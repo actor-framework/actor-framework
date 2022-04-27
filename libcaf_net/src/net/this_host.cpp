@@ -2,7 +2,7 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#include "caf/net/host.hpp"
+#include "caf/net/this_host.hpp"
 
 #include "caf/config.hpp"
 #include "caf/detail/net_syscall.hpp"
@@ -16,11 +16,10 @@ namespace caf::net {
 
 #ifdef CAF_WINDOWS
 
-error this_host::startup() {
+void this_host::startup() {
   WSADATA WinsockData;
-  CAF_NET_SYSCALL("WSAStartup", result, !=, 0,
-                  WSAStartup(MAKEWORD(2, 2), &WinsockData));
-  return none;
+  CAF_NET_CRITICAL_SYSCALL("WSAStartup", result, !=, 0,
+                           WSAStartup(MAKEWORD(2, 2), &WinsockData));
 }
 
 void this_host::cleanup() {
@@ -29,8 +28,8 @@ void this_host::cleanup() {
 
 #else // CAF_WINDOWS
 
-error this_host::startup() {
-  return none;
+void this_host::startup() {
+  // nop
 }
 
 void this_host::cleanup() {

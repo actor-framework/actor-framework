@@ -36,4 +36,7 @@ bool inspect(Inspector& f, tls& x) {
 /// @relates tls
 CAF_NET_EXPORT int native(tls);
 
+/// @relates tls
+CAF_NET_EXPORT bool has(tls, tls, tls);
+
 } // namespace caf::net::ssl

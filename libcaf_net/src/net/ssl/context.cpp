@@ -45,23 +45,56 @@ context::~context() {
 
 namespace {
 
-std::pair<SSL_CTX*, const char*> make_ctx(const SSL_METHOD* method, int vmin,
-                                          int vmax) {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#  define CAF_TLS_METHOD(infix) SSLv23##infix##method()
+#else
+#  define CAF_TLS_METHOD(infix) TLS##infix##method()
+#endif
+
+template <class Enum>
+std::pair<SSL_CTX*, const char*>
+make_ctx(const SSL_METHOD* method, Enum min_val, Enum max_val) {
+  if (min_val > max_val && max_val != Enum::any)
+    return {nullptr, "invalid version range"};
   auto ctx = SSL_CTX_new(method);
   if (!ctx)
     return {nullptr, "SSL_CTX_new returned null"};
+    // Avoid fallback to SSLv3.
+    // Select the protocol versions in the configured range.
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+  if constexpr (std::is_same_v<Enum, tls>) {
+    auto opts = SSL_OP_NO_SSLv3;
+    if (!has(tls::v1_0, min_val, max_val))
+      opts |= SSL_OP_NO_TLSv1;
+    if (!has(tls::v1_1, min_val, max_val))
+      opts |= SSL_OP_NO_TLSv1_1;
+    if (!has(tls::v1_2, min_val, max_val))
+      opts |= SSL_OP_NO_TLSv1_2;
+    SSL_CTX_set_options(ctx, opts);
+  } else {
+    static_assert(std::is_same_v<Enum, dtls>);
+    // Nothing to do for DTLS in this OpenSSL version.
+    CAF_IGNORE_UNUSED(min_val);
+    CAF_IGNORE_UNUSED(max_val);
+  }
+#else
+  if constexpr (std::is_same_v<Enum, tls>) {
+    SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv3);
+  }
+  auto vmin = native(min_val);
+  auto vmax = native(max_val);
   if (vmin != 0 && SSL_CTX_set_min_proto_version(ctx, vmin) != 1)
     return {ctx, "SSL_CTX_set_min_proto_version returned an error"};
   if (vmax != 0 && SSL_CTX_set_max_proto_version(ctx, vmax) != 1)
     return {ctx, "SSL_CTX_set_max_proto_version returned an error"};
+#endif
   return {ctx, nullptr};
 }
 
 } // namespace
 
-expected<context> context::make(tls min_version, tls max_version) {
-  auto [raw, errstr] = make_ctx(TLS_method(), native(min_version),
-                                native(max_version));
+expected<context> context::make(tls vmin, tls vmax) {
+  auto [raw, errstr] = make_ctx(CAF_TLS_METHOD(_), vmin, vmax);
   context ctx{reinterpret_cast<impl*>(raw)};
   if (errstr == nullptr)
     return {std::move(ctx)};
@@ -69,9 +102,8 @@ expected<context> context::make(tls min_version, tls max_version) {
     return {make_error(sec::logic_error, errstr)};
 }
 
-expected<context> context::make_server(tls min_version, tls max_version) {
-  auto [raw, errstr] = make_ctx(TLS_server_method(), native(min_version),
-                                native(max_version));
+expected<context> context::make_server(tls vmin, tls vmax) {
+  auto [raw, errstr] = make_ctx(CAF_TLS_METHOD(_server_), vmin, vmax);
   context ctx{reinterpret_cast<impl*>(raw)};
   if (errstr == nullptr)
     return {std::move(ctx)};
@@ -79,9 +111,8 @@ expected<context> context::make_server(tls min_version, tls max_version) {
     return {make_error(sec::logic_error, errstr)};
 }
 
-expected<context> context::make_client(tls min_version, tls max_version) {
-  auto [raw, errstr] = make_ctx(TLS_client_method(), native(min_version),
-                                native(max_version));
+expected<context> context::make_client(tls vmin, tls vmax) {
+  auto [raw, errstr] = make_ctx(CAF_TLS_METHOD(_client_), vmin, vmax);
   context ctx{reinterpret_cast<impl*>(raw)};
   if (errstr == nullptr)
     return {std::move(ctx)};
@@ -89,9 +120,8 @@ expected<context> context::make_client(tls min_version, tls max_version) {
     return {make_error(sec::logic_error, errstr)};
 }
 
-expected<context> context::make(dtls min_version, dtls max_version) {
-  auto [raw, errstr] = make_ctx(TLS_method(), native(min_version),
-                                native(max_version));
+expected<context> context::make(dtls vmin, dtls vmax) {
+  auto [raw, errstr] = make_ctx(DTLS_method(), vmin, vmax);
   context ctx{reinterpret_cast<impl*>(raw)};
   if (errstr == nullptr)
     return {std::move(ctx)};
@@ -99,9 +129,8 @@ expected<context> context::make(dtls min_version, dtls max_version) {
     return {make_error(sec::logic_error, errstr)};
 }
 
-expected<context> context::make_server(dtls min_version, dtls max_version) {
-  auto [raw, errstr] = make_ctx(DTLS_server_method(), native(min_version),
-                                native(max_version));
+expected<context> context::make_server(dtls vmin, dtls vmax) {
+  auto [raw, errstr] = make_ctx(DTLS_server_method(), vmin, vmax);
   context ctx{reinterpret_cast<impl*>(raw)};
   if (errstr == nullptr)
     return {std::move(ctx)};
@@ -109,9 +138,8 @@ expected<context> context::make_server(dtls min_version, dtls max_version) {
     return {make_error(sec::logic_error, errstr)};
 }
 
-expected<context> context::make_client(dtls min_version, dtls max_version) {
-  auto [raw, errstr] = make_ctx(DTLS_client_method(), native(min_version),
-                                native(max_version));
+expected<context> context::make_client(dtls vmin, dtls vmax) {
+  auto [raw, errstr] = make_ctx(DTLS_client_method(), vmin, vmax);
   context ctx{reinterpret_cast<impl*>(raw)};
   if (errstr == nullptr)
     return {std::move(ctx)};

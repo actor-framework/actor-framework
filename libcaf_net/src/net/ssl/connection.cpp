@@ -80,12 +80,18 @@ errc connection::last_error(ptrdiff_t ret) const {
       return errc::want_accept;
     case SSL_ERROR_WANT_X509_LOOKUP:
       return errc::want_x509_lookup;
+#ifdef SSL_ERROR_WANT_ASYNC
     case SSL_ERROR_WANT_ASYNC:
       return errc::want_async;
+#endif
+#ifdef SSL_ERROR_WANT_ASYNC_JOB
     case SSL_ERROR_WANT_ASYNC_JOB:
       return errc::want_async_job;
+#endif
+#ifdef SSL_ERROR_WANT_CLIENT_HELLO_CB
     case SSL_ERROR_WANT_CLIENT_HELLO_CB:
       return errc::want_client_hello;
+#endif
     case SSL_ERROR_SYSCALL:
       return errc::syscall_failed;
     case SSL_ERROR_SSL:

@@ -2,8 +2,9 @@
 
 #include "caf/error.hpp"
 #include "caf/init_global_meta_objects.hpp"
-#include "caf/net/host.hpp"
 #include "caf/net/middleman.hpp"
+#include "caf/net/ssl/startup.hpp"
+#include "caf/net/this_host.hpp"
 #include "caf/raise_error.hpp"
 
 #define CAF_TEST_NO_MAIN
@@ -90,12 +91,13 @@ void barrier::arrive_and_wait() {
 // -- main --------------------------------------------------------------------
 
 int main(int argc, char** argv) {
-  if (auto err = net::this_host::startup())
-    CAF_RAISE_ERROR(std::logic_error, "this_host::startup failed");
+  net::this_host::startup();
+  net::ssl::startup();
   using namespace caf;
   net::middleman::init_global_meta_objects();
   core::init_global_meta_objects();
   auto result = test::main(argc, argv);
+  net::ssl::cleanup();
   net::this_host::cleanup();
   return result;
 }

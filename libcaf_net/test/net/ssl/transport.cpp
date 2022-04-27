@@ -34,7 +34,6 @@ struct fixture {
 
   fixture() {
     multiplexer::block_sigpipe();
-    OPENSSL_init_ssl(OPENSSL_INIT_SSL_DEFAULT, nullptr);
   }
 
   template <class SocketPair>

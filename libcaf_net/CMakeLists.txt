@@ -36,7 +36,6 @@ caf_add_component(
     src/net/datagram_socket.cpp
     src/net/generic_lower_layer.cpp
     src/net/generic_upper_layer.cpp
-    src/net/host.cpp
     src/net/http/header.cpp
     src/net/http/lower_layer.cpp
     src/net/http/method.cpp
@@ -59,6 +58,7 @@ caf_add_component(
     src/net/ssl/context.cpp
     src/net/ssl/dtls.cpp
     src/net/ssl/format.cpp
+    src/net/ssl/startup.cpp
     src/net/ssl/tls.cpp
     src/net/ssl/transport.cpp
     src/net/stream_oriented.cpp
@@ -66,6 +66,7 @@ caf_add_component(
     src/net/stream_transport.cpp
     src/net/tcp_accept_socket.cpp
     src/net/tcp_stream_socket.cpp
+    src/net/this_host.cpp
     src/net/udp_datagram_socket.cpp
     src/net/web_socket/client.cpp
     src/net/web_socket/default_trait.cpp

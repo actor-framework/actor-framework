@@ -22,9 +22,16 @@ int native(tls x) {
       return TLS1_1_VERSION;
     case tls::v1_2:
       return TLS1_2_VERSION;
+#ifdef TLS1_3_VERSION
     case tls::v1_3:
       return TLS1_3_VERSION;
+#endif
   }
+}
+
+bool has(tls val, tls vmin, tls vmax) {
+  CAF_ASSERT(val != tls::any);
+  return val >= vmin && (vmax == tls::any || val <= vmax);
 }
 
 } // namespace caf::net::ssl

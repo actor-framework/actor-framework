@@ -13,7 +13,7 @@ namespace caf::net {
 class CAF_NET_EXPORT this_host {
 public:
   /// Initializes the network subsystem.
-  static error startup();
+  static void startup();
 
   /// Release any resources of the network subsystem.
   static void cleanup();
