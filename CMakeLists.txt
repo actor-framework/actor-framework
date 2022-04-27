@@ -21,11 +21,12 @@ option(THREADS_PREFER_PTHREAD_FLAG "Prefer -pthread flag if available " ON)
 
 # -- CAF options that are off by default ---------------------------------------
 
+option(CAF_ENABLE_ACTOR_PROFILER "Enable experimental profiler API" OFF)
+option(CAF_ENABLE_CPACK "Enable packaging via CPack" OFF)
 option(CAF_ENABLE_CURL_EXAMPLES "Build examples with libcurl" OFF)
 option(CAF_ENABLE_PROTOBUF_EXAMPLES "Build examples with Google Protobuf" OFF)
 option(CAF_ENABLE_QT6_EXAMPLES "Build examples with the Qt6 framework" OFF)
 option(CAF_ENABLE_RUNTIME_CHECKS "Build CAF with extra runtime assertions" OFF)
-option(CAF_ENABLE_ACTOR_PROFILER "Enable experimental profiler API" OFF)
 
 # -- CAF options that are on by default ----------------------------------------
 
@@ -454,4 +455,26 @@ if(CAF_BUILD_INFO_FILE_PATH)
   configure_file("${PROJECT_SOURCE_DIR}/cmake/caf-build-info.txt.in"
                  "${CAF_BUILD_INFO_FILE_PATH}"
                  @ONLY)
+endif()
+
+# -- CPack setup ---------------------------------------------------------------
+
+if(CAF_ENABLE_CPACK)
+  include(InstallRequiredSystemLibraries)
+  set(CPACK_PACKAGE_NAME "CAF")
+  set(CPACK_PACKAGE_VENDOR "CAF Community")
+  set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/LICENSE")
+  set(CPACK_PACKAGE_VERSION_MAJOR "${CAF_VERSION_MAJOR}")
+  set(CPACK_PACKAGE_VERSION_MINOR "${CAF_VERSION_MINOR}")
+  set(CPACK_PACKAGE_VERSION_PATCH "${CAF_VERSION_PATCH}")
+  set(CPACK_PACKAGE_DESCRIPTION
+      "To learn more about CAF, please visit https://www.actor-framework.org.")
+    set(CPACK_PACKAGE_DESCRIPTION_SUMMARY
+        "CAF offers high-level building blocks for concurrency & distribution.")
+  set(CPACK_PACKAGE_HOMEPAGE_URL "https://www.actor-framework.org")
+  set(CPACK_PACKAGE_ICON "${PROJECT_SOURCE_DIR}/doc/png/logo-1000x1000.png")
+  if(NOT CPACK_SOURCE_GENERATOR)
+    set(CPACK_SOURCE_GENERATOR "TGZ")
+  endif()
+  include(CPack)
 endif()
