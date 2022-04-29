@@ -24,11 +24,6 @@ public:
   /// function to decide whether it has to wait for write events on the socket.
   [[nodiscard]] virtual bool done_sending() = 0;
 
-  /// Called by the lower layer after some event triggered re-registering the
-  /// socket manager for read operations after it has been stopped previously
-  /// by the read policy. May restart consumption of bytes or messages.
-  virtual void continue_reading() = 0;
-
   /// Called by the lower layer for cleaning up any state in case of an error.
   virtual void abort(const error& reason) = 0;
 };

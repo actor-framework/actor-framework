@@ -45,10 +45,11 @@ public:
     // nop
   }
 
-  caf::error init(net::socket_manager*,
+  caf::error init(net::socket_manager* mgr_ptr,
                   net::message_oriented::lower_layer* down_ptr,
                   const settings&) override {
     // Start reading immediately.
+    mgr = mgr_ptr;
     down = down_ptr;
     down->request_messages();
     return none;
@@ -66,23 +67,23 @@ public:
     // nop
   }
 
-  void continue_reading() override {
-    down->request_messages();
+  void continue_reading() {
+    mgr->schedule_fn([this] { down->request_messages(); });
   }
 
   ptrdiff_t consume(byte_span buf) override {
-    printf("app_t::consume %d\n", __LINE__);
     auto printable = [](std::byte x) {
       return ::isprint(static_cast<uint8_t>(x));
     };
     if (CHECK(std::all_of(buf.begin(), buf.end(), printable))) {
-      printf("app_t::consume %d\n", __LINE__);
       auto str_buf = reinterpret_cast<char*>(buf.data());
       inputs->emplace_back(std::string{str_buf, buf.size()});
-      printf("app_t::consume %d added %s\n", __LINE__, inputs->back().c_str());
+      MESSAGE("app: consumed " << inputs->back());
       if constexpr (EnableSuspend)
-        if (inputs->back() == "pause")
+        if (inputs->back() == "pause") {
+          MESSAGE("app: suspend reading");
           down->suspend_reading();
+        }
       std::string response = "ok ";
       response += std::to_string(inputs->size());
       auto response_bytes = as_bytes(make_span(response));
@@ -92,10 +93,11 @@ public:
       CHECK(down->end_message());
       return static_cast<ptrdiff_t>(buf.size());
     } else {
-      printf("app_t::consume %d\n", __LINE__);
       return -1;
     }
   }
+
+  net::socket_manager* mgr = nullptr;
 
   net::message_oriented::lower_layer* down = nullptr;
 
@@ -157,7 +159,7 @@ SCENARIO("length-prefix framing reads data with 32-bit size headers") {
   }
 }
 
-SCENARIO("calling suspend_reading removes message apps temporarily") {
+SCENARIO("calling suspend_reading temporarily halts receiving of messages") {
   using namespace std::literals;
   GIVEN("a length_prefix_framing with an app that consumes strings") {
     auto [fd1, fd2] = unbox(net::make_stream_socket_pair());
@@ -185,6 +187,7 @@ SCENARIO("calling suspend_reading removes message apps temporarily") {
       CAF_FAIL("nonblocking returned an error: " << err);
     auto buf = std::make_shared<string_list>();
     auto app = app_t<true>::make(buf);
+    auto app_ptr = app.get();
     auto framing = net::length_prefix_framing::make(std::move(app));
     auto transport = net::stream_transport::make(fd2, std::move(framing));
     auto mgr = net::socket_manager::make(&mpx, fd2, std::move(transport));
@@ -201,8 +204,8 @@ SCENARIO("calling suspend_reading removes message apps temporarily") {
         CHECK_EQ(buf->at(1), "second");
         CHECK_EQ(buf->at(2), "pause");
       }
-      THEN("users can resume it via continue_reading ") {
-        mgr->continue_reading();
+      THEN("users can resume it manually") {
+        app_ptr->continue_reading();
         mpx.apply_updates();
         mpx.poll_once(true);
         CHECK_EQ(mpx.mask_of(mgr), net::operation::read);

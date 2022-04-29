@@ -74,11 +74,6 @@ ptrdiff_t server::consume(byte_span input, byte_span delta) {
   }
 }
 
-void server::continue_reading() {
-  auto rp = receive_policy::up_to(handshake::max_http_size);
-  lower_layer().configure_read(rp);
-}
-
 bool server::prepare_send() {
   return handshake_complete_ ? upper_layer().prepare_send() : true;
 }

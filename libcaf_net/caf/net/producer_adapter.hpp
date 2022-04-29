@@ -8,36 +8,35 @@
 #include <new>
 
 #include "caf/async/producer.hpp"
+#include "caf/detail/atomic_ref_counted.hpp"
 #include "caf/flow/observer.hpp"
 #include "caf/flow/subscription.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/socket_manager.hpp"
-#include "caf/ref_counted.hpp"
 
 namespace caf::net {
 
 /// Connects a socket manager to an asynchronous producer resource.
 template <class Buffer>
-class producer_adapter final : public ref_counted, public async::producer {
+class producer_adapter final : public detail::atomic_ref_counted,
+                               public async::producer {
 public:
-  using atomic_count = std::atomic<size_t>;
-
   using buf_ptr = intrusive_ptr<Buffer>;
 
   using value_type = typename Buffer::value_type;
+
+  using ptr_type = intrusive_ptr<producer_adapter>;
 
   void on_consumer_ready() override {
     // nop
   }
 
   void on_consumer_cancel() override {
-    mgr_->mpx().schedule_fn([adapter = strong_this()] { //
-      adapter->on_cancel();
-    });
+    mgr_->schedule(do_cancel_);
   }
 
   void on_consumer_demand(size_t) override {
-    mgr_->continue_reading();
+    mgr_->schedule(do_resume_);
   }
 
   void ref_producer() const noexcept override {
@@ -48,16 +47,13 @@ public:
     this->deref();
   }
 
-  /// Tries to open the resource for writing.
-  /// @returns a connected adapter that writes to the resource on success,
-  ///          `nullptr` otherwise.
-  template <class Resource>
-  static intrusive_ptr<producer_adapter>
-  try_open(socket_manager* owner, Resource src) {
-    CAF_ASSERT(owner != nullptr);
-    if (auto buf = src.try_open()) {
-      using ptr_type = intrusive_ptr<producer_adapter>;
-      auto adapter = ptr_type{new producer_adapter(owner, buf), false};
+  static ptr_type make(buf_ptr buf, socket_manager_ptr mgr, action do_resume,
+                       action do_cancel) {
+    if (buf) {
+      auto adapter
+        = ptr_type{new producer_adapter(buf, mgr, std::move(do_resume),
+                                        std::move(do_cancel)),
+                   false};
       buf->set_producer(adapter);
       return adapter;
     } else {
@@ -88,47 +84,40 @@ public:
   void close() {
     if (buf_) {
       buf_->close();
-      buf_ = nullptr;
-      mgr_ = nullptr;
+      reset();
     }
   }
 
   void abort(error reason) {
     if (buf_) {
       buf_->abort(std::move(reason));
-      buf_ = nullptr;
-      mgr_ = nullptr;
+      reset();
     }
-  }
-
-  friend void intrusive_ptr_add_ref(const producer_adapter* ptr) noexcept {
-    ptr->ref();
-  }
-
-  friend void intrusive_ptr_release(const producer_adapter* ptr) noexcept {
-    ptr->deref();
   }
 
 private:
-  producer_adapter(socket_manager* owner, buf_ptr buf)
-    : mgr_(owner), buf_(std::move(buf)) {
+  producer_adapter(buf_ptr buf, socket_manager_ptr mgr, action do_resume,
+                   action do_cancel)
+    : buf_(std::move(buf)),
+      mgr_(std::move(mgr)),
+      do_resume_(std::move(do_resume)),
+      do_cancel_(std::move(do_cancel)) {
     // nop
   }
 
-  void on_cancel() {
-    if (buf_) {
-      mgr_->mpx().shutdown_reading(mgr_);
-      buf_ = nullptr;
-      mgr_ = nullptr;
-    }
+  void reset() {
+    buf_ = nullptr;
+    mgr_ = nullptr;
+    do_resume_.dispose();
+    do_resume_ = nullptr;
+    do_cancel_.dispose();
+    do_cancel_ = nullptr;
   }
 
-  auto strong_this() {
-    return intrusive_ptr{this};
-  }
-
-  intrusive_ptr<socket_manager> mgr_;
   intrusive_ptr<Buffer> buf_;
+  intrusive_ptr<socket_manager> mgr_;
+  action do_resume_;
+  action do_cancel_;
 };
 
 template <class T>

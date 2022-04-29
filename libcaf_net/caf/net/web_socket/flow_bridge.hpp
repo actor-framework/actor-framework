@@ -79,6 +79,10 @@ public:
     }
   };
 
+  bool running() const noexcept {
+    return in_ || out_;
+  }
+
   // -- implementation of web_socket::lower_layer ------------------------------
 
   error init(net::socket_manager* mgr, web_socket::lower_layer* down,
@@ -86,20 +90,30 @@ public:
     down_ = down;
     auto [err, pull, push] = conn_->on_request(cfg);
     if (!err) {
-      in_ = consumer_type::try_open(mgr, pull);
-      out_ = producer_type::try_open(mgr, push);
-      CAF_ASSERT(in_ != nullptr);
-      CAF_ASSERT(out_ != nullptr);
+      auto do_wakeup = make_action([this] {
+        prepare_send();
+        if (!running())
+          down_->close();
+      });
+      auto do_resume = make_action([this] { down_->request_messages(); });
+      auto do_cancel = make_action([this] {
+        out_ = nullptr;
+        if (!running())
+          down_->close();
+      });
+      in_ = consumer_type::make(pull.try_open(), mgr, std::move(do_wakeup));
+      out_ = producer_type::make(push.try_open(), mgr, std::move(do_resume),
+                                 std::move(do_cancel));
       conn_ = nullptr;
-      return none;
+      if (running())
+        return none;
+      else
+        return make_error(sec::runtime_error,
+                          "cannot init flow bridge: no buffers");
     } else {
       conn_ = nullptr;
       return err;
     }
-  }
-
-  void continue_reading() override {
-    // nop
   }
 
   bool prepare_send() override {
@@ -108,16 +122,16 @@ public:
       auto [again, consumed] = in_->pull(async::delay_errors, 1, helper);
       if (!again) {
         if (helper.err) {
-          down_->send_close_message(helper.err);
+          down_->close(helper.err);
         } else {
-          down_->send_close_message();
+          down_->close();
         }
         in_ = nullptr;
-        return false;
+        return true;
       } else if (helper.aborted) {
         in_->cancel();
         in_ = nullptr;
-        return false;
+        return true;
       } else if (consumed == 0) {
         return true;
       }

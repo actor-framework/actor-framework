@@ -93,10 +93,6 @@ public:
     return static_cast<ptrdiff_t>(recv_buf_->size());
   }
 
-  void continue_reading() override {
-    FAIL("continue_reading called");
-  }
-
   bool prepare_send() override {
     MESSAGE("prepare_send called");
     auto& buf = down->output_buffer();

@@ -116,9 +116,9 @@ public:
       auto [again, consumed] = in_->pull(async::delay_errors, 1, helper);
       if (!again) {
         if (helper.err) {
-          down_->send_close_message(helper.err);
+          down_->close(helper.err);
         } else {
-          down_->send_close_message();
+          down_->close();
         }
         in_ = nullptr;
       } else if (helper.aborted) {

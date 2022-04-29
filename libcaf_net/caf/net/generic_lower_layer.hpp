@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/detail/net_export.hpp"
+#include "caf/fwd.hpp"
 
 namespace caf::net {
 
@@ -17,12 +18,18 @@ public:
   /// Queries whether the output device can accept more data straight away.
   [[nodiscard]] virtual bool can_send_more() const noexcept = 0;
 
-  /// Halt receiving of additional bytes or messages.
-  virtual void suspend_reading() = 0;
-
   /// Queries whether the lower layer is currently configured to halt receiving
   /// of additional bytes or messages.
-  [[nodiscard]] virtual bool stopped_reading() const noexcept = 0;
+  [[nodiscard]] virtual bool is_reading() const noexcept = 0;
+
+  /// Shuts down any connection or session gracefully. Any pending data gets
+  /// flushed before closing the socket.
+  virtual void close() = 0;
+
+  /// Shuts down any connection or session du to an error. Any pending data gets
+  /// flushed before closing the socket. Protocols with a dedicated closing
+  /// handshake such as WebSocket may send the close reason to the peer.
+  virtual void close(const error& reason);
 };
 
 } // namespace caf::net

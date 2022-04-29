@@ -73,10 +73,10 @@ public:
   size_t num_socket_managers() const noexcept;
 
   /// Returns the index of `mgr` in the pollset or `-1`.
-  ptrdiff_t index_of(const socket_manager_ptr& mgr);
+  ptrdiff_t index_of(const socket_manager_ptr& mgr) const noexcept;
 
   /// Returns the index of `fd` in the pollset or `-1`.
-  ptrdiff_t index_of(socket fd);
+  ptrdiff_t index_of(socket fd) const noexcept;
 
   /// Returns the owning @ref middleman instance.
   middleman& owner();
@@ -88,22 +88,6 @@ public:
   operation mask_of(const socket_manager_ptr& mgr);
 
   // -- thread-safe signaling --------------------------------------------------
-
-  /// Registers `mgr` for read events.
-  /// @thread-safe
-  void register_reading(const socket_manager_ptr& mgr);
-
-  /// Registers `mgr` for write events.
-  /// @thread-safe
-  void register_writing(const socket_manager_ptr& mgr);
-
-  /// Triggers a continue reading event for `mgr`.
-  /// @thread-safe
-  void continue_reading(const socket_manager_ptr& mgr);
-
-  /// Triggers a continue writing event for `mgr`.
-  /// @thread-safe
-  void continue_writing(const socket_manager_ptr& mgr);
 
   /// Schedules a call to `mgr->handle_error(sec::discarded)`.
   /// @thread-safe
@@ -136,6 +120,29 @@ public:
   /// @thread-safe
   void shutdown();
 
+  // -- callbacks for socket managers ------------------------------------------
+
+  /// Registers `mgr` for read events.
+  void register_reading(socket_manager* mgr);
+
+  /// Registers `mgr` for write events.
+  void register_writing(socket_manager* mgr);
+
+  /// Deregisters `mgr` from read events.
+  void deregister_reading(socket_manager* mgr);
+
+  /// Deregisters `mgr` from write events.
+  void deregister_writing(socket_manager* mgr);
+
+  /// Deregisters @p mgr from read and write events.
+  void deregister(socket_manager* mgr);
+
+  /// Queries whether `mgr` is currently registered for reading.
+  bool is_reading(const socket_manager* mgr) const noexcept;
+
+  /// Queries whether `mgr` is currently registered for writing.
+  bool is_writing(const socket_manager* mgr) const noexcept;
+
   // -- control flow -----------------------------------------------------------
 
   /// Polls I/O activity once and runs all socket event handlers that become
@@ -160,15 +167,12 @@ protected:
   /// Handles an I/O event on given manager.
   void handle(const socket_manager_ptr& mgr, short events, short revents);
 
-  /// Transfers socket ownership from one manager to another.
-  void do_handover(const socket_manager_ptr& mgr);
-
   /// Returns a change entry for the socket at given index. Lazily creates a new
   /// entry before returning if necessary.
   poll_update& update_for(ptrdiff_t index);
 
   /// Returns a change entry for the socket of the manager.
-  poll_update& update_for(const socket_manager_ptr& mgr);
+  poll_update& update_for(socket_manager* mgr);
 
   /// Writes `opcode` and pointer to `mgr` the the pipe for handling an event
   /// later via the pollset updater.
@@ -182,13 +186,7 @@ protected:
   }
 
   /// Queries the currently active event bitmask for `mgr`.
-  short active_mask_of(const socket_manager_ptr& mgr);
-
-  /// Queries whether `mgr` is currently registered for reading.
-  bool is_reading(const socket_manager_ptr& mgr);
-
-  /// Queries whether `mgr` is currently registered for writing.
-  bool is_writing(const socket_manager_ptr& mgr);
+  short active_mask_of(const socket_manager* mgr) const noexcept;
 
   // -- member variables -------------------------------------------------------
 
@@ -225,12 +223,6 @@ private:
   void do_shutdown();
 
   void do_register_reading(const socket_manager_ptr& mgr);
-
-  void do_register_writing(const socket_manager_ptr& mgr);
-
-  void do_continue_reading(const socket_manager_ptr& mgr);
-
-  void do_continue_writing(const socket_manager_ptr& mgr);
 
   void do_discard(const socket_manager_ptr& mgr);
 

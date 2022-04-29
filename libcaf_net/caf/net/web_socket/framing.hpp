@@ -77,11 +77,15 @@ public:
 
   // -- web_socket::lower_layer implementation ---------------------------------
 
+  using web_socket::lower_layer::close;
+
   bool can_send_more() const noexcept override;
 
   void suspend_reading() override;
 
-  bool stopped_reading() const noexcept override;
+  bool is_reading() const noexcept override;
+
+  void close(status code, std::string_view desc) override;
 
   void request_messages() override;
 
@@ -97,16 +101,7 @@ public:
 
   bool end_text_message() override;
 
-  void send_close_message() override;
-
-  void send_close_message(status code, std::string_view desc) override;
-
   // -- interface for the lower layer ------------------------------------------
-
-  template <class LowerLayerPtr>
-  static void continue_reading(LowerLayerPtr down) {
-    down->configure_read(receive_policy::up_to(2048));
-  }
 
   ptrdiff_t consume(byte_span input, byte_span);
 
@@ -116,10 +111,6 @@ private:
   bool handle(uint8_t opcode, byte_span payload);
 
   void ship_pong(byte_span payload);
-
-  void ship_close(uint16_t code, std::string_view msg);
-
-  void ship_close();
 
   template <class T>
   void ship_frame(std::vector<T>& buf);

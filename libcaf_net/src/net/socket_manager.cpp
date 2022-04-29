@@ -40,22 +40,73 @@ actor_system& socket_manager::system() noexcept {
   return mpx_->system();
 }
 
+bool socket_manager::is_reading() const noexcept {
+  return mpx_->is_reading(this);
+}
+
+bool socket_manager::is_writing() const noexcept {
+  return mpx_->is_writing(this);
+}
+
 // -- event loop management ----------------------------------------------------
 
 void socket_manager::register_reading() {
-  mpx_->register_reading(this);
-}
-
-void socket_manager::continue_reading() {
-  mpx_->continue_reading(this);
+  if (!flags_.read_closed)
+    mpx_->register_reading(this);
 }
 
 void socket_manager::register_writing() {
-  mpx_->register_writing(this);
+  if (!flags_.write_closed)
+    mpx_->register_writing(this);
 }
 
-void socket_manager::continue_writing() {
-  mpx_->continue_writing(this);
+void socket_manager::deregister_reading() {
+  mpx_->deregister_reading(this);
+}
+
+void socket_manager::deregister_writing() {
+  mpx_->deregister_writing(this);
+}
+
+void socket_manager::deregister() {
+  mpx_->deregister(this);
+}
+
+void socket_manager::shutdown_read() {
+  deregister_reading();
+  flags_.read_closed = true;
+}
+
+void socket_manager::shutdown_write() {
+  deregister_writing();
+  flags_.write_closed = true;
+}
+
+void socket_manager::shutdown() {
+  flags_.read_closed = true;
+  flags_.write_closed = true;
+  deregister();
+}
+
+// -- callbacks for the handler ------------------------------------------------
+
+void socket_manager::schedule_handover() {
+  deregister();
+  mpx_->schedule_fn([ptr = strong_this()] { //
+    event_handler_ptr next;
+    if (ptr->handler_->do_handover(next)) {
+      ptr->handler_.swap(next);
+    }
+  });
+}
+
+void socket_manager::schedule(action what) {
+  // Wrap the action to make sure the socket manager is still alive when running
+  // the action later.
+  mpx_->schedule_fn([ptr = strong_this(), f = std::move(what)]() mutable {
+    CAF_IGNORE_UNUSED(ptr);
+    f.run();
+  });
 }
 
 // -- callbacks for the multiplexer --------------------------------------------
@@ -70,16 +121,6 @@ void socket_manager::close_write() noexcept {
   flags_.write_closed = true;
 }
 
-bool socket_manager::do_handover() {
-  event_handler_ptr next;
-  if (handler_->do_handover(next)) {
-    handler_.swap(next);
-    return true;
-  } else {
-    return false;
-  }
-}
-
 error socket_manager::init(const settings& cfg) {
   CAF_LOG_TRACE(CAF_ARG(cfg));
   if (auto err = nonblocking(fd_, true)) {
@@ -89,32 +130,12 @@ error socket_manager::init(const settings& cfg) {
   return handler_->init(this, cfg);
 }
 
-socket_manager::read_result socket_manager::handle_read_event() {
-  auto result = handler_->handle_read_event();
-  switch (result) {
-    default:
-      break;
-    case read_result::close:
-      flags_.read_closed = true;
-      break;
-    case read_result::abort:
-      flags_.read_closed = true;
-      flags_.write_closed = true;
-      break;
-  }
-  return result;
+void socket_manager::handle_read_event() {
+  handler_->handle_read_event();
 }
 
-socket_manager::read_result socket_manager::handle_buffered_data() {
-  return handler_->handle_buffered_data();
-}
-
-socket_manager::read_result socket_manager::handle_continue_reading() {
-  return handler_->handle_continue_reading();
-}
-
-socket_manager::write_result socket_manager::handle_write_event() {
-  return handler_->handle_write_event();
+void socket_manager::handle_write_event() {
+  handler_->handle_write_event();
 }
 
 void socket_manager::handle_error(sec code) {
@@ -122,6 +143,12 @@ void socket_manager::handle_error(sec code) {
     handler_->abort(make_error(code));
     handler_ = nullptr;
   }
+}
+
+// -- utility functions --------------------------------------------------------
+
+socket_manager_ptr socket_manager::strong_this() {
+  return socket_manager_ptr{this};
 }
 
 } // namespace caf::net

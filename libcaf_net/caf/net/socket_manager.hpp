@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/action.hpp"
 #include "caf/actor.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/callback.hpp"
@@ -27,10 +28,6 @@ namespace caf::net {
 class CAF_NET_EXPORT socket_manager : public ref_counted {
 public:
   // -- member types -----------------------------------------------------------
-
-  using read_result = socket_event_layer::read_result;
-
-  using write_result = socket_event_layer::write_result;
 
   using event_handler_ptr = std::unique_ptr<socket_event_layer>;
 
@@ -122,31 +119,54 @@ public:
     return flags_.write_closed;
   }
 
+  /// Queries whether the manager is registered for reading.
+  bool is_reading() const noexcept;
+
+  /// Queries whether the manager is registered for writing.
+  bool is_writing() const noexcept;
+
   // -- event loop management --------------------------------------------------
 
-  /// Registers the manager for read operations on the @ref multiplexer.
-  /// @thread-safe
+  /// Registers the manager for read operations.
   void register_reading();
 
-  /// Registers the manager for write operations on the @ref multiplexer.
-  /// @thread-safe
+  /// Registers the manager for write operations.
   void register_writing();
 
-  /// Schedules a call to `handle_continue_reading` on the @ref multiplexer.
-  /// This mechanism allows users to signal changes in the environment to the
-  /// manager that allow it to make progress, e.g., new demand in asynchronous
-  /// buffer that allow the manager to push available data downstream. The event
-  /// is a no-op if the manager is already registered for reading.
-  /// @thread-safe
-  void continue_reading();
+  /// Deregisters the manager from read operations.
+  void deregister_reading();
 
-  /// Schedules a call to `handle_continue_reading` on the @ref multiplexer.
-  /// This mechanism allows users to signal changes in the environment to the
-  /// manager that allow it to make progress, e.g., new data for writing in an
-  /// asynchronous buffer. The event is a no-op if the manager is already
-  /// registered for writing.
-  /// @thread-safe
-  void continue_writing();
+  /// Deregisters the manager from write operations.
+  void deregister_writing();
+
+  /// Deregisters the manager from both read and write operations.
+  void deregister();
+
+  /// Deregisters the manager from read operations and blocks any future
+  /// attempts to re-register it.
+  void shutdown_read();
+
+  /// Deregisters the manager from write operations and blocks any future
+  /// attempts to re-register it.
+  void shutdown_write();
+
+  /// Deregisters the manager from both read and write operations and blocks any
+  /// future attempts to re-register it.
+  void shutdown();
+
+  // -- callbacks for the handler ----------------------------------------------
+
+  /// Schedules a call to `do_handover` on the handler.
+  void schedule_handover();
+
+  /// Schedules @p what to run later.
+  void schedule(action what);
+
+  /// Schedules @p what to run later.
+  template <class F>
+  void schedule_fn(F&& what) {
+    schedule(make_action(std::forward<F>(what)));
+  }
 
   // -- callbacks for the multiplexer ------------------------------------------
 
@@ -160,30 +180,20 @@ public:
   error init(const settings& cfg);
 
   /// Called whenever the socket received new data.
-  read_result handle_read_event();
-
-  /// Called after handovers to allow the manager to process any data that is
-  /// already buffered at the transport policy and thus would not trigger a read
-  /// event on the socket.
-  read_result handle_buffered_data();
-
-  /// Restarts a socket manager that suspended reads. Calling this member
-  /// function on active managers is a no-op. This function also should read any
-  /// data buffered outside of the socket.
-  read_result handle_continue_reading();
+  void handle_read_event();
 
   /// Called whenever the socket is allowed to send data.
-  write_result handle_write_event();
+  void handle_write_event();
 
   /// Called when the remote side becomes unreachable due to an error.
   /// @param code The error code as reported by the operating system.
   void handle_error(sec code);
 
-  /// Performs a handover to another transport after `handle_read_event` or
-  /// `handle_read_event` returned `handover`.
-  [[nodiscard]] bool do_handover();
-
 private:
+  // -- utility functions ------------------------------------------------------
+
+  socket_manager_ptr strong_this();
+
   // -- member variables -------------------------------------------------------
 
   /// Stores the socket file descriptor. The socket manager automatically closes

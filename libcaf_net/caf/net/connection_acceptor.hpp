@@ -21,10 +21,6 @@ public:
 
   using factory_type = Factory;
 
-  using read_result = typename socket_event_layer::read_result;
-
-  using write_result = typename socket_event_layer::write_result;
-
   // -- constructors, destructors, and assignment operators --------------------
 
   template <class... Ts>
@@ -54,40 +50,34 @@ public:
     return none;
   }
 
-  read_result handle_read_event() override {
+  void handle_read_event() override {
     CAF_LOG_TRACE("");
     if (auto x = accept(fd_)) {
       socket_manager_ptr child = factory_.make(owner_->mpx_ptr(), *x);
       if (!child) {
         CAF_LOG_ERROR("factory failed to create a new child");
-        return read_result::abort;
+        owner_->deregister();
+        return;
       }
       if (auto err = child->init(cfg_)) {
         CAF_LOG_ERROR("failed to initialize new child:" << err);
-        return read_result::abort;
+        owner_->deregister();
+        return;
       }
-      if (limit_ == 0) {
-        return read_result::again;
-      } else {
-        return ++accepted_ < limit_ ? read_result::again : read_result::stop;
+      if (limit_ != 0 && ++accepted_ == limit_) {
+        // TODO: ask owner to close socket.
+        owner_->deregister();
+        return;
       }
     } else {
       CAF_LOG_ERROR("accept failed:" << x.error());
-      return read_result::stop;
+      owner_->deregister();
     }
   }
 
-  read_result handle_buffered_data() override {
-    return read_result::again;
-  }
-
-  read_result handle_continue_reading() override {
-    return read_result::again;
-  }
-
-  write_result handle_write_event() override {
+  void handle_write_event() override {
     CAF_LOG_ERROR("connection_acceptor received write event");
-    return write_result::stop;
+    owner_->deregister_writing();
   }
 
   void abort(const error& reason) override {

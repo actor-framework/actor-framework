@@ -80,10 +80,6 @@ public:
     return true;
   }
 
-  void continue_reading() override {
-    // nop
-  }
-
   ptrdiff_t consume(byte_span data, byte_span) override {
     MESSAGE("dummy app received " << data.size() << " bytes");
     // Store the received bytes.
@@ -193,6 +189,7 @@ SCENARIO("ssl::transport::make_client performs the client handshake") {
       THEN("CAF transparently calls SSL_connect") {
         net::multiplexer mpx{nullptr};
         mpx.set_thread_id();
+        std::ignore = mpx.init();
         auto ctx = unbox(ssl::context::make_client(ssl::tls::any));
         auto conn = unbox(ctx.new_connection(client_fd));
         auto done = std::make_shared<bool>(false);
@@ -230,6 +227,7 @@ SCENARIO("ssl::transport::make_server performs the server handshake") {
       THEN("CAF transparently calls SSL_accept") {
         net::multiplexer mpx{nullptr};
         mpx.set_thread_id();
+        std::ignore = mpx.init();
         auto ctx = unbox(ssl::context::make_server(ssl::tls::any));
         REQUIRE(ctx.use_certificate_from_file(cert_1_pem_path, //
                                               ssl::format::pem));

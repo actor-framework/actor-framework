@@ -25,10 +25,6 @@ public:
   using msg_buf = std::array<std::byte, sizeof(intptr_t) + 1>;
 
   enum class code : uint8_t {
-    register_reading,
-    continue_reading,
-    register_writing,
-    continue_writing,
     init_manager,
     discard_manager,
     shutdown_reading,
@@ -49,18 +45,15 @@ public:
 
   error init(socket_manager* owner, const settings& cfg) override;
 
-  read_result handle_read_event() override;
+  void handle_read_event() override;
 
-  read_result handle_buffered_data() override;
-
-  read_result handle_continue_reading() override;
-
-  write_result handle_write_event() override;
+  void handle_write_event() override;
 
   void abort(const error& reason) override;
 
 private:
   pipe_socket fd_;
+  socket_manager* owner_ = nullptr;
   multiplexer* mpx_ = nullptr;
   msg_buf buf_;
   size_t buf_size_ = 0;

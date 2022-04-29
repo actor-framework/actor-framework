@@ -85,6 +85,9 @@ public:
 
     /// Stores whether we left a write handler due to want_read.
     bool wanted_write_from_read_event : 1;
+
+    /// Stores whether we shutdown write on the socket after flushing.
+    bool shutting_down : 1;
   };
 
   // -- constants --------------------------------------------------------------
@@ -118,9 +121,9 @@ public:
 
   bool end_output() override;
 
-  void suspend_reading() override;
+  bool is_reading() const noexcept override;
 
-  bool stopped_reading() const noexcept override;
+  void close() override;
 
   // -- properties -------------------------------------------------------------
 
@@ -152,17 +155,23 @@ public:
 
   error init(socket_manager* owner, const settings& config) override;
 
-  read_result handle_read_event() override;
+  void handle_read_event() override;
 
-  read_result handle_buffered_data() override;
-
-  write_result handle_write_event() override;
-
-  read_result handle_continue_reading() override;
+  void handle_write_event() override;
 
   void abort(const error& reason) override;
 
 protected:
+  // -- utility functions ------------------------------------------------------
+
+  /// Consumes as much data from the buffer as possible.
+  void handle_buffered_data();
+
+  /// Calls abort on the upper layer and deregisters the transport from events.
+  void fail(const error& reason);
+
+  // -- member variables -------------------------------------------------------
+
   /// The socket file descriptor.
   stream_socket fd_;
 

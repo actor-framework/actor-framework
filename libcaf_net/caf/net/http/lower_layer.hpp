@@ -18,6 +18,12 @@ class CAF_NET_EXPORT lower_layer : public generic_lower_layer {
 public:
   virtual ~lower_layer();
 
+  /// Start or re-start reading data from the client.
+  virtual void request_messages() = 0;
+
+  /// Stops reading messages until calling `request_messages`.
+  virtual void suspend_reading() = 0;
+
   /// Sends the next header to the client.
   virtual bool
   send_header(context ctx, status code, const header_fields_map& fields)

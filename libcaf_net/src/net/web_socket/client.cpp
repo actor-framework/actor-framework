@@ -95,11 +95,6 @@ ptrdiff_t client::consume(byte_span buffer, byte_span delta) {
   }
 }
 
-void client::continue_reading() {
-  if (handshake_completed())
-    upper_layer().continue_reading();
-}
-
 bool client::prepare_send() {
   return handshake_completed() ? upper_layer().prepare_send() : true;
 }

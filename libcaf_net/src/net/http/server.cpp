@@ -14,12 +14,21 @@ bool server::can_send_more() const noexcept {
   return down_->can_send_more();
 }
 
-void server::suspend_reading() {
-  return down_->suspend_reading();
+bool server::is_reading() const noexcept {
+  return down_->is_reading();
 }
 
-bool server::stopped_reading() const noexcept {
-  return down_->stopped_reading();
+void server::close() {
+  down_->close();
+}
+
+void server::request_messages() {
+  if (!down_->is_reading())
+    down_->configure_read(receive_policy::up_to(max_request_size_));
+}
+
+void server::suspend_reading() {
+  down_->configure_read(receive_policy::stop());
 }
 
 bool server::send_header(context, status code,
@@ -69,11 +78,10 @@ void server::fin(context) {
 error server::init(socket_manager* owner, stream_oriented::lower_layer* down,
                    const settings& cfg) {
   down_ = down;
-  if (auto err = up_->init(owner, this, cfg))
-    return err;
   if (auto max_size = get_as<uint32_t>(cfg, "http.max-request-size"))
     max_request_size_ = *max_size;
-  down_->configure_read(receive_policy::up_to(max_request_size_));
+  if (auto err = up_->init(owner, this, cfg))
+    return err;
   return none;
 }
 
@@ -87,10 +95,6 @@ bool server::prepare_send() {
 
 bool server::done_sending() {
   return up_->done_sending();
-}
-
-void server::continue_reading() {
-  down_->configure_read(receive_policy::up_to(max_request_size_));
 }
 
 ptrdiff_t server::consume(byte_span input, byte_span) {

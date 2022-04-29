@@ -63,53 +63,33 @@ public:
 
   // -- implementation of socket_event_layer -----------------------------------
 
-  error init(net::socket_manager*, const settings&) override {
+  error init(net::socket_manager* mgr, const settings&) override {
+    mgr_ = mgr;
     return none;
   }
 
-  read_result handle_read_event() override {
-    // if (trigger_handover) {
-    //   MESSAGE(name << " triggered a handover");
-    //   return read_result::handover;
-    // }
+  void handle_read_event() override {
     if (read_capacity() < 1024)
       rd_buf_.resize(rd_buf_.size() + 2048);
-    auto num_bytes = read(fd_,
-                          make_span(read_position_begin(), read_capacity()));
-    if (num_bytes > 0) {
-      CAF_ASSERT(num_bytes > 0);
-      rd_buf_pos_ += num_bytes;
-      return read_result::again;
-    } else if (num_bytes < 0 && net::last_socket_error_is_temporary()) {
-      return read_result::again;
-    } else {
-      return read_result::stop;
+    auto res = read(fd_, make_span(read_position_begin(), read_capacity()));
+    if (res > 0) {
+      CAF_ASSERT(res > 0);
+      rd_buf_pos_ += res;
+    } else if (res == 0 || !net::last_socket_error_is_temporary()) {
+      mgr_->deregister();
     }
   }
 
-  read_result handle_buffered_data() override {
-    return read_result::again;
-  }
-
-  read_result handle_continue_reading() override {
-    return read_result::again;
-  }
-
-  write_result handle_write_event() override {
-    // if (trigger_handover) {
-    //   MESSAGE(name << " triggered a handover");
-    //   return write_result::handover;
-    // }
-    if (wr_buf_.size() == 0)
-      return write_result::stop;
-    auto num_bytes = write(fd_, wr_buf_);
-    if (num_bytes > 0) {
-      wr_buf_.erase(wr_buf_.begin(), wr_buf_.begin() + num_bytes);
-      return wr_buf_.size() > 0 ? write_result::again : write_result::stop;
+  void handle_write_event() override {
+    if (wr_buf_.size() == 0) {
+      mgr_->deregister_writing();
+    } else if (auto res = write(fd_, wr_buf_); res > 0) {
+      wr_buf_.erase(wr_buf_.begin(), wr_buf_.begin() + res);
+      if (wr_buf_.size() == 0)
+        mgr_->deregister_writing();
+    } else if (res == 0 || !net::last_socket_error_is_temporary()) {
+      mgr_->deregister();
     }
-    return num_bytes < 0 && net::last_socket_error_is_temporary()
-             ? write_result::again
-             : write_result::stop;
   }
 
   void abort(const error& reason) override {
@@ -130,7 +110,6 @@ private:
   size_t read_capacity() const {
     return rd_buf_.size() - rd_buf_pos_;
   }
-
   net::stream_socket fd_;
 
   shared_count count_;
@@ -140,6 +119,8 @@ private:
   byte_buffer wr_buf_;
 
   byte_buffer rd_buf_;
+
+  net::socket_manager* mgr_ = nullptr;
 };
 
 struct fixture {
@@ -168,7 +149,9 @@ struct fixture {
   make_manager(net::stream_socket fd, std::string name) {
     auto mock = mock_event_layer::make(fd, std::move(name), manager_count);
     auto mock_ptr = mock.get();
-    return {mock_ptr, net::socket_manager::make(&mpx, fd, std::move(mock))};
+    auto mgr = net::socket_manager::make(&mpx, fd, std::move(mock));
+    std::ignore = mgr->init(settings{});
+    return {mock_ptr, std::move(mgr)};
   }
 
   void init() {

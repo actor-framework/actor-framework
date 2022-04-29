@@ -5,27 +5,28 @@
 #pragma once
 
 #include "caf/async/consumer.hpp"
+#include "caf/detail/atomic_ref_counted.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/socket_manager.hpp"
-#include "caf/ref_counted.hpp"
 
 namespace caf::net {
 
 /// Connects a socket manager to an asynchronous consumer resource. Whenever new
 /// data becomes ready, the adapter registers the socket manager for writing.
 template <class Buffer>
-class consumer_adapter final : public ref_counted, public async::consumer {
+class consumer_adapter final : public detail::atomic_ref_counted,
+                               public async::consumer {
 public:
   using buf_ptr = intrusive_ptr<Buffer>;
+
+  using ptr_type = intrusive_ptr<consumer_adapter>;
 
   void on_producer_ready() override {
     // nop
   }
 
   void on_producer_wakeup() override {
-    mgr_->mpx().schedule_fn([adapter = strong_this()] { //
-      adapter->on_wakeup();
-    });
+    mgr_->schedule(do_wakeup_);
   }
 
   void ref_consumer() const noexcept override {
@@ -44,22 +45,20 @@ public:
   void cancel() {
     buf_->cancel();
     buf_ = nullptr;
+    mgr_ = nullptr;
+    do_wakeup_.dispose();
+    do_wakeup_ = nullptr;
   }
 
   bool has_data() const noexcept {
     return buf_->has_data();
   }
 
-  /// Tries to open the resource for reading.
-  /// @returns a connected adapter that reads from the resource on success,
-  ///          `nullptr` otherwise.
-  template <class Resource>
-  static intrusive_ptr<consumer_adapter>
-  try_open(socket_manager* owner, Resource src) {
-    CAF_ASSERT(owner != nullptr);
-    if (auto buf = src.try_open()) {
-      using ptr_type = intrusive_ptr<consumer_adapter>;
-      auto adapter = ptr_type{new consumer_adapter(owner, buf), false};
+  static ptr_type make(buf_ptr buf, socket_manager_ptr mgr, action do_wakeup) {
+    if (buf) {
+      auto adapter = ptr_type{new consumer_adapter(buf, mgr,
+                                                   std::move(do_wakeup)), //
+                              false};
       buf->set_consumer(adapter);
       return adapter;
     } else {
@@ -67,17 +66,11 @@ public:
     }
   }
 
-  friend void intrusive_ptr_add_ref(const consumer_adapter* ptr) noexcept {
-    ptr->ref();
-  }
-
-  friend void intrusive_ptr_release(const consumer_adapter* ptr) noexcept {
-    ptr->deref();
-  }
-
 private:
-  consumer_adapter(socket_manager* owner, buf_ptr buf)
-    : mgr_(owner), buf_(std::move(buf)) {
+  consumer_adapter(buf_ptr buf, socket_manager_ptr mgr, action do_wakeup)
+    : buf_(std::move(buf)),
+      mgr_(std::move(mgr)),
+      do_wakeup_(std::move(do_wakeup)) {
     // nop
   }
 
@@ -91,8 +84,10 @@ private:
     }
   }
 
-  intrusive_ptr<socket_manager> mgr_;
   intrusive_ptr<Buffer> buf_;
+  socket_manager_ptr mgr_;
+  action do_wakeup_;
+  action do_cancel_;
 };
 
 template <class T>

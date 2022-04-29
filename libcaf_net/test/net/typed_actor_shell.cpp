@@ -65,10 +65,6 @@ public:
     return !self->terminated();
   }
 
-  void continue_reading() override {
-    CAF_FAIL("continue_reading called");
-  }
-
   bool done_sending() override {
     return self->try_block_mailbox();
   }

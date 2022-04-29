@@ -81,8 +81,9 @@ public:
              net::stream_oriented::lower_layer* down_ptr,
              const settings&) override {
     down = down_ptr;
-    if (auto ptr = adapter_type::try_open(mgr, std::move(input))) {
-      adapter = std::move(ptr);
+    if (auto buf = input.try_open()) {
+      auto do_wakeup = make_action([this] { prepare_send(); });
+      adapter = adapter_type::make(std::move(buf), mgr, std::move(do_wakeup));
       return none;
     } else {
       FAIL("unable to open the resource");
@@ -135,10 +136,6 @@ public:
 
   bool done_sending() override {
     return done || !adapter->has_data();
-  }
-
-  void continue_reading() override {
-    CAF_FAIL("continue_reading called");
   }
 
   void abort(const error& reason) override {

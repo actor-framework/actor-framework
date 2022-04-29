@@ -81,8 +81,6 @@ public:
 
   ptrdiff_t consume(byte_span buffer, byte_span delta) override;
 
-  void continue_reading() override;
-
   bool prepare_send() override;
 
   bool done_sending() override;
@@ -95,7 +93,7 @@ public:
 
   void suspend_reading() override;
 
-  bool stopped_reading() const noexcept override;
+  bool is_reading() const noexcept override;
 
   void begin_message() override;
 
@@ -103,9 +101,7 @@ public:
 
   bool end_message() override;
 
-  void send_close_message() override;
-
-  void send_close_message(const error& reason) override;
+  void close() override;
 
   // -- utility functions ------------------------------------------------------
 

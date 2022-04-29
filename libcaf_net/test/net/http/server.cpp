@@ -51,6 +51,7 @@ public:
   error init(net::socket_manager*, net::http::lower_layer* down_ptr,
              const settings&) override {
     down = down_ptr;
+    down->request_messages();
     return none;
   }
 
@@ -75,10 +76,6 @@ public:
                         as_bytes(make_span(content)));
     payload.assign(body.begin(), body.end());
     return static_cast<ptrdiff_t>(body.size());
-  }
-
-  void continue_reading() override {
-    // nop
   }
 };
 

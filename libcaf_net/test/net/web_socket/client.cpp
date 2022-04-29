@@ -40,10 +40,6 @@ public:
     return true;
   }
 
-  void continue_reading() override {
-    // nop
-  }
-
   void abort(const error& reason) override {
     CAF_FAIL("app::abort called: " << reason);
   }

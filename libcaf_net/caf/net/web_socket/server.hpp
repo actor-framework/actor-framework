@@ -81,8 +81,6 @@ public:
 
   ptrdiff_t consume(byte_span input, byte_span) override;
 
-  void continue_reading() override;
-
   bool prepare_send() override;
 
   bool done_sending() override;

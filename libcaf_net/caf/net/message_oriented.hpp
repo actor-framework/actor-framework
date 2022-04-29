@@ -47,6 +47,9 @@ public:
   /// Pulls messages from the transport until calling `suspend_reading`.
   virtual void request_messages() = 0;
 
+  /// Stops reading messages until calling `request_messages`.
+  virtual void suspend_reading() = 0;
+
   /// Prepares the layer for an outgoing message, e.g., by allocating an
   /// output buffer as necessary.
   virtual void begin_message() = 0;
@@ -62,17 +65,6 @@ public:
   /// @note When returning `false`, clients must also call
   ///       `down.set_read_error(...)` with an appropriate error code.
   virtual bool end_message() = 0;
-
-  /// Inform the remote endpoint that no more messages will arrive.
-  /// @note Not every protocol has a dedicated close message. Some
-  ///       implementation may simply do nothing.
-  virtual void send_close_message() = 0;
-
-  /// Inform the remote endpoint that no more messages will arrive because of
-  /// an error.
-  /// @note Not every protocol has a dedicated close message. Some
-  ///       implementation may simply do nothing.
-  virtual void send_close_message(const error& reason) = 0;
 };
 
 } // namespace caf::net::message_oriented

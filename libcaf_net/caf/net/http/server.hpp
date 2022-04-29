@@ -80,9 +80,13 @@ public:
 
   bool can_send_more() const noexcept override;
 
-  void suspend_reading() override;
+  bool is_reading() const noexcept override;
 
-  bool stopped_reading() const noexcept override;
+  void close() override;
+
+  void request_messages() override;
+
+  void suspend_reading() override;
 
   bool send_header(context, status code,
                    const header_fields_map& fields) override;
@@ -105,8 +109,6 @@ public:
   bool prepare_send() override;
 
   bool done_sending() override;
-
-  void continue_reading() override;
 
   ptrdiff_t consume(byte_span input, byte_span) override;
 

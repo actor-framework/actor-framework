@@ -75,16 +75,17 @@ public:
              const settings&) override {
     down = down_ptr;
     down->request_messages();
-    if (auto ptr = adapter_type::try_open(mgr, std::move(output_))) {
-      adapter_ = std::move(ptr);
+    if (auto buf = output_.try_open()) {
+      // Note: the execution unit is the owner of this object. As as long as the
+      // execution unit lives, accessing `this` is safe.
+      auto do_resume = make_action([this] { down->request_messages(); });
+      auto do_cancel = make_action([this] { down->close(); });
+      adapter_ = adapter_type::make(std::move(buf), mgr, std::move(do_resume),
+                                    std::move(do_cancel));
       return none;
     } else {
       FAIL("unable to open the resource");
     }
-  }
-
-  void continue_reading() override {
-    down->request_messages();
   }
 
   bool prepare_send() override {

@@ -36,7 +36,7 @@ void length_prefix_framing::abort(const error& reason) {
 }
 
 ptrdiff_t length_prefix_framing::consume(byte_span input, byte_span) {
-  CAF_LOG_TRACE("got" << input.size() << "bytes");
+  CAF_LOG_TRACE("got" << input.size() << "bytes\n");
   if (input.size() < sizeof(uint32_t)) {
     CAF_LOG_ERROR("received too few bytes from underlying transport");
     up_->abort(make_error(sec::logic_error,
@@ -65,7 +65,7 @@ ptrdiff_t length_prefix_framing::consume(byte_span input, byte_span) {
     if (msg_size == msg.size() && msg_size + hdr_size == input.size()) {
       CAF_LOG_DEBUG("got message of size" << msg_size);
       if (up_->consume(msg) >= 0) {
-        if (!down_->stopped_reading())
+        if (down_->is_reading())
           down_->configure_read(receive_policy::exactly(hdr_size));
         return static_cast<ptrdiff_t>(input.size());
       } else {
@@ -77,10 +77,6 @@ ptrdiff_t length_prefix_framing::consume(byte_span input, byte_span) {
       return -1;
     }
   }
-}
-
-void length_prefix_framing::continue_reading() {
-  up_->continue_reading();
 }
 
 bool length_prefix_framing::prepare_send() {
@@ -98,15 +94,15 @@ bool length_prefix_framing::can_send_more() const noexcept {
 }
 
 void length_prefix_framing::suspend_reading() {
-  down_->suspend_reading();
+  down_->configure_read(receive_policy::stop());
 }
 
-bool length_prefix_framing::stopped_reading() const noexcept {
-  return down_->stopped_reading();
+bool length_prefix_framing::is_reading() const noexcept {
+  return down_->is_reading();
 }
 
 void length_prefix_framing::request_messages() {
-  if (down_->stopped_reading())
+  if (!down_->is_reading())
     down_->configure_read(receive_policy::exactly(hdr_size));
 }
 
@@ -139,12 +135,8 @@ bool length_prefix_framing::end_message() {
   }
 }
 
-void length_prefix_framing::send_close_message() {
-  // nop: this layer has no close message
-}
-
-void length_prefix_framing::send_close_message(const error&) {
-  // nop: this layer has no close message
+void length_prefix_framing::close() {
+  down_->close();
 }
 
 // -- utility functions ------------------------------------------------------

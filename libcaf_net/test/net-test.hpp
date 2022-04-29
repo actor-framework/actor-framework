@@ -32,7 +32,9 @@ public:
 
   bool can_send_more() const noexcept override;
 
-  void suspend_reading() override;
+  bool is_reading() const noexcept override;
+
+  void close() override;
 
   void configure_read(caf::net::receive_policy policy) override;
 
@@ -41,8 +43,6 @@ public:
   caf::byte_buffer& output_buffer() override;
 
   bool end_output() override;
-
-  bool stopped_reading() const noexcept override;
 
   // -- initialization ---------------------------------------------------------
 
