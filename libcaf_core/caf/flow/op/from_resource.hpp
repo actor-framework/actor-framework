@@ -31,13 +31,13 @@ public:
 
   from_resource_sub(coordinator* ctx, buffer_ptr buf, observer<value_type> out)
     : ctx_(ctx), buf_(buf), out_(std::move(out)) {
-    ctx_->ref_coordinator();
+    ctx_->ref_execution_context();
   }
 
   ~from_resource_sub() {
     if (buf_)
       buf_->cancel();
-    ctx_->deref_coordinator();
+    ctx_->deref_execution_context();
   }
 
   // -- implementation of subscription_impl ------------------------------------
@@ -157,9 +157,9 @@ private:
     return {this};
   }
 
-  /// Stores the context (coordinator) that runs this flow. Unlike other
-  /// observables, we need a strong reference to the context because otherwise
-  /// the buffer might call schedule_fn on a destroyed object.
+  /// Stores the @ref coordinator that runs this flow. Unlike other observables,
+  /// we need a strong reference to the coordinator because otherwise the buffer
+  /// might call `schedule_fn` on a destroyed object.
   intrusive_ptr<coordinator> ctx_;
 
   /// Stores a pointer to the asynchronous input buffer.

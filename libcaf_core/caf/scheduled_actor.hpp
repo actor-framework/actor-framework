@@ -427,9 +427,9 @@ public:
 
   steady_time_point steady_time() override;
 
-  void ref_coordinator() const noexcept override;
+  void ref_execution_context() const noexcept override;
 
-  void deref_coordinator() const noexcept override;
+  void deref_execution_context() const noexcept override;
 
   void schedule(action what) override;
 

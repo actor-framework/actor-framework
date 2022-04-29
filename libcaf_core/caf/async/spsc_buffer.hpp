@@ -398,7 +398,7 @@ public:
   }
 
   template <class Coordinator>
-  auto observe_on(Coordinator* ctx) {
+  auto observe_on(Coordinator* ctx) const {
     return ctx->make_observable().from_resource(*this);
   }
 
