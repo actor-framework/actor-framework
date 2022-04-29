@@ -74,16 +74,6 @@ private:
     // nop
   }
 
-  auto strong_this() {
-    return intrusive_ptr{this};
-  }
-
-  void on_wakeup() {
-    if (buf_ && buf_->has_consumer_event()) {
-      mgr_->mpx().register_writing(mgr_);
-    }
-  }
-
   intrusive_ptr<Buffer> buf_;
   socket_manager_ptr mgr_;
   action do_wakeup_;
