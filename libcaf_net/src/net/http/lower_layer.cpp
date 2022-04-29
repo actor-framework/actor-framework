@@ -4,7 +4,6 @@
 
 #include "caf/net/http/lower_layer.hpp"
 
-#include "caf/net/http/context.hpp"
 #include "caf/net/http/header_fields_map.hpp"
 #include "caf/net/http/status.hpp"
 
@@ -19,14 +18,18 @@ lower_layer::~lower_layer() {
   // nop
 }
 
-bool lower_layer::send_response(context ctx, status code,
-                                std::string_view content_type,
+bool lower_layer::send_response(status code, std::string_view content_type,
                                 const_byte_span content) {
   auto content_size = std::to_string(content.size());
   header_fields_map fields;
   fields.emplace("Content-Type"sv, content_type);
   fields.emplace("Content-Length"sv, content_size);
-  return send_header(ctx, code, fields) && send_payload(ctx, content);
+  return send_header(code, fields) && send_payload(content);
+}
+
+bool lower_layer::send_response(status code, std::string_view content_type,
+                                std::string_view content) {
+  return send_response(code, content_type, as_bytes(make_span(content)));
 }
 
 } // namespace caf::net::http

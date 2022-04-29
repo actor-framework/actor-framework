@@ -25,27 +25,26 @@ public:
   virtual void suspend_reading() = 0;
 
   /// Sends the next header to the client.
-  virtual bool
-  send_header(context ctx, status code, const header_fields_map& fields)
-    = 0;
+  virtual bool send_header(status code, const header_fields_map& fields) = 0;
 
   /// Sends the payload after the header.
-  virtual bool send_payload(context, const_byte_span bytes) = 0;
+  virtual bool send_payload(const_byte_span bytes) = 0;
 
   /// Sends a chunk of data if the full payload is unknown when starting to
   /// send.
-  virtual bool send_chunk(context, const_byte_span bytes) = 0;
+  virtual bool send_chunk(const_byte_span bytes) = 0;
 
   /// Sends the last chunk, completing a chunked payload.
   virtual bool send_end_of_chunks() = 0;
 
-  /// Terminates an HTTP context.
-  virtual void fin(context) = 0;
-
   /// Convenience function for sending header and payload. Automatically sets
   /// the header fields `Content-Type` and `Content-Length`.
-  bool send_response(context ctx, status codek, std::string_view content_type,
+  bool send_response(status code, std::string_view content_type,
                      const_byte_span content);
+
+  /// @copydoc send_response
+  bool send_response(status code, std::string_view content_type,
+                     std::string_view content);
 };
 
 } // namespace caf::net::http

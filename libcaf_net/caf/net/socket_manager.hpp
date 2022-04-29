@@ -74,6 +74,10 @@ public:
     return make_actor_shell<Handle>(std::move(f));
   }
 
+  /// Returns a thread-safe disposer for stopping the socket manager from an
+  /// outside context.
+  disposable make_disposer();
+
   // -- properties -------------------------------------------------------------
 
   /// Returns the handle for the managed socket.

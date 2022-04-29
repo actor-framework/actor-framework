@@ -51,6 +51,7 @@ caf_add_component(
     src/net/network_socket.cpp
     src/net/pipe_socket.cpp
     src/net/pollset_updater.cpp
+    src/net/prometheus/server.cpp
     src/net/socket.cpp
     src/net/socket_event_layer.cpp
     src/net/socket_manager.cpp
@@ -94,6 +95,7 @@ caf_add_component(
     net.operation
     net.pipe_socket
     net.producer_adapter
+    net.prometheus.server
     net.socket
     net.socket_guard
     net.ssl.transport

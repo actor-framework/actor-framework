@@ -67,12 +67,11 @@ public:
     return true;
   }
 
-  ptrdiff_t consume(net::http::context ctx,
-                    const net::http::header& request_hdr,
+  ptrdiff_t consume(const net::http::header& request_hdr,
                     const_byte_span body) override {
     hdr = request_hdr;
     auto content = "Hello world!"sv;
-    down->send_response(ctx, net::http::status::ok, "text/plain",
+    down->send_response(net::http::status::ok, "text/plain",
                         as_bytes(make_span(content)));
     payload.assign(body.begin(), body.end());
     return static_cast<ptrdiff_t>(body.size());

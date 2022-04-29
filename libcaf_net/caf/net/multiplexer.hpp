@@ -89,9 +89,9 @@ public:
 
   // -- thread-safe signaling --------------------------------------------------
 
-  /// Schedules a call to `mgr->handle_error(sec::discarded)`.
+  /// Schedules a call to `mgr->handle_error(sec::disposed)`.
   /// @thread-safe
-  void discard(const socket_manager_ptr& mgr);
+  void dispose(const socket_manager_ptr& mgr);
 
   /// Stops further reading by `mgr`.
   /// @thread-safe
@@ -224,7 +224,7 @@ private:
 
   void do_register_reading(const socket_manager_ptr& mgr);
 
-  void do_discard(const socket_manager_ptr& mgr);
+  void do_dispose(const socket_manager_ptr& mgr);
 
   void do_shutdown_reading(const socket_manager_ptr& mgr);
 

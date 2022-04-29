@@ -10,7 +10,6 @@
 #include "caf/logger.hpp"
 #include "caf/net/connection_acceptor.hpp"
 #include "caf/net/fwd.hpp"
-#include "caf/net/http/context.hpp"
 #include "caf/net/http/header.hpp"
 #include "caf/net/http/header_fields_map.hpp"
 #include "caf/net/http/lower_layer.hpp"
@@ -38,8 +37,6 @@ public:
   using header_fields_type = header_fields_map;
 
   using status_code_type = status;
-
-  using context_type = context;
 
   using header_type = header;
 
@@ -88,16 +85,13 @@ public:
 
   void suspend_reading() override;
 
-  bool send_header(context, status code,
-                   const header_fields_map& fields) override;
+  bool send_header(status code, const header_fields_map& fields) override;
 
-  bool send_payload(context, const_byte_span bytes) override;
+  bool send_payload(const_byte_span bytes) override;
 
-  bool send_chunk(context, const_byte_span bytes) override;
+  bool send_chunk(const_byte_span bytes) override;
 
   bool send_end_of_chunks() override;
-
-  void fin(context) override;
 
   // -- stream_oriented::upper_layer implementation ----------------------------
 

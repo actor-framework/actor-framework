@@ -167,12 +167,12 @@ operation multiplexer::mask_of(const socket_manager_ptr& mgr) {
 
 // -- thread-safe signaling ----------------------------------------------------
 
-void multiplexer::discard(const socket_manager_ptr& mgr) {
+void multiplexer::dispose(const socket_manager_ptr& mgr) {
   CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
   if (std::this_thread::get_id() == tid_) {
-    do_discard(mgr);
+    do_dispose(mgr);
   } else {
-    write_to_pipe(pollset_updater::code::discard_manager, mgr.get());
+    write_to_pipe(pollset_updater::code::dispose_manager, mgr.get());
   }
 }
 
@@ -471,7 +471,7 @@ void multiplexer::do_shutdown() {
   apply_updates();
 }
 
-void multiplexer::do_discard(const socket_manager_ptr& mgr) {
+void multiplexer::do_dispose(const socket_manager_ptr& mgr) {
   CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
   mgr->handle_error(sec::disposed);
   update_for(mgr.get()).events = 0;

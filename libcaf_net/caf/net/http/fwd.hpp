@@ -10,7 +10,6 @@
 
 namespace caf::net::http {
 
-class context;
 class header;
 class lower_layer;
 class server;

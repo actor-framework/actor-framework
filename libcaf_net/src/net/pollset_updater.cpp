@@ -60,8 +60,8 @@ void pollset_updater::handle_read_event() {
           case code::init_manager:
             mpx_->do_init(as_mgr(ptr));
             break;
-          case code::discard_manager:
-            mpx_->do_discard(as_mgr(ptr));
+          case code::dispose_manager:
+            mpx_->do_dispose(as_mgr(ptr));
             break;
           case code::shutdown_reading:
             mpx_->do_shutdown_reading(as_mgr(ptr));

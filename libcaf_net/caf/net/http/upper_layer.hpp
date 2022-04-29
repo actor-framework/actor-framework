@@ -28,18 +28,12 @@ public:
     = 0;
 
   /// Consumes an HTTP message.
-  /// @param ctx Identifies this request. The response message must pass this
-  ///            back to the lower layer. Allows clients to send multiple
-  ///            requests in "parallel" (i.e., send multiple requests before
-  ///            receiving the response on the first one).
   /// @param hdr The header fields for the received message.
   /// @param payload The payload of the received message.
   /// @returns The number of consumed bytes or a negative value to signal an
   ///          error.
   /// @note Discarded data is lost permanently.
-  virtual ptrdiff_t
-  consume(context ctx, const header& hdr, const_byte_span payload)
-    = 0;
+  virtual ptrdiff_t consume(const header& hdr, const_byte_span payload) = 0;
 };
 
 } // namespace caf::net::http

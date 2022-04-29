@@ -33,6 +33,49 @@ socket_manager_ptr socket_manager::make(multiplexer* mpx, socket handle,
   return make_counted<socket_manager>(mpx, handle, std::move(handler));
 }
 
+namespace {
+
+class disposer : public detail::atomic_ref_counted, public disposable_impl {
+public:
+  disposer(multiplexer* mpx, socket_manager_ptr mgr)
+    : mpx_(mpx), mgr_(std::move(mgr)) {
+    // nop
+  }
+
+  void dispose() {
+    std::unique_lock guard{mtx_};
+    if (mpx_) {
+      mpx_->dispose(mgr_);
+      mpx_ = nullptr;
+      mgr_ = nullptr;
+    }
+  }
+
+  bool disposed() const noexcept {
+    std::unique_lock guard{mtx_};
+    return mpx_ == nullptr;
+  }
+
+  void ref_disposable() const noexcept {
+    ref();
+  }
+
+  void deref_disposable() const noexcept {
+    deref();
+  }
+
+private:
+  mutable std::mutex mtx_;
+  multiplexer* mpx_;
+  socket_manager_ptr mgr_;
+};
+
+} // namespace
+
+disposable socket_manager::make_disposer() {
+  return disposable{make_counted<disposer>(mpx_, this)};
+}
+
 // -- properties ---------------------------------------------------------------
 
 actor_system& socket_manager::system() noexcept {

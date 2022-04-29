@@ -26,7 +26,7 @@ public:
 
   enum class code : uint8_t {
     init_manager,
-    discard_manager,
+    dispose_manager,
     shutdown_reading,
     shutdown_writing,
     run_action,

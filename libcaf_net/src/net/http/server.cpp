@@ -31,15 +31,14 @@ void server::suspend_reading() {
   down_->configure_read(receive_policy::stop());
 }
 
-bool server::send_header(context, status code,
-                         const header_fields_map& fields) {
+bool server::send_header(status code, const header_fields_map& fields) {
   down_->begin_output();
   v1::write_header(code, fields, down_->output_buffer());
   down_->end_output();
   return true;
 }
 
-bool server::send_payload(context, const_byte_span bytes) {
+bool server::send_payload(const_byte_span bytes) {
   down_->begin_output();
   auto& buf = down_->output_buffer();
   buf.insert(buf.end(), bytes.begin(), bytes.end());
@@ -47,7 +46,7 @@ bool server::send_payload(context, const_byte_span bytes) {
   return true;
 }
 
-bool server::send_chunk(context, const_byte_span bytes) {
+bool server::send_chunk(const_byte_span bytes) {
   down_->begin_output();
   auto& buf = down_->output_buffer();
   auto size = bytes.size();
@@ -67,10 +66,6 @@ bool server::send_end_of_chunks() {
   auto& buf = down_->output_buffer();
   buf.insert(buf.end(), bytes.begin(), bytes.end());
   return down_->end_output();
-}
-
-void server::fin(context) {
-  // nop
 }
 
 // -- stream_oriented::upper_layer implementation ------------------------------
@@ -178,7 +173,7 @@ void server::write_response(status code, std::string_view content) {
 }
 
 bool server::invoke_upper_layer(const_byte_span payload) {
-  return up_->consume(context{}, hdr_, payload) >= 0;
+  return up_->consume(hdr_, payload) >= 0;
 }
 
 bool server::handle_header(std::string_view http) {
