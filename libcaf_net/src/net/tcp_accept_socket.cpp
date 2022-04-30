@@ -121,6 +121,14 @@ make_tcp_accept_socket(const uri::authority_type& node, bool reuse_addr) {
                     to_string(node));
 }
 
+expected<tcp_accept_socket>
+make_tcp_accept_socket(uint16_t port, std::string addr, bool reuse_addr) {
+  uri::authority_type auth;
+  auth.port = port;
+  auth.host = std::move(addr);
+  return make_tcp_accept_socket(auth, reuse_addr);
+}
+
 expected<tcp_stream_socket> accept(tcp_accept_socket x) {
   auto sock = ::accept(x.id, nullptr, nullptr);
   if (sock == net::invalid_socket_id) {

@@ -421,14 +421,17 @@ strong_actor_ptr middleman::remote_lookup(std::string name,
 
 void middleman::start() {
   CAF_LOG_TRACE("");
-  // Launch background tasks.
-  if (auto prom = get_if<config_value::dictionary>(
-        &system().config(), "caf.middleman.prometheus-http")) {
-    auto ptr = std::make_unique<prometheus_scraping>(system());
-    if (auto port = ptr->start(*prom)) {
-      CAF_ASSERT(*port != 0);
-      prometheus_scraping_port_ = *port;
-      background_tasks_.emplace_back(std::move(ptr));
+  // Launch background tasks unless caf-net is also available. In that case, the
+  // net::middleman takes care of these.
+  if (!system().has_network_manager()) {
+    if (auto prom = get_if<config_value::dictionary>(
+          &system().config(), "caf.middleman.prometheus-http")) {
+      auto ptr = std::make_unique<prometheus_scraping>(system());
+      if (auto port = ptr->start(*prom)) {
+        CAF_ASSERT(*port != 0);
+        prometheus_scraping_port_ = *port;
+        background_tasks_.emplace_back(std::move(ptr));
+      }
     }
   }
   // Launch backend.

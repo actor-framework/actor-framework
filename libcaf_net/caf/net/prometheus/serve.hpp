@@ -8,6 +8,7 @@
 #include "caf/fwd.hpp"
 #include "caf/net/http/server.hpp"
 #include "caf/net/prometheus/server.hpp"
+#include "caf/net/stream_transport.hpp"
 
 namespace caf::detail {
 
