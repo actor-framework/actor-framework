@@ -74,8 +74,10 @@ int exec_main(F fun, int argc, char** argv) {
                 "second parameter of main function must take a subtype of "
                 "actor_system_config as const reference");
   using helper = exec_main_helper<typename trait::arg_types>;
-  // Pass CLI options to config.
   typename helper::config cfg;
+  // Load modules.
+  (exec_main_load_module<Ts>(cfg), ...);
+  // Pass CLI options to config.
   if (auto err = cfg.parse(argc, argv)) {
     std::cerr << "error while parsing CLI and file options: " << to_string(err)
               << std::endl;
@@ -84,8 +86,6 @@ int exec_main(F fun, int argc, char** argv) {
   // Return immediately if a help text was printed.
   if (cfg.cli_helptext_printed)
     return EXIT_SUCCESS;
-  // Load modules.
-  (exec_main_load_module<Ts>(cfg), ...);
   // Initialize the actor system.
   actor_system system{cfg};
   if (cfg.slave_mode) {
