@@ -15,6 +15,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   the closing parenthesis.
 - The JSON reader now automatically widens integers to doubles as necessary.
 - Module options (e.g. for the `middleman`) now show up in `--long-help` output.
+- Fix undefined behavior in the Qt group chat example (#1336).
 
 ### Changed
 
