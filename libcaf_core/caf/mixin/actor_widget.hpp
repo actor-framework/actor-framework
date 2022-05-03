@@ -36,7 +36,7 @@ public:
 
   ~actor_widget() {
     if (companion_)
-      self()->cleanup(error{}, &dummy_);
+      self()->cleanup(error{}, self()->system().dummy_execution_unit());
   }
 
   void init(actor_system& system) {
