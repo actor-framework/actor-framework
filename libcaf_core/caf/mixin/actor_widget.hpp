@@ -36,11 +36,12 @@ public:
 
   ~actor_widget() {
     if (companion_)
-      self()->cleanup(error{}, &dummy_);
+      self()->cleanup(error{}, &execution_unit_);
   }
 
   void init(actor_system& system) {
     alive_ = true;
+    execution_unit_.system_ptr(&system);
     companion_ = actor_cast<strong_actor_ptr>(system.spawn<actor_companion>());
     self()->on_enqueue([=](mailbox_element_ptr ptr) {
       qApp->postEvent(this, new event_type(std::move(ptr)));
@@ -66,7 +67,7 @@ public:
     if (event->type() == static_cast<QEvent::Type>(EventId)) {
       auto ptr = dynamic_cast<event_type*>(event);
       if (ptr && alive_) {
-        switch (self()->activate(&dummy_, *(ptr->mptr))) {
+        switch (self()->activate(&execution_unit_, *(ptr->mptr))) {
           default:
             break;
         };
@@ -89,7 +90,7 @@ public:
   }
 
 private:
-  scoped_execution_unit dummy_;
+  scoped_execution_unit execution_unit_;
   strong_actor_ptr companion_;
   bool alive_;
 };
