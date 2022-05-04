@@ -203,12 +203,13 @@ public:
 
   bool value(span<std::byte> x) override;
 
+  /// @private
+  std::string current_field_name();
+
 private:
   [[nodiscard]] position pos() const noexcept;
 
   void append_current_field_name(std::string& str);
-
-  std::string current_field_name();
 
   std::string mandatory_field_missing_str(std::string_view name);
 
