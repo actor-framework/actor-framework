@@ -29,6 +29,7 @@
 #include "caf/timestamp.hpp"
 #include "caf/unit.hpp"
 #include "caf/uri.hpp"
+#include "caf/uuid.hpp"
 
 namespace caf::core {
 
