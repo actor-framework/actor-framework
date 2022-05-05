@@ -20,6 +20,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 ### Changed
 
 - Remote spawning of actors is no longer considered experimental.
+- The output of `--dump-config` now prints valid config file syntax.
 
 ### Deprecated
 
