@@ -47,7 +47,7 @@ public:
           g(static_cast<const error&>(std::get<error>(cp->value)));
       }
     };
-    auto cb_action = make_action(std::move(cb));
+    auto cb_action = make_single_shot_action(std::move(cb));
     auto event = typename cell_type::event{ctx_, cb_action};
     bool fire_immediately = false;
     { // Critical section.
@@ -113,6 +113,16 @@ public:
   /// @pre `valid()`
   bound_future<T> bind_to(execution_context* ctx) const& {
     return {ctx, cell_};
+  }
+
+  /// Queries whether the result of the asynchronous computation is still
+  /// pending, i.e., neither `set_value` nor `set_error` has been called on the
+  /// @ref promise.
+  /// @pre `valid()`
+  bool pending() const {
+    CAF_ASSERT(valid());
+    std::unique_lock guard{cell_->mtx};
+    return std::holds_alternative<none_t>(cell_->value);
   }
 
 private:

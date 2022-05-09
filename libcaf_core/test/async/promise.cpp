@@ -8,6 +8,7 @@
 
 #include "core-test.hpp"
 
+#include "caf/flow/scoped_coordinator.hpp"
 #include "caf/scheduled_actor/flow.hpp"
 
 using namespace caf;
@@ -66,6 +67,57 @@ SCENARIO("actors can observe futures") {
         uut.set_value("hello world"s);
         run();
         CHECK(std::holds_alternative<none_t>(*val));
+      }
+    }
+  }
+}
+
+SCENARIO("never setting a value or an error breaks the promises") {
+  GIVEN("multiple promises that point to the same cell") {
+    WHEN("the last promise goes out of scope") {
+      THEN("the future reports a broken promise") {
+        using promise_t = async::promise<int32_t>;
+        using future_t = async::future<int32_t>;
+        future_t fut;
+        {
+          auto uut = promise_t{};
+          fut = uut.get_future();
+          CHECK(fut.pending());
+          {
+            // copy ctor
+            promise_t cpy{uut};
+            CHECK(fut.pending());
+            // move ctor
+            promise_t mv{std::move(cpy)};
+            CHECK(fut.pending());
+            {
+              // copy assign
+              promise_t cpy2;
+              cpy2 = mv;
+              CHECK(fut.pending());
+              // move assign
+              promise_t mv2;
+              mv2 = std::move(mv);
+              CHECK(fut.pending());
+            }
+            CHECK(fut.pending());
+          }
+          CHECK(fut.pending());
+        }
+        CHECK(!fut.pending());
+        auto ctx = flow::scoped_coordinator::make();
+        size_t observed_events = 0;
+        fut.bind_to(ctx.get()).then(
+          [&observed_events](int32_t) {
+            ++observed_events;
+            FAIL("unexpected value");
+          },
+          [&observed_events](const error& err) {
+            ++observed_events;
+            CHECK_EQ(err, make_error(sec::broken_promise));
+          });
+        ctx->run();
+        CHECK_EQ(observed_events, 1u);
       }
     }
   }

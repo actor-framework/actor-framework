@@ -121,7 +121,7 @@ private:
 } // namespace caf
 namespace caf::detail {
 
-template <class F>
+template <class F, bool IsSingleShot>
 struct default_action_impl : detail::atomic_ref_counted, action::impl {
   std::atomic<action::state> state_;
   F f_;
@@ -149,6 +149,8 @@ struct default_action_impl : detail::atomic_ref_counted, action::impl {
     // to implement time-based loops.
     if (state_.load() == action::state::scheduled) {
       f_();
+      if constexpr (IsSingleShot)
+        state_ = action::state::disposed;
     }
   }
 
@@ -177,7 +179,15 @@ namespace caf {
 /// @param f The body for the action.
 template <class F>
 action make_action(F f) {
-  using impl_t = detail::default_action_impl<F>;
+  using impl_t = detail::default_action_impl<F, false>;
+  return action{make_counted<impl_t>(std::move(f))};
+}
+
+/// Convenience function for creating an @ref action from a function object.
+/// @param f The body for the action.
+template <class F>
+action make_single_shot_action(F f) {
+  using impl_t = detail::default_action_impl<F, true>;
   return action{make_counted<impl_t>(std::move(f))};
 }
 

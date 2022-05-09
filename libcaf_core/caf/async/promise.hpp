@@ -19,16 +19,25 @@ template <class T>
 class promise {
 public:
   promise(promise&&) noexcept = default;
-  promise(const promise&) noexcept = default;
+
   promise& operator=(promise&&) noexcept = default;
-  promise& operator=(const promise&) noexcept = default;
+
+  promise(const promise& other) noexcept : promise(other.cell_) {
+    // nop
+  }
+
+  promise& operator=(const promise& other) noexcept {
+    promise copy{other};
+    cell_.swap(copy.cell_);
+    return *this;
+  }
 
   promise() : cell_(std::make_shared<cell_type>()) {
     // nop
   }
 
   ~promise() {
-    if (cell_) {
+    if (valid()) {
       auto& cnt = cell_->promises;
       if (cnt == 1 || cnt.fetch_sub(1, std::memory_order_acq_rel) == 1) {
         typename cell_type::event_list events;
@@ -59,7 +68,7 @@ public:
 
   /// @pre `valid()`
   void set_value(T value) {
-    if (cell_) {
+    if (valid()) {
       do_set(value);
       cell_ = nullptr;
     }
@@ -67,7 +76,7 @@ public:
 
   /// @pre `valid()`
   void set_error(error reason) {
-    if (cell_) {
+    if (valid()) {
       do_set(reason);
       cell_ = nullptr;
     }
@@ -82,7 +91,7 @@ private:
   using cell_type = detail::async_cell<T>;
   using cell_ptr = std::shared_ptr<cell_type>;
 
-  explicit promise(cell_type cell) : cell_(std::move(cell)) {
+  explicit promise(cell_ptr cell) noexcept : cell_(std::move(cell)) {
     CAF_ASSERT(cell_ != nullptr);
     cell_->promises.fetch_add(1, std::memory_order_relaxed);
   }
