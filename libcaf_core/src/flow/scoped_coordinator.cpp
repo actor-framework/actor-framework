@@ -28,11 +28,11 @@ void scoped_coordinator::run() {
 
 // -- reference counting -------------------------------------------------------
 
-void scoped_coordinator::ref_coordinator() const noexcept {
+void scoped_coordinator::ref_execution_context() const noexcept {
   ref();
 }
 
-void scoped_coordinator::deref_coordinator() const noexcept {
+void scoped_coordinator::deref_execution_context() const noexcept {
   deref();
 }
 

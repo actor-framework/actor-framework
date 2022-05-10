@@ -86,6 +86,7 @@ caf_add_component(
     src/actor_system_config.cpp
     src/async/batch.cpp
     src/async/consumer.cpp
+    src/async/execution_context.cpp
     src/async/producer.cpp
     src/attachable.cpp
     src/behavior.cpp
@@ -223,6 +224,7 @@ caf_add_component(
     actor_system_config
     actor_termination
     aout
+    async.promise
     async.spsc_buffer
     behavior
     binary_deserializer

@@ -385,11 +385,11 @@ flow::coordinator::steady_time_point scheduled_actor::steady_time() {
   return clock().now();
 }
 
-void scheduled_actor::ref_coordinator() const noexcept {
+void scheduled_actor::ref_execution_context() const noexcept {
   intrusive_ptr_add_ref(ctrl());
 }
 
-void scheduled_actor::deref_coordinator() const noexcept {
+void scheduled_actor::deref_execution_context() const noexcept {
   intrusive_ptr_release(ctrl());
 }
 

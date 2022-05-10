@@ -25,6 +25,12 @@ class consumer_resource;
 template <class T>
 class producer_resource;
 
+template <class T>
+class promise;
+
+template <class T>
+class future;
+
 // -- free function templates --------------------------------------------------
 
 template <class T>
