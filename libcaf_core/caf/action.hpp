@@ -144,13 +144,12 @@ struct default_action_impl : detail::atomic_ref_counted, action::impl {
   }
 
   void run() override {
-    // Note: we do *not* set the state to disposed after running the function
-    // object. This allows the action to re-register itself when needed, e.g.,
-    // to implement time-based loops.
     if (state_.load() == action::state::scheduled) {
       f_();
       if constexpr (IsSingleShot)
         state_ = action::state::disposed;
+      // else: allow the action to re-register itself when needed by *not*
+      //       setting the state to disposed, e.g., to implement time loops.
     }
   }
 
