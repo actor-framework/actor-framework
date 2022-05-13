@@ -136,8 +136,9 @@ public:
   gauge_instance(std::string_view prefix, std::string_view name,
                  span_t<label_view> labels, std::string_view helptext,
                  std::string_view unit = "1", bool is_sum = false) {
-    auto fptr = gauge_family<ValueType>(prefix, name, labels, helptext, unit,
-                                        is_sum);
+    auto label_names = get_label_names(labels);
+    auto fptr = gauge_family<ValueType>(prefix, name, label_names, helptext,
+                                        unit, is_sum);
     return fptr->get_or_add(labels);
   }
 
@@ -228,27 +229,6 @@ public:
                                      is_sum);
   }
 
-  /// @copydoc counter_family
-  template <class ValueType = int64_t>
-  metric_family_impl<counter<ValueType>>*
-  counter_family(std::string_view prefix, std::string_view name,
-                 span_t<label_view> labels, std::string_view helptext,
-                 std::string_view unit = "1", bool is_sum = false) {
-    using counter_type = counter<ValueType>;
-    using family_type = metric_family_impl<counter_type>;
-    std::unique_lock<std::mutex> guard{families_mx_};
-    if (auto ptr = fetch(prefix, name)) {
-      assert_properties(ptr, counter_type::runtime_type, labels, unit, is_sum);
-      return static_cast<family_type*>(ptr);
-    }
-    auto ptr = std::make_unique<family_type>(
-      std::string{prefix}, std::string{name}, to_sorted_vec(labels),
-      std::string{helptext}, std::string{unit}, is_sum);
-    auto result = ptr.get();
-    families_.emplace_back(std::move(ptr));
-    return result;
-  }
-
   /// Returns a counter. Creates all objects lazily if necessary, but fails
   /// if the full name already belongs to a different family.
   /// @param prefix The prefix (namespace) this family belongs to. Usually the
@@ -269,8 +249,9 @@ public:
   counter_instance(std::string_view prefix, std::string_view name,
                    span_t<label_view> labels, std::string_view helptext,
                    std::string_view unit = "1", bool is_sum = false) {
-    auto fptr = counter_family<ValueType>(prefix, name, labels, helptext, unit,
-                                          is_sum);
+    auto label_names = get_label_names(labels);
+    auto fptr = counter_family<ValueType>(prefix, name, label_names, helptext,
+                                          unit, is_sum);
     return fptr->get_or_add(labels);
   }
 
@@ -419,8 +400,10 @@ public:
                      span_t<label_view> labels, span_t<ValueType> upper_bounds,
                      std::string_view helptext, std::string_view unit = "1",
                      bool is_sum = false) {
-    auto fptr = histogram_family<ValueType>(prefix, name, labels, upper_bounds,
-                                            helptext, unit, is_sum);
+    auto label_names = get_label_names(labels);
+    auto fptr = histogram_family<ValueType>(prefix, name, label_names,
+                                            upper_bounds, helptext, unit,
+                                            is_sum);
     return fptr->get_or_add(labels);
   }
 
@@ -432,8 +415,8 @@ public:
                      span_t<ValueType> upper_bounds, std::string_view helptext,
                      std::string_view unit = "1", bool is_sum = false) {
     span_t<label_view> lbls{labels.begin(), labels.size()};
-    return histogram_instance(prefix, name, lbls, upper_bounds, helptext, unit,
-                              is_sum);
+    return histogram_instance<ValueType>(prefix, name, lbls, upper_bounds,
+                                         helptext, unit, is_sum);
   }
 
   /// Returns a histogram metric singleton, i.e., the single instance of a
@@ -488,6 +471,8 @@ private:
   /// @pre `families_mx_` is locked.
   metric_family* fetch(const std::string_view& prefix,
                        const std::string_view& name);
+
+  static std::vector<std::string_view> get_label_names(span_t<label_view> xs);
 
   static std::vector<std::string> to_sorted_vec(span_t<std::string_view> xs);
 

@@ -16,6 +16,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The JSON reader now automatically widens integers to doubles as necessary.
 - Module options (e.g. for the `middleman`) now show up in `--long-help` output.
 - Fix undefined behavior in the Qt group chat example (#1336).
+- The `..._instance` convenience functions on the registry metric now properly
+  support `double` metrics and histograms.
 
 ### Changed
 
