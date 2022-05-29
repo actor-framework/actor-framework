@@ -80,7 +80,7 @@ struct test_collector {
 };
 
 struct fixture {
-  metric_registry registry;
+  metric_registry reg;
   test_collector collector;
 };
 
@@ -90,10 +90,10 @@ BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(registries lazily create metrics) {
   std::vector<int64_t> upper_bounds{1, 2, 4, 8};
-  auto f = registry.gauge_family("caf", "running-actors", {"var1", "var2"},
-                                 "How many actors are currently running?");
-  auto g = registry.histogram_family("caf", "response-time", {"var1", "var2"},
-                                     upper_bounds, "How long take requests?");
+  auto f = reg.gauge_family("caf", "running-actors", {"var1", "var2"},
+                            "How many actors are currently running?");
+  auto g = reg.histogram_family("caf", "response-time", {"var1", "var2"},
+                                upper_bounds, "How long take requests?");
   std::vector<label_view> v1{{"var1", "foo"}, {"var2", "bar"}};
   std::vector<label_view> v1_reversed{{"var2", "bar"}, {"var1", "foo"}};
   std::vector<label_view> v2{{"var1", "bar"}, {"var2", "foo"}};
@@ -113,24 +113,21 @@ CAF_TEST(registries lazily create metrics) {
 }
 
 CAF_TEST(registries allow users to collect all registered metrics) {
-  auto fb = registry.gauge_family("foo", "bar", {},
-                                  "Some value without labels.", "seconds");
-  auto sv = registry.gauge_family("some", "value", {"a", "b"},
-                                  "Some (total) value with two labels.", "1",
-                                  true);
-  auto ov = registry.gauge_family("other", "value", {"x"},
-                                  "Some (total) seconds with one label.",
-                                  "seconds", true);
-  auto ra = registry.gauge_family("caf", "running-actors", {"node"},
-                                  "How many actors are running?");
-  auto ms = registry.gauge_family("caf", "mailbox-size", {"name"},
-                                  "How full is the mailbox?");
+  auto fb = reg.gauge_family("foo", "bar", {}, "Some value without labels.",
+                             "seconds");
+  auto sv = reg.gauge_family("some", "value", {"a", "b"},
+                             "Some (total) value with two labels.", "1", true);
+  auto ov = reg.gauge_family("other", "value", {"x"},
+                             "Some (total) seconds with one label.", "seconds",
+                             true);
+  auto ra = reg.gauge_family("caf", "running-actors", {"node"},
+                             "How many actors are running?");
+  auto ms = reg.gauge_family("caf", "mailbox-size", {"name"},
+                             "How full is the mailbox?");
   MESSAGE("the registry always returns the same family object");
-  CHECK_EQ(fb, registry.gauge_family("foo", "bar", {}, "", "seconds"));
-  CHECK_EQ(sv,
-           registry.gauge_family("some", "value", {"a", "b"}, "", "1", true));
-  CHECK_EQ(sv,
-           registry.gauge_family("some", "value", {"b", "a"}, "", "1", true));
+  CHECK_EQ(fb, reg.gauge_family("foo", "bar", {}, "", "seconds"));
+  CHECK_EQ(sv, reg.gauge_family("some", "value", {"a", "b"}, "", "1", true));
+  CHECK_EQ(sv, reg.gauge_family("some", "value", {"b", "a"}, "", "1", true));
   MESSAGE("families always return the same metric object for given labels");
   CHECK_EQ(fb->get_or_add({}), fb->get_or_add({}));
   CHECK_EQ(sv->get_or_add({{"a", "1"}, {"b", "2"}}),
@@ -143,7 +140,7 @@ CAF_TEST(registries allow users to collect all registered metrics) {
   ra->get_or_add({{"node", "localhost"}})->value(42);
   ms->get_or_add({{"name", "printer"}})->value(3);
   ms->get_or_add({{"name", "parser"}})->value(12);
-  registry.collect(collector);
+  reg.collect(collector);
   CHECK_EQ(collector.result, R"(
 foo.bar.seconds 123
 some.value.total{a="1",b="2"} 12
@@ -168,10 +165,10 @@ CAF_TEST(buckets for histograms are configurable via runtime settings) {
   std::vector<int64_t> alternative_upper_bounds{10, 20, 30};
   put(cfg, "caf.response-time.buckets", upper_bounds);
   put(cfg, "caf.response-time.var1=foo.buckets", alternative_upper_bounds);
-  registry.config(&cfg);
-  auto hf = registry.histogram_family("caf", "response-time", {"var1", "var2"},
-                                      default_upper_bounds,
-                                      "How long take requests?");
+  reg.config(&cfg);
+  auto hf = reg.histogram_family("caf", "response-time", {"var1", "var2"},
+                                 default_upper_bounds,
+                                 "How long take requests?");
   CHECK_EQ(hf->config(), get_if<settings>(&cfg, "caf.response-time"));
   CHECK_EQ(hf->extra_setting(), upper_bounds);
   auto h1 = hf->get_or_add({{"var1", "bar"}, {"var2", "baz"}});
@@ -181,15 +178,92 @@ CAF_TEST(buckets for histograms are configurable via runtime settings) {
   CHECK_EQ(bounds(h2->buckets()), alternative_upper_bounds);
 }
 
-CAF_TEST(counter_instance is a shortcut for using the family manually) {
-  auto fptr = registry.counter_family("http", "requests", {"method"},
-                                      "Number of HTTP requests.", "seconds",
-                                      true);
-  auto count = fptr->get_or_add({{"method", "put"}});
-  auto count2
-    = registry.counter_instance("http", "requests", {{"method", "put"}},
-                                "Number of HTTP requests.", "seconds", true);
-  CHECK_EQ(count, count2);
+SCENARIO("instance methods provide a shortcut for using the family manually") {
+  GIVEN("an int counter family with at least one label dimension") {
+    WHEN("calling counter_instance on the registry") {
+      THEN("calling get_or_add on the family object returns the same pointer") {
+        auto fp = reg.counter_family("http", "requests", {"method"},
+                                     "Number of HTTP requests.", "seconds",
+                                     true);
+        auto p1 = fp->get_or_add({{"method", "put"}});
+        auto p2 = reg.counter_instance("http", "requests", {{"method", "put"}},
+                                       "Number of HTTP requests.", "seconds",
+                                       true);
+        CHECK_EQ(p1, p2);
+      }
+    }
+  }
+  GIVEN("an int gauge family with at least one label dimension") {
+    WHEN("calling gauge_instance on the registry") {
+      THEN("calling get_or_add on the family object returns the same pointer") {
+        auto fp = reg.gauge_family("db", "pending", {"operation"},
+                                   "Pending DB operations.");
+        auto p1 = fp->get_or_add({{"operation", "update"}});
+        auto p2 = reg.gauge_instance("db", "pending", {{"operation", "update"}},
+                                     "Pending DB operations.");
+        CHECK_EQ(p1, p2);
+      }
+    }
+  }
+  GIVEN("an int histogram family with at least one label dimension") {
+    WHEN("calling histogram_instance on the registry") {
+      THEN("calling get_or_add on the family object returns the same pointer") {
+        std::vector<int64_t> upper_bounds{1, 2, 3, 5, 7};
+        auto fp = reg.histogram_family("db", "query-results", {"operation"},
+                                       upper_bounds, "Results per query.");
+        auto p1 = fp->get_or_add({{"operation", "update"}});
+        auto p2 = reg.histogram_instance("db", "query-results",
+                                         {{"operation", "update"}},
+                                         upper_bounds, "Results per query.");
+        CHECK_EQ(p1, p2);
+      }
+    }
+  }
+  GIVEN("a double counter family with at least one label dimension") {
+    WHEN("calling counter_instance on the registry") {
+      THEN("calling get_or_add on the family object returns the same pointer") {
+        auto fp = reg.counter_family<double>("db", "cpu-usage", {"operation"},
+                                             "Total CPU time by query type.",
+                                             "seconds", true);
+        auto p1 = fp->get_or_add({{"operation", "update"}});
+        auto p2 = reg.counter_instance<double>("db", "cpu-usage",
+                                               {{"operation", "update"}},
+                                               "Total CPU time by query type.",
+                                               "seconds", true);
+        CHECK_EQ(p1, p2);
+      }
+    }
+  }
+  GIVEN("a double gauge family with at least one label dimension") {
+    WHEN("calling gauge_instance on the registry") {
+      THEN("calling get_or_add on the family object returns the same pointer") {
+        auto fp = reg.gauge_family<double>("sensor", "water-level",
+                                           {"location"},
+                                           "Water level by location.");
+        auto p1 = fp->get_or_add({{"location", "tank-1"}});
+        auto p2 = reg.gauge_instance<double>("sensor", "water-level",
+                                             {{"location", "tank-1"}},
+                                             "Water level by location.");
+        CHECK_EQ(p1, p2);
+      }
+    }
+  }
+  GIVEN("a double histogram family with at least one label dimension") {
+    WHEN("calling histogram_instance on the registry") {
+      THEN("calling get_or_add on the family object returns the same pointer") {
+        std::vector<double> upper_bounds{1, 2, 3, 5, 7};
+        auto fp = reg.histogram_family<double>("db", "query-duration",
+                                               {"operation"}, upper_bounds,
+                                               "Query processing time.");
+        auto p1 = fp->get_or_add({{"operation", "update"}});
+        auto p2 = reg.histogram_instance<double>("db", "query-duration",
+                                                 {{"operation", "update"}},
+                                                 upper_bounds,
+                                                 "Query processing time.");
+        CHECK_EQ(p1, p2);
+      }
+    }
+  }
 }
 
 SCENARIO("metric registries can merge families from other registries") {
@@ -198,12 +272,10 @@ SCENARIO("metric registries can merge families from other registries") {
     auto foo_bar = tmp.counter_singleton("foo", "bar", "test metric");
     auto bar_foo = tmp.counter_singleton("bar", "foo", "test metric");
     WHEN("merging the registry into another one") {
-      registry.merge(tmp);
+      reg.merge(tmp);
       THEN("all metrics move into the new location") {
-        CHECK_EQ(foo_bar,
-                 registry.counter_singleton("foo", "bar", "test metric"));
-        CHECK_EQ(bar_foo,
-                 registry.counter_singleton("bar", "foo", "test metric"));
+        CHECK_EQ(foo_bar, reg.counter_singleton("foo", "bar", "test metric"));
+        CHECK_EQ(bar_foo, reg.counter_singleton("bar", "foo", "test metric"));
         tmp.collect(collector);
         CHECK(collector.result.empty());
       }

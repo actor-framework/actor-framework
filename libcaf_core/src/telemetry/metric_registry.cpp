@@ -63,6 +63,15 @@ metric_family* metric_registry::fetch(const std::string_view& prefix,
   return nullptr;
 }
 
+std::vector<std::string_view>
+metric_registry::get_label_names(span_t<label_view> xs) {
+  std::vector<std::string_view> result;
+  result.reserve(xs.size());
+  for (auto& x : xs)
+    result.push_back(x.name());
+  return result;
+}
+
 std::vector<std::string>
 metric_registry::to_sorted_vec(span<const std::string_view> xs) {
   std::vector<std::string> result;
