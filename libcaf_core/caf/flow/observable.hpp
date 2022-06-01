@@ -2066,7 +2066,7 @@ private:
       }
     };
     decorator dst{&demand_, dst_.ptr()};
-    if (!buf_->pull(async::prioritize_errors, demand_, dst).first) {
+    if (!buf_->pull(async::delay_errors, demand_, dst).first) {
       buf_ = nullptr;
       dst_ = nullptr;
     }
