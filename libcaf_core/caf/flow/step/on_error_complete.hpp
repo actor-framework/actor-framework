@@ -24,8 +24,8 @@ public:
   }
 
   template <class Next, class... Steps>
-  void on_error(Next& next, Steps&... steps) {
-    next.on_error(steps...);
+  void on_complete(Next& next, Steps&... steps) {
+    next.on_complete(steps...);
   }
 
   template <class Next, class... Steps>
