@@ -3,75 +3,56 @@
 #include "caf/error.hpp"
 #include "caf/net/receive_policy.hpp"
 #include "caf/net/socket.hpp"
+#include "caf/net/stream_oriented.hpp"
 #include "caf/settings.hpp"
 #include "caf/span.hpp"
 #include "caf/string_view.hpp"
-#include "caf/tag/stream_oriented.hpp"
 #include "caf/test/bdd_dsl.hpp"
 
-template <class UpperLayer>
-class mock_stream_transport {
+class mock_stream_transport : public caf::net::stream_oriented::lower_layer {
 public:
   // -- member types -----------------------------------------------------------
 
-  using output_tag = caf::tag::stream_oriented;
+  using upper_layer_ptr
+    = std::unique_ptr<caf::net::stream_oriented::upper_layer>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  template <class... Ts>
-  explicit mock_stream_transport(Ts&&... xs)
-    : upper_layer(std::forward<Ts>(xs)...) {
+  explicit mock_stream_transport(upper_layer_ptr ptr) : up(std::move(ptr)) {
     // nop
   }
 
-  // -- interface for the upper layer ------------------------------------------
+  // -- factories --------------------------------------------------------------
 
-  void begin_output() {
-    // nop
+  static std::unique_ptr<mock_stream_transport> make(upper_layer_ptr ptr) {
+    return std::make_unique<mock_stream_transport>(std::move(ptr));
   }
 
-  auto& output_buffer() {
-    return output;
-  }
+  // -- implementation of stream_oriented::lower_layer -------------------------
 
-  constexpr void end_output() {
-    // nop
-  }
+  bool can_send_more() const noexcept override;
 
-  constexpr caf::net::socket handle() noexcept {
-    return caf::net::invalid_socket;
-  }
+  void suspend_reading() override;
 
-  bool can_send_more() const noexcept {
-    return true;
-  }
+  void configure_read(caf::net::receive_policy policy) override;
 
-  const caf::error& abort_reason() {
-    return abort_reason_;
-  }
+  void begin_output() override;
 
-  void abort_reason(caf::error reason) {
-    abort_reason_ = std::move(reason);
-  }
+  caf::byte_buffer& output_buffer() override;
 
-  bool stopped() const noexcept {
-    return max_read_size == 0;
-  }
+  bool end_output() override;
 
-  void configure_read(caf::net::receive_policy policy) {
-    min_read_size = policy.min_size;
-    max_read_size = policy.max_size;
-  }
+  bool stopped_reading() const noexcept override;
 
   // -- initialization ---------------------------------------------------------
 
-  caf::error init(const caf::settings& config) {
-    return upper_layer.init(nullptr, this, config);
+  caf::error init(const caf::settings& cfg) {
+    return up->init(nullptr, this, cfg);
   }
 
   caf::error init() {
-    caf::settings config;
-    return init(config);
+    caf::settings cfg;
+    return init(cfg);
   }
 
   // -- buffer management ------------------------------------------------------
@@ -94,43 +75,11 @@ public:
 
   // -- event callbacks --------------------------------------------------------
 
-  ptrdiff_t handle_input() {
-    ptrdiff_t result = 0;
-    while (max_read_size > 0) {
-      CAF_ASSERT(max_read_size > static_cast<size_t>(read_size_));
-      size_t len = max_read_size - static_cast<size_t>(read_size_);
-      CAF_LOG_DEBUG(CAF_ARG2("available capacity:", len));
-      auto num_bytes = std::min(input.size(), len);
-      if (num_bytes == 0)
-        return result;
-      auto delta_offset = static_cast<ptrdiff_t>(read_buf_.size());
-      read_buf_.insert(read_buf_.end(), input.begin(),
-                       input.begin() + num_bytes);
-      input.erase(input.begin(), input.begin() + num_bytes);
-      read_size_ += static_cast<ptrdiff_t>(num_bytes);
-      if (static_cast<size_t>(read_size_) < min_read_size)
-        return result;
-      auto delta = caf::make_span(read_buf_.data() + delta_offset,
-                                  read_size_ - delta_offset);
-      auto consumed = upper_layer.consume(this, caf::make_span(read_buf_),
-                                          delta);
-      if (consumed > 0) {
-        result += static_cast<ptrdiff_t>(consumed);
-        read_buf_.erase(read_buf_.begin(), read_buf_.begin() + consumed);
-        read_size_ -= consumed;
-      } else if (consumed < 0) {
-        if (!abort_reason_)
-          abort_reason_ = caf::sec::runtime_error;
-        upper_layer.abort(this, abort_reason_);
-        return -1;
-      }
-    }
-    return result;
-  }
+  ptrdiff_t handle_input();
 
   // -- member variables -------------------------------------------------------
 
-  UpperLayer upper_layer;
+  upper_layer_ptr up;
 
   caf::byte_buffer output;
 
@@ -156,18 +105,7 @@ public:
     // nop
   }
 
-  void arrive_and_wait() {
-    std::unique_lock<std::mutex> guard{mx_};
-    auto new_count = ++count_;
-    if (new_count == num_threads_) {
-      cv_.notify_all();
-    } else if (new_count > num_threads_) {
-      count_ = 1;
-      cv_.wait(guard, [this] { return count_.load() == num_threads_; });
-    } else {
-      cv_.wait(guard, [this] { return count_.load() == num_threads_; });
-    }
-  }
+  void arrive_and_wait();
 
 private:
   ptrdiff_t num_threads_;

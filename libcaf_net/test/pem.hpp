@@ -2,9 +2,9 @@
 
 #include <string_view>
 
-extern std::string_view ca_pem;
-extern std::string_view cert_1_pem;
-extern std::string_view cert_2_pem;
-extern std::string_view key_1_enc_pem;
-extern std::string_view key_1_pem;
-extern std::string_view key_2_pem;
+extern const char* ca_pem_path;
+extern const char* cert_1_pem_path;
+extern const char* cert_2_pem_path;
+extern const char* key_1_enc_pem_path;
+extern const char* key_1_pem_path;
+extern const char* key_2_pem_path;

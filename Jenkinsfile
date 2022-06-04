@@ -126,8 +126,10 @@ config = [
         ['FreeBSD', [
             numCores: 4,
             builds: ['debug', 'release'],
-            extraBuildFlags: [
+            extraDebugBuildFlags: [
                 'CAF_SANITIZERS:STRING=address',
+                // Deadlocks on FreeBSD in CRYPTO_THREAD_run_once under ASAN.
+                'CAF_EXCLUDE_TESTS:STRING=net.ssl.transport'
             ],
         ]],
         // Non-UNIX systems.

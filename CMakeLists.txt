@@ -45,6 +45,7 @@ cmake_dependent_option(CAF_ENABLE_OPENSSL_MODULE "Build OpenSSL module" ON
 # -- CAF options with non-boolean values ---------------------------------------
 
 set(CAF_LOG_LEVEL "QUIET" CACHE STRING "Set log verbosity of CAF components")
+set(CAF_EXCLUDE_TESTS "" CACHE STRING "List of excluded test suites")
 set(CAF_SANITIZERS "" CACHE STRING
     "Comma separated sanitizers, e.g., 'address,undefined'")
 set(CAF_BUILD_INFO_FILE_PATH "" CACHE FILEPATH
@@ -112,11 +113,13 @@ if(CAF_ENABLE_TESTING)
   enable_testing()
   function(caf_add_test_suites target)
     foreach(suiteName ${ARGN})
-      string(REPLACE "." "/" suitePath ${suiteName})
-      target_sources(${target} PRIVATE
-        "${CMAKE_CURRENT_SOURCE_DIR}/test/${suitePath}.cpp")
-      add_test(NAME ${suiteName}
-               COMMAND ${target} -r300 -n -v5 -s "^${suiteName}$")
+      if(NOT ${suiteName} IN_LIST CAF_EXCLUDE_TESTS)
+        string(REPLACE "." "/" suitePath ${suiteName})
+        target_sources(${target} PRIVATE
+          "${CMAKE_CURRENT_SOURCE_DIR}/test/${suitePath}.cpp")
+        add_test(NAME ${suiteName}
+                 COMMAND ${target} -r300 -n -v5 -s "^${suiteName}$")
+      endif()
     endforeach()
   endfunction()
 endif()

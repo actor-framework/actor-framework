@@ -40,7 +40,7 @@ public:
 
   using input_ptr = std::unique_ptr<input_t>;
 
-  using input_map = detail::unordered_flat_map<input_key, input_ptr>;
+  using input_map = unordered_flat_map<input_key, input_ptr>;
 
   // -- constructors, destructors, and assignment operators --------------------
 

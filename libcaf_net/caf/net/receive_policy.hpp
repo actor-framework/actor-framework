@@ -8,8 +8,15 @@
 
 namespace caf::net {
 
+/// Configures how many bytes a @ref stream_transport receives before calling
+/// `consume` on its upper layer.
 struct receive_policy {
+  /// Configures how many bytes  @ref stream_transport must read before it may
+  /// call `consume` on its upper layer.
   uint32_t min_size;
+
+  /// Configures how many bytes  @ref stream_transport may read at most before
+  /// it calls `consume` on its upper layer.
   uint32_t max_size;
 
   /// @pre `min_size > 0`
@@ -24,6 +31,7 @@ struct receive_policy {
     return {size, size};
   }
 
+  /// @pre `max_size >= 1`
   static constexpr receive_policy up_to(uint32_t max_size) {
     return {1, max_size};
   }

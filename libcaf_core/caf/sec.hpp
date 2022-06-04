@@ -175,6 +175,10 @@ enum class sec : uint8_t {
   disposed,
   /// Failed to open a resource.
   cannot_open_resource,
+  /// Received malformed data on a network socket.
+  protocol_error,
+  /// Encountered faulty logic in the program.
+  logic_error,
 };
 // --(rst-sec-end)--
 

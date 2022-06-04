@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <memory>
 #include <string_view>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -47,6 +48,9 @@ template <class Iterator, class Sentinel = Iterator> struct parser_state;
 // -- 3 param templates --------------------------------------------------------
 
 template <class, class, int> class actor_cast_access;
+
+template <class K, class V, class = std::allocator<std::pair<K, V>>>
+class unordered_flat_map;
 
 // -- variadic templates -------------------------------------------------------
 

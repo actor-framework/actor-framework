@@ -270,7 +270,6 @@ caf_add_component(
     detail.serialized_size
     detail.type_id_list_builder
     detail.unique_function
-    detail.unordered_flat_map
     dictionary
     dsl
     dynamic_spawn
@@ -360,6 +359,7 @@ caf_add_component(
     typed_response_promise
     typed_spawn
     unit
+    unordered_flat_map
     uri
     uuid)
 

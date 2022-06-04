@@ -18,6 +18,12 @@ class flow_bridge;
 template <class Trait, class... Ts>
 class request;
 
-class CAF_CORE_EXPORT frame;
+class frame;
+class framing;
+class lower_layer;
+class server;
+class upper_layer;
+
+enum class status : uint16_t;
 
 } // namespace caf::net::web_socket

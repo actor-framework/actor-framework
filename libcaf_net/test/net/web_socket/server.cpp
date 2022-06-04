@@ -21,42 +21,46 @@ namespace {
 
 using svec = std::vector<std::string>;
 
-struct app_t {
+class app_t : public net::web_socket::upper_layer {
+public:
   std::string text_input;
 
   byte_buffer binary_input;
 
   settings cfg;
 
-  template <class LowerLayerPtr>
-  error init(net::socket_manager*, LowerLayerPtr, const settings& init_cfg) {
+  static auto make() {
+    return std::make_unique<app_t>();
+  }
+
+  error init(net::socket_manager*, net::web_socket::lower_layer*,
+             const settings& init_cfg) override {
     cfg = init_cfg;
     return none;
   }
 
-  template <class LowerLayerPtr>
-  bool prepare_send(LowerLayerPtr) {
+  bool prepare_send() override {
     return true;
   }
 
-  template <class LowerLayerPtr>
-  bool done_sending(LowerLayerPtr) {
+  bool done_sending() override {
     return true;
   }
 
-  template <class LowerLayerPtr>
-  void abort(LowerLayerPtr, const error& reason) {
+  void continue_reading() override {
+    // nop
+  }
+
+  void abort(const error& reason) override {
     CAF_FAIL("app::abort called: " << reason);
   }
 
-  template <class LowerLayerPtr>
-  ptrdiff_t consume_text(LowerLayerPtr, std::string_view text) {
+  ptrdiff_t consume_text(std::string_view text) override {
     text_input.insert(text_input.end(), text.begin(), text.end());
     return static_cast<ptrdiff_t>(text.size());
   }
 
-  template <class LowerLayerPtr>
-  ptrdiff_t consume_binary(LowerLayerPtr, byte_span bytes) {
+  ptrdiff_t consume_binary(byte_span bytes) override {
     binary_input.insert(binary_input.end(), bytes.begin(), bytes.end());
     return static_cast<ptrdiff_t>(bytes.size());
   }
@@ -65,9 +69,12 @@ struct app_t {
 struct fixture {
   fixture() {
     using namespace caf::net;
-    ws = std::addressof(transport.upper_layer);
-    app = std::addressof(ws->upper_layer());
-    if (auto err = transport.init())
+    auto app_ptr = app_t::make();
+    app = app_ptr.get();
+    auto ws_ptr = net::web_socket::server::make(std::move(app_ptr));
+    ws = ws_ptr.get();
+    transport = mock_stream_transport::make(std::move(ws_ptr));
+    if (auto err = transport->init())
       CAF_FAIL("failed to initialize mock transport: " << err);
     rng.seed(0xD3ADC0D3);
   }
@@ -90,7 +97,7 @@ struct fixture {
   void push(uint8_t opcode, const_byte_span bytes) {
     byte_buffer frame;
     rfc6455_append(opcode, bytes, frame);
-    transport.push(frame);
+    transport->push(frame);
   }
 
   void push(const_byte_span bytes) {
@@ -101,9 +108,9 @@ struct fixture {
     push(detail::rfc6455::text_frame, as_bytes(make_span(str)));
   }
 
-  mock_stream_transport<net::web_socket::server<app_t>> transport;
+  std::unique_ptr<mock_stream_transport> transport;
 
-  net::web_socket::server<app_t>* ws;
+  net::web_socket::server* ws;
 
   app_t* app;
 
@@ -130,15 +137,15 @@ constexpr std::string_view opening_handshake
 CAF_TEST_FIXTURE_SCOPE(web_socket_tests, fixture)
 
 CAF_TEST(applications receive handshake data via config) {
-  transport.push(opening_handshake);
+  transport->push(opening_handshake);
   {
-    auto consumed = transport.handle_input();
+    auto consumed = transport->handle_input();
     if (consumed < 0)
-      CAF_FAIL("error handling input: " << transport.abort_reason());
+      CAF_FAIL("transport->handle_input failed");
     CHECK_EQ(consumed, static_cast<ptrdiff_t>(opening_handshake.size()));
   }
-  CHECK_EQ(transport.input.size(), 0u);
-  CHECK_EQ(transport.unconsumed(), 0u);
+  CHECK_EQ(transport->input.size(), 0u);
+  CHECK_EQ(transport->unconsumed(), 0u);
   CHECK(ws->handshake_complete());
   CHECK_SETTING("web-socket.method", "GET");
   CHECK_SETTING("web-socket.path", "/chat");
@@ -157,11 +164,11 @@ CAF_TEST(applications receive handshake data via config) {
 }
 
 CAF_TEST(the server responds with an HTTP response on success) {
-  transport.push(opening_handshake);
-  CHECK_EQ(transport.handle_input(),
+  transport->push(opening_handshake);
+  CHECK_EQ(transport->handle_input(),
            static_cast<ptrdiff_t>(opening_handshake.size()));
   CHECK(ws->handshake_complete());
-  CHECK_EQ(transport.output_as_str(),
+  CHECK_EQ(transport->output_as_str(),
            "HTTP/1.1 101 Switching Protocols\r\n"
            "Upgrade: websocket\r\n"
            "Connection: Upgrade\r\n"
@@ -177,14 +184,14 @@ CAF_TEST(handshakes may arrive in chunks) {
   bufs.emplace_back(i, i + chunk_size);
   i += chunk_size;
   bufs.emplace_back(i, opening_handshake.end());
-  transport.push(bufs[0]);
-  CHECK_EQ(transport.handle_input(), 0u);
+  transport->push(bufs[0]);
+  CHECK_EQ(transport->handle_input(), 0u);
   CHECK(!ws->handshake_complete());
-  transport.push(bufs[1]);
-  CHECK_EQ(transport.handle_input(), 0u);
+  transport->push(bufs[1]);
+  CHECK_EQ(transport->handle_input(), 0u);
   CHECK(!ws->handshake_complete());
-  transport.push(bufs[2]);
-  CHECK_EQ(static_cast<size_t>(transport.handle_input()),
+  transport->push(bufs[2]);
+  CHECK_EQ(static_cast<size_t>(transport->handle_input()),
            opening_handshake.size());
   CHECK(ws->handshake_complete());
 }
@@ -194,19 +201,19 @@ CAF_TEST(data may follow the handshake immediately) {
   byte_buffer buf{hs_bytes.begin(), hs_bytes.end()};
   rfc6455_append("Hello WebSocket!\n"sv, buf);
   rfc6455_append("Bye WebSocket!\n"sv, buf);
-  transport.push(buf);
-  CHECK_EQ(transport.handle_input(), static_cast<ptrdiff_t>(buf.size()));
+  transport->push(buf);
+  CHECK_EQ(transport->handle_input(), static_cast<ptrdiff_t>(buf.size()));
   CHECK(ws->handshake_complete());
   CHECK_EQ(app->text_input, "Hello WebSocket!\nBye WebSocket!\n");
 }
 
 CAF_TEST(data may arrive later) {
-  transport.push(opening_handshake);
-  CHECK_EQ(transport.handle_input(),
+  transport->push(opening_handshake);
+  CHECK_EQ(transport->handle_input(),
            static_cast<ptrdiff_t>(opening_handshake.size()));
   CHECK(ws->handshake_complete());
   push("Hello WebSocket!\nBye WebSocket!\n"sv);
-  transport.handle_input();
+  transport->handle_input();
   CHECK_EQ(app->text_input, "Hello WebSocket!\nBye WebSocket!\n");
 }
 

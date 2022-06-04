@@ -7,6 +7,6 @@
 namespace caf::net::http {
 
 /// Stores context information for a request. For HTTP/2, this is the stream ID.
-struct context {};
+class context {};
 
 } // namespace caf::net::http

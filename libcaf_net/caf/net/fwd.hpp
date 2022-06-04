@@ -4,26 +4,20 @@
 
 #pragma once
 
-#include <memory>
-
 #include "caf/intrusive_ptr.hpp"
 #include "caf/type_id.hpp"
+
+#include <memory>
+#include <vector>
 
 namespace caf::net {
 
 // -- templates ----------------------------------------------------------------
 
-template <class UpperLayer>
 class stream_transport;
 
 template <class Factory>
 class datagram_transport;
-
-template <class Application, class IdType = unit_t>
-class transport_worker;
-
-template <class Transport, class IdType = unit_t>
-class transport_worker_dispatcher;
 
 template <class... Sigs>
 class typed_actor_shell;
@@ -38,16 +32,18 @@ class actor_shell_ptr;
 class middleman;
 class multiplexer;
 class socket_manager;
+class this_host;
 
 // -- structs ------------------------------------------------------------------
 
+struct datagram_socket;
 struct network_socket;
 struct pipe_socket;
+struct receive_policy;
 struct socket;
 struct stream_socket;
 struct tcp_accept_socket;
 struct tcp_stream_socket;
-struct datagram_socket;
 struct udp_datagram_socket;
 
 // -- smart pointer aliases ----------------------------------------------------
@@ -55,5 +51,9 @@ struct udp_datagram_socket;
 using multiplexer_ptr = std::shared_ptr<multiplexer>;
 using socket_manager_ptr = intrusive_ptr<socket_manager>;
 using weak_multiplexer_ptr = std::weak_ptr<multiplexer>;
+
+// -- miscellaneous aliases ----------------------------------------------------
+
+using text_buffer = std::vector<char>;
 
 } // namespace caf::net

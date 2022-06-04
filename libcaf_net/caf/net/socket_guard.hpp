@@ -12,15 +12,15 @@ namespace caf::net {
 template <class Socket>
 class socket_guard {
 public:
-  socket_guard() noexcept : sock_(invalid_socket_id) {
+  socket_guard() noexcept : fd_(invalid_socket_id) {
     // nop
   }
 
-  explicit socket_guard(Socket sock) noexcept : sock_(sock) {
+  explicit socket_guard(Socket fd) noexcept : fd_(fd) {
     // nop
   }
 
-  socket_guard(socket_guard&& other) noexcept : sock_(other.release()) {
+  socket_guard(socket_guard&& other) noexcept : fd_(other.release()) {
     // nop
   }
 
@@ -34,28 +34,32 @@ public:
   socket_guard& operator=(const socket_guard&) = delete;
 
   ~socket_guard() {
-    if (sock_.id != invalid_socket_id)
-      close(sock_);
+    if (fd_.id != invalid_socket_id)
+      close(fd_);
   }
 
   void reset(Socket x) noexcept {
-    if (sock_.id != invalid_socket_id)
-      close(sock_);
-    sock_ = x;
+    if (fd_.id != invalid_socket_id)
+      close(fd_);
+    fd_ = x;
   }
 
   Socket release() noexcept {
-    auto sock = sock_;
-    sock_.id = invalid_socket_id;
+    auto sock = fd_;
+    fd_.id = invalid_socket_id;
     return sock;
   }
 
+  Socket get() noexcept {
+    return fd_;
+  }
+
   Socket socket() const noexcept {
-    return sock_;
+    return fd_;
   }
 
 private:
-  Socket sock_;
+  Socket fd_;
 };
 
 template <class Socket>

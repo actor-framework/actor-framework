@@ -19,7 +19,6 @@
 #include "caf/actor_traits.hpp"
 #include "caf/detail/behavior_stack.hpp"
 #include "caf/detail/core_export.hpp"
-#include "caf/detail/unordered_flat_map.hpp"
 #include "caf/disposable.hpp"
 #include "caf/error.hpp"
 #include "caf/extend.hpp"
@@ -45,6 +44,7 @@
 #include "caf/response_handle.hpp"
 #include "caf/sec.hpp"
 #include "caf/telemetry/timer.hpp"
+#include "caf/unordered_flat_map.hpp"
 
 namespace caf {
 
@@ -546,7 +546,7 @@ protected:
   std::forward_list<pending_response> awaited_responses_;
 
   /// Stores callbacks for multiplexed responses.
-  detail::unordered_flat_map<message_id, behavior> multiplexed_responses_;
+  unordered_flat_map<message_id, behavior> multiplexed_responses_;
 
   /// Customization point for setting a default `message` callback.
   default_handler default_handler_;

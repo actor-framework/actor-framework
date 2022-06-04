@@ -14,42 +14,46 @@ namespace {
 
 using svec = std::vector<std::string>;
 
-struct app_t {
+class app_t : public net::web_socket::upper_layer {
+public:
+  static auto make() {
+    return std::make_unique<app_t>();
+  }
+
   std::string text_input;
 
   caf::byte_buffer binary_input;
 
   settings cfg;
 
-  template <class LowerLayerPtr>
-  error init(net::socket_manager*, LowerLayerPtr, const settings& init_cfg) {
+  error init(net::socket_manager*, net::web_socket::lower_layer*,
+             const settings& init_cfg) override {
     cfg = init_cfg;
     return none;
   }
 
-  template <class LowerLayerPtr>
-  bool prepare_send(LowerLayerPtr) {
+  bool prepare_send() override {
     return true;
   }
 
-  template <class LowerLayerPtr>
-  bool done_sending(LowerLayerPtr) {
+  bool done_sending() override {
     return true;
   }
 
-  template <class LowerLayerPtr>
-  void abort(LowerLayerPtr, const error& reason) {
+  void continue_reading() override {
+    // nop
+  }
+
+  void abort(const error& reason) override {
     CAF_FAIL("app::abort called: " << reason);
   }
 
-  template <class LowerLayerPtr>
-  ptrdiff_t consume_text(LowerLayerPtr, std::string_view text) {
+  ptrdiff_t consume_text(std::string_view text) override {
     text_input.insert(text_input.end(), text.begin(), text.end());
     return static_cast<ptrdiff_t>(text.size());
   }
 
-  template <class LowerLayerPtr>
-  ptrdiff_t consume_binary(LowerLayerPtr, byte_span bytes) {
+  ptrdiff_t consume_binary(byte_span bytes) override {
     binary_input.insert(binary_input.end(), bytes.begin(), bytes.end());
     return static_cast<ptrdiff_t>(bytes.size());
   }
@@ -83,32 +87,33 @@ auto key_to_bytes() {
 }
 
 auto make_handshake() {
-  net::web_socket::handshake result;
-  result.endpoint("/chat");
-  result.host("server.example.com");
-  result.key(key_to_bytes());
-  result.origin("http://example.com");
-  result.protocols("chat, superchat");
+  auto result = std::make_unique<net::web_socket::handshake>();
+  result->endpoint("/chat");
+  result->host("server.example.com");
+  result->key(key_to_bytes());
+  result->origin("http://example.com");
+  result->protocols("chat, superchat");
   return result;
 }
-
-using mock_client_type = mock_stream_transport<net::web_socket::client<app_t>>;
 
 } // namespace
 
 SCENARIO("the client performs the WebSocket handshake on startup") {
   GIVEN("valid WebSocket handshake data") {
     WHEN("starting a WebSocket client") {
-      mock_client_type client{make_handshake()};
+      auto app = app_t::make();
+      auto ws = net::web_socket::client::make(make_handshake(), std::move(app));
+      auto& ws_state = *ws;
+      auto uut = mock_stream_transport::make(std::move(ws));
       THEN("the client sends its HTTP request when initializing it") {
-        CHECK_EQ(client.init(), error{});
-        CHECK_EQ(client.output_as_str(), http_request);
+        CHECK_EQ(uut->init(), error{});
+        CHECK_EQ(uut->output_as_str(), http_request);
       }
       AND("the client waits for the server handshake and validates it") {
-        client.push(http_response);
-        CHECK_EQ(client.handle_input(),
+        uut->push(http_response);
+        CHECK_EQ(uut->handle_input(),
                  static_cast<ptrdiff_t>(http_response.size()));
-        CHECK(client.upper_layer.handshake_complete());
+        CHECK(ws_state.handshake_completed());
       }
     }
   }

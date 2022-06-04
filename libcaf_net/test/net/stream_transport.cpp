@@ -21,7 +21,6 @@
 #include "caf/span.hpp"
 
 using namespace caf;
-using namespace caf::net;
 
 namespace {
 
@@ -40,7 +39,7 @@ struct fixture : test_coordinator_fixture<> {
     if (auto err = mpx.init())
       FAIL("mpx.init failed: " << err);
     REQUIRE_EQ(mpx.num_socket_managers(), 1u);
-    auto sockets = unbox(make_stream_socket_pair());
+    auto sockets = unbox(net::make_stream_socket_pair());
     send_socket_guard.reset(sockets.first);
     recv_socket_guard.reset(sockets.second);
     if (auto err = nonblocking(recv_socket_guard.socket(), true))
@@ -52,69 +51,63 @@ struct fixture : test_coordinator_fixture<> {
   }
 
   settings config;
-  multiplexer mpx;
+  net::multiplexer mpx;
   byte_buffer recv_buf;
-  socket_guard<stream_socket> send_socket_guard;
-  socket_guard<stream_socket> recv_socket_guard;
+  net::socket_guard<net::stream_socket> send_socket_guard;
+  net::socket_guard<net::stream_socket> recv_socket_guard;
   byte_buffer_ptr shared_recv_buf;
   byte_buffer_ptr shared_send_buf;
 };
 
-class dummy_application {
+class mock_application : public net::stream_oriented::upper_layer {
 public:
   using byte_buffer_ptr = std::shared_ptr<byte_buffer>;
 
-  using input_tag = tag::stream_oriented;
+  explicit mock_application(byte_buffer_ptr recv_buf, byte_buffer_ptr send_buf)
+    : recv_buf_(std::move(recv_buf)), send_buf_(std::move(send_buf)) {
+    // nop
+  }
 
-  explicit dummy_application(byte_buffer_ptr recv_buf, byte_buffer_ptr send_buf)
-    : recv_buf_(std::move(recv_buf)),
-      send_buf_(std::move(send_buf)){
-        // nop
-      };
+  static auto make(byte_buffer_ptr recv_buf, byte_buffer_ptr send_buf) {
+    return std::make_unique<mock_application>(std::move(recv_buf),
+                                              std::move(send_buf));
+  }
 
-  ~dummy_application() = default;
+  net::stream_oriented::lower_layer* down;
 
-  template <class ParentPtr>
-  error init(socket_manager*, ParentPtr parent, const settings&) {
-    parent->configure_read(receive_policy::exactly(hello_manager.size()));
+  error init(net::socket_manager*, net::stream_oriented::lower_layer* down_ptr,
+             const settings&) override {
+    down = down_ptr;
+    down->configure_read(net::receive_policy::exactly(hello_manager.size()));
     return none;
   }
 
-  template <class ParentPtr>
-  bool prepare_send(ParentPtr parent) {
+  void abort(const error& reason) override {
+    FAIL("abort called: " << CAF_ARG(reason));
+  }
+
+  ptrdiff_t consume(byte_span data, byte_span) override {
+    recv_buf_->clear();
+    recv_buf_->insert(recv_buf_->begin(), data.begin(), data.end());
+    MESSAGE("Received " << recv_buf_->size() << " bytes in mock_application");
+    return static_cast<ptrdiff_t>(recv_buf_->size());
+  }
+
+  void continue_reading() override {
+    FAIL("continue_reading called");
+  }
+
+  bool prepare_send() override {
     MESSAGE("prepare_send called");
-    auto& buf = parent->output_buffer();
+    auto& buf = down->output_buffer();
     auto data = as_bytes(make_span(hello_manager));
     buf.insert(buf.end(), data.begin(), data.end());
     return true;
   }
 
-  template <class ParentPtr>
-  bool done_sending(ParentPtr) {
+  bool done_sending() override {
     MESSAGE("done_sending called");
     return true;
-  }
-
-  template <class ParentPtr>
-  void continue_reading(ParentPtr) {
-    FAIL("continue_reading called");
-  }
-
-  template <class ParentPtr>
-  size_t consume(ParentPtr, const_byte_span data, const_byte_span) {
-    recv_buf_->clear();
-    recv_buf_->insert(recv_buf_->begin(), data.begin(), data.end());
-    MESSAGE("Received " << recv_buf_->size() << " bytes in dummy_application");
-    return recv_buf_->size();
-  }
-
-  static void handle_error(sec code) {
-    FAIL("handle_error called with " << CAF_ARG(code));
-  }
-
-  template <class ParentPtr>
-  static void abort(ParentPtr, const error& reason) {
-    FAIL("abort called with " << CAF_ARG(reason));
   }
 
 private:
@@ -127,8 +120,11 @@ private:
 BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(receive) {
-  auto mgr = make_socket_manager<dummy_application, stream_transport>(
-    recv_socket_guard.release(), &mpx, shared_recv_buf, shared_send_buf);
+  auto mock = mock_application::make(shared_recv_buf, shared_send_buf);
+  auto transport = net::stream_transport::make(recv_socket_guard.get(),
+                                               std::move(mock));
+  auto mgr = net::socket_manager::make(&mpx, recv_socket_guard.release(),
+                                       std::move(transport));
   CHECK_EQ(mgr->init(config), none);
   mpx.apply_updates();
   CHECK_EQ(mpx.num_socket_managers(), 2u);
@@ -143,8 +139,11 @@ CAF_TEST(receive) {
 }
 
 CAF_TEST(send) {
-  auto mgr = make_socket_manager<dummy_application, stream_transport>(
-    recv_socket_guard.release(), &mpx, shared_recv_buf, shared_send_buf);
+  auto mock = mock_application::make(shared_recv_buf, shared_send_buf);
+  auto transport = net::stream_transport::make(recv_socket_guard.get(),
+                                               std::move(mock));
+  auto mgr = net::socket_manager::make(&mpx, recv_socket_guard.release(),
+                                       std::move(transport));
   CHECK_EQ(mgr->init(config), none);
   mpx.apply_updates();
   CHECK_EQ(mpx.num_socket_managers(), 2u);

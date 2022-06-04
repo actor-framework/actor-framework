@@ -4,6 +4,8 @@ file(GLOB_RECURSE CAF_NET_HEADERS "caf/*.hpp")
 
 # -- add targets ---------------------------------------------------------------
 
+configure_file(test/pem.cpp.in test/pem.cpp @ONLY)
+
 caf_add_component(
   net
   DEPENDENCIES
@@ -18,39 +20,65 @@ caf_add_component(
     net.http.method
     net.http.status
     net.operation
+    net.ssl.dtls
+    net.ssl.errc
+    net.ssl.format
+    net.ssl.tls
     net.stream_transport_error
     net.web_socket.status
   HEADERS
     ${CAF_NET_HEADERS}
   SOURCES
-    src/datagram_socket.cpp
     src/detail/convert_ip_endpoint.cpp
     src/detail/rfc6455.cpp
-    src/host.cpp
-    src/ip.cpp
-    src/multiplexer.cpp
     src/net/abstract_actor_shell.cpp
     src/net/actor_shell.cpp
+    src/net/datagram_socket.cpp
+    src/net/generic_lower_layer.cpp
+    src/net/generic_upper_layer.cpp
     src/net/http/header.cpp
+    src/net/http/lower_layer.cpp
     src/net/http/method.cpp
+    src/net/http/server.cpp
     src/net/http/status.cpp
+    src/net/http/upper_layer.cpp
     src/net/http/v1.cpp
+    src/net/ip.cpp
+    src/net/length_prefix_framing.cpp
+    src/net/message_oriented.cpp
     src/net/middleman.cpp
+    src/net/multiplexer.cpp
+    src/net/network_socket.cpp
+    src/net/pipe_socket.cpp
+    src/net/pollset_updater.cpp
+    src/net/socket.cpp
+    src/net/socket_event_layer.cpp
+    src/net/socket_manager.cpp
+    src/net/ssl/connection.cpp
+    src/net/ssl/context.cpp
+    src/net/ssl/dtls.cpp
+    src/net/ssl/format.cpp
+    src/net/ssl/startup.cpp
+    src/net/ssl/tls.cpp
+    src/net/ssl/transport.cpp
+    src/net/stream_oriented.cpp
+    src/net/stream_socket.cpp
+    src/net/stream_transport.cpp
+    src/net/tcp_accept_socket.cpp
+    src/net/tcp_stream_socket.cpp
+    src/net/this_host.cpp
+    src/net/udp_datagram_socket.cpp
+    src/net/web_socket/client.cpp
     src/net/web_socket/default_trait.cpp
     src/net/web_socket/frame.cpp
+    src/net/web_socket/framing.cpp
     src/net/web_socket/handshake.cpp
-    src/network_socket.cpp
-    src/pipe_socket.cpp
-    src/pollset_updater.cpp
-    src/socket.cpp
-    src/socket_manager.cpp
-    src/stream_socket.cpp
-    src/tcp_accept_socket.cpp
-    src/tcp_stream_socket.cpp
-    src/udp_datagram_socket.cpp
+    src/net/web_socket/lower_layer.cpp
+    src/net/web_socket/server.cpp
+    src/net/web_socket/upper_layer.cpp
   TEST_SOURCES
+    ${CMAKE_CURRENT_BINARY_DIR}/test/pem.cpp
     test/net-test.cpp
-    test/pem.cpp
   TEST_SUITES
     detail.convert_ip_endpoint
     detail.rfc6455
@@ -68,6 +96,7 @@ caf_add_component(
     net.producer_adapter
     net.socket
     net.socket_guard
+    net.ssl.transport
     net.stream_socket
     net.stream_transport
     net.tcp_socket
@@ -76,21 +105,3 @@ caf_add_component(
     net.web_socket.client
     net.web_socket.handshake
     net.web_socket.server)
-
-# Our OpenSSL test currently depends on <filesystem>.
-check_cxx_source_compiles("
-  #include <cstdlib>
-  #include <filesystem>
-  int main(int, char**) {
-    auto cwd = std::filesystem::current_path();
-    auto str = cwd.string();
-    return str.empty() ? EXIT_FAILURE : EXIT_SUCCESS;
-  }
-  "
-  CAF_NET_HAS_STD_FILESYSTEM)
-
-if(CAF_NET_HAS_STD_FILESYSTEM)
-  caf_add_test_suites(caf-net-test net.openssl_transport)
-else()
-  message(STATUS "<filesystem> not working, skip OpenSSL test in CAF::net")
-endif()

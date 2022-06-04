@@ -10,11 +10,12 @@
 
 #include "caf/detail/network_order.hpp"
 #include "caf/net/length_prefix_framing.hpp"
+#include "caf/net/message_oriented.hpp"
 #include "caf/net/middleman.hpp"
 #include "caf/net/socket_guard.hpp"
 #include "caf/net/stream_socket.hpp"
+#include "caf/net/stream_transport.hpp"
 #include "caf/scheduled_actor/flow.hpp"
-#include "caf/tag/message_oriented.hpp"
 
 using namespace caf;
 
@@ -51,10 +52,8 @@ private:
   net::socket_guard<net::stream_socket> sg_;
 };
 
-class app_t {
+class app_t : public net::message_oriented::upper_layer {
 public:
-  using input_tag = tag::message_oriented;
-
   using resource_type = async::producer_resource<int32_t>;
 
   using buffer_type = resource_type::buffer_type;
@@ -67,8 +66,15 @@ public:
     // nop
   }
 
-  template <class LowerLayerPtr>
-  error init(net::socket_manager* mgr, LowerLayerPtr, const settings&) {
+  static auto make(resource_type output) {
+    return std::make_unique<app_t>(std::move(output));
+  }
+
+  error init(net::socket_manager* mgr,
+             net::message_oriented::lower_layer* down_ptr,
+             const settings&) override {
+    down = down_ptr;
+    down->request_messages();
     if (auto ptr = adapter_type::try_open(mgr, std::move(output_))) {
       adapter_ = std::move(ptr);
       return none;
@@ -77,31 +83,26 @@ public:
     }
   }
 
-  template <class LowerLayerPtr>
-  bool prepare_send(LowerLayerPtr) {
+  void continue_reading() override {
+    down->request_messages();
+  }
+
+  bool prepare_send() override {
     return true;
   }
 
-  template <class LowerLayerPtr>
-  bool done_sending(LowerLayerPtr) {
+  bool done_sending() override {
     return true;
   }
 
-  template <class LowerLayerPtr>
-  void abort(LowerLayerPtr, const error& reason) {
+  void abort(const error& reason) override {
     if (reason == caf::sec::socket_disconnected || reason == caf::sec::disposed)
       adapter_->close();
     else
       adapter_->abort(reason);
   }
 
-  template <class LowerLayerPtr>
-  void after_reading(LowerLayerPtr) {
-    // nop
-  }
-
-  template <class LowerLayerPtr>
-  ptrdiff_t consume(LowerLayerPtr down, byte_span buf) {
+  ptrdiff_t consume(byte_span buf) override {
     auto val = int32_t{0};
     auto str = std::string_view{reinterpret_cast<char*>(buf.data()),
                                 buf.size()};
@@ -114,6 +115,7 @@ public:
     return static_cast<ptrdiff_t>(buf.size());
   }
 
+  net::message_oriented::lower_layer* down = nullptr;
   size_t received_messages = 0;
   adapter_ptr adapter_;
   resource_type output_;
@@ -128,6 +130,10 @@ struct fixture : test_coordinator_fixture<> {
   bool handle_io_event() override {
     mm.mpx().apply_updates();
     return mm.mpx().poll_once(false);
+  }
+
+  auto mpx() {
+    return mm.mpx_ptr();
   }
 
   net::middleman mm;
@@ -157,10 +163,10 @@ SCENARIO("publisher adapters suspend reads if the buffer becomes full") {
       }};
       if (auto err = nonblocking(fd2, true))
         FAIL("nonblocking(fd2) returned an error: " << err);
-      auto mgr = net::make_socket_manager<app_t, net::length_prefix_framing,
-                                          net::stream_transport>(fd2,
-                                                                 mm.mpx_ptr(),
-                                                                 std::move(wr));
+      auto app = app_t::make(std::move(wr));
+      auto framing = net::length_prefix_framing::make(std::move(app));
+      auto transport = net::stream_transport::make(fd2, std::move(framing));
+      auto mgr = net::socket_manager::make(mpx(), fd2, std::move(transport));
       if (auto err = mgr->init(content(cfg)))
         FAIL("mgr->init() failed: " << err);
       THEN("the actor receives all items from the writer (socket)") {
