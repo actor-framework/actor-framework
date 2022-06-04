@@ -55,6 +55,8 @@ public:
       CAF_ASSERT(buf.empty());
       --demand;
       out.on_next(item);
+      if (when_consumed_some)
+        ctx->delay(when_consumed_some);
     } else {
       buf.push_back(item);
     }
@@ -120,6 +122,8 @@ public:
           out.on_complete();
         out = nullptr;
         do_dispose();
+      } else if (got_some && when_consumed_some) {
+        ctx->delay(when_consumed_some);
       }
     }
   }
