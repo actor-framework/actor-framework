@@ -17,6 +17,23 @@
 
 // -- hard-coded default values for various CAF options ------------------------
 
+namespace caf::defaults {
+
+/// Stores the name of a parameter along with the fallback value.
+template <class T>
+struct parameter {
+  std::string_view name;
+  T fallback;
+};
+
+/// @relates parameter
+template <class T>
+constexpr parameter<T> make_parameter(std::string_view name, T fallback) {
+  return {name, fallback};
+}
+
+} // namespace caf::defaults
+
 namespace caf::defaults::stream {
 
 constexpr auto max_batch_delay = timespan{1'000'000};
@@ -108,12 +125,12 @@ constexpr auto format = std::string_view{"[%c:%p] %d %m"};
 namespace caf::defaults::middleman {
 
 constexpr auto app_identifier = std::string_view{"generic-caf-app"};
-constexpr auto network_backend = std::string_view{"default"};
-constexpr auto max_consecutive_reads = size_t{50};
-constexpr auto heartbeat_interval = timespan{10'000'000'000};
-constexpr auto connection_timeout = timespan{30'000'000'000};
 constexpr auto cached_udp_buffers = size_t{10};
+constexpr auto connection_timeout = timespan{30'000'000'000};
+constexpr auto heartbeat_interval = timespan{10'000'000'000};
+constexpr auto max_consecutive_reads = size_t{50};
 constexpr auto max_pending_msgs = size_t{10};
+constexpr auto network_backend = std::string_view{"default"};
 
 } // namespace caf::defaults::middleman
 
@@ -124,3 +141,12 @@ constexpr auto batch_size = size_t{32};
 constexpr auto buffer_size = size_t{128};
 
 } // namespace caf::defaults::flow
+
+namespace caf::defaults::net {
+
+/// Configures how many concurrent connections an acceptor allows. When reaching
+/// this limit, the connector stops accepting additional connections until a
+/// previous connection has been closed.
+constexpr auto max_connections = make_parameter("max-connections", size_t{64});
+
+} // namespace caf::defaults::net

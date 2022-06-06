@@ -14,23 +14,41 @@ bool server::can_send_more() const noexcept {
   return down_->can_send_more();
 }
 
+bool server::is_reading() const noexcept {
+  return down_->is_reading();
+}
+
+void server::write_later() {
+  down_->write_later();
+}
+
+void server::shutdown() {
+  down_->shutdown();
+}
+
+void server::request_messages() {
+  if (!down_->is_reading())
+    down_->configure_read(receive_policy::up_to(max_request_size_));
+}
+
 void server::suspend_reading() {
-  return down_->suspend_reading();
+  down_->configure_read(receive_policy::stop());
 }
 
-bool server::stopped_reading() const noexcept {
-  return down_->stopped_reading();
-}
-
-bool server::send_header(context, status code,
-                         const header_fields_map& fields) {
+void server::begin_header(status code) {
   down_->begin_output();
-  v1::write_header(code, fields, down_->output_buffer());
-  down_->end_output();
-  return true;
+  v1::begin_header(code, down_->output_buffer());
 }
 
-bool server::send_payload(context, const_byte_span bytes) {
+void server::add_header_field(std::string_view key, std::string_view val) {
+  v1::add_header_field(key, val, down_->output_buffer());
+}
+
+bool server::end_header() {
+  return v1::end_header(down_->output_buffer()) && down_->end_output();
+}
+
+bool server::send_payload(const_byte_span bytes) {
   down_->begin_output();
   auto& buf = down_->output_buffer();
   buf.insert(buf.end(), bytes.begin(), bytes.end());
@@ -38,7 +56,7 @@ bool server::send_payload(context, const_byte_span bytes) {
   return true;
 }
 
-bool server::send_chunk(context, const_byte_span bytes) {
+bool server::send_chunk(const_byte_span bytes) {
   down_->begin_output();
   auto& buf = down_->output_buffer();
   auto size = bytes.size();
@@ -60,37 +78,28 @@ bool server::send_end_of_chunks() {
   return down_->end_output();
 }
 
-void server::fin(context) {
-  // nop
-}
-
 // -- stream_oriented::upper_layer implementation ------------------------------
 
-error server::init(socket_manager* owner, stream_oriented::lower_layer* down,
-                   const settings& cfg) {
+error server::start(stream_oriented::lower_layer* down, const settings& cfg) {
   down_ = down;
-  if (auto err = up_->init(owner, this, cfg))
-    return err;
   if (auto max_size = get_as<uint32_t>(cfg, "http.max-request-size"))
     max_request_size_ = *max_size;
-  down_->configure_read(receive_policy::up_to(max_request_size_));
-  return none;
+  if (auto err = up_->start(this, cfg))
+    return err;
+  else
+    return none;
 }
 
 void server::abort(const error& reason) {
   up_->abort(reason);
 }
 
-bool server::prepare_send() {
-  return up_->prepare_send();
+void server::prepare_send() {
+  up_->prepare_send();
 }
 
 bool server::done_sending() {
   return up_->done_sending();
-}
-
-void server::continue_reading() {
-  down_->configure_read(receive_policy::up_to(max_request_size_));
 }
 
 ptrdiff_t server::consume(byte_span input, byte_span) {
@@ -174,7 +183,7 @@ void server::write_response(status code, std::string_view content) {
 }
 
 bool server::invoke_upper_layer(const_byte_span payload) {
-  return up_->consume(context{}, hdr_, payload) >= 0;
+  return up_->consume(hdr_, payload) >= 0;
 }
 
 bool server::handle_header(std::string_view http) {

@@ -69,19 +69,15 @@ public:
   }
 
   multiplexer& mpx() noexcept {
-    return mpx_;
+    return *mpx_;
   }
 
   const multiplexer& mpx() const noexcept {
-    return mpx_;
+    return *mpx_;
   }
 
-  multiplexer* mpx_ptr() noexcept {
-    return &mpx_;
-  }
-
-  const multiplexer* mpx_ptr() const noexcept {
-    return &mpx_;
+  multiplexer* mpx_ptr() const noexcept {
+    return mpx_.get();
   }
 
 private:
@@ -91,7 +87,7 @@ private:
   actor_system& sys_;
 
   /// Stores the global socket I/O multiplexer.
-  multiplexer mpx_;
+  multiplexer_ptr mpx_;
 
   /// Runs the multiplexer's event loop
   std::thread mpx_thread_;

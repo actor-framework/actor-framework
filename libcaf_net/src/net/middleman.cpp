@@ -7,6 +7,9 @@
 #include "caf/actor_system_config.hpp"
 #include "caf/detail/set_thread_name.hpp"
 #include "caf/expected.hpp"
+#include "caf/net/prometheus/serve.hpp"
+#include "caf/net/tcp_accept_socket.hpp"
+#include "caf/net/tcp_stream_socket.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/sec.hpp"
 #include "caf/send.hpp"
@@ -14,11 +17,46 @@
 
 namespace caf::net {
 
+namespace {
+
+struct prom_config {
+  uint16_t port;
+  std::string address = "0.0.0.0";
+  bool reuse_address = true;
+};
+
+template <class Inspector>
+bool inspect(Inspector& f, prom_config& x) {
+  return f.object(x).fields(
+    f.field("port", x.port), f.field("address", x.address).fallback("0.0.0.0"),
+    f.field("reuse-address", x.reuse_address).fallback(true));
+}
+
+void launch_prom_server(actor_system& sys, const prom_config& cfg) {
+  if (auto fd = make_tcp_accept_socket(cfg.port, cfg.address,
+                                       cfg.reuse_address)) {
+    CAF_LOG_INFO("start Prometheus server at port" << local_port(*fd));
+    prometheus::serve(sys, std::move(*fd));
+  } else {
+    CAF_LOG_WARNING("failed to start Prometheus server: " << fd.error());
+  }
+}
+
+void launch_background_tasks(actor_system& sys) {
+  auto& cfg = sys.config();
+  if (auto pcfg = get_as<prom_config>(cfg, "caf.middleman.prometheus-http")) {
+    launch_prom_server(sys, *pcfg);
+  }
+}
+
+} // namespace
+
 void middleman::init_global_meta_objects() {
   // nop
 }
 
-middleman::middleman(actor_system& sys) : sys_(sys), mpx_(this) {
+middleman::middleman(actor_system& sys)
+  : sys_(sys), mpx_(multiplexer::make(this)) {
   // nop
 }
 
@@ -29,26 +67,27 @@ middleman::~middleman() {
 void middleman::start() {
   if (!get_or(config(), "caf.middleman.manual-multiplexing", false)) {
     mpx_thread_ = sys_.launch_thread("caf.net.mpx", [this] {
-      mpx_.set_thread_id();
-      mpx_.run();
+      mpx_->set_thread_id();
+      launch_background_tasks(sys_);
+      mpx_->run();
     });
   } else {
-    mpx_.set_thread_id();
+    mpx_->set_thread_id();
   }
 }
 
 void middleman::stop() {
-  mpx_.shutdown();
+  mpx_->shutdown();
   if (mpx_thread_.joinable())
     mpx_thread_.join();
   else
-    mpx_.run();
+    mpx_->run();
 }
 
 void middleman::init(actor_system_config& cfg) {
-  if (auto err = mpx_.init()) {
-    CAF_LOG_ERROR("mpx_.init() failed: " << err);
-    CAF_RAISE_ERROR("mpx_.init() failed");
+  if (auto err = mpx_->init()) {
+    CAF_LOG_ERROR("mpx_->init() failed: " << err);
+    CAF_RAISE_ERROR("mpx_->init() failed");
   }
   if (auto node_uri = get_if<uri>(&cfg, "caf.middleman.this-node")) {
     auto this_node = make_node_id(std::move(*node_uri));
@@ -85,6 +124,9 @@ void middleman::add_module_options(actor_system_config& cfg) {
                    "max. time between messages before declaring a node dead "
                    "(disabled if 0, ignored if heartbeats are disabled)")
     .add<std::string>("network-backend", "legacy option");
+  config_option_adder{cfg.custom_options(), "caf.middleman.prometheus-http"}
+    .add<uint16_t>("port", "listening port for incoming scrapes")
+    .add<std::string>("address", "bind address for the HTTP server socket");
 }
 
 } // namespace caf::net

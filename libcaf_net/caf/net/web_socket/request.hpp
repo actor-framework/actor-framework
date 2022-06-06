@@ -19,7 +19,7 @@ template <class Trait, class... Ts>
 class request {
 public:
   template <class, class, class...>
-  friend class flow_connector_impl;
+  friend class flow_connector_request_impl;
 
   using input_type = typename Trait::input_type;
 

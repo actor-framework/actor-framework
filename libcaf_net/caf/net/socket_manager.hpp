@@ -4,11 +4,14 @@
 
 #pragma once
 
+#include "caf/action.hpp"
 #include "caf/actor.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/callback.hpp"
+#include "caf/detail/atomic_ref_counted.hpp"
 #include "caf/detail/infer_actor_shell_ptr_type.hpp"
 #include "caf/detail/net_export.hpp"
+#include "caf/disposable.hpp"
 #include "caf/error.hpp"
 #include "caf/fwd.hpp"
 #include "caf/net/actor_shell.hpp"
@@ -16,7 +19,6 @@
 #include "caf/net/socket.hpp"
 #include "caf/net/socket_event_layer.hpp"
 #include "caf/net/typed_actor_shell.hpp"
-#include "caf/ref_counted.hpp"
 #include "caf/sec.hpp"
 
 #include <type_traits>
@@ -24,27 +26,18 @@
 namespace caf::net {
 
 /// Manages the lifetime of a single socket and handles any I/O events on it.
-class CAF_NET_EXPORT socket_manager : public ref_counted {
+class CAF_NET_EXPORT socket_manager : public detail::atomic_ref_counted,
+                                      public disposable_impl {
 public:
   // -- member types -----------------------------------------------------------
 
-  using read_result = socket_event_layer::read_result;
-
-  using write_result = socket_event_layer::write_result;
-
   using event_handler_ptr = std::unique_ptr<socket_event_layer>;
-
-  /// Stores manager-related flags in a single block.
-  struct flags_t {
-    bool read_closed : 1;
-    bool write_closed : 1;
-  };
 
   // -- constructors, destructors, and assignment operators --------------------
 
   /// @pre `handle != invalid_socket`
   /// @pre `mpx!= nullptr`
-  socket_manager(multiplexer* mpx, socket handle, event_handler_ptr handler);
+  socket_manager(multiplexer* mpx, event_handler_ptr handler);
 
   ~socket_manager() override;
 
@@ -54,28 +47,7 @@ public:
 
   // -- factories --------------------------------------------------------------
 
-  static socket_manager_ptr make(multiplexer* mpx, socket handle,
-                                 event_handler_ptr handler);
-
-  template <class Handle = actor, class FallbackHandler>
-  detail::infer_actor_shell_ptr_type<Handle>
-  make_actor_shell(FallbackHandler f) {
-    using ptr_type = detail::infer_actor_shell_ptr_type<Handle>;
-    using impl_type = typename ptr_type::element_type;
-    auto hdl = system().spawn<impl_type>(this);
-    auto ptr = ptr_type{actor_cast<strong_actor_ptr>(std::move(hdl))};
-    ptr->set_fallback(std::move(f));
-    return ptr;
-  }
-
-  template <class Handle = actor>
-  auto make_actor_shell() {
-    auto f = [](abstract_actor_shell* self, message& msg) -> result<message> {
-      self->quit(make_error(sec::unexpected_message, std::move(msg)));
-      return make_error(sec::unexpected_message);
-    };
-    return make_actor_shell<Handle>(std::move(f));
-  }
+  static socket_manager_ptr make(multiplexer* mpx, event_handler_ptr handler);
 
   // -- properties -------------------------------------------------------------
 
@@ -112,92 +84,112 @@ public:
     return mpx_;
   }
 
-  /// Returns whether the manager closed read operations on the socket.
-  [[nodiscard]] bool read_closed() const noexcept {
-    return flags_.read_closed;
-  }
+  /// Queries whether the manager is registered for reading.
+  bool is_reading() const noexcept;
 
-  /// Returns whether the manager closed write operations on the socket.
-  [[nodiscard]] bool write_closed() const noexcept {
-    return flags_.write_closed;
-  }
+  /// Queries whether the manager is registered for writing.
+  bool is_writing() const noexcept;
 
   // -- event loop management --------------------------------------------------
 
-  /// Registers the manager for read operations on the @ref multiplexer.
-  /// @thread-safe
+  /// Registers the manager for read operations.
   void register_reading();
 
-  /// Registers the manager for write operations on the @ref multiplexer.
-  /// @thread-safe
+  /// Registers the manager for write operations.
   void register_writing();
 
-  /// Schedules a call to `handle_continue_reading` on the @ref multiplexer.
-  /// This mechanism allows users to signal changes in the environment to the
-  /// manager that allow it to make progress, e.g., new demand in asynchronous
-  /// buffer that allow the manager to push available data downstream. The event
-  /// is a no-op if the manager is already registered for reading.
-  /// @thread-safe
-  void continue_reading();
+  /// Deregisters the manager from read operations.
+  void deregister_reading();
 
-  /// Schedules a call to `handle_continue_reading` on the @ref multiplexer.
-  /// This mechanism allows users to signal changes in the environment to the
-  /// manager that allow it to make progress, e.g., new data for writing in an
-  /// asynchronous buffer. The event is a no-op if the manager is already
-  /// registered for writing.
-  /// @thread-safe
-  void continue_writing();
+  /// Deregisters the manager from write operations.
+  void deregister_writing();
+
+  /// Deregisters the manager from both read and write operations.
+  void deregister();
+
+  /// Schedules a call to `fn` on the multiplexer when this socket manager
+  /// cleans up its state.
+  /// @note Must be called before `start`.
+  void add_cleanup_listener(action fn) {
+    cleanup_listeners_.push_back(std::move(fn));
+  }
+
+  // -- callbacks for the handler ----------------------------------------------
+
+  /// Schedules a call to `do_handover` on the handler.
+  void schedule_handover();
+
+  /// Schedules @p what to run later.
+  void schedule(action what);
+
+  /// Schedules @p what to run later.
+  template <class F>
+  void schedule_fn(F&& what) {
+    schedule(make_action(std::forward<F>(what)));
+  }
+
+  /// Shuts down this socket manager.
+  void shutdown();
 
   // -- callbacks for the multiplexer ------------------------------------------
 
-  /// Closes the read channel of the socket.
-  void close_read() noexcept;
-
-  /// Closes the write channel of the socket.
-  void close_write() noexcept;
-
-  /// Initializes the manager and its all of its sub-components.
-  error init(const settings& cfg);
+  /// Starts the manager and its all of its processing layers.
+  error start(const settings& cfg);
 
   /// Called whenever the socket received new data.
-  read_result handle_read_event();
-
-  /// Called after handovers to allow the manager to process any data that is
-  /// already buffered at the transport policy and thus would not trigger a read
-  /// event on the socket.
-  read_result handle_buffered_data();
-
-  /// Restarts a socket manager that suspended reads. Calling this member
-  /// function on active managers is a no-op. This function also should read any
-  /// data buffered outside of the socket.
-  read_result handle_continue_reading();
+  void handle_read_event();
 
   /// Called whenever the socket is allowed to send data.
-  write_result handle_write_event();
+  void handle_write_event();
 
-  /// Called when the remote side becomes unreachable due to an error.
-  /// @param code The error code as reported by the operating system.
+  /// Called when the remote side becomes unreachable due to an error or after
+  /// calling @ref dispose.
+  /// @param code The error code as reported by the operating system or
+  ///             @ref sec::disposed.
   void handle_error(sec code);
 
-  /// Performs a handover to another transport after `handle_read_event` or
-  /// `handle_read_event` returned `handover`.
-  [[nodiscard]] bool do_handover();
+  // -- implementation of disposable_impl --------------------------------------
+
+  void dispose() override;
+
+  bool disposed() const noexcept override;
+
+  void ref_disposable() const noexcept override;
+
+  void deref_disposable() const noexcept override;
 
 private:
+  // -- utility functions ------------------------------------------------------
+
+  void cleanup();
+
+  socket_manager_ptr strong_this();
+
   // -- member variables -------------------------------------------------------
 
   /// Stores the socket file descriptor. The socket manager automatically closes
   /// the socket in its destructor.
   socket fd_;
 
-  /// Points to the multiplexer that owns this manager.
+  /// Points to the multiplexer that executes this manager. Note: we do not need
+  /// to increase the reference count for the multiplexer, because the
+  /// multiplexer owns all managers in the sense that calling any member
+  /// function on a socket manager may not occur if the actor system has shut
+  /// down (and the multiplexer is part of the actor system).
   multiplexer* mpx_;
-
-  /// Stores flags for the socket file descriptor.
-  flags_t flags_;
 
   /// Stores the event handler that operators on the socket file descriptor.
   event_handler_ptr handler_;
+
+  /// Stores whether `shutdown` has been called.
+  bool shutting_down_ = false;
+
+  /// Stores whether the manager has been either explicitly disposed or shut
+  /// down by demand of the application.
+  std::atomic<bool> disposed_;
+
+  /// Callbacks to run when calling `cleanup`.
+  std::vector<action> cleanup_listeners_;
 };
 
 /// @relates socket_manager

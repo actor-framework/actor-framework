@@ -32,7 +32,11 @@ public:
 
   bool can_send_more() const noexcept override;
 
-  void suspend_reading() override;
+  bool is_reading() const noexcept override;
+
+  void write_later() override;
+
+  void shutdown() override;
 
   void configure_read(caf::net::receive_policy policy) override;
 
@@ -42,17 +46,15 @@ public:
 
   bool end_output() override;
 
-  bool stopped_reading() const noexcept override;
-
   // -- initialization ---------------------------------------------------------
 
-  caf::error init(const caf::settings& cfg) {
-    return up->init(nullptr, this, cfg);
+  caf::error start(const caf::settings& cfg) {
+    return up->start(this, cfg);
   }
 
-  caf::error init() {
+  caf::error start() {
     caf::settings cfg;
-    return init(cfg);
+    return start(cfg);
   }
 
   // -- buffer management ------------------------------------------------------

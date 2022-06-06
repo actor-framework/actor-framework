@@ -50,8 +50,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
       .for_each([self](const event_t& event) {
         // ... that simply pushes data back to the sender.
         auto [pull, push] = event.data();
-        self->make_observable()
-          .from_resource(pull)
+        pull.observe_on(self)
           .do_on_next([](const ws::frame& x) {
             if (x.is_binary()) {
               std::cout << "*** received a binary WebSocket frame of size "

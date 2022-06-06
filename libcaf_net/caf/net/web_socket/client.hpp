@@ -27,7 +27,7 @@ namespace caf::net::web_socket {
 /// 6455. Initially, the layer performs the WebSocket handshake. Once completed,
 /// this layer decodes RFC 6455 frames and forwards binary and text messages to
 /// `UpperLayer`.
-class client : public stream_oriented::upper_layer {
+class CAF_NET_EXPORT client : public stream_oriented::upper_layer {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -42,6 +42,10 @@ public:
   // -- factories --------------------------------------------------------------
 
   static std::unique_ptr<client> make(handshake_ptr hs, upper_layer_ptr up);
+
+  static std::unique_ptr<client> make(handshake&& hs, upper_layer_ptr up) {
+    return make(std::make_unique<handshake>(std::move(hs)), std::move(up));
+  }
 
   // -- properties -------------------------------------------------------------
 
@@ -67,16 +71,14 @@ public:
 
   // -- implementation of stream_oriented::upper_layer -------------------------
 
-  error init(socket_manager* owner, stream_oriented::lower_layer* down,
-             const settings& config) override;
+  error start(stream_oriented::lower_layer* down,
+              const settings& config) override;
 
   void abort(const error& reason) override;
 
   ptrdiff_t consume(byte_span buffer, byte_span delta) override;
 
-  void continue_reading() override;
-
-  bool prepare_send() override;
+  void prepare_send() override;
 
   bool done_sending() override;
 
@@ -92,9 +94,6 @@ private:
 
   /// Stores the upper layer.
   framing framing_;
-
-  /// Stores a pointer to the owning manager for the delayed initialization.
-  socket_manager* owner_ = nullptr;
 
   settings cfg_;
 };

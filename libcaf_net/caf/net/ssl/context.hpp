@@ -13,6 +13,10 @@
 
 namespace caf::net::ssl {
 
+struct close_on_shutdown_t {};
+
+constexpr close_on_shutdown_t close_on_shutdown = close_on_shutdown_t{};
+
 /// SSL state, shared by multiple connections.
 class CAF_NET_EXPORT context {
 public:
@@ -71,7 +75,14 @@ public:
 
   // -- connections ------------------------------------------------------------
 
+  /// Creates a new SSL connection on `fd`. The connection does not take
+  /// ownership of the socket, i.e., does not close the socket when the SSL
+  /// session ends.
   expected<connection> new_connection(stream_socket fd);
+
+  /// Creates a new SSL connection on `fd`. The connection takes ownership of
+  /// the socket, i.e., closes the socket when the SSL session ends.
+  expected<connection> new_connection(stream_socket fd, close_on_shutdown_t);
 
   // -- certificates and keys --------------------------------------------------
 

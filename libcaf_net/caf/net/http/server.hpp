@@ -6,11 +6,11 @@
 
 #include "caf/byte_span.hpp"
 #include "caf/detail/append_hex.hpp"
+#include "caf/detail/net_export.hpp"
 #include "caf/error.hpp"
 #include "caf/logger.hpp"
 #include "caf/net/connection_acceptor.hpp"
 #include "caf/net/fwd.hpp"
-#include "caf/net/http/context.hpp"
 #include "caf/net/http/header.hpp"
 #include "caf/net/http/header_fields_map.hpp"
 #include "caf/net/http/lower_layer.hpp"
@@ -31,15 +31,14 @@
 namespace caf::net::http {
 
 /// Implements the server part for the HTTP Protocol as defined in RFC 7231.
-class server : public stream_oriented::upper_layer, public http::lower_layer {
+class CAF_NET_EXPORT server : public stream_oriented::upper_layer,
+                              public http::lower_layer {
 public:
   // -- member types -----------------------------------------------------------
 
   using header_fields_type = header_fields_map;
 
   using status_code_type = status;
-
-  using context_type = context;
 
   using header_type = header;
 
@@ -80,33 +79,38 @@ public:
 
   bool can_send_more() const noexcept override;
 
+  bool is_reading() const noexcept override;
+
+  void write_later() override;
+
+  void shutdown() override;
+
+  void request_messages() override;
+
   void suspend_reading() override;
 
-  bool stopped_reading() const noexcept override;
+  void begin_header(status code) override;
 
-  bool send_header(context, status code,
-                   const header_fields_map& fields) override;
+  void add_header_field(std::string_view key, std::string_view val) override;
 
-  bool send_payload(context, const_byte_span bytes) override;
+  bool end_header() override;
 
-  bool send_chunk(context, const_byte_span bytes) override;
+  bool send_payload(const_byte_span bytes) override;
+
+  bool send_chunk(const_byte_span bytes) override;
 
   bool send_end_of_chunks() override;
 
-  void fin(context) override;
-
   // -- stream_oriented::upper_layer implementation ----------------------------
 
-  error init(socket_manager* owner, stream_oriented::lower_layer* down,
-             const settings& config) override;
+  error start(stream_oriented::lower_layer* down,
+              const settings& config) override;
 
   void abort(const error& reason) override;
 
-  bool prepare_send() override;
+  void prepare_send() override;
 
   bool done_sending() override;
-
-  void continue_reading() override;
 
   ptrdiff_t consume(byte_span input, byte_span) override;
 

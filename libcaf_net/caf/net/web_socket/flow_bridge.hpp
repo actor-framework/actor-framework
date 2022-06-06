@@ -4,11 +4,11 @@
 
 #pragma once
 
+#include "caf/async/consumer_adapter.hpp"
+#include "caf/async/producer_adapter.hpp"
 #include "caf/async/spsc_buffer.hpp"
 #include "caf/fwd.hpp"
-#include "caf/net/consumer_adapter.hpp"
-#include "caf/net/producer_adapter.hpp"
-#include "caf/net/web_socket/flow_connector.hpp"
+#include "caf/net/flow_connector.hpp"
 #include "caf/net/web_socket/lower_layer.hpp"
 #include "caf/net/web_socket/request.hpp"
 #include "caf/net/web_socket/upper_layer.hpp"
@@ -27,21 +27,24 @@ public:
   using output_type = typename Trait::output_type;
 
   /// Type for the consumer adapter. We consume the output of the application.
-  using consumer_type = consumer_adapter<async::spsc_buffer<output_type>>;
+  using consumer_type = async::consumer_adapter<output_type>;
 
   /// Type for the producer adapter. We produce the input of the application.
-  using producer_type = producer_adapter<async::spsc_buffer<input_type>>;
+  using producer_type = async::producer_adapter<input_type>;
 
   using request_type = request<Trait>;
 
   using connector_pointer = flow_connector_ptr<Trait>;
 
-  explicit flow_bridge(connector_pointer conn) : conn_(std::move(conn)) {
+  explicit flow_bridge(async::execution_context_ptr loop,
+                       connector_pointer conn)
+    : loop_(std::move(loop)), conn_(std::move(conn)) {
     // nop
   }
 
-  static std::unique_ptr<flow_bridge> make(connector_pointer conn) {
-    return std::make_unique<flow_bridge>(std::move(conn));
+  static std::unique_ptr<flow_bridge> make(async::execution_context_ptr loop,
+                                           connector_pointer conn) {
+    return std::make_unique<flow_bridge>(std::move(loop), std::move(conn));
   }
 
   bool write(const output_type& item) {
@@ -56,92 +59,77 @@ public:
     }
   }
 
-  struct write_helper {
-    flow_bridge* thisptr;
-    bool aborted = false;
-    error err;
-
-    explicit write_helper(flow_bridge* thisptr) : thisptr(thisptr) {
-      // nop
-    }
-
-    void on_next(const output_type& item) {
-      if (!thisptr->write(item))
-        aborted = true;
-    }
-
-    void on_complete() {
-      // nop
-    }
-
-    void on_error(const error& x) {
-      err = x;
-    }
-  };
+  bool running() const noexcept {
+    return in_ || out_;
+  }
 
   // -- implementation of web_socket::lower_layer ------------------------------
 
-  error init(net::socket_manager* mgr, web_socket::lower_layer* down,
-             const settings& cfg) override {
+  error start(web_socket::lower_layer* down, const settings& cfg) override {
     down_ = down;
     auto [err, pull, push] = conn_->on_request(cfg);
     if (!err) {
-      in_ = consumer_type::try_open(mgr, pull);
-      out_ = producer_type::try_open(mgr, push);
-      CAF_ASSERT(in_ != nullptr);
-      CAF_ASSERT(out_ != nullptr);
+      auto do_wakeup = make_action([this] {
+        prepare_send();
+        if (!running())
+          down_->shutdown();
+      });
+      auto do_resume = make_action([this] { down_->request_messages(); });
+      auto do_cancel = make_action([this] {
+        if (!running())
+          down_->shutdown();
+      });
+      in_ = consumer_type::make(pull.try_open(), loop_, std::move(do_wakeup));
+      out_ = producer_type::make(push.try_open(), loop_, std::move(do_resume),
+                                 std::move(do_cancel));
       conn_ = nullptr;
-      return none;
+      if (running())
+        return none;
+      else
+        return make_error(sec::runtime_error,
+                          "cannot init flow bridge: no buffers");
     } else {
       conn_ = nullptr;
       return err;
     }
   }
 
-  void continue_reading() override {
-    // nop
-  }
-
-  bool prepare_send() override {
-    write_helper helper{this};
-    while (down_->can_send_more() && in_) {
-      auto [again, consumed] = in_->pull(async::delay_errors, 1, helper);
-      if (!again) {
-        if (helper.err) {
-          down_->send_close_message(helper.err);
-        } else {
-          down_->send_close_message();
-        }
-        in_ = nullptr;
-        return false;
-      } else if (helper.aborted) {
-        in_->cancel();
-        in_ = nullptr;
-        return false;
-      } else if (consumed == 0) {
-        return true;
+  void prepare_send() override {
+    input_type tmp;
+    while (down_->can_send_more()) {
+      switch (in_.pull(async::delay_errors, tmp)) {
+        case async::read_result::ok:
+          if (!write(tmp)) {
+            down_->shutdown(trait_.last_error());
+            return;
+          }
+          break;
+        case async::read_result::stop:
+          down_->shutdown();
+          break;
+        case async::read_result::abort:
+          down_->shutdown(in_.abort_reason());
+          break;
+        default: // try later
+          return;
       }
     }
-    return true;
   }
 
   bool done_sending() override {
-    return !in_ || !in_->has_data();
+    return !in_.has_consumer_event();
   }
 
   void abort(const error& reason) override {
     CAF_LOG_TRACE(CAF_ARG(reason));
     if (out_) {
-      if (reason == sec::socket_disconnected || reason == sec::disposed)
-        out_->close();
+      if (reason == sec::connection_closed || reason == sec::socket_disconnected
+          || reason == sec::disposed)
+        out_.close();
       else
-        out_->abort(reason);
-      out_ = nullptr;
+        out_.abort(reason);
     }
-    if (in_) {
-      in_->cancel();
-      in_ = nullptr;
-    }
+    in_.cancel();
   }
 
   ptrdiff_t consume_binary(byte_span buf) override {
@@ -150,7 +138,7 @@ public:
     input_type val;
     if (!trait_.convert(buf, val))
       return -1;
-    if (out_->push(std::move(val)) == 0)
+    if (out_.push(std::move(val)) == 0)
       down_->suspend_reading();
     return static_cast<ptrdiff_t>(buf.size());
   }
@@ -161,7 +149,7 @@ public:
     input_type val;
     if (!trait_.convert(buf, val))
       return -1;
-    if (out_->push(std::move(val)) == 0)
+    if (out_.push(std::move(val)) == 0)
       down_->suspend_reading();
     return static_cast<ptrdiff_t>(buf.size());
   }
@@ -170,13 +158,16 @@ private:
   web_socket::lower_layer* down_;
 
   /// The output of the application. Serialized to the socket.
-  intrusive_ptr<consumer_type> in_;
+  consumer_type in_;
 
   /// The input to the application. Deserialized from the socket.
-  intrusive_ptr<producer_type> out_;
+  producer_type out_;
 
   /// Converts between raw bytes and native C++ objects.
   Trait trait_;
+
+  /// Runs callbacks in the I/O event loop.
+  async::execution_context_ptr loop_;
 
   /// Initializes the bridge. Disposed (set to null) after initializing.
   connector_pointer conn_;

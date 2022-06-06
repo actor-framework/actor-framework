@@ -38,7 +38,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  actor_shell(actor_config& cfg, socket_manager* owner);
+  actor_shell(actor_config& cfg, async::execution_context_ptr loop);
 
   ~actor_shell() override;
 
@@ -47,7 +47,7 @@ public:
   /// Overrides the callbacks for incoming messages.
   template <class... Fs>
   void set_behavior(Fs... fs) {
-    bhvr_ = behavior{std::move(fs)...};
+    set_behavior_impl(behavior{std::move(fs)...});
   }
 
   // -- overridden functions of local_actor ------------------------------------
@@ -61,7 +61,9 @@ class CAF_NET_EXPORT actor_shell_ptr {
 public:
   // -- friends ----------------------------------------------------------------
 
-  friend class socket_manager;
+  template <class Handle>
+  friend actor_shell_ptr_t<Handle>
+  make_actor_shell(actor_system&, async::execution_context_ptr);
 
   // -- member types -----------------------------------------------------------
 

@@ -26,10 +26,6 @@ public:
 
   using super = socket_event_layer;
 
-  using read_result = typename super::read_result;
-
-  using write_result = typename super::write_result;
-
   using upper_layer_ptr = transport::upper_layer_ptr;
 
   handshake_worker(connection conn, bool is_server, upper_layer_ptr up)
@@ -39,69 +35,74 @@ public:
 
   // -- interface functions ----------------------------------------------------
 
-  error init(socket_manager* owner, const settings& cfg) override {
+  error start(socket_manager* owner, const settings& cfg) override {
     owner_ = owner;
     cfg_ = cfg;
     owner->register_writing();
     return caf::none;
   }
 
-  read_result handle_read_event() override {
+  socket handle() const override {
+    return policy_.conn.fd();
+  }
+
+  void handle_read_event() override {
     if (auto res = advance_handshake(); res > 0) {
-      return read_result::handover;
+      owner_->deregister();
+      owner_->schedule_handover();
     } else if (res == 0) {
       up_->abort(make_error(sec::connection_closed));
-      return read_result::stop;
+      owner_->deregister();
     } else {
       auto err = policy_.last_error(policy_.conn.fd(), res);
       switch (err) {
         case stream_transport_error::want_read:
         case stream_transport_error::temporary:
-          return read_result::again;
+          break;
         case stream_transport_error::want_write:
-          return read_result::want_write;
-        default:
+          owner_->deregister_reading();
+          owner_->register_writing();
+          break;
+        default: {
           auto err = make_error(sec::cannot_connect_to_node,
                                 policy_.conn.last_error_string(res));
           up_->abort(std::move(err));
-          return read_result::stop;
+          owner_->deregister();
+        }
       }
     }
   }
 
-  read_result handle_buffered_data() override {
-    return read_result::again;
-  }
-
-  read_result handle_continue_reading() override {
-    return read_result::again;
-  }
-
-  write_result handle_write_event() override {
+  void handle_write_event() override {
     if (auto res = advance_handshake(); res > 0) {
-      return write_result::handover;
+      owner_->deregister();
+      owner_->schedule_handover();
+      return;
     } else if (res == 0) {
       up_->abort(make_error(sec::connection_closed));
-      return write_result::stop;
+      owner_->deregister();
     } else {
       switch (policy_.last_error(policy_.conn.fd(), res)) {
         case stream_transport_error::want_write:
         case stream_transport_error::temporary:
-          return write_result::again;
+          break;
         case stream_transport_error::want_read:
-          return write_result::want_read;
-        default:
+          owner_->deregister_writing();
+          owner_->register_reading();
+          break;
+        default: {
           auto err = make_error(sec::cannot_connect_to_node,
                                 policy_.conn.last_error_string(res));
           up_->abort(std::move(err));
-          return write_result::stop;
+          owner_->deregister();
+        }
       }
     }
   }
 
   bool do_handover(std::unique_ptr<socket_event_layer>& next) override {
     next = transport::make(std::move(policy_.conn), std::move(up_));
-    if (auto err = next->init(owner_, cfg_))
+    if (auto err = next->start(owner_, cfg_))
       return false;
     else
       return true;

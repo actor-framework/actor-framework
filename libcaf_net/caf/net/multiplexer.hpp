@@ -9,6 +9,8 @@
 #include <thread>
 
 #include "caf/action.hpp"
+#include "caf/async/execution_context.hpp"
+#include "caf/detail/atomic_ref_counted.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/operation.hpp"
@@ -28,7 +30,8 @@ namespace caf::net {
 class pollset_updater;
 
 /// Multiplexes any number of ::socket_manager objects with a ::socket.
-class CAF_NET_EXPORT multiplexer {
+class CAF_NET_EXPORT multiplexer : public detail::atomic_ref_counted,
+                                   public async::execution_context {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -55,13 +58,18 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
+  ~multiplexer();
+
+  // -- factories --------------------------------------------------------------
+
   /// @param parent Points to the owning middleman instance. May be `nullptr`
   ///               only for the purpose of unit testing if no @ref
   ///               socket_manager requires access to the @ref middleman or the
   ///               @ref actor_system.
-  explicit multiplexer(middleman* parent);
-
-  ~multiplexer();
+  static multiplexer_ptr make(middleman* parent) {
+    auto ptr = new multiplexer(parent);
+    return multiplexer_ptr{ptr, false};
+  }
 
   // -- initialization ---------------------------------------------------------
 
@@ -73,10 +81,10 @@ public:
   size_t num_socket_managers() const noexcept;
 
   /// Returns the index of `mgr` in the pollset or `-1`.
-  ptrdiff_t index_of(const socket_manager_ptr& mgr);
+  ptrdiff_t index_of(const socket_manager_ptr& mgr) const noexcept;
 
   /// Returns the index of `fd` in the pollset or `-1`.
-  ptrdiff_t index_of(socket fd);
+  ptrdiff_t index_of(socket fd) const noexcept;
 
   /// Returns the owning @ref middleman instance.
   middleman& owner();
@@ -87,54 +95,48 @@ public:
   /// Computes the current mask for the manager. Mostly useful for testing.
   operation mask_of(const socket_manager_ptr& mgr);
 
+  // -- implementation of execution_context ------------------------------------
+
+  void ref_execution_context() const noexcept override;
+
+  void deref_execution_context() const noexcept override;
+
+  void schedule(action what) override;
+
+  void watch(disposable what) override;
+
   // -- thread-safe signaling --------------------------------------------------
-
-  /// Registers `mgr` for read events.
-  /// @thread-safe
-  void register_reading(const socket_manager_ptr& mgr);
-
-  /// Registers `mgr` for write events.
-  /// @thread-safe
-  void register_writing(const socket_manager_ptr& mgr);
-
-  /// Triggers a continue reading event for `mgr`.
-  /// @thread-safe
-  void continue_reading(const socket_manager_ptr& mgr);
-
-  /// Triggers a continue writing event for `mgr`.
-  /// @thread-safe
-  void continue_writing(const socket_manager_ptr& mgr);
-
-  /// Schedules a call to `mgr->handle_error(sec::discarded)`.
-  /// @thread-safe
-  void discard(const socket_manager_ptr& mgr);
-
-  /// Stops further reading by `mgr`.
-  /// @thread-safe
-  void shutdown_reading(const socket_manager_ptr& mgr);
-
-  /// Stops further writing by `mgr`.
-  /// @thread-safe
-  void shutdown_writing(const socket_manager_ptr& mgr);
-
-  /// Schedules an action for execution on this multiplexer.
-  /// @thread-safe
-  void schedule(const action& what);
-
-  /// Schedules an action for execution on this multiplexer.
-  /// @thread-safe
-  template <class F>
-  void schedule_fn(F f) {
-    schedule(make_action(std::move(f)));
-  }
 
   /// Registers `mgr` for initialization in the multiplexer's thread.
   /// @thread-safe
-  void init(const socket_manager_ptr& mgr);
+  void start(socket_manager_ptr mgr);
 
   /// Signals the multiplexer to initiate shutdown.
   /// @thread-safe
   void shutdown();
+
+  // -- callbacks for socket managers ------------------------------------------
+
+  /// Registers `mgr` for read events.
+  void register_reading(socket_manager* mgr);
+
+  /// Registers `mgr` for write events.
+  void register_writing(socket_manager* mgr);
+
+  /// Deregisters `mgr` from read events.
+  void deregister_reading(socket_manager* mgr);
+
+  /// Deregisters `mgr` from write events.
+  void deregister_writing(socket_manager* mgr);
+
+  /// Deregisters @p mgr from read and write events.
+  void deregister(socket_manager* mgr);
+
+  /// Queries whether `mgr` is currently registered for reading.
+  bool is_reading(const socket_manager* mgr) const noexcept;
+
+  /// Queries whether `mgr` is currently registered for writing.
+  bool is_writing(const socket_manager* mgr) const noexcept;
 
   // -- control flow -----------------------------------------------------------
 
@@ -160,18 +162,16 @@ protected:
   /// Handles an I/O event on given manager.
   void handle(const socket_manager_ptr& mgr, short events, short revents);
 
-  /// Transfers socket ownership from one manager to another.
-  void do_handover(const socket_manager_ptr& mgr);
-
   /// Returns a change entry for the socket at given index. Lazily creates a new
   /// entry before returning if necessary.
   poll_update& update_for(ptrdiff_t index);
 
   /// Returns a change entry for the socket of the manager.
-  poll_update& update_for(const socket_manager_ptr& mgr);
+  poll_update& update_for(socket_manager* mgr);
 
   /// Writes `opcode` and pointer to `mgr` the the pipe for handling an event
   /// later via the pollset updater.
+  /// @warning assumes ownership of @p ptr.
   template <class T>
   void write_to_pipe(uint8_t opcode, T* ptr);
 
@@ -182,13 +182,7 @@ protected:
   }
 
   /// Queries the currently active event bitmask for `mgr`.
-  short active_mask_of(const socket_manager_ptr& mgr);
-
-  /// Queries whether `mgr` is currently registered for reading.
-  bool is_reading(const socket_manager_ptr& mgr);
-
-  /// Queries whether `mgr` is currently registered for writing.
-  bool is_writing(const socket_manager_ptr& mgr);
+  short active_mask_of(const socket_manager* mgr) const noexcept;
 
   // -- member variables -------------------------------------------------------
 
@@ -219,26 +213,21 @@ protected:
   /// Signals whether shutdown has been requested.
   bool shutting_down_ = false;
 
+  /// Keeps track of watched disposables.
+  std::vector<disposable> watched_;
+
 private:
+  // -- constructors, destructors, and assignment operators --------------------
+
+  explicit multiplexer(middleman* parent);
+
   // -- internal callbacks the pollset updater ---------------------------------
 
   void do_shutdown();
 
   void do_register_reading(const socket_manager_ptr& mgr);
 
-  void do_register_writing(const socket_manager_ptr& mgr);
-
-  void do_continue_reading(const socket_manager_ptr& mgr);
-
-  void do_continue_writing(const socket_manager_ptr& mgr);
-
-  void do_discard(const socket_manager_ptr& mgr);
-
-  void do_shutdown_reading(const socket_manager_ptr& mgr);
-
-  void do_shutdown_writing(const socket_manager_ptr& mgr);
-
-  void do_init(const socket_manager_ptr& mgr);
+  void do_start(const socket_manager_ptr& mgr);
 };
 
 } // namespace caf::net

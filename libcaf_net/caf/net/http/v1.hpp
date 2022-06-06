@@ -20,18 +20,27 @@ namespace caf::net::http::v1 {
 CAF_NET_EXPORT std::pair<std::string_view, byte_span>
 split_header(byte_span bytes);
 
-/// Writes an HTTP header to the buffer.
+/// Writes an HTTP header to @p buf.
 CAF_NET_EXPORT void write_header(status code, const header_fields_map& fields,
                                  byte_buffer& buf);
 
-/// Writes a complete HTTP response to the buffer. Automatically sets
-/// Content-Type and Content-Length header fields.
+/// Write the status code for an HTTP header to @p buf.
+CAF_NET_EXPORT void begin_header(status code, byte_buffer& buf);
+
+/// Write a header field to @p buf.
+CAF_NET_EXPORT void add_header_field(std::string_view key, std::string_view val,
+                                     byte_buffer& buf);
+
+/// Write the status code for an HTTP header to @buf.
+CAF_NET_EXPORT bool end_header(byte_buffer& buf);
+
+/// Writes a complete HTTP response to @p buf. Automatically sets Content-Type
+/// and Content-Length header fields.
 CAF_NET_EXPORT void write_response(status code, std::string_view content_type,
                                    std::string_view content, byte_buffer& buf);
 
-/// Writes a complete HTTP response to the buffer. Automatically sets
-/// Content-Type and Content-Length header fields followed by the user-defined
-/// @p fields.
+/// Writes a complete HTTP response to @p buf. Automatically sets Content-Type
+/// and Content-Length header fields followed by the user-defined @p fields.
 CAF_NET_EXPORT void write_response(status code, std::string_view content_type,
                                    std::string_view content,
                                    const header_fields_map& fields,

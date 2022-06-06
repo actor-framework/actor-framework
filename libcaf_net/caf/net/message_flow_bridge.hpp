@@ -5,11 +5,11 @@
 #pragma once
 
 #include "caf/actor_system.hpp"
-#include "caf/async/spsc_buffer.hpp"
-#include "caf/net/consumer_adapter.hpp"
-#include "caf/net/message_oriented.hpp"
+#include "caf/async/consumer_adapter.hpp"
+#include "caf/async/producer_adapter.hpp"
+#include "caf/net/binary/lower_layer.hpp"
+#include "caf/net/binary/upper_layer.hpp"
 #include "caf/net/multiplexer.hpp"
-#include "caf/net/producer_adapter.hpp"
 #include "caf/net/socket_manager.hpp"
 #include "caf/sec.hpp"
 #include "caf/settings.hpp"
@@ -32,7 +32,7 @@ namespace caf::net {
 /// };
 /// ~~~
 template <class Trait>
-class message_flow_bridge : public message_oriented::upper_layer {
+class message_flow_bridge : public binary::upper_layer {
 public:
   /// The input type for the application.
   using input_type = typename Trait::input_type;
@@ -64,15 +64,17 @@ public:
     // nop
   }
 
-  error init(net::socket_manager* mgr, message_oriented::lower_layer* down,
-             const settings&) {
+  error start(net::socket_manager* mgr, binary::lower_layer* down,
+              const settings&) {
     down_ = down;
-    if (in_res_) {
-      in_ = consumer_adapter<pull_buffer_t>::try_open(mgr, in_res_);
+    if (auto in = make_consumer_adapter(in_res_, mgr->mpx_ptr(),
+                                        do_wakeup_cb())) {
+      in_ = std::move(*in);
       in_res_ = nullptr;
     }
-    if (out_res_) {
-      out_ = producer_adapter<push_buffer_t>::try_open(mgr, out_res_);
+    if (auto out = make_producer_adapter(out_res_, mgr->mpx_ptr(),
+                                         do_resume_cb(), do_cancel_cb())) {
+      out_ = std::move(*out);
       out_res_ = nullptr;
     }
     if (!in_ && !out_)
@@ -87,63 +89,39 @@ public:
     return trait_.convert(item, buf) && down_->end_message();
   }
 
-  struct write_helper {
-    message_flow_bridge* bridge;
-    bool aborted = false;
-    error err;
-
-    write_helper(message_flow_bridge* bridge) : bridge(bridge) {
-      // nop
-    }
-
-    void on_next(const input_type& item) {
-      if (!bridge->write(item))
-        aborted = true;
-    }
-
-    void on_complete() {
-      // nop
-    }
-
-    void on_error(const error& x) {
-      err = x;
-    }
-  };
-
-  bool prepare_send() override {
-    write_helper helper{this};
-    while (down_->can_send_more() && in_) {
-      auto [again, consumed] = in_->pull(async::delay_errors, 1, helper);
-      if (!again) {
-        if (helper.err) {
-          down_->send_close_message(helper.err);
-        } else {
-          down_->send_close_message();
-        }
-        in_ = nullptr;
-      } else if (helper.aborted) {
-        in_->cancel();
-        in_ = nullptr;
-        return false;
-      } else if (consumed == 0) {
-        return true;
+  void prepare_send() override {
+    input_type tmp;
+    while (down_->can_send_more()) {
+      switch (in_.pull(async::delay_errors, tmp)) {
+        case async::read_result::ok:
+          if (!write(tmp)) {
+            down_->shutdown(trait_.last_error());
+            return;
+          }
+          break;
+        case async::read_result::stop:
+          down_->shutdown();
+          break;
+        case async::read_result::abort:
+          down_->shutdown(in_.abort_reason());
+          break;
+        default: // try later
+          return;
       }
     }
-    return true;
   }
 
   bool done_sending() override {
-    return !in_ || !in_->has_data();
+    return !in_->has_consumer_event();
   }
 
   void abort(const error& reason) override {
     CAF_LOG_TRACE(CAF_ARG(reason));
     if (out_) {
       if (reason == sec::socket_disconnected || reason == sec::disposed)
-        out_->close();
+        out_.close();
       else
-        out_->abort(reason);
-      out_ = nullptr;
+        out_ > abort(reason);
     }
     if (in_) {
       in_->cancel();
@@ -163,14 +141,31 @@ public:
   }
 
 private:
+  action do_wakeup_cb() {
+    return make_action([this] { down_->write_later(); });
+  }
+
+  action do_resume_cb() {
+    return make_action([this] { down_->request_messages(); });
+  }
+
+  action do_cancel_cb() {
+    return make_action([this] {
+      if (out_) {
+        out_ = nullptr;
+        down_->shutdown();
+      }
+    });
+  }
+
   /// Points to the next layer down the protocol stack.
-  message_oriented::lower_layer* down_ = nullptr;
+  binary::lower_layer* down_ = nullptr;
 
   /// Incoming messages, serialized to the socket.
-  consumer_adapter_ptr<pull_buffer_t> in_;
+  async::consumer_adapter<input_type> in_;
 
   /// Outgoing messages, deserialized from the socket.
-  producer_adapter_ptr<push_buffer_t> out_;
+  async::producer_adapter<output_type> out_;
 
   /// Converts between raw bytes and items.
   Trait trait_;

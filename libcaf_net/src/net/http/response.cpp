@@ -2,11 +2,12 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#pragma once
+#include "caf/net/http/response.hpp"
 
 namespace caf::net::http {
 
-/// Stores context information for a request. For HTTP/2, this is the stream ID.
-class context {};
+response::response(status code, fields_map fm, std::vector<std::byte> body) {
+  pimpl_ = std::make_shared<impl>(impl{code, std::move(fm), std::move(body)});
+}
 
 } // namespace caf::net::http

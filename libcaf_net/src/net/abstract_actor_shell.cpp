@@ -4,6 +4,7 @@
 
 #include "caf/net/abstract_actor_shell.hpp"
 
+#include "caf/action.hpp"
 #include "caf/callback.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/default_invoke_result_visitor.hpp"
@@ -18,9 +19,15 @@ namespace caf::net {
 // -- constructors, destructors, and assignment operators ----------------------
 
 abstract_actor_shell::abstract_actor_shell(actor_config& cfg,
-                                           socket_manager* owner)
-  : super(cfg), mailbox_(policy::normal_messages{}), owner_(owner) {
+                                           async::execution_context_ptr loop)
+  : super(cfg), mailbox_(policy::normal_messages{}), loop_(loop) {
   mailbox_.try_block();
+  resume_ = make_action([this] {
+    for (;;) {
+      if (!consume_message() && try_block_mailbox())
+        return;
+    }
+  });
 }
 
 abstract_actor_shell::~abstract_actor_shell() {
@@ -117,13 +124,13 @@ bool abstract_actor_shell::enqueue(mailbox_element_ptr ptr, execution_unit*) {
   switch (mailbox().push_back(std::move(ptr))) {
     case intrusive::inbox_result::unblocked_reader: {
       CAF_LOG_ACCEPT_EVENT(true);
-      std::unique_lock<std::mutex> guard{owner_mtx_};
-      // The owner can only be null if this enqueue succeeds, then we close the
-      // mailbox and reset owner_ in cleanup() before acquiring the mutex here.
+      std::unique_lock<std::mutex> guard{loop_mtx_};
+      // The loop can only be null if this enqueue succeeds, then we close the
+      // mailbox and reset loop_ in cleanup() before acquiring the mutex here.
       // Hence, the mailbox element has already been disposed and we can simply
       // skip any further processing.
-      if (owner_)
-        owner_->mpx().register_writing(owner_);
+      if (loop_)
+        loop_->schedule(resume_);
       return true;
     }
     case intrusive::inbox_result::success:
@@ -175,8 +182,9 @@ bool abstract_actor_shell::cleanup(error&& fail_state, execution_unit* host) {
   }
   // Detach from owner.
   {
-    std::unique_lock<std::mutex> guard{owner_mtx_};
-    owner_ = nullptr;
+    std::unique_lock<std::mutex> guard{loop_mtx_};
+    loop_ = nullptr;
+    resume_.dispose();
   }
   // Dispatch to parent's `cleanup` function.
   return super::cleanup(std::move(fail_state), host);

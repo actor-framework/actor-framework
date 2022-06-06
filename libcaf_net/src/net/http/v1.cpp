@@ -61,6 +61,24 @@ void write_header(status code, const header_fields_map& fields,
   out << "\r\n"sv;
 }
 
+void begin_header(status code, byte_buffer& buf) {
+  writer out{&buf};
+  out << "HTTP/1.1 "sv << std::to_string(static_cast<int>(code)) << ' '
+      << phrase(code) << "\r\n"sv;
+}
+
+void add_header_field(std::string_view key, std::string_view val,
+                      byte_buffer& buf) {
+  writer out{&buf};
+  out << key << ": "sv << val << "\r\n"sv;
+}
+
+bool end_header(byte_buffer& buf) {
+  writer out{&buf};
+  out << "\r\n"sv;
+  return true;
+}
+
 void write_response(status code, std::string_view content_type,
                     std::string_view content, byte_buffer& buf) {
   header_fields_map fields;

@@ -10,4 +10,8 @@ generic_lower_layer::~generic_lower_layer() {
   // nop
 }
 
+void generic_lower_layer::shutdown(const error&) {
+  shutdown();
+}
+
 } // namespace caf::net

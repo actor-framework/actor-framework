@@ -2,16 +2,12 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#include "caf/net/message_oriented.hpp"
+#pragma once
 
-namespace caf::net::message_oriented {
+namespace caf::net::binary {
 
-upper_layer::~upper_layer() {
-  // nop
-}
+class frame;
+class lower_layer;
+class upper_layer;
 
-lower_layer::~lower_layer() {
-  // nop
-}
-
-} // namespace caf::net::message_oriented
+} // namespace caf::net::binary

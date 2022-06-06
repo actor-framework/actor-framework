@@ -26,22 +26,17 @@ public:
 
   settings cfg;
 
-  error init(net::socket_manager*, net::web_socket::lower_layer*,
-             const settings& init_cfg) override {
-    cfg = init_cfg;
+  error start(net::web_socket::lower_layer*, const settings& args) override {
+    cfg = args;
     return none;
   }
 
-  bool prepare_send() override {
-    return true;
+  void prepare_send() override {
+    // nop
   }
 
   bool done_sending() override {
     return true;
-  }
-
-  void continue_reading() override {
-    // nop
   }
 
   void abort(const error& reason) override {
@@ -106,7 +101,7 @@ SCENARIO("the client performs the WebSocket handshake on startup") {
       auto& ws_state = *ws;
       auto uut = mock_stream_transport::make(std::move(ws));
       THEN("the client sends its HTTP request when initializing it") {
-        CHECK_EQ(uut->init(), error{});
+        CHECK_EQ(uut->start(), error{});
         CHECK_EQ(uut->output_as_str(), http_request);
       }
       AND("the client waits for the server handshake and validates it") {

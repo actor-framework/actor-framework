@@ -16,64 +16,27 @@ class CAF_NET_EXPORT socket_event_layer {
 public:
   virtual ~socket_event_layer();
 
-  /// Encodes how to proceed after a read operation.
-  enum class read_result {
-    /// Indicates that a manager wants to read again later.
-    again,
-    /// Indicates that a manager wants to stop reading until explicitly resumed.
-    stop,
-    /// Indicates that a manager wants to write to the socket instead of reading
-    /// from the socket.
-    want_write,
-    /// Indicates that the manager no longer reads from the socket.
-    close,
-    /// Indicates that the manager encountered a fatal error and stops both
-    /// reading and writing.
-    abort,
-    /// Indicates that a manager is done with the socket and hands ownership to
-    /// another manager.
-    handover,
-  };
+  /// Starts processing on this layer.
+  virtual error start(socket_manager* owner, const settings& cfg) = 0;
 
-  /// Encodes how to proceed after a write operation.
-  enum class write_result {
-    /// Indicates that a manager wants to read again later.
-    again,
-    /// Indicates that a manager wants to stop reading until explicitly resumed.
-    stop,
-    /// Indicates that a manager wants to read from the socket instead of
-    /// writing to the socket.
-    want_read,
-    /// Indicates that the manager no longer writes to the socket.
-    close,
-    /// Indicates that the manager encountered a fatal error and stops both
-    /// reading and writing.
-    abort,
-    /// Indicates that a manager is done with the socket and hands ownership to
-    /// another manager.
-    handover,
-  };
-
-  /// Initializes the layer.
-  virtual error init(socket_manager* owner, const settings& cfg) = 0;
+  /// Returns the handle for the managed socket.
+  virtual socket handle() const = 0;
 
   /// Handles a read event on the managed socket.
-  virtual read_result handle_read_event() = 0;
-
-  /// Handles internally buffered data.
-  virtual read_result handle_buffered_data() = 0;
-
-  /// Handles a request to continue reading on the socket.
-  virtual read_result handle_continue_reading() = 0;
+  virtual void handle_read_event() = 0;
 
   /// Handles a write event on the managed socket.
-  virtual write_result handle_write_event() = 0;
+  virtual void handle_write_event() = 0;
 
   /// Called after returning `handover` from a read or write handler.
   virtual bool do_handover(std::unique_ptr<socket_event_layer>& next);
 
-  /// Called on hard errors on the managed socket.
+  /// Called on socket errors or when the manager gets disposed.
   virtual void abort(const error& reason) = 0;
+
+  /// Queries whether the object can be safely discarded after calling
+  /// @ref abort on it, e.g., that pending data has been written.
+  virtual bool finalized() const noexcept;
 };
 
 } // namespace caf::net

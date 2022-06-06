@@ -4,14 +4,15 @@
 
 #pragma once
 
-#include <condition_variable>
-#include <type_traits>
-
 #include "caf/async/producer.hpp"
 #include "caf/async/spsc_buffer.hpp"
+#include "caf/detail/atomic_ref_counted.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/make_counted.hpp"
-#include "caf/ref_counted.hpp"
+
+#include <condition_variable>
+#include <optional>
+#include <type_traits>
 
 namespace caf::async {
 
@@ -19,7 +20,7 @@ namespace caf::async {
 template <class T>
 class blocking_producer {
 public:
-  class impl : public ref_counted, public producer {
+  class impl : public detail::atomic_ref_counted, public producer {
   public:
     impl() = delete;
     impl(const impl&) = delete;
@@ -99,8 +100,6 @@ public:
       deref();
     }
 
-    CAF_INTRUSIVE_PTR_FRIENDS(impl)
-
   private:
     spsc_buffer_ptr<T> buf_;
     mutable std::mutex mtx_;
@@ -169,18 +168,30 @@ public:
     return impl_->canceled();
   }
 
+  explicit operator bool() const noexcept {
+    return static_cast<bool>(impl_);
+  }
+
 private:
   intrusive_ptr<impl> impl_;
 };
 
+/// @pre `buf != nullptr`
+/// @relates blocking_producer
 template <class T>
-expected<blocking_producer<T>>
+blocking_producer<T> make_blocking_producer(spsc_buffer_ptr<T> buf) {
+  using impl_t = typename blocking_producer<T>::impl;
+  return blocking_producer<T>{make_counted<impl_t>(std::move(buf))};
+}
+
+/// @relates blocking_producer
+template <class T>
+std::optional<blocking_producer<T>>
 make_blocking_producer(producer_resource<T> res) {
   if (auto buf = res.try_open()) {
-    using impl_t = typename blocking_producer<T>::impl;
-    return {blocking_producer<T>{make_counted<impl_t>(std::move(buf))}};
+    return {make_blocking_producer(std::move(buf))};
   } else {
-    return {make_error(sec::cannot_open_resource)};
+    return {};
   }
 }
 

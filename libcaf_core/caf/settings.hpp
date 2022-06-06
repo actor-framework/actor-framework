@@ -7,6 +7,7 @@
 #include <string_view>
 
 #include "caf/config_value.hpp"
+#include "caf/defaults.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/move_if_not_ptr.hpp"
 #include "caf/dictionary.hpp"
@@ -66,6 +67,12 @@ auto get_or(const settings& xs, std::string_view name, Fallback&& fallback) {
   } else {
     return To{std::forward<Fallback>(fallback)};
   }
+}
+
+/// Convenience overload for calling `get_or(xs, param.name, param.fallback)`.
+template <class T>
+auto get_or(const settings& xs, defaults::parameter<T> param) {
+  return get_or(xs, param.name, param.fallback);
 }
 
 /// Tries to retrieve the value associated to `name` from `xs` as an instance of

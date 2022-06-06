@@ -8,8 +8,8 @@ namespace caf::net {
 
 // -- actor_shell --------------------------------------------------------------
 
-actor_shell::actor_shell(actor_config& cfg, socket_manager* owner)
-  : super(cfg, owner) {
+actor_shell::actor_shell(actor_config& cfg, async::execution_context_ptr loop)
+  : super(cfg, loop) {
   // nop
 }
 

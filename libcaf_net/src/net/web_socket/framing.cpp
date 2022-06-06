@@ -10,7 +10,7 @@ namespace caf::net::web_socket {
 
 // -- initialization ---------------------------------------------------------
 
-void framing::init(socket_manager*, stream_oriented::lower_layer* down) {
+void framing::start(stream_oriented::lower_layer* down) {
   std::random_device rd;
   rng_.seed(rd());
   down_ = down;
@@ -23,15 +23,39 @@ bool framing::can_send_more() const noexcept {
 }
 
 void framing::suspend_reading() {
-  down_->suspend_reading();
+  down_->configure_read(receive_policy::stop());
 }
 
-bool framing::stopped_reading() const noexcept {
-  return down_->stopped_reading();
+bool framing::is_reading() const noexcept {
+  return down_->is_reading();
+}
+
+void framing::write_later() {
+  down_->write_later();
+}
+
+void framing::shutdown(status code, std::string_view msg) {
+  auto code_val = static_cast<uint16_t>(code);
+  uint32_t mask_key = 0;
+  byte_buffer payload;
+  payload.reserve(msg.size() + 2);
+  payload.push_back(static_cast<std::byte>((code_val & 0xFF00) >> 8));
+  payload.push_back(static_cast<std::byte>(code_val & 0x00FF));
+  for (auto c : msg)
+    payload.push_back(static_cast<std::byte>(c));
+  if (mask_outgoing_frames) {
+    mask_key = static_cast<uint32_t>(rng_());
+    detail::rfc6455::mask_data(mask_key, payload);
+  }
+  down_->begin_output();
+  detail::rfc6455::assemble_frame(detail::rfc6455::connection_close, mask_key,
+                                  payload, down_->output_buffer());
+  down_->end_output();
+  down_->shutdown();
 }
 
 void framing::request_messages() {
-  if (down_->stopped_reading())
+  if (!down_->is_reading())
     down_->configure_read(receive_policy::up_to(2048));
 }
 
@@ -59,14 +83,6 @@ text_buffer& framing::text_message_buffer() {
 bool framing::end_text_message() {
   ship_frame(text_buf_);
   return true;
-}
-
-void framing::send_close_message() {
-  ship_close();
-}
-
-void framing::send_close_message(status code, std::string_view desc) {
-  ship_close(static_cast<uint16_t>(code), desc);
 }
 
 // -- interface for the lower layer --------------------------------------------
@@ -99,9 +115,6 @@ ptrdiff_t framing::consume(byte_span input, byte_span) {
     // Wait for more data if necessary.
     size_t frame_size = hdr_bytes + hdr.payload_len;
     if (buffer.size() < frame_size) {
-      // Ask for more data unless the upper layer called suspend_reading.
-      if (!down_->stopped_reading())
-        down_->configure_read(receive_policy::up_to(2048));
       down_->configure_read(receive_policy::exactly(frame_size));
       return consumed;
     }
@@ -170,7 +183,7 @@ ptrdiff_t framing::consume(byte_span input, byte_span) {
     buffer = buffer.subspan(frame_size);
     if (buffer.empty()) {
       // Ask for more data unless the upper layer called suspend_reading.
-      if (!down_->stopped_reading())
+      if (down_->is_reading())
         down_->configure_read(receive_policy::up_to(2048));
       return consumed + static_cast<ptrdiff_t>(frame_size);
     }
@@ -212,40 +225,6 @@ void framing::ship_pong(byte_span payload) {
   down_->begin_output();
   detail::rfc6455::assemble_frame(detail::rfc6455::pong, mask_key, payload,
                                   down_->output_buffer());
-  down_->end_output();
-}
-
-void framing::ship_close(uint16_t code, std::string_view msg) {
-  uint32_t mask_key = 0;
-  byte_buffer payload;
-  payload.reserve(msg.size() + 2);
-  payload.push_back(static_cast<std::byte>((code & 0xFF00) >> 8));
-  payload.push_back(static_cast<std::byte>(code & 0x00FF));
-  for (auto c : msg)
-    payload.push_back(static_cast<std::byte>(c));
-  if (mask_outgoing_frames) {
-    mask_key = static_cast<uint32_t>(rng_());
-    detail::rfc6455::mask_data(mask_key, payload);
-  }
-  down_->begin_output();
-  detail::rfc6455::assemble_frame(detail::rfc6455::connection_close, mask_key,
-                                  payload, down_->output_buffer());
-  down_->end_output();
-}
-
-void framing::ship_close() {
-  uint32_t mask_key = 0;
-  std::byte payload[] = {// Error code 1000: normal close.
-                         std::byte{0x03}, std::byte{0xE8},
-                         // "EOF" string as goodbye message.
-                         std::byte{'E'}, std::byte{'O'}, std::byte{'F'}};
-  if (mask_outgoing_frames) {
-    mask_key = static_cast<uint32_t>(rng_());
-    detail::rfc6455::mask_data(mask_key, payload);
-  }
-  down_->begin_output();
-  detail::rfc6455::assemble_frame(detail::rfc6455::connection_close, mask_key,
-                                  payload, down_->output_buffer());
   down_->end_output();
 }
 

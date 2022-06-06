@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/net/connection_factory.hpp"
 #include "caf/net/socket_event_layer.hpp"
 #include "caf/net/socket_manager.hpp"
 #include "caf/settings.hpp"
@@ -12,99 +13,116 @@ namespace caf::net {
 
 /// A connection_acceptor accepts connections from an accept socket and creates
 /// socket managers to handle them via its factory.
-template <class Socket, class Factory>
+template <class Socket>
 class connection_acceptor : public socket_event_layer {
 public:
   // -- member types -----------------------------------------------------------
 
   using socket_type = Socket;
 
-  using factory_type = Factory;
+  using connected_socket_type = typename socket_type::connected_socket_type;
 
-  using read_result = typename socket_event_layer::read_result;
-
-  using write_result = typename socket_event_layer::write_result;
+  using factory_type = connection_factory<connected_socket_type>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  template <class... Ts>
-  explicit connection_acceptor(Socket fd, size_t limit, Ts&&... xs)
-    : fd_(fd), limit_(limit), factory_(std::forward<Ts>(xs)...) {
-    // nop
+  template <class FactoryPtr, class... Ts>
+  connection_acceptor(Socket fd, FactoryPtr fptr, size_t max_connections)
+    : fd_(fd),
+      factory_(factory_type::decorate(std::move(fptr))),
+      max_connections_(max_connections) {
+    CAF_ASSERT(max_connections_ > 0);
+  }
+
+  ~connection_acceptor() {
+    on_conn_close_.dispose();
+    if (fd_.id != invalid_socket_id)
+      close(fd_);
   }
 
   // -- factories --------------------------------------------------------------
 
-  template <class... Ts>
+  template <class FactoryPtr, class... Ts>
   static std::unique_ptr<connection_acceptor>
-  make(Socket fd, size_t limit, Ts&&... xs) {
-    return std::make_unique<connection_acceptor>(fd, limit,
-                                                 std::forward<Ts>(xs)...);
+  make(Socket fd, FactoryPtr fptr, size_t max_connections) {
+    return std::make_unique<connection_acceptor>(fd, std::move(fptr),
+                                                 max_connections);
   }
 
   // -- implementation of socket_event_layer -----------------------------------
 
-  error init(socket_manager* owner, const settings& cfg) override {
+  error start(socket_manager* owner, const settings& cfg) override {
     CAF_LOG_TRACE("");
     owner_ = owner;
     cfg_ = cfg;
-    if (auto err = factory_.init(owner, cfg))
+    if (auto err = factory_->start(owner, cfg)) {
+      CAF_LOG_DEBUG("factory_->start failed:" << err);
       return err;
+    }
+    on_conn_close_ = make_action([this] { connection_closed(); });
     owner->register_reading();
     return none;
   }
 
-  read_result handle_read_event() override {
+  socket handle() const override {
+    return fd_;
+  }
+
+  void handle_read_event() override {
     CAF_LOG_TRACE("");
-    if (auto x = accept(fd_)) {
-      socket_manager_ptr child = factory_.make(owner_->mpx_ptr(), *x);
+    CAF_ASSERT(owner_ != nullptr);
+    if (open_connections_ == max_connections_) {
+      owner_->deregister_reading();
+    } else if (auto x = accept(fd_)) {
+      socket_manager_ptr child = factory_->make(owner_->mpx_ptr(), *x);
       if (!child) {
         CAF_LOG_ERROR("factory failed to create a new child");
-        return read_result::abort;
+        on_conn_close_.dispose();
+        owner_->shutdown();
+        return;
       }
-      if (auto err = child->init(cfg_)) {
-        CAF_LOG_ERROR("failed to initialize new child:" << err);
-        return read_result::abort;
-      }
-      if (limit_ == 0) {
-        return read_result::again;
-      } else {
-        return ++accepted_ < limit_ ? read_result::again : read_result::stop;
-      }
+      if (++open_connections_ == max_connections_)
+        owner_->deregister_reading();
+      child->add_cleanup_listener(on_conn_close_);
+      std::ignore = child->start(cfg_);
+    } else if (x.error() == sec::unavailable_or_would_block) {
+      // Encountered a "soft" error: simply try again later.
+      CAF_LOG_DEBUG("accept failed:" << x.error());
     } else {
-      CAF_LOG_ERROR("accept failed:" << x.error());
-      return read_result::stop;
+      // Encountered a "hard" error: stop.
+      abort(x.error());
+      owner_->deregister_reading();
     }
   }
 
-  read_result handle_buffered_data() override {
-    return read_result::again;
-  }
-
-  read_result handle_continue_reading() override {
-    return read_result::again;
-  }
-
-  write_result handle_write_event() override {
+  void handle_write_event() override {
     CAF_LOG_ERROR("connection_acceptor received write event");
-    return write_result::stop;
+    owner_->deregister_writing();
   }
 
   void abort(const error& reason) override {
-    CAF_LOG_ERROR("connection_acceptor aborts due to an error: " << reason);
-    factory_.abort(reason);
+    CAF_LOG_ERROR("connection_acceptor aborts due to an error:" << reason);
+    factory_->abort(reason);
+    on_conn_close_.dispose();
   }
 
 private:
+  void connection_closed() {
+    if (open_connections_-- == max_connections_)
+      owner_->register_reading();
+  }
+
   Socket fd_;
 
-  size_t limit_;
+  connection_factory_ptr<connected_socket_type> factory_;
 
-  factory_type factory_;
+  size_t max_connections_;
+
+  size_t open_connections_ = 0;
 
   socket_manager* owner_ = nullptr;
 
-  size_t accepted_ = 0;
+  action on_conn_close_;
 
   settings cfg_;
 };

@@ -19,8 +19,16 @@ bool mock_stream_transport::can_send_more() const noexcept {
   return true;
 }
 
-void mock_stream_transport::suspend_reading() {
-  configure_read(net::receive_policy::stop());
+bool mock_stream_transport::is_reading() const noexcept {
+  return max_read_size > 0;
+}
+
+void mock_stream_transport::write_later() {
+  // nop
+}
+
+void mock_stream_transport::shutdown() {
+  // nop
 }
 
 void mock_stream_transport::configure_read(net::receive_policy policy) {
@@ -38,10 +46,6 @@ byte_buffer& mock_stream_transport::output_buffer() {
 
 bool mock_stream_transport::end_output() {
   return true;
-}
-
-bool mock_stream_transport::stopped_reading() const noexcept {
-  return max_read_size == 0;
 }
 
 ptrdiff_t mock_stream_transport::handle_input() {

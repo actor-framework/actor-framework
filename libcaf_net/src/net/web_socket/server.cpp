@@ -22,9 +22,8 @@ std::unique_ptr<server> server::make(upper_layer_ptr up) {
 
 // -- stream_oriented::upper_layer implementation ------------------------------
 
-error server::init(socket_manager* owner, stream_oriented::lower_layer* down,
-                   const settings& cfg) {
-  framing_.init(owner, down);
+error server::start(stream_oriented::lower_layer* down, const settings& cfg) {
+  framing_.start(down);
   cfg_ = cfg;
   lower_layer().configure_read(receive_policy::up_to(handshake::max_http_size));
   return none;
@@ -74,13 +73,9 @@ ptrdiff_t server::consume(byte_span input, byte_span delta) {
   }
 }
 
-void server::continue_reading() {
-  auto rp = receive_policy::up_to(handshake::max_http_size);
-  lower_layer().configure_read(rp);
-}
-
-bool server::prepare_send() {
-  return handshake_complete_ ? upper_layer().prepare_send() : true;
+void server::prepare_send() {
+  if (handshake_complete_)
+    upper_layer().prepare_send();
 }
 
 bool server::done_sending() {
@@ -131,7 +126,7 @@ bool server::handle_header(std::string_view http) {
       put(fields, std::string{key}, std::string{val});
   }
   // Try to initialize the upper layer.
-  if (auto err = upper_layer().init(owner_, &framing_, cfg_)) {
+  if (auto err = upper_layer().start(&framing_, cfg_)) {
     auto descr = to_string(err);
     CAF_LOG_DEBUG("upper layer rejected a WebSocket connection:" << descr);
     write_response(http::status::bad_request, descr);

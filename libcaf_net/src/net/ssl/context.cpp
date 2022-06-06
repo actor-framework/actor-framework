@@ -185,6 +185,21 @@ bool context::has_last_error() noexcept {
 expected<connection> context::new_connection(stream_socket fd) {
   if (auto ptr = SSL_new(native(pimpl_))) {
     auto conn = connection::from_native(ptr);
+    if (auto bio_ptr = BIO_new_socket(fd.id, BIO_NOCLOSE)) {
+      SSL_set_bio(ptr, bio_ptr, bio_ptr);
+      return {std::move(conn)};
+    } else {
+      return {make_error(sec::logic_error, "BIO_new_socket failed")};
+    }
+  } else {
+    return {make_error(sec::logic_error, "SSL_new returned null")};
+  }
+}
+
+expected<connection> context::new_connection(stream_socket fd,
+                                             close_on_shutdown_t) {
+  if (auto ptr = SSL_new(native(pimpl_))) {
+    auto conn = connection::from_native(ptr);
     if (SSL_set_fd(ptr, fd.id) == 1)
       return {std::move(conn)};
     else

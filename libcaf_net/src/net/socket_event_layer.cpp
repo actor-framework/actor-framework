@@ -14,4 +14,8 @@ bool socket_event_layer::do_handover(std::unique_ptr<socket_event_layer>&) {
   return false;
 }
 
+bool socket_event_layer::finalized() const noexcept {
+  return true;
+}
+
 } // namespace caf::net

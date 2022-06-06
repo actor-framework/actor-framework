@@ -72,7 +72,6 @@ public:
 
   std::string_view as_text() const noexcept;
 
-private:
   class data {
   public:
     data() = delete;
@@ -133,6 +132,7 @@ private:
     std::byte storage_[];
   };
 
+private:
   explicit frame(intrusive_ptr<data> ptr) : data_(std::move(ptr)) {
     // nop
   }
