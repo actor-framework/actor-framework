@@ -104,12 +104,18 @@ public:
     CAF_LOG_ERROR("connection_acceptor aborts due to an error:" << reason);
     factory_->abort(reason);
     on_conn_close_.dispose();
+    self_ref_ = nullptr;
+  }
+
+  void self_ref(disposable ref) {
+    self_ref_ = std::move(ref);
   }
 
 private:
   void connection_closed() {
-    if (open_connections_-- == max_connections_)
+    if (open_connections_ == max_connections_)
       owner_->register_reading();
+    --open_connections_;
   }
 
   Socket fd_;
@@ -125,6 +131,11 @@ private:
   action on_conn_close_;
 
   settings cfg_;
+
+  /// Type-erased handle to the @ref socket_manager. This reference is important
+  /// to keep the acceptor alive while the manager is not registered for writing
+  /// or reading.
+  disposable self_ref_;
 };
 
 } // namespace caf::net

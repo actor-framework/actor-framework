@@ -62,7 +62,7 @@ public:
     buf_.insert(buf_.end(), items.begin(), items.end());
     if (buf_.size() == items.size() && consumer_)
       consumer_->on_producer_wakeup();
-    if (capacity_ >= buf_.size())
+    if (capacity_ > buf_.size())
       return capacity_ - buf_.size();
     else
       return 0;
@@ -235,13 +235,8 @@ public:
       consumer_buf_.assign(make_move_iterator(buf_.begin()),
                            make_move_iterator(buf_.begin() + n));
       buf_.erase(buf_.begin(), buf_.begin() + n);
-      if (overflow == 0) {
-        signal_demand(n);
-      } else if (n <= overflow) {
-        overflow -= n;
-      } else {
+      if (n > overflow) {
         signal_demand(n - overflow);
-        overflow = 0;
       }
       guard.unlock();
       auto items = span<const T>{consumer_buf_.data(), n};
@@ -251,6 +246,7 @@ public:
       consumed += n;
       consumer_buf_.clear();
       guard.lock();
+      overflow = buf_.size() <= capacity_ ? 0u : buf_.size() - capacity_;
     }
     if (!buf_.empty() || !closed_) {
       return {true, consumed};
@@ -268,9 +264,13 @@ private:
   void ready() {
     producer_->on_consumer_ready();
     consumer_->on_producer_ready();
-    if (!buf_.empty())
+    if (!buf_.empty()) {
       consumer_->on_producer_wakeup();
-    signal_demand(capacity_);
+      if (capacity_ > buf_.size())
+        signal_demand(capacity_ - buf_.size());
+    } else {
+      signal_demand(capacity_);
+    }
   }
 
   void signal_demand(uint32_t new_demand) {

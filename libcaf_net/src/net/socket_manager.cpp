@@ -24,8 +24,17 @@ socket_manager::socket_manager(multiplexer* mpx, event_handler_ptr handler)
 }
 
 socket_manager::~socket_manager() {
-  if (fd_)
+  // Note: may not call cleanup since it calls the multiplexer via deregister().
+  handler_.reset();
+  if (fd_) {
     close(fd_);
+    fd_ = invalid_socket;
+  }
+  if (!cleanup_listeners_.empty()) {
+    for (auto& f : cleanup_listeners_)
+      mpx_->schedule(std::move(f));
+    cleanup_listeners_.clear();
+  }
 }
 
 // -- factories ----------------------------------------------------------------
@@ -113,11 +122,11 @@ error socket_manager::start(const settings& cfg) {
   CAF_LOG_TRACE(CAF_ARG(cfg));
   if (auto err = nonblocking(fd_, true)) {
     CAF_LOG_ERROR("failed to set nonblocking flag in socket:" << err);
-    close(fd_);
+    cleanup();
     return err;
-  } else if (err = handler_->start(this, cfg)) {
+  } else if (err = handler_->start(this, cfg); err) {
     CAF_LOG_DEBUG("failed to initialize handler:" << err);
-    close(fd_);
+    cleanup();
     return err;
   } else {
     return none;

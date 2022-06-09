@@ -50,28 +50,39 @@ bool mock_stream_transport::end_output() {
 
 ptrdiff_t mock_stream_transport::handle_input() {
   ptrdiff_t result = 0;
-  while (max_read_size > 0) {
-    CAF_ASSERT(max_read_size > static_cast<size_t>(read_size_));
-    size_t len = max_read_size - static_cast<size_t>(read_size_);
-    CAF_LOG_DEBUG(CAF_ARG2("available capacity:", len));
-    auto num_bytes = std::min(input.size(), len);
-    if (num_bytes == 0)
+  // Loop until we have drained the buffer as much as we can.
+  while (max_read_size > 0 && input.size() >= min_read_size) {
+    auto n = std::min(input.size(), size_t{max_read_size});
+    auto bytes = make_span(input.data(), n);
+    auto delta = bytes.subspan(delta_offset);
+    auto consumed = up->consume(bytes, delta);
+    if (consumed < 0) {
+      // Negative values indicate that the application encountered an
+      // unrecoverable error.
+      up->abort(make_error(caf::sec::runtime_error, "consumed < 0"));
       return result;
-    auto delta_offset = static_cast<ptrdiff_t>(read_buf_.size());
-    read_buf_.insert(read_buf_.end(), input.begin(), input.begin() + num_bytes);
-    input.erase(input.begin(), input.begin() + num_bytes);
-    read_size_ += static_cast<ptrdiff_t>(num_bytes);
-    if (static_cast<size_t>(read_size_) < min_read_size)
+    } else if (static_cast<size_t>(consumed) > n) {
+      // Must not happen. An application cannot handle more data then we pass
+      // to it.
+      up->abort(make_error(sec::logic_error, "consumed > buffer.size"));
       return result;
-    auto delta = make_span(read_buf_.data() + delta_offset,
-                           read_size_ - delta_offset);
-    auto consumed = up->consume(make_span(read_buf_), delta);
-    if (consumed > 0) {
-      result += static_cast<ptrdiff_t>(consumed);
-      read_buf_.erase(read_buf_.begin(), read_buf_.begin() + consumed);
-      read_size_ -= consumed;
-    } else if (consumed < 0) {
-      return -1;
+    } else if (consumed == 0) {
+      // See whether the next iteration would change what we pass to the
+      // application (max_read_size_ may have changed). Otherwise, we'll try
+      // again later.
+      delta_offset = static_cast<ptrdiff_t>(n);
+      if (n == std::min(input.size(), size_t{max_read_size})) {
+        return result;
+      } else {
+        // "Fall through".
+      }
+    } else {
+      // Shove the unread bytes to the beginning of the buffer and continue
+      // to the next loop iteration.
+      result += consumed;
+      auto del = static_cast<size_t>(consumed);
+      delta_offset = static_cast<ptrdiff_t>(n - del);
+      input.erase(input.begin(), input.begin() + del);
     }
   }
   return result;

@@ -60,7 +60,7 @@ public:
   // -- buffer management ------------------------------------------------------
 
   void push(caf::span<const std::byte> bytes) {
-    input.insert(input.begin(), bytes.begin(), bytes.end());
+    input.insert(input.end(), bytes.begin(), bytes.end());
   }
 
   void push(std::string_view str) {
@@ -91,10 +91,10 @@ public:
 
   uint32_t max_read_size = 0;
 
+  size_t delta_offset = 0;
+
 private:
   caf::byte_buffer read_buf_;
-
-  ptrdiff_t read_size_ = 0;
 
   caf::error abort_reason_;
 };

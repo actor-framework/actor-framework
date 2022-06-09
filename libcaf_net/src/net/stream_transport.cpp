@@ -77,7 +77,8 @@ void stream_transport::configure_read(receive_policy rd) {
   min_read_size_ = rd.min_size;
   max_read_size_ = rd.max_size;
   if (restarting && !parent_->is_reading()) {
-    if (buffered_ > 0 && buffered_ >= min_read_size_) {
+    if (buffered_ > 0 && buffered_ >= min_read_size_
+        && delta_offset_ < buffered_) {
       // We can already make progress with the data we have. Hence, we need
       // schedule a call to read from our buffer before we can wait for
       // additional data from the peer.
@@ -221,7 +222,8 @@ void stream_transport::handle_buffered_data() {
   CAF_LOG_TRACE(CAF_ARG(buffered_));
   // Loop until we have drained the buffer as much as we can.
   CAF_ASSERT(min_read_size_ <= max_read_size_);
-  while (max_read_size_ > 0 && buffered_ >= min_read_size_) {
+  while (parent_->is_reading() && max_read_size_ > 0
+         && buffered_ >= min_read_size_) {
     auto n = std::min(buffered_, size_t{max_read_size_});
     auto bytes = make_span(read_buf_.data(), n);
     auto delta = bytes.subspan(delta_offset_);
@@ -238,6 +240,16 @@ void stream_transport::handle_buffered_data() {
       up_->abort(make_error(sec::logic_error, "consumed > buffer.size"));
       parent_->deregister();
       return;
+    } else if (consumed == 0) {
+      // See whether the next iteration would change what we pass to the
+      // application (max_read_size_ may have changed). Otherwise, we'll try
+      // again later.
+      delta_offset_ = static_cast<ptrdiff_t>(n);
+      if (n == std::min(buffered_, size_t{max_read_size_})) {
+        return;
+      } else {
+        // "Fall through".
+      }
     } else {
       // Shove the unread bytes to the beginning of the buffer and continue
       // to the next loop iteration.
@@ -252,8 +264,6 @@ void stream_transport::handle_buffered_data() {
       }
     }
   }
-  if (max_read_size_ == 0)
-    parent_->deregister_reading();
 }
 
 void stream_transport::fail(const error& reason) {

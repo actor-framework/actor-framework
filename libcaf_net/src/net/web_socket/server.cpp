@@ -58,17 +58,8 @@ ptrdiff_t server::consume(byte_span input, byte_span delta) {
       }
     } else if (!handle_header(hdr)) {
       return -1;
-    } else if (remainder.empty()) {
-      CAF_ASSERT(hdr.size() == input.size());
-      return hdr.size();
     } else {
-      CAF_LOG_DEBUG(CAF_ARG2("remainder.size", remainder.size()));
-      if (auto sub_result = framing_.consume(remainder, remainder);
-          sub_result >= 0) {
-        return hdr.size() + sub_result;
-      } else {
-        return sub_result;
-      }
+      return hdr.size();
     }
   }
 }
@@ -126,6 +117,7 @@ bool server::handle_header(std::string_view http) {
       put(fields, std::string{key}, std::string{val});
   }
   // Try to initialize the upper layer.
+  lower_layer().configure_read(receive_policy::stop());
   if (auto err = upper_layer().start(&framing_, cfg_)) {
     auto descr = to_string(err);
     CAF_LOG_DEBUG("upper layer rejected a WebSocket connection:" << descr);

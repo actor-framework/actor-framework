@@ -63,6 +63,10 @@ public:
     return in_ || out_;
   }
 
+  void self_ref(disposable ref) {
+    self_ref_ = std::move(ref);
+  }
+
   // -- implementation of web_socket::lower_layer ------------------------------
 
   error start(web_socket::lower_layer* down, const settings& cfg) override {
@@ -124,12 +128,14 @@ public:
     CAF_LOG_TRACE(CAF_ARG(reason));
     if (out_) {
       if (reason == sec::connection_closed || reason == sec::socket_disconnected
-          || reason == sec::disposed)
+          || reason == sec::disposed) {
         out_.close();
-      else
+      } else {
         out_.abort(reason);
+      }
     }
     in_.cancel();
+    self_ref_ = nullptr;
   }
 
   ptrdiff_t consume_binary(byte_span buf) override {
@@ -171,6 +177,11 @@ private:
 
   /// Initializes the bridge. Disposed (set to null) after initializing.
   connector_pointer conn_;
+
+  /// Type-erased handle to the @ref socket_manager. This reference is important
+  /// to keep the bridge alive while the manager is not registered for writing
+  /// or reading.
+  disposable self_ref_;
 };
 
 } // namespace caf::net::web_socket

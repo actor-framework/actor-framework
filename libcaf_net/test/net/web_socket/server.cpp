@@ -33,7 +33,9 @@ public:
     return std::make_unique<app_t>();
   }
 
-  error start(net::web_socket::lower_layer*, const settings& args) override {
+  error start(net::web_socket::lower_layer* down,
+              const settings& args) override {
+    down->request_messages();
     cfg = args;
     return none;
   }

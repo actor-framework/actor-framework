@@ -33,9 +33,12 @@ public:
 
   net::socket_manager_ptr make(net::multiplexer* mpx, socket_type fd) override {
     auto app = net::web_socket::flow_bridge<Trait>::make(mpx, connector_);
+    auto app_ptr = app.get();
     auto ws = net::web_socket::server::make(std::move(app));
     auto transport = Transport::make(fd, std::move(ws));
-    return net::socket_manager::make(mpx, std::move(transport));
+    auto mgr = net::socket_manager::make(mpx, std::move(transport));
+    app_ptr->self_ref(mgr->as_disposable());
+    return mgr;
   }
 
 private:
@@ -92,7 +95,9 @@ disposable accept(actor_system& sys, Socket fd, acceptor_resource_t<Ts...> out,
     auto conn = std::make_shared<conn_t>(std::move(on_request), std::move(buf));
     auto factory = std::make_unique<factory_t>(std::move(conn));
     auto impl = impl_t::make(fd, std::move(factory), max_connections);
+    auto impl_ptr = impl.get();
     auto ptr = socket_manager::make(&mpx, std::move(impl));
+    impl_ptr->self_ref(ptr->as_disposable());
     mpx.start(ptr);
     return disposable{std::move(ptr)};
   } else {
