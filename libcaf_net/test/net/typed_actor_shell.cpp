@@ -152,6 +152,12 @@ struct fixture : test_coordinator_fixture<> {
       CAF_FAIL("nonblocking returned an error: " << err);
   }
 
+  ~fixture() {
+    while (mpx->poll_once(false)) {
+      // repeat
+    }
+  }
+
   template <class Predicate>
   void run_while(Predicate predicate) {
     if (!predicate())
@@ -206,7 +212,6 @@ CAF_TEST(actor shells expose their mailbox to their owners) {
   run_while([&] { return app->lines.size() != 3; });
   CAF_CHECK_EQUAL(app->lines, svec({"line 1", "line 2", "line 3"}));
   self_socket_guard.reset();
-  run_while([&] { return mpx->num_socket_managers() > 1; });
 }
 
 CAF_TEST(actor shells can send requests and receive responses) {
@@ -231,7 +236,6 @@ CAF_TEST(actor shells can send requests and receive responses) {
                                      recv_buf.size()};
   CAF_CHECK_EQUAL(received_response, expected_response);
   self_socket_guard.reset();
-  run_while([&] { return mpx->num_socket_managers() > 1; });
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

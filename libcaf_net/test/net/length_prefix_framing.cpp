@@ -228,6 +228,9 @@ SCENARIO("calling suspend_reading temporarily halts receiving of messages") {
       }
     }
     writer.join();
+    while (mpx->poll_once(false)) {
+      // repeat
+    }
   }
 }
 

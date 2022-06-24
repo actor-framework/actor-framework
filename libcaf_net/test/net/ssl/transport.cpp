@@ -210,6 +210,9 @@ SCENARIO("ssl::transport::make_client performs the client handshake") {
             CHECK_EQ(value, 10);
           }
         }
+        while (mpx->poll_once(false)) {
+          // repeat
+        }
       }
     }
     server.join();
@@ -250,6 +253,9 @@ SCENARIO("ssl::transport::make_server performs the server handshake") {
             static_cast<void>(src.apply(value));
             CHECK_EQ(value, 10);
           }
+        }
+        while (mpx->poll_once(false)) {
+          // repeat
         }
       }
     }
