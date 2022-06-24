@@ -37,6 +37,14 @@ struct CAF_NET_EXPORT socket : detail::comparable<socket> {
     return static_cast<signed_socket_id>(id)
            - static_cast<signed_socket_id>(other.id);
   }
+
+  constexpr explicit operator bool() const noexcept {
+    return id != invalid_socket_id;
+  }
+
+  constexpr bool operator!() const noexcept {
+    return id == invalid_socket_id;
+  }
 };
 
 /// @relates socket

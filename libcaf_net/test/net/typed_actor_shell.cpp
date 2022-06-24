@@ -11,6 +11,7 @@
 #include "caf/byte.hpp"
 #include "caf/byte_span.hpp"
 #include "caf/callback.hpp"
+#include "caf/net/make_actor_shell.hpp"
 #include "caf/net/middleman.hpp"
 #include "caf/net/socket_guard.hpp"
 #include "caf/net/socket_manager.hpp"
@@ -29,24 +30,20 @@ using string_consumer = typed_actor<result<void>(std::string)>;
 
 class app_t : public net::stream_oriented::upper_layer {
 public:
-  app_t() = default;
-
-  explicit app_t(actor hdl) : worker(std::move(hdl)) {
-    // nop
+  explicit app_t(actor_system& sys, async::execution_context_ptr loop,
+                 actor hdl = {})
+    : worker(std::move(hdl)) {
+    self = net::make_actor_shell<string_consumer>(sys, loop);
   }
 
-  static auto make() {
-    return std::make_unique<app_t>();
+  static auto make(actor_system& sys, async::execution_context_ptr loop,
+                   actor hdl = {}) {
+    return std::make_unique<app_t>(sys, std::move(loop), std::move(hdl));
   }
 
-  static auto make(actor hdl) {
-    return std::make_unique<app_t>(std::move(hdl));
-  }
-
-  error init(net::socket_manager* mgr, net::stream_oriented::lower_layer* down,
-             const settings&) override {
+  error start(net::stream_oriented::lower_layer* down,
+              const settings&) override {
     this->down = down;
-    self = mgr->make_actor_shell<string_consumer>();
     self->set_behavior([this](std::string& line) {
       CAF_MESSAGE("received an asynchronous message: " << line);
       lines.emplace_back(std::move(line));
@@ -59,22 +56,16 @@ public:
     return none;
   }
 
-  bool prepare_send() override {
-    while (self->consume_message())
-      ; // repeat
-    return !self->terminated();
-  }
-
-  void continue_reading() override {
-    CAF_FAIL("continue_reading called");
+  void prepare_send() override {
+    // nop
   }
 
   bool done_sending() override {
-    return self->try_block_mailbox();
+    return true;
   }
 
-  void abort(const error& reason) override {
-    CAF_FAIL("app::abort called: " << reason);
+  void abort(const error&) override {
+    // nop
   }
 
   ptrdiff_t consume(byte_span buf, byte_span) override {
@@ -138,7 +129,7 @@ public:
   std::vector<std::string> lines;
 
   // Actor shell representing this app.
-  net::typed_actor_shell_ptr_t<string_consumer> self;
+  net::actor_shell_ptr_t<string_consumer> self;
 
   // Counts how many bytes we've consumed in total.
   size_t consumed_bytes = 0;
@@ -148,10 +139,10 @@ public:
 };
 
 struct fixture : test_coordinator_fixture<> {
-  fixture() : mm(sys), mpx(&mm) {
-    mpx.set_thread_id();
-    if (auto err = mpx.init())
-      CAF_FAIL("mpx.init() failed: " << err);
+  fixture() : mm(sys), mpx(net::multiplexer::make(&mm)) {
+    mpx->set_thread_id();
+    if (auto err = mpx->init())
+      CAF_FAIL("mpx->init() failed: " << err);
     auto sockets = unbox(net::make_stream_socket_pair());
     self_socket_guard.reset(sockets.first);
     testee_socket_guard.reset(sockets.second);
@@ -161,13 +152,19 @@ struct fixture : test_coordinator_fixture<> {
       CAF_FAIL("nonblocking returned an error: " << err);
   }
 
+  ~fixture() {
+    while (mpx->poll_once(false)) {
+      // repeat
+    }
+  }
+
   template <class Predicate>
   void run_while(Predicate predicate) {
     if (!predicate())
       return;
     for (size_t i = 0; i < 1000; ++i) {
-      mpx.apply_updates();
-      mpx.poll_once(false);
+      mpx->apply_updates();
+      mpx->poll_once(false);
       std::byte tmp[1024];
       auto bytes = read(self_socket_guard.socket(), make_span(tmp, 1024));
       if (bytes > 0)
@@ -186,7 +183,7 @@ struct fixture : test_coordinator_fixture<> {
   }
 
   net::middleman mm;
-  net::multiplexer mpx;
+  net::multiplexer_ptr mpx;
   net::socket_guard<net::stream_socket> self_socket_guard;
   net::socket_guard<net::stream_socket> testee_socket_guard;
   byte_buffer recv_buf;
@@ -202,18 +199,19 @@ CAF_TEST_FIXTURE_SCOPE(actor_shell_tests, fixture)
 
 CAF_TEST(actor shells expose their mailbox to their owners) {
   auto fd = testee_socket_guard.release();
-  auto app_uptr = app_t::make();
+  auto app_uptr = app_t::make(sys, mpx);
   auto app = app_uptr.get();
   auto transport = net::stream_transport::make(fd, std::move(app_uptr));
-  auto mgr = net::socket_manager::make(&mpx, fd, std::move(transport));
-  if (auto err = mgr->init(content(cfg)))
-    CAF_FAIL("mgr->init() failed: " << err);
+  auto mgr = net::socket_manager::make(mpx.get(), std::move(transport));
+  if (auto err = mgr->start(content(cfg)))
+    CAF_FAIL("mgr->start() failed: " << err);
   auto hdl = app->self.as_actor();
   anon_send(hdl, "line 1");
   anon_send(hdl, "line 2");
   anon_send(hdl, "line 3");
   run_while([&] { return app->lines.size() != 3; });
   CAF_CHECK_EQUAL(app->lines, svec({"line 1", "line 2", "line 3"}));
+  self_socket_guard.reset();
 }
 
 CAF_TEST(actor shells can send requests and receive responses) {
@@ -223,12 +221,12 @@ CAF_TEST(actor shells can send requests and receive responses) {
     };
   });
   auto fd = testee_socket_guard.release();
-  auto app_uptr = app_t::make(worker);
+  auto app_uptr = app_t::make(sys, mpx, worker);
   auto app = app_uptr.get();
   auto transport = net::stream_transport::make(fd, std::move(app_uptr));
-  auto mgr = net::socket_manager::make(&mpx, fd, std::move(transport));
-  if (auto err = mgr->init(content(cfg)))
-    CAF_FAIL("mgr->init() failed: " << err);
+  auto mgr = net::socket_manager::make(mpx.get(), std::move(transport));
+  if (auto err = mgr->start(content(cfg)))
+    CAF_FAIL("mgr->start() failed: " << err);
   send(input);
   run_while([&] { return app->consumed_bytes != input.size(); });
   expect((int32_t), to(worker).with(123));
@@ -237,6 +235,7 @@ CAF_TEST(actor shells can send requests and receive responses) {
   std::string_view received_response{reinterpret_cast<char*>(recv_buf.data()),
                                      recv_buf.size()};
   CAF_CHECK_EQUAL(received_response, expected_response);
+  self_socket_guard.reset();
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

@@ -6,11 +6,8 @@
 
 namespace caf::net::web_socket {
 
-template <class Trait>
-class flow_connector;
-
 template <class OnRequest, class Trait, class... Ts>
-class flow_connector_impl;
+class flow_connector_request_impl;
 
 template <class Trait>
 class flow_bridge;

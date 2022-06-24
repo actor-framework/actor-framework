@@ -22,6 +22,9 @@ public:
   /// Pulls messages from the transport until calling `suspend_reading`.
   virtual void request_messages() = 0;
 
+  /// Stops reading messages until calling `request_messages`.
+  virtual void suspend_reading() = 0;
+
   /// Begins transmission of a binary message.
   virtual void begin_binary_message() = 0;
 
@@ -42,14 +45,12 @@ public:
   /// Seals the current text message buffer and ships a new WebSocket frame.
   virtual bool end_text_message() = 0;
 
-  /// Sends the close message with @ref status `normal_close`.
-  virtual void send_close_message() = 0;
+  void shutdown() override;
 
-  /// Sends the close message with an custom @ref status.
-  virtual void send_close_message(status code, std::string_view desc) = 0;
+  void shutdown(const error& reason) override;
 
-  /// Sends the close message with @ref status `unexpected_condition`.
-  void send_close_message(const error& reason);
+  /// Sends a shutdown message with custom @ref status @p code and @p msg text.
+  virtual void shutdown(status code, std::string_view msg) = 0;
 };
 
 } // namespace caf::net::web_socket

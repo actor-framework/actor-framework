@@ -33,20 +33,24 @@ public:
 
     template <class ErrorPolicy, class TimePoint>
     read_result pull(ErrorPolicy policy, T& item, TimePoint timeout) {
+      if (!buf_) {
+        return abort_reason_ ? read_result::abort : read_result::stop;
+      }
       val_ = &item;
       std::unique_lock guard{buf_->mtx()};
       if constexpr (std::is_same_v<TimePoint, none_t>) {
         buf_->await_consumer_ready(guard, cv_);
       } else {
         if (!buf_->await_consumer_ready(guard, cv_, timeout))
-          return read_result::timeout;
+          return read_result::try_again_later;
       }
       auto [again, n] = buf_->pull_unsafe(guard, policy, 1u, *this);
-      CAF_IGNORE_UNUSED(again);
-      CAF_ASSERT(!again || n == 1);
+      if (!again) {
+        buf_ = nullptr;
+      }
       if (n == 1) {
         return read_result::ok;
-      } else if (buf_->abort_reason_unsafe()) {
+      } else if (abort_reason_) {
         return read_result::abort;
       } else {
         return read_result::stop;
@@ -58,19 +62,18 @@ public:
       return pull(policy, item, none);
     }
 
-    void on_next(span<const T> items) {
-      CAF_ASSERT(items.size() == 1);
-      *val_ = items[0];
+    void on_next(const T& item) {
+      *val_ = item;
     }
 
     void on_complete() {
     }
 
-    void on_error(const caf::error&) {
-      // nop
+    void on_error(const caf::error& abort_reason) {
+      abort_reason_ = abort_reason;
     }
 
-    void dispose() {
+    void cancel() {
       if (buf_) {
         buf_->cancel();
         buf_ = nullptr;
@@ -94,8 +97,8 @@ public:
       deref();
     }
 
-    error abort_reason() const {
-      buf_->abort_reason()();
+    const error& abort_reason() const {
+      return abort_reason_;
     }
 
     CAF_INTRUSIVE_PTR_FRIENDS(impl)
@@ -104,6 +107,7 @@ public:
     spsc_buffer_ptr<T> buf_;
     std::condition_variable cv_;
     T* val_ = nullptr;
+    error abort_reason_;
   };
 
   using impl_ptr = intrusive_ptr<impl>;
@@ -120,6 +124,10 @@ public:
 
   explicit blocking_consumer(impl_ptr ptr) : impl_(std::move(ptr)) {
     // nop
+  }
+
+  explicit blocking_consumer(spsc_buffer_ptr<T> buf) {
+    impl_.emplace(std::move(buf));
   }
 
   ~blocking_consumer() {

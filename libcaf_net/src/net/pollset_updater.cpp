@@ -29,13 +29,18 @@ std::unique_ptr<pollset_updater> pollset_updater::make(pipe_socket fd) {
 
 // -- interface functions ------------------------------------------------------
 
-error pollset_updater::init(socket_manager* owner, const settings&) {
+error pollset_updater::start(socket_manager* owner, const settings&) {
   CAF_LOG_TRACE("");
+  owner_ = owner;
   mpx_ = owner->mpx_ptr();
   return nonblocking(fd_, true);
 }
 
-pollset_updater::read_result pollset_updater::handle_read_event() {
+socket pollset_updater::handle() const {
+  return fd_;
+}
+
+void pollset_updater::handle_read_event() {
   CAF_LOG_TRACE("");
   auto as_mgr = [](intptr_t ptr) {
     return intrusive_ptr{reinterpret_cast<socket_manager*>(ptr), false};
@@ -56,29 +61,8 @@ pollset_updater::read_result pollset_updater::handle_read_event() {
         intptr_t ptr;
         memcpy(&ptr, buf_.data() + 1, sizeof(intptr_t));
         switch (static_cast<code>(opcode)) {
-          case code::register_reading:
-            mpx_->do_register_reading(as_mgr(ptr));
-            break;
-          case code::continue_reading:
-            mpx_->do_continue_reading(as_mgr(ptr));
-            break;
-          case code::register_writing:
-            mpx_->do_register_writing(as_mgr(ptr));
-            break;
-          case code::continue_writing:
-            mpx_->do_continue_writing(as_mgr(ptr));
-            break;
-          case code::init_manager:
-            mpx_->do_init(as_mgr(ptr));
-            break;
-          case code::discard_manager:
-            mpx_->do_discard(as_mgr(ptr));
-            break;
-          case code::shutdown_reading:
-            mpx_->do_shutdown_reading(as_mgr(ptr));
-            break;
-          case code::shutdown_writing:
-            mpx_->do_shutdown_writing(as_mgr(ptr));
+          case code::start_manager:
+            mpx_->do_start(as_mgr(ptr));
             break;
           case code::run_action:
             run_action(ptr);
@@ -94,25 +78,20 @@ pollset_updater::read_result pollset_updater::handle_read_event() {
       }
     } else if (num_bytes == 0) {
       CAF_LOG_DEBUG("pipe closed, assume shutdown");
-      return read_result::stop;
+      owner_->deregister();
+      return;
     } else if (last_socket_error_is_temporary()) {
-      return read_result::again;
+      return;
     } else {
-      return read_result::stop;
+      CAF_LOG_ERROR("pollset updater failed to read from the pipe");
+      owner_->deregister();
+      return;
     }
   }
 }
 
-pollset_updater::read_result pollset_updater::handle_buffered_data() {
-  return read_result::again;
-}
-
-pollset_updater::read_result pollset_updater::handle_continue_reading() {
-  return read_result::again;
-}
-
-pollset_updater::write_result pollset_updater::handle_write_event() {
-  return write_result::stop;
+void pollset_updater::handle_write_event() {
+  owner_->deregister_writing();
 }
 
 void pollset_updater::abort(const error&) {

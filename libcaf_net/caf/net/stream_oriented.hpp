@@ -21,14 +21,9 @@ public:
   virtual ~upper_layer();
 
   /// Initializes the upper layer.
-  /// @param owner A pointer to the socket manager that owns the entire
-  ///              protocol stack. Remains valid for the lifetime of the upper
-  ///              layer.
   /// @param down A pointer to the lower layer that remains valid for the
   ///             lifetime of the upper layer.
-  virtual error
-  init(socket_manager* owner, lower_layer* down, const settings& config)
-    = 0;
+  virtual error start(lower_layer* down, const settings& config) = 0;
 
   /// Consumes bytes from the lower layer.
   /// @param buffer Available bytes to read.
@@ -44,6 +39,10 @@ public:
 class CAF_NET_EXPORT lower_layer : public generic_lower_layer {
 public:
   virtual ~lower_layer();
+
+  /// Queries whether the transport is currently configured to read from its
+  /// socket.
+  virtual bool is_reading() const noexcept = 0;
 
   /// Configures threshold for the next receive operations. Policies remain
   /// active until calling this function again.

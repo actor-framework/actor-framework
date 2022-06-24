@@ -117,18 +117,23 @@ public:
   void fwd_on_next(input_key key, const T& item) {
     CAF_LOG_TRACE(CAF_ARG(key) << CAF_ARG(item));
     if (auto ptr = get(key)) {
-      ptr->buf.push_back(item);
-      if (ptr->buf.size() == 1 && !flags_.running) {
-        flags_.running = true;
-        do_run();
+      if (!flags_.running && demand_ > 0) {
+        CAF_ASSERT(out_.valid());
+        --demand_;
+        out_.on_next(item);
+        ptr->sub.request(1);
+      } else {
+        ptr->buf.push_back(item);
       }
     }
   }
 
   void fwd_on_next(input_key key, const observable<T>& item) {
     CAF_LOG_TRACE(CAF_ARG(key) << CAF_ARG(item));
-    if (auto ptr = get(key))
+    if (auto ptr = get(key)) {
       subscribe_to(item);
+      ptr->sub.request(1);
+    }
   }
 
   // -- implementation of subscription_impl ------------------------------------
@@ -150,7 +155,8 @@ public:
   void request(size_t n) override {
     CAF_ASSERT(out_.valid());
     demand_ += n;
-    run_later();
+    if (demand_ == n)
+      run_later();
   }
 
   size_t buffered() const noexcept {
@@ -181,9 +187,10 @@ private:
     if (has_items_at(start))
       return inputs_.begin() + start;
     while (pos_ != start) {
-      if (has_items_at(pos_))
-        return inputs_.begin() + pos_;
+      auto p = pos_;
       pos_ = (pos_ + 1) % inputs_.size();
+      if (has_items_at(p))
+        return inputs_.begin() + p;
     }
     return inputs_.end();
   }
@@ -195,14 +202,14 @@ private:
         auto& buf = i->second->buf;
         auto tmp = std::move(buf.front());
         buf.pop_front();
-        if (auto& sub = i->second->sub)
+        if (auto& sub = i->second->sub) {
           sub.request(1);
-        else if (buf.empty())
+        } else if (buf.empty()) {
           inputs_.erase(i);
+        }
         out_.on_next(tmp);
       } else {
-        flags_.running = false;
-        return;
+        break;
       }
     }
     if (out_ && inputs_.empty())

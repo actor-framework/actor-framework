@@ -131,6 +131,12 @@ public:
     return pimpl_.compare(other.pimpl_);
   }
 
+  // -- utility ----------------------------------------------------------------
+
+  /// Erases each `x` from `xs` where `x.disposed()`.
+  /// @returns The number of erased elements.
+  static size_t erase_disposed(std::vector<disposable>& xs);
+
 private:
   intrusive_ptr<impl> pimpl_;
 };

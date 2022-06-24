@@ -20,8 +20,9 @@ enum class read_result {
   stop,
   /// Signals that the source failed with an error.
   abort,
-  /// Signals that the read operation timed out.
-  timeout,
+  /// Signals that the read operation cannot produce a result at the moment,
+  /// e.g., because of a timeout.
+  try_again_later,
 };
 
 /// @relates read_result

@@ -10,6 +10,18 @@
 
 namespace caf {
 
+// -- member types -------------------------------------------------------------
+
+disposable::impl::~impl() {
+  // nop
+}
+
+disposable disposable::impl::as_disposable() noexcept {
+  return disposable{intrusive_ptr<impl>{this}};
+}
+
+// -- factories ----------------------------------------------------------------
+
 namespace {
 
 class composite_impl : public ref_counted, public disposable::impl {
@@ -52,19 +64,25 @@ private:
 
 } // namespace
 
-disposable::impl::~impl() {
-  // nop
-}
-
-disposable disposable::impl::as_disposable() noexcept {
-  return disposable{intrusive_ptr<impl>{this}};
-}
-
 disposable disposable::make_composite(std::vector<disposable> entries) {
   if (entries.empty())
     return {};
   else
     return disposable{make_counted<composite_impl>(std::move(entries))};
+}
+
+// -- utility ------------------------------------------------------------------
+
+size_t disposable::erase_disposed(std::vector<disposable>& xs) {
+  auto is_disposed = [](auto& hdl) { return hdl.disposed(); };
+  auto xs_end = xs.end();
+  if (auto e = std::remove_if(xs.begin(), xs_end, is_disposed); e != xs_end) {
+    auto res = std::distance(e, xs_end);
+    xs.erase(e, xs_end);
+    return static_cast<size_t>(res);
+  } else {
+    return 0;
+  }
 }
 
 } // namespace caf

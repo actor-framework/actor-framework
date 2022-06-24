@@ -15,6 +15,7 @@
 #include "caf/intrusive_ptr.hpp"
 
 #include <cstddef>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -31,6 +32,9 @@ public:
 
   /// The pointer-to-implementation type.
   using pimpl_type = intrusive_ptr<op::base<T>>;
+
+  /// Type for drop-all subscribers.
+  using ignore_t = decltype(std::ignore);
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -56,6 +60,9 @@ public:
 
   /// Creates a new observer that pushes all observed items to the resource.
   disposable subscribe(async::producer_resource<T> resource);
+
+  /// Subscribes a new observer to the items emitted by this observable.
+  disposable subscribe(ignore_t);
 
   /// Calls `on_next` for each item emitted by this observable.
   template <class OnNext>

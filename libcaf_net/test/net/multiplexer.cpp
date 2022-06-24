@@ -63,60 +63,46 @@ public:
 
   // -- implementation of socket_event_layer -----------------------------------
 
-  error init(net::socket_manager*, const settings&) override {
+  error start(net::socket_manager* mgr, const settings&) override {
+    mgr_ = mgr;
     return none;
   }
 
-  read_result handle_read_event() override {
-    // if (trigger_handover) {
-    //   MESSAGE(name << " triggered a handover");
-    //   return read_result::handover;
-    // }
+  net::socket handle() const override {
+    return fd_;
+  }
+
+  void handle_read_event() override {
     if (read_capacity() < 1024)
       rd_buf_.resize(rd_buf_.size() + 2048);
-    auto num_bytes = read(fd_,
-                          make_span(read_position_begin(), read_capacity()));
-    if (num_bytes > 0) {
-      CAF_ASSERT(num_bytes > 0);
-      rd_buf_pos_ += num_bytes;
-      return read_result::again;
-    } else if (num_bytes < 0 && net::last_socket_error_is_temporary()) {
-      return read_result::again;
-    } else {
-      return read_result::stop;
+    auto res = read(fd_, make_span(read_position_begin(), read_capacity()));
+    if (res > 0) {
+      CAF_ASSERT(res > 0);
+      rd_buf_pos_ += res;
+    } else if (res == 0 || !net::last_socket_error_is_temporary()) {
+      mgr_->deregister();
     }
   }
 
-  read_result handle_buffered_data() override {
-    return read_result::again;
-  }
-
-  read_result handle_continue_reading() override {
-    return read_result::again;
-  }
-
-  write_result handle_write_event() override {
-    // if (trigger_handover) {
-    //   MESSAGE(name << " triggered a handover");
-    //   return write_result::handover;
-    // }
-    if (wr_buf_.size() == 0)
-      return write_result::stop;
-    auto num_bytes = write(fd_, wr_buf_);
-    if (num_bytes > 0) {
-      wr_buf_.erase(wr_buf_.begin(), wr_buf_.begin() + num_bytes);
-      return wr_buf_.size() > 0 ? write_result::again : write_result::stop;
+  void handle_write_event() override {
+    if (wr_buf_.size() == 0) {
+      mgr_->deregister_writing();
+    } else if (auto res = write(fd_, wr_buf_); res > 0) {
+      wr_buf_.erase(wr_buf_.begin(), wr_buf_.begin() + res);
+      if (wr_buf_.size() == 0)
+        mgr_->deregister_writing();
+    } else if (res == 0 || !net::last_socket_error_is_temporary()) {
+      mgr_->deregister();
     }
-    return num_bytes < 0 && net::last_socket_error_is_temporary()
-             ? write_result::again
-             : write_result::stop;
   }
 
   void abort(const error& reason) override {
-    FAIL("abort called: " << reason);
+    abort_reason = reason;
   }
 
   std::string name;
+
+  error abort_reason;
 
 private:
   std::byte* read_position_begin() {
@@ -130,7 +116,6 @@ private:
   size_t read_capacity() const {
     return rd_buf_.size() - rd_buf_pos_;
   }
-
   net::stream_socket fd_;
 
   shared_count count_;
@@ -140,46 +125,50 @@ private:
   byte_buffer wr_buf_;
 
   byte_buffer rd_buf_;
+
+  net::socket_manager* mgr_ = nullptr;
 };
 
 struct fixture {
-  fixture() : mpx(nullptr) {
+  fixture() : mpx(net::multiplexer::make(nullptr)) {
     manager_count = std::make_shared<std::atomic<size_t>>(0);
-    mpx.set_thread_id();
+    mpx->set_thread_id();
   }
 
   ~fixture() {
-    mpx.shutdown();
+    mpx->shutdown();
     exhaust();
     REQUIRE_EQ(*manager_count, 0u);
   }
 
   void exhaust() {
-    mpx.apply_updates();
-    while (mpx.poll_once(false))
+    mpx->apply_updates();
+    while (mpx->poll_once(false))
       ; // Repeat.
   }
 
   void apply_updates() {
-    mpx.apply_updates();
+    mpx->apply_updates();
   }
 
   std::pair<mock_event_layer*, net::socket_manager_ptr>
   make_manager(net::stream_socket fd, std::string name) {
     auto mock = mock_event_layer::make(fd, std::move(name), manager_count);
     auto mock_ptr = mock.get();
-    return {mock_ptr, net::socket_manager::make(&mpx, fd, std::move(mock))};
+    auto mgr = net::socket_manager::make(mpx.get(), std::move(mock));
+    std::ignore = mgr->start(settings{});
+    return {mock_ptr, std::move(mgr)};
   }
 
   void init() {
-    if (auto err = mpx.init())
-      FAIL("mpx.init failed: " << err);
+    if (auto err = mpx->init())
+      FAIL("mpx->init failed: " << err);
     exhaust();
   }
 
   shared_count manager_count;
 
-  net::multiplexer mpx;
+  net::multiplexer_ptr mpx;
 };
 
 } // namespace
@@ -190,7 +179,7 @@ SCENARIO("the multiplexer has no socket managers after default construction") {
   GIVEN("a default constructed multiplexer") {
     WHEN("querying the number of socket managers") {
       THEN("the result is 0") {
-        CHECK_EQ(mpx.num_socket_managers(), 0u);
+        CHECK_EQ(mpx->num_socket_managers(), 0u);
       }
     }
   }
@@ -200,10 +189,10 @@ SCENARIO("the multiplexer constructs the pollset updater while initializing") {
   GIVEN("an initialized multiplexer") {
     WHEN("querying the number of socket managers") {
       THEN("the result is 1") {
-        CHECK_EQ(mpx.num_socket_managers(), 0u);
-        CHECK_EQ(mpx.init(), none);
+        CHECK_EQ(mpx->num_socket_managers(), 0u);
+        CHECK_EQ(mpx->init(), none);
         exhaust();
-        CHECK_EQ(mpx.num_socket_managers(), 1u);
+        CHECK_EQ(mpx->num_socket_managers(), 1u);
       }
     }
   }
@@ -219,7 +208,7 @@ SCENARIO("socket managers can register for read and write operations") {
       alice_mgr->register_reading();
       bob_mgr->register_reading();
       apply_updates();
-      CHECK_EQ(mpx.num_socket_managers(), 3u);
+      CHECK_EQ(mpx->num_socket_managers(), 3u);
       THEN("the multiplexer runs callbacks on socket activity") {
         alice->send("Hello Bob!");
         alice_mgr->register_writing();
@@ -235,9 +224,9 @@ SCENARIO("a multiplexer terminates its thread after shutting down") {
     init();
     auto go_time = std::make_shared<barrier>(2);
     auto mpx_thread = std::thread{[this, go_time] {
-      mpx.set_thread_id();
+      mpx->set_thread_id();
       go_time->arrive_and_wait();
-      mpx.run();
+      mpx->run();
     }};
     go_time->arrive_and_wait();
     auto [alice_fd, bob_fd] = unbox(net::make_stream_socket_pair());
@@ -246,11 +235,11 @@ SCENARIO("a multiplexer terminates its thread after shutting down") {
     alice_mgr->register_reading();
     bob_mgr->register_reading();
     WHEN("calling shutdown on the multiplexer") {
-      mpx.shutdown();
+      mpx->shutdown();
       THEN("the thread terminates and all socket managers get shut down") {
         mpx_thread.join();
-        CHECK(alice_mgr->read_closed());
-        CHECK(bob_mgr->read_closed());
+        CHECK(alice_mgr->disposed());
+        CHECK(bob_mgr->disposed());
       }
     }
   }
@@ -268,7 +257,7 @@ SCENARIO("a multiplexer terminates its thread after shutting down") {
 //       alice->register_reading();
 //       bob->register_reading();
 //       apply_updates();
-//       CHECK_EQ(mpx.num_socket_managers(), 3u);
+//       CHECK_EQ(mpx->num_socket_managers(), 3u);
 //       THEN("the multiplexer swaps out the socket managers for the socket") {
 //         alice->send("Hello Bob!");
 //         alice->register_writing();

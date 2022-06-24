@@ -55,7 +55,7 @@ public:
   template <class... Fs>
   void set_behavior(Fs... fs) {
     auto new_bhvr = behavior_type{std::move(fs)...};
-    this->bhvr_ = std::move(new_bhvr.unbox());
+    this->set_behavior_impl(std::move(new_bhvr.unbox()));
   }
 
   // -- overridden functions of local_actor ------------------------------------
@@ -72,7 +72,9 @@ class typed_actor_shell_ptr {
 public:
   // -- friends ----------------------------------------------------------------
 
-  friend class socket_manager;
+  template <class Handle>
+  friend actor_shell_ptr_t<Handle>
+  make_actor_shell(actor_system&, async::execution_context_ptr);
 
   // -- member types -----------------------------------------------------------
 
@@ -152,25 +154,5 @@ private:
 
   strong_actor_ptr ptr_;
 };
-
-} // namespace caf::net
-
-namespace caf::detail {
-
-template <class T>
-struct typed_actor_shell_ptr_oracle;
-
-template <class... Sigs>
-struct typed_actor_shell_ptr_oracle<typed_actor<Sigs...>> {
-  using type = net::typed_actor_shell_ptr<Sigs...>;
-};
-
-} // namespace caf::detail
-
-namespace caf::net {
-
-template <class Handle>
-using typed_actor_shell_ptr_t =
-  typename detail::typed_actor_shell_ptr_oracle<Handle>::type;
 
 } // namespace caf::net

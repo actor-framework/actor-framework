@@ -13,24 +13,36 @@ namespace caf::net {
 
 // -- constructors, destructors, and assignment operators ----------------------
 
-socket_manager::socket_manager(multiplexer* mpx, socket fd,
-                               event_handler_ptr handler)
-  : fd_(fd), mpx_(mpx), handler_(std::move(handler)) {
+socket_manager::socket_manager(multiplexer* mpx, event_handler_ptr handler)
+  : fd_(handler->handle()),
+    mpx_(mpx),
+    handler_(std::move(handler)),
+    disposed_(false) {
   CAF_ASSERT(fd_ != invalid_socket);
   CAF_ASSERT(mpx_ != nullptr);
   CAF_ASSERT(handler_ != nullptr);
-  memset(&flags_, 0, sizeof(flags_t));
 }
 
 socket_manager::~socket_manager() {
-  close(fd_);
+  // Note: may not call cleanup since it calls the multiplexer via deregister().
+  handler_.reset();
+  if (fd_) {
+    close(fd_);
+    fd_ = invalid_socket;
+  }
+  if (!cleanup_listeners_.empty()) {
+    for (auto& f : cleanup_listeners_)
+      mpx_->schedule(std::move(f));
+    cleanup_listeners_.clear();
+  }
 }
 
 // -- factories ----------------------------------------------------------------
 
-socket_manager_ptr socket_manager::make(multiplexer* mpx, socket handle,
+socket_manager_ptr socket_manager::make(multiplexer* mpx,
                                         event_handler_ptr handler) {
-  return make_counted<socket_manager>(mpx, handle, std::move(handler));
+  CAF_ASSERT(mpx != nullptr);
+  return make_counted<socket_manager>(std::move(mpx), std::move(handler));
 }
 
 // -- properties ---------------------------------------------------------------
@@ -40,88 +52,160 @@ actor_system& socket_manager::system() noexcept {
   return mpx_->system();
 }
 
+bool socket_manager::is_reading() const noexcept {
+  return mpx_->is_reading(this);
+}
+
+bool socket_manager::is_writing() const noexcept {
+  return mpx_->is_writing(this);
+}
+
 // -- event loop management ----------------------------------------------------
 
 void socket_manager::register_reading() {
   mpx_->register_reading(this);
 }
 
-void socket_manager::continue_reading() {
-  mpx_->continue_reading(this);
-}
-
 void socket_manager::register_writing() {
   mpx_->register_writing(this);
 }
 
-void socket_manager::continue_writing() {
-  mpx_->continue_writing(this);
+void socket_manager::deregister_reading() {
+  mpx_->deregister_reading(this);
+}
+
+void socket_manager::deregister_writing() {
+  mpx_->deregister_writing(this);
+}
+
+void socket_manager::deregister() {
+  mpx_->deregister(this);
+}
+
+// -- callbacks for the handler ------------------------------------------------
+
+void socket_manager::schedule_handover() {
+  deregister();
+  mpx_->schedule_fn([ptr = strong_this()] {
+    event_handler_ptr next;
+    if (ptr->handler_->do_handover(next)) {
+      ptr->handler_.swap(next);
+    }
+  });
+}
+
+void socket_manager::schedule(action what) {
+  // Wrap the action to make sure the socket manager is still alive when running
+  // the action later.
+  mpx_->schedule_fn([ptr = strong_this(), f = std::move(what)]() mutable {
+    CAF_IGNORE_UNUSED(ptr);
+    f.run();
+  });
+}
+
+void socket_manager::shutdown() {
+  if (!shutting_down_) {
+    shutting_down_ = true;
+    dispose();
+  } else {
+    // This usually only happens after disposing the manager if the handler
+    // still had data to send.
+    mpx_->schedule_fn([ptr = strong_this()] { //
+      ptr->cleanup();
+    });
+  }
 }
 
 // -- callbacks for the multiplexer --------------------------------------------
 
-void socket_manager::close_read() noexcept {
-  // TODO: extend transport API for closing read operations.
-  flags_.read_closed = true;
-}
-
-void socket_manager::close_write() noexcept {
-  // TODO: extend transport API for closing write operations.
-  flags_.write_closed = true;
-}
-
-bool socket_manager::do_handover() {
-  event_handler_ptr next;
-  if (handler_->do_handover(next)) {
-    handler_.swap(next);
-    return true;
-  } else {
-    return false;
-  }
-}
-
-error socket_manager::init(const settings& cfg) {
+error socket_manager::start(const settings& cfg) {
   CAF_LOG_TRACE(CAF_ARG(cfg));
   if (auto err = nonblocking(fd_, true)) {
     CAF_LOG_ERROR("failed to set nonblocking flag in socket:" << err);
+    cleanup();
     return err;
+  } else if (err = handler_->start(this, cfg); err) {
+    CAF_LOG_DEBUG("failed to initialize handler:" << err);
+    cleanup();
+    return err;
+  } else {
+    return none;
   }
-  return handler_->init(this, cfg);
 }
 
-socket_manager::read_result socket_manager::handle_read_event() {
-  auto result = handler_->handle_read_event();
-  switch (result) {
-    default:
-      break;
-    case read_result::close:
-      flags_.read_closed = true;
-      break;
-    case read_result::abort:
-      flags_.read_closed = true;
-      flags_.write_closed = true;
-      break;
-  }
-  return result;
+void socket_manager::handle_read_event() {
+  if (handler_)
+    handler_->handle_read_event();
+  else
+    deregister();
 }
 
-socket_manager::read_result socket_manager::handle_buffered_data() {
-  return handler_->handle_buffered_data();
-}
-
-socket_manager::read_result socket_manager::handle_continue_reading() {
-  return handler_->handle_continue_reading();
-}
-
-socket_manager::write_result socket_manager::handle_write_event() {
-  return handler_->handle_write_event();
+void socket_manager::handle_write_event() {
+  if (handler_)
+    handler_->handle_write_event();
+  else
+    deregister();
 }
 
 void socket_manager::handle_error(sec code) {
+  if (!disposed_)
+    disposed_ = true;
   if (handler_) {
-    handler_->abort(make_error(code));
-    handler_ = nullptr;
+    if (!shutting_down_) {
+      handler_->abort(make_error(code));
+      shutting_down_ = true;
+    }
+    if (code == sec::disposed && !handler_->finalized()) {
+      // When disposing the manger, the transport is still allowed to send any
+      // pending data and it will call shutdown() later to trigger cleanup().
+      deregister_reading();
+    } else {
+      cleanup();
+    }
   }
+}
+
+// -- implementation of disposable_impl ----------------------------------------
+
+void socket_manager::dispose() {
+  bool expected = false;
+  if (disposed_.compare_exchange_strong(expected, true)) {
+    mpx_->schedule_fn([ptr = strong_this()] { //
+      ptr->handle_error(sec::disposed);
+    });
+  }
+}
+
+bool socket_manager::disposed() const noexcept {
+  return disposed_.load();
+}
+
+void socket_manager::ref_disposable() const noexcept {
+  ref();
+}
+
+void socket_manager::deref_disposable() const noexcept {
+  deref();
+}
+
+// -- utility functions --------------------------------------------------------
+
+void socket_manager::cleanup() {
+  deregister();
+  handler_.reset();
+  if (fd_) {
+    close(fd_);
+    fd_ = invalid_socket;
+  }
+  if (!cleanup_listeners_.empty()) {
+    for (auto& f : cleanup_listeners_)
+      mpx_->schedule(std::move(f));
+    cleanup_listeners_.clear();
+  }
+}
+
+socket_manager_ptr socket_manager::strong_this() {
+  return socket_manager_ptr{this};
 }
 
 } // namespace caf::net

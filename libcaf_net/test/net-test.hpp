@@ -32,7 +32,11 @@ public:
 
   bool can_send_more() const noexcept override;
 
-  void suspend_reading() override;
+  bool is_reading() const noexcept override;
+
+  void write_later() override;
+
+  void shutdown() override;
 
   void configure_read(caf::net::receive_policy policy) override;
 
@@ -42,23 +46,21 @@ public:
 
   bool end_output() override;
 
-  bool stopped_reading() const noexcept override;
-
   // -- initialization ---------------------------------------------------------
 
-  caf::error init(const caf::settings& cfg) {
-    return up->init(nullptr, this, cfg);
+  caf::error start(const caf::settings& cfg) {
+    return up->start(this, cfg);
   }
 
-  caf::error init() {
+  caf::error start() {
     caf::settings cfg;
-    return init(cfg);
+    return start(cfg);
   }
 
   // -- buffer management ------------------------------------------------------
 
   void push(caf::span<const std::byte> bytes) {
-    input.insert(input.begin(), bytes.begin(), bytes.end());
+    input.insert(input.end(), bytes.begin(), bytes.end());
   }
 
   void push(std::string_view str) {
@@ -89,10 +91,10 @@ public:
 
   uint32_t max_read_size = 0;
 
+  size_t delta_offset = 0;
+
 private:
   caf::byte_buffer read_buf_;
-
-  ptrdiff_t read_size_ = 0;
 
   caf::error abort_reason_;
 };

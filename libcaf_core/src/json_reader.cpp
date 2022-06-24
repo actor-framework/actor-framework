@@ -634,15 +634,10 @@ json_reader::position json_reader::pos() const noexcept {
 }
 
 void json_reader::append_current_field_name(std::string& result) {
-  if (field_.empty()) {
-    result += "null";
-  } else {
-    auto i = field_.begin();
-    result += *i++;
-    while (i != field_.end()) {
-      result += '.';
-      result += *i++;
-    }
+  result += "ROOT";
+  for (auto& key : field_) {
+    result += '.';
+    result.insert(result.end(), key.begin(), key.end());
   }
 }
 

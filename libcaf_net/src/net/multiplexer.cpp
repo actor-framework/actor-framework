@@ -57,13 +57,8 @@ const short output_mask = POLLOUT;
 //                             | (is_writing(mask) ? output_mask : 0));
 // }
 
-operation to_operation(const socket_manager_ptr& mgr,
-                       std::optional<short> mask) {
+operation to_operation(const socket_manager_ptr&, std::optional<short> mask) {
   operation res = operation::none;
-  if (mgr->read_closed())
-    res = block_reads(res);
-  if (mgr->write_closed())
-    res = block_writes(res);
   if (mask) {
     if ((*mask & input_mask) != 0)
       res = add_read_flag(res);
@@ -115,9 +110,8 @@ error multiplexer::init() {
   if (!pipe_handles)
     return std::move(pipe_handles.error());
   auto updater = pollset_updater::make(pipe_handles->first);
-  auto mgr = socket_manager::make(this, pipe_handles->first,
-                                  std::move(updater));
-  if (auto err = mgr->init(settings{}))
+  auto mgr = socket_manager::make(this, std::move(updater));
+  if (auto err = mgr->start(settings{}))
     return err;
   write_handle_ = pipe_handles->second;
   pollset_.emplace_back(pollfd{pipe_handles->first.id, input_mask, 0});
@@ -131,17 +125,18 @@ size_t multiplexer::num_socket_managers() const noexcept {
   return managers_.size();
 }
 
-ptrdiff_t multiplexer::index_of(const socket_manager_ptr& mgr) {
+ptrdiff_t multiplexer::index_of(const socket_manager_ptr& mgr) const noexcept {
   auto first = managers_.begin();
   auto last = managers_.end();
   auto i = std::find(first, last, mgr);
   return i == last ? -1 : std::distance(first, i);
 }
 
-ptrdiff_t multiplexer::index_of(socket fd) {
+ptrdiff_t multiplexer::index_of(socket fd) const noexcept {
   auto first = pollset_.begin();
   auto last = pollset_.end();
-  auto i = std::find_if(first, last, [fd](pollfd& x) { return x.fd == fd.id; });
+  auto i = std::find_if(first, last,
+                        [fd](const pollfd& x) { return x.fd == fd.id; });
   return i == last ? -1 : std::distance(first, i);
 }
 
@@ -164,80 +159,34 @@ operation multiplexer::mask_of(const socket_manager_ptr& mgr) {
     return to_operation(mgr, std::nullopt);
 }
 
+// -- implementation of execution_context --------------------------------------
+
+void multiplexer::ref_execution_context() const noexcept {
+  ref();
+}
+
+void multiplexer::deref_execution_context() const noexcept {
+  deref();
+}
+
+void multiplexer::schedule(action what) {
+  CAF_LOG_TRACE("");
+  auto ptr = std::move(what).as_intrusive_ptr().release();
+  write_to_pipe(pollset_updater::code::run_action, ptr);
+}
+
+void multiplexer::watch(disposable what) {
+  watched_.emplace_back(what);
+}
+
 // -- thread-safe signaling ----------------------------------------------------
 
-void multiplexer::register_reading(const socket_manager_ptr& mgr) {
+void multiplexer::start(socket_manager_ptr mgr) {
   CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
   if (std::this_thread::get_id() == tid_) {
-    do_register_reading(mgr);
+    do_start(mgr);
   } else {
-    write_to_pipe(pollset_updater::code::register_reading, mgr.get());
-  }
-}
-
-void multiplexer::register_writing(const socket_manager_ptr& mgr) {
-  CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
-  CAF_ASSERT(mgr != nullptr);
-  if (std::this_thread::get_id() == tid_) {
-    do_register_writing(mgr);
-  } else {
-    write_to_pipe(pollset_updater::code::register_writing, mgr.get());
-  }
-}
-
-void multiplexer::continue_reading(const socket_manager_ptr& mgr) {
-  CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
-  write_to_pipe(pollset_updater::code::continue_reading, mgr.get());
-}
-
-void multiplexer::continue_writing(const socket_manager_ptr& mgr) {
-  CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
-  CAF_ASSERT(mgr != nullptr);
-  if (std::this_thread::get_id() == tid_) {
-    do_continue_writing(mgr);
-  } else {
-    write_to_pipe(pollset_updater::code::continue_writing, mgr.get());
-  }
-}
-
-void multiplexer::discard(const socket_manager_ptr& mgr) {
-  CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
-  if (std::this_thread::get_id() == tid_) {
-    do_discard(mgr);
-  } else {
-    write_to_pipe(pollset_updater::code::discard_manager, mgr.get());
-  }
-}
-
-void multiplexer::shutdown_reading(const socket_manager_ptr& mgr) {
-  CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
-  if (std::this_thread::get_id() == tid_) {
-    do_shutdown_reading(mgr);
-  } else {
-    write_to_pipe(pollset_updater::code::shutdown_reading, mgr.get());
-  }
-}
-
-void multiplexer::shutdown_writing(const socket_manager_ptr& mgr) {
-  CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
-  if (std::this_thread::get_id() == tid_) {
-    do_shutdown_writing(mgr);
-  } else {
-    write_to_pipe(pollset_updater::code::shutdown_writing, mgr.get());
-  }
-}
-
-void multiplexer::schedule(const action& what) {
-  CAF_LOG_TRACE("");
-  write_to_pipe(pollset_updater::code::run_action, what.ptr());
-}
-
-void multiplexer::init(const socket_manager_ptr& mgr) {
-  CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
-  if (std::this_thread::get_id() == tid_) {
-    do_init(mgr);
-  } else {
-    write_to_pipe(pollset_updater::code::init_manager, mgr.get());
+    write_to_pipe(pollset_updater::code::start_manager, mgr.release());
   }
 }
 
@@ -249,6 +198,41 @@ void multiplexer::shutdown() {
   CAF_LOG_DEBUG("push shutdown event to pipe");
   write_to_pipe(pollset_updater::code::shutdown,
                 static_cast<socket_manager*>(nullptr));
+}
+
+// -- callbacks for socket managers --------------------------------------------
+
+void multiplexer::register_reading(socket_manager* mgr) {
+  CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
+  update_for(mgr).events |= input_mask;
+}
+
+void multiplexer::register_writing(socket_manager* mgr) {
+  CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
+  update_for(mgr).events |= output_mask;
+}
+
+void multiplexer::deregister_reading(socket_manager* mgr) {
+  CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
+  update_for(mgr).events &= ~input_mask;
+}
+
+void multiplexer::deregister_writing(socket_manager* mgr) {
+  CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
+  update_for(mgr).events &= ~output_mask;
+}
+
+void multiplexer::deregister(socket_manager* mgr) {
+  CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
+  update_for(mgr).events = 0;
+}
+
+bool multiplexer::is_reading(const socket_manager* mgr) const noexcept {
+  return (active_mask_of(mgr) & input_mask) != 0;
+}
+
+bool multiplexer::is_writing(const socket_manager* mgr) const noexcept {
+  return (active_mask_of(mgr) & output_mask) != 0;
 }
 
 // -- control flow -------------------------------------------------------------
@@ -271,7 +255,6 @@ bool multiplexer::poll_once(bool blocking) {
       CAF_LOG_DEBUG("poll() on" << pollset_.size() << "sockets reported"
                                 << presult << "event(s)");
       // Scan pollset for events.
-      CAF_LOG_DEBUG("scan pollset for socket events");
       if (auto revents = pollset_[0].revents; revents != 0) {
         // Index 0 is always the pollset updater. This is the only handler that
         // is allowed to modify pollset_ and managers_. Since this may very well
@@ -280,6 +263,7 @@ bool multiplexer::poll_once(bool blocking) {
         handle(mgr, pollset_[0].events, revents);
         --presult;
       }
+      apply_updates();
       for (size_t i = 1; i < pollset_.size() && presult > 0; ++i) {
         if (auto revents = pollset_[i].revents; revents != 0) {
           handle(managers_[i], pollset_[i].events, revents);
@@ -352,12 +336,16 @@ void multiplexer::set_thread_id() {
 
 void multiplexer::run() {
   CAF_LOG_TRACE("");
+  CAF_LOG_DEBUG("run multiplexer" << CAF_ARG(input_mask) << CAF_ARG(error_mask)
+                                  << CAF_ARG(output_mask));
   // On systems like Linux, we cannot disable sigpipe on the socket alone. We
   // need to block the signal at thread level since some APIs (such as OpenSSL)
   // are unsafe to call otherwise.
   block_sigpipe();
-  while (!shutting_down_ || pollset_.size() > 1)
+  while (!shutting_down_ || pollset_.size() > 1 || !watched_.empty()) {
     poll_once(true);
+    disposable::erase_disposed(watched_);
+  }
   // Close the pipe to block any future event.
   std::lock_guard<std::mutex> guard{write_lock_};
   if (write_handle_ != invalid_socket) {
@@ -374,45 +362,19 @@ void multiplexer::handle(const socket_manager_ptr& mgr,
                 << CAF_ARG(events) << CAF_ARG(revents));
   CAF_ASSERT(mgr != nullptr);
   bool checkerror = true;
+  CAF_LOG_DEBUG("handle event on socket" << mgr->handle().id << CAF_ARG(events)
+                                         << CAF_ARG(revents));
   // Note: we double-check whether the manager is actually reading because a
-  // previous action from the pipe may have called shutdown_reading.
-  if ((events & revents & input_mask) != 0) {
+  // previous action from the pipe may have disabled reading.
+  if ((revents & input_mask) != 0 && is_reading(mgr.get())) {
     checkerror = false;
-    switch (mgr->handle_read_event()) {
-      default: // socket_manager::read_result::again
-        // Nothing to do, bitmask may remain unchanged.
-        break;
-      case socket_manager::read_result::abort:
-      case socket_manager::read_result::stop:
-        update_for(mgr).events &= ~input_mask;
-        break;
-      case socket_manager::read_result::want_write:
-        update_for(mgr).events = output_mask;
-        break;
-      case socket_manager::read_result::handover: {
-        do_handover(mgr);
-        return;
-      }
-    }
+    mgr->handle_read_event();
   }
   // Similar reasoning than before: double-check whether this event should still
   // get dispatched.
-  if ((events & revents & output_mask) != 0) {
+  if ((revents & output_mask) != 0 && is_writing(mgr.get())) {
     checkerror = false;
-    switch (mgr->handle_write_event()) {
-      default: // socket_manager::write_result::again
-        break;
-      case socket_manager::write_result::abort:
-      case socket_manager::write_result::stop:
-        update_for(mgr).events &= ~output_mask;
-        break;
-      case socket_manager::write_result::want_read:
-        update_for(mgr).events = input_mask;
-        break;
-      case socket_manager::write_result::handover:
-        do_handover(mgr);
-        return;
-    }
+    mgr->handle_write_event();
   }
   if (checkerror && ((revents & error_mask) != 0)) {
     if (revents & POLLNVAL)
@@ -421,38 +383,7 @@ void multiplexer::handle(const socket_manager_ptr& mgr,
       mgr->handle_error(sec::socket_disconnected);
     else
       mgr->handle_error(sec::socket_operation_failed);
-    update_for(mgr).events = 0;
-  }
-}
-
-void multiplexer::do_handover(const socket_manager_ptr& mgr) {
-  // Make sure to override the manager pointer in the update. Updates are
-  // associated to sockets, so the new manager is likely to modify this update
-  // again. Hence, it *must not* point to the old manager.
-  auto& update = update_for(mgr);
-  update.events = 0;
-  if (mgr->do_handover()) {
-    // If the new manager registered itself for reading, make sure it processes
-    // whatever data is available in buffers outside of the socket that may not
-    // trigger read events.
-    if ((update.events & input_mask)) {
-      switch (mgr->handle_buffered_data()) {
-        default: // socket_manager::read_result::again
-          // Nothing to do, bitmask may remain unchanged.
-          break;
-        case socket_manager::read_result::abort:
-        case socket_manager::read_result::stop:
-          update.events &= ~input_mask;
-          break;
-        case socket_manager::read_result::want_write:
-          update.events = output_mask;
-          break;
-        case socket_manager::read_result::handover: {
-          // Down the rabbit hole we go!
-          do_handover(mgr);
-        }
-      }
-    }
+    update_for(mgr.get()).events = 0;
   }
 }
 
@@ -467,14 +398,13 @@ multiplexer::poll_update& multiplexer::update_for(ptrdiff_t index) {
   }
 }
 
-multiplexer::poll_update&
-multiplexer::update_for(const socket_manager_ptr& mgr) {
+multiplexer::poll_update& multiplexer::update_for(socket_manager* mgr) {
   auto fd = mgr->handle();
   if (auto i = updates_.find(fd); i != updates_.end()) {
     return i->second;
   } else if (auto index = index_of(fd); index != -1) {
-    updates_.container().emplace_back(fd,
-                                      poll_update{pollset_[index].events, mgr});
+    updates_.container().emplace_back(fd, poll_update{pollset_[index].events,
+                                                      socket_manager_ptr{mgr}});
     return updates_.container().back().second;
   } else {
     updates_.container().emplace_back(fd, poll_update{0, mgr});
@@ -485,9 +415,7 @@ multiplexer::update_for(const socket_manager_ptr& mgr) {
 template <class T>
 void multiplexer::write_to_pipe(uint8_t opcode, T* ptr) {
   pollset_updater::msg_buf buf;
-  if (ptr) {
-    intrusive_ptr_add_ref(ptr);
-  }
+  // Note: no intrusive_ptr_add_ref(ptr) since we take ownership of `ptr`.
   buf[0] = static_cast<std::byte>(opcode);
   auto value = reinterpret_cast<intptr_t>(ptr);
   memcpy(buf.data() + 1, &value, sizeof(intptr_t));
@@ -501,7 +429,7 @@ void multiplexer::write_to_pipe(uint8_t opcode, T* ptr) {
     intrusive_ptr_release(ptr);
 }
 
-short multiplexer::active_mask_of(const socket_manager_ptr& mgr) {
+short multiplexer::active_mask_of(const socket_manager* mgr) const noexcept {
   auto fd = mgr->handle();
   if (auto i = updates_.find(fd); i != updates_.end()) {
     return i->second.events;
@@ -510,14 +438,6 @@ short multiplexer::active_mask_of(const socket_manager_ptr& mgr) {
   } else {
     return 0;
   }
-}
-
-bool multiplexer::is_reading(const socket_manager_ptr& mgr) {
-  return (active_mask_of(mgr) & input_mask) != 0;
-}
-
-bool multiplexer::is_writing(const socket_manager_ptr& mgr) {
-  return (active_mask_of(mgr) & output_mask) != 0;
 }
 
 // -- internal callbacks the pollset updater -----------------------------------
@@ -529,96 +449,25 @@ void multiplexer::do_shutdown() {
   shutting_down_ = true;
   apply_updates();
   // Skip the first manager (the pollset updater).
-  for (size_t i = 1; i < managers_.size(); ++i) {
-    auto& mgr = managers_[i];
-    mgr->close_read();
-    update_for(static_cast<ptrdiff_t>(i)).events &= ~input_mask;
-  }
+  for (size_t i = 1; i < managers_.size(); ++i)
+    managers_[i]->dispose();
   apply_updates();
 }
 
-void multiplexer::do_register_reading(const socket_manager_ptr& mgr) {
-  CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
-  // When shutting down, no new reads are allowed.
-  if (shutting_down_)
-    mgr->close_read();
-  else if (!mgr->read_closed())
-    update_for(mgr).events |= input_mask;
-}
-
-void multiplexer::do_register_writing(const socket_manager_ptr& mgr) {
-  CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
-  // When shutting down, we do allow managers to write whatever is currently
-  // pending but we make sure that all read channels are closed.
-  if (shutting_down_)
-    mgr->close_read();
-  if (!mgr->write_closed())
-    update_for(mgr).events |= output_mask;
-}
-
-void multiplexer::do_continue_reading(const socket_manager_ptr& mgr) {
-  if (!is_reading(mgr)) {
-    switch (mgr->handle_continue_reading()) {
-      default: // socket_manager::read_result::(stop | abort)
-        update_for(mgr).events &= ~input_mask;
-        break;
-      case socket_manager::read_result::again:
-        update_for(mgr).events |= input_mask;
-        break;
-      case socket_manager::read_result::want_write:
-        update_for(mgr).events = output_mask;
-        break;
-      case socket_manager::read_result::handover: {
-        do_handover(mgr);
-      }
-    }
-  }
-}
-
-void multiplexer::do_continue_writing(const socket_manager_ptr& mgr) {
-  if (!is_writing(mgr)) {
-    update_for(mgr).events |= output_mask;
-  }
-}
-
-void multiplexer::do_discard(const socket_manager_ptr& mgr) {
-  CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
-  mgr->handle_error(sec::disposed);
-  update_for(mgr).events = 0;
-}
-
-void multiplexer::do_shutdown_reading(const socket_manager_ptr& mgr) {
-  CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
-  if (!shutting_down_ && !mgr->read_closed()) {
-    mgr->close_read();
-    update_for(mgr).events &= ~input_mask;
-  }
-}
-
-void multiplexer::do_shutdown_writing(const socket_manager_ptr& mgr) {
-  CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
-  if (!shutting_down_ && !mgr->write_closed()) {
-    mgr->close_write();
-    update_for(mgr).events &= ~output_mask;
-  }
-}
-
-void multiplexer::do_init(const socket_manager_ptr& mgr) {
+void multiplexer::do_start(const socket_manager_ptr& mgr) {
   CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
   if (!shutting_down_) {
     error err;
     if (owner_)
-      err = mgr->init(content(system().config()));
+      err = mgr->start(content(system().config()));
     else
-      err = mgr->init(settings{});
+      err = mgr->start(settings{});
     if (err) {
       CAF_LOG_DEBUG("mgr->init failed: " << err);
       // The socket manager should not register itself for any events if
       // initialization fails. Purge any state just in case.
-      update_for(mgr).events = 0;
+      update_for(mgr.get()).events = 0;
     }
-    // Else: no update since the manager is supposed to call continue_reading
-    // and continue_writing as necessary.
   }
 }
 

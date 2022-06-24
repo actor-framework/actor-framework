@@ -47,7 +47,7 @@ public:
     }
 
     void on_error(const error& what) {
-      CAF_ASSERT(sub->subscribed());
+      CAF_ASSERT(sub->in_.valid());
       sub->in_.dispose();
       sub->in_ = nullptr;
       sub->err_ = what;
@@ -215,7 +215,9 @@ private:
         --demand_;
         out_.on_next(item);
       }
-      if (!in_ && buf_.empty()) {
+      if (in_) {
+        pull();
+      } else if (buf_.empty()) {
         if (err_)
           out_.on_error(err_);
         else

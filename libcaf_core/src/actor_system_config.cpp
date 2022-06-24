@@ -238,100 +238,27 @@ std::ostream& operator<<(std::ostream& out, indentation indent) {
   return out;
 }
 
-// Fakes a buffer interface but really prints to std::cout.
-struct out_buf {
-  int end() {
-    return 0;
-  }
-  void push_back(char c) {
-    std::cout << c;
-  }
-  template <class Iterator, class Sentinel>
-  void insert(int, Iterator i, Sentinel e) {
-    while (i != e)
-      std::cout << *i++;
-  }
-};
-
-void print(const config_value::dictionary& xs, indentation indent);
-
-void print_val(const config_value& val, indentation indent) {
-  out_buf out;
-  using std::cout;
-  switch (val.get_data().index()) {
-    default: // none
-      // omit
-      break;
-    case 1: // integer
-      detail::print(out, get<config_value::integer>(val));
-      break;
-    case 2: // boolean
-      detail::print(out, get<config_value::boolean>(val));
-      break;
-    case 3: // real
-      detail::print(out, get<config_value::real>(val));
-      break;
-    case 4: // timespan
-      detail::print(out, get<timespan>(val));
-      break;
-    case 5: // uri
-      cout << '<' << get<uri>(val).str() << '>';
-      break;
-    case 6: // string
-      detail::print_escaped(out, get<std::string>(val));
-      break;
-    case 7: { // list
-      auto& xs = get<config_value::list>(val);
-      if (xs.empty()) {
-        cout << "[]";
-      } else {
-        auto list_indent = indent + 2;
-        cout << "[\n";
-        for (auto& x : xs) {
-          cout << list_indent;
-          print_val(x, list_indent);
-          cout << ",\n";
-        }
-        cout << indent << ']';
-      }
-      break;
-    }
-    case 8: { // dictionary
-      print(get<config_value::dictionary>(val), indent + 2);
-    }
-  }
-}
-
-bool needs_quotes(const std::string& key) {
-  auto is_alnum_or_dash = [](char x) {
-    return isalnum(x) || x == '-' || x == '_';
-  };
-  return key.empty() || !std::all_of(key.begin(), key.end(), is_alnum_or_dash);
-}
-
 void print(const config_value::dictionary& xs, indentation indent) {
-  out_buf out;
   using std::cout;
-  bool top_level = indent.size == 0;
-  for (const auto& [key, val] : xs) {
-    if (!top_level || (key != "dump-config" && key != "config-file")) {
-      cout << indent;
-      if (!needs_quotes(key)) {
-        cout << key;
+  for (const auto& kvp : xs) {
+    if (kvp.first == "dump-config")
+      continue;
+    if (auto submap = get_if<config_value::dictionary>(&kvp.second)) {
+      cout << indent << kvp.first << " {\n";
+      print(*submap, indent + 2);
+      cout << indent << "}\n";
+    } else if (auto lst = get_if<config_value::list>(&kvp.second)) {
+      if (lst->empty()) {
+        cout << indent << kvp.first << " = []\n";
       } else {
-        detail::print_escaped(out, key);
+        cout << indent << kvp.first << " = [\n";
+        auto list_indent = indent + 2;
+        for (auto& x : *lst)
+          cout << list_indent << to_string(x) << ",\n";
+        cout << indent << "]\n";
       }
-      if (!holds_alternative<config_value::dictionary>(val)) {
-        cout << " = ";
-        print_val(val, indent);
-        cout << '\n';
-      } else if (auto xs = get<config_value::dictionary>(val); xs.empty()) {
-        cout << "{}\n";
-      } else {
-        cout << " {\n";
-        print(get<config_value::dictionary>(val), indent + 2);
-        cout << indent << "}\n";
-      }
+    } else {
+      cout << indent << kvp.first << " = " << to_string(kvp.second) << '\n';
     }
   }
 }

@@ -74,16 +74,14 @@ public:
 
   // -- stream_oriented::upper_layer implementation ----------------------------
 
-  error init(socket_manager* owner, stream_oriented::lower_layer* down,
-             const settings& config) override;
+  error start(stream_oriented::lower_layer* down,
+              const settings& config) override;
 
   void abort(const error& reason) override;
 
   ptrdiff_t consume(byte_span input, byte_span) override;
 
-  void continue_reading() override;
-
-  bool prepare_send() override;
+  void prepare_send() override;
 
   bool done_sending() override;
 
@@ -99,9 +97,6 @@ private:
 
   /// Stores the upper layer.
   framing framing_;
-
-  /// Stores a pointer to the owning manager for the delayed initialization.
-  socket_manager* owner_ = nullptr;
 
   /// Holds a copy of the settings in order to delay initialization of the upper
   /// layer until the handshake completed. We also fill this dictionary with the

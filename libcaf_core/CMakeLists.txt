@@ -224,6 +224,10 @@ caf_add_component(
     actor_system_config
     actor_termination
     aout
+    async.blocking_consumer
+    async.blocking_producer
+    async.consumer_adapter
+    async.producer_adapter
     async.promise
     async.spsc_buffer
     behavior

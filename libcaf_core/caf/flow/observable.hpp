@@ -471,6 +471,11 @@ disposable observable<T>::subscribe(async::producer_resource<T> resource) {
 }
 
 template <class T>
+disposable observable<T>::subscribe(ignore_t) {
+  return subscribe(observer<T>::ignore());
+}
+
+template <class T>
 template <class OnNext>
 disposable observable<T>::for_each(OnNext on_next) {
   return subscribe(make_observer(std::move(on_next)));

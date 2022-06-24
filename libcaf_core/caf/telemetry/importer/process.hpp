@@ -31,6 +31,7 @@ private:
   telemetry::int_gauge* rss_ = nullptr;
   telemetry::int_gauge* vms_ = nullptr;
   telemetry::dbl_gauge* cpu_ = nullptr;
+  telemetry::int_gauge* fds_ = nullptr;
 };
 
 } // namespace caf::telemetry::importer

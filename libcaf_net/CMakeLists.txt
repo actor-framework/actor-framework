@@ -33,24 +33,31 @@ caf_add_component(
     src/detail/rfc6455.cpp
     src/net/abstract_actor_shell.cpp
     src/net/actor_shell.cpp
+    src/net/binary/default_trait.cpp
+    src/net/binary/frame.cpp
+    src/net/binary/lower_layer.cpp
+    src/net/binary/upper_layer.cpp
     src/net/datagram_socket.cpp
     src/net/generic_lower_layer.cpp
     src/net/generic_upper_layer.cpp
     src/net/http/header.cpp
     src/net/http/lower_layer.cpp
     src/net/http/method.cpp
+    src/net/http/request.cpp
+    src/net/http/response.cpp
+    src/net/http/serve.cpp
     src/net/http/server.cpp
     src/net/http/status.cpp
     src/net/http/upper_layer.cpp
     src/net/http/v1.cpp
     src/net/ip.cpp
     src/net/length_prefix_framing.cpp
-    src/net/message_oriented.cpp
     src/net/middleman.cpp
     src/net/multiplexer.cpp
     src/net/network_socket.cpp
     src/net/pipe_socket.cpp
     src/net/pollset_updater.cpp
+    src/net/prometheus/server.cpp
     src/net/socket.cpp
     src/net/socket_event_layer.cpp
     src/net/socket_manager.cpp
@@ -84,7 +91,6 @@ caf_add_component(
     detail.rfc6455
     net.accept_socket
     net.actor_shell
-    net.consumer_adapter
     net.datagram_socket
     net.http.server
     net.ip
@@ -93,7 +99,7 @@ caf_add_component(
     net.network_socket
     net.operation
     net.pipe_socket
-    net.producer_adapter
+    net.prometheus.server
     net.socket
     net.socket_guard
     net.ssl.transport

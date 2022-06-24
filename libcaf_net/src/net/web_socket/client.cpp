@@ -38,10 +38,9 @@ std::unique_ptr<client> client::make(handshake_ptr hs, upper_layer_ptr up) {
 
 // -- implementation of stream_oriented::upper_layer ---------------------------
 
-error client::init(socket_manager* owner, stream_oriented::lower_layer* down,
-                   const settings& cfg) {
+error client::start(stream_oriented::lower_layer* down, const settings& cfg) {
   CAF_ASSERT(hs_ != nullptr);
-  framing_.init(owner, down);
+  framing_.start(down);
   if (!hs_->has_mandatory_fields())
     return make_error(sec::runtime_error,
                       "handshake data lacks mandatory fields");
@@ -95,13 +94,9 @@ ptrdiff_t client::consume(byte_span buffer, byte_span delta) {
   }
 }
 
-void client::continue_reading() {
+void client::prepare_send() {
   if (handshake_completed())
-    upper_layer().continue_reading();
-}
-
-bool client::prepare_send() {
-  return handshake_completed() ? upper_layer().prepare_send() : true;
+    upper_layer().prepare_send();
 }
 
 bool client::done_sending() {
@@ -115,7 +110,7 @@ bool client::handle_header(std::string_view http) {
   auto http_ok = hs_->is_valid_http_1_response(http);
   hs_.reset();
   if (http_ok) {
-    if (auto err = upper_layer().init(owner_, &framing_, cfg_)) {
+    if (auto err = upper_layer().start(&framing_, cfg_)) {
       CAF_LOG_DEBUG("failed to initialize WebSocket framing layer");
       return false;
     } else {

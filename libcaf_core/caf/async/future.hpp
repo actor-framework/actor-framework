@@ -111,8 +111,20 @@ public:
 
   /// Binds this future to an @ref execution_context to run callbacks.
   /// @pre `valid()`
+  bound_future<T> bind_to(execution_context& ctx) && {
+    return {&ctx, std::move(cell_)};
+  }
+
+  /// Binds this future to an @ref execution_context to run callbacks.
+  /// @pre `valid()`
   bound_future<T> bind_to(execution_context* ctx) const& {
     return {ctx, cell_};
+  }
+
+  /// Binds this future to an @ref execution_context to run callbacks.
+  /// @pre `valid()`
+  bound_future<T> bind_to(execution_context& ctx) const& {
+    return {&ctx, cell_};
   }
 
   /// Queries whether the result of the asynchronous computation is still

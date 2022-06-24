@@ -21,18 +21,19 @@
 namespace {
 
 struct sys_stats {
-  int64_t rss;
-  int64_t vms;
-  double cpu_time;
+  int64_t rss = 0;
+  int64_t vms = 0;
+  double cpu_time = 0.0;
+  int64_t fds = 0;
 };
 
 sys_stats read_sys_stats();
 
-static constexpr bool platform_supported_v = true;
+constexpr bool platform_supported_v = true;
 
-template <class CpuPtr, class RssPtr, class VmsPtr>
+template <class CpuPtr, class RssPtr, class VmsPtr, class FdsPtr>
 void sys_stats_init(caf::telemetry::metric_registry& reg, RssPtr& rss,
-                    VmsPtr& vms, CpuPtr& cpu) {
+                    VmsPtr& vms, CpuPtr& cpu, FdsPtr& fds) {
   rss = reg.gauge_singleton("process", "resident_memory",
                             "Resident memory size.", "bytes");
   vms = reg.gauge_singleton("process", "virtual_memory", "Virtual memory size.",
@@ -40,15 +41,19 @@ void sys_stats_init(caf::telemetry::metric_registry& reg, RssPtr& rss,
   cpu = reg.gauge_singleton<double>("process", "cpu",
                                     "Total user and system CPU time spent.",
                                     "seconds", true);
+  fds = reg.gauge_singleton("process", "open_fds",
+                            "Number of open file descriptors.");
 }
 
 void update_impl(caf::telemetry::int_gauge* rss_gauge,
                  caf::telemetry::int_gauge* vms_gauge,
-                 caf::telemetry::dbl_gauge* cpu_gauge) {
-  auto [rss, vmsize, cpu] = read_sys_stats();
+                 caf::telemetry::dbl_gauge* cpu_gauge,
+                 caf::telemetry::int_gauge* fds_gauge) {
+  auto [rss, vmsize, cpu, fds] = read_sys_stats();
   rss_gauge->value(rss);
   vms_gauge->value(vmsize);
   cpu_gauge->value(cpu);
+  fds_gauge->value(fds);
 }
 
 } // namespace
@@ -57,7 +62,7 @@ void update_impl(caf::telemetry::int_gauge* rss_gauge,
 
 namespace {
 
-static constexpr bool platform_supported_v = false;
+constexpr bool platform_supported_v = false;
 
 template <class... Ts>
 void sys_stats_init(Ts&&...) {
@@ -77,14 +82,16 @@ void update_impl(Ts&&...) {
 
 #ifdef CAF_MACOS
 
+#  include <libproc.h>
 #  include <mach/mach.h>
 #  include <mach/task.h>
 #  include <sys/resource.h>
+#  include <unistd.h>
 
 namespace {
 
 sys_stats read_sys_stats() {
-  sys_stats result{0, 0, 0};
+  sys_stats result;
   // Fetch memory usage.
   {
     mach_task_basic_info info;
@@ -110,6 +117,20 @@ sys_stats read_sys_stats() {
       result.cpu_time += ceil(info.system_time.microseconds / 1000.0) / 1000.0;
     }
   }
+  // Fetch open file handles.
+  {
+    // proc_pidinfo is undocumented, but this is what lsof also uses.
+    auto suggested_buf_size = proc_pidinfo(getpid(), PROC_PIDLISTFDS, 0,
+                                           nullptr, 0);
+    if (suggested_buf_size > 0) {
+      auto buf_size = suggested_buf_size;
+      auto buf = malloc(buf_size); // TODO: could be thread-local
+      auto res = proc_pidinfo(getpid(), PROC_PIDLISTFDS, 0, buf, buf_size);
+      free(buf);
+      if (res > 0)
+        result.fds = res / sizeof(proc_fdinfo);
+    }
+  }
   return result;
 }
 
@@ -121,7 +142,21 @@ sys_stats read_sys_stats() {
 
 #if defined(CAF_LINUX) || defined(CAF_NET_BSD)
 
+#  include <dirent.h>
 #  include <unistd.h>
+
+int64_t count_entries_in_directory(const char* path) {
+  int64_t result = 0;
+  if (auto dptr = opendir(path); dptr != nullptr) {
+    for (auto entry = readdir(dptr); entry != nullptr; entry = readdir(dptr)) {
+      auto fname = entry->d_name;
+      if (strcmp(".", fname) != 0 && strcmp("..", fname) != 0)
+        ++result;
+    }
+    closedir(dptr);
+  }
+  return result;
+}
 
 /// Caches the result from a `sysconf` call in a cache variable to avoid
 /// frequent syscalls. Sets `cache_var` to -1 in case of an error. Initially,
@@ -160,6 +195,7 @@ bool load_system_setting(std::atomic<long>& cache_var, long& var, int name,
 #ifdef CAF_LINUX
 
 #  include <cstdio>
+#  include <dirent.h>
 
 namespace {
 
@@ -168,7 +204,7 @@ std::atomic<long> global_ticks_per_second;
 std::atomic<long> global_page_size;
 
 sys_stats read_sys_stats() {
-  sys_stats result{0, 0, 0};
+  sys_stats result;
   long ticks_per_second = 0;
   long page_size = 0;
   if (!TRY_LOAD(ticks_per_second, _SC_CLK_TCK)
@@ -218,6 +254,7 @@ sys_stats read_sys_stats() {
     result.cpu_time += stime_ticks;
     result.cpu_time /= ticks_per_second;
   }
+  result.fds = count_entries_in_directory("/proc/self/fd");
   return result;
 }
 
@@ -234,7 +271,7 @@ namespace {
 std::atomic<long> global_page_size;
 
 sys_stats read_sys_stats() {
-  auto result = sys_stats{0, 0, 0};
+  auto result = sys_stats;
   auto kip2 = kinfo_proc2{};
   auto kip2_size = sizeof(kip2);
   int mib[6] = {
@@ -263,7 +300,7 @@ sys_stats read_sys_stats() {
 namespace caf::telemetry::importer {
 
 process::process(metric_registry& reg) {
-  sys_stats_init(reg, rss_, vms_, cpu_);
+  sys_stats_init(reg, rss_, vms_, cpu_, fds_);
 }
 
 bool process::platform_supported() noexcept {
@@ -271,7 +308,7 @@ bool process::platform_supported() noexcept {
 }
 
 void process::update() {
-  update_impl(rss_, vms_, cpu_);
+  update_impl(rss_, vms_, cpu_, fds_);
 }
 
 } // namespace caf::telemetry::importer

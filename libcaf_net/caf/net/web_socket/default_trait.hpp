@@ -32,6 +32,8 @@ public:
   bool convert(const_byte_span bytes, input_type& x);
 
   bool convert(std::string_view text, input_type& x);
+
+  error last_error();
 };
 
 } // namespace caf::net::web_socket

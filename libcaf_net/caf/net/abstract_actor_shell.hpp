@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/actor_traits.hpp"
+#include "caf/async/execution_context.hpp"
 #include "caf/callback.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/extend.hpp"
@@ -46,7 +47,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  abstract_actor_shell(actor_config& cfg, socket_manager* owner);
+  abstract_actor_shell(actor_config& cfg, async::execution_context_ptr loop);
 
   ~abstract_actor_shell() override;
 
@@ -56,7 +57,7 @@ public:
 
   // -- state modifiers --------------------------------------------------------
 
-  /// Detaches the shell from its owner and closes the mailbox.
+  /// Detaches the shell from its loop and closes the mailbox.
   void quit(error reason);
 
   /// Overrides the default handler for unexpected messages.
@@ -94,11 +95,6 @@ public:
 
   // -- message processing -----------------------------------------------------
 
-  /// Dequeues and processes the next message from the mailbox.
-  /// @returns `true` if a message was dequeued and processed, `false` if the
-  ///          mailbox was empty.
-  bool consume_message();
-
   /// Adds a callback for a multiplexed response.
   void add_multiplexed_response_handler(message_id response_id, behavior bhvr);
 
@@ -117,23 +113,35 @@ public:
   bool cleanup(error&& fail_state, execution_unit* host) override;
 
 protected:
-  // Stores incoming actor messages.
+  void set_behavior_impl(behavior bhvr) {
+    bhvr_ = std::move(bhvr);
+  }
+
+private:
+  /// Stores incoming actor messages.
   mailbox_type mailbox_;
 
-  // Guards access to owner_.
-  std::mutex owner_mtx_;
+  /// Guards access to loop_.
+  std::mutex loop_mtx_;
 
-  // Points to the owning manager (nullptr after quit was called).
-  socket_manager* owner_;
+  /// Points to the loop in which this "actor" runs (nullptr after calling
+  /// quit).
+  async::execution_context_ptr loop_;
 
-  // Handler for consuming messages from the mailbox.
+  /// Handler for consuming messages from the mailbox.
   behavior bhvr_;
 
-  // Handler for unexpected messages.
+  /// Handler for unexpected messages.
   fallback_handler fallback_;
 
-  // Stores callbacks for multiplexed responses.
+  /// Stores callbacks for multiplexed responses.
   unordered_flat_map<message_id, behavior> multiplexed_responses_;
+
+  /// Callback for processing the next message on the event loop.
+  action resume_;
+
+  /// Dequeues and processes the next message from the mailbox.
+  bool consume_message();
 };
 
 } // namespace caf::net

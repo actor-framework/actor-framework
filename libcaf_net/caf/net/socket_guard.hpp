@@ -44,6 +44,13 @@ public:
     fd_ = x;
   }
 
+  void reset() noexcept {
+    if (fd_.id != invalid_socket_id) {
+      close(fd_);
+      fd_.id = invalid_socket_id;
+    }
+  }
+
   Socket release() noexcept {
     auto sock = fd_;
     fd_.id = invalid_socket_id;

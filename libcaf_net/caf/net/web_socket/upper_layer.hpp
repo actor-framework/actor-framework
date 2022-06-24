@@ -16,9 +16,7 @@ class CAF_NET_EXPORT upper_layer : public generic_upper_layer {
 public:
   virtual ~upper_layer();
 
-  virtual error
-  init(net::socket_manager* mgr, lower_layer* down, const settings& cfg)
-    = 0;
+  virtual error start(lower_layer* down, const settings& cfg) = 0;
   virtual ptrdiff_t consume_binary(byte_span buf) = 0;
   virtual ptrdiff_t consume_text(std::string_view buf) = 0;
 };

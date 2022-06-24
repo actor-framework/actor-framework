@@ -102,7 +102,8 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
   // Open up a TCP port for incoming connections.
   auto port = caf::get_or(cfg, "port", default_port);
   cn::tcp_accept_socket fd;
-  if (auto maybe_fd = cn::make_tcp_accept_socket({caf::ipv4_address{}, port})) {
+  if (auto maybe_fd = cn::make_tcp_accept_socket({caf::ipv4_address{}, port},
+                                                 true)) {
     std::cout << "*** started listening for incoming connections on port "
               << port << '\n';
     fd = std::move(*maybe_fd);
@@ -127,7 +128,8 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
         auto quote = quotes.empty() ? "Try /epictetus, /seneca or /plato."
                                     : f(quotes);
         self->make_observable().just(ws::frame{quote}).subscribe(push);
-        // Note: we simply drop `pull` here, which will close the buffer.
+        // We ignore whatever the client may send to us.
+        pull.observe_on(self).subscribe(std::ignore);
       });
   });
   // Callback for incoming WebSocket requests.

@@ -752,12 +752,9 @@ void scheduled_actor::run_actions() {
 
 void scheduled_actor::update_watched_disposables() {
   CAF_LOG_TRACE("");
-  auto disposed = [](auto& hdl) { return hdl.disposed(); };
-  auto& xs = watched_disposables_;
-  if (auto e = std::remove_if(xs.begin(), xs.end(), disposed); e != xs.end()) {
-    xs.erase(e, xs.end());
-    CAF_LOG_DEBUG("now watching" << xs.size() << "disposables");
-  }
+  [[maybe_unused]] auto n = disposable::erase_disposed(watched_disposables_);
+  CAF_LOG_DEBUG_IF(n > 0, "now watching" << watched_disposables_.size()
+                                         << "disposables");
 }
 
 } // namespace caf

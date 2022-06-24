@@ -56,9 +56,9 @@ public:
 
   // -- public member functions ------------------------------------------------
 
-  error init(endpoint_manager& manager) override {
+  error start(endpoint_manager& manager) override {
     CAF_LOG_TRACE("");
-    if (auto err = super::init(manager))
+    if (auto err = super::start(manager))
       return err;
     prepare_next_read();
     return none;
