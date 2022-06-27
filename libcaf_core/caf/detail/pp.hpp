@@ -15,6 +15,9 @@
 /// Evaluate x and y before concatenating into a single token.
 #define CAF_PP_PASTE(x, y) CAF_PP_CAT(x, y)
 
+/// Adds the current line number to make `NAME` unique.
+#define CAF_PP_UNIFYN(name) CAF_PP_PASTE(name, __LINE__)
+
 /// Evaluates to __COUNTER__. Allows delaying evaluation of __COUNTER__ in some
 /// edge cases where it otherwise could increment the internal counter twice.
 #define CAF_PP_COUNTER() __COUNTER__

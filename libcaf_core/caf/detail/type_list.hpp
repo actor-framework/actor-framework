@@ -8,8 +8,6 @@
 #include <type_traits>
 #include <typeinfo>
 
-#include "caf/detail/tbind.hpp"
-#include "caf/detail/type_pair.hpp"
 #include "caf/fwd.hpp"
 #include "caf/none.hpp"
 #include "caf/unit.hpp"
@@ -133,18 +131,6 @@ struct tl_back<type_list<T0, T1, Ts...>> {
 template <class List>
 using tl_back_t = typename tl_back<List>::type;
 
-// bool empty(type_list)
-
-/// Tests whether a list is empty.
-template <class List>
-struct tl_empty {
-  static constexpr bool value = std::is_same<empty_type_list, List>::value;
-};
-
-// Uncomment after having switched to C++14
-// template <class List>
-// inline constexpr bool tl_empty_v = tl_empty<List>::value;
-
 // list slice(size_t, size_t)
 
 template <size_t LeftOffset, size_t Remaining, typename PadType, class List,
@@ -198,98 +184,6 @@ struct tl_slice {
 
 template <class List, size_t First, size_t Last>
 using tl_slice_t = typename tl_slice<List, First, Last>::type;
-
-/// Creates a new list containing the last `N` elements.
-template <class List, size_t NewSize, size_t OldSize = tl_size<List>::value>
-struct tl_right {
-  static constexpr size_t first_idx = OldSize > NewSize ? OldSize - NewSize : 0;
-  using type = tl_slice_t<List, first_idx, OldSize>;
-};
-
-template <class List, size_t N>
-struct tl_right<List, N, N> {
-  using type = List;
-};
-
-template <size_t N>
-struct tl_right<empty_type_list, N, 0> {
-  using type = empty_type_list;
-};
-
-template <>
-struct tl_right<empty_type_list, 0, 0> {
-  using type = empty_type_list;
-};
-
-template <class List, size_t NewSize, size_t OldSize = tl_size<List>::value>
-using tl_right_t = typename tl_right<List, NewSize, OldSize>::type;
-
-template <class ListA, class ListB,
-          template <class, typename> class Fun = to_type_pair>
-struct tl_zip_impl;
-
-template <class... LhsElements, class... RhsElements,
-          template <class, typename> class Fun>
-struct tl_zip_impl<type_list<LhsElements...>, type_list<RhsElements...>, Fun> {
-  static_assert(sizeof...(LhsElements) == sizeof...(RhsElements),
-                "Lists have different size");
-  using type = type_list<typename Fun<LhsElements, RhsElements>::type...>;
-};
-
-/// Zips two lists of equal size.
-///
-/// Creates a list formed from the two lists `ListA` and `ListB,`
-/// e.g., tl_zip<type_list<int, double>, type_list<float, string>>::type
-/// is type_list<type_pair<int, float>, type_pair<double, string>>.
-template <class ListA, class ListB, template <class, class> class Fun>
-struct tl_zip {
-  static constexpr size_t sizea = tl_size<ListA>::value;
-  static constexpr size_t sizeb = tl_size<ListB>::value;
-  static constexpr size_t result_size = (sizea < sizeb) ? sizea : sizeb;
-  using type =
-    typename tl_zip_impl<tl_slice_t<ListA, 0, result_size>,
-                         tl_slice_t<ListB, 0, result_size>, Fun>::type;
-};
-
-template <class ListA, class ListB, template <class, class> class Fun>
-using tl_zip_t = typename tl_zip<ListA, ListB, Fun>::type;
-
-/// Equal to `zip(right(ListA, N), right(ListB, N), Fun)`.
-template <class ListA, class ListB, template <class, class> class Fun, size_t N>
-struct tl_zip_right {
-  using type =
-    typename tl_zip_impl<tl_right_t<ListA, N>, tl_right_t<ListB, N>, Fun>::type;
-};
-
-template <class ListA, class ListB, template <class, class> class Fun, size_t N>
-using tl_zip_right_t = typename tl_zip_right<ListA, ListB, Fun, N>::type;
-
-template <class ListA, class ListB, typename PadA = unit_t,
-          typename PadB = unit_t,
-          template <class, typename> class Fun = to_type_pair>
-struct tl_zip_all {
-  static constexpr size_t result_size
-    = (tl_size<ListA>::value > tl_size<ListB>::value) ? tl_size<ListA>::value
-                                                      : tl_size<ListB>::value;
-  using type = typename tl_zip_impl<
-    typename tl_slice_<ListA, tl_size<ListA>::value, 0, result_size>::type,
-    typename tl_slice_<ListB, tl_size<ListB>::value, 0, result_size>::type,
-    Fun>::type;
-};
-
-template <class ListA, class ListB, typename PadA = unit_t,
-          typename PadB = unit_t,
-          template <class, typename> class Fun = to_type_pair>
-using tl_zip_all_t = typename tl_zip_all<ListA, ListB, PadA, PadB, Fun>::type;
-
-template <class ListA>
-struct tl_unzip;
-
-template <class... Elements>
-struct tl_unzip<type_list<Elements...>> {
-  using first = type_list<typename Elements::first...>;
-  using second = type_list<typename Elements::second...>;
-};
 
 // int index_of(list, type)
 
@@ -899,13 +793,6 @@ struct tl_pad_left {
 
 template <class List, size_t NewSize, class FillType = unit_t>
 using tl_pad_left_t = typename tl_pad_left<List, NewSize, FillType>::type;
-
-// bool is_zipped(list)
-
-template <class List>
-struct tl_is_zipped {
-  static constexpr bool value = tl_forall<List, is_type_pair>::value;
-};
 
 // Uncomment after having switched to C++14
 // template <class List>

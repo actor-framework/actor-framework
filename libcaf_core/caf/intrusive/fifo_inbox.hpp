@@ -20,8 +20,6 @@
 #include "caf/intrusive/lifo_inbox.hpp"
 #include "caf/intrusive/new_round_result.hpp"
 
-#include "caf/detail/enqueue_result.hpp"
-
 namespace caf::intrusive {
 
 /// A FIFO inbox that combines an efficient thread-safe LIFO inbox with a FIFO
@@ -97,8 +95,8 @@ public:
 
   /// @cond PRIVATE
 
-  detail::enqueue_result enqueue(pointer ptr) noexcept {
-    return static_cast<detail::enqueue_result>(inbox_.push_front(ptr));
+  inbox_result enqueue(pointer ptr) noexcept {
+    return static_cast<inbox_result>(inbox_.push_front(ptr));
   }
 
   size_t count() noexcept {

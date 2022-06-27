@@ -1,5 +1,6 @@
 #pragma once
 
+#include "caf/detail/pp.hpp"
 #include "caf/test/dsl.hpp"
 
 #define SCENARIO(description)                                                  \
@@ -68,6 +69,6 @@
 #define FAIL(what) CAF_FAIL(what)
 
 #define BEGIN_FIXTURE_SCOPE(fixture_class)                                     \
-  CAF_TEST_FIXTURE_SCOPE(CAF_UNIFYN(tests), fixture_class)
+  CAF_TEST_FIXTURE_SCOPE(CAF_PP_UNIFYN(tests), fixture_class)
 
 #define END_FIXTURE_SCOPE() CAF_TEST_FIXTURE_SCOPE_END()

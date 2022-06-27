@@ -20,7 +20,6 @@
 #include "caf/config_option_set.hpp"
 #include "caf/config_value.hpp"
 #include "caf/detail/core_export.hpp"
-#include "caf/detail/safe_equal.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/dictionary.hpp"
 #include "caf/fwd.hpp"

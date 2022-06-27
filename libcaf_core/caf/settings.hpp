@@ -9,7 +9,6 @@
 #include "caf/config_value.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/core_export.hpp"
-#include "caf/detail/move_if_not_ptr.hpp"
 #include "caf/dictionary.hpp"
 #include "caf/raise_error.hpp"
 
@@ -52,7 +51,10 @@ template <class T>
 T get(const settings& xs, std::string_view name) {
   auto result = get_if<T>(&xs, name);
   CAF_ASSERT(result);
-  return detail::move_if_not_ptr(result);
+  if constexpr (std::is_pointer_v<decltype(result)>)
+    return *result;
+  else
+    return std::move(*result);
 }
 
 /// Retrieves the value associated to `name` from `xs` or returns `fallback`.

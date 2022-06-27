@@ -13,7 +13,6 @@
 #include <string>
 #include <vector>
 
-#include "caf/detail/move_if_not_ptr.hpp"
 #include "caf/settings.hpp"
 
 using std::string;

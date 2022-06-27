@@ -8,7 +8,6 @@
 #include "caf/actor_addr.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/check_typed_input.hpp"
-#include "caf/is_message_sink.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/message.hpp"

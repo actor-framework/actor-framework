@@ -23,7 +23,6 @@
 #include "caf/config_value_writer.hpp"
 #include "caf/detail/bounds_checker.hpp"
 #include "caf/detail/core_export.hpp"
-#include "caf/detail/move_if_not_ptr.hpp"
 #include "caf/detail/parse.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/dictionary.hpp"

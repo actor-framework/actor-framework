@@ -6,13 +6,13 @@
 
 #include "caf/behavior.hpp"
 #include "caf/deduce_mpi.hpp"
+#include "caf/detail/tbind.hpp"
+#include "caf/detail/typed_actor_util.hpp"
 #include "caf/interface_mismatch.hpp"
 #include "caf/message_handler.hpp"
 #include "caf/system_messages.hpp"
 #include "caf/timespan.hpp"
 #include "caf/unsafe_behavior_init.hpp"
-
-#include "caf/detail/typed_actor_util.hpp"
 
 namespace caf ::detail {
 
