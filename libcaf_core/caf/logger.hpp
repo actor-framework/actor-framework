@@ -20,6 +20,7 @@
 #include "caf/detail/arg_wrapper.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/log_level.hpp"
+#include "caf/detail/pp.hpp"
 #include "caf/detail/pretty_type_name.hpp"
 #include "caf/detail/ringbuffer.hpp"
 #include "caf/detail/scope_guard.hpp"
@@ -30,7 +31,6 @@
 #include "caf/intrusive/singly_linked.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/timestamp.hpp"
-#include "caf/unifyn.hpp"
 
 /*
  * To enable logging, you have to define CAF_DEBUG. This enables
@@ -420,22 +420,24 @@ CAF_CORE_EXPORT bool operator==(const logger::field& x, const logger::field& y);
 
 #define CAF_LOG_IMPL(component, loglvl, message)                               \
   do {                                                                         \
-    auto CAF_UNIFYN(caf_logger) = caf::logger::current_logger();               \
-    if (CAF_UNIFYN(caf_logger) != nullptr                                      \
-        && CAF_UNIFYN(caf_logger)->accepts(loglvl, component))                 \
-      CAF_UNIFYN(caf_logger)                                                   \
+    auto CAF_PP_UNIFYN(caf_logger) = caf::logger::current_logger();            \
+    if (CAF_PP_UNIFYN(caf_logger) != nullptr                                   \
+        && CAF_PP_UNIFYN(caf_logger)->accepts(loglvl, component))              \
+      CAF_PP_UNIFYN(caf_logger)                                                \
         ->log(CAF_LOG_MAKE_EVENT(caf::logger::thread_local_aid(), component,   \
                                  loglvl, message));                            \
   } while (false)
 
 #define CAF_PUSH_AID(aarg)                                                     \
-  caf::actor_id CAF_UNIFYN(caf_aid_tmp) = caf::logger::thread_local_aid(aarg); \
-  auto CAF_UNIFYN(caf_aid_tmp_guard) = caf::detail::make_scope_guard(          \
-    [=] { caf::logger::thread_local_aid(CAF_UNIFYN(caf_aid_tmp)); })
+  caf::actor_id CAF_PP_UNIFYN(caf_aid_tmp)                                     \
+    = caf::logger::thread_local_aid(aarg);                                     \
+  auto CAF_PP_UNIFYN(caf_aid_tmp_guard) = caf::detail::make_scope_guard(       \
+    [=] { caf::logger::thread_local_aid(CAF_PP_UNIFYN(caf_aid_tmp)); })
 
 #define CAF_PUSH_AID_FROM_PTR(some_ptr)                                        \
-  auto CAF_UNIFYN(caf_aid_ptr) = some_ptr;                                     \
-  CAF_PUSH_AID(CAF_UNIFYN(caf_aid_ptr) ? CAF_UNIFYN(caf_aid_ptr)->id() : 0)
+  auto CAF_PP_UNIFYN(caf_aid_ptr) = some_ptr;                                  \
+  CAF_PUSH_AID(CAF_PP_UNIFYN(caf_aid_ptr) ? CAF_PP_UNIFYN(caf_aid_ptr)->id()   \
+                                          : 0)
 
 #define CAF_SET_AID(aid_arg) caf::logger::thread_local_aid(aid_arg)
 
@@ -450,8 +452,9 @@ CAF_CORE_EXPORT bool operator==(const logger::field& x, const logger::field& y);
 #  define CAF_LOG_TRACE(entry_message)                                         \
     CAF_LOG_IMPL(CAF_LOG_COMPONENT, CAF_LOG_LEVEL_TRACE,                       \
                  "ENTRY" << entry_message);                                    \
-    auto CAF_UNIFYN(caf_log_trace_guard_) = ::caf::detail::make_scope_guard(   \
-      [=] { CAF_LOG_IMPL(CAF_LOG_COMPONENT, CAF_LOG_LEVEL_TRACE, "EXIT"); })
+    auto CAF_PP_UNIFYN(caf_log_trace_guard_)                                   \
+      = ::caf::detail::make_scope_guard(                                       \
+        [=] { CAF_LOG_IMPL(CAF_LOG_COMPONENT, CAF_LOG_LEVEL_TRACE, "EXIT"); })
 
 #endif // CAF_LOG_LEVEL < CAF_LOG_LEVEL_TRACE
 

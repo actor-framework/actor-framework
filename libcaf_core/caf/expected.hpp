@@ -14,7 +14,6 @@
 #include "caf/deep_to_string.hpp"
 #include "caf/error.hpp"
 #include "caf/is_error_code_enum.hpp"
-#include "caf/unifyn.hpp"
 #include "caf/unit.hpp"
 
 namespace caf {

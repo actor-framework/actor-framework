@@ -131,7 +131,6 @@ caf_add_component(
     src/detail/private_thread.cpp
     src/detail/private_thread_pool.cpp
     src/detail/ripemd_160.cpp
-    src/detail/serialized_size.cpp
     src/detail/set_thread_name.cpp
     src/detail/shared_spinlock.cpp
     src/detail/stringification_inspector.cpp
@@ -254,7 +253,6 @@ caf_add_component(
     detail.ieee_754
     detail.json
     detail.latch
-    detail.limited_vector
     detail.local_group_module
     detail.meta_object
     detail.monotonic_buffer_resource
@@ -271,7 +269,6 @@ caf_add_component(
     detail.private_thread_pool
     detail.ringbuffer
     detail.ripemd_160
-    detail.serialized_size
     detail.type_id_list_builder
     detail.unique_function
     dictionary
