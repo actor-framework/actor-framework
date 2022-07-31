@@ -362,7 +362,9 @@ caf_add_component(
     unit
     unordered_flat_map
     uri
-    uuid)
+    uuid
+  FUZZ_TESTS
+    json-parse)
 
 if(CAF_ENABLE_TESTING AND CAF_ENABLE_EXCEPTIONS)
   caf_add_test_suites(caf-core-test custom_exception_handler)

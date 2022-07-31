@@ -76,6 +76,21 @@ if(MSVC AND CAF_SANITIZERS)
   message(FATAL_ERROR "Sanitizer builds are currently not supported on MSVC")
 endif()
 
+# -- when building fuzzing targets, we skip unit tests and install targets -----
+
+if(CAF_SANITIZERS MATCHES "fuzzer")
+  message(STATUS "Build fuzz targets and skip unit test targets")
+  set(CAF_ADD_FUZZ_TARGETS ON)
+  set(CAF_ADD_TEST_TARGETS OFF)
+else()
+  set(CAF_ADD_FUZZ_TARGETS OFF)
+  if(CAF_ENABLE_TESTING)
+    set(CAF_ADD_TEST_TARGETS ON)
+  else()
+    set(CAF_ADD_TEST_TARGETS OFF)
+  endif()
+endif()
+
 # -- get dependencies that are used in more than one module --------------------
 
 if(CAF_ENABLE_OPENSSL_MODULE OR CAF_ENABLE_NET_MODULE)
@@ -109,7 +124,7 @@ endif()
 
 # -- unit testing setup / caf_add_test_suites function  ------------------------
 
-if(CAF_ENABLE_TESTING)
+if(CAF_ADD_TEST_TARGETS)
   enable_testing()
   function(caf_add_test_suites target)
     foreach(suiteName ${ARGN})
@@ -121,6 +136,9 @@ if(CAF_ENABLE_TESTING)
                  COMMAND ${target} -r300 -n -v5 -s "^${suiteName}$")
       endif()
     endforeach()
+  endfunction()
+else()
+  function(caf_add_test_suites)
   endfunction()
 endif()
 
@@ -315,7 +333,8 @@ endfunction()
 #     ...
 # )
 function(caf_add_component name)
-  set(varargs DEPENDENCIES HEADERS SOURCES TEST_SOURCES TEST_SUITES ENUM_TYPES)
+  set(varargs DEPENDENCIES HEADERS SOURCES TEST_SOURCES TEST_SUITES ENUM_TYPES
+              FUZZ_TESTS)
   cmake_parse_arguments(CAF_ADD_COMPONENT "" "" "${varargs}" ${ARGN})
   if(NOT CAF_ADD_COMPONENT_HEADERS)
     message(FATAL_ERROR "Cannot add CAF component without at least one header.")
@@ -339,7 +358,7 @@ function(caf_add_component name)
   add_library(${pub_lib_target}
               "${PROJECT_SOURCE_DIR}/cmake/dummy.cpp"
               $<TARGET_OBJECTS:${obj_lib_target}>)
-  if(CAF_ENABLE_TESTING AND CAF_ADD_COMPONENT_TEST_SOURCES)
+  if(CAF_ADD_TEST_TARGETS AND CAF_ADD_COMPONENT_TEST_SOURCES)
     set(tst_bin_target "caf-${name}-test")
     list(APPEND targets ${tst_bin_target})
     add_executable(${tst_bin_target}
@@ -352,6 +371,23 @@ function(caf_add_component name)
     if(CAF_ADD_COMPONENT_TEST_SUITES)
       caf_add_test_suites(${tst_bin_target} ${CAF_ADD_COMPONENT_TEST_SUITES})
     endif()
+  endif()
+  if(CAF_ADD_FUZZ_TARGETS AND CAF_ADD_COMPONENT_FUZZ_TESTS)
+    foreach(fuzz_name ${CAF_ADD_COMPONENT_FUZZ_TESTS})
+      set(fuzz_bin_target "caf-${name}-${fuzz_name}")
+      add_executable(${fuzz_bin_target}
+                     "${CMAKE_CURRENT_SOURCE_DIR}/fuzz/src/${fuzz_name}.cpp"
+                     $<TARGET_OBJECTS:${obj_lib_target}>)
+      target_link_libraries(${fuzz_bin_target} PRIVATE CAF::internal
+                            ${CAF_ADD_COMPONENT_DEPENDENCIES})
+      if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/fuzz/include")
+        target_include_directories(${fuzz_bin_target} PRIVATE
+                                   "${CMAKE_CURRENT_SOURCE_DIR}/fuzz/include")
+      endif()
+      target_include_directories(${fuzz_bin_target} PRIVATE
+                                 "${CMAKE_CURRENT_SOURCE_DIR}"
+                                 "${CMAKE_CURRENT_BINARY_DIR}")
+    endforeach()
   endif()
   target_link_libraries(${pub_lib_target} ${CAF_ADD_COMPONENT_DEPENDENCIES})
   if(CAF_ADD_COMPONENT_ENUM_TYPES)
@@ -393,11 +429,11 @@ if(CAF_ENABLE_OPENSSL_MODULE)
   add_subdirectory(libcaf_openssl)
 endif()
 
-if(CAF_ENABLE_EXAMPLES)
+if(CAF_ENABLE_EXAMPLES AND NOT CAF_ADD_FUZZ_TARGETS)
   add_subdirectory(examples)
 endif()
 
-if(CAF_ENABLE_TOOLS)
+if(CAF_ENABLE_TOOLS AND NOT CAF_ADD_FUZZ_TARGETS)
   add_subdirectory(tools)
 endif()
 
