@@ -10,6 +10,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The JSON parser no longer chokes when encountering `null` as last value before
   the closing parenthesis.
 - The JSON reader now automatically widens integers to doubles as necessary.
+- Parsing deeply nested JSON inputs no longer produces a stack overflow.
+  Instead, the parser rejects any JSON with too many nesting levels.
 
 ## [0.18.6]
 
