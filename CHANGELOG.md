@@ -18,6 +18,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Fix undefined behavior in the Qt group chat example (#1336).
 - The `..._instance` convenience functions on the registry metric now properly
   support `double` metrics and histograms.
+- Parsing deeply nested JSON inputs no longer produces a stack overflow.
+  Instead, the parser rejects any JSON with too many nesting levels.
 
 ### Changed
 
