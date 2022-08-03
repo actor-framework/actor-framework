@@ -139,6 +139,7 @@ else()
   endfunction()
 endif()
 
+add_net_example(http secure-time-server)
 add_net_example(http time-server)
 
 add_net_example(web_socket echo)

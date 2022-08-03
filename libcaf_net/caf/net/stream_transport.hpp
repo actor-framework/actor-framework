@@ -24,6 +24,8 @@ public:
 
   using socket_type = stream_socket;
 
+  using connection_handle = stream_socket;
+
   /// An owning smart pointer type for storing an upper layer object.
   using upper_layer_ptr = std::unique_ptr<stream_oriented::upper_layer>;
 
@@ -151,6 +153,10 @@ public:
 
   const auto& upper_layer() const noexcept {
     return *up_;
+  }
+
+  policy& active_policy() {
+    return *policy_;
   }
 
   // -- implementation of socket_event_layer -----------------------------------

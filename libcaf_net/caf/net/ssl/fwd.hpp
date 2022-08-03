@@ -6,6 +6,7 @@
 
 namespace caf::net::ssl {
 
+class acceptor;
 class connection;
 class context;
 class transport;

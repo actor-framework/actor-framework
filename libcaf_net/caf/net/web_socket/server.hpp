@@ -8,7 +8,6 @@
 #include "caf/detail/net_export.hpp"
 #include "caf/error.hpp"
 #include "caf/logger.hpp"
-#include "caf/net/connection_acceptor.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/http/header.hpp"
 #include "caf/net/http/method.hpp"

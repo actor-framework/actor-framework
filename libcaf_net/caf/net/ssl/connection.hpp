@@ -85,6 +85,14 @@ public:
   /// Returns the file descriptor for this connection.
   stream_socket fd() const noexcept;
 
+  bool valid() const noexcept {
+    return pimpl_ != nullptr;
+  }
+
+  explicit operator bool() const noexcept {
+    return valid();
+  }
+
 private:
   constexpr explicit connection(impl* ptr) : pimpl_(ptr) {
     // nop
@@ -92,5 +100,9 @@ private:
 
   impl* pimpl_;
 };
+
+inline bool valid(const connection& conn) {
+  return conn.valid();
+}
 
 } // namespace caf::net::ssl

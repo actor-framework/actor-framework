@@ -45,6 +45,10 @@ struct CAF_NET_EXPORT socket : detail::comparable<socket> {
   constexpr bool operator!() const noexcept {
     return id == invalid_socket_id;
   }
+
+  constexpr socket fd() const noexcept {
+    return *this;
+  }
 };
 
 /// @relates socket
@@ -60,6 +64,11 @@ constexpr auto invalid_socket = socket{invalid_socket_id};
 template <class To, class From>
 To socket_cast(From x) {
   return To{x.id};
+}
+
+/// Checks whether `x` contains a valid ID.
+constexpr bool valid(socket x) noexcept {
+  return x.id != invalid_socket_id;
 }
 
 /// Closes socket `x`.

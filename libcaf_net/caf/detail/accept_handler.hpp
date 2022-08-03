@@ -4,54 +4,54 @@
 
 #pragma once
 
-#include "caf/net/connection_factory.hpp"
+#include "caf/detail/connection_factory.hpp"
 #include "caf/net/socket_event_layer.hpp"
 #include "caf/net/socket_manager.hpp"
 #include "caf/settings.hpp"
 
-namespace caf::net {
+namespace caf::detail {
 
-/// A connection_acceptor accepts connections from an accept socket and creates
-/// socket managers to handle them via its factory.
-template <class Socket>
-class connection_acceptor : public socket_event_layer {
+/// Accepts incoming clients with an Acceptor and handles them via a connection
+/// factory.
+template <class Acceptor, class ConnectionHandle>
+class accept_handler : public net::socket_event_layer {
 public:
   // -- member types -----------------------------------------------------------
 
-  using socket_type = Socket;
+  using socket_type = net::socket;
 
-  using connected_socket_type = typename socket_type::connected_socket_type;
+  using connection_handle = ConnectionHandle;
 
-  using factory_type = connection_factory<connected_socket_type>;
+  using factory_type = connection_factory<connection_handle>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
   template <class FactoryPtr, class... Ts>
-  connection_acceptor(Socket fd, FactoryPtr fptr, size_t max_connections)
-    : fd_(fd),
-      factory_(factory_type::decorate(std::move(fptr))),
+  accept_handler(Acceptor acc, FactoryPtr fptr, size_t max_connections)
+    : acc_(std::move(acc)),
+      factory_(std::move(fptr)),
       max_connections_(max_connections) {
     CAF_ASSERT(max_connections_ > 0);
   }
 
-  ~connection_acceptor() {
+  ~accept_handler() {
     on_conn_close_.dispose();
-    if (fd_.id != invalid_socket_id)
-      close(fd_);
+    if (valid(acc_))
+      close(acc_);
   }
 
   // -- factories --------------------------------------------------------------
 
   template <class FactoryPtr, class... Ts>
-  static std::unique_ptr<connection_acceptor>
-  make(Socket fd, FactoryPtr fptr, size_t max_connections) {
-    return std::make_unique<connection_acceptor>(fd, std::move(fptr),
-                                                 max_connections);
+  static std::unique_ptr<accept_handler>
+  make(Acceptor acc, FactoryPtr fptr, size_t max_connections) {
+    return std::make_unique<accept_handler>(std::move(acc), std::move(fptr),
+                                            max_connections);
   }
 
   // -- implementation of socket_event_layer -----------------------------------
 
-  error start(socket_manager* owner, const settings& cfg) override {
+  error start(net::socket_manager* owner, const settings& cfg) override {
     CAF_LOG_TRACE("");
     owner_ = owner;
     cfg_ = cfg;
@@ -64,8 +64,8 @@ public:
     return none;
   }
 
-  socket handle() const override {
-    return fd_;
+  net::socket handle() const override {
+    return acc_.fd();
   }
 
   void handle_read_event() override {
@@ -73,8 +73,8 @@ public:
     CAF_ASSERT(owner_ != nullptr);
     if (open_connections_ == max_connections_) {
       owner_->deregister_reading();
-    } else if (auto x = accept(fd_)) {
-      socket_manager_ptr child = factory_->make(owner_->mpx_ptr(), *x);
+    } else if (auto conn = accept(acc_)) {
+      auto child = factory_->make(owner_->mpx_ptr(), std::move(*conn));
       if (!child) {
         CAF_LOG_ERROR("factory failed to create a new child");
         on_conn_close_.dispose();
@@ -85,12 +85,12 @@ public:
         owner_->deregister_reading();
       child->add_cleanup_listener(on_conn_close_);
       std::ignore = child->start(cfg_);
-    } else if (x.error() == sec::unavailable_or_would_block) {
+    } else if (conn.error() == sec::unavailable_or_would_block) {
       // Encountered a "soft" error: simply try again later.
-      CAF_LOG_DEBUG("accept failed:" << x.error());
+      CAF_LOG_DEBUG("accept failed:" << conn.error());
     } else {
       // Encountered a "hard" error: stop.
-      abort(x.error());
+      abort(conn.error());
       owner_->deregister_reading();
     }
   }
@@ -118,15 +118,15 @@ private:
     --open_connections_;
   }
 
-  Socket fd_;
+  Acceptor acc_;
 
-  connection_factory_ptr<connected_socket_type> factory_;
+  detail::connection_factory_ptr<connection_handle> factory_;
 
   size_t max_connections_;
 
   size_t open_connections_ = 0;
 
-  socket_manager* owner_ = nullptr;
+  net::socket_manager* owner_ = nullptr;
 
   action on_conn_close_;
 
@@ -138,4 +138,4 @@ private:
   disposable self_ref_;
 };
 
-} // namespace caf::net
+} // namespace caf::detail

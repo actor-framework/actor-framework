@@ -18,6 +18,8 @@ public:
 
   using super = stream_transport;
 
+  using connection_handle = connection;
+
   using worker_ptr = std::unique_ptr<socket_event_layer>;
 
   class policy_impl : public stream_transport::policy {
