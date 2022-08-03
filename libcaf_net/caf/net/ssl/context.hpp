@@ -11,6 +11,8 @@
 #include "caf/net/ssl/tls.hpp"
 #include "caf/net/stream_socket.hpp"
 
+#include <string>
+
 namespace caf::net::ssl {
 
 struct close_on_shutdown_t {};
@@ -52,6 +54,16 @@ public:
 
   static expected<context> make_client(dtls min_version,
                                        dtls max_version = dtls::any);
+
+  // -- properties -------------------------------------------------------------
+
+  explicit operator bool() const noexcept {
+    return pimpl_ != nullptr;
+  }
+
+  bool operator!() const noexcept {
+    return pimpl_ == nullptr;
+  }
 
   // -- native handles ---------------------------------------------------------
 

@@ -5,6 +5,8 @@
 #pragma once
 
 #include "caf/actor_system.hpp"
+#include "caf/detail/accept_handler.hpp"
+#include "caf/detail/connection_factory.hpp"
 #include "caf/fwd.hpp"
 #include "caf/net/http/server.hpp"
 #include "caf/net/prometheus/server.hpp"
@@ -13,21 +15,22 @@
 namespace caf::detail {
 
 template <class Transport>
-class prometheus_acceptor_factory
-  : public net::connection_factory<typename Transport::socket_type> {
+class prometheus_conn_factory
+  : public connection_factory<typename Transport::connection_handle> {
 public:
   using state_ptr = net::prometheus::server::scrape_state_ptr;
 
-  using socket_type = typename Transport::socket_type;
+  using connection_handle = typename Transport::connection_handle;
 
-  explicit prometheus_acceptor_factory(state_ptr ptr) : ptr_(std::move(ptr)) {
+  explicit prometheus_conn_factory(state_ptr ptr) : ptr_(std::move(ptr)) {
     // nop
   }
 
-  net::socket_manager_ptr make(net::multiplexer* mpx, socket_type fd) override {
+  net::socket_manager_ptr make(net::multiplexer* mpx,
+                               connection_handle conn) override {
     auto prom_serv = net::prometheus::server::make(ptr_);
     auto http_serv = net::http::server::make(std::move(prom_serv));
-    auto transport = Transport::make(fd, std::move(http_serv));
+    auto transport = Transport::make(std::move(conn), std::move(http_serv));
     return net::socket_manager::make(mpx, std::move(transport));
   }
 
@@ -45,8 +48,9 @@ namespace caf::net::prometheus {
 ///           must already listen to a port.
 template <class Transport = stream_transport, class Socket>
 disposable serve(actor_system& sys, Socket fd, const settings& cfg = {}) {
-  using factory_t = detail::prometheus_acceptor_factory<Transport>;
-  using impl_t = connection_acceptor<Socket>;
+  using factory_t = detail::prometheus_conn_factory<Transport>;
+  using conn_t = typename Transport::connection_handle;
+  using impl_t = detail::accept_handler<Socket, conn_t>;
   auto mpx = &sys.network_manager().mpx();
   auto registry = &sys.metrics();
   auto state = prometheus::server::scrape_state::make(registry);

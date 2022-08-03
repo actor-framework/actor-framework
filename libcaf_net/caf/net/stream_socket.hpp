@@ -23,6 +23,10 @@ struct CAF_NET_EXPORT stream_socket : network_socket {
   using super = network_socket;
 
   using super::super;
+
+  constexpr stream_socket fd() const noexcept {
+    return *this;
+  }
 };
 
 /// Creates two connected sockets to mimic network communication (usually for

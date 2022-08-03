@@ -42,6 +42,7 @@ caf_add_component(
     src/net/generic_upper_layer.cpp
     src/net/http/header.cpp
     src/net/http/lower_layer.cpp
+    src/net/http/serve.cpp
     src/net/http/method.cpp
     src/net/http/request.cpp
     src/net/http/response.cpp
@@ -61,6 +62,7 @@ caf_add_component(
     src/net/socket.cpp
     src/net/socket_event_layer.cpp
     src/net/socket_manager.cpp
+    src/net/ssl/acceptor.cpp
     src/net/ssl/connection.cpp
     src/net/ssl/context.cpp
     src/net/ssl/dtls.cpp

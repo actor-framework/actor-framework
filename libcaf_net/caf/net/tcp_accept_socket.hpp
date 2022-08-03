@@ -18,8 +18,6 @@ struct CAF_NET_EXPORT tcp_accept_socket : network_socket {
   using super = network_socket;
 
   using super::super;
-
-  using connected_socket_type = tcp_stream_socket;
 };
 
 /// Creates a new TCP socket to accept connections on a given port.
@@ -29,7 +27,7 @@ struct CAF_NET_EXPORT tcp_accept_socket : network_socket {
 /// @relates tcp_accept_socket
 expected<tcp_accept_socket>
   CAF_NET_EXPORT make_tcp_accept_socket(ip_endpoint node,
-                                        bool reuse_addr = false);
+                                        bool reuse_addr = true);
 
 /// Creates a new TCP socket to accept connections on a given port.
 /// @param node The endpoint to listen on and the filter for incoming addresses.
@@ -39,7 +37,7 @@ expected<tcp_accept_socket>
 /// @relates tcp_accept_socket
 expected<tcp_accept_socket>
   CAF_NET_EXPORT make_tcp_accept_socket(const uri::authority_type& node,
-                                        bool reuse_addr = false);
+                                        bool reuse_addr = true);
 
 /// Creates a new TCP socket to accept connections on a given port.
 /// @param port The port for listening to incoming connection. Passing 0 lets
@@ -49,7 +47,7 @@ expected<tcp_accept_socket>
 /// @param reuse_addr Optionally sets the SO_REUSEADDR option on the socket.
 /// @relates tcp_accept_socket
 expected<tcp_accept_socket> CAF_NET_EXPORT make_tcp_accept_socket(
-  uint16_t port, std::string addr = "0.0.0.0", bool reuse_addr = false);
+  uint16_t port, std::string addr = "0.0.0.0", bool reuse_addr = true);
 
 /// Accepts a connection on `x`.
 /// @param x Listening endpoint.

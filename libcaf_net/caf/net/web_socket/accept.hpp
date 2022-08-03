@@ -6,6 +6,8 @@
 
 #include "caf/actor_system.hpp"
 #include "caf/cow_tuple.hpp"
+#include "caf/detail/accept_handler.hpp"
+#include "caf/detail/connection_factory.hpp"
 #include "caf/net/flow_connector.hpp"
 #include "caf/net/web_socket/default_trait.hpp"
 #include "caf/net/web_socket/flow_bridge.hpp"
@@ -19,14 +21,14 @@
 namespace caf::detail {
 
 template <class Transport, class Trait>
-class ws_acceptor_factory
-  : public net::connection_factory<typename Transport::socket_type> {
+class ws_conn_factory
+  : public connection_factory<typename Transport::connection_handle> {
 public:
   using socket_type = typename Transport::socket_type;
 
   using connector_pointer = net::flow_connector_ptr<Trait>;
 
-  explicit ws_acceptor_factory(connector_pointer connector)
+  explicit ws_conn_factory(connector_pointer connector)
     : connector_(std::move(connector)) {
     // nop
   }
@@ -86,13 +88,15 @@ disposable accept(actor_system& sys, Socket fd, acceptor_resource_t<Ts...> out,
   using request_t = request<default_trait, Ts...>;
   static_assert(std::is_invocable_v<OnRequest, const settings&, request_t&>,
                 "invalid signature found for on_request");
-  using factory_t = detail::ws_acceptor_factory<Transport, trait_t>;
-  using impl_t = connection_acceptor<Socket>;
-  using conn_t = flow_connector_request_impl<OnRequest, trait_t, Ts...>;
+  using factory_t = detail::ws_conn_factory<Transport, trait_t>;
+  using conn_t = typename Transport::connection_handle;
+  using impl_t = detail::accept_handler<Socket, conn_t>;
+  using connector_t = flow_connector_request_impl<OnRequest, trait_t, Ts...>;
   auto max_connections = get_or(cfg, defaults::net::max_connections);
   if (auto buf = out.try_open()) {
     auto& mpx = sys.network_manager().mpx();
-    auto conn = std::make_shared<conn_t>(std::move(on_request), std::move(buf));
+    auto conn = std::make_shared<connector_t>(std::move(on_request),
+                                              std::move(buf));
     auto factory = std::make_unique<factory_t>(std::move(conn));
     auto impl = impl_t::make(fd, std::move(factory), max_connections);
     auto impl_ptr = impl.get();
