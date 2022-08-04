@@ -13,6 +13,7 @@
 #include "caf/scheduled_actor/flow.hpp"
 
 #include <iostream>
+#include <string>
 #include <utility>
 
 static constexpr uint16_t default_port = 8080;

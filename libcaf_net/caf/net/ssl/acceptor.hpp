@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/detail/net_export.hpp"
+#include "caf/expected.hpp"
 #include "caf/net/ssl/context.hpp"
 #include "caf/net/ssl/fwd.hpp"
 #include "caf/net/tcp_accept_socket.hpp"
@@ -30,6 +31,34 @@ public:
     // nop
   }
 
+  // -- factories --------------------------------------------------------------
+
+  static expected<acceptor>
+  make_with_cert_file(tcp_accept_socket fd, const char* cert_file_path,
+                      const char* key_file_path,
+                      format file_format = format::pem);
+
+  static expected<acceptor>
+  make_with_cert_file(uint16_t port, const char* cert_file_path,
+                      const char* key_file_path,
+                      format file_format = format::pem);
+
+  static expected<acceptor>
+  make_with_cert_file(tcp_accept_socket fd, const std::string& cert_file_path,
+                      const std::string& key_file_path,
+                      format file_format = format::pem) {
+    return make_with_cert_file(fd, cert_file_path.c_str(),
+                               key_file_path.c_str(), file_format);
+  }
+
+  static expected<acceptor>
+  make_with_cert_file(uint16_t port, const std::string& cert_file_path,
+                      const std::string& key_file_path,
+                      format file_format = format::pem) {
+    return make_with_cert_file(port, cert_file_path.c_str(),
+                               key_file_path.c_str(), file_format);
+  }
+
   // -- properties -------------------------------------------------------------
 
   tcp_accept_socket fd() const noexcept {
@@ -48,6 +77,8 @@ private:
   tcp_accept_socket fd_;
   context ctx_;
 };
+
+// -- free functions -----------------------------------------------------------
 
 /// Checks whether `acc` has a valid socket descriptor.
 bool CAF_NET_EXPORT valid(const acceptor& acc);
