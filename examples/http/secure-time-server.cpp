@@ -15,6 +15,8 @@
 #include "caf/scheduled_actor/flow.hpp"
 
 #include <iostream>
+#include <string>
+#include <string_view>
 #include <utility>
 
 using namespace std::literals;
@@ -45,41 +47,18 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
   }
   // Open up a TCP port for incoming connections.
   auto port = caf::get_or(cfg, "port", default_port);
-  net::tcp_accept_socket fd;
-  if (auto maybe_fd = net::make_tcp_accept_socket({ipv4_address{}, port})) {
-    std::cout << "*** started listening for incoming connections on port "
-              << port << '\n';
-    fd = std::move(*maybe_fd);
-  } else {
-    std::cerr << "*** unable to open port " << port << ": "
-              << to_string(maybe_fd.error()) << '\n';
-    return EXIT_FAILURE;
-  }
-  // Create the OpenSSL context and set key and certificate.
-  auto ctx = net::ssl::context::make_server(net::ssl::tls::any);
-  if (!ctx) {
-    std::cerr << "*** unable to create SSL context: " << to_string(ctx.error())
+  auto acc = net::ssl::acceptor::make_with_cert_file(port, cert_file, key_file);
+  if (!acc) {
+    std::cerr << "*** unable to initialize TLS: " << to_string(acc.error())
               << '\n';
     return EXIT_FAILURE;
   }
-  if (!ctx->use_certificate_from_file(cert_file.c_str(),
-                                      net::ssl::format::pem)) {
-    std::cerr << "*** unable to load certificate file: "
-              << ctx->last_error_string() << '\n';
-    return EXIT_FAILURE;
-  }
-  if (!ctx->use_private_key_from_file(key_file.c_str(),
-                                      net::ssl::format::pem)) {
-    std::cerr << "*** unable to load private key file: "
-              << ctx->last_error_string() << '\n';
-    return EXIT_FAILURE;
-  }
-  // Tie context and socket up into an acceptor for the http::serve API.
-  auto acc = net::ssl::acceptor{fd, std::move(*ctx)};
+  std::cout << "*** started listening for incoming connections on port " << port
+            << '\n';
   // Create buffers to signal events from the WebSocket server to the worker.
   auto [worker_pull, server_push] = net::http::make_request_resource();
   // Spin up the HTTP server.
-  net::http::serve(sys, std::move(acc), std::move(server_push));
+  net::http::serve(sys, std::move(*acc), std::move(server_push));
   // Spin up a worker to handle the HTTP requests.
   auto worker = sys.spawn([wres = worker_pull](event_based_actor* self) {
     // For each incoming request ...

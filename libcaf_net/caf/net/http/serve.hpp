@@ -22,7 +22,7 @@ inline auto make_request_resource() {
   return async::make_spsc_buffer_resource<request>();
 }
 
-/// Listens for incoming HTTP requests on @p fd.
+/// Listens for incoming HTTP requests.
 /// @param sys The host system.
 /// @param fd An accept socket in listening mode, already bound to a port.
 /// @param out A buffer resource that connects the server to a listener that
@@ -32,7 +32,7 @@ disposable CAF_NET_EXPORT serve(actor_system& sys, tcp_accept_socket fd,
                                 async::producer_resource<request> out,
                                 const settings& cfg = {});
 
-/// Listens for incoming HTTP requests on @p fd.
+/// Listens for incoming HTTPS requests.
 /// @param sys The host system.
 /// @param acc An SSL connection acceptor with a socket that in listening mode.
 /// @param out A buffer resource that connects the server to a listener that

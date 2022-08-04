@@ -24,6 +24,39 @@ acceptor& acceptor::operator=(acceptor&& other) {
   return *this;
 }
 
+// -- factories ----------------------------------------------------------------
+
+expected<acceptor>
+acceptor::make_with_cert_file(tcp_accept_socket fd, const char* cert_file_path,
+                              const char* key_file_path, format file_format) {
+  auto ctx = context::make_server(tls::any);
+  if (!ctx) {
+    return {make_error(sec::runtime_error, "unable to create SSL context")};
+  }
+  if (!ctx->use_certificate_from_file(cert_file_path, file_format)) {
+    return {make_error(sec::runtime_error, "unable to load certificate file",
+                       ctx->last_error_string())};
+  }
+  if (!ctx->use_private_key_from_file(key_file_path, file_format)) {
+    return {make_error(sec::runtime_error, "unable to load private key file",
+                       ctx->last_error_string())};
+  }
+  return {acceptor{fd, std::move(*ctx)}};
+}
+
+expected<acceptor>
+acceptor::make_with_cert_file(uint16_t port, const char* cert_file_path,
+                              const char* key_file_path, format file_format) {
+  if (auto fd = make_tcp_accept_socket(port)) {
+    return acceptor::make_with_cert_file(*fd, cert_file_path, key_file_path,
+                                         file_format);
+  } else {
+    return {make_error(sec::cannot_open_port)};
+  }
+}
+
+// -- free functions -----------------------------------------------------------
+
 bool valid(const acceptor& acc) {
   return valid(acc.fd());
 }
