@@ -37,10 +37,12 @@ void uri::impl_type::assemble_str() {
   str += ':';
   if (authority.empty()) {
     CAF_ASSERT(!path.empty());
+    path_offset = str.size();
     uri::encode(str, path, true);
   } else {
     str += "//";
     str += to_string(authority);
+    path_offset = str.size();
     if (!path.empty()) {
       str += '/';
       uri::encode(str, path, true);
@@ -72,6 +74,25 @@ uri::uri() : impl_(&default_instance) {
 
 uri::uri(impl_ptr ptr) : impl_(std::move(ptr)) {
   CAF_ASSERT(impl_ != nullptr);
+}
+
+std::string uri::host_str() const {
+  const auto& host = impl_->authority.host;
+  if (std::holds_alternative<std::string>(host)) {
+    return std::get<std::string>(host);
+  } else {
+    return to_string(std::get<ip_address>(host));
+  }
+}
+
+std::string uri::path_query_fragment() const {
+  std::string result;
+  auto sub_str = impl_->str_after_path_offset();
+  if (sub_str.empty() || sub_str[0] != '/') {
+    result += '/';
+  }
+  result.insert(result.begin(), sub_str.begin(), sub_str.end());
+  return result;
 }
 
 size_t uri::hash_code() const noexcept {

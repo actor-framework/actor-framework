@@ -91,6 +91,9 @@ public:
     /// The fragment component.
     std::string fragment;
 
+    /// Offset to the path in `str`.
+    size_t path_offset = 0;
+
     // -- properties -----------------------------------------------------------
 
     bool valid() const noexcept {
@@ -99,6 +102,10 @@ public:
 
     bool unique() const noexcept {
       return rc_.load() == 1;
+    }
+
+    std::string_view str_after_path_offset() const noexcept {
+      return {str.c_str() + path_offset, str.size() - path_offset};
     }
 
     // -- modifiers ------------------------------------------------------------
@@ -181,6 +188,13 @@ public:
   std::string_view fragment() const noexcept {
     return impl_->fragment;
   }
+
+  /// Returns the host sub-component of the authority as string.
+  std::string host_str() const;
+
+  /// Returns the path, query and fragment components (as they appear in the
+  /// encoded URI) with a leading '/'.
+  std::string path_query_fragment() const;
 
   /// Returns a hash code over all components.
   size_t hash_code() const noexcept;
