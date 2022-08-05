@@ -13,15 +13,11 @@
 #include <iostream>
 #include <utility>
 
-static constexpr uint16_t default_port = 8080;
-
 struct config : caf::actor_system_config {
   config() {
-    opt_group{custom_options_, "global"} //
-      .add<std::string>("host", "TCP endpoint to connect to")
-      .add<uint16_t>("port,p", "port for connecting to the host")
-      .add<std::string>("endpoint", "sets the Request-URI field")
-      .add<std::string>("protocols", "sets the Sec-WebSocket-Protocol field")
+    opt_group{custom_options_, "global"}
+      .add<caf::uri>("server,s", "URI for connecting to the server")
+      .add<std::string>("protocols,p", "sets the Sec-WebSocket-Protocol field")
       .add<size_t>("max,m", "maximum number of message to receive");
   }
 };
@@ -30,34 +26,27 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
   namespace cn = caf::net;
   namespace ws = cn::web_socket;
   // Sanity checking.
-  auto host = caf::get_or(cfg, "host", "");
-  if (host.empty()) {
-    std::cerr << "*** missing mandatory argument: host\n";
+  auto server = caf::get_or(cfg, "server", caf::uri{});
+  if (!server.valid()) {
+    std::cerr << "*** mandatory argument server missing or invalid\n";
     return EXIT_FAILURE;
   }
   // Ask user for the hello message.
   std::string hello;
   std::cout << "Please enter a hello message for the server: " << std::flush;
   std::getline(std::cin, hello);
-  // Open up the TCP connection.
-  auto port = caf::get_or(cfg, "port", default_port);
-  cn::tcp_stream_socket fd;
-  if (auto maybe_fd = cn::make_connected_tcp_stream_socket(host, port)) {
-    std::cout << "*** connected to " << host << ':' << port << '\n';
-    fd = std::move(*maybe_fd);
-  } else {
-    std::cerr << "*** unable to connect to " << host << ':' << port << ": "
-              << to_string(maybe_fd.error()) << '\n';
+  // Spin up the WebSocket.
+  auto hs_setup = [&cfg](ws::handshake& hs) {
+    if (auto str = caf::get_as<std::string>(cfg, "protocols");
+        str && !str->empty())
+      hs.protocols(std::move(*str));
+  };
+  auto conn = ws::connect(sys, server, hs_setup);
+  if (!conn) {
+    std::cerr << "*** failed to connect: " << to_string(conn.error()) << '\n';
     return EXIT_FAILURE;
   }
-  // Spin up the WebSocket.
-  ws::handshake hs;
-  hs.host(host);
-  hs.endpoint(caf::get_or(cfg, "endpoint", "/"));
-  if (auto str = caf::get_as<std::string>(cfg, "protocols");
-      str && !str->empty())
-    hs.protocols(std::move(*str));
-  ws::connect(sys, fd, std::move(hs), [&](const ws::connect_event_t& conn) {
+  conn->run([&](const ws::connect_event_t& conn) {
     sys.spawn([conn, hello](caf::event_based_actor* self) {
       auto [pull, push] = conn.data();
       // Print everything from the server to stdout.
@@ -73,6 +62,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
             return std::move(in).as_observable();
           }
         })
+        .do_finally([] { std::cout << "Server has closed the connection\n"; })
         .for_each([](const ws::frame& msg) {
           if (msg.is_text()) {
             std::cout << "Server: " << msg.as_text() << '\n';
