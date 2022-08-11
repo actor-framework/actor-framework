@@ -25,6 +25,13 @@ constexpr const char* json_type_name(json_writer::type t) {
   return json_type_names[static_cast<uint8_t>(t)];
 }
 
+char last_non_ws_char(const std::vector<char>& buf) {
+  auto not_ws = [](char c) { return !std::isspace(c); };
+  auto last = buf.rend();
+  auto i = std::find_if(buf.rbegin(), last, not_ws);
+  return (i != last) ? *i : '\0';
+}
+
 } // namespace
 
 // -- implementation details ---------------------------------------------------
@@ -247,7 +254,13 @@ bool json_writer::begin_sequence(size_t) {
 bool json_writer::end_sequence() {
   if (pop_if(type::array)) {
     --indentation_level_;
-    nl();
+    // Check whether the array was empty and compress the output in that case.
+    if (last_non_ws_char(buf_) == '[') {
+      while (std::isspace(buf_.back()))
+        buf_.pop_back();
+    } else {
+      nl();
+    }
     add(']');
     return true;
   } else {
@@ -278,7 +291,13 @@ bool json_writer::begin_associative_array(size_t) {
 bool json_writer::end_associative_array() {
   if (pop_if(type::object)) {
     --indentation_level_;
-    nl();
+    // Check whether the array was empty and compress the output in that case.
+    if (last_non_ws_char(buf_) == '{') {
+      while (std::isspace(buf_.back()))
+        buf_.pop_back();
+    } else {
+      nl();
+    }
     add('}');
     if (!stack_.empty())
       stack_.back().filled = true;
