@@ -183,6 +183,12 @@ public:
     return transform(do_on_error_step<T, F>{std::move(f)});
   }
 
+  /// Registers a callback that runs on `on_next`.
+  template <class F>
+  auto do_on_next(F f) {
+    return transform(do_on_next_step<F>{std::move(f)});
+  }
+
   /// Registers a callback that runs on `on_complete` or `on_error`.
   template <class F>
   auto do_finally(F f) {
@@ -1225,10 +1231,16 @@ public:
   }
 
   template <class F>
+  auto do_on_next(F f) && {
+    return std::move(*this).transform(do_on_next_step<F>{std::move(f)});
+  }
+
+  template <class F>
   auto do_finally(F f) && {
     return std::move(*this) //
       .transform(do_finally_step<output_type, F>{std::move(f)});
   }
+
   auto on_error_complete() {
     return std::move(*this) //
       .transform(on_error_complete_step<output_type>{});

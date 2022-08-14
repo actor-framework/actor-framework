@@ -154,6 +154,47 @@ struct flat_map_optional_step {
   }
 };
 
+template <class Fn>
+class do_on_next_step {
+public:
+  using trait = detail::get_callable_trait_t<Fn>;
+
+  static_assert(trait::num_args == 1,
+                "do_on_next functions must take exactly one argument");
+
+  using input_type = std::decay_t<detail::tl_head_t<typename trait::arg_types>>;
+
+  using output_type = input_type;
+
+  explicit do_on_next_step(Fn fn) : fn_(std::move(fn)) {
+    // nop
+  }
+
+  do_on_next_step(do_on_next_step&&) = default;
+  do_on_next_step(const do_on_next_step&) = default;
+  do_on_next_step& operator=(do_on_next_step&&) = default;
+  do_on_next_step& operator=(const do_on_next_step&) = default;
+
+  template <class Next, class... Steps>
+  bool on_next(const input_type& item, Next& next, Steps&... steps) {
+    fn_(item);
+    return next.on_next(item, steps...);
+  }
+
+  template <class Next, class... Steps>
+  void on_complete(Next& next, Steps&... steps) {
+    next.on_complete(steps...);
+  }
+
+  template <class Next, class... Steps>
+  void on_error(const error& what, Next& next, Steps&... steps) {
+    next.on_error(what, steps...);
+  }
+
+private:
+  Fn fn_;
+};
+
 template <class T, class Fn>
 struct do_on_complete_step {
   using input_type = T;
