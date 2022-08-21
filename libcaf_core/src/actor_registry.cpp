@@ -12,10 +12,8 @@
 
 #include "caf/actor_system.hpp"
 #include "caf/attachable.hpp"
-#include "caf/detail/shared_spinlock.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/exit_reason.hpp"
-#include "caf/locks.hpp"
 #include "caf/logger.hpp"
 #include "caf/scoped_actor.hpp"
 #include "caf/sec.hpp"
@@ -25,8 +23,8 @@ namespace caf {
 
 namespace {
 
-using exclusive_guard = unique_lock<detail::shared_spinlock>;
-using shared_guard = shared_lock<detail::shared_spinlock>;
+using exclusive_guard = std::unique_lock<std::shared_mutex>;
+using shared_guard = std::shared_lock<std::shared_mutex>;
 
 } // namespace
 
