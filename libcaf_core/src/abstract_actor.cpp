@@ -17,7 +17,6 @@
 #include "caf/actor_system.hpp"
 #include "caf/config.hpp"
 #include "caf/default_attachable.hpp"
-#include "caf/detail/shared_spinlock.hpp"
 #include "caf/execution_unit.hpp"
 #include "caf/logger.hpp"
 #include "caf/mailbox_element.hpp"

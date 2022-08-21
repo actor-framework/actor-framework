@@ -9,7 +9,6 @@
 
 #include "caf/abstract_actor.hpp"
 #include "caf/detail/core_export.hpp"
-#include "caf/detail/shared_spinlock.hpp"
 #include "caf/monitorable_actor.hpp"
 
 namespace caf {
