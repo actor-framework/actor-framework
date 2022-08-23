@@ -122,7 +122,7 @@ public:
 
     virtual ~module();
 
-    /// Returns the human-redable name of the module.
+    /// Returns the human-readable name of the module.
     const char* name() const noexcept;
 
     /// Starts any background threads needed by the module.
