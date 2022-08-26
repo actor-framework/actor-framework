@@ -145,7 +145,7 @@ json_reader::~json_reader() {
 bool json_reader::load(std::string_view json_text) {
   reset();
   string_parser_state ps{json_text.begin(), json_text.end()};
-  root_ = detail::json::parse(ps, &buf_);
+  root_ = detail::json::parse_shallow(ps, &buf_);
   if (ps.code != pec::success) {
     set_error(make_error(ps));
     st_ = nullptr;

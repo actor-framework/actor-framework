@@ -106,6 +106,12 @@ void stringify(std::string& str, size_t, detail::json::null_t) {
   str += "null";
 }
 
+void stringify(std::string& str, size_t, detail::json::undefined_t) {
+  // The parser never emits undefined objects, but we still need to provide an
+  // overload for this type.
+  str += "null";
+}
+
 void stringify(std::string& str, size_t indent, const detail::json::array& xs) {
   if (xs.empty()) {
     str += "[]";
