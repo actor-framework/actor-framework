@@ -134,6 +134,13 @@ public:
   ///          objects created from that value.
   static expected<json_value> parse_in_situ(std::string& str);
 
+  // -- printing ---------------------------------------------------------------
+
+  template <class Buffer>
+  void print_to(Buffer& buf, size_t indentation_factor = 0) const {
+    detail::json::print_to(buf, *val_, indentation_factor);
+  }
+
   // -- serialization ----------------------------------------------------------
 
   template <class Inspector>
@@ -155,6 +162,8 @@ private:
   detail::json::storage_ptr storage_;
 };
 
+// -- free functions -----------------------------------------------------------
+
 inline bool operator==(const json_value& lhs, const json_value& rhs) {
   return lhs.equal_to(rhs);
 }
@@ -162,5 +171,8 @@ inline bool operator==(const json_value& lhs, const json_value& rhs) {
 inline bool operator!=(const json_value& lhs, const json_value& rhs) {
   return !(lhs == rhs);
 }
+
+/// @relates json_value
+CAF_CORE_EXPORT std::string to_string(const json_value& val);
 
 } // namespace caf

@@ -160,6 +160,7 @@ caf_add_component(
     src/ipv6_address.cpp
     src/ipv6_endpoint.cpp
     src/ipv6_subnet.cpp
+    src/json_array.cpp
     src/json_object.cpp
     src/json_reader.cpp
     src/json_value.cpp

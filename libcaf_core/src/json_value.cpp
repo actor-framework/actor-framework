@@ -121,4 +121,10 @@ expected<json_value> json_value::parse_in_situ(std::string& str) {
   }
 }
 
+std::string to_string(const json_value& val) {
+  std::string result;
+  val.print_to(result);
+  return result;
+}
+
 } // namespace caf

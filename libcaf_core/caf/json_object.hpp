@@ -119,6 +119,13 @@ public:
     return {obj_->end(), storage_.get()};
   }
 
+  // -- printing ---------------------------------------------------------------
+
+  template <class Buffer>
+  void print_to(Buffer& buf, size_t indentation_factor = 0) const {
+    detail::json::print_to(buf, *obj_, indentation_factor);
+  }
+
   // -- serialization ----------------------------------------------------------
 
   template <class Inspector>
@@ -164,5 +171,8 @@ inline bool operator!=(const json_object& lhs,
                        const json_object& rhs) noexcept {
   return !(lhs == rhs);
 }
+
+/// @relates json_object
+CAF_CORE_EXPORT std::string to_string(const json_object& val);
 
 } // namespace caf

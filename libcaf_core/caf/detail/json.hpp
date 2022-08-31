@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/detail/monotonic_buffer_resource.hpp"
+#include "caf/detail/print.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/parser_state.hpp"
 #include "caf/ref_counted.hpp"
@@ -656,5 +657,124 @@ value* parse_shallow(string_parser_state& ps,
 // escaped characters are decoded in place.
 value* parse_in_situ(mutable_string_parser_state& ps,
                      monotonic_buffer_resource* storage);
+
+// -- printing -----------------------------------------------------------------
+
+template <class Buffer>
+static void print_to(Buffer& buf, std::string_view str) {
+  buf.insert(buf.end(), str.begin(), str.end());
+}
+
+template <class Buffer>
+static void print_nl_to(Buffer& buf, size_t indentation) {
+  buf.push_back('\n');
+  buf.insert(buf.end(), indentation, ' ');
+}
+
+template <class Buffer>
+void print_to(Buffer& buf, const array& arr, size_t indentation_factor,
+              size_t offset = 0);
+
+template <class Buffer>
+void print_to(Buffer& buf, const object& obj, size_t indentation_factor,
+              size_t offset = 0);
+
+template <class Buffer>
+void print_to(Buffer& buf, const value& val, size_t indentation_factor,
+              size_t offset = 0) {
+  using namespace std::literals;
+  switch (val.data.index()) {
+    case value::integer_index:
+      print(buf, std::get<int64_t>(val.data));
+      break;
+    case value::double_index:
+      print(buf, std::get<double>(val.data));
+      break;
+    case value::bool_index:
+      print(buf, std::get<bool>(val.data));
+      break;
+    case value::string_index:
+      print_escaped(buf, std::get<std::string_view>(val.data));
+      break;
+    case value::array_index:
+      print_to(buf, std::get<array>(val.data), indentation_factor, offset);
+      break;
+    case value::object_index:
+      print_to(buf, std::get<object>(val.data), indentation_factor, offset);
+      break;
+    default:
+      print_to(buf, "null"sv);
+  }
+}
+template <class Buffer>
+void print_to(Buffer& buf, const array& arr, size_t indentation_factor,
+              size_t offset) {
+  using namespace std::literals;
+  if (arr.empty()) {
+    print_to(buf, "[]"sv);
+  } else if (indentation_factor == 0) {
+    buf.push_back('[');
+    auto i = arr.begin();
+    print_to(buf, *i, 0);
+    auto e = arr.end();
+    while (++i != e) {
+      print_to(buf, ", "sv);
+      print_to(buf, *i, 0);
+    }
+    buf.push_back(']');
+  } else {
+    buf.push_back('[');
+    auto new_offset = indentation_factor + offset;
+    print_nl_to(buf, new_offset);
+    auto i = arr.begin();
+    print_to(buf, *i, indentation_factor, new_offset);
+    auto e = arr.end();
+    while (++i != e) {
+      buf.push_back(',');
+      print_nl_to(buf, new_offset);
+      print_to(buf, *i, indentation_factor, new_offset);
+    }
+    print_nl_to(buf, offset);
+    buf.push_back(']');
+  }
+}
+
+template <class Buffer>
+void print_to(Buffer& buf, const object& obj, size_t indentation_factor,
+              size_t offset) {
+  using namespace std::literals;
+  auto print_member = [&](const value::member& kvp, size_t new_offset) {
+    print_escaped(buf, kvp.key);
+    print_to(buf, ": "sv);
+    print_to(buf, *kvp.val, indentation_factor, new_offset);
+  };
+  if (obj.empty()) {
+    print_to(buf, "{}"sv);
+  } else if (indentation_factor == 0) {
+    buf.push_back('{');
+    auto i = obj.begin();
+    print_member(*i, offset);
+    auto e = obj.end();
+    while (++i != e) {
+      print_to(buf, ", "sv);
+      print_member(*i, offset);
+    }
+    buf.push_back('}');
+  } else {
+    buf.push_back('{');
+    auto new_offset = indentation_factor + offset;
+    print_nl_to(buf, new_offset);
+    auto i = obj.begin();
+    print_member(*i, new_offset);
+    auto e = obj.end();
+    while (++i != e) {
+      buf.push_back(',');
+      print_nl_to(buf, new_offset);
+      print_member(*i, new_offset);
+    }
+    print_nl_to(buf, offset);
+    buf.push_back('}');
+  }
+}
 
 } // namespace caf::detail::json
