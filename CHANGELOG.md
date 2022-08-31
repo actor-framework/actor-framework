@@ -5,6 +5,11 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ## [Unreleased]
 
+### Added
+
+- The new classes `json_value`, `json_array` and `json_object` allow working
+  with JSON inputs directly. Actors can also pass around JSON values safely.
+
 ### Fixed
 
 - Passing a response promise to a run-delayed continuation could result in a
