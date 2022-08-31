@@ -25,6 +25,11 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - JSON inspectors now allow users to use a custom `type_id_mapper` to generate
   and parse JSON text that uses different names for the types than the C++ API.
 
+### Added
+
+- The new classes `json_value`, `json_array` and `json_object` allow working
+  with JSON inputs directly. Actors can also pass around JSON values safely.
+
 ### Fixed
 
 - Passing a response promise to a run-delayed continuation could result in a
