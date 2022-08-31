@@ -14,6 +14,16 @@
 using namespace caf;
 using namespace std::literals;
 
+namespace {
+
+std::string printed(const json_object& obj) {
+  std::string result;
+  obj.print_to(result, 2);
+  return result;
+}
+
+} // namespace
+
 TEST_CASE("default-constructed") {
   auto obj = json_object{};
   CHECK(obj.empty());
@@ -21,6 +31,8 @@ TEST_CASE("default-constructed") {
   CHECK(obj.begin() == obj.end());
   CHECK_EQ(obj.size(), 0u);
   CHECK(obj.value("foo").is_undefined());
+  CHECK_EQ(to_string(obj), "{}");
+  CHECK_EQ(printed(obj), "{}");
   CHECK_EQ(deep_copy(obj), obj);
 }
 
@@ -31,6 +43,8 @@ TEST_CASE("from empty object") {
   CHECK(obj.begin() == obj.end());
   CHECK_EQ(obj.size(), 0u);
   CHECK(obj.value("foo").is_undefined());
+  CHECK_EQ(to_string(obj), "{}");
+  CHECK_EQ(printed(obj), "{}");
   CHECK_EQ(deep_copy(obj), obj);
 }
 
@@ -54,5 +68,7 @@ TEST_CASE("from non-empty object") {
   CHECK_EQ(vals[0].second.to_string(), "one");
   CHECK_EQ(vals[1].first, "b");
   CHECK_EQ(vals[1].second.to_integer(), 2);
+  CHECK_EQ(to_string(obj), R"_({"a": "one", "b": 2})_");
+  CHECK_EQ(printed(obj), "{\n  \"a\": \"one\",\n  \"b\": 2\n}");
   CHECK_EQ(deep_copy(obj), obj);
 }

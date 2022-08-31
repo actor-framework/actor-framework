@@ -16,6 +16,16 @@
 using namespace caf;
 using namespace std::literals;
 
+namespace {
+
+std::string printed(const json_value& val) {
+  std::string result;
+  val.print_to(result, 2);
+  return result;
+}
+
+} // namespace
+
 TEST_CASE("default-constructed") {
   auto val = json_value{};
   CHECK(val.is_null());
@@ -33,6 +43,8 @@ TEST_CASE("default-constructed") {
   CHECK_EQ(val.to_bool(), false);
   CHECK_EQ(val.to_string(), ""sv);
   CHECK_EQ(val.to_object().size(), 0u);
+  CHECK_EQ(to_string(val), "null");
+  CHECK_EQ(printed(val), "null");
   CHECK_EQ(deep_copy(val), val);
 }
 
@@ -53,6 +65,8 @@ TEST_CASE("from undefined") {
   CHECK_EQ(val.to_bool(), false);
   CHECK_EQ(val.to_string(), ""sv);
   CHECK_EQ(val.to_object().size(), 0u);
+  CHECK_EQ(to_string(val), "null");
+  CHECK_EQ(printed(val), "null");
   CHECK_EQ(deep_copy(val), val);
 }
 
@@ -72,6 +86,8 @@ TEST_CASE("from integer") {
   CHECK_EQ(val.to_bool(), false);
   CHECK_EQ(val.to_string(), ""sv);
   CHECK_EQ(val.to_object().size(), 0u);
+  CHECK_EQ(to_string(val), "42");
+  CHECK_EQ(printed(val), "42");
   CHECK_EQ(deep_copy(val), val);
 }
 
@@ -91,6 +107,8 @@ TEST_CASE("from double") {
   CHECK_EQ(val.to_bool(), false);
   CHECK_EQ(val.to_string(), ""sv);
   CHECK_EQ(val.to_object().size(), 0u);
+  CHECK_EQ(to_string(val), "42");
+  CHECK_EQ(printed(val), "42");
   CHECK_EQ(deep_copy(val), val);
 }
 
@@ -110,7 +128,8 @@ TEST_CASE("from bool") {
   CHECK_EQ(val.to_bool(), true);
   CHECK_EQ(val.to_string(), ""sv);
   CHECK_EQ(val.to_object().size(), 0u);
-  MESSAGE(deep_to_string(val));
+  CHECK_EQ(to_string(val), "true");
+  CHECK_EQ(printed(val), "true");
   CHECK_EQ(deep_copy(val), val);
 }
 
@@ -130,6 +149,8 @@ TEST_CASE("from string") {
   CHECK_EQ(val.to_bool(), false);
   CHECK_EQ(val.to_string(), "Hello, world!"sv);
   CHECK_EQ(val.to_object().size(), 0u);
+  CHECK_EQ(to_string(val), R"_("Hello, world!")_");
+  CHECK_EQ(printed(val), R"_("Hello, world!")_");
   CHECK_EQ(deep_copy(val), val);
 }
 
@@ -150,10 +171,34 @@ TEST_CASE("from empty array") {
   CHECK_EQ(val.to_string(), ""sv);
   CHECK_EQ(val.to_array().size(), 0u);
   CHECK_EQ(val.to_object().size(), 0u);
+  CHECK_EQ(to_string(val), "[]");
+  CHECK_EQ(printed(val), "[]");
   CHECK_EQ(deep_copy(val), val);
 }
 
-TEST_CASE("from non-empty array") {
+TEST_CASE("from array of size 1") {
+  auto val = unbox(json_value::parse("[1]"));
+  CHECK(!val.is_null());
+  CHECK(!val.is_undefined());
+  CHECK(!val.is_integer());
+  CHECK(!val.is_double());
+  CHECK(!val.is_number());
+  CHECK(!val.is_bool());
+  CHECK(!val.is_string());
+  CHECK(val.is_array());
+  CHECK(!val.is_object());
+  CHECK_EQ(val.to_integer(), 0);
+  CHECK_EQ(val.to_double(), 0.0);
+  CHECK_EQ(val.to_bool(), false);
+  CHECK_EQ(val.to_string(), ""sv);
+  CHECK_EQ(val.to_array().size(), 1u);
+  CHECK_EQ(val.to_object().size(), 0u);
+  CHECK_EQ(to_string(val), "[1]");
+  CHECK_EQ(printed(val), "[\n  1\n]");
+  CHECK_EQ(deep_copy(val), val);
+}
+
+TEST_CASE("from array of size 3") {
   auto val = unbox(json_value::parse("[1, 2, 3]"));
   CHECK(!val.is_null());
   CHECK(!val.is_undefined());
@@ -170,6 +215,8 @@ TEST_CASE("from non-empty array") {
   CHECK_EQ(val.to_string(), ""sv);
   CHECK_EQ(val.to_array().size(), 3u);
   CHECK_EQ(val.to_object().size(), 0u);
+  CHECK_EQ(to_string(val), "[1, 2, 3]");
+  CHECK_EQ(printed(val), "[\n  1,\n  2,\n  3\n]");
   CHECK_EQ(deep_copy(val), val);
 }
 
@@ -189,6 +236,8 @@ TEST_CASE("from empty object") {
   CHECK_EQ(val.to_bool(), false);
   CHECK_EQ(val.to_string(), ""sv);
   CHECK_EQ(val.to_object().size(), 0u);
+  CHECK_EQ(to_string(val), "{}");
+  CHECK_EQ(printed(val), "{}");
   CHECK_EQ(deep_copy(val), val);
 }
 
@@ -208,5 +257,7 @@ TEST_CASE("from non-empty object") {
   CHECK_EQ(val.to_bool(), false);
   CHECK_EQ(val.to_string(), ""sv);
   CHECK_EQ(val.to_object().size(), 1u);
+  CHECK_EQ(to_string(val), R"_({"foo": "bar"})_");
+  CHECK_EQ(printed(val), "{\n  \"foo\": \"bar\"\n}");
   CHECK_EQ(deep_copy(val), val);
 }

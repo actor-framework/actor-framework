@@ -14,12 +14,24 @@
 using namespace caf;
 using namespace std::literals;
 
+namespace {
+
+std::string printed(const json_array& arr) {
+  std::string result;
+  arr.print_to(result, 2);
+  return result;
+}
+
+} // namespace
+
 TEST_CASE("default-constructed") {
   auto arr = json_array{};
   CHECK(arr.empty());
   CHECK(arr.is_empty());
   CHECK(arr.begin() == arr.end());
   CHECK_EQ(arr.size(), 0u);
+  CHECK_EQ(to_string(arr), "[]");
+  CHECK_EQ(printed(arr), "[]");
   CHECK_EQ(deep_copy(arr), arr);
 }
 
@@ -29,6 +41,8 @@ TEST_CASE("from empty array") {
   CHECK(arr.is_empty());
   CHECK(arr.begin() == arr.end());
   CHECK_EQ(arr.size(), 0u);
+  CHECK_EQ(to_string(arr), "[]");
+  CHECK_EQ(printed(arr), "[]");
   CHECK_EQ(deep_copy(arr), arr);
 }
 
@@ -47,5 +61,7 @@ TEST_CASE("from non-empty array") {
   CHECK_EQ(vals[0].to_integer(), 1);
   CHECK_EQ(vals[1].to_string(), "two");
   CHECK_EQ(vals[2].to_double(), 3.0);
+  CHECK_EQ(to_string(arr), R"_([1, "two", 3])_");
+  CHECK_EQ(printed(arr), "[\n  1,\n  \"two\",\n  3\n]");
   CHECK_EQ(deep_copy(arr), arr);
 }

@@ -17,4 +17,10 @@ json_value json_object::value(std::string_view key) const {
   return json_value::undefined();
 }
 
+std::string to_string(const json_object& obj) {
+  std::string result;
+  obj.print_to(result);
+  return result;
+}
+
 } // namespace caf

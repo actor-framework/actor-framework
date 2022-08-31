@@ -114,6 +114,13 @@ public:
     return {arr_->end(), storage_.get()};
   }
 
+  // -- printing ---------------------------------------------------------------
+
+  template <class Buffer>
+  void print_to(Buffer& buf, size_t indentation_factor = 0) const {
+    detail::json::print_to(buf, *arr_, indentation_factor);
+  }
+
   // -- serialization ----------------------------------------------------------
 
   template <class Inspector>
@@ -141,6 +148,8 @@ private:
   detail::json::storage_ptr storage_;
 };
 
+// -- free functions -----------------------------------------------------------
+
 inline bool operator==(const json_array::const_iterator& lhs,
                        const json_array::const_iterator& rhs) noexcept {
   return lhs.equal_to(rhs);
@@ -158,5 +167,8 @@ inline bool operator==(const json_array& lhs, const json_array& rhs) noexcept {
 inline bool operator!=(const json_array& lhs, const json_array& rhs) noexcept {
   return !(lhs == rhs);
 }
+
+/// @relates json_array
+CAF_CORE_EXPORT std::string to_string(const json_array& arr);
 
 } // namespace caf
