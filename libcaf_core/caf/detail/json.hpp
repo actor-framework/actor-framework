@@ -27,6 +27,18 @@
 
 namespace caf::detail::json {
 
+// -- utility classes ----------------------------------------------------------
+
+// Wraps a buffer resource with a reference count.
+struct CAF_CORE_EXPORT storage : public ref_counted {
+  /// Provides the memory for all of our parsed JSON entities.
+  detail::monotonic_buffer_resource buf;
+};
+
+// -- helper for modeling the JSON type system ---------------------------------
+
+using storage_ptr = intrusive_ptr<storage>;
+
 struct null_t {};
 
 constexpr bool operator==(null_t, null_t) {
@@ -287,6 +299,24 @@ bool operator!=(const linked_list<T>& lhs, const linked_list<T>& rhs) {
   return !(lhs == rhs);
 }
 
+/// Re-allocates the given string at the buffer resource.
+CAF_CORE_EXPORT std::string_view realloc(std::string_view str,
+                                         monotonic_buffer_resource* res);
+
+inline std::string_view realloc(std::string_view str, const storage_ptr& ptr) {
+  return realloc(str, &ptr->buf);
+}
+
+/// Concatenates all strings and allocates a single new string for the result.
+CAF_CORE_EXPORT std::string_view
+concat(std::initializer_list<std::string_view> xs,
+       monotonic_buffer_resource* res);
+
+inline std::string_view concat(std::initializer_list<std::string_view> xs,
+                               const storage_ptr& ptr) {
+  return concat(xs, &ptr->buf);
+}
+
 class CAF_CORE_EXPORT value {
 public:
   using array = linked_list<value>;
@@ -354,6 +384,30 @@ public:
   bool is_undefined() const noexcept {
     return data.index() == undefined_index;
   }
+
+  void assign_string(std::string_view str, monotonic_buffer_resource* res) {
+    data = realloc(str, res);
+  }
+
+  void assign_string(std::string_view str, const storage_ptr& ptr) {
+    data = realloc(str, &ptr->buf);
+  }
+
+  void assign_object(monotonic_buffer_resource* res) {
+    data = object{object_allocator{res}};
+  }
+
+  void assign_object(const storage_ptr& ptr) {
+    assign_object(&ptr->buf);
+  }
+
+  void assign_array(monotonic_buffer_resource* res) {
+    data = array{array_allocator{res}};
+  }
+
+  void assign_array(const storage_ptr& ptr) {
+    assign_array(&ptr->buf);
+  }
 };
 
 inline bool operator==(const value& lhs, const value& rhs) {
@@ -380,16 +434,6 @@ using array = value::array;
 using member = value::member;
 
 using object = value::object;
-
-// -- utility classes ----------------------------------------------------------
-
-// Wraps a buffer resource with a reference count.
-struct CAF_CORE_EXPORT storage : public ref_counted {
-  /// Provides the memory for all of our parsed JSON entities.
-  detail::monotonic_buffer_resource buf;
-};
-
-using storage_ptr = intrusive_ptr<storage>;
 
 // -- factory functions --------------------------------------------------------
 
@@ -548,10 +592,7 @@ bool load(Deserializer& source, value& val, monotonic_buffer_resource* res) {
       if (tmp.empty()) {
         val.data = std::string_view{};
       } else {
-        using alloc_t = detail::monotonic_buffer_resource::allocator<char>;
-        auto buf = alloc_t{res}.allocate(tmp.size());
-        strncpy(buf, tmp.data(), tmp.size());
-        val.data = std::string_view{buf, tmp.size()};
+        val.assign_string(tmp, res);
       }
       break;
     }
@@ -589,10 +630,7 @@ bool load(Deserializer& source, object& obj, monotonic_buffer_resource* res) {
     if (key.empty()) {
       kvp.key = std::string_view{};
     } else {
-      using alloc_t = detail::monotonic_buffer_resource::allocator<char>;
-      auto buf = alloc_t{res}.allocate(key.size());
-      strncpy(buf, key.data(), key.size());
-      kvp.key = std::string_view{buf, key.size()};
+      kvp.key = realloc(key, res);
     }
     // Deserialize the value.
     kvp.val = make_value(res);

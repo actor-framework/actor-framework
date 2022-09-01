@@ -7,6 +7,7 @@
 #include <cstring>
 #include <iterator>
 #include <memory>
+#include <numeric>
 
 #include "caf/config.hpp"
 #include "caf/detail/parser/chars.hpp"
@@ -445,6 +446,27 @@ const object empty_object_instance;
 const array empty_array_instance;
 
 } // namespace
+
+std::string_view realloc(std::string_view str, monotonic_buffer_resource* res) {
+  using alloc_t = detail::monotonic_buffer_resource::allocator<char>;
+  auto buf = alloc_t{res}.allocate(str.size());
+  strncpy(buf, str.data(), str.size());
+  return std::string_view{buf, str.size()};
+}
+
+std::string_view concat(std::initializer_list<std::string_view> xs,
+                        monotonic_buffer_resource* res) {
+  auto get_size = [](size_t x, std::string_view str) { return x + str.size(); };
+  auto total_size = std::accumulate(xs.begin(), xs.end(), size_t{0}, get_size);
+  using alloc_t = detail::monotonic_buffer_resource::allocator<char>;
+  auto* buf = alloc_t{res}.allocate(total_size);
+  auto* pos = buf;
+  for (auto str : xs) {
+    strncpy(pos, str.data(), str.size());
+    pos += str.size();
+  }
+  return std::string_view{buf, total_size};
+}
 
 value* make_value(monotonic_buffer_resource* storage) {
   return make_impl<value>(storage);
