@@ -162,6 +162,7 @@ caf_add_component(
     src/ipv6_endpoint.cpp
     src/ipv6_subnet.cpp
     src/json_array.cpp
+    src/json_builder.cpp
     src/json_object.cpp
     src/json_reader.cpp
     src/json_value.cpp
@@ -317,6 +318,7 @@ caf_add_component(
     ipv6_endpoint
     ipv6_subnet
     json_array
+    json_builder
     json_object
     json_reader
     json_value
