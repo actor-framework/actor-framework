@@ -106,9 +106,10 @@ std::string get_root_uuid() {
   ifstream fs;
   fs.open("/etc/fstab", std::ios_base::in);
   columns_iterator end;
-  auto i = std::find_if(columns_iterator{&fs}, end, [](const vector<string>& cols) {
-    return cols.size() == 6 && cols[1] == "/";
-  });
+  auto i = std::find_if(columns_iterator{&fs}, end,
+                        [](const vector<string>& cols) {
+                          return cols.size() == 6 && cols[1] == "/";
+                        });
   if (i != end) {
     uuid = std::move((*i)[0]);
     const char cstr[] = {"UUID="};
