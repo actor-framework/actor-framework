@@ -367,7 +367,14 @@ public:
 
   void dispose() override {
     CAF_LOG_TRACE("");
-    on_complete();
+    if (sub_) {
+      sub_.cancel();
+      sub_ = nullptr;
+    }
+    if (buf_) {
+      buf_->close();
+      buf_ = nullptr;
+    }
   }
 
   bool disposed() const noexcept override {
