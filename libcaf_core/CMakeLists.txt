@@ -189,6 +189,7 @@ caf_add_component(
     src/serializer.cpp
     src/settings.cpp
     src/skip.cpp
+    src/stream.cpp
     src/string_algorithms.cpp
     src/string_view.cpp
     src/telemetry/collector/prometheus.cpp
@@ -343,6 +344,7 @@ caf_add_component(
     simple_timeout
     span
     stateful_actor
+    stream
     string_algorithms
     string_view
     telemetry.collector.prometheus
