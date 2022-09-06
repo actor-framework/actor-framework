@@ -19,11 +19,15 @@ class cow_vector {
 public:
   // -- member types -----------------------------------------------------------
 
-  using std_type = std::vector<T>;
+  using value_type = T;
+
+  using std_type = std::vector<value_type>;
 
   using size_type = typename std_type::size_type;
 
   using const_iterator = typename std_type::const_iterator;
+
+  using difference_type = typename std_type::difference_type;
 
   using const_reverse_iterator = typename std_type::const_reverse_iterator;
 
