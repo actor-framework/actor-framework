@@ -141,7 +141,4 @@ auto make_error(const parser_state<Iterator, Sentinel>& ps, Ts&&... xs)
 /// Specialization for parsers operating on string views.
 using string_parser_state = parser_state<std::string_view::iterator>;
 
-/// Specialization for parsers operating on mutable character sequences.
-using mutable_string_parser_state = parser_state<char*>;
-
 } // namespace caf

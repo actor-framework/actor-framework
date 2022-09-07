@@ -134,6 +134,13 @@ public:
   ///          objects created from that value.
   static expected<json_value> parse_in_situ(std::string& str);
 
+  /// Attempts to parse the content of the file at @p path as JSON input into a
+  /// self-contained value.
+  static expected<json_value> parse_file(const char* path);
+
+  /// @copydoc parse_file
+  static expected<json_value> parse_file(const std::string& path);
+
   // -- printing ---------------------------------------------------------------
 
   template <class Buffer>

@@ -8,6 +8,8 @@
 #include "caf/detail/print.hpp"
 #include "caf/string_algorithms.hpp"
 
+#include <fstream>
+
 namespace {
 
 static constexpr const char class_name[] = "caf::json_reader";
@@ -150,14 +152,36 @@ bool json_reader::load(std::string_view json_text) {
     set_error(make_error(ps));
     st_ = nullptr;
     return false;
-  } else {
-    err_.reset();
-    detail::monotonic_buffer_resource::allocator<stack_type> alloc{&buf_};
-    st_ = new (alloc.allocate(1)) stack_type(stack_allocator{&buf_});
-    st_->reserve(16);
-    st_->emplace_back(root_);
-    return true;
   }
+  err_.reset();
+  detail::monotonic_buffer_resource::allocator<stack_type> alloc{&buf_};
+  st_ = new (alloc.allocate(1)) stack_type(stack_allocator{&buf_});
+  st_->reserve(16);
+  st_->emplace_back(root_);
+  return true;
+}
+
+bool json_reader::load_file(const char* path) {
+  using iterator_t = std::istreambuf_iterator<char>;
+  reset();
+  std::ifstream input{path};
+  if (!input.is_open()) {
+    emplace_error(sec::cannot_open_file);
+    return false;
+  }
+  detail::json::file_parser_state ps{iterator_t{input}, iterator_t{}};
+  root_ = detail::json::parse(ps, &buf_);
+  if (ps.code != pec::success) {
+    set_error(make_error(ps));
+    st_ = nullptr;
+    return false;
+  }
+  err_.reset();
+  detail::monotonic_buffer_resource::allocator<stack_type> alloc{&buf_};
+  st_ = new (alloc.allocate(1)) stack_type(stack_allocator{&buf_});
+  st_->reserve(16);
+  st_->emplace_back(root_);
+  return true;
 }
 
 void json_reader::revert() {
