@@ -10,6 +10,8 @@
 #include "caf/make_counted.hpp"
 #include "caf/parser_state.hpp"
 
+#include <fstream>
+
 namespace caf {
 
 // -- conversion ---------------------------------------------------------------
@@ -92,34 +94,48 @@ expected<json_value> json_value::parse(std::string_view str) {
   auto storage = make_counted<detail::json::storage>();
   string_parser_state ps{str.begin(), str.end()};
   auto root = detail::json::parse(ps, &storage->buf);
-  if (ps.code != pec::success) {
-    return {make_error(ps)};
-  } else {
+  if (ps.code == pec::success)
     return {json_value{root, std::move(storage)}};
-  }
+  return {make_error(ps)};
 }
 
 expected<json_value> json_value::parse_shallow(std::string_view str) {
   auto storage = make_counted<detail::json::storage>();
   string_parser_state ps{str.begin(), str.end()};
   auto root = detail::json::parse_shallow(ps, &storage->buf);
-  if (ps.code != pec::success) {
-    return {make_error(ps)};
-  } else {
+  if (ps.code == pec::success)
     return {json_value{root, std::move(storage)}};
-  }
+  return {make_error(ps)};
 }
 
 expected<json_value> json_value::parse_in_situ(std::string& str) {
   auto storage = make_counted<detail::json::storage>();
-  mutable_string_parser_state ps{str.data(), str.data() + str.size()};
+  detail::json::mutable_string_parser_state ps{str.data(),
+                                               str.data() + str.size()};
   auto root = detail::json::parse_in_situ(ps, &storage->buf);
-  if (ps.code != pec::success) {
-    return {make_error(ps)};
-  } else {
+  if (ps.code == pec::success)
     return {json_value{root, std::move(storage)}};
-  }
+  return {make_error(ps)};
 }
+
+expected<json_value> json_value::parse_file(const char* path) {
+  using iterator_t = std::istreambuf_iterator<char>;
+  std::ifstream input{path};
+  if (!input.is_open())
+    return make_error(sec::cannot_open_file);
+  auto storage = make_counted<detail::json::storage>();
+  detail::json::file_parser_state ps{iterator_t{input}, iterator_t{}};
+  auto root = detail::json::parse(ps, &storage->buf);
+  if (ps.code == pec::success)
+    return {json_value{root, std::move(storage)}};
+  return {make_error(ps)};
+}
+
+expected<json_value> json_value::parse_file(const std::string& path) {
+  return parse_file(path.c_str());
+}
+
+// -- free functions -----------------------------------------------------------
 
 std::string to_string(const json_value& val) {
   std::string result;

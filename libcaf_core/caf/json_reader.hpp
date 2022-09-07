@@ -133,6 +133,17 @@ public:
   /// @note Implicitly calls `reset`.
   bool load(std::string_view json_text);
 
+  /// Parses the content of the file under the given @p path. After loading the
+  /// content of the JSON file, the reader is ready for attempting to
+  /// deserialize inspectable objects.
+  /// @note Implicitly calls `reset`.
+  bool load_file(const char* path);
+
+  /// @copydoc load_file
+  bool load_file(const std::string& path) {
+    return load_file(path.c_str());
+  }
+
   /// Reverts the state of the reader back to where it was after calling `load`.
   /// @post The reader is ready for attempting to deserialize another
   ///       inspectable object.
