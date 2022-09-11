@@ -5,6 +5,7 @@
 #pragma once
 
 #include <cstddef>
+#include <deque>
 #include <numeric>
 #include <type_traits>
 #include <vector>
@@ -627,12 +628,12 @@ public:
 
   explicit buffered_observable_impl(coordinator* ctx)
     : ctx_(ctx), desired_capacity_(defaults::flow::buffer_size) {
-    buf_.reserve(desired_capacity_);
+    // nop
   }
 
   buffered_observable_impl(coordinator* ctx, size_t desired_capacity)
     : ctx_(ctx), desired_capacity_(desired_capacity) {
-    buf_.reserve(desired_capacity_);
+    // nop
   }
 
   // -- implementation of disposable::impl -------------------------------------
@@ -808,7 +809,7 @@ protected:
 
   coordinator* ctx_;
   size_t desired_capacity_;
-  std::vector<T> buf_;
+  std::deque<T> buf_;
   bool completed_ = false;
   size_t max_demand_ = 0;
   std::vector<output_t> outputs_;
@@ -1499,7 +1500,7 @@ private:
   void pull(size_t n) override {
     CAF_LOG_TRACE(CAF_ARG(n));
     while (n > 0 && !inputs_.empty()) {
-      auto& input = inputs_[0];
+      auto& input = inputs_.front();
       auto m = std::min(input.buf.size() - input.offset, n);
       CAF_ASSERT(m > 0);
       auto items = input.buf.template items<T>().subspan(input.offset, m);
@@ -1507,7 +1508,7 @@ private:
       if (m + input.offset == input.buf.size()) {
         if (auto& sub = input.src->sub)
           sub.request(input.buf.size());
-        inputs_.erase(inputs_.begin());
+        inputs_.pop_front();
       } else {
         input.offset += m;
       }
@@ -1586,7 +1587,7 @@ private:
     }
   };
 
-  std::vector<input_t> inputs_;
+  std::deque<input_t> inputs_;
   std::vector<fwd_ptr> forwarders_;
   flags_t flags_;
   error delayed_error_;
