@@ -104,24 +104,29 @@ errc connection::last_error(ptrdiff_t ret) const {
 // -- connecting and teardown --------------------------------------------------
 
 ptrdiff_t connection::connect() {
+  ERR_clear_error();
   return SSL_connect(native(pimpl_));
 }
 
 ptrdiff_t connection::accept() {
+  ERR_clear_error();
   return SSL_accept(native(pimpl_));
 }
 
 ptrdiff_t connection::close() {
+  ERR_clear_error();
   return SSL_shutdown(native(pimpl_));
 }
 
 // -- reading and writing ------------------------------------------------------
 
 ptrdiff_t connection::read(byte_span buf) {
+  ERR_clear_error();
   return SSL_read(native(pimpl_), buf.data(), static_cast<int>(buf.size()));
 }
 
 ptrdiff_t connection::write(const_byte_span buf) {
+  ERR_clear_error();
   return SSL_write(native(pimpl_), buf.data(), static_cast<int>(buf.size()));
 }
 
