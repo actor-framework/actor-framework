@@ -7,8 +7,8 @@
 #include <atomic>
 #include <random>
 
-#include "caf/send.hpp"
 #include "caf/default_attachable.hpp"
+#include "caf/send.hpp"
 
 #include "caf/detail/sync_request_bouncer.hpp"
 
@@ -22,7 +22,7 @@ actor_pool::policy actor_pool::round_robin() {
     impl(const impl&) : pos_(0) {
       // nop
     }
-    void operator()(actor_system&, uplock& guard, const actor_vec& vec,
+    void operator()(actor_system&, guard_type& guard, const actor_vec& vec,
                     mailbox_element_ptr& ptr, execution_unit* host) {
       CAF_ASSERT(!vec.empty());
       actor selected = vec[pos_++ % vec.size()];
@@ -36,7 +36,7 @@ actor_pool::policy actor_pool::round_robin() {
 
 namespace {
 
-void broadcast_dispatch(actor_system&, actor_pool::uplock&,
+void broadcast_dispatch(actor_system&, actor_pool::guard_type&,
                         const actor_pool::actor_vec& vec,
                         mailbox_element_ptr& ptr, execution_unit* host) {
   CAF_ASSERT(!vec.empty());
@@ -59,12 +59,11 @@ actor_pool::policy actor_pool::random() {
     impl(const impl&) : rd_() {
       // nop
     }
-    void operator()(actor_system&, uplock& guard, const actor_vec& vec,
+    void operator()(actor_system&, guard_type& guard, const actor_vec& vec,
                     mailbox_element_ptr& ptr, execution_unit* host) {
-      upgrade_to_unique_lock<detail::shared_spinlock> unique_guard{guard};
-      auto selected =
-          vec[dis_(rd_, decltype(dis_)::param_type(0, vec.size() - 1))];
-      unique_guard.unlock();
+      auto selected
+        = vec[dis_(rd_, decltype(dis_)::param_type(0, vec.size() - 1))];
+      guard.unlock();
       selected->enqueue(std::move(ptr), host);
     }
     std::random_device rd_;
@@ -95,14 +94,15 @@ actor actor_pool::make(execution_unit* eu, size_t num_workers,
   auto res_addr = ptr->address();
   for (size_t i = 0; i < num_workers; ++i) {
     auto worker = fac();
-    worker->attach(default_attachable::make_monitor(worker.address(), res_addr));
+    worker->attach(
+      default_attachable::make_monitor(worker.address(), res_addr));
     ptr->workers_.push_back(std::move(worker));
   }
   return res;
 }
 
 bool actor_pool::enqueue(mailbox_element_ptr what, execution_unit* eu) {
-  upgrade_lock<detail::shared_spinlock> guard{workers_mtx_};
+  guard_type guard{workers_mtx_};
   if (filter(guard, what->sender, what->mid, what->payload, eu))
     return false;
   policy_(home_system(), guard, workers_, what, eu);
@@ -110,8 +110,7 @@ bool actor_pool::enqueue(mailbox_element_ptr what, execution_unit* eu) {
 }
 
 actor_pool::actor_pool(actor_config& cfg)
-    : monitorable_actor(cfg),
-      planned_reason_(exit_reason::normal) {
+  : monitorable_actor(cfg), planned_reason_(exit_reason::normal) {
   register_at_system();
 }
 
@@ -130,9 +129,8 @@ void actor_pool::on_cleanup(const error& reason) {
   CAF_LOG_TERMINATE_EVENT(this, reason);
 }
 
-bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,
-                        const strong_actor_ptr& sender, message_id mid,
-                        message& content, execution_unit* eu) {
+bool actor_pool::filter(guard_type& guard, const strong_actor_ptr& sender,
+                        message_id mid, message& content, execution_unit* eu) {
   CAF_LOG_TRACE(CAF_ARG(mid) << CAF_ARG(content));
   if (auto view = make_const_typed_message_view<exit_msg>(content)) {
     // acquire second mutex as well
@@ -141,9 +139,8 @@ bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,
     if (cleanup(std::move(reason), eu)) {
       // send exit messages *always* to all workers and clear vector afterwards
       // but first swap workers_ out of the critical section
-      upgrade_to_unique_lock<detail::shared_spinlock> unique_guard{guard};
       workers_.swap(workers);
-      unique_guard.unlock();
+      guard.unlock();
       for (auto& w : workers)
         anon_send(w, content);
       unregister_from_system();
@@ -153,7 +150,6 @@ bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,
   if (auto view = make_const_typed_message_view<down_msg>(content)) {
     // remove failed worker from pool
     const auto& dm = get<0>(view);
-    upgrade_to_unique_lock<detail::shared_spinlock> unique_guard{guard};
     auto last = workers_.end();
     auto i = std::find(workers_.begin(), workers_.end(), dm.source);
     CAF_LOG_DEBUG_IF(i == last, "received down message for an unknown worker");
@@ -161,7 +157,7 @@ bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,
       workers_.erase(i);
     if (workers_.empty()) {
       planned_reason_ = exit_reason::out_of_workers;
-      unique_guard.unlock();
+      guard.unlock();
       quit(eu);
     }
     return true;
@@ -169,15 +165,13 @@ bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,
   if (auto view
       = make_const_typed_message_view<sys_atom, put_atom, actor>(content)) {
     const auto& worker = get<2>(view);
-    worker->attach(default_attachable::make_monitor(worker.address(),
-                                                    address()));
-    upgrade_to_unique_lock<detail::shared_spinlock> unique_guard{guard};
+    worker->attach(
+      default_attachable::make_monitor(worker.address(), address()));
     workers_.push_back(worker);
     return true;
   }
   if (auto view
       = make_const_typed_message_view<sys_atom, delete_atom, actor>(content)) {
-    upgrade_to_unique_lock<detail::shared_spinlock> unique_guard{guard};
     auto& what = get<2>(view);
     auto last = workers_.end();
     auto i = std::find(workers_.begin(), last, what);
@@ -190,7 +184,6 @@ bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,
     return true;
   }
   if (content.match_elements<sys_atom, delete_atom>()) {
-    upgrade_to_unique_lock<detail::shared_spinlock> unique_guard{guard};
     for (auto& worker : workers_) {
       default_attachable::observe_token tk{address(),
                                            default_attachable::monitor};
@@ -202,8 +195,8 @@ bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,
   if (content.match_elements<sys_atom, get_atom>()) {
     auto cpy = workers_;
     guard.unlock();
-    sender->enqueue(nullptr, mid.response_id(),
-                    make_message(std::move(cpy)), eu);
+    sender->enqueue(nullptr, mid.response_id(), make_message(std::move(cpy)),
+                    eu);
     return true;
   }
   if (workers_.empty()) {

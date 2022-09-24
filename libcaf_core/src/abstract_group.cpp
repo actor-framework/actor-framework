@@ -5,7 +5,6 @@
 #include "caf/abstract_group.hpp"
 
 #include "caf/actor_cast.hpp"
-#include "caf/detail/shared_spinlock.hpp"
 #include "caf/group.hpp"
 #include "caf/group_manager.hpp"
 #include "caf/group_module.hpp"

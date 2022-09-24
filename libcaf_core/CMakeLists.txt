@@ -132,7 +132,6 @@ caf_add_component(
     src/detail/ripemd_160.cpp
     src/detail/serialized_size.cpp
     src/detail/set_thread_name.cpp
-    src/detail/shared_spinlock.cpp
     src/detail/size_based_credit_controller.cpp
     src/detail/stringification_inspector.cpp
     src/detail/sync_request_bouncer.cpp

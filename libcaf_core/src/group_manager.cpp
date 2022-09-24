@@ -8,7 +8,6 @@
 #include "caf/detail/local_group_module.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/group.hpp"
-#include "caf/locks.hpp"
 #include "caf/message.hpp"
 #include "caf/sec.hpp"
 #include "caf/serializer.hpp"

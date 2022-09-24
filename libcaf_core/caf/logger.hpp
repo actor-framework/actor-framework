@@ -22,7 +22,6 @@
 #include "caf/detail/pretty_type_name.hpp"
 #include "caf/detail/ringbuffer.hpp"
 #include "caf/detail/scope_guard.hpp"
-#include "caf/detail/shared_spinlock.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive/drr_queue.hpp"
 #include "caf/intrusive/fifo_inbox.hpp"

@@ -4,22 +4,22 @@
 
 #pragma once
 
-#include <atomic>
-#include <condition_variable>
-#include <cstdint>
-#include <mutex>
-#include <string>
-#include <thread>
-#include <unordered_map>
-
 #include "caf/abstract_actor.hpp"
 #include "caf/actor.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/actor_control_block.hpp"
 #include "caf/detail/core_export.hpp"
-#include "caf/detail/shared_spinlock.hpp"
 #include "caf/fwd.hpp"
 #include "caf/telemetry/int_gauge.hpp"
+
+#include <atomic>
+#include <condition_variable>
+#include <cstdint>
+#include <mutex>
+#include <shared_mutex>
+#include <string>
+#include <thread>
+#include <unordered_map>
 
 namespace caf {
 
@@ -113,11 +113,11 @@ private:
   mutable std::mutex running_mtx_;
   mutable std::condition_variable running_cv_;
 
-  mutable detail::shared_spinlock instances_mtx_;
+  mutable std::shared_mutex instances_mtx_;
   entries entries_;
 
   name_map named_entries_;
-  mutable detail::shared_spinlock named_entries_mtx_;
+  mutable std::shared_mutex named_entries_mtx_;
 
   actor_system& system_;
 };
