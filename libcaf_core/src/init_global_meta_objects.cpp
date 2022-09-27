@@ -24,6 +24,7 @@
 #include "caf/message.hpp"
 #include "caf/message_id.hpp"
 #include "caf/node_id.hpp"
+#include "caf/stream.hpp"
 #include "caf/system_messages.hpp"
 #include "caf/timespan.hpp"
 #include "caf/timestamp.hpp"

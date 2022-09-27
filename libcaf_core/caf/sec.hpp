@@ -83,26 +83,10 @@ enum class sec : uint8_t {
   runtime_error,
   /// Linking to a remote actor failed because actor no longer exists.
   remote_linking_failed,
-  /// Adding an upstream to a stream failed.
-  cannot_add_upstream = 30,
-  /// Adding an upstream to a stream failed because it already exists.
-  upstream_already_exists,
-  /// Unable to process upstream messages because upstream is invalid.
-  invalid_upstream,
-  /// Adding a downstream to a stream failed.
-  cannot_add_downstream,
-  /// Adding a downstream to a stream failed because it already exists.
-  downstream_already_exists,
-  /// Unable to process downstream messages because downstream is invalid.
-  invalid_downstream = 35,
-  /// Cannot start streaming without next stage.
-  no_downstream_stages_defined,
-  /// Actor failed to initialize state after receiving a stream handshake.
-  stream_init_failed,
-  /// Unable to process a stream since due to missing state.
-  invalid_stream_state,
-  /// Stream aborted due to unexpected error.
-  unhandled_stream_error,
+  /// Subscribing to a stream failed because it was invalid.
+  invalid_stream = 30,
+  /// Subscribing to a stream failed because it can only be subscribed to once.
+  cannot_resubscribe_stream,
   /// A function view was called without assigning an actor first.
   bad_function_call = 40,
   /// Feature is disabled in the actor system config.
@@ -175,7 +159,7 @@ enum class sec : uint8_t {
   disposed,
   /// Failed to open a resource.
   cannot_open_resource,
-  /// Received malformed data on a network socket.
+  /// Received malformed data.
   protocol_error,
   /// Encountered faulty logic in the program.
   logic_error,

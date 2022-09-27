@@ -12,17 +12,18 @@
 #include "caf/error.hpp"
 #include "caf/execution_unit.hpp"
 #include "caf/exit_reason.hpp"
+#include "caf/fwd.hpp"
+#include "caf/message_priority.hpp"
 
 namespace caf {
 
-class abstract_actor;
+/// @relates attachable
+using attachable_ptr = std::unique_ptr<attachable>;
 
 /// Callback utility class.
 class CAF_CORE_EXPORT attachable {
 public:
-  attachable() = default;
-  attachable(const attachable&) = delete;
-  attachable& operator=(const attachable&) = delete;
+  // -- member types -----------------------------------------------------------
 
   /// Represents a pointer to a value with its subtype as type ID number.
   struct token {
@@ -52,7 +53,15 @@ public:
     token(size_t typenr, const void* vptr);
   };
 
+  // -- constructors and destructors -------------------------------------------
+
+  attachable() = default;
+  attachable(const attachable&) = delete;
+  attachable& operator=(const attachable&) = delete;
+
   virtual ~attachable();
+
+  // -- interface for the actor ------------------------------------------------
 
   /// Executed if the actor finished execution with given `reason`.
   /// The default implementation does nothing.
@@ -68,10 +77,21 @@ public:
     return matches(token{T::token_type, &what});
   }
 
-  std::unique_ptr<attachable> next;
-};
+  // -- factory functions ------------------------------------------------------
 
-/// @relates attachable
-using attachable_ptr = std::unique_ptr<attachable>;
+  static attachable_ptr
+  make_monitor(actor_addr observed, actor_addr observer,
+               message_priority prio = message_priority::normal);
+
+  static attachable_ptr make_link(actor_addr observed, actor_addr observer);
+
+  static attachable_ptr make_stream_aborter(actor_addr observed,
+                                            actor_addr observer,
+                                            uint64_t sink_flow_id);
+
+  // -- member variables -------------------------------------------------------
+
+  attachable_ptr next;
+};
 
 } // namespace caf

@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "caf/flow/coordinator.hpp"
-#include "caf/flow/observable.hpp"
+#include "caf/flow/fwd.hpp"
+#include "caf/flow/observable_decl.hpp"
 #include "caf/flow/op/mcast.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/make_counted.hpp"
@@ -17,15 +17,27 @@ namespace caf::flow {
 template <class T>
 class item_publisher {
 public:
+  using impl_ptr = intrusive_ptr<op::mcast<T>>;
+
   explicit item_publisher(coordinator* ctx) {
     pimpl_ = make_counted<op::mcast<T>>(ctx);
   }
 
-  item_publisher(item_publisher&&) = default;
-  item_publisher& operator=(item_publisher&&) = default;
+  explicit item_publisher(impl_ptr ptr) noexcept : pimpl_(std::move(ptr)) {
+    // nop
+  }
+
+  item_publisher(item_publisher&&) noexcept = default;
+
+  item_publisher& operator=(item_publisher&&) noexcept = default;
+
+  item_publisher(const item_publisher&) = delete;
+
+  item_publisher& operator=(const item_publisher&) = delete;
 
   ~item_publisher() {
-    pimpl_->close();
+    if (pimpl_)
+      pimpl_->close();
   }
 
   /// Pushes an item to all subscribed observers. The publisher drops the item
@@ -87,7 +99,7 @@ public:
   }
 
 private:
-  intrusive_ptr<op::mcast<T>> pimpl_;
+  impl_ptr pimpl_;
 };
 
 } // namespace caf::flow

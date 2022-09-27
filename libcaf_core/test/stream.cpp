@@ -8,7 +8,10 @@
 
 #include "core-test.hpp"
 
+#include "caf/scheduled_actor/flow.hpp"
+
 using namespace caf;
+using namespace std::literals;
 
 namespace {
 
@@ -30,6 +33,18 @@ struct fixture : test_coordinator_fixture<> {
     return result;
   }
 };
+
+using ivec = std::vector<int>;
+
+behavior int_sink(event_based_actor* self, std::shared_ptr<ivec> results) {
+  return {
+    [self, results](stream input) {
+      self //
+        ->observe_as<int>(input, 30, 10)
+        .for_each([results](int x) { results->push_back(x); });
+    },
+  };
+}
 
 } // namespace
 
@@ -55,6 +70,36 @@ TEST_CASE("value-constructed") {
   CHECK_EQ(uut.name(), "foo");
   CHECK_EQ(uut.source(), dummy);
   CHECK_EQ(uut, deep_copy(uut));
+}
+
+TEST_CASE("streams allow actors to transmit flow items to others") {
+  auto res = ivec{};
+  res.resize(256);
+  std::iota(res.begin(), res.end(), 1);
+  auto r1 = std::make_shared<ivec>();
+  auto s1 = sys.spawn(int_sink, r1);
+  auto r2 = std::make_shared<ivec>();
+  auto s2 = sys.spawn(int_sink, r2);
+  run();
+  auto src = sys.spawn([s1, s2](event_based_actor* self) {
+    auto vals = self //
+                  ->make_observable()
+                  .iota(1)
+                  .take(256)
+                  .compose(self->to_stream("foo", 10ms, 10));
+    self->send(s1, vals);
+    self->send(s2, vals);
+  });
+  run_once();
+  expect((stream), from(src).to(s1));
+  expect((stream), from(src).to(s2));
+  expect((stream_open_msg), from(s1).to(src));
+  expect((stream_open_msg), from(s2).to(src));
+  expect((stream_ack_msg), from(src).to(s1));
+  expect((stream_ack_msg), from(src).to(s2));
+  run();
+  CHECK_EQ(*r1, res);
+  CHECK_EQ(*r2, res);
 }
 
 END_FIXTURE_SCOPE()

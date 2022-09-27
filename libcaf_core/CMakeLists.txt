@@ -132,6 +132,7 @@ caf_add_component(
     src/detail/private_thread_pool.cpp
     src/detail/ripemd_160.cpp
     src/detail/set_thread_name.cpp
+    src/detail/stream_bridge.cpp
     src/detail/stringification_inspector.cpp
     src/detail/sync_request_bouncer.cpp
     src/detail/test_actor_clock.cpp

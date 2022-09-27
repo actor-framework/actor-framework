@@ -208,6 +208,12 @@ public:
     return fn(std::move(*this));
   }
 
+  // -- batching ---------------------------------------------------------------
+
+  /// Like @c buffer, but wraps the collected items into type-erased batches.
+  observable<async::batch> collect_batches(timespan max_delay,
+                                           size_t max_items);
+
   // -- observing --------------------------------------------------------------
 
   /// Observes items from this observable on another @ref coordinator.
@@ -284,9 +290,9 @@ private:
 /// Convenience function for creating an @ref observable from a concrete
 /// operator type.
 /// @relates observable
-template <class Operator, class... Ts>
+template <class Operator, class CoordinatorType, class... Ts>
 observable<typename Operator::output_type>
-make_observable(coordinator* ctx, Ts&&... xs) {
+make_observable(CoordinatorType* ctx, Ts&&... xs) {
   using out_t = typename Operator::output_type;
   using ptr_t = intrusive_ptr<op::base<out_t>>;
   ptr_t ptr{new Operator(ctx, std::forward<Ts>(xs)...), false};

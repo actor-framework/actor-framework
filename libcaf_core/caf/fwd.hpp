@@ -86,6 +86,7 @@ class actor_proxy;
 class actor_registry;
 class actor_system;
 class actor_system_config;
+class attachable;
 class behavior;
 class binary_deserializer;
 class binary_serializer;
@@ -125,6 +126,7 @@ class scoped_actor;
 class serializer;
 class skip_t;
 class skippable_result;
+class stream;
 class tracing_data;
 class tracing_data_factory;
 class type_id_list;
@@ -148,6 +150,13 @@ struct invalid_actor_t;
 struct node_down_msg;
 struct none_t;
 struct prohibit_top_level_spawn_marker;
+struct stream_abort_msg;
+struct stream_ack_msg;
+struct stream_batch_msg;
+struct stream_cancel_msg;
+struct stream_close_msg;
+struct stream_demand_msg;
+struct stream_open_msg;
 struct unit_t;
 
 // -- free template functions --------------------------------------------------
@@ -334,6 +343,8 @@ class dynamic_message_data;
 class group_manager;
 class message_data;
 class private_thread;
+class stream_bridge;
+class stream_bridge_sub;
 
 struct meta_object;
 

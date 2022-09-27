@@ -373,7 +373,7 @@ public:
 
 CAF_BEGIN_TYPE_ID_BLOCK(core_module, 0)
 
-  // -- C types
+  // -- C types ----------------------------------------------------------------
 
   CAF_ADD_TYPE_ID_FROM_EXPR(core_module, (bool) )
   CAF_ADD_TYPE_ID_FROM_EXPR(core_module, (double) )
@@ -388,14 +388,15 @@ CAF_BEGIN_TYPE_ID_BLOCK(core_module, 0)
   CAF_ADD_TYPE_ID_FROM_EXPR(core_module, (uint64_t))
   CAF_ADD_TYPE_ID_FROM_EXPR(core_module, (uint8_t))
 
-  // -- STL types
+  // -- STL types --------------------------------------------------------------
 
   CAF_ADD_TYPE_ID(core_module, (std::string))
   CAF_ADD_TYPE_ID(core_module, (std::u16string))
   CAF_ADD_TYPE_ID(core_module, (std::u32string))
   CAF_ADD_TYPE_ID(core_module, (std::set<std::string>) )
 
-  // -- CAF types
+  // -- CAF types --------------------------------------------------------------
+
   CAF_ADD_TYPE_ID(core_module, (caf::action))
   CAF_ADD_TYPE_ID(core_module, (caf::actor))
   CAF_ADD_TYPE_ID(core_module, (caf::actor_addr))
@@ -426,6 +427,14 @@ CAF_BEGIN_TYPE_ID_BLOCK(core_module, 0)
   CAF_ADD_TYPE_ID(core_module, (caf::pec))
   CAF_ADD_TYPE_ID(core_module, (caf::sec))
   CAF_ADD_TYPE_ID(core_module, (caf::shared_action_ptr))
+  CAF_ADD_TYPE_ID(core_module, (caf::stream))
+  CAF_ADD_TYPE_ID(core_module, (caf::stream_abort_msg))
+  CAF_ADD_TYPE_ID(core_module, (caf::stream_ack_msg))
+  CAF_ADD_TYPE_ID(core_module, (caf::stream_batch_msg))
+  CAF_ADD_TYPE_ID(core_module, (caf::stream_cancel_msg))
+  CAF_ADD_TYPE_ID(core_module, (caf::stream_close_msg))
+  CAF_ADD_TYPE_ID(core_module, (caf::stream_demand_msg))
+  CAF_ADD_TYPE_ID(core_module, (caf::stream_open_msg))
   CAF_ADD_TYPE_ID(core_module, (caf::strong_actor_ptr))
   CAF_ADD_TYPE_ID(core_module, (caf::timespan))
   CAF_ADD_TYPE_ID(core_module, (caf::timestamp))
