@@ -33,7 +33,8 @@ public:
   disposable then(OnSuccess on_success, OnError on_error) {
     static_assert(std::is_invocable_v<OnSuccess, const T&>);
     static_assert(std::is_invocable_v<OnError, const error&>);
-    auto cb = [cp = cell_, f = std::move(on_success), g = std::move(on_error)] {
+    auto cb = [cp = cell_, f = std::move(on_success),
+               g = std::move(on_error)]() mutable {
       // Note: no need to lock the mutex. Once the cell has a value and actions
       // are allowed to run, the value is immutable.
       switch (cp->value.index()) {
