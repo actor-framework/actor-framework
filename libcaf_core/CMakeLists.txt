@@ -275,6 +275,7 @@ caf_add_component(
     dynamic_spawn
     error
     expected
+    flow.buffer
     flow.concat
     flow.concat_map
     flow.defer

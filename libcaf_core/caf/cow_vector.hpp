@@ -9,6 +9,7 @@
 #include "caf/make_counted.hpp"
 #include "caf/ref_counted.hpp"
 
+#include <initializer_list>
 #include <vector>
 
 namespace caf {
@@ -39,6 +40,10 @@ public:
 
   explicit cow_vector(std_type std) {
     impl_ = make_counted<impl>(std::move(std));
+  }
+
+  explicit cow_vector(std::initializer_list<T> values) {
+    impl_ = make_counted<impl>(std_type{values});
   }
 
   cow_vector(cow_vector&&) noexcept = default;

@@ -25,6 +25,8 @@ public:
 
   void run();
 
+  size_t run_some();
+
   // -- reference counting -----------------------------------------------------
 
   void ref_execution_context() const noexcept override;

@@ -141,6 +141,13 @@ public:
       .filter([](const vector_type& xs) { return !xs.empty(); });
   }
 
+  /// Emits items in buffers of size @p count.
+  observable<cow_vector<T>> buffer(size_t count);
+
+  /// Emits items in buffers of size up to @p count and forces an item at
+  /// regular intervals .
+  observable<cow_vector<T>> buffer(size_t count, timespan period);
+
   // -- combining --------------------------------------------------------------
 
   /// Combines the output of multiple @ref observable objects into one by
