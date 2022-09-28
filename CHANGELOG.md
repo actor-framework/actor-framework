@@ -23,7 +23,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The spinlock-based work-stealing implementation had severe performance issues
   on Windows in some cases. We have switched to a regular, mutex-based approach
   to avoid performance degradations. The new implementation also uses the
-  mutexes for interruptable waiting on the work queues, which improves the
+  mutexes for interruptible waiting on the work queues, which improves the
   responsiveness of the actor system (#1343).
 
 ### Changed
