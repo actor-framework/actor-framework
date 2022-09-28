@@ -1,4 +1,4 @@
-FROM centos:8
+FROM almalinux:8
 
 RUN dnf update -y \
     && dnf install -y \
