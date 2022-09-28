@@ -20,6 +20,11 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   support `double` metrics and histograms.
 - Parsing deeply nested JSON inputs no longer produces a stack overflow.
   Instead, the parser rejects any JSON with too many nesting levels.
+- The spinlock-based work-stealing implementation had severe performance issues
+  on Windows in some cases. We have switched to a regular, mutex-based approach
+  to avoid performance degradations. The new implementation also uses the
+  mutexes for interruptable waiting on the work queues, which improves the
+  responsiveness of the actor system (#1343).
 
 ### Changed
 

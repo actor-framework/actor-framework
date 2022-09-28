@@ -9,9 +9,6 @@
 #include "caf/actor.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/event_based_actor.hpp"
-#include "caf/locks.hpp"
-
-#include "caf/detail/shared_spinlock.hpp"
 
 namespace caf::detail {
 
@@ -78,10 +75,9 @@ public:
     // nop
   }
 
-  void
-  operator()(actor_system& sys, upgrade_lock<detail::shared_spinlock>& ulock,
-             const std::vector<actor>& workers, mailbox_element_ptr& ptr,
-             execution_unit* host) {
+  void operator()(actor_system& sys, std::unique_lock<std::shared_mutex>& ulock,
+                  const std::vector<actor>& workers, mailbox_element_ptr& ptr,
+                  execution_unit* host) {
     if (!ptr->sender)
       return;
     actor_msg_vec xs;
