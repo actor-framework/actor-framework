@@ -1,4 +1,4 @@
-FROM fedora:33
+FROM fedora:35
 
 RUN dnf update -y \
     && dnf clean all \
