@@ -5,6 +5,11 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ## [Unreleased]
 
+### Added
+
+- JSON inspectors now allow users to use a custom `type_id_mapper` to generate
+  and parse JSON text that uses different names for the types than the C++ API.
+
 ### Fixed
 
 - Passing a response promise to a run-delayed continuation could result in a

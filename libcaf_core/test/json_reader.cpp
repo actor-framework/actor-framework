@@ -12,6 +12,8 @@
 
 using namespace caf;
 
+using namespace std::literals;
+
 namespace {
 
 struct fixture {
@@ -121,6 +123,59 @@ CAF_TEST(json baselines) {
     if (!f())
       if (auto reason = reader.get_error())
         MESSAGE("JSON reader stopped due to: " << reason);
+  }
+}
+
+SCENARIO("mappers enable custom type names in JSON input") {
+  GIVEN("a custom mapper") {
+    class custom_mapper : public type_id_mapper {
+      std::string_view operator()(type_id_t type) const override {
+        switch (type) {
+          case type_id_v<std::string>:
+            return "String";
+          case type_id_v<int32_t>:
+            return "Int";
+          default:
+            return query_type_name(type);
+        }
+      }
+      type_id_t operator()(std::string_view name) const override {
+        if (name == "String")
+          return type_id_v<std::string>;
+        else if (name == "Int")
+          return type_id_v<int32_t>;
+        else
+          return query_type_id(name);
+      }
+    };
+    custom_mapper mapper_instance;
+    WHEN("reading a variant from JSON") {
+      using value_type = std::variant<int32_t, std::string>;
+      THEN("the custom mapper translates between external and internal names") {
+        json_reader reader;
+        reader.mapper(&mapper_instance);
+        auto value = value_type{};
+        auto input1 = R"_({"@value-type": "String", "value": "hello world"})_"s;
+        if (CHECK(reader.load(input1))) {
+          if (!CHECK(reader.apply(value)))
+            MESSAGE("reader reported error: " << reader.get_error());
+          if (CHECK(std::holds_alternative<std::string>(value)))
+            CHECK_EQ(std::get<std::string>(value), "hello world"s);
+        } else {
+          MESSAGE("reader reported error: " << reader.get_error());
+        }
+        reader.reset();
+        auto input2 = R"_({"@value-type": "Int", "value": 42})_"sv;
+        if (CHECK(reader.load(input2))) {
+          if (!CHECK(reader.apply(value)))
+            MESSAGE("reader reported error: " << reader.get_error());
+          if (CHECK(std::holds_alternative<int32_t>(value)))
+            CHECK_EQ(std::get<int32_t>(value), 42);
+        } else {
+          MESSAGE("reader reported error: " << reader.get_error());
+        }
+      }
+    }
   }
 }
 

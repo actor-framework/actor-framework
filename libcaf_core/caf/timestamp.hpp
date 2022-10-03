@@ -4,12 +4,13 @@
 
 #pragma once
 
+#include "caf/detail/core_export.hpp"
+#include "caf/fwd.hpp"
+#include "caf/timespan.hpp"
+
 #include <chrono>
 #include <cstdint>
 #include <string>
-
-#include "caf/detail/core_export.hpp"
-#include "caf/timespan.hpp"
 
 namespace caf {
 
@@ -22,6 +23,9 @@ CAF_CORE_EXPORT timestamp make_timestamp();
 
 /// Prints `x` in ISO 8601 format, e.g., `2018-11-15T06:25:01.462`.
 CAF_CORE_EXPORT std::string timestamp_to_string(timestamp x);
+
+/// Converts an ISO 8601 formatted timestamp into its native representation.
+CAF_CORE_EXPORT expected<timestamp> timestamp_from_string(std::string_view str);
 
 /// Appends the timestamp `x` in ISO 8601 format, e.g.,
 /// `2018-11-15T06:25:01.462`, to `y`.
