@@ -20,6 +20,7 @@ namespace caf {
 
 // -- 1 param templates --------------------------------------------------------
 
+template <class> class [[deprecated ("use std::optional instead")]] optional;
 template <class> class [[nodiscard]] error_code;
 template <class> class basic_cow_string;
 template <class> class behavior_type_of;
@@ -29,9 +30,9 @@ template <class> class dictionary;
 template <class> class expected;
 template <class> class intrusive_cow_ptr;
 template <class> class intrusive_ptr;
-template <class> class [[deprecated ("use std::optional instead")]] optional;
 template <class> class param;
 template <class> class span;
+template <class> class typed_stream;
 template <class> class weak_intrusive_ptr;
 
 template <class> struct inspector_access;

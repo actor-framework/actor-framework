@@ -55,7 +55,7 @@ public:
 
   /// Queries the source of this stream. Default-constructed streams return a
   /// @c null pointer.
-  const strong_actor_ptr& source() {
+  const strong_actor_ptr& source() const noexcept {
     return source_;
   }
 

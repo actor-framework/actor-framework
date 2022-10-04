@@ -15,6 +15,7 @@
 #include "caf/flow/single.hpp"
 #include "caf/scheduled_actor.hpp"
 #include "caf/stream.hpp"
+#include "caf/typed_stream.hpp"
 
 namespace caf::flow {
 
@@ -106,6 +107,35 @@ scheduled_actor::to_stream(cow_string name, timespan max_delay,
     flow::make_observable<flow::op::interval>(this, max_delay, max_delay));
   return to_stream_impl(std::move(name), std::move(batch_op), type_id_v<val_t>,
                         max_items_per_batch);
+}
+
+template <class Observable>
+flow::assert_scheduled_actor_hdr_t<
+  Observable, typed_stream<typename Observable::output_type>>
+scheduled_actor::to_typed_stream(std::string name, timespan max_delay,
+                                 size_t max_items_per_batch, Observable obs) {
+  auto res = to_stream(std::move(name), max_delay, max_items_per_batch,
+                       std::move(obs));
+  return {res.source(), res.name(), res.id()};
+}
+
+template <class Observable>
+flow::assert_scheduled_actor_hdr_t<
+  Observable, typed_stream<typename Observable::output_type>>
+scheduled_actor::to_typed_stream(cow_string name, timespan max_delay,
+                                 size_t max_items_per_batch, Observable obs) {
+  auto res = to_stream(std::move(name), max_delay, max_items_per_batch,
+                       std::move(obs));
+  return {res.source(), res.name(), res.id()};
+}
+
+template <class T>
+flow::assert_scheduled_actor_hdr_t<flow::observable<T>>
+scheduled_actor::observe(typed_stream<T> what, size_t buf_capacity,
+                         size_t demand_threshold) {
+  return do_observe(what.dynamically_typed(), buf_capacity, demand_threshold)
+    .transform(detail::unbatch<T>{})
+    .as_observable();
 }
 
 template <class T>

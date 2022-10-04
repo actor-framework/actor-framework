@@ -468,16 +468,26 @@ public:
 
   void watch(disposable what) override;
 
+  /// Converts an @ref observable into a @ref stream to allow other actors to
+  /// consume its items.
+  /// @param name The human-readable name for this stream.
+  /// @param max_delay The maximum delay between emitting two batches.
+  /// @param max_items_per_batch The maximum amount of items per batch.
+  /// @param obs An observable sequence of items.
+  /// @returns a @ref stream that makes @p obs available to other actors.
   template <class Observable>
   flow::assert_scheduled_actor_hdr_t<Observable, stream>
   to_stream(std::string name, timespan max_delay, size_t max_items_per_batch,
-            Observable&&);
+            Observable&& obs);
 
+  /// @copydoc to_stream
   template <class Observable>
   flow::assert_scheduled_actor_hdr_t<Observable, stream>
   to_stream(cow_string name, timespan max_delay, size_t max_items_per_batch,
-            Observable&&);
+            Observable&& obs);
 
+  /// Utility class that converts an @ref observable to a @ref stream when
+  /// passed to @c compose.
   struct to_stream_t {
     scheduled_actor* self;
     cow_string name;
@@ -496,10 +506,69 @@ public:
     return {this, cow_string{std::move(name)}, max_delay, max_items_per_batch};
   }
 
+  /// Returns a function object for passing it to @c compose.
   to_stream_t to_stream(cow_string name, timespan max_delay,
                         size_t max_items_per_batch) {
     return {this, std::move(name), max_delay, max_items_per_batch};
   }
+
+  /// Converts an @ref observable into a @ref stream to allow other actors to
+  /// consume its items.
+  /// @param name The human-readable name for this stream.
+  /// @param max_delay The maximum delay between emitting two batches.
+  /// @param max_items_per_batch The maximum amount of items per batch.
+  /// @param obs An observable sequence of items.
+  /// @returns a @ref stream that makes @p obs available to other actors.
+  template <class Observable>
+  flow::assert_scheduled_actor_hdr_t<
+    Observable, typed_stream<typename Observable::output_type>>
+  to_typed_stream(std::string name, timespan max_delay,
+                  size_t max_items_per_batch, Observable obs);
+
+  /// @copydoc to_stream
+  template <class Observable>
+  flow::assert_scheduled_actor_hdr_t<
+    Observable, typed_stream<typename Observable::output_type>>
+  to_typed_stream(cow_string name, timespan max_delay,
+                  size_t max_items_per_batch, Observable obs);
+
+  /// Utility class that converts an @ref observable to a @ref stream when
+  /// passed to @c compose.
+  struct to_typed_stream_t {
+    scheduled_actor* self;
+    cow_string name;
+    timespan max_delay;
+    size_t max_items_per_batch;
+    template <class Observable>
+    auto operator()(Observable&& what) {
+      return self->to_typed_stream(name, max_delay, max_items_per_batch,
+                                   std::forward<Observable>(what));
+    }
+  };
+
+  /// Returns a function object for passing it to @c compose.
+  to_typed_stream_t to_typed_stream(std::string name, timespan max_delay,
+                                    size_t max_items_per_batch) {
+    return {this, cow_string{std::move(name)}, max_delay, max_items_per_batch};
+  }
+
+  /// Returns a function object for passing it to @c compose.
+  to_typed_stream_t to_typed_stream(cow_string name, timespan max_delay,
+                                    size_t max_items_per_batch) {
+    return {this, std::move(name), max_delay, max_items_per_batch};
+  }
+
+  /// Lifts a statically typed stream into an @ref observable.
+  /// @param what The input stream.
+  /// @param buf_capacity Upper bound for caching inputs from the stream.
+  /// @param demand_threshold Minimal free buffer capacity before signaling
+  ///                         demand upstream.
+  /// @note Both @p buf_capacity and @p demand_threshold are considered hints.
+  ///       The actor may increase (or decrease) the effective settings
+  ///       depending on the amount of messages per batch or other factors.
+  template <class T>
+  flow::assert_scheduled_actor_hdr_t<flow::observable<T>>
+  observe(typed_stream<T> what, size_t buf_capacity, size_t demand_threshold);
 
   /// Lifts a stream into an @ref observable.
   /// @param what The input stream.

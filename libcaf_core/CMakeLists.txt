@@ -362,6 +362,7 @@ caf_add_component(
     typed_message_view
     typed_response_promise
     typed_spawn
+    typed_stream
     unit
     unordered_flat_map
     uri
