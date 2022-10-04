@@ -29,6 +29,15 @@ auto ls(T x, Ts... xs) {
   return std::vector<T>{x, xs...};
 }
 
+// Note: last is inclusive.
+template <class T>
+auto ls_range(T first, T last) {
+  auto result = std::vector<T>{};
+  for (; first <= last; ++first)
+    result.push_back(first);
+  return result;
+}
+
 } // namespace
 
 BEGIN_FIXTURE_SCOPE(fixture)
@@ -108,6 +117,30 @@ SCENARIO("prefix_and_tail splits off initial elements") {
         ctx->run();
         CHECK_EQ(flat_map_calls, 1);
         CHECK_EQ(snk->buf, ls(3, 4, 5, 6, 7, 8));
+        CHECK_EQ(snk->state, flow::observer_state::completed);
+        CHECK_EQ(snk->err, error{});
+      }
+    }
+  }
+  GIVEN("a generation with 256 values") {
+    WHEN("calling prefix_and_tail(7)") {
+      THEN("the observer receives the first 7 elements plus remainder") {
+        auto snk = flow::make_auto_observer<int>();
+        auto flat_map_calls = 0;
+        ctx->make_observable()
+          .iota(1)
+          .take(256)
+          .prefix_and_tail(7)
+          .flat_map([&](const tuple_t& x) {
+            ++flat_map_calls;
+            auto& [prefix, tail] = x.data();
+            CHECK_EQ(prefix, ls(1, 2, 3, 4, 5, 6, 7));
+            return tail;
+          })
+          .subscribe(snk->as_observer());
+        ctx->run();
+        CHECK_EQ(flat_map_calls, 1);
+        CHECK_EQ(snk->buf, ls_range(8, 256));
         CHECK_EQ(snk->state, flow::observer_state::completed);
         CHECK_EQ(snk->err, error{});
       }
