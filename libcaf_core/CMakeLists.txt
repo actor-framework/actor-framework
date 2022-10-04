@@ -132,6 +132,7 @@ caf_add_component(
     src/detail/private_thread_pool.cpp
     src/detail/ripemd_160.cpp
     src/detail/set_thread_name.cpp
+    src/detail/stream_bridge.cpp
     src/detail/stringification_inspector.cpp
     src/detail/sync_request_bouncer.cpp
     src/detail/test_actor_clock.cpp
@@ -189,6 +190,7 @@ caf_add_component(
     src/serializer.cpp
     src/settings.cpp
     src/skip.cpp
+    src/stream.cpp
     src/string_algorithms.cpp
     src/string_view.cpp
     src/telemetry/collector/prometheus.cpp
@@ -343,6 +345,7 @@ caf_add_component(
     simple_timeout
     span
     stateful_actor
+    stream
     string_algorithms
     string_view
     telemetry.collector.prometheus
@@ -359,6 +362,7 @@ caf_add_component(
     typed_message_view
     typed_response_promise
     typed_spawn
+    typed_stream
     unit
     unordered_flat_map
     uri

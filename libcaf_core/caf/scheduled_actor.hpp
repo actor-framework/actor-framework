@@ -17,13 +17,18 @@
 
 #include "caf/action.hpp"
 #include "caf/actor_traits.hpp"
+#include "caf/async/fwd.hpp"
+#include "caf/cow_string.hpp"
 #include "caf/detail/behavior_stack.hpp"
 #include "caf/detail/core_export.hpp"
+#include "caf/detail/stream_bridge.hpp"
 #include "caf/disposable.hpp"
 #include "caf/error.hpp"
 #include "caf/extend.hpp"
 #include "caf/flow/coordinator.hpp"
 #include "caf/flow/fwd.hpp"
+#include "caf/flow/item_publisher.hpp"
+#include "caf/flow/observer.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive/drr_cached_queue.hpp"
 #include "caf/intrusive/drr_queue.hpp"
@@ -75,6 +80,10 @@ class CAF_CORE_EXPORT scheduled_actor : public local_actor,
                                         public flow::coordinator {
 public:
   // -- friends ----------------------------------------------------------------
+
+  friend class detail::stream_bridge;
+
+  friend class detail::stream_bridge_sub;
 
   template <class, class>
   friend class response_handle;
@@ -128,6 +137,13 @@ public:
                                                 urgent_queue, normal_queue>;
   };
 
+  using batch_op_ptr = intrusive_ptr<flow::op::base<async::batch>>;
+
+  struct stream_source_state {
+    batch_op_ptr obs;
+    size_t max_items_per_batch;
+  };
+
   static constexpr size_t urgent_queue_index = 0;
 
   static constexpr size_t normal_queue_index = 1;
@@ -160,6 +176,19 @@ public:
   /// Function object for handling exit messages.
   using exception_handler = std::function<error(pointer, std::exception_ptr&)>;
 #endif // CAF_ENABLE_EXCEPTIONS
+
+  using batch_publisher = flow::item_publisher<async::batch>;
+
+  class batch_forwarder : public ref_counted {
+  public:
+    ~batch_forwarder() override;
+
+    virtual void cancel() = 0;
+
+    virtual void request(size_t num_items) = 0;
+  };
+
+  using batch_forwarder_ptr = intrusive_ptr<batch_forwarder>;
 
   // -- static helper functions ------------------------------------------------
 
@@ -439,6 +468,125 @@ public:
 
   void watch(disposable what) override;
 
+  /// Converts an @ref observable into a @ref stream to allow other actors to
+  /// consume its items.
+  /// @param name The human-readable name for this stream.
+  /// @param max_delay The maximum delay between emitting two batches.
+  /// @param max_items_per_batch The maximum amount of items per batch.
+  /// @param obs An observable sequence of items.
+  /// @returns a @ref stream that makes @p obs available to other actors.
+  template <class Observable>
+  flow::assert_scheduled_actor_hdr_t<Observable, stream>
+  to_stream(std::string name, timespan max_delay, size_t max_items_per_batch,
+            Observable&& obs);
+
+  /// @copydoc to_stream
+  template <class Observable>
+  flow::assert_scheduled_actor_hdr_t<Observable, stream>
+  to_stream(cow_string name, timespan max_delay, size_t max_items_per_batch,
+            Observable&& obs);
+
+  /// Utility class that converts an @ref observable to a @ref stream when
+  /// passed to @c compose.
+  struct to_stream_t {
+    scheduled_actor* self;
+    cow_string name;
+    timespan max_delay;
+    size_t max_items_per_batch;
+    template <class Observable>
+    auto operator()(Observable&& what) {
+      return self->to_stream(name, max_delay, max_items_per_batch,
+                             std::forward<Observable>(what));
+    }
+  };
+
+  /// Returns a function object for passing it to @c compose.
+  to_stream_t to_stream(std::string name, timespan max_delay,
+                        size_t max_items_per_batch) {
+    return {this, cow_string{std::move(name)}, max_delay, max_items_per_batch};
+  }
+
+  /// Returns a function object for passing it to @c compose.
+  to_stream_t to_stream(cow_string name, timespan max_delay,
+                        size_t max_items_per_batch) {
+    return {this, std::move(name), max_delay, max_items_per_batch};
+  }
+
+  /// Converts an @ref observable into a @ref stream to allow other actors to
+  /// consume its items.
+  /// @param name The human-readable name for this stream.
+  /// @param max_delay The maximum delay between emitting two batches.
+  /// @param max_items_per_batch The maximum amount of items per batch.
+  /// @param obs An observable sequence of items.
+  /// @returns a @ref stream that makes @p obs available to other actors.
+  template <class Observable>
+  flow::assert_scheduled_actor_hdr_t<
+    Observable, typed_stream<typename Observable::output_type>>
+  to_typed_stream(std::string name, timespan max_delay,
+                  size_t max_items_per_batch, Observable obs);
+
+  /// @copydoc to_stream
+  template <class Observable>
+  flow::assert_scheduled_actor_hdr_t<
+    Observable, typed_stream<typename Observable::output_type>>
+  to_typed_stream(cow_string name, timespan max_delay,
+                  size_t max_items_per_batch, Observable obs);
+
+  /// Utility class that converts an @ref observable to a @ref stream when
+  /// passed to @c compose.
+  struct to_typed_stream_t {
+    scheduled_actor* self;
+    cow_string name;
+    timespan max_delay;
+    size_t max_items_per_batch;
+    template <class Observable>
+    auto operator()(Observable&& what) {
+      return self->to_typed_stream(name, max_delay, max_items_per_batch,
+                                   std::forward<Observable>(what));
+    }
+  };
+
+  /// Returns a function object for passing it to @c compose.
+  to_typed_stream_t to_typed_stream(std::string name, timespan max_delay,
+                                    size_t max_items_per_batch) {
+    return {this, cow_string{std::move(name)}, max_delay, max_items_per_batch};
+  }
+
+  /// Returns a function object for passing it to @c compose.
+  to_typed_stream_t to_typed_stream(cow_string name, timespan max_delay,
+                                    size_t max_items_per_batch) {
+    return {this, std::move(name), max_delay, max_items_per_batch};
+  }
+
+  /// Lifts a statically typed stream into an @ref observable.
+  /// @param what The input stream.
+  /// @param buf_capacity Upper bound for caching inputs from the stream.
+  /// @param demand_threshold Minimal free buffer capacity before signaling
+  ///                         demand upstream.
+  /// @note Both @p buf_capacity and @p demand_threshold are considered hints.
+  ///       The actor may increase (or decrease) the effective settings
+  ///       depending on the amount of messages per batch or other factors.
+  template <class T>
+  flow::assert_scheduled_actor_hdr_t<flow::observable<T>>
+  observe(typed_stream<T> what, size_t buf_capacity, size_t demand_threshold);
+
+  /// Lifts a stream into an @ref observable.
+  /// @param what The input stream.
+  /// @param buf_capacity Upper bound for caching inputs from the stream.
+  /// @param demand_threshold Minimal free buffer capacity before signaling
+  ///                         demand upstream.
+  /// @note Both @p buf_capacity and @p demand_threshold are considered hints.
+  ///       The actor may increase (or decrease) the effective settings
+  ///       depending on the amount of messages per batch or other factors.
+  template <class T>
+  flow::assert_scheduled_actor_hdr_t<flow::observable<T>>
+  observe_as(stream what, size_t buf_capacity, size_t demand_threshold);
+
+  /// Deregisters a local stream. After calling this function, other actors can
+  /// no longer access the flow that has been attached to the stream. Current
+  /// flows remain unaffected.
+  void deregister_stream(uint64_t stream_id);
+
   /// @cond PRIVATE
 
   // -- utility functions for invoking default handler -------------------------
@@ -518,7 +666,8 @@ public:
   /// @private
   bool alive() const noexcept {
     return !bhvr_stack_.empty() || !awaited_responses_.empty()
-           || !multiplexed_responses_.empty() || !watched_disposables_.empty();
+           || !multiplexed_responses_.empty() || !watched_disposables_.empty()
+           || !stream_sources_.empty();
   }
 
   /// Runs all pending actions.
@@ -610,12 +759,46 @@ private:
   /// Removes any watched object that became disposed since the last update.
   void update_watched_disposables();
 
+  /// Implementation detail for observe_as.
+  flow::observable<async::batch> do_observe(stream what, size_t buf_capacity,
+                                            size_t request_threshold);
+
+  /// Implementation detail for to_stream.
+  stream to_stream_impl(cow_string name, batch_op_ptr batch_op,
+                        type_id_t item_type, size_t max_items_per_batch);
+
+  /// Registers a stream bridge at the actor (callback for
+  /// detail::stream_bridge).
+  void register_flow_state(uint64_t local_id,
+                           detail::stream_bridge_sub_ptr sub);
+
+  /// Drops the state for a stream bridge (callback for
+  /// detail::stream_bridge_sub).
+  void drop_flow_state(uint64_t local_id);
+
+  /// Tries to emit more items on a stream bridge (callback for
+  /// detail::stream_bridge_sub).
+  void try_push_stream(uint64_t local_id);
+
   /// Stores actions that the actor executes after processing the current
   /// message.
   std::vector<action> actions_;
 
-  /// Stores resources that block the actor from terminating.
+  /// Stores ongoing activities such as flows that block the actor from
+  /// terminating.
   std::vector<disposable> watched_disposables_;
+
+  /// Stores open streams that other actors may access. An actor is considered
+  /// alive as long as it has open streams.
+  std::unordered_map<uint64_t, stream_source_state> stream_sources_;
+
+  /// Maps the ID of outgoing streams to local forwarder objects to allow the
+  /// actor to signal demand from the receiver to the flow.
+  std::unordered_map<uint64_t, batch_forwarder_ptr> stream_subs_;
+
+  /// Maps the ID of incoming stream batches to local state that allows the
+  /// actor to push received batches into the local flow.
+  std::unordered_map<uint64_t, detail::stream_bridge_sub_ptr> stream_bridges_;
 };
 
 } // namespace caf

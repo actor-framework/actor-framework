@@ -125,8 +125,8 @@ struct assert_scheduled_actor_hdr {
                 "include 'caf/scheduled_actor/flow.hpp' for this method");
 };
 
-template <class T>
+template <class T, class V = T>
 using assert_scheduled_actor_hdr_t
-  = std::enable_if_t<assert_scheduled_actor_hdr<T>::value, T>;
+  = std::enable_if_t<assert_scheduled_actor_hdr<T>::value, V>;
 
 } // namespace caf::flow

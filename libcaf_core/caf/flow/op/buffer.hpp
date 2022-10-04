@@ -84,9 +84,9 @@ public:
   void fwd_on_subscribe(buffer_input_t, subscription sub) {
     if (!value_sub_ && out_) {
       value_sub_ = std::move(sub);
-      if (pending_demand_ > 0) {
-        value_sub_.request(pending_demand_);
-        pending_demand_ = 0;
+      if (demand_ > 0) {
+        in_flight_ += max_buf_size_;
+        value_sub_.request(max_buf_size_);
       }
     } else {
       sub.dispose();
@@ -94,7 +94,8 @@ public:
   }
 
   void fwd_on_complete(buffer_input_t) {
-    CAF_ASSERT(value_sub_.valid());
+    if (!value_sub_.valid())
+      return;
     CAF_ASSERT(out_.valid());
     value_sub_ = nullptr;
     if (!buf_.empty())
@@ -113,6 +114,8 @@ public:
   }
 
   void fwd_on_next(buffer_input_t, const input_type& item) {
+    CAF_ASSERT(in_flight_ > 0);
+    --in_flight_;
     buf_.push_back(item);
     if (buf_.size() == max_buf_size_)
       do_emit();
@@ -163,17 +166,27 @@ public:
 
   void request(size_t n) override {
     CAF_ASSERT(out_.valid());
-    if (value_sub_)
-      value_sub_.request(n);
-    else
-      pending_demand_ += n;
+    demand_ += n;
+    if (value_sub_ && pending() == 0) {
+      in_flight_ = max_buf_size_;
+      value_sub_.request(max_buf_size_);
+    }
   }
 
 private:
+  size_t pending() const noexcept {
+    return buf_.size() + in_flight_;
+  }
+
   void do_emit() {
     Trait f;
     out_.on_next(f(buf_));
+    auto buffered = buf_.size();
     buf_.clear();
+    if (value_sub_ && buffered > 0) {
+      in_flight_ += buffered;
+      value_sub_.request(buffered);
+    }
   }
 
   void do_dispose() {
@@ -210,6 +223,9 @@ private:
   /// Stores the maximum buffer size before forcing a batch.
   size_t max_buf_size_;
 
+  /// Keeps track of how many items we have already requested.
+  size_t in_flight_ = 0;
+
   /// Stores the elements until we can emit them.
   std::vector<input_type> buf_;
 
@@ -222,8 +238,8 @@ private:
   /// Our subscription for the control tokens.
   subscription control_sub_;
 
-  ///
-  size_t pending_demand_ = 0;
+  /// Demand signaled by the observer.
+  size_t demand_ = 0;
 };
 
 template <class Trait>

@@ -1,9 +1,12 @@
+#pragma once
+
 #include "caf/cow_vector.hpp"
 #include "caf/fwd.hpp"
 #include "caf/result.hpp"
 #include "caf/test/bdd_dsl.hpp"
 #include "caf/type_id.hpp"
 #include "caf/typed_actor.hpp"
+#include "caf/typed_stream.hpp"
 
 #include <cstdint>
 #include <numeric>
@@ -420,6 +423,7 @@ bool inspect(Inspector& f, phone_book& x) {
 CAF_BEGIN_TYPE_ID_BLOCK(core_test, caf::first_custom_type_id)
 
   ADD_TYPE_ID((caf::cow_vector<int>) )
+  ADD_TYPE_ID((caf::typed_stream<int32_t>) )
   ADD_TYPE_ID((circle))
   ADD_TYPE_ID((dummy_enum))
   ADD_TYPE_ID((dummy_enum_class))

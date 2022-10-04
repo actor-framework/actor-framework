@@ -13,7 +13,11 @@
 #include "caf/detail/meta_object.hpp"
 #include "caf/detail/private_thread.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
+#include "caf/flow/observable.hpp"
+#include "caf/flow/observable_builder.hpp"
+#include "caf/flow/op/mcast.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
+#include "caf/stream.hpp"
 
 using namespace std::string_literals;
 
@@ -107,6 +111,10 @@ error scheduled_actor::default_exception_handler(local_actor* ptr,
 #endif // CAF_ENABLE_EXCEPTIONS
 
 // -- constructors and destructors ---------------------------------------------
+
+scheduled_actor::batch_forwarder::~batch_forwarder() {
+  // nop
+}
 
 scheduled_actor::scheduled_actor(actor_config& cfg)
   : super(cfg),
@@ -381,6 +389,83 @@ void scheduled_actor::set_receive_timeout() {
 
 // -- caf::flow API ------------------------------------------------------------
 
+namespace {
+
+// Forwards batches from a local flow to another actor.
+class batch_forwarder_impl : public scheduled_actor::batch_forwarder,
+                             public flow::observer_impl<async::batch> {
+public:
+  batch_forwarder_impl(scheduled_actor* self, actor sink_hdl,
+                       uint64_t sink_flow_id)
+    : self_(self), sink_hdl_(sink_hdl), sink_flow_id_(sink_flow_id) {
+    // nop
+  }
+
+  void cancel() override {
+    if (sub_) {
+      sub_.dispose();
+      sink_hdl_ = nullptr;
+      sub_ = nullptr;
+    }
+  }
+
+  void request(size_t num_items) override {
+    if (sub_)
+      sub_.request(num_items);
+  }
+
+  void ref_coordinated() const noexcept final {
+    ref();
+  }
+
+  void deref_coordinated() const noexcept final {
+    deref();
+  }
+
+  bool subscribed() const noexcept {
+    return sub_.valid();
+  }
+
+  void on_next(const async::batch& content) override {
+    unsafe_send_as(self_, sink_hdl_, stream_batch_msg{sink_flow_id_, content});
+  }
+
+  void on_error(const error& err) override {
+    unsafe_send_as(self_, sink_hdl_, stream_abort_msg{sink_flow_id_, err});
+    sink_hdl_ = nullptr;
+    sub_ = nullptr;
+  }
+
+  void on_complete() override {
+    unsafe_send_as(self_, sink_hdl_, stream_close_msg{sink_flow_id_});
+    sink_hdl_ = nullptr;
+    sub_ = nullptr;
+  }
+
+  void on_subscribe(flow::subscription sub) override {
+    if (!sub_ && sink_hdl_)
+      sub_ = sub;
+    else
+      sub.dispose();
+  }
+
+  friend void intrusive_ptr_add_ref(const batch_forwarder_impl* ptr) noexcept {
+    ptr->ref();
+  }
+
+  friend void intrusive_ptr_release(const batch_forwarder_impl* ptr) noexcept {
+    ptr->deref();
+  }
+
+private:
+  scheduled_actor* self_;
+  actor sink_hdl_;
+  uint64_t sink_flow_id_;
+  flow::subscription sub_;
+};
+
+} // namespace
+
 flow::coordinator::steady_time_point scheduled_actor::steady_time() {
   return clock().now();
 }
@@ -441,41 +526,110 @@ scheduled_actor::categorize(mailbox_element& x) {
     }
     return message_category::internal;
   }
-  if (auto view = make_typed_message_view<exit_msg>(content)) {
-    auto& em = get<0>(view);
-    // make sure to get rid of attachables if they're no longer needed
-    unlink_from(em.source);
-    // exit_reason::kill is always fatal
-    if (em.reason == exit_reason::kill) {
-      quit(std::move(em.reason));
-    } else {
-      call_handler(exit_handler_, this, em);
+  if (content.size() != 1)
+    return message_category::ordinary;
+  switch (content.type_at(0)) {
+    case type_id_v<exit_msg>: {
+      auto& em = content.get_mutable_as<exit_msg>(0);
+      // make sure to get rid of attachables if they're no longer needed
+      unlink_from(em.source);
+      // exit_reason::kill is always fatal
+      if (em.reason == exit_reason::kill) {
+        quit(std::move(em.reason));
+      } else {
+        call_handler(exit_handler_, this, em);
+      }
+      return message_category::internal;
     }
-    return message_category::internal;
+    case type_id_v<down_msg>: {
+      auto& dm = content.get_mutable_as<down_msg>(0);
+      call_handler(down_handler_, this, dm);
+      return message_category::internal;
+    }
+    case type_id_v<action>: {
+      auto ptr = content.get_as<action>(0).ptr();
+      CAF_ASSERT(ptr != nullptr);
+      CAF_LOG_DEBUG("run action");
+      ptr->run();
+      return message_category::internal;
+    }
+    case type_id_v<node_down_msg>: {
+      auto& dm = content.get_mutable_as<node_down_msg>(0);
+      call_handler(node_down_handler_, this, dm);
+      return message_category::internal;
+    }
+    case type_id_v<error>: {
+      auto& err = content.get_mutable_as<error>(0);
+      call_handler(error_handler_, this, err);
+      return message_category::internal;
+    }
+    case type_id_v<stream_open_msg>: {
+      auto& [str_id, ptr, sink_id] = content.get_as<stream_open_msg>(0);
+      auto sink_hdl = actor_cast<actor>(ptr);
+      if (auto i = stream_sources_.find(str_id); i != stream_sources_.end()) {
+        auto fwd = make_counted<batch_forwarder_impl>(this, sink_hdl, sink_id);
+        auto sub = i->second.obs->subscribe(flow::observer<async::batch>{fwd});
+        if (fwd->subscribed()) {
+          auto flow_id = new_u64_id();
+          stream_subs_.emplace(flow_id, std::move(fwd));
+          auto mipb = static_cast<uint32_t>(i->second.max_items_per_batch);
+          unsafe_send_as(this, sink_hdl,
+                         stream_ack_msg{ctrl(), sink_id, flow_id, mipb});
+        } else {
+          CAF_LOG_ERROR("failed to subscribe a batch forwarder");
+          sub.dispose();
+        }
+      }
+      return message_category::internal;
+    }
+    case type_id_v<stream_demand_msg>: {
+      auto [sub_id, new_demand] = content.get_as<stream_demand_msg>(0);
+      if (auto i = stream_subs_.find(sub_id); i != stream_subs_.end()) {
+        i->second->request(new_demand);
+      }
+      return message_category::internal;
+    }
+    case type_id_v<stream_cancel_msg>: {
+      auto [sub_id] = content.get_as<stream_cancel_msg>(0);
+      if (auto i = stream_subs_.find(sub_id); i != stream_subs_.end()) {
+        i->second->cancel();
+        stream_subs_.erase(i);
+      }
+      return message_category::internal;
+    }
+    case type_id_v<stream_ack_msg>: {
+      auto [ptr, sink_id, src_id, mipb] = content.get_as<stream_ack_msg>(0);
+      if (auto i = stream_bridges_.find(sink_id); i != stream_bridges_.end()) {
+        i->second->ack(src_id, mipb);
+      }
+      return message_category::internal;
+    }
+    case type_id_v<stream_batch_msg>: {
+      const auto& [sink_id, xs] = content.get_as<stream_batch_msg>(0);
+      if (auto i = stream_bridges_.find(sink_id); i != stream_bridges_.end()) {
+        i->second->push(xs);
+      }
+      return message_category::internal;
+    }
+    case type_id_v<stream_close_msg>: {
+      auto [sink_id] = content.get_as<stream_close_msg>(0);
+      if (auto i = stream_bridges_.find(sink_id); i != stream_bridges_.end()) {
+        i->second->drop();
+        stream_bridges_.erase(i);
+      }
+      return message_category::internal;
+    }
+    case type_id_v<stream_abort_msg>: {
+      const auto& [sink_id, reason] = content.get_as<stream_abort_msg>(0);
+      if (auto i = stream_bridges_.find(sink_id); i != stream_bridges_.end()) {
+        i->second->drop(reason);
+        stream_bridges_.erase(i);
+      }
+      return message_category::internal;
+    }
+    default:
+      return message_category::ordinary;
   }
-  if (auto view = make_typed_message_view<down_msg>(content)) {
-    auto& dm = get<0>(view);
-    call_handler(down_handler_, this, dm);
-    return message_category::internal;
-  }
-  if (auto view = make_typed_message_view<action>(content)) {
-    auto ptr = get<0>(view).ptr();
-    CAF_ASSERT(ptr != nullptr);
-    CAF_LOG_DEBUG("run action");
-    ptr->run();
-    return message_category::internal;
-  }
-  if (auto view = make_typed_message_view<node_down_msg>(content)) {
-    auto& dm = get<0>(view);
-    call_handler(node_down_handler_, this, dm);
-    return message_category::internal;
-  }
-  if (auto view = make_typed_message_view<error>(content)) {
-    auto& err = get<0>(view);
-    call_handler(error_handler_, this, err);
-    return message_category::internal;
-  }
-  return message_category::ordinary;
 }
 
 invoke_message_result scheduled_actor::consume(mailbox_element& x) {
@@ -730,12 +884,40 @@ disposable scheduled_actor::run_delayed(timespan delay, action what) {
                           strong_actor_ptr{ctrl()});
 }
 
-// -- scheduling of caf::flow events -------------------------------------------
+// -- caf::flow bindings -------------------------------------------------------
+
+stream scheduled_actor::to_stream_impl(cow_string name, batch_op_ptr batch_op,
+                                       type_id_t item_type,
+                                       size_t max_items_per_batch) {
+  CAF_LOG_TRACE(CAF_ARG(name)
+                << CAF_ARG2("item_type", query_type_name(item_type)));
+  auto local_id = new_u64_id();
+  stream_sources_.emplace(local_id, stream_source_state{std::move(batch_op),
+                                                        max_items_per_batch});
+  return {ctrl(), item_type, std::move(name), local_id};
+}
+
+flow::observable<async::batch>
+scheduled_actor::do_observe(stream what, size_t buf_capacity,
+                            size_t request_threshold) {
+  CAF_LOG_TRACE(CAF_ARG(what)
+                << CAF_ARG(buf_capacity) << CAF_ARG(request_threshold));
+  if (const auto& src = what.source()) {
+    using impl_t = detail::stream_bridge;
+    return flow::make_observable<impl_t>(this, src, what.id(), buf_capacity,
+                                         request_threshold);
+  }
+  return make_observable().fail<async::batch>(make_error(sec::invalid_stream));
+}
 
 void scheduled_actor::watch(disposable obj) {
   CAF_ASSERT(obj.valid());
   watched_disposables_.emplace_back(std::move(obj));
   CAF_LOG_DEBUG("now watching" << watched_disposables_.size() << "disposables");
+}
+
+void scheduled_actor::deregister_stream(uint64_t stream_id) {
+  stream_sources_.erase(stream_id);
 }
 
 void scheduled_actor::run_actions() {
@@ -755,6 +937,21 @@ void scheduled_actor::update_watched_disposables() {
   [[maybe_unused]] auto n = disposable::erase_disposed(watched_disposables_);
   CAF_LOG_DEBUG_IF(n > 0, "now watching" << watched_disposables_.size()
                                          << "disposables");
+}
+
+void scheduled_actor::register_flow_state(uint64_t local_id,
+                                          detail::stream_bridge_sub_ptr sub) {
+  stream_bridges_.emplace(local_id, std::move(sub));
+}
+
+void scheduled_actor::drop_flow_state(uint64_t local_id) {
+  stream_bridges_.erase(local_id);
+}
+
+void scheduled_actor::try_push_stream(uint64_t local_id) {
+  CAF_LOG_TRACE(CAF_ARG(local_id));
+  if (auto i = stream_bridges_.find(local_id); i != stream_bridges_.end())
+    i->second->push();
 }
 
 } // namespace caf
