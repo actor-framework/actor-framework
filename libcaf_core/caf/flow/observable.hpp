@@ -26,7 +26,7 @@
 #include "caf/flow/op/interval.hpp"
 #include "caf/flow/op/merge.hpp"
 #include "caf/flow/op/never.hpp"
-#include "caf/flow/op/prefetch.hpp"
+#include "caf/flow/op/prefix_and_tail.hpp"
 #include "caf/flow/op/publish.hpp"
 #include "caf/flow/step/all.hpp"
 #include "caf/flow/subscription.hpp"
@@ -681,33 +681,19 @@ auto observable<T>::concat_map(F f) {
 template <class T>
 observable<cow_tuple<cow_vector<T>, observable<T>>>
 observable<T>::prefix_and_tail(size_t n) {
-  using vector_t = cow_vector<T>;
-  CAF_ASSERT(n > 0);
-  auto do_prefetch = [](auto in) {
-    auto ptr = op::prefetch<T>::apply(std::move(in).as_observable().pimpl());
-    return observable<T>{std::move(ptr)};
-  };
-  auto split = share(2);
-  auto tail = split.skip(n).compose(do_prefetch);
-  return split //
-    .take(n)
-    .to_vector()
-    .filter([n](const vector_t& xs) { return xs.size() == n; })
-    .map([tail](const vector_t& xs) { return make_cow_tuple(xs, tail); })
-    .as_observable();
+  using impl_t = op::prefix_and_tail<T>;
+  return make_observable<impl_t>(ctx(), as_observable(), n);
 }
 
 template <class T>
 observable<cow_tuple<T, observable<T>>> observable<T>::head_and_tail() {
-  auto do_prefetch = [](auto in) {
-    auto ptr = op::prefetch<T>::apply(std::move(in).as_observable().pimpl());
-    return observable<T>{std::move(ptr)};
-  };
-  auto split = share(2);
-  auto tail = split.skip(1).compose(do_prefetch);
-  return split //
-    .take(1)
-    .map([tail](const T& x) { return make_cow_tuple(x, tail); })
+  using prefix_tuple_t = cow_tuple<cow_vector<T>, observable<T>>;
+  return prefix_and_tail(1)
+    .map([](const prefix_tuple_t& tup) {
+      auto& [vec, obs] = tup.data();
+      CAF_ASSERT(vec.size() == 1);
+      return make_cow_tuple(vec.front(), obs);
+    })
     .as_observable();
 }
 

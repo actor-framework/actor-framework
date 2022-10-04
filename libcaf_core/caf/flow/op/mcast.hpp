@@ -8,6 +8,7 @@
 #include "caf/flow/observer.hpp"
 #include "caf/flow/op/empty.hpp"
 #include "caf/flow/op/hot.hpp"
+#include "caf/flow/op/ucast.hpp"
 #include "caf/flow/subscription.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/make_counted.hpp"
@@ -20,114 +21,7 @@ namespace caf::flow::op {
 
 /// State shared between one multicast operator and one subscribed observer.
 template <class T>
-class mcast_sub_state : public detail::plain_ref_counted {
-public:
-  friend void intrusive_ptr_add_ref(const mcast_sub_state* ptr) noexcept {
-    ptr->ref();
-  }
-
-  friend void intrusive_ptr_release(const mcast_sub_state* ptr) noexcept {
-    ptr->deref();
-  }
-
-  mcast_sub_state(coordinator* ctx, observer<T> out)
-    : ctx(ctx), out(std::move(out)) {
-    // nop
-  }
-
-  coordinator* ctx;
-  std::deque<T> buf;
-  size_t demand = 0;
-  observer<T> out;
-  bool disposed = false;
-  bool closed = false;
-  bool running = false;
-  error err;
-
-  action when_disposed;
-  action when_consumed_some;
-
-  void push(const T& item) {
-    if (disposed) {
-      // nop
-    } else if (demand > 0 && !running) {
-      CAF_ASSERT(out);
-      CAF_ASSERT(buf.empty());
-      --demand;
-      out.on_next(item);
-      if (when_consumed_some)
-        ctx->delay(when_consumed_some);
-    } else {
-      buf.push_back(item);
-    }
-  }
-
-  void close() {
-    if (!disposed) {
-      closed = true;
-      if (!running && buf.empty()) {
-        disposed = true;
-        out.on_complete();
-        out = nullptr;
-        when_disposed = nullptr;
-        when_consumed_some = nullptr;
-      }
-    }
-  }
-
-  void abort(const error& reason) {
-    if (!disposed && !err) {
-      closed = true;
-      err = reason;
-      if (!running && buf.empty()) {
-        disposed = true;
-        out.on_error(reason);
-        out = nullptr;
-        when_disposed = nullptr;
-        when_consumed_some = nullptr;
-      }
-    }
-  }
-
-  void do_dispose() {
-    if (out) {
-      out.on_complete();
-      out = nullptr;
-    }
-    if (when_disposed) {
-      ctx->delay(std::move(when_disposed));
-    }
-    if (when_consumed_some) {
-      when_consumed_some.dispose();
-      when_consumed_some = nullptr;
-    }
-    buf.clear();
-    demand = 0;
-    disposed = true;
-  }
-
-  void do_run() {
-    auto guard = detail::make_scope_guard([this] { running = false; });
-    if (!disposed) {
-      auto got_some = demand > 0 && !buf.empty();
-      for (bool run = got_some; run; run = demand > 0 && !buf.empty()) {
-        out.on_next(buf.front());
-        buf.pop_front();
-        --demand;
-      }
-      if (buf.empty() && closed) {
-        if (err)
-          out.on_error(err);
-        else
-          out.on_complete();
-        out = nullptr;
-        do_dispose();
-      } else if (got_some && when_consumed_some) {
-        ctx->delay(when_consumed_some);
-      }
-    }
-  }
-};
+using mcast_sub_state = ucast_sub_state<T>;
 
 template <class T>
 using mcast_sub_state_ptr = intrusive_ptr<mcast_sub_state<T>>;
