@@ -80,7 +80,7 @@ BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(put) {
   put(x, "foo", "bar");
-  put(x, "logger.console", "none");
+  put(x, "logger.console", config_value{"none"});
   put(x, "one.two.three", "four");
   CHECK_EQ(x.size(), 3u);
   CHECK(x.contains("foo"));
@@ -192,6 +192,17 @@ SCENARIO("put_missing normalizes 'global' suffixes") {
       }
     }
   }
+}
+
+TEST_CASE("put and put_missing decomposes user-defined types") {
+  settings uut;
+  put(uut, "dummy", dummy_struct{42, "foo"});
+  CHECK_EQ(get_as<int>(uut, "dummy.a"), 42);
+  CHECK_EQ(get_as<std::string>(uut, "dummy.b"), "foo"s);
+  uut.clear();
+  put_missing(uut, "dummy", dummy_struct{23, "bar"});
+  CHECK_EQ(get_as<int>(uut, "dummy.a"), 23);
+  CHECK_EQ(get_as<std::string>(uut, "dummy.b"), "bar"s);
 }
 
 END_FIXTURE_SCOPE()

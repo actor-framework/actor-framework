@@ -93,13 +93,15 @@ CAF_CORE_EXPORT config_value& put_impl(settings& dict, std::string_view name,
                                        config_value& value);
 
 /// Converts `value` to a `config_value` and assigns it to `key`.
-/// @param dict Dictionary of key-value pairs.
+/// @param xs Dictionary of key-value pairs.
 /// @param key Human-readable nested keys in the form `category.key`.
 /// @param value New value for given `key`.
 template <class T>
-config_value& put(settings& dict, std::string_view key, T&& value) {
-  config_value tmp{std::forward<T>(value)};
-  return put_impl(dict, key, tmp);
+config_value& put(settings& xs, std::string_view key, T&& value) {
+  config_value tmp;
+  if (auto err = tmp.assign(std::forward<T>(value)); err)
+    tmp = none;
+  return put_impl(xs, key, tmp);
 }
 
 /// Converts `value` to a `config_value` and assigns it to `key` unless `xs`
@@ -111,8 +113,9 @@ template <class T>
 void put_missing(settings& xs, std::string_view key, T&& value) {
   if (get_if(&xs, key) != nullptr)
     return;
-  config_value tmp{std::forward<T>(value)};
-  put_impl(xs, key, tmp);
+  config_value tmp;
+  if (auto err = tmp.assign(std::forward<T>(value)); !err)
+    put_impl(xs, key, tmp);
 }
 
 /// Inserts a new list named `name` into the dictionary `xs` and returns
