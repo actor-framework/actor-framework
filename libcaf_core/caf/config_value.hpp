@@ -227,16 +227,25 @@ public:
   }
 
   template <class T>
-  error assign(const T& x) {
-    if constexpr (detail::is_config_value_type_v<T>) {
-      data_ = x;
+  error assign(T&& x) {
+    using val_t = std::decay_t<T>;
+    if constexpr (std::is_convertible_v<val_t, const char*>) {
+      data_ = std::string{x};
+      return {};
+    } else if constexpr (std::is_same_v<val_t, config_value>) {
+      if constexpr (std::is_rvalue_reference_v<T&&>)
+        data_ = std::move(x.data_);
+      else
+        data_ = x.data_;
+      return {};
+    } else if constexpr (detail::is_config_value_type_v<val_t>) {
+      data_ = std::forward<T>(x);
       return {};
     } else {
       config_value_writer writer{this};
       if (writer.apply(x))
         return {};
-      else
-        return {writer.move_error()};
+      return {writer.move_error()};
     }
   }
 
