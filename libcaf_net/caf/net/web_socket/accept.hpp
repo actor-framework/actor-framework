@@ -77,13 +77,29 @@ private:
   connector_pointer connector_;
 };
 
-template <class Transport, class Acceptor, class... Ts, class OnRequest>
-disposable ws_accept_impl(actor_system& sys, Acceptor acc,
-                          net::web_socket::acceptor_resource_t<Ts...> out,
-                          OnRequest on_request, const settings& cfg) {
+} // namespace caf::detail
+
+namespace caf::net::web_socket {
+
+/// Listens for incoming WebSocket connections.
+/// @param sys The host system.
+/// @param acc A connection acceptor such as @ref tcp_accept_socket or
+///            @ref ssl::acceptor.
+/// @param out A buffer resource that connects the server to a listener that
+///            processes the buffer pairs for each incoming connection.
+/// @param on_request Function object for accepting incoming requests.
+/// @param cfg Configuration parameters for the acceptor.
+template <class Acceptor, class... Ts, class OnRequest>
+disposable accept(actor_system& sys, Acceptor acc,
+                  acceptor_resource_t<Ts...> out, OnRequest on_request,
+                  const settings& cfg = {}) {
+  using transport_t = typename Acceptor::transport_type;
+  using request_t = request<default_trait, Ts...>;
+  static_assert(std::is_invocable_v<OnRequest, const settings&, request_t&>,
+                "invalid signature found for on_request");
   using trait_t = net::web_socket::default_trait;
-  using factory_t = detail::ws_conn_factory<Transport, trait_t>;
-  using conn_t = typename Transport::connection_handle;
+  using factory_t = detail::ws_conn_factory<transport_t, trait_t>;
+  using conn_t = typename transport_t::connection_handle;
   using impl_t = detail::accept_handler<Acceptor, conn_t>;
   using connector_t
     = net::web_socket::flow_connector_request_impl<OnRequest, trait_t, Ts...>;
@@ -103,46 +119,6 @@ disposable ws_accept_impl(actor_system& sys, Acceptor acc,
   } else {
     return {};
   }
-}
-
-} // namespace caf::detail
-
-namespace caf::net::web_socket {
-
-/// Listens for incoming WebSocket connections.
-/// @param sys The host system.
-/// @param fd An accept socket in listening mode, already bound to a port.
-/// @param out A buffer resource that connects the server to a listener that
-///            processes the buffer pairs for each incoming connection.
-/// @param on_request Function object for accepting incoming requests.
-/// @param cfg Configuration parameters for the acceptor.
-template <class... Ts, class OnRequest>
-disposable accept(actor_system& sys, tcp_accept_socket fd,
-                  acceptor_resource_t<Ts...> out, OnRequest on_request,
-                  const settings& cfg = {}) {
-  using request_t = request<default_trait, Ts...>;
-  static_assert(std::is_invocable_v<OnRequest, const settings&, request_t&>,
-                "invalid signature found for on_request");
-  return detail::ws_accept_impl<stream_transport>(sys, fd, out,
-                                                  std::move(on_request), cfg);
-}
-
-/// Listens for incoming WebSocket connections over TLS.
-/// @param sys The host system.
-/// @param acc An SSL connection acceptor with a socket that in listening mode.
-/// @param out A buffer resource that connects the server to a listener that
-///            processes the buffer pairs for each incoming connection.
-/// @param on_request Function object for accepting incoming requests.
-/// @param cfg Configuration parameters for the acceptor.
-template <class... Ts, class OnRequest>
-disposable accept(actor_system& sys, ssl::acceptor acc,
-                  acceptor_resource_t<Ts...> out, OnRequest on_request,
-                  const settings& cfg = {}) {
-  using request_t = request<default_trait, Ts...>;
-  static_assert(std::is_invocable_v<OnRequest, const settings&, request_t&>,
-                "invalid signature found for on_request");
-  return detail::ws_accept_impl<ssl::transport>(sys, std::move(acc), out,
-                                                std::move(on_request), cfg);
 }
 
 } // namespace caf::net::web_socket

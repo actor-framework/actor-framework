@@ -22,7 +22,7 @@ template <class Transport, class Connection>
 ws::connect_state
 ws_do_connect_impl(actor_system& sys, Connection conn, ws::handshake& hs) {
   using trait_t = ws::default_trait;
-  using connector_t = net::flow_connector_trivial_impl<trait_t>;
+  using connector_t = flow_connector_trivial_impl<trait_t>;
   auto [ws_pull, app_push] = async::make_spsc_buffer_resource<ws::frame>();
   auto [app_pull, ws_push] = async::make_spsc_buffer_resource<ws::frame>();
   auto mpx = sys.network_manager().mpx_ptr();

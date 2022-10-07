@@ -130,10 +130,12 @@ public:
 
   void fwd_on_next(input_key key, const observable<T>& item) {
     CAF_LOG_TRACE(CAF_ARG(key) << CAF_ARG(item));
-    if (auto ptr = get(key)) {
+    if (auto ptr = get(key))
       subscribe_to(item);
+    // Note: we need to double-check that the key still exists here, because
+    //       subscribe_on may result in an error (that nukes all inputs).
+    if (auto ptr = get(key))
       ptr->sub.request(1);
-    }
   }
 
   // -- implementation of subscription_impl ------------------------------------

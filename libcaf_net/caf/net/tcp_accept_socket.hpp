@@ -18,6 +18,8 @@ struct CAF_NET_EXPORT tcp_accept_socket : network_socket {
   using super = network_socket;
 
   using super::super;
+
+  using transport_type = stream_transport;
 };
 
 /// Creates a new TCP socket to accept connections on a given port.

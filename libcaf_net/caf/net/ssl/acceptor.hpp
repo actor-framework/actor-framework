@@ -15,6 +15,10 @@ namespace caf::net::ssl {
 /// Wraps an accept socket and an SSL context.
 class CAF_NET_EXPORT acceptor {
 public:
+  // -- member types -----------------------------------------------------------
+
+  using transport_type = transport;
+
   // -- constructors, destructors, and assignment operators --------------------
 
   acceptor() = delete;

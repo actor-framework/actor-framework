@@ -142,6 +142,9 @@ endif()
 add_net_example(http secure-time-server)
 add_net_example(http time-server)
 
+add_net_example(length_prefix_framing chat-client)
+add_net_example(length_prefix_framing chat-server)
+
 add_net_example(web_socket echo)
 add_net_example(web_socket hello-client)
 add_net_example(web_socket quote-server)
