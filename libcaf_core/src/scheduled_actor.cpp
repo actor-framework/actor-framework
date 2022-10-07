@@ -306,8 +306,16 @@ resumable::resume_result scheduled_actor::resume(execution_unit* ctx,
     // TODO: maybe replace '3' with configurable / adaptive value?
     static constexpr size_t quantum = 3;
     // Dispatch urgent and normal (asynchronous) messages.
-    get_urgent_queue().new_round(quantum * 3, handle_async);
-    get_normal_queue().new_round(quantum, handle_async);
+    auto& hq = get_urgent_queue();
+    auto& nq = get_normal_queue();
+    if (hq.new_round(quantum * 3, handle_async).consumed_items > 0) {
+      // After matching any message, all caches must be re-evaluated.
+      nq.flush_cache();
+    }
+    if (nq.new_round(quantum, handle_async).consumed_items > 0) {
+      // After matching any message, all caches must be re-evaluated.
+      hq.flush_cache();
+    }
     // Update metrics or try returning if the actor consumed nothing.
     auto delta = consumed - prev;
     CAF_LOG_DEBUG("consumed" << delta << "messages this round");
