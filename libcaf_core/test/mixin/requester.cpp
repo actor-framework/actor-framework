@@ -221,4 +221,117 @@ SCENARIO("request.await enforces a processing order") {
   }
 }
 
+// The GH-1299 worker processes int32 and string messages but alternates between
+// processing either type.
+
+using log_ptr = std::shared_ptr<std::string>;
+
+behavior gh1299_worker_bhvr1(caf::event_based_actor* self, log_ptr log);
+
+behavior gh1299_worker_bhvr2(caf::event_based_actor* self, log_ptr log);
+
+behavior gh1299_worker(caf::event_based_actor* self, log_ptr log) {
+  self->set_default_handler(skip);
+  return gh1299_worker_bhvr1(self, log);
+}
+
+behavior gh1299_worker_bhvr1(caf::event_based_actor* self, log_ptr log) {
+  return {
+    [self, log](int32_t x) {
+      *log += "int: ";
+      *log += std::to_string(x);
+      *log += '\n';
+      self->become(gh1299_worker_bhvr2(self, log));
+    },
+  };
+}
+
+behavior gh1299_worker_bhvr2(caf::event_based_actor* self, log_ptr log) {
+  return {
+    [self, log](const std::string& x) {
+      *log += "string: ";
+      *log += x;
+      *log += '\n';
+      self->become(gh1299_worker_bhvr1(self, log));
+    },
+  };
+}
+
+TEST_CASE("GH-1299 regression non-blocking") {
+  SUBTEST("HIGH (skip) -> NORMAL") {
+    auto log = std::make_shared<std::string>();
+    auto worker = sys.spawn(gh1299_worker, log);
+    scoped_actor self{sys};
+    self->send<message_priority::high>(worker, "hi there");
+    run();
+    self->send(worker, int32_t{123});
+    run();
+    CHECK_EQ(*log, "int: 123\nstring: hi there\n");
+  }
+  SUBTEST("NORMAL (skip) -> HIGH") {
+    auto log = std::make_shared<std::string>();
+    auto worker = sys.spawn(gh1299_worker, log);
+    scoped_actor self{sys};
+    self->send(worker, "hi there");
+    run();
+    self->send<message_priority::high>(worker, int32_t{123});
+    run();
+    CHECK_EQ(*log, "int: 123\nstring: hi there\n");
+  }
+}
+
+void gh1299_recv(scoped_actor& self, log_ptr log, int& tag) {
+  bool fin = false;
+  for (;;) {
+    if (tag == 0) {
+      self->receive(
+        [log, &tag](int32_t x) {
+          *log += "int: ";
+          *log += std::to_string(x);
+          *log += '\n';
+          tag = 1;
+        },
+        after(timespan{0}) >> [&fin] { fin = true; });
+      if (fin)
+        return;
+    } else {
+      self->receive(
+        [log, &tag](const std::string& x) {
+          *log += "string: ";
+          *log += x;
+          *log += '\n';
+          tag = 0;
+        },
+        after(timespan{0}) >> [&fin] { fin = true; });
+      if (fin)
+        return;
+    }
+  }
+}
+
+TEST_CASE("GH-1299 regression blocking") {
+  SUBTEST("HIGH (skip) -> NORMAL") {
+    auto log = std::make_shared<std::string>();
+    auto tag = 0;
+    scoped_actor sender{sys};
+    scoped_actor self{sys};
+    sender->send<message_priority::high>(self, "hi there");
+    gh1299_recv(self, log, tag);
+    sender->send(self, int32_t{123});
+    gh1299_recv(self, log, tag);
+    CHECK_EQ(*log, "int: 123\nstring: hi there\n");
+  }
+  SUBTEST("NORMAL (skip) -> HIGH") {
+    auto log = std::make_shared<std::string>();
+    auto tag = 0;
+    scoped_actor sender{sys};
+    scoped_actor self{sys};
+    sender->send(self, "hi there");
+    gh1299_recv(self, log, tag);
+    sender->send<message_priority::high>(self, int32_t{123});
+    gh1299_recv(self, log, tag);
+    CHECK_EQ(*log, "int: 123\nstring: hi there\n");
+  }
+}
+
 END_FIXTURE_SCOPE()
