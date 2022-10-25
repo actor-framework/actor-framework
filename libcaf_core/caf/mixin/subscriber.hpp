@@ -34,7 +34,7 @@ public:
     : Base(cfg, std::forward<Ts>(xs)...) {
     if (cfg.groups != nullptr)
       for (auto& grp : *cfg.groups)
-        join(grp);
+        join_impl(grp);
   }
 
   // -- overridden functions of monitorable_actor ------------------------------
@@ -51,27 +51,31 @@ public:
 
   /// Causes this actor to subscribe to the group `what`.
   /// The group will be unsubscribed if the actor finishes execution.
-  void join(const group& what) {
-    CAF_LOG_TRACE(CAF_ARG(what));
-    if (what == invalid_group)
-      return;
-    if (what->subscribe(this->ctrl()))
-      subscriptions_.emplace(what);
+  [[deprecated("use flows instead of groups")]] void join(const group& what) {
+    join_impl(what);
   }
 
   /// Causes this actor to leave the group `what`.
-  void leave(const group& what) {
+  [[deprecated("use flows instead of groups")]] void leave(const group& what) {
     CAF_LOG_TRACE(CAF_ARG(what));
     if (subscriptions_.erase(what) > 0)
       what->unsubscribe(this->ctrl());
   }
 
   /// Returns all subscribed groups.
-  const subscriptions& joined_groups() const {
+  [[deprecated("use flows instead of groups")]] const subscriptions&
+  joined_groups() const {
     return subscriptions_;
   }
 
 private:
+  void join_impl(const group& what) {
+    CAF_LOG_TRACE(CAF_ARG(what));
+    if (what == invalid_group)
+      return;
+    if (what->subscribe(this->ctrl()))
+      subscriptions_.emplace(what);
+  }
   // -- data members -----------------------------------------------------------
 
   /// Stores all subscribed groups.

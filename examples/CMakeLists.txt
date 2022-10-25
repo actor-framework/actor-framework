@@ -65,8 +65,6 @@ if(TARGET CAF::io)
   endfunction()
 
   # basic remoting
-  add_io_example(remoting group_chat)
-  add_io_example(remoting group_server)
   add_io_example(remoting remote_spawn)
   add_io_example(remoting distributed_calculator)
 
@@ -86,36 +84,6 @@ if(TARGET CAF::io)
     target_link_libraries(protobuf_broker
                           PRIVATE ${PROTOBUF_LIBRARIES} CAF::internal CAF::io)
     add_dependencies(protobuf_broker all_examples)
-  endif()
-
-  if(CAF_ENABLE_QT6_EXAMPLES)
-    find_package(Qt6 COMPONENTS Core Gui Widgets REQUIRED)
-    qt6_wrap_ui(GROUP_CHAT_UI_HDR qtsupport/chatwindow.ui)
-    qt6_wrap_cpp(GROUP_CHAT_MOC_SRC qtsupport/chatwidget.hpp)
-    # generated headers will be in cmake build directory
-    add_executable(qt_group_chat
-                   qtsupport/qt_group_chat.cpp
-                   qtsupport/chatwidget.cpp
-                   ${GROUP_CHAT_MOC_SRC}
-                   ${GROUP_CHAT_UI_HDR})
-    target_link_libraries(qt_group_chat
-                          CAF::io
-                          CAF::internal
-                          Qt6::Core
-                          Qt6::Gui
-                          Qt6::Widgets)
-    target_include_directories(qt_group_chat PRIVATE
-                               qtsupport
-                               ${CMAKE_CURRENT_BINARY_DIR}
-                               ${Qt6Core_INCLUDE_DIRS}
-                               ${Qt6Gui_INCLUDE_DIRS}
-                               ${Qt6Widgets_INCLUDE_DIRS})
-    if (CMAKE_VERSION VERSION_LESS 3.8)
-      message(STATUS "Note: build fails if Qt6 sets incompatible -std=ARG flag")
-    else()
-      set_property(TARGET qt_group_chat PROPERTY CXX_STANDARD 17)
-    endif()
-    add_dependencies(qt_group_chat all_examples)
   endif()
 
   if(CAF_ENABLE_CURL_EXAMPLES)
@@ -150,3 +118,33 @@ add_net_example(web_socket hello-client)
 add_net_example(web_socket quote-server)
 add_net_example(web_socket secure-echo)
 add_net_example(web_socket stock-ticker)
+
+if(TARGET CAF::net AND CAF_ENABLE_QT6_EXAMPLES)
+  find_package(Qt6 COMPONENTS Core Gui Widgets REQUIRED)
+  qt6_wrap_ui(GROUP_CHAT_UI_HDR qtsupport/chatwindow.ui)
+  qt6_wrap_cpp(GROUP_CHAT_MOC_SRC qtsupport/chatwidget.hpp)
+  # generated headers will be in cmake build directory
+  add_executable(qt_group_chat
+                 qtsupport/qt_group_chat.cpp
+                 qtsupport/chatwidget.cpp
+                 ${GROUP_CHAT_MOC_SRC}
+                 ${GROUP_CHAT_UI_HDR})
+  target_link_libraries(qt_group_chat
+                        CAF::net
+                        CAF::internal
+                        Qt6::Core
+                        Qt6::Gui
+                        Qt6::Widgets)
+  target_include_directories(qt_group_chat PRIVATE
+                             qtsupport
+                             ${CMAKE_CURRENT_BINARY_DIR}
+                             ${Qt6Core_INCLUDE_DIRS}
+                             ${Qt6Gui_INCLUDE_DIRS}
+                             ${Qt6Widgets_INCLUDE_DIRS})
+  if (CMAKE_VERSION VERSION_LESS 3.8)
+    message(STATUS "Note: build fails if Qt6 sets incompatible -std=ARG flag")
+  else()
+    set_property(TARGET qt_group_chat PROPERTY CXX_STANDARD 17)
+  endif()
+  add_dependencies(qt_group_chat all_examples)
+endif()

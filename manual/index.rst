@@ -21,7 +21,6 @@ Contents
    ReferenceCounting
    Error
    ConfiguringActorApplications
-   GroupCommunication
    ManagingGroupsOfWorkers
    DataFlows
    Testing

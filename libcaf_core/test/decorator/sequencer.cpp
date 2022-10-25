@@ -12,6 +12,8 @@
 
 #define ERROR_HANDLER [&](error& err) { CAF_FAIL(err); }
 
+CAF_PUSH_DEPRECATED_WARNING
+
 using namespace caf;
 
 namespace {
@@ -150,3 +152,5 @@ CAF_TEST(dot_composition_2) {
 }
 
 END_FIXTURE_SCOPE()
+
+CAF_POP_WARNINGS

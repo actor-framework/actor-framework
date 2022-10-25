@@ -38,10 +38,6 @@ struct testee_state {
         pending = self->run_delayed(10s, [this] { run_delayed_called = true; });
       },
       [](const std::string&) { CAF_LOG_TRACE(""); },
-      [this](group& grp) {
-        CAF_LOG_TRACE("");
-        self->join(grp);
-      },
     };
   }
 };
@@ -119,26 +115,6 @@ CAF_TEST(delay_actor_message) {
   CHECK_EQ(t.actions.size(), 0u);
   // Have AUT receive the message.
   expect((std::string), from(aut).to(aut).with("foo"));
-}
-
-CAF_TEST(delay_group_message) {
-  // Have AUT join the group.
-  auto grp = sys.groups().anonymous();
-  self->send(aut, grp);
-  expect((group), from(self).to(aut).with(_));
-  // Schedule a message for now + 10s.
-  auto n = t.now() + 10s;
-  auto autptr = actor_cast<strong_actor_ptr>(aut);
-  t.schedule_message(n, std::move(grp), autptr, make_message("foo"));
-  CHECK_EQ(t.actions.size(), 1u);
-  // Advance time to send the message.
-  t.advance_time(10s);
-  CHECK_EQ(t.actions.size(), 0u);
-  // Have AUT receive the message.
-  expect((std::string), from(aut).to(aut).with("foo"));
-  // Kill AUT (necessary because the group keeps a reference around).
-  self->send_exit(aut, exit_reason::kill);
-  expect((exit_msg), from(self).to(aut).with(_));
 }
 
 END_FIXTURE_SCOPE()

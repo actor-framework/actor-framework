@@ -259,27 +259,6 @@ public:
   /// Renders `x` using the line format `lf` to `out`.
   void render(std::ostream& out, const line_format& lf, const event& x) const;
 
-  /// Returns a string representation of the joined groups of `x` if `x` is an
-  /// actor with the `subscriber` mixin.
-  template <class T>
-  static
-    typename std::enable_if<std::is_base_of<mixin::subscriber_base, T>::value,
-                            std::string>::type
-    joined_groups_of(const T& x) {
-    return deep_to_string(x.joined_groups());
-  }
-
-  /// Returns a string representation of an empty list if `x` is not an actor
-  /// with the `subscriber` mixin.
-  template <class T>
-  static
-    typename std::enable_if<!std::is_base_of<mixin::subscriber_base, T>::value,
-                            const char*>::type
-    joined_groups_of(const T& x) {
-    CAF_IGNORE_UNUSED(x);
-    return "[]";
-  }
-
   // -- thread-local properties ------------------------------------------------
 
   /// Stores the actor system for the current thread.
@@ -531,8 +510,7 @@ CAF_CORE_EXPORT bool operator==(const logger::field& x, const logger::field& y);
                    << ref.id() << "; NAME =" << ref.name() << "; TYPE ="       \
                    << ::caf::detail::pretty_type_name(typeid(ref))             \
                    << "; ARGS =" << ctor_data.c_str()                          \
-                   << "; NODE =" << ref.node()                                 \
-                   << "; GROUPS =" << ::caf::logger::joined_groups_of(ref))
+                   << "; NODE =" << ref.node())
 
 #  define CAF_LOG_SEND_EVENT(ptr)                                              \
     CAF_LOG_IMPL(CAF_LOG_FLOW_COMPONENT, CAF_LOG_LEVEL_DEBUG,                  \

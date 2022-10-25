@@ -3,7 +3,9 @@
 #include <exception>
 
 #include "caf/all.hpp"
+#include "caf/async/spsc_buffer.hpp"
 #include "caf/mixin/actor_widget.hpp"
+#include "caf/net/binary/frame.hpp"
 
 CAF_PUSH_WARNINGS
 #include <QWidget>
@@ -13,7 +15,6 @@ CAF_POP_WARNINGS
 
 CAF_BEGIN_TYPE_ID_BLOCK(qtsupport, first_custom_type_id)
 
-  CAF_ADD_ATOM(qtsupport, set_name_atom)
   CAF_ADD_ATOM(qtsupport, quit_atom)
 
 CAF_END_TYPE_ID_BLOCK(qtsupport)
@@ -29,16 +30,21 @@ public:
 
   using super = caf::mixin::actor_widget<QWidget>;
 
+  using bin_frame = caf::net::binary::frame;
+
+  using publisher_type = caf::flow::item_publisher<QString>;
+
   ChatWidget(QWidget* parent = nullptr);
 
   ~ChatWidget();
 
-  void init(caf::actor_system& system);
+  void init(caf::actor_system& system, const std::string& name,
+            caf::async::consumer_resource<bin_frame> pull,
+            caf::async::producer_resource<bin_frame> push);
 
 public slots:
 
   void sendChatMessage();
-  void joinGroup();
   void changeName();
 
 private:
@@ -71,6 +77,6 @@ private:
 
   QLineEdit* input_;
   QTextEdit* output_;
-  std::string name_;
-  caf::group chatroom_;
+  QString name_;
+  std::unique_ptr<publisher_type> publisher_;
 };

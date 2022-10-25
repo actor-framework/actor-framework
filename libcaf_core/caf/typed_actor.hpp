@@ -301,7 +301,8 @@ bool operator!=(std::nullptr_t, const typed_actor<Xs...>& x) noexcept {
 /// Returns a new actor that implements the composition `f.g(x) = f(g(x))`.
 /// @relates typed_actor
 template <class... Xs, class... Ys>
-composed_type_t<detail::type_list<Xs...>, detail::type_list<Ys...>>
+[[deprecated]] composed_type_t<detail::type_list<Xs...>,
+                               detail::type_list<Ys...>>
 operator*(typed_actor<Xs...> f, typed_actor<Ys...> g) {
   using result
     = composed_type_t<detail::type_list<Xs...>, detail::type_list<Ys...>>;

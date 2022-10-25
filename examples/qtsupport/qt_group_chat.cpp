@@ -1,12 +1,12 @@
 /******************************************************************************\
  * This example program represents a minimal GUI chat program                 *
  * based on group communication. This chat program is compatible to the       *
- * terminal version in remote_actors/group_chat.cpp.                          *
+ * terminal version in length_prefix_framing/chat-server.cpp.                 *
  *                                                                            *
  * Setup for a minimal chat between "alice" and "bob":                        *
- * - group_server -p 4242                                                     *
- * - qt_group_chat -g remote:chatroom@localhost:4242 -n alice                 *
- * - qt_group_chat -g remote:chatroom@localhost:4242 -n bob                   *
+ * - chat-server -p 4242                                                      *
+ * - qt_group_chat -H localhost -p 4242 -n alice                              *
+ * - qt_group_chat -H localhost -p 4242 -n bob                                *
 \******************************************************************************/
 
 #include <cstdlib>
@@ -18,7 +18,10 @@
 #include <vector>
 
 #include "caf/all.hpp"
-#include "caf/io/all.hpp"
+#include "caf/net/length_prefix_framing.hpp"
+#include "caf/net/middleman.hpp"
+#include "caf/net/stream_transport.hpp"
+#include "caf/net/tcp_stream_socket.hpp"
 
 CAF_PUSH_WARNINGS
 #include "ui_chatwindow.h" // auto generated from chatwindow.ui
@@ -30,49 +33,64 @@ CAF_POP_WARNINGS
 
 using namespace caf;
 
+// -- constants ----------------------------------------------------------------
+
+static constexpr uint16_t default_port = 7788;
+
+static constexpr std::string_view default_host = "localhost";
+
+// -- configuration setup ------------------------------------------------------
+
 class config : public actor_system_config {
 public:
   config() {
     opt_group{custom_options_, "global"}
-      .add<std::string>("name,n", "set name")
-      .add<std::string>("group,g", "join group");
+      .add<uint16_t>("port,p", "port of the server")
+      .add<std::string>("host,H", "host of the server")
+      .add<std::string>("name,n", "set name");
   }
 };
 
+// -- main ---------------------------------------------------------------------
+
 int caf_main(actor_system& sys, const config& cfg) {
-  std::string name;
-  if (auto config_name = get_if<std::string>(&cfg, "name"))
-    name = std::move(*config_name);
-  while (name.empty()) {
-    std::cout << "please enter your name: " << std::flush;
-    if (!std::getline(std::cin, name)) {
-      std::cerr << "*** no name given... terminating" << std::endl;
-      return EXIT_FAILURE;
-    }
+  // Connect to the server.
+  auto port = caf::get_or(cfg, "port", default_port);
+  auto host = caf::get_or(cfg, "host", default_host);
+  auto name = caf::get_or(cfg, "name", "");
+  if (name.empty()) {
+    std::cerr << "*** mandatory parameter 'name' missing or empty\n";
+    return EXIT_FAILURE;
   }
-  group grp;
-  // evaluate group parameters
-  if (auto locator = get_if<std::string>(&cfg, "group")) {
-    if (auto maybe_grp = sys.groups().get(*locator)) {
-      grp = std::move(*maybe_grp);
-    } else {
-      std::cerr << R"(*** failed to parse ")" << *locator
-                << R"(" as group locator: )" << to_string(maybe_grp.error())
-                << std::endl;
-    }
+  auto fd = caf::net::make_connected_tcp_stream_socket(host, port);
+  if (!fd) {
+    std::cerr << "*** unable to connect to " << host << ":" << port << ": "
+              << to_string(fd.error()) << '\n';
+    return EXIT_FAILURE;
   }
+  std::cout << "*** connected to " << host << ":" << port << ": " << '\n';
+  // Create our buffers that connect the worker to the socket.
+  using bin_frame = caf::net::binary::frame;
+  using caf::async::make_spsc_buffer_resource;
+  auto [lpf_pull, app_push] = make_spsc_buffer_resource<bin_frame>();
+  auto [app_pull, lpf_push] = make_spsc_buffer_resource<bin_frame>();
+  // Spin up the network backend.
+  using lpf = caf::net::length_prefix_framing;
+  auto conn = lpf::run(sys, *fd, std::move(lpf_pull), std::move(lpf_push));
+  // Spin up Qt.
   auto [argc, argv] = cfg.c_args_remainder();
   QApplication app{argc, argv};
   app.setQuitOnLastWindowClosed(true);
   QMainWindow mw;
   Ui::ChatWindow helper;
   helper.setupUi(&mw);
-  helper.chatwidget->init(sys);
+  helper.chatwidget->init(sys, name, std::move(app_pull), std::move(app_push));
+  // Setup and run.
   auto client = helper.chatwidget->as_actor();
-  anon_send(client, set_name_atom_v, move(name));
-  anon_send(client, join_atom_v, std::move(grp));
   mw.show();
-  return app.exec();
+  auto result = app.exec();
+  conn.dispose();
+  return result;
 }
 
-CAF_MAIN(id_block::qtsupport, io::middleman)
+CAF_MAIN(caf::id_block::qtsupport, caf::net::middleman)

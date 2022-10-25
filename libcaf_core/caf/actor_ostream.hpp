@@ -45,11 +45,13 @@ public:
   actor_ostream& flush();
 
   /// Redirects all further output from `self` to `file_name`.
-  static void redirect(abstract_actor* self, std::string fn, int flags = 0);
+  [[deprecated]] static void redirect(abstract_actor* self, std::string fn,
+                                      int flags = 0);
 
   /// Redirects all further output from any actor that did not
   /// redirect its output to `fname`.
-  static void redirect_all(actor_system& sys, std::string fn, int flags = 0);
+  [[deprecated]] static void redirect_all(actor_system& sys, std::string fn,
+                                          int flags = 0);
 
   /// Writes `arg` to the buffer allocated for the calling actor.
   actor_ostream& operator<<(const char* arg) {
