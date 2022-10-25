@@ -233,7 +233,6 @@ caf_add_component(
     binary_deserializer
     binary_serializer
     blocking_actor
-    composition
     config_option
     config_option_set
     config_value

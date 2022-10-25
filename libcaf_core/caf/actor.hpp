@@ -158,7 +158,7 @@ private:
 };
 
 /// Combine `f` and `g` so that `(f*g)(x) = f(g(x))`.
-CAF_CORE_EXPORT actor operator*(actor f, actor g);
+[[deprecated]] CAF_CORE_EXPORT actor operator*(actor f, actor g);
 
 /// @relates actor
 CAF_CORE_EXPORT bool operator==(const actor& lhs, abstract_actor* rhs);
