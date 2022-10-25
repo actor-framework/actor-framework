@@ -7,6 +7,7 @@
 #include "caf/byte_span.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/net/ssl/errc.hpp"
+#include "caf/net/ssl/fwd.hpp"
 #include "caf/net/stream_socket.hpp"
 
 #include <cstddef>
@@ -17,6 +18,9 @@ namespace caf::net::ssl {
 class CAF_NET_EXPORT connection {
 public:
   // -- member types -----------------------------------------------------------
+
+  /// The default transport for exchanging raw bytes over an SSL connection.
+  using transport_type = transport;
 
   /// The opaque implementation type.
   struct impl;

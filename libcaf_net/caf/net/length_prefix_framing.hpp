@@ -67,18 +67,19 @@ public:
   ///             `Transport`.
   /// @param pull Source for pulling data to send.
   /// @param push Source for pushing received data.
-  template <class Transport = stream_transport, class Connection>
+  template <class Connection>
   static disposable run(actor_system& sys, Connection conn,
                         async::consumer_resource<binary::frame> pull,
                         async::producer_resource<binary::frame> push) {
     using trait_t = binary::default_trait;
+    using transport_t = typename Connection::transport_type;
     auto mpx = sys.network_manager().mpx_ptr();
     auto fc = flow_connector<trait_t>::make_trivial(std::move(pull),
                                                     std::move(push));
     auto bridge = binary::flow_bridge<trait_t>::make(mpx, std::move(fc));
     auto bridge_ptr = bridge.get();
     auto impl = length_prefix_framing::make(std::move(bridge));
-    auto transport = Transport::make(std::move(conn), std::move(impl));
+    auto transport = transport_t::make(std::move(conn), std::move(impl));
     auto ptr = socket_manager::make(mpx, std::move(transport));
     bridge_ptr->self_ref(ptr->as_disposable());
     mpx->start(ptr);
@@ -90,7 +91,7 @@ public:
   /// @param conn A connected stream socket or SSL connection, depending on the
   ///             `Transport`.
   /// @param init Function object for setting up the created flows.
-  template <class Transport = stream_transport, class Connection, class Init>
+  template <class Connection, class Init>
   static disposable run(actor_system& sys, Connection conn, Init init) {
     static_assert(std::is_invocable_v<Init, connect_event_t&&>,
                   "invalid signature found for init");

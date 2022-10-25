@@ -46,6 +46,8 @@ struct config : caf::actor_system_config {
   }
 };
 
+// -- main ---------------------------------------------------------------------
+
 int caf_main(caf::actor_system& sys, const config& cfg) {
   // Connect to the server.
   auto port = caf::get_or(cfg, "port", default_port);

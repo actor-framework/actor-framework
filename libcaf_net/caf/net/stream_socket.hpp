@@ -9,6 +9,7 @@
 #include "caf/byte_span.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/fwd.hpp"
+#include "caf/net/fwd.hpp"
 #include "caf/net/network_socket.hpp"
 
 // Note: This API mostly wraps platform-specific functions that return ssize_t.
@@ -20,7 +21,11 @@ namespace caf::net {
 /// A connection-oriented network communication endpoint for bidirectional byte
 /// streams.
 struct CAF_NET_EXPORT stream_socket : network_socket {
+  /// The parent type.
   using super = network_socket;
+
+  /// The default transport for exchanging raw bytes over a stream socket.
+  using transport_type = stream_transport;
 
   using super::super;
 

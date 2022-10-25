@@ -101,16 +101,10 @@
     <property name="title">
      <string>File</string>
     </property>
-    <addaction name="actionJoin_Group"/>
     <addaction name="actionSet_Name"/>
    </widget>
    <addaction name="menuFile"/>
   </widget>
-  <action name="actionJoin_Group">
-   <property name="text">
-    <string>Join Group</string>
-   </property>
-  </action>
   <action name="actionSet_Name">
    <property name="text">
     <string>Set Name</string>
@@ -126,28 +120,11 @@
    <slots>
     <slot>sendChatMessage()</slot>
     <slot>changeName()</slot>
-    <slot>joinGroup()</slot>
    </slots>
   </customwidget>
  </customwidgets>
  <resources/>
  <connections>
-  <connection>
-   <sender>actionJoin_Group</sender>
-   <signal>triggered()</signal>
-   <receiver>chatwidget</receiver>
-   <slot>joinGroup()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>399</x>
-     <y>300</y>
-    </hint>
-   </hints>
-  </connection>
   <connection>
    <sender>actionSet_Name</sender>
    <signal>triggered()</signal>
