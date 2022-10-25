@@ -43,6 +43,16 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The types `caf::byte`, `caf::optional` and `caf::string_view` became obsolete
   after switching to C++17. Consequently, these types are now deprecated in
   favor of their standard library counterpart.
+- The group-based pub/sub mechanism never fit nicely into the typed messaging
+  API and the fact that group messages use the regular mailbox makes it hard to
+  separate regular communication from multi-cast messages. Hence, we decided to
+  drop the group API and instead focus on the new flows and streams that can
+  replace group-communication in many use cases.
+- The "actor-composition operator" was added as a means to enable the first
+  experimental streaming API. With that gone, there's no justification to keep
+  this feature. While it has some neat niche-applications, the prevent some
+  optimization we would like to apply to the messaging layer. Hence, we will
+  remove this feature without a replacement.
 
 ### Removed
 
