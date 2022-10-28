@@ -35,6 +35,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 - Remote spawning of actors is no longer considered experimental.
 - The output of `--dump-config` now prints valid config file syntax.
+- When starting a new thread via CAF, the thread hooks API now receives an
+  additional tag that identifies the component responsible for launching the new
+  thread.
 
 ### Deprecated
 

@@ -13,6 +13,7 @@
 #include "caf/raise_error.hpp"
 #include "caf/sec.hpp"
 #include "caf/send.hpp"
+#include "caf/thread_owner.hpp"
 #include "caf/uri.hpp"
 
 namespace caf::net {
@@ -66,11 +67,12 @@ middleman::~middleman() {
 
 void middleman::start() {
   if (!get_or(config(), "caf.middleman.manual-multiplexing", false)) {
-    mpx_thread_ = sys_.launch_thread("caf.net.mpx", [this] {
+    auto fn = [this] {
       mpx_->set_thread_id();
       launch_background_tasks(sys_);
       mpx_->run();
-    });
+    };
+    mpx_thread_ = sys_.launch_thread("caf.net.mpx", thread_owner::system, fn);
   } else {
     mpx_->set_thread_id();
   }

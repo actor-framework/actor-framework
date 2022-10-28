@@ -536,19 +536,19 @@ public:
 
   /// Calls all thread started hooks
   /// @warning must be called by thread which is about to start
-  void thread_started();
+  void thread_started(thread_owner);
 
   /// Calls all thread terminates hooks
   /// @warning must be called by thread which is about to terminate
   void thread_terminates();
 
   template <class F>
-  std::thread launch_thread(const char* thread_name, F fun) {
-    auto body = [this, thread_name, f{std::move(fun)}](auto guard) {
+  std::thread launch_thread(const char* thread_name, thread_owner tag, F fun) {
+    auto body = [this, thread_name, tag, f{std::move(fun)}](auto guard) {
       CAF_IGNORE_UNUSED(guard);
       CAF_SET_LOGGER_SYS(this);
       detail::set_thread_name(thread_name);
-      thread_started();
+      thread_started(tag);
       f();
       thread_terminates();
     };

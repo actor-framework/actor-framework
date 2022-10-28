@@ -21,6 +21,7 @@
 #include "caf/actor_system.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/private_thread.hpp"
+#include "caf/thread_owner.hpp"
 
 namespace caf::detail {
 
@@ -29,7 +30,8 @@ private_thread_pool::node::~node() {
 }
 
 void private_thread_pool::start() {
-  loop_ = sys_->launch_thread("caf.pool", [this] { run_loop(); });
+  loop_ = sys_->launch_thread("caf.pool", thread_owner::pool,
+                              [this] { run_loop(); });
 }
 
 void private_thread_pool::stop() {

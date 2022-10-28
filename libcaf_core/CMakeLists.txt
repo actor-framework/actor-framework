@@ -64,6 +64,7 @@ caf_add_component(
     message_priority
     pec
     sec
+    thread_owner
   HEADERS
     ${CAF_CORE_HEADERS}
   SOURCES

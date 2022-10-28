@@ -10,6 +10,7 @@
 #include "caf/logger.hpp"
 #include "caf/resumable.hpp"
 #include "caf/scoped_execution_unit.hpp"
+#include "caf/thread_owner.hpp"
 
 namespace caf::detail {
 
@@ -64,7 +65,7 @@ std::pair<resumable*, bool> private_thread::await() {
 private_thread* private_thread::launch(actor_system* sys) {
   auto ptr = std::make_unique<private_thread>();
   auto raw_ptr = ptr.get();
-  ptr->thread_ = sys->launch_thread("caf.thread",
+  ptr->thread_ = sys->launch_thread("caf.thread", thread_owner::pool,
                                     [raw_ptr, sys] { raw_ptr->run(sys); });
   return ptr.release();
 }

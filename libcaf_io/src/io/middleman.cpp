@@ -42,6 +42,7 @@
 #include "caf/scoped_actor.hpp"
 #include "caf/sec.hpp"
 #include "caf/send.hpp"
+#include "caf/thread_owner.hpp"
 #include "caf/typed_event_based_actor.hpp"
 
 #ifdef CAF_WINDOWS
@@ -149,7 +150,8 @@ public:
       sync_ptr->count_down();
       mpx_.run();
     };
-    thread_ = mpx_.system().launch_thread("caf.io.prom", run_mpx);
+    thread_ = mpx_.system().launch_thread("caf.io.prom", thread_owner::system,
+                                          run_mpx);
     sync.wait();
     CAF_LOG_INFO("expose Prometheus metrics at port" << actual_port);
     return actual_port;
@@ -448,7 +450,8 @@ void middleman::start() {
       sync_ptr->count_down();
       backend().run();
     };
-    thread_ = system().launch_thread("caf.io.mpx", run_backend);
+    thread_ = system().launch_thread("caf.io.mpx", thread_owner::system,
+                                     run_backend);
     sync.wait();
   }
   // Spawn utility actors.

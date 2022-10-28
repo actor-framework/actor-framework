@@ -9,6 +9,7 @@
 #include "caf/logger.hpp"
 #include "caf/sec.hpp"
 #include "caf/system_messages.hpp"
+#include "caf/thread_owner.hpp"
 
 namespace caf::detail {
 
@@ -52,7 +53,8 @@ void thread_safe_actor_clock::run() {
 }
 
 void thread_safe_actor_clock::start_dispatch_loop(caf::actor_system& sys) {
-  dispatcher_ = sys.launch_thread("caf.clock", [this] { run(); });
+  dispatcher_ = sys.launch_thread("caf.clock", thread_owner::system,
+                                  [this] { run(); });
 }
 
 void thread_safe_actor_clock::stop_dispatch_loop() {

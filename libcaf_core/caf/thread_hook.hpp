@@ -18,10 +18,11 @@ public:
   /// Called by the actor system once before starting any threads.
   virtual void init(actor_system&) = 0;
 
-  /// Called whenever the actor system has started a new thread.
-  /// To access a reference to the started thread use `std::this_thread`.
+  /// Called whenever the actor system has started a new thread. To access a
+  /// reference to the started thread use `std::this_thread`.
+  /// @param owner Identifies the CAF component that created this thread.
   /// @warning must the thread-safe
-  virtual void thread_started() = 0;
+  virtual void thread_started(thread_owner owner) = 0;
 
   /// Called whenever a thread is about to quit.
   /// To access a reference to the terminating thread use `std::this_thread`.
