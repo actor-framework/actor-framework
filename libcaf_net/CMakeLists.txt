@@ -94,6 +94,7 @@ caf_add_component(
     detail.rfc6455
     net.accept_socket
     net.actor_shell
+    net.binary.frame
     net.datagram_socket
     net.http.server
     net.ip
@@ -112,5 +113,6 @@ caf_add_component(
     net.typed_actor_shell
     net.udp_datagram_socket
     net.web_socket.client
+    net.web_socket.frame
     net.web_socket.handshake
     net.web_socket.server)

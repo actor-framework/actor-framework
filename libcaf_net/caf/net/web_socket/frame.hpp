@@ -34,43 +34,7 @@ namespace caf::net::web_socket {
 /// text or binary frames.
 class CAF_NET_EXPORT frame {
 public:
-  frame() = default;
-  frame(frame&&) = default;
-  frame(const frame&) = default;
-  frame& operator=(frame&&) = default;
-  frame& operator=(const frame&) = default;
-
-  explicit frame(const_byte_span bytes);
-
-  explicit frame(std::string_view text);
-
-  explicit operator bool() const noexcept {
-    return static_cast<bool>(data_);
-  }
-
-  size_t size() const noexcept {
-    return data_ ? data_->size() : 0;
-  }
-
-  bool empty() const noexcept {
-    return data_ ? data_->size() == 0 : true;
-  }
-
-  void swap(frame& other) {
-    data_.swap(other.data_);
-  }
-
-  bool is_binary() const noexcept {
-    return data_ && data_->is_binary();
-  }
-
-  bool is_text() const noexcept {
-    return data_ && !data_->is_binary();
-  }
-
-  const_byte_span as_binary() const noexcept;
-
-  std::string_view as_text() const noexcept;
+  // -- member types -----------------------------------------------------------
 
   class data {
   public:
@@ -80,9 +44,17 @@ public:
 
     data& operator=(const data&) = delete;
 
-    explicit data(bool bin, size_t size) : rc_(1), bin_(bin), size_(size) {
+    data(bool is_bin, size_t size) : rc_(1), bin_(is_bin), size_(size) {
       static_cast<void>(padding_); // Silence unused-private-field warning.
     }
+
+    explicit data(const_byte_span bytes);
+
+    explicit data(std::string_view str);
+
+    data(size_t total_size, span<const const_byte_span> bufs);
+
+    data(size_t total_size, span<const std::string_view> bufs);
 
     // -- reference counting ---------------------------------------------------
 
@@ -132,12 +104,79 @@ public:
     std::byte storage_[];
   };
 
+  // -- constructors, destructors, and assignment operators --------------------
+
+  frame() = default;
+
+  frame(frame&&) = default;
+
+  frame(const frame&) = default;
+
+  frame& operator=(frame&&) = default;
+
+  frame& operator=(const frame&) = default;
+
+  explicit frame(const_byte_span bytes);
+
+  explicit frame(std::string_view text);
+
+  // -- factory functions ------------------------------------------------------
+
+  template <class... Buffers>
+  static frame from_buffers(const Buffers&... buffers) {
+    static_assert(sizeof...(Buffers) > 0);
+    const_byte_span bufs[sizeof...(Buffers)] = {make_span(buffers)...};
+    return frame(make_span(bufs));
+  }
+
+  template <class... Buffers>
+  static frame from_strings(const Buffers&... buffers) {
+    static_assert(sizeof...(Buffers) > 0);
+    std::string_view bufs[sizeof...(Buffers)] = {std::string_view(buffers)...};
+    return frame(make_span(bufs));
+  }
+
+  // -- properties -------------------------------------------------------------
+
+  explicit operator bool() const noexcept {
+    return static_cast<bool>(data_);
+  }
+
+  size_t size() const noexcept {
+    return data_ ? data_->size() : 0;
+  }
+
+  bool empty() const noexcept {
+    return data_ ? data_->size() == 0 : true;
+  }
+
+  void swap(frame& other) {
+    data_.swap(other.data_);
+  }
+
+  bool is_binary() const noexcept {
+    return data_ && data_->is_binary();
+  }
+
+  bool is_text() const noexcept {
+    return data_ && !data_->is_binary();
+  }
+
+  const_byte_span as_binary() const noexcept;
+
+  std::string_view as_text() const noexcept;
+
 private:
   explicit frame(intrusive_ptr<data> ptr) : data_(std::move(ptr)) {
     // nop
   }
 
-  void alloc(bool is_binary, size_t num_bytes);
+  explicit frame(caf::span<const const_byte_span> buffers);
+
+  explicit frame(caf::span<const std::string_view> buffers);
+
+  template <class... Args>
+  void init(size_t payload_size, Args&&... arg);
 
   intrusive_ptr<data> data_;
 };

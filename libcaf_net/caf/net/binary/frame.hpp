@@ -19,13 +19,30 @@ namespace caf::net::binary {
 /// An implicitly shared type for binary data frames.
 class CAF_NET_EXPORT frame {
 public:
+  // -- constructors, destructors, and assignment operators --------------------
+
   frame() = default;
+
   frame(frame&&) = default;
+
   frame(const frame&) = default;
+
   frame& operator=(frame&&) = default;
+
   frame& operator=(const frame&) = default;
 
-  explicit frame(const_byte_span data);
+  explicit frame(const_byte_span buf);
+
+  // -- factory functions ------------------------------------------------------
+
+  template <class... ByteBuffers>
+  static frame from_buffers(const ByteBuffers&... buffers) {
+    static_assert(sizeof...(ByteBuffers) > 0);
+    const_byte_span bufs[sizeof...(ByteBuffers)] = {make_span(buffers)...};
+    return frame(make_span(bufs));
+  }
+
+  // -- properties -------------------------------------------------------------
 
   explicit operator bool() const noexcept {
     return static_cast<bool>(data_);
@@ -44,10 +61,16 @@ public:
   }
 
   const_byte_span bytes() const noexcept {
-    return {data_->storage(), data_->size()};
+    return data_ ? const_byte_span{data_->storage(), data_->size()}
+                 : const_byte_span{};
   }
 
 private:
+  explicit frame(caf::span<const const_byte_span> bufs);
+
+  template <class... Args>
+  void init(size_t payload_size, Args&&... arg);
+
   intrusive_ptr<web_socket::frame::data> data_;
 };
 
