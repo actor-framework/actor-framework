@@ -38,6 +38,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - When starting a new thread via CAF, the thread hooks API now receives an
   additional tag that identifies the component responsible for launching the new
   thread.
+- Response promises now hold a strong reference to their parent actor to avoid
+  `broken_promise` errors in some (legitimate) edge cases (#1361).
 
 ### Deprecated
 

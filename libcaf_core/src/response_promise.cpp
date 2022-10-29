@@ -40,7 +40,7 @@ response_promise::response_promise(local_actor* self, strong_actor_ptr source,
   // anonymous messages since there's nowhere to send the message to anyway.
   if (requires_response(mid)) {
     state_ = make_counted<state>();
-    state_->weak_self = self->ctrl();
+    state_->self = self->ctrl();
     state_->source.swap(source);
     state_->stages.swap(stages);
     state_->id = mid;
@@ -60,7 +60,7 @@ bool response_promise::async() const noexcept {
 }
 
 bool response_promise::pending() const noexcept {
-  return state_ != nullptr && state_->weak_self != nullptr;
+  return state_ != nullptr && state_->self != nullptr;
 }
 
 strong_actor_ptr response_promise::source() const noexcept {
@@ -122,7 +122,7 @@ void response_promise::respond_to(local_actor* self, mailbox_element* request,
   if (request && requires_response(*request)
       && has_response_receiver(*request)) {
     state tmp;
-    tmp.weak_self = self->ctrl();
+    tmp.self = self->ctrl();
     tmp.source.swap(request->sender);
     tmp.stages.swap(request->stages);
     tmp.id = request->mid;
@@ -136,7 +136,7 @@ void response_promise::respond_to(local_actor* self, mailbox_element* request,
   if (request && requires_response(*request)
       && has_response_receiver(*request)) {
     state tmp;
-    tmp.weak_self = self->ctrl();
+    tmp.self = self->ctrl();
     tmp.source.swap(request->sender);
     tmp.stages.swap(request->stages);
     tmp.id = request->mid;
@@ -151,17 +151,16 @@ response_promise::state::~state() {
   // Note: the state may get destroyed outside of the actor. For example, when
   //       storing the promise in a run-later continuation. Hence, we can't call
   //       deliver_impl here since it calls self->context().
-  if (weak_self && source) {
+  if (self && source) {
     CAF_LOG_DEBUG("broken promise!");
-    auto element = make_mailbox_element(weak_self.lock(), id.response_id(),
-                                        no_stages,
+    auto element = make_mailbox_element(self, id.response_id(), no_stages,
                                         make_error(sec::broken_promise));
     source->enqueue(std::move(element), nullptr);
   }
 }
 
 void response_promise::state::cancel() {
-  weak_self = nullptr;
+  self = nullptr;
 }
 
 void response_promise::state::deliver_impl(message msg) {
@@ -169,17 +168,19 @@ void response_promise::state::deliver_impl(message msg) {
   // Even though we are holding a weak pointer, we can access the pointer
   // without any additional check here because only the actor itself is allowed
   // to call this function.
-  auto self = static_cast<local_actor*>(weak_self.get()->get());
+  auto selfptr = static_cast<local_actor*>(self->get());
   if (msg.empty() && id.is_async()) {
     CAF_LOG_DEBUG("drop response: empty response to asynchronous input");
   } else if (!stages.empty()) {
     auto next = std::move(stages.back());
     stages.pop_back();
-    detail::profiled_send(self, std::move(source), next, id, std::move(stages),
-                          self->context(), std::move(msg));
+    detail::profiled_send(selfptr, std::move(source), next, id,
+                          std::move(stages), selfptr->context(),
+                          std::move(msg));
   } else if (source != nullptr) {
-    detail::profiled_send(self, self->ctrl(), source, id.response_id(),
-                          forwarding_stack{}, self->context(), std::move(msg));
+    detail::profiled_send(selfptr, self, source, id.response_id(),
+                          forwarding_stack{}, selfptr->context(),
+                          std::move(msg));
   }
   cancel();
 }
@@ -188,9 +189,10 @@ void response_promise::state::delegate_impl(abstract_actor* receiver,
                                             message msg) {
   CAF_LOG_TRACE(CAF_ARG(msg));
   if (receiver != nullptr) {
-    auto self = static_cast<local_actor*>(weak_self.get()->get());
-    detail::profiled_send(self, std::move(source), receiver, id,
-                          std::move(stages), self->context(), std::move(msg));
+    auto selfptr = static_cast<local_actor*>(self->get());
+    detail::profiled_send(selfptr, std::move(source), receiver, id,
+                          std::move(stages), selfptr->context(),
+                          std::move(msg));
   } else {
     CAF_LOG_DEBUG("drop response: invalid delegation target");
   }
