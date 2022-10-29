@@ -197,7 +197,7 @@ private:
     void delegate_impl(abstract_actor* receiver, message msg);
 
     mutable size_t ref_count = 1;
-    weak_actor_ptr weak_self;
+    strong_actor_ptr self;
     strong_actor_ptr source;
     forwarding_stack stages;
     message_id id;

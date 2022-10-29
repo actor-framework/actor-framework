@@ -35,6 +35,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 - Remote spawning of actors is no longer considered experimental.
 - The output of `--dump-config` now prints valid config file syntax.
+- Response promises now hold a strong reference to their parent actor to avoid
+  `broken_promise` errors in some (legitimate) edge cases (#1361).
 
 ### Deprecated
 
