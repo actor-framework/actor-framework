@@ -33,11 +33,11 @@ acceptor::make_with_cert_file(tcp_accept_socket fd, const char* cert_file_path,
   if (!ctx) {
     return {make_error(sec::runtime_error, "unable to create SSL context")};
   }
-  if (!ctx->use_certificate_from_file(cert_file_path, file_format)) {
+  if (!ctx->use_certificate_file(cert_file_path, file_format)) {
     return {make_error(sec::runtime_error, "unable to load certificate file",
                        ctx->last_error_string())};
   }
-  if (!ctx->use_private_key_from_file(key_file_path, file_format)) {
+  if (!ctx->use_private_key_file(key_file_path, file_format)) {
     return {make_error(sec::runtime_error, "unable to load private key file",
                        ctx->last_error_string())};
   }

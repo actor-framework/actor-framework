@@ -112,12 +112,12 @@ void dummy_tls_server(stream_socket fd, const char* cert_file,
   auto guard = detail::make_scope_guard([fd] { close(fd); });
   // Get and configure our SSL context.
   auto ctx = unbox(ssl::context::make_server(ssl::tls::any));
-  if (!ctx.use_certificate_from_file(cert_file, ssl::format::pem)) {
+  if (!ctx.use_certificate_file(cert_file, ssl::format::pem)) {
     std::cerr << "*** failed to load certificate_file: "
               << ctx.last_error_string() << '\n';
     return;
   }
-  if (!ctx.use_private_key_from_file(key_file, ssl::format::pem)) {
+  if (!ctx.use_private_key_file(key_file, ssl::format::pem)) {
     std::cerr << "*** failed to load private key file: "
               << ctx.last_error_string() << '\n';
     return;
@@ -231,10 +231,10 @@ SCENARIO("ssl::transport::make_server performs the server handshake") {
         mpx->set_thread_id();
         std::ignore = mpx->init();
         auto ctx = unbox(ssl::context::make_server(ssl::tls::any));
-        REQUIRE(ctx.use_certificate_from_file(cert_1_pem_path, //
-                                              ssl::format::pem));
-        REQUIRE(ctx.use_private_key_from_file(key_1_pem_path, //
-                                              ssl::format::pem));
+        REQUIRE(ctx.use_certificate_file(cert_1_pem_path, //
+                                         ssl::format::pem));
+        REQUIRE(ctx.use_private_key_file(key_1_pem_path, //
+                                         ssl::format::pem));
         auto conn = unbox(ctx.new_connection(server_fd));
         auto done = std::make_shared<bool>(false);
         auto buf = std::make_shared<byte_buffer>();

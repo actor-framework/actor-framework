@@ -69,7 +69,7 @@ public:
   /// from a client.
   [[nodiscard]] ptrdiff_t accept();
 
-  /// Gracefully closes the SSL connection.
+  /// Gracefully closes the SSL connection without closing the socket.
   ptrdiff_t close();
 
   // -- reading and writing ----------------------------------------------------

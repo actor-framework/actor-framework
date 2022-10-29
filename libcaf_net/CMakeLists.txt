@@ -67,9 +67,11 @@ caf_add_component(
     src/net/ssl/context.cpp
     src/net/ssl/dtls.cpp
     src/net/ssl/format.cpp
+    src/net/ssl/password.cpp
     src/net/ssl/startup.cpp
     src/net/ssl/tls.cpp
     src/net/ssl/transport.cpp
+    src/net/ssl/verify.cpp
     src/net/stream_oriented.cpp
     src/net/stream_socket.cpp
     src/net/stream_transport.cpp
