@@ -22,7 +22,7 @@ struct dummy_thread_hook : thread_hook {
     // nop
   }
 
-  void thread_started() override {
+  void thread_started(thread_owner) override {
     // nop
   }
 
@@ -48,7 +48,7 @@ public:
     ++count_init_;
   }
 
-  void thread_started() override {
+  void thread_started(thread_owner) override {
     ++count_thread_started_;
   }
 

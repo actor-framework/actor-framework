@@ -499,9 +499,9 @@ size_t actor_system::detached_actors() const noexcept {
   return private_threads_.running();
 }
 
-void actor_system::thread_started() {
+void actor_system::thread_started(thread_owner owner) {
   for (auto& hook : cfg_.thread_hooks_)
-    hook->thread_started();
+    hook->thread_started(owner);
 }
 
 void actor_system::thread_terminates() {
