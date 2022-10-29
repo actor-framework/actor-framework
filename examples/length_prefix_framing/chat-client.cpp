@@ -19,8 +19,12 @@
 
 // -- convenience type aliases -------------------------------------------------
 
+// The trait for translating between bytes on the wire and flow items. The
+// binary default trait operates on binary::frame items.
+using trait = caf::net::binary::default_trait;
+
 // Takes care converting a byte stream into a sequence of messages on the wire.
-using lpf = caf::net::length_prefix_framing;
+using lpf = caf::net::length_prefix_framing::bind<trait>;
 
 // An implicitly shared type for storing a binary frame.
 using bin_frame = caf::net::binary::frame;

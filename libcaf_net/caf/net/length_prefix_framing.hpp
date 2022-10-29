@@ -56,103 +56,111 @@ public:
 
   // -- high-level factory functions -------------------------------------------
 
-  /// Describes the one-time connection event.
-  using connect_event_t
-    = cow_tuple<async::consumer_resource<binary::frame>,  // Socket to App.
-                async::producer_resource<binary::frame>>; // App to Socket.
+  /// Binds a trait class to the framing protocol to enable a high-level API for
+  /// operating on flows.
+  template <class Trait>
+  struct bind {
+    /// Describes the one-time connection event.
+    using connect_event_t
+      = cow_tuple<async::consumer_resource<typename Trait::input_type>,
+                  async::producer_resource<typename Trait::output_type>>;
 
-  /// Runs length-prefix framing on given connection.
-  /// @param sys The host system.
-  /// @param conn A connected stream socket or SSL connection, depending on the
-  ///             `Transport`.
-  /// @param pull Source for pulling data to send.
-  /// @param push Source for pushing received data.
-  template <class Connection>
-  static disposable run(actor_system& sys, Connection conn,
-                        async::consumer_resource<binary::frame> pull,
-                        async::producer_resource<binary::frame> push) {
-    using trait_t = binary::default_trait;
-    using transport_t = typename Connection::transport_type;
-    auto mpx = sys.network_manager().mpx_ptr();
-    auto fc = flow_connector<trait_t>::make_trivial(std::move(pull),
+    /// Runs length-prefix framing on given connection.
+    /// @param sys The host system.
+    /// @param conn A connected stream socket or SSL connection, depending on
+    /// the
+    ///             `Transport`.
+    /// @param pull Source for pulling data to send.
+    /// @param push Source for pushing received data.
+    template <class Connection>
+    static disposable
+    run(actor_system& sys, Connection conn,
+        async::consumer_resource<typename Trait::output_type> pull,
+        async::producer_resource<typename Trait::input_type> push) {
+      using transport_t = typename Connection::transport_type;
+      auto mpx = sys.network_manager().mpx_ptr();
+      auto fc = flow_connector<Trait>::make_trivial(std::move(pull),
                                                     std::move(push));
-    auto bridge = binary::flow_bridge<trait_t>::make(mpx, std::move(fc));
-    auto bridge_ptr = bridge.get();
-    auto impl = length_prefix_framing::make(std::move(bridge));
-    auto transport = transport_t::make(std::move(conn), std::move(impl));
-    auto ptr = socket_manager::make(mpx, std::move(transport));
-    bridge_ptr->self_ref(ptr->as_disposable());
-    mpx->start(ptr);
-    return disposable{std::move(ptr)};
-  }
-
-  /// Runs length-prefix framing on given connection.
-  /// @param sys The host system.
-  /// @param conn A connected stream socket or SSL connection, depending on the
-  ///             `Transport`.
-  /// @param init Function object for setting up the created flows.
-  template <class Connection, class Init>
-  static disposable run(actor_system& sys, Connection conn, Init init) {
-    static_assert(std::is_invocable_v<Init, connect_event_t&&>,
-                  "invalid signature found for init");
-    using frame_t = binary::frame;
-    auto [fd_pull, app_push] = async::make_spsc_buffer_resource<frame_t>();
-    auto [app_pull, fd_push] = async::make_spsc_buffer_resource<frame_t>();
-    auto result = run(sys, std::move(conn), std::move(fd_pull),
-                      std::move(fd_push));
-    init(connect_event_t{std::move(app_pull), std::move(app_push)});
-    return result;
-  }
-
-  /// The default number of concurrently open connections when using `accept`.
-  static constexpr size_t default_max_connections = 128;
-
-  /// A producer resource for the acceptor. Any accepted connection is
-  /// represented by two buffers: one for input and one for output.
-  using acceptor_resource_t = async::producer_resource<connect_event_t>;
-
-  /// Describes the per-connection event.
-  using accept_event_t
-    = cow_tuple<async::consumer_resource<binary::frame>,  // Socket to App.
-                async::producer_resource<binary::frame>>; // App to Socket.
-
-  /// Convenience function for creating an event listener resource and an
-  /// @ref acceptor_resource_t via @ref async::make_spsc_buffer_resource.
-  template <class... Ts>
-  static auto make_accept_event_resources() {
-    return async::make_spsc_buffer_resource<accept_event_t>();
-  }
-
-  /// Listens for incoming connection on @p fd.
-  /// @param sys The host system.
-  /// @param acc A connection acceptor such as @ref tcp_accept_socket or
-  ///            @ref ssl::acceptor.
-  /// @param cfg Configures the acceptor. Currently, the only supported
-  ///            configuration parameter is `max-connections`.
-  template <class Acceptor>
-  static disposable accept(actor_system& sys, Acceptor acc,
-                           acceptor_resource_t out, const settings& cfg = {}) {
-    using transport_t = typename Acceptor::transport_type;
-    using trait_t = binary::default_trait;
-    using factory_t = cf_impl<transport_t>;
-    using conn_t = typename transport_t::connection_handle;
-    using impl_t = detail::accept_handler<Acceptor, conn_t>;
-    auto max_connections = get_or(cfg, defaults::net::max_connections);
-    if (auto buf = out.try_open()) {
-      auto& mpx = sys.network_manager().mpx();
-      auto conn = flow_connector<trait_t>::make_basic_server(std::move(buf));
-      auto factory = std::make_unique<factory_t>(std::move(conn));
-      auto impl = impl_t::make(std::move(acc), std::move(factory),
-                               max_connections);
-      auto impl_ptr = impl.get();
-      auto ptr = net::socket_manager::make(&mpx, std::move(impl));
-      impl_ptr->self_ref(ptr->as_disposable());
-      mpx.start(ptr);
+      auto bridge = binary::flow_bridge<Trait>::make(mpx, std::move(fc));
+      auto bridge_ptr = bridge.get();
+      auto impl = length_prefix_framing::make(std::move(bridge));
+      auto transport = transport_t::make(std::move(conn), std::move(impl));
+      auto ptr = socket_manager::make(mpx, std::move(transport));
+      bridge_ptr->self_ref(ptr->as_disposable());
+      mpx->start(ptr);
       return disposable{std::move(ptr)};
-    } else {
-      return {};
     }
-  }
+
+    /// Runs length-prefix framing on given connection.
+    /// @param sys The host system.
+    /// @param conn A connected stream socket or SSL connection, depending on
+    /// the
+    ///             `Transport`.
+    /// @param init Function object for setting up the created flows.
+    template <class Connection, class Init>
+    static disposable run(actor_system& sys, Connection conn, Init init) {
+      using app_in_t = typename Trait::input_type;
+      using app_out_t = typename Trait::output_type;
+      static_assert(std::is_invocable_v<Init, connect_event_t&&>,
+                    "invalid signature found for init");
+      auto [app_pull, fd_push] = async::make_spsc_buffer_resource<app_in_t>();
+      auto [fd_pull, app_push] = async::make_spsc_buffer_resource<app_out_t>();
+      auto result = run(sys, std::move(conn), std::move(fd_pull),
+                        std::move(fd_push));
+      init(connect_event_t{std::move(app_pull), std::move(app_push)});
+      return result;
+    }
+
+    /// The default number of concurrently open connections when using `accept`.
+    static constexpr size_t default_max_connections = 128;
+
+    /// A producer resource for the acceptor. Any accepted connection is
+    /// represented by two buffers: one for input and one for output.
+    using acceptor_resource_t = async::producer_resource<connect_event_t>;
+
+    /// Describes the per-connection event.
+    using accept_event_t
+      = cow_tuple<async::consumer_resource<typename Trait::input_type>,
+                  async::producer_resource<typename Trait::output_type>>;
+
+    /// Convenience function for creating an event listener resource and an
+    /// @ref acceptor_resource_t via @ref async::make_spsc_buffer_resource.
+    static auto make_accept_event_resources() {
+      return async::make_spsc_buffer_resource<accept_event_t>();
+    }
+
+    /// Listens for incoming connection on @p fd.
+    /// @param sys The host system.
+    /// @param acc A connection acceptor such as @ref tcp_accept_socket or
+    ///            @ref ssl::acceptor.
+    /// @param cfg Configures the acceptor. Currently, the only supported
+    ///            configuration parameter is `max-connections`.
+    template <class Acceptor>
+    static disposable accept(actor_system& sys, Acceptor acc,
+                             acceptor_resource_t out,
+                             const settings& cfg = {}) {
+      using transport_t = typename Acceptor::transport_type;
+      using trait_t = binary::default_trait;
+      using factory_t = cf_impl<transport_t>;
+      using conn_t = typename transport_t::connection_handle;
+      using impl_t = detail::accept_handler<Acceptor, conn_t>;
+      auto max_connections = get_or(cfg, defaults::net::max_connections);
+      if (auto buf = out.try_open()) {
+        auto& mpx = sys.network_manager().mpx();
+        auto conn = flow_connector<trait_t>::make_basic_server(std::move(buf));
+        auto factory = std::make_unique<factory_t>(std::move(conn));
+        auto impl = impl_t::make(std::move(acc), std::move(factory),
+                                 max_connections);
+        auto impl_ptr = impl.get();
+        auto ptr = net::socket_manager::make(&mpx, std::move(impl));
+        impl_ptr->self_ref(ptr->as_disposable());
+        mpx.start(ptr);
+        return disposable{std::move(ptr)};
+      } else {
+        return {};
+      }
+    }
+  };
 
   // -- implementation of stream_oriented::upper_layer -------------------------
 
