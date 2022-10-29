@@ -253,7 +253,7 @@ handles is no longer valid.
      datagram_handle handle;
    };
 
-A ``datagram_servant_closed_msg`` informs the broker that one of its
+A ``datagram_servant_passivated_msg`` informs the broker that one of its
 handles entered passive mode and no longer accepts new data trigger_.
 
 .. _trigger:
