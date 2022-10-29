@@ -36,6 +36,10 @@ using accept_event_t
 template <class... Ts>
 using acceptor_resource_t = async::producer_resource<accept_event_t<Ts...>>;
 
+/// A consumer resource for processing accepted connections.
+template <class... Ts>
+using listener_resource_t = async::consumer_resource<accept_event_t<Ts...>>;
+
 /// Convenience function for creating an event listener resource and an
 /// @ref acceptor_resource_t via @ref async::make_spsc_buffer_resource.
 template <class... Ts>
