@@ -215,7 +215,6 @@ SCENARIO("calling suspend_reading temporarily halts receiving of messages") {
         app_ptr->continue_reading();
         mpx->apply_updates();
         mpx->poll_once(true);
-        CHECK_EQ(mpx->mask_of(mgr), net::operation::read);
         while (mpx->num_socket_managers() > 1u)
           mpx->poll_once(true);
         if (CHECK_EQ(buf->size(), 5u)) {

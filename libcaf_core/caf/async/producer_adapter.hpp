@@ -107,6 +107,11 @@ public:
     // nop
   }
 
+  producer_adapter& operator=(std::nullptr_t) {
+    impl_ = nullptr;
+    return *this;
+  }
+
   ~producer_adapter() {
     if (impl_)
       impl_->close();

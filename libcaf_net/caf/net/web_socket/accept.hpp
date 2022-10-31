@@ -9,6 +9,7 @@
 #include "caf/detail/accept_handler.hpp"
 #include "caf/detail/connection_factory.hpp"
 #include "caf/net/flow_connector.hpp"
+#include "caf/net/middleman.hpp"
 #include "caf/net/ssl/acceptor.hpp"
 #include "caf/net/ssl/transport.hpp"
 #include "caf/net/web_socket/default_trait.hpp"

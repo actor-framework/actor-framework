@@ -171,8 +171,12 @@ void multiplexer::deref_execution_context() const noexcept {
 
 void multiplexer::schedule(action what) {
   CAF_LOG_TRACE("");
-  auto ptr = std::move(what).as_intrusive_ptr().release();
-  write_to_pipe(pollset_updater::code::run_action, ptr);
+  if (std::this_thread::get_id() == tid_) {
+    pending_actions_.push_back(what);
+  } else {
+    auto ptr = std::move(what).as_intrusive_ptr().release();
+    write_to_pipe(pollset_updater::code::run_action, ptr);
+  }
 }
 
 void multiplexer::watch(disposable what) {
@@ -309,23 +313,32 @@ void multiplexer::poll() {
 
 void multiplexer::apply_updates() {
   CAF_LOG_DEBUG("apply" << updates_.size() << "updates");
-  if (!updates_.empty()) {
-    for (auto& [fd, update] : updates_) {
-      if (auto index = index_of(fd); index == -1) {
-        if (update.events != 0) {
-          pollfd new_entry{socket_cast<socket_id>(fd), update.events, 0};
-          pollset_.emplace_back(new_entry);
-          managers_.emplace_back(std::move(update.mgr));
+  for (;;) {
+    if (!updates_.empty()) {
+      for (auto& [fd, update] : updates_) {
+        if (auto index = index_of(fd); index == -1) {
+          if (update.events != 0) {
+            pollfd new_entry{socket_cast<socket_id>(fd), update.events, 0};
+            pollset_.emplace_back(new_entry);
+            managers_.emplace_back(std::move(update.mgr));
+          }
+        } else if (update.events != 0) {
+          pollset_[index].events = update.events;
+          managers_[index].swap(update.mgr);
+        } else {
+          pollset_.erase(pollset_.begin() + index);
+          managers_.erase(managers_.begin() + index);
         }
-      } else if (update.events != 0) {
-        pollset_[index].events = update.events;
-        managers_[index].swap(update.mgr);
-      } else {
-        pollset_.erase(pollset_.begin() + index);
-        managers_.erase(managers_.begin() + index);
       }
+      updates_.clear();
     }
-    updates_.clear();
+    while (!pending_actions_.empty()) {
+      auto next = std::move(pending_actions_.front());
+      pending_actions_.pop_front();
+      next.run();
+    }
+    if (updates_.empty())
+      return;
   }
 }
 
