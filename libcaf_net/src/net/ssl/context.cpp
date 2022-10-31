@@ -23,22 +23,34 @@ auto native(context::impl* ptr) {
 
 } // namespace
 
+// -- member types -------------------------------------------------------------
+
+struct context::user_data {
+  password::callback_ptr pw_callback;
+};
+
 // -- constructors, destructors, and assignment operators ----------------------
 
 context::context(context&& other) {
   pimpl_ = other.pimpl_;
   other.pimpl_ = nullptr;
+  data_ = other.data_;
+  other.data_ = nullptr;
 }
 
 context& context::operator=(context&& other) {
   SSL_CTX_free(native(pimpl_));
   pimpl_ = other.pimpl_;
   other.pimpl_ = nullptr;
+  delete data_;
+  data_ = other.data_;
+  other.data_ = nullptr;
   return *this;
 }
 
 context::~context() {
   SSL_CTX_free(native(pimpl_)); // Already checks for NULL.
+  delete data_;
 }
 
 // -- factories ----------------------------------------------------------------
@@ -147,6 +159,34 @@ expected<context> context::make_client(dtls vmin, dtls vmax) {
     return {make_error(sec::logic_error, errstr)};
 }
 
+// -- properties ---------------------------------------------------------------
+
+void context::set_verify_mode(verify_t flags) {
+  auto ptr = native(pimpl_);
+  SSL_CTX_set_verify(ptr, to_integer(flags), SSL_CTX_get_verify_callback(ptr));
+}
+
+namespace {
+
+int c_password_callback(char* buf, int size, int rwflag, void* ptr) {
+  if (ptr == nullptr)
+    return -1;
+  auto flag = static_cast<password::purpose>(rwflag);
+  auto fn = static_cast<password::callback*>(ptr);
+  return (*fn)(buf, size, flag);
+}
+
+} // namespace
+
+void context::set_password_callback_impl(password::callback_ptr callback) {
+  if (data_ == nullptr)
+    data_ = new user_data;
+  auto ptr = native(pimpl_);
+  data_->pw_callback = std::move(callback);
+  SSL_CTX_set_default_passwd_cb(ptr, c_password_callback);
+  SSL_CTX_set_default_passwd_cb_userdata(ptr, data_->pw_callback.get());
+}
+
 // -- native handles -----------------------------------------------------------
 
 context context::from_native(void* native_handle) {
@@ -217,7 +257,7 @@ bool context::set_default_verify_paths() {
   return SSL_CTX_set_default_verify_paths(native(pimpl_)) == 1;
 }
 
-bool context::load_verify_dir(const char* path) {
+bool context::add_verify_path(const char* path) {
   ERR_clear_error();
   return SSL_CTX_load_verify_locations(native(pimpl_), nullptr, path) == 1;
 }
@@ -227,16 +267,21 @@ bool context::load_verify_file(const char* path) {
   return SSL_CTX_load_verify_locations(native(pimpl_), path, nullptr) == 1;
 }
 
-bool context::use_certificate_from_file(const char* path, format file_format) {
+bool context::use_certificate_file(const char* path, format file_format) {
   ERR_clear_error();
-  return SSL_CTX_use_certificate_file(native(pimpl_), path, native(file_format))
-         == 1;
+  auto nff = native(file_format);
+  return SSL_CTX_use_certificate_file(native(pimpl_), path, nff) == 1;
 }
 
-bool context::use_private_key_from_file(const char* path, format file_format) {
+bool context::use_certificate_chain_file(const char* path) {
   ERR_clear_error();
-  return SSL_CTX_use_PrivateKey_file(native(pimpl_), path, native(file_format))
-         == 1;
+  return SSL_CTX_use_certificate_chain_file(native(pimpl_), path) == 1;
+}
+
+bool context::use_private_key_file(const char* path, format file_format) {
+  ERR_clear_error();
+  auto nff = native(file_format);
+  return SSL_CTX_use_PrivateKey_file(native(pimpl_), path, nff) == 1;
 }
 
 } // namespace caf::net::ssl

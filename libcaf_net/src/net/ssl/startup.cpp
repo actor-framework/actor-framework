@@ -62,6 +62,8 @@ void startup() {
   CRYPTO_set_dynlock_create_callback(dynlock_create);
   CRYPTO_set_dynlock_lock_callback(dynlock_lock);
   CRYPTO_set_dynlock_destroy_callback(dynlock_destroy);
+#else
+  OPENSSL_init_ssl(0, nullptr);
 #endif
 }
 
@@ -72,6 +74,10 @@ void cleanup() {
   CRYPTO_set_dynlock_lock_callback(nullptr);
   CRYPTO_set_dynlock_destroy_callback(nullptr);
   mutexes.clear();
+#else
+  ERR_free_strings();
+  EVP_cleanup();
+  CRYPTO_cleanup_all_ex_data();
 #endif
 }
 

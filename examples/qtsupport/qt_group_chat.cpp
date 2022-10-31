@@ -75,7 +75,8 @@ int caf_main(actor_system& sys, const config& cfg) {
   auto [lpf_pull, app_push] = make_spsc_buffer_resource<bin_frame>();
   auto [app_pull, lpf_push] = make_spsc_buffer_resource<bin_frame>();
   // Spin up the network backend.
-  using lpf = caf::net::length_prefix_framing;
+  using trait = caf::net::binary::default_trait;
+  using lpf = caf::net::length_prefix_framing::bind<trait>;
   auto conn = lpf::run(sys, *fd, std::move(lpf_pull), std::move(lpf_push));
   // Spin up Qt.
   auto [argc, argv] = cfg.c_args_remainder();

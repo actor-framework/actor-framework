@@ -140,6 +140,11 @@ public:
       impl_->cancel();
   }
 
+  consumer_adapter& operator=(std::nullptr_t) {
+    impl_ = nullptr;
+    return *this;
+  }
+
   template <class Policy>
   read_result pull(Policy policy, T& result) {
     if (impl_)

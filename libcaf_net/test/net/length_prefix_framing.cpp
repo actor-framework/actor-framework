@@ -215,7 +215,6 @@ SCENARIO("calling suspend_reading temporarily halts receiving of messages") {
         app_ptr->continue_reading();
         mpx->apply_updates();
         mpx->poll_once(true);
-        CHECK_EQ(mpx->mask_of(mgr), net::operation::read);
         while (mpx->num_socket_managers() > 1u)
           mpx->poll_once(true);
         if (CHECK_EQ(buf->size(), 5u)) {
@@ -248,7 +247,9 @@ SCENARIO("length_prefix_framing::run translates between flows and socket I/O") {
         caf::actor_system sys{cfg};
         auto buf = std::make_shared<std::vector<std::string>>();
         caf::actor hdl;
-        net::length_prefix_framing::run(sys, fd2, [&](auto event) {
+        using trait = net::binary::default_trait;
+        using lpf = net::length_prefix_framing::bind<trait>;
+        lpf::run(sys, fd2, [&](auto event) {
           hdl = sys.spawn([event, buf](event_based_actor* self) {
             auto [pull, push] = event.data();
             pull.observe_on(self)

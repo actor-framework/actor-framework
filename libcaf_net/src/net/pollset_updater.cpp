@@ -45,9 +45,9 @@ void pollset_updater::handle_read_event() {
   auto as_mgr = [](intptr_t ptr) {
     return intrusive_ptr{reinterpret_cast<socket_manager*>(ptr), false};
   };
-  auto run_action = [](intptr_t ptr) {
+  auto add_action = [this](intptr_t ptr) {
     auto f = action{intrusive_ptr{reinterpret_cast<action::impl*>(ptr), false}};
-    f.run();
+    mpx_->pending_actions_.push_back(std::move(f));
   };
   for (;;) {
     CAF_ASSERT((buf_.size() - buf_size_) > 0);
@@ -65,7 +65,7 @@ void pollset_updater::handle_read_event() {
             mpx_->do_start(as_mgr(ptr));
             break;
           case code::run_action:
-            run_action(ptr);
+            add_action(ptr);
             break;
           case code::shutdown:
             CAF_ASSERT(ptr == 0);

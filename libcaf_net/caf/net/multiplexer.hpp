@@ -4,10 +4,6 @@
 
 #pragma once
 
-#include <memory>
-#include <mutex>
-#include <thread>
-
 #include "caf/action.hpp"
 #include "caf/async/execution_context.hpp"
 #include "caf/detail/atomic_ref_counted.hpp"
@@ -18,6 +14,11 @@
 #include "caf/net/socket.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/unordered_flat_map.hpp"
+
+#include <deque>
+#include <memory>
+#include <mutex>
+#include <thread>
 
 extern "C" {
 
@@ -150,6 +151,9 @@ public:
   /// Applies all pending updates.
   void apply_updates();
 
+  /// Runs all pending actions.
+  void run_actions();
+
   /// Sets the thread ID to `std::this_thread::id()`.
   void set_thread_id();
 
@@ -212,6 +216,9 @@ protected:
 
   /// Signals whether shutdown has been requested.
   bool shutting_down_ = false;
+
+  /// Pending actions via `schedule`.
+  std::deque<action> pending_actions_;
 
   /// Keeps track of watched disposables.
   std::vector<disposable> watched_;
