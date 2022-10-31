@@ -3,10 +3,25 @@
 All notable changes to this project will be documented in this file. The format
 is based on [Keep a Changelog](https://keepachangelog.com).
 
-## [Unreleased]
+## [0.19.0-rc.1] - 2020-10-31
 
 ### Added
 
+- CAF now ships an all-new "flow API". This allows users to express data flows
+  at a high level of abstraction with a ReactiveX-style interface. Please refer
+  to new examples and the documentation for more details, as this is a large
+  addition that we cannot cover in-depth here.
+- CAF has received a new module: `caf.net`. This module enables CAF applications
+  to interface with network protocols more directly than `caf.io`. The new
+  module contains many low-level building blocks for implementing bindings to
+  network protocols. However, CAF also ships ready-to-use, high-level APIs for
+  WebSocket and HTTP. Please have a look at our new examples that showcase the
+  new APIs!
+- To complement the flow API as well as the new networking module, CAF also
+  received a new set of `async` building blocks. Most notably, this includes
+  asynchronous buffers for the flow API and futures / promises that enable the
+  new HTTP request API. We plan on making these building blocks more general in
+  the future for supporting a wider range of use cases.
 - JSON inspectors now allow users to use a custom `type_id_mapper` to generate
   and parse JSON text that uses different names for the types than the C++ API.
 
@@ -40,6 +55,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   thread.
 - Response promises now hold a strong reference to their parent actor to avoid
   `broken_promise` errors in some (legitimate) edge cases (#1361).
+- The old, experimental `stream` API in CAF has been replaced by a new API that
+  is based on the new flow API.
 
 ### Deprecated
 
@@ -849,7 +866,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Setting the log level to `quiet` now properly suppresses any log output.
 - Configuring colored terminal output should now print colored output.
 
-[Unreleased]: https://github.com/actor-framework/actor-framework/compare/0.18.6...master
+[Unreleased]: https://github.com/actor-framework/actor-framework/compare/0.19.0-rc.1...master
+[0.19.0-rc.1]: https://github.com/actor-framework/actor-framework/releases/0.19.0-rc.1
 [0.18.6]: https://github.com/actor-framework/actor-framework/releases/0.18.6
 [0.18.5]: https://github.com/actor-framework/actor-framework/releases/0.18.5
 [0.18.4]: https://github.com/actor-framework/actor-framework/releases/0.18.4
