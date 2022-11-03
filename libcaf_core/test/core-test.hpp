@@ -1,5 +1,8 @@
 #pragma once
 
+#include "caf/binary_deserializer.hpp"
+#include "caf/binary_serializer.hpp"
+#include "caf/byte_buffer.hpp"
 #include "caf/cow_vector.hpp"
 #include "caf/fwd.hpp"
 #include "caf/result.hpp"
@@ -12,6 +15,32 @@
 #include <numeric>
 #include <string>
 #include <utility>
+
+// -- utility for testing serialization round-trips ----------------------------
+
+template <class T>
+T deep_copy(const T& val) {
+  using namespace std::literals;
+  caf::byte_buffer buf;
+  {
+    caf::binary_serializer sink{nullptr, buf};
+    if (!sink.apply(val)) {
+      auto msg = "serialization failed in deep_copy: "s;
+      msg += to_string(sink.get_error());
+      CAF_RAISE_ERROR(msg.c_str());
+    }
+  }
+  auto result = T{};
+  {
+    caf::binary_deserializer sink{nullptr, buf};
+    if (!sink.apply(result)) {
+      auto msg = "deserialization failed in deep_copy: "s;
+      msg += to_string(sink.get_error());
+      CAF_RAISE_ERROR(msg.c_str());
+    }
+  }
+  return result;
+}
 
 // -- forward declarations for all unit test suites ----------------------------
 

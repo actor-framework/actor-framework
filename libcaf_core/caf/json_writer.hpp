@@ -210,7 +210,7 @@ private:
 
   void init();
 
-  // Returns the current top of the stack or `null_literal` if empty.
+  // Returns the current top of the stack or `null` if empty.
   type top();
 
   // Enters a new level of nesting.
@@ -299,5 +299,13 @@ private:
   // Configures which ID mapper we use to translate between type IDs and names.
   const type_id_mapper* mapper_ = &default_mapper_;
 };
+
+/// @relates json_writer::type
+CAF_CORE_EXPORT std::string_view as_json_type_name(json_writer::type t);
+
+/// @relates json_writer::type
+constexpr bool can_morph(json_writer::type from, json_writer::type to) {
+  return from == json_writer::type::element && to != json_writer::type::member;
+}
 
 } // namespace caf

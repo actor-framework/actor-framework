@@ -16,6 +16,8 @@ namespace caf {
 /// Stores all information necessary for implementing an FSM-based parser.
 template <class Iterator, class Sentinel>
 struct parser_state {
+  using iterator_type = Iterator;
+
   /// Current position of the parser.
   Iterator i;
 

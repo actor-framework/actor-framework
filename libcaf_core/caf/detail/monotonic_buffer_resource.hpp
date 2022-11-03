@@ -55,20 +55,20 @@ public:
       using other = allocator<U>;
     };
 
-    explicit allocator(monotonic_buffer_resource* mbr) : mbr_(mbr) {
+    constexpr explicit allocator(monotonic_buffer_resource* mbr) : mbr_(mbr) {
       // nop
     }
 
-    allocator() : mbr_(nullptr) {
+    constexpr allocator() : mbr_(nullptr) {
       // nop
     }
 
-    allocator(const allocator&) = default;
+    constexpr allocator(const allocator&) = default;
 
-    allocator& operator=(const allocator&) = default;
+    constexpr allocator& operator=(const allocator&) = default;
 
     template <class U>
-    allocator(const allocator<U>& other) : mbr_(other.resource()) {
+    constexpr allocator(const allocator<U>& other) : mbr_(other.resource()) {
       // nop
     }
 

@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file. The format
 is based on [Keep a Changelog](https://keepachangelog.com).
 
+## [Unreleased]
+
+### Added
+
+- The new classes `json_value`, `json_array` and `json_object` allow working
+  with JSON inputs directly. Actors can also pass around JSON values safely.
+
 ## [0.19.0-rc.1] - 2020-10-31
 
 ### Added
