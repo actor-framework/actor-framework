@@ -10,7 +10,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The new classes `json_value`, `json_array` and `json_object` allow working
   with JSON inputs directly. Actors can also pass around JSON values safely.
 
-## [0.19.0-rc.1] - 2020-10-31
+## [0.19.0-rc.1] - 2022-10-31
 
 ### Added
 
@@ -92,7 +92,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   code base. Since fixing `caf::variant` does not seem to be worth the time
   investment, we remove this type without a deprecation cycle.
 
-## [0.18.6]
+## [0.18.6] - 2022-03-24
 
 ### Added
 
