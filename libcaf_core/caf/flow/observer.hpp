@@ -352,8 +352,13 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  buffer_writer_impl(coordinator* ctx, buffer_ptr buf)
-    : ctx_(ctx), buf_(std::move(buf)) {
+  buffer_writer_impl(coordinator* ctx, buffer_ptr buf,
+                     std::shared_ptr<size_t> total_requested,
+                     std::shared_ptr<size_t> total_pushed)
+    : ctx_(ctx),
+      buf_(std::move(buf)),
+      total_requested_(std::move(total_requested)),
+      total_pushed_(std::move(total_pushed)) {
     CAF_ASSERT(ctx_ != nullptr);
     CAF_ASSERT(buf_ != nullptr);
   }
@@ -393,8 +398,11 @@ public:
 
   void on_next(span<const value_type> items) override {
     CAF_LOG_TRACE(CAF_ARG(items));
-    if (buf_)
+    if (buf_) {
+      if (total_pushed_)
+        *total_pushed_ += items.size();
       buf_->push(items);
+    }
   }
 
   void on_complete() override {
@@ -459,8 +467,11 @@ public:
 private:
   void on_demand(size_t n) {
     CAF_LOG_TRACE(CAF_ARG(n));
-    if (sub_)
+    if (sub_) {
+      if (total_requested_)
+        *total_requested_ += n;
       sub_.request(n);
+    }
   }
 
   void on_cancel() {
@@ -479,6 +490,8 @@ private:
   coordinator_ptr ctx_;
   buffer_ptr buf_;
   subscription sub_;
+  std::shared_ptr<size_t> total_requested_;
+  std::shared_ptr<size_t> total_pushed_;
 };
 
 // -- utility observer ---------------------------------------------------------

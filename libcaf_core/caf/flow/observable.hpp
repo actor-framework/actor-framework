@@ -166,7 +166,9 @@ public:
   }
 
   /// Creates a new observer that pushes all observed items to the resource.
-  disposable subscribe(async::producer_resource<T> resource);
+  disposable subscribe(async::producer_resource<T> resource,
+                       std::shared_ptr<size_t> total_requested = nullptr,
+                       std::shared_ptr<size_t> total_pushed = nullptr);
 
   /// Returns a transformation that applies a step function to each input.
   template <class Step>
@@ -439,8 +441,11 @@ public:
     return lift().subscribe(std::move(what));
   }
 
-  disposable subscribe(async::producer_resource<T> resource) && {
-    return lift().subscribe(std::move(resource));
+  disposable subscribe(async::producer_resource<T> resource,
+                       std::shared_ptr<size_t> total_requested = nullptr,
+                       std::shared_ptr<size_t> total_pushed = nullptr) && {
+    return lift().subscribe(std::move(resource), std::move(total_requested),
+                            std::move(total_pushed));
   }
 
   async::consumer_resource<T> to_resource() && {
@@ -2128,12 +2133,16 @@ observable<T> observable<T>::observe_on(coordinator* other, size_t buffer_size,
 // -- observable::subscribe ----------------------------------------------------
 
 template <class T>
-disposable observable<T>::subscribe(async::producer_resource<T> resource) {
+disposable observable<T>::subscribe(async::producer_resource<T> resource,
+                                    std::shared_ptr<size_t> total_requested,
+                                    std::shared_ptr<size_t> total_pushed) {
   using buffer_type = typename async::consumer_resource<T>::buffer_type;
   using adapter_type = buffer_writer_impl<buffer_type>;
   if (auto buf = resource.try_open()) {
     CAF_LOG_DEBUG("subscribe producer resource to flow");
-    auto adapter = make_counted<adapter_type>(pimpl_->ctx(), buf);
+    auto adapter = make_counted<adapter_type>(pimpl_->ctx(), buf,
+                                              std::move(total_requested),
+                                              std::move(total_pushed));
     buf->set_producer(adapter);
     auto obs = adapter->as_observer();
     pimpl_->ctx()->watch(obs.as_disposable());
