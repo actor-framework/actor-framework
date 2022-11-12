@@ -606,7 +606,12 @@ void scheduled_actor::schedule(action what) {
 }
 
 void scheduled_actor::delay(action what) {
-  actions_.emplace_back(std::move(what));
+  // If we are already in run_actions, we force the action through the mailbox
+  // in order to break hot loops that would otherwise starve any other activity.
+  if (!running_actions_)
+    actions_.emplace_back(std::move(what));
+  else
+    schedule(std::move(what));
 }
 
 disposable scheduled_actor::delay_until(steady_time_point abs_time,
@@ -1242,6 +1247,8 @@ void scheduled_actor::watch(disposable obj) {
 }
 
 void scheduled_actor::run_actions() {
+  running_actions_ = true;
+  auto guard = detail::make_scope_guard([this] { running_actions_ = false; });
   if (!actions_.empty()) {
     // Note: can't use iterators here since actions may add to the vector.
     for (auto index = size_t{0}; index < actions_.size(); ++index) {

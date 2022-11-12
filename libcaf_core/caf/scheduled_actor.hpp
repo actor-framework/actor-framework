@@ -807,6 +807,10 @@ private:
   /// message.
   std::vector<action> actions_;
 
+  /// Flag that tells delay() to push actions to the mailbox if we are already
+  /// in run_actions.
+  bool running_actions_ = false;
+
   /// Stores resources that block the actor from terminating.
   std::vector<disposable> watched_disposables_;
 };
