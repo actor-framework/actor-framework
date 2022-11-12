@@ -716,6 +716,30 @@ public:
     return completed_ && buf_.empty();
   }
 
+  size_t desired_capacity() const noexcept {
+    return desired_capacity_;
+  }
+
+  size_t buf_size() const noexcept {
+    return buf_.size();
+  }
+
+  bool completed() const noexcept {
+    return completed_;
+  }
+
+  size_t max_demand() const noexcept {
+    return max_demand_;
+  }
+
+  const std::vector<output_t>& outputs() {
+    return outputs_;
+  }
+
+  size_t total_pushed() const noexcept {
+    return total_pushed_;
+  }
+
   // -- buffer handling --------------------------------------------------------
 
   template <class Iterator, class Sentinel>
@@ -784,6 +808,7 @@ public:
       }
       max_demand_ -= n;
       batch_.clear();
+      total_pushed_ += n;
       if (done()) {
         for (auto& out : outputs_)
           out.sink.on_complete();
@@ -818,6 +843,7 @@ protected:
   bool completed_ = false;
   size_t max_demand_ = 0;
   std::vector<output_t> outputs_;
+  size_t total_pushed_ = 0;
 
   /// Stores items right before calling on_next on the sinks.
   std::vector<T> batch_;
