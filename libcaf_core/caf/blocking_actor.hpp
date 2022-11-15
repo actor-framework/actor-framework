@@ -4,10 +4,6 @@
 
 #pragma once
 
-#include <chrono>
-#include <condition_variable>
-#include <mutex>
-
 #include "caf/actor_config.hpp"
 #include "caf/actor_traits.hpp"
 #include "caf/after.hpp"
@@ -33,12 +29,14 @@
 #include "caf/none.hpp"
 #include "caf/policy/arg.hpp"
 #include "caf/policy/categorized.hpp"
-#include "caf/policy/downstream_messages.hpp"
 #include "caf/policy/normal_messages.hpp"
-#include "caf/policy/upstream_messages.hpp"
 #include "caf/policy/urgent_messages.hpp"
 #include "caf/send.hpp"
 #include "caf/typed_actor.hpp"
+
+#include <chrono>
+#include <condition_variable>
+#include <mutex>
 
 namespace caf {
 
@@ -387,8 +385,6 @@ public:
                     detail::blocking_behavior& bhvr);
 
   bool cleanup(error&& fail_state, execution_unit* host) override;
-
-  sec build_pipeline(stream_slot in, stream_slot out, stream_manager_ptr mgr);
 
   // -- backwards compatibility ------------------------------------------------
 

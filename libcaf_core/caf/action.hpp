@@ -6,12 +6,13 @@
 
 #include "caf/allowed_unsafe_message_type.hpp"
 #include "caf/config.hpp"
+#include "caf/detail/atomic_ref_counted.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/disposable.hpp"
 #include "caf/make_counted.hpp"
-#include "caf/ref_counted.hpp"
 
 #include <atomic>
+#include <cstddef>
 
 namespace caf {
 
@@ -33,14 +34,6 @@ public:
     virtual void run() = 0;
 
     virtual state current_state() const noexcept = 0;
-
-    friend void intrusive_ptr_add_ref(const impl* ptr) noexcept {
-      ptr->ref_disposable();
-    }
-
-    friend void intrusive_ptr_release(const impl* ptr) noexcept {
-      ptr->deref_disposable();
-    }
   };
 
   using impl_ptr = intrusive_ptr<impl>;
@@ -58,6 +51,11 @@ public:
   action& operator=(action&&) noexcept = default;
 
   action& operator=(const action&) noexcept = default;
+
+  action& operator=(std::nullptr_t) noexcept {
+    pimpl_ = nullptr;
+    return *this;
+  }
 
   // -- observers --------------------------------------------------------------
 
@@ -108,6 +106,14 @@ public:
     return pimpl_;
   }
 
+  explicit operator bool() const noexcept {
+    return static_cast<bool>(pimpl_);
+  }
+
+  [[nodiscard]] bool operator!() const noexcept {
+    return !pimpl_;
+  }
+
 private:
   impl_ptr pimpl_;
 };
@@ -115,8 +121,8 @@ private:
 } // namespace caf
 namespace caf::detail {
 
-template <class F>
-struct default_action_impl : ref_counted, action::impl {
+template <class F, bool IsSingleShot>
+struct default_action_impl : detail::atomic_ref_counted, action::impl {
   std::atomic<action::state> state_;
   F f_;
 
@@ -138,11 +144,12 @@ struct default_action_impl : ref_counted, action::impl {
   }
 
   void run() override {
-    // Note: we do *not* set the state to disposed after running the function
-    // object. This allows the action to re-register itself when needed, e.g.,
-    // to implement time-based loops.
     if (state_.load() == action::state::scheduled) {
       f_();
+      if constexpr (IsSingleShot)
+        state_ = action::state::disposed;
+      // else: allow the action to re-register itself when needed by *not*
+      //       setting the state to disposed, e.g., to implement time loops.
     }
   }
 
@@ -171,7 +178,15 @@ namespace caf {
 /// @param f The body for the action.
 template <class F>
 action make_action(F f) {
-  using impl_t = detail::default_action_impl<F>;
+  using impl_t = detail::default_action_impl<F, false>;
+  return action{make_counted<impl_t>(std::move(f))};
+}
+
+/// Convenience function for creating an @ref action from a function object.
+/// @param f The body for the action.
+template <class F>
+action make_single_shot_action(F f) {
+  using impl_t = detail::default_action_impl<F, true>;
   return action{make_counted<impl_t>(std::move(f))};
 }
 

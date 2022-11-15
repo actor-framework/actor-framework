@@ -17,6 +17,11 @@ namespace {
 
 struct fixture : test_coordinator_fixture<> {
   flow::scoped_coordinator_ptr ctx = flow::make_scoped_coordinator();
+
+  template <class... Ts>
+  std::vector<int> ls(Ts... xs) {
+    return std::vector<int>{xs...};
+  }
 };
 
 } // namespace
@@ -30,9 +35,9 @@ SCENARIO("concat operators combine inputs") {
         auto outputs = std::vector<int>{};
         auto r1 = ctx->make_observable().repeat(11).take(113);
         auto r2 = ctx->make_observable().repeat(22).take(223);
-        flow::concat(std::move(r1), std::move(r2)).for_each([&outputs](int x) {
-          outputs.emplace_back(x);
-        });
+        ctx->make_observable()
+          .concat(std::move(r1), std::move(r2))
+          .for_each([&outputs](int x) { outputs.emplace_back(x); });
         ctx->run();
         if (CHECK_EQ(outputs.size(), 336u)) {
           CHECK(std::all_of(outputs.begin(), outputs.begin() + 113,

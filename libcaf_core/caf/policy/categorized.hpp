@@ -8,9 +8,7 @@
 #include "caf/fwd.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/message_priority.hpp"
-#include "caf/policy/downstream_messages.hpp"
 #include "caf/policy/normal_messages.hpp"
-#include "caf/policy/upstream_messages.hpp"
 #include "caf/policy/urgent_messages.hpp"
 #include "caf/unit.hpp"
 
@@ -50,14 +48,6 @@ public:
     // Allow actors to consume twice as many urgent as normal messages per
     // credit round.
     return x + x;
-  }
-
-  template <template <class> class Queue>
-  static deficit_type
-  quantum(const Queue<upstream_messages>& q, deficit_type) noexcept {
-    // Allow actors to consume *all* upstream messages. They are lightweight by
-    // design and require little processing.
-    return q.total_task_size();
   }
 
   template <class Queue>

@@ -62,7 +62,7 @@ public:
     buf_.insert(buf_.end(), items.begin(), items.end());
     if (buf_.size() == items.size() && consumer_)
       consumer_->on_producer_wakeup();
-    if (capacity_ >= buf_.size())
+    if (capacity_ > buf_.size())
       return capacity_ - buf_.size();
     else
       return 0;
@@ -235,20 +235,18 @@ public:
       consumer_buf_.assign(make_move_iterator(buf_.begin()),
                            make_move_iterator(buf_.begin() + n));
       buf_.erase(buf_.begin(), buf_.begin() + n);
-      if (overflow == 0) {
-        signal_demand(n);
-      } else if (n <= overflow) {
-        overflow -= n;
-      } else {
+      if (n > overflow) {
         signal_demand(n - overflow);
-        overflow = 0;
       }
       guard.unlock();
-      dst.on_next(span<const T>{consumer_buf_.data(), n});
+      auto items = span<const T>{consumer_buf_.data(), n};
+      for (auto& item : items)
+        dst.on_next(item);
       demand -= n;
       consumed += n;
       consumer_buf_.clear();
       guard.lock();
+      overflow = buf_.size() <= capacity_ ? 0u : buf_.size() - capacity_;
     }
     if (!buf_.empty() || !closed_) {
       return {true, consumed};
@@ -266,9 +264,13 @@ private:
   void ready() {
     producer_->on_consumer_ready();
     consumer_->on_producer_ready();
-    if (!buf_.empty())
+    if (!buf_.empty()) {
       consumer_->on_producer_wakeup();
-    signal_demand(capacity_);
+      if (capacity_ > buf_.size())
+        signal_demand(capacity_ - buf_.size());
+    } else {
+      signal_demand(capacity_);
+    }
   }
 
   void signal_demand(uint32_t new_demand) {
@@ -327,7 +329,7 @@ struct resource_ctrl : ref_counted {
   ~resource_ctrl() {
     if (buf) {
       if constexpr (IsProducer) {
-        auto err = make_error(sec::invalid_upstream,
+        auto err = make_error(sec::disposed,
                               "producer_resource destroyed without opening it");
         buf->abort(err);
       } else {
@@ -395,9 +397,17 @@ public:
     }
   }
 
+  /// Convenience function for calling
+  /// `ctx->make_observable().from_resource(*this)`.
   template <class Coordinator>
-  auto observe_on(Coordinator* ctx) {
+  auto observe_on(Coordinator* ctx) const {
     return ctx->make_observable().from_resource(*this);
+  }
+
+  /// Calls `try_open` and on success immediately calls `cancel` on the buffer.
+  void cancel() {
+    if (auto buf = try_open())
+      buf->cancel();
   }
 
   explicit operator bool() const noexcept {
@@ -452,6 +462,12 @@ public:
     }
   }
 
+  /// Calls `try_open` and on success immediately calls `close` on the buffer.
+  void close() {
+    if (auto buf = try_open())
+      buf->close();
+  }
+
   explicit operator bool() const noexcept {
     return ctrl_ != nullptr;
   }
@@ -460,19 +476,23 @@ private:
   intrusive_ptr<resource_ctrl<T, true>> ctrl_;
 };
 
-/// Creates spsc buffer and returns two resources connected by that buffer.
+template <class T1, class T2 = T1>
+using resource_pair = std::pair<consumer_resource<T1>, producer_resource<T2>>;
+
+/// Creates an @ref spsc_buffer and returns two resources connected by that
+/// buffer.
 template <class T>
-std::pair<consumer_resource<T>, producer_resource<T>>
+resource_pair<T>
 make_spsc_buffer_resource(size_t buffer_size, size_t min_request_size) {
   using buffer_type = spsc_buffer<T>;
   auto buf = make_counted<buffer_type>(buffer_size, min_request_size);
   return {async::consumer_resource<T>{buf}, async::producer_resource<T>{buf}};
 }
 
-/// Creates spsc buffer and returns two resources connected by that buffer.
+/// Creates an @ref spsc_buffer and returns two resources connected by that
+/// buffer.
 template <class T>
-std::pair<consumer_resource<T>, producer_resource<T>>
-make_spsc_buffer_resource() {
+resource_pair<T> make_spsc_buffer_resource() {
   return make_spsc_buffer_resource<T>(defaults::flow::buffer_size,
                                       defaults::flow::min_demand);
 }

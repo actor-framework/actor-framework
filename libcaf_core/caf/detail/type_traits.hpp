@@ -7,6 +7,7 @@
 #include <array>
 #include <chrono>
 #include <functional>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <type_traits>
@@ -220,6 +221,9 @@ public:
 
 template <class T>
 constexpr bool is_iterable<T>::value;
+
+template <class T>
+constexpr bool is_iterable_v = is_iterable<T>::value;
 
 /// Checks whether `T` is a non-const reference.
 template <class T>
@@ -527,12 +531,6 @@ struct transfer_const<const T, U> {
 
 template <class T, class U>
 using transfer_const_t = typename transfer_const<T, U>::type;
-
-template <class T>
-struct is_stream : std::false_type {};
-
-template <class T>
-struct is_stream<stream<T>> : std::true_type {};
 
 template <class T>
 struct is_result : std::false_type {};
@@ -1028,6 +1026,29 @@ template <>
 struct is_builtin_inspector_type<span<const byte>, false> {
   static constexpr bool value = true;
 };
+
+/// Checks whether `T` is a `std::optional`.
+template <class T>
+struct is_optional : std::false_type {};
+
+template <class T>
+struct is_optional<std::optional<T>> : std::true_type {};
+
+template <class T>
+constexpr bool is_optional_v = is_optional<T>::value;
+
+template <class T>
+struct unboxed_oracle {
+  using type = T;
+};
+
+template <class T>
+struct unboxed_oracle<std::optional<T>> {
+  using type = T;
+};
+
+template <class T>
+using unboxed_t = typename unboxed_oracle<T>::type;
 
 } // namespace caf::detail
 

@@ -43,7 +43,7 @@ local_actor::metrics_t make_instance_metrics(local_actor* self) {
     };
   self->setf(abstract_actor::collects_metrics_flag);
   const auto& families = sys.actor_metric_families();
-  string_view sv{name, strlen(name)};
+  std::string_view sv{name, strlen(name)};
   return {
     families.processing_time->get_or_add({{"name", sv}}),
     families.mailbox_time->get_or_add({{"name", sv}}),
@@ -129,9 +129,14 @@ void local_actor::on_exit() {
   // nop
 }
 
-message_id local_actor::new_request_id(message_priority mp) {
+message_id local_actor::new_request_id(message_priority mp) noexcept {
   auto result = ++last_request_id_;
   return mp == message_priority::normal ? result : result.with_high_priority();
+}
+
+uint64_t local_actor::new_u64_id() noexcept {
+  auto result = ++last_request_id_;
+  return result.integer_value();
 }
 
 void local_actor::send_exit(const actor_addr& whom, error reason) {

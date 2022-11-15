@@ -25,11 +25,13 @@ public:
 
   void run();
 
+  size_t run_some();
+
   // -- reference counting -----------------------------------------------------
 
-  void ref_coordinator() const noexcept override;
+  void ref_execution_context() const noexcept override;
 
-  void deref_coordinator() const noexcept override;
+  void deref_execution_context() const noexcept override;
 
   friend void intrusive_ptr_add_ref(const scoped_coordinator* ptr) {
     ptr->ref();

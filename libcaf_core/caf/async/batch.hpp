@@ -11,7 +11,6 @@
 #include <memory>
 
 #include "caf/async/fwd.hpp"
-#include "caf/byte.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
@@ -40,7 +39,7 @@ public:
   template <class T>
   friend batch make_batch(span<const T> items);
 
-  using item_destructor = void (*)(type_id_t, uint16_t, size_t, byte*);
+  using item_destructor = void (*)(type_id_t, uint16_t, size_t, std::byte*);
 
   batch() = default;
   batch(batch&&) = default;
@@ -143,11 +142,11 @@ private:
       return size_;
     }
 
-    byte* storage() noexcept {
+    std::byte* storage() noexcept {
       return storage_;
     }
 
-    const byte* storage() const noexcept {
+    const std::byte* storage() const noexcept {
       return storage_;
     }
 
@@ -176,7 +175,7 @@ private:
     type_id_t item_type_;
     uint16_t item_size_;
     size_t size_;
-    byte storage_[];
+    std::byte storage_[];
   };
 
   explicit batch(intrusive_ptr<data> ptr) : data_(std::move(ptr)) {
@@ -205,7 +204,8 @@ batch make_batch(span<const T> items) {
   auto vptr = malloc(total_size);
   if (vptr == nullptr)
     CAF_RAISE_ERROR(std::bad_alloc, "make_batch");
-  auto destroy_items = [](type_id_t, uint16_t, size_t size, byte* storage) {
+  auto destroy_items = [](type_id_t, uint16_t, size_t size,
+                          std::byte* storage) {
     auto ptr = reinterpret_cast<T*>(storage);
     std::destroy(ptr, ptr + size);
   };

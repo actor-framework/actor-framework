@@ -26,13 +26,27 @@ void scoped_coordinator::run() {
   }
 }
 
+size_t scoped_coordinator::run_some() {
+  size_t result = 0;
+  for (;;) {
+    auto f = next(false);
+    if (f.ptr() != nullptr) {
+      ++result;
+      f.run();
+      drop_disposed_flows();
+    } else {
+      return result;
+    }
+  }
+}
+
 // -- reference counting -------------------------------------------------------
 
-void scoped_coordinator::ref_coordinator() const noexcept {
+void scoped_coordinator::ref_execution_context() const noexcept {
   ref();
 }
 
-void scoped_coordinator::deref_coordinator() const noexcept {
+void scoped_coordinator::deref_execution_context() const noexcept {
   deref();
 }
 

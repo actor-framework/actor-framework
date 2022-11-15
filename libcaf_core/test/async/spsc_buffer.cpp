@@ -83,8 +83,8 @@ public:
 
 struct dummy_observer {
   template <class T>
-  void on_next(span<const T> items) {
-    consumed += items.size();
+  void on_next(const T&) {
+    ++consumed;
   }
 
   void on_error(error what) {

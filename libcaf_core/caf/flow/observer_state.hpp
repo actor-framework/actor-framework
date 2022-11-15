@@ -18,16 +18,26 @@ enum class observer_state {
   /// Indicates that on_complete was called.
   completed,
   /// Indicates that on_error was called.
-  aborted,
-  /// Indicates that dispose was called.
-  disposed,
+  aborted
 };
+
+/// Returns whether `x` represents a final state, i.e., `completed`, `aborted`
+/// or `disposed`.
+constexpr bool is_final(observer_state x) noexcept {
+  return static_cast<int>(x) >= static_cast<int>(observer_state::completed);
+}
+
+/// Returns whether `x` represents an active state, i.e., `idle` or
+/// `subscribed`.
+constexpr bool is_active(observer_state x) noexcept {
+  return static_cast<int>(x) <= static_cast<int>(observer_state::subscribed);
+}
 
 /// @relates sec
 CAF_CORE_EXPORT std::string to_string(observer_state);
 
 /// @relates observer_state
-CAF_CORE_EXPORT bool from_string(string_view, observer_state&);
+CAF_CORE_EXPORT bool from_string(std::string_view, observer_state&);
 
 /// @relates observer_state
 CAF_CORE_EXPORT bool from_integer(std::underlying_type_t<observer_state>,

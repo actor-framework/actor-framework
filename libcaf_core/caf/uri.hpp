@@ -9,7 +9,6 @@
 
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
-#include "caf/detail/unordered_flat_map.hpp"
 #include "caf/fwd.hpp"
 #include "caf/hash/fnv.hpp"
 #include "caf/inspector_access.hpp"
@@ -18,6 +17,7 @@
 #include "caf/ip_address.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/string_view.hpp"
+#include "caf/unordered_flat_map.hpp"
 #include "caf/variant.hpp"
 
 namespace caf {
@@ -60,7 +60,7 @@ public:
   using path_list = std::vector<string_view>;
 
   /// Separates the query component into key-value pairs.
-  using query_map = detail::unordered_flat_map<std::string, std::string>;
+  using query_map = unordered_flat_map<std::string, std::string>;
 
   class CAF_CORE_EXPORT impl_type {
   public:

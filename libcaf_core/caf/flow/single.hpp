@@ -4,18 +4,89 @@
 
 #pragma once
 
-#include <algorithm>
-#include <utility>
-#include <variant>
-
 #include "caf/detail/overload.hpp"
 #include "caf/disposable.hpp"
 #include "caf/error.hpp"
 #include "caf/flow/observable.hpp"
-#include "caf/none.hpp"
 #include "caf/ref_counted.hpp"
 
+#include <algorithm>
+#include <optional>
+#include <type_traits>
+#include <utility>
+
 namespace caf::flow {
+
+template <class OnSuccess>
+struct on_success_orcacle {
+  using trait = detail::get_callable_trait_t<OnSuccess>;
+
+  static_assert(trait::num_args == 1,
+                "OnSuccess functions must take exactly one argument");
+
+  using arg_type = std::decay_t<detail::tl_head_t<typename trait::arg_types>>;
+};
+
+template <class OnSuccess>
+using on_success_arg_t = typename on_success_orcacle<OnSuccess>::arg_type;
+
+template <class OnSuccess, class OnError>
+class single_observer_impl
+  : public observer_impl_base<on_success_arg_t<OnSuccess>> {
+public:
+  using input_type = on_success_arg_t<OnSuccess>;
+
+  single_observer_impl(OnSuccess on_success, OnError on_error)
+    : on_success_(std::move(on_success)), on_error_(std::move(on_error)) {
+    // nop
+  }
+
+  void on_subscribe(subscription sub) {
+    // Request one additional item to detect whether the observable emits more
+    // than one item.
+    sub.request(2);
+    sub_ = std::move(sub);
+  }
+
+  void on_next(const input_type& item) {
+    if (!result_) {
+      result_.emplace(item);
+    } else {
+      sub_.dispose();
+      sub_ = nullptr;
+      auto err = make_error(sec::runtime_error,
+                            "single emitted more than one item");
+      on_error_(err);
+    }
+  }
+
+  void on_complete() {
+    if (sub_) {
+      sub_ = nullptr;
+      if (result_) {
+        on_success_(*result_);
+        result_ = std::nullopt;
+      } else {
+        auto err = make_error(sec::broken_promise,
+                              "single failed to produce an item");
+        on_error_(err);
+      }
+    }
+  }
+
+  void on_error(const error& what) {
+    if (sub_) {
+      sub_ = nullptr;
+      on_error_(what);
+    }
+  }
+
+private:
+  OnSuccess on_success_;
+  OnError on_error_;
+  std::optional<input_type> result_;
+  subscription sub_;
+};
 
 /// Similar to an `observable`, but always emits either a single value or an
 /// error.
@@ -24,107 +95,7 @@ class single {
 public:
   using output_type = T;
 
-  /// Internal interface of a `single`.
-  class impl : public ref_counted, public observable_impl<T> {
-  public:
-    using super = observable_impl<T>;
-
-    CAF_INTRUSIVE_PTR_FRIENDS(impl)
-
-    explicit impl(coordinator* ctx) : ctx_(ctx) {
-      // nop
-    }
-
-    coordinator* ctx() const noexcept override {
-      return ctx_;
-    }
-
-    disposable subscribe(observer<T> what) override {
-      if (!std::holds_alternative<error>(value_)) {
-        auto res = super::do_subscribe(what.ptr());
-        observers_.emplace_back(std::move(what), 0u);
-        return res;
-      } else {
-        what.on_error(std::get<error>(value_));
-        return disposable{};
-      }
-    }
-
-    void on_request(observer_impl<T>* sink, size_t n) override {
-      auto pred = [sink](auto& entry) { return entry.first.ptr() == sink; };
-      if (auto i = std::find_if(observers_.begin(), observers_.end(), pred);
-          i != observers_.end()) {
-        auto f = detail::make_overload( //
-          [i, n](none_t) { i->second += n; },
-          [this, i](const T& val) {
-            i->first.on_next(make_span(&val, 1));
-            i->first.on_complete();
-            observers_.erase(i);
-          },
-          [this, i](const error& err) {
-            i->first.on_error(err);
-            observers_.erase(i);
-          });
-        std::visit(f, value_);
-      }
-    }
-
-    void on_cancel(observer_impl<T>* sink) override {
-      auto pred = [sink](auto& entry) { return entry.first.ptr() == sink; };
-      if (auto i = std::find_if(observers_.begin(), observers_.end(), pred);
-          i != observers_.end())
-        observers_.erase(i);
-    }
-
-    void dispose() override {
-      if (!std::holds_alternative<error>(value_))
-        set_error(make_error(sec::disposed));
-    }
-
-    bool disposed() const noexcept override {
-      return observers_.empty() && !std::holds_alternative<none_t>(value_);
-    }
-
-    void ref_disposable() const noexcept final {
-      this->ref();
-    }
-
-    void deref_disposable() const noexcept final {
-      this->deref();
-    }
-
-    void set_value(T val) {
-      if (std::holds_alternative<none_t>(value_)) {
-        value_ = std::move(val);
-        auto& ref = std::get<T>(value_);
-        auto pred = [](auto& entry) { return entry.second == 0; };
-        if (auto first = std::partition(observers_.begin(), observers_.end(),
-                                        pred);
-            first != observers_.end()) {
-          for (auto i = first; i != observers_.end(); ++i) {
-            i->first.on_next(make_span(&ref, 1));
-            i->first.on_complete();
-          }
-          observers_.erase(first, observers_.end());
-        }
-      }
-    }
-
-    void set_error(error err) {
-      value_ = std::move(err);
-      auto& ref = std::get<error>(value_);
-      for (auto& entry : observers_)
-        entry.first.on_error(ref);
-      observers_.clear();
-    }
-
-  private:
-    coordinator* ctx_;
-    std::variant<none_t, T, error> value_;
-    std::vector<std::pair<observer<T>, size_t>> observers_;
-  };
-
-  explicit single(intrusive_ptr<impl> pimpl) noexcept
+  explicit single(intrusive_ptr<op::base<T>> pimpl) noexcept
     : pimpl_(std::move(pimpl)) {
     // nop
   }
@@ -140,13 +111,6 @@ public:
   single& operator=(single&&) noexcept = default;
   single& operator=(const single&) noexcept = default;
 
-  disposable as_disposable() && {
-    return disposable{std::move(pimpl_)};
-  }
-  disposable as_disposable() const& {
-    return disposable{pimpl_};
-  }
-
   observable<T> as_observable() && {
     return observable<T>{std::move(pimpl_)};
   }
@@ -154,32 +118,13 @@ public:
     return observable<T>{pimpl_};
   }
 
-  void subscribe(observer<T> what) {
-    if (pimpl_)
-      pimpl_->subscribe(std::move(what));
-    else
-      what.on_error(make_error(sec::invalid_observable));
-  }
-
   template <class OnSuccess, class OnError>
-  void subscribe(OnSuccess on_success, OnError on_error) {
+  disposable subscribe(OnSuccess on_success, OnError on_error) {
     static_assert(std::is_invocable_v<OnSuccess, const T&>);
-    as_observable().for_each(
-      [f{std::move(on_success)}](span<const T> items) mutable {
-        CAF_ASSERT(items.size() == 1);
-        f(items[0]);
-      },
-      std::move(on_error));
-  }
-
-  void set_value(T val) {
-    if (pimpl_)
-      pimpl_->set_value(std::move(val));
-  }
-
-  void set_error(error err) {
-    if (pimpl_)
-      pimpl_->set_error(std::move(err));
+    static_assert(std::is_invocable_v<OnError, const error&>);
+    using impl_t = single_observer_impl<OnSuccess, OnError>;
+    auto ptr = make_counted<impl_t>(std::move(on_success), std::move(on_error));
+    return pimpl_->subscribe(observer<T>{ptr});
   }
 
   bool valid() const noexcept {
@@ -194,36 +139,22 @@ public:
     return !valid();
   }
 
-  impl* ptr() {
-    return pimpl_.get();
-  }
-
-  const impl* ptr() const {
-    return pimpl_.get();
-  }
-
-  const intrusive_ptr<impl>& as_intrusive_ptr() const& noexcept {
-    return pimpl_;
-  }
-
-  intrusive_ptr<impl>&& as_intrusive_ptr() && noexcept {
-    return std::move(pimpl_);
-  }
-
   void swap(single& other) {
     pimpl_.swap(other.pimpl_);
   }
 
 private:
-  intrusive_ptr<impl> pimpl_;
+  intrusive_ptr<op::base<T>> pimpl_;
 };
 
-template <class T>
-using single_impl = typename single<T>::impl;
-
-template <class T>
-single<T> make_single(coordinator* ctx) {
-  return single<T>{make_counted<single_impl<T>>(ctx)};
+/// Convenience function for creating a @ref single from a flow operator.
+template <class Operator, class... Ts>
+single<typename Operator::output_type>
+make_single(coordinator* ctx, Ts&&... xs) {
+  using out_t = typename Operator::output_type;
+  using ptr_t = intrusive_ptr<out_t>;
+  ptr_t ptr{new Operator(ctx, std::forward<Ts>(xs)...), false};
+  return single<out_t>{std::move(ptr)};
 }
 
 } // namespace caf::flow
