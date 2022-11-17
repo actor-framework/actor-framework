@@ -7,6 +7,7 @@
 #include "caf/default_enum_inspect.hpp"
 #include "caf/detail/core_export.hpp"
 
+#include <string_view>
 #include <type_traits>
 
 namespace caf::async {
@@ -19,15 +20,16 @@ enum class read_result {
   stop,
   /// Signals that the source failed with an error.
   abort,
-  /// Signals that the read operation timed out.
-  timeout,
+  /// Signals that the read operation cannot produce a result at the moment,
+  /// e.g., because of a timeout.
+  try_again_later,
 };
 
 /// @relates read_result
 CAF_CORE_EXPORT std::string to_string(read_result);
 
 /// @relates read_result
-CAF_CORE_EXPORT bool from_string(string_view, read_result&);
+CAF_CORE_EXPORT bool from_string(std::string_view, read_result&);
 
 /// @relates read_result
 CAF_CORE_EXPORT bool from_integer(std::underlying_type_t<read_result>,

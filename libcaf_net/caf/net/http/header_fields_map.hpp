@@ -4,12 +4,12 @@
 
 #pragma once
 
-#include "caf/detail/unordered_flat_map.hpp"
 #include "caf/string_view.hpp"
+#include "caf/unordered_flat_map.hpp"
 
 namespace caf::net::http {
 
 /// Convenience type alias for a key-value map storing header fields.
-using header_fields_map = detail::unordered_flat_map<string_view, string_view>;
+using header_fields_map = unordered_flat_map<string_view, string_view>;
 
 } // namespace caf::net::http

@@ -419,7 +419,10 @@ public:
 
   bool cleanup(error&& fail_state, execution_unit* host) override;
 
-  message_id new_request_id(message_priority mp);
+  message_id new_request_id(message_priority mp) noexcept;
+
+  /// Returns a 64-bit ID that is unique on this actor.
+  uint64_t new_u64_id() noexcept;
 
   template <class T>
   void respond(T& x) {

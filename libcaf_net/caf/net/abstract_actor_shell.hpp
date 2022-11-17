@@ -7,7 +7,6 @@
 #include "caf/actor_traits.hpp"
 #include "caf/callback.hpp"
 #include "caf/detail/net_export.hpp"
-#include "caf/detail/unordered_flat_map.hpp"
 #include "caf/extend.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive/drr_queue.hpp"
@@ -18,6 +17,7 @@
 #include "caf/net/fwd.hpp"
 #include "caf/none.hpp"
 #include "caf/policy/normal_messages.hpp"
+#include "caf/unordered_flat_map.hpp"
 
 namespace caf::net {
 
@@ -114,7 +114,7 @@ protected:
   fallback_handler fallback_;
 
   // Stores callbacks for multiplexed responses.
-  detail::unordered_flat_map<message_id, behavior> multiplexed_responses_;
+  unordered_flat_map<message_id, behavior> multiplexed_responses_;
 };
 
 } // namespace caf::net

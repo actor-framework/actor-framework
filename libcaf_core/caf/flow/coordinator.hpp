@@ -5,11 +5,11 @@
 #pragma once
 
 #include "caf/action.hpp"
+#include "caf/async/execution_context.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/flow/fwd.hpp"
 #include "caf/flow/subscription.hpp"
 #include "caf/intrusive_ptr.hpp"
-#include "caf/ref_counted.hpp"
 #include "caf/timespan.hpp"
 
 #include <chrono>
@@ -20,12 +20,8 @@ namespace caf::flow {
 /// Coordinates any number of co-located observables and observers. The
 /// co-located objects never need to synchronize calls to other co-located
 /// objects since the coordinator guarantees synchronous execution.
-class CAF_CORE_EXPORT coordinator {
+class CAF_CORE_EXPORT coordinator : public async::execution_context {
 public:
-  // -- friends ----------------------------------------------------------------
-
-  friend class subscription_impl;
-
   // -- member types -----------------------------------------------------------
 
   /// A time point of the monotonic clock.
@@ -35,34 +31,10 @@ public:
 
   virtual ~coordinator();
 
-  // -- reference counting -----------------------------------------------------
-
-  /// Increases the reference count of the coordinator.
-  virtual void ref_coordinator() const noexcept = 0;
-
-  /// Decreases the reference count of the coordinator and destroys the object
-  /// if necessary.
-  virtual void deref_coordinator() const noexcept = 0;
-
-  friend void intrusive_ptr_add_ref(const coordinator* ptr) noexcept {
-    ptr->ref_coordinator();
-  }
-
-  friend void intrusive_ptr_release(const coordinator* ptr) noexcept {
-    ptr->deref_coordinator();
-  }
-
   // -- conversions ------------------------------------------------------------
 
   /// Returns a factory object for new observable objects on this coordinator.
   [[nodiscard]] observable_builder make_observable();
-
-  // -- lifetime management ----------------------------------------------------
-
-  /// Asks the coordinator to keep its event loop running until `obj` becomes
-  /// disposed since it depends on external events or produces events that are
-  /// visible to outside observers.
-  virtual void watch(disposable what) = 0;
 
   // -- time -------------------------------------------------------------------
 
@@ -70,17 +42,6 @@ public:
   virtual steady_time_point steady_time() = 0;
 
   // -- scheduling of actions --------------------------------------------------
-
-  /// Schedules an action for execution on this coordinator. This member
-  /// function may get called from external sources or threads.
-  /// @thread-safe
-  virtual void schedule(action what) = 0;
-
-  ///@copydoc schedule
-  template <class F>
-  void schedule_fn(F&& what) {
-    return schedule(make_action(std::forward<F>(what)));
-  }
 
   /// Delays execution of an action until all pending actions were executed. May
   /// call `schedule`.

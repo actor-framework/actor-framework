@@ -240,7 +240,8 @@ public:
       }
       guard.unlock();
       auto items = span<const T>{consumer_buf_.data(), n};
-      dst.on_next(items);
+      for (auto& item : items)
+        dst.on_next(item);
       demand -= n;
       consumed += n;
       consumer_buf_.clear();

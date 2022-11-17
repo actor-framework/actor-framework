@@ -175,6 +175,12 @@ enum class sec : uint8_t {
   disposed,
   /// Failed to open a resource.
   cannot_open_resource,
+  /// Subscribing to a stream failed because it was invalid.
+  invalid_stream,
+  /// Received malformed data.
+  protocol_error,
+  /// Subscribing to a stream failed because it can only be subscribed to once.
+  cannot_resubscribe_stream,
 };
 // --(rst-sec-end)--
 

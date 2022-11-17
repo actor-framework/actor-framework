@@ -47,7 +47,7 @@ SCENARIO("scheduled actors schedule observable intervals on the actor clock") {
     WHEN("an observer subscribes to it") {
       THEN("the actor uses the actor clock to schedule flow processing") {
         auto outputs = i64_list{};
-        sys.spawn([&outputs](caf::event_based_actor* self) {
+        sys.spawn([&outputs](event_based_actor* self) {
           self->make_observable()
             .interval(50ms, 25ms)
             .take(3)

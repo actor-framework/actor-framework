@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <caf/fwd.hpp>
+#include "caf/fwd.hpp"
 
 namespace caf::async {
 
@@ -12,6 +12,7 @@ namespace caf::async {
 
 class batch;
 class consumer;
+class execution_context;
 class producer;
 
 // -- template classes ---------------------------------------------------------
@@ -24,6 +25,16 @@ class consumer_resource;
 
 template <class T>
 class producer_resource;
+
+template <class T>
+class promise;
+
+template <class T>
+class future;
+
+// -- smart pointer aliases ----------------------------------------------------
+
+using execution_context_ptr = intrusive_ptr<execution_context>;
 
 // -- free function templates --------------------------------------------------
 

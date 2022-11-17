@@ -17,16 +17,19 @@
 
 #include "caf/action.hpp"
 #include "caf/actor_traits.hpp"
+#include "caf/async/fwd.hpp"
+#include "caf/cow_string.hpp"
 #include "caf/detail/behavior_stack.hpp"
 #include "caf/detail/core_export.hpp"
-#include "caf/detail/unordered_flat_map.hpp"
+#include "caf/detail/stream_bridge.hpp"
 #include "caf/disposable.hpp"
 #include "caf/error.hpp"
 #include "caf/extend.hpp"
 #include "caf/flow/coordinator.hpp"
 #include "caf/flow/fwd.hpp"
+#include "caf/flow/item_publisher.hpp"
+#include "caf/flow/observer.hpp"
 #include "caf/fwd.hpp"
-#include "caf/inbound_path.hpp"
 #include "caf/intrusive/drr_cached_queue.hpp"
 #include "caf/intrusive/drr_queue.hpp"
 #include "caf/intrusive/fifo_inbox.hpp"
@@ -41,14 +44,12 @@
 #include "caf/no_stages.hpp"
 #include "caf/policy/arg.hpp"
 #include "caf/policy/categorized.hpp"
-#include "caf/policy/downstream_messages.hpp"
 #include "caf/policy/normal_messages.hpp"
-#include "caf/policy/upstream_messages.hpp"
 #include "caf/policy/urgent_messages.hpp"
 #include "caf/response_handle.hpp"
 #include "caf/sec.hpp"
-#include "caf/stream_manager.hpp"
 #include "caf/telemetry/timer.hpp"
+#include "caf/unordered_flat_map.hpp"
 
 namespace caf {
 
@@ -79,6 +80,10 @@ class CAF_CORE_EXPORT scheduled_actor : public local_actor,
                                         public flow::coordinator {
 public:
   // -- friends ----------------------------------------------------------------
+
+  friend class detail::stream_bridge;
+
+  friend class detail::stream_bridge_sub;
 
   template <class, class>
   friend class response_handle;
@@ -112,39 +117,14 @@ public:
   /// Base type.
   using super = local_actor;
 
-  /// Maps types to metric objects for inbound stream traffic.
-  using inbound_stream_metrics_map
-    = std::unordered_map<type_id_t, inbound_stream_metrics_t>;
-
-  /// Maps types to metric objects for outbound stream traffic.
-  using outbound_stream_metrics_map
-    = std::unordered_map<type_id_t, outbound_stream_metrics_t>;
-
-  /// Maps slot IDs to stream managers.
-  using stream_manager_map = std::map<stream_slot, stream_manager_ptr>;
-
   /// Stores asynchronous messages with default priority.
   using normal_queue = intrusive::drr_cached_queue<policy::normal_messages>;
 
   /// Stores asynchronous messages with hifh priority.
   using urgent_queue = intrusive::drr_cached_queue<policy::urgent_messages>;
 
-  /// Stores upstream messages.
-  using upstream_queue = intrusive::drr_queue<policy::upstream_messages>;
-
-  /// Stores downstream messages.
-  using downstream_queue
-    = intrusive::wdrr_dynamic_multiplexed_queue<policy::downstream_messages>;
-
-  /// Configures the FIFO inbox with four nested queues:
-  ///
-  ///   1. Default asynchronous messages
-  ///   2. High-priority asynchronous messages
-  ///   3. Upstream messages
-  ///   4. Downstream messages
-  ///
-  /// The queue for downstream messages is in turn composed of a nested queues,
-  /// one for each active input slot.
+  /// Configures the FIFO inbox with two nested queues. One for high-priority
+  /// and one for normal priority messages.
   struct mailbox_policy {
     using deficit_type = size_t;
 
@@ -152,18 +132,21 @@ public:
 
     using unique_pointer = mailbox_element_ptr;
 
-    using queue_type = intrusive::wdrr_fixed_multiplexed_queue<
-      policy::categorized, urgent_queue, normal_queue, upstream_queue,
-      downstream_queue>;
+    using queue_type
+      = intrusive::wdrr_fixed_multiplexed_queue<policy::categorized,
+                                                urgent_queue, normal_queue>;
+  };
+
+  using batch_op_ptr = intrusive_ptr<flow::op::base<async::batch>>;
+
+  struct stream_source_state {
+    batch_op_ptr obs;
+    size_t max_items_per_batch;
   };
 
   static constexpr size_t urgent_queue_index = 0;
 
   static constexpr size_t normal_queue_index = 1;
-
-  static constexpr size_t upstream_queue_index = 2;
-
-  static constexpr size_t downstream_queue_index = 3;
 
   /// A queue optimized for single-reader-many-writers.
   using mailbox_type = intrusive::fifo_inbox<mailbox_policy>;
@@ -193,6 +176,19 @@ public:
   /// Function object for handling exit messages.
   using exception_handler = std::function<error(pointer, std::exception_ptr&)>;
 #endif // CAF_ENABLE_EXCEPTIONS
+
+  using batch_publisher = flow::item_publisher<async::batch>;
+
+  class batch_forwarder : public ref_counted {
+  public:
+    ~batch_forwarder() override;
+
+    virtual void cancel() = 0;
+
+    virtual void request(size_t num_items) = 0;
+  };
+
+  using batch_forwarder_ptr = intrusive_ptr<batch_forwarder>;
 
   // -- static helper functions ------------------------------------------------
 
@@ -275,22 +271,6 @@ public:
   mailbox_type& mailbox() noexcept {
     return mailbox_;
   }
-
-  /// Returns map for all active streams.
-  stream_manager_map& stream_managers() noexcept {
-    return stream_managers_;
-  }
-
-  /// Returns map for all pending streams.
-  stream_manager_map& pending_stream_managers() noexcept {
-    return pending_stream_managers_;
-  }
-
-  // -- actor metrics ----------------------------------------------------------
-
-  inbound_stream_metrics_t inbound_stream_metrics(type_id_t type);
-
-  outbound_stream_metrics_t outbound_stream_metrics(type_id_t type);
 
   // -- event handlers ---------------------------------------------------------
 
@@ -409,9 +389,6 @@ public:
   /// Requests a new timeout for the current behavior.
   void set_receive_timeout();
 
-  /// Requests a new timeout.
-  void set_stream_timeout(actor_clock::time_point x);
-
   // -- message processing -----------------------------------------------------
 
   /// Adds a callback for an awaited response.
@@ -475,19 +452,13 @@ public:
   /// Returns the default queue of the mailbox that stores ordinary messages.
   normal_queue& get_normal_queue();
 
-  /// Returns the queue of the mailbox that stores `upstream_msg` messages.
-  upstream_queue& get_upstream_queue();
-
-  /// Returns the queue of the mailbox that stores `downstream_msg` messages.
-  downstream_queue& get_downstream_queue();
-
   // -- caf::flow API ----------------------------------------------------------
 
   steady_time_point steady_time() override;
 
-  void ref_coordinator() const noexcept override;
+  void ref_execution_context() const noexcept override;
 
-  void deref_coordinator() const noexcept override;
+  void deref_execution_context() const noexcept override;
 
   void schedule(action what) override;
 
@@ -497,65 +468,124 @@ public:
 
   void watch(disposable what) override;
 
-  // -- inbound_path management ------------------------------------------------
+  /// Converts an @ref observable into a @ref stream to allow other actors to
+  /// consume its items.
+  /// @param name The human-readable name for this stream.
+  /// @param max_delay The maximum delay between emitting two batches.
+  /// @param max_items_per_batch The maximum amount of items per batch.
+  /// @param obs An observable sequence of items.
+  /// @returns a @ref stream that makes @p obs available to other actors.
+  template <class Observable>
+  flow::assert_scheduled_actor_hdr_t<Observable, stream>
+  to_stream(std::string name, timespan max_delay, size_t max_items_per_batch,
+            Observable&& obs);
 
-  /// Creates a new path for incoming stream traffic from `sender`.
-  virtual bool add_inbound_path(type_id_t input_type,
-                                std::unique_ptr<inbound_path> path);
+  /// @copydoc to_stream
+  template <class Observable>
+  flow::assert_scheduled_actor_hdr_t<Observable, stream>
+  to_stream(cow_string name, timespan max_delay, size_t max_items_per_batch,
+            Observable&& obs);
 
-  /// Silently closes incoming stream traffic on `slot`.
-  virtual void erase_inbound_path_later(stream_slot slot);
-
-  /// Closes incoming stream traffic on `slot`. Emits a drop message on the
-  /// path if `reason == none` and a `forced_drop` message otherwise.
-  virtual void erase_inbound_path_later(stream_slot slot, error reason);
-
-  /// Silently closes all inbound paths for `mgr`.
-  virtual void erase_inbound_paths_later(const stream_manager* mgr);
-
-  /// Closes all incoming stream traffic for a manager. Emits a drop message on
-  /// each path if `reason == none` and a `forced_drop` message on each path
-  /// otherwise.
-  virtual void erase_inbound_paths_later(const stream_manager* mgr,
-                                         error reason);
-
-  // -- handling of stream messages --------------------------------------------
-
-  void handle_upstream_msg(stream_slots slots, actor_addr& sender,
-                           upstream_msg::ack_open& x);
-
-  template <class T>
-  void handle_upstream_msg(stream_slots slots, actor_addr& sender, T& x) {
-    CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(sender) << CAF_ARG(x));
-    CAF_IGNORE_UNUSED(sender);
-    auto i = stream_managers_.find(slots.receiver);
-    if (i == stream_managers_.end()) {
-      auto j = pending_stream_managers_.find(slots.receiver);
-      if (j != pending_stream_managers_.end()) {
-        j->second->stop(sec::stream_init_failed);
-        pending_stream_managers_.erase(j);
-        return;
-      }
-      CAF_LOG_INFO("no manager found:" << CAF_ARG(slots));
-      if constexpr (std::is_same<T, upstream_msg::ack_batch>::value) {
-        // Make sure the other actor does not falsely believe us a source.
-        inbound_path::emit_irregular_shutdown(this, slots, current_sender(),
-                                              sec::invalid_upstream);
-      }
-      return;
+  /// Utility class that converts an @ref observable to a @ref stream when
+  /// passed to @c compose.
+  struct to_stream_t {
+    scheduled_actor* self;
+    cow_string name;
+    timespan max_delay;
+    size_t max_items_per_batch;
+    template <class Observable>
+    auto operator()(Observable&& what) {
+      return self->to_stream(name, max_delay, max_items_per_batch,
+                             std::forward<Observable>(what));
     }
-    CAF_ASSERT(i->second != nullptr);
-    auto ptr = i->second;
-    ptr->handle(slots, x);
-    if (ptr->done()) {
-      CAF_LOG_DEBUG("done sending:" << CAF_ARG(slots));
-      ptr->stop();
-      erase_stream_manager(ptr);
-    } else if (ptr->out().path(slots.receiver) == nullptr) {
-      CAF_LOG_DEBUG("done sending on path:" << CAF_ARG(slots.receiver));
-      erase_stream_manager(slots.receiver);
-    }
+  };
+
+  /// Returns a function object for passing it to @c compose.
+  to_stream_t to_stream(std::string name, timespan max_delay,
+                        size_t max_items_per_batch) {
+    return {this, cow_string{std::move(name)}, max_delay, max_items_per_batch};
   }
+
+  /// Returns a function object for passing it to @c compose.
+  to_stream_t to_stream(cow_string name, timespan max_delay,
+                        size_t max_items_per_batch) {
+    return {this, std::move(name), max_delay, max_items_per_batch};
+  }
+
+  /// Converts an @ref observable into a @ref stream to allow other actors to
+  /// consume its items.
+  /// @param name The human-readable name for this stream.
+  /// @param max_delay The maximum delay between emitting two batches.
+  /// @param max_items_per_batch The maximum amount of items per batch.
+  /// @param obs An observable sequence of items.
+  /// @returns a @ref stream that makes @p obs available to other actors.
+  template <class Observable>
+  flow::assert_scheduled_actor_hdr_t<
+    Observable, typed_stream<typename Observable::output_type>>
+  to_typed_stream(std::string name, timespan max_delay,
+                  size_t max_items_per_batch, Observable obs);
+
+  /// @copydoc to_stream
+  template <class Observable>
+  flow::assert_scheduled_actor_hdr_t<
+    Observable, typed_stream<typename Observable::output_type>>
+  to_typed_stream(cow_string name, timespan max_delay,
+                  size_t max_items_per_batch, Observable obs);
+
+  /// Utility class that converts an @ref observable to a @ref stream when
+  /// passed to @c compose.
+  struct to_typed_stream_t {
+    scheduled_actor* self;
+    cow_string name;
+    timespan max_delay;
+    size_t max_items_per_batch;
+    template <class Observable>
+    auto operator()(Observable&& what) {
+      return self->to_typed_stream(name, max_delay, max_items_per_batch,
+                                   std::forward<Observable>(what));
+    }
+  };
+
+  /// Returns a function object for passing it to @c compose.
+  to_typed_stream_t to_typed_stream(std::string name, timespan max_delay,
+                                    size_t max_items_per_batch) {
+    return {this, cow_string{std::move(name)}, max_delay, max_items_per_batch};
+  }
+
+  /// Returns a function object for passing it to @c compose.
+  to_typed_stream_t to_typed_stream(cow_string name, timespan max_delay,
+                                    size_t max_items_per_batch) {
+    return {this, std::move(name), max_delay, max_items_per_batch};
+  }
+
+  /// Lifts a statically typed stream into an @ref observable.
+  /// @param what The input stream.
+  /// @param buf_capacity Upper bound for caching inputs from the stream.
+  /// @param demand_threshold Minimal free buffer capacity before signaling
+  ///                         demand upstream.
+  /// @note Both @p buf_capacity and @p demand_threshold are considered hints.
+  ///       The actor may increase (or decrease) the effective settings
+  ///       depending on the amount of messages per batch or other factors.
+  template <class T>
+  flow::assert_scheduled_actor_hdr_t<flow::observable<T>>
+  observe(typed_stream<T> what, size_t buf_capacity, size_t demand_threshold);
+
+  /// Lifts a stream into an @ref observable.
+  /// @param what The input stream.
+  /// @param buf_capacity Upper bound for caching inputs from the stream.
+  /// @param demand_threshold Minimal free buffer capacity before signaling
+  ///                         demand upstream.
+  /// @note Both @p buf_capacity and @p demand_threshold are considered hints.
+  ///       The actor may increase (or decrease) the effective settings
+  ///       depending on the amount of messages per batch or other factors.
+  template <class T>
+  flow::assert_scheduled_actor_hdr_t<flow::observable<T>>
+  observe_as(stream what, size_t buf_capacity, size_t demand_threshold);
+
+  /// Deregisters a local stream. After calling this function, other actors can
+  /// no longer access the flow that has been attached to the stream. Current
+  /// flows remain unaffected.
+  void deregister_stream(uint64_t stream_id);
 
   /// @cond PRIVATE
 
@@ -629,51 +659,6 @@ public:
     return run_delayed(duration_cast<timespan>(delay), make_action(what));
   }
 
-  // -- stream processing ------------------------------------------------------
-
-  /// Returns a currently unused slot.
-  stream_slot next_slot();
-
-  /// Assigns slot `x` to `mgr`, i.e., adds a new entry to `stream_managers_`.
-  void assign_slot(stream_slot x, stream_manager_ptr mgr);
-
-  /// Assigns slot `x` to the pending manager `mgr`, i.e., adds a new entry to
-  /// `pending_stream_managers_`.
-  void assign_pending_slot(stream_slot x, stream_manager_ptr mgr);
-
-  /// Convenience function for calling `assign_slot(next_slot(), mgr)`.
-  stream_slot assign_next_slot_to(stream_manager_ptr mgr);
-
-  /// Convenience function for calling `assign_slot(next_slot(), mgr)`.
-  stream_slot assign_next_pending_slot_to(stream_manager_ptr mgr);
-
-  /// Adds a new stream manager to the actor and starts cycle management if
-  /// needed.
-  bool add_stream_manager(stream_slot id, stream_manager_ptr ptr);
-
-  /// Removes the stream manager mapped to `id` in `O(log n)`.
-  void erase_stream_manager(stream_slot id);
-
-  /// Removes the stream manager mapped to `id` in `O(log n)`.
-  void erase_pending_stream_manager(stream_slot id);
-
-  /// Moves a pending stream manager to the list of active stream managers.
-  /// @returns `true` and a pointer to the moved stream manager on success,
-  ///          `false` and `nullptr` otherwise.
-  [[nodiscard]] std::pair<bool, stream_manager*>
-  ack_pending_stream_manager(stream_slot id);
-
-  /// Removes all entries for `mgr` in `O(n)`.
-  void erase_stream_manager(const stream_manager_ptr& mgr);
-
-  /// Processes a stream handshake.
-  /// @pre `x.content().match_elements<open_stream_msg>()`
-  invoke_message_result handle_open_stream_msg(mailbox_element& x);
-
-  /// Advances credit and batch timeouts and returns the timestamp when to call
-  /// this function again.
-  actor_clock::time_point advance_streams(actor_clock::time_point now);
-
   // -- properties -------------------------------------------------------------
 
   /// Returns `true` if the actor has a behavior, awaits responses, or
@@ -681,18 +666,9 @@ public:
   /// @private
   bool alive() const noexcept {
     return !bhvr_stack_.empty() || !awaited_responses_.empty()
-           || !multiplexed_responses_.empty() || !stream_managers_.empty()
-           || !pending_stream_managers_.empty()
-           || !watched_disposables_.empty();
+           || !multiplexed_responses_.empty() || !watched_disposables_.empty()
+           || !stream_sources_.empty();
   }
-
-  auto max_batch_delay() const noexcept {
-    return max_batch_delay_;
-  }
-
-  void active_stream_managers(std::vector<stream_manager*>& result);
-
-  std::vector<stream_manager*> active_stream_managers();
 
   /// Runs all pending actions.
   void run_actions();
@@ -719,7 +695,7 @@ protected:
   std::forward_list<pending_response> awaited_responses_;
 
   /// Stores callbacks for multiplexed responses.
-  detail::unordered_flat_map<message_id, behavior> multiplexed_responses_;
+  unordered_flat_map<message_id, behavior> multiplexed_responses_;
 
   /// Customization point for setting a default `message` callback.
   default_handler default_handler_;
@@ -736,28 +712,8 @@ protected:
   /// Customization point for setting a default `exit_msg` callback.
   exit_handler exit_handler_;
 
-  /// Stores stream managers for established streams.
-  stream_manager_map stream_managers_;
-
-  /// Stores stream managers for pending streams, i.e., streams that have not
-  /// yet received an ACK.
-  stream_manager_map pending_stream_managers_;
-
-  /// Stores how long the actor should try to accumulate more items in order to
-  /// send a full stream batch.
-  timespan max_batch_delay_;
-
-  /// Number of ticks per batch delay.
-  size_t max_batch_delay_ticks_;
-
   /// Pointer to a private thread object associated with a detached actor.
   detail::private_thread* private_thread_;
-
-  /// Caches metric objects for inbound stream traffic.
-  inbound_stream_metrics_map inbound_stream_metrics_;
-
-  /// Caches metric objects for outbound stream traffic.
-  outbound_stream_metrics_map outbound_stream_metrics_;
 
 #ifdef CAF_ENABLE_EXCEPTIONS
   /// Customization point for setting a default exception callback.
@@ -803,12 +759,46 @@ private:
   /// Removes any watched object that became disposed since the last update.
   void update_watched_disposables();
 
+  /// Implementation detail for observe_as.
+  flow::observable<async::batch> do_observe(stream what, size_t buf_capacity,
+                                            size_t request_threshold);
+
+  /// Implementation detail for to_stream.
+  stream to_stream_impl(cow_string name, batch_op_ptr batch_op,
+                        type_id_t item_type, size_t max_items_per_batch);
+
+  /// Registers a stream bridge at the actor (callback for
+  /// detail::stream_bridge).
+  void register_flow_state(uint64_t local_id,
+                           detail::stream_bridge_sub_ptr sub);
+
+  /// Drops the state for a stream bridge (callback for
+  /// detail::stream_bridge_sub).
+  void drop_flow_state(uint64_t local_id);
+
+  /// Tries to emit more items on a stream bridge (callback for
+  /// detail::stream_bridge_sub).
+  void try_push_stream(uint64_t local_id);
+
   /// Stores actions that the actor executes after processing the current
   /// message.
   std::vector<action> actions_;
 
-  /// Stores resources that block the actor from terminating.
+  /// Stores ongoing activities such as flows that block the actor from
+  /// terminating.
   std::vector<disposable> watched_disposables_;
+
+  /// Stores open streams that other actors may access. An actor is considered
+  /// alive as long as it has open streams.
+  std::unordered_map<uint64_t, stream_source_state> stream_sources_;
+
+  /// Maps the ID of outgoing streams to local forwarder objects to allow the
+  /// actor to signal demand from the receiver to the flow.
+  std::unordered_map<uint64_t, batch_forwarder_ptr> stream_subs_;
+
+  /// Maps the ID of incoming stream batches to local state that allows the
+  /// actor to push received batches into the local flow.
+  std::unordered_map<uint64_t, detail::stream_bridge_sub_ptr> stream_bridges_;
 };
 
 } // namespace caf

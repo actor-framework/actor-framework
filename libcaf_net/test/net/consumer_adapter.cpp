@@ -91,9 +91,7 @@ public:
     bool on_next_called;
     bool aborted;
 
-    void on_next(span<const int32_t> items) {
-      REQUIRE_EQ(items.size(), 1u);
-      auto val = items[0];
+    void on_next(int32_t val) {
       thisptr->written_values.emplace_back(val);
       auto offset = thisptr->written_bytes.size();
       binary_serializer sink{nullptr, thisptr->written_bytes};

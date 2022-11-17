@@ -6,7 +6,6 @@
 
 #include "caf/byte_span.hpp"
 #include "caf/detail/append_hex.hpp"
-#include "caf/detail/unordered_flat_map.hpp"
 #include "caf/error.hpp"
 #include "caf/logger.hpp"
 #include "caf/net/connection_acceptor.hpp"
@@ -25,6 +24,7 @@
 #include "caf/settings.hpp"
 #include "caf/tag/hypertext_oriented.hpp"
 #include "caf/tag/stream_oriented.hpp"
+#include "caf/unordered_flat_map.hpp"
 
 #include <algorithm>
 

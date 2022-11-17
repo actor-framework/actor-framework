@@ -250,4 +250,17 @@ struct is_result : std::false_type {};
 template <class... Ts>
 struct is_result<result<Ts...>> : std::true_type {};
 
+template <class T>
+struct unboxed_oracle {
+  using type = T;
+};
+
+template <class T>
+struct unboxed_oracle<std::optional<T>> {
+  using type = T;
+};
+
+template <class T>
+using unboxed_t = typename unboxed_oracle<T>::type;
+
 } // namespace caf

@@ -8,7 +8,6 @@
 
 #include "caf/detail/core_export.hpp"
 #include "caf/intrusive_ptr.hpp"
-#include "caf/ref_counted.hpp"
 
 namespace caf {
 
@@ -20,7 +19,13 @@ public:
   /// Internal implementation class of a `disposable`.
   class CAF_CORE_EXPORT impl {
   public:
-    CAF_INTRUSIVE_PTR_FRIENDS_SFX(impl, _disposable)
+    friend void intrusive_ptr_add_ref(const impl* ptr) noexcept {
+      ptr->ref_disposable();
+    }
+
+    friend void intrusive_ptr_release(const impl* ptr) noexcept {
+      ptr->deref_disposable();
+    }
 
     virtual ~impl();
 
@@ -35,12 +40,12 @@ public:
     virtual void deref_disposable() const noexcept = 0;
   };
 
+  // -- constructors, destructors, and assignment operators --------------------
+
   explicit disposable(intrusive_ptr<impl> pimpl) noexcept
     : pimpl_(std::move(pimpl)) {
     // nop
   }
-
-  // -- constructors, destructors, and assignment operators --------------------
 
   disposable() noexcept = default;
 
@@ -126,8 +131,17 @@ public:
     return pimpl_.compare(other.pimpl_);
   }
 
+  // -- utility ----------------------------------------------------------------
+
+  /// Erases each `x` from `xs` where `x.disposed()`.
+  /// @returns The number of erased elements.
+  static size_t erase_disposed(std::vector<disposable>& xs);
+
 private:
   intrusive_ptr<impl> pimpl_;
 };
+
+/// @relates disposable
+using disposable_impl = disposable::impl;
 
 } // namespace caf

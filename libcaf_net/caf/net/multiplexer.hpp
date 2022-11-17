@@ -10,7 +10,7 @@
 
 #include "caf/action.hpp"
 #include "caf/detail/net_export.hpp"
-#include "caf/detail/unordered_flat_map.hpp"
+#include "caf/unordered_flat_map.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/operation.hpp"
 #include "caf/net/pipe_socket.hpp"
@@ -37,7 +37,7 @@ public:
     socket_manager_ptr mgr;
   };
 
-  using poll_update_map = detail::unordered_flat_map<socket, poll_update>;
+  using poll_update_map = unordered_flat_map<socket, poll_update>;
 
   using pollfd_list = std::vector<pollfd>;
 

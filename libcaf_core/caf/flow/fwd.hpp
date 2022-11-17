@@ -38,14 +38,29 @@ class observer;
 template <class T>
 class observable;
 
-template <class In, class Out>
-class processor;
+template <class Materializer, class... Steps>
+class observable_def;
 
+template <class Generator>
+class generation_materializer;
+
+/// A blueprint for an @ref observer that generates items and applies any number
+/// of processing steps immediately before emitting them.
 template <class Generator, class... Steps>
-class generation;
+using generation = observable_def<generation_materializer<Generator>, Steps...>;
 
+template <class Input>
+class transformation_materializer;
+
+/// A blueprint for an @ref observer that applies a series of transformation
+/// steps to its inputs and emits the results.
 template <class Step, class... Steps>
-class transformation;
+using transformation
+  = observable_def<transformation_materializer<typename Step::input_type>, Step,
+                   Steps...>;
+
+template <class T>
+class connectable;
 
 template <class T>
 struct is_observable {
@@ -57,18 +72,8 @@ struct is_observable<observable<T>> {
   static constexpr bool value = true;
 };
 
-template <class Step, class... Steps>
-struct is_observable<transformation<Step, Steps...>> {
-  static constexpr bool value = true;
-};
-
-template <class Generator, class... Steps>
-struct is_observable<generation<Generator, Steps...>> {
-  static constexpr bool value = true;
-};
-
-template <class In, class Out>
-struct is_observable<processor<In, Out>> {
+template <class Materializer, class... Steps>
+struct is_observable<observable_def<Materializer, Steps...>> {
   static constexpr bool value = true;
 };
 
@@ -80,29 +85,6 @@ struct is_observable<single<T>> {
 template <class T>
 constexpr bool is_observable_v = is_observable<T>::value;
 
-template <class T>
-struct is_observer {
-  static constexpr bool value = false;
-};
-
-template <class T>
-struct is_observer<observer<T>> {
-  static constexpr bool value = true;
-};
-
-template <class Step, class... Steps>
-struct is_observer<transformation<Step, Steps...>> {
-  static constexpr bool value = true;
-};
-
-template <class In, class Out>
-struct is_observer<processor<In, Out>> {
-  static constexpr bool value = true;
-};
-
-template <class T>
-constexpr bool is_observer_v = is_observer<T>::value;
-
 class observable_builder;
 
 template <class T>
@@ -113,16 +95,19 @@ struct input_type_oracle {
 template <class T>
 using input_type_t = typename input_type_oracle<T>::type;
 
+template <class...>
+struct output_type_oracle;
+
 template <class T>
-struct output_type_oracle {
+struct output_type_oracle<T> {
   using type = typename T::output_type;
 };
 
-template <class T>
-using output_type_t = typename output_type_oracle<T>::type;
+template <class T0, class T1, class... Ts>
+struct output_type_oracle<T0, T1, Ts...> : output_type_oracle<T1, Ts...> {};
 
-template <class T>
-class merger_impl;
+template <class... Ts>
+using output_type_t = typename output_type_oracle<Ts...>::type;
 
 template <class>
 struct has_impl_include {
@@ -140,8 +125,8 @@ struct assert_scheduled_actor_hdr {
                 "include 'caf/scheduled_actor/flow.hpp' for this method");
 };
 
-template <class T>
+template <class T, class V = T>
 using assert_scheduled_actor_hdr_t
-  = std::enable_if_t<assert_scheduled_actor_hdr<T>::value, T>;
+  = std::enable_if_t<assert_scheduled_actor_hdr<T>::value, V>;
 
 } // namespace caf::flow

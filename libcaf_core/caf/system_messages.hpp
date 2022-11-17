@@ -9,10 +9,11 @@
 #include <vector>
 
 #include "caf/actor_addr.hpp"
+#include "caf/async/batch.hpp"
 #include "caf/deep_to_string.hpp"
 #include "caf/fwd.hpp"
 #include "caf/group.hpp"
-#include "caf/stream_slot.hpp"
+#include "caf/type_id.hpp"
 
 namespace caf {
 
@@ -106,33 +107,128 @@ bool inspect(Inspector& f, node_down_msg& x) {
                             f.field("reason", x.reason));
 }
 
-/// Demands the receiver to open a new stream from the sender to the receiver.
-struct open_stream_msg {
-  /// Reserved slot on the source.
-  stream_slot slot;
+/// Asks a source to add another sink.
+/// @note The sender is always the sink.
+struct stream_open_msg {
+  /// The ID of the requested stream.
+  uint64_t id;
 
-  /// Contains a type-erased stream<T> object as first argument followed by
-  /// any number of user-defined additional handshake data.
-  message msg;
+  /// A handle to the new sink.
+  strong_actor_ptr sink;
 
-  /// Identifies the previous stage in the pipeline.
-  strong_actor_ptr prev_stage;
-
-  /// Identifies the original receiver of this message.
-  strong_actor_ptr original_stage;
-
-  /// Configures the priority for stream elements.
-  stream_priority priority;
+  /// The ID of the flow at the sink.
+  uint64_t sink_flow_id;
 };
 
-/// @relates open_stream_msg
+/// @relates stream_open_msg
 template <class Inspector>
-bool inspect(Inspector& f, open_stream_msg& x) {
-  return f.object(x).fields(f.field("slot", x.slot), //
-                            f.field("msg", x.msg),
-                            f.field("prev_stage", x.prev_stage),
-                            f.field("original_stage", x.original_stage),
-                            f.field("priority", x.priority));
+bool inspect(Inspector& f, stream_open_msg& msg) {
+  return f.object(msg).fields(f.field("id", msg.id), f.field("sink", msg.sink),
+                              f.field("sink-flow-id", msg.sink_flow_id));
+}
+
+/// Asks the source for more data.
+/// @note The sender is always the sink.
+struct stream_demand_msg {
+  /// The ID of the flow at the source.
+  uint64_t source_flow_id;
+
+  /// Additional demand from the sink.
+  uint32_t demand;
+};
+
+/// @relates stream_demand_msg
+template <class Inspector>
+bool inspect(Inspector& f, stream_demand_msg& msg) {
+  return f.object(msg).fields(f.field("source-flow-id", msg.source_flow_id),
+                              f.field("demand", msg.demand));
+}
+
+/// Informs the source that the sender is no longer interest in receiving
+/// items from this stream.
+/// @note The sender is always the sink.
+struct stream_cancel_msg {
+  /// The ID of the flow at the source.
+  uint64_t source_flow_id;
+};
+
+/// @relates stream_cancel_msg
+template <class Inspector>
+bool inspect(Inspector& f, stream_cancel_msg& msg) {
+  return f.object(msg).fields(f.field("source-flow-id", msg.source_flow_id));
+}
+
+/// Informs the sink that the source has added it to the flow.
+/// @note The sender is always the source.
+struct stream_ack_msg {
+  /// Pointer to the source actor.
+  strong_actor_ptr source;
+
+  /// The ID of the flow at the sink.
+  uint64_t sink_flow_id;
+
+  /// The ID of the flow at the source.
+  uint64_t source_flow_id;
+
+  /// Maximum amounts of items per batch.
+  uint32_t max_items_per_batch;
+};
+
+/// @relates stream_ack_msg
+template <class Inspector>
+bool inspect(Inspector& f, stream_ack_msg& msg) {
+  return f.object(msg).fields(
+    f.field("source", msg.source), f.field("sink-flow-id", msg.sink_flow_id),
+    f.field("source-flow-id", msg.source_flow_id),
+    f.field("max-items-per-batch", msg.max_items_per_batch));
+}
+
+/// Transfers items from a source to a sink.
+/// @note The sender is always the source.
+struct stream_batch_msg {
+  /// The ID of the flow at the sink.
+  uint64_t sink_flow_id;
+
+  /// Contains the new items from the source.
+  async::batch content;
+};
+
+/// @relates stream_batch_msg
+template <class Inspector>
+bool inspect(Inspector& f, stream_batch_msg& msg) {
+  return f.object(msg).fields(f.field("sink-flow-id", msg.sink_flow_id),
+                              f.field("content", msg.content));
+}
+
+/// Informs the sink that a stream has reached the end.
+/// @note The sender is always the source.
+struct stream_close_msg {
+  /// The ID of the flow at the sink.
+  uint64_t sink_flow_id;
+};
+
+/// @relates stream_close_msg
+template <class Inspector>
+bool inspect(Inspector& f, stream_close_msg& msg) {
+  return f.object(msg).fields(f.field("sink-flow-id", msg.sink_flow_id));
+}
+
+/// Informs the sink that a stream has been aborted due to an unrecoverable
+/// error.
+/// @note The sender is always the source.
+struct stream_abort_msg {
+  /// The ID of the flow at the sink.
+  uint64_t sink_flow_id;
+
+  /// Contains details about the abort reason.
+  error reason;
+};
+
+/// @relates stream_abort_msg
+template <class Inspector>
+bool inspect(Inspector& f, stream_abort_msg& msg) {
+  return f.object(msg).fields(f.field("sink-flow-id", msg.sink_flow_id),
+                              f.field("reason", msg.reason));
 }
 
 } // namespace caf

@@ -21,17 +21,15 @@ template <class> class basic_cow_string;
 template <class> class behavior_type_of;
 template <class> class callback;
 template <class> class dictionary;
-template <class> class downstream;
 template <class> class expected;
-template <class> class inbound_stream_slot;
 template <class> class intrusive_cow_ptr;
 template <class> class intrusive_ptr;
 template <class> class optional;
 template <class> class param;
 template <class> class span;
-template <class> class stream;
 template <class> class stream_sink;
 template <class> class stream_source;
+template <class> class typed_stream;
 template <class> class weak_intrusive_ptr;
 
 template <class> struct inspector_access;
@@ -52,6 +50,9 @@ template <class Iterator, class Sentinel = Iterator> struct parser_state;
 template <class, class, int> class actor_cast_access;
 
 template <class, class, class> class broadcast_downstream_manager;
+
+template <class K, class V, class = std::allocator<std::pair<K, V>>>
+class unordered_flat_map;
 
 // -- variadic templates -------------------------------------------------------
 
@@ -131,6 +132,7 @@ class scheduled_actor;
 class scoped_actor;
 class serializer;
 class skip_t;
+class stream;
 class stream_manager;
 class string_view;
 class tracing_data;
@@ -148,10 +150,6 @@ class stateful_actor;
 // -- structs ------------------------------------------------------------------
 
 struct down_msg;
-struct downstream_msg;
-struct downstream_msg_batch;
-struct downstream_msg_close;
-struct downstream_msg_forced_close;
 struct exit_msg;
 struct group_down_msg;
 struct illegal_message_element;
@@ -159,15 +157,15 @@ struct invalid_actor_addr_t;
 struct invalid_actor_t;
 struct node_down_msg;
 struct none_t;
-struct open_stream_msg;
 struct prohibit_top_level_spawn_marker;
-struct stream_slots;
+struct stream_abort_msg;
+struct stream_ack_msg;
+struct stream_batch_msg;
+struct stream_cancel_msg;
+struct stream_close_msg;
+struct stream_demand_msg;
+struct stream_open_msg;
 struct unit_t;
-struct upstream_msg;
-struct upstream_msg_ack_batch;
-struct upstream_msg_ack_open;
-struct upstream_msg_drop;
-struct upstream_msg_forced_drop;
 
 // -- free template functions --------------------------------------------------
 
@@ -186,7 +184,6 @@ enum class exit_reason : uint8_t;
 enum class invoke_message_result;
 enum class pec : uint8_t;
 enum class sec : uint8_t;
-enum class stream_priority : uint8_t;
 
 // -- aliases ------------------------------------------------------------------
 
@@ -202,7 +199,6 @@ using ip_endpoint = ipv6_endpoint;
 using ip_subnet = ipv6_subnet;
 using settings = dictionary<config_value>;
 using skippable_result = variant<delegated<message>, message, error, skip_t>;
-using stream_slot = uint16_t;
 using type_id_t = uint16_t;
 
 // -- functions ----------------------------------------------------------------
