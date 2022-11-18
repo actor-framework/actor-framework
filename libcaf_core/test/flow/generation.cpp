@@ -65,7 +65,9 @@ SCENARIO("container sources stream their input values") {
       THEN("the observer receives the values from the container in order") {
         auto xs = ivec{1, 2, 3, 4, 5, 6, 7};
         auto snk = flow::make_passive_observer<int>();
-        ctx->make_observable().from_container(xs).subscribe(snk->as_observer());
+        ctx->make_observable()
+          .from_container(std::move(xs))
+          .subscribe(snk->as_observer());
         CHECK_EQ(snk->state, flow::observer_state::subscribed);
         CHECK(snk->buf.empty());
         if (CHECK(snk->sub)) {
@@ -77,6 +79,19 @@ SCENARIO("container sources stream their input values") {
           CHECK_EQ(snk->buf, ivec({1, 2, 3, 4, 5, 6, 7}));
           CHECK_EQ(snk->state, flow::observer_state::completed);
         }
+      }
+    }
+    WHEN("combining it with with a step that limits the amount of items") {
+      THEN("the observer receives the defined subset of values") {
+        auto xs = iota_vec(713);
+        auto snk = flow::make_passive_observer<int>();
+        auto res = ivec{};
+        ctx->make_observable()
+          .from_container(std::move(xs))
+          .take(678)
+          .for_each([&res](int val) { res.push_back(val); });
+        ctx->run();
+        CHECK_EQ(res, iota_vec(678));
       }
     }
   }
