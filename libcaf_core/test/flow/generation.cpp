@@ -18,9 +18,18 @@ using namespace caf;
 
 namespace {
 
+using ivec = std::vector<int>;
+
 struct fixture : test_coordinator_fixture<> {
   flow::scoped_coordinator_ptr ctx = flow::make_scoped_coordinator();
 };
+
+auto iota_vec(size_t n, int init = 1) {
+  auto result = ivec{};
+  result.resize(n);
+  std::iota(result.begin(), result.end(), init);
+  return result;
+}
 
 } // namespace
 
@@ -30,7 +39,6 @@ SCENARIO("repeater sources repeat one value indefinitely") {
   GIVEN("a repeater source") {
     WHEN("subscribing to its output") {
       THEN("the observer receives the same value over and over again") {
-        using ivec = std::vector<int>;
         auto snk = flow::make_passive_observer<int>();
         ctx->make_observable().repeat(42).subscribe(snk->as_observer());
         CHECK_EQ(snk->state, flow::observer_state::subscribed);
@@ -55,7 +63,6 @@ SCENARIO("container sources stream their input values") {
   GIVEN("a container source") {
     WHEN("subscribing to its output") {
       THEN("the observer receives the values from the container in order") {
-        using ivec = std::vector<int>;
         auto xs = ivec{1, 2, 3, 4, 5, 6, 7};
         auto snk = flow::make_passive_observer<int>();
         ctx->make_observable().from_container(xs).subscribe(snk->as_observer());
@@ -79,7 +86,6 @@ SCENARIO("value sources produce exactly one input") {
   GIVEN("a value source") {
     WHEN("subscribing to its output") {
       THEN("the observer receives one value") {
-        using ivec = std::vector<int>;
         auto snk = flow::make_passive_observer<int>();
         ctx->make_observable().just(42).subscribe(snk->as_observer());
         CHECK_EQ(snk->state, flow::observer_state::subscribed);
@@ -100,7 +106,6 @@ SCENARIO("callable sources stream values generated from a function object") {
     WHEN("subscribing to its output") {
       THEN("the observer receives an indefinite amount of values") {
         auto f = [n = 1]() mutable { return n++; };
-        using ivec = std::vector<int>;
         auto snk = flow::make_passive_observer<int>();
         ctx->make_observable().from_callable(f).subscribe(snk->as_observer());
         CHECK_EQ(snk->state, flow::observer_state::subscribed);
@@ -118,6 +123,19 @@ SCENARIO("callable sources stream values generated from a function object") {
         }
       }
     }
+    WHEN("combining it with with a step that accepts a finite amount") {
+      THEN("the observer receives a fixed amount of values") {
+        auto res = ivec{};
+        auto f = [n = 1]() mutable { return n++; };
+        ctx
+          ->make_observable() //
+          .from_callable(f)
+          .take(713)
+          .for_each([&res](int val) { res.push_back(val); });
+        ctx->run();
+        CHECK_EQ(res, iota_vec(713));
+      }
+    }
   }
   GIVEN("a callable source returning optional values") {
     WHEN("subscribing to its output") {
@@ -128,7 +146,6 @@ SCENARIO("callable sources stream values generated from a function object") {
           else
             return std::nullopt;
         };
-        using ivec = std::vector<int>;
         auto snk = flow::make_passive_observer<int>();
         ctx->make_observable().from_callable(f).subscribe(snk->as_observer());
         CHECK_EQ(snk->state, flow::observer_state::subscribed);
@@ -142,6 +159,19 @@ SCENARIO("callable sources stream values generated from a function object") {
           CHECK_EQ(snk->buf, ivec({1, 2, 3, 4, 5, 6, 7}));
           CHECK_EQ(snk->state, flow::observer_state::completed);
         }
+      }
+    }
+    WHEN("combining it with with a step that accepts a finite amount") {
+      THEN("the observer receives a fixed amount of values") {
+        auto res = ivec{};
+        auto f = [n = 1]() mutable -> std::optional<int> { return n++; };
+        ctx
+          ->make_observable() //
+          .from_callable(f)
+          .take(713)
+          .for_each([&res](int val) { res.push_back(val); });
+        ctx->run();
+        CHECK_EQ(res, iota_vec(713));
       }
     }
   }
@@ -175,7 +205,6 @@ SCENARIO("lifting converts a generator into an observable") {
   GIVEN("a lifted implementation of the generator concept") {
     WHEN("subscribing to its output") {
       THEN("the observer receives the generated values") {
-        using ivec = std::vector<int>;
         auto snk = flow::make_passive_observer<int>();
         auto f = custom_generator{};
         ctx->make_observable().from_generator(f).subscribe(snk->as_observer());

@@ -37,7 +37,8 @@ public:
         if (!val) {
           step.on_complete(steps...);
           return;
-        } else if (!step.on_next(*val, steps...))
+        }
+        if (!step.on_next(*val, steps...))
           return;
       } else {
         if (!step.on_next(fn_(), steps...))
