@@ -8,6 +8,7 @@
 
 #include "core-test.hpp"
 
+#include "caf/async/blocking_producer.hpp"
 #include "caf/flow/coordinator.hpp"
 #include "caf/flow/merge.hpp"
 #include "caf/flow/observable_builder.hpp"
@@ -192,6 +193,142 @@ SCENARIO("callable sources stream values generated from a function object") {
   }
 }
 
+SCENARIO("asynchronous buffers can generate flow items") {
+  GIVEN("a background thread writing into an async buffer") {
+    auto producer_impl = [](async::producer_resource<int> res,
+                            bool* cancelled) {
+      auto producer = async::make_blocking_producer(std::move(res));
+      if (!producer)
+        CAF_FAIL("make_blocking_producer failed");
+      for (int i = 1; i <= 713; ++i) {
+        if (!producer->push(i)) {
+          *cancelled = true;
+          return;
+        }
+      }
+      *cancelled = false;
+    };
+    WHEN("reading all values from the buffer") {
+      THEN("the observer receives all produced values") {
+        auto cancelled = false;
+        auto [pull, push] = async::make_spsc_buffer_resource<int>();
+        auto bg_thread = std::thread{producer_impl, push, &cancelled};
+        auto res = ivec{};
+        ctx
+          ->make_observable() //
+          .from_resource(pull)
+          .take(777)
+          .for_each([&res](int val) { res.push_back(val); });
+        ctx->run();
+        CHECK_EQ(res, iota_vec(713));
+        bg_thread.join();
+        CHECK(!cancelled);
+      }
+    }
+    WHEN("reading only a subset of values from the buffer") {
+      THEN("producer receives a cancel event after the selected items") {
+        auto cancelled = false;
+        auto [pull, push] = async::make_spsc_buffer_resource<int>();
+        auto bg_thread = std::thread{producer_impl, push, &cancelled};
+        auto res = ivec{};
+        ctx
+          ->make_observable() //
+          .from_resource(pull)
+          .take(20)
+          .for_each([&res](int val) { res.push_back(val); });
+        ctx->run();
+        CHECK_EQ(res, iota_vec(20));
+        bg_thread.join();
+        CHECK(cancelled);
+      }
+    }
+    WHEN("canceling the subscription to the buffer") {
+      THEN("the producer receives a cancel event") {
+        auto cancelled = false;
+        auto [pull, push] = async::make_spsc_buffer_resource<int>();
+        auto res = ivec{};
+        auto sub = ctx
+                     ->make_observable() //
+                     .from_resource(pull)
+                     .take(777)
+                     .for_each([&res](int val) { res.push_back(val); });
+        // Run initial actions to handle events from the initial request()
+        // calls. Without this step, from_resource is in `running_` state and we
+        // won't hit the code paths for disposing a "cold" object. This is also
+        // why we spin up the thread later: making sure we're hitting the code
+        // paths we want to test here.
+        ctx->run_some();
+        auto bg_thread = std::thread{producer_impl, push, &cancelled};
+        sub.dispose();
+        ctx->run();
+        CHECK(res.empty());
+        bg_thread.join();
+        CHECK(cancelled);
+      }
+    }
+  }
+  GIVEN("a null-resource") {
+    WHEN("trying to read from it") {
+      THEN("the observer receives an error") {
+        auto res = ivec{};
+        auto err = error{};
+        auto pull = async::consumer_resource<int>{};
+        ctx
+          ->make_observable() //
+          .from_resource(pull)
+          .take(713)
+          .do_on_error([&err](const error& what) { err = what; })
+          .for_each([&res](int val) { res.push_back(val); });
+        ctx->run();
+        CHECK(res.empty());
+        CHECK(err);
+      }
+    }
+  }
+  GIVEN("a resource that has already been accessed") {
+    WHEN("trying to read from it") {
+      THEN("the observer receives an error") {
+        auto [pull, push] = async::make_spsc_buffer_resource<int>();
+        auto pull_cpy = pull;
+        auto buf = pull_cpy.try_open();
+        CHECK(buf != nullptr);
+        auto res = ivec{};
+        auto err = error{};
+        ctx
+          ->make_observable() //
+          .from_resource(pull)
+          .take(713)
+          .do_on_error([&err](const error& what) { err = what; })
+          .for_each([&res](int val) { res.push_back(val); });
+        ctx->run();
+        CHECK(res.empty());
+        CHECK(err);
+      }
+    }
+  }
+  GIVEN("a from_resource_sub object") {
+    WHEN("manipulating its ref count as consumer or disposable") {
+      THEN("the different pointer types manipulate the same ref count") {
+        using buf_t = async::spsc_buffer<int>;
+        using impl_t = flow::op::from_resource_sub<buf_t>;
+        auto ptr = make_counted<impl_t>(ctx.get(), nullptr,
+                                        flow::observer<int>::ignore());
+        CHECK_EQ(ptr->get_reference_count(), 1u);
+        {
+          auto sub = flow::subscription{ptr.get()};
+          CHECK_EQ(ptr->get_reference_count(), 2u);
+        }
+        CHECK_EQ(ptr->get_reference_count(), 1u);
+        {
+          auto cptr = async::consumer_ptr{ptr.get()};
+          CHECK_EQ(ptr->get_reference_count(), 2u);
+        }
+        CHECK_EQ(ptr->get_reference_count(), 1u);
+      }
+    }
+  }
+}
+
 namespace {
 
 class custom_generator {
@@ -216,7 +353,7 @@ private:
 
 } // namespace
 
-SCENARIO("lifting converts a generator into an observable") {
+SCENARIO("users can provide custom generators") {
   GIVEN("a lifted implementation of the generator concept") {
     WHEN("subscribing to its output") {
       THEN("the observer receives the generated values") {
