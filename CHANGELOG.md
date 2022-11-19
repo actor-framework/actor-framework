@@ -9,6 +9,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 - The new classes `json_value`, `json_array` and `json_object` allow working
   with JSON inputs directly. Actors can also pass around JSON values safely.
+- Fused stages now properly forward errors during the initial subscription to
+  their observer.
 
 ### Fixed
 
