@@ -41,8 +41,19 @@ public:
 
   using lock_type = std::unique_lock<std::mutex>;
 
+  /// Packs various status flags for the buffer into a single struct.
+  struct flags {
+    /// Stores whether `close` has been called.
+    bool closed : 1;
+    /// Stores whether the buffer had a consumer at some point.
+    bool had_consumer : 1;
+    /// Stores whether the buffer had a producer at some point.
+    bool had_producer : 1;
+  };
+
   spsc_buffer(uint32_t capacity, uint32_t min_pull_size)
     : capacity_(capacity), min_pull_size_(min_pull_size) {
+    memset(&flags_, 0, sizeof(flags));
     // Allocate some extra space in the buffer in case the producer goes beyond
     // the announced capacity.
     buf_.reserve(capacity + (capacity / 2));
@@ -58,7 +69,7 @@ public:
   size_t push(span<const T> items) {
     lock_type guard{mtx_};
     CAF_ASSERT(producer_ != nullptr);
-    CAF_ASSERT(!closed_);
+    CAF_ASSERT(!flags_.closed);
     buf_.insert(buf_.end(), items.begin(), items.end());
     if (buf_.size() == items.size() && consumer_)
       consumer_->on_producer_wakeup();
@@ -95,7 +106,7 @@ public:
   /// closed or aborted the flow.
   bool has_consumer_event() const noexcept {
     lock_type guard{mtx_};
-    return !buf_.empty() || closed_;
+    return !buf_.empty() || flags_.closed;
   }
 
   /// Returns how many items are currently available. This may be greater than
@@ -116,7 +127,7 @@ public:
   void close() {
     lock_type guard{mtx_};
     if (producer_) {
-      closed_ = true;
+      flags_.closed = true;
       producer_ = nullptr;
       if (buf_.empty() && consumer_)
         consumer_->on_producer_wakeup();
@@ -128,7 +139,7 @@ public:
   void abort(error reason) {
     lock_type guard{mtx_};
     if (producer_) {
-      closed_ = true;
+      flags_.closed = true;
       err_ = std::move(reason);
       producer_ = nullptr;
       if (buf_.empty() && consumer_)
@@ -153,8 +164,11 @@ public:
     if (consumer_)
       CAF_RAISE_ERROR("SPSC buffer already has a consumer");
     consumer_ = std::move(consumer);
+    flags_.had_consumer = true;
     if (producer_)
       ready();
+    else if (flags_.had_producer)
+      consumer_->on_producer_wakeup();
   }
 
   /// Producer callback for the initial handshake between producer and consumer.
@@ -164,8 +178,11 @@ public:
     if (producer_)
       CAF_RAISE_ERROR("SPSC buffer already has a producer");
     producer_ = std::move(producer);
+    flags_.had_producer = true;
     if (consumer_)
       ready();
+    else if (flags_.had_consumer)
+      producer_->on_consumer_cancel();
   }
 
   /// Returns the capacity as passed to the constructor of the buffer.
@@ -195,7 +212,7 @@ public:
   /// Blocks until there is at least one item available or the producer stopped.
   /// @pre the consumer calls `cv.notify_all()` in its `on_producer_wakeup`
   void await_consumer_ready(lock_type& guard, std::condition_variable& cv) {
-    while (!closed_ && buf_.empty()) {
+    while (!flags_.closed && buf_.empty()) {
       cv.wait(guard);
     }
   }
@@ -206,7 +223,7 @@ public:
   template <class TimePoint>
   bool await_consumer_ready(lock_type& guard, std::condition_variable& cv,
                             TimePoint timeout) {
-    while (!closed_ && buf_.empty())
+    while (!flags_.closed && buf_.empty())
       if (cv.wait_until(guard, timeout) == std::cv_status::timeout)
         return false;
     return true;
@@ -248,7 +265,7 @@ public:
       guard.lock();
       overflow = buf_.size() <= capacity_ ? 0u : buf_.size() - capacity_;
     }
-    if (!buf_.empty() || !closed_) {
+    if (!buf_.empty() || !flags_.closed) {
       return {true, consumed};
     } else {
       consumer_ = nullptr;
@@ -298,7 +315,7 @@ private:
   uint32_t demand_ = 0;
 
   /// Stores whether `close` has been called.
-  bool closed_ = false;
+  flags flags_;
 
   /// Stores the abort reason.
   error err_;

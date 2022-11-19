@@ -10,6 +10,12 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The new classes `json_value`, `json_array` and `json_object` allow working
   with JSON inputs directly. Actors can also pass around JSON values safely.
 
+### Fixed
+
+- The SPSC buffer now makes sure that subscribers get informed of a producer has
+  already left before the subscriber appeared and vice versa. This fixes a race
+  on the buffer that could cause indefinite hanging of an application.
+
 ## [0.19.0-rc.1] - 2022-10-31
 
 ### Added
