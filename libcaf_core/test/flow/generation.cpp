@@ -331,7 +331,8 @@ SCENARIO("asynchronous buffers can generate flow items") {
 
 namespace {
 
-class custom_generator {
+// Generates 7 integers and then calls on_complete.
+class i7_generator {
 public:
   using output_type = int;
 
@@ -351,14 +352,36 @@ private:
   int value_ = 1;
 };
 
+// Generates 3 integers and then calls on_error.
+class broken_generator {
+public:
+  using output_type = int;
+
+  template <class Step, class... Steps>
+  void pull(size_t n, Step& step, Steps&... steps) {
+    for (size_t i = 0; i < n; ++i) {
+      if (value_ > 3) {
+        auto err = make_error(sec::runtime_error, "something went wrong");
+        step.on_error(err, steps...);
+        return;
+      } else if (!step.on_next(value_++, steps...)) {
+        return;
+      }
+    }
+  }
+
+private:
+  int value_ = 1;
+};
+
 } // namespace
 
 SCENARIO("users can provide custom generators") {
-  GIVEN("a lifted implementation of the generator concept") {
+  GIVEN("an implementation of the generator concept") {
     WHEN("subscribing to its output") {
       THEN("the observer receives the generated values") {
         auto snk = flow::make_passive_observer<int>();
-        auto f = custom_generator{};
+        auto f = i7_generator{};
         ctx->make_observable().from_generator(f).subscribe(snk->as_observer());
         CHECK_EQ(snk->state, flow::observer_state::subscribed);
         CHECK(snk->buf.empty());
@@ -370,6 +393,24 @@ SCENARIO("users can provide custom generators") {
         ctx->run();
         CHECK_EQ(snk->buf, ivec({1, 2, 3, 4, 5, 6, 7}));
         CHECK(snk->completed());
+      }
+    }
+  }
+  GIVEN("an implementation of the generator concept that calls on_error") {
+    WHEN("subscribing to its output") {
+      THEN("the observer receives the generated values followed by an error") {
+        auto snk = flow::make_passive_observer<int>();
+        auto f = broken_generator{};
+        ctx->make_observable().from_generator(f).subscribe(snk->as_observer());
+        CHECK_EQ(snk->state, flow::observer_state::subscribed);
+        CHECK(snk->buf.empty());
+        CHECK(snk->subscribed());
+        snk->request(27);
+        ctx->run();
+        CHECK_EQ(snk->buf, ivec({1, 2, 3}));
+        if (CHECK(snk->aborted())) {
+          CHECK_EQ(snk->err, caf::sec::runtime_error);
+        }
       }
     }
   }
