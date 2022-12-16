@@ -47,9 +47,10 @@ public:
     }
 
     void on_error(const error& what) {
-      CAF_ASSERT(sub->in_.valid());
-      sub->in_.dispose();
-      sub->in_ = nullptr;
+      if (sub->in_) {
+        sub->in_.dispose();
+        sub->in_ = nullptr;
+      }
       sub->err_ = what;
     }
   };
@@ -137,6 +138,19 @@ public:
 
   void on_error(const error& what) override {
     if (in_) {
+      if (!err_) {
+        auto fn = [this, &what](auto& step, auto&... steps) {
+          term_step term{this};
+          step.on_error(what, steps..., term);
+        };
+        std::apply(fn, steps_);
+        if (!running_) {
+          running_ = true;
+          do_run();
+        }
+      }
+    } else if (out_) {
+      // This may only happen if subscribing to the input fails.
       auto fn = [this, &what](auto& step, auto&... steps) {
         term_step term{this};
         step.on_error(what, steps..., term);
@@ -273,19 +287,10 @@ public:
     auto ptr = make_counted<sub_t>(super::ctx_, out, steps_);
     input_->subscribe(observer<input_type>{ptr});
     if (ptr->subscribed()) {
-      auto sub = subscription{std::move(ptr)};
-      out.on_subscribe(sub);
-      return std::move(sub).as_disposable();
-    } else if (auto& fail_reason = ptr->fail_reason()) {
-      out.on_error(fail_reason);
-      return disposable{};
-    } else {
-      auto err = make_error(sec::invalid_observable,
-                            "flow operator from_steps failed "
-                            "to subscribe to its input");
-      out.on_error(err);
-      return disposable{};
+      out.on_subscribe(subscription{ptr});
+      return ptr->as_disposable();
     }
+    return disposable{};
   }
 
 private:

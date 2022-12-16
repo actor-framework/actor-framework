@@ -35,8 +35,10 @@ public:
   }
 
   ~from_resource_sub() {
-    if (buf_)
-      buf_->cancel();
+    // The buffer points back to this object as consumer, so this cannot be
+    // destroyed unless we have called buf_->cancel(). All code paths that do
+    // call cancel() on the buffer also must set the variable to `nullptr`.
+    CAF_ASSERT(buf_ == nullptr);
     ctx_->deref_execution_context();
   }
 
@@ -51,7 +53,7 @@ public:
     if (!disposed_) {
       disposed_ = true;
       if (!running_)
-        do_cancel();
+        do_dispose();
     }
   }
 
@@ -114,7 +116,7 @@ private:
     }
   }
 
-  void do_cancel() {
+  void do_dispose() {
     if (buf_) {
       buf_->cancel();
       buf_ = nullptr;
@@ -129,7 +131,7 @@ private:
     CAF_LOG_TRACE("");
     auto guard = detail::make_scope_guard([this] { running_ = false; });
     if (disposed_) {
-      do_cancel();
+      do_dispose();
       return;
     }
     CAF_ASSERT(out_);
@@ -142,7 +144,7 @@ private:
         disposed_ = true;
         return;
       } else if (disposed_) {
-        do_cancel();
+        do_dispose();
         return;
       } else if (pulled == 0) {
         return;
