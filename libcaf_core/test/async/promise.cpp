@@ -14,13 +14,28 @@
 using namespace caf;
 using namespace std::literals;
 
+namespace {
+
+template <class T>
+auto make_shared_val_ptr() {
+  return std::make_shared<std::variant<none_t, T, error>>();
+}
+
+template <class T>
+auto make_observer(std::shared_ptr<std::variant<none_t, T, error>> ptr) {
+  return flow::make_observer([ptr](const T& val) { *ptr = val; },
+                             [ptr](const error& what) { *ptr = what; });
+}
+
+} // namespace
+
 BEGIN_FIXTURE_SCOPE(test_coordinator_fixture<>)
 
 SCENARIO("actors can observe futures") {
   GIVEN("a promise and future pair") {
     WHEN("passing a non-ready future to an actor") {
-      THEN("the actor can observe the value via .then() later") {
-        auto val = std::make_shared<std::variant<none_t, std::string, error>>();
+      THEN("it can observe the value via .then() later") {
+        auto val = make_shared_val_ptr<std::string>();
         auto uut = async::promise<std::string>{};
         auto fut = uut.get_future();
         auto testee = sys.spawn([val, fut](event_based_actor* self) {
@@ -34,10 +49,24 @@ SCENARIO("actors can observe futures") {
         if (CHECK(std::holds_alternative<std::string>(*val)))
           CHECK_EQ(std::get<std::string>(*val), "hello world");
       }
+      AND_THEN("it can observe the value via .observe_on() later") {
+        auto val = make_shared_val_ptr<std::string>();
+        auto uut = async::promise<std::string>{};
+        auto fut = uut.get_future();
+        auto testee = sys.spawn([val, fut](event_based_actor* self) {
+          fut.observe_on(self).subscribe(make_observer(val));
+        });
+        run();
+        CHECK(std::holds_alternative<none_t>(*val));
+        uut.set_value("hello world"s);
+        expect((action), to(testee));
+        if (CHECK(std::holds_alternative<std::string>(*val)))
+          CHECK_EQ(std::get<std::string>(*val), "hello world");
+      }
     }
     WHEN("passing a ready future to an actor") {
-      THEN("the actor can observe the value via .then() immediately") {
-        auto val = std::make_shared<std::variant<none_t, std::string, error>>();
+      THEN("it can observe the value via .then() immediately") {
+        auto val = make_shared_val_ptr<std::string>();
         auto uut = async::promise<std::string>{};
         auto fut = uut.get_future();
         uut.set_value("hello world"s);
@@ -49,10 +78,22 @@ SCENARIO("actors can observe futures") {
         if (CHECK(std::holds_alternative<std::string>(*val)))
           CHECK_EQ(std::get<std::string>(*val), "hello world");
       }
+      AND_THEN("it can observe the value via .observe_on() immediately") {
+        auto val = make_shared_val_ptr<std::string>();
+        auto uut = async::promise<std::string>{};
+        auto fut = uut.get_future();
+        uut.set_value("hello world"s);
+        auto testee = sys.spawn([val, fut](event_based_actor* self) {
+          fut.observe_on(self).subscribe(make_observer(val));
+        });
+        run();
+        if (CHECK(std::holds_alternative<std::string>(*val)))
+          CHECK_EQ(std::get<std::string>(*val), "hello world");
+      }
     }
     WHEN("passing a non-ready future to an actor and disposing the action") {
-      THEN("the actor never observes the value") {
-        auto val = std::make_shared<std::variant<none_t, std::string, error>>();
+      THEN("it never observes the value with .then()") {
+        auto val = make_shared_val_ptr<std::string>();
         auto uut = async::promise<std::string>{};
         auto fut = uut.get_future();
         auto hdl = disposable{};
@@ -75,7 +116,7 @@ SCENARIO("actors can observe futures") {
 SCENARIO("never setting a value or an error breaks the promises") {
   GIVEN("multiple promises that point to the same cell") {
     WHEN("the last promise goes out of scope") {
-      THEN("the future reports a broken promise") {
+      THEN("the future reports a broken promise when using .then()") {
         using promise_t = async::promise<int32_t>;
         using future_t = async::future<int32_t>;
         future_t fut;
@@ -118,6 +159,24 @@ SCENARIO("never setting a value or an error breaks the promises") {
           });
         ctx->run();
         CHECK_EQ(observed_events, 1u);
+      }
+      AND_THEN("the future reports a broken promise when using .observe_on()") {
+        using promise_t = async::promise<int32_t>;
+        using future_t = async::future<int32_t>;
+        future_t fut;
+        {
+          auto uut = promise_t{};
+          fut = uut.get_future();
+          CHECK(fut.pending());
+        }
+        CHECK(!fut.pending());
+        auto val = make_shared_val_ptr<int32_t>();
+        sys.spawn([val, fut](event_based_actor* self) {
+          fut.observe_on(self).subscribe(make_observer(val));
+        });
+        run();
+        if (CHECK(std::holds_alternative<error>(*val)))
+          CHECK_EQ(std::get<error>(*val), sec::broken_promise);
       }
     }
   }

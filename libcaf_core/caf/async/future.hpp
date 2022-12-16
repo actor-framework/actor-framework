@@ -9,6 +9,8 @@
 #include "caf/detail/async_cell.hpp"
 #include "caf/disposable.hpp"
 #include "caf/error.hpp"
+#include "caf/flow/observable.hpp"
+#include "caf/flow/op/cell.hpp"
 #include "caf/sec.hpp"
 
 namespace caf::async {
@@ -126,6 +128,17 @@ public:
   /// @pre `valid()`
   bound_future<T> bind_to(execution_context& ctx) const& {
     return {&ctx, cell_};
+  }
+
+  /// Binds this future to a @ref coordinator and converts it to an
+  /// @ref observable.
+  /// @pre `valid()`
+  flow::observable<T> observe_on(flow::coordinator* ctx) const {
+    using flow_cell_t = flow::op::cell<T>;
+    auto ptr = make_counted<flow_cell_t>(ctx);
+    bind_to(ctx).then([ptr](const T& val) { ptr->set_value(val); },
+                      [ptr](const error& what) { ptr->set_error(what); });
+    return flow::observable<T>{ptr};
   }
 
   /// Queries whether the result of the asynchronous computation is still
