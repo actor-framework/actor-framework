@@ -9,14 +9,16 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 - The new classes `json_value`, `json_array` and `json_object` allow working
   with JSON inputs directly. Actors can also pass around JSON values safely.
-- Fused stages now properly forward errors during the initial subscription to
-  their observer.
+- Futures can now convert to observable values for making it easier to process
+  asynchronous results with data flows.
 
 ### Fixed
 
 - The SPSC buffer now makes sure that subscribers get informed of a producer has
   already left before the subscriber appeared and vice versa. This fixes a race
   on the buffer that could cause indefinite hanging of an application.
+- Fused stages now properly forward errors during the initial subscription to
+  their observer.
 
 ## [0.19.0-rc.1] - 2022-10-31
 
