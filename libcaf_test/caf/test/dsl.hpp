@@ -249,18 +249,29 @@ std::optional<std::tuple<T, Ts...>> try_extract(caf_handle x) {
 /// Returns the content of the next mailbox element without taking it out of
 /// the mailbox. Fails on an empty mailbox or if the content of the next
 /// element does not match `<T, Ts...>`.
-template <class T, class... Ts>
-std::tuple<T, Ts...> extract(caf_handle x, int src_line) {
-  if (auto result = try_extract<T, Ts...>(x)) {
-    return std::move(*result);
+template <class... Ts>
+std::tuple<Ts...> extract(caf_handle x, int src_line) {
+  if constexpr (sizeof...(Ts) > 0) {
+    if (auto result = try_extract<Ts...>(x)) {
+      return std::move(*result);
+    } else {
+      auto ptr = x->peek_at_next_mailbox_element();
+      if (ptr == nullptr)
+        CAF_FAIL("cannot peek at the next message: mailbox is empty", src_line);
+      else
+        CAF_FAIL("message does not match expected types: "
+                   << to_string(ptr->content()),
+                 src_line);
+    }
   } else {
     auto ptr = x->peek_at_next_mailbox_element();
     if (ptr == nullptr)
       CAF_FAIL("cannot peek at the next message: mailbox is empty", src_line);
-    else
-      CAF_FAIL("message does not match expected types: "
+    else if (!ptr->content().empty())
+      CAF_FAIL("message does not match (expected an empty message): "
                  << to_string(ptr->content()),
                src_line);
+    return {};
   }
 }
 
