@@ -12,6 +12,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The JSON reader now automatically widens integers to doubles as necessary.
 - Parsing deeply nested JSON inputs no longer produces a stack overflow.
   Instead, the parser rejects any JSON with too many nesting levels.
+- The `fan_out_request` request now properly deals with actor handles that
+  respond with `void` (#1369).
 
 ## [0.18.6]
 

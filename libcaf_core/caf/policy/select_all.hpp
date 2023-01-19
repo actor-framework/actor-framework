@@ -37,8 +37,11 @@ using select_all_helper_value_t =
   typename select_all_helper_value_oracle<Ts...>::type;
 
 template <class F, class... Ts>
-struct select_all_helper {
-  using value_type = select_all_helper_value_t<Ts...>;
+struct select_all_helper;
+
+template <class F, class T, class... Ts>
+struct select_all_helper<F, T, Ts...> {
+  using value_type = select_all_helper_value_t<T, Ts...>;
   std::vector<value_type> results;
   std::shared_ptr<size_t> pending;
   disposable timeouts;
@@ -52,10 +55,10 @@ struct select_all_helper {
     results.reserve(pending);
   }
 
-  void operator()(Ts&... xs) {
+  void operator()(T& x, Ts&... xs) {
     CAF_LOG_TRACE(CAF_ARG2("pending", *pending));
     if (*pending > 0) {
-      results.emplace_back(std::move(xs)...);
+      results.emplace_back(std::move(x), std::move(xs)...);
       if (--*pending == 0) {
         timeouts.dispose();
         f(std::move(results));
@@ -64,7 +67,34 @@ struct select_all_helper {
   }
 
   auto wrap() {
-    return [this](Ts&... xs) { (*this)(xs...); };
+    return [this](T& x, Ts&... xs) { (*this)(x, xs...); };
+  }
+};
+
+template <class F>
+struct select_all_helper<F> {
+  std::shared_ptr<size_t> pending;
+  disposable timeouts;
+  F f;
+
+  template <class Fun>
+  select_all_helper(size_t pending, disposable timeouts, Fun&& f)
+    : pending(std::make_shared<size_t>(pending)),
+      timeouts(std::move(timeouts)),
+      f(std::forward<Fun>(f)) {
+    // nop
+  }
+
+  void operator()() {
+    CAF_LOG_TRACE(CAF_ARG2("pending", *pending));
+    if (*pending > 0 && --*pending == 0) {
+      timeouts.dispose();
+      f();
+    }
+  }
+
+  auto wrap() {
+    return [this] { (*this)(); };
   }
 };
 
@@ -80,6 +110,11 @@ struct select_select_all_helper<
 template <class F, class T>
 struct select_select_all_helper<F, detail::type_list<std::vector<T>>> {
   using type = select_all_helper<F, T>;
+};
+
+template <class F>
+struct select_select_all_helper<F, detail::type_list<>> {
+  using type = select_all_helper<F>;
 };
 
 template <class F>

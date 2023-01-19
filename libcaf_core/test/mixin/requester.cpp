@@ -19,7 +19,8 @@ namespace {
 
 using discarding_server_type = typed_actor<replies_to<int, int>::with<void>>;
 
-using adding_server_type = typed_actor<replies_to<int, int>::with<int>>;
+using adding_server_type = typed_actor<result<int>(int, int)>;
+using no_op_server_type = typed_actor<result<void>(int, int)>;
 
 using result_type = variant<none_t, unit_t, int>;
 
@@ -164,6 +165,30 @@ CAF_TEST(requesters support fan_out_request) {
   expect((int, int), from(client).to(workers[2]).with(1, 2));
   expect((int), from(workers[2]).to(client).with(3));
   CHECK_EQ(*sum, 9);
+}
+
+CAF_TEST(requesters support fan_out_request with result<void>) {
+  using policy::select_all;
+  std::vector<no_op_server_type> workers{
+    make_server([](int, int) {}),
+    make_server([](int, int) {}),
+    make_server([](int, int) {}),
+  };
+  run();
+  auto ran = std::make_shared<bool>(false);
+  auto client = sys.spawn([=](event_based_actor* self) {
+    self->fan_out_request<select_all>(workers, infinite, 1, 2).then([=]() {
+      *ran = true;
+    });
+  });
+  run_once();
+  expect((int, int), from(client).to(workers[0]).with(1, 2));
+  expect((), from(workers[0]).to(client));
+  expect((int, int), from(client).to(workers[1]).with(1, 2));
+  expect((), from(workers[1]).to(client));
+  expect((int, int), from(client).to(workers[2]).with(1, 2));
+  expect((), from(workers[2]).to(client));
+  CHECK_EQ(*ran, true);
 }
 
 #ifdef CAF_ENABLE_EXCEPTIONS
