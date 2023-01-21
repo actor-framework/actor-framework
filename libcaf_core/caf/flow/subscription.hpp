@@ -172,6 +172,10 @@ public:
     return disposable{std::move(pimpl_)};
   }
 
+  bool disposed() const noexcept {
+    return !pimpl_ || pimpl_->disposed();
+  }
+
   // -- swapping ---------------------------------------------------------------
 
   void swap(subscription& other) noexcept {

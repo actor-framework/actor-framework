@@ -570,6 +570,13 @@ public:
     }
   }
 
+  void unsubscribe() {
+    if (sub) {
+      sub.dispose();
+      state = observer_state::idle;
+    }
+  }
+
   bool idle() const noexcept {
     return state == observer_state::idle;
   }

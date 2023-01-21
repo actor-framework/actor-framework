@@ -11,8 +11,6 @@
 #include "caf/flow/observable_builder.hpp"
 #include "caf/flow/scoped_coordinator.hpp"
 
-namespace caf::flow {} // namespace caf::flow
-
 using namespace caf;
 
 namespace {

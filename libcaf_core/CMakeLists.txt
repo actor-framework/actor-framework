@@ -294,6 +294,7 @@ caf_add_component(
     flow.mixed
     flow.never
     flow.observe_on
+    flow.op.cell
     flow.prefix_and_tail
     flow.publish
     flow.single
