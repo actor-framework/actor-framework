@@ -6,7 +6,7 @@
 
 #include "caf/detail/parser/read_number.hpp"
 
-#include "caf/test/unit_test.hpp"
+#include "core-test.hpp"
 
 #include <string>
 
@@ -108,9 +108,9 @@ struct fixture {
 
 } // namespace
 
-#define CHECK_NUMBER(x) CAF_CHECK_EQUAL(p(#x), res(x))
+#define CHECK_NUMBER(x) CHECK_EQ(p(#x), res(x))
 
-CAF_TEST_FIXTURE_SCOPE(read_number_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(add ascii - unsigned) {
   using detail::parser::add_ascii;
@@ -122,9 +122,9 @@ CAF_TEST(add ascii - unsigned) {
     return x;
   };
   for (int i = 0; i < 256; ++i)
-    CAF_CHECK_EQUAL(rd(std::to_string(i)), static_cast<uint8_t>(i));
+    CHECK_EQ(rd(std::to_string(i)), static_cast<uint8_t>(i));
   for (int i = 256; i < 513; ++i)
-    CAF_CHECK_EQUAL(rd(std::to_string(i)), pec::integer_overflow);
+    CHECK_EQ(rd(std::to_string(i)), pec::integer_overflow);
 }
 
 CAF_TEST(add ascii - signed) {
@@ -136,9 +136,9 @@ CAF_TEST(add ascii - signed) {
     return x;
   };
   for (int i = 0; i < 128; ++i)
-    CAF_CHECK_EQUAL(rd(std::to_string(i)), static_cast<int8_t>(i));
+    CHECK_EQ(rd(std::to_string(i)), static_cast<int8_t>(i));
   for (int i = 128; i < 513; ++i)
-    CAF_CHECK_EQUAL(rd(std::to_string(i)), pec::integer_overflow);
+    CHECK_EQ(rd(std::to_string(i)), pec::integer_overflow);
 }
 
 CAF_TEST(sub ascii) {
@@ -152,13 +152,12 @@ CAF_TEST(sub ascii) {
   // Using sub_ascii in this way behaves as if we'd prefix the number with a
   // minus sign, i.e., "123" will result in -123.
   for (int i = 1; i < 129; ++i)
-    CAF_CHECK_EQUAL(rd(std::to_string(i)), static_cast<int8_t>(-i));
+    CHECK_EQ(rd(std::to_string(i)), static_cast<int8_t>(-i));
   for (int i = 129; i < 513; ++i)
-    CAF_CHECK_EQUAL(rd(std::to_string(i)), pec::integer_underflow);
+    CHECK_EQ(rd(std::to_string(i)), pec::integer_underflow);
 }
 
 CAF_TEST(binary numbers) {
-  /* TODO: use this implementation when switching to C++14
   CHECK_NUMBER(0b0);
   CHECK_NUMBER(0b10);
   CHECK_NUMBER(0b101);
@@ -166,14 +165,6 @@ CAF_TEST(binary numbers) {
   CHECK_NUMBER(-0b0);
   CHECK_NUMBER(-0b101);
   CHECK_NUMBER(-0B1001);
-  */
-  CAF_CHECK_EQUAL(p("0b0"), res(0));
-  CAF_CHECK_EQUAL(p("0b10"), res(2));
-  CAF_CHECK_EQUAL(p("0b101"), res(5));
-  CAF_CHECK_EQUAL(p("0B1001"), res(9));
-  CAF_CHECK_EQUAL(p("-0b0"), res(0));
-  CAF_CHECK_EQUAL(p("-0b101"), res(-5));
-  CAF_CHECK_EQUAL(p("-0B1001"), res(-9));
 }
 
 CAF_TEST(octal numbers) {
@@ -185,7 +176,7 @@ CAF_TEST(octal numbers) {
   CHECK_NUMBER(-00);
   CHECK_NUMBER(-0123);
   // invalid numbers
-  CAF_CHECK_EQUAL(p("018"), pec::trailing_character);
+  CHECK_EQ(p("018"), pec::trailing_character);
 }
 
 CAF_TEST(decimal numbers) {
@@ -206,11 +197,9 @@ CAF_TEST(hexadecimal numbers) {
   CHECK_NUMBER(-0x123);
   CHECK_NUMBER(-0xaf01);
   // invalid numbers
-  CAF_CHECK_EQUAL(p("0xFG"), pec::trailing_character);
-  CAF_CHECK_EQUAL(p("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"),
-                  pec::integer_overflow);
-  CAF_CHECK_EQUAL(p("-0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"),
-                  pec::integer_underflow);
+  CHECK_EQ(p("0xFG"), pec::trailing_character);
+  CHECK_EQ(p("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"), pec::integer_overflow);
+  CHECK_EQ(p("-0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"), pec::integer_underflow);
 }
 
 CAF_TEST(floating point numbers) {
@@ -261,8 +250,8 @@ CAF_TEST(integer mantissa with negative exponent) {
   CHECK_NUMBER(1e-5);
   CHECK_NUMBER(1e-6);
   // invalid numbers
-  CAF_CHECK_EQUAL(p("-9.9999e-e511"), pec::unexpected_character);
-  CAF_CHECK_EQUAL(p("-9.9999e-511"), pec::exponent_underflow);
+  CHECK_EQ(p("-9.9999e-e511"), pec::unexpected_character);
+  CHECK_EQ(p("-9.9999e-511"), pec::exponent_underflow);
 }
 
 CAF_TEST(fractional mantissa with positive exponent) {
@@ -288,7 +277,7 @@ CAF_TEST(fractional mantissa with negative exponent) {
 }
 
 #define CHECK_RANGE(expr, ...)                                                 \
-  CAF_CHECK_EQUAL(r(expr), std::vector<int64_t>({__VA_ARGS__}))
+  CHECK_EQ(r(expr), std::vector<int64_t>({__VA_ARGS__}))
 
 CAF_TEST(a range from n to n is just n) {
   CHECK_RANGE("0..0", 0);
@@ -331,7 +320,7 @@ CAF_TEST(ranges can use signed integers) {
   if (auto res = r(expr)) {                                                    \
     CAF_FAIL("expected expression to produce to an error");                    \
   } else {                                                                     \
-    CAF_CHECK_EQUAL(res.error(), enum_value);                                  \
+    CHECK_EQ(res.error(), enum_value);                                         \
   }
 
 CAF_TEST(the parser rejects invalid step values) {
@@ -339,4 +328,4 @@ CAF_TEST(the parser rejects invalid step values) {
   CHECK_ERR("+2..-2..+2", pec::invalid_range_expression);
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

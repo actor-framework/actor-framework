@@ -20,7 +20,7 @@ public:
 
   ~forwarding_actor_proxy() override;
 
-  void enqueue(mailbox_element_ptr what, execution_unit* context) override;
+  bool enqueue(mailbox_element_ptr what, execution_unit* context) override;
 
   bool add_backlink(abstract_actor* x) override;
 
@@ -29,7 +29,7 @@ public:
   void kill_proxy(execution_unit* ctx, error rsn) override;
 
 private:
-  void forward_msg(strong_actor_ptr sender, message_id mid, message msg,
+  bool forward_msg(strong_actor_ptr sender, message_id mid, message msg,
                    const forwarding_stack* fwd = nullptr);
 
   mutable detail::shared_spinlock broker_mtx_;

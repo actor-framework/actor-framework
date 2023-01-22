@@ -6,7 +6,7 @@
 
 #include "caf/io/basp/message_queue.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "io-test.hpp"
 
 #include "caf/actor_cast.hpp"
 #include "caf/actor_system.hpp"
@@ -45,19 +45,19 @@ struct fixture : test_coordinator_fixture<> {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(message_queue_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(default construction) {
-  CAF_CHECK_EQUAL(queue.next_id, 0u);
-  CAF_CHECK_EQUAL(queue.next_undelivered, 0u);
-  CAF_CHECK_EQUAL(queue.pending.size(), 0u);
+  CHECK_EQ(queue.next_id, 0u);
+  CHECK_EQ(queue.next_undelivered, 0u);
+  CHECK_EQ(queue.pending.size(), 0u);
 }
 
 CAF_TEST(ascending IDs) {
-  CAF_CHECK_EQUAL(queue.new_id(), 0u);
-  CAF_CHECK_EQUAL(queue.new_id(), 1u);
-  CAF_CHECK_EQUAL(queue.new_id(), 2u);
-  CAF_CHECK_EQUAL(queue.next_undelivered, 0u);
+  CHECK_EQ(queue.new_id(), 0u);
+  CHECK_EQ(queue.new_id(), 1u);
+  CHECK_EQ(queue.new_id(), 2u);
+  CHECK_EQ(queue.next_undelivered, 0u);
 }
 
 CAF_TEST(push order 0 - 1 - 2) {
@@ -138,4 +138,4 @@ CAF_TEST(dropping) {
   expect((ok_atom, int), from(self).to(testee).with(_, 2));
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

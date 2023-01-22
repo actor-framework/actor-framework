@@ -52,29 +52,12 @@ config_value get_timespan(const void* ptr) {
   return config_value{val};
 }
 
-meta_state us_res_meta{sync_timespan<1000>, get_timespan<1000>, "timespan"};
-
-meta_state ms_res_meta{sync_timespan<1000000>, get_timespan<1000000>,
-                       "timespan"};
-
 } // namespace
 
 config_option make_negated_config_option(bool& storage, string_view category,
                                          string_view name,
                                          string_view description) {
   return {category, name, description, &bool_neg_meta, &storage};
-}
-
-config_option
-make_us_resolution_config_option(size_t& storage, string_view category,
-                                 string_view name, string_view description) {
-  return {category, name, description, &us_res_meta, &storage};
-}
-
-config_option
-make_ms_resolution_config_option(size_t& storage, string_view category,
-                                 string_view name, string_view description) {
-  return {category, name, description, &ms_res_meta, &storage};
 }
 
 } // namespace caf

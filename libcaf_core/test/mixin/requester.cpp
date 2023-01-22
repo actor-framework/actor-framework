@@ -65,10 +65,10 @@ struct fixture : test_coordinator_fixture<> {
 #define SUBTEST(message)                                                       \
   *result = none;                                                              \
   run();                                                                       \
-  CAF_MESSAGE("subtest: " message);                                            \
+  MESSAGE("subtest: " message);                                                \
   for (int subtest_dummy = 0; subtest_dummy < 1; ++subtest_dummy)
 
-CAF_TEST_FIXTURE_SCOPE(requester_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(requests without result) {
   auto server = discarding_server;
@@ -79,7 +79,7 @@ CAF_TEST(requests without result) {
     run_once();
     expect((int, int), from(client).to(server).with(1, 2));
     expect((void), from(server).to(client));
-    CAF_CHECK_EQUAL(*result, result_type{unit});
+    CHECK_EQ(*result, result_type{unit});
   }
   SUBTEST("request.await") {
     auto client = sys.spawn([=](event_based_actor* self) {
@@ -88,13 +88,13 @@ CAF_TEST(requests without result) {
     run_once();
     expect((int, int), from(client).to(server).with(1, 2));
     expect((void), from(server).to(client));
-    CAF_CHECK_EQUAL(*result, result_type{unit});
+    CHECK_EQ(*result, result_type{unit});
   }
   SUBTEST("request.receive") {
     auto res_hdl = self->request(server, infinite, 1, 2);
     run();
     res_hdl.receive([&] { *result = unit; }, ERROR_HANDLER);
-    CAF_CHECK_EQUAL(*result, result_type{unit});
+    CHECK_EQ(*result, result_type{unit});
   }
 }
 
@@ -107,7 +107,7 @@ CAF_TEST(requests with integer result) {
     run_once();
     expect((int, int), from(client).to(server).with(1, 2));
     expect((int), from(server).to(client).with(3));
-    CAF_CHECK_EQUAL(*result, result_type{3});
+    CHECK_EQ(*result, result_type{3});
   }
   SUBTEST("request.await") {
     auto client = sys.spawn([=](event_based_actor* self) {
@@ -116,13 +116,13 @@ CAF_TEST(requests with integer result) {
     run_once();
     expect((int, int), from(client).to(server).with(1, 2));
     expect((int), from(server).to(client).with(3));
-    CAF_CHECK_EQUAL(*result, result_type{3});
+    CHECK_EQ(*result, result_type{3});
   }
   SUBTEST("request.receive") {
     auto res_hdl = self->request(server, infinite, 1, 2);
     run();
     res_hdl.receive([&](int x) { *result = x; }, ERROR_HANDLER);
-    CAF_CHECK_EQUAL(*result, result_type{3});
+    CHECK_EQ(*result, result_type{3});
   }
 }
 
@@ -136,7 +136,7 @@ CAF_TEST(delegated request with integer result) {
   expect((int, int), from(client).to(server).with(1, 2));
   expect((int, int), from(client).to(worker).with(1, 2));
   expect((int), from(worker).to(client).with(3));
-  CAF_CHECK_EQUAL(*result, result_type{3});
+  CHECK_EQ(*result, result_type{3});
 }
 
 CAF_TEST(requesters support fan_out_request) {
@@ -152,7 +152,7 @@ CAF_TEST(requesters support fan_out_request) {
     self->fan_out_request<select_all>(workers, infinite, 1, 2)
       .then([=](std::vector<int> results) {
         for (auto result : results)
-          CAF_CHECK_EQUAL(result, 3);
+          CHECK_EQ(result, 3);
         *sum = std::accumulate(results.begin(), results.end(), 0);
       });
   });
@@ -163,7 +163,7 @@ CAF_TEST(requesters support fan_out_request) {
   expect((int), from(workers[1]).to(client).with(3));
   expect((int, int), from(client).to(workers[2]).with(1, 2));
   expect((int), from(workers[2]).to(client).with(3));
-  CAF_CHECK_EQUAL(*sum, 9);
+  CHECK_EQ(*sum, 9);
 }
 
 #ifdef CAF_ENABLE_EXCEPTIONS
@@ -220,4 +220,4 @@ SCENARIO("request.await enforces a processing order") {
   }
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

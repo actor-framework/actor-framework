@@ -34,16 +34,14 @@ struct dummy_thread_hook : thread_hook {
 class counting_thread_hook : public thread_hook {
 public:
   counting_thread_hook()
-      : count_init_{0},
-        count_thread_started_{0},
-        count_thread_terminates_{0} {
+    : count_init_{0}, count_thread_started_{0}, count_thread_terminates_{0} {
     // nop
   }
 
   ~counting_thread_hook() override {
-    CAF_CHECK_EQUAL(count_init_, assumed_init_calls);
-    CAF_CHECK_EQUAL(count_thread_started_, assumed_thread_count);
-    CAF_CHECK_EQUAL(count_thread_terminates_, assumed_thread_count);
+    CHECK_EQ(count_init_, assumed_init_calls);
+    CHECK_EQ(count_thread_started_, assumed_thread_count);
+    CHECK_EQ(count_thread_terminates_, assumed_thread_count);
   }
 
   void init(actor_system&) override {
@@ -89,15 +87,15 @@ CAF_TEST(counting_no_system) {
   cfg.add_thread_hook<counting_thread_hook>();
 }
 
-CAF_TEST_FIXTURE_SCOPE(dummy_hook, fixture<dummy_thread_hook>)
+BEGIN_FIXTURE_SCOPE(fixture<dummy_thread_hook>)
 
 CAF_TEST(counting_no_args) {
   // nop
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()
 
-CAF_TEST_FIXTURE_SCOPE(counting_hook, fixture<counting_thread_hook>)
+BEGIN_FIXTURE_SCOPE(fixture<counting_thread_hook>)
 
 CAF_TEST(counting_system_without_actor) {
   assumed_init_calls = 1;
@@ -121,4 +119,4 @@ CAF_TEST(counting_system_with_actor) {
   sys.spawn([] {});
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

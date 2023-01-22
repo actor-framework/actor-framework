@@ -39,12 +39,6 @@ public:
 
   typed_response_promise& operator=(const typed_response_promise&) = default;
 
-  [[deprecated("use the default constructor instead")]] //
-  typed_response_promise(none_t x)
-    : promise_(x) {
-    // nop
-  }
-
   // -- properties -------------------------------------------------------------
 
   /// @copydoc response_promise::async
@@ -75,11 +69,6 @@ public:
   /// @copydoc response_promise::id
   message_id id() const {
     return promise_.id();
-  }
-
-  [[deprecated("use the typed_response_promise directly")]]
-  operator response_promise&() {
-    return promise_;
   }
 
   // -- delivery ---------------------------------------------------------------

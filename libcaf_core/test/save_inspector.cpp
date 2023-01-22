@@ -270,12 +270,12 @@ struct fixture {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(load_inspector_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(save inspectors can visit C arrays) {
   int32_t xs[] = {1, 2, 3};
-  CAF_CHECK_EQUAL(detail::save(f, xs), true);
-  CAF_CHECK_EQUAL(f.log, R"_(
+  CHECK_EQ(detail::save(f, xs), true);
+  CHECK_EQ(f.log, R"_(
 begin tuple of size 3
   int32_t value
   int32_t value
@@ -285,11 +285,11 @@ end tuple)_");
 
 CAF_TEST(save inspectors can visit simple POD types) {
   point_3d p{1, 1, 1};
-  CAF_CHECK_EQUAL(inspect(f, p), true);
-  CAF_CHECK_EQUAL(p.x, 1);
-  CAF_CHECK_EQUAL(p.y, 1);
-  CAF_CHECK_EQUAL(p.z, 1);
-  CAF_CHECK_EQUAL(f.log, R"_(
+  CHECK_EQ(inspect(f, p), true);
+  CHECK_EQ(p.x, 1);
+  CHECK_EQ(p.y, 1);
+  CHECK_EQ(p.z, 1);
+  CHECK_EQ(f.log, R"_(
 begin object point_3d
   begin field x
     int32_t value
@@ -306,8 +306,8 @@ end object)_");
 CAF_TEST(save inspectors can visit node IDs) {
   auto tmp = make_node_id(42, "0102030405060708090A0B0C0D0E0F1011121314");
   auto hash_based_id = unbox(tmp);
-  CAF_CHECK_EQUAL(inspect(f, hash_based_id), true);
-  CAF_CHECK_EQUAL(f.log, R"_(
+  CHECK_EQ(inspect(f, hash_based_id), true);
+  CHECK_EQ(f.log, R"_(
 begin object caf::node_id
   begin optional variant field data
     begin object caf::hashed_node_id
@@ -345,14 +345,14 @@ end object)_");
 
 CAF_TEST(save inspectors recurse into members) {
   line l{point_3d{1, 1, 1}, point_3d{1, 1, 1}};
-  CAF_CHECK_EQUAL(inspect(f, l), true);
-  CAF_CHECK_EQUAL(l.p1.x, 1);
-  CAF_CHECK_EQUAL(l.p1.y, 1);
-  CAF_CHECK_EQUAL(l.p1.z, 1);
-  CAF_CHECK_EQUAL(l.p2.x, 1);
-  CAF_CHECK_EQUAL(l.p2.y, 1);
-  CAF_CHECK_EQUAL(l.p2.z, 1);
-  CAF_CHECK_EQUAL(f.log, R"_(
+  CHECK_EQ(inspect(f, l), true);
+  CHECK_EQ(l.p1.x, 1);
+  CHECK_EQ(l.p1.y, 1);
+  CHECK_EQ(l.p1.z, 1);
+  CHECK_EQ(l.p2.x, 1);
+  CHECK_EQ(l.p2.y, 1);
+  CHECK_EQ(l.p2.z, 1);
+  CHECK_EQ(f.log, R"_(
 begin object line
   begin field p1
     begin object point_3d
@@ -384,13 +384,13 @@ end object)_");
 }
 
 CAF_TEST(save inspectors support fields with fallbacks and invariants) {
-  CAF_MESSAGE("save inspectors suppress fields with their default value");
+  MESSAGE("save inspectors suppress fields with their default value");
   {
     duration d{"seconds", 12.0};
-    CAF_CHECK_EQUAL(inspect(f, d), true);
-    CAF_CHECK_EQUAL(d.unit, "seconds");
-    CAF_CHECK_EQUAL(d.count, 12.0);
-    CAF_CHECK_EQUAL(f.log, R"_(
+    CHECK_EQ(inspect(f, d), true);
+    CHECK_EQ(d.unit, "seconds");
+    CHECK_EQ(d.count, 12.0);
+    CHECK_EQ(f.log, R"_(
 begin object duration
   begin optional field unit
   end field
@@ -400,13 +400,13 @@ begin object duration
 end object)_");
   }
   f.log.clear();
-  CAF_MESSAGE("save inspectors include fields with non-default value");
+  MESSAGE("save inspectors include fields with non-default value");
   {
     duration d{"minutes", 42.0};
-    CAF_CHECK_EQUAL(inspect(f, d), true);
-    CAF_CHECK_EQUAL(d.unit, "minutes");
-    CAF_CHECK_EQUAL(d.count, 42.0);
-    CAF_CHECK_EQUAL(f.log, R"_(
+    CHECK_EQ(inspect(f, d), true);
+    CHECK_EQ(d.unit, "minutes");
+    CHECK_EQ(d.count, 42.0);
+    CHECK_EQ(f.log, R"_(
 begin object duration
   begin optional field unit
     std::string value
@@ -420,8 +420,8 @@ end object)_");
 
 CAF_TEST(save inspectors support optional) {
   optional<int32_t> x;
-  CAF_CHECK_EQUAL(f.apply(x), true);
-  CAF_CHECK_EQUAL(f.log, R"_(
+  CHECK_EQ(f.apply(x), true);
+  CHECK_EQ(f.log, R"_(
 begin object anonymous
   begin optional field value
   end field
@@ -430,8 +430,8 @@ end object)_");
 
 CAF_TEST(save inspectors support fields with optional values) {
   person p1{"Eduard Example", none};
-  CAF_CHECK_EQUAL(inspect(f, p1), true);
-  CAF_CHECK_EQUAL(f.log, R"_(
+  CHECK_EQ(inspect(f, p1), true);
+  CHECK_EQ(f.log, R"_(
 begin object person
   begin field name
     std::string value
@@ -441,8 +441,8 @@ begin object person
 end object)_");
   f.log.clear();
   person p2{"Bruce Almighty", std::string{"776-2323"}};
-  CAF_CHECK_EQUAL(inspect(f, p2), true);
-  CAF_CHECK_EQUAL(f.log, R"_(
+  CHECK_EQ(inspect(f, p2), true);
+  CHECK_EQ(f.log, R"_(
 begin object person
   begin field name
     std::string value
@@ -457,10 +457,10 @@ CAF_TEST(save inspectors support fields with getters and setters) {
   foobar fb;
   fb.foo("hello");
   fb.bar("world");
-  CAF_CHECK(inspect(f, fb));
-  CAF_CHECK_EQUAL(fb.foo(), "hello");
-  CAF_CHECK_EQUAL(fb.bar(), "world");
-  CAF_CHECK_EQUAL(f.log, R"_(
+  CHECK(inspect(f, fb));
+  CHECK_EQ(fb.foo(), "hello");
+  CHECK_EQ(fb.bar(), "world");
+  CHECK_EQ(f.log, R"_(
 begin object foobar
   begin field foo
     std::string value
@@ -473,9 +473,9 @@ end object)_");
 
 CAF_TEST(save inspectors support nasty data structures) {
   nasty x;
-  CAF_CHECK(inspect(f, x));
-  CAF_CHECK_EQUAL(f.get_error(), error{});
-  CAF_CHECK_EQUAL(f.log, R"_(
+  CHECK(inspect(f, x));
+  CHECK_EQ(f.get_error(), error{});
+  CHECK_EQ(f.log, R"_(
 begin object nasty
   begin field field_01
     int32_t value
@@ -587,8 +587,8 @@ CAF_TEST(save inspectors support all basic STL types) {
   v8_2.emplace_back("foo", array_3i{{0, 0, 0}});
   x.v8.emplace_back(std::move(v8_1));
   x.v8.emplace_back(std::move(v8_2));
-  CAF_CHECK(inspect(f, x));
-  CAF_CHECK_EQUAL(f.log, R"_(
+  CHECK(inspect(f, x));
+  CHECK_EQ(f.log, R"_(
 begin object basics
   begin field v1
     begin object anonymous
@@ -688,9 +688,9 @@ end object)_");
 
 CAF_TEST(save inspectors support messages) {
   auto x = make_message(1, "two", 3.0);
-  CAF_MESSAGE("for machine-to-machine formats, messages prefix their types");
-  CAF_CHECK(inspect(f, x));
-  CAF_CHECK_EQUAL(f.log, R"_(
+  MESSAGE("for machine-to-machine formats, messages prefix their types");
+  CHECK(inspect(f, x));
+  CHECK_EQ(f.log, R"_(
 begin object message
   begin field types
     begin sequence of size 3
@@ -707,11 +707,11 @@ begin object message
     end tuple
   end field
 end object)_");
-  CAF_MESSAGE("for human-readable formats, messages inline type annotations");
+  MESSAGE("for human-readable formats, messages inline type annotations");
   f.log.clear();
   f.set_has_human_readable_format(true);
-  CAF_CHECK(inspect(f, x));
-  CAF_CHECK_EQUAL(f.log, R"_(
+  CHECK(inspect(f, x));
+  CHECK_EQ(f.log, R"_(
 begin sequence of size 3
   int32_t value
   std::string value
@@ -783,8 +783,6 @@ end object)_");
   }
 }
 
-#ifdef __cpp_lib_byte
-
 SCENARIO("save inspectors support std::byte") {
   GIVEN("a struct with std::byte") {
     struct byte_test {
@@ -811,6 +809,4 @@ end object)_";
   }
 }
 
-#endif
-
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

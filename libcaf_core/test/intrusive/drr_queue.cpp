@@ -6,7 +6,7 @@
 
 #include "caf/intrusive/drr_queue.hpp"
 
-#include "caf/test/unit_test.hpp"
+#include "core-test.hpp"
 
 #include <memory>
 
@@ -67,7 +67,7 @@ auto make_new_round_result(size_t consumed_items, bool stop_all) {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(drr_queue_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(default_constructed) {
   CAF_REQUIRE_EQUAL(queue.empty(), true);
@@ -100,24 +100,24 @@ CAF_TEST(new_round) {
   };
   // Allow f to consume 1, 2, and 3 with a leftover deficit of 1.
   auto round_result = queue.new_round(7, f);
-  CAF_CHECK_EQUAL(round_result, make_new_round_result(3, false));
-  CAF_CHECK_EQUAL(seq, "123");
-  CAF_CHECK_EQUAL(queue.deficit(), 1);
+  CHECK_EQ(round_result, make_new_round_result(3, false));
+  CHECK_EQ(seq, "123");
+  CHECK_EQ(queue.deficit(), 1);
   // Allow f to consume 4 and 5 with a leftover deficit of 0.
   round_result = queue.new_round(8, f);
-  CAF_CHECK_EQUAL(round_result, make_new_round_result(2, false));
-  CAF_CHECK_EQUAL(seq, "12345");
-  CAF_CHECK_EQUAL(queue.deficit(), 0);
+  CHECK_EQ(round_result, make_new_round_result(2, false));
+  CHECK_EQ(seq, "12345");
+  CHECK_EQ(queue.deficit(), 0);
   // Allow f to consume 6 with a leftover deficit of 0 (queue is empty).
   round_result = queue.new_round(1000, f);
-  CAF_CHECK_EQUAL(round_result, make_new_round_result(1, false));
-  CAF_CHECK_EQUAL(seq, "123456");
-  CAF_CHECK_EQUAL(queue.deficit(), 0);
+  CHECK_EQ(round_result, make_new_round_result(1, false));
+  CHECK_EQ(seq, "123456");
+  CHECK_EQ(queue.deficit(), 0);
   // new_round on an empty queue does nothing.
   round_result = queue.new_round(1000, f);
-  CAF_CHECK_EQUAL(round_result, make_new_round_result(0, false));
-  CAF_CHECK_EQUAL(seq, "123456");
-  CAF_CHECK_EQUAL(queue.deficit(), 0);
+  CHECK_EQ(round_result, make_new_round_result(0, false));
+  CHECK_EQ(seq, "123456");
+  CHECK_EQ(queue.deficit(), 0);
 }
 
 CAF_TEST(next) {
@@ -136,14 +136,14 @@ CAF_TEST(next) {
     auto ptr = take();
     f(*ptr);
   }
-  CAF_CHECK_EQUAL(seq, "123456");
+  CHECK_EQ(seq, "123456");
   fill(queue, 5, 4, 3, 2, 1);
   while (!queue.empty()) {
     auto ptr = take();
     f(*ptr);
   }
-  CAF_CHECK_EQUAL(seq, "12345654321");
-  CAF_CHECK_EQUAL(queue.deficit(), 0);
+  CHECK_EQ(seq, "12345654321");
+  CHECK_EQ(queue.deficit(), 0);
 }
 
 CAF_TEST(peek_all) {
@@ -157,21 +157,21 @@ CAF_TEST(peek_all) {
     queue.peek_all(peek_fun);
     return str;
   };
-  CAF_CHECK_EQUAL(queue_to_string(), "");
+  CHECK_EQ(queue_to_string(), "");
   queue.emplace_back(1);
-  CAF_CHECK_EQUAL(queue_to_string(), "1");
+  CHECK_EQ(queue_to_string(), "1");
   queue.emplace_back(2);
-  CAF_CHECK_EQUAL(queue_to_string(), "1, 2");
+  CHECK_EQ(queue_to_string(), "1, 2");
   queue.emplace_back(3);
-  CAF_CHECK_EQUAL(queue_to_string(), "1, 2, 3");
+  CHECK_EQ(queue_to_string(), "1, 2, 3");
   queue.emplace_back(4);
-  CAF_CHECK_EQUAL(queue_to_string(), "1, 2, 3, 4");
+  CHECK_EQ(queue_to_string(), "1, 2, 3, 4");
 }
 
 CAF_TEST(to_string) {
-  CAF_CHECK_EQUAL(deep_to_string(queue), "[]");
+  CHECK_EQ(deep_to_string(queue), "[]");
   fill(queue, 1, 2, 3, 4);
-  CAF_CHECK_EQUAL(deep_to_string(queue), "[1, 2, 3, 4]");
+  CHECK_EQ(deep_to_string(queue), "[1, 2, 3, 4]");
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

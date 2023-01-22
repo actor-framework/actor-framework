@@ -89,7 +89,7 @@ void group_tunnel::unsubscribe(const actor_control_block* who) {
   });
 }
 
-void group_tunnel::enqueue(strong_actor_ptr sender, message_id mid,
+bool group_tunnel::enqueue(strong_actor_ptr sender, message_id mid,
                            message content, execution_unit* host) {
   CAF_LOG_TRACE(CAF_ARG(sender) << CAF_ARG(content));
   std::unique_lock<std::mutex> guard{mtx_};
@@ -100,6 +100,7 @@ void group_tunnel::enqueue(strong_actor_ptr sender, message_id mid,
     auto wrapped = make_message(sys_atom_v, forward_atom_v, std::move(content));
     cached_messages_.emplace_back(std::move(sender), mid, std::move(wrapped));
   }
+  return true;
 }
 
 void group_tunnel::stop() {

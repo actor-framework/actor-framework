@@ -81,11 +81,6 @@ public:
   /// - Store the converted value unless this option is stateless.
   error sync(config_value& x) const;
 
-  [[deprecated("use sync instead")]] error store(const config_value& x) const;
-
-  [[deprecated("use sync instead")]] expected<config_value>
-  parse(string_view input) const;
-
   /// Returns a human-readable representation of this option's expected type.
   string_view type_name() const noexcept;
 
@@ -94,10 +89,6 @@ public:
 
   /// Returns whether the category is optional for CLI options.
   bool has_flat_cli_name() const noexcept;
-
-  /// @private
-  // TODO: remove with CAF 0.17
-  optional<config_value> get() const;
 
 private:
   string_view buf_slice(size_t from, size_t to) const noexcept;

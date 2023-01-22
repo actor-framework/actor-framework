@@ -62,9 +62,9 @@ public:
 
   // -- overridden functions ---------------------------------------------------
 
-  void enqueue(mailbox_element_ptr ptr, execution_unit* host) override;
+  bool enqueue(mailbox_element_ptr ptr, execution_unit* host) override;
 
-  void enqueue(strong_actor_ptr src, message_id mid, message content,
+  bool enqueue(strong_actor_ptr src, message_id mid, message content,
                execution_unit* eu) override;
 
   void launch(execution_unit* eu, bool lazy, bool hide) override;

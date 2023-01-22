@@ -167,26 +167,6 @@ pipeline {
                 runClangFormat(config)
             }
         }
-        stage('Check Consistency') {
-            agent { label 'unix' }
-            steps {
-                deleteDir()
-                unstash('sources')
-                dir('sources') {
-                    cmakeBuild([
-                        buildDir: 'build',
-                        installation: 'cmake in search path',
-                        sourceDir: '.',
-                        cmakeArgs: '-DCAF_ENABLE_IO_MODULE:BOOL=OFF ' +
-                                   '-DCAF_ENABLE_UTILITY_TARGETS:BOOL=ON',
-                        steps: [[
-                            args: '--target consistency-check',
-                            withCmake: true,
-                        ]],
-                    ])
-                }
-            }
-        }
         stage('Build') {
             steps {
                 buildParallel(config)

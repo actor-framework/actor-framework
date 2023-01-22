@@ -37,8 +37,9 @@ public:
       [&](add_atom, actor_id, const std::string& str) { std::cout << str; });
   }
 
-  void enqueue(mailbox_element_ptr what, execution_unit*) override {
+  bool enqueue(mailbox_element_ptr what, execution_unit*) override {
     mh_(what->content());
+    return true;
   }
 
   void setup_metrics() {

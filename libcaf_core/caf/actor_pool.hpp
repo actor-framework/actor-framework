@@ -85,7 +85,7 @@ public:
   static actor
   make(execution_unit* eu, size_t num_workers, const factory& fac, policy pol);
 
-  void enqueue(mailbox_element_ptr what, execution_unit* eu) override;
+  bool enqueue(mailbox_element_ptr what, execution_unit* eu) override;
 
   actor_pool(actor_config& cfg);
 

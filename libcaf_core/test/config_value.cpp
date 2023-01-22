@@ -65,7 +65,7 @@ struct fixture {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(config_value_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 SCENARIO("default-constructed config values represent null") {
   GIVEN("a default-constructed config value") {
@@ -145,14 +145,14 @@ SCENARIO("get_as can convert config values to integers") {
     auto x = config_value{-5};
     WHEN("using get_as with integer types") {
       THEN("conversion fails for all unsigned types") {
-        CAF_CHECK_EQUAL(get_as<uint64_t>(x), sec::conversion_failed);
-        CAF_CHECK_EQUAL(get_as<int64_t>(x), -5);
-        CAF_CHECK_EQUAL(get_as<uint32_t>(x), sec::conversion_failed);
-        CAF_CHECK_EQUAL(get_as<int32_t>(x), -5);
-        CAF_CHECK_EQUAL(get_as<uint16_t>(x), sec::conversion_failed);
-        CAF_CHECK_EQUAL(get_as<int16_t>(x), -5);
-        CAF_CHECK_EQUAL(get_as<uint8_t>(x), sec::conversion_failed);
-        CAF_CHECK_EQUAL(get_as<int8_t>(x), -5);
+        CHECK_EQ(get_as<uint64_t>(x), sec::conversion_failed);
+        CHECK_EQ(get_as<int64_t>(x), -5);
+        CHECK_EQ(get_as<uint32_t>(x), sec::conversion_failed);
+        CHECK_EQ(get_as<int32_t>(x), -5);
+        CHECK_EQ(get_as<uint16_t>(x), sec::conversion_failed);
+        CHECK_EQ(get_as<int16_t>(x), -5);
+        CHECK_EQ(get_as<uint8_t>(x), sec::conversion_failed);
+        CHECK_EQ(get_as<int8_t>(x), -5);
       }
     }
   }
@@ -160,14 +160,14 @@ SCENARIO("get_as can convert config values to integers") {
     auto x = config_value{"50000"s};
     WHEN("using get_as with integer types") {
       THEN("CAF parses the string and performs a bound check") {
-        CAF_CHECK_EQUAL(get_as<uint64_t>(x), 50'000u);
-        CAF_CHECK_EQUAL(get_as<int64_t>(x), 50'000);
-        CAF_CHECK_EQUAL(get_as<uint32_t>(x), 50'000u);
-        CAF_CHECK_EQUAL(get_as<int32_t>(x), 50'000);
-        CAF_CHECK_EQUAL(get_as<uint16_t>(x), 50'000u);
-        CAF_CHECK_EQUAL(get_as<int16_t>(x), sec::conversion_failed);
-        CAF_CHECK_EQUAL(get_as<uint8_t>(x), sec::conversion_failed);
-        CAF_CHECK_EQUAL(get_as<int8_t>(x), sec::conversion_failed);
+        CHECK_EQ(get_as<uint64_t>(x), 50'000u);
+        CHECK_EQ(get_as<int64_t>(x), 50'000);
+        CHECK_EQ(get_as<uint32_t>(x), 50'000u);
+        CHECK_EQ(get_as<int32_t>(x), 50'000);
+        CHECK_EQ(get_as<uint16_t>(x), 50'000u);
+        CHECK_EQ(get_as<int16_t>(x), sec::conversion_failed);
+        CHECK_EQ(get_as<uint8_t>(x), sec::conversion_failed);
+        CHECK_EQ(get_as<int8_t>(x), sec::conversion_failed);
       }
     }
   }
@@ -865,7 +865,7 @@ SCENARIO("config_value::parse returns an error for invalid inputs") {
   }
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()
 
 // -- end of scenario testing, here come several baseline checks for parsing ---
 

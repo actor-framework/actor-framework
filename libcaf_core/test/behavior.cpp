@@ -10,12 +10,12 @@
 
 #include <functional>
 
-#include "caf/send.hpp"
-#include "caf/behavior.hpp"
 #include "caf/actor_system.hpp"
-#include "caf/message_handler.hpp"
-#include "caf/event_based_actor.hpp"
 #include "caf/actor_system_config.hpp"
+#include "caf/behavior.hpp"
+#include "caf/event_based_actor.hpp"
+#include "caf/message_handler.hpp"
+#include "caf/send.hpp"
 
 using namespace caf;
 
@@ -57,48 +57,43 @@ struct fixture {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(behavior_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(default_construct) {
   behavior f;
-  CAF_CHECK_EQUAL(f(m1), none);
-  CAF_CHECK_EQUAL(f(m2), none);
-  CAF_CHECK_EQUAL(f(m3), none);
+  CHECK_EQ(f(m1), none);
+  CHECK_EQ(f(m2), none);
+  CHECK_EQ(f(m3), none);
 }
 
 CAF_TEST(nocopy_function_object) {
   behavior f{nocopy_fun{}};
-  CAF_CHECK_EQUAL(f(m1), none);
-  CAF_CHECK_EQUAL(res_of(f, m2), 3);
-  CAF_CHECK_EQUAL(f(m3), none);
+  CHECK_EQ(f(m1), none);
+  CHECK_EQ(res_of(f, m2), 3);
+  CHECK_EQ(f(m3), none);
 }
 
 CAF_TEST(single_lambda_construct) {
   behavior f{[](int x) { return x + 1; }};
-  CAF_CHECK_EQUAL(res_of(f, m1), 2);
-  CAF_CHECK_EQUAL(res_of(f, m2), none);
-  CAF_CHECK_EQUAL(res_of(f, m3), none);
+  CHECK_EQ(res_of(f, m1), 2);
+  CHECK_EQ(res_of(f, m2), none);
+  CHECK_EQ(res_of(f, m3), none);
 }
 
 CAF_TEST(multiple_lambda_construct) {
-  behavior f{
-    [](int x) { return x + 1; },
-    [](int x, int y) { return x * y; }
-  };
-  CAF_CHECK_EQUAL(res_of(f, m1), 2);
-  CAF_CHECK_EQUAL(res_of(f, m2), 2);
-  CAF_CHECK_EQUAL(res_of(f, m3), none);
+  behavior f{[](int x) { return x + 1; }, [](int x, int y) { return x * y; }};
+  CHECK_EQ(res_of(f, m1), 2);
+  CHECK_EQ(res_of(f, m2), 2);
+  CHECK_EQ(res_of(f, m3), none);
 }
 
 CAF_TEST(become_empty_behavior) {
   actor_system_config cfg{};
   actor_system sys{cfg};
   auto make_bhvr = [](event_based_actor* self) -> behavior {
-    return {
-      [=](int) { self->become(behavior{}); }
-    };
+    return {[=](int) { self->become(behavior{}); }};
   };
   anon_send(sys.spawn(make_bhvr), int{5});
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

@@ -6,7 +6,7 @@
 
 #include "caf/detail/parser/read_unsigned_integer.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 #include "caf/parser_state.hpp"
 #include "caf/string_view.hpp"
@@ -52,17 +52,16 @@ T max_val() {
 
 } // namespace
 
-#define ZERO_VALUE(type, literal)                                              \
-  CAF_CHECK_EQUAL(read<type>(#literal), type(0));
+#define ZERO_VALUE(type, literal) CHECK_EQ(read<type>(#literal), type(0));
 
 #define MAX_VALUE(type, literal)                                               \
-  CAF_CHECK_EQUAL(read<type>(#literal), max_val<type>());
+  CHECK_EQ(read<type>(#literal), max_val<type>());
 
 #ifdef OVERFLOW
 #  undef OVERFLOW
 #endif // OVERFLOW
 
-#define OVERFLOW(type, literal) CAF_CHECK(overflow<type>(#literal));
+#define OVERFLOW(type, literal) CHECK(overflow<type>(#literal));
 
 CAF_TEST(read zeros) {
   ZERO_VALUE(uint8_t, 0);

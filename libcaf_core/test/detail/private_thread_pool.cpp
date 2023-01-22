@@ -26,7 +26,7 @@
 
 using namespace caf;
 
-CAF_TEST_FIXTURE_SCOPE(private_thread_pool_tests, test_coordinator_fixture<>)
+BEGIN_FIXTURE_SCOPE(test_coordinator_fixture<>)
 
 SCENARIO("private threads count towards detached actors") {
   GIVEN("an actor system with a private thread pool") {
@@ -97,4 +97,4 @@ SCENARIO("private threads rerun their resumable when it returns resume_later") {
   }
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

@@ -220,7 +220,7 @@ public:
 
   // -- overridden functions of abstract_actor ---------------------------------
 
-  void enqueue(mailbox_element_ptr, execution_unit*) override;
+  bool enqueue(mailbox_element_ptr, execution_unit*) override;
 
   mailbox_element* peek_at_next_mailbox_element() override;
 

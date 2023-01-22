@@ -59,16 +59,16 @@ using namespace caf;
 
 macro_repeat20(i_n)
 
-// a variant with 20 element types
-using v20 = variant<i01, i02, i03, i04, i05, i06, i07, i08, i09, i10,
-                    i11, i12, i13, i14, i15, i16, i17, i18, i19, i20>;
+  // a variant with 20 element types
+  using v20 = variant<i01, i02, i03, i04, i05, i06, i07, i08, i09, i10, i11,
+                      i12, i13, i14, i15, i16, i17, i18, i19, i20>;
 
 #define VARIANT_EQ(x, y)                                                       \
   do {                                                                         \
     using type = std::decay_t<decltype(y)>;                                    \
     auto&& tmp = x;                                                            \
-    if (CAF_CHECK(holds_alternative<type>(tmp)))                               \
-      CAF_CHECK_EQUAL(get<type>(tmp), y);                                      \
+    if (CHECK(holds_alternative<type>(tmp)))                                   \
+      CHECK_EQ(get<type>(tmp), y);                                             \
   } while (false)
 
 #define v20_test(n)                                                            \
@@ -122,17 +122,17 @@ CAF_TEST(n_ary_visit) {
   variant<float, int, std::string> b{"bar"s};
   variant<int, std::string, double> c{123};
   test_visitor f;
-  CAF_CHECK_EQUAL(visit(f, a), R"__([42])__");
-  CAF_CHECK_EQUAL(visit(f, a, b), R"__([42, "bar"])__");
-  CAF_CHECK_EQUAL(visit(f, a, b, c), R"__([42, "bar", 123])__");
+  CHECK_EQ(visit(f, a), R"__([42])__");
+  CHECK_EQ(visit(f, a, b), R"__([42, "bar"])__");
+  CHECK_EQ(visit(f, a, b, c), R"__([42, "bar", 123])__");
 }
 
 CAF_TEST(get_if) {
   variant<int, std::string> b = "foo"s;
-  CAF_MESSAGE("test get_if directly");
-  CAF_CHECK_EQUAL(get_if<int>(&b), nullptr);
-  CAF_CHECK_NOT_EQUAL(get_if<std::string>(&b), nullptr);
-  CAF_MESSAGE("test get_if via unit test framework");
+  MESSAGE("test get_if directly");
+  CHECK_EQ(get_if<int>(&b), nullptr);
+  CHECK_NE(get_if<std::string>(&b), nullptr);
+  MESSAGE("test get_if via unit test framework");
   VARIANT_EQ(b, "foo"s);
 }
 
@@ -140,25 +140,25 @@ CAF_TEST(less_than) {
   using variant_type = variant<char, int>;
   auto a = variant_type{'x'};
   auto b = variant_type{'y'};
-  CAF_CHECK(a < b);
-  CAF_CHECK(!(a > b));
-  CAF_CHECK(a <= b);
-  CAF_CHECK(!(a >= b));
+  CHECK(a < b);
+  CHECK(!(a > b));
+  CHECK(a <= b);
+  CHECK(!(a >= b));
   b = 42;
-  CAF_CHECK(a < b);
-  CAF_CHECK(!(a > b));
-  CAF_CHECK(a <= b);
-  CAF_CHECK(!(a >= b));
+  CHECK(a < b);
+  CHECK(!(a > b));
+  CHECK(a <= b);
+  CHECK(!(a >= b));
   a = 42;
-  CAF_CHECK(!(a < b));
-  CAF_CHECK(!(a > b));
-  CAF_CHECK(a <= b);
-  CAF_CHECK(a >= b);
+  CHECK(!(a < b));
+  CHECK(!(a > b));
+  CHECK(a <= b);
+  CHECK(a >= b);
   b = 'x';
 }
 
 CAF_TEST(equality) {
   variant<uint16_t, int> x = 42;
   variant<uint16_t, int> y = uint16_t{42};
-  CAF_CHECK_NOT_EQUAL(x, y);
+  CHECK_NE(x, y);
 }

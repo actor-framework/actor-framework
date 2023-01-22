@@ -36,23 +36,21 @@ public:
   behavior make_behavior() override {
     // reflecting a message increases its reference count by one
     set_default_handler(reflect_and_quit);
-    return {
-      [] {
-        // nop
-      }
-    };
+    return {[] {
+      // nop
+    }};
   }
 };
 
 class tester : public event_based_actor {
 public:
   tester(actor_config& cfg, actor aut)
-      : event_based_actor(cfg),
-        aut_(std::move(aut)),
-        msg_(make_message(1, 2, 3)) {
+    : event_based_actor(cfg),
+      aut_(std::move(aut)),
+      msg_(make_message(1, 2, 3)) {
     set_down_handler([=](down_msg& dm) {
-      CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
-      CAF_CHECK_EQUAL(dm.source, aut_.address());
+      CHECK_EQ(dm.reason, exit_reason::normal);
+      CHECK_EQ(dm.source, aut_.address());
       quit();
     });
   }
@@ -60,13 +58,11 @@ public:
   behavior make_behavior() override {
     monitor(aut_);
     send(aut_, msg_);
-    return {
-      [=](int a, int b, int c) {
-        CAF_CHECK_EQUAL(a, 1);
-        CAF_CHECK_EQUAL(b, 2);
-        CAF_CHECK_EQUAL(c, 3);
-      }
-    };
+    return {[=](int a, int b, int c) {
+      CHECK_EQ(a, 1);
+      CHECK_EQ(b, 2);
+      CHECK_EQ(c, 3);
+    }};
   }
 
 private:
@@ -76,41 +72,37 @@ private:
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(message_lifetime_tests, test_coordinator_fixture<>)
+BEGIN_FIXTURE_SCOPE(test_coordinator_fixture<>)
 
 CAF_TEST(nocopy_in_scoped_actor) {
   auto msg = make_message(fail_on_copy{1});
   self->send(self, msg);
-  self->receive(
-    [&](const fail_on_copy& x) {
-      CAF_CHECK_EQUAL(x.value, 1);
-      CAF_CHECK_EQUAL(msg.cdata().get_reference_count(), 2u);
-    }
-  );
-  CAF_CHECK_EQUAL(msg.cdata().get_reference_count(), 1u);
+  self->receive([&](const fail_on_copy& x) {
+    CHECK_EQ(x.value, 1);
+    CHECK_EQ(msg.cdata().get_reference_count(), 2u);
+  });
+  CHECK_EQ(msg.cdata().get_reference_count(), 1u);
 }
 
 CAF_TEST(message_lifetime_in_scoped_actor) {
   auto msg = make_message(1, 2, 3);
   self->send(self, msg);
-  self->receive(
-    [&](int a, int b, int c) {
-      CAF_CHECK_EQUAL(a, 1);
-      CAF_CHECK_EQUAL(b, 2);
-      CAF_CHECK_EQUAL(c, 3);
-      CAF_CHECK_EQUAL(msg.cdata().get_reference_count(), 2u);
-    }
-  );
-  CAF_CHECK_EQUAL(msg.cdata().get_reference_count(), 1u);
+  self->receive([&](int a, int b, int c) {
+    CHECK_EQ(a, 1);
+    CHECK_EQ(b, 2);
+    CHECK_EQ(c, 3);
+    CHECK_EQ(msg.cdata().get_reference_count(), 2u);
+  });
+  CHECK_EQ(msg.cdata().get_reference_count(), 1u);
   msg = make_message(42);
   self->send(self, msg);
-  CAF_CHECK_EQUAL(msg.cdata().get_reference_count(), 2u);
+  CHECK_EQ(msg.cdata().get_reference_count(), 2u);
   self->receive([&](int& value) {
     auto addr = static_cast<void*>(&value);
-    CAF_CHECK_NOT_EQUAL(addr, msg.cdata().at(0));
+    CHECK_NE(addr, msg.cdata().at(0));
     value = 10;
   });
-  CAF_CHECK_EQUAL(msg.get_as<int>(0), 42);
+  CHECK_EQ(msg.get_as<int>(0), 42);
 }
 
 CAF_TEST(message_lifetime_in_spawned_actor) {
@@ -118,4 +110,4 @@ CAF_TEST(message_lifetime_in_spawned_actor) {
     sys.spawn<tester>(sys.spawn<testee>());
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

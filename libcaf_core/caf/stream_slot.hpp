@@ -7,6 +7,7 @@
 #include <cstdint>
 
 #include "caf/detail/comparable.hpp"
+#include "caf/fwd.hpp"
 
 namespace caf {
 

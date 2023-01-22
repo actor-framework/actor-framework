@@ -6,7 +6,7 @@
 
 #include "caf/policy/select_all.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 #include <tuple>
 
@@ -31,12 +31,19 @@ struct fixture : test_coordinator_fixture<> {
     return sys.spawn(init);
   }
 
-  std::function<void(const error&)> make_error_handler() {
+  auto make_error_handler() {
     return [](const error& err) { CAF_FAIL("unexpected error: " << err); };
   }
 
-  std::function<void(const error&)> make_counting_error_handler(size_t* count) {
+  auto make_counting_error_handler(size_t* count) {
     return [count](const error&) { *count += 1; };
+  }
+
+  template <class... ResponseHandles>
+  auto fuse(ResponseHandles&... handles) {
+    return select_all<detail::type_list<int>>{
+      {handles.id()...},
+      disposable::make_composite({handles.policy().pending_timeouts()...})};
   }
 };
 
@@ -44,10 +51,10 @@ struct fixture : test_coordinator_fixture<> {
 
 #define SUBTEST(message)                                                       \
   run();                                                                       \
-  CAF_MESSAGE("subtest: " message);                                            \
+  MESSAGE("subtest: " message);                                                \
   for (int subtest_dummy = 0; subtest_dummy < 1; ++subtest_dummy)
 
-CAF_TEST_FIXTURE_SCOPE(select_all_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(select_all combines two integer results into one vector) {
   using int_list = std::vector<int>;
@@ -58,13 +65,13 @@ CAF_TEST(select_all combines two integer results into one vector) {
     SUBTEST("vector of int") {
       auto r1 = self->request(server1, infinite, 1, 2);
       auto r2 = self->request(server2, infinite, 2, 3);
-      select_all<detail::type_list<int>> merge{{r1.id(), r2.id()}};
+      auto merge = fuse(r1, r2);
       run();
       merge.receive(
         self.ptr(),
         [](int_list results) {
           std::sort(results.begin(), results.end());
-          CAF_CHECK_EQUAL(results, int_list({3, 5}));
+          CHECK_EQ(results, int_list({3, 5}));
         },
         make_error_handler());
     }
@@ -72,15 +79,14 @@ CAF_TEST(select_all combines two integer results into one vector) {
       using std::make_tuple;
       auto r1 = self->request(server1, infinite, 1, 2);
       auto r2 = self->request(server2, infinite, 2, 3);
-      select_all<detail::type_list<int>> merge{{r1.id(), r2.id()}};
+      auto merge = fuse(r1, r2);
       run();
-      using results_vector = std::vector<std::tuple<int>>;
+      using results_vector = std::vector<int>;
       merge.receive(
         self.ptr(),
         [](results_vector results) {
           std::sort(results.begin(), results.end());
-          CAF_CHECK_EQUAL(results,
-                          results_vector({make_tuple(3), make_tuple(5)}));
+          CHECK_EQ(results, results_vector({3, 5}));
         },
         make_error_handler());
     }
@@ -90,7 +96,7 @@ CAF_TEST(select_all combines two integer results into one vector) {
     auto client = sys.spawn([=, &results](event_based_actor* client_ptr) {
       auto r1 = client_ptr->request(server1, infinite, 1, 2);
       auto r2 = client_ptr->request(server2, infinite, 2, 3);
-      select_all<detail::type_list<int>> merge{{r1.id(), r2.id()}};
+      auto merge = fuse(r1, r2);
       merge.then(
         client_ptr, [&results](int_list xs) { results = std::move(xs); },
         make_error_handler());
@@ -100,15 +106,15 @@ CAF_TEST(select_all combines two integer results into one vector) {
     expect((int, int), from(client).to(server2).with(2, 3));
     expect((int), from(server1).to(client).with(3));
     expect((int), from(server2).to(client).with(5));
-    CAF_MESSAGE("request.then stores results in arrival order");
-    CAF_CHECK_EQUAL(results, int_list({3, 5}));
+    MESSAGE("request.then stores results in arrival order");
+    CHECK_EQ(results, int_list({3, 5}));
   }
   SUBTEST("request.await") {
     int_list results;
     auto client = sys.spawn([=, &results](event_based_actor* client_ptr) {
       auto r1 = client_ptr->request(server1, infinite, 1, 2);
       auto r2 = client_ptr->request(server2, infinite, 2, 3);
-      select_all<detail::type_list<int>> merge{{r1.id(), r2.id()}};
+      auto merge = fuse(r1, r2);
       merge.await(
         client_ptr, [&results](int_list xs) { results = std::move(xs); },
         make_error_handler());
@@ -120,8 +126,8 @@ CAF_TEST(select_all combines two integer results into one vector) {
     // expect((int), from(server1).to(client).with(3));
     // expect((int), from(server2).to(client).with(5));
     run();
-    CAF_MESSAGE("request.await froces responses into reverse request order");
-    CAF_CHECK_EQUAL(results, int_list({5, 3}));
+    MESSAGE("request.await froces responses into reverse request order");
+    CHECK_EQ(results, int_list({5, 3}));
   }
 }
 
@@ -133,21 +139,21 @@ CAF_TEST(select_all calls the error handler at most once) {
   SUBTEST("request.receive") {
     auto r1 = self->request(server1, infinite, 1, 2);
     auto r2 = self->request(server2, infinite, 2, 3);
-    select_all<detail::type_list<int>> merge{{r1.id(), r2.id()}};
+    auto merge = fuse(r1, r2);
     run();
     size_t errors = 0;
     merge.receive(
       self.ptr(),
       [](int_list) { CAF_FAIL("fan-in policy called the result handler"); },
       make_counting_error_handler(&errors));
-    CAF_CHECK_EQUAL(errors, 1u);
+    CHECK_EQ(errors, 1u);
   }
   SUBTEST("request.then") {
     size_t errors = 0;
     auto client = sys.spawn([=, &errors](event_based_actor* client_ptr) {
       auto r1 = client_ptr->request(server1, infinite, 1, 2);
       auto r2 = client_ptr->request(server2, infinite, 2, 3);
-      select_all<detail::type_list<int>> merge{{r1.id(), r2.id()}};
+      auto merge = fuse(r1, r2);
       merge.then(
         client_ptr,
         [](int_list) { CAF_FAIL("fan-in policy called the result handler"); },
@@ -158,14 +164,14 @@ CAF_TEST(select_all calls the error handler at most once) {
     expect((int, int), from(client).to(server2).with(2, 3));
     expect((error), from(server1).to(client).with(sec::invalid_argument));
     expect((error), from(server2).to(client).with(sec::invalid_argument));
-    CAF_CHECK_EQUAL(errors, 1u);
+    CHECK_EQ(errors, 1u);
   }
   SUBTEST("request.await") {
     size_t errors = 0;
     auto client = sys.spawn([=, &errors](event_based_actor* client_ptr) {
       auto r1 = client_ptr->request(server1, infinite, 1, 2);
       auto r2 = client_ptr->request(server2, infinite, 2, 3);
-      select_all<detail::type_list<int>> merge{{r1.id(), r2.id()}};
+      auto merge = fuse(r1, r2);
       merge.await(
         client_ptr,
         [](int_list) { CAF_FAIL("fan-in policy called the result handler"); },
@@ -178,8 +184,8 @@ CAF_TEST(select_all calls the error handler at most once) {
     // expect((int), from(server1).to(client).with(3));
     // expect((int), from(server2).to(client).with(5));
     run();
-    CAF_CHECK_EQUAL(errors, 1u);
+    CHECK_EQ(errors, 1u);
   }
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

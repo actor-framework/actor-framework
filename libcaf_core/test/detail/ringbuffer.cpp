@@ -6,7 +6,7 @@
 
 #include "caf/detail/ringbuffer.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 #include <algorithm>
 
@@ -39,33 +39,33 @@ struct fixture {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(ringbuffer_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(construction) {
-  CAF_CHECK_EQUAL(buf.empty(), true);
-  CAF_CHECK_EQUAL(buf.full(), false);
-  CAF_CHECK_EQUAL(buf.size(), 0u);
+  CHECK_EQ(buf.empty(), true);
+  CHECK_EQ(buf.full(), false);
+  CHECK_EQ(buf.size(), 0u);
 }
 
 CAF_TEST(push_back) {
-  CAF_MESSAGE("add one element");
+  MESSAGE("add one element");
   buf.push_back(42);
-  CAF_CHECK_EQUAL(buf.empty(), false);
-  CAF_CHECK_EQUAL(buf.full(), false);
-  CAF_CHECK_EQUAL(buf.size(), 1u);
-  CAF_CHECK_EQUAL(buf.front(), 42);
-  CAF_MESSAGE("remove element");
+  CHECK_EQ(buf.empty(), false);
+  CHECK_EQ(buf.full(), false);
+  CHECK_EQ(buf.size(), 1u);
+  CHECK_EQ(buf.front(), 42);
+  MESSAGE("remove element");
   buf.pop_front();
-  CAF_CHECK_EQUAL(buf.empty(), true);
-  CAF_CHECK_EQUAL(buf.full(), false);
-  CAF_CHECK_EQUAL(buf.size(), 0u);
-  CAF_MESSAGE("fill buffer");
+  CHECK_EQ(buf.empty(), true);
+  CHECK_EQ(buf.full(), false);
+  CHECK_EQ(buf.size(), 0u);
+  MESSAGE("fill buffer");
   for (int i = 0; i < static_cast<int>(buf_size - 1); ++i)
     buf.push_back(std::move(i));
-  CAF_CHECK_EQUAL(buf.empty(), false);
-  CAF_CHECK_EQUAL(buf.full(), true);
-  CAF_CHECK_EQUAL(buf.size(), buf_size - 1);
-  CAF_CHECK_EQUAL(buf.front(), 0);
+  CHECK_EQ(buf.empty(), false);
+  CHECK_EQ(buf.full(), true);
+  CHECK_EQ(buf.size(), buf_size - 1);
+  CHECK_EQ(buf.front(), 0);
 }
 
 CAF_TEST(get all) {
@@ -77,29 +77,29 @@ CAF_TEST(get all) {
     auto e = buf.get_all(i);
     return vector_type(i, e);
   };
-  CAF_MESSAGE("add five element");
+  MESSAGE("add five element");
   for (int i = 0; i < 5; ++i)
     buf.push_back(std::move(i));
-  CAF_CHECK_EQUAL(buf.empty(), false);
-  CAF_CHECK_EQUAL(buf.full(), false);
-  CAF_CHECK_EQUAL(buf.size(), 5u);
-  CAF_CHECK_EQUAL(buf.front(), 0);
-  CAF_MESSAGE("drain elements");
-  CAF_CHECK_EQUAL(fetch_all(), vector_type({0, 1, 2, 3, 4}));
-  CAF_CHECK_EQUAL(buf.empty(), true);
-  CAF_CHECK_EQUAL(buf.full(), false);
-  CAF_CHECK_EQUAL(buf.size(), 0u);
-  CAF_MESSAGE("add 60 elements (wraps around)");
+  CHECK_EQ(buf.empty(), false);
+  CHECK_EQ(buf.full(), false);
+  CHECK_EQ(buf.size(), 5u);
+  CHECK_EQ(buf.front(), 0);
+  MESSAGE("drain elements");
+  CHECK_EQ(fetch_all(), vector_type({0, 1, 2, 3, 4}));
+  CHECK_EQ(buf.empty(), true);
+  CHECK_EQ(buf.full(), false);
+  CHECK_EQ(buf.size(), 0u);
+  MESSAGE("add 60 elements (wraps around)");
   vector_type expected;
   for (int i = 0; i < 60; ++i) {
     expected.push_back(i);
     buf.push_back(std::move(i));
   }
-  CAF_CHECK_EQUAL(buf.size(), 60u);
-  CAF_CHECK_EQUAL(fetch_all(), expected);
-  CAF_CHECK_EQUAL(buf.empty(), true);
-  CAF_CHECK_EQUAL(buf.full(), false);
-  CAF_CHECK_EQUAL(buf.size(), 0u);
+  CHECK_EQ(buf.size(), 60u);
+  CHECK_EQ(fetch_all(), expected);
+  CHECK_EQ(buf.empty(), true);
+  CHECK_EQ(buf.full(), false);
+  CHECK_EQ(buf.size(), 0u);
 }
 
 CAF_TEST(concurrent access) {
@@ -109,12 +109,12 @@ CAF_TEST(concurrent access) {
   producers.emplace_back(producer, std::ref(buf), 200, 300);
   auto vec = consumer(buf, 300);
   std::sort(vec.begin(), vec.end());
-  CAF_CHECK(std::is_sorted(vec.begin(), vec.end()));
-  CAF_CHECK_EQUAL(vec.size(), 300u);
-  CAF_CHECK_EQUAL(vec.front(), 0);
-  CAF_CHECK_EQUAL(vec.back(), 299);
+  CHECK(std::is_sorted(vec.begin(), vec.end()));
+  CHECK_EQ(vec.size(), 300u);
+  CHECK_EQ(vec.front(), 0);
+  CHECK_EQ(vec.back(), 299);
   for (auto& t : producers)
     t.join();
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

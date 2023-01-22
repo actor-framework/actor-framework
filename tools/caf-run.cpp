@@ -12,7 +12,7 @@
 #include <vector>
 
 #include "caf/all.hpp"
-#include "caf/detail/encode_base64.hpp"
+#include "caf/detail/base64.hpp"
 #include "caf/io/all.hpp"
 
 using namespace caf;

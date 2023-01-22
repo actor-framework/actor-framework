@@ -12,7 +12,7 @@ caf_add_component(
       $<$<CXX_COMPILER_ID:MSVC>:ws2_32>
     PRIVATE
       CAF::internal
-  ENUM_CONSISTENCY_CHECKS
+  ENUM_TYPES
     io.basp.message_type
     io.network.operation
   HEADERS
@@ -25,7 +25,6 @@ caf_add_component(
     src/io/basp/header.cpp
     src/io/basp/instance.cpp
     src/io/basp/message_queue.cpp
-    src/io/basp/message_type_strings.cpp
     src/io/basp/routing_table.cpp
     src/io/basp/worker.cpp
     src/io/basp_broker.cpp
@@ -49,7 +48,6 @@ caf_add_component(
     src/io/network/manager.cpp
     src/io/network/multiplexer.cpp
     src/io/network/native_socket.cpp
-    src/io/network/operation_strings.cpp
     src/io/network/pipe_reader.cpp
     src/io/network/protocol.cpp
     src/io/network/receive_buffer.cpp

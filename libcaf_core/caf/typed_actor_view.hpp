@@ -230,19 +230,12 @@ public:
     return self_->new_request_id(mp);
   }
 
-  void request_response_timeout(timespan d, message_id mid) {
+  disposable request_response_timeout(timespan d, message_id mid) {
     return self_->request_response_timeout(d, mid);
   }
 
   response_promise make_response_promise() {
     return self_->make_response_promise();
-  }
-
-  template <class... Ts,
-            class R = typename detail::make_response_promise_helper<
-              typename std::decay<Ts>::type...>::type>
-  R response(Ts&&... xs) {
-    return self_->response(std::forward<Ts>(xs)...);
   }
 
   template <class... Ts>

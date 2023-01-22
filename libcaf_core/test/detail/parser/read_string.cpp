@@ -6,7 +6,7 @@
 
 #include "caf/detail/parser/read_string.hpp"
 
-#include "caf/test/unit_test.hpp"
+#include "core-test.hpp"
 
 #include <string>
 
@@ -16,6 +16,7 @@
 #include "caf/variant.hpp"
 
 using namespace caf;
+using namespace std::literals;
 
 namespace {
 
@@ -41,68 +42,61 @@ struct fixture {
   string_parser p;
 };
 
-// TODO: remove and use "..."s from the STL when switching to C++14
-std::string operator"" _s(const char* str, size_t str_len) {
-  std::string result;
-  result.assign(str, str_len);
-  return result;
-}
-
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(read_string_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(empty string) {
-  CAF_CHECK_EQUAL(p(R"("")"), ""_s);
-  CAF_CHECK_EQUAL(p(R"( "")"), ""_s);
-  CAF_CHECK_EQUAL(p(R"(  "")"), ""_s);
-  CAF_CHECK_EQUAL(p(R"("" )"), ""_s);
-  CAF_CHECK_EQUAL(p(R"(""  )"), ""_s);
-  CAF_CHECK_EQUAL(p(R"(  ""  )"), ""_s);
-  CAF_CHECK_EQUAL(p("\t \"\" \t\t\t "), ""_s);
-  CAF_CHECK_EQUAL(p(R"('')"), ""_s);
-  CAF_CHECK_EQUAL(p(R"( '')"), ""_s);
-  CAF_CHECK_EQUAL(p(R"(  '')"), ""_s);
-  CAF_CHECK_EQUAL(p(R"('' )"), ""_s);
-  CAF_CHECK_EQUAL(p(R"(''  )"), ""_s);
-  CAF_CHECK_EQUAL(p(R"(  ''  )"), ""_s);
-  CAF_CHECK_EQUAL(p("\t '' \t\t\t "), ""_s);
+  CHECK_EQ(p(R"("")"), ""s);
+  CHECK_EQ(p(R"( "")"), ""s);
+  CHECK_EQ(p(R"(  "")"), ""s);
+  CHECK_EQ(p(R"("" )"), ""s);
+  CHECK_EQ(p(R"(""  )"), ""s);
+  CHECK_EQ(p(R"(  ""  )"), ""s);
+  CHECK_EQ(p("\t \"\" \t\t\t "), ""s);
+  CHECK_EQ(p(R"('')"), ""s);
+  CHECK_EQ(p(R"( '')"), ""s);
+  CHECK_EQ(p(R"(  '')"), ""s);
+  CHECK_EQ(p(R"('' )"), ""s);
+  CHECK_EQ(p(R"(''  )"), ""s);
+  CHECK_EQ(p(R"(  ''  )"), ""s);
+  CHECK_EQ(p("\t '' \t\t\t "), ""s);
 }
 
 CAF_TEST(nonempty quoted string) {
-  CAF_CHECK_EQUAL(p(R"("abc")"), "abc"_s);
-  CAF_CHECK_EQUAL(p(R"("a b c")"), "a b c"_s);
-  CAF_CHECK_EQUAL(p(R"(   "abcdefABCDEF"   )"), "abcdefABCDEF"_s);
-  CAF_CHECK_EQUAL(p(R"('abc')"), "abc"_s);
-  CAF_CHECK_EQUAL(p(R"('a b c')"), "a b c"_s);
-  CAF_CHECK_EQUAL(p(R"(   'abcdefABCDEF'   )"), "abcdefABCDEF"_s);
+  CHECK_EQ(p(R"("abc")"), "abc"s);
+  CHECK_EQ(p(R"("a b c")"), "a b c"s);
+  CHECK_EQ(p(R"(   "abcdefABCDEF"   )"), "abcdefABCDEF"s);
+  CHECK_EQ(p(R"('abc')"), "abc"s);
+  CHECK_EQ(p(R"('a b c')"), "a b c"s);
+  CHECK_EQ(p(R"(   'abcdefABCDEF'   )"), "abcdefABCDEF"s);
 }
 
 CAF_TEST(quoted string with escaped characters) {
-  CAF_CHECK_EQUAL(p(R"("a\tb\tc")"), "a\tb\tc"_s);
-  CAF_CHECK_EQUAL(p(R"("a\nb\r\nc")"), "a\nb\r\nc"_s);
-  CAF_CHECK_EQUAL(p(R"("a\\b")"), "a\\b"_s);
-  CAF_CHECK_EQUAL(p("\"'hello' \\\"world\\\"\""), "'hello' \"world\""_s);
-  CAF_CHECK_EQUAL(p(R"('a\tb\tc')"), "a\tb\tc"_s);
-  CAF_CHECK_EQUAL(p(R"('a\nb\r\nc')"), "a\nb\r\nc"_s);
-  CAF_CHECK_EQUAL(p(R"('a\\b')"), "a\\b"_s);
-  CAF_CHECK_EQUAL(p(R"('\'hello\' "world"')"), "'hello' \"world\""_s);
+  CHECK_EQ(p(R"("a\tb\tc")"), "a\tb\tc"s);
+  CHECK_EQ(p(R"("a\nb\r\nc")"), "a\nb\r\nc"s);
+  CHECK_EQ(p(R"("a\\b")"), "a\\b"s);
+  CHECK_EQ(p("\"'hello' \\\"world\\\"\""), "'hello' \"world\""s);
+  CHECK_EQ(p(R"('a\tb\tc')"), "a\tb\tc"s);
+  CHECK_EQ(p(R"('a\nb\r\nc')"), "a\nb\r\nc"s);
+  CHECK_EQ(p(R"('a\\b')"), "a\\b"s);
+  CHECK_EQ(p(R"('\'hello\' "world"')"), "'hello' \"world\""s);
 }
 
 CAF_TEST(unquoted strings) {
-  CAF_CHECK_EQUAL(p(R"(foo)"), "foo"_s);
-  CAF_CHECK_EQUAL(p(R"( foo )"), "foo"_s);
-  CAF_CHECK_EQUAL(p(R"( 123 )"), "123"_s);
+  CHECK_EQ(p(R"(foo)"), "foo"s);
+  CHECK_EQ(p(R"( foo )"), "foo"s);
+  CHECK_EQ(p(R"( 123 )"), "123"s);
 }
 
 CAF_TEST(invalid strings) {
-  CAF_CHECK_EQUAL(p(R"("abc)"), pec::unexpected_eof);
-  CAF_CHECK_EQUAL(p(R"('abc)"), pec::unexpected_eof);
-  CAF_CHECK_EQUAL(p("\"ab\nc\""), pec::unexpected_newline);
-  CAF_CHECK_EQUAL(p("'ab\nc'"), pec::unexpected_newline);
-  CAF_CHECK_EQUAL(p(R"("abc" def)"), pec::trailing_character);
-  CAF_CHECK_EQUAL(p(R"('abc' def)"), pec::trailing_character);
-  CAF_CHECK_EQUAL(p(R"( 123, )"), pec::trailing_character);
+  CHECK_EQ(p(R"("abc)"), pec::unexpected_eof);
+  CHECK_EQ(p(R"('abc)"), pec::unexpected_eof);
+  CHECK_EQ(p("\"ab\nc\""), pec::unexpected_newline);
+  CHECK_EQ(p("'ab\nc'"), pec::unexpected_newline);
+  CHECK_EQ(p(R"("abc" def)"), pec::trailing_character);
+  CHECK_EQ(p(R"('abc' def)"), pec::trailing_character);
+  CHECK_EQ(p(R"( 123, )"), pec::trailing_character);
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

@@ -57,26 +57,6 @@ constexpr auto always_true = always_true_t{};
 template <class>
 constexpr bool assertion_failed_v = false;
 
-// TODO: remove with CAF 0.19
-template <class T, class Inspector, class Obj>
-class has_static_apply {
-private:
-  template <class U>
-  static auto sfinae(Inspector* f, Obj* x) -> decltype(U::apply(*f, *x));
-
-  template <class U>
-  static auto sfinae(...) -> std::false_type;
-
-  using sfinae_type = decltype(sfinae<T>(nullptr, nullptr));
-
-public:
-  static constexpr bool value
-    = !std::is_same<sfinae_type, std::false_type>::value;
-};
-
-template <class T, class Inspector, class Obj>
-constexpr bool has_static_apply_v = has_static_apply<T, Inspector, Obj>::value;
-
 // -- loading ------------------------------------------------------------------
 
 // Converts a setter that returns void, error or bool to a sync function object
@@ -105,17 +85,8 @@ auto bind_setter(Inspector& f, Set& set, ValueType& tmp) {
   }
 }
 
-// TODO: remove with CAF 0.19
 template <class Inspector, class T>
-[[deprecated("please provide apply instead of apply_object/apply_value")]] //
-std::enable_if_t<!has_static_apply_v<inspector_access<T>, Inspector, T>, bool>
-load(Inspector& f, T& x, inspector_access_type::specialization) {
-  return inspector_access<T>::apply_value(f, x);
-}
-
-template <class Inspector, class T>
-std::enable_if_t<has_static_apply_v<inspector_access<T>, Inspector, T>, bool>
-load(Inspector& f, T& x, inspector_access_type::specialization) {
+bool load(Inspector& f, T& x, inspector_access_type::specialization) {
   return inspector_access<T>::apply(f, x);
 }
 
@@ -206,17 +177,8 @@ bool load_field(Inspector& f, string_view field_name, T& x, IsValid& is_valid,
 
 // -- saving -------------------------------------------------------------------
 
-// TODO: remove with CAF 0.19
 template <class Inspector, class T>
-[[deprecated("please provide apply instead of apply_object/apply_value")]] //
-std::enable_if_t<!has_static_apply_v<inspector_access<T>, Inspector, T>, bool>
-save(Inspector& f, T& x, inspector_access_type::specialization) {
-  return inspector_access<T>::apply_value(f, x);
-}
-
-template <class Inspector, class T>
-std::enable_if_t<has_static_apply_v<inspector_access<T>, Inspector, T>, bool>
-save(Inspector& f, T& x, inspector_access_type::specialization) {
+bool save(Inspector& f, T& x, inspector_access_type::specialization) {
   return inspector_access<T>::apply(f, x);
 }
 
@@ -395,18 +357,6 @@ struct optional_inspector_access {
   }
 
   template <class Inspector>
-  [[deprecated("use apply instead")]] static bool
-  apply_object(Inspector& f, container_type& x) {
-    return apply(f, x);
-  }
-
-  template <class Inspector>
-  [[deprecated("use apply instead")]] static bool
-  apply_value(Inspector& f, container_type& x) {
-    return apply(f, x);
-  }
-
-  template <class Inspector>
   static bool
   save_field(Inspector& f, string_view field_name, container_type& x) {
     auto is_present = [&x] { return static_cast<bool>(x); };
@@ -478,8 +428,6 @@ struct inspector_access<std::unique_ptr<error::data>>
 
 // -- inspection support for std::byte -----------------------------------------
 
-#ifdef __cpp_lib_byte
-
 template <>
 struct inspector_access<std::byte> : inspector_access_base<std::byte> {
   template <class Inspector>
@@ -490,8 +438,6 @@ struct inspector_access<std::byte> : inspector_access_base<std::byte> {
     return f.apply(get, set);
   }
 };
-
-#endif
 
 // -- inspection support for variant<Ts...> ------------------------------------
 
@@ -552,18 +498,6 @@ struct variant_inspector_access {
   template <class Inspector>
   [[nodiscard]] static bool apply(Inspector& f, value_type& x) {
     return f.object(x).fields(f.field("value", x));
-  }
-
-  template <class Inspector>
-  [[deprecated("use apply instead")]] static bool
-  apply_object(Inspector& f, T& x) {
-    return apply(f, x);
-  }
-
-  template <class Inspector>
-  [[deprecated("use apply instead")]] static bool
-  apply_value(Inspector& f, T& x) {
-    return apply(f, x);
   }
 
   template <class Inspector>
@@ -760,18 +694,6 @@ struct inspector_access<std::chrono::duration<Rep, Period>>
       return f.apply(get, set);
     }
   }
-
-  template <class Inspector>
-  [[deprecated("use apply instead")]] static bool
-  apply_object(Inspector& f, value_type& x) {
-    return apply(f, x);
-  }
-
-  template <class Inspector>
-  [[deprecated("use apply instead")]] static bool
-  apply_value(Inspector& f, value_type& x) {
-    return apply(f, x);
-  }
 };
 
 template <class Duration>
@@ -801,35 +723,6 @@ struct inspector_access<
       };
       return f.apply(get, set);
     }
-  }
-
-  template <class Inspector>
-  [[deprecated("use apply instead")]] static bool
-  apply_object(Inspector& f, value_type& x) {
-    return apply(f, x);
-  }
-
-  template <class Inspector>
-  [[deprecated("use apply instead")]] static bool
-  apply_value(Inspector& f, value_type& x) {
-    return apply(f, x);
-  }
-};
-
-// -- deprecated API -----------------------------------------------------------
-
-template <class T>
-struct default_inspector_access : inspector_access_base<T> {
-  template <class Inspector>
-  [[deprecated("call f.apply(x) instead")]] static bool
-  apply_object(Inspector& f, T& x) {
-    return f.apply(x);
-  }
-
-  template <class Inspector>
-  [[deprecated("call f.apply(x) instead")]] static bool
-  apply_value(Inspector& f, T& x) {
-    return f.apply(x);
   }
 };
 

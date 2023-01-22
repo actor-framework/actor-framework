@@ -81,12 +81,7 @@ expected<T> get_as(const settings& xs, string_view name) {
 }
 
 /// @private
-CAF_CORE_EXPORT config_value& put_impl(settings& dict,
-                                       const std::vector<string_view>& path,
-                                       config_value& value);
-
-/// @private
-CAF_CORE_EXPORT config_value& put_impl(settings& dict, string_view key,
+CAF_CORE_EXPORT config_value& put_impl(settings& dict, string_view name,
                                        config_value& value);
 
 /// Converts `value` to a `config_value` and assigns it to `key`.

@@ -50,27 +50,26 @@ struct fixture {
   }
 };
 
-#define CHECK_TO_STRING(addr) CAF_CHECK_EQUAL(addr, to_string(addr##_ep))
+#define CHECK_TO_STRING(addr) CHECK_EQ(addr, to_string(addr##_ep))
 
 #define CHECK_COMPARISON(addr1, addr2)                                         \
-  CAF_CHECK_GREATER(addr2##_ep, addr1##_ep);                                   \
-  CAF_CHECK_GREATER_OR_EQUAL(addr2##_ep, addr1##_ep);                          \
-  CAF_CHECK_GREATER_OR_EQUAL(addr1##_ep, addr1##_ep);                          \
-  CAF_CHECK_GREATER_OR_EQUAL(addr2##_ep, addr2##_ep);                          \
-  CAF_CHECK_EQUAL(addr1##_ep, addr1##_ep);                                     \
-  CAF_CHECK_EQUAL(addr2##_ep, addr2##_ep);                                     \
-  CAF_CHECK_LESS_OR_EQUAL(addr1##_ep, addr2##_ep);                             \
-  CAF_CHECK_LESS_OR_EQUAL(addr1##_ep, addr1##_ep);                             \
-  CAF_CHECK_LESS_OR_EQUAL(addr2##_ep, addr2##_ep);                             \
-  CAF_CHECK_NOT_EQUAL(addr1##_ep, addr2##_ep);                                 \
-  CAF_CHECK_NOT_EQUAL(addr2##_ep, addr1##_ep);
+  CHECK_GT(addr2##_ep, addr1##_ep);                                            \
+  CHECK_GE(addr2##_ep, addr1##_ep);                                            \
+  CHECK_GE(addr1##_ep, addr1##_ep);                                            \
+  CHECK_GE(addr2##_ep, addr2##_ep);                                            \
+  CHECK_EQ(addr1##_ep, addr1##_ep);                                            \
+  CHECK_EQ(addr2##_ep, addr2##_ep);                                            \
+  CHECK_LE(addr1##_ep, addr2##_ep);                                            \
+  CHECK_LE(addr1##_ep, addr1##_ep);                                            \
+  CHECK_LE(addr2##_ep, addr2##_ep);                                            \
+  CHECK_NE(addr1##_ep, addr2##_ep);                                            \
+  CHECK_NE(addr2##_ep, addr1##_ep);
 
-#define CHECK_SERIALIZATION(addr)                                              \
-  CAF_CHECK_EQUAL(addr##_ep, roundtrip(addr##_ep))
+#define CHECK_SERIALIZATION(addr) CHECK_EQ(addr##_ep, roundtrip(addr##_ep))
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(comparison_scope, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(constructing assigning and hash_code) {
   const uint16_t port = 8888;
@@ -78,22 +77,22 @@ CAF_TEST(constructing assigning and hash_code) {
                                  0, 0, 0, 0, 0, 0, 0, 1};
   auto addr = ipv6_address{bytes};
   ipv6_endpoint ep1(addr, port);
-  CAF_CHECK_EQUAL(ep1.address(), addr);
-  CAF_CHECK_EQUAL(ep1.port(), port);
+  CHECK_EQ(ep1.address(), addr);
+  CHECK_EQ(ep1.port(), port);
   ipv6_endpoint ep2;
   ep2.address(addr);
   ep2.port(port);
-  CAF_CHECK_EQUAL(ep2.address(), addr);
-  CAF_CHECK_EQUAL(ep2.port(), port);
-  CAF_CHECK_EQUAL(ep1, ep2);
-  CAF_CHECK_EQUAL(ep1.hash_code(), ep2.hash_code());
+  CHECK_EQ(ep2.address(), addr);
+  CHECK_EQ(ep2.port(), port);
+  CHECK_EQ(ep1, ep2);
+  CHECK_EQ(ep1.hash_code(), ep2.hash_code());
 }
 
 CAF_TEST(comparison to IPv4) {
   ipv4_endpoint v4{ipv4_address({127, 0, 0, 1}), 8080};
   ipv6_endpoint v6{v4.address(), v4.port()};
-  CAF_CHECK_EQUAL(v4, v6);
-  CAF_CHECK_EQUAL(v6, v4);
+  CHECK_EQ(v4, v6);
+  CHECK_EQ(v6, v4);
 }
 
 CAF_TEST(to_string) {
@@ -139,4 +138,4 @@ CAF_TEST(serialization) {
   CHECK_SERIALIZATION("[4432::33:1]:999");
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

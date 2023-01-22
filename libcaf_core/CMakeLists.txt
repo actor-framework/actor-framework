@@ -52,7 +52,7 @@ caf_add_component(
       ${LIBCAF_CORE_OPTIONAL_DEPENDENCIES}
     PRIVATE
       CAF::internal
-  ENUM_CONSISTENCY_CHECKS
+  ENUM_TYPES
     exit_reason
     intrusive.inbox_result
     intrusive.task_result
@@ -67,6 +67,7 @@ caf_add_component(
     src/abstract_actor.cpp
     src/abstract_channel.cpp
     src/abstract_group.cpp
+    src/action.cpp
     src/actor.cpp
     src/actor_addr.cpp
     src/actor_clock.cpp
@@ -126,7 +127,6 @@ caf_add_component(
     src/detail/serialized_size.cpp
     src/detail/set_thread_name.cpp
     src/detail/shared_spinlock.cpp
-    src/detail/simple_actor_clock.cpp
     src/detail/size_based_credit_controller.cpp
     src/detail/stringification_inspector.cpp
     src/detail/sync_request_bouncer.cpp
@@ -135,12 +135,12 @@ caf_add_component(
     src/detail/tick_emitter.cpp
     src/detail/token_based_credit_controller.cpp
     src/detail/type_id_list_builder.cpp
+    src/disposable.cpp
     src/downstream_manager.cpp
     src/downstream_manager_base.cpp
     src/error.cpp
     src/event_based_actor.cpp
     src/execution_unit.cpp
-    src/exit_reason_strings.cpp
     src/forwarding_actor_proxy.cpp
     src/group.cpp
     src/group_manager.cpp
@@ -148,9 +148,6 @@ caf_add_component(
     src/hash/sha1.cpp
     src/inbound_path.cpp
     src/init_global_meta_objects.cpp
-    src/intrusive/inbox_result_strings.cpp
-    src/intrusive/task_result_strings.cpp
-    src/invoke_message_result_strings.cpp
     src/ipv4_address.cpp
     src/ipv4_endpoint.cpp
     src/ipv4_subnet.cpp
@@ -164,15 +161,12 @@ caf_add_component(
     src/logger.cpp
     src/mailbox_element.cpp
     src/make_config_option.cpp
-    src/memory_managed.cpp
     src/message.cpp
     src/message_builder.cpp
     src/message_handler.cpp
-    src/message_priority_strings.cpp
     src/monitorable_actor.cpp
     src/node_id.cpp
     src/outbound_path.cpp
-    src/pec_strings.cpp
     src/policy/downstream_messages.cpp
     src/policy/unprofiled.cpp
     src/policy/work_sharing.cpp
@@ -189,22 +183,20 @@ caf_add_component(
     src/scheduler/test_coordinator.cpp
     src/scoped_actor.cpp
     src/scoped_execution_unit.cpp
-    src/sec_strings.cpp
     src/serializer.cpp
     src/settings.cpp
     src/skip.cpp
     src/stream_aborter.cpp
     src/stream_manager.cpp
-    src/stream_priority_strings.cpp
     src/string_algorithms.cpp
     src/string_view.cpp
     src/telemetry/collector/prometheus.cpp
+    src/telemetry/importer/process.cpp
     src/telemetry/label.cpp
     src/telemetry/label_view.cpp
     src/telemetry/metric.cpp
     src/telemetry/metric_family.cpp
     src/telemetry/metric_registry.cpp
-    src/telemetry/importer/process.cpp
     src/term.cpp
     src/thread_hook.cpp
     src/timestamp.cpp
@@ -219,6 +211,7 @@ caf_add_component(
     test/core-test.cpp
     test/nasty.cpp
   TEST_SUITES
+    action
     actor_clock
     actor_factory
     actor_lifetime
@@ -277,6 +270,7 @@ caf_add_component(
     detail.unique_function
     detail.unordered_flat_map
     dictionary
+    dsl
     dynamic_spawn
     error
     expected

@@ -5,10 +5,45 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ## [Unreleased]
 
+## [0.18.6]
+
+### Added
+
+- When adding CAF with exceptions enabled (default), the unit test framework now
+  offers new check macros:
+  - `CAF_CHECK_NOTHROW(expr)`
+  - `CAF_CHECK_THROWS_AS(expr, type)`
+  - `CAF_CHECK_THROWS_WITH(expr, str)`
+  - `CAF_CHECK_THROWS_WITH_AS(expr, str, type)`
+
+### Fixed
+
+- The DSL function `run_until` miscounted the number of executed events, also
+  causing `run_once` to report a wrong value. Both functions now return the
+  correct result.
+- Using `allow(...).with(...)` in unit tests without a matching message crashed
+  the program. By adding a missing NULL-check, `allow` is now always safe to
+  use.
+- Passing a response promise to a run-delayed continuation could result in a
+  heap-use-after-free if the actor terminates before the action runs. The
+  destructor of the promise now checks for this case.
+- Fix OpenSSL 3.0 warnings when building the OpenSSL module by switching to
+  newer EC-curve API.
+- When working with settings, `put`, `put_missing`, `get_if`, etc. now
+  gracefully handle the `global` category when explicitly using it.
+- Messages created from a `message_builder` did not call the destructors for
+  their values, potentially causing memory leaks (#1321).
+
 ### Changed
 
 - Since support of Qt 5 expired, we have ported the Qt examples to version 6.
   Hence, building the Qt examples now requires Qt in version 6.
+- When compiling CAF with exceptions enabled (default), `REQUIRE*` macros,
+  `expect` and `disallow` no longer call `abort()`. Instead, they throw an
+  exception that only stops the current test instead of stopping the entire test
+  program.
+- Reporting of several unit test macros has been improved to show correct line
+  numbers and provide better diagnostic of test errors.
 
 ## [0.18.5] - 2021-07-16
 
@@ -751,7 +786,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Setting the log level to `quiet` now properly suppresses any log output.
 - Configuring colored terminal output should now print colored output.
 
-[Unreleased]: https://github.com/actor-framework/actor-framework/compare/0.18.5...master
+[Unreleased]: https://github.com/actor-framework/actor-framework/compare/0.18.6...master
+[0.18.6]: https://github.com/actor-framework/actor-framework/releases/0.18.6
 [0.18.5]: https://github.com/actor-framework/actor-framework/releases/0.18.5
 [0.18.4]: https://github.com/actor-framework/actor-framework/releases/0.18.4
 [0.18.3]: https://github.com/actor-framework/actor-framework/releases/0.18.3

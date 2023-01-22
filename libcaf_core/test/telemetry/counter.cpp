@@ -6,32 +6,32 @@
 
 #include "caf/telemetry/counter.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 using namespace caf;
 
 CAF_TEST(double counters can only increment) {
   telemetry::dbl_counter c;
-  CAF_MESSAGE("counters start at 0");
-  CAF_CHECK_EQUAL(c.value(), 0.0);
-  CAF_MESSAGE("counters are incrementable");
+  MESSAGE("counters start at 0");
+  CHECK_EQ(c.value(), 0.0);
+  MESSAGE("counters are incrementable");
   c.inc();
   c.inc(2.0);
-  CAF_CHECK_EQUAL(c.value(), 3.0);
-  CAF_MESSAGE("users can create counters with custom start values");
-  CAF_CHECK_EQUAL(telemetry::dbl_counter{42.0}.value(), 42.0);
+  CHECK_EQ(c.value(), 3.0);
+  MESSAGE("users can create counters with custom start values");
+  CHECK_EQ(telemetry::dbl_counter{42.0}.value(), 42.0);
 }
 
 CAF_TEST(integer counters can only increment) {
   telemetry::int_counter c;
-  CAF_MESSAGE("counters start at 0");
-  CAF_CHECK_EQUAL(c.value(), 0);
-  CAF_MESSAGE("counters are incrementable");
+  MESSAGE("counters start at 0");
+  CHECK_EQ(c.value(), 0);
+  MESSAGE("counters are incrementable");
   c.inc();
   c.inc(2);
-  CAF_CHECK_EQUAL(c.value(), 3);
-  CAF_MESSAGE("integer counters also support operator++");
-  CAF_CHECK_EQUAL(++c, 4);
-  CAF_MESSAGE("users can create counters with custom start values");
-  CAF_CHECK_EQUAL(telemetry::int_counter{42}.value(), 42);
+  CHECK_EQ(c.value(), 3);
+  MESSAGE("integer counters also support operator++");
+  CHECK_EQ(++c, 4);
+  MESSAGE("users can create counters with custom start values");
+  CHECK_EQ(telemetry::int_counter{42}.value(), 42);
 }

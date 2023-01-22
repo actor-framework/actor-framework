@@ -48,11 +48,6 @@ public:
 
   response_promise& operator=(const response_promise&) = default;
 
-  [[deprecated("use the default constructor instead")]] response_promise(none_t)
-    : response_promise() {
-    // nop
-  }
-
   // -- properties -------------------------------------------------------------
 
   /// Returns whether this response promise replies to an asynchronous message.
@@ -202,7 +197,7 @@ private:
     void delegate_impl(abstract_actor* receiver, message msg);
 
     mutable size_t ref_count = 1;
-    local_actor* self;
+    weak_actor_ptr weak_self;
     strong_actor_ptr source;
     forwarding_stack stages;
     message_id id;

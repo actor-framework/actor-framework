@@ -66,11 +66,12 @@ local_group_module::impl::~impl() {
   // nop
 }
 
-void local_group_module::impl::enqueue(strong_actor_ptr sender, message_id mid,
+bool local_group_module::impl::enqueue(strong_actor_ptr sender, message_id mid,
                                        message content, execution_unit* host) {
   std::unique_lock<std::mutex> guard{mtx_};
   for (auto subscriber : subscribers_)
     subscriber->enqueue(sender, mid, content, host);
+  return true;
 }
 
 bool local_group_module::impl::subscribe(strong_actor_ptr who) {

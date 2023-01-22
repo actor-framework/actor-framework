@@ -71,7 +71,7 @@ namespace {
 struct print_with_comma_t {
   bool first = true;
   template <class T>
-  std::ostream&  operator()(std::ostream& out, const T& x) {
+  std::ostream& operator()(std::ostream& out, const T& x) {
     if (!first)
       out << ", ";
     else
@@ -90,8 +90,8 @@ std::string collapse_args(const T& x, const Ts&... xs) {
 }
 
 #define TRACE(name, type, ...)                                                 \
-  CAF_MESSAGE(name << " received a " << #type << ": "                          \
-                   << collapse_args(__VA_ARGS__));
+  MESSAGE(name << " received a " << #type << ": "                              \
+               << collapse_args(__VA_ARGS__));
 
 const char* name_of(const strong_actor_ptr& x) {
   CAF_ASSERT(x != nullptr);
@@ -108,7 +108,7 @@ const char* name_of(const actor_addr& x) {
 using mboxqueue = scheduled_actor::mailbox_policy::queue_type;
 
 template <size_t Value>
-using uint_constant =  std::integral_constant<size_t, Value>;
+using uint_constant = std::integral_constant<size_t, Value>;
 
 using urgent_async_id = uint_constant<scheduled_actor::urgent_queue_index>;
 
@@ -152,10 +152,11 @@ public:
     CAF_ASSERT(global_time_ != nullptr);
   }
 
-  void enqueue(mailbox_element_ptr what, execution_unit*) override {
+  bool enqueue(mailbox_element_ptr what, execution_unit*) override {
     auto push_back_result = mbox.push_back(std::move(what));
-    CAF_CHECK_EQUAL(push_back_result, true);
+    CHECK_EQ(push_back_result, true);
     CAF_ASSERT(push_back_result);
+    return true;
   }
 
   void attach(attachable_ptr) override {
@@ -212,14 +213,15 @@ public:
       bool done() const noexcept override {
         return x_ == sentinel_;
       }
+
     private:
       int32_t x_;
       int32_t sentinel_;
     };
     auto mgr = detail::make_stream_source<driver>(this, num_messages);
     auto res = mgr->add_outbound_path(ref.ctrl());
-    CAF_MESSAGE(name_ << " starts streaming to " << ref.name()
-                << " on slot " << res.value());
+    MESSAGE(name_ << " starts streaming to " << ref.name() << " on slot "
+                  << res.value());
   }
 
   void forward_to(entity& ref) {
@@ -234,7 +236,7 @@ public:
       }
 
       void process(downstream<int>& out, vector<int>& batch) override {
-        CAF_MESSAGE(name << " forwards " << batch.size() << " elements");
+        MESSAGE(name << " forwards " << batch.size() << " elements");
         log_->insert(log_->end(), batch.begin(), batch.end());
         out.append(batch.begin(), batch.end());
       }
@@ -249,8 +251,8 @@ public:
     };
     forwarder = detail::make_stream_stage<driver>(this, &data, name_);
     auto res = forwarder->add_outbound_path(ref.ctrl());
-    CAF_MESSAGE(name_ << " starts forwarding to " << ref.name()
-                << " on slot " << res.value());
+    MESSAGE(name_ << " starts forwarding to " << ref.name() << " on slot "
+                  << res.value());
   }
 
   void operator()(open_stream_msg& hs) {
@@ -269,6 +271,7 @@ public:
         void process(std::vector<int>& xs) override {
           log_->insert(log_->end(), xs.begin(), xs.end());
         }
+
       private:
         vector<int>* log_;
       };
@@ -289,8 +292,8 @@ public:
 
   void operator()(stream_slots slots, actor_addr& sender,
                   upstream_msg::ack_batch& x) {
-    TRACE(name_, ack_batch, CAF_ARG(slots),
-          CAF_ARG2("sender", name_of(sender)), CAF_ARG(x));
+    TRACE(name_, ack_batch, CAF_ARG(slots), CAF_ARG2("sender", name_of(sender)),
+          CAF_ARG(x));
     scheduled_actor::handle_upstream_msg(slots, sender, x);
   }
 
@@ -379,19 +382,14 @@ struct msg_visitor {
     self->current_mailbox_element(&x);
     auto& um = x.content().get_mutable_as<upstream_msg>(0);
     auto f = detail::make_overload(
-      [&](upstream_msg::ack_open& y) {
-        (*self)(um.slots, um.sender, y);
-      },
-      [&](upstream_msg::ack_batch& y) {
-        (*self)(um.slots, um.sender, y);
-      },
+      [&](upstream_msg::ack_open& y) { (*self)(um.slots, um.sender, y); },
+      [&](upstream_msg::ack_batch& y) { (*self)(um.slots, um.sender, y); },
       [](upstream_msg::drop&) {
         CAF_FAIL("did not expect upstream_msg::drop");
       },
       [](upstream_msg::forced_drop&) {
         CAF_FAIL("did not expect upstream_msg::forced_drop");
-      }
-    );
+      });
     visit(f, um.content);
     self->current_mailbox_element(nullptr);
     self->push();
@@ -412,8 +410,7 @@ struct msg_visitor {
         TRACE(self->name(), batch, CAF_ARG(dm.slots), CAF_ARG(y.xs_size));
         inptr->handle(y);
         if (inptr->mgr->done()) {
-          CAF_MESSAGE(self->name()
-                      << " is done receiving and closes its manager");
+          MESSAGE(self->name() << " is done receiving and closes its manager");
           inptr->mgr->stop();
         }
         return intrusive::task_result::resume;
@@ -506,9 +503,9 @@ struct fixture {
     // Check whether all actors cleaned up their state properly.
     entity* xs[] = {&alice, &bob, &carl};
     for (auto x : xs) {
-      CAF_CHECK(get<dmsg_id::value>(x->mbox.queues()).queues().empty());
-      CAF_CHECK(x->pending_stream_managers().empty());
-      CAF_CHECK(x->stream_managers().empty());
+      CHECK(get<dmsg_id::value>(x->mbox.queues()).queues().empty());
+      CHECK(x->pending_stream_managers().empty());
+      CHECK(x->stream_managers().empty());
     }
   }
 
@@ -524,7 +521,7 @@ struct fixture {
   template <class... Ts>
   void next_cycle(Ts&... xs) {
     entity* es[] = {&xs...};
-    CAF_MESSAGE("advance clock by " << max_batch_delay);
+    MESSAGE("advance clock by " << max_batch_delay);
     sched.clock().current_time += max_batch_delay;
     for (auto e : es)
       e->tick();
@@ -539,12 +536,11 @@ struct fixture {
       while (!std::all_of(std::begin(fs), std::end(fs), mailbox_empty))
         for (auto& f : fs)
           f.self->mbox.new_round(1, f);
-      CAF_MESSAGE("advance clock by " << max_batch_delay);
+      MESSAGE("advance clock by " << max_batch_delay);
       sched.clock().current_time += max_batch_delay;
       for (auto e : es)
         e->tick();
-    }
-    while (!pred());
+    } while (!pred());
   }
 
   bool done_streaming() {
@@ -566,46 +562,46 @@ vector<int> make_iota(int first, int last) {
 
 // -- unit tests ---------------------------------------------------------------
 
-CAF_TEST_FIXTURE_SCOPE(native_streaming_classes_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(depth_2_pipeline_30_items) {
   alice.start_streaming(bob, 30);
   loop_until([&] { return done_streaming(); }, alice, bob);
-  CAF_CHECK_EQUAL(bob.data, make_iota(0, 30));
+  CHECK_EQ(bob.data, make_iota(0, 30));
 }
 
 CAF_TEST(depth_2_pipeline_500_items) {
   constexpr size_t num_messages = 500;
   alice.start_streaming(bob, num_messages);
   loop_until([&] { return done_streaming(); }, alice, bob);
-  CAF_CHECK_EQUAL(bob.data, make_iota(0, num_messages));
+  CHECK_EQ(bob.data, make_iota(0, num_messages));
 }
 
 CAF_TEST(depth_3_pipeline_30_items) {
   bob.forward_to(carl);
   alice.start_streaming(bob, 30);
   loop_until([&] { return done_streaming(); }, alice, bob, carl);
-  CAF_CHECK_EQUAL(bob.data, make_iota(0, 30));
-  CAF_CHECK_EQUAL(carl.data, make_iota(0, 30));
+  CHECK_EQ(bob.data, make_iota(0, 30));
+  CHECK_EQ(carl.data, make_iota(0, 30));
 }
 
 CAF_TEST(depth_3_pipeline_500_items) {
   constexpr size_t num_messages = 500;
   bob.forward_to(carl);
   alice.start_streaming(bob, num_messages);
-  CAF_MESSAGE("loop over alice and bob until bob is congested");
+  MESSAGE("loop over alice and bob until bob is congested");
   loop(alice, bob);
-  CAF_CHECK_NOT_EQUAL(bob.data.size(), 0u);
-  CAF_CHECK_EQUAL(carl.data.size(), 0u);
-  CAF_MESSAGE("loop over bob and carl until bob finished sending");
+  CHECK_NE(bob.data.size(), 0u);
+  CHECK_EQ(carl.data.size(), 0u);
+  MESSAGE("loop over bob and carl until bob finished sending");
   // bob has one batch from alice in its mailbox that bob will read when
   // becoming uncongested again
   loop(bob, carl);
-  CAF_CHECK_EQUAL(bob.data.size(), carl.data.size());
-  CAF_MESSAGE("loop over all until done");
+  CHECK_EQ(bob.data.size(), carl.data.size());
+  MESSAGE("loop over all until done");
   loop_until([&] { return done_streaming(); }, alice, bob, carl);
-  CAF_CHECK_EQUAL(bob.data, make_iota(0, num_messages));
-  CAF_CHECK_EQUAL(carl.data, make_iota(0, num_messages));
+  CHECK_EQ(bob.data, make_iota(0, num_messages));
+  CHECK_EQ(carl.data, make_iota(0, num_messages));
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

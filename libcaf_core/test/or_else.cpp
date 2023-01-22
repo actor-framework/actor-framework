@@ -43,13 +43,13 @@ struct fixture {
   void run_testee(const actor& testee) {
     scoped_actor self{system};
     self->request(testee, infinite, int8_t{1})
-      .receive([](const std::string& str) { CAF_CHECK_EQUAL(str, "a"); },
+      .receive([](const std::string& str) { CHECK_EQ(str, "a"); },
                ERROR_HANDLER);
     self->request(testee, infinite, int16_t{1})
-      .receive([](const std::string& str) { CAF_CHECK_EQUAL(str, "b"); },
+      .receive([](const std::string& str) { CHECK_EQ(str, "b"); },
                ERROR_HANDLER);
     self->request(testee, infinite, int32_t{1})
-      .receive([](const std::string& str) { CAF_CHECK_EQUAL(str, "c"); },
+      .receive([](const std::string& str) { CHECK_EQ(str, "c"); },
                ERROR_HANDLER);
     self->send_exit(testee, exit_reason::user_shutdown);
   }
@@ -57,7 +57,7 @@ struct fixture {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(atom_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(composition1) {
   run_testee(system.spawn(
@@ -78,4 +78,4 @@ CAF_TEST(composition3) {
   }));
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

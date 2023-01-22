@@ -89,10 +89,6 @@ public:
   template <class State>
   using stateful_impl = stateful_actor<State, impl>;
 
-  template <class State>
-  using stateful_base [[deprecated("use stateful_impl instead")]]
-  = stateful_actor<State, base>;
-
   /// Convenience alias for `stateful_impl<State>*`.
   template <class State>
   using stateful_pointer = stateful_impl<State>*;

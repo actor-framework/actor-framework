@@ -4,6 +4,7 @@
 
 #include "caf/init_global_meta_objects.hpp"
 
+#include "caf/action.hpp"
 #include "caf/actor.hpp"
 #include "caf/actor_addr.hpp"
 #include "caf/actor_control_block.hpp"

@@ -78,12 +78,6 @@ constexpr type_id_t first_custom_type_id = 200;
 template <class T>
 constexpr bool has_type_id_v = detail::is_complete<type_id<T>>;
 
-// TODO: remove with CAF 0.19 (this exists for compatibility with CAF 0.17).
-template <class T>
-struct has_type_id {
-  static constexpr bool value = detail::is_complete<type_id<T>>;
-};
-
 /// Returns `type_name_v<T>` if available, "anonymous" otherwise.
 template <class T>
 string_view type_name_or_anonymous() {
@@ -381,6 +375,7 @@ CAF_BEGIN_TYPE_ID_BLOCK(core_module, 0)
 
   // -- CAF types
 
+  CAF_ADD_TYPE_ID(core_module, (caf::action))
   CAF_ADD_TYPE_ID(core_module, (caf::actor))
   CAF_ADD_TYPE_ID(core_module, (caf::actor_addr))
   CAF_ADD_TYPE_ID(core_module, (caf::byte_buffer))
@@ -413,7 +408,6 @@ CAF_BEGIN_TYPE_ID_BLOCK(core_module, 0)
   CAF_ADD_TYPE_ID(core_module, (caf::sec))
   CAF_ADD_TYPE_ID(core_module, (caf::stream_slots))
   CAF_ADD_TYPE_ID(core_module, (caf::strong_actor_ptr))
-  CAF_ADD_TYPE_ID(core_module, (caf::timeout_msg))
   CAF_ADD_TYPE_ID(core_module, (caf::timespan))
   CAF_ADD_TYPE_ID(core_module, (caf::timestamp))
   CAF_ADD_TYPE_ID(core_module, (caf::unit_t))

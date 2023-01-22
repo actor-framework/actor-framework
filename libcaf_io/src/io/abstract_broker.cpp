@@ -17,15 +17,15 @@
 
 namespace caf::io {
 
-void abstract_broker::enqueue(strong_actor_ptr src, message_id mid, message msg,
+bool abstract_broker::enqueue(strong_actor_ptr src, message_id mid, message msg,
                               execution_unit*) {
-  enqueue(make_mailbox_element(std::move(src), mid, {}, std::move(msg)),
-          backend_);
+  return enqueue(make_mailbox_element(std::move(src), mid, {}, std::move(msg)),
+                 backend_);
 }
 
-void abstract_broker::enqueue(mailbox_element_ptr ptr, execution_unit*) {
+bool abstract_broker::enqueue(mailbox_element_ptr ptr, execution_unit*) {
   CAF_PUSH_AID(id());
-  scheduled_actor::enqueue(std::move(ptr), backend_);
+  return scheduled_actor::enqueue(std::move(ptr), backend_);
 }
 
 void abstract_broker::launch(execution_unit* eu, bool lazy, bool hide) {

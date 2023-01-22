@@ -6,7 +6,7 @@
 
 #include "caf/io/network/ip_endpoint.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "io-test.hpp"
 
 #include <vector>
 
@@ -50,37 +50,37 @@ struct fixture : test_coordinator_fixture<> {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(ep_endpoint_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST_DISABLED(ip_endpoint) {
   // create an empty endpoint
   network::ip_endpoint ep;
   ep.clear();
-  CAF_CHECK_EQUAL("", network::host(ep));
-  CAF_CHECK_EQUAL(uint16_t{0}, network::port(ep));
-  CAF_CHECK_EQUAL(size_t{0}, *ep.length());
+  CHECK_EQ("", network::host(ep));
+  CHECK_EQ(uint16_t{0}, network::port(ep));
+  CHECK_EQ(size_t{0}, *ep.length());
   // fill it with data from a local endpoint
   network::interfaces::get_endpoint("localhost", 12345, ep);
   // save the data
   auto h = network::host(ep);
   auto p = network::port(ep);
   auto l = *ep.length();
-  CAF_CHECK("localhost" == h || "127.0.0.1" == h || "::1" == h);
-  CAF_CHECK_EQUAL(12345, p);
-  CAF_CHECK(0 < l);
+  CHECK("localhost" == h || "127.0.0.1" == h || "::1" == h);
+  CHECK_EQ(12345, p);
+  CHECK(0 < l);
   // serialize the endpoint and clear it
   auto buf = serialize(ep);
   auto save = ep;
   ep.clear();
-  CAF_CHECK_EQUAL("", network::host(ep));
-  CAF_CHECK_EQUAL(uint16_t{0}, network::port(ep));
-  CAF_CHECK_EQUAL(size_t{0}, *ep.length());
+  CHECK_EQ("", network::host(ep));
+  CHECK_EQ(uint16_t{0}, network::port(ep));
+  CHECK_EQ(size_t{0}, *ep.length());
   // deserialize the data and check if it was load successfully
   deserialize(buf, ep);
-  CAF_CHECK_EQUAL(h, network::host(ep));
-  CAF_CHECK_EQUAL(uint16_t{p}, network::port(ep));
-  CAF_CHECK_EQUAL(size_t{l}, *ep.length());
-  CAF_CHECK_EQUAL(save, ep);
+  CHECK_EQ(h, network::host(ep));
+  CHECK_EQ(uint16_t{p}, network::port(ep));
+  CHECK_EQ(size_t{l}, *ep.length());
+  CHECK_EQ(save, ep);
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

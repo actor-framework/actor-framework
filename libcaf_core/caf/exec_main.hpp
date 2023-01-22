@@ -55,8 +55,7 @@ void exec_main_load_module(actor_system_config& cfg) {
 }
 
 template <class... Ts, class F = void (*)(actor_system&)>
-[[deprecated("override config_file_path in the config class instead")]] int
-exec_main(F fun, int argc, char** argv, const char* config_file_name) {
+int exec_main(F fun, int argc, char** argv) {
   using trait = typename detail::get_callable_trait<F>::type;
   using arg_types = typename trait::arg_types;
   static_assert(detail::tl_size<arg_types>::value == 1
@@ -77,13 +76,11 @@ exec_main(F fun, int argc, char** argv, const char* config_file_name) {
   using helper = exec_main_helper<typename trait::arg_types>;
   // Pass CLI options to config.
   typename helper::config cfg;
-  CAF_PUSH_DEPRECATED_WARNING
-  if (auto err = cfg.parse(argc, argv, config_file_name)) {
+  if (auto err = cfg.parse(argc, argv)) {
     std::cerr << "error while parsing CLI and file options: " << to_string(err)
               << std::endl;
     return EXIT_FAILURE;
   }
-  CAF_POP_WARNINGS
   // Return immediately if a help text was printed.
   if (cfg.cli_helptext_printed)
     return EXIT_SUCCESS;
@@ -106,13 +103,6 @@ exec_main(F fun, int argc, char** argv, const char* config_file_name) {
     f(fun, system, cfg);
     return EXIT_SUCCESS;
   }
-}
-
-template <class... Ts, class F = void (*)(actor_system&)>
-int exec_main(F fun, int argc, char** argv) {
-  CAF_PUSH_DEPRECATED_WARNING
-  return exec_main<Ts...>(std::move(fun), argc, argv, nullptr);
-  CAF_POP_WARNINGS
 }
 
 } // namespace caf

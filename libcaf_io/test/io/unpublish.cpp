@@ -6,7 +6,7 @@
 
 #include "caf/config.hpp"
 
-#include "caf/test/io_dsl.hpp"
+#include "io-test.hpp"
 
 #include <atomic>
 #include <memory>
@@ -56,7 +56,7 @@ struct fixture : point_to_point_fixture<> {
 
   ~fixture() {
     run();
-    CAF_CHECK_EQUAL(ssp->dtors_called, 2);
+    CHECK_EQ(ssp->dtors_called, 2);
   }
 
   suite_state_ptr ssp;
@@ -64,7 +64,7 @@ struct fixture : point_to_point_fixture<> {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(unpublish_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(actors can become unpublished) {
   auto testee = mars.sys.spawn<dummy>(ssp);
@@ -76,21 +76,21 @@ CAF_TEST(actors can become unpublished) {
   loop_after_next_enqueue(mars);
   auto port = unbox(mars.mm.publish(testee, 8080));
   CAF_REQUIRE_EQUAL(port, 8080);
-  CAF_MESSAGE("the middleman ignores invalid unpublish() calls");
+  MESSAGE("the middleman ignores invalid unpublish() calls");
   auto testee2 = mars.sys.spawn<dummy>(ssp);
   loop_after_next_enqueue(mars);
   auto res = mars.mm.unpublish(testee2, 8080);
-  CAF_CHECK(!res && res.error() == sec::no_actor_published_at_port);
+  CHECK(!res && res.error() == sec::no_actor_published_at_port);
   anon_send_exit(testee2, exit_reason::user_shutdown);
-  CAF_MESSAGE("after unpublishing an actor, remotes can no longer connect");
+  MESSAGE("after unpublishing an actor, remotes can no longer connect");
   loop_after_next_enqueue(mars);
-  CAF_CHECK(mars.mm.unpublish(testee, 8080));
+  CHECK(mars.mm.unpublish(testee, 8080));
   // TODO: ideally, we'd check that remote actors in fact can no longer connect.
   //       However, the test multiplexer does not support "closing" connections
   //       and the remote_actor blocks forever.
   // run();
   // loop_after_next_enqueue(earth);
-  // CAF_CHECK(!earth.mm.remote_actor("mars", 8080));
+  // CHECK(!earth.mm.remote_actor("mars", 8080));
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

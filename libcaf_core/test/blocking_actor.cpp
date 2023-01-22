@@ -24,28 +24,21 @@ struct fixture {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(blocking_actor_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(catch_all) {
   self->send(self, 42);
   self->receive([](float) { CAF_FAIL("received unexpected float"); },
                 others >> [](message& msg) -> skippable_result {
-                  CAF_CHECK_EQUAL(to_tuple<int32_t>(msg), std::make_tuple(42));
+                  CHECK_EQ(to_tuple<int32_t>(msg), std::make_tuple(42));
                   return make_error(sec::unexpected_message);
                 });
   self->receive(
-    [](const error& err) {
-      CAF_CHECK_EQUAL(err, sec::unexpected_message);
-    }
-  );
+    [](const error& err) { CHECK_EQ(err, sec::unexpected_message); });
 }
 
 CAF_TEST(behavior_ref) {
-  behavior bhvr{
-    [](int i) {
-      CAF_CHECK_EQUAL(i, 42);
-    }
-  };
+  behavior bhvr{[](int i) { CHECK_EQ(i, 42); }};
   self->send(self, 42);
   self->receive(bhvr);
 }
@@ -53,12 +46,9 @@ CAF_TEST(behavior_ref) {
 CAF_TEST(timeout_in_scoped_actor) {
   bool timeout_called = false;
   scoped_actor self{system};
-  self->receive(
-    after(std::chrono::milliseconds(20)) >> [&] {
-      timeout_called = true;
-    }
-  );
-  CAF_CHECK(timeout_called);
+  self->receive(after(std::chrono::milliseconds(20)) >>
+                [&] { timeout_called = true; });
+  CHECK(timeout_called);
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

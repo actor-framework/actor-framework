@@ -43,7 +43,7 @@ CAF_TEST(unit_results) {
     self->request(aut, infinite, a)
       .receive(
         [&] {
-          CAF_MESSAGE("actor under test correctly replied to " << to_string(a));
+          MESSAGE("actor under test correctly replied to " << to_string(a));
         },
         [&](const error&) {
           CAF_FAIL("actor under test failed at input " << to_string(a));

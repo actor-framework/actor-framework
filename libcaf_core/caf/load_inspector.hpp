@@ -21,10 +21,6 @@ namespace caf {
 ///       for the DSL.
 class CAF_CORE_EXPORT load_inspector {
 public:
-  // -- member types -----------------------------------------------------------
-
-  using result_type [[deprecated("inspectors always return bool")]] = bool;
-
   // -- constants --------------------------------------------------------------
 
   /// Enables dispatching on the inspector type.

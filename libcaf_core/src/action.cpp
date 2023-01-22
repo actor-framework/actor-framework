@@ -2,20 +2,16 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#pragma once
+#include "caf/action.hpp"
 
-#include "caf/detail/core_export.hpp"
+#include "caf/logger.hpp"
 
 namespace caf {
 
-class [[deprecated]] memory_managed;
-
-class CAF_CORE_EXPORT memory_managed {
-public:
-  virtual void request_deletion(bool decremented_rc) const noexcept;
-
-protected:
-  virtual ~memory_managed();
-};
+action::transition action::run() {
+  CAF_LOG_TRACE("");
+  CAF_ASSERT(pimpl_ != nullptr);
+  return pimpl_->run();
+}
 
 } // namespace caf
