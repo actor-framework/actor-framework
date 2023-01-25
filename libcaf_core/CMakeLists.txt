@@ -58,6 +58,7 @@ caf_add_component(
     exit_reason
     flow.observable_state
     flow.observer_state
+    flow.op.state
     intrusive.inbox_result
     intrusive.task_result
     invoke_message_result

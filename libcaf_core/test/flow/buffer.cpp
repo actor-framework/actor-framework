@@ -102,4 +102,54 @@ SCENARIO("the buffer operator forces items at regular intervals") {
   }
 }
 
+SCENARIO("the buffer operator forwards errors") {
+  GIVEN("an observable that produces some values followed by an error") {
+    WHEN("calling .buffer() on it") {
+      THEN("the observer receives the values and then the error") {
+        auto outputs = std::make_shared<std::vector<cow_vector<int>>>();
+        auto err = std::make_shared<error>();
+        sys.spawn([outputs, err](caf::event_based_actor* self) {
+          auto obs = self->make_observable();
+          obs.iota(1)
+            .take(17)
+            .concat(obs.fail<int>(make_error(caf::sec::runtime_error)))
+            .buffer(7, 1s)
+            .do_on_error([err](const error& what) { *err = what; })
+            .for_each([outputs](const cow_vector<int>& xs) {
+              outputs->emplace_back(xs);
+            });
+        });
+        sched.run();
+        auto expected = std::vector<cow_vector<int>>{
+          cow_vector<int>{1, 2, 3, 4, 5, 6, 7},
+          cow_vector<int>{8, 9, 10, 11, 12, 13, 14},
+          cow_vector<int>{15, 16, 17},
+        };
+        CHECK_EQ(*outputs, expected);
+        CHECK_EQ(*err, caf::sec::runtime_error);
+      }
+    }
+  }
+  GIVEN("an observable that produces only an error") {
+    WHEN("calling .buffer() on it") {
+      THEN("the observer receives the error") {
+        auto outputs = std::make_shared<std::vector<cow_vector<int>>>();
+        auto err = std::make_shared<error>();
+        sys.spawn([outputs, err](caf::event_based_actor* self) {
+          self->make_observable()
+            .fail<int>(make_error(caf::sec::runtime_error))
+            .buffer(3, 1s)
+            .do_on_error([err](const error& what) { *err = what; })
+            .for_each([outputs](const cow_vector<int>& xs) {
+              outputs->emplace_back(xs);
+            });
+        });
+        sched.run();
+        CHECK(outputs->empty());
+        CHECK_EQ(*err, caf::sec::runtime_error);
+      }
+    }
+  }
+}
+
 END_FIXTURE_SCOPE()
