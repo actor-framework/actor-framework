@@ -26,8 +26,8 @@ using caf::io::network::socket_size_type;
 
 namespace caf::policy {
 
-rw_state
-tcp::read_some(size_t& result, native_socket fd, void* buf, size_t len) {
+rw_state tcp::read_some(size_t& result, native_socket fd, void* buf,
+                        size_t len) {
   CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(len));
   auto sres = ::recv(fd, reinterpret_cast<io::network::socket_recv_ptr>(buf),
                      len, no_sigpipe_io_flag);
@@ -47,8 +47,8 @@ tcp::read_some(size_t& result, native_socket fd, void* buf, size_t len) {
   return rw_state::success;
 }
 
-rw_state
-tcp::write_some(size_t& result, native_socket fd, const void* buf, size_t len) {
+rw_state tcp::write_some(size_t& result, native_socket fd, const void* buf,
+                         size_t len) {
   CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(len));
   auto sres = ::send(fd, reinterpret_cast<io::network::socket_send_ptr>(buf),
                      len, no_sigpipe_io_flag);

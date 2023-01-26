@@ -20,4 +20,3 @@ bool operator==(const delegated<Ts...>&, const delegated<Ts...>&) {
 }
 
 } // namespace caf
-

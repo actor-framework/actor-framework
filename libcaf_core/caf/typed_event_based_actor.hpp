@@ -24,17 +24,14 @@ public:
 /// implementation with static type-checking.
 /// @extends local_actor
 template <class... Sigs>
-class typed_event_based_actor : public extend<scheduled_actor,
-                                              typed_event_based_actor<Sigs...>
-                                       >::template
-                                       with<mixin::sender, mixin::requester,
-                                            mixin::behavior_changer>,
-                                public statically_typed_actor_base {
+class typed_event_based_actor
+  : public extend<scheduled_actor, typed_event_based_actor<Sigs...>>::
+      template with<mixin::sender, mixin::requester, mixin::behavior_changer>,
+    public statically_typed_actor_base {
 public:
-  using super = typename
-                extend<scheduled_actor,
-                       typed_event_based_actor<Sigs...>>::template
-                with<mixin::sender, mixin::requester, mixin::behavior_changer>;
+  using super =
+    typename extend<scheduled_actor, typed_event_based_actor<Sigs...>>::
+      template with<mixin::sender, mixin::requester, mixin::behavior_changer>;
 
   explicit typed_event_based_actor(actor_config& cfg) : super(cfg) {
     // nop
@@ -57,7 +54,7 @@ public:
     this->setf(abstract_actor::is_initialized_flag);
     auto bhvr = make_behavior();
     CAF_LOG_DEBUG_IF(!bhvr, "make_behavior() did not return a behavior:"
-                            << CAF_ARG2("alive", this->alive()));
+                              << CAF_ARG2("alive", this->alive()));
     if (bhvr) {
       // make_behavior() did return a behavior instead of using become()
       CAF_LOG_DEBUG("make_behavior() did return a valid behavior");
@@ -78,4 +75,3 @@ protected:
 };
 
 } // namespace caf
-

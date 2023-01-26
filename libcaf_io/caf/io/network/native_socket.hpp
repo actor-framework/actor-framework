@@ -74,8 +74,8 @@ CAF_IO_EXPORT std::pair<native_socket, native_socket> create_pipe();
 /// Sets fd to be inherited by child processes if `new_value == true`
 /// or not if `new_value == false`.  Not implemented on Windows.
 /// throws `network_error` on error
-CAF_IO_EXPORT expected<void>
-child_process_inherit(native_socket fd, bool new_value);
+CAF_IO_EXPORT expected<void> child_process_inherit(native_socket fd,
+                                                   bool new_value);
 
 /// Enables keepalive on `fd`. Throws `network_error` on error.
 CAF_IO_EXPORT expected<void> keepalive(native_socket fd, bool new_value);
@@ -93,8 +93,8 @@ CAF_IO_EXPORT expected<void> tcp_nodelay(native_socket fd, bool new_value);
 CAF_IO_EXPORT expected<void> allow_sigpipe(native_socket fd, bool new_value);
 
 /// Enables or disables `SIO_UDP_CONNRESET`error on `fd`.
-CAF_IO_EXPORT expected<void>
-allow_udp_connreset(native_socket fd, bool new_value);
+CAF_IO_EXPORT expected<void> allow_udp_connreset(native_socket fd,
+                                                 bool new_value);
 
 /// Get the socket buffer size for `fd`.
 CAF_IO_EXPORT expected<int> send_buffer_size(native_socket fd);

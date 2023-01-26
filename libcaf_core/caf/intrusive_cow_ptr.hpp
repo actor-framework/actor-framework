@@ -35,10 +35,10 @@ T* intrusive_cow_ptr_unshare(T*& ptr) {
 /// copy-on-write optimization.
 template <class T>
 class intrusive_cow_ptr
-    : detail::comparable<intrusive_cow_ptr<T>>,
-      detail::comparable<intrusive_cow_ptr<T>, T*>,
-      detail::comparable<intrusive_cow_ptr<T>, std::nullptr_t>,
-      detail::comparable<intrusive_cow_ptr<T>, intrusive_ptr<T>> {
+  : detail::comparable<intrusive_cow_ptr<T>>,
+    detail::comparable<intrusive_cow_ptr<T>, T*>,
+    detail::comparable<intrusive_cow_ptr<T>, std::nullptr_t>,
+    detail::comparable<intrusive_cow_ptr<T>, intrusive_ptr<T>> {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -68,7 +68,7 @@ public:
 
   template <class Y>
   intrusive_cow_ptr(intrusive_cow_ptr<Y> other) noexcept
-      : ptr_(other.detach(), false) {
+    : ptr_(other.detach(), false) {
     // nop
   }
 
@@ -77,7 +77,7 @@ public:
   }
 
   explicit intrusive_cow_ptr(pointer ptr, bool add_ref = true) noexcept
-      : ptr_(ptr, add_ref) {
+    : ptr_(ptr, add_ref) {
     // nop
   }
 

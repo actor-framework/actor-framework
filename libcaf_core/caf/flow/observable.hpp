@@ -607,9 +607,9 @@ auto observable<T>::merge(Inputs&&... xs) {
     static_assert(
       sizeof...(Inputs) > 0,
       "merge without arguments expects this observable to emit observables");
-    static_assert(
-      (std::is_same_v<Out, output_type_t<std::decay_t<Inputs>>> && ...),
-      "can only merge observables with the same observed type");
+    static_assert((std::is_same_v<Out, output_type_t<std::decay_t<Inputs>>>
+                   && ...),
+                  "can only merge observables with the same observed type");
     using impl_t = op::merge<Out>;
     return make_observable<impl_t>(ctx(), *this, std::forward<Inputs>(xs)...);
   }

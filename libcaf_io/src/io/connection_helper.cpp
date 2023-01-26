@@ -24,8 +24,8 @@ auto autoconnect_timeout = std::chrono::minutes(10);
 
 } // namespace
 
-behavior
-connection_helper(stateful_actor<connection_helper_state>* self, actor b) {
+behavior connection_helper(stateful_actor<connection_helper_state>* self,
+                           actor b) {
   CAF_LOG_TRACE(CAF_ARG(b));
   self->monitor(b);
   self->set_down_handler([=](down_msg& dm) {

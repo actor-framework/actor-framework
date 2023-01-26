@@ -7,4 +7,3 @@
 #include "caf/openssl/manager.hpp"
 #include "caf/openssl/publish.hpp"
 #include "caf/openssl/remote_actor.hpp"
-

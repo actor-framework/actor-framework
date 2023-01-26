@@ -49,8 +49,9 @@ template <message_priority P = message_priority::normal, class Source,
 void unsafe_send_as(Source* src, const Dest& dest, Ts&&... xs) {
   static_assert(sizeof...(Ts) > 0, "no message to send");
   if (dest)
-    actor_cast<abstract_actor*>(dest)->eq_impl(
-      make_message_id(P), src->ctrl(), src->context(), std::forward<Ts>(xs)...);
+    actor_cast<abstract_actor*>(dest)->eq_impl(make_message_id(P), src->ctrl(),
+                                               src->context(),
+                                               std::forward<Ts>(xs)...);
 }
 
 template <class... Ts>

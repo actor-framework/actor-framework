@@ -72,9 +72,8 @@ public:
 public:
   datagram_servant_ptr new_datagram_servant(datagram_handle, uint16_t port);
 
-  datagram_servant_ptr new_datagram_servant(datagram_handle,
-                                            const std::string& host,
-                                            uint16_t port);
+  datagram_servant_ptr
+  new_datagram_servant(datagram_handle, const std::string& host, uint16_t port);
 
   void provide_scribe(std::string host, uint16_t desired_port,
                       connection_handle hdl);
@@ -183,8 +182,8 @@ public:
   /// Stores `hdl` as a pending endpoint for `src`.
   void add_pending_endpoint(datagram_handle src, datagram_handle hdl);
 
-  using pending_connects_map = std::unordered_multimap<accept_handle,
-                                                       connection_handle>;
+  using pending_connects_map
+    = std::unordered_multimap<accept_handle, connection_handle>;
 
   pending_connects_map& pending_connects();
 
@@ -192,13 +191,13 @@ public:
 
   pending_endpoints_map& pending_endpoints();
 
-  using pending_scribes_map = std::map<std::pair<std::string, uint16_t>,
-                                       connection_handle>;
+  using pending_scribes_map
+    = std::map<std::pair<std::string, uint16_t>, connection_handle>;
 
   using pending_doorman_map = std::unordered_map<uint16_t, accept_handle>;
 
-  using pending_local_datagram_endpoints_map = std::map<uint16_t,
-                                                        datagram_handle>;
+  using pending_local_datagram_endpoints_map
+    = std::map<uint16_t, datagram_handle>;
 
   using pending_remote_datagram_endpoints_map
     = std::map<std::pair<std::string, uint16_t>, datagram_handle>;
@@ -235,8 +234,8 @@ public:
 
   /// Appends `buf` to the virtual network buffer of `hdl`
   /// and calls `read_data(hdl)` afterwards.
-  void
-  virtual_send(datagram_handle src, datagram_handle ep, const byte_buffer&);
+  void virtual_send(datagram_handle src, datagram_handle ep,
+                    const byte_buffer&);
 
   /// Waits until a `runnable` is available and executes it.
   void exec_runnable();
@@ -324,16 +323,15 @@ private:
     // the output of another scribe and vice versa.
     datagram_data(
       shared_job_queue_type input = std::make_shared<write_job_queue_type>(),
-      shared_job_queue_type output = std::make_shared<write_job_queue_type>()
-    );
+      shared_job_queue_type output = std::make_shared<write_job_queue_type>());
   };
 
   using scribe_data_map = std::unordered_map<connection_handle, scribe_data>;
 
   using doorman_data_map = std::unordered_map<accept_handle, doorman_data>;
 
-  using datagram_data_map = std::unordered_map<datagram_handle,
-                                               std::shared_ptr<datagram_data>>;
+  using datagram_data_map
+    = std::unordered_map<datagram_handle, std::shared_ptr<datagram_data>>;
 
   // guards resumables_ and scribes_
   std::mutex mx_;

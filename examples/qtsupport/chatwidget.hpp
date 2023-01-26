@@ -8,9 +8,9 @@
 #include "caf/net/binary/frame.hpp"
 
 CAF_PUSH_WARNINGS
-#include <QWidget>
 #include <QLineEdit>
 #include <QTextEdit>
+#include <QWidget>
 CAF_POP_WARNINGS
 
 CAF_BEGIN_TYPE_ID_BLOCK(qtsupport, first_custom_type_id)
@@ -48,8 +48,7 @@ public slots:
   void changeName();
 
 private:
-
-  template<typename T>
+  template <typename T>
   T* get(T*& member, const char* name) {
     if (member == nullptr) {
       member = findChild<T*>(name);

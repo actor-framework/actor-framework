@@ -72,7 +72,8 @@ struct equality_operator {
                                  || (std::is_floating_point<U>::value
                                      && std::is_convertible<T, double>::value))
                                   && detail::is_comparable<T, U>::value,
-                                int> = 0>
+                                int>
+            = 0>
   bool operator()(const T& t, const U& u) const {
     auto x = static_cast<long double>(t);
     auto y = static_cast<long double>(u);
@@ -87,7 +88,8 @@ struct equality_operator {
                                   || (std::is_floating_point<U>::value
                                       && std::is_convertible<T, double>::value))
                                   && detail::is_comparable<T, U>::value,
-                                int> = 0>
+                                int>
+            = 0>
   bool operator()(const T& x, const U& y) const {
     return x == y;
   }

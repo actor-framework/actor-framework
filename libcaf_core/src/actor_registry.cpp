@@ -4,8 +4,8 @@
 
 #include "caf/actor_registry.hpp"
 
-#include <mutex>
 #include <limits>
+#include <mutex>
 #include <stdexcept>
 #include <unordered_map>
 #include <unordered_set>
@@ -57,9 +57,7 @@ void actor_registry::put_impl(actor_id key, strong_actor_ptr val) {
   // attach functor without lock
   CAF_LOG_DEBUG("added actor:" << CAF_ARG(key));
   actor_registry* reg = this;
-  val->get()->attach_functor([key, reg]() {
-    reg->erase(key);
-  });
+  val->get()->attach_functor([key, reg]() { reg->erase(key); });
 }
 
 void actor_registry::erase(actor_id key) {

@@ -15,8 +15,7 @@ ipv4_subnet::ipv4_subnet() : prefix_length_(0) {
 }
 
 ipv4_subnet::ipv4_subnet(ipv4_address network_address, uint8_t prefix_length)
-    : address_(network_address),
-      prefix_length_(prefix_length) {
+  : address_(network_address), prefix_length_(prefix_length) {
   detail::mask_bits(address_.bytes(), prefix_length_);
 }
 
@@ -31,8 +30,8 @@ bool ipv4_subnet::contains(ipv4_subnet other) const noexcept {
   if (prefix_length_ > other.prefix_length_)
     return false;
   return prefix_length_ == other.prefix_length_
-         ? address_ == other.address_
-         : address_ == other.address_.network_address(prefix_length_);
+           ? address_ == other.address_
+           : address_ == other.address_.network_address(prefix_length_);
 }
 
 // -- comparison ---------------------------------------------------------------

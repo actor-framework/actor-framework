@@ -62,8 +62,8 @@ public:
   ~middleman() override;
 
   /// Tries to open a port for other CAF instances to connect to.
-  expected<uint16_t>
-  open(uint16_t port, const char* in = nullptr, bool reuse = false);
+  expected<uint16_t> open(uint16_t port, const char* in = nullptr,
+                          bool reuse = false);
 
   /// Closes port `port` regardless of whether an actor is published to it.
   expected<void> close(uint16_t port);
@@ -91,9 +91,9 @@ public:
   /// on address `addr` and `port`.
   /// @returns The actual port the OS uses after `bind()`. If `port == 0`
   ///          the OS chooses a random high-level port.
-  expected<uint16_t>
-  publish_local_groups(uint16_t port, const char* in = nullptr,
-                       bool reuse = false);
+  expected<uint16_t> publish_local_groups(uint16_t port,
+                                          const char* in = nullptr,
+                                          bool reuse = false);
 
   /// Unpublishes `whom` by closing `port` or all assigned ports if `port == 0`.
   /// @param whom Actor that should be unpublished at `port`.
@@ -193,9 +193,9 @@ public:
   }
 
   template <class Handle, class Rep, class Period>
-  expected<Handle>
-  remote_spawn(const node_id& nid, std::string name, message args,
-               std::chrono::duration<Rep, Period> timeout) {
+  expected<Handle> remote_spawn(const node_id& nid, std::string name,
+                                message args,
+                                std::chrono::duration<Rep, Period> timeout) {
     return remote_spawn<Handle>(nid, std::move(name), std::move(args),
                                 timespan{timeout});
   }
@@ -353,14 +353,14 @@ private:
   remote_spawn_impl(const node_id& nid, std::string& name, message& args,
                     std::set<std::string> s, timespan timeout);
 
-  expected<uint16_t>
-  publish(const strong_actor_ptr& whom, std::set<std::string> sigs,
-          uint16_t port, const char* cstr, bool ru);
+  expected<uint16_t> publish(const strong_actor_ptr& whom,
+                             std::set<std::string> sigs, uint16_t port,
+                             const char* cstr, bool ru);
 
   expected<void> unpublish(const actor_addr& whom, uint16_t port);
 
-  expected<strong_actor_ptr>
-  remote_actor(std::set<std::string> ifs, std::string host, uint16_t port);
+  expected<strong_actor_ptr> remote_actor(std::set<std::string> ifs,
+                                          std::string host, uint16_t port);
 
   static int exec_slave_mode(actor_system&, const actor_system_config&);
 

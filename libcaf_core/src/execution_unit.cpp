@@ -7,8 +7,7 @@
 namespace caf {
 
 execution_unit::execution_unit(actor_system* sys)
-    : system_(sys),
-      proxies_(nullptr) {
+  : system_(sys), proxies_(nullptr) {
   // nop
 }
 

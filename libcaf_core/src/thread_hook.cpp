@@ -11,4 +11,3 @@ thread_hook::~thread_hook() {
 }
 
 } // namespace caf
-
