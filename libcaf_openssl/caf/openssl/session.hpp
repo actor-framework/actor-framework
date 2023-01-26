@@ -39,8 +39,8 @@ public:
 
   bool init();
   rw_state read_some(size_t& result, native_socket fd, void* buf, size_t len);
-  rw_state
-  write_some(size_t& result, native_socket fd, const void* buf, size_t len);
+  rw_state write_some(size_t& result, native_socket fd, const void* buf,
+                      size_t len);
   bool try_connect(native_socket fd);
   bool try_accept(native_socket fd);
 

@@ -5,11 +5,11 @@
 #include "caf/actor_addr.hpp"
 
 #include "caf/actor.hpp"
-#include "caf/node_id.hpp"
-#include "caf/serializer.hpp"
-#include "caf/local_actor.hpp"
 #include "caf/deserializer.hpp"
+#include "caf/local_actor.hpp"
+#include "caf/node_id.hpp"
 #include "caf/proxy_registry.hpp"
+#include "caf/serializer.hpp"
 
 namespace caf {
 
@@ -27,7 +27,7 @@ actor_addr::actor_addr(actor_control_block* ptr) : ptr_(ptr) {
 }
 
 actor_addr::actor_addr(actor_control_block* ptr, bool add_ref)
-    : ptr_(ptr, add_ref) {
+  : ptr_(ptr, add_ref) {
   // nop
 }
 

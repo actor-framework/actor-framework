@@ -9,7 +9,7 @@
 
 namespace caf::openssl {
 
-CAF_OPENSSL_EXPORT io::middleman_actor
-make_middleman_actor(actor_system& sys, actor db);
+CAF_OPENSSL_EXPORT io::middleman_actor make_middleman_actor(actor_system& sys,
+                                                            actor db);
 
 } // namespace caf::openssl

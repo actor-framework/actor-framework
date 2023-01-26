@@ -9,11 +9,11 @@
 #include "caf/config.hpp"
 
 #ifdef CAF_WINDOWS
-#include <io.h>
-#include <windows.h>
+#  include <io.h>
+#  include <windows.h>
 #else
-#include <cstdio>
-#include <unistd.h>
+#  include <cstdio>
+#  include <unistd.h>
 #endif
 
 namespace caf {
@@ -72,10 +72,10 @@ void set_term_color(std::ostream& out, int c) {
     out << '\n';
 }
 
-#define STDOUT_FILENO 1
-#define STDERR_FILENO 2
+#  define STDOUT_FILENO 1
+#  define STDERR_FILENO 2
 
-#define ISATTY_FUN ::_isatty
+#  define ISATTY_FUN ::_isatty
 
 #else // POSIX-compatible terminals
 
@@ -104,7 +104,7 @@ void set_term_color(std::ostream& out, const char* x) {
   out << x;
 }
 
-#define ISATTY_FUN ::isatty
+#  define ISATTY_FUN ::isatty
 
 #endif
 

@@ -16,17 +16,17 @@ struct CAF_IO_EXPORT udp {
   /// at the endpoint in `sa` with size `sa_len`. Returns true as long
   /// as no IO error occurs. The number of written bytes is stored in
   /// `result` and the sender is stored in `ep`.
-  static bool
-  read_datagram(size_t& result, io::network::native_socket fd, void* buf,
-                size_t buf_len, io::network::ip_endpoint& ep);
+  static bool read_datagram(size_t& result, io::network::native_socket fd,
+                            void* buf, size_t buf_len,
+                            io::network::ip_endpoint& ep);
 
   /// Reveice a datagram of up to `len` bytes. Larger datagrams are truncated.
   /// Up to `sender_len` bytes of the receiver address is written into
   /// `sender_addr`. Returns `true` if no IO error occurred. The number of
   /// received bytes is stored in `result` (can be 0).
-  static bool
-  write_datagram(size_t& result, io::network::native_socket fd, void* buf,
-                 size_t buf_len, const io::network::ip_endpoint& ep);
+  static bool write_datagram(size_t& result, io::network::native_socket fd,
+                             void* buf, size_t buf_len,
+                             const io::network::ip_endpoint& ep);
 
   /// Always returns `false`. Native UDP I/O event handlers only rely on the
   /// socket buffer.

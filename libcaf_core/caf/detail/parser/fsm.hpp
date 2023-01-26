@@ -46,18 +46,15 @@
     ps.code = ch != '\n' ? caf::pec::unexpected_character                      \
                          : caf::pec::unexpected_newline;                       \
     return;                                                                    \
-    s_##name :                                                                 \
-    if (ch == '\0')                                                            \
-      goto s_unexpected_eof;                                                   \
-    e_##name :
+    s_##name : if (ch == '\0') goto s_unexpected_eof;                          \
+    e_##name:
 
 /// Defines a state in the FSM that doesn't check for end-of-input. Unstable
 /// states must make a transition and cause undefined behavior otherwise.
 #define unstable_state(name)                                                   \
   }                                                                            \
   {                                                                            \
-    s_##name :                                                                 \
-    e_##name :
+    s_##name : e_##name:
 
 /// Ends the definition of an FSM.
 #define fin()                                                                  \
@@ -67,33 +64,29 @@
   return;
 
 /// Defines a terminal state in the FSM.
-#define CAF_TERM_STATE_IMPL1(name)                                                       \
+#define CAF_TERM_STATE_IMPL1(name)                                             \
   }                                                                            \
   for (;;) {                                                                   \
     /* jumps back up here if no transition matches */                          \
     ps.code = caf::pec::trailing_character;                                    \
     return;                                                                    \
-    s_##name :                                                                 \
-    if (ch == '\0')                                                            \
-      goto s_fin;                                                              \
-    e_##name :
+    s_##name : if (ch == '\0') goto s_fin;                                     \
+    e_##name:
 
 /// Defines a terminal state in the FSM that runs `exit_statement` when leaving
 /// the state with code `pec::success` or `pec::trailing_character`.
-#define CAF_TERM_STATE_IMPL2(name, exit_statement)                                                       \
+#define CAF_TERM_STATE_IMPL2(name, exit_statement)                             \
   }                                                                            \
   for (;;) {                                                                   \
     /* jumps back up here if no transition matches */                          \
     ps.code = caf::pec::trailing_character;                                    \
     exit_statement;                                                            \
     return;                                                                    \
-    s_##name :                                                                 \
-    if (ch == '\0') {                                                          \
+    s_##name : if (ch == '\0') {                                               \
       exit_statement;                                                          \
       goto s_fin;                                                              \
     }                                                                          \
-    e_##name :
-
+    e_##name:
 
 #define CAF_TRANSITION_IMPL1(target)                                           \
   ch = ps.next();                                                              \
@@ -210,65 +203,69 @@
 #ifdef CAF_MSVC
 
 /// Defines a terminal state in the FSM.
-#define term_state(...)                                                        \
-  CAF_PP_CAT(CAF_PP_OVERLOAD(CAF_TERM_STATE_IMPL, __VA_ARGS__)(__VA_ARGS__),   \
-             CAF_PP_EMPTY())
+#  define term_state(...)                                                      \
+    CAF_PP_CAT(CAF_PP_OVERLOAD(CAF_TERM_STATE_IMPL, __VA_ARGS__)(__VA_ARGS__), \
+               CAF_PP_EMPTY())
 
 /// Transitions to target state if a predicate (optional argument 1) holds for
 /// the current token and executes an action (optional argument 2) before
 /// entering the new state.
-#define transition(...)                                                        \
-  CAF_PP_CAT(CAF_PP_OVERLOAD(CAF_TRANSITION_IMPL, __VA_ARGS__)(__VA_ARGS__),   \
-             CAF_PP_EMPTY())
+#  define transition(...)                                                      \
+    CAF_PP_CAT(CAF_PP_OVERLOAD(CAF_TRANSITION_IMPL, __VA_ARGS__)(__VA_ARGS__), \
+               CAF_PP_EMPTY())
 
 /// Stops the FSM with reason `error_code` if `predicate` holds for the current
 /// token.
-#define error_transition(...)                                                  \
-  CAF_PP_CAT(CAF_PP_OVERLOAD(CAF_ERROR_TRANSITION_IMPL, __VA_ARGS__)(__VA_ARGS__),\
-             CAF_PP_EMPTY())
+#  define error_transition(...)                                                \
+    CAF_PP_CAT(CAF_PP_OVERLOAD(CAF_ERROR_TRANSITION_IMPL,                      \
+                               __VA_ARGS__)(__VA_ARGS__),                      \
+               CAF_PP_EMPTY())
 
 // Makes an epsilon transition into another state.
-#define epsilon(...)                                                           \
-  CAF_PP_CAT(CAF_PP_OVERLOAD(CAF_EPSILON_IMPL, __VA_ARGS__)(__VA_ARGS__),      \
-             CAF_PP_EMPTY())
+#  define epsilon(...)                                                         \
+    CAF_PP_CAT(CAF_PP_OVERLOAD(CAF_EPSILON_IMPL, __VA_ARGS__)(__VA_ARGS__),    \
+               CAF_PP_EMPTY())
 
 /// Makes an transition transition into another FSM, resuming at state `target`.
-#define fsm_transition(...)                                                    \
-  CAF_PP_CAT(CAF_PP_OVERLOAD(CAF_FSM_TRANSITION_IMPL, __VA_ARGS__)(__VA_ARGS__),\
-             CAF_PP_EMPTY())
+#  define fsm_transition(...)                                                  \
+    CAF_PP_CAT(CAF_PP_OVERLOAD(CAF_FSM_TRANSITION_IMPL,                        \
+                               __VA_ARGS__)(__VA_ARGS__),                      \
+               CAF_PP_EMPTY())
 
 /// Makes an epsilon transition into another FSM, resuming at state `target`.
-#define fsm_epsilon(...)                                                       \
-  CAF_PP_CAT(CAF_PP_OVERLOAD(CAF_FSM_EPSILON_IMPL, __VA_ARGS__)(__VA_ARGS__),  \
-             CAF_PP_EMPTY())
+#  define fsm_epsilon(...)                                                     \
+    CAF_PP_CAT(CAF_PP_OVERLOAD(CAF_FSM_EPSILON_IMPL,                           \
+                               __VA_ARGS__)(__VA_ARGS__),                      \
+               CAF_PP_EMPTY())
 
 #else // CAF_MSVC
 
 /// Defines a terminal state in the FSM.
-#define term_state(...)                                                        \
-  CAF_PP_OVERLOAD(CAF_TERM_STATE_IMPL, __VA_ARGS__)(__VA_ARGS__)
+#  define term_state(...)                                                      \
+    CAF_PP_OVERLOAD(CAF_TERM_STATE_IMPL, __VA_ARGS__)(__VA_ARGS__)
 
 /// Transitions to target state if a predicate (optional argument 1) holds for
 /// the current token and executes an action (optional argument 2) before
 /// entering the new state.
-#define transition(...)                                                        \
-  CAF_PP_OVERLOAD(CAF_TRANSITION_IMPL, __VA_ARGS__)(__VA_ARGS__)
+#  define transition(...)                                                      \
+    CAF_PP_OVERLOAD(CAF_TRANSITION_IMPL, __VA_ARGS__)(__VA_ARGS__)
 
 /// Stops the FSM with reason `error_code` if `predicate` holds for the current
 /// token.
-#define error_transition(...)                                                  \
-  CAF_PP_OVERLOAD(CAF_ERROR_TRANSITION_IMPL, __VA_ARGS__)(__VA_ARGS__)
+#  define error_transition(...)                                                \
+    CAF_PP_OVERLOAD(CAF_ERROR_TRANSITION_IMPL, __VA_ARGS__)(__VA_ARGS__)
 
 // Makes an epsilon transition into another state.
-#define epsilon(...) CAF_PP_OVERLOAD(CAF_EPSILON_IMPL, __VA_ARGS__)(__VA_ARGS__)
+#  define epsilon(...)                                                         \
+    CAF_PP_OVERLOAD(CAF_EPSILON_IMPL, __VA_ARGS__)(__VA_ARGS__)
 
 /// Makes an transition transition into another FSM, resuming at state `target`.
-#define fsm_transition(...)                                                    \
-  CAF_PP_OVERLOAD(CAF_FSM_TRANSITION_IMPL, __VA_ARGS__)(__VA_ARGS__)
+#  define fsm_transition(...)                                                  \
+    CAF_PP_OVERLOAD(CAF_FSM_TRANSITION_IMPL, __VA_ARGS__)(__VA_ARGS__)
 
 /// Makes an epsilon transition into another FSM, resuming at state `target`.
-#define fsm_epsilon(...)                                                       \
-  CAF_PP_OVERLOAD(CAF_FSM_EPSILON_IMPL, __VA_ARGS__)(__VA_ARGS__)
+#  define fsm_epsilon(...)                                                     \
+    CAF_PP_OVERLOAD(CAF_FSM_EPSILON_IMPL, __VA_ARGS__)(__VA_ARGS__)
 
 #endif // CAF_MSVC
 

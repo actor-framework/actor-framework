@@ -1,11 +1,11 @@
-#include <iostream>
 #include <chrono>
+#include <iostream>
 
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
 
-using std::cout;
 using std::cerr;
+using std::cout;
 using std::endl;
 
 using namespace caf;
@@ -38,17 +38,13 @@ behavior connection_worker(broker* self, connection_handle hdl) {
       self->write(msg.handle, cstr_size(http_ok), http_ok);
       self->quit();
     },
-    [=](const connection_closed_msg&) {
-      self->quit();
-    }
+    [=](const connection_closed_msg&) { self->quit(); },
   };
 }
 
 behavior server(broker* self) {
   auto counter = std::make_shared<int>(0);
-  self->set_down_handler([=](down_msg&) {
-    ++*counter;
-  });
+  self->set_down_handler([=](down_msg&) { ++*counter; });
   self->delayed_send(self, std::chrono::seconds(1), tick_atom_v);
   return {
     [=](const new_connection_msg& ncm) {
@@ -60,7 +56,7 @@ behavior server(broker* self) {
       aout(self) << "Finished " << *counter << " requests per second." << endl;
       *counter = 0;
       self->delayed_send(self, std::chrono::seconds(1), tick_atom_v);
-    }
+    },
   };
 }
 
@@ -69,8 +65,7 @@ public:
   uint16_t port = 0;
 
   config() {
-    opt_group{custom_options_, "global"}
-    .add(port, "port,p", "set port");
+    opt_group{custom_options_, "global"}.add(port, "port,p", "set port");
   }
 };
 

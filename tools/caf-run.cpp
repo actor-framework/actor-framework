@@ -23,7 +23,6 @@ using std::endl;
 using std::string;
 using std::vector;
 
-
 class host_desc {
 public:
   std::string host;

@@ -1,5 +1,5 @@
-#include <string>
 #include <iostream>
+#include <string>
 
 #include "caf/actor_ostream.hpp"
 #include "caf/actor_system.hpp"

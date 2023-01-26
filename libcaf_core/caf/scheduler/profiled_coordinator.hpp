@@ -99,11 +99,11 @@ public:
       m.mem = 0;
 #else
       ::rusage ru;
-#ifdef RUSAGE_THREAD
+#  ifdef RUSAGE_THREAD
       ::getrusage(RUSAGE_THREAD, &ru);
-#else
+#  else
       ::getrusage(RUSAGE_SELF, &ru);
-#endif
+#  endif
       m.usr = to_usec(ru.ru_utime);
       m.sys = to_usec(ru.ru_stime);
       m.mem = ru.ru_maxrss;
@@ -172,8 +172,8 @@ public:
     if (!file_)
       std::cerr << R"([WARNING] could not open file ")" << fname
                 << R"(" (no profiler output will be generated))" << std::endl;
-    auto res
-      = get_or(cfg, "scheduler.profiling-resolution", sr::profiling_resolution);
+    auto res = get_or(cfg, "scheduler.profiling-resolution",
+                      sr::profiling_resolution);
     resolution_ = std::chrono::duration_cast<msec>(res);
   }
 

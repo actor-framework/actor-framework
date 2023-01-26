@@ -48,7 +48,7 @@
 namespace caf::detail {
 
 /// Creates a hash from `data` using the RIPEMD-160 algorithm.
-CAF_CORE_EXPORT void
-ripemd_160(std::array<uint8_t, 20>& storage, const std::string& data);
+CAF_CORE_EXPORT void ripemd_160(std::array<uint8_t, 20>& storage,
+                                const std::string& data);
 
 } // namespace caf::detail

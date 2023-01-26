@@ -5,28 +5,28 @@
 #pragma once
 
 #include <map>
-#include <vector>
 #include <type_traits>
+#include <vector>
 
-#include "caf/none.hpp"
 #include "caf/config.hpp"
-#include "caf/make_counted.hpp"
 #include "caf/extend.hpp"
-#include "caf/typed_actor.hpp"
 #include "caf/local_actor.hpp"
+#include "caf/make_counted.hpp"
+#include "caf/none.hpp"
+#include "caf/typed_actor.hpp"
 
-#include "caf/logger.hpp"
-#include "caf/detail/scope_guard.hpp"
 #include "caf/actor_registry.hpp"
+#include "caf/detail/scope_guard.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
+#include "caf/logger.hpp"
 
-#include "caf/mixin/sender.hpp"
-#include "caf/mixin/requester.hpp"
 #include "caf/mixin/behavior_changer.hpp"
+#include "caf/mixin/requester.hpp"
+#include "caf/mixin/sender.hpp"
 
+#include "caf/io/abstract_broker.hpp"
 #include "caf/io/fwd.hpp"
 #include "caf/io/middleman.hpp"
-#include "caf/io/abstract_broker.hpp"
 
 namespace caf {
 
@@ -71,8 +71,9 @@ public:
 
   using behavior_type = typed_behavior<Sigs...>;
 
-  using super = typename extend<abstract_broker, typed_broker<Sigs...>>::
-    template with<mixin::sender, mixin::requester, mixin::behavior_changer>;
+  using super =
+    typename extend<abstract_broker, typed_broker<Sigs...>>::template with<
+      mixin::sender, mixin::requester, mixin::behavior_changer>;
 
   /// @cond PRIVATE
 
@@ -88,7 +89,7 @@ public:
     this->init_broker();
     auto bhvr = make_behavior();
     CAF_LOG_DEBUG_IF(!bhvr, "make_behavior() did not return a behavior:"
-                            << CAF_ARG2("alive", this->alive()));
+                              << CAF_ARG2("alive", this->alive()));
     if (bhvr) {
       // make_behavior() did return a behavior instead of using become()
       CAF_LOG_DEBUG("make_behavior() did return a valid behavior");
@@ -103,17 +104,15 @@ public:
     auto sptr = this->take(hdl);
     CAF_ASSERT(sptr->hdl() == hdl);
     using impl = typename infer_handle_from_fun<F>::impl;
-    static_assert(std::is_convertible<
-                    typename impl::actor_hdl,
-                    connection_handler
-                  >::value,
-                  "Cannot fork: new broker misses required handlers");
+    static_assert(
+      std::is_convertible<typename impl::actor_hdl, connection_handler>::value,
+      "Cannot fork: new broker misses required handlers");
     actor_config cfg{this->context()};
     detail::init_fun_factory<impl, F> fac;
     cfg.init_fun = fac(std::move(fun), hdl, std::forward<Ts>(xs)...);
     using impl = infer_impl_from_fun_t<F>;
-    static constexpr bool spawnable = detail::spawnable<F, impl, decltype(hdl),
-                                                        Ts...>();
+    static constexpr bool spawnable
+      = detail::spawnable<F, impl, decltype(hdl), Ts...>();
     static_assert(spawnable,
                   "cannot spawn function-based broker with given arguments");
     detail::bool_token<spawnable> enabled;
@@ -124,7 +123,8 @@ public:
     return res;
   }
 
-  expected<connection_handle> add_tcp_scribe(const std::string& host, uint16_t port) {
+  expected<connection_handle> add_tcp_scribe(const std::string& host,
+                                             uint16_t port) {
     static_assert(std::is_convertible<actor_hdl, connection_handler>::value,
                   "Cannot add scribe: broker misses required handlers");
     return super::add_tcp_scribe(host, port);
@@ -137,8 +137,7 @@ public:
   }
 
   expected<std::pair<accept_handle, uint16_t>>
-  add_tcp_doorman(uint16_t port = 0,
-                  const char* in = nullptr,
+  add_tcp_doorman(uint16_t port = 0, const char* in = nullptr,
                   bool reuse_addr = false) {
     static_assert(std::is_convertible<actor_hdl, accept_handler>::value,
                   "Cannot add doorman: broker misses required handlers");
@@ -169,4 +168,3 @@ protected:
 
 } // namespace io
 } // namespace caf
-

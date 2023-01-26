@@ -22,7 +22,7 @@ attachable::~attachable() {
 }
 
 attachable::token::token(size_t typenr, const void* vptr)
-    : subtype(typenr), ptr(vptr) {
+  : subtype(typenr), ptr(vptr) {
   // nop
 }
 

@@ -16,8 +16,8 @@ namespace detail {
 
 class behavior_impl;
 
-CAF_CORE_EXPORT behavior_impl*
-new_default_behavior(timespan d, std::function<void()> fun);
+CAF_CORE_EXPORT behavior_impl* new_default_behavior(timespan d,
+                                                    std::function<void()> fun);
 
 } // namespace detail
 

@@ -86,8 +86,8 @@ public:
       xs.emplace_back(worker, message{});
     ulock.unlock();
     using collector_t = split_join_collector<T, Split, Join>;
-    auto hdl
-      = sys.spawn<collector_t, lazy_init>(init_, sf_, jf_, std::move(xs));
+    auto hdl = sys.spawn<collector_t, lazy_init>(init_, sf_, jf_,
+                                                 std::move(xs));
     hdl->enqueue(std::move(ptr), host);
   }
 

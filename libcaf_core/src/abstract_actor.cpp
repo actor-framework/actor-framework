@@ -4,9 +4,9 @@
 
 #include "caf/config.hpp"
 
+#include <atomic>
 #include <map>
 #include <mutex>
-#include <atomic>
 #include <stdexcept>
 
 #include "caf/abstract_actor.hpp"
@@ -46,7 +46,7 @@ bool abstract_actor::enqueue(strong_actor_ptr sender, message_id mid,
 }
 
 abstract_actor::abstract_actor(actor_config& cfg)
-    : abstract_channel(cfg.flags) {
+  : abstract_channel(cfg.flags) {
   // nop
 }
 

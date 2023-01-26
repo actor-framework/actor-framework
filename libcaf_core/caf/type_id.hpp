@@ -333,9 +333,7 @@ public:
   [[maybe_unused]] constexpr bool operator!=(atom_name, atom_name) {           \
     return false;                                                              \
   }                                                                            \
-  inline std::string to_string(atom_name) {                                    \
-    return atom_text;                                                          \
-  }                                                                            \
+  inline std::string to_string(atom_name) { return atom_text; }                \
   template <class Inspector>                                                   \
   auto inspect(Inspector& f, atom_name& x) {                                   \
     return f.object(x).fields();                                               \

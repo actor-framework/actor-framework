@@ -5,8 +5,8 @@
 #include "caf/default_attachable.hpp"
 
 #include "caf/actor.hpp"
-#include "caf/message.hpp"
 #include "caf/actor_cast.hpp"
+#include "caf/message.hpp"
 #include "caf/system_messages.hpp"
 
 namespace caf {
@@ -42,10 +42,10 @@ bool default_attachable::matches(const token& what) {
 default_attachable::default_attachable(actor_addr observed, actor_addr observer,
                                        observe_type type,
                                        message_priority priority)
-    : observed_(std::move(observed)),
-      observer_(std::move(observer)),
-      type_(type),
-      priority_(priority) {
+  : observed_(std::move(observed)),
+    observer_(std::move(observer)),
+    type_(type),
+    priority_(priority) {
   // nop
 }
 

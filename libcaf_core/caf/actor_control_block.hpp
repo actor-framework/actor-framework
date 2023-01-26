@@ -159,13 +159,13 @@ inline bool operator!=(const abstract_actor* x, const strong_actor_ptr& y) {
 /// @relates actor_control_block
 using weak_actor_ptr = weak_intrusive_ptr<actor_control_block>;
 
-CAF_CORE_EXPORT error_code<sec>
-load_actor(strong_actor_ptr& storage, execution_unit*, actor_id aid,
-           const node_id& nid);
+CAF_CORE_EXPORT error_code<sec> load_actor(strong_actor_ptr& storage,
+                                           execution_unit*, actor_id aid,
+                                           const node_id& nid);
 
-CAF_CORE_EXPORT error_code<sec>
-save_actor(strong_actor_ptr& storage, execution_unit*, actor_id aid,
-           const node_id& nid);
+CAF_CORE_EXPORT error_code<sec> save_actor(strong_actor_ptr& storage,
+                                           execution_unit*, actor_id aid,
+                                           const node_id& nid);
 
 template <class Inspector>
 auto context_of(Inspector* f) -> decltype(f->context()) {
@@ -178,8 +178,8 @@ inline execution_unit* context_of(void*) {
 
 CAF_CORE_EXPORT std::string to_string(const strong_actor_ptr& x);
 
-CAF_CORE_EXPORT void
-append_to_string(std::string& x, const strong_actor_ptr& y);
+CAF_CORE_EXPORT void append_to_string(std::string& x,
+                                      const strong_actor_ptr& y);
 
 CAF_CORE_EXPORT std::string to_string(const weak_actor_ptr& x);
 

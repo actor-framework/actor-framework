@@ -28,7 +28,6 @@ using std::endl;
 using std::chrono::seconds;
 using namespace caf;
 
-
 /// A simple actor for storing an integer value.
 using cell = typed_actor<
   // Writes a new value.

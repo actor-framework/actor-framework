@@ -77,9 +77,9 @@ struct default_actor_traits<T, true> {
 
   /// Denotes whether `T` is an incomplete actor type that misses one or more
   /// markers.
-  static constexpr bool is_incomplete
-    = (!is_dynamically_typed && !is_statically_typed)
-      || (!is_blocking && !is_non_blocking);
+  static constexpr bool is_incomplete = (!is_dynamically_typed
+                                         && !is_statically_typed)
+                                        || (!is_blocking && !is_non_blocking);
 
   static_assert(!is_dynamically_typed || !is_statically_typed,
                 "an actor cannot be both statically and dynamically typed");

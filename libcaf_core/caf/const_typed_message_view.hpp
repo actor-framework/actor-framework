@@ -28,8 +28,8 @@ public:
 
   const_typed_message_view(const const_typed_message_view&) noexcept = default;
 
-  const_typed_message_view&
-  operator=(const const_typed_message_view&) noexcept = default;
+  const_typed_message_view& operator=(const const_typed_message_view&) noexcept
+    = default;
 
   const detail::message_data* operator->() const noexcept {
     return ptr_;

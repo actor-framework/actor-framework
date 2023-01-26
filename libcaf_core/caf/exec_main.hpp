@@ -59,18 +59,16 @@ int exec_main(F fun, int argc, char** argv) {
   using trait = typename detail::get_callable_trait<F>::type;
   using arg_types = typename trait::arg_types;
   static_assert(detail::tl_size<arg_types>::value == 1
-                || detail::tl_size<arg_types>::value == 2,
+                  || detail::tl_size<arg_types>::value == 2,
                 "main function must have one or two arguments");
-  static_assert(std::is_same<
-                  typename detail::tl_head<arg_types>::type,
-                  actor_system&
-                >::value,
+  static_assert(std::is_same<typename detail::tl_head<arg_types>::type,
+                             actor_system&>::value,
                 "main function must take actor_system& as first parameter");
   using arg2 = typename detail::tl_at<arg_types, 1>::type;
   using decayed_arg2 = typename std::decay<arg2>::type;
   static_assert(std::is_same<arg2, unit_t>::value
-                || (std::is_base_of<actor_system_config, decayed_arg2>::value
-                    && std::is_same<arg2, const decayed_arg2&>::value),
+                  || (std::is_base_of<actor_system_config, decayed_arg2>::value
+                      && std::is_same<arg2, const decayed_arg2&>::value),
                 "second parameter of main function must take a subtype of "
                 "actor_system_config as const reference");
   using helper = exec_main_helper<typename trait::arg_types>;

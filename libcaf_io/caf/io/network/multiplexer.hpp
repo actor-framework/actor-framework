@@ -47,9 +47,9 @@ public:
   /// Tries to create an unbound TCP doorman bound to `port`, optionally
   /// accepting only connections from IP address `in`.
   /// @warning Do not call from outside the multiplexer's event loop.
-  virtual expected<doorman_ptr>
-  new_tcp_doorman(uint16_t port, const char* in = nullptr,
-                  bool reuse_addr = false)
+  virtual expected<doorman_ptr> new_tcp_doorman(uint16_t port,
+                                                const char* in = nullptr,
+                                                bool reuse_addr = false)
     = 0;
 
   /// Creates a new `datagram_servant` from a native socket handle.

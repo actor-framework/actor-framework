@@ -6,9 +6,9 @@
 
 #include <type_traits>
 
-#include "caf/fwd.hpp"
 #include "caf/abstract_actor.hpp"
 #include "caf/actor_control_block.hpp"
+#include "caf/fwd.hpp"
 
 namespace caf {
 
@@ -40,7 +40,7 @@ namespace {
 
 constexpr int raw_ptr_cast = 0; // either To or From is a raw pointer
 constexpr int weak_ptr_downgrade_cast = 12; // To is weak, From is strong
-constexpr int weak_ptr_upgrade_cast = 3; // To is strong, From is weak
+constexpr int weak_ptr_upgrade_cast = 3;    // To is strong, From is weak
 constexpr int neutral_cast = 6; // To and From are both weak or both strong
 
 template <class T>
@@ -146,9 +146,7 @@ public:
 template <class T, class U>
 T actor_cast(U&& what) {
   using from_type =
-    typename std::remove_const<
-      typename std::remove_reference<U>::type
-    >::type;
+    typename std::remove_const<typename std::remove_reference<U>::type>::type;
   // query traits for T
   constexpr bool to_raw = std::is_pointer<T>::value;
   constexpr bool to_weak = is_weak_ptr<T>::value;
@@ -164,4 +162,3 @@ T actor_cast(U&& what) {
 }
 
 } // namespace caf
-

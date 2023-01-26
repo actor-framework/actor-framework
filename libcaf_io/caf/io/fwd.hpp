@@ -20,7 +20,8 @@ namespace caf {
 
 // -- templates from the parent namespace necessary for defining aliases -------
 
-template <class> class intrusive_ptr;
+template <class>
+class intrusive_ptr;
 
 namespace io {
 

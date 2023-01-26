@@ -21,12 +21,12 @@ sequencer::sequencer(strong_actor_ptr f, strong_actor_ptr g,
   // composed actor has dependency on constituent actors by default;
   // if either constituent actor is already dead upon establishing
   // the dependency, the actor is spawned dead
-  auto monitor1
-    = default_attachable::make_monitor(actor_cast<actor_addr>(f_), address());
+  auto monitor1 = default_attachable::make_monitor(actor_cast<actor_addr>(f_),
+                                                   address());
   f_->get()->attach(std::move(monitor1));
   if (g_ != f_) {
-    auto monitor2
-      = default_attachable::make_monitor(actor_cast<actor_addr>(g_), address());
+    auto monitor2 = default_attachable::make_monitor(actor_cast<actor_addr>(g_),
+                                                     address());
     g_->get()->attach(std::move(monitor2));
   }
 }

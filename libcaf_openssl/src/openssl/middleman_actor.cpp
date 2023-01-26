@@ -77,8 +77,8 @@ struct ssl_policy {
     return session_->read_some(result, fd, buf, len);
   }
 
-  rw_state
-  write_some(size_t& result, native_socket fd, const void* buf, size_t len) {
+  rw_state write_some(size_t& result, native_socket fd, const void* buf,
+                      size_t len) {
     CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(len));
     return session_->write_some(result, fd, buf, len);
   }
@@ -238,8 +238,8 @@ public:
   }
 
 protected:
-  expected<io::scribe_ptr>
-  connect(const std::string& host, uint16_t port) override {
+  expected<io::scribe_ptr> connect(const std::string& host,
+                                   uint16_t port) override {
     CAF_LOG_TRACE(CAF_ARG(host) << CAF_ARG(port));
     auto fd = io::network::new_tcp_connection(host, port);
     if (!fd)
@@ -255,8 +255,8 @@ protected:
     return make_counted<scribe_impl>(mpx(), *fd, std::move(sssn));
   }
 
-  expected<io::doorman_ptr>
-  open(uint16_t port, const char* addr, bool reuse) override {
+  expected<io::doorman_ptr> open(uint16_t port, const char* addr,
+                                 bool reuse) override {
     CAF_LOG_TRACE(CAF_ARG(port) << CAF_ARG(reuse));
     auto fd = io::network::new_tcp_acceptor_impl(port, addr, reuse);
     if (!fd)

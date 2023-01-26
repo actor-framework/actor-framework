@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <string>
 #include <cstdint>
+#include <string>
 
 #include "caf/detail/comparable.hpp"
 
@@ -79,4 +79,3 @@ protected:
 };
 
 } // namespace caf
-

@@ -17,7 +17,7 @@ struct extend_helper<D, B> {
 };
 
 template <class D, class B, template <class, class> class M,
-      template <class, class> class... Ms>
+          template <class, class> class... Ms>
 struct extend_helper<D, B, M, Ms...> : extend_helper<D, M<B, D>, Ms...> {
   // no content
 };
@@ -40,4 +40,3 @@ struct extend {
 };
 
 } // namespace caf
-

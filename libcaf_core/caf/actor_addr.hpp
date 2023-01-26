@@ -70,8 +70,8 @@ public:
 
   /// @cond PRIVATE
 
-  static intptr_t
-  compare(const actor_control_block* lhs, const actor_control_block* rhs);
+  static intptr_t compare(const actor_control_block* lhs,
+                          const actor_control_block* rhs);
 
   intptr_t compare(const actor_addr& other) const noexcept;
 

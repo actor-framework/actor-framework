@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "caf/scheduler/worker.hpp"
-#include "caf/scheduler/coordinator.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
-
+#include "caf/scheduler/coordinator.hpp"
+#include "caf/scheduler/worker.hpp"

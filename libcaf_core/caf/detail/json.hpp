@@ -90,11 +90,12 @@ public:
     // nop
   }
 
-  constexpr linked_list_iterator(
-    const linked_list_iterator&) noexcept = default;
+  constexpr linked_list_iterator(const linked_list_iterator&) noexcept
+    = default;
 
   constexpr linked_list_iterator&
-  operator=(const linked_list_iterator&) noexcept = default;
+  operator=(const linked_list_iterator&) noexcept
+    = default;
 
   constexpr node_pointer get() const noexcept {
     return ptr_;
