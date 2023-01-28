@@ -695,7 +695,8 @@ public:
   /// @param what The action to invoke after the delay.
   /// @returns A @ref disposable that allows the actor to cancel the action.
   template <class Rep, class Period, class F>
-  disposable run_delayed_weak(std::chrono::duration<Rep, Period> delay, F what) {
+  disposable
+  run_delayed_weak(std::chrono::duration<Rep, Period> delay, F what) {
     using std::chrono::duration_cast;
     return run_delayed_weak(duration_cast<timespan>(delay), make_action(what));
   }
