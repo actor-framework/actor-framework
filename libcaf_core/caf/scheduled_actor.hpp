@@ -647,8 +647,9 @@ public:
     return run_scheduled(time_point_cast<duration_t>(when), make_action(what));
   }
 
-  /// Runs `what` asynchronously at some point after `when`, iff this actor is
-  /// alive.
+  /// Runs `what` asynchronously at some point after `when` if the actor still
+  /// exists. The callback is going to hold a weak reference to the actor, i.e.,
+  /// does not prevent the actor to become unreachable.
   /// @param when The local time until the actor waits before invoking the
   ///             action. Due to scheduling delays, there will always be some
   ///             additional wait time. Passing the current time or a past time
@@ -685,7 +686,9 @@ public:
     return run_delayed(duration_cast<timespan>(delay), make_action(what));
   }
 
-  /// Runs `what` asynchronously after the `delay`, iff this actor is alive.
+  /// Runs `what` asynchronously after the `delay` if the actor still exists.
+  /// The callback is going to hold a weak reference to the actor, i.e., does
+  /// not prevent the actor to become unreachable.
   /// @param delay Minimum amount of time that actor waits before invoking the
   ///              action. Due to scheduling delays, there will always be some
   ///              additional wait time.
