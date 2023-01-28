@@ -12,14 +12,29 @@ usage() {
   exit 1
 }
 
+isRelative() {
+  case $1 in
+    /*) echo "no" ;;
+    *) echo "yes" ;;
+  esac
+}
+
+makeAbsolute() {
+  if [ `isRelative $1` = "yes" ]; then
+    echo "$WorkingDir/$1"
+  else
+    echo "$1"
+  fi
+}
+
 set -e
 
 if [ $# = 4 ]; then
   if [ "$1" = 'build' ] && [ -f "$2" ] && [ -d "$3" ]; then
     Mode='build'
-    InitFile="$2"
-    SourceDir="$3"
-    BuildDir="$4"
+    InitFile=`makeAbsolute $2`
+    SourceDir=`makeAbsolute $3`
+    BuildDir=`makeAbsolute $4`
     mkdir -p "$BuildDir"
   else
     usage
@@ -27,7 +42,7 @@ if [ $# = 4 ]; then
 elif [ $# = 2 ]; then
   if [ "$1" = 'test' ] && [ -d "$2" ]; then
     Mode='test'
-    BuildDir="$2"
+    BuildDir=`makeAbsolute $2`
   elif [ "$1" = 'assert' ]; then
     Mode='assert'
     What="$2"

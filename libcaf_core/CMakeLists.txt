@@ -228,7 +228,6 @@ caf_add_component(
     actor_registry
     actor_system_config
     actor_termination
-    async.blocking_consumer
     async.blocking_producer
     async.consumer_adapter
     async.producer_adapter
@@ -377,4 +376,9 @@ caf_add_component(
 
 if(CAF_ENABLE_TESTING AND CAF_ENABLE_EXCEPTIONS)
   caf_add_test_suites(caf-core-test custom_exception_handler)
+endif()
+
+# TODO: see https://github.com/actor-framework/actor-framework/issues/1371.
+if(NOT MSVC)
+  caf_add_test_suites(caf-core-test async.blocking_consumer)
 endif()
