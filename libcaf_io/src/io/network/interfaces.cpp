@@ -267,7 +267,7 @@ bool interfaces::get_endpoint(const std::string& host, uint16_t port,
   addrinfo hint;
   // max port is 2^16 which needs 5 characters plus null terminator
   char port_hint[6];
-  snprintf(port_hint, sizeof port_hint, "%hu", port);
+  snprintf(port_hint, sizeof(port_hint), "%hu", port);
   memset(&hint, 0, sizeof(hint));
   hint.ai_socktype = SOCK_DGRAM;
   if (preferred)
