@@ -1,0 +1,49 @@
+# On community clusters, we can use up to 8 CPUs and up to 24 GB of memory.
+# However, using less usually means we get workers more quickly.
+resources_template: &RESOURCES_TEMPLATE
+  cpu: 4
+  memory: 16GB
+
+debug_build_template: &DEBUG_BUILD_TEMPLATE
+  build_script: .ci/run.sh build .ci/debug-flags.cmake . build
+  test_script: .ci/run.sh test build
+
+# CentOS 7 EOL: June 2024
+centos7_task:
+  container:
+    dockerfile: .ci/centos-7/Dockerfile
+    << : *RESOURCES_TEMPLATE
+  << : *DEBUG_BUILD_TEMPLATE
+
+# Debian 11 EOL: June 2026
+debian11_task:
+  container:
+    dockerfile: .ci/debian-11/Dockerfile
+    << : *RESOURCES_TEMPLATE
+  << : *DEBUG_BUILD_TEMPLATE
+
+
+# Ubuntu 20.04 EOL: April 2025
+ubuntu20_task:
+  container:
+    dockerfile: .ci/ubuntu-20.04/Dockerfile
+    << : *RESOURCES_TEMPLATE
+  << : *DEBUG_BUILD_TEMPLATE
+
+# FreeBSD 12.4 EOL: December 2023
+freebsd12_task:
+  freebsd_instance:
+    image_family: freebsd-12-4
+    << : *RESOURCES_TEMPLATE
+  prepare_script: .ci/freebsd-12/prepare.sh
+  << : *DEBUG_BUILD_TEMPLATE
+
+# Windows Server 2019 EOL: January 2024
+windows_task:
+  timeout_in: 120m
+  windows_container:
+    dockerfile: .ci/windows/Dockerfile
+    os_version: 2019
+    << : *RESOURCES_TEMPLATE
+  build_script: .ci/windows/build.cmd
+  test_script: .ci/windows/test.cmd
