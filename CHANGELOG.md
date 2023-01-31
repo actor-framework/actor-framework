@@ -19,6 +19,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   on the buffer that could cause indefinite hanging of an application.
 - Fused stages now properly forward errors during the initial subscription to
   their observer.
+- The `fan_out_request` request now properly deals with actor handles that
+  respond with `void` (#1369).
 
 ## [0.19.0-rc.1] - 2022-10-31
 
