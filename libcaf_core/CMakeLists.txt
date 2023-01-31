@@ -343,6 +343,8 @@ caf_add_component(
     response_handle
     response_promise
     result
+    run_delayed
+    run_scheduled
     save_inspector
     scheduled_actor
     serial_reply

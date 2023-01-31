@@ -885,11 +885,28 @@ disposable scheduled_actor::run_scheduled(actor_clock::time_point when,
   return clock().schedule(when, std::move(what), strong_actor_ptr{ctrl()});
 }
 
-disposable scheduled_actor::run_delayed(timespan delay, action what) {
+disposable scheduled_actor::run_scheduled_weak(timestamp when, action what) {
   CAF_ASSERT(what.ptr() != nullptr);
+  CAF_LOG_TRACE(CAF_ARG(when));
+  auto delay = when - make_timestamp();
+  return run_scheduled_weak(clock().now() + delay, std::move(what));
+}
+
+disposable scheduled_actor::run_scheduled_weak(actor_clock::time_point when,
+                                               action what) {
+  CAF_ASSERT(what.ptr() != nullptr);
+  CAF_LOG_TRACE(CAF_ARG(when));
+  return clock().schedule(when, std::move(what), weak_actor_ptr{ctrl()});
+}
+
+disposable scheduled_actor::run_delayed(timespan delay, action what) {
   CAF_LOG_TRACE(CAF_ARG(delay));
-  return clock().schedule(clock().now() + delay, std::move(what),
-                          strong_actor_ptr{ctrl()});
+  return run_scheduled(clock().now() + delay, std::move(what));
+}
+
+disposable scheduled_actor::run_delayed_weak(timespan delay, action what) {
+  CAF_LOG_TRACE(CAF_ARG(delay));
+  return run_scheduled_weak(clock().now() + delay, std::move(what));
 }
 
 // -- caf::flow bindings -------------------------------------------------------

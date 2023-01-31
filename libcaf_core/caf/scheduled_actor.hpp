@@ -647,6 +647,33 @@ public:
     return run_scheduled(time_point_cast<duration_t>(when), make_action(what));
   }
 
+  /// Runs `what` asynchronously at some point after `when` if the actor still
+  /// exists. The callback is going to hold a weak reference to the actor, i.e.,
+  /// does not prevent the actor to become unreachable.
+  /// @param when The local time until the actor waits before invoking the
+  ///             action. Due to scheduling delays, there will always be some
+  ///             additional wait time. Passing the current time or a past time
+  ///             immediately schedules the action for execution.
+  /// @param what The action to invoke after waiting on the timeout.
+  /// @returns A @ref disposable that allows the actor to cancel the action.
+  template <class Duration, class F>
+  disposable run_scheduled_weak(
+    std::chrono::time_point<std::chrono::system_clock, Duration> when, F what) {
+    using std::chrono::time_point_cast;
+    return run_scheduled_weak(time_point_cast<timespan>(when),
+                              make_action(what));
+  }
+
+  /// @copydoc run_scheduled_weak
+  template <class Duration, class F>
+  disposable run_scheduled_weak(
+    std::chrono::time_point<actor_clock::clock_type, Duration> when, F what) {
+    using std::chrono::time_point_cast;
+    using duration_t = actor_clock::duration_type;
+    return run_scheduled_weak(time_point_cast<duration_t>(when),
+                              make_action(what));
+  }
+
   /// Runs `what` asynchronously after the `delay`.
   /// @param delay Minimum amount of time that actor waits before invoking the
   ///              action. Due to scheduling delays, there will always be some
@@ -657,6 +684,21 @@ public:
   disposable run_delayed(std::chrono::duration<Rep, Period> delay, F what) {
     using std::chrono::duration_cast;
     return run_delayed(duration_cast<timespan>(delay), make_action(what));
+  }
+
+  /// Runs `what` asynchronously after the `delay` if the actor still exists.
+  /// The callback is going to hold a weak reference to the actor, i.e., does
+  /// not prevent the actor to become unreachable.
+  /// @param delay Minimum amount of time that actor waits before invoking the
+  ///              action. Due to scheduling delays, there will always be some
+  ///              additional wait time.
+  /// @param what The action to invoke after the delay.
+  /// @returns A @ref disposable that allows the actor to cancel the action.
+  template <class Rep, class Period, class F>
+  disposable
+  run_delayed_weak(std::chrono::duration<Rep, Period> delay, F what) {
+    using std::chrono::duration_cast;
+    return run_delayed_weak(duration_cast<timespan>(delay), make_action(what));
   }
 
   // -- properties -------------------------------------------------------------
@@ -744,7 +786,10 @@ private:
 
   disposable run_scheduled(timestamp when, action what);
   disposable run_scheduled(actor_clock::time_point when, action what);
+  disposable run_scheduled_weak(timestamp when, action what);
+  disposable run_scheduled_weak(actor_clock::time_point when, action what);
   disposable run_delayed(timespan delay, action what);
+  disposable run_delayed_weak(timespan delay, action what);
 
   // -- caf::flow bindings -----------------------------------------------------
 
