@@ -110,6 +110,7 @@ set_build_flag() {
     actor-profiler)          FlagName='CAF_ENABLE_ACTOR_PROFILER' ;;
     examples)                FlagName='CAF_ENABLE_EXAMPLES' ;;
     io-module)               FlagName='CAF_ENABLE_IO_MODULE' ;;
+    net-module)              FlagName='CAF_ENABLE_NET_MODULE' ;;
     openssl-module)          FlagName='CAF_ENABLE_OPENSSL_MODULE' ;;
     testing)                 FlagName='CAF_ENABLE_TESTING' ;;
     tools)                   FlagName='CAF_ENABLE_TOOLS' ;;
