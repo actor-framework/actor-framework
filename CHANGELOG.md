@@ -11,6 +11,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   with JSON inputs directly. Actors can also pass around JSON values safely.
 - Futures can now convert to observable values for making it easier to process
   asynchronous results with data flows.
+- Add new `*_weak` variants of `scheduled_actor::run_{delayed, scheduled}`.
+  These functions add no reference count to their actor, allowing it to become
+  unreachable if other actors no longer reference it.
 
 ### Fixed
 
