@@ -69,6 +69,24 @@ public:
     // nop
   }
 
+  // -- properties -------------------------------------------------------------
+
+  bool running() const noexcept {
+    return state_ == state::running;
+  }
+
+  const error& err() const noexcept {
+    return err_;
+  }
+
+  size_t pending() const noexcept {
+    return buf_.size();
+  }
+
+  bool can_emit() const noexcept {
+    return buf_.size() == max_buf_size_ || has_shut_down(state_);
+  }
+
   // -- callbacks for the parent -----------------------------------------------
 
   void init(observable<input_type> vals, observable<select_token_type> ctrl) {
@@ -76,21 +94,22 @@ public:
     using ctrl_fwd_t = forwarder<select_token_type, buffer_sub, buffer_emit_t>;
     vals.subscribe(
       make_counted<val_fwd_t>(this, buffer_input_t{})->as_observer());
-    ctrl.subscribe(
-      make_counted<ctrl_fwd_t>(this, buffer_emit_t{})->as_observer());
+    // Note: the previous subscribe might call on_error, in which case we don't
+    // need to try to subscribe to the control observable.
+    if (running())
+      ctrl.subscribe(
+        make_counted<ctrl_fwd_t>(this, buffer_emit_t{})->as_observer());
   }
 
   // -- callbacks for the forwarders -------------------------------------------
 
   void fwd_on_subscribe(buffer_input_t, subscription sub) {
-    if (state_ != state::idle || value_sub_ || !out_) {
+    if (!running() || value_sub_ || !out_) {
       sub.dispose();
       return;
     }
     value_sub_ = std::move(sub);
     value_sub_.request(max_buf_size_);
-    if (control_sub_)
-      state_ = state::running;
   }
 
   void fwd_on_complete(buffer_input_t) {
@@ -105,27 +124,20 @@ public:
   }
 
   void fwd_on_next(buffer_input_t, const input_type& item) {
-    switch (state_) {
-      case state::idle:
-      case state::running:
-        buf_.push_back(item);
-        if (buf_.size() == max_buf_size_)
-          do_emit();
-        break;
-      default:
-        break;
+    if (running()) {
+      buf_.push_back(item);
+      if (buf_.size() == max_buf_size_)
+        do_emit();
     }
   }
 
   void fwd_on_subscribe(buffer_emit_t, subscription sub) {
-    if (state_ != state::idle || control_sub_ || !out_) {
+    if (!running() || control_sub_ || !out_) {
       sub.dispose();
       return;
     }
     control_sub_ = std::move(sub);
     control_sub_.request(1);
-    if (value_sub_)
-      state_ = state::running;
   }
 
   void fwd_on_complete(buffer_emit_t) {
@@ -177,15 +189,10 @@ public:
   }
 
 private:
-  bool can_emit() const noexcept {
-    return buf_.size() == max_buf_size_ || has_shut_down(state_);
-  }
-
   void shutdown() {
     value_sub_.dispose();
     control_sub_.dispose();
     switch (state_) {
-      case state::idle:
       case state::running:
         if (!buf_.empty()) {
           if (demand_ == 0) {
@@ -211,33 +218,27 @@ private:
   void on_request() {
     if (demand_ == 0 || !can_emit())
       return;
-    switch (state_) {
-      case state::idle:
-      case state::running:
-        CAF_ASSERT(buf_.size() == max_buf_size_);
-        do_emit();
-        break;
-      case state::completed:
-      case state::aborted:
-        if (!buf_.empty())
-          do_emit();
-        if (err_)
-          out_.on_error(err_);
-        else
-          out_.on_complete();
-        out_ = nullptr;
-        break;
-      default:
-        break;
+    if (running()) {
+      CAF_ASSERT(buf_.size() == max_buf_size_);
+      do_emit();
+      return;
     }
+    if (!buf_.empty())
+      do_emit();
+    if (err_)
+      out_.on_error(err_);
+    else
+      out_.on_complete();
+    out_ = nullptr;
   }
 
   void do_emit() {
-    CAF_ASSERT(demand_ > 0);
+    if (demand_ == 0)
+      return;
     Trait f;
     --demand_;
-    out_.on_next(f(buf_));
     auto buffered = buf_.size();
+    out_.on_next(f(buf_));
     buf_.clear();
     if (value_sub_ && buffered > 0)
       value_sub_.request(buffered);
@@ -277,12 +278,11 @@ private:
   size_t demand_ = 0;
 
   /// Our current state.
-  /// - idle: until we have received both subscriptions.
-  /// - running: emitting batches.
+  /// - running: alive and ready to emit batches.
   /// - completed: on_complete was called but some data is still buffered.
   /// - aborted: on_error was called but some data is still buffered.
   /// - disposed: inactive.
-  state state_ = state::idle;
+  state state_ = state::running;
 
   /// Caches the abort reason.
   error err_;
@@ -318,6 +318,12 @@ public:
   disposable subscribe(observer<output_type> out) override {
     auto ptr = make_counted<buffer_sub<Trait>>(super::ctx_, max_items_, out);
     ptr->init(in_, select_);
+    if (!ptr->running()) {
+      auto err = ptr->err().or_else(sec::runtime_error,
+                                    "failed to initialize buffer subscription");
+      out.on_error(err);
+      return {};
+    }
     out.on_subscribe(subscription{ptr});
     return ptr->as_disposable();
   }
