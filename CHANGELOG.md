@@ -53,15 +53,10 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   heap-use-after-free if the actor terminates before the action runs. The
   destructor of the promise now checks for this case.
 - Accessing URI fields now always returns the normalized string.
-- The JSON parser no longer chokes when encountering `null` as last value before
-  the closing parenthesis.
-- The JSON reader now automatically widens integers to doubles as necessary.
 - Module options (e.g. for the `middleman`) now show up in `--long-help` output.
 - Fix undefined behavior in the Qt group chat example (#1336).
 - The `..._instance` convenience functions on the registry metric now properly
   support `double` metrics and histograms.
-- Parsing deeply nested JSON inputs no longer produces a stack overflow.
-  Instead, the parser rejects any JSON with too many nesting levels.
 - The spinlock-based work-stealing implementation had severe performance issues
   on Windows in some cases. We have switched to a regular, mutex-based approach
   to avoid performance degradations. The new implementation also uses the
@@ -106,6 +101,18 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   greedy and did not play nicely with ADL when using `std::variant` in the same
   code base. Since fixing `caf::variant` does not seem to be worth the time
   investment, we remove this type without a deprecation cycle.
+
+## [0.18.7] - 2023-02-08
+
+### Fixed
+
+- The JSON parser no longer chokes when encountering `null` as last value before
+  the closing parenthesis.
+- The JSON reader now automatically widens integers to doubles as necessary.
+- Parsing deeply nested JSON inputs no longer produces a stack overflow.
+  Instead, the parser rejects any JSON with too many nesting levels.
+- The `fan_out_request` request now properly deals with actor handles that
+  respond with `void` (#1369). Note: back-ported fix from 0.19.
 
 ## [0.18.6] - 2022-03-24
 
@@ -890,6 +897,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 [Unreleased]: https://github.com/actor-framework/actor-framework/compare/0.19.0-rc.1...master
 [0.19.0-rc.1]: https://github.com/actor-framework/actor-framework/releases/0.19.0-rc.1
+[0.18.7]: https://github.com/actor-framework/actor-framework/releases/0.18.7
 [0.18.6]: https://github.com/actor-framework/actor-framework/releases/0.18.6
 [0.18.5]: https://github.com/actor-framework/actor-framework/releases/0.18.5
 [0.18.4]: https://github.com/actor-framework/actor-framework/releases/0.18.4
