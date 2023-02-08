@@ -101,14 +101,7 @@ public:
   void fwd_on_error(input_key key, const error& what) {
     if (key == active_key_ || key == factory_key_) {
       CAF_ASSERT(out_);
-      if (delay_error_) {
-        if (!err_)
-          err_ = what;
-        subscribe_next();
-      } else {
-        err_ = what;
-        fin();
-      }
+      fin(&what);
     }
   }
 
@@ -137,7 +130,6 @@ public:
     if (out_) {
       ctx_->delay_fn([strong_this = intrusive_ptr<concat_sub>{this}] {
         if (strong_this->out_) {
-          strong_this->err_.reset();
           strong_this->fin();
         }
       });
@@ -152,7 +144,7 @@ public:
   }
 
 private:
-  void fin() {
+  void fin(const error* err = nullptr) {
     CAF_ASSERT(out_);
     if (factory_sub_) {
       factory_sub_.dispose();
@@ -164,8 +156,8 @@ private:
     }
     factory_key_ = 0;
     active_key_ = 0;
-    if (err_)
-      out_.on_error(err_);
+    if (err)
+      out_.on_error(*err);
     else
       out_.on_complete();
     out_ = nullptr;
@@ -176,12 +168,6 @@ private:
 
   /// Stores a handle to the subscribed observer.
   observer<T> out_;
-
-  /// Configures whether we carry on after an error.
-  bool delay_error_ = false;
-
-  /// Caches an on_error reason if delay_error_ is true.
-  error err_;
 
   /// Stores our input sources. The first input is active (subscribed to) while
   /// the others are pending (not subscribed to).
@@ -245,13 +231,8 @@ private:
   template <class Input>
   void add(Input&& x) {
     using input_t = std::decay_t<Input>;
-    if constexpr (detail::is_iterable_v<input_t>) {
-      for (auto& in : x)
-        add(in);
-    } else {
-      static_assert(is_observable_v<input_t>);
-      inputs_.emplace_back(std::move(x).as_observable());
-    }
+    static_assert(is_observable_v<input_t>);
+    inputs_.emplace_back(std::move(x).as_observable());
   }
 
   std::vector<input_type> inputs_;
