@@ -3,7 +3,7 @@
 All notable changes to this project will be documented in this file. The format
 is based on [Keep a Changelog](https://keepachangelog.com).
 
-## [Unreleased]
+## [0.18.7] - 2023-02-08
 
 ### Fixed
 
@@ -15,7 +15,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The `fan_out_request` request now properly deals with actor handles that
   respond with `void` (#1369).
 
-## [0.18.6]
+## [0.18.6] - 2022-03-24
 
 ### Added
 
@@ -796,7 +796,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Setting the log level to `quiet` now properly suppresses any log output.
 - Configuring colored terminal output should now print colored output.
 
-[Unreleased]: https://github.com/actor-framework/actor-framework/compare/0.18.6...master
+[0.18.7]: https://github.com/actor-framework/actor-framework/releases/0.18.7
 [0.18.6]: https://github.com/actor-framework/actor-framework/releases/0.18.6
 [0.18.5]: https://github.com/actor-framework/actor-framework/releases/0.18.5
 [0.18.4]: https://github.com/actor-framework/actor-framework/releases/0.18.4
