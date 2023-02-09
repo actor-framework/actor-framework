@@ -107,55 +107,52 @@ public:
       for (auto& state : states_)
         state->abort(reason);
       states_.clear();
+      err_ = reason;
     }
   }
 
   size_t max_demand() const noexcept {
     if (states_.empty()) {
       return 0;
-    } else {
-      auto pred = [](const state_ptr_type& x, const state_ptr_type& y) {
-        return x->demand < y->demand;
-      };
-      auto& ptr = *std::max_element(states_.begin(), states_.end(), pred);
-      return ptr->demand;
     }
+    auto pred = [](const state_ptr_type& x, const state_ptr_type& y) {
+      return x->demand < y->demand;
+    };
+    auto& ptr = *std::max_element(states_.begin(), states_.end(), pred);
+    return ptr->demand;
   }
 
   size_t min_demand() const noexcept {
     if (states_.empty()) {
       return 0;
-    } else {
-      auto pred = [](const state_ptr_type& x, const state_ptr_type& y) {
-        return x->demand < y->demand;
-      };
-      auto& ptr = *std::min_element(states_.begin(), states_.end(), pred);
-      ptr->demand;
     }
+    auto pred = [](const state_ptr_type& x, const state_ptr_type& y) {
+      return x->demand < y->demand;
+    };
+    auto& ptr = *std::min_element(states_.begin(), states_.end(), pred);
+    return ptr->demand;
   }
 
   size_t max_buffered() const noexcept {
     if (states_.empty()) {
       return 0;
-    } else {
-      auto pred = [](const state_ptr_type& x, const state_ptr_type& y) {
-        return x->buf.size() < y->buf.size();
-      };
-      auto& ptr = *std::max_element(states_.begin(), states_.end(), pred);
-      return ptr->buf.size();
     }
+    auto pred = [](const state_ptr_type& x, const state_ptr_type& y) {
+      return x->buf.size() < y->buf.size();
+    };
+    auto& ptr = *std::max_element(states_.begin(), states_.end(), pred);
+    return ptr->buf.size();
   }
 
   size_t min_buffered() const noexcept {
     if (states_.empty()) {
       return 0;
-    } else {
-      auto pred = [](const state_ptr_type& x, const state_ptr_type& y) {
-        return x->buf.size() < y->buf.size();
-      };
-      auto& ptr = *std::min_element(states_.begin(), states_.end(), pred);
-      ptr->buf.size();
     }
+    auto pred = [](const state_ptr_type& x, const state_ptr_type& y) {
+      return x->buf.size() < y->buf.size();
+    };
+    auto& ptr = *std::min_element(states_.begin(), states_.end(), pred);
+    return ptr->buf.size();
   }
 
   /// Queries whether there is at least one observer subscribed to the operator.
