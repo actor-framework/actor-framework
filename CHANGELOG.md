@@ -24,6 +24,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   their observer.
 - The `fan_out_request` request now properly deals with actor handles that
   respond with `void` (#1369).
+- Fix subscription and event handling in flow buffer operator.
+- Fix undefined behavior in getter functions of the flow `mcast` operator.
 
 ## [0.19.0-rc.1] - 2022-10-31
 
