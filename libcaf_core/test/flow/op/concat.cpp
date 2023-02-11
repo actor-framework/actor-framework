@@ -192,7 +192,7 @@ SCENARIO("empty concat operators only call on_complete") {
   }
 }
 
-SCENARIO("the concat operator disposed unexpected subscriptions") {
+SCENARIO("the concat operator disposes unexpected subscriptions") {
   GIVEN("a concat operator with no inputs") {
     WHEN("subscribing to it") {
       THEN("the observer only receives an on_complete event") {
