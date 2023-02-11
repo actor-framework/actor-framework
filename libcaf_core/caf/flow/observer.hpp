@@ -14,7 +14,6 @@
 #include "caf/error.hpp"
 #include "caf/flow/coordinated.hpp"
 #include "caf/flow/coordinator.hpp"
-#include "caf/flow/observer_state.hpp"
 #include "caf/flow/subscription.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/logger.hpp"

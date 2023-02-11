@@ -20,6 +20,45 @@
 
 namespace caf::flow {
 
+/// Represents the current state of an @ref observer.
+enum class observer_state {
+  /// Indicates that no callbacks were called yet.
+  idle,
+  /// Indicates that on_subscribe was called.
+  subscribed,
+  /// Indicates that on_complete was called.
+  completed,
+  /// Indicates that on_error was called.
+  aborted
+};
+
+/// Returns whether `x` represents a final state, i.e., `completed`, `aborted`
+/// or `disposed`.
+constexpr bool is_final(observer_state x) noexcept {
+  return static_cast<int>(x) >= static_cast<int>(observer_state::completed);
+}
+
+/// Returns whether `x` represents an active state, i.e., `idle` or
+/// `subscribed`.
+constexpr bool is_active(observer_state x) noexcept {
+  return static_cast<int>(x) <= static_cast<int>(observer_state::subscribed);
+}
+
+/// @relates observer_state
+std::string to_string(observer_state);
+
+/// @relates observer_state
+bool from_string(std::string_view, observer_state&);
+
+/// @relates observer_state
+bool from_integer(std::underlying_type_t<observer_state>, observer_state&);
+
+/// @relates observer_state
+template <class Inspector>
+bool inspect(Inspector& f, observer_state& x) {
+  return default_enum_inspect(f, x);
+}
+
 /// Returns a trivial disposable that wraps an atomic flag.
 disposable make_trivial_disposable();
 
