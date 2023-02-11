@@ -9,7 +9,6 @@
 
 #include "core-test.hpp"
 
-#include "caf/flow/merge.hpp"
 #include "caf/flow/observable.hpp"
 #include "caf/flow/observable_builder.hpp"
 #include "caf/flow/scoped_coordinator.hpp"

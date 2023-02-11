@@ -4,7 +4,7 @@
 
 #define CAF_SUITE flow.concat
 
-#include "caf/flow/concat.hpp"
+#include "caf/flow/op/concat.hpp"
 
 #include "core-test.hpp"
 

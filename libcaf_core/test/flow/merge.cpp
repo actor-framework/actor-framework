@@ -4,13 +4,12 @@
 
 #define CAF_SUITE flow.merge
 
-#include "caf/flow/merge.hpp"
+#include "caf/flow/op/merge.hpp"
 
 #include "core-test.hpp"
 
 #include "caf/flow/item_publisher.hpp"
 #include "caf/flow/observable_builder.hpp"
-#include "caf/flow/op/merge.hpp"
 #include "caf/flow/scoped_coordinator.hpp"
 
 using namespace caf;

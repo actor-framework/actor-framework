@@ -10,7 +10,6 @@
 
 #include "caf/async/blocking_producer.hpp"
 #include "caf/flow/coordinator.hpp"
-#include "caf/flow/merge.hpp"
 #include "caf/flow/observable_builder.hpp"
 #include "caf/flow/observer.hpp"
 #include "caf/flow/scoped_coordinator.hpp"
