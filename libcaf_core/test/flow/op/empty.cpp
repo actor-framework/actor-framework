@@ -2,12 +2,13 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE flow.fail
+#define CAF_SUITE flow.op.empty
 
-#include "caf/flow/observable_builder.hpp"
+#include "caf/flow/op/empty.hpp"
 
 #include "core-test.hpp"
 
+#include "caf/flow/observable_builder.hpp"
 #include "caf/flow/scoped_coordinator.hpp"
 
 using namespace caf;
@@ -22,16 +23,17 @@ struct fixture : test_coordinator_fixture<> {
 
 BEGIN_FIXTURE_SCOPE(fixture)
 
-SCENARIO("the fail operator immediately calls on_error on any subscriber") {
-  GIVEN("a fail<int32> operator") {
+SCENARIO("an empty observable terminates normally") {
+  GIVEN("an empty<int32>") {
     WHEN("an observer subscribes") {
-      THEN("the observer receives on_error") {
-        auto uut = ctx->make_observable().fail<int32_t>(sec::runtime_error);
-        auto snk = flow::make_auto_observer<int32_t>();
-        uut.subscribe(snk->as_observer());
+      THEN("the observer receives on_complete") {
+        auto snk = flow::make_passive_observer<int32_t>();
+        ctx->make_observable().empty<int32_t>().subscribe(snk->as_observer());
         ctx->run();
-        CHECK(!snk->sub);
-        CHECK_EQ(snk->state, flow::observer_state::aborted);
+        CHECK(snk->subscribed());
+        snk->request(42);
+        ctx->run();
+        CHECK(snk->completed());
         CHECK(snk->buf.empty());
       }
     }

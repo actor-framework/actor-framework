@@ -2,7 +2,7 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE flow.merge
+#define CAF_SUITE flow.op.merge
 
 #include "caf/flow/op/merge.hpp"
 

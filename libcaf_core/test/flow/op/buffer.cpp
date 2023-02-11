@@ -2,14 +2,15 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE flow.buffer
+#define CAF_SUITE flow.op.buffer
 
-#include "caf/flow/observable.hpp"
+#include "caf/flow/op/buffer.hpp"
 
 #include "core-test.hpp"
 
 #include "caf/flow/coordinator.hpp"
 #include "caf/flow/item_publisher.hpp"
+#include "caf/flow/observable.hpp"
 #include "caf/flow/observable_builder.hpp"
 #include "caf/flow/observer.hpp"
 #include "caf/flow/scoped_coordinator.hpp"
