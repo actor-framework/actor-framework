@@ -16,7 +16,6 @@
 #include "caf/flow/coordinator.hpp"
 #include "caf/flow/fwd.hpp"
 #include "caf/flow/observable_decl.hpp"
-#include "caf/flow/observable_state.hpp"
 #include "caf/flow/observer.hpp"
 #include "caf/flow/op/base.hpp"
 #include "caf/flow/op/buffer.hpp"

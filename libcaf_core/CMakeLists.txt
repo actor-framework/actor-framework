@@ -56,7 +56,6 @@ caf_add_component(
     async.read_result
     async.write_result
     exit_reason
-    flow.observable_state
     flow.observer_state
     flow.op.state
     intrusive.inbox_result
