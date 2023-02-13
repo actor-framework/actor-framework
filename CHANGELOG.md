@@ -26,6 +26,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   respond with `void` (#1369).
 - Fix subscription and event handling in flow buffer operator.
 - Fix undefined behavior in getter functions of the flow `mcast` operator.
+- Add checks to avoid potential UB when using `prefix_and_tail` or other
+  operators that use the `ucast` operator internally.
 
 ## [0.19.0-rc.1] - 2022-10-31
 

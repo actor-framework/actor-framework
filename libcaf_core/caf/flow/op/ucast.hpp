@@ -123,6 +123,9 @@ public:
       auto got_some = demand > 0 && !buf.empty();
       for (bool run = got_some; run; run = demand > 0 && !buf.empty()) {
         out.on_next(buf.front());
+        // Note: on_next may call dispose().
+        if (disposed)
+          return;
         buf.pop_front();
         --demand;
       }
@@ -166,6 +169,8 @@ public:
   }
 
   void request(size_t n) override {
+    if (!state_)
+      return;
     state_->demand += n;
     if (state_->when_demand_changed)
       state_->when_demand_changed.run();

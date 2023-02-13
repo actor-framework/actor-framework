@@ -121,7 +121,7 @@ public:
   }
 
   void request(size_t demand) override {
-    // Only called by the out_, never by the sink_. The latter triggers
+    // Only called by out_, never by sink_ (triggers on_sink_demand_change()).
     prefix_demand_ += demand;
     if (sub_ && !requested_prefix_) {
       sub_.request(prefix_size_);
