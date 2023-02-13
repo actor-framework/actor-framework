@@ -34,8 +34,9 @@ SCENARIO("the never operator never invokes callbacks except when disposed") {
         ctx->run();
         CHECK(snk1->buf.empty());
         CHECK_EQ(snk1->state, flow::observer_state::subscribed);
-        sub1.dispose();
+        sub1.ptr()->dispose();
         ctx->run();
+        CHECK(sub1.ptr()->disposed());
         CHECK_EQ(snk1->state, flow::observer_state::completed);
         MESSAGE("dispose only affects the subscription, "
                 "the never operator remains unchanged");
