@@ -489,6 +489,8 @@ disposable observable<T>::subscribe(ignore_t) {
 template <class T>
 template <class OnNext>
 disposable observable<T>::for_each(OnNext on_next) {
+  static_assert(std::is_invocable_v<OnNext, const T&>,
+                "for_each: the on_next function must accept a 'const T&'");
   return subscribe(make_observer(std::move(on_next)));
 }
 
