@@ -207,6 +207,10 @@ public:
   bool disposed() const noexcept override;
 };
 
+inline auto make_passive_subscription() {
+  return make_counted<passive_subscription_impl>();
+}
+
 namespace op {
 
 /// An observable that does nothing when subscribed except returning a trivial
