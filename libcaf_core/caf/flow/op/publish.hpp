@@ -25,7 +25,9 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  publish(coordinator* ctx, src_ptr src) : super(ctx), source_(std::move(src)) {
+  publish(coordinator* ctx, src_ptr src,
+          size_t max_buf_size = defaults::flow::buffer_size)
+    : super(ctx), max_buf_size_(max_buf_size), source_(std::move(src)) {
     // nop
   }
 
@@ -74,7 +76,6 @@ public:
 
   void auto_disconnect(bool new_value) {
     auto_disconnect_ = new_value;
-    ;
   }
 
   bool connected() const noexcept {
@@ -133,7 +134,7 @@ private:
   }
 
   size_t in_flight_ = 0;
-  size_t max_buf_size_ = defaults::flow::buffer_size;
+  size_t max_buf_size_;
   subscription in_;
   src_ptr source_;
   bool connected_ = false;
