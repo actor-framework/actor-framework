@@ -296,6 +296,7 @@ caf_add_component(
     flow.op.merge
     flow.op.never
     flow.op.prefix_and_tail
+    flow.op.ucast
     flow.op.zip_with
     flow.publish
     flow.single

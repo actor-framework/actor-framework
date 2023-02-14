@@ -96,6 +96,10 @@ public:
   }
 
   void on_next(const T& item) override {
+    if (!subscribed()) {
+      auto what = "on_next called but observer is in state" + to_string(state);
+      throw std::logic_error(what);
+    }
     buf.emplace_back(item);
   }
 
@@ -154,6 +158,55 @@ public:
   std::vector<T> buf;
 };
 
+template <class T>
+class canceling_observer : public flow::observer_impl_base<T> {
+public:
+  explicit canceling_observer(bool accept_first) : accept_next(accept_first) {
+    // nop
+  }
+
+  void on_next(const T&) override {
+    ++on_next_calls;
+    if (sub) {
+      sub.dispose();
+      sub = nullptr;
+    }
+  }
+
+  void on_error(const error&) override {
+    ++on_error_calls;
+    if (sub)
+      sub = nullptr;
+  }
+
+  void on_complete() override {
+    ++on_complete_calls;
+    if (sub)
+      sub = nullptr;
+  }
+
+  void on_subscribe(flow::subscription sub) override {
+    if (accept_next) {
+      accept_next = false;
+      sub.request(128);
+      this->sub = std::move(sub);
+      return;
+    }
+    sub.dispose();
+  }
+
+  int on_next_calls = 0;
+  int on_error_calls = 0;
+  int on_complete_calls = 0;
+  bool accept_next = false;
+  flow::subscription sub;
+};
+
+template <class T>
+auto make_canceling_observer(bool accept_first = false) {
+  return make_counted<canceling_observer<T>>(accept_first);
+}
+
 /// @relates passive_observer
 template <class T>
 intrusive_ptr<passive_observer<T>> make_passive_observer() {
@@ -165,7 +218,7 @@ intrusive_ptr<passive_observer<T>> make_passive_observer() {
 template <class T>
 class auto_observer : public passive_observer<T> {
 public:
-  // -- implementation of observer_impl<T> -------------------------------------
+  using super = passive_observer<T>;
 
   void on_subscribe(subscription new_sub) override {
     if (this->state == observer_state::idle) {
@@ -179,7 +232,7 @@ public:
   }
 
   void on_next(const T& item) override {
-    this->buf.emplace_back(item);
+    super::on_next(item);
     if (this->sub)
       this->sub.request(1);
   }
