@@ -39,12 +39,14 @@ public:
   // -- implementation of subscription -----------------------------------------
 
   bool disposed() const noexcept override {
-    return !state_;
+    return !state_ || state_->disposed;
   }
 
   void dispose() override {
     if (state_) {
-      ctx_->delay_fn([state = std::move(state_)]() { state->do_dispose(); });
+      decltype(state_) state;
+      std::swap(state_, state);
+      state->dispose();
     }
   }
 

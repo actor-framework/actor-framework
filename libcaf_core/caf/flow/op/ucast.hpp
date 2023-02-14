@@ -99,7 +99,7 @@ public:
     }
   }
 
-  void do_dispose() {
+  void dispose() {
     if (out) {
       out.on_complete();
       out = nullptr;
@@ -135,7 +135,7 @@ public:
         else
           out.on_complete();
         out = nullptr;
-        do_dispose();
+        dispose();
       } else if (got_some && when_consumed_some) {
         ctx->delay(when_consumed_some);
       }
@@ -159,12 +159,14 @@ public:
   // -- implementation of subscription -----------------------------------------
 
   bool disposed() const noexcept override {
-    return !state_;
+    return !state_ || state_->disposed;
   }
 
   void dispose() override {
     if (state_) {
-      ctx_->delay_fn([state = std::move(state_)]() { state->do_dispose(); });
+      decltype(state_) state;
+      std::swap(state_, state);
+      state->dispose();
     }
   }
 
