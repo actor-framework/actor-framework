@@ -108,12 +108,6 @@ public:
     return pimpl_.compare(other.pimpl_);
   }
 
-  /// Returns an observer that ignores any of its inputs.
-  static observer ignore();
-
-  /// Returns an observer that disposes its subscription immediately.
-  static observer cancel();
-
 private:
   intrusive_ptr<impl> pimpl_;
 };
@@ -142,55 +136,6 @@ public:
 } // namespace caf::flow
 
 namespace caf::detail {
-
-template <class T>
-class ignoring_observer : public flow::observer_impl_base<T> {
-public:
-  void on_next(const T&) override {
-    if (sub_)
-      sub_.request(1);
-  }
-
-  void on_error(const error&) override {
-    sub_ = nullptr;
-  }
-
-  void on_complete() override {
-    sub_ = nullptr;
-  }
-
-  void on_subscribe(flow::subscription sub) override {
-    if (!sub_) {
-      sub_ = std::move(sub);
-      sub_.request(defaults::flow::buffer_size);
-    } else {
-      sub.dispose();
-    }
-  }
-
-private:
-  flow::subscription sub_;
-};
-
-template <class T>
-class canceling_observer : public flow::observer_impl_base<T> {
-public:
-  void on_next(const T&) override {
-    // nop
-  }
-
-  void on_error(const error&) override {
-    // nop
-  }
-
-  void on_complete() override {
-    // nop
-  }
-
-  void on_subscribe(flow::subscription sub) override {
-    sub.dispose();
-  }
-};
 
 template <class OnNextSignature>
 struct on_next_trait;
@@ -278,16 +223,6 @@ private:
 } // namespace caf::detail
 
 namespace caf::flow {
-
-template <class T>
-observer<T> observer<T>::ignore() {
-  return observer<T>{make_counted<detail::ignoring_observer<T>>()};
-}
-
-template <class T>
-observer<T> observer<T>::cancel() {
-  return observer<T>{make_counted<detail::canceling_observer<T>>()};
-}
 
 /// Creates an observer from given callbacks.
 /// @param on_next Callback for handling incoming elements.

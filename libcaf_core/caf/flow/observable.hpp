@@ -483,7 +483,7 @@ disposable observable<T>::subscribe(async::producer_resource<T> resource) {
 
 template <class T>
 disposable observable<T>::subscribe(ignore_t) {
-  return subscribe(observer<T>::ignore());
+  return for_each([](const T&) {});
 }
 
 template <class T>
