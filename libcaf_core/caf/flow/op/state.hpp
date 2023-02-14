@@ -35,7 +35,7 @@ CAF_CORE_EXPORT bool from_integer(std::underlying_type_t<state>, state&);
 
 /// @relates state
 template <class Inspector>
-bool insstatet(Inspector& f, state& x) {
+bool inspect(Inspector& f, state& x) {
   return default_enum_inspect(f, x);
 }
 
