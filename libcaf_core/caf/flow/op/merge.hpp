@@ -214,24 +214,15 @@ private:
         break;
       }
     }
-    if (out_ && inputs_.empty())
-      fin();
+    if (out_ && inputs_.empty()) {
+      if (!err_) {
+        out_.on_complete();
+      } else {
+        out_.on_error(err_);
+      }
+      out_ = nullptr;
+    }
     flags_.running = false;
-  }
-
-  void fin() {
-    if (!inputs_.empty()) {
-      for (auto& kvp : inputs_)
-        if (auto& sub = kvp.second->sub)
-          sub.dispose();
-      inputs_.clear();
-    }
-    if (!err_) {
-      out_.on_complete();
-    } else {
-      out_.on_error(err_);
-    }
-    out_ = nullptr;
   }
 
   /// Selects an input object by key or returns null.

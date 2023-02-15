@@ -172,6 +172,15 @@ public:
   template <class Out = output_type, class F>
   auto concat_map(F f);
 
+  /// Creates an @ref observable that combines the emitted from all passed
+  /// source observables by applying a function object.
+  /// @param fn The zip function. Takes one element from each input at a time
+  ///           and reduces them into a single result.
+  /// @param input0 The first additional input.
+  /// @param inputs Additional inputs, if any.
+  template <class F, class T0, class... Ts>
+  auto zip_with(F fn, T0 input0, Ts... inputs);
+
   // -- splitting --------------------------------------------------------------
 
   /// Takes @p prefix_size elements from this observable and emits it in a tuple

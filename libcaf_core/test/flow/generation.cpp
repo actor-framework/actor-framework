@@ -10,7 +10,6 @@
 
 #include "caf/async/blocking_producer.hpp"
 #include "caf/flow/coordinator.hpp"
-#include "caf/flow/merge.hpp"
 #include "caf/flow/observable_builder.hpp"
 #include "caf/flow/observer.hpp"
 #include "caf/flow/scoped_coordinator.hpp"
@@ -311,8 +310,8 @@ SCENARIO("asynchronous buffers can generate flow items") {
       THEN("the different pointer types manipulate the same ref count") {
         using buf_t = async::spsc_buffer<int>;
         using impl_t = flow::op::from_resource_sub<buf_t>;
-        auto ptr = make_counted<impl_t>(ctx.get(), nullptr,
-                                        flow::observer<int>::ignore());
+        auto obs = flow::make_auto_observer<int>();
+        auto ptr = make_counted<impl_t>(ctx.get(), nullptr, obs->as_observer());
         CHECK_EQ(ptr->get_reference_count(), 1u);
         {
           auto sub = flow::subscription{ptr.get()};

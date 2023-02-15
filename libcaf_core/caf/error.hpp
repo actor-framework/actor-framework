@@ -145,6 +145,18 @@ public:
 
   int compare(uint8_t code, type_id_t category) const noexcept;
 
+  /// Returns a copy of `this` if `!empty()` or else returns a new error from
+  /// given arguments.
+  template <class Enum, class... Ts>
+  error or_else(Enum code, Ts&&... args) const {
+    if (!empty())
+      return *this;
+    if constexpr (sizeof...(Ts) > 0)
+      return error{code, make_message(std::forward<Ts>(args)...)};
+    else
+      return error{code};
+  }
+
   // -- modifiers --------------------------------------------------------------
 
   /// Reverts this error to "not an error" as if calling `*this = error{}`.

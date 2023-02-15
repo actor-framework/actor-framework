@@ -16,7 +16,6 @@
 #include "caf/flow/coordinator.hpp"
 #include "caf/flow/fwd.hpp"
 #include "caf/flow/observable_decl.hpp"
-#include "caf/flow/observable_state.hpp"
 #include "caf/flow/observer.hpp"
 #include "caf/flow/op/base.hpp"
 #include "caf/flow/op/buffer.hpp"
@@ -28,6 +27,7 @@
 #include "caf/flow/op/never.hpp"
 #include "caf/flow/op/prefix_and_tail.hpp"
 #include "caf/flow/op/publish.hpp"
+#include "caf/flow/op/zip_with.hpp"
 #include "caf/flow/step/all.hpp"
 #include "caf/flow/subscription.hpp"
 #include "caf/intrusive_ptr.hpp"
@@ -331,6 +331,13 @@ public:
     return materialize().concat_map(std::move(f));
   }
 
+  /// @copydoc observable::zip_with
+  template <class F, class T0, class... Ts>
+  auto zip_with(F fn, T0 input0, Ts... inputs) {
+    return materialize().zip_with(std::move(fn), std::move(input0),
+                                  std::move(inputs)...);
+  }
+
   /// @copydoc observable::publish
   auto publish() && {
     return materialize().publish();
@@ -484,12 +491,14 @@ disposable observable<T>::subscribe(async::producer_resource<T> resource) {
 
 template <class T>
 disposable observable<T>::subscribe(ignore_t) {
-  return subscribe(observer<T>::ignore());
+  return for_each([](const T&) {});
 }
 
 template <class T>
 template <class OnNext>
 disposable observable<T>::for_each(OnNext on_next) {
+  static_assert(std::is_invocable_v<OnNext, const T&>,
+                "for_each: the on_next function must accept a 'const T&'");
   return subscribe(make_observer(std::move(on_next)));
 }
 
@@ -680,6 +689,18 @@ auto observable<T>::concat_map(F f) {
            })
       .concat();
   }
+}
+
+template <class T>
+template <class F, class T0, class... Ts>
+auto observable<T>::zip_with(F fn, T0 input0, Ts... inputs) {
+  using output_type = op::zip_with_output_t<F, T,                     //
+                                            typename T0::output_type, //
+                                            typename Ts::output_type...>;
+  if (pimpl_)
+    return op::make_zip_with(pimpl_->ctx(), std::move(fn), *this,
+                             std::move(input0), std::move(inputs)...);
+  return observable<output_type>{};
 }
 
 // -- observable: splitting ----------------------------------------------------

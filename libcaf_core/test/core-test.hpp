@@ -16,6 +16,323 @@
 #include <string>
 #include <utility>
 
+// -- utility for testing flows ------------------------------------------------
+
+namespace caf::flow {
+
+/// Represents the current state of an @ref observer.
+enum class observer_state {
+  /// Indicates that no callbacks were called yet.
+  idle,
+  /// Indicates that on_subscribe was called.
+  subscribed,
+  /// Indicates that on_complete was called.
+  completed,
+  /// Indicates that on_error was called.
+  aborted
+};
+
+/// Returns whether `x` represents a final state, i.e., `completed`, `aborted`
+/// or `disposed`.
+constexpr bool is_final(observer_state x) noexcept {
+  return static_cast<int>(x) >= static_cast<int>(observer_state::completed);
+}
+
+/// Returns whether `x` represents an active state, i.e., `idle` or
+/// `subscribed`.
+constexpr bool is_active(observer_state x) noexcept {
+  return static_cast<int>(x) <= static_cast<int>(observer_state::subscribed);
+}
+
+/// @relates observer_state
+std::string to_string(observer_state);
+
+/// @relates observer_state
+bool from_string(std::string_view, observer_state&);
+
+/// @relates observer_state
+bool from_integer(std::underlying_type_t<observer_state>, observer_state&);
+
+/// @relates observer_state
+template <class Inspector>
+bool inspect(Inspector& f, observer_state& x) {
+  return default_enum_inspect(f, x);
+}
+
+/// Returns a trivial disposable that wraps an atomic flag.
+disposable make_trivial_disposable();
+
+/// An observer with minimal internal logic. Useful for writing unit tests.
+template <class T>
+class passive_observer : public observer_impl_base<T> {
+public:
+  // -- implementation of observer_impl<T> -------------------------------------
+
+  void on_complete() override {
+    if (sub) {
+      sub.dispose();
+      sub = nullptr;
+    }
+    state = observer_state::completed;
+  }
+
+  void on_error(const error& what) override {
+    if (sub) {
+      sub.dispose();
+      sub = nullptr;
+    }
+    err = what;
+    state = observer_state::aborted;
+  }
+
+  void on_subscribe(subscription new_sub) override {
+    if (state == observer_state::idle) {
+      CAF_ASSERT(!sub);
+      sub = std::move(new_sub);
+      state = observer_state::subscribed;
+    } else {
+      new_sub.dispose();
+    }
+  }
+
+  void on_next(const T& item) override {
+    if (!subscribed()) {
+      auto what = "on_next called but observer is in state" + to_string(state);
+      throw std::logic_error(what);
+    }
+    buf.emplace_back(item);
+  }
+
+  // -- convenience functions --------------------------------------------------
+
+  bool request(size_t demand) {
+    if (sub) {
+      sub.request(demand);
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  void unsubscribe() {
+    if (sub) {
+      sub.dispose();
+      state = observer_state::idle;
+    }
+  }
+
+  bool idle() const noexcept {
+    return state == observer_state::idle;
+  }
+
+  bool subscribed() const noexcept {
+    return state == observer_state::subscribed;
+  }
+
+  bool completed() const noexcept {
+    return state == observer_state::completed;
+  }
+
+  bool aborted() const noexcept {
+    return state == observer_state::aborted;
+  }
+
+  std::vector<T> sorted_buf() const {
+    auto result = buf;
+    std::sort(result.begin(), result.end());
+    return result;
+  }
+
+  // -- member variables -------------------------------------------------------
+
+  /// The subscription for requesting additional items.
+  subscription sub;
+
+  /// Default-constructed unless on_error was called.
+  error err;
+
+  /// Represents the current state of this observer.
+  observer_state state = observer_state::idle;
+
+  /// Stores all items received via `on_next`.
+  std::vector<T> buf;
+};
+
+template <class T>
+class canceling_observer : public flow::observer_impl_base<T> {
+public:
+  explicit canceling_observer(bool accept_first) : accept_next(accept_first) {
+    // nop
+  }
+
+  void on_next(const T&) override {
+    ++on_next_calls;
+    if (sub) {
+      sub.dispose();
+      sub = nullptr;
+    }
+  }
+
+  void on_error(const error&) override {
+    ++on_error_calls;
+    if (sub)
+      sub = nullptr;
+  }
+
+  void on_complete() override {
+    ++on_complete_calls;
+    if (sub)
+      sub = nullptr;
+  }
+
+  void on_subscribe(flow::subscription sub) override {
+    if (accept_next) {
+      accept_next = false;
+      sub.request(128);
+      this->sub = std::move(sub);
+      return;
+    }
+    sub.dispose();
+  }
+
+  int on_next_calls = 0;
+  int on_error_calls = 0;
+  int on_complete_calls = 0;
+  bool accept_next = false;
+  flow::subscription sub;
+};
+
+template <class T>
+auto make_canceling_observer(bool accept_first = false) {
+  return make_counted<canceling_observer<T>>(accept_first);
+}
+
+/// @relates passive_observer
+template <class T>
+intrusive_ptr<passive_observer<T>> make_passive_observer() {
+  return make_counted<passive_observer<T>>();
+}
+
+/// Similar to @ref passive_observer but automatically requests items until
+/// completed. Useful for writing unit tests.
+template <class T>
+class auto_observer : public passive_observer<T> {
+public:
+  using super = passive_observer<T>;
+
+  void on_subscribe(subscription new_sub) override {
+    if (this->state == observer_state::idle) {
+      CAF_ASSERT(!this->sub);
+      this->sub = std::move(new_sub);
+      this->state = observer_state::subscribed;
+      this->sub.request(64);
+    } else {
+      new_sub.dispose();
+    }
+  }
+
+  void on_next(const T& item) override {
+    super::on_next(item);
+    if (this->sub)
+      this->sub.request(1);
+  }
+};
+
+/// @relates auto_observer
+template <class T>
+intrusive_ptr<auto_observer<T>> make_auto_observer() {
+  return make_counted<auto_observer<T>>();
+}
+
+/// A subscription implementation without internal logic.
+class passive_subscription_impl final : public subscription::impl_base {
+public:
+  /// Incremented by `request`.
+  size_t demand = 0;
+
+  /// Flipped by `dispose`.
+  bool disposed_flag = false;
+
+  void request(size_t n) override;
+
+  void dispose() override;
+
+  bool disposed() const noexcept override;
+};
+
+inline auto make_passive_subscription() {
+  return make_counted<passive_subscription_impl>();
+}
+
+namespace op {
+
+/// An observable that does nothing when subscribed except returning a trivial
+/// disposable. Allows tests to call on_subscribe some time later.
+template <class T>
+class nil_observable : public op::cold<T> {
+public:
+  using super = op::cold<T>;
+
+  using shared_count = std::shared_ptr<size_t>;
+
+  nil_observable(coordinator* ctx, shared_count subscribe_count)
+    : super(ctx), subscribe_count_(std::move(subscribe_count)) {
+    // nop
+  }
+
+  disposable subscribe(observer<T>) override {
+    if (subscribe_count_)
+      *subscribe_count_ += 1;
+    return make_trivial_disposable();
+  }
+
+  shared_count subscribe_count_;
+};
+
+/// An observable that passes a trivial disposable to any observer.
+template <class T>
+class trivial_observable : public op::cold<T> {
+public:
+  using super = op::cold<T>;
+
+  using shared_count = std::shared_ptr<size_t>;
+
+  trivial_observable(coordinator* ctx, shared_count subscribe_count)
+    : super(ctx), subscribe_count_(std::move(subscribe_count)) {
+    // nop
+  }
+
+  disposable subscribe(observer<T> out) override {
+    if (subscribe_count_)
+      *subscribe_count_ += 1;
+    auto ptr = make_counted<passive_subscription_impl>();
+    out.on_subscribe(subscription{ptr});
+    return make_trivial_disposable();
+  }
+
+  shared_count subscribe_count_;
+};
+
+} // namespace op
+
+template <class T>
+observable<T>
+make_nil_observable(coordinator* ctx,
+                    std::shared_ptr<size_t> subscribe_count = nullptr) {
+  auto ptr = make_counted<op::nil_observable<T>>(ctx, subscribe_count);
+  return observable<T>{std::move(ptr)};
+}
+
+template <class T>
+observable<T>
+make_trivial_observable(coordinator* ctx,
+                        std::shared_ptr<size_t> subscribe_count = nullptr) {
+  auto ptr = make_counted<op::trivial_observable<T>>(ctx, subscribe_count);
+  return observable<T>{std::move(ptr)};
+}
+
+} // namespace caf::flow
+
 // -- utility for testing serialization round-trips ----------------------------
 
 template <class T>

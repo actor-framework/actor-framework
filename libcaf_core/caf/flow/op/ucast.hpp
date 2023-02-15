@@ -89,8 +89,8 @@ public:
       if (!running && buf.empty()) {
         disposed = true;
         if (out) {
-          out.on_error(reason);
-          out = nullptr;
+          auto out_hdl = std::move(out);
+          out_hdl.on_error(reason);
         }
         when_disposed = nullptr;
         when_consumed_some = nullptr;
@@ -99,7 +99,7 @@ public:
     }
   }
 
-  void do_dispose() {
+  void dispose() {
     if (out) {
       out.on_complete();
       out = nullptr;
@@ -123,6 +123,9 @@ public:
       auto got_some = demand > 0 && !buf.empty();
       for (bool run = got_some; run; run = demand > 0 && !buf.empty()) {
         out.on_next(buf.front());
+        // Note: on_next may call dispose().
+        if (disposed)
+          return;
         buf.pop_front();
         --demand;
       }
@@ -132,7 +135,7 @@ public:
         else
           out.on_complete();
         out = nullptr;
-        do_dispose();
+        dispose();
       } else if (got_some && when_consumed_some) {
         ctx->delay(when_consumed_some);
       }
@@ -156,16 +159,19 @@ public:
   // -- implementation of subscription -----------------------------------------
 
   bool disposed() const noexcept override {
-    return !state_;
+    return !state_ || state_->disposed;
   }
 
   void dispose() override {
     if (state_) {
-      ctx_->delay_fn([state = std::move(state_)]() { state->do_dispose(); });
+      auto state = std::move(state_);
+      state->dispose();
     }
   }
 
   void request(size_t n) override {
+    if (!state_)
+      return;
     state_->demand += n;
     if (state_->when_demand_changed)
       state_->when_demand_changed.run();

@@ -14,7 +14,6 @@
 #include "caf/error.hpp"
 #include "caf/flow/coordinated.hpp"
 #include "caf/flow/coordinator.hpp"
-#include "caf/flow/observer_state.hpp"
 #include "caf/flow/subscription.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/logger.hpp"
@@ -109,12 +108,6 @@ public:
     return pimpl_.compare(other.pimpl_);
   }
 
-  /// Returns an observer that ignores any of its inputs.
-  static observer ignore();
-
-  /// Returns an observer that disposes its subscription immediately.
-  static observer cancel();
-
 private:
   intrusive_ptr<impl> pimpl_;
 };
@@ -143,55 +136,6 @@ public:
 } // namespace caf::flow
 
 namespace caf::detail {
-
-template <class T>
-class ignoring_observer : public flow::observer_impl_base<T> {
-public:
-  void on_next(const T&) override {
-    if (sub_)
-      sub_.request(1);
-  }
-
-  void on_error(const error&) override {
-    sub_ = nullptr;
-  }
-
-  void on_complete() override {
-    sub_ = nullptr;
-  }
-
-  void on_subscribe(flow::subscription sub) override {
-    if (!sub_) {
-      sub_ = std::move(sub);
-      sub_.request(defaults::flow::buffer_size);
-    } else {
-      sub.dispose();
-    }
-  }
-
-private:
-  flow::subscription sub_;
-};
-
-template <class T>
-class canceling_observer : public flow::observer_impl_base<T> {
-public:
-  void on_next(const T&) override {
-    // nop
-  }
-
-  void on_error(const error&) override {
-    // nop
-  }
-
-  void on_complete() override {
-    // nop
-  }
-
-  void on_subscribe(flow::subscription sub) override {
-    sub.dispose();
-  }
-};
 
 template <class OnNextSignature>
 struct on_next_trait;
@@ -279,16 +223,6 @@ private:
 } // namespace caf::detail
 
 namespace caf::flow {
-
-template <class T>
-observer<T> observer<T>::ignore() {
-  return observer<T>{make_counted<detail::ignoring_observer<T>>()};
-}
-
-template <class T>
-observer<T> observer<T>::cancel() {
-  return observer<T>{make_counted<detail::canceling_observer<T>>()};
-}
 
 /// Creates an observer from given callbacks.
 /// @param on_next Callback for handling incoming elements.
@@ -521,127 +455,5 @@ private:
   intrusive_ptr<Parent> parent_;
   Token token_;
 };
-
-/// An observer with minimal internal logic. Useful for writing unit tests.
-template <class T>
-class passive_observer : public observer_impl_base<T> {
-public:
-  // -- implementation of observer_impl<T> -------------------------------------
-
-  void on_complete() override {
-    if (sub) {
-      sub.dispose();
-      sub = nullptr;
-    }
-    state = observer_state::completed;
-  }
-
-  void on_error(const error& what) override {
-    if (sub) {
-      sub.dispose();
-      sub = nullptr;
-    }
-    err = what;
-    state = observer_state::aborted;
-  }
-
-  void on_subscribe(subscription new_sub) override {
-    if (state == observer_state::idle) {
-      CAF_ASSERT(!sub);
-      sub = std::move(new_sub);
-      state = observer_state::subscribed;
-    } else {
-      new_sub.dispose();
-    }
-  }
-
-  void on_next(const T& item) override {
-    buf.emplace_back(item);
-  }
-
-  // -- convenience functions --------------------------------------------------
-
-  bool request(size_t demand) {
-    if (sub) {
-      sub.request(demand);
-      return true;
-    } else {
-      return false;
-    }
-  }
-
-  bool idle() const noexcept {
-    return state == observer_state::idle;
-  }
-
-  bool subscribed() const noexcept {
-    return state == observer_state::subscribed;
-  }
-
-  bool completed() const noexcept {
-    return state == observer_state::completed;
-  }
-
-  bool aborted() const noexcept {
-    return state == observer_state::aborted;
-  }
-
-  std::vector<T> sorted_buf() const {
-    auto result = buf;
-    std::sort(result.begin(), result.end());
-    return result;
-  }
-
-  // -- member variables -------------------------------------------------------
-
-  /// The subscription for requesting additional items.
-  subscription sub;
-
-  /// Default-constructed unless on_error was called.
-  error err;
-
-  /// Represents the current state of this observer.
-  observer_state state = observer_state::idle;
-
-  /// Stores all items received via `on_next`.
-  std::vector<T> buf;
-};
-
-/// @relates passive_observer
-template <class T>
-intrusive_ptr<passive_observer<T>> make_passive_observer() {
-  return make_counted<passive_observer<T>>();
-}
-
-/// Similar to @ref passive_observer but automatically requests items until
-/// completed. Useful for writing unit tests.
-template <class T>
-class auto_observer : public passive_observer<T> {
-public:
-  // -- implementation of observer_impl<T> -------------------------------------
-
-  void on_subscribe(subscription new_sub) override {
-    if (this->state == observer_state::idle) {
-      CAF_ASSERT(!this->sub);
-      this->sub = std::move(new_sub);
-      this->state = observer_state::subscribed;
-      this->sub.request(64);
-    } else {
-      new_sub.dispose();
-    }
-  }
-
-  void on_next(const T& item) override {
-    this->buf.emplace_back(item);
-    if (this->sub)
-      this->sub.request(1);
-  }
-};
-
-/// @relates auto_observer
-template <class T>
-intrusive_ptr<auto_observer<T>> make_auto_observer() {
-  return make_counted<auto_observer<T>>();
-}
 
 } // namespace caf::flow

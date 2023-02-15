@@ -228,6 +228,9 @@ private:
         buf_.pop_front();
         --demand_;
         out_.on_next(item);
+        // Note: on_next() may call dispose() and set out_ to nullptr.
+        if (!out_)
+          return;
       }
       if (in_) {
         pull();

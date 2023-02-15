@@ -9,6 +9,7 @@
 #include "core-test.hpp"
 
 #include "caf/flow/observable_builder.hpp"
+#include "caf/flow/op/cell.hpp"
 #include "caf/flow/scoped_coordinator.hpp"
 
 using namespace caf;
@@ -112,6 +113,119 @@ SCENARIO("publish creates a connectable observable") {
         CHECK_EQ(snk1->buf, ls(1, 2, 3, 4, 5, 6, 7, 8, 9, 10));
         CHECK(snk2->completed());
         CHECK_EQ(snk2->buf, ls(1, 2, 3, 4, 5, 6, 7, 8, 9, 10));
+      }
+    }
+  }
+}
+
+SCENARIO("connectable observables forward errors") {
+  GIVEN("a connectable with a cell and two subscribers") {
+    WHEN("the cell fails") {
+      THEN("all subscribers receive the error") {
+        auto cell = make_counted<flow::op::cell<int>>(ctx.get());
+        auto snk1 = flow::make_auto_observer<int>();
+        auto snk2 = flow::make_auto_observer<int>();
+        flow::observable<int>{cell}.share(2).compose(subscribe_all(snk1, snk2));
+        ctx->run();
+        CHECK(snk1->subscribed());
+        CHECK(snk2->subscribed());
+        cell->set_error(sec::runtime_error);
+        ctx->run();
+        CHECK(snk1->aborted());
+        CHECK(snk2->aborted());
+      }
+    }
+  }
+  GIVEN("an already failed connectable") {
+    WHEN("subscribing to it") {
+      THEN("the subscribers receive the error immediately") {
+        auto cell = make_counted<flow::op::cell<int>>(ctx.get());
+        auto conn = flow::observable<int>{cell}.share();
+        cell->set_error(sec::runtime_error);
+        // First subscriber to trigger subscription to the cell.
+        conn.subscribe(flow::make_auto_observer<int>()->as_observer());
+        ctx->run();
+        // After this point, new subscribers should be aborted right away.
+        auto snk = flow::make_auto_observer<int>();
+        auto sub = conn.subscribe(snk->as_observer());
+        CHECK(sub.disposed());
+        CHECK(snk->aborted());
+        ctx->run();
+      }
+    }
+  }
+}
+
+SCENARIO("observers that dispose their subscription do not affect others") {
+  GIVEN("a connectable with two subscribers") {
+    WHEN("one of the subscribers disposes its subscription") {
+      THEN("the other subscriber still receives all data") {
+        using impl_t = flow::op::publish<int>;
+        auto snk1 = flow::make_passive_observer<int>();
+        auto snk2 = flow::make_passive_observer<int>();
+        auto iota = ctx->make_observable().iota(1).take(12).as_observable();
+        auto uut = make_counted<impl_t>(ctx.get(), iota.pimpl(), 5);
+        auto sub1 = uut->subscribe(snk1->as_observer());
+        auto sub2 = uut->subscribe(snk2->as_observer());
+        uut->connect();
+        ctx->run();
+        snk1->request(7);
+        snk2->request(3);
+        ctx->run();
+        CHECK_EQ(snk1->buf, ls(1, 2, 3, 4, 5, 6, 7));
+        CHECK_EQ(snk2->buf, ls(1, 2, 3));
+        snk2->sub.dispose();
+        ctx->run();
+        snk1->request(42);
+        ctx->run();
+        CHECK_EQ(snk1->buf, ls(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12));
+      }
+    }
+  }
+}
+
+SCENARIO("publishers with auto_disconnect auto-dispose their subscription") {
+  GIVEN("a connectable with two subscribers") {
+    WHEN("both subscribers drop out and auto_disconnect is enabled") {
+      THEN("the publisher becomes disconnected") {
+        using impl_t = flow::op::publish<int>;
+        auto snk1 = flow::make_passive_observer<int>();
+        auto snk2 = flow::make_passive_observer<int>();
+        auto iota = ctx->make_observable().iota(1).take(12).as_observable();
+        auto uut = make_counted<impl_t>(ctx.get(), iota.pimpl(), 5);
+        auto sub1 = uut->subscribe(snk1->as_observer());
+        auto sub2 = uut->subscribe(snk2->as_observer());
+        uut->auto_disconnect(true);
+        uut->connect();
+        CHECK(uut->connected());
+        ctx->run();
+        snk1->request(7);
+        snk2->request(3);
+        ctx->run();
+        CHECK_EQ(snk1->buf, ls(1, 2, 3, 4, 5, 6, 7));
+        CHECK_EQ(snk2->buf, ls(1, 2, 3));
+        snk1->sub.dispose();
+        snk2->sub.dispose();
+        ctx->run();
+        CHECK(!uut->connected());
+      }
+    }
+  }
+}
+
+SCENARIO("publishers dispose unexpected subscriptions") {
+  GIVEN("an initialized publish operator") {
+    WHEN("calling on_subscribe with unexpected subscriptions") {
+      THEN("the operator disposes them immediately") {
+        using impl_t = flow::op::publish<int>;
+        auto snk1 = flow::make_passive_observer<int>();
+        auto iota = ctx->make_observable().iota(1).take(12).as_observable();
+        auto uut = make_counted<impl_t>(ctx.get(), iota.pimpl());
+        uut->subscribe(snk1->as_observer());
+        uut->connect();
+        auto sub = flow::make_passive_subscription();
+        uut->on_subscribe(flow::subscription{sub});
+        CHECK(sub->disposed());
       }
     }
   }

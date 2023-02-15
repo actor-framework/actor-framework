@@ -2,15 +2,14 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE flow.merge
+#define CAF_SUITE flow.op.merge
 
-#include "caf/flow/merge.hpp"
+#include "caf/flow/op/merge.hpp"
 
 #include "core-test.hpp"
 
 #include "caf/flow/item_publisher.hpp"
 #include "caf/flow/observable_builder.hpp"
-#include "caf/flow/op/merge.hpp"
 #include "caf/flow/scoped_coordinator.hpp"
 
 using namespace caf;
@@ -31,11 +30,48 @@ struct fixture : test_coordinator_fixture<> {
       xs.push_back(y);
     return xs;
   }
+
+  // Creates a flow::op::merge<T>
+  template <class T, class... Inputs>
+  auto make_operator(Inputs&&... inputs) {
+    return make_counted<flow::op::merge<T>>(ctx.get(),
+                                            std::forward<Inputs>(inputs)...);
+  }
+
+  // Similar to merge::subscribe, but returns a merge_sub pointer instead of
+  // type-erasing it into a disposable.
+  template <class T, class... Ts>
+  auto raw_sub(flow::observer<T> out, Ts&&... xs) {
+    using flow::observable;
+    auto ptr = make_counted<flow::op::merge_sub<T>>(ctx.get(), out);
+    (ptr->subscribe_to(xs), ...);
+    out.on_subscribe(flow::subscription{ptr});
+    return ptr;
+  }
 };
 
 } // namespace
 
 BEGIN_FIXTURE_SCOPE(fixture)
+
+SCENARIO("the merge operator combine inputs") {
+  GIVEN("two observables") {
+    WHEN("merging them to a single observable") {
+      THEN("the observer receives the output of both sources") {
+        using ivec = std::vector<int>;
+        auto snk = flow::make_auto_observer<int>();
+        ctx->make_observable()
+          .repeat(11)
+          .take(113)
+          .merge(ctx->make_observable().repeat(22).take(223))
+          .subscribe(snk->as_observer());
+        ctx->run();
+        CHECK_EQ(snk->state, flow::observer_state::completed);
+        CHECK_EQ(snk->sorted_buf(), concat(ivec(113, 11), ivec(223, 22)));
+      }
+    }
+  }
+}
 
 SCENARIO("mergers round-robin over their inputs") {
   GIVEN("a merger with no inputs") {
@@ -50,7 +86,7 @@ SCENARIO("mergers round-robin over their inputs") {
       }
     }
   }
-  GIVEN("a round-robin merger with one input that completes") {
+  GIVEN("a merger with one input that completes") {
     WHEN("subscribing to the merger and requesting before the first push") {
       auto src = flow::item_publisher<int>{ctx.get()};
       auto uut = make_counted<flow::op::merge<int>>(ctx.get(),
@@ -84,7 +120,7 @@ SCENARIO("mergers round-robin over their inputs") {
         CHECK_EQ(snk->buf, ls(1, 2, 3, 4, 5));
       }
     }
-    AND_WHEN("subscribing to the merger pushing before the first request") {
+    WHEN("subscribing to the merger pushing before the first request") {
       auto src = flow::item_publisher<int>{ctx.get()};
       auto uut = make_counted<flow::op::merge<int>>(ctx.get(),
                                                     src.as_observable());
@@ -119,7 +155,7 @@ SCENARIO("mergers round-robin over their inputs") {
       }
     }
   }
-  GIVEN("a round-robin merger with one input that aborts after some items") {
+  GIVEN("a merger with one input that aborts after some items") {
     WHEN("subscribing to the merger") {
       auto src = flow::item_publisher<int>{ctx.get()};
       auto uut = make_counted<flow::op::merge<int>>(ctx.get(),
@@ -167,20 +203,71 @@ SCENARIO("mergers round-robin over their inputs") {
   }
 }
 
-SCENARIO("the merge operator combine inputs") {
-  GIVEN("two observables") {
-    WHEN("merging them to a single observable") {
-      THEN("the observer receives the output of both sources") {
-        using ivec = std::vector<int>;
+SCENARIO("empty merge operators only call on_complete") {
+  GIVEN("a merge operator with no inputs") {
+    WHEN("subscribing to it") {
+      THEN("the observer only receives an on_complete event") {
         auto snk = flow::make_auto_observer<int>();
-        ctx->make_observable()
-          .repeat(11)
-          .take(113)
-          .merge(ctx->make_observable().repeat(22).take(223))
-          .subscribe(snk->as_observer());
+        auto sub = make_operator<int>()->subscribe(snk->as_observer());
         ctx->run();
-        CHECK_EQ(snk->state, flow::observer_state::completed);
-        CHECK_EQ(snk->sorted_buf(), concat(ivec(113, 11), ivec(223, 22)));
+        CHECK(sub.disposed());
+        CHECK(snk->completed());
+        CHECK(snk->buf.empty());
+      }
+    }
+  }
+}
+
+SCENARIO("the merge operator disposes unexpected subscriptions") {
+  GIVEN("a merge operator with no inputs") {
+    WHEN("subscribing to it") {
+      THEN("the observer only receives an on_complete event") {
+        auto snk = flow::make_passive_observer<int>();
+        auto r1 = ctx->make_observable().just(1).as_observable();
+        auto r2 = ctx->make_observable().just(2).as_observable();
+        auto uut = raw_sub(snk->as_observer(), r1, r2);
+        auto sub = make_counted<flow::passive_subscription_impl>();
+        ctx->run();
+        CHECK(!sub->disposed());
+        uut->fwd_on_subscribe(42, flow::subscription{sub});
+        CHECK(sub->disposed());
+        snk->request(127);
+        ctx->run();
+        CHECK(snk->completed());
+        CHECK_EQ(snk->buf, std::vector<int>({1, 2}));
+      }
+    }
+  }
+}
+
+SCENARIO("the merge operator drops inputs with no pending data on error") {
+  GIVEN("a merge operator with two inputs") {
+    WHEN("one of the inputs fails") {
+      THEN("the operator drops the other input right away") {
+        auto snk = flow::make_auto_observer<int>();
+        auto uut
+          = raw_sub(snk->as_observer(), ctx->make_observable().never<int>(),
+                    ctx->make_observable().fail<int>(sec::runtime_error));
+        ctx->run();
+        CHECK(uut->disposed());
+      }
+    }
+  }
+}
+
+SCENARIO("the merge operator drops inputs when disposed") {
+  GIVEN("a merge operator with two inputs") {
+    WHEN("one of the inputs fails") {
+      THEN("the operator drops the other input right away") {
+        auto snk = flow::make_auto_observer<int>();
+        auto uut = raw_sub(snk->as_observer(),
+                           ctx->make_observable().never<int>(),
+                           ctx->make_observable().never<int>());
+        ctx->run();
+        CHECK(!uut->disposed());
+        uut->dispose();
+        ctx->run();
+        CHECK(uut->disposed());
       }
     }
   }
