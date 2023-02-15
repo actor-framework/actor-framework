@@ -28,6 +28,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Fix undefined behavior in getter functions of the flow `mcast` operator.
 - Add checks to avoid potential UB when using `prefix_and_tail` or other
   operators that use the `ucast` operator internally.
+- The `mcast` and `ucast` operators now stop calling `on_next` immediately when
+  disposed.
 
 ## [0.19.0-rc.1] - 2022-10-31
 
