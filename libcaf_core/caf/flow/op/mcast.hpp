@@ -44,8 +44,7 @@ public:
 
   void dispose() override {
     if (state_) {
-      decltype(state_) state;
-      state.swap(state_);
+      auto state = std::move(state_);
       state->dispose();
     }
   }

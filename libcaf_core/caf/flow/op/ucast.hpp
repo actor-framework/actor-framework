@@ -89,8 +89,8 @@ public:
       if (!running && buf.empty()) {
         disposed = true;
         if (out) {
-          out.on_error(reason);
-          out = nullptr;
+          auto out_hdl = std::move(out);
+          out_hdl.on_error(reason);
         }
         when_disposed = nullptr;
         when_consumed_some = nullptr;
@@ -164,8 +164,7 @@ public:
 
   void dispose() override {
     if (state_) {
-      decltype(state_) state;
-      state.swap(state_);
+      auto state = std::move(state_);
       state->dispose();
     }
   }
