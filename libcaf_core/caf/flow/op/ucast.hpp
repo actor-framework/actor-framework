@@ -165,7 +165,7 @@ public:
   void dispose() override {
     if (state_) {
       decltype(state_) state;
-      std::swap(state_, state);
+      state.swap(state_);
       state->dispose();
     }
   }
