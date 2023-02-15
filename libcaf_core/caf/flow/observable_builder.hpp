@@ -218,6 +218,8 @@ public:
     }
   }
 
+  /// Creates an @ref observable that combines the emitted from all passed
+  /// source observables by applying a function object.
   /// @param fn The zip function. Takes one element from each input at a time
   ///           and reduces them into a single result.
   /// @param input0 The input at index 0.
@@ -225,24 +227,8 @@ public:
   /// @param inputs The inputs for index > 1, if any.
   template <class F, class T0, class T1, class... Ts>
   auto zip_with(F fn, T0 input0, T1 input1, Ts... inputs) {
-    using output_type = op::zip_with_output_t<F, //
-                                              typename T0::output_type,
-                                              typename T1::output_type,
-                                              typename Ts::output_type...>;
-    using impl_t = op::zip_with<F,                        //
-                                typename T0::output_type, //
-                                typename T1::output_type, //
-                                typename Ts::output_type...>;
-    if (input0.valid() && input1.valid() && (inputs.valid() && ...)) {
-      auto ptr = make_counted<impl_t>(ctx_, std::move(fn),
-                                      std::move(input0).as_observable(),
-                                      std::move(input1).as_observable(),
-                                      std::move(inputs).as_observable()...);
-      return observable<output_type>{std::move(ptr)};
-    } else {
-      auto ptr = make_counted<op::empty<output_type>>(ctx_);
-      return observable<output_type>{std::move(ptr)};
-    }
+    return op::make_zip_with(ctx_, std::move(fn), std::move(input0),
+                             std::move(input1), std::move(inputs)...);
   }
 
 private:

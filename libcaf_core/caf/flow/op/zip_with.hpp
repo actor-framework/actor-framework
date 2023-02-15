@@ -7,7 +7,6 @@
 #include "caf/flow/observable_decl.hpp"
 #include "caf/flow/observer.hpp"
 #include "caf/flow/op/cold.hpp"
-#include "caf/flow/op/empty.hpp"
 #include "caf/flow/subscription.hpp"
 
 #include <algorithm>
@@ -36,7 +35,13 @@ struct zip_input {
   using value_type = T;
 
   subscription sub;
-  std::vector<T> buf;
+  std::deque<T> buf;
+
+  T pop() {
+    auto result = buf.front();
+    buf.pop_front();
+    return result;
+  }
 
   /// Returns whether the input can no longer produce additional items.
   bool at_end() const noexcept {
@@ -136,17 +141,14 @@ public:
   template <size_t I>
   void fwd_on_subscribe(zip_index<I> index, subscription sub) {
     if (out_) {
-      auto& in = at(index);
-      if (!in.sub) {
+      if (auto& in = at(index); !in.sub) {
         if (demand_ > 0)
           sub.request(demand_);
         in.sub = std::move(sub);
-      } else {
-        sub.dispose();
+        return;
       }
-    } else {
-      sub.dispose();
     }
+    sub.dispose();
   }
 
   template <size_t I>
@@ -163,12 +165,11 @@ public:
   template <size_t I>
   void fwd_on_error(zip_index<I> index, const error& what) {
     if (out_) {
+      if (!err_)
+        err_ = what;
       auto& input = at(index);
-      if (input.sub) {
-        if (!err_)
-          err_ = what;
+      if (input.sub)
         input.sub = nullptr;
-      }
       if (input.buf.empty())
         fin();
     }
@@ -185,15 +186,12 @@ public:
 private:
   void push() {
     if (auto n = std::min(buffered(), demand_); n > 0) {
-      for (size_t index = 0; index < n; ++index) {
-        fold([this, index](auto&... x) { //
-          out_.on_next(fn_(x.buf[index]...));
-        });
-      }
       demand_ -= n;
-      for_each_input([n](auto, auto& x) { //
-        x.buf.erase(x.buf.begin(), x.buf.begin() + n);
-      });
+      for (size_t i = 0; i < n; ++i) {
+        fold([this](auto&... x) { out_.on_next(fn_(x.pop()...)); });
+        if (!out_) // on_next might call dispose()
+          return;
+      }
     }
     if (at_end())
       fin();
@@ -267,5 +265,26 @@ private:
   /// Stores the source observables until an observer subscribes.
   std::tuple<observable<Ts>...> inputs_;
 };
+
+/// Creates a new zip-with operator from given inputs.
+template <class F, class T0, class T1, class... Ts>
+auto make_zip_with(coordinator* ctx, F fn, T0 input0, T1 input1, Ts... inputs) {
+  using output_type = zip_with_output_t<F,                        //
+                                        typename T0::output_type, //
+                                        typename T1::output_type, //
+                                        typename Ts::output_type...>;
+  using impl_t = zip_with<F,                        //
+                          typename T0::output_type, //
+                          typename T1::output_type, //
+                          typename Ts::output_type...>;
+  if (input0.valid() && input1.valid() && (inputs.valid() && ...)) {
+    auto ptr = make_counted<impl_t>(ctx, std::move(fn),
+                                    std::move(input0).as_observable(),
+                                    std::move(input1).as_observable(),
+                                    std::move(inputs).as_observable()...);
+    return observable<output_type>{std::move(ptr)};
+  }
+  return observable<output_type>{};
+}
 
 } // namespace caf::flow::op

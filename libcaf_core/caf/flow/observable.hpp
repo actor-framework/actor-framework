@@ -27,6 +27,7 @@
 #include "caf/flow/op/never.hpp"
 #include "caf/flow/op/prefix_and_tail.hpp"
 #include "caf/flow/op/publish.hpp"
+#include "caf/flow/op/zip_with.hpp"
 #include "caf/flow/step/all.hpp"
 #include "caf/flow/subscription.hpp"
 #include "caf/intrusive_ptr.hpp"
@@ -328,6 +329,13 @@ public:
   template <class F>
   auto concat_map(F f) && {
     return materialize().concat_map(std::move(f));
+  }
+
+  /// @copydoc observable::zip_with
+  template <class F, class T0, class... Ts>
+  auto zip_with(F fn, T0 input0, Ts... inputs) {
+    return materialize().zip_with(std::move(fn), std::move(input0),
+                                  std::move(inputs)...);
   }
 
   /// @copydoc observable::publish
@@ -681,6 +689,18 @@ auto observable<T>::concat_map(F f) {
            })
       .concat();
   }
+}
+
+template <class T>
+template <class F, class T0, class... Ts>
+auto observable<T>::zip_with(F fn, T0 input0, Ts... inputs) {
+  using output_type = op::zip_with_output_t<F, T,                     //
+                                            typename T0::output_type, //
+                                            typename Ts::output_type...>;
+  if (pimpl_)
+    return op::make_zip_with(pimpl_->ctx(), std::move(fn), *this,
+                             std::move(input0), std::move(inputs)...);
+  return observable<output_type>{};
 }
 
 // -- observable: splitting ----------------------------------------------------
