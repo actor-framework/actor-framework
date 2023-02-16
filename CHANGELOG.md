@@ -14,6 +14,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Add new `*_weak` variants of `scheduled_actor::run_{delayed, scheduled}`.
   These functions add no reference count to their actor, allowing it to become
   unreachable if other actors no longer reference it.
+- Typed actors that use a `typed_actor_pointer` can now access the
+  `run_{delayed,scheduled}` member functions.
 
 ### Fixed
 

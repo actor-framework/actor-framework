@@ -204,6 +204,35 @@ public:
     self_->send_exit(whom, std::move(reason));
   }
 
+  // -- scheduling actions -----------------------------------------------------
+
+  /// @copydoc scheduled_actor::run_scheduled
+  template <class Clock, class Duration, class F>
+  disposable
+  run_scheduled(std::chrono::time_point<Clock, Duration> when, F what) {
+    return self_->run_scheduled(when, std::move(what));
+  }
+
+  /// @copydoc scheduled_actor::run_scheduled_weak
+  template <class Clock, class Duration, class F>
+  disposable
+  run_scheduled_weak(std::chrono::time_point<Clock, Duration> when, F what) {
+    return self_->run_scheduled_weak(when, std::move(what));
+  }
+
+  /// @copydoc scheduled_actor::run_delayed
+  template <class Rep, class Period, class F>
+  disposable run_delayed(std::chrono::duration<Rep, Period> delay, F what) {
+    return self_->run_delayed(delay, std::move(what));
+  }
+
+  /// @copydoc scheduled_actor::run_delayed_weak
+  template <class Rep, class Period, class F>
+  disposable
+  run_delayed_weak(std::chrono::duration<Rep, Period> delay, F what) {
+    return self_->run_delayed_weak(delay, std::move(what));
+  }
+
   // -- miscellaneous actor operations -----------------------------------------
 
   void quit(exit_reason reason = exit_reason::normal) {
