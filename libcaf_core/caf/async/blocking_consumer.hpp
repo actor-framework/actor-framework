@@ -45,6 +45,7 @@ public:
           return read_result::try_again_later;
       }
       auto [again, n] = buf_->pull_unsafe(guard, policy, 1u, *this);
+      guard.unlock();
       if (!again) {
         buf_ = nullptr;
       }
