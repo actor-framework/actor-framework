@@ -45,7 +45,7 @@ struct int_actor_state {
 using int_actor_impl = int_actor::stateful_impl<int_actor_state>;
 
 struct fixture : test_coordinator_fixture<> {
-  int_actor spawn_int_actor(int_actor_state ::init_fn init) {
+  int_actor spawn_int_actor(int_actor_state::init_fn init) {
     return sys.spawn<int_actor_impl>(std::move(init));
   }
 };
