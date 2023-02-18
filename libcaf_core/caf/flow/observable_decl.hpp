@@ -249,8 +249,9 @@ public:
   async::consumer_resource<T> to_resource() {
     return to_resource(defaults::flow::buffer_size, defaults::flow::min_demand);
   }
+
   const observable& as_observable() const& noexcept {
-    return std::move(*this);
+    return *this;
   }
 
   observable&& as_observable() && noexcept {
