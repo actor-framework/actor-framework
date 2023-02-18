@@ -107,13 +107,15 @@ public:
 
   template <class T>
   flow::assert_scheduled_actor_hdr_t<flow::single<T>> as_single() && {
-    static_assert(std::is_same_v<response_type, message>);
+    static_assert(std::is_same_v<response_type, detail::type_list<T>>
+                  || std::is_same_v<response_type, message>);
     return self_->template single_from_response<T>(policy_);
   }
 
   template <class T>
   flow::assert_scheduled_actor_hdr_t<flow::observable<T>> as_observable() && {
-    static_assert(std::is_same_v<response_type, message>);
+    static_assert(std::is_same_v<response_type, detail::type_list<T>>
+                  || std::is_same_v<response_type, message>);
     return self_->template single_from_response<T>(policy_).as_observable();
   }
 
