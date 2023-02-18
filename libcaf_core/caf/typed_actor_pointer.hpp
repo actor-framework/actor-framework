@@ -10,6 +10,8 @@
 
 namespace caf {
 
+/// Provides a view to an actor that implements this messaging interface without
+/// knowledge of the actual type.
 template <class... Sigs>
 class typed_actor_pointer : public typed_actor_view_base {
 public:
@@ -76,8 +78,12 @@ public:
     return &view_;
   }
 
-  explicit operator bool() const {
-    return static_cast<bool>(view_.internal_ptr());
+  bool operator!() const noexcept {
+    return internal_ptr() == nullptr;
+  }
+
+  explicit operator bool() const noexcept {
+    return internal_ptr() != nullptr;
   }
 
   /// @private
