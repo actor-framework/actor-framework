@@ -332,6 +332,7 @@ caf_add_component(
     message_builder
     message_id
     message_lifetime
+    messaging
     metaprogramming
     mixin.requester
     mixin.sender

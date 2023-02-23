@@ -99,7 +99,7 @@ public:
   /// passed already).
   template <message_priority P = message_priority::normal, class Dest = actor,
             class... Ts>
-  detail::enable_if_t<!std::is_same<Dest, group>::value>
+  detail::enable_if_t<!std::is_same<Dest, group>::value, disposable>
   scheduled_send(const Dest& dest, actor_clock::time_point timeout,
                  Ts&&... xs) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
@@ -109,15 +109,16 @@ public:
     detail::type_list<detail::strip_and_convert_t<Ts>...> args_token;
     type_check(dest, args_token);
     auto self = dptr();
-    detail::profiled_send(self, self->ctrl(), dest, self->system().clock(),
-                          timeout, make_message_id(P), std::forward<Ts>(xs)...);
+    return detail::profiled_send(self, self->ctrl(), dest,
+                                 self->system().clock(), timeout,
+                                 make_message_id(P), std::forward<Ts>(xs)...);
   }
 
   /// Sends a message at given time point (or immediately if `timeout` has
   /// passed already).
   template <class... Ts>
-  void scheduled_send(const group& dest, actor_clock::time_point timeout,
-                      Ts&&... xs) {
+  disposable scheduled_send(const group& dest, actor_clock::time_point timeout,
+                            Ts&&... xs) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
     static_assert((detail::sendable<Ts> && ...),
                   "at least one type has no ID, "
@@ -128,17 +129,17 @@ public:
     auto self = dptr();
     if (dest) {
       auto& clock = self->system().clock();
-      clock.schedule_message(timeout, dest, self->ctrl(),
-                             make_message(std::forward<Ts>(xs)...));
-    } else {
-      self->home_system().base_metrics().rejected_messages->inc();
+      return clock.schedule_message(timeout, dest, self->ctrl(),
+                                    make_message(std::forward<Ts>(xs)...));
     }
+    self->home_system().base_metrics().rejected_messages->inc();
+    return {};
   }
 
   /// Sends a message after a relative timeout.
   template <message_priority P = message_priority::normal, class Rep = int,
             class Period = std::ratio<1>, class Dest = actor, class... Ts>
-  detail::enable_if_t<!std::is_same<Dest, group>::value>
+  detail::enable_if_t<!std::is_same<Dest, group>::value, disposable>
   delayed_send(const Dest& dest, std::chrono::duration<Rep, Period> rel_timeout,
                Ts&&... xs) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
@@ -150,15 +151,16 @@ public:
     auto self = dptr();
     auto& clock = self->system().clock();
     auto timeout = clock.now() + rel_timeout;
-    detail::profiled_send(self, self->ctrl(), dest, clock, timeout,
-                          make_message_id(P), std::forward<Ts>(xs)...);
+    return detail::profiled_send(self, self->ctrl(), dest, clock, timeout,
+                                 make_message_id(P), std::forward<Ts>(xs)...);
   }
 
   /// Sends a message after a relative timeout.
   template <class Rep = int, class Period = std::ratio<1>, class Dest = actor,
             class... Ts>
-  void delayed_send(const group& dest, std::chrono::duration<Rep, Period> rtime,
-                    Ts&&... xs) {
+  disposable delayed_send(const group& dest,
+                          std::chrono::duration<Rep, Period> rtime,
+                          Ts&&... xs) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
     static_assert((detail::sendable<Ts> && ...),
                   "at least one type has no ID, "
@@ -166,19 +168,21 @@ public:
     static_assert(!statically_typed<Subtype>(),
                   "statically typed actors are not allowed to send to groups");
     // TODO: consider whether it's feasible to track messages to groups
+    auto self = dptr();
     if (dest) {
-      auto self = dptr();
       auto& clock = self->system().clock();
       auto timeout = clock.now() + rtime;
-      clock.schedule_message(timeout, dest, self->ctrl(),
-                             make_message(std::forward<Ts>(xs)...));
+      return clock.schedule_message(timeout, dest, self->ctrl(),
+                                    make_message(std::forward<Ts>(xs)...));
     }
+    self->home_system().base_metrics().rejected_messages->inc();
+    return {};
   }
 
   template <message_priority P = message_priority::normal, class Dest = actor,
             class... Ts>
-  void scheduled_anon_send(const Dest& dest, actor_clock::time_point timeout,
-                           Ts&&... xs) {
+  disposable scheduled_anon_send(const Dest& dest,
+                                 actor_clock::time_point timeout, Ts&&... xs) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
     static_assert((detail::sendable<Ts> && ...),
                   "at least one type has no ID, "
@@ -186,15 +190,16 @@ public:
     detail::type_list<detail::strip_and_convert_t<Ts>...> args_token;
     type_check(dest, args_token);
     auto self = dptr();
-    detail::profiled_send(self, nullptr, dest, self->system().clock(), timeout,
-                          make_message_id(P), std::forward<Ts>(xs)...);
+    return detail::profiled_send(self, nullptr, dest, self->system().clock(),
+                                 timeout, make_message_id(P),
+                                 std::forward<Ts>(xs)...);
   }
 
   template <message_priority P = message_priority::normal, class Dest = actor,
             class Rep = int, class Period = std::ratio<1>, class... Ts>
-  void delayed_anon_send(const Dest& dest,
-                         std::chrono::duration<Rep, Period> rel_timeout,
-                         Ts&&... xs) {
+  disposable delayed_anon_send(const Dest& dest,
+                               std::chrono::duration<Rep, Period> rel_timeout,
+                               Ts&&... xs) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
     static_assert((detail::sendable<Ts> && ...),
                   "at least one type has no ID, "
@@ -204,8 +209,8 @@ public:
     auto self = dptr();
     auto& clock = self->system().clock();
     auto timeout = clock.now() + rel_timeout;
-    detail::profiled_send(self, nullptr, dest, clock, timeout,
-                          make_message_id(P), std::forward<Ts>(xs)...);
+    return detail::profiled_send(self, nullptr, dest, clock, timeout,
+                                 make_message_id(P), std::forward<Ts>(xs)...);
   }
 
 private:
