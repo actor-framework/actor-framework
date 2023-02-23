@@ -829,6 +829,11 @@ private:
   /// message.
   std::vector<action> actions_;
 
+  /// Counter for scheduled_actor::delay to make sure
+  /// scheduled_actor::run_actions does not end up in a busy loop that might
+  /// starve other activities.
+  size_t delayed_actions_this_run_ = 0;
+
   /// Stores ongoing activities such as flows that block the actor from
   /// terminating.
   std::vector<disposable> watched_disposables_;

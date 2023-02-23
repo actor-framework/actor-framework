@@ -491,7 +491,10 @@ void scheduled_actor::schedule(action what) {
 }
 
 void scheduled_actor::delay(action what) {
-  actions_.emplace_back(std::move(what));
+  if (delayed_actions_this_run_++ < defaults::max_inline_actions_per_run)
+    actions_.emplace_back(std::move(what));
+  else
+    schedule(std::move(what));
 }
 
 disposable scheduled_actor::delay_until(steady_time_point abs_time,
@@ -946,6 +949,7 @@ void scheduled_actor::deregister_stream(uint64_t stream_id) {
 }
 
 void scheduled_actor::run_actions() {
+  delayed_actions_this_run_ = 0;
   if (!actions_.empty()) {
     // Note: can't use iterators here since actions may add to the vector.
     for (auto index = size_t{0}; index < actions_.size(); ++index) {
