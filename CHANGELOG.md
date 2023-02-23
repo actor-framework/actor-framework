@@ -45,6 +45,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   could end up in a long-running read loop. To avoid potentially starving other
   actors or activities, scheduled actors now limit the amount of actions that
   may run in one iteration (#1364).
+- Destroying a consumer or producer resource before opening it lead to a stall
+  of the consumer / producer. The buffer now keeps track of whether `close` or
+  `abort` were called prior to consumers or producers attaching.
 
 ## [0.19.0-rc.1] - 2022-10-31
 
