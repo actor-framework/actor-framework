@@ -141,7 +141,7 @@ SCENARIO("typed actors may use the flow API") {
         CHECK(!*err);
       }
     }
-    WHEN("the actor creates a typed stream via to_stream") {
+    WHEN("the actor creates a typed stream via to_typed_stream") {
       THEN("other actors may observe the values") {
         auto res = std::make_shared<int>(0);
         auto err = std::make_shared<error>();
