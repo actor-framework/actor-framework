@@ -13,8 +13,8 @@ namespace caf {
 size_t type_id_list::data_size() const noexcept {
   auto result = size_t{0};
   for (auto type : *this) {
-    auto meta_obj = detail::global_meta_object(type);
-    result += meta_obj->padded_size;
+    auto meta = detail::global_meta_object(type);
+    result += meta->padded_size;
   }
   return result;
 }

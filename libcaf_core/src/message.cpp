@@ -71,7 +71,7 @@ bool load_data(Deserializer& source, message::data_ptr& data) {
     CAF_ASSERT(ids.size() == msg_size);
     size_t data_size = 0;
     for (auto id : ids) {
-      if (auto meta_obj = detail::global_meta_object(id))
+      if (auto meta_obj = detail::global_meta_object_or_null(id))
         data_size += meta_obj->padded_size;
       else
         STOP(sec::unknown_type);
@@ -155,7 +155,7 @@ bool load_data(Deserializer& source, message::data_ptr& data) {
     for (size_t i = 0; i < msg_size; ++i) {
       auto type = type_id_t{0};
       GUARDED(source.fetch_next_object_type(type));
-      if (auto meta_obj = detail::global_meta_object(type)) {
+      if (auto meta_obj = detail::global_meta_object_or_null(type)) {
         ids.push_back(type);
         auto obj_size = meta_obj->padded_size;
         data_size += obj_size;
@@ -290,13 +290,11 @@ std::string to_string(const message& msg) {
   if (!types.empty()) {
     auto ptr = msg.cdata().storage();
     auto meta = detail::global_meta_object(types[0]);
-    CAF_ASSERT(meta != nullptr);
     meta->stringify(result, ptr);
     ptr += meta->padded_size;
     for (size_t index = 1; index < types.size(); ++index) {
       result += ", ";
       meta = detail::global_meta_object(types[index]);
-      CAF_ASSERT(meta != nullptr);
       meta->stringify(result, ptr);
       ptr += meta->padded_size;
     }

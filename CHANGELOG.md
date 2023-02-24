@@ -17,6 +17,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Typed actors that use a `typed_actor_pointer` can now access the
   `run_{delayed,scheduled}` member functions.
 - Scheduled and delayed sends now return a disposable (#1362).
+- Not initializing the meta objects table now prints a diagnosis message before
+  aborting the program. Previously, the application would usually just crash due
+  to a `nullptr`-access inside some CAF function.
 
 ### Fixed
 

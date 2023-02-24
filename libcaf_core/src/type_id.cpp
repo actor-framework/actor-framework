@@ -9,7 +9,7 @@
 namespace caf {
 
 std::string_view query_type_name(type_id_t type) {
-  if (auto ptr = detail::global_meta_object(type))
+  if (auto ptr = detail::global_meta_object_or_null(type))
     return ptr->type_name;
   return {};
 }

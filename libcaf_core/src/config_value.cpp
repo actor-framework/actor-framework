@@ -194,7 +194,7 @@ error_code<sec> config_value::default_construct(type_id_t id) {
       set(uri{});
       return sec::none;
     default:
-      if (auto meta = detail::global_meta_object(id)) {
+      if (auto meta = detail::global_meta_object_or_null(id)) {
         auto ptr = malloc(meta->padded_size);
         auto free_guard = detail::make_scope_guard([ptr] { free(ptr); });
         meta->default_construct(ptr);
@@ -520,7 +520,6 @@ config_value::parse_msg_impl(std::string_view str,
       auto pos = ptr->storage();
       for (auto type : ls) {
         auto meta = detail::global_meta_object(type);
-        CAF_ASSERT(meta != nullptr);
         meta->default_construct(pos);
         ptr->inc_constructed_elements();
         if (!meta->load(reader, pos))
