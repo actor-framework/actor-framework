@@ -849,6 +849,12 @@ private:
   /// Maps the ID of incoming stream batches to local state that allows the
   /// actor to push received batches into the local flow.
   std::unordered_map<uint64_t, detail::stream_bridge_sub_ptr> stream_bridges_;
+
+  /// Special-purpose behavior for scheduled_actor::delay. When pushing an
+  /// action to the mailbox, we register this behavior as the response handler.
+  /// This is to make sure that actor does not terminate because it thinks it's
+  /// done before processing the delayed action.
+  behavior delay_bhvr_;
 };
 
 } // namespace caf
