@@ -16,6 +16,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   unreachable if other actors no longer reference it.
 - Typed actors that use a `typed_actor_pointer` can now access the
   `run_{delayed,scheduled}` member functions.
+- Scheduled and delayed sends now return a disposable (#1362).
 - Typed response handles received support for converting them to observable or
   single objects.
 - Typed actors that use the type-erased pointer-view type received access to the
