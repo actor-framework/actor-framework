@@ -8,11 +8,23 @@
 #include "caf/config.hpp"
 #include "caf/mixin/requester.hpp"
 #include "caf/mixin/sender.hpp"
+#include "caf/none.hpp"
 #include "caf/scheduled_actor.hpp"
+#include "caf/stream.hpp"
 #include "caf/timespan.hpp"
 #include "caf/typed_actor_view_base.hpp"
+#include "caf/typed_stream.hpp"
 
 namespace caf {
+
+/// Utility function to force the type of `self` to depend on `T` and to raise a
+/// compiler error if the user did not include 'caf/scheduled_actor/flow.hpp'.
+/// The function itself does nothing and simply returns `self`.
+template <class T>
+auto typed_actor_view_flow_access(caf::scheduled_actor* self) {
+  using Self = flow::assert_scheduled_actor_hdr_t<T, caf::scheduled_actor*>;
+  return static_cast<Self>(self);
+}
 
 /// Decorates a pointer to a @ref scheduled_actor with a statically typed actor
 /// interface.
@@ -294,6 +306,101 @@ public:
 
   operator scheduled_actor*() const noexcept {
     return self_;
+  }
+
+  // -- flow API ---------------------------------------------------------------
+
+  /// @copydoc flow::coordinator::make_observable
+  template <class T = none_t>
+  auto make_observable() {
+    // Note: the template parameter T serves no purpose other than forcing the
+    //       compiler to delay evaluation of this function body by having
+    //       *something* to pass to `typed_actor_view_flow_access`.
+    auto self = typed_actor_view_flow_access<T>(self_);
+    return self->make_observable();
+  }
+
+  /// @copydoc scheduled_actor::to_stream
+  template <class Observable>
+  auto to_stream(cow_string name, timespan max_delay,
+                 size_t max_items_per_batch, Observable&& obs) {
+    auto self = typed_actor_view_flow_access<Observable>(self_);
+    return self->to_stream(std::move(name), max_delay, max_items_per_batch,
+                           std::forward<Observable>(obs));
+  }
+
+  /// @copydoc scheduled_actor::to_stream
+  template <class Observable>
+  auto to_stream(std::string name, timespan max_delay,
+                 size_t max_items_per_batch, Observable&& obs) {
+    return to_stream(cow_string{std::move(name)}, max_delay,
+                     max_items_per_batch, std::forward<Observable>(obs));
+  }
+
+  /// Returns a function object for passing it to @c compose.
+  scheduled_actor::to_stream_t to_stream(cow_string name, timespan max_delay,
+                                         size_t max_items_per_batch) {
+    return {self_, std::move(name), max_delay, max_items_per_batch};
+  }
+
+  /// Returns a function object for passing it to @c compose.
+  scheduled_actor::to_stream_t to_stream(std::string name, timespan max_delay,
+                                         size_t max_items_per_batch) {
+    return to_stream(cow_string{std::move(name)}, max_delay,
+                     max_items_per_batch);
+  }
+
+  /// @copydoc scheduled_actor::to_typed_stream
+  template <class Observable>
+  auto to_typed_stream(cow_string name, timespan max_delay,
+                       size_t max_items_per_batch, Observable obs) {
+    auto self = typed_actor_view_flow_access<Observable>(self_);
+    return self->to_typed_stream(std::move(name), max_delay,
+                                 max_items_per_batch, std::move(obs));
+  }
+
+  /// @copydoc scheduled_actor::to_typed_stream
+  template <class Observable>
+  auto to_typed_stream(std::string name, timespan max_delay,
+                       size_t max_items_per_batch, Observable obs) {
+    return to_typed_stream(cow_string{std::move(name)}, max_delay,
+                           max_items_per_batch, std::move(obs));
+  }
+
+  /// Returns a function object for passing it to @c compose.
+  scheduled_actor::to_typed_stream_t
+  to_typed_stream(cow_string name, timespan max_delay,
+                  size_t max_items_per_batch) {
+    return {self_, std::move(name), max_delay, max_items_per_batch};
+  }
+
+  /// Returns a function object for passing it to @c compose.
+  scheduled_actor::to_typed_stream_t
+  to_typed_stream(std::string name, timespan max_delay,
+                  size_t max_items_per_batch) {
+    return to_typed_stream(cow_string{std::move(name)}, max_delay,
+                           max_items_per_batch);
+  }
+
+  /// @copydoc scheduled_actor::observe
+  template <class T>
+  auto
+  observe(typed_stream<T> what, size_t buf_capacity, size_t demand_threshold) {
+    auto self = typed_actor_view_flow_access<T>(self_);
+    return self->observe(std::move(what), buf_capacity, demand_threshold);
+  }
+
+  /// @copydoc scheduled_actor::observe_as
+  template <class T>
+  auto observe_as(stream what, size_t buf_capacity, size_t demand_threshold) {
+    auto self = typed_actor_view_flow_access<T>(self_);
+    return self->template observe_as<T>(std::move(what), buf_capacity,
+                                        demand_threshold);
+  }
+
+  /// @copydoc scheduled_actor::deregister_stream
+  void deregister_stream(uint64_t stream_id) {
+    self_->deregister_stream(stream_id);
   }
 
 private:

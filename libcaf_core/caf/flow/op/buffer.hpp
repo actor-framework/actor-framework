@@ -142,8 +142,9 @@ public:
 
   void fwd_on_complete(buffer_emit_t) {
     control_sub_ = nullptr;
-    err_ = make_error(sec::end_of_stream,
-                      "buffer: unexpected end of the control stream");
+    if (state_ == state::running)
+      err_ = make_error(sec::end_of_stream,
+                        "buffer: unexpected end of the control stream");
     shutdown();
   }
 
