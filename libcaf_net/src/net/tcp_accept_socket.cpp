@@ -83,7 +83,7 @@ expected<tcp_accept_socket> new_tcp_acceptor_impl(uint16_t port,
 
 expected<tcp_accept_socket> make_tcp_accept_socket(ip_endpoint node,
                                                    bool reuse_addr) {
-  CAF_LOG_TRACE(CAF_ARG(node));
+  CAF_LOG_TRACE(CAF_ARG(node) << CAF_ARG(reuse_addr));
   auto addr = to_string(node.address());
   bool is_v4 = node.address().embeds_v4();
   bool is_zero = is_v4 ? node.address().embedded_v4().bits() == 0
@@ -106,9 +106,19 @@ expected<tcp_accept_socket> make_tcp_accept_socket(ip_endpoint node,
 
 expected<tcp_accept_socket>
 make_tcp_accept_socket(const uri::authority_type& node, bool reuse_addr) {
+  CAF_LOG_TRACE(CAF_ARG(node) << CAF_ARG(reuse_addr));
   if (auto ip = std::get_if<ip_address>(&node.host))
     return make_tcp_accept_socket(ip_endpoint{*ip, node.port}, reuse_addr);
-  auto host = std::get<std::string>(node.host);
+  const auto& host = std::get<std::string>(node.host);
+  if (host.empty()) {
+    // For empty strings, try IPv6::any and use IPv4::any as fallback.
+    auto v6_any = ip_address{{0}, {0}};
+    auto v4_any = ip_address{make_ipv4_address(0, 0, 0, 0)};
+    if (auto sock = make_tcp_accept_socket(ip_endpoint{v6_any, node.port},
+                                           reuse_addr))
+      return *sock;
+    return make_tcp_accept_socket(ip_endpoint{v4_any, node.port}, reuse_addr);
+  }
   auto addrs = ip::local_addresses(host);
   if (addrs.empty())
     return make_error(sec::cannot_open_port, "no local interface available",
@@ -124,6 +134,7 @@ make_tcp_accept_socket(const uri::authority_type& node, bool reuse_addr) {
 
 expected<tcp_accept_socket>
 make_tcp_accept_socket(uint16_t port, std::string addr, bool reuse_addr) {
+  CAF_LOG_TRACE(CAF_ARG(port) << CAF_ARG(addr) << CAF_ARG(reuse_addr));
   uri::authority_type auth;
   auth.port = port;
   auth.host = std::move(addr);

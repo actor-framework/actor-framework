@@ -80,6 +80,13 @@ public:
   const array_type& data() const noexcept {
     return bytes_;
   }
+  // -- factories --------------------------------------------------------------
+
+  /// Returns `INADDR_ANY`, i.e., `0.0.0.0`.
+  static ipv4_address any() noexcept;
+
+  /// Returns `INADDR_LOOPBACK`, i.e., `127.0.0.1`.
+  static ipv4_address loopback() noexcept;
 
   // -- comparison -------------------------------------------------------------
 

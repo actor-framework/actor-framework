@@ -38,6 +38,10 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The `mcast` and `ucast` operators now stop calling `on_next` immediately when
   disposed.
 - Actors no longer terminate despite having open streams (#1377).
+- The function `caf::net::make_tcp_accept_socket` now handles passing `0.0.0.0`
+  correctly by opening the socket in IPv4 mode. Passing an empty bind address
+  now defaults to `INADDR6_ANY` with `INADDR_ANY` as fallback in case opening
+  the socket in IPv6 mode failed.
 
 ## [0.19.0-rc.1] - 2022-10-31
 

@@ -63,6 +63,16 @@ bool ipv4_address::is_multicast() const noexcept {
   return (bits_ & net_order(0xF0000000)) == net_order(0xE0000000);
 }
 
+// -- factories ----------------------------------------------------------------
+
+ipv4_address ipv4_address::any() noexcept {
+  return make_ipv4_address(0, 0, 0, 0);
+}
+
+ipv4_address ipv4_address::loopback() noexcept {
+  return make_ipv4_address(127, 0, 0, 1);
+}
+
 // -- related free functions ---------------------------------------------------
 
 ipv4_address make_ipv4_address(uint8_t oct1, uint8_t oct2, uint8_t oct3,
