@@ -187,8 +187,8 @@ std::vector<ip_address> local_addresses(string_view host) {
     for_each_adapter(
       [&](string_view, ip_address ip) { results.push_back(ip); });
   } else if (host == localhost) {
-    auto v6_local = ip_address{{0}, {0x1}};
-    auto v4_local = ip_address{make_ipv4_address(127, 0, 0, 1)};
+    auto v6_local = ip_address::loopback();
+    auto v4_local = ip_address{ipv4_address::loopback()};
     for_each_adapter([&](string_view, ip_address ip) {
       if (ip == v4_local || ip == v6_local)
         results.push_back(ip);
@@ -205,10 +205,8 @@ std::vector<ip_address> local_addresses(string_view host) {
 }
 
 std::vector<ip_address> local_addresses(ip_address host) {
-  static auto v6_any = ip_address{{0}, {0}};
-  static auto v4_any = ip_address{make_ipv4_address(0, 0, 0, 0)};
-  if (host == v4_any || host == v6_any)
-    return resolve("");
+  if (host == ipv6_address::any() || host == ipv4_address::any())
+    return {host};
   auto link_local = ip_address({0xfe, 0x8, 0x0, 0x0}, {0x0, 0x0, 0x0, 0x0});
   auto ll_prefix = ip_subnet(link_local, 10);
   // Unless explicitly specified we are going to skip link-local addresses.

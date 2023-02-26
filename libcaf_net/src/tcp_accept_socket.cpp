@@ -127,7 +127,15 @@ make_tcp_accept_socket(const uri::authority_type& node,
                        tcp_accept_socket_operator fn) {
   if (auto ip = get_if<ip_address>(&node.host))
     return make_tcp_accept_socket(ip_endpoint{*ip, node.port}, fn);
-  auto host = get<std::string>(node.host);
+  const auto& host = get<std::string>(node.host);
+  if (host.empty()) {
+    // For empty strings, try IPv6::any and use IPv4::any as fallback.
+    auto v6_any = ip_address{{0}, {0}};
+    auto v4_any = ip_address{make_ipv4_address(0, 0, 0, 0)};
+    if (auto sock = make_tcp_accept_socket(ip_endpoint{v6_any, node.port}, fn))
+      return *sock;
+    return make_tcp_accept_socket(ip_endpoint{v4_any, node.port}, fn);
+  }
   auto addrs = ip::local_addresses(host);
   if (addrs.empty())
     return make_error(sec::cannot_open_port, "no local interface available",

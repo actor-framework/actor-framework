@@ -137,6 +137,16 @@ bool ipv6_address::is_loopback() const noexcept {
          : half_segments_[0] == 0 && half_segments_[1] == net_order_64(1u);
 }
 
+// -- factories ----------------------------------------------------------------
+
+ipv6_address ipv6_address::any() noexcept {
+  return ip_address{{0}, {0}};
+}
+
+ipv6_address ipv6_address::loopback() noexcept {
+  return ip_address{{0}, {0x1}};
+}
+
 // -- related free functions ---------------------------------------------------
 
 namespace {
