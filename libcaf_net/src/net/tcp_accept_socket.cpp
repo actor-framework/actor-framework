@@ -123,6 +123,13 @@ make_tcp_accept_socket(const uri::authority_type& node, bool reuse_addr) {
   if (addrs.empty())
     return make_error(sec::cannot_open_port, "no local interface available",
                       to_string(node));
+  // Prefer ipv6 addresses.
+  std::stable_sort(std::begin(addrs), std::end(addrs),
+                   [](const ip_address& lhs, const ip_address& rhs) {
+                     if (lhs.embeds_v4())
+                       return rhs.embeds_v4() ? lhs < rhs : false;
+                     return rhs.embeds_v4() ? true : lhs < rhs;
+                   });
   for (auto& addr : addrs) {
     if (auto sock = make_tcp_accept_socket(ip_endpoint{addr, node.port},
                                            reuse_addr))
