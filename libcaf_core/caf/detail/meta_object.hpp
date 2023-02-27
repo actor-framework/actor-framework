@@ -66,7 +66,7 @@ CAF_CORE_EXPORT span<const meta_object> global_meta_objects();
 
 /// Returns the global meta object for given type ID. Aborts the program if no
 /// meta object exists for `id`.
-CAF_CORE_EXPORT const meta_object* global_meta_object(type_id_t id);
+CAF_CORE_EXPORT const meta_object& global_meta_object(type_id_t id);
 
 /// Returns the global meta object for given type ID or `nullptr` if no meta
 /// object exists for `id`.

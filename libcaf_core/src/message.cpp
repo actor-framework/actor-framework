@@ -71,8 +71,8 @@ bool load_data(Deserializer& source, message::data_ptr& data) {
     CAF_ASSERT(ids.size() == msg_size);
     size_t data_size = 0;
     for (auto id : ids) {
-      if (auto meta_obj = detail::global_meta_object_or_null(id))
-        data_size += meta_obj->padded_size;
+      if (auto meta = detail::global_meta_object_or_null(id))
+        data_size += meta->padded_size;
       else
         STOP(sec::unknown_type);
     }
@@ -289,12 +289,12 @@ std::string to_string(const message& msg) {
   auto types = msg.types();
   if (!types.empty()) {
     auto ptr = msg.cdata().storage();
-    auto meta = detail::global_meta_object(types[0]);
+    auto* meta = &detail::global_meta_object(types[0]);
     meta->stringify(result, ptr);
     ptr += meta->padded_size;
     for (size_t index = 1; index < types.size(); ++index) {
       result += ", ";
-      meta = detail::global_meta_object(types[index]);
+      meta = &detail::global_meta_object(types[index]);
       meta->stringify(result, ptr);
       ptr += meta->padded_size;
     }

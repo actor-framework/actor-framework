@@ -12,10 +12,8 @@ namespace caf {
 
 size_t type_id_list::data_size() const noexcept {
   auto result = size_t{0};
-  for (auto type : *this) {
-    auto meta = detail::global_meta_object(type);
-    result += meta->padded_size;
-  }
+  for (auto type : *this)
+    result += detail::global_meta_object(type).padded_size;
   return result;
 }
 
@@ -25,12 +23,12 @@ std::string to_string(type_id_list xs) {
   std::string result;
   result += '[';
   {
-    auto tn = detail::global_meta_object(xs[0])->type_name;
+    auto tn = detail::global_meta_object(xs[0]).type_name;
     result.insert(result.end(), tn.begin(), tn.end());
   }
   for (size_t index = 1; index < xs.size(); ++index) {
     result += ", ";
-    auto tn = detail::global_meta_object(xs[index])->type_name;
+    auto tn = detail::global_meta_object(xs[index]).type_name;
     result.insert(result.end(), tn.begin(), tn.end());
   }
   result += ']';

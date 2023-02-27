@@ -51,11 +51,11 @@ span<const meta_object> global_meta_objects() {
   return {meta_objects, meta_objects_size};
 }
 
-const meta_object* global_meta_object(type_id_t id) {
+const meta_object& global_meta_object(type_id_t id) {
   if (id < meta_objects_size) {
     auto& meta = meta_objects[id];
     if (!meta.type_name.empty())
-      return &meta;
+      return meta;
   }
   CAF_CRITICAL_FMT(
     "found no meta object for type ID %d!\n"
@@ -66,7 +66,6 @@ const meta_object* global_meta_object(type_id_t id) {
     "        - <module>::init_global_meta_objects() for all loaded modules\n"
     "        - caf::init_global_meta_objects<T>() for all custom ID blocks",
     static_cast<int>(id));
-  return nullptr;
 }
 
 const meta_object* global_meta_object_or_null(type_id_t id) {
