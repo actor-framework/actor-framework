@@ -35,17 +35,17 @@ bool batch::data::save(Inspector& sink) const {
     sink.emplace_error(sec::unsafe_type);
     return false;
   }
-  auto meta = detail::global_meta_object(item_type_);
+  auto& meta = detail::global_meta_object(item_type_);
   auto ptr = storage_;
   if (!sink.begin_sequence(size_))
     return false;
   auto len = size_;
   do {
     if constexpr (std::is_same_v<Inspector, binary_serializer>) {
-      if (!meta->save_binary(sink, ptr))
+      if (!meta.save_binary(sink, ptr))
         return false;
     } else {
-      if (!meta->save(sink, ptr))
+      if (!meta.save(sink, ptr))
         return false;
     }
     ptr += item_size_;

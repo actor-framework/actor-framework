@@ -179,7 +179,7 @@ public:
   }
 
   error abort_reason() const {
-    impl_->abort_reason();
+    return impl_->abort_reason();
   }
 
 private:

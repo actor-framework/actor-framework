@@ -21,6 +21,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   single objects.
 - Typed actors that use the type-erased pointer-view type received access to the
   new flow API functions (e.g., `make_observable`).
+- Not initializing the meta objects table now prints a diagnosis message before
+  aborting the program. Previously, the application would usually just crash due
+  to a `nullptr`-access inside some CAF function.
 
 ### Fixed
 
