@@ -52,9 +52,9 @@ public:
   }
 
   std::byte* copy_init(std::byte* storage) const override {
-    auto* meta = global_meta_object(src_.type_at(index_));
-    meta->copy_construct(storage, src_.data().at(index_));
-    return storage + meta->padded_size;
+    auto& meta = global_meta_object(src_.type_at(index_));
+    meta.copy_construct(storage, src_.data().at(index_));
+    return storage + meta.padded_size;
   }
 
   std::byte* move_init(std::byte* storage) override {
@@ -75,8 +75,8 @@ message_builder& message_builder::append_from(const caf::message& msg,
   auto end = std::min(msg.size(), first + n);
   for (size_t index = first; index < end; ++index) {
     auto tid = msg.type_at(index);
-    auto* meta = detail::global_meta_object(tid);
-    storage_size_ += meta->padded_size;
+    auto& meta = detail::global_meta_object(tid);
+    storage_size_ += meta.padded_size;
     types_.push_back(tid);
     elements_.emplace_back(
       std::make_unique<message_builder_element_adapter>(msg, index));

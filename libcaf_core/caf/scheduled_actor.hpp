@@ -709,7 +709,7 @@ public:
   bool alive() const noexcept {
     return !bhvr_stack_.empty() || !awaited_responses_.empty()
            || !multiplexed_responses_.empty() || !watched_disposables_.empty()
-           || !stream_sources_.empty();
+           || !stream_sources_.empty() || !stream_bridges_.empty();
   }
 
   /// Runs all pending actions.

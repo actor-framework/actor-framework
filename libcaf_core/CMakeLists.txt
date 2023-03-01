@@ -332,6 +332,7 @@ caf_add_component(
     message_builder
     message_id
     message_lifetime
+    messaging
     metaprogramming
     mixin.requester
     mixin.sender
@@ -369,6 +370,7 @@ caf_add_component(
     thread_hook
     tracing_data
     type_id_list
+    typed_actor_view
     typed_behavior
     typed_message_view
     typed_response_promise

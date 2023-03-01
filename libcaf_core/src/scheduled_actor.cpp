@@ -587,21 +587,45 @@ scheduled_actor::categorize(mailbox_element& x) {
       return message_category::internal;
     }
     case type_id_v<stream_open_msg>: {
+      // Try to subscribe the sink to the observable.
       auto& [str_id, ptr, sink_id] = content.get_as<stream_open_msg>(0);
+      if (!ptr) {
+        CAF_LOG_ERROR("received a stream_open_msg with a null sink");
+        return message_category::internal;
+      }
       auto sink_hdl = actor_cast<actor>(ptr);
       if (auto i = stream_sources_.find(str_id); i != stream_sources_.end()) {
+        // Create a forwarder that turns observed items into batches.
         auto fwd = make_counted<batch_forwarder_impl>(this, sink_hdl, sink_id);
         auto sub = i->second.obs->subscribe(flow::observer<async::batch>{fwd});
         if (fwd->subscribed()) {
+          // Inform the sink that the stream is now open.
           auto flow_id = new_u64_id();
           stream_subs_.emplace(flow_id, std::move(fwd));
           auto mipb = static_cast<uint32_t>(i->second.max_items_per_batch);
           unsafe_send_as(this, sink_hdl,
                          stream_ack_msg{ctrl(), sink_id, flow_id, mipb});
+          if (sink_hdl.node() != node()) {
+            // Actors cancel any pending streams when they terminate. However,
+            // remote actors may terminate without sending us a proper goodbye.
+            // Hence, we add a function object to remote actors to make sure we
+            // get a cancel in all cases.
+            auto weak_self = weak_actor_ptr{ctrl()};
+            sink_hdl->attach_functor([weak_self, flow_id] {
+              if (auto sptr = weak_self.lock())
+                anon_send(actor_cast<actor>(sptr), stream_cancel_msg{flow_id});
+            });
+          }
         } else {
           CAF_LOG_ERROR("failed to subscribe a batch forwarder");
           sub.dispose();
         }
+      } else {
+        // Abort the flow immediately.
+        CAF_LOG_DEBUG("requested stream does not exist");
+        auto err = make_error(sec::invalid_stream);
+        unsafe_send_as(this, sink_hdl,
+                       stream_abort_msg{sink_id, std::move(err)});
       }
       return message_category::internal;
     }
@@ -615,6 +639,7 @@ scheduled_actor::categorize(mailbox_element& x) {
     case type_id_v<stream_cancel_msg>: {
       auto [sub_id] = content.get_as<stream_cancel_msg>(0);
       if (auto i = stream_subs_.find(sub_id); i != stream_subs_.end()) {
+        CAF_LOG_DEBUG("canceled stream " << sub_id);
         i->second->cancel();
         stream_subs_.erase(i);
       }

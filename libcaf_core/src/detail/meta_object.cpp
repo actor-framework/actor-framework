@@ -51,10 +51,28 @@ span<const meta_object> global_meta_objects() {
   return {meta_objects, meta_objects_size};
 }
 
-const meta_object* global_meta_object(type_id_t id) {
+const meta_object& global_meta_object(type_id_t id) {
   if (id < meta_objects_size) {
     auto& meta = meta_objects[id];
-    return !meta.type_name.empty() ? &meta : nullptr;
+    if (!meta.type_name.empty())
+      return meta;
+  }
+  CAF_CRITICAL_FMT(
+    "found no meta object for type ID %d!\n"
+    "        This usually means that run-time type initialization is missing.\n"
+    "        With CAF_MAIN, make sure to pass all custom type ID blocks.\n"
+    "        With a custom main, call (before any other CAF function):\n"
+    "        - caf::core::init_global_meta_objects()\n"
+    "        - <module>::init_global_meta_objects() for all loaded modules\n"
+    "        - caf::init_global_meta_objects<T>() for all custom ID blocks",
+    static_cast<int>(id));
+}
+
+const meta_object* global_meta_object_or_null(type_id_t id) {
+  if (id < meta_objects_size) {
+    auto& meta = meta_objects[id];
+    if (!meta.type_name.empty())
+      return &meta;
   }
   return nullptr;
 }

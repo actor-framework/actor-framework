@@ -16,6 +16,14 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   unreachable if other actors no longer reference it.
 - Typed actors that use a `typed_actor_pointer` can now access the
   `run_{delayed,scheduled}` member functions.
+- Scheduled and delayed sends now return a disposable (#1362).
+- Typed response handles received support for converting them to observable or
+  single objects.
+- Typed actors that use the type-erased pointer-view type received access to the
+  new flow API functions (e.g., `make_observable`).
+- Not initializing the meta objects table now prints a diagnosis message before
+  aborting the program. Previously, the application would usually just crash due
+  to a `nullptr`-access inside some CAF function.
 
 ### Fixed
 
@@ -32,6 +40,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   operators that use the `ucast` operator internally.
 - The `mcast` and `ucast` operators now stop calling `on_next` immediately when
   disposed.
+- Actors no longer terminate despite having open streams (#1377).
 - Actors reading from external sources such as SPSC buffers via a local flow
   could end up in a long-running read loop. To avoid potentially starving other
   actors or activities, scheduled actors now limit the amount of actions that

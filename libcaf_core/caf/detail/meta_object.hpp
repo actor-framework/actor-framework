@@ -64,8 +64,13 @@ CAF_CORE_EXPORT global_meta_objects_guard_type global_meta_objects_guard();
 /// is the index for accessing the corresponding meta object.
 CAF_CORE_EXPORT span<const meta_object> global_meta_objects();
 
-/// Returns the global meta object for given type ID.
-CAF_CORE_EXPORT const meta_object* global_meta_object(type_id_t id);
+/// Returns the global meta object for given type ID. Aborts the program if no
+/// meta object exists for `id`.
+CAF_CORE_EXPORT const meta_object& global_meta_object(type_id_t id);
+
+/// Returns the global meta object for given type ID or `nullptr` if no meta
+/// object exists for `id`.
+CAF_CORE_EXPORT const meta_object* global_meta_object_or_null(type_id_t id);
 
 /// Clears the array for storing global meta objects.
 /// @warning intended for unit testing only!
