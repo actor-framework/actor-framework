@@ -491,7 +491,22 @@ void scheduled_actor::schedule(action what) {
 }
 
 void scheduled_actor::delay(action what) {
-  actions_.emplace_back(std::move(what));
+  // Happy path: push it to `actions_`, where we run it from `run_actions`.
+  if (delayed_actions_this_run_++ < defaults::max_inline_actions_per_run) {
+    actions_.emplace_back(std::move(what));
+    return;
+  }
+  // Slow path: we send a "request" with the action to ourselves. The pending
+  // request makes sure that the action keeps the actor alive until processed.
+  if (!delay_bhvr_) {
+    delay_bhvr_ = behavior{[](action& f) {
+      CAF_LOG_DEBUG("run delayed action");
+      f.run();
+    }};
+  }
+  auto res_id = new_request_id(message_priority::normal).response_id();
+  enqueue(nullptr, res_id, make_message(std::move(what)), context_);
+  add_multiplexed_response_handler(res_id, delay_bhvr_);
 }
 
 disposable scheduled_actor::delay_until(steady_time_point abs_time,
@@ -971,6 +986,7 @@ void scheduled_actor::deregister_stream(uint64_t stream_id) {
 }
 
 void scheduled_actor::run_actions() {
+  delayed_actions_this_run_ = 0;
   if (!actions_.empty()) {
     // Note: can't use iterators here since actions may add to the vector.
     for (auto index = size_t{0}; index < actions_.size(); ++index) {

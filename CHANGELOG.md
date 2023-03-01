@@ -41,6 +41,10 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The `mcast` and `ucast` operators now stop calling `on_next` immediately when
   disposed.
 - Actors no longer terminate despite having open streams (#1377).
+- Actors reading from external sources such as SPSC buffers via a local flow
+  could end up in a long-running read loop. To avoid potentially starving other
+  actors or activities, scheduled actors now limit the amount of actions that
+  may run in one iteration (#1364).
 
 ## [0.19.0-rc.1] - 2022-10-31
 

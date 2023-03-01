@@ -829,6 +829,11 @@ private:
   /// message.
   std::vector<action> actions_;
 
+  /// Counter for scheduled_actor::delay to make sure
+  /// scheduled_actor::run_actions does not end up in a busy loop that might
+  /// starve other activities.
+  size_t delayed_actions_this_run_ = 0;
+
   /// Stores ongoing activities such as flows that block the actor from
   /// terminating.
   std::vector<disposable> watched_disposables_;
@@ -844,6 +849,12 @@ private:
   /// Maps the ID of incoming stream batches to local state that allows the
   /// actor to push received batches into the local flow.
   std::unordered_map<uint64_t, detail::stream_bridge_sub_ptr> stream_bridges_;
+
+  /// Special-purpose behavior for scheduled_actor::delay. When pushing an
+  /// action to the mailbox, we register this behavior as the response handler.
+  /// This is to make sure that actor does not terminate because it thinks it's
+  /// done before processing the delayed action.
+  behavior delay_bhvr_;
 };
 
 } // namespace caf
