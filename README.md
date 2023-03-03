@@ -14,7 +14,7 @@ transparent messaging, and more.
 * __Developer Blog__: https://www.actor-framework.org/blog
 * __Guides and Tutorials__: https://www.cafcademy.com/articles
 * __Manual__: https://actor-framework.readthedocs.io
-* __Doxygen__: https://codedocs.xyz/actor-framework/actor-framework
+* __Doxygen__: https://www.actor-framework.org/doxygen/
 
 ## Report Bugs / Get Help
 
