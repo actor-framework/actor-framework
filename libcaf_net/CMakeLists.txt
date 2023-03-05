@@ -31,6 +31,7 @@ caf_add_component(
   SOURCES
     src/detail/convert_ip_endpoint.cpp
     src/detail/rfc6455.cpp
+    src/detail/shared_ssl_acceptor.cpp
     src/net/abstract_actor_shell.cpp
     src/net/actor_shell.cpp
     src/net/binary/default_trait.cpp

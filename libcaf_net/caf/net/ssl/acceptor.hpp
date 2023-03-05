@@ -10,6 +10,8 @@
 #include "caf/net/ssl/fwd.hpp"
 #include "caf/net/tcp_accept_socket.hpp"
 
+#include <variant>
+
 namespace caf::net::ssl {
 
 /// Wraps an accept socket and an SSL context.

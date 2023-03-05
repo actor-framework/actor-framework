@@ -36,6 +36,13 @@ Contents
 
 .. toctree::
    :maxdepth: 2
+   :caption: Networking Library
+
+   net/Overview
+   net/Prometheus
+
+.. toctree::
+   :maxdepth: 2
    :caption: Appendix
 
    FAQ

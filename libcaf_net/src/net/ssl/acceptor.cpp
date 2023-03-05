@@ -66,11 +66,10 @@ void close(acceptor& acc) {
 }
 
 expected<connection> accept(acceptor& acc) {
-  if (auto fd = accept(acc.fd()); fd) {
+  auto fd = accept(acc.fd());
+  if (fd)
     return acc.ctx().new_connection(*fd);
-  } else {
-    return expected<connection>{std::move(fd.error())};
-  }
+  return expected<connection>{std::move(fd.error())};
 }
 
 } // namespace caf::net::ssl

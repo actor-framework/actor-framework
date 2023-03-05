@@ -7,7 +7,7 @@
 #include "caf/actor_system_config.hpp"
 #include "caf/detail/set_thread_name.hpp"
 #include "caf/expected.hpp"
-#include "caf/net/prometheus/serve.hpp"
+#include "caf/net/prometheus/with.hpp"
 #include "caf/net/tcp_accept_socket.hpp"
 #include "caf/net/tcp_stream_socket.hpp"
 #include "caf/raise_error.hpp"
@@ -34,13 +34,12 @@ bool inspect(Inspector& f, prom_config& x) {
 }
 
 void launch_prom_server(actor_system& sys, const prom_config& cfg) {
-  if (auto fd = make_tcp_accept_socket(cfg.port, cfg.address,
-                                       cfg.reuse_address)) {
-    CAF_LOG_INFO("start Prometheus server at port" << local_port(*fd));
-    prometheus::serve(sys, std::move(*fd));
-  } else {
-    CAF_LOG_WARNING("failed to start Prometheus server: " << fd.error());
-  }
+  prometheus::with(sys)
+    .accept(cfg.port, cfg.address, cfg.reuse_address)
+    .do_on_error([](const error& err) {
+      CAF_LOG_WARNING("failed to start Prometheus server: " << err);
+    })
+    .start();
 }
 
 void launch_background_tasks(actor_system& sys) {

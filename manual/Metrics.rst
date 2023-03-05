@@ -561,6 +561,9 @@ caf.stream.output-buffer-size
   - **Type**: ``int_gauge``
   - **Label dimensions**: name, type.
 
+
+.. _metrics_export:
+
 Exporting Metrics to Prometheus
 -------------------------------
 
