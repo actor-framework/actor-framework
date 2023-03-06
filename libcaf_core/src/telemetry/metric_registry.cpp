@@ -4,6 +4,7 @@
 
 #include "caf/telemetry/metric_registry.hpp"
 
+#include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/config.hpp"
 #include "caf/raise_error.hpp"
@@ -34,6 +35,10 @@ metric_registry::metric_registry(const actor_system_config& cfg) {
 
 metric_registry::~metric_registry() {
   // nop
+}
+
+metric_registry* metric_registry::from(actor_system& sys) {
+  return &sys.metrics();
 }
 
 void metric_registry::merge(metric_registry& other) {

@@ -57,6 +57,9 @@ public:
   /// windows. Has no effect when running on Windows.
   static void block_sigpipe();
 
+  /// Returns a pointer to the multiplexer from the actor system.
+  static multiplexer* from(actor_system& sys);
+
   // -- constructors, destructors, and assignment operators --------------------
 
   ~multiplexer();

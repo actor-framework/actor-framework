@@ -47,6 +47,9 @@ public:
       // nop
     }
 
+    /// Returns the `host` as string.
+    std::string host_str() const;
+
     /// Returns whether `host` is empty, i.e., the host is not an IP address
     /// and the string is empty.
     bool empty() const noexcept {

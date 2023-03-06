@@ -27,9 +27,6 @@ class typed_actor_shell;
 template <class... Sigs>
 class typed_actor_shell_ptr;
 
-template <class Trait>
-class flow_connector;
-
 // -- classes ------------------------------------------------------------------
 
 class actor_shell;
@@ -55,9 +52,6 @@ struct udp_datagram_socket;
 
 using multiplexer_ptr = intrusive_ptr<multiplexer>;
 using socket_manager_ptr = intrusive_ptr<socket_manager>;
-
-template <class Trait>
-using flow_connector_ptr = std::shared_ptr<flow_connector<Trait>>;
 
 // -- miscellaneous aliases ----------------------------------------------------
 

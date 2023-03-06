@@ -4,7 +4,7 @@
 #include "caf/actor_system_config.hpp"
 #include "caf/caf_main.hpp"
 #include "caf/event_based_actor.hpp"
-#include "caf/net/length_prefix_framing.hpp"
+#include "caf/net/lp/with.hpp"
 #include "caf/net/middleman.hpp"
 #include "caf/net/stream_transport.hpp"
 #include "caf/net/tcp_accept_socket.hpp"
@@ -20,9 +20,6 @@
 // The trait for translating between bytes on the wire and flow items. The
 // binary default trait operates on binary::frame items.
 using trait = caf::net::binary::default_trait;
-
-// Takes care converting a byte stream into a sequence of messages on the wire.
-using lpf = caf::net::length_prefix_framing::bind<trait>;
 
 // An implicitly shared type for storing a binary frame.
 using bin_frame = caf::net::binary::frame;
@@ -47,7 +44,7 @@ struct config : caf::actor_system_config {
 // -- multiplexing logic -------------------------------------------------------
 
 void worker_impl(caf::event_based_actor* self,
-                 caf::async::consumer_resource<lpf::accept_event_t> events) {
+                 trait::acceptor_resource events) {
   // Allows us to push new flows into the central merge point.
   caf::flow::item_publisher<caf::flow::observable<message_t>> msg_pub{self};
   // Our central merge point combines all inputs into a single, shared flow.
@@ -64,7 +61,7 @@ void worker_impl(caf::event_based_actor* self,
     .observe_on(self) //
     .for_each(
       [self, messages, pub = std::move(msg_pub)] //
-      (const lpf::accept_event_t& event) mutable {
+      (const trait::accept_event& event) mutable {
         // Each connection gets a unique ID.
         auto conn = caf::uuid::random();
         std::cout << "*** accepted new connection " << to_string(conn) << '\n';
@@ -98,29 +95,22 @@ void worker_impl(caf::event_based_actor* self,
 // -- main ---------------------------------------------------------------------
 
 int caf_main(caf::actor_system& sys, const config& cfg) {
-  // Open up a TCP port for incoming connections.
+  // Open up a TCP port for incoming connections and start the server.
+  auto had_error = false;
   auto port = caf::get_or(cfg, "port", default_port);
-  caf::net::tcp_accept_socket fd;
-  if (auto maybe_fd = caf::net::make_tcp_accept_socket(port)) {
-    std::cout << "*** started listening for incoming connections on port "
-              << port << '\n';
-    fd = std::move(*maybe_fd);
-  } else {
-    std::cerr << "*** unable to open port " << port << ": "
-              << to_string(maybe_fd.error()) << '\n';
-    return EXIT_FAILURE;
-  }
-  // Create buffers to signal events from the caf.net backend to the worker.
-  auto [wres, sres] = lpf::make_accept_event_resources();
-  // Spin up a worker to multiplex the messages.
-  auto worker = sys.spawn(worker_impl, std::move(wres));
-  // Set everything in motion.
-  lpf::accept(sys, fd, std::move(sres));
-  // Done. However, the actor system will keep the application running for as
-  // long as actors are still alive and for as long as it has open ports or
-  // connections. Since we never close the accept socket, this means the server
-  // is running indefinitely until the process gets killed (e.g., via CTRL+C).
-  return EXIT_SUCCESS;
+  caf::net::lp::with(sys)
+    .accept(port)
+    .do_on_error([&](const caf::error& what) {
+      std::cerr << "*** unable to open port " << port << ": " << to_string(what)
+                << '\n';
+      had_error = true;
+    })
+    .start([&sys](trait::acceptor_resource accept_events) {
+      sys.spawn(worker_impl, std::move(accept_events));
+    });
+  // Note: the actor system will keep the application running for as long as the
+  // workers are still alive.
+  return had_error ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
 CAF_MAIN(caf::net::middleman)

@@ -4,7 +4,7 @@
 #include "caf/actor_system_config.hpp"
 #include "caf/caf_main.hpp"
 #include "caf/event_based_actor.hpp"
-#include "caf/net/length_prefix_framing.hpp"
+#include "caf/net/lp/with.hpp"
 #include "caf/net/middleman.hpp"
 #include "caf/net/stream_transport.hpp"
 #include "caf/net/tcp_accept_socket.hpp"
@@ -22,9 +22,6 @@
 // The trait for translating between bytes on the wire and flow items. The
 // binary default trait operates on binary::frame items.
 using trait = caf::net::binary::default_trait;
-
-// Takes care converting a byte stream into a sequence of messages on the wire.
-using lpf = caf::net::length_prefix_framing::bind<trait>;
 
 // An implicitly shared type for storing a binary frame.
 using bin_frame = caf::net::binary::frame;
@@ -53,7 +50,8 @@ struct config : caf::actor_system_config {
 // -- main ---------------------------------------------------------------------
 
 int caf_main(caf::actor_system& sys, const config& cfg) {
-  // Connect to the server.
+  // Read the configuration.
+  bool had_error = false;
   auto port = caf::get_or(cfg, "port", default_port);
   auto host = caf::get_or(cfg, "host", default_host);
   auto name = caf::get_or(cfg, "name", "");
@@ -61,54 +59,54 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
     std::cerr << "*** mandatory parameter 'name' missing or empty\n";
     return EXIT_FAILURE;
   }
-  auto fd = caf::net::make_connected_tcp_stream_socket(host, port);
-  if (!fd) {
-    std::cerr << "*** unable to connect to " << host << ":" << port << ": "
-              << to_string(fd.error()) << '\n';
-    return EXIT_FAILURE;
-  }
-  std::cout << "*** connected to " << host << ":" << port << ": " << '\n';
-  // Create our buffers that connect the worker to the socket.
-  using caf::async::make_spsc_buffer_resource;
-  auto [lpf_pull, app_push] = make_spsc_buffer_resource<bin_frame>();
-  auto [app_pull, lpf_push] = make_spsc_buffer_resource<bin_frame>();
-  // Spin up the network backend.
-  lpf::run(sys, *fd, std::move(lpf_pull), std::move(lpf_push));
-  // Spin up a worker that simply prints received inputs.
-  sys.spawn([pull = std::move(app_pull)](caf::event_based_actor* self) {
-    pull
-      .observe_on(self) //
-      .do_finally([self] {
-        std::cout << "*** lost connection to server -> quit\n"
-                  << "*** use CTRL+D or CTRL+C to terminate\n";
-        self->quit();
-      })
-      .for_each([](const bin_frame& frame) {
-        // Interpret the bytes as ASCII characters.
-        auto bytes = frame.bytes();
-        auto str = std::string_view{reinterpret_cast<const char*>(bytes.data()),
-                                    bytes.size()};
-        if (std::all_of(str.begin(), str.end(), ::isprint)) {
-          std::cout << str << '\n';
-        } else {
-          std::cout << "<non-ascii-data of size " << bytes.size() << ">\n";
+  // Connect to the server.
+  caf::net::lp::with(sys)
+    .connect(host, port)
+    .do_on_error([&](const caf::error& what) {
+      std::cerr << "*** unable to connect to " << host << ":" << port << ": "
+                << to_string(what) << '\n';
+      had_error = true;
+    })
+    .start([&sys, name](auto pull, auto push) {
+      // Spin up a worker that prints received inputs.
+      sys.spawn([pull](caf::event_based_actor* self) {
+        pull
+          .observe_on(self) //
+          .do_finally([self] {
+            std::cout << "*** lost connection to server -> quit\n"
+                      << "*** use CTRL+D or CTRL+C to terminate\n";
+            self->quit();
+          })
+          .for_each([](const bin_frame& frame) {
+            // Interpret the bytes as ASCII characters.
+            auto bytes = frame.bytes();
+            auto str = std::string_view{
+              reinterpret_cast<const char*>(bytes.data()), bytes.size()};
+            if (std::all_of(str.begin(), str.end(), ::isprint)) {
+              std::cout << str << '\n';
+            } else {
+              std::cout << "<non-ascii-data of size " << bytes.size() << ">\n";
+            }
+          });
+      });
+      // Spin up a second worker that reads from std::cin and sends each line to
+      // the server. Put that to its own thread since it's doing I/O.
+      sys.spawn<caf::detached>([push, name] {
+        auto lines = caf::async::make_blocking_producer(push);
+        if (!lines)
+          throw std::logic_error("failed to create blocking producer");
+        auto line = std::string{};
+        auto prefix = name + ": ";
+        while (std::getline(std::cin, line)) {
+          line.insert(line.begin(), prefix.begin(), prefix.end());
+          lines->push(bin_frame{caf::as_bytes(caf::make_span(line))});
+          line.clear();
         }
       });
-  });
-  // Wait for user input on std::cin and send them to the server.
-  auto push_buf = app_push.try_open();
-  assert(push_buf != nullptr);
-  auto inputs = caf::async::blocking_producer<bin_frame>{std::move(push_buf)};
-  auto line = std::string{};
-  auto prefix = name + ": ";
-  while (std::getline(std::cin, line)) {
-    line.insert(line.begin(), prefix.begin(), prefix.end());
-    inputs.push(bin_frame{caf::as_bytes(caf::make_span(line))});
-    line.clear();
-  }
-  // Done. However, the actor system will keep the application running for as
-  // long as it has open ports or connections.
-  return EXIT_SUCCESS;
+    });
+  // Note: the actor system will keep the application running for as long as the
+  // workers are still alive.
+  return had_error ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
 CAF_MAIN(caf::net::middleman)

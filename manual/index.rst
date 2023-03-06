@@ -40,6 +40,7 @@ Contents
 
    net/Overview
    net/Prometheus
+   net/LengthPrefixFraming
 
 .. toctree::
    :maxdepth: 2

@@ -27,6 +27,12 @@ caf::uri::impl_type default_instance;
 
 namespace caf {
 
+std::string uri::authority_type::host_str() const {
+  if (auto* str = std::get_if<std::string>(&host))
+    return *str;
+  return to_string(std::get<ip_address>(host));
+}
+
 uri::impl_type::impl_type() : rc_(1) {
   // nop
 }

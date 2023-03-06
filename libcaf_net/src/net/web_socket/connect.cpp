@@ -4,7 +4,8 @@
 
 #include "caf/net/web_socket/connect.hpp"
 
-#include "caf/net/flow_connector.hpp"
+#include "caf/detail/flow_connector.hpp"
+#include "caf/detail/ws_flow_bridge.hpp"
 #include "caf/net/middleman.hpp"
 #include "caf/net/ssl/context.hpp"
 #include "caf/net/ssl/transport.hpp"
@@ -12,7 +13,6 @@
 #include "caf/net/tcp_stream_socket.hpp"
 #include "caf/net/web_socket/client.hpp"
 #include "caf/net/web_socket/default_trait.hpp"
-#include "caf/net/web_socket/flow_bridge.hpp"
 
 namespace ws = caf::net::web_socket;
 
@@ -28,7 +28,7 @@ ws_do_connect_impl(actor_system& sys, Connection conn, ws::handshake& hs) {
   auto mpx = sys.network_manager().mpx_ptr();
   auto connector = std::make_shared<connector_t>(std::move(ws_pull),
                                                  std::move(ws_push));
-  auto bridge = ws::flow_bridge<trait_t>::make(mpx, std::move(connector));
+  auto bridge = ws_flow_bridge<trait_t>::make(mpx, std::move(connector));
   auto impl = ws::client::make(std::move(hs), std::move(bridge));
   auto fd = conn.fd();
   auto transport = Transport::make(std::move(conn), std::move(impl));

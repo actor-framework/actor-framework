@@ -8,13 +8,13 @@
 #include "caf/cow_tuple.hpp"
 #include "caf/detail/accept_handler.hpp"
 #include "caf/detail/connection_factory.hpp"
-#include "caf/net/flow_connector.hpp"
+#include "caf/detail/flow_connector.hpp"
+#include "caf/detail/ws_flow_bridge.hpp"
+#include "caf/detail/ws_flow_connector_request_impl.hpp"
 #include "caf/net/middleman.hpp"
 #include "caf/net/ssl/acceptor.hpp"
 #include "caf/net/ssl/transport.hpp"
 #include "caf/net/web_socket/default_trait.hpp"
-#include "caf/net/web_socket/flow_bridge.hpp"
-#include "caf/net/web_socket/flow_connector_request_impl.hpp"
 #include "caf/net/web_socket/frame.hpp"
 #include "caf/net/web_socket/request.hpp"
 #include "caf/net/web_socket/server.hpp"
@@ -58,7 +58,7 @@ class ws_conn_factory
 public:
   using connection_handle = typename Transport::connection_handle;
 
-  using connector_pointer = net::flow_connector_ptr<Trait>;
+  using connector_pointer = flow_connector_ptr<Trait>;
 
   explicit ws_conn_factory(connector_pointer connector)
     : connector_(std::move(connector)) {
@@ -67,7 +67,7 @@ public:
 
   net::socket_manager_ptr make(net::multiplexer* mpx,
                                connection_handle conn) override {
-    auto app = net::web_socket::flow_bridge<Trait>::make(mpx, connector_);
+    auto app = detail::ws_flow_bridge<Trait>::make(mpx, connector_);
     auto app_ptr = app.get();
     auto ws = net::web_socket::server::make(std::move(app));
     auto fd = conn.fd();
@@ -107,7 +107,7 @@ disposable accept(actor_system& sys, Acceptor acc,
   using conn_t = typename transport_t::connection_handle;
   using impl_t = detail::accept_handler<Acceptor, conn_t>;
   using connector_t
-    = net::web_socket::flow_connector_request_impl<OnRequest, trait_t, Ts...>;
+    = detail::ws_flow_connector_request_impl<OnRequest, trait_t, Ts...>;
   auto max_connections = get_or(cfg, defaults::net::max_connections);
   if (auto buf = out.try_open()) {
     auto& mpx = sys.network_manager().mpx();

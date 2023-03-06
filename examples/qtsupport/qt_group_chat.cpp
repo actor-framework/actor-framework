@@ -18,7 +18,7 @@
 #include <vector>
 
 #include "caf/all.hpp"
-#include "caf/net/length_prefix_framing.hpp"
+#include "caf/net/lp/with.hpp"
 #include "caf/net/middleman.hpp"
 #include "caf/net/stream_transport.hpp"
 #include "caf/net/tcp_stream_socket.hpp"
@@ -54,7 +54,7 @@ public:
 // -- main ---------------------------------------------------------------------
 
 int caf_main(actor_system& sys, const config& cfg) {
-  // Connect to the server.
+  // Read the configuration.
   auto port = caf::get_or(cfg, "port", default_port);
   auto host = caf::get_or(cfg, "host", default_host);
   auto name = caf::get_or(cfg, "name", "");
@@ -62,22 +62,6 @@ int caf_main(actor_system& sys, const config& cfg) {
     std::cerr << "*** mandatory parameter 'name' missing or empty\n";
     return EXIT_FAILURE;
   }
-  auto fd = caf::net::make_connected_tcp_stream_socket(host, port);
-  if (!fd) {
-    std::cerr << "*** unable to connect to " << host << ":" << port << ": "
-              << to_string(fd.error()) << '\n';
-    return EXIT_FAILURE;
-  }
-  std::cout << "*** connected to " << host << ":" << port << ": " << '\n';
-  // Create our buffers that connect the worker to the socket.
-  using bin_frame = caf::net::binary::frame;
-  using caf::async::make_spsc_buffer_resource;
-  auto [lpf_pull, app_push] = make_spsc_buffer_resource<bin_frame>();
-  auto [app_pull, lpf_push] = make_spsc_buffer_resource<bin_frame>();
-  // Spin up the network backend.
-  using trait = caf::net::binary::default_trait;
-  using lpf = caf::net::length_prefix_framing::bind<trait>;
-  auto conn = lpf::run(sys, *fd, std::move(lpf_pull), std::move(lpf_push));
   // Spin up Qt.
   auto [argc, argv] = cfg.c_args_remainder();
   QApplication app{argc, argv};
@@ -85,9 +69,25 @@ int caf_main(actor_system& sys, const config& cfg) {
   QMainWindow mw;
   Ui::ChatWindow helper;
   helper.setupUi(&mw);
-  helper.chatwidget->init(sys, name, std::move(app_pull), std::move(app_push));
+  // Connect to the server.
+  auto had_error = false;
+  auto conn
+    = caf::net::lp::with(sys)
+        .connect(host, port)
+        .do_on_error([&](const caf::error& what) {
+          std::cerr << "*** unable to connect to " << host << ":" << port
+                    << ": " << to_string(what) << '\n';
+          had_error = true;
+        })
+        .start([&](auto pull, auto push) {
+          std::cout << "*** connected to " << host << ":" << port << '\n';
+          helper.chatwidget->init(sys, name, std::move(pull), std::move(push));
+        });
+  if (had_error) {
+    mw.close();
+    return app.exec();
+  }
   // Setup and run.
-  auto client = helper.chatwidget->as_actor();
   mw.show();
   auto result = app.exec();
   conn.dispose();

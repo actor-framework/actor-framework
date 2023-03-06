@@ -8,6 +8,7 @@
 #include "caf/cow_tuple.hpp"
 #include "caf/error.hpp"
 #include "caf/net/fwd.hpp"
+#include "caf/net/web_socket/fwd.hpp"
 
 #include <utility>
 
@@ -19,7 +20,7 @@ template <class Trait, class... Ts>
 class request {
 public:
   template <class, class, class...>
-  friend class flow_connector_request_impl;
+  friend class detail::ws_flow_connector_request_impl;
 
   using input_type = typename Trait::input_type;
 

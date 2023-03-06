@@ -53,7 +53,7 @@ caf_add_component(
     src/net/http/upper_layer.cpp
     src/net/http/v1.cpp
     src/net/ip.cpp
-    src/net/length_prefix_framing.cpp
+    src/net/lp/framing.cpp
     src/net/middleman.cpp
     src/net/multiplexer.cpp
     src/net/network_socket.cpp

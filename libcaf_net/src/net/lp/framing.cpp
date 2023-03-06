@@ -1,4 +1,4 @@
-#include "caf/net/length_prefix_framing.hpp"
+#include "caf/net/lp/framing.hpp"
 
 #include "caf/detail/network_order.hpp"
 #include "caf/error.hpp"
@@ -6,35 +6,26 @@
 #include "caf/net/receive_policy.hpp"
 #include "caf/sec.hpp"
 
-namespace caf::net {
-
-// -- constructors, destructors, and assignment operators ----------------------
-
-length_prefix_framing::length_prefix_framing(upper_layer_ptr up)
-  : up_(std::move(up)) {
-  // nop
-}
+namespace caf::net::lp {
 
 // -- factories ----------------------------------------------------------------
 
-std::unique_ptr<length_prefix_framing>
-length_prefix_framing::make(upper_layer_ptr up) {
-  return std::make_unique<length_prefix_framing>(std::move(up));
+std::unique_ptr<framing> framing::make(upper_layer_ptr up) {
+  return std::make_unique<framing>(std::move(up));
 }
 
 // -- implementation of stream_oriented::upper_layer ---------------------------
 
-error length_prefix_framing::start(stream_oriented::lower_layer* down,
-                                   const settings& cfg) {
+error framing::start(stream_oriented::lower_layer* down, const settings& cfg) {
   down_ = down;
   return up_->start(this, cfg);
 }
 
-void length_prefix_framing::abort(const error& reason) {
+void framing::abort(const error& reason) {
   up_->abort(reason);
 }
 
-ptrdiff_t length_prefix_framing::consume(byte_span input, byte_span) {
+ptrdiff_t framing::consume(byte_span input, byte_span) {
   CAF_LOG_TRACE("got" << input.size() << "bytes\n");
   if (input.size() < sizeof(uint32_t)) {
     CAF_LOG_ERROR("received too few bytes from underlying transport");
@@ -80,49 +71,49 @@ ptrdiff_t length_prefix_framing::consume(byte_span input, byte_span) {
   }
 }
 
-void length_prefix_framing::prepare_send() {
+void framing::prepare_send() {
   up_->prepare_send();
 }
 
-bool length_prefix_framing::done_sending() {
+bool framing::done_sending() {
   return up_->done_sending();
 }
 
 // -- implementation of binary::lower_layer ------------------------------------
 
-bool length_prefix_framing::can_send_more() const noexcept {
+bool framing::can_send_more() const noexcept {
   return down_->can_send_more();
 }
 
-void length_prefix_framing::suspend_reading() {
+void framing::suspend_reading() {
   down_->configure_read(receive_policy::stop());
 }
 
-bool length_prefix_framing::is_reading() const noexcept {
+bool framing::is_reading() const noexcept {
   return down_->is_reading();
 }
 
-void length_prefix_framing::write_later() {
+void framing::write_later() {
   down_->write_later();
 }
 
-void length_prefix_framing::request_messages() {
+void framing::request_messages() {
   if (!down_->is_reading())
     down_->configure_read(receive_policy::exactly(hdr_size));
 }
 
-void length_prefix_framing::begin_message() {
+void framing::begin_message() {
   down_->begin_output();
   auto& buf = down_->output_buffer();
   message_offset_ = buf.size();
   buf.insert(buf.end(), 4, std::byte{0});
 }
 
-byte_buffer& length_prefix_framing::message_buffer() {
+byte_buffer& framing::message_buffer() {
   return down_->output_buffer();
 }
 
-bool length_prefix_framing::end_message() {
+bool framing::end_message() {
   using detail::to_network_order;
   auto& buf = down_->output_buffer();
   CAF_ASSERT(message_offset_ < buf.size());
@@ -140,14 +131,13 @@ bool length_prefix_framing::end_message() {
   }
 }
 
-void length_prefix_framing::shutdown() {
+void framing::shutdown() {
   down_->shutdown();
 }
 
 // -- utility functions ------------------------------------------------------
 
-std::pair<size_t, byte_span>
-length_prefix_framing::split(byte_span buffer) noexcept {
+std::pair<size_t, byte_span> framing::split(byte_span buffer) noexcept {
   CAF_ASSERT(buffer.size() >= sizeof(uint32_t));
   auto u32_size = uint32_t{0};
   memcpy(&u32_size, buffer.data(), sizeof(uint32_t));
@@ -155,4 +145,4 @@ length_prefix_framing::split(byte_span buffer) noexcept {
   return std::make_pair(msg_size, buffer.subspan(sizeof(uint32_t)));
 }
 
-} // namespace caf::net
+} // namespace caf::net::lp

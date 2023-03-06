@@ -7,8 +7,9 @@
 #include "caf/async/consumer_adapter.hpp"
 #include "caf/async/producer_adapter.hpp"
 #include "caf/async/spsc_buffer.hpp"
+#include "caf/detail/flow_connector.hpp"
 #include "caf/fwd.hpp"
-#include "caf/net/flow_connector.hpp"
+#include "caf/logger.hpp"
 #include "caf/sec.hpp"
 
 #include <utility>
@@ -29,7 +30,7 @@ public:
   /// Type for the producer adapter. We produce the input of the application.
   using producer_type = async::producer_adapter<input_type>;
 
-  using connector_pointer = net::flow_connector_ptr<Trait>;
+  using connector_pointer = flow_connector_ptr<Trait>;
 
   flow_bridge_base(async::execution_context_ptr loop, connector_pointer conn)
     : loop_(std::move(loop)), conn_(std::move(conn)) {

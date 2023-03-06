@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/byte_span.hpp"
+#include "caf/detail/message_flow_bridge.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/error.hpp"
 #include "caf/logger.hpp"
@@ -13,7 +14,6 @@
 #include "caf/net/http/method.hpp"
 #include "caf/net/http/status.hpp"
 #include "caf/net/http/v1.hpp"
-#include "caf/net/message_flow_bridge.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/receive_policy.hpp"
 #include "caf/net/socket_manager.hpp"

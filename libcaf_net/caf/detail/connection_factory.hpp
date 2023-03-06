@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/error.hpp"
 #include "caf/fwd.hpp"
 #include "caf/net/fwd.hpp"
 

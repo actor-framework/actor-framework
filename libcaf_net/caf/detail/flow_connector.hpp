@@ -12,7 +12,13 @@
 
 #include <tuple>
 
-namespace caf::net {
+namespace caf::detail {
+
+template <class Trait>
+class flow_connector;
+
+template <class Trait>
+using flow_connector_ptr = std::shared_ptr<flow_connector<Trait>>;
 
 /// Connects a flow bridge to input and output buffers.
 template <class Trait>
@@ -48,16 +54,12 @@ public:
   static flow_connector_ptr<Trait> make_basic_server(connect_event_buf buf);
 };
 
-} // namespace caf::net
-
-namespace caf::detail {
-
 /// Trivial flow connector that passes its constructor arguments to the
 /// @ref flow_bridge.
 template <class Trait>
-class flow_connector_trivial_impl : public net::flow_connector<Trait> {
+class flow_connector_trivial_impl : public flow_connector<Trait> {
 public:
-  using super = net::flow_connector<Trait>;
+  using super = flow_connector<Trait>;
 
   using input_type = typename Trait::input_type;
 
@@ -85,9 +87,9 @@ private:
 
 /// A flow connector for basic servers that have no custom handshake logic.
 template <class Trait>
-class flow_connector_basic_server_impl : public net::flow_connector<Trait> {
+class flow_connector_basic_server_impl : public flow_connector<Trait> {
 public:
-  using super = net::flow_connector<Trait>;
+  using super = flow_connector<Trait>;
 
   using input_type = typename Trait::input_type;
 
@@ -117,10 +119,6 @@ private:
   producer_type prod_;
 };
 
-} // namespace caf::detail
-
-namespace caf::net {
-
 template <class Trait>
 flow_connector_ptr<Trait>
 flow_connector<Trait>::make_trivial(pull_t pull, push_t push) {
@@ -135,4 +133,4 @@ flow_connector<Trait>::make_basic_server(connect_event_buf buf) {
   return std::make_shared<impl_t>(std::move(buf));
 }
 
-} // namespace caf::net
+} // namespace caf::detail

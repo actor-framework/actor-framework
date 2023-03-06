@@ -4,25 +4,28 @@
 
 #pragma once
 
-namespace caf::net::web_socket {
+#include "caf/detail/flow_connector.hpp"
+#include "caf/net/web_socket/request.hpp"
+
+namespace caf::detail {
 
 /// Calls an `OnRequest` handler with a @ref request object and passes the
 /// generated buffers to the @ref flow_bridge.
 template <class OnRequest, class Trait, class... Ts>
-class flow_connector_request_impl : public flow_connector<Trait> {
+class ws_flow_connector_request_impl : public flow_connector<Trait> {
 public:
   using super = flow_connector<Trait>;
 
   using result_type = typename super::result_type;
 
-  using request_type = request<Trait, Ts...>;
+  using request_type = net::web_socket::request<Trait, Ts...>;
 
   using app_res_type = typename request_type::app_res_type;
 
   using producer_type = async::blocking_producer<app_res_type>;
 
   template <class T>
-  flow_connector_request_impl(OnRequest&& on_request, T&& out)
+  ws_flow_connector_request_impl(OnRequest&& on_request, T&& out)
     : on_request_(std::move(on_request)), out_(std::forward<T>(out)) {
     // nop
   }
@@ -48,4 +51,4 @@ private:
   producer_type out_;
 };
 
-} // namespace caf::net::web_socket
+} // namespace caf::detail

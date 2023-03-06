@@ -5,6 +5,7 @@
 #include "caf/net/multiplexer.hpp"
 
 #include "caf/action.hpp"
+#include "caf/actor_system.hpp"
 #include "caf/byte.hpp"
 #include "caf/config.hpp"
 #include "caf/error.hpp"
@@ -92,6 +93,10 @@ void multiplexer::block_sigpipe() {
 }
 
 #endif
+
+multiplexer* multiplexer::from(actor_system& sys) {
+  return sys.network_manager().mpx_ptr();
+}
 
 // -- constructors, destructors, and assignment operators ----------------------
 

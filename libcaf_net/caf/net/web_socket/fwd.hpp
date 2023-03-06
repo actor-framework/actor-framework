@@ -4,13 +4,14 @@
 
 #pragma once
 
+namespace caf::detail {
+
+template <class, class, class...>
+class ws_flow_connector_request_impl;
+
+} // namespace caf::detail
+
 namespace caf::net::web_socket {
-
-template <class OnRequest, class Trait, class... Ts>
-class flow_connector_request_impl;
-
-template <class Trait>
-class flow_bridge;
 
 template <class Trait, class... Ts>
 class request;

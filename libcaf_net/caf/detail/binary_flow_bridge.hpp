@@ -8,26 +8,27 @@
 #include "caf/async/producer_adapter.hpp"
 #include "caf/async/spsc_buffer.hpp"
 #include "caf/detail/flow_bridge_base.hpp"
+#include "caf/detail/flow_connector.hpp"
 #include "caf/fwd.hpp"
 #include "caf/net/binary/lower_layer.hpp"
 #include "caf/net/binary/upper_layer.hpp"
-#include "caf/net/flow_connector.hpp"
 #include "caf/sec.hpp"
 
 #include <utility>
 
-namespace caf::net::binary {
+namespace caf::detail {
 
 /// Convenience alias for referring to the base type of @ref flow_bridge.
 template <class Trait>
-using flow_bridge_base_t
-  = detail::flow_bridge_base<upper_layer, lower_layer, Trait>;
+using binary_flow_bridge_base_t
+  = detail::flow_bridge_base<net::binary::upper_layer, net::binary::lower_layer,
+                             Trait>;
 
 /// Translates between a message-oriented transport and data flows.
 template <class Trait>
-class flow_bridge : public flow_bridge_base_t<Trait> {
+class binary_flow_bridge : public binary_flow_bridge_base_t<Trait> {
 public:
-  using super = flow_bridge_base_t<Trait>;
+  using super = binary_flow_bridge_base_t<Trait>;
 
   using input_type = typename Trait::input_type;
 
@@ -37,9 +38,10 @@ public:
 
   using super::super;
 
-  static std::unique_ptr<flow_bridge> make(async::execution_context_ptr loop,
-                                           connector_pointer conn) {
-    return std::make_unique<flow_bridge>(std::move(loop), std::move(conn));
+  static std::unique_ptr<binary_flow_bridge>
+  make(async::execution_context_ptr loop, connector_pointer conn) {
+    return std::make_unique<binary_flow_bridge>(std::move(loop),
+                                                std::move(conn));
   }
 
   bool write(const output_type& item) override {
@@ -62,4 +64,4 @@ public:
   }
 };
 
-} // namespace caf::net::binary
+} // namespace caf::detail
