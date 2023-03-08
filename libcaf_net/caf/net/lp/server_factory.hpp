@@ -11,11 +11,10 @@
 #include "caf/detail/flow_connector.hpp"
 #include "caf/detail/shared_ssl_acceptor.hpp"
 #include "caf/fwd.hpp"
+#include "caf/net/dsl/server_factory_base.hpp"
 #include "caf/net/http/server.hpp"
 #include "caf/net/lp/framing.hpp"
 #include "caf/net/multiplexer.hpp"
-#include "caf/net/prometheus/accept_factory.hpp"
-#include "caf/net/prometheus/server.hpp"
 #include "caf/net/ssl/transport.hpp"
 #include "caf/net/stream_transport.hpp"
 #include "caf/net/tcp_accept_socket.hpp"
@@ -62,40 +61,14 @@ private:
 
 namespace caf::net::lp {
 
-template <class>
-class with_t;
-
-/// Factory for the `with(...).accept(...).start(...)` DSL.
+/// Factory type for the `with(...).accept(...).start(...)` DSL.
 template <class Trait>
-class accept_factory {
+class server_factory
+  : public dsl::server_factory_base<Trait, server_factory<Trait>> {
 public:
-  friend class with_t<Trait>;
+  using super = dsl::server_factory_base<Trait, server_factory<Trait>>;
 
-  accept_factory(accept_factory&&) = default;
-
-  accept_factory(const accept_factory&) = delete;
-
-  accept_factory& operator=(accept_factory&&) noexcept = default;
-
-  accept_factory& operator=(const accept_factory&) noexcept = delete;
-
-  ~accept_factory() {
-    if (auto* fd = std::get_if<tcp_accept_socket>(&state_))
-      close(*fd);
-  }
-
-  /// Configures how many concurrent connections we are allowing.
-  accept_factory& max_connections(size_t value) {
-    max_connections_ = value;
-    return *this;
-  }
-
-  /// Sets the callback for errors.
-  template <class F>
-  accept_factory& do_on_error(F callback) {
-    do_on_error_ = std::move(callback);
-    return *this;
-  }
+  using super::super;
 
   /// Starts a server that accepts incoming connections with the
   /// length-prefixing protocol.
@@ -103,94 +76,69 @@ public:
   disposable start(OnStart on_start) {
     using acceptor_resource = typename Trait::acceptor_resource;
     static_assert(std::is_invocable_v<OnStart, acceptor_resource>);
-    switch (state_.index()) {
-      case 1: {
-        auto& cfg = std::get<1>(state_);
-        auto fd = make_tcp_accept_socket(cfg.port, cfg.address, cfg.reuse_addr);
-        if (fd)
-          return do_start(*fd, on_start);
-        if (do_on_error_)
-          do_on_error_(fd.error());
-        return {};
-      }
-      case 2: {
-        // Pass ownership of the socket to the accept handler.
-        auto fd = std::get<2>(state_);
-        state_ = none;
-        return do_start(fd, on_start);
-      }
-      default:
-        return {};
-    }
+    auto f = [this, &on_start](auto& cfg) {
+      return this->do_start(cfg, on_start);
+    };
+    return visit(f, this->config());
   }
 
 private:
-  struct config {
-    uint16_t port;
-    std::string address;
-    bool reuse_addr;
-  };
-
-  explicit accept_factory(multiplexer* mpx) : mpx_(mpx) {
-    // nop
-  }
-
   template <class Factory, class AcceptHandler, class Acceptor, class OnStart>
-  disposable do_start_impl(Acceptor&& acc, OnStart& on_start) {
+  disposable do_start_impl(dsl::server_config<Trait>& cfg, Acceptor acc,
+                           OnStart& on_start) {
     using accept_event = typename Trait::accept_event;
     using connector_t = detail::flow_connector<Trait>;
     auto [pull, push] = async::make_spsc_buffer_resource<accept_event>();
     auto serv = connector_t::make_basic_server(push.try_open());
     auto factory = std::make_unique<Factory>(std::move(serv));
     auto impl = AcceptHandler::make(std::move(acc), std::move(factory),
-                                    max_connections_);
+                                    cfg.max_connections);
     auto impl_ptr = impl.get();
-    auto ptr = net::socket_manager::make(mpx_, std::move(impl));
+    auto ptr = net::socket_manager::make(cfg.mpx, std::move(impl));
     impl_ptr->self_ref(ptr->as_disposable());
-    mpx_->start(ptr);
+    cfg.mpx->start(ptr);
     on_start(std::move(pull));
     return disposable{std::move(ptr)};
   }
 
   template <class OnStart>
-  disposable do_start(tcp_accept_socket fd, OnStart& on_start) {
-    if (!ctx_) {
+  disposable do_start(dsl::server_config<Trait>& cfg, tcp_accept_socket fd,
+                      OnStart& on_start) {
+    if (!cfg.ctx) {
       using factory_t = detail::lp_connection_factory<Trait, stream_transport>;
       using impl_t = detail::accept_handler<tcp_accept_socket, stream_socket>;
-      return do_start_impl<factory_t, impl_t>(fd, on_start);
+      return do_start_impl<factory_t, impl_t>(cfg, fd, on_start);
     }
     using factory_t = detail::lp_connection_factory<Trait, ssl::transport>;
     using acc_t = detail::shared_ssl_acceptor;
     using impl_t = detail::accept_handler<acc_t, ssl::connection>;
-    return do_start_impl<factory_t, impl_t>(acc_t{fd, ctx_}, on_start);
+    return do_start_impl<factory_t, impl_t>(cfg, acc_t{fd, cfg.ctx}, on_start);
   }
 
-  void set_ssl(ssl::context ctx) {
-    ctx_ = std::make_shared<ssl::context>(std::move(ctx));
+  template <class OnStart>
+  disposable
+  do_start(typename dsl::server_config<Trait>::socket& cfg, OnStart& on_start) {
+    if (cfg.fd == invalid_socket) {
+      auto err = make_error(
+        sec::runtime_error,
+        "server factory cannot create a server on an invalid socket");
+      cfg.call_on_error(err);
+      return {};
+    }
+    return do_start(cfg, cfg.take_fd(), on_start);
   }
 
-  void init(uint16_t port, std::string address, bool reuse_addr) {
-    state_ = config{port, std::move(address), reuse_addr};
+  template <class OnStart>
+  disposable
+  do_start(typename dsl::server_config<Trait>::lazy& cfg, OnStart& on_start) {
+    auto fd = make_tcp_accept_socket(cfg.port, cfg.bind_address,
+                                     cfg.reuse_addr);
+    if (!fd) {
+      cfg.call_on_error(fd.error());
+      return {};
+    }
+    return do_start(cfg, *fd, on_start);
   }
-
-  void init(tcp_accept_socket fd) {
-    state_ = fd;
-  }
-
-  /// Pointer to the hosting actor system.
-  multiplexer* mpx_;
-
-  /// Callback for errors.
-  std::function<void(const error&)> do_on_error_;
-
-  /// Configures the maximum number of concurrent connections.
-  size_t max_connections_ = defaults::net::max_connections.fallback;
-
-  /// User-defined state for getting things up and running.
-  std::variant<none_t, config, tcp_accept_socket> state_;
-
-  /// Pointer to the (optional) SSL context.
-  std::shared_ptr<ssl::context> ctx_;
 };
 
 } // namespace caf::net::lp
