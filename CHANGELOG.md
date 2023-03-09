@@ -27,6 +27,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ### Fixed
 
+- When exporting metrics to Prometheus, CAF now normalizes label names to meet
+  the Prometheus name requirements, e.g., `label-1` becomes `label_1` (#1386).
 - The SPSC buffer now makes sure that subscribers get informed of a producer has
   already left before the subscriber appeared and vice versa. This fixes a race
   on the buffer that could cause indefinite hanging of an application.
