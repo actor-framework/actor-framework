@@ -18,6 +18,10 @@ bottom up, usually starting at the actor system. For example:
    namespace ws = caf::net::web_socket;
    auto conn = ws::with(sys)
                  .connect("localhost", 8080)
+                 .do_on_error([](const caf::error& err) {
+                   std::cerr << "*** failed to connect: " << to_string(err)
+                             << std::endl;
+                 })
                  .start([&sys](auto pull, auto push) {
                    sys.spawn(my_actor, pull, push);
                  });
