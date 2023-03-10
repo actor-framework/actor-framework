@@ -544,6 +544,9 @@ struct is_expected : std::false_type {};
 template <class T>
 struct is_expected<expected<T>> : std::true_type {};
 
+template <class T>
+constexpr bool is_expected_v = is_expected<T>::value;
+
 // Checks whether `T` and `U` are integers of the same size and signedness.
 // clang-format off
 template <class T, class U,

@@ -46,9 +46,10 @@ void caf_main(actor_system& system) {
   auto cell2 = system.spawn(unchecked_cell);
   // --(rst-spawn-cell-end)--
   auto f = make_function_view(cell1);
-  cout << "cell value: " << f(get_atom_v) << endl;
+  cout << "cell value: " << caf::to_string(f(get_atom_v)) << endl;
   f(put_atom_v, 20);
-  cout << "cell value (after setting to 20): " << f(get_atom_v) << endl;
+  cout << "cell value (after setting to 20): " << caf::to_string(f(get_atom_v))
+       << endl;
   // Get an unchecked cell and send it some garbage. Triggers an "unexpected
   // message" error (and terminates cell2!).
   anon_send(cell2, "hello there!");

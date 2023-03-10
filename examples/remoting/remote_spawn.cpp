@@ -94,7 +94,8 @@ void client_repl(function_view<calculator> f) {
       usage();
     else
       cout << " = "
-           << (words[1] == "+" ? f(add_atom_v, *x, *y) : f(sub_atom_v, *x, *y))
+           << caf::to_string(words[1] == "+" ? f(add_atom_v, *x, *y)
+                                             : f(sub_atom_v, *x, *y))
            << "\n";
   }
 }
