@@ -125,6 +125,7 @@ std::ostream& operator<<(std::ostream& out, const expected<int>& x) {
 }
 
 void caf_main(actor_system& sys) {
+  using std::cout;
   // Spawn our matrix.
   static constexpr int rows = 3;
   static constexpr int columns = 6;
@@ -140,18 +141,18 @@ void caf_main(actor_system& sys) {
   // Print out matrix.
   for (int row = 0; row < rows; ++row) {
     for (int column = 0; column < columns; ++column)
-      std::cout << std::setw(4) << f(get_atom_v, row, column) << ' ';
-    std::cout << '\n';
+      cout << std::setw(4) << f(get_atom_v, row, column) << ' ';
+    cout << '\n';
   }
   // Print out AVG for each row and column.
   for (int row = 0; row < rows; ++row)
-    std::cout << "AVG(row " << row
-              << ") = " << f(get_atom_v, average_atom_v, row_atom_v, row)
-              << '\n';
+    cout << "AVG(row " << row << ") = "
+         << caf::to_string(f(get_atom_v, average_atom_v, row_atom_v, row))
+         << '\n';
   for (int column = 0; column < columns; ++column)
-    std::cout << "AVG(column " << column
-              << ") = " << f(get_atom_v, average_atom_v, column_atom_v, column)
-              << '\n';
+    cout << "AVG(column " << column << ") = "
+         << caf::to_string(f(get_atom_v, average_atom_v, column_atom_v, column))
+         << '\n';
 }
 
 CAF_MAIN(id_block::fan_out_request)

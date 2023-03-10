@@ -23,6 +23,10 @@
   }                                                                            \
   void CAF_UNIQUE(test)::run_test_impl()
 
+#define SUBCASE(description)                                                   \
+  CAF_MESSAGE(description);                                                    \
+  if (true)
+
 #define GIVEN(description)                                                     \
   CAF_MESSAGE("GIVEN " description);                                           \
   if (true)

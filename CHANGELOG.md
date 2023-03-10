@@ -24,6 +24,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Not initializing the meta objects table now prints a diagnosis message before
   aborting the program. Previously, the application would usually just crash due
   to a `nullptr`-access inside some CAF function.
+- The class `expected` now implements the monadic member functions from C++23
+  `std::expected` as well as `value_or`.
 
 ### Fixed
 
@@ -45,6 +47,14 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   could end up in a long-running read loop. To avoid potentially starving other
   actors or activities, scheduled actors now limit the amount of actions that
   may run in one iteration (#1364).
+
+### Deprecated
+
+- All member functions from `caf::expected` that have no equivalent in
+  `std::expected` are now deprecated. Further, `caf::expected<unit_t>` as well
+  as constructing from `unit_t` are deprecated as well. The reasoning behind
+  this decision is that `caf::expected` should eventually become an alias for
+  `std::expected<T, caf::error>`.
 
 ## [0.19.0-rc.1] - 2022-10-31
 

@@ -128,7 +128,7 @@ expected<void> child_process_inherit(native_socket fd, bool new_value) {
   // calculate and set new flags
   auto wf = (!new_value) ? (rf | FD_CLOEXEC) : (rf & (~(FD_CLOEXEC)));
   CALL_CFUN(set_res, detail::cc_not_minus1, "fcntl", fcntl(fd, F_SETFD, wf));
-  return unit;
+  return {};
 }
 
 expected<void> keepalive(native_socket fd, bool new_value) {
@@ -137,7 +137,7 @@ expected<void> keepalive(native_socket fd, bool new_value) {
   CALL_CFUN(res, detail::cc_zero, "setsockopt",
             setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &value,
                        static_cast<unsigned>(sizeof(value))));
-  return unit;
+  return {};
 }
 
 expected<void> nonblocking(native_socket fd, bool new_value) {
@@ -147,7 +147,7 @@ expected<void> nonblocking(native_socket fd, bool new_value) {
   // calculate and set new flags
   auto wf = new_value ? (rf | O_NONBLOCK) : (rf & (~(O_NONBLOCK)));
   CALL_CFUN(set_res, detail::cc_not_minus1, "fcntl", fcntl(fd, F_SETFL, wf));
-  return unit;
+  return {};
 }
 
 expected<void> allow_sigpipe(native_socket fd, bool new_value) {
@@ -157,12 +157,12 @@ expected<void> allow_sigpipe(native_socket fd, bool new_value) {
               setsockopt(fd, SOL_SOCKET, no_sigpipe_socket_flag, &value,
                          static_cast<unsigned>(sizeof(value))));
   }
-  return unit;
+  return {};
 }
 
 expected<void> allow_udp_connreset(native_socket, bool) {
   // nop; SIO_UDP_CONNRESET only exists on Windows
-  return unit;
+  return {};
 }
 
 std::pair<native_socket, native_socket> create_pipe() {
@@ -353,7 +353,7 @@ expected<void> send_buffer_size(native_socket fd, int new_value) {
             setsockopt(fd, SOL_SOCKET, SO_SNDBUF,
                        reinterpret_cast<setsockopt_ptr>(&new_value),
                        static_cast<socket_size_type>(sizeof(int))));
-  return unit;
+  return {};
 }
 
 expected<void> tcp_nodelay(native_socket fd, bool new_value) {
@@ -363,7 +363,7 @@ expected<void> tcp_nodelay(native_socket fd, bool new_value) {
             setsockopt(fd, IPPROTO_TCP, TCP_NODELAY,
                        reinterpret_cast<setsockopt_ptr>(&flag),
                        static_cast<socket_size_type>(sizeof(flag))));
-  return unit;
+  return {};
 }
 
 bool is_error(signed_size_type res, bool is_nonblock) {

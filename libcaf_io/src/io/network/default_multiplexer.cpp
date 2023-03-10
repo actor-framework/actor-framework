@@ -788,12 +788,12 @@ expected<void> read_port(native_socket fd, SockAddrType& sa) {
   socket_size_type len = sizeof(SockAddrType);
   CALL_CFUN(res, detail::cc_zero, "getsockname",
             getsockname(fd, reinterpret_cast<sockaddr*>(&sa), &len));
-  return unit;
+  return {};
 }
 
 expected<void> set_inaddr_any(native_socket, sockaddr_in& sa) {
   sa.sin_addr.s_addr = INADDR_ANY;
-  return unit;
+  return {};
 }
 
 expected<void> set_inaddr_any(native_socket fd, sockaddr_in6& sa) {
@@ -804,7 +804,7 @@ expected<void> set_inaddr_any(native_socket fd, sockaddr_in6& sa) {
             setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY,
                        reinterpret_cast<setsockopt_ptr>(&off),
                        static_cast<socket_size_type>(sizeof(off))));
-  return unit;
+  return {};
 }
 
 template <int Family, int SockType = SOCK_STREAM>
