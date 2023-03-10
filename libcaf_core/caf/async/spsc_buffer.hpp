@@ -155,7 +155,7 @@ public:
     CAF_ASSERT(consumer != nullptr);
     lock_type guard{mtx_};
     if (consumer_)
-      CAF_RAISE_ERROR("SPSC buffer already has a consumer");
+      CAF_RAISE_ERROR(std::logic_error, "SPSC buffer already has a consumer");
     consumer_ = std::move(consumer);
     if (producer_)
       ready();
@@ -167,10 +167,8 @@ public:
   void set_producer(producer_ptr producer) {
     CAF_ASSERT(producer != nullptr);
     lock_type guard{mtx_};
-    if (producer_) {
-      producer->on_consumer_cancel();
-      return;
-    }
+    if (producer_)
+      CAF_RAISE_ERROR(std::logic_error, "SPSC buffer already has a producer");
     producer_ = std::move(producer);
     if (consumer_)
       ready();
@@ -349,13 +347,12 @@ struct resource_ctrl : ref_counted {
   }
 
   buffer_ptr try_open() {
+    auto res = buffer_ptr{};
     std::unique_lock guard{mtx};
     if (buf) {
-      auto res = buffer_ptr{};
       res.swap(buf);
-      return res;
     }
-    return nullptr;
+    return res;
   }
 
   mutable std::mutex mtx;
@@ -428,6 +425,16 @@ public:
     return ctrl_ == nullptr;
   }
 
+  friend bool operator==(const consumer_resource& lhs,
+                         const consumer_resource& rhs) {
+    return lhs.ctrl_ == rhs.ctrl_;
+  }
+
+  friend bool operator!=(const consumer_resource& lhs,
+                         const consumer_resource& rhs) {
+    return lhs.ctrl_ != rhs.ctrl_;
+  }
+
 private:
   intrusive_ptr<resource_ctrl<T, false>> ctrl_;
 };
@@ -494,6 +501,16 @@ public:
 
   bool operator!() const noexcept {
     return ctrl_ == nullptr;
+  }
+
+  friend bool operator==(const producer_resource& lhs,
+                         const producer_resource& rhs) {
+    return lhs.ctrl_ == rhs.ctrl_;
+  }
+
+  friend bool operator!=(const producer_resource& lhs,
+                         const producer_resource& rhs) {
+    return lhs.ctrl_ != rhs.ctrl_;
   }
 
 private:

@@ -287,15 +287,22 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  buffer_writer_impl(coordinator* ctx, buffer_ptr buf)
-    : ctx_(ctx), buf_(std::move(buf)) {
+  buffer_writer_impl(coordinator* ctx) : ctx_(ctx) {
     CAF_ASSERT(ctx_ != nullptr);
-    CAF_ASSERT(buf_ != nullptr);
   }
 
   ~buffer_writer_impl() {
     if (buf_)
       buf_->close();
+  }
+
+  void init(buffer_ptr buf) {
+    // This step is a bit subtle. Basically, buf->set_producer might throw, in
+    // which case we must not set buf_ to avoid closing a buffer that we don't
+    // actually own.
+    CAF_ASSERT(buf != nullptr);
+    buf->set_producer(this);
+    buf_ = std::move(buf);
   }
 
   // -- intrusive_ptr interface ------------------------------------------------

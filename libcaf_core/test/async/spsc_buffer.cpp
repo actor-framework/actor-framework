@@ -108,6 +108,44 @@ struct dummy_observer {
 
 BEGIN_FIXTURE_SCOPE(test_coordinator_fixture<>)
 
+TEST_CASE("resources may be copied") {
+  auto [rd, wr] = async::make_spsc_buffer_resource<int>(6, 2);
+  // Test copy constructor.
+  async::consumer_resource<int> rd2{rd};
+  CHECK_EQ(rd, rd2);
+  async::producer_resource<int> wr2{wr};
+  CHECK_EQ(wr, wr2);
+  // Test copy-assignment.
+  async::consumer_resource<int> rd3;
+  CHECK_NE(rd2, rd3);
+  rd3 = rd2;
+  CHECK_EQ(rd2, rd3);
+  async::producer_resource<int> wr3;
+  CHECK_NE(wr2, wr3);
+  wr3 = wr2;
+  CHECK_EQ(wr2, wr3);
+}
+
+TEST_CASE("resources may be moved") {
+  auto [rd, wr] = async::make_spsc_buffer_resource<int>(6, 2);
+  CHECK(rd);
+  CHECK(wr);
+  // Test move constructor.
+  async::consumer_resource<int> rd2{std::move(rd)};
+  CHECK(!rd);
+  CHECK(rd2);
+  async::producer_resource<int> wr2{std::move(wr)};
+  CHECK(!wr);
+  CHECK(wr2);
+  // Test move-assignment.
+  async::consumer_resource<int> rd3{std::move(rd2)};
+  CHECK(!rd2);
+  CHECK(rd3);
+  async::producer_resource<int> wr3{std::move(wr2)};
+  CHECK(!wr2);
+  CHECK(wr3);
+}
+
 SCENARIO("SPSC buffers may go past their capacity") {
   GIVEN("an SPSC buffer with consumer and produer") {
     auto prod = make_counted<dummy_producer>();
@@ -379,29 +417,15 @@ SCENARIO("resources are invalid after calling try_open") {
         CHECK_NE(rd.try_open(), nullptr);
         CHECK(!rd);
         CHECK_EQ(rd.try_open(), nullptr);
-        auto rd2 = async::consumer_resource<int>{};
-        rd2 = rd;
-        CHECK(!rd2);
-        rd2 = std::move(rd);
-        CHECK(!rd2);
-        CHECK(wr);
-        CHECK_NE(wr.try_open(), nullptr);
-        CHECK(!wr);
-        CHECK_EQ(wr.try_open(), nullptr);
-        auto wr2 = async::producer_resource<int>{};
-        wr2 = wr;
-        CHECK(!wr2);
-        wr2 = std::move(wr);
-        CHECK(!wr2);
       }
     }
   }
 }
 
-SCENARIO("try_open on producer resources succeeds only once") {
+SCENARIO("producer resources may be subscribed to flows only once") {
   GIVEN("a producer resource") {
-    WHEN("opening it twice") {
-      THEN("the second try_open fails") {
+    WHEN("subscribing it to a flow twice") {
+      THEN("the second attempt results in a canceled subscription") {
         using actor_t = event_based_actor;
         auto outputs = std::vector<int>{};
         auto [rd, wr] = async::make_spsc_buffer_resource<int>(6, 2);
@@ -428,10 +452,10 @@ SCENARIO("try_open on producer resources succeeds only once") {
   }
 }
 
-SCENARIO("try_open on consumer resources succeeds only once") {
+SCENARIO("consumer resources may be converted to flows only once") {
   GIVEN("a consumer resource") {
-    WHEN("opening it twice") {
-      THEN("the second try_open fails") {
+    WHEN("making an observable from the resource") {
+      THEN("the second attempt results in an empty observable") {
         using actor_t = event_based_actor;
         auto outputs = std::vector<int>{};
         auto [rd, wr] = async::make_spsc_buffer_resource<int>(6, 2);
@@ -459,6 +483,8 @@ SCENARIO("try_open on consumer resources succeeds only once") {
   }
 }
 
+#ifdef CAF_ENABLE_EXCEPTIONS
+
 // Note: this basically checks that buffer protects against misuse and is not
 //       how users should do things.
 SCENARIO("SPSC buffers reject multiple producers") {
@@ -482,14 +508,14 @@ SCENARIO("SPSC buffers reject multiple producers") {
         });
         self->monitor(prod2);
         run();
-        expect((down_msg), to(self).with(down_msg{prod2.address(), error{}}));
+        // prod2 dies immediately to the exception.
+        expect((down_msg),
+               to(self).with(down_msg{prod2.address(), sec::runtime_error}));
         CHECK(self->mailbox().empty());
       }
     }
   }
 }
-
-#ifdef CAF_ENABLE_EXCEPTIONS
 
 // Note: this basically checks that buffer protects against misuse and is not
 //       how users should do things.
@@ -521,6 +547,7 @@ SCENARIO("SPSC buffers reject multiple consumers") {
         });
         self->monitor(snk2);
         run();
+        // snk2 dies immediately to the exception.
         expect((down_msg),
                to(self).with(down_msg{snk2.address(), sec::runtime_error}));
         CHECK(self->mailbox().empty());
