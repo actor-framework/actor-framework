@@ -5,8 +5,8 @@
 #pragma once
 
 #include "caf/make_counted.hpp"
+#include "caf/net/dsl/base.hpp"
 #include "caf/net/dsl/client_config.hpp"
-#include "caf/net/dsl/has_trait.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/ssl/acceptor.hpp"
 #include "caf/net/tcp_accept_socket.hpp"
@@ -44,7 +44,7 @@ public:
   /// @param value The new retry delay.
   /// @returns a reference to this `client_factory`.
   Derived& retry_delay(timespan value) {
-    if (auto* cfg = std::get_if<lazy_client_config<Trait>>(&cfg_.get()))
+    if (auto* cfg = get_if<lazy_client_config<Trait>>(cfg_.get()))
       cfg->retry_delay = value;
     return dref();
   }
@@ -54,7 +54,7 @@ public:
   /// @param value The new connection timeout.
   /// @returns a reference to this `client_factory`.
   Derived& connection_timeout(timespan value) {
-    if (auto* cfg = std::get_if<lazy_client_config<Trait>>(&cfg_.get()))
+    if (auto* cfg = get_if<lazy_client_config<Trait>>(cfg_.get()))
       cfg->connection_timeout = value;
     return dref();
   }
@@ -64,7 +64,7 @@ public:
   /// @param value The new maximum retry count.
   /// @returns a reference to this `client_factory`.
   Derived& max_retry_count(size_t value) {
-    if (auto* cfg = std::get_if<lazy_client_config<Trait>>(&cfg_.get()))
+    if (auto* cfg = get_if<lazy_client_config<Trait>>(cfg_.get()))
       cfg->max_retry_count = value;
     return dref();
   }

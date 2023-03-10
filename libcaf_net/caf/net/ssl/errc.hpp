@@ -61,4 +61,10 @@ bool inspect(Inspector& f, errc& x) {
 
 } // namespace caf::net::ssl
 
+namespace caf::detail {
+
+CAF_NET_EXPORT net::ssl::errc ssl_errc_from_native(int);
+
+} // namespace caf::detail
+
 CAF_ERROR_CODE_ENUM(caf::net::ssl::errc)

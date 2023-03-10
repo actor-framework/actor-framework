@@ -39,14 +39,15 @@ caf_add_component(
     src/net/binary/lower_layer.cpp
     src/net/binary/upper_layer.cpp
     src/net/datagram_socket.cpp
+    src/net/dsl/config_base.cpp
     src/net/generic_lower_layer.cpp
     src/net/generic_upper_layer.cpp
     src/net/http/header.cpp
     src/net/http/lower_layer.cpp
-    src/net/http/serve.cpp
     src/net/http/method.cpp
     src/net/http/request.cpp
     src/net/http/response.cpp
+    src/net/http/serve.cpp
     src/net/http/serve.cpp
     src/net/http/server.cpp
     src/net/http/status.cpp
@@ -67,6 +68,7 @@ caf_add_component(
     src/net/ssl/connection.cpp
     src/net/ssl/context.cpp
     src/net/ssl/dtls.cpp
+    src/net/ssl/errc.cpp
     src/net/ssl/format.cpp
     src/net/ssl/password.cpp
     src/net/ssl/startup.cpp

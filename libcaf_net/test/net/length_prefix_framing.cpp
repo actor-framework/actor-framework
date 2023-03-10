@@ -247,28 +247,32 @@ SCENARIO("lp::with(...).connect(...) translates between flows and socket I/O") {
         caf::actor_system sys{cfg};
         auto buf = std::make_shared<std::vector<std::string>>();
         caf::actor hdl;
-        net::lp::with(sys).connect(fd2).start([&](auto pull, auto push) {
-          hdl = sys.spawn([buf, pull, push](event_based_actor* self) {
-            pull.observe_on(self)
-              .do_on_error([](const error& what) { //
-                MESSAGE("flow aborted: " << what);
-              })
-              .do_on_complete([] { MESSAGE("flow completed"); })
-              .do_on_next([buf](const net::binary::frame& x) {
-                std::string str;
-                for (auto val : x.bytes())
-                  str.push_back(static_cast<char>(val));
-                buf->push_back(std::move(str));
-              })
-              .map([](const net::binary::frame& x) {
-                std::string response = "ok ";
-                for (auto val : x.bytes())
-                  response.push_back(static_cast<char>(val));
-                return net::binary::frame{as_bytes(make_span(response))};
-              })
-              .subscribe(push);
-          });
-        });
+        auto conn
+          = net::lp::with(sys) //
+              .connect(fd2)
+              .start([&](auto pull, auto push) {
+                hdl = sys.spawn([buf, pull, push](event_based_actor* self) {
+                  pull.observe_on(self)
+                    .do_on_error([](const error& what) { //
+                      MESSAGE("flow aborted: " << what);
+                    })
+                    .do_on_complete([] { MESSAGE("flow completed"); })
+                    .do_on_next([buf](const net::binary::frame& x) {
+                      std::string str;
+                      for (auto val : x.bytes())
+                        str.push_back(static_cast<char>(val));
+                      buf->push_back(std::move(str));
+                    })
+                    .map([](const net::binary::frame& x) {
+                      std::string response = "ok ";
+                      for (auto val : x.bytes())
+                        response.push_back(static_cast<char>(val));
+                      return net::binary::frame{as_bytes(make_span(response))};
+                    })
+                    .subscribe(push);
+                });
+              });
+        REQUIRE(conn);
         scoped_actor self{sys};
         self->wait_for(hdl);
         if (CHECK_EQ(buf->size(), 5u)) {

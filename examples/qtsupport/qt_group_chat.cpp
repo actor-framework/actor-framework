@@ -70,27 +70,23 @@ int caf_main(actor_system& sys, const config& cfg) {
   Ui::ChatWindow helper;
   helper.setupUi(&mw);
   // Connect to the server.
-  auto had_error = false;
   auto conn
     = caf::net::lp::with(sys)
         .connect(host, port)
-        .do_on_error([&](const caf::error& what) {
-          std::cerr << "*** unable to connect to " << host << ":" << port
-                    << ": " << to_string(what) << '\n';
-          had_error = true;
-        })
         .start([&](auto pull, auto push) {
           std::cout << "*** connected to " << host << ":" << port << '\n';
           helper.chatwidget->init(sys, name, std::move(pull), std::move(push));
         });
-  if (had_error) {
+  if (!conn) {
+    std::cerr << "*** unable to connect to " << host << ":" << port << ": "
+              << to_string(conn.error()) << '\n';
     mw.close();
     return app.exec();
   }
   // Setup and run.
   mw.show();
   auto result = app.exec();
-  conn.dispose();
+  conn->dispose();
   return result;
 }
 

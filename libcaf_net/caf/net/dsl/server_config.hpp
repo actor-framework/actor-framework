@@ -6,9 +6,9 @@
 
 #include "caf/callback.hpp"
 #include "caf/defaults.hpp"
-#include "caf/detail/plain_ref_counted.hpp"
 #include "caf/intrusive_ptr.hpp"
-#include "caf/net/dsl/has_trait.hpp"
+#include "caf/net/dsl/base.hpp"
+#include "caf/net/dsl/config_base.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/ssl/context.hpp"
 #include "caf/net/tcp_accept_socket.hpp"
@@ -20,30 +20,24 @@
 namespace caf::net::dsl {
 
 /// The server config type enum class.
-enum class server_config_type { lazy, socket };
+enum class server_config_type { lazy, socket, fail };
 
 /// Base class for server configuration objects.
 template <class Trait>
-class server_config : public detail::plain_ref_counted {
+class server_config : public config_base {
 public:
+  using trait_type = Trait;
+
   class lazy;
   class socket;
+  class fail;
 
   friend class lazy;
   friend class socket;
-
-  server_config(const server_config&) = delete;
-
-  server_config& operator=(const server_config&) = delete;
-
-  /// Virtual destructor.
-  virtual ~server_config() = default;
+  friend class fail;
 
   /// Returns the server configuration type.
   virtual server_config_type type() const noexcept = 0;
-
-  /// The pointer to the @ref multiplexer for running the server.
-  multiplexer* mpx;
 
   /// The user-defined trait for configuration serialization.
   Trait trait;
@@ -51,29 +45,12 @@ public:
   /// SSL context for secure servers.
   std::shared_ptr<ssl::context> ctx;
 
-  /// User-defined callback for errors.
-  shared_callback_ptr<void(const error&)> on_error;
-
-  /// Configures the maximum number of concurrent connections.
   size_t max_connections = defaults::net::max_connections.fallback;
-
-  /// Calls `on_error` if non-null.
-  void call_on_error(const error& what) {
-    if (on_error)
-      (*on_error)(what);
-  }
-
-  friend void intrusive_ptr_add_ref(const server_config* ptr) noexcept {
-    ptr->ref();
-  }
-
-  friend void intrusive_ptr_release(const server_config* ptr) noexcept {
-    ptr->deref();
-  }
 
 private:
   /// Private constructor to enforce sealing.
-  server_config(multiplexer* mpx, const Trait& trait) : mpx(mpx), trait(trait) {
+  server_config(multiplexer* mpx, const Trait& trait)
+    : config_base(mpx), trait(trait) {
     // nop
   }
 };
@@ -146,6 +123,28 @@ public:
   }
 };
 
+/// Wraps an error that occurred earlier in the setup phase.
+template <class Trait>
+class server_config<Trait>::fail final : public server_config<Trait> {
+public:
+  static constexpr auto type_token = server_config_type::fail;
+
+  using super = server_config;
+
+  fail(multiplexer* mpx, const Trait& trait, error err)
+    : super(mpx, trait), err(std::move(err)) {
+    // nop
+  }
+
+  /// Returns the server configuration type.
+  server_config_type type() const noexcept override {
+    return type_token;
+  }
+
+  /// The forwarded error.
+  error err;
+};
+
 /// Convenience alias for the `lazy` sub-type of @ref server_config.
 template <class Trait>
 using lazy_server_config = typename server_config<Trait>::lazy;
@@ -154,25 +153,39 @@ using lazy_server_config = typename server_config<Trait>::lazy;
 template <class Trait>
 using socket_server_config = typename server_config<Trait>::socket;
 
+/// Convenience alias for the `fail` sub-type of @ref server_config.
+template <class Trait>
+using fail_server_config = typename server_config<Trait>::fail;
+
 /// Calls a function object with the actual subtype of a server configuration
 /// and returns its result.
 template <class F, class Trait>
 decltype(auto) visit(F&& f, server_config<Trait>& cfg) {
   auto type = cfg.type();
-  if (cfg.type() == server_config_type::lazy)
-    return f(static_cast<lazy_server_config<Trait>&>(cfg));
-  assert(type == server_config_type::socket);
-  return f(static_cast<socket_server_config<Trait>&>(cfg));
+  switch (cfg.type()) {
+    case server_config_type::lazy:
+      return f(static_cast<lazy_server_config<Trait>&>(cfg));
+    case server_config_type::socket:
+      return f(static_cast<socket_server_config<Trait>&>(cfg));
+    default:
+      assert(type == server_config_type::fail);
+      return f(static_cast<fail_server_config<Trait>&>(cfg));
+  }
 }
 
 /// Calls a function object with the actual subtype of a server configuration.
 template <class F, class Trait>
 decltype(auto) visit(F&& f, const server_config<Trait>& cfg) {
   auto type = cfg.type();
-  if (cfg.type() == server_config_type::lazy)
-    return f(static_cast<const lazy_server_config<Trait>&>(cfg));
-  assert(type == server_config_type::socket);
-  return f(static_cast<const socket_server_config<Trait>&>(cfg));
+  switch (cfg.type()) {
+    case server_config_type::lazy:
+      return f(static_cast<const lazy_server_config<Trait>&>(cfg));
+    case server_config_type::socket:
+      return f(static_cast<const socket_server_config<Trait>&>(cfg));
+    default:
+      assert(type == server_config_type::fail);
+      return f(static_cast<const fail_server_config<Trait>&>(cfg));
+  }
 }
 
 /// Gets a pointer to a specific subtype of a server configuration.
@@ -189,6 +202,13 @@ const T* get_if(const server_config<Trait>* cfg) {
   if (T::type_token == cfg->type())
     return static_cast<const T*>(cfg);
   return nullptr;
+}
+
+/// Creates a `fail_server_config` from another configuration object plus error.
+template <class Trait>
+auto to_fail_config(server_config_ptr<Trait> ptr, error err) {
+  using impl_t = fail_server_config<Trait>;
+  return make_counted<impl_t>(ptr->mpx, ptr->trait, std::move(err));
 }
 
 } // namespace caf::net::dsl

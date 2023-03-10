@@ -34,9 +34,11 @@ public:
 
   using super::super;
 
+  using start_res_t = expected<disposable>;
+
   /// Starts a connection with the length-prefixing protocol.
   template <class OnStart>
-  disposable start(OnStart on_start) {
+  [[nodiscard]] expected<disposable> start(OnStart on_start) {
     using input_res_t = typename Trait::input_resource;
     using output_res_t = typename Trait::output_resource;
     static_assert(std::is_invocable_v<OnStart, input_res_t, output_res_t>);
@@ -47,24 +49,24 @@ public:
   }
 
 private:
-  expected<stream_socket> try_connect(const dsl::lazy_client_config<Trait>& cfg,
-                                      const std::string& host, uint16_t port) {
+  auto try_connect(const dsl::lazy_client_config<Trait>& cfg,
+                   const std::string& host, uint16_t port) {
     auto result = make_connected_tcp_stream_socket(host, port,
                                                    cfg.connection_timeout);
     if (result)
-      return {*result};
+      return result;
     for (size_t i = 1; i <= cfg.max_retry_count; ++i) {
       std::this_thread::sleep_for(cfg.retry_delay);
       result = make_connected_tcp_stream_socket(host, port,
                                                 cfg.connection_timeout);
       if (result)
-        return {*result};
+        return result;
     }
-    return {std::move(result.error())};
+    return result;
   }
 
   template <class Conn, class OnStart>
-  disposable
+  start_res_t
   do_start_impl(dsl::client_config<Trait>& cfg, Conn conn, OnStart& on_start) {
     // s2a: socket-to-application (and a2s is the inverse).
     using input_t = typename Trait::input_type;
@@ -78,18 +80,20 @@ private:
                                                           std::move(fc));
     auto bridge_ptr = bridge.get();
     auto impl = framing::make(std::move(bridge));
+    auto fd = conn.fd();
     auto transport = transport_t::make(std::move(conn), std::move(impl));
+    transport->active_policy().connect(fd);
     auto ptr = socket_manager::make(cfg.mpx, std::move(transport));
     bridge_ptr->self_ref(ptr->as_disposable());
     cfg.mpx->start(ptr);
     on_start(std::move(s2a_pull), std::move(a2s_push));
-    return disposable{std::move(ptr)};
+    return start_res_t{disposable{std::move(ptr)}};
   }
 
   template <class OnStart>
-  disposable do_start(dsl::lazy_client_config<Trait>& cfg,
-                      const std::string& host, uint16_t port,
-                      OnStart& on_start) {
+  start_res_t do_start(dsl::lazy_client_config<Trait>& cfg,
+                       const std::string& host, uint16_t port,
+                       OnStart& on_start) {
     auto fd = try_connect(cfg, host, port);
     if (fd) {
       if (cfg.ctx) {
@@ -97,48 +101,39 @@ private:
         if (conn)
           return do_start_impl(cfg, std::move(*conn), on_start);
         cfg.call_on_error(conn.error());
-        return {};
+        return start_res_t{std::move(conn.error())};
       }
       return do_start_impl(cfg, *fd, on_start);
     }
     cfg.call_on_error(fd.error());
-    return {};
+    return start_res_t{std::move(fd.error())};
   }
 
   template <class OnStart>
-  disposable do_start(dsl::lazy_client_config<Trait>& cfg, OnStart& on_start) {
+  start_res_t do_start(dsl::lazy_client_config<Trait>& cfg, OnStart& on_start) {
     if (auto* st = std::get_if<dsl::client_config_server_address>(&cfg.server))
       return do_start(cfg, st->host, st->port, on_start);
-    auto fail = [&cfg](auto code, std::string description) {
-      auto err = make_error(code, std::move(description));
-      cfg.call_on_error(err);
-      return disposable{};
-    };
-    auto& server_uri = std::get<uri>(cfg.server);
-    if (server_uri.scheme() != "tcp")
-      return fail(sec::invalid_argument, "connect expects tcp://<host>:<port>");
-    auto& auth = server_uri.authority();
-    if (auth.empty() || auth.port == 0)
-      return fail(sec::invalid_argument,
-                  "connect expects tcp://<host>:<port> with non-zero port");
-    return do_start(cfg, auth.host_str(), auth.port, on_start);
+    auto err = make_error(sec::invalid_argument,
+                          "length-prefix factories do not accept URIs");
+    cfg.call_on_error(err);
+    return start_res_t{std::move(err)};
   }
 
   template <class OnStart>
-  disposable
+  start_res_t
   do_start(dsl::socket_client_config<Trait>& cfg, OnStart& on_start) {
     return do_start_impl(cfg, cfg.take_fd(), on_start);
   }
 
   template <class OnStart>
-  disposable do_start(dsl::conn_client_config<Trait>& cfg, OnStart& on_start) {
+  start_res_t do_start(dsl::conn_client_config<Trait>& cfg, OnStart& on_start) {
     return do_start_impl(cfg, std::move(cfg.state), on_start);
   }
 
   template <class OnStart>
-  disposable do_start(dsl::fail_client_config<Trait>& cfg, OnStart&) {
+  start_res_t do_start(dsl::fail_client_config<Trait>& cfg, OnStart&) {
     cfg.call_on_error(cfg.err);
-    return {};
+    return start_res_t{std::move(cfg.err)};
   }
 };
 

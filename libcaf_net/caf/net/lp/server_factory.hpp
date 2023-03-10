@@ -70,10 +70,12 @@ public:
 
   using super::super;
 
+  using start_res_t = expected<disposable>;
+
   /// Starts a server that accepts incoming connections with the
   /// length-prefixing protocol.
   template <class OnStart>
-  disposable start(OnStart on_start) {
+  start_res_t start(OnStart on_start) {
     using acceptor_resource = typename Trait::acceptor_resource;
     static_assert(std::is_invocable_v<OnStart, acceptor_resource>);
     auto f = [this, &on_start](auto& cfg) {
@@ -84,8 +86,8 @@ public:
 
 private:
   template <class Factory, class AcceptHandler, class Acceptor, class OnStart>
-  disposable do_start_impl(dsl::server_config<Trait>& cfg, Acceptor acc,
-                           OnStart& on_start) {
+  start_res_t do_start_impl(dsl::server_config<Trait>& cfg, Acceptor acc,
+                            OnStart& on_start) {
     using accept_event = typename Trait::accept_event;
     using connector_t = detail::flow_connector<Trait>;
     auto [pull, push] = async::make_spsc_buffer_resource<accept_event>();
@@ -98,12 +100,12 @@ private:
     impl_ptr->self_ref(ptr->as_disposable());
     cfg.mpx->start(ptr);
     on_start(std::move(pull));
-    return disposable{std::move(ptr)};
+    return start_res_t{disposable{std::move(ptr)}};
   }
 
   template <class OnStart>
-  disposable do_start(dsl::server_config<Trait>& cfg, tcp_accept_socket fd,
-                      OnStart& on_start) {
+  start_res_t do_start(dsl::server_config<Trait>& cfg, tcp_accept_socket fd,
+                       OnStart& on_start) {
     if (!cfg.ctx) {
       using factory_t = detail::lp_connection_factory<Trait, stream_transport>;
       using impl_t = detail::accept_handler<tcp_accept_socket, stream_socket>;
@@ -116,28 +118,34 @@ private:
   }
 
   template <class OnStart>
-  disposable
+  start_res_t
   do_start(typename dsl::server_config<Trait>::socket& cfg, OnStart& on_start) {
     if (cfg.fd == invalid_socket) {
       auto err = make_error(
         sec::runtime_error,
         "server factory cannot create a server on an invalid socket");
       cfg.call_on_error(err);
-      return {};
+      return start_res_t{std::move(err)};
     }
     return do_start(cfg, cfg.take_fd(), on_start);
   }
 
   template <class OnStart>
-  disposable
+  start_res_t
   do_start(typename dsl::server_config<Trait>::lazy& cfg, OnStart& on_start) {
     auto fd = make_tcp_accept_socket(cfg.port, cfg.bind_address,
                                      cfg.reuse_addr);
     if (!fd) {
       cfg.call_on_error(fd.error());
-      return {};
+      return start_res_t{std::move(fd.error())};
     }
     return do_start(cfg, *fd, on_start);
+  }
+
+  template <class OnStart>
+  start_res_t do_start(dsl::fail_server_config<Trait>& cfg, OnStart&) {
+    cfg.call_on_error(cfg.err);
+    return start_res_t{std::move(cfg.err)};
   }
 };
 

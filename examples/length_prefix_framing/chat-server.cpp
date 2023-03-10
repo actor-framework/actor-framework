@@ -32,12 +32,18 @@ using message_t = std::pair<caf::uuid, bin_frame>;
 
 static constexpr uint16_t default_port = 7788;
 
+static constexpr size_t default_max_connections = 128;
+
 // -- configuration setup ------------------------------------------------------
 
 struct config : caf::actor_system_config {
   config() {
     opt_group{custom_options_, "global"} //
-      .add<uint16_t>("port,p", "port to listen for incoming connections");
+      .add<uint16_t>("port,p", "port to listen for incoming connections")
+      .add<size_t>("max-connections,m", "limit for concurrent clients");
+    opt_group{custom_options_, "tls"} //
+      .add<std::string>("key-file,k", "path to the private key file")
+      .add<std::string>("cert-file,c", "path to the certificate file");
   }
 };
 
@@ -78,16 +84,19 @@ void worker_impl(caf::event_based_actor* self,
           })
           .subscribe(push);
         // Feed messages from the `pull` end into the central merge point.
-        auto inputs = pull.observe_on(self)
-                        .on_error_complete() // Cary on if a connection breaks.
-                        .do_on_complete([conn] {
-                          std::cout << "*** lost connection " << to_string(conn)
-                                    << '\n';
-                        })
-                        .map([conn](const bin_frame& frame) {
-                          return message_t{conn, frame};
-                        })
-                        .as_observable();
+        auto inputs
+          = pull.observe_on(self)
+              .do_on_error([](const caf::error& err) {
+                std::cout << "*** connection error: " << to_string(err) << '\n';
+              })
+              .on_error_complete() // Cary on if a connection breaks.
+              .do_on_complete([conn] {
+                std::cout << "*** lost connection " << to_string(conn) << '\n';
+              })
+              .map([conn](const bin_frame& frame) {
+                return message_t{conn, frame};
+              })
+              .as_observable();
         pub.push(inputs);
       });
 }
@@ -95,22 +104,43 @@ void worker_impl(caf::event_based_actor* self,
 // -- main ---------------------------------------------------------------------
 
 int caf_main(caf::actor_system& sys, const config& cfg) {
+  namespace ssl = caf::net::ssl;
+  // Read the configuration.
+  auto port = caf::get_or(cfg, "port", default_port);
+  auto pem = ssl::format::pem;
+  auto key_file = caf::get_as<std::string>(cfg, "tls.key-file");
+  auto cert_file = caf::get_as<std::string>(cfg, "tls.cert-file");
+  auto max_connections = caf::get_or(cfg, "max-connections",
+                                     default_max_connections);
+  if (!key_file != !cert_file) {
+    std::cerr << "*** inconsistent TLS config: declare neither file or both\n";
+    return EXIT_FAILURE;
+  }
   // Open up a TCP port for incoming connections and start the server.
   auto had_error = false;
-  auto port = caf::get_or(cfg, "port", default_port);
-  caf::net::lp::with(sys)
-    .accept(port)
-    .do_on_error([&](const caf::error& what) {
-      std::cerr << "*** unable to open port " << port << ": " << to_string(what)
-                << '\n';
-      had_error = true;
-    })
-    .start([&sys](trait::acceptor_resource accept_events) {
-      sys.spawn(worker_impl, std::move(accept_events));
-    });
+  auto server
+    = caf::net::lp::with(sys)
+        // Optionally enable TLS.
+        .context(ssl::context::enable(key_file && cert_file)
+                   .and_then(ssl::emplace_server(ssl::tls::v1_2))
+                   .and_then(ssl::use_private_key_file(key_file, pem))
+                   .and_then(ssl::use_certificate_file(cert_file, pem)))
+        // Bind to the user-defined port.
+        .accept(port)
+        // Limit how many clients may be connected at any given time.
+        .max_connections(max_connections)
+        // When started, run our worker actor to handle incoming connections.
+        .start([&sys](trait::acceptor_resource accept_events) {
+          sys.spawn(worker_impl, std::move(accept_events));
+        });
+  if (!server) {
+    std::cerr << "*** unable to run at port " << port << ": "
+              << to_string(server.error()) << '\n';
+    return EXIT_FAILURE;
+  }
   // Note: the actor system will keep the application running for as long as the
   // workers are still alive.
-  return had_error ? EXIT_FAILURE : EXIT_SUCCESS;
+  return EXIT_SUCCESS;
 }
 
 CAF_MAIN(caf::net::middleman)

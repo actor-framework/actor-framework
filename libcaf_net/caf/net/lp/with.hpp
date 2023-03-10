@@ -7,6 +7,7 @@
 #include "caf/fwd.hpp"
 #include "caf/net/dsl/has_accept.hpp"
 #include "caf/net/dsl/has_connect.hpp"
+#include "caf/net/dsl/has_context.hpp"
 #include "caf/net/lp/client_factory.hpp"
 #include "caf/net/lp/server_factory.hpp"
 #include "caf/net/multiplexer.hpp"
@@ -20,12 +21,12 @@ namespace caf::net::lp {
 
 /// Entry point for the `with(...)` DSL.
 template <class Trait>
-class with_t : public dsl::has_accept<server_factory<Trait>>,
-               public dsl::has_connect<client_factory<Trait>> {
+class with_t : public extend<dsl::base<Trait>, with_t<Trait>>::template //
+               with<dsl::has_accept, dsl::has_connect, dsl::has_context> {
 public:
   template <class... Ts>
   explicit with_t(multiplexer* mpx, Ts&&... xs)
-    : mpx_(mpx), trait_(std::forward<Ts>(xs)...) {
+    : mpx_(mpx), trait_(std::forward<Ts>(xs)...), ctx_(error{}) {
     // nop
   }
 
@@ -41,12 +42,29 @@ public:
     return trait_;
   }
 
+  /// @private
+  server_factory<Trait> lift(dsl::server_config_ptr<Trait> cfg) {
+    return server_factory<Trait>{std::move(cfg)};
+  }
+
+  /// @private
+  client_factory<Trait> lift(dsl::client_config_ptr<Trait> cfg) {
+    return client_factory<Trait>{std::move(cfg)};
+  }
+
 private:
+  expected<ssl::context>& get_context_impl() noexcept override {
+    return ctx_;
+  }
+
   /// Pointer to multiplexer that runs the protocol stack.
   multiplexer* mpx_;
 
   /// User-defined trait for configuring serialization.
   Trait trait_;
+
+  /// The optional SSL context.
+  expected<ssl::context> ctx_;
 };
 
 template <class Trait = binary::default_trait>

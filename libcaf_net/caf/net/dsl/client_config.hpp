@@ -6,9 +6,9 @@
 
 #include "caf/callback.hpp"
 #include "caf/defaults.hpp"
-#include "caf/detail/plain_ref_counted.hpp"
 #include "caf/intrusive_ptr.hpp"
-#include "caf/net/dsl/has_trait.hpp"
+#include "caf/net/dsl/base.hpp"
+#include "caf/net/dsl/config_base.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/ssl/connection.hpp"
 #include "caf/net/ssl/context.hpp"
@@ -24,10 +24,12 @@ namespace caf::net::dsl {
 /// The server config type enum class.
 enum class client_config_type { lazy, socket, conn, fail };
 
-/// Base class for server configuration objects.
+/// Base class for client configuration objects.
 template <class Trait>
-class client_config : public detail::plain_ref_counted {
+class client_config : public config_base {
 public:
+  using trait_type = Trait;
+
   class lazy;
   class socket;
   class conn;
@@ -38,42 +40,19 @@ public:
   friend class conn;
   friend class fail;
 
-  client_config(const client_config&) = delete;
-
-  client_config& operator=(const client_config&) = delete;
-
   /// Virtual destructor.
   virtual ~client_config() = default;
 
   /// Returns the server configuration type.
   virtual client_config_type type() const noexcept = 0;
 
-  /// The pointer to the @ref multiplexer for running the server.
-  multiplexer* mpx;
-
   /// The user-defined trait for configuration serialization.
   Trait trait;
 
-  /// User-defined callback for errors.
-  shared_callback_ptr<void(const error&)> on_error;
-
-  /// Calls `on_error` if non-null.
-  void call_on_error(const error& what) {
-    if (on_error)
-      (*on_error)(what);
-  }
-
-  friend void intrusive_ptr_add_ref(const client_config* ptr) noexcept {
-    ptr->ref();
-  }
-
-  friend void intrusive_ptr_release(const client_config* ptr) noexcept {
-    ptr->deref();
-  }
-
 private:
   /// Private constructor to enforce sealing.
-  client_config(multiplexer* mpx, const Trait& trait) : mpx(mpx), trait(trait) {
+  client_config(multiplexer* mpx, const Trait& trait)
+    : config_base(mpx), trait(trait) {
     // nop
   }
 };
@@ -292,6 +271,13 @@ const T* get_if(const client_config<Trait>* config) {
   if (T::type_token == config->type())
     return static_cast<const T*>(config);
   return nullptr;
+}
+
+/// Creates a `fail_client_config` from another configuration object plus error.
+template <class Trait>
+auto to_fail_config(client_config_ptr<Trait> ptr, error err) {
+  using impl_t = fail_client_config<Trait>;
+  return make_counted<impl_t>(ptr->mpx, ptr->trait, std::move(err));
 }
 
 } // namespace caf::net::dsl

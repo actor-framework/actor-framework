@@ -176,12 +176,20 @@ public:
 
   template <class C>
   intrusive_ptr<C> downcast() const noexcept {
-    return (ptr_) ? dynamic_cast<C*>(get()) : nullptr;
+    static_assert(std::is_base_of_v<T, C>);
+    return intrusive_ptr<C>{ptr_ ? dynamic_cast<C*>(get()) : nullptr};
   }
 
   template <class C>
-  intrusive_ptr<C> upcast() const noexcept {
-    return (ptr_) ? static_cast<C*>(get()) : nullptr;
+  intrusive_ptr<C> upcast() const& noexcept {
+    static_assert(std::is_base_of_v<C, T>);
+    return intrusive_ptr<C>{ptr_ ? ptr_ : nullptr};
+  }
+
+  template <class C>
+  intrusive_ptr<C> upcast() && noexcept {
+    static_assert(std::is_base_of_v<C, T>);
+    return intrusive_ptr<C>{ptr_ ? release() : nullptr, false};
   }
 
 private:

@@ -5,7 +5,7 @@
 #pragma once
 
 #include "caf/make_counted.hpp"
-#include "caf/net/dsl/has_trait.hpp"
+#include "caf/net/dsl/base.hpp"
 #include "caf/net/dsl/server_config.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/ssl/acceptor.hpp"
