@@ -35,10 +35,6 @@ public:
   }
 
   ~from_resource_sub() {
-    // The buffer points back to this object as consumer, so this cannot be
-    // destroyed unless we have called buf_->cancel(). All code paths that do
-    // call cancel() on the buffer also must set the variable to `nullptr`.
-    CAF_ASSERT(buf_ == nullptr);
     ctx_->deref_execution_context();
   }
 

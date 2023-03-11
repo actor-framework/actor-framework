@@ -477,8 +477,8 @@ disposable observable<T>::subscribe(async::producer_resource<T> resource) {
   using adapter_type = buffer_writer_impl<buffer_type>;
   if (auto buf = resource.try_open()) {
     CAF_LOG_DEBUG("subscribe producer resource to flow");
-    auto adapter = make_counted<adapter_type>(pimpl_->ctx(), buf);
-    buf->set_producer(adapter);
+    auto adapter = make_counted<adapter_type>(pimpl_->ctx());
+    adapter->init(buf);
     auto obs = adapter->as_observer();
     auto sub = subscribe(std::move(obs));
     pimpl_->ctx()->watch(sub);
@@ -754,8 +754,8 @@ async::consumer_resource<T>
 observable<T>::to_resource(size_t buffer_size, size_t min_request_size) {
   using buffer_type = async::spsc_buffer<T>;
   auto buf = make_counted<buffer_type>(buffer_size, min_request_size);
-  auto up = make_counted<buffer_writer_impl<buffer_type>>(pimpl_->ctx(), buf);
-  buf->set_producer(up);
+  auto up = make_counted<buffer_writer_impl<buffer_type>>(pimpl_->ctx());
+  up->init(buf);
   subscribe(up->as_observer());
   return async::consumer_resource<T>{std::move(buf)};
 }

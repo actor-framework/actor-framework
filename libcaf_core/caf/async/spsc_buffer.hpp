@@ -45,10 +45,8 @@ public:
   struct flags {
     /// Stores whether `close` has been called.
     bool closed : 1;
-    /// Stores whether the buffer had a consumer at some point.
-    bool had_consumer : 1;
-    /// Stores whether the buffer had a producer at some point.
-    bool had_producer : 1;
+    /// Stores whether `cancel` has been called.
+    bool canceled : 1;
   };
 
   spsc_buffer(uint32_t capacity, uint32_t min_pull_size)
@@ -125,20 +123,14 @@ public:
 
   /// Closes the buffer by request of the producer.
   void close() {
-    lock_type guard{mtx_};
-    if (producer_) {
-      flags_.closed = true;
-      producer_ = nullptr;
-      if (buf_.empty() && consumer_)
-        consumer_->on_producer_wakeup();
-    }
+    abort(error{});
   }
 
   /// Closes the buffer by request of the producer and signals an error to the
   /// consumer.
   void abort(error reason) {
     lock_type guard{mtx_};
-    if (producer_) {
+    if (!flags_.closed) {
       flags_.closed = true;
       err_ = std::move(reason);
       producer_ = nullptr;
@@ -150,7 +142,8 @@ public:
   /// Closes the buffer by request of the consumer.
   void cancel() {
     lock_type guard{mtx_};
-    if (consumer_) {
+    if (!flags_.canceled) {
+      flags_.canceled = true;
       consumer_ = nullptr;
       if (producer_)
         producer_->on_consumer_cancel();
@@ -162,12 +155,11 @@ public:
     CAF_ASSERT(consumer != nullptr);
     lock_type guard{mtx_};
     if (consumer_)
-      CAF_RAISE_ERROR("SPSC buffer already has a consumer");
+      CAF_RAISE_ERROR(std::logic_error, "SPSC buffer already has a consumer");
     consumer_ = std::move(consumer);
-    flags_.had_consumer = true;
     if (producer_)
       ready();
-    else if (flags_.had_producer)
+    else if (flags_.closed)
       consumer_->on_producer_wakeup();
   }
 
@@ -176,12 +168,11 @@ public:
     CAF_ASSERT(producer != nullptr);
     lock_type guard{mtx_};
     if (producer_)
-      CAF_RAISE_ERROR("SPSC buffer already has a producer");
+      CAF_RAISE_ERROR(std::logic_error, "SPSC buffer already has a producer");
     producer_ = std::move(producer);
-    flags_.had_producer = true;
     if (consumer_)
       ready();
-    else if (flags_.had_consumer)
+    else if (flags_.canceled)
       producer_->on_consumer_cancel();
   }
 
@@ -347,7 +338,7 @@ struct resource_ctrl : ref_counted {
     if (buf) {
       if constexpr (IsProducer) {
         auto err = make_error(sec::disposed,
-                              "producer_resource destroyed without opening it");
+                              "destroyed producer_resource without opening it");
         buf->abort(err);
       } else {
         buf->cancel();
@@ -356,13 +347,12 @@ struct resource_ctrl : ref_counted {
   }
 
   buffer_ptr try_open() {
+    auto res = buffer_ptr{};
     std::unique_lock guard{mtx};
     if (buf) {
-      auto res = buffer_ptr{};
       res.swap(buf);
-      return res;
     }
-    return nullptr;
+    return res;
   }
 
   mutable std::mutex mtx;
@@ -431,6 +421,20 @@ public:
     return ctrl_ != nullptr;
   }
 
+  bool operator!() const noexcept {
+    return ctrl_ == nullptr;
+  }
+
+  friend bool operator==(const consumer_resource& lhs,
+                         const consumer_resource& rhs) {
+    return lhs.ctrl_ == rhs.ctrl_;
+  }
+
+  friend bool operator!=(const consumer_resource& lhs,
+                         const consumer_resource& rhs) {
+    return lhs.ctrl_ != rhs.ctrl_;
+  }
+
 private:
   intrusive_ptr<resource_ctrl<T, false>> ctrl_;
 };
@@ -485,8 +489,28 @@ public:
       buf->close();
   }
 
+  /// Calls `try_open` and on success immediately calls `abort` on the buffer.
+  void abort(error reason) {
+    if (auto buf = try_open())
+      buf->abort(std::move(reason));
+  }
+
   explicit operator bool() const noexcept {
     return ctrl_ != nullptr;
+  }
+
+  bool operator!() const noexcept {
+    return ctrl_ == nullptr;
+  }
+
+  friend bool operator==(const producer_resource& lhs,
+                         const producer_resource& rhs) {
+    return lhs.ctrl_ == rhs.ctrl_;
+  }
+
+  friend bool operator!=(const producer_resource& lhs,
+                         const producer_resource& rhs) {
+    return lhs.ctrl_ != rhs.ctrl_;
   }
 
 private:
