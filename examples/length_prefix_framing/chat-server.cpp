@@ -117,7 +117,6 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
     return EXIT_FAILURE;
   }
   // Open up a TCP port for incoming connections and start the server.
-  auto had_error = false;
   auto server
     = caf::net::lp::with(sys)
         // Optionally enable TLS.
@@ -133,6 +132,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
         .start([&sys](trait::acceptor_resource accept_events) {
           sys.spawn(worker_impl, std::move(accept_events));
         });
+  // Report any error to the user.
   if (!server) {
     std::cerr << "*** unable to run at port " << port << ": "
               << to_string(server.error()) << '\n';

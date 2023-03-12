@@ -7,7 +7,6 @@
 #include "caf/async/blocking_producer.hpp"
 #include "caf/async/spsc_buffer.hpp"
 #include "caf/error.hpp"
-#include "caf/net/web_socket/request.hpp"
 #include "caf/sec.hpp"
 
 #include <tuple>

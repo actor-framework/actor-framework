@@ -56,7 +56,7 @@ public:
     return *cfg_;
   }
 
-private:
+protected:
   Derived& dref() {
     return static_cast<Derived&>(*this);
   }

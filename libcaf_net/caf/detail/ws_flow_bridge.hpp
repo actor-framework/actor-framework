@@ -11,7 +11,6 @@
 #include "caf/detail/flow_connector.hpp"
 #include "caf/fwd.hpp"
 #include "caf/net/web_socket/lower_layer.hpp"
-#include "caf/net/web_socket/request.hpp"
 #include "caf/net/web_socket/upper_layer.hpp"
 #include "caf/sec.hpp"
 

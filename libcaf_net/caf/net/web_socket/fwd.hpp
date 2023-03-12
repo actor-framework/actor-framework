@@ -6,15 +6,21 @@
 
 namespace caf::detail {
 
-template <class, class, class...>
+template <class, class...>
 class ws_flow_connector_request_impl;
 
 } // namespace caf::detail
 
 namespace caf::net::web_socket {
 
+template <class... Ts>
+class acceptor;
+
 template <class Trait, class... Ts>
-class request;
+class acceptor_impl;
+
+template <class Trait, class... Ts>
+class server_factory;
 
 class frame;
 class framing;
