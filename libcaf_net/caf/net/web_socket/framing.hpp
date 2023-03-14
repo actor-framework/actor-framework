@@ -53,19 +53,19 @@ public:
 
   // -- properties -------------------------------------------------------------
 
-  auto& upper_layer() noexcept {
+  auto& up() noexcept {
     return *up_;
   }
 
-  const auto& upper_layer() const noexcept {
+  const auto& up() const noexcept {
     return *up_;
   }
 
-  auto& lower_layer() noexcept {
+  auto& down() noexcept {
     return *down_;
   }
 
-  const auto& lower_layer() const noexcept {
+  const auto& down() const noexcept {
     return *down_;
   }
 

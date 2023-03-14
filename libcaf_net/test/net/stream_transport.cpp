@@ -75,8 +75,7 @@ public:
 
   net::stream_oriented::lower_layer* down;
 
-  error start(net::stream_oriented::lower_layer* down_ptr,
-              const settings&) override {
+  error start(net::stream_oriented::lower_layer* down_ptr) override {
     down = down_ptr;
     down->configure_read(net::receive_policy::exactly(hello_manager.size()));
     return none;
@@ -119,7 +118,7 @@ CAF_TEST(receive) {
   auto transport = net::stream_transport::make(recv_socket_guard.release(),
                                                std::move(mock));
   auto mgr = net::socket_manager::make(mpx.get(), std::move(transport));
-  CHECK_EQ(mgr->start(config), none);
+  CHECK_EQ(mgr->start(), none);
   mpx->apply_updates();
   CHECK_EQ(mpx->num_socket_managers(), 2u);
   CHECK_EQ(static_cast<size_t>(write(send_socket_guard.socket(),
@@ -137,7 +136,7 @@ CAF_TEST(send) {
   auto transport = net::stream_transport::make(recv_socket_guard.release(),
                                                std::move(mock));
   auto mgr = net::socket_manager::make(mpx.get(), std::move(transport));
-  CHECK_EQ(mgr->start(config), none);
+  CHECK_EQ(mgr->start(), none);
   mpx->apply_updates();
   CHECK_EQ(mpx->num_socket_managers(), 2u);
   mgr->register_writing();

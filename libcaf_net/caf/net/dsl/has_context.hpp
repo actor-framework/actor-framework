@@ -13,13 +13,19 @@ namespace caf::net::dsl {
 template <class Base, class Subtype>
 class has_context : public Base {
 public:
-  using trait_type = typename Base::trait_type;
-
   /// Sets the optional SSL context.
-  ///
   /// @param ctx The SSL context for encryption.
   /// @returns a reference to `*this`.
   Subtype& context(expected<ssl::context> ctx) {
+    auto& dref = static_cast<Subtype&>(*this);
+    dref.get_context() = std::move(ctx);
+    return dref;
+  }
+
+  /// Sets the optional SSL context.
+  /// @param ctx The SSL context for encryption.
+  /// @returns a reference to `*this`.
+  Subtype& context(ssl::context ctx) {
     auto& dref = static_cast<Subtype&>(*this);
     dref.get_context() = std::move(ctx);
     return dref;

@@ -22,7 +22,7 @@ public:
     // nop
   }
 
-  virtual error start(net::socket_manager*, const settings&) {
+  virtual error start(net::socket_manager*) {
     return none;
   }
 

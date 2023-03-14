@@ -128,12 +128,8 @@ void stream_transport::shutdown() {
 
 // -- implementation of transport ----------------------------------------------
 
-error stream_transport::start(socket_manager* owner, const settings& config) {
+error stream_transport::start(socket_manager* owner) {
   parent_ = owner;
-  namespace mm = defaults::middleman;
-  auto default_max_reads = static_cast<uint32_t>(mm::max_consecutive_reads);
-  max_consecutive_reads_ = get_or(config, "caf.middleman.max-consecutive-reads",
-                                  default_max_reads);
   // if (auto err = nodelay(fd_, true)) {
   //   CAF_LOG_ERROR("nodelay failed: " << err);
   //   return err;
@@ -146,7 +142,7 @@ error stream_transport::start(socket_manager* owner, const settings& config) {
     CAF_LOG_ERROR("send_buffer_size: " << socket_buf_size.error());
     return std::move(socket_buf_size.error());
   }
-  return up_->start(this, config);
+  return up_->start(this);
 }
 
 socket stream_transport::handle() const {

@@ -48,7 +48,7 @@ public:
 
   // -- implementation of http::upper_layer ------------------------------------
 
-  error start(net::http::lower_layer* down_ptr, const settings&) override {
+  error start(net::http::lower_layer* down_ptr) override {
     down = down_ptr;
     down->request_messages();
     return none;
@@ -95,7 +95,7 @@ SCENARIO("the server parses HTTP GET requests into header fields") {
       auto app = app_ptr.get();
       auto http_ptr = net::http::server::make(std::move(app_ptr));
       auto serv = mock_stream_transport::make(std::move(http_ptr));
-      CHECK_EQ(serv->start(settings{}), error{});
+      CHECK_EQ(serv->start(), error{});
       serv->push(req);
       THEN("the HTTP layer parses the data and calls the application layer") {
         CHECK_EQ(serv->handle_input(), static_cast<ptrdiff_t>(req.size()));

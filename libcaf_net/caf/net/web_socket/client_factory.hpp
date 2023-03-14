@@ -5,12 +5,13 @@
 #pragma once
 
 #include "caf/async/spsc_buffer.hpp"
-#include "caf/detail/binary_flow_bridge.hpp"
+#include "caf/detail/ws_flow_bridge.hpp"
 #include "caf/disposable.hpp"
 #include "caf/net/dsl/client_factory_base.hpp"
-#include "caf/net/lp/framing.hpp"
 #include "caf/net/ssl/connection.hpp"
 #include "caf/net/tcp_stream_socket.hpp"
+#include "caf/net/web_socket/client.hpp"
+#include "caf/net/web_socket/framing.hpp"
 #include "caf/timespan.hpp"
 
 #include <chrono>
@@ -22,30 +23,31 @@
 namespace caf::detail {
 
 /// Specializes the WebSocket flow bridge for the server side.
-template <class Trait>
-class lp_client_flow_bridge : public binary_flow_bridge<Trait> {
+template <class Trait, class... Ts>
+class ws_client_flow_bridge
+  : public ws_flow_bridge<Trait, net::web_socket::client> {
 public:
-  using super = binary_flow_bridge<Trait>;
+  using super = ws_flow_bridge<Trait, net::web_socket::client>;
 
   // We consume the output type of the application.
-  using pull_t = async::consumer_resource<typename Trait::output_type>;
+  using pull_t = async::consumer_resource<typename Trait::input_type>;
 
   // We produce the input type of the application.
-  using push_t = async::producer_resource<typename Trait::input_type>;
+  using push_t = async::producer_resource<typename Trait::output_type>;
 
-  lp_client_flow_bridge(async::execution_context_ptr loop, pull_t pull,
+  ws_client_flow_bridge(async::execution_context_ptr loop, pull_t pull,
                         push_t push)
     : super(std::move(loop)), pull_(std::move(pull)), push_(std::move(push)) {
     // nop
   }
 
-  static std::unique_ptr<lp_client_flow_bridge> make(net::multiplexer* mpx,
+  static std::unique_ptr<ws_client_flow_bridge> make(net::multiplexer* mpx,
                                                      pull_t pull, push_t push) {
-    return std::make_unique<lp_client_flow_bridge>(mpx, std::move(pull),
+    return std::make_unique<ws_client_flow_bridge>(mpx, std::move(pull),
                                                    std::move(push));
   }
 
-  error start(net::binary::lower_layer* down_ptr) override {
+  error start(net::web_socket::lower_layer* down_ptr) override {
     super::down_ = down_ptr;
     return super::init(std::move(pull_), std::move(push_));
   }
@@ -57,25 +59,32 @@ private:
 
 } // namespace caf::detail
 
-namespace caf::net::lp {
+namespace caf::net::web_socket {
 
-template <class>
-class with_t;
+template <class Trait>
+class client_factory_config : public dsl::config_with_trait<Trait> {
+public:
+  using super = dsl::config_with_trait<Trait>;
+
+  using super::super;
+
+  handshake hs;
+};
 
 /// Factory for the `with(...).connect(...).start(...)` DSL.
 template <class Trait>
 class client_factory
-  : public dsl::client_factory_base<dsl::config_with_trait<Trait>,
+  : public dsl::client_factory_base<client_factory_config<Trait>,
                                     client_factory<Trait>> {
 public:
-  using super = dsl::client_factory_base<dsl::config_with_trait<Trait>,
+  using super = dsl::client_factory_base<client_factory_config<Trait>,
                                          client_factory<Trait>>;
-
-  using config_type = typename super::config_type;
 
   using super::super;
 
   using start_res_t = expected<disposable>;
+
+  using config_type = dsl::client_config<client_factory_config<Trait>>;
 
   /// Starts a connection with the length-prefixing protocol.
   template <class OnStart>
@@ -107,18 +116,19 @@ private:
   }
 
   template <class Conn, class OnStart>
-  start_res_t do_start_impl(config_type& cfg, Conn conn, OnStart& on_start) {
+  start_res_t do_start_impl(config_type& cfg, net::web_socket::handshake& hs,
+                            Conn conn, OnStart& on_start) {
     // s2a: socket-to-application (and a2s is the inverse).
     using input_t = typename Trait::input_type;
     using output_t = typename Trait::output_type;
-    using bridge_t = detail::lp_client_flow_bridge<Trait>;
     using transport_t = typename Conn::transport_type;
+    using bridge_t = detail::ws_client_flow_bridge<Trait>;
     auto [s2a_pull, s2a_push] = async::make_spsc_buffer_resource<input_t>();
     auto [a2s_pull, a2s_push] = async::make_spsc_buffer_resource<output_t>();
     auto bridge = bridge_t::make(cfg.mpx, std::move(a2s_pull),
                                  std::move(s2a_push));
     auto bridge_ptr = bridge.get();
-    auto impl = framing::make(std::move(bridge));
+    auto impl = client::make(std::move(hs), std::move(bridge));
     auto fd = conn.fd();
     auto transport = transport_t::make(std::move(conn), std::move(impl));
     transport->active_policy().connect(fd);
@@ -131,40 +141,55 @@ private:
 
   template <class OnStart>
   start_res_t do_start(typename config_type::lazy& cfg, const std::string& host,
-                       uint16_t port, OnStart& on_start) {
+                       uint16_t port, std::string path, OnStart& on_start) {
+    net::web_socket::handshake hs;
+    hs.host(host);
+    hs.endpoint(path);
     auto fd = try_connect(cfg, host, port);
-    if (fd) {
-      if (cfg.ctx) {
-        auto conn = cfg.ctx->new_connection(*fd);
-        if (conn)
-          return do_start_impl(cfg, std::move(*conn), on_start);
-        cfg.call_on_error(conn.error());
-        return start_res_t{std::move(conn.error())};
-      }
-      return do_start_impl(cfg, *fd, on_start);
+    if (!fd) {
+      cfg.call_on_error(fd.error());
+      return start_res_t{std::move(fd.error())};
     }
-    cfg.call_on_error(fd.error());
-    return start_res_t{std::move(fd.error())};
+    if (cfg.ctx) {
+      auto conn = cfg.ctx->new_connection(*fd);
+      if (conn)
+        return do_start_impl(cfg, hs, std::move(*conn), on_start);
+      cfg.call_on_error(conn.error());
+      return start_res_t{std::move(conn.error())};
+    }
+    return do_start_impl(cfg, hs, *fd, on_start);
   }
 
   template <class OnStart>
   start_res_t do_start(typename config_type::lazy& cfg, OnStart& on_start) {
     if (auto* st = std::get_if<dsl::client_config_server_address>(&cfg.server))
-      return do_start(cfg, st->host, st->port, on_start);
-    auto err = make_error(sec::invalid_argument,
-                          "length-prefix factories do not accept URIs");
+      return do_start(cfg, st->host, st->port, "/", on_start);
+    const auto& addr = std::get<uri>(cfg.server);
+    if (addr.scheme() != "ws" && addr.scheme() != "wss") {
+      return make_error(sec::invalid_argument, "URI must use ws or wss scheme");
+    }
+    if (addr.scheme() == "ws" && cfg.ctx) {
+      return make_error(sec::logic_error, "found SSL config with scheme ws");
+    }
+    auto port = addr.authority().port;
+    return do_start(cfg, std::string{addr.host_str()}, port == 0 ? 80 : port,
+                    addr.path_query_fragment(), on_start);
+  }
+
+  template <class OnStart>
+  start_res_t do_start(typename config_type::socket& cfg, OnStart&) {
+    auto err = make_error(sec::logic_error, "not implemented yet");
     cfg.call_on_error(err);
     return start_res_t{std::move(err)};
+    // return do_start_impl(cfg, cfg.take_fd(), on_start);
   }
 
   template <class OnStart>
-  start_res_t do_start(typename config_type::socket& cfg, OnStart& on_start) {
-    return do_start_impl(cfg, cfg.take_fd(), on_start);
-  }
-
-  template <class OnStart>
-  start_res_t do_start(typename config_type::conn& cfg, OnStart& on_start) {
-    return do_start_impl(cfg, std::move(cfg.state), on_start);
+  start_res_t do_start(typename config_type::conn& cfg, OnStart&) {
+    auto err = make_error(sec::logic_error, "not implemented yet");
+    cfg.call_on_error(err);
+    return start_res_t{std::move(err)};
+    // return do_start_impl(cfg, std::move(cfg.state), on_start);
   }
 
   template <class OnStart>
@@ -174,4 +199,4 @@ private:
   }
 };
 
-} // namespace caf::net::lp
+} // namespace caf::net::web_socket

@@ -74,6 +74,14 @@ public:
     return *up_;
   }
 
+  size_t max_request_size() const noexcept {
+    return max_request_size_;
+  }
+
+  void max_request_size(size_t value) noexcept {
+    max_request_size_ = value;
+  }
+
   // -- http::lower_layer implementation ---------------------------------------
 
   bool can_send_more() const noexcept override;
@@ -102,8 +110,7 @@ public:
 
   // -- stream_oriented::upper_layer implementation ----------------------------
 
-  error start(stream_oriented::lower_layer* down,
-              const settings& config) override;
+  error start(stream_oriented::lower_layer* down) override;
 
   void abort(const error& reason) override;
 
@@ -136,7 +143,7 @@ private:
   size_t payload_len_ = 0;
 
   /// Maximum size for incoming HTTP requests.
-  uint32_t max_request_size_ = default_max_request_size;
+  size_t max_request_size_ = default_max_request_size;
 };
 
 } // namespace caf::net::http

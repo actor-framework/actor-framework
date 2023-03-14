@@ -36,6 +36,7 @@ struct config : caf::actor_system_config {
 // -- main ---------------------------------------------------------------------
 
 int caf_main(caf::actor_system& sys, const config& cfg) {
+  namespace http = caf::net::http;
   namespace ssl = caf::net::ssl;
   namespace ws = caf::net::web_socket;
   // Read the configuration.
@@ -63,10 +64,10 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
         // Limit how many clients may be connected at any given time.
         .max_connections(max_connections)
         // Accept only requests for path "/".
-        .on_request([](const caf::settings& hdr, ws::acceptor<>& acc) {
+        .on_request([](ws::acceptor<>& acc, const http::header& hdr) {
           // The hdr parameter is a dictionary with fields from the WebSocket
           // handshake such as the path.
-          auto path = caf::get_or(hdr, "web-socket.path", "/");
+          auto path = hdr.path();
           std::cout << "*** new client request for path " << path << '\n';
           // Accept the WebSocket connection only if the path is "/".
           if (path == "/") {

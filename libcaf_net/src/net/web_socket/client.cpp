@@ -23,39 +23,44 @@
 
 namespace caf::net::web_socket {
 
+// -- member types -------------------------------------------------------------
+
+client::upper_layer::~upper_layer() {
+  // nop
+}
+
 // -- constructors, destructors, and assignment operators ----------------------
 
-client::client(handshake_ptr hs, upper_layer_ptr up)
-  : hs_(std::move(hs)), framing_(std::move(up)) {
+client::client(handshake_ptr hs, upper_layer_ptr up_ptr)
+  : hs_(std::move(hs)), framing_(std::move(up_ptr)) {
   // nop
 }
 
 // -- factories ----------------------------------------------------------------
 
-std::unique_ptr<client> client::make(handshake_ptr hs, upper_layer_ptr up) {
-  return std::make_unique<client>(std::move(hs), std::move(up));
+std::unique_ptr<client> client::make(handshake_ptr hs, upper_layer_ptr up_ptr) {
+  return std::make_unique<client>(std::move(hs), std::move(up_ptr));
 }
 
 // -- implementation of stream_oriented::upper_layer ---------------------------
 
-error client::start(stream_oriented::lower_layer* down, const settings& cfg) {
+error client::start(stream_oriented::lower_layer* down_ptr) {
   CAF_ASSERT(hs_ != nullptr);
-  framing_.start(down);
+  framing_.start(down_ptr);
   if (!hs_->has_mandatory_fields())
     return make_error(sec::runtime_error,
                       "handshake data lacks mandatory fields");
   if (!hs_->has_valid_key())
     hs_->randomize_key();
-  cfg_ = cfg;
-  down->begin_output();
-  hs_->write_http_1_request(down->output_buffer());
-  down->end_output();
-  down->configure_read(receive_policy::up_to(handshake::max_http_size));
+  down().begin_output();
+  hs_->write_http_1_request(down().output_buffer());
+  down().end_output();
+  down().configure_read(receive_policy::up_to(handshake::max_http_size));
   return none;
 }
 
 void client::abort(const error& reason) {
-  upper_layer().abort(reason);
+  up().abort(reason);
 }
 
 ptrdiff_t client::consume(byte_span buffer, byte_span delta) {
@@ -70,9 +75,8 @@ ptrdiff_t client::consume(byte_span buffer, byte_span delta) {
     if (hdr.empty()) {
       if (buffer.size() >= handshake::max_http_size) {
         CAF_LOG_ERROR("server response exceeded the maximum header size");
-        upper_layer().abort(make_error(sec::protocol_error,
-                                       "server response exceeded "
-                                       "the maximum header size"));
+        up().abort(make_error(sec::protocol_error, "server response exceeded "
+                                                   "the maximum header size"));
         return -1;
       } else {
         return 0;
@@ -96,11 +100,11 @@ ptrdiff_t client::consume(byte_span buffer, byte_span delta) {
 
 void client::prepare_send() {
   if (handshake_completed())
-    upper_layer().prepare_send();
+    up().prepare_send();
 }
 
 bool client::done_sending() {
-  return handshake_completed() ? upper_layer().done_sending() : true;
+  return handshake_completed() ? up().done_sending() : true;
 }
 
 // -- HTTP response processing -------------------------------------------------
@@ -110,7 +114,7 @@ bool client::handle_header(std::string_view http) {
   auto http_ok = hs_->is_valid_http_1_response(http);
   hs_.reset();
   if (http_ok) {
-    if (auto err = upper_layer().start(&framing_, cfg_)) {
+    if (auto err = up().start(&framing_)) {
       CAF_LOG_DEBUG("failed to initialize WebSocket framing layer");
       return false;
     } else {
@@ -119,8 +123,8 @@ bool client::handle_header(std::string_view http) {
     }
   } else {
     CAF_LOG_DEBUG("received an invalid WebSocket handshake");
-    upper_layer().abort(make_error(sec::protocol_error,
-                                   "received an invalid WebSocket handshake"));
+    up().abort(make_error(sec::protocol_error,
+                          "received an invalid WebSocket handshake"));
     return false;
   }
 }

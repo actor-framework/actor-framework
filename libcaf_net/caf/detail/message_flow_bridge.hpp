@@ -64,8 +64,7 @@ public:
     // nop
   }
 
-  error start(net::socket_manager* mgr, binary::lower_layer* down,
-              const settings&) {
+  error start(net::socket_manager* mgr, binary::lower_layer* down) {
     down_ = down;
     if (auto in = make_consumer_adapter(in_res_, mgr->mpx_ptr(),
                                         do_wakeup_cb())) {

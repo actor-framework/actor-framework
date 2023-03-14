@@ -118,13 +118,13 @@ void socket_manager::shutdown() {
 
 // -- callbacks for the multiplexer --------------------------------------------
 
-error socket_manager::start(const settings& cfg) {
-  CAF_LOG_TRACE(CAF_ARG(cfg));
+error socket_manager::start() {
+  CAF_LOG_TRACE("");
   if (auto err = nonblocking(fd_, true)) {
     CAF_LOG_ERROR("failed to set nonblocking flag in socket:" << err);
     cleanup();
     return err;
-  } else if (err = handler_->start(this, cfg); err) {
+  } else if (err = handler_->start(this); err) {
     CAF_LOG_DEBUG("failed to initialize handler:" << err);
     cleanup();
     return err;

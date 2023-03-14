@@ -21,7 +21,7 @@ namespace {
 
 using svec = std::vector<std::string>;
 
-class app_t : public net::web_socket::upper_layer {
+class app_t : public net::web_socket::server::upper_layer {
 public:
   std::string text_input;
 
@@ -34,9 +34,20 @@ public:
   }
 
   error start(net::web_socket::lower_layer* down,
-              const settings& args) override {
+              const net::http::header& hdr) override {
     down->request_messages();
-    cfg = args;
+    // Store the request information in cfg to evaluate them later.
+    auto& ws = cfg["web-socket"].as_dictionary();
+    put(ws, "method", to_rfc_string(hdr.method()));
+    put(ws, "path", std::string{hdr.path()});
+    put(ws, "query", hdr.query());
+    put(ws, "fragment", hdr.fragment());
+    put(ws, "http-version", hdr.version());
+    if (!hdr.fields().empty()) {
+      auto& fields = ws["fields"].as_dictionary();
+      for (auto& [key, val] : hdr.fields())
+        put(fields, std::string{key}, std::string{val});
+    }
     return none;
   }
 

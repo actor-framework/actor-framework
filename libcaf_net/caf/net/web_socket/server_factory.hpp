@@ -4,15 +4,17 @@
 
 #pragma once
 
+#include "caf/async/blocking_producer.hpp"
+#include "caf/callback.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/accept_handler.hpp"
 #include "caf/detail/binary_flow_bridge.hpp"
 #include "caf/detail/connection_factory.hpp"
 #include "caf/detail/shared_ssl_acceptor.hpp"
 #include "caf/detail/ws_flow_bridge.hpp"
-#include "caf/detail/ws_flow_connector_request_impl.hpp"
 #include "caf/fwd.hpp"
 #include "caf/net/dsl/server_factory_base.hpp"
+#include "caf/net/http/header.hpp"
 #include "caf/net/http/server.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/ssl/transport.hpp"
@@ -26,27 +28,107 @@
 
 namespace caf::detail {
 
+/// Specializes the WebSocket flow bridge for the server side.
+template <class Trait, class... Ts>
+class ws_server_flow_bridge
+  : public ws_flow_bridge<Trait, net::web_socket::server> {
+public:
+  using super = ws_flow_bridge<Trait, net::web_socket::server>;
+
+  using ws_acceptor_t = net::web_socket::acceptor<Ts...>;
+
+  using on_request_cb_type
+    = shared_callback_ptr<void(ws_acceptor_t&, const net::http::header&)>;
+
+  using accept_event = typename Trait::template accept_event<Ts...>;
+
+  using producer_type = async::blocking_producer<accept_event>;
+
+  // Note: this is shared with the connection factory. In general, this is
+  //       *unsafe*. However, we exploit the fact that there is currently only
+  //       one thread running in the multiplexer (which makes this safe).
+  using shared_producer_type = std::shared_ptr<producer_type>;
+
+  ws_server_flow_bridge(async::execution_context_ptr loop,
+                        on_request_cb_type on_request,
+                        shared_producer_type producer)
+    : super(std::move(loop)),
+      on_request_(std::move(on_request)),
+      producer_(std::move(producer)) {
+    // nop
+  }
+
+  static auto make(net::multiplexer* mpx, on_request_cb_type on_request,
+                   shared_producer_type producer) {
+    return std::make_unique<ws_server_flow_bridge>(mpx, std::move(on_request),
+                                                   std::move(producer));
+  }
+
+  error start(net::web_socket::lower_layer* down_ptr,
+              const net::http::header& hdr) override {
+    CAF_ASSERT(down_ptr != nullptr);
+    super::down_ = down_ptr;
+    net::web_socket::acceptor_impl<Trait, Ts...> acc;
+    (*on_request_)(acc, hdr);
+    if (!acc.accepted()) {
+      return std::move(acc) //
+        .reject_reason()
+        .or_else(sec::runtime_error,
+                 "WebSocket request rejected without reason");
+    }
+    if (!producer_->push(acc.app_event)) {
+      return make_error(sec::runtime_error,
+                        "WebSocket connection dropped: client canceled");
+    }
+    auto& [pull, push] = acc.ws_resources;
+    return super::init(std::move(pull), std::move(push));
+  }
+
+private:
+  on_request_cb_type on_request_;
+  shared_producer_type producer_;
+};
+
 /// Specializes @ref connection_factory for the WebSocket protocol.
-template <class Trait, class Transport>
+template <class Transport, class Trait, class... Ts>
 class ws_connection_factory
   : public connection_factory<typename Transport::connection_handle> {
 public:
   using connection_handle = typename Transport::connection_handle;
 
-  using connector_pointer = flow_connector_ptr<Trait>;
+  using ws_acceptor_t = net::web_socket::acceptor<Ts...>;
 
-  explicit ws_connection_factory(connector_pointer connector)
-    : connector_(std::move(connector)) {
+  using on_request_cb_type
+    = shared_callback_ptr<void(ws_acceptor_t&, const net::http::header&)>;
+
+  using accept_event = typename Trait::template accept_event<Ts...>;
+
+  using producer_type = async::blocking_producer<accept_event>;
+
+  using shared_producer_type = std::shared_ptr<producer_type>;
+
+  ws_connection_factory(on_request_cb_type on_request,
+                        shared_producer_type producer,
+                        size_t max_consecutive_reads)
+    : on_request_(std::move(on_request)),
+      producer_(std::move(producer)),
+      max_consecutive_reads_(max_consecutive_reads) {
     // nop
   }
 
   net::socket_manager_ptr make(net::multiplexer* mpx,
                                connection_handle conn) override {
-    auto app = ws_flow_bridge<Trait>::make(mpx, connector_);
+    if (producer_->canceled()) {
+      // TODO: stop the caller?
+      return nullptr;
+    }
+    using bridge_t = ws_server_flow_bridge<Trait, Ts...>;
+    auto app = bridge_t::make(mpx, on_request_, producer_);
     auto app_ptr = app.get();
     auto ws = net::web_socket::server::make(std::move(app));
     auto fd = conn.fd();
     auto transport = Transport::make(std::move(conn), std::move(ws));
+    transport->max_consecutive_reads(max_consecutive_reads_);
     transport->active_policy().accept(fd);
     auto mgr = net::socket_manager::make(mpx, std::move(transport));
     app_ptr->self_ref(mgr->as_disposable());
@@ -54,7 +136,9 @@ public:
   }
 
 private:
-  connector_pointer connector_;
+  on_request_cb_type on_request_;
+  shared_producer_type producer_;
+  size_t max_consecutive_reads_;
 };
 
 } // namespace caf::detail
@@ -64,15 +148,18 @@ namespace caf::net::web_socket {
 /// Factory type for the `with(...).accept(...).start(...)` DSL.
 template <class Trait, class... Ts>
 class server_factory
-  : public dsl::server_factory_base<Trait, server_factory<Trait>> {
+  : public dsl::server_factory_base<dsl::config_with_trait<Trait>,
+                                    server_factory<Trait>> {
 public:
-  using super = dsl::server_factory_base<Trait, server_factory<Trait>>;
+  using super = dsl::server_factory_base<dsl::config_with_trait<Trait>,
+                                         server_factory<Trait>>;
+
+  using config_type = typename super::config_type;
 
   using on_request_cb_type
-    = shared_callback_ptr<void(const settings&, acceptor<Ts...>&)>;
+    = shared_callback_ptr<void(acceptor<Ts...>&, const http::header&)>;
 
-  server_factory(dsl::server_config_ptr<Trait> cfg,
-                 on_request_cb_type on_request)
+  server_factory(intrusive_ptr<config_type> cfg, on_request_cb_type on_request)
     : super(std::move(cfg)), on_request_(std::move(on_request)) {
     // nop
   }
@@ -112,12 +199,12 @@ public:
 
 private:
   template <class Factory, class AcceptHandler, class Acceptor, class OnStart>
-  start_res_t do_start_impl(dsl::server_config<Trait>& cfg, Acceptor acc,
-                            OnStart& on_start) {
-    using connector_t = detail::ws_flow_connector_request_impl<Trait, Ts...>;
+  start_res_t do_start_impl(config_type& cfg, Acceptor acc, OnStart& on_start) {
+    using producer_t = async::blocking_producer<accept_event>;
     auto [pull, push] = async::make_spsc_buffer_resource<accept_event>();
-    auto serv = std::make_shared<connector_t>(on_request_, push.try_open());
-    auto factory = std::make_unique<Factory>(std::move(serv));
+    auto producer = std::make_shared<producer_t>(producer_t{push.try_open()});
+    auto factory = std::make_unique<Factory>(on_request_, std::move(producer),
+                                             cfg.max_consecutive_reads);
     auto impl = AcceptHandler::make(std::move(acc), std::move(factory),
                                     cfg.max_connections);
     auto impl_ptr = impl.get();
@@ -129,22 +216,22 @@ private:
   }
 
   template <class OnStart>
-  start_res_t do_start(dsl::server_config<Trait>& cfg, tcp_accept_socket fd,
-                       OnStart& on_start) {
+  start_res_t
+  do_start(config_type& cfg, tcp_accept_socket fd, OnStart& on_start) {
+    using detail::ws_connection_factory;
     if (!cfg.ctx) {
-      using factory_t = detail::ws_connection_factory<Trait, stream_transport>;
+      using factory_t = ws_connection_factory<stream_transport, Trait, Ts...>;
       using impl_t = detail::accept_handler<tcp_accept_socket, stream_socket>;
       return do_start_impl<factory_t, impl_t>(cfg, fd, on_start);
     }
-    using factory_t = detail::ws_connection_factory<Trait, ssl::transport>;
+    using factory_t = ws_connection_factory<ssl::transport, Trait, Ts...>;
     using acc_t = detail::shared_ssl_acceptor;
     using impl_t = detail::accept_handler<acc_t, ssl::connection>;
     return do_start_impl<factory_t, impl_t>(cfg, acc_t{fd, cfg.ctx}, on_start);
   }
 
   template <class OnStart>
-  start_res_t
-  do_start(typename dsl::server_config<Trait>::socket& cfg, OnStart& on_start) {
+  start_res_t do_start(typename config_type::socket& cfg, OnStart& on_start) {
     if (cfg.fd == invalid_socket) {
       auto err = make_error(
         sec::runtime_error,
@@ -156,8 +243,7 @@ private:
   }
 
   template <class OnStart>
-  start_res_t
-  do_start(typename dsl::server_config<Trait>::lazy& cfg, OnStart& on_start) {
+  start_res_t do_start(typename config_type::lazy& cfg, OnStart& on_start) {
     auto fd = make_tcp_accept_socket(cfg.port, cfg.bind_address,
                                      cfg.reuse_addr);
     if (!fd) {
@@ -168,7 +254,7 @@ private:
   }
 
   template <class OnStart>
-  start_res_t do_start(dsl::fail_server_config<Trait>& cfg, OnStart&) {
+  start_res_t do_start(typename config_type::fail& cfg, OnStart&) {
     cfg.call_on_error(cfg.err);
     return start_res_t{std::move(cfg.err)};
   }

@@ -59,8 +59,7 @@ public:
     *done_ = true;
   }
 
-  error start(net::stream_oriented::lower_layer* down,
-              const settings&) override {
+  error start(net::stream_oriented::lower_layer* down) override {
     MESSAGE("initialize dummy app");
     down_ = down;
     down->configure_read(receive_policy::exactly(4));

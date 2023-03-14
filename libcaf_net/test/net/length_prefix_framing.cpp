@@ -50,8 +50,7 @@ public:
     return std::make_unique<app_t>(std::move(loop), std::move(inputs));
   }
 
-  caf::error start(net::binary::lower_layer* down_ptr,
-                   const settings&) override {
+  caf::error start(net::binary::lower_layer* down_ptr) override {
     // Start reading immediately.
     down = down_ptr;
     down->request_messages();
@@ -198,7 +197,7 @@ SCENARIO("calling suspend_reading temporarily halts receiving of messages") {
     auto framing = net::lp::framing::make(std::move(app));
     auto transport = net::stream_transport::make(fd2, std::move(framing));
     auto mgr = net::socket_manager::make(mpx.get(), std::move(transport));
-    CHECK_EQ(mgr->start(settings{}), none);
+    CHECK_EQ(mgr->start(), none);
     mpx->apply_updates();
     REQUIRE_EQ(mpx->num_socket_managers(), 2u);
     CHECK_EQ(mpx->mask_of(mgr), net::operation::read);

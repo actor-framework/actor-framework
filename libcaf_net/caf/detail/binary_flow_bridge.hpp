@@ -8,7 +8,6 @@
 #include "caf/async/producer_adapter.hpp"
 #include "caf/async/spsc_buffer.hpp"
 #include "caf/detail/flow_bridge_base.hpp"
-#include "caf/detail/flow_connector.hpp"
 #include "caf/fwd.hpp"
 #include "caf/net/binary/lower_layer.hpp"
 #include "caf/net/binary/upper_layer.hpp"
@@ -34,15 +33,7 @@ public:
 
   using output_type = typename Trait::output_type;
 
-  using connector_pointer = flow_connector_ptr<Trait>;
-
   using super::super;
-
-  static std::unique_ptr<binary_flow_bridge>
-  make(async::execution_context_ptr loop, connector_pointer conn) {
-    return std::make_unique<binary_flow_bridge>(std::move(loop),
-                                                std::move(conn));
-  }
 
   bool write(const output_type& item) override {
     super::down_->begin_message();

@@ -16,9 +16,9 @@ std::unique_ptr<framing> framing::make(upper_layer_ptr up) {
 
 // -- implementation of stream_oriented::upper_layer ---------------------------
 
-error framing::start(stream_oriented::lower_layer* down, const settings& cfg) {
+error framing::start(stream_oriented::lower_layer* down) {
   down_ = down;
-  return up_->start(this, cfg);
+  return up_->start(this);
 }
 
 void framing::abort(const error& reason) {

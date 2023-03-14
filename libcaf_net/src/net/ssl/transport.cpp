@@ -35,9 +35,8 @@ public:
 
   // -- interface functions ----------------------------------------------------
 
-  error start(socket_manager* owner, const settings& cfg) override {
+  error start(socket_manager* owner) override {
     owner_ = owner;
-    cfg_ = cfg;
     owner->register_writing();
     return caf::none;
   }
@@ -102,7 +101,7 @@ public:
 
   bool do_handover(std::unique_ptr<socket_event_layer>& next) override {
     next = transport::make(std::move(policy_.conn), std::move(up_));
-    if (auto err = next->start(owner_, cfg_))
+    if (auto err = next->start(owner_))
       return false;
     else
       return true;
@@ -122,7 +121,6 @@ private:
 
   bool is_server_ = false;
   socket_manager* owner_ = nullptr;
-  settings cfg_;
   transport::policy_impl policy_;
   upper_layer_ptr up_;
 };

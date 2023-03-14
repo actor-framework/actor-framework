@@ -116,7 +116,7 @@ error multiplexer::init() {
     return std::move(pipe_handles.error());
   auto updater = pollset_updater::make(pipe_handles->first);
   auto mgr = socket_manager::make(this, std::move(updater));
-  if (auto err = mgr->start(settings{}))
+  if (auto err = mgr->start())
     return err;
   write_handle_ = pipe_handles->second;
   pollset_.emplace_back(pollfd{pipe_handles->first.id, input_mask, 0});
@@ -476,10 +476,7 @@ void multiplexer::do_start(const socket_manager_ptr& mgr) {
   CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
   if (!shutting_down_) {
     error err;
-    if (owner_)
-      err = mgr->start(content(system().config()));
-    else
-      err = mgr->start(settings{});
+    err = mgr->start();
     if (err) {
       CAF_LOG_DEBUG("mgr->init failed: " << err);
       // The socket manager should not register itself for any events if

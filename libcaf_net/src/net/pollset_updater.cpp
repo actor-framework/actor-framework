@@ -29,7 +29,7 @@ std::unique_ptr<pollset_updater> pollset_updater::make(pipe_socket fd) {
 
 // -- interface functions ------------------------------------------------------
 
-error pollset_updater::start(socket_manager* owner, const settings&) {
+error pollset_updater::start(socket_manager* owner) {
   CAF_LOG_TRACE("");
   owner_ = owner;
   mpx_ = owner->mpx_ptr();

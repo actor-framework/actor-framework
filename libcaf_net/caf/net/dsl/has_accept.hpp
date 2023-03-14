@@ -66,26 +66,28 @@ public:
     return accept(acc.fd());
   }
 
-private:
+protected:
+  using config_base_type = dsl::config_with_trait<trait_type>;
+
   template <class... Ts>
   auto make_lazy_config(Ts&&... xs) {
-    using impl_t = typename server_config<trait_type>::lazy;
-    return make_counted<impl_t>(this->mpx(), this->trait(),
-                                std::forward<Ts>(xs)...);
+    using impl_t = lazy_server_config<config_base_type>;
+    return make_counted<impl_t>(std::forward<Ts>(xs)..., this->mpx(),
+                                this->trait());
   }
 
   template <class... Ts>
   auto make_socket_config(Ts&&... xs) {
-    using impl_t = typename server_config<trait_type>::socket;
-    return make_counted<impl_t>(this->mpx(), this->trait(),
-                                std::forward<Ts>(xs)...);
+    using impl_t = socket_server_config<config_base_type>;
+    return make_counted<impl_t>(std::forward<Ts>(xs)..., this->mpx(),
+                                this->trait());
   }
 
   template <class... Ts>
   auto make_fail_config(Ts&&... xs) {
-    using impl_t = fail_server_config<trait_type>;
-    return make_counted<impl_t>(this->mpx(), this->trait(),
-                                std::forward<Ts>(xs)...);
+    using impl_t = fail_server_config<config_base_type>;
+    return make_counted<impl_t>(std::forward<Ts>(xs)..., this->mpx(),
+                                this->trait());
   }
 };
 

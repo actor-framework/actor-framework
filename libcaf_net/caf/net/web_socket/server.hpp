@@ -39,7 +39,18 @@ class CAF_NET_EXPORT server : public stream_oriented::upper_layer {
 public:
   // -- member types -----------------------------------------------------------
 
-  using upper_layer_ptr = std::unique_ptr<web_socket::upper_layer>;
+  class CAF_NET_EXPORT upper_layer : public web_socket::upper_layer {
+  public:
+    virtual ~upper_layer();
+
+    /// Initializes the upper layer.
+    /// @param down A pointer to the lower layer that remains valid for the
+    ///             lifetime of the upper layer.
+    /// @param hdr The HTTP request header from the client handshake.
+    virtual error start(lower_layer* down, const http::header& hdr) = 0;
+  };
+
+  using upper_layer_ptr = std::unique_ptr<upper_layer>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -51,20 +62,24 @@ public:
 
   // -- properties -------------------------------------------------------------
 
-  auto& upper_layer() noexcept {
-    return framing_.upper_layer();
+  server::upper_layer& up() noexcept {
+    // This cast is safe, because we know that we have initialized the framing
+    // layer with a pointer to an web_socket::server::upper_layer object that
+    // the framing then upcasts to web_socket::upper_layer.
+    return static_cast<server::upper_layer&>(framing_.up());
   }
 
-  const auto& upper_layer() const noexcept {
-    return framing_.upper_layer();
+  const server::upper_layer& up() const noexcept {
+    // See comment in the other up() overload.
+    return static_cast<const server::upper_layer&>(framing_.up());
   }
 
-  auto& lower_layer() noexcept {
-    return framing_.lower_layer();
+  stream_oriented::lower_layer& down() noexcept {
+    return framing_.down();
   }
 
-  const auto& lower_layer() const noexcept {
-    return framing_.lower_layer();
+  const stream_oriented::lower_layer& down() const noexcept {
+    return framing_.down();
   }
 
   bool handshake_complete() const noexcept {
@@ -73,8 +88,7 @@ public:
 
   // -- stream_oriented::upper_layer implementation ----------------------------
 
-  error start(stream_oriented::lower_layer* down,
-              const settings& config) override;
+  error start(stream_oriented::lower_layer* down) override;
 
   void abort(const error& reason) override;
 
@@ -96,11 +110,6 @@ private:
 
   /// Stores the upper layer.
   framing framing_;
-
-  /// Holds a copy of the settings in order to delay initialization of the upper
-  /// layer until the handshake completed. We also fill this dictionary with the
-  /// contents of the HTTP GET header.
-  settings cfg_;
 };
 
 } // namespace caf::net::web_socket

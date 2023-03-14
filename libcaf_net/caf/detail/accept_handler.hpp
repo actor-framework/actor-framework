@@ -51,11 +51,10 @@ public:
 
   // -- implementation of socket_event_layer -----------------------------------
 
-  error start(net::socket_manager* owner, const settings& cfg) override {
+  error start(net::socket_manager* owner) override {
     CAF_LOG_TRACE("");
     owner_ = owner;
-    cfg_ = cfg;
-    if (auto err = factory_->start(owner, cfg)) {
+    if (auto err = factory_->start(owner)) {
       CAF_LOG_DEBUG("factory_->start failed:" << err);
       return err;
     }
@@ -84,7 +83,7 @@ public:
       if (++open_connections_ == max_connections_)
         owner_->deregister_reading();
       child->add_cleanup_listener(on_conn_close_);
-      std::ignore = child->start(cfg_);
+      std::ignore = child->start();
     } else if (conn.error() == sec::unavailable_or_would_block) {
       // Encountered a "soft" error: simply try again later.
       CAF_LOG_DEBUG("accept failed:" << conn.error());
@@ -129,8 +128,6 @@ private:
   net::socket_manager* owner_ = nullptr;
 
   action on_conn_close_;
-
-  settings cfg_;
 
   /// Type-erased handle to the @ref socket_manager. This reference is important
   /// to keep the acceptor alive while the manager is not registered for writing

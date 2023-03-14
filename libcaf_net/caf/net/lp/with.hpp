@@ -43,13 +43,17 @@ public:
   }
 
   /// @private
-  server_factory<Trait> lift(dsl::server_config_ptr<Trait> cfg) {
+  using config_base_type = dsl::config_with_trait<Trait>;
+
+  /// @private
+  server_factory<Trait> lift(dsl::server_config_ptr<config_base_type> cfg) {
     return server_factory<Trait>{std::move(cfg)};
   }
 
   /// @private
-  client_factory<Trait> lift(dsl::client_config_ptr<Trait> cfg) {
-    return client_factory<Trait>{std::move(cfg)};
+  template <class T, class... Ts>
+  auto make(dsl::client_config_token<T> token, Ts&&... xs) {
+    return client_factory<Trait>{token, std::forward<Ts>(xs)...};
   }
 
 private:

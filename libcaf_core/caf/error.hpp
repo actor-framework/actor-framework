@@ -148,9 +148,21 @@ public:
   /// Returns a copy of `this` if `!empty()` or else returns a new error from
   /// given arguments.
   template <class Enum, class... Ts>
-  error or_else(Enum code, Ts&&... args) const {
+  error or_else(Enum code, Ts&&... args) const& {
     if (!empty())
       return *this;
+    if constexpr (sizeof...(Ts) > 0)
+      return error{code, make_message(std::forward<Ts>(args)...)};
+    else
+      return error{code};
+  }
+
+  /// Returns a copy of `this` if `!empty()` or else returns a new error from
+  /// given arguments.
+  template <class Enum, class... Ts>
+  error or_else(Enum code, Ts&&... args) && {
+    if (!empty())
+      return std::move(*this);
     if constexpr (sizeof...(Ts) > 0)
       return error{code, make_message(std::forward<Ts>(args)...)};
     else

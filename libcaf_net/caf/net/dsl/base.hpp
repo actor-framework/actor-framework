@@ -35,10 +35,6 @@ public:
   /// @private
   template <class ConfigType>
   auto with_context(intrusive_ptr<ConfigType> ptr) {
-    using ConfigBaseType = typename ConfigType::super;
-    auto as_base_ptr = [](auto& derived_ptr) {
-      return std::move(derived_ptr).template upcast<ConfigBaseType>();
-    };
     // Move the context into the config if present.
     auto& ctx = get_context();
     if (ctx) {

@@ -80,14 +80,9 @@ bool server::send_end_of_chunks() {
 
 // -- stream_oriented::upper_layer implementation ------------------------------
 
-error server::start(stream_oriented::lower_layer* down, const settings& cfg) {
+error server::start(stream_oriented::lower_layer* down) {
   down_ = down;
-  if (auto max_size = get_as<uint32_t>(cfg, "http.max-request-size"))
-    max_request_size_ = *max_size;
-  if (auto err = up_->start(this, cfg))
-    return err;
-  else
-    return none;
+  return up_->start(this);
 }
 
 void server::abort(const error& reason) {

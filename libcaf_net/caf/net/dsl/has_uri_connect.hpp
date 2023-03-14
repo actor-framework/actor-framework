@@ -19,9 +19,11 @@ namespace caf::net::dsl {
 
 /// DSL entry point for creating a client from an URI.
 template <class Base, class Subtype>
-class has_uri_connect : public Base {
+class has_uri_connect : public has_connect<Base, Subtype> {
 public:
-  using trait_type = typename Base::trait_type;
+  using super = has_connect<Base, Subtype>;
+
+  using super::connect;
 
   /// Creates a `connect_factory` object for the given TCP `endpoint`.
   ///
@@ -29,8 +31,8 @@ public:
   /// @returns a `connect_factory` object initialized with the given parameters.
   auto connect(const uri& endpoint) {
     auto& dref = static_cast<Subtype&>(*this);
-    auto cfg = this->make_lazy_config(endpoint);
-    return dref.lift(dref.with_context(std::move(cfg)));
+    return dref.make(client_config_lazy_v, endpoint, this->mpx(),
+                     this->trait());
   }
 
   /// Creates a `connect_factory` object for the given TCP `endpoint`.
@@ -41,8 +43,8 @@ public:
     if (endpoint)
       return connect(*endpoint);
     auto& dref = static_cast<Subtype&>(*this);
-    auto cfg = this->make_fail_config(endpoint.error());
-    return dref.lift(dref.with_context(std::move(cfg)));
+    return dref.make(client_config_fail_v, std::move(endpoint.error()),
+                     this->mpx(), this->trait());
   }
 };
 

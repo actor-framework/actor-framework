@@ -36,7 +36,7 @@ void server::abort(const error&) {
   // nop
 }
 
-error server::start(http::lower_layer* down, const settings&) {
+error server::start(http::lower_layer* down) {
   down_ = down;
   down_->request_messages();
   return caf::none;

@@ -42,7 +42,7 @@ public:
 
   // -- implementation of socket_event_layer -----------------------------------
 
-  error start(socket_manager* owner, const settings& cfg) override;
+  error start(socket_manager* owner) override;
 
   socket handle() const override;
 

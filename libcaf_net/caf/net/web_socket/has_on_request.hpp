@@ -7,6 +7,7 @@
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/net/dsl/server_factory_base.hpp"
+#include "caf/net/http/fwd.hpp"
 #include "caf/net/web_socket/acceptor.hpp"
 #include "caf/net/web_socket/server_factory.hpp"
 
@@ -17,9 +18,11 @@ namespace caf::net::web_socket {
 /// DSL entry point for creating a server.
 template <class Trait>
 class has_on_request
-  : public dsl::server_factory_base<Trait, has_on_request<Trait>> {
+  : public dsl::server_factory_base<dsl::config_with_trait<Trait>,
+                                    has_on_request<Trait>> {
 public:
-  using super = dsl::server_factory_base<Trait, has_on_request<Trait>>;
+  using super = dsl::server_factory_base<dsl::config_with_trait<Trait>,
+                                         has_on_request<Trait>>;
 
   using super::super;
 
@@ -33,13 +36,13 @@ public:
     using arg_types = typename fn_trait::arg_types;
     using arg1_t = detail::tl_at_t<arg_types, 0>;
     using arg2_t = detail::tl_at_t<arg_types, 1>;
-    static_assert(std::is_same_v<arg1_t, const settings&>,
-                  "on_request must take 'const settings&' as first argument");
-    using acceptor_t = std::decay_t<arg2_t>;
+    using acceptor_t = std::decay_t<arg1_t>;
     static_assert(is_acceptor_v<acceptor_t>,
-                  "on_request must take an acceptor as second argument");
-    static_assert(std::is_same_v<arg2_t, acceptor_t&>,
+                  "on_request must take an acceptor as 1st argument");
+    static_assert(std::is_same_v<arg1_t, acceptor_t&>,
                   "on_request must take the acceptor as mutable reference");
+    static_assert(std::is_same_v<arg2_t, const http::header&>,
+                  "on_request must take 'const http::header&' as 2nd argument");
     // Wrap the callback and return the factory object.
     using factory_t = typename acceptor_t::template server_factory_type<Trait>;
     auto callback = make_shared_type_erased_callback(std::move(on_request));

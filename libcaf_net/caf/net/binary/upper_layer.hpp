@@ -20,8 +20,7 @@ public:
   /// Initializes the upper layer.
   /// @param down A pointer to the lower layer that remains valid for the
   ///             lifetime of the upper layer.
-  /// @param config Protocol-dependent configuration parameters.
-  virtual error start(lower_layer* down, const settings& config) = 0;
+  virtual error start(lower_layer* down) = 0;
 
   /// Consumes bytes from the lower layer.
   /// @param payload Payload of the received message.

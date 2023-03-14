@@ -91,7 +91,7 @@ public:
       pending.dispose();
   }
 
-  error start(net::http::lower_layer* down, const settings&) override {
+  error start(net::http::lower_layer* down) override {
     down_ = down;
     down_->request_messages();
     return none;

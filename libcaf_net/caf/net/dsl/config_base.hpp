@@ -29,9 +29,9 @@ public:
     // nop
   }
 
-  config_base(const config_base&) = delete;
+  config_base(const config_base&) = default;
 
-  config_base& operator=(const config_base&) = delete;
+  config_base& operator=(const config_base&) = default;
 
   virtual ~config_base();
 
@@ -46,6 +46,26 @@ public:
     if (on_error)
       (*on_error)(what);
   }
+};
+
+/// Simple base class for a configuration with a trait member.
+template <class Trait>
+class config_with_trait : public config_base {
+public:
+  using trait_type = Trait;
+
+  explicit config_with_trait(multiplexer* mpx, Trait trait)
+    : config_base(mpx), trait(std::move(trait)) {
+    // nop
+  }
+
+  config_with_trait(const config_with_trait&) = default;
+
+  config_with_trait& operator=(const config_with_trait&) = default;
+
+  /// Configures various aspects of the protocol stack such as in- and output
+  /// types.
+  Trait trait;
 };
 
 } // namespace caf::net::dsl

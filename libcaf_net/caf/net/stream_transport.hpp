@@ -7,6 +7,7 @@
 #include <deque>
 
 #include "caf/byte_buffer.hpp"
+#include "caf/defaults.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/net/fwd.hpp"
@@ -159,9 +160,17 @@ public:
     return *policy_;
   }
 
+  size_t max_consecutive_reads() const noexcept {
+    return max_consecutive_reads_;
+  }
+
+  void max_consecutive_reads(size_t value) noexcept {
+    max_consecutive_reads_ = value;
+  }
+
   // -- implementation of socket_event_layer -----------------------------------
 
-  error start(socket_manager* owner, const settings& config) override;
+  error start(socket_manager* owner) override;
 
   socket handle() const override;
 
@@ -191,7 +200,7 @@ protected:
   flags_t flags_;
 
   /// Caches the config parameter for limiting max. socket operations.
-  uint32_t max_consecutive_reads_ = 0;
+  size_t max_consecutive_reads_ = defaults::middleman::max_consecutive_reads;
 
   /// Caches the write buffer size of the socket.
   uint32_t max_write_buf_size_ = 0;

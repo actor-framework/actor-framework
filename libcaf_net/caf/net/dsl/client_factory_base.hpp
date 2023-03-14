@@ -17,19 +17,27 @@
 namespace caf::net::dsl {
 
 /// Base type for client factories for use with `can_connect`.
-template <class Trait, class Derived>
+template <class ConfigBase, class Derived>
 class client_factory_base {
 public:
-  using trait_type = Trait;
+  using config_type = client_config<ConfigBase>;
 
-  explicit client_factory_base(client_config_ptr<Trait> cfg)
-    : cfg_(std::move(cfg)) {
+  using trait_type = typename config_type::trait_type;
+
+  using config_pointer = intrusive_ptr<config_type>;
+
+  explicit client_factory_base(config_pointer cfg) : cfg_(std::move(cfg)) {
     // nop
   }
 
   client_factory_base(const client_factory_base&) = default;
 
   client_factory_base& operator=(const client_factory_base&) = default;
+
+  template <class T, class... Ts>
+  explicit client_factory_base(dsl::client_config_token<T> token, Ts&&... xs) {
+    cfg_ = config_type::make(token, std::forward<Ts>(xs)...);
+  }
 
   /// Sets the callback for errors.
   template <class F>
@@ -44,7 +52,7 @@ public:
   /// @param value The new retry delay.
   /// @returns a reference to this `client_factory`.
   Derived& retry_delay(timespan value) {
-    if (auto* cfg = get_if<lazy_client_config<Trait>>(cfg_.get()))
+    if (auto* cfg = get_if<lazy_client_config<ConfigBase>>(cfg_.get()))
       cfg->retry_delay = value;
     return dref();
   }
@@ -54,7 +62,7 @@ public:
   /// @param value The new connection timeout.
   /// @returns a reference to this `client_factory`.
   Derived& connection_timeout(timespan value) {
-    if (auto* cfg = get_if<lazy_client_config<Trait>>(cfg_.get()))
+    if (auto* cfg = get_if<lazy_client_config<ConfigBase>>(cfg_.get()))
       cfg->connection_timeout = value;
     return dref();
   }
@@ -64,12 +72,12 @@ public:
   /// @param value The new maximum retry count.
   /// @returns a reference to this `client_factory`.
   Derived& max_retry_count(size_t value) {
-    if (auto* cfg = get_if<lazy_client_config<Trait>>(cfg_.get()))
+    if (auto* cfg = get_if<lazy_client_config<ConfigBase>>(cfg_.get()))
       cfg->max_retry_count = value;
     return dref();
   }
 
-  client_config<Trait>& config() {
+  config_type& config() {
     return *cfg_;
   }
 
@@ -78,7 +86,7 @@ private:
     return static_cast<Derived&>(*this);
   }
 
-  client_config_ptr<Trait> cfg_;
+  config_pointer cfg_;
 };
 
 } // namespace caf::net::dsl

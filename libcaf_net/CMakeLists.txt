@@ -83,7 +83,6 @@ caf_add_component(
     src/net/this_host.cpp
     src/net/udp_datagram_socket.cpp
     src/net/web_socket/client.cpp
-    src/net/web_socket/connect.cpp
     src/net/web_socket/default_trait.cpp
     src/net/web_socket/frame.cpp
     src/net/web_socket/framing.cpp

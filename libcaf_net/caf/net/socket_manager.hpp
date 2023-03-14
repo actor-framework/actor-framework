@@ -134,7 +134,7 @@ public:
   // -- callbacks for the multiplexer ------------------------------------------
 
   /// Starts the manager and its all of its processing layers.
-  error start(const settings& cfg);
+  error start();
 
   /// Called whenever the socket received new data.
   void handle_read_event();

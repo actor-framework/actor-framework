@@ -8,7 +8,6 @@
 #include "caf/async/producer_adapter.hpp"
 #include "caf/async/spsc_buffer.hpp"
 #include "caf/detail/flow_bridge_base.hpp"
-#include "caf/detail/flow_connector.hpp"
 #include "caf/fwd.hpp"
 #include "caf/net/web_socket/lower_layer.hpp"
 #include "caf/net/web_socket/upper_layer.hpp"
@@ -19,29 +18,22 @@
 namespace caf::detail {
 
 /// Convenience alias for referring to the base type of @ref flow_bridge.
-template <class Trait>
+template <class Trait, class Role>
 using ws_flow_bridge_base_t
-  = detail::flow_bridge_base<net::web_socket::upper_layer,
+  = detail::flow_bridge_base<typename Role::upper_layer,
                              net::web_socket::lower_layer, Trait>;
 
 /// Translates between a message-oriented transport and data flows.
-template <class Trait>
-class ws_flow_bridge : public ws_flow_bridge_base_t<Trait> {
+template <class Trait, class Role>
+class ws_flow_bridge : public ws_flow_bridge_base_t<Trait, Role> {
 public:
-  using super = ws_flow_bridge_base_t<Trait>;
+  using super = ws_flow_bridge_base_t<Trait, Role>;
 
   using input_type = typename Trait::input_type;
 
   using output_type = typename Trait::output_type;
 
-  using connector_pointer = flow_connector_ptr<Trait>;
-
   using super::super;
-
-  static std::unique_ptr<ws_flow_bridge> make(async::execution_context_ptr loop,
-                                              connector_pointer conn) {
-    return std::make_unique<ws_flow_bridge>(std::move(loop), std::move(conn));
-  }
 
   bool write(const output_type& item) override {
     if (super::trait_.converts_to_binary(item)) {

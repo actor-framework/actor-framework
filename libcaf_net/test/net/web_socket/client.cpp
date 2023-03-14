@@ -14,7 +14,7 @@ namespace {
 
 using svec = std::vector<std::string>;
 
-class app_t : public net::web_socket::upper_layer {
+class app_t : public net::web_socket::client::upper_layer {
 public:
   static auto make() {
     return std::make_unique<app_t>();
@@ -24,10 +24,7 @@ public:
 
   caf::byte_buffer binary_input;
 
-  settings cfg;
-
-  error start(net::web_socket::lower_layer*, const settings& args) override {
-    cfg = args;
+  error start(net::web_socket::lower_layer*) override {
     return none;
   }
 

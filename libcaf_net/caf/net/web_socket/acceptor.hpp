@@ -62,9 +62,12 @@ public:
 
   using output_type = typename Trait::output_type;
 
-  using app_res_type = cow_tuple<async::consumer_resource<input_type>,
-                                 async::producer_resource<output_type>, Ts...>;
+  /// The event type for informing the application of an accepted connection.
+  using app_event_type
+    = cow_tuple<async::consumer_resource<input_type>,
+                async::producer_resource<output_type>, Ts...>;
 
+  /// The pair of resources for the WebSocket worker.
   using ws_res_type = async::resource_pair<output_type, input_type>;
 
   void accept(Ts... xs) override {
@@ -73,13 +76,13 @@ public:
     auto [app_pull, ws_push] = async::make_spsc_buffer_resource<input_type>();
     auto [ws_pull, app_push] = async::make_spsc_buffer_resource<output_type>();
     ws_resources = ws_res_type{ws_pull, ws_push};
-    app_resources = make_cow_tuple(app_pull, app_push, std::move(xs)...);
+    app_event = make_cow_tuple(app_pull, app_push, std::move(xs)...);
     super::accepted_ = true;
   }
 
   ws_res_type ws_resources;
 
-  app_res_type app_resources;
+  app_event_type app_event;
 };
 
 /// Type trait that determines if a type is an `acceptor`.

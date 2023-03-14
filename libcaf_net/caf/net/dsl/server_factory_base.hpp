@@ -17,13 +17,16 @@
 namespace caf::net::dsl {
 
 /// Base type for server factories for use with `can_accept`.
-template <class Trait, class Derived>
+template <class ConfigBase, class Derived>
 class server_factory_base {
 public:
-  using trait_type = Trait;
+  using config_type = server_config<ConfigBase>;
 
-  explicit server_factory_base(server_config_ptr<Trait> cfg)
-    : cfg_(std::move(cfg)) {
+  using trait_type = typename config_type::trait_type;
+
+  using config_pointer = intrusive_ptr<config_type>;
+
+  explicit server_factory_base(config_pointer cfg) : cfg_(std::move(cfg)) {
     // nop
   }
 
@@ -47,12 +50,12 @@ public:
 
   /// Configures whether the server creates its socket with `SO_REUSEADDR`.
   Derived& reuse_addr(bool value) {
-    if (auto* cfg = get_if<lazy_server_config<Trait>>(cfg_.get()))
+    if (auto* cfg = get_if<lazy_server_config<ConfigBase>>(cfg_.get()))
       cfg->reuse_addr = value;
     return dref();
   }
 
-  server_config<Trait>& config() {
+  config_type& config() {
     return *cfg_;
   }
 
@@ -61,7 +64,7 @@ protected:
     return static_cast<Derived&>(*this);
   }
 
-  server_config_ptr<Trait> cfg_;
+  config_pointer cfg_;
 };
 
 } // namespace caf::net::dsl

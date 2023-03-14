@@ -20,7 +20,7 @@ public:
   /// Initializes the upper layer.
   /// @param down A pointer to the lower layer that remains valid for the
   ///             lifetime of the upper layer.
-  virtual error start(lower_layer* down, const settings& config) = 0;
+  virtual error start(lower_layer* down) = 0;
 
   /// Consumes an HTTP message.
   /// @param hdr The header fields for the received message.
