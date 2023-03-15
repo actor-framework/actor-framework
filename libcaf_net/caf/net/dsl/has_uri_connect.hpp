@@ -31,8 +31,8 @@ public:
   /// @returns a `connect_factory` object initialized with the given parameters.
   auto connect(const uri& endpoint) {
     auto& dref = static_cast<Subtype&>(*this);
-    return dref.make(client_config_lazy_v, endpoint, this->mpx(),
-                     this->trait());
+    return dref.make(client_config::lazy_v, this->mpx(), this->trait(),
+                     endpoint);
   }
 
   /// Creates a `connect_factory` object for the given TCP `endpoint`.
@@ -43,8 +43,8 @@ public:
     if (endpoint)
       return connect(*endpoint);
     auto& dref = static_cast<Subtype&>(*this);
-    return dref.make(client_config_fail_v, std::move(endpoint.error()),
-                     this->mpx(), this->trait());
+    return dref.make(client_config::fail_v, this->mpx(), this->trait(),
+                     std::move(endpoint.error()));
   }
 };
 

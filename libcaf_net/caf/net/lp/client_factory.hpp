@@ -45,6 +45,12 @@ public:
                                                    std::move(push));
   }
 
+  void abort(const error& err) override {
+    super::abort(err);
+    if (push_)
+      push_.abort(err);
+  }
+
   error start(net::binary::lower_layer* down_ptr) override {
     super::down_ = down_ptr;
     return super::init(std::move(pull_), std::move(push_));
@@ -75,39 +81,21 @@ public:
 
   using super::super;
 
-  using start_res_t = expected<disposable>;
-
   /// Starts a connection with the length-prefixing protocol.
   template <class OnStart>
   [[nodiscard]] expected<disposable> start(OnStart on_start) {
     using input_res_t = typename Trait::input_resource;
     using output_res_t = typename Trait::output_resource;
     static_assert(std::is_invocable_v<OnStart, input_res_t, output_res_t>);
-    auto f = [this, &on_start](auto& cfg) {
-      return this->do_start(cfg, on_start);
-    };
-    return visit(f, this->config());
+    return super::config().visit([this, &on_start](auto& data) {
+      return do_start(super::config(), data, on_start);
+    });
   }
 
 private:
-  auto try_connect(const typename config_type::lazy& cfg,
-                   const std::string& host, uint16_t port) {
-    auto result = make_connected_tcp_stream_socket(host, port,
-                                                   cfg.connection_timeout);
-    if (result)
-      return result;
-    for (size_t i = 1; i <= cfg.max_retry_count; ++i) {
-      std::this_thread::sleep_for(cfg.retry_delay);
-      result = make_connected_tcp_stream_socket(host, port,
-                                                cfg.connection_timeout);
-      if (result)
-        return result;
-    }
-    return result;
-  }
-
   template <class Conn, class OnStart>
-  start_res_t do_start_impl(config_type& cfg, Conn conn, OnStart& on_start) {
+  expected<disposable>
+  do_start_impl(config_type& cfg, Conn conn, OnStart& on_start) {
     // s2a: socket-to-application (and a2s is the inverse).
     using input_t = typename Trait::input_type;
     using output_t = typename Trait::output_type;
@@ -126,51 +114,45 @@ private:
     bridge_ptr->self_ref(ptr->as_disposable());
     cfg.mpx->start(ptr);
     on_start(std::move(s2a_pull), std::move(a2s_push));
-    return start_res_t{disposable{std::move(ptr)}};
+    return expected<disposable>{disposable{std::move(ptr)}};
   }
 
   template <class OnStart>
-  start_res_t do_start(typename config_type::lazy& cfg, const std::string& host,
-                       uint16_t port, OnStart& on_start) {
-    auto fd = try_connect(cfg, host, port);
-    if (fd) {
-      if (cfg.ctx) {
-        auto conn = cfg.ctx->new_connection(*fd);
-        if (conn)
-          return do_start_impl(cfg, std::move(*conn), on_start);
-        cfg.call_on_error(conn.error());
-        return start_res_t{std::move(conn.error())};
-      }
-      return do_start_impl(cfg, *fd, on_start);
+  expected<disposable> do_start(config_type& cfg,
+                                dsl::client_config::lazy& data,
+                                OnStart& on_start) {
+    if (std::holds_alternative<uri>(data.server)) {
+      auto err = make_error(sec::invalid_argument,
+                            "length-prefix factories do not accept URIs");
+      return do_start(cfg, err, on_start);
     }
-    cfg.call_on_error(fd.error());
-    return start_res_t{std::move(fd.error())};
+    auto& addr = std::get<dsl::server_address>(data.server);
+    return detail::tcp_try_connect(std::move(addr.host), addr.port,
+                                   data.connection_timeout,
+                                   data.max_retry_count, data.retry_delay)
+      .and_then(data.with_ctx([this, &cfg, &on_start](auto& conn) {
+        return this->do_start_impl(cfg, std::move(conn), on_start);
+      }));
   }
 
   template <class OnStart>
-  start_res_t do_start(typename config_type::lazy& cfg, OnStart& on_start) {
-    if (auto* st = std::get_if<dsl::client_config_server_address>(&cfg.server))
-      return do_start(cfg, st->host, st->port, on_start);
-    auto err = make_error(sec::invalid_argument,
-                          "length-prefix factories do not accept URIs");
+  expected<disposable> do_start(config_type& cfg,
+                                dsl::client_config::socket& data,
+                                OnStart& on_start) {
+    return do_start_impl(cfg, data.take_fd(), on_start);
+  }
+
+  template <class OnStart>
+  expected<disposable> do_start(config_type& cfg,
+                                dsl::client_config::conn& data,
+                                OnStart& on_start) {
+    return do_start_impl(cfg, std::move(data.state), on_start);
+  }
+
+  template <class OnStart>
+  expected<disposable> do_start(config_type& cfg, error& err, OnStart&) {
     cfg.call_on_error(err);
-    return start_res_t{std::move(err)};
-  }
-
-  template <class OnStart>
-  start_res_t do_start(typename config_type::socket& cfg, OnStart& on_start) {
-    return do_start_impl(cfg, cfg.take_fd(), on_start);
-  }
-
-  template <class OnStart>
-  start_res_t do_start(typename config_type::conn& cfg, OnStart& on_start) {
-    return do_start_impl(cfg, std::move(cfg.state), on_start);
-  }
-
-  template <class OnStart>
-  start_res_t do_start(typename config_type::fail& cfg, OnStart&) {
-    cfg.call_on_error(cfg.err);
-    return start_res_t{std::move(cfg.err)};
+    return expected<disposable>{std::move(err)};
   }
 };
 

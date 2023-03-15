@@ -27,8 +27,8 @@ public:
   /// @returns a `connect_factory` object initialized with the given parameters.
   auto connect(std::string host, uint16_t port) {
     auto& dref = static_cast<Subtype&>(*this);
-    return dref.make(client_config_lazy_v, std::move(host), port, this->mpx(),
-                     this->trait());
+    return dref.make(client_config::lazy_v, this->mpx(), this->trait(),
+                     std::move(host), port);
   }
 
   /// Creates a `connect_factory` object for the given stream `fd`.
@@ -36,7 +36,7 @@ public:
   /// @returns a `connect_factory` object that will use the given socket.
   auto connect(stream_socket fd) {
     auto& dref = static_cast<Subtype&>(*this);
-    return dref.make(client_config_socket_v, fd, this->mpx(), this->trait());
+    return dref.make(client_config::socket_v, this->mpx(), this->trait(), fd);
   }
 
   /// Creates a `connect_factory` object for the given SSL `connection`.
@@ -44,8 +44,8 @@ public:
   /// @returns a `connect_factory` object that will use the given connection.
   auto connect(ssl::connection conn) {
     auto& dref = static_cast<Subtype&>(*this);
-    return dref.make(client_config_conn_v, std::move(conn), this->mpx(),
-                     this->trait());
+    return dref.make(client_config::conn_v, this->mpx(), this->trait(),
+                     std::move(conn));
   }
 };
 

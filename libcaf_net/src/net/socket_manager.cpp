@@ -104,6 +104,7 @@ void socket_manager::schedule(action what) {
 }
 
 void socket_manager::shutdown() {
+  CAF_LOG_TRACE("");
   if (!shutting_down_) {
     shutting_down_ = true;
     dispose();
@@ -122,6 +123,7 @@ error socket_manager::start() {
   CAF_LOG_TRACE("");
   if (auto err = nonblocking(fd_, true)) {
     CAF_LOG_ERROR("failed to set nonblocking flag in socket:" << err);
+    handler_->abort(err);
     cleanup();
     return err;
   } else if (err = handler_->start(this); err) {
@@ -148,6 +150,7 @@ void socket_manager::handle_write_event() {
 }
 
 void socket_manager::handle_error(sec code) {
+  CAF_LOG_TRACE("");
   if (!disposed_)
     disposed_ = true;
   if (handler_) {

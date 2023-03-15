@@ -182,3 +182,25 @@ expected<tcp_stream_socket> make_connected_tcp_stream_socket(std::string host,
 }
 
 } // namespace caf::net
+
+namespace caf::detail {
+
+expected<net::tcp_stream_socket>
+tcp_try_connect(std::string host, uint16_t port, timespan connection_timeout,
+                size_t max_retry_count, timespan retry_delay) {
+  uri::authority_type auth;
+  auth.host = std::move(host);
+  auth.port = port;
+  auto result = net::make_connected_tcp_stream_socket(auth, connection_timeout);
+  if (result)
+    return result;
+  for (size_t i = 1; i <= max_retry_count; ++i) {
+    std::this_thread::sleep_for(retry_delay);
+    result = net::make_connected_tcp_stream_socket(auth, connection_timeout);
+    if (result)
+      return result;
+  }
+  return result;
+}
+
+} // namespace caf::detail

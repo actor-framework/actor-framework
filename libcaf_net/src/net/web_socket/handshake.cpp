@@ -67,7 +67,7 @@ void handshake::randomize_key(unsigned seed) {
 }
 
 bool handshake::has_mandatory_fields() const noexcept {
-  return fields_.contains("_endpoint") && fields_.contains("_host");
+  return has_endpoint() && has_host();
 }
 
 // -- HTTP generation and validation -------------------------------------------

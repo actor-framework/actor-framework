@@ -61,12 +61,19 @@ private:
 
 namespace caf::net::web_socket {
 
+/// Configuration type for WebSocket clients with a handshake object. The
+/// handshake object sets the default endpoint to '/' for convenience.
 template <class Trait>
 class client_factory_config : public dsl::config_with_trait<Trait> {
 public:
   using super = dsl::config_with_trait<Trait>;
 
-  using super::super;
+  client_factory_config(multiplexer* mpx, Trait trait)
+    : super(mpx, std::move(trait)) {
+    hs.endpoint("/");
+  }
+
+  client_factory_config(const client_factory_config&) = default;
 
   handshake hs;
 };
@@ -82,9 +89,7 @@ public:
 
   using super::super;
 
-  using start_res_t = expected<disposable>;
-
-  using config_type = dsl::client_config<client_factory_config<Trait>>;
+  using config_type = typename super::config_type;
 
   /// Starts a connection with the length-prefixing protocol.
   template <class OnStart>
@@ -92,32 +97,15 @@ public:
     using input_res_t = typename Trait::input_resource;
     using output_res_t = typename Trait::output_resource;
     static_assert(std::is_invocable_v<OnStart, input_res_t, output_res_t>);
-    auto f = [this, &on_start](auto& cfg) {
-      return this->do_start(cfg, on_start);
-    };
-    return visit(f, this->config());
+    return super::config().visit([this, &on_start](auto& data) {
+      return do_start(super::config(), data, on_start);
+    });
   }
 
 private:
-  auto try_connect(const typename config_type::lazy& cfg,
-                   const std::string& host, uint16_t port) {
-    auto result = make_connected_tcp_stream_socket(host, port,
-                                                   cfg.connection_timeout);
-    if (result)
-      return result;
-    for (size_t i = 1; i <= cfg.max_retry_count; ++i) {
-      std::this_thread::sleep_for(cfg.retry_delay);
-      result = make_connected_tcp_stream_socket(host, port,
-                                                cfg.connection_timeout);
-      if (result)
-        return result;
-    }
-    return result;
-  }
-
   template <class Conn, class OnStart>
-  start_res_t do_start_impl(config_type& cfg, net::web_socket::handshake& hs,
-                            Conn conn, OnStart& on_start) {
+  expected<disposable>
+  do_start_impl(config_type& cfg, Conn conn, OnStart& on_start) {
     // s2a: socket-to-application (and a2s is the inverse).
     using input_t = typename Trait::input_type;
     using output_t = typename Trait::output_type;
@@ -128,7 +116,7 @@ private:
     auto bridge = bridge_t::make(cfg.mpx, std::move(a2s_pull),
                                  std::move(s2a_push));
     auto bridge_ptr = bridge.get();
-    auto impl = client::make(std::move(hs), std::move(bridge));
+    auto impl = client::make(std::move(cfg.hs), std::move(bridge));
     auto fd = conn.fd();
     auto transport = transport_t::make(std::move(conn), std::move(impl));
     transport->active_policy().connect(fd);
@@ -136,66 +124,112 @@ private:
     bridge_ptr->self_ref(ptr->as_disposable());
     cfg.mpx->start(ptr);
     on_start(std::move(s2a_pull), std::move(a2s_push));
-    return start_res_t{disposable{std::move(ptr)}};
+    return expected<disposable>{disposable{std::move(ptr)}};
+  }
+
+  expected<void> sanity_check(config_type& cfg) {
+    if (cfg.hs.has_mandatory_fields()) {
+      return {};
+    } else {
+      auto err = make_error(sec::invalid_argument,
+                            "WebSocket handshake lacks mandatory fields");
+      cfg.call_on_error(err);
+      return {std::move(err)};
+    }
   }
 
   template <class OnStart>
-  start_res_t do_start(typename config_type::lazy& cfg, const std::string& host,
-                       uint16_t port, std::string path, OnStart& on_start) {
-    net::web_socket::handshake hs;
-    hs.host(host);
-    hs.endpoint(path);
-    auto fd = try_connect(cfg, host, port);
-    if (!fd) {
-      cfg.call_on_error(fd.error());
-      return start_res_t{std::move(fd.error())};
-    }
-    if (cfg.ctx) {
-      auto conn = cfg.ctx->new_connection(*fd);
-      if (conn)
-        return do_start_impl(cfg, hs, std::move(*conn), on_start);
-      cfg.call_on_error(conn.error());
-      return start_res_t{std::move(conn.error())};
-    }
-    return do_start_impl(cfg, hs, *fd, on_start);
+  expected<disposable> do_start(config_type& cfg,
+                                dsl::client_config::lazy& data,
+                                dsl::server_address& addr, OnStart& on_start) {
+    cfg.hs.host(addr.host);
+    return detail::tcp_try_connect(std::move(addr.host), addr.port,
+                                   data.connection_timeout,
+                                   data.max_retry_count, data.retry_delay)
+      .and_then(data.with_ctx([this, &cfg, &on_start](auto& conn) {
+        return this->do_start_impl(cfg, std::move(conn), on_start);
+      }));
   }
 
   template <class OnStart>
-  start_res_t do_start(typename config_type::lazy& cfg, OnStart& on_start) {
-    if (auto* st = std::get_if<dsl::client_config_server_address>(&cfg.server))
-      return do_start(cfg, st->host, st->port, "/", on_start);
-    const auto& addr = std::get<uri>(cfg.server);
-    if (addr.scheme() != "ws" && addr.scheme() != "wss") {
-      return make_error(sec::invalid_argument, "URI must use ws or wss scheme");
+  expected<disposable> do_start(config_type& cfg,
+                                dsl::client_config::lazy& data, const uri& addr,
+                                OnStart& on_start) {
+    const auto& auth = addr.authority();
+    auto host = auth.host_str();
+    auto port = auth.port;
+    // Sanity checking.
+    if (host.empty()) {
+      auto err = make_error(sec::invalid_argument,
+                            "URI must provide a valid hostname");
+      return do_start(cfg, err, on_start);
     }
-    if (addr.scheme() == "ws" && cfg.ctx) {
-      return make_error(sec::logic_error, "found SSL config with scheme ws");
+    if (addr.scheme() == "ws") {
+      if (data.ctx) {
+        auto err = make_error(sec::logic_error,
+                              "found SSL config with scheme ws");
+        return do_start(cfg, err, on_start);
+      }
+      if (port == 0)
+        port = defaults::net::http_default_port;
+    } else if (addr.scheme() == "wss") {
+      if (port == 0)
+        port = defaults::net::https_default_port;
+      if (!data.ctx) { // Auto-initialize SSL context for wss.
+        auto ctx = ssl::context::make_client(ssl::tls::v1_0);
+        if (!ctx)
+          return do_start(cfg, ctx.error(), on_start);
+        data.ctx = std::make_shared<ssl::context>(std::move(*ctx));
+      }
+    } else {
+      auto err = make_error(sec::invalid_argument,
+                            "URI must use ws or wss scheme");
+      return do_start(cfg, err, on_start);
     }
-    auto port = addr.authority().port;
-    return do_start(cfg, std::string{addr.host_str()}, port == 0 ? 80 : port,
-                    addr.path_query_fragment(), on_start);
+    // Fill the handshake with fields from the URI.
+    cfg.hs.host(host);
+    cfg.hs.endpoint(addr.path_query_fragment());
+    // Try to connect.
+    return detail::tcp_try_connect(std::move(host), port,
+                                   data.connection_timeout,
+                                   data.max_retry_count, data.retry_delay)
+      .and_then(data.with_ctx([this, &cfg, &on_start](auto& conn) {
+        return this->do_start_impl(cfg, std::move(conn), on_start);
+      }));
   }
 
   template <class OnStart>
-  start_res_t do_start(typename config_type::socket& cfg, OnStart&) {
-    auto err = make_error(sec::logic_error, "not implemented yet");
+  expected<disposable> do_start(config_type& cfg,
+                                dsl::client_config::lazy& data,
+                                OnStart& on_start) {
+    auto fn = [this, &cfg, &data, &on_start](auto& addr) {
+      return this->do_start(cfg, data, addr, on_start);
+    };
+    return std::visit(fn, data.server);
+  }
+
+  template <class OnStart>
+  expected<disposable> do_start(config_type& cfg,
+                                dsl::client_config::socket& data,
+                                OnStart& on_start) {
+    return sanity_check(cfg).and_then([&] { //
+      return do_start_impl(cfg, data.take_fd(), on_start);
+    });
+  }
+
+  template <class OnStart>
+  expected<disposable> do_start(config_type& cfg,
+                                dsl::client_config::conn& data,
+                                OnStart& on_start) {
+    return sanity_check(cfg).and_then([&] { //
+      return do_start_impl(cfg, std::move(data.state), on_start);
+    });
+  }
+
+  template <class OnStart>
+  expected<disposable> do_start(config_type& cfg, error& err, OnStart&) {
     cfg.call_on_error(err);
-    return start_res_t{std::move(err)};
-    // return do_start_impl(cfg, cfg.take_fd(), on_start);
-  }
-
-  template <class OnStart>
-  start_res_t do_start(typename config_type::conn& cfg, OnStart&) {
-    auto err = make_error(sec::logic_error, "not implemented yet");
-    cfg.call_on_error(err);
-    return start_res_t{std::move(err)};
-    // return do_start_impl(cfg, std::move(cfg.state), on_start);
-  }
-
-  template <class OnStart>
-  start_res_t do_start(typename config_type::fail& cfg, OnStart&) {
-    cfg.call_on_error(cfg.err);
-    return start_res_t{std::move(cfg.err)};
+    return expected<disposable>{std::move(err)};
   }
 };
 

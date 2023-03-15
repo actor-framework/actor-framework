@@ -86,12 +86,22 @@ public:
     fields_["_endpoint"] = std::move(value);
   }
 
+  /// Checks whether the handshake has an `endpoint` defined.
+  bool has_endpoint() const noexcept {
+    return fields_.contains("_endpoint");
+  }
+
   /// Sets a value for the mandatory `Host` field.
   /// @param value The Internet host and port number of the resource being
   ///              requested, as obtained from the original URI given by the
   ///              user or referring resource.
   void host(std::string value) {
     fields_["_host"] = std::move(value);
+  }
+
+  /// Checks whether the handshake has an `host` defined.
+  bool has_host() const noexcept {
+    return fields_.contains("_host");
   }
 
   /// Sets a value for the optional `Origin` field.
