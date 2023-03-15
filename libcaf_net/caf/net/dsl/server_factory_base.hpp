@@ -20,19 +20,26 @@ namespace caf::net::dsl {
 template <class ConfigBase, class Derived>
 class server_factory_base {
 public:
-  using config_type = server_config<ConfigBase>;
-
-  using trait_type = typename config_type::trait_type;
+  using config_type = server_config_value<ConfigBase>;
 
   using config_pointer = intrusive_ptr<config_type>;
+
+  server_factory_base(server_factory_base&&) = default;
+
+  server_factory_base(const server_factory_base&) = default;
+
+  server_factory_base& operator=(server_factory_base&&) = default;
+
+  server_factory_base& operator=(const server_factory_base&) = default;
 
   explicit server_factory_base(config_pointer cfg) : cfg_(std::move(cfg)) {
     // nop
   }
 
-  server_factory_base(const server_factory_base&) = default;
-
-  server_factory_base& operator=(const server_factory_base&) = default;
+  template <class T, class... Ts>
+  explicit server_factory_base(dsl::server_config_tag<T> token, Ts&&... xs) {
+    cfg_ = config_type::make(token, std::forward<Ts>(xs)...);
+  }
 
   /// Sets the callback for errors.
   template <class F>
@@ -49,9 +56,9 @@ public:
   }
 
   /// Configures whether the server creates its socket with `SO_REUSEADDR`.
-  Derived& reuse_addr(bool value) {
-    if (auto* cfg = get_if<lazy_server_config<ConfigBase>>(cfg_.get()))
-      cfg->reuse_addr = value;
+  Derived& reuse_address(bool value) {
+    if (auto* lazy = get_if<server_config::lazy>(&cfg_->data))
+      lazy->reuse_addr = value;
     return dref();
   }
 

@@ -16,18 +16,25 @@ public:
   /// Sets the optional SSL context.
   /// @param ctx The SSL context for encryption.
   /// @returns a reference to `*this`.
-  Subtype& context(expected<ssl::context> ctx) {
+  Subtype& context(ssl::context ctx) {
     auto& dref = static_cast<Subtype&>(*this);
-    dref.get_context() = std::move(ctx);
+    auto& cfg = dref.config();
+    if (auto* ptr = cfg.as_has_ctx())
+      ptr->ctx = std::make_shared<ssl::context>(std::move(ctx));
+    else if (cfg)
+      cfg.fail(cfg.cannot_add_ctx());
     return dref;
   }
 
   /// Sets the optional SSL context.
   /// @param ctx The SSL context for encryption.
   /// @returns a reference to `*this`.
-  Subtype& context(ssl::context ctx) {
+  Subtype& context(expected<ssl::context> ctx) {
     auto& dref = static_cast<Subtype&>(*this);
-    dref.get_context() = std::move(ctx);
+    if (ctx)
+      context(std::move(*ctx));
+    else if (ctx.error())
+      dref.config().fail(std::move(ctx).error());
     return dref;
   }
 };

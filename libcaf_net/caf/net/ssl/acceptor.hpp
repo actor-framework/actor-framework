@@ -21,6 +21,8 @@ public:
 
   using transport_type = transport;
 
+  using accept_result_type = connection;
+
   // -- constructors, destructors, and assignment operators --------------------
 
   acceptor() = delete;

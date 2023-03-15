@@ -5,6 +5,8 @@
 #pragma once
 
 #include "caf/fwd.hpp"
+#include "caf/net/dsl/base.hpp"
+#include "caf/net/dsl/generic_config.hpp"
 #include "caf/net/dsl/has_accept.hpp"
 #include "caf/net/dsl/has_connect.hpp"
 #include "caf/net/dsl/has_context.hpp"
@@ -21,54 +23,43 @@ namespace caf::net::lp {
 
 /// Entry point for the `with(...)` DSL.
 template <class Trait>
-class with_t : public extend<dsl::base<Trait>, with_t<Trait>>::template //
+class with_t : public extend<dsl::base, with_t<Trait>>::template //
                with<dsl::has_accept, dsl::has_connect, dsl::has_context> {
 public:
+  using config_type = dsl::generic_config_value<dsl::config_with_trait<Trait>>;
+
   template <class... Ts>
-  explicit with_t(multiplexer* mpx, Ts&&... xs)
-    : mpx_(mpx), trait_(std::forward<Ts>(xs)...), ctx_(error{}) {
+  explicit with_t(multiplexer* mpx) : config_(config_type::make(mpx)) {
     // nop
   }
 
+  with_t(with_t&&) noexcept = default;
+
   with_t(const with_t&) noexcept = default;
+
+  with_t& operator=(with_t&&) noexcept = default;
 
   with_t& operator=(const with_t&) noexcept = default;
 
-  multiplexer* mpx() const noexcept override {
-    return mpx_;
-  }
-
-  const Trait& trait() const noexcept override {
-    return trait_;
-  }
-
   /// @private
-  using config_base_type = dsl::config_with_trait<Trait>;
-
-  /// @private
-  server_factory<Trait> lift(dsl::server_config_ptr<config_base_type> cfg) {
-    return server_factory<Trait>{std::move(cfg)};
+  config_type& config() {
+    return *config_;
   }
 
   /// @private
   template <class T, class... Ts>
-  auto make(dsl::client_config_tag<T> tag, Ts&&... xs) {
-    return client_factory<Trait>{tag, std::forward<Ts>(xs)...};
+  auto make(dsl::server_config_tag<T> token, Ts&&... xs) {
+    return server_factory<Trait>{token, *config_, std::forward<Ts>(xs)...};
+  }
+
+  /// @private
+  template <class T, class... Ts>
+  auto make(dsl::client_config_tag<T> token, Ts&&... xs) {
+    return client_factory<Trait>{token, *config_, std::forward<Ts>(xs)...};
   }
 
 private:
-  expected<ssl::context>& get_context_impl() noexcept override {
-    return ctx_;
-  }
-
-  /// Pointer to multiplexer that runs the protocol stack.
-  multiplexer* mpx_;
-
-  /// User-defined trait for configuring serialization.
-  Trait trait_;
-
-  /// The optional SSL context.
-  expected<ssl::context> ctx_;
+  intrusive_ptr<config_type> config_;
 };
 
 template <class Trait = binary::default_trait>

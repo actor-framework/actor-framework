@@ -19,16 +19,13 @@ namespace caf::net::dsl {
 template <class Base, class Subtype>
 class has_connect : public Base {
 public:
-  using trait_type = typename Base::trait_type;
-
   /// Creates a `connect_factory` object for the given TCP `host` and `port`.
   /// @param host The hostname or IP address to connect to.
   /// @param port The port number to connect to.
   /// @returns a `connect_factory` object initialized with the given parameters.
   auto connect(std::string host, uint16_t port) {
     auto& dref = static_cast<Subtype&>(*this);
-    return dref.make(client_config::lazy_v, this->mpx(), this->trait(),
-                     std::move(host), port);
+    return dref.make(client_config::lazy_v, std::move(host), port);
   }
 
   /// Creates a `connect_factory` object for the given stream `fd`.
@@ -36,7 +33,7 @@ public:
   /// @returns a `connect_factory` object that will use the given socket.
   auto connect(stream_socket fd) {
     auto& dref = static_cast<Subtype&>(*this);
-    return dref.make(client_config::socket_v, this->mpx(), this->trait(), fd);
+    return dref.make(client_config::socket_v, fd);
   }
 
   /// Creates a `connect_factory` object for the given SSL `connection`.
@@ -44,8 +41,7 @@ public:
   /// @returns a `connect_factory` object that will use the given connection.
   auto connect(ssl::connection conn) {
     auto& dref = static_cast<Subtype&>(*this);
-    return dref.make(client_config::conn_v, this->mpx(), this->trait(),
-                     std::move(conn));
+    return dref.make(client_config::conn_v, std::move(conn));
   }
 };
 

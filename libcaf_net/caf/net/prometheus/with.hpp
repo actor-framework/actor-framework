@@ -5,7 +5,10 @@
 #pragma once
 
 #include "caf/fwd.hpp"
-#include "caf/net/prometheus/accept_factory.hpp"
+#include "caf/net/dsl/generic_config.hpp"
+#include "caf/net/dsl/has_accept.hpp"
+#include "caf/net/dsl/has_context.hpp"
+#include "caf/net/prometheus/server_factory.hpp"
 #include "caf/net/ssl/acceptor.hpp"
 #include "caf/net/ssl/context.hpp"
 #include "caf/net/tcp_accept_socket.hpp"
@@ -15,9 +18,13 @@
 namespace caf::net::prometheus {
 
 /// Entry point for the `with(...).accept(...).start()` DSL.
-class with_t {
+class with_t : public extend<dsl::base, with_t>::template //
+               with<dsl::has_accept, dsl::has_context> {
 public:
-  explicit with_t(actor_system* sys) : sys_(sys) {
+  using config_type = dsl::generic_config_value<dsl::config_base>;
+
+  template <class... Ts>
+  explicit with_t(multiplexer* mpx) : config_(config_type::make(mpx)) {
     // nop
   }
 
@@ -25,66 +32,27 @@ public:
 
   with_t& operator=(const with_t&) noexcept = default;
 
-  /// Creates an `accept_factory` object for the given TCP `port` and
-  /// `bind_address`.
-  ///
-  /// @param port Port number to bind to.
-  /// @param bind_address IP address to bind to. Default is an empty string.
-  /// @param reuse_addr Whether or not to set `SO_REUSEADDR`.
-  /// @returns an `accept_factory` object initialized with the given parameters.
-  accept_factory accept(uint16_t port, std::string bind_address = "",
-                        bool reuse_addr = true) {
-    accept_factory factory{sys_};
-    factory.init(port, std::move(bind_address), std::move(reuse_addr));
-    return factory;
+  /// @private
+  config_type& config() {
+    return *config_;
   }
 
-  /// Creates an `accept_factory` object for the given accept socket.
-  ///
-  /// @param fd File descriptor for the accept socket.
-  /// @returns an `accept_factory` object that will start a Prometheus server on
-  ///          the given socket.
-  accept_factory accept(tcp_accept_socket fd) {
-    accept_factory factory{sys_};
-    factory.init(fd);
-    return factory;
-  }
-
-  /// Creates an `accept_factory` object for the given acceptor.
-  ///
-  /// @param acc The SSL acceptor for incoming connections.
-  /// @returns an `accept_factory` object that will start a Prometheus server on
-  ///          the given acceptor.
-  accept_factory accept(ssl::acceptor acc) {
-    accept_factory factory{sys_};
-    factory.set_ssl(std::move(std::move(acc.ctx())));
-    factory.init(acc.fd());
-    return factory;
-  }
-
-  /// Creates an `accept_factory` object for the given TCP `port` and
-  /// `bind_address`.
-  ///
-  /// @param ctx The SSL context for encryption.
-  /// @param port Port number to bind to.
-  /// @param bind_address IP address to bind to. Default is an empty string.
-  /// @param reuse_addr Whether or not to set `SO_REUSEADDR`.
-  /// @returns an `accept_factory` object initialized with the given parameters.
-  accept_factory accept(ssl::context ctx, uint16_t port,
-                        std::string bind_address = "", bool reuse_addr = true) {
-    accept_factory factory{sys_};
-    factory.set_ssl(std::move(std::move(ctx)));
-    factory.init(port, std::move(bind_address), std::move(reuse_addr));
-    return factory;
+  /// @private
+  template <class T, class... Ts>
+  auto make(dsl::server_config_tag<T> token, Ts&&... xs) {
+    return server_factory{token, *config_, std::forward<Ts>(xs)...};
   }
 
 private:
-  /// Pointer to context.
-  actor_system* sys_;
+  intrusive_ptr<config_type> config_;
 };
 
 inline with_t with(actor_system& sys) {
-  return with_t{&sys};
+  return with_t{multiplexer::from(sys)};
+}
+
+inline with_t with(multiplexer* mpx) {
+  return with_t{mpx};
 }
 
 } // namespace caf::net::prometheus

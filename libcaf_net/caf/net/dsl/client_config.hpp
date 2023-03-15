@@ -23,7 +23,9 @@ namespace caf::net::dsl {
 
 /// Meta programming utility.
 template <class T>
-struct client_config_tag {};
+struct client_config_tag {
+  using type = T;
+};
 
 /// Simple type for storing host and port information for reaching a server.
 struct server_address {
@@ -34,27 +36,27 @@ struct server_address {
   uint16_t port;
 };
 
+/// Wraps configuration parameters for starting clients.
 class client_config {
 public:
   /// Configuration for a client that creates the socket on demand.
-  class lazy {
+  class CAF_NET_EXPORT lazy : public has_ctx {
   public:
     /// Type for holding a client address.
     using server_t = std::variant<server_address, uri>;
 
-    lazy(std::string host, uint16_t port) {
-      server = server_address{std::move(host), port};
+    static constexpr std::string_view name = "lazy";
+
+    lazy(std::string host, uint16_t port)
+      : server(server_address{std::move(host), port}) {
     }
 
-    explicit lazy(uri addr) {
-      server = addr;
+    explicit lazy(const uri& addr) : server(addr) {
+      // nop
     }
 
     /// The address for reaching the server or an error.
     server_t server;
-
-    /// SSL context for secure servers.
-    std::shared_ptr<ssl::context> ctx;
 
     /// The delay between connection attempts.
     timespan retry_delay = std::chrono::seconds{1};
@@ -64,31 +66,15 @@ public:
 
     /// The maximum amount of retries.
     size_t max_retry_count = 0;
-
-    /// Returns a function that, when called with a @ref stream_socket, calls
-    /// `f` either with a new SSL connection from `ctx` or with the file the
-    /// file descriptor if no SSL context is defined.
-    template <class F>
-    auto with_ctx(F&& f) {
-      return [this, g = std::forward<F>(f)](stream_socket fd) mutable {
-        using res_t = decltype(g(fd));
-        if (ctx) {
-          auto conn = ctx->new_connection(fd);
-          if (conn)
-            return g(*conn);
-          else
-            return res_t{std::move(conn.error())};
-        } else
-          return g(fd);
-      };
-    }
   };
 
   static constexpr auto lazy_v = client_config_tag<lazy>{};
 
   /// Configuration for a client that uses a user-provided socket.
-  class socket {
+  class CAF_NET_EXPORT socket : public has_ctx {
   public:
+    static constexpr std::string_view name = "socket";
+
     explicit socket(stream_socket fd) : fd(fd) {
       // nop
     }
@@ -117,9 +103,6 @@ public:
     /// The socket file descriptor to use.
     stream_socket fd;
 
-    /// SSL context for secure servers.
-    std::shared_ptr<ssl::context> ctx;
-
     /// Returns the file descriptor and setting the `fd` member variable to the
     /// invalid socket.
     stream_socket take_fd() noexcept {
@@ -133,8 +116,10 @@ public:
 
   /// Configuration for a client that uses an already established SSL
   /// connection.
-  class conn {
+  class CAF_NET_EXPORT conn {
   public:
+    static constexpr std::string_view name = "conn";
+
     explicit conn(ssl::connection st) : state(std::move(st)) {
       // nop
     }
@@ -165,35 +150,18 @@ public:
   static constexpr auto fail_v = client_config_tag<error>{};
 
   template <class Base>
-  class value : public Base {
+  class value : public config_impl<Base, lazy, socket, conn> {
   public:
-    using super = Base;
+    using super = config_impl<Base, lazy, socket, conn>;
 
-    template <class Trait, class... Data>
-    value(net::multiplexer* mpx, Trait trait, Data&&... arg)
-      : super(mpx, std::move(trait)), data(std::forward<Data>(arg)...) {
-      // nop
-    }
+    using super::super;
 
-    template <class... Data>
-    explicit value(const value& other, Data&&... arg)
-      : super(other), data(std::forward<Data>(arg)...) {
-      // nop
-    }
-
-    std::variant<error, lazy, socket, conn> data;
-
-    template <class T, class Trait, class... Args>
-    static intrusive_ptr<value> make(client_config_tag<T>,
-                                     net::multiplexer* mpx, Trait trait,
-                                     Args&&... args) {
-      return make_counted<value>(mpx, std::move(trait), std::in_place_type<T>,
+    template <class From, class T, class... Args>
+    static auto make(client_config_tag<T>, From&& from, Args&&... args) {
+      static_assert(std::is_constructible_v<T, Args...>);
+      return make_counted<value>(std::forward<From>(from),
+                                 std::in_place_type<T>,
                                  std::forward<Args>(args)...);
-    }
-
-    template <class F>
-    auto visit(F&& f) {
-      return std::visit([&](auto& arg) { return f(arg); }, data);
     }
   };
 };
@@ -203,12 +171,5 @@ using client_config_value = client_config::value<Base>;
 
 template <class Base>
 using client_config_ptr = intrusive_ptr<client_config_value<Base>>;
-
-/// Creates a `fail_client_config` from another configuration object plus error.
-template <class Base>
-client_config_ptr<Base> to_fail_config(client_config_ptr<Base> ptr, error err) {
-  using val_t = typename client_config::template value<Base>;
-  return make_counted<val_t>(*ptr, std::move(err));
-}
 
 } // namespace caf::net::dsl

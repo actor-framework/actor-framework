@@ -7,6 +7,7 @@
 #include "caf/async/spsc_buffer.hpp"
 #include "caf/detail/binary_flow_bridge.hpp"
 #include "caf/disposable.hpp"
+#include "caf/net/checked_socket.hpp"
 #include "caf/net/dsl/client_factory_base.hpp"
 #include "caf/net/lp/framing.hpp"
 #include "caf/net/ssl/connection.hpp"
@@ -64,9 +65,6 @@ private:
 } // namespace caf::detail
 
 namespace caf::net::lp {
-
-template <class>
-class with_t;
 
 /// Factory for the `with(...).connect(...).start(...)` DSL.
 template <class Trait>
@@ -130,7 +128,7 @@ private:
     return detail::tcp_try_connect(std::move(addr.host), addr.port,
                                    data.connection_timeout,
                                    data.max_retry_count, data.retry_delay)
-      .and_then(data.with_ctx([this, &cfg, &on_start](auto& conn) {
+      .and_then(data.connection_with_ctx([this, &cfg, &on_start](auto& conn) {
         return this->do_start_impl(cfg, std::move(conn), on_start);
       }));
   }
@@ -139,7 +137,10 @@ private:
   expected<disposable> do_start(config_type& cfg,
                                 dsl::client_config::socket& data,
                                 OnStart& on_start) {
-    return do_start_impl(cfg, data.take_fd(), on_start);
+    return checked_socket(data.take_fd())
+      .and_then(data.connection_with_ctx([this, &cfg, &on_start](auto& conn) {
+        return this->do_start_impl(cfg, std::move(conn), on_start);
+      }));
   }
 
   template <class OnStart>

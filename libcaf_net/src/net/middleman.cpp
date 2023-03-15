@@ -34,12 +34,12 @@ bool inspect(Inspector& f, prom_config& x) {
 }
 
 void launch_prom_server(actor_system& sys, const prom_config& cfg) {
-  prometheus::with(sys)
-    .accept(cfg.port, cfg.address, cfg.reuse_address)
-    .do_on_error([](const error& err) {
-      CAF_LOG_WARNING("failed to start Prometheus server: " << err);
-    })
-    .start();
+  auto server = prometheus::with(sys)
+                  .accept(cfg.port, cfg.address)
+                  .reuse_address(cfg.reuse_address)
+                  .start();
+  if (!server)
+    CAF_LOG_WARNING("failed to start Prometheus server: " << server.error());
 }
 
 void launch_background_tasks(actor_system& sys) {

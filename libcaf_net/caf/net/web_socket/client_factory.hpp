@@ -7,6 +7,7 @@
 #include "caf/async/spsc_buffer.hpp"
 #include "caf/detail/ws_flow_bridge.hpp"
 #include "caf/disposable.hpp"
+#include "caf/net/checked_socket.hpp"
 #include "caf/net/dsl/client_factory_base.hpp"
 #include "caf/net/ssl/connection.hpp"
 #include "caf/net/tcp_stream_socket.hpp"
@@ -68,8 +69,11 @@ class client_factory_config : public dsl::config_with_trait<Trait> {
 public:
   using super = dsl::config_with_trait<Trait>;
 
-  client_factory_config(multiplexer* mpx, Trait trait)
-    : super(mpx, std::move(trait)) {
+  explicit client_factory_config(multiplexer* mpx) : super(mpx) {
+    hs.endpoint("/");
+  }
+
+  explicit client_factory_config(const super& other) : super(other) {
     hs.endpoint("/");
   }
 
@@ -146,7 +150,7 @@ private:
     return detail::tcp_try_connect(std::move(addr.host), addr.port,
                                    data.connection_timeout,
                                    data.max_retry_count, data.retry_delay)
-      .and_then(data.with_ctx([this, &cfg, &on_start](auto& conn) {
+      .and_then(data.connection_with_ctx([this, &cfg, &on_start](auto& conn) {
         return this->do_start_impl(cfg, std::move(conn), on_start);
       }));
   }
@@ -193,7 +197,7 @@ private:
     return detail::tcp_try_connect(std::move(host), port,
                                    data.connection_timeout,
                                    data.max_retry_count, data.retry_delay)
-      .and_then(data.with_ctx([this, &cfg, &on_start](auto& conn) {
+      .and_then(data.connection_with_ctx([this, &cfg, &on_start](auto& conn) {
         return this->do_start_impl(cfg, std::move(conn), on_start);
       }));
   }
@@ -212,9 +216,12 @@ private:
   expected<disposable> do_start(config_type& cfg,
                                 dsl::client_config::socket& data,
                                 OnStart& on_start) {
-    return sanity_check(cfg).and_then([&] { //
-      return do_start_impl(cfg, data.take_fd(), on_start);
-    });
+    return sanity_check(cfg)
+      .transform([&data] { return data.take_fd(); })
+      .and_then(check_socket)
+      .and_then(data.connection_with_ctx([this, &cfg, &on_start](auto& conn) {
+        return this->do_start_impl(cfg, std::move(conn), on_start);
+      }));
   }
 
   template <class OnStart>

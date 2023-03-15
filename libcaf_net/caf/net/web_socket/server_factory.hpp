@@ -90,12 +90,9 @@ private:
 };
 
 /// Specializes @ref connection_factory for the WebSocket protocol.
-template <class Transport, class Trait, class... Ts>
-class ws_connection_factory
-  : public connection_factory<typename Transport::connection_handle> {
+template <class Transport, class ConnHandle, class Trait, class... Ts>
+class ws_connection_factory : public connection_factory<ConnHandle> {
 public:
-  using connection_handle = typename Transport::connection_handle;
-
   using ws_acceptor_t = net::web_socket::acceptor<Ts...>;
 
   using on_request_cb_type
@@ -117,7 +114,7 @@ public:
   }
 
   net::socket_manager_ptr make(net::multiplexer* mpx,
-                               connection_handle conn) override {
+                               ConnHandle conn) override {
     if (producer_->canceled()) {
       // TODO: stop the caller?
       return nullptr;
@@ -164,8 +161,6 @@ public:
     // nop
   }
 
-  using start_res_t = expected<disposable>;
-
   /// The input type of the application, i.e., what that flows from the
   /// WebSocket to the application layer.
   using input_type = typename Trait::input_type;
@@ -189,74 +184,62 @@ public:
   /// Starts a server that accepts incoming connections with the WebSocket
   /// protocol.
   template <class OnStart>
-  start_res_t start(OnStart on_start) {
+  expected<disposable> start(OnStart on_start) {
     static_assert(std::is_invocable_v<OnStart, acceptor_resource>);
-    auto f = [this, &on_start](auto& cfg) {
-      return this->do_start(cfg, on_start);
-    };
-    return visit(f, this->config());
+    auto& cfg = super::config();
+    return cfg.visit([this, &cfg, &on_start](auto& data) {
+      return this->do_start(cfg, data, on_start)
+        .or_else([&cfg](const error& err) { cfg.call_on_error(err); });
+    });
   }
 
 private:
-  template <class Factory, class AcceptHandler, class Acceptor, class OnStart>
-  start_res_t do_start_impl(config_type& cfg, Acceptor acc, OnStart& on_start) {
+  template <class Acceptor, class OnStart>
+  expected<disposable>
+  do_start_impl(config_type& cfg, Acceptor acc, OnStart& on_start) {
+    using conn_t = typename Acceptor::accept_result_type;
+    using transport_t = typename Acceptor::transport_type;
+    using factory_t
+      = detail::ws_connection_factory<transport_t, conn_t, Trait, Ts...>;
+    using impl_t = detail::accept_handler<Acceptor>;
     using producer_t = async::blocking_producer<accept_event>;
     auto [pull, push] = async::make_spsc_buffer_resource<accept_event>();
     auto producer = std::make_shared<producer_t>(producer_t{push.try_open()});
-    auto factory = std::make_unique<Factory>(on_request_, std::move(producer),
-                                             cfg.max_consecutive_reads);
-    auto impl = AcceptHandler::make(std::move(acc), std::move(factory),
-                                    cfg.max_connections);
+    auto factory = std::make_unique<factory_t>(on_request_, std::move(producer),
+                                               cfg.max_consecutive_reads);
+    auto impl = impl_t::make(std::move(acc), std::move(factory),
+                             cfg.max_connections);
     auto impl_ptr = impl.get();
     auto ptr = net::socket_manager::make(cfg.mpx, std::move(impl));
     impl_ptr->self_ref(ptr->as_disposable());
     cfg.mpx->start(ptr);
     on_start(std::move(pull));
-    return start_res_t{disposable{std::move(ptr)}};
+    return expected<disposable>{disposable{std::move(ptr)}};
   }
 
   template <class OnStart>
-  start_res_t
-  do_start(config_type& cfg, tcp_accept_socket fd, OnStart& on_start) {
-    using detail::ws_connection_factory;
-    if (!cfg.ctx) {
-      using factory_t = ws_connection_factory<stream_transport, Trait, Ts...>;
-      using impl_t = detail::accept_handler<tcp_accept_socket, stream_socket>;
-      return do_start_impl<factory_t, impl_t>(cfg, fd, on_start);
-    }
-    using factory_t = ws_connection_factory<ssl::transport, Trait, Ts...>;
-    using acc_t = detail::shared_ssl_acceptor;
-    using impl_t = detail::accept_handler<acc_t, ssl::connection>;
-    return do_start_impl<factory_t, impl_t>(cfg, acc_t{fd, cfg.ctx}, on_start);
+  expected<disposable> do_start(config_type& cfg,
+                                dsl::server_config::socket& data,
+                                OnStart& on_start) {
+    return checked_socket(data.take_fd())
+      .and_then(data.acceptor_with_ctx([this, &cfg, &on_start](auto& acc) {
+        return this->do_start_impl(cfg, std::move(acc), on_start);
+      }));
   }
 
   template <class OnStart>
-  start_res_t do_start(typename config_type::socket& cfg, OnStart& on_start) {
-    if (cfg.fd == invalid_socket) {
-      auto err = make_error(
-        sec::runtime_error,
-        "server factory cannot create a server on an invalid socket");
-      cfg.call_on_error(err);
-      return start_res_t{std::move(err)};
-    }
-    return do_start(cfg, cfg.take_fd(), on_start);
+  expected<disposable> do_start(config_type& cfg,
+                                dsl::server_config::lazy& data,
+                                OnStart& on_start) {
+    return make_tcp_accept_socket(data.port, data.bind_address, data.reuse_addr)
+      .and_then(data.acceptor_with_ctx([this, &cfg, &on_start](auto& acc) {
+        return this->do_start_impl(cfg, std::move(acc), on_start);
+      }));
   }
 
   template <class OnStart>
-  start_res_t do_start(typename config_type::lazy& cfg, OnStart& on_start) {
-    auto fd = make_tcp_accept_socket(cfg.port, cfg.bind_address,
-                                     cfg.reuse_addr);
-    if (!fd) {
-      cfg.call_on_error(fd.error());
-      return start_res_t{std::move(fd.error())};
-    }
-    return do_start(cfg, *fd, on_start);
-  }
-
-  template <class OnStart>
-  start_res_t do_start(typename config_type::fail& cfg, OnStart&) {
-    cfg.call_on_error(cfg.err);
-    return start_res_t{std::move(cfg.err)};
+  expected<disposable> do_start(config_type&, error& err, OnStart&) {
+    return expected<disposable>{std::move(err)};
   }
 
   on_request_cb_type on_request_;

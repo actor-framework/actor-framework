@@ -13,21 +13,23 @@ namespace caf::detail {
 
 /// Accepts incoming clients with an Acceptor and handles them via a connection
 /// factory.
-template <class Acceptor, class ConnectionHandle>
+template <class Acceptor,
+          class ConnHandle = typename Acceptor::accept_result_type>
 class accept_handler : public net::socket_event_layer {
 public:
   // -- member types -----------------------------------------------------------
 
   using socket_type = net::socket;
 
-  using connection_handle = ConnectionHandle;
+  using connection_handle = ConnHandle;
 
   using factory_type = connection_factory<connection_handle>;
 
+  using factory_ptr = detail::connection_factory_ptr<connection_handle>;
+
   // -- constructors, destructors, and assignment operators --------------------
 
-  template <class FactoryPtr, class... Ts>
-  accept_handler(Acceptor acc, FactoryPtr fptr, size_t max_connections)
+  accept_handler(Acceptor acc, factory_ptr fptr, size_t max_connections)
     : acc_(std::move(acc)),
       factory_(std::move(fptr)),
       max_connections_(max_connections) {
@@ -42,9 +44,8 @@ public:
 
   // -- factories --------------------------------------------------------------
 
-  template <class FactoryPtr, class... Ts>
-  static std::unique_ptr<accept_handler>
-  make(Acceptor acc, FactoryPtr fptr, size_t max_connections) {
+  static std::unique_ptr<accept_handler> make(Acceptor acc, factory_ptr fptr,
+                                              size_t max_connections) {
     return std::make_unique<accept_handler>(std::move(acc), std::move(fptr),
                                             max_connections);
   }
@@ -119,7 +120,7 @@ private:
 
   Acceptor acc_;
 
-  detail::connection_factory_ptr<connection_handle> factory_;
+  factory_ptr factory_;
 
   size_t max_connections_;
 

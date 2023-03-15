@@ -4,13 +4,19 @@
 
 #pragma once
 
-#include "caf/fwd.hpp"
-#include "caf/net/fwd.hpp"
-#include "caf/net/ssl/fwd.hpp"
+#include "caf/error.hpp"
 
 namespace caf::net::dsl {
 
-/// Base type for our DSL classes to configure a factory object.
-struct base {};
+/// Meta programming utility for accessing the name of a type.
+template <class T>
+struct get_name {
+  static constexpr std::string_view value = T::name;
+};
+
+template <>
+struct get_name<error> {
+  static constexpr std::string_view value = "fail";
+};
 
 } // namespace caf::net::dsl
