@@ -144,9 +144,10 @@ void append(prometheus::char_buffer& buf, const std::vector<label>& labels,
   if (!labels.empty()) {
     append(buf, '{');
     auto i = labels.begin();
-    append(buf, i->name(), "=\""sv, i->value(), '"');
+    append(buf, separator_to_underline{i->name()}, "=\""sv, i->value(), '"');
     while (++i != labels.end())
-      append(buf, ',', i->name(), "=\"", i->value(), '"');
+      append(buf, ',', separator_to_underline{i->name()}, "=\""sv, i->value(),
+             '"');
     append(buf, '}');
   }
   append(buf, std::forward<Ts>(xs)...);
