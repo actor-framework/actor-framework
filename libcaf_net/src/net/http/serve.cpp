@@ -177,8 +177,7 @@ disposable http_serve_impl(actor_system& sys, Acceptor acc,
                            async::producer_resource<net::http::request> out,
                            const settings& cfg = {}) {
   using factory_t = http_conn_factory<Transport>;
-  using conn_t = typename Transport::connection_handle;
-  using impl_t = accept_handler<Acceptor, conn_t>;
+  using impl_t = accept_handler<Acceptor>;
   auto max_conn = get_or(cfg, defaults::net::max_connections);
   if (auto buf = out.try_open()) {
     auto& mpx = sys.network_manager().mpx();

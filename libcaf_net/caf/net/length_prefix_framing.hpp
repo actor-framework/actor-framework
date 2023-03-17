@@ -142,8 +142,7 @@ public:
       using transport_t = typename Acceptor::transport_type;
       using trait_t = binary::default_trait;
       using factory_t = cf_impl<transport_t>;
-      using conn_t = typename transport_t::connection_handle;
-      using impl_t = detail::accept_handler<Acceptor, conn_t>;
+      using impl_t = detail::accept_handler<Acceptor>;
       auto max_connections = get_or(cfg, defaults::net::max_connections);
       if (auto buf = out.try_open()) {
         auto& mpx = sys.network_manager().mpx();

@@ -90,8 +90,9 @@ private:
 };
 
 /// Specializes @ref connection_factory for the WebSocket protocol.
-template <class Transport, class ConnHandle, class Trait, class... Ts>
-class ws_connection_factory : public connection_factory<ConnHandle> {
+template <class Transport, class Trait, class... Ts>
+class ws_connection_factory
+  : public connection_factory<typename Transport::connection_handle> {
 public:
   using ws_acceptor_t = net::web_socket::acceptor<Ts...>;
 
@@ -104,6 +105,8 @@ public:
 
   using shared_producer_type = std::shared_ptr<producer_type>;
 
+  using connection_handle = typename Transport::connection_handle;
+
   ws_connection_factory(on_request_cb_type on_request,
                         shared_producer_type producer,
                         size_t max_consecutive_reads)
@@ -114,7 +117,7 @@ public:
   }
 
   net::socket_manager_ptr make(net::multiplexer* mpx,
-                               ConnHandle conn) override {
+                               connection_handle conn) override {
     if (producer_->canceled()) {
       // TODO: stop the caller?
       return nullptr;
@@ -197,10 +200,8 @@ private:
   template <class Acceptor, class OnStart>
   expected<disposable>
   do_start_impl(config_type& cfg, Acceptor acc, OnStart& on_start) {
-    using conn_t = typename Acceptor::accept_result_type;
     using transport_t = typename Acceptor::transport_type;
-    using factory_t
-      = detail::ws_connection_factory<transport_t, conn_t, Trait, Ts...>;
+    using factory_t = detail::ws_connection_factory<transport_t, Trait, Ts...>;
     using impl_t = detail::accept_handler<Acceptor>;
     using producer_t = async::blocking_producer<accept_event>;
     auto [pull, push] = async::make_spsc_buffer_resource<accept_event>();

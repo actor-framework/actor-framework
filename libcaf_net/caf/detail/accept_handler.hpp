@@ -13,15 +13,16 @@ namespace caf::detail {
 
 /// Accepts incoming clients with an Acceptor and handles them via a connection
 /// factory.
-template <class Acceptor,
-          class ConnHandle = typename Acceptor::accept_result_type>
+template <class Acceptor>
 class accept_handler : public net::socket_event_layer {
 public:
   // -- member types -----------------------------------------------------------
 
   using socket_type = net::socket;
 
-  using connection_handle = ConnHandle;
+  using transport_type = typename Acceptor::transport_type;
+
+  using connection_handle = typename transport_type::connection_handle;
 
   using factory_type = connection_factory<connection_handle>;
 

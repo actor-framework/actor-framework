@@ -27,9 +27,12 @@
 
 namespace caf::detail {
 
-template <class Transport, class ConnHandle>
-class prom_conn_factory : public connection_factory<ConnHandle> {
+template <class Transport>
+class prom_conn_factory
+  : public connection_factory<typename Transport::connection_handle> {
 public:
+  using connection_handle = typename Transport::connection_handle;
+
   using state_ptr = net::prometheus::server::scrape_state_ptr;
 
   explicit prom_conn_factory(state_ptr ptr) : ptr_(std::move(ptr)) {
@@ -37,7 +40,7 @@ public:
   }
 
   net::socket_manager_ptr make(net::multiplexer* mpx,
-                               ConnHandle conn) override {
+                               connection_handle conn) override {
     auto prom_serv = net::prometheus::server::make(ptr_);
     auto http_serv = net::http::server::make(std::move(prom_serv));
     auto transport = Transport::make(std::move(conn), std::move(http_serv));
@@ -75,9 +78,8 @@ public:
 private:
   template <class Acceptor>
   expected<disposable> do_start_impl(config_type& cfg, Acceptor acc) {
-    using conn_t = typename Acceptor::accept_result_type;
     using transport_t = typename Acceptor::transport_type;
-    using factory_t = detail::prom_conn_factory<transport_t, conn_t>;
+    using factory_t = detail::prom_conn_factory<transport_t>;
     using impl_t = detail::accept_handler<Acceptor>;
     auto* mpx = cfg.mpx;
     auto* registry = &mpx->system().metrics();
