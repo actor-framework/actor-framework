@@ -99,6 +99,14 @@ public:
     return half_segments_[0] == 0 && half_segments_[1] == 0;
   }
 
+  // -- factories --------------------------------------------------------------
+
+  /// Returns `INADDR6_ANY`, i.e., `::`.
+  static ipv6_address any() noexcept;
+
+  /// Returns `INADDR6_LOOPBACK`, i.e., `::1`.
+  static ipv6_address loopback() noexcept;
+
   // -- inspection -------------------------------------------------------------
 
   template <class Inspector>

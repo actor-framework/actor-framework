@@ -45,6 +45,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The `mcast` and `ucast` operators now stop calling `on_next` immediately when
   disposed.
 - Actors no longer terminate despite having open streams (#1377).
+<<<<<<< HEAD
 - Actors reading from external sources such as SPSC buffers via a local flow
   could end up in a long-running read loop. To avoid potentially starving other
   actors or activities, scheduled actors now limit the amount of actions that
@@ -52,6 +53,10 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Destroying a consumer or producer resource before opening it lead to a stall
   of the consumer / producer. The buffer now keeps track of whether `close` or
   `abort` were called prior to consumers or producers attaching.
+- The function `caf::net::make_tcp_accept_socket` now handles passing `0.0.0.0`
+  correctly by opening the socket in IPv4 mode. Passing an empty bind address
+  now defaults to `INADDR6_ANY` (but allowing IPv4 clients) with `INADDR_ANY` as
+  fallback in case opening the socket in IPv6 mode failed.
 
 ### Deprecated
 
