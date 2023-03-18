@@ -11,7 +11,8 @@
 
 namespace caf::net {
 
-/// Lifts `Socket` to a `expected<Socket>` and sets an error if `fd` is invalid.
+/// Lifts `Socket` to an `expected<Socket>` and sets an error if `fd` is
+/// invalid.
 template <class Socket>
 expected<Socket> checked_socket(Socket fd) {
   using res_t = expected<Socket>;

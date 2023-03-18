@@ -5,6 +5,7 @@
 
 namespace caf::net {
 
+/// Creates a new @ref actor_shell and registers it at the actor system.
 template <class Handle>
 actor_shell_ptr_t<Handle>
 make_actor_shell(actor_system& sys, async::execution_context_ptr loop) {

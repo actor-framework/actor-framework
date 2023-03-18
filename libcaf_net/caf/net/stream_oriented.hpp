@@ -12,8 +12,6 @@
 
 namespace caf::net::stream_oriented {
 
-class lower_layer;
-
 /// The upper layer requests bytes from the lower layer and consumes raw chunks
 /// of data.
 class CAF_NET_EXPORT upper_layer : public generic_upper_layer {

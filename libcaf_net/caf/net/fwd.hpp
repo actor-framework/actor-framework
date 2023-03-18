@@ -80,3 +80,10 @@ actor_shell_ptr_t<Handle>
 make_actor_shell(actor_system&, async::execution_context_ptr);
 
 } // namespace caf::net
+
+namespace caf::net::stream_oriented {
+
+class lower_layer;
+class upper_layer;
+
+} // namespace caf::net::stream_oriented
