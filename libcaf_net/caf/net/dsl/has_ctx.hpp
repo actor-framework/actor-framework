@@ -5,9 +5,9 @@
 #pragma once
 
 #include "caf/expected.hpp"
-#include "caf/net/ssl/acceptor.hpp"
 #include "caf/net/ssl/connection.hpp"
 #include "caf/net/ssl/context.hpp"
+#include "caf/net/ssl/tcp_acceptor.hpp"
 #include "caf/net/stream_socket.hpp"
 
 #include <memory>
@@ -46,7 +46,7 @@ public:
   auto acceptor_with_ctx(F&& f) {
     return [this, g = std::forward<F>(f)](auto fd) mutable {
       if (ctx) {
-        auto acc = ssl::acceptor{fd, std::move(*ctx)};
+        auto acc = ssl::tcp_acceptor{fd, std::move(*ctx)};
         return g(acc);
       } else
         return g(fd);

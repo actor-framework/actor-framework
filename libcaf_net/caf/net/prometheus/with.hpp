@@ -9,7 +9,6 @@
 #include "caf/net/dsl/has_accept.hpp"
 #include "caf/net/dsl/has_context.hpp"
 #include "caf/net/prometheus/server_factory.hpp"
-#include "caf/net/ssl/acceptor.hpp"
 #include "caf/net/ssl/context.hpp"
 #include "caf/net/tcp_accept_socket.hpp"
 

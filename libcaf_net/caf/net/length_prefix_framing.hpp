@@ -132,7 +132,7 @@ public:
     /// Listens for incoming connection on @p fd.
     /// @param sys The host system.
     /// @param acc A connection acceptor such as @ref tcp_accept_socket or
-    ///            @ref ssl::acceptor.
+    ///            @ref ssl::tcp_acceptor.
     /// @param cfg Configures the acceptor. Currently, the only supported
     ///            configuration parameter is `max-connections`.
     template <class Acceptor>

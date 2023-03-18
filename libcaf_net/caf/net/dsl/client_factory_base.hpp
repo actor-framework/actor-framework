@@ -8,7 +8,7 @@
 #include "caf/net/dsl/base.hpp"
 #include "caf/net/dsl/client_config.hpp"
 #include "caf/net/fwd.hpp"
-#include "caf/net/ssl/acceptor.hpp"
+#include "caf/net/ssl/tcp_acceptor.hpp"
 #include "caf/net/tcp_accept_socket.hpp"
 
 #include <cstdint>

@@ -13,7 +13,6 @@
 #include "caf/net/http/request.hpp"
 #include "caf/net/http/server_factory.hpp"
 #include "caf/net/multiplexer.hpp"
-#include "caf/net/ssl/acceptor.hpp"
 #include "caf/net/ssl/context.hpp"
 #include "caf/net/tcp_accept_socket.hpp"
 

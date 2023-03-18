@@ -14,8 +14,8 @@
 
 namespace caf::net::ssl {
 
-/// Wraps an accept socket and an SSL context.
-class CAF_NET_EXPORT acceptor {
+/// Wraps a TCP accept socket and an SSL context.
+class CAF_NET_EXPORT tcp_acceptor {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -25,33 +25,34 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  acceptor() = delete;
+  tcp_acceptor() = delete;
 
-  acceptor(const acceptor&) = delete;
+  tcp_acceptor(const tcp_acceptor&) = delete;
 
-  acceptor& operator=(const acceptor&) = delete;
+  tcp_acceptor& operator=(const tcp_acceptor&) = delete;
 
-  acceptor(acceptor&& other);
+  tcp_acceptor(tcp_acceptor&& other);
 
-  acceptor& operator=(acceptor&& other);
+  tcp_acceptor& operator=(tcp_acceptor&& other);
 
-  acceptor(tcp_accept_socket fd, context ctx) : fd_(fd), ctx_(std::move(ctx)) {
+  tcp_acceptor(tcp_accept_socket fd, context ctx)
+    : fd_(fd), ctx_(std::move(ctx)) {
     // nop
   }
 
   // -- factories --------------------------------------------------------------
 
-  static expected<acceptor>
+  static expected<tcp_acceptor>
   make_with_cert_file(tcp_accept_socket fd, const char* cert_file_path,
                       const char* key_file_path,
                       format file_format = format::pem);
 
-  static expected<acceptor>
+  static expected<tcp_acceptor>
   make_with_cert_file(uint16_t port, const char* cert_file_path,
                       const char* key_file_path,
                       format file_format = format::pem);
 
-  static expected<acceptor>
+  static expected<tcp_acceptor>
   make_with_cert_file(tcp_accept_socket fd, const std::string& cert_file_path,
                       const std::string& key_file_path,
                       format file_format = format::pem) {
@@ -59,7 +60,7 @@ public:
                                key_file_path.c_str(), file_format);
   }
 
-  static expected<acceptor>
+  static expected<tcp_acceptor>
   make_with_cert_file(uint16_t port, const std::string& cert_file_path,
                       const std::string& key_file_path,
                       format file_format = format::pem) {
@@ -89,13 +90,13 @@ private:
 // -- free functions -----------------------------------------------------------
 
 /// Checks whether `acc` has a valid socket descriptor.
-bool CAF_NET_EXPORT valid(const acceptor& acc);
+bool CAF_NET_EXPORT valid(const tcp_acceptor& acc);
 
 /// Closes the socket of `obj`.
-void CAF_NET_EXPORT close(acceptor& acc);
+void CAF_NET_EXPORT close(tcp_acceptor& acc);
 
 /// Tries to accept a new connection on `acc`. On success, wraps the new socket
 /// into an SSL @ref connection and returns it.
-expected<connection> CAF_NET_EXPORT accept(acceptor& acc);
+expected<connection> CAF_NET_EXPORT accept(tcp_acceptor& acc);
 
 } // namespace caf::net::ssl

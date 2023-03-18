@@ -8,7 +8,6 @@
 #include "caf/defaults.hpp"
 #include "caf/detail/accept_handler.hpp"
 #include "caf/detail/connection_factory.hpp"
-#include "caf/detail/shared_ssl_acceptor.hpp"
 #include "caf/fwd.hpp"
 #include "caf/net/checked_socket.hpp"
 #include "caf/net/dsl/server_config.hpp"

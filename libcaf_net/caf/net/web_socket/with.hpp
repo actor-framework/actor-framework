@@ -10,7 +10,6 @@
 #include "caf/net/dsl/has_context.hpp"
 #include "caf/net/dsl/has_uri_connect.hpp"
 #include "caf/net/multiplexer.hpp"
-#include "caf/net/ssl/acceptor.hpp"
 #include "caf/net/ssl/context.hpp"
 #include "caf/net/tcp_accept_socket.hpp"
 #include "caf/net/web_socket/client_factory.hpp"

@@ -31,7 +31,6 @@ caf_add_component(
   SOURCES
     src/detail/convert_ip_endpoint.cpp
     src/detail/rfc6455.cpp
-    src/detail/shared_ssl_acceptor.cpp
     src/net/abstract_actor_shell.cpp
     src/net/actor_shell.cpp
     src/net/binary/default_trait.cpp
@@ -63,7 +62,6 @@ caf_add_component(
     src/net/socket.cpp
     src/net/socket_event_layer.cpp
     src/net/socket_manager.cpp
-    src/net/ssl/acceptor.cpp
     src/net/ssl/connection.cpp
     src/net/ssl/context.cpp
     src/net/ssl/dtls.cpp
@@ -71,6 +69,7 @@ caf_add_component(
     src/net/ssl/format.cpp
     src/net/ssl/password.cpp
     src/net/ssl/startup.cpp
+    src/net/ssl/tcp_acceptor.cpp
     src/net/ssl/tls.cpp
     src/net/ssl/transport.cpp
     src/net/ssl/verify.cpp
