@@ -53,7 +53,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
   }
   // Open up a TCP port for incoming connections and start the server.
   auto server
-    = caf::net::http::with(sys)
+    = http::with(sys)
         // Optionally enable TLS.
         .context(ssl::context::enable(key_file && cert_file)
                    .and_then(ssl::emplace_server(ssl::tls::v1_2))
