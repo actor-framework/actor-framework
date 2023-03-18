@@ -9,7 +9,6 @@
 #include "caf/detail/atomic_ref_counted.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/net/fwd.hpp"
-#include "caf/net/operation.hpp"
 #include "caf/net/pipe_socket.hpp"
 #include "caf/net/socket.hpp"
 #include "caf/ref_counted.hpp"
@@ -95,9 +94,6 @@ public:
 
   /// Returns the enclosing @ref actor_system.
   actor_system& system();
-
-  /// Computes the current mask for the manager. Mostly useful for testing.
-  operation mask_of(const socket_manager_ptr& mgr);
 
   // -- implementation of execution_context ------------------------------------
 

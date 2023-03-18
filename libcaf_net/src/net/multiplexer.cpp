@@ -13,7 +13,6 @@
 #include "caf/logger.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/net/middleman.hpp"
-#include "caf/net/operation.hpp"
 #include "caf/net/pollset_updater.hpp"
 #include "caf/net/socket_manager.hpp"
 #include "caf/sec.hpp"
@@ -52,22 +51,6 @@ const short input_mask = POLLIN | POLLPRI;
 const short error_mask = POLLRDHUP | POLLERR | POLLHUP | POLLNVAL;
 
 const short output_mask = POLLOUT;
-
-// short to_bitmask(operation mask) {
-//   return static_cast<short>((is_reading(mask) ? input_mask : 0)
-//                             | (is_writing(mask) ? output_mask : 0));
-// }
-
-operation to_operation(const socket_manager_ptr&, std::optional<short> mask) {
-  operation res = operation::none;
-  if (mask) {
-    if ((*mask & input_mask) != 0)
-      res = add_read_flag(res);
-    if ((*mask & output_mask) != 0)
-      res = add_write_flag(res);
-  }
-  return res;
-}
 
 } // namespace
 
@@ -152,16 +135,6 @@ middleman& multiplexer::owner() {
 
 actor_system& multiplexer::system() {
   return owner().system();
-}
-
-operation multiplexer::mask_of(const socket_manager_ptr& mgr) {
-  auto fd = mgr->handle();
-  if (auto i = updates_.find(fd); i != updates_.end())
-    return to_operation(mgr, i->second.events);
-  else if (auto index = index_of(mgr); index != -1)
-    return to_operation(mgr, pollset_[index].events);
-  else
-    return to_operation(mgr, std::nullopt);
 }
 
 // -- implementation of execution_context --------------------------------------

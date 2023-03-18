@@ -19,7 +19,6 @@ caf_add_component(
   ENUM_TYPES
     net.http.method
     net.http.status
-    net.operation
     net.ssl.dtls
     net.ssl.errc
     net.ssl.format
@@ -103,7 +102,6 @@ caf_add_component(
     net.length_prefix_framing
     net.multiplexer
     net.network_socket
-    net.operation
     net.pipe_socket
     net.prometheus.server
     net.socket
