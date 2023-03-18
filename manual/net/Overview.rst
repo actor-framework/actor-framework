@@ -3,12 +3,15 @@
 Overview
 ========
 
-The networking module offers high-level APIs for individual protocols as well as
-low-level building blocks for building implementing new protocols and assembling
-protocol stacks.
+The networking module offers a high-level, declarative DSL for individual
+protocols as well as low-level building blocks for implementing new protocols
+and assembling protocol stacks.
 
-High-level APIs
-===============
+When using caf-net for applications, we generally recommend sticking to the
+declarative API.
+
+Declarative High-level DSL :sup:`experimental`
+----------------------------------------------
 
 The high-level APIs follow a factory pattern that configures each layer from the
 bottom up, usually starting at the actor system. For example:
@@ -82,4 +85,4 @@ for the handshake such as protocols or extensions fields. These options are
 listed at the documentation for the individual protocols.
 
 Layering
-========
+--------

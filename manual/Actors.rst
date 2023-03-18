@@ -416,10 +416,14 @@ the actor has already exited. Otherwise, the actor will execute it as part of
 its termination. The following example attaches a function object to actors for
 printing a custom string on exit.
 
-.. literalinclude:: /examples/broker/simple_broker.cpp
-   :language: C++
-   :start-after: --(rst-attach-begin)--
-   :end-before: --(rst-attach-end)--
+.. code-block:: C++
+
+  // Utility function to print an exit message with custom name.
+  void print_on_exit(const actor& hdl, const std::string& name) {
+    hdl->attach_functor([=](const error& reason) {
+      cout << name << " exited: " << to_string(reason) << endl;
+    });
+  }
 
 It is possible to attach code to remote actors. However, the cleanup code will
 run on the local machine.

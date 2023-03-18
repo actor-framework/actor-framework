@@ -39,14 +39,15 @@ Contents
    :caption: Networking Library
 
    net/Overview
-   net/Prometheus
+   net/ActorShell
+   net/HTTP
    net/LengthPrefixFraming
+   net/Prometheus
 
 .. toctree::
    :maxdepth: 2
    :caption: Appendix
 
    FAQ
-   Utility
    CommonPitfalls
    UsingAout

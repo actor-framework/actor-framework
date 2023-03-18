@@ -1,7 +1,7 @@
 .. _net_prometheus:
 
-Prometheus
-==========
+Prometheus :sup:`experimental`
+==============================
 
 CAF ships a Prometheus server implementation that allows a scraper to collect
 metrics from the actor system. The Prometheus server sits on top of an HTTP

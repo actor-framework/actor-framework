@@ -1,7 +1,7 @@
-.. _net_prometheus:
+.. _length_prefix_framing:
 
-Length-prefix Framing
-=====================
+Length-prefix Framing :sup:`experimental`
+=========================================
 
 Length-prefix framing is a simple protocol for encoding variable-length messages
 on the network. Each message is preceded by a fixed-length value (32 bit) that

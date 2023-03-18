@@ -1,5 +1,6 @@
 // Non-interactive example to illustrate how to connect flows over an
-// asynchronous SPSC (Single Producer Single Consumer) buffer.
+// asynchronous SPSC (Single Producer Single Consumer) buffer manually. Usually,
+// CAF generates the SPSC buffers implicitly.
 
 #include "caf/actor_system.hpp"
 #include "caf/async/spsc_buffer.hpp"

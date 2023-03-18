@@ -1,7 +1,7 @@
 .. _worker-groups:
 
-Managing Groups of Workers  :sup:`experimental`
-===============================================
+Managing Groups of Workers :sup:`experimental`
+==============================================
 
 When managing a set of workers, a central actor often dispatches requests to a
 set of workers. For this purpose, the class ``actor_pool`` implements a
