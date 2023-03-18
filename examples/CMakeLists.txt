@@ -107,7 +107,6 @@ else()
   endfunction()
 endif()
 
-add_net_example(http secure-time-server)
 add_net_example(http time-server)
 
 add_net_example(length_prefix_framing chat-client)
