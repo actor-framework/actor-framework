@@ -27,8 +27,6 @@ struct pollfd;
 
 namespace caf::net {
 
-class pollset_updater;
-
 /// Multiplexes any number of ::socket_manager objects with a ::socket.
 class CAF_NET_EXPORT multiplexer : public detail::atomic_ref_counted,
                                    public async::execution_context {
@@ -48,7 +46,7 @@ public:
 
   // -- friends ----------------------------------------------------------------
 
-  friend class pollset_updater; // Needs access to the `do_*` functions.
+  friend class detail::pollset_updater; // Needs access to the `do_*` functions.
 
   // -- static utility functions -----------------------------------------------
 

@@ -89,3 +89,9 @@ class upper_layer;
 enum class errc;
 
 } // namespace caf::net::octet_stream
+
+namespace caf::detail {
+
+class pollset_updater;
+
+} // namespace caf::detail

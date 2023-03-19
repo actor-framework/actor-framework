@@ -14,13 +14,13 @@
 #include <cstdint>
 #include <mutex>
 
-namespace caf::net {
+namespace caf::detail {
 
-class CAF_NET_EXPORT pollset_updater : public socket_event_layer {
+class CAF_NET_EXPORT pollset_updater : public net::socket_event_layer {
 public:
   // -- member types -----------------------------------------------------------
 
-  using super = socket_manager;
+  using super = net::socket_manager;
 
   using msg_buf = std::array<std::byte, sizeof(intptr_t) + 1>;
 
@@ -34,17 +34,17 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit pollset_updater(pipe_socket fd);
+  explicit pollset_updater(net::pipe_socket fd);
 
   // -- factories --------------------------------------------------------------
 
-  static std::unique_ptr<pollset_updater> make(pipe_socket fd);
+  static std::unique_ptr<pollset_updater> make(net::pipe_socket fd);
 
   // -- implementation of socket_event_layer -----------------------------------
 
-  error start(socket_manager* owner) override;
+  error start(net::socket_manager* owner) override;
 
-  socket handle() const override;
+  net::socket handle() const override;
 
   void handle_read_event() override;
 
@@ -53,11 +53,11 @@ public:
   void abort(const error& reason) override;
 
 private:
-  pipe_socket fd_;
-  socket_manager* owner_ = nullptr;
-  multiplexer* mpx_ = nullptr;
+  net::pipe_socket fd_;
+  net::socket_manager* owner_ = nullptr;
+  net::multiplexer* mpx_ = nullptr;
   msg_buf buf_;
   size_t buf_size_ = 0;
 };
 
-} // namespace caf::net
+} // namespace caf::detail

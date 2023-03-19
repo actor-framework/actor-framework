@@ -29,6 +29,7 @@ caf_add_component(
     ${CAF_NET_HEADERS}
   SOURCES
     src/detail/convert_ip_endpoint.cpp
+    src/detail/pollset_updater.cpp
     src/detail/rfc6455.cpp
     src/net/abstract_actor_shell.cpp
     src/net/actor_shell.cpp
@@ -60,7 +61,6 @@ caf_add_component(
     src/net/octet_stream/transport.cpp
     src/net/octet_stream/upper_layer.cpp
     src/net/pipe_socket.cpp
-    src/net/pollset_updater.cpp
     src/net/prometheus/server.cpp
     src/net/socket.cpp
     src/net/socket_event_layer.cpp
