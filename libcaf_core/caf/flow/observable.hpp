@@ -499,7 +499,9 @@ template <class OnNext>
 disposable observable<T>::for_each(OnNext on_next) {
   static_assert(std::is_invocable_v<OnNext, const T&>,
                 "for_each: the on_next function must accept a 'const T&'");
-  return subscribe(make_observer(std::move(on_next)));
+  using impl_type = detail::default_observer_impl<T, OnNext>;
+  auto ptr = make_counted<impl_type>(std::move(on_next));
+  return subscribe(observer<T>{std::move(ptr)});
 }
 
 // -- observable: transforming -------------------------------------------------

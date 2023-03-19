@@ -157,15 +157,17 @@ using on_next_trait_t
 template <class F>
 using on_next_value_type = typename on_next_trait_t<F>::value_type;
 
-template <class OnNext, class OnError = unit_t, class OnComplete = unit_t>
-class default_observer_impl
-  : public flow::observer_impl_base<on_next_value_type<OnNext>> {
+template <class T, class OnNext, class OnError = unit_t,
+          class OnComplete = unit_t>
+class default_observer_impl : public flow::observer_impl_base<T> {
 public:
+  static_assert(std::is_invocable_v<OnNext, const T&>);
+
   static_assert(std::is_invocable_v<OnError, const error&>);
 
   static_assert(std::is_invocable_v<OnComplete>);
 
-  using input_type = on_next_value_type<OnNext>;
+  using input_type = T;
 
   explicit default_observer_impl(OnNext&& on_next_fn)
     : on_next_(std::move(on_next_fn)) {
@@ -230,8 +232,9 @@ namespace caf::flow {
 /// @param on_complete Callback for handling the end-of-stream event.
 template <class OnNext, class OnError, class OnComplete>
 auto make_observer(OnNext on_next, OnError on_error, OnComplete on_complete) {
-  using impl_type = detail::default_observer_impl<OnNext, OnError, OnComplete>;
-  using input_type = typename impl_type::input_type;
+  using input_type = detail::on_next_value_type<OnNext>;
+  using impl_type
+    = detail::default_observer_impl<input_type, OnNext, OnError, OnComplete>;
   auto ptr = make_counted<impl_type>(std::move(on_next), std::move(on_error),
                                      std::move(on_complete));
   return observer<input_type>{std::move(ptr)};
@@ -242,8 +245,8 @@ auto make_observer(OnNext on_next, OnError on_error, OnComplete on_complete) {
 /// @param on_error Callback for handling an error.
 template <class OnNext, class OnError>
 auto make_observer(OnNext on_next, OnError on_error) {
-  using impl_type = detail::default_observer_impl<OnNext, OnError>;
-  using input_type = typename impl_type::input_type;
+  using input_type = detail::on_next_value_type<OnNext>;
+  using impl_type = detail::default_observer_impl<input_type, OnNext, OnError>;
   auto ptr = make_counted<impl_type>(std::move(on_next), std::move(on_error));
   return observer<input_type>{std::move(ptr)};
 }
@@ -252,8 +255,8 @@ auto make_observer(OnNext on_next, OnError on_error) {
 /// @param on_next Callback for handling incoming elements.
 template <class OnNext>
 auto make_observer(OnNext on_next) {
-  using impl_type = detail::default_observer_impl<OnNext>;
-  using input_type = typename impl_type::input_type;
+  using input_type = detail::on_next_value_type<OnNext>;
+  using impl_type = detail::default_observer_impl<input_type, OnNext>;
   auto ptr = make_counted<impl_type>(std::move(on_next));
   return observer<input_type>{std::move(ptr)};
 }
