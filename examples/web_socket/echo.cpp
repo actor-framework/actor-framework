@@ -84,11 +84,11 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
         })
         // When started, run our worker actor to handle incoming connections.
         .start([&sys](trait::acceptor_resource<> events) {
-          using event_t = trait::accept_event<>;
           sys.spawn([events](caf::event_based_actor* self) {
             // For each buffer pair, we create a new flow ...
-            self->make_observable().from_resource(events).for_each(
-              [self](const event_t& ev) {
+            self->make_observable()
+              .from_resource(events) //
+              .for_each([self](const trait::accept_event<>& ev) {
                 // ... that simply pushes data back to the sender.
                 auto [pull, push] = ev.data();
                 pull.observe_on(self)

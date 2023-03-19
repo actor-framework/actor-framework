@@ -8,7 +8,6 @@
 #include "caf/net/fwd.hpp"
 #include "caf/net/generic_upper_layer.hpp"
 #include "caf/net/http/header.hpp"
-#include "caf/net/web_socket/fwd.hpp"
 
 namespace caf::net::web_socket {
 

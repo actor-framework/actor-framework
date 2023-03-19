@@ -80,7 +80,7 @@ bool framing::done_sending() {
   return up_->done_sending();
 }
 
-// -- implementation of binary::lower_layer ------------------------------------
+// -- implementation of lp::lower_layer ----------------------------------------
 
 bool framing::can_send_more() const noexcept {
   return down_->can_send_more();

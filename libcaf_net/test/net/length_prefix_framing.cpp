@@ -17,9 +17,9 @@
 #include "caf/byte_buffer.hpp"
 #include "caf/byte_span.hpp"
 #include "caf/detail/network_order.hpp"
-#include "caf/net/binary/frame.hpp"
-#include "caf/net/binary/lower_layer.hpp"
-#include "caf/net/binary/upper_layer.hpp"
+#include "caf/net/lp/frame.hpp"
+#include "caf/net/lp/lower_layer.hpp"
+#include "caf/net/lp/upper_layer.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/octet_stream/transport.hpp"
 #include "caf/net/socket_guard.hpp"
@@ -38,7 +38,7 @@ using string_list = std::vector<std::string>;
 using shared_string_list = std::shared_ptr<string_list>;
 
 template <bool EnableSuspend>
-class app_t : public net::binary::upper_layer {
+class app_t : public net::lp::upper_layer {
 public:
   app_t(async::execution_context_ptr loop, shared_string_list ls_ptr)
     : loop(std::move(loop)), inputs(std::move(ls_ptr)) {
@@ -50,7 +50,7 @@ public:
     return std::make_unique<app_t>(std::move(loop), std::move(inputs));
   }
 
-  caf::error start(net::binary::lower_layer* down_ptr) override {
+  caf::error start(net::lp::lower_layer* down_ptr) override {
     // Start reading immediately.
     down = down_ptr;
     down->request_messages();
@@ -101,7 +101,7 @@ public:
 
   async::execution_context_ptr loop;
 
-  net::binary::lower_layer* down = nullptr;
+  net::lp::lower_layer* down = nullptr;
 
   shared_string_list inputs;
 };
@@ -257,17 +257,17 @@ SCENARIO("lp::with(...).connect(...) translates between flows and socket I/O") {
                       MESSAGE("flow aborted: " << what);
                     })
                     .do_on_complete([] { MESSAGE("flow completed"); })
-                    .do_on_next([buf](const net::binary::frame& x) {
+                    .do_on_next([buf](const net::lp::frame& x) {
                       std::string str;
                       for (auto val : x.bytes())
                         str.push_back(static_cast<char>(val));
                       buf->push_back(std::move(str));
                     })
-                    .map([](const net::binary::frame& x) {
+                    .map([](const net::lp::frame& x) {
                       std::string response = "ok ";
                       for (auto val : x.bytes())
                         response.push_back(static_cast<char>(val));
-                      return net::binary::frame{as_bytes(make_span(response))};
+                      return net::lp::frame{as_bytes(make_span(response))};
                     })
                     .subscribe(push);
                 });

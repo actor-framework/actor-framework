@@ -8,15 +8,12 @@
 #include "caf/async/spsc_buffer.hpp"
 #include "caf/byte_span.hpp"
 #include "caf/cow_tuple.hpp"
-#include "caf/detail/accept_handler.hpp"
-#include "caf/detail/binary_flow_bridge.hpp"
-#include "caf/detail/connection_factory.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/disposable.hpp"
-#include "caf/net/binary/default_trait.hpp"
-#include "caf/net/binary/frame.hpp"
-#include "caf/net/binary/lower_layer.hpp"
-#include "caf/net/binary/upper_layer.hpp"
+#include "caf/net/lp/default_trait.hpp"
+#include "caf/net/lp/frame.hpp"
+#include "caf/net/lp/lower_layer.hpp"
+#include "caf/net/lp/upper_layer.hpp"
 #include "caf/net/middleman.hpp"
 #include "caf/net/octet_stream/upper_layer.hpp"
 
@@ -33,11 +30,11 @@ namespace caf::net::lp {
 /// maximum size of INT32_MAX. This limitation comes from the POSIX API (recv)
 /// on 32-bit platforms.
 class CAF_NET_EXPORT framing : public octet_stream::upper_layer,
-                               public binary::lower_layer {
+                               public lp::lower_layer {
 public:
   // -- member types -----------------------------------------------------------
 
-  using upper_layer_ptr = std::unique_ptr<binary::upper_layer>;
+  using upper_layer_ptr = std::unique_ptr<lp::upper_layer>;
 
   // -- constants --------------------------------------------------------------
 
@@ -67,7 +64,7 @@ public:
 
   bool done_sending() override;
 
-  // -- implementation of binary::lower_layer ----------------------------------
+  // -- implementation of lp::lower_layer ----------------------------------
 
   bool can_send_more() const noexcept override;
 

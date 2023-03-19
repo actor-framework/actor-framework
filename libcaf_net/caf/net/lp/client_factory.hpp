@@ -5,7 +5,7 @@
 #pragma once
 
 #include "caf/async/spsc_buffer.hpp"
-#include "caf/detail/binary_flow_bridge.hpp"
+#include "caf/detail/lp_flow_bridge.hpp"
 #include "caf/disposable.hpp"
 #include "caf/net/checked_socket.hpp"
 #include "caf/net/dsl/client_factory_base.hpp"
@@ -24,9 +24,9 @@ namespace caf::detail {
 
 /// Specializes the WebSocket flow bridge for the server side.
 template <class Trait>
-class lp_client_flow_bridge : public binary_flow_bridge<Trait> {
+class lp_client_flow_bridge : public lp_flow_bridge<Trait> {
 public:
-  using super = binary_flow_bridge<Trait>;
+  using super = lp_flow_bridge<Trait>;
 
   // We consume the output type of the application.
   using pull_t = async::consumer_resource<typename Trait::output_type>;
@@ -52,7 +52,7 @@ public:
       push_.abort(err);
   }
 
-  error start(net::binary::lower_layer* down_ptr) override {
+  error start(net::lp::lower_layer* down_ptr) override {
     super::down_ = down_ptr;
     return super::init(std::move(pull_), std::move(push_));
   }

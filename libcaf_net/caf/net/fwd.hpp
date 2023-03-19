@@ -95,3 +95,60 @@ namespace caf::detail {
 class pollset_updater;
 
 } // namespace caf::detail
+
+namespace caf::net::lp {
+
+class client;
+class frame;
+class framing;
+class lower_layer;
+class server;
+class upper_layer;
+
+} // namespace caf::net::lp
+
+namespace caf::net::web_socket {
+
+class client;
+class frame;
+class framing;
+class lower_layer;
+class server;
+class upper_layer;
+
+template <class Trait, class... Ts>
+class server_factory;
+
+enum class status : uint16_t;
+
+} // namespace caf::net::web_socket
+
+namespace caf::net::http {
+
+class header;
+class lower_layer;
+class server;
+class upper_layer;
+
+using header_fields_map
+  = unordered_flat_map<std::string_view, std::string_view>;
+
+enum class method : uint8_t;
+
+enum class status : uint16_t;
+
+} // namespace caf::net::http
+
+namespace caf::net::ssl {
+
+class acceptor;
+class connection;
+class context;
+class transport;
+
+enum class dtls;
+enum class errc : uint8_t;
+enum class format;
+enum class tls;
+
+} // namespace caf::net::ssl

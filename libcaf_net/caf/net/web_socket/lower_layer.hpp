@@ -8,7 +8,6 @@
 #include "caf/fwd.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/generic_lower_layer.hpp"
-#include "caf/net/web_socket/fwd.hpp"
 
 #include <string_view>
 

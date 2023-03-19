@@ -61,12 +61,12 @@ private:
   intrusive_ptr<config_type> config_;
 };
 
-template <class Trait = binary::default_trait>
+template <class Trait = lp::default_trait>
 with_t<Trait> with(actor_system& sys) {
   return with_t<Trait>{multiplexer::from(sys)};
 }
 
-template <class Trait = binary::default_trait>
+template <class Trait = lp::default_trait>
 with_t<Trait> with(multiplexer* mpx) {
   return with_t<Trait>{mpx};
 }

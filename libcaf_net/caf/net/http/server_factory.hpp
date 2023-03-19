@@ -7,7 +7,6 @@
 #include "caf/async/blocking_producer.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/accept_handler.hpp"
-#include "caf/detail/binary_flow_bridge.hpp"
 #include "caf/detail/connection_factory.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/fwd.hpp"

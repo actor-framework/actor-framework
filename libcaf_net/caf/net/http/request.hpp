@@ -8,7 +8,7 @@
 #include "caf/async/promise.hpp"
 #include "caf/byte_span.hpp"
 #include "caf/detail/net_export.hpp"
-#include "caf/net/http/fwd.hpp"
+#include "caf/net/fwd.hpp"
 #include "caf/net/http/header.hpp"
 #include "caf/net/http/response.hpp"
 

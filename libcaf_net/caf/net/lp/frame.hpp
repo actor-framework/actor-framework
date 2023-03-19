@@ -14,7 +14,7 @@
 #include "caf/raise_error.hpp"
 #include "caf/type_id.hpp"
 
-namespace caf::net::binary {
+namespace caf::net::lp {
 
 /// An implicitly shared type for binary data frames.
 class CAF_NET_EXPORT frame {
@@ -74,4 +74,4 @@ private:
   intrusive_ptr<web_socket::frame::data> data_;
 };
 
-} // namespace caf::net::binary
+} // namespace caf::net::lp

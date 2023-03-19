@@ -16,18 +16,8 @@
 
 using namespace std::literals;
 
-// -- convenience type aliases -------------------------------------------------
-
-// The trait for translating between bytes on the wire and flow items. The
-// binary default trait operates on binary::frame items.
-using trait = caf::net::binary::default_trait;
-
-// An implicitly shared type for storing a binary frame.
-using bin_frame = caf::net::binary::frame;
-
-// Each client gets a UUID for identifying it. While processing messages, we add
-// this ID to the input to tag it.
-using message_t = std::pair<caf::uuid, bin_frame>;
+namespace lp = caf::net::lp;
+namespace ssl = caf::net::ssl;
 
 // -- constants ----------------------------------------------------------------
 
@@ -52,7 +42,6 @@ struct config : caf::actor_system_config {
 // -- main ---------------------------------------------------------------------
 
 int caf_main(caf::actor_system& sys, const config& cfg) {
-  namespace ssl = caf::net::ssl;
   // Read the configuration.
   auto use_ssl = caf::get_or(cfg, "tls.enable", false);
   auto port = caf::get_or(cfg, "port", default_port);
@@ -88,7 +77,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
                           << "*** use CTRL+D or CTRL+C to terminate\n";
                 self->quit();
               })
-              .for_each([](const bin_frame& frame) {
+              .for_each([](const lp::frame& frame) {
                 // Interpret the bytes as ASCII characters.
                 auto bytes = frame.bytes();
                 auto str = std::string_view{
@@ -103,7 +92,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
           });
           // Spin up a second worker that reads from std::cin and sends each
           // line to the server. Put that to its own thread since it's doing
-          // I/O.
+          // blocking I/O calls.
           sys.spawn<caf::detached>([push, name] {
             auto lines = caf::async::make_blocking_producer(push);
             if (!lines)
@@ -112,7 +101,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
             auto prefix = name + ": ";
             while (std::getline(std::cin, line)) {
               line.insert(line.begin(), prefix.begin(), prefix.end());
-              lines->push(bin_frame{caf::as_bytes(caf::make_span(line))});
+              lines->push(lp::frame{caf::as_bytes(caf::make_span(line))});
               line.clear();
             }
           });

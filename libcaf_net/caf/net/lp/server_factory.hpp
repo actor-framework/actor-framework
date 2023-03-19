@@ -7,8 +7,8 @@
 #include "caf/async/blocking_producer.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/accept_handler.hpp"
-#include "caf/detail/binary_flow_bridge.hpp"
 #include "caf/detail/connection_factory.hpp"
+#include "caf/detail/lp_flow_bridge.hpp"
 #include "caf/fwd.hpp"
 #include "caf/net/checked_socket.hpp"
 #include "caf/net/dsl/server_factory_base.hpp"
@@ -29,9 +29,9 @@ namespace caf::detail {
 
 /// Specializes the length-prefix flow bridge for the server side.
 template <class Trait>
-class lp_server_flow_bridge : public binary_flow_bridge<Trait> {
+class lp_server_flow_bridge : public lp_flow_bridge<Trait> {
 public:
-  using super = binary_flow_bridge<Trait>;
+  using super = lp_flow_bridge<Trait>;
 
   using input_type = typename Trait::input_type;
 
@@ -56,7 +56,7 @@ public:
     return std::make_unique<lp_server_flow_bridge>(mpx, std::move(producer));
   }
 
-  error start(net::binary::lower_layer* down_ptr) override {
+  error start(net::lp::lower_layer* down_ptr) override {
     CAF_ASSERT(down_ptr != nullptr);
     super::down_ = down_ptr;
     auto [app_pull, lp_push] = async::make_spsc_buffer_resource<input_type>();

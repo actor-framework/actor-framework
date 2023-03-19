@@ -9,7 +9,6 @@
 #include "caf/cow_tuple.hpp"
 #include "caf/error.hpp"
 #include "caf/net/fwd.hpp"
-#include "caf/net/web_socket/fwd.hpp"
 
 #include <utility>
 
@@ -20,9 +19,6 @@ namespace caf::net::web_socket {
 template <class... Ts>
 class acceptor {
 public:
-  template <class Trait>
-  using impl_type = acceptor_impl<Trait, Ts...>;
-
   template <class Trait>
   using server_factory_type = server_factory<Trait, Ts...>;
 

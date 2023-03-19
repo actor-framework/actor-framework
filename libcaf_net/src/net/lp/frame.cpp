@@ -2,13 +2,13 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#include "caf/net/binary/frame.hpp"
+#include "caf/net/lp/frame.hpp"
 
 #include <cstring>
 #include <new>
 #include <numeric>
 
-namespace caf::net::binary {
+namespace caf::net::lp {
 
 namespace {
 
@@ -36,4 +36,4 @@ void frame::init(size_t payload_size, Args&&... args) {
   data_.reset(new (vptr) data_t(std::forward<Args>(args)...), false);
 }
 
-} // namespace caf::net::binary
+} // namespace caf::net::lp

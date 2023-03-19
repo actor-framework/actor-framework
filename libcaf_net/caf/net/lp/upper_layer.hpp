@@ -6,13 +6,12 @@
 
 #include "caf/detail/net_export.hpp"
 #include "caf/fwd.hpp"
-#include "caf/net/binary/fwd.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/generic_upper_layer.hpp"
 
-namespace caf::net::binary {
+namespace caf::net::lp {
 
-/// Consumes binary messages from the lower layer.
+/// Consumes lp messages from the lower layer.
 class CAF_NET_EXPORT upper_layer : public generic_upper_layer {
 public:
   virtual ~upper_layer();
@@ -30,4 +29,4 @@ public:
   [[nodiscard]] virtual ptrdiff_t consume(byte_span payload) = 0;
 };
 
-} // namespace caf::net::binary
+} // namespace caf::net::lp

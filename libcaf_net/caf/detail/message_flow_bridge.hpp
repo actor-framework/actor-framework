@@ -7,8 +7,8 @@
 #include "caf/actor_system.hpp"
 #include "caf/async/consumer_adapter.hpp"
 #include "caf/async/producer_adapter.hpp"
-#include "caf/net/binary/lower_layer.hpp"
-#include "caf/net/binary/upper_layer.hpp"
+#include "caf/net/lp/lower_layer.hpp"
+#include "caf/net/lp/upper_layer.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/socket_manager.hpp"
 #include "caf/sec.hpp"
@@ -32,7 +32,7 @@ namespace caf::net {
 /// };
 /// ~~~
 template <class Trait>
-class message_flow_bridge : public binary::upper_layer {
+class message_flow_bridge : public lp::upper_layer {
 public:
   /// The input type for the application.
   using input_type = typename Trait::input_type;
@@ -64,7 +64,7 @@ public:
     // nop
   }
 
-  error start(net::socket_manager* mgr, binary::lower_layer* down) {
+  error start(net::socket_manager* mgr, lp::lower_layer* down) {
     down_ = down;
     if (auto in = make_consumer_adapter(in_res_, mgr->mpx_ptr(),
                                         do_wakeup_cb())) {
@@ -158,7 +158,7 @@ private:
   }
 
   /// Points to the next layer down the protocol stack.
-  binary::lower_layer* down_ = nullptr;
+  lp::lower_layer* down_ = nullptr;
 
   /// Incoming messages, serialized to the socket.
   async::consumer_adapter<input_type> in_;

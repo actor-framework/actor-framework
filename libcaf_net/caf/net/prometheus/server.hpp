@@ -5,7 +5,7 @@
 #pragma once
 
 #include "caf/fwd.hpp"
-#include "caf/net/http/fwd.hpp"
+#include "caf/net/fwd.hpp"
 #include "caf/net/http/upper_layer.hpp"
 #include "caf/telemetry/collector/prometheus.hpp"
 #include "caf/telemetry/importer/process.hpp"

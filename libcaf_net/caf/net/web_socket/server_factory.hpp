@@ -8,7 +8,6 @@
 #include "caf/callback.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/accept_handler.hpp"
-#include "caf/detail/binary_flow_bridge.hpp"
 #include "caf/detail/connection_factory.hpp"
 #include "caf/detail/ws_flow_bridge.hpp"
 #include "caf/fwd.hpp"

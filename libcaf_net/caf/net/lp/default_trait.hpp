@@ -7,12 +7,12 @@
 #include "caf/async/spsc_buffer.hpp"
 #include "caf/byte_span.hpp"
 #include "caf/detail/net_export.hpp"
-#include "caf/net/binary/fwd.hpp"
+#include "caf/net/fwd.hpp"
 
 #include <string_view>
 #include <vector>
 
-namespace caf::net::binary {
+namespace caf::net::lp {
 
 /// A default trait type for binary protocols that uses @ref frame as both input
 /// and output types and provides async::consumer_resource and
@@ -56,4 +56,4 @@ public:
   error last_error();
 };
 
-} // namespace caf::net::binary
+} // namespace caf::net::lp

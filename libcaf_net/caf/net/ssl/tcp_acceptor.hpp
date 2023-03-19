@@ -6,8 +6,8 @@
 
 #include "caf/detail/net_export.hpp"
 #include "caf/expected.hpp"
+#include "caf/net/fwd.hpp"
 #include "caf/net/ssl/context.hpp"
-#include "caf/net/ssl/fwd.hpp"
 #include "caf/net/tcp_accept_socket.hpp"
 
 #include <variant>

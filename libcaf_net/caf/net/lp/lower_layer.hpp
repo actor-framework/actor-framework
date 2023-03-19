@@ -7,10 +7,10 @@
 #include "caf/detail/net_export.hpp"
 #include "caf/error.hpp"
 #include "caf/fwd.hpp"
-#include "caf/net/binary/fwd.hpp"
+#include "caf/net/fwd.hpp"
 #include "caf/net/generic_lower_layer.hpp"
 
-namespace caf::net::binary {
+namespace caf::net::lp {
 
 /// Provides access to a resource that operates on the granularity of binary
 /// messages.
@@ -41,4 +41,4 @@ public:
   virtual bool end_message() = 0;
 };
 
-} // namespace caf::net::binary
+} // namespace caf::net::lp

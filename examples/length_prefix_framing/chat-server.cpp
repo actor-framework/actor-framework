@@ -12,18 +12,7 @@
 #include <iostream>
 #include <utility>
 
-// -- convenience type aliases -------------------------------------------------
-
-// The trait for translating between bytes on the wire and flow items. The
-// binary default trait operates on binary::frame items.
-using trait = caf::net::binary::default_trait;
-
-// An implicitly shared type for storing a binary frame.
-using bin_frame = caf::net::binary::frame;
-
-// Each client gets a UUID for identifying it. While processing messages, we add
-// this ID to the input to tag it.
-using message_t = std::pair<caf::uuid, bin_frame>;
+namespace lp = caf::net::lp;
 
 // -- constants ----------------------------------------------------------------
 
@@ -47,11 +36,14 @@ struct config : caf::actor_system_config {
 // -- multiplexing logic -------------------------------------------------------
 
 void worker_impl(caf::event_based_actor* self,
-                 trait::acceptor_resource events) {
+                 lp::default_trait::acceptor_resource events) {
+  // Each client gets a UUID for identifying it. While processing messages, we
+  // add this ID to the input to tag it.
+  using message_t = std::pair<caf::uuid, lp::frame>;
   // Allows us to push new flows into the central merge point.
-  caf::flow::item_publisher<caf::flow::observable<message_t>> msg_pub{self};
+  caf::flow::item_publisher<caf::flow::observable<message_t>> pub{self};
   // Our central merge point combines all inputs into a single, shared flow.
-  auto messages = msg_pub.as_observable().merge().share();
+  auto messages = pub.as_observable().merge().share();
   // Have one subscription for debug output. This also makes sure that the
   // shared observable stays subscribed to the merger.
   messages.for_each([](const message_t& msg) {
@@ -63,8 +55,7 @@ void worker_impl(caf::event_based_actor* self,
   events
     .observe_on(self) //
     .for_each(
-      [self, messages, pub = std::move(msg_pub)] //
-      (const trait::accept_event& event) mutable {
+      [self, messages, pub = std::move(pub)](const auto& event) mutable {
         // Each connection gets a unique ID.
         auto conn = caf::uuid::random();
         std::cout << "*** accepted new connection " << to_string(conn) << '\n';
@@ -90,7 +81,7 @@ void worker_impl(caf::event_based_actor* self,
               .do_on_complete([conn] {
                 std::cout << "*** lost connection " << to_string(conn) << '\n';
               })
-              .map([conn](const bin_frame& frame) {
+              .map([conn](const lp::frame& frame) {
                 return message_t{conn, frame};
               })
               .as_observable();
@@ -126,7 +117,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
         // Limit how many clients may be connected at any given time.
         .max_connections(max_connections)
         // When started, run our worker actor to handle incoming connections.
-        .start([&sys](trait::acceptor_resource accept_events) {
+        .start([&sys](lp::default_trait::acceptor_resource accept_events) {
           sys.spawn(worker_impl, std::move(accept_events));
         });
   // Report any error to the user.

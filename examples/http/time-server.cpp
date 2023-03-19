@@ -60,7 +60,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
         .accept(port)
         // Limit how many clients may be connected at any given time.
         .max_connections(max_connections)
-        // When started, run our worker actor to handle incoming connections.
+        // When started, run our worker actor to handle incoming requests.
         .start([&sys](auto requests) {
           // Note: requests is an async::consumer_resource<http::request>.
           sys.spawn([requests](caf::event_based_actor* self) {

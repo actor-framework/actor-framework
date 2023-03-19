@@ -9,8 +9,8 @@
 #include "caf/async/spsc_buffer.hpp"
 #include "caf/detail/flow_bridge_base.hpp"
 #include "caf/fwd.hpp"
-#include "caf/net/binary/lower_layer.hpp"
-#include "caf/net/binary/upper_layer.hpp"
+#include "caf/net/lp/lower_layer.hpp"
+#include "caf/net/lp/upper_layer.hpp"
 #include "caf/sec.hpp"
 
 #include <utility>
@@ -19,15 +19,14 @@ namespace caf::detail {
 
 /// Convenience alias for referring to the base type of @ref flow_bridge.
 template <class Trait>
-using binary_flow_bridge_base_t
-  = detail::flow_bridge_base<net::binary::upper_layer, net::binary::lower_layer,
-                             Trait>;
+using lp_flow_bridge_base
+  = flow_bridge_base<net::lp::upper_layer, net::lp::lower_layer, Trait>;
 
 /// Translates between a message-oriented transport and data flows.
 template <class Trait>
-class binary_flow_bridge : public binary_flow_bridge_base_t<Trait> {
+class lp_flow_bridge : public lp_flow_bridge_base<Trait> {
 public:
-  using super = binary_flow_bridge_base_t<Trait>;
+  using super = lp_flow_bridge_base<Trait>;
 
   using input_type = typename Trait::input_type;
 
@@ -41,7 +40,7 @@ public:
     return super::trait_.convert(item, bytes) && super::down_->end_message();
   }
 
-  // -- implementation of binary::lower_layer ----------------------------------
+  // -- implementation of lp::lower_layer --------------------------------------
 
   ptrdiff_t consume(byte_span buf) override {
     if (!super::out_)
