@@ -6,9 +6,6 @@
 #include "caf/event_based_actor.hpp"
 #include "caf/net/lp/with.hpp"
 #include "caf/net/middleman.hpp"
-#include "caf/net/stream_transport.hpp"
-#include "caf/net/tcp_accept_socket.hpp"
-#include "caf/net/tcp_stream_socket.hpp"
 #include "caf/scheduled_actor/flow.hpp"
 #include "caf/uuid.hpp"
 

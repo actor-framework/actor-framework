@@ -15,9 +15,9 @@
 #include "caf/net/http/status.hpp"
 #include "caf/net/http/v1.hpp"
 #include "caf/net/multiplexer.hpp"
+#include "caf/net/octet_stream/upper_layer.hpp"
 #include "caf/net/receive_policy.hpp"
 #include "caf/net/socket_manager.hpp"
-#include "caf/net/stream_oriented.hpp"
 #include "caf/net/web_socket/framing.hpp"
 #include "caf/net/web_socket/handshake.hpp"
 #include "caf/net/web_socket/lower_layer.hpp"
@@ -35,7 +35,7 @@ namespace caf::net::web_socket {
 /// 6455. Initially, the layer performs the WebSocket handshake. Once completed,
 /// this layer decodes RFC 6455 frames and forwards binary and text messages to
 /// `UpperLayer`.
-class CAF_NET_EXPORT server : public stream_oriented::upper_layer {
+class CAF_NET_EXPORT server : public octet_stream::upper_layer {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -74,11 +74,11 @@ public:
     return static_cast<const server::upper_layer&>(framing_.up());
   }
 
-  stream_oriented::lower_layer& down() noexcept {
+  octet_stream::lower_layer& down() noexcept {
     return framing_.down();
   }
 
-  const stream_oriented::lower_layer& down() const noexcept {
+  const octet_stream::lower_layer& down() const noexcept {
     return framing_.down();
   }
 
@@ -86,9 +86,9 @@ public:
     return handshake_complete_;
   }
 
-  // -- stream_oriented::upper_layer implementation ----------------------------
+  // -- octet_stream::upper_layer implementation -------------------------------
 
-  error start(stream_oriented::lower_layer* down) override;
+  error start(octet_stream::lower_layer* down) override;
 
   void abort(const error& reason) override;
 

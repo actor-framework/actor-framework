@@ -18,7 +18,7 @@
 #include "caf/net/binary/lower_layer.hpp"
 #include "caf/net/binary/upper_layer.hpp"
 #include "caf/net/middleman.hpp"
-#include "caf/net/stream_oriented.hpp"
+#include "caf/net/octet_stream/upper_layer.hpp"
 
 #include <cstdint>
 #include <cstring>
@@ -32,7 +32,7 @@ namespace caf::net::lp {
 /// but messages (including the 4 Bytes for the length prefix) are limited to a
 /// maximum size of INT32_MAX. This limitation comes from the POSIX API (recv)
 /// on 32-bit platforms.
-class CAF_NET_EXPORT framing : public stream_oriented::upper_layer,
+class CAF_NET_EXPORT framing : public octet_stream::upper_layer,
                                public binary::lower_layer {
 public:
   // -- member types -----------------------------------------------------------
@@ -55,9 +55,9 @@ public:
 
   static std::unique_ptr<framing> make(upper_layer_ptr up);
 
-  // -- implementation of stream_oriented::upper_layer -------------------------
+  // -- implementation of octet_stream::upper_layer ----------------------------
 
-  error start(stream_oriented::lower_layer* down) override;
+  error start(octet_stream::lower_layer* down) override;
 
   void abort(const error& reason) override;
 
@@ -94,7 +94,7 @@ public:
 private:
   // -- member variables -------------------------------------------------------
 
-  stream_oriented::lower_layer* down_;
+  octet_stream::lower_layer* down_;
   upper_layer_ptr up_;
   size_t message_offset_ = 0;
 };

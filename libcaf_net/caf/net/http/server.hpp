@@ -18,9 +18,9 @@
 #include "caf/net/http/upper_layer.hpp"
 #include "caf/net/http/v1.hpp"
 #include "caf/net/multiplexer.hpp"
+#include "caf/net/octet_stream/upper_layer.hpp"
 #include "caf/net/receive_policy.hpp"
 #include "caf/net/socket_manager.hpp"
-#include "caf/net/stream_oriented.hpp"
 #include "caf/pec.hpp"
 #include "caf/settings.hpp"
 #include "caf/unordered_flat_map.hpp"
@@ -30,7 +30,7 @@
 namespace caf::net::http {
 
 /// Implements the server part for the HTTP Protocol as defined in RFC 7231.
-class CAF_NET_EXPORT server : public stream_oriented::upper_layer,
+class CAF_NET_EXPORT server : public octet_stream::upper_layer,
                               public http::lower_layer {
 public:
   // -- member types -----------------------------------------------------------
@@ -108,9 +108,9 @@ public:
 
   bool send_end_of_chunks() override;
 
-  // -- stream_oriented::upper_layer implementation ----------------------------
+  // -- octet_stream::upper_layer implementation -------------------------------
 
-  error start(stream_oriented::lower_layer* down) override;
+  error start(octet_stream::lower_layer* down) override;
 
   void abort(const error& reason) override;
 
@@ -129,7 +129,7 @@ private:
 
   bool handle_header(std::string_view http);
 
-  stream_oriented::lower_layer* down_;
+  octet_stream::lower_layer* down_;
 
   upper_layer_ptr up_;
 

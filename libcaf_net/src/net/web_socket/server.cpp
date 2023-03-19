@@ -26,9 +26,9 @@ std::unique_ptr<server> server::make(upper_layer_ptr up) {
   return std::make_unique<server>(std::move(up));
 }
 
-// -- stream_oriented::upper_layer implementation ------------------------------
+// -- octet_stream::upper_layer implementation ---------------------------------
 
-error server::start(stream_oriented::lower_layer* down_ptr) {
+error server::start(octet_stream::lower_layer* down_ptr) {
   framing_.start(down_ptr);
   down().configure_read(receive_policy::up_to(handshake::max_http_size));
   return none;

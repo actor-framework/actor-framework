@@ -2,9 +2,9 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE net.stream_transport
+#define CAF_SUITE net.octet_stream.transport
 
-#include "caf/net/stream_transport.hpp"
+#include "caf/net/octet_stream/transport.hpp"
 
 #include "net-test.hpp"
 
@@ -21,6 +21,8 @@
 #include "caf/span.hpp"
 
 using namespace caf;
+
+namespace os = net::octet_stream;
 
 namespace {
 
@@ -59,7 +61,7 @@ struct fixture : test_coordinator_fixture<> {
   byte_buffer_ptr shared_send_buf;
 };
 
-class mock_application : public net::stream_oriented::upper_layer {
+class mock_application : public os::upper_layer {
 public:
   using byte_buffer_ptr = std::shared_ptr<byte_buffer>;
 
@@ -73,9 +75,9 @@ public:
                                               std::move(send_buf));
   }
 
-  net::stream_oriented::lower_layer* down;
+  os::lower_layer* down;
 
-  error start(net::stream_oriented::lower_layer* down_ptr) override {
+  error start(os::lower_layer* down_ptr) override {
     down = down_ptr;
     down->configure_read(net::receive_policy::exactly(hello_manager.size()));
     return none;
@@ -115,8 +117,8 @@ BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(receive) {
   auto mock = mock_application::make(shared_recv_buf, shared_send_buf);
-  auto transport = net::stream_transport::make(recv_socket_guard.release(),
-                                               std::move(mock));
+  auto transport = os::transport::make(recv_socket_guard.release(),
+                                       std::move(mock));
   auto mgr = net::socket_manager::make(mpx.get(), std::move(transport));
   CHECK_EQ(mgr->start(), none);
   mpx->apply_updates();
@@ -133,8 +135,8 @@ CAF_TEST(receive) {
 
 CAF_TEST(send) {
   auto mock = mock_application::make(shared_recv_buf, shared_send_buf);
-  auto transport = net::stream_transport::make(recv_socket_guard.release(),
-                                               std::move(mock));
+  auto transport = os::transport::make(recv_socket_guard.release(),
+                                       std::move(mock));
   auto mgr = net::socket_manager::make(mpx.get(), std::move(transport));
   CHECK_EQ(mgr->start(), none);
   mpx->apply_updates();

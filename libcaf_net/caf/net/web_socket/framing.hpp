@@ -8,8 +8,8 @@
 #include "caf/byte_span.hpp"
 #include "caf/detail/rfc6455.hpp"
 #include "caf/net/fwd.hpp"
+#include "caf/net/octet_stream/lower_layer.hpp"
 #include "caf/net/receive_policy.hpp"
-#include "caf/net/stream_oriented.hpp"
 #include "caf/net/web_socket/lower_layer.hpp"
 #include "caf/net/web_socket/status.hpp"
 #include "caf/net/web_socket/upper_layer.hpp"
@@ -49,7 +49,7 @@ public:
 
   // -- initialization ---------------------------------------------------------
 
-  void start(stream_oriented::lower_layer* down);
+  void start(octet_stream::lower_layer* down);
 
   // -- properties -------------------------------------------------------------
 
@@ -120,7 +120,7 @@ private:
   // -- member variables -------------------------------------------------------
 
   /// Points to the transport layer below.
-  stream_oriented::lower_layer* down_;
+  octet_stream::lower_layer* down_;
 
   /// Buffer for assembling binary frames.
   binary_buffer binary_buf_;

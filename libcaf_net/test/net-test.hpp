@@ -1,20 +1,20 @@
 #pragma once
 
 #include "caf/error.hpp"
+#include "caf/net/octet_stream/lower_layer.hpp"
+#include "caf/net/octet_stream/upper_layer.hpp"
 #include "caf/net/receive_policy.hpp"
 #include "caf/net/socket.hpp"
-#include "caf/net/stream_oriented.hpp"
 #include "caf/settings.hpp"
 #include "caf/span.hpp"
 #include "caf/string_view.hpp"
 #include "caf/test/bdd_dsl.hpp"
 
-class mock_stream_transport : public caf::net::stream_oriented::lower_layer {
+class mock_stream_transport : public caf::net::octet_stream::lower_layer {
 public:
   // -- member types -----------------------------------------------------------
 
-  using upper_layer_ptr
-    = std::unique_ptr<caf::net::stream_oriented::upper_layer>;
+  using upper_layer_ptr = std::unique_ptr<caf::net::octet_stream::upper_layer>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -28,7 +28,7 @@ public:
     return std::make_unique<mock_stream_transport>(std::move(ptr));
   }
 
-  // -- implementation of stream_oriented::lower_layer -------------------------
+  // -- implementation of octet_stream::lower_layer ----------------------------
 
   bool can_send_more() const noexcept override;
 

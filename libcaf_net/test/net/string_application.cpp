@@ -4,7 +4,7 @@
 
 #define CAF_SUITE net.string_application
 
-#include "caf/net/stream_transport.hpp"
+#include "caf/net/octet_stream/transport.hpp"
 
 #include "caf/test/dsl.hpp"
 
@@ -186,7 +186,7 @@ CAF_TEST_FIXTURE_SCOPE(endpoint_manager_tests, fixture)
 CAF_TEST(receive) {
   using application_type
     = extend<string_application>::with<stream_string_application>;
-  using transport_type = stream_transport<application_type>;
+  using transport_type = octet_stream::transport<application_type>;
   byte_buffer read_buf(1024);
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 1u);
   auto buf = std::make_shared<byte_buffer>();

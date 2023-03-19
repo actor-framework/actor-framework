@@ -13,9 +13,9 @@
 #include "caf/callback.hpp"
 #include "caf/net/make_actor_shell.hpp"
 #include "caf/net/middleman.hpp"
+#include "caf/net/octet_stream/transport.hpp"
 #include "caf/net/socket_guard.hpp"
 #include "caf/net/socket_manager.hpp"
-#include "caf/net/stream_transport.hpp"
 #include "caf/typed_actor.hpp"
 
 using namespace caf;
@@ -28,7 +28,7 @@ using svec = std::vector<std::string>;
 
 using string_consumer = typed_actor<result<void>(std::string)>;
 
-class app_t : public net::stream_oriented::upper_layer {
+class app_t : public net::octet_stream::upper_layer {
 public:
   explicit app_t(actor_system& sys, async::execution_context_ptr loop,
                  actor hdl = {})
@@ -41,7 +41,7 @@ public:
     return std::make_unique<app_t>(sys, std::move(loop), std::move(hdl));
   }
 
-  error start(net::stream_oriented::lower_layer* down) override {
+  error start(net::octet_stream::lower_layer* down) override {
     this->down = down;
     self->set_behavior([this](std::string& line) {
       CAF_MESSAGE("received an asynchronous message: " << line);
@@ -119,7 +119,7 @@ public:
   }
 
   // Pointer to the layer below.
-  net::stream_oriented::lower_layer* down;
+  net::octet_stream::lower_layer* down;
 
   // Handle to the worker-under-test.
   actor worker;
@@ -200,7 +200,7 @@ CAF_TEST(actor shells expose their mailbox to their owners) {
   auto fd = testee_socket_guard.release();
   auto app_uptr = app_t::make(sys, mpx);
   auto app = app_uptr.get();
-  auto transport = net::stream_transport::make(fd, std::move(app_uptr));
+  auto transport = net::octet_stream::transport::make(fd, std::move(app_uptr));
   auto mgr = net::socket_manager::make(mpx.get(), std::move(transport));
   if (auto err = mgr->start())
     CAF_FAIL("mgr->start() failed: " << err);
@@ -222,7 +222,7 @@ CAF_TEST(actor shells can send requests and receive responses) {
   auto fd = testee_socket_guard.release();
   auto app_uptr = app_t::make(sys, mpx, worker);
   auto app = app_uptr.get();
-  auto transport = net::stream_transport::make(fd, std::move(app_uptr));
+  auto transport = net::octet_stream::transport::make(fd, std::move(app_uptr));
   auto mgr = net::socket_manager::make(mpx.get(), std::move(transport));
   if (auto err = mgr->start())
     CAF_FAIL("mgr->start() failed: " << err);

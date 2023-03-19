@@ -16,8 +16,6 @@ namespace caf::net {
 
 // -- templates ----------------------------------------------------------------
 
-class stream_transport;
-
 template <class Factory>
 class datagram_transport;
 
@@ -81,9 +79,13 @@ make_actor_shell(actor_system&, async::execution_context_ptr);
 
 } // namespace caf::net
 
-namespace caf::net::stream_oriented {
+namespace caf::net::octet_stream {
 
 class lower_layer;
+class policy;
+class transport;
 class upper_layer;
 
-} // namespace caf::net::stream_oriented
+enum class errc;
+
+} // namespace caf::net::octet_stream

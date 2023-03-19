@@ -3,6 +3,7 @@
 #include "caf/detail/network_order.hpp"
 #include "caf/error.hpp"
 #include "caf/logger.hpp"
+#include "caf/net/octet_stream/lower_layer.hpp"
 #include "caf/net/receive_policy.hpp"
 #include "caf/sec.hpp"
 
@@ -14,9 +15,9 @@ std::unique_ptr<framing> framing::make(upper_layer_ptr up) {
   return std::make_unique<framing>(std::move(up));
 }
 
-// -- implementation of stream_oriented::upper_layer ---------------------------
+// -- implementation of octet_stream::upper_layer ------------------------------
 
-error framing::start(stream_oriented::lower_layer* down) {
+error framing::start(octet_stream::lower_layer* down) {
   down_ = down;
   return up_->start(this);
 }

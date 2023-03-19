@@ -16,8 +16,8 @@
 #include "caf/net/http/header.hpp"
 #include "caf/net/http/server.hpp"
 #include "caf/net/multiplexer.hpp"
+#include "caf/net/octet_stream/transport.hpp"
 #include "caf/net/ssl/transport.hpp"
-#include "caf/net/stream_transport.hpp"
 #include "caf/net/tcp_accept_socket.hpp"
 #include "caf/net/web_socket/server.hpp"
 

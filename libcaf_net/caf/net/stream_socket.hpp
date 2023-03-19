@@ -25,7 +25,7 @@ struct CAF_NET_EXPORT stream_socket : network_socket {
   using super = network_socket;
 
   /// The default transport for exchanging raw bytes over a stream socket.
-  using transport_type = stream_transport;
+  using transport_type = octet_stream::transport;
 
   using super::super;
 

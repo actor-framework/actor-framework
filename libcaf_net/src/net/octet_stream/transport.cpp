@@ -2,77 +2,41 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#include "caf/net/stream_transport.hpp"
+#include "caf/net/octet_stream/transport.hpp"
 
 #include "caf/defaults.hpp"
+#include "caf/net/octet_stream/errc.hpp"
 #include "caf/net/receive_policy.hpp"
 #include "caf/net/socket_manager.hpp"
 
-namespace caf::net {
-
-// -- member types -------------------------------------------------------------
-
-stream_transport::policy::~policy() {
-  // nop
-}
-
-ptrdiff_t stream_transport::default_policy::read(stream_socket x,
-                                                 byte_span buf) {
-  return net::read(x, buf);
-}
-
-ptrdiff_t stream_transport::default_policy::write(stream_socket x,
-                                                  const_byte_span buf) {
-  return net::write(x, buf);
-}
-
-stream_transport_error
-stream_transport::default_policy::last_error(stream_socket, ptrdiff_t) {
-  return last_socket_error_is_temporary() ? stream_transport_error::temporary
-                                          : stream_transport_error::permanent;
-}
-
-ptrdiff_t stream_transport::default_policy::connect(stream_socket x) {
-  // A connection is established if the OS reports a socket as ready for read
-  // or write and if there is no error on the socket.
-  return net::probe(x) ? 1 : -1;
-}
-
-ptrdiff_t stream_transport::default_policy::accept(stream_socket) {
-  return 1;
-}
-
-size_t stream_transport::default_policy::buffered() const noexcept {
-  return 0;
-}
+namespace caf::net::octet_stream {
 
 // -- constructors, destructors, and assignment operators ----------------------
 
-stream_transport::stream_transport(stream_socket fd, upper_layer_ptr up)
+transport::transport(stream_socket fd, upper_layer_ptr up)
   : fd_(fd), up_(std::move(up)), policy_(&default_policy_) {
   memset(&flags_, 0, sizeof(flags_t));
 }
 
-stream_transport::stream_transport(stream_socket fd, upper_layer_ptr up,
-                                   policy* policy)
+transport::transport(stream_socket fd, upper_layer_ptr up, policy* policy)
   : fd_(fd), up_(std::move(up)), policy_(policy) {
   memset(&flags_, 0, sizeof(flags_t));
 }
 
 // -- factories ----------------------------------------------------------------
 
-std::unique_ptr<stream_transport> stream_transport::make(stream_socket fd,
-                                                         upper_layer_ptr up) {
-  return std::make_unique<stream_transport>(fd, std::move(up));
+std::unique_ptr<transport> transport::make(stream_socket fd,
+                                           upper_layer_ptr up) {
+  return std::make_unique<transport>(fd, std::move(up));
 }
 
-// -- implementation of stream_oriented::lower_layer ---------------------------
+// -- implementation of octet_stream::lower_layer ------------------------------
 
-bool stream_transport::can_send_more() const noexcept {
+bool transport::can_send_more() const noexcept {
   return write_buf_.size() < max_write_buf_size_;
 }
 
-void stream_transport::configure_read(receive_policy rd) {
+void transport::configure_read(receive_policy rd) {
   auto restarting = rd.max_size > 0 && max_read_size_ == 0;
   min_read_size_ = rd.min_size;
   max_read_size_ = rd.max_size;
@@ -95,28 +59,28 @@ void stream_transport::configure_read(receive_policy rd) {
   }
 }
 
-void stream_transport::begin_output() {
+void transport::begin_output() {
   if (write_buf_.empty())
     parent_->register_writing();
 }
 
-byte_buffer& stream_transport::output_buffer() {
+byte_buffer& transport::output_buffer() {
   return write_buf_;
 }
 
-bool stream_transport::end_output() {
+bool transport::end_output() {
   return true;
 }
 
-bool stream_transport::is_reading() const noexcept {
+bool transport::is_reading() const noexcept {
   return max_read_size_ > 0;
 }
 
-void stream_transport::write_later() {
+void transport::write_later() {
   parent_->register_writing();
 }
 
-void stream_transport::shutdown() {
+void transport::shutdown() {
   if (write_buf_.empty()) {
     parent_->shutdown();
   } else {
@@ -128,7 +92,7 @@ void stream_transport::shutdown() {
 
 // -- implementation of transport ----------------------------------------------
 
-error stream_transport::start(socket_manager* owner) {
+error transport::start(socket_manager* owner) {
   parent_ = owner;
   // if (auto err = nodelay(fd_, true)) {
   //   CAF_LOG_ERROR("nodelay failed: " << err);
@@ -145,11 +109,11 @@ error stream_transport::start(socket_manager* owner) {
   return up_->start(this);
 }
 
-socket stream_transport::handle() const {
+socket transport::handle() const {
   return fd_;
 }
 
-void stream_transport::handle_read_event() {
+void transport::handle_read_event() {
   CAF_LOG_TRACE(CAF_ARG2("socket", fd_.id));
   // Resume a write operation if the transport waited for the socket to be
   // readable from the last call to handle_write_event.
@@ -179,11 +143,11 @@ void stream_transport::handle_read_event() {
   // Stop if we failed to get more data.
   if (rd < 0) {
     switch (policy_->last_error(fd_, rd)) {
-      case stream_transport_error::temporary:
-      case stream_transport_error::want_read:
+      case errc::temporary:
+      case errc::want_read:
         // Try again later.
         return;
-      case stream_transport_error::want_write:
+      case errc::want_write:
         // Wait for writable socket and then call handle_read_event again.
         flags_.wanted_write_from_read_event = true;
         parent_->register_writing();
@@ -214,7 +178,7 @@ void stream_transport::handle_read_event() {
   handle_buffered_data();
 }
 
-void stream_transport::handle_buffered_data() {
+void transport::handle_buffered_data() {
   CAF_LOG_TRACE(CAF_ARG(buffered_));
   // Loop until we have drained the buffer as much as we can.
   CAF_ASSERT(min_read_size_ <= max_read_size_);
@@ -262,7 +226,7 @@ void stream_transport::handle_buffered_data() {
   }
 }
 
-void stream_transport::fail(const error& reason) {
+void transport::fail(const error& reason) {
   CAF_LOG_TRACE(CAF_ARG(reason));
   up_->abort(reason);
   up_.reset();
@@ -270,7 +234,7 @@ void stream_transport::fail(const error& reason) {
   parent_->shutdown();
 }
 
-void stream_transport::handle_write_event() {
+void transport::handle_write_event() {
   CAF_LOG_TRACE(CAF_ARG2("socket", fd_.id));
   // Resume a read operation if the transport waited for the socket to be
   // writable from the last call to handle_read_event.
@@ -310,10 +274,10 @@ void stream_transport::handle_write_event() {
     // Try again later on temporary errors such as EWOULDBLOCK and
     // stop writing to the socket on hard errors.
     switch (policy_->last_error(fd_, write_res)) {
-      case stream_transport_error::temporary:
-      case stream_transport_error::want_write:
+      case errc::temporary:
+      case errc::want_write:
         return;
-      case stream_transport_error::want_read:
+      case errc::want_read:
         flags_.wanted_read_from_write_event = true;
         parent_->register_reading();
         parent_->deregister_writing();
@@ -327,57 +291,13 @@ void stream_transport::handle_write_event() {
   }
 }
 
-void stream_transport::abort(const error& reason) {
+void transport::abort(const error& reason) {
   up_->abort(reason);
   flags_.shutting_down = true;
 }
 
-bool stream_transport::finalized() const noexcept {
+bool transport::finalized() const noexcept {
   return write_buf_.empty();
 }
 
-// -- free functions -----------------------------------------------------------
-
-std::string to_string(stream_transport::policy::ec code) {
-  switch (code) {
-    case stream_transport::policy::ec::temporary:
-      return "temporary";
-    case stream_transport::policy::ec::want_read:
-      return "want_read";
-    case stream_transport::policy::ec::want_write:
-      return "want_write";
-    case stream_transport::policy::ec::permanent:
-      return "permanent";
-    default:
-      return "invalid";
-  }
-}
-
-bool from_string(std::string_view str, stream_transport::policy::ec& code) {
-  if (str == "temporary") {
-    code = stream_transport::policy::ec::temporary;
-    return true;
-  } else if (str == "want_read") {
-    code = stream_transport::policy::ec::want_read;
-    return true;
-  } else if (str == "want_write") {
-    code = stream_transport::policy::ec::want_write;
-    return true;
-  } else if (str == "permanent") {
-    code = stream_transport::policy::ec::permanent;
-    return true;
-  } else {
-    return false;
-  }
-}
-
-bool from_integer(int value, stream_transport::policy::ec& code) {
-  if (value >= 0 && value < 4) {
-    code = static_cast<stream_transport::policy::ec>(value);
-    return true;
-  } else {
-    return false;
-  }
-}
-
-} // namespace caf::net
+} // namespace caf::net::octet_stream

@@ -12,7 +12,6 @@
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/socket_manager.hpp"
 #include "caf/net/stream_socket.hpp"
-#include "caf/net/stream_transport.hpp"
 
 using namespace caf;
 using namespace std::literals;

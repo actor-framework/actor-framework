@@ -13,7 +13,6 @@
 #include "caf/net/fwd.hpp"
 #include "caf/net/http/v1.hpp"
 #include "caf/net/receive_policy.hpp"
-#include "caf/net/stream_oriented.hpp"
 #include "caf/net/web_socket/framing.hpp"
 #include "caf/net/web_socket/handshake.hpp"
 #include "caf/pec.hpp"
@@ -42,9 +41,9 @@ std::unique_ptr<client> client::make(handshake_ptr hs, upper_layer_ptr up_ptr) {
   return std::make_unique<client>(std::move(hs), std::move(up_ptr));
 }
 
-// -- implementation of stream_oriented::upper_layer ---------------------------
+// -- implementation of octet_stream::upper_layer ------------------------------
 
-error client::start(stream_oriented::lower_layer* down_ptr) {
+error client::start(octet_stream::lower_layer* down_ptr) {
   CAF_ASSERT(hs_ != nullptr);
   framing_.start(down_ptr);
   if (!hs_->has_mandatory_fields())

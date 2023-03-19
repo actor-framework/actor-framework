@@ -10,7 +10,7 @@ namespace caf::net::web_socket {
 
 // -- initialization ---------------------------------------------------------
 
-void framing::start(stream_oriented::lower_layer* down) {
+void framing::start(octet_stream::lower_layer* down) {
   std::random_device rd;
   rng_.seed(rd());
   down_ = down;

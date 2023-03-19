@@ -5,24 +5,24 @@
 #pragma once
 
 #include "caf/detail/net_export.hpp"
+#include "caf/net/octet_stream/transport.hpp"
 #include "caf/net/ssl/connection.hpp"
-#include "caf/net/stream_transport.hpp"
 
 namespace caf::net::ssl {
 
-/// Implements a stream_transport that manages a stream socket with encrypted
-/// communication over OpenSSL.
-class CAF_NET_EXPORT transport : public stream_transport {
+/// Implements a octet stream transport that manages a stream socket with
+/// encrypted communication over TLS.
+class CAF_NET_EXPORT transport : public octet_stream::transport {
 public:
   // -- member types -----------------------------------------------------------
 
-  using super = stream_transport;
+  using super = octet_stream::transport;
 
   using connection_handle = connection;
 
   using worker_ptr = std::unique_ptr<socket_event_layer>;
 
-  class policy_impl : public stream_transport::policy {
+  class policy_impl : public octet_stream::policy {
   public:
     explicit policy_impl(connection conn);
 
@@ -30,7 +30,7 @@ public:
 
     ptrdiff_t write(stream_socket, const_byte_span) override;
 
-    stream_transport_error last_error(stream_socket, ptrdiff_t) override;
+    octet_stream::errc last_error(stream_socket, ptrdiff_t) override;
 
     ptrdiff_t connect(stream_socket) override;
 

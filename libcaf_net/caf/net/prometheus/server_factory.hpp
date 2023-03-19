@@ -14,9 +14,9 @@
 #include "caf/net/dsl/server_factory_base.hpp"
 #include "caf/net/http/server.hpp"
 #include "caf/net/multiplexer.hpp"
+#include "caf/net/octet_stream/transport.hpp"
 #include "caf/net/prometheus/server.hpp"
 #include "caf/net/ssl/transport.hpp"
-#include "caf/net/stream_transport.hpp"
 #include "caf/net/tcp_accept_socket.hpp"
 #include "caf/none.hpp"
 

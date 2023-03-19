@@ -8,29 +8,8 @@
 #include "caf/fwd.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/generic_lower_layer.hpp"
-#include "caf/net/generic_upper_layer.hpp"
 
-namespace caf::net::stream_oriented {
-
-/// The upper layer requests bytes from the lower layer and consumes raw chunks
-/// of data.
-class CAF_NET_EXPORT upper_layer : public generic_upper_layer {
-public:
-  virtual ~upper_layer();
-
-  /// Initializes the upper layer.
-  /// @param down A pointer to the lower layer that remains valid for the
-  ///             lifetime of the upper layer.
-  virtual error start(lower_layer* down) = 0;
-
-  /// Consumes bytes from the lower layer.
-  /// @param buffer Available bytes to read.
-  /// @param delta Bytes that arrived since last calling this function.
-  /// @returns The number of consumed bytes. May be zero if waiting for more
-  ///          input or negative to signal an error.
-  [[nodiscard]] virtual ptrdiff_t consume(byte_span buffer, byte_span delta)
-    = 0;
-};
+namespace caf::net::octet_stream {
 
 /// Provides access to a resource that operates on a byte stream, e.g., a TCP
 /// socket.
@@ -61,4 +40,4 @@ public:
   virtual bool end_output() = 0;
 };
 
-} // namespace caf::net::stream_oriented
+} // namespace caf::net::octet_stream

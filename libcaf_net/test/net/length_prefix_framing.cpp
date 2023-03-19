@@ -21,10 +21,10 @@
 #include "caf/net/binary/lower_layer.hpp"
 #include "caf/net/binary/upper_layer.hpp"
 #include "caf/net/multiplexer.hpp"
+#include "caf/net/octet_stream/transport.hpp"
 #include "caf/net/socket_guard.hpp"
 #include "caf/net/socket_manager.hpp"
 #include "caf/net/stream_socket.hpp"
-#include "caf/net/stream_transport.hpp"
 #include "caf/scheduled_actor/flow.hpp"
 #include "caf/span.hpp"
 
@@ -195,7 +195,8 @@ SCENARIO("calling suspend_reading temporarily halts receiving of messages") {
     auto app = app_t<true>::make(mpx, buf);
     auto app_ptr = app.get();
     auto framing = net::lp::framing::make(std::move(app));
-    auto transport = net::stream_transport::make(fd2, std::move(framing));
+    auto transport = net::octet_stream::transport::make(fd2,
+                                                        std::move(framing));
     auto mgr = net::socket_manager::make(mpx.get(), std::move(transport));
     CHECK_EQ(mgr->start(), none);
     mpx->apply_updates();

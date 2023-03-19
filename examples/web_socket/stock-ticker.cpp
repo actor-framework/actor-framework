@@ -9,7 +9,6 @@
 #include "caf/event_based_actor.hpp"
 #include "caf/json_writer.hpp"
 #include "caf/net/middleman.hpp"
-#include "caf/net/stream_transport.hpp"
 #include "caf/net/web_socket/with.hpp"
 #include "caf/scheduled_actor/flow.hpp"
 #include "caf/span.hpp"

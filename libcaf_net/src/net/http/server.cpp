@@ -1,5 +1,7 @@
 #include "caf/net/http/server.hpp"
 
+#include "caf/net/octet_stream/lower_layer.hpp"
+
 namespace caf::net::http {
 
 // -- factories ----------------------------------------------------------------
@@ -78,9 +80,9 @@ bool server::send_end_of_chunks() {
   return down_->end_output();
 }
 
-// -- stream_oriented::upper_layer implementation ------------------------------
+// -- octet_stream::upper_layer implementation ---------------------------------
 
-error server::start(stream_oriented::lower_layer* down) {
+error server::start(octet_stream::lower_layer* down) {
   down_ = down;
   return up_->start(this);
 }

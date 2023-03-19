@@ -11,15 +11,16 @@
 #include "caf/detail/net_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/net/fwd.hpp"
+#include "caf/net/octet_stream/lower_layer.hpp"
+#include "caf/net/octet_stream/policy.hpp"
+#include "caf/net/octet_stream/upper_layer.hpp"
 #include "caf/net/socket_event_layer.hpp"
-#include "caf/net/stream_oriented.hpp"
 #include "caf/net/stream_socket.hpp"
-#include "caf/net/stream_transport_error.hpp"
 
-namespace caf::net {
+namespace caf::net::octet_stream {
 
-class CAF_NET_EXPORT stream_transport : public socket_event_layer,
-                                        public stream_oriented::lower_layer {
+class CAF_NET_EXPORT transport : public socket_event_layer,
+                                 public octet_stream::lower_layer {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -28,58 +29,7 @@ public:
   using connection_handle = stream_socket;
 
   /// An owning smart pointer type for storing an upper layer object.
-  using upper_layer_ptr = std::unique_ptr<stream_oriented::upper_layer>;
-
-  class policy {
-  public:
-    enum class ec {
-      /// Indicates that the transport should try again later.
-      temporary,
-      /// Indicates that the transport must read data before trying again.
-      want_read,
-      /// Indicates that the transport must write data before trying again.
-      want_write,
-      /// Indicates that the transport cannot resume this operation.
-      permanent,
-    };
-
-    virtual ~policy();
-
-    /// Reads data from the socket into the buffer.
-    virtual ptrdiff_t read(stream_socket x, byte_span buf) = 0;
-
-    /// Writes data from the buffer to the socket.
-    virtual ptrdiff_t write(stream_socket x, const_byte_span buf) = 0;
-
-    /// Returns the last socket error on this thread.
-    virtual stream_transport_error last_error(stream_socket, ptrdiff_t) = 0;
-
-    /// Checks whether connecting a non-blocking socket was successful.
-    virtual ptrdiff_t connect(stream_socket x) = 0;
-
-    /// Convenience function that always returns 1. Exists to make writing code
-    /// against multiple policies easier by providing the same interface.
-    virtual ptrdiff_t accept(stream_socket) = 0;
-
-    /// Returns the number of bytes that are buffered internally and available
-    /// for immediate read.
-    virtual size_t buffered() const noexcept = 0;
-  };
-
-  class default_policy : public policy {
-  public:
-    ptrdiff_t read(stream_socket x, byte_span buf) override;
-
-    ptrdiff_t write(stream_socket x, const_byte_span buf) override;
-
-    stream_transport_error last_error(stream_socket, ptrdiff_t) override;
-
-    ptrdiff_t connect(stream_socket x) override;
-
-    ptrdiff_t accept(stream_socket) override;
-
-    size_t buffered() const noexcept override;
-  };
+  using upper_layer_ptr = std::unique_ptr<octet_stream::upper_layer>;
 
   /// Bundles various flags into a single block of memory.
   struct flags_t {
@@ -99,20 +49,19 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  stream_transport(stream_socket fd, upper_layer_ptr up);
+  transport(stream_socket fd, upper_layer_ptr up);
 
-  stream_transport(stream_socket fd, upper_layer_ptr up, policy* custom);
+  transport(stream_socket fd, upper_layer_ptr up, policy* custom);
 
-  stream_transport(const stream_transport&) = delete;
+  transport(const transport&) = delete;
 
-  stream_transport& operator=(const stream_transport&) = delete;
+  transport& operator=(const transport&) = delete;
 
   // -- factories --------------------------------------------------------------
 
-  static std::unique_ptr<stream_transport> make(stream_socket fd,
-                                                upper_layer_ptr up);
+  static std::unique_ptr<transport> make(stream_socket fd, upper_layer_ptr up);
 
-  // -- implementation of stream_oriented::lower_layer -------------------------
+  // -- implementation of octet_stream::lower_layer ----------------------------
 
   bool can_send_more() const noexcept override;
 
@@ -235,25 +184,9 @@ protected:
   policy* policy_ = nullptr;
 
   /// Fallback policy.
-  default_policy default_policy_;
+  policy default_policy_;
 
   // TODO: add [[no_unique_address]] to default_policy_ when switching to C++20.
 };
 
-/// @relates stream_transport
-CAF_NET_EXPORT std::string to_string(stream_transport::policy::ec);
-
-/// @relates stream_transport
-CAF_NET_EXPORT bool from_string(std::string_view,
-                                stream_transport::policy::ec&);
-
-/// @relates stream_transport
-CAF_NET_EXPORT bool from_integer(int, stream_transport::policy::ec&);
-
-/// @relates stream_transport
-template <class Inspector>
-bool inspect(Inspector& f, stream_transport::policy::ec& x) {
-  return default_enum_inspect(f, x);
-}
-
-} // namespace caf::net
+} // namespace caf::net::octet_stream

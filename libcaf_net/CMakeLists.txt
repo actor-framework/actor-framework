@@ -19,11 +19,11 @@ caf_add_component(
   ENUM_TYPES
     net.http.method
     net.http.status
+    net.octet_stream.errc
     net.ssl.dtls
     net.ssl.errc
     net.ssl.format
     net.ssl.tls
-    net.stream_transport_error
     net.web_socket.status
   HEADERS
     ${CAF_NET_HEADERS}
@@ -55,6 +55,10 @@ caf_add_component(
     src/net/middleman.cpp
     src/net/multiplexer.cpp
     src/net/network_socket.cpp
+    src/net/octet_stream/lower_layer.cpp
+    src/net/octet_stream/policy.cpp
+    src/net/octet_stream/transport.cpp
+    src/net/octet_stream/upper_layer.cpp
     src/net/pipe_socket.cpp
     src/net/pollset_updater.cpp
     src/net/prometheus/server.cpp
@@ -72,9 +76,7 @@ caf_add_component(
     src/net/ssl/tls.cpp
     src/net/ssl/transport.cpp
     src/net/ssl/verify.cpp
-    src/net/stream_oriented.cpp
     src/net/stream_socket.cpp
-    src/net/stream_transport.cpp
     src/net/tcp_accept_socket.cpp
     src/net/tcp_stream_socket.cpp
     src/net/this_host.cpp
@@ -102,13 +104,13 @@ caf_add_component(
     net.length_prefix_framing
     net.multiplexer
     net.network_socket
+    net.octet_stream.transport
     net.pipe_socket
     net.prometheus.server
     net.socket
     net.socket_guard
     net.ssl.transport
     net.stream_socket
-    net.stream_transport
     net.tcp_socket
     net.typed_actor_shell
     net.udp_datagram_socket

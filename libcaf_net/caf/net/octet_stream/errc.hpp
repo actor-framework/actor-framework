@@ -13,9 +13,10 @@
 #include <string>
 #include <type_traits>
 
-namespace caf::net {
+namespace caf::net::octet_stream {
 
-enum class stream_transport_error {
+/// Holds error codes for the @ref octet_stream::transport.
+enum class errc {
   /// Indicates that the transport should try again later.
   temporary,
   /// Indicates that the transport must read data before trying again.
@@ -26,20 +27,19 @@ enum class stream_transport_error {
   permanent,
 };
 
-/// @relates stream_transport_error
-CAF_NET_EXPORT std::string to_string(stream_transport_error);
+/// @relates errc
+CAF_NET_EXPORT std::string to_string(errc);
 
-/// @relates stream_transport_error
-CAF_NET_EXPORT bool from_string(std::string_view, stream_transport_error&);
+/// @relates errc
+CAF_NET_EXPORT bool from_string(std::string_view, errc&);
 
-/// @relates stream_transport_error
-CAF_NET_EXPORT bool from_integer(std::underlying_type_t<stream_transport_error>,
-                                 stream_transport_error&);
+/// @relates errc
+CAF_NET_EXPORT bool from_integer(std::underlying_type_t<errc>, errc&);
 
-/// @relates stream_transport_error
+/// @relates errc
 template <class Inspector>
-bool inspect(Inspector& f, stream_transport_error& x) {
+bool inspect(Inspector& f, errc& x) {
   return default_enum_inspect(f, x);
 }
 
-} // namespace caf::net
+} // namespace caf::net::octet_stream
