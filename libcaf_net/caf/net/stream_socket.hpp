@@ -49,7 +49,7 @@ error CAF_NET_EXPORT keepalive(stream_socket x, bool new_value);
 error CAF_NET_EXPORT nodelay(stream_socket x, bool new_value);
 
 /// Receives data from `x`.
-/// @param x A connected endpoint.
+/// @param x A connected socket.
 /// @param buf Points to destination buffer.
 /// @returns The number of received bytes on success, 0 if the socket is closed,
 ///          or -1 in case of an error.
