@@ -61,7 +61,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
         // Limit how many clients may be connected at any given time.
         .max_connections(max_connections)
         // Accept only requests for path "/".
-        .on_request([](ws::acceptor<>& acc, const http::header& hdr) {
+        .on_request([](ws::acceptor<>& acc, const http::request_header& hdr) {
           // The hdr parameter is a dictionary with fields from the WebSocket
           // handshake such as the path.
           auto path = hdr.path();

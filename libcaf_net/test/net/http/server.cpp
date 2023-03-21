@@ -17,7 +17,7 @@ class app_t : public net::http::upper_layer {
 public:
   // -- member variables -------------------------------------------------------
 
-  net::http::header hdr;
+  net::http::request_header hdr;
 
   caf::byte_buffer payload;
 
@@ -66,7 +66,7 @@ public:
     return true;
   }
 
-  ptrdiff_t consume(const net::http::header& request_hdr,
+  ptrdiff_t consume(const net::http::request_header& request_hdr,
                     const_byte_span body) override {
     hdr = request_hdr;
     auto content = "Hello world!"sv;

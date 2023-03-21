@@ -10,8 +10,8 @@
 #include "caf/error.hpp"
 #include "caf/logger.hpp"
 #include "caf/net/fwd.hpp"
-#include "caf/net/http/header.hpp"
 #include "caf/net/http/method.hpp"
+#include "caf/net/http/request_header.hpp"
 #include "caf/net/http/status.hpp"
 #include "caf/net/http/v1.hpp"
 #include "caf/net/multiplexer.hpp"
@@ -47,7 +47,7 @@ public:
     /// @param down A pointer to the lower layer that remains valid for the
     ///             lifetime of the upper layer.
     /// @param hdr The HTTP request header from the client handshake.
-    virtual error start(lower_layer* down, const http::header& hdr) = 0;
+    virtual error start(lower_layer* down, const http::request_header& hdr) = 0;
   };
 
   using upper_layer_ptr = std::unique_ptr<upper_layer>;

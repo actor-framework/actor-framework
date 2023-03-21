@@ -89,7 +89,7 @@ void server::write_response(http::status code, std::string_view msg) {
 bool server::handle_header(std::string_view http) {
   using namespace std::literals;
   // Parse the header and reject invalid inputs.
-  http::header hdr;
+  http::request_header hdr;
   auto [code, msg] = hdr.parse(http);
   if (code != http::status::ok) {
     write_response(code, msg);

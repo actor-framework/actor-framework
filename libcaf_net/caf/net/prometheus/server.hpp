@@ -63,7 +63,8 @@ public:
 
   error start(http::lower_layer* down) override;
 
-  ptrdiff_t consume(const http::header& hdr, const_byte_span payload) override;
+  ptrdiff_t consume(const http::request_header& hdr,
+                    const_byte_span payload) override;
 
 private:
   explicit server(scrape_state_ptr state) : state_(std::move(state)) {

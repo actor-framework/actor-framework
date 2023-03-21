@@ -51,7 +51,7 @@ error http_flow_adapter::start(net::http::lower_layer* down) {
   return none;
 }
 
-ptrdiff_t http_flow_adapter::consume(const net::http::header& hdr,
+ptrdiff_t http_flow_adapter::consume(const net::http::request_header& hdr,
                                      const_byte_span payload) {
   using namespace net::http;
   if (!pending_.empty()) {

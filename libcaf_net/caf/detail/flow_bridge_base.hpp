@@ -9,7 +9,7 @@
 #include "caf/async/spsc_buffer.hpp"
 #include "caf/fwd.hpp"
 #include "caf/logger.hpp"
-#include "caf/net/http/header.hpp"
+#include "caf/net/http/request_header.hpp"
 #include "caf/sec.hpp"
 
 #include <utility>

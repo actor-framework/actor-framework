@@ -16,19 +16,20 @@
 
 namespace caf::net::http {
 
-class CAF_NET_EXPORT header {
+/// Encapsulates meta data for HTTP requests.
+class CAF_NET_EXPORT request_header {
 public:
-  header() = default;
+  request_header() = default;
 
-  header(header&&) = default;
+  request_header(request_header&&) = default;
 
-  header& operator=(header&&) = default;
+  request_header& operator=(request_header&&) = default;
 
-  header(const header&);
+  request_header(const request_header&);
 
-  header& operator=(const header&);
+  request_header& operator=(const request_header&);
 
-  void assign(const header&);
+  void assign(const request_header&);
 
   http::method method() const noexcept {
     return method_;

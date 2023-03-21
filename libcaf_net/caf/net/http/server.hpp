@@ -11,9 +11,9 @@
 #include "caf/error.hpp"
 #include "caf/logger.hpp"
 #include "caf/net/fwd.hpp"
-#include "caf/net/http/header.hpp"
 #include "caf/net/http/header_fields_map.hpp"
 #include "caf/net/http/lower_layer.hpp"
+#include "caf/net/http/request_header.hpp"
 #include "caf/net/http/status.hpp"
 #include "caf/net/http/upper_layer.hpp"
 #include "caf/net/http/v1.hpp"
@@ -34,12 +34,6 @@ class CAF_NET_EXPORT server : public octet_stream::upper_layer,
                               public http::lower_layer {
 public:
   // -- member types -----------------------------------------------------------
-
-  using header_fields_type = header_fields_map;
-
-  using status_code_type = status;
-
-  using header_type = header;
 
   enum class mode {
     read_header,
@@ -134,7 +128,7 @@ private:
   upper_layer_ptr up_;
 
   /// Buffer for re-using memory.
-  header hdr_;
+  request_header hdr_;
 
   /// Stores whether we are currently waiting for the payload.
   mode mode_ = mode::read_header;

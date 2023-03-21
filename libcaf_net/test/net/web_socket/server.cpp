@@ -33,7 +33,7 @@ public:
   }
 
   error start(net::web_socket::lower_layer* down,
-              const net::http::header& hdr) override {
+              const net::http::request_header& hdr) override {
     down->request_messages();
     // Store the request information in cfg to evaluate them later.
     auto& ws = cfg["web-socket"].as_dictionary();

@@ -27,7 +27,8 @@ public:
   /// @returns The number of consumed bytes or a negative value to signal an
   ///          error.
   /// @note Discarded data is lost permanently.
-  virtual ptrdiff_t consume(const header& hdr, const_byte_span payload) = 0;
+  virtual ptrdiff_t consume(const request_header& hdr, const_byte_span payload)
+    = 0;
 };
 
 } // namespace caf::net::http

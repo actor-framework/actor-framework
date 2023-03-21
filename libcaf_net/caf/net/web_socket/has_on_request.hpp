@@ -41,8 +41,9 @@ public:
                   "on_request must take an acceptor as 1st argument");
     static_assert(std::is_same_v<arg1_t, acceptor_t&>,
                   "on_request must take the acceptor as mutable reference");
-    static_assert(std::is_same_v<arg2_t, const http::header&>,
-                  "on_request must take 'const http::header&' as 2nd argument");
+    static_assert(
+      std::is_same_v<arg2_t, const http::request_header&>,
+      "on_request must take 'const http::request_header&' as 2nd argument");
     // Wrap the callback and return the factory object.
     using factory_t = typename acceptor_t::template server_factory_type<Trait>;
     auto callback = make_shared_type_erased_callback(std::move(on_request));

@@ -185,7 +185,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
         // Limit how many clients may be connected at any given time.
         .max_connections(max_connections)
         // Add handler for incoming connections.
-        .on_request([](ws::acceptor<>& acc, const http::header&) {
+        .on_request([](ws::acceptor<>& acc, const http::request_header&) {
           // Ignore all header fields and accept the connection.
           acc.accept();
         })

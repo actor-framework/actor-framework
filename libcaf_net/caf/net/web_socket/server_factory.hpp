@@ -12,7 +12,7 @@
 #include "caf/detail/ws_flow_bridge.hpp"
 #include "caf/fwd.hpp"
 #include "caf/net/dsl/server_factory_base.hpp"
-#include "caf/net/http/header.hpp"
+#include "caf/net/http/request_header.hpp"
 #include "caf/net/http/server.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/octet_stream/transport.hpp"
@@ -36,7 +36,8 @@ public:
   using ws_acceptor_t = net::web_socket::acceptor<Ts...>;
 
   using on_request_cb_type
-    = shared_callback_ptr<void(ws_acceptor_t&, const net::http::header&)>;
+    = shared_callback_ptr<void(ws_acceptor_t&, //
+                               const net::http::request_header&)>;
 
   using accept_event = typename Trait::template accept_event<Ts...>;
 
@@ -63,7 +64,7 @@ public:
   }
 
   error start(net::web_socket::lower_layer* down_ptr,
-              const net::http::header& hdr) override {
+              const net::http::request_header& hdr) override {
     CAF_ASSERT(down_ptr != nullptr);
     super::down_ = down_ptr;
     net::web_socket::acceptor_impl<Trait, Ts...> acc;
@@ -95,7 +96,8 @@ public:
   using ws_acceptor_t = net::web_socket::acceptor<Ts...>;
 
   using on_request_cb_type
-    = shared_callback_ptr<void(ws_acceptor_t&, const net::http::header&)>;
+    = shared_callback_ptr<void(ws_acceptor_t&, //
+                               const net::http::request_header&)>;
 
   using accept_event = typename Trait::template accept_event<Ts...>;
 
@@ -155,7 +157,7 @@ public:
   using config_type = typename super::config_type;
 
   using on_request_cb_type
-    = shared_callback_ptr<void(acceptor<Ts...>&, const http::header&)>;
+    = shared_callback_ptr<void(acceptor<Ts...>&, const http::request_header&)>;
 
   server_factory(intrusive_ptr<config_type> cfg, on_request_cb_type on_request)
     : super(std::move(cfg)), on_request_(std::move(on_request)) {

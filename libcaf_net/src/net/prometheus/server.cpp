@@ -4,8 +4,8 @@
 
 #include "caf/net/prometheus/server.hpp"
 
-#include "caf/net/http/header.hpp"
 #include "caf/net/http/lower_layer.hpp"
+#include "caf/net/http/request_header.hpp"
 
 using namespace std::literals;
 
@@ -42,7 +42,8 @@ error server::start(http::lower_layer* down) {
   return caf::none;
 }
 
-ptrdiff_t server::consume(const http::header& hdr, const_byte_span payload) {
+ptrdiff_t server::consume(const http::request_header& hdr,
+                          const_byte_span payload) {
   if (hdr.path() != "/metrics") {
     down_->send_response(http::status::not_found, "text/plain", "Not found.");
     down_->shutdown();

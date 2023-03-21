@@ -75,7 +75,7 @@ public:
 
   error start(net::http::lower_layer* down) override;
 
-  ptrdiff_t consume(const net::http::header& hdr,
+  ptrdiff_t consume(const net::http::request_header& hdr,
                     const_byte_span payload) override;
 
   static auto make(async::execution_context_ptr loop,

@@ -140,14 +140,14 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
         // Limit how many clients may be connected at any given time.
         .max_connections(max_connections)
         // Forward the path from the WebSocket request to the worker.
-        .on_request(
-          [](ws::acceptor<caf::cow_string>& acc, const http::header& hdr) {
-            // The hdr parameter is a dictionary with fields from the WebSocket
-            // handshake such as the path. This is only field we care about
-            // here. By passing the (copy-on-write) string to accept() here, we
-            // make it available to the worker through the acceptor_resource.
-            acc.accept(caf::cow_string{hdr.path()});
-          })
+        .on_request([](ws::acceptor<caf::cow_string>& acc,
+                       const http::request_header& hdr) {
+          // The hdr parameter is a dictionary with fields from the WebSocket
+          // handshake such as the path. This is only field we care about
+          // here. By passing the (copy-on-write) string to accept() here, we
+          // make it available to the worker through the acceptor_resource.
+          acc.accept(caf::cow_string{hdr.path()});
+        })
         // When started, run our worker actor to handle incoming connections.
         .start([&sys](trait::acceptor_resource<caf::cow_string> events) {
           using event_t = trait::accept_event<caf::cow_string>;

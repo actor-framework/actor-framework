@@ -1,4 +1,4 @@
-#include "caf/net/http/header.hpp"
+#include "caf/net/http/request_header.hpp"
 
 #include "caf/expected.hpp"
 #include "caf/logger.hpp"
@@ -30,16 +30,16 @@ bool for_each_line(std::string_view input, F&& f) {
 
 } // namespace
 
-header::header(const header& other) {
+request_header::request_header(const request_header& other) {
   assign(other);
 }
 
-header& header::operator=(const header& other) {
+request_header& request_header::operator=(const request_header& other) {
   assign(other);
   return *this;
 }
 
-void header::assign(const header& other) {
+void request_header::assign(const request_header& other) {
   auto remap = [](const char* base, std::string_view src,
                   const char* new_base) {
     auto offset = std::distance(base, src.data());
@@ -66,7 +66,8 @@ void header::assign(const header& other) {
   }
 }
 
-std::pair<status, std::string_view> header::parse(std::string_view raw) {
+std::pair<status, std::string_view>
+request_header::parse(std::string_view raw) {
   CAF_LOG_TRACE(CAF_ARG(raw));
   // Sanity checking and copying of the raw input.
   using namespace literals;
@@ -146,11 +147,11 @@ std::pair<status, std::string_view> header::parse(std::string_view raw) {
   }
 }
 
-bool header::chunked_transfer_encoding() const {
+bool request_header::chunked_transfer_encoding() const {
   return field("Transfer-Encoding").find("chunked") != std::string_view::npos;
 }
 
-std::optional<size_t> header::content_length() const {
+std::optional<size_t> request_header::content_length() const {
   return field_as<size_t>("Content-Length");
 }
 
