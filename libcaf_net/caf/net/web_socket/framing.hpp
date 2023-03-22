@@ -9,6 +9,7 @@
 #include "caf/detail/rfc6455.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/octet_stream/lower_layer.hpp"
+#include "caf/net/octet_stream/upper_layer.hpp"
 #include "caf/net/receive_policy.hpp"
 #include "caf/net/web_socket/lower_layer.hpp"
 #include "caf/net/web_socket/status.hpp"
@@ -25,13 +26,18 @@
 namespace caf::net::web_socket {
 
 /// Implements the WebSocket framing protocol as defined in RFC-6455.
-class CAF_NET_EXPORT framing : public web_socket::lower_layer {
+class CAF_NET_EXPORT framing : public octet_stream::upper_layer,
+                               public web_socket::lower_layer {
 public:
   // -- member types -----------------------------------------------------------
 
   using binary_buffer = std::vector<std::byte>;
 
   using upper_layer_ptr = std::unique_ptr<web_socket::upper_layer>;
+
+  using server_ptr = std::unique_ptr<web_socket::upper_layer::server>;
+
+  using client_ptr = std::unique_ptr<web_socket::upper_layer::client>;
 
   // -- constants --------------------------------------------------------------
 
@@ -43,13 +49,14 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit framing(upper_layer_ptr up) : up_(std::move(up)) {
-    // nop
+  static std::unique_ptr<framing> make(client_ptr up) {
+    return std::unique_ptr<framing>{new framing(std::move(up))};
   }
 
-  // -- initialization ---------------------------------------------------------
-
-  void start(octet_stream::lower_layer* down);
+  static std::unique_ptr<framing> make(server_ptr up,
+                                       http::request_header hdr) {
+    return std::unique_ptr<framing>{new framing(std::move(up), std::move(hdr))};
+  }
 
   // -- properties -------------------------------------------------------------
 
@@ -74,6 +81,18 @@ public:
   /// this to false, whereas clients are required to always mask according to
   /// the standard.
   bool mask_outgoing_frames = true;
+
+  // -- octet_stream::upper_layer implementation -------------------------------
+
+  error start(octet_stream::lower_layer* down) override;
+
+  void abort(const error& reason) override;
+
+  ptrdiff_t consume(byte_span input, byte_span) override;
+
+  void prepare_send() override;
+
+  bool done_sending() override;
 
   // -- web_socket::lower_layer implementation ---------------------------------
 
@@ -105,12 +124,19 @@ public:
 
   bool end_text_message() override;
 
-  // -- interface for the lower layer ------------------------------------------
-
-  ptrdiff_t consume(byte_span input, byte_span);
-
 private:
   // -- implementation details -------------------------------------------------
+
+  explicit framing(client_ptr up) : up_(std::move(up)) {
+    // nop
+  }
+
+  explicit framing(server_ptr up, http::request_header&& hdr)
+    : up_(std::move(up)), hdr_(std::move(hdr)) {
+    // > A server MUST NOT mask any frames that it sends to the client.
+    // See RFC 6455, Section 5.1.
+    mask_outgoing_frames = false;
+  }
 
   bool handle(uint8_t opcode, byte_span payload);
 
@@ -141,6 +167,9 @@ private:
 
   /// Next layer in the processing chain.
   upper_layer_ptr up_;
+
+  /// Stored when running as a server and passed to `up_` in start.
+  std::optional<http::request_header> hdr_;
 };
 
 } // namespace caf::net::web_socket

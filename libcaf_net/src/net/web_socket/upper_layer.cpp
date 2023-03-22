@@ -10,4 +10,12 @@ upper_layer::~upper_layer() {
   // nop
 }
 
+upper_layer::server::~server() {
+  // nop
+}
+
+upper_layer::client::~client() {
+  // nop
+}
+
 } // namespace caf::net::web_socket

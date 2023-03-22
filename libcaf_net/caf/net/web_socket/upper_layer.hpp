@@ -16,11 +16,27 @@ namespace caf::net::web_socket {
 ///       a server or a client.
 class CAF_NET_EXPORT upper_layer : public generic_upper_layer {
 public:
+  class server;
+
+  class client;
+
   virtual ~upper_layer();
 
   virtual ptrdiff_t consume_binary(byte_span buf) = 0;
 
   virtual ptrdiff_t consume_text(std::string_view buf) = 0;
+};
+
+class upper_layer::server : public upper_layer {
+public:
+  virtual ~server();
+  virtual error start(lower_layer* down, const http::request_header& hdr) = 0;
+};
+
+class upper_layer::client : public upper_layer {
+public:
+  virtual ~client();
+  virtual error start(lower_layer* down) = 0;
 };
 
 } // namespace caf::net::web_socket

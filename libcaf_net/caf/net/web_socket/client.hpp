@@ -31,23 +31,16 @@ class CAF_NET_EXPORT client : public octet_stream::upper_layer {
 public:
   // -- member types -----------------------------------------------------------
 
-  class CAF_NET_EXPORT upper_layer : public web_socket::upper_layer {
-  public:
-    virtual ~upper_layer();
-
-    /// Initializes the upper layer.
-    /// @param down A pointer to the lower layer that remains valid for the
-    ///             lifetime of the upper layer.
-    virtual error start(lower_layer* down) = 0;
-  };
-
   using handshake_ptr = std::unique_ptr<handshake>;
 
-  using upper_layer_ptr = std::unique_ptr<upper_layer>;
+  using upper_layer_ptr = std::unique_ptr<web_socket::upper_layer::client>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  client(handshake_ptr hs, upper_layer_ptr up);
+  client(handshake_ptr hs, upper_layer_ptr up)
+    : hs_(std::move(hs)), up_(std::move(up)) {
+    // nop
+  }
 
   // -- factories --------------------------------------------------------------
 
@@ -55,32 +48,6 @@ public:
 
   static std::unique_ptr<client> make(handshake&& hs, upper_layer_ptr up) {
     return make(std::make_unique<handshake>(std::move(hs)), std::move(up));
-  }
-
-  // -- properties -------------------------------------------------------------
-
-  client::upper_layer& up() noexcept {
-    // This cast is safe, because we know that we have initialized the framing
-    // layer with a pointer to an web_socket::client::upper_layer object that
-    // the framing then upcasts to web_socket::upper_layer.
-    return static_cast<client::upper_layer&>(framing_.up());
-  }
-
-  const client::upper_layer& up() const noexcept {
-    // See comment in the other up() overload.
-    return static_cast<const client::upper_layer&>(framing_.up());
-  }
-
-  octet_stream::lower_layer& down() noexcept {
-    return framing_.down();
-  }
-
-  const octet_stream::lower_layer& down() const noexcept {
-    return framing_.down();
-  }
-
-  bool handshake_completed() const noexcept {
-    return hs_ == nullptr;
   }
 
   // -- implementation of octet_stream::upper_layer ----------------------------
@@ -102,13 +69,14 @@ private:
 
   // -- member variables -------------------------------------------------------
 
+  /// Points to the transport layer below.
+  octet_stream::lower_layer* down_;
+
   /// Stores the WebSocket handshake data until the handshake completed.
   handshake_ptr hs_;
 
-  /// Stores the upper layer.
-  framing framing_;
-
-  settings cfg_;
+  /// Next layer in the processing chain.
+  upper_layer_ptr up_;
 };
 
 } // namespace caf::net::web_socket

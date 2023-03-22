@@ -94,6 +94,10 @@ void transport::shutdown() {
   }
 }
 
+void transport::switch_protocol(upper_layer_ptr next) {
+  next_ = std::move(next);
+}
+
 // -- implementation of transport ----------------------------------------------
 
 error transport::start(socket_manager* owner) {
@@ -186,6 +190,19 @@ void transport::handle_buffered_data() {
   CAF_LOG_TRACE(CAF_ARG(buffered_));
   // Loop until we have drained the buffer as much as we can.
   CAF_ASSERT(min_read_size_ <= max_read_size_);
+  auto switch_to_next_protocol = [this] {
+    assert(next_);
+    // Switch to the new protocol and initialize it.
+    configure_read(receive_policy::stop());
+    up_.reset(next_.release());
+    if (auto err = up_->start(this)) {
+      up_.reset();
+      parent_->deregister();
+      parent_->shutdown();
+      return false;
+    }
+    return true;
+  };
   while (parent_->is_reading() && max_read_size_ > 0
          && buffered_ >= min_read_size_) {
     auto n = std::min(buffered_, size_t{max_read_size_});
@@ -205,16 +222,23 @@ void transport::handle_buffered_data() {
       parent_->deregister();
       return;
     } else if (consumed == 0) {
-      // See whether the next iteration would change what we pass to the
-      // application (max_read_size_ may have changed). Otherwise, we'll try
-      // again later.
-      delta_offset_ = static_cast<ptrdiff_t>(n);
-      if (n == std::min(buffered_, size_t{max_read_size_})) {
-        return;
+      if (next_) {
+        // When switching protocol, the new layer has never seen the data, so we
+        // might just re-invoke the same data again.
+        if (!switch_to_next_protocol())
+          return;
       } else {
-        // "Fall through".
+        // See whether the next iteration would change what we pass to the
+        // application (max_read_size_ may have changed). Otherwise, we'll try
+        // again later.
+        delta_offset_ = static_cast<ptrdiff_t>(n);
+        if (n == std::min(buffered_, size_t{max_read_size_}))
+          return;
+        // else: "Fall through".
       }
     } else {
+      if (next_ && !switch_to_next_protocol())
+        return;
       // Shove the unread bytes to the beginning of the buffer and continue
       // to the next loop iteration.
       auto del = static_cast<size_t>(consumed);

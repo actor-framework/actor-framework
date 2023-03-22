@@ -18,16 +18,15 @@
 namespace caf::detail {
 
 /// Convenience alias for referring to the base type of @ref flow_bridge.
-template <class Trait, class Role>
+template <class Trait, class Base>
 using ws_flow_bridge_base_t
-  = detail::flow_bridge_base<typename Role::upper_layer,
-                             net::web_socket::lower_layer, Trait>;
+  = detail::flow_bridge_base<Base, net::web_socket::lower_layer, Trait>;
 
 /// Translates between a message-oriented transport and data flows.
-template <class Trait, class Role>
-class ws_flow_bridge : public ws_flow_bridge_base_t<Trait, Role> {
+template <class Trait, class Base>
+class ws_flow_bridge : public ws_flow_bridge_base_t<Trait, Base> {
 public:
-  using super = ws_flow_bridge_base_t<Trait, Role>;
+  using super = ws_flow_bridge_base_t<Trait, Base>;
 
   using input_type = typename Trait::input_type;
 

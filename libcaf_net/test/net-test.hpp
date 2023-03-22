@@ -48,6 +48,8 @@ public:
 
   bool end_output() override;
 
+  void switch_protocol(upper_layer_ptr) override;
+
   // -- initialization ---------------------------------------------------------
 
   caf::error start(caf::net::multiplexer* ptr) {
@@ -80,6 +82,8 @@ public:
   // -- member variables -------------------------------------------------------
 
   upper_layer_ptr up;
+
+  upper_layer_ptr next;
 
   caf::byte_buffer output;
 

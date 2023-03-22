@@ -81,6 +81,8 @@ public:
 
   void shutdown() override;
 
+  void switch_protocol(upper_layer_ptr) override;
+
   // -- properties -------------------------------------------------------------
 
   auto& read_buffer() noexcept {
@@ -187,6 +189,10 @@ protected:
 
   /// Fallback policy.
   policy default_policy_;
+
+  /// Setting this to non-null informs the transport to replace `up_` with
+  /// `next_`.
+  upper_layer_ptr next_;
 
   // TODO: add [[no_unique_address]] to default_policy_ when switching to C++20.
 };

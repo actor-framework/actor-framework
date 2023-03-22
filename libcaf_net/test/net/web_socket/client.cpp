@@ -14,7 +14,7 @@ namespace {
 
 using svec = std::vector<std::string>;
 
-class app_t : public net::web_socket::client::upper_layer {
+class app_t : public net::web_socket::upper_layer::client {
 public:
   static auto make() {
     return std::make_unique<app_t>();
@@ -95,7 +95,6 @@ SCENARIO("the client performs the WebSocket handshake on startup") {
     WHEN("starting a WebSocket client") {
       auto app = app_t::make();
       auto ws = net::web_socket::client::make(make_handshake(), std::move(app));
-      auto& ws_state = *ws;
       auto uut = mock_stream_transport::make(std::move(ws));
       THEN("the client sends its HTTP request when initializing it") {
         CHECK_EQ(uut->start(nullptr), error{});
@@ -105,7 +104,6 @@ SCENARIO("the client performs the WebSocket handshake on startup") {
         uut->push(http_response);
         CHECK_EQ(uut->handle_input(),
                  static_cast<ptrdiff_t>(http_response.size()));
-        CHECK(ws_state.handshake_completed());
       }
     }
   }

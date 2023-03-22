@@ -38,6 +38,11 @@ public:
   /// Prepares written data for transfer, e.g., by flushing buffers or
   /// registering sockets for write events.
   virtual bool end_output() = 0;
+
+  /// Asks the stream to swap the current upper layer with `next` after
+  /// returning from `consume()`.
+  /// @note may only be called from the upper layer in `consume`.
+  virtual void switch_protocol(std::unique_ptr<upper_layer> next) = 0;
 };
 
 } // namespace caf::net::octet_stream

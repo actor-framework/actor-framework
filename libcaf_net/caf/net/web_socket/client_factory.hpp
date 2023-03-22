@@ -26,9 +26,9 @@ namespace caf::detail {
 /// Specializes the WebSocket flow bridge for the server side.
 template <class Trait, class... Ts>
 class ws_client_flow_bridge
-  : public ws_flow_bridge<Trait, net::web_socket::client> {
+  : public ws_flow_bridge<Trait, net::web_socket::upper_layer::client> {
 public:
-  using super = ws_flow_bridge<Trait, net::web_socket::client>;
+  using super = ws_flow_bridge<Trait, net::web_socket::upper_layer::client>;
 
   // We consume the output type of the application.
   using pull_t = async::consumer_resource<typename Trait::input_type>;
