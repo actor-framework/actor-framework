@@ -42,10 +42,11 @@ public:
     put(ws, "query", hdr.query());
     put(ws, "fragment", hdr.fragment());
     put(ws, "http-version", hdr.version());
-    if (!hdr.fields().empty()) {
+    if (hdr.num_fields() > 0) {
       auto& fields = ws["fields"].as_dictionary();
-      for (auto& [key, val] : hdr.fields())
+      hdr.for_each_field([&fields](auto key, auto val) {
         put(fields, std::string{key}, std::string{val});
+      });
     }
     return none;
   }
@@ -81,7 +82,7 @@ struct fixture {
     auto ws_ptr = net::web_socket::server::make(std::move(app_ptr));
     ws = ws_ptr.get();
     transport = mock_stream_transport::make(std::move(ws_ptr));
-    if (auto err = transport->start())
+    if (auto err = transport->start(nullptr))
       CAF_FAIL("failed to initialize mock transport: " << err);
     rng.seed(0xD3ADC0D3);
   }

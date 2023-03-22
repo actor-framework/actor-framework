@@ -63,6 +63,8 @@ public:
 
   // -- implementation of octet_stream::lower_layer ----------------------------
 
+  multiplexer& mpx() noexcept override;
+
   bool can_send_more() const noexcept override;
 
   void configure_read(receive_policy policy) override;

@@ -82,6 +82,10 @@ bool framing::done_sending() {
 
 // -- implementation of lp::lower_layer ----------------------------------------
 
+multiplexer& framing::mpx() noexcept {
+  return down_->mpx();
+}
+
 bool framing::can_send_more() const noexcept {
   return down_->can_send_more();
 }

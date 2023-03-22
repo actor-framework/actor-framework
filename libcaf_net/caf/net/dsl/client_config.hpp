@@ -156,7 +156,7 @@ public:
 
     using super::super;
 
-    template <class From, class T, class... Args>
+    template <class T, class From, class... Args>
     static auto make(client_config_tag<T>, From&& from, Args&&... args) {
       static_assert(std::is_constructible_v<T, Args...>);
       return make_counted<value>(std::forward<From>(from),

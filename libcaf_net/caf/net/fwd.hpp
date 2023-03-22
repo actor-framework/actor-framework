@@ -128,14 +128,12 @@ namespace caf::net::http {
 class lower_layer;
 class request;
 class request_header;
+class responder;
+class router;
 class server;
 class upper_layer;
 
-using header_fields_map
-  = unordered_flat_map<std::string_view, std::string_view>;
-
 enum class method : uint8_t;
-
 enum class status : uint16_t;
 
 } // namespace caf::net::http

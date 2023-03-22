@@ -66,6 +66,8 @@ public:
 
   // -- implementation of lp::lower_layer ----------------------------------
 
+  multiplexer& mpx() noexcept override;
+
   bool can_send_more() const noexcept override;
 
   void request_messages() override;

@@ -7,7 +7,8 @@
 #include "caf/actor_system_config.hpp"
 #include "caf/detail/set_thread_name.hpp"
 #include "caf/expected.hpp"
-#include "caf/net/prometheus/with.hpp"
+#include "caf/net/http/with.hpp"
+#include "caf/net/prometheus.hpp"
 #include "caf/net/tcp_accept_socket.hpp"
 #include "caf/net/tcp_stream_socket.hpp"
 #include "caf/raise_error.hpp"
@@ -34,9 +35,10 @@ bool inspect(Inspector& f, prom_config& x) {
 }
 
 void launch_prom_server(actor_system& sys, const prom_config& cfg) {
-  auto server = prometheus::with(sys)
+  auto server = http::with(sys)
                   .accept(cfg.port, cfg.address)
                   .reuse_address(cfg.reuse_address)
+                  .route("/metrics", prometheus::scraper(sys))
                   .start();
   if (!server)
     CAF_LOG_WARNING("failed to start Prometheus server: " << server.error());

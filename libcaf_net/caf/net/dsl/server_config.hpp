@@ -87,9 +87,10 @@ public:
 
     using super::super;
 
-    template <class T, class... Args>
-    static auto make(server_config_tag<T>, const Base& other, Args&&... args) {
-      return make_counted<value>(other, std::in_place_type<T>,
+    template <class T, class From, class... Args>
+    static auto make(server_config_tag<T>, const From& from, Args&&... args) {
+      static_assert(std::is_constructible_v<T, Args...>);
+      return make_counted<value>(from, std::in_place_type<T>,
                                  std::forward<Args>(args)...);
     }
 

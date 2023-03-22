@@ -98,7 +98,7 @@ SCENARIO("the client performs the WebSocket handshake on startup") {
       auto& ws_state = *ws;
       auto uut = mock_stream_transport::make(std::move(ws));
       THEN("the client sends its HTTP request when initializing it") {
-        CHECK_EQ(uut->start(), error{});
+        CHECK_EQ(uut->start(nullptr), error{});
         CHECK_EQ(uut->output_as_str(), http_request);
       }
       AND("the client waits for the server handshake and validates it") {

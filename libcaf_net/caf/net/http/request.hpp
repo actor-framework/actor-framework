@@ -20,7 +20,8 @@
 
 namespace caf::net::http {
 
-/// Implicitly shared Handle type that represents an HTTP client request.
+/// Implicitly shared handle type that represents an HTTP client request with a
+/// promise for the HTTP response.
 class CAF_NET_EXPORT request {
 public:
   struct impl {

@@ -30,6 +30,8 @@ public:
 
   // -- implementation of octet_stream::lower_layer ----------------------------
 
+  caf::net::multiplexer& mpx() noexcept override;
+
   bool can_send_more() const noexcept override;
 
   bool is_reading() const noexcept override;
@@ -48,7 +50,8 @@ public:
 
   // -- initialization ---------------------------------------------------------
 
-  caf::error start() {
+  caf::error start(caf::net::multiplexer* ptr) {
+    mpx_ = ptr;
     return up->start(this);
   }
 
@@ -92,6 +95,8 @@ private:
   caf::byte_buffer read_buf_;
 
   caf::error abort_reason_;
+
+  caf::net::multiplexer* mpx_;
 };
 
 // Drop-in replacement for std::barrier (based on the TS API as of 2020).

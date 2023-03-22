@@ -11,6 +11,7 @@
 #include "caf/net/dsl/has_connect.hpp"
 #include "caf/net/dsl/has_context.hpp"
 #include "caf/net/http/request.hpp"
+#include "caf/net/http/router.hpp"
 #include "caf/net/http/server_factory.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/ssl/context.hpp"

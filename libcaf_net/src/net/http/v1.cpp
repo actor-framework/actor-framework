@@ -51,7 +51,7 @@ std::pair<std::string_view, byte_span> split_header(byte_span bytes) {
   }
 }
 
-void write_header(status code, const header_fields_map& fields,
+void write_header(status code, span<const string_view_pair> fields,
                   byte_buffer& buf) {
   writer out{&buf};
   out << "HTTP/1.1 "sv << std::to_string(static_cast<int>(code)) << ' '
@@ -81,15 +81,14 @@ bool end_header(byte_buffer& buf) {
 
 void write_response(status code, std::string_view content_type,
                     std::string_view content, byte_buffer& buf) {
-  header_fields_map fields;
-  write_response(code, content_type, content, fields, buf);
+  write_response(code, content_type, content, {}, buf);
   writer out{&buf};
   out << content;
 }
 
 void write_response(status code, std::string_view content_type,
-                    std::string_view content, const header_fields_map& fields,
-                    byte_buffer& buf) {
+                    std::string_view content,
+                    span<const string_view_pair> fields, byte_buffer& buf) {
   writer out{&buf};
   out << "HTTP/1.1 "sv << std::to_string(static_cast<int>(code)) << ' '
       << phrase(code) << "\r\n"sv;

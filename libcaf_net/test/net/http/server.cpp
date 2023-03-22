@@ -25,13 +25,6 @@ public:
 
   // -- properties -------------------------------------------------------------
 
-  std::string_view field(std::string_view key) {
-    if (auto i = hdr.fields().find(key); i != hdr.fields().end())
-      return i->second;
-    else
-      return {};
-  }
-
   std::string_view param(std::string_view key) {
     auto& qm = hdr.query();
     if (auto i = qm.find(key); i != qm.end())
@@ -95,7 +88,7 @@ SCENARIO("the server parses HTTP GET requests into header fields") {
       auto app = app_ptr.get();
       auto http_ptr = net::http::server::make(std::move(app_ptr));
       auto serv = mock_stream_transport::make(std::move(http_ptr));
-      CHECK_EQ(serv->start(), error{});
+      CHECK_EQ(serv->start(nullptr), error{});
       serv->push(req);
       THEN("the HTTP layer parses the data and calls the application layer") {
         CHECK_EQ(serv->handle_input(), static_cast<ptrdiff_t>(req.size()));
@@ -103,9 +96,9 @@ SCENARIO("the server parses HTTP GET requests into header fields") {
         CHECK_EQ(hdr.method(), net::http::method::get);
         CHECK_EQ(hdr.version(), "HTTP/1.1");
         CHECK_EQ(hdr.path(), "/foo/bar");
-        CHECK_EQ(app->field("Host"), "localhost:8090");
-        CHECK_EQ(app->field("User-Agent"), "AwesomeLib/1.0");
-        CHECK_EQ(app->field("Accept-Encoding"), "gzip");
+        CHECK_EQ(app->hdr.field("Host"), "localhost:8090");
+        CHECK_EQ(app->hdr.field("User-Agent"), "AwesomeLib/1.0");
+        CHECK_EQ(app->hdr.field("Accept-Encoding"), "gzip");
       }
       AND("the server properly formats a response from the application layer") {
         CHECK_EQ(serv->output_as_str(), res);

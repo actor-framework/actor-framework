@@ -15,6 +15,10 @@ using namespace caf;
 
 // -- mock_stream_transport ----------------------------------------------------
 
+net::multiplexer& mock_stream_transport::mpx() noexcept {
+  return *mpx_;
+}
+
 bool mock_stream_transport::can_send_more() const noexcept {
   return true;
 }

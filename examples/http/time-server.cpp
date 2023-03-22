@@ -60,29 +60,25 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
         .accept(port)
         // Limit how many clients may be connected at any given time.
         .max_connections(max_connections)
-        // When started, run our worker actor to handle incoming requests.
-        .start([&sys](auto requests) {
-          // Note: requests is an async::consumer_resource<http::request>.
-          sys.spawn([requests](caf::event_based_actor* self) {
-            // For each incoming HTTP request ...
-            requests
-              .observe_on(self) //
-              .for_each([](const http::request& req) {
-                // ... respond with the current time as string.
-                auto str = caf::deep_to_string(caf::make_timestamp());
-                req.respond(http::status::ok, "text/plain", str);
-                // Note: we cannot respond more than once to a request.
-              });
-          });
-        });
+        // Provide the time at '/'.
+        .route("/", http::method::get,
+               [](http::responder& res) {
+                 auto str = caf::deep_to_string(caf::make_timestamp());
+                 res.respond(http::status::ok, "text/plain", str);
+               })
+        // Launch the server.
+        .start();
   // Report any error to the user.
   if (!server) {
     std::cerr << "*** unable to run at port " << port << ": "
               << to_string(server.error()) << '\n';
     return EXIT_FAILURE;
   }
-  // Note: the actor system will keep the application running for as long as the
-  // workers are still alive.
+  // Note: the actor system will only wait for actors on default. Since we don't
+  // start actors, we need to block on something else.
+  std::cout << "Server is up and running. Press <enter> to shut down.\n";
+  getchar();
+  std::cout << "Terminating.\n";
   return EXIT_SUCCESS;
 }
 

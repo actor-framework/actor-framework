@@ -4,7 +4,6 @@
 
 #include "caf/net/http/lower_layer.hpp"
 
-#include "caf/net/http/header_fields_map.hpp"
 #include "caf/net/http/status.hpp"
 
 #include <string>

@@ -162,7 +162,7 @@ SCENARIO("length-prefix framing reads data with 32-bit size headers") {
       auto app = app_t<false>::make(nullptr, buf);
       auto framing = net::lp::framing::make(std::move(app));
       auto uut = mock_stream_transport::make(std::move(framing));
-      CHECK_EQ(uut->start(), error{});
+      CHECK_EQ(uut->start(nullptr), error{});
       THEN("the app receives all strings as individual messages") {
         encode(uut->input, "hello");
         encode(uut->input, "world");

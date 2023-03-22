@@ -79,6 +79,8 @@ public:
 
   using web_socket::lower_layer::shutdown;
 
+  multiplexer& mpx() noexcept override;
+
   bool can_send_more() const noexcept override;
 
   void suspend_reading() override;

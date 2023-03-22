@@ -11,7 +11,6 @@
 #include "caf/error.hpp"
 #include "caf/logger.hpp"
 #include "caf/net/fwd.hpp"
-#include "caf/net/http/header_fields_map.hpp"
 #include "caf/net/http/lower_layer.hpp"
 #include "caf/net/http/request_header.hpp"
 #include "caf/net/http/status.hpp"
@@ -77,6 +76,8 @@ public:
   }
 
   // -- http::lower_layer implementation ---------------------------------------
+
+  multiplexer& mpx() noexcept override;
 
   bool can_send_more() const noexcept override;
 

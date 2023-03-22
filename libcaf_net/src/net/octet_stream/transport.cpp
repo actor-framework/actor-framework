@@ -32,6 +32,10 @@ std::unique_ptr<transport> transport::make(stream_socket fd,
 
 // -- implementation of octet_stream::lower_layer ------------------------------
 
+multiplexer& transport::mpx() noexcept {
+  return parent_->mpx();
+}
+
 bool transport::can_send_more() const noexcept {
   return write_buf_.size() < max_write_buf_size_;
 }

@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/async/blocking_producer.hpp"
+#include "caf/async/execution_context.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/accept_handler.hpp"
 #include "caf/detail/connection_factory.hpp"
@@ -13,12 +14,13 @@
 #include "caf/net/checked_socket.hpp"
 #include "caf/net/dsl/server_factory_base.hpp"
 #include "caf/net/http/request.hpp"
+#include "caf/net/http/router.hpp"
 #include "caf/net/http/server.hpp"
-#include "caf/net/http/upper_layer.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/octet_stream/transport.hpp"
 #include "caf/net/ssl/transport.hpp"
 #include "caf/net/tcp_accept_socket.hpp"
+#include "caf/net/tcp_stream_socket.hpp"
 #include "caf/none.hpp"
 
 #include <cstdint>
@@ -31,12 +33,13 @@ class CAF_NET_EXPORT http_request_producer : public atomic_ref_counted,
 public:
   using buffer_ptr = async::spsc_buffer_ptr<net::http::request>;
 
-  http_request_producer(buffer_ptr buf) : buf_(std::move(buf)) {
+  http_request_producer(async::execution_context_ptr ecp, buffer_ptr buf)
+    : ecp_(std::move(ecp)), buf_(std::move(buf)) {
     // nop
   }
 
-  static auto make(buffer_ptr buf) {
-    auto ptr = make_counted<http_request_producer>(buf);
+  static auto make(async::execution_context_ptr ecp, buffer_ptr buf) {
+    auto ptr = make_counted<http_request_producer>(std::move(ecp), buf);
     buf->set_producer(ptr);
     return ptr;
   }
@@ -54,41 +57,11 @@ public:
   bool push(const net::http::request& item);
 
 private:
+  async::execution_context_ptr ecp_;
   buffer_ptr buf_;
 };
 
 using http_request_producer_ptr = intrusive_ptr<http_request_producer>;
-
-class CAF_NET_EXPORT http_flow_adapter : public net::http::upper_layer {
-public:
-  explicit http_flow_adapter(async::execution_context_ptr loop,
-                             http_request_producer_ptr ptr)
-    : loop_(std::move(loop)), producer_(std::move(ptr)) {
-    // nop
-  }
-
-  void prepare_send() override;
-
-  bool done_sending() override;
-
-  void abort(const error&) override;
-
-  error start(net::http::lower_layer* down) override;
-
-  ptrdiff_t consume(const net::http::request_header& hdr,
-                    const_byte_span payload) override;
-
-  static auto make(async::execution_context_ptr loop,
-                   http_request_producer_ptr ptr) {
-    return std::make_unique<http_flow_adapter>(loop, ptr);
-  }
-
-private:
-  async::execution_context_ptr loop_;
-  net::http::lower_layer* down_ = nullptr;
-  std::vector<disposable> pending_;
-  http_request_producer_ptr producer_;
-};
 
 template <class Transport>
 class http_conn_factory
@@ -96,16 +69,16 @@ class http_conn_factory
 public:
   using connection_handle = typename Transport::connection_handle;
 
-  http_conn_factory(http_request_producer_ptr producer,
+  http_conn_factory(std::vector<net::http::router::route_ptr> routes,
                     size_t max_consecutive_reads)
-    : producer_(std::move(producer)),
+    : routes_(std::move(routes)),
       max_consecutive_reads_(max_consecutive_reads) {
     // nop
   }
 
   net::socket_manager_ptr make(net::multiplexer* mpx,
                                connection_handle conn) override {
-    auto app = http_flow_adapter::make(mpx, producer_);
+    auto app = net::http::router::make(routes_);
     auto serv = net::http::server::make(std::move(app));
     auto fd = conn.fd();
     auto transport = Transport::make(std::move(conn), std::move(serv));
@@ -117,7 +90,7 @@ public:
   }
 
 private:
-  http_request_producer_ptr producer_;
+  std::vector<net::http::router::route_ptr> routes_;
   size_t max_consecutive_reads_;
 };
 
@@ -125,18 +98,74 @@ private:
 
 namespace caf::net::http {
 
+/// Configuration type for WebSocket clients with a handshake object. The
+/// handshake object sets the default endpoint to '/' for convenience.
+class server_factory_config : public dsl::config_base {
+public:
+  using super = dsl::config_base;
+
+  explicit server_factory_config(multiplexer* mpx) : super(mpx) {
+    // nop
+  }
+
+  explicit server_factory_config(const super& other) : super(other) {
+    // nop
+  }
+
+  server_factory_config(const server_factory_config&) = default;
+
+  std::vector<router::route_ptr> routes;
+};
+
 /// Factory type for the `with(...).accept(...).start(...)` DSL.
 class server_factory
-  : public dsl::server_factory_base<dsl::config_base, server_factory> {
+  : public dsl::server_factory_base<server_factory_config, server_factory> {
 public:
-  using super = dsl::server_factory_base<dsl::config_base, server_factory>;
+  using super = dsl::server_factory_base<server_factory_config, server_factory>;
 
   using config_type = typename super::config_type;
 
   using super::super;
 
-  /// Starts a server that accepts incoming connections with the
-  /// length-prefixing protocol.
+  /// Adds a new route to the HTTP server.
+  /// @param path The path on this server for the new route.
+  /// @param f The function object for handling requests on the new route.
+  /// @return a reference to `*this`.
+  template <class F>
+  server_factory& route(std::string path, F f) {
+    auto& cfg = super::config();
+    if (cfg.failed())
+      return *this;
+    auto new_route = router::make_route(std::move(path), std::move(f));
+    if (!new_route) {
+      cfg.fail(std::move(new_route.error()));
+    } else {
+      cfg.routes.push_back(std::move(*new_route));
+    }
+    return *this;
+  }
+
+  /// Adds a new route to the HTTP server.
+  /// @param path The path on this server for the new route.
+  /// @param method The allowed HTTP method on the new route.
+  /// @param f The function object for handling requests on the new route.
+  /// @return a reference to `*this`.
+  template <class F>
+  server_factory& route(std::string path, http::method method, F f) {
+    auto& cfg = super::config();
+    if (cfg.failed())
+      return *this;
+    auto new_route = router::make_route(std::move(path), method, std::move(f));
+    if (!new_route) {
+      cfg.fail(std::move(new_route.error()));
+    } else {
+      cfg.routes.push_back(std::move(*new_route));
+    }
+    return *this;
+  }
+
+  /// Starts a server that makes HTTP requests without a fixed route available
+  /// to an observer.
   template <class OnStart>
   [[nodiscard]] expected<disposable> start(OnStart on_start) {
     using consumer_resource = async::consumer_resource<request>;
@@ -148,16 +177,50 @@ public:
     });
   }
 
+  /// Starts a server that only serves the fixed routes.
+  [[nodiscard]] expected<disposable> start() {
+    unit_t dummy;
+    return start(dummy);
+  }
+
 private:
+  template <class Acceptor>
+  expected<disposable> do_start_impl(config_type& cfg, Acceptor acc, unit_t&) {
+    if (cfg.routes.empty()) {
+      return make_error(sec::logic_error,
+                        "cannot start an HTTP server without any routes");
+    }
+    using transport_t = typename Acceptor::transport_type;
+    using factory_t = detail::http_conn_factory<transport_t>;
+    using impl_t = detail::accept_handler<Acceptor>;
+    auto factory = std::make_unique<factory_t>(cfg.routes,
+                                               cfg.max_consecutive_reads);
+    auto impl = impl_t::make(std::move(acc), std::move(factory),
+                             cfg.max_connections);
+    auto impl_ptr = impl.get();
+    auto ptr = net::socket_manager::make(cfg.mpx, std::move(impl));
+    impl_ptr->self_ref(ptr->as_disposable());
+    cfg.mpx->start(ptr);
+    return expected<disposable>{disposable{std::move(ptr)}};
+  }
+
   template <class Acceptor, class OnStart>
   expected<disposable>
   do_start_impl(config_type& cfg, Acceptor acc, OnStart& on_start) {
     using transport_t = typename Acceptor::transport_type;
     using factory_t = detail::http_conn_factory<transport_t>;
     using impl_t = detail::accept_handler<Acceptor>;
+    auto routes = cfg.routes;
     auto [pull, push] = async::make_spsc_buffer_resource<request>();
-    auto producer = detail::http_request_producer::make(push.try_open());
-    auto factory = std::make_unique<factory_t>(std::move(producer),
+    auto producer = detail::http_request_producer::make(cfg.mpx,
+                                                        push.try_open());
+    routes.push_back(router::make_route([producer](responder& res) {
+      if (!producer->push(std::move(res).to_request())) {
+        auto err = make_error(sec::runtime_error, "flow disconnected");
+        res.router()->shutdown(err);
+      }
+    }));
+    auto factory = std::make_unique<factory_t>(std::move(routes),
                                                cfg.max_consecutive_reads);
     auto impl = impl_t::make(std::move(acc), std::move(factory),
                              cfg.max_connections);

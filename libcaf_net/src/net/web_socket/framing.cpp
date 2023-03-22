@@ -18,6 +18,10 @@ void framing::start(octet_stream::lower_layer* down) {
 
 // -- web_socket::lower_layer implementation -----------------------------------
 
+multiplexer& framing::mpx() noexcept {
+  return down_->mpx();
+}
+
 bool framing::can_send_more() const noexcept {
   return down_->can_send_more();
 }
