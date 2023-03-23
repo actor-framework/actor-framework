@@ -69,7 +69,7 @@ class http_conn_factory
 public:
   using connection_handle = typename Transport::connection_handle;
 
-  http_conn_factory(std::vector<net::http::router::route_ptr> routes,
+  http_conn_factory(std::vector<net::http::route_ptr> routes,
                     size_t max_consecutive_reads)
     : routes_(std::move(routes)),
       max_consecutive_reads_(max_consecutive_reads) {
@@ -90,7 +90,7 @@ public:
   }
 
 private:
-  std::vector<net::http::router::route_ptr> routes_;
+  std::vector<net::http::route_ptr> routes_;
   size_t max_consecutive_reads_;
 };
 
@@ -114,7 +114,7 @@ public:
 
   server_factory_config(const server_factory_config&) = default;
 
-  std::vector<router::route_ptr> routes;
+  std::vector<route_ptr> routes;
 };
 
 /// Factory type for the `with(...).accept(...).start(...)` DSL.
@@ -136,7 +136,7 @@ public:
     auto& cfg = super::config();
     if (cfg.failed())
       return *this;
-    auto new_route = router::make_route(std::move(path), std::move(f));
+    auto new_route = make_route(std::move(path), std::move(f));
     if (!new_route) {
       cfg.fail(std::move(new_route.error()));
     } else {
@@ -155,7 +155,7 @@ public:
     auto& cfg = super::config();
     if (cfg.failed())
       return *this;
-    auto new_route = router::make_route(std::move(path), method, std::move(f));
+    auto new_route = make_route(std::move(path), method, std::move(f));
     if (!new_route) {
       cfg.fail(std::move(new_route.error()));
     } else {
@@ -214,7 +214,7 @@ private:
     auto [pull, push] = async::make_spsc_buffer_resource<request>();
     auto producer = detail::http_request_producer::make(cfg.mpx,
                                                         push.try_open());
-    routes.push_back(router::make_route([producer](responder& res) {
+    routes.push_back(make_route([producer](responder& res) {
       if (!producer->push(std::move(res).to_request())) {
         auto err = make_error(sec::runtime_error, "flow disconnected");
         res.router()->shutdown(err);

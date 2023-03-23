@@ -15,6 +15,7 @@ using namespace std::literals;
 
 namespace http = caf::net::http;
 
+using http::make_route;
 using http::responder;
 using http::router;
 
@@ -76,6 +77,10 @@ public:
     return true;
   }
 
+  void switch_protocol(std::unique_ptr<net::octet_stream::upper_layer>) {
+    // nop
+  }
+
 private:
   net::multiplexer* mpx_;
 };
@@ -125,9 +130,9 @@ SCENARIO("routes must have one <arg> entry per argument") {
   GIVEN("a make_route call that has fewer arguments than the callback") {
     WHEN("evaluating the factory call") {
       THEN("the factory produces an error") {
-        auto res1 = router::make_route("/", [](responder&, int) {});
+        auto res1 = make_route("/", [](responder&, int) {});
         CHECK_EQ(res1, sec::invalid_argument);
-        auto res2 = router::make_route("/<arg>", [](responder&, int, int) {});
+        auto res2 = make_route("/<arg>", [](responder&, int, int) {});
         CHECK_EQ(res2, sec::invalid_argument);
       }
     }
@@ -135,9 +140,9 @@ SCENARIO("routes must have one <arg> entry per argument") {
   GIVEN("a make_route call that has more arguments than the callback") {
     WHEN("evaluating the factory call") {
       THEN("the factory produces an error") {
-        auto res1 = router::make_route("/<arg>/<arg>", [](responder&) {});
+        auto res1 = make_route("/<arg>/<arg>", [](responder&) {});
         CHECK_EQ(res1, sec::invalid_argument);
-        auto res2 = router::make_route("/<arg>/<arg>", [](responder&, int) {});
+        auto res2 = make_route("/<arg>/<arg>", [](responder&, int) {});
         CHECK_EQ(res2, sec::invalid_argument);
       }
     }
@@ -145,14 +150,14 @@ SCENARIO("routes must have one <arg> entry per argument") {
   GIVEN("a make_route call with the matching number of arguments") {
     WHEN("evaluating the factory call") {
       THEN("the factory produces a valid callback") {
-        if (auto res = router::make_route("/", [](responder&) {}); CHECK(res)) {
+        if (auto res = make_route("/", [](responder&) {}); CHECK(res)) {
           set_get_request("/");
           CHECK((*res)->exec(hdr, {}, &rt));
           set_get_request("/foo/bar");
           CHECK(!(*res)->exec(hdr, {}, &rt));
         }
-        if (auto res = router::make_route("/foo/bar", http::method::get,
-                                          [](responder&) {});
+        if (auto res = make_route("/foo/bar", http::method::get,
+                                  [](responder&) {});
             CHECK(res)) {
           set_get_request("/");
           CHECK(!(*res)->exec(hdr, {}, &rt));
@@ -165,7 +170,7 @@ SCENARIO("routes must have one <arg> entry per argument") {
           set_get_request("/foo/bar");
           CHECK((*res)->exec(hdr, {}, &rt));
         }
-        if (auto res = router::make_route(
+        if (auto res = make_route(
               "/<arg>", [this](responder&, int x) { args = make_args(x); });
             CHECK(res)) {
           set_get_request("/");
@@ -176,10 +181,9 @@ SCENARIO("routes must have one <arg> entry per argument") {
           if (CHECK((*res)->exec(hdr, {}, &rt)))
             CHECK_EQ(args, make_args(42));
         }
-        if (auto res = router::make_route("/foo/<arg>/bar",
-                                          [this](responder&, int x) {
-                                            args = make_args(x);
-                                          });
+        if (auto res
+            = make_route("/foo/<arg>/bar",
+                         [this](responder&, int x) { args = make_args(x); });
             CHECK(res)) {
           set_get_request("/");
           CHECK(!(*res)->exec(hdr, {}, &rt));
@@ -189,10 +193,10 @@ SCENARIO("routes must have one <arg> entry per argument") {
           if (CHECK((*res)->exec(hdr, {}, &rt)))
             CHECK_EQ(args, make_args(123));
         }
-        if (auto res = router::make_route("/foo/<arg>/bar",
-                                          [this](responder&, std::string x) {
-                                            args = make_args(x);
-                                          });
+        if (auto res = make_route("/foo/<arg>/bar",
+                                  [this](responder&, std::string x) {
+                                    args = make_args(x);
+                                  });
             CHECK(res)) {
           set_get_request("/");
           CHECK(!(*res)->exec(hdr, {}, &rt));
@@ -202,11 +206,10 @@ SCENARIO("routes must have one <arg> entry per argument") {
           if (CHECK((*res)->exec(hdr, {}, &rt)))
             CHECK_EQ(args, make_args("my-arg"s));
         }
-        if (auto res
-            = router::make_route("/<arg>/<arg>/<arg>",
-                                 [this](responder&, int x, bool y, int z) {
-                                   args = make_args(x, y, z);
-                                 });
+        if (auto res = make_route("/<arg>/<arg>/<arg>",
+                                  [this](responder&, int x, bool y, int z) {
+                                    args = make_args(x, y, z);
+                                  });
             CHECK(res)) {
           set_get_request("/");
           CHECK(!(*res)->exec(hdr, {}, &rt));

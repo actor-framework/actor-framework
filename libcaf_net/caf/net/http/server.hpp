@@ -103,6 +103,8 @@ public:
 
   bool send_end_of_chunks() override;
 
+  void switch_protocol(std::unique_ptr<octet_stream::upper_layer>) override;
+
   // -- octet_stream::upper_layer implementation -------------------------------
 
   error start(octet_stream::lower_layer* down) override;

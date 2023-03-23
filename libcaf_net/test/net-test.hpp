@@ -50,6 +50,8 @@ public:
 
   void switch_protocol(upper_layer_ptr) override;
 
+  bool switching_protocol() const noexcept override;
+
   // -- initialization ---------------------------------------------------------
 
   caf::error start(caf::net::multiplexer* ptr) {

@@ -8,41 +8,6 @@
 
 namespace caf::net::http {
 
-// -- member types -------------------------------------------------------------
-
-router::route::~route() {
-  // nop
-}
-
-std::pair<std::string_view, std::string_view>
-router::route::next_component(const std::string_view str) {
-  if (str.empty() || str.front() != '/') {
-    return {std::string_view{}, std::string_view{}};
-  }
-  size_t start = 1;
-  size_t end = str.find('/', start);
-  auto component
-    = str.substr(start, end == std::string_view::npos ? end : end - start);
-  auto remaining = end == std::string_view::npos ? std::string_view{}
-                                                 : str.substr(end);
-  return {component, remaining};
-}
-
-size_t router::route::args_in_path(std::string_view str) {
-  size_t count = 0;
-  size_t start = 0;
-  size_t end = 0;
-  while (end != std::string_view::npos) {
-    end = str.find('/', start);
-    auto component
-      = str.substr(start, end == std::string_view::npos ? end : end - start);
-    if (component == "<arg>")
-      ++count;
-    start = end + 1;
-  }
-  return count;
-}
-
 // -- constructors and destructors ---------------------------------------------
 
 router::~router() {

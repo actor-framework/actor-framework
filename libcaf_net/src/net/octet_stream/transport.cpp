@@ -98,6 +98,10 @@ void transport::switch_protocol(upper_layer_ptr next) {
   next_ = std::move(next);
 }
 
+bool transport::switching_protocol() const noexcept {
+  return next_ != nullptr;
+}
+
 // -- implementation of transport ----------------------------------------------
 
 error transport::start(socket_manager* owner) {

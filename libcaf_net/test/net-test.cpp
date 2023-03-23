@@ -39,6 +39,10 @@ void mock_stream_transport::switch_protocol(upper_layer_ptr new_up) {
   next.swap(new_up);
 }
 
+bool mock_stream_transport::switching_protocol() const noexcept {
+  return next != nullptr;
+}
+
 void mock_stream_transport::configure_read(net::receive_policy policy) {
   min_read_size = policy.min_size;
   max_read_size = policy.max_size;

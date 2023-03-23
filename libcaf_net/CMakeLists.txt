@@ -43,6 +43,7 @@ caf_add_component(
   src/net/http/request_header.cpp
   src/net/http/responder.cpp
   src/net/http/response.cpp
+  src/net/http/route.cpp
   src/net/http/router.cpp
   src/net/http/server.cpp
   src/net/http/server_factory.cpp

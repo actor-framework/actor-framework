@@ -31,19 +31,15 @@ public:
   auto on_request(OnRequest on_request) {
     // Type checking.
     using fn_trait = detail::get_callable_trait_t<OnRequest>;
-    static_assert(fn_trait::num_args == 2,
-                  "on_request must take exactly two arguments");
+    static_assert(fn_trait::num_args == 1,
+                  "on_request must take exactly one argument");
     using arg_types = typename fn_trait::arg_types;
     using arg1_t = detail::tl_at_t<arg_types, 0>;
-    using arg2_t = detail::tl_at_t<arg_types, 1>;
     using acceptor_t = std::decay_t<arg1_t>;
     static_assert(is_acceptor_v<acceptor_t>,
-                  "on_request must take an acceptor as 1st argument");
+                  "on_request must take an acceptor as its argument");
     static_assert(std::is_same_v<arg1_t, acceptor_t&>,
                   "on_request must take the acceptor as mutable reference");
-    static_assert(
-      std::is_same_v<arg2_t, const http::request_header&>,
-      "on_request must take 'const http::request_header&' as 2nd argument");
     // Wrap the callback and return the factory object.
     using factory_t = typename acceptor_t::template server_factory_type<Trait>;
     auto callback = make_shared_type_erased_callback(std::move(on_request));

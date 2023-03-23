@@ -43,6 +43,9 @@ public:
   /// returning from `consume()`.
   /// @note may only be called from the upper layer in `consume`.
   virtual void switch_protocol(std::unique_ptr<upper_layer> next) = 0;
+
+  /// Queries whether `switch_protocol` has been called.
+  virtual bool switching_protocol() const noexcept = 0;
 };
 
 } // namespace caf::net::octet_stream

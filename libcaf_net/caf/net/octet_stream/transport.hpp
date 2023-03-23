@@ -83,6 +83,8 @@ public:
 
   void switch_protocol(upper_layer_ptr) override;
 
+  bool switching_protocol() const noexcept override;
+
   // -- properties -------------------------------------------------------------
 
   auto& read_buffer() noexcept {

@@ -129,12 +129,15 @@ class lower_layer;
 class request;
 class request_header;
 class responder;
+class route;
 class router;
 class server;
 class upper_layer;
 
 enum class method : uint8_t;
 enum class status : uint16_t;
+
+using route_ptr = intrusive_ptr<route>;
 
 } // namespace caf::net::http
 

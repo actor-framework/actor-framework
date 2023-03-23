@@ -22,6 +22,10 @@ public:
   template <class Trait>
   using server_factory_type = server_factory<Trait, Ts...>;
 
+  explicit acceptor(const http::request_header& hdr) : hdr_(hdr) {
+    // nop
+  }
+
   virtual ~acceptor() = default;
 
   virtual void accept(Ts... xs) = 0;
@@ -44,7 +48,12 @@ public:
     return reject_reason_;
   }
 
+  const http::request_header& header() const noexcept {
+    return hdr_;
+  }
+
 protected:
+  const http::request_header& hdr_;
   bool accepted_ = false;
   error reject_reason_;
 };
@@ -53,6 +62,8 @@ template <class Trait, class... Ts>
 class acceptor_impl : public acceptor<Ts...> {
 public:
   using super = acceptor<Ts...>;
+
+  using super::super;
 
   using input_type = typename Trait::input_type;
 

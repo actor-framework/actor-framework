@@ -84,6 +84,10 @@ bool server::send_end_of_chunks() {
   return down_->end_output();
 }
 
+void server::switch_protocol(std::unique_ptr<octet_stream::upper_layer> next) {
+  down_->switch_protocol(std::move(next));
+}
+
 // -- octet_stream::upper_layer implementation ---------------------------------
 
 error server::start(octet_stream::lower_layer* down) {

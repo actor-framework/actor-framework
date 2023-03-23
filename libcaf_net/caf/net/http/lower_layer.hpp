@@ -53,6 +53,12 @@ public:
   /// @copydoc send_response
   bool send_response(status code, std::string_view content_type,
                      std::string_view content);
+
+  /// Asks the stream to swap the HTTP layer with `next` after returning from
+  /// `consume`.
+  /// @note may only be called from the upper layer in `consume`.
+  virtual void switch_protocol(std::unique_ptr<octet_stream::upper_layer> next)
+    = 0;
 };
 
 } // namespace caf::net::http
