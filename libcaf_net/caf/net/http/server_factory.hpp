@@ -170,6 +170,8 @@ public:
   [[nodiscard]] expected<disposable> start(OnStart on_start) {
     using consumer_resource = async::consumer_resource<request>;
     static_assert(std::is_invocable_v<OnStart, consumer_resource>);
+    for (auto& ptr : super::config().routes)
+      ptr->init();
     auto& cfg = super::config();
     return cfg.visit([this, &cfg, &on_start](auto& data) {
       return this->do_start(cfg, data, on_start)

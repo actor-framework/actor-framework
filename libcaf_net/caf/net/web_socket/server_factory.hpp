@@ -40,49 +40,55 @@ public:
 
   using producer_type = async::blocking_producer<accept_event>;
 
+  using acceptor_impl_t = net::web_socket::acceptor_impl<Trait, Ts...>;
+
+  using ws_res_type = typename acceptor_impl_t::ws_res_type;
+
   // Note: this is shared with the connection factory. In general, this is
   //       *unsafe*. However, we exploit the fact that there is currently only
   //       one thread running in the multiplexer (which makes this safe).
   using shared_producer_type = std::shared_ptr<producer_type>;
 
-  ws_server_flow_bridge(async::execution_context_ptr loop,
-                        on_request_cb_type on_request,
+  ws_server_flow_bridge(on_request_cb_type on_request,
                         shared_producer_type producer)
-    : super(std::move(loop)),
-      on_request_(std::move(on_request)),
-      producer_(std::move(producer)) {
+    : on_request_(std::move(on_request)), producer_(std::move(producer)) {
     // nop
   }
 
-  static auto make(net::multiplexer* mpx, on_request_cb_type on_request,
+  static auto make(on_request_cb_type on_request,
                    shared_producer_type producer) {
-    return std::make_unique<ws_server_flow_bridge>(mpx, std::move(on_request),
+    return std::make_unique<ws_server_flow_bridge>(std::move(on_request),
                                                    std::move(producer));
   }
 
-  error start(net::web_socket::lower_layer* down_ptr,
-              const net::http::request_header& hdr) override {
+  error start(net::web_socket::lower_layer* down_ptr) override {
     CAF_ASSERT(down_ptr != nullptr);
     super::down_ = down_ptr;
-    net::web_socket::acceptor_impl<Trait, Ts...> acc{hdr};
-    (*on_request_)(acc);
-    if (!acc.accepted()) {
-      return std::move(acc) //
-        .reject_reason()
-        .or_else(sec::runtime_error,
-                 "WebSocket request rejected without reason");
-    }
-    if (!producer_->push(acc.app_event)) {
+    if (!producer_->push(app_event)) {
       return make_error(sec::runtime_error,
                         "WebSocket connection dropped: client canceled");
     }
-    auto& [pull, push] = acc.ws_resources;
-    return super::init(std::move(pull), std::move(push));
+    auto& [pull, push] = ws_resources;
+    return super::init(&down_ptr->mpx(), std::move(pull), std::move(push));
+  }
+
+  error accept(const net::http::request_header& hdr) override {
+    net::web_socket::acceptor_impl<Trait, Ts...> acc{hdr};
+    (*on_request_)(acc);
+    if (acc.accepted()) {
+      app_event = std::move(acc.app_event);
+      return {};
+    }
+    return std::move(acc) //
+      .reject_reason()
+      .or_else(sec::runtime_error, "WebSocket request rejected without reason");
   }
 
 private:
   on_request_cb_type on_request_;
   shared_producer_type producer_;
+  accept_event app_event;
+  ws_res_type ws_resources;
 };
 
 /// Specializes @ref connection_factory for the WebSocket protocol.
@@ -118,7 +124,7 @@ public:
       return nullptr;
     }
     using bridge_t = ws_server_flow_bridge<Trait, Ts...>;
-    auto app = bridge_t::make(mpx, on_request_, producer_);
+    auto app = bridge_t::make(on_request_, producer_);
     auto app_ptr = app.get();
     auto ws = net::web_socket::server::make(std::move(app));
     auto fd = conn.fd();

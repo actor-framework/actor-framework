@@ -26,9 +26,9 @@ namespace caf::detail {
 /// Specializes the WebSocket flow bridge for the server side.
 template <class Trait, class... Ts>
 class ws_client_flow_bridge
-  : public ws_flow_bridge<Trait, net::web_socket::upper_layer::client> {
+  : public ws_flow_bridge<Trait, net::web_socket::upper_layer> {
 public:
-  using super = ws_flow_bridge<Trait, net::web_socket::upper_layer::client>;
+  using super = ws_flow_bridge<Trait, net::web_socket::upper_layer>;
 
   // We consume the output type of the application.
   using pull_t = async::consumer_resource<typename Trait::input_type>;
@@ -36,21 +36,19 @@ public:
   // We produce the input type of the application.
   using push_t = async::producer_resource<typename Trait::output_type>;
 
-  ws_client_flow_bridge(async::execution_context_ptr loop, pull_t pull,
-                        push_t push)
-    : super(std::move(loop)), pull_(std::move(pull)), push_(std::move(push)) {
+  ws_client_flow_bridge(pull_t pull, push_t push)
+    : pull_(std::move(pull)), push_(std::move(push)) {
     // nop
   }
 
-  static std::unique_ptr<ws_client_flow_bridge> make(net::multiplexer* mpx,
-                                                     pull_t pull, push_t push) {
-    return std::make_unique<ws_client_flow_bridge>(mpx, std::move(pull),
+  static std::unique_ptr<ws_client_flow_bridge> make(pull_t pull, push_t push) {
+    return std::make_unique<ws_client_flow_bridge>(std::move(pull),
                                                    std::move(push));
   }
 
   error start(net::web_socket::lower_layer* down_ptr) override {
     super::down_ = down_ptr;
-    return super::init(std::move(pull_), std::move(push_));
+    return super::init(&down_ptr->mpx(), std::move(pull_), std::move(push_));
   }
 
 private:
@@ -117,8 +115,7 @@ private:
     using bridge_t = detail::ws_client_flow_bridge<Trait>;
     auto [s2a_pull, s2a_push] = async::make_spsc_buffer_resource<input_t>();
     auto [a2s_pull, a2s_push] = async::make_spsc_buffer_resource<output_t>();
-    auto bridge = bridge_t::make(cfg.mpx, std::move(a2s_pull),
-                                 std::move(s2a_push));
+    auto bridge = bridge_t::make(std::move(a2s_pull), std::move(s2a_push));
     auto bridge_ptr = bridge.get();
     auto impl = client::make(std::move(cfg.hs), std::move(bridge));
     auto fd = conn.fd();

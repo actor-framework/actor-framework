@@ -50,7 +50,7 @@ void client::abort(const error& reason) {
   up_->abort(reason);
 }
 
-ptrdiff_t client::consume(byte_span buffer, byte_span delta) {
+ptrdiff_t client::consume(byte_span buffer, byte_span) {
   CAF_LOG_TRACE(CAF_ARG2("buffer", buffer.size()));
   // Check whether we have received the HTTP header or else wait for more
   // data. Abort when exceeding the maximum size.
@@ -89,7 +89,7 @@ bool client::handle_header(std::string_view http) {
   auto http_ok = hs_->is_valid_http_1_response(http);
   hs_.reset();
   if (http_ok) {
-    down_->switch_protocol(framing::make(std::move(up_)));
+    down_->switch_protocol(framing::make_client(std::move(up_)));
     return true;
   }
   CAF_LOG_DEBUG("received an invalid WebSocket handshake");

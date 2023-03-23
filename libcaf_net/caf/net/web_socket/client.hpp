@@ -33,7 +33,7 @@ public:
 
   using handshake_ptr = std::unique_ptr<handshake>;
 
-  using upper_layer_ptr = std::unique_ptr<web_socket::upper_layer::client>;
+  using upper_layer_ptr = std::unique_ptr<web_socket::upper_layer>;
 
   // -- constructors, destructors, and assignment operators --------------------
 

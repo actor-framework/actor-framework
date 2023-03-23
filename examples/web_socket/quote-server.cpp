@@ -1,5 +1,7 @@
-// Simple WebSocket server that sends local files from a working directory to
-// the clients.
+// Simple HTTP/WebSocket server that sends predefined text snippets
+// (philosophers quotes) to the client. Clients may either ask for a single
+// quote via HTTP GET request or for all quotes of a selected philosopher by
+// connecting via WebSocket.
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
@@ -7,9 +9,10 @@
 #include "caf/cow_string.hpp"
 #include "caf/cow_tuple.hpp"
 #include "caf/event_based_actor.hpp"
+#include "caf/net/http/with.hpp"
 #include "caf/net/middleman.hpp"
 #include "caf/net/ssl/context.hpp"
-#include "caf/net/web_socket/with.hpp"
+#include "caf/net/web_socket/switch_protocol.hpp"
 #include "caf/scheduled_actor/flow.hpp"
 #include "caf/span.hpp"
 
@@ -81,12 +84,12 @@ struct config : caf::actor_system_config {
 // -- helper functions ---------------------------------------------------------
 
 // Returns a list of philosopher quotes by path.
-caf::span<const std::string_view> quotes_by_path(std::string_view path) {
-  if (path == "/epictetus")
+caf::span<const std::string_view> quotes_by_name(std::string_view path) {
+  if (path == "epictetus")
     return caf::make_span(epictetus);
-  else if (path == "/seneca")
+  else if (path == "seneca")
     return caf::make_span(seneca);
-  else if (path == "/plato")
+  else if (path == "plato")
     return caf::make_span(plato);
   else
     return {};
@@ -109,6 +112,13 @@ private:
   std::minstd_rand engine_;
 };
 
+std::string not_found_str(std::string_view name) {
+  auto result = "Name '"s;
+  result += name;
+  result += "' not found. Try 'epictetus', 'seneca' or 'plato'.";
+  return result;
+}
+
 // -- main ---------------------------------------------------------------------
 
 int caf_main(caf::actor_system& sys, const config& cfg) {
@@ -129,7 +139,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
   // Open up a TCP port for incoming connections and start the server.
   using trait = ws::default_trait;
   auto server
-    = ws::with(sys)
+    = http::with(sys)
         // Optionally enable TLS.
         .context(ssl::context::enable(key_file && cert_file)
                    .and_then(ssl::emplace_server(ssl::tls::v1_2))
@@ -139,34 +149,61 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
         .accept(port)
         // Limit how many clients may be connected at any given time.
         .max_connections(max_connections)
-        // Forward the path from the WebSocket request to the worker.
-        .on_request([](ws::acceptor<caf::cow_string>& acc) {
-          // The hdr parameter is a dictionary with fields from the WebSocket
-          // handshake such as the path. This is only field we care about
-          // here. By passing the (copy-on-write) string to accept() here, we
-          // make it available to the worker through the acceptor_resource.
-          acc.accept(caf::cow_string{acc.header().path()});
-        })
-        // When started, run our worker actor to handle incoming connections.
-        .start([&sys](trait::acceptor_resource<caf::cow_string> events) {
-          using event_t = trait::accept_event<caf::cow_string>;
-          sys.spawn([events](caf::event_based_actor* self) {
-            // For each buffer pair, we create a new flow ...
-            self->make_observable()
-              .from_resource(events) //
-              .for_each([self, f = pick_random{}](const event_t& ev) mutable {
-                // ... that pushes one random quote to the client.
-                auto [pull, push, path] = ev.data();
-                auto quotes = quotes_by_path(path);
-                auto quote = quotes.empty()
-                               ? "Try /epictetus, /seneca or /plato."
-                               : f(quotes);
-                self->make_observable().just(ws::frame{quote}).subscribe(push);
-                // We ignore whatever the client may send to us.
-                pull.observe_on(self).subscribe(std::ignore);
-              });
-          });
-        });
+        // On "/quote/<arg>", we pick one random quote for the client.
+        .route("/quote/<arg>", http::method::get,
+               [](http::responder& res, std::string name) {
+                 auto quotes = quotes_by_name(name);
+                 if (quotes.empty()) {
+                   res.respond(http::status::not_found, "text/plain",
+                               not_found_str(name));
+                 } else {
+                   pick_random f;
+                   res.respond(http::status::ok, "text/plain", f(quotes));
+                 }
+               })
+        // On "/ws/quotes/<arg>", we switch the protocol to WebSocket.
+        .route("/ws/quotes/<arg>", http::method::get,
+               ws::switch_protocol()
+                 // Check that the client asks for a known philosopher.
+                 .on_request(
+                   [](ws::acceptor<caf::cow_string>& acc, std::string name) {
+                     auto quotes = quotes_by_name(name);
+                     if (quotes.empty()) {
+                       auto err = make_error(caf::sec::invalid_argument,
+                                             not_found_str(name));
+                       acc.reject(std::move(err));
+                     } else {
+                       // Forward the name to the WebSocket worker.
+                       acc.accept(caf::cow_string{std::move(name)});
+                     }
+                   })
+                 // Spawn a worker for the WebSocket clients.
+                 .on_start(
+                   [&sys](trait::acceptor_resource<caf::cow_string> events) {
+                     // Spawn a worker that reads from `events`.
+                     using event_t = trait::accept_event<caf::cow_string>;
+                     sys.spawn([events](caf::event_based_actor* self) {
+                       // Each WS connection has a pull/push buffer pair.
+                       self->make_observable()
+                         .from_resource(events) //
+                         .for_each([self](const event_t& ev) mutable {
+                           // Forward the quotes to the client.
+                           auto [pull, push, name] = ev.data();
+                           auto quotes = quotes_by_name(name);
+                           assert(!quotes.empty()); // Checked in on_request.
+                           self->make_observable()
+                             .from_container(quotes)
+                             .map([](std::string_view quote) {
+                               return ws::frame{quote};
+                             })
+                             .subscribe(push);
+                           // We ignore whatever the client may send to us.
+                           pull.observe_on(self).subscribe(std::ignore);
+                         });
+                     });
+                   }))
+        // Run with the configured routes.
+        .start();
   // Report any error to the user.
   if (!server) {
     std::cerr << "*** unable to run at port " << port << ": "

@@ -46,14 +46,13 @@ public:
   //       one thread running in the multiplexer (which makes this safe).
   using shared_producer_type = std::shared_ptr<producer_type>;
 
-  lp_server_flow_bridge(async::execution_context_ptr loop,
-                        shared_producer_type producer)
-    : super(std::move(loop)), producer_(std::move(producer)) {
+  lp_server_flow_bridge(shared_producer_type producer)
+    : producer_(std::move(producer)) {
     // nop
   }
 
-  static auto make(net::multiplexer* mpx, shared_producer_type producer) {
-    return std::make_unique<lp_server_flow_bridge>(mpx, std::move(producer));
+  static auto make(shared_producer_type producer) {
+    return std::make_unique<lp_server_flow_bridge>(std::move(producer));
   }
 
   error start(net::lp::lower_layer* down_ptr) override {
@@ -66,7 +65,8 @@ public:
       return make_error(sec::runtime_error,
                         "Length-prefixed connection dropped: client canceled");
     }
-    return super::init(std::move(lp_pull), std::move(lp_push));
+    return super::init(&down_ptr->mpx(), std::move(lp_pull),
+                       std::move(lp_push));
   }
 
 private:
@@ -95,7 +95,7 @@ public:
   net::socket_manager_ptr make(net::multiplexer* mpx,
                                connection_handle conn) override {
     using bridge_t = lp_server_flow_bridge<Trait>;
-    auto bridge = bridge_t::make(mpx, producer_);
+    auto bridge = bridge_t::make(producer_);
     auto bridge_ptr = bridge.get();
     auto impl = net::lp::framing::make(std::move(bridge));
     auto fd = conn.fd();

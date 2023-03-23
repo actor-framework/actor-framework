@@ -80,14 +80,20 @@ bool server::handle_header(std::string_view http) {
     CAF_LOG_DEBUG("received invalid WebSocket handshake");
     return false;
   }
+  // Kindly ask the upper layer to accept a new WebSocket connection.
+  if (auto err = up_->accept(hdr)) {
+    write_response(http::status::bad_request, to_string(err));
+    return false;
+  }
   // Finalize the WebSocket handshake.
   handshake hs;
   hs.assign_key(sec_key);
   down_->begin_output();
   hs.write_http_1_response(down_->output_buffer());
   down_->end_output();
+  // All done. Switch to the framing protocol.
   CAF_LOG_DEBUG("completed WebSocket handshake");
-  down_->switch_protocol(framing::make(std::move(up_), std::move(hdr)));
+  down_->switch_protocol(framing::make_server(std::move(up_)));
   return true;
 }
 

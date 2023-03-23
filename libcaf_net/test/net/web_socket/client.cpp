@@ -14,7 +14,7 @@ namespace {
 
 using svec = std::vector<std::string>;
 
-class app_t : public net::web_socket::upper_layer::client {
+class app_t : public net::web_socket::upper_layer {
 public:
   static auto make() {
     return std::make_unique<app_t>();

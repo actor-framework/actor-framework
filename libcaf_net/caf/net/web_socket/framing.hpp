@@ -35,10 +35,6 @@ public:
 
   using upper_layer_ptr = std::unique_ptr<web_socket::upper_layer>;
 
-  using server_ptr = std::unique_ptr<web_socket::upper_layer::server>;
-
-  using client_ptr = std::unique_ptr<web_socket::upper_layer::client>;
-
   // -- constants --------------------------------------------------------------
 
   /// Restricts the size of received frames (including header).
@@ -49,13 +45,18 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  static std::unique_ptr<framing> make(client_ptr up) {
+  /// Creates a new framing protocol for client mode.
+  static std::unique_ptr<framing> make_client(upper_layer_ptr up) {
     return std::unique_ptr<framing>{new framing(std::move(up))};
   }
 
-  static std::unique_ptr<framing> make(server_ptr up,
-                                       http::request_header hdr) {
-    return std::unique_ptr<framing>{new framing(std::move(up), std::move(hdr))};
+  /// Creates a new framing protocol for server mode.
+  static std::unique_ptr<framing> make_server(upper_layer_ptr up) {
+    // > A server MUST NOT mask any frames that it sends to the client.
+    // See RFC 6455, Section 5.1.
+    auto res = std::unique_ptr<framing>{new framing(std::move(up))};
+    res->mask_outgoing_frames = false;
+    return res;
   }
 
   // -- properties -------------------------------------------------------------
@@ -127,15 +128,8 @@ public:
 private:
   // -- implementation details -------------------------------------------------
 
-  explicit framing(client_ptr up) : up_(std::move(up)) {
+  explicit framing(upper_layer_ptr up) : up_(std::move(up)) {
     // nop
-  }
-
-  explicit framing(server_ptr up, http::request_header&& hdr)
-    : up_(std::move(up)), hdr_(std::move(hdr)) {
-    // > A server MUST NOT mask any frames that it sends to the client.
-    // See RFC 6455, Section 5.1.
-    mask_outgoing_frames = false;
   }
 
   bool handle(uint8_t opcode, byte_span payload);
@@ -167,9 +161,6 @@ private:
 
   /// Next layer in the processing chain.
   upper_layer_ptr up_;
-
-  /// Stored when running as a server and passed to `up_` in start.
-  std::optional<http::request_header> hdr_;
 };
 
 } // namespace caf::net::web_socket

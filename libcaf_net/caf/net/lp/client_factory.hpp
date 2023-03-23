@@ -34,15 +34,13 @@ public:
   // We produce the input type of the application.
   using push_t = async::producer_resource<typename Trait::input_type>;
 
-  lp_client_flow_bridge(async::execution_context_ptr loop, pull_t pull,
-                        push_t push)
-    : super(std::move(loop)), pull_(std::move(pull)), push_(std::move(push)) {
+  lp_client_flow_bridge(pull_t pull, push_t push)
+    : pull_(std::move(pull)), push_(std::move(push)) {
     // nop
   }
 
-  static std::unique_ptr<lp_client_flow_bridge> make(net::multiplexer* mpx,
-                                                     pull_t pull, push_t push) {
-    return std::make_unique<lp_client_flow_bridge>(mpx, std::move(pull),
+  static std::unique_ptr<lp_client_flow_bridge> make(pull_t pull, push_t push) {
+    return std::make_unique<lp_client_flow_bridge>(std::move(pull),
                                                    std::move(push));
   }
 
@@ -54,7 +52,7 @@ public:
 
   error start(net::lp::lower_layer* down_ptr) override {
     super::down_ = down_ptr;
-    return super::init(std::move(pull_), std::move(push_));
+    return super::init(&down_ptr->mpx(), std::move(pull_), std::move(push_));
   }
 
 private:
@@ -101,8 +99,7 @@ private:
     using transport_t = typename Conn::transport_type;
     auto [s2a_pull, s2a_push] = async::make_spsc_buffer_resource<input_t>();
     auto [a2s_pull, a2s_push] = async::make_spsc_buffer_resource<output_t>();
-    auto bridge = bridge_t::make(cfg.mpx, std::move(a2s_pull),
-                                 std::move(s2a_push));
+    auto bridge = bridge_t::make(std::move(a2s_pull), std::move(s2a_push));
     auto bridge_ptr = bridge.get();
     auto impl = framing::make(std::move(bridge));
     auto fd = conn.fd();

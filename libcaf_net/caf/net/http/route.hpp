@@ -72,6 +72,15 @@ bool match_path(std::string_view lhs, std::string_view rhs, F&& predicate) {
   }
   return tail2.empty();
 }
+template <class, class = void>
+struct http_route_has_init : std::false_type {};
+
+template <class T>
+struct http_route_has_init<T, std::void_t<decltype(std::declval<T>().init())>>
+  : std::true_type {};
+
+template <class T>
+constexpr bool http_route_has_init_v = http_route_has_init<T>::value;
 
 /// Base type for HTTP routes that parse one or more arguments from the requests
 /// and then forward them to a user-provided function object.
@@ -145,6 +154,12 @@ public:
     // nop
   }
 
+  void init() override {
+    if constexpr (detail::http_route_has_init_v<F>) {
+      f_.init();
+    }
+  }
+
 private:
   void do_apply(net::http::responder& res, Ts&&... args) override {
     f_(res, std::move(args)...);
@@ -184,6 +199,12 @@ public:
     // nop
   }
 
+  void init() override {
+    if constexpr (detail::http_route_has_init<F>::value) {
+      f_.init();
+    }
+  }
+
 private:
   void do_apply(net::http::responder& res) override {
     f_(res);
@@ -211,7 +232,7 @@ private:
   F f_;
 };
 
-/// Default policy class for
+/// Creates a route from a function object.
 template <class F, class... Args>
 net::http::route_ptr
 make_http_route_impl(std::string& path, std::optional<net::http::method> method,

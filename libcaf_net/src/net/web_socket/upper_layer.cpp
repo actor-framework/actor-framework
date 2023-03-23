@@ -14,8 +14,4 @@ upper_layer::server::~server() {
   // nop
 }
 
-upper_layer::client::~client() {
-  // nop
-}
-
 } // namespace caf::net::web_socket

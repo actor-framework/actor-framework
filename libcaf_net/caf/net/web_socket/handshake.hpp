@@ -7,6 +7,7 @@
 #include "caf/byte_buffer.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/dictionary.hpp"
+#include "caf/net/fwd.hpp"
 
 #include <cstddef>
 #include <string>
@@ -134,6 +135,10 @@ public:
   /// Writes the HTTP 1.1 response message to `buf`.
   /// @pre `has_valid_key()`
   void write_http_1_response(byte_buffer& buf) const;
+
+  /// Writes the HTTP response message to `down`.
+  /// @pre `has_valid_key()`
+  void write_response(http::lower_layer* down) const;
 
   /// Checks whether the `http_response` contains a HTTP 1.1 response to the
   /// generated HTTP GET request. A valid response contains:

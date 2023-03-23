@@ -30,10 +30,6 @@ public:
   /// Type for the producer adapter. We produce the input of the application.
   using producer_type = async::producer_adapter<input_type>;
 
-  flow_bridge_base(async::execution_context_ptr loop) : loop_(std::move(loop)) {
-    // nop
-  }
-
   virtual bool write(const output_type& item) = 0;
 
   bool running() const noexcept {
@@ -41,14 +37,14 @@ public:
   }
 
   /// Initializes consumer and producer of the bridge.
-  error init(async::consumer_resource<output_type> pull,
+  error init(net::multiplexer* mpx, async::consumer_resource<output_type> pull,
              async::producer_resource<input_type> push) {
     // Initialize our consumer.
     auto do_wakeup = make_action([this] {
       if (running())
         prepare_send();
     });
-    in_ = consumer_type::make(pull.try_open(), loop_, std::move(do_wakeup));
+    in_ = consumer_type::make(pull.try_open(), mpx, std::move(do_wakeup));
     if (!in_) {
       auto err = make_error(sec::runtime_error,
                             "flow bridge failed to open the input resource");
@@ -62,7 +58,7 @@ public:
         down_->shutdown();
       }
     });
-    out_ = producer_type::make(push.try_open(), loop_, std::move(do_resume),
+    out_ = producer_type::make(push.try_open(), mpx, std::move(do_resume),
                                std::move(do_cancel));
     if (!out_) {
       auto err = make_error(sec::runtime_error,
@@ -138,9 +134,6 @@ protected:
 
   /// Converts between raw bytes and native C++ objects.
   Trait trait_;
-
-  /// Our event loop.
-  async::execution_context_ptr loop_;
 
   /// Type-erased handle to the @ref socket_manager. This reference is important
   /// to keep the bridge alive while the manager is not registered for writing

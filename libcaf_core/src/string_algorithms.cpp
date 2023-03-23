@@ -65,14 +65,11 @@ std::string_view trim(std::string_view str) {
 }
 
 bool icase_equal(std::string_view x, std::string_view y) {
-  if (x.size() != y.size()) {
-    return false;
-  } else {
-    for (size_t index = 0; index < x.size(); ++index)
-      if (tolower(x[index]) != tolower(y[index]))
-        return false;
-    return true;
-  }
+  auto cmp = [](const char lhs, const char rhs) {
+    auto to_uchar = [](char c) { return static_cast<unsigned char>(c); };
+    return tolower(to_uchar(lhs)) == tolower(to_uchar(rhs));
+  };
+  return std::equal(x.begin(), x.end(), y.begin(), y.end(), cmp);
 }
 
 std::pair<std::string_view, std::string_view> split_by(std::string_view str,

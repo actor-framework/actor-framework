@@ -9,6 +9,7 @@
 #include "caf/net/fwd.hpp"
 #include "caf/net/http/method.hpp"
 #include "caf/net/http/status.hpp"
+#include "caf/string_algorithms.hpp"
 #include "caf/uri.hpp"
 
 #include <string_view>
@@ -89,6 +90,25 @@ public:
       return i->second;
     else
       return {};
+  }
+
+  ///  Checks whether the field `key` exists and equals `val` when using
+  ///  case-insensitive compare.
+  bool field_equals(ignore_case_t, std::string_view key,
+                    std::string_view val) const noexcept {
+    if (auto i = fields_.find(key); i != fields_.end())
+      return icase_equal(val, i->second);
+    else
+      return false;
+  }
+
+  ///  Checks whether the field `key` exists and equals `val` when using
+  ///  case-insensitive compare.
+  bool field_equals(std::string_view key, std::string_view val) const noexcept {
+    if (auto i = fields_.find(key); i != fields_.end())
+      return val == i->second;
+    else
+      return false;
   }
 
   /// Returns the value of the field with the specified key as the requested

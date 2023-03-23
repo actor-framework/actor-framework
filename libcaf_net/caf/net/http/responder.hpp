@@ -107,9 +107,10 @@ public:
   /// asynchronously.
   request to_request() &&;
 
-private:
+  /// Returns a pointer to the HTTP layer.
   lower_layer* down();
 
+private:
   const request_header* hdr_;
   const_byte_span body_;
   http::router* router_;

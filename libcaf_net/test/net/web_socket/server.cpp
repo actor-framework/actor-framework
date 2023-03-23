@@ -32,9 +32,12 @@ public:
     return std::make_unique<app_t>();
   }
 
-  error start(net::web_socket::lower_layer* down,
-              const net::http::request_header& hdr) override {
+  error start(net::web_socket::lower_layer* down) override {
     down->request_messages();
+    return none;
+  }
+
+  error accept(const net::http::request_header& hdr) override {
     // Store the request information in cfg to evaluate them later.
     auto& ws = cfg["web-socket"].as_dictionary();
     put(ws, "method", to_rfc_string(hdr.method()));

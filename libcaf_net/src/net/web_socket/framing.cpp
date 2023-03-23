@@ -15,22 +15,7 @@ error framing::start(octet_stream::lower_layer* down) {
   std::random_device rd;
   rng_.seed(rd());
   down_ = down;
-  if (!hdr_) {
-    using dptr_t = web_socket::upper_layer::client;
-    return static_cast<dptr_t*>(up_.get())->start(this);
-  }
-  using dptr_t = web_socket::upper_layer::server;
-  auto err = static_cast<dptr_t*>(up_.get())->start(this, *hdr_);
-  hdr_ = std::nullopt;
-  if (err) {
-    auto descr = to_string(err);
-    CAF_LOG_DEBUG("upper layer rejected a WebSocket connection:" << descr);
-    down_->begin_output();
-    http::v1::write_response(http::status::bad_request, "text/plain", descr,
-                             down_->output_buffer());
-    down_->end_output();
-  }
-  return err;
+  return up_->start(this);
 }
 
 void framing::abort(const error& reason) {

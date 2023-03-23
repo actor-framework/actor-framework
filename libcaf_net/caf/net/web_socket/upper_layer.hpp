@@ -25,18 +25,17 @@ public:
   virtual ptrdiff_t consume_binary(byte_span buf) = 0;
 
   virtual ptrdiff_t consume_text(std::string_view buf) = 0;
+
+  virtual error start(lower_layer* down) = 0;
 };
 
 class upper_layer::server : public upper_layer {
 public:
   virtual ~server();
-  virtual error start(lower_layer* down, const http::request_header& hdr) = 0;
-};
 
-class upper_layer::client : public upper_layer {
-public:
-  virtual ~client();
-  virtual error start(lower_layer* down) = 0;
+  /// Asks the layer to accept a new client.
+  /// @warning the server calls this function *before* calling `start`.
+  virtual error accept(const http::request_header& hdr) = 0;
 };
 
 } // namespace caf::net::web_socket
