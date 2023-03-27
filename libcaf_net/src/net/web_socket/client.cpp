@@ -46,7 +46,7 @@ error client::start(octet_stream::lower_layer* down) {
 }
 
 void client::abort(const error& reason) {
-  assert(up_);
+  CAF_ASSERT(up_);
   up_->abort(reason);
 }
 

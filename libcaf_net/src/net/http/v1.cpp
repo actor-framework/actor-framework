@@ -1,5 +1,6 @@
 #include "caf/net/http/v1.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <string_view>

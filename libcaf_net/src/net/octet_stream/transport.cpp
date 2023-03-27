@@ -195,7 +195,7 @@ void transport::handle_buffered_data() {
   // Loop until we have drained the buffer as much as we can.
   CAF_ASSERT(min_read_size_ <= max_read_size_);
   auto switch_to_next_protocol = [this] {
-    assert(next_);
+    CAF_ASSERT(next_);
     // Switch to the new protocol and initialize it.
     configure_read(receive_policy::stop());
     up_.reset(next_.release());
