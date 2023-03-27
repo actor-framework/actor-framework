@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/byte_span.hpp"
+#include "caf/detail/net_export.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/http/arg_parser.hpp"
@@ -19,7 +20,7 @@
 namespace caf::net::http {
 
 /// Represents a single route for HTTP requests at a server.
-class route : public ref_counted {
+class CAF_NET_EXPORT route : public ref_counted {
 public:
   virtual ~route();
 
@@ -44,11 +45,11 @@ public:
 namespace caf::detail {
 
 /// Counts how many `<arg>` entries are in `path`.
-size_t args_in_path(std::string_view path);
+size_t CAF_NET_EXPORT args_in_path(std::string_view path);
 
 /// Splits `str` in the first component of a path and its remainder.
 std::pair<std::string_view, std::string_view>
-next_path_component(std::string_view str);
+  CAF_NET_EXPORT next_path_component(std::string_view str);
 
 /// Matches two paths by splitting both inputs at '/' and then checking that
 /// `predicate` holds for each resulting pair.
@@ -170,7 +171,7 @@ private:
 
 /// A simple implementation for `http::route` that does not parse any arguments
 /// from the requests and simply calls the user-provided function object.
-class http_simple_route_base : public net::http::route {
+class CAF_NET_EXPORT http_simple_route_base : public net::http::route {
 public:
   http_simple_route_base(std::string&& path,
                          std::optional<net::http::method> method)
