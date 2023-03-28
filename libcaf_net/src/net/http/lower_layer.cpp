@@ -17,6 +17,11 @@ lower_layer::~lower_layer() {
   // nop
 }
 
+bool lower_layer::send_response(status code) {
+  begin_header(code);
+  return end_header() && send_payload(const_byte_span{});
+}
+
 bool lower_layer::send_response(status code, std::string_view content_type,
                                 const_byte_span content) {
   auto content_size = std::to_string(content.size());
@@ -29,6 +34,11 @@ bool lower_layer::send_response(status code, std::string_view content_type,
 bool lower_layer::send_response(status code, std::string_view content_type,
                                 std::string_view content) {
   return send_response(code, content_type, as_bytes(make_span(content)));
+}
+
+bool lower_layer::send_response(status code, const error& err) {
+  auto msg = to_string(err);
+  return send_response(code, "text/plain", msg);
 }
 
 } // namespace caf::net::http

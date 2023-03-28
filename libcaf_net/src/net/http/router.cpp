@@ -4,6 +4,7 @@
 #include "caf/disposable.hpp"
 #include "caf/net/http/request.hpp"
 #include "caf/net/http/responder.hpp"
+#include "caf/net/make_actor_shell.hpp"
 #include "caf/net/multiplexer.hpp"
 
 namespace caf::net::http {
@@ -19,6 +20,16 @@ router::~router() {
 
 std::unique_ptr<router> router::make(std::vector<route_ptr> routes) {
   return std::make_unique<router>(std::move(routes));
+}
+
+// -- properties ---------------------------------------------------------------
+
+actor_shell* router::self() {
+  if (shell_)
+    return shell_.get();
+  auto& mpx = down_->mpx();
+  shell_ = make_actor_shell(mpx.system(), &mpx);
+  return shell_.get();
 }
 
 // -- API for the responders ---------------------------------------------------

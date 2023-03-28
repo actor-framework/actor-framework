@@ -92,6 +92,7 @@ public:
 private:
   std::vector<net::http::route_ptr> routes_;
   size_t max_consecutive_reads_;
+  action monitor_;
 };
 
 } // namespace caf::detail
@@ -115,6 +116,7 @@ public:
   server_factory_config(const server_factory_config&) = default;
 
   std::vector<route_ptr> routes;
+  std::vector<strong_actor_ptr> monitored_actors;
 };
 
 /// Factory type for the `with(...).accept(...).start(...)` DSL.
@@ -126,6 +128,22 @@ public:
   using config_type = typename super::config_type;
 
   using super::super;
+
+  /// Monitors the actor handle @p hdl and stops the server if the monitored
+  /// actor terminates.
+  template <class ActorHandle>
+  server_factory& monitor(const ActorHandle& hdl) {
+    auto& cfg = super::config();
+    auto ptr = actor_cast<strong_actor_ptr>(hdl);
+    if (!ptr) {
+      auto err = make_error(sec::logic_error,
+                            "cannot monitor an invalid actor handle");
+      cfg.fail(std::move(err));
+      return *this;
+    }
+    cfg.monitored_actors.push_back(std::move(ptr));
+    return *this;
+  }
 
   /// Adds a new route to the HTTP server.
   /// @param path The path on this server for the new route.
@@ -198,7 +216,7 @@ private:
     auto factory = std::make_unique<factory_t>(cfg.routes,
                                                cfg.max_consecutive_reads);
     auto impl = impl_t::make(std::move(acc), std::move(factory),
-                             cfg.max_connections);
+                             cfg.max_connections, cfg.monitored_actors);
     auto impl_ptr = impl.get();
     auto ptr = net::socket_manager::make(cfg.mpx, std::move(impl));
     impl_ptr->self_ref(ptr->as_disposable());
@@ -225,7 +243,7 @@ private:
     auto factory = std::make_unique<factory_t>(std::move(routes),
                                                cfg.max_consecutive_reads);
     auto impl = impl_t::make(std::move(acc), std::move(factory),
-                             cfg.max_connections);
+                             cfg.max_connections, cfg.monitored_actors);
     auto impl_ptr = impl.get();
     auto ptr = net::socket_manager::make(cfg.mpx, std::move(impl));
     impl_ptr->self_ref(ptr->as_disposable());

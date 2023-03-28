@@ -4,7 +4,9 @@
 
 #pragma once
 
+#include "caf/async/execution_context.hpp"
 #include "caf/detail/connection_factory.hpp"
+#include "caf/net/multiplexer.hpp"
 #include "caf/net/socket_event_layer.hpp"
 #include "caf/net/socket_manager.hpp"
 #include "caf/settings.hpp"
@@ -30,10 +32,12 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  accept_handler(Acceptor acc, factory_ptr fptr, size_t max_connections)
+  accept_handler(Acceptor acc, factory_ptr fptr, size_t max_connections,
+                 std::vector<strong_actor_ptr> monitored_actors = {})
     : acc_(std::move(acc)),
       factory_(std::move(fptr)),
-      max_connections_(max_connections) {
+      max_connections_(max_connections),
+      monitored_actors_(std::move(monitored_actors)) {
     CAF_ASSERT(max_connections_ > 0);
   }
 
@@ -41,14 +45,18 @@ public:
     on_conn_close_.dispose();
     if (valid(acc_))
       close(acc_);
+    if (monitor_callback_)
+      monitor_callback_.dispose();
   }
 
   // -- factories --------------------------------------------------------------
 
-  static std::unique_ptr<accept_handler> make(Acceptor acc, factory_ptr fptr,
-                                              size_t max_connections) {
+  static std::unique_ptr<accept_handler>
+  make(Acceptor acc, factory_ptr fptr, size_t max_connections,
+       std::vector<strong_actor_ptr> monitored_actors = {}) {
     return std::make_unique<accept_handler>(std::move(acc), std::move(fptr),
-                                            max_connections);
+                                            max_connections,
+                                            std::move(monitored_actors));
   }
 
   // -- implementation of socket_event_layer -----------------------------------
@@ -59,6 +67,17 @@ public:
     if (auto err = factory_->start(owner)) {
       CAF_LOG_DEBUG("factory_->start failed:" << err);
       return err;
+    }
+    if (!monitored_actors_.empty()) {
+      monitor_callback_ = make_action([this] { owner_->shutdown(); });
+      auto ctx = async::execution_context_ptr{owner_->mpx_ptr()};
+      for (auto& hdl : monitored_actors_) {
+        CAF_ASSERT(hdl);
+        hdl->get()->attach_functor([ctx, cb = monitor_callback_] {
+          if (!cb.disposed())
+            ctx->schedule(cb);
+        });
+      }
     }
     on_conn_close_ = make_action([this] { connection_closed(); });
     owner->register_reading();
@@ -135,6 +154,12 @@ private:
   /// to keep the acceptor alive while the manager is not registered for writing
   /// or reading.
   disposable self_ref_;
+
+  /// An action for stopping this handler if an observed actor terminates.
+  action monitor_callback_;
+
+  /// List of actors that we add monitors to in `start`.
+  std::vector<strong_actor_ptr> monitored_actors_;
 };
 
 } // namespace caf::detail

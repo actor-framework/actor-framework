@@ -9,6 +9,7 @@
 #include "caf/detail/type_traits.hpp"
 #include "caf/expected.hpp"
 #include "caf/intrusive_ptr.hpp"
+#include "caf/net/actor_shell.hpp"
 #include "caf/net/http/arg_parser.hpp"
 #include "caf/net/http/lower_layer.hpp"
 #include "caf/net/http/responder.hpp"
@@ -44,9 +45,14 @@ public:
 
   // -- properties -------------------------------------------------------------
 
+  /// Returns a pointer to the underlying HTTP layer.
   lower_layer* down() {
     return down_;
   }
+
+  /// Returns an @ref actor_shell for this router that enables routes to
+  /// interact with actors.
+  actor_shell* self();
 
   // -- API for the responders -------------------------------------------------
 
@@ -70,10 +76,20 @@ public:
   void abort(const error& reason) override;
 
 private:
+  /// Handle to the underlying HTTP layer.
   lower_layer* down_ = nullptr;
+
+  /// List of user-defined routes.
   std::vector<route_ptr> routes_;
+
+  /// Generates ascending IDs for `pending_`.
   size_t request_id_ = 0;
+
+  /// Keeps track of pending HTTP requests when lifting @ref responder objects.
   std::unordered_map<size_t, disposable> pending_;
+
+  /// Lazily initialized for allowing a @ref route to interact with actors.
+  actor_shell_ptr shell_;
 };
 
 } // namespace caf::net::http

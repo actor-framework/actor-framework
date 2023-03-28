@@ -23,6 +23,87 @@ namespace caf::net::http {
 /// response immediately.
 class CAF_NET_EXPORT responder {
 public:
+  // -- member types -----------------------------------------------------------
+
+  /// Implementation detail for `promise`.
+  class CAF_NET_EXPORT promise_state : public ref_counted {
+  public:
+    explicit promise_state(lower_layer* down) : down_(down) {
+      // nop
+    }
+
+    promise_state(const promise_state&) = delete;
+
+    promise_state& operator-(const promise_state&) = delete;
+
+    ~promise_state() override;
+
+    /// Returns a pointer to the HTTP layer.
+    lower_layer* down() {
+      return down_;
+    }
+
+    /// Marks the promise as fulfilled
+    void set_completed() {
+      completed_ = true;
+    }
+
+  private:
+    lower_layer* down_;
+    bool completed_ = false;
+  };
+
+  /// Allows users to respond to an incoming HTTP request at some later time.
+  class CAF_NET_EXPORT promise {
+  public:
+    explicit promise(responder& parent);
+
+    promise(const promise&) noexcept = default;
+
+    promise& operator=(const promise&) noexcept = default;
+
+    /// Sends an HTTP response that only consists of a header with a status code
+    /// such as `status::no_content`.
+    void respond(status code) {
+      impl_->down()->send_response(code);
+      impl_->set_completed();
+    }
+
+    /// Sends an HTTP response message to the client. Automatically sets the
+    /// `Content-Type` and `Content-Length` header fields.
+    void respond(status code, std::string_view content_type,
+                 const_byte_span content) {
+      impl_->down()->send_response(code, content_type, content);
+      impl_->set_completed();
+    }
+
+    /// Sends an HTTP response message to the client. Automatically sets the
+    /// `Content-Type` and `Content-Length` header fields.
+    void respond(status code, std::string_view content_type,
+                 std::string_view content) {
+      impl_->down()->send_response(code, content_type, content);
+      impl_->set_completed();
+    }
+
+    /// Sends an HTTP response message with an error to the client.
+    /// Converts @p what to a string representation and then transfers this
+    /// description to the client.
+    void respond(status code, const error& what) {
+      impl_->down()->send_response(code, what);
+      impl_->set_completed();
+    }
+
+    /// Returns a pointer to the HTTP layer.
+    lower_layer* down() {
+      return impl_->down();
+    }
+
+  private:
+    intrusive_ptr<promise_state> impl_;
+  };
+
+  // -- constructors, destructors, and assignment operators --------------------
+
   responder(const request_header* hdr, const_byte_span body,
             http::router* router)
     : hdr_(hdr), body_(body), router_(router) {
@@ -32,6 +113,8 @@ public:
   responder(const responder&) noexcept = default;
 
   responder& operator=(const responder&) noexcept = default;
+
+  // -- properties -------------------------------------------------------------
 
   /// Returns the HTTP header for the responder.
   /// @pre `valid()`
@@ -55,6 +138,21 @@ public:
     return router_;
   }
 
+  /// Returns the @ref actor_shell object from the @ref router for interacting
+  /// with actors in the system.
+  actor_shell* self();
+
+  /// Returns a pointer to the HTTP layer.
+  lower_layer* down();
+
+  // -- responding -------------------------------------------------------------
+
+  /// Sends an HTTP response that only consists of a header with a status code
+  /// such as `status::no_content`.
+  void respond(status code) {
+    down()->send_response(code);
+  }
+
   /// Sends an HTTP response message to the client. Automatically sets the
   /// `Content-Type` and `Content-Length` header fields.
   /// @pre `valid()`
@@ -69,6 +167,13 @@ public:
   void respond(status code, std::string_view content_type,
                std::string_view content) {
     down()->send_response(code, content_type, content);
+  }
+
+  /// Sends an HTTP response message with an error to the client.
+  /// Converts @p what to a string representation and then transfers this
+  /// description to the client.
+  void respond(status code, const error& what) {
+    down()->send_response(code, what);
   }
 
   /// Starts writing an HTTP header.
@@ -103,12 +208,15 @@ public:
     return down()->send_end_of_chunks();
   }
 
+  // -- conversions ------------------------------------------------------------
+
   /// Converts a responder to a @ref request for processing the HTTP request
   /// asynchronously.
   request to_request() &&;
 
-  /// Returns a pointer to the HTTP layer.
-  lower_layer* down();
+  /// Converts the responder to a promise object for responding to the HTTP
+  /// request at some later time but from the same @ref socket_manager.
+  promise to_promise() &&;
 
 private:
   const request_header* hdr_;

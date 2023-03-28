@@ -6,7 +6,7 @@
 namespace caf::net {
 
 /// Creates a new @ref actor_shell and registers it at the actor system.
-template <class Handle>
+template <class Handle> // Note: default is caf::actor; see fwd.hpp
 actor_shell_ptr_t<Handle>
 make_actor_shell(actor_system& sys, async::execution_context_ptr loop) {
   auto f = [](abstract_actor_shell* self, message& msg) -> result<message> {
