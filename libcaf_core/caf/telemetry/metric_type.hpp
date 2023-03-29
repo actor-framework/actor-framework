@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <cstdint>
+
 namespace caf::telemetry {
 
 enum class metric_type : uint8_t {

@@ -57,6 +57,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   correctly by opening the socket in IPv4 mode. Passing an empty bind address
   now defaults to `INADDR6_ANY` (but allowing IPv4 clients) with `INADDR_ANY` as
   fallback in case opening the socket in IPv6 mode failed.
+- Add missing includes that prevented CAF from compiling on GCC 13.
 
 ### Deprecated
 
