@@ -42,6 +42,7 @@
 
 #include <array>
 #include <string>
+#include <cstdint>
 
 #include "caf/detail/core_export.hpp"
 
