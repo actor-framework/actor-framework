@@ -161,6 +161,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
                    res.respond(http::status::ok, "text/plain", f(quotes));
                  }
                })
+        // --(rst-switch_protocol-begin)--
         // On "/ws/quotes/<arg>", we switch the protocol to WebSocket.
         .route("/ws/quotes/<arg>", http::method::get,
                ws::switch_protocol()
@@ -202,6 +203,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
                          });
                      });
                    }))
+        // --(rst-switch_protocol-end)--
         // Run with the configured routes.
         .start();
   // Report any error to the user.

@@ -32,6 +32,7 @@ struct config : caf::actor_system_config {
 
 // -- main ---------------------------------------------------------------------
 
+// --(rst-main-begin)--
 int caf_main(caf::actor_system& sys, const config& cfg) {
   namespace http = caf::net::http;
   namespace ssl = caf::net::ssl;
@@ -62,8 +63,8 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
         .max_connections(max_connections)
         // Accept only requests for path "/".
         .on_request([](ws::acceptor<>& acc) {
-          // The hdr parameter is a dictionary with fields from the WebSocket
-          // handshake such as the path.
+          // The header parameter contains fields from the WebSocket handshake
+          // such as the path and HTTP header fields..
           auto path = acc.header().path();
           std::cout << "*** new client request for path " << path << '\n';
           // Accept the WebSocket connection only if the path is "/".
@@ -73,7 +74,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
             acc.accept();
           } else {
             // Calling `reject` aborts the connection with HTTP status code 400
-            // (Bad Request). The error gets converted to a string and send to
+            // (Bad Request). The error gets converted to a string and sent to
             // the client to give some indication to the client why the request
             // was rejected.
             auto err = caf::make_error(caf::sec::invalid_argument,
@@ -117,5 +118,6 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
   // workers are still alive.
   return EXIT_SUCCESS;
 }
+// --(rst-main-end)--
 
 CAF_MAIN(caf::net::middleman)

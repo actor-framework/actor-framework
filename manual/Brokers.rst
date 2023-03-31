@@ -6,10 +6,10 @@ Network I/O with Brokers
 .. note::
 
   We no longer recommend the Brokers from the I/O module for new code. Please
-  consider using Networking Module instead: :ref:`net_overview`. The new caf-net
+  consider using Networking Module instead: :ref:`net-overview`. The new caf-net
   module offers higher-level abstractions that interface with flows (see
   :ref:`data_flows`). Message-based communication is also available with an
-  :ref:`actor_shell`.
+  :ref:`net-actor-shell`.
 
 When communicating to other services in the network, sometimes low-level socket
 I/O is inevitable. For this reason, CAF provides *brokers*. A broker is

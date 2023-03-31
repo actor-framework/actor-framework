@@ -1,39 +1,25 @@
-.. _net_prometheus:
+.. _net-prometheus:
 
-Prometheus :sup:`experimental`
-==============================
+Prometheus
+==========
 
-CAF ships a Prometheus server implementation that allows a scraper to collect
-metrics from the actor system. The Prometheus server sits on top of an HTTP
-layer.
+CAF ships a Prometheus scraper implementation that allows exposing metrics from
+the actor system. User can create an instance of the scraper with the factory
+function ``caf::net::prometheus::scraper`` (include ``caf/net/prometheus.hpp``).
+The scraper is designed to work with an HTTP server.
 
-Usually, users  can simply use the configuration options of the actor system to
-export metrics to scrapers: :ref:`metrics_export`. When setting these options,
-CAF uses this implementation to start the Prometheus server in the background.
-
-Starting a Prometheus Server
-----------------------------
-
-The Prometheus server always binds to the actor system, because it needs the
-multiplexer and the metrics registry. Hence, the entry point is always:
+A minimal example for starting an HTTP server (see :ref:`net-http`) at port 8081
+that responds to GET requests on ``/metrics`` could look like this:
 
 .. code-block:: C++
 
-  caf::net::prometheus::with(sys)
+  auto server = net::http::with(sys)
+                  .accept(8081)
+                  .route("/metrics", net::prometheus::scraper(sys))
+                  .start();
 
-From here, users can call ``accept`` with:
+.. note::
 
-- A port, a bind address (defaults to the empty string for *any host*) and
-  whether to create the socket with ``SO_REUSEADDR`` (defaults to ``true``).
-- An ``ssl::context``, a port, a bind address and whether to create the socket
-  with ``SO_REUSEADDR`` (with the same defaults as before).
-- A ``tcp_accept_socket`` for accepting incoming connections.
-- An ``ssl::acceptor`` for accepting incoming connections.
-
-After setting up the factory, users may call these functions on the object:
-
-- ``max_connections(size_t)`` for limiting the amount of concurrent connections
-  on the server.
-- ``do_on_error(function<void(const caf::error&)>)`` for setting an error
-  callback.
-- ``start()`` for initializing the server and running it in the background.
+  Usually, users  can simply use the configuration options of the actor system
+  to export metrics: :ref:`metrics_export`. When setting these options, CAF uses
+  this implementation to start the Prometheus server in the background.

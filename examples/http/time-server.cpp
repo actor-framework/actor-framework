@@ -34,6 +34,7 @@ struct config : caf::actor_system_config {
 
 // -- main ---------------------------------------------------------------------
 
+// --(rst-main-begin)--
 int caf_main(caf::actor_system& sys, const config& cfg) {
   namespace http = caf::net::http;
   namespace ssl = caf::net::ssl;
@@ -81,5 +82,6 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
   std::cout << "Terminating.\n";
   return EXIT_SUCCESS;
 }
+// --(rst-main-end)--
 
 CAF_MAIN(caf::net::middleman)

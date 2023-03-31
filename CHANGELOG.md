@@ -27,6 +27,13 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The class `expected` now implements the monadic member functions from C++23
   `std::expected` as well as `value_or`.
 
+### Changed
+
+- After collecting experience and feedback on the new HTTP and WebSocket APIs
+  introduced with 0.19.0-rc.1, we decided to completely overhaul the
+  user-facing, high-level APIs. Please consult the manual for the new DSL to
+  start servers.
+
 ### Fixed
 
 - The SPSC buffer now makes sure that subscribers get informed of a producer has

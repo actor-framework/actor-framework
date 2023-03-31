@@ -1,4 +1,4 @@
-.. _net_overview:
+.. _net-overview:
 
 Overview
 ========
@@ -54,25 +54,25 @@ Starting a server uses ``accept`` instead:
 
    PROTOCOL::with(CONTEXT).accept(WHERE).start(ON_ACCEPT);
 
-CAF also includes some self-contained services that users may simply start in
-the background such as a Prometheus endpoint. These services take no callback in
-``start``. For example:
+The ``ON_ACCEPT`` handler may be optional and some protocols do not support it
+at all. For example, the HTTP server accepts callbacks for individual routes and
+users may call ``start`` without arguments to simply launch the server and
+dispatch to the configured routes.
 
-.. code-block:: C++
-
-   prometheus::with(sys).accept(8008).start();
-
-In all cases, CAF returns ``expected<disposable>``. The ``disposble`` allows
-users to cancel the activity at any time. Note: when canceling a server, it only
-disposes the accept socket itself. Previously established connections remain
-unaffected.
+In all cases, CAF returns ``expected<disposable>``. The ``disposable`` allows
+users to cancel the background activity at any time. Note: when canceling a
+server, this only disposes the server itself. Previously established connections
+remain unaffected.
 
 For error reporting, most factories also allow setting a callback with
 ``do_on_error``. This can be useful for ignoring the result value but still
 reporting errors.
 
 Many protocols also accept additional configuration parameters. For example, the
-``connect`` API also allows to configure multiple connection attempts.
+``connect`` API may also allows to configure multiple connection attempts.
+
+Please refer to the sections for the individual protocols for a more detailed
+description of available options.
 
 Protocol Layering
 -----------------
@@ -85,7 +85,7 @@ naturally with any number of other protocols. To enable this key property,
 Please note that the protocol layering is meant for adding new networking
 capabilities to CAF, but we do not recommend using the protocol stacks directly
 in application code. The protocol stacks are meant as building blocks for
-higher-level the declarative, high-level APIs.
+higher-level, declarative APIs.
 
 A *protocol layer* is a class that implements a single processing step in a
 communication pipeline. Multiple layers are organized in a *protocol stack*.
@@ -136,3 +136,10 @@ When instantiating a protocol stack, each layer is represented by a concrete
 object and we build the pipeline from top to bottom, i.e., we create the highest
 layer first and then pass the last layer to the next lower layer until arriving
 at the socket manager.
+
+The layering API is generally structured into upper and lower layers. For
+example, the upper layer for HTTP consumes the requests while the lower layer
+can be used to send responses. Since the layering API is quite low level, we
+recommend consulting the Doxygen documentation for the class interfaces and
+looking at existing protocols such as the length-prefix framing as basis for
+implementing custom protocols. In the manual, we focus on the high-level APIs.

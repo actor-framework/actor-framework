@@ -39,10 +39,12 @@ Contents
    :caption: Networking Library
 
    net/Overview
+   net/SSL
    net/ActorShell
    net/HTTP
    net/LengthPrefixFraming
    net/Prometheus
+   net/WebSocket
 
 .. toctree::
    :maxdepth: 2

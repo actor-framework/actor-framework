@@ -22,6 +22,7 @@ struct config : caf::actor_system_config {
   }
 };
 
+// --(rst-main-begin)--
 int caf_main(caf::actor_system& sys, const config& cfg) {
   namespace ws = caf::net::web_socket;
   // Sanity checking.
@@ -30,7 +31,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
     std::cerr << "*** mandatory argument server missing or invalid\n";
     return EXIT_FAILURE;
   }
-  // Ask user for the hello message.
+  // Ask the user for the hello message.
   std::string hello;
   std::cout << "Please enter a hello message for the server: " << std::flush;
   std::getline(std::cin, hello);
@@ -42,7 +43,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
         // If we don't succeed at first, try up to 10 times with 1s delay.
         .retry_delay(1s)
         .max_retry_count(9)
-        // After connecting, spin up a worker to manage it.
+        // On success, spin up a worker to manage the connection.
         .start([&sys, hello](auto pull, auto push) {
           sys.spawn([hello, pull, push](caf::event_based_actor* self) {
             // Open the pull handle.
@@ -54,7 +55,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
                           << to_string(what) << '\n';
               })
               // Restrict how many messages we receive if the user configured
-              // it.
+              // a limit.
               .compose([self](auto in) {
                 if (auto limit = caf::get_as<size_t>(self->config(), "max")) {
                   return std::move(in).take(*limit).as_observable();
@@ -93,5 +94,6 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
   // workers are still alive.
   return EXIT_SUCCESS;
 }
+// --(rst-main-end)--
 
 CAF_MAIN(caf::net::middleman)

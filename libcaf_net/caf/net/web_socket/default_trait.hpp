@@ -15,6 +15,9 @@
 
 namespace caf::net::web_socket {
 
+// --(rst-class-begin)--
+/// Configures a WebSocket server or client to operate on the granularity of
+/// regular WebSocket frames.
 class CAF_NET_EXPORT default_trait {
 public:
   /// The input type of the application, i.e., what that flows from the
@@ -39,17 +42,28 @@ public:
   template <class... Ts>
   using acceptor_resource = async::consumer_resource<accept_event<Ts...>>;
 
+  /// Queries whether `x` should be serialized as binary frame (`true`) or text
+  /// frame (`false`).
   bool converts_to_binary(const output_type& x);
 
+  /// Serializes an output to raw bytes for sending a binary frame
+  /// (`converts_to_binary` returned `true`).
   bool convert(const output_type& x, byte_buffer& bytes);
 
+  /// Serializes an output to ASCII (or UTF-8) characters for sending a text
+  /// frame (`converts_to_binary` returned `false`).
   bool convert(const output_type& x, std::vector<char>& text);
 
+  /// Converts the raw bytes from a binary frame to the input type.
   bool convert(const_byte_span bytes, input_type& x);
 
+  /// Converts the characters from a text frame to the input type.
   bool convert(std::string_view text, input_type& x);
 
+  /// Returns a description of the error if any of the `convert` functions
+  /// returned `false`.
   error last_error();
 };
+// --(rst-class-end)--
 
 } // namespace caf::net::web_socket
