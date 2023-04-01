@@ -61,10 +61,16 @@ private:
 };
 
 template <class OnRequest, class OnStart>
-struct ws_switch_protocol_state {
-  ws_switch_protocol_state(OnRequest on_request_fn, OnStart on_start_fn)
-    : on_request(std::move(on_request_fn)), on_start(std::move(on_start_fn)) {
+struct ws_switch_protocol_state : public ref_counted {
+  template <class OnStartInit>
+  ws_switch_protocol_state(OnRequest on_request_fn, OnStartInit&& on_start_fn)
+    : on_request(std::move(on_request_fn)),
+      on_start(std::forward<OnStartInit>(on_start_fn)) {
     // nop
+  }
+
+  ws_switch_protocol_state* copy() const {
+    return new ws_switch_protocol_state{on_request, on_start};
   }
 
   OnRequest on_request;
@@ -83,7 +89,7 @@ public:
 
   using shared_producer_type = std::shared_ptr<producer_type>;
 
-  explicit ws_switch_protocol(std::shared_ptr<State> state)
+  explicit ws_switch_protocol(intrusive_ptr<State> state)
     : state_(std::move(state)) {
     // nop
   }
@@ -142,7 +148,12 @@ public:
   }
 
   void init() {
-    if (auto& on_start = state_->on_start; on_start) {
+    // Once we call init(), the route becomes active. Before, this step, we want
+    // to allow the route to copy this instance freely and have multiple
+    // "potential" routes. But once the server actually starts, we detach this
+    // instance from the others and it becomes a "live" object.
+    auto& st = state_.unshared();
+    if (auto& on_start = st.on_start; on_start) {
       auto [pull, push] = async::make_spsc_buffer_resource<accept_event>();
       using producer_t = async::blocking_producer<accept_event>;
       producer_ = std::make_shared<producer_t>(producer_t{push.try_open()});
@@ -152,7 +163,7 @@ public:
   }
 
 private:
-  std::shared_ptr<State> state_;
+  intrusive_cow_ptr<State> state_;
   shared_producer_type producer_;
 };
 
@@ -184,8 +195,8 @@ private:
     using namespace detail;
     using state_t = ws_switch_protocol_state<OnRequest, OnStart>;
     using impl_t = ws_switch_protocol<Trait, state_t, type_list<Out...>, Ts...>;
-    auto state = std::make_shared<state_t>(std::move(on_request_),
-                                           std::move(on_start));
+    auto state = make_counted<state_t>(std::move(on_request_),
+                                       std::move(on_start));
     static_assert(http_route_has_init_v<impl_t>);
     return impl_t{std::move(state)};
   }
