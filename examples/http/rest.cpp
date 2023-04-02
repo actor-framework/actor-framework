@@ -42,13 +42,10 @@ struct config : caf::actor_system_config {
 // -- our key-value store actor ------------------------------------------------
 
 struct kvs_actor_state {
-  explicit kvs_actor_state(caf::event_based_actor* self_ptr) : self(self_ptr) {
-    // nop
-  }
-
   caf::behavior make_behavior() {
+    using caf::result;
     return {
-      [this](caf::get_atom, const std::string& key) -> caf::result<std::string> {
+      [this](caf::get_atom, const std::string& key) -> result<std::string> {
         if (auto i = data.find(key); i != data.end())
           return i->second;
         else
@@ -62,7 +59,6 @@ struct kvs_actor_state {
   }
 
   std::map<std::string, std::string> data;
-  caf::event_based_actor* self;
 };
 
 using kvs_actor_impl = caf::stateful_actor<kvs_actor_state>;

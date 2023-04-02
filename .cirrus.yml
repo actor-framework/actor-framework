@@ -8,6 +8,10 @@ debug_build_template: &DEBUG_BUILD_TEMPLATE
   build_script: .ci/run.sh build .ci/debug-flags.cmake . build
   test_script: .ci/run.sh test build
 
+asan_build_template: &ASAN_BUILD_TEMPLATE
+  build_script: .ci/run.sh build .ci/asan-flags.cmake . build
+  test_script: .ci/run.sh test build
+
 # CentOS 7 EOL: June 2024
 centos7_task:
   container:
@@ -37,6 +41,14 @@ freebsd12_task:
     << : *RESOURCES_TEMPLATE
   prepare_script: .ci/freebsd-12/prepare.sh
   << : *DEBUG_BUILD_TEMPLATE
+
+# Fedora 36 EOL: May 2023
+sanitizers_task:
+  container:
+    dockerfile: .ci/fedora-36/Dockerfile
+    << : *RESOURCES_TEMPLATE
+  prepare_script: .ci/run.sh assert UBSanitizer
+  << : *ASAN_BUILD_TEMPLATE
 
 # Windows Server 2019 EOL: January 2024
 windows_task:
