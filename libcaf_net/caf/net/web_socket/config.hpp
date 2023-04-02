@@ -41,32 +41,14 @@ public:
 
   using super::super;
 
-  static auto make(dsl::server_config::lazy_t, const base_config<Trait>& from,
-                   uint16_t port, std::string bind_address) {
-    auto res = make_counted<server_config>(from.mpx);
-    if (auto* err = std::get_if<error>(&from.data)) {
-      res->data = *err;
-    } else {
-      auto& src_data = std::get<dsl::generic_config::lazy>(from.data);
-      res->data = dsl::server_config::lazy{src_data.ctx, port,
-                                           std::move(bind_address)};
-      res->trait = from.trait;
-    }
-    return res;
-  }
-
-  static auto make(dsl::server_config::socket_t, const base_config<Trait>& from,
-                   tcp_accept_socket fd) {
-    auto res = make_counted<server_config>(from.mpx);
-    if (auto* err = std::get_if<error>(&from.data)) {
-      res->data = *err;
-      close(fd);
-    } else {
-      auto& src_data = std::get<dsl::generic_config::lazy>(from.data);
-      res->data = dsl::server_config::socket{src_data.ctx, fd};
-      res->trait = from.trait;
-    }
-    return res;
+  template <class T, class... Args>
+  static auto make(dsl::server_config_tag<T>, const base_config<Trait>& from,
+                   Args&&... args) {
+    auto ptr = super::make_impl(std::in_place_type<server_config>, from,
+                                std::in_place_type<T>,
+                                std::forward<Args>(args)...);
+    ptr->trait = from.trait;
+    return ptr;
   }
 
   Trait trait;
@@ -80,46 +62,17 @@ public:
 
   using super = dsl::client_config_value;
 
-  explicit client_config(multiplexer* mpx) : super(mpx) {
-    hs.endpoint("/");
-  }
+  using super::super;
 
-  client_config(const client_config&) = default;
-
-  template <class... Ts>
-  static auto
-  make(dsl::client_config::lazy_t, const base_config<Trait>& from, Ts&&... args) {
-    auto res = make_counted<client_config>(from.mpx);
-    if (auto* err = std::get_if<error>(&from.data)) {
-      res->data = *err;
-    } else {
-      auto& src_data = std::get<dsl::generic_config::lazy>(from.data);
-      res->data = dsl::client_config::lazy{src_data.ctx,
-                                           std::forward<Ts>(args)...};
-      res->trait = from.trait;
-    }
-    return res;
-  }
-
-  static auto make(dsl::client_config::socket_t, const base_config<Trait>& from,
-                   tcp_accept_socket fd) {
-    auto res = make_counted<client_config>(from.mpx);
-    if (auto* err = std::get_if<error>(&from.data)) {
-      res->data = *err;
-      close(fd);
-    } else {
-      auto& src_data = std::get<dsl::generic_config::lazy>(from.data);
-      res->data = dsl::client_config::socket{src_data.ctx, fd};
-      res->trait = from.trait;
-    }
-    return res;
-  }
-
-  static auto make(dsl::client_config::fail_t, const base_config<Trait>& from,
-                   error err) {
-    auto res = make_counted<client_config>(from.mpx);
-    res->data = std::move(err);
-    return res;
+  template <class T, class... Args>
+  static auto make(dsl::client_config_tag<T>, const base_config<Trait>& from,
+                   Args&&... args) {
+    auto ptr = super::make_impl(std::in_place_type<client_config>, from,
+                                std::in_place_type<T>,
+                                std::forward<Args>(args)...);
+    ptr->trait = from.trait;
+    ptr->hs.endpoint("/");
+    return ptr;
   }
 
   Trait trait;

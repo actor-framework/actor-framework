@@ -25,6 +25,10 @@ struct generic_config_tag {
 /// is starting a client or a server.
 class generic_config {
 public:
+  static constexpr auto fail_v = generic_config_tag<error>{};
+
+  static constexpr size_t fail_index = 0;
+
   /// Configuration for a client that creates the socket on demand.
   class lazy : public has_ctx {
   public:
@@ -33,7 +37,7 @@ public:
 
   static constexpr auto lazy_v = generic_config_tag<lazy>{};
 
-  static constexpr auto fail_v = generic_config_tag<error>{};
+  static constexpr size_t lazy_index = 1;
 
   class value : public config_impl<lazy> {
   public:

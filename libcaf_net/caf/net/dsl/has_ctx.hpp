@@ -80,6 +80,18 @@ public:
     };
     return std::visit(get_ptr, data);
   }
+
+  template <class SumType>
+  static const has_ctx* from(const SumType& data) noexcept {
+    auto get_ptr = [](const auto& val) -> const has_ctx* {
+      using val_t = std::decay_t<decltype(val)>;
+      if constexpr (std::is_base_of_v<has_ctx, val_t>)
+        return &val;
+      else
+        return nullptr;
+    };
+    return std::visit(get_ptr, data);
+  }
 };
 
 } // namespace caf::net::dsl

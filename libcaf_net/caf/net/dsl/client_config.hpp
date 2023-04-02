@@ -18,6 +18,7 @@
 #include <cassert>
 #include <cstdint>
 #include <string>
+#include <utility>
 
 namespace caf::net::dsl {
 
@@ -47,12 +48,12 @@ public:
 
     static constexpr std::string_view name = "lazy";
 
-    lazy(std::shared_ptr<ssl::context> ctx, std::string host, uint16_t port)
-      : has_ctx(std::move(ctx)), server(server_address{std::move(host), port}) {
+    lazy(std::string host, uint16_t port)
+      : server(server_address{std::move(host), port}) {
+      // nop
     }
 
-    lazy(std::shared_ptr<ssl::context> ctx, const uri& addr)
-      : has_ctx(std::move(ctx)), server(addr) {
+    explicit lazy(const uri& addr) : server(addr) {
       // nop
     }
 
@@ -78,8 +79,7 @@ public:
   public:
     static constexpr std::string_view name = "socket";
 
-    socket(std::shared_ptr<ssl::context> ctx, stream_socket fd)
-      : has_ctx(std::move(ctx)), fd(fd) {
+    explicit socket(stream_socket fd) : fd(fd) {
       // nop
     }
 

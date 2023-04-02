@@ -25,15 +25,18 @@ class CAF_NET_EXPORT server_config : public dsl::server_config_value {
 public:
   using super = dsl::server_config_value;
 
+  ~server_config() override;
+
   using super::super;
 
-  static intrusive_ptr<server_config>
-  make(dsl::server_config::lazy_t, const base_config& from, uint16_t port,
-       std::string bind_address);
-
-  static intrusive_ptr<server_config> make(dsl::server_config::socket_t,
-                                           const base_config& from,
-                                           tcp_accept_socket fd);
+  template <class T, class... Args>
+  static auto
+  make(dsl::server_config_tag<T>, const base_config& from, Args&&... args) {
+    auto ptr = super::make_impl(std::in_place_type<server_config>, from,
+                                std::in_place_type<T>,
+                                std::forward<Args>(args)...);
+    return ptr;
+  }
 
   /// Stores the available routes on the HTTP server.
   std::vector<route_ptr> routes;

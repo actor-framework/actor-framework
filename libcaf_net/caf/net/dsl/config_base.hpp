@@ -24,6 +24,7 @@
 #include <cassert>
 #include <cstdint>
 #include <string>
+#include <utility>
 
 namespace caf::net::dsl {
 
@@ -58,6 +59,10 @@ public:
   /// `has_ctx` instance if possible, `nullptr` otherwise.
   virtual has_ctx* as_has_ctx() noexcept = 0;
 
+  /// Inspects the data of this configuration and returns a pointer to it as
+  /// `has_ctx` instance if possible, `nullptr` otherwise.
+  virtual const has_ctx* as_has_ctx() const noexcept = 0;
+
   bool failed() const noexcept {
     return name() == get_name<error>::value;
   }
@@ -88,13 +93,16 @@ class config_impl : public config_base {
 public:
   using super = config_base;
 
-  template <class From, class... Args>
-  explicit config_impl(From&& from, Args&&... args)
-    : super(std::forward<From>(from)), data(std::forward<Args>(args)...) {
-    if constexpr (std::is_base_of_v<config_base, std::decay_t<From>>) {
-      if (!from)
-        data = from.fail_reason();
-    }
+  template <class... Args>
+  explicit config_impl(const config_base& from, Args&&... args)
+    : super(from), data(std::forward<Args>(args)...) {
+    // nop
+  }
+
+  template <class... Args>
+  explicit config_impl(multiplexer* mpx, Args&&... args)
+    : super(mpx), data(std::forward<Args>(args)...) {
+    // nop
   }
 
   std::variant<error, Data...> data;
@@ -127,6 +135,33 @@ public:
 
   has_ctx* as_has_ctx() noexcept override {
     return has_ctx::from(data);
+  }
+
+  const has_ctx* as_has_ctx() const noexcept override {
+    return has_ctx::from(data);
+  }
+
+protected:
+  template <class Derived, class From, class Token, class... Args>
+  static intrusive_ptr<Derived> make_impl(std::in_place_type_t<Derived>,
+                                          const From& from, Token token,
+                                          Args&&... args) {
+    // Always construct the data in-place first. This makes sure we account
+    // for ownership transfers (e.g. for sockets).
+    auto ptr = make_counted<Derived>(from, token, std::forward<Args>(args)...);
+    // Discard the data if `from` contained an error. Otherwise, transfer the
+    // SSL context over to the refined configuration.
+    if (!from) {
+      ptr->data = std::get<error>(from.data);
+    } else if (auto* dst = ptr->as_has_ctx()) {
+      if (const auto* src = from.as_has_ctx()) {
+        dst->ctx = src->ctx;
+      } else {
+        ptr->data = make_error(caf::sec::logic_error,
+                               "failed to transfer SSL context");
+      }
+    }
+    return ptr;
   }
 };
 

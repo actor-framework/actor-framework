@@ -33,11 +33,9 @@ public:
   public:
     static constexpr std::string_view name = "lazy";
 
-    lazy(std::shared_ptr<ssl::context> ctx, uint16_t port,
-         std::string bind_address)
-      : has_ctx(std::move(ctx)),
-        port(port),
-        bind_address(std::move(bind_address)) {
+    lazy(uint16_t port, std::string bind_address)
+      : port(port), bind_address(std::move(bind_address)) {
+      // nop
     }
 
     /// The port number to bind to.
@@ -59,8 +57,7 @@ public:
   public:
     static constexpr std::string_view name = "socket";
 
-    socket(std::shared_ptr<ssl::context> ctx, tcp_accept_socket fd)
-      : has_ctx(std::move(ctx)), fd(fd) {
+    explicit socket(tcp_accept_socket fd) : fd(fd) {
       // nop
     }
 
