@@ -152,7 +152,7 @@ protected:
     // Discard the data if `from` contained an error. Otherwise, transfer the
     // SSL context over to the refined configuration.
     if (!from) {
-      ptr->data = std::get<error>(from.data);
+      ptr->data.template emplace<error>(std::get<error>(from.data));
     } else if (auto* dst = ptr->as_has_ctx()) {
       if (const auto* src = from.as_has_ctx()) {
         dst->ctx = src->ctx;
