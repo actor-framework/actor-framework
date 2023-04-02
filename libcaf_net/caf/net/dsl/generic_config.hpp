@@ -35,23 +35,16 @@ public:
 
   static constexpr auto fail_v = generic_config_tag<error>{};
 
-  template <class Base>
-  class value : public config_impl<Base, lazy> {
+  class value : public config_impl<lazy> {
   public:
-    using super = config_impl<Base, lazy>;
+    using super = config_impl<lazy>;
 
-    using super::super;
-
-    static auto make(multiplexer* mpx) {
-      return make_counted<value>(mpx, std::in_place_type<lazy>);
+    explicit value(multiplexer* mpx) : super(mpx, std::in_place_type<lazy>) {
+      // nop
     }
   };
 };
 
-template <class Base>
-using generic_config_value = typename generic_config::value<Base>;
-
-template <class Base>
-using generic_config_ptr = intrusive_ptr<generic_config_value<Base>>;
+using generic_config_value = typename generic_config::value;
 
 } // namespace caf::net::dsl

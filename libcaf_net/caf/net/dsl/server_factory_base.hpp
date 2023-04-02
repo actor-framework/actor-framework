@@ -16,10 +16,10 @@
 namespace caf::net::dsl {
 
 /// Base type for server factories for use with `can_accept`.
-template <class ConfigBase, class Derived>
+template <class Config, class Derived>
 class server_factory_base {
 public:
-  using config_type = server_config_value<ConfigBase>;
+  using config_type = Config;
 
   using config_pointer = intrusive_ptr<config_type>;
 

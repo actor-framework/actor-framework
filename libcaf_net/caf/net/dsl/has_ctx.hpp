@@ -18,6 +18,22 @@ namespace caf::net::dsl {
 /// Configuration for a client that uses a user-provided socket.
 class has_ctx {
 public:
+  using ctx_ptr = std::shared_ptr<ssl::context>;
+
+  has_ctx() = default;
+
+  has_ctx(ctx_ptr ptr) : ctx(std::move(ptr)) {
+    // nop
+  }
+
+  has_ctx(has_ctx&&) = default;
+
+  has_ctx(const has_ctx&) = default;
+
+  has_ctx& operator=(has_ctx&&) = default;
+
+  has_ctx& operator=(const has_ctx&) = default;
+
   /// SSL context for secure servers.
   std::shared_ptr<ssl::context> ctx;
 

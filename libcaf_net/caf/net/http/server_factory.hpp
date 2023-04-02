@@ -12,7 +12,9 @@
 #include "caf/detail/net_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/net/checked_socket.hpp"
+#include "caf/net/dsl/generic_config.hpp"
 #include "caf/net/dsl/server_factory_base.hpp"
+#include "caf/net/http/config.hpp"
 #include "caf/net/http/request.hpp"
 #include "caf/net/http/router.hpp"
 #include "caf/net/http/server.hpp"
@@ -99,31 +101,11 @@ private:
 
 namespace caf::net::http {
 
-/// Configuration type for WebSocket clients with a handshake object. The
-/// handshake object sets the default endpoint to '/' for convenience.
-class server_factory_config : public dsl::config_base {
-public:
-  using super = dsl::config_base;
-
-  explicit server_factory_config(multiplexer* mpx) : super(mpx) {
-    // nop
-  }
-
-  explicit server_factory_config(const super& other) : super(other) {
-    // nop
-  }
-
-  server_factory_config(const server_factory_config&) = default;
-
-  std::vector<route_ptr> routes;
-  std::vector<strong_actor_ptr> monitored_actors;
-};
-
 /// Factory type for the `with(...).accept(...).start(...)` DSL.
 class server_factory
-  : public dsl::server_factory_base<server_factory_config, server_factory> {
+  : public dsl::server_factory_base<server_config, server_factory> {
 public:
-  using super = dsl::server_factory_base<server_factory_config, server_factory>;
+  using super = dsl::server_factory_base<server_config, server_factory>;
 
   using config_type = typename super::config_type;
 

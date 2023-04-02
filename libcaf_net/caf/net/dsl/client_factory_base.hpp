@@ -17,10 +17,10 @@
 namespace caf::net::dsl {
 
 /// Base type for client factories for use with `can_connect`.
-template <class ConfigBase, class Derived>
+template <class Config, class Derived>
 class client_factory_base {
 public:
-  using config_type = client_config_value<ConfigBase>;
+  using config_type = Config;
 
   using trait_type = typename config_type::trait_type;
 

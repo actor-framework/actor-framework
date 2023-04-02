@@ -10,6 +10,7 @@
 #include "caf/net/dsl/has_accept.hpp"
 #include "caf/net/dsl/has_connect.hpp"
 #include "caf/net/dsl/has_context.hpp"
+#include "caf/net/http/config.hpp"
 #include "caf/net/http/request.hpp"
 #include "caf/net/http/router.hpp"
 #include "caf/net/http/server_factory.hpp"
@@ -25,10 +26,8 @@ namespace caf::net::http {
 class with_t : public extend<dsl::base, with_t>:: //
                with<dsl::has_accept, dsl::has_context> {
 public:
-  using config_type = dsl::generic_config_value<dsl::config_base>;
-
   template <class... Ts>
-  explicit with_t(multiplexer* mpx) : config_(config_type::make(mpx)) {
+  explicit with_t(multiplexer* mpx) : config_(make_counted<base_config>(mpx)) {
     // nop
   }
 
@@ -41,7 +40,7 @@ public:
   with_t& operator=(const with_t&) noexcept = default;
 
   /// @private
-  config_type& config() {
+  base_config& config() {
     return *config_;
   }
 
@@ -52,7 +51,7 @@ public:
   }
 
 private:
-  intrusive_ptr<config_type> config_;
+  intrusive_ptr<base_config> config_;
 };
 
 inline with_t with(actor_system& sys) {

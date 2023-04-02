@@ -37,6 +37,7 @@ caf_add_component(
   src/net/dsl/config_base.cpp
   src/net/generic_lower_layer.cpp
   src/net/generic_upper_layer.cpp
+  src/net/http/config.cpp
   src/net/http/lower_layer.cpp
   src/net/http/method.cpp
   src/net/http/request.cpp

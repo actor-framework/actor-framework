@@ -26,6 +26,7 @@ option(CAF_ENABLE_CPACK "Enable packaging via CPack" OFF)
 option(CAF_ENABLE_CURL_EXAMPLES "Build examples with libcurl" OFF)
 option(CAF_ENABLE_PROTOBUF_EXAMPLES "Build examples with Google Protobuf" OFF)
 option(CAF_ENABLE_QT6_EXAMPLES "Build examples with the Qt6 framework" OFF)
+option(CAF_ENABLE_ROBOT_TESTS "Add the Robot tests to CTest " OFF)
 option(CAF_ENABLE_RUNTIME_CHECKS "Build CAF with extra runtime assertions" OFF)
 
 # -- CAF options that are on by default ----------------------------------------
@@ -399,6 +400,12 @@ endif()
 
 if(CAF_ENABLE_TOOLS)
   add_subdirectory(tools)
+endif()
+
+# -- optionally add the Robot tests to CTest -----------------------------------
+
+if(CAF_ENABLE_TESTING AND CAF_ENABLE_ROBOT_TESTS)
+  add_subdirectory(robot)
 endif()
 
 # -- add top-level compiler and linker flags that propagate to clients ---------

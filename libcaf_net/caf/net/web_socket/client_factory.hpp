@@ -12,6 +12,7 @@
 #include "caf/net/ssl/connection.hpp"
 #include "caf/net/tcp_stream_socket.hpp"
 #include "caf/net/web_socket/client.hpp"
+#include "caf/net/web_socket/config.hpp"
 #include "caf/net/web_socket/framing.hpp"
 #include "caf/timespan.hpp"
 
@@ -60,34 +61,13 @@ private:
 
 namespace caf::net::web_socket {
 
-/// Configuration type for WebSocket clients with a handshake object. The
-/// handshake object sets the default endpoint to '/' for convenience.
-template <class Trait>
-class client_factory_config : public dsl::config_with_trait<Trait> {
-public:
-  using super = dsl::config_with_trait<Trait>;
-
-  explicit client_factory_config(multiplexer* mpx) : super(mpx) {
-    hs.endpoint("/");
-  }
-
-  explicit client_factory_config(const super& other) : super(other) {
-    hs.endpoint("/");
-  }
-
-  client_factory_config(const client_factory_config&) = default;
-
-  handshake hs;
-};
-
 /// Factory for the `with(...).connect(...).start(...)` DSL.
 template <class Trait>
-class client_factory
-  : public dsl::client_factory_base<client_factory_config<Trait>,
-                                    client_factory<Trait>> {
+class client_factory : public dsl::client_factory_base<client_config<Trait>,
+                                                       client_factory<Trait>> {
 public:
-  using super = dsl::client_factory_base<client_factory_config<Trait>,
-                                         client_factory<Trait>>;
+  using super
+    = dsl::client_factory_base<client_config<Trait>, client_factory<Trait>>;
 
   using super::super;
 

@@ -54,6 +54,8 @@ public:
                         + std::string{name()});
   }
 
+  /// Inspects the data of this configuration and returns a pointer to it as
+  /// `has_ctx` instance if possible, `nullptr` otherwise.
   virtual has_ctx* as_has_ctx() noexcept = 0;
 
   bool failed() const noexcept {
@@ -81,31 +83,10 @@ public:
   }
 };
 
-/// Simple base class for a configuration with a trait member.
-template <class Trait>
-class config_with_trait : public config_base {
+template <class... Data>
+class config_impl : public config_base {
 public:
-  using trait_type = Trait;
-
-  explicit config_with_trait(multiplexer* mpx) : config_base(mpx) {
-    // nop
-  }
-
-  config_with_trait(const config_with_trait&) = default;
-
-  config_with_trait& operator=(const config_with_trait&) = default;
-
-  /// Configures various aspects of the protocol stack such as in- and output
-  /// types.
-  Trait trait;
-};
-
-template <class Base, class... Data>
-class config_impl : public Base {
-public:
-  using super = Base;
-
-  static_assert(std::is_base_of_v<config_base, super>);
+  using super = config_base;
 
   template <class From, class... Args>
   explicit config_impl(From&& from, Args&&... args)

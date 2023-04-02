@@ -17,12 +17,11 @@ namespace caf::net::web_socket {
 
 /// DSL entry point for creating a server.
 template <class Trait>
-class has_on_request
-  : public dsl::server_factory_base<dsl::config_with_trait<Trait>,
-                                    has_on_request<Trait>> {
+class has_on_request : public dsl::server_factory_base<server_config<Trait>,
+                                                       has_on_request<Trait>> {
 public:
-  using super = dsl::server_factory_base<dsl::config_with_trait<Trait>,
-                                         has_on_request<Trait>>;
+  using super
+    = dsl::server_factory_base<server_config<Trait>, has_on_request<Trait>>;
 
   using super::super;
 

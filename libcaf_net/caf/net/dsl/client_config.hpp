@@ -47,11 +47,12 @@ public:
 
     static constexpr std::string_view name = "lazy";
 
-    lazy(std::string host, uint16_t port)
-      : server(server_address{std::move(host), port}) {
+    lazy(std::shared_ptr<ssl::context> ctx, std::string host, uint16_t port)
+      : has_ctx(std::move(ctx)), server(server_address{std::move(host), port}) {
     }
 
-    explicit lazy(const uri& addr) : server(addr) {
+    lazy(std::shared_ptr<ssl::context> ctx, const uri& addr)
+      : has_ctx(std::move(ctx)), server(addr) {
       // nop
     }
 
@@ -68,14 +69,17 @@ public:
     size_t max_retry_count = 0;
   };
 
-  static constexpr auto lazy_v = client_config_tag<lazy>{};
+  using lazy_t = client_config_tag<lazy>;
+
+  static constexpr auto lazy_v = lazy_t{};
 
   /// Configuration for a client that uses a user-provided socket.
   class CAF_NET_EXPORT socket : public has_ctx {
   public:
     static constexpr std::string_view name = "socket";
 
-    explicit socket(stream_socket fd) : fd(fd) {
+    socket(std::shared_ptr<ssl::context> ctx, stream_socket fd)
+      : has_ctx(std::move(ctx)), fd(fd) {
       // nop
     }
 
@@ -112,7 +116,9 @@ public:
     }
   };
 
-  static constexpr auto socket_v = client_config_tag<socket>{};
+  using socket_t = client_config_tag<socket>;
+
+  static constexpr auto socket_v = socket_t{};
 
   /// Configuration for a client that uses an already established SSL
   /// connection.
@@ -145,31 +151,17 @@ public:
     ssl::connection state;
   };
 
-  static constexpr auto conn_v = client_config_tag<conn>{};
+  using conn_t = client_config_tag<conn>;
 
-  static constexpr auto fail_v = client_config_tag<error>{};
+  static constexpr auto conn_v = conn_t{};
 
-  template <class Base>
-  class value : public config_impl<Base, lazy, socket, conn> {
-  public:
-    using super = config_impl<Base, lazy, socket, conn>;
+  using fail_t = client_config_tag<error>;
 
-    using super::super;
+  static constexpr auto fail_v = fail_t{};
 
-    template <class T, class From, class... Args>
-    static auto make(client_config_tag<T>, From&& from, Args&&... args) {
-      static_assert(std::is_constructible_v<T, Args...>);
-      return make_counted<value>(std::forward<From>(from),
-                                 std::in_place_type<T>,
-                                 std::forward<Args>(args)...);
-    }
-  };
+  using value = config_impl<lazy, socket, conn>;
 };
 
-template <class Base>
-using client_config_value = client_config::value<Base>;
-
-template <class Base>
-using client_config_ptr = intrusive_ptr<client_config_value<Base>>;
+using client_config_value = client_config::value;
 
 } // namespace caf::net::dsl

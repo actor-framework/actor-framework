@@ -19,6 +19,7 @@ lower_layer::~lower_layer() {
 
 bool lower_layer::send_response(status code) {
   begin_header(code);
+  add_header_field("Content-Length"sv, "0"sv);
   return end_header() && send_payload(const_byte_span{});
 }
 

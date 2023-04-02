@@ -17,6 +17,7 @@
 #include "caf/net/octet_stream/transport.hpp"
 #include "caf/net/ssl/transport.hpp"
 #include "caf/net/tcp_accept_socket.hpp"
+#include "caf/net/web_socket/config.hpp"
 #include "caf/net/web_socket/server.hpp"
 
 #include <cstdint>
@@ -148,12 +149,11 @@ namespace caf::net::web_socket {
 
 /// Factory type for the `with(...).accept(...).start(...)` DSL.
 template <class Trait, class... Ts>
-class server_factory
-  : public dsl::server_factory_base<dsl::config_with_trait<Trait>,
-                                    server_factory<Trait>> {
+class server_factory : public dsl::server_factory_base<server_config<Trait>,
+                                                       server_factory<Trait>> {
 public:
-  using super = dsl::server_factory_base<dsl::config_with_trait<Trait>,
-                                         server_factory<Trait>>;
+  using super
+    = dsl::server_factory_base<server_config<Trait>, server_factory<Trait>>;
 
   using config_type = typename super::config_type;
 

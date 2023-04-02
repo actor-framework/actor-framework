@@ -48,11 +48,11 @@ struct kvs_actor_state {
 
   caf::behavior make_behavior() {
     return {
-      [this](caf::get_atom, const std::string& key) -> std::string {
+      [this](caf::get_atom, const std::string& key) -> caf::result<std::string> {
         if (auto i = data.find(key); i != data.end())
           return i->second;
         else
-          return {};
+          return make_error(caf::sec::no_such_key, key + " not found");
       },
       [this](caf::put_atom, const std::string& key, std::string& value) {
         data.insert_or_assign(key, std::move(value));
@@ -122,7 +122,12 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
                        prom.respond(http::status::ok, "text/plain", value);
                      },
                      [prom](const caf::error& what) mutable {
-                       prom.respond(http::status::internal_server_error, what);
+                       if (what == caf::sec::no_such_key)
+                         prom.respond(http::status::not_found, "text/plain",
+                                      "Key not found.");
+                       else
+                         prom.respond(http::status::internal_server_error,
+                                      what);
                      });
                })
         .route("/api/<arg>", http::method::post,
@@ -158,6 +163,10 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
                      [prom](const caf::error& what) mutable {
                        prom.respond(http::status::internal_server_error, what);
                      });
+               })
+        .route("/status", http::method::get,
+               [kvs](http::responder& res) {
+                 res.respond(http::status::no_content);
                })
         // Launch the server.
         .start();

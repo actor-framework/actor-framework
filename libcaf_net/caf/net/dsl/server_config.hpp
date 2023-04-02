@@ -33,9 +33,11 @@ public:
   public:
     static constexpr std::string_view name = "lazy";
 
-    lazy(uint16_t port, std::string bind_address)
-      : port(port), bind_address(std::move(bind_address)) {
-      // nop
+    lazy(std::shared_ptr<ssl::context> ctx, uint16_t port,
+         std::string bind_address)
+      : has_ctx(std::move(ctx)),
+        port(port),
+        bind_address(std::move(bind_address)) {
     }
 
     /// The port number to bind to.
@@ -48,14 +50,17 @@ public:
     bool reuse_addr = true;
   };
 
-  static constexpr auto lazy_v = server_config_tag<lazy>{};
+  using lazy_t = server_config_tag<lazy>;
+
+  static constexpr auto lazy_v = lazy_t{};
 
   /// Configuration for a server that uses a user-provided socket.
   class socket : public has_ctx {
   public:
     static constexpr std::string_view name = "socket";
 
-    explicit socket(tcp_accept_socket fd) : fd(fd) {
+    socket(std::shared_ptr<ssl::context> ctx, tcp_accept_socket fd)
+      : has_ctx(std::move(ctx)), fd(fd) {
       // nop
     }
 
@@ -76,23 +81,19 @@ public:
     }
   };
 
-  static constexpr auto socket_v = server_config_tag<error>{};
+  using socket_t = server_config_tag<error>;
 
-  static constexpr auto fail_v = server_config_tag<error>{};
+  static constexpr auto socket_v = socket_t{};
 
-  template <class Base>
-  class value : public config_impl<Base, lazy, socket> {
+  using fail_t = server_config_tag<error>;
+
+  static constexpr auto fail_v = fail_t{};
+
+  class value : public config_impl<lazy, socket> {
   public:
-    using super = config_impl<Base, lazy, socket>;
+    using super = config_impl<lazy, socket>;
 
     using super::super;
-
-    template <class T, class From, class... Args>
-    static auto make(server_config_tag<T>, const From& from, Args&&... args) {
-      static_assert(std::is_constructible_v<T, Args...>);
-      return make_counted<value>(from, std::in_place_type<T>,
-                                 std::forward<Args>(args)...);
-    }
 
     /// Configures how many reads we allow on a socket before returning to the
     /// event loop.
@@ -104,10 +105,6 @@ public:
   };
 };
 
-template <class Base>
-using server_config_value = server_config::value<Base>;
-
-template <class Base>
-using server_config_ptr = intrusive_ptr<server_config_value<Base>>;
+using server_config_value = server_config::value;
 
 } // namespace caf::net::dsl

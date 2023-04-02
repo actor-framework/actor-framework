@@ -13,6 +13,7 @@
 #include "caf/net/checked_socket.hpp"
 #include "caf/net/dsl/server_factory_base.hpp"
 #include "caf/net/http/server.hpp"
+#include "caf/net/lp/config.hpp"
 #include "caf/net/lp/framing.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/octet_stream/transport.hpp"
@@ -118,12 +119,11 @@ namespace caf::net::lp {
 
 /// Factory type for the `with(...).accept(...).start(...)` DSL.
 template <class Trait>
-class server_factory
-  : public dsl::server_factory_base<dsl::config_with_trait<Trait>,
-                                    server_factory<Trait>> {
+class server_factory : public dsl::server_factory_base<server_config<Trait>,
+                                                       server_factory<Trait>> {
 public:
-  using super = dsl::server_factory_base<dsl::config_with_trait<Trait>,
-                                         server_factory<Trait>>;
+  using super
+    = dsl::server_factory_base<server_config<Trait>, server_factory<Trait>>;
 
   using config_type = typename super::config_type;
 

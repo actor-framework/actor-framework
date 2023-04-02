@@ -13,6 +13,7 @@
 #include "caf/net/ssl/context.hpp"
 #include "caf/net/tcp_accept_socket.hpp"
 #include "caf/net/web_socket/client_factory.hpp"
+#include "caf/net/web_socket/config.hpp"
 #include "caf/net/web_socket/default_trait.hpp"
 #include "caf/net/web_socket/has_on_request.hpp"
 
@@ -25,10 +26,10 @@ template <class Trait>
 class with_t : public extend<dsl::base, with_t<Trait>>::template //
                with<dsl::has_accept, dsl::has_uri_connect, dsl::has_context> {
 public:
-  using config_type = dsl::generic_config_value<dsl::config_with_trait<Trait>>;
+  using config_type = base_config<Trait>;
 
   template <class... Ts>
-  explicit with_t(multiplexer* mpx) : config_(config_type::make(mpx)) {
+  explicit with_t(multiplexer* mpx) : config_(make_counted<config_type>(mpx)) {
     // nop
   }
 

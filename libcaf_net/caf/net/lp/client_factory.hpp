@@ -9,6 +9,7 @@
 #include "caf/disposable.hpp"
 #include "caf/net/checked_socket.hpp"
 #include "caf/net/dsl/client_factory_base.hpp"
+#include "caf/net/lp/config.hpp"
 #include "caf/net/lp/framing.hpp"
 #include "caf/net/ssl/connection.hpp"
 #include "caf/net/tcp_stream_socket.hpp"
@@ -66,12 +67,11 @@ namespace caf::net::lp {
 
 /// Factory for the `with(...).connect(...).start(...)` DSL.
 template <class Trait>
-class client_factory
-  : public dsl::client_factory_base<dsl::config_with_trait<Trait>,
-                                    client_factory<Trait>> {
+class client_factory : public dsl::client_factory_base<client_config<Trait>,
+                                                       client_factory<Trait>> {
 public:
-  using super = dsl::client_factory_base<dsl::config_with_trait<Trait>,
-                                         client_factory<Trait>>;
+  using super
+    = dsl::client_factory_base<client_config<Trait>, client_factory<Trait>>;
 
   using config_type = typename super::config_type;
 
