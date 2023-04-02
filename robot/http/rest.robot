@@ -3,8 +3,8 @@ Documentation     A test suite for examples/http/rest.hpp.
 Library           Process
 Library           RequestsLibrary
 
-Suite Setup       Start Server
-Suite Teardown    Stop Server
+Suite Setup       Start Servers
+Suite Teardown    Stop Servers
 
 *** Variables ***
 ${HTTP_URL}       http://localhost:55501
@@ -48,7 +48,7 @@ HTTPS Test Delete Key Value Pair
     Key Should Not Exist     ${HTTPS_URL}    foo
 
 *** Keywords ***
-Start Server
+Start Servers
     ${res1}=    Start Process    ${BINARY_PATH}  -p  55501
     Set Suite Variable    ${http_server_process}    ${res1}
     ${res2}=    Start Process    ${BINARY_PATH}  -p  55502  -k  ${SSL_PATH}/key.pem  -c  ${SSL_PATH}/cert.pem
@@ -56,7 +56,7 @@ Start Server
     Wait Until Keyword Succeeds    5s    125ms    Check If HTTP Server Is Reachable
     Wait Until Keyword Succeeds    5s    125ms    Check If HTTPS Server Is Reachable
 
-Stop Server
+Stop Servers
     Terminate Process    ${http_server_process}
     Terminate Process    ${https_server_process}
 

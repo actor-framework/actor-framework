@@ -203,6 +203,10 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
                          });
                      });
                    }))
+        .route("/status", http::method::get,
+               [](http::responder& res) {
+                 res.respond(http::status::no_content);
+               })
         // --(rst-switch_protocol-end)--
         // Run with the configured routes.
         .start();

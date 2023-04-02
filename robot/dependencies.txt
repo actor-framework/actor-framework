@@ -1,2 +1,3 @@
+obotframework-websocketclient
 robotframework
 robotframework-requests
