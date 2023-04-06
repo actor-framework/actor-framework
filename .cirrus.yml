@@ -10,7 +10,8 @@ debug_build_template: &DEBUG_BUILD_TEMPLATE
 
 asan_build_template: &ASAN_BUILD_TEMPLATE
   build_script: .ci/run.sh build .ci/asan-flags.cmake . build
-  test_script: .ci/run.sh test build
+  # see GH issue #1396
+  test_script: .ci/run.sh test build openssl
 
 # CentOS 7 EOL: June 2024
 centos7_task:
