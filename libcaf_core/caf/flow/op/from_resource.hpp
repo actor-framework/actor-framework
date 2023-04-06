@@ -114,12 +114,12 @@ private:
 
   void do_dispose() {
     if (buf_) {
-      buf_->cancel();
-      buf_ = nullptr;
+      auto tmp = std::move(buf_);
+      tmp->cancel();
     }
     if (out_) {
-      out_.on_complete();
-      out_ = nullptr;
+      auto tmp = std::move(out_);
+      tmp.on_complete();
     }
   }
 

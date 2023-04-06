@@ -101,8 +101,8 @@ public:
         while (i != inputs_.end()) {
           auto& input = *i->second;
           if (auto& sub = input.sub) {
-            sub.dispose();
-            sub = nullptr;
+            auto tmp = std::move(input.sub);
+            tmp.dispose();
           }
           if (input.buf.empty())
             i = inputs_.erase(i);
@@ -215,12 +215,11 @@ private:
       }
     }
     if (out_ && inputs_.empty()) {
-      if (!err_) {
-        out_.on_complete();
-      } else {
-        out_.on_error(err_);
-      }
-      out_ = nullptr;
+      auto tmp = std::move(out_);
+      if (!err_)
+        tmp.on_complete();
+      else
+        tmp.on_error(err_);
     }
     flags_.running = false;
   }

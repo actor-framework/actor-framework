@@ -70,8 +70,8 @@ public:
       sink_->abort(reason);
       sub_ = nullptr;
     } else if (out_) {
-      out_.on_error(reason);
-      out_ = nullptr;
+      auto tmp = std::move(out_);
+      tmp.on_error(reason);
     }
   }
 
@@ -81,8 +81,8 @@ public:
       sink_->close();
       sub_ = nullptr;
     } else if (out_) {
-      out_.on_complete();
-      out_ = nullptr;
+      auto tmp = std::move(out_);
+      tmp.on_complete();
     }
   }
 
@@ -102,8 +102,8 @@ public:
     if (out_) {
       out_ = nullptr;
       if (sub_) {
-        sub_.dispose();
-        sub_ = nullptr;
+        auto tmp = std::move(sub_);
+        tmp.dispose();
       }
     }
   }
@@ -157,8 +157,8 @@ private:
   void on_sink_dispose() {
     sink_ = nullptr;
     if (sub_) {
-      sub_.dispose();
-      sub_ = nullptr;
+      auto tmp = std::move(sub_);
+      tmp.dispose();
     }
   }
 

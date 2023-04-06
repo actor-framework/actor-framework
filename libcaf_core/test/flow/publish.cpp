@@ -21,6 +21,10 @@ namespace {
 struct fixture : test_coordinator_fixture<> {
   flow::scoped_coordinator_ptr ctx = flow::make_scoped_coordinator();
 
+  ~fixture() {
+    ctx->run();
+  }
+
   template <class... Ts>
   std::vector<int> ls(Ts... xs) {
     return std::vector<int>{xs...};
@@ -143,13 +147,15 @@ SCENARIO("connectable observables forward errors") {
         auto conn = flow::observable<int>{cell}.share();
         cell->set_error(sec::runtime_error);
         // First subscriber to trigger subscription to the cell.
-        conn.subscribe(flow::make_auto_observer<int>()->as_observer());
+        auto snk1 = flow::make_auto_observer<int>();
+        conn.subscribe(snk1->as_observer());
         ctx->run();
+        CHECK(snk1->aborted());
         // After this point, new subscribers should be aborted right away.
-        auto snk = flow::make_auto_observer<int>();
-        auto sub = conn.subscribe(snk->as_observer());
+        auto snk2 = flow::make_auto_observer<int>();
+        auto sub = conn.subscribe(snk2->as_observer());
         CHECK(sub.disposed());
-        CHECK(snk->aborted());
+        CHECK(snk2->aborted());
         ctx->run();
       }
     }
@@ -163,6 +169,7 @@ SCENARIO("observers that dispose their subscription do not affect others") {
         using impl_t = flow::op::publish<int>;
         auto snk1 = flow::make_passive_observer<int>();
         auto snk2 = flow::make_passive_observer<int>();
+        auto grd = make_unsubscribe_guard(snk1, snk2);
         auto iota = ctx->make_observable().iota(1).take(12).as_observable();
         auto uut = make_counted<impl_t>(ctx.get(), iota.pimpl(), 5);
         auto sub1 = uut->subscribe(snk1->as_observer());
@@ -191,6 +198,7 @@ SCENARIO("publishers with auto_disconnect auto-dispose their subscription") {
         using impl_t = flow::op::publish<int>;
         auto snk1 = flow::make_passive_observer<int>();
         auto snk2 = flow::make_passive_observer<int>();
+        auto grd = make_unsubscribe_guard(snk1, snk2);
         auto iota = ctx->make_observable().iota(1).take(12).as_observable();
         auto uut = make_counted<impl_t>(ctx.get(), iota.pimpl(), 5);
         auto sub1 = uut->subscribe(snk1->as_observer());
@@ -218,10 +226,11 @@ SCENARIO("publishers dispose unexpected subscriptions") {
     WHEN("calling on_subscribe with unexpected subscriptions") {
       THEN("the operator disposes them immediately") {
         using impl_t = flow::op::publish<int>;
-        auto snk1 = flow::make_passive_observer<int>();
+        auto snk = flow::make_passive_observer<int>();
+        auto grd = make_unsubscribe_guard(snk);
         auto iota = ctx->make_observable().iota(1).take(12).as_observable();
         auto uut = make_counted<impl_t>(ctx.get(), iota.pimpl());
-        uut->subscribe(snk1->as_observer());
+        uut->subscribe(snk->as_observer());
         uut->connect();
         auto sub = flow::make_passive_subscription();
         uut->on_subscribe(flow::subscription{sub});

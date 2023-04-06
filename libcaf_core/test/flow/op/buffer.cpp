@@ -49,6 +49,10 @@ struct noskip_trait {
 struct fixture : test_coordinator_fixture<> {
   flow::scoped_coordinator_ptr ctx = flow::make_scoped_coordinator();
 
+  ~fixture() {
+    ctx->run();
+  }
+
   // Similar to buffer::subscribe, but returns a buffer_sub pointer instead of
   // type-erasing it into a disposable.
   template <class Trait = noskip_trait>
@@ -208,6 +212,7 @@ SCENARIO("buffers start to emit items once subscribed") {
     WHEN("the selector never calls on_subscribe") {
       THEN("the buffer still emits batches") {
         auto snk = flow::make_passive_observer<cow_vector<int>>();
+        auto grd = make_unsubscribe_guard(snk);
         auto uut = raw_sub(3, flow::make_nil_observable<int>(ctx.get()),
                            flow::make_nil_observable<int64_t>(ctx.get()),
                            snk->as_observer());
@@ -251,6 +256,7 @@ SCENARIO("buffers dispose unexpected subscriptions") {
     WHEN("calling on_subscribe with unexpected subscriptions") {
       THEN("the buffer disposes them immediately") {
         auto snk = flow::make_passive_observer<cow_vector<int>>();
+        auto grd = make_unsubscribe_guard(snk);
         auto uut = raw_sub(3, flow::make_nil_observable<int>(ctx.get()),
                            flow::make_nil_observable<int64_t>(ctx.get()),
                            snk->as_observer());
@@ -425,6 +431,7 @@ SCENARIO("skip policies suppress empty batches") {
     WHEN("the control observable fires with no pending data") {
       THEN("the operator omits the batch") {
         auto snk = flow::make_passive_observer<cow_vector<int>>();
+        auto grd = make_unsubscribe_guard(snk);
         auto uut = raw_sub<skip_trait>(3, trivial_obs<int>(),
                                        trivial_obs<int64_t>(),
                                        snk->as_observer());
@@ -439,6 +446,7 @@ SCENARIO("skip policies suppress empty batches") {
     WHEN("the control observable fires with pending data") {
       THEN("the operator emits a partial batch") {
         auto snk = flow::make_passive_observer<cow_vector<int>>();
+        auto grd = make_unsubscribe_guard(snk);
         auto uut = raw_sub<skip_trait>(3, trivial_obs<int>(),
                                        trivial_obs<int64_t>(),
                                        snk->as_observer());
@@ -459,6 +467,7 @@ SCENARIO("no-skip policies emit empty batches") {
     WHEN("the control observable fires with no pending data") {
       THEN("the operator emits an empty batch") {
         auto snk = flow::make_passive_observer<cow_vector<int>>();
+        auto grd = make_unsubscribe_guard(snk);
         auto uut = raw_sub<noskip_trait>(3, trivial_obs<int>(),
                                          trivial_obs<int64_t>(),
                                          snk->as_observer());
@@ -473,6 +482,7 @@ SCENARIO("no-skip policies emit empty batches") {
     WHEN("the control observable fires with pending data") {
       THEN("the operator emits a partial batch") {
         auto snk = flow::make_passive_observer<cow_vector<int>>();
+        auto grd = make_unsubscribe_guard(snk);
         auto uut = raw_sub<noskip_trait>(3, trivial_obs<int>(),
                                          trivial_obs<int64_t>(),
                                          snk->as_observer());
@@ -512,6 +522,7 @@ SCENARIO("on_request actions can turn into no-ops") {
     WHEN("the sink requests more data right before a timeout triggers") {
       THEN("the batch gets shipped and the on_request action does nothing") {
         auto snk = flow::make_passive_observer<cow_vector<int>>();
+        auto grd = make_unsubscribe_guard(snk);
         auto uut = raw_sub<skip_trait>(3, trivial_obs<int>(),
                                        trivial_obs<int64_t>(),
                                        snk->as_observer());

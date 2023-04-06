@@ -70,8 +70,9 @@ public:
 
   void on_complete() override {
     if (sub) {
-      sub.dispose();
-      sub = nullptr;
+      subscription tmp;
+      tmp.swap(sub);
+      tmp.dispose();
     }
     state = observer_state::completed;
   }
@@ -157,6 +158,43 @@ public:
   /// Stores all items received via `on_next`.
   std::vector<T> buf;
 };
+
+template <class T>
+struct unsubscribe_guard {
+public:
+  explicit unsubscribe_guard(intrusive_ptr<T> ptr) : ptr_(std::move(ptr)) {
+    // nop
+  }
+
+  unsubscribe_guard(unsubscribe_guard&&) = default;
+
+  unsubscribe_guard& operator=(unsubscribe_guard&&) = delete;
+
+  unsubscribe_guard(const unsubscribe_guard&) = delete;
+
+  unsubscribe_guard& operator=(const unsubscribe_guard&) = delete;
+
+  ~unsubscribe_guard() {
+    if (ptr_)
+      ptr_->unsubscribe();
+  }
+
+private:
+  intrusive_ptr<T> ptr_;
+};
+
+template <class T>
+auto make_unsubscribe_guard(intrusive_ptr<T> ptr) {
+  return unsubscribe_guard<T>{std::move(ptr)};
+}
+
+template <class T1, class T2, class... Ts>
+auto make_unsubscribe_guard(intrusive_ptr<T1> ptr1, intrusive_ptr<T2> ptr2,
+                            Ts... ptrs) {
+  return std::make_tuple(make_unsubscribe_guard(std::move(ptr1)),
+                         make_unsubscribe_guard(ptr2),
+                         make_unsubscribe_guard(std::move(ptrs))...);
+}
 
 template <class T>
 class canceling_observer : public flow::observer_impl_base<T> {

@@ -194,7 +194,7 @@ private:
     value_sub_.dispose();
     control_sub_.dispose();
     switch (state_) {
-      case state::running:
+      case state::running: {
         if (!buf_.empty()) {
           if (demand_ == 0) {
             state_ = err_ ? state::aborted : state::completed;
@@ -204,13 +204,14 @@ private:
           out_.on_next(f(buf_));
           buf_.clear();
         }
+        auto tmp = std::move(out_);
         if (err_)
-          out_.on_error(err_);
+          tmp.on_error(err_);
         else
-          out_.on_complete();
-        out_ = nullptr;
+          tmp.on_complete();
         state_ = state::disposed;
         break;
+      }
       default:
         break;
     }
@@ -226,11 +227,11 @@ private:
     }
     if (!buf_.empty())
       do_emit();
+    auto tmp = std::move(out_);
     if (err_)
-      out_.on_error(err_);
+      tmp.on_error(err_);
     else
-      out_.on_complete();
-    out_ = nullptr;
+      tmp.on_complete();
   }
 
   void do_emit() {
@@ -249,8 +250,8 @@ private:
     value_sub_.dispose();
     control_sub_.dispose();
     if (out_) {
-      out_.on_complete();
-      out_ = nullptr;
+      auto tmp = std::move(out_);
+      tmp.on_complete();
     }
     state_ = state::disposed;
   }

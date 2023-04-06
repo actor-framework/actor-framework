@@ -81,8 +81,8 @@ public:
     if (out_) {
       for_each_input([](auto, auto& input) {
         if (input.sub) {
-          input.sub.dispose();
-          input.sub = nullptr;
+          auto tmp = std::move(input.sub);
+          tmp.dispose();
         }
         input.buf.clear();
       });

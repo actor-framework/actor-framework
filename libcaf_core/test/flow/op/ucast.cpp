@@ -68,6 +68,7 @@ SCENARIO("ucast operators may only be subscribed to once") {
         auto uut = make_ucast();
         auto o1 = flow::make_passive_observer<int>();
         auto o2 = flow::make_passive_observer<int>();
+        auto grd = make_unsubscribe_guard(o1, o2);
         auto sub1 = uut->subscribe(o1->as_observer());
         auto sub2 = uut->subscribe(o2->as_observer());
         CHECK(o1->subscribed());

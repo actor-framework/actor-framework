@@ -41,15 +41,16 @@ public:
     }
 
     void on_complete() {
-      CAF_ASSERT(sub->in_.valid());
-      sub->in_.dispose();
-      sub->in_ = nullptr;
+      if (sub->in_) {
+        auto tmp = std::move(sub->in_);
+        tmp.dispose();
+      }
     }
 
     void on_error(const error& what) {
       if (sub->in_) {
-        sub->in_.dispose();
-        sub->in_ = nullptr;
+        auto tmp = std::move(sub->in_);
+        tmp.dispose();
       }
       sub->err_ = what;
     }
@@ -187,8 +188,8 @@ public:
       ctx_->delay_fn([out = std::move(out_)]() mutable { out.on_complete(); });
     }
     if (in_) {
-      in_.dispose();
-      in_ = nullptr;
+      auto tmp = std::move(in_);
+      tmp.dispose();
     }
   }
 
@@ -235,12 +236,12 @@ private:
       if (in_) {
         pull();
       } else if (buf_.empty()) {
-        if (err_)
-          out_.on_error(err_);
-        else
-          out_.on_complete();
-        out_ = nullptr;
         disposed_ = true;
+        auto tmp = std::move(out_);
+        if (err_)
+          tmp.on_error(err_);
+        else
+          tmp.on_complete();
       }
     }
   }

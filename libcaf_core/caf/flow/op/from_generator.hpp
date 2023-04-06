@@ -97,11 +97,11 @@ private:
   }
 
   void fin() {
+    auto tmp = std::move(out_);
     if (!err_)
-      out_.on_complete();
+      tmp.on_complete();
     else
-      out_.on_error(err_);
-    out_ = nullptr;
+      tmp.on_error(err_);
   }
 
   void pull(size_t n) {
