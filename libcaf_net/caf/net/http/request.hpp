@@ -8,8 +8,8 @@
 #include "caf/async/promise.hpp"
 #include "caf/byte_span.hpp"
 #include "caf/detail/net_export.hpp"
-#include "caf/net/http/fwd.hpp"
-#include "caf/net/http/header.hpp"
+#include "caf/net/fwd.hpp"
+#include "caf/net/http/request_header.hpp"
 #include "caf/net/http/response.hpp"
 
 #include <cstdint>
@@ -20,11 +20,12 @@
 
 namespace caf::net::http {
 
-/// Handle type (implicitly shared) that represents an HTTP client request.
+/// Implicitly shared handle type that represents an HTTP client request with a
+/// promise for the HTTP response.
 class CAF_NET_EXPORT request {
 public:
   struct impl {
-    header hdr;
+    request_header hdr;
     std::vector<std::byte> body;
     async::promise<response> prom;
   };
@@ -40,15 +41,20 @@ public:
     // nop
   }
 
-  /// Returns the HTTP header.
+  /// Returns the HTTP header for the request.
   /// @pre `valid()`
-  const header& hdr() const {
+  const request_header& header() const {
     return pimpl_->hdr;
   }
 
-  /// Returns the HTTP body (payload).
+  /// Returns the HTTP body (payload) for the request.
   /// @pre `valid()`
   const_byte_span body() const {
+    return make_span(pimpl_->body);
+  }
+
+  /// @copydoc body
+  const_byte_span payload() const {
     return make_span(pimpl_->body);
   }
 

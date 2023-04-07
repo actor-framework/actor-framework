@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/error.hpp"
 #include "caf/fwd.hpp"
 #include "caf/net/fwd.hpp"
 
@@ -21,7 +22,7 @@ public:
     // nop
   }
 
-  virtual error start(net::socket_manager*, const settings&) {
+  virtual error start(net::socket_manager*) {
     return none;
   }
 

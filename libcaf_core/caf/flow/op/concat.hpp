@@ -147,20 +147,20 @@ private:
   void fin(const error* err = nullptr) {
     CAF_ASSERT(out_);
     if (factory_sub_) {
-      factory_sub_.dispose();
-      factory_sub_ = nullptr;
+      auto tmp = std::move(factory_sub_);
+      tmp.dispose();
     }
     if (active_sub_) {
-      active_sub_.dispose();
-      active_sub_ = nullptr;
+      auto tmp = std::move(active_sub_);
+      tmp.dispose();
     }
     factory_key_ = 0;
     active_key_ = 0;
+    auto tmp = std::move(out_);
     if (err)
-      out_.on_error(*err);
+      tmp.on_error(*err);
     else
-      out_.on_complete();
-    out_ = nullptr;
+      tmp.on_complete();
   }
 
   /// Stores the context (coordinator) that runs this flow.

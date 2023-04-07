@@ -71,13 +71,13 @@ public:
       closed = true;
       if (!running && buf.empty()) {
         disposed = true;
-        if (out) {
-          out.on_complete();
-          out = nullptr;
-        }
         when_disposed = nullptr;
         when_consumed_some = nullptr;
         when_demand_changed = nullptr;
+        if (out) {
+          auto tmp = std::move(out);
+          tmp.on_complete();
+        }
       }
     }
   }
@@ -88,33 +88,33 @@ public:
       err = reason;
       if (!running && buf.empty()) {
         disposed = true;
-        if (out) {
-          auto out_hdl = std::move(out);
-          out_hdl.on_error(reason);
-        }
         when_disposed = nullptr;
         when_consumed_some = nullptr;
         when_demand_changed = nullptr;
+        if (out) {
+          auto tmp = std::move(out);
+          tmp.on_error(reason);
+        }
       }
     }
   }
 
   void dispose() {
-    if (out) {
-      out.on_complete();
-      out = nullptr;
-    }
     if (when_disposed) {
       ctx->delay(std::move(when_disposed));
     }
     if (when_consumed_some) {
-      when_consumed_some.dispose();
-      when_consumed_some = nullptr;
+      auto tmp = std::move(when_consumed_some);
+      tmp.dispose();
     }
     when_demand_changed = nullptr;
     buf.clear();
     demand = 0;
     disposed = true;
+    if (out) {
+      auto tmp = std::move(out);
+      tmp.on_complete();
+    }
   }
 
   void do_run() {
@@ -130,11 +130,11 @@ public:
         --demand;
       }
       if (buf.empty() && closed) {
+        auto tmp = std::move(out);
         if (err)
-          out.on_error(err);
+          tmp.on_error(err);
         else
-          out.on_complete();
-        out = nullptr;
+          tmp.on_complete();
         dispose();
       } else if (got_some && when_consumed_some) {
         ctx->delay(when_consumed_some);

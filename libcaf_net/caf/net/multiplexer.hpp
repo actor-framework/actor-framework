@@ -9,7 +9,6 @@
 #include "caf/detail/atomic_ref_counted.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/net/fwd.hpp"
-#include "caf/net/operation.hpp"
 #include "caf/net/pipe_socket.hpp"
 #include "caf/net/socket.hpp"
 #include "caf/ref_counted.hpp"
@@ -27,8 +26,6 @@ struct pollfd;
 } // extern "C"
 
 namespace caf::net {
-
-class pollset_updater;
 
 /// Multiplexes any number of ::socket_manager objects with a ::socket.
 class CAF_NET_EXPORT multiplexer : public detail::atomic_ref_counted,
@@ -49,13 +46,16 @@ public:
 
   // -- friends ----------------------------------------------------------------
 
-  friend class pollset_updater; // Needs access to the `do_*` functions.
+  friend class detail::pollset_updater; // Needs access to the `do_*` functions.
 
   // -- static utility functions -----------------------------------------------
 
   /// Blocks the PIPE signal on the current thread when running on a POSIX
   /// windows. Has no effect when running on Windows.
   static void block_sigpipe();
+
+  /// Returns a pointer to the multiplexer from the actor system.
+  static multiplexer* from(actor_system& sys);
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -92,9 +92,6 @@ public:
 
   /// Returns the enclosing @ref actor_system.
   actor_system& system();
-
-  /// Computes the current mask for the manager. Mostly useful for testing.
-  operation mask_of(const socket_manager_ptr& mgr);
 
   // -- implementation of execution_context ------------------------------------
 

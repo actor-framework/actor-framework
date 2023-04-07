@@ -105,6 +105,16 @@ make_ctx(const SSL_METHOD* method, Enum min_val, Enum max_val) {
 
 } // namespace
 
+expected<void> context::enable(bool flag) {
+  // By returning a default-constructed error, we suppress any subsequent
+  // function calls in an `and_then` chain. The caf-net DSL then treats a
+  // default-constructed error as "no SSL".
+  if (flag)
+    return expected<void>{};
+  else
+    return expected<void>{caf::error{}};
+}
+
 expected<context> context::make(tls vmin, tls vmax) {
   auto [raw, errstr] = make_ctx(CAF_TLS_METHOD(_), vmin, vmax);
   context ctx{reinterpret_cast<impl*>(raw)};
@@ -161,7 +171,7 @@ expected<context> context::make_client(dtls vmin, dtls vmax) {
 
 // -- properties ---------------------------------------------------------------
 
-void context::set_verify_mode(verify_t flags) {
+void context::verify_mode(verify_t flags) {
   auto ptr = native(pimpl_);
   SSL_CTX_set_verify(ptr, to_integer(flags), SSL_CTX_get_verify_callback(ptr));
 }
@@ -178,7 +188,7 @@ int c_password_callback(char* buf, int size, int rwflag, void* ptr) {
 
 } // namespace
 
-void context::set_password_callback_impl(password::callback_ptr callback) {
+void context::password_callback_impl(password::callback_ptr callback) {
   if (data_ == nullptr)
     data_ = new user_data;
   auto ptr = native(pimpl_);
@@ -199,25 +209,66 @@ void* context::native_handle() const noexcept {
 
 // -- error handling -----------------------------------------------------------
 
-std::string context::last_error_string() {
+std::string context::next_error_string() {
+  std::string result;
+  append_next_error_string(result);
+  return result;
+}
+
+void context::append_next_error_string(std::string& buf) {
   auto save_cstr = [](const char* cstr) { return cstr ? cstr : "NULL"; };
   if (auto code = ERR_get_error(); code != 0) {
-    std::string result;
-    result.reserve(256);
-    result = "error:";
-    result += std::to_string(code);
-    result += ':';
-    result += save_cstr(ERR_lib_error_string(code));
-    result += "::";
-    result += save_cstr(ERR_reason_error_string(code));
-    return result;
+    buf = "error:";
+    buf += std::to_string(code);
+    buf += ':';
+    buf += save_cstr(ERR_lib_error_string(code));
+    buf += "::";
+    buf += save_cstr(ERR_reason_error_string(code));
   } else {
-    return "no-error";
+    buf += "no-error";
   }
 }
 
-bool context::has_last_error() noexcept {
+std::string context::last_error_string() {
+  if (!has_error())
+    return {};
+  auto result = next_error_string();
+  while (has_error()) {
+    result += '\n';
+    append_next_error_string(result);
+  }
+  return result;
+}
+
+bool context::has_error() noexcept {
   return ERR_peek_error() != 0;
+}
+
+error context::last_error() {
+  if (ERR_peek_error() == 0)
+    return error{};
+  auto description = next_error_string();
+  while (has_error()) {
+    description += '\n';
+    append_next_error_string(description);
+  }
+  // TODO: Mapping the codes to an error enum would be much nicer than using
+  //       the generic 'runtime_error'.
+  return make_error(sec::runtime_error, std::move(description));
+}
+
+error context::last_error_or(error default_error) {
+  if (ERR_peek_error() == 0)
+    return default_error;
+  else
+    return last_error();
+}
+
+error context::last_error_or_unexpected(std::string_view description) {
+  if (ERR_peek_error() == 0)
+    return make_error(sec::runtime_error, std::string{description});
+  else
+    return last_error();
 }
 
 // -- connections --------------------------------------------------------------
@@ -227,6 +278,7 @@ expected<connection> context::new_connection(stream_socket fd) {
     auto conn = connection::from_native(ptr);
     if (auto bio_ptr = BIO_new_socket(fd.id, BIO_NOCLOSE)) {
       SSL_set_bio(ptr, bio_ptr, bio_ptr);
+
       return {std::move(conn)};
     } else {
       return {make_error(sec::logic_error, "BIO_new_socket failed")};
@@ -252,7 +304,7 @@ expected<connection> context::new_connection(stream_socket fd,
 
 // -- certificates and keys ----------------------------------------------------
 
-bool context::set_default_verify_paths() {
+bool context::enable_default_verify_paths() {
   ERR_clear_error();
   return SSL_CTX_set_default_verify_paths(native(pimpl_)) == 1;
 }

@@ -9,7 +9,6 @@
 #include "caf/fwd.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/generic_lower_layer.hpp"
-#include "caf/net/http/fwd.hpp"
 
 #include <string_view>
 
@@ -46,6 +45,10 @@ public:
   /// Sends the last chunk, completing a chunked payload.
   virtual bool send_end_of_chunks() = 0;
 
+  /// Sends a response that only consists of a header with a status code such as
+  /// `status::no_content`.
+  bool send_response(status code);
+
   /// Convenience function for sending header and payload. Automatically sets
   /// the header fields `Content-Type` and `Content-Length`.
   bool send_response(status code, std::string_view content_type,
@@ -54,6 +57,15 @@ public:
   /// @copydoc send_response
   bool send_response(status code, std::string_view content_type,
                      std::string_view content);
+
+  /// @copydoc send_response
+  bool send_response(status code, const error& err);
+
+  /// Asks the stream to swap the HTTP layer with `next` after returning from
+  /// `consume`.
+  /// @note may only be called from the upper layer in `consume`.
+  virtual void switch_protocol(std::unique_ptr<octet_stream::upper_layer> next)
+    = 0;
 };
 
 } // namespace caf::net::http

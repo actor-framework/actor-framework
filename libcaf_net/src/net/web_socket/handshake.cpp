@@ -7,6 +7,8 @@
 #include "caf/config.hpp"
 #include "caf/detail/base64.hpp"
 #include "caf/hash/sha1.hpp"
+#include "caf/net/http/lower_layer.hpp"
+#include "caf/net/http/status.hpp"
 #include "caf/string_algorithms.hpp"
 
 #include <algorithm>
@@ -67,7 +69,7 @@ void handshake::randomize_key(unsigned seed) {
 }
 
 bool handshake::has_mandatory_fields() const noexcept {
-  return fields_.contains("_endpoint") && fields_.contains("_host");
+  return has_endpoint() && has_host();
 }
 
 // -- HTTP generation and validation -------------------------------------------
@@ -116,6 +118,15 @@ void handshake::write_http_1_response(byte_buffer& buf) const {
          "Connection: Upgrade\r\n"
          "Sec-WebSocket-Accept: "
       << response_key() << "\r\n\r\n";
+}
+
+void handshake::write_response(http::lower_layer* down) const {
+  down->begin_header(http::status::switching_protocols);
+  down->add_header_field("Upgrade", "websocket");
+  down->add_header_field("Connection", "Upgrade");
+  down->add_header_field("Sec-WebSocket-Accept", response_key());
+  down->end_header();
+  down->send_payload({});
 }
 
 namespace {

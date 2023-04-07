@@ -5,19 +5,19 @@
 #pragma once
 
 #include "caf/byte_span.hpp"
+#include "caf/detail/message_flow_bridge.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/error.hpp"
 #include "caf/logger.hpp"
 #include "caf/net/fwd.hpp"
-#include "caf/net/http/header.hpp"
 #include "caf/net/http/method.hpp"
+#include "caf/net/http/request_header.hpp"
 #include "caf/net/http/status.hpp"
 #include "caf/net/http/v1.hpp"
-#include "caf/net/message_flow_bridge.hpp"
 #include "caf/net/multiplexer.hpp"
+#include "caf/net/octet_stream/upper_layer.hpp"
 #include "caf/net/receive_policy.hpp"
 #include "caf/net/socket_manager.hpp"
-#include "caf/net/stream_oriented.hpp"
 #include "caf/net/web_socket/framing.hpp"
 #include "caf/net/web_socket/handshake.hpp"
 #include "caf/net/web_socket/lower_layer.hpp"
@@ -35,46 +35,27 @@ namespace caf::net::web_socket {
 /// 6455. Initially, the layer performs the WebSocket handshake. Once completed,
 /// this layer decodes RFC 6455 frames and forwards binary and text messages to
 /// `UpperLayer`.
-class CAF_NET_EXPORT server : public stream_oriented::upper_layer {
+class CAF_NET_EXPORT server : public octet_stream::upper_layer {
 public:
   // -- member types -----------------------------------------------------------
 
-  using upper_layer_ptr = std::unique_ptr<web_socket::upper_layer>;
+  using upper_layer_ptr = std::unique_ptr<web_socket::upper_layer::server>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit server(upper_layer_ptr up);
+  explicit server(upper_layer_ptr up) : up_(std::move(up)) {
+    // nop
+  }
 
   // -- factories --------------------------------------------------------------
 
-  static std::unique_ptr<server> make(upper_layer_ptr up);
-
-  // -- properties -------------------------------------------------------------
-
-  auto& upper_layer() noexcept {
-    return framing_.upper_layer();
+  static std::unique_ptr<server> make(upper_layer_ptr up) {
+    return std::make_unique<server>(std::move(up));
   }
 
-  const auto& upper_layer() const noexcept {
-    return framing_.upper_layer();
-  }
+  // -- octet_stream::upper_layer implementation -------------------------------
 
-  auto& lower_layer() noexcept {
-    return framing_.lower_layer();
-  }
-
-  const auto& lower_layer() const noexcept {
-    return framing_.lower_layer();
-  }
-
-  bool handshake_complete() const noexcept {
-    return handshake_complete_;
-  }
-
-  // -- stream_oriented::upper_layer implementation ----------------------------
-
-  error start(stream_oriented::lower_layer* down,
-              const settings& config) override;
+  error start(octet_stream::lower_layer* down) override;
 
   void abort(const error& reason) override;
 
@@ -91,16 +72,11 @@ private:
 
   bool handle_header(std::string_view http);
 
-  /// Stores whether the WebSocket handshake completed successfully.
-  bool handshake_complete_ = false;
+  /// Points to the transport layer below.
+  octet_stream::lower_layer* down_;
 
-  /// Stores the upper layer.
-  framing framing_;
-
-  /// Holds a copy of the settings in order to delay initialization of the upper
-  /// layer until the handshake completed. We also fill this dictionary with the
-  /// contents of the HTTP GET header.
-  settings cfg_;
+  /// We store this only to pass it to the framing layer after the handshake.
+  upper_layer_ptr up_;
 };
 
 } // namespace caf::net::web_socket

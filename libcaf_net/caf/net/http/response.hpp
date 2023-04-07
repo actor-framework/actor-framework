@@ -8,7 +8,7 @@
 #include "caf/byte_buffer.hpp"
 #include "caf/default_enum_inspect.hpp"
 #include "caf/detail/net_export.hpp"
-#include "caf/net/http/fwd.hpp"
+#include "caf/net/fwd.hpp"
 #include "caf/span.hpp"
 #include "caf/unordered_flat_map.hpp"
 

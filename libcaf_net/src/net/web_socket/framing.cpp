@@ -5,87 +5,22 @@
 #include "caf/net/web_socket/framing.hpp"
 
 #include "caf/logger.hpp"
+#include "caf/net/http/v1.hpp"
 
 namespace caf::net::web_socket {
 
-// -- initialization ---------------------------------------------------------
+// -- octet_stream::upper_layer implementation ---------------------------------
 
-void framing::start(stream_oriented::lower_layer* down) {
+error framing::start(octet_stream::lower_layer* down) {
   std::random_device rd;
   rng_.seed(rd());
   down_ = down;
+  return up_->start(this);
 }
 
-// -- web_socket::lower_layer implementation -----------------------------------
-
-bool framing::can_send_more() const noexcept {
-  return down_->can_send_more();
+void framing::abort(const error& reason) {
+  up_->abort(reason);
 }
-
-void framing::suspend_reading() {
-  down_->configure_read(receive_policy::stop());
-}
-
-bool framing::is_reading() const noexcept {
-  return down_->is_reading();
-}
-
-void framing::write_later() {
-  down_->write_later();
-}
-
-void framing::shutdown(status code, std::string_view msg) {
-  auto code_val = static_cast<uint16_t>(code);
-  uint32_t mask_key = 0;
-  byte_buffer payload;
-  payload.reserve(msg.size() + 2);
-  payload.push_back(static_cast<std::byte>((code_val & 0xFF00) >> 8));
-  payload.push_back(static_cast<std::byte>(code_val & 0x00FF));
-  for (auto c : msg)
-    payload.push_back(static_cast<std::byte>(c));
-  if (mask_outgoing_frames) {
-    mask_key = static_cast<uint32_t>(rng_());
-    detail::rfc6455::mask_data(mask_key, payload);
-  }
-  down_->begin_output();
-  detail::rfc6455::assemble_frame(detail::rfc6455::connection_close, mask_key,
-                                  payload, down_->output_buffer());
-  down_->end_output();
-  down_->shutdown();
-}
-
-void framing::request_messages() {
-  if (!down_->is_reading())
-    down_->configure_read(receive_policy::up_to(2048));
-}
-
-void framing::begin_binary_message() {
-  // nop
-}
-
-byte_buffer& framing::binary_message_buffer() {
-  return binary_buf_;
-}
-
-bool framing::end_binary_message() {
-  ship_frame(binary_buf_);
-  return true;
-}
-
-void framing::begin_text_message() {
-  // nop
-}
-
-text_buffer& framing::text_message_buffer() {
-  return text_buf_;
-}
-
-bool framing::end_text_message() {
-  ship_frame(text_buf_);
-  return true;
-}
-
-// -- interface for the lower layer --------------------------------------------
 
 ptrdiff_t framing::consume(byte_span buffer, byte_span) {
   // Make sure we're overriding any 'exactly' setting.
@@ -175,6 +110,87 @@ ptrdiff_t framing::consume(byte_span buffer, byte_span) {
     payload_buf_.insert(payload_buf_.end(), payload.begin(), payload.end());
   }
   return static_cast<ptrdiff_t>(frame_size);
+}
+
+void framing::prepare_send() {
+  up_->prepare_send();
+}
+
+bool framing::done_sending() {
+  return up_->done_sending();
+}
+
+// -- web_socket::lower_layer implementation -----------------------------------
+
+multiplexer& framing::mpx() noexcept {
+  return down_->mpx();
+}
+
+bool framing::can_send_more() const noexcept {
+  return down_->can_send_more();
+}
+
+void framing::suspend_reading() {
+  down_->configure_read(receive_policy::stop());
+}
+
+bool framing::is_reading() const noexcept {
+  return down_->is_reading();
+}
+
+void framing::write_later() {
+  down_->write_later();
+}
+
+void framing::shutdown(status code, std::string_view msg) {
+  auto code_val = static_cast<uint16_t>(code);
+  uint32_t mask_key = 0;
+  byte_buffer payload;
+  payload.reserve(msg.size() + 2);
+  payload.push_back(static_cast<std::byte>((code_val & 0xFF00) >> 8));
+  payload.push_back(static_cast<std::byte>(code_val & 0x00FF));
+  for (auto c : msg)
+    payload.push_back(static_cast<std::byte>(c));
+  if (mask_outgoing_frames) {
+    mask_key = static_cast<uint32_t>(rng_());
+    detail::rfc6455::mask_data(mask_key, payload);
+  }
+  down_->begin_output();
+  detail::rfc6455::assemble_frame(detail::rfc6455::connection_close, mask_key,
+                                  payload, down_->output_buffer());
+  down_->end_output();
+  down_->shutdown();
+}
+
+void framing::request_messages() {
+  if (!down_->is_reading())
+    down_->configure_read(receive_policy::up_to(2048));
+}
+
+void framing::begin_binary_message() {
+  // nop
+}
+
+byte_buffer& framing::binary_message_buffer() {
+  return binary_buf_;
+}
+
+bool framing::end_binary_message() {
+  ship_frame(binary_buf_);
+  return true;
+}
+
+void framing::begin_text_message() {
+  // nop
+}
+
+text_buffer& framing::text_message_buffer() {
+  return text_buf_;
+}
+
+bool framing::end_text_message() {
+  ship_frame(text_buf_);
+  return true;
 }
 
 // -- implementation details ---------------------------------------------------

@@ -60,3 +60,11 @@ make_connected_tcp_stream_socket(std::string host, uint16_t port,
                                  timespan timeout = infinite);
 
 } // namespace caf::net
+
+namespace caf::detail {
+
+expected<net::tcp_stream_socket> CAF_NET_EXPORT //
+tcp_try_connect(std::string host, uint16_t port, timespan connection_timeout,
+                size_t max_retry_count, timespan retry_delay);
+
+} // namespace caf::detail

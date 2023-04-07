@@ -16,19 +16,46 @@
 
 namespace caf::flow::op {
 
+/// Interface for listening on a cell.
+template <class T>
+class cell_listener {
+public:
+  friend void intrusive_ptr_add_ref(const cell_listener* ptr) noexcept {
+    ptr->ref_listener();
+  }
+
+  friend void intrusive_ptr_release(const cell_listener* ptr) noexcept {
+    ptr->deref_listener();
+  }
+
+  virtual void on_next(const T& item) = 0;
+
+  virtual void on_complete() = 0;
+
+  virtual void on_error(const error& what) = 0;
+
+  virtual void ref_listener() const noexcept = 0;
+
+  virtual void deref_listener() const noexcept = 0;
+};
+
+/// Convenience alias for a reference-counting smart pointer.
+template <class T>
+using cell_listener_ptr = intrusive_ptr<cell_listener<T>>;
+
 /// State shared between one multicast operator and one subscribed observer.
 template <class T>
 struct cell_sub_state {
   std::variant<none_t, unit_t, T, error> content;
-  std::vector<observer<T>> listeners;
+  std::vector<cell_listener_ptr<T>> listeners;
 
   void set_null() {
     CAF_ASSERT(std::holds_alternative<none_t>(content));
     content = unit;
-    std::vector<observer<T>> xs;
+    std::vector<cell_listener_ptr<T>> xs;
     xs.swap(listeners);
     for (auto& listener : xs) {
-      listener.on_complete();
+      listener->on_complete();
     }
   }
 
@@ -36,11 +63,11 @@ struct cell_sub_state {
     CAF_ASSERT(std::holds_alternative<none_t>(content));
     content = std::move(item);
     auto& ref = std::get<T>(content);
-    std::vector<observer<T>> xs;
+    std::vector<cell_listener_ptr<T>> xs;
     xs.swap(listeners);
     for (auto& listener : xs) {
-      listener.on_next(ref);
-      listener.on_complete();
+      listener->on_next(ref);
+      listener->on_complete();
     }
   }
 
@@ -48,47 +75,59 @@ struct cell_sub_state {
     CAF_ASSERT(std::holds_alternative<none_t>(content));
     content = std::move(what);
     auto& ref = std::get<error>(content);
-    std::vector<observer<T>> xs;
+    std::vector<cell_listener_ptr<T>> xs;
     xs.swap(listeners);
     for (auto& listener : xs)
-      listener.on_error(ref);
+      listener->on_error(ref);
   }
 
-  void listen(observer<T> listener) {
+  void listen(cell_listener_ptr<T> listener) {
     switch (content.index()) {
       case 1:
-        listener.on_complete();
+        listener->on_complete();
         break;
       case 2:
-        listener.on_next(std::get<T>(content));
-        listener.on_complete();
+        listener->on_next(std::get<T>(content));
+        listener->on_complete();
         break;
       case 3:
-        listener.on_error(std::get<error>(content));
+        listener->on_error(std::get<error>(content));
         break;
       default:
         listeners.emplace_back(std::move(listener));
     }
   }
 
-  void drop(const observer<T>& listener) {
+  void drop(const cell_listener_ptr<T>& listener) {
     if (auto i = std::find(listeners.begin(), listeners.end(), listener);
         i != listeners.end())
       listeners.erase(i);
   }
 };
 
+/// Convenience alias for the state of a cell.
 template <class T>
 using cell_sub_state_ptr = std::shared_ptr<cell_sub_state<T>>;
 
+/// The subscription object for interfacing an observer with the cell state.
 template <class T>
-class cell_sub : public subscription::impl_base {
+class cell_sub : public subscription::impl_base, public cell_listener<T> {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
   cell_sub(coordinator* ctx, cell_sub_state_ptr<T> state, observer<T> out)
     : ctx_(ctx), state_(std::move(state)), out_(std::move(out)) {
     // nop
+  }
+
+  // -- disambiguation ---------------------------------------------------------
+
+  friend void intrusive_ptr_add_ref(const cell_sub* ptr) noexcept {
+    ptr->ref_disposable();
+  }
+
+  friend void intrusive_ptr_release(const cell_sub* ptr) noexcept {
+    ptr->deref_disposable();
   }
 
   // -- implementation of subscription -----------------------------------------
@@ -99,19 +138,54 @@ public:
 
   void dispose() override {
     if (state_) {
-      state_->drop(out_);
+      state_->drop(this);
       state_ = nullptr;
-      out_ = nullptr;
+    }
+    if (out_) {
+      auto tmp = std::move(out_);
+      tmp.on_complete();
     }
   }
 
   void request(size_t) override {
     if (!listening_) {
       listening_ = true;
-      ctx_->delay_fn([state = state_, out = out_] { //
-        state->listen(std::move(out));
+      auto self = cell_listener_ptr<T>{this};
+      ctx_->delay_fn([state = state_, self]() mutable { //
+        state->listen(std::move(self));
       });
     }
+  }
+
+  // -- implementation of listener<T> ------------------------------------------
+
+  void on_next(const T& item) override {
+    if (out_)
+      out_.on_next(item);
+  }
+
+  void on_complete() override {
+    state_ = nullptr;
+    if (out_) {
+      auto tmp = std::move(out_);
+      tmp.on_complete();
+    }
+  }
+
+  void on_error(const error& what) override {
+    state_ = nullptr;
+    if (out_) {
+      auto tmp = std::move(out_);
+      tmp.on_error(what);
+    }
+  }
+
+  void ref_listener() const noexcept override {
+    ref_disposable();
+  }
+
+  void deref_listener() const noexcept override {
+    deref_disposable();
   }
 
 private:

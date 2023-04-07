@@ -24,10 +24,7 @@ public:
 
   caf::byte_buffer binary_input;
 
-  settings cfg;
-
-  error start(net::web_socket::lower_layer*, const settings& args) override {
-    cfg = args;
+  error start(net::web_socket::lower_layer*) override {
     return none;
   }
 
@@ -98,17 +95,15 @@ SCENARIO("the client performs the WebSocket handshake on startup") {
     WHEN("starting a WebSocket client") {
       auto app = app_t::make();
       auto ws = net::web_socket::client::make(make_handshake(), std::move(app));
-      auto& ws_state = *ws;
       auto uut = mock_stream_transport::make(std::move(ws));
       THEN("the client sends its HTTP request when initializing it") {
-        CHECK_EQ(uut->start(), error{});
+        CHECK_EQ(uut->start(nullptr), error{});
         CHECK_EQ(uut->output_as_str(), http_request);
       }
       AND("the client waits for the server handshake and validates it") {
         uut->push(http_response);
         CHECK_EQ(uut->handle_input(),
                  static_cast<ptrdiff_t>(http_response.size()));
-        CHECK(ws_state.handshake_completed());
       }
     }
   }

@@ -1049,6 +1049,13 @@ struct unboxed_oracle<std::optional<T>> {
 template <class T>
 using unboxed_t = typename unboxed_oracle<T>::type;
 
+/// Evaluates to true if `T` is a std::string or is convertible to a `const
+/// char*`.
+template <class T>
+constexpr bool is_string_or_cstring_v
+  = std::is_convertible_v<T, const char*>
+    || std::is_same_v<std::string, std::decay_t<T>>;
+
 } // namespace caf::detail
 
 #undef CAF_HAS_MEMBER_TRAIT

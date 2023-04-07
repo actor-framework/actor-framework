@@ -4,9 +4,9 @@
 
 #include "caf/net/ssl/transport.hpp"
 
+#include "caf/net/octet_stream/errc.hpp"
 #include "caf/net/socket_manager.hpp"
 #include "caf/net/ssl/connection.hpp"
-#include "caf/net/stream_transport.hpp"
 #include "caf/settings.hpp"
 
 CAF_PUSH_WARNINGS
@@ -35,9 +35,8 @@ public:
 
   // -- interface functions ----------------------------------------------------
 
-  error start(socket_manager* owner, const settings& cfg) override {
+  error start(socket_manager* owner) override {
     owner_ = owner;
-    cfg_ = cfg;
     owner->register_writing();
     return caf::none;
   }
@@ -56,10 +55,10 @@ public:
     } else {
       auto err = policy_.last_error(policy_.conn.fd(), res);
       switch (err) {
-        case stream_transport_error::want_read:
-        case stream_transport_error::temporary:
+        case octet_stream::errc::want_read:
+        case octet_stream::errc::temporary:
           break;
-        case stream_transport_error::want_write:
+        case octet_stream::errc::want_write:
           owner_->deregister_reading();
           owner_->register_writing();
           break;
@@ -83,10 +82,10 @@ public:
       owner_->deregister();
     } else {
       switch (policy_.last_error(policy_.conn.fd(), res)) {
-        case stream_transport_error::want_write:
-        case stream_transport_error::temporary:
+        case octet_stream::errc::want_write:
+        case octet_stream::errc::temporary:
           break;
-        case stream_transport_error::want_read:
+        case octet_stream::errc::want_read:
           owner_->deregister_writing();
           owner_->register_reading();
           break;
@@ -102,7 +101,7 @@ public:
 
   bool do_handover(std::unique_ptr<socket_event_layer>& next) override {
     next = transport::make(std::move(policy_.conn), std::move(up_));
-    if (auto err = next->start(owner_, cfg_))
+    if (auto err = next->start(owner_))
       return false;
     else
       return true;
@@ -122,7 +121,6 @@ private:
 
   bool is_server_ = false;
   socket_manager* owner_ = nullptr;
-  settings cfg_;
   transport::policy_impl policy_;
   upper_layer_ptr up_;
 };
@@ -143,25 +141,25 @@ ptrdiff_t transport::policy_impl::write(stream_socket, const_byte_span buf) {
   return conn.write(buf);
 }
 
-stream_transport_error transport::policy_impl::last_error(stream_socket fd,
-                                                          ptrdiff_t ret) {
+octet_stream::errc transport::policy_impl::last_error(stream_socket fd,
+                                                      ptrdiff_t ret) {
   switch (conn.last_error(ret)) {
     case errc::none:
     case errc::want_accept:
     case errc::want_connect:
       // For all of these, OpenSSL docs say to do the operation again later.
-      return stream_transport_error::temporary;
+      return octet_stream::errc::temporary;
     case errc::syscall_failed:
       // Need to consult errno, which we just leave to the default policy.
-      return stream_transport::default_policy{}.last_error(fd, ret);
+      return octet_stream::policy{}.last_error(fd, ret);
     case errc::want_read:
-      return stream_transport_error::want_read;
+      return octet_stream::errc::want_read;
     case errc::want_write:
-      return stream_transport_error::want_write;
+      return octet_stream::errc::want_write;
     default:
       // Errors like SSL_ERROR_WANT_X509_LOOKUP are technically temporary, but
       // we do not configure any callbacks. So seeing this is a red flag.
-      return stream_transport_error::permanent;
+      return octet_stream::errc::permanent;
   }
 }
 

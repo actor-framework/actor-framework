@@ -6,21 +6,20 @@
 
 #include "caf/byte_span.hpp"
 #include "caf/detail/append_hex.hpp"
+#include "caf/detail/message_flow_bridge.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/error.hpp"
 #include "caf/logger.hpp"
 #include "caf/net/fwd.hpp"
-#include "caf/net/http/header.hpp"
-#include "caf/net/http/header_fields_map.hpp"
 #include "caf/net/http/lower_layer.hpp"
+#include "caf/net/http/request_header.hpp"
 #include "caf/net/http/status.hpp"
 #include "caf/net/http/upper_layer.hpp"
 #include "caf/net/http/v1.hpp"
-#include "caf/net/message_flow_bridge.hpp"
 #include "caf/net/multiplexer.hpp"
+#include "caf/net/octet_stream/upper_layer.hpp"
 #include "caf/net/receive_policy.hpp"
 #include "caf/net/socket_manager.hpp"
-#include "caf/net/stream_oriented.hpp"
 #include "caf/pec.hpp"
 #include "caf/settings.hpp"
 #include "caf/unordered_flat_map.hpp"
@@ -30,16 +29,10 @@
 namespace caf::net::http {
 
 /// Implements the server part for the HTTP Protocol as defined in RFC 7231.
-class CAF_NET_EXPORT server : public stream_oriented::upper_layer,
+class CAF_NET_EXPORT server : public octet_stream::upper_layer,
                               public http::lower_layer {
 public:
   // -- member types -----------------------------------------------------------
-
-  using header_fields_type = header_fields_map;
-
-  using status_code_type = status;
-
-  using header_type = header;
 
   enum class mode {
     read_header,
@@ -74,7 +67,17 @@ public:
     return *up_;
   }
 
+  size_t max_request_size() const noexcept {
+    return max_request_size_;
+  }
+
+  void max_request_size(size_t value) noexcept {
+    max_request_size_ = value;
+  }
+
   // -- http::lower_layer implementation ---------------------------------------
+
+  multiplexer& mpx() noexcept override;
 
   bool can_send_more() const noexcept override;
 
@@ -100,10 +103,11 @@ public:
 
   bool send_end_of_chunks() override;
 
-  // -- stream_oriented::upper_layer implementation ----------------------------
+  void switch_protocol(std::unique_ptr<octet_stream::upper_layer>) override;
 
-  error start(stream_oriented::lower_layer* down,
-              const settings& config) override;
+  // -- octet_stream::upper_layer implementation -------------------------------
+
+  error start(octet_stream::lower_layer* down) override;
 
   void abort(const error& reason) override;
 
@@ -122,12 +126,12 @@ private:
 
   bool handle_header(std::string_view http);
 
-  stream_oriented::lower_layer* down_;
+  octet_stream::lower_layer* down_;
 
   upper_layer_ptr up_;
 
   /// Buffer for re-using memory.
-  header hdr_;
+  request_header hdr_;
 
   /// Stores whether we are currently waiting for the payload.
   mode mode_ = mode::read_header;
@@ -136,7 +140,7 @@ private:
   size_t payload_len_ = 0;
 
   /// Maximum size for incoming HTTP requests.
-  uint32_t max_request_size_ = default_max_request_size;
+  size_t max_request_size_ = default_max_request_size;
 };
 
 } // namespace caf::net::http

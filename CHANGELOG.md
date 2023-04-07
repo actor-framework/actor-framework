@@ -27,6 +27,13 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The class `expected` now implements the monadic member functions from C++23
   `std::expected` as well as `value_or`.
 
+### Changed
+
+- After collecting experience and feedback on the new HTTP and WebSocket APIs
+  introduced with 0.19.0-rc.1, we decided to completely overhaul the
+  user-facing, high-level APIs. Please consult the manual for the new DSL to
+  start servers.
+
 ### Fixed
 
 - When exporting metrics to Prometheus, CAF now normalizes label names to meet
@@ -39,13 +46,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The `fan_out_request` request now properly deals with actor handles that
   respond with `void` (#1369).
 - Fix subscription and event handling in flow buffer operator.
-- Fix undefined behavior in getter functions of the flow `mcast` operator.
-- Add checks to avoid potential UB when using `prefix_and_tail` or other
-  operators that use the `ucast` operator internally.
 - The `mcast` and `ucast` operators now stop calling `on_next` immediately when
   disposed.
 - Actors no longer terminate despite having open streams (#1377).
-<<<<<<< HEAD
 - Actors reading from external sources such as SPSC buffers via a local flow
   could end up in a long-running read loop. To avoid potentially starving other
   actors or activities, scheduled actors now limit the amount of actions that
@@ -58,6 +61,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   now defaults to `INADDR6_ANY` (but allowing IPv4 clients) with `INADDR_ANY` as
   fallback in case opening the socket in IPv6 mode failed.
 - Add missing includes that prevented CAF from compiling on GCC 13.
+- Fix AddressSanitizer and LeakSanitizer findings in some flow operators.
 
 ### Deprecated
 

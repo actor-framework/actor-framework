@@ -15,6 +15,10 @@ using namespace caf;
 
 // -- mock_stream_transport ----------------------------------------------------
 
+net::multiplexer& mock_stream_transport::mpx() noexcept {
+  return *mpx_;
+}
+
 bool mock_stream_transport::can_send_more() const noexcept {
   return true;
 }
@@ -29,6 +33,14 @@ void mock_stream_transport::write_later() {
 
 void mock_stream_transport::shutdown() {
   // nop
+}
+
+void mock_stream_transport::switch_protocol(upper_layer_ptr new_up) {
+  next.swap(new_up);
+}
+
+bool mock_stream_transport::switching_protocol() const noexcept {
+  return next != nullptr;
 }
 
 void mock_stream_transport::configure_read(net::receive_policy policy) {
@@ -50,6 +62,17 @@ bool mock_stream_transport::end_output() {
 
 ptrdiff_t mock_stream_transport::handle_input() {
   ptrdiff_t result = 0;
+  auto switch_to_next_protocol = [this] {
+    assert(next);
+    // Switch to the new protocol and initialize it.
+    configure_read(net::receive_policy::stop());
+    up.reset(next.release());
+    if (auto err = up->start(this)) {
+      up.reset();
+      return false;
+    }
+    return true;
+  };
   // Loop until we have drained the buffer as much as we can.
   while (max_read_size > 0 && input.size() >= min_read_size) {
     auto n = std::min(input.size(), size_t{max_read_size});
@@ -67,16 +90,24 @@ ptrdiff_t mock_stream_transport::handle_input() {
       up->abort(make_error(sec::logic_error, "consumed > buffer.size"));
       return result;
     } else if (consumed == 0) {
-      // See whether the next iteration would change what we pass to the
-      // application (max_read_size_ may have changed). Otherwise, we'll try
-      // again later.
-      delta_offset = static_cast<ptrdiff_t>(n);
-      if (n == std::min(input.size(), size_t{max_read_size})) {
-        return result;
+      if (next) {
+        // When switching protocol, the new layer has never seen the data, so we
+        // might just re-invoke the same data again.
+        if (!switch_to_next_protocol())
+          return -1;
       } else {
-        // "Fall through".
+        // See whether the next iteration would change what we pass to the
+        // application (max_read_size_ may have changed). Otherwise, we'll try
+        // again later.
+        delta_offset = static_cast<ptrdiff_t>(n);
+        if (n == std::min(input.size(), size_t{max_read_size})) {
+          return result;
+        }
+        // else: "Fall through".
       }
     } else {
+      if (next && !switch_to_next_protocol())
+        return -1;
       // Shove the unread bytes to the beginning of the buffer and continue
       // to the next loop iteration.
       result += consumed;

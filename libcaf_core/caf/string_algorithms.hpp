@@ -18,6 +18,12 @@
 
 namespace caf {
 
+/// Tag type for selecting case-insensitive algorithms.
+struct ignore_case_t {};
+
+/// Tag for selecting case-insensitive algorithms.
+constexpr ignore_case_t ignore_case = ignore_case_t{};
+
 // provide boost::split compatible interface
 
 constexpr std::string_view is_any_of(std::string_view arg) noexcept {

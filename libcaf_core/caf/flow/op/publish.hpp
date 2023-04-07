@@ -123,9 +123,9 @@ private:
   void on_dispose(state_type&) override {
     try_request_more();
     if (auto_disconnect_ && connected_ && super::observer_count() == 0) {
-      in_.dispose();
-      in_ = nullptr;
       connected_ = false;
+      auto tmp = std::move(in_);
+      tmp.dispose();
     }
   }
 

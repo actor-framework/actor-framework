@@ -461,6 +461,11 @@ public:
       visit_family(f, ptr.get());
   }
 
+  // -- static utility functions -----------------------------------------------
+
+  /// Returns a pointer to the metric registry from the actor system.
+  static metric_registry* from(actor_system& sys);
+
   // -- modifiers --------------------------------------------------------------
 
   /// Takes ownership of all metric families in `other`.

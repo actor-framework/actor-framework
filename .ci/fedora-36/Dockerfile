@@ -10,4 +10,11 @@ RUN dnf update -y \
          libubsan \
          make \
          openssl-devel \
+         python3 \
+         python3-pip \
     && dnf clean all
+
+RUN python3 -m pip install \
+      robotframework \
+      robotframework-requests \
+      robotframework-websocketclient

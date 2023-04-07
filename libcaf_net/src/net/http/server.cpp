@@ -1,5 +1,7 @@
 #include "caf/net/http/server.hpp"
 
+#include "caf/net/octet_stream/lower_layer.hpp"
+
 namespace caf::net::http {
 
 // -- factories ----------------------------------------------------------------
@@ -9,6 +11,10 @@ std::unique_ptr<server> server::make(upper_layer_ptr up) {
 }
 
 // -- http::lower_layer implementation -----------------------------------------
+
+multiplexer& server::mpx() noexcept {
+  return down_->mpx();
+}
 
 bool server::can_send_more() const noexcept {
   return down_->can_send_more();
@@ -78,16 +84,15 @@ bool server::send_end_of_chunks() {
   return down_->end_output();
 }
 
-// -- stream_oriented::upper_layer implementation ------------------------------
+void server::switch_protocol(std::unique_ptr<octet_stream::upper_layer> next) {
+  down_->switch_protocol(std::move(next));
+}
 
-error server::start(stream_oriented::lower_layer* down, const settings& cfg) {
+// -- octet_stream::upper_layer implementation ---------------------------------
+
+error server::start(octet_stream::lower_layer* down) {
   down_ = down;
-  if (auto max_size = get_as<uint32_t>(cfg, "http.max-request-size"))
-    max_request_size_ = *max_size;
-  if (auto err = up_->start(this, cfg))
-    return err;
-  else
-    return none;
+  return up_->start(this);
 }
 
 void server::abort(const error& reason) {

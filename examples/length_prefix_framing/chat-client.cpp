@@ -4,11 +4,8 @@
 #include "caf/actor_system_config.hpp"
 #include "caf/caf_main.hpp"
 #include "caf/event_based_actor.hpp"
-#include "caf/net/length_prefix_framing.hpp"
+#include "caf/net/lp/with.hpp"
 #include "caf/net/middleman.hpp"
-#include "caf/net/stream_transport.hpp"
-#include "caf/net/tcp_accept_socket.hpp"
-#include "caf/net/tcp_stream_socket.hpp"
 #include "caf/scheduled_actor/flow.hpp"
 #include "caf/span.hpp"
 #include "caf/uuid.hpp"
@@ -17,21 +14,10 @@
 #include <iostream>
 #include <utility>
 
-// -- convenience type aliases -------------------------------------------------
+using namespace std::literals;
 
-// The trait for translating between bytes on the wire and flow items. The
-// binary default trait operates on binary::frame items.
-using trait = caf::net::binary::default_trait;
-
-// Takes care converting a byte stream into a sequence of messages on the wire.
-using lpf = caf::net::length_prefix_framing::bind<trait>;
-
-// An implicitly shared type for storing a binary frame.
-using bin_frame = caf::net::binary::frame;
-
-// Each client gets a UUID for identifying it. While processing messages, we add
-// this ID to the input to tag it.
-using message_t = std::pair<caf::uuid, bin_frame>;
+namespace lp = caf::net::lp;
+namespace ssl = caf::net::ssl;
 
 // -- constants ----------------------------------------------------------------
 
@@ -47,67 +33,86 @@ struct config : caf::actor_system_config {
       .add<uint16_t>("port,p", "port of the server")
       .add<std::string>("host,H", "host of the server")
       .add<std::string>("name,n", "set name");
+    opt_group{custom_options_, "tls"} //
+      .add<bool>("enable", "enables encryption via TLS")
+      .add<std::string>("ca-file", "CA file for trusted servers");
   }
 };
 
 // -- main ---------------------------------------------------------------------
 
 int caf_main(caf::actor_system& sys, const config& cfg) {
-  // Connect to the server.
+  // Read the configuration.
+  auto use_ssl = caf::get_or(cfg, "tls.enable", false);
   auto port = caf::get_or(cfg, "port", default_port);
   auto host = caf::get_or(cfg, "host", default_host);
   auto name = caf::get_or(cfg, "name", "");
+  auto ca_file = caf::get_as<std::string>(cfg, "tls.ca-file");
   if (name.empty()) {
     std::cerr << "*** mandatory parameter 'name' missing or empty\n";
     return EXIT_FAILURE;
   }
-  auto fd = caf::net::make_connected_tcp_stream_socket(host, port);
-  if (!fd) {
+  // Connect to the server.
+  auto conn
+    = caf::net::lp::with(sys)
+        // Optionally enable TLS.
+        .context(ssl::context::enable(use_ssl)
+                   .and_then(ssl::emplace_client(ssl::tls::v1_2))
+                   .and_then(ssl::load_verify_file_if(ca_file)))
+        // Connect to "$host:$port".
+        .connect(host, port)
+        // If we don't succeed at first, try up to 10 times with 1s delay.
+        .retry_delay(1s)
+        .max_retry_count(9)
+        // After connecting, spin up a worker that prints received inputs.
+        .start([&sys, name](auto pull, auto push) {
+          sys.spawn([pull](caf::event_based_actor* self) {
+            pull
+              .observe_on(self) //
+              .do_on_error([](const caf::error& err) {
+                std::cout << "*** connection error: " << to_string(err) << '\n';
+              })
+              .do_finally([self] {
+                std::cout << "*** lost connection to server -> quit\n"
+                          << "*** use CTRL+D or CTRL+C to terminate\n";
+                self->quit();
+              })
+              .for_each([](const lp::frame& frame) {
+                // Interpret the bytes as ASCII characters.
+                auto bytes = frame.bytes();
+                auto str = std::string_view{
+                  reinterpret_cast<const char*>(bytes.data()), bytes.size()};
+                if (std::all_of(str.begin(), str.end(), ::isprint)) {
+                  std::cout << str << '\n';
+                } else {
+                  std::cout << "<non-ascii-data of size " << bytes.size()
+                            << ">\n";
+                }
+              });
+          });
+          // Spin up a second worker that reads from std::cin and sends each
+          // line to the server. Put that to its own thread since it's doing
+          // blocking I/O calls.
+          sys.spawn<caf::detached>([push, name] {
+            auto lines = caf::async::make_blocking_producer(push);
+            if (!lines)
+              throw std::logic_error("failed to create blocking producer");
+            auto line = std::string{};
+            auto prefix = name + ": ";
+            while (std::getline(std::cin, line)) {
+              line.insert(line.begin(), prefix.begin(), prefix.end());
+              lines->push(lp::frame{caf::as_bytes(caf::make_span(line))});
+              line.clear();
+            }
+          });
+        });
+  if (!conn) {
     std::cerr << "*** unable to connect to " << host << ":" << port << ": "
-              << to_string(fd.error()) << '\n';
+              << to_string(conn.error()) << '\n';
     return EXIT_FAILURE;
   }
-  std::cout << "*** connected to " << host << ":" << port << ": " << '\n';
-  // Create our buffers that connect the worker to the socket.
-  using caf::async::make_spsc_buffer_resource;
-  auto [lpf_pull, app_push] = make_spsc_buffer_resource<bin_frame>();
-  auto [app_pull, lpf_push] = make_spsc_buffer_resource<bin_frame>();
-  // Spin up the network backend.
-  lpf::run(sys, *fd, std::move(lpf_pull), std::move(lpf_push));
-  // Spin up a worker that simply prints received inputs.
-  sys.spawn([pull = std::move(app_pull)](caf::event_based_actor* self) {
-    pull
-      .observe_on(self) //
-      .do_finally([self] {
-        std::cout << "*** lost connection to server -> quit\n"
-                  << "*** use CTRL+D or CTRL+C to terminate\n";
-        self->quit();
-      })
-      .for_each([](const bin_frame& frame) {
-        // Interpret the bytes as ASCII characters.
-        auto bytes = frame.bytes();
-        auto str = std::string_view{reinterpret_cast<const char*>(bytes.data()),
-                                    bytes.size()};
-        if (std::all_of(str.begin(), str.end(), ::isprint)) {
-          std::cout << str << '\n';
-        } else {
-          std::cout << "<non-ascii-data of size " << bytes.size() << ">\n";
-        }
-      });
-  });
-  // Wait for user input on std::cin and send them to the server.
-  auto push_buf = app_push.try_open();
-  assert(push_buf != nullptr);
-  auto inputs = caf::async::blocking_producer<bin_frame>{std::move(push_buf)};
-  auto line = std::string{};
-  auto prefix = name + ": ";
-  while (std::getline(std::cin, line)) {
-    line.insert(line.begin(), prefix.begin(), prefix.end());
-    inputs.push(bin_frame{caf::as_bytes(caf::make_span(line))});
-    line.clear();
-  }
-  // Done. However, the actor system will keep the application running for as
-  // long as it has open ports or connections.
+  // Note: the actor system will keep the application running for as long as the
+  // workers are still alive.
   return EXIT_SUCCESS;
 }
 

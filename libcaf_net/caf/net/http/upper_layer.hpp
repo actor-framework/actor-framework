@@ -8,7 +8,6 @@
 #include "caf/fwd.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/generic_upper_layer.hpp"
-#include "caf/net/http/fwd.hpp"
 
 namespace caf::net::http {
 
@@ -20,7 +19,7 @@ public:
   /// Initializes the upper layer.
   /// @param down A pointer to the lower layer that remains valid for the
   ///             lifetime of the upper layer.
-  virtual error start(lower_layer* down, const settings& config) = 0;
+  virtual error start(lower_layer* down) = 0;
 
   /// Consumes an HTTP message.
   /// @param hdr The header fields for the received message.
@@ -28,7 +27,8 @@ public:
   /// @returns The number of consumed bytes or a negative value to signal an
   ///          error.
   /// @note Discarded data is lost permanently.
-  virtual ptrdiff_t consume(const header& hdr, const_byte_span payload) = 0;
+  virtual ptrdiff_t consume(const request_header& hdr, const_byte_span payload)
+    = 0;
 };
 
 } // namespace caf::net::http

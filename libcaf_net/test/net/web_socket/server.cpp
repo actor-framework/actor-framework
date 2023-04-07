@@ -12,7 +12,6 @@
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/socket_manager.hpp"
 #include "caf/net/stream_socket.hpp"
-#include "caf/net/stream_transport.hpp"
 
 using namespace caf;
 using namespace std::literals;
@@ -21,7 +20,7 @@ namespace {
 
 using svec = std::vector<std::string>;
 
-class app_t : public net::web_socket::upper_layer {
+class app_t : public net::web_socket::upper_layer::server {
 public:
   std::string text_input;
 
@@ -33,10 +32,25 @@ public:
     return std::make_unique<app_t>();
   }
 
-  error start(net::web_socket::lower_layer* down,
-              const settings& args) override {
+  error start(net::web_socket::lower_layer* down) override {
     down->request_messages();
-    cfg = args;
+    return none;
+  }
+
+  error accept(const net::http::request_header& hdr) override {
+    // Store the request information in cfg to evaluate them later.
+    auto& ws = cfg["web-socket"].as_dictionary();
+    put(ws, "method", to_rfc_string(hdr.method()));
+    put(ws, "path", std::string{hdr.path()});
+    put(ws, "query", hdr.query());
+    put(ws, "fragment", hdr.fragment());
+    put(ws, "http-version", hdr.version());
+    if (hdr.num_fields() > 0) {
+      auto& fields = ws["fields"].as_dictionary();
+      hdr.for_each_field([&fields](auto key, auto val) {
+        put(fields, std::string{key}, std::string{val});
+      });
+    }
     return none;
   }
 
@@ -69,9 +83,8 @@ struct fixture {
     auto app_ptr = app_t::make();
     app = app_ptr.get();
     auto ws_ptr = net::web_socket::server::make(std::move(app_ptr));
-    ws = ws_ptr.get();
     transport = mock_stream_transport::make(std::move(ws_ptr));
-    if (auto err = transport->start())
+    if (auto err = transport->start(nullptr))
       CAF_FAIL("failed to initialize mock transport: " << err);
     rng.seed(0xD3ADC0D3);
   }
@@ -107,8 +120,6 @@ struct fixture {
 
   std::unique_ptr<mock_stream_transport> transport;
 
-  net::web_socket::server* ws;
-
   app_t* app;
 
   std::minstd_rand rng;
@@ -143,7 +154,6 @@ CAF_TEST(applications receive handshake data via config) {
   }
   CHECK_EQ(transport->input.size(), 0u);
   CHECK_EQ(transport->unconsumed(), 0u);
-  CHECK(ws->handshake_complete());
   CHECK_SETTING("web-socket.method", "GET");
   CHECK_SETTING("web-socket.path", "/chat");
   CHECK_SETTING("web-socket.http-version", "HTTP/1.1");
@@ -164,7 +174,6 @@ CAF_TEST(the server responds with an HTTP response on success) {
   transport->push(opening_handshake);
   CHECK_EQ(transport->handle_input(),
            static_cast<ptrdiff_t>(opening_handshake.size()));
-  CHECK(ws->handshake_complete());
   CHECK_EQ(transport->output_as_str(),
            "HTTP/1.1 101 Switching Protocols\r\n"
            "Upgrade: websocket\r\n"
@@ -183,14 +192,11 @@ CAF_TEST(handshakes may arrive in chunks) {
   bufs.emplace_back(i, opening_handshake.end());
   transport->push(bufs[0]);
   CHECK_EQ(transport->handle_input(), 0u);
-  CHECK(!ws->handshake_complete());
   transport->push(bufs[1]);
   CHECK_EQ(transport->handle_input(), 0u);
-  CHECK(!ws->handshake_complete());
   transport->push(bufs[2]);
   CHECK_EQ(static_cast<size_t>(transport->handle_input()),
            opening_handshake.size());
-  CHECK(ws->handshake_complete());
 }
 
 CAF_TEST(data may follow the handshake immediately) {
@@ -200,7 +206,6 @@ CAF_TEST(data may follow the handshake immediately) {
   rfc6455_append("Bye WebSocket!\n"sv, buf);
   transport->push(buf);
   CHECK_EQ(transport->handle_input(), static_cast<ptrdiff_t>(buf.size()));
-  CHECK(ws->handshake_complete());
   CHECK_EQ(app->text_input, "Hello WebSocket!\nBye WebSocket!\n");
 }
 
@@ -208,7 +213,6 @@ CAF_TEST(data may arrive later) {
   transport->push(opening_handshake);
   CHECK_EQ(transport->handle_input(),
            static_cast<ptrdiff_t>(opening_handshake.size()));
-  CHECK(ws->handshake_complete());
   push("Hello WebSocket!\nBye WebSocket!\n"sv);
   transport->handle_input();
   CHECK_EQ(app->text_input, "Hello WebSocket!\nBye WebSocket!\n");

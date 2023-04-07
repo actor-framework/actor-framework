@@ -4,7 +4,7 @@
 
 #define CAF_SUITE net.length_prefix_framing
 
-#include "caf/net/length_prefix_framing.hpp"
+#include "caf/net/lp/with.hpp"
 
 #include "net-test.hpp"
 
@@ -17,14 +17,14 @@
 #include "caf/byte_buffer.hpp"
 #include "caf/byte_span.hpp"
 #include "caf/detail/network_order.hpp"
-#include "caf/net/binary/frame.hpp"
-#include "caf/net/binary/lower_layer.hpp"
-#include "caf/net/binary/upper_layer.hpp"
+#include "caf/net/lp/frame.hpp"
+#include "caf/net/lp/lower_layer.hpp"
+#include "caf/net/lp/upper_layer.hpp"
 #include "caf/net/multiplexer.hpp"
+#include "caf/net/octet_stream/transport.hpp"
 #include "caf/net/socket_guard.hpp"
 #include "caf/net/socket_manager.hpp"
 #include "caf/net/stream_socket.hpp"
-#include "caf/net/stream_transport.hpp"
 #include "caf/scheduled_actor/flow.hpp"
 #include "caf/span.hpp"
 
@@ -38,7 +38,7 @@ using string_list = std::vector<std::string>;
 using shared_string_list = std::shared_ptr<string_list>;
 
 template <bool EnableSuspend>
-class app_t : public net::binary::upper_layer {
+class app_t : public net::lp::upper_layer {
 public:
   app_t(async::execution_context_ptr loop, shared_string_list ls_ptr)
     : loop(std::move(loop)), inputs(std::move(ls_ptr)) {
@@ -50,8 +50,7 @@ public:
     return std::make_unique<app_t>(std::move(loop), std::move(inputs));
   }
 
-  caf::error start(net::binary::lower_layer* down_ptr,
-                   const settings&) override {
+  caf::error start(net::lp::lower_layer* down_ptr) override {
     // Start reading immediately.
     down = down_ptr;
     down->request_messages();
@@ -102,7 +101,7 @@ public:
 
   async::execution_context_ptr loop;
 
-  net::binary::lower_layer* down = nullptr;
+  net::lp::lower_layer* down = nullptr;
 
   shared_string_list inputs;
 };
@@ -123,7 +122,7 @@ auto decode(byte_buffer& buf) {
   string_list result;
   auto input = make_span(buf);
   while (!input.empty()) {
-    auto [msg_size, msg] = net::length_prefix_framing::split(input);
+    auto [msg_size, msg] = net::lp::framing::split(input);
     if (msg_size > msg.size()) {
       CAF_FAIL("cannot decode buffer: invalid message size");
     } else if (!std::all_of(msg.begin(), msg.begin() + msg_size, printable)) {
@@ -157,13 +156,13 @@ void run_writer(net::stream_socket fd) {
 } // namespace
 
 SCENARIO("length-prefix framing reads data with 32-bit size headers") {
-  GIVEN("a length_prefix_framing with an app that consumes strings") {
+  GIVEN("a framing object with an app that consumes strings") {
     WHEN("pushing data into the unit-under-test") {
       auto buf = std::make_shared<string_list>();
       auto app = app_t<false>::make(nullptr, buf);
-      auto framing = net::length_prefix_framing::make(std::move(app));
+      auto framing = net::lp::framing::make(std::move(app));
       auto uut = mock_stream_transport::make(std::move(framing));
-      CHECK_EQ(uut->start(), error{});
+      CHECK_EQ(uut->start(nullptr), error{});
       THEN("the app receives all strings as individual messages") {
         encode(uut->input, "hello");
         encode(uut->input, "world");
@@ -181,7 +180,7 @@ SCENARIO("length-prefix framing reads data with 32-bit size headers") {
 
 SCENARIO("calling suspend_reading temporarily halts receiving of messages") {
   using namespace std::literals;
-  GIVEN("a length_prefix_framing with an app that consumes strings") {
+  GIVEN("a framing object with an app that consumes strings") {
     auto [fd1, fd2] = unbox(net::make_stream_socket_pair());
     auto writer = std::thread{run_writer, fd1};
     auto mpx = net::multiplexer::make(nullptr);
@@ -195,17 +194,18 @@ SCENARIO("calling suspend_reading temporarily halts receiving of messages") {
     auto buf = std::make_shared<string_list>();
     auto app = app_t<true>::make(mpx, buf);
     auto app_ptr = app.get();
-    auto framing = net::length_prefix_framing::make(std::move(app));
-    auto transport = net::stream_transport::make(fd2, std::move(framing));
+    auto framing = net::lp::framing::make(std::move(app));
+    auto transport = net::octet_stream::transport::make(fd2,
+                                                        std::move(framing));
     auto mgr = net::socket_manager::make(mpx.get(), std::move(transport));
-    CHECK_EQ(mgr->start(settings{}), none);
+    CHECK_EQ(mgr->start(), none);
     mpx->apply_updates();
     REQUIRE_EQ(mpx->num_socket_managers(), 2u);
-    CHECK_EQ(mpx->mask_of(mgr), net::operation::read);
+    CHECK(mpx->is_reading(mgr.get()));
     WHEN("the app calls suspend_reading") {
       while (mpx->num_socket_managers() > 1u)
         mpx->poll_once(true);
-      CHECK_EQ(mpx->mask_of(mgr), net::operation::none);
+      CHECK(!mpx->is_reading(mgr.get()));
       if (CHECK_EQ(buf->size(), 3u)) {
         CHECK_EQ(buf->at(0), "first");
         CHECK_EQ(buf->at(1), "second");
@@ -233,7 +233,7 @@ SCENARIO("calling suspend_reading temporarily halts receiving of messages") {
   }
 }
 
-SCENARIO("length_prefix_framing::run translates between flows and socket I/O") {
+SCENARIO("lp::with(...).connect(...) translates between flows and socket I/O") {
   using namespace std::literals;
   GIVEN("a connected socket with a writer at the other end") {
     auto [fd1, fd2] = unbox(net::make_stream_socket_pair());
@@ -247,31 +247,32 @@ SCENARIO("length_prefix_framing::run translates between flows and socket I/O") {
         caf::actor_system sys{cfg};
         auto buf = std::make_shared<std::vector<std::string>>();
         caf::actor hdl;
-        using trait = net::binary::default_trait;
-        using lpf = net::length_prefix_framing::bind<trait>;
-        lpf::run(sys, fd2, [&](auto event) {
-          hdl = sys.spawn([event, buf](event_based_actor* self) {
-            auto [pull, push] = event.data();
-            pull.observe_on(self)
-              .do_on_error([](const error& what) { //
-                MESSAGE("flow aborted: " << what);
-              })
-              .do_on_complete([] { MESSAGE("flow completed"); })
-              .do_on_next([buf](const net::binary::frame& x) {
-                std::string str;
-                for (auto val : x.bytes())
-                  str.push_back(static_cast<char>(val));
-                buf->push_back(std::move(str));
-              })
-              .map([](const net::binary::frame& x) {
-                std::string response = "ok ";
-                for (auto val : x.bytes())
-                  response.push_back(static_cast<char>(val));
-                return net::binary::frame{as_bytes(make_span(response))};
-              })
-              .subscribe(push);
-          });
-        });
+        auto conn
+          = net::lp::with(sys) //
+              .connect(fd2)
+              .start([&](auto pull, auto push) {
+                hdl = sys.spawn([buf, pull, push](event_based_actor* self) {
+                  pull.observe_on(self)
+                    .do_on_error([](const error& what) { //
+                      MESSAGE("flow aborted: " << what);
+                    })
+                    .do_on_complete([] { MESSAGE("flow completed"); })
+                    .do_on_next([buf](const net::lp::frame& x) {
+                      std::string str;
+                      for (auto val : x.bytes())
+                        str.push_back(static_cast<char>(val));
+                      buf->push_back(std::move(str));
+                    })
+                    .map([](const net::lp::frame& x) {
+                      std::string response = "ok ";
+                      for (auto val : x.bytes())
+                        response.push_back(static_cast<char>(val));
+                      return net::lp::frame{as_bytes(make_span(response))};
+                    })
+                    .subscribe(push);
+                });
+              });
+        conn.or_else([](const error& err) { FAIL("connect failed:" << err); });
         scoped_actor self{sys};
         self->wait_for(hdl);
         if (CHECK_EQ(buf->size(), 5u)) {

@@ -8,15 +8,15 @@
 
 namespace caf::net {
 
-/// Configures how many bytes a @ref stream_transport receives before calling
+/// Configures how many bytes an octet stream transport receives before calling
 /// `consume` on its upper layer.
 struct receive_policy {
-  /// Configures how many bytes  @ref stream_transport must read before it may
-  /// call `consume` on its upper layer.
+  /// Configures how many bytes the transport  must read before it may call
+  /// `consume` on its upper layer.
   uint32_t min_size;
 
-  /// Configures how many bytes  @ref stream_transport may read at most before
-  /// it calls `consume` on its upper layer.
+  /// Configures how many bytes the transport may read at most before it calls
+  /// `consume` on its upper layer.
   uint32_t max_size;
 
   /// @pre `min_size > 0`

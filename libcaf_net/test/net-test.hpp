@@ -1,20 +1,20 @@
 #pragma once
 
 #include "caf/error.hpp"
+#include "caf/net/octet_stream/lower_layer.hpp"
+#include "caf/net/octet_stream/upper_layer.hpp"
 #include "caf/net/receive_policy.hpp"
 #include "caf/net/socket.hpp"
-#include "caf/net/stream_oriented.hpp"
 #include "caf/settings.hpp"
 #include "caf/span.hpp"
 #include "caf/string_view.hpp"
 #include "caf/test/bdd_dsl.hpp"
 
-class mock_stream_transport : public caf::net::stream_oriented::lower_layer {
+class mock_stream_transport : public caf::net::octet_stream::lower_layer {
 public:
   // -- member types -----------------------------------------------------------
 
-  using upper_layer_ptr
-    = std::unique_ptr<caf::net::stream_oriented::upper_layer>;
+  using upper_layer_ptr = std::unique_ptr<caf::net::octet_stream::upper_layer>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -28,7 +28,9 @@ public:
     return std::make_unique<mock_stream_transport>(std::move(ptr));
   }
 
-  // -- implementation of stream_oriented::lower_layer -------------------------
+  // -- implementation of octet_stream::lower_layer ----------------------------
+
+  caf::net::multiplexer& mpx() noexcept override;
 
   bool can_send_more() const noexcept override;
 
@@ -46,15 +48,15 @@ public:
 
   bool end_output() override;
 
+  void switch_protocol(upper_layer_ptr) override;
+
+  bool switching_protocol() const noexcept override;
+
   // -- initialization ---------------------------------------------------------
 
-  caf::error start(const caf::settings& cfg) {
-    return up->start(this, cfg);
-  }
-
-  caf::error start() {
-    caf::settings cfg;
-    return start(cfg);
+  caf::error start(caf::net::multiplexer* ptr) {
+    mpx_ = ptr;
+    return up->start(this);
   }
 
   // -- buffer management ------------------------------------------------------
@@ -83,6 +85,8 @@ public:
 
   upper_layer_ptr up;
 
+  upper_layer_ptr next;
+
   caf::byte_buffer output;
 
   caf::byte_buffer input;
@@ -97,6 +101,8 @@ private:
   caf::byte_buffer read_buf_;
 
   caf::error abort_reason_;
+
+  caf::net::multiplexer* mpx_;
 };
 
 // Drop-in replacement for std::barrier (based on the TS API as of 2020).

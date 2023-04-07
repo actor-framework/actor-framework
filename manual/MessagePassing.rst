@@ -43,8 +43,9 @@ Copy on Write
 -------------
 
 CAF allows multiple actors to implicitly share message contents, as long as no
-actor performs writes. This allows groups (see :ref:`groups`) to send the same
-content to all subscribed actors without any copying overhead.
+actor performs writes. This allows sending the same message to multiple
+receivers without copying overhead, as long as all receivers only read the
+content of the message.
 
 Actors copy message contents whenever other actors hold references to it and if
 one or more arguments of a message handler take a mutable reference.

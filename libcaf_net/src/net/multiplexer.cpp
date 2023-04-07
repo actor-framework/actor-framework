@@ -5,15 +5,15 @@
 #include "caf/net/multiplexer.hpp"
 
 #include "caf/action.hpp"
+#include "caf/actor_system.hpp"
 #include "caf/byte.hpp"
 #include "caf/config.hpp"
+#include "caf/detail/pollset_updater.hpp"
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
 #include "caf/logger.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/net/middleman.hpp"
-#include "caf/net/operation.hpp"
-#include "caf/net/pollset_updater.hpp"
 #include "caf/net/socket_manager.hpp"
 #include "caf/sec.hpp"
 #include "caf/span.hpp"
@@ -52,22 +52,6 @@ const short error_mask = POLLRDHUP | POLLERR | POLLHUP | POLLNVAL;
 
 const short output_mask = POLLOUT;
 
-// short to_bitmask(operation mask) {
-//   return static_cast<short>((is_reading(mask) ? input_mask : 0)
-//                             | (is_writing(mask) ? output_mask : 0));
-// }
-
-operation to_operation(const socket_manager_ptr&, std::optional<short> mask) {
-  operation res = operation::none;
-  if (mask) {
-    if ((*mask & input_mask) != 0)
-      res = add_read_flag(res);
-    if ((*mask & output_mask) != 0)
-      res = add_write_flag(res);
-  }
-  return res;
-}
-
 } // namespace
 
 // -- static utility functions -------------------------------------------------
@@ -93,6 +77,10 @@ void multiplexer::block_sigpipe() {
 
 #endif
 
+multiplexer* multiplexer::from(actor_system& sys) {
+  return sys.network_manager().mpx_ptr();
+}
+
 // -- constructors, destructors, and assignment operators ----------------------
 
 multiplexer::multiplexer(middleman* owner) : owner_(owner) {
@@ -109,9 +97,9 @@ error multiplexer::init() {
   auto pipe_handles = make_pipe();
   if (!pipe_handles)
     return std::move(pipe_handles.error());
-  auto updater = pollset_updater::make(pipe_handles->first);
+  auto updater = detail::pollset_updater::make(pipe_handles->first);
   auto mgr = socket_manager::make(this, std::move(updater));
-  if (auto err = mgr->start(settings{}))
+  if (auto err = mgr->start())
     return err;
   write_handle_ = pipe_handles->second;
   pollset_.emplace_back(pollfd{pipe_handles->first.id, input_mask, 0});
@@ -149,16 +137,6 @@ actor_system& multiplexer::system() {
   return owner().system();
 }
 
-operation multiplexer::mask_of(const socket_manager_ptr& mgr) {
-  auto fd = mgr->handle();
-  if (auto i = updates_.find(fd); i != updates_.end())
-    return to_operation(mgr, i->second.events);
-  else if (auto index = index_of(mgr); index != -1)
-    return to_operation(mgr, pollset_[index].events);
-  else
-    return to_operation(mgr, std::nullopt);
-}
-
 // -- implementation of execution_context --------------------------------------
 
 void multiplexer::ref_execution_context() const noexcept {
@@ -175,7 +153,7 @@ void multiplexer::schedule(action what) {
     pending_actions_.push_back(what);
   } else {
     auto ptr = std::move(what).as_intrusive_ptr().release();
-    write_to_pipe(pollset_updater::code::run_action, ptr);
+    write_to_pipe(detail::pollset_updater::code::run_action, ptr);
   }
 }
 
@@ -190,7 +168,7 @@ void multiplexer::start(socket_manager_ptr mgr) {
   if (std::this_thread::get_id() == tid_) {
     do_start(mgr);
   } else {
-    write_to_pipe(pollset_updater::code::start_manager, mgr.release());
+    write_to_pipe(detail::pollset_updater::code::start_manager, mgr.release());
   }
 }
 
@@ -200,7 +178,7 @@ void multiplexer::shutdown() {
   // thread, because do_shutdown calls apply_updates. This must only be called
   // from the pollset_updater.
   CAF_LOG_DEBUG("push shutdown event to pipe");
-  write_to_pipe(pollset_updater::code::shutdown,
+  write_to_pipe(detail::pollset_updater::code::shutdown,
                 static_cast<socket_manager*>(nullptr));
 }
 
@@ -427,7 +405,7 @@ multiplexer::poll_update& multiplexer::update_for(socket_manager* mgr) {
 
 template <class T>
 void multiplexer::write_to_pipe(uint8_t opcode, T* ptr) {
-  pollset_updater::msg_buf buf;
+  detail::pollset_updater::msg_buf buf;
   // Note: no intrusive_ptr_add_ref(ptr) since we take ownership of `ptr`.
   buf[0] = static_cast<std::byte>(opcode);
   auto value = reinterpret_cast<intptr_t>(ptr);
@@ -471,10 +449,7 @@ void multiplexer::do_start(const socket_manager_ptr& mgr) {
   CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
   if (!shutting_down_) {
     error err;
-    if (owner_)
-      err = mgr->start(content(system().config()));
-    else
-      err = mgr->start(settings{});
+    err = mgr->start();
     if (err) {
       CAF_LOG_DEBUG("mgr->init failed: " << err);
       // The socket manager should not register itself for any events if

@@ -68,24 +68,6 @@ if(TARGET CAF::io)
   add_io_example(remoting remote_spawn)
   add_io_example(remoting distributed_calculator)
 
-  # basic I/O with brokers
-  add_io_example(broker simple_broker)
-  add_io_example(broker simple_http_broker)
-
-  if(CAF_ENABLE_PROTOBUF_EXAMPLES)
-    find_package(Protobuf REQUIRED)
-    if(NOT PROTOBUF_PROTOC_EXECUTABLE)
-      message(FATAL_ERROR "CMake was unable to set PROTOBUF_PROTOC_EXECUTABLE")
-    endif()
-    protobuf_generate_cpp(ProtoSources ProtoHeaders "${CMAKE_CURRENT_SOURCE_DIR}/remoting/pingpong.proto")
-    include_directories(${PROTOBUF_INCLUDE_DIR})
-    include_directories(${CMAKE_CURRENT_BINARY_DIR})
-    add_executable(protobuf_broker broker/protobuf_broker.cpp ${ProtoSources})
-    target_link_libraries(protobuf_broker
-                          PRIVATE ${PROTOBUF_LIBRARIES} CAF::internal CAF::io)
-    add_dependencies(protobuf_broker all_examples)
-  endif()
-
   if(CAF_ENABLE_CURL_EXAMPLES)
     find_package(CURL REQUIRED)
     add_executable(curl_fuse curl/curl_fuse.cpp)
@@ -107,7 +89,7 @@ else()
   endfunction()
 endif()
 
-add_net_example(http secure-time-server)
+add_net_example(http rest)
 add_net_example(http time-server)
 
 add_net_example(length_prefix_framing chat-client)
@@ -116,7 +98,6 @@ add_net_example(length_prefix_framing chat-server)
 add_net_example(web_socket echo)
 add_net_example(web_socket hello-client)
 add_net_example(web_socket quote-server)
-add_net_example(web_socket secure-echo)
 add_net_example(web_socket stock-ticker)
 
 if(TARGET CAF::net AND CAF_ENABLE_QT6_EXAMPLES)

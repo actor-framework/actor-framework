@@ -60,7 +60,8 @@ else:
 
 # -- Enable Sphinx to find the literal includes -------------------------------
 
-for dirname in ["examples", "libcaf_core", "libcaf_io", "libcaf_openssl"]:
+for dirname in ["examples", "libcaf_core", "libcaf_io", "libcaf_openssl",
+                "libcaf_net"]:
     dest_dir = os.path.join(conf_dir, dirname)
     if not os.path.isdir(dest_dir):
         os.symlink(os.path.join(root_dir, dirname), dest_dir)
@@ -110,7 +111,7 @@ rst_epilog = """
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = "en"
 
 # There are two options for replacing |today|: either, you set today to some
 # non-false value, then it is used:

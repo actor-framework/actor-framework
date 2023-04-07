@@ -5,13 +5,13 @@
 #include "caf/caf_main.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/net/middleman.hpp"
-#include "caf/net/tcp_accept_socket.hpp"
-#include "caf/net/tcp_stream_socket.hpp"
-#include "caf/net/web_socket/connect.hpp"
+#include "caf/net/web_socket/with.hpp"
 #include "caf/scheduled_actor/flow.hpp"
 
 #include <iostream>
 #include <utility>
+
+using namespace std::literals;
 
 struct config : caf::actor_system_config {
   config() {
@@ -22,63 +22,78 @@ struct config : caf::actor_system_config {
   }
 };
 
+// --(rst-main-begin)--
 int caf_main(caf::actor_system& sys, const config& cfg) {
-  namespace cn = caf::net;
-  namespace ws = cn::web_socket;
+  namespace ws = caf::net::web_socket;
   // Sanity checking.
-  auto server = caf::get_or(cfg, "server", caf::uri{});
-  if (!server.valid()) {
+  auto server = caf::get_as<caf::uri>(cfg, "server");
+  if (!server) {
     std::cerr << "*** mandatory argument server missing or invalid\n";
     return EXIT_FAILURE;
   }
-  // Ask user for the hello message.
+  // Ask the user for the hello message.
   std::string hello;
   std::cout << "Please enter a hello message for the server: " << std::flush;
   std::getline(std::cin, hello);
-  // Spin up the WebSocket.
-  auto hs_setup = [&cfg](ws::handshake& hs) {
-    if (auto str = caf::get_as<std::string>(cfg, "protocols");
-        str && !str->empty())
-      hs.protocols(std::move(*str));
-  };
-  auto conn = ws::connect(sys, server, hs_setup);
+  // Try to establish a connection to the server and send the hello message.
+  auto conn
+    = ws::with(sys)
+        // Connect to the given URI.
+        .connect(server)
+        // If we don't succeed at first, try up to 10 times with 1s delay.
+        .retry_delay(1s)
+        .max_retry_count(9)
+        // On success, spin up a worker to manage the connection.
+        .start([&sys, hello](auto pull, auto push) {
+          sys.spawn([hello, pull, push](caf::event_based_actor* self) {
+            // Open the pull handle.
+            pull
+              .observe_on(self)
+              // Print errors to stderr.
+              .do_on_error([](const caf::error& what) {
+                std::cerr << "*** error while reading from the WebSocket: "
+                          << to_string(what) << '\n';
+              })
+              // Restrict how many messages we receive if the user configured
+              // a limit.
+              .compose([self](auto in) {
+                if (auto limit = caf::get_as<size_t>(self->config(), "max")) {
+                  return std::move(in).take(*limit).as_observable();
+                } else {
+                  return std::move(in).as_observable();
+                }
+              })
+              // Print a bye-bye message if the server closes the connection.
+              .do_on_complete([] { //
+                std::cout << "Server has closed the connection\n";
+              })
+              // Print everything from the server to stdout.
+              .for_each([](const ws::frame& msg) {
+                if (msg.is_text()) {
+                  std::cout << "Server: " << msg.as_text() << '\n';
+                } else if (msg.is_binary()) {
+                  std::cout << "Server: [binary message of size "
+                            << msg.as_binary().size() << "]\n";
+                }
+              });
+            // Send our hello message and wait until the server closes the
+            // socket. We keep the connection alive by never closing the write
+            // channel.
+            self->make_observable()
+              .just(ws::frame{hello})
+              .concat(self->make_observable().never<ws::frame>())
+              .subscribe(push);
+          });
+        });
   if (!conn) {
-    std::cerr << "*** failed to connect: " << to_string(conn.error()) << '\n';
+    std::cerr << "*** unable to connect to " << server->str() << ": "
+              << to_string(conn.error()) << '\n';
     return EXIT_FAILURE;
   }
-  conn->run([&](const ws::connect_event_t& conn) {
-    sys.spawn([conn, hello](caf::event_based_actor* self) {
-      auto [pull, push] = conn.data();
-      // Print everything from the server to stdout.
-      pull.observe_on(self)
-        .do_on_error([](const caf::error& what) {
-          std::cerr << "*** error while reading from the WebSocket: "
-                    << to_string(what) << '\n';
-        })
-        .compose([self](auto in) {
-          if (auto limit = caf::get_as<size_t>(self->config(), "max")) {
-            return std::move(in).take(*limit).as_observable();
-          } else {
-            return std::move(in).as_observable();
-          }
-        })
-        .do_finally([] { std::cout << "Server has closed the connection\n"; })
-        .for_each([](const ws::frame& msg) {
-          if (msg.is_text()) {
-            std::cout << "Server: " << msg.as_text() << '\n';
-          } else if (msg.is_binary()) {
-            std::cout << "Server: [binary message of size "
-                      << msg.as_binary().size() << "]\n";
-          }
-        });
-      // Send our hello message and wait until the server closes the socket.
-      self->make_observable()
-        .just(ws::frame{hello})
-        .concat(self->make_observable().never<ws::frame>())
-        .subscribe(push);
-    });
-  });
+  // Note: the actor system will keep the application running for as long as the
+  // workers are still alive.
   return EXIT_SUCCESS;
 }
+// --(rst-main-end)--
 
 CAF_MAIN(caf::net::middleman)

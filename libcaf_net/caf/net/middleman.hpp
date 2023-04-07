@@ -20,6 +20,7 @@
 
 namespace caf::net {
 
+/// Provides a network backend for running protocol stacks.
 class CAF_NET_EXPORT middleman : public actor_system::module {
 public:
   // -- member types -----------------------------------------------------------

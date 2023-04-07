@@ -4,7 +4,9 @@
 
 #pragma once
 
+#include "caf/async/execution_context.hpp"
 #include "caf/detail/connection_factory.hpp"
+#include "caf/net/multiplexer.hpp"
 #include "caf/net/socket_event_layer.hpp"
 #include "caf/net/socket_manager.hpp"
 #include "caf/settings.hpp"
@@ -13,24 +15,29 @@ namespace caf::detail {
 
 /// Accepts incoming clients with an Acceptor and handles them via a connection
 /// factory.
-template <class Acceptor, class ConnectionHandle>
+template <class Acceptor>
 class accept_handler : public net::socket_event_layer {
 public:
   // -- member types -----------------------------------------------------------
 
   using socket_type = net::socket;
 
-  using connection_handle = ConnectionHandle;
+  using transport_type = typename Acceptor::transport_type;
+
+  using connection_handle = typename transport_type::connection_handle;
 
   using factory_type = connection_factory<connection_handle>;
 
+  using factory_ptr = detail::connection_factory_ptr<connection_handle>;
+
   // -- constructors, destructors, and assignment operators --------------------
 
-  template <class FactoryPtr, class... Ts>
-  accept_handler(Acceptor acc, FactoryPtr fptr, size_t max_connections)
+  accept_handler(Acceptor acc, factory_ptr fptr, size_t max_connections,
+                 std::vector<strong_actor_ptr> monitored_actors = {})
     : acc_(std::move(acc)),
       factory_(std::move(fptr)),
-      max_connections_(max_connections) {
+      max_connections_(max_connections),
+      monitored_actors_(std::move(monitored_actors)) {
     CAF_ASSERT(max_connections_ > 0);
   }
 
@@ -38,26 +45,39 @@ public:
     on_conn_close_.dispose();
     if (valid(acc_))
       close(acc_);
+    if (monitor_callback_)
+      monitor_callback_.dispose();
   }
 
   // -- factories --------------------------------------------------------------
 
-  template <class FactoryPtr, class... Ts>
   static std::unique_ptr<accept_handler>
-  make(Acceptor acc, FactoryPtr fptr, size_t max_connections) {
+  make(Acceptor acc, factory_ptr fptr, size_t max_connections,
+       std::vector<strong_actor_ptr> monitored_actors = {}) {
     return std::make_unique<accept_handler>(std::move(acc), std::move(fptr),
-                                            max_connections);
+                                            max_connections,
+                                            std::move(monitored_actors));
   }
 
   // -- implementation of socket_event_layer -----------------------------------
 
-  error start(net::socket_manager* owner, const settings& cfg) override {
+  error start(net::socket_manager* owner) override {
     CAF_LOG_TRACE("");
     owner_ = owner;
-    cfg_ = cfg;
-    if (auto err = factory_->start(owner, cfg)) {
+    if (auto err = factory_->start(owner)) {
       CAF_LOG_DEBUG("factory_->start failed:" << err);
       return err;
+    }
+    if (!monitored_actors_.empty()) {
+      monitor_callback_ = make_action([this] { owner_->shutdown(); });
+      auto ctx = async::execution_context_ptr{owner_->mpx_ptr()};
+      for (auto& hdl : monitored_actors_) {
+        CAF_ASSERT(hdl);
+        hdl->get()->attach_functor([ctx, cb = monitor_callback_] {
+          if (!cb.disposed())
+            ctx->schedule(cb);
+        });
+      }
     }
     on_conn_close_ = make_action([this] { connection_closed(); });
     owner->register_reading();
@@ -84,7 +104,7 @@ public:
       if (++open_connections_ == max_connections_)
         owner_->deregister_reading();
       child->add_cleanup_listener(on_conn_close_);
-      std::ignore = child->start(cfg_);
+      std::ignore = child->start();
     } else if (conn.error() == sec::unavailable_or_would_block) {
       // Encountered a "soft" error: simply try again later.
       CAF_LOG_DEBUG("accept failed:" << conn.error());
@@ -120,7 +140,7 @@ private:
 
   Acceptor acc_;
 
-  detail::connection_factory_ptr<connection_handle> factory_;
+  factory_ptr factory_;
 
   size_t max_connections_;
 
@@ -130,12 +150,16 @@ private:
 
   action on_conn_close_;
 
-  settings cfg_;
-
   /// Type-erased handle to the @ref socket_manager. This reference is important
   /// to keep the acceptor alive while the manager is not registered for writing
   /// or reading.
   disposable self_ref_;
+
+  /// An action for stopping this handler if an observed actor terminates.
+  action monitor_callback_;
+
+  /// List of actors that we add monitors to in `start`.
+  std::vector<strong_actor_ptr> monitored_actors_;
 };
 
 } // namespace caf::detail

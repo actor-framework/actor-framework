@@ -36,7 +36,7 @@ SCENARIO("the Prometheus server responds to requests with scrape results") {
         auto prom_serv = prometheus::server::make(prom_state);
         auto http_serv = net::http::server::make(std::move(prom_serv));
         auto serv = mock_stream_transport::make(std::move(http_serv));
-        CHECK_EQ(serv->start(settings{}), error{});
+        CHECK_EQ(serv->start(nullptr), error{});
         serv->push(request_str);
         CHECK_EQ(serv->handle_input(),
                  static_cast<ptrdiff_t>(request_str.size()));

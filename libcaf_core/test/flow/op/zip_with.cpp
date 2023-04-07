@@ -37,6 +37,7 @@ SCENARIO("zip_with combines inputs") {
     WHEN("merging them with zip_with") {
       THEN("the observer receives the combined output of both sources") {
         auto snk = flow::make_passive_observer<int>();
+        auto grd = make_unsubscribe_guard(snk);
         ctx->make_observable()
           .zip_with([](int x, int y) { return x + y; },
                     ctx->make_observable().repeat(11).take(113),
@@ -200,6 +201,7 @@ SCENARIO("observers may request from zip_with operators before on_subscribe") {
       THEN("the observer receives the item") {
         using flow::op::zip_index;
         auto snk = flow::make_passive_observer<int>();
+        auto grd = make_unsubscribe_guard(snk);
         auto uut = make_zip_with_sub([](int, int) { return 0; },
                                      snk->as_observer(),
                                      flow::make_nil_observable<int>(ctx.get()),
@@ -222,6 +224,7 @@ SCENARIO("the zip_with operators disposes unexpected subscriptions") {
       THEN("the operator disposes the subscription") {
         using flow::op::zip_index;
         auto snk = flow::make_passive_observer<int>();
+        auto grd = make_unsubscribe_guard(snk);
         auto uut = make_zip_with_sub([](int, int) { return 0; },
                                      snk->as_observer(),
                                      flow::make_nil_observable<int>(ctx.get()),

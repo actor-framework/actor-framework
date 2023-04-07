@@ -7,6 +7,7 @@
 #include "caf/byte_buffer.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/dictionary.hpp"
+#include "caf/net/fwd.hpp"
 
 #include <cstddef>
 #include <string>
@@ -86,12 +87,22 @@ public:
     fields_["_endpoint"] = std::move(value);
   }
 
+  /// Checks whether the handshake has an `endpoint` defined.
+  bool has_endpoint() const noexcept {
+    return fields_.contains("_endpoint");
+  }
+
   /// Sets a value for the mandatory `Host` field.
   /// @param value The Internet host and port number of the resource being
   ///              requested, as obtained from the original URI given by the
   ///              user or referring resource.
   void host(std::string value) {
     fields_["_host"] = std::move(value);
+  }
+
+  /// Checks whether the handshake has an `host` defined.
+  bool has_host() const noexcept {
+    return fields_.contains("_host");
   }
 
   /// Sets a value for the optional `Origin` field.
@@ -124,6 +135,10 @@ public:
   /// Writes the HTTP 1.1 response message to `buf`.
   /// @pre `has_valid_key()`
   void write_http_1_response(byte_buffer& buf) const;
+
+  /// Writes the HTTP response message to `down`.
+  /// @pre `has_valid_key()`
+  void write_response(http::lower_layer* down) const;
 
   /// Checks whether the `http_response` contains a HTTP 1.1 response to the
   /// generated HTTP GET request. A valid response contains:

@@ -17,7 +17,7 @@ public:
   virtual ~socket_event_layer();
 
   /// Starts processing on this layer.
-  virtual error start(socket_manager* owner, const settings& cfg) = 0;
+  virtual error start(socket_manager* owner) = 0;
 
   /// Returns the handle for the managed socket.
   virtual socket handle() const = 0;

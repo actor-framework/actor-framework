@@ -4,6 +4,7 @@ WorkingDir="$PWD"
 UsageString="
      $0 build CMAKE_INIT_FILE SOURCE_DIR BUILD_DIR
   OR $0 test BUILD_DIR
+  OR $0 test BUILD_DIR EXCLUDES
   OR $0 assert WHAT
 "
 
@@ -43,9 +44,18 @@ elif [ $# = 2 ]; then
   if [ "$1" = 'test' ] && [ -d "$2" ]; then
     Mode='test'
     BuildDir=`makeAbsolute $2`
+    Excludes=""
   elif [ "$1" = 'assert' ]; then
     Mode='assert'
     What="$2"
+  else
+    usage
+  fi
+elif [ $# = 3 ]; then
+  if [ "$1" = 'test' ] && [ -d "$2" ]; then
+    Mode='test'
+    BuildDir=`makeAbsolute $2`
+    Excludes="$3"
   else
     usage
   fi
@@ -80,9 +90,11 @@ runBuild() {
 }
 
 runTest() {
-  cd "$BuildDir"
-  $CTestCommand --output-on-failure
-  cd "$WorkingDir"
+  if [ -z "$Excludes" ]; then
+    $CTestCommand --test-dir "$BuildDir" --output-on-failure
+  else
+    $CTestCommand --test-dir "$BuildDir" --output-on-failure -E "$Excludes"
+  fi
 }
 
 runLeakSanitizerCheck() {

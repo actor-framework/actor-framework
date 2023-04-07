@@ -6,6 +6,7 @@
 
 #include "caf/detail/net_export.hpp"
 #include "caf/fwd.hpp"
+#include "caf/net/fwd.hpp"
 
 namespace caf::net {
 
@@ -14,6 +15,9 @@ namespace caf::net {
 class CAF_NET_EXPORT generic_lower_layer {
 public:
   virtual ~generic_lower_layer();
+
+  /// Returns the @ref multiplexer instance that executes this protocol stack.
+  virtual multiplexer& mpx() noexcept = 0;
 
   /// Queries whether the output device can accept more data straight away.
   [[nodiscard]] virtual bool can_send_more() const noexcept = 0;

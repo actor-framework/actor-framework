@@ -8,8 +8,9 @@
 #include "caf/byte_span.hpp"
 #include "caf/detail/rfc6455.hpp"
 #include "caf/net/fwd.hpp"
+#include "caf/net/octet_stream/lower_layer.hpp"
+#include "caf/net/octet_stream/upper_layer.hpp"
 #include "caf/net/receive_policy.hpp"
-#include "caf/net/stream_oriented.hpp"
 #include "caf/net/web_socket/lower_layer.hpp"
 #include "caf/net/web_socket/status.hpp"
 #include "caf/net/web_socket/upper_layer.hpp"
@@ -25,7 +26,8 @@
 namespace caf::net::web_socket {
 
 /// Implements the WebSocket framing protocol as defined in RFC-6455.
-class CAF_NET_EXPORT framing : public web_socket::lower_layer {
+class CAF_NET_EXPORT framing : public octet_stream::upper_layer,
+                               public web_socket::lower_layer {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -43,29 +45,35 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit framing(upper_layer_ptr up) : up_(std::move(up)) {
-    // nop
+  /// Creates a new framing protocol for client mode.
+  static std::unique_ptr<framing> make_client(upper_layer_ptr up) {
+    return std::unique_ptr<framing>{new framing(std::move(up))};
   }
 
-  // -- initialization ---------------------------------------------------------
-
-  void start(stream_oriented::lower_layer* down);
+  /// Creates a new framing protocol for server mode.
+  static std::unique_ptr<framing> make_server(upper_layer_ptr up) {
+    // > A server MUST NOT mask any frames that it sends to the client.
+    // See RFC 6455, Section 5.1.
+    auto res = std::unique_ptr<framing>{new framing(std::move(up))};
+    res->mask_outgoing_frames = false;
+    return res;
+  }
 
   // -- properties -------------------------------------------------------------
 
-  auto& upper_layer() noexcept {
+  auto& up() noexcept {
     return *up_;
   }
 
-  const auto& upper_layer() const noexcept {
+  const auto& up() const noexcept {
     return *up_;
   }
 
-  auto& lower_layer() noexcept {
+  auto& down() noexcept {
     return *down_;
   }
 
-  const auto& lower_layer() const noexcept {
+  const auto& down() const noexcept {
     return *down_;
   }
 
@@ -75,9 +83,23 @@ public:
   /// the standard.
   bool mask_outgoing_frames = true;
 
+  // -- octet_stream::upper_layer implementation -------------------------------
+
+  error start(octet_stream::lower_layer* down) override;
+
+  void abort(const error& reason) override;
+
+  ptrdiff_t consume(byte_span input, byte_span) override;
+
+  void prepare_send() override;
+
+  bool done_sending() override;
+
   // -- web_socket::lower_layer implementation ---------------------------------
 
   using web_socket::lower_layer::shutdown;
+
+  multiplexer& mpx() noexcept override;
 
   bool can_send_more() const noexcept override;
 
@@ -103,12 +125,12 @@ public:
 
   bool end_text_message() override;
 
-  // -- interface for the lower layer ------------------------------------------
-
-  ptrdiff_t consume(byte_span input, byte_span);
-
 private:
   // -- implementation details -------------------------------------------------
+
+  explicit framing(upper_layer_ptr up) : up_(std::move(up)) {
+    // nop
+  }
 
   bool handle(uint8_t opcode, byte_span payload);
 
@@ -120,7 +142,7 @@ private:
   // -- member variables -------------------------------------------------------
 
   /// Points to the transport layer below.
-  stream_oriented::lower_layer* down_;
+  octet_stream::lower_layer* down_;
 
   /// Buffer for assembling binary frames.
   binary_buffer binary_buf_;

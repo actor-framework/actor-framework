@@ -16,6 +16,8 @@ CAF_POP_WARNINGS
 using namespace std;
 using namespace caf;
 
+namespace lp = caf::net::lp;
+
 ChatWidget::ChatWidget(QWidget* parent)
   : super(parent), input_(nullptr), output_(nullptr) {
   // nop
@@ -26,8 +28,8 @@ ChatWidget::~ChatWidget() {
 }
 
 void ChatWidget::init(actor_system& system, const std::string& name,
-                      caf::async::consumer_resource<bin_frame> pull,
-                      caf::async::producer_resource<bin_frame> push) {
+                      caf::async::consumer_resource<lp::frame> pull,
+                      caf::async::producer_resource<lp::frame> push) {
   name_ = QString::fromUtf8(name);
   print("*** hello " + name_);
   super::init(system);
@@ -37,7 +39,7 @@ void ChatWidget::init(actor_system& system, const std::string& name,
     .do_finally([this] { //
       print("*** chatroom offline: lost connection to the server");
     })
-    .for_each([this](const bin_frame& frame) {
+    .for_each([this](const lp::frame& frame) {
       auto bytes = frame.bytes();
       auto str = std::string_view{reinterpret_cast<const char*>(bytes.data()),
                                   bytes.size()};
@@ -56,7 +58,7 @@ void ChatWidget::init(actor_system& system, const std::string& name,
       auto encoded = str.toUtf8();
       auto bytes = caf::as_bytes(
         caf::make_span(encoded.data(), static_cast<size_t>(encoded.size())));
-      return bin_frame{bytes};
+      return lp::frame{bytes};
     })
     .subscribe(push);
   set_message_handler([=](actor_companion*) -> message_handler {

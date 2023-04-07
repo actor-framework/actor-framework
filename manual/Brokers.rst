@@ -3,6 +3,14 @@
 Network I/O with Brokers
 ========================
 
+.. note::
+
+  We no longer recommend the Brokers from the I/O module for new code. Please
+  consider using Networking Module instead: :ref:`net-overview`. The new caf-net
+  module offers higher-level abstractions that interface with flows (see
+  :ref:`data_flows`). Message-based communication is also available with an
+  :ref:`net-actor-shell`.
+
 When communicating to other services in the network, sometimes low-level socket
 I/O is inevitable. For this reason, CAF provides *brokers*. A broker is
 an event-based actor running in the middleman that multiplexes socket I/O. It

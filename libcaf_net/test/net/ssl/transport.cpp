@@ -42,7 +42,7 @@ struct fixture {
   }
 };
 
-class mock_application : public net::stream_oriented::upper_layer {
+class mock_application : public net::octet_stream::upper_layer {
 public:
   explicit mock_application(std::shared_ptr<bool> done,
                             byte_buffer_ptr recv_buf)
@@ -59,8 +59,7 @@ public:
     *done_ = true;
   }
 
-  error start(net::stream_oriented::lower_layer* down,
-              const settings&) override {
+  error start(net::octet_stream::lower_layer* down) override {
     MESSAGE("initialize dummy app");
     down_ = down;
     down->configure_read(receive_policy::exactly(4));
@@ -98,7 +97,7 @@ public:
   }
 
 private:
-  net::stream_oriented::lower_layer* down_ = nullptr;
+  net::octet_stream::lower_layer* down_ = nullptr;
   std::shared_ptr<bool> done_;
   byte_buffer_ptr recv_buf_;
 };

@@ -8,7 +8,8 @@
 #include "caf/async/producer_adapter.hpp"
 #include "caf/async/spsc_buffer.hpp"
 #include "caf/fwd.hpp"
-#include "caf/net/flow_connector.hpp"
+#include "caf/logger.hpp"
+#include "caf/net/http/request_header.hpp"
 #include "caf/sec.hpp"
 
 #include <utility>
@@ -29,17 +30,43 @@ public:
   /// Type for the producer adapter. We produce the input of the application.
   using producer_type = async::producer_adapter<input_type>;
 
-  using connector_pointer = net::flow_connector_ptr<Trait>;
-
-  flow_bridge_base(async::execution_context_ptr loop, connector_pointer conn)
-    : loop_(std::move(loop)), conn_(std::move(conn)) {
-    // nop
-  }
-
   virtual bool write(const output_type& item) = 0;
 
   bool running() const noexcept {
-    return in_ || out_;
+    return in_ && out_;
+  }
+
+  /// Initializes consumer and producer of the bridge.
+  error init(net::multiplexer* mpx, async::consumer_resource<output_type> pull,
+             async::producer_resource<input_type> push) {
+    // Initialize our consumer.
+    auto do_wakeup = make_action([this] {
+      if (running())
+        prepare_send();
+    });
+    in_ = consumer_type::make(pull.try_open(), mpx, std::move(do_wakeup));
+    if (!in_) {
+      auto err = make_error(sec::runtime_error,
+                            "flow bridge failed to open the input resource");
+      push.abort(err);
+      return err;
+    }
+    // Initialize our producer.
+    auto do_resume = make_action([this] { down_->request_messages(); });
+    auto do_cancel = make_action([this] {
+      if (!running()) {
+        down_->shutdown();
+      }
+    });
+    out_ = producer_type::make(push.try_open(), mpx, std::move(do_resume),
+                               std::move(do_cancel));
+    if (!out_) {
+      auto err = make_error(sec::runtime_error,
+                            "flow bridge failed to open the output resource");
+      in_.cancel();
+      return err;
+    }
+    return {};
   }
 
   void self_ref(disposable ref) {
@@ -47,36 +74,6 @@ public:
   }
 
   // -- implementation of the lower_layer --------------------------------------
-
-  error start(LowerLayer* down, const settings& cfg) override {
-    CAF_ASSERT(down != nullptr);
-    down_ = down;
-    auto [err, pull, push] = conn_->on_request(cfg);
-    if (!err) {
-      auto do_wakeup = make_action([this] {
-        if (running())
-          prepare_send();
-      });
-      auto do_resume = make_action([this] { down_->request_messages(); });
-      auto do_cancel = make_action([this] {
-        if (!running()) {
-          down_->shutdown();
-        }
-      });
-      in_ = consumer_type::make(pull.try_open(), loop_, std::move(do_wakeup));
-      out_ = producer_type::make(push.try_open(), loop_, std::move(do_resume),
-                                 std::move(do_cancel));
-      conn_ = nullptr;
-      if (running())
-        return none;
-      else
-        return make_error(sec::runtime_error,
-                          "cannot init flow bridge: no buffers");
-    } else {
-      conn_ = nullptr;
-      return err;
-    }
-  }
 
   void prepare_send() override {
     input_type tmp;
@@ -137,12 +134,6 @@ protected:
 
   /// Converts between raw bytes and native C++ objects.
   Trait trait_;
-
-  /// Our event loop.
-  async::execution_context_ptr loop_;
-
-  /// Initializes the bridge. Disposed (set to null) after initializing.
-  connector_pointer conn_;
 
   /// Type-erased handle to the @ref socket_manager. This reference is important
   /// to keep the bridge alive while the manager is not registered for writing

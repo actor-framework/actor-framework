@@ -5,7 +5,7 @@
 #include "caf/all.hpp"
 #include "caf/async/spsc_buffer.hpp"
 #include "caf/mixin/actor_widget.hpp"
-#include "caf/net/binary/frame.hpp"
+#include "caf/net/lp/frame.hpp"
 
 CAF_PUSH_WARNINGS
 #include <QLineEdit>
@@ -30,7 +30,7 @@ public:
 
   using super = caf::mixin::actor_widget<QWidget>;
 
-  using bin_frame = caf::net::binary::frame;
+  using frame = caf::net::lp::frame;
 
   using publisher_type = caf::flow::item_publisher<QString>;
 
@@ -39,8 +39,8 @@ public:
   ~ChatWidget();
 
   void init(caf::actor_system& system, const std::string& name,
-            caf::async::consumer_resource<bin_frame> pull,
-            caf::async::producer_resource<bin_frame> push);
+            caf::async::consumer_resource<frame> pull,
+            caf::async::producer_resource<frame> push);
 
 public slots:
 

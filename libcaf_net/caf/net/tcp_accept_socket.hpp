@@ -15,11 +15,13 @@ namespace caf::net {
 
 /// Represents a TCP acceptor in listening mode.
 struct CAF_NET_EXPORT tcp_accept_socket : network_socket {
+  /// The parent type.
   using super = network_socket;
 
-  using super::super;
+  /// The default transport for exchanging raw bytes over accepted sockets.
+  using transport_type = octet_stream::transport;
 
-  using transport_type = stream_transport;
+  using super::super;
 };
 
 /// Creates a new TCP socket to accept connections on a given port.
