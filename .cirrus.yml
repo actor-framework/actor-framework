@@ -10,7 +10,7 @@ debug_build_template: &DEBUG_BUILD_TEMPLATE
 
 asan_build_template: &ASAN_BUILD_TEMPLATE
   build_script: .ci/run.sh build .ci/asan-flags.cmake . build
-  # see GH issue #1396
+  # The OpenSSL tests currently report memory leaks, see GH issue #1396.
   test_script: .ci/run.sh test build openssl
 
 # CentOS 7 EOL: June 2024
@@ -41,7 +41,10 @@ freebsd12_task:
     image_family: freebsd-12-4
     << : *RESOURCES_TEMPLATE
   prepare_script: .ci/freebsd-12/prepare.sh
-  << : *DEBUG_BUILD_TEMPLATE
+  # Test net.udp_datagram_socket is unstable on FreeBSD, see GH issue #1397.
+  # << : *DEBUG_BUILD_TEMPLATE
+  build_script: .ci/run.sh build .ci/debug-flags.cmake . build
+  test_script: .ci/run.sh test build net.udp_datagram_socket
 
 # Fedora 36 EOL: May 2023
 sanitizers_task:
