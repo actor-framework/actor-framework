@@ -286,8 +286,8 @@ public:
   template <class F>
   std::enable_if_t<std::is_invocable_r_v<skippable_result, F, message&>>
   set_default_handler(F fun) {
-    using std::move;
-    default_handler_ = [fn{move(fun)}](scheduled_actor*, message& xs) mutable {
+    default_handler_ = [fn{std::move(fun)}](scheduled_actor*,
+                                            message& xs) mutable {
       return fn(xs);
     };
   }
@@ -319,10 +319,8 @@ public:
   /// Sets a custom handler for down messages.
   template <class F>
   std::enable_if_t<std::is_invocable_v<F, down_msg&>> set_down_handler(F fun) {
-    using std::move;
-    down_handler_ = [fn{move(fun)}](scheduled_actor*, down_msg& x) mutable {
-      fn(x);
-    };
+    down_handler_ = [fn{std::move(fun)}](scheduled_actor*,
+                                         down_msg& x) mutable { fn(x); };
   }
 
   /// Sets a custom handler for node down messages.
@@ -354,10 +352,8 @@ public:
   /// Sets a custom handler for exit messages.
   template <class F>
   std::enable_if_t<std::is_invocable_v<F, exit_msg&>> set_exit_handler(F fun) {
-    using std::move;
-    exit_handler_ = [fn{move(fun)}](scheduled_actor*, exit_msg& x) mutable {
-      fn(x);
-    };
+    exit_handler_ = [fn{std::move(fun)}](scheduled_actor*,
+                                         exit_msg& x) mutable { fn(x); };
   }
 
 #ifdef CAF_ENABLE_EXCEPTIONS

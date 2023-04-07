@@ -160,7 +160,7 @@ struct fixture {
   }
 
   void exec_loop() {
-    while (exec_one(client_side) | exec_one(server_side))
+    while (exec_one(client_side) || exec_one(server_side))
       ; // nop
   }
 

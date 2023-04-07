@@ -616,7 +616,6 @@ void second_pass(blocking_actor* self, const group& grp,
     CAF_RAISE_ERROR("logger ID not found");
   };
   // additional state for second pass
-  size_t line = 0;
   log_entry plain_entry;
   std::vector<se_event> in_flight_messages;
   std::vector<se_event> in_flight_spawns;
@@ -654,7 +653,6 @@ void second_pass(blocking_actor* self, const group& grp,
   };
   // second pass
   while (in >> plain_entry) {
-    ++line;
     // increment local time
     auto& st = state(plain_entry.id);
     // do not produce log output for internal actors but still track messages
