@@ -57,6 +57,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Destroying a consumer or producer resource before opening it lead to a stall
   of the consumer / producer. The buffer now keeps track of whether `close` or
   `abort` were called prior to consumers or producers attaching.
+- Fix potential leaks and ASAN findings in some flow operators.
 
 ### Deprecated
 
