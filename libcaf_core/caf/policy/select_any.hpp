@@ -26,9 +26,8 @@ struct select_any_factory<F, type_list<Ts...>> {
   template <class Fun>
   static auto
   make(std::shared_ptr<size_t> pending, disposable timeouts, Fun f) {
-    using std::move;
-    return [pending{move(pending)}, timeouts{move(timeouts)},
-            f{move(f)}](Ts... xs) mutable {
+    return [pending{std::move(pending)}, timeouts{std::move(timeouts)},
+            f{std::move(f)}](Ts... xs) mutable {
       CAF_LOG_TRACE(CAF_ARG2("pending", *pending));
       if (*pending > 0) {
         timeouts.dispose();

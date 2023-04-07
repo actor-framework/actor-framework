@@ -13,7 +13,6 @@
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
 
-using std::move;
 using std::string;
 
 namespace caf {

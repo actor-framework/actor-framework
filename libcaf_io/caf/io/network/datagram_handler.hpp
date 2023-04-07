@@ -56,7 +56,7 @@ public:
   /// @warning Must not be modified outside the IO multiplexers event loop
   ///          once the stream has been started.
   void enqueue_datagram(datagram_handle hdl, byte_buffer buf) {
-    wr_offline_buf_.emplace_back(hdl, move(buf));
+    wr_offline_buf_.emplace_back(hdl, std::move(buf));
   }
 
   /// Returns the read buffer of this stream.
