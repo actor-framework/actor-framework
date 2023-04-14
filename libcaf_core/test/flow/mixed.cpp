@@ -12,6 +12,7 @@
 #include "caf/flow/observable.hpp"
 #include "caf/flow/observable_builder.hpp"
 #include "caf/flow/scoped_coordinator.hpp"
+#include "caf/scheduled_actor/flow.hpp"
 
 using namespace caf;
 
@@ -66,6 +67,32 @@ SCENARIO("sum up all the multiples of 3 or 5 below 1000") {
     CHECK_EQ(snk->state, flow::observer_state::completed);
     CHECK_EQ(snk->buf, ls(233'168));
   }
+}
+
+TEST_CASE("GH-1399 regression") {
+  // Original issue: flat_map does not limit the demand it signals upstream.
+  // When running flat_map on an unbound sequence like iota-observable, it
+  // produces an infinite amount of observables without ever giving downstream
+  // operators the opportunity to cut off the flow items.
+  auto worker_fn = []() -> behavior {
+    return {
+      [](int x) { return -x; },
+    };
+  };
+  auto worker = sys.spawn(worker_fn);
+  auto results = std::make_shared<std::vector<int>>();
+  auto run_fn = [worker, results](caf::event_based_actor* self) {
+    self->make_observable()
+      .iota(1)
+      .flat_map([self, worker](int x) {
+        return self->request(worker, infinite, x).as_observable<int32_t>();
+      })
+      .take(10)
+      .for_each([results](int value) { results->push_back(value); });
+  };
+  sys.spawn(run_fn);
+  run();
+  CHECK_EQ(*results, ls(-1, -2, -3, -4, -5, -6, -7, -8, -9, -10));
 }
 
 END_FIXTURE_SCOPE()

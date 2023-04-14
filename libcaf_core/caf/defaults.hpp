@@ -141,9 +141,19 @@ constexpr auto network_backend = std::string_view{"default"};
 
 namespace caf::defaults::flow {
 
+/// Defines how much demand should accumulate before signaling demand upstream.
+/// A minimum demand is used by operators such as `observe_on` to avoid overly
+/// frequent signaling across asynchronous barriers.
 constexpr auto min_demand = size_t{8};
+
+/// Defines how many items a single batch may contain.
 constexpr auto batch_size = size_t{32};
+
+/// Limits how many items an operator buffers internally.
 constexpr auto buffer_size = size_t{128};
+
+/// Limits the number of concurrent subscriptions for operators such as `merge`.
+constexpr auto max_concurrent = size_t{8};
 
 } // namespace caf::defaults::flow
 
