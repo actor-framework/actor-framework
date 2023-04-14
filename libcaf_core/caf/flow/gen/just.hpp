@@ -4,6 +4,9 @@
 
 #pragma once
 
+#include <cstddef>
+#include <utility>
+
 namespace caf::flow::gen {
 
 /// A generator that emits a single value once.
