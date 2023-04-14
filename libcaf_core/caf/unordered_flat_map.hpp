@@ -144,7 +144,7 @@ public:
   }
 
   void swap(unordered_flat_map& other) {
-    xs_.swap(other);
+    xs_.swap(other.xs_);
   }
 
   // -- insertion -------------------------------------------------------------

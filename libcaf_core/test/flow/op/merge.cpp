@@ -43,8 +43,9 @@ struct fixture : test_coordinator_fixture<> {
   template <class T, class... Ts>
   auto raw_sub(flow::observer<T> out, Ts&&... xs) {
     using flow::observable;
-    auto ptr = make_counted<flow::op::merge_sub<T>>(ctx.get(), out);
-    (ptr->subscribe_to(xs), ...);
+    auto ptr = make_counted<flow::op::merge_sub<T>>(ctx.get(), out,
+                                                    sizeof...(Ts));
+    (ptr->on_next(xs), ...);
     out.on_subscribe(flow::subscription{ptr});
     return ptr;
   }
@@ -54,7 +55,7 @@ struct fixture : test_coordinator_fixture<> {
 
 BEGIN_FIXTURE_SCOPE(fixture)
 
-SCENARIO("the merge operator combine inputs") {
+SCENARIO("the merge operator combines inputs") {
   GIVEN("two observables") {
     WHEN("merging them to a single observable") {
       THEN("the observer receives the output of both sources") {
