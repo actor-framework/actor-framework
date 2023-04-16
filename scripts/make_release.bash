@@ -235,3 +235,34 @@ rm "$github_msg" .make-release-steps.bash
 
 echo ; echo
 echo ">>> done"
+
+echo ; echo
+echo ">>> build and publish Doxygen on the homepage (needs a checkout under ../website)?"
+ask_permission "type [y] to proceed or [n] to abort"
+
+if [ ! -d ../website/static/doxygen ] ; then
+  raise_error "../website/static/doxygen does not exist"
+fi
+
+if [ -d ../website/static/doxygen/$tag_version ] ; then
+  raise_error "../website/static/doxygen/$tag_version/ already exist"
+fi
+
+echo "\
+doxygen &> doxygen-log.txt
+mkdir ../website/static/doxygen/$tag_version
+cp -R html/* ../website/static/doxygen/$tag_version/
+cd ../website
+git add static/doxygen/$tag_version
+git commit -m 'Add Doxygen for $tag_version'
+git push
+" >> .push-doxygen-steps.bash
+
+echo ; echo
+echo ">>> please review the final steps for pushing Doxygen for $tag_version"
+cat .push-doxygen-steps.bash
+echo ; echo
+ask_permission "type [y] to execute the steps above or [n] to abort"
+
+chmod +x .push-doxygen-steps.bash
+./.push-doxygen-steps.bash
