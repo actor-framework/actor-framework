@@ -135,6 +135,33 @@
 /// @namespace caf::policy
 /// Contains policies encapsulating characteristics or algorithms.
 ///
+/// @namespace caf::telemetry
+/// Contains classes and functions for collecting telemetry data.
+///
+/// @namespace caf::net
+/// Contains all classes and functions related to network protocols.
+///
+/// @namespace caf::net::dsl
+/// Contains building blocks to assemble protocol stacks in a declarative way.
+///
+/// @namespace caf::net::http
+/// Contains an implementation for HTTP.
+///
+/// @namespace caf::net::ssl
+/// Contains wrappers for convenient access to SSL.
+///
+/// @namespace caf::net::octet_stream
+/// Contains classes and utilities for transports that operate on raw octets.
+///
+/// @namespace caf::net::prometheus
+/// Contains a scraper for exposing metrics from an actor system to Prometheus.
+///
+/// @namespace caf::net::web_socket
+/// Contains an implementation for message exchange over the WebSocket protocol.
+///
+/// @namespace caf::net::lp
+/// Contains an implementation for message exchange over length-prefix framing.
+///
 /// @namespace caf::io
 /// Contains all IO-related classes and functions.
 ///

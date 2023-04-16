@@ -1,6 +1,4 @@
-/******************************************************************************\
- * Illustrates semantics of request().{then|await|receive}.                   *
-\******************************************************************************/
+// This example illustrates semantics of request().{then|await|receive}.
 
 #include <chrono>
 #include <cstdint>

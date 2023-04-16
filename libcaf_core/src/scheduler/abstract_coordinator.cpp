@@ -31,9 +31,7 @@
 
 namespace caf::scheduler {
 
-/******************************************************************************
- *                     utility and implementation details                     *
- ******************************************************************************/
+// -- utility and implementation details ---------------------------------------
 
 namespace {
 
@@ -164,9 +162,7 @@ public:
 
 } // namespace
 
-/******************************************************************************
- *                       implementation of coordinator                        *
- ******************************************************************************/
+// -- implementation of coordinator --------------------------------------------
 
 const actor_system_config& abstract_coordinator::config() const {
   return system_.config();

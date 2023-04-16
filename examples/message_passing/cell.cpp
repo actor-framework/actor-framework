@@ -1,7 +1,5 @@
-/******************************************************************************\
- * This example is a very basic, non-interactive math service implemented     *
- * for both the blocking and the event-based API.                             *
-\******************************************************************************/
+// This example is a very basic, non-interactive math service implemented for
+// both the blocking and the event-based API.
 
 #include <cstdint>
 #include <iostream>

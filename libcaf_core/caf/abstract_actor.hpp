@@ -97,9 +97,7 @@ public:
   /// Returns the system that created this actor (or proxy).
   actor_system& home_system() const noexcept;
 
-  /****************************************************************************
-   *                 here be dragons: end of public interface                 *
-   ****************************************************************************/
+  // -- here be dragons: end of public interface -------------------------------
 
   /// @cond PRIVATE
 

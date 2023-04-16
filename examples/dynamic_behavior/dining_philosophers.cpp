@@ -1,7 +1,5 @@
-/******************************************************************************\
- * This example is an implementation of the classical Dining Philosophers     *
- * exercise using only libcaf's event-based actor implementation.             *
-\******************************************************************************/
+// This example is an implementation of the classical Dining Philosophers
+// exercise using only CAF's event-based actor implementation.
 
 #include <chrono>
 #include <iostream>

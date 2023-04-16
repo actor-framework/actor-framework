@@ -1,15 +1,13 @@
-/******************************************************************************\
- * This program is a distributed version of the math_actor example.           *
- * Client and server use a stateless request/response protocol and the client *
- * is failure resilient by using a FIFO request queue.                        *
- * The client auto-reconnects and also allows for server reconfiguration.     *
- *                                                                            *
- * Run server at port 4242:                                                   *
- * - distributed_calculator -s -p 4242                                        *
- *                                                                            *
- * Run client at the same host:                                               *
- * - distributed_calculator -c -p 4242                                        *
-\******************************************************************************/
+// This program is a distributed version of the math_actor example. Client and
+// server use a stateless request/response protocol and the client is failure
+// resilient by using a FIFO request queue. The client auto-reconnects and also
+// allows for server reconfiguration.
+//
+// Run server at port 4242:
+// - distributed_calculator -s -p 4242
+//
+// Run client at the same host:
+// - distributed_calculator -c -p 4242
 
 #include <array>
 #include <cassert>

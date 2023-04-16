@@ -1,13 +1,11 @@
-/******************************************************************************\
- * This example program represents a minimal GUI chat program                 *
- * based on group communication. This chat program is compatible to the       *
- * terminal version in length_prefix_framing/chat-server.cpp.                 *
- *                                                                            *
- * Setup for a minimal chat between "alice" and "bob":                        *
- * - chat-server -p 4242                                                      *
- * - qt_group_chat -H localhost -p 4242 -n alice                              *
- * - qt_group_chat -H localhost -p 4242 -n bob                                *
-\******************************************************************************/
+// This example program represents a minimal GUI chat program based on group
+// communication. This chat program is compatible to the terminal version in
+// length_prefix_framing/chat-server.cpp.
+//
+// Setup for a minimal chat between "alice" and "bob":
+// - chat-server -p 4242
+// - qt_group_chat -H localhost -p 4242 -n alice
+// - qt_group_chat -H localhost -p 4242 -n bob
 
 #include <cstdlib>
 #include <iostream>

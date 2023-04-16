@@ -1,7 +1,5 @@
-/******************************************************************************\
- * This example is a very basic, non-interactive math service implemented     *
- * using typed actors.                                                        *
-\******************************************************************************/
+// This example is a very basic, non-interactive math service implemented using
+// typed actors.
 
 #include "caf/all.hpp"
 #include <cassert>

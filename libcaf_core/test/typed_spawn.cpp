@@ -42,9 +42,7 @@ static_assert(std::is_convertible<dummy5, dummy3>::value,
 static_assert(std::is_convertible<dummy5, dummy4>::value,
               "handle not assignable to narrower definition");
 
-/******************************************************************************
- *                        simple request/response test                        *
- ******************************************************************************/
+// -- simple request/response test ---------------------------------------------
 
 using server_type = typed_actor<result<bool>(my_request)>;
 
@@ -81,9 +79,7 @@ void client(event_based_actor* self, const actor& parent,
   });
 }
 
-/******************************************************************************
- *          test skipping of messages intentionally + using become()          *
- ******************************************************************************/
+// -- test skipping of messages intentionally + using become() -----------------
 
 using event_testee_type
   = typed_actor<result<string>(get_state_atom), result<void>(string),
@@ -127,9 +123,7 @@ public:
   }
 };
 
-/******************************************************************************
- *                         simple 'forwarding' chain                          *
- ******************************************************************************/
+// -- simple 'forwarding' chain ------------------------------------------------
 
 using string_actor = typed_actor<result<string>(string)>;
 
@@ -178,9 +172,7 @@ maybe_string_delegator(maybe_string_actor::pointer self,
   };
 }
 
-/******************************************************************************
- *                        sending typed actor handles                         *
- ******************************************************************************/
+// -- sending typed actor handles ----------------------------------------------
 
 int_actor::behavior_type int_fun() {
   return {
@@ -256,9 +248,7 @@ struct fixture : test_coordinator_fixture<> {
 
 BEGIN_FIXTURE_SCOPE(fixture)
 
-/******************************************************************************
- *                             put it all together                            *
- ******************************************************************************/
+// -- putting it all together --------------------------------------------------
 
 CAF_TEST(typed_spawns) {
   MESSAGE("run test series with typed_server1");

@@ -102,9 +102,7 @@ protected:
   /// Creates a new actor instance.
   explicit monitorable_actor(actor_config& cfg);
 
-  /****************************************************************************
-   *                 here be dragons: end of public interface                 *
-   ****************************************************************************/
+  // -- here be dragons: end of public interface -------------------------------
 
   // precondition: `mtx_` is acquired
   void attach_impl(attachable_ptr& ptr) {

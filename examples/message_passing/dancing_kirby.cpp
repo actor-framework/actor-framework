@@ -1,6 +1,4 @@
-/******************************************************************************\
- * This example illustrates how to do time-triggered loops in libcaf.         *
-\******************************************************************************/
+// This example illustrates how to do time-triggered loops in CAF.
 
 #include <algorithm>
 #include <chrono>
