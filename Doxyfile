@@ -38,7 +38,7 @@ PROJECT_NAME           = "C++ Actor Framework"
 # could be handy for archiving the generated documentation or if some version
 # control system is used.
 
-PROJECT_NUMBER         = 0.18
+PROJECT_NUMBER         = 0.19
 
 # Using the PROJECT_BRIEF tag one can provide an optional one line description
 # for a project that appears at the top of each page and should give viewer a
@@ -814,7 +814,8 @@ WARN_LOGFILE           =
 # Note: If this tag is empty the current directory is searched.
 
 INPUT                  = "libcaf_core/caf" \
-                         "libcaf_io/caf"
+                         "libcaf_io/caf" \
+                         "libcaf_net/caf"
 
 # This tag can be used to specify the character encoding of the source files
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding. Doxygen uses
@@ -2103,7 +2104,8 @@ INCLUDE_FILE_PATTERNS  =
 
 PREDEFINED             = CAF_DOCUMENTATION, \
                          CAF_CORE_EXPORT=,  \
-                         CAF_IO_EXPORT=
+                         CAF_IO_EXPORT=     \
+                         CAF_NET_EXPORT=,
 
 # If the MACRO_EXPANSION and EXPAND_ONLY_PREDEF tags are set to YES then this
 # tag can be used to specify a list of macro names that should be expanded. The
