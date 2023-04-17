@@ -661,7 +661,7 @@ CAF_TEST(indirect_connections) {
   MESSAGE("publish self at port 4242");
   auto ax = accept_handle::from_int(4242);
   mpx()->provide_acceptor(4242, ax);
-  sys.middleman().publish(self(), 4242);
+  CAF_REQUIRE(sys.middleman().publish(self(), 4242));
   mpx()->flush_runnables(); // process publish message in basp_broker
   MESSAGE("connect to Mars");
   connect_node(mars(), ax, self()->id());

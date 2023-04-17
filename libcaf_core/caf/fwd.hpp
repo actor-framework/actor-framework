@@ -27,7 +27,7 @@ template <class> class behavior_type_of;
 template <class> class callback;
 template <class> class cow_vector;
 template <class> class dictionary;
-template <class> class expected;
+template <class> class [[nodiscard]] expected;
 template <class> class intrusive_cow_ptr;
 template <class> class intrusive_ptr;
 template <class> class param;
