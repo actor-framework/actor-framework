@@ -39,6 +39,7 @@ TEST_CASE("default-constructed") {
   CHECK(!val.is_array());
   CHECK(!val.is_object());
   CHECK_EQ(val.to_integer(), 0);
+  CHECK_EQ(val.to_unsigned(), 0u);
   CHECK_EQ(val.to_double(), 0.0);
   CHECK_EQ(val.to_bool(), false);
   CHECK_EQ(val.to_string(), ""sv);
@@ -61,6 +62,7 @@ TEST_CASE("from undefined") {
   CHECK(!val.is_array());
   CHECK(!val.is_object());
   CHECK_EQ(val.to_integer(), 0);
+  CHECK_EQ(val.to_unsigned(), 0u);
   CHECK_EQ(val.to_double(), 0.0);
   CHECK_EQ(val.to_bool(), false);
   CHECK_EQ(val.to_string(), ""sv);
@@ -70,11 +72,36 @@ TEST_CASE("from undefined") {
   CHECK_EQ(deep_copy(val), val);
 }
 
-TEST_CASE("from integer") {
+TEST_CASE("from negative integer") {
+  auto val = unbox(json_value::parse("-1"));
+  CHECK(!val.is_null());
+  CHECK(!val.is_undefined());
+  CHECK(val.is_integer());
+  CHECK(!val.is_unsigned());
+  CHECK(!val.is_double());
+  CHECK(val.is_number());
+  CHECK(!val.is_bool());
+  CHECK(!val.is_string());
+  CHECK(!val.is_array());
+  CHECK(!val.is_object());
+  CHECK_EQ(val.to_integer(), -1);
+  CHECK_EQ(val.to_unsigned(), 0u);
+  CHECK_EQ(val.to_double(), -1.0);
+  CHECK_EQ(val.to_bool(), false);
+  CHECK_EQ(val.to_string(), ""sv);
+  CHECK_EQ(val.to_object().size(), 0u);
+  CHECK_EQ(to_string(val), "-1");
+  CHECK_EQ(printed(val), "-1");
+  CHECK_EQ(deep_copy(val), val);
+}
+
+TEST_CASE("from small integer") {
+  // A small integer can be represented as both int64_t and uint64_t.
   auto val = unbox(json_value::parse("42"));
   CHECK(!val.is_null());
   CHECK(!val.is_undefined());
   CHECK(val.is_integer());
+  CHECK(val.is_unsigned());
   CHECK(!val.is_double());
   CHECK(val.is_number());
   CHECK(!val.is_bool());
@@ -82,12 +109,36 @@ TEST_CASE("from integer") {
   CHECK(!val.is_array());
   CHECK(!val.is_object());
   CHECK_EQ(val.to_integer(), 42);
+  CHECK_EQ(val.to_unsigned(), 42u);
   CHECK_EQ(val.to_double(), 42.0);
   CHECK_EQ(val.to_bool(), false);
   CHECK_EQ(val.to_string(), ""sv);
   CHECK_EQ(val.to_object().size(), 0u);
   CHECK_EQ(to_string(val), "42");
   CHECK_EQ(printed(val), "42");
+  CHECK_EQ(deep_copy(val), val);
+}
+
+TEST_CASE("from UINT64_MAX") {
+  auto val = unbox(json_value::parse("18446744073709551615"));
+  CHECK(!val.is_null());
+  CHECK(!val.is_undefined());
+  CHECK(!val.is_integer());
+  CHECK(val.is_unsigned());
+  CHECK(!val.is_double());
+  CHECK(val.is_number());
+  CHECK(!val.is_bool());
+  CHECK(!val.is_string());
+  CHECK(!val.is_array());
+  CHECK(!val.is_object());
+  CHECK_EQ(val.to_integer(), 0);
+  CHECK_EQ(val.to_unsigned(), UINT64_MAX);
+  CHECK_EQ(val.to_double(), static_cast<double>(UINT64_MAX));
+  CHECK_EQ(val.to_bool(), false);
+  CHECK_EQ(val.to_string(), ""sv);
+  CHECK_EQ(val.to_object().size(), 0u);
+  CHECK_EQ(to_string(val), "18446744073709551615");
+  CHECK_EQ(printed(val), "18446744073709551615");
   CHECK_EQ(deep_copy(val), val);
 }
 
@@ -103,6 +154,7 @@ TEST_CASE("from double") {
   CHECK(!val.is_array());
   CHECK(!val.is_object());
   CHECK_EQ(val.to_integer(), 42);
+  CHECK_EQ(val.to_unsigned(), 42u);
   CHECK_EQ(val.to_double(), 42.0);
   CHECK_EQ(val.to_bool(), false);
   CHECK_EQ(val.to_string(), ""sv);
@@ -124,6 +176,7 @@ TEST_CASE("from bool") {
   CHECK(!val.is_array());
   CHECK(!val.is_object());
   CHECK_EQ(val.to_integer(), 0);
+  CHECK_EQ(val.to_unsigned(), 0u);
   CHECK_EQ(val.to_double(), 0.0);
   CHECK_EQ(val.to_bool(), true);
   CHECK_EQ(val.to_string(), ""sv);
@@ -145,6 +198,7 @@ TEST_CASE("from string") {
   CHECK(!val.is_array());
   CHECK(!val.is_object());
   CHECK_EQ(val.to_integer(), 0);
+  CHECK_EQ(val.to_unsigned(), 0u);
   CHECK_EQ(val.to_double(), 0.0);
   CHECK_EQ(val.to_bool(), false);
   CHECK_EQ(val.to_string(), "Hello, world!"sv);
@@ -166,6 +220,7 @@ TEST_CASE("from empty array") {
   CHECK(val.is_array());
   CHECK(!val.is_object());
   CHECK_EQ(val.to_integer(), 0);
+  CHECK_EQ(val.to_unsigned(), 0u);
   CHECK_EQ(val.to_double(), 0.0);
   CHECK_EQ(val.to_bool(), false);
   CHECK_EQ(val.to_string(), ""sv);
@@ -188,6 +243,7 @@ TEST_CASE("from array of size 1") {
   CHECK(val.is_array());
   CHECK(!val.is_object());
   CHECK_EQ(val.to_integer(), 0);
+  CHECK_EQ(val.to_unsigned(), 0u);
   CHECK_EQ(val.to_double(), 0.0);
   CHECK_EQ(val.to_bool(), false);
   CHECK_EQ(val.to_string(), ""sv);
@@ -210,6 +266,7 @@ TEST_CASE("from array of size 3") {
   CHECK(val.is_array());
   CHECK(!val.is_object());
   CHECK_EQ(val.to_integer(), 0);
+  CHECK_EQ(val.to_unsigned(), 0u);
   CHECK_EQ(val.to_double(), 0.0);
   CHECK_EQ(val.to_bool(), false);
   CHECK_EQ(val.to_string(), ""sv);
@@ -232,6 +289,7 @@ TEST_CASE("from empty object") {
   CHECK(!val.is_array());
   CHECK(val.is_object());
   CHECK_EQ(val.to_integer(), 0);
+  CHECK_EQ(val.to_unsigned(), 0u);
   CHECK_EQ(val.to_double(), 0.0);
   CHECK_EQ(val.to_bool(), false);
   CHECK_EQ(val.to_string(), ""sv);
@@ -253,6 +311,7 @@ TEST_CASE("from non-empty object") {
   CHECK(!val.is_array());
   CHECK(val.is_object());
   CHECK_EQ(val.to_integer(), 0);
+  CHECK_EQ(val.to_unsigned(), 0u);
   CHECK_EQ(val.to_double(), 0.0);
   CHECK_EQ(val.to_bool(), false);
   CHECK_EQ(val.to_string(), ""sv);
@@ -260,4 +319,25 @@ TEST_CASE("from non-empty object") {
   CHECK_EQ(to_string(val), R"_({"foo": "bar"})_");
   CHECK_EQ(printed(val), "{\n  \"foo\": \"bar\"\n}");
   CHECK_EQ(deep_copy(val), val);
+}
+
+namespace {
+
+std::string_view json_with_boundary_values = R"_({
+  "min-int64": -9223372036854775808,
+  "max-int64": 9223372036854775807,
+  "min-uint64": 0,
+  "max-uint64": 18446744073709551615
+})_";
+
+} // namespace
+
+TEST_CASE("non-empty object with nested values") {
+  auto val = unbox(json_value::parse(json_with_boundary_values));
+  CHECK(val.is_object());
+  auto obj = val.to_object();
+  CHECK_EQ(obj.value("min-int64").to_integer(), INT64_MIN);
+  CHECK_EQ(obj.value("max-int64").to_integer(), INT64_MAX);
+  CHECK_EQ(obj.value("min-uint64").to_unsigned(), 0u);
+  CHECK_EQ(obj.value("max-uint64").to_unsigned(), UINT64_MAX);
 }

@@ -30,6 +30,12 @@ struct number_consumer {
   void value(int64_t y) {
     x = y;
   }
+  void value(uint64_t y) {
+    if (y < INT64_MAX)
+      value(static_cast<int64_t>(y));
+    else
+      CAF_FAIL("number consumer called with a uint64_t larger than INT64_MAX");
+  }
 };
 
 struct range_consumer {
@@ -39,6 +45,12 @@ struct range_consumer {
   }
   void value(int64_t y) {
     xs.emplace_back(y);
+  }
+  void value(uint64_t y) {
+    if (y < INT64_MAX)
+      value(static_cast<int64_t>(y));
+    else
+      CAF_FAIL("range consumer called with a uint64_t larger than INT64_MAX");
   }
 };
 
@@ -328,6 +340,7 @@ CAF_TEST(ranges can use signed integers) {
 CAF_TEST(the parser rejects invalid step values) {
   CHECK_ERR("-2..+2..-2", pec::invalid_range_expression);
   CHECK_ERR("+2..-2..+2", pec::invalid_range_expression);
+  CHECK_ERR("+2..-2..0", pec::invalid_range_expression);
 }
 
 END_FIXTURE_SCOPE()

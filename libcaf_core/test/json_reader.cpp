@@ -17,6 +17,7 @@ using namespace std::literals;
 namespace {
 
 struct fixture {
+  // Adds a test case for a given input and expected output.
   template <class T>
   void add_test_case(std::string_view input, T val) {
     auto f = [this, input, obj{std::move(val)}]() -> bool {
@@ -32,6 +33,20 @@ struct fixture {
       if (!res)
         MESSAGE("rejected input: " << input);
       return res;
+    };
+    test_cases.emplace_back(std::move(f));
+  }
+
+  // Adds a test case that should fail.
+  template <class T>
+  void add_neg_test_case(std::string_view input) {
+    auto f = [this, input]() -> bool {
+      auto tmp = T{};
+      auto res = reader.load(input)    // parse JSON
+                 && reader.apply(tmp); // deserialize object
+      if (res)
+        MESSAGE("got unexpected output: " << tmp);
+      return !res;
     };
     test_cases.emplace_back(std::move(f));
   }
@@ -67,7 +82,6 @@ fixture::fixture() {
   add_test_case(R"_(true)_", true);
   add_test_case(R"_(false)_", false);
   add_test_case(R"_([true, false])_", ls<bool>(true, false));
-  add_test_case(R"_(42)_", int32_t{42});
   add_test_case(R"_([1, 2, 3])_", ls<int32_t>(1, 2, 3));
   add_test_case(R"_([[1, 2], [3], []])_",
                 ls<i32_list>(ls<int32_t>(1, 2), ls<int32_t>(3), ls<int32_t>()));
@@ -109,6 +123,42 @@ fixture::fixture() {
                 R"({"top-left": {"x": 10, "y": 10}, )"
                 R"("bottom-right": {"x": 20, "y": 20}}})",
                 widget{"blue", rectangle{{10, 10}, {20, 20}}});
+  // Test cases for integers that are in bound.
+  add_test_case(R"_(-128)_", int8_t{INT8_MIN});
+  add_test_case(R"_(127)_", int8_t{INT8_MAX});
+  add_test_case(R"_(-32768)_", int16_t{INT16_MIN});
+  add_test_case(R"_(32767)_", int16_t{INT16_MAX});
+  add_test_case(R"_(-2147483648)_", int32_t{INT32_MIN});
+  add_test_case(R"_(2147483647)_", int32_t{INT32_MAX});
+  add_test_case(R"_(-9223372036854775808)_", int64_t{INT64_MIN});
+  add_test_case(R"_(9223372036854775807)_", int64_t{INT64_MAX});
+  // Test cases for unsigned integers that are in bound.
+  add_test_case(R"_(0)_", uint8_t{0});
+  add_test_case(R"_(255)_", uint8_t{UINT8_MAX});
+  add_test_case(R"_(0)_", uint16_t{0});
+  add_test_case(R"_(65535)_", uint16_t{UINT16_MAX});
+  add_test_case(R"_(0)_", uint32_t{0});
+  add_test_case(R"_(4294967295)_", uint32_t{UINT32_MAX});
+  add_test_case(R"_(0)_", uint64_t{0});
+  add_test_case(R"_(18446744073709551615)_", uint64_t{UINT64_MAX});
+  // Test cases for integers that are out of bound.
+  add_neg_test_case<int8_t>(R"_(-129)_");
+  add_neg_test_case<int8_t>(R"_(128)_");
+  add_neg_test_case<int16_t>(R"_(-32769)_");
+  add_neg_test_case<int16_t>(R"_(32768)_");
+  add_neg_test_case<int32_t>(R"_(-2147483649)_");
+  add_neg_test_case<int32_t>(R"_(2147483648)_");
+  add_neg_test_case<int64_t>(R"_(-9223372036854775809)_");
+  add_neg_test_case<int64_t>(R"_(9223372036854775808)_");
+  // Test cases for unsigned integers that are out of bound.
+  add_neg_test_case<uint8_t>(R"_(-1)_");
+  add_neg_test_case<uint8_t>(R"_(256)_");
+  add_neg_test_case<uint16_t>(R"_(-1)_");
+  add_neg_test_case<uint16_t>(R"_(65536)_");
+  add_neg_test_case<uint32_t>(R"_(-1)_");
+  add_neg_test_case<uint32_t>(R"_(4294967296)_");
+  add_neg_test_case<uint64_t>(R"_(-1)_");
+  add_neg_test_case<uint64_t>(R"_(18446744073709551616)_");
 }
 
 } // namespace

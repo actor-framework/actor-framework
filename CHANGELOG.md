@@ -5,6 +5,21 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ## [Unreleased]
 
+### Added
+
+- The class `json_value` can now hold unsigned 64-bit integer values. This
+  allows it to store values that would otherwise overflow a signed integer.
+  Values that can be represented in both integer types will return `true` for
+  `is_integer()` as well as for the new `is_unsigned()` function. Users can
+  obtain the stored value as `uint64_t` via `to_unsigned()`.
+
+### Changed
+
+- With the addition of the unsigned type to `json_value`, there is now a new
+  edge case where `is_number()` returns `true` but neither `is_integer()` nor
+  `is_double()` return `true`: integer values larger than `INT64_MAX` will only
+  return true for `is_unsigned()`.
+
 ### Fixed
 
 - Fix flow setup for servers that use `web_socket::with`. This bug caused

@@ -10,30 +10,82 @@
 #include "caf/make_counted.hpp"
 #include "caf/parser_state.hpp"
 
+#include <cstdint>
 #include <fstream>
 
 namespace caf {
 
+// -- properties ---------------------------------------------------------------
+
+bool json_value::is_integer() const noexcept {
+  return val_->is_integer()
+         || (val_->is_unsigned()
+             && std::get<uint64_t>(val_->data) <= INT64_MAX);
+}
+
+bool json_value::is_unsigned() const noexcept {
+  return val_->is_unsigned()
+         || (val_->is_integer() && std::get<int64_t>(val_->data) >= 0);
+}
+
+bool json_value::is_number() const noexcept {
+  switch (val_->data.index()) {
+    default:
+      return false;
+    case detail::json::value::integer_index:
+    case detail::json::value::unsigned_index:
+    case detail::json::value::double_index:
+      return true;
+  }
+}
+
 // -- conversion ---------------------------------------------------------------
 
 int64_t json_value::to_integer(int64_t fallback) const {
-  if (is_integer()) {
-    return std::get<int64_t>(val_->data);
+  switch (val_->data.index()) {
+    default:
+      return fallback;
+    case detail::json::value::integer_index:
+      return std::get<int64_t>(val_->data);
+    case detail::json::value::unsigned_index: {
+      auto val = std::get<uint64_t>(val_->data);
+      if (val <= INT64_MAX)
+        return static_cast<int64_t>(val);
+      return fallback;
+    }
+    case detail::json::value::double_index:
+      return static_cast<int64_t>(std::get<double>(val_->data));
   }
-  if (is_double()) {
-    return static_cast<int64_t>(std::get<double>(val_->data));
+}
+
+uint64_t json_value::to_unsigned(uint64_t fallback) const {
+  switch (val_->data.index()) {
+    default:
+      return fallback;
+    case detail::json::value::integer_index: {
+      auto val = std::get<int64_t>(val_->data);
+      if (val >= 0)
+        return static_cast<uint64_t>(val);
+      return fallback;
+    }
+    case detail::json::value::unsigned_index:
+      return std::get<uint64_t>(val_->data);
+    case detail::json::value::double_index:
+      return static_cast<int64_t>(std::get<double>(val_->data));
   }
-  return fallback;
 }
 
 double json_value::to_double(double fallback) const {
-  if (is_double()) {
-    return std::get<double>(val_->data);
-  }
-  if (is_integer()) {
-    return static_cast<double>(std::get<int64_t>(val_->data));
-  }
-  return fallback;
+  switch (val_->data.index()) {
+    default:
+      return fallback;
+    case detail::json::value::integer_index:
+      return static_cast<double>(std::get<int64_t>(val_->data));
+    case detail::json::value::unsigned_index:
+      return static_cast<double>(std::get<uint64_t>(val_->data));
+    case detail::json::value::double_index:
+      return std::get<double>(val_->data);
+  };
 }
 
 bool json_value::to_bool(bool fallback) const {
