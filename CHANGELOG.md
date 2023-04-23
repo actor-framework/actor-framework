@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file. The format
 is based on [Keep a Changelog](https://keepachangelog.com).
 
+## [Unreleased]
+
+### Fixed
+
+- Fix flow setup for servers that use `web_socket::with`. This bug caused
+  servers to immediately abort incoming connection (#1402).
+
 ## [0.19.0] - 2023-04-17
 
 ### Added

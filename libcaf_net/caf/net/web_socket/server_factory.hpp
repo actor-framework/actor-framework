@@ -78,6 +78,7 @@ public:
     (*on_request_)(acc);
     if (acc.accepted()) {
       app_event = std::move(acc.app_event);
+      ws_resources = std::move(acc.ws_resources);
       return {};
     }
     return std::move(acc) //

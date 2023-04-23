@@ -93,6 +93,13 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
                 // ... that simply pushes data back to the sender.
                 auto [pull, push] = ev.data();
                 pull.observe_on(self)
+                  .do_on_error([](const caf::error& what) { //
+                    std::cout << "*** connection closed: " << to_string(what)
+                              << "\n";
+                  })
+                  .do_on_complete([] { //
+                    std::cout << "*** connection closed\n";
+                  })
                   .do_on_next([](const ws::frame& x) {
                     if (x.is_binary()) {
                       std::cout
@@ -115,7 +122,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
     return EXIT_FAILURE;
   }
   // Note: the actor system will keep the application running for as long as the
-  // workers are still alive.
+  // worker from .start() is still alive.
   return EXIT_SUCCESS;
 }
 // --(rst-main-end)--
