@@ -17,3 +17,12 @@ add_test(
       --variable BINARY_PATH:$<TARGET_FILE:quote-server>
       --variable SSL_PATH:${CMAKE_CURRENT_SOURCE_DIR}
       "${CMAKE_CURRENT_SOURCE_DIR}/web_socket/quote-server.robot")
+
+add_test(
+  NAME "robot-web-socket-echo"
+  COMMAND
+    ${Python_EXECUTABLE}
+      -m robot
+      --variable BINARY_PATH:$<TARGET_FILE:echo>
+      --variable SSL_PATH:${CMAKE_CURRENT_SOURCE_DIR}
+      "${CMAKE_CURRENT_SOURCE_DIR}/web_socket/echo.robot")
