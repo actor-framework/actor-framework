@@ -9,6 +9,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 - Fix flow setup for servers that use `web_socket::with`. This bug caused
   servers to immediately abort incoming connection (#1402).
+- Make sure that a protocol stack ships pending data before closing a socket.
+  This bug prevented clients from receiving error messages from servers if the
+  server shuts down immediately after writing the message.
 
 ## [0.19.0] - 2023-04-17
 
