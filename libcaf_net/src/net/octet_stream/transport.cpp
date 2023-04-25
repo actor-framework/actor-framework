@@ -214,16 +214,16 @@ void transport::handle_buffered_data() {
     auto delta = bytes.subspan(delta_offset_);
     auto consumed = up_->consume(bytes, delta);
     if (consumed < 0) {
-      // Negative values indicate that the application encountered an
-      // unrecoverable error.
+      // Negative values indicate that the application wants to close the
+      // socket. We still make sure to send any pending data before closing.
       up_->abort(make_error(caf::sec::runtime_error, "consumed < 0"));
-      parent_->deregister();
+      parent_->deregister_reading();
       return;
     } else if (static_cast<size_t>(consumed) > n) {
       // Must not happen. An application cannot handle more data then we pass
       // to it.
       up_->abort(make_error(sec::logic_error, "consumed > buffer.size"));
-      parent_->deregister();
+      parent_->deregister_reading();
       return;
     } else if (consumed == 0) {
       if (next_) {
