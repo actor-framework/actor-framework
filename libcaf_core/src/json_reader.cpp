@@ -8,6 +8,8 @@
 #include "caf/detail/print.hpp"
 #include "caf/string_algorithms.hpp"
 
+#include <fstream>
+
 namespace {
 
 static constexpr const char class_name[] = "caf::json_reader";
@@ -50,23 +52,24 @@ std::string type_clash(caf::json_reader::position want,
 
 std::string type_clash(caf::string_view want,
                        const caf::detail::json::value& got) {
-  using namespace caf::literals;
+  using namespace std::literals;
   using caf::detail::json::value;
   switch (got.data.index()) {
     case value::integer_index:
-      return type_clash(want, "json::integer"_sv);
+    case value::unsigned_index:
+      return type_clash(want, "json::integer"sv);
     case value::double_index:
-      return type_clash(want, "json::real"_sv);
+      return type_clash(want, "json::real"sv);
     case value::bool_index:
-      return type_clash(want, "json::boolean"_sv);
+      return type_clash(want, "json::boolean"sv);
     case value::string_index:
-      return type_clash(want, "json::string"_sv);
+      return type_clash(want, "json::string"sv);
     case value::array_index:
-      return type_clash(want, "json::array"_sv);
+      return type_clash(want, "json::array"sv);
     case value::object_index:
-      return type_clash(want, "json::object"_sv);
+      return type_clash(want, "json::object"sv);
     default:
-      return type_clash(want, "json::null"_sv);
+      return type_clash(want, "json::null"sv);
   }
 }
 
@@ -145,19 +148,41 @@ json_reader::~json_reader() {
 bool json_reader::load(string_view json_text) {
   reset();
   string_parser_state ps{json_text.begin(), json_text.end()};
+  root_ = detail::json::parse_shallow(ps, &buf_);
+  if (ps.code != pec::success) {
+    set_error(make_error(ps));
+    st_ = nullptr;
+    return false;
+  }
+  err_.reset();
+  detail::monotonic_buffer_resource::allocator<stack_type> alloc{&buf_};
+  st_ = new (alloc.allocate(1)) stack_type(stack_allocator{&buf_});
+  st_->reserve(16);
+  st_->emplace_back(root_);
+  return true;
+}
+
+bool json_reader::load_file(const char* path) {
+  using iterator_t = std::istreambuf_iterator<char>;
+  reset();
+  std::ifstream input{path};
+  if (!input.is_open()) {
+    emplace_error(sec::cannot_open_file);
+    return false;
+  }
+  detail::json::file_parser_state ps{iterator_t{input}, iterator_t{}};
   root_ = detail::json::parse(ps, &buf_);
   if (ps.code != pec::success) {
     set_error(make_error(ps));
     st_ = nullptr;
     return false;
-  } else {
-    err_.reset();
-    detail::monotonic_buffer_resource::allocator<stack_type> alloc{&buf_};
-    st_ = new (alloc.allocate(1)) stack_type(stack_allocator{&buf_});
-    st_->reserve(16);
-    st_->emplace_back(root_);
-    return true;
   }
+  err_.reset();
+  detail::monotonic_buffer_resource::allocator<stack_type> alloc{&buf_};
+  st_ = new (alloc.allocate(1)) stack_type(stack_allocator{&buf_});
+  st_->reserve(16);
+  st_->emplace_back(root_);
+  return true;
 }
 
 void json_reader::revert() {
@@ -166,6 +191,7 @@ void json_reader::revert() {
     err_.reset();
     st_->clear();
     st_->emplace_back(root_);
+    field_.clear();
   }
 }
 
@@ -173,6 +199,7 @@ void json_reader::reset() {
   buf_.reclaim();
   st_ = nullptr;
   err_.reset();
+  field_.clear();
 }
 
 // -- interface functions ------------------------------------------------------
@@ -199,7 +226,7 @@ bool json_reader::fetch_next_object_name(string_view& type_name) {
   FN_DECL;
   return consume<false>(fn, [this, &type_name](const detail::json::value& val) {
     if (val.data.index() == detail::json::value::object_index) {
-      auto& obj = get<detail::json::object>(val.data);
+      auto& obj = std::get<detail::json::object>(val.data);
       if (auto mem_ptr = find_member(&obj, "@type")) {
         if (mem_ptr->val->data.index() == detail::json::value::string_index) {
           type_name = std::get<string_view>(mem_ptr->val->data);
@@ -227,7 +254,7 @@ bool json_reader::begin_object(type_id_t, string_view) {
   FN_DECL;
   return consume<false>(fn, [this](const detail::json::value& val) {
     if (val.data.index() == detail::json::value::object_index) {
-      push(&get<detail::json::object>(val.data));
+      push(&std::get<detail::json::object>(val.data));
       return true;
     } else {
       emplace_error(sec::runtime_error, class_name, fn, current_field_name(),
@@ -260,8 +287,8 @@ bool json_reader::end_object() {
 
 bool json_reader::begin_field(string_view name) {
   SCOPE(position::object);
+  field_.push_back(name);
   if (auto member = find_member(top<position::object>(), name)) {
-    field_.push_back(name);
     push(member->val);
     return true;
   } else {
@@ -273,10 +300,10 @@ bool json_reader::begin_field(string_view name) {
 
 bool json_reader::begin_field(string_view name, bool& is_present) {
   SCOPE(position::object);
+  field_.push_back(name);
   if (auto member = find_member(top<position::object>(), name);
       member != nullptr
       && member->val->data.index() != detail::json::value::null_index) {
-    field_.push_back(name);
     push(member->val);
     is_present = true;
   } else {
@@ -285,8 +312,8 @@ bool json_reader::begin_field(string_view name, bool& is_present) {
   return true;
 }
 
-bool json_reader::begin_field(string_view name, span<const type_id_t> types,
-                              size_t& index) {
+bool json_reader::begin_field(string_view name,
+                              span<const type_id_t> types, size_t& index) {
   bool is_present = false;
   if (begin_field(name, is_present, types, index)) {
     if (is_present) {
@@ -304,6 +331,7 @@ bool json_reader::begin_field(string_view name, span<const type_id_t> types,
 bool json_reader::begin_field(string_view name, bool& is_present,
                               span<const type_id_t> types, size_t& index) {
   SCOPE(position::object);
+  field_.push_back(name);
   if (auto member = find_member(top<position::object>(), name);
       member != nullptr
       && member->val->data.index() != detail::json::value::null_index) {
@@ -312,7 +340,6 @@ bool json_reader::begin_field(string_view name, bool& is_present,
       if (auto i = std::find(types.begin(), types.end(), id);
           i != types.end()) {
         index = static_cast<size_t>(std::distance(types.begin(), i));
-        field_.push_back(name);
         push(member->val);
         is_present = true;
         return true;
@@ -327,7 +354,8 @@ bool json_reader::end_field() {
   SCOPE(position::object);
   // Note: no pop() here, because the value(s) were already consumed. Only
   //       update the field_ for debugging.
-  field_.pop_back();
+  if (!field_.empty())
+    field_.pop_back();
   return true;
 }
 
@@ -379,7 +407,7 @@ bool json_reader::begin_sequence(size_t& size) {
   FN_DECL;
   return consume<false>(fn, [this, &size](const detail::json::value& val) {
     if (val.data.index() == detail::json::value::array_index) {
-      auto& ls = get<detail::json::array>(val.data);
+      auto& ls = std::get<detail::json::array>(val.data);
       size = ls.size();
       push(sequence{ls.begin(), ls.end()});
       return true;
@@ -410,7 +438,7 @@ bool json_reader::begin_associative_array(size_t& size) {
   FN_DECL;
   return consume<false>(fn, [this, &size](const detail::json::value& val) {
     if (val.data.index() == detail::json::value::object_index) {
-      auto* obj = std::addressof(get<detail::json::object>(val.data));
+      auto* obj = std::addressof(std::get<detail::json::object>(val.data));
       pop();
       size = obj->size();
       push(members{obj->begin(), obj->end()});
@@ -507,11 +535,19 @@ bool json_reader::integer(T& x) {
       if (detail::bounds_checker<T>::check(i64)) {
         x = static_cast<T>(i64);
         return true;
-      } else {
-        emplace_error(sec::runtime_error, class_name, fn,
-                      "integer out of bounds");
-        return false;
       }
+      emplace_error(sec::runtime_error, class_name, fn,
+                    "signed integer out of bounds");
+      return false;
+    } else if (val.data.index() == detail::json::value::unsigned_index) {
+      auto u64 = std::get<uint64_t>(val.data);
+      if (detail::bounds_checker<T>::check(u64)) {
+        x = static_cast<T>(u64);
+        return true;
+      }
+      emplace_error(sec::runtime_error, class_name, fn,
+                    "unsigned integer out of bounds");
+      return false;
     } else {
       emplace_error(sec::runtime_error, class_name, fn, current_field_name(),
                     type_clash("json::integer", val));
@@ -565,13 +601,20 @@ bool json_reader::value(float& x) {
 bool json_reader::value(double& x) {
   FN_DECL;
   return consume<true>(fn, [this, &x](const detail::json::value& val) {
-    if (val.data.index() == detail::json::value::double_index) {
-      x = std::get<double>(val.data);
-      return true;
-    } else {
-      emplace_error(sec::runtime_error, class_name, fn, current_field_name(),
-                    type_clash("json::real", val));
-      return false;
+    switch (val.data.index()) {
+      case detail::json::value::double_index:
+        x = std::get<double>(val.data);
+        return true;
+      case detail::json::value::integer_index:
+        x = std::get<int64_t>(val.data);
+        return true;
+      case detail::json::value::unsigned_index:
+        x = std::get<uint64_t>(val.data);
+        return true;
+      default:
+        emplace_error(sec::runtime_error, class_name, fn, current_field_name(),
+                      type_clash("json::real", val));
+        return false;
     }
   });
 }

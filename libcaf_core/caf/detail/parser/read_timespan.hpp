@@ -6,12 +6,12 @@
 
 #include <chrono>
 #include <cstdint>
+#include <optional>
 #include <string>
 
 #include "caf/config.hpp"
 #include "caf/detail/parser/read_signed_integer.hpp"
 #include "caf/detail/scope_guard.hpp"
-#include "caf/optional.hpp"
 #include "caf/pec.hpp"
 #include "caf/timestamp.hpp"
 
@@ -24,7 +24,7 @@ namespace caf::detail::parser {
 /// Reads a timespan.
 template <class State, class Consumer>
 void read_timespan(State& ps, Consumer&& consumer,
-                   optional<int64_t> num = none) {
+                   std::optional<int64_t> num = std::nullopt) {
   using namespace std::chrono;
   struct interim_consumer {
     using value_type = int64_t;

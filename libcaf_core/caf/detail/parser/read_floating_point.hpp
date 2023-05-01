@@ -5,6 +5,7 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 #include <type_traits>
 
 #include "caf/config.hpp"
@@ -14,7 +15,6 @@
 #include "caf/detail/parser/is_digit.hpp"
 #include "caf/detail/parser/sub_ascii.hpp"
 #include "caf/detail/scope_guard.hpp"
-#include "caf/optional.hpp"
 #include "caf/pec.hpp"
 
 CAF_PUSH_UNUSED_LABEL_WARNING
@@ -30,7 +30,7 @@ namespace caf::detail::parser {
 ///                    the pre-decimal value.
 template <class State, class Consumer, class ValueType>
 void read_floating_point(State& ps, Consumer&& consumer,
-                         optional<ValueType> start_value,
+                         std::optional<ValueType> start_value,
                          bool negative = false) {
   // Any exponent larger than 511 always overflows.
   static constexpr int max_double_exponent = 511;
@@ -38,7 +38,7 @@ void read_floating_point(State& ps, Consumer&& consumer,
   enum sign_t { plus, minus };
   sign_t sign;
   ValueType result;
-  if (start_value == none) {
+  if (!start_value) {
     sign = plus;
     result = 0;
   } else if (*start_value < 0) {
@@ -72,8 +72,8 @@ void read_floating_point(State& ps, Consumer&& consumer,
       }
       // 3) Scale result.
       // Pre-computed powers of 10 for the scaling loop.
-      static double powerTable[]
-        = {1e1, 1e2, 1e4, 1e8, 1e16, 1e32, 1e64, 1e128, 1e256};
+      static double powerTable[] = {1e1,  1e2,  1e4,   1e8,  1e16,
+                                    1e32, 1e64, 1e128, 1e256};
       auto i = 0;
       if (exp < 0) {
         for (auto n = -exp; n != 0; n >>= 1, ++i)
@@ -97,7 +97,7 @@ void read_floating_point(State& ps, Consumer&& consumer,
   // Definition of our parser FSM.
   start();
   unstable_state(init) {
-    epsilon_if(start_value == none, regular_init)
+    epsilon_if(!start_value, regular_init)
     epsilon(after_dec, "eE.")
     epsilon(after_dot, any_char)
   }
@@ -173,7 +173,7 @@ template <class State, class Consumer>
 void read_floating_point(State& ps, Consumer&& consumer) {
   using consumer_type = typename std::decay<Consumer>::type;
   using value_type = typename consumer_type::value_type;
-  return read_floating_point(ps, consumer, optional<value_type>{});
+  return read_floating_point(ps, consumer, std::optional<value_type>{});
 }
 
 } // namespace caf::detail::parser

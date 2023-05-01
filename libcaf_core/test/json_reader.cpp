@@ -113,7 +113,7 @@ fixture::fixture() {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(json_reader_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(json baselines) {
   size_t baseline_index = 0;
@@ -179,4 +179,4 @@ SCENARIO("mappers enable custom type names in JSON input") {
   }
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

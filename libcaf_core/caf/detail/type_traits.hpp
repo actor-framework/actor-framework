@@ -1050,6 +1050,10 @@ struct unboxed_oracle<std::optional<T>> {
 template <class T>
 using unboxed_t = typename unboxed_oracle<T>::type;
 
+template <class T>
+constexpr bool is_64bit_integer_v = std::is_same_v<T, int64_t>
+                                    || std::is_same_v<T, uint64_t>;
+
 } // namespace caf::detail
 
 #undef CAF_HAS_MEMBER_TRAIT

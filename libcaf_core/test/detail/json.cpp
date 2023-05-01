@@ -85,6 +85,10 @@ void stringify(std::string& str, size_t, int64_t val) {
   str += std::to_string(val);
 }
 
+void stringify(std::string& str, size_t, uint64_t val) {
+  str += std::to_string(val);
+}
+
 void stringify(std::string& str, size_t, double val) {
   str += std::to_string(val);
 }
@@ -103,6 +107,12 @@ void stringify(std::string& str, size_t, string_view val) {
 }
 
 void stringify(std::string& str, size_t, detail::json::null_t) {
+  str += "null";
+}
+
+void stringify(std::string& str, size_t, detail::json::undefined_t) {
+  // The parser never emits undefined objects, but we still need to provide an
+  // overload for this type.
   str += "null";
 }
 

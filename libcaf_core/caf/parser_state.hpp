@@ -6,16 +6,18 @@
 
 #include <cctype>
 #include <cstdint>
+#include <string_view>
 
 #include "caf/fwd.hpp"
 #include "caf/pec.hpp"
-#include "caf/string_view.hpp"
 
 namespace caf {
 
 /// Stores all information necessary for implementing an FSM-based parser.
 template <class Iterator, class Sentinel>
 struct parser_state {
+  using iterator_type = Iterator;
+
   /// Current position of the parser.
   Iterator i;
 

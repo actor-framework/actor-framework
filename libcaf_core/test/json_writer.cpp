@@ -38,7 +38,7 @@ struct fixture {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(json_writer_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 SCENARIO("the JSON writer converts builtin types to strings") {
   GIVEN("an integer") {
@@ -314,4 +314,33 @@ SCENARIO("the JSON writer annotates variant fields") {
   }
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+SCENARIO("the JSON compresses empty lists and objects") {
+  GIVEN("a map with an empty list value") {
+    std::map<std::string, std::vector<int>> obj;
+    obj["xs"] = std::vector<int>{};
+    obj["ys"] = std::vector<int>{1, 2, 3};
+    WHEN("converting it to JSON with indentation factor 2") {
+      THEN("the JSON contains a compressed representation of the empty list") {
+        std::string out = R"({
+  "xs": [],
+  "ys": [
+    1,
+    2,
+    3
+  ]
+})";
+        CHECK_EQ(to_json_string(obj, 2, true, true), out);
+      }
+    }
+  }
+  GIVEN("an empty map") {
+    std::map<std::string, std::vector<int>> obj;
+    WHEN("converting it to JSON with indentation factor 2") {
+      THEN("the JSON contains a compressed representation of the empty map") {
+        CHECK_EQ(to_json_string(obj, 2, true, true), "{}"s);
+      }
+    }
+  }
+}
+
+END_FIXTURE_SCOPE()

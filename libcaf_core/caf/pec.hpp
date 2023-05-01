@@ -66,6 +66,8 @@ enum class pec : uint8_t {
   /// Stopped after running into an invalid parser state. Should never happen
   /// and most likely indicates a bug in the implementation.
   invalid_state,
+  /// Parser stopped after exceeding its maximum supported level of nesting.
+  nested_too_deeply,
 };
 
 /// @relates pec
