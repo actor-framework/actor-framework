@@ -10,8 +10,8 @@
 
 namespace {
 
-template <class T>
-bool check(int64_t x) {
+template <class T, class U>
+bool check(U x) {
   return caf::detail::bounds_checker<T>::check(x);
 }
 
@@ -39,5 +39,7 @@ CAF_TEST(small integers) {
 CAF_TEST(large unsigned integers) {
   CHECK_EQ(check<uint64_t>(-1), false);
   CHECK_EQ(check<uint64_t>(0), true);
+  CHECK_EQ(check<uint64_t>(0u), true);
   CHECK_EQ(check<uint64_t>(std::numeric_limits<int64_t>::max()), true);
+  CHECK_EQ(check<uint64_t>(std::numeric_limits<uint64_t>::max()), true);
 }

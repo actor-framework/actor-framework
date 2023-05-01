@@ -85,6 +85,10 @@ void stringify(std::string& str, size_t, int64_t val) {
   str += std::to_string(val);
 }
 
+void stringify(std::string& str, size_t, uint64_t val) {
+  str += std::to_string(val);
+}
+
 void stringify(std::string& str, size_t, double val) {
   str += std::to_string(val);
 }

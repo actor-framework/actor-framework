@@ -35,6 +35,8 @@ void read_number_or_timespan(State& ps, Consumer& consumer,
     Consumer* outer = nullptr;
     std::variant<none_t, int64_t, double> interim;
     void value(int64_t x) {
+      // If we see a second integer, we have a range of integers and forward all
+      // calls to the outer consumer.
       switch (++invocations) {
         case 1:
           interim = x;
@@ -47,6 +49,13 @@ void read_number_or_timespan(State& ps, Consumer& consumer,
         default:
           outer->value(x);
       }
+    }
+    pec value(uint64_t x) {
+      if (x <= INT64_MAX) {
+        value(static_cast<int64_t>(x));
+        return pec::success;
+      }
+      return pec::integer_overflow;
     }
     void value(double x) {
       interim = x;

@@ -333,24 +333,26 @@ public:
 
   using object_allocator = object::allocator_type;
 
-  using data_type = std::variant<null_t, int64_t, double, bool,
+  using data_type = std::variant<null_t, int64_t, uint64_t, double, bool,
                                  std::string_view, array, object, undefined_t>;
 
   static constexpr size_t null_index = 0;
 
   static constexpr size_t integer_index = 1;
 
-  static constexpr size_t double_index = 2;
+  static constexpr size_t unsigned_index = 2;
 
-  static constexpr size_t bool_index = 3;
+  static constexpr size_t double_index = 3;
 
-  static constexpr size_t string_index = 4;
+  static constexpr size_t bool_index = 4;
 
-  static constexpr size_t array_index = 5;
+  static constexpr size_t string_index = 5;
 
-  static constexpr size_t object_index = 6;
+  static constexpr size_t array_index = 6;
 
-  static constexpr size_t undefined_index = 7;
+  static constexpr size_t object_index = 7;
+
+  static constexpr size_t undefined_index = 8;
 
   data_type data;
 
@@ -360,6 +362,10 @@ public:
 
   bool is_integer() const noexcept {
     return data.index() == integer_index;
+  }
+
+  bool is_unsigned() const noexcept {
+    return data.index() == unsigned_index;
   }
 
   bool is_double() const noexcept {
@@ -470,10 +476,10 @@ bool save(Serializer& sink, const value& val) {
   if (!sink.begin_object(type_id_v<json_value>, type_name_v<json_value>))
     return false;
   // Maps our type indexes to their public API counterpart.
-  type_id_t mapping[] = {type_id_v<unit_t>,      type_id_v<int64_t>,
-                         type_id_v<double>,      type_id_v<bool>,
-                         type_id_v<std::string>, type_id_v<json_array>,
-                         type_id_v<json_object>, type_id_v<none_t>};
+  type_id_t mapping[]
+    = {type_id_v<unit_t>,     type_id_v<int64_t>,     type_id_v<uint64_t>,
+       type_id_v<double>,     type_id_v<bool>,        type_id_v<std::string>,
+       type_id_v<json_array>, type_id_v<json_object>, type_id_v<none_t>};
   // Act as-if this type is a variant of the mapped types.
   auto type_index = val.data.index();
   if (!sink.begin_field("value", make_span(mapping), type_index))
@@ -482,6 +488,10 @@ bool save(Serializer& sink, const value& val) {
   switch (type_index) {
     case value::integer_index:
       if (!sink.apply(std::get<int64_t>(val.data)))
+        return false;
+      break;
+    case value::unsigned_index:
+      if (!sink.apply(std::get<uint64_t>(val.data)))
         return false;
       break;
     case value::double_index:
@@ -552,10 +562,10 @@ bool load(Deserializer& source, value& val, monotonic_buffer_resource* res) {
   if (!source.begin_object(type_id_v<json_value>, type_name_v<json_value>))
     return false;
   // Maps our type indexes to their public API counterpart.
-  type_id_t mapping[] = {type_id_v<unit_t>,      type_id_v<int64_t>,
-                         type_id_v<double>,      type_id_v<bool>,
-                         type_id_v<std::string>, type_id_v<json_array>,
-                         type_id_v<json_object>, type_id_v<none_t>};
+  type_id_t mapping[]
+    = {type_id_v<unit_t>,     type_id_v<int64_t>,     type_id_v<uint64_t>,
+       type_id_v<double>,     type_id_v<bool>,        type_id_v<std::string>,
+       type_id_v<json_array>, type_id_v<json_object>, type_id_v<none_t>};
   // Act as-if this type is a variant of the mapped types.
   auto type_index = size_t{0};
   if (!source.begin_field("value", make_span(mapping), type_index))
@@ -567,6 +577,13 @@ bool load(Deserializer& source, value& val, monotonic_buffer_resource* res) {
       break;
     case value::integer_index: {
       auto tmp = int64_t{0};
+      if (!source.apply(tmp))
+        return false;
+      val.data = tmp;
+      break;
+    }
+    case value::unsigned_index: {
+      auto tmp = uint64_t{0};
       if (!source.apply(tmp))
         return false;
       val.data = tmp;
@@ -737,6 +754,9 @@ void print_to(Buffer& buf, const value& val, size_t indentation_factor,
   switch (val.data.index()) {
     case value::integer_index:
       print(buf, std::get<int64_t>(val.data));
+      break;
+    case value::unsigned_index:
+      print(buf, std::get<uint64_t>(val.data));
       break;
     case value::double_index:
       print(buf, std::get<double>(val.data));

@@ -56,6 +56,7 @@ std::string type_clash(std::string_view want,
   using caf::detail::json::value;
   switch (got.data.index()) {
     case value::integer_index:
+    case value::unsigned_index:
       return type_clash(want, "json::integer"sv);
     case value::double_index:
       return type_clash(want, "json::real"sv);
@@ -534,11 +535,19 @@ bool json_reader::integer(T& x) {
       if (detail::bounds_checker<T>::check(i64)) {
         x = static_cast<T>(i64);
         return true;
-      } else {
-        emplace_error(sec::runtime_error, class_name, fn,
-                      "integer out of bounds");
-        return false;
       }
+      emplace_error(sec::runtime_error, class_name, fn,
+                    "integer out of bounds");
+      return false;
+    } else if (val.data.index() == detail::json::value::unsigned_index) {
+      auto u64 = std::get<uint64_t>(val.data);
+      if (detail::bounds_checker<T>::check(u64)) {
+        x = static_cast<T>(u64);
+        return true;
+      }
+      emplace_error(sec::runtime_error, class_name, fn,
+                    "integer out of bounds");
+      return false;
     } else {
       emplace_error(sec::runtime_error, class_name, fn, current_field_name(),
                     type_clash("json::integer", val));
@@ -592,16 +601,20 @@ bool json_reader::value(float& x) {
 bool json_reader::value(double& x) {
   FN_DECL;
   return consume<true>(fn, [this, &x](const detail::json::value& val) {
-    if (val.data.index() == detail::json::value::double_index) {
-      x = std::get<double>(val.data);
-      return true;
-    } else if (val.data.index() == detail::json::value::integer_index) {
-      x = std::get<int64_t>(val.data);
-      return true;
-    } else {
-      emplace_error(sec::runtime_error, class_name, fn, current_field_name(),
-                    type_clash("json::real", val));
-      return false;
+    switch (val.data.index()) {
+      case detail::json::value::double_index:
+        x = std::get<double>(val.data);
+        return true;
+      case detail::json::value::integer_index:
+        x = std::get<int64_t>(val.data);
+        return true;
+      case detail::json::value::unsigned_index:
+        x = std::get<uint64_t>(val.data);
+        return true;
+      default:
+        emplace_error(sec::runtime_error, class_name, fn, current_field_name(),
+                      type_clash("json::real", val));
+        return false;
     }
   });
 }

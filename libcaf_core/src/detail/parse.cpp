@@ -12,7 +12,6 @@
 #include "caf/detail/parser/read_floating_point.hpp"
 #include "caf/detail/parser/read_ipv4_address.hpp"
 #include "caf/detail/parser/read_ipv6_address.hpp"
-#include "caf/detail/parser/read_signed_integer.hpp"
 #include "caf/detail/parser/read_string.hpp"
 #include "caf/detail/parser/read_timespan.hpp"
 #include "caf/detail/parser/read_unsigned_integer.hpp"

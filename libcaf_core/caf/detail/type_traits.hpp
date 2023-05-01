@@ -1056,6 +1056,10 @@ constexpr bool is_string_or_cstring_v
   = std::is_convertible_v<T, const char*>
     || std::is_same_v<std::string, std::decay_t<T>>;
 
+template <class T>
+constexpr bool is_64bit_integer_v = std::is_same_v<T, int64_t>
+                                    || std::is_same_v<T, uint64_t>;
+
 } // namespace caf::detail
 
 #undef CAF_HAS_MEMBER_TRAIT
