@@ -5,7 +5,6 @@ lightweight & fast actor implementations, pattern matching for messages, network
 transparent messaging, and more.
 
 [![Gitter][gitter-badge]](https://gitter.im/actor-framework/chat)
-[![Jenkins][jenkins-badge]](https://jenkins.inet.haw-hamburg.de/job/CAF/job/actor-framework/job/master)
 [![Documentation Status][docs-badge]](http://actor-framework.readthedocs.io/en/latest/?badge=latest)
 
 ## Online Resources
@@ -29,15 +28,13 @@ transparent messaging, and more.
 
 ## Get CAF
 
-We currently officially maintain only the CAF package available on
-[Homebrew](https://formulae.brew.sh/formula/caf).
-
-More package managers are supported by community members:
+We do not officially maintain packages for CAF. However, some of our community
+members made packages available for these package managers:
 
 - [Conan](https://conan.io/center/caf)
 - [FreeBSD Ports](https://svnweb.freebsd.org/ports/head/devel/caf)
+- [Homebrew](https://formulae.brew.sh/formula/caf).
 - [VCPKG](https://github.com/microsoft/vcpkg/tree/master/ports/caf)
-
 
 ## Get the Sources
 
@@ -156,16 +153,6 @@ If you use CAF in a scientific context, please use one of the following citation
 
 You can find the papers online at http://dx.doi.org/10.1145/2541329.2541336 and
 http://dx.doi.org/10.1016/j.cl.2016.01.002.
-
-[obs]: https://software.opensuse.org/download.html?project=devel%3Alibraries%3Acaf&package=caf
-
-[obs-nightly]: https://software.opensuse.org/download.html?project=devel%3Alibraries%3Acaf%3Anightly&package=caf
-
-[obs-dev]: https://software.opensuse.org/download.html?project=devel%3Alibraries%3Acaf&package=caf-devel
-
-[obs-dev-nightly]: https://software.opensuse.org/download.html?project=devel%3Alibraries%3Acaf%3Anightly&package=caf-devel
-
-[jenkins-badge]: https://jenkins.inet.haw-hamburg.de/buildStatus/icon?job=CAF/actor-framework/master
 
 [docs-badge]: https://readthedocs.org/projects/actor-framework/badge/?version=latest
 

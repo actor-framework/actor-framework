@@ -105,22 +105,19 @@ echo "\
                        | |___ / ___ \|  _|      Framework
                         \____/_/   \_|_|
 
-This script expects to run at the root directory of a Git clone of CAF.
-The current repository must be master. There must be no untracked file
-and the working tree status must be equal to the current HEAD commit.
-Further, the script expects a release_note.md file in the current directory
-with the developer blog checked out one level above, i.e.:
+This script expects to run at the root directory of a Git clone of CAF. The
+current branch must be master. There must be no untracked file and the working
+tree status must be equal to the current HEAD commit. Further, the script
+expects a checkout of the actor-framework.github.io repository at ../website:
 
 \$HOME
 ├── .github-oauth-token
 
 .
-├── libcaf_io
-├── blog_release_note.md [optional]
-├── github_release_note.md
+├── libcaf_core
 
 ..
-├── blog
+├── website
 │   ├── _posts
 
 "
@@ -133,9 +130,6 @@ fi
 token_path="$HOME/.github-oauth-token"
 github_msg="github_release_note.md"
 config_hpp_path="libcaf_core/caf/config.hpp"
-
-# assumed directories
-blog_posts_path="../blog/_posts"
 
 # check whether all expected files and directories exist
 assert_exists "$token_path" "$config_hpp_path"
@@ -200,25 +194,12 @@ token=$(cat "$token_path")
 tag_descr=$(awk 1 ORS='\\r\\n' "$github_msg")
 github_json=$(printf '{"tag_name": "%s","name": "%s","body": "%s","draft": false,"prerelease": false}' "$tag_version" "$tag_version" "$tag_descr")
 
-# for returning to this directory after pushing blog
-anchor="$PWD"
-
 echo "\
 git push
 git tag $tag_version
 git push origin --tags
 curl --data '$github_json' -H 'Authorization: token $token' https://api.github.com/repos/actor-framework/actor-framework/releases
 " >> .make-release-steps.bash
-
-if [ -z "$rc_version" ]; then
-  if which brew &>/dev/null ; then
-    file_url="https://github.com/actor-framework/actor-framework/archive/$tag_version.tar.gz"
-    echo "\
-export HOMEBREW_GITHUB_API_TOKEN=\$(cat "$token_path")
-brew bump-formula-pr --message=\"Update CAF to version $tag_version\" --url=\"$file_url\" caf
-" >> .make-release-steps.bash
-  fi
-fi
 
 echo ; echo
 echo ">>> please review the final steps for releasing $tag_version "
