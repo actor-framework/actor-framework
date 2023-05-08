@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file. The format
 is based on [Keep a Changelog](https://keepachangelog.com).
 
+## [Unreleased]
+
+### Changed
+
+- Install CAF tools to `${CMAKE_INSTALL_BINDIR}` to make packaging easier.
+
 ## [0.19.1] - 2023-05-01
 
 ### Added
