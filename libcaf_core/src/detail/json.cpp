@@ -151,7 +151,6 @@ struct val_consumer {
 
   template <class T>
   void value(T x) {
-if constexpr (std::is_same_v<T,uint64_t>) puts("GOT AN uint64_t");
     ptr->data = x;
   }
 
