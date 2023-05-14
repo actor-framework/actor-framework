@@ -35,7 +35,7 @@ void caf_main(caf::actor_system& sys, const config& cfg) {
     // Switch to `snk` for further processing.
     .observe_on(snk)
     // Print each integer.
-    .for_each([](int x) { std::cout << x << '\n'; });
+    .for_each([](int x) { std::cout << x << std::endl; });
   // Allow the actors to run. After this point, we may no longer dereference
   // the `src` and `snk` pointers! Calling these manually is optional. When
   // removing these two lines, CAF automatically launches the actors at scope

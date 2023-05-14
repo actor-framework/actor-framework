@@ -83,7 +83,7 @@ struct random_feed_state {
                auto& x = update();
                if (!writer.apply(x)) {
                  std::cerr << "*** failed to generate JSON: "
-                           << to_string(writer.get_error()) << '\n';
+                           << to_string(writer.get_error()) << std::endl;
                  return frame{};
                }
                return frame{writer.str()};
@@ -95,18 +95,19 @@ struct random_feed_state {
              .share();
     // Subscribe once to start the feed immediately and to keep it running.
     feed.for_each([n = 1](const frame&) mutable {
-      std::cout << "*** tick " << n++ << "\n";
+      std::cout << "*** tick " << n++ << std::endl;
     });
     // Add each incoming WebSocket listener to the feed.
     auto n = std::make_shared<int>(0);
     events
       .observe_on(self) //
       .for_each([this, n](const accept_event& ev) {
-        std::cout << "*** added listener (n = " << ++*n << ")\n";
+        std::cout << "*** added listener (n = " << ++*n << ")" << std::endl;
         auto [pull, push] = ev.data();
         pull.observe_on(self)
           .do_finally([n] { //
-            std::cout << "*** removed listener (n = " << --*n << ")\n";
+            std::cout << "*** removed listener (n = " << --*n << ")"
+                      << std::endl;
           })
           .subscribe(std::ignore);
         feed.subscribe(push);

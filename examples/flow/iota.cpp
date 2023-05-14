@@ -29,7 +29,7 @@ void caf_main(caf::actor_system& sys, const config& cfg) {
       // Only take the requested number of items from the infinite sequence.
       .take(n)
       // Print each integer.
-      .for_each([](int x) { std::cout << x << '\n'; });
+      .for_each([](int x) { std::cout << x << std::endl; });
   });
 }
 // --(rst-main-end)--

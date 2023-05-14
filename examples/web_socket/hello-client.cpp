@@ -52,7 +52,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
               // Print errors to stderr.
               .do_on_error([](const caf::error& what) {
                 std::cerr << "*** error while reading from the WebSocket: "
-                          << to_string(what) << '\n';
+                          << to_string(what) << std::endl;
               })
               // Restrict how many messages we receive if the user configured
               // a limit.
@@ -65,15 +65,15 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
               })
               // Print a bye-bye message if the server closes the connection.
               .do_on_complete([] { //
-                std::cout << "Server has closed the connection\n";
+                std::cout << "Server has closed the connection" << std::endl;
               })
               // Print everything from the server to stdout.
               .for_each([](const ws::frame& msg) {
                 if (msg.is_text()) {
-                  std::cout << "Server: " << msg.as_text() << '\n';
+                  std::cout << "Server: " << msg.as_text() << std::endl;
                 } else if (msg.is_binary()) {
                   std::cout << "Server: [binary message of size "
-                            << msg.as_binary().size() << "]\n";
+                            << msg.as_binary().size() << "]" << std::endl;
                 }
               });
             // Send our hello message and wait until the server closes the
@@ -87,7 +87,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
         });
   if (!conn) {
     std::cerr << "*** unable to connect to " << server->str() << ": "
-              << to_string(conn.error()) << '\n';
+              << to_string(conn.error()) << std::endl;
     return EXIT_FAILURE;
   }
   // Note: the actor system will keep the application running for as long as the

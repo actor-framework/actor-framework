@@ -70,11 +70,13 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
             pull
               .observe_on(self) //
               .do_on_error([](const caf::error& err) {
-                std::cout << "*** connection error: " << to_string(err) << '\n';
+                std::cout << "*** connection error: " << to_string(err)
+                          << std::endl;
               })
               .do_finally([self] {
                 std::cout << "*** lost connection to server -> quit\n"
-                          << "*** use CTRL+D or CTRL+C to terminate\n";
+                             "*** use CTRL+D or CTRL+C to terminate"
+                          << std::endl;
                 self->quit();
               })
               .for_each([](const lp::frame& frame) {
@@ -83,10 +85,10 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
                 auto str = std::string_view{
                   reinterpret_cast<const char*>(bytes.data()), bytes.size()};
                 if (std::all_of(str.begin(), str.end(), ::isprint)) {
-                  std::cout << str << '\n';
+                  std::cout << str << std::endl;
                 } else {
-                  std::cout << "<non-ascii-data of size " << bytes.size()
-                            << ">\n";
+                  std::cout << "<non-ascii-data of size " << bytes.size() << ">"
+                            << std::endl;
                 }
               });
           });
