@@ -109,6 +109,39 @@ public:
   actor_system(const actor_system&) = delete;
   actor_system& operator=(const actor_system&) = delete;
 
+  /// Calls a cleanup function in its destructor for cleaning up global state.
+  class [[nodiscard]] global_state_guard {
+  public:
+    using void_fun_t = void (*)();
+
+    explicit global_state_guard(void_fun_t f) : fun_(f) {
+      // nop
+    }
+
+    global_state_guard(global_state_guard&& other) noexcept : fun_(other.fun_) {
+      other.fun_ = nullptr;
+    }
+
+    global_state_guard& operator=(global_state_guard&& other) noexcept {
+      std::swap(fun_, other.fun_);
+      return *this;
+    }
+
+    global_state_guard() = delete;
+
+    global_state_guard(const global_state_guard&) = delete;
+
+    global_state_guard& operator=(const global_state_guard&) = delete;
+
+    ~global_state_guard() {
+      if (fun_ != nullptr)
+        fun_();
+    }
+
+  private:
+    void_fun_t fun_;
+  };
+
   /// An (optional) component of the actor system.
   class CAF_CORE_EXPORT module {
   public:

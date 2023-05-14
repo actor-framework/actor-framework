@@ -569,9 +569,13 @@ void default_multiplexer::handle_socket_event(native_socket fd, int mask,
 
 void default_multiplexer::init() {
 #ifdef CAF_WINDOWS
-  WSADATA WinsockData;
-  if (WSAStartup(MAKEWORD(2, 2), &WinsockData) != 0) {
-    CAF_CRITICAL("WSAStartup failed");
+  // Note: when loading the caf-net module, users should call
+  //       net::middleman::init_host_system() or net::this_host::startup().
+  if (!system().has_network_manager()) {
+    WSADATA WinsockData;
+    if (WSAStartup(MAKEWORD(2, 2), &WinsockData) != 0) {
+      CAF_CRITICAL("WSAStartup failed");
+    }
   }
 #endif
   namespace sr = defaults::scheduler;
@@ -631,7 +635,8 @@ default_multiplexer::~default_multiplexer() {
   close_socket(pipe_reader_.fd());
   pipe_reader_.init(invalid_native_socket);
 #ifdef CAF_WINDOWS
-  WSACleanup();
+  if (!system().has_network_manager())
+    WSACleanup();
 #endif
 }
 

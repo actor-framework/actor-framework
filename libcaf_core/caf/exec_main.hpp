@@ -105,8 +105,28 @@ int exec_main(F fun, int argc, char** argv) {
 
 } // namespace caf
 
+namespace caf::detail {
+
+template <class... Module>
+auto do_init_host_system(type_list<Module...>, type_list<>) {
+  return std::make_tuple(Module::init_host_system()...);
+}
+
+template <class... Module, class T, class... Ts>
+auto do_init_host_system(type_list<Module...>, type_list<T, Ts...>) {
+  if constexpr (detail::has_init_host_system_v<T>) {
+    return do_init_host_system(type_list<Module..., T>{}, type_list<Ts...>{});
+  } else {
+    return do_init_host_system(type_list<Module...>{}, type_list<Ts...>{});
+  }
+}
+
+} // namespace caf::detail
+
 #define CAF_MAIN(...)                                                          \
   int main(int argc, char** argv) {                                            \
+    [[maybe_unused]] auto host_init_guard = caf::detail::do_init_host_system(  \
+      caf::detail::type_list<>{}, caf::detail::type_list<__VA_ARGS__>{});      \
     caf::exec_main_init_meta_objects<__VA_ARGS__>();                           \
     caf::core::init_global_meta_objects();                                     \
     return caf::exec_main<__VA_ARGS__>(caf_main, argc, argv);                  \

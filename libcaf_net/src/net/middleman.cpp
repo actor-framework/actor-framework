@@ -9,8 +9,10 @@
 #include "caf/expected.hpp"
 #include "caf/net/http/with.hpp"
 #include "caf/net/prometheus.hpp"
+#include "caf/net/ssl/startup.hpp"
 #include "caf/net/tcp_accept_socket.hpp"
 #include "caf/net/tcp_stream_socket.hpp"
+#include "caf/net/this_host.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/sec.hpp"
 #include "caf/send.hpp"
@@ -55,6 +57,15 @@ void launch_background_tasks(actor_system& sys) {
 
 void middleman::init_global_meta_objects() {
   // nop
+}
+
+actor_system::global_state_guard middleman::init_host_system() {
+  this_host::startup();
+  ssl::startup();
+  return actor_system::global_state_guard{+[] {
+    ssl::cleanup();
+    this_host::cleanup();
+  }};
 }
 
 middleman::middleman(actor_system& sys)
