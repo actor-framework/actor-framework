@@ -5,6 +5,7 @@ cmake.exe ^
   -B build ^
   -G "Visual Studio 17 2022" ^
   -C ".ci\debug-flags.cmake" ^
+  -DCAF_ENABLE_ROBOT_TESTS=ON ^
   -DEXTRA_FLAGS=/MP%CIRRUS_CPU% ^
   -DBUILD_SHARED_LIBS=OFF ^
   -DCMAKE_C_COMPILER=cl.exe ^
