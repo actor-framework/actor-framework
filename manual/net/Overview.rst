@@ -10,6 +10,26 @@ and assembling protocol stacks.
 When using caf-net for applications, we generally recommend sticking to the
 declarative API.
 
+Initializing the Module
+-----------------------
+
+The networking module is an optional component of CAF. To use it, users can pass
+``caf::net::middleman`` to ``CAF_MAIN``.
+
+When not using the ``CAF_MAIN`` macro, users must initialize the library by:
+
+- Calling ``caf::net::middleman::init_global_meta_objects()`` before
+  initializing the ``actor_system``. This step adds the necessary meta objects
+  to the global meta object registry.
+- Calling ``caf::net::middleman::init_host_system()`` before initializing the
+  ``actor_system`` (or calling any function of the module). This step runs
+  platform-specific initialization code (such as calling ``WSAStartup`` on
+  Windows) by calling ``caf::net::this_host::startup()`` and initializes the SSL
+  library by calling ``caf::net::ssl::startup()`` The function
+  ``init_host_system`` returns a guard object that calls
+  ``caf::net::this_host::cleanup()`` and ``caf::net::ssl::cleanup()`` in its
+  destructor.
+
 Declarative High-level DSL :sup:`experimental`
 ----------------------------------------------
 

@@ -9,6 +9,11 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 - Install CAF tools to `${CMAKE_INSTALL_BINDIR}` to make packaging easier.
 
+### Fixed
+
+- Add missing initialization code for the new caf-net module when using the
+  `CAF_MAIN` macro. This fixes the `WSANOTINITIALISED` error on Windows (#1409).
+
 ## [0.19.1] - 2023-05-01
 
 ### Added
