@@ -9,10 +9,10 @@ Suite Setup       Start Servers
 Suite Teardown    Stop Servers
 
 *** Variables ***
-${HTTP_URL}       http://localhost:55501
-${HTTPS_URL}      https://localhost:55502
-${WS_URL}         ws://localhost:55501
-${WSS_URL}        wss://localhost:55502
+${HTTP_URL}       http://localhost:55503
+${HTTPS_URL}      https://localhost:55504
+${WS_URL}         ws://localhost:55503
+${WSS_URL}        wss://localhost:55504
 ${FRAME_COUNT}    ${10}
 ${BINARY_PATH}    /path/to/the/server
 ${SSL_PATH}       /path/to/the/pem/files
@@ -37,16 +37,13 @@ Test WebSocket Over SSL Server
 
 *** Keywords ***
 Start Servers
-    ${res1}=    Start Process    ${BINARY_PATH}  -p  55501
-    Set Suite Variable    ${ws_server_process}    ${res1}
-    ${res2}=    Start Process    ${BINARY_PATH}  -p  55502  -k  ${SSL_PATH}/key.pem  -c  ${SSL_PATH}/cert.pem
-    Set Suite Variable    ${wss_server_process}    ${res2}
+    Start Process    ${BINARY_PATH}  -p  55503
+    Start Process    ${BINARY_PATH}  -p  55504  -k  ${SSL_PATH}/key.pem  -c  ${SSL_PATH}/cert.pem
     Wait Until Keyword Succeeds    5s    125ms    Check If HTTP Server Is Reachable
     Wait Until Keyword Succeeds    5s    125ms    Check If HTTPS Server Is Reachable
 
 Stop Servers
-    Terminate Process    ${ws_server_process}
-    Terminate Process    ${wss_server_process}
+    Run Keyword And Ignore Error    Terminate All Processes
 
 Check If HTTP Server Is Reachable
     # The server sends a "400 Bad Request" if we try HTTP on the WebSocket port.

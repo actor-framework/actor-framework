@@ -9,10 +9,10 @@ Suite Setup       Start Servers
 Suite Teardown    Stop Servers
 
 *** Variables ***
-${HTTP_URL}       http://localhost:55501
-${HTTPS_URL}      https://localhost:55502
-${WS_URL}         ws://localhost:55501/ws/quotes/seneca
-${WSS_URL}        wss://localhost:55502/ws/quotes/seneca
+${HTTP_URL}       http://localhost:55505
+${HTTPS_URL}      https://localhost:55506
+${WS_URL}         ws://localhost:55505/ws/quotes/seneca
+${WSS_URL}        wss://localhost:55506/ws/quotes/seneca
 ${FRAME_COUNT}    ${10}
 ${BINARY_PATH}    /path/to/the/server
 ${SSL_PATH}       /path/to/the/pem/files
@@ -45,16 +45,13 @@ Test WebSocket Over SSL Server Quotes
 
 *** Keywords ***
 Start Servers
-    ${res1}=    Start Process    ${BINARY_PATH}  -p  55501
-    Set Suite Variable    ${ws_server_process}    ${res1}
-    ${res2}=    Start Process    ${BINARY_PATH}  -p  55502  -k  ${SSL_PATH}/key.pem  -c  ${SSL_PATH}/cert.pem
-    Set Suite Variable    ${wss_server_process}    ${res2}
+    Start Process    ${BINARY_PATH}  -p  55505
+    Start Process    ${BINARY_PATH}  -p  55506  -k  ${SSL_PATH}/key.pem  -c  ${SSL_PATH}/cert.pem
     Wait Until Keyword Succeeds    5s    125ms    Check If HTTP Server Is Reachable
     Wait Until Keyword Succeeds    5s    125ms    Check If HTTPS Server Is Reachable
 
 Stop Servers
-    Terminate Process    ${ws_server_process}
-    Terminate Process    ${wss_server_process}
+    Run Keyword And Ignore Error    Terminate All Processes
 
 Check If HTTP Server Is Reachable
     Log         Try reaching ${HTTP_URL}/status.

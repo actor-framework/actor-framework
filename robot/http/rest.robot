@@ -49,16 +49,13 @@ HTTPS Test Delete Key Value Pair
 
 *** Keywords ***
 Start Servers
-    ${res1}=    Start Process    ${BINARY_PATH}  -p  55501
-    Set Suite Variable    ${http_server_process}    ${res1}
-    ${res2}=    Start Process    ${BINARY_PATH}  -p  55502  -k  ${SSL_PATH}/key.pem  -c  ${SSL_PATH}/cert.pem
-    Set Suite Variable    ${https_server_process}    ${res2}
+    Start Process    ${BINARY_PATH}  -p  55501
+    Start Process    ${BINARY_PATH}  -p  55502  -k  ${SSL_PATH}/key.pem  -c  ${SSL_PATH}/cert.pem
     Wait Until Keyword Succeeds    5s    125ms    Check If HTTP Server Is Reachable
     Wait Until Keyword Succeeds    5s    125ms    Check If HTTPS Server Is Reachable
 
 Stop Servers
-    Terminate Process    ${http_server_process}
-    Terminate Process    ${https_server_process}
+    Run Keyword And Ignore Error    Terminate All Processes
 
 Check If HTTP Server Is Reachable
     Log         Try reaching ${HTTP_URL}/status.
