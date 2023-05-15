@@ -8,6 +8,14 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 ### Changed
 
 - Install CAF tools to `${CMAKE_INSTALL_BINDIR}` to make packaging easier.
+- The OpenSSL module no longer hard-codes calls to `SSL_CTX_set_cipher_list` in
+  order to use the system settings by default. Users can provide a custom cipher
+  list by providing a value for the configuration option
+  `caf.openssl.cipher-list`. To restore the previous behavior, set this
+  parameter to `HIGH:!aNULL:!MD5` when running with a certificate and
+  `AECDH-AES256-SHA@SECLEVEL=0` otherwise (or without `@SECLEVEL=0` for older
+  versions of OpenSSL). Please note that these lists are *not* recommended as
+  safe defaults, which is why we are no longer setting these values.
 
 ## [0.19.1] - 2023-05-01
 
