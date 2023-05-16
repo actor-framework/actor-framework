@@ -77,6 +77,13 @@ else
   exit 1
 fi
 
+# Pick up Cirrus environment variables.
+if [ -z "$CAF_NUM_CORES" ]; then
+  if [ ! -z "$CIRRUS_CPU" ]; then
+    CAF_NUM_CORES=$CIRRUS_CPU
+  fi
+fi
+
 runBuild() {
   cat "$InitFile"
   cd "$BuildDir"
