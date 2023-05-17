@@ -13,9 +13,8 @@ RUN Set-ExecutionPolicy Bypass -Scope Process -Force; \
 RUN choco install -y --no-progress visualstudio2022buildtools
 RUN choco install -y --no-progress visualstudio2022-workload-vctools
 
-# Install and OpenSSL and Python.
-RUN choco install -y --no-progress msysgit openssl
-RUN choco install -y --no-progress python
+# Install Git, OpenSSL and Python.
+RUN choco install -y --no-progress msysgit openssl python
 
 # Install Robot Framework and dependencies.
 RUN python.exe -m pip install \
