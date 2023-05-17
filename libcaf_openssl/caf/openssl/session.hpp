@@ -18,7 +18,6 @@ CAF_POP_WARNINGS
 #include "caf/io/network/native_socket.hpp"
 
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
-#  define CAF_SSL_HAS_SECURITY_LEVEL
 #  define CAF_SSL_HAS_NON_VERSIONED_TLS_FUN
 #endif
 
