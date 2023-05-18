@@ -36,6 +36,7 @@
 #include <utility>
 
 #include "caf/detail/get_mac_addresses.hpp"
+#include "caf/detail/print.hpp"
 #include "caf/io/network/ip_endpoint.hpp"
 #include "caf/raise_error.hpp"
 
@@ -262,14 +263,11 @@ interfaces::server_address(uint16_t port, const char* host,
 bool interfaces::get_endpoint(const std::string& host, uint16_t port,
                               ip_endpoint& ep,
                               optional<protocol::network> preferred) {
-  static_assert(sizeof(uint16_t) == sizeof(unsigned short int),
-                "uint16_t cannot be printed with %hu in snprintf");
   addrinfo hint;
-  // max port is 2^16 which needs 5 characters plus null terminator
-  char port_hint[6];
-  sprintf(port_hint, "%hu", port);
   memset(&hint, 0, sizeof(hint));
   hint.ai_socktype = SOCK_DGRAM;
+  std::string port_hint;
+  detail::print(port_hint, port);
   if (preferred)
     hint.ai_family = *preferred == protocol::network::ipv4 ? AF_INET : AF_INET6;
 #ifdef AI_V4MAPPED
@@ -277,7 +275,7 @@ bool interfaces::get_endpoint(const std::string& host, uint16_t port,
     hint.ai_flags = AI_V4MAPPED;
 #endif
   addrinfo* tmp = nullptr;
-  if (getaddrinfo(host.c_str(), port_hint, &hint, &tmp) != 0)
+  if (getaddrinfo(host.c_str(), port_hint.c_str(), &hint, &tmp) != 0)
     return false;
   std::unique_ptr<addrinfo, decltype(freeaddrinfo)*> addrs{tmp, freeaddrinfo};
   for (auto i = addrs.get(); i != nullptr; i = i->ai_next) {
