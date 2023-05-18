@@ -77,7 +77,8 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
   }
   // Note: the actor system will only wait for actors on default. Since we don't
   // start actors, we need to block on something else.
-  std::cout << "Server is up and running. Press <enter> to shut down.\n";
+  std::cout << "Server is up and running. Press <enter> to shut down."
+            << std::endl;
   getchar();
   std::cout << "Terminating.\n";
   return EXIT_SUCCESS;

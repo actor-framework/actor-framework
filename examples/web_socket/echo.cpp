@@ -66,7 +66,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
           // The header parameter contains fields from the WebSocket handshake
           // such as the path and HTTP header fields..
           auto path = acc.header().path();
-          std::cout << "*** new client request for path " << path << '\n';
+          std::cout << "*** new client request for path " << path << std::endl;
           // Accept the WebSocket connection only if the path is "/".
           if (path == "/") {
             // Calling `accept` causes the server to acknowledge the client and
@@ -95,20 +95,20 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
                 pull.observe_on(self)
                   .do_on_error([](const caf::error& what) { //
                     std::cout << "*** connection closed: " << to_string(what)
-                              << "\n";
+                              << std::endl;
                   })
                   .do_on_complete([] { //
-                    std::cout << "*** connection closed\n";
+                    std::cout << "*** connection closed" << std::endl;
                   })
                   .do_on_next([](const ws::frame& x) {
                     if (x.is_binary()) {
                       std::cout
                         << "*** received a binary WebSocket frame of size "
-                        << x.size() << '\n';
+                        << x.size() << std::endl;
                     } else {
                       std::cout
                         << "*** received a text WebSocket frame of size "
-                        << x.size() << '\n';
+                        << x.size() << std::endl;
                     }
                   })
                   .subscribe(push);

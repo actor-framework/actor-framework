@@ -49,7 +49,7 @@ void worker_impl(caf::event_based_actor* self,
   messages.for_each([](const message_t& msg) {
     const auto& [conn, frame] = msg;
     std::cout << "*** got message of size " << frame.size() << " from "
-              << to_string(conn) << '\n';
+              << to_string(conn) << std::endl;
   });
   // Connect the flows for each incoming connection.
   events
@@ -58,7 +58,8 @@ void worker_impl(caf::event_based_actor* self,
       [self, messages, pub = std::move(pub)](const auto& event) mutable {
         // Each connection gets a unique ID.
         auto conn = caf::uuid::random();
-        std::cout << "*** accepted new connection " << to_string(conn) << '\n';
+        std::cout << "*** accepted new connection " << to_string(conn)
+                  << std::endl;
         auto& [pull, push] = event.data();
         // Subscribe the `push` end to the central merge point.
         messages
@@ -72,14 +73,16 @@ void worker_impl(caf::event_based_actor* self,
           })
           .subscribe(push);
         // Feed messages from the `pull` end into the central merge point.
-        auto inputs
+        auto inputs //
           = pull.observe_on(self)
               .do_on_error([](const caf::error& err) {
-                std::cout << "*** connection error: " << to_string(err) << '\n';
+                std::cout << "*** connection error: " << to_string(err)
+                          << std::endl;
               })
               .on_error_complete() // Cary on if a connection breaks.
               .do_on_complete([conn] {
-                std::cout << "*** lost connection " << to_string(conn) << '\n';
+                std::cout << "*** lost connection " << to_string(conn)
+                          << std::endl;
               })
               .map([conn](const lp::frame& frame) {
                 return message_t{conn, frame};

@@ -23,15 +23,27 @@ namespace caf::net {
 /// Provides a network backend for running protocol stacks.
 class CAF_NET_EXPORT middleman : public actor_system::module {
 public:
+  // -- constants --------------------------------------------------------------
+
+  /// Identifies the network manager module.
+  actor_system::module::id_t id_v = actor_system::module::network_manager;
+
   // -- member types -----------------------------------------------------------
 
   using module = actor_system::module;
 
   using module_ptr = actor_system::module_ptr;
 
+  using void_fun_t = void (*)();
+
   // -- static utility functions -----------------------------------------------
 
   static void init_global_meta_objects();
+
+  /// Initializes global state for the network backend by calling
+  /// platform-dependent functions such as `WSAStartup` and `ssl::startup()`.
+  /// @returns a guard object shutting down the global state.
+  static actor_system::global_state_guard init_host_system();
 
   // -- constructors, destructors, and assignment operators --------------------
 

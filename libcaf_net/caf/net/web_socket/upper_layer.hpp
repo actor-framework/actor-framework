@@ -29,7 +29,7 @@ public:
   virtual error start(lower_layer* down) = 0;
 };
 
-class upper_layer::server : public upper_layer {
+class CAF_NET_EXPORT upper_layer::server : public upper_layer {
 public:
   virtual ~server();
 

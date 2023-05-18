@@ -37,7 +37,7 @@ void sink(caf::event_based_actor* self, caf::async::consumer_resource<int> in) {
     // Lift the input to an observable flow.
     .from_resource(std::move(in))
     // Print each integer.
-    .for_each([](int x) { std::cout << x << '\n'; });
+    .for_each([](int x) { std::cout << x << std::endl; });
 }
 // --(rst-sink-end)--
 

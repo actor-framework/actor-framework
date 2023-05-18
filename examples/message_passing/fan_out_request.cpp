@@ -142,17 +142,17 @@ void caf_main(actor_system& sys) {
   for (int row = 0; row < rows; ++row) {
     for (int column = 0; column < columns; ++column)
       cout << std::setw(4) << f(get_atom_v, row, column) << ' ';
-    cout << '\n';
+    cout << std::endl;
   }
   // Print out AVG for each row and column.
   for (int row = 0; row < rows; ++row)
     cout << "AVG(row " << row << ") = "
          << caf::to_string(f(get_atom_v, average_atom_v, row_atom_v, row))
-         << '\n';
+         << std::endl;
   for (int column = 0; column < columns; ++column)
     cout << "AVG(column " << column << ") = "
          << caf::to_string(f(get_atom_v, average_atom_v, column_atom_v, column))
-         << '\n';
+         << std::endl;
 }
 
 CAF_MAIN(id_block::fan_out_request)

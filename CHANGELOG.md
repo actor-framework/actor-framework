@@ -17,6 +17,11 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   versions of OpenSSL). Please note that these lists are *not* recommended as
   safe defaults, which is why we are no longer setting these values.
 
+### Fixed
+
+- Add missing initialization code for the new caf-net module when using the
+  `CAF_MAIN` macro. This fixes the `WSANOTINITIALISED` error on Windows (#1409).
+
 ## [0.19.1] - 2023-05-01
 
 ### Added

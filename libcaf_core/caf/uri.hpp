@@ -38,7 +38,7 @@ public:
 
   /// Bundles the authority component of the URI, i.e., userinfo, host, and
   /// port.
-  struct authority_type {
+  struct CAF_CORE_EXPORT authority_type {
     std::string userinfo;
     host_type host;
     uint16_t port;

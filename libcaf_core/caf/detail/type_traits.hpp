@@ -1060,6 +1060,23 @@ template <class T>
 constexpr bool is_64bit_integer_v = std::is_same_v<T, int64_t>
                                     || std::is_same_v<T, uint64_t>;
 
+/// Checks whether `T` has a static member function called `init_host_system`.
+template <class T>
+struct has_init_host_system {
+  template <class U>
+  static auto sfinae(U*) -> decltype(U::init_host_system(), std::true_type());
+
+  template <class U>
+  static auto sfinae(...) -> std::false_type;
+
+  using type = decltype(sfinae<T>(nullptr));
+  static constexpr bool value = type::value;
+};
+
+/// Convenience alias for `has_init_host_system<T>::value`.
+template <class T>
+constexpr bool has_init_host_system_v = has_init_host_system<T>::value;
+
 } // namespace caf::detail
 
 #undef CAF_HAS_MEMBER_TRAIT
