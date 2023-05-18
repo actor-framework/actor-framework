@@ -195,9 +195,9 @@ SSL_CTX* session::create_ssl_context() {
 #endif
   if (!ctx)
     CAF_RAISE_ERROR("cannot create OpenSSL context");
+  auto& cfg = sys_.config();
   if (sys_.openssl_manager().authentication_enabled()) {
     // Require valid certificates on both sides.
-    auto& cfg = sys_.config();
     if (!cfg.openssl_certificate.empty()
         && SSL_CTX_use_certificate_chain_file(ctx,
                                               cfg.openssl_certificate.c_str())
@@ -223,8 +223,6 @@ SSL_CTX* session::create_ssl_context() {
     }
     SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
                        nullptr);
-    if (SSL_CTX_set_cipher_list(ctx, "HIGH:!aNULL:!MD5") != 1)
-      CAF_RAISE_ERROR("cannot set cipher list");
   } else {
     // No authentication.
     SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, nullptr);
@@ -243,13 +241,12 @@ SSL_CTX* session::create_ssl_context() {
     SSL_CTX_set1_groups_list(ctx, "P-384");
 #  endif /* OPENSSL_VERSION_NUMBER < 0x10101000L */
 #endif
-#ifdef CAF_SSL_HAS_SECURITY_LEVEL
-    const char* cipher = "AECDH-AES256-SHA@SECLEVEL=0";
-#else
-    const char* cipher = "AECDH-AES256-SHA";
-#endif
-    if (SSL_CTX_set_cipher_list(ctx, cipher) != 1)
-      CAF_RAISE_ERROR("cannot set anonymous cipher");
+  }
+  // Set custom cipher list if specified.
+  if (auto str = get_if<std::string>(&cfg, "caf.openssl.cipher-list");
+      str && !str->empty()) {
+    if (SSL_CTX_set_cipher_list(ctx, str->c_str()) != 1)
+      CAF_RAISE_ERROR("failed to set cipher list");
   }
   return ctx;
 }

@@ -148,7 +148,9 @@ void manager::add_module_options(actor_system_config& cfg) {
       "path to an OpenSSL-style directory of trusted certificates")
     .add<std::string>(
       cfg.openssl_cafile, "cafile",
-      "path to a file of concatenated PEM-formatted certificates");
+      "path to a file of concatenated PEM-formatted certificates")
+    .add<std::string>("cipher-list",
+                      "colon-separated list of OpenSSL cipher strings to use");
 }
 
 actor_system::module* manager::make(actor_system& sys, detail::type_list<>) {
