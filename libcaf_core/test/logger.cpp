@@ -157,9 +157,9 @@ CAF_TEST(rendering) {
   timestamp t0;
   time_t t0_t = 0;
   char t0_buf[50];
-  CAF_REQUIRE(strftime(t0_buf, sizeof(t0_buf),
-                       "%Y-%m-%dT%H:%M:%S.000", localtime(&t0_t)));
-  CAF_CHECK_EQUAL(render(logger::render_date, t0), t0_buf);
+  strftime(t0_buf, sizeof(t0_buf), "%Y-%m-%dT%H:%M:%S", localtime(&t0_t));
+  // Note: we use starts_with because we cannot predict the exact time zone.
+  CHECK(starts_with(render(logger::render_date, t0), t0_buf));
   // Rendering of events.
   logger::event e{
     CAF_LOG_LEVEL_WARNING,
