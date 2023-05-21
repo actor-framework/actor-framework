@@ -93,6 +93,7 @@ caf_add_component(
     src/binary_deserializer.cpp
     src/binary_serializer.cpp
     src/blocking_actor.cpp
+    src/chrono.cpp
     src/config_option.cpp
     src/config_option_adder.cpp
     src/config_option_set.cpp
@@ -237,6 +238,7 @@ caf_add_component(
     binary_deserializer
     binary_serializer
     blocking_actor
+    chrono
     config_option
     config_option_set
     config_value
