@@ -32,7 +32,6 @@ public:
 
   void dispose() override {
     decorated_->dispose();
-    worker_ = nullptr;
   }
 
   bool disposed() const noexcept override {
@@ -76,8 +75,9 @@ public:
 
 private:
   void do_run(strong_actor_ptr& ptr) {
-    ptr->enqueue(nullptr, make_message_id(), make_message(action{decorated_}),
-                 nullptr);
+    if (!decorated_->disposed())
+      ptr->enqueue(nullptr, make_message_id(), make_message(action{decorated_}),
+                   nullptr);
   }
 
   action::impl_ptr decorated_;
@@ -87,6 +87,7 @@ private:
 template <class WorkerPtr>
 action decorate(action f, WorkerPtr worker) {
   CAF_ASSERT(f.ptr() != nullptr);
+  CAF_ASSERT(worker != nullptr);
   using impl_t = action_decorator<WorkerPtr>;
   auto ptr = make_counted<impl_t>(std::move(f).as_intrusive_ptr(),
                                   std::move(worker));
@@ -113,12 +114,14 @@ disposable actor_clock::schedule(action f) {
 
 disposable actor_clock::schedule(time_point t, action f,
                                  strong_actor_ptr worker) {
-  return schedule(t, decorate(std::move(f), std::move(worker)));
+  schedule(t, decorate(f, std::move(worker)));
+  return std::move(f).as_disposable();
 }
 
 disposable actor_clock::schedule(time_point t, action f,
                                  weak_actor_ptr worker) {
-  return schedule(t, decorate(std::move(f), std::move(worker)));
+  schedule(t, decorate(f, std::move(worker)));
+  return std::move(f).as_disposable();
 }
 
 disposable actor_clock::schedule_message(time_point t,
@@ -128,8 +131,7 @@ disposable actor_clock::schedule_message(time_point t,
     [rptr{std::move(receiver)}, cptr{std::move(content)}]() mutable {
       rptr->enqueue(std::move(cptr), nullptr);
     });
-  schedule(t, f);
-  return std::move(f).as_disposable();
+  return schedule(t, std::move(f));
 }
 
 disposable actor_clock::schedule_message(time_point t, weak_actor_ptr receiver,
@@ -139,8 +141,7 @@ disposable actor_clock::schedule_message(time_point t, weak_actor_ptr receiver,
       if (auto ptr = actor_cast<strong_actor_ptr>(rptr))
         ptr->enqueue(std::move(cptr), nullptr);
     });
-  schedule(t, f);
-  return std::move(f).as_disposable();
+  return schedule(t, std::move(f));
 }
 
 disposable actor_clock::schedule_message(time_point t, group target,
@@ -151,8 +152,7 @@ disposable actor_clock::schedule_message(time_point t, group target,
       dst->enqueue(std::move(sender), make_message_id(), std::move(content),
                    nullptr);
   });
-  schedule(t, f);
-  return std::move(f).as_disposable();
+  return schedule(t, std::move(f));
 }
 
 } // namespace caf
