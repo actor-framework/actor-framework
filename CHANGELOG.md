@@ -21,6 +21,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 - Add missing initialization code for the new caf-net module when using the
   `CAF_MAIN` macro. This fixes the `WSANOTINITIALISED` error on Windows (#1409).
+- The WebSocket implementation now properly re-assembles fragmented frames.
+  Previously, a bug in the framing protocol implementation caused CAF to sever
+  the connection when encountering continuation frames (#1417).
 
 ## [0.19.1] - 2023-05-01
 

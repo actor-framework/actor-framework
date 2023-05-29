@@ -82,7 +82,7 @@ ptrdiff_t framing::consume(byte_span buffer, byte_span) {
       } else {
         // End of fragmented input.
         payload_buf_.insert(payload_buf_.end(), payload.begin(), payload.end());
-        if (!handle(hdr.opcode, payload_buf_)) {
+        if (!handle(opcode_, payload_buf_)) {
           return -1;
         }
         opcode_ = nil_code;
@@ -90,6 +90,8 @@ ptrdiff_t framing::consume(byte_span buffer, byte_span) {
       }
     }
   } else {
+    // The first frame must not be a continuation frame. Any frame that is not
+    // the first frame must be a continuation frame.
     if (opcode_ == nil_code) {
       if (hdr.opcode == detail::rfc6455::continuation_frame) {
         CAF_LOG_DEBUG("received WebSocket continuation "
@@ -100,6 +102,11 @@ ptrdiff_t framing::consume(byte_span buffer, byte_span) {
         return -1;
       }
       opcode_ = hdr.opcode;
+    } else if (hdr.opcode != detail::rfc6455::continuation_frame) {
+      CAF_LOG_DEBUG("expected a continuation frame");
+      up_->abort(make_error(sec::protocol_error, //
+                            "expected a continuation frame"));
+      return -1;
     } else if (payload_buf_.size() + payload_len > max_frame_size) {
       // Reject assembled payloads that exceed max_frame_size.
       CAF_LOG_DEBUG("fragmented WebSocket payload exceeds maximum size");
