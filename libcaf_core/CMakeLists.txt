@@ -190,6 +190,8 @@ caf_add_component(
     caf/flow/observable.test.cpp
     caf/flow/observable_builder.cpp
     caf/flow/op/interval.cpp
+    caf/flow/op/mcast.test.cpp
+    caf/flow/op/pullable.cpp
     caf/flow/scoped_coordinator.cpp
     caf/flow/step/ignore_elements.test.cpp
     caf/flow/step/skip_last.test.cpp
@@ -324,7 +326,6 @@ caf_add_component(
     flow.op.empty
     flow.op.fail
     flow.op.interval
-    flow.op.mcast
     flow.op.merge
     flow.op.never
     flow.op.prefix_and_tail

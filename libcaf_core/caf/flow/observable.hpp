@@ -722,18 +722,19 @@ template <class T>
 template <class Out, class... Inputs>
 auto observable<T>::merge(Inputs&&... xs) {
   if constexpr (is_observable_v<Out>) {
+    static_assert(sizeof...(Inputs) == 0,
+                  "merge on an observable<observable<T>> expects no arguments");
     using value_t = output_type_t<Out>;
     using impl_t = op::merge<value_t>;
-    return make_observable<impl_t>(ctx(), *this, std::forward<Inputs>(xs)...);
+    return make_observable<impl_t>(ctx(), *this);
   } else {
-    static_assert(
-      sizeof...(Inputs) > 0,
-      "merge without arguments expects this observable to emit observables");
+    static_assert(sizeof...(Inputs) > 0, "no observable to merge with");
     static_assert((std::is_same_v<Out, output_type_t<std::decay_t<Inputs>>>
                    && ...),
                   "can only merge observables with the same observed type");
     using impl_t = op::merge<Out>;
-    return make_observable<impl_t>(ctx(), *this, std::forward<Inputs>(xs)...);
+    return make_observable<impl_t>(ctx(), *this,
+                                   std::forward<Inputs>(xs).as_observable()...);
   }
 }
 

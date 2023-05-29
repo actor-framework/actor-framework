@@ -16,7 +16,8 @@ class from_callable {
 public:
   using callable_res_t = std::invoke_result_t<F>;
 
-  static constexpr bool boxed_output = detail::is_optional_v<callable_res_t>;
+  static constexpr bool boxed_output = detail::is_optional_v<callable_res_t>
+                                       || detail::is_expected_v<callable_res_t>;
 
   using output_type = detail::unboxed_t<callable_res_t>;
 
@@ -35,7 +36,14 @@ public:
       if constexpr (boxed_output) {
         auto val = fn_();
         if (!val) {
-          step.on_complete(steps...);
+          if constexpr (detail::is_expected_v<callable_res_t>) {
+            if (const auto& err = val.error())
+              step.on_error(err, steps...);
+            else
+              step.on_complete(steps...);
+          } else {
+            step.on_complete(steps...);
+          }
           return;
         }
         if (!step.on_next(*val, steps...))

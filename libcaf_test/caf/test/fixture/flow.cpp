@@ -6,6 +6,21 @@
 
 namespace caf::test::fixture {
 
+std::string flow::to_string(observer_state x) {
+  switch (x) {
+    case observer_state::idle:
+      return "idle";
+    case observer_state::subscribed:
+      return "subscribed";
+    case observer_state::completed:
+      return "completed";
+    case observer_state::aborted:
+      return "aborted";
+    default:
+      return "<invalid>";
+  }
+}
+
 void flow::run_flows() {
   // TODO: the scoped_coordinator is not the right tool for this job. We need a
   //       custom coordinator that allows us to control timeouts. For now, this

@@ -974,6 +974,11 @@ struct unboxed_oracle<std::optional<T>> {
 };
 
 template <class T>
+struct unboxed_oracle<expected<T>> {
+  using type = T;
+};
+
+template <class T>
 using unboxed_t = typename unboxed_oracle<T>::type;
 
 /// Evaluates to true if `T` is a std::string or is convertible to a `const

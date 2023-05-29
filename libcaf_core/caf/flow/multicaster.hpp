@@ -43,23 +43,24 @@ public:
 
   /// Pushes an item to all subscribed observers. The publisher drops the item
   /// if no subscriber exists.
-  void push(const T& item) {
-    pimpl_->push_all(item);
+  bool push(const T& item) {
+    return pimpl_->push_all(item);
   }
 
   /// Pushes the items in range `[first, last)` to all subscribed observers. The
   /// publisher drops the items if no subscriber exists.
   template <class Iterator, class Sentinel>
-  void push(Iterator first, Sentinel last) {
-    while (first != last)
-      push(*first++);
+  size_t push(Iterator first, Sentinel last) {
+    return std::accumulate(first, last, size_t{0},
+                           [this](size_t x, const T& y) {
+                             return x + static_cast<size_t>(push(y));
+                           });
   }
 
   /// Pushes the items from the initializer list to all subscribed observers.
   /// The publisher drops the items if no subscriber exists.
-  void push(std::initializer_list<T> items) {
-    for (auto& item : items)
-      push(item);
+  size_t push(std::initializer_list<T> items) {
+    return push(items.begin(), items.end());
   }
 
   /// Closes the publisher, eventually emitting on_complete on all observers.
@@ -97,6 +98,11 @@ public:
   /// Subscribes a new @ref observer to the output of the publisher.
   disposable subscribe(observer<T> out) {
     return pimpl_->subscribe(out);
+  }
+
+  /// @private
+  op::mcast<T>& impl() {
+    return *pimpl_;
   }
 
 private:

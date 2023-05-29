@@ -118,11 +118,13 @@ SCENARIO("the buffer operator forces items at regular intervals") {
           cow_vector<int>{},        cow_vector<int>{64},
           cow_vector<int>{},        cow_vector<int>{128, 256, 512},
         };
+        auto closed = std::make_shared<bool>(false);
         auto pub = flow::multicaster<int>{ctx.get()};
-        sys.spawn([&pub, outputs](caf::event_based_actor* self) {
+        sys.spawn([&pub, outputs, closed](caf::event_based_actor* self) {
           pub.as_observable()
             .observe_on(self) //
             .buffer(3, 1s)
+            .do_on_complete([closed] { *closed = true; })
             .for_each([outputs](const cow_vector<int>& xs) {
               outputs->emplace_back(xs);
             });
@@ -152,6 +154,7 @@ SCENARIO("the buffer operator forces items at regular intervals") {
         advance_time(1s);
         sched.run();
         CHECK_EQ(*outputs, expected);
+        CHECK(*closed);
       }
     }
   }
