@@ -39,6 +39,8 @@ struct CAF_NET_EXPORT rfc6455 {
 
   static constexpr uint8_t pong = 0x0A;
 
+  static constexpr uint8_t fin_flag = 0x80;
+
   // -- utility functions ------------------------------------------------------
 
   static void mask_data(uint32_t key, span<char> data);
@@ -52,7 +54,8 @@ struct CAF_NET_EXPORT rfc6455 {
                              binary_buffer& out);
 
   static void assemble_frame(uint8_t opcode, uint32_t mask_key,
-                             span<const byte> data, binary_buffer& out);
+                             span<const byte> data, binary_buffer& out,
+                             uint8_t flags = fin_flag);
 
   static ptrdiff_t decode_header(span<const byte> data, header& hdr);
 };

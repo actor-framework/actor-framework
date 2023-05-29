@@ -238,7 +238,7 @@ public:
           // End of fragmented input.
           payload_buf_.insert(payload_buf_.end(), payload.begin(),
                               payload.end());
-          if (!handle(down, hdr.opcode, payload_buf_))
+          if (!handle(down, opcode_, payload_buf_))
             return -1;
           opcode_ = nil_code;
           payload_buf_.clear();
@@ -254,6 +254,11 @@ public:
             return -1;
           }
           opcode_ = hdr.opcode;
+        } else if (hdr.opcode != detail::rfc6455::continuation_frame) {
+          CAF_LOG_DEBUG("expected a continuation frame");
+          down->abort_reason(make_error(sec::protocol_error, //
+                                        "expected a continuation frame"));
+          return -1;
         } else if (payload_buf_.size() + payload_len > max_frame_size) {
           // Reject assembled payloads that exceed max_frame_size.
           auto err = make_error(sec::runtime_error,
