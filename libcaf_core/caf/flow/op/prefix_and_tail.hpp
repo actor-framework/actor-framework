@@ -23,15 +23,31 @@ namespace caf::flow::op {
 template <class T>
 class prefix_and_tail_sub : public detail::plain_ref_counted,
                             public observer_impl<T>,
-                            public subscription_impl {
+                            public subscription_impl,
+                            public ucast_sub_state_listener<T> {
 public:
+  // -- member types -----------------------------------------------------------
+
   using tuple_t = cow_tuple<cow_vector<T>, observable<T>>;
+
+  using state_type = ucast_sub_state<T>;
+
+  // -- constructors, destructors, and assignment operators --------------------
 
   prefix_and_tail_sub(coordinator* ctx, observer<tuple_t> out,
                       size_t prefix_size)
     : ctx_(ctx), out_(std::move(out)), prefix_size_(prefix_size) {
     prefix_buf_.reserve(prefix_size);
   }
+
+  ~prefix_and_tail_sub() {
+    if (sink_) {
+      sink_->state().listener = nullptr;
+      sink_->close();
+    }
+  }
+
+  // -- implementation of observer ---------------------------------------------
 
   void ref_coordinated() const noexcept override {
     ref();
@@ -53,7 +69,7 @@ public:
       if (prefix_buf_.size() == prefix_size_) {
         // Create the sink to deliver to tail lazily and deliver the prefix.
         sink_ = make_counted<ucast<T>>(ctx_);
-        set_callbacks();
+        sink_->state().listener = this;
         // Force member to be null before calling on_next / on_complete.
         auto out = std::move(out_);
         auto tup = make_cow_tuple(cow_vector<T>{std::move(prefix_buf_)},
@@ -66,7 +82,7 @@ public:
 
   void on_error(const error& reason) override {
     if (sink_) {
-      sink_->state().when_demand_changed = nullptr;
+      sink_->state().listener= nullptr;
       sink_->abort(reason);
       sub_ = nullptr;
     } else if (out_) {
@@ -77,7 +93,7 @@ public:
 
   void on_complete() override {
     if (sink_) {
-      sink_->state().when_demand_changed = nullptr;
+      sink_->state().listener = nullptr;
       sink_->close();
       sub_ = nullptr;
     } else if (out_) {
@@ -85,6 +101,8 @@ public:
       out_ = nullptr;
     }
   }
+
+  // -- implementation of observable -------------------------------------------
 
   void on_subscribe(flow::subscription sub) override {
     if (!sub_ && out_) {
@@ -97,6 +115,8 @@ public:
       sub.dispose();
     }
   }
+
+  // -- implementation of disposable -------------------------------------------
 
   void dispose() override {
     if (out_) {
@@ -129,20 +149,13 @@ public:
     }
   }
 
-private:
-  intrusive_ptr<prefix_and_tail_sub> strong_this() {
-    return {this};
+  // -- implementation of ucast_sub_state_listener -----------------------------
+
+  void on_disposed(state_type*) override {
+    ctx_->delay_fn([sptr = strong_this()] { sptr->do_dispose(); });
   }
 
-  void set_callbacks() {
-    auto sptr = strong_this();
-    auto demand_cb = [sptr] { sptr->on_sink_demand_change(); };
-    sink_->state().when_demand_changed = make_action(std::move(demand_cb));
-    auto disposed_cb = [sptr] { sptr->on_sink_dispose(); };
-    sink_->state().when_disposed = make_action(std::move(disposed_cb));
-  }
-
-  void on_sink_demand_change() {
+  void on_demand_changed(state_type*) override {
     if (sink_ && sub_) {
       auto& st = sink_->state();
       auto pending = in_flight_ + st.buf.size();
@@ -154,13 +167,19 @@ private:
     }
   }
 
-  void on_sink_dispose() {
+private:
+  intrusive_ptr<prefix_and_tail_sub> strong_this() {
+    return {this};
+  }
+
+  void do_dispose() {
     sink_ = nullptr;
-    if (sub_) {
-      sub_.dispose();
-      sub_ = nullptr;
+    if (out_) {
+      auto tmp = std::move(out_);
+      tmp.on_complete();
     }
   }
+
 
   /// Our scheduling context.
   coordinator* ctx_;

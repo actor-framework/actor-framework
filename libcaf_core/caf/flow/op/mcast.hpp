@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <deque>
 #include <memory>
+#include <numeric>
 
 namespace caf::flow::op {
 
@@ -39,12 +40,13 @@ public:
   // -- implementation of subscription -----------------------------------------
 
   bool disposed() const noexcept override {
-    return !state_;
+    return !state_ || state_->disposed;
   }
 
   void dispose() override {
     if (state_) {
-      ctx_->delay_fn([state = std::move(state_)]() { state->do_dispose(); });
+      auto state = std::move(state_);
+      state->dispose();
     }
   }
 
@@ -66,7 +68,7 @@ private:
 
 // Base type for *hot* operators that multicast data to subscribed observers.
 template <class T>
-class mcast : public hot<T> {
+class mcast : public hot<T>, public ucast_sub_state_listener<T> {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -84,18 +86,30 @@ public:
     // nop
   }
 
+  ~mcast() override {
+    close();
+  }
+
+  // -- broadcasting -----------------------------------------------------------
+
   /// Pushes @p item to all subscribers.
-  void push_all(const T& item) {
-    for (auto& state : states_)
-      state->push(item);
+  /// @returns `true` if all observers consumed the item immediately without
+  ///          buffering it, `false` otherwise.
+  bool push_all(const T& item) {
+    return std::accumulate(states_.begin(), states_.end(), true,
+                           [&item](bool res, const state_ptr_type& ptr) {
+                             return res & ptr->push(item);
+                           });
   }
 
   /// Closes the operator, eventually emitting on_complete on all observers.
   void close() {
     if (!closed_) {
       closed_ = true;
-      for (auto& state : states_)
+      for (auto& state : states_) {
+        state->listener = nullptr;
         state->close();
+      }
       states_.clear();
     }
   }
@@ -104,58 +118,59 @@ public:
   void abort(const error& reason) {
     if (!closed_) {
       closed_ = true;
-      for (auto& state : states_)
+      for (auto& state : states_) {
+        state->listener = nullptr;
         state->abort(reason);
+      }
       states_.clear();
+      err_ = reason;
     }
   }
+
+  // -- properties -------------------------------------------------------------
 
   size_t max_demand() const noexcept {
     if (states_.empty()) {
       return 0;
-    } else {
-      auto pred = [](const state_ptr_type& x, const state_ptr_type& y) {
-        return x->demand < y->demand;
-      };
-      auto& ptr = *std::max_element(states_.begin(), states_.end(), pred);
-      return ptr->demand;
     }
+    auto pred = [](const state_ptr_type& x, const state_ptr_type& y) {
+      return x->demand < y->demand;
+    };
+    auto& ptr = *std::max_element(states_.begin(), states_.end(), pred);
+    return ptr->demand;
   }
 
   size_t min_demand() const noexcept {
     if (states_.empty()) {
       return 0;
-    } else {
-      auto pred = [](const state_ptr_type& x, const state_ptr_type& y) {
-        return x->demand < y->demand;
-      };
-      auto& ptr = *std::min_element(states_.begin(), states_.end(), pred);
-      ptr->demand;
     }
+    auto pred = [](const state_ptr_type& x, const state_ptr_type& y) {
+      return x->demand < y->demand;
+    };
+    auto& ptr = *std::min_element(states_.begin(), states_.end(), pred);
+    return ptr->demand;
   }
 
   size_t max_buffered() const noexcept {
     if (states_.empty()) {
       return 0;
-    } else {
-      auto pred = [](const state_ptr_type& x, const state_ptr_type& y) {
-        return x->buf.size() < y->buf.size();
-      };
-      auto& ptr = *std::max_element(states_.begin(), states_.end(), pred);
-      return ptr->buf.size();
     }
+    auto pred = [](const state_ptr_type& x, const state_ptr_type& y) {
+      return x->buf.size() < y->buf.size();
+    };
+    auto& ptr = *std::max_element(states_.begin(), states_.end(), pred);
+    return ptr->buf.size();
   }
 
   size_t min_buffered() const noexcept {
     if (states_.empty()) {
       return 0;
-    } else {
-      auto pred = [](const state_ptr_type& x, const state_ptr_type& y) {
-        return x->buf.size() < y->buf.size();
-      };
-      auto& ptr = *std::min_element(states_.begin(), states_.end(), pred);
-      ptr->buf.size();
     }
+    auto pred = [](const state_ptr_type& x, const state_ptr_type& y) {
+      return x->buf.size() < y->buf.size();
+    };
+    auto& ptr = *std::min_element(states_.begin(), states_.end(), pred);
+    return ptr->buf.size();
   }
 
   /// Queries whether there is at least one observer subscribed to the operator.
@@ -168,20 +183,20 @@ public:
     return states_.size();
   }
 
+  // -- state management -------------------------------------------------------
+
+  /// Adds state for a new observer to the operator.
   state_ptr_type add_state(observer_type out) {
     auto state = make_counted<state_type>(super::ctx_, std::move(out));
-    auto mc = strong_this();
-    state->when_disposed = make_action([mc, state]() mutable { //
-      mc->do_dispose(state);
-    });
-    state->when_consumed_some = make_action([mc, state]() mutable { //
-      mc->on_consumed_some(*state);
-    });
+    state->listener = this;
     states_.push_back(state);
     return state;
   }
 
-  disposable subscribe(observer<T> out) override {
+  // -- implementation of observable -------------------------------------------
+
+  /// Adds a new observer to the operator.
+  disposable subscribe(observer_type out) override {
     if (!closed_) {
       auto ptr = make_counted<mcast_sub<T>>(super::ctx_, add_state(out));
       out.on_subscribe(subscription{ptr});
@@ -194,6 +209,23 @@ public:
     }
   }
 
+  // -- implementation of ucast_sub_state_listener -----------------------------
+
+  void on_disposed(state_type* ptr) final {
+    super::ctx_->delay_fn([mc = strong_this(), sptr = state_ptr_type{ptr}] {
+      if (auto i = std::find(mc->states_.begin(), mc->states_.end(), sptr);
+          i != mc->states_.end()) {
+        // We don't care about preserving the order of elements in the vector.
+        // Hence, we can swap the element to the back and then pop it.
+        auto last = mc->states_.end() - 1;
+        if (i != last)
+          std::swap(*i, *last);
+        mc->states_.pop_back();
+        mc->do_dispose(sptr);
+      }
+    });
+  }
+
 protected:
   bool closed_ = false;
   error err_;
@@ -204,19 +236,8 @@ private:
     return {this};
   }
 
-  void do_dispose(state_ptr_type& state) {
-    auto e = states_.end();
-    if (auto i = std::find(states_.begin(), e, state); i != e) {
-      states_.erase(i);
-      on_dispose(*state);
-    }
-  }
-
-  virtual void on_dispose(state_type&) {
-    // nop
-  }
-
-  virtual void on_consumed_some(state_type&) {
+  /// Called whenever a state is disposed.
+  virtual void do_dispose(const state_ptr_type&) {
     // nop
   }
 };

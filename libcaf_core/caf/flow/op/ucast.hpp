@@ -17,10 +17,13 @@
 
 namespace caf::flow::op {
 
-/// State shared between one multicast operator and one subscribed observer.
+/// Shared state between an operator that emits values and the subscribed
+/// observer.
 template <class T>
 class ucast_sub_state : public detail::plain_ref_counted {
 public:
+  // -- friends ----------------------------------------------------------------
+
   friend void intrusive_ptr_add_ref(const ucast_sub_state* ptr) noexcept {
     ptr->ref();
   }
@@ -28,6 +31,39 @@ public:
   friend void intrusive_ptr_release(const ucast_sub_state* ptr) noexcept {
     ptr->deref();
   }
+
+  // -- member types -----------------------------------------------------------
+
+  /// Interface for listeners that want to be notified when a `ucast_sub_state`
+  /// is disposed, has consumed some items, or when its demand hast changed.
+  class abstract_listener {
+  public:
+    virtual ~abstract_listener() {
+      // nop
+    }
+
+    /// Called when the `ucast_sub_state` is disposed.
+    virtual void on_disposed(ucast_sub_state*) = 0;
+
+    /// Called when the `ucast_sub_state` receives new demand.
+    virtual void on_demand_changed(ucast_sub_state*) {
+      // nop
+    }
+
+    /// Called when the `ucast_sub_state` has consumed some items.
+    /// @param state The `ucast_sub_state` that consumed items.
+    /// @param old_buffer_size The number of items in the buffer before
+    ///                        consuming items.
+    /// @param new_buffer_size The number of items in the buffer after
+    ///                        consuming items.
+    virtual void on_consumed_some([[maybe_unused]] ucast_sub_state* state,
+                                  [[maybe_unused]] size_t old_buffer_size,
+                                  [[maybe_unused]] size_t new_buffer_size) {
+      // nop
+    }
+  };
+
+  // -- constructors, destructors, and assignment operators --------------------
 
   explicit ucast_sub_state(coordinator* ptr) : ctx(ptr) {
     // nop
@@ -38,31 +74,49 @@ public:
     // nop
   }
 
+  /// The coordinator for scheduling delayed function calls.
   coordinator* ctx;
+
+  /// The buffer for storing items until the observer requests them.
   std::deque<T> buf;
+
+  /// The number items that the observer has requested but not yet received.
   size_t demand = 0;
+
+  /// The observer to send items to.
   observer<T> out;
+
+  /// Keeps track of whether this object has been disposed.
   bool disposed = false;
+
+  /// Keeps track of whether this object has been closed.
   bool closed = false;
+
+  /// Keeps track of whether `do_run` is currently running.
   bool running = false;
+
+  /// The error to pass to the observer after the last `on_next` call. If this
+  /// error is default-constructed, then the observer receives `on_complete`.
+  /// Otherwise, the observer receives `on_error`.
   error err;
 
-  action when_disposed;
-  action when_consumed_some;
-  action when_demand_changed;
+  /// The listener for state changes. We hold a non-owning pointer to the
+  /// listener, because the listener owns the state.
+  abstract_listener* listener = nullptr;
 
-  void push(const T& item) {
+  /// Returns `true` if `item` was consumed, `false` when it was buffered.
+  [[nodiscard]] bool push(const T& item) {
     if (disposed) {
-      // nop
+      return true;
     } else if (demand > 0 && !running) {
       CAF_ASSERT(out);
       CAF_ASSERT(buf.empty());
       --demand;
       out.on_next(item);
-      if (when_consumed_some)
-        ctx->delay(when_consumed_some);
+      return true;
     } else {
       buf.push_back(item);
+      return false;
     }
   }
 
@@ -71,13 +125,11 @@ public:
       closed = true;
       if (!running && buf.empty()) {
         disposed = true;
+        listener = nullptr;
         if (out) {
-          out.on_complete();
-          out = nullptr;
+          auto tmp = std::move(out);
+          tmp.on_complete();
         }
-        when_disposed = nullptr;
-        when_consumed_some = nullptr;
-        when_demand_changed = nullptr;
       }
     }
   }
@@ -88,57 +140,59 @@ public:
       err = reason;
       if (!running && buf.empty()) {
         disposed = true;
+        listener = nullptr;
         if (out) {
-          out.on_error(reason);
-          out = nullptr;
+          auto tmp = std::move(out);
+          tmp.on_error(reason);
         }
-        when_disposed = nullptr;
-        when_consumed_some = nullptr;
-        when_demand_changed = nullptr;
       }
     }
   }
 
-  void do_dispose() {
-    if (out) {
-      out.on_complete();
-      out = nullptr;
-    }
-    if (when_disposed) {
-      ctx->delay(std::move(when_disposed));
-    }
-    if (when_consumed_some) {
-      when_consumed_some.dispose();
-      when_consumed_some = nullptr;
-    }
-    when_demand_changed = nullptr;
+  void dispose() {
     buf.clear();
     demand = 0;
     disposed = true;
+    if (listener) {
+      auto* lptr = listener;
+      listener = nullptr;
+      lptr->on_disposed(this);
+    }
+    if (out) {
+      auto tmp = std::move(out);
+      tmp.on_complete();
+    }
   }
 
   void do_run() {
     auto guard = detail::make_scope_guard([this] { running = false; });
     if (!disposed) {
+      auto old_buf_size = buf.size();
       auto got_some = demand > 0 && !buf.empty();
       for (bool run = got_some; run; run = demand > 0 && !buf.empty()) {
         out.on_next(buf.front());
+        // Note: on_next may call dispose().
+        if (disposed)
+          return;
         buf.pop_front();
         --demand;
       }
       if (buf.empty() && closed) {
+        auto tmp = std::move(out);
         if (err)
-          out.on_error(err);
+          tmp.on_error(err);
         else
-          out.on_complete();
-        out = nullptr;
-        do_dispose();
-      } else if (got_some && when_consumed_some) {
-        ctx->delay(when_consumed_some);
+          tmp.on_complete();
+        dispose();
+      } else if (got_some && listener) {
+        listener->on_consumed_some(this, old_buf_size, buf.size());
       }
     }
   }
 };
+
+template <class T>
+using ucast_sub_state_listener = typename ucast_sub_state<T>::abstract_listener;
 
 template <class T>
 using ucast_sub_state_ptr = intrusive_ptr<ucast_sub_state<T>>;
@@ -156,20 +210,23 @@ public:
   // -- implementation of subscription -----------------------------------------
 
   bool disposed() const noexcept override {
-    return !state_;
+    return !state_ || state_->disposed;
   }
 
   void dispose() override {
     if (state_) {
-      ctx_->delay_fn([state = std::move(state_)]() { state->do_dispose(); });
+      auto state = std::move(state_);
+      state->dispose();
     }
   }
 
   void request(size_t n) override {
+    if (!state_)
+      return;
     state_->demand += n;
-    if (state_->when_demand_changed)
-      state_->when_demand_changed.run();
-    if (!state_->running) {
+    if (state_->listener)
+      state_->listener->on_demand_changed(state_.get());
+    if (!state_->running && !state_->buf.empty()) {
       state_->running = true;
       ctx_->delay_fn([state = state_] { state->do_run(); });
     }
@@ -205,7 +262,7 @@ public:
 
   /// Pushes @p item to the subscriber or buffers them until subscribed.
   void push(const T& item) {
-    state_->push(item);
+    std::ignore = state_->push(item);
   }
 
   /// Closes the operator, eventually emitting on_complete on all observers.
