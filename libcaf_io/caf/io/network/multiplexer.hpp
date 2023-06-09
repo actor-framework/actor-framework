@@ -97,7 +97,7 @@ public:
   /// Creates an instance using the networking backend compiled with CAF.
   static std::unique_ptr<multiplexer> make(actor_system& sys);
 
-  /// Exectutes all pending events without blocking.
+  /// Executes all pending events without blocking.
   /// @returns `true` if at least one event was called, `false` otherwise.
   virtual bool try_run_once() = 0;
 

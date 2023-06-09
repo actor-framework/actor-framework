@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/chrono.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/none.hpp"
 
@@ -16,6 +17,7 @@
 
 namespace caf::detail {
 
+// TODO: this function is obsolete. Deprecate/remove with future versions.
 CAF_CORE_EXPORT
 size_t print_timestamp(char* buf, size_t buf_size, time_t ts, size_t ms);
 
@@ -221,20 +223,7 @@ void print(Buffer& buf, std::chrono::duration<Rep, Period> x) {
 template <class Buffer, class Duration>
 void print(Buffer& buf,
            std::chrono::time_point<std::chrono::system_clock, Duration> x) {
-  namespace sc = std::chrono;
-  using clock_type = sc::system_clock;
-  using clock_timestamp = typename clock_type::time_point;
-  using clock_duration = typename clock_type::duration;
-  auto tse = x.time_since_epoch();
-  clock_timestamp as_sys_time{sc::duration_cast<clock_duration>(tse)};
-  auto secs = clock_type::to_time_t(as_sys_time);
-  auto msecs = sc::duration_cast<sc::milliseconds>(tse).count() % 1000;
-  // We print in ISO 8601 format, e.g., "2020-09-01T15:58:42.372". 32-Bytes are
-  // more than enough space.
-  char stack_buffer[32];
-  auto pos = print_timestamp(stack_buffer, 32, secs,
-                             static_cast<size_t>(msecs));
-  buf.insert(buf.end(), stack_buffer, stack_buffer + pos);
+  chrono::print(buf, x);
 }
 
 } // namespace caf::detail

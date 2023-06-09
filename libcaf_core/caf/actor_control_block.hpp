@@ -85,7 +85,7 @@ public:
                 "sizeof(node_id) != sizeof(size_t)");
 
   static_assert(sizeof(data_destructor) == sizeof(void*),
-                "functiion pointer and regular pointers have different size");
+                "function pointer and regular pointers have different size");
 
   /// Returns a pointer to the actual actor instance.
   abstract_actor* get() {
