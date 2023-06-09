@@ -188,7 +188,7 @@ template <class Duration>
 void parse(string_parser_state& ps,
            std::chrono::time_point<std::chrono::system_clock, Duration>& x) {
   chrono::datetime dt;
-  dt.parse(ps);
+  parse(ps, dt);
   if (ps.code != pec::success)
     return;
   x = dt.to_local_time<Duration>();

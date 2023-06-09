@@ -109,17 +109,8 @@ public:
   /// Returns whether this object is equal to `other`.
   bool equals(const datetime& other) const noexcept;
 
-  /// Parses a date and time string in ISO 8601 format.
-  /// @param str The string to parse.
-  /// @returns The parsed date and time.
-  error parse(std::string_view str);
-
   /// Convenience function for converting a string to a `datetime` object.
   static expected<datetime> from_string(std::string_view str);
-
-  /// Parses a date and time string in ISO 8601 format.
-  /// @param ps The parser state to use.
-  void parse(string_parser_state& ps);
 
   /// Overrides the current date and time with the values from `x`.
   void value(const datetime& x) noexcept {
@@ -127,6 +118,7 @@ public:
   }
 
   /// Converts this object to a time_point object with given Duration type.
+  /// @pre `valid()` returns `true`.
   template <class Duration = std::chrono::system_clock::duration>
   auto to_local_time() const noexcept {
     // TODO: consider using year_month_day once we have C++20.
@@ -143,6 +135,8 @@ private:
   time_t to_time_t() const noexcept;
 };
 
+// -- free functions -----------------------------------------------------------
+
 /// @relates datetime
 inline bool operator==(const datetime& x, const datetime& y) noexcept {
   return x.equals(y);
@@ -153,7 +147,20 @@ inline bool operator!=(const datetime& x, const datetime& y) noexcept {
   return !(x == y);
 }
 
+/// Parses a date and time string in ISO 8601 format.
+/// @param str The string to parse.
+/// @param dest The output parameter for the parsed date and time.
+/// @returns An error code if parsing failed.
 /// @relates datetime
-std::string to_string(const datetime& x);
+CAF_CORE_EXPORT error parse(std::string_view str, datetime& dest);
+
+/// Parses a date and time string in ISO 8601 format.
+/// @param ps The parser state to use.
+/// @param dest The output parameter for the parsed date and time.
+/// @relates datetime
+CAF_CORE_EXPORT void parse(string_parser_state& ps, datetime& dest);
+
+/// @relates datetime
+CAF_CORE_EXPORT std::string to_string(const datetime& x);
 
 } // namespace caf::chrono

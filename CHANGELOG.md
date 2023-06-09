@@ -24,11 +24,11 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ### Added
 
-- We have added new utilities in `caf::chrono` for making it easier to handle
-  ISO 8601 timestamps. The new function `std::chrono::to_string` converts system
-  time to an ISO timestamp. For reading an ISO timestamp, CAF now provides the
-  class `caf::chrono::datetime`. It can parse ISO-formatted strings via `parse`
-  (or `datetime::from_string`) and convert them to a local representation via
+- Add new utilities in `caf::chrono` for making it easier to handle ISO 8601
+  timestamps. The new function `std::chrono::to_string` converts system time to
+  an ISO timestamp. For reading an ISO timestamp, CAF now provides the class
+  `caf::chrono::datetime`. It can parse ISO-formatted strings via `parse` (or
+  `datetime::from_string`) and convert them to a local representation via
   `to_local_time`. Please refer to the class documentation for more details.
 
 ## [0.19.1] - 2023-05-01

@@ -17,12 +17,12 @@ TEST_CASE("a default constructed date and time is invalid") {
   CHECK(!x.valid());
 }
 
-SCENARIO("a date and time can be parsed from a string") {
+SCENARIO("a date and time can be parsed from strings") {
   GIVEN("a valid date and time string with no UTC time zone information") {
     WHEN("parsing the string") {
       THEN("the date and time is valid and has an UTC offset is nullopt") {
         datetime x;
-        CHECK_EQ(x.parse("2021-02-03T14:25:36"), none);
+        CHECK_EQ(parse("2021-02-03T14:25:36", x), none);
         CHECK(x.valid());
         CHECK_EQ(x.year, 2021);
         CHECK_EQ(x.month, 2);
@@ -39,7 +39,7 @@ SCENARIO("a date and time can be parsed from a string") {
     WHEN("parsing the string") {
       THEN("the date and time is valid and has an UTC offset of 0") {
         datetime x;
-        CHECK_EQ(x.parse("2021-02-03T14:25:36Z"), none);
+        CHECK_EQ(parse("2021-02-03T14:25:36Z", x), none);
         CHECK(x.valid());
         CHECK_EQ(x.year, 2021);
         CHECK_EQ(x.month, 2);
@@ -56,7 +56,7 @@ SCENARIO("a date and time can be parsed from a string") {
     WHEN("parsing the string") {
       THEN("the date and time is valid and has the specified UTC offset") {
         datetime x;
-        CHECK_EQ(x.parse("2021-02-03T14:25:36+02:00"), none);
+        CHECK_EQ(parse("2021-02-03T14:25:36+02:00", x), none);
         CHECK(x.valid());
         CHECK_EQ(x.year, 2021);
         CHECK_EQ(x.month, 2);
@@ -73,7 +73,7 @@ SCENARIO("a date and time can be parsed from a string") {
     WHEN("parsing the string") {
       THEN("the date and time is valid and has the specified UTC offset") {
         datetime x;
-        CHECK_EQ(x.parse("2021-02-03T14:25:36-01:30"), none);
+        CHECK_EQ(parse("2021-02-03T14:25:36-01:30", x), none);
         CHECK(x.valid());
         CHECK_EQ(x.year, 2021);
         CHECK_EQ(x.month, 2);
@@ -88,13 +88,12 @@ SCENARIO("a date and time can be parsed from a string") {
   }
 }
 
-// Same as above, but with milliseconds.
-SCENARIO("a date and time with milliseconds can be parsed from a string") {
+SCENARIO("a date and time with fractional seconds can be parsed from strings") {
   GIVEN("a valid date and time string with no UTC time zone information") {
     WHEN("parsing the string") {
       THEN("the date and time is valid and has an UTC offset is nullopt") {
         datetime x;
-        CHECK_EQ(x.parse("2021-02-03T14:25:36.000"), none);
+        CHECK_EQ(parse("2021-02-03T14:25:36.000", x), none);
         CHECK(x.valid());
         CHECK_EQ(x.year, 2021);
         CHECK_EQ(x.month, 2);
@@ -111,7 +110,7 @@ SCENARIO("a date and time with milliseconds can be parsed from a string") {
     WHEN("parsing the string") {
       THEN("the date and time is valid and has an UTC offset of 0") {
         datetime x;
-        CHECK_EQ(x.parse("2021-02-03T14:25:36.012Z"), none);
+        CHECK_EQ(parse("2021-02-03T14:25:36.012Z", x), none);
         CHECK(x.valid());
         CHECK_EQ(x.year, 2021);
         CHECK_EQ(x.month, 2);
@@ -128,7 +127,7 @@ SCENARIO("a date and time with milliseconds can be parsed from a string") {
     WHEN("parsing the string") {
       THEN("the date and time is valid and has the specified UTC offset") {
         datetime x;
-        CHECK_EQ(x.parse("2021-02-03T14:25:36.123+02:00"), none);
+        CHECK_EQ(parse("2021-02-03T14:25:36.123+02:00", x), none);
         CHECK(x.valid());
         CHECK_EQ(x.year, 2021);
         CHECK_EQ(x.month, 2);
@@ -145,7 +144,7 @@ SCENARIO("a date and time with milliseconds can be parsed from a string") {
     WHEN("parsing the string") {
       THEN("the date and time is valid and has the specified UTC offset") {
         datetime x;
-        CHECK_EQ(x.parse("2021-02-03T14:25:36.999-01:30"), none);
+        CHECK_EQ(parse("2021-02-03T14:25:36.999-01:30", x), none);
         CHECK(x.valid());
         CHECK_EQ(x.year, 2021);
         CHECK_EQ(x.month, 2);
@@ -163,14 +162,14 @@ SCENARIO("a date and time with milliseconds can be parsed from a string") {
 TEST_CASE("the parser refuses invalid date time values") {
   datetime x;
   auto invalid = make_error(pec::invalid_argument);
-  CHECK_EQ(x.parse("2021-02-29T01:00:00"), invalid); // Not a leap year.
-  CHECK_EQ(x.parse("2021-00-10T01:00:00"), invalid); // Month < 1.
-  CHECK_EQ(x.parse("2021-13-10T01:00:00"), invalid); // Month > 12.
-  CHECK_EQ(x.parse("2021-01-00T01:00:00"), invalid); // Day < 1.
-  CHECK_EQ(x.parse("2021-01-32T01:00:00"), invalid); // Day > 31.
-  CHECK_EQ(x.parse("2021-01-01T24:00:00"), invalid); // Hour > 23.
-  CHECK_EQ(x.parse("2021-01-01T00:60:00"), invalid); // Minute > 56.
-  CHECK_EQ(x.parse("2021-01-01T00:00:60"), invalid); // Second > 56.
+  CHECK_EQ(parse("2021-02-29T01:00:00", x), invalid); // Not a leap year.
+  CHECK_EQ(parse("2021-00-10T01:00:00", x), invalid); // Month < 1.
+  CHECK_EQ(parse("2021-13-10T01:00:00", x), invalid); // Month > 12.
+  CHECK_EQ(parse("2021-01-00T01:00:00", x), invalid); // Day < 1.
+  CHECK_EQ(parse("2021-01-32T01:00:00", x), invalid); // Day > 31.
+  CHECK_EQ(parse("2021-01-01T24:00:00", x), invalid); // Hour > 23.
+  CHECK_EQ(parse("2021-01-01T00:60:00", x), invalid); // Minute > 59.
+  CHECK_EQ(parse("2021-01-01T00:00:60", x), invalid); // Second > 59.
 }
 
 SCENARIO("to_string produces valid input for parse") {
@@ -188,7 +187,7 @@ SCENARIO("to_string produces valid input for parse") {
         auto x_str = to_string(x);
         CHECK_EQ(x_str, "1999-09-09T09:09:09.009");
         auto y = datetime{};
-        CHECK_EQ(y.parse(x_str), none);
+        CHECK_EQ(parse(x_str, y), none);
         CHECK_EQ(x, y);
         CHECK_EQ(x_str, to_string(y));
       }
@@ -209,7 +208,7 @@ SCENARIO("to_string produces valid input for parse") {
         auto x_str = to_string(x);
         CHECK_EQ(x_str, "2010-10-10T10:10:10.099Z");
         auto y = datetime{};
-        CHECK_EQ(y.parse(x_str), none);
+        CHECK_EQ(parse(x_str, y), none);
         CHECK_EQ(x, y);
         CHECK_EQ(x_str, to_string(y));
       }
@@ -230,7 +229,7 @@ SCENARIO("to_string produces valid input for parse") {
         auto x_str = to_string(x);
         CHECK_EQ(x_str, "2211-11-11T11:11:11.999+01:30");
         auto y = datetime{};
-        CHECK_EQ(y.parse(x_str), none);
+        CHECK_EQ(parse(x_str, y), none);
         CHECK_EQ(x, y);
         CHECK_EQ(x_str, to_string(y));
       }
@@ -251,7 +250,7 @@ SCENARIO("to_string produces valid input for parse") {
         auto x_str = to_string(x);
         CHECK_EQ(x_str, "1122-12-12T12:12:12.999-01:30");
         auto y = datetime{};
-        CHECK_EQ(y.parse(x_str), none);
+        CHECK_EQ(parse(x_str, y), none);
         CHECK_EQ(x, y);
         CHECK_EQ(x_str, to_string(y));
       }
@@ -352,11 +351,11 @@ TEST_CASE("the fractional component may have 1-9 digits") {
 TEST_CASE("chrono::to_string generates valid input for datetime::parse") {
   // We know neither the local timezone nor what the system clock returns, so we
   // can only check that the string is valid by parsing it again.
-  /* std::chrono time point */ {
+  { // std::chrono time point
     auto str = chrono::to_string(std::chrono::system_clock::now());
     CHECK(datetime::from_string(str));
   }
-  /* caf::timestamp */ {
+  { // caf::timestamp
     auto str = chrono::to_string(make_timestamp());
     CHECK(datetime::from_string(str));
   }
@@ -368,4 +367,18 @@ TEST_CASE("chrono::to_string and chrono::print generate the same string") {
   auto str2 = std::string{};
   chrono::print(str2, ts);
   CHECK_EQ(str1, str2);
+}
+
+TEST_CASE("two timestamps with the same time point are equal") {
+  auto from_string = [](std::string_view str) {
+    return datetime::from_string(str);
+  };
+  CHECK_EQ(from_string("2021-02-03T14:25:36Z"),
+           from_string("2021-02-03T14:25:36+00:00"));
+  CHECK_EQ(from_string("2021-02-03T14:25:36Z"),
+           from_string("2021-02-03T15:25:36+01:00"));
+  CHECK_EQ(from_string("2021-02-03T14:25:36Z"),
+           from_string("2021-02-03T13:25:36-01:00"));
+  CHECK_EQ(from_string("2021-02-03T15:25:36+01:00"),
+           from_string("2021-02-03T13:25:36-01:00"));
 }

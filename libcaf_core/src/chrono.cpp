@@ -85,7 +85,7 @@ char* print_localtime_fraction(char* pos, int val) noexcept {
 
 char* print_localtime_impl(char* buf, size_t buf_size, time_t ts,
                            int ns) noexcept {
-  // Max size of a timestamp is 29 bytes: "2019-12-31T23:59:59.111222333+01:00".
+  // Max size of a timestamp is 35 bytes: "2019-12-31T23:59:59.111222333+01:00".
   // We need at least 36 bytes to store the timestamp and the null terminator.
   CAF_ASSERT(buf_size >= 36);
   // Read the time into a tm struct and print year plus time using strftime.
@@ -210,21 +210,23 @@ time_t datetime::to_time_t() const noexcept {
   return tm_to_time_t(time_buf) - utc_offset.value_or(0);
 }
 
-error datetime::parse(std::string_view str) {
+expected<datetime> datetime::from_string(std::string_view str) {
+  datetime tmp;
+  if (auto err = parse(str, tmp))
+    return err;
+  return tmp;
+}
+
+// -- free functions -----------------------------------------------------------
+
+error parse(std::string_view str, datetime& dest) {
   string_parser_state ps{str.begin(), str.end()};
-  detail::parser::read_timestamp(ps, *this);
+  detail::parser::read_timestamp(ps, dest);
   return ps.code;
 }
 
-void datetime::parse(string_parser_state& ps) {
-  detail::parser::read_timestamp(ps, *this);
-}
-
-expected<datetime> datetime::from_string(std::string_view str) {
-  datetime tmp;
-  if (auto err = tmp.parse(str))
-    return err;
-  return tmp;
+void parse(string_parser_state& ps, datetime& dest) {
+  detail::parser::read_timestamp(ps, dest);
 }
 
 std::string to_string(const datetime& x) {
