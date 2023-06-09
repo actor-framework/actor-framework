@@ -1,2 +1,6 @@
 [files]
 extend-exclude = ["*.pem", "libcaf_net/test/pem.cpp"]
+
+[default.extend-words]
+caf = "caf"
+CAF = "CAF"
