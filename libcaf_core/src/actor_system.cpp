@@ -132,7 +132,7 @@ behavior config_serv_impl(stateful_actor<kvstate>* self) {
 
 // A spawn server allows users to spawn actors dynamically with a name and a
 // message containing the data for initialization. By accessing the spawn server
-// on another node, users can spwan actors remotely.
+// on another node, users can spawn actors remotely.
 
 struct spawn_serv_state {
   static inline const char* name = "caf.system.spawn-server";

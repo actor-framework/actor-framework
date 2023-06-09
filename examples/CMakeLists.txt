@@ -16,7 +16,7 @@ endfunction()
 
 # -- examples for CAF::core ----------------------------------------------------
 
-# introductionary applications
+# introductory applications
 add_core_example(. aout)
 add_core_example(. hello_world)
 

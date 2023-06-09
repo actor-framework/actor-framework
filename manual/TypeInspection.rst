@@ -451,7 +451,7 @@ directly on the underlying type of the ``enum class`` otherwise.
     monday,
     tuesday,
     wednesday,
-    thurday,
+    thursday,
     friday,
     saturday,
     sunday,

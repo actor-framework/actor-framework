@@ -75,7 +75,7 @@ struct fixture {
 
 BEGIN_FIXTURE_SCOPE(fixture)
 
-CAF_TEST(empty_function_fiew) {
+CAF_TEST(empty_function_view) {
   function_view<calculator> f;
   CHECK_EQ(f(10, 20), sec::bad_function_call);
 }

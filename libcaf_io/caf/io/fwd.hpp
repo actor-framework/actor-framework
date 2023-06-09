@@ -12,7 +12,7 @@
 #include "caf/type_id.hpp"
 
 // Unfortunately required, because we cannot add a forward declaration for the
-// enum protol::network that we need for assigning a type ID to
+// enum protocol::network that we need for assigning a type ID to
 // io::network::address_listing.
 #include "caf/io/network/protocol.hpp"
 

@@ -20,7 +20,7 @@ namespace caf {
 template <class T>
 class optional {
 public:
-  /// Typdef for `T`.
+  /// Type alias for `T`.
   using type = T;
 
   using value_type = T;

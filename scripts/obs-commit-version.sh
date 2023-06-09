@@ -83,7 +83,7 @@ elif [ "$1" = "--nightly" ] ; then
   packageVersion="${versionAsStr}.$(date +%Y%m%d)"
 else
   # Don't prevent other branches from building, but issue a warning.
-  echo "Use with either '--nightly' or '--release'. Exitting." >&2
+  echo "Use with either '--nightly' or '--release'. Exiting." >&2
   exit
 fi
 
