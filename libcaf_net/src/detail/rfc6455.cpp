@@ -36,9 +36,10 @@ void rfc6455::assemble_frame(uint32_t mask_key, const_byte_span data,
 }
 
 void rfc6455::assemble_frame(uint8_t opcode, uint32_t mask_key,
-                             const_byte_span data, byte_buffer& out) {
-  // First 8 bits: FIN flag + opcode (we never fragment frames).
-  out.push_back(std::byte{static_cast<uint8_t>(0x80 | opcode)});
+                             const_byte_span data, byte_buffer& out,
+                             uint8_t flags) {
+  // First 8 bits: flags + opcode
+  out.push_back(std::byte{static_cast<uint8_t>(flags | opcode)});
   // Mask flag + payload length (7 bits, 7+16 bits, or 7+64 bits)
   auto mask_bit = std::byte{static_cast<uint8_t>(mask_key == 0 ? 0x00 : 0x80)};
   if (data.size() < 126) {

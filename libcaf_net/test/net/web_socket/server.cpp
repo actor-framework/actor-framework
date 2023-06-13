@@ -89,11 +89,17 @@ struct fixture {
     rng.seed(0xD3ADC0D3);
   }
 
-  void rfc6455_append(uint8_t opcode, const_byte_span bytes, byte_buffer& out) {
+  void rfc6455_append(uint8_t opcode, const_byte_span bytes, byte_buffer& out,
+                      uint8_t flags = detail::rfc6455::fin_flag) {
     byte_buffer payload{bytes.begin(), bytes.end()};
     auto key = static_cast<uint32_t>(rng());
     detail::rfc6455::mask_data(key, payload);
-    detail::rfc6455::assemble_frame(opcode, key, payload, out);
+    detail::rfc6455::assemble_frame(opcode, key, payload, out, flags);
+  }
+
+  void rfc6455_append(uint8_t opcode, std::string_view text, byte_buffer& out,
+                      uint8_t flags = detail::rfc6455::fin_flag) {
+    rfc6455_append(opcode, as_bytes(make_span(text)), out, flags);
   }
 
   void rfc6455_append(const_byte_span bytes, byte_buffer& out) {
@@ -215,6 +221,21 @@ CAF_TEST(data may arrive later) {
            static_cast<ptrdiff_t>(opening_handshake.size()));
   push("Hello WebSocket!\nBye WebSocket!\n"sv);
   transport->handle_input();
+  CHECK_EQ(app->text_input, "Hello WebSocket!\nBye WebSocket!\n");
+}
+
+CAF_TEST(data may arrive fragmented) {
+  transport->push(opening_handshake);
+  CHECK_EQ(transport->handle_input(),
+           static_cast<ptrdiff_t>(opening_handshake.size()));
+  byte_buffer buf;
+  rfc6455_append(detail::rfc6455::text_frame, "Hello "sv, buf, 0);
+  rfc6455_append(detail::rfc6455::continuation_frame, "WebSocket!\n"sv, buf);
+  rfc6455_append(detail::rfc6455::text_frame, "Bye "sv, buf, 0);
+  rfc6455_append(detail::rfc6455::continuation_frame, "Web"sv, buf, 0);
+  rfc6455_append(detail::rfc6455::continuation_frame, "Socket!\n"sv, buf);
+  transport->push(buf);
+  CHECK_EQ(transport->handle_input(), static_cast<ptrdiff_t>(buf.size()));
   CHECK_EQ(app->text_input, "Hello WebSocket!\nBye WebSocket!\n");
 }
 
