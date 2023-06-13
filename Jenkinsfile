@@ -19,10 +19,6 @@ config = [
         'CAF_ENABLE_EXAMPLES:BOOL=ON',
         'CAF_ENABLE_RUNTIME_CHECKS:BOOL=ON',
     ],
-    extraDebugFlags: [
-        'CAF_LOG_LEVEL:STRING=TRACE',
-        'CAF_ENABLE_ROBOT_TESTS:BOOL=ON',
-    ],
     // Our build matrix. Keys are the operating system labels and values are build configurations.
     buildMatrix: [
         // Various Linux builds.
@@ -72,6 +68,8 @@ config = [
             tags: ['docker'],
             builds: ['debug'],
             extraBuildFlags: [
+                'CAF_LOG_LEVEL:STRING=TRACE',
+                'CAF_ENABLE_ROBOT_TESTS:BOOL=ON',
                 'CAF_ENABLE_EXCEPTIONS:BOOL=OFF',
                 'CMAKE_CXX_FLAGS:STRING=-fno-exceptions',
             ],
@@ -82,6 +80,8 @@ config = [
             tags: ['docker', 'LeakSanitizer'],
             builds: ['debug'],
             extraBuildFlags: [
+                'CAF_LOG_LEVEL:STRING=TRACE',
+                'CAF_ENABLE_ROBOT_TESTS:BOOL=ON',
                 'CAF_SANITIZERS:STRING=address',
             ],
             extraBuildEnv: [
@@ -94,6 +94,8 @@ config = [
             tags: ['docker', 'UBSanitizer'],
             builds: ['debug'],
             extraBuildFlags: [
+                'CAF_LOG_LEVEL:STRING=TRACE',
+                'CAF_ENABLE_ROBOT_TESTS:BOOL=ON',
                 'BUILD_SHARED_LIBS:BOOL=OFF',
                 'CAF_SANITIZERS:STRING=address,undefined',
             ],
