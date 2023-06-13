@@ -46,10 +46,10 @@ freebsd12_task:
   build_script: .ci/run.sh build .ci/debug-flags.cmake . build
   test_script: .ci/run.sh test build net.udp_datagram_socket
 
-# Fedora 36 EOL: May 2023
+# Fedora 38 EOL: May 2024
 sanitizers_task:
   container:
-    dockerfile: .ci/fedora-36/Dockerfile
+    dockerfile: .ci/fedora-38/Dockerfile
     << : *RESOURCES_TEMPLATE
   prepare_script: .ci/run.sh assert UBSanitizer
   << : *ASAN_BUILD_TEMPLATE
