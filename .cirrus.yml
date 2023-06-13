@@ -46,6 +46,17 @@ freebsd12_task:
   build_script: .ci/run.sh build .ci/debug-flags.cmake . build
   test_script: .ci/run.sh test build net.udp_datagram_socket
 
+# FreeBSD 13.2 EOL: Release of 13.3 + 3 months
+freebsd13_task:
+  freebsd_instance:
+    image_family: freebsd-13-2
+    << : *RESOURCES_TEMPLATE
+  prepare_script: .ci/freebsd-13/prepare.sh
+  # Test net.udp_datagram_socket is unstable on FreeBSD, see GH issue #1397.
+  # << : *DEBUG_BUILD_TEMPLATE
+  build_script: .ci/run.sh build .ci/debug-flags.cmake . build
+  test_script: .ci/run.sh test build net.udp_datagram_socket
+
 # Fedora 38 EOL: May 2024
 sanitizers_task:
   container:
