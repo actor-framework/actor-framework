@@ -21,6 +21,7 @@ config = [
     ],
     extraDebugFlags: [
         'CAF_LOG_LEVEL:STRING=TRACE',
+        'CAF_ENABLE_ROBOT_TESTS:BOOL=ON',
     ],
     // Our build matrix. Keys are the operating system labels and values are build configurations.
     buildMatrix: [
