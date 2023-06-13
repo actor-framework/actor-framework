@@ -18,6 +18,7 @@ freebsd12_task:
   prepare_script: .ci/freebsd-12/prepare.sh
   build_script: .ci/run.sh build .ci/debug-flags.cmake . build
   test_script: .ci/run.sh test build net.udp_datagram_socket
+  << : *BRANCH_FILTER
 
 # FreeBSD 13.2 EOL: Release of 13.3 + 3 months
 freebsd13_task:
