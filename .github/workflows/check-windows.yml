@@ -1,0 +1,14 @@
+name: build-caf
+on: [pull_request]
+
+jobs:
+  build-caf:
+    name: Build caf using provided script
+    runs-on: windows-2019
+    steps:
+    - uses: actions/checkout@v3
+    - uses: ilammy/msvc-dev-cmd@v1.4.1
+    - name: Build
+      run: .ci/windows/build.cmd
+    - name: Test
+      run: .ci/windows/test.cmd
