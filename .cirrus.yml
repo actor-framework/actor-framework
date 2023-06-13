@@ -4,14 +4,22 @@ resources_template: &RESOURCES_TEMPLATE
   cpu: 4
   memory: 16GB
 
+# Run only when pushing to master and in PRs.
+branch_filter: &BRANCH_FILTER
+  only_if: >
+    $CIRRUS_PR != '' ||
+    $CIRRUS_BRANCH == 'master'
+
 debug_build_template: &DEBUG_BUILD_TEMPLATE
   build_script: .ci/run.sh build .ci/debug-flags.cmake . build
   test_script: .ci/run.sh test build
+  << : *BRANCH_FILTER
 
 asan_build_template: &ASAN_BUILD_TEMPLATE
   build_script: .ci/run.sh build .ci/asan-flags.cmake . build
   # The OpenSSL tests currently report memory leaks, see GH issue #1396.
   test_script: .ci/run.sh test build openssl
+  << : *BRANCH_FILTER
 
 # CentOS 7 EOL: June 2024
 centos7_task:
@@ -56,6 +64,7 @@ freebsd13_task:
   # << : *DEBUG_BUILD_TEMPLATE
   build_script: .ci/run.sh build .ci/debug-flags.cmake . build
   test_script: .ci/run.sh test build net.udp_datagram_socket
+  << : *BRANCH_FILTER
 
 # Fedora 38 EOL: May 2024
 sanitizers_task:
@@ -74,3 +83,4 @@ windows_task:
     << : *RESOURCES_TEMPLATE
   build_script: .ci/windows/build.cmd
   test_script: .ci/windows/test.cmd
+  << : *BRANCH_FILTER
