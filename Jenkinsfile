@@ -13,7 +13,7 @@ config = [
         'build',
         'tests',
     ],
-    // Default CMake flags by build type.
+    // Default CMake flags the builds.
     buildFlags: [
         'CAF_ENABLE_ACTOR_PROFILER:BOOL=ON',
         'CAF_ENABLE_EXAMPLES:BOOL=ON',
@@ -21,7 +21,7 @@ config = [
     ],
     // Our build matrix. Keys are the operating system labels and values are build configurations.
     buildMatrix: [
-        // Various Linux builds.
+        // Release builds.
         ['almalinux-8', [ // EOL: June 2029
             numCores: 4,
             tags: ['docker'],
@@ -62,8 +62,8 @@ config = [
             tags: ['docker'],
             builds: ['release'],
         ]],
-        // Extra debug build with exceptions disabled.
-        ['fedora-38', [
+        // Debug build with exceptions disabled.
+        ['fedora-38:no-exceptions', [
             numCores: 4,
             tags: ['docker'],
             builds: ['debug'],
@@ -74,8 +74,8 @@ config = [
                 'CMAKE_CXX_FLAGS:STRING=-fno-exceptions',
             ],
         ]],
-        // Extra debug build for leak checking.
-        ['fedora-38', [
+        // Debug build for LeakSanitizer.
+        ['fedora-38:leak-checks', [
             numCores: 4,
             tags: ['docker', 'LeakSanitizer'],
             builds: ['debug'],
@@ -88,8 +88,8 @@ config = [
                 'ASAN_OPTIONS=detect_leaks=1',
             ],
         ]],
-        // Extra debug build with static libs, UBSan and hardening flags.
-        ['fedora-38', [
+        // Debug build with static libs, UBSan and hardening flags.
+        ['fedora-38:ub-checks', [
             numCores: 4,
             tags: ['docker', 'UBSanitizer'],
             builds: ['debug'],
