@@ -1,7 +1,7 @@
 cmake.exe ^
   -S . ^
   -B build ^
-  -G "NMake Makefiles" ^
+  -G "Visual Studio 17 2022" ^
   -C ".ci\debug-flags.cmake" ^
   -DCAF_ENABLE_ROBOT_TESTS=ON ^
   -DBUILD_SHARED_LIBS=OFF ^

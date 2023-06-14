@@ -2,12 +2,12 @@ name: build-caf
 on: [pull_request]
 
 jobs:
-  build-caf:
-    name: Build caf using provided script
+  Windows:
     runs-on: windows-2019
     steps:
     - uses: actions/checkout@v3
     - uses: ilammy/msvc-dev-cmd@v1.4.1
+    - uses: joonvena/robotframework-docker-action@v1.0
     - name: Build
       run: .ci/windows/build.cmd
     - name: Test
