@@ -97,8 +97,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
           // blocking I/O calls.
           sys.spawn<caf::detached>([push, name] {
             auto lines = caf::async::make_blocking_producer(push);
-            if (!lines)
-              throw std::logic_error("failed to create blocking producer");
+            assert(lines);
             auto line = std::string{};
             auto prefix = name + ": ";
             while (std::getline(std::cin, line)) {

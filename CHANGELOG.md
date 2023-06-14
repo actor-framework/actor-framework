@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file. The format
 is based on [Keep a Changelog](https://keepachangelog.com).
 
+
+## [Unreleased]
+
+### Fixed
+
+- Fix build errors with exceptions disabled.
+
 ## [0.19.2] - 2023-06-13
 
 ### Changed

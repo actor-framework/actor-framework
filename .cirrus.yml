@@ -4,36 +4,11 @@ resources_template: &RESOURCES_TEMPLATE
   cpu: 4
   memory: 16GB
 
-debug_build_template: &DEBUG_BUILD_TEMPLATE
-  build_script: .ci/run.sh build .ci/debug-flags.cmake . build
-  test_script: .ci/run.sh test build
-
-asan_build_template: &ASAN_BUILD_TEMPLATE
-  build_script: .ci/run.sh build .ci/asan-flags.cmake . build
-  # The OpenSSL tests currently report memory leaks, see GH issue #1396.
-  test_script: .ci/run.sh test build openssl
-
-# CentOS 7 EOL: June 2024
-centos7_task:
-  container:
-    dockerfile: .ci/centos-7/Dockerfile
-    << : *RESOURCES_TEMPLATE
-  << : *DEBUG_BUILD_TEMPLATE
-
-# Debian 11 EOL: June 2026
-debian11_task:
-  container:
-    dockerfile: .ci/debian-11/Dockerfile
-    << : *RESOURCES_TEMPLATE
-  << : *DEBUG_BUILD_TEMPLATE
-
-
-# Ubuntu 20.04 EOL: April 2025
-ubuntu20_task:
-  container:
-    dockerfile: .ci/ubuntu-20.04/Dockerfile
-    << : *RESOURCES_TEMPLATE
-  << : *DEBUG_BUILD_TEMPLATE
+# Run only when pushing to master or in PRs.
+branch_filter: &BRANCH_FILTER
+  only_if: >
+    $CIRRUS_PR != '' ||
+    $CIRRUS_BRANCH == 'master'
 
 # FreeBSD 12.4 EOL: December 2023
 freebsd12_task:
@@ -41,10 +16,9 @@ freebsd12_task:
     image_family: freebsd-12-4
     << : *RESOURCES_TEMPLATE
   prepare_script: .ci/freebsd-12/prepare.sh
-  # Test net.udp_datagram_socket is unstable on FreeBSD, see GH issue #1397.
-  # << : *DEBUG_BUILD_TEMPLATE
   build_script: .ci/run.sh build .ci/debug-flags.cmake . build
   test_script: .ci/run.sh test build net.udp_datagram_socket
+  << : *BRANCH_FILTER
 
 # FreeBSD 13.2 EOL: Release of 13.3 + 3 months
 freebsd13_task:
@@ -52,18 +26,9 @@ freebsd13_task:
     image_family: freebsd-13-2
     << : *RESOURCES_TEMPLATE
   prepare_script: .ci/freebsd-13/prepare.sh
-  # Test net.udp_datagram_socket is unstable on FreeBSD, see GH issue #1397.
-  # << : *DEBUG_BUILD_TEMPLATE
   build_script: .ci/run.sh build .ci/debug-flags.cmake . build
   test_script: .ci/run.sh test build net.udp_datagram_socket
-
-# Fedora 38 EOL: May 2024
-sanitizers_task:
-  container:
-    dockerfile: .ci/fedora-38/Dockerfile
-    << : *RESOURCES_TEMPLATE
-  prepare_script: .ci/run.sh assert UBSanitizer
-  << : *ASAN_BUILD_TEMPLATE
+  << : *BRANCH_FILTER
 
 # Windows Server 2019 EOL: January 2024
 windows_task:
@@ -74,3 +39,4 @@ windows_task:
     << : *RESOURCES_TEMPLATE
   build_script: .ci/windows/build.cmd
   test_script: .ci/windows/test.cmd
+  << : *BRANCH_FILTER

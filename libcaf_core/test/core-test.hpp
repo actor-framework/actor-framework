@@ -5,6 +5,7 @@
 #include "caf/byte_buffer.hpp"
 #include "caf/cow_vector.hpp"
 #include "caf/fwd.hpp"
+#include "caf/raise_error.hpp"
 #include "caf/result.hpp"
 #include "caf/test/bdd_dsl.hpp"
 #include "caf/type_id.hpp"
@@ -98,8 +99,8 @@ public:
 
   void on_next(const T& item) override {
     if (!subscribed()) {
-      auto what = "on_next called but observer is in state" + to_string(state);
-      throw std::logic_error(what);
+      auto what = "on_next called but observer is in state " + to_string(state);
+      CAF_RAISE_ERROR(std::logic_error, what.c_str());
     }
     buf.emplace_back(item);
   }
