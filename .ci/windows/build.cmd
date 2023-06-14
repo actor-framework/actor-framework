@@ -1,7 +1,7 @@
 cmake.exe ^
   -S . ^
   -B build ^
-  -G "Visual Studio 17 2022" ^
+  -G "Visual Studio 16 2019" ^
   -C ".ci\debug-flags.cmake" ^
   -DCAF_ENABLE_ROBOT_TESTS=ON ^
   -DBUILD_SHARED_LIBS=OFF ^
@@ -9,4 +9,4 @@ cmake.exe ^
   -DCMAKE_CXX_COMPILER=cl.exe ^
   -DOPENSSL_ROOT_DIR="C:\Program Files\OpenSSL-Win64"
 
-cmake.exe --build build --target install --config debug || exit \b 1
+cmake.exe --build build --parallel %NUMBER_OF_PROCESSORS% --target install --config debug || exit \b 1

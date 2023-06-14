@@ -6,8 +6,12 @@ jobs:
     runs-on: windows-2019
     steps:
     - uses: actions/checkout@v3
-    - uses: ilammy/msvc-dev-cmd@v1.4.1
-    - uses: joonvena/robotframework-docker-action@v1.0
+    - uses: egor-tensin/vs-shell@v2
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        cache: 'pip'
+    - run: pip install robotframework robotframework-requests robotframework-websocketclient
     - name: Build
       run: .ci/windows/build.cmd
     - name: Test
