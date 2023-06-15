@@ -1,5 +1,9 @@
 name: check-formatting
-on: [pull_request]
+on:
+  pull_request:
+  push:
+    branches: 
+      - master
 jobs:
   formatting:
     runs-on: ubuntu-latest
