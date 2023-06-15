@@ -29,14 +29,3 @@ freebsd13_task:
   build_script: .ci/run.sh build .ci/debug-flags.cmake . build
   test_script: .ci/run.sh test build net.udp_datagram_socket
   << : *BRANCH_FILTER
-
-# Windows Server 2019 EOL: January 2024
-windows_task:
-  timeout_in: 120m
-  windows_container:
-    dockerfile: .ci/windows/Dockerfile
-    os_version: 2019
-    << : *RESOURCES_TEMPLATE
-  build_script: .ci/windows/build.cmd
-  test_script: .ci/windows/test.cmd
-  << : *BRANCH_FILTER
