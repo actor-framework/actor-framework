@@ -1,9 +1,12 @@
 name: build-caf
-on: [pull_request]
-
+on:
+  pull_request:
+  push:
+    branches: 
+      - master
 jobs:
   Windows:
-    runs-on: windows-2019
+    runs-on: windows-2022
     steps:
     - uses: actions/checkout@v3
     - uses: egor-tensin/vs-shell@v2
