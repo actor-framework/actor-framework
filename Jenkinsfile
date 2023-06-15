@@ -27,6 +27,16 @@ config = [
             tags: ['docker'],
             builds: ['release'],
         ]],
+        ['almalinux-9', [ // EOL: May 2032
+            numCores: 4,
+            tags: ['docker'],
+            builds: ['release'],
+        ]],
+        ['alpinelinux-3.18', [ // EOL: May 2025
+            numCores: 4,
+            tags: ['docker'],
+            builds: ['release'],
+        ]],
         ['centos-7', [ // EOL July 2024
             numCores: 4,
             tags: ['docker'],

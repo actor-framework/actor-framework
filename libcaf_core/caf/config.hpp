@@ -222,7 +222,7 @@ struct IUnknown;
 // Optionally enable CAF_ASSERT
 #ifndef CAF_ENABLE_RUNTIME_CHECKS
 #  define CAF_ASSERT(unused) static_cast<void>(0)
-#elif defined(CAF_WINDOWS) || defined(CAF_BSD)
+#elif defined(CAF_WINDOWS) || defined(CAF_BSD) || !__has_include(<execinfo.h>)
 #  define CAF_ASSERT(stmt)                                                     \
     if (static_cast<bool>(stmt) == false) {                                    \
       printf("%s:%u: requirement failed '%s'\n", __FILE__, __LINE__, #stmt);   \
