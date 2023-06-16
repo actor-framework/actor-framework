@@ -47,7 +47,8 @@ actor_system_config::actor_system_config()
   using string_list = std::vector<string>;
   opt_group{custom_options_, "global"}
     .add<bool>("help,h?", "print help text to STDERR and exit")
-    .add<bool>("long-help", "print long help text to STDERR and exit")
+    .add<bool>("long-help",
+               "same as --help but list options that are omitted by default")
     .add<bool>("dump-config", "print configuration to STDERR and exit")
     .add<string>("config-file", "sets a path to a configuration file");
   opt_group{custom_options_, "caf.scheduler"}

@@ -6,6 +6,13 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ## [Unreleased]
 
+### Changed
+
+- When using CAF to parse CLI arguments, the output of `--help` now includes all
+  user-defined options. Previously, only options in the global category or
+  options with a short name were included. Only CAF options are now excluded
+  from the output. They will still be included in the output of `--long-help`.
+
 ### Fixed
 
 - Fix build errors with exceptions disabled.

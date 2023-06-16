@@ -158,7 +158,7 @@ public:
   config_option_set& add(config_option opt);
 
   /// Generates human-readable help text for all options.
-  std::string help_text(bool global_only = true) const;
+  std::string help_text(bool hide_caf_options = true) const;
 
   /// Drops all options.
   void clear() {

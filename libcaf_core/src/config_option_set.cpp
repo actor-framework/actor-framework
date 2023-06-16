@@ -43,7 +43,7 @@ config_option_set& config_option_set::add(config_option opt) {
   return *this;
 }
 
-std::string config_option_set::help_text(bool global_only) const {
+std::string config_option_set::help_text(bool hide_caf_options) const {
   // <--- argument --------> <---- description --->
   //  (-w|--write) <string> : output file
   auto build_argument = [](const config_option& x) {
@@ -68,6 +68,10 @@ std::string config_option_set::help_text(bool global_only) const {
       sb << "<" << x.type_name() << '>';
     return std::move(sb.result);
   };
+  // Utility function for checking whether a category is a CAF option.
+  auto is_caf_option = [](std::string_view category) {
+    return category == "caf" || starts_with(category, "caf.");
+  };
   // Sort argument + description by category.
   using pair = std::pair<std::string, option_pointer>;
   std::set<std::string_view> categories;
@@ -75,12 +79,12 @@ std::string config_option_set::help_text(bool global_only) const {
   size_t max_arg_size = 0;
   for (auto& opt : opts_) {
     // We treat all options with flat name as-if the category was 'global'.
-    if (!global_only || opt.has_flat_cli_name()) {
-      auto arg = build_argument(opt);
+    auto arg = build_argument(opt);
+    std::string_view category = "global";
+    if (!opt.has_flat_cli_name())
+      category = opt.category();
+    if (!hide_caf_options || !is_caf_option(category)) {
       max_arg_size = std::max(max_arg_size, arg.size());
-      std::string_view category = "global";
-      if (!opt.has_flat_cli_name())
-        category = opt.category();
       categories.emplace(category);
       args.emplace(category, std::make_pair(std::move(arg), &opt));
     }
