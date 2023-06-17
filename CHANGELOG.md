@@ -6,6 +6,12 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ## [Unreleased]
 
+### Added
+
+- The class `caf::telemetry::label` now has a new `compare` overload that
+  accepts a `caf::telemetry::label_view` to make the interface of the both
+  classes symmetrical.
+
 ### Changed
 
 - When using CAF to parse CLI arguments, the output of `--help` now includes all

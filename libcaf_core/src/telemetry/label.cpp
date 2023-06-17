@@ -25,8 +25,14 @@ void label::value(std::string_view new_value) {
   str_.insert(str_.end(), new_value.begin(), new_value.end());
 }
 
+int label::compare(const label_view& x) const noexcept {
+  auto cmp1 = name().compare(x.name());
+  return cmp1 != 0 ? cmp1 : value().compare(x.value());
+}
+
 int label::compare(const label& x) const noexcept {
-  return str_.compare(x.str());
+  auto cmp1 = name().compare(x.name());
+  return cmp1 != 0 ? cmp1 : value().compare(x.value());
 }
 
 std::string to_string(const label& x) {
