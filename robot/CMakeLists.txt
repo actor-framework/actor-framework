@@ -1,6 +1,14 @@
 find_package(Python COMPONENTS Interpreter)
 
 add_test(
+  NAME "robot-config-dump-config"
+  COMMAND
+    ${Python_EXECUTABLE}
+      -m robot
+      --variable BINARY_PATH:$<TARGET_FILE:hello_world>
+      "${CMAKE_CURRENT_SOURCE_DIR}/config/dump-config.robot")
+
+add_test(
   NAME "robot-http-rest"
   COMMAND
     ${Python_EXECUTABLE}

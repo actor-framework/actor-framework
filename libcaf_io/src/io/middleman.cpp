@@ -190,6 +190,7 @@ void middleman::init_global_meta_objects() {
 }
 
 void middleman::add_module_options(actor_system_config& cfg) {
+  // Add options to the CLI parser.
   config_option_adder{cfg.custom_options(), "caf.middleman"}
     .add<std::string>("network-backend",
                       "either 'default' or 'asio' (if available)")
@@ -211,6 +212,18 @@ void middleman::add_module_options(actor_system_config& cfg) {
   config_option_adder{cfg.custom_options(), "caf.middleman.prometheus-http"}
     .add<uint16_t>("port", "listening port for incoming scrapes")
     .add<std::string>("address", "bind address for the HTTP server socket");
+  // Add the defaults to the config so they show up in --dump-config.
+  auto& grp = put_dictionary(cfg.content, "caf.middleman");
+  auto default_id = std::string{defaults::middleman::app_identifier};
+  put_missing(grp, "app-identifiers",
+              std::vector<std::string>{std::move(default_id)});
+  put_missing(grp, "enable-automatic-connections", false);
+  put_missing(grp, "max-consecutive-reads",
+              defaults::middleman::max_consecutive_reads);
+  put_missing(grp, "heartbeat-interval",
+              defaults::middleman::heartbeat_interval);
+  put_missing(grp, "connection-timeout",
+              defaults::middleman::connection_timeout);
 }
 
 actor_system::module* middleman::make(actor_system& sys, detail::type_list<>) {
