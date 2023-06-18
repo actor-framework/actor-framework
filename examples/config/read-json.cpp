@@ -48,22 +48,17 @@ int caf_main(caf::actor_system& sys) {
   // Get file path from config (positional argument).
   auto& cfg = sys.config();
   if (cfg.remainder.size() != 1) {
-    std::cerr << "*** expected one positional argument: path to a JSON file\n";
+    std::cerr
+      << "*** expected one positional argument: path to a JSON file\n"
+      << "\n\nNote: expected a JSON list of user objects. For example:\n"
+      << example_input << '\n';
     return EXIT_FAILURE;
   }
   auto& file_path = cfg.remainder[0];
-  // Read file into a string.
-  std::ifstream input{file_path};
-  if (!input) {
-    std::cerr << "*** unable to open input file '" << file_path << "'\n";
-    return EXIT_FAILURE;
-  }
-  std::string json{std::istreambuf_iterator<char>{input},
-                   std::istreambuf_iterator<char>{}};
-  // Parse the JSON-formatted text.
+  // Read JSON-formatted file.
   caf::json_reader reader;
-  if (!reader.load(json)) {
-    std::cerr << "*** failed to parse JSON input: "
+  if (!reader.load_file(file_path)) {
+    std::cerr << "*** failed to parse JSON file: "
               << to_string(reader.get_error()) << '\n';
     return EXIT_FAILURE;
   }
