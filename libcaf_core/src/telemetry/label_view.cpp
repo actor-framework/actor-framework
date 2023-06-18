@@ -8,14 +8,12 @@
 
 namespace caf::telemetry {
 
-int label_view::compare(const label_view& x) const noexcept {
-  auto cmp1 = name().compare(x.name());
-  return cmp1 != 0 ? cmp1 : value().compare(x.value());
+int label_view::compare(const label_view& other) const noexcept {
+  return label::compare(*this, other);
 }
 
-int label_view::compare(const label& x) const noexcept {
-  auto cmp1 = name().compare(x.name());
-  return cmp1 != 0 ? cmp1 : value().compare(x.value());
+int label_view::compare(const label& other) const noexcept {
+  return label::compare(*this, other);
 }
 
 std::string to_string(const label_view& x) {

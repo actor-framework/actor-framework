@@ -26,13 +26,11 @@ void label::value(std::string_view new_value) {
 }
 
 int label::compare(const label_view& x) const noexcept {
-  auto cmp1 = name().compare(x.name());
-  return cmp1 != 0 ? cmp1 : value().compare(x.value());
+  return compare(*this, x);
 }
 
 int label::compare(const label& x) const noexcept {
-  auto cmp1 = name().compare(x.name());
-  return cmp1 != 0 ? cmp1 : value().compare(x.value());
+  return compare(*this, x);
 }
 
 std::string to_string(const label& x) {

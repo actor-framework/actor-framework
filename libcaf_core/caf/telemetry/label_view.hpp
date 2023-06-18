@@ -42,9 +42,9 @@ public:
 
   // -- comparison -------------------------------------------------------------
 
-  int compare(const label& x) const noexcept;
+  int compare(const label& other) const noexcept;
 
-  int compare(const label_view& x) const noexcept;
+  int compare(const label_view& other) const noexcept;
 
 private:
   std::string_view name_;
