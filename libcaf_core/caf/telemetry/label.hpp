@@ -53,7 +53,15 @@ public:
 
   // -- comparison -------------------------------------------------------------
 
-  int compare(const label& x) const noexcept;
+  template <class T1, class T2>
+  static int compare(const T1& lhs, const T2& rhs) noexcept {
+    auto cmp1 = lhs.name().compare(rhs.name());
+    return cmp1 != 0 ? cmp1 : lhs.value().compare(rhs.value());
+  }
+
+  int compare(const label_view& other) const noexcept;
+
+  int compare(const label& other) const noexcept;
 
 private:
   size_t name_length_;

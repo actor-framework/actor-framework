@@ -25,8 +25,12 @@ void label::value(std::string_view new_value) {
   str_.insert(str_.end(), new_value.begin(), new_value.end());
 }
 
+int label::compare(const label_view& x) const noexcept {
+  return compare(*this, x);
+}
+
 int label::compare(const label& x) const noexcept {
-  return str_.compare(x.str());
+  return compare(*this, x);
 }
 
 std::string to_string(const label& x) {
