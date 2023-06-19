@@ -55,7 +55,6 @@ struct fixture {
 
   void parse(const char* file_content, string_list args = {}) {
     cfg.clear();
-    cfg.remainder.clear();
     std::istringstream conf{file_content};
     if (auto err = cfg.parse(std::move(args), conf))
       CAF_FAIL("parse() failed: " << err);
@@ -148,6 +147,21 @@ CAF_TEST(file input overrides defaults but CLI args always win) {
   put(res, "group2.arg1", "bye");
   put(res, "group2.arg2", 2);
   CHECK_EQ(content(cfg), res);
+}
+
+CAF_TEST(parsing - with config file cli option) {
+  MESSAGE("Try opening non-existent config file");
+  cfg.clear();
+  auto err = cfg.parse(string_list{"--config-file=test-me"});
+  CHECK_EQ(err, caf::sec::cannot_open_file);
+  CHECK(cfg.remainder.empty());
+  CHECK_EQ(get_or(cfg, "config-file", ""), "test-me");
+
+  cfg.clear();
+  err = cfg.parse(string_list{"--config-file", "test-me"});
+  CHECK_EQ(err, caf::sec::cannot_open_file);
+  CHECK(cfg.remainder.empty());
+  CHECK_EQ(get_or(cfg, "config-file", ""), "test-me");
 }
 
 // Checks whether both a synced variable and the corresponding entry in

@@ -470,7 +470,11 @@ actor_system_config::extract_config_file_path(string_list& args) {
             std::string{}};
   } else {
     auto path_str = std::string{path.begin(), path.end()};
-    args.erase(i);
+    if (i->find('=') != std::string::npos) {
+      args.erase(i);
+    } else {
+      args.erase(i, i + 2);
+    }
     config_value val{path_str};
     if (auto err = ptr->sync(val); !err) {
       put(content, "config-file", std::move(val));

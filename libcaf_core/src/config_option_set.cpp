@@ -167,18 +167,16 @@ auto config_option_set::parse(settings& config, argument_iterator first,
       }
     }
   };
-  // We loop over the first N-1 values, because we always consider two
-  // arguments at once.
   for (auto i = first; i != last;) {
     if (i->size() < 2)
       return {pec::not_an_option, i};
     if (*i == "--")
       return {pec::success, std::next(first)};
     if (i->compare(0, 2, "--") == 0) {
-      // Long options cone in three variaties:
-      // syntax "--<name>=<value>" formated as a single single argument,
-      // sytnax "--<name> <value>", comes as two arguments
-      // special case "--<name>", boolean flag
+      // Long options come in three varieties:
+      // "--<name>", config option is a boolean flag
+      // "--<name>=<value>", formatted as a single argument with the value,
+      // "--<name> <value>", formatted as two arguments,
       const auto npos = std::string::npos;
       auto assign_op = i->find('=');
       auto name = assign_op == npos ? i->substr(2)
