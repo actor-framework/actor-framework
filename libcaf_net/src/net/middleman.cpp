@@ -98,16 +98,10 @@ void middleman::stop() {
     mpx_->run();
 }
 
-void middleman::init(actor_system_config& cfg) {
+void middleman::init(actor_system_config&) {
   if (auto err = mpx_->init()) {
     CAF_LOG_ERROR("mpx_->init() failed: " << err);
     CAF_RAISE_ERROR("mpx_->init() failed");
-  }
-  if (auto node_uri = get_if<uri>(&cfg, "caf.middleman.this-node")) {
-    auto this_node = make_node_id(std::move(*node_uri));
-    sys_.node_.swap(this_node);
-  } else {
-    // CAF_RAISE_ERROR("no valid entry for caf.middleman.this-node found");
   }
 }
 
@@ -124,20 +118,9 @@ actor_system::module* middleman::make(actor_system& sys, detail::type_list<>) {
 }
 
 void middleman::add_module_options(actor_system_config& cfg) {
-  config_option_adder{cfg.custom_options(), "caf.middleman"}
-    .add<std::vector<std::string>>("app-identifiers",
-                                   "valid application identifiers of this node")
-    .add<uri>("this-node", "locator of this CAF node")
-    .add<size_t>("max-consecutive-reads",
-                 "max. number of consecutive reads per broker")
+  config_option_adder{cfg.custom_options(), "caf.middleman"} //
     .add<bool>("manual-multiplexing",
-               "disables background activity of the multiplexer")
-    .add<size_t>("workers", "number of deserialization workers")
-    .add<timespan>("heartbeat-interval", "interval of heartbeat messages")
-    .add<timespan>("connection-timeout",
-                   "max. time between messages before declaring a node dead "
-                   "(disabled if 0, ignored if heartbeats are disabled)")
-    .add<std::string>("network-backend", "legacy option");
+               "disables background activity of the multiplexer");
   config_option_adder{cfg.custom_options(), "caf.middleman.prometheus-http"}
     .add<uint16_t>("port", "listening port for incoming scrapes")
     .add<std::string>("address", "bind address for the HTTP server socket");
