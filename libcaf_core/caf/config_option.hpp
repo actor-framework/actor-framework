@@ -105,8 +105,8 @@ private:
 };
 
 /// Finds `config_option` string with a matching long name in the argument list
-/// [`first`, `last`). Returns an `iterator` to the matching location and a 
-/// `string_view` of the option value if the entry is found, or a `iterator` 
+/// [`first`, `last`). Returns an `iterator` to the matching location and a
+/// `string_view` of the option value if the entry is found, or a `iterator`
 /// to `last` with an empty `string_view` otherwise.
 std::pair<std::vector<std::string>::const_iterator, std::string_view>
 find_by_long_name(const config_option& x,

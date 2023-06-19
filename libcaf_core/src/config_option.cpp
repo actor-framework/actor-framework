@@ -133,7 +133,7 @@ std::string_view config_option::buf_slice(size_t from,
   return {buf_.get() + from, to - from};
 }
 
-// TODO: consider using `config_option_set` and deprecating this 
+// TODO: consider using `config_option_set` and deprecating this
 std::pair<std::vector<std::string>::const_iterator, std::string_view>
 find_by_long_name(const config_option& x,
                   std::vector<std::string>::const_iterator first,
@@ -156,10 +156,9 @@ find_by_long_name(const config_option& x,
       // Remove leading '=' and return the value.
       str.remove_prefix(1);
       return {first, str};
-    } else if (str.empty() && (first + 1) != last) {
+    } else if (auto val = first + 1; str.empty() && val != last) {
       // Get the next argument the value
-      ++first;
-      return {first, std::string_view{*first}};
+      return {first, std::string_view{*val}};
     } else {
       continue;
     }
