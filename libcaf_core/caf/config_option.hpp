@@ -104,37 +104,14 @@ private:
   mutable void* value_;
 };
 
-/// Finds `config_option` string with a matching long name in (`first`, `last`],
-/// where each entry is a pointer to a string. Returns a `ForwardIterator` to
-/// the match and a `string_view` of the option value if the entry is
-/// found and a `ForwardIterator` to `last` with an empty `string_view`
+/// Finds `config_option` string with a matching long name in the string
+/// argument list [`first`, `last`). Returns an `argument_iterator` to the
+/// matching location and a `string_view` of the option value if the entry is
+/// found, or a `arugment_iterator` to `last` with an empty `string_view`
 /// otherwise.
-template <class ForwardIterator, class Sentinel>
-std::pair<ForwardIterator, std::string_view>
-find_by_long_name(const config_option& x, ForwardIterator first,
-                  Sentinel last) {
-  auto long_name = x.long_name();
-  for (; first != last; ++first) {
-    std::string_view str{*first};
-    // Make sure this is a long option starting with "--".
-    if (!starts_with(str, "--"))
-      continue;
-    str.remove_prefix(2);
-    // Skip optional "caf#" prefix.
-    if (starts_with(str, "caf#"))
-      str.remove_prefix(4);
-    // Make sure we are dealing with the right key.
-    if (!starts_with(str, long_name))
-      continue;
-    // Make sure the key is followed by an assignment.
-    str.remove_prefix(long_name.size());
-    if (!starts_with(str, "="))
-      continue;
-    // Remove leading '=' and return the value.
-    str.remove_prefix(1);
-    return {first, str};
-  }
-  return {first, std::string_view{}};
-}
+std::pair<std::vector<std::string>::const_iterator, std::string_view>
+find_by_long_name(const config_option& x,
+                  std::vector<std::string>::const_iterator first,
+                  std::vector<std::string>::const_iterator last);
 
 } // namespace caf

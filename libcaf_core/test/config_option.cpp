@@ -352,20 +352,20 @@ CAF_TEST(find by long opt) {
   };
   // Well formed, find val2.
   check({"--foo=val1", "--bar=val2", "--baz=val3"}, true, true);
+  check({"--foo=val1", "--bar", "val2", "--baz=val3"}, true, true);
   // Dashes missing, no match.
   check({"--foo=val1", "bar=val2", "--baz=val3"}, false, false);
   // Equal missing.
   check({"--fooval1", "--barval2", "--bazval3"}, false, false);
   // Option value missing.
   check({"--foo=val1", "--bar=", "--baz=val3"}, true, false);
-  // With prefix 'caf#'.
-  check({"--caf#foo=val1", "--caf#bar=val2", "--caf#baz=val3"}, true, true);
   // Option not included.
   check({"--foo=val1", "--b4r=val2", "--baz=val3"}, false, false);
-  // Option not included, with prefix.
-  check({"--caf#foo=val1", "--caf#b4r=val2", "--caf#baz=val3"}, false, false);
   // No options to look through.
   check({}, false, false);
+  // flag option for booleans
+  needle = make_config_option<bool>("?foo"sv, "bar,b"sv, "test option"sv);
+  check({"--foo=val1", "--bar", "--baz=val3"}, true, false);
 }
 
 END_FIXTURE_SCOPE()

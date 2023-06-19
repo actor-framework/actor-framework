@@ -133,4 +133,38 @@ std::string_view config_option::buf_slice(size_t from,
   return {buf_.get() + from, to - from};
 }
 
+// TODO: consider deprecating this 
+std::pair<std::vector<std::string>::const_iterator, std::string_view>
+find_by_long_name(const config_option& x,
+                  std::vector<std::string>::const_iterator first,
+                  std::vector<std::string>::const_iterator last) {
+  auto long_name = x.long_name();
+  for (; first != last; ++first) {
+    std::string_view str{*first};
+    // Make sure this is a long option starting with "--".
+    if (!starts_with(str, "--"))
+      continue;
+    str.remove_prefix(2);
+    // Make sure we are dealing with the right key.
+    if (!starts_with(str, long_name))
+      continue;
+    str.remove_prefix(long_name.size());
+    // check for flag
+    if (x.is_flag() && str.empty()) {
+      return {first, str};
+    } else if (starts_with(str, "=")) {
+      // Remove leading '=' and return the value.
+      str.remove_prefix(1);
+      return {first, str};
+    } else if (str.empty() && (first + 1) != last) {
+      // Get the next argument as value
+      ++first;
+      return {first, std::string_view{*first}};
+    } else {
+      continue;
+    }
+  }
+  return {first, std::string_view{}};
+}
+
 } // namespace caf

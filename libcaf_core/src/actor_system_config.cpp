@@ -462,9 +462,7 @@ std::pair<error, std::string>
 actor_system_config::extract_config_file_path(string_list& args) {
   auto ptr = custom_options_.qualified_name_lookup("global.config-file");
   CAF_ASSERT(ptr != nullptr);
-  string_list::iterator i;
-  std::string_view path;
-  std::tie(i, path) = find_by_long_name(*ptr, args.begin(), args.end());
+  auto [i, path] = find_by_long_name(*ptr, args.begin(), args.end());
   if (i == args.end()) {
     return {none, std::string{}};
   } else if (path.empty()) {
