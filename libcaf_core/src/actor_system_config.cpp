@@ -49,7 +49,7 @@ actor_system_config::actor_system_config()
     .add<bool>("help,h?", "print help text to STDERR and exit")
     .add<bool>("long-help",
                "same as --help but list options that are omitted by default")
-    .add<bool>("dump-config", "print configuration to STDERR and exit")
+    .add<bool>("dump-config", "print configuration and exit")
     .add<string>("config-file", "sets a path to a configuration file");
   opt_group{custom_options_, "caf.scheduler"}
     .add<string>("policy", "'stealing' (default) or 'sharing'")
@@ -90,6 +90,9 @@ actor_system_config::actor_system_config()
 
 settings actor_system_config::dump_content() const {
   settings result = content;
+  // Hide options that make no sense in a config file.
+  result.erase("dump-config");
+  result.erase("config-file");
   auto& caf_group = result["caf"].as_dictionary();
   // -- scheduler parameters
   auto& scheduler_group = caf_group["scheduler"].as_dictionary();
@@ -118,7 +121,7 @@ settings actor_system_config::dump_content() const {
               defaults::work_stealing::relaxed_sleep_duration);
   // -- logger parameters
   auto& logger_group = caf_group["logger"].as_dictionary();
-  put_missing(logger_group, "inline-output", false);
+  // Note: omit "inline-output" option since it should only be used for testing.
   auto& file_group = logger_group["file"].as_dictionary();
   put_missing(file_group, "path", defaults::logger::file::path);
   put_missing(file_group, "format", defaults::logger::file::format);
@@ -127,23 +130,6 @@ settings actor_system_config::dump_content() const {
   put_missing(console_group, "colored", defaults::logger::console::colored);
   put_missing(console_group, "format", defaults::logger::console::format);
   put_missing(console_group, "excluded-components", std::vector<std::string>{});
-  // -- middleman parameters
-  auto& middleman_group = caf_group["middleman"].as_dictionary();
-  auto default_id = std::string{defaults::middleman::app_identifier};
-  put_missing(middleman_group, "app-identifiers",
-              std::vector<std::string>{std::move(default_id)});
-  put_missing(middleman_group, "enable-automatic-connections", false);
-  put_missing(middleman_group, "max-consecutive-reads",
-              defaults::middleman::max_consecutive_reads);
-  put_missing(middleman_group, "heartbeat-interval",
-              defaults::middleman::heartbeat_interval);
-  // -- openssl parameters
-  auto& openssl_group = caf_group["openssl"].as_dictionary();
-  put_missing(openssl_group, "certificate", std::string{});
-  put_missing(openssl_group, "key", std::string{});
-  put_missing(openssl_group, "passphrase", std::string{});
-  put_missing(openssl_group, "capath", std::string{});
-  put_missing(openssl_group, "cafile", std::string{});
   return result;
 }
 
@@ -225,7 +211,7 @@ bool operator!=(config_iter iter, config_sentinel) {
 }
 
 struct indentation {
-  size_t size;
+  size_t size = 0;
 };
 
 indentation operator+(indentation x, size_t y) noexcept {
@@ -238,30 +224,101 @@ std::ostream& operator<<(std::ostream& out, indentation indent) {
   return out;
 }
 
-void print(const config_value::dictionary& xs, indentation indent) {
-  using std::cout;
-  for (const auto& kvp : xs) {
-    if (kvp.first == "dump-config")
-      continue;
-    if (auto submap = get_if<config_value::dictionary>(&kvp.second)) {
-      cout << indent << kvp.first << " {\n";
-      print(*submap, indent + 2);
-      cout << indent << "}\n";
-    } else if (auto lst = get_if<config_value::list>(&kvp.second)) {
-      if (lst->empty()) {
-        cout << indent << kvp.first << " = []\n";
-      } else {
-        cout << indent << kvp.first << " = [\n";
-        auto list_indent = indent + 2;
-        for (auto& x : *lst)
-          cout << list_indent << to_string(x) << ",\n";
-        cout << indent << "]\n";
-      }
-    } else {
-      cout << indent << kvp.first << " = " << to_string(kvp.second) << '\n';
+struct cout_pseudo_buf {
+  void push_back(char ch) {
+    std::cout.put(ch);
+  }
+
+  unit_t end() {
+    return unit;
+  }
+
+  template <class Iterator, class Sentinel>
+  void insert(unit_t, Iterator first, Sentinel last) {
+    while (first != last)
+      std::cout.put(*first++);
+  }
+};
+
+class config_printer {
+public:
+  config_printer() = default;
+
+  explicit config_printer(indentation indent) : indent_(indent) {
+    // nop
+  }
+
+  void operator()(const config_value& val) {
+    std::visit(*this, val.get_data());
+  }
+
+  void operator()(none_t) {
+    detail::print(out_, none);
+  }
+
+  template <class T>
+  std::enable_if_t<std::is_arithmetic_v<T>> operator()(T val) {
+    detail::print(out_, val);
+  }
+
+  void operator()(timespan val) {
+    detail::print(out_, val);
+  }
+
+  void operator()(const uri& val) {
+    std::cout << '<' << val.str() << '>';
+  }
+
+  void operator()(const std::string& str) {
+    detail::print_escaped(out_, str);
+  }
+
+  void operator()(const config_value::list& xs) {
+    if (xs.empty()) {
+      std::cout << "[]";
+      return;
+    }
+    std::cout << "[\n";
+    auto nestd_indent = indent_ + 2;
+    for (auto& x : xs) {
+      std::cout << nestd_indent;
+      std::visit(config_printer{nestd_indent}, x.get_data());
+      std::cout << ",\n";
+    }
+    std::cout << indent_ << "]";
+  }
+
+  void operator()(const config_value::dictionary& dict) {
+    if (dict.empty()) {
+      std::cout << "{}";
+      return;
+    }
+    auto pos = dict.begin();
+    for (;;) {
+      print_kvp(*pos++);
+      if (pos == dict.end())
+        return;
+      std::cout << '\n';
     }
   }
-}
+
+private:
+  void print_kvp(const config_value::dictionary::value_type& kvp) {
+    const auto& [key, val] = kvp;
+    if (auto* submap = get_if<config_value::dictionary>(&val)) {
+      std::cout << indent_ << key << " {\n";
+      auto sub_printer = config_printer{indent_ + 2};
+      sub_printer(*submap);
+      std::cout << "\n" << indent_ << "}";
+    } else {
+      std::cout << indent_ << key << " = ";
+      std::visit(*this, val.get_data());
+    }
+  }
+
+  indentation indent_;
+  cout_pseudo_buf out_;
+};
 
 } // namespace
 
@@ -297,8 +354,9 @@ error actor_system_config::parse(string_list args, std::istream& config) {
   }
   // Generate config dump if needed.
   if (!cli_helptext_printed && get_or(content, "dump-config", false)) {
-    print(dump_content(), indentation{0});
-    std::cout << std::flush;
+    config_printer printer;
+    printer(dump_content());
+    std::cout << std::endl;
     cli_helptext_printed = true;
   }
   return none;

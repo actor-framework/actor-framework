@@ -11,6 +11,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The class `caf::telemetry::label` now has a new `compare` overload that
   accepts a `caf::telemetry::label_view` to make the interface of the both
   classes symmetrical.
+- The template class `caf::dictionary` now has new member functions for erasing
+  elements.
 
 ### Changed
 
@@ -18,10 +20,15 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   user-defined options. Previously, only options in the global category or
   options with a short name were included. Only CAF options are now excluded
   from the output. They will still be included in the output of `--long-help`.
+- The output of `--dump-config` now only contains CAF options from loaded
+  modules. Previously, it also included options from modules that were not
+  loaded.
 
 ### Fixed
 
 - Fix build errors with exceptions disabled.
+- Fix a regression in `--dump-config` that caused CAF applications to emit
+  malformed output.
 
 ## [0.19.2] - 2023-06-13
 

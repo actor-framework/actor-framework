@@ -136,6 +136,7 @@ bool manager::authentication_enabled() {
 }
 
 void manager::add_module_options(actor_system_config& cfg) {
+  // Add options to the CLI parser.
   config_option_adder(cfg.custom_options(), "caf.openssl")
     .add<std::string>(cfg.openssl_certificate, "certificate",
                       "path to the PEM-formatted certificate file")
@@ -151,6 +152,13 @@ void manager::add_module_options(actor_system_config& cfg) {
       "path to a file of concatenated PEM-formatted certificates")
     .add<std::string>("cipher-list",
                       "colon-separated list of OpenSSL cipher strings to use");
+  // Add the defaults to the config so they show up in --dump-config.
+  auto& grp = put_dictionary(cfg.content, "caf.openssl");
+  put_missing(grp, "certificate", cfg.openssl_certificate);
+  put_missing(grp, "key", cfg.openssl_key);
+  put_missing(grp, "passphrase", cfg.openssl_passphrase);
+  put_missing(grp, "capath", cfg.openssl_capath);
+  put_missing(grp, "cafile", cfg.openssl_cafile);
 }
 
 actor_system::module* manager::make(actor_system& sys, detail::type_list<>) {
