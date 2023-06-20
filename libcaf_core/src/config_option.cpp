@@ -134,11 +134,10 @@ std::string_view config_option::buf_slice(size_t from,
 }
 
 // TODO: consider using `config_option_set` and deprecating this
-std::pair<std::vector<std::string>::const_iterator, std::string_view>
-find_by_long_name(const config_option& x,
-                  std::vector<std::string>::const_iterator first,
-                  std::vector<std::string>::const_iterator last) {
-  auto long_name = x.long_name();
+config_option::find_result config_option::find_by_long_name(
+  config_option::argument_iterator first,
+  config_option::argument_iterator last) const noexcept {
+  auto argument_name = long_name();
   for (; first != last; ++first) {
     std::string_view str{*first};
     // Make sure this is a long option starting with "--".
@@ -146,24 +145,24 @@ find_by_long_name(const config_option& x,
       continue;
     str.remove_prefix(2);
     // Make sure we are dealing with the right key.
-    if (!starts_with(str, long_name))
+    if (!starts_with(str, argument_name))
       continue;
-    str.remove_prefix(long_name.size());
+    str.remove_prefix(argument_name.size());
     // check for flag
-    if (x.is_flag() && str.empty()) {
-      return {first, str};
+    if (is_flag() && str.empty()) {
+      return {first, first + 1, str};
     } else if (starts_with(str, "=")) {
       // Remove leading '=' and return the value.
       str.remove_prefix(1);
-      return {first, str};
+      return {first, first + 1, str};
     } else if (auto val = first + 1; str.empty() && val != last) {
       // Get the next argument the value
-      return {first, std::string_view{*val}};
+      return {first, first + 2, std::string_view{*val}};
     } else {
       continue;
     }
   }
-  return {first, std::string_view{}};
+  return {first, first, std::string_view{}};
 }
 
 } // namespace caf

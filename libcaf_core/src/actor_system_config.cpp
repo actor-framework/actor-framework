@@ -462,19 +462,15 @@ std::pair<error, std::string>
 actor_system_config::extract_config_file_path(string_list& args) {
   auto ptr = custom_options_.qualified_name_lookup("global.config-file");
   CAF_ASSERT(ptr != nullptr);
-  auto [i, path] = find_by_long_name(*ptr, args.begin(), args.end());
-  if (i == args.end()) {
+  auto [first, last, path] = ptr->find_by_long_name(args.begin(), args.end());
+  if (first == args.end()) {
     return {none, std::string{}};
   } else if (path.empty()) {
     return {make_error(pec::missing_argument, "no argument to --config-file"),
             std::string{}};
   } else {
-    auto path_str = std::string{path.begin(), path.end()};
-    if (i->find('=') != std::string::npos) {
-      args.erase(i);
-    } else {
-      args.erase(i, i + 2);
-    }
+    auto path_str = std::string{path};
+    args.erase(first, last);
     config_value val{path_str};
     if (auto err = ptr->sync(val); !err) {
       put(content, "config-file", std::move(val));

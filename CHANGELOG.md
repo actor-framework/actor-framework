@@ -23,6 +23,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The output of `--dump-config` now only contains CAF options from loaded
   modules. Previously, it also included options from modules that were not
   loaded.
+- The CLI argument format now supports a space separator when using long
+  argument names (e.g. `--foo bar`)
 
 ### Fixed
 

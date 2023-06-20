@@ -109,7 +109,7 @@ CAF_TEST(parse with ref syncing) {
   CHECK_EQ(get_as<int>(cfg, "foo.i"), 42);
 }
 
-CAF_TEST(Long format for flags) {
+CAF_TEST(long format for flags) {
   auto foo_b = false;
   opts.add<bool>(foo_b, "foo", "b,b", "");
   settings cfg;

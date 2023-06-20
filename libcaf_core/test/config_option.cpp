@@ -343,12 +343,12 @@ CAF_TEST(find by long opt) {
   auto needle = make_config_option<std::string>("?foo"sv, "bar,b"sv,
                                                 "test option"sv);
   auto check = [&](std::vector<string> args, bool found_opt, bool has_opt) {
-    auto res = find_by_long_name(needle, std::begin(args), std::end(args));
-    CHECK_EQ(res.first != std::end(args), found_opt);
+    auto res = needle.find_by_long_name(std::begin(args), std::end(args));
+    CHECK_EQ(res.begin != std::end(args), found_opt);
     if (has_opt)
-      CHECK_EQ(res.second, "val2");
+      CHECK_EQ(res.value, "val2");
     else
-      CHECK(res.second.empty());
+      CHECK(res.value.empty());
   };
   // Well formed, find val2.
   check({"--foo=val1", "--bar=val2", "--baz=val3"}, true, true);
