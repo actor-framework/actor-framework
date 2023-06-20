@@ -13,6 +13,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   classes symmetrical.
 - The template class `caf::dictionary` now has new member functions for erasing
   elements.
+- The CLI argument parser now supports a space separator when using long
+  argument names, e.g., `--foo bar`. This is in addition to the existing
+  `--foo=bar` syntax.
 
 ### Changed
 

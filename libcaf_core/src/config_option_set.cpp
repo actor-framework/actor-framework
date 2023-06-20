@@ -167,32 +167,43 @@ auto config_option_set::parse(settings& config, argument_iterator first,
       }
     }
   };
-  // We loop over the first N-1 values, because we always consider two
-  // arguments at once.
   for (auto i = first; i != last;) {
     if (i->size() < 2)
       return {pec::not_an_option, i};
     if (*i == "--")
       return {pec::success, std::next(first)};
     if (i->compare(0, 2, "--") == 0) {
-      // Long options use the syntax "--<name>=<value>" and consume only a
-      // single argument.
-      auto npos = std::string::npos;
+      // Long options come in three varieties:
+      // "--<name>", config option is a boolean flag
+      // "--<name>=<value>", formatted as a single argument with the value,
+      // "--<name> <value>", formatted as two arguments,
+      const auto npos = std::string::npos;
       auto assign_op = i->find('=');
       auto name = assign_op == npos ? i->substr(2)
                                     : i->substr(2, assign_op - 2);
       auto opt = cli_long_name_lookup(name);
       if (opt == nullptr)
         return {pec::not_an_option, i};
-      auto code
-        = consume(*opt,
-                  assign_op == npos
-                    ? i->end()
-                    : i->begin() + static_cast<ptrdiff_t>(assign_op + 1),
-                  i->end());
-      if (code != pec::success)
-        return {code, i};
-      ++i;
+      if (opt->is_flag() || assign_op != npos) {
+        auto code
+          = consume(*opt,
+                    assign_op == npos
+                      ? i->end()
+                      : i->begin() + static_cast<ptrdiff_t>(assign_op + 1),
+                    i->end());
+        if (code != pec::success)
+          return {code, i};
+        ++i;
+      } else {
+        auto j = std::next(i);
+        if (j == last) {
+          return {pec::missing_argument, j};
+        }
+        auto code = consume(*opt, j->begin(), j->end());
+        if (code != pec::success)
+          return {code, i};
+        std::advance(i, 2);
+      }
     } else if (i->front() == '-') {
       // Short options have three possibilities.
       auto opt = cli_short_name_lookup((*i)[1]);

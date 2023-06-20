@@ -109,9 +109,22 @@ CAF_TEST(parse with ref syncing) {
   CHECK_EQ(get_as<int>(cfg, "foo.i"), 42);
 }
 
+CAF_TEST(long format for flags) {
+  auto foo_b = false;
+  opts.add<bool>(foo_b, "foo", "b,b", "");
+  settings cfg;
+  vector<string> args{"--foo.b"};
+  auto res = opts.parse(cfg, args);
+  CHECK_EQ(res.first, pec::success);
+  if (res.second != args.end())
+    CAF_FAIL("parser stopped at: " << *res.second);
+  CHECK_EQ(foo_b, true);
+}
+
 CAF_TEST(string parameters) {
   opts.add<std::string>("value,v", "some value");
   CHECK_EQ(read<std::string>({"--value=foobar"}), "foobar");
+  CHECK_EQ(read<std::string>({"--value", "foobar"}), "foobar");
   CHECK_EQ(read<std::string>({"-v", "foobar"}), "foobar");
   CHECK_EQ(read<std::string>({"-vfoobar"}), "foobar");
 }
@@ -121,8 +134,11 @@ CAF_TEST(flat CLI options) {
   opts.add<std::string>("?foo", "bar,b", "some value");
   CHECK(opts.begin()->has_flat_cli_name());
   CHECK_EQ(read<std::string>({"-b", "foobar"}), "foobar");
+  CHECK_EQ(read<std::string>({"-bfoobar"}), "foobar");
   CHECK_EQ(read<std::string>({"--bar=foobar"}), "foobar");
   CHECK_EQ(read<std::string>({"--foo.bar=foobar"}), "foobar");
+  CHECK_EQ(read<std::string>({"--bar", "foobar"}), "foobar");
+  CHECK_EQ(read<std::string>({"--foo.bar", "foobar"}), "foobar");
 }
 
 CAF_TEST(flat CLI parsing with nested categories) {
@@ -130,8 +146,11 @@ CAF_TEST(flat CLI parsing with nested categories) {
   opts.add<std::string>("?foo.goo", "bar,b", "some value");
   CHECK(opts.begin()->has_flat_cli_name());
   CHECK_EQ(read<std::string>({"-b", "foobar"}), "foobar");
+  CHECK_EQ(read<std::string>({"-bfoobar"}), "foobar");
   CHECK_EQ(read<std::string>({"--bar=foobar"}), "foobar");
   CHECK_EQ(read<std::string>({"--foo.goo.bar=foobar"}), "foobar");
+  CHECK_EQ(read<std::string>({"--bar", "foobar"}), "foobar");
+  CHECK_EQ(read<std::string>({"--foo.goo.bar", "foobar"}), "foobar");
 }
 
 CAF_TEST(square brackets are optional on the command line) {
@@ -146,6 +165,15 @@ CAF_TEST(square brackets are optional on the command line) {
   CHECK_EQ(read<int_list>({"--value=1"}), int_list({1}));
   CHECK_EQ(read<int_list>({"--value=1,2,3"}), int_list({1, 2, 3}));
   CHECK_EQ(read<int_list>({"--value=1, 2 , 3 , "}), int_list({1, 2, 3}));
+  CHECK_EQ(read<int_list>({"--value", "[1]"}), int_list({1}));
+  CHECK_EQ(read<int_list>({"--value", "[1,]"}), int_list({1}));
+  CHECK_EQ(read<int_list>({"--value", "[ 1 , ]"}), int_list({1}));
+  CHECK_EQ(read<int_list>({"--value", "[1,2]"}), int_list({1, 2}));
+  CHECK_EQ(read<int_list>({"--value", "[1, 2, 3]"}), int_list({1, 2, 3}));
+  CHECK_EQ(read<int_list>({"--value", "[1, 2, 3, ]"}), int_list({1, 2, 3}));
+  CHECK_EQ(read<int_list>({"--value", "1"}), int_list({1}));
+  CHECK_EQ(read<int_list>({"--value", "1,2,3"}), int_list({1, 2, 3}));
+  CHECK_EQ(read<int_list>({"--value", "1, 2 , 3 , "}), int_list({1, 2, 3}));
   CHECK_EQ(read<int_list>({"-v", "[1]"}), int_list({1}));
   CHECK_EQ(read<int_list>({"-v", "[1,]"}), int_list({1}));
   CHECK_EQ(read<int_list>({"-v", "[ 1 , ]"}), int_list({1}));

@@ -55,7 +55,6 @@ struct fixture {
 
   void parse(const char* file_content, string_list args = {}) {
     cfg.clear();
-    cfg.remainder.clear();
     std::istringstream conf{file_content};
     if (auto err = cfg.parse(std::move(args), conf))
       CAF_FAIL("parse() failed: " << err);

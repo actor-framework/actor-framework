@@ -133,4 +133,36 @@ std::string_view config_option::buf_slice(size_t from,
   return {buf_.get() + from, to - from};
 }
 
+// TODO: consider using `config_option_set` and deprecating this
+config_option::find_result config_option::find_by_long_name(
+  config_option::argument_iterator first,
+  config_option::argument_iterator last) const noexcept {
+  auto argument_name = long_name();
+  for (; first != last; ++first) {
+    std::string_view str{*first};
+    // Make sure this is a long option starting with "--".
+    if (!starts_with(str, "--"))
+      continue;
+    str.remove_prefix(2);
+    // Make sure we are dealing with the right key.
+    if (!starts_with(str, argument_name))
+      continue;
+    str.remove_prefix(argument_name.size());
+    // check for flag
+    if (is_flag() && str.empty()) {
+      return {first, first + 1, str};
+    } else if (starts_with(str, "=")) {
+      // Remove leading '=' and return the value.
+      str.remove_prefix(1);
+      return {first, first + 1, str};
+    } else if (auto val = first + 1; str.empty() && val != last) {
+      // Get the next argument the value
+      return {first, first + 2, std::string_view{*val}};
+    } else {
+      continue;
+    }
+  }
+  return {first, first, std::string_view{}};
+}
+
 } // namespace caf
