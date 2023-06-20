@@ -222,6 +222,7 @@ caf_add_component(
     action
     actor_clock
     actor_factory
+    actor_group
     actor_lifetime
     actor_pool
     actor_profiler
