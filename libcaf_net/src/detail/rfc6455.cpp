@@ -45,7 +45,7 @@ void rfc6455::assemble_frame(uint8_t opcode, uint32_t mask_key,
   if (data.size() < 126) {
     auto len = static_cast<uint8_t>(data.size());
     out.push_back(mask_bit | std::byte{len});
-  } else if (data.size() < std::numeric_limits<uint16_t>::max()) {
+  } else if (data.size() <= std::numeric_limits<uint16_t>::max()) {
     auto len = static_cast<uint16_t>(data.size());
     auto no_len = to_network_order(len);
     std::byte len_data[2];

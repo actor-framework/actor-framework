@@ -60,6 +60,40 @@ CAF_TEST(masking) {
   CAF_CHECK_EQUAL(masked_data, data);
 }
 
+CAF_TEST(no mask key and no data) {
+  std::vector<uint8_t> data{};
+  byte_buffer out;
+  impl::assemble_frame(impl::binary_frame, 0, as_bytes(make_span(data)), out);
+  CAF_CHECK_EQUAL(out, bytes({
+                         0x82, // FIN + binary frame opcode
+                         0x00, // data size = 0
+                       }));
+  impl::header hdr;
+  CAF_CHECK_EQUAL(impl::decode_header(out, hdr), 2);
+  CAF_CHECK_EQUAL(hdr.fin, true);
+  CAF_CHECK_EQUAL(hdr.mask_key, 0u);
+  CAF_CHECK_EQUAL(hdr.opcode, impl::binary_frame);
+  CAF_CHECK_EQUAL(hdr.payload_len, data.size());
+}
+
+CAF_TEST(valid mask key and no data) {
+  std::vector<uint8_t> data{};
+  byte_buffer out;
+  impl::assemble_frame(impl::binary_frame, 0xDEADC0DE,
+                       as_bytes(make_span(data)), out);
+  CAF_CHECK_EQUAL(out, bytes({
+                         0x82,                   // FIN + binary frame opcode
+                         0x80,                   // MASKED + data size = 0
+                         0xDE, 0xAD, 0xC0, 0xDE, // mask key,
+                       }));
+  impl::header hdr;
+  CAF_CHECK_EQUAL(impl::decode_header(out, hdr), 6);
+  CAF_CHECK_EQUAL(hdr.fin, true);
+  CAF_CHECK_EQUAL(hdr.mask_key, 0xDEADC0DEu);
+  CAF_CHECK_EQUAL(hdr.opcode, impl::binary_frame);
+  CAF_CHECK_EQUAL(hdr.payload_len, data.size());
+}
+
 CAF_TEST(no mask key plus small data) {
   std::vector<uint8_t> data{0x12, 0x34, 0x45, 0x67};
   byte_buffer out;
@@ -88,6 +122,44 @@ CAF_TEST(valid mask key plus small data) {
                          0xDE, 0xAD, 0xC0, 0xDE, // mask key,
                          0x12, 0x34, 0x45, 0x67, // masked data
                        }));
+  impl::header hdr;
+  CAF_CHECK_EQUAL(impl::decode_header(out, hdr), 6);
+  CAF_CHECK_EQUAL(hdr.fin, true);
+  CAF_CHECK_EQUAL(hdr.mask_key, 0xDEADC0DEu);
+  CAF_CHECK_EQUAL(hdr.opcode, impl::binary_frame);
+  CAF_CHECK_EQUAL(hdr.payload_len, data.size());
+}
+
+CAF_TEST(no mask key plus upper bound on small data) {
+  std::vector<uint8_t> data;
+  data.resize(125, 0xFF);
+  byte_buffer out;
+  impl::assemble_frame(impl::binary_frame, 0, as_bytes(make_span(data)), out);
+  CAF_CHECK_EQUAL(take(out, 6), bytes({
+                                  0x82, // FIN + binary frame opcode
+                                  0x7D, // data size = 125
+                                  0xFF, 0xFF, 0xFF, 0xFF, // masked data
+                                }));
+  impl::header hdr;
+  CAF_CHECK_EQUAL(impl::decode_header(out, hdr), 2);
+  CAF_CHECK_EQUAL(hdr.fin, true);
+  CAF_CHECK_EQUAL(hdr.mask_key, 0u);
+  CAF_CHECK_EQUAL(hdr.opcode, impl::binary_frame);
+  CAF_CHECK_EQUAL(hdr.payload_len, data.size());
+}
+
+CAF_TEST(valid mask key plus upper bound on small data) {
+  std::vector<uint8_t> data;
+  data.resize(125, 0xFF);
+  byte_buffer out;
+  impl::assemble_frame(impl::binary_frame, 0xDEADC0DE,
+                       as_bytes(make_span(data)), out);
+  CAF_CHECK_EQUAL(take(out, 10), bytes({
+                                   0x82, // FIN + binary frame opcode
+                                   0xFD, // MASKED + data size = 125
+                                   0xDE, 0xAD, 0xC0, 0xDE, // mask key,
+                                   0xFF, 0xFF, 0xFF, 0xFF, // masked data
+                                 }));
   impl::header hdr;
   CAF_CHECK_EQUAL(impl::decode_header(out, hdr), 6);
   CAF_CHECK_EQUAL(hdr.fin, true);
@@ -127,6 +199,48 @@ CAF_TEST(valid mask key plus medium data) {
                     0x82,                   // FIN + binary frame opcode
                     0xFE,                   // MASKED + 126 -> uint16 size
                     0x00, 0x7E,             // data size = 126
+                    0xDE, 0xAD, 0xC0, 0xDE, // mask key,
+                    0xFF, 0xFF, 0xFF, 0xFF, // first 4 masked bytes
+                  }));
+  impl::header hdr;
+  CAF_CHECK_EQUAL(impl::decode_header(out, hdr), 8);
+  CAF_CHECK_EQUAL(hdr.fin, true);
+  CAF_CHECK_EQUAL(hdr.mask_key, 0xDEADC0DEu);
+  CAF_CHECK_EQUAL(hdr.opcode, impl::binary_frame);
+  CAF_CHECK_EQUAL(hdr.payload_len, data.size());
+}
+
+CAF_TEST(no mask key plus upper bound on medium data) {
+  std::vector<uint8_t> data;
+  data.insert(data.end(), 65535, 0xFF);
+  byte_buffer out;
+  impl::assemble_frame(impl::binary_frame, 0, as_bytes(make_span(data)), out);
+  CAF_CHECK_EQUAL(take(out, 8),
+                  bytes({
+                    0x82,                   // FIN + binary frame opcode
+                    0x7E,                   // 126 -> uint16 size
+                    0xFF, 0xFF,             // data size = 65535
+                    0xFF, 0xFF, 0xFF, 0xFF, // first 4 masked bytes
+                  }));
+  impl::header hdr;
+  CAF_CHECK_EQUAL(impl::decode_header(out, hdr), 4);
+  CAF_CHECK_EQUAL(hdr.fin, true);
+  CAF_CHECK_EQUAL(hdr.mask_key, 0u);
+  CAF_CHECK_EQUAL(hdr.opcode, impl::binary_frame);
+  CAF_CHECK_EQUAL(hdr.payload_len, data.size());
+}
+
+CAF_TEST(valid mask key plus upper bound on medium data) {
+  std::vector<uint8_t> data;
+  data.insert(data.end(), 65535, 0xFF);
+  byte_buffer out;
+  impl::assemble_frame(impl::binary_frame, 0xDEADC0DE,
+                       as_bytes(make_span(data)), out);
+  CAF_CHECK_EQUAL(take(out, 12),
+                  bytes({
+                    0x82,                   // FIN + binary frame opcode
+                    0xFE,                   // 126 -> uint16 size
+                    0xFF, 0xFF,             // data size = 65535
                     0xDE, 0xAD, 0xC0, 0xDE, // mask key,
                     0xFF, 0xFF, 0xFF, 0xFF, // first 4 masked bytes
                   }));

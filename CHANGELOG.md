@@ -32,6 +32,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Fix build errors with exceptions disabled.
 - Fix a regression in `--dump-config` that caused CAF applications to emit
   malformed output.
+- Fix handling of WebSocket frames that are exactly on the 65535 byte limit.
 
 ## [0.19.2] - 2023-06-13
 
