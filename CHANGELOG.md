@@ -674,9 +674,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   already did.
 - The `typed_actor_view` decorator lacked several member functions such as
   `link_to`, `send_exit`, etc. These are now available.
-- Constructing a `typed_actor` handle from a pointer view failed du to a missing
-  constructor overload. This (explicit) overload now exists and the conversion
-  should work as expected.
+- Constructing a `typed_actor` handle from a pointer view failed due to a
+  missing constructor overload. This (explicit) overload now exists and the
+  conversion should work as expected.
 - Sending floating points to remote actors changed `infinity` and `NaN` to
   garbage values (#1107). The fixed packing / unpacking routines for IEEE 754
   values keep these non-numeric values intact now. It is worth mentioning that
