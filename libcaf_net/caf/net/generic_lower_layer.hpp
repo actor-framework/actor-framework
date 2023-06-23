@@ -34,8 +34,8 @@ public:
   /// flushed before closing the socket.
   virtual void shutdown() = 0;
 
-  /// Shuts down any connection or session du to an error. Any pending data gets
-  /// flushed before closing the socket. Protocols with a dedicated closing
+  /// Shuts down any connection or session due to an error. Any pending data
+  /// gets flushed before closing the socket. Protocols with a dedicated closing
   /// handshake such as WebSocket may send the close reason to the peer.
   virtual void shutdown(const error& reason);
 };
