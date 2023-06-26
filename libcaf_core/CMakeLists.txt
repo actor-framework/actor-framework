@@ -248,7 +248,6 @@ caf_add_component(
     constructor_attach
     cow_string
     cow_tuple
-    decorator.sequencer
     deep_to_string
     detached_actors
     detail.base64
