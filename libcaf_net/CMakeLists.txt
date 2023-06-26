@@ -120,5 +120,6 @@ caf_add_component(
   net.udp_datagram_socket
   net.web_socket.client
   net.web_socket.frame
+  net.web_socket.framing
   net.web_socket.handshake
   net.web_socket.server)

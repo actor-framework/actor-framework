@@ -84,6 +84,10 @@ ptrdiff_t rfc6455::decode_header(const_byte_span data, header& hdr) {
   bool masked = (byte2 & 0x80) != 0;
   auto len_field = byte2 & 0x7F;
   size_t header_length;
+  // control frames can only have payload up to 125 bytes
+  if (rfc6455::is_control_frame(hdr.opcode) && len_field > 125) {
+    return -1;
+  }
   if (len_field < 126) {
     header_length = 2 + (masked ? 4 : 0);
     hdr.payload_len = len_field;
@@ -133,6 +137,17 @@ ptrdiff_t rfc6455::decode_header(const_byte_span data, header& hdr) {
     default:
       return -1;
   }
+}
+
+bool rfc6455::is_control_frame(uint8_t opcode) {
+  switch (opcode) {
+    case ping:
+    case pong:
+    case connection_close:
+    case continuation_frame:
+      return true;
+  }
+  return false;
 }
 
 } // namespace caf::detail
