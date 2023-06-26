@@ -6,6 +6,7 @@
 
 #include "caf/error.hpp"
 #include "caf/net/web_socket/status.hpp"
+#include "caf/sec.hpp"
 
 namespace caf::net::web_socket {
 
@@ -19,7 +20,11 @@ void lower_layer::shutdown() {
 }
 
 void lower_layer::shutdown(const error& reason) {
-  shutdown(status::unexpected_condition, to_string(reason));
+  if (reason.code() == static_cast<uint8_t>(sec::protocol_error)) {
+    shutdown(status::protocol_error, to_string(reason));
+  } else {
+    shutdown(status::unexpected_condition, to_string(reason));
+  }
 }
 
 } // namespace caf::net::web_socket

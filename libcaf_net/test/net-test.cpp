@@ -82,7 +82,6 @@ ptrdiff_t mock_stream_transport::handle_input() {
     if (consumed < 0) {
       // Negative values indicate that the application encountered an
       // unrecoverable error.
-      up->abort(make_error(caf::sec::runtime_error, "consumed < 0"));
       return result;
     } else if (static_cast<size_t>(consumed) > n) {
       // Must not happen. An application cannot handle more data then we pass
