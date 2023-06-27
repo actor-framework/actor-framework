@@ -20,67 +20,10 @@ namespace {
 
 using svec = std::vector<std::string>;
 
-class app_t : public net::web_socket::upper_layer::server {
-public:
-  std::string text_input;
-
-  byte_buffer binary_input;
-
-  settings cfg;
-
-  static auto make() {
-    return std::make_unique<app_t>();
-  }
-
-  error start(net::web_socket::lower_layer* down) override {
-    down->request_messages();
-    return none;
-  }
-
-  error accept(const net::http::request_header& hdr) override {
-    // Store the request information in cfg to evaluate them later.
-    auto& ws = cfg["web-socket"].as_dictionary();
-    put(ws, "method", to_rfc_string(hdr.method()));
-    put(ws, "path", std::string{hdr.path()});
-    put(ws, "query", hdr.query());
-    put(ws, "fragment", hdr.fragment());
-    put(ws, "http-version", hdr.version());
-    if (hdr.num_fields() > 0) {
-      auto& fields = ws["fields"].as_dictionary();
-      hdr.for_each_field([&fields](auto key, auto val) {
-        put(fields, std::string{key}, std::string{val});
-      });
-    }
-    return none;
-  }
-
-  void prepare_send() override {
-    // nop
-  }
-
-  bool done_sending() override {
-    return true;
-  }
-
-  void abort(const error& reason) override {
-    CAF_FAIL("app::abort called: " << reason);
-  }
-
-  ptrdiff_t consume_text(std::string_view text) override {
-    text_input.insert(text_input.end(), text.begin(), text.end());
-    return static_cast<ptrdiff_t>(text.size());
-  }
-
-  ptrdiff_t consume_binary(byte_span bytes) override {
-    binary_input.insert(binary_input.end(), bytes.begin(), bytes.end());
-    return static_cast<ptrdiff_t>(bytes.size());
-  }
-};
-
 struct fixture {
   fixture() {
     using namespace caf::net;
-    auto app_ptr = app_t::make();
+    auto app_ptr = mock_web_socket_app::make(/*behave_as_server=*/true);
     app = app_ptr.get();
     auto ws_ptr = net::web_socket::server::make(std::move(app_ptr));
     transport = mock_stream_transport::make(std::move(ws_ptr));
@@ -126,7 +69,7 @@ struct fixture {
 
   std::unique_ptr<mock_stream_transport> transport;
 
-  app_t* app;
+  mock_web_socket_app* app;
 
   std::minstd_rand rng;
 };

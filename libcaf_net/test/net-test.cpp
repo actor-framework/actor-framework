@@ -118,6 +118,59 @@ ptrdiff_t mock_stream_transport::handle_input() {
   return result;
 }
 
+// -- mock_web_socket_app ------------------------------------------------------
+
+mock_web_socket_app::mock_web_socket_app(bool behave_as_server)
+  : behave_as_server(behave_as_server) {
+  // nop
+}
+
+caf::error mock_web_socket_app::start(caf::net::web_socket::lower_layer* ll) {
+  down = ll;
+  if (behave_as_server)
+    down->request_messages();
+  return caf::none;
+}
+
+caf::error
+mock_web_socket_app::accept(const caf::net::http::request_header& hdr) {
+  // Store the request information in cfg to evaluate them later.
+  auto& ws = cfg["web-socket"].as_dictionary();
+  put(ws, "method", to_rfc_string(hdr.method()));
+  put(ws, "path", std::string{hdr.path()});
+  put(ws, "query", hdr.query());
+  put(ws, "fragment", hdr.fragment());
+  put(ws, "http-version", hdr.version());
+  if (hdr.num_fields() > 0) {
+    auto& fields = ws["fields"].as_dictionary();
+    hdr.for_each_field([&fields](auto key, auto val) {
+      put(fields, std::string{key}, std::string{val});
+    });
+  }
+  return caf::none;
+}
+
+void mock_web_socket_app::abort(const caf::error& reason) {
+  if (expect_abort_) {
+    has_aborted = true;
+    err = reason;
+    expect_abort_ = false;
+    down->shutdown(reason);
+  } else {
+    CAF_FAIL("app::abort called: " << reason);
+  }
+}
+
+ptrdiff_t mock_web_socket_app::consume_text(std::string_view text) {
+  text_input.insert(text_input.end(), text.begin(), text.end());
+  return static_cast<ptrdiff_t>(text.size());
+}
+
+ptrdiff_t mock_web_socket_app::consume_binary(caf::byte_span bytes) {
+  binary_input.insert(binary_input.end(), bytes.begin(), bytes.end());
+  return static_cast<ptrdiff_t>(bytes.size());
+}
+
 // -- barrier ------------------------------------------------------------------
 
 void barrier::arrive_and_wait() {

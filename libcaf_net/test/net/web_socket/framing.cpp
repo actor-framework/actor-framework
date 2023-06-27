@@ -13,59 +13,13 @@ using namespace std::literals;
 
 namespace {
 
-class app_t : public net::web_socket::upper_layer {
-public:
-  static auto make() {
-    return std::make_unique<app_t>();
-  }
-
-  std::string text_input;
-
-  caf::byte_buffer binary_input;
-
-  error err;
-
-  bool aborted = false;
-
-  net::web_socket::lower_layer* down = nullptr;
-
-  error start(net::web_socket::lower_layer* ll) override {
-    down = ll;
-    return none;
-  }
-
-  void prepare_send() override {
-    // nop
-  }
-
-  bool done_sending() override {
-    return true;
-  }
-
-  void abort(const error& reason) override {
-    aborted = true;
-    err = reason;
-    down->shutdown(reason);
-  }
-
-  ptrdiff_t consume_text(std::string_view text) override {
-    text_input.insert(text_input.end(), text.begin(), text.end());
-    return static_cast<ptrdiff_t>(text.size());
-  }
-
-  ptrdiff_t consume_binary(byte_span bytes) override {
-    binary_input.insert(binary_input.end(), bytes.begin(), bytes.end());
-    return static_cast<ptrdiff_t>(bytes.size());
-  }
-};
-
 struct fixture {
-  app_t* app;
+  mock_web_socket_app* app;
   net::web_socket::framing* uut;
   std::unique_ptr<mock_stream_transport> transport;
 
   fixture() {
-    auto app_layer = app_t::make();
+    auto app_layer = mock_web_socket_app::make();
     app = app_layer.get();
     auto uut_layer
       = net::web_socket::framing::make_server(std::move(app_layer));
@@ -152,8 +106,9 @@ SCENARIO("the client sends an invalid ping that closes the connection") {
                                       ping_frame);
       transport->push(ping_frame);
       THEN("the server aborts the application") {
+        app->expect_abort();
         CHECK_EQ(transport->handle_input(), 0);
-        CHECK(app->aborted);
+        CHECK(app->has_aborted);
         CHECK_EQ(app->err, sec::protocol_error);
         MESSAGE("Aborted with: " << app->err);
       }

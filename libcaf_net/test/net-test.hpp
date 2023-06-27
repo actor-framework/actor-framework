@@ -5,6 +5,7 @@
 #include "caf/net/octet_stream/upper_layer.hpp"
 #include "caf/net/receive_policy.hpp"
 #include "caf/net/socket.hpp"
+#include "caf/net/web_socket/server.hpp"
 #include "caf/settings.hpp"
 #include "caf/span.hpp"
 #include "caf/string_view.hpp"
@@ -103,6 +104,63 @@ private:
   caf::error abort_reason_;
 
   caf::net::multiplexer* mpx_;
+};
+
+class mock_web_socket_app : public caf::net::web_socket::upper_layer::server {
+public:
+  // -- constructor ------------------------------------------------------------
+
+  mock_web_socket_app(bool behave_as_server);
+
+  // -- factories --------------------------------------------------------------
+
+  static auto make(bool behave_as_server = false) {
+    return std::make_unique<mock_web_socket_app>(behave_as_server);
+  }
+
+  // -- initialization ---------------------------------------------------------
+
+  caf::error start(caf::net::web_socket::lower_layer* ll) override;
+
+  // -- implementation ---------------------------------------------------------
+
+  caf::error accept(const caf::net::http::request_header& hdr) override;
+
+  void prepare_send() override {
+    // nop
+  }
+
+  bool done_sending() override {
+    return true;
+  }
+
+  void abort(const caf::error& reason) override;
+
+  ptrdiff_t consume_text(std::string_view text) override;
+
+  ptrdiff_t consume_binary(caf::byte_span bytes) override;
+
+  void expect_abort() {
+    expect_abort_ = true;
+  }
+
+  // -- member variables -------------------------------------------------------
+
+  std::string text_input;
+
+  caf::byte_buffer binary_input;
+
+  caf::net::web_socket::lower_layer* down = nullptr;
+
+  caf::settings cfg;
+
+  bool behave_as_server = false;
+
+  caf::error err;
+
+  bool has_aborted = false;
+
+  bool expect_abort_ = false;
 };
 
 // Drop-in replacement for std::barrier (based on the TS API as of 2020).
