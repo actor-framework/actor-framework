@@ -136,4 +136,30 @@ SCENARIO("the client sends an invalid ping that closes the connection") {
   }
 }
 
+SCENARIO("the client closes the connection with a closing handshake") {
+  GIVEN("a valid WebSocket connection") {
+    WHEN("the client sends a closing handshake") {
+      std::vector<std::byte> handshake;
+      detail::rfc6455::assemble_frame(detail::rfc6455::connection_close, 0x0,
+                                      make_test_data(0), handshake);
+      transport->push(handshake);
+    }
+    THEN("the server closes the connection with a closing handshake") {
+      transport->handle_input();
+      detail::rfc6455::header hdr;
+      auto hdr_length
+        = detail::rfc6455::decode_header(transport->output_buffer(), hdr);
+      CHECK(app->has_aborted());
+      CHECK_EQ(app->abort_reason, sec::connection_closed);
+      CHECK_EQ(hdr_length, 2);
+      CHECK_EQ(hdr.opcode, detail::rfc6455::connection_close);
+      CHECK(hdr.fin);
+      CHECK(hdr.payload_len >= 2);
+      auto status = (std::to_integer<int>(transport->output_buffer()[2]) << 8)
+                    + std::to_integer<int>(transport->output_buffer()[3]);
+      CHECK_EQ(status, static_cast<int>(net::web_socket::status::normal_close));
+    }
+  }
+}
+
 END_FIXTURE_SCOPE()

@@ -139,6 +139,11 @@ private:
   template <class T>
   void ship_frame(std::vector<T>& buf);
 
+  void abort_and_shutdown(caf::error reason) {
+    abort(reason);
+    shutdown(reason);
+  }
+
   // -- member variables -------------------------------------------------------
 
   /// Points to the transport layer below.
