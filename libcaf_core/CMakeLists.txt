@@ -131,6 +131,7 @@ caf_add_component(
     src/detail/print.cpp
     src/detail/private_thread.cpp
     src/detail/private_thread_pool.cpp
+    src/detail/rfc3629.cpp
     src/detail/ripemd_160.cpp
     src/detail/set_thread_name.cpp
     src/detail/stream_bridge.cpp
@@ -271,6 +272,7 @@ caf_add_component(
     detail.parser.read_timespan
     detail.parser.read_unsigned_integer
     detail.private_thread_pool
+    detail.rfc3629
     detail.ringbuffer
     detail.ripemd_160
     detail.type_id_list_builder
