@@ -139,10 +139,12 @@ private:
   template <class T>
   void ship_frame(std::vector<T>& buf);
 
-  void abort_and_shutdown(caf::error reason) {
-    abort(reason);
-    shutdown(reason);
-  }
+  // Sends closing message, can be error status, or closing handshake
+  void ship_closing_message(status code, std::string_view desc);
+
+  // Signal abort to the upper layer and shutdown to the lower layer,
+  // with closing message
+  void abort_and_close_connection(sec reason, std::string_view msg);
 
   // -- member variables -------------------------------------------------------
 
