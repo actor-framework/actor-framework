@@ -24,8 +24,7 @@ using std::string;
 using std::vector;
 
 using namespace caf;
-
-using namespace std::literals::string_literals;
+using namespace std::literals;
 
 namespace {
 
@@ -36,8 +35,8 @@ std::string msg_as_string(Ts&&... xs) {
 
 } // namespace
 
-CAF_TEST(messages allow index - based access) {
-  auto msg = make_message("abc", uint32_t{10}, 20.0);
+TEST_CASE("messages allow index-based access") {
+  auto msg = make_message("abc"s, uint32_t{10}, 20.0);
   CHECK_EQ(msg.size(), 3u);
   CHECK_EQ(msg.types(), (make_type_id_list<std::string, uint32_t, double>()));
   CHECK_EQ(msg.get_as<std::string>(0), "abc");
@@ -46,9 +45,9 @@ CAF_TEST(messages allow index - based access) {
   CHECK_EQ(msg.cdata().get_reference_count(), 1u);
 }
 
-CAF_TEST(message detach their content on mutating access) {
+TEST_CASE("message detach their content on mutating access") {
   MESSAGE("Given to messages pointing to the same content.");
-  auto msg1 = make_message("one", uint32_t{1});
+  auto msg1 = make_message("one"s, uint32_t{1});
   auto msg2 = msg1;
   CHECK_EQ(msg1.cdata().get_reference_count(), 2u);
   CHECK_EQ(msg1.cptr(), msg2.cptr());
@@ -64,13 +63,13 @@ CAF_TEST(message detach their content on mutating access) {
   CHECK_EQ(msg1.get_as<uint32_t>(1), msg2.get_as<uint32_t>(1));
 }
 
-CAF_TEST(compare_custom_types) {
+TEST_CASE("messages can render custom types to strings") {
   s2 tmp;
   tmp.value[0][1] = 100;
   CHECK_NE(to_string(make_message(s2{})), to_string(make_message(tmp)));
 }
 
-CAF_TEST(integers_to_string) {
+TEST_CASE("messages can render integers to strings") {
   using ivec = vector<int32_t>;
   using svec = vector<std::string>;
   using sset = std::set<std::string>;
@@ -89,7 +88,7 @@ CAF_TEST(integers_to_string) {
   CHECK_EQ(make_message(itup(1, 2, 3)).types()[0], type_id_v<itup>);
 }
 
-CAF_TEST(to_string converts messages to strings) {
+TEST_CASE("to_string converts messages to strings") {
   using svec = vector<string>;
   CHECK_EQ(msg_as_string(), "message()");
   CHECK_EQ(msg_as_string("hello", "world"), R"__(message("hello", "world"))__");
@@ -111,15 +110,7 @@ CAF_TEST(to_string converts messages to strings) {
   CHECK_EQ(msg_as_string(s3{}), "message([1, 2, 3, 4])");
 }
 
-CAF_TEST(match_elements exposes element types) {
-  auto msg = make_message(put_atom_v, "foo", int64_t{123});
-  CHECK((msg.match_element<put_atom>(0)));
-  CHECK((msg.match_element<string>(1)));
-  CHECK((msg.match_element<int64_t>(2)));
-  CHECK((msg.match_elements<put_atom, string, int64_t>()));
-}
-
-CAF_TEST(messages are concatenable) {
+TEST_CASE("messages are concatenable") {
   using std::make_tuple;
   CHECK(message::concat(make_tuple(int16_t{1}), make_tuple(uint8_t{2}))
           .matches(int16_t{1}, uint8_t{2}));
@@ -129,4 +120,25 @@ CAF_TEST(messages are concatenable) {
           .matches(int16_t{1}, uint8_t{2}));
   CHECK(message::concat(make_tuple(int16_t{1}), make_message(uint8_t{2}))
           .matches(int16_t{1}, uint8_t{2}));
+}
+
+TEST_CASE("match_elements exposes element types") {
+  auto msg = make_message(put_atom_v, "foo", int64_t{123});
+  CHECK((msg.match_element<put_atom>(0)));
+  CHECK((msg.match_element<string>(1)));
+  CHECK((msg.match_element<int64_t>(2)));
+  CHECK((msg.match_elements<put_atom, string, int64_t>()));
+}
+
+TEST_CASE("messages implicitly convert string-like things to strings") {
+  auto is_hello_caf = [](const message& msg) {
+    return msg.match_elements<string>() && msg.get_as<string>(0) == "hello CAF";
+  };
+  // From character array.
+  char char_array[] = "hello CAF";
+  CHECK(is_hello_caf(make_message(char_array)));
+  // From string_view.
+  CHECK(is_hello_caf(make_message("hello CAF"sv)));
+  // From plain C-string literal.
+  CHECK(is_hello_caf(make_message("hello CAF")));
 }
