@@ -71,8 +71,6 @@ actor_system_config::actor_system_config()
                  "frequency of relaxed steal attempts")
     .add<timespan>("relaxed-sleep-duration",
                    "sleep duration between relaxed steal attempts");
-  opt_group{custom_options_, "caf.logger"} //
-    .add<bool>("inline-output", "disable logger thread (for testing only!)");
   opt_group{custom_options_, "caf.logger.file"}
     .add<string>("path", "filesystem path for the log file")
     .add<string>("format", "format for individual log file entries")
@@ -121,7 +119,6 @@ settings actor_system_config::dump_content() const {
               defaults::work_stealing::relaxed_sleep_duration);
   // -- logger parameters
   auto& logger_group = caf_group["logger"].as_dictionary();
-  // Note: omit "inline-output" option since it should only be used for testing.
   auto& file_group = logger_group["file"].as_dictionary();
   put_missing(file_group, "path", defaults::logger::file::path);
   put_missing(file_group, "format", defaults::logger::file::format);

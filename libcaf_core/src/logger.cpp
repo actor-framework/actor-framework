@@ -308,9 +308,6 @@ void logger::init(actor_system_config& cfg) {
     = parse_format(get_or(cfg, "caf.logger.file.format", lg::file::format));
   console_format_ = parse_format(
     get_or(cfg, "caf.logger.console.format", lg::console::format));
-  // Set flags.
-  if (get_or(cfg, "caf.logger.inline-output", false))
-    cfg_.inline_output = true;
   // If not set to `false`, CAF enables colored output when writing to TTYs.
   cfg_.console_coloring = get_or(cfg, "caf.logger.console.colored", true);
 }
