@@ -52,6 +52,11 @@ struct implicit_conversions<char*> {
   using type = std::string;
 };
 
+template <>
+struct implicit_conversions<std::string_view> {
+  using type = std::string;
+};
+
 template <size_t N>
 struct implicit_conversions<char[N]> : implicit_conversions<char*> {};
 

@@ -16,6 +16,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The CLI argument parser now supports a space separator when using long
   argument names, e.g., `--foo bar`. This is in addition to the existing
   `--foo=bar` syntax.
+- The functions `make_message` and `make_error` now support `std::string_view`
+  as input and automatically convert it to `std::string`.
 
 ### Changed
 
