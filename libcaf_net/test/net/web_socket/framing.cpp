@@ -13,59 +13,13 @@ using namespace std::literals;
 
 namespace {
 
-class app_t : public net::web_socket::upper_layer {
-public:
-  static auto make() {
-    return std::make_unique<app_t>();
-  }
-
-  std::string text_input;
-
-  caf::byte_buffer binary_input;
-
-  error err;
-
-  bool aborted = false;
-
-  net::web_socket::lower_layer* down = nullptr;
-
-  error start(net::web_socket::lower_layer* ll) override {
-    down = ll;
-    return none;
-  }
-
-  void prepare_send() override {
-    // nop
-  }
-
-  bool done_sending() override {
-    return true;
-  }
-
-  void abort(const error& reason) override {
-    aborted = true;
-    err = reason;
-    down->shutdown(reason);
-  }
-
-  ptrdiff_t consume_text(std::string_view text) override {
-    text_input.insert(text_input.end(), text.begin(), text.end());
-    return static_cast<ptrdiff_t>(text.size());
-  }
-
-  ptrdiff_t consume_binary(byte_span bytes) override {
-    binary_input.insert(binary_input.end(), bytes.begin(), bytes.end());
-    return static_cast<ptrdiff_t>(bytes.size());
-  }
-};
-
 struct fixture {
-  app_t* app;
+  mock_web_socket_app* app;
   net::web_socket::framing* uut;
   std::unique_ptr<mock_stream_transport> transport;
 
   fixture() {
-    auto app_layer = app_t::make();
+    auto app_layer = mock_web_socket_app::make();
     app = app_layer.get();
     auto uut_layer
       = net::web_socket::framing::make_server(std::move(app_layer));
@@ -100,6 +54,9 @@ SCENARIO("the client sends a ping and receives a pong response") {
                                         pong_frame);
         CHECK_EQ(transport->output_buffer(), pong_frame);
       }
+      AND("the client did not abort") {
+        CHECK(!app->has_aborted());
+      }
     }
     transport->output_buffer().clear();
     WHEN("the client sends a ping with some data") {
@@ -113,6 +70,9 @@ SCENARIO("the client sends a ping and receives a pong response") {
         detail::rfc6455::assemble_frame(detail::rfc6455::pong, 0x0, data,
                                         pong_frame);
         CHECK_EQ(transport->output_buffer(), pong_frame);
+      }
+      AND("the client did not abort") {
+        CHECK(!app->has_aborted());
       }
     }
     transport->output_buffer().clear();
@@ -128,6 +88,9 @@ SCENARIO("the client sends a ping and receives a pong response") {
                                         pong_frame);
         CHECK_EQ(transport->output_buffer(), pong_frame);
       }
+      AND("the client did not abort") {
+        CHECK(!app->has_aborted());
+      }
     }
   }
 }
@@ -141,6 +104,7 @@ TEST_CASE("calling shutdown with protocol_error sets status in close header") {
   auto status = (std::to_integer<int>(transport->output_buffer().at(2)) << 8)
                 + std::to_integer<int>(transport->output_buffer().at(3));
   CHECK_EQ(status, static_cast<int>(net::web_socket::status::protocol_error));
+  CHECK(!app->has_aborted());
 }
 
 SCENARIO("the client sends an invalid ping that closes the connection") {
@@ -153,9 +117,9 @@ SCENARIO("the client sends an invalid ping that closes the connection") {
       transport->push(ping_frame);
       THEN("the server aborts the application") {
         CHECK_EQ(transport->handle_input(), 0);
-        CHECK(app->aborted);
-        CHECK_EQ(app->err, sec::protocol_error);
-        MESSAGE("Aborted with: " << app->err);
+        CHECK(app->has_aborted());
+        CHECK_EQ(app->abort_reason, sec::protocol_error);
+        MESSAGE("Aborted with: " << app->abort_reason);
       }
       AND("the server closes the connection with a protocol error") {
         detail::rfc6455::header hdr;

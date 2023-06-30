@@ -14,43 +14,6 @@ namespace {
 
 using svec = std::vector<std::string>;
 
-class app_t : public net::web_socket::upper_layer {
-public:
-  static auto make() {
-    return std::make_unique<app_t>();
-  }
-
-  std::string text_input;
-
-  caf::byte_buffer binary_input;
-
-  error start(net::web_socket::lower_layer*) override {
-    return none;
-  }
-
-  void prepare_send() override {
-    // nop
-  }
-
-  bool done_sending() override {
-    return true;
-  }
-
-  void abort(const error& reason) override {
-    CAF_FAIL("app::abort called: " << reason);
-  }
-
-  ptrdiff_t consume_text(std::string_view text) override {
-    text_input.insert(text_input.end(), text.begin(), text.end());
-    return static_cast<ptrdiff_t>(text.size());
-  }
-
-  ptrdiff_t consume_binary(byte_span bytes) override {
-    binary_input.insert(binary_input.end(), bytes.begin(), bytes.end());
-    return static_cast<ptrdiff_t>(bytes.size());
-  }
-};
-
 constexpr std::string_view key = "the sample nonce";
 
 constexpr std::string_view http_request
@@ -93,7 +56,8 @@ auto make_handshake() {
 SCENARIO("the client performs the WebSocket handshake on startup") {
   GIVEN("valid WebSocket handshake data") {
     WHEN("starting a WebSocket client") {
-      auto app = app_t::make();
+      auto app = mock_web_socket_app::make();
+      auto app_ptr = app.get();
       auto ws = net::web_socket::client::make(make_handshake(), std::move(app));
       auto uut = mock_stream_transport::make(std::move(ws));
       THEN("the client sends its HTTP request when initializing it") {
@@ -104,6 +68,9 @@ SCENARIO("the client performs the WebSocket handshake on startup") {
         uut->push(http_response);
         CHECK_EQ(uut->handle_input(),
                  static_cast<ptrdiff_t>(http_response.size()));
+      }
+      AND("the client did not abort") {
+        CHECK(!app_ptr->has_aborted());
       }
     }
   }

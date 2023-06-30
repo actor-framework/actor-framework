@@ -5,11 +5,16 @@
 #include "caf/net/octet_stream/upper_layer.hpp"
 #include "caf/net/receive_policy.hpp"
 #include "caf/net/socket.hpp"
+#include "caf/net/web_socket/server.hpp"
 #include "caf/settings.hpp"
 #include "caf/span.hpp"
 #include "caf/string_view.hpp"
 #include "caf/test/bdd_dsl.hpp"
 
+/// Implements a trivial transport layer that stores the contents of all
+/// received frames in a respective output buffer, it can propagate the content
+/// of the input buffer to the upper layer, and switch protocols if configured
+/// so.
 class mock_stream_transport : public caf::net::octet_stream::lower_layer {
 public:
   // -- member types -----------------------------------------------------------
@@ -103,6 +108,67 @@ private:
   caf::error abort_reason_;
 
   caf::net::multiplexer* mpx_;
+};
+
+/// Tag used to configure mock_web_socket_app to request messages on start
+struct request_messages_on_start_t {};
+constexpr auto request_messages_on_start = request_messages_on_start_t{};
+
+/// Implements a trivial WebSocket application that stores the contents of all
+/// received messages in respective text/binary buffers. It can take both
+/// roles, server and client, request messages and track whether the
+/// lower layer was aborted.
+class mock_web_socket_app : public caf::net::web_socket::upper_layer::server {
+public:
+  // -- constructor ------------------------------------------------------------
+
+  explicit mock_web_socket_app(bool request_messages_on_start);
+
+  // -- factories --------------------------------------------------------------
+
+  static auto make(request_messages_on_start_t) {
+    return std::make_unique<mock_web_socket_app>(true);
+  }
+
+  static auto make() {
+    return std::make_unique<mock_web_socket_app>(false);
+  }
+
+  // -- initialization ---------------------------------------------------------
+
+  caf::error start(caf::net::web_socket::lower_layer* ll) override;
+
+  // -- implementation ---------------------------------------------------------
+
+  caf::error accept(const caf::net::http::request_header& hdr) override;
+
+  void prepare_send() override;
+
+  bool done_sending() override;
+
+  void abort(const caf::error& reason) override;
+
+  ptrdiff_t consume_text(std::string_view text) override;
+
+  ptrdiff_t consume_binary(caf::byte_span bytes) override;
+
+  bool has_aborted() const noexcept {
+    return !abort_reason.empty();
+  }
+
+  // -- member variables -------------------------------------------------------
+
+  std::string text_input;
+
+  caf::byte_buffer binary_input;
+
+  caf::net::web_socket::lower_layer* down = nullptr;
+
+  caf::settings cfg;
+
+  bool request_messages_on_start = false;
+
+  caf::error abort_reason;
 };
 
 // Drop-in replacement for std::barrier (based on the TS API as of 2020).
