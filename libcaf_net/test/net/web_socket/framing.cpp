@@ -144,7 +144,7 @@ SCENARIO("the client closes the connection with a closing handshake") {
                                       make_test_data(0), handshake);
       transport->push(handshake);
     }
-    THEN("the server closes the connection with a closing handshake") {
+    THEN("the server closes the connection after sending a close frame") {
       transport->handle_input();
       detail::rfc6455::header hdr;
       auto hdr_length

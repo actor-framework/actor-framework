@@ -144,7 +144,12 @@ private:
 
   // Signal abort to the upper layer and shutdown to the lower layer,
   // with closing message
-  void abort_and_close_connection(sec reason, std::string_view msg);
+  template <class... Ts>
+  void abort_and_shutdown(sec reason, Ts&&... xs) {
+    auto err = make_error(reason, std::forward<Ts>(xs)...);
+    up_->abort(err);
+    shutdown(err);
+  }
 
   // -- member variables -------------------------------------------------------
 
