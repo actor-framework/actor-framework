@@ -1,0 +1,11 @@
+ignore:
+  - build
+  - examples
+  - libcaf_core/caf/decorator
+  - libcaf_core/src/decorator
+  - libcaf_core/test
+  - libcaf_io/test
+  - libcaf_net/test
+  - libcaf_openssl
+  - libcaf_test
+  - tools

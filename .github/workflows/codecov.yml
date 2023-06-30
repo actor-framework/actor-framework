@@ -1,0 +1,39 @@
+# Note: we use a build with exceptions disabled for gcov, because it generates
+#       more accurate stats on branches.
+name: codecov
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+env:
+  CTEST_NO_TESTS_ACTION: error
+jobs:
+  codecov:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: install-robot
+      run:  |
+        pip install \
+          robotframework \
+          robotframework-requests \
+          robotframework-websocketclient
+    - name: configure
+      run: |
+        cmake \
+          -S . \
+          -B build \
+          -DCAF_ENABLE_ROBOT_TESTS:BOOL=ON \
+          -DCAF_ENABLE_EXCEPTIONS:BOOL=OFF \
+          -DCMAKE_CXX_FLAGS:STRING="-fno-exceptions -fprofile-arcs -ftest-coverage" \
+          -DCMAKE_BUILD_TYPE:STRING=Debug \
+          -DBUILD_SHARED_LIBS:BOOL=OFF
+    - name: build
+      run: make -C build -j 4
+    - name: test
+      run: ctest --test-dir build
+    - name: upload-coverage
+      uses: codecov/codecov-action@v3
+      with:
+        gcov: true
