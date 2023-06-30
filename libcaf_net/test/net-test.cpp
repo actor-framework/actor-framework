@@ -120,16 +120,24 @@ ptrdiff_t mock_stream_transport::handle_input() {
 
 // -- mock_web_socket_app ------------------------------------------------------
 
-mock_web_socket_app::mock_web_socket_app(bool behave_as_server)
-  : behave_as_server(behave_as_server) {
+mock_web_socket_app::mock_web_socket_app(bool request_messages_on_start)
+  : request_messages_on_start(request_messages_on_start) {
   // nop
 }
 
 caf::error mock_web_socket_app::start(caf::net::web_socket::lower_layer* ll) {
   down = ll;
-  if (behave_as_server)
+  if (request_messages_on_start)
     down->request_messages();
   return caf::none;
+}
+
+void mock_web_socket_app::prepare_send() {
+  // nop
+}
+
+bool mock_web_socket_app::done_sending() {
+  return true;
 }
 
 caf::error
@@ -151,14 +159,8 @@ mock_web_socket_app::accept(const caf::net::http::request_header& hdr) {
 }
 
 void mock_web_socket_app::abort(const caf::error& reason) {
-  if (expect_abort_) {
-    has_aborted = true;
-    err = reason;
-    expect_abort_ = false;
-    down->shutdown(reason);
-  } else {
-    CAF_FAIL("app::abort called: " << reason);
-  }
+  abort_reason = reason;
+  down->shutdown(reason);
 }
 
 ptrdiff_t mock_web_socket_app::consume_text(std::string_view text) {

@@ -23,7 +23,7 @@ using svec = std::vector<std::string>;
 struct fixture {
   fixture() {
     using namespace caf::net;
-    auto app_ptr = mock_web_socket_app::make(/*behave_as_server=*/true);
+    auto app_ptr = mock_web_socket_app::make(request_messages_on_start);
     app = app_ptr.get();
     auto ws_ptr = net::web_socket::server::make(std::move(app_ptr));
     transport = mock_stream_transport::make(std::move(ws_ptr));
@@ -91,9 +91,9 @@ constexpr std::string_view opening_handshake
   if (CHECK(holds_alternative<std::string>(app->cfg, key)))                    \
     CHECK_EQ(get<std::string>(app->cfg, key), expected_value);
 
-CAF_TEST_FIXTURE_SCOPE(web_socket_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
-CAF_TEST(applications receive handshake data via config) {
+TEST_CASE("applications receive handshake data via config") {
   transport->push(opening_handshake);
   {
     auto consumed = transport->handle_input();
@@ -117,9 +117,10 @@ CAF_TEST(applications receive handshake data via config) {
   using str_map = std::map<std::string, std::string>;
   if (auto query = get_as<str_map>(app->cfg, "web-socket.query"); CHECK(query))
     CHECK_EQ(*query, str_map({{"room"s, "lounge"s}}));
+  CHECK(!app->has_aborted());
 }
 
-CAF_TEST(the server responds with an HTTP response on success) {
+TEST_CASE("the server responds with an HTTP response on success") {
   transport->push(opening_handshake);
   CHECK_EQ(transport->handle_input(),
            static_cast<ptrdiff_t>(opening_handshake.size()));
@@ -128,9 +129,10 @@ CAF_TEST(the server responds with an HTTP response on success) {
            "Upgrade: websocket\r\n"
            "Connection: Upgrade\r\n"
            "Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=\r\n\r\n");
+  CHECK(!app->has_aborted());
 }
 
-CAF_TEST(handshakes may arrive in chunks) {
+TEST_CASE("handshakes may arrive in chunks") {
   svec bufs;
   size_t chunk_size = opening_handshake.size() / 3;
   auto i = opening_handshake.begin();
@@ -146,9 +148,10 @@ CAF_TEST(handshakes may arrive in chunks) {
   transport->push(bufs[2]);
   CHECK_EQ(static_cast<size_t>(transport->handle_input()),
            opening_handshake.size());
+  CHECK(!app->has_aborted());
 }
 
-CAF_TEST(data may follow the handshake immediately) {
+TEST_CASE("data may follow the handshake immediately") {
   auto hs_bytes = as_bytes(make_span(opening_handshake));
   byte_buffer buf{hs_bytes.begin(), hs_bytes.end()};
   rfc6455_append("Hello WebSocket!\n"sv, buf);
@@ -156,18 +159,20 @@ CAF_TEST(data may follow the handshake immediately) {
   transport->push(buf);
   CHECK_EQ(transport->handle_input(), static_cast<ptrdiff_t>(buf.size()));
   CHECK_EQ(app->text_input, "Hello WebSocket!\nBye WebSocket!\n");
+  CHECK(!app->has_aborted());
 }
 
-CAF_TEST(data may arrive later) {
+TEST_CASE("data may arrive later") {
   transport->push(opening_handshake);
   CHECK_EQ(transport->handle_input(),
            static_cast<ptrdiff_t>(opening_handshake.size()));
   push("Hello WebSocket!\nBye WebSocket!\n"sv);
   transport->handle_input();
   CHECK_EQ(app->text_input, "Hello WebSocket!\nBye WebSocket!\n");
+  CHECK(!app->has_aborted());
 }
 
-CAF_TEST(data may arrive fragmented) {
+TEST_CASE("data may arrive fragmented") {
   transport->push(opening_handshake);
   CHECK_EQ(transport->handle_input(),
            static_cast<ptrdiff_t>(opening_handshake.size()));
@@ -180,6 +185,7 @@ CAF_TEST(data may arrive fragmented) {
   transport->push(buf);
   CHECK_EQ(transport->handle_input(), static_cast<ptrdiff_t>(buf.size()));
   CHECK_EQ(app->text_input, "Hello WebSocket!\nBye WebSocket!\n");
+  CHECK(!app->has_aborted());
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

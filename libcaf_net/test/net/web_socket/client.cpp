@@ -57,6 +57,7 @@ SCENARIO("the client performs the WebSocket handshake on startup") {
   GIVEN("valid WebSocket handshake data") {
     WHEN("starting a WebSocket client") {
       auto app = mock_web_socket_app::make();
+      auto app_ptr = app.get();
       auto ws = net::web_socket::client::make(make_handshake(), std::move(app));
       auto uut = mock_stream_transport::make(std::move(ws));
       THEN("the client sends its HTTP request when initializing it") {
@@ -67,6 +68,9 @@ SCENARIO("the client performs the WebSocket handshake on startup") {
         uut->push(http_response);
         CHECK_EQ(uut->handle_input(),
                  static_cast<ptrdiff_t>(http_response.size()));
+      }
+      AND("the client did not abort") {
+        CHECK(!app_ptr->has_aborted());
       }
     }
   }

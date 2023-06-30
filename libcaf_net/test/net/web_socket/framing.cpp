@@ -54,6 +54,9 @@ SCENARIO("the client sends a ping and receives a pong response") {
                                         pong_frame);
         CHECK_EQ(transport->output_buffer(), pong_frame);
       }
+      AND("the client did not abort") {
+        CHECK(!app->has_aborted());
+      }
     }
     transport->output_buffer().clear();
     WHEN("the client sends a ping with some data") {
@@ -67,6 +70,9 @@ SCENARIO("the client sends a ping and receives a pong response") {
         detail::rfc6455::assemble_frame(detail::rfc6455::pong, 0x0, data,
                                         pong_frame);
         CHECK_EQ(transport->output_buffer(), pong_frame);
+      }
+      AND("the client did not abort") {
+        CHECK(!app->has_aborted());
       }
     }
     transport->output_buffer().clear();
@@ -82,6 +88,9 @@ SCENARIO("the client sends a ping and receives a pong response") {
                                         pong_frame);
         CHECK_EQ(transport->output_buffer(), pong_frame);
       }
+      AND("the client did not abort") {
+        CHECK(!app->has_aborted());
+      }
     }
   }
 }
@@ -95,6 +104,7 @@ TEST_CASE("calling shutdown with protocol_error sets status in close header") {
   auto status = (std::to_integer<int>(transport->output_buffer().at(2)) << 8)
                 + std::to_integer<int>(transport->output_buffer().at(3));
   CHECK_EQ(status, static_cast<int>(net::web_socket::status::protocol_error));
+  CHECK(!app->has_aborted());
 }
 
 SCENARIO("the client sends an invalid ping that closes the connection") {
@@ -106,11 +116,10 @@ SCENARIO("the client sends an invalid ping that closes the connection") {
                                       ping_frame);
       transport->push(ping_frame);
       THEN("the server aborts the application") {
-        app->expect_abort();
         CHECK_EQ(transport->handle_input(), 0);
-        CHECK(app->has_aborted);
-        CHECK_EQ(app->err, sec::protocol_error);
-        MESSAGE("Aborted with: " << app->err);
+        CHECK(app->has_aborted());
+        CHECK_EQ(app->abort_reason, sec::protocol_error);
+        MESSAGE("Aborted with: " << app->abort_reason);
       }
       AND("the server closes the connection with a protocol error") {
         detail::rfc6455::header hdr;
