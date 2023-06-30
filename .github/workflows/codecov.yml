@@ -36,4 +36,6 @@ jobs:
     - name: upload-coverage
       uses: codecov/codecov-action@v3
       with:
+        fail_ci_if_error: true
         gcov: true
+        token: ${{ secrets.CODECOV_TOKEN  }}
