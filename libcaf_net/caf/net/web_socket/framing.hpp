@@ -139,6 +139,18 @@ private:
   template <class T>
   void ship_frame(std::vector<T>& buf);
 
+  // Sends closing message, can be error status, or closing handshake
+  void ship_closing_message(status code, std::string_view desc);
+
+  // Signal abort to the upper layer and shutdown to the lower layer,
+  // with closing message
+  template <class... Ts>
+  void abort_and_shutdown(sec reason, Ts&&... xs) {
+    auto err = make_error(reason, std::forward<Ts>(xs)...);
+    up_->abort(err);
+    shutdown(err);
+  }
+
   // -- member variables -------------------------------------------------------
 
   /// Points to the transport layer below.

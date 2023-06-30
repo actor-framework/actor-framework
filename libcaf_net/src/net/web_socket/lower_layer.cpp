@@ -20,7 +20,9 @@ void lower_layer::shutdown() {
 }
 
 void lower_layer::shutdown(const error& reason) {
-  if (reason.code() == static_cast<uint8_t>(sec::protocol_error)) {
+  if (reason.code() == static_cast<uint8_t>(sec::connection_closed)) {
+    shutdown(status::normal_close, to_string(reason));
+  } else if (reason.code() == static_cast<uint8_t>(sec::protocol_error)) {
     shutdown(status::protocol_error, to_string(reason));
   } else {
     shutdown(status::unexpected_condition, to_string(reason));
