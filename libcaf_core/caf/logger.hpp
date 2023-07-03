@@ -273,6 +273,12 @@ private:
 
   logger(actor_system& sys);
 
+  // -- called by the actor_system when running with a test coordinator --------
+
+  void inline_output(bool value) noexcept {
+    cfg_.inline_output = value;
+  }
+
   // -- initialization ---------------------------------------------------------
 
   void init(actor_system_config& cfg);

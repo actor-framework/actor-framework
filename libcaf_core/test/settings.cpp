@@ -32,7 +32,6 @@ struct fixture {
     logger["console-format"] = "%m";
     logger["console-verbosity"] = "trace";
     logger["file-format"] = "%r %c %p %a %t %C %M %F:%L %m%n";
-    logger["inline-output"] = false;
     auto& middleman = x["middleman"].as_dictionary();
     middleman["app-identifiers"] = make_config_value_list("generic-caf-app");
     middleman["enable-automatic-connections"] = false;

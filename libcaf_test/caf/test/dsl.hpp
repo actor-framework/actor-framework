@@ -700,7 +700,6 @@ public:
                              caf::test::engine::argv()))
       CAF_FAIL("failed to parse config: " << to_string(err));
     cfg.set("caf.scheduler.policy", "testing");
-    cfg.set("caf.logger.inline-output", true);
     if (cfg.custom_options().has_category("caf.middleman")) {
       cfg.set("caf.middleman.network-backend", "testing");
       cfg.set("caf.middleman.manual-multiplexing", true);
