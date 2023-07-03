@@ -23,6 +23,7 @@ transparent messaging, and more.
 ## Community
 
 * __Chat__: https://gitter.im/actor-framework/chat
+* __Mastodon__: https://fosstodon.org/@caf
 * __Twitter__: https://twitter.com/actor_framework
 * __User Mailing List__: https://groups.google.com/d/forum/actor-framework
 
