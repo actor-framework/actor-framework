@@ -18,10 +18,10 @@ class producer;
 // -- template classes ---------------------------------------------------------
 
 template <class T>
-class spsc_buffer;
+class consumer_resource;
 
 template <class T>
-class consumer_resource;
+class future;
 
 template <class T>
 class producer_resource;
@@ -30,7 +30,10 @@ template <class T>
 class promise;
 
 template <class T>
-class future;
+class publisher;
+
+template <class T>
+class spsc_buffer;
 
 // -- smart pointer aliases ----------------------------------------------------
 

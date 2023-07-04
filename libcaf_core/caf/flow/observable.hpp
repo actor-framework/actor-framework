@@ -6,6 +6,7 @@
 
 #include "caf/async/consumer.hpp"
 #include "caf/async/producer.hpp"
+#include "caf/async/publisher.hpp"
 #include "caf/async/spsc_buffer.hpp"
 #include "caf/cow_tuple.hpp"
 #include "caf/cow_vector.hpp"
@@ -375,6 +376,11 @@ public:
   async::consumer_resource<output_type>
   to_resource(size_t buffer_size, size_t min_request_size) && {
     return materialize().to_resource(buffer_size, min_request_size);
+  }
+
+  /// @copydoc observable::to_resource
+  async::publisher<output_type> to_publisher() && {
+    return materialize().to_publisher();
   }
 
   /// @copydoc observable::observe_on
@@ -760,6 +766,11 @@ observable<T>::to_resource(size_t buffer_size, size_t min_request_size) {
   up->init(buf);
   subscribe(up->as_observer());
   return async::consumer_resource<T>{std::move(buf)};
+}
+
+template <class T>
+async::publisher<T> observable<T>::to_publisher() {
+  return async::publisher<T>::from(*this);
 }
 
 } // namespace caf::flow

@@ -69,6 +69,9 @@ public:
   /// disposes all elements individually.
   static disposable make_composite(std::vector<disposable> entries);
 
+  /// Creates a disposable that simply represents a flag.
+  static disposable make_flag();
+
   // -- mutators ---------------------------------------------------------------
 
   /// Disposes the resource. Calling `dispose()` on a disposed resource is a
