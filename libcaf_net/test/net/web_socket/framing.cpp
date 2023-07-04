@@ -6,6 +6,7 @@
 
 #include "caf/net/web_socket/framing.hpp"
 
+#include "caf/detail/rfc3629.hpp"
 #include "net-test.hpp"
 
 using namespace caf;
@@ -31,6 +32,13 @@ struct fixture {
 
   byte_buffer make_test_data(size_t requested_size) {
     return byte_buffer{requested_size, std::byte{0xFF}};
+  }
+
+  auto bytes(std::initializer_list<uint8_t> xs) {
+    byte_buffer result;
+    for (auto x : xs)
+      result.emplace_back(static_cast<std::byte>(x));
+    return result;
   }
 };
 
@@ -158,6 +166,124 @@ SCENARIO("the client closes the connection with a closing handshake") {
       auto status = (std::to_integer<int>(transport->output_buffer()[2]) << 8)
                     + std::to_integer<int>(transport->output_buffer()[3]);
       CHECK_EQ(status, static_cast<int>(net::web_socket::status::normal_close));
+    }
+  }
+}
+
+SCENARIO("the client sends a fragmented ping that fails the connection") {
+  GIVEN("a valid WebSocket connection") {
+    std::vector<std::byte> ping_frame;
+    WHEN("the client sends the first frame of a fragmented ping message") {
+      auto data = make_test_data(10);
+      detail::rfc6455::assemble_frame(detail::rfc6455::ping, 0x0, data,
+                                      ping_frame, 0);
+      transport->push(ping_frame);
+      THEN("the server aborts the application") {
+        CHECK_EQ(transport->handle_input(), 0);
+        CHECK(app->has_aborted());
+        CHECK_EQ(app->abort_reason, sec::protocol_error);
+        MESSAGE("Aborted with: " << app->abort_reason);
+      }
+      AND("the server closes the connection with a protocol error") {
+        detail::rfc6455::header hdr;
+        detail::rfc6455::decode_header(transport->output_buffer(), hdr);
+        MESSAGE("Buffer: " << transport->output_buffer());
+        CHECK_EQ(hdr.opcode, detail::rfc6455::connection_close);
+        CHECK(hdr.payload_len >= 2);
+        auto status = (std::to_integer<int>(transport->output_buffer()[2]) << 8)
+                      + std::to_integer<int>(transport->output_buffer()[3]);
+        CHECK_EQ(status,
+                 static_cast<int>(net::web_socket::status::protocol_error));
+      }
+    }
+  }
+}
+
+SCENARIO("the client sends a fragmented text message with a ping in-between") {
+  GIVEN("a valid WebSocket connection") {
+    WHEN("the client sends the first text frame, a ping, and the final text "
+         "frame at once") {
+      std::vector<std::byte> input;
+
+      auto fragment1 = "Hello"sv;
+      auto fragment2 = ", world!"sv;
+      auto data = as_bytes(make_span(fragment1));
+      detail::rfc6455::assemble_frame(detail::rfc6455::text_frame, 0x0, data,
+                                      input, 0);
+      transport->push(input);
+      input.clear();
+      detail::rfc6455::assemble_frame(detail::rfc6455::ping, 0x0, data, input);
+      transport->push(input);
+      input.clear();
+      data = as_bytes(make_span(fragment2));
+      detail::rfc6455::assemble_frame(detail::rfc6455::continuation_frame, 0x0,
+                                      data, input);
+      transport->push(input);
+      transport->handle_input();
+      THEN("the server responds with a pong") {
+        detail::rfc6455::header hdr;
+        auto hdr_len
+          = detail::rfc6455::decode_header(transport->output_buffer(), hdr);
+        MESSAGE("Payload: " << transport->output_buffer());
+        CHECK_EQ(hdr_len, 2u);
+        CHECK(hdr.fin);
+        CHECK_EQ(hdr.opcode, detail::rfc6455::pong);
+        CHECK_EQ(hdr.payload_len, 5u);
+        CHECK_EQ(hdr.mask_key, 0u);
+      }
+      THEN("the server receives the full text message") {
+        CHECK_EQ(app->text_input, "Hello, world!"sv);
+      }
+      AND("the client did not abort") {
+        CHECK(!app->has_aborted());
+      }
+    }
+  }
+}
+
+SCENARIO("the client sends an fragmented text message with a ping in-between "
+         "separated by octets") {
+  GIVEN("a valid WebSocket connection") {
+    WHEN("the client sends the first text frame, a ping, and then the final "
+         "text frame separately") {
+      auto fragment1 = "Hello"sv;
+      auto fragment2 = ", world!"sv;
+      std::vector<std::byte> input;
+      auto data = as_bytes(make_span(fragment1));
+      detail::rfc6455::assemble_frame(detail::rfc6455::text_frame, 0x0, data,
+                                      input, 0);
+      transport->push(input);
+      transport->handle_input();
+      THEN("the server receives nothing") {
+        CHECK(app->text_input.empty());
+        CHECK(app->binary_input.empty());
+      }
+      input.clear();
+      detail::rfc6455::assemble_frame(detail::rfc6455::ping, 0x0, data, input);
+      transport->push(input);
+      transport->handle_input();
+      THEN("the server responds with a pong") {
+        detail::rfc6455::header hdr;
+        auto hdr_len
+          = detail::rfc6455::decode_header(transport->output_buffer(), hdr);
+        CHECK_EQ(hdr_len, 2u);
+        CHECK(hdr.fin);
+        CHECK_EQ(hdr.opcode, detail::rfc6455::pong);
+        CHECK_EQ(hdr.payload_len, 5u);
+        CHECK_EQ(hdr.mask_key, 0u);
+      }
+      input.clear();
+      data = as_bytes(make_span(fragment2));
+      detail::rfc6455::assemble_frame(detail::rfc6455::continuation_frame, 0x0,
+                                      data, input);
+      transport->push(input);
+      transport->handle_input();
+      THEN("the server receives the full text message") {
+        CHECK_EQ(app->text_input, "Hello, world!"sv);
+      }
+      AND("the client did not abort") {
+        CHECK(!app->has_aborted());
+      }
     }
   }
 }

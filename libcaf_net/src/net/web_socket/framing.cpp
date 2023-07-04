@@ -56,13 +56,25 @@ ptrdiff_t framing::consume(byte_span buffer, byte_span) {
   if (hdr.mask_key != 0) {
     detail::rfc6455::mask_data(hdr.mask_key, payload);
   }
-  if (hdr.fin) {
+  // Handle control frames first, since these may not me fragmented,
+  // and can come up in between regular message fragments
+  if (detail::rfc6455::is_control_frame(hdr.opcode)
+      && hdr.opcode != detail::rfc6455::continuation_frame) {
+    if (!hdr.fin) {
+      abort_and_shutdown(sec::protocol_error,
+                         "received a fragmented WebSocket control message");
+      return -1;
+    }
+    if (hdr.opcode == detail::rfc6455::connection_close) {
+      abort_and_shutdown(sec::connection_closed);
+      return -1;
+    } else if (!handle(hdr.opcode, payload)) {
+      return -1;
+    }
+  } else if (hdr.fin) {
     if (opcode_ == nil_code) {
       // Call upper layer.
-      if (hdr.opcode == detail::rfc6455::connection_close) {
-        abort_and_shutdown(sec::connection_closed);
-        return -1;
-      } else if (!handle(hdr.opcode, payload)) {
+      if (!handle(hdr.opcode, payload)) {
         return -1;
       }
     } else if (hdr.opcode != detail::rfc6455::continuation_frame) {
@@ -76,18 +88,13 @@ ptrdiff_t framing::consume(byte_span buffer, byte_span) {
                                               "exceeds maximum size");
       return -1;
     } else {
-      if (hdr.opcode == detail::rfc6455::connection_close) {
-        abort_and_shutdown(sec::connection_closed);
+      // End of fragmented input.
+      payload_buf_.insert(payload_buf_.end(), payload.begin(), payload.end());
+      if (!handle(opcode_, payload_buf_)) {
         return -1;
-      } else {
-        // End of fragmented input.
-        payload_buf_.insert(payload_buf_.end(), payload.begin(), payload.end());
-        if (!handle(opcode_, payload_buf_)) {
-          return -1;
-        }
-        opcode_ = nil_code;
-        payload_buf_.clear();
       }
+      opcode_ = nil_code;
+      payload_buf_.clear();
     }
   } else {
     // The first frame must not be a continuation frame. Any frame that is not
