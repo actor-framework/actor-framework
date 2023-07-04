@@ -35,6 +35,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The output of `--dump-config` now only contains CAF options from loaded
   modules. Previously, it also included options from modules that were not
   loaded.
+- We renamed `caf::flow::item_publisher` to `caf::flow::multicaster` to better
+  reflect its purpose and to avoid confusion with the new
+  `caf::async::publisher`.
 
 ### Fixed
 

@@ -27,7 +27,8 @@
 #include "caf/extend.hpp"
 #include "caf/flow/coordinator.hpp"
 #include "caf/flow/fwd.hpp"
-#include "caf/flow/item_publisher.hpp"
+#include "caf/flow/item_publisher.hpp" // deprecated
+#include "caf/flow/multicaster.hpp"
 #include "caf/flow/observer.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive/drr_cached_queue.hpp"
@@ -177,7 +178,7 @@ public:
   using exception_handler = std::function<error(pointer, std::exception_ptr&)>;
 #endif // CAF_ENABLE_EXCEPTIONS
 
-  using batch_publisher = flow::item_publisher<async::batch>;
+  using batch_publisher = flow::multicaster<async::batch>;
 
   class batch_forwarder : public ref_counted {
   public:

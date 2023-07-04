@@ -41,7 +41,7 @@ void worker_impl(caf::event_based_actor* self,
   // add this ID to the input to tag it.
   using message_t = std::pair<caf::uuid, lp::frame>;
   // Allows us to push new flows into the central merge point.
-  caf::flow::item_publisher<caf::flow::observable<message_t>> pub{self};
+  caf::flow::multicaster<caf::flow::observable<message_t>> pub{self};
   // Our central merge point combines all inputs into a single, shared flow.
   auto messages = pub.as_observable().merge().share();
   // Have one subscription for debug output. This also makes sure that the

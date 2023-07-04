@@ -2,9 +2,9 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE flow.item_publisher
+#define CAF_SUITE flow.multicaster
 
-#include "caf/flow/item_publisher.hpp"
+#include "caf/flow/multicaster.hpp"
 
 #include "core-test.hpp"
 
@@ -29,11 +29,11 @@ struct fixture : test_coordinator_fixture<> {
 
 BEGIN_FIXTURE_SCOPE(fixture)
 
-SCENARIO("item publishers discard items that arrive before a subscriber") {
-  GIVEN("an item publisher") {
-    WHEN("publishing items") {
-      THEN("observers see only items that were published after subscribing") {
-        auto uut = flow::item_publisher<int>{ctx.get()};
+SCENARIO("a multicaster discards items that arrive before a subscriber") {
+  GIVEN("an multicaster") {
+    WHEN("pushing items") {
+      THEN("observers see only items that were pushed after subscribing") {
+        auto uut = flow::multicaster<int>{ctx.get()};
         uut.push({1, 2, 3});
         auto snk = flow::make_auto_observer<int>();
         uut.subscribe(snk->as_observer());
