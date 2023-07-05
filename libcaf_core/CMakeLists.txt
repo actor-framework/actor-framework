@@ -234,6 +234,7 @@ caf_add_component(
     async.consumer_adapter
     async.producer_adapter
     async.promise
+    async.publisher
     async.spsc_buffer
     behavior
     binary_deserializer
@@ -286,8 +287,8 @@ caf_add_component(
     flow.flat_map
     flow.for_each
     flow.generation
-    flow.item_publisher
     flow.mixed
+    flow.multicaster
     flow.observe_on
     flow.op.buffer
     flow.op.cell

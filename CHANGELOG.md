@@ -18,6 +18,13 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   `--foo=bar` syntax.
 - The functions `make_message` and `make_error` now support `std::string_view`
   as input and automatically convert it to `std::string`.
+- To make it easier to set up asynchronous flows, CAF now provides a new class:
+  `caf::async::publisher`. Any observable can be transformed into a publisher by
+  calling `to_publisher`. The publisher can then be used to subscribe to the
+  observable from other actors or threads. The publisher has only a single
+  member function: `observe_on`. It converts the publisher back into an
+  observable. This new abstraction allows users to set up asynchronous flows
+  without having to manually deal with SPSC buffers.
 
 ### Changed
 
@@ -28,6 +35,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The output of `--dump-config` now only contains CAF options from loaded
   modules. Previously, it also included options from modules that were not
   loaded.
+- We renamed `caf::flow::item_publisher` to `caf::flow::multicaster` to better
+  reflect its purpose and to avoid confusion with the new
+  `caf::async::publisher`.
 
 ### Fixed
 

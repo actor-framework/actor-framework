@@ -8,7 +8,7 @@
 
 #include "core-test.hpp"
 
-#include "caf/flow/item_publisher.hpp"
+#include "caf/flow/multicaster.hpp"
 #include "caf/flow/observable_builder.hpp"
 #include "caf/flow/scoped_coordinator.hpp"
 
@@ -89,7 +89,7 @@ SCENARIO("mergers round-robin over their inputs") {
   }
   GIVEN("a merger with one input that completes") {
     WHEN("subscribing to the merger and requesting before the first push") {
-      auto src = flow::item_publisher<int>{ctx.get()};
+      auto src = flow::multicaster<int>{ctx.get()};
       auto uut = make_counted<flow::op::merge<int>>(ctx.get(),
                                                     src.as_observable());
       auto snk = flow::make_passive_observer<int>();
@@ -122,7 +122,7 @@ SCENARIO("mergers round-robin over their inputs") {
       }
     }
     WHEN("subscribing to the merger pushing before the first request") {
-      auto src = flow::item_publisher<int>{ctx.get()};
+      auto src = flow::multicaster<int>{ctx.get()};
       auto uut = make_counted<flow::op::merge<int>>(ctx.get(),
                                                     src.as_observable());
       ctx->run();
@@ -158,7 +158,7 @@ SCENARIO("mergers round-robin over their inputs") {
   }
   GIVEN("a merger with one input that aborts after some items") {
     WHEN("subscribing to the merger") {
-      auto src = flow::item_publisher<int>{ctx.get()};
+      auto src = flow::multicaster<int>{ctx.get()};
       auto uut = make_counted<flow::op::merge<int>>(ctx.get(),
                                                     src.as_observable());
       auto snk = flow::make_passive_observer<int>();

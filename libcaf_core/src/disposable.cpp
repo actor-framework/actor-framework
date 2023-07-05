@@ -71,6 +71,48 @@ disposable disposable::make_composite(std::vector<disposable> entries) {
     return disposable{make_counted<composite_impl>(std::move(entries))};
 }
 
+namespace {
+
+class flag_impl : public ref_counted, public disposable::impl {
+public:
+  flag_impl() : flag_(false) {
+    // nop
+  }
+
+  void dispose() {
+    flag_ = true;
+  }
+
+  bool disposed() const noexcept {
+    return flag_.load();
+  }
+
+  void ref_disposable() const noexcept {
+    ref();
+  }
+
+  void deref_disposable() const noexcept {
+    deref();
+  }
+
+  friend void intrusive_ptr_add_ref(const flag_impl* ptr) noexcept {
+    ptr->ref();
+  }
+
+  friend void intrusive_ptr_release(const flag_impl* ptr) noexcept {
+    ptr->deref();
+  }
+
+private:
+  std::atomic<bool> flag_;
+};
+
+} // namespace
+
+disposable disposable::make_flag() {
+  return disposable{make_counted<flag_impl>()};
+}
+
 // -- utility ------------------------------------------------------------------
 
 size_t disposable::erase_disposed(std::vector<disposable>& xs) {

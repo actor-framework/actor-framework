@@ -44,6 +44,9 @@ class observable_def;
 template <class Generator>
 class generation_materializer;
 
+template <class T>
+class multicaster;
+
 /// A blueprint for an @ref observer that generates items and applies any number
 /// of processing steps immediately before emitting them.
 template <class Generator, class... Steps>

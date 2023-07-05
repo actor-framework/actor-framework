@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/async/fwd.hpp"
 #include "caf/cow_vector.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/is_complete.hpp"
@@ -249,6 +250,9 @@ public:
   async::consumer_resource<T> to_resource() {
     return to_resource(defaults::flow::buffer_size, defaults::flow::min_demand);
   }
+
+  /// Creates a publisher that makes emitted items available asynchronously.
+  async::publisher<T> to_publisher();
 
   const observable& as_observable() const& noexcept {
     return *this;

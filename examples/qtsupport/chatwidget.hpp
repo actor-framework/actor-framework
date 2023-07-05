@@ -32,7 +32,7 @@ public:
 
   using frame = caf::net::lp::frame;
 
-  using publisher_type = caf::flow::item_publisher<QString>;
+  using publisher_type = caf::flow::multicaster<QString>;
 
   ChatWidget(QWidget* parent = nullptr);
 
