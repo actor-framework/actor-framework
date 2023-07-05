@@ -29,18 +29,11 @@ struct fixture {
     CHECK_EQ(transport->start(nullptr), error{});
     transport->configure_read(caf::net::receive_policy::up_to(2048u));
   }
-
-  byte_buffer make_test_data(size_t requested_size) {
-    return byte_buffer{requested_size, std::byte{0xFF}};
-  }
-
-  auto bytes(std::initializer_list<uint8_t> xs) {
-    byte_buffer result;
-    for (auto x : xs)
-      result.emplace_back(static_cast<std::byte>(x));
-    return result;
-  }
 };
+
+byte_buffer make_test_data(size_t requested_size) {
+  return byte_buffer{requested_size, std::byte{0xFF}};
+}
 
 } // namespace
 
@@ -289,3 +282,86 @@ SCENARIO("the client sends an fragmented text message with a ping in-between "
 }
 
 END_FIXTURE_SCOPE()
+
+// The following setup is a mock websocket application that rejects everything
+
+struct rejecting_mock_web_socket_app : public mock_web_socket_app {
+  rejecting_mock_web_socket_app() : mock_web_socket_app(false) {
+  }
+  ptrdiff_t consume_text(std::string_view) override {
+    abort(make_error(sec::logic_error));
+    return -1;
+  }
+  ptrdiff_t consume_binary(caf::byte_span) override {
+    abort(make_error(sec::logic_error));
+    return -1;
+  }
+};
+
+struct rejecting_fixture {
+  rejecting_mock_web_socket_app* app;
+  net::web_socket::framing* uut;
+  std::unique_ptr<mock_stream_transport> transport;
+
+  rejecting_fixture() {
+    auto app_layer = std::make_unique<rejecting_mock_web_socket_app>();
+    app = app_layer.get();
+    auto uut_layer
+      = net::web_socket::framing::make_server(std::move(app_layer));
+    uut = uut_layer.get();
+    transport = mock_stream_transport::make(std::move(uut_layer));
+    CHECK_EQ(transport->start(nullptr), error{});
+    transport->configure_read(caf::net::receive_policy::up_to(2048u));
+  }
+};
+
+BEGIN_FIXTURE_SCOPE(rejecting_fixture);
+
+TEST_CASE("send a binary message that gets rejected") {
+  byte_buffer input;
+  const auto data = make_test_data(4);
+  detail::rfc6455::assemble_frame(0x0, data, input);
+  transport->push(input);
+  CHECK_EQ(transport->handle_input(), 0);
+  CHECK(app->has_aborted());
+}
+
+TEST_CASE("send a framed binary message gets rejected") {
+  byte_buffer frame1;
+  byte_buffer frame2;
+  const auto data = make_test_data(4);
+  detail::rfc6455::assemble_frame(detail::rfc6455::binary_frame, 0x0, data,
+                                  frame1, 0);
+  transport->push(frame1);
+  detail::rfc6455::assemble_frame(detail::rfc6455::continuation_frame, 0x0,
+                                  data, frame2);
+  transport->push(frame2);
+  // We only handle one frame, the second one results in an abort
+  CHECK_EQ(transport->handle_input(), static_cast<ptrdiff_t>(frame1.size()));
+  CHECK(app->has_aborted());
+}
+
+TEST_CASE("send a text message that gets rejected") {
+  byte_buffer input;
+  const auto msg = "Hello, world!"sv;
+  detail::rfc6455::assemble_frame(0x0, make_span(msg), input);
+  transport->push(input);
+  CHECK_EQ(transport->handle_input(), 0);
+  CHECK(app->has_aborted());
+}
+
+TEST_CASE("send a framed text message gets rejected") {
+  byte_buffer frame1;
+  byte_buffer frame2;
+  const auto msg = "Hello, world!"sv;
+  detail::rfc6455::assemble_frame(detail::rfc6455::text_frame, 0x0,
+                                  as_bytes(make_span(msg)), frame1, 0);
+  transport->push(frame1);
+  detail::rfc6455::assemble_frame(detail::rfc6455::continuation_frame, 0x0,
+                                  as_bytes(make_span(msg)), frame2);
+  transport->push(frame2);
+  CHECK_EQ(transport->handle_input(), static_cast<ptrdiff_t>(frame1.size()));
+  CHECK(app->has_aborted());
+}
+
+END_FIXTURE_SCOPE();
