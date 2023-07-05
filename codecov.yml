@@ -9,3 +9,8 @@ ignore:
   - libcaf_openssl
   - libcaf_test
   - tools
+coverage:
+  status:
+    project:
+      default:
+        threshold: 1% # we have some fluctuation from nondeterminism alone
