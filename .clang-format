@@ -30,12 +30,13 @@ IndentCaseLabels: true
 IndentPPDirectives: AfterHash
 IndentWidth: 2
 IndentWrappedFunctionNames: false
-KeepEmptyLinesAtTheStartOfBlocks: false
+KeepEmptyLinesAtTheStartOfBlocks: true
 Language: Cpp
 MacroBlockBegin: "^BEGIN_STATE$|CAF_BEGIN_TYPE_ID_BLOCK"
 MacroBlockEnd: "^END_STATE$|CAF_END_TYPE_ID_BLOCK"
 MaxEmptyLinesToKeep: 1
 NamespaceIndentation: None
+NamespaceMacros: ["SUITE", "WITH_FIXTURE"]
 PenaltyBreakAssignment: 25
 PenaltyBreakBeforeFirstCallParameter: 50
 PenaltyReturnTypeOnItsOwnLine: 25

@@ -207,25 +207,9 @@ else()
       CACHE INTERNAL "The version string used for shared library objects")
 endif()
 
-# -- install testing DSL headers -----------------------------------------------
+# -- create the libcaf_test target ahead of time for caf_core ------------------
 
-add_library(libcaf_test INTERFACE)
-
-set_target_properties(libcaf_test PROPERTIES EXPORT_NAME test)
-
-target_include_directories(libcaf_test INTERFACE
-  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/libcaf_test>)
-
-add_library(CAF::test ALIAS libcaf_test)
-
-install(DIRECTORY libcaf_test/caf/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/caf
-        FILES_MATCHING PATTERN "*.hpp")
-
-install(TARGETS libcaf_test
-        EXPORT CAFTargets
-        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT test
-        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT test
-        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT test)
+add_library(libcaf_test)
 
 # -- add uninstall target if it does not exist yet -----------------------------
 
@@ -356,16 +340,24 @@ function(caf_add_component name)
   set_property(TARGET ${obj_lib_target} PROPERTY POSITION_INDEPENDENT_CODE ON)
   caf_target_link_libraries(${obj_lib_target}
                             ${CAF_ADD_COMPONENT_DEPENDENCIES})
-  add_library(${pub_lib_target}
-              "${PROJECT_SOURCE_DIR}/cmake/dummy.cpp"
-              $<TARGET_OBJECTS:${obj_lib_target}>)
+  if(NOT TARGET ${pub_lib_target})
+    add_library(${pub_lib_target}
+                "${PROJECT_SOURCE_DIR}/cmake/dummy.cpp"
+                $<TARGET_OBJECTS:${obj_lib_target}>)
+  else()
+    target_sources(
+      ${pub_lib_target}
+      PRIVATE
+        "${PROJECT_SOURCE_DIR}/cmake/dummy.cpp"
+        $<TARGET_OBJECTS:${obj_lib_target}>)
+  endif()
   if(CAF_ENABLE_TESTING AND CAF_ADD_COMPONENT_TEST_SOURCES)
     set(tst_bin_target "caf-${name}-test")
     list(APPEND targets ${tst_bin_target})
     add_executable(${tst_bin_target}
                    ${CAF_ADD_COMPONENT_TEST_SOURCES}
                    $<TARGET_OBJECTS:${obj_lib_target}>)
-    target_link_libraries(${tst_bin_target} PRIVATE CAF::test
+    target_link_libraries(${tst_bin_target} PRIVATE libcaf_test
                           ${CAF_ADD_COMPONENT_DEPENDENCIES})
     target_include_directories(${tst_bin_target} PRIVATE
                                "${CMAKE_CURRENT_SOURCE_DIR}/test")
@@ -400,6 +392,8 @@ endfunction()
 # -- build all components the user asked for -----------------------------------
 
 add_subdirectory(libcaf_core)
+
+add_subdirectory(libcaf_test)
 
 if(CAF_ENABLE_NET_MODULE)
   add_subdirectory(libcaf_net)
