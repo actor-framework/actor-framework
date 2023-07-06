@@ -38,11 +38,29 @@ ptrdiff_t framing::consume(byte_span buffer, byte_span) {
     // Wait for more input.
     return 0;
   }
-  // Make sure the entire frame (including header) fits into max_frame_size.
-  if (hdr.payload_len >= (max_frame_size - static_cast<size_t>(hdr_bytes))) {
-    CAF_LOG_DEBUG("WebSocket frame too large");
-    abort_and_shutdown(sec::protocol_error, "WebSocket frame too large");
-    return -1;
+  if (detail::rfc6455::is_control_frame(hdr.opcode)) {
+    // control frames can only have payload up to 125 bytes
+    if (hdr.payload_len > 125) {
+      CAF_LOG_DEBUG("WebSocket control frame payload exceeds allowed size");
+      abort_and_shutdown(sec::protocol_error, "WebSocket control frame payload "
+                                              "exceeds allowed size");
+      return -1;
+    }
+  } else {
+    // Make sure the entire frame (including header) fits into max_frame_size.
+    if (hdr.payload_len >= max_frame_size - static_cast<size_t>(hdr_bytes)) {
+      CAF_LOG_DEBUG("WebSocket frame too large");
+      abort_and_shutdown(sec::protocol_error, "WebSocket frame too large");
+      return -1;
+    }
+    // Reject any payload that exceeds max_frame_size. This covers assembled
+    //  payloads as well by including payload_buf_.
+    if (payload_buf_.size() + hdr.payload_len > max_frame_size) {
+      CAF_LOG_DEBUG("fragmented WebSocket payload exceeds maximum size");
+      abort_and_shutdown(sec::protocol_error, "fragmented WebSocket payload "
+                                              "exceeds maximum size");
+      return -1;
+    }
   }
   // Wait for more data if necessary.
   size_t frame_size = hdr_bytes + hdr.payload_len;
@@ -66,14 +84,6 @@ ptrdiff_t framing::consume(byte_span buffer, byte_span) {
       return -1;
     }
     return handle(hdr.opcode, payload, frame_size);
-  }
-  // Reject any payload that exceeds max_frame_size. This covers assembled
-  // payloads as well by including payload_buf_.
-  if (payload_buf_.size() + payload_len > max_frame_size) {
-    CAF_LOG_DEBUG("fragmented WebSocket payload exceeds maximum size");
-    abort_and_shutdown(sec::protocol_error, "fragmented WebSocket payload "
-                                            "exceeds maximum size");
-    return -1;
   }
   if (hdr.fin) {
     if (opcode_ == nil_code) {
@@ -183,6 +193,7 @@ bool framing::end_text_message() {
 
 ptrdiff_t framing::handle(uint8_t opcode, byte_span payload,
                           size_t frame_size) {
+  // opcodes are checked for validity when decoding the header
   switch (opcode) {
     case detail::rfc6455::connection_close:
       abort_and_shutdown(sec::connection_closed);
@@ -201,12 +212,9 @@ ptrdiff_t framing::handle(uint8_t opcode, byte_span payload,
     case detail::rfc6455::ping:
       ship_pong(payload);
       break;
-    case detail::rfc6455::pong:
+    default: //  detail::rfc6455::pong
       // nop
       break;
-    default:
-      // error
-      return -1;
   }
   return static_cast<ptrdiff_t>(frame_size);
 }

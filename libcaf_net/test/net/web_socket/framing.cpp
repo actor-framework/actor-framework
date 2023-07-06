@@ -6,7 +6,6 @@
 
 #include "caf/net/web_socket/framing.hpp"
 
-#include "caf/detail/rfc3629.hpp"
 #include "net-test.hpp"
 
 using namespace caf;
@@ -37,6 +36,13 @@ struct fixture {
 
 byte_buffer make_test_data(size_t requested_size) {
   return byte_buffer{requested_size, std::byte{0xFF}};
+}
+
+auto bytes(std::initializer_list<uint8_t> xs) {
+  byte_buffer result;
+  for (auto x : xs)
+    result.emplace_back(static_cast<std::byte>(x));
+  return result;
 }
 
 } // namespace
@@ -374,6 +380,102 @@ SCENARIO("apps can return errors to shut down the framing layer") {
         CHECK_EQ(transport->handle_input(),
                  static_cast<ptrdiff_t>(frame1.size()));
         CHECK(app->has_aborted());
+      }
+    }
+  }
+}
+
+SCENARIO("the application receives a pong") {
+  GIVEN("a valid WebSocket connection") {
+    WHEN("the client sends a pong") {
+      reset();
+      byte_buffer input;
+      const auto data = make_test_data(10);
+      detail::rfc6455::assemble_frame(detail::rfc6455::pong, 0x0, data, input);
+      transport->push(input);
+      THEN("the application handles the frame without actual input") {
+        CHECK_EQ(transport->handle_input(),
+                 static_cast<ptrdiff_t>(input.size()));
+        CHECK(app->text_input.empty());
+        CHECK(app->binary_input.empty());
+      }
+      AND("the application is still working") {
+        CHECK(!app->has_aborted());
+      }
+    }
+  }
+}
+
+SCENARIO("apps reject frames whose payload exceeds maximum allowed size") {
+  GIVEN("a WebSocket app accepting payloads up to INT32_MAX") {
+    WHEN("receiving a single large frame") {
+      reset();
+      // Faking a large frame without the actual payload
+      auto frame
+        = bytes({0x82, // FIN + binary frame opcode
+                 0x7F, // NO MASK + 127 -> uint64 size
+                 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, // 2 ^ 31
+                 0xFF, 0xFF, 0xFF, 0xFF}); // first 4 bytes
+      transport->push(frame);
+      THEN("the app closes the connection with a protocol error") {
+        CHECK_EQ(transport->handle_input(), 0);
+        CHECK_EQ(app->abort_reason, sec::protocol_error);
+        MESSAGE("Aborted with: " << app->abort_reason);
+      }
+    }
+    WHEN("receiving fragmented frames whose combined payload is too large") {
+      reset();
+      byte_buffer frame;
+      auto data = make_test_data(256);
+      detail::rfc6455::assemble_frame(detail::rfc6455::binary_frame, 0x0, data,
+                                      frame, 0);
+      transport->push(frame);
+      CHECK_EQ(transport->handle_input(), static_cast<ptrdiff_t>(frame.size()));
+      frame.clear();
+      frame = bytes({0x82, // FIN + continuation frame opcode
+                     0x7F, // NO MASK + 127 -> uint64 size
+                     0x00, 0x00, 0x00, 0x00, 0x7f, 0xff, 0xff,
+                     0x00,                     // 2 ^ 31 - 256
+                     0xFF, 0xFF, 0xFF, 0xFF}); // first 4 masked bytes
+      transport->push(frame);
+      THEN("the app closes the connection with a protocol error") {
+        CHECK_EQ(transport->handle_input(), 0);
+        CHECK_EQ(app->abort_reason, sec::protocol_error);
+        MESSAGE("Aborted with: " << app->abort_reason);
+      }
+    }
+  }
+}
+
+SCENARIO("the application shuts down on invalid frame fragments") {
+  GIVEN("a client that sends invalid fragmented frames") {
+    WHEN("the first fragment is a continuation frame") {
+      reset();
+      byte_buffer input;
+      const auto data = make_test_data(10);
+      detail::rfc6455::assemble_frame(detail::rfc6455::continuation_frame, 0x0,
+                                      data, input, 0);
+      transport->push(input);
+      THEN("the app closes the connection with a protocol error") {
+        CHECK_EQ(transport->handle_input(), 0);
+        CHECK_EQ(app->abort_reason, sec::protocol_error);
+      }
+    }
+    WHEN("two starting fragments are received") {
+      reset();
+      byte_buffer input;
+      const auto data = make_test_data(10);
+      detail::rfc6455::assemble_frame(detail::rfc6455::binary_frame, 0x0, data,
+                                      input, 0);
+      THEN("the app accepts the first frame") {
+        transport->push(input);
+        CHECK_EQ(transport->handle_input(),
+                 static_cast<ptrdiff_t>(input.size()));
+      }
+      AND("the app closes the connection after the second frame") {
+        transport->push(input);
+        CHECK_EQ(transport->handle_input(), 0);
+        CHECK_EQ(app->abort_reason, sec::protocol_error);
       }
     }
   }
