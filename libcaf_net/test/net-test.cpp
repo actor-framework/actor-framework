@@ -160,7 +160,6 @@ mock_web_socket_app::accept(const caf::net::http::request_header& hdr) {
 
 void mock_web_socket_app::abort(const caf::error& reason) {
   abort_reason = reason;
-  down->shutdown(reason);
 }
 
 ptrdiff_t mock_web_socket_app::consume_text(std::string_view text) {

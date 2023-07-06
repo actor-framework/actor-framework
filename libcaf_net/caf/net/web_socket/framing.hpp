@@ -132,7 +132,8 @@ private:
     // nop
   }
 
-  bool handle(uint8_t opcode, byte_span payload);
+  // Returns `frame_size` on success and -1 on error.
+  ptrdiff_t handle(uint8_t opcode, byte_span payload, size_t frame_size);
 
   void ship_pong(byte_span payload);
 

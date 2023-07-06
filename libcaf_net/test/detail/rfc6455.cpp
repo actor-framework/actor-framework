@@ -60,6 +60,16 @@ TEST_CASE("masking") {
   CHECK_EQ(masked_data, data);
 }
 
+TEST_CASE("decoding a frame with RSV bits fails") {
+  std::vector<uint8_t> data;
+  byte_buffer out = bytes({
+    0xF2, // FIN + RSV + binary frame opcode
+    0x00, // data size = 0
+  });
+  impl::header hdr;
+  CHECK_EQ(impl::decode_header(out, hdr), -1);
+}
+
 TEST_CASE("no mask key and no data") {
   std::vector<uint8_t> data;
   byte_buffer out;
