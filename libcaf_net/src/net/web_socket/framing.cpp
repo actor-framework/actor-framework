@@ -57,7 +57,7 @@ ptrdiff_t framing::consume(byte_span buffer, byte_span) {
     detail::rfc6455::mask_data(hdr.mask_key, payload);
   }
   // Handle control frames first, since these may not me fragmented,
-  // and can come up in between regular message fragments
+  // and can arrive between regular message fragments.
   if (detail::rfc6455::is_control_frame(hdr.opcode)
       && hdr.opcode != detail::rfc6455::continuation_frame) {
     if (!hdr.fin) {
@@ -67,8 +67,8 @@ ptrdiff_t framing::consume(byte_span buffer, byte_span) {
     }
     return handle(hdr.opcode, payload, frame_size);
   }
-  // Reject any payload that exceed max_frame_size. This covers assembled
-  // payloads as well by including payload_buf_
+  // Reject any payload that exceeds max_frame_size. This covers assembled
+  // payloads as well by including payload_buf_.
   if (payload_buf_.size() + payload_len > max_frame_size) {
     CAF_LOG_DEBUG("fragmented WebSocket payload exceeds maximum size");
     abort_and_shutdown(sec::protocol_error, "fragmented WebSocket payload "

@@ -15,11 +15,15 @@ using namespace std::literals;
 namespace {
 
 struct fixture {
-  mock_web_socket_app* app;
-  net::web_socket::framing* uut;
+  mock_web_socket_app* app = nullptr;
+  net::web_socket::framing* uut = nullptr;
   std::unique_ptr<mock_stream_transport> transport;
 
   fixture() {
+    reset();
+  }
+
+  void reset() {
     auto app_layer = mock_web_socket_app::make();
     app = app_layer.get();
     auto uut_layer
@@ -163,7 +167,7 @@ SCENARIO("the client closes the connection with a closing handshake") {
   }
 }
 
-SCENARIO("the client sends a fragmented ping that fails the connection") {
+SCENARIO("ping messages may not be fragmented") {
   GIVEN("a valid WebSocket connection") {
     std::vector<std::byte> ping_frame;
     WHEN("the client sends the first frame of a fragmented ping message") {
@@ -192,12 +196,10 @@ SCENARIO("the client sends a fragmented ping that fails the connection") {
   }
 }
 
-SCENARIO("the client sends a fragmented text message with a ping in-between") {
+SCENARIO("ping messages may arrive between message fragments") {
   GIVEN("a valid WebSocket connection") {
-    WHEN("the client sends the first text frame, a ping, and the final text "
-         "frame at once") {
+    WHEN("the frames arrive all at once") {
       std::vector<std::byte> input;
-
       auto fragment1 = "Hello"sv;
       auto fragment2 = ", world!"sv;
       auto data = as_bytes(make_span(fragment1));
@@ -224,21 +226,15 @@ SCENARIO("the client sends a fragmented text message with a ping in-between") {
         CHECK_EQ(hdr.payload_len, 5u);
         CHECK_EQ(hdr.mask_key, 0u);
       }
-      THEN("the server receives the full text message") {
+      AND("the server receives the full text message") {
         CHECK_EQ(app->text_input, "Hello, world!"sv);
       }
-      AND("the client did not abort") {
+      AND("the app is still running") {
         CHECK(!app->has_aborted());
       }
     }
-  }
-}
-
-SCENARIO("the client sends an fragmented text message with a ping in-between "
-         "separated by octets") {
-  GIVEN("a valid WebSocket connection") {
-    WHEN("the client sends the first text frame, a ping, and then the final "
-         "text frame separately") {
+    WHEN("the frames arrive separately") {
+      reset();
       auto fragment1 = "Hello"sv;
       auto fragment2 = ", world!"sv;
       std::vector<std::byte> input;
@@ -283,6 +279,8 @@ SCENARIO("the client sends an fragmented text message with a ping in-between "
 
 END_FIXTURE_SCOPE()
 
+namespace {
+
 // The following setup is a mock websocket application that rejects everything
 
 struct rejecting_mock_web_socket_app : public mock_web_socket_app {
@@ -299,11 +297,11 @@ struct rejecting_mock_web_socket_app : public mock_web_socket_app {
 };
 
 struct rejecting_fixture {
-  rejecting_mock_web_socket_app* app;
-  net::web_socket::framing* uut;
+  rejecting_mock_web_socket_app* app = nullptr;
+  net::web_socket::framing* uut = nullptr;
   std::unique_ptr<mock_stream_transport> transport;
 
-  rejecting_fixture() {
+  void reset() {
     auto app_layer = std::make_unique<rejecting_mock_web_socket_app>();
     app = app_layer.get();
     auto uut_layer
@@ -315,53 +313,70 @@ struct rejecting_fixture {
   }
 };
 
+} // namespace
+
 BEGIN_FIXTURE_SCOPE(rejecting_fixture);
 
-TEST_CASE("send a binary message that gets rejected") {
-  byte_buffer input;
-  const auto data = make_test_data(4);
-  detail::rfc6455::assemble_frame(0x0, data, input);
-  transport->push(input);
-  CHECK_EQ(transport->handle_input(), 0);
-  CHECK(app->has_aborted());
-}
-
-TEST_CASE("send a framed binary message gets rejected") {
-  byte_buffer frame1;
-  byte_buffer frame2;
-  const auto data = make_test_data(4);
-  detail::rfc6455::assemble_frame(detail::rfc6455::binary_frame, 0x0, data,
-                                  frame1, 0);
-  transport->push(frame1);
-  detail::rfc6455::assemble_frame(detail::rfc6455::continuation_frame, 0x0,
-                                  data, frame2);
-  transport->push(frame2);
-  // We only handle one frame, the second one results in an abort
-  CHECK_EQ(transport->handle_input(), static_cast<ptrdiff_t>(frame1.size()));
-  CHECK(app->has_aborted());
-}
-
-TEST_CASE("send a text message that gets rejected") {
-  byte_buffer input;
-  const auto msg = "Hello, world!"sv;
-  detail::rfc6455::assemble_frame(0x0, make_span(msg), input);
-  transport->push(input);
-  CHECK_EQ(transport->handle_input(), 0);
-  CHECK(app->has_aborted());
-}
-
-TEST_CASE("send a framed text message gets rejected") {
-  byte_buffer frame1;
-  byte_buffer frame2;
-  const auto msg = "Hello, world!"sv;
-  detail::rfc6455::assemble_frame(detail::rfc6455::text_frame, 0x0,
-                                  as_bytes(make_span(msg)), frame1, 0);
-  transport->push(frame1);
-  detail::rfc6455::assemble_frame(detail::rfc6455::continuation_frame, 0x0,
-                                  as_bytes(make_span(msg)), frame2);
-  transport->push(frame2);
-  CHECK_EQ(transport->handle_input(), static_cast<ptrdiff_t>(frame1.size()));
-  CHECK(app->has_aborted());
+SCENARIO("apps can return errors to shut down the framing layer") {
+  GIVEN("an app that returns -1 for any frame it receives") {
+    WHEN("receiving a binary message") {
+      THEN("the framing layer closes the connection") {
+        reset();
+        byte_buffer input;
+        const auto data = make_test_data(4);
+        detail::rfc6455::assemble_frame(0x0, data, input);
+        transport->push(input);
+        CHECK_EQ(transport->handle_input(), 0);
+        CHECK(app->has_aborted());
+      }
+    }
+    WHEN("receiving a fragmented binary message") {
+      THEN("the framing layer closes the connection") {
+        reset();
+        byte_buffer frame1;
+        byte_buffer frame2;
+        const auto data = make_test_data(4);
+        detail::rfc6455::assemble_frame(detail::rfc6455::binary_frame, 0x0,
+                                        data, frame1, 0);
+        transport->push(frame1);
+        detail::rfc6455::assemble_frame(detail::rfc6455::continuation_frame,
+                                        0x0, data, frame2);
+        transport->push(frame2);
+        // We only handle one frame, the second one results in an abort
+        CHECK_EQ(transport->handle_input(),
+                 static_cast<ptrdiff_t>(frame1.size()));
+        CHECK(app->has_aborted());
+      }
+    }
+    WHEN("receiving a text message") {
+      THEN("the framing layer closes the connection") {
+        reset();
+        byte_buffer input;
+        const auto msg = "Hello, world!"sv;
+        detail::rfc6455::assemble_frame(0x0, make_span(msg), input);
+        transport->push(input);
+        CHECK_EQ(transport->handle_input(), 0);
+        CHECK(app->has_aborted());
+      }
+    }
+    WHEN("receiving a fragmented text message") {
+      THEN("the framing layer closes the connection") {
+        reset();
+        byte_buffer frame1;
+        byte_buffer frame2;
+        const auto msg = "Hello, world!"sv;
+        detail::rfc6455::assemble_frame(detail::rfc6455::text_frame, 0x0,
+                                        as_bytes(make_span(msg)), frame1, 0);
+        transport->push(frame1);
+        detail::rfc6455::assemble_frame(detail::rfc6455::continuation_frame,
+                                        0x0, as_bytes(make_span(msg)), frame2);
+        transport->push(frame2);
+        CHECK_EQ(transport->handle_input(),
+                 static_cast<ptrdiff_t>(frame1.size()));
+        CHECK(app->has_aborted());
+      }
+    }
+  }
 }
 
 END_FIXTURE_SCOPE();
