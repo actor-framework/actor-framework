@@ -255,6 +255,7 @@ caf_add_component(
     detail.base64
     detail.bounds_checker
     detail.config_consumer
+    detail.format
     detail.group_tunnel
     detail.ieee_754
     detail.json
@@ -384,6 +385,10 @@ caf_add_component(
     unordered_flat_map
     uri
     uuid)
+
+if(NOT CAF_USE_STD_FORMAT)
+  target_sources(libcaf_core_obj PRIVATE src/detail/format.cpp)
+endif()
 
 if(CAF_ENABLE_TESTING AND CAF_ENABLE_EXCEPTIONS)
   caf_add_test_suites(caf-core-test custom_exception_handler)

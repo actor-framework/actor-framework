@@ -11,3 +11,5 @@
 #cmakedefine CAF_ENABLE_EXCEPTIONS
 
 #cmakedefine CAF_ENABLE_ACTOR_PROFILER
+
+#cmakedefine CAF_USE_STD_FORMAT

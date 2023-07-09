@@ -6,6 +6,7 @@ project(CAF CXX)
 include(CMakeDependentOption)
 include(CMakePackageConfigHelpers)
 include(CheckCXXSourceCompiles)
+include(CheckCXXSourceRuns)
 include(GNUInstallDirs)
 include(GenerateExportHeader)
 
@@ -156,6 +157,26 @@ if(NOT CMAKE_CROSSCOMPILING)
     endif()
     target_compile_options(caf_internal INTERFACE "${cxx_flag}")
   endif()
+endif()
+
+# -- check whether we can use std::format --------------------------------------
+
+if(NOT DEFINED CAF_USE_STD_FORMAT)
+  set(CAF_USE_STD_FORMAT OFF CACHE BOOL "Enable std::format support" FORCE)
+  if(NOT CMAKE_CROSSCOMPILING)
+    set(snippet "#include <format>
+                 #include <iostream>
+                 int main() { std::cout << std::format(\"{}\", \"ok\"); }")
+    check_cxx_source_runs("${snippet}" snippet_output)
+    if("${snippet_output}" STREQUAL "ok")
+      message(STATUS "Enable std::format support")
+      set(CAF_USE_STD_FORMAT ON CACHE BOOL "Enable std::format support" FORCE)
+    else()
+      message(STATUS "Disable std::format support: NOT available")
+    endif()
+  endif()
+else()
+  set(CAF_USE_STD_FORMAT OFF CACHE BOOL "Enable std::format support" FORCE)
 endif()
 
 # -- export internal target (may be useful for re-using compiler flags) --------
