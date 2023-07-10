@@ -15,6 +15,36 @@ namespace caf::detail {
 /// https://datatracker.ietf.org/doc/html/rfc3629 for details.
 class CAF_CORE_EXPORT rfc3629 {
 public:
+  enum class validation_result {
+    valid = 0,
+    incomplete_data,
+    invalid_code_point,
+    malformed_message,
+  };
+
+  // 1. suggestion
+
+  /// Checks whether the begining of `bytes` is a valid UTF-8 string and returns
+  /// the end of the validated segment.
+  /// In case of validation_result::valid, the index is equal to bytes.size()
+  /// Otherwise, index points to the end of the valid utf-8 range between [0,
+  /// size) and the validation_result indicates the reason of failure.
+  static std::pair<const_byte_span::index_type, validation_result>
+  validate_prefix(const_byte_span bytes) noexcept;
+
+  /// Returns -1 on hard failure, index otherwise
+  static const_byte_span::index_type
+  validate_prefix(const_byte_span bytes) noexcept;
+
+  /// Returns validation result and sets begin to end of the valid utf-8 range
+  static validation_result
+  validate_prefix(const_byte_span::iterator& begin,
+                  const_byte_span::iterator end) noexcept;
+
+  /// Checks whether `str` is a valid UTF-8 string.
+  static std::optional<std::string_view::size_type>
+  validate_prefix(std::string_view str) noexcept;
+
   /// Checks whether `bytes` is a valid UTF-8 string.
   static bool valid(const_byte_span bytes) noexcept;
 

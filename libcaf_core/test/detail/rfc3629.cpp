@@ -162,3 +162,66 @@ TEST_CASE("invalid UTF-8 input") {
   CHECK(!valid_utf8(invalid_four_byte_9));
   CHECK(!valid_utf8(invalid_four_byte_10));
 }
+
+namespace {
+
+std::byte hex_to_byte(char c) {
+  if (std::isdigit(c))
+    return static_cast<std::byte>(c - '0');
+  if (c >= 'a' && c <= 'f')
+    return static_cast<std::byte>(c - 'a' + 10);
+  return static_cast<std::byte>(c - 'A' + 10);
+}
+
+byte_buffer hex_to_bytes(std::string_view hex) {
+  byte_buffer result;
+  for (auto it = hex.begin(); it != hex.end(); it += 2)
+    result.push_back(hex_to_byte(*it) << 4 | hex_to_byte(*(it + 1)));
+  return result;
+}
+
+std::string_view to_msg(const byte_buffer& bs) {
+  return {reinterpret_cast<const char*>(bs.data()), bs.size()};
+}
+
+} // namespace
+
+using namespace std::literals;
+
+TEST_CASE("invalid UTF-8 sequence") {
+  {
+    byte_buffer bs{0xce_b, 0xba_b, 0xe1_b, 0xbd_b, 0xb9_b, 0xcf_b, 0x83_b,
+                   0xce_b, 0xbc_b, 0xce_b, 0xb5_b, 0xed_b, 0xa0_b, 0x80_b,
+                   0x65_b, 0x64_b, 0x69_b, 0x74_b, 0x65_b, 0x64_b};
+    MESSAGE("UTF-8 Payload: " << to_msg(bs));
+    CHECK(valid_utf8(bs));
+  }
+
+  {
+    auto bs = byte_buffer{0x48_b, 0x65_b, 0x6c_b, 0x6c_b, 0x6f_b, 0x2d_b,
+                          0xc2_b, 0xb5_b, 0x40_b, 0xc3_b, 0x9f_b, 0xc3_b,
+                          0xb6_b, 0xc3_b, 0xa4_b, 0xc3_b, 0xbc_b, 0xc3_b,
+                          0xa0_b, 0xc3_b, 0xa1_b, 0x2d_b, 0x55_b, 0x54_b,
+                          0x46_b, 0x2d_b, 0x38_b, 0x21_b, 0x21_b};
+    MESSAGE("UTF-8 Payload: " << to_msg(bs));
+    CHECK(valid_utf8(bs));
+  }
+
+  {
+    auto bs = hex_to_bytes("48656c6c6f2dc2b540c39fc3b6c3a4"sv);
+    MESSAGE("UTF-8 Payload: " << to_msg(bs));
+    CHECK(valid_utf8(bs));
+    bs = hex_to_bytes("c3bcc3a0c3a12d5554462d382121"sv);
+    MESSAGE("UTF-8 Payload: " << to_msg(bs));
+    CHECK(valid_utf8(bs));
+  }
+
+  auto b1 = byte_buffer({0xce_b, 0xba_b, 0xe1_b, 0xbd_b, 0xb9_b, 0xcf_b, 0x83_b,
+                         0xce_b, 0xbc_b, 0xce_b, 0xb5_b});
+  auto b2 = byte_buffer({0xf4_b, 0x90_b, 0x80_b, 0x80_b});
+  auto b3 = byte_buffer({0x65_b, 0x64_b, 0x69_b, 0x74_b, 0x65_b, 0x64_b});
+
+  CHECK(valid_utf8(b1));
+  CHECK(valid_utf8(b2));
+  CHECK(valid_utf8(b3));
+}
