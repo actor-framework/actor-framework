@@ -8,7 +8,7 @@ using caf::test::block_type;
 SUITE("caf.test.test") {
 
 TEST("tests can contain checks") {
-  auto* rep  = caf::test::reporter::instance;
+  auto* rep = caf::test::reporter::instance;
   for (int i = 0; i < 3; ++i)
     check_eq(i, i);
   auto stats = rep->test_stats();

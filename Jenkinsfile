@@ -90,6 +90,7 @@ config = [
             tags: ['docker', 'LeakSanitizer'],
             builds: ['debug'],
             extraBuildFlags: [
+                'BUILD_SHARED_LIBS:BOOL=OFF',
                 'CAF_LOG_LEVEL:STRING=TRACE',
                 'CAF_ENABLE_ROBOT_TESTS:BOOL=ON',
                 'CAF_SANITIZERS:STRING=address',
@@ -104,9 +105,9 @@ config = [
             tags: ['docker', 'UBSanitizer'],
             builds: ['debug'],
             extraBuildFlags: [
+                'BUILD_SHARED_LIBS:BOOL=OFF',
                 'CAF_LOG_LEVEL:STRING=TRACE',
                 'CAF_ENABLE_ROBOT_TESTS:BOOL=ON',
-                'BUILD_SHARED_LIBS:BOOL=OFF',
                 'CAF_SANITIZERS:STRING=address,undefined',
             ],
             extraBuildEnv: [

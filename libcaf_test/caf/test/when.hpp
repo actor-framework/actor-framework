@@ -16,7 +16,7 @@ public:
   static constexpr block_type type_token = block_type::when;
 
   then* get_then(int id, std::string_view description,
-                 const detail::source_location& loc) override ;
+                 const detail::source_location& loc) override;
 
   and_then* get_and_then(int id, std::string_view description,
                          const detail::source_location& loc) override;

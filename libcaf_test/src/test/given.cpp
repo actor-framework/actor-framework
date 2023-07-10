@@ -39,4 +39,4 @@ scope given::commit() {
   return scope{this};
 }
 
-  } // namespace caf::test
+} // namespace caf::test

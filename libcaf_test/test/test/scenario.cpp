@@ -44,7 +44,6 @@ SCENARIO("each run starts with fresh local variables") {
   }
 }
 
-
 struct int_fixture {
   int my_int = 0;
 };
@@ -105,12 +104,12 @@ SCENARIO("scenario-1") {
       }
     }
     AND_WHEN("and-when-1-1") {
-        check_eq(++counter, 6);
-        check_eq(render(), "scenario-1/given-1/and-when-1-1");
+      check_eq(++counter, 6);
+      check_eq(render(), "scenario-1/given-1/and-when-1-1");
     }
     AND_WHEN("and-when-1-2") {
-        check_eq(++counter, 7);
-        check_eq(render(), "scenario-1/given-1/and-when-1-2");
+      check_eq(++counter, 7);
+      check_eq(render(), "scenario-1/given-1/and-when-1-2");
     }
     WHEN("when-2") {
       check_eq(++counter, 2);
@@ -129,12 +128,12 @@ SCENARIO("scenario-1") {
       }
     }
     AND_WHEN("and-when-2-1") {
-        check_eq(++counter, 6);
-        check_eq(render(), "scenario-1/given-1/and-when-2-1");
+      check_eq(++counter, 6);
+      check_eq(render(), "scenario-1/given-1/and-when-2-1");
     }
     AND_WHEN("and-when-2-2") {
-        check_eq(++counter, 7);
-        check_eq(render(), "scenario-1/given-1/and-when-2-2");
+      check_eq(++counter, 7);
+      check_eq(render(), "scenario-1/given-1/and-when-2-2");
     }
   }
 }

@@ -14,35 +14,35 @@
 
 namespace caf::test {
 
-  block_type scenario::type() const noexcept {
-    return block_type::scenario;
-  }
+block_type scenario::type() const noexcept {
+  return block_type::scenario;
+}
 
-  given* scenario::get_given(int id, std::string_view description,
-                   const detail::source_location& loc) {
-    return get_nested<given>(id, description, loc);
-  }
-
-  and_given* scenario::get_and_given(int id, std::string_view description,
+given* scenario::get_given(int id, std::string_view description,
                            const detail::source_location& loc) {
-    return get_nested<and_given>(id, description, loc);
-  }
+  return get_nested<given>(id, description, loc);
+}
 
-  when* scenario::get_when(int id, std::string_view description,
-                 const detail::source_location& loc) {
-    return get_nested<when>(id, description, loc);
-  }
+and_given* scenario::get_and_given(int id, std::string_view description,
+                                   const detail::source_location& loc) {
+  return get_nested<and_given>(id, description, loc);
+}
 
-  and_when* scenario::get_and_when(int id, std::string_view description,
+when* scenario::get_when(int id, std::string_view description,
                          const detail::source_location& loc) {
-    return get_nested<and_when>(id, description, loc);
-  }
+  return get_nested<when>(id, description, loc);
+}
 
-  scope scenario::commit() {
-    if (!ctx_->active() || !can_run())
-      return {};
-    enter();
-    return scope{this};
-  }
+and_when* scenario::get_and_when(int id, std::string_view description,
+                                 const detail::source_location& loc) {
+  return get_nested<and_when>(id, description, loc);
+}
+
+scope scenario::commit() {
+  if (!ctx_->active() || !can_run())
+    return {};
+  enter();
+  return scope{this};
+}
 
 } // namespace caf::test

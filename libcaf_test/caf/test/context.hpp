@@ -16,10 +16,10 @@
 
 namespace caf::test {
 
-/// Represents the exeuction context of a test. The context stores all steps of
+/// Represents the execution context of a test. The context stores all steps of
 /// the test and the current execution stack. The context persists across
 /// multiple runs of the test in order to select one execution path per run.
-class CAF_TEST_EXPORT context : public std::enable_shared_from_this<context> {
+class CAF_TEST_EXPORT context {
 public:
   /// Returns whether the test is still active. A test is active as long as
   /// no unwinding is in progress.
@@ -42,9 +42,7 @@ public:
 
   /// Checks whether `ptr` has been activated this run, i.e., whether we can
   /// find it in `unwind_stack`.
-  bool activated(block* ptr) {
-    return std::find(path.begin(), path.end(), ptr) != path.end();
-  }
+  bool activated(block* ptr) const noexcept;
 
   /// Stores the current execution stack for the run.
   std::vector<block*> call_stack;
@@ -55,7 +53,6 @@ public:
   /// Stores all steps that we have reached at least once during the run.
   std::vector<block*> path;
 
-
   /// Stores all steps of the test with their run-time ID.
   std::map<int, std::unique_ptr<block>> steps;
 
@@ -64,7 +61,7 @@ public:
          const detail::source_location& loc) {
     auto& result = steps[id];
     if (!result) {
-      result = std::make_unique<T>(shared_from_this(), id, description, loc);
+      result = std::make_unique<T>(this, id, description, loc);
     }
     return static_cast<T*>(result.get());
   }

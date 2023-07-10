@@ -18,7 +18,6 @@ namespace caf::test {
 /// A registry for our factories.
 class registry {
 public:
-
   /// Maps test names to factories. Elements are sorted by the order of their
   /// registration.
   using tests_map = unordered_flat_map<std::string_view, factory*>;

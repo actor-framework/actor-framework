@@ -34,6 +34,12 @@ namespace {
 /// - $C(cyan text)
 /// - $0 turns off coloring completely (enter verbatim mode)
 struct colorizing_iterator {
+  using difference_type = void;
+  using value_type = void;
+  using pointer = void;
+  using reference = void;
+  using iterator_category = std::output_iterator_tag;
+
   enum mode_t {
     normal,
     read_color,
@@ -187,7 +193,7 @@ public:
     if (!failed_suites_.empty()) {
       format_to(colored(), "  $B(Failed Suites):\n");
       for (auto name : failed_suites_)
-          format_to(colored(), "  - $R({})\n", name);
+        format_to(colored(), "  - $R({})\n", name);
     }
     std::cout << std::endl;
   }
@@ -223,7 +229,7 @@ public:
     if (!failed_tests_.empty()) {
       format_to(colored(), "  $B(Failed tests):\n");
       for (auto name : failed_tests_)
-          format_to(colored(), "  - $R({})\n", name);
+        format_to(colored(), "  - $R({})\n", name);
     }
     std::cout << std::endl;
   }
@@ -240,7 +246,7 @@ public:
       failed_tests_.push_back(current_test_);
     suite_stats_ += test_stats_;
     current_ctx_.reset();
-    if(live_)
+    if (live_)
       std::cout << std::endl;
   }
 
@@ -252,7 +258,7 @@ public:
       CAF_RAISE_ERROR(std::logic_error, "begin_test was not called");
     format_to(colored(), "$C(Suite): $0{}\n", current_suite_);
     indent_ = 2;
-    live_= true;
+    live_ = true;
     for (auto* frame : current_ctx_->call_stack)
       begin_step(frame);
   }

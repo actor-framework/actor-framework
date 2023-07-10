@@ -7,9 +7,11 @@
 #include "caf/test/context.hpp"
 #include "caf/test/nesting_error.hpp"
 
+#include <algorithm>
+
 namespace caf::test {
 
-block::block(context_ptr ctx, int id, std::string_view description,
+block::block(context* ctx, int id, std::string_view description,
              const detail::source_location& loc)
   : ctx_(ctx), id_(id), description_(description), loc_(loc) {
   // nop

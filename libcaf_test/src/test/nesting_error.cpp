@@ -32,9 +32,9 @@ nesting_error::raise_impl(nesting_error::code what, block_type parent,
 #ifdef CAF_ENABLE_EXCEPTIONS
   throw nesting_error{what, parent, child, loc};
 #else
-  auto msg = nesting_error{code::not_allowed, parent, child}.message();
-  fprintf(stderr, "[FATAL] critical error (%s:%d): %s\n", msg.c_str(),
-          loc.file_name, static_cast<int>(loc.line));
+  auto msg = nesting_error{what, parent, child, loc}.message();
+  fprintf(stderr, "[FATAL] critical error (%s:%d): %s\n", loc.file_name(),
+          static_cast<int>(loc.line()), msg.c_str());
   abort();
 #endif
 }

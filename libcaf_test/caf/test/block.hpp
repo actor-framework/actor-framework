@@ -17,7 +17,9 @@ namespace caf::test {
 /// structure.
 class CAF_TEST_EXPORT block {
 public:
-  block(context_ptr ctx, int id, std::string_view description,
+  // Note: the context owns the block. Hence, we can use a raw pointer for
+  //       pointing back to the parent object here.
+  block(context* ctx, int id, std::string_view description,
         const detail::source_location& loc);
 
   virtual ~block();
@@ -100,7 +102,7 @@ public:
 protected:
   std::unique_ptr<block>& get_nested_or_construct(int id);
 
-  context_ptr ctx_;
+  context* ctx_;
   int id_ = 0;
   std::string_view description_;
   bool active_ = false;

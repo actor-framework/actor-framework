@@ -87,4 +87,4 @@ private:
   detail::source_location loc_;
 };
 
-  } // namespace caf::test
+} // namespace caf::test

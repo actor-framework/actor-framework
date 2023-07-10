@@ -7,6 +7,8 @@
 #include "caf/test/block.hpp"
 #include "caf/test/reporter.hpp"
 
+#include <algorithm>
+
 namespace caf::test {
 
 void context::on_enter(block* ptr) {
@@ -20,6 +22,10 @@ void context::on_leave(block* ptr) {
   call_stack.pop_back();
   unwind_stack.push_back(ptr);
   reporter::instance->end_step(ptr);
+}
+
+bool context::activated(block* ptr) const noexcept {
+  return std::find(path.begin(), path.end(), ptr) != path.end();
 }
 
 bool context::can_run() {

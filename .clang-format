@@ -30,7 +30,7 @@ IndentCaseLabels: true
 IndentPPDirectives: AfterHash
 IndentWidth: 2
 IndentWrappedFunctionNames: false
-KeepEmptyLinesAtTheStartOfBlocks: true
+KeepEmptyLinesAtTheStartOfBlocks: false
 Language: Cpp
 MacroBlockBegin: "^BEGIN_STATE$|CAF_BEGIN_TYPE_ID_BLOCK"
 MacroBlockEnd: "^END_STATE$|CAF_END_TYPE_ID_BLOCK"
