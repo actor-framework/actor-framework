@@ -85,6 +85,14 @@ ptrdiff_t framing::consume(byte_span buffer, byte_span) {
     }
     return handle(hdr.opcode, payload, frame_size);
   }
+  if (opcode_ == nil_code
+      && hdr.opcode == detail::rfc6455::continuation_frame) {
+    CAF_LOG_DEBUG("received WebSocket continuation "
+                  "frame without prior opcode");
+    abort_and_shutdown(sec::protocol_error, "received WebSocket continuation "
+                                            "frame without prior opcode");
+    return -1;
+  }
   if (hdr.fin) {
     if (opcode_ == nil_code) {
       // Call upper layer.
@@ -106,13 +114,6 @@ ptrdiff_t framing::consume(byte_span buffer, byte_span) {
   // The first frame must not be a continuation frame. Any frame that is not
   // the first frame must be a continuation frame.
   if (opcode_ == nil_code) {
-    if (hdr.opcode == detail::rfc6455::continuation_frame) {
-      CAF_LOG_DEBUG("received WebSocket continuation "
-                    "frame without prior opcode");
-      abort_and_shutdown(sec::protocol_error, "received WebSocket continuation "
-                                              "frame without prior opcode");
-      return -1;
-    }
     opcode_ = hdr.opcode;
   } else if (hdr.opcode != detail::rfc6455::continuation_frame) {
     CAF_LOG_DEBUG("expected a continuation frame");
