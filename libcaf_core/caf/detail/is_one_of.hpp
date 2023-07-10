@@ -21,4 +21,7 @@ struct is_one_of<T, T, Ts...> : std::true_type {};
 template <class T, class U, class... Ts>
 struct is_one_of<T, U, Ts...> : is_one_of<T, Ts...> {};
 
+template <class T, class... Ts>
+constexpr bool is_one_of_v = (std::is_same_v<T, Ts> || ...);
+
 } // namespace caf::detail
