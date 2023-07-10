@@ -52,9 +52,7 @@ using format_arg = std::variant<bool, char, int64_t, uint64_t, double,
 
 template <class T>
 format_arg make_format_arg(const T& arg) {
-  if constexpr (std::is_same_v<T, bool>) {
-    return format_arg{arg};
-  } else if constexpr (std::is_same_v<T, char>) {
+  if constexpr (is_one_of_v<T, bool, char, const char*, std::string_view>) {
     return format_arg{arg};
   } else if constexpr (std::is_integral_v<T>) {
     if constexpr (std::is_signed_v<T>) {
@@ -64,12 +62,8 @@ format_arg make_format_arg(const T& arg) {
     }
   } else if constexpr (std::is_floating_point_v<T>) {
     return format_arg{static_cast<double>(arg)};
-  } else if constexpr (std::is_same_v<T, const char*>) {
-    return format_arg{arg};
   } else if constexpr (std::is_same_v<T, std::string>) {
     return format_arg{std::string_view{arg}};
-  } else if constexpr (std::is_same_v<T, std::string_view>) {
-    return format_arg{arg};
   } else {
     static_assert(std::is_pointer_v<T>, "unsupported argument type");
     return format_arg{static_cast<const void*>(arg)};

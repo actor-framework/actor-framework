@@ -175,8 +175,6 @@ if(NOT DEFINED CAF_USE_STD_FORMAT)
       message(STATUS "Disable std::format support: NOT available")
     endif()
   endif()
-else()
-  set(CAF_USE_STD_FORMAT OFF CACHE BOOL "Enable std::format support" FORCE)
 endif()
 
 # -- export internal target (may be useful for re-using compiler flags) --------
