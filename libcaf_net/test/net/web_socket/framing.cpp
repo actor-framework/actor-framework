@@ -449,7 +449,19 @@ SCENARIO("apps reject frames whose payload exceeds maximum allowed size") {
 
 SCENARIO("the application shuts down on invalid frame fragments") {
   GIVEN("a client that sends invalid fragmented frames") {
-    WHEN("the first fragment is a continuation frame") {
+    WHEN("the first fragment is a continuation frame with FIN flag") {
+      reset();
+      byte_buffer input;
+      const auto data = make_test_data(10);
+      detail::rfc6455::assemble_frame(detail::rfc6455::continuation_frame, 0x0,
+                                      data, input);
+      transport->push(input);
+      THEN("the app closes the connection with a protocol error") {
+        CHECK_EQ(transport->handle_input(), 0);
+        CHECK_EQ(app->abort_reason, sec::protocol_error);
+      }
+    }
+    WHEN("the first fragment is a continuation frame without FIN flag") {
       reset();
       byte_buffer input;
       const auto data = make_test_data(10);
