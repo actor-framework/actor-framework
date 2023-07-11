@@ -30,7 +30,7 @@ bool context::activated(block* ptr) const noexcept {
 
 bool context::can_run() {
   auto pred = [](auto& kvp) { return kvp.second->can_run(); };
-  return !steps.empty() && std::any_of(steps.begin(), steps.end(), pred);
+  return std::any_of(steps.begin(), steps.end(), pred);
 }
 
 block* context::find_predecessor_block(int caller_id, block_type type) {
