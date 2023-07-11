@@ -2,7 +2,7 @@ name: check-formatting
 on:
   pull_request:
   push:
-    branches: 
+    branches:
       - master
 jobs:
   formatting:
@@ -12,4 +12,4 @@ jobs:
     - name: Run clang-format.
       uses: jidicula/clang-format-action@v4.10.1
       with:
-        clang-format-version: '15'
+        clang-format-version: '16'
