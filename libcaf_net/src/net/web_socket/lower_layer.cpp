@@ -24,6 +24,8 @@ void lower_layer::shutdown(const error& reason) {
     shutdown(status::normal_close, to_string(reason));
   } else if (reason.code() == static_cast<uint8_t>(sec::protocol_error)) {
     shutdown(status::protocol_error, to_string(reason));
+  } else if (reason.code() == static_cast<uint8_t>(sec::malformed_message)) {
+    shutdown(status::inconsistent_data, to_string(reason));
   } else {
     shutdown(status::unexpected_condition, to_string(reason));
   }

@@ -105,8 +105,8 @@ enum class sec : uint8_t {
   incompatible_versions,
   /// Connection refused because of incompatible application IDs.
   incompatible_application_ids,
-  /// The middleman received a malformed BASP message from another node.
-  malformed_basp_message,
+  /// Received a malformed message from another node.
+  malformed_message,
   /// The middleman closed a connection because it failed to serialize or
   /// deserialize a payload.
   serializing_basp_payload_failed = 50,

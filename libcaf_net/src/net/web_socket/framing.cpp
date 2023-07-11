@@ -4,6 +4,7 @@
 
 #include "caf/net/web_socket/framing.hpp"
 
+#include "caf/detail/rfc3629.hpp"
 #include "caf/logger.hpp"
 #include "caf/net/http/v1.hpp"
 
@@ -202,6 +203,10 @@ ptrdiff_t framing::handle(uint8_t opcode, byte_span payload,
     case detail::rfc6455::text_frame: {
       std::string_view text{reinterpret_cast<const char*>(payload.data()),
                             payload.size()};
+      if (!detail::rfc3629::valid(text)) {
+        abort_and_shutdown(sec::malformed_message, "invalid UTF-8 sequence");
+        return -1;
+      }
       if (up_->consume_text(text) < 0)
         return -1;
       break;

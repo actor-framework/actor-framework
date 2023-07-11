@@ -42,9 +42,6 @@ constexpr bool is_continuation_byte(std::byte value) noexcept {
 bool validate_rfc3629(const std::byte* first, const std::byte* last) {
   while (first != last) {
     auto x = *first++;
-    // Null byte (terminator) is not allowed.
-    if (x == 0_b)
-      return false;
     // First bit is zero: ASCII character.
     if (head<1>(x) == 0b0000'0000_b)
       continue;
@@ -72,12 +69,18 @@ bool validate_rfc3629(const std::byte* first, const std::byte* last) {
         return false;
       continue;
     }
-    // 1111'0bxx: 4-byte sequence.
+    // 1111'0xxx: 4-byte sequence.
     if (head<5>(x) == 0b1111'0000_b) {
+      // Check if code point is in the valid UTF range.
+      if (x > std::byte{0xf4})
+        return false;
       if (first == last || !is_continuation_byte(*first))
         return false;
       // No non-shortest form.
       if (x == 0b1111'0000_b && head<4>(*first) == 0b1000'0000_b)
+        return false;
+      // Check if code point is in the valid UTF range.
+      if (x == std::byte{0xf4} && *first >= std::byte{0x90})
         return false;
       ++first;
       if (first == last || !is_continuation_byte(*first++))
