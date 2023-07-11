@@ -27,8 +27,8 @@ enum connection_state {
   incompatible_versions,
   /// See `sec::incompatible_application_ids`.
   incompatible_application_ids,
-  /// See `sec::malformed_basp_message`.
-  malformed_basp_message,
+  /// See `sec::malformed_message`.
+  malformed_message,
   /// See `sec::serializing_basp_payload_failed`.
   serializing_basp_payload_failed,
   /// See `sec::redundant_connection`.
@@ -55,8 +55,8 @@ inline sec to_sec(connection_state x) noexcept {
       return sec::incompatible_versions;
     case incompatible_application_ids:
       return sec::incompatible_application_ids;
-    case malformed_basp_message:
-      return sec::malformed_basp_message;
+    case malformed_message:
+      return sec::malformed_message;
     case serializing_basp_payload_failed:
       return sec::serializing_basp_payload_failed;
     case redundant_connection:

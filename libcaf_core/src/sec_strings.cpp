@@ -113,8 +113,8 @@ std::string to_string(sec x) {
       return "caf::sec::incompatible_versions";
     case sec::incompatible_application_ids:
       return "caf::sec::incompatible_application_ids";
-    case sec::malformed_basp_message:
-      return "caf::sec::malformed_basp_message";
+    case sec::malformed_message:
+      return "caf::sec::malformed_message";
     case sec::serializing_basp_payload_failed:
       return "caf::sec::serializing_basp_payload_failed";
     case sec::redundant_connection:
@@ -306,8 +306,8 @@ bool from_string(std::string_view in, sec& out) {
   } else if (in == "caf::sec::incompatible_application_ids") {
     out = sec::incompatible_application_ids;
     return true;
-  } else if (in == "caf::sec::malformed_basp_message") {
-    out = sec::malformed_basp_message;
+  } else if (in == "caf::sec::malformed_message") {
+    out = sec::malformed_message;
     return true;
   } else if (in == "caf::sec::serializing_basp_payload_failed") {
     out = sec::serializing_basp_payload_failed;
@@ -429,7 +429,7 @@ bool from_integer(std::underlying_type_t<sec> in,
     case sec::unavailable_or_would_block:
     case sec::incompatible_versions:
     case sec::incompatible_application_ids:
-    case sec::malformed_basp_message:
+    case sec::malformed_message:
     case sec::serializing_basp_payload_failed:
     case sec::redundant_connection:
     case sec::remote_lookup_failed:

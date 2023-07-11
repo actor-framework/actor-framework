@@ -204,7 +204,7 @@ ptrdiff_t framing::handle(uint8_t opcode, byte_span payload,
       std::string_view text{reinterpret_cast<const char*>(payload.data()),
                             payload.size()};
       if (!detail::rfc3629::valid(text)) {
-        abort_and_shutdown(sec::runtime_error, "invalid UTF-8 sequence");
+        abort_and_shutdown(sec::malformed_message, "invalid UTF-8 sequence");
         return -1;
       }
       if (up_->consume_text(text) < 0)

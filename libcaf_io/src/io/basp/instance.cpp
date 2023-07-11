@@ -55,17 +55,17 @@ connection_state instance::handle(execution_unit* ctx, new_data_msg& dm,
     if (payload->size() != hdr.payload_len) {
       CAF_LOG_WARNING("received invalid payload, expected"
                       << hdr.payload_len << "bytes, got" << payload->size());
-      return err(malformed_basp_message);
+      return err(malformed_message);
     }
   } else {
     binary_deserializer source{ctx, dm.buf};
     if (!source.apply(hdr)) {
       CAF_LOG_WARNING("failed to receive header:" << source.get_error());
-      return err(malformed_basp_message);
+      return err(malformed_message);
     }
     if (!valid(hdr)) {
       CAF_LOG_WARNING("received invalid header:" << CAF_ARG(hdr));
-      return err(malformed_basp_message);
+      return err(malformed_message);
     }
     if (hdr.payload_len > 0) {
       CAF_LOG_DEBUG("await payload before processing further");
@@ -309,11 +309,11 @@ connection_state instance::handle(execution_unit* ctx, connection_handle hdl,
   if (payload == nullptr) {
     if (hdr.payload_len != 0) {
       CAF_LOG_WARNING("missing payload");
-      return malformed_basp_message;
+      return malformed_message;
     }
   } else if (hdr.payload_len != payload->size()) {
     CAF_LOG_WARNING("actual payload size differs from advertised size");
-    return malformed_basp_message;
+    return malformed_message;
   }
   // Dispatch by message type.
   switch (hdr.operation) {
@@ -506,7 +506,7 @@ connection_state instance::handle(execution_unit* ctx, connection_handle hdl,
     }
     default: {
       CAF_LOG_ERROR("invalid operation");
-      return malformed_basp_message;
+      return malformed_message;
     }
   }
   return await_header;
