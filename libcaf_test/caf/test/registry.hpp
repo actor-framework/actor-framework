@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/detail/test_export.hpp"
 #include "caf/test/block_type.hpp"
 #include "caf/test/factory.hpp"
 #include "caf/test/fwd.hpp"
@@ -16,7 +17,7 @@
 namespace caf::test {
 
 /// A registry for our factories.
-class registry {
+class CAF_TEST_EXPORT registry {
 public:
   /// Maps test names to factories. Elements are sorted by the order of their
   /// registration.

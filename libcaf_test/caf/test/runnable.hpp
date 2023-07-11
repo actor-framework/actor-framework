@@ -8,6 +8,7 @@
 #include "caf/deep_to_string.hpp"
 #include "caf/detail/format.hpp"
 #include "caf/detail/source_location.hpp"
+#include "caf/detail/test_export.hpp"
 #include "caf/test/binary_predicate.hpp"
 #include "caf/test/block_type.hpp"
 #include "caf/test/fwd.hpp"
@@ -18,7 +19,7 @@
 namespace caf::test {
 
 /// A runnable definition of a test case or scenario.
-class runnable {
+class CAF_TEST_EXPORT runnable {
 public:
   /// Creates a new runnable.
   /// @param ctx The test context.

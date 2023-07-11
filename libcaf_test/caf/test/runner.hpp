@@ -4,12 +4,13 @@
 
 #pragma once
 
+#include "caf/detail/test_export.hpp"
 #include "caf/test/registry.hpp"
 
 namespace caf::test {
 
 /// Implements the main loop for running tests.
-class runner {
+class CAF_TEST_EXPORT runner {
 public:
   /// Bundles the result of a command line parsing operation.
   struct parse_cli_result {

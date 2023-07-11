@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/detail/pp.hpp"
+#include "caf/detail/test_export.hpp"
 #include "caf/test/and_given.hpp"
 #include "caf/test/and_then.hpp"
 #include "caf/test/and_when.hpp"
@@ -21,7 +22,7 @@
 
 namespace caf::test {
 
-class scenario : public block {
+class CAF_TEST_EXPORT scenario : public block {
 public:
   using block::block;
 

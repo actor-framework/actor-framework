@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/detail/test_export.hpp"
 #include "caf/test/block_type.hpp"
 #include "caf/test/fwd.hpp"
 
@@ -13,7 +14,7 @@
 namespace caf::test {
 
 /// A factory for creating runnable test definitions.
-class factory {
+class CAF_TEST_EXPORT factory {
 public:
   friend class registry;
 
