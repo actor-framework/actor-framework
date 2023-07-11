@@ -24,7 +24,7 @@ ConstructorInitializerAllOnOneLineOrOnePerLine: true
 ConstructorInitializerIndentWidth: 2
 ContinuationIndentWidth: 2
 Cpp11BracedListStyle: true
-FixNamespaceComments: true
+FixNamespaceComments: false
 IncludeBlocks: Preserve
 IndentCaseLabels: true
 IndentPPDirectives: AfterHash
@@ -36,6 +36,7 @@ MacroBlockBegin: "^BEGIN_STATE$|CAF_BEGIN_TYPE_ID_BLOCK"
 MacroBlockEnd: "^END_STATE$|CAF_END_TYPE_ID_BLOCK"
 MaxEmptyLinesToKeep: 1
 NamespaceIndentation: None
+NamespaceMacros: ["SUITE", "WITH_FIXTURE"]
 PenaltyBreakAssignment: 25
 PenaltyBreakBeforeFirstCallParameter: 50
 PenaltyReturnTypeOnItsOwnLine: 25

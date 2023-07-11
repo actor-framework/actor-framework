@@ -159,9 +159,7 @@ public:
   template <class Inspector>
   friend bool inspect(Inspector& f, node_id& x) {
     auto is_present = [&x] { return x.data_ != nullptr; };
-    auto get = [&]() -> const auto& {
-      return x.data_->content;
-    };
+    auto get = [&]() -> const auto& { return x.data_->content; };
     auto reset = [&x] { x.data_.reset(); };
     auto set = [&x](node_id_data::variant_type&& val) {
       if (x.data_ && x.data_->unique())

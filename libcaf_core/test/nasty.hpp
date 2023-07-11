@@ -48,8 +48,12 @@ private:                                                                       \
   type name##_ = type{};                                                       \
                                                                                \
 public:                                                                        \
-  const auto& name() const noexcept { return name##_; }                        \
-  void name(type value) { name##_ = std::move(value); }
+  const auto& name() const noexcept {                                          \
+    return name##_;                                                            \
+  }                                                                            \
+  void name(type value) {                                                      \
+    name##_ = std::move(value);                                                \
+  }
 
 // A mean data type designed for maximum coverage of the inspect API.
 class nasty {
