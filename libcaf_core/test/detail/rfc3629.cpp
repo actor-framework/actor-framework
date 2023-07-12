@@ -9,6 +9,7 @@
 #include "core-test.hpp"
 
 using namespace caf;
+using detail::rfc3629;
 
 namespace {
 
@@ -161,4 +162,48 @@ TEST_CASE("invalid UTF-8 input") {
   CHECK(!valid_utf8(invalid_four_byte_8));
   CHECK(!valid_utf8(invalid_four_byte_9));
   CHECK(!valid_utf8(invalid_four_byte_10));
+}
+
+TEST_CASE("invalid UTF-8 input missing continuation bytes") {
+  CHECK_EQ(rfc3629::validate(invalid_two_byte_1), std::pair(0ul, true));
+  CHECK_EQ(rfc3629::validate(invalid_three_byte_1), std::pair(0ul, true));
+  CHECK_EQ(rfc3629::validate(invalid_three_byte_2), std::pair(0ul, true));
+  CHECK_EQ(rfc3629::validate(invalid_four_byte_1), std::pair(0ul, true));
+  CHECK_EQ(rfc3629::validate(invalid_four_byte_2), std::pair(0ul, true));
+  CHECK_EQ(rfc3629::validate(invalid_four_byte_3), std::pair(0ul, true));
+}
+
+TEST_CASE("invalid UTF-8 input malformed data") {
+  CHECK_EQ(rfc3629::validate(invalid_two_byte_2), std::pair(0ul, false));
+  CHECK_EQ(rfc3629::validate(invalid_two_byte_3), std::pair(0ul, false));
+  CHECK_EQ(rfc3629::validate(invalid_two_byte_4), std::pair(0ul, false));
+  CHECK_EQ(rfc3629::validate(invalid_three_byte_3), std::pair(0ul, false));
+  CHECK_EQ(rfc3629::validate(invalid_three_byte_4), std::pair(0ul, false));
+  CHECK_EQ(rfc3629::validate(invalid_three_byte_5), std::pair(0ul, false));
+  CHECK_EQ(rfc3629::validate(invalid_three_byte_6), std::pair(0ul, false));
+  CHECK_EQ(rfc3629::validate(invalid_three_byte_7), std::pair(0ul, false));
+  CHECK_EQ(rfc3629::validate(invalid_three_byte_8), std::pair(0ul, false));
+  CHECK_EQ(rfc3629::validate(invalid_four_byte_4), std::pair(0ul, false));
+  CHECK_EQ(rfc3629::validate(invalid_four_byte_5), std::pair(0ul, false));
+  CHECK_EQ(rfc3629::validate(invalid_four_byte_6), std::pair(0ul, false));
+  CHECK_EQ(rfc3629::validate(invalid_four_byte_7), std::pair(0ul, false));
+  CHECK_EQ(rfc3629::validate(invalid_four_byte_8), std::pair(0ul, false));
+  CHECK_EQ(rfc3629::validate(invalid_four_byte_9), std::pair(0ul, false));
+  CHECK_EQ(rfc3629::validate(invalid_four_byte_10), std::pair(0ul, false));
+}
+
+TEST_CASE("invalid UTF-8 input with invalid code point") {
+  const_byte_span input{invalid_four_byte_9};
+  CHECK_EQ(rfc3629::validate(input.subspan(0, 2)), std::pair(0ul, false));
+  input = invalid_four_byte_10;
+  CHECK_EQ(rfc3629::validate(input.subspan(0, 1)), std::pair(0ul, false));
+}
+
+TEST_CASE("invalid UTF-8 input with valid prefix") {
+  byte_buffer data;
+  data.insert(data.end(), begin(valid_four_byte_1), end(valid_four_byte_1));
+  data.insert(data.end(), begin(valid_four_byte_2), end(valid_four_byte_2));
+  data.insert(data.end(), begin(valid_two_byte_1), end(valid_two_byte_1));
+  data.insert(data.end(), begin(invalid_four_byte_4), end(invalid_four_byte_4));
+  CHECK_EQ(rfc3629::validate(data), std::pair(10ul, false));
 }

@@ -22,6 +22,16 @@ public:
   static bool valid(std::string_view str) noexcept {
     return valid(as_bytes(make_span(str)));
   }
+
+  /// Checks whether `bytes` is a valid UTF-8 string.
+  static auto validate(const_byte_span bytes) noexcept
+    -> std::pair<size_t, bool>;
+
+  /// Checks whether `str` is a valid UTF-8 string.
+  static auto validate(std::string_view str) noexcept
+    -> std::pair<size_t, bool> {
+    return validate(as_bytes(make_span(str)));
+  }
 };
 
 } // namespace caf::detail
