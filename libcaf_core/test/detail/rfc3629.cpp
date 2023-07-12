@@ -2,16 +2,16 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE detail.rfc3629
-
 #include "caf/detail/rfc3629.hpp"
 
-#include "core-test.hpp"
+#include "caf/test/test.hpp"
 
 using namespace caf;
 using detail::rfc3629;
 
-namespace {
+using res_t = std::pair<size_t, bool>;
+
+SUITE("detail.rfc3629") {
 
 bool valid_utf8(const_byte_span bytes) noexcept {
   return detail::rfc3629::valid(bytes);
@@ -123,87 +123,87 @@ constexpr std::string_view ascii_2 = R"__(
  *                      \____/_/   \_|_|                                      *
 )__";
 
-} // namespace
-
-TEST_CASE("ASCII input") {
-  CHECK(valid_utf8(ascii_1));
-  CHECK(valid_utf8(ascii_2));
+TEST("ASCII input") {
+  check(valid_utf8(ascii_1));
+  check(valid_utf8(ascii_2));
 }
 
-TEST_CASE("valid UTF-8 input") {
-  CHECK(valid_utf8(valid_two_byte_1));
-  CHECK(valid_utf8(valid_two_byte_2));
-  CHECK(valid_utf8(valid_three_byte_1));
-  CHECK(valid_utf8(valid_three_byte_2));
-  CHECK(valid_utf8(valid_four_byte_1));
-  CHECK(valid_utf8(valid_four_byte_2));
+TEST("valid UTF-8 input") {
+  check(valid_utf8(valid_two_byte_1));
+  check(valid_utf8(valid_two_byte_2));
+  check(valid_utf8(valid_three_byte_1));
+  check(valid_utf8(valid_three_byte_2));
+  check(valid_utf8(valid_four_byte_1));
+  check(valid_utf8(valid_four_byte_2));
 }
 
-TEST_CASE("invalid UTF-8 input") {
-  CHECK(!valid_utf8(invalid_two_byte_1));
-  CHECK(!valid_utf8(invalid_two_byte_2));
-  CHECK(!valid_utf8(invalid_two_byte_3));
-  CHECK(!valid_utf8(invalid_two_byte_4));
-  CHECK(!valid_utf8(invalid_three_byte_1));
-  CHECK(!valid_utf8(invalid_three_byte_2));
-  CHECK(!valid_utf8(invalid_three_byte_3));
-  CHECK(!valid_utf8(invalid_three_byte_4));
-  CHECK(!valid_utf8(invalid_three_byte_5));
-  CHECK(!valid_utf8(invalid_three_byte_6));
-  CHECK(!valid_utf8(invalid_three_byte_7));
-  CHECK(!valid_utf8(invalid_three_byte_8));
-  CHECK(!valid_utf8(invalid_four_byte_1));
-  CHECK(!valid_utf8(invalid_four_byte_2));
-  CHECK(!valid_utf8(invalid_four_byte_3));
-  CHECK(!valid_utf8(invalid_four_byte_4));
-  CHECK(!valid_utf8(invalid_four_byte_5));
-  CHECK(!valid_utf8(invalid_four_byte_6));
-  CHECK(!valid_utf8(invalid_four_byte_7));
-  CHECK(!valid_utf8(invalid_four_byte_8));
-  CHECK(!valid_utf8(invalid_four_byte_9));
-  CHECK(!valid_utf8(invalid_four_byte_10));
+TEST("invalid UTF-8 input") {
+  check(!valid_utf8(invalid_two_byte_1));
+  check(!valid_utf8(invalid_two_byte_2));
+  check(!valid_utf8(invalid_two_byte_3));
+  check(!valid_utf8(invalid_two_byte_4));
+  check(!valid_utf8(invalid_three_byte_1));
+  check(!valid_utf8(invalid_three_byte_2));
+  check(!valid_utf8(invalid_three_byte_3));
+  check(!valid_utf8(invalid_three_byte_4));
+  check(!valid_utf8(invalid_three_byte_5));
+  check(!valid_utf8(invalid_three_byte_6));
+  check(!valid_utf8(invalid_three_byte_7));
+  check(!valid_utf8(invalid_three_byte_8));
+  check(!valid_utf8(invalid_four_byte_1));
+  check(!valid_utf8(invalid_four_byte_2));
+  check(!valid_utf8(invalid_four_byte_3));
+  check(!valid_utf8(invalid_four_byte_4));
+  check(!valid_utf8(invalid_four_byte_5));
+  check(!valid_utf8(invalid_four_byte_6));
+  check(!valid_utf8(invalid_four_byte_7));
+  check(!valid_utf8(invalid_four_byte_8));
+  check(!valid_utf8(invalid_four_byte_9));
+  check(!valid_utf8(invalid_four_byte_10));
 }
 
-TEST_CASE("invalid UTF-8 input missing continuation bytes") {
-  CHECK_EQ(rfc3629::validate(invalid_two_byte_1), std::pair(0ul, true));
-  CHECK_EQ(rfc3629::validate(invalid_three_byte_1), std::pair(0ul, true));
-  CHECK_EQ(rfc3629::validate(invalid_three_byte_2), std::pair(0ul, true));
-  CHECK_EQ(rfc3629::validate(invalid_four_byte_1), std::pair(0ul, true));
-  CHECK_EQ(rfc3629::validate(invalid_four_byte_2), std::pair(0ul, true));
-  CHECK_EQ(rfc3629::validate(invalid_four_byte_3), std::pair(0ul, true));
+TEST("invalid UTF-8 input missing continuation bytes") {
+  check_eq(rfc3629::validate(invalid_two_byte_1), res_t(0, true));
+  check_eq(rfc3629::validate(invalid_three_byte_1), res_t{0ul, true});
+  check_eq(rfc3629::validate(invalid_three_byte_2), res_t{0ul, true});
+  check_eq(rfc3629::validate(invalid_four_byte_1), res_t{0ul, true});
+  check_eq(rfc3629::validate(invalid_four_byte_2), res_t{0ul, true});
+  check_eq(rfc3629::validate(invalid_four_byte_3), res_t{0ul, true});
 }
 
-TEST_CASE("invalid UTF-8 input malformed data") {
-  CHECK_EQ(rfc3629::validate(invalid_two_byte_2), std::pair(0ul, false));
-  CHECK_EQ(rfc3629::validate(invalid_two_byte_3), std::pair(0ul, false));
-  CHECK_EQ(rfc3629::validate(invalid_two_byte_4), std::pair(0ul, false));
-  CHECK_EQ(rfc3629::validate(invalid_three_byte_3), std::pair(0ul, false));
-  CHECK_EQ(rfc3629::validate(invalid_three_byte_4), std::pair(0ul, false));
-  CHECK_EQ(rfc3629::validate(invalid_three_byte_5), std::pair(0ul, false));
-  CHECK_EQ(rfc3629::validate(invalid_three_byte_6), std::pair(0ul, false));
-  CHECK_EQ(rfc3629::validate(invalid_three_byte_7), std::pair(0ul, false));
-  CHECK_EQ(rfc3629::validate(invalid_three_byte_8), std::pair(0ul, false));
-  CHECK_EQ(rfc3629::validate(invalid_four_byte_4), std::pair(0ul, false));
-  CHECK_EQ(rfc3629::validate(invalid_four_byte_5), std::pair(0ul, false));
-  CHECK_EQ(rfc3629::validate(invalid_four_byte_6), std::pair(0ul, false));
-  CHECK_EQ(rfc3629::validate(invalid_four_byte_7), std::pair(0ul, false));
-  CHECK_EQ(rfc3629::validate(invalid_four_byte_8), std::pair(0ul, false));
-  CHECK_EQ(rfc3629::validate(invalid_four_byte_9), std::pair(0ul, false));
-  CHECK_EQ(rfc3629::validate(invalid_four_byte_10), std::pair(0ul, false));
+TEST("invalid UTF-8 input malformed data") {
+  check_eq(rfc3629::validate(invalid_two_byte_2), res_t{0ul, false});
+  check_eq(rfc3629::validate(invalid_two_byte_3), res_t{0ul, false});
+  check_eq(rfc3629::validate(invalid_two_byte_4), res_t{0ul, false});
+  check_eq(rfc3629::validate(invalid_three_byte_3), res_t{0ul, false});
+  check_eq(rfc3629::validate(invalid_three_byte_4), res_t{0ul, false});
+  check_eq(rfc3629::validate(invalid_three_byte_5), res_t{0ul, false});
+  check_eq(rfc3629::validate(invalid_three_byte_6), res_t{0ul, false});
+  check_eq(rfc3629::validate(invalid_three_byte_7), res_t{0ul, false});
+  check_eq(rfc3629::validate(invalid_three_byte_8), res_t{0ul, false});
+  check_eq(rfc3629::validate(invalid_four_byte_4), res_t{0ul, false});
+  check_eq(rfc3629::validate(invalid_four_byte_5), res_t{0ul, false});
+  check_eq(rfc3629::validate(invalid_four_byte_6), res_t{0ul, false});
+  check_eq(rfc3629::validate(invalid_four_byte_7), res_t{0ul, false});
+  check_eq(rfc3629::validate(invalid_four_byte_8), res_t{0ul, false});
+  check_eq(rfc3629::validate(invalid_four_byte_9), res_t{0ul, false});
+  check_eq(rfc3629::validate(invalid_four_byte_10), res_t{0ul, false});
 }
 
-TEST_CASE("invalid UTF-8 input with invalid code point") {
+TEST("invalid UTF-8 input fails on the invalid byte") {
   const_byte_span input{invalid_four_byte_9};
-  CHECK_EQ(rfc3629::validate(input.subspan(0, 2)), std::pair(0ul, false));
+  check_eq(rfc3629::validate(input.subspan(0, 2)), res_t{0ul, false});
   input = invalid_four_byte_10;
-  CHECK_EQ(rfc3629::validate(input.subspan(0, 1)), std::pair(0ul, false));
+  check_eq(rfc3629::validate(input.subspan(0, 1)), res_t{0ul, false});
 }
 
-TEST_CASE("invalid UTF-8 input with valid prefix") {
+TEST("invalid UTF-8 input with valid prefix") {
   byte_buffer data;
   data.insert(data.end(), begin(valid_four_byte_1), end(valid_four_byte_1));
   data.insert(data.end(), begin(valid_four_byte_2), end(valid_four_byte_2));
   data.insert(data.end(), begin(valid_two_byte_1), end(valid_two_byte_1));
   data.insert(data.end(), begin(invalid_four_byte_4), end(invalid_four_byte_4));
-  CHECK_EQ(rfc3629::validate(data), std::pair(10ul, false));
+  check_eq(rfc3629::validate(data), res_t{10, false});
+}
+
 }

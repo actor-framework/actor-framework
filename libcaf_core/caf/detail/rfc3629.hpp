@@ -24,12 +24,10 @@ public:
   }
 
   /// Checks whether `bytes` is a valid UTF-8 string.
-  static auto validate(const_byte_span bytes) noexcept
-    -> std::pair<size_t, bool>;
+  static std::pair<size_t, bool> validate(const_byte_span bytes) noexcept;
 
   /// Checks whether `str` is a valid UTF-8 string.
-  static auto validate(std::string_view str) noexcept
-    -> std::pair<size_t, bool> {
+  static std::pair<size_t, bool> validate(std::string_view str) noexcept {
     return validate(as_bytes(make_span(str)));
   }
 };

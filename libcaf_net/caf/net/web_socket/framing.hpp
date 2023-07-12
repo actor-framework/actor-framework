@@ -155,7 +155,7 @@ private:
   // -- member variables -------------------------------------------------------
 
   /// Points to the transport layer below.
-  octet_stream::lower_layer* down_;
+  octet_stream::lower_layer* down_ = nullptr;
 
   /// Buffer for assembling binary frames.
   binary_buffer binary_buf_;

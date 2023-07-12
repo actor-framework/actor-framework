@@ -219,6 +219,7 @@ caf_add_component(
   TEST_SOURCES
     test/core-test.cpp
   TEST_SUITES
+    detail.rfc3629
     hash.fnv
   LEGACY_TEST_SOURCES
     test/core-legacy-test.cpp
@@ -278,7 +279,6 @@ caf_add_component(
     detail.parser.read_timespan
     detail.parser.read_unsigned_integer
     detail.private_thread_pool
-    detail.rfc3629
     detail.ringbuffer
     detail.ripemd_160
     detail.type_id_list_builder
