@@ -4,8 +4,8 @@
 
 #include "caf/test/block_type.hpp"
 
-#include "caf/test/test.hpp"
 #include "caf/test/caf_test_main.hpp"
+#include "caf/test/test.hpp"
 
 using caf::test::block_type;
 
