@@ -218,8 +218,12 @@ caf_add_component(
     src/uuid.cpp
   TEST_SOURCES
     test/core-test.cpp
-    test/nasty.cpp
   TEST_SUITES
+    hash.fnv
+  LEGACY_TEST_SOURCES
+    test/core-legacy-test.cpp
+    test/nasty.cpp
+  LEGACY_TEST_SUITES
     action
     actor_clock
     actor_factory
@@ -308,7 +312,6 @@ caf_add_component(
     flow.single
     function_view
     handles
-    hash.fnv
     hash.sha1
     intrusive.drr_cached_queue
     intrusive.drr_queue
@@ -391,5 +394,5 @@ if(NOT CAF_USE_STD_FORMAT)
 endif()
 
 if(CAF_ENABLE_TESTING AND CAF_ENABLE_EXCEPTIONS)
-  caf_add_test_suites(caf-core-test custom_exception_handler)
+  caf_add_test_suites(caf-core-legacy-test custom_exception_handler)
 endif()

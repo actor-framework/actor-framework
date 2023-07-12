@@ -61,6 +61,10 @@ caf_add_component(
   TEST_SOURCES
     test/io-test.cpp
   TEST_SUITES
+    io.network.receive_buffer
+  LEGACY_TEST_SOURCES
+    test/io-legacy-test.cpp
+  LEGACY_TEST_SUITES
     detail.prometheus_broker
     io.basp.message_queue
     io.basp_broker
@@ -69,7 +73,6 @@ caf_add_component(
     io.monitor
     io.network.default_multiplexer
     io.network.ip_endpoint
-    io.receive_buffer
     io.remote_actor
     io.remote_group
     io.remote_spawn
@@ -77,5 +80,5 @@ caf_add_component(
     io.worker)
 
 if(CAF_ENABLE_TESTING AND UNIX)
-  caf_add_test_suites(caf-io-test io.middleman)
+  caf_add_test_suites(caf-io-legacy-test io.middleman)
 endif()

@@ -26,6 +26,7 @@
 #include "caf/detail/type_traits.hpp"
 
 namespace caf::test {
+inline namespace legacy {
 
 #ifdef CAF_ENABLE_EXCEPTIONS
 
@@ -493,6 +494,7 @@ void require_bin(bool result, const char* file, size_t line, const char* expr,
                  const std::string& lhs, const std::string& rhs);
 
 } // namespace detail
+} // namespace legacy
 } // namespace caf::test
 
 // on the global namespace so that it can hidden via namespace-scoping

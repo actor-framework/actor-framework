@@ -319,7 +319,8 @@ endfunction()
 #     ...
 # )
 function(caf_add_component name)
-  set(varargs DEPENDENCIES HEADERS SOURCES TEST_SOURCES TEST_SUITES ENUM_TYPES)
+  set(varargs DEPENDENCIES HEADERS SOURCES TEST_SOURCES TEST_SUITES ENUM_TYPES
+              LEGACY_TEST_SOURCES LEGACY_TEST_SUITES)
   cmake_parse_arguments(CAF_ADD_COMPONENT "" "" "${varargs}" ${ARGN})
   if(NOT CAF_ADD_COMPONENT_HEADERS)
     message(FATAL_ERROR "Cannot add CAF component without at least one header.")
@@ -363,6 +364,20 @@ function(caf_add_component name)
                                "${CMAKE_CURRENT_SOURCE_DIR}/test")
     if(CAF_ADD_COMPONENT_TEST_SUITES)
       caf_add_test_suites(${tst_bin_target} ${CAF_ADD_COMPONENT_TEST_SUITES})
+    endif()
+  endif()
+  if(CAF_ENABLE_TESTING AND CAF_ADD_COMPONENT_LEGACY_TEST_SOURCES)
+    set(tst_bin_target "caf-${name}-legacy-test")
+    list(APPEND targets ${tst_bin_target})
+    add_executable(${tst_bin_target}
+                   ${CAF_ADD_COMPONENT_LEGACY_TEST_SOURCES}
+                   $<TARGET_OBJECTS:${obj_lib_target}>)
+    target_link_libraries(${tst_bin_target} PRIVATE libcaf_test
+                          ${CAF_ADD_COMPONENT_DEPENDENCIES})
+    target_include_directories(${tst_bin_target} PRIVATE
+                               "${CMAKE_CURRENT_SOURCE_DIR}/test")
+    if(CAF_ADD_COMPONENT_LEGACY_TEST_SUITES)
+      caf_add_test_suites(${tst_bin_target} ${CAF_ADD_COMPONENT_LEGACY_TEST_SUITES})
     endif()
   endif()
   target_link_libraries(${pub_lib_target} ${CAF_ADD_COMPONENT_DEPENDENCIES})

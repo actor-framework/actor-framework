@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/detail/test_export.hpp"
 #include "caf/test/block_type.hpp"
 #include "caf/test/factory.hpp"
 #include "caf/test/fwd.hpp"
@@ -16,8 +17,16 @@
 namespace caf::test {
 
 /// A registry for our factories.
-class registry {
+class CAF_TEST_EXPORT registry {
 public:
+  constexpr registry() noexcept = default;
+
+  registry(const registry&) = delete;
+
+  registry& operator=(const registry&) = delete;
+
+  ~registry();
+
   /// Maps test names to factories. Elements are sorted by the order of their
   /// registration.
   using tests_map = unordered_flat_map<std::string_view, factory*>;
@@ -37,21 +46,16 @@ public:
                                           this->type_);
       }
     };
-    auto ptr = std::make_unique<impl>(suite_name, description, type);
-    auto result = reinterpret_cast<ptrdiff_t>(ptr.get());
-    if (head_ == nullptr) {
-      head_ = std::move(ptr);
-      tail_ = head_.get();
-    } else {
-      tail_->next_ = std::move(ptr);
-      tail_ = tail_->next_.get();
-    }
-    return result;
+    return instance().add(new impl(suite_name, description, type));
   }
 
 private:
-  static std::unique_ptr<factory> head_;
-  static factory* tail_;
+  ptrdiff_t add(factory* new_factory);
+
+  static registry& instance();
+
+  factory* head_ = nullptr;
+  factory* tail_ = nullptr;
 };
 
 } // namespace caf::test

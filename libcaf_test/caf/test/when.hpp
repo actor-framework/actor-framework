@@ -4,12 +4,13 @@
 
 #pragma once
 
+#include "caf/detail/test_export.hpp"
 #include "caf/test/block.hpp"
 #include "caf/test/block_type.hpp"
 
 namespace caf::test {
 
-class when : public block {
+class CAF_TEST_EXPORT when : public block {
 public:
   using block::block;
 

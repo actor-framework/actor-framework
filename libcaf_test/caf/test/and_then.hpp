@@ -4,12 +4,13 @@
 
 #pragma once
 
+#include "caf/detail/test_export.hpp"
 #include "caf/test/block.hpp"
 
 namespace caf::test {
 
 /// Represents an `AND_THEN` block.
-class and_then : public block {
+class CAF_TEST_EXPORT and_then : public block {
 public:
   using block::block;
 

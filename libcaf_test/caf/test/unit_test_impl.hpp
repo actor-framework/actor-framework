@@ -28,6 +28,7 @@
 #include "caf/test/unit_test.hpp"
 
 namespace caf::test {
+inline namespace legacy {
 
 #ifdef CAF_ENABLE_EXCEPTIONS
 
@@ -657,6 +658,7 @@ int main(int argc, char** argv) {
   return result ? 0 : 1;
 }
 
+} // namespace legacy
 } // namespace caf::test
 
 #ifndef CAF_TEST_NO_MAIN

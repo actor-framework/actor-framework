@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/detail/test_export.hpp"
 #include "caf/test/block_type.hpp"
 #include "caf/test/fwd.hpp"
 
@@ -13,7 +14,7 @@
 namespace caf::test {
 
 /// A factory for creating runnable test definitions.
-class factory {
+class CAF_TEST_EXPORT factory {
 public:
   friend class registry;
 
@@ -34,7 +35,7 @@ public:
   virtual std::unique_ptr<runnable> make(context_ptr state) = 0;
 
 protected:
-  std::unique_ptr<factory> next_;
+  factory* next_ = nullptr;
   std::string_view suite_name_;
   std::string_view description_;
   block_type type_;

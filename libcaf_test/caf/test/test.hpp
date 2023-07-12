@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/detail/pp.hpp"
+#include "caf/detail/test_export.hpp"
 #include "caf/test/block.hpp"
 #include "caf/test/context.hpp"
 #include "caf/test/factory.hpp"
@@ -17,7 +18,7 @@
 namespace caf::test {
 
 /// Represents a `TEST` block.
-class test : public block {
+class CAF_TEST_EXPORT test : public block {
 public:
   using block::block;
 
