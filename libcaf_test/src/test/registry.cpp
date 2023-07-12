@@ -10,11 +10,10 @@
 namespace caf::test {
 
 registry::~registry() {
-  auto ptr = head_;
-  while (ptr != nullptr) {
-    auto next = ptr->next_;
-    delete ptr;
-    ptr = next;
+  while (head_ != nullptr) {
+    auto next = head_->next_;
+    delete head_;
+    head_ = next;
   }
 }
 
@@ -32,13 +31,11 @@ registry::suites_map registry::suites() {
 }
 
 ptrdiff_t registry::add(factory* new_factory) {
-  if (head_ == nullptr) {
+  if (head_ == nullptr)
     head_ = new_factory;
-    tail_ = head_;
-  } else {
+  else
     tail_->next_ = new_factory;
-    tail_ = new_factory;
-  }
+  tail_ = new_factory;
   return reinterpret_cast<ptrdiff_t>(new_factory);
 }
 

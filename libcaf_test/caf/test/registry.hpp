@@ -19,9 +19,11 @@ namespace caf::test {
 /// A registry for our factories.
 class CAF_TEST_EXPORT registry {
 public:
-  constexpr registry() noexcept : head_(nullptr), tail_(nullptr) {
-    // nop
-  }
+  constexpr registry() noexcept = default;
+
+  registry(const registry&) = delete;
+
+  registry& operator=(const registry&) = delete;
 
   ~registry();
 
@@ -52,8 +54,8 @@ private:
 
   static registry& instance();
 
-  factory* head_;
-  factory* tail_;
+  factory* head_ = nullptr;
+  factory* tail_ = nullptr;
 };
 
 } // namespace caf::test
