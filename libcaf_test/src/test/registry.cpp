@@ -9,9 +9,18 @@
 
 namespace caf::test {
 
+registry::~registry() {
+  auto ptr = head_;
+  while (ptr != nullptr) {
+    auto next = ptr->next_;
+    delete ptr;
+    ptr = next;
+  }
+}
+
 registry::suites_map registry::suites() {
   suites_map result;
-  for (auto ptr = head_.get(); ptr != nullptr; ptr = ptr->next_.get()) {
+  for (auto* ptr = instance().head_; ptr != nullptr; ptr = ptr->next_) {
     auto& suite = result[ptr->suite_name_];
     if (auto [iter, ok] = suite.emplace(ptr->description_, ptr); !ok) {
       auto msg = detail::format("duplicate test name in suite {}: {}",
@@ -22,8 +31,25 @@ registry::suites_map registry::suites() {
   return result;
 }
 
-std::unique_ptr<factory> registry::head_;
+ptrdiff_t registry::add(factory* new_factory) {
+  if (head_ == nullptr) {
+    head_ = new_factory;
+    tail_ = head_;
+  } else {
+    tail_->next_ = new_factory;
+    tail_ = new_factory;
+  }
+  return reinterpret_cast<ptrdiff_t>(new_factory);
+}
 
-factory* registry::tail_;
+namespace {
+
+registry default_instance;
+
+} // namespace
+
+registry& registry::instance() {
+  return default_instance;
+}
 
 } // namespace caf::test

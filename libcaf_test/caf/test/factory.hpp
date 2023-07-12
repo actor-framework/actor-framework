@@ -35,7 +35,7 @@ public:
   virtual std::unique_ptr<runnable> make(context_ptr state) = 0;
 
 protected:
-  std::unique_ptr<factory> next_;
+  factory* next_ = nullptr;
   std::string_view suite_name_;
   std::string_view description_;
   block_type type_;
