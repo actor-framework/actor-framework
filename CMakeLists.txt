@@ -336,11 +336,25 @@ function(caf_add_component name)
   set(pub_lib_target "libcaf_${name}")
   set(obj_lib_target "libcaf_${name}_obj")
   set(targets ${pub_lib_target} ${obj_lib_target})
-  add_library(${obj_lib_target} OBJECT
-              ${CAF_ADD_COMPONENT_HEADERS} ${CAF_ADD_COMPONENT_SOURCES})
+  add_library(${obj_lib_target} OBJECT ${CAF_ADD_COMPONENT_HEADERS})
   set_property(TARGET ${obj_lib_target} PROPERTY POSITION_INDEPENDENT_CODE ON)
   caf_target_link_libraries(${obj_lib_target}
                             ${CAF_ADD_COMPONENT_DEPENDENCIES})
+  foreach(source_file ${CAF_ADD_COMPONENT_SOURCES})
+    get_filename_component(ext ${source_file} EXT)
+    if(ext STREQUAL ".cpp")
+      target_sources(${obj_lib_target} PRIVATE ${source_file})
+    elseif(ext STREQUAL ".test.cpp" AND CAF_ENABLE_TESTING)
+      get_filename_component(test_name ${source_file} NAME_WE)
+      get_filename_component(test_path ${source_file} DIRECTORY)
+      string(REPLACE "/" "-" test_name "${test_path}/${test_name}-test")
+      add_executable("${test_name}" ${source_file}
+                     $<TARGET_OBJECTS:${obj_lib_target}>)
+      target_link_libraries(${test_name} PRIVATE libcaf_test
+                            ${CAF_ADD_COMPONENT_DEPENDENCIES})
+      add_test(NAME ${test_name} COMMAND ${test_name})
+    endif()
+  endforeach()
   if(NOT TARGET ${pub_lib_target})
     add_library(${pub_lib_target}
                 "${PROJECT_SOURCE_DIR}/cmake/dummy.cpp"

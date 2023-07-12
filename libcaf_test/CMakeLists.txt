@@ -16,27 +16,23 @@ caf_add_component(
   HEADERS
     ${CAF_TEST_HEADERS}
   SOURCES
-    src/test/and_given.cpp
-    src/test/and_then.cpp
-    src/test/and_when.cpp
-    src/test/block.cpp
-    src/test/context.cpp
-    src/test/factory.cpp
-    src/test/given.cpp
-    src/test/nesting_error.cpp
-    src/test/registry.cpp
-    src/test/reporter.cpp
-    src/test/runnable.cpp
-    src/test/runner.cpp
-    src/test/scenario.cpp
-    src/test/scope.cpp
-    src/test/section.cpp
-    src/test/test.cpp
-    src/test/then.cpp
-    src/test/when.cpp
-  TEST_SOURCES
-    test/test-test.cpp
-  TEST_SUITES
-    test.block_type
-    test.scenario
-    test.test)
+    caf/test/and_given.cpp
+    caf/test/and_then.cpp
+    caf/test/and_when.cpp
+    caf/test/block.cpp
+    caf/test/context.cpp
+    caf/test/factory.cpp
+    caf/test/given.cpp
+    caf/test/nesting_error.cpp
+    caf/test/registry.cpp
+    caf/test/reporter.cpp
+    caf/test/runnable.cpp
+    caf/test/runner.cpp
+    caf/test/scenario.cpp
+    caf/test/scenario.test.cpp
+    caf/test/scope.cpp
+    caf/test/section.cpp
+    caf/test/test.cpp
+    caf/test/test.test.cpp
+    caf/test/then.cpp
+    caf/test/when.cpp)

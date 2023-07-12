@@ -88,9 +88,6 @@ public:
     using super::super;                                                        \
     void do_run() override;                                                    \
     static ptrdiff_t register_id;                                              \
-    using caf_test_suite_name_t = std::decay_t<decltype(caf_test_suite_name)>; \
-    static_assert(!std::is_same_v<caf::unit_t, caf_test_suite_name_t>,         \
-                  "SCENARIO must be nested in a SUITE block");                 \
   };                                                                           \
   ptrdiff_t CAF_PP_UNIFYN(scenario_)::register_id                              \
     = caf::test::registry::add<CAF_PP_UNIFYN(scenario_)>(                      \

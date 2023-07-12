@@ -5,10 +5,9 @@
 #include "caf/test/block_type.hpp"
 
 #include "caf/test/test.hpp"
+#include "caf/test/caf_test_main.hpp"
 
 using caf::test::block_type;
-
-SUITE("caf.test.block_type") {
 
 TEST("is_extension checks whether a block type needs a predecessor") {
   using caf::test::is_extension;
@@ -28,4 +27,4 @@ TEST("is_extension checks whether a block type needs a predecessor") {
   }
 }
 
-} // SUITE("caf.test.block_type")
+CAF_TEST_MAIN()

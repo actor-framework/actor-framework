@@ -24,9 +24,6 @@ struct caf_test_case_auto_fixture {};
 
 #define WITH_FIXTURE(name)                                                     \
   namespace CAF_PP_UNIFYN(caf_fixture_) {                                      \
-  static_assert(                                                               \
-    !std::is_same_v<std::decay_t<decltype(caf_test_suite_name)>, caf::unit_t>, \
-    "WITH_FIXTURE must be placed into a SUITE scope");                         \
   using caf_test_case_auto_fixture = name;                                     \
   }                                                                            \
   namespace CAF_PP_UNIFYN(caf_fixture_)
