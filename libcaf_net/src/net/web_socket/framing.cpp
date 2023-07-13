@@ -97,6 +97,11 @@ ptrdiff_t framing::consume(byte_span buffer, byte_span) {
   if (hdr.fin) {
     if (opcode_ == nil_code) {
       // Call upper layer.
+      if (hdr.opcode == detail::rfc6455::text_frame
+          && !detail::rfc3629::valid(payload)) {
+        abort_and_shutdown(sec::malformed_message, "invalid UTF-8 sequence");
+        return -1;
+      }
       return handle(hdr.opcode, payload, frame_size);
     }
     if (hdr.opcode != detail::rfc6455::continuation_frame) {
@@ -107,9 +112,14 @@ ptrdiff_t framing::consume(byte_span buffer, byte_span) {
     }
     // End of fragmented input.
     payload_buf_.insert(payload_buf_.end(), payload.begin(), payload.end());
+    if (opcode_ == detail::rfc6455::text_frame && !validate_fragmented_utf8()) {
+      abort_and_shutdown(sec::malformed_message, "invalid UTF-8 sequence");
+      return -1;
+    }
     auto result = handle(opcode_, payload_buf_, frame_size);
     opcode_ = nil_code;
     payload_buf_.clear();
+    validation_point = 0;
     return result;
   }
   // The first frame must not be a continuation frame. Any frame that is not
@@ -122,6 +132,10 @@ ptrdiff_t framing::consume(byte_span buffer, byte_span) {
     return -1;
   }
   payload_buf_.insert(payload_buf_.end(), payload.begin(), payload.end());
+  if (opcode_ == detail::rfc6455::text_frame && !validate_fragmented_utf8()) {
+    abort_and_shutdown(sec::malformed_message, "invalid UTF-8 sequence");
+    return -1;
+  }
   return static_cast<ptrdiff_t>(frame_size);
 }
 
@@ -203,10 +217,6 @@ ptrdiff_t framing::handle(uint8_t opcode, byte_span payload,
     case detail::rfc6455::text_frame: {
       std::string_view text{reinterpret_cast<const char*>(payload.data()),
                             payload.size()};
-      if (!detail::rfc3629::valid(text)) {
-        abort_and_shutdown(sec::malformed_message, "invalid UTF-8 sequence");
-        return -1;
-      }
       if (up_->consume_text(text) < 0)
         return -1;
       break;
@@ -267,6 +277,18 @@ void framing::ship_closing_message(status code, std::string_view msg) {
   detail::rfc6455::assemble_frame(detail::rfc6455::connection_close, mask_key,
                                   payload, down_->output_buffer());
   down_->end_output();
+}
+
+bool framing::validate_fragmented_utf8() noexcept {
+  // validate from the index where we left off last time
+  auto [index, incomplete] = detail::rfc3629::validate(
+    make_span(payload_buf_).subspan(validation_point));
+  validation_point += index;
+  if (validation_point == payload_buf_.size())
+    return true;
+  // incomplete will be true if the last code point is missing continuation
+  // bytes but might be valid
+  return incomplete;
 }
 
 } // namespace caf::net::web_socket

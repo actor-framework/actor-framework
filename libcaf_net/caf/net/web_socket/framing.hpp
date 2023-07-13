@@ -152,6 +152,8 @@ private:
     shutdown(err);
   }
 
+  bool validate_fragmented_utf8() noexcept;
+
   // -- member variables -------------------------------------------------------
 
   /// Points to the transport layer below.
@@ -171,6 +173,9 @@ private:
 
   /// Assembles fragmented payloads.
   binary_buffer payload_buf_;
+
+  /// Validated UTF-8 range for fragmented text payloads
+  size_t validation_point = 0ul;
 
   /// Next layer in the processing chain.
   upper_layer_ptr up_;

@@ -283,6 +283,51 @@ SCENARIO("ping messages may arrive between message fragments") {
   }
 }
 
+SCENARIO("the application shuts down on invalid UTF-8 message") {
+  GIVEN("a text message with an invalid UTF-8 code point") {
+    auto data = bytes({
+      0xce, 0xba, 0xe1, 0xbd, 0xb9, 0xcf, // valid
+      0x83, 0xce, 0xbc, 0xce, 0xb5,       // valid
+      0xf4, 0x90, 0x80, 0x80,             // invalid code point
+      0x65, 0x64, 0x69, 0x74, 0x65, 0x64  // valid
+    });
+    auto data_span = const_byte_span(data);
+    WHEN("the client sends the whole message as a single frame") {
+      reset();
+      byte_buffer frame;
+      detail::rfc6455::assemble_frame(detail::rfc6455::text_frame, 0x0,
+                                      data_span, frame);
+      transport->push(frame);
+      THEN("the client aborts") {
+        CHECK_EQ(transport->handle_input(), 0);
+        CHECK(app->has_aborted());
+      }
+    }
+    WHEN("the client sends the first part of the message") {
+      reset();
+      byte_buffer frame;
+      detail::rfc6455::assemble_frame(detail::rfc6455::text_frame, 0x0,
+                                      data_span.subspan(0, 11), frame, 0);
+      transport->push(frame);
+      THEN("the connection did not abort") {
+        CHECK_EQ(transport->handle_input(),
+                 static_cast<ptrdiff_t>(frame.size()));
+        CHECK(!app->has_aborted());
+      }
+    }
+    AND_WHEN("the client sends the second frame containing invalid data") {
+      byte_buffer frame;
+      detail::rfc6455::assemble_frame(detail::rfc6455::continuation_frame, 0x0,
+                                      data_span.subspan(11), frame, 0);
+      transport->push(frame);
+      THEN("the client aborts") {
+        CHECK_EQ(transport->handle_input(), 0);
+        CHECK(app->has_aborted());
+      }
+    }
+  }
+}
+
 END_FIXTURE_SCOPE()
 
 namespace {
