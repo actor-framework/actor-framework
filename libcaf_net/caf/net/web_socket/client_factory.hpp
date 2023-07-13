@@ -98,9 +98,8 @@ private:
     auto bridge = bridge_t::make(std::move(a2s_pull), std::move(s2a_push));
     auto bridge_ptr = bridge.get();
     auto impl = client::make(std::move(cfg.hs), std::move(bridge));
-    auto fd = conn.fd();
     auto transport = transport_t::make(std::move(conn), std::move(impl));
-    transport->active_policy().connect(fd);
+    transport->active_policy().connect();
     auto ptr = socket_manager::make(cfg.mpx, std::move(transport));
     bridge_ptr->self_ref(ptr->as_disposable());
     cfg.mpx->start(ptr);

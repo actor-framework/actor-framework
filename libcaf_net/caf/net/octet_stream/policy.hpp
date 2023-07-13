@@ -18,25 +18,28 @@ class CAF_NET_EXPORT policy {
 public:
   virtual ~policy();
 
+  /// Returns the handle for the managed socket.
+  virtual stream_socket handle() const = 0;
+
   /// Reads data from the socket into the buffer.
-  virtual ptrdiff_t read(stream_socket x, byte_span buf);
+  virtual ptrdiff_t read(byte_span buf) = 0;
 
   /// Writes data from the buffer to the socket.
-  virtual ptrdiff_t write(stream_socket x, const_byte_span buf);
+  virtual ptrdiff_t write(const_byte_span buf) = 0;
 
   /// Returns the last socket error on this thread.
-  virtual errc last_error(stream_socket, ptrdiff_t);
+  virtual errc last_error(ptrdiff_t) = 0;
 
   /// Checks whether connecting a non-blocking socket was successful.
-  virtual ptrdiff_t connect(stream_socket x);
+  virtual ptrdiff_t connect() = 0;
 
   /// Convenience function that always returns 1. Exists to make writing code
   /// against multiple policies easier by providing the same interface.
-  virtual ptrdiff_t accept(stream_socket);
+  virtual ptrdiff_t accept() = 0;
 
   /// Returns the number of bytes that are buffered internally and available
   /// for immediate read.
-  virtual size_t buffered() const noexcept;
+  virtual size_t buffered() const noexcept = 0;
 };
 
 } // namespace caf::net::octet_stream

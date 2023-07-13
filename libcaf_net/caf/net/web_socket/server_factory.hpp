@@ -129,10 +129,9 @@ public:
     auto app = bridge_t::make(on_request_, producer_);
     auto app_ptr = app.get();
     auto ws = net::web_socket::server::make(std::move(app));
-    auto fd = conn.fd();
     auto transport = Transport::make(std::move(conn), std::move(ws));
     transport->max_consecutive_reads(max_consecutive_reads_);
-    transport->active_policy().accept(fd);
+    transport->active_policy().accept();
     auto mgr = net::socket_manager::make(mpx, std::move(transport));
     app_ptr->self_ref(mgr->as_disposable());
     return mgr;

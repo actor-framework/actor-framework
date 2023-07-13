@@ -53,7 +53,7 @@ public:
       up_->abort(make_error(sec::connection_closed));
       owner_->deregister();
     } else {
-      auto err = policy_.last_error(policy_.conn.fd(), res);
+      auto err = policy_.last_error(res);
       switch (err) {
         case octet_stream::errc::want_read:
         case octet_stream::errc::temporary:
@@ -81,7 +81,7 @@ public:
       up_->abort(make_error(sec::connection_closed));
       owner_->deregister();
     } else {
-      switch (policy_.last_error(policy_.conn.fd(), res)) {
+      switch (policy_.last_error(res)) {
         case octet_stream::errc::want_write:
         case octet_stream::errc::temporary:
           break;
@@ -133,16 +133,19 @@ transport::policy_impl::policy_impl(connection conn) : conn(std::move(conn)) {
   // nop
 }
 
-ptrdiff_t transport::policy_impl::read(stream_socket, byte_span buf) {
+stream_socket transport::policy_impl::handle() const {
+  return conn.fd();
+}
+
+ptrdiff_t transport::policy_impl::read(byte_span buf) {
   return conn.read(buf);
 }
 
-ptrdiff_t transport::policy_impl::write(stream_socket, const_byte_span buf) {
+ptrdiff_t transport::policy_impl::write(const_byte_span buf) {
   return conn.write(buf);
 }
 
-octet_stream::errc transport::policy_impl::last_error(stream_socket fd,
-                                                      ptrdiff_t ret) {
+octet_stream::errc transport::policy_impl::last_error(ptrdiff_t ret) {
   switch (conn.last_error(ret)) {
     case errc::none:
     case errc::want_accept:
@@ -151,7 +154,7 @@ octet_stream::errc transport::policy_impl::last_error(stream_socket fd,
       return octet_stream::errc::temporary;
     case errc::syscall_failed:
       // Need to consult errno, which we just leave to the default policy.
-      return octet_stream::policy{}.last_error(fd, ret);
+      return super::policy_impl{conn.fd()}.last_error(ret);
     case errc::want_read:
       return octet_stream::errc::want_read;
     case errc::want_write:
@@ -163,11 +166,11 @@ octet_stream::errc transport::policy_impl::last_error(stream_socket fd,
   }
 }
 
-ptrdiff_t transport::policy_impl::connect(stream_socket) {
+ptrdiff_t transport::policy_impl::connect() {
   return conn.connect();
 }
 
-ptrdiff_t transport::policy_impl::accept(stream_socket) {
+ptrdiff_t transport::policy_impl::accept() {
   return conn.accept();
 }
 
@@ -180,8 +183,7 @@ size_t transport::policy_impl::buffered() const noexcept {
 std::unique_ptr<transport> transport::make(connection conn,
                                            upper_layer_ptr up) {
   // Note: can't use make_unique because the constructor is private.
-  auto fd = conn.fd();
-  auto ptr = new transport(fd, std::move(conn), std::move(up));
+  auto ptr = new transport(std::move(conn), std::move(up));
   return std::unique_ptr<transport>{ptr};
 }
 
@@ -199,8 +201,8 @@ transport::worker_ptr transport::make_client(connection conn,
 
 // -- constructors, destructors, and assignment operators ----------------------
 
-transport::transport(stream_socket fd, connection conn, upper_layer_ptr up)
-  : super(fd, std::move(up), &policy_impl_), policy_impl_(std::move(conn)) {
+transport::transport(connection conn, upper_layer_ptr up)
+  : super(&policy_impl_, std::move(up)), policy_impl_(std::move(conn)) {
   // nop
 }
 
