@@ -352,6 +352,9 @@ function(caf_add_component name)
                      $<TARGET_OBJECTS:${obj_lib_target}>)
       target_link_libraries(${test_name} PRIVATE libcaf_test
                             ${CAF_ADD_COMPONENT_DEPENDENCIES})
+      target_include_directories(${test_name} PRIVATE
+                                 "${CMAKE_CURRENT_SOURCE_DIR}"
+                                 "${CMAKE_CURRENT_BINARY_DIR}")
       add_test(NAME ${test_name} COMMAND ${test_name})
     endif()
   endforeach()
