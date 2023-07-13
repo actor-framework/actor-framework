@@ -5,10 +5,9 @@
 #include "caf/test/scenario.hpp"
 
 #include "caf/config.hpp"
+#include "caf/test/caf_test_main.hpp"
 #include "caf/test/nesting_error.hpp"
 #include "caf/test/test.hpp"
-
-SUITE("caf.test.scenario") {
 
 #ifdef CAF_ENABLE_EXCEPTIONS
 SCENARIO("a scenario may not contain a section") {
@@ -138,4 +137,4 @@ SCENARIO("scenario-1") {
   }
 }
 
-} // SUITE("caf.test.scenario")
+CAF_TEST_MAIN()

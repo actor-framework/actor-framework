@@ -3,9 +3,9 @@
 
 #include "caf/test/test.hpp"
 
-using caf::test::block_type;
+#include "caf/test/caf_test_main.hpp"
 
-SUITE("caf.test.test") {
+using caf::test::block_type;
 
 TEST("tests can contain checks") {
   auto* rep = caf::test::reporter::instance;
@@ -57,4 +57,4 @@ TEST("each run starts with a fresh fixture") {
 
 } // WITH_FIXTURE(int_fixture)
 
-} // SUITE("caf.test.test")
+CAF_TEST_MAIN()

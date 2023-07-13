@@ -36,6 +36,7 @@ public:
 
   static suites_map suites();
 
+  /// Adds a new test factory to the suite `suite_name`.
   template <class TestImpl>
   static ptrdiff_t add(std::string_view suite_name,
                        std::string_view description, block_type type) {
@@ -47,6 +48,12 @@ public:
       }
     };
     return instance().add(new impl(suite_name, description, type));
+  }
+
+  /// Adds a new test factory to the "anonymous" suite named `$`.
+  template <class TestImpl>
+  static ptrdiff_t add(unit_t, std::string_view description, block_type type) {
+    return add<TestImpl>("$", description, type);
   }
 
 private:

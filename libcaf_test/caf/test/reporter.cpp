@@ -220,7 +220,7 @@ public:
               "  $B(Time):   $Y({1:.3f}s)\n"
               "  $B(Checks): ${2}({3} / {4})\n"
               "  $B(Status): ${2}({5})\n",
-              name,                                               // {0}
+              name != "$" ? name : "(default suite)",             // {0}
               duration_cast<fractional_seconds>(elapsed).count(), // {1}
               suite_stats_.failed > 0 ? 'R' : 'G',                // {2}
               suite_stats_.passed,                                // {3}
@@ -256,8 +256,12 @@ public:
     using detail::format_to;
     if (current_ctx_ == nullptr)
       CAF_RAISE_ERROR(std::logic_error, "begin_test was not called");
-    format_to(colored(), "$C(Suite): $0{}\n", current_suite_);
-    indent_ = 2;
+    if (current_suite_ != "$") {
+      format_to(colored(), "$C(Suite): $0{}\n", current_suite_);
+      indent_ = 2;
+    } else {
+      indent_ = 0;
+    }
     live_ = true;
     for (auto* frame : current_ctx_->call_stack)
       begin_step(frame);
