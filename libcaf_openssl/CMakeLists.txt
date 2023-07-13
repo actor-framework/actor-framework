@@ -16,13 +16,13 @@ caf_add_component(
   HEADERS
     ${CAF_OPENSSL_HEADERS}
   SOURCES
-    src/openssl/manager.cpp
-    src/openssl/middleman_actor.cpp
-    src/openssl/publish.cpp
-    src/openssl/remote_actor.cpp
-    src/openssl/session.cpp
-  TEST_SOURCES
+    caf/openssl/manager.cpp
+    caf/openssl/middleman_actor.cpp
+    caf/openssl/publish.cpp
+    caf/openssl/remote_actor.cpp
+    caf/openssl/session.cpp
+  LEGACY_TEST_SUITES
     test/openssl-test.cpp
-  TEST_SUITES
+  LEGACY_TEST_SUITES
     openssl.authentication
     openssl.remote_actor)
