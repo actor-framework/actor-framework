@@ -112,14 +112,14 @@ ptrdiff_t framing::consume(byte_span buffer, byte_span) {
     }
     // End of fragmented input.
     payload_buf_.insert(payload_buf_.end(), payload.begin(), payload.end());
-    if (opcode_ == detail::rfc6455::text_frame && !validate_fragmented_utf8()) {
+    if (opcode_ == detail::rfc6455::text_frame && !payload_valid()) {
       abort_and_shutdown(sec::malformed_message, "invalid UTF-8 sequence");
       return -1;
     }
     auto result = handle(opcode_, payload_buf_, frame_size);
     opcode_ = nil_code;
     payload_buf_.clear();
-    validation_point = 0;
+    validation_offset_ = 0;
     return result;
   }
   // The first frame must not be a continuation frame. Any frame that is not
@@ -132,7 +132,7 @@ ptrdiff_t framing::consume(byte_span buffer, byte_span) {
     return -1;
   }
   payload_buf_.insert(payload_buf_.end(), payload.begin(), payload.end());
-  if (opcode_ == detail::rfc6455::text_frame && !validate_fragmented_utf8()) {
+  if (opcode_ == detail::rfc6455::text_frame && !payload_valid()) {
     abort_and_shutdown(sec::malformed_message, "invalid UTF-8 sequence");
     return -1;
   }
@@ -279,12 +279,12 @@ void framing::ship_closing_message(status code, std::string_view msg) {
   down_->end_output();
 }
 
-bool framing::validate_fragmented_utf8() noexcept {
+bool framing::payload_valid() noexcept {
   // validate from the index where we left off last time
   auto [index, incomplete] = detail::rfc3629::validate(
-    make_span(payload_buf_).subspan(validation_point));
-  validation_point += index;
-  if (validation_point == payload_buf_.size())
+    make_span(payload_buf_).subspan(validation_offset_));
+  validation_offset_ += index;
+  if (validation_offset_ == payload_buf_.size())
     return true;
   // incomplete will be true if the last code point is missing continuation
   // bytes but might be valid

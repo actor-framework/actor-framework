@@ -123,87 +123,107 @@ constexpr std::string_view ascii_2 = R"__(
  *                      \____/_/   \_|_|                                      *
 )__";
 
-TEST("ASCII input") {
-  check(valid_utf8(ascii_1));
-  check(valid_utf8(ascii_2));
+TEST("rfc3629::valid checks whether an input is valid UTF-8") {
+  SECTION("valid ASCII input") {
+    check(valid_utf8(ascii_1));
+    check(valid_utf8(ascii_2));
+  }
+
+  SECTION("valid UTF-8 input") {
+    check(valid_utf8(valid_two_byte_1));
+    check(valid_utf8(valid_two_byte_2));
+    check(valid_utf8(valid_three_byte_1));
+    check(valid_utf8(valid_three_byte_2));
+    check(valid_utf8(valid_four_byte_1));
+    check(valid_utf8(valid_four_byte_2));
+  }
+
+  SECTION("invalid UTF-8 input") {
+    check(!valid_utf8(invalid_two_byte_1));
+    check(!valid_utf8(invalid_two_byte_2));
+    check(!valid_utf8(invalid_two_byte_3));
+    check(!valid_utf8(invalid_two_byte_4));
+    check(!valid_utf8(invalid_three_byte_1));
+    check(!valid_utf8(invalid_three_byte_2));
+    check(!valid_utf8(invalid_three_byte_3));
+    check(!valid_utf8(invalid_three_byte_4));
+    check(!valid_utf8(invalid_three_byte_5));
+    check(!valid_utf8(invalid_three_byte_6));
+    check(!valid_utf8(invalid_three_byte_7));
+    check(!valid_utf8(invalid_three_byte_8));
+    check(!valid_utf8(invalid_four_byte_1));
+    check(!valid_utf8(invalid_four_byte_2));
+    check(!valid_utf8(invalid_four_byte_3));
+    check(!valid_utf8(invalid_four_byte_4));
+    check(!valid_utf8(invalid_four_byte_5));
+    check(!valid_utf8(invalid_four_byte_6));
+    check(!valid_utf8(invalid_four_byte_7));
+    check(!valid_utf8(invalid_four_byte_8));
+    check(!valid_utf8(invalid_four_byte_9));
+    check(!valid_utf8(invalid_four_byte_10));
+  }
 }
 
-TEST("valid UTF-8 input") {
-  check(valid_utf8(valid_two_byte_1));
-  check(valid_utf8(valid_two_byte_2));
-  check(valid_utf8(valid_three_byte_1));
-  check(valid_utf8(valid_three_byte_2));
-  check(valid_utf8(valid_four_byte_1));
-  check(valid_utf8(valid_four_byte_2));
+TEST("rfc3629::validate returns the end index if the range is valid") {
+  SECTION("valid ASCII input") {
+    check_eq(rfc3629::validate(ascii_1), res_t{ascii_1.size(), false});
+    check_eq(rfc3629::validate(ascii_2), res_t{ascii_2.size(), false});
+  }
+
+  SECTION("valid UTF-8 input") {
+    check_eq(rfc3629::validate(valid_two_byte_1), res_t{2, false});
+    check_eq(rfc3629::validate(valid_two_byte_2), res_t{2, false});
+    check_eq(rfc3629::validate(valid_three_byte_1), res_t{3, false});
+    check_eq(rfc3629::validate(valid_three_byte_2), res_t{3, false});
+    check_eq(rfc3629::validate(valid_four_byte_1), res_t{4, false});
+    check_eq(rfc3629::validate(valid_four_byte_2), res_t{4, false});
+  }
 }
 
-TEST("invalid UTF-8 input") {
-  check(!valid_utf8(invalid_two_byte_1));
-  check(!valid_utf8(invalid_two_byte_2));
-  check(!valid_utf8(invalid_two_byte_3));
-  check(!valid_utf8(invalid_two_byte_4));
-  check(!valid_utf8(invalid_three_byte_1));
-  check(!valid_utf8(invalid_three_byte_2));
-  check(!valid_utf8(invalid_three_byte_3));
-  check(!valid_utf8(invalid_three_byte_4));
-  check(!valid_utf8(invalid_three_byte_5));
-  check(!valid_utf8(invalid_three_byte_6));
-  check(!valid_utf8(invalid_three_byte_7));
-  check(!valid_utf8(invalid_three_byte_8));
-  check(!valid_utf8(invalid_four_byte_1));
-  check(!valid_utf8(invalid_four_byte_2));
-  check(!valid_utf8(invalid_four_byte_3));
-  check(!valid_utf8(invalid_four_byte_4));
-  check(!valid_utf8(invalid_four_byte_5));
-  check(!valid_utf8(invalid_four_byte_6));
-  check(!valid_utf8(invalid_four_byte_7));
-  check(!valid_utf8(invalid_four_byte_8));
-  check(!valid_utf8(invalid_four_byte_9));
-  check(!valid_utf8(invalid_four_byte_10));
-}
+TEST("rfc3629::validate stops at the first invalid byte") {
+  SECTION("UTF-8 input missing continuation bytes") {
+    check_eq(rfc3629::validate(invalid_two_byte_1), res_t{0, true});
+    check_eq(rfc3629::validate(invalid_three_byte_1), res_t{0, true});
+    check_eq(rfc3629::validate(invalid_three_byte_2), res_t{0, true});
+    check_eq(rfc3629::validate(invalid_four_byte_1), res_t{0, true});
+    check_eq(rfc3629::validate(invalid_four_byte_2), res_t{0, true});
+    check_eq(rfc3629::validate(invalid_four_byte_3), res_t{0, true});
+  }
 
-TEST("invalid UTF-8 input missing continuation bytes") {
-  check_eq(rfc3629::validate(invalid_two_byte_1), res_t(0, true));
-  check_eq(rfc3629::validate(invalid_three_byte_1), res_t{0ul, true});
-  check_eq(rfc3629::validate(invalid_three_byte_2), res_t{0ul, true});
-  check_eq(rfc3629::validate(invalid_four_byte_1), res_t{0ul, true});
-  check_eq(rfc3629::validate(invalid_four_byte_2), res_t{0ul, true});
-  check_eq(rfc3629::validate(invalid_four_byte_3), res_t{0ul, true});
-}
+  SECTION("UTF-8 input with malformed data") {
+    check_eq(rfc3629::validate(invalid_two_byte_2), res_t{0, false});
+    check_eq(rfc3629::validate(invalid_two_byte_3), res_t{0, false});
+    check_eq(rfc3629::validate(invalid_two_byte_4), res_t{0, false});
+    check_eq(rfc3629::validate(invalid_three_byte_3), res_t{0, false});
+    check_eq(rfc3629::validate(invalid_three_byte_4), res_t{0, false});
+    check_eq(rfc3629::validate(invalid_three_byte_5), res_t{0, false});
+    check_eq(rfc3629::validate(invalid_three_byte_6), res_t{0, false});
+    check_eq(rfc3629::validate(invalid_three_byte_7), res_t{0, false});
+    check_eq(rfc3629::validate(invalid_three_byte_8), res_t{0, false});
+    check_eq(rfc3629::validate(invalid_four_byte_4), res_t{0, false});
+    check_eq(rfc3629::validate(invalid_four_byte_5), res_t{0, false});
+    check_eq(rfc3629::validate(invalid_four_byte_6), res_t{0, false});
+    check_eq(rfc3629::validate(invalid_four_byte_7), res_t{0, false});
+    check_eq(rfc3629::validate(invalid_four_byte_8), res_t{0, false});
+    check_eq(rfc3629::validate(invalid_four_byte_9), res_t{0, false});
+    check_eq(rfc3629::validate(invalid_four_byte_10), res_t{0, false});
+  }
 
-TEST("invalid UTF-8 input malformed data") {
-  check_eq(rfc3629::validate(invalid_two_byte_2), res_t{0ul, false});
-  check_eq(rfc3629::validate(invalid_two_byte_3), res_t{0ul, false});
-  check_eq(rfc3629::validate(invalid_two_byte_4), res_t{0ul, false});
-  check_eq(rfc3629::validate(invalid_three_byte_3), res_t{0ul, false});
-  check_eq(rfc3629::validate(invalid_three_byte_4), res_t{0ul, false});
-  check_eq(rfc3629::validate(invalid_three_byte_5), res_t{0ul, false});
-  check_eq(rfc3629::validate(invalid_three_byte_6), res_t{0ul, false});
-  check_eq(rfc3629::validate(invalid_three_byte_7), res_t{0ul, false});
-  check_eq(rfc3629::validate(invalid_three_byte_8), res_t{0ul, false});
-  check_eq(rfc3629::validate(invalid_four_byte_4), res_t{0ul, false});
-  check_eq(rfc3629::validate(invalid_four_byte_5), res_t{0ul, false});
-  check_eq(rfc3629::validate(invalid_four_byte_6), res_t{0ul, false});
-  check_eq(rfc3629::validate(invalid_four_byte_7), res_t{0ul, false});
-  check_eq(rfc3629::validate(invalid_four_byte_8), res_t{0ul, false});
-  check_eq(rfc3629::validate(invalid_four_byte_9), res_t{0ul, false});
-  check_eq(rfc3629::validate(invalid_four_byte_10), res_t{0ul, false});
-}
+  SECTION("invalid UTF-8 input fails on the invalid byte") {
+    check_eq(rfc3629::validate(make_span(invalid_four_byte_9, 2)),
+             res_t{0, false});
+    check_eq(rfc3629::validate(make_span(invalid_four_byte_10, 1)),
+             res_t{0, false});
+  }
 
-TEST("invalid UTF-8 input fails on the invalid byte") {
-  const_byte_span input{invalid_four_byte_9};
-  check_eq(rfc3629::validate(input.subspan(0, 2)), res_t{0ul, false});
-  input = invalid_four_byte_10;
-  check_eq(rfc3629::validate(input.subspan(0, 1)), res_t{0ul, false});
+  SECTION("invalid UTF-8 input with valid prefix") {
+    byte_buffer data;
+    data.insert(data.end(), begin(valid_four_byte_1), end(valid_four_byte_1));
+    data.insert(data.end(), begin(valid_four_byte_2), end(valid_four_byte_2));
+    data.insert(data.end(), begin(valid_two_byte_1), end(valid_two_byte_1));
+    data.insert(data.end(), begin(invalid_four_byte_4),
+                end(invalid_four_byte_4));
+    check_eq(rfc3629::validate(data), res_t{10, false});
+  }
 }
-
-TEST("invalid UTF-8 input with valid prefix") {
-  byte_buffer data;
-  data.insert(data.end(), begin(valid_four_byte_1), end(valid_four_byte_1));
-  data.insert(data.end(), begin(valid_four_byte_2), end(valid_four_byte_2));
-  data.insert(data.end(), begin(valid_two_byte_1), end(valid_two_byte_1));
-  data.insert(data.end(), begin(invalid_four_byte_4), end(invalid_four_byte_4));
-  check_eq(rfc3629::validate(data), res_t{10, false});
-}
-
 }

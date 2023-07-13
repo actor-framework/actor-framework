@@ -121,7 +121,7 @@ bool rfc3629::valid(const_byte_span bytes) noexcept {
 
 std::pair<size_t, bool> rfc3629::validate(const_byte_span bytes) noexcept {
   auto [last, incomplete] = validate_rfc3629(bytes.begin(), bytes.end());
-  return {last - bytes.begin(), incomplete};
+  return {static_cast<size_t>(last - bytes.begin()), incomplete};
 }
 
 } // namespace caf::detail

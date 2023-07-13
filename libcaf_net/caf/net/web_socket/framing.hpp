@@ -152,7 +152,9 @@ private:
     shutdown(err);
   }
 
-  bool validate_fragmented_utf8() noexcept;
+  /// Checks whether the current input is valid UTF-8. Stores the last position
+  /// while scanning in order to avoid validating the same bytes again.
+  bool payload_valid() noexcept;
 
   // -- member variables -------------------------------------------------------
 
@@ -174,8 +176,8 @@ private:
   /// Assembles fragmented payloads.
   binary_buffer payload_buf_;
 
-  /// Validated UTF-8 range for fragmented text payloads
-  size_t validation_point = 0ul;
+  /// Stores where to resume the UTF-8 input validation.
+  size_t validation_offset_ = 0;
 
   /// Next layer in the processing chain.
   upper_layer_ptr up_;
