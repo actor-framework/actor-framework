@@ -54,6 +54,7 @@ struct colorizing_iterator {
   };
   mode_t mode = normal;
   std::ostream* out;
+  mode_t start = mode;
   void put(char c) {
     switch (mode) {
       case normal:
@@ -101,7 +102,10 @@ struct colorizing_iterator {
         if (c == ')') {
           out->flush();
           *out << term::reset;
-          mode = normal;
+          if (start == off)
+            mode = off;
+          else
+            mode = normal;
           break;
         }
         out->put(c);
@@ -113,7 +117,32 @@ struct colorizing_iterator {
           out->put(c);
         break;
       case off_read_color:
-        mode = off_escape;
+        switch (c) {
+          case 'R':
+            mode = off_escape;
+            break;
+          case 'G':
+            mode = off_escape;
+            break;
+          case 'B':
+            mode = off_escape;
+            break;
+          case 'Y':
+            mode = off_escape;
+            break;
+          case 'M':
+            mode = off_escape;
+            break;
+          case 'C':
+            mode = off_escape;
+            break;
+          case '0':
+            mode = verbatim;
+            return;
+          default:
+            CAF_RAISE_ERROR("invalid color code");
+            break;
+        }
         break;
       case off_escape:
         if (c != '(')
@@ -171,7 +200,10 @@ public:
   }
 
   auto colored() {
-    return colorizing_iterator{colorizing_iterator::normal, &std::cout};
+    if (plain_output_)
+      return colorizing_iterator{colorizing_iterator::off, &std::cout};
+    else
+      return colorizing_iterator{colorizing_iterator::normal, &std::cout};
   }
 
   void stop() override {
@@ -381,6 +413,10 @@ public:
     level_ = level;
   }
 
+  void disable_colored(bool plain_output) override {
+    plain_output_ = plain_output;
+  }
+
   stats test_stats() override {
     return test_stats_;
   }
@@ -430,6 +466,9 @@ private:
 
   /// Configures the verbosity of the reporter.
   unsigned level_ = CAF_LOG_LEVEL_INFO;
+
+  /// Configures the color output of the reporter.
+  bool plain_output_ = false;
 
   /// Stores the names of failed test suites.
   std::vector<std::string_view> failed_suites_;
