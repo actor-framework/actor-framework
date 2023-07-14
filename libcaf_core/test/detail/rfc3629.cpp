@@ -128,7 +128,6 @@ TEST("rfc3629::valid checks whether an input is valid UTF-8") {
     check(valid_utf8(ascii_1));
     check(valid_utf8(ascii_2));
   }
-
   SECTION("valid UTF-8 input") {
     check(valid_utf8(valid_two_byte_1));
     check(valid_utf8(valid_two_byte_2));
@@ -137,7 +136,6 @@ TEST("rfc3629::valid checks whether an input is valid UTF-8") {
     check(valid_utf8(valid_four_byte_1));
     check(valid_utf8(valid_four_byte_2));
   }
-
   SECTION("invalid UTF-8 input") {
     check(!valid_utf8(invalid_two_byte_1));
     check(!valid_utf8(invalid_two_byte_2));
@@ -169,7 +167,6 @@ TEST("rfc3629::validate returns the end index if the range is valid") {
     check_eq(rfc3629::validate(ascii_1), res_t{ascii_1.size(), false});
     check_eq(rfc3629::validate(ascii_2), res_t{ascii_2.size(), false});
   }
-
   SECTION("valid UTF-8 input") {
     check_eq(rfc3629::validate(valid_two_byte_1), res_t{2, false});
     check_eq(rfc3629::validate(valid_two_byte_2), res_t{2, false});
@@ -189,7 +186,6 @@ TEST("rfc3629::validate stops at the first invalid byte") {
     check_eq(rfc3629::validate(invalid_four_byte_2), res_t{0, true});
     check_eq(rfc3629::validate(invalid_four_byte_3), res_t{0, true});
   }
-
   SECTION("UTF-8 input with malformed data") {
     check_eq(rfc3629::validate(invalid_two_byte_2), res_t{0, false});
     check_eq(rfc3629::validate(invalid_two_byte_3), res_t{0, false});
@@ -208,14 +204,12 @@ TEST("rfc3629::validate stops at the first invalid byte") {
     check_eq(rfc3629::validate(invalid_four_byte_9), res_t{0, false});
     check_eq(rfc3629::validate(invalid_four_byte_10), res_t{0, false});
   }
-
   SECTION("invalid UTF-8 input fails on the invalid byte") {
     check_eq(rfc3629::validate(make_span(invalid_four_byte_9, 2)),
              res_t{0, false});
     check_eq(rfc3629::validate(make_span(invalid_four_byte_10, 1)),
              res_t{0, false});
   }
-
   SECTION("invalid UTF-8 input with valid prefix") {
     byte_buffer data;
     data.insert(data.end(), begin(valid_four_byte_1), end(valid_four_byte_1));
@@ -226,4 +220,5 @@ TEST("rfc3629::validate stops at the first invalid byte") {
     check_eq(rfc3629::validate(data), res_t{10, false});
   }
 }
-}
+
+} // SUITE("detail.rfc3629")
