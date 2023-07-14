@@ -152,10 +152,14 @@ private:
     shutdown(err);
   }
 
+  /// Checks whether the current input is valid UTF-8. Stores the last position
+  /// while scanning in order to avoid validating the same bytes again.
+  bool payload_valid() noexcept;
+
   // -- member variables -------------------------------------------------------
 
   /// Points to the transport layer below.
-  octet_stream::lower_layer* down_;
+  octet_stream::lower_layer* down_ = nullptr;
 
   /// Buffer for assembling binary frames.
   binary_buffer binary_buf_;
@@ -171,6 +175,9 @@ private:
 
   /// Assembles fragmented payloads.
   binary_buffer payload_buf_;
+
+  /// Stores where to resume the UTF-8 input validation.
+  size_t validation_offset_ = 0;
 
   /// Next layer in the processing chain.
   upper_layer_ptr up_;
