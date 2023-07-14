@@ -74,9 +74,7 @@ int runner::run(int argc, char** argv) {
   };
   auto suite_regex = parse_regex_opt(get_or(cfg_, "suites", ".*"));
   for (auto& [suite_name, suite] : suites_) {
-    if (suite_regex.has_value()
-        && !enabled(suite_regex.value(),
-                    {suite_name.data(), suite_name.size()}))
+    if (suite_regex.has_value() && !enabled(suite_regex.value(), suite_name))
       continue;
     default_reporter->begin_suite(suite_name);
     for (auto [test_name, factory_instance] : suite) {
