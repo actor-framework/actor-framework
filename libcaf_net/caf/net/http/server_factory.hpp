@@ -82,10 +82,9 @@ public:
                                connection_handle conn) override {
     auto app = net::http::router::make(routes_);
     auto serv = net::http::server::make(std::move(app));
-    auto fd = conn.fd();
     auto transport = Transport::make(std::move(conn), std::move(serv));
     transport->max_consecutive_reads(max_consecutive_reads_);
-    transport->active_policy().accept(fd);
+    transport->active_policy().accept();
     auto res = net::socket_manager::make(mpx, std::move(transport));
     mpx->watch(res->as_disposable());
     return res;

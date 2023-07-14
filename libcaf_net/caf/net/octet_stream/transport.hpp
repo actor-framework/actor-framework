@@ -43,6 +43,29 @@ public:
     bool shutting_down : 1;
   };
 
+  class policy_impl : public octet_stream::policy {
+  public:
+    explicit policy_impl(stream_socket fd) : fd(std::move(fd)) {
+      // nop
+    }
+
+    stream_socket handle() const override;
+
+    ptrdiff_t read(byte_span) override;
+
+    ptrdiff_t write(const_byte_span) override;
+
+    octet_stream::errc last_error(ptrdiff_t) override;
+
+    ptrdiff_t connect() override;
+
+    ptrdiff_t accept() override;
+
+    size_t buffered() const noexcept override;
+
+    stream_socket fd;
+  };
+
   // -- constants --------------------------------------------------------------
 
   static constexpr size_t default_buf_size = 4 * 1024; // 4 KiB
@@ -51,11 +74,13 @@ public:
 
   transport(stream_socket fd, upper_layer_ptr up);
 
-  transport(stream_socket fd, upper_layer_ptr up, policy* custom);
+  transport(policy* custom, upper_layer_ptr up);
 
   transport(const transport&) = delete;
 
   transport& operator=(const transport&) = delete;
+
+  ~transport();
 
   // -- factories --------------------------------------------------------------
 
@@ -148,9 +173,6 @@ protected:
 
   // -- member variables -------------------------------------------------------
 
-  /// The socket file descriptor.
-  stream_socket fd_;
-
   /// Stores temporary flags.
   flags_t flags_;
 
@@ -190,13 +212,13 @@ protected:
   policy* policy_ = nullptr;
 
   /// Fallback policy.
-  policy default_policy_;
+  union {
+    policy_impl default_policy_;
+  };
 
   /// Setting this to non-null informs the transport to replace `up_` with
   /// `next_`.
   upper_layer_ptr next_;
-
-  // TODO: add [[no_unique_address]] to default_policy_ when switching to C++20.
 };
 
 } // namespace caf::net::octet_stream

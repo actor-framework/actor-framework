@@ -9,18 +9,59 @@
 #include "caf/net/receive_policy.hpp"
 #include "caf/net/socket_manager.hpp"
 
+#include <new>
+
 namespace caf::net::octet_stream {
+
+// -- nested types -------------------------------------------------------------
+
+stream_socket transport::policy_impl::handle() const {
+  return fd;
+}
+
+ptrdiff_t transport::policy_impl::read(byte_span buf) {
+  return net::read(fd, buf);
+}
+
+ptrdiff_t transport::policy_impl::write(const_byte_span buf) {
+  return net::write(fd, buf);
+}
+
+errc transport::policy_impl::last_error(ptrdiff_t) {
+  return last_socket_error_is_temporary() ? errc::temporary : errc::permanent;
+}
+
+ptrdiff_t transport::policy_impl::connect() {
+  // A connection is established if the OS reports a socket as ready for read
+  // or write and if there is no error on the socket.
+  return probe(fd) ? 1 : -1;
+}
+
+ptrdiff_t transport::policy_impl::accept() {
+  return 1;
+}
+
+size_t transport::policy_impl::buffered() const noexcept {
+  return 0;
+}
 
 // -- constructors, destructors, and assignment operators ----------------------
 
 transport::transport(stream_socket fd, upper_layer_ptr up)
-  : fd_(fd), up_(std::move(up)), policy_(&default_policy_) {
+  : up_(std::move(up)) {
+  memset(&flags_, 0, sizeof(flags_t));
+  new (&default_policy_) policy_impl(fd);
+  policy_ = &default_policy_;
+}
+
+transport::transport(policy* policy, upper_layer_ptr up)
+  : up_(std::move(up)), policy_(policy) {
   memset(&flags_, 0, sizeof(flags_t));
 }
 
-transport::transport(stream_socket fd, upper_layer_ptr up, policy* policy)
-  : fd_(fd), up_(std::move(up)), policy_(policy) {
-  memset(&flags_, 0, sizeof(flags_t));
+transport::~transport() {
+  if (policy_ == &default_policy_)
+    default_policy_.~policy_impl();
 }
 
 // -- factories ----------------------------------------------------------------
@@ -110,7 +151,7 @@ error transport::start(socket_manager* owner) {
   //   CAF_LOG_ERROR("nodelay failed: " << err);
   //   return err;
   // }
-  if (auto socket_buf_size = send_buffer_size(fd_)) {
+  if (auto socket_buf_size = send_buffer_size(policy_->handle())) {
     max_write_buf_size_ = *socket_buf_size;
     CAF_ASSERT(max_write_buf_size_ > 0);
     write_buf_.reserve(max_write_buf_size_ * 2);
@@ -122,11 +163,11 @@ error transport::start(socket_manager* owner) {
 }
 
 socket transport::handle() const {
-  return fd_;
+  return policy_->handle();
 }
 
 void transport::handle_read_event() {
-  CAF_LOG_TRACE(CAF_ARG2("socket", fd_.id));
+  CAF_LOG_TRACE(CAF_ARG2("socket", handle()));
   // Resume a write operation if the transport waited for the socket to be
   // readable from the last call to handle_write_event.
   if (flags_.wanted_read_from_write_event) {
@@ -150,11 +191,11 @@ void transport::handle_read_event() {
   if (read_buf_.size() < max_read_size_)
     read_buf_.resize(max_read_size_);
   // Fill up our buffer.
-  auto rd = policy_->read(fd_, make_span(read_buf_.data() + buffered_,
-                                         read_buf_.size() - buffered_));
+  auto rd = policy_->read(
+    make_span(read_buf_.data() + buffered_, read_buf_.size() - buffered_));
   // Stop if we failed to get more data.
   if (rd < 0) {
-    switch (policy_->last_error(fd_, rd)) {
+    switch (policy_->last_error(rd)) {
       case errc::temporary:
       case errc::want_read:
         // Try again later.
@@ -178,8 +219,8 @@ void transport::handle_read_event() {
   if (auto policy_buffered = policy_->buffered(); policy_buffered > 0) {
     if (auto n = buffered_ + policy_buffered; n > read_buf_.size())
       read_buf_.resize(n);
-    auto rd2 = policy_->read(fd_, make_span(read_buf_.data() + buffered_,
-                                            policy_buffered));
+    auto rd2
+      = policy_->read(make_span(read_buf_.data() + buffered_, policy_buffered));
     if (rd2 != static_cast<ptrdiff_t>(policy_buffered)) {
       CAF_LOG_ERROR("failed to read buffered data from the policy");
       return fail(make_error(sec::socket_operation_failed));
@@ -267,7 +308,7 @@ void transport::fail(const error& reason) {
 }
 
 void transport::handle_write_event() {
-  CAF_LOG_TRACE(CAF_ARG2("socket", fd_.id));
+  CAF_LOG_TRACE(CAF_ARG2("socket", handle()));
   // Resume a read operation if the transport waited for the socket to be
   // writable from the last call to handle_read_event.
   if (flags_.wanted_write_from_read_event) {
@@ -291,7 +332,7 @@ void transport::handle_write_event() {
     // Allow the upper layer to add extra data to the write buffer.
     up_->prepare_send();
   }
-  auto write_res = policy_->write(fd_, write_buf_);
+  auto write_res = policy_->write(write_buf_);
   if (write_res > 0) {
     write_buf_.erase(write_buf_.begin(), write_buf_.begin() + write_res);
     if (write_buf_.empty() && up_->done_sending()) {
@@ -305,7 +346,7 @@ void transport::handle_write_event() {
   } else if (write_res < 0) {
     // Try again later on temporary errors such as EWOULDBLOCK and
     // stop writing to the socket on hard errors.
-    switch (policy_->last_error(fd_, write_res)) {
+    switch (policy_->last_error(write_res)) {
       case errc::temporary:
       case errc::want_write:
         return;

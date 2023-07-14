@@ -26,15 +26,17 @@ public:
   public:
     explicit policy_impl(connection conn);
 
-    ptrdiff_t read(stream_socket, byte_span) override;
+    stream_socket handle() const override;
 
-    ptrdiff_t write(stream_socket, const_byte_span) override;
+    ptrdiff_t read(byte_span) override;
 
-    octet_stream::errc last_error(stream_socket, ptrdiff_t) override;
+    ptrdiff_t write(const_byte_span) override;
 
-    ptrdiff_t connect(stream_socket) override;
+    octet_stream::errc last_error(ptrdiff_t) override;
 
-    ptrdiff_t accept(stream_socket) override;
+    ptrdiff_t connect() override;
+
+    ptrdiff_t accept() override;
 
     size_t buffered() const noexcept override;
 
@@ -66,7 +68,7 @@ public:
 private:
   // -- constructors, destructors, and assignment operators --------------------
 
-  transport(stream_socket fd, connection conn, upper_layer_ptr up);
+  transport(connection conn, upper_layer_ptr up);
 
   policy_impl policy_impl_;
 };
