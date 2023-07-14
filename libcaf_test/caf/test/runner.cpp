@@ -68,15 +68,15 @@ int runner::run(int argc, char** argv) {
   }
   default_reporter->start();
   auto enabled = [](const std::regex& selected,
-                    const std::string& search_string) {
-    return std::regex_search(search_string, selected);
+                    const std::string_view& search_string) {
+    return std::regex_search(search_string.begin(), search_string.end(),
+                             selected);
   };
-  std::regex suite_regex;
-  if (auto suite_regex_string = get_as<std::string>(cfg_, "suites")) {
-    suite_regex = std::regex(*suite_regex_string);
-  }
+  auto suite_regex = parse_regex_opt(get_or(cfg_, "suites", ".*"));
   for (auto& [suite_name, suite] : suites_) {
-    if (!enabled(suite_regex, {suite_name.data(), suite_name.size()}))
+    if (suite_regex.has_value()
+        && !enabled(suite_regex.value(),
+                    {suite_name.data(), suite_name.size()}))
       continue;
     default_reporter->begin_suite(suite_name);
     for (auto [test_name, factory_instance] : suite) {
@@ -148,10 +148,6 @@ runner::parse_cli_result runner::parse_cli(int argc, char** argv) {
       format_to(err, "- {}\n", test_name);
     return {true, true};
   }
-  if (auto suite_regex_string = get_as<std::string>(cfg_, "suites")) {
-    format_to(err, "suite regex: {}\n", *suite_regex_string);
-    return {true, true};
-  }
   if (auto verbosity = get_as<std::string>(cfg_, "verbosity")) {
     auto level = parse_log_level(*verbosity);
     if (!level) {
@@ -170,6 +166,19 @@ runner::parse_cli_result runner::parse_cli(int argc, char** argv) {
     reporter::instance->verbosity(*level);
   }
   return {true, false};
+}
+
+std::optional<std::regex>
+runner::parse_regex_opt(const std::string& regex_string) {
+#ifdef CAF_ENABLE_EXCEPTIONS
+  try {
+    return std::regex(regex_string);
+  } catch (...) {
+    return std::nullopt;
+  }
+#else
+  return std::regex(regex_string);
+#endif
 }
 
 } // namespace caf::test
