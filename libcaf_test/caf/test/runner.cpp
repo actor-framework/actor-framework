@@ -3,6 +3,7 @@
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
 #include "caf/test/runner.hpp"
+
 #include "caf/config_option.hpp"
 #include "caf/config_option_adder.hpp"
 #include "caf/config_option_set.hpp"
@@ -68,13 +69,19 @@ int runner::run(int argc, char** argv) {
   }
   default_reporter->start();
   auto enabled = [](const std::regex& selected,
-                    const std::string_view& search_string) {
+                    std::string_view search_string) {
     return std::regex_search(search_string.begin(), search_string.end(),
                              selected);
   };
-  auto suite_regex = parse_regex_opt(get_or(cfg_, "suites", ".*"));
+  auto suite_regex = runner::to_regex(get_or(cfg_, "suites", ".*"));
+  if (!suite_regex) {
+    using detail::format_to;
+    auto err = std::ostream_iterator<char>{std::cerr};
+    format_to(err, "regex could not be parsed\n");
+    return EXIT_FAILURE;
+  }
   for (auto& [suite_name, suite] : suites_) {
-    if (suite_regex.has_value() && !enabled(suite_regex.value(), suite_name))
+    if (!enabled(*suite_regex, suite_name))
       continue;
     default_reporter->begin_suite(suite_name);
     for (auto [test_name, factory_instance] : suite) {
@@ -166,16 +173,15 @@ runner::parse_cli_result runner::parse_cli(int argc, char** argv) {
   return {true, false};
 }
 
-std::optional<std::regex>
-runner::parse_regex_opt(const std::string& regex_string) {
+std::optional<std::regex> runner::to_regex(std::string_view regex_string) {
 #ifdef CAF_ENABLE_EXCEPTIONS
   try {
-    return std::regex(regex_string);
+    return std::regex{regex_string.begin(), regex_string.end()};
   } catch (...) {
     return std::nullopt;
   }
 #else
-  return std::regex(regex_string);
+  return std::regex{regex_string.begin(), regex_string.end()};
 #endif
 }
 

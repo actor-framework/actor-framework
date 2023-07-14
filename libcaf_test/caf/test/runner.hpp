@@ -30,7 +30,7 @@ public:
 
 private:
   parse_cli_result parse_cli(int argc, char** argv);
-  std::optional<std::regex> parse_regex_opt(const std::string& regex_string);
+  static std::optional<std::regex> to_regex(std::string_view regex_string);
 
   registry::suites_map suites_;
   caf::settings cfg_;
