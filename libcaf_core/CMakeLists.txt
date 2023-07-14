@@ -219,7 +219,7 @@ caf_add_component(
     caf/uri_builder.cpp
     caf/uuid.cpp
   LEGACY_TEST_SOURCES
-    test/core-legacy-test.cpp
+    test/core-test.cpp
     test/nasty.cpp
   LEGACY_TEST_SUITES
     action
