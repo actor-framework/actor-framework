@@ -4,15 +4,14 @@
 
 #include "caf/hash/fnv.hpp"
 
+#include "caf/test/caf_test_main.hpp"
 #include "caf/test/test.hpp"
 
 #include <string>
 
 using namespace std::literals;
 
-SUITE("hash.fnv") {
-
-TEST("hash::fnv can build hashe values incrementally") {
+TEST("hash::fnv can build hash values incrementally") {
   caf::hash::fnv<uint32_t> f;
   check_eq(f.result, 0x811C9DC5u);
   f.value('a');
@@ -55,4 +54,4 @@ TEST("fnv::compute can create hash values for types with inspect overloads") {
   check_eq(hash_type::compute(foo{"C++ Actor Framework"}), 0x2FF91FE5u);
 }
 
-} // SUITE("hash.fnv")
+CAF_TEST_MAIN()
