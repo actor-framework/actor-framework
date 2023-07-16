@@ -11,7 +11,7 @@
 
 using namespace std::literals;
 
-TEST("hash::fnv can build hashe values incrementally") {
+TEST("hash::fnv can build hash values incrementally") {
   caf::hash::fnv<uint32_t> f;
   check_eq(f.result, 0x811C9DC5u);
   f.value('a');
