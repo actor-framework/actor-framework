@@ -29,7 +29,7 @@ constexpr bool operator==(const wildcard&, const wildcard&) {
 
 template <size_t I, class T>
 bool cmp_one(const caf::message& x, const T& y) {
-  if (std::is_same<T, wildcard>::value)
+  if (std::is_same_v<T, wildcard>)
     return true;
   return x.match_element<T>(I) && x.get_as<T>(I) == y;
 }
@@ -74,7 +74,7 @@ struct has_outer_type {
   static auto sfinae(...) -> std::false_type;
 
   using type = decltype(sfinae<T>(nullptr));
-  static constexpr bool value = !std::is_same<type, std::false_type>::value;
+  static constexpr bool value = !std::is_same_v<type, std::false_type>;
 };
 
 // enables ADL in `with_content`

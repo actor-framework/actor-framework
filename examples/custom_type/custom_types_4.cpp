@@ -173,7 +173,7 @@ struct variant_inspector_traits<shape_ptr> {
   // Assigns a value to x.
   template <class U>
   static void assign(value_type& x, U value) {
-    if constexpr (std::is_same<U, none_t>::value)
+    if constexpr (std::is_same_v<U, none_t>)
       x.reset();
     else
       x = std::make_shared<U>(std::move(value));

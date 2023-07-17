@@ -98,7 +98,7 @@ public:
   config_value(const config_value& other) = default;
 
   template <class T, class E = detail::enable_if_t<
-                       !std::is_same<detail::decay_t<T>, config_value>::value>>
+                       !std::is_same_v<detail::decay_t<T>, config_value>>>
   explicit config_value(T&& x) {
     set(std::forward<T>(x));
   }
@@ -108,7 +108,7 @@ public:
   config_value& operator=(const config_value& other) = default;
 
   template <class T, class E = detail::enable_if_t<
-                       !std::is_same<detail::decay_t<T>, config_value>::value>>
+                       !std::is_same_v<detail::decay_t<T>, config_value>>>
   config_value& operator=(T&& x) {
     set(std::forward<T>(x));
     return *this;
@@ -361,9 +361,9 @@ get_as(const config_value& x, inspector_access_type::builtin_inspect token) {
 
 template <class T>
 expected<T> get_as(const config_value& x, inspector_access_type::builtin) {
-  if constexpr (std::is_same<T, std::string>::value) {
+  if constexpr (std::is_same_v<T, std::string>) {
     return to_string(x);
-  } else if constexpr (std::is_same<T, bool>::value) {
+  } else if constexpr (std::is_same_v<T, bool>) {
     return x.to_boolean();
   } else if constexpr (std::is_integral<T>::value) {
     if (auto result = x.to_integer()) {
@@ -488,13 +488,13 @@ expected<T> get_as(const config_value& x, inspector_access_type::list) {
 /// @relates config_value
 template <class T>
 expected<T> get_as(const config_value& value) {
-  if constexpr (std::is_same<T, timespan>::value) {
+  if constexpr (std::is_same_v<T, timespan>) {
     return value.to_timespan();
-  } else if constexpr (std::is_same<T, config_value::list>::value) {
+  } else if constexpr (std::is_same_v<T, config_value::list>) {
     return value.to_list();
-  } else if constexpr (std::is_same<T, config_value::dictionary>::value) {
+  } else if constexpr (std::is_same_v<T, config_value::dictionary>) {
     return value.to_dictionary();
-  } else if constexpr (std::is_same<T, uri>::value) {
+  } else if constexpr (std::is_same_v<T, uri>) {
     return value.to_uri();
   } else {
     auto token = inspect_access_type<config_value_reader, T>();
@@ -550,7 +550,7 @@ struct get_or_auto_deduce {};
 /// @relates config_value
 template <class To = get_or_auto_deduce, class Fallback>
 auto get_or(const config_value& x, Fallback&& fallback) {
-  if constexpr (std::is_same<To, get_or_auto_deduce>::value) {
+  if constexpr (std::is_same_v<To, get_or_auto_deduce>) {
     using guide = get_or_deduction_guide<std::decay_t<Fallback>>;
     using value_type = typename guide::value_type;
     if (auto val = get_as<value_type>(x))

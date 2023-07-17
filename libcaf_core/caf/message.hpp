@@ -181,7 +181,7 @@ public:
 private:
   template <size_t Pos, class T>
   bool matches_at(const T& value) const {
-    if constexpr (std::is_same<T, decltype(std::ignore)>::value)
+    if constexpr (std::is_same_v<T, decltype(std::ignore)>)
       return true;
     else
       return match_element<T>(Pos) && get_as<T>(Pos) == value;

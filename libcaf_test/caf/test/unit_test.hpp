@@ -294,9 +294,9 @@ public:
       }
     };
     using fwd =
-      typename std::conditional<std::is_same<char, T>::value
+      typename std::conditional<std::is_same_v<char, T>
                                   || std::is_convertible<T, std::string>::value
-                                  || std::is_same<caf::term, T>::value,
+                                  || std::is_same_v<caf::term, T>,
                                 simple_fwd_t, deep_to_string_t>::type;
     fwd f;
     auto y = f(x);

@@ -172,7 +172,7 @@ class is_comparable {
                                    && std::is_arithmetic<T2>::value>{}));
 
 public:
-  static constexpr bool value = std::is_same<bool, result_type>::value;
+  static constexpr bool value = std::is_same_v<bool, result_type>;
 };
 
 /// Checks whether `T` behaves like a forward iterator.
@@ -194,7 +194,7 @@ class is_forward_iterator {
   using result_type = decltype(sfinae(std::declval<T&>(), std::declval<T&>()));
 
 public:
-  static constexpr bool value = std::is_same<bool, result_type>::value;
+  static constexpr bool value = std::is_same_v<bool, result_type>;
 };
 
 /// Checks whether `T` has `begin()` and `end()` member
@@ -217,7 +217,7 @@ class is_iterable {
 
 public:
   static constexpr bool value = is_primitive<T>::value == false
-                                && std::is_same<bool, result_type>::value;
+                                && std::is_same_v<bool, result_type>;
 };
 
 template <class T>
@@ -363,7 +363,7 @@ struct is_callable {
   using result_type = decltype(_fun(static_cast<decay_t<T>*>(nullptr)));
 
 public:
-  static constexpr bool value = std::is_same<bool, result_type>::value;
+  static constexpr bool value = std::is_same_v<bool, result_type>;
 };
 
 /// Checks whether `F` is callable with arguments of types `Ts...`.
@@ -552,8 +552,8 @@ constexpr bool is_expected_v = is_expected<T>::value;
 template <class T, class U,
           bool Enable = std::is_integral<T>::value
                         && std::is_integral<U>::value
-                        && !std::is_same<T, bool>::value
-                        && !std::is_same<U, bool>::value>
+                        && !std::is_same_v<T, bool>
+                        && !std::is_same_v<U, bool>>
 // clang-format on
 struct is_equal_int_type {
   static constexpr bool value = sizeof(T) == sizeof(U)
@@ -569,7 +569,7 @@ struct is_equal_int_type<T, U, false> : std::false_type {};
 /// same size and signedness. This works around the issue that
 /// `uint8_t != unsigned char on some compilers.
 template <class T, typename U>
-struct is_same_ish : std::conditional<std::is_same<T, U>::value, std::true_type,
+struct is_same_ish : std::conditional<std::is_same_v<T, U>, std::true_type,
                                       is_equal_int_type<T, U>>::type {};
 
 /// Utility for fallbacks calling `static_assert`.
@@ -878,8 +878,7 @@ private:
   using result_type = decltype(sfinae(std::declval<Inspector&>()));
 
 public:
-  static constexpr bool value
-    = std::is_same<result_type, execution_unit*>::value;
+  static constexpr bool value = std::is_same_v<result_type, execution_unit*>;
 };
 
 /// Checks whether `T` provides an `inspect` overload for `Inspector`.

@@ -44,7 +44,7 @@ struct same_output_or_skip_t {
   using other = typename RepliesToWith::output_types;
   static constexpr bool value
     = std::is_same<Output, typename RepliesToWith::output_types>::value
-      || std::is_same<Output, type_list<skip_t>>::value;
+      || std::is_same_v<Output, type_list<skip_t>>;
 };
 
 template <class SList>

@@ -440,7 +440,7 @@ bool pull(config_value_reader& reader, T& x) {
     }
   } else if (holds_alternative<config_value_reader::key_ptr>(top)) {
     auto ptr = get<config_value_reader::key_ptr>(top);
-    if constexpr (std::is_same<std::string, T>::value) {
+    if constexpr (std::is_same_v<std::string, T>) {
       x = *ptr;
       reader.pop();
       return true;

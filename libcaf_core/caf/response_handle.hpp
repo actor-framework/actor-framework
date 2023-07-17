@@ -65,7 +65,7 @@ public:
     static_assert(detail::is_callable_with<OnError, error&>::value,
                   "OnError must provide an operator() that takes a caf::error");
     using result_type = typename detail::get_callable_trait<F>::result_type;
-    static_assert(std::is_same<void, result_type>::value,
+    static_assert(std::is_same_v<void, result_type>,
                   "response handlers are not allowed to have a return "
                   "type other than void");
     policy_type::template type_checker<F>::check();
@@ -90,7 +90,7 @@ public:
     static_assert(detail::is_callable_with<OnError, error&>::value,
                   "OnError must provide an operator() that takes a caf::error");
     using result_type = typename detail::get_callable_trait<F>::result_type;
-    static_assert(std::is_same<void, result_type>::value,
+    static_assert(std::is_same_v<void, result_type>,
                   "response handlers are not allowed to have a return "
                   "type other than void");
     policy_type::template type_checker<F>::check();
@@ -129,7 +129,7 @@ public:
     static_assert(detail::is_callable_with<OnError, error&>::value,
                   "OnError must provide an operator() that takes a caf::error");
     using result_type = typename detail::get_callable_trait<F>::result_type;
-    static_assert(std::is_same<void, result_type>::value,
+    static_assert(std::is_same_v<void, result_type>,
                   "response handlers are not allowed to have a return "
                   "type other than void");
     policy_type::template type_checker<F>::check();

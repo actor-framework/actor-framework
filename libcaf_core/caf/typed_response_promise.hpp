@@ -82,7 +82,7 @@ public:
 
   /// Satisfies the promise by sending an empty response message.
   template <class L = detail::type_list<Ts...>>
-  std::enable_if_t<std::is_same<L, detail::type_list<void>>::value> deliver() {
+  std::enable_if_t<std::is_same_v<L, detail::type_list<void>>> deliver() {
     promise_.deliver();
   }
 
@@ -96,7 +96,7 @@ public:
   /// message.
   template <class T>
   std::enable_if_t<
-    std::is_same<detail::type_list<T>, detail::type_list<Ts...>>::value>
+    std::is_same_v<detail::type_list<T>, detail::type_list<Ts...>>>
   deliver(expected<T> x) {
     promise_.deliver(std::move(x));
   }

@@ -106,7 +106,7 @@ void config_consumer::destroy() {
 
 void config_consumer::end_map() {
   auto f = [this](auto ptr) {
-    if constexpr (std::is_same<none_t, decltype(ptr)>::value) {
+    if constexpr (std::is_same_v<none_t, decltype(ptr)>) {
       // nop
     } else {
       ptr->value(std::move(*cfg_));

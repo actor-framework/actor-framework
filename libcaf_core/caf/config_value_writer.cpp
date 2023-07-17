@@ -20,7 +20,7 @@
 #define SCOPE(top_type)                                                        \
   CHECK_NOT_EMPTY();                                                           \
   if (!holds_alternative<top_type>(st_.top())) {                               \
-    if constexpr (std::is_same<top_type, settings*>::value) {                  \
+    if constexpr (std::is_same_v<top_type, settings*>) {                       \
       emplace_error(sec::runtime_error,                                        \
                     "attempted to add list items before calling "              \
                     "begin_sequence or begin_tuple");                          \

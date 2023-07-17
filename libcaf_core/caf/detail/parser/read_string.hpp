@@ -24,11 +24,10 @@ template <class State, class Consumer>
 void read_string(State& ps, Consumer&& consumer) {
   // Allow Consumer to be a string&, in which case we simply store the result
   // directly in the reference.
-  using res_type
-    = std::conditional_t<std::is_same<Consumer, std::string&>::value,
-                         std::string&, std::string>;
+  using res_type = std::conditional_t<std::is_same_v<Consumer, std::string&>,
+                                      std::string&, std::string>;
   auto init_res = [](auto& c) -> res_type {
-    if constexpr (std::is_same<res_type, std::string&>::value) {
+    if constexpr (std::is_same_v<res_type, std::string&>) {
       c.clear();
       return c;
     } else {
@@ -37,7 +36,7 @@ void read_string(State& ps, Consumer&& consumer) {
   };
   res_type res = init_res(consumer);
   auto g = caf::detail::make_scope_guard([&] {
-    if constexpr (std::is_same<res_type, std::string>::value)
+    if constexpr (std::is_same_v<res_type, std::string>)
       if (ps.code <= pec::trailing_character)
         consumer.value(std::move(res));
   });

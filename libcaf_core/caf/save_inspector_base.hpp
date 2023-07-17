@@ -44,7 +44,7 @@ public:
       return false;
     for (auto&& val : xs) {
       using found_type = std::decay_t<decltype(val)>;
-      if constexpr (std::is_same<found_type, value_type>::value) {
+      if constexpr (std::is_same_v<found_type, value_type>) {
         if (!detail::save(dref(), val))
           return false;
       } else {

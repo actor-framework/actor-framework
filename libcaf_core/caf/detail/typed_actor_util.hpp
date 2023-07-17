@@ -39,9 +39,9 @@ struct type_checker {
   static void check() {
     using arg_types = typename tl_map<typename get_callable_trait<F>::arg_types,
                                       std::decay>::type;
-    static_assert(std::is_same<Output, arg_types>::value
-                    || (std::is_same<Output, type_list<void>>::value
-                        && std::is_same<arg_types, type_list<>>::value),
+    static_assert(std::is_same_v<Output, arg_types>
+                    || (std::is_same_v<Output, type_list<void>>
+                        && std::is_same_v<arg_types, type_list<>>),
                   "wrong functor signature");
   }
 };

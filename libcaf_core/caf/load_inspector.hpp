@@ -282,7 +282,7 @@ public:
       using load_callback_result = decltype(load_callback());
       if (!(f->begin_object(object_type, object_name) && (fs(*f) && ...)))
         return false;
-      if constexpr (std::is_same<load_callback_result, bool>::value) {
+      if constexpr (std::is_same_v<load_callback_result, bool>) {
         if (!load_callback()) {
           f->set_error(sec::load_callback_failed);
           return false;
@@ -351,11 +351,11 @@ public:
   static auto field(std::string_view name, Get get, Set set) {
     using field_type = std::decay_t<decltype(get())>;
     using setter_result = decltype(set(std::declval<field_type&&>()));
-    if constexpr (std::is_same<setter_result, error>::value
-                  || std::is_same<setter_result, bool>::value) {
+    if constexpr (std::is_same_v<setter_result, error>
+                  || std::is_same_v<setter_result, bool>) {
       return virt_field_t<field_type, Set>{name, std::move(set)};
     } else {
-      static_assert(std::is_same<setter_result, void>::value,
+      static_assert(std::is_same_v<setter_result, void>,
                     "a setter must return caf::error, bool or void");
       auto set_fun = [f{std::move(set)}](field_type&& val) {
         f(std::move(val));
@@ -371,13 +371,13 @@ public:
   field(std::string_view name, IsPresent&&, Get&& get, Reset reset, Set set) {
     using field_type = std::decay_t<decltype(get())>;
     using setter_result = decltype(set(std::declval<field_type&&>()));
-    if constexpr (std::is_same<setter_result, error>::value
-                  || std::is_same<setter_result, bool>::value) {
+    if constexpr (std::is_same_v<setter_result, error>
+                  || std::is_same_v<setter_result, bool>) {
       return optional_virt_field_t<field_type, Reset, Set>{name,
                                                            std::move(reset),
                                                            std::move(set)};
     } else {
-      static_assert(std::is_same<setter_result, void>::value,
+      static_assert(std::is_same_v<setter_result, void>,
                     "a setter must return caf::error, bool or void");
       auto set_fun = [f{std::move(set)}](field_type&& val) {
         f(std::move(val));

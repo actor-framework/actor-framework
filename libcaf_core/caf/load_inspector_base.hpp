@@ -115,7 +115,7 @@ public:
     using value_type = std::decay_t<decltype(get())>;
     auto tmp = value_type{};
     using setter_result = decltype(set(std::move(tmp)));
-    if constexpr (std::is_same<setter_result, bool>::value) {
+    if constexpr (std::is_same_v<setter_result, bool>) {
       if (dref().apply(tmp)) {
         if (set(std::move(tmp))) {
           return true;
@@ -126,7 +126,7 @@ public:
       } else {
         return false;
       }
-    } else if constexpr (std::is_same<setter_result, void>::value) {
+    } else if constexpr (std::is_same_v<setter_result, void>) {
       if (dref().apply(tmp)) {
         set(std::move(tmp));
         return true;

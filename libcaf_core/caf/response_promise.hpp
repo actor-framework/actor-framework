@@ -117,8 +117,7 @@ public:
   void deliver(expected<T> x) {
     if (pending()) {
       if (x) {
-        if constexpr (std::is_same<T, void>::value
-                      || std::is_same<T, unit_t>::value)
+        if constexpr (std::is_same_v<T, void> || std::is_same_v<T, unit_t>)
           state_->deliver_impl(make_message());
         else
           state_->deliver_impl(make_message(std::move(*x)));

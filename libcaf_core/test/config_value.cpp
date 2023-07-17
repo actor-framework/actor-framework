@@ -636,7 +636,7 @@ SCENARIO("get_or converts or returns a fallback value") {
       auto fallback = make_span(fallback_arr);
       THEN("CAF returns the default value after converting it to vector<int>") {
         auto result = get_or(x, fallback);
-        static_assert(std::is_same<decltype(result), std::vector<int>>::value);
+        static_assert(std::is_same_v<decltype(result), std::vector<int>>);
         CHECK_EQ(result, std::vector<int>({10, 20, 30}));
       }
     }
@@ -738,7 +738,7 @@ SCENARIO("config values can default-construct all registered types") {
       auto parsed = config_value::parse(str);                                  \
       using init_val_type = decltype(init_val);                                \
       if (CHECK(parsed)) {                                                     \
-        if constexpr (!std::is_same<init_val_type, message>::value)            \
+        if constexpr (!std::is_same_v<init_val_type, message>)                 \
           CHECK_EQ(get_as<init_val_type>(*parsed), init_val);                  \
         else                                                                   \
           CHECK_EQ(to_string(*parsed), str);                                   \

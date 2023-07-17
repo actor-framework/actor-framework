@@ -25,7 +25,7 @@ struct fixture {
       auto res = CHECK(reader.load(input))    // parse JSON
                  && CHECK(reader.apply(tmp)); // deserialize object
       if (res) {
-        if constexpr (std::is_same<T, message>::value)
+        if constexpr (std::is_same_v<T, message>)
           res = CHECK_EQ(to_string(tmp), to_string(obj));
         else
           res = CHECK_EQ(tmp, obj);
