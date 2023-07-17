@@ -53,9 +53,9 @@ constexpr bool assertion_failed_v = false;
 template <class Inspector, class Set, class ValueType>
 auto bind_setter(Inspector& f, Set& set, ValueType& tmp) {
   using set_result_type = decltype(set(std::move(tmp)));
-  if constexpr (std::is_same<set_result_type, bool>::value) {
+  if constexpr (std::is_same_v<set_result_type, bool>) {
     return [&] { return set(std::move(tmp)); };
-  } else if constexpr (std::is_same<set_result_type, error>::value) {
+  } else if constexpr (std::is_same_v<set_result_type, error>) {
     return [&] {
       if (auto err = set(std::move(tmp)); !err) {
         return true;
@@ -65,7 +65,7 @@ auto bind_setter(Inspector& f, Set& set, ValueType& tmp) {
       }
     };
   } else {
-    static_assert(std::is_same<set_result_type, void>::value,
+    static_assert(std::is_same_v<set_result_type, void>,
                   "a setter must return caf::error, bool or void");
     return [&] {
       set(std::move(tmp));

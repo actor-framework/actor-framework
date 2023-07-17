@@ -52,7 +52,7 @@ public:
 
 template <class ExitMsgType>
 behavior tester(event_based_actor* self, const actor& aut) {
-  if (std::is_same<ExitMsgType, exit_msg>::value) {
+  if (std::is_same_v<ExitMsgType, exit_msg>) {
     self->set_exit_handler([self](exit_msg& msg) {
       // must be still alive at this point
       CHECK_EQ(s_testees.load(), 1);

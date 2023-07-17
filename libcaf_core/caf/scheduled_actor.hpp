@@ -592,7 +592,7 @@ public:
   /// and restoring `f` only if it has not been replaced by the user.
   template <class F, class... Ts>
   auto call_handler(F& f, Ts&&... xs) -> typename std::enable_if<
-    !std::is_same<decltype(f(std::forward<Ts>(xs)...)), void>::value,
+    !std::is_same_v<decltype(f(std::forward<Ts>(xs)...)), void>,
     decltype(f(std::forward<Ts>(xs)...))>::type {
     using std::swap;
     F g;
@@ -605,7 +605,7 @@ public:
 
   template <class F, class... Ts>
   auto call_handler(F& f, Ts&&... xs) -> typename std::enable_if<
-    std::is_same<decltype(f(std::forward<Ts>(xs)...)), void>::value>::type {
+    std::is_same_v<decltype(f(std::forward<Ts>(xs)...)), void>>::type {
     using std::swap;
     F g;
     swap(f, g);

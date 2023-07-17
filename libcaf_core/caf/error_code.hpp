@@ -23,7 +23,7 @@ public:
 
   static_assert(is_error_code_enum_v<Enum>);
 
-  static_assert(std::is_same<underlying_type, uint8_t>::value);
+  static_assert(std::is_same_v<underlying_type, uint8_t>);
 
   constexpr error_code() noexcept : value_(static_cast<Enum>(0)) {
     // nop

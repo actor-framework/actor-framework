@@ -26,9 +26,9 @@ public:
 
   // -- constants --------------------------------------------------------------
 
-  static constexpr metric_type runtime_type
-    = std::is_same<value_type, double>::value ? metric_type::dbl_counter
-                                              : metric_type::int_counter;
+  static constexpr metric_type runtime_type = std::is_same_v<value_type, double>
+                                                ? metric_type::dbl_counter
+                                                : metric_type::int_counter;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -59,7 +59,7 @@ public:
   /// Increments the counter by 1.
   /// @returns The new value of the counter.
   template <class T = ValueType>
-  std::enable_if_t<std::is_same<T, int64_t>::value, T> operator++() noexcept {
+  std::enable_if_t<std::is_same_v<T, int64_t>, T> operator++() noexcept {
     return ++gauge_;
   }
 

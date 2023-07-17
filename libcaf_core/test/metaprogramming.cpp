@@ -72,7 +72,7 @@ std::ostream& operator<<(std::ostream& out, token<T>) {
 
 template <class T, class U>
 constexpr bool operator==(token<T>, token<U>) {
-  return std::is_same<T, U>::value;
+  return std::is_same_v<T, U>;
 }
 
 template <class T>

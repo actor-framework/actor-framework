@@ -178,7 +178,7 @@ public:
       using save_callback_result = decltype(save_callback());
       if (!(f->begin_object(object_type, object_name) && (fs(*f) && ...)))
         return false;
-      if constexpr (std::is_same<save_callback_result, bool>::value) {
+      if constexpr (std::is_same_v<save_callback_result, bool>) {
         if (!save_callback()) {
           f->set_error(sec::save_callback_failed);
           return false;

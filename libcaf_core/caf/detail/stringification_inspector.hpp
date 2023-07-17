@@ -172,9 +172,9 @@ public:
       sep();
       result_ += "null";
       return true;
-    } else if constexpr (std::is_same<T, char>::value) {
+    } else if constexpr (std::is_same_v<T, char>) {
       return value(std::string_view{x, strlen(x)});
-    } else if constexpr (std::is_same<T, void>::value) {
+    } else if constexpr (std::is_same_v<T, void>) {
       sep();
       result_ += "*<";
       auto addr = reinterpret_cast<intptr_t>(x);
@@ -218,7 +218,7 @@ public:
 
   template <class T>
   static std::string render(const T& x) {
-    if constexpr (std::is_same<std::nullptr_t, T>::value) {
+    if constexpr (std::is_same_v<std::nullptr_t, T>) {
       return "null";
     } else if constexpr (std::is_constructible<std::string_view, T>::value) {
       if constexpr (std::is_pointer<T>::value) {

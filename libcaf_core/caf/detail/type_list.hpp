@@ -386,8 +386,7 @@ constexpr size_t tl_count<List, Pred>::value;
 /// Counts the number of elements in the list which are equal to `T`.
 template <class List, class T>
 struct tl_count_type {
-  static constexpr size_t value = (std::is_same<tl_head_t<List>, T>::value ? 1
-                                                                           : 0)
+  static constexpr size_t value = (std::is_same_v<tl_head_t<List>, T> ? 1 : 0)
                                   + tl_count_type<tl_tail_t<List>, T>::value;
 };
 
@@ -676,8 +675,8 @@ struct tl_filter_type;
 
 template <class Type, class... T>
 struct tl_filter_type<type_list<T...>, Type> {
-  using type = typename tl_filter_impl<type_list<T...>,
-                                       !std::is_same<T, Type>::value...>::type;
+  using type =
+    typename tl_filter_impl<type_list<T...>, !std::is_same_v<T, Type>...>::type;
 };
 
 template <class List, class T>
@@ -690,9 +689,8 @@ struct tl_filter_not_type;
 
 template <class Type, class... T>
 struct tl_filter_not_type<type_list<T...>, Type> {
-  using type =
-    typename tl_filter_impl<type_list<T...>,
-                            (!std::is_same<T, Type>::value)...>::type;
+  using type = typename tl_filter_impl<type_list<T...>,
+                                       (!std::is_same_v<T, Type>) ...>::type;
 };
 
 template <class List, class T>

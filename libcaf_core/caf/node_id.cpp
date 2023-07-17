@@ -165,7 +165,7 @@ bool node_id::can_parse(std::string_view str) noexcept {
 
 void append_to_string(std::string& str, const node_id& x) {
   auto f = [&str](auto& x) {
-    if constexpr (std::is_same<std::decay_t<decltype(x)>, uri>::value)
+    if constexpr (std::is_same_v<std::decay_t<decltype(x)>, uri>)
       str.insert(str.end(), x.str().begin(), x.str().end());
     else
       x.print(str);

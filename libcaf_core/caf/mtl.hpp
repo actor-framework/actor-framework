@@ -80,7 +80,7 @@ public:
   bool try_request(const typed_actor<Fs...>& dst, Timeout timeout,
                    OnResult on_result, OnError on_error) {
     using on_error_result = decltype(on_error(std::declval<error&>()));
-    static_assert(std::is_same<void, on_error_result>::value);
+    static_assert(std::is_same_v<void, on_error_result>);
     auto dst_hdl = actor_cast<actor>(dst);
     return (detail::mtl_util<Fs>::request(self_, dst_hdl, timeout, adapter_,
                                           *reader_, on_result, on_error)

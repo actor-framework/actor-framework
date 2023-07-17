@@ -26,7 +26,7 @@ void set_thread_name(const char* name) {
 #ifdef CAF_WINDOWS
   // nop
 #else // CAF_WINDOWS
-  static_assert(std::is_same<std::thread::native_handle_type, pthread_t>::value,
+  static_assert(std::is_same_v<std::thread::native_handle_type, pthread_t>,
                 "std::thread not based on pthread_t");
 #  if defined(CAF_MACOS)
   pthread_setname_np(name);

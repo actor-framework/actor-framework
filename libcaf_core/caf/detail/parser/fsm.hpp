@@ -12,7 +12,7 @@
 
 #define CAF_FSM_EVAL_ACTION(action)                                            \
   auto action_impl = [&]() -> decltype(auto) { return action; };               \
-  if constexpr (std::is_same<pec, decltype(action_impl())>::value) {           \
+  if constexpr (std::is_same_v<pec, decltype(action_impl())>) {                \
     if (auto code = action_impl(); code != pec::success) {                     \
       ps.code = code;                                                          \
       return;                                                                  \
