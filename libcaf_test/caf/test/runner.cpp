@@ -55,15 +55,17 @@ std::optional<unsigned> parse_log_level(std::string_view x) {
 
 std::optional<std::regex> to_regex(std::string_view regex_string) {
 #ifdef CAF_ENABLE_EXCEPTIONS
+  using detail::format_to;
+  auto err_out = [] { return std::ostream_iterator<char>{std::cerr}; };
   try {
     return std::regex{regex_string.begin(), regex_string.end()};
-  } catch (std::regex_error& err) {
-    using detail::format_to;
-    auto errStream = std::ostream_iterator<char>{std::cerr};
-    format_to(errStream, "error while parsing argument '{}': {}\n",
+  } catch (const std::exception& err) {
+    format_to(err_out(), "error while parsing argument '{}': {}\n",
               regex_string, err.what());
     return std::nullopt;
   } catch (...) {
+    format_to(err_out(), "error while parsing argument '{}': unknown error\n",
+              regex_string);
     return std::nullopt;
   }
 #else
