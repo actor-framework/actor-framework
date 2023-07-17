@@ -53,6 +53,24 @@ std::optional<unsigned> parse_log_level(std::string_view x) {
   return {};
 }
 
+std::optional<std::regex> to_regex(std::string_view regex_string) {
+#ifdef CAF_ENABLE_EXCEPTIONS
+  try {
+    return std::regex{regex_string.begin(), regex_string.end()};
+  } catch (std::regex_error& err) {
+    using detail::format_to;
+    auto errStream = std::ostream_iterator<char>{std::cerr};
+    format_to(errStream, "error while parsing argument '{}': {}\n",
+              regex_string, err.what());
+    return std::nullopt;
+  } catch (...) {
+    return std::nullopt;
+  }
+#else
+  return std::regex{regex_string.begin(), regex_string.end()};
+#endif
+}
+
 } // namespace
 
 runner::runner() : suites_(caf::test::registry::suites()) {
@@ -67,19 +85,16 @@ int runner::run(int argc, char** argv) {
   } else if (help_printed) {
     return EXIT_SUCCESS;
   }
+  auto suite_regex = to_regex(get_or(cfg_, "suites", ".*"));
+  if (!suite_regex) {
+    return EXIT_FAILURE;
+  }
   default_reporter->start();
   auto enabled = [](const std::regex& selected,
                     std::string_view search_string) {
     return std::regex_search(search_string.begin(), search_string.end(),
                              selected);
   };
-  auto suite_regex = runner::to_regex(get_or(cfg_, "suites", ".*"));
-  if (!suite_regex) {
-    using detail::format_to;
-    auto err = std::ostream_iterator<char>{std::cerr};
-    format_to(err, "regex could not be parsed\n");
-    return EXIT_FAILURE;
-  }
   for (auto& [suite_name, suite] : suites_) {
     if (!enabled(*suite_regex, suite_name))
       continue;
@@ -171,18 +186,6 @@ runner::parse_cli_result runner::parse_cli(int argc, char** argv) {
     reporter::instance->verbosity(*level);
   }
   return {true, false};
-}
-
-std::optional<std::regex> runner::to_regex(std::string_view regex_string) {
-#ifdef CAF_ENABLE_EXCEPTIONS
-  try {
-    return std::regex{regex_string.begin(), regex_string.end()};
-  } catch (...) {
-    return std::nullopt;
-  }
-#else
-  return std::regex{regex_string.begin(), regex_string.end()};
-#endif
 }
 
 } // namespace caf::test

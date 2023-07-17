@@ -8,9 +8,6 @@
 #include "caf/settings.hpp"
 #include "caf/test/registry.hpp"
 
-#include <optional>
-#include <regex>
-
 namespace caf::test {
 
 /// Implements the main loop for running tests.
@@ -30,7 +27,6 @@ public:
 
 private:
   parse_cli_result parse_cli(int argc, char** argv);
-  static std::optional<std::regex> to_regex(std::string_view regex_string);
 
   registry::suites_map suites_;
   caf::settings cfg_;
