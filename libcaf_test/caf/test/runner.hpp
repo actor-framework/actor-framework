@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/detail/test_export.hpp"
+#include "caf/settings.hpp"
 #include "caf/test/registry.hpp"
 
 namespace caf::test {
@@ -28,6 +29,7 @@ private:
   parse_cli_result parse_cli(int argc, char** argv);
 
   registry::suites_map suites_;
+  caf::settings cfg_;
 };
 
 } // namespace caf::test

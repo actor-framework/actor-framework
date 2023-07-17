@@ -8,7 +8,6 @@
 #include "caf/config_option_adder.hpp"
 #include "caf/config_option_set.hpp"
 #include "caf/detail/log_level.hpp"
-#include "caf/settings.hpp"
 #include "caf/test/context.hpp"
 #include "caf/test/nesting_error.hpp"
 #include "caf/test/reporter.hpp"
@@ -16,6 +15,7 @@
 
 #include <iostream>
 #include <optional>
+#include <regex>
 #include <string>
 
 namespace caf::test {
@@ -53,6 +53,26 @@ std::optional<unsigned> parse_log_level(std::string_view x) {
   return {};
 }
 
+std::optional<std::regex> to_regex(std::string_view regex_string) {
+#ifdef CAF_ENABLE_EXCEPTIONS
+  using detail::format_to;
+  auto err_out = [] { return std::ostream_iterator<char>{std::cerr}; };
+  try {
+    return std::regex{regex_string.begin(), regex_string.end()};
+  } catch (const std::exception& err) {
+    format_to(err_out(), "error while parsing argument '{}': {}\n",
+              regex_string, err.what());
+    return std::nullopt;
+  } catch (...) {
+    format_to(err_out(), "error while parsing argument '{}': unknown error\n",
+              regex_string);
+    return std::nullopt;
+  }
+#else
+  return std::regex{regex_string.begin(), regex_string.end()};
+#endif
+}
+
 } // namespace
 
 runner::runner() : suites_(caf::test::registry::suites()) {
@@ -67,8 +87,19 @@ int runner::run(int argc, char** argv) {
   } else if (help_printed) {
     return EXIT_SUCCESS;
   }
+  auto suite_regex = to_regex(get_or(cfg_, "suites", ".*"));
+  if (!suite_regex) {
+    return EXIT_FAILURE;
+  }
   default_reporter->start();
+  auto enabled = [](const std::regex& selected,
+                    std::string_view search_string) {
+    return std::regex_search(search_string.begin(), search_string.end(),
+                             selected);
+  };
   for (auto& [suite_name, suite] : suites_) {
+    if (!enabled(*suite_regex, suite_name))
+      continue;
     default_reporter->begin_suite(suite_name);
     for (auto [test_name, factory_instance] : suite) {
       auto state = std::make_shared<context>();
@@ -109,27 +140,26 @@ int runner::run(int argc, char** argv) {
 
 runner::parse_cli_result runner::parse_cli(int argc, char** argv) {
   using detail::format_to;
-  caf::settings cfg;
   std::vector<std::string> args_cpy{argv + 1, argv + argc};
   auto options = make_option_set();
-  auto res = options.parse(cfg, args_cpy);
+  auto res = options.parse(cfg_, args_cpy);
   auto err = std::ostream_iterator<char>{std::cerr};
   if (res.first != caf::pec::success) {
     format_to(err, "error while parsing argument '{}': {}\n\n{}\n", *res.second,
               to_string(res.first), options.help_text());
     return {false, true};
   }
-  if (get_or(cfg, "help", false)) {
+  if (get_or(cfg_, "help", false)) {
     format_to(err, "{}\n", options.help_text());
     return {true, true};
   }
-  if (get_or(cfg, "available-suites", false)) {
+  if (get_or(cfg_, "available-suites", false)) {
     format_to(err, "available suites:\n");
     for (auto& [suite_name, suite] : suites_)
       format_to(err, "- {}\n", suite_name);
     return {true, true};
   }
-  if (auto suite_name = get_as<std::string>(cfg, "available-tests")) {
+  if (auto suite_name = get_as<std::string>(cfg_, "available-tests")) {
     auto i = suites_.find(*suite_name);
     if (i == suites_.end()) {
       format_to(err, "no such suite: {}\n", *suite_name);
@@ -140,7 +170,7 @@ runner::parse_cli_result runner::parse_cli(int argc, char** argv) {
       format_to(err, "- {}\n", test_name);
     return {true, true};
   }
-  if (auto verbosity = get_as<std::string>(cfg, "verbosity")) {
+  if (auto verbosity = get_as<std::string>(cfg_, "verbosity")) {
     auto level = parse_log_level(*verbosity);
     if (!level) {
       format_to(err,
