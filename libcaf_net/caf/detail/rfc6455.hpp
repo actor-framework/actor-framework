@@ -59,8 +59,7 @@ struct CAF_NET_EXPORT rfc6455 {
   static ptrdiff_t decode_header(const_byte_span data, header& hdr);
 
   static constexpr bool is_control_frame(uint8_t opcode) noexcept {
-    return opcode != text_frame && opcode != binary_frame
-           && opcode != continuation_frame;
+    return opcode > binary_frame;
   }
 };
 
