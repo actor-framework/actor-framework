@@ -30,6 +30,7 @@ config_option_set make_option_set() {
     .add<bool>("no-colors,n", "disable coloring (ignored on Windows)")
     .add<size_t>("max-runtime,r", "set a maximum runtime in seconds")
     .add<std::string>("suites,s", "regex for selecting suites")
+    .add<std::string>("tests,t", "regex for selecting tests")
     .add<std::string>("available-tests,A", "print tests for a suite")
     .add<std::string>("verbosity,v", "set verbosity level of the reporter");
   return result;
@@ -88,7 +89,8 @@ int runner::run(int argc, char** argv) {
     return EXIT_SUCCESS;
   }
   auto suite_regex = to_regex(get_or(cfg_, "suites", ".*"));
-  if (!suite_regex) {
+  auto test_regex = to_regex(get_or(cfg_, "tests", ".*"));
+  if (!suite_regex || !test_regex) {
     return EXIT_FAILURE;
   }
   default_reporter->start();
@@ -102,6 +104,8 @@ int runner::run(int argc, char** argv) {
       continue;
     default_reporter->begin_suite(suite_name);
     for (auto [test_name, factory_instance] : suite) {
+      if (!enabled(*test_regex, test_name))
+        continue;
       auto state = std::make_shared<context>();
 #ifdef CAF_ENABLE_EXCEPTIONS
       try {
