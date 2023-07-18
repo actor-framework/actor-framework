@@ -95,29 +95,18 @@ bool hashed_node_id::can_parse(std::string_view str) noexcept {
 
 node_id hashed_node_id::local(const actor_system_config&) {
   CAF_LOG_TRACE("");
-  auto ifs = detail::get_mac_addresses();
-  std::vector<std::string> macs;
-  macs.reserve(ifs.size());
-  for (auto& i : ifs)
-    macs.emplace_back(std::move(i.second));
-  auto seeded_hd_serial_and_mac_addr = join(macs, "") + detail::get_root_uuid();
-  // By adding 8 random ASCII characters, we make sure to assign a new (random)
-  // ID to a node every time we start it. Otherwise, we might run into issues
-  // where a restarted node produces identical actor IDs than the node it
-  // replaces. Especially when running nodes in a container, because then the
-  // process ID is most likely the same.
+  // We add an global incrementing counter to make sure two actor systems in the
+  // same process won't have the same node ID - even if the user manipulates the
+  // system to always produce the same seed for its randomness.
+  auto sys_seed = static_cast<uint8_t>(system_id.fetch_add(1));
   std::random_device rd;
-  std::minstd_rand gen{rd()};
-  std::uniform_int_distribution<> dis(33, 126);
-  for (int i = 0; i < 8; ++i)
-    seeded_hd_serial_and_mac_addr += static_cast<char>(dis(gen));
-  // One final tweak: we add another character that makes sure two actor systems
-  // in the same process won't have the same node ID - even if the user
-  // manipulates the system to always produce the same seed for its randomness.
-  auto sys_seed = static_cast<char>(system_id.fetch_add(1) + 33);
-  seeded_hd_serial_and_mac_addr += sys_seed;
+  std::minstd_rand gen{rd() + sys_seed};
+  // uniform_int_distribution doesn't accept uint8_t as template parameter
+  std::uniform_int_distribution<> dis(std::numeric_limits<uint8_t>::min(),
+                                      std::numeric_limits<uint8_t>::max());
   host_id_type hid;
-  detail::ripemd_160(hid, seeded_hd_serial_and_mac_addr);
+  for (auto& x : hid)
+    x = static_cast<uint8_t>(dis(gen));
   return make_node_id(detail::get_process_id(), hid);
 }
 
