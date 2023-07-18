@@ -6,6 +6,7 @@
 
 #include "caf/config.hpp"
 
+#include <algorithm>
 #include <cstdint>
 
 namespace caf {

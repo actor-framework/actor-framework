@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/config.hpp"
+#include "caf/fwd.hpp"
 #include "caf/none.hpp"
 #include "caf/unit.hpp"
 

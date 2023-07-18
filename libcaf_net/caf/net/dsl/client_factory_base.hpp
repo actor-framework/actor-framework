@@ -10,6 +10,7 @@
 #include "caf/net/ssl/tcp_acceptor.hpp"
 #include "caf/net/tcp_accept_socket.hpp"
 
+#include "caf/config_value.hpp"
 #include "caf/make_counted.hpp"
 
 #include <cstdint>
