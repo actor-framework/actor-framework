@@ -9,6 +9,7 @@ ignore:
   - libcaf_openssl
   - libcaf_test
   - tools
+  - "**/*.test.cpp"
 coverage:
   status:
     project:
