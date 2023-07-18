@@ -4,13 +4,13 @@
 
 #pragma once
 
-#include <chrono>
-#include <tuple>
-#include <type_traits>
-
 #include "caf/detail/core_export.hpp"
 #include "caf/timeout_definition.hpp"
 #include "caf/timespan.hpp"
+
+#include <chrono>
+#include <tuple>
+#include <type_traits>
 
 namespace caf {
 

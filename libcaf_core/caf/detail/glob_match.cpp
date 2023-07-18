@@ -34,10 +34,10 @@
 
 #include "caf/detail/glob_match.hpp"
 
+#include "caf/config.hpp"
+
 #include <cstdio>
 #include <cstring>
-
-#include "caf/config.hpp"
 
 namespace caf::detail {
 

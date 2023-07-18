@@ -4,13 +4,13 @@
 
 #pragma once
 
-#include <condition_variable>
-#include <map>
-#include <mutex>
-
 #include "caf/flow/coordinator.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/ref_counted.hpp"
+
+#include <condition_variable>
+#include <map>
+#include <mutex>
 
 namespace caf::flow {
 

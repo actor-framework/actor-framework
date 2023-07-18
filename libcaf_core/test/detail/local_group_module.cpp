@@ -4,6 +4,8 @@
 
 #define CAF_SUITE detail.local_group_module
 
+#include "caf/detail/local_group_module.hpp"
+
 #include "caf/all.hpp"
 
 #include "core-test.hpp"
@@ -11,8 +13,6 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
-
-#include "caf/detail/local_group_module.hpp"
 
 using namespace caf;
 

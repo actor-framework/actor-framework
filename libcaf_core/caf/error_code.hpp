@@ -4,12 +4,12 @@
 
 #pragma once
 
-#include <string>
-#include <type_traits>
-
 #include "caf/fwd.hpp"
 #include "caf/is_error_code_enum.hpp"
 #include "caf/none.hpp"
+
+#include <string>
+#include <type_traits>
 
 namespace caf {
 

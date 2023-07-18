@@ -4,8 +4,9 @@
 
 #include "caf/net/ssl/connection.hpp"
 
-#include "caf/config.hpp"
 #include "caf/net/ssl/context.hpp"
+
+#include "caf/config.hpp"
 
 CAF_PUSH_WARNINGS
 #include <openssl/err.h>

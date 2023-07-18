@@ -4,15 +4,15 @@
 
 #include "caf/detail/type_id_list_builder.hpp"
 
-#include <cstdint>
-#include <cstdlib>
-#include <mutex>
-#include <unordered_set>
-
 #include "caf/config.hpp"
 #include "caf/hash/fnv.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/type_id_list.hpp"
+
+#include <cstdint>
+#include <cstdlib>
+#include <mutex>
+#include <unordered_set>
 
 namespace caf::detail {
 namespace {

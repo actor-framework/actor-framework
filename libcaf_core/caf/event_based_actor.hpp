@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include <type_traits>
-
 #include "caf/actor_traits.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/extend.hpp"
@@ -18,6 +16,8 @@
 #include "caf/mixin/subscriber.hpp"
 #include "caf/response_handle.hpp"
 #include "caf/scheduled_actor.hpp"
+
+#include <type_traits>
 
 namespace caf {
 

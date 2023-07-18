@@ -4,12 +4,12 @@
 
 #pragma once
 
-#include <type_traits>
-
 #include "caf/actor.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/detail/mtl_util.hpp"
 #include "caf/typed_actor.hpp"
+
+#include <type_traits>
 
 namespace caf {
 

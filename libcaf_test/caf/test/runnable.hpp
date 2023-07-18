@@ -4,15 +4,16 @@
 
 #pragma once
 
+#include "caf/test/binary_predicate.hpp"
+#include "caf/test/block_type.hpp"
+#include "caf/test/fwd.hpp"
+#include "caf/test/reporter.hpp"
+
 #include "caf/config.hpp"
 #include "caf/deep_to_string.hpp"
 #include "caf/detail/format.hpp"
 #include "caf/detail/source_location.hpp"
 #include "caf/detail/test_export.hpp"
-#include "caf/test/binary_predicate.hpp"
-#include "caf/test/block_type.hpp"
-#include "caf/test/fwd.hpp"
-#include "caf/test/reporter.hpp"
 
 #include <string_view>
 

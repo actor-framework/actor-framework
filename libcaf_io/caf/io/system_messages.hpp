@@ -4,17 +4,18 @@
 
 #pragma once
 
-#include <iomanip>
-#include <sstream>
-#include <tuple>
-#include <vector>
-
-#include "caf/byte_buffer.hpp"
 #include "caf/io/accept_handle.hpp"
 #include "caf/io/connection_handle.hpp"
 #include "caf/io/datagram_handle.hpp"
 #include "caf/io/handle.hpp"
 #include "caf/io/network/receive_buffer.hpp"
+
+#include "caf/byte_buffer.hpp"
+
+#include <iomanip>
+#include <sstream>
+#include <tuple>
+#include <vector>
 
 namespace caf::io {
 

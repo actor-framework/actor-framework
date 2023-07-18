@@ -4,14 +4,6 @@
 
 #pragma once
 
-#include <cstdint>
-#include <cstring>
-#include <iterator>
-#include <string_view>
-#include <type_traits>
-#include <utility>
-#include <vector>
-
 #include "caf/chrono.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/squashed_int.hpp"
@@ -22,6 +14,14 @@
 #include "caf/none.hpp"
 #include "caf/parser_state.hpp"
 #include "caf/unit.hpp"
+
+#include <cstdint>
+#include <cstring>
+#include <iterator>
+#include <string_view>
+#include <type_traits>
+#include <utility>
+#include <vector>
 
 namespace caf::detail {
 

@@ -6,11 +6,11 @@
 
 #include "caf/io/basp/message_queue.hpp"
 
-#include "io-test.hpp"
-
 #include "caf/actor_cast.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/behavior.hpp"
+
+#include "io-test.hpp"
 
 using namespace caf;
 

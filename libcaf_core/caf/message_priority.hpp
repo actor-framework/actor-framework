@@ -4,11 +4,11 @@
 
 #pragma once
 
+#include "caf/detail/core_export.hpp"
+
 #include <cstdint>
 #include <string>
 #include <type_traits>
-
-#include "caf/detail/core_export.hpp"
 
 namespace caf {
 

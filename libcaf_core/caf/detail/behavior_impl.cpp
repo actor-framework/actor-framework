@@ -4,9 +4,9 @@
 
 #include "caf/detail/behavior_impl.hpp"
 
-#include <utility>
-
 #include "caf/message_handler.hpp"
+
+#include <utility>
 
 namespace caf::detail {
 

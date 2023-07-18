@@ -4,9 +4,6 @@
 
 #pragma once
 
-#include <algorithm>
-#include <type_traits>
-
 #include "caf/config.hpp"
 #include "caf/fwd.hpp"
 #include "caf/settings.hpp"
@@ -15,6 +12,9 @@
 #include "caf/telemetry/gauge.hpp"
 #include "caf/telemetry/label.hpp"
 #include "caf/telemetry/metric_type.hpp"
+
+#include <algorithm>
+#include <type_traits>
 
 namespace caf::telemetry {
 

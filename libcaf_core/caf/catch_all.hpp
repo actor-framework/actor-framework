@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include <functional>
-#include <type_traits>
-
 #include "caf/message.hpp"
 #include "caf/result.hpp"
+
+#include <functional>
+#include <type_traits>
 
 namespace caf {
 

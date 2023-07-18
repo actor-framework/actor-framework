@@ -4,17 +4,18 @@
 
 #pragma once
 
-#include <vector>
-
-#include "caf/byte_buffer.hpp"
-#include "caf/detail/io_export.hpp"
 #include "caf/io/broker_servant.hpp"
 #include "caf/io/datagram_handle.hpp"
 #include "caf/io/network/datagram_manager.hpp"
 #include "caf/io/network/ip_endpoint.hpp"
 #include "caf/io/network/receive_buffer.hpp"
 #include "caf/io/system_messages.hpp"
+
+#include "caf/byte_buffer.hpp"
+#include "caf/detail/io_export.hpp"
 #include "caf/message.hpp"
+
+#include <vector>
 
 namespace caf::io {
 

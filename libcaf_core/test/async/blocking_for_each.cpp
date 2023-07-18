@@ -5,14 +5,13 @@
 #define CAF_SUITE async.blocking_for_each
 
 #include "caf/async/publisher.hpp"
-
-#include "core-test.hpp"
-
 #include "caf/flow/coordinator.hpp"
 #include "caf/flow/observable.hpp"
 #include "caf/flow/observable_builder.hpp"
 #include "caf/flow/observer.hpp"
 #include "caf/scheduled_actor/flow.hpp"
+
+#include "core-test.hpp"
 
 using namespace caf;
 

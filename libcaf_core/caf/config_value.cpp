@@ -4,12 +4,6 @@
 
 #include "caf/config_value.hpp"
 
-#include <cctype>
-#include <cmath>
-#include <cstdlib>
-#include <ostream>
-#include <string_view>
-
 #include "caf/detail/config_consumer.hpp"
 #include "caf/detail/meta_object.hpp"
 #include "caf/detail/overload.hpp"
@@ -21,6 +15,12 @@
 #include "caf/parser_state.hpp"
 #include "caf/pec.hpp"
 #include "caf/settings.hpp"
+
+#include <cctype>
+#include <cmath>
+#include <cstdlib>
+#include <ostream>
+#include <string_view>
 
 namespace caf {
 

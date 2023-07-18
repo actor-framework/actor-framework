@@ -4,15 +4,15 @@
 
 #include "caf/binary_deserializer.hpp"
 
-#include <iomanip>
-#include <sstream>
-#include <type_traits>
-
 #include "caf/actor_system.hpp"
 #include "caf/detail/ieee_754.hpp"
 #include "caf/detail/network_order.hpp"
 #include "caf/error.hpp"
 #include "caf/sec.hpp"
+
+#include <iomanip>
+#include <sstream>
+#include <type_traits>
 
 namespace caf {
 

@@ -6,15 +6,15 @@
 
 #include "caf/detail/meta_object.hpp"
 
-#include "core-test.hpp"
-
-#include <tuple>
-#include <type_traits>
-
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/detail/make_meta_object.hpp"
 #include "caf/init_global_meta_objects.hpp"
+
+#include "core-test.hpp"
+
+#include <tuple>
+#include <type_traits>
 
 using namespace std::string_literals;
 

@@ -9,11 +9,10 @@
 
 #  define CAF_SUITE typed_spawn
 
-#  include "core-test.hpp"
-
+#  include "caf/all.hpp"
 #  include "caf/string_algorithms.hpp"
 
-#  include "caf/all.hpp"
+#  include "core-test.hpp"
 
 #  define ERROR_HANDLER [&](error& err) { CAF_FAIL(err); }
 

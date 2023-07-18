@@ -4,16 +4,16 @@
 
 #pragma once
 
+#include "caf/detail/build_config.hpp"
+#include "caf/detail/log_level.hpp"
+#include "caf/timestamp.hpp"
+
 #include <chrono>
 #include <cstddef>
 #include <limits>
 #include <string>
 #include <string_view>
 #include <vector>
-
-#include "caf/detail/build_config.hpp"
-#include "caf/detail/log_level.hpp"
-#include "caf/timestamp.hpp"
 
 // -- hard-coded default values for various CAF options ------------------------
 

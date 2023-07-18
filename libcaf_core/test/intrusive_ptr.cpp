@@ -11,11 +11,11 @@
 // this test doesn't verify thread-safety of intrusive_ptr
 // however, it is thread safe since it uses atomic operations only
 
-#include <cstddef>
-#include <vector>
-
 #include "caf/make_counted.hpp"
 #include "caf/ref_counted.hpp"
+
+#include <cstddef>
+#include <vector>
 
 using namespace caf;
 

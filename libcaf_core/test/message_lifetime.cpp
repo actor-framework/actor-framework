@@ -4,12 +4,12 @@
 
 #define CAF_SUITE message_lifetime
 
+#include "caf/all.hpp"
+
 #include "core-test.hpp"
 
 #include <atomic>
 #include <iostream>
-
-#include "caf/all.hpp"
 
 using namespace caf;
 

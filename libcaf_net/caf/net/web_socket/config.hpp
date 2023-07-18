@@ -4,12 +4,13 @@
 
 #pragma once
 
-#include "caf/actor_control_block.hpp"
-#include "caf/detail/net_export.hpp"
 #include "caf/net/dsl/generic_config.hpp"
 #include "caf/net/dsl/server_config.hpp"
 #include "caf/net/tcp_accept_socket.hpp"
 #include "caf/net/web_socket/handshake.hpp"
+
+#include "caf/actor_control_block.hpp"
+#include "caf/detail/net_export.hpp"
 
 #include <string>
 #include <vector>

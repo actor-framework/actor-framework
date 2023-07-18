@@ -4,14 +4,15 @@
 
 #pragma once
 
-#include <type_traits>
+#include "caf/test/unit_test.hpp"
 
 #include "caf/all.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/byte_buffer.hpp"
 #include "caf/config.hpp"
 #include "caf/init_global_meta_objects.hpp"
-#include "caf/test/unit_test.hpp"
+
+#include <type_traits>
 
 CAF_PUSH_WARNINGS
 

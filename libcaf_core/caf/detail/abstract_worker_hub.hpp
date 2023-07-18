@@ -4,12 +4,12 @@
 
 #pragma once
 
+#include "caf/detail/core_export.hpp"
+#include "caf/fwd.hpp"
+
 #include <atomic>
 #include <condition_variable>
 #include <mutex>
-
-#include "caf/detail/core_export.hpp"
-#include "caf/fwd.hpp"
 
 namespace caf::detail {
 

@@ -6,16 +6,17 @@
 
 #include "caf/io/basp/worker.hpp"
 
-#include "io-test.hpp"
+#include "caf/io/basp/message_queue.hpp"
+#include "caf/io/network/test_multiplexer.hpp"
 
 #include "caf/actor_cast.hpp"
 #include "caf/actor_control_block.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/binary_serializer.hpp"
-#include "caf/io/basp/message_queue.hpp"
-#include "caf/io/network/test_multiplexer.hpp"
 #include "caf/make_actor.hpp"
 #include "caf/proxy_registry.hpp"
+
+#include "io-test.hpp"
 
 using namespace caf;
 

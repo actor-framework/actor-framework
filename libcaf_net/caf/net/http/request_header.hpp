@@ -4,11 +4,12 @@
 
 #pragma once
 
-#include "caf/config_value.hpp"
-#include "caf/detail/net_export.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/http/method.hpp"
 #include "caf/net/http/status.hpp"
+
+#include "caf/config_value.hpp"
+#include "caf/detail/net_export.hpp"
 #include "caf/string_algorithms.hpp"
 #include "caf/uri.hpp"
 

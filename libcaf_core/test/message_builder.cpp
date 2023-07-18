@@ -6,15 +6,15 @@
 
 #include "caf/message_builder.hpp"
 
+#include "caf/message.hpp"
+#include "caf/type_id_list.hpp"
+
 #include "core-test.hpp"
 
 #include <map>
 #include <numeric>
 #include <string>
 #include <vector>
-
-#include "caf/message.hpp"
-#include "caf/type_id_list.hpp"
 
 using namespace std::literals;
 

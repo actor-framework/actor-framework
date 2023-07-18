@@ -4,10 +4,6 @@
 
 #pragma once
 
-#include <functional>
-#include <string>
-#include <utility>
-
 #include "caf/abstract_group.hpp"
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
@@ -16,6 +12,10 @@
 #include "caf/group_module.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/none.hpp"
+
+#include <functional>
+#include <string>
+#include <utility>
 
 namespace caf {
 

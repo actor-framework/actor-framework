@@ -8,17 +8,18 @@ CAF_PUSH_WARNINGS
 #include <openssl/err.h>
 CAF_POP_WARNINGS
 
-#include "caf/actor_system_config.hpp"
-
 #include "caf/io/network/default_multiplexer.hpp"
 
 #include "caf/openssl/manager.hpp"
+
+#include "caf/actor_system_config.hpp"
 
 // On Linux we need to block SIGPIPE whenever we access OpenSSL functions.
 // Unfortunately there's no sane way to configure OpenSSL properly.
 #ifdef CAF_LINUX
 
 #  include "caf/detail/scope_guard.hpp"
+
 #  include <signal.h>
 
 #  define CAF_BLOCK_SIGPIPE()                                                  \

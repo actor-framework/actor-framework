@@ -4,9 +4,10 @@
 
 #pragma once
 
+#include "caf/net/socket.hpp"
+
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
-#include "caf/net/socket.hpp"
 #include "caf/sec.hpp"
 
 namespace caf::net {

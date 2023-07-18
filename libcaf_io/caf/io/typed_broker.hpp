@@ -4,29 +4,27 @@
 
 #pragma once
 
-#include <map>
-#include <type_traits>
-#include <vector>
-
-#include "caf/config.hpp"
-#include "caf/extend.hpp"
-#include "caf/local_actor.hpp"
-#include "caf/make_counted.hpp"
-#include "caf/none.hpp"
-#include "caf/typed_actor.hpp"
-
-#include "caf/actor_registry.hpp"
-#include "caf/detail/scope_guard.hpp"
-#include "caf/detail/sync_request_bouncer.hpp"
-#include "caf/logger.hpp"
-
-#include "caf/mixin/behavior_changer.hpp"
-#include "caf/mixin/requester.hpp"
-#include "caf/mixin/sender.hpp"
-
 #include "caf/io/abstract_broker.hpp"
 #include "caf/io/fwd.hpp"
 #include "caf/io/middleman.hpp"
+
+#include "caf/actor_registry.hpp"
+#include "caf/config.hpp"
+#include "caf/detail/scope_guard.hpp"
+#include "caf/detail/sync_request_bouncer.hpp"
+#include "caf/extend.hpp"
+#include "caf/local_actor.hpp"
+#include "caf/logger.hpp"
+#include "caf/make_counted.hpp"
+#include "caf/mixin/behavior_changer.hpp"
+#include "caf/mixin/requester.hpp"
+#include "caf/mixin/sender.hpp"
+#include "caf/none.hpp"
+#include "caf/typed_actor.hpp"
+
+#include <map>
+#include <type_traits>
+#include <vector>
 
 namespace caf {
 

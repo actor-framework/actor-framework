@@ -4,13 +4,6 @@
 
 #pragma once
 
-#include <atomic>
-#include <cstdint>
-#include <exception>
-#include <functional>
-#include <type_traits>
-#include <utility>
-
 #include "caf/abstract_actor.hpp"
 #include "caf/abstract_group.hpp"
 #include "caf/actor.hpp"
@@ -39,6 +32,13 @@
 #include "caf/timespan.hpp"
 #include "caf/typed_actor.hpp"
 #include "caf/typed_response_promise.hpp"
+
+#include <atomic>
+#include <cstdint>
+#include <exception>
+#include <functional>
+#include <type_traits>
+#include <utility>
 
 namespace caf {
 

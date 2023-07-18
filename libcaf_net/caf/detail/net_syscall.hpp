@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include <cstdio>
-#include <cstdlib>
-
 #include "caf/error.hpp"
 #include "caf/sec.hpp"
+
+#include <cstdio>
+#include <cstdlib>
 
 /// Calls a C functions and returns an error if `var op rhs` returns `true`.
 #define CAF_NET_SYSCALL(funname, var, op, rhs, expr)                           \

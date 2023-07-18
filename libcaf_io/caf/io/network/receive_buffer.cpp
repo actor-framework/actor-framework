@@ -2,11 +2,11 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#include <algorithm>
+#include "caf/io/network/receive_buffer.hpp"
 
 #include "caf/config.hpp"
 
-#include "caf/io/network/receive_buffer.hpp"
+#include <algorithm>
 
 namespace {
 

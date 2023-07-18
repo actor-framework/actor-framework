@@ -4,16 +4,16 @@
 
 #pragma once
 
-#include <array>
-#include <cstdint>
-#include <initializer_list>
-#include <string>
-
 #include "caf/byte_address.hpp"
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/ipv4_address.hpp"
+
+#include <array>
+#include <cstdint>
+#include <initializer_list>
+#include <string>
 
 namespace caf {
 

@@ -4,9 +4,6 @@
 
 #pragma once
 
-#include "caf/async/spsc_buffer.hpp"
-#include "caf/detail/ws_flow_bridge.hpp"
-#include "caf/disposable.hpp"
 #include "caf/net/checked_socket.hpp"
 #include "caf/net/dsl/client_factory_base.hpp"
 #include "caf/net/ssl/connection.hpp"
@@ -14,6 +11,10 @@
 #include "caf/net/web_socket/client.hpp"
 #include "caf/net/web_socket/config.hpp"
 #include "caf/net/web_socket/framing.hpp"
+
+#include "caf/async/spsc_buffer.hpp"
+#include "caf/detail/ws_flow_bridge.hpp"
+#include "caf/disposable.hpp"
 #include "caf/timespan.hpp"
 
 #include <chrono>

@@ -6,12 +6,12 @@
 
 #include "caf/logger.hpp"
 
+#include "caf/all.hpp"
+
 #include "core-test.hpp"
 
 #include <ctime>
 #include <string>
-
-#include "caf/all.hpp"
 
 using namespace caf;
 using namespace std::literals;

@@ -6,9 +6,9 @@
 
 #include "caf/openssl/all.hpp"
 
-#include "openssl-test.hpp"
-
 #include "caf/config.hpp"
+
+#include "openssl-test.hpp"
 
 #ifndef CAF_WINDOWS
 #  include <unistd.h>
@@ -19,15 +19,16 @@
 #  define PATH_MAX MAX_PATH
 #endif
 
+#include "caf/io/all.hpp"
+
+#include "caf/all.hpp"
+
 #include <algorithm>
 #include <climits>
 #include <cstdlib>
 #include <sstream>
 #include <utility>
 #include <vector>
-
-#include "caf/all.hpp"
-#include "caf/io/all.hpp"
 
 using namespace caf;
 

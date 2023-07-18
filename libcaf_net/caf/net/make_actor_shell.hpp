@@ -1,7 +1,8 @@
-#include "caf/actor_system.hpp"
 #include "caf/net/actor_shell.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/typed_actor_shell.hpp"
+
+#include "caf/actor_system.hpp"
 
 namespace caf::net {
 

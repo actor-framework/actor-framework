@@ -4,6 +4,15 @@
 
 #pragma once
 
+#include "caf/config.hpp"
+#include "caf/deep_to_string.hpp"
+#include "caf/detail/arg_wrapper.hpp"
+#include "caf/detail/type_traits.hpp"
+#include "caf/fwd.hpp"
+#include "caf/logger.hpp"
+#include "caf/raise_error.hpp"
+#include "caf/term.hpp"
+
 #include <cmath>
 #include <fstream>
 #include <iostream>
@@ -14,16 +23,6 @@
 #include <string>
 #include <thread>
 #include <vector>
-
-#include "caf/config.hpp"
-#include "caf/deep_to_string.hpp"
-#include "caf/fwd.hpp"
-#include "caf/logger.hpp"
-#include "caf/raise_error.hpp"
-#include "caf/term.hpp"
-
-#include "caf/detail/arg_wrapper.hpp"
-#include "caf/detail/type_traits.hpp"
 
 namespace caf::test {
 inline namespace legacy {

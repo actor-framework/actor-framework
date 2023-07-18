@@ -6,9 +6,9 @@
 
 #include "caf/json_builder.hpp"
 
-#include "core-test.hpp"
-
 #include "caf/json_value.hpp"
+
+#include "core-test.hpp"
 
 #include <string_view>
 

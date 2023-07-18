@@ -6,14 +6,15 @@
 
 #include "caf/io/network/default_multiplexer.hpp"
 
+#include "caf/io/all.hpp"
+#include "caf/io/network/operation.hpp"
+
+#include "caf/all.hpp"
+
 #include "io-test.hpp"
 
 #include <algorithm>
 #include <vector>
-
-#include "caf/all.hpp"
-#include "caf/io/all.hpp"
-#include "caf/io/network/operation.hpp"
 
 using namespace caf;
 

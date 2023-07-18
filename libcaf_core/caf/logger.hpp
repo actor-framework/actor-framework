@@ -4,16 +4,6 @@
 
 #pragma once
 
-#include <cstring>
-#include <fstream>
-#include <iostream>
-#include <sstream>
-#include <string_view>
-#include <thread>
-#include <type_traits>
-#include <typeinfo>
-#include <unordered_map>
-
 #include "caf/abstract_actor.hpp"
 #include "caf/config.hpp"
 #include "caf/deep_to_string.hpp"
@@ -30,6 +20,16 @@
 #include "caf/intrusive/singly_linked.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/timestamp.hpp"
+
+#include <cstring>
+#include <fstream>
+#include <iostream>
+#include <sstream>
+#include <string_view>
+#include <thread>
+#include <type_traits>
+#include <typeinfo>
+#include <unordered_map>
 
 /*
  * To enable logging, you have to define CAF_DEBUG. This enables

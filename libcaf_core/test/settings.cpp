@@ -6,13 +6,13 @@
 
 #include "caf/settings.hpp"
 
-#include "core-test.hpp"
-
-#include <string>
-
 #include "caf/detail/config_consumer.hpp"
 #include "caf/detail/parser/read_config.hpp"
 #include "caf/none.hpp"
+
+#include "core-test.hpp"
+
+#include <string>
 
 using namespace std::string_literals;
 

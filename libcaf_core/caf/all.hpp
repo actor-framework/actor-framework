@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include "caf/config.hpp"
-
 #include "caf/abstract_actor.hpp"
 #include "caf/abstract_channel.hpp"
 #include "caf/abstract_group.hpp"
@@ -29,12 +27,14 @@
 #include "caf/byte_buffer.hpp"
 #include "caf/byte_span.hpp"
 #include "caf/caf_main.hpp"
+#include "caf/config.hpp"
 #include "caf/config_option.hpp"
 #include "caf/config_option_adder.hpp"
 #include "caf/config_value.hpp"
 #include "caf/config_value_reader.hpp"
 #include "caf/config_value_writer.hpp"
 #include "caf/const_typed_message_view.hpp"
+#include "caf/decorator/sequencer.hpp"
 #include "caf/deep_to_string.hpp"
 #include "caf/defaults.hpp"
 #include "caf/deserializer.hpp"
@@ -69,6 +69,8 @@
 #include "caf/response_handle.hpp"
 #include "caf/result.hpp"
 #include "caf/resumable.hpp"
+#include "caf/scheduler/abstract_coordinator.hpp"
+#include "caf/scheduler/test_coordinator.hpp"
 #include "caf/scoped_actor.hpp"
 #include "caf/scoped_execution_unit.hpp"
 #include "caf/sec.hpp"
@@ -94,11 +96,6 @@
 #include "caf/typed_response_promise.hpp"
 #include "caf/unit.hpp"
 #include "caf/uuid.hpp"
-
-#include "caf/decorator/sequencer.hpp"
-
-#include "caf/scheduler/abstract_coordinator.hpp"
-#include "caf/scheduler/test_coordinator.hpp"
 
 ///
 /// @mainpage CAF

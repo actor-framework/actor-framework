@@ -4,10 +4,6 @@
 
 #include "caf/uuid.hpp"
 
-#include <cctype>
-#include <cstring>
-#include <random>
-
 #include "caf/detail/append_hex.hpp"
 #include "caf/detail/network_order.hpp"
 #include "caf/detail/parser/add_ascii.hpp"
@@ -15,6 +11,10 @@
 #include "caf/hash/fnv.hpp"
 #include "caf/message.hpp"
 #include "caf/parser_state.hpp"
+
+#include <cctype>
+#include <cstring>
+#include <random>
 
 namespace caf {
 

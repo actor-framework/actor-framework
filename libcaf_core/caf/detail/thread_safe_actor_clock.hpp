@@ -4,16 +4,16 @@
 
 #pragma once
 
-#include <memory>
-#include <thread>
-#include <vector>
-
 #include "caf/action.hpp"
 #include "caf/actor_clock.hpp"
 #include "caf/actor_control_block.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/ringbuffer.hpp"
 #include "caf/fwd.hpp"
+
+#include <memory>
+#include <thread>
+#include <vector>
 
 namespace caf::detail {
 

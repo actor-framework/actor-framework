@@ -4,12 +4,6 @@
 
 #pragma once
 
-#include "caf/byte_span.hpp"
-#include "caf/detail/append_hex.hpp"
-#include "caf/detail/message_flow_bridge.hpp"
-#include "caf/detail/net_export.hpp"
-#include "caf/error.hpp"
-#include "caf/logger.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/http/lower_layer.hpp"
 #include "caf/net/http/request_header.hpp"
@@ -20,6 +14,13 @@
 #include "caf/net/octet_stream/upper_layer.hpp"
 #include "caf/net/receive_policy.hpp"
 #include "caf/net/socket_manager.hpp"
+
+#include "caf/byte_span.hpp"
+#include "caf/detail/append_hex.hpp"
+#include "caf/detail/message_flow_bridge.hpp"
+#include "caf/detail/net_export.hpp"
+#include "caf/error.hpp"
+#include "caf/logger.hpp"
 #include "caf/pec.hpp"
 #include "caf/settings.hpp"
 #include "caf/unordered_flat_map.hpp"

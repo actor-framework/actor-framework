@@ -4,10 +4,11 @@
 
 #pragma once
 
-#include <functional>
+#include "caf/io/handle.hpp"
 
 #include "caf/error.hpp"
-#include "caf/io/handle.hpp"
+
+#include <functional>
 
 namespace caf::io {
 

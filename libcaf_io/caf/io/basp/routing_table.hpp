@@ -4,14 +4,15 @@
 
 #pragma once
 
+#include "caf/io/abstract_broker.hpp"
+
+#include "caf/detail/io_export.hpp"
+#include "caf/node_id.hpp"
+
 #include <mutex>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-
-#include "caf/detail/io_export.hpp"
-#include "caf/io/abstract_broker.hpp"
-#include "caf/node_id.hpp"
 
 namespace caf::io::basp {
 

@@ -4,9 +4,9 @@
 
 #define CAF_SUITE string_view
 
-#include "core-test.hpp"
-
 #include "caf/string_view.hpp"
+
+#include "core-test.hpp"
 
 using namespace caf;
 using namespace caf::literals;

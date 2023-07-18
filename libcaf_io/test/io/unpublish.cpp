@@ -4,6 +4,9 @@
 
 #define CAF_SUITE io.unpublish
 
+#include "caf/io/all.hpp"
+
+#include "caf/all.hpp"
 #include "caf/config.hpp"
 
 #include "io-test.hpp"
@@ -12,9 +15,6 @@
 #include <memory>
 #include <new>
 #include <thread>
-
-#include "caf/all.hpp"
-#include "caf/io/all.hpp"
 
 using namespace caf;
 

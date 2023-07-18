@@ -4,6 +4,9 @@
 
 #include "caf/net/abstract_actor_shell.hpp"
 
+#include "caf/net/multiplexer.hpp"
+#include "caf/net/socket_manager.hpp"
+
 #include "caf/action.hpp"
 #include "caf/callback.hpp"
 #include "caf/config.hpp"
@@ -11,8 +14,6 @@
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/invoke_message_result.hpp"
 #include "caf/logger.hpp"
-#include "caf/net/multiplexer.hpp"
-#include "caf/net/socket_manager.hpp"
 
 namespace caf::net {
 

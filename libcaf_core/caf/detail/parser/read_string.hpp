@@ -4,13 +4,13 @@
 
 #pragma once
 
-#include <cstdint>
-#include <string>
-
 #include "caf/config.hpp"
 #include "caf/detail/parser/chars.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/pec.hpp"
+
+#include <cstdint>
+#include <string>
 
 CAF_PUSH_UNUSED_LABEL_WARNING
 

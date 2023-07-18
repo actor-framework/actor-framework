@@ -4,16 +4,17 @@
 
 #pragma once
 
-#include <ctime>
-#include <unordered_map>
-#include <vector>
+#include "caf/io/broker.hpp"
 
 #include "caf/byte_buffer.hpp"
 #include "caf/detail/io_export.hpp"
 #include "caf/fwd.hpp"
-#include "caf/io/broker.hpp"
 #include "caf/telemetry/collector/prometheus.hpp"
 #include "caf/telemetry/importer/process.hpp"
+
+#include <ctime>
+#include <unordered_map>
+#include <vector>
 
 namespace caf::detail {
 

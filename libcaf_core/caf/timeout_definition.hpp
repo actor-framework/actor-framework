@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include <functional>
-#include <type_traits>
-
 #include "caf/detail/core_export.hpp"
 #include "caf/timespan.hpp"
+
+#include <functional>
+#include <type_traits>
 
 namespace caf {
 

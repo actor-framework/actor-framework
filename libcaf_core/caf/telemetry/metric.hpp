@@ -4,12 +4,12 @@
 
 #pragma once
 
+#include "caf/fwd.hpp"
+#include "caf/telemetry/label.hpp"
+
 #include <string>
 #include <utility>
 #include <vector>
-
-#include "caf/fwd.hpp"
-#include "caf/telemetry/label.hpp"
 
 namespace caf::telemetry {
 

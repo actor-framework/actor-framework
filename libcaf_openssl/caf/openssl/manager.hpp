@@ -4,12 +4,13 @@
 
 #pragma once
 
-#include <set>
-#include <string>
+#include "caf/io/middleman_actor.hpp"
 
 #include "caf/actor_system.hpp"
 #include "caf/detail/openssl_export.hpp"
-#include "caf/io/middleman_actor.hpp"
+
+#include <set>
+#include <string>
 
 namespace caf::openssl {
 

@@ -4,14 +4,14 @@
 
 #pragma once
 
-#include <atomic>
-
 #include "caf/config.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/node_id.hpp"
 #include "caf/weak_intrusive_ptr.hpp"
+
+#include <atomic>
 
 namespace caf {
 

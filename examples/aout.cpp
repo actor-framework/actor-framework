@@ -1,12 +1,12 @@
-#include <chrono>
-#include <cstdlib>
-#include <iostream>
-#include <random>
-
 #include "caf/actor_ostream.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/caf_main.hpp"
 #include "caf/event_based_actor.hpp"
+
+#include <chrono>
+#include <cstdlib>
+#include <iostream>
+#include <random>
 
 using namespace caf;
 

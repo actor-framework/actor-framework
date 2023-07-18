@@ -4,13 +4,14 @@
 
 #pragma once
 
-#include <cstdint>
-#include <string>
+#include "caf/io/basp/message_type.hpp"
 
 #include "caf/detail/io_export.hpp"
 #include "caf/error.hpp"
-#include "caf/io/basp/message_type.hpp"
 #include "caf/node_id.hpp"
+
+#include <cstdint>
+#include <string>
 
 namespace caf::io::basp {
 

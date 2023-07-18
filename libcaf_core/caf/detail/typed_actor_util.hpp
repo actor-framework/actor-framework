@@ -4,15 +4,14 @@
 
 #pragma once
 
-#include <tuple>
-
 #include "caf/delegated.hpp"
+#include "caf/detail/type_list.hpp"
 #include "caf/fwd.hpp"
 #include "caf/response_promise.hpp"
 #include "caf/system_messages.hpp"
 #include "caf/typed_response_promise.hpp"
 
-#include "caf/detail/type_list.hpp"
+#include <tuple>
 
 namespace caf::detail {
 

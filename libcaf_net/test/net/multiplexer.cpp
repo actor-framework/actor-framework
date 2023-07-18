@@ -6,13 +6,14 @@
 
 #include "caf/net/multiplexer.hpp"
 
-#include "net-test.hpp"
+#include "caf/net/socket_manager.hpp"
+#include "caf/net/stream_socket.hpp"
 
 #include "caf/byte.hpp"
 #include "caf/byte_buffer.hpp"
-#include "caf/net/socket_manager.hpp"
-#include "caf/net/stream_socket.hpp"
 #include "caf/span.hpp"
+
+#include "net-test.hpp"
 
 #include <new>
 #include <string_view>

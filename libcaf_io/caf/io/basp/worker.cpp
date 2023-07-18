@@ -4,8 +4,9 @@
 
 #include "caf/io/basp/worker.hpp"
 
-#include "caf/actor_system.hpp"
 #include "caf/io/basp/message_queue.hpp"
+
+#include "caf/actor_system.hpp"
 #include "caf/proxy_registry.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
 

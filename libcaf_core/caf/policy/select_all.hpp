@@ -4,12 +4,6 @@
 
 #pragma once
 
-#include <cstddef>
-#include <functional>
-#include <limits>
-#include <memory>
-#include <vector>
-
 #include "caf/behavior.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/type_list.hpp"
@@ -19,6 +13,12 @@
 #include "caf/error.hpp"
 #include "caf/logger.hpp"
 #include "caf/message_id.hpp"
+
+#include <cstddef>
+#include <functional>
+#include <limits>
+#include <memory>
+#include <vector>
 
 namespace caf::detail {
 

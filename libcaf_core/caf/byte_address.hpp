@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include <cstdint>
-
 #include "caf/config.hpp"
+
+#include <cstdint>
 
 namespace caf {
 

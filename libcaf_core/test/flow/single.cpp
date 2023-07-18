@@ -6,10 +6,10 @@
 
 #include "caf/flow/single.hpp"
 
-#include "core-test.hpp"
-
 #include "caf/flow/op/cell.hpp"
 #include "caf/flow/scoped_coordinator.hpp"
+
+#include "core-test.hpp"
 
 using namespace caf;
 

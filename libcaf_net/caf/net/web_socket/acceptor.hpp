@@ -4,11 +4,12 @@
 
 #pragma once
 
+#include "caf/net/fwd.hpp"
+
 #include "caf/async/spsc_buffer.hpp"
 #include "caf/callback.hpp"
 #include "caf/cow_tuple.hpp"
 #include "caf/error.hpp"
-#include "caf/net/fwd.hpp"
 
 #include <utility>
 

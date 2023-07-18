@@ -4,12 +4,13 @@
 
 #pragma once
 
-#include <cstdio>
-#include <cstdlib>
+#include "caf/io/network/native_socket.hpp"
 
 #include "caf/error.hpp"
-#include "caf/io/network/native_socket.hpp"
 #include "caf/sec.hpp"
+
+#include <cstdio>
+#include <cstdlib>
 
 namespace caf::detail {
 

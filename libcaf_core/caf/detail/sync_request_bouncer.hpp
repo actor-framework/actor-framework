@@ -4,12 +4,12 @@
 
 #pragma once
 
-#include <cstdint>
-
 #include "caf/detail/core_export.hpp"
 #include "caf/error.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive/task_result.hpp"
+
+#include <cstdint>
 
 namespace caf::detail {
 

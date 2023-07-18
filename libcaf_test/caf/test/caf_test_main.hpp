@@ -4,8 +4,9 @@
 
 #pragma once
 
-#include "caf/exec_main.hpp"
 #include "caf/test/runner.hpp"
+
+#include "caf/exec_main.hpp"
 
 #define CAF_TEST_MAIN(...)                                                     \
   int main(int argc, char** argv) {                                            \

@@ -6,11 +6,11 @@
 
 #include "caf/async/producer_adapter.hpp"
 
-#include "core-test.hpp"
-
 #include "caf/async/blocking_producer.hpp"
 #include "caf/flow/scoped_coordinator.hpp"
 #include "caf/scheduled_actor/flow.hpp"
+
+#include "core-test.hpp"
 
 #include <mutex>
 

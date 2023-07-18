@@ -3,6 +3,7 @@
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
 #include "caf/timestamp.hpp"
+
 #include "caf/deep_to_string.hpp"
 #include "caf/detail/parse.hpp"
 #include "caf/expected.hpp"

@@ -4,13 +4,13 @@
 
 #include "caf/net/socket.hpp"
 
-#include <system_error>
-
 #include "caf/config.hpp"
 #include "caf/detail/net_syscall.hpp"
 #include "caf/detail/socket_sys_includes.hpp"
 #include "caf/logger.hpp"
 #include "caf/sec.hpp"
+
+#include <system_error>
 
 namespace caf::net {
 

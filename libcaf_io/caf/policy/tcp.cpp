@@ -4,10 +4,11 @@
 
 #include "caf/policy/tcp.hpp"
 
-#include <cstring>
-
 #include "caf/io/network/native_socket.hpp"
+
 #include "caf/logger.hpp"
+
+#include <cstring>
 
 #ifdef CAF_WINDOWS
 #  include <winsock2.h>

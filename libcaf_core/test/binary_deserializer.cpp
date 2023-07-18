@@ -4,7 +4,11 @@
 
 #define CAF_SUITE binary_deserializer
 
+#include "caf/actor_system.hpp"
+#include "caf/actor_system_config.hpp"
 #include "caf/binary_serializer.hpp"
+#include "caf/byte_buffer.hpp"
+#include "caf/timestamp.hpp"
 
 #include "core-test.hpp"
 #include "nasty.hpp"
@@ -12,11 +16,6 @@
 #include <cstddef>
 #include <cstring>
 #include <vector>
-
-#include "caf/actor_system.hpp"
-#include "caf/actor_system_config.hpp"
-#include "caf/byte_buffer.hpp"
-#include "caf/timestamp.hpp"
 
 using namespace caf;
 

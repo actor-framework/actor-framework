@@ -6,8 +6,6 @@
 
 #include "caf/policy/categorized.hpp"
 
-#include "core-test.hpp"
-
 #include "caf/intrusive/drr_queue.hpp"
 #include "caf/intrusive/fifo_inbox.hpp"
 #include "caf/intrusive/wdrr_dynamic_multiplexed_queue.hpp"
@@ -15,6 +13,8 @@
 #include "caf/policy/normal_messages.hpp"
 #include "caf/policy/urgent_messages.hpp"
 #include "caf/unit.hpp"
+
+#include "core-test.hpp"
 
 using namespace caf;
 

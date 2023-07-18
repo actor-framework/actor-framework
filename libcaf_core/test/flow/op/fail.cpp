@@ -5,10 +5,9 @@
 #define CAF_SUITE flow.op.fail
 
 #include "caf/flow/observable_builder.hpp"
+#include "caf/flow/scoped_coordinator.hpp"
 
 #include "core-test.hpp"
-
-#include "caf/flow/scoped_coordinator.hpp"
 
 using namespace caf;
 

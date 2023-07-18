@@ -4,13 +4,14 @@
 
 #pragma once
 
+#include "caf/net/web_socket/frame.hpp"
+
 #include "caf/async/fwd.hpp"
 #include "caf/byte_span.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive_ptr.hpp"
-#include "caf/net/web_socket/frame.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/type_id.hpp"
 

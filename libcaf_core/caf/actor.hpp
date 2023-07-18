@@ -4,12 +4,6 @@
 
 #pragma once
 
-#include <cstddef>
-#include <cstdint>
-#include <string>
-#include <type_traits>
-#include <utility>
-
 #include "caf/abstract_actor.hpp"
 #include "caf/actor_control_block.hpp"
 #include "caf/actor_traits.hpp"
@@ -19,6 +13,12 @@
 #include "caf/detail/type_traits.hpp"
 #include "caf/fwd.hpp"
 #include "caf/message.hpp"
+
+#include <cstddef>
+#include <cstdint>
+#include <string>
+#include <type_traits>
+#include <utility>
 
 namespace caf {
 

@@ -4,15 +4,15 @@
 
 #pragma once
 
-#include <memory>
-#include <string>
-
 #include "caf/abstract_channel.hpp"
 #include "caf/actor_addr.hpp"
 #include "caf/attachable.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/ref_counted.hpp"
+
+#include <memory>
+#include <string>
 
 namespace caf {
 

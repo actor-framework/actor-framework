@@ -4,14 +4,14 @@
 
 #pragma once
 
+#include "caf/detail/io_export.hpp"
+#include "caf/error.hpp"
+#include "caf/sec.hpp"
+
 #include <deque>
 #include <functional>
 #include <string>
 #include <vector>
-
-#include "caf/detail/io_export.hpp"
-#include "caf/error.hpp"
-#include "caf/sec.hpp"
 
 struct sockaddr;
 struct sockaddr_storage;

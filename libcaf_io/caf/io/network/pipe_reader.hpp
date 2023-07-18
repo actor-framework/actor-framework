@@ -5,11 +5,11 @@
 #pragma once
 
 #include "caf/io/fwd.hpp"
-
-#include "caf/detail/io_export.hpp"
 #include "caf/io/network/event_handler.hpp"
 #include "caf/io/network/native_socket.hpp"
 #include "caf/io/network/operation.hpp"
+
+#include "caf/detail/io_export.hpp"
 
 namespace caf::io::network {
 

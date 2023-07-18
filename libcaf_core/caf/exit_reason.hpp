@@ -8,15 +8,15 @@
 
 #pragma once
 
-#include <cstdint>
-#include <string>
-#include <string_view>
-#include <type_traits>
-
 #include "caf/default_enum_inspect.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/is_error_code_enum.hpp"
+
+#include <cstdint>
+#include <string>
+#include <string_view>
+#include <type_traits>
 
 namespace caf {
 

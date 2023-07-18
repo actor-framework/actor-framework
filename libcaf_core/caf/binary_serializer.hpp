@@ -4,17 +4,17 @@
 
 #pragma once
 
-#include <cstddef>
-#include <string>
-#include <type_traits>
-#include <vector>
-
 #include "caf/byte_buffer.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/squashed_int.hpp"
 #include "caf/fwd.hpp"
 #include "caf/save_inspector_base.hpp"
 #include "caf/span.hpp"
+
+#include <cstddef>
+#include <string>
+#include <type_traits>
+#include <vector>
 
 namespace caf {
 

@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include <type_traits>
-#include <utility>
-
 #include "caf/behavior_policy.hpp"
 #include "caf/fwd.hpp"
+
+#include <type_traits>
+#include <utility>
 
 namespace caf::mixin {
 

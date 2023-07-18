@@ -4,16 +4,16 @@
 
 #pragma once
 
-#include <cstdint>
-#include <memory>
-#include <typeinfo>
-
 #include "caf/detail/core_export.hpp"
 #include "caf/error.hpp"
 #include "caf/execution_unit.hpp"
 #include "caf/exit_reason.hpp"
 #include "caf/fwd.hpp"
 #include "caf/message_priority.hpp"
+
+#include <cstdint>
+#include <memory>
+#include <typeinfo>
 
 namespace caf {
 

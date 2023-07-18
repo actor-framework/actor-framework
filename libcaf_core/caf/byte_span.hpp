@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include <cstddef>
-
 #include "caf/span.hpp"
+
+#include <cstddef>
 
 namespace caf {
 

@@ -4,13 +4,14 @@
 
 #include "caf/net/stream_socket.hpp"
 
+#include "caf/net/socket.hpp"
+#include "caf/net/socket_guard.hpp"
+
 #include "caf/detail/net_syscall.hpp"
 #include "caf/detail/socket_sys_aliases.hpp"
 #include "caf/detail/socket_sys_includes.hpp"
 #include "caf/expected.hpp"
 #include "caf/logger.hpp"
-#include "caf/net/socket.hpp"
-#include "caf/net/socket_guard.hpp"
 #include "caf/span.hpp"
 
 #include <cstddef>

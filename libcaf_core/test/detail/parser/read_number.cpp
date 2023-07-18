@@ -6,17 +6,17 @@
 
 #include "caf/detail/parser/read_number.hpp"
 
-#include "core-test.hpp"
-
-#include <string>
-#include <string_view>
-#include <variant>
-
 #include "caf/detail/parser/add_ascii.hpp"
 #include "caf/detail/parser/sub_ascii.hpp"
 #include "caf/expected.hpp"
 #include "caf/parser_state.hpp"
 #include "caf/pec.hpp"
+
+#include "core-test.hpp"
+
+#include <string>
+#include <string_view>
+#include <variant>
 
 using namespace caf;
 

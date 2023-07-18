@@ -5,13 +5,12 @@
 #define CAF_SUITE simple_timeout
 
 #include "caf/after.hpp"
+#include "caf/all.hpp"
 
 #include "core-test.hpp"
 
 #include <chrono>
 #include <memory>
-
-#include "caf/all.hpp"
 
 using namespace caf;
 

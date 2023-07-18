@@ -4,11 +4,6 @@
 
 #include "caf/detail/meta_object.hpp"
 
-#include <algorithm>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-
 #include "caf/actor_system.hpp"
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
@@ -20,6 +15,11 @@
 #include "caf/ref_counted.hpp"
 #include "caf/serializer.hpp"
 #include "caf/span.hpp"
+
+#include <algorithm>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 
 namespace caf::detail {
 

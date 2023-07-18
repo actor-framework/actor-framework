@@ -6,11 +6,10 @@
 
 #include "caf/config_value_writer.hpp"
 
-#include "core-test.hpp"
-
-#include "inspector-tests.hpp"
-
 #include "caf/inspector_access.hpp"
+
+#include "core-test.hpp"
+#include "inspector-tests.hpp"
 
 using namespace caf;
 

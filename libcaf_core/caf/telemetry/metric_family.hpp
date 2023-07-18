@@ -4,12 +4,12 @@
 
 #pragma once
 
+#include "caf/detail/core_export.hpp"
+#include "caf/fwd.hpp"
+
 #include <memory>
 #include <string>
 #include <vector>
-
-#include "caf/detail/core_export.hpp"
-#include "caf/fwd.hpp"
 
 namespace caf::telemetry {
 

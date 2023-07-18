@@ -4,14 +4,15 @@
 
 #include "caf/detail/pollset_updater.hpp"
 
-#include <cstring>
+#include "caf/net/multiplexer.hpp"
 
 #include "caf/action.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/logger.hpp"
-#include "caf/net/multiplexer.hpp"
 #include "caf/sec.hpp"
 #include "caf/span.hpp"
+
+#include <cstring>
 
 namespace caf::detail {
 

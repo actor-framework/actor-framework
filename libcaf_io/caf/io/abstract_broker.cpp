@@ -2,13 +2,14 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
+#include "caf/io/broker.hpp"
+#include "caf/io/network/multiplexer.hpp"
+
 #include "caf/actor_system.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/event_based_actor.hpp"
-#include "caf/io/broker.hpp"
-#include "caf/io/network/multiplexer.hpp"
 #include "caf/logger.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/none.hpp"

@@ -4,13 +4,13 @@
 
 #include "caf/string_view.hpp"
 
+#include "caf/config.hpp"
+#include "caf/raise_error.hpp"
+
 #include <algorithm>
 #include <cstring>
 #include <iostream>
 #include <stdexcept>
-
-#include "caf/config.hpp"
-#include "caf/raise_error.hpp"
 
 CAF_PUSH_DEPRECATED_WARNING
 

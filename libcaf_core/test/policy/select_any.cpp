@@ -6,11 +6,11 @@
 
 #include "caf/policy/select_any.hpp"
 
-#include "core-test.hpp"
-
 #include "caf/actor_system.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/sec.hpp"
+
+#include "core-test.hpp"
 
 using caf::policy::select_any;
 

@@ -4,12 +4,12 @@
 
 #pragma once
 
-#include <cstdint>
-#include <string>
-
 #include "caf/config.hpp"
 #include "caf/detail/io_export.hpp"
 #include "caf/expected.hpp"
+
+#include <cstdint>
+#include <string>
 
 namespace caf::io::network {
 

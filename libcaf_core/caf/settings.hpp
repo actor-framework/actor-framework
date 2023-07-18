@@ -4,13 +4,13 @@
 
 #pragma once
 
-#include <string_view>
-
 #include "caf/config_value.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/dictionary.hpp"
 #include "caf/raise_error.hpp"
+
+#include <string_view>
 
 namespace caf {
 

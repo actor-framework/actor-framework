@@ -4,11 +4,12 @@
 
 #pragma once
 
+#include "caf/net/web_socket/frame.hpp"
+
 #include "caf/async/spsc_buffer.hpp"
 #include "caf/byte_span.hpp"
 #include "caf/cow_tuple.hpp"
 #include "caf/detail/net_export.hpp"
-#include "caf/net/web_socket/frame.hpp"
 
 #include <string_view>
 #include <vector>

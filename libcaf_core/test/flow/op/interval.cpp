@@ -6,10 +6,10 @@
 
 #include "caf/flow/op/interval.hpp"
 
-#include "core-test.hpp"
-
 #include "caf/flow/observable_builder.hpp"
 #include "caf/flow/scoped_coordinator.hpp"
+
+#include "core-test.hpp"
 
 using namespace std::literals;
 

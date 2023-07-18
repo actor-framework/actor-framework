@@ -4,10 +4,10 @@
 
 #pragma once
 
+#include "caf/detail/stringification_inspector.hpp"
+
 #include <string>
 #include <tuple>
-
-#include "caf/detail/stringification_inspector.hpp"
 
 namespace caf {
 

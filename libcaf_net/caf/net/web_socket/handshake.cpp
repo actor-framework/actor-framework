@@ -4,11 +4,12 @@
 
 #include "caf/net/web_socket/handshake.hpp"
 
+#include "caf/net/http/lower_layer.hpp"
+#include "caf/net/http/status.hpp"
+
 #include "caf/config.hpp"
 #include "caf/detail/base64.hpp"
 #include "caf/hash/sha1.hpp"
-#include "caf/net/http/lower_layer.hpp"
-#include "caf/net/http/status.hpp"
 #include "caf/string_algorithms.hpp"
 
 #include <algorithm>

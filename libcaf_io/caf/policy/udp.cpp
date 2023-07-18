@@ -5,6 +5,7 @@
 #include "caf/policy/udp.hpp"
 
 #include "caf/io/network/native_socket.hpp"
+
 #include "caf/logger.hpp"
 
 #ifdef CAF_WINDOWS

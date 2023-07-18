@@ -4,8 +4,9 @@
 
 #pragma once
 
-#include "caf/fwd.hpp"
 #include "caf/net/fwd.hpp"
+
+#include "caf/fwd.hpp"
 
 namespace caf::detail {
 

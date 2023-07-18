@@ -4,13 +4,14 @@
 
 #pragma once
 
+#include "caf/net/fwd.hpp"
+#include "caf/net/http/request_header.hpp"
+#include "caf/net/http/response.hpp"
+
 #include "caf/async/execution_context.hpp"
 #include "caf/async/promise.hpp"
 #include "caf/byte_span.hpp"
 #include "caf/detail/net_export.hpp"
-#include "caf/net/fwd.hpp"
-#include "caf/net/http/request_header.hpp"
-#include "caf/net/http/response.hpp"
 
 #include <cstdint>
 #include <memory>

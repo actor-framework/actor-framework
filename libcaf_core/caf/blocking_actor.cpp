@@ -4,8 +4,6 @@
 
 #include "caf/blocking_actor.hpp"
 
-#include <utility>
-
 #include "caf/actor_registry.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/detail/default_invoke_result_visitor.hpp"
@@ -17,6 +15,8 @@
 #include "caf/logger.hpp"
 #include "caf/scheduled_actor.hpp"
 #include "caf/telemetry/timer.hpp"
+
+#include <utility>
 
 namespace caf {
 

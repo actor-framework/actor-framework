@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include <type_traits>
-
 #include "caf/actor_traits.hpp"
 #include "caf/catch_all.hpp"
+#include "caf/detail/type_list.hpp"
+#include "caf/detail/typed_actor_util.hpp"
 #include "caf/flow/fwd.hpp"
 #include "caf/message_id.hpp"
 #include "caf/none.hpp"
@@ -15,8 +15,7 @@
 #include "caf/system_messages.hpp"
 #include "caf/typed_behavior.hpp"
 
-#include "caf/detail/type_list.hpp"
-#include "caf/detail/typed_actor_util.hpp"
+#include <type_traits>
 
 namespace caf {
 

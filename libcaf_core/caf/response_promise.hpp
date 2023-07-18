@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include <vector>
-
 #include "caf/actor.hpp"
 #include "caf/actor_addr.hpp"
 #include "caf/actor_cast.hpp"
@@ -15,6 +13,8 @@
 #include "caf/message.hpp"
 #include "caf/message_id.hpp"
 #include "caf/response_type.hpp"
+
+#include <vector>
 
 namespace caf {
 

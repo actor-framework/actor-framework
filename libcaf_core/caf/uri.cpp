@@ -4,8 +4,6 @@
 
 #include "caf/uri.hpp"
 
-#include <optional>
-
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/deserializer.hpp"
@@ -18,6 +16,8 @@
 #include "caf/hash/fnv.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/serializer.hpp"
+
+#include <optional>
 
 namespace {
 

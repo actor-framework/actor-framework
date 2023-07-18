@@ -4,9 +4,10 @@
 
 #pragma once
 
+#include "caf/net/fwd.hpp"
+
 #include "caf/detail/net_export.hpp"
 #include "caf/fwd.hpp"
-#include "caf/net/fwd.hpp"
 
 #include <cstdint>
 

@@ -4,10 +4,11 @@
 
 #include "caf/detail/remote_group_module.hpp"
 
+#include "caf/io/middleman.hpp"
+
 #include "caf/detail/group_tunnel.hpp"
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
-#include "caf/io/middleman.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/sec.hpp"
 

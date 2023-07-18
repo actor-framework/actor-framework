@@ -4,8 +4,9 @@
 
 #include "caf/io/network/ip_endpoint.hpp"
 
-#include "caf/hash/fnv.hpp"
 #include "caf/io/network/native_socket.hpp"
+
+#include "caf/hash/fnv.hpp"
 #include "caf/logger.hpp"
 #include "caf/sec.hpp"
 

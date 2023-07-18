@@ -4,9 +4,6 @@
 
 #pragma once
 
-#include <algorithm>
-#include <cstdint>
-
 #include "caf/config.hpp"
 #include "caf/detail/network_order.hpp"
 #include "caf/detail/parser/add_ascii.hpp"
@@ -18,6 +15,9 @@
 #include "caf/ipv4_address.hpp"
 #include "caf/ipv6_address.hpp"
 #include "caf/pec.hpp"
+
+#include <algorithm>
+#include <cstdint>
 
 CAF_PUSH_UNUSED_LABEL_WARNING
 

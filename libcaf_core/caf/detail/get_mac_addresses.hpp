@@ -4,11 +4,11 @@
 
 #pragma once
 
+#include "caf/detail/core_export.hpp"
+
 #include <string>
 #include <utility>
 #include <vector>
-
-#include "caf/detail/core_export.hpp"
 
 namespace caf::detail {
 

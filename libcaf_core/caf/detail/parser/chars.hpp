@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include <cstring>
-
 #include "caf/config.hpp"
 #include "caf/detail/core_export.hpp"
+
+#include <cstring>
 
 namespace caf::detail::parser {
 

@@ -4,9 +4,14 @@
 
 #define CAF_SUITE net.string_application
 
-#include "caf/net/octet_stream/transport.hpp"
-
 #include "caf/test/dsl.hpp"
+
+#include "caf/net/actor_proxy_impl.hpp"
+#include "caf/net/endpoint_manager.hpp"
+#include "caf/net/make_endpoint_manager.hpp"
+#include "caf/net/multiplexer.hpp"
+#include "caf/net/octet_stream/transport.hpp"
+#include "caf/net/stream_socket.hpp"
 
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
@@ -14,11 +19,6 @@
 #include "caf/byte_buffer.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/make_actor.hpp"
-#include "caf/net/actor_proxy_impl.hpp"
-#include "caf/net/endpoint_manager.hpp"
-#include "caf/net/make_endpoint_manager.hpp"
-#include "caf/net/multiplexer.hpp"
-#include "caf/net/stream_socket.hpp"
 #include "caf/span.hpp"
 
 using namespace caf;

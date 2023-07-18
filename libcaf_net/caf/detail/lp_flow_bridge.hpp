@@ -4,13 +4,14 @@
 
 #pragma once
 
+#include "caf/net/lp/lower_layer.hpp"
+#include "caf/net/lp/upper_layer.hpp"
+
 #include "caf/async/consumer_adapter.hpp"
 #include "caf/async/producer_adapter.hpp"
 #include "caf/async/spsc_buffer.hpp"
 #include "caf/detail/flow_bridge_base.hpp"
 #include "caf/fwd.hpp"
-#include "caf/net/lp/lower_layer.hpp"
-#include "caf/net/lp/upper_layer.hpp"
 #include "caf/sec.hpp"
 
 #include <utility>

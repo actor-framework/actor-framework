@@ -4,10 +4,11 @@
 
 #pragma once
 
-#include "caf/detail/io_export.hpp"
-#include "caf/fwd.hpp"
 #include "caf/io/fwd.hpp"
 #include "caf/io/middleman_actor.hpp"
+
+#include "caf/detail/io_export.hpp"
+#include "caf/fwd.hpp"
 #include "caf/typed_actor.hpp"
 #include "caf/typed_event_based_actor.hpp"
 

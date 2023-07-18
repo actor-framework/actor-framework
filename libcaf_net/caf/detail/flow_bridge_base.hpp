@@ -4,12 +4,13 @@
 
 #pragma once
 
+#include "caf/net/http/request_header.hpp"
+
 #include "caf/async/consumer_adapter.hpp"
 #include "caf/async/producer_adapter.hpp"
 #include "caf/async/spsc_buffer.hpp"
 #include "caf/fwd.hpp"
 #include "caf/logger.hpp"
-#include "caf/net/http/request_header.hpp"
 #include "caf/sec.hpp"
 
 #include <utility>

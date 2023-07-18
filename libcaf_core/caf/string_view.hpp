@@ -4,6 +4,11 @@
 
 #pragma once
 
+#include "caf/config.hpp"
+#include "caf/detail/comparable.hpp"
+#include "caf/detail/core_export.hpp"
+#include "caf/fwd.hpp"
+
 #include <cstddef>
 #include <cstring>
 #include <iosfwd>
@@ -11,11 +16,6 @@
 #include <limits>
 #include <string>
 #include <type_traits>
-
-#include "caf/config.hpp"
-#include "caf/detail/comparable.hpp"
-#include "caf/detail/core_export.hpp"
-#include "caf/fwd.hpp"
 
 namespace caf {
 

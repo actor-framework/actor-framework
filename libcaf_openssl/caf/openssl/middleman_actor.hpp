@@ -4,8 +4,9 @@
 
 #pragma once
 
-#include "caf/detail/openssl_export.hpp"
 #include "caf/io/middleman_actor.hpp"
+
+#include "caf/detail/openssl_export.hpp"
 
 namespace caf::openssl {
 

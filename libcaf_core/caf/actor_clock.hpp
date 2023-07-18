@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include <chrono>
-#include <string>
-
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
+
+#include <chrono>
+#include <string>
 
 namespace caf {
 

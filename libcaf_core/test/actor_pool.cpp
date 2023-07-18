@@ -6,9 +6,9 @@
 
 #include "caf/actor_pool.hpp"
 
-#include "core-test.hpp"
-
 #include "caf/all.hpp"
+
+#include "core-test.hpp"
 
 using namespace caf;
 

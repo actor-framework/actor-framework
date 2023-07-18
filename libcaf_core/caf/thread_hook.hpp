@@ -4,9 +4,8 @@
 
 #pragma once
 
-#include "caf/fwd.hpp"
-
 #include "caf/detail/core_export.hpp"
+#include "caf/fwd.hpp"
 
 namespace caf {
 

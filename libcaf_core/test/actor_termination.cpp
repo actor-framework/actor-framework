@@ -4,9 +4,9 @@
 
 #define CAF_SUITE actor_termination
 
-#include "core-test.hpp"
-
 #include "caf/all.hpp"
+
+#include "core-test.hpp"
 
 using namespace caf;
 

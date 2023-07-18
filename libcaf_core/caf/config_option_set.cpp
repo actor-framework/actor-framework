@@ -4,13 +4,13 @@
 
 #include "caf/config_option_set.hpp"
 
-#include <map>
-#include <set>
-
 #include "caf/config_option.hpp"
 #include "caf/config_value.hpp"
 #include "caf/detail/algorithms.hpp"
 #include "caf/expected.hpp"
+
+#include <map>
+#include <set>
 
 using std::string;
 

@@ -6,12 +6,12 @@
 
 #include "caf/unit.hpp"
 
-#include "core-test.hpp"
-
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/scoped_actor.hpp"
+
+#include "core-test.hpp"
 
 using namespace caf;
 

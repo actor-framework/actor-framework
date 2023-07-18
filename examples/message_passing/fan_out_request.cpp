@@ -1,10 +1,3 @@
-#include <cassert>
-#include <chrono>
-#include <iomanip>
-#include <iostream>
-#include <numeric>
-#include <vector>
-
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/event_based_actor.hpp"
@@ -15,6 +8,13 @@
 #include "caf/scoped_actor.hpp"
 #include "caf/typed_actor.hpp"
 #include "caf/typed_event_based_actor.hpp"
+
+#include <cassert>
+#include <chrono>
+#include <iomanip>
+#include <iostream>
+#include <numeric>
+#include <vector>
 
 CAF_BEGIN_TYPE_ID_BLOCK(fan_out_request, first_custom_type_id)
 

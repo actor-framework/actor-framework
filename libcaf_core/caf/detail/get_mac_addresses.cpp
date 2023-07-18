@@ -10,20 +10,20 @@
 #if defined(CAF_MACOS) || defined(CAF_BSD) || defined(CAF_IOS)
 
 #  include <arpa/inet.h>
-#  include <cerrno>
-#  include <cstdio>
-#  include <cstdlib>
-#  include <memory>
 #  include <net/if.h>
 #  include <net/if_dl.h>
 #  include <netinet/in.h>
-#  include <sstream>
 #  include <sys/ioctl.h>
 #  include <sys/socket.h>
 #  include <sys/sysctl.h>
 #  include <sys/types.h>
 
+#  include <cerrno>
+#  include <cstdio>
+#  include <cstdlib>
 #  include <iostream>
+#  include <memory>
+#  include <sstream>
 
 namespace caf {
 namespace detail {
@@ -85,20 +85,21 @@ std::vector<iface_info> get_mac_addresses() {
 
 #elif defined(CAF_LINUX) || defined(CAF_ANDROID) || defined(CAF_CYGWIN)
 
+#  include <net/if.h>
+#  include <stdio.h>
+#  include <sys/ioctl.h>
+#  include <sys/socket.h>
+#  include <sys/types.h>
+#  include <unistd.h>
+
 #  include <algorithm>
 #  include <cctype>
 #  include <cstring>
 #  include <fstream>
 #  include <iostream>
 #  include <iterator>
-#  include <net/if.h>
 #  include <sstream>
-#  include <stdio.h>
 #  include <string>
-#  include <sys/ioctl.h>
-#  include <sys/socket.h>
-#  include <sys/types.h>
-#  include <unistd.h>
 #  include <vector>
 
 namespace caf::detail {

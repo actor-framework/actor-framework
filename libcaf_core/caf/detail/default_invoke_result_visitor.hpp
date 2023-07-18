@@ -4,9 +4,8 @@
 
 #pragma once
 
-#include "caf/local_actor.hpp"
-
 #include "caf/detail/invoke_result_visitor.hpp"
+#include "caf/local_actor.hpp"
 
 namespace caf::detail {
 

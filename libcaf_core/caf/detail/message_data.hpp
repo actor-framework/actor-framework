@@ -4,17 +4,17 @@
 
 #pragma once
 
-#include <atomic>
-#include <cstddef>
-#include <cstdlib>
-#include <new>
-
 #include "caf/config.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/implicit_conversions.hpp"
 #include "caf/detail/padded_size.hpp"
 #include "caf/fwd.hpp"
 #include "caf/type_id_list.hpp"
+
+#include <atomic>
+#include <cstddef>
+#include <cstdlib>
+#include <new>
 
 #ifdef CAF_CLANG
 #  pragma clang diagnostic push

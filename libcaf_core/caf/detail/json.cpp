@@ -4,12 +4,6 @@
 
 #include "caf/detail/json.hpp"
 
-#include <cstring>
-#include <iterator>
-#include <memory>
-#include <numeric>
-#include <streambuf>
-
 #include "caf/config.hpp"
 #include "caf/detail/parser/chars.hpp"
 #include "caf/detail/parser/is_char.hpp"
@@ -18,6 +12,12 @@
 #include "caf/detail/scope_guard.hpp"
 #include "caf/pec.hpp"
 #include "caf/span.hpp"
+
+#include <cstring>
+#include <iterator>
+#include <memory>
+#include <numeric>
+#include <streambuf>
 
 CAF_PUSH_UNUSED_LABEL_WARNING
 

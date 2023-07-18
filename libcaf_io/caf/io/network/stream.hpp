@@ -4,17 +4,18 @@
 
 #pragma once
 
-#include <vector>
-
-#include "caf/byte_buffer.hpp"
-#include "caf/detail/io_export.hpp"
 #include "caf/io/fwd.hpp"
 #include "caf/io/network/event_handler.hpp"
 #include "caf/io/network/rw_state.hpp"
 #include "caf/io/network/stream_manager.hpp"
 #include "caf/io/receive_policy.hpp"
+
+#include "caf/byte_buffer.hpp"
+#include "caf/detail/io_export.hpp"
 #include "caf/logger.hpp"
 #include "caf/ref_counted.hpp"
+
+#include <vector>
 
 namespace caf::io::network {
 

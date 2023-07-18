@@ -4,10 +4,10 @@
 
 #pragma once
 
+#include "caf/detail/io_export.hpp"
+
 #include <cstddef>
 #include <string>
-
-#include "caf/detail/io_export.hpp"
 
 namespace caf::io::network {
 

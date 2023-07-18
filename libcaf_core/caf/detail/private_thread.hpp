@@ -4,13 +4,13 @@
 
 #pragma once
 
+#include "caf/detail/private_thread_pool.hpp"
+#include "caf/fwd.hpp"
+
 #include <atomic>
 #include <condition_variable>
 #include <mutex>
 #include <thread>
-
-#include "caf/detail/private_thread_pool.hpp"
-#include "caf/fwd.hpp"
 
 namespace caf::detail {
 

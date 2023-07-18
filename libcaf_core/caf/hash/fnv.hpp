@@ -4,16 +4,16 @@
 
 #pragma once
 
-#include <cstddef>
-#include <cstdint>
-#include <string_view>
-#include <type_traits>
-
 #include "caf/detail/ieee_754.hpp"
 #include "caf/inspector_access.hpp"
 #include "caf/save_inspector_base.hpp"
 #include "caf/span.hpp"
 #include "caf/type_id.hpp"
+
+#include <cstddef>
+#include <cstdint>
+#include <string_view>
+#include <type_traits>
 
 namespace caf::hash {
 

@@ -4,9 +4,6 @@
 
 #pragma once
 
-#include <algorithm>
-#include <cstddef>
-
 #include "caf/allowed_unsafe_message_type.hpp"
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
@@ -17,6 +14,9 @@
 #include "caf/inspector_access.hpp"
 #include "caf/serializer.hpp"
 #include "caf/type_id.hpp"
+
+#include <algorithm>
+#include <cstddef>
 
 namespace caf::detail::default_function {
 

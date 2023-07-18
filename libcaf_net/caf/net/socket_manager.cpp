@@ -4,10 +4,11 @@
 
 #include "caf/net/socket_manager.hpp"
 
-#include "caf/config.hpp"
-#include "caf/make_counted.hpp"
 #include "caf/net/actor_shell.hpp"
 #include "caf/net/multiplexer.hpp"
+
+#include "caf/config.hpp"
+#include "caf/make_counted.hpp"
 
 namespace caf::net {
 

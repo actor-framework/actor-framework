@@ -4,9 +4,10 @@
 
 #include "caf/net/web_socket/framing.hpp"
 
+#include "caf/net/http/v1.hpp"
+
 #include "caf/detail/rfc3629.hpp"
 #include "caf/logger.hpp"
-#include "caf/net/http/v1.hpp"
 
 namespace caf::net::web_socket {
 

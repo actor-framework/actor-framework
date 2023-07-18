@@ -6,9 +6,9 @@
 
 #include "caf/telemetry/label.hpp"
 
-#include "core-test.hpp"
-
 #include "caf/telemetry/label_view.hpp"
+
+#include "core-test.hpp"
 
 using namespace caf;
 using namespace caf::telemetry;

@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include <functional>
-
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
+
+#include <functional>
 
 namespace caf {
 

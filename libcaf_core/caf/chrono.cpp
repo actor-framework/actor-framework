@@ -64,7 +64,6 @@ time_t tm_to_time_t(tm& time_buf) noexcept {
 #endif
 
 #include "caf/chrono.hpp"
-
 #include "caf/detail/parser/read_timestamp.hpp"
 #include "caf/detail/print.hpp"
 #include "caf/error.hpp"

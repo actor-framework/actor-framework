@@ -4,9 +4,9 @@
 
 #define CAF_SUITE or_else
 
-#include "core-test.hpp"
-
 #include "caf/all.hpp"
+
+#include "core-test.hpp"
 
 #define ERROR_HANDLER [&](error& err) { CAF_FAIL(err); }
 

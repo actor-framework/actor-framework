@@ -4,14 +4,14 @@
 
 #pragma once
 
+#include "caf/allowed_unsafe_message_type.hpp"
+#include "caf/detail/io_export.hpp"
+
 #include <algorithm>
 #include <cstddef>
 #include <cstring>
 #include <limits>
 #include <memory>
-
-#include "caf/allowed_unsafe_message_type.hpp"
-#include "caf/detail/io_export.hpp"
 
 namespace caf::io::network {
 

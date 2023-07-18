@@ -6,12 +6,12 @@
 
 #include "caf/mtl.hpp"
 
-#include "core-test.hpp"
-
 #include "caf/json_reader.hpp"
 #include "caf/json_writer.hpp"
 #include "caf/typed_actor.hpp"
 #include "caf/typed_event_based_actor.hpp"
+
+#include "core-test.hpp"
 
 using namespace caf;
 

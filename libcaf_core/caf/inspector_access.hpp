@@ -4,13 +4,6 @@
 
 #pragma once
 
-#include <chrono>
-#include <cstddef>
-#include <memory>
-#include <string_view>
-#include <tuple>
-#include <utility>
-
 #include "caf/allowed_unsafe_message_type.hpp"
 #include "caf/detail/as_mutable_ref.hpp"
 #include "caf/detail/parse.hpp"
@@ -25,6 +18,13 @@
 #include "caf/optional.hpp"
 #include "caf/sec.hpp"
 #include "caf/span.hpp"
+
+#include <chrono>
+#include <cstddef>
+#include <memory>
+#include <string_view>
+#include <tuple>
+#include <utility>
 
 namespace caf::detail {
 

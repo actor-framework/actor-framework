@@ -4,10 +4,10 @@
 
 #include "caf/detail/monotonic_buffer_resource.hpp"
 
+#include "caf/raise_error.hpp"
+
 #include <limits>
 #include <memory>
-
-#include "caf/raise_error.hpp"
 
 namespace caf::detail {
 

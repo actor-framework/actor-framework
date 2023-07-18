@@ -6,10 +6,10 @@
 
 #include "caf/async/blocking_consumer.hpp"
 
-#include "core-test.hpp"
-
 #include "caf/async/blocking_producer.hpp"
 #include "caf/scheduled_actor/flow.hpp"
+
+#include "core-test.hpp"
 
 #include <mutex>
 

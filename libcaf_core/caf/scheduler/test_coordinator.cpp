@@ -4,12 +4,12 @@
 
 #include "caf/scheduler/test_coordinator.hpp"
 
-#include <limits>
-
 #include "caf/actor_system_config.hpp"
 #include "caf/monitorable_actor.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/resumable.hpp"
+
+#include <limits>
 
 namespace caf::scheduler {
 

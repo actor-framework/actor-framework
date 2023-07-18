@@ -6,13 +6,13 @@
 
 #include "caf/detail/parser/read_config.hpp"
 
-#include "core-test.hpp"
-
-#include <string_view>
-
 #include "caf/config_value.hpp"
 #include "caf/parser_state.hpp"
 #include "caf/pec.hpp"
+
+#include "core-test.hpp"
+
+#include <string_view>
 
 using namespace caf;
 

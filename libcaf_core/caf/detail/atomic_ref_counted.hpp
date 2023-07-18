@@ -4,10 +4,10 @@
 
 #pragma once
 
+#include "caf/detail/core_export.hpp"
+
 #include <atomic>
 #include <cstddef>
-
-#include "caf/detail/core_export.hpp"
 
 namespace caf::detail {
 

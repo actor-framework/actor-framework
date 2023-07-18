@@ -6,10 +6,10 @@
 
 #include "caf/node_id.hpp"
 
-#include "core-test.hpp"
-
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
+
+#include "core-test.hpp"
 
 using namespace caf;
 

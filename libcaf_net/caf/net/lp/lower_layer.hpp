@@ -4,11 +4,12 @@
 
 #pragma once
 
+#include "caf/net/fwd.hpp"
+#include "caf/net/generic_lower_layer.hpp"
+
 #include "caf/detail/net_export.hpp"
 #include "caf/error.hpp"
 #include "caf/fwd.hpp"
-#include "caf/net/fwd.hpp"
-#include "caf/net/generic_lower_layer.hpp"
 
 namespace caf::net::lp {
 

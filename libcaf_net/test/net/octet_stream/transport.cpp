@@ -6,7 +6,10 @@
 
 #include "caf/net/octet_stream/transport.hpp"
 
-#include "net-test.hpp"
+#include "caf/net/multiplexer.hpp"
+#include "caf/net/socket_guard.hpp"
+#include "caf/net/socket_manager.hpp"
+#include "caf/net/stream_socket.hpp"
 
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
@@ -14,11 +17,9 @@
 #include "caf/byte_buffer.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/make_actor.hpp"
-#include "caf/net/multiplexer.hpp"
-#include "caf/net/socket_guard.hpp"
-#include "caf/net/socket_manager.hpp"
-#include "caf/net/stream_socket.hpp"
 #include "caf/span.hpp"
+
+#include "net-test.hpp"
 
 using namespace caf;
 

@@ -4,11 +4,12 @@
 
 #pragma once
 
+#include "caf/net/fwd.hpp"
+#include "caf/net/network_socket.hpp"
+
 #include "caf/detail/net_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/ip_endpoint.hpp"
-#include "caf/net/fwd.hpp"
-#include "caf/net/network_socket.hpp"
 #include "caf/uri.hpp"
 
 namespace caf::net {

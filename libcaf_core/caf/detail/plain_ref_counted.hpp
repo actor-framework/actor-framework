@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include <cstddef>
-
 #include "caf/detail/core_export.hpp"
+
+#include <cstddef>
 
 namespace caf::detail {
 

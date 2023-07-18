@@ -3,6 +3,7 @@
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
 #include "caf/detail/get_root_uuid.hpp"
+
 #include "caf/config.hpp"
 
 #ifndef CAF_MACOS // not needed on Mac OS X
@@ -73,6 +74,8 @@ std::string get_root_uuid() {
 
 #elif defined(CAF_LINUX) || defined(CAF_BSD) || defined(CAF_CYGWIN)
 
+#  include "caf/string_algorithms.hpp"
+
 #  include <algorithm>
 #  include <fstream>
 #  include <iostream>
@@ -80,8 +83,6 @@ std::string get_root_uuid() {
 #  include <sstream>
 #  include <string>
 #  include <vector>
-
-#  include "caf/string_algorithms.hpp"
 
 using std::ifstream;
 using std::string;
@@ -159,12 +160,12 @@ std::string get_root_uuid() {
 
 #elif defined(CAF_WINDOWS)
 
+#  include <tchar.h>
+#  include <windows.h>
+
 #  include <algorithm>
 #  include <iostream>
 #  include <string>
-
-#  include <tchar.h>
-#  include <windows.h>
 
 namespace caf {
 namespace detail {

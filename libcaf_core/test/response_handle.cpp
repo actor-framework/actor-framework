@@ -6,9 +6,9 @@
 
 #include "caf/response_handle.hpp"
 
-#include "core-test.hpp"
-
 #include "caf/scheduled_actor/flow.hpp"
+
+#include "core-test.hpp"
 
 using namespace caf;
 

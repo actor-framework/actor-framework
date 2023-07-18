@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include <cstddef>
-
 #include "caf/abstract_actor.hpp"
 #include "caf/actor.hpp"
 #include "caf/actor_cast.hpp"
@@ -20,6 +18,8 @@
 #include "caf/typed_actor_view_base.hpp"
 #include "caf/typed_behavior.hpp"
 #include "caf/typed_response_promise.hpp"
+
+#include <cstddef>
 
 namespace caf {
 

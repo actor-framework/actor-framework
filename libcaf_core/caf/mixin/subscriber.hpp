@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include <unordered_set>
-
 #include "caf/fwd.hpp"
 #include "caf/group.hpp"
+
+#include <unordered_set>
 
 namespace caf::mixin {
 

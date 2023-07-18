@@ -4,6 +4,10 @@
 
 #pragma once
 
+#include "caf/config.hpp"
+#include "caf/detail/core_export.hpp"
+#include "caf/detail/type_traits.hpp"
+
 #include <algorithm>
 #include <limits>
 #include <sstream>
@@ -11,10 +15,6 @@
 #include <string_view>
 #include <type_traits>
 #include <vector>
-
-#include "caf/config.hpp"
-#include "caf/detail/core_export.hpp"
-#include "caf/detail/type_traits.hpp"
 
 namespace caf {
 

@@ -6,10 +6,6 @@
 
 #include "caf/detail/parse.hpp"
 
-#include "core-test.hpp"
-
-#include <string_view>
-
 #include "caf/expected.hpp"
 #include "caf/ipv4_address.hpp"
 #include "caf/ipv4_endpoint.hpp"
@@ -18,6 +14,10 @@
 #include "caf/ipv6_endpoint.hpp"
 #include "caf/ipv6_subnet.hpp"
 #include "caf/uri.hpp"
+
+#include "core-test.hpp"
+
+#include <string_view>
 
 using namespace caf;
 

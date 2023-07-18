@@ -4,23 +4,24 @@
 
 #include "caf/io/middleman_actor_impl.hpp"
 
-#include <stdexcept>
-#include <tuple>
-#include <utility>
-
-#include "caf/actor.hpp"
-#include "caf/actor_proxy.hpp"
-#include "caf/actor_system_config.hpp"
 #include "caf/io/basp/header.hpp"
 #include "caf/io/basp_broker.hpp"
 #include "caf/io/network/default_multiplexer.hpp"
 #include "caf/io/network/interfaces.hpp"
 #include "caf/io/system_messages.hpp"
+
+#include "caf/actor.hpp"
+#include "caf/actor_proxy.hpp"
+#include "caf/actor_system_config.hpp"
 #include "caf/logger.hpp"
 #include "caf/node_id.hpp"
 #include "caf/sec.hpp"
 #include "caf/send.hpp"
 #include "caf/typed_event_based_actor.hpp"
+
+#include <stdexcept>
+#include <tuple>
+#include <utility>
 
 namespace caf::io {
 

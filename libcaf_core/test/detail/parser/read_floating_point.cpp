@@ -6,13 +6,13 @@
 
 #include "caf/detail/parser/read_floating_point.hpp"
 
+#include "caf/parser_state.hpp"
+
 #include "core-test.hpp"
 
 #include <string>
 #include <string_view>
 #include <variant>
-
-#include "caf/parser_state.hpp"
 
 using namespace caf;
 

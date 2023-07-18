@@ -4,10 +4,6 @@
 
 #pragma once
 
-#include <cstdint>
-#include <set>
-#include <string>
-
 #include "caf/actor_cast.hpp"
 #include "caf/actor_control_block.hpp"
 #include "caf/detail/openssl_export.hpp"
@@ -15,6 +11,10 @@
 #include "caf/fwd.hpp"
 #include "caf/sec.hpp"
 #include "caf/typed_actor.hpp"
+
+#include <cstdint>
+#include <set>
+#include <string>
 
 namespace caf::openssl {
 

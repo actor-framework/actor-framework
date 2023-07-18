@@ -194,8 +194,9 @@ bool load_system_setting(std::atomic<long>& cache_var, long& var, int name,
 
 #ifdef CAF_LINUX
 
-#  include <cstdio>
 #  include <dirent.h>
+
+#  include <cstdio>
 
 namespace {
 

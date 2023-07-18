@@ -6,12 +6,12 @@
 
 #include "caf/byte.hpp"
 
+#include "caf/detail/parser/add_ascii.hpp"
+#include "caf/raise_error.hpp"
+
 #include "core-test.hpp"
 
 #include <cstdint>
-
-#include "caf/detail/parser/add_ascii.hpp"
-#include "caf/raise_error.hpp"
 
 using namespace caf;
 

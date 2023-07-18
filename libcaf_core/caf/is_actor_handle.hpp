@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include <type_traits>
-
 #include "caf/fwd.hpp"
+
+#include <type_traits>
 
 namespace caf {
 

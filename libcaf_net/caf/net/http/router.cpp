@@ -1,11 +1,12 @@
 #include "caf/net/http/router.hpp"
 
-#include "caf/async/future.hpp"
-#include "caf/disposable.hpp"
 #include "caf/net/http/request.hpp"
 #include "caf/net/http/responder.hpp"
 #include "caf/net/make_actor_shell.hpp"
 #include "caf/net/multiplexer.hpp"
+
+#include "caf/async/future.hpp"
+#include "caf/disposable.hpp"
 
 namespace caf::net::http {
 

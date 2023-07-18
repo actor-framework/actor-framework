@@ -6,10 +6,9 @@
 
 #include "caf/json_array.hpp"
 
-#include "core-test.hpp"
-
-#include "caf/json_array.hpp"
 #include "caf/json_value.hpp"
+
+#include "core-test.hpp"
 
 using namespace caf;
 using namespace std::literals;

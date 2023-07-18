@@ -6,13 +6,13 @@
 
 #include "caf/actor_clock.hpp"
 
+#include "caf/all.hpp"
+#include "caf/detail/test_actor_clock.hpp"
+
 #include "core-test.hpp"
 
 #include <chrono>
 #include <memory>
-
-#include "caf/all.hpp"
-#include "caf/detail/test_actor_clock.hpp"
 
 using namespace caf;
 

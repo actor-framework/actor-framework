@@ -1,7 +1,8 @@
 #pragma once
 
-#include "caf/detail/pp.hpp"
 #include "caf/test/dsl.hpp"
+
+#include "caf/detail/pp.hpp"
 
 #define SCENARIO(description)                                                  \
   namespace {                                                                  \

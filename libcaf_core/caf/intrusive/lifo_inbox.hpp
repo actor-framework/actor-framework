@@ -4,13 +4,12 @@
 
 #pragma once
 
+#include "caf/config.hpp"
+#include "caf/intrusive/inbox_result.hpp"
+
 #include <atomic>
 #include <condition_variable>
 #include <mutex>
-
-#include "caf/config.hpp"
-
-#include "caf/intrusive/inbox_result.hpp"
 
 namespace caf::intrusive {
 

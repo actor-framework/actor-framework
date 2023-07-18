@@ -4,14 +4,13 @@
 
 #pragma once
 
-#include <tuple>
-#include <type_traits>
-#include <utility>
-
+#include "caf/detail/type_traits.hpp"
 #include "caf/intrusive/new_round_result.hpp"
 #include "caf/intrusive/task_result.hpp"
 
-#include "caf/detail/type_traits.hpp"
+#include <tuple>
+#include <type_traits>
+#include <utility>
 
 namespace caf::intrusive {
 

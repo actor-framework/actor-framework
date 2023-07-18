@@ -4,14 +4,14 @@
 
 #pragma once
 
-#include <algorithm>
-#include <functional>
-#include <vector>
-
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/fwd.hpp"
 #include "caf/raise_error.hpp"
+
+#include <algorithm>
+#include <functional>
+#include <vector>
 
 namespace caf {
 

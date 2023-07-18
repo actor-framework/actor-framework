@@ -4,13 +4,6 @@
 
 #pragma once
 
-#include <cstddef>
-#include <string>
-#include <string_view>
-#include <tuple>
-#include <type_traits>
-#include <utility>
-
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/squashed_int.hpp"
 #include "caf/error_code.hpp"
@@ -18,6 +11,13 @@
 #include "caf/load_inspector_base.hpp"
 #include "caf/sec.hpp"
 #include "caf/span.hpp"
+
+#include <cstddef>
+#include <string>
+#include <string_view>
+#include <tuple>
+#include <type_traits>
+#include <utility>
 
 namespace caf {
 

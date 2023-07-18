@@ -2,18 +2,18 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#include <algorithm>
-#include <utility>
+#include "caf/proxy_registry.hpp"
 
 #include "caf/actor_addr.hpp"
+#include "caf/actor_registry.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/deserializer.hpp"
+#include "caf/logger.hpp"
 #include "caf/node_id.hpp"
-#include "caf/proxy_registry.hpp"
 #include "caf/serializer.hpp"
 
-#include "caf/actor_registry.hpp"
-#include "caf/logger.hpp"
+#include <algorithm>
+#include <utility>
 
 namespace caf {
 

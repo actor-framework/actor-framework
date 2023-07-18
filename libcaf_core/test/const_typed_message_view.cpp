@@ -6,9 +6,9 @@
 
 #include "caf/const_typed_message_view.hpp"
 
-#include "core-test.hpp"
-
 #include "caf/message.hpp"
+
+#include "core-test.hpp"
 
 using namespace caf;
 

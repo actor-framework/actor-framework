@@ -4,11 +4,6 @@
 
 #pragma once
 
-#include <array>
-#include <cstdint>
-#include <functional>
-#include <string>
-
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
@@ -18,6 +13,11 @@
 #include "caf/none.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/uri.hpp"
+
+#include <array>
+#include <cstdint>
+#include <functional>
+#include <string>
 
 namespace caf {
 

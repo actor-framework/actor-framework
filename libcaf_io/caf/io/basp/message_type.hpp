@@ -4,12 +4,12 @@
 
 #pragma once
 
+#include "caf/default_enum_inspect.hpp"
+#include "caf/detail/io_export.hpp"
+
 #include <cstdint>
 #include <string>
 #include <type_traits>
-
-#include "caf/default_enum_inspect.hpp"
-#include "caf/detail/io_export.hpp"
 
 namespace caf::io::basp {
 

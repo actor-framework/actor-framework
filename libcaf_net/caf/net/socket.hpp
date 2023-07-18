@@ -4,15 +4,16 @@
 
 #pragma once
 
-#include <string>
-#include <system_error>
-#include <type_traits>
+#include "caf/net/socket_id.hpp"
 
 #include "caf/config.hpp"
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/fwd.hpp"
-#include "caf/net/socket_id.hpp"
+
+#include <string>
+#include <system_error>
+#include <type_traits>
 
 namespace caf::net {
 

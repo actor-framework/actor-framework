@@ -6,9 +6,9 @@
 
 #include "caf/detail/parser/read_timespan.hpp"
 
-#include "core-test.hpp"
-
 #include "caf/parser_state.hpp"
+
+#include "core-test.hpp"
 
 #include <chrono>
 #include <string_view>

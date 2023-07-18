@@ -4,21 +4,6 @@
 
 #pragma once
 
-#include <chrono>
-#include <cmath>
-#include <cstddef>
-#include <cstdint>
-#include <iosfwd>
-#include <iterator>
-#include <map>
-#include <optional>
-#include <string>
-#include <string_view>
-#include <tuple>
-#include <type_traits>
-#include <variant>
-#include <vector>
-
 #include "caf/config_value_reader.hpp"
 #include "caf/config_value_writer.hpp"
 #include "caf/detail/bounds_checker.hpp"
@@ -36,6 +21,21 @@
 #include "caf/timestamp.hpp"
 #include "caf/uri.hpp"
 #include "caf/variant_wrapper.hpp"
+
+#include <chrono>
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <iosfwd>
+#include <iterator>
+#include <map>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <tuple>
+#include <type_traits>
+#include <variant>
+#include <vector>
 
 namespace caf::detail {
 

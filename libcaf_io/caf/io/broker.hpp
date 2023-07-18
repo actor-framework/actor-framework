@@ -4,21 +4,22 @@
 
 #pragma once
 
-#include <map>
-#include <vector>
-
-#include "caf/detail/io_export.hpp"
-#include "caf/extend.hpp"
-#include "caf/fwd.hpp"
 #include "caf/io/abstract_broker.hpp"
 #include "caf/io/datagram_servant.hpp"
 #include "caf/io/doorman.hpp"
 #include "caf/io/scribe.hpp"
+
+#include "caf/detail/io_export.hpp"
+#include "caf/extend.hpp"
+#include "caf/fwd.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/mixin/behavior_changer.hpp"
 #include "caf/mixin/requester.hpp"
 #include "caf/mixin/sender.hpp"
 #include "caf/stateful_actor.hpp"
+
+#include <map>
+#include <vector>
 
 namespace caf {
 

@@ -4,15 +4,15 @@
 
 #pragma once
 
-#include <atomic>
-#include <functional>
-#include <unordered_map>
-
 #include "caf/abstract_group.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/expected.hpp"
 #include "caf/fwd.hpp"
 #include "caf/group_module.hpp"
+
+#include <atomic>
+#include <functional>
+#include <unordered_map>
 
 namespace caf {
 

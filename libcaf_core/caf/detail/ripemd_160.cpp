@@ -38,6 +38,7 @@
 //     available at http://www.esat.kuleuven.be/~cosicart/ps/AB-9601/.
 
 #include "caf/detail/ripemd_160.hpp"
+
 #include <cstring>
 
 namespace {

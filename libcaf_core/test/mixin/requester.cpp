@@ -6,13 +6,13 @@
 
 #include "caf/mixin/requester.hpp"
 
-#include "core-test.hpp"
-
-#include <numeric>
-
 #include "caf/event_based_actor.hpp"
 #include "caf/policy/select_all.hpp"
 #include "caf/result.hpp"
+
+#include "core-test.hpp"
+
+#include <numeric>
 
 using namespace caf;
 

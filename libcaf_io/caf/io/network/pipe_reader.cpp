@@ -2,12 +2,13 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
+#include "caf/io/network/pipe_reader.hpp"
+
+#include "caf/io/network/default_multiplexer.hpp"
+
 #include "caf/logger.hpp"
 
 #include <cstdint>
-
-#include "caf/io/network/default_multiplexer.hpp"
-#include "caf/io/network/pipe_reader.hpp"
 
 #ifdef CAF_WINDOWS
 #  include <winsock2.h>

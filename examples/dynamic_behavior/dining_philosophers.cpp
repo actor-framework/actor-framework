@@ -1,6 +1,8 @@
 // This example is an implementation of the classical Dining Philosophers
 // exercise using only CAF's event-based actor implementation.
 
+#include "caf/all.hpp"
+
 #include <chrono>
 #include <iostream>
 #include <map>
@@ -8,8 +10,6 @@
 #include <thread>
 #include <utility>
 #include <vector>
-
-#include "caf/all.hpp"
 
 CAF_BEGIN_TYPE_ID_BLOCK(dining_philosophers, first_custom_type_id)
 

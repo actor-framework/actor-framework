@@ -4,8 +4,9 @@
 
 #pragma once
 
-#include "caf/detail/net_export.hpp"
 #include "caf/net/network_socket.hpp"
+
+#include "caf/detail/net_export.hpp"
 
 #include <cstddef>
 #include <variant>

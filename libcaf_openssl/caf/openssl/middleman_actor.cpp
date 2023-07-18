@@ -12,9 +12,13 @@
 #  include <sys/types.h>
 #endif
 
-#include <stdexcept>
-#include <tuple>
-#include <utility>
+#include "caf/io/basp_broker.hpp"
+#include "caf/io/middleman_actor_impl.hpp"
+#include "caf/io/network/default_multiplexer.hpp"
+#include "caf/io/network/doorman_impl.hpp"
+#include "caf/io/network/interfaces.hpp"
+#include "caf/io/network/stream_impl.hpp"
+#include "caf/io/system_messages.hpp"
 
 #include "caf/actor.hpp"
 #include "caf/actor_proxy.hpp"
@@ -26,14 +30,9 @@
 #include "caf/send.hpp"
 #include "caf/typed_event_based_actor.hpp"
 
-#include "caf/io/basp_broker.hpp"
-#include "caf/io/middleman_actor_impl.hpp"
-#include "caf/io/system_messages.hpp"
-
-#include "caf/io/network/default_multiplexer.hpp"
-#include "caf/io/network/doorman_impl.hpp"
-#include "caf/io/network/interfaces.hpp"
-#include "caf/io/network/stream_impl.hpp"
+#include <stdexcept>
+#include <tuple>
+#include <utility>
 
 #ifdef CAF_WINDOWS
 #  ifndef WIN32_LEAN_AND_MEAN

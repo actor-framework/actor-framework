@@ -4,6 +4,12 @@
 
 #pragma once
 
+#include "caf/net/actor_shell.hpp"
+#include "caf/net/fwd.hpp"
+#include "caf/net/socket.hpp"
+#include "caf/net/socket_event_layer.hpp"
+#include "caf/net/typed_actor_shell.hpp"
+
 #include "caf/action.hpp"
 #include "caf/actor.hpp"
 #include "caf/actor_system.hpp"
@@ -14,11 +20,6 @@
 #include "caf/disposable.hpp"
 #include "caf/error.hpp"
 #include "caf/fwd.hpp"
-#include "caf/net/actor_shell.hpp"
-#include "caf/net/fwd.hpp"
-#include "caf/net/socket.hpp"
-#include "caf/net/socket_event_layer.hpp"
-#include "caf/net/typed_actor_shell.hpp"
 #include "caf/sec.hpp"
 
 #include <type_traits>

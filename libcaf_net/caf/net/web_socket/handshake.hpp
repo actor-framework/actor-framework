@@ -4,10 +4,11 @@
 
 #pragma once
 
+#include "caf/net/fwd.hpp"
+
 #include "caf/byte_buffer.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/dictionary.hpp"
-#include "caf/net/fwd.hpp"
 
 #include <cstddef>
 #include <string>

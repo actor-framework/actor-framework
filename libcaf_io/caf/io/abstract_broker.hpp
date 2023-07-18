@@ -4,11 +4,6 @@
 
 #pragma once
 
-#include <unordered_map>
-#include <vector>
-
-#include "caf/byte_buffer.hpp"
-#include "caf/detail/io_export.hpp"
 #include "caf/io/accept_handle.hpp"
 #include "caf/io/connection_handle.hpp"
 #include "caf/io/datagram_handle.hpp"
@@ -20,8 +15,14 @@
 #include "caf/io/network/stream_manager.hpp"
 #include "caf/io/receive_policy.hpp"
 #include "caf/io/system_messages.hpp"
+
+#include "caf/byte_buffer.hpp"
+#include "caf/detail/io_export.hpp"
 #include "caf/prohibit_top_level_spawn_marker.hpp"
 #include "caf/scheduled_actor.hpp"
+
+#include <unordered_map>
+#include <vector>
 
 namespace caf::io {
 

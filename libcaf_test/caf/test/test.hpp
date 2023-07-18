@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include "caf/detail/pp.hpp"
-#include "caf/detail/test_export.hpp"
 #include "caf/test/block.hpp"
 #include "caf/test/context.hpp"
 #include "caf/test/factory.hpp"
@@ -14,6 +12,9 @@
 #include "caf/test/scope.hpp"
 #include "caf/test/section.hpp"
 #include "caf/test/suite.hpp"
+
+#include "caf/detail/pp.hpp"
+#include "caf/detail/test_export.hpp"
 
 namespace caf::test {
 

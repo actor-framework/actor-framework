@@ -4,11 +4,11 @@
 
 #define CAF_SUITE request_timeout
 
+#include "caf/all.hpp"
+
 #include "core-test.hpp"
 
 #include <chrono>
-
-#include "caf/all.hpp"
 
 using namespace caf;
 

@@ -6,16 +6,17 @@
 
 #include "caf/net/actor_shell.hpp"
 
-#include "net-test.hpp"
-
-#include "caf/byte.hpp"
-#include "caf/byte_span.hpp"
-#include "caf/callback.hpp"
 #include "caf/net/make_actor_shell.hpp"
 #include "caf/net/middleman.hpp"
 #include "caf/net/octet_stream/transport.hpp"
 #include "caf/net/socket_guard.hpp"
 #include "caf/net/socket_manager.hpp"
+
+#include "caf/byte.hpp"
+#include "caf/byte_span.hpp"
+#include "caf/callback.hpp"
+
+#include "net-test.hpp"
 
 using namespace caf;
 

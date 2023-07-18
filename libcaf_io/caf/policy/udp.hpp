@@ -4,9 +4,10 @@
 
 #pragma once
 
-#include "caf/detail/io_export.hpp"
 #include "caf/io/network/ip_endpoint.hpp"
 #include "caf/io/network/native_socket.hpp"
+
+#include "caf/detail/io_export.hpp"
 
 namespace caf::policy {
 

@@ -1,11 +1,11 @@
 // Showcases custom message types with a sealed class hierarchy.
 
+#include "caf/all.hpp"
+
 #include <cassert>
 #include <iostream>
 #include <memory>
 #include <utility>
-
-#include "caf/all.hpp"
 
 class circle;
 class shape;

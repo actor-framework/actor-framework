@@ -38,11 +38,11 @@
 
 #pragma once
 
+#include "caf/detail/core_export.hpp"
+
 #include <array>
 #include <cstdint>
 #include <string>
-
-#include "caf/detail/core_export.hpp"
 
 namespace caf::detail {
 

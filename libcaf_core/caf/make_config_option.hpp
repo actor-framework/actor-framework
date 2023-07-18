@@ -4,9 +4,6 @@
 
 #pragma once
 
-#include <memory>
-#include <string_view>
-
 #include "caf/config_option.hpp"
 #include "caf/config_value.hpp"
 #include "caf/detail/type_traits.hpp"
@@ -14,6 +11,9 @@
 #include "caf/expected.hpp"
 #include "caf/fwd.hpp"
 #include "caf/pec.hpp"
+
+#include <memory>
+#include <string_view>
 
 namespace caf::detail {
 

@@ -6,12 +6,12 @@
 
 #include "caf/telemetry/histogram.hpp"
 
+#include "caf/telemetry/gauge.hpp"
+
 #include "core-test.hpp"
 
 #include <cmath>
 #include <limits>
-
-#include "caf/telemetry/gauge.hpp"
 
 using namespace caf;
 using namespace caf::telemetry;

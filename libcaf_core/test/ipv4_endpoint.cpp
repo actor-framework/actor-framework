@@ -6,12 +6,6 @@
 
 #include "caf/ipv4_endpoint.hpp"
 
-#include "core-test.hpp"
-
-#include <cassert>
-#include <cstddef>
-#include <vector>
-
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/binary_deserializer.hpp"
@@ -20,6 +14,12 @@
 #include "caf/detail/parse.hpp"
 #include "caf/ipv4_address.hpp"
 #include "caf/span.hpp"
+
+#include "core-test.hpp"
+
+#include <cassert>
+#include <cstddef>
+#include <vector>
 
 using namespace caf;
 

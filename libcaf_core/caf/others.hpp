@@ -4,10 +4,10 @@
 
 #pragma once
 
+#include "caf/catch_all.hpp"
+
 #include <functional>
 #include <type_traits>
-
-#include "caf/catch_all.hpp"
 
 namespace caf {
 

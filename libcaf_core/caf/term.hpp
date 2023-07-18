@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include <iosfwd>
-
 #include "caf/detail/core_export.hpp"
+
+#include <iosfwd>
 
 namespace caf {
 

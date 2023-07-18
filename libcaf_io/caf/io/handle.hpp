@@ -4,10 +4,10 @@
 
 #pragma once
 
+#include "caf/detail/comparable.hpp"
+
 #include <cstdint>
 #include <string>
-
-#include "caf/detail/comparable.hpp"
 
 namespace caf {
 

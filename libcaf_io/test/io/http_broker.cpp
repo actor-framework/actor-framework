@@ -5,13 +5,14 @@
 #include "caf/config.hpp"
 
 #define CAF_SUITE io_http_broker
+#include "caf/io/all.hpp"
+
+#include "caf/all.hpp"
+
 #include "io-test.hpp"
 
 #include <algorithm>
 #include <cassert>
-
-#include "caf/all.hpp"
-#include "caf/io/all.hpp"
 
 using std::cerr;
 using std::cout;

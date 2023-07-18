@@ -4,13 +4,13 @@
 
 #pragma once
 
-#include <cstdint>
-#include <set>
-#include <string>
+#include "caf/io/middleman.hpp"
 
 #include "caf/actor_system.hpp"
 
-#include "caf/io/middleman.hpp"
+#include <cstdint>
+#include <set>
+#include <string>
 
 namespace caf::io {
 

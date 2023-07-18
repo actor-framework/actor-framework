@@ -6,9 +6,9 @@
 
 #include "caf/stateful_actor.hpp"
 
-#include "core-test.hpp"
-
 #include "caf/event_based_actor.hpp"
+
+#include "core-test.hpp"
 
 using namespace caf;
 

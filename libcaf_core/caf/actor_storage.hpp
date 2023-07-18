@@ -4,14 +4,14 @@
 
 #pragma once
 
+#include "caf/abstract_actor.hpp"
+#include "caf/actor_control_block.hpp"
+#include "caf/config.hpp"
+
 #include <atomic>
 #include <cstddef>
 #include <new>
 #include <type_traits>
-
-#include "caf/abstract_actor.hpp"
-#include "caf/actor_control_block.hpp"
-#include "caf/config.hpp"
 
 #ifdef CAF_GCC
 #  pragma GCC diagnostic push

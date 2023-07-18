@@ -1,5 +1,7 @@
 #pragma once
 
+#include "caf/test/bdd_dsl.hpp"
+
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/byte_buffer.hpp"
@@ -7,7 +9,6 @@
 #include "caf/fwd.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/result.hpp"
-#include "caf/test/bdd_dsl.hpp"
 #include "caf/type_id.hpp"
 #include "caf/typed_actor.hpp"
 #include "caf/typed_stream.hpp"

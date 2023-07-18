@@ -4,9 +4,6 @@
 
 #pragma once
 
-#include <chrono>
-#include <tuple>
-
 #include "caf/actor.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/actor_clock.hpp"
@@ -23,6 +20,9 @@
 #include "caf/scheduler/abstract_coordinator.hpp"
 #include "caf/send.hpp"
 #include "caf/typed_actor_view_base.hpp"
+
+#include <chrono>
+#include <tuple>
 
 namespace caf::mixin {
 

@@ -9,8 +9,11 @@ CAF_PUSH_WARNINGS
 #include <openssl/ssl.h>
 CAF_POP_WARNINGS
 
-#include <mutex>
-#include <vector>
+#include "caf/io/basp_broker.hpp"
+#include "caf/io/middleman.hpp"
+#include "caf/io/network/default_multiplexer.hpp"
+
+#include "caf/openssl/middleman_actor.hpp"
 
 #include "caf/actor_control_block.hpp"
 #include "caf/actor_system.hpp"
@@ -19,11 +22,8 @@ CAF_POP_WARNINGS
 #include "caf/raise_error.hpp"
 #include "caf/scoped_actor.hpp"
 
-#include "caf/io/basp_broker.hpp"
-#include "caf/io/middleman.hpp"
-#include "caf/io/network/default_multiplexer.hpp"
-
-#include "caf/openssl/middleman_actor.hpp"
+#include <mutex>
+#include <vector>
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 struct CRYPTO_dynlock_value {

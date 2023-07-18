@@ -6,9 +6,9 @@
 
 #include "caf/detail/base64.hpp"
 
-#include <string_view>
-
 #include "core-test.hpp"
+
+#include <string_view>
 
 using namespace caf;
 using namespace std::literals;

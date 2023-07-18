@@ -4,9 +4,9 @@
 
 #include "caf/make_config_option.hpp"
 
-#include <ctype.h>
-
 #include "caf/config_value.hpp"
+
+#include <ctype.h>
 
 namespace caf {
 

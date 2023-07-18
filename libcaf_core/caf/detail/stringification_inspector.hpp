@@ -4,19 +4,19 @@
 
 #pragma once
 
-#include <chrono>
-#include <cstring>
-#include <string>
-#include <string_view>
-#include <type_traits>
-#include <vector>
-
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/inspector_access.hpp"
 #include "caf/save_inspector_base.hpp"
 #include "caf/timespan.hpp"
 #include "caf/timestamp.hpp"
+
+#include <chrono>
+#include <cstring>
+#include <string>
+#include <string_view>
+#include <type_traits>
+#include <vector>
 
 namespace caf::detail {
 

@@ -1,9 +1,9 @@
 // This example is a very basic, non-interactive math service implemented for
 // both the blocking and the event-based API.
 
-#include <iostream>
-
 #include "caf/all.hpp"
+
+#include <iostream>
 
 using std::endl;
 using namespace caf;

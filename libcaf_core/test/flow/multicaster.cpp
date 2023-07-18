@@ -6,11 +6,11 @@
 
 #include "caf/flow/multicaster.hpp"
 
-#include "core-test.hpp"
-
 #include "caf/flow/observable_builder.hpp"
 #include "caf/flow/op/merge.hpp"
 #include "caf/flow/scoped_coordinator.hpp"
+
+#include "core-test.hpp"
 
 using namespace caf;
 

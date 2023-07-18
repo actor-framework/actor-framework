@@ -4,16 +4,6 @@
 
 #pragma once
 
-#include <atomic>
-#include <condition_variable>
-#include <cstdint>
-#include <memory>
-#include <mutex>
-#include <set>
-#include <string>
-#include <type_traits>
-#include <vector>
-
 #include "caf/abstract_actor.hpp"
 #include "caf/actor_addr.hpp"
 #include "caf/actor_cast.hpp"
@@ -23,6 +13,16 @@
 #include "caf/mailbox_element.hpp"
 #include "caf/system_messages.hpp"
 #include "caf/typed_message_view.hpp"
+
+#include <atomic>
+#include <condition_variable>
+#include <cstdint>
+#include <memory>
+#include <mutex>
+#include <set>
+#include <string>
+#include <type_traits>
+#include <vector>
 
 namespace caf {
 

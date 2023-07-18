@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include "caf/detail/pp.hpp"
-#include "caf/detail/test_export.hpp"
 #include "caf/test/and_given.hpp"
 #include "caf/test/and_then.hpp"
 #include "caf/test/and_when.hpp"
@@ -19,6 +17,9 @@
 #include "caf/test/suite.hpp"
 #include "caf/test/then.hpp"
 #include "caf/test/when.hpp"
+
+#include "caf/detail/pp.hpp"
+#include "caf/detail/test_export.hpp"
 
 namespace caf::test {
 

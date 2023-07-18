@@ -4,11 +4,12 @@
 
 #pragma once
 
-#include "caf/byte_span.hpp"
-#include "caf/detail/net_export.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/http/lower_layer.hpp"
 #include "caf/net/http/request_header.hpp"
+
+#include "caf/byte_span.hpp"
+#include "caf/detail/net_export.hpp"
 
 #include <string_view>
 

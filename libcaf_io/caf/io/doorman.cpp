@@ -4,9 +4,9 @@
 
 #include "caf/io/doorman.hpp"
 
-#include "caf/logger.hpp"
-
 #include "caf/io/abstract_broker.hpp"
+
+#include "caf/logger.hpp"
 
 namespace caf::io {
 

@@ -2,6 +2,8 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
+#include "caf/detail/sync_request_bouncer.hpp"
+
 #include "caf/actor.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/config.hpp"
@@ -10,8 +12,6 @@
 #include "caf/message_id.hpp"
 #include "caf/sec.hpp"
 #include "caf/system_messages.hpp"
-
-#include "caf/detail/sync_request_bouncer.hpp"
 
 namespace caf::detail {
 

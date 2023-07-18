@@ -4,12 +4,13 @@
 
 #pragma once
 
-#include "caf/make_counted.hpp"
 #include "caf/net/dsl/base.hpp"
 #include "caf/net/dsl/client_config.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/ssl/tcp_acceptor.hpp"
 #include "caf/net/tcp_accept_socket.hpp"
+
+#include "caf/make_counted.hpp"
 
 #include <cstdint>
 #include <string>

@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include "caf/config.hpp"
+
 #include <algorithm>
 #include <cassert>
 #include <cctype>
@@ -13,11 +15,11 @@
 #include <regex>
 #include <thread>
 
-#include "caf/config.hpp"
-
 #ifndef CAF_WINDOWS
 #  include <unistd.h>
 #endif
+
+#include "caf/test/unit_test.hpp"
 
 #include "caf/config_option_adder.hpp"
 #include "caf/config_option_set.hpp"
@@ -25,7 +27,6 @@
 #include "caf/detail/set_thread_name.hpp"
 #include "caf/settings.hpp"
 #include "caf/string_algorithms.hpp"
-#include "caf/test/unit_test.hpp"
 
 namespace caf::test {
 inline namespace legacy {

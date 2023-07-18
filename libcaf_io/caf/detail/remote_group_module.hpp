@@ -4,12 +4,13 @@
 
 #pragma once
 
+#include "caf/io/fwd.hpp"
+
 #include "caf/detail/group_tunnel.hpp"
 #include "caf/detail/io_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/group.hpp"
 #include "caf/group_module.hpp"
-#include "caf/io/fwd.hpp"
 
 #include <mutex>
 #include <string>

@@ -4,18 +4,19 @@
 
 #pragma once
 
-#include <memory>
-
 #include "caf/config.hpp"
+
+#include <memory>
 
 CAF_PUSH_WARNINGS
 #include <openssl/ssl.h>
 CAF_POP_WARNINGS
 
-#include "caf/actor_system.hpp"
-#include "caf/detail/openssl_export.hpp"
 #include "caf/io/network/default_multiplexer.hpp"
 #include "caf/io/network/native_socket.hpp"
+
+#include "caf/actor_system.hpp"
+#include "caf/detail/openssl_export.hpp"
 
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
 #  define CAF_SSL_HAS_NON_VERSIONED_TLS_FUN

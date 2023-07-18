@@ -2,15 +2,15 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#include <algorithm>
-#include <utility>
-
 #include "caf/response_promise.hpp"
 
 #include "caf/detail/profiled_send.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/logger.hpp"
 #include "caf/no_stages.hpp"
+
+#include <algorithm>
+#include <utility>
 
 namespace caf {
 

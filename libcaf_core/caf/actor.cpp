@@ -4,9 +4,6 @@
 
 #include "caf/actor.hpp"
 
-#include <cassert>
-#include <utility>
-
 #include "caf/actor_addr.hpp"
 #include "caf/actor_proxy.hpp"
 #include "caf/decorator/sequencer.hpp"
@@ -16,6 +13,9 @@
 #include "caf/make_actor.hpp"
 #include "caf/scoped_actor.hpp"
 #include "caf/serializer.hpp"
+
+#include <cassert>
+#include <utility>
 
 namespace caf {
 

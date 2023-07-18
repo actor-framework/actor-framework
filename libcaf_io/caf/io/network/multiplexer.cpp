@@ -3,6 +3,7 @@
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
 #include "caf/io/network/multiplexer.hpp"
+
 #include "caf/io/network/default_multiplexer.hpp" // default singleton
 
 namespace caf::io::network {

@@ -4,18 +4,19 @@
 
 #include "caf/io/basp/instance.hpp"
 
-#include <algorithm>
+#include "caf/io/basp/remote_message_handler.hpp"
+#include "caf/io/basp/version.hpp"
+#include "caf/io/basp/worker.hpp"
 
 #include "caf/actor_system_config.hpp"
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/defaults.hpp"
-#include "caf/io/basp/remote_message_handler.hpp"
-#include "caf/io/basp/version.hpp"
-#include "caf/io/basp/worker.hpp"
 #include "caf/settings.hpp"
 #include "caf/telemetry/histogram.hpp"
 #include "caf/telemetry/timer.hpp"
+
+#include <algorithm>
 
 namespace caf::io::basp {
 

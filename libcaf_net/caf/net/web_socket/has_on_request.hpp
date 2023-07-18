@@ -4,12 +4,13 @@
 
 #pragma once
 
-#include "caf/detail/type_list.hpp"
-#include "caf/detail/type_traits.hpp"
 #include "caf/net/dsl/server_factory_base.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/web_socket/acceptor.hpp"
 #include "caf/net/web_socket/server_factory.hpp"
+
+#include "caf/detail/type_list.hpp"
+#include "caf/detail/type_traits.hpp"
 
 #include <type_traits>
 

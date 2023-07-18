@@ -15,6 +15,13 @@
 #  include <sys/resource.h>
 #endif
 
+#include "caf/actor_system_config.hpp"
+#include "caf/defaults.hpp"
+#include "caf/logger.hpp"
+#include "caf/policy/profiled.hpp"
+#include "caf/policy/work_stealing.hpp"
+#include "caf/scheduler/coordinator.hpp"
+
 #include <chrono>
 #include <cmath>
 #include <fstream>
@@ -22,13 +29,6 @@
 #include <mutex>
 #include <unordered_map>
 #include <vector>
-
-#include "caf/actor_system_config.hpp"
-#include "caf/defaults.hpp"
-#include "caf/logger.hpp"
-#include "caf/policy/profiled.hpp"
-#include "caf/policy/work_stealing.hpp"
-#include "caf/scheduler/coordinator.hpp"
 
 namespace caf::scheduler {
 

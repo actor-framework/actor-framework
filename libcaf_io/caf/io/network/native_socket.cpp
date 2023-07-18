@@ -4,12 +4,11 @@
 
 #include "caf/io/network/native_socket.hpp"
 
-#include "caf/logger.hpp"
-#include "caf/sec.hpp"
+#include "caf/io/network/protocol.hpp"
 
 #include "caf/detail/call_cfun.hpp"
-
-#include "caf/io/network/protocol.hpp"
+#include "caf/logger.hpp"
+#include "caf/sec.hpp"
 
 // clang-format off
 #ifdef CAF_WINDOWS

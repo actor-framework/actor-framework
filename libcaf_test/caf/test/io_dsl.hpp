@@ -4,12 +4,12 @@
 
 #pragma once
 
-#include <functional>
+#include "caf/test/dsl.hpp"
 
 #include "caf/io/all.hpp"
 #include "caf/io/network/test_multiplexer.hpp"
 
-#include "caf/test/dsl.hpp"
+#include <functional>
 
 class test_node_fixture_config : public caf::actor_system_config {
 public:

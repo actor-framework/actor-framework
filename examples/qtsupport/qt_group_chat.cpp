@@ -7,20 +7,23 @@
 // - qt_group_chat -H localhost -p 4242 -n alice
 // - qt_group_chat -H localhost -p 4242 -n bob
 
+#include "caf/net/lp/with.hpp"
+#include "caf/net/middleman.hpp"
+
+#include "caf/all.hpp"
+
+#include <time.h>
+
 #include <cstdlib>
 #include <iostream>
 #include <map>
 #include <set>
 #include <sstream>
-#include <time.h>
 #include <vector>
-
-#include "caf/all.hpp"
-#include "caf/net/lp/with.hpp"
-#include "caf/net/middleman.hpp"
 
 CAF_PUSH_WARNINGS
 #include "ui_chatwindow.h" // auto generated from chatwindow.ui
+
 #include <QApplication>
 #include <QMainWindow>
 CAF_POP_WARNINGS

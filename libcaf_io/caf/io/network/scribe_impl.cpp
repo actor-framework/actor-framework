@@ -4,11 +4,11 @@
 
 #include "caf/io/network/scribe_impl.hpp"
 
-#include <algorithm>
+#include "caf/io/network/default_multiplexer.hpp"
 
 #include "caf/logger.hpp"
 
-#include "caf/io/network/default_multiplexer.hpp"
+#include <algorithm>
 
 namespace caf::io::network {
 

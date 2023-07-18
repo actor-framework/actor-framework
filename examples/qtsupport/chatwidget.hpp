@@ -1,11 +1,12 @@
 #pragma once
 
-#include <exception>
+#include "caf/net/lp/frame.hpp"
 
 #include "caf/all.hpp"
 #include "caf/async/spsc_buffer.hpp"
 #include "caf/mixin/actor_widget.hpp"
-#include "caf/net/lp/frame.hpp"
+
+#include <exception>
 
 CAF_PUSH_WARNINGS
 #include <QLineEdit>

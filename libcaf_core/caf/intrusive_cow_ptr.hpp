@@ -4,10 +4,10 @@
 
 #pragma once
 
+#include "caf/intrusive_ptr.hpp"
+
 #include <cstddef>
 #include <cstdint>
-
-#include "caf/intrusive_ptr.hpp"
 
 namespace caf {
 

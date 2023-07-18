@@ -4,14 +4,13 @@
 
 #pragma once
 
-#include <new>
-#include <type_traits>
-
+#include "caf/detail/type_traits.hpp"
 #include "caf/fwd.hpp"
 #include "caf/sec.hpp"
 #include "caf/unsafe_behavior_init.hpp"
 
-#include "caf/detail/type_traits.hpp"
+#include <new>
+#include <type_traits>
 
 namespace caf::detail {
 

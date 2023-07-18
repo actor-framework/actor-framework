@@ -6,16 +6,17 @@
 
 #include "caf/io/network/ip_endpoint.hpp"
 
-#include "io-test.hpp"
-
-#include <vector>
+#include "caf/io/middleman.hpp"
+#include "caf/io/network/interfaces.hpp"
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
-#include "caf/io/middleman.hpp"
-#include "caf/io/network/interfaces.hpp"
+
+#include "io-test.hpp"
+
+#include <vector>
 
 using namespace caf;
 using namespace caf::io;

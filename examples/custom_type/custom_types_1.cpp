@@ -1,12 +1,12 @@
 // Showcases how to add custom POD message types.
 
+#include "caf/all.hpp"
+
 #include <cassert>
 #include <iostream>
 #include <string>
 #include <utility>
 #include <vector>
-
-#include "caf/all.hpp"
 
 // --(rst-type-id-block-begin)--
 struct foo;

@@ -4,10 +4,11 @@
 
 #pragma once
 
-#include "caf/detail/net_export.hpp"
-#include "caf/ip_endpoint.hpp"
 #include "caf/net/socket.hpp"
 #include "caf/net/stream_socket.hpp"
+
+#include "caf/detail/net_export.hpp"
+#include "caf/ip_endpoint.hpp"
 #include "caf/timespan.hpp"
 #include "caf/uri.hpp"
 

@@ -2,6 +2,8 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
+#include "caf/all.hpp"
+
 #include <cassert>
 #include <cctype>
 #include <fstream>
@@ -9,8 +11,6 @@
 #include <string>
 #include <utility>
 #include <vector>
-
-#include "caf/all.hpp"
 
 struct entity;
 struct se_event;

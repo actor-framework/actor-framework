@@ -4,9 +4,10 @@
 
 #pragma once
 
+#include "caf/test/block_type.hpp"
+
 #include "caf/detail/source_location.hpp"
 #include "caf/detail/test_export.hpp"
-#include "caf/test/block_type.hpp"
 
 namespace caf::test {
 

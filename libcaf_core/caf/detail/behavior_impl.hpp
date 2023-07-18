@@ -4,11 +4,6 @@
 
 #pragma once
 
-#include <optional>
-#include <tuple>
-#include <type_traits>
-#include <utility>
-
 #include "caf/const_typed_message_view.hpp"
 #include "caf/detail/apply_args.hpp"
 #include "caf/detail/core_export.hpp"
@@ -26,6 +21,11 @@
 #include "caf/timespan.hpp"
 #include "caf/typed_message_view.hpp"
 #include "caf/typed_response_promise.hpp"
+
+#include <optional>
+#include <tuple>
+#include <type_traits>
+#include <utility>
 
 namespace caf {
 

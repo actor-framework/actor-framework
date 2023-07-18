@@ -4,13 +4,13 @@
 
 #pragma once
 
+#include "caf/abstract_group.hpp"
+#include "caf/group_module.hpp"
+
 #include <functional>
 #include <mutex>
 #include <set>
 #include <unordered_map>
-
-#include "caf/abstract_group.hpp"
-#include "caf/group_module.hpp"
 
 namespace caf::detail {
 
