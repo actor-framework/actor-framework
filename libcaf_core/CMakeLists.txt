@@ -112,7 +112,6 @@ caf_add_component(
     caf/detail/blocking_behavior.cpp
     caf/detail/config_consumer.cpp
     caf/detail/get_process_id.cpp
-    caf/detail/get_root_uuid.cpp
     caf/detail/glob_match.cpp
     caf/detail/group_tunnel.cpp
     caf/detail/invoke_result_visitor.cpp

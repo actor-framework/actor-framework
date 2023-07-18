@@ -35,7 +35,6 @@
 #include <memory>
 #include <utility>
 
-#include "caf/detail/get_mac_addresses.hpp"
 #include "caf/detail/print.hpp"
 #include "caf/io/network/ip_endpoint.hpp"
 #include "caf/raise_error.hpp"
