@@ -77,8 +77,7 @@ ptrdiff_t framing::consume(byte_span buffer, byte_span) {
   }
   // Handle control frames first, since these may not me fragmented,
   // and can arrive between regular message fragments.
-  if (detail::rfc6455::is_control_frame(hdr.opcode)
-      && hdr.opcode != detail::rfc6455::continuation_frame) {
+  if (detail::rfc6455::is_control_frame(hdr.opcode)) {
     if (!hdr.fin) {
       abort_and_shutdown(sec::protocol_error,
                          "received a fragmented WebSocket control message");
