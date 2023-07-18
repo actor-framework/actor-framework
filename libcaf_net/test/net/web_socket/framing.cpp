@@ -199,7 +199,6 @@ SCENARIO("the client closes the connection with a closing handshake") {
       CHECK(hdr.fin);
       auto result = net::web_socket::framing::decode_closing_payload(
         make_span(transport->output_buffer()).subspan(hdr_length));
-      MESSAGE(reinterpret_cast<char*>(transport->output_buffer().data()));
       CHECK(result);
       CHECK_EQ(result->first,
                static_cast<int>(net::web_socket::status::protocol_error));
