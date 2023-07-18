@@ -43,6 +43,11 @@ public:
   /// Stored as currently active opcode to mean "no opcode received yet".
   static constexpr size_t nil_code = 0xFF;
 
+  // -- static utility functions -----------------------------------------------
+
+  static expected<std::pair<uint16_t, const_byte_span>>
+  decode_closing_payload(const_byte_span payload);
+
   // -- constructors, destructors, and assignment operators --------------------
 
   /// Creates a new framing protocol for client mode.

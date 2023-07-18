@@ -10,6 +10,49 @@
 
 namespace caf::net::web_socket {
 
+// -- static utility functions -------------------------------------------------
+
+expected<std::pair<uint16_t, const_byte_span>>
+framing::decode_closing_payload(const_byte_span payload) {
+  if (payload.size() == 0)
+    return std::make_pair(0, payload);
+  if (payload.size() < 2)
+    return make_error(caf::sec::protocol_error,
+                      "no status flag in closing payload");
+  auto status = (std::to_integer<uint_fast16_t>(payload[0]) << 8)
+                + std::to_integer<uint16_t>(payload[1]);
+  if (!detail::rfc3629::valid(payload.subspan(2)))
+    return make_error(sec::protocol_error,
+                      "malformed text message in closing payload");
+  if (status < 1000 || status >= 5000)
+    return make_error(sec::protocol_error,
+                      "invalid status code in closing payload");
+  // statuses between 3000 and 4999 are allowed and application specific
+  if (status >= 3000 && status < 5000)
+    return std::make_pair(status, payload.subspan(2));
+  // statuses between 1000 and 2999 are protocol defined
+  web_socket::status status_code;
+  auto success = from_integer(status, status_code);
+  if (!success)
+    return make_error(sec::protocol_error,
+                      "invalid status code in closing payload");
+  switch (status_code) {
+    case status::normal_close:
+    case status::going_away:
+    case status::protocol_error:
+    case status::invalid_data:
+    case status::inconsistent_data:
+    case status::policy_violation:
+    case status::message_too_big:
+    case status::missing_extensions:
+    case status::unexpected_condition:
+      return std::make_pair(status, payload.subspan(2));
+    default:
+      return make_error(sec::protocol_error,
+                        "invalid status code in closing payload");
+  }
+}
+
 // -- octet_stream::upper_layer implementation ---------------------------------
 
 error framing::start(octet_stream::lower_layer* down) {
@@ -211,9 +254,16 @@ ptrdiff_t framing::handle(uint8_t opcode, byte_span payload,
                           size_t frame_size) {
   // opcodes are checked for validity when decoding the header
   switch (opcode) {
-    case detail::rfc6455::connection_close:
+    case detail::rfc6455::connection_close: {
+      auto result = decode_closing_payload(payload);
+      if (!result) {
+        abort(result.error());
+        shutdown(result.error());
+        return -1;
+      }
       abort_and_shutdown(sec::connection_closed);
       return -1;
+    }
     case detail::rfc6455::text_frame: {
       std::string_view text{reinterpret_cast<const char*>(payload.data()),
                             payload.size()};
