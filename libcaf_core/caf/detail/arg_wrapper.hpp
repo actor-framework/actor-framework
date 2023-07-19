@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include <string>
-
 #include "caf/deep_to_string.hpp"
+
+#include <string>
 
 namespace caf::detail {
 

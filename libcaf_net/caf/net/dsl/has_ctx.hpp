@@ -4,11 +4,12 @@
 
 #pragma once
 
-#include "caf/expected.hpp"
 #include "caf/net/ssl/connection.hpp"
 #include "caf/net/ssl/context.hpp"
 #include "caf/net/ssl/tcp_acceptor.hpp"
 #include "caf/net/stream_socket.hpp"
+
+#include "caf/expected.hpp"
 
 #include <memory>
 #include <variant>

@@ -4,15 +4,15 @@
 
 #include "caf/io/middleman_actor.hpp"
 
-#include <stdexcept>
-#include <tuple>
-#include <utility>
+#include "caf/io/middleman_actor_impl.hpp"
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/spawn_options.hpp"
 
-#include "caf/io/middleman_actor_impl.hpp"
+#include <stdexcept>
+#include <tuple>
+#include <utility>
 
 namespace caf::io {
 

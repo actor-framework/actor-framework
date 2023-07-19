@@ -6,10 +6,11 @@
 
 #include "caf/net/prometheus/server.hpp"
 
-#include "net-test.hpp"
-
 #include "caf/net/http/server.hpp"
+
 #include "caf/telemetry/metric_registry.hpp"
+
+#include "net-test.hpp"
 
 using namespace caf;
 using namespace caf::net;

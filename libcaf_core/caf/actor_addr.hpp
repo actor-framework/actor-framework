@@ -4,16 +4,16 @@
 
 #pragma once
 
-#include <cstddef>
-#include <cstdint>
-#include <functional>
-#include <type_traits>
-
 #include "caf/abstract_actor.hpp"
 #include "caf/actor_control_block.hpp"
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
+
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <type_traits>
 
 namespace caf {
 

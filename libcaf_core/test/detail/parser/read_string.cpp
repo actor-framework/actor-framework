@@ -6,13 +6,13 @@
 
 #include "caf/detail/parser/read_string.hpp"
 
+#include "caf/expected.hpp"
+#include "caf/parser_state.hpp"
+
 #include "core-test.hpp"
 
 #include <string>
 #include <string_view>
-
-#include "caf/expected.hpp"
-#include "caf/parser_state.hpp"
 
 using namespace caf;
 using namespace std::literals;

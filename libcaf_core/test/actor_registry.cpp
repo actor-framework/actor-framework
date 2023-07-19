@@ -6,10 +6,10 @@
 
 #include "caf/actor_registry.hpp"
 
-#include "core-test.hpp"
-
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
+
+#include "core-test.hpp"
 
 using namespace caf;
 

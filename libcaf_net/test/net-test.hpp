@@ -1,15 +1,17 @@
 #pragma once
 
-#include "caf/error.hpp"
+#include "caf/test/bdd_dsl.hpp"
+
 #include "caf/net/octet_stream/lower_layer.hpp"
 #include "caf/net/octet_stream/upper_layer.hpp"
 #include "caf/net/receive_policy.hpp"
 #include "caf/net/socket.hpp"
 #include "caf/net/web_socket/server.hpp"
+
+#include "caf/error.hpp"
 #include "caf/settings.hpp"
 #include "caf/span.hpp"
 #include "caf/string_view.hpp"
-#include "caf/test/bdd_dsl.hpp"
 
 /// Implements a trivial transport layer that stores the contents of all
 /// received frames in a respective output buffer, it can propagate the content

@@ -6,6 +6,13 @@
 
 #include "caf/io/basp_broker.hpp"
 
+#include "caf/io/all.hpp"
+#include "caf/io/network/interfaces.hpp"
+#include "caf/io/network/test_multiplexer.hpp"
+
+#include "caf/all.hpp"
+#include "caf/deep_to_string.hpp"
+
 #include "io-test.hpp"
 
 #include <array>
@@ -15,12 +22,6 @@
 #include <memory>
 #include <mutex>
 #include <vector>
-
-#include "caf/all.hpp"
-#include "caf/deep_to_string.hpp"
-#include "caf/io/all.hpp"
-#include "caf/io/network/interfaces.hpp"
-#include "caf/io/network/test_multiplexer.hpp"
 
 using namespace caf;
 using namespace caf::io;

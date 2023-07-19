@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include <vector>
-
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/implicit_conversions.hpp"
 #include "caf/detail/message_builder_element.hpp"
@@ -13,6 +11,8 @@
 #include "caf/detail/type_id_list_builder.hpp"
 #include "caf/fwd.hpp"
 #include "caf/message.hpp"
+
+#include <vector>
 
 namespace caf {
 

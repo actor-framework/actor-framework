@@ -4,17 +4,16 @@
 
 #define CAF_SUITE metaprogramming
 
+#include "caf/all.hpp"
+#include "caf/detail/int_list.hpp"
+#include "caf/detail/type_list.hpp"
+
 #include "core-test.hpp"
 
 #include <cstdint>
 #include <string>
 #include <type_traits>
 #include <typeinfo>
-
-#include "caf/all.hpp"
-
-#include "caf/detail/int_list.hpp"
-#include "caf/detail/type_list.hpp"
 
 using namespace caf;
 using namespace caf::detail;

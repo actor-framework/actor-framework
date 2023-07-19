@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include <atomic>
-#include <cstdint>
-#include <vector>
+#include "caf/io/basp/fwd.hpp"
+#include "caf/io/basp/header.hpp"
+#include "caf/io/basp/remote_message_handler.hpp"
 
 #include "caf/byte_buffer.hpp"
 #include "caf/config.hpp"
@@ -14,11 +14,12 @@
 #include "caf/detail/io_export.hpp"
 #include "caf/detail/worker_hub.hpp"
 #include "caf/fwd.hpp"
-#include "caf/io/basp/fwd.hpp"
-#include "caf/io/basp/header.hpp"
-#include "caf/io/basp/remote_message_handler.hpp"
 #include "caf/node_id.hpp"
 #include "caf/resumable.hpp"
+
+#include <atomic>
+#include <cstdint>
+#include <vector>
 
 namespace caf::io::basp {
 

@@ -4,14 +4,14 @@
 
 #pragma once
 
-#include <set>
-#include <string>
-
 #include "caf/actor_addr.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/execution_unit.hpp"
 #include "caf/infer_handle.hpp"
+
+#include <set>
+#include <string>
 
 namespace caf {
 

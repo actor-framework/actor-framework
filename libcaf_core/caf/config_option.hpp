@@ -4,14 +4,14 @@
 
 #pragma once
 
+#include "caf/detail/core_export.hpp"
+#include "caf/fwd.hpp"
+#include "caf/string_algorithms.hpp"
+
 #include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
-
-#include "caf/detail/core_export.hpp"
-#include "caf/fwd.hpp"
-#include "caf/string_algorithms.hpp"
 
 namespace caf {
 

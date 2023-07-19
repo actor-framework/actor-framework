@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include <string>
-#include <string_view>
-
 #include "caf/detail/as_mutable_ref.hpp"
 #include "caf/sec.hpp"
+
+#include <string>
+#include <string_view>
 
 namespace caf {
 

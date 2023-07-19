@@ -4,13 +4,13 @@
 
 #pragma once
 
-#include <type_traits>
-
 #include "caf/config.hpp"
 #include "caf/fwd.hpp"
 #include "caf/span.hpp"
 #include "caf/telemetry/gauge.hpp"
 #include "caf/telemetry/label.hpp"
+
+#include <type_traits>
 
 namespace caf::telemetry {
 

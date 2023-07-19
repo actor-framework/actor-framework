@@ -4,19 +4,20 @@
 
 #pragma once
 
-#include <chrono>
-#include <set>
-#include <string>
-#include <thread>
+#include "caf/net/fwd.hpp"
+#include "caf/net/multiplexer.hpp"
+#include "caf/net/socket_manager.hpp"
 
 #include "caf/actor_system.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/detail/type_list.hpp"
 #include "caf/fwd.hpp"
-#include "caf/net/fwd.hpp"
-#include "caf/net/multiplexer.hpp"
-#include "caf/net/socket_manager.hpp"
 #include "caf/scoped_actor.hpp"
+
+#include <chrono>
+#include <set>
+#include <string>
+#include <thread>
 
 namespace caf::net {
 

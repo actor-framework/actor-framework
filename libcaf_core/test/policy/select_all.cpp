@@ -6,13 +6,13 @@
 
 #include "caf/policy/select_all.hpp"
 
-#include "core-test.hpp"
-
-#include <tuple>
-
 #include "caf/actor_system.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/sec.hpp"
+
+#include "core-test.hpp"
+
+#include <tuple>
 
 using caf::policy::select_all;
 

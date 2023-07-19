@@ -4,10 +4,11 @@
 
 #pragma once
 
-#include "caf/fwd.hpp"
 #include "caf/io/abstract_broker.hpp"
 #include "caf/io/fwd.hpp"
 #include "caf/io/system_messages.hpp"
+
+#include "caf/fwd.hpp"
 #include "caf/mailbox_element.hpp"
 
 namespace caf::io {

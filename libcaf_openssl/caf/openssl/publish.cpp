@@ -4,13 +4,14 @@
 
 #include "caf/openssl/publish.hpp"
 
-#include <set>
+#include "caf/openssl/manager.hpp"
 
 #include "caf/actor_control_block.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/expected.hpp"
 #include "caf/function_view.hpp"
-#include "caf/openssl/manager.hpp"
+
+#include <set>
 
 namespace caf::openssl {
 

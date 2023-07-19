@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <cstdint>
+#include "caf/openssl/manager.hpp"
 
 #include "caf/actor_cast.hpp"
 #include "caf/actor_control_block.hpp"
@@ -14,7 +14,7 @@
 #include "caf/sec.hpp"
 #include "caf/typed_actor.hpp"
 
-#include "caf/openssl/manager.hpp"
+#include <cstdint>
 
 namespace caf::openssl {
 

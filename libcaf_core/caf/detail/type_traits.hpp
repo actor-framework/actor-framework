@@ -4,6 +4,12 @@
 
 #pragma once
 
+#include "caf/detail/is_complete.hpp"
+#include "caf/detail/is_one_of.hpp"
+#include "caf/detail/type_list.hpp"
+#include "caf/fwd.hpp"
+#include "caf/timestamp.hpp"
+
 #include <array>
 #include <chrono>
 #include <functional>
@@ -13,12 +19,6 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
-
-#include "caf/detail/is_complete.hpp"
-#include "caf/detail/is_one_of.hpp"
-#include "caf/detail/type_list.hpp"
-#include "caf/fwd.hpp"
-#include "caf/timestamp.hpp"
 
 #define CAF_HAS_MEMBER_TRAIT(name)                                             \
   template <class T>                                                           \

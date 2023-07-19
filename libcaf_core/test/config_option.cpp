@@ -6,13 +6,13 @@
 
 #include "caf/config_option.hpp"
 
-#include "core-test.hpp"
-
-#include <sstream>
-
 #include "caf/config_value.hpp"
 #include "caf/expected.hpp"
 #include "caf/make_config_option.hpp"
+
+#include "core-test.hpp"
+
+#include <sstream>
 
 using namespace caf;
 using namespace std::literals;

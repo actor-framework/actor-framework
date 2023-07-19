@@ -4,18 +4,18 @@
 
 #pragma once
 
-#include <algorithm>
-#include <chrono>
-#include <cstddef>
-#include <deque>
-#include <limits>
-
 #include "caf/config.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/test_actor_clock.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/scheduled_actor.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
+
+#include <algorithm>
+#include <chrono>
+#include <cstddef>
+#include <deque>
+#include <limits>
 
 namespace caf::scheduler {
 

@@ -6,14 +6,15 @@
 
 #include "caf/io/broker.hpp"
 
+#include "caf/io/all.hpp"
+
+#include "caf/all.hpp"
+
 #include "io-test.hpp"
 
 #include <cstdint>
 #include <iostream>
 #include <memory>
-
-#include "caf/all.hpp"
-#include "caf/io/all.hpp"
 
 using namespace caf;
 using namespace caf::io;

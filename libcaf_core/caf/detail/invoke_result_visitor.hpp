@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include <tuple>
-
 #include "caf/detail/apply_args.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/int_list.hpp"
@@ -16,6 +14,8 @@
 #include "caf/result.hpp"
 #include "caf/skip.hpp"
 #include "caf/unit.hpp"
+
+#include <tuple>
 
 namespace caf::detail {
 

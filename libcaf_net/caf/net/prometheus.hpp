@@ -4,10 +4,11 @@
 
 #pragma once
 
-#include "caf/actor_system.hpp"
-#include "caf/fwd.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/http/responder.hpp"
+
+#include "caf/actor_system.hpp"
+#include "caf/fwd.hpp"
 #include "caf/telemetry/collector/prometheus.hpp"
 #include "caf/telemetry/importer/process.hpp"
 

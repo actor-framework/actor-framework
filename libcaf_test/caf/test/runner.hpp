@@ -4,9 +4,10 @@
 
 #pragma once
 
+#include "caf/test/registry.hpp"
+
 #include "caf/detail/test_export.hpp"
 #include "caf/settings.hpp"
-#include "caf/test/registry.hpp"
 
 namespace caf::test {
 

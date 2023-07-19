@@ -4,6 +4,9 @@
 
 #include "caf/net/multiplexer.hpp"
 
+#include "caf/net/middleman.hpp"
+#include "caf/net/socket_manager.hpp"
+
 #include "caf/action.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/byte.hpp"
@@ -13,8 +16,6 @@
 #include "caf/expected.hpp"
 #include "caf/logger.hpp"
 #include "caf/make_counted.hpp"
-#include "caf/net/middleman.hpp"
-#include "caf/net/socket_manager.hpp"
 #include "caf/sec.hpp"
 #include "caf/span.hpp"
 

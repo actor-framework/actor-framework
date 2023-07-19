@@ -4,14 +4,15 @@
 
 #include "caf/net/tcp_stream_socket.hpp"
 
+#include "caf/net/ip.hpp"
+#include "caf/net/socket_guard.hpp"
+
 #include "caf/detail/net_syscall.hpp"
 #include "caf/detail/sockaddr_members.hpp"
 #include "caf/detail/socket_sys_includes.hpp"
 #include "caf/expected.hpp"
 #include "caf/ipv4_address.hpp"
 #include "caf/logger.hpp"
-#include "caf/net/ip.hpp"
-#include "caf/net/socket_guard.hpp"
 #include "caf/sec.hpp"
 
 #include <algorithm>

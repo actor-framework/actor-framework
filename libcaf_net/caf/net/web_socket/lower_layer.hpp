@@ -4,10 +4,11 @@
 
 #pragma once
 
-#include "caf/detail/net_export.hpp"
-#include "caf/fwd.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/generic_lower_layer.hpp"
+
+#include "caf/detail/net_export.hpp"
+#include "caf/fwd.hpp"
 
 #include <string_view>
 

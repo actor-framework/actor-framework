@@ -4,10 +4,11 @@
 
 #pragma once
 
-#include "caf/detail/test_export.hpp"
 #include "caf/test/block_type.hpp"
 #include "caf/test/factory.hpp"
 #include "caf/test/fwd.hpp"
+
+#include "caf/detail/test_export.hpp"
 #include "caf/unordered_flat_map.hpp"
 
 #include <cstddef>

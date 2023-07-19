@@ -4,16 +4,16 @@
 
 #pragma once
 
-#include <chrono>
-#include <cstddef>
-#include <memory>
-
 #include "caf/actor_control_block.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/intrusive/singly_linked.hpp"
 #include "caf/message.hpp"
 #include "caf/message_id.hpp"
 #include "caf/tracing_data.hpp"
+
+#include <chrono>
+#include <cstddef>
+#include <memory>
 
 namespace caf {
 

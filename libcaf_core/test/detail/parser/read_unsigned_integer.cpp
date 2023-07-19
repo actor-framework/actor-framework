@@ -6,11 +6,11 @@
 
 #include "caf/detail/parser/read_unsigned_integer.hpp"
 
+#include "caf/parser_state.hpp"
+
 #include "core-test.hpp"
 
 #include <string_view>
-
-#include "caf/parser_state.hpp"
 
 using namespace caf;
 

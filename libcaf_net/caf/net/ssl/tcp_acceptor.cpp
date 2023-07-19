@@ -4,9 +4,10 @@
 
 #include "caf/net/ssl/tcp_acceptor.hpp"
 
-#include "caf/expected.hpp"
 #include "caf/net/ssl/connection.hpp"
 #include "caf/net/tcp_stream_socket.hpp"
+
+#include "caf/expected.hpp"
 
 namespace caf::net::ssl {
 

@@ -4,8 +4,6 @@
 
 #include "caf/message.hpp"
 
-#include <utility>
-
 #include "caf/actor_system.hpp"
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
@@ -16,6 +14,8 @@
 #include "caf/message_handler.hpp"
 #include "caf/serializer.hpp"
 #include "caf/string_algorithms.hpp"
+
+#include <utility>
 
 #define GUARDED(statement)                                                     \
   if (!(statement))                                                            \

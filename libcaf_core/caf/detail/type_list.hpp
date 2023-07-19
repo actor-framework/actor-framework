@@ -4,13 +4,13 @@
 
 #pragma once
 
-#include <cstddef>
-#include <type_traits>
-#include <typeinfo>
-
 #include "caf/fwd.hpp"
 #include "caf/none.hpp"
 #include "caf/unit.hpp"
+
+#include <cstddef>
+#include <type_traits>
+#include <typeinfo>
 
 namespace caf::detail {
 

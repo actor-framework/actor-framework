@@ -4,12 +4,12 @@
 
 #pragma once
 
-#include <algorithm>
-#include <map>
-
 #include "caf/action.hpp"
 #include "caf/actor_clock.hpp"
 #include "caf/detail/core_export.hpp"
+
+#include <algorithm>
+#include <map>
 
 namespace caf::detail {
 

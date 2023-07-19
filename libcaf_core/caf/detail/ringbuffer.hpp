@@ -4,12 +4,12 @@
 
 #pragma once
 
+#include "caf/config.hpp"
+
 #include <array>
 #include <atomic>
 #include <condition_variable>
 #include <mutex>
-
-#include "caf/config.hpp"
 
 namespace caf::detail {
 

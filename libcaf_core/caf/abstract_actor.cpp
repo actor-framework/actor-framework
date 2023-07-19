@@ -2,14 +2,8 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#include "caf/config.hpp"
-
-#include <atomic>
-#include <map>
-#include <mutex>
-#include <stdexcept>
-
 #include "caf/abstract_actor.hpp"
+
 #include "caf/actor_addr.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/actor_control_block.hpp"
@@ -22,6 +16,11 @@
 #include "caf/mailbox_element.hpp"
 #include "caf/message.hpp"
 #include "caf/system_messages.hpp"
+
+#include <atomic>
+#include <map>
+#include <mutex>
+#include <stdexcept>
 
 namespace caf {
 

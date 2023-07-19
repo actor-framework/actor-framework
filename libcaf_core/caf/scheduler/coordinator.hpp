@@ -5,16 +5,15 @@
 #pragma once
 
 #include "caf/config.hpp"
+#include "caf/detail/set_thread_name.hpp"
+#include "caf/detail/thread_safe_actor_clock.hpp"
+#include "caf/scheduler/abstract_coordinator.hpp"
+#include "caf/scheduler/worker.hpp"
 
 #include <condition_variable>
 #include <limits>
 #include <memory>
 #include <thread>
-
-#include "caf/detail/set_thread_name.hpp"
-#include "caf/detail/thread_safe_actor_clock.hpp"
-#include "caf/scheduler/abstract_coordinator.hpp"
-#include "caf/scheduler/worker.hpp"
 
 namespace caf::scheduler {
 

@@ -4,10 +4,11 @@
 
 #pragma once
 
-#include "caf/detail/net_export.hpp"
 #include "caf/net/pipe_socket.hpp"
 #include "caf/net/socket_event_layer.hpp"
 #include "caf/net/socket_manager.hpp"
+
+#include "caf/detail/net_export.hpp"
 
 #include <array>
 #include <cstddef>

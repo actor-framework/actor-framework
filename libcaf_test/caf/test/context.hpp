@@ -4,10 +4,11 @@
 
 #pragma once
 
-#include "caf/detail/source_location.hpp"
-#include "caf/detail/test_export.hpp"
 #include "caf/test/block.hpp"
 #include "caf/test/fwd.hpp"
+
+#include "caf/detail/source_location.hpp"
+#include "caf/detail/test_export.hpp"
 
 #include <map>
 #include <memory>

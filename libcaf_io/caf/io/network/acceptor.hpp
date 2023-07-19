@@ -4,12 +4,13 @@
 
 #pragma once
 
-#include "caf/detail/io_export.hpp"
 #include "caf/io/fwd.hpp"
 #include "caf/io/network/acceptor_manager.hpp"
 #include "caf/io/network/event_handler.hpp"
 #include "caf/io/network/native_socket.hpp"
 #include "caf/io/network/operation.hpp"
+
+#include "caf/detail/io_export.hpp"
 #include "caf/logger.hpp"
 #include "caf/ref_counted.hpp"
 

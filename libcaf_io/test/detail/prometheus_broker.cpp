@@ -6,10 +6,11 @@
 
 #include "caf/detail/prometheus_broker.hpp"
 
-#include "io-test.hpp"
-
 #include "caf/io/network/default_multiplexer.hpp"
+
 #include "caf/policy/tcp.hpp"
+
+#include "io-test.hpp"
 
 using namespace caf;
 using namespace caf::io;

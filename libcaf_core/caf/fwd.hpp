@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include "caf/detail/core_export.hpp"
+
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -11,8 +13,6 @@
 #include <utility>
 #include <variant>
 #include <vector>
-
-#include "caf/detail/core_export.hpp"
 
 namespace caf {
 

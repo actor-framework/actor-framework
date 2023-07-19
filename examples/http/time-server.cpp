@@ -1,12 +1,13 @@
 // Simple HTTP server that tells the time.
 
+#include "caf/net/http/with.hpp"
+#include "caf/net/middleman.hpp"
+
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/caf_main.hpp"
 #include "caf/deep_to_string.hpp"
 #include "caf/event_based_actor.hpp"
-#include "caf/net/http/with.hpp"
-#include "caf/net/middleman.hpp"
 #include "caf/scheduled_actor/flow.hpp"
 
 #include <iostream>

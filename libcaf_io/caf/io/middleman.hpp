@@ -4,13 +4,9 @@
 
 #pragma once
 
-#include <chrono>
-#include <list>
-#include <map>
-#include <memory>
-#include <mutex>
-#include <thread>
-#include <vector>
+#include "caf/io/broker.hpp"
+#include "caf/io/middleman_actor.hpp"
+#include "caf/io/network/multiplexer.hpp"
 
 #include "caf/actor_system.hpp"
 #include "caf/config_value.hpp"
@@ -19,13 +15,18 @@
 #include "caf/detail/unique_function.hpp"
 #include "caf/expected.hpp"
 #include "caf/fwd.hpp"
-#include "caf/io/broker.hpp"
-#include "caf/io/middleman_actor.hpp"
-#include "caf/io/network/multiplexer.hpp"
 #include "caf/node_id.hpp"
 #include "caf/proxy_registry.hpp"
 #include "caf/send.hpp"
 #include "caf/timespan.hpp"
+
+#include <chrono>
+#include <list>
+#include <map>
+#include <memory>
+#include <mutex>
+#include <thread>
+#include <vector>
 
 namespace caf::io {
 

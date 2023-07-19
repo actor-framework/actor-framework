@@ -6,9 +6,9 @@
 
 #include "caf/detail/private_thread_pool.hpp"
 
-#include "core-test.hpp"
-
 #include "caf/detail/private_thread.hpp"
+
+#include "core-test.hpp"
 
 using namespace caf;
 

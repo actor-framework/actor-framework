@@ -4,13 +4,14 @@
 
 #pragma once
 
+#include "caf/net/fwd.hpp"
+#include "caf/net/pipe_socket.hpp"
+#include "caf/net/socket.hpp"
+
 #include "caf/action.hpp"
 #include "caf/async/execution_context.hpp"
 #include "caf/detail/atomic_ref_counted.hpp"
 #include "caf/detail/net_export.hpp"
-#include "caf/net/fwd.hpp"
-#include "caf/net/pipe_socket.hpp"
-#include "caf/net/socket.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/unordered_flat_map.hpp"
 

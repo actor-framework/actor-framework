@@ -4,8 +4,9 @@
 
 #include "caf/net/web_socket/lower_layer.hpp"
 
-#include "caf/error.hpp"
 #include "caf/net/web_socket/status.hpp"
+
+#include "caf/error.hpp"
 #include "caf/sec.hpp"
 
 namespace caf::net::web_socket {

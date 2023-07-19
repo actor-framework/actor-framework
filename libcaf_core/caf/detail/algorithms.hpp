@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include <vector>
-
 #include "caf/detail/type_traits.hpp"
+
+#include <vector>
 
 namespace caf::detail {
 

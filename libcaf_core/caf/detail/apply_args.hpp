@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include <utility>
-
 #include "caf/detail/int_list.hpp"
 #include "caf/detail/type_list.hpp"
+
+#include <utility>
 
 namespace caf::detail {
 

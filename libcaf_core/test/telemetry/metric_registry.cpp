@@ -6,12 +6,12 @@
 
 #include "caf/telemetry/metric_registry.hpp"
 
-#include "core-test.hpp"
-
 #include "caf/telemetry/counter.hpp"
 #include "caf/telemetry/gauge.hpp"
 #include "caf/telemetry/label_view.hpp"
 #include "caf/telemetry/metric_type.hpp"
+
+#include "core-test.hpp"
 
 using namespace caf;
 using namespace caf::telemetry;

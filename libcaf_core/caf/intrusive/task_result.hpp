@@ -4,10 +4,10 @@
 
 #pragma once
 
+#include "caf/fwd.hpp"
+
 #include <string>
 #include <type_traits>
-
-#include "caf/fwd.hpp"
 
 namespace caf::intrusive {
 

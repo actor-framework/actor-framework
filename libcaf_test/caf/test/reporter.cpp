@@ -4,14 +4,15 @@
 
 #include "caf/test/reporter.hpp"
 
-#include "caf/detail/format.hpp"
-#include "caf/detail/log_level.hpp"
-#include "caf/raise_error.hpp"
-#include "caf/term.hpp"
 #include "caf/test/binary_predicate.hpp"
 #include "caf/test/block.hpp"
 #include "caf/test/block_type.hpp"
 #include "caf/test/context.hpp"
+
+#include "caf/detail/format.hpp"
+#include "caf/detail/log_level.hpp"
+#include "caf/raise_error.hpp"
+#include "caf/term.hpp"
 
 #include <iostream>
 

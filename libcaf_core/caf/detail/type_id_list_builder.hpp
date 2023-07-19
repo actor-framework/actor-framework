@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include <cstdlib>
-
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/type_id.hpp"
+
+#include <cstdlib>
 
 namespace caf::detail {
 

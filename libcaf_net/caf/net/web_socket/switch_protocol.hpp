@@ -4,10 +4,11 @@
 
 #pragma once
 
-#include "caf/detail/type_list.hpp"
 #include "caf/net/web_socket/acceptor.hpp"
 #include "caf/net/web_socket/default_trait.hpp"
 #include "caf/net/web_socket/server_factory.hpp"
+
+#include "caf/detail/type_list.hpp"
 
 #include <memory>
 

@@ -6,10 +6,10 @@
 
 #include "caf/telemetry/collector/prometheus.hpp"
 
-#include "core-test.hpp"
-
 #include "caf/telemetry/metric_registry.hpp"
 #include "caf/telemetry/metric_type.hpp"
+
+#include "core-test.hpp"
 
 using namespace caf;
 using namespace caf::telemetry;

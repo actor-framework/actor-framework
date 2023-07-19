@@ -4,9 +4,10 @@
 
 #pragma once
 
-#include "caf/detail/net_export.hpp"
 #include "caf/net/octet_stream/transport.hpp"
 #include "caf/net/ssl/connection.hpp"
+
+#include "caf/detail/net_export.hpp"
 
 namespace caf::net::ssl {
 

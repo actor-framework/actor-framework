@@ -4,12 +4,6 @@
 
 #pragma once
 
-#include <atomic>
-#include <cstddef>
-#include <cstdint>
-#include <cstdlib>
-#include <memory>
-
 #include "caf/async/fwd.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/core_export.hpp"
@@ -18,6 +12,12 @@
 #include "caf/raise_error.hpp"
 #include "caf/span.hpp"
 #include "caf/type_id.hpp"
+
+#include <atomic>
+#include <cstddef>
+#include <cstdint>
+#include <cstdlib>
+#include <memory>
 
 #ifdef CAF_CLANG
 #  pragma clang diagnostic push

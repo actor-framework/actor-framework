@@ -6,13 +6,13 @@
 
 #include "caf/mailbox_element.hpp"
 
+#include "caf/all.hpp"
+
 #include "core-test.hpp"
 
 #include <string>
 #include <tuple>
 #include <vector>
-
-#include "caf/all.hpp"
 
 using std::make_tuple;
 using std::string;

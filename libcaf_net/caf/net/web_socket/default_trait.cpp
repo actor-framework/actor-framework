@@ -4,9 +4,10 @@
 
 #include "caf/net/web_socket/default_trait.hpp"
 
+#include "caf/net/web_socket/frame.hpp"
+
 #include "caf/error.hpp"
 #include "caf/logger.hpp"
-#include "caf/net/web_socket/frame.hpp"
 #include "caf/sec.hpp"
 
 namespace caf::net::web_socket {

@@ -4,17 +4,6 @@
 
 #include "caf/scheduler/abstract_coordinator.hpp"
 
-#include <algorithm>
-#include <atomic>
-#include <chrono>
-#include <condition_variable>
-#include <fstream>
-#include <ios>
-#include <iostream>
-#include <memory>
-#include <thread>
-#include <unordered_map>
-
 #include "caf/actor_ostream.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
@@ -28,6 +17,17 @@
 #include "caf/scoped_actor.hpp"
 #include "caf/send.hpp"
 #include "caf/system_messages.hpp"
+
+#include <algorithm>
+#include <atomic>
+#include <chrono>
+#include <condition_variable>
+#include <fstream>
+#include <ios>
+#include <iostream>
+#include <memory>
+#include <thread>
+#include <unordered_map>
 
 namespace caf::scheduler {
 

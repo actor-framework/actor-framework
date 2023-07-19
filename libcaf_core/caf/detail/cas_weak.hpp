@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include <atomic>
-
 #include "caf/config.hpp"
+
+#include <atomic>
 
 namespace caf::detail {
 

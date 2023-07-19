@@ -4,14 +4,14 @@
 
 #pragma once
 
-#include <string_view>
-#include <type_traits>
-#include <utility>
-
 #include "caf/detail/as_mutable_ref.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/error.hpp"
 #include "caf/inspector_access.hpp"
+
+#include <string_view>
+#include <type_traits>
+#include <utility>
 
 namespace caf {
 

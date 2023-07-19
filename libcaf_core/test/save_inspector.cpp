@@ -6,16 +6,15 @@
 
 #include "caf/save_inspector.hpp"
 
+#include "caf/message.hpp"
+#include "caf/serializer.hpp"
+
 #include "core-test.hpp"
+#include "inspector-tests.hpp"
 
 #include <cstdint>
 #include <string>
 #include <vector>
-
-#include "caf/message.hpp"
-#include "caf/serializer.hpp"
-
-#include "inspector-tests.hpp"
 
 using namespace caf;
 

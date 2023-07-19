@@ -4,13 +4,13 @@
 
 #pragma once
 
-#include <string>
-#include <string_view>
-
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/hash/fnv.hpp"
+
+#include <string>
+#include <string_view>
 
 namespace caf::telemetry {
 

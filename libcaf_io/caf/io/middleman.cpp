@@ -4,12 +4,12 @@
 
 #include "caf/io/middleman.hpp"
 
-#include <cerrno>
-#include <cstring>
-#include <memory>
-#include <sstream>
-#include <stdexcept>
-#include <tuple>
+#include "caf/io/basp/header.hpp"
+#include "caf/io/basp_broker.hpp"
+#include "caf/io/network/default_multiplexer.hpp"
+#include "caf/io/network/interfaces.hpp"
+#include "caf/io/network/test_multiplexer.hpp"
+#include "caf/io/system_messages.hpp"
 
 #include "caf/actor.hpp"
 #include "caf/actor_proxy.hpp"
@@ -25,12 +25,6 @@
 #include "caf/function_view.hpp"
 #include "caf/group_module.hpp"
 #include "caf/init_global_meta_objects.hpp"
-#include "caf/io/basp/header.hpp"
-#include "caf/io/basp_broker.hpp"
-#include "caf/io/network/default_multiplexer.hpp"
-#include "caf/io/network/interfaces.hpp"
-#include "caf/io/network/test_multiplexer.hpp"
-#include "caf/io/system_messages.hpp"
 #include "caf/logger.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/node_id.hpp"
@@ -41,6 +35,13 @@
 #include "caf/send.hpp"
 #include "caf/thread_owner.hpp"
 #include "caf/typed_event_based_actor.hpp"
+
+#include <cerrno>
+#include <cstring>
+#include <memory>
+#include <sstream>
+#include <stdexcept>
+#include <tuple>
 
 #ifdef CAF_WINDOWS
 #  include <fcntl.h>

@@ -4,17 +4,19 @@
 
 #define CAF_SUITE openssl.dynamic_remote_actor
 
+#include "caf/io/all.hpp"
+
+#include "caf/openssl/all.hpp"
+
+#include "caf/all.hpp"
+
 #include "openssl-test.hpp"
+#include <signal.h>
 
 #include <algorithm>
-#include <signal.h>
 #include <sstream>
 #include <utility>
 #include <vector>
-
-#include "caf/all.hpp"
-#include "caf/io/all.hpp"
-#include "caf/openssl/all.hpp"
 
 using namespace caf;
 

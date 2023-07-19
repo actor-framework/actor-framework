@@ -4,14 +4,6 @@
 
 #include "caf/node_id.hpp"
 
-#include <cstdio>
-#include <cstring>
-#include <ctype.h>
-#include <iterator>
-#include <random>
-#include <sstream>
-#include <string_view>
-
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/config.hpp"
@@ -27,6 +19,15 @@
 #include "caf/sec.hpp"
 #include "caf/serializer.hpp"
 #include "caf/string_algorithms.hpp"
+
+#include <ctype.h>
+
+#include <cstdio>
+#include <cstring>
+#include <iterator>
+#include <random>
+#include <sstream>
+#include <string_view>
 
 namespace {
 

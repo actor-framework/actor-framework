@@ -4,11 +4,12 @@
 
 #pragma once
 
-#include "caf/detail/io_export.hpp"
 #include "caf/io/doorman.hpp"
 #include "caf/io/fwd.hpp"
 #include "caf/io/network/acceptor_impl.hpp"
 #include "caf/io/network/native_socket.hpp"
+
+#include "caf/detail/io_export.hpp"
 #include "caf/policy/tcp.hpp"
 
 namespace caf::io::network {

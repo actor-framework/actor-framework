@@ -4,16 +4,16 @@
 
 #pragma once
 
-#include <functional>
-#include <new>
-#include <utility>
-
 #include "caf/detail/core_export.hpp"
 #include "caf/expected.hpp"
 #include "caf/response_type.hpp"
 #include "caf/scoped_actor.hpp"
 #include "caf/timespan.hpp"
 #include "caf/typed_actor.hpp"
+
+#include <functional>
+#include <new>
+#include <utility>
 
 namespace caf {
 

@@ -4,10 +4,6 @@
 
 #pragma once
 
-#include <chrono>
-#include <cstdint>
-#include <string>
-
 #include "caf/config.hpp"
 #include "caf/detail/parser/chars.hpp"
 #include "caf/detail/parser/is_char.hpp"
@@ -17,6 +13,10 @@
 #include "caf/none.hpp"
 #include "caf/pec.hpp"
 #include "caf/timestamp.hpp"
+
+#include <chrono>
+#include <cstdint>
+#include <string>
 
 CAF_PUSH_UNUSED_LABEL_WARNING
 

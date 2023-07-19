@@ -4,8 +4,9 @@
 
 #pragma once
 
-#include "caf/detail/test_export.hpp"
 #include "caf/test/block.hpp"
+
+#include "caf/detail/test_export.hpp"
 
 namespace caf::test {
 

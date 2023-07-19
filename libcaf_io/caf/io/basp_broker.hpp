@@ -4,6 +4,18 @@
 
 #pragma once
 
+#include "caf/io/basp/all.hpp"
+#include "caf/io/broker.hpp"
+#include "caf/io/typed_broker.hpp"
+
+#include "caf/binary_deserializer.hpp"
+#include "caf/binary_serializer.hpp"
+#include "caf/byte_buffer.hpp"
+#include "caf/detail/io_export.hpp"
+#include "caf/forwarding_actor_proxy.hpp"
+#include "caf/proxy_registry.hpp"
+#include "caf/stateful_actor.hpp"
+
 #include <future>
 #include <map>
 #include <set>
@@ -12,17 +24,6 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-
-#include "caf/binary_deserializer.hpp"
-#include "caf/binary_serializer.hpp"
-#include "caf/byte_buffer.hpp"
-#include "caf/detail/io_export.hpp"
-#include "caf/forwarding_actor_proxy.hpp"
-#include "caf/io/basp/all.hpp"
-#include "caf/io/broker.hpp"
-#include "caf/io/typed_broker.hpp"
-#include "caf/proxy_registry.hpp"
-#include "caf/stateful_actor.hpp"
 
 namespace caf::io {
 

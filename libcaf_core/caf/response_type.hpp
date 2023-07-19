@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include <tuple>
-
 #include "caf/detail/type_list.hpp"
 #include "caf/fwd.hpp"
+
+#include <tuple>
 
 namespace caf {
 

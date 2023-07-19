@@ -3,6 +3,7 @@
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
 #include "caf/group_manager.hpp"
+
 #include "caf/all.hpp"
 #include "caf/deserializer.hpp"
 #include "caf/detail/local_group_module.hpp"

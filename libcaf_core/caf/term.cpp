@@ -4,16 +4,17 @@
 
 #include "caf/term.hpp"
 
-#include <iostream>
-
 #include "caf/config.hpp"
+
+#include <iostream>
 
 #ifdef CAF_WINDOWS
 #  include <io.h>
 #  include <windows.h>
 #else
-#  include <cstdio>
 #  include <unistd.h>
+
+#  include <cstdio>
 #endif
 
 namespace caf {

@@ -6,16 +6,17 @@
 
 #include "caf/net/ssl/transport.hpp"
 
-#include "net-test.hpp"
-#include "pem.hpp"
-
-#include "caf/binary_deserializer.hpp"
-#include "caf/binary_serializer.hpp"
-#include "caf/byte_buffer.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/socket_manager.hpp"
 #include "caf/net/ssl/context.hpp"
 #include "caf/net/stream_socket.hpp"
+
+#include "caf/binary_deserializer.hpp"
+#include "caf/binary_serializer.hpp"
+#include "caf/byte_buffer.hpp"
+
+#include "net-test.hpp"
+#include "pem.hpp"
 
 using namespace caf;
 using namespace caf::net;

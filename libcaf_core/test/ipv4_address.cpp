@@ -6,9 +6,9 @@
 
 #include "caf/ipv4_address.hpp"
 
-#include "core-test.hpp"
-
 #include "caf/detail/network_order.hpp"
+
+#include "core-test.hpp"
 
 using caf::detail::to_network_order;
 

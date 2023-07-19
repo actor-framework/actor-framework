@@ -1,10 +1,10 @@
-#include <string>
-#include <string_view>
-#include <utility>
-
 #include "caf/all.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/scheduled_actor/flow.hpp"
+
+#include <string>
+#include <string_view>
+#include <utility>
 
 CAF_PUSH_WARNINGS
 #include <QInputDialog>

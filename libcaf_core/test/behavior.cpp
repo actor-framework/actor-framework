@@ -4,16 +4,16 @@
 
 #define CAF_SUITE behavior
 
-#include "caf/config.hpp"
-
-#include "core-test.hpp"
+#include "caf/behavior.hpp"
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
-#include "caf/behavior.hpp"
+#include "caf/config.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/message_handler.hpp"
 #include "caf/send.hpp"
+
+#include "core-test.hpp"
 
 #include <functional>
 #include <string_view>

@@ -7,6 +7,7 @@
 #include "caf/net/octet_stream/errc.hpp"
 #include "caf/net/socket_manager.hpp"
 #include "caf/net/ssl/connection.hpp"
+
 #include "caf/settings.hpp"
 
 CAF_PUSH_WARNINGS

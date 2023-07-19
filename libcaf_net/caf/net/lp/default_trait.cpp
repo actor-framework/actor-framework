@@ -4,9 +4,10 @@
 
 #include "caf/net/lp/default_trait.hpp"
 
+#include "caf/net/lp/frame.hpp"
+
 #include "caf/error.hpp"
 #include "caf/logger.hpp"
-#include "caf/net/lp/frame.hpp"
 #include "caf/sec.hpp"
 
 namespace caf::net::lp {

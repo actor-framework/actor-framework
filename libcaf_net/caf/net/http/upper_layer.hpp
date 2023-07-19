@@ -4,10 +4,11 @@
 
 #pragma once
 
-#include "caf/error.hpp"
-#include "caf/fwd.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/generic_upper_layer.hpp"
+
+#include "caf/error.hpp"
+#include "caf/fwd.hpp"
 
 namespace caf::net::http {
 

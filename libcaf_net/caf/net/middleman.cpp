@@ -4,15 +4,16 @@
 
 #include "caf/net/middleman.hpp"
 
-#include "caf/actor_system_config.hpp"
-#include "caf/detail/set_thread_name.hpp"
-#include "caf/expected.hpp"
 #include "caf/net/http/with.hpp"
 #include "caf/net/prometheus.hpp"
 #include "caf/net/ssl/startup.hpp"
 #include "caf/net/tcp_accept_socket.hpp"
 #include "caf/net/tcp_stream_socket.hpp"
 #include "caf/net/this_host.hpp"
+
+#include "caf/actor_system_config.hpp"
+#include "caf/detail/set_thread_name.hpp"
+#include "caf/expected.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/sec.hpp"
 #include "caf/send.hpp"

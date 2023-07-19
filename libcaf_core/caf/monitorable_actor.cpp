@@ -7,15 +7,13 @@
 #include "caf/actor_cast.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/default_attachable.hpp"
+#include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/logger.hpp"
 #include "caf/message_handler.hpp"
+#include "caf/scheduler/abstract_coordinator.hpp"
 #include "caf/sec.hpp"
 #include "caf/system_messages.hpp"
 #include "caf/typed_message_view.hpp"
-
-#include "caf/detail/sync_request_bouncer.hpp"
-
-#include "caf/scheduler/abstract_coordinator.hpp"
 
 namespace caf {
 

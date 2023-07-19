@@ -4,14 +4,14 @@
 
 #pragma once
 
-#include <cstddef>
-
 #include "caf/detail/double_ended_queue.hpp"
 #include "caf/detail/set_thread_name.hpp"
 #include "caf/execution_unit.hpp"
 #include "caf/logger.hpp"
 #include "caf/resumable.hpp"
 #include "caf/thread_owner.hpp"
+
+#include <cstddef>
 
 namespace caf::scheduler {
 

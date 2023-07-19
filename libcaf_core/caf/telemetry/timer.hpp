@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include <chrono>
-
 #include "caf/telemetry/histogram.hpp"
+
+#include <chrono>
 
 namespace caf::telemetry {
 

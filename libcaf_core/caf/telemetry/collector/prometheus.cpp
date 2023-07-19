@@ -4,15 +4,15 @@
 
 #include "caf/telemetry/collector/prometheus.hpp"
 
-#include <cmath>
-#include <ctime>
-#include <type_traits>
-
 #include "caf/telemetry/dbl_gauge.hpp"
 #include "caf/telemetry/int_gauge.hpp"
 #include "caf/telemetry/metric.hpp"
 #include "caf/telemetry/metric_family.hpp"
 #include "caf/telemetry/metric_registry.hpp"
+
+#include <cmath>
+#include <ctime>
+#include <type_traits>
 
 using namespace std::literals;
 

@@ -5,6 +5,7 @@
 #define CAF_SUITE dynamic_spawn
 
 #include "caf/actor_system.hpp"
+#include "caf/all.hpp"
 
 #include "core-test.hpp"
 
@@ -13,8 +14,6 @@
 #include <functional>
 #include <iostream>
 #include <stack>
-
-#include "caf/all.hpp"
 
 using namespace caf;
 

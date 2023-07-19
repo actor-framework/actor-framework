@@ -1,8 +1,8 @@
 #define CAF_TEST_NO_MAIN
 
-#include "caf/test/unit_test_impl.hpp"
-
 #include "core-test.hpp"
+
+#include "caf/test/unit_test_impl.hpp"
 
 #include <atomic>
 

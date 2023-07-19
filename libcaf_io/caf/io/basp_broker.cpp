@@ -4,8 +4,10 @@
 
 #include "caf/io/basp_broker.hpp"
 
-#include <chrono>
-#include <limits>
+#include "caf/io/basp/all.hpp"
+#include "caf/io/connection_helper.hpp"
+#include "caf/io/middleman.hpp"
+#include "caf/io/network/interfaces.hpp"
 
 #include "caf/actor_registry.hpp"
 #include "caf/actor_system_config.hpp"
@@ -14,14 +16,13 @@
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/forwarding_actor_proxy.hpp"
-#include "caf/io/basp/all.hpp"
-#include "caf/io/connection_helper.hpp"
-#include "caf/io/middleman.hpp"
-#include "caf/io/network/interfaces.hpp"
 #include "caf/logger.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/sec.hpp"
 #include "caf/send.hpp"
+
+#include <chrono>
+#include <limits>
 
 namespace {
 

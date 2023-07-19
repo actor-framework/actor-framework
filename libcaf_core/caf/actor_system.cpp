@@ -4,8 +4,6 @@
 
 #include "caf/actor_system.hpp"
 
-#include <unordered_set>
-
 #include "caf/actor.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/defaults.hpp"
@@ -19,6 +17,8 @@
 #include "caf/scheduler/test_coordinator.hpp"
 #include "caf/send.hpp"
 #include "caf/stateful_actor.hpp"
+
+#include <unordered_set>
 
 namespace caf {
 

@@ -5,6 +5,9 @@
 #pragma once
 
 #include "caf/config.hpp"
+#include "caf/intrusive/inbox_result.hpp"
+#include "caf/intrusive/lifo_inbox.hpp"
+#include "caf/intrusive/new_round_result.hpp"
 
 #include <atomic>
 #include <condition_variable> // std::cv_status
@@ -13,12 +16,6 @@
 #include <list>
 #include <memory>
 #include <mutex>
-
-#include "caf/config.hpp"
-
-#include "caf/intrusive/inbox_result.hpp"
-#include "caf/intrusive/lifo_inbox.hpp"
-#include "caf/intrusive/new_round_result.hpp"
 
 namespace caf::intrusive {
 

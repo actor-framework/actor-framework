@@ -4,10 +4,11 @@
 
 #include "caf/net/octet_stream/transport.hpp"
 
-#include "caf/defaults.hpp"
 #include "caf/net/octet_stream/errc.hpp"
 #include "caf/net/receive_policy.hpp"
 #include "caf/net/socket_manager.hpp"
+
+#include "caf/defaults.hpp"
 
 #include <new>
 

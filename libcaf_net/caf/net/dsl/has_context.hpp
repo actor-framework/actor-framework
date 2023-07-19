@@ -4,8 +4,9 @@
 
 #pragma once
 
-#include "caf/expected.hpp"
 #include "caf/net/ssl/context.hpp"
+
+#include "caf/expected.hpp"
 
 namespace caf::net::dsl {
 

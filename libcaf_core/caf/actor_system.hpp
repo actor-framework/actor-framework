@@ -4,17 +4,6 @@
 
 #pragma once
 
-#include <array>
-#include <atomic>
-#include <condition_variable>
-#include <cstddef>
-#include <functional>
-#include <memory>
-#include <mutex>
-#include <string>
-#include <thread>
-#include <typeinfo>
-
 #include "caf/abstract_actor.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/actor_clock.hpp"
@@ -40,6 +29,17 @@
 #include "caf/string_algorithms.hpp"
 #include "caf/telemetry/metric_registry.hpp"
 #include "caf/type_id.hpp"
+
+#include <array>
+#include <atomic>
+#include <condition_variable>
+#include <cstddef>
+#include <functional>
+#include <memory>
+#include <mutex>
+#include <string>
+#include <thread>
+#include <typeinfo>
 
 namespace caf::detail {
 

@@ -6,12 +6,13 @@
 
 #include "caf/net/web_socket/server.hpp"
 
-#include "net-test.hpp"
-
-#include "caf/byte_span.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/socket_manager.hpp"
 #include "caf/net/stream_socket.hpp"
+
+#include "caf/byte_span.hpp"
+
+#include "net-test.hpp"
 
 using namespace caf;
 using namespace std::literals;

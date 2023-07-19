@@ -6,12 +6,12 @@
 
 #include "caf/intrusive/fifo_inbox.hpp"
 
+#include "caf/intrusive/drr_queue.hpp"
+#include "caf/intrusive/singly_linked.hpp"
+
 #include "core-test.hpp"
 
 #include <memory>
-
-#include "caf/intrusive/drr_queue.hpp"
-#include "caf/intrusive/singly_linked.hpp"
 
 using namespace caf;
 using namespace caf::intrusive;

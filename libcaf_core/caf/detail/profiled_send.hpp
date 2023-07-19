@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include <vector>
-
 #include "caf/actor_cast.hpp"
 #include "caf/actor_clock.hpp"
 #include "caf/actor_control_block.hpp"
@@ -15,6 +13,8 @@
 #include "caf/mailbox_element.hpp"
 #include "caf/message_id.hpp"
 #include "caf/no_stages.hpp"
+
+#include <vector>
 
 namespace caf::detail {
 

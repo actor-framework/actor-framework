@@ -4,9 +4,9 @@
 
 #include "caf/disposable.hpp"
 
-#include <algorithm>
-
 #include "caf/make_counted.hpp"
+
+#include <algorithm>
 
 namespace caf {
 

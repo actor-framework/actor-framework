@@ -4,6 +4,13 @@
 
 #pragma once
 
+#include "caf/actor_system_config.hpp"
+#include "caf/detail/core_export.hpp"
+#include "caf/detail/double_ended_queue.hpp"
+#include "caf/policy/unprofiled.hpp"
+#include "caf/resumable.hpp"
+#include "caf/timespan.hpp"
+
 #include <array>
 #include <chrono>
 #include <condition_variable>
@@ -12,13 +19,6 @@
 #include <mutex>
 #include <random>
 #include <thread>
-
-#include "caf/actor_system_config.hpp"
-#include "caf/detail/core_export.hpp"
-#include "caf/detail/double_ended_queue.hpp"
-#include "caf/policy/unprofiled.hpp"
-#include "caf/resumable.hpp"
-#include "caf/timespan.hpp"
 
 namespace caf::policy {
 

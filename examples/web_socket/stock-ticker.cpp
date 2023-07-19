@@ -1,6 +1,9 @@
 // Pseudo "Stock Ticker" that publishes random updates once per second via
 // WebSocket feed.
 
+#include "caf/net/middleman.hpp"
+#include "caf/net/web_socket/with.hpp"
+
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/caf_main.hpp"
@@ -8,8 +11,6 @@
 #include "caf/cow_tuple.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/json_writer.hpp"
-#include "caf/net/middleman.hpp"
-#include "caf/net/web_socket/with.hpp"
 #include "caf/scheduled_actor/flow.hpp"
 #include "caf/span.hpp"
 

@@ -4,13 +4,13 @@
 
 #pragma once
 
-#include <cstddef>
-#include <cstdint>
-#include <string_view>
-
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/span.hpp"
+
+#include <cstddef>
+#include <cstdint>
+#include <string_view>
 
 namespace caf::detail {
 

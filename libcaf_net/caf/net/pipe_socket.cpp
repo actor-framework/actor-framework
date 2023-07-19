@@ -4,8 +4,7 @@
 
 #include "caf/net/pipe_socket.hpp"
 
-#include <cstdio>
-#include <utility>
+#include "caf/net/stream_socket.hpp"
 
 #include "caf/byte.hpp"
 #include "caf/detail/scope_guard.hpp"
@@ -14,9 +13,11 @@
 #include "caf/expected.hpp"
 #include "caf/logger.hpp"
 #include "caf/message.hpp"
-#include "caf/net/stream_socket.hpp"
 #include "caf/sec.hpp"
 #include "caf/span.hpp"
+
+#include <cstdio>
+#include <utility>
 
 namespace caf::net {
 

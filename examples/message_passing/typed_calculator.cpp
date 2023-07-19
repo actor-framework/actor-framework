@@ -2,6 +2,7 @@
 // typed actors.
 
 #include "caf/all.hpp"
+
 #include <cassert>
 #include <iostream>
 

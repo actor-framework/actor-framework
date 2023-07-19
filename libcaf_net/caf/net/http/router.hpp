@@ -4,17 +4,18 @@
 
 #pragma once
 
-#include "caf/detail/print.hpp"
-#include "caf/detail/type_list.hpp"
-#include "caf/detail/type_traits.hpp"
-#include "caf/expected.hpp"
-#include "caf/intrusive_ptr.hpp"
 #include "caf/net/actor_shell.hpp"
 #include "caf/net/http/arg_parser.hpp"
 #include "caf/net/http/lower_layer.hpp"
 #include "caf/net/http/responder.hpp"
 #include "caf/net/http/route.hpp"
 #include "caf/net/http/upper_layer.hpp"
+
+#include "caf/detail/print.hpp"
+#include "caf/detail/type_list.hpp"
+#include "caf/detail/type_traits.hpp"
+#include "caf/expected.hpp"
+#include "caf/intrusive_ptr.hpp"
 #include "caf/ref_counted.hpp"
 
 #include <algorithm>

@@ -4,14 +4,15 @@
 
 #pragma once
 
+#include "caf/net/abstract_actor_shell.hpp"
+#include "caf/net/fwd.hpp"
+
 #include "caf/actor_traits.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/extend.hpp"
 #include "caf/fwd.hpp"
 #include "caf/mixin/requester.hpp"
 #include "caf/mixin/sender.hpp"
-#include "caf/net/abstract_actor_shell.hpp"
-#include "caf/net/fwd.hpp"
 #include "caf/none.hpp"
 
 namespace caf::net {

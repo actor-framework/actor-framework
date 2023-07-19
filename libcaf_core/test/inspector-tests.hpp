@@ -4,10 +4,10 @@
 
 #include "caf/type_id.hpp"
 
+#include "nasty.hpp"
+
 #include <optional>
 #include <variant>
-
-#include "nasty.hpp"
 
 namespace {
 

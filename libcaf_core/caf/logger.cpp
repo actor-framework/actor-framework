@@ -4,16 +4,6 @@
 
 #include "caf/logger.hpp"
 
-#include <algorithm>
-#include <condition_variable>
-#include <cstring>
-#include <ctime>
-#include <fstream>
-#include <iomanip>
-#include <thread>
-#include <unordered_map>
-#include <utility>
-
 #include "caf/actor_proxy.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
@@ -30,6 +20,16 @@
 #include "caf/term.hpp"
 #include "caf/thread_owner.hpp"
 #include "caf/timestamp.hpp"
+
+#include <algorithm>
+#include <condition_variable>
+#include <cstring>
+#include <ctime>
+#include <fstream>
+#include <iomanip>
+#include <thread>
+#include <unordered_map>
+#include <utility>
 
 namespace caf {
 

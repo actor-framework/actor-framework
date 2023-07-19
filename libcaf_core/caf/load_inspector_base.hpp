@@ -4,13 +4,13 @@
 
 #pragma once
 
-#include <array>
-#include <tuple>
-#include <utility>
-
 #include "caf/inspector_access.hpp"
 #include "caf/load_inspector.hpp"
 #include "caf/sec.hpp"
+
+#include <array>
+#include <tuple>
+#include <utility>
 
 namespace caf {
 

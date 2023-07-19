@@ -4,14 +4,15 @@
 
 #pragma once
 
-#include "caf/callback.hpp"
-#include "caf/defaults.hpp"
-#include "caf/intrusive_ptr.hpp"
 #include "caf/net/dsl/base.hpp"
 #include "caf/net/dsl/config_base.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/ssl/context.hpp"
 #include "caf/net/tcp_accept_socket.hpp"
+
+#include "caf/callback.hpp"
+#include "caf/defaults.hpp"
+#include "caf/intrusive_ptr.hpp"
 
 #include <cassert>
 #include <cstdint>

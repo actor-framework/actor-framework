@@ -5,12 +5,11 @@
 #pragma once
 
 #include "caf/detail/core_export.hpp"
+#include "caf/telemetry/label.hpp"
+#include "caf/telemetry/metric_type.hpp"
 
 #include <atomic>
 #include <cstdint>
-
-#include "caf/telemetry/label.hpp"
-#include "caf/telemetry/metric_type.hpp"
 
 namespace caf::telemetry {
 

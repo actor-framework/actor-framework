@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include <atomic>
-#include <cstddef>
-
 #include "caf/detail/atomic_ref_counted.hpp"
 #include "caf/detail/core_export.hpp"
+
+#include <atomic>
+#include <cstddef>
 
 namespace caf {
 

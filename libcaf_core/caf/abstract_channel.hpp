@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include <atomic>
-
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/message_id.hpp"
+
+#include <atomic>
 
 namespace caf {
 

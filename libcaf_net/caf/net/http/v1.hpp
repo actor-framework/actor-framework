@@ -4,9 +4,10 @@
 
 #pragma once
 
+#include "caf/net/http/status.hpp"
+
 #include "caf/byte_span.hpp"
 #include "caf/detail/net_export.hpp"
-#include "caf/net/http/status.hpp"
 
 #include <string_view>
 #include <utility>

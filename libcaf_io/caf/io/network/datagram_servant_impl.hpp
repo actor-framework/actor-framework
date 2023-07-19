@@ -4,14 +4,15 @@
 
 #pragma once
 
-#include <cstdint>
-
-#include "caf/detail/io_export.hpp"
 #include "caf/io/datagram_servant.hpp"
 #include "caf/io/fwd.hpp"
 #include "caf/io/network/datagram_handler_impl.hpp"
 #include "caf/io/network/native_socket.hpp"
+
+#include "caf/detail/io_export.hpp"
 #include "caf/policy/udp.hpp"
+
+#include <cstdint>
 
 namespace caf::io::network {
 

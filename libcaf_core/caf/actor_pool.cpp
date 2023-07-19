@@ -4,13 +4,12 @@
 
 #include "caf/actor_pool.hpp"
 
-#include <atomic>
-#include <random>
-
 #include "caf/default_attachable.hpp"
+#include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/send.hpp"
 
-#include "caf/detail/sync_request_bouncer.hpp"
+#include <atomic>
+#include <random>
 
 namespace caf {
 

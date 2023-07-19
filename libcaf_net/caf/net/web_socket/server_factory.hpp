@@ -4,13 +4,6 @@
 
 #pragma once
 
-#include "caf/async/blocking_producer.hpp"
-#include "caf/callback.hpp"
-#include "caf/defaults.hpp"
-#include "caf/detail/accept_handler.hpp"
-#include "caf/detail/connection_factory.hpp"
-#include "caf/detail/ws_flow_bridge.hpp"
-#include "caf/fwd.hpp"
 #include "caf/net/dsl/server_factory_base.hpp"
 #include "caf/net/http/server.hpp"
 #include "caf/net/multiplexer.hpp"
@@ -19,6 +12,14 @@
 #include "caf/net/tcp_accept_socket.hpp"
 #include "caf/net/web_socket/config.hpp"
 #include "caf/net/web_socket/server.hpp"
+
+#include "caf/async/blocking_producer.hpp"
+#include "caf/callback.hpp"
+#include "caf/defaults.hpp"
+#include "caf/detail/accept_handler.hpp"
+#include "caf/detail/connection_factory.hpp"
+#include "caf/detail/ws_flow_bridge.hpp"
+#include "caf/fwd.hpp"
 
 #include <cstdint>
 #include <functional>

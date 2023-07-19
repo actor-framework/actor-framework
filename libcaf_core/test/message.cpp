@@ -6,17 +6,17 @@
 
 #include "caf/message.hpp"
 
+#include "caf/init_global_meta_objects.hpp"
+#include "caf/message_handler.hpp"
+#include "caf/type_id.hpp"
+#include "caf/type_id_list.hpp"
+
 #include "core-test.hpp"
 
 #include <map>
 #include <numeric>
 #include <string>
 #include <vector>
-
-#include "caf/init_global_meta_objects.hpp"
-#include "caf/message_handler.hpp"
-#include "caf/type_id.hpp"
-#include "caf/type_id_list.hpp"
 
 using std::make_tuple;
 using std::map;

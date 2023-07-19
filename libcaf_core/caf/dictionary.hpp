@@ -4,14 +4,14 @@
 
 #pragma once
 
+#include "caf/deep_to_string.hpp"
+
 #include <algorithm>
 #include <iterator>
 #include <map>
 #include <ostream>
 #include <string>
 #include <string_view>
-
-#include "caf/deep_to_string.hpp"
 
 namespace caf {
 

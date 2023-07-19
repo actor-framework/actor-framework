@@ -4,11 +4,12 @@
 
 #pragma once
 
-#include "caf/byte_span.hpp"
-#include "caf/detail/net_export.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/ssl/errc.hpp"
 #include "caf/net/stream_socket.hpp"
+
+#include "caf/byte_span.hpp"
+#include "caf/detail/net_export.hpp"
 
 #include <cstddef>
 

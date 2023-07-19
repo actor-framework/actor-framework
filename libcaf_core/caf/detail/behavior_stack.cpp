@@ -2,11 +2,12 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#include <iterator>
-
 #include "caf/detail/behavior_stack.hpp"
+
 #include "caf/local_actor.hpp"
 #include "caf/none.hpp"
+
+#include <iterator>
 
 namespace caf::detail {
 

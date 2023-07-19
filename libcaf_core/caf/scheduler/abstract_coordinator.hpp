@@ -4,10 +4,6 @@
 
 #pragma once
 
-#include <atomic>
-#include <chrono>
-#include <cstddef>
-
 #include "caf/actor.hpp"
 #include "caf/actor_addr.hpp"
 #include "caf/actor_cast.hpp"
@@ -16,6 +12,10 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/message.hpp"
+
+#include <atomic>
+#include <chrono>
+#include <cstddef>
 
 namespace caf::scheduler {
 

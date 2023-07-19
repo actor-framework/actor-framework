@@ -6,6 +6,16 @@
 
 #include "caf/config_value.hpp"
 
+#include "caf/actor_system.hpp"
+#include "caf/actor_system_config.hpp"
+#include "caf/deep_to_string.hpp"
+#include "caf/detail/bounds_checker.hpp"
+#include "caf/detail/overload.hpp"
+#include "caf/detail/parse.hpp"
+#include "caf/make_config_option.hpp"
+#include "caf/none.hpp"
+#include "caf/pec.hpp"
+
 #include "core-test.hpp"
 #include "nasty.hpp"
 
@@ -18,18 +28,6 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-
-#include "caf/actor_system.hpp"
-#include "caf/actor_system_config.hpp"
-#include "caf/deep_to_string.hpp"
-#include "caf/detail/bounds_checker.hpp"
-#include "caf/make_config_option.hpp"
-#include "caf/none.hpp"
-#include "caf/pec.hpp"
-
-#include "caf/detail/bounds_checker.hpp"
-#include "caf/detail/overload.hpp"
-#include "caf/detail/parse.hpp"
 
 using std::string;
 

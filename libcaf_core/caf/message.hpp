@@ -4,10 +4,6 @@
 
 #pragma once
 
-#include <sstream>
-#include <tuple>
-#include <type_traits>
-
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/implicit_conversions.hpp"
@@ -16,6 +12,10 @@
 #include "caf/fwd.hpp"
 #include "caf/intrusive_cow_ptr.hpp"
 #include "caf/raise_error.hpp"
+
+#include <sstream>
+#include <tuple>
+#include <type_traits>
 
 namespace caf {
 

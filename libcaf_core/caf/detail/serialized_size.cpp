@@ -4,11 +4,11 @@
 
 #include "caf/detail/serialized_size.hpp"
 
+#include "caf/error.hpp"
+
 #include <iomanip>
 #include <sstream>
 #include <string_view>
-
-#include "caf/error.hpp"
 
 namespace caf::detail {
 

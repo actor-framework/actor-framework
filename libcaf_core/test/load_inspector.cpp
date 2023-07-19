@@ -6,19 +6,18 @@
 
 #include "caf/load_inspector.hpp"
 
-#include "core-test.hpp"
-
-#include <array>
-#include <cstdint>
-#include <string>
-#include <vector>
-
 #include "caf/load_inspector_base.hpp"
 #include "caf/message.hpp"
 #include "caf/span.hpp"
 #include "caf/type_id.hpp"
 
+#include "core-test.hpp"
 #include "inspector-tests.hpp"
+
+#include <array>
+#include <cstdint>
+#include <string>
+#include <vector>
 
 using namespace caf;
 

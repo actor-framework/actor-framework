@@ -4,11 +4,12 @@
 
 #pragma once
 
-#include "caf/async/execution_context.hpp"
-#include "caf/detail/connection_factory.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/socket_event_layer.hpp"
 #include "caf/net/socket_manager.hpp"
+
+#include "caf/async/execution_context.hpp"
+#include "caf/detail/connection_factory.hpp"
 #include "caf/settings.hpp"
 
 namespace caf::detail {

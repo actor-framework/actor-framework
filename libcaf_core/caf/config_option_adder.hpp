@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include <vector>
-
 #include "caf/config_option.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
+
+#include <vector>
 
 namespace caf {
 

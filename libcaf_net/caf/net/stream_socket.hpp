@@ -4,13 +4,14 @@
 
 #pragma once
 
-#include <cstddef>
+#include "caf/net/fwd.hpp"
+#include "caf/net/network_socket.hpp"
 
 #include "caf/byte_span.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/fwd.hpp"
-#include "caf/net/fwd.hpp"
-#include "caf/net/network_socket.hpp"
+
+#include <cstddef>
 
 // Note: This API mostly wraps platform-specific functions that return ssize_t.
 // We return ptrdiff_t instead, since only POSIX defines ssize_t and the two

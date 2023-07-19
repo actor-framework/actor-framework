@@ -4,12 +4,12 @@
 
 #define CAF_SUITE net.tcp_accept_socket
 
-#include "caf/net/tcp_accept_socket.hpp"
-
 #include "caf/test/dsl.hpp"
 
 #include "caf/net/socket_guard.hpp"
+#include "caf/net/tcp_accept_socket.hpp"
 #include "caf/net/tcp_stream_socket.hpp"
+
 #include "caf/uri.hpp"
 
 using namespace caf;

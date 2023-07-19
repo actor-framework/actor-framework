@@ -4,18 +4,19 @@
 
 #pragma once
 
-#include "caf/actor_system.hpp"
-#include "caf/async/spsc_buffer.hpp"
-#include "caf/byte_span.hpp"
-#include "caf/cow_tuple.hpp"
-#include "caf/detail/net_export.hpp"
-#include "caf/disposable.hpp"
 #include "caf/net/lp/default_trait.hpp"
 #include "caf/net/lp/frame.hpp"
 #include "caf/net/lp/lower_layer.hpp"
 #include "caf/net/lp/upper_layer.hpp"
 #include "caf/net/middleman.hpp"
 #include "caf/net/octet_stream/upper_layer.hpp"
+
+#include "caf/actor_system.hpp"
+#include "caf/async/spsc_buffer.hpp"
+#include "caf/byte_span.hpp"
+#include "caf/cow_tuple.hpp"
+#include "caf/detail/net_export.hpp"
+#include "caf/disposable.hpp"
 
 #include <cstdint>
 #include <cstring>

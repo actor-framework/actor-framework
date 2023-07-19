@@ -6,10 +6,10 @@
 
 #include "caf/typed_actor_view.hpp"
 
-#include "core-test.hpp"
-
 #include "caf/scheduled_actor/flow.hpp"
 #include "caf/typed_actor.hpp"
+
+#include "core-test.hpp"
 
 using namespace caf;
 using namespace std::literals;

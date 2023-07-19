@@ -1,8 +1,8 @@
 // A very basic, interactive divider.
 
-#include <iostream>
-
 #include "caf/all.hpp"
+
+#include <iostream>
 
 // --(rst-math-error-begin)--
 enum class math_error : uint8_t {

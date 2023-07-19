@@ -4,14 +4,15 @@
 
 #pragma once
 
-#include <thread>
-
-#include "caf/byte_buffer.hpp"
-#include "caf/detail/io_export.hpp"
 #include "caf/io/abstract_broker.hpp"
 #include "caf/io/network/multiplexer.hpp"
 #include "caf/io/network/receive_buffer.hpp"
 #include "caf/io/receive_policy.hpp"
+
+#include "caf/byte_buffer.hpp"
+#include "caf/detail/io_export.hpp"
+
+#include <thread>
 
 namespace caf::io::network {
 

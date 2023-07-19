@@ -4,12 +4,12 @@
 
 #pragma once
 
-#include <cstdint>
-#include <string>
-
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/uri.hpp"
+
+#include <cstdint>
+#include <string>
 
 namespace caf {
 

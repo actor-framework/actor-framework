@@ -4,12 +4,12 @@
 
 #pragma once
 
-#include <atomic>
-#include <cstdint>
-
 #include "caf/abstract_actor.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/monitorable_actor.hpp"
+
+#include <atomic>
+#include <cstdint>
 
 namespace caf {
 

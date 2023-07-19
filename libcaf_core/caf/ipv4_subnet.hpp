@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include <cstdint>
-
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/ipv4_address.hpp"
+
+#include <cstdint>
 
 namespace caf {
 

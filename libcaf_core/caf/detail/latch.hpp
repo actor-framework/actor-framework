@@ -4,11 +4,11 @@
 
 #pragma once
 
+#include "caf/detail/core_export.hpp"
+
 #include <condition_variable>
 #include <cstdint>
 #include <mutex>
-
-#include "caf/detail/core_export.hpp"
 
 namespace caf::detail {
 

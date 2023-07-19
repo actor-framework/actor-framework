@@ -4,16 +4,16 @@
 
 #pragma once
 
-#include <algorithm>
-#include <memory>
-#include <utility>
-#include <vector>
-
 #include "caf/behavior.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/message_id.hpp"
+
+#include <algorithm>
+#include <memory>
+#include <utility>
+#include <vector>
 
 namespace caf::detail {
 

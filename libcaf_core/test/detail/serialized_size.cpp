@@ -6,10 +6,10 @@
 
 #include "caf/detail/serialized_size.hpp"
 
-#include "core-test.hpp"
-
 #include "caf/binary_serializer.hpp"
 #include "caf/byte_buffer.hpp"
+
+#include "core-test.hpp"
 
 #include <cstddef>
 #include <vector>

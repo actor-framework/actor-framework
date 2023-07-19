@@ -4,14 +4,14 @@
 
 #pragma once
 
+#include "caf/detail/core_export.hpp"
+#include "caf/policy/unprofiled.hpp"
+#include "caf/resumable.hpp"
+
 #include <condition_variable>
 #include <cstddef>
 #include <list>
 #include <mutex>
-
-#include "caf/detail/core_export.hpp"
-#include "caf/policy/unprofiled.hpp"
-#include "caf/resumable.hpp"
 
 namespace caf::policy {
 

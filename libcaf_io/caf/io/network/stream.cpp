@@ -4,13 +4,14 @@
 
 #include "caf/io/network/stream.hpp"
 
-#include <algorithm>
+#include "caf/io/network/default_multiplexer.hpp"
 
 #include "caf/actor_system_config.hpp"
 #include "caf/config_value.hpp"
 #include "caf/defaults.hpp"
-#include "caf/io/network/default_multiplexer.hpp"
 #include "caf/logger.hpp"
+
+#include <algorithm>
 
 namespace caf::io::network {
 

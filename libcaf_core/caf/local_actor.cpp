@@ -4,9 +4,6 @@
 
 #include "caf/local_actor.hpp"
 
-#include <condition_variable>
-#include <string>
-
 #include "caf/actor_cast.hpp"
 #include "caf/actor_ostream.hpp"
 #include "caf/actor_system.hpp"
@@ -20,6 +17,9 @@
 #include "caf/resumable.hpp"
 #include "caf/scheduler.hpp"
 #include "caf/sec.hpp"
+
+#include <condition_variable>
+#include <string>
 
 namespace caf {
 

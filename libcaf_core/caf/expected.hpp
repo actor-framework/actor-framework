@@ -5,19 +5,18 @@
 #pragma once
 
 #include "caf/config.hpp"
-
-#include <memory>
-#include <new>
-#include <ostream>
-#include <type_traits>
-#include <utility>
-
 #include "caf/deep_to_string.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/error.hpp"
 #include "caf/is_error_code_enum.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/unit.hpp"
+
+#include <memory>
+#include <new>
+#include <ostream>
+#include <type_traits>
+#include <utility>
 
 namespace caf {
 

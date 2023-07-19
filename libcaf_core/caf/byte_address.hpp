@@ -4,9 +4,10 @@
 
 #pragma once
 
-#include <cstdint>
-
 #include "caf/config.hpp"
+
+#include <algorithm>
+#include <cstdint>
 
 namespace caf {
 

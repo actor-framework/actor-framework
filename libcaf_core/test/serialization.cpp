@@ -4,6 +4,26 @@
 
 #define CAF_SUITE serialization
 
+#include "caf/actor_system.hpp"
+#include "caf/actor_system_config.hpp"
+#include "caf/binary_deserializer.hpp"
+#include "caf/binary_serializer.hpp"
+#include "caf/byte_buffer.hpp"
+#include "caf/deserializer.hpp"
+#include "caf/detail/ieee_754.hpp"
+#include "caf/detail/int_list.hpp"
+#include "caf/detail/stringification_inspector.hpp"
+#include "caf/detail/type_traits.hpp"
+#include "caf/event_based_actor.hpp"
+#include "caf/json_reader.hpp"
+#include "caf/json_writer.hpp"
+#include "caf/message.hpp"
+#include "caf/message_handler.hpp"
+#include "caf/proxy_registry.hpp"
+#include "caf/ref_counted.hpp"
+#include "caf/sec.hpp"
+#include "caf/serializer.hpp"
+
 #include "core-test.hpp"
 
 #include <algorithm>
@@ -28,26 +48,6 @@
 #include <type_traits>
 #include <typeinfo>
 #include <vector>
-
-#include "caf/actor_system.hpp"
-#include "caf/actor_system_config.hpp"
-#include "caf/binary_deserializer.hpp"
-#include "caf/binary_serializer.hpp"
-#include "caf/byte_buffer.hpp"
-#include "caf/deserializer.hpp"
-#include "caf/detail/ieee_754.hpp"
-#include "caf/detail/int_list.hpp"
-#include "caf/detail/stringification_inspector.hpp"
-#include "caf/detail/type_traits.hpp"
-#include "caf/event_based_actor.hpp"
-#include "caf/json_reader.hpp"
-#include "caf/json_writer.hpp"
-#include "caf/message.hpp"
-#include "caf/message_handler.hpp"
-#include "caf/proxy_registry.hpp"
-#include "caf/ref_counted.hpp"
-#include "caf/sec.hpp"
-#include "caf/serializer.hpp"
 
 struct opaque {
   int secret;

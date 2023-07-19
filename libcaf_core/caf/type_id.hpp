@@ -4,12 +4,6 @@
 
 #pragma once
 
-#include <cstdint>
-#include <set>
-#include <string>
-#include <string_view>
-#include <utility>
-
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/is_complete.hpp"
 #include "caf/detail/pp.hpp"
@@ -17,6 +11,12 @@
 #include "caf/fwd.hpp"
 #include "caf/timespan.hpp"
 #include "caf/timestamp.hpp"
+
+#include <cstdint>
+#include <set>
+#include <string>
+#include <string_view>
+#include <utility>
 
 namespace caf {
 

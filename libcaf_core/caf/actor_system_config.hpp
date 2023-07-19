@@ -4,15 +4,6 @@
 
 #pragma once
 
-#include <atomic>
-#include <functional>
-#include <memory>
-#include <string>
-#include <string_view>
-#include <type_traits>
-#include <typeindex>
-#include <unordered_map>
-
 #include "caf/actor_factory.hpp"
 #include "caf/actor_profiler.hpp"
 #include "caf/config_option.hpp"
@@ -26,6 +17,15 @@
 #include "caf/is_typed_actor.hpp"
 #include "caf/settings.hpp"
 #include "caf/thread_hook.hpp"
+
+#include <atomic>
+#include <functional>
+#include <memory>
+#include <string>
+#include <string_view>
+#include <type_traits>
+#include <typeindex>
+#include <unordered_map>
 
 namespace caf {
 

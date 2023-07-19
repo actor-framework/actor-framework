@@ -4,15 +4,16 @@
 
 #pragma once
 
-#include <unordered_map>
-
-#include "caf/actor_clock.hpp"
 #include "caf/io/basp/connection_state.hpp"
 #include "caf/io/basp/header.hpp"
 #include "caf/io/connection_handle.hpp"
 #include "caf/io/datagram_handle.hpp"
+
+#include "caf/actor_clock.hpp"
 #include "caf/response_promise.hpp"
 #include "caf/timestamp.hpp"
+
+#include <unordered_map>
 
 namespace caf::io::basp {
 

@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "caf/fwd.hpp"
 #include "caf/net/dsl/base.hpp"
 #include "caf/net/dsl/generic_config.hpp"
 #include "caf/net/dsl/has_accept.hpp"
@@ -17,6 +16,8 @@
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/ssl/context.hpp"
 #include "caf/net/tcp_accept_socket.hpp"
+
+#include "caf/fwd.hpp"
 
 #include <cstdint>
 

@@ -6,12 +6,13 @@
 
 #include "caf/net/udp_datagram_socket.hpp"
 
-#include "net-test.hpp"
+#include "caf/net/ip.hpp"
 
 #include "caf/byte_buffer.hpp"
 #include "caf/ip_address.hpp"
 #include "caf/ip_endpoint.hpp"
-#include "caf/net/ip.hpp"
+
+#include "net-test.hpp"
 
 using namespace caf;
 using namespace caf::net;

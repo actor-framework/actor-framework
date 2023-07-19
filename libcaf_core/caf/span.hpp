@@ -4,11 +4,11 @@
 
 #pragma once
 
+#include "caf/detail/type_traits.hpp"
+
 #include <array>
 #include <cstddef>
 #include <type_traits>
-
-#include "caf/detail/type_traits.hpp"
 
 namespace caf {
 

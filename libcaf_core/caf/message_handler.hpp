@@ -4,12 +4,6 @@
 
 #pragma once
 
-#include <list>
-#include <memory>
-#include <type_traits>
-#include <utility>
-#include <vector>
-
 #include "caf/behavior.hpp"
 #include "caf/detail/behavior_impl.hpp"
 #include "caf/detail/core_export.hpp"
@@ -20,6 +14,12 @@
 #include "caf/none.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/timeout_definition.hpp"
+
+#include <list>
+#include <memory>
+#include <type_traits>
+#include <utility>
+#include <vector>
 
 namespace caf {
 

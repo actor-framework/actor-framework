@@ -1,11 +1,11 @@
 // This example illustrates semantics of request().{then|await|receive}.
 
+#include "caf/all.hpp"
+
 #include <chrono>
 #include <cstdint>
 #include <iostream>
 #include <vector>
-
-#include "caf/all.hpp"
 
 using std::endl;
 using std::vector;

@@ -4,9 +4,10 @@
 
 #include "caf/openssl/remote_actor.hpp"
 
+#include "caf/openssl/manager.hpp"
+
 #include "caf/expected.hpp"
 #include "caf/function_view.hpp"
-#include "caf/openssl/manager.hpp"
 #include "caf/sec.hpp"
 
 namespace caf::openssl {

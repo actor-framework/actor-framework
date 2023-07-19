@@ -4,15 +4,16 @@
 
 #pragma once
 
-#include "caf/async/spsc_buffer.hpp"
-#include "caf/detail/lp_flow_bridge.hpp"
-#include "caf/disposable.hpp"
 #include "caf/net/checked_socket.hpp"
 #include "caf/net/dsl/client_factory_base.hpp"
 #include "caf/net/lp/config.hpp"
 #include "caf/net/lp/framing.hpp"
 #include "caf/net/ssl/connection.hpp"
 #include "caf/net/tcp_stream_socket.hpp"
+
+#include "caf/async/spsc_buffer.hpp"
+#include "caf/detail/lp_flow_bridge.hpp"
+#include "caf/disposable.hpp"
 #include "caf/timespan.hpp"
 
 #include <chrono>

@@ -4,12 +4,12 @@
 
 #pragma once
 
+#include "caf/allowed_unsafe_message_type.hpp"
+#include "caf/type_id.hpp"
+
 #include <map>
 #include <string>
 #include <vector>
-
-#include "caf/allowed_unsafe_message_type.hpp"
-#include "caf/type_id.hpp"
 
 // Unfortunately required, because we cannot add a forward declaration for the
 // enum protocol::network that we need for assigning a type ID to

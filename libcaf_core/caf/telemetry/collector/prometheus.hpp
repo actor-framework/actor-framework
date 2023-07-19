@@ -4,11 +4,6 @@
 
 #pragma once
 
-#include <ctime>
-#include <string_view>
-#include <unordered_map>
-#include <vector>
-
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/telemetry/counter.hpp"
@@ -16,6 +11,11 @@
 #include "caf/telemetry/histogram.hpp"
 #include "caf/timespan.hpp"
 #include "caf/timestamp.hpp"
+
+#include <ctime>
+#include <string_view>
+#include <unordered_map>
+#include <vector>
 
 namespace caf::telemetry::collector {
 

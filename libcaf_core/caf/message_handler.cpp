@@ -3,6 +3,7 @@
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
 #include "caf/message_handler.hpp"
+
 #include "caf/config.hpp"
 
 namespace caf {

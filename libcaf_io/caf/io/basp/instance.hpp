@@ -4,14 +4,6 @@
 
 #pragma once
 
-#include <limits>
-
-#include "caf/actor_system_config.hpp"
-#include "caf/byte_buffer.hpp"
-#include "caf/callback.hpp"
-#include "caf/detail/io_export.hpp"
-#include "caf/detail/worker_hub.hpp"
-#include "caf/error.hpp"
 #include "caf/io/basp/connection_state.hpp"
 #include "caf/io/basp/header.hpp"
 #include "caf/io/basp/message_queue.hpp"
@@ -19,6 +11,15 @@
 #include "caf/io/basp/routing_table.hpp"
 #include "caf/io/basp/worker.hpp"
 #include "caf/io/middleman.hpp"
+
+#include "caf/actor_system_config.hpp"
+#include "caf/byte_buffer.hpp"
+#include "caf/callback.hpp"
+#include "caf/detail/io_export.hpp"
+#include "caf/detail/worker_hub.hpp"
+#include "caf/error.hpp"
+
+#include <limits>
 
 namespace caf::io::basp {
 

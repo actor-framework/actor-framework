@@ -4,9 +4,9 @@
 
 #define CAF_SUITE optional
 
-#include "core-test.hpp"
-
 #include "caf/optional.hpp"
+
+#include "core-test.hpp"
 
 using namespace caf;
 

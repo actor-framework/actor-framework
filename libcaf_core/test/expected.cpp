@@ -6,9 +6,9 @@
 
 #include "caf/expected.hpp"
 
-#include "core-test.hpp"
-
 #include "caf/sec.hpp"
+
+#include "core-test.hpp"
 
 #include <cassert>
 

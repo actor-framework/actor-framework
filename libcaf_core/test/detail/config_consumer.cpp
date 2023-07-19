@@ -6,9 +6,9 @@
 
 #include "caf/detail/config_consumer.hpp"
 
-#include "core-test.hpp"
-
 #include "caf/detail/parser/read_config.hpp"
+
+#include "core-test.hpp"
 
 using std::string;
 

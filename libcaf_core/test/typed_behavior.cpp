@@ -6,12 +6,12 @@
 
 #include "caf/typed_behavior.hpp"
 
+#include "caf/typed_actor.hpp"
+
 #include "core-test.hpp"
 
 #include <cstdint>
 #include <string>
-
-#include "caf/typed_actor.hpp"
 
 using namespace caf;
 

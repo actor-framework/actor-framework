@@ -1,10 +1,10 @@
 // This example illustrates how to do time-triggered loops in CAF.
 
+#include "caf/all.hpp"
+
 #include <algorithm>
 #include <chrono>
 #include <iostream>
-
-#include "caf/all.hpp"
 
 // This file is partially included in the manual, do not modify
 // without updating the references in the *.tex files!

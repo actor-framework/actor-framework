@@ -4,14 +4,14 @@
 
 #include "caf/config_option.hpp"
 
-#include <algorithm>
-#include <limits>
-#include <numeric>
-
 #include "caf/config.hpp"
 #include "caf/config_value.hpp"
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
+
+#include <algorithm>
+#include <limits>
+#include <numeric>
 
 using std::string;
 

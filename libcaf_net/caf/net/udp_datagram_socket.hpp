@@ -4,11 +4,12 @@
 
 #pragma once
 
+#include "caf/net/network_socket.hpp"
+
 #include "caf//net/datagram_socket.hpp"
 #include "caf/byte_span.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/fwd.hpp"
-#include "caf/net/network_socket.hpp"
 
 #include <vector>
 

@@ -4,12 +4,13 @@
 
 #pragma once
 
+#include "caf/io/fwd.hpp"
+#include "caf/io/network/operation.hpp"
+
 #include "caf/actor_control_block.hpp"
 #include "caf/byte_buffer.hpp"
 #include "caf/detail/io_export.hpp"
 #include "caf/intrusive_ptr.hpp"
-#include "caf/io/fwd.hpp"
-#include "caf/io/network/operation.hpp"
 #include "caf/message.hpp"
 #include "caf/ref_counted.hpp"
 

@@ -4,13 +4,13 @@
 
 #define CAF_SUITE actor_lifetime
 
+#include "caf/all.hpp"
+
 #include "core-test.hpp"
 
 #include <atomic>
 #include <condition_variable>
 #include <mutex>
-
-#include "caf/all.hpp"
 
 using namespace caf;
 

@@ -6,9 +6,9 @@
 
 #include "caf/result.hpp"
 
-#include "core-test.hpp"
-
 #include "caf/sec.hpp"
+
+#include "core-test.hpp"
 
 using namespace caf;
 

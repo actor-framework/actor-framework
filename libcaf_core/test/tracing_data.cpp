@@ -6,15 +6,15 @@
 
 #include "caf/tracing_data.hpp"
 
-#include "core-test.hpp"
-
-#include <vector>
-
 #include "caf/actor_profiler.hpp"
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/config.hpp"
 #include "caf/tracing_data_factory.hpp"
+
+#include "core-test.hpp"
+
+#include <vector>
 
 #ifdef CAF_ENABLE_ACTOR_PROFILER
 

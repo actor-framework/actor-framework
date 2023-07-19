@@ -10,11 +10,6 @@
 #  include <exception>
 #endif // CAF_ENABLE_EXCEPTIONS
 
-#include <forward_list>
-#include <map>
-#include <type_traits>
-#include <unordered_map>
-
 #include "caf/action.hpp"
 #include "caf/actor_traits.hpp"
 #include "caf/async/fwd.hpp"
@@ -51,6 +46,11 @@
 #include "caf/sec.hpp"
 #include "caf/telemetry/timer.hpp"
 #include "caf/unordered_flat_map.hpp"
+
+#include <forward_list>
+#include <map>
+#include <type_traits>
+#include <unordered_map>
 
 namespace caf {
 

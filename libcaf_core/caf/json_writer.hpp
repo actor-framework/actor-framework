@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include <vector>
-
 #include "caf/detail/core_export.hpp"
 #include "caf/serializer.hpp"
+
+#include <vector>
 
 namespace caf {
 

@@ -6,14 +6,14 @@
 
 #include "caf/config_option_set.hpp"
 
+#include "caf/settings.hpp"
+
 #include "core-test.hpp"
 #include "inspector-tests.hpp"
 
 #include <map>
 #include <string>
 #include <vector>
-
-#include "caf/settings.hpp"
 
 using std::string;
 using std::vector;

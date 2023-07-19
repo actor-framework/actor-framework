@@ -4,14 +4,14 @@
 
 #pragma once
 
-#include <cstdint>
-#include <mutex>
-#include <vector>
-
 #include "caf/actor_control_block.hpp"
 #include "caf/detail/io_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/mailbox_element.hpp"
+
+#include <cstdint>
+#include <mutex>
+#include <vector>
 
 namespace caf::io::basp {
 

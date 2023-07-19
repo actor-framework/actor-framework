@@ -6,15 +6,15 @@
 
 #include "caf/flow/op/prefix_and_tail.hpp"
 
-#include "core-test.hpp"
-
-#include <memory>
-
 #include "caf/flow/coordinator.hpp"
 #include "caf/flow/observable.hpp"
 #include "caf/flow/observable_builder.hpp"
 #include "caf/flow/observer.hpp"
 #include "caf/flow/scoped_coordinator.hpp"
+
+#include "core-test.hpp"
+
+#include <memory>
 
 using namespace caf;
 

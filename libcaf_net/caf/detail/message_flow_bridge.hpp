@@ -4,13 +4,14 @@
 
 #pragma once
 
-#include "caf/actor_system.hpp"
-#include "caf/async/consumer_adapter.hpp"
-#include "caf/async/producer_adapter.hpp"
 #include "caf/net/lp/lower_layer.hpp"
 #include "caf/net/lp/upper_layer.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/socket_manager.hpp"
+
+#include "caf/actor_system.hpp"
+#include "caf/async/consumer_adapter.hpp"
+#include "caf/async/producer_adapter.hpp"
 #include "caf/sec.hpp"
 #include "caf/settings.hpp"
 

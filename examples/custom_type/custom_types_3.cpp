@@ -1,10 +1,10 @@
 // Showcases custom message types that cannot provide
 // friend access to the inspect() function.
 
+#include "caf/all.hpp"
+
 #include <iostream>
 #include <utility>
-
-#include "caf/all.hpp"
 
 class foo;
 

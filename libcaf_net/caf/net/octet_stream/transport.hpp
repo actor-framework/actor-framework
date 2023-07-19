@@ -4,18 +4,19 @@
 
 #pragma once
 
-#include <deque>
-
-#include "caf/byte_buffer.hpp"
-#include "caf/defaults.hpp"
-#include "caf/detail/net_export.hpp"
-#include "caf/fwd.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/octet_stream/lower_layer.hpp"
 #include "caf/net/octet_stream/policy.hpp"
 #include "caf/net/octet_stream/upper_layer.hpp"
 #include "caf/net/socket_event_layer.hpp"
 #include "caf/net/stream_socket.hpp"
+
+#include "caf/byte_buffer.hpp"
+#include "caf/defaults.hpp"
+#include "caf/detail/net_export.hpp"
+#include "caf/fwd.hpp"
+
+#include <deque>
 
 namespace caf::net::octet_stream {
 

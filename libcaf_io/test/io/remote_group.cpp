@@ -4,15 +4,15 @@
 
 #define CAF_SUITE io.remote_group
 
+#include "caf/io/all.hpp"
+
+#include "caf/all.hpp"
 #include "caf/config.hpp"
 
 #include "io-test.hpp"
 
 #include <algorithm>
 #include <vector>
-
-#include "caf/all.hpp"
-#include "caf/io/all.hpp"
 
 using namespace caf;
 

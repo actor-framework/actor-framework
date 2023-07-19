@@ -1,46 +1,33 @@
-This document specifies how to contribute code to CAF.
-
 Git Workflow
 ============
 
-Please adhere to the following Git naming and commit message conventions.
-Having a consistent work flow and style reduces friction and makes organizing
+Please adhere to the following Git naming and commit message conventions. Having
+a consistent work flow and style reduces friction and makes organizing
 contributions a lot easier for all sides.
 
 Branches
 --------
 
 - Our main branch is `master`. It reflects the latest development changes for
-  the next release and should always compile. Nightly versions use the
-  `master`. Users looking for a production-ready state are encouraged to use
-  the latest release version instead.
+  the next release and should always compile. Nightly versions use the `master`
+  branch. Users looking for a production-ready state are encouraged to use the
+  latest release version.
 
-- Push trivial bugfixes (e.g. typos, missing includes, etc.) consisting of a
-  single commit directly to `master`. Otherwise, implement your changes in a
-  topic or bugfix branch and file a pull request on GitHub.
+- As an external contributor, please fork the project on GitHub and create a
+  pull request for your proposed changes. Otherwise, follow the guidelines
+  below.
 
-- Implement new features and non-trivial changes in a *topic branch* with
-  naming convention `topic/short-description`.
+- After a GitHub issue has been assigned to you, create a branch with naming
+  convention `issue/$num`, where `$num` is the issue ID on GitHub. Once you are
+  ready, create a pull request for your branch. You can also file a draft pull
+  request to get early feedback. In the pull request, put "Closes #$num." or
+  "Fixes #$num." into the description if the pull request resolves the issue. If
+  the pull request only partially addresses the issue, use "Relates #$num."
 
-- Implement fixes for existing issues in a *bugfix branch* with naming
-  convention `issue/$num`, where `$num` is the issue ID on GitHub.
-
-- Simply use a fork of CAF if you are an external contributor.
-
-Pull Requests
--------------
-
-Check the following steps to prepare for a merge into `master` after completing
-work in a topic or bugfix branch (or fork).
-
-- Squash your commits into a single one if necessary. Each commit should
-  represent a coherent set of changes.
-
-- Wait for a code review and the test results of our CI.
-
-- Address any review feedback and fix all issues reported by the CI.
-
-- A maintainer will merge the pull request when all issues are resolved.
+- For smaller changes that do not have a GitHub issue, we use topic branches
+  with naming convention `topic/$user/short-description`. For example, a branch
+  for fixing some typos in the documentation by user `johndoe` could be named
+  `topic/johndoe/fix-doc-typos`.
 
 Commit Message Style
 --------------------
@@ -57,19 +44,49 @@ Commit Message Style
 - Optionally add a long description written in full sentences beginning on the
   third line. Indent at 72 characters per line.
 
+Pull Requests
+-------------
+
+- Squash your commits into a single one before filing a pull request if
+  necessary. Each commit should represent a coherent set of changes.
+
+- Wait for the results of our CI and fix all issues. Our CI builds CAF with GCC,
+  Clang, and MSVC on various platforms and makes sure that the code is formatted
+  correctly. We also measure code coverage and require that new code is covered
+  by tests.
+
+- We require at least one code review approval before merging a pull request. We
+  take the review phase seriously and have a high bar for code quality. Multiple
+  rounds of review are common.
+
+- In case there are multiple rounds of review, please do not squash the commits
+  until everything is resolved. This makes it easier for reviewers to see what
+  has changed since the last review.
+
+- A usual commit message for the review phase is "Integrate review feedback" or
+  "Address review feedback" if you only changed the code according to the review
+  recommendations.
+
+- A maintainer will merge the pull request when all issues are resolved and the
+  pull request has been approved by at least one reviewer. If there have been
+  multiple rounds of review, the maintainer may squash the commits.
+
 Coding Style
 ============
 
 When contributing source code, please adhere to the following coding style,
-which is loosely based on the [Google C++ Style
-Guide](https://google.github.io/styleguide/cppguide.html) and the coding
-conventions used by the C++ Standard Library.
+which is loosely based the C++ Core Guidelines and the coding conventions used
+by the C++ Standard Library.
 
 Example for the Impatient
 -------------------------
 
 ```c++
-// libcaf_example/caf/example/my_class.hpp
+// File: libcaf_foo/caf/foo/my_class.hpp
+
+// This file is part of CAF, the C++ Actor Framework. See the file LICENSE in
+// the main distribution directory for license terms and copyright or visit
+// https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
 #pragma once
 
@@ -77,8 +94,7 @@ Example for the Impatient
 
 // use "//" for regular comments and "///" for doxygen
 
-namespace caf {
-namespace example {
+namespace caf::foo {
 
 /// This class is only being used as style guide example.
 class my_class {
@@ -91,47 +107,44 @@ public:
   /// Destructs `my_class`. Please use Markdown in comments.
   ~my_class();
 
-  // suppress redundant @return if you start the brief description with "Returns"
+  // omit redundant @return if you start the brief description with "Returns"
   /// Returns the name of this instance.
-  inline const std::string& name() const noexcept {
+  const std::string& name() const noexcept {
     return name_;
   }
 
   /// Sets the name of this instance.
-  inline void name(const std::string& new_name) {
-    name_ = new_name;
+  void name(const std::string& new_name) {
+    name_ = std::move(new_name);
   }
 
   /// Prints the name to `std::cout`.
   void print_name() const;
 
-  /// Does something (maybe).
-  void do_something();
-
-  /// Does something else but is guaranteed to never throw.
-  void do_something_else() noexcept;
-
 private:
-  std::string name_;
+  std::string name_; // Private member variables end with an underscore.
 };
 
-} // namespace example
-} // namespace caf
+} // namespace caf::foo
 ```
 
 ```c++
-// libcaf_example/src/example/my_class.cpp
+// File: libcaf_foo/caf/foo/my_class.cpp
 
-#include "caf/example/my_class.hpp"
+// This file is part of CAF, the C++ Actor Framework. See the file LICENSE in
+// the main distribution directory for license terms and copyright or visit
+// https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
+
+#include "caf/foo/my_class.hpp"
 
 #include <iostream>
+#include <string_view>
 
-namespace caf {
-namespace example {
+namespace caf::foo {
 
 namespace {
 
-constexpr const char default_name[] = "my object";
+constexpr std::string_view default_name = "my object";
 
 } // namespace
 
@@ -147,73 +160,37 @@ void my_class::print_name() const {
   std::cout << name() << std::endl;
 }
 
-void my_class::do_something() {
-  if (name() == default_name) {
-    std::cout << "You didn't gave me a proper name, so I "
-              << "refuse to do something."
-              << std::endl;
-  } else {
-    std::cout << "You gave me the name \"" << name()
-              << "\"... Do you really think I'm willing to do something "
-                 "for you after insulting me like that?"
-              << std::endl;
-  }
-}
-
-void my_class::do_something_else() noexcept {
-  // Do nothing if we don't have a name.
-  if (name().empty())
-    return;
-  switch (name.front()) {
-    case 'a':
-      // handle a
-      break;
-    case 'b':
-      // handle b
-      break;
-    default:
-      handle_default();
-  }
-}
-
-} // namespace example
-} // namespace caf
+} // namespace caf::foo
 ```
 
 ```c++
-// libcaf_example/test/example/my_class.cpp
+// File: libcaf_foo/caf/foo/my_class.test.cpp
 
-#define CAF_SUITE example.my_class    // name of this test suite
+// This file is part of CAF, the C++ Actor Framework. See the file LICENSE in
+// the main distribution directory for license terms and copyright or visit
+// https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#include "caf/example/my_class.hpp"   // header-under-test
+#include "caf/example/my_class.hpp" // the header-under-test
 
-#include "caf/test/dsl.hpp"           // caf::test includes
+#include "caf/test/caf_test_main.hpp"
+#include "caf/test/test.hpp"
 
-#include <iostream>                   // standard includes
+TEST("my_class::name gets or sets the name") {
+  caf::foo::my_class x;
+  check_eq(x.name(), "my object");
+  x.name("new name");
+  check_eq(x.name(), "new name");
+}
 
-// ...                                // other CAF includes
-
-namespace {
-
-struct fixture {};
-
-} // namespace
-
-CAF_TEST_FIXTURE_SCOPE(my_class_tests, fixture)
-
-// ... any number of CAF_TEST ...
-
-CAF_TEST_FIXTURE_SCOPE_END()
+CAF_TEST_MAIN()
 ```
 
 General
 -------
 
-- Use 2 spaces per indentation level.
-
-- Use at most 80 characters per line.
-
-- Never use tabs.
+Source code must be formatted using `clang-format` with the configuration file
+`.clang-format` in the root directory of the repository. The following rules are
+not enforced by `clang-format` and must be applied manually:
 
 - Never use C-style casts.
 
@@ -222,12 +199,11 @@ General
 - Only separate functions with vertical whitespaces and use comments to
   document logical blocks inside functions.
 
-- Use `.hpp` as suffix for header files and `.cpp` as suffix for implementation
-  files.
+- Use `.hpp` as suffix for header files, `.cpp` as suffix for implementation
+  files and `.test.cpp` as suffix for unit tests.
 
-- Bind `*` and `&` to the *type*, e.g., `const std::string& arg`.
-
-- Never increase the indentation level for namespaces and access modifiers.
+- Use `#include "caf/foo/bar.hpp"` for CAF headers and `#include <foo/bar.hpp>`
+  for third-party headers.
 
 - Use the order `public`, `protected`, and then `private` in classes.
 
@@ -235,82 +211,31 @@ General
   immediately or if you actually want a type conversion. In the latter case,
   provide a comment why this conversion is necessary.
 
-- Never use unwrapped, manual resource management such as `new` and `delete`.
+- Never use unwrapped, manual resource management such as `new` and `delete`,
+  except when implementing a smart pointer or a similar abstraction.
+
+- Prefer algorithms over manual loops.
 
 - Prefer `using T = X` over `typedef X T`.
-
-- Insert a whitespaces after keywords: `if (...)`, `template <...>`,
-  `while (...)`, etc.
-
-- Put opening braces on the same line:
-
-  ```c++
-  void foo() {
-    // ...
-  }
-  ```
-
-- Use standard order for readability: C standard libraries, C++ standard
-  libraries, OS-specific headers (usually guarded by `ifdef`), other libraries,
-  and finally (your) CAF headers. Include `caf/config.hpp` before the standard
-  headers if you need to include platform-dependent headers. Use angle brackets
-  for system includes and doublequotes otherwise.
-
-  ```c++
-  // example.hpp
-
-  #include <vector>
-
-  #include <sys/types.h>
-
-  #include "3rd/party.h"
-
-  #include "caf/fwd.hpp"
-  ```
-
-  Put the implemented header always first in a `.cpp` file.
-
-  ```c++
-  // example.cpp
-
-  #include "caf/example.hpp" // header for this .cpp file
-
-  #include "caf/config.hpp" // needed for #ifdef guards
-
-  #include <algorithm>
-
-  #ifdef CAF_WINDOWS
-  #include <windows.h>
-  #else
-  #include <sys/socket.h>
-  #endif
-
-  #include "some/other/library.h"
-
-  #include "caf/actor.hpp"
-  ```
-
-- Put output parameters in functions before input parameters if unavoidable.
-  This follows the parameter order from the STL.
 
 - Protect single-argument constructors with `explicit` to avoid implicit
   conversions.
 
-- Use `noexcept` whenever it makes sense and as long as it does not limit future
-  design space. Move construction and assignment are natural candidates for
-  `noexcept`.
+- Use `noexcept` and attributes such as `[[nodiscard]]` whenever it makes sense
+  and as long as it does not limit future design space. For example, move
+  construction and assignment are natural candidates for `noexcept`.
 
 Naming
 ------
 
-- All names except macros and template parameters should be
-  lower case and delimited by underscores.
+- All names except macros and template parameters should be lower case and
+  delimited by underscores, i.e., `snake_case`.
 
-- Template parameter names should be written in CamelCase.
+- Template parameter names should be written in `CamelCase`.
 
 - Types and variables should be nouns, while functions performing an action
-  should be "command" verbs. Classes used to implement metaprogramming
-  functions also should use verbs, e.g., `remove_const`.
+  should be "command" verbs. Classes used to implement metaprogramming functions
+  also should use verbs, e.g., `remove_const`.
 
 - Private and protected member variables use the suffix `_` while getter *and*
   setter functions use the name without suffix:
@@ -322,7 +247,7 @@ Naming
       // nop
     }
 
-    const std::string& name() const {
+    const std::string& name() const noexcept {
       return name_
     }
 
@@ -335,132 +260,23 @@ Naming
   };
   ```
 
-- Use `T` for generic, unconstrained template parameters and `x`
-  for generic function arguments. Suffix both with `s` for
-  template parameter packs and lists:
-
-  ```c++
-  template <class... Ts>
-  void print(const Ts&... xs) {
-    // ...
-  }
-
-  void print(const std::vector<T>& xs) {
-    // ...
-  }
-  ```
-
 Headers
 -------
 
-- Each `.cpp` file has an associated `.hpp` file.
-  Exceptions to this rule are unit tests and `main.cpp` files.
-
-- Each class has its own pair of header and implementation files and the
-  relative path for the files are derived from the full class name. For
-  example, the header file for `caf::example::my_class` of `libcaf_example` is
-  located at `libcaf_example/caf/example/my_class.hpp` and the source file at
-  `libcaf_example/src/example/my_class.cpp`.
-
 - All header files use `#pragma once` to prevent multiple inclusion.
 
-- Do not `#include` when a forward declaration suffices.
+- Each library component should provide a `fwd.hpp` header providing forward
+  declarations for its public types.
 
-- Each library component must provide a `fwd.hpp` header providing forward
-  declarations for all types used in the user API.
+- Only include the forwarding header when a forward declaration suffices.
 
-- Each library component should provide an `all.hpp` header that contains the
-  main page for the documentation and includes all headers for the user API.
-
-- Use `inline` for small functions (rule of thumb: 10 lines or less).
-
-Breaking Statements
--------------------
-
-- Break constructor initializers after the comma, use two spaces for
-  indentation, and place each initializer on its own line (unless you don't
-  need to break at all):
-
-  ```c++
-  my_class::my_class()
-    : my_base_class(some_function()),
-      greeting_("Hello there! This is my_class!"),
-      some_bool_flag_(false) {
-    // ok
-  }
-  other_class::other_class() : name_("tommy"), buddy_("michael") {
-    // ok
-  }
-  ```
-
-- Break function arguments after the comma for both declaration and invocation:
-
-  ```c++
-  intptr_t channel::compare(const abstract_channel* lhs,
-                            const abstract_channel* rhs) {
-    // ...
-  }
-  ```
-
-- Break before tenary operators and before binary operators:
-
-  ```c++
-  if (today_is_a_sunny_day()
-      && it_is_not_too_hot_to_go_swimming()) {
-    // ...
-  }
-  ```
-
-Template Metaprogramming
-------------------------
-
-Despite its power, template metaprogramming came to the language pretty
-much by accident. Templates were never meant to be used for compile-time
-algorithms and type transformations. This is why C++ punishes metaprogramming
-with an insane amount of syntax noise. In CAF, we make excessive use of
-templates. To keep the code readable despite all the syntax noise, we have some
-extra rules for formatting metaprogramming code.
-
-- Break `using name = ...` statements always directly after `=` if it
-  does not fit in one line.
-
-- Consider the *semantics* of a metaprogramming function. For example,
-  `std::conditional` is an if-then-else construct. Hence, place the if-clause
-  on its own line and do the same for the two cases.
-
-- Use one level of indentation per "open" template and place the closing `>`,
-  `>::type` or `>::value` on its own line. For example:
-
-  ```c++
-  using optional_result_type =
-    typename std::conditional<
-      std::is_same<result_type, void>::value,
-      bool,
-      optional<result_type>
-    >::type;
-  // think of it as the following (not valid C++):
-  auto optional_result_type =
-    conditional {
-      if   result_type == void
-      then bool
-      else optional<result_type>
-    };
-  ```
-
-- Note that this is not necessary when simply defining a type alias.
-  When dealing with "ordinary" templates, indenting based on the position of
-  the opening `<` is ok, e.g.:
-
-  ```c++
-  using response_handle_type = response_handle<Subtype, message,
-                                               ResponseHandleTag>;
-  ```
+- Implement small functions inline (rule of thumb: 5 lines or less).
 
 Preprocessor Macros
 -------------------
 
 - Use macros if and only if you can't get the same result by using inline
-  functions or proper constants.
+  functions, templates, or proper constants.
 
 - Macro names use the form `CAF_<COMPONENT>_<NAME>`.
 
@@ -469,9 +285,10 @@ Comments
 
 - Start Doxygen comments with `///`.
 
-- Use Markdown instead of Doxygen formatters.
+- Use Markdown syntax in Doxygen comments.
 
 - Use `@cmd` rather than `\cmd`.
 
 - Use `//` to define basic comments that should not be processed by Doxygen.
 
+- Never use `/* ... */` C-style comments.

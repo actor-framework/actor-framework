@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "caf/fwd.hpp"
 #include "caf/net/dsl/generic_config.hpp"
 #include "caf/net/dsl/has_accept.hpp"
 #include "caf/net/dsl/has_context.hpp"
@@ -16,6 +15,8 @@
 #include "caf/net/web_socket/config.hpp"
 #include "caf/net/web_socket/default_trait.hpp"
 #include "caf/net/web_socket/has_on_request.hpp"
+
+#include "caf/fwd.hpp"
 
 #include <cstdint>
 

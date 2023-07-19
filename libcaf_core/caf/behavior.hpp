@@ -4,9 +4,6 @@
 
 #pragma once
 
-#include <functional>
-#include <type_traits>
-
 #include "caf/detail/behavior_impl.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/type_list.hpp"
@@ -15,6 +12,9 @@
 #include "caf/timeout_definition.hpp"
 #include "caf/timespan.hpp"
 #include "caf/unsafe_behavior_init.hpp"
+
+#include <functional>
+#include <type_traits>
 
 namespace caf {
 

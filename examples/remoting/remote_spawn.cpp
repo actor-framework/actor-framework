@@ -7,6 +7,10 @@
 // Run client at the same host:
 // - remote_spawn -H localhost -p 4242
 
+#include "caf/io/all.hpp"
+
+#include "caf/all.hpp"
+
 #include <array>
 #include <cassert>
 #include <functional>
@@ -14,9 +18,6 @@
 #include <sstream>
 #include <string>
 #include <vector>
-
-#include "caf/all.hpp"
-#include "caf/io/all.hpp"
 
 // --(rst-calculator-begin)--
 using calculator

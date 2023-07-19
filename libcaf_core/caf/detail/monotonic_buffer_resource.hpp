@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include <cstddef>
-#include <map>
-
 #include "caf/config.hpp"
 #include "caf/detail/core_export.hpp"
+
+#include <cstddef>
+#include <map>
 
 #ifdef CAF_CLANG
 #  pragma clang diagnostic push

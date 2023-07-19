@@ -4,11 +4,12 @@
 
 #pragma once
 
+#include "caf/net/fwd.hpp"
+
 #include "caf/async/promise.hpp"
 #include "caf/byte_buffer.hpp"
 #include "caf/default_enum_inspect.hpp"
 #include "caf/detail/net_export.hpp"
-#include "caf/net/fwd.hpp"
 #include "caf/span.hpp"
 #include "caf/unordered_flat_map.hpp"
 

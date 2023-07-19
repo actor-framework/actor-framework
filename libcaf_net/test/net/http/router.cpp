@@ -6,9 +6,9 @@
 
 #include "caf/net/http/router.hpp"
 
-#include "net-test.hpp"
-
 #include "caf/net/multiplexer.hpp"
+
+#include "net-test.hpp"
 
 using namespace caf;
 using namespace std::literals;

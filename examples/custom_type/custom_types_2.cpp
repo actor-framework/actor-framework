@@ -1,10 +1,10 @@
 // showcases how to add custom message types to CAF
 // if friend access for serialization is available
 
+#include "caf/all.hpp"
+
 #include <iostream>
 #include <utility>
-
-#include "caf/all.hpp"
 
 class foo;
 

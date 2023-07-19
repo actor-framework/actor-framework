@@ -4,16 +4,16 @@
 
 #pragma once
 
+#include "caf/detail/append_hex.hpp"
+#include "caf/detail/comparable.hpp"
+#include "caf/detail/type_traits.hpp"
+#include "caf/fwd.hpp"
+
 #include <algorithm>
 #include <cstddef>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
-
-#include "caf/detail/append_hex.hpp"
-#include "caf/detail/comparable.hpp"
-#include "caf/detail/type_traits.hpp"
-#include "caf/fwd.hpp"
 
 namespace caf {
 

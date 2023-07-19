@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include <functional>
-#include <type_traits>
-
 #include "caf/actor.hpp"
 #include "caf/actor_traits.hpp"
+
+#include <functional>
+#include <type_traits>
 
 namespace caf::detail {
 

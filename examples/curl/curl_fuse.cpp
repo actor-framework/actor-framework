@@ -42,8 +42,9 @@
 #include <vector>
 
 // CAF
-#include "caf/all.hpp"
 #include "caf/io/all.hpp"
+
+#include "caf/all.hpp"
 
 CAF_PUSH_WARNINGS
 #include <curl/curl.h>

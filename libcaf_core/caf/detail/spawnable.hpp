@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include <type_traits>
-
 #include "caf/detail/type_traits.hpp"
 #include "caf/infer_handle.hpp"
+
+#include <type_traits>
 
 namespace caf::detail {
 

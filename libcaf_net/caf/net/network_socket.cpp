@@ -4,8 +4,6 @@
 
 #include "caf/net/network_socket.hpp"
 
-#include <cstdint>
-
 #include "caf/config.hpp"
 #include "caf/detail/net_syscall.hpp"
 #include "caf/detail/socket_sys_aliases.hpp"
@@ -14,6 +12,8 @@
 #include "caf/expected.hpp"
 #include "caf/logger.hpp"
 #include "caf/sec.hpp"
+
+#include <cstdint>
 
 namespace {
 

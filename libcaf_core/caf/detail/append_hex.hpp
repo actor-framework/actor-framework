@@ -4,12 +4,12 @@
 
 #pragma once
 
+#include "caf/detail/core_export.hpp"
+#include "caf/detail/type_traits.hpp"
+
 #include <cstddef>
 #include <string>
 #include <type_traits>
-
-#include "caf/detail/core_export.hpp"
-#include "caf/detail/type_traits.hpp"
 
 namespace caf::detail {
 

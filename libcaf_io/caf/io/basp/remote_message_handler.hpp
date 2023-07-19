@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <cstdint>
-#include <vector>
+#include "caf/io/basp/header.hpp"
+#include "caf/io/middleman.hpp"
 
 #include "caf/actor_control_block.hpp"
 #include "caf/actor_proxy.hpp"
@@ -15,14 +15,15 @@
 #include "caf/detail/scope_guard.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/execution_unit.hpp"
-#include "caf/io/basp/header.hpp"
-#include "caf/io/middleman.hpp"
 #include "caf/logger.hpp"
 #include "caf/message.hpp"
 #include "caf/message_id.hpp"
 #include "caf/node_id.hpp"
 #include "caf/telemetry/histogram.hpp"
 #include "caf/telemetry/timer.hpp"
+
+#include <cstdint>
+#include <vector>
 
 namespace caf::io::basp {
 

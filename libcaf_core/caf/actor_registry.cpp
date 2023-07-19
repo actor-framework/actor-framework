@@ -4,12 +4,6 @@
 
 #include "caf/actor_registry.hpp"
 
-#include <limits>
-#include <mutex>
-#include <stdexcept>
-#include <unordered_map>
-#include <unordered_set>
-
 #include "caf/actor_system.hpp"
 #include "caf/attachable.hpp"
 #include "caf/event_based_actor.hpp"
@@ -18,6 +12,12 @@
 #include "caf/scoped_actor.hpp"
 #include "caf/sec.hpp"
 #include "caf/stateful_actor.hpp"
+
+#include <limits>
+#include <mutex>
+#include <stdexcept>
+#include <unordered_map>
+#include <unordered_set>
 
 namespace caf {
 

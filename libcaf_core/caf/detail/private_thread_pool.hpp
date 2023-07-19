@@ -4,13 +4,13 @@
 
 #pragma once
 
+#include "caf/fwd.hpp"
+
 #include <atomic>
 #include <condition_variable>
 #include <forward_list>
 #include <mutex>
 #include <thread>
-
-#include "caf/fwd.hpp"
 
 namespace caf::detail {
 

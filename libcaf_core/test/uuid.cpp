@@ -6,10 +6,10 @@
 
 #include "caf/uuid.hpp"
 
-#include "core-test.hpp"
-
 #include "caf/json_reader.hpp"
 #include "caf/json_writer.hpp"
+
+#include "core-test.hpp"
 
 using namespace caf;
 

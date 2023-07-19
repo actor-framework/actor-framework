@@ -4,12 +4,12 @@
 
 #include "caf/binary_serializer.hpp"
 
-#include <iomanip>
-
 #include "caf/actor_system.hpp"
 #include "caf/detail/ieee_754.hpp"
 #include "caf/detail/network_order.hpp"
 #include "caf/detail/squashed_int.hpp"
+
+#include <iomanip>
 
 namespace caf {
 

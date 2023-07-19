@@ -4,12 +4,12 @@
 
 #pragma once
 
-#include <tuple>
-
 #include "caf/detail/comparable.hpp"
 #include "caf/inspector_access.hpp"
 #include "caf/make_copy_on_write.hpp"
 #include "caf/ref_counted.hpp"
+
+#include <tuple>
 
 namespace caf {
 

@@ -9,17 +9,17 @@
 
 #include "caf/io/middleman.hpp"
 
-#include "io-test.hpp"
-
-#include <sys/socket.h>
-#include <sys/types.h>
+#include "caf/io/network/native_socket.hpp"
+#include "caf/io/network/scribe_impl.hpp"
 
 #include "caf/actor.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/behavior.hpp"
-#include "caf/io/network/native_socket.hpp"
-#include "caf/io/network/scribe_impl.hpp"
 #include "caf/scoped_actor.hpp"
+
+#include "io-test.hpp"
+#include <sys/socket.h>
+#include <sys/types.h>
 
 using namespace caf;
 

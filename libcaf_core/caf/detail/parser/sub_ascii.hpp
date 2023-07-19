@@ -5,10 +5,10 @@
 
 #pragma once
 
-#include <limits>
-
 #include "caf/detail/parser/ascii_to_int.hpp"
 #include "caf/detail/type_traits.hpp"
+
+#include <limits>
 
 namespace caf::detail::parser {
 

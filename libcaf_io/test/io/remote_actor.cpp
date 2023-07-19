@@ -4,15 +4,16 @@
 
 #define CAF_SUITE io.remote_actor
 
+#include "caf/io/all.hpp"
+
+#include "caf/all.hpp"
+
 #include "io-test.hpp"
 
 #include <algorithm>
 #include <sstream>
 #include <utility>
 #include <vector>
-
-#include "caf/all.hpp"
-#include "caf/io/all.hpp"
 
 using namespace caf;
 

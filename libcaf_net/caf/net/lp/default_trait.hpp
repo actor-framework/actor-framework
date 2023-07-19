@@ -4,10 +4,11 @@
 
 #pragma once
 
+#include "caf/net/fwd.hpp"
+
 #include "caf/async/spsc_buffer.hpp"
 #include "caf/byte_span.hpp"
 #include "caf/detail/net_export.hpp"
-#include "caf/net/fwd.hpp"
 
 #include <string_view>
 #include <vector>

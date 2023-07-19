@@ -4,13 +4,12 @@
 
 #define CAF_SUITE flow.publish
 
-#include "caf/flow/observer.hpp"
-
-#include "core-test.hpp"
-
 #include "caf/flow/observable_builder.hpp"
+#include "caf/flow/observer.hpp"
 #include "caf/flow/op/cell.hpp"
 #include "caf/flow/scoped_coordinator.hpp"
+
+#include "core-test.hpp"
 
 using namespace caf;
 

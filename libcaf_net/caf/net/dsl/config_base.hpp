@@ -4,11 +4,6 @@
 
 #pragma once
 
-#include "caf/callback.hpp"
-#include "caf/defaults.hpp"
-#include "caf/detail/net_export.hpp"
-#include "caf/error.hpp"
-#include "caf/intrusive_ptr.hpp"
 #include "caf/net/checked_socket.hpp"
 #include "caf/net/dsl/base.hpp"
 #include "caf/net/dsl/get_name.hpp"
@@ -17,6 +12,12 @@
 #include "caf/net/ssl/connection.hpp"
 #include "caf/net/ssl/context.hpp"
 #include "caf/net/stream_socket.hpp"
+
+#include "caf/callback.hpp"
+#include "caf/defaults.hpp"
+#include "caf/detail/net_export.hpp"
+#include "caf/error.hpp"
+#include "caf/intrusive_ptr.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/sec.hpp"
 #include "caf/uri.hpp"

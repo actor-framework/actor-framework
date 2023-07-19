@@ -3,16 +3,17 @@
 // quote via HTTP GET request or for all quotes of a selected philosopher by
 // connecting via WebSocket.
 
+#include "caf/net/http/with.hpp"
+#include "caf/net/middleman.hpp"
+#include "caf/net/ssl/context.hpp"
+#include "caf/net/web_socket/switch_protocol.hpp"
+
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/caf_main.hpp"
 #include "caf/cow_string.hpp"
 #include "caf/cow_tuple.hpp"
 #include "caf/event_based_actor.hpp"
-#include "caf/net/http/with.hpp"
-#include "caf/net/middleman.hpp"
-#include "caf/net/ssl/context.hpp"
-#include "caf/net/web_socket/switch_protocol.hpp"
 #include "caf/scheduled_actor/flow.hpp"
 #include "caf/span.hpp"
 

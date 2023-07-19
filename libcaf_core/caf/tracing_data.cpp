@@ -4,8 +4,6 @@
 
 #include "caf/tracing_data.hpp"
 
-#include <cstdint>
-
 #include "caf/actor_system.hpp"
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
@@ -15,6 +13,8 @@
 #include "caf/sec.hpp"
 #include "caf/serializer.hpp"
 #include "caf/tracing_data_factory.hpp"
+
+#include <cstdint>
 
 namespace caf {
 

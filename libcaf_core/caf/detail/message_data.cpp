@@ -4,9 +4,6 @@
 
 #include "caf/detail/message_data.hpp"
 
-#include <cstring>
-#include <numeric>
-
 #include "caf/detail/meta_object.hpp"
 #include "caf/error.hpp"
 #include "caf/error_code.hpp"
@@ -14,6 +11,9 @@
 #include "caf/raise_error.hpp"
 #include "caf/sec.hpp"
 #include "caf/span.hpp"
+
+#include <cstring>
+#include <numeric>
 
 namespace caf::detail {
 

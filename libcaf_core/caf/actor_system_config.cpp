@@ -4,11 +4,6 @@
 
 #include "caf/actor_system_config.hpp"
 
-#include <fstream>
-#include <limits>
-#include <sstream>
-#include <thread>
-
 #include "caf/config.hpp"
 #include "caf/config_option.hpp"
 #include "caf/config_option_adder.hpp"
@@ -20,6 +15,11 @@
 #include "caf/pec.hpp"
 #include "caf/sec.hpp"
 #include "caf/type_id.hpp"
+
+#include <fstream>
+#include <limits>
+#include <sstream>
+#include <thread>
 
 namespace caf {
 

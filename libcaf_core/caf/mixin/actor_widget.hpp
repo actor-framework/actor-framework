@@ -8,7 +8,6 @@
 #include "caf/config.hpp"
 #include "caf/make_actor.hpp"
 #include "caf/message_handler.hpp"
-
 #include "caf/scoped_execution_unit.hpp"
 
 CAF_PUSH_WARNINGS

@@ -4,13 +4,12 @@
 
 #define CAF_SUITE actor_factory
 
-#include "caf/actor_system_config.hpp"
-
-#include "core-test.hpp"
-
 #include "caf/actor_registry.hpp"
+#include "caf/actor_system_config.hpp"
 #include "caf/all.hpp"
 #include "caf/type_id.hpp"
+
+#include "core-test.hpp"
 
 using namespace caf;
 

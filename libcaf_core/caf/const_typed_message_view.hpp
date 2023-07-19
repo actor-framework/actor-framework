@@ -4,13 +4,13 @@
 
 #pragma once
 
-#include <optional>
-#include <utility>
-
 #include "caf/detail/message_data.hpp"
 #include "caf/detail/offset_at.hpp"
 #include "caf/detail/type_list.hpp"
 #include "caf/message.hpp"
+
+#include <optional>
+#include <utility>
 
 namespace caf {
 

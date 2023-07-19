@@ -4,13 +4,13 @@
 
 #pragma once
 
-#include <cstdint>
-#include <functional>
-
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/ipv6_address.hpp"
+
+#include <cstdint>
+#include <functional>
 
 namespace caf {
 

@@ -1,10 +1,11 @@
 #include "caf/net/lp/framing.hpp"
 
+#include "caf/net/octet_stream/lower_layer.hpp"
+#include "caf/net/receive_policy.hpp"
+
 #include "caf/detail/network_order.hpp"
 #include "caf/error.hpp"
 #include "caf/logger.hpp"
-#include "caf/net/octet_stream/lower_layer.hpp"
-#include "caf/net/receive_policy.hpp"
 #include "caf/sec.hpp"
 
 namespace caf::net::lp {

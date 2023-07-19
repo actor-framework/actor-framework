@@ -4,14 +4,15 @@
 
 #include "caf/test/runner.hpp"
 
-#include "caf/config_option.hpp"
-#include "caf/config_option_adder.hpp"
-#include "caf/config_option_set.hpp"
-#include "caf/detail/log_level.hpp"
 #include "caf/test/context.hpp"
 #include "caf/test/nesting_error.hpp"
 #include "caf/test/reporter.hpp"
 #include "caf/test/runnable.hpp"
+
+#include "caf/config_option.hpp"
+#include "caf/config_option_adder.hpp"
+#include "caf/config_option_set.hpp"
+#include "caf/detail/log_level.hpp"
 
 #include <iostream>
 #include <optional>

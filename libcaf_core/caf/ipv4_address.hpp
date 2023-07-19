@@ -4,14 +4,14 @@
 
 #pragma once
 
-#include <array>
-#include <cstdint>
-#include <string>
-
 #include "caf/byte_address.hpp"
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
+
+#include <array>
+#include <cstdint>
+#include <string>
 
 namespace caf {
 

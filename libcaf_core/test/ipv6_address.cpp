@@ -6,11 +6,11 @@
 
 #include "caf/ipv6_address.hpp"
 
+#include "caf/ipv4_address.hpp"
+
 #include "core-test.hpp"
 
 #include <initializer_list>
-
-#include "caf/ipv4_address.hpp"
 
 using namespace caf;
 

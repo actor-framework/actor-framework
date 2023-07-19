@@ -4,16 +4,16 @@
 
 #pragma once
 
-#include <cstdint>
-#include <type_traits>
-#include <vector>
-
 #include "caf/actor_addr.hpp"
 #include "caf/async/batch.hpp"
 #include "caf/deep_to_string.hpp"
 #include "caf/fwd.hpp"
 #include "caf/group.hpp"
 #include "caf/type_id.hpp"
+
+#include <cstdint>
+#include <type_traits>
+#include <vector>
 
 namespace caf {
 

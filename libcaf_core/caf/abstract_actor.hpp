@@ -4,15 +4,6 @@
 
 #pragma once
 
-#include <atomic>
-#include <cstdint>
-#include <memory>
-#include <mutex>
-#include <set>
-#include <string>
-#include <type_traits>
-#include <vector>
-
 #include "caf/abstract_channel.hpp"
 #include "caf/attachable.hpp"
 #include "caf/detail/core_export.hpp"
@@ -25,6 +16,15 @@
 #include "caf/mailbox_element.hpp"
 #include "caf/message_id.hpp"
 #include "caf/node_id.hpp"
+
+#include <atomic>
+#include <cstdint>
+#include <memory>
+#include <mutex>
+#include <set>
+#include <string>
+#include <type_traits>
+#include <vector>
 
 namespace caf {
 

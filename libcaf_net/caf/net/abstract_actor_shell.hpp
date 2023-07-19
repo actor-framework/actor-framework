@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include "caf/net/fwd.hpp"
+
 #include "caf/actor_traits.hpp"
 #include "caf/async/execution_context.hpp"
 #include "caf/callback.hpp"
@@ -15,7 +17,6 @@
 #include "caf/local_actor.hpp"
 #include "caf/mixin/requester.hpp"
 #include "caf/mixin/sender.hpp"
-#include "caf/net/fwd.hpp"
 #include "caf/none.hpp"
 #include "caf/policy/normal_messages.hpp"
 #include "caf/unordered_flat_map.hpp"

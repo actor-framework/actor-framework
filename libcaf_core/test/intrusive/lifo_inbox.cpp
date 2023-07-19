@@ -6,11 +6,11 @@
 
 #include "caf/intrusive/lifo_inbox.hpp"
 
+#include "caf/intrusive/singly_linked.hpp"
+
 #include "core-test.hpp"
 
 #include <memory>
-
-#include "caf/intrusive/singly_linked.hpp"
 
 using namespace caf;
 using namespace caf::intrusive;

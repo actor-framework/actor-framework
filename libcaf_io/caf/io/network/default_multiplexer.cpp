@@ -4,14 +4,6 @@
 
 #include "caf/io/network/default_multiplexer.hpp"
 
-#include <optional>
-#include <utility>
-
-#include "caf/actor_system_config.hpp"
-#include "caf/config.hpp"
-#include "caf/defaults.hpp"
-#include "caf/make_counted.hpp"
-
 #include "caf/io/broker.hpp"
 #include "caf/io/middleman.hpp"
 #include "caf/io/network/datagram_servant_impl.hpp"
@@ -20,10 +12,16 @@
 #include "caf/io/network/protocol.hpp"
 #include "caf/io/network/scribe_impl.hpp"
 
+#include "caf/actor_system_config.hpp"
+#include "caf/config.hpp"
+#include "caf/defaults.hpp"
 #include "caf/detail/call_cfun.hpp"
 #include "caf/detail/socket_guard.hpp"
-
+#include "caf/make_counted.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
+
+#include <optional>
+#include <utility>
 
 // clang-format off
 #ifdef CAF_WINDOWS

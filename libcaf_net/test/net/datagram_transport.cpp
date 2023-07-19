@@ -8,11 +8,6 @@
 
 #include "caf/test/dsl.hpp"
 
-#include "caf/binary_serializer.hpp"
-#include "caf/byte.hpp"
-#include "caf/byte_buffer.hpp"
-#include "caf/detail/socket_sys_includes.hpp"
-#include "caf/make_actor.hpp"
 #include "caf/net/actor_proxy_impl.hpp"
 #include "caf/net/endpoint_manager.hpp"
 #include "caf/net/endpoint_manager_impl.hpp"
@@ -20,6 +15,12 @@
 #include "caf/net/make_endpoint_manager.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/udp_datagram_socket.hpp"
+
+#include "caf/binary_serializer.hpp"
+#include "caf/byte.hpp"
+#include "caf/byte_buffer.hpp"
+#include "caf/detail/socket_sys_includes.hpp"
+#include "caf/make_actor.hpp"
 #include "caf/span.hpp"
 
 using namespace caf;

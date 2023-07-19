@@ -6,9 +6,9 @@
 
 #include "caf/json_reader.hpp"
 
-#include "core-test.hpp"
-
 #include "caf/dictionary.hpp"
+
+#include "core-test.hpp"
 
 using namespace caf;
 

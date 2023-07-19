@@ -4,18 +4,18 @@
 
 #pragma once
 
+#include "caf/config_option.hpp"
+#include "caf/detail/core_export.hpp"
+#include "caf/fwd.hpp"
+#include "caf/make_config_option.hpp"
+#include "caf/pec.hpp"
+
 #include <map>
 #include <memory>
 #include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
-
-#include "caf/config_option.hpp"
-#include "caf/detail/core_export.hpp"
-#include "caf/fwd.hpp"
-#include "caf/make_config_option.hpp"
-#include "caf/pec.hpp"
 
 namespace caf {
 

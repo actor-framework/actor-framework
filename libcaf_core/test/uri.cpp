@@ -6,11 +6,11 @@
 
 #include "caf/uri.hpp"
 
-#include "core-test.hpp"
-
 #include "caf/byte_buffer.hpp"
 #include "caf/ipv4_address.hpp"
 #include "caf/uri_builder.hpp"
+
+#include "core-test.hpp"
 
 using namespace caf;
 

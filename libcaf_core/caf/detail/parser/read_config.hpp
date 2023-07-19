@@ -4,10 +4,6 @@
 
 #pragma once
 
-#include <ctype.h>
-
-#include <stack>
-
 #include "caf/config.hpp"
 #include "caf/detail/parser/chars.hpp"
 #include "caf/detail/parser/read_bool.hpp"
@@ -17,6 +13,10 @@
 #include "caf/detail/scope_guard.hpp"
 #include "caf/pec.hpp"
 #include "caf/uri_builder.hpp"
+
+#include <ctype.h>
+
+#include <stack>
 
 CAF_PUSH_UNUSED_LABEL_WARNING
 

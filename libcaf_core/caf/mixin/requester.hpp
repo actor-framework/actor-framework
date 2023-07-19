@@ -4,10 +4,6 @@
 
 #pragma once
 
-#include <chrono>
-#include <tuple>
-#include <vector>
-
 #include "caf/actor.hpp"
 #include "caf/check_typed_input.hpp"
 #include "caf/detail/profiled_send.hpp"
@@ -19,6 +15,10 @@
 #include "caf/policy/single_response.hpp"
 #include "caf/response_handle.hpp"
 #include "caf/response_type.hpp"
+
+#include <chrono>
+#include <tuple>
+#include <vector>
 
 namespace caf::mixin {
 

@@ -4,10 +4,6 @@
 
 #pragma once
 
-#include <cstdint>
-#include <string_view>
-#include <vector>
-
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
@@ -18,6 +14,10 @@
 #include "caf/ip_address.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/unordered_flat_map.hpp"
+
+#include <cstdint>
+#include <string_view>
+#include <vector>
 
 namespace caf {
 

@@ -1,10 +1,11 @@
 #include "net-test.hpp"
 
-#include "caf/error.hpp"
-#include "caf/init_global_meta_objects.hpp"
 #include "caf/net/middleman.hpp"
 #include "caf/net/ssl/startup.hpp"
 #include "caf/net/this_host.hpp"
+
+#include "caf/error.hpp"
+#include "caf/init_global_meta_objects.hpp"
 #include "caf/raise_error.hpp"
 
 #define CAF_TEST_NO_MAIN

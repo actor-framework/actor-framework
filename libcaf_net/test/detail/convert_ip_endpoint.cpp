@@ -8,11 +8,11 @@
 
 #include "caf/test/dsl.hpp"
 
-#include <cstring>
-
 #include "caf/detail/socket_sys_includes.hpp"
 #include "caf/ipv4_endpoint.hpp"
 #include "caf/ipv6_endpoint.hpp"
+
+#include <cstring>
 
 using namespace caf;
 using namespace caf::detail;

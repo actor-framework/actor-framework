@@ -6,11 +6,11 @@
 
 #include "caf/net/stream_socket.hpp"
 
-#include "net-test.hpp"
-
 #include "caf/byte.hpp"
 #include "caf/byte_buffer.hpp"
 #include "caf/span.hpp"
+
+#include "net-test.hpp"
 
 using namespace caf;
 using namespace caf::net;

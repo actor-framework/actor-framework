@@ -4,13 +4,13 @@
 
 #pragma once
 
+#include "caf/detail/comparable.hpp"
+#include "caf/intrusive_ptr.hpp"
+
 #include <algorithm>
 #include <cstddef>
 #include <stdexcept>
 #include <type_traits>
-
-#include "caf/detail/comparable.hpp"
-#include "caf/intrusive_ptr.hpp"
 
 namespace caf {
 

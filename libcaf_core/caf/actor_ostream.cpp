@@ -6,10 +6,9 @@
 
 #include "caf/abstract_actor.hpp"
 #include "caf/default_attachable.hpp"
+#include "caf/scheduler/abstract_coordinator.hpp"
 #include "caf/scoped_actor.hpp"
 #include "caf/send.hpp"
-
-#include "caf/scheduler/abstract_coordinator.hpp"
 
 namespace caf {
 

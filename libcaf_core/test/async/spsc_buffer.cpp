@@ -6,14 +6,14 @@
 
 #include "caf/async/spsc_buffer.hpp"
 
-#include "core-test.hpp"
-
-#include <memory>
-
 #include "caf/flow/coordinator.hpp"
 #include "caf/flow/observable_builder.hpp"
 #include "caf/flow/observer.hpp"
 #include "caf/scheduled_actor/flow.hpp"
+
+#include "core-test.hpp"
+
+#include <memory>
 
 using namespace caf;
 

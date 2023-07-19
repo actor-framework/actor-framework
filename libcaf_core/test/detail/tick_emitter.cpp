@@ -18,12 +18,12 @@
 
 #include "caf/detail/tick_emitter.hpp"
 
+#include "caf/detail/gcd.hpp"
+#include "caf/timestamp.hpp"
+
 #include "core-test.hpp"
 
 #include <vector>
-
-#include "caf/detail/gcd.hpp"
-#include "caf/timestamp.hpp"
 
 using std::vector;
 

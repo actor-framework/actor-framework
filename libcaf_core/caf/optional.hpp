@@ -4,13 +4,14 @@
 
 #pragma once
 
+#include "caf/config.hpp"
+#include "caf/fwd.hpp"
+#include "caf/none.hpp"
+#include "caf/unit.hpp"
+
 #include <memory>
 #include <new>
 #include <utility>
-
-#include "caf/config.hpp"
-#include "caf/none.hpp"
-#include "caf/unit.hpp"
 
 CAF_PUSH_DEPRECATED_WARNING
 

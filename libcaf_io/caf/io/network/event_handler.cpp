@@ -4,9 +4,9 @@
 
 #include "caf/io/network/event_handler.hpp"
 
-#include "caf/logger.hpp"
-
 #include "caf/io/network/default_multiplexer.hpp"
+
+#include "caf/logger.hpp"
 
 #ifdef CAF_WINDOWS
 #  include <winsock2.h>

@@ -4,9 +4,10 @@
 
 #pragma once
 
+#include "caf/test/fwd.hpp"
+
 #include "caf/detail/source_location.hpp"
 #include "caf/detail/test_export.hpp"
-#include "caf/test/fwd.hpp"
 
 #include <cstddef>
 #include <string_view>

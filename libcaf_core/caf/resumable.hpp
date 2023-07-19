@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include <type_traits>
-
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
+
+#include <type_traits>
 
 namespace caf {
 

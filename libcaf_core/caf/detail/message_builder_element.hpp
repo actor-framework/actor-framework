@@ -4,12 +4,12 @@
 
 #pragma once
 
+#include "caf/detail/core_export.hpp"
+#include "caf/detail/padded_size.hpp"
+
 #include <cstddef>
 #include <memory>
 #include <new>
-
-#include "caf/detail/core_export.hpp"
-#include "caf/detail/padded_size.hpp"
 
 namespace caf::detail {
 

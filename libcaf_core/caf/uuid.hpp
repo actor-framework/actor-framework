@@ -4,17 +4,17 @@
 
 #pragma once
 
+#include "caf/detail/comparable.hpp"
+#include "caf/detail/core_export.hpp"
+#include "caf/error.hpp"
+#include "caf/fwd.hpp"
+
 #include <array>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <string>
 #include <string_view>
-
-#include "caf/detail/comparable.hpp"
-#include "caf/detail/core_export.hpp"
-#include "caf/error.hpp"
-#include "caf/fwd.hpp"
 
 namespace caf {
 

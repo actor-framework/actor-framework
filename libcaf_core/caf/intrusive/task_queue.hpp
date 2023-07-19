@@ -4,11 +4,10 @@
 
 #pragma once
 
-#include <utility>
-
 #include "caf/config.hpp"
-
 #include "caf/intrusive/forward_iterator.hpp"
+
+#include <utility>
 
 namespace caf::intrusive {
 

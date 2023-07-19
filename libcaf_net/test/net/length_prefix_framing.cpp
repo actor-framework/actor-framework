@@ -4,29 +4,29 @@
 
 #define CAF_SUITE net.length_prefix_framing
 
+#include "caf/net/lp/frame.hpp"
+#include "caf/net/lp/lower_layer.hpp"
+#include "caf/net/lp/upper_layer.hpp"
 #include "caf/net/lp/with.hpp"
-
-#include "net-test.hpp"
-
-#include <cctype>
-#include <numeric>
-#include <vector>
+#include "caf/net/multiplexer.hpp"
+#include "caf/net/octet_stream/transport.hpp"
+#include "caf/net/socket_guard.hpp"
+#include "caf/net/socket_manager.hpp"
+#include "caf/net/stream_socket.hpp"
 
 #include "caf/binary_serializer.hpp"
 #include "caf/byte.hpp"
 #include "caf/byte_buffer.hpp"
 #include "caf/byte_span.hpp"
 #include "caf/detail/network_order.hpp"
-#include "caf/net/lp/frame.hpp"
-#include "caf/net/lp/lower_layer.hpp"
-#include "caf/net/lp/upper_layer.hpp"
-#include "caf/net/multiplexer.hpp"
-#include "caf/net/octet_stream/transport.hpp"
-#include "caf/net/socket_guard.hpp"
-#include "caf/net/socket_manager.hpp"
-#include "caf/net/stream_socket.hpp"
 #include "caf/scheduled_actor/flow.hpp"
 #include "caf/span.hpp"
+
+#include "net-test.hpp"
+
+#include <cctype>
+#include <numeric>
+#include <vector>
 
 using namespace caf;
 using namespace std::literals;

@@ -4,14 +4,14 @@
 
 #pragma once
 
-#include <string>
-#include <type_traits>
-#include <vector>
-
 #include "caf/detail/is_complete.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/fwd.hpp"
 #include "caf/span.hpp"
+
+#include <string>
+#include <type_traits>
+#include <vector>
 
 namespace caf {
 

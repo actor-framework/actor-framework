@@ -4,13 +4,13 @@
 
 #pragma once
 
-#include <tuple>
-
 #include "caf/detail/apply_args.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/spawn_fwd.hpp"
 #include "caf/detail/unique_function.hpp"
 #include "caf/fwd.hpp"
+
+#include <tuple>
 
 namespace caf::detail {
 

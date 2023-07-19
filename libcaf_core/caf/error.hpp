@@ -4,10 +4,6 @@
 
 #pragma once
 
-#include <cstdint>
-#include <memory>
-#include <utility>
-
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/error_code.hpp"
@@ -16,6 +12,10 @@
 #include "caf/message.hpp"
 #include "caf/none.hpp"
 #include "caf/type_id.hpp"
+
+#include <cstdint>
+#include <memory>
+#include <utility>
 
 namespace caf {
 

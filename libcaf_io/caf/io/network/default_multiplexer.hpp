@@ -4,14 +4,6 @@
 
 #pragma once
 
-#include <cstdint>
-#include <string>
-#include <thread>
-#include <vector>
-
-#include "caf/config.hpp"
-#include "caf/detail/io_export.hpp"
-#include "caf/extend.hpp"
 #include "caf/io/accept_handle.hpp"
 #include "caf/io/connection_handle.hpp"
 #include "caf/io/datagram_handle.hpp"
@@ -31,9 +23,17 @@
 #include "caf/io/network/stream_manager.hpp"
 #include "caf/io/receive_policy.hpp"
 #include "caf/io/scribe.hpp"
+
+#include "caf/config.hpp"
+#include "caf/detail/io_export.hpp"
+#include "caf/extend.hpp"
+#include "caf/logger.hpp"
 #include "caf/ref_counted.hpp"
 
-#include "caf/logger.hpp"
+#include <cstdint>
+#include <string>
+#include <thread>
+#include <vector>
 
 // Forward declaration of C types.
 extern "C" {

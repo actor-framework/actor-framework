@@ -4,8 +4,9 @@
 
 #pragma once
 
-#include "caf/detail/io_export.hpp"
 #include "caf/io/network/manager.hpp"
+
+#include "caf/detail/io_export.hpp"
 
 namespace caf::io::network {
 

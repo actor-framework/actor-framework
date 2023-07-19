@@ -6,9 +6,9 @@
 
 #include "caf/actor_profiler.hpp"
 
-#include "core-test.hpp"
-
 #include "caf/config.hpp"
+
+#include "core-test.hpp"
 
 #ifdef CAF_ENABLE_ACTOR_PROFILER
 

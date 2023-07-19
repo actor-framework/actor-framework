@@ -4,11 +4,11 @@
 
 #pragma once
 
+#include "caf/config.hpp"
+
 #include <cstddef>
 #include <limits>
 #include <type_traits>
-
-#include "caf/config.hpp"
 
 namespace caf::net {
 

@@ -4,9 +4,10 @@
 
 #pragma once
 
+#include "caf/net/fwd.hpp"
+
 #include "caf/error.hpp"
 #include "caf/fwd.hpp"
-#include "caf/net/fwd.hpp"
 
 #include <memory>
 
