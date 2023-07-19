@@ -54,7 +54,6 @@ struct colorizing_iterator {
   };
   mode_t mode = normal;
   std::ostream* out;
-  mode_t start = mode;
   void put(char c) {
     switch (mode) {
       case normal:
@@ -102,10 +101,7 @@ struct colorizing_iterator {
         if (c == ')') {
           out->flush();
           *out << term::reset;
-          if (start == off)
-            mode = off;
-          else
-            mode = normal;
+          mode = normal;
           break;
         }
         out->put(c);
@@ -117,40 +113,24 @@ struct colorizing_iterator {
           out->put(c);
         break;
       case off_read_color:
+        out->flush();
         switch (c) {
-          case 'R':
-            mode = off_escape;
-            break;
-          case 'G':
-            mode = off_escape;
-            break;
-          case 'B':
-            mode = off_escape;
-            break;
-          case 'Y':
-            mode = off_escape;
-            break;
-          case 'M':
-            mode = off_escape;
-            break;
-          case 'C':
-            mode = off_escape;
-            break;
           case '0':
             mode = verbatim;
             return;
           default:
-            CAF_RAISE_ERROR("invalid color code");
-            break;
+            mode = off_escape;
+            return;
         }
         break;
       case off_escape:
         if (c != '(')
           CAF_RAISE_ERROR("expected ( after color code");
-        mode = color;
+        mode = off_color;
         break;
       case off_color:
         if (c == ')') {
+          out->flush();
           mode = off;
           break;
         }
@@ -200,10 +180,10 @@ public:
   }
 
   auto colored() {
-    if (plain_output_)
-      return colorizing_iterator{colorizing_iterator::off, &std::cout};
-    else
-      return colorizing_iterator{colorizing_iterator::normal, &std::cout};
+    auto state = plain_output_ ? colorizing_iterator::off
+                               : colorizing_iterator::normal;
+
+    return colorizing_iterator{state, &std::cout};
   }
 
   void stop() override {
@@ -413,7 +393,7 @@ public:
     level_ = level;
   }
 
-  void disable_colored(bool plain_output) override {
+  void disable_colors(bool plain_output) override {
     plain_output_ = plain_output;
   }
 
