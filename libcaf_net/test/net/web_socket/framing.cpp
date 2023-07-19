@@ -644,3 +644,9 @@ TEST_CASE("fail on invalid utf8 closing message") {
   auto result = net::web_socket::framing::decode_closing_payload(payload);
   CHECK_EQ(result.error(), sec::protocol_error);
 }
+
+TEST_CASE("fail on single byte payload") {
+  auto payload = byte_buffer{std::byte{0}};
+  auto result = net::web_socket::framing::decode_closing_payload(payload);
+  CHECK_EQ(result.error(), sec::protocol_error);
+}
