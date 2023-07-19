@@ -13,15 +13,71 @@
 #include "caf/config_option_adder.hpp"
 #include "caf/config_option_set.hpp"
 #include "caf/detail/log_level.hpp"
+#include "caf/detail/set_thread_name.hpp"
 
 #include <iostream>
+#include <mutex>
 #include <optional>
 #include <regex>
 #include <string>
+#include <thread>
 
 namespace caf::test {
 
 namespace {
+
+class watchdog {
+public:
+  static void start(int secs);
+  static void stop();
+
+private:
+  watchdog(int secs) {
+    using detail::format_to;
+    thread_ = std::thread{[=] {
+      caf::detail::set_thread_name("test.watchdog");
+      auto tp = std::chrono::high_resolution_clock::now()
+                + std::chrono::seconds(secs);
+      std::unique_lock<std::mutex> guard{mtx_};
+      while (!canceled_
+             && cv_.wait_until(guard, tp) != std::cv_status::timeout) {
+      }
+      if (!canceled_) {
+        auto err_out = [] { return std::ostream_iterator<char>{std::cerr}; };
+        format_to(err_out(),
+                  "WATCHDOG: unit test did not finish within {} seconds\n",
+                  secs);
+        abort();
+      }
+    }};
+  }
+  ~watchdog() {
+    {
+      std::lock_guard<std::mutex> guard{mtx_};
+      canceled_ = true;
+      cv_.notify_all();
+    }
+    thread_.join();
+  }
+
+  volatile bool canceled_ = false;
+  std::mutex mtx_;
+  std::condition_variable cv_;
+  std::thread thread_;
+};
+
+namespace {
+watchdog* s_watchdog;
+}
+
+void watchdog::start(int secs) {
+  if (secs > 0)
+    s_watchdog = new watchdog(secs);
+}
+
+void watchdog::stop() {
+  delete s_watchdog;
+}
 
 config_option_set make_option_set() {
   config_option_set result;
@@ -29,7 +85,7 @@ config_option_set make_option_set() {
     .add<bool>("available-suites,a", "print all available suites")
     .add<bool>("help,h?", "print this help text")
     .add<bool>("no-colors,n", "disable coloring (ignored on Windows)")
-    .add<size_t>("max-runtime,r", "set a maximum runtime in seconds")
+    .add<size_t>("max-runtime,m", "set a maximum runtime in seconds")
     .add<std::string>("suites,s", "regex for selecting suites")
     .add<std::string>("tests,t", "regex for selecting tests")
     .add<std::string>("available-tests,A", "print tests for a suite")
@@ -100,6 +156,7 @@ int runner::run(int argc, char** argv) {
     return std::regex_search(search_string.begin(), search_string.end(),
                              selected);
   };
+  const auto max_runtime = get_or(cfg_, "max-runtime", 0);
   for (auto& [suite_name, suite] : suites_) {
     if (!enabled(*suite_regex, suite_name))
       continue;
@@ -107,6 +164,7 @@ int runner::run(int argc, char** argv) {
     for (auto [test_name, factory_instance] : suite) {
       if (!enabled(*test_regex, test_name))
         continue;
+      watchdog::start(max_runtime);
       auto state = std::make_shared<context>();
 #ifdef CAF_ENABLE_EXCEPTIONS
       try {
@@ -136,6 +194,7 @@ int runner::run(int argc, char** argv) {
         state->clear_stacks();
       } while (state->can_run());
 #endif
+      watchdog::stop();
     }
     default_reporter->end_suite(suite_name);
   }
