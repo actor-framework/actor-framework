@@ -257,8 +257,7 @@ ptrdiff_t framing::handle(uint8_t opcode, byte_span payload,
     case detail::rfc6455::connection_close: {
       auto result = decode_closing_payload(payload);
       if (!result) {
-        abort(result.error());
-        shutdown(result.error());
+        abort_and_shutdown(result.error());
         return -1;
       }
       abort_and_shutdown(sec::connection_closed);

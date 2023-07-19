@@ -152,7 +152,10 @@ private:
   // with closing message
   template <class... Ts>
   void abort_and_shutdown(sec reason, Ts&&... xs) {
-    auto err = make_error(reason, std::forward<Ts>(xs)...);
+    abort_and_shutdown(make_error(reason, std::forward<Ts>(xs)...));
+  }
+
+  void abort_and_shutdown(const error& err) {
     up_->abort(err);
     shutdown(err);
   }
