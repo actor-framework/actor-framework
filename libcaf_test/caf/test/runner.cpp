@@ -15,6 +15,7 @@
 #include "caf/detail/log_level.hpp"
 #include "caf/detail/set_thread_name.hpp"
 
+#include <condition_variable>
 #include <iostream>
 #include <mutex>
 #include <optional>
