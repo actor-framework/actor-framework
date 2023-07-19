@@ -111,9 +111,7 @@ caf_add_component(
     caf/detail/behavior_stack.cpp
     caf/detail/blocking_behavior.cpp
     caf/detail/config_consumer.cpp
-    caf/detail/get_mac_addresses.cpp
     caf/detail/get_process_id.cpp
-    caf/detail/get_root_uuid.cpp
     caf/detail/glob_match.cpp
     caf/detail/group_tunnel.cpp
     caf/detail/invoke_result_visitor.cpp
@@ -133,7 +131,6 @@ caf_add_component(
     caf/detail/private_thread_pool.cpp
     caf/detail/rfc3629.cpp
     caf/detail/rfc3629.test.cpp
-    caf/detail/ripemd_160.cpp
     caf/detail/set_thread_name.cpp
     caf/detail/stream_bridge.cpp
     caf/detail/stringification_inspector.cpp
@@ -277,7 +274,6 @@ caf_add_component(
     detail.parser.read_unsigned_integer
     detail.private_thread_pool
     detail.ringbuffer
-    detail.ripemd_160
     detail.type_id_list_builder
     detail.unique_function
     dictionary

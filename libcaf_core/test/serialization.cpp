@@ -35,7 +35,6 @@
 #include "caf/binary_serializer.hpp"
 #include "caf/byte_buffer.hpp"
 #include "caf/deserializer.hpp"
-#include "caf/detail/get_mac_addresses.hpp"
 #include "caf/detail/ieee_754.hpp"
 #include "caf/detail/int_list.hpp"
 #include "caf/detail/stringification_inspector.hpp"
