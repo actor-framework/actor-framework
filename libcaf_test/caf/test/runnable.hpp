@@ -71,6 +71,261 @@ public:
     return false;
   }
 
+  /// Checks whether `lhs` and `rhs` are unequal.
+  template <class T0, class T1>
+  void check_ne(const T0& lhs, const T1& rhs,
+                const detail::source_location& location
+                = detail::source_location::current()) {
+    if (std::is_integral_v<T0> && std::is_integral_v<T1>) {
+      static_assert(std::is_signed_v<T0> == std::is_signed_v<T1>,
+                    "comparing signed and unsigned integers is unsafe");
+    }
+    if (lhs != rhs) {
+      reporter::instance->pass(location);
+      return;
+    }
+    reporter::instance->fail(binary_predicate::ne, stringify(lhs),
+                             stringify(rhs), location);
+  }
+
+  /// Checks whether `lhs` is less than `rhs`.
+  template <class T0, class T1>
+  void check_lt(const T0& lhs, const T1& rhs,
+                const detail::source_location& location
+                = detail::source_location::current()) {
+    if (std::is_integral_v<T0> && std::is_integral_v<T1>) {
+      static_assert(std::is_signed_v<T0> == std::is_signed_v<T1>,
+                    "comparing signed and unsigned integers is unsafe");
+    }
+    if (lhs < rhs) {
+      reporter::instance->pass(location);
+      return;
+    }
+    reporter::instance->fail(binary_predicate::lt, stringify(lhs),
+                             stringify(rhs), location);
+  }
+
+  /// Checks whether `lhs` less than or equal to `rhs`.
+  template <class T0, class T1>
+  void check_le(const T0& lhs, const T1& rhs,
+                const detail::source_location& location
+                = detail::source_location::current()) {
+    if (std::is_integral_v<T0> && std::is_integral_v<T1>) {
+      static_assert(std::is_signed_v<T0> == std::is_signed_v<T1>,
+                    "comparing signed and unsigned integers is unsafe");
+    }
+    if (lhs <= rhs) {
+      reporter::instance->pass(location);
+      return;
+    }
+    reporter::instance->fail(binary_predicate::le, stringify(lhs),
+                             stringify(rhs), location);
+  }
+
+  /// Checks whether `lhs` is greater than `rhs`.
+  template <class T0, class T1>
+  void check_gt(const T0& lhs, const T1& rhs,
+                const detail::source_location& location
+                = detail::source_location::current()) {
+    if (std::is_integral_v<T0> && std::is_integral_v<T1>) {
+      static_assert(std::is_signed_v<T0> == std::is_signed_v<T1>,
+                    "comparing signed and unsigned integers is unsafe");
+    }
+    if (lhs > rhs) {
+      reporter::instance->pass(location);
+      return;
+    }
+    reporter::instance->fail(binary_predicate::gt, stringify(lhs),
+                             stringify(rhs), location);
+  }
+
+  /// Checks whether `lhs` greater than or equal to `rhs`.
+  template <class T0, class T1>
+  void check_ge(const T0& lhs, const T1& rhs,
+                const detail::source_location& location
+                = detail::source_location::current()) {
+    if (std::is_integral_v<T0> && std::is_integral_v<T1>) {
+      static_assert(std::is_signed_v<T0> == std::is_signed_v<T1>,
+                    "comparing signed and unsigned integers is unsafe");
+    }
+    if (lhs >= rhs) {
+      reporter::instance->pass(location);
+      return;
+    }
+    reporter::instance->fail(binary_predicate::ge, stringify(lhs),
+                             stringify(rhs), location);
+  }
+
+  /// Checks whether `lhs` and `rhs` are unequal.
+  template <class T0, class T1>
+  void check_ne(const T0& lhs, const T1& rhs,
+                const detail::source_location& location
+                = detail::source_location::current()) {
+    if (std::is_integral_v<T0> && std::is_integral_v<T1>) {
+      static_assert(std::is_signed_v<T0> == std::is_signed_v<T1>,
+                    "comparing signed and unsigned integers is unsafe");
+    }
+    if (lhs != rhs) {
+      reporter::instance->pass(location);
+      return;
+    }
+    reporter::instance->fail(binary_predicate::ne, stringify(lhs),
+                             stringify(rhs), location);
+  }
+
+  /// Checks whether `lhs` is less than `rhs`.
+  template <class T0, class T1>
+  void check_lt(const T0& lhs, const T1& rhs,
+                const detail::source_location& location
+                = detail::source_location::current()) {
+    if (std::is_integral_v<T0> && std::is_integral_v<T1>) {
+      static_assert(std::is_signed_v<T0> == std::is_signed_v<T1>,
+                    "comparing signed and unsigned integers is unsafe");
+    }
+    if (lhs < rhs) {
+      reporter::instance->pass(location);
+      return;
+    }
+    reporter::instance->fail(binary_predicate::lt, stringify(lhs),
+                             stringify(rhs), location);
+  }
+
+  /// Checks whether `lhs` less than or equal to `rhs`.
+  template <class T0, class T1>
+  void check_le(const T0& lhs, const T1& rhs,
+                const detail::source_location& location
+                = detail::source_location::current()) {
+    if (std::is_integral_v<T0> && std::is_integral_v<T1>) {
+      static_assert(std::is_signed_v<T0> == std::is_signed_v<T1>,
+                    "comparing signed and unsigned integers is unsafe");
+    }
+    if (lhs <= rhs) {
+      reporter::instance->pass(location);
+      return;
+    }
+    reporter::instance->fail(binary_predicate::le, stringify(lhs),
+                             stringify(rhs), location);
+  }
+
+  /// Checks whether `lhs` is greater than `rhs`.
+  template <class T0, class T1>
+  void check_gt(const T0& lhs, const T1& rhs,
+                const detail::source_location& location
+                = detail::source_location::current()) {
+    if (std::is_integral_v<T0> && std::is_integral_v<T1>) {
+      static_assert(std::is_signed_v<T0> == std::is_signed_v<T1>,
+                    "comparing signed and unsigned integers is unsafe");
+    }
+    if (lhs > rhs) {
+      reporter::instance->pass(location);
+      return;
+    }
+    reporter::instance->fail(binary_predicate::gt, stringify(lhs),
+                             stringify(rhs), location);
+  }
+
+  /// Checks whether `lhs` greater than or equal to `rhs`.
+  template <class T0, class T1>
+  void check_ge(const T0& lhs, const T1& rhs,
+                const detail::source_location& location
+                = detail::source_location::current()) {
+    if (std::is_integral_v<T0> && std::is_integral_v<T1>) {
+      static_assert(std::is_signed_v<T0> == std::is_signed_v<T1>,
+                    "comparing signed and unsigned integers is unsafe");
+    }
+    if (lhs >= rhs) {
+      reporter::instance->pass(location);
+      return;
+    }
+    reporter::instance->fail(binary_predicate::ge, stringify(lhs),
+                             stringify(rhs), location);
+  }
+
+  /// Checks whether `lhs` and `rhs` are unequal.
+  template <class T0, class T1>
+  void check_ne(const T0& lhs, const T1& rhs,
+                const detail::source_location& location
+                = detail::source_location::current()) {
+    if (std::is_integral_v<T0> && std::is_integral_v<T1>) {
+      static_assert(std::is_signed_v<T0> == std::is_signed_v<T1>,
+                    "comparing signed and unsigned integers is unsafe");
+    }
+    if (lhs != rhs) {
+      reporter::instance->pass(location);
+      return;
+    }
+    reporter::instance->fail(binary_predicate::ne, stringify(lhs),
+                             stringify(rhs), location);
+  }
+
+  /// Checks whether `lhs` is less than `rhs`.
+  template <class T0, class T1>
+  void check_lt(const T0& lhs, const T1& rhs,
+                const detail::source_location& location
+                = detail::source_location::current()) {
+    if (std::is_integral_v<T0> && std::is_integral_v<T1>) {
+      static_assert(std::is_signed_v<T0> == std::is_signed_v<T1>,
+                    "comparing signed and unsigned integers is unsafe");
+    }
+    if (lhs < rhs) {
+      reporter::instance->pass(location);
+      return;
+    }
+    reporter::instance->fail(binary_predicate::lt, stringify(lhs),
+                             stringify(rhs), location);
+  }
+
+  /// Checks whether `lhs` less than or equal to `rhs`.
+  template <class T0, class T1>
+  void check_le(const T0& lhs, const T1& rhs,
+                const detail::source_location& location
+                = detail::source_location::current()) {
+    if (std::is_integral_v<T0> && std::is_integral_v<T1>) {
+      static_assert(std::is_signed_v<T0> == std::is_signed_v<T1>,
+                    "comparing signed and unsigned integers is unsafe");
+    }
+    if (lhs <= rhs) {
+      reporter::instance->pass(location);
+      return;
+    }
+    reporter::instance->fail(binary_predicate::le, stringify(lhs),
+                             stringify(rhs), location);
+  }
+
+  /// Checks whether `lhs` is greater than `rhs`.
+  template <class T0, class T1>
+  void check_gt(const T0& lhs, const T1& rhs,
+                const detail::source_location& location
+                = detail::source_location::current()) {
+    if (std::is_integral_v<T0> && std::is_integral_v<T1>) {
+      static_assert(std::is_signed_v<T0> == std::is_signed_v<T1>,
+                    "comparing signed and unsigned integers is unsafe");
+    }
+    if (lhs > rhs) {
+      reporter::instance->pass(location);
+      return;
+    }
+    reporter::instance->fail(binary_predicate::gt, stringify(lhs),
+                             stringify(rhs), location);
+  }
+
+  /// Checks whether `lhs` greater than or equal to `rhs`.
+  template <class T0, class T1>
+  void check_ge(const T0& lhs, const T1& rhs,
+                const detail::source_location& location
+                = detail::source_location::current()) {
+    if (std::is_integral_v<T0> && std::is_integral_v<T1>) {
+      static_assert(std::is_signed_v<T0> == std::is_signed_v<T1>,
+                    "comparing signed and unsigned integers is unsafe");
+    }
+    if (lhs >= rhs) {
+      reporter::instance->pass(location);
+      return;
+    }
+    reporter::instance->fail(binary_predicate::ge, stringify(lhs),
+                             stringify(rhs), location);
+  }
+
   bool check(bool value, const detail::source_location& location
                          = detail::source_location::current());
 
