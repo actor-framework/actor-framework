@@ -232,7 +232,7 @@ private:
   void add(Input&& x) {
     using input_t = std::decay_t<Input>;
     static_assert(is_observable_v<input_t>);
-    inputs_.emplace_back(std::move(x).as_observable());
+    inputs_.emplace_back(std::forward<Input>(x).as_observable());
   }
 
   std::vector<input_type> inputs_;

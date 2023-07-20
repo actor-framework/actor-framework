@@ -201,7 +201,7 @@ private:
   behavior make_behavior(F&& f, OnError&& g) {
     using namespace detail;
     using helper_type = select_all_helper_t<decay_t<F>>;
-    helper_type helper{ids_.size(), pending_timeouts_, std::move(f)};
+    helper_type helper{ids_.size(), pending_timeouts_, std::forward<F>(f)};
     auto pending = helper.pending;
     auto error_handler = [pending{std::move(pending)},
                           timeouts{pending_timeouts_},
