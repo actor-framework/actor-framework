@@ -45,8 +45,11 @@ public:
 
   // -- static utility functions -----------------------------------------------
 
-  static expected<std::pair<uint16_t, const_byte_span>>
-  decode_closing_payload(const_byte_span payload);
+  /// Checks whether the payload of a closing frame contains a valid status
+  /// code and an UTF-8 formatted message.
+  /// @returns A default constructed `error` if the payload is valid, error kind
+  ///          otherwise.
+  static error validate_closing_payload(const_byte_span payload);
 
   // -- constructors, destructors, and assignment operators --------------------
 
