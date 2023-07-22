@@ -14,10 +14,10 @@ namespace caf::net::web_socket {
 
 error framing::validate_closing_payload(const_byte_span payload) {
   if (payload.empty())
-    return error{};
+    return {};
   if (payload.size() == 1)
     return make_error(caf::sec::protocol_error,
-                      "closing status code must have two bytes");
+                      "non empty closing payload must have at least two bytes");
   auto status = (std::to_integer<uint16_t>(payload[0]) << 8)
                 + std::to_integer<uint16_t>(payload[1]);
   if (!detail::rfc3629::valid(payload.subspan(2)))
@@ -25,7 +25,7 @@ error framing::validate_closing_payload(const_byte_span payload) {
                       "malformed UTF-8 text message in closing payload");
   // statuses between 3000 and 4999 are allowed and application specific
   if (status >= 3000 && status < 5000)
-    return error{};
+    return {};
   // statuses between 1000 and 2999 need to be protocol defined, and status
   // codes lower then 1000 and greater or equal then 5000 are invalid.
   auto status_code = web_socket::status{0};
@@ -40,7 +40,7 @@ error framing::validate_closing_payload(const_byte_span payload) {
       case status::message_too_big:
       case status::missing_extensions:
       case status::unexpected_condition:
-        return error{};
+        return {};
       default:
         break;
     }
@@ -251,8 +251,8 @@ ptrdiff_t framing::handle(uint8_t opcode, byte_span payload,
   // opcodes are checked for validity when decoding the header
   switch (opcode) {
     case detail::rfc6455::connection_close:
-      if (auto error = validate_closing_payload(payload); error) {
-        abort_and_shutdown(error);
+      if (auto err = validate_closing_payload(payload); err) {
+        abort_and_shutdown(err);
         return -1;
       }
       abort_and_shutdown(sec::connection_closed);
