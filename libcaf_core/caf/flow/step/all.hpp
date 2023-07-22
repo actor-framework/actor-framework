@@ -11,4 +11,3 @@
 #include "caf/flow/step/take.hpp"
 #include "caf/flow/step/take_last.hpp"
 #include "caf/flow/step/take_while.hpp"
-
