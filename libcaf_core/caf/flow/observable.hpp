@@ -223,6 +223,11 @@ public:
     return add_step(step::take<output_type>{n});
   }
 
+  /// @copydoc observable::take_last
+  auto take_last(size_t n) && {
+    return add_step(step::take_last<output_type>{n});
+  }
+
   /// @copydoc observable::buffer
   auto buffer(size_t count) && {
     return materialize().buffer(count);

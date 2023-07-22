@@ -9,4 +9,6 @@
 #include "caf/flow/step/reduce.hpp"
 #include "caf/flow/step/skip.hpp"
 #include "caf/flow/step/take.hpp"
+#include "caf/flow/step/take_last.hpp"
 #include "caf/flow/step/take_while.hpp"
+

@@ -69,6 +69,31 @@ SCENARIO("sum up all the multiples of 3 or 5 below 1000") {
   }
 }
 
+SCENARIO("take the last 5 digits in a series of 100 digits") {
+  auto snk = flow::make_auto_observer<int>();
+  ctx->make_observable().range(1, 100).take_last(5).subscribe(
+    snk->as_observer());
+  ctx->run();
+  CHECK_EQ(snk->state, flow::observer_state::completed);
+  CHECK_EQ(snk->buf, ls(96, 97, 98, 99, 100));
+}
+
+SCENARIO("take the last 5 digits in a series of 5 digits") {
+  auto snk = flow::make_auto_observer<int>();
+  ctx->make_observable().range(1, 5).take_last(5).subscribe(snk->as_observer());
+  ctx->run();
+  CHECK_EQ(snk->state, flow::observer_state::completed);
+  CHECK_EQ(snk->buf, ls(1, 2, 3, 4, 5));
+}
+
+SCENARIO("take the last 5 digits in a series of 3 digits") {
+  auto snk = flow::make_auto_observer<int>();
+  ctx->make_observable().range(1, 3).take_last(5).subscribe(snk->as_observer());
+  ctx->run();
+  CHECK_EQ(snk->state, flow::observer_state::completed);
+  CHECK_EQ(snk->buf, ls(1, 2, 3));
+}
+
 TEST_CASE("GH-1399 regression") {
   // Original issue: flat_map does not limit the demand it signals upstream.
   // When running flat_map on an unbound sequence like iota-observable, it
