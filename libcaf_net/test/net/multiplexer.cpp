@@ -131,7 +131,7 @@ private:
 };
 
 struct fixture {
-  fixture() : mpx(net::multiplexer::make(nullptr)) {
+  fixture() : mpx(net::multiplexer::make_default(nullptr)) {
     manager_count = std::make_shared<std::atomic<size_t>>(0);
     mpx->set_thread_id();
   }

@@ -33,7 +33,7 @@ struct fixture : test_coordinator_fixture<> {
   using byte_buffer_ptr = std::shared_ptr<byte_buffer>;
 
   fixture()
-    : mpx(net::multiplexer::make(nullptr)),
+    : mpx(net::multiplexer::make_default(nullptr)),
       recv_buf(1024),
       shared_recv_buf{std::make_shared<byte_buffer>()},
       shared_send_buf{std::make_shared<byte_buffer>()} {

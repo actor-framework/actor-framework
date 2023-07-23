@@ -139,7 +139,7 @@ public:
 };
 
 struct fixture : test_coordinator_fixture<> {
-  fixture() : mm(sys), mpx(net::multiplexer::make(&mm)) {
+  fixture() : mm(sys), mpx(net::multiplexer::make_default(&mm)) {
     mpx->set_thread_id();
     if (auto err = mpx->init())
       CAF_FAIL("mpx->init() failed: " << err);

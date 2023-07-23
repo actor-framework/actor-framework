@@ -48,7 +48,7 @@ void pollset_updater::handle_read_event() {
   };
   auto add_action = [this](intptr_t ptr) {
     auto f = action{intrusive_ptr{reinterpret_cast<action::impl*>(ptr), false}};
-    mpx_->pending_actions_.push_back(std::move(f));
+    mpx_->pending_actions().push_back(std::move(f));
   };
   for (;;) {
     CAF_ASSERT((buf_.size() - buf_size_) > 0);

@@ -183,7 +183,7 @@ SCENARIO("calling suspend_reading temporarily halts receiving of messages") {
   GIVEN("a framing object with an app that consumes strings") {
     auto [fd1, fd2] = unbox(net::make_stream_socket_pair());
     auto writer = std::thread{run_writer, fd1};
-    auto mpx = net::multiplexer::make(nullptr);
+    auto mpx = net::multiplexer::make_default(nullptr);
     mpx->set_thread_id();
     if (auto err = mpx->init())
       FAIL("mpx->init failed: " << err);
