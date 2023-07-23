@@ -36,12 +36,9 @@ public:
   void on_complete(Next& next, Steps&... steps) {
     auto take_last_begin = elements_.begin();
     if (elements_.size() > last_elements_count_)
-      take_last_begin = elements_.begin()
-                        + (elements_.size() - last_elements_count_);
-    for (auto elements_it = take_last_begin; elements_it != elements_.end();
-         ++elements_it) {
-      next.on_next(*elements_it, steps...);
-    }
+      take_last_begin += (elements_.size() - last_elements_count_);
+    std::for_each(take_last_begin, elements_.end(),
+                  [&](auto item) { next.on_next(item, steps...); });
     next.on_complete(steps...);
   }
 
