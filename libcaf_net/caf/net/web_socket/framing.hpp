@@ -44,6 +44,14 @@ public:
   /// Stored as currently active opcode to mean "no opcode received yet".
   static constexpr size_t nil_code = 0xFF;
 
+  // -- static utility functions -----------------------------------------------
+
+  /// Checks whether the payload of a closing frame contains a valid status
+  /// code and an UTF-8 formatted message.
+  /// @returns A default constructed `error` if the payload is valid, error kind
+  ///          otherwise.
+  static error validate_closing_payload(const_byte_span payload);
+
   // -- constructors, destructors, and assignment operators --------------------
 
   /// Creates a new framing protocol for client mode.
@@ -148,7 +156,10 @@ private:
   // with closing message
   template <class... Ts>
   void abort_and_shutdown(sec reason, Ts&&... xs) {
-    auto err = make_error(reason, std::forward<Ts>(xs)...);
+    abort_and_shutdown(make_error(reason, std::forward<Ts>(xs)...));
+  }
+
+  void abort_and_shutdown(const error& err) {
     up_->abort(err);
     shutdown(err);
   }

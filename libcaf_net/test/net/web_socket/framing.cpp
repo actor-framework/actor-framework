@@ -50,6 +50,15 @@ int fetch_status(const_byte_span payload) {
          + std::to_integer<int>(payload[3]);
 }
 
+byte_buffer make_closing_payload(uint16_t code_val, std::string_view msg) {
+  byte_buffer payload;
+  payload.push_back(static_cast<std::byte>((code_val & 0xFF00) >> 8));
+  payload.push_back(static_cast<std::byte>(code_val & 0x00FF));
+  auto* first = reinterpret_cast<const std::byte*>(msg.data());
+  payload.insert(payload.end(), first, first + msg.size());
+  return payload;
+}
+
 } // namespace
 
 BEGIN_FIXTURE_SCOPE(fixture)
@@ -170,6 +179,25 @@ SCENARIO("the client closes the connection with a closing handshake") {
       CHECK(hdr.payload_len >= 2);
       CHECK_EQ(fetch_status(transport->output_buffer()),
                static_cast<int>(net::web_socket::status::normal_close));
+    }
+    WHEN("the client sends an invalid closing handshake") {
+      reset();
+      std::vector<std::byte> handshake;
+      // invalid status code
+      auto payload = make_closing_payload(1016, ""sv);
+      detail::rfc6455::assemble_frame(detail::rfc6455::connection_close, 0x0,
+                                      payload, handshake);
+      transport->push(handshake);
+    }
+    THEN("the server closes the connection with protocol error") {
+      CHECK_EQ(transport->handle_input(), 0l);
+      detail::rfc6455::header hdr;
+      detail::rfc6455::decode_header(transport->output_buffer(), hdr);
+      CHECK_EQ(app->abort_reason, sec::protocol_error);
+      CHECK_EQ(hdr.opcode, detail::rfc6455::connection_close);
+      CHECK(hdr.fin);
+      CHECK_EQ(fetch_status(transport->output_buffer()),
+               static_cast<int>(net::web_socket::status::protocol_error));
     }
   }
 }
@@ -585,3 +613,41 @@ SCENARIO("the application shuts down on invalid frame fragments") {
 }
 
 END_FIXTURE_SCOPE();
+
+TEST_CASE("empty closing payload is valid") {
+  auto error
+    = net::web_socket::framing::validate_closing_payload(byte_buffer{});
+  CHECK(!error);
+}
+
+TEST_CASE("decode valid closing codes") {
+  auto valid_status_codes = std::array{1000, 1001, 1002, 1003, 1007, 1008, 1009,
+                                       1010, 1011, 3000, 3999, 4000, 4999};
+  for (auto status_code : valid_status_codes) {
+    auto payload = make_closing_payload(status_code, ""sv);
+    auto error = net::web_socket::framing::validate_closing_payload(payload);
+    CHECK(!error);
+  }
+}
+
+TEST_CASE("fail on invalid closing codes") {
+  auto valid_status_codes = std::array{0,    999,  1004, 1005, 1006, 1016,
+                                       1100, 2000, 2999, 5000, 65535};
+  for (auto status_code : valid_status_codes) {
+    auto payload = make_closing_payload(status_code, ""sv);
+    auto result = net::web_socket::framing::validate_closing_payload(payload);
+    CHECK_EQ(result, sec::protocol_error);
+  }
+}
+
+TEST_CASE("fail on invalid utf8 closing message") {
+  auto payload = make_closing_payload(1000, "\xf4\x80"sv);
+  auto result = net::web_socket::framing::validate_closing_payload(payload);
+  CHECK_EQ(result, sec::protocol_error);
+}
+
+TEST_CASE("fail on single byte payload") {
+  auto payload = byte_buffer{std::byte{0}};
+  auto result = net::web_socket::framing::validate_closing_payload(payload);
+  CHECK_EQ(result, sec::protocol_error);
+}
