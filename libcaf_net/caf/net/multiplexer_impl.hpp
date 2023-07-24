@@ -26,10 +26,6 @@ namespace caf::net {
 /// Multiplexes any number of ::socket_manager objects with a ::socket.
 class CAF_NET_EXPORT multiplexer_impl : public multiplexer {
 public:
-  // -- constructors, destructors, and assignment operators --------------------
-
-  ~multiplexer_impl();
-
   // -- factories --------------------------------------------------------------
 
   /// @param parent Points to the owning middleman instance. May be `nullptr`
