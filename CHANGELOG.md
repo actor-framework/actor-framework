@@ -38,6 +38,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - We renamed `caf::flow::item_publisher` to `caf::flow::multicaster` to better
   reflect its purpose and to avoid confusion with the new
   `caf::async::publisher`.
+- When failing to deserialize a request, the sender will receive an error of 
+  kind `sec::malformed_message`.
 
 ### Fixed
 

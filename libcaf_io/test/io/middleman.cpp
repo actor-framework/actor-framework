@@ -101,4 +101,20 @@ CAF_TEST(remote_lookup allows registry lookups on other nodes) {
   anon_send_exit(testee, exit_reason::user_shutdown);
 }
 
+CAF_TEST(failing to deserialize a request reports an error to the sender) {
+  auto testee_impl = []() -> behavior {
+    return {
+      [](non_deserializable_t) { return 0; },
+    };
+  };
+  auto testee = earth.sys.spawn(testee_impl);
+  earth.sys.registry().put("testee", testee);
+  auto testee_proxy_ptr = mars.mm.remote_lookup("testee", earth.sys.node());
+  auto testee_proxy = actor_cast<actor>(testee_proxy_ptr);
+  mars.self->request(testee_proxy, caf::infinite, non_deserializable_t{})
+    .receive([](int32_t) { CAF_FAIL("Expected an error"); },
+             [](caf::error& err) { CHECK_EQ(err, sec::malformed_message); });
+  anon_send_exit(testee, exit_reason::user_shutdown);
+}
+
 END_FIXTURE_SCOPE()
