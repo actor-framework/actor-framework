@@ -8,7 +8,7 @@ using calculator
 struct non_deserializable_t {
   template <typename Inspector>
   friend bool inspect(Inspector&, non_deserializable_t&) {
-    return not Inspector::is_loading;
+    return !Inspector::is_loading;
   }
 };
 
