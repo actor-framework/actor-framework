@@ -78,7 +78,7 @@ public:
   virtual void verbosity(unsigned level) = 0;
 
   /// Disables the colored output mode for the reporter
-  virtual void disable_colors(bool plain_output) = 0;
+  virtual void no_colors(bool new_value) = 0;
 
   /// Returns statistics for the current test.
   virtual stats test_stats() = 0;

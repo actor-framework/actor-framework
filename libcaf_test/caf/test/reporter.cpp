@@ -180,8 +180,8 @@ public:
   }
 
   auto colored() {
-    auto state = plain_output_ ? colorizing_iterator::off
-                               : colorizing_iterator::normal;
+    auto state = no_colors_ ? colorizing_iterator::off
+                            : colorizing_iterator::normal;
 
     return colorizing_iterator{state, &std::cout};
   }
@@ -393,8 +393,8 @@ public:
     level_ = level;
   }
 
-  void disable_colors(bool plain_output) override {
-    plain_output_ = plain_output;
+  void no_colors(bool new_value) override {
+    no_colors_ = new_value;
   }
 
   stats test_stats() override {
@@ -448,7 +448,7 @@ private:
   unsigned level_ = CAF_LOG_LEVEL_INFO;
 
   /// Configures the color output of the reporter.
-  bool plain_output_ = false;
+  bool no_colors_ = false;
 
   /// Stores the names of failed test suites.
   std::vector<std::string_view> failed_suites_;

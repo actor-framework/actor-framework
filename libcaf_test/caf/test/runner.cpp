@@ -142,7 +142,7 @@ int runner::run(int argc, char** argv) {
   if (!suite_regex || !test_regex) {
     return EXIT_FAILURE;
   }
-  default_reporter->disable_colors(get_or(cfg_, "no-colors", false));
+  default_reporter->no_colors(get_or(cfg_, "no-colors", false));
   default_reporter->start();
   auto enabled = [](const std::regex& selected,
                     std::string_view search_string) {
