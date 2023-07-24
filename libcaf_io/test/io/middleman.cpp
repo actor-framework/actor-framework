@@ -117,4 +117,25 @@ CAF_TEST(failing to deserialize a request reports an error to the sender) {
   anon_send_exit(testee, exit_reason::user_shutdown);
 }
 
+CAF_TEST(failing to find the desitnation reports an error to the sender) {
+  auto testee_impl = []() -> behavior {
+    return {
+      [](int a) { return a; },
+    };
+  };
+  auto requester_impl = [](event_based_actor* self, actor buddy) {
+    self->request(buddy, caf::infinite, 10)
+      .then([](int a) { CAF_FAIL("Expected an error, received " << a); },
+            [](caf::error& err) { CHECK_EQ(err, sec::malformed_message); });
+  };
+  auto testee = earth.sys.spawn(testee_impl);
+  earth.sys.registry().put("testee", testee);
+  auto testee_proxy_ptr = mars.mm.remote_lookup("testee", earth.sys.node());
+  auto testee_proxy = actor_cast<actor>(testee_proxy_ptr);
+  anon_send_exit(testee, exit_reason::user_shutdown);
+  auto buddy = mars.sys.spawn(requester_impl, testee_proxy);
+  mars.sys.await_all_actors_done();
+  anon_send_exit(buddy, exit_reason::user_shutdown);
+}
+
 END_FIXTURE_SCOPE()
