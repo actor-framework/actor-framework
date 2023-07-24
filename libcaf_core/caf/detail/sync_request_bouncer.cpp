@@ -22,8 +22,7 @@ sync_request_bouncer::sync_request_bouncer(error r) : rsn(std::move(r)) {
 void sync_request_bouncer::operator()(const strong_actor_ptr& sender,
                                       const message_id& mid) const {
   if (sender && mid.is_request())
-    sender->enqueue(nullptr, mid.response_id(),
-                    make_message(make_error(sec::request_receiver_down)),
+    sender->enqueue(nullptr, mid.response_id(), make_message(rsn),
                     // TODO: this breaks out of the execution unit
                     nullptr);
 }
