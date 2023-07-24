@@ -2,7 +2,7 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#include "caf/net/multiplexer_impl.hpp"
+#include "caf/net/default_multiplexer.hpp"
 
 #include "caf/net/middleman.hpp"
 #include "caf/net/socket_manager.hpp"
@@ -57,13 +57,13 @@ const short output_mask = POLLOUT;
 
 // -- constructors, destructors, and assignment operators ----------------------
 
-multiplexer_impl::multiplexer_impl(middleman* owner) : owner_(owner) {
+default_multiplexer::default_multiplexer(middleman* owner) : owner_(owner) {
   // nop
 }
 
 // -- initialization -----------------------------------------------------------
 
-error multiplexer_impl::init() {
+error default_multiplexer::init() {
   auto pipe_handles = make_pipe();
   if (!pipe_handles)
     return std::move(pipe_handles.error());
@@ -79,19 +79,19 @@ error multiplexer_impl::init() {
 
 // -- properties ---------------------------------------------------------------
 
-size_t multiplexer_impl::num_socket_managers() const noexcept {
+size_t default_multiplexer::num_socket_managers() const noexcept {
   return managers_.size();
 }
 
 ptrdiff_t
-multiplexer_impl::index_of(const socket_manager_ptr& mgr) const noexcept {
+default_multiplexer::index_of(const socket_manager_ptr& mgr) const noexcept {
   auto first = managers_.begin();
   auto last = managers_.end();
   auto i = std::find(first, last, mgr);
   return i == last ? -1 : std::distance(first, i);
 }
 
-ptrdiff_t multiplexer_impl::index_of(socket fd) const noexcept {
+ptrdiff_t default_multiplexer::index_of(socket fd) const noexcept {
   auto first = pollset_.begin();
   auto last = pollset_.end();
   auto i = std::find_if(first, last,
@@ -99,26 +99,26 @@ ptrdiff_t multiplexer_impl::index_of(socket fd) const noexcept {
   return i == last ? -1 : std::distance(first, i);
 }
 
-middleman& multiplexer_impl::owner() {
+middleman& default_multiplexer::owner() {
   CAF_ASSERT(owner_ != nullptr);
   return *owner_;
 }
 
-actor_system& multiplexer_impl::system() {
+actor_system& default_multiplexer::system() {
   return owner().system();
 }
 
 // -- implementation of execution_context --------------------------------------
 
-void multiplexer_impl::ref_execution_context() const noexcept {
+void default_multiplexer::ref_execution_context() const noexcept {
   ref();
 }
 
-void multiplexer_impl::deref_execution_context() const noexcept {
+void default_multiplexer::deref_execution_context() const noexcept {
   deref();
 }
 
-void multiplexer_impl::schedule(action what) {
+void default_multiplexer::schedule(action what) {
   CAF_LOG_TRACE("");
   if (std::this_thread::get_id() == tid_) {
     pending_actions_.push_back(what);
@@ -128,13 +128,13 @@ void multiplexer_impl::schedule(action what) {
   }
 }
 
-void multiplexer_impl::watch(disposable what) {
+void default_multiplexer::watch(disposable what) {
   watched_.emplace_back(what);
 }
 
 // -- thread-safe signaling ----------------------------------------------------
 
-void multiplexer_impl::start(socket_manager_ptr mgr) {
+void default_multiplexer::start(socket_manager_ptr mgr) {
   CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
   if (std::this_thread::get_id() == tid_) {
     do_start(mgr);
@@ -143,10 +143,10 @@ void multiplexer_impl::start(socket_manager_ptr mgr) {
   }
 }
 
-void multiplexer_impl::shutdown() {
+void default_multiplexer::shutdown() {
   CAF_LOG_TRACE("");
   // Note: there is no 'shortcut' when calling the function in the
-  // multiplexer_impl's thread, because do_shutdown calls apply_updates. This
+  // default_multiplexer's thread, because do_shutdown calls apply_updates. This
   // must only be called from the pollset_updater.
   CAF_LOG_DEBUG("push shutdown event to pipe");
   write_to_pipe(detail::pollset_updater::code::shutdown,
@@ -155,42 +155,42 @@ void multiplexer_impl::shutdown() {
 
 // -- callbacks for socket managers --------------------------------------------
 
-void multiplexer_impl::register_reading(socket_manager* mgr) {
+void default_multiplexer::register_reading(socket_manager* mgr) {
   CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
   update_for(mgr).events |= input_mask;
 }
 
-void multiplexer_impl::register_writing(socket_manager* mgr) {
+void default_multiplexer::register_writing(socket_manager* mgr) {
   CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
   update_for(mgr).events |= output_mask;
 }
 
-void multiplexer_impl::deregister_reading(socket_manager* mgr) {
+void default_multiplexer::deregister_reading(socket_manager* mgr) {
   CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
   update_for(mgr).events &= ~input_mask;
 }
 
-void multiplexer_impl::deregister_writing(socket_manager* mgr) {
+void default_multiplexer::deregister_writing(socket_manager* mgr) {
   CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
   update_for(mgr).events &= ~output_mask;
 }
 
-void multiplexer_impl::deregister(socket_manager* mgr) {
+void default_multiplexer::deregister(socket_manager* mgr) {
   CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
   update_for(mgr).events = 0;
 }
 
-bool multiplexer_impl::is_reading(const socket_manager* mgr) const noexcept {
+bool default_multiplexer::is_reading(const socket_manager* mgr) const noexcept {
   return (active_mask_of(mgr) & input_mask) != 0;
 }
 
-bool multiplexer_impl::is_writing(const socket_manager* mgr) const noexcept {
+bool default_multiplexer::is_writing(const socket_manager* mgr) const noexcept {
   return (active_mask_of(mgr) & output_mask) != 0;
 }
 
 // -- control flow -------------------------------------------------------------
 
-bool multiplexer_impl::poll_once(bool blocking) {
+bool default_multiplexer::poll_once(bool blocking) {
   CAF_LOG_TRACE(CAF_ARG(blocking));
   if (pollset_.empty())
     return false;
@@ -255,12 +255,12 @@ bool multiplexer_impl::poll_once(bool blocking) {
   }
 }
 
-void multiplexer_impl::poll() {
+void default_multiplexer::poll() {
   while (poll_once(false))
     ; // repeat
 }
 
-void multiplexer_impl::apply_updates() {
+void default_multiplexer::apply_updates() {
   CAF_LOG_DEBUG("apply" << updates_.size() << "updates");
   for (;;) {
     if (!updates_.empty()) {
@@ -291,16 +291,16 @@ void multiplexer_impl::apply_updates() {
   }
 }
 
-void multiplexer_impl::set_thread_id() {
+void default_multiplexer::set_thread_id() {
   CAF_LOG_TRACE("");
   tid_ = std::this_thread::get_id();
 }
 
-void multiplexer_impl::run() {
+void default_multiplexer::run() {
   CAF_LOG_TRACE("");
-  CAF_LOG_DEBUG("run multiplexer_impl" << CAF_ARG(input_mask)
-                                       << CAF_ARG(error_mask)
-                                       << CAF_ARG(output_mask));
+  CAF_LOG_DEBUG("run default_multiplexer" << CAF_ARG(input_mask)
+                                          << CAF_ARG(error_mask)
+                                          << CAF_ARG(output_mask));
   // On systems like Linux, we cannot disable sigpipe on the socket alone. We
   // need to block the signal at thread level since some APIs (such as OpenSSL)
   // are unsafe to call otherwise.
@@ -319,8 +319,8 @@ void multiplexer_impl::run() {
 
 // -- utility functions --------------------------------------------------------
 
-void multiplexer_impl::handle(const socket_manager_ptr& mgr,
-                              [[maybe_unused]] short events, short revents) {
+void default_multiplexer::handle(const socket_manager_ptr& mgr,
+                                 [[maybe_unused]] short events, short revents) {
   CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id)
                 << CAF_ARG(events) << CAF_ARG(revents));
   CAF_ASSERT(mgr != nullptr);
@@ -350,7 +350,8 @@ void multiplexer_impl::handle(const socket_manager_ptr& mgr,
   }
 }
 
-multiplexer_impl::poll_update& multiplexer_impl::update_for(ptrdiff_t index) {
+default_multiplexer::poll_update&
+default_multiplexer::update_for(ptrdiff_t index) {
   auto fd = socket{pollset_[index].fd};
   if (auto i = updates_.find(fd); i != updates_.end()) {
     return i->second;
@@ -361,8 +362,8 @@ multiplexer_impl::poll_update& multiplexer_impl::update_for(ptrdiff_t index) {
   }
 }
 
-multiplexer_impl::poll_update&
-multiplexer_impl::update_for(socket_manager* mgr) {
+default_multiplexer::poll_update&
+default_multiplexer::update_for(socket_manager* mgr) {
   auto fd = mgr->handle();
   if (auto i = updates_.find(fd); i != updates_.end()) {
     return i->second;
@@ -377,7 +378,7 @@ multiplexer_impl::update_for(socket_manager* mgr) {
 }
 
 template <class T>
-void multiplexer_impl::write_to_pipe(uint8_t opcode, T* ptr) {
+void default_multiplexer::write_to_pipe(uint8_t opcode, T* ptr) {
   detail::pollset_updater::msg_buf buf;
   // Note: no intrusive_ptr_add_ref(ptr) since we take ownership of `ptr`.
   buf[0] = static_cast<std::byte>(opcode);
@@ -393,7 +394,7 @@ void multiplexer_impl::write_to_pipe(uint8_t opcode, T* ptr) {
     intrusive_ptr_release(ptr);
 }
 
-short multiplexer_impl::active_mask_of(
+short default_multiplexer::active_mask_of(
   const socket_manager* mgr) const noexcept {
   auto fd = mgr->handle();
   if (auto i = updates_.find(fd); i != updates_.end()) {
@@ -407,13 +408,13 @@ short multiplexer_impl::active_mask_of(
 
 // -- internal getter for the pollset updater --------------------------------
 
-std::deque<action>& multiplexer_impl::pending_actions() {
+std::deque<action>& default_multiplexer::pending_actions() {
   return pending_actions_;
 };
 
 // -- internal callbacks the pollset updater -----------------------------------
 
-void multiplexer_impl::do_shutdown() {
+void default_multiplexer::do_shutdown() {
   // Note: calling apply_updates here is only safe because we know that the
   // pollset updater runs outside of the for-loop in run_once.
   CAF_LOG_DEBUG("initiate shutdown");
@@ -425,7 +426,7 @@ void multiplexer_impl::do_shutdown() {
   apply_updates();
 }
 
-void multiplexer_impl::do_start(const socket_manager_ptr& mgr) {
+void default_multiplexer::do_start(const socket_manager_ptr& mgr) {
   CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
   if (!shutting_down_) {
     error err;

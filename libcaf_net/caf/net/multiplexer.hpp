@@ -86,6 +86,8 @@ public:
   /// Returns the enclosing @ref actor_system.
   virtual actor_system& system() = 0;
 
+  // -- thread-safe signaling --------------------------------------------------
+
   /// Registers `mgr` for initialization in the multiplexer's thread.
   /// @thread-safe
   virtual void start(socket_manager_ptr mgr) = 0;
@@ -139,8 +141,11 @@ public:
   virtual void run() = 0;
 
 private:
-  // -- internal callbacks the pollset updater ---------------------------------
+  // -- internal getter for the pollset updater --------------------------------
+
   virtual std::deque<action>& pending_actions() = 0;
+
+  // -- internal callbacks the pollset updater ---------------------------------
 
   virtual void do_shutdown() = 0;
 

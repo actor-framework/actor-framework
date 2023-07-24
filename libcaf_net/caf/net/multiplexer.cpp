@@ -4,8 +4,8 @@
 
 #include "caf/net/multiplexer.hpp"
 
+#include "caf/net/default_multiplexer.hpp"
 #include "caf/net/middleman.hpp"
-#include "caf/net/multiplexer_impl.hpp"
 #include "caf/net/socket_manager.hpp"
 
 #include "caf/action.hpp"
@@ -56,7 +56,7 @@ void multiplexer::block_sigpipe() {
 #endif
 
 multiplexer_ptr multiplexer::make_default(middleman* parent) {
-  return multiplexer_impl::make(parent);
+  return default_multiplexer::make(parent);
 }
 
 multiplexer* multiplexer::from(actor_system& sys) {

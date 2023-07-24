@@ -24,7 +24,7 @@
 namespace caf::net {
 
 /// Multiplexes any number of ::socket_manager objects with a ::socket.
-class CAF_NET_EXPORT multiplexer_impl : public multiplexer {
+class CAF_NET_EXPORT default_multiplexer : public multiplexer {
 public:
   // -- factories --------------------------------------------------------------
 
@@ -33,7 +33,7 @@ public:
   ///               socket_manager requires access to the @ref middleman or the
   ///               @ref actor_system.
   static multiplexer_ptr make(middleman* parent) {
-    auto ptr = new multiplexer_impl(parent);
+    auto ptr = new default_multiplexer(parent);
     return multiplexer_ptr{ptr, false};
   }
 
@@ -188,7 +188,7 @@ protected:
 private:
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit multiplexer_impl(middleman* parent);
+  explicit default_multiplexer(middleman* parent);
 
   // -- internal getter for the pollset updater --------------------------------
 

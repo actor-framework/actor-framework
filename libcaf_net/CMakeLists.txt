@@ -60,7 +60,7 @@ caf_add_component(
     caf/net/lp/upper_layer.cpp
     caf/net/middleman.cpp
     caf/net/multiplexer.cpp
-    caf/net/multiplexer_impl.cpp
+    caf/net/default_multiplexer.cpp
     caf/net/network_socket.cpp
     caf/net/octet_stream/lower_layer.cpp
     caf/net/octet_stream/policy.cpp
