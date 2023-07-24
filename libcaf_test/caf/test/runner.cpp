@@ -29,13 +29,9 @@ namespace {
 
 class watchdog {
 public:
-  static void start(int secs);
-  static void stop();
-
-private:
   watchdog(int secs) {
     using detail::format_to;
-    thread_ = std::thread{[=] {
+    thread_ = secs <= 0 ? std::thread() : std::thread{[=] {
       caf::detail::set_thread_name("test.watchdog");
       auto tp = std::chrono::high_resolution_clock::now()
                 + std::chrono::seconds(secs);
@@ -58,27 +54,15 @@ private:
       canceled_ = true;
       cv_.notify_all();
     }
-    thread_.join();
+    if (thread_.joinable())
+      thread_.join();
   }
 
-  volatile bool canceled_ = false;
+  bool canceled_ = false;
   std::mutex mtx_;
   std::condition_variable cv_;
   std::thread thread_;
 };
-
-namespace {
-watchdog* s_watchdog;
-}
-
-void watchdog::start(int secs) {
-  if (secs > 0)
-    s_watchdog = new watchdog(secs);
-}
-
-void watchdog::stop() {
-  delete s_watchdog;
-}
 
 config_option_set make_option_set() {
   config_option_set result;
@@ -158,6 +142,7 @@ int runner::run(int argc, char** argv) {
                              selected);
   };
   const auto max_runtime = get_or(cfg_, "max-runtime", 0);
+  const auto watchdog_ptr = std::make_unique<watchdog>(max_runtime);
   for (auto& [suite_name, suite] : suites_) {
     if (!enabled(*suite_regex, suite_name))
       continue;
@@ -165,7 +150,6 @@ int runner::run(int argc, char** argv) {
     for (auto [test_name, factory_instance] : suite) {
       if (!enabled(*test_regex, test_name))
         continue;
-      watchdog::start(max_runtime);
       auto state = std::make_shared<context>();
 #ifdef CAF_ENABLE_EXCEPTIONS
       try {
@@ -195,7 +179,6 @@ int runner::run(int argc, char** argv) {
         state->clear_stacks();
       } while (state->can_run());
 #endif
-      watchdog::stop();
     }
     default_reporter->end_suite(suite_name);
   }
