@@ -396,7 +396,10 @@ struct optional_inspector_access {
   template <class Inspector, class IsPresent, class Get>
   static bool save_field(Inspector& f, std::string_view field_name,
                          IsPresent& is_present, Get& get) {
-    return detail::save_field(f, field_name, is_present, get);
+    auto deref_get = [&get]() -> decltype(auto) {
+      return traits::deref_save(get());
+    };
+    return detail::save_field(f, field_name, is_present, deref_get);
   }
 
   template <class Inspector, class IsValid, class SyncValue>
