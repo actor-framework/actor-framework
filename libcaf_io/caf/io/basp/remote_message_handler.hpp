@@ -103,6 +103,8 @@ public:
     auto t0 = telemetry::timer::clock_type::now();
     if (!source.apply(msg)) {
       CAF_LOG_ERROR("failed to read message content:" << source.get_error());
+      src->enqueue(nullptr, mid.response_id(),
+                   make_message(make_error(sec::malformed_message)), nullptr);
       return;
     }
     telemetry::timer::observe(mm_metrics.deserialization_time, t0);
