@@ -75,7 +75,7 @@ public:
     template <class Inspector>
     bool operator()(Inspector& f) {
       auto is_present = [this] { return *val != fallback; };
-      auto get = [this] { return *val; };
+      auto get = [this]() -> decltype(auto) { return *val; };
       return detail::save_field(f, field_name, is_present, get);
     }
 

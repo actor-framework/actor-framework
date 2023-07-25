@@ -808,6 +808,7 @@ end object)_";
     }
   }
 }
+
 TEST_CASE("GH-1427 regression") {
   struct opt_test {
     std::optional<int> val;
