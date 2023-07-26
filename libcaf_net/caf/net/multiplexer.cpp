@@ -136,7 +136,8 @@ private:
 };
 
 /// Multiplexes any number of ::socket_manager objects with a ::socket.
-class default_multiplexer : public multiplexer {
+class default_multiplexer : public detail::atomic_ref_counted,
+                            public multiplexer {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -155,15 +156,10 @@ public:
 
   friend class pollset_updater; // Needs access to the `do_*` functions.
 
-  // -- factories --------------------------------------------------------------
+  // -- constructors, destructors, and assignment operators --------------------
 
-  /// @param parent Points to the owning middleman instance. May be `nullptr`
-  ///               only for the purpose of unit testing if no @ref
-  ///               socket_manager requires access to the @ref middleman or the
-  ///               @ref actor_system.
-  static multiplexer_ptr make(middleman* parent) {
-    auto ptr = new default_multiplexer(parent);
-    return multiplexer_ptr{ptr, false};
+  explicit default_multiplexer(middleman* parent) : owner_(parent) {
+    // nop
   }
 
   // -- implementation of caf::net::multiplexer --------------------------------
@@ -191,21 +187,6 @@ public:
     return managers_.size();
   }
 
-  /// Returns the index of `mgr` in the pollset or `-1`.
-  ptrdiff_t index_of(const socket_manager_ptr& mgr) const noexcept override {
-    auto first = managers_.begin();
-    auto last = managers_.end();
-    auto i = std::find(first, last, mgr);
-    return i == last ? -1 : std::distance(first, i);
-  }
-  /// Returns the index of `fd` in the pollset or `-1`.
-  ptrdiff_t index_of(socket fd) const noexcept override {
-    auto first = pollset_.begin();
-    auto last = pollset_.end();
-    auto i = std::find_if(first, last,
-                          [fd](const pollfd& x) { return x.fd == fd.id; });
-    return i == last ? -1 : std::distance(first, i);
-  }
   /// Returns the owning @ref middleman instance.
   middleman& owner() override {
     CAF_ASSERT(owner_ != nullptr);
@@ -229,7 +210,7 @@ public:
   void schedule(action what) override {
     CAF_LOG_TRACE("");
     if (std::this_thread::get_id() == tid_) {
-      pending_actions_.push_back(what);
+      pending_actions.push_back(what);
     } else {
       auto ptr = std::move(what).as_intrusive_ptr().release();
       write_to_pipe(pollset_updater::code::run_action, ptr);
@@ -270,30 +251,36 @@ public:
     CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
     update_for(mgr).events |= input_mask;
   }
+
   /// Registers `mgr` for write events.
   void register_writing(socket_manager* mgr) override {
     CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
     update_for(mgr).events |= output_mask;
   }
+
   /// Deregisters `mgr` from read events.
   void deregister_reading(socket_manager* mgr) override {
     CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
     update_for(mgr).events &= ~input_mask;
   }
+
   /// Deregisters `mgr` from write events.
   void deregister_writing(socket_manager* mgr) override {
     CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
     update_for(mgr).events &= ~output_mask;
   }
+
   /// Deregisters @p mgr from read and write events.
   void deregister(socket_manager* mgr) override {
     CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
     update_for(mgr).events = 0;
   }
+
   /// Queries whether `mgr` is currently registered for reading.
   bool is_reading(const socket_manager* mgr) const noexcept override {
     return (active_mask_of(mgr) & input_mask) != 0;
   }
+
   /// Queries whether `mgr` is currently registered for writing.
   bool is_writing(const socket_manager* mgr) const noexcept override {
     return (active_mask_of(mgr) & output_mask) != 0;
@@ -327,13 +314,13 @@ public:
           // very well mess with the for loop below, we process this handler
           // first.
           auto mgr = managers_[0];
-          handle(mgr, pollset_[0].events, revents);
+          handle(mgr, revents);
           --presult;
         }
         apply_updates();
         for (size_t i = 1; i < pollset_.size() && presult > 0; ++i) {
           if (auto revents = pollset_[i].revents; revents != 0) {
-            handle(managers_[i], pollset_[i].events, revents);
+            handle(managers_[i], revents);
             --presult;
           }
         }
@@ -369,12 +356,6 @@ public:
     }
   }
 
-  /// Runs `poll_once(false)` until it returns `true`.`
-  void poll() override {
-    while (poll_once(false))
-      ; // repeat
-  }
-
   /// Applies all pending updates.
   void apply_updates() override {
     CAF_LOG_DEBUG("apply" << updates_.size() << "updates");
@@ -397,9 +378,9 @@ public:
         }
         updates_.clear();
       }
-      while (!pending_actions_.empty()) {
-        auto next = std::move(pending_actions_.front());
-        pending_actions_.pop_front();
+      while (!pending_actions.empty()) {
+        auto next = std::move(pending_actions.front());
+        pending_actions.pop_front();
         next.run();
       }
       if (updates_.empty())
@@ -435,11 +416,55 @@ public:
     }
   }
 
-protected:
+  // -- internal callbacks the pollset updater ---------------------------------
+
+  void do_shutdown() {
+    // Note: calling apply_updates here is only safe because we know that the
+    // pollset updater runs outside of the for-loop in run_once.
+    CAF_LOG_DEBUG("initiate shutdown");
+    shutting_down_ = true;
+    apply_updates();
+    // Skip the first manager (the pollset updater).
+    for (size_t i = 1; i < managers_.size(); ++i)
+      managers_[i]->dispose();
+    apply_updates();
+  }
+
+  void do_start(const socket_manager_ptr& mgr) {
+    CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
+    if (!shutting_down_) {
+      error err;
+      err = mgr->start();
+      if (err) {
+        CAF_LOG_DEBUG("mgr->init failed: " << err);
+        // The socket manager should not register itself for any events if
+        // initialization fails. Purge any state just in case.
+        update_for(mgr.get()).events = 0;
+      }
+    }
+  }
+
   // -- utility functions ------------------------------------------------------
 
+  /// Returns the index of `mgr` in the pollset or `-1`.
+  ptrdiff_t index_of(const socket_manager_ptr& mgr) const noexcept {
+    auto first = managers_.begin();
+    auto last = managers_.end();
+    auto i = std::find(first, last, mgr);
+    return i == last ? -1 : std::distance(first, i);
+  }
+
+  /// Returns the index of `fd` in the pollset or `-1`.
+  ptrdiff_t index_of(socket fd) const noexcept {
+    auto first = pollset_.begin();
+    auto last = pollset_.end();
+    auto i = std::find_if(first, last,
+                          [fd](const pollfd& x) { return x.fd == fd.id; });
+    return i == last ? -1 : std::distance(first, i);
+  }
+
   /// Handles an I/O event on given manager.
-  void handle(const socket_manager_ptr& mgr, short events, short revents) {
+  void handle(const socket_manager_ptr& mgr, short revents) {
     CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id)
                   << CAF_ARG(events) << CAF_ARG(revents));
     CAF_ASSERT(mgr != nullptr);
@@ -533,6 +558,11 @@ protected:
       return 0;
     }
   }
+
+  /// Pending actions via `schedule`.
+  std::deque<action> pending_actions;
+
+private:
   // -- member variables -------------------------------------------------------
 
   /// Bookkeeping data for managed sockets.
@@ -562,46 +592,8 @@ protected:
   /// Signals whether shutdown has been requested.
   bool shutting_down_ = false;
 
-  /// Pending actions via `schedule`.
-  std::deque<action> pending_actions_;
-
   /// Keeps track of watched disposables.
   std::vector<disposable> watched_;
-
-private:
-  // -- constructors, destructors, and assignment operators --------------------
-
-  explicit default_multiplexer(middleman* parent) : owner_(parent) {
-    // nop
-  }
-
-  // -- internal callbacks the pollset updater ---------------------------------
-
-  void do_shutdown() {
-    // Note: calling apply_updates here is only safe because we know that the
-    // pollset updater runs outside of the for-loop in run_once.
-    CAF_LOG_DEBUG("initiate shutdown");
-    shutting_down_ = true;
-    apply_updates();
-    // Skip the first manager (the pollset updater).
-    for (size_t i = 1; i < managers_.size(); ++i)
-      managers_[i]->dispose();
-    apply_updates();
-  }
-
-  void do_start(const socket_manager_ptr& mgr) {
-    CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
-    if (!shutting_down_) {
-      error err;
-      err = mgr->start();
-      if (err) {
-        CAF_LOG_DEBUG("mgr->init failed: " << err);
-        // The socket manager should not register itself for any events if
-        // initialization fails. Purge any state just in case.
-        update_for(mgr.get()).events = 0;
-      }
-    }
-  }
 };
 
 void pollset_updater::handle_read_event() {
@@ -611,7 +603,7 @@ void pollset_updater::handle_read_event() {
   };
   auto add_action = [this](intptr_t ptr) {
     auto f = action{intrusive_ptr{reinterpret_cast<action::impl*>(ptr), false}};
-    mpx_->pending_actions_.push_back(std::move(f));
+    mpx_->pending_actions.push_back(std::move(f));
   };
   for (;;) {
     CAF_ASSERT((buf_.size() - buf_size_) > 0);
@@ -681,7 +673,7 @@ void multiplexer::block_sigpipe() {
 #endif
 
 multiplexer_ptr multiplexer::make_default(middleman* parent) {
-  return default_multiplexer::make(parent);
+  return multiplexer_ptr{new default_multiplexer{parent}, false};
 }
 
 multiplexer* multiplexer::from(actor_system& sys) {

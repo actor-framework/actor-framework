@@ -18,8 +18,7 @@
 namespace caf::net {
 
 /// Multiplexes any number of ::socket_manager objects with a ::socket.
-class CAF_NET_EXPORT multiplexer : public detail::atomic_ref_counted,
-                                   public async::execution_context {
+class CAF_NET_EXPORT multiplexer : public async::execution_context {
 public:
   // -- static utility functions -----------------------------------------------
 
@@ -50,12 +49,6 @@ public:
 
   /// Returns the number of currently active socket managers.
   virtual size_t num_socket_managers() const noexcept = 0;
-
-  /// Returns the index of `mgr` in the pollset or `-1`.
-  virtual ptrdiff_t index_of(const socket_manager_ptr& mgr) const noexcept = 0;
-
-  /// Returns the index of `fd` in the pollset or `-1`.
-  virtual ptrdiff_t index_of(socket fd) const noexcept = 0;
 
   /// Returns the owning @ref middleman instance.
   virtual middleman& owner() = 0;
@@ -101,9 +94,6 @@ public:
   /// Polls I/O activity once and runs all socket event handlers that become
   /// ready as a result.
   virtual bool poll_once(bool blocking) = 0;
-
-  /// Runs `poll_once(false)` until it returns `true`.`
-  virtual void poll() = 0;
 
   /// Applies all pending updates.
   virtual void apply_updates() = 0;
