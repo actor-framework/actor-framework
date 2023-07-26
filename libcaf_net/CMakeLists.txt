@@ -29,7 +29,6 @@ caf_add_component(
     ${CAF_NET_HEADERS}
   SOURCES
     caf/detail/convert_ip_endpoint.cpp
-    caf/detail/pollset_updater.cpp
     caf/detail/rfc6455.cpp
     caf/detail/rfc6455.test.cpp
     caf/net/abstract_actor_shell.cpp
@@ -60,7 +59,6 @@ caf_add_component(
     caf/net/lp/upper_layer.cpp
     caf/net/middleman.cpp
     caf/net/multiplexer.cpp
-    caf/net/default_multiplexer.cpp
     caf/net/network_socket.cpp
     caf/net/octet_stream/lower_layer.cpp
     caf/net/octet_stream/policy.cpp
