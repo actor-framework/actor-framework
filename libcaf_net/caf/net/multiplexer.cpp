@@ -44,12 +44,6 @@
 #  include "caf/detail/socket_sys_includes.hpp"
 #endif // CAF_WINDOWS
 
-extern "C" {
-
-struct pollfd;
-
-} // extern "C"
-
 namespace caf::net {
 
 namespace {
@@ -76,11 +70,11 @@ const short error_mask = POLLRDHUP | POLLERR | POLLHUP | POLLNVAL;
 
 const short output_mask = POLLOUT;
 
-class pollset_updater : public net::socket_event_layer {
+class pollset_updater : public socket_event_layer {
 public:
   // -- member types -----------------------------------------------------------
 
-  using super = net::socket_manager;
+  using super = socket_manager;
 
   using msg_buf = std::array<std::byte, sizeof(intptr_t) + 1>;
 
@@ -94,26 +88,26 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit pollset_updater(net::pipe_socket fd) : fd_(fd) {
+  explicit pollset_updater(pipe_socket fd) : fd_(fd) {
     // nop
   }
 
   // -- factories --------------------------------------------------------------
 
-  static std::unique_ptr<pollset_updater> make(net::pipe_socket fd) {
+  static std::unique_ptr<pollset_updater> make(pipe_socket fd) {
     return std::make_unique<pollset_updater>(fd);
   }
 
   // -- implementation of socket_event_layer -----------------------------------
 
-  error start(net::socket_manager* owner) override {
+  error start(socket_manager* owner) override {
     CAF_LOG_TRACE("");
     owner_ = owner;
-    mpx_ = reinterpret_cast<net::default_multiplexer*>(owner->mpx_ptr());
-    return net::nonblocking(fd_, true);
+    mpx_ = static_cast<default_multiplexer*>(owner->mpx_ptr());
+    return nonblocking(fd_, true);
   }
 
-  net::socket handle() const override {
+  socket handle() const override {
     return fd_;
   }
 
@@ -128,9 +122,9 @@ public:
   }
 
 private:
-  net::pipe_socket fd_;
-  net::socket_manager* owner_ = nullptr;
-  net::default_multiplexer* mpx_ = nullptr;
+  pipe_socket fd_;
+  socket_manager* owner_ = nullptr;
+  default_multiplexer* mpx_ = nullptr;
   msg_buf buf_;
   size_t buf_size_ = 0;
 };
@@ -172,8 +166,10 @@ public:
       return std::move(pipe_handles.error());
     auto updater = pollset_updater::make(pipe_handles->first);
     auto mgr = socket_manager::make(this, std::move(updater));
-    if (auto err = mgr->start())
+    if (auto err = mgr->start()) {
+      close(pipe_handles->second);
       return err;
+    }
     write_handle_ = pipe_handles->second;
     pollset_.emplace_back(pollfd{pipe_handles->first.id, input_mask, 0});
     managers_.emplace_back(mgr);
@@ -182,7 +178,6 @@ public:
 
   // -- properties -------------------------------------------------------------
 
-  /// Returns the number of currently active socket managers.
   size_t num_socket_managers() const noexcept override {
     return managers_.size();
   }
@@ -599,7 +594,7 @@ private:
 void pollset_updater::handle_read_event() {
   CAF_LOG_TRACE("");
   auto as_mgr = [](intptr_t ptr) {
-    return intrusive_ptr{reinterpret_cast<net::socket_manager*>(ptr), false};
+    return intrusive_ptr{reinterpret_cast<socket_manager*>(ptr), false};
   };
   auto add_action = [this](intptr_t ptr) {
     auto f = action{intrusive_ptr{reinterpret_cast<action::impl*>(ptr), false}};
@@ -636,7 +631,7 @@ void pollset_updater::handle_read_event() {
       CAF_LOG_DEBUG("pipe closed, assume shutdown");
       owner_->deregister();
       return;
-    } else if (net::last_socket_error_is_temporary()) {
+    } else if (last_socket_error_is_temporary()) {
       return;
     } else {
       CAF_LOG_ERROR("pollset updater failed to read from the pipe");
@@ -673,7 +668,7 @@ void multiplexer::block_sigpipe() {
 #endif
 
 multiplexer_ptr multiplexer::make_default(middleman* parent) {
-  return multiplexer_ptr{new default_multiplexer{parent}, false};
+  return make_counted<default_multiplexer>(parent);
 }
 
 multiplexer* multiplexer::from(actor_system& sys) {
