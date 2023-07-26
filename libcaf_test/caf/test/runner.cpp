@@ -29,9 +29,25 @@ namespace {
 
 class watchdog {
 public:
-  watchdog(int secs) {
+  explicit watchdog(int secs) {
+    if (secs > 0)
+      run(secs);
+  }
+  ~watchdog() {
+    if (!thread_.joinable())
+      return;
+    {
+      std::lock_guard<std::mutex> guard{mtx_};
+      canceled_ = true;
+      cv_.notify_all();
+    }
+    thread_.join();
+  }
+
+private:
+  void run(int secs) {
     using detail::format_to;
-    thread_ = secs <= 0 ? std::thread() : std::thread{[=] {
+    thread_ = std::thread{[=] {
       caf::detail::set_thread_name("test.watchdog");
       auto tp = std::chrono::high_resolution_clock::now()
                 + std::chrono::seconds(secs);
@@ -48,15 +64,6 @@ public:
       }
     }};
   }
-  ~watchdog() {
-    {
-      std::lock_guard<std::mutex> guard{mtx_};
-      canceled_ = true;
-      cv_.notify_all();
-    }
-    if (thread_.joinable())
-      thread_.join();
-  }
 
   bool canceled_ = false;
   std::mutex mtx_;
@@ -70,7 +77,7 @@ config_option_set make_option_set() {
     .add<bool>("available-suites,a", "print all available suites")
     .add<bool>("help,h?", "print this help text")
     .add<bool>("no-colors,n", "disable coloring (ignored on Windows)")
-    .add<size_t>("max-runtime,m", "set a maximum runtime in seconds")
+    .add<size_t>("max-runtime,r", "set a maximum runtime in seconds")
     .add<std::string>("suites,s", "regex for selecting suites")
     .add<std::string>("tests,t", "regex for selecting tests")
     .add<std::string>("available-tests,A", "print tests for a suite")
@@ -141,8 +148,7 @@ int runner::run(int argc, char** argv) {
     return std::regex_search(search_string.begin(), search_string.end(),
                              selected);
   };
-  const auto max_runtime = get_or(cfg_, "max-runtime", 0);
-  const auto watchdog_ptr = std::make_unique<watchdog>(max_runtime);
+  watchdog runtime_guard{get_or(cfg_, "max-runtime", 0)};
   for (auto& [suite_name, suite] : suites_) {
     if (!enabled(*suite_regex, suite_name))
       continue;
