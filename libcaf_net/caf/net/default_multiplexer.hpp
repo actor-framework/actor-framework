@@ -21,11 +21,34 @@
 #include <mutex>
 #include <thread>
 
+extern "C" {
+
+struct pollfd;
+
+} // extern "C"
+
 namespace caf::net {
 
 /// Multiplexes any number of ::socket_manager objects with a ::socket.
 class CAF_NET_EXPORT default_multiplexer : public multiplexer {
 public:
+  // -- member types -----------------------------------------------------------
+
+  struct poll_update {
+    short events = 0;
+    socket_manager_ptr mgr;
+  };
+
+  using poll_update_map = unordered_flat_map<socket, poll_update>;
+
+  using pollfd_list = std::vector<pollfd>;
+
+  using manager_list = std::vector<socket_manager_ptr>;
+
+  // -- friends ----------------------------------------------------------------
+
+  friend class detail::pollset_updater; // Needs access to the `do_*` functions.
+
   // -- factories --------------------------------------------------------------
 
   /// @param parent Points to the owning middleman instance. May be `nullptr`
@@ -190,15 +213,11 @@ private:
 
   explicit default_multiplexer(middleman* parent);
 
-  // -- internal getter for the pollset updater --------------------------------
-
-  std::deque<action>& pending_actions() override;
-
   // -- internal callbacks the pollset updater ---------------------------------
 
-  void do_shutdown() override;
+  void do_shutdown();
 
-  void do_start(const socket_manager_ptr& mgr) override;
+  void do_start(const socket_manager_ptr& mgr);
 };
 
 } // namespace caf::net

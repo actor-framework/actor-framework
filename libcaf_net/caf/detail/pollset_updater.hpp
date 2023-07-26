@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/net/default_multiplexer.hpp"
 #include "caf/net/pipe_socket.hpp"
 #include "caf/net/socket_event_layer.hpp"
 #include "caf/net/socket_manager.hpp"
@@ -56,7 +57,7 @@ public:
 private:
   net::pipe_socket fd_;
   net::socket_manager* owner_ = nullptr;
-  net::multiplexer* mpx_ = nullptr;
+  net::default_multiplexer* mpx_ = nullptr;
   msg_buf buf_;
   size_t buf_size_ = 0;
 };

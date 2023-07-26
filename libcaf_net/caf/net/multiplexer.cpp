@@ -12,7 +12,6 @@
 #include "caf/actor_system.hpp"
 #include "caf/byte.hpp"
 #include "caf/config.hpp"
-#include "caf/detail/pollset_updater.hpp"
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
 #include "caf/logger.hpp"

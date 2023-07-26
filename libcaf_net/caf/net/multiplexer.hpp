@@ -15,35 +15,12 @@
 #include <mutex>
 #include <thread>
 
-extern "C" {
-
-struct pollfd;
-
-} // extern "C"
-
 namespace caf::net {
 
 /// Multiplexes any number of ::socket_manager objects with a ::socket.
 class CAF_NET_EXPORT multiplexer : public detail::atomic_ref_counted,
                                    public async::execution_context {
 public:
-  // -- member types -----------------------------------------------------------
-
-  struct poll_update {
-    short events = 0;
-    socket_manager_ptr mgr;
-  };
-
-  using poll_update_map = unordered_flat_map<socket, poll_update>;
-
-  using pollfd_list = std::vector<pollfd>;
-
-  using manager_list = std::vector<socket_manager_ptr>;
-
-  // -- friends ----------------------------------------------------------------
-
-  friend class detail::pollset_updater; // Needs access to the `do_*` functions.
-
   // -- static utility functions -----------------------------------------------
 
   /// Blocks the PIPE signal on the current thread when running on a POSIX
@@ -139,17 +116,6 @@ public:
 
   /// Runs the multiplexer until no socket event handler remains active.
   virtual void run() = 0;
-
-private:
-  // -- internal getter for the pollset updater --------------------------------
-
-  virtual std::deque<action>& pending_actions() = 0;
-
-  // -- internal callbacks the pollset updater ---------------------------------
-
-  virtual void do_shutdown() = 0;
-
-  virtual void do_start(const socket_manager_ptr& mgr) = 0;
 };
 
 } // namespace caf::net

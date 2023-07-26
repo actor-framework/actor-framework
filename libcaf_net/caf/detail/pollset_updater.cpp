@@ -33,7 +33,7 @@ std::unique_ptr<pollset_updater> pollset_updater::make(net::pipe_socket fd) {
 error pollset_updater::start(net::socket_manager* owner) {
   CAF_LOG_TRACE("");
   owner_ = owner;
-  mpx_ = owner->mpx_ptr();
+  mpx_ = reinterpret_cast<net::default_multiplexer*>(owner->mpx_ptr());
   return net::nonblocking(fd_, true);
 }
 
@@ -48,7 +48,7 @@ void pollset_updater::handle_read_event() {
   };
   auto add_action = [this](intptr_t ptr) {
     auto f = action{intrusive_ptr{reinterpret_cast<action::impl*>(ptr), false}};
-    mpx_->pending_actions().push_back(std::move(f));
+    mpx_->pending_actions_.push_back(std::move(f));
   };
   for (;;) {
     CAF_ASSERT((buf_.size() - buf_size_) > 0);

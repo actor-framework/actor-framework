@@ -406,12 +406,6 @@ short default_multiplexer::active_mask_of(
   }
 }
 
-// -- internal getter for the pollset updater --------------------------------
-
-std::deque<action>& default_multiplexer::pending_actions() {
-  return pending_actions_;
-};
-
 // -- internal callbacks the pollset updater -----------------------------------
 
 void default_multiplexer::do_shutdown() {
