@@ -100,12 +100,7 @@ public:
 
   // -- implementation of socket_event_layer -----------------------------------
 
-  error start(socket_manager* owner) override {
-    CAF_LOG_TRACE("");
-    owner_ = owner;
-    mpx_ = static_cast<default_multiplexer*>(owner->mpx_ptr());
-    return nonblocking(fd_, true);
-  }
+  error start(socket_manager* owner) override;
 
   socket handle() const override {
     return fd_;
@@ -590,6 +585,13 @@ private:
   /// Keeps track of watched disposables.
   std::vector<disposable> watched_;
 };
+
+error pollset_updater::start(socket_manager* owner) {
+  CAF_LOG_TRACE("");
+  owner_ = owner;
+  mpx_ = static_cast<default_multiplexer*>(owner->mpx_ptr());
+  return nonblocking(fd_, true);
+}
 
 void pollset_updater::handle_read_event() {
   CAF_LOG_TRACE("");
