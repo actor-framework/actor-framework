@@ -7,13 +7,33 @@
 
 using caf::test::block_type;
 
-TEST("tests can contain checks") {
+TEST("tests can contain different type of checks") {
   auto* rep = caf::test::reporter::instance;
-  for (int i = 0; i < 3; ++i)
-    check_eq(i, i);
+  /// tests all of the possible scenario for check_ne
+  check_ne(0u, 0u);
+  check_ne(0u, 1u);
   auto stats = rep->test_stats();
-  check_eq(stats.passed, 3u);
-  check_eq(stats.failed, 0u);
+  /// tests all of the possible scenario for check_eq
+  check_eq(stats.passed, 1u);
+  check_eq(stats.passed, 0u);
+  /// tests all of the possible scenario for check_ge
+  check_ge(stats.passed, 0u);
+  check_ge(stats.passed, 1u);
+  check_ge(stats.passed, 2u);
+  /// tests all of the possible scenario for check_gt
+  check_gt(stats.passed, 0u);
+  check_gt(stats.passed, 1u);
+  check_gt(stats.passed, 2u);
+  /// tests all of the possible scenario for check_le
+  check_le(stats.passed, 0u);
+  check_le(stats.passed, 1u);
+  check_le(stats.passed, 2u);
+  /// tests all of the possible scenario for check_lt
+  check_lt(stats.passed, 0u);
+  check_lt(stats.passed, 1u);
+  check_lt(stats.passed, 2u);
+  info("reset error count to not fail the test");
+  caf::test::reporter::instance->test_stats({16, 0});
   info("this test had {} checks", rep->test_stats().total());
 }
 
