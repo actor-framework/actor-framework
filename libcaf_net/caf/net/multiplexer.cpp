@@ -630,7 +630,6 @@ void pollset_updater::handle_read_event() {
 
 // -- static utility functions -------------------------------------------------
 
-
 void multiplexer::block_sigpipe() {
 #ifdef CAF_LINUX
   sigset_t sigpipe_mask;
