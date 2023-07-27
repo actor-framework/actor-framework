@@ -135,6 +135,7 @@ caf_add_component(
     caf/detail/stream_bridge.cpp
     caf/detail/stringification_inspector.cpp
     caf/detail/sync_request_bouncer.cpp
+    caf/detail/sync_ring_buffer.test.cpp
     caf/detail/test_actor_clock.cpp
     caf/detail/thread_safe_actor_clock.cpp
     caf/detail/type_id_list_builder.cpp
@@ -273,7 +274,6 @@ caf_add_component(
     detail.parser.read_timespan
     detail.parser.read_unsigned_integer
     detail.private_thread_pool
-    detail.ringbuffer
     detail.type_id_list_builder
     detail.unique_function
     dictionary

@@ -13,14 +13,14 @@
 
 namespace caf::detail {
 
-// A ringbuffer designed for a single consumer and any number of producers that
-// can hold a maximum of `Size - 1` elements.
+// A ring buffer backed by an array for a single consumer and any number of
+// producers that can hold a maximum of `Size - 1` elements.
 template <class T, size_t Size>
-class ringbuffer {
+class sync_ring_buffer {
 public:
   using guard_type = std::unique_lock<std::mutex>;
 
-  ringbuffer() : wr_pos_(0), rd_pos_(0) {
+  sync_ring_buffer() : wr_pos_(0), rd_pos_(0) {
     // nop
   }
 

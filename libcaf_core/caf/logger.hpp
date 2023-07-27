@@ -12,8 +12,8 @@
 #include "caf/detail/log_level.hpp"
 #include "caf/detail/pp.hpp"
 #include "caf/detail/pretty_type_name.hpp"
-#include "caf/detail/ringbuffer.hpp"
 #include "caf/detail/scope_guard.hpp"
+#include "caf/detail/sync_ring_buffer.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive/drr_queue.hpp"
 #include "caf/intrusive/fifo_inbox.hpp"
@@ -339,7 +339,7 @@ private:
   std::fstream file_;
 
   // Filled with log events by other threads.
-  detail::ringbuffer<event, queue_size> queue_;
+  detail::sync_ring_buffer<event, queue_size> queue_;
 
   // Stores the assembled name of the log file.
   std::string file_name_;
