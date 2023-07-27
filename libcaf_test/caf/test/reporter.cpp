@@ -182,7 +182,6 @@ public:
   auto colored() {
     auto state = no_colors_ ? colorizing_iterator::off
                             : colorizing_iterator::normal;
-
     return colorizing_iterator{state, &std::cout};
   }
 
@@ -447,7 +446,7 @@ private:
   /// Configures the verbosity of the reporter.
   unsigned level_ = CAF_LOG_LEVEL_INFO;
 
-  /// Configures the color output of the reporter.
+  /// Configures whether we render text without colors.
   bool no_colors_ = false;
 
   /// Stores the names of failed test suites.

@@ -77,7 +77,8 @@ public:
 
   virtual void verbosity(unsigned level) = 0;
 
-  /// Disables the colored output mode for the reporter
+  /// Sets whether the reporter disables colored output even when writing to a
+  /// TTY.
   virtual void no_colors(bool new_value) = 0;
 
   /// Returns statistics for the current test.
