@@ -13,15 +13,63 @@
 #include "caf/config_option_adder.hpp"
 #include "caf/config_option_set.hpp"
 #include "caf/detail/log_level.hpp"
+#include "caf/detail/set_thread_name.hpp"
 
+#include <condition_variable>
 #include <iostream>
+#include <mutex>
 #include <optional>
 #include <regex>
 #include <string>
+#include <thread>
 
 namespace caf::test {
 
 namespace {
+
+class watchdog {
+public:
+  explicit watchdog(int secs) {
+    if (secs > 0)
+      run(secs);
+  }
+  ~watchdog() {
+    if (!thread_.joinable())
+      return;
+    {
+      std::lock_guard<std::mutex> guard{mtx_};
+      canceled_ = true;
+      cv_.notify_all();
+    }
+    thread_.join();
+  }
+
+private:
+  void run(int secs) {
+    using detail::format_to;
+    thread_ = std::thread{[=] {
+      caf::detail::set_thread_name("test.watchdog");
+      auto tp = std::chrono::high_resolution_clock::now()
+                + std::chrono::seconds(secs);
+      std::unique_lock<std::mutex> guard{mtx_};
+      while (!canceled_
+             && cv_.wait_until(guard, tp) != std::cv_status::timeout) {
+      }
+      if (!canceled_) {
+        auto err_out = [] { return std::ostream_iterator<char>{std::cerr}; };
+        format_to(err_out(),
+                  "WATCHDOG: unit test did not finish within {} seconds\n",
+                  secs);
+        abort();
+      }
+    }};
+  }
+
+  bool canceled_ = false;
+  std::mutex mtx_;
+  std::condition_variable cv_;
+  std::thread thread_;
+};
 
 config_option_set make_option_set() {
   config_option_set result;
@@ -100,6 +148,7 @@ int runner::run(int argc, char** argv) {
     return std::regex_search(search_string.begin(), search_string.end(),
                              selected);
   };
+  watchdog runtime_guard{get_or(cfg_, "max-runtime", 0)};
   for (auto& [suite_name, suite] : suites_) {
     if (!enabled(*suite_regex, suite_name))
       continue;
