@@ -187,7 +187,7 @@ SCENARIO("ssl::transport::make_client performs the client handshake") {
                        key_1_pem_path};
     WHEN("connecting as a client to an SSL server") {
       THEN("CAF transparently calls SSL_connect") {
-        auto mpx = net::multiplexer::make_default(nullptr);
+        auto mpx = net::multiplexer::make(nullptr);
         mpx->set_thread_id();
         std::ignore = mpx->init();
         auto ctx = unbox(ssl::context::make_client(ssl::tls::any));
@@ -227,7 +227,7 @@ SCENARIO("ssl::transport::make_server performs the server handshake") {
     std::thread client{dummy_tls_client, client_fd};
     WHEN("acting as the SSL server") {
       THEN("CAF transparently calls SSL_accept") {
-        auto mpx = net::multiplexer::make_default(nullptr);
+        auto mpx = net::multiplexer::make(nullptr);
         mpx->set_thread_id();
         std::ignore = mpx->init();
         auto ctx = unbox(ssl::context::make_server(ssl::tls::any));

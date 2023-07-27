@@ -22,8 +22,8 @@ class CAF_NET_EXPORT multiplexer : public async::execution_context {
 public:
   // -- static utility functions -----------------------------------------------
 
-  /// Blocks the PIPE signal on the current thread when running on a POSIX
-  /// windows. Has no effect when running on Windows.
+  /// Blocks the PIPE signal on the current thread when running on Linux. Has no
+  /// effect otherwise.
   static void block_sigpipe();
 
   /// Returns a pointer to the multiplexer from the actor system.
@@ -31,15 +31,16 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  virtual ~multiplexer();
+  ~multiplexer() override;
 
   // -- factories --------------------------------------------------------------
 
+  /// Creates a new multiplexer instance with the default implementation.
   /// @param parent Points to the owning middleman instance. May be `nullptr`
   ///               only for the purpose of unit testing if no @ref
   ///               socket_manager requires access to the @ref middleman or the
   ///               @ref actor_system.
-  static multiplexer_ptr make_default(middleman* parent);
+  static multiplexer_ptr make(middleman* parent);
 
   // -- initialization ---------------------------------------------------------
 
@@ -97,9 +98,6 @@ public:
 
   /// Applies all pending updates.
   virtual void apply_updates() = 0;
-
-  /// Runs all pending actions.
-  // virtual void run_actions() = 0;
 
   /// Sets the thread ID to `std::this_thread::id()`.
   virtual void set_thread_id() = 0;

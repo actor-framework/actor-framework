@@ -70,7 +70,7 @@ actor_system::global_state_guard middleman::init_host_system() {
 }
 
 middleman::middleman(actor_system& sys)
-  : sys_(sys), mpx_(multiplexer::make_default(this)) {
+  : sys_(sys), mpx_(multiplexer::make(this)) {
   // nop
 }
 

@@ -153,8 +153,6 @@ public:
 
   // -- implementation of caf::net::multiplexer --------------------------------
 
-  // -- initialization ---------------------------------------------------------
-
   error init() override {
     auto pipe_handles = make_pipe();
     if (!pipe_handles)
@@ -171,18 +169,14 @@ public:
     return none;
   }
 
-  // -- properties -------------------------------------------------------------
-
   size_t num_socket_managers() const noexcept override {
     return managers_.size();
   }
 
-  /// Returns the owning @ref middleman instance.
   middleman& owner() override {
     CAF_ASSERT(owner_ != nullptr);
     return *owner_;
   }
-  /// Returns the enclosing @ref actor_system.
   actor_system& system() override {
     return owner().system();
   }
@@ -213,8 +207,6 @@ public:
 
   // -- thread-safe signaling --------------------------------------------------
 
-  /// Registers `mgr` for initialization in the multiplexer's thread.
-  /// @thread-safe
   void start(socket_manager_ptr mgr) override {
     CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
     if (std::this_thread::get_id() == tid_) {
@@ -223,8 +215,7 @@ public:
       write_to_pipe(pollset_updater::code::start_manager, mgr.release());
     }
   }
-  /// Signals the multiplexer to initiate shutdown.
-  /// @thread-safe
+
   void shutdown() override {
     CAF_LOG_TRACE("");
     // Note: there is no 'shortcut' when calling the function in the
@@ -234,52 +225,44 @@ public:
     write_to_pipe(pollset_updater::code::shutdown,
                   static_cast<socket_manager*>(nullptr));
   }
+
   // -- callbacks for socket managers ------------------------------------------
 
-  /// Registers `mgr` for read events.
   void register_reading(socket_manager* mgr) override {
     CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
     update_for(mgr).events |= input_mask;
   }
 
-  /// Registers `mgr` for write events.
   void register_writing(socket_manager* mgr) override {
     CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
     update_for(mgr).events |= output_mask;
   }
 
-  /// Deregisters `mgr` from read events.
   void deregister_reading(socket_manager* mgr) override {
     CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
     update_for(mgr).events &= ~input_mask;
   }
 
-  /// Deregisters `mgr` from write events.
   void deregister_writing(socket_manager* mgr) override {
     CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
     update_for(mgr).events &= ~output_mask;
   }
 
-  /// Deregisters @p mgr from read and write events.
   void deregister(socket_manager* mgr) override {
     CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
     update_for(mgr).events = 0;
   }
 
-  /// Queries whether `mgr` is currently registered for reading.
   bool is_reading(const socket_manager* mgr) const noexcept override {
     return (active_mask_of(mgr) & input_mask) != 0;
   }
 
-  /// Queries whether `mgr` is currently registered for writing.
   bool is_writing(const socket_manager* mgr) const noexcept override {
     return (active_mask_of(mgr) & output_mask) != 0;
   }
 
   // -- control flow -----------------------------------------------------------
 
-  /// Polls I/O activity once and runs all socket event handlers that become
-  /// ready as a result.
   bool poll_once(bool blocking) override {
     CAF_LOG_TRACE(CAF_ARG(blocking));
     if (pollset_.empty())
@@ -346,7 +329,6 @@ public:
     }
   }
 
-  /// Applies all pending updates.
   void apply_updates() override {
     CAF_LOG_DEBUG("apply" << updates_.size() << "updates");
     for (;;) {
@@ -378,13 +360,11 @@ public:
     }
   }
 
-  /// Sets the thread ID to `std::this_thread::id()`.
   void set_thread_id() override {
     CAF_LOG_TRACE("");
     tid_ = std::this_thread::get_id();
   }
 
-  /// Runs the multiplexer until no socket event handler remains active.
   void run() override {
     CAF_LOG_TRACE("");
     CAF_LOG_DEBUG("run default_multiplexer" << CAF_ARG(input_mask)
@@ -496,6 +476,7 @@ public:
       return updates_.container().back().second;
     }
   }
+
   /// Returns a change entry for the socket of the manager.
   poll_update& update_for(socket_manager* mgr) {
     auto fd = mgr->handle();
@@ -646,11 +627,12 @@ void pollset_updater::handle_read_event() {
 } // namespace
 
 // -- multiplexer implementation -----------------------------------------------
+
 // -- static utility functions -------------------------------------------------
 
-#ifdef CAF_LINUX
 
 void multiplexer::block_sigpipe() {
+#ifdef CAF_LINUX
   sigset_t sigpipe_mask;
   sigemptyset(&sigpipe_mask);
   sigaddset(&sigpipe_mask, SIGPIPE);
@@ -659,17 +641,10 @@ void multiplexer::block_sigpipe() {
     perror("pthread_sigmask");
     exit(1);
   }
-}
-
-#else
-
-void multiplexer::block_sigpipe() {
-  // nop
-}
-
 #endif
+}
 
-multiplexer_ptr multiplexer::make_default(middleman* parent) {
+multiplexer_ptr multiplexer::make(middleman* parent) {
   return make_counted<default_multiplexer>(parent);
 }
 

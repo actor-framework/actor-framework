@@ -86,7 +86,7 @@ private:
 };
 
 struct fixture : test_coordinator_fixture<> {
-  fixture() : mpx(net::multiplexer::make_default(nullptr)), serv(mpx.get()) {
+  fixture() : mpx(net::multiplexer::make(nullptr)), serv(mpx.get()) {
     mpx->set_thread_id();
     std::ignore = rt.start(&serv);
   }
