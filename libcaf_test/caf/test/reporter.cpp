@@ -113,15 +113,24 @@ struct colorizing_iterator {
           out->put(c);
         break;
       case off_read_color:
-        mode = off_escape;
+        out->flush();
+        switch (c) {
+          case '0':
+            mode = verbatim;
+            return;
+          default:
+            mode = off_escape;
+            return;
+        }
         break;
       case off_escape:
         if (c != '(')
           CAF_RAISE_ERROR("expected ( after color code");
-        mode = color;
+        mode = off_color;
         break;
       case off_color:
         if (c == ')') {
+          out->flush();
           mode = off;
           break;
         }
@@ -171,7 +180,9 @@ public:
   }
 
   auto colored() {
-    return colorizing_iterator{colorizing_iterator::normal, &std::cout};
+    auto state = no_colors_ ? colorizing_iterator::off
+                            : colorizing_iterator::normal;
+    return colorizing_iterator{state, &std::cout};
   }
 
   void stop() override {
@@ -381,6 +392,10 @@ public:
     level_ = level;
   }
 
+  void no_colors(bool new_value) override {
+    no_colors_ = new_value;
+  }
+
   stats test_stats() override {
     return test_stats_;
   }
@@ -430,6 +445,9 @@ private:
 
   /// Configures the verbosity of the reporter.
   unsigned level_ = CAF_LOG_LEVEL_INFO;
+
+  /// Configures whether we render text without colors.
+  bool no_colors_ = false;
 
   /// Stores the names of failed test suites.
   std::vector<std::string_view> failed_suites_;
