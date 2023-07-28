@@ -39,12 +39,13 @@ void runnable::run() {
   }
 }
 
-void runnable::check(bool value, const detail::source_location& location) {
+bool runnable::check(bool value, const detail::source_location& location) {
   if (value) {
     reporter::instance->pass(location);
-    return;
+  } else {
+    reporter::instance->fail("should be true", location);
   }
-  reporter::instance->fail("should be true", location);
+  return value;
 }
 
 block& runnable::current_block() {

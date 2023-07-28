@@ -55,7 +55,7 @@ public:
 
   /// Checks whether `lhs` and `rhs` are equal.
   template <class T0, class T1>
-  void check_eq(const T0& lhs, const T1& rhs,
+  bool check_eq(const T0& lhs, const T1& rhs,
                 const detail::source_location& location
                 = detail::source_location::current()) {
     if (std::is_integral_v<T0> && std::is_integral_v<T1>) {
@@ -64,13 +64,14 @@ public:
     }
     if (lhs == rhs) {
       reporter::instance->pass(location);
-      return;
+      return true;
     }
     reporter::instance->fail(binary_predicate::eq, stringify(lhs),
                              stringify(rhs), location);
+    return false;
   }
 
-  void check(bool value, const detail::source_location& location
+  bool check(bool value, const detail::source_location& location
                          = detail::source_location::current());
 
   block& current_block();
