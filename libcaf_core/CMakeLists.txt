@@ -70,6 +70,7 @@ caf_add_component(
     caf/abstract_actor.cpp
     caf/abstract_channel.cpp
     caf/abstract_group.cpp
+    caf/abstract_mailbox.cpp
     caf/action.cpp
     caf/actor.cpp
     caf/actor_addr.cpp
@@ -111,6 +112,8 @@ caf_add_component(
     caf/detail/behavior_stack.cpp
     caf/detail/blocking_behavior.cpp
     caf/detail/config_consumer.cpp
+    caf/detail/default_mailbox.cpp
+    caf/detail/default_mailbox.test.cpp
     caf/detail/get_process_id.cpp
     caf/detail/glob_match.cpp
     caf/detail/group_tunnel.cpp
@@ -156,6 +159,7 @@ caf_add_component(
     caf/hash/fnv.test.cpp
     caf/hash/sha1.cpp
     caf/init_global_meta_objects.cpp
+    caf/intrusive/stack.test.cpp
     caf/ipv4_address.cpp
     caf/ipv4_endpoint.cpp
     caf/ipv4_subnet.cpp

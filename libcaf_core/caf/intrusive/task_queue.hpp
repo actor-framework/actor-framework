@@ -52,7 +52,11 @@ public:
 
   // -- constructors, destructors, and assignment operators -------------------
 
-  task_queue(policy_type p)
+  task_queue() : old_last_(nullptr), new_head_(nullptr) {
+    init();
+  }
+
+  explicit task_queue(policy_type p)
     : old_last_(nullptr), new_head_(nullptr), policy_(std::move(p)) {
     init();
   }
@@ -190,6 +194,24 @@ public:
     return result;
   }
 
+  /// Removes the first element from the queue and returns it.
+  unique_pointer pop_front() {
+    unique_pointer result;
+    if (!empty()) {
+      auto ptr = promote(head_.next);
+      auto ts = policy_.task_size(*ptr);
+      CAF_ASSERT(ts > 0);
+      total_task_size_ -= ts;
+      head_.next = ptr->next;
+      if (total_task_size_ == 0) {
+        CAF_ASSERT(head_.next == &(tail_));
+        tail_.next = &(head_);
+      }
+      result.reset(ptr);
+    }
+    return result;
+  }
+
   // -- iterator access --------------------------------------------------------
 
   /// Returns an iterator to the dummy before the first element.
@@ -260,6 +282,21 @@ public:
     return push_back(new value_type(std::forward<Ts>(xs)...));
   }
 
+  void push_front(pointer ptr) noexcept {
+    CAF_ASSERT(ptr != nullptr);
+    if (empty()) {
+      push_back(ptr);
+      return;
+    }
+    ptr->next = head_.next;
+    head_.next = ptr;
+    inc_total_task_size(*ptr);
+  }
+
+  void push_front(unique_pointer ptr) noexcept {
+    push_front(ptr.release());
+  }
+
   /// Transfers all element from `other` to the front of this queue.
   template <class Container>
   void prepend(Container& other) {
@@ -328,16 +365,22 @@ public:
     total_task_size_ = 0;
   }
 
+  template <class F>
+  void drain(F fn) {
+    for (auto i = head_.next; i != &tail_;) {
+      auto ptr = i;
+      i = i->next;
+      fn(promote(ptr));
+    }
+    init();
+  }
+
   /// Deletes all elements.
   /// @warning leaves the queue in an invalid state until calling `init` again.
   /// @private
   void deinit() noexcept {
-    for (auto i = head_.next; i != &tail_;) {
-      auto ptr = i;
-      i = i->next;
-      typename unique_pointer::deleter_type d;
-      d(promote(ptr));
-    }
+    typename unique_pointer::deleter_type fn;
+    drain(fn);
   }
 
 protected:

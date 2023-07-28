@@ -160,7 +160,7 @@ public:
   /// `f` must take ownership of the passed pointer.
   /// @warning Call only from the reader (owner).
   template <class F>
-  void close(F& f) noexcept(noexcept(f(std::declval<pointer>()))) {
+  void close(F&& f) noexcept(noexcept(f(std::declval<pointer>()))) {
     node_pointer ptr = take_head(stack_closed_tag());
     while (ptr != nullptr) {
       auto next = ptr->next;

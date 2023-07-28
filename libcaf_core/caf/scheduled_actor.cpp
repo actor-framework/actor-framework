@@ -118,7 +118,6 @@ scheduled_actor::batch_forwarder::~batch_forwarder() {
 
 scheduled_actor::scheduled_actor(actor_config& cfg)
   : super(cfg),
-    mailbox_(unit, unit, unit),
     default_handler_(print_and_drop),
     error_handler_(default_error_handler),
     down_handler_(default_down_handler),
@@ -182,15 +181,9 @@ bool scheduled_actor::enqueue(mailbox_element_ptr ptr, execution_unit* eu) {
 }
 
 mailbox_element* scheduled_actor::peek_at_next_mailbox_element() {
-  if (mailbox().closed() || mailbox().blocked()) {
-    return nullptr;
-  } else if (awaited_responses_.empty()) {
-    return mailbox().peek();
-  } else {
-    auto mid = awaited_responses_.begin()->first;
-    auto pred = [mid](mailbox_element& x) { return x.mid == mid; };
-    return mailbox().find_if(pred);
-  }
+  return mailbox().peek(awaited_responses_.empty()
+                          ? make_message_id()
+                          : awaited_responses_.begin()->first);
 }
 
 // -- overridden functions of local_actor --------------------------------------
@@ -238,19 +231,11 @@ bool scheduled_actor::cleanup(error&& fail_state, execution_unit* host) {
     run_actions();
   }
   // Clear mailbox.
-  if (!mailbox_.closed()) {
-    mailbox_.close();
-    get_normal_queue().flush_cache();
-    get_urgent_queue().flush_cache();
-    detail::sync_request_bouncer bounce{fail_state};
-    auto dropped = mailbox_.queue().new_round(1000, bounce).consumed_items;
-    while (dropped > 0) {
-      if (getf(abstract_actor::collects_metrics_flag)) {
-        auto val = static_cast<int64_t>(dropped);
-        metrics_.mailbox_size->dec(val);
-      }
-      dropped = mailbox_.queue().new_round(1000, bounce).consumed_items;
-    }
+  if (!mailbox().closed()) {
+    unstash();
+    auto dropped = mailbox().close(fail_state);
+    if (dropped > 0 && metrics_.mailbox_size)
+      metrics_.mailbox_size->dec(static_cast<int64_t>(dropped));
   }
   // Dispatch to parent's `cleanup` function.
   return super::cleanup(std::move(fail_state), host);
@@ -277,66 +262,54 @@ resumable::resume_result scheduled_actor::resume(execution_unit* ctx,
   if (!activate(ctx))
     return resumable::done;
   size_t consumed = 0;
+  auto guard = detail::make_scope_guard([this, &consumed] {
+    CAF_LOG_DEBUG("resume consumed" << consumed << "messages");
+    if (consumed > 0) {
+      auto val = static_cast<int64_t>(consumed);
+      home_system().base_metrics().processed_messages->inc(val);
+    }
+  });
   auto reset_timeouts_if_needed = [&] {
     // Set a new receive timeout if we called our behavior at least once.
     if (consumed > 0)
       set_receive_timeout();
   };
-  // Callback for handling urgent and normal messages.
-  auto handle_async = [this, max_throughput, &consumed](mailbox_element& x) {
-    return run_with_metrics(x, [this, max_throughput, &consumed, &x] {
-      switch (reactivate(x)) {
+  mailbox_element_ptr ptr;
+  while (consumed < max_throughput) {
+    auto ptr = mailbox().pop_front();
+    if (!ptr) {
+      if (mailbox().try_block()) {
+        reset_timeouts_if_needed();
+        CAF_LOG_DEBUG("mailbox empty: await new messages");
+        return resumable::awaiting_message;
+      }
+      continue; // Interrupted by a new message, try again.
+    }
+    auto res = run_with_metrics(*ptr, [this, &ptr, &consumed] {
+      switch (reactivate(*ptr)) {
+        case activation_result::success:
+          ++consumed;
+          unstash();
+          return intrusive::task_result::resume;
         case activation_result::terminated:
           return intrusive::task_result::stop;
-        case activation_result::success:
-          return ++consumed < max_throughput ? intrusive::task_result::resume
-                                             : intrusive::task_result::stop_all;
         case activation_result::skipped:
+          stash_.push(ptr.release());
           return intrusive::task_result::skip;
-        default:
+        default: // drop
           return intrusive::task_result::resume;
       }
     });
-  };
-  mailbox_element_ptr ptr;
-  while (consumed < max_throughput) {
-    CAF_LOG_DEBUG("start new DRR round");
-    mailbox_.fetch_more();
-    auto prev = consumed; // Caches the value before processing more.
-    // TODO: maybe replace '3' with configurable / adaptive value?
-    static constexpr size_t quantum = 3;
-    // Dispatch urgent and normal (asynchronous) messages.
-    auto& hq = get_urgent_queue();
-    auto& nq = get_normal_queue();
-    if (hq.new_round(quantum * 3, handle_async).consumed_items > 0) {
-      // After matching any message, all caches must be re-evaluated.
-      nq.flush_cache();
-    }
-    if (nq.new_round(quantum, handle_async).consumed_items > 0) {
-      // After matching any message, all caches must be re-evaluated.
-      hq.flush_cache();
-    }
-    // Update metrics or try returning if the actor consumed nothing.
-    auto delta = consumed - prev;
-    CAF_LOG_DEBUG("consumed" << delta << "messages this round");
-    if (delta > 0) {
-      auto signed_val = static_cast<int64_t>(delta);
-      home_system().base_metrics().processed_messages->inc(signed_val);
-    } else {
-      reset_timeouts_if_needed();
-      if (mailbox().try_block())
-        return resumable::awaiting_message;
-      CAF_LOG_DEBUG("mailbox().try_block() returned false");
-    }
-    CAF_LOG_DEBUG("check for shutdown");
-    if (finalize())
+    if (res == intrusive::task_result::stop)
       return resumable::done;
   }
-  CAF_LOG_DEBUG("max throughput reached");
   reset_timeouts_if_needed();
-  if (mailbox().try_block())
+  if (mailbox().try_block()) {
+    CAF_LOG_DEBUG("mailbox empty: await new messages");
     return resumable::awaiting_message;
+  }
   // time's up
+  CAF_LOG_DEBUG("max throughput reached: resume later");
   return resumable::resume_later;
 }
 
@@ -890,25 +863,7 @@ bool scheduled_actor::finalize() {
 }
 
 void scheduled_actor::push_to_cache(mailbox_element_ptr ptr) {
-  using namespace intrusive;
-  auto& p = mailbox_.queue().policy();
-  auto& qs = mailbox_.queue().queues();
-  auto push = [&ptr](auto& q) {
-    q.inc_total_task_size(q.policy().task_size(*ptr));
-    q.cache().push_back(ptr.release());
-  };
-  if (p.id_of(*ptr) == normal_queue_index)
-    push(std::get<normal_queue_index>(qs));
-  else
-    push(std::get<urgent_queue_index>(qs));
-}
-
-scheduled_actor::urgent_queue& scheduled_actor::get_urgent_queue() {
-  return get<urgent_queue_index>(mailbox_.queue().queues());
-}
-
-scheduled_actor::normal_queue& scheduled_actor::get_normal_queue() {
-  return get<normal_queue_index>(mailbox_.queue().queues());
+  stash_.push(ptr.release());
 }
 
 disposable scheduled_actor::run_scheduled(timestamp when, action what) {
@@ -986,6 +941,7 @@ void scheduled_actor::deregister_stream(uint64_t stream_id) {
 }
 
 void scheduled_actor::run_actions() {
+  CAF_LOG_TRACE("");
   delayed_actions_this_run_ = 0;
   if (!actions_.empty()) {
     // Note: can't use iterators here since actions may add to the vector.
@@ -1018,6 +974,11 @@ void scheduled_actor::try_push_stream(uint64_t local_id) {
   CAF_LOG_TRACE(CAF_ARG(local_id));
   if (auto i = stream_bridges_.find(local_id); i != stream_bridges_.end())
     i->second->push();
+}
+
+void scheduled_actor::unstash() {
+  while (auto stashed = stash_.pop())
+    mailbox().push_front(mailbox_element_ptr{stashed});
 }
 
 } // namespace caf

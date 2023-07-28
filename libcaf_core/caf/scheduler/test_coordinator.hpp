@@ -48,7 +48,7 @@ public:
   /// Peeks into the mailbox of `next_job<scheduled_actor>()`.
   template <class... Ts>
   decltype(auto) peek() {
-    auto ptr = next_job<scheduled_actor>().mailbox().peek();
+    auto ptr = next_job<scheduled_actor>().peek_at_next_mailbox_element();
     CAF_ASSERT(ptr != nullptr);
     if (auto view = make_const_typed_message_view<Ts...>(ptr->payload)) {
       if constexpr (sizeof...(Ts) == 1)
