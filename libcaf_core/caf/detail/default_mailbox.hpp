@@ -36,11 +36,11 @@ public:
 
   default_mailbox& operator=(const default_mailbox&) = delete;
 
+  mailbox_element* peek(message_id id);
+
   intrusive::inbox_result push_back(mailbox_element_ptr ptr) override;
 
   void push_front(mailbox_element_ptr ptr) override;
-
-  mailbox_element* peek(message_id id) override;
 
   mailbox_element_ptr pop_front() override;
 
@@ -49,6 +49,8 @@ public:
   bool blocked() override;
 
   bool try_block() override;
+
+  bool try_unblock() override;
 
   size_t close(const error&) override;
 

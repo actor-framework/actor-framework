@@ -27,12 +27,6 @@ public:
   /// @note Only the owning actor is allowed to call this function.
   virtual void push_front(mailbox_element_ptr ptr) = 0;
 
-  /// Called by the testing DSL to peek at the next element in the mailbox.
-  /// @returns A pointer to the next mailbox element or `nullptr` if the
-  ///          mailbox is empty or does not support peeking.
-  /// @note Only the owning actor is allowed to call this function.
-  virtual mailbox_element* peek(message_id id = make_message_id()) = 0;
-
   /// Removes the next element from the mailbox.
   /// @returns The next element in the mailbox or `nullptr` if the mailbox is
   ///          empty.
@@ -52,6 +46,10 @@ public:
   /// @note Only the owning actor is allowed to call this function.
   virtual bool try_block() = 0;
 
+  /// Tries to put the mailbox in an empty state from a blocked state.
+  /// @note Only the owning actor is allowed to call this function.
+  virtual bool try_unblock() = 0;
+
   /// Closes the mailbox and discards all pending messages.
   /// @returns The number of dropped messages.
   /// @note Only the owning actor is allowed to call this function.
@@ -60,6 +58,11 @@ public:
   /// Returns the number of pending messages.
   /// @note Only the owning actor is allowed to call this function.
   virtual size_t size() = 0;
+
+  /// Checks whether the mailbox is empty.
+  bool empty() {
+    return size() == 0;
+  }
 };
 
 } // namespace caf

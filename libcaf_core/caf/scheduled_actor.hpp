@@ -120,9 +120,6 @@ public:
     size_t max_items_per_batch;
   };
 
-  /// A queue optimized for single-reader-many-writers.
-  using mailbox_type = detail::default_mailbox;
-
   /// The message ID of an outstanding response with its callback.
   using pending_response = std::pair<const message_id, behavior>;
 
@@ -687,7 +684,7 @@ protected:
   // -- member variables -------------------------------------------------------
 
   /// Stores incoming messages.
-  mailbox_type mailbox_;
+  detail::default_mailbox mailbox_;
 
   /// Stores user-defined callbacks for message handling.
   detail::behavior_stack bhvr_stack_;
