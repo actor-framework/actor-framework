@@ -74,6 +74,7 @@ class [[deprecated("use std::string_view instead")]] string_view;
 class [[nodiscard]] error;
 class abstract_actor;
 class abstract_group;
+class abstract_mailbox;
 class action;
 class actor;
 class actor_addr;
@@ -266,6 +267,8 @@ using int_gauge_family = metric_family_impl<int_gauge>;
 } // namespace telemetry
 
 namespace detail {
+
+class mailbox_factory;
 
 template <class>
 struct gauge_oracle;

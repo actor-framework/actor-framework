@@ -10,6 +10,7 @@
 #include "caf/config.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/default_invoke_result_visitor.hpp"
+#include "caf/detail/mailbox_factory.hpp"
 #include "caf/detail/meta_object.hpp"
 #include "caf/detail/private_thread.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
@@ -18,6 +19,8 @@
 #include "caf/flow/op/mcast.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
 #include "caf/stream.hpp"
+
+#include <new>
 
 using namespace std::string_literals;
 
@@ -129,11 +132,18 @@ scheduled_actor::scheduled_actor(actor_config& cfg)
     exception_handler_(default_exception_handler)
 #endif // CAF_ENABLE_EXCEPTIONS
 {
-  // nop
+  if (cfg.mbox_factory == nullptr)
+    mailbox_ = new (&default_mailbox_) detail::default_mailbox();
+  else
+    mailbox_ = cfg.mbox_factory->make(this);
 }
 
 scheduled_actor::~scheduled_actor() {
-  // nop
+  unstash();
+  if (mailbox_ == &default_mailbox_)
+    default_mailbox_.~default_mailbox();
+  else
+    mailbox_->deref_mailbox();
 }
 
 // -- overridden functions of abstract_actor -----------------------------------
@@ -181,9 +191,9 @@ bool scheduled_actor::enqueue(mailbox_element_ptr ptr, execution_unit* eu) {
 }
 
 mailbox_element* scheduled_actor::peek_at_next_mailbox_element() {
-  return mailbox_.peek(awaited_responses_.empty()
-                         ? make_message_id()
-                         : awaited_responses_.begin()->first);
+  return mailbox().peek(awaited_responses_.empty()
+                          ? make_message_id()
+                          : awaited_responses_.begin()->first);
 }
 
 // -- overridden functions of local_actor --------------------------------------

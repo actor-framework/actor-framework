@@ -52,6 +52,12 @@ TEST("a default default-constructed uut is empty") {
   check_eq(uut.begin(), uut.end());
 }
 
+TEST("uuts are convertible to strings") {
+  check_eq(deep_to_string(uut), "[]");
+  fill(uut, 1, 2, 3, 4);
+  check_eq(deep_to_string(uut), "[1, 2, 3, 4]");
+}
+
 TEST("push_back adds elements to the back of the uut") {
   uut.emplace_back(1);
   uut.push_back(std::make_unique<inode>(2));
@@ -103,12 +109,6 @@ TEST("the size of the uut is the number of elements") {
   check_eq(uut.size(), 3u);
   fill(uut, 4, 5);
   check_eq(uut.size(), 5u);
-}
-
-TEST("uuts are convertible to strings") {
-  check_eq(deep_to_string(uut), "[]");
-  fill(uut, 1, 2, 3, 4);
-  check_eq(deep_to_string(uut), "[1, 2, 3, 4]");
 }
 
 TEST("calling clear removes all elements from a uut") {

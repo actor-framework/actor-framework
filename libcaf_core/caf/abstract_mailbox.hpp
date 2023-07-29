@@ -60,10 +60,20 @@ public:
   /// @note Only the owning actor is allowed to call this function.
   virtual size_t size() = 0;
 
+  /// Increases the reference count by one.
+  virtual void ref_mailbox() noexcept = 0;
+
+  /// Decreases the reference count by one and deletes this instance if the
+  /// reference count drops to zero.
+  virtual void deref_mailbox() noexcept = 0;
+
   /// Checks whether the mailbox is empty.
   bool empty() {
     return size() == 0;
   }
+
+  /// @private
+  virtual mailbox_element* peek(message_id id) = 0;
 };
 
 } // namespace caf

@@ -238,7 +238,7 @@ public:
 
   /// Returns the queue for storing incoming messages.
   abstract_mailbox& mailbox() noexcept {
-    return mailbox_;
+    return *mailbox_;
   }
 
   // -- event handlers ---------------------------------------------------------
@@ -684,7 +684,7 @@ protected:
   // -- member variables -------------------------------------------------------
 
   /// Stores incoming messages.
-  detail::default_mailbox mailbox_;
+  abstract_mailbox* mailbox_;
 
   /// Stores user-defined callbacks for message handling.
   detail::behavior_stack bhvr_stack_;
@@ -820,6 +820,12 @@ private:
 
   /// Stashes skipped messages until the actor processes the next message.
   intrusive::stack<mailbox_element> stash_;
+
+  union {
+    /// The default mailbox instance that we use if the user does not configure
+    /// a mailbox via the ::actor_config.
+    detail::default_mailbox default_mailbox_;
+  };
 };
 
 } // namespace caf

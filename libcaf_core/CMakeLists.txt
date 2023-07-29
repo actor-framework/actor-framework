@@ -120,6 +120,8 @@ caf_add_component(
     caf/detail/json.cpp
     caf/detail/latch.cpp
     caf/detail/local_group_module.cpp
+    caf/detail/mailbox_factory.cpp
+    caf/detail/mailbox_factory.test.cpp
     caf/detail/message_builder_element.cpp
     caf/detail/message_data.cpp
     caf/detail/meta_object.cpp

@@ -9,6 +9,9 @@
 #include "caf/intrusive/lifo_inbox.hpp"
 #include "caf/intrusive/linked_list.hpp"
 
+#include <atomic>
+#include <cstddef>
+
 namespace caf::detail {
 
 /// Our default mailbox implementation. Uses a LIFO inbox for storing incoming
@@ -30,13 +33,15 @@ public:
     }
   };
 
-  default_mailbox() = default;
+  default_mailbox() noexcept : ref_count_(1) {
+    // nop
+  }
 
   default_mailbox(const default_mailbox&) = delete;
 
   default_mailbox& operator=(const default_mailbox&) = delete;
 
-  mailbox_element* peek(message_id id);
+  mailbox_element* peek(message_id id) override;
 
   intrusive::inbox_result push_back(mailbox_element_ptr ptr) override;
 
@@ -56,6 +61,14 @@ public:
 
   size_t size() override;
 
+  void ref_mailbox() noexcept override;
+
+  void deref_mailbox() noexcept override;
+
+  size_t ref_count() const noexcept {
+    return ref_count_.load();
+  }
+
 private:
   /// Returns the total number of elements stored in the queues.
   size_t cached() const noexcept {
@@ -65,14 +78,17 @@ private:
   /// Tries to fetch more messages from the LIFO inbox.
   bool fetch_more();
 
-  /// Stores incoming messages in LIFO order.
-  alignas(CAF_CACHE_LINE_SIZE) intrusive::lifo_inbox<policy> inbox_;
-
   /// Stores urgent messages in FIFO order.
   intrusive::linked_list<mailbox_element> urgent_queue_;
 
   /// Stores normal messages in FIFO order.
   intrusive::linked_list<mailbox_element> normal_queue_;
+
+  /// Stores incoming messages in LIFO order.
+  alignas(CAF_CACHE_LINE_SIZE) intrusive::lifo_inbox<policy> inbox_;
+
+  /// The intrusive reference count.
+  alignas(CAF_CACHE_LINE_SIZE) std::atomic<size_t> ref_count_;
 };
 
 } // namespace caf::detail

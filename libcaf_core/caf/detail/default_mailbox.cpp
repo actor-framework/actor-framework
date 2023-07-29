@@ -107,4 +107,13 @@ bool default_mailbox::fetch_more() {
   return true;
 }
 
+void default_mailbox::ref_mailbox() noexcept {
+  ++ref_count_;
+}
+
+void default_mailbox::deref_mailbox() noexcept {
+  if (--ref_count_ == 0)
+    delete this;
+}
+
 } // namespace caf::detail
