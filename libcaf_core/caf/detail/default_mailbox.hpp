@@ -5,12 +5,16 @@
 #pragma once
 
 #include "caf/abstract_mailbox.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/intrusive/lifo_inbox.hpp"
 #include "caf/intrusive/linked_list.hpp"
 
 namespace caf::detail {
 
-class default_mailbox : public abstract_mailbox {
+/// Our default mailbox implementation. Uses a LIFO inbox for storing incoming
+/// messages and combines it with two FIFO caches for storing urgent and normal
+/// messages.
+class CAF_CORE_EXPORT default_mailbox : public abstract_mailbox {
 public:
   struct policy {
     using mapped_type = mailbox_element;

@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive/inbox_result.hpp"
 #include "caf/mailbox_element.hpp"
@@ -11,7 +12,7 @@
 namespace caf {
 
 /// The base class for all mailbox implementations.
-class abstract_mailbox {
+class CAF_CORE_EXPORT abstract_mailbox {
 public:
   virtual ~abstract_mailbox();
 
