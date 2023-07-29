@@ -160,6 +160,7 @@ caf_add_component(
     caf/hash/fnv.test.cpp
     caf/hash/sha1.cpp
     caf/init_global_meta_objects.cpp
+    caf/intrusive/lifo_inbox.test.cpp
     caf/intrusive/linked_list.test.cpp
     caf/intrusive/stack.test.cpp
     caf/ipv4_address.cpp
@@ -312,7 +313,6 @@ caf_add_component(
     function_view
     handles
     hash.sha1
-    intrusive.lifo_inbox
     intrusive_ptr
     ipv4_address
     ipv4_endpoint

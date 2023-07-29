@@ -19,20 +19,6 @@ namespace caf::detail {
 /// messages.
 class CAF_CORE_EXPORT default_mailbox : public abstract_mailbox {
 public:
-  struct policy {
-    using mapped_type = mailbox_element;
-
-    using task_size_type = size_t;
-
-    using deficit_type = size_t;
-
-    using unique_pointer = mailbox_element_ptr;
-
-    static size_t task_size(const mapped_type&) noexcept {
-      return 1;
-    }
-  };
-
   default_mailbox() noexcept : ref_count_(1) {
     // nop
   }
@@ -85,7 +71,7 @@ private:
   intrusive::linked_list<mailbox_element> normal_queue_;
 
   /// Stores incoming messages in LIFO order.
-  alignas(CAF_CACHE_LINE_SIZE) intrusive::lifo_inbox<policy> inbox_;
+  alignas(CAF_CACHE_LINE_SIZE) intrusive::lifo_inbox<mailbox_element> inbox_;
 
   /// The intrusive reference count.
   alignas(CAF_CACHE_LINE_SIZE) std::atomic<size_t> ref_count_;

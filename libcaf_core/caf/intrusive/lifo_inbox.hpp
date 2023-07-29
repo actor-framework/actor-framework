@@ -9,20 +9,19 @@
 
 #include <atomic>
 #include <condition_variable>
+#include <memory>
 #include <mutex>
 
 namespace caf::intrusive {
 
 /// An intrusive, thread-safe LIFO queue implementation for a single reader
 /// with any number of writers.
-template <class Policy>
+template <class T>
 class lifo_inbox {
 public:
   // -- member types -----------------------------------------------------------
 
-  using policy_type = Policy;
-
-  using value_type = typename policy_type::mapped_type;
+  using value_type = T;
 
   using pointer = value_type*;
 
@@ -30,7 +29,7 @@ public:
 
   using node_pointer = node_type*;
 
-  using unique_pointer = typename policy_type::unique_pointer;
+  using unique_pointer = std::unique_ptr<value_type>;
 
   using deleter_type = typename unique_pointer::deleter_type;
 
@@ -146,21 +145,15 @@ public:
 
   /// Closes this queue and deletes all remaining elements.
   /// @warning Call only from the reader (owner).
-  void close() noexcept {
-    deleter_type d;
-    // We assume the node destructor to never throw. However, the following
-    // static assert fails. Unfortunately, std::default_delete's apply operator
-    // is not noexcept (event for types that have a noexcept destructor).
-    // static_assert(noexcept(d(std::declval<pointer>())),
-    //               "deleter is not noexcept");
-    close(d);
+  void close() {
+    close(deleter_type{});
   }
 
   /// Closes this queue and applies `f` to each pointer. The function object
   /// `f` must take ownership of the passed pointer.
   /// @warning Call only from the reader (owner).
   template <class F>
-  void close(F&& f) noexcept(noexcept(f(std::declval<pointer>()))) {
+  void close(F&& f) {
     node_pointer ptr = take_head(stack_closed_tag());
     while (ptr != nullptr) {
       auto next = ptr->next;
@@ -176,62 +169,6 @@ public:
   ~lifo_inbox() noexcept {
     if (!closed())
       close();
-  }
-
-  // -- synchronized access ---------------------------------------------------
-
-  template <class Mutex, class CondVar>
-  bool synchronized_push_front(Mutex& mtx, CondVar& cv, pointer ptr) {
-    switch (push_front(ptr)) {
-      default:
-        // enqueued message to a running actor's mailbox
-        return true;
-      case inbox_result::unblocked_reader: {
-        std::unique_lock<Mutex> guard(mtx);
-        cv.notify_one();
-        return true;
-      }
-      case inbox_result::queue_closed:
-        // actor no longer alive
-        return false;
-    }
-  }
-
-  template <class Mutex, class CondVar>
-  bool synchronized_push_front(Mutex& mtx, CondVar& cv, unique_pointer ptr) {
-    return synchronized_push_front(mtx, cv, ptr.release());
-  }
-
-  template <class Mutex, class CondVar, class... Ts>
-  bool synchronized_emplace_front(Mutex& mtx, CondVar& cv, Ts&&... xs) {
-    return synchronized_push_front(mtx, cv,
-                                   new value_type(std::forward<Ts>(xs)...));
-  }
-
-  template <class Mutex, class CondVar>
-  void synchronized_await(Mutex& mtx, CondVar& cv) {
-    CAF_ASSERT(!closed());
-    if (try_block()) {
-      std::unique_lock<Mutex> guard(mtx);
-      while (blocked())
-        cv.wait(guard);
-    }
-  }
-
-  template <class Mutex, class CondVar, class TimePoint>
-  bool synchronized_await(Mutex& mtx, CondVar& cv, const TimePoint& timeout) {
-    CAF_ASSERT(!closed());
-    if (try_block()) {
-      std::unique_lock<Mutex> guard(mtx);
-      while (blocked()) {
-        if (cv.wait_until(guard, timeout) == std::cv_status::timeout) {
-          // if we're unable to set the queue from blocked to empty,
-          // than there's a new element in the list
-          return !try_unblock();
-        }
-      }
-    }
-    return true;
   }
 
 private:

@@ -12,60 +12,50 @@
 
 using namespace caf;
 
-namespace {
-
 struct inode : intrusive::singly_linked<inode> {
-  int value;
-  inode(int x = 0) : value(x) {
+  explicit inode(int x = 0) : value(x) {
     // nop
   }
+
+  int value;
 };
 
-[[maybe_unused]] std::string to_string(const inode& x) {
+std::string to_string(const inode& x) {
   return std::to_string(x.value);
 }
 
 using list_type = intrusive::linked_list<inode>;
 
-struct fixture {
+template <class... Ts>
+void fill(list_type& xs, Ts... args) {
+  (xs.emplace_back(args), ...);
+}
+
+TEST("a default default-constructed list is empty") {
   list_type uut;
-
-  void fill(list_type&) {
-    // nop
-  }
-
-  template <class T, class... Ts>
-  void fill(list_type& q, T x, Ts... xs) {
-    q.emplace_back(x);
-    fill(q, xs...);
-  }
-};
-
-} // namespace
-
-WITH_FIXTURE(fixture) {
-
-TEST("a default default-constructed uut is empty") {
   check_eq(uut.empty(), true);
   check_eq(uut.size(), 0u);
   check_eq(uut.peek(), nullptr);
   check_eq(uut.begin(), uut.end());
 }
 
-TEST("uuts are convertible to strings") {
+TEST("lists are convertible to strings") {
+  list_type uut;
   check_eq(deep_to_string(uut), "[]");
   fill(uut, 1, 2, 3, 4);
   check_eq(deep_to_string(uut), "[1, 2, 3, 4]");
 }
 
-TEST("push_back adds elements to the back of the uut") {
+TEST("push_back adds elements to the back of the list") {
+  list_type uut;
   uut.emplace_back(1);
   uut.push_back(std::make_unique<inode>(2));
   uut.push_back(new inode(3));
   check_eq(deep_to_string(uut), "[1, 2, 3]");
 }
 
-TEST("push_front adds elements to the front of the uut") {
+TEST("push_front adds elements to the front of the list") {
+  list_type uut;
   uut.emplace_front(1);
   uut.push_front(std::make_unique<inode>(2));
   uut.push_front(new inode(3));
@@ -73,6 +63,7 @@ TEST("push_front adds elements to the front of the uut") {
 }
 
 TEST("insert_after inserts elements after a given position") {
+  list_type uut;
   uut.insert_after(uut.before_end(), new inode(1));
   uut.insert_after(uut.before_end(), new inode(3));
   uut.insert_after(uut.begin(), new inode(2));
@@ -80,7 +71,8 @@ TEST("insert_after inserts elements after a given position") {
   check_eq(deep_to_string(uut), "[0, 1, 2, 3]");
 }
 
-TEST("uuts are movable") {
+TEST("lists are movable") {
+  list_type uut;
   SECTION("move constructor") {
     fill(uut, 1, 2, 3);
     list_type q2 = std::move(uut);
@@ -99,26 +91,30 @@ TEST("uuts are movable") {
 }
 
 TEST("peek returns a pointer to the first element without removing it") {
+  list_type uut;
   check_eq(uut.peek(), nullptr);
   fill(uut, 1, 2, 3);
   check_eq(uut.peek()->value, 1);
 }
 
-TEST("the size of the uut is the number of elements") {
+TEST("the size of the list is the number of elements") {
+  list_type uut;
   fill(uut, 1, 2, 3);
   check_eq(uut.size(), 3u);
   fill(uut, 4, 5);
   check_eq(uut.size(), 5u);
 }
 
-TEST("calling clear removes all elements from a uut") {
+TEST("calling clear removes all elements from a list") {
+  list_type uut;
   fill(uut, 1, 2, 3);
   check_eq(uut.size(), 3u);
   uut.clear();
   check_eq(uut.size(), 0u);
 }
 
-TEST("find_if selects an element from the uut") {
+TEST("find_if selects an element from the list") {
+  list_type uut;
   fill(uut, 1, 2, 3);
   SECTION("find_if returns a pointer to the first matching element") {
     auto ptr = uut.find_if([](const inode& x) { return x.value == 2; });
@@ -131,7 +127,8 @@ TEST("find_if selects an element from the uut") {
   }
 }
 
-TEST("uut allow iterator-based access") {
+TEST("lists allow iterator-based access") {
+  list_type uut;
   fill(uut, 1, 2, 3);
   // Mutable access via begin/end.
   for (auto& x : uut)
@@ -145,7 +142,5 @@ TEST("uut allow iterator-based access") {
                            }),
            12);
 }
-
-} // WITH_FIXTURE(fixture)
 
 CAF_TEST_MAIN()
