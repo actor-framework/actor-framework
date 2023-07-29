@@ -6,7 +6,7 @@
 
 #include "caf/abstract_mailbox.hpp"
 #include "caf/intrusive/lifo_inbox.hpp"
-#include "caf/intrusive/task_queue.hpp"
+#include "caf/intrusive/linked_list.hpp"
 
 namespace caf::detail {
 
@@ -55,7 +55,7 @@ public:
 private:
   /// Returns the total number of elements stored in the queues.
   size_t cached() const noexcept {
-    return urgent_queue_.total_task_size() + normal_queue_.total_task_size();
+    return urgent_queue_.size() + normal_queue_.size();
   }
 
   /// Tries to fetch more messages from the LIFO inbox.
@@ -65,10 +65,10 @@ private:
   alignas(CAF_CACHE_LINE_SIZE) intrusive::lifo_inbox<policy> inbox_;
 
   /// Stores urgent messages in FIFO order.
-  intrusive::task_queue<policy> urgent_queue_;
+  intrusive::linked_list<mailbox_element> urgent_queue_;
 
   /// Stores normal messages in FIFO order.
-  intrusive::task_queue<policy> normal_queue_;
+  intrusive::linked_list<mailbox_element> normal_queue_;
 };
 
 } // namespace caf::detail

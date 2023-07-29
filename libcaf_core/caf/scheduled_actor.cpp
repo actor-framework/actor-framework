@@ -286,21 +286,21 @@ resumable::resume_result scheduled_actor::resume(execution_unit* ctx,
       continue; // Interrupted by a new message, try again.
     }
     auto res = run_with_metrics(*ptr, [this, &ptr, &consumed] {
-      switch (reactivate(*ptr)) {
+      auto res = reactivate(*ptr);
+      switch (res) {
         case activation_result::success:
           ++consumed;
           unstash();
-          return intrusive::task_result::resume;
-        case activation_result::terminated:
-          return intrusive::task_result::stop;
+          break;
         case activation_result::skipped:
           stash_.push(ptr.release());
-          return intrusive::task_result::skip;
+          break;
         default: // drop
-          return intrusive::task_result::resume;
+          break;
       }
+      return res;
     });
-    if (res == intrusive::task_result::stop)
+    if (res == activation_result::terminated)
       return resumable::done;
   }
   reset_timeouts_if_needed();

@@ -29,7 +29,6 @@
 #include "caf/flow/observer.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive/stack.hpp"
-#include "caf/intrusive/task_result.hpp"
 #include "caf/invoke_message_result.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/logger.hpp"
@@ -729,12 +728,12 @@ private:
   void unstash();
 
   template <class F>
-  intrusive::task_result run_with_metrics(mailbox_element& x, F body) {
+  activation_result run_with_metrics(mailbox_element& x, F body) {
     if (metrics_.mailbox_time) {
       auto t0 = std::chrono::steady_clock::now();
       auto mbox_time = x.seconds_until(t0);
       auto res = body();
-      if (res != intrusive::task_result::skip) {
+      if (res != activation_result::skipped) {
         telemetry::timer::observe(metrics_.processing_time, t0);
         metrics_.mailbox_time->observe(mbox_time);
         metrics_.mailbox_size->dec();

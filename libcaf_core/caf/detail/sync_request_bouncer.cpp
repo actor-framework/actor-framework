@@ -15,10 +15,6 @@
 
 namespace caf::detail {
 
-sync_request_bouncer::sync_request_bouncer(error r) : rsn(std::move(r)) {
-  // nop
-}
-
 void sync_request_bouncer::operator()(const strong_actor_ptr& sender,
                                       const message_id& mid) const {
   if (sender && mid.is_request())
@@ -27,10 +23,8 @@ void sync_request_bouncer::operator()(const strong_actor_ptr& sender,
                     nullptr);
 }
 
-intrusive::task_result
-sync_request_bouncer::operator()(const mailbox_element& e) const {
+void sync_request_bouncer::operator()(const mailbox_element& e) const {
   (*this)(e.sender, e.mid);
-  return intrusive::task_result::resume;
 }
 
 } // namespace caf::detail

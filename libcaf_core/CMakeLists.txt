@@ -58,7 +58,6 @@ caf_add_component(
     exit_reason
     flow.op.state
     intrusive.inbox_result
-    intrusive.task_result
     invoke_message_result
     message_priority
     pec
@@ -159,6 +158,7 @@ caf_add_component(
     caf/hash/fnv.test.cpp
     caf/hash/sha1.cpp
     caf/init_global_meta_objects.cpp
+    caf/intrusive/linked_list.test.cpp
     caf/intrusive/stack.test.cpp
     caf/ipv4_address.cpp
     caf/ipv4_endpoint.cpp
@@ -311,7 +311,6 @@ caf_add_component(
     handles
     hash.sha1
     intrusive.lifo_inbox
-    intrusive.task_queue
     intrusive_ptr
     ipv4_address
     ipv4_endpoint

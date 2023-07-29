@@ -215,14 +215,6 @@ class fnv;
 
 } // namespace hash
 
-// -- intrusive containers -----------------------------------------------------
-
-namespace intrusive {
-
-enum class task_result;
-
-} // namespace intrusive
-
 // -- marker classes for mixins ------------------------------------------------
 
 namespace mixin {

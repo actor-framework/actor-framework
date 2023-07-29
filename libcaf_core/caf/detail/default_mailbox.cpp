@@ -93,17 +93,17 @@ bool default_mailbox::fetch_more() {
   auto* head = static_cast<node_type*>(inbox_.take_head());
   if (head == nullptr)
     return false;
+  auto urgent_insertion_point = urgent_queue_.before_end();
+  auto normal_insertion_point = normal_queue_.before_end();
   do {
     auto next = head->next;
     auto phead = promote(head);
     if (phead->mid.is_urgent_message())
-      urgent_queue_.lifo_append(phead);
+      urgent_queue_.insert_after(urgent_insertion_point, phead);
     else
-      normal_queue_.lifo_append(phead);
+      normal_queue_.insert_after(normal_insertion_point, phead);
     head = next;
   } while (head != nullptr);
-  urgent_queue_.stop_lifo_append();
-  normal_queue_.stop_lifo_append();
   return true;
 }
 
