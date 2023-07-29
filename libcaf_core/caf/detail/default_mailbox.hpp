@@ -7,7 +7,6 @@
 #include "caf/abstract_mailbox.hpp"
 #include "caf/intrusive/fifo_inbox.hpp"
 #include "caf/intrusive/task_queue.hpp"
-#include "caf/intrusive/wdrr_fixed_multiplexed_queue.hpp"
 #include "caf/policy/categorized.hpp"
 #include "caf/policy/normal_messages.hpp"
 #include "caf/policy/urgent_messages.hpp"
@@ -44,9 +43,9 @@ public:
 
   mailbox_element_ptr pop_front() override;
 
-  bool closed() override;
+  bool closed() const noexcept override;
 
-  bool blocked() override;
+  bool blocked() const noexcept override;
 
   bool try_block() override;
 

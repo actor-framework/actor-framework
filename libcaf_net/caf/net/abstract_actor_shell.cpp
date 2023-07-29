@@ -21,7 +21,7 @@ namespace caf::net {
 
 abstract_actor_shell::abstract_actor_shell(actor_config& cfg,
                                            async::execution_context_ptr loop)
-  : super(cfg), mailbox_(policy::normal_messages{}), loop_(loop) {
+  : super(cfg), loop_(loop) {
   mailbox_.try_block();
   resume_ = make_action([this] {
     for (;;) {
@@ -50,14 +50,8 @@ void abstract_actor_shell::quit(error reason) {
 // -- mailbox access -----------------------------------------------------------
 
 mailbox_element_ptr abstract_actor_shell::next_message() {
-  if (!mailbox_.blocked()) {
-    mailbox_.fetch_more();
-    auto& q = mailbox_.queue();
-    if (q.total_task_size() > 0) {
-      q.inc_deficit(1);
-      return q.next();
-    }
-  }
+  if (!mailbox_.blocked())
+    return mailbox_.pop_front();
   return nullptr;
 }
 
@@ -153,7 +147,7 @@ bool abstract_actor_shell::enqueue(mailbox_element_ptr ptr, execution_unit*) {
 }
 
 mailbox_element* abstract_actor_shell::peek_at_next_mailbox_element() {
-  return mailbox().closed() || mailbox().blocked() ? nullptr : mailbox().peek();
+  return mailbox_.peek(make_message_id());
 }
 
 // -- overridden functions of local_actor --------------------------------------
@@ -170,15 +164,10 @@ bool abstract_actor_shell::cleanup(error&& fail_state, execution_unit* host) {
   CAF_LOG_TRACE(CAF_ARG(fail_state));
   // Clear mailbox.
   if (!mailbox_.closed()) {
-    mailbox_.close();
-    detail::sync_request_bouncer bounce{fail_state};
-    auto dropped = mailbox_.queue().new_round(1000, bounce).consumed_items;
-    while (dropped > 0) {
-      if (getf(abstract_actor::collects_metrics_flag)) {
-        auto val = static_cast<int64_t>(dropped);
-        metrics_.mailbox_size->dec(val);
-      }
-      dropped = mailbox_.queue().new_round(1000, bounce).consumed_items;
+    auto dropped = mailbox_.close(fail_state);
+    while (dropped > 0 && getf(abstract_actor::collects_metrics_flag)) {
+      auto val = static_cast<int64_t>(dropped);
+      metrics_.mailbox_size->dec(val);
     }
   }
   // Detach from owner.

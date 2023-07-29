@@ -50,11 +50,11 @@ mailbox_element_ptr default_mailbox::pop_front() {
   }
 }
 
-bool default_mailbox::closed() {
+bool default_mailbox::closed() const noexcept {
   return inbox_.closed();
 }
 
-bool default_mailbox::blocked() {
+bool default_mailbox::blocked() const noexcept {
   return inbox_.blocked();
 }
 

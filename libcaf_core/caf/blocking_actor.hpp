@@ -17,9 +17,6 @@
 #include "caf/detail/type_traits.hpp"
 #include "caf/extend.hpp"
 #include "caf/fwd.hpp"
-#include "caf/intrusive/drr_cached_queue.hpp"
-#include "caf/intrusive/drr_queue.hpp"
-#include "caf/intrusive/fifo_inbox.hpp"
 #include "caf/intrusive/stack.hpp"
 #include "caf/is_timeout_or_catch_all.hpp"
 #include "caf/local_actor.hpp"
@@ -56,12 +53,6 @@ public:
 
   /// Base type.
   using super = extended_base;
-
-  /// Stores asynchronous messages with default priority.
-  using normal_queue = intrusive::drr_cached_queue<policy::normal_messages>;
-
-  /// Stores asynchronous messages with high priority.
-  using urgent_queue = intrusive::drr_cached_queue<policy::urgent_messages>;
 
   /// Absolute timeout type.
   using timeout_type = std::chrono::high_resolution_clock::time_point;

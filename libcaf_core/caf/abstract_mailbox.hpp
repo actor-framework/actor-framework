@@ -35,12 +35,12 @@ public:
 
   /// Checks whether the mailbox has been closed.
   /// @note Only the owning actor is allowed to call this function.
-  virtual bool closed() = 0;
+  virtual bool closed() const noexcept = 0;
 
   /// Checks whether the owner of this mailbox is currently waiting for new
   /// messages.
   /// @note Only the owning actor is allowed to call this function.
-  virtual bool blocked() = 0;
+  virtual bool blocked() const noexcept = 0;
 
   /// Tries to put the mailbox in a blocked state.
   /// @note Only the owning actor is allowed to call this function.

@@ -15,9 +15,6 @@
 #include "caf/detail/scope_guard.hpp"
 #include "caf/detail/sync_ring_buffer.hpp"
 #include "caf/fwd.hpp"
-#include "caf/intrusive/drr_queue.hpp"
-#include "caf/intrusive/fifo_inbox.hpp"
-#include "caf/intrusive/singly_linked.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/timestamp.hpp"
 

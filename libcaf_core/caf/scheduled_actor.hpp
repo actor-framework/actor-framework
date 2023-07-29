@@ -29,6 +29,7 @@
 #include "caf/flow/observer.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive/stack.hpp"
+#include "caf/intrusive/task_result.hpp"
 #include "caf/invoke_message_result.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/logger.hpp"

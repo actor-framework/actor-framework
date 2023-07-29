@@ -367,7 +367,11 @@ size_t blocking_actor::attach_functor(const strong_actor_ptr& ptr) {
 bool blocking_actor::cleanup(error&& fail_state, execution_unit* host) {
   if (!mailbox_.closed()) {
     unstash();
-    mailbox_.close(fail_state);
+    auto dropped = mailbox_.close(fail_state);
+    while (dropped > 0 && getf(abstract_actor::collects_metrics_flag)) {
+      auto val = static_cast<int64_t>(dropped);
+      metrics_.mailbox_size->dec(val);
+    }
   }
   // Dispatch to parent's `cleanup` function.
   return super::cleanup(std::move(fail_state), host);

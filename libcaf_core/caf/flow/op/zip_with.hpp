@@ -10,6 +10,7 @@
 #include "caf/flow/subscription.hpp"
 
 #include <algorithm>
+#include <deque>
 #include <memory>
 #include <tuple>
 #include <type_traits>
