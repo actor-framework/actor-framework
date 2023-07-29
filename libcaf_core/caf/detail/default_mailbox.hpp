@@ -5,11 +5,8 @@
 #pragma once
 
 #include "caf/abstract_mailbox.hpp"
-#include "caf/intrusive/fifo_inbox.hpp"
+#include "caf/intrusive/lifo_inbox.hpp"
 #include "caf/intrusive/task_queue.hpp"
-#include "caf/policy/categorized.hpp"
-#include "caf/policy/normal_messages.hpp"
-#include "caf/policy/urgent_messages.hpp"
 
 namespace caf::detail {
 

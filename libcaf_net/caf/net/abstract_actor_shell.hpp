@@ -18,7 +18,6 @@
 #include "caf/mixin/requester.hpp"
 #include "caf/mixin/sender.hpp"
 #include "caf/none.hpp"
-#include "caf/policy/normal_messages.hpp"
 #include "caf/unordered_flat_map.hpp"
 
 namespace caf::net {

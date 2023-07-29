@@ -310,13 +310,8 @@ caf_add_component(
     function_view
     handles
     hash.sha1
-    intrusive.drr_cached_queue
-    intrusive.drr_queue
-    intrusive.fifo_inbox
     intrusive.lifo_inbox
     intrusive.task_queue
-    intrusive.wdrr_dynamic_multiplexed_queue
-    intrusive.wdrr_fixed_multiplexed_queue
     intrusive_ptr
     ipv4_address
     ipv4_endpoint
@@ -345,7 +340,6 @@ caf_add_component(
     node_id
     optional
     or_else
-    policy.categorized
     policy.select_all
     policy.select_any
     request_timeout

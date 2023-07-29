@@ -26,7 +26,6 @@
 #include "caf/mixin/subscriber.hpp"
 #include "caf/none.hpp"
 #include "caf/policy/arg.hpp"
-#include "caf/policy/categorized.hpp"
 #include "caf/send.hpp"
 #include "caf/typed_actor.hpp"
 
