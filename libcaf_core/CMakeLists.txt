@@ -131,6 +131,7 @@ caf_add_component(
     caf/detail/private_thread_pool.cpp
     caf/detail/rfc3629.cpp
     caf/detail/rfc3629.test.cpp
+    caf/detail/ring_buffer.test.cpp
     caf/detail/set_thread_name.cpp
     caf/detail/stream_bridge.cpp
     caf/detail/stringification_inspector.cpp

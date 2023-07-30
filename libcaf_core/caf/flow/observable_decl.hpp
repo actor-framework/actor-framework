@@ -121,6 +121,9 @@ public:
   /// Returns a transformation that selects only the first `n` items.
   transformation<step::take<T>> take(size_t n);
 
+  /// Returns a transformation that selects only the last `n` items.
+  transformation<step::take_last<T>> take_last(size_t n);
+
   /// Returns a transformation that selects all value until the `predicate`
   /// returns false.
   template <class Predicate>

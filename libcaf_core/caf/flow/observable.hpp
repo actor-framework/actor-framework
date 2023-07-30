@@ -594,6 +594,11 @@ transformation<step::take<T>> observable<T>::take(size_t n) {
 }
 
 template <class T>
+transformation<step::take_last<T>> observable<T>::take_last(size_t n) {
+  return transform(step::take_last<T>{n});
+}
+
+template <class T>
 template <class Predicate>
 transformation<step::take_while<Predicate>>
 observable<T>::take_while(Predicate predicate) {

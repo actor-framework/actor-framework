@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/detail/ring_buffer.hpp"
 #include "caf/fwd.hpp"
 
 #include <cstddef>
@@ -17,7 +18,9 @@ public:
 
   using output_type = T;
 
-  explicit take_last(size_t num) : last_elements_count_(num) {
+  explicit take_last(size_t num)
+    : last_elements_count_(num),
+      elements_(caf::detail::ring_buffer<output_type>(num)) {
     // nop
   }
 
@@ -28,17 +31,17 @@ public:
 
   template <class Next, class... Steps>
   bool on_next(const input_type& item, Next& next, Steps&... steps) {
-    elements_.emplace_back(std::move(item));
+    elements_.push_back(item);
     return true;
   }
 
   template <class Next, class... Steps>
   void on_complete(Next& next, Steps&... steps) {
-    auto take_last_begin = elements_.begin();
-    if (elements_.size() > last_elements_count_)
-      take_last_begin += (elements_.size() - last_elements_count_);
-    std::for_each(take_last_begin, elements_.end(),
-                  [&](auto item) { next.on_next(item, steps...); });
+    while (!elements_.empty()) {
+      if (!next.on_next(elements_.front(), steps...))
+        break;
+      elements_.pop_front();
+    };
     next.on_complete(steps...);
   }
 
@@ -49,7 +52,7 @@ public:
 
 private:
   size_t last_elements_count_;
-  std::vector<output_type> elements_;
+  caf::detail::ring_buffer<output_type> elements_;
 };
 
 } // namespace caf::flow::step
