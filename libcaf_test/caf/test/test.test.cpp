@@ -7,33 +7,37 @@
 
 using caf::test::block_type;
 
-TEST("tests can contain different type of checks") {
+TEST("tests can contain different types of checks") {
   auto* rep = caf::test::reporter::instance;
-  /// tests all of the possible scenario for check_ne
-  check_ne(0u, 0u);
-  check_ne(0u, 1u);
   auto stats = rep->test_stats();
-  /// tests all of the possible scenario for check_eq
-  check_eq(stats.passed, 1u);
-  check_eq(stats.passed, 0u);
-  /// tests all of the possible scenario for check_ge
-  check_ge(stats.passed, 0u);
-  check_ge(stats.passed, 1u);
-  check_ge(stats.passed, 2u);
-  /// tests all of the possible scenario for check_gt
-  check_gt(stats.passed, 0u);
-  check_gt(stats.passed, 1u);
-  check_gt(stats.passed, 2u);
-  /// tests all of the possible scenario for check_le
-  check_le(stats.passed, 0u);
-  check_le(stats.passed, 1u);
-  check_le(stats.passed, 2u);
-  /// tests all of the possible scenario for check_lt
-  check_lt(stats.passed, 0u);
-  check_lt(stats.passed, 1u);
-  check_lt(stats.passed, 2u);
-  info("reset error count to not fail the test");
-  caf::test::reporter::instance->test_stats({16, 0});
+  SECTION("checks functionality of check_ne") {
+    check_ne(0u, 1u);
+    should_fail([this]() { check_ne(0u, 0u); });
+  }
+  SECTION("checks functionality of check_eq") {
+    check_eq(1u, 1u);
+    should_fail([this]() { check_eq(1u, 0u); });
+  }
+  SECTION("checks functionality of check_ge") {
+    check_ge(0u, 0u);
+    check_ge(2u, 1u);
+    should_fail([this]() { check_ge(1u, 2u); });
+  }
+  SECTION("checks functionality of check_gt") {
+    check_gt(2u, 1u);
+    should_fail([this]() { check_gt(0u, 0u); });
+    should_fail([this]() { check_gt(1u, 2u); });
+  }
+  SECTION("checks functionality of check_le") {
+    check_le(0u, 0u);
+    check_le(1u, 2u);
+    should_fail([this]() { check_le(2u, 1u); });
+  }
+  SECTION("checks functionality of check_lt") {
+    check_lt(1u, 2u);
+    should_fail([this]() { check_lt(1u, 1u); });
+    should_fail([this]() { check_lt(2u, 1u); });
+  }
   info("this test had {} checks", rep->test_stats().total());
 }
 
