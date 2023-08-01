@@ -7,13 +7,37 @@
 
 using caf::test::block_type;
 
-TEST("tests can contain checks") {
+TEST("tests can contain different types of checks") {
   auto* rep = caf::test::reporter::instance;
-  for (int i = 0; i < 3; ++i)
-    check_eq(i, i);
   auto stats = rep->test_stats();
-  check_eq(stats.passed, 3u);
-  check_eq(stats.failed, 0u);
+  SECTION("check_ne checks for inequality") {
+    check_ne(0, 1);
+    should_fail([this]() { check_ne(0, 0); });
+  }
+  SECTION("check_eq checks for equality") {
+    check_eq(1, 1);
+    should_fail([this]() { check_eq(1, 0); });
+  }
+  SECTION("check_ge checks that lhs is greater than or equal to rhs") {
+    check_ge(0, 0);
+    check_ge(2, 1);
+    should_fail([this]() { check_ge(1, 2); });
+  }
+  SECTION("check_gt checks that lhs is greater than rhs") {
+    check_gt(2, 1);
+    should_fail([this]() { check_gt(0, 0); });
+    should_fail([this]() { check_gt(1, 2); });
+  }
+  SECTION("check_le checks that lhs is less than or equal to rhs") {
+    check_le(0, 0);
+    check_le(1, 2);
+    should_fail([this]() { check_le(2, 1); });
+  }
+  SECTION("check_lt checks that lhs is less than rhs") {
+    check_lt(1, 2);
+    should_fail([this]() { check_lt(1, 1); });
+    should_fail([this]() { check_lt(2, 1); });
+  }
   info("this test had {} checks", rep->test_stats().total());
 }
 

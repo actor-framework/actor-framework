@@ -58,15 +58,87 @@ public:
   bool check_eq(const T0& lhs, const T1& rhs,
                 const detail::source_location& location
                 = detail::source_location::current()) {
-    if (std::is_integral_v<T0> && std::is_integral_v<T1>) {
-      static_assert(std::is_signed_v<T0> == std::is_signed_v<T1>,
-                    "comparing signed and unsigned integers is unsafe");
-    }
+    assert_save_comparison<T0, T1>();
     if (lhs == rhs) {
       reporter::instance->pass(location);
       return true;
     }
     reporter::instance->fail(binary_predicate::eq, stringify(lhs),
+                             stringify(rhs), location);
+    return false;
+  }
+
+  /// Checks whether `lhs` and `rhs` are unequal.
+  template <class T0, class T1>
+  bool check_ne(const T0& lhs, const T1& rhs,
+                const detail::source_location& location
+                = detail::source_location::current()) {
+    assert_save_comparison<T0, T1>();
+    if (lhs != rhs) {
+      reporter::instance->pass(location);
+      return true;
+    }
+    reporter::instance->fail(binary_predicate::ne, stringify(lhs),
+                             stringify(rhs), location);
+    return false;
+  }
+
+  /// Checks whether `lhs` is less than `rhs`.
+  template <class T0, class T1>
+  bool check_lt(const T0& lhs, const T1& rhs,
+                const detail::source_location& location
+                = detail::source_location::current()) {
+    assert_save_comparison<T0, T1>();
+    if (lhs < rhs) {
+      reporter::instance->pass(location);
+      return true;
+    }
+    reporter::instance->fail(binary_predicate::lt, stringify(lhs),
+                             stringify(rhs), location);
+    return false;
+  }
+
+  /// Checks whether `lhs` less than or equal to `rhs`.
+  template <class T0, class T1>
+  bool check_le(const T0& lhs, const T1& rhs,
+                const detail::source_location& location
+                = detail::source_location::current()) {
+    assert_save_comparison<T0, T1>();
+    if (lhs <= rhs) {
+      reporter::instance->pass(location);
+      return true;
+    }
+    reporter::instance->fail(binary_predicate::le, stringify(lhs),
+                             stringify(rhs), location);
+    return false;
+  }
+
+  /// Checks whether `lhs` is greater than `rhs`.
+  template <class T0, class T1>
+  bool check_gt(const T0& lhs, const T1& rhs,
+                const detail::source_location& location
+                = detail::source_location::current()) {
+    assert_save_comparison<T0, T1>();
+    if (lhs > rhs) {
+      reporter::instance->pass(location);
+      return true;
+    }
+    reporter::instance->fail(binary_predicate::gt, stringify(lhs),
+                             stringify(rhs), location);
+    return false;
+  }
+
+  /// Checks whether `lhs` greater than or equal to `rhs`.
+  template <class T0, class T1>
+  bool check_ge(const T0& lhs, const T1& rhs,
+                const detail::source_location& location
+                = detail::source_location::current()) {
+    assert_save_comparison<T0, T1>();
+    if (lhs >= rhs) {
+      reporter::instance->pass(location);
+      return true;
+    }
+    reporter::instance->fail(binary_predicate::ge, stringify(lhs),
                              stringify(rhs), location);
     return false;
   }
@@ -103,6 +175,18 @@ public:
   }
 #endif
 
+  template <class Expr>
+  void should_fail(Expr&& expr, const caf::detail::source_location& location
+                                = caf::detail::source_location::current()) {
+    auto* rep = reporter::instance;
+    auto before = rep->test_stats();
+    expr();
+    auto after = rep->test_stats();
+    check_eq(before.passed, after.passed, location);
+    if (check_eq(before.failed + 1, after.failed, location))
+      rep->test_stats({before.passed + 1, before.failed});
+  }
+
 protected:
   context_ptr ctx_;
   std::string_view description_;
@@ -110,6 +194,14 @@ protected:
   detail::source_location loc_;
 
 private:
+  template <class T0, class T1>
+  static void assert_save_comparison() {
+    if constexpr (std::is_integral_v<T0> && std::is_integral_v<T1>) {
+      static_assert(std::is_signed_v<T0> == std::is_signed_v<T1>,
+                    "comparing signed and unsigned integers is unsafe");
+    }
+  }
+
   template <class T>
   std::string stringify(const T& value) {
     if constexpr (std::is_convertible_v<T, std::string>) {
