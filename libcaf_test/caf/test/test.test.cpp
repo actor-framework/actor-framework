@@ -10,33 +10,33 @@ using caf::test::block_type;
 TEST("tests can contain different types of checks") {
   auto* rep = caf::test::reporter::instance;
   auto stats = rep->test_stats();
-  SECTION("checks functionality of check_ne") {
-    check_ne(0u, 1u);
-    should_fail([this]() { check_ne(0u, 0u); });
+  SECTION("check_ne checks for inequality") {
+    check_ne(0, 1);
+    should_fail([this]() { check_ne(0, 0); });
   }
-  SECTION("checks functionality of check_eq") {
-    check_eq(1u, 1u);
-    should_fail([this]() { check_eq(1u, 0u); });
+  SECTION("check_eq checks for equality") {
+    check_eq(1, 1);
+    should_fail([this]() { check_eq(1, 0); });
   }
-  SECTION("checks functionality of check_ge") {
-    check_ge(0u, 0u);
-    check_ge(2u, 1u);
-    should_fail([this]() { check_ge(1u, 2u); });
+  SECTION("check_ge checks that lhs greater than or equals to rhs") {
+    check_ge(0, 0);
+    check_ge(2, 1);
+    should_fail([this]() { check_ge(1, 2); });
   }
-  SECTION("checks functionality of check_gt") {
-    check_gt(2u, 1u);
-    should_fail([this]() { check_gt(0u, 0u); });
-    should_fail([this]() { check_gt(1u, 2u); });
+  SECTION("check_gt checks that lhs is greater than rhs") {
+    check_gt(2, 1);
+    should_fail([this]() { check_gt(0, 0); });
+    should_fail([this]() { check_gt(1, 2); });
   }
-  SECTION("checks functionality of check_le") {
-    check_le(0u, 0u);
-    check_le(1u, 2u);
-    should_fail([this]() { check_le(2u, 1u); });
+  SECTION("check_le checks that lhs is lesser than or equals to rhs") {
+    check_le(0, 0);
+    check_le(1, 2);
+    should_fail([this]() { check_le(2, 1); });
   }
-  SECTION("checks functionality of check_lt") {
-    check_lt(1u, 2u);
-    should_fail([this]() { check_lt(1u, 1u); });
-    should_fail([this]() { check_lt(2u, 1u); });
+  SECTION("check_lt checks that lhs is lesser than rhs") {
+    check_lt(1, 2);
+    should_fail([this]() { check_lt(1, 1); });
+    should_fail([this]() { check_lt(2, 1); });
   }
   info("this test had {} checks", rep->test_stats().total());
 }
