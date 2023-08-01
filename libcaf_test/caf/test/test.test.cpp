@@ -18,7 +18,7 @@ TEST("tests can contain different types of checks") {
     check_eq(1, 1);
     should_fail([this]() { check_eq(1, 0); });
   }
-  SECTION("check_ge checks that lhs greater than or equals to rhs") {
+  SECTION("check_ge checks that lhs is greater than or equal to rhs") {
     check_ge(0, 0);
     check_ge(2, 1);
     should_fail([this]() { check_ge(1, 2); });
@@ -28,12 +28,12 @@ TEST("tests can contain different types of checks") {
     should_fail([this]() { check_gt(0, 0); });
     should_fail([this]() { check_gt(1, 2); });
   }
-  SECTION("check_le checks that lhs is lesser than or equals to rhs") {
+  SECTION("check_le checks that lhs is less than or equal to rhs") {
     check_le(0, 0);
     check_le(1, 2);
     should_fail([this]() { check_le(2, 1); });
   }
-  SECTION("check_lt checks that lhs is lesser than rhs") {
+  SECTION("check_lt checks that lhs is less than rhs") {
     check_lt(1, 2);
     should_fail([this]() { check_lt(1, 1); });
     should_fail([this]() { check_lt(2, 1); });

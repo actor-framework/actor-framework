@@ -189,7 +189,7 @@ public:
 
   template <class T0, class T1>
   static void assert_save_comparison(T0&&, T1&&) {
-    if (std::is_integral_v<T0> && std::is_integral_v<T1>) {
+    if constexpr (std::is_integral_v<T0> && std::is_integral_v<T1>) {
       static_assert(std::is_signed_v<T0> == std::is_signed_v<T1>,
                     "comparing signed and unsigned integers is unsafe");
     }
