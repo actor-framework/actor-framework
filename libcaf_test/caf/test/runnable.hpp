@@ -187,6 +187,13 @@ public:
       rep->test_stats({before.passed + 1, before.failed});
   }
 
+protected:
+  context_ptr ctx_;
+  std::string_view description_;
+  block_type root_type_;
+  detail::source_location loc_;
+
+private:
   template <class T0, class T1>
   static void assert_save_comparison() {
     if constexpr (std::is_integral_v<T0> && std::is_integral_v<T1>) {
@@ -195,13 +202,6 @@ public:
     }
   }
 
-protected:
-  context_ptr ctx_;
-  std::string_view description_;
-  block_type root_type_;
-  detail::source_location loc_;
-
-private:
   template <class T>
   std::string stringify(const T& value) {
     if constexpr (std::is_convertible_v<T, std::string>) {
