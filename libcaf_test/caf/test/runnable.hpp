@@ -58,7 +58,7 @@ public:
   bool check_eq(const T0& lhs, const T1& rhs,
                 const detail::source_location& location
                 = detail::source_location::current()) {
-    assert_save_comparison(lhs, rhs);
+    assert_save_comparison<T0, T1>();
     if (lhs == rhs) {
       reporter::instance->pass(location);
       return true;
@@ -73,7 +73,7 @@ public:
   bool check_ne(const T0& lhs, const T1& rhs,
                 const detail::source_location& location
                 = detail::source_location::current()) {
-    assert_save_comparison(lhs, rhs);
+    assert_save_comparison<T0, T1>();
     if (lhs != rhs) {
       reporter::instance->pass(location);
       return true;
@@ -88,7 +88,7 @@ public:
   bool check_lt(const T0& lhs, const T1& rhs,
                 const detail::source_location& location
                 = detail::source_location::current()) {
-    assert_save_comparison(lhs, rhs);
+    assert_save_comparison<T0, T1>();
     if (lhs < rhs) {
       reporter::instance->pass(location);
       return true;
@@ -103,7 +103,7 @@ public:
   bool check_le(const T0& lhs, const T1& rhs,
                 const detail::source_location& location
                 = detail::source_location::current()) {
-    assert_save_comparison(lhs, rhs);
+    assert_save_comparison<T0, T1>();
     if (lhs <= rhs) {
       reporter::instance->pass(location);
       return true;
@@ -118,7 +118,7 @@ public:
   bool check_gt(const T0& lhs, const T1& rhs,
                 const detail::source_location& location
                 = detail::source_location::current()) {
-    assert_save_comparison(lhs, rhs);
+    assert_save_comparison<T0, T1>();
     if (lhs > rhs) {
       reporter::instance->pass(location);
       return true;
@@ -133,7 +133,7 @@ public:
   bool check_ge(const T0& lhs, const T1& rhs,
                 const detail::source_location& location
                 = detail::source_location::current()) {
-    assert_save_comparison(lhs, rhs);
+    assert_save_comparison<T0, T1>();
     if (lhs >= rhs) {
       reporter::instance->pass(location);
       return true;
@@ -188,7 +188,7 @@ public:
   }
 
   template <class T0, class T1>
-  static void assert_save_comparison(T0&&, T1&&) {
+  static void assert_save_comparison() {
     if constexpr (std::is_integral_v<T0> && std::is_integral_v<T1>) {
       static_assert(std::is_signed_v<T0> == std::is_signed_v<T1>,
                     "comparing signed and unsigned integers is unsafe");
