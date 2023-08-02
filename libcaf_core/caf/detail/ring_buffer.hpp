@@ -6,7 +6,7 @@
 
 #include "caf/config.hpp"
 
-#include <vector>
+#include <memory>
 
 namespace caf::detail {
 
@@ -15,54 +15,62 @@ template <class T>
 class ring_buffer {
 public:
   ring_buffer(size_t buffer_size)
-    : curr_front_(0),
-      curr_back_(0),
-      element_count_(0),
-      buf_(std::vector<T>(buffer_size)) {
+    : write_pos_(0),
+      max_size_(buffer_size),
+      size_(0),
+      buf_(std::unique_ptr<T[]>(new T[buffer_size])) {
     // nop
   }
 
+  ring_buffer(const ring_buffer& other)
+    : write_pos_(other.write_pos_),
+      max_size_(other.max_size_),
+      size_(other.size_),
+      buf_(std::unique_ptr<T[]>(new T[other.max_size_])) {
+    for (int i = 0; i < max_size_; ++i)
+      buf_[i] = other.buf_[i];
+  }
+
   T& front() {
-    return buf_[curr_front_ % buf_.size()];
+    return buf_[(write_pos_ + max_size_ - size_ + 1) % max_size_];
   }
 
   void pop_front() {
     if (empty())
       return;
-    curr_front_++;
-    element_count_--;
+    --size_;
   }
 
   void push_back(const T& x) {
-    buf_[curr_back_ % buf_.size()] = x;
-    curr_back_++;
-    if (full())
-      curr_front_++;
-    else
-      element_count_++;
+    if (max_size_ <= 0)
+      return;
+    write_pos_ = (write_pos_ + 1) % max_size_;
+    buf_[write_pos_] = x;
+    if (!full())
+      ++size_;
   }
 
   bool full() const noexcept {
-    return element_count_ == buf_.size();
+    return size_ == max_size_;
   }
 
   bool empty() const noexcept {
-    return curr_back_ == curr_front_;
+    return size_ == 0;
   }
 
   size_t size() const noexcept {
-    return element_count_;
+    return size_;
   }
 
 private:
   // current head, indicates the index of the front of the buffer
-  std::size_t curr_front_;
+  std::size_t write_pos_;
   // current tail, this is the index where new items will be added
-  std::size_t curr_back_;
+  std::size_t max_size_;
   // number of elements in the buffer
-  std::size_t element_count_;
+  std::size_t size_;
   // Stores events in a circular ringbuffer
-  std::vector<T> buf_;
+  std::unique_ptr<T[]> buf_;
 };
 
 } // namespace caf::detail

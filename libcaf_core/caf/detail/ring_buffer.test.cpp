@@ -90,6 +90,17 @@ TEST("circular buffer functions properly") {
   check_eq(buf.front(), 5);
 }
 
+TEST("empty buffer is handled correctly") {
+  ring_buffer<int> buf(0);
+  info("empty buffer is initialized");
+  check_eq(buf.size(), 0u);
+  for (int i = 1; i <= 3; ++i) {
+    buf.push_back(i);
+  }
+  info("buffer size after adding some elements");
+  check_eq(buf.size(), 0u);
+}
+
 TEST("buffer size is calculated correctly") {
   ring_buffer<int> buf(5);
   info("empty buffer is initialized");
