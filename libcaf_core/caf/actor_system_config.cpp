@@ -478,6 +478,10 @@ actor_system_config::extract_config_file_path(string_list& args) {
   }
 }
 
+detail::mailbox_factory* actor_system_config::mailbox_factory() {
+  return nullptr;
+}
+
 const settings& content(const actor_system_config& cfg) {
   return cfg.content;
 }

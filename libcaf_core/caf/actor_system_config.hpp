@@ -32,6 +32,10 @@ namespace caf {
 /// Configures an `actor_system` on startup.
 class CAF_CORE_EXPORT actor_system_config {
 public:
+  // -- friends ----------------------------------------------------------------
+
+  friend class actor_system;
+
   // -- member types -----------------------------------------------------------
 
   using hook_factory = std::function<io::hook*(actor_system&)>;
@@ -303,6 +307,8 @@ protected:
   config_option_set custom_options_;
 
 private:
+  virtual detail::mailbox_factory* mailbox_factory();
+
   void set_remainder(string_list args);
 
   mutable std::vector<char*> c_args_remainder_;
