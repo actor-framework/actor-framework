@@ -11,7 +11,7 @@
 
 namespace caf::detail {
 
-// A simple ring buffer implementation
+/// A simple ring buffer implementation.
 template <class T>
 class ring_buffer {
 public:
@@ -28,17 +28,17 @@ public:
     max_size_ = other.max_size_;
     write_pos_ = other.write_pos_;
     size_ = other.size_;
-    buf_ = std::make_unique<T[]>(max_size_);
-    if (max_size_ > 0)
+    if (max_size_ > 0) {
+      buf_ = std::make_unique<T[]>(max_size_);
       std::copy(other.buf_.get(), other.buf_.get() + other.max_size_,
                 buf_.get());
+    }
   }
 
   ring_buffer& operator=(const ring_buffer& other) {
-    ring_buffer copy_ring_buffer{other.max_size_};
-    if (max_size_ > 0)
-      std::copy(other.buf_.get(), other.buf_.get() + other.max_size_,
-                copy_ring_buffer.buf_);
+    ring_buffer tmp{other};
+    swap(*this, tmp);
+    return *this;
   }
 
   T& front() {
@@ -71,14 +71,24 @@ public:
     return size_;
   }
 
+  friend void swap(ring_buffer& first, ring_buffer& second) noexcept {
+    std::swap(first.buf_, second.buf_);
+    std::swap(first.size_, second.size_);
+    std::swap(first.max_size_, second.max_size_);
+    std::swap(first.write_pos_, second.write_pos_);
+  }
+
 private:
-  /// write index for the buffer, new elements will be added in this index
+  /// The index for writing new elements.
   size_t write_pos_ = 0;
-  /// maximum size of the buffer
+
+  /// Maximum size of the buffer.
   size_t max_size_;
-  /// number of elements in the buffer
+
+  /// The number of elements in the buffer currently.
   size_t size_ = 0;
-  /// Stores events in a circular ringbuffer
+
+  /// Stores events in a circular ringbuffer.
   std::unique_ptr<T[]> buf_;
 };
 

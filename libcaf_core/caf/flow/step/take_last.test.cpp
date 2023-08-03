@@ -20,7 +20,7 @@ struct fixture {
   flow::scoped_coordinator_ptr ctx = flow::make_scoped_coordinator();
 
   template <class... Ts>
-  std::vector<int> ls(Ts... xs) {
+  static auto ls(Ts... xs) {
     return std::vector<int>{xs...};
   }
 };
@@ -83,6 +83,7 @@ TEST("take the last 5 numbers in a series of 3 numbers") {
   check_eq(result.size(), 3u);
   check_eq(result, ls(1, 2, 3));
 }
-}
+
+} // WITH_FIXTURE(fixture)
 
 CAF_TEST_MAIN()

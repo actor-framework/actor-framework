@@ -49,7 +49,7 @@ public:
   }
 
 private:
-  caf::detail::ring_buffer<output_type> elements_;
+  detail::ring_buffer<output_type> elements_;
 };
 
 } // namespace caf::flow::step

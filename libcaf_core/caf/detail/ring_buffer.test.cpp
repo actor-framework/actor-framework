@@ -35,7 +35,7 @@ TEST("push_back adds element") {
   check_eq(buf.front(), 4);
 }
 
-TEST("pop_front removes element") {
+TEST("pop_front removes the oldest element") {
   ring_buffer<int> buf{3};
   info("full capacity of ring buffer");
   for (int i = 1; i <= 3; ++i) {
@@ -82,7 +82,7 @@ TEST("circular buffer overwrites oldest element after it is full") {
   check_eq(buf.front(), 5);
 }
 
-TEST("new elements overwrite old elements that are popped") {
+TEST("pop_front removes the oldest element from the buffer") {
   ring_buffer<int> buf{5};
   info("full capacity of ring buffer");
   for (int i = 1; i <= 5; ++i) {
@@ -115,7 +115,7 @@ TEST("new elements overwrite old elements that are popped") {
   check_eq(buf.front(), 5);
 }
 
-TEST("empty ring buffer ignores call to push_back") {
+TEST("push_back does nothing for ring buffer with a capacity of 0") {
   ring_buffer<int> buf{0};
   info("empty buffer is initialized");
   check_eq(buf.size(), 0u);
@@ -126,7 +126,7 @@ TEST("empty ring buffer ignores call to push_back") {
   check_eq(buf.size(), 0u);
 }
 
-TEST("buffer size is calculated correctly") {
+TEST("size() returns the number of elements in a buffer") {
   ring_buffer<int> buf{5};
   info("empty buffer is initialized");
   check_eq(buf.size(), 0u);
@@ -134,6 +134,26 @@ TEST("buffer size is calculated correctly") {
     buf.push_back(i);
   }
   info("buffer size after adding some elements");
+  check_eq(buf.size(), 3u);
+}
+
+TEST("copy-assignment copies and swaps a ring buffer") {
+  ring_buffer<int> buf{5};
+  info("empty buffer is initialized");
+  check_eq(buf.size(), 0u);
+  for (int i = 1; i <= 3; ++i) {
+    buf.push_back(i);
+  }
+  ring_buffer<int> new_buf{0};
+  check_eq(buf.size(), 3u);
+  check_eq(new_buf.size(), 0u);
+  new_buf = buf;
+  info("check size and elements of new_buf after copy-assignment");
+  check_eq(new_buf.size(), 3u);
+  check_eq(new_buf.front(), 1);
+  new_buf.pop_front();
+  check_eq(new_buf.front(), 2);
+  info("check size of buf after copy-assignment");
   check_eq(buf.size(), 3u);
 }
 
