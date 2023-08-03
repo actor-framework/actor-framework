@@ -15,8 +15,7 @@ namespace caf::detail {
 template <class T>
 class ring_buffer {
 public:
-  explicit ring_buffer(size_t max_size)
-    : max_size_(max_size), size_(0), write_pos_(0) {
+  explicit ring_buffer(size_t max_size) : max_size_(max_size) {
     if (max_size > 0)
       buf_ = std::make_unique<T[]>(max_size);
   }
@@ -74,11 +73,11 @@ public:
 
 private:
   /// write index for the buffer, new elements will be added in this index
-  size_t write_pos_;
+  size_t write_pos_ = 0;
   /// maximum size of the buffer
   size_t max_size_;
   /// number of elements in the buffer
-  size_t size_;
+  size_t size_ = 0;
   /// Stores events in a circular ringbuffer
   std::unique_ptr<T[]> buf_;
 };
