@@ -27,87 +27,62 @@ struct fixture {
 
 WITH_FIXTURE(fixture) {
 
-TEST("take the last 5 digits in a series of 100 digits") {
+TEST("take the last 5 numbers in a series of 100 numbers") {
+  auto result = std::vector<int>{};
   SECTION("blueprint") {
-    auto result = std::vector<std::vector<int>>{};
-    ctx->make_observable().range(1, 100).take_last(5).to_vector().for_each(
-      [&](const caf::cow_vector<int>& result_cow) {
-        result.emplace_back(result_cow.std());
+    ctx->make_observable().range(1, 100).take_last(5).for_each(
+      [&](const int& result_observable) {
+        result.emplace_back(result_observable);
       });
-    ctx->run();
-    check_eq(result.size(), 1u);
-    check_eq(result.at(0), ls(96, 97, 98, 99, 100));
   }
   SECTION("observable") {
-    auto result = std::vector<std::vector<int>>{};
-    ctx->make_observable()
-      .range(1, 100)
-      .as_observable()
-      .take_last(5)
-      .to_vector()
-      .for_each([&](const caf::cow_vector<int>& result_cow) {
-        result.emplace_back(result_cow.std());
+    ctx->make_observable().range(1, 100).as_observable().take_last(5).for_each(
+      [&](const int& result_observable) {
+        result.emplace_back(result_observable);
       });
-    ctx->run();
-    check_eq(result.size(), 1u);
-    check_eq(result.at(0), ls(96, 97, 98, 99, 100));
   }
+  ctx->run();
+  check_eq(result.size(), 5u);
+  check_eq(result, ls(96, 97, 98, 99, 100));
 }
 
-TEST("take the last 5 digits in a series of 5 digits") {
+TEST("take the last 5 numbers in a series of 5 numbers") {
+  auto result = std::vector<int>{};
   SECTION("blueprint") {
-    auto result = std::vector<std::vector<int>>{};
-    ctx->make_observable().range(1, 5).take_last(5).to_vector().for_each(
-      [&](const caf::cow_vector<int>& result_cow) {
-        result.emplace_back(result_cow.std());
+    ctx->make_observable().range(1, 5).take_last(5).for_each(
+      [&](const int& result_observable) {
+        result.emplace_back(result_observable);
       });
-    ctx->run();
-    check_eq(result.size(), 1u);
-    check_eq(result.at(0), ls(1, 2, 3, 4, 5));
   }
   SECTION("observable") {
-    auto result = std::vector<std::vector<int>>{};
-    ctx->make_observable()
-      .range(1, 5)
-      .as_observable()
-      .take_last(5)
-      .to_vector()
-      .for_each([&](const caf::cow_vector<int>& result_cow) {
-        result.emplace_back(result_cow.std());
+    ctx->make_observable().range(1, 5).as_observable().take_last(5).for_each(
+      [&](const int& result_observable) {
+        result.emplace_back(result_observable);
       });
-    ctx->run();
-    check_eq(result.size(), 1u);
-    check_eq(result.at(0), ls(1, 2, 3, 4, 5));
   }
+  ctx->run();
+  check_eq(result.size(), 5u);
+  check_eq(result, ls(1, 2, 3, 4, 5));
 }
 
-TEST("take the last 5 digits in a series of 3 digits") {
+TEST("take the last 5 numbers in a series of 3 numbers") {
+  auto result = std::vector<int>{};
   SECTION("blueprint") {
-    auto result = std::vector<std::vector<int>>{};
-    ctx->make_observable().range(1, 5).take_last(5).to_vector().for_each(
-      [&](const caf::cow_vector<int>& result_cow) {
-        result.emplace_back(result_cow.std());
+    ctx->make_observable().range(1, 3).take_last(5).for_each(
+      [&](const int& result_observable) {
+        result.emplace_back(result_observable);
       });
-    ctx->run();
-    check_eq(result.size(), 1u);
-    check_eq(result.at(0), ls(1, 2, 3, 4, 5));
   }
   SECTION("observable") {
-    auto result = std::vector<std::vector<int>>{};
-    ctx->make_observable()
-      .range(1, 2)
-      .as_observable()
-      .take_last(5)
-      .to_vector()
-      .for_each([&](const caf::cow_vector<int>& result_cow) {
-        result.emplace_back(result_cow.std());
+    ctx->make_observable().range(1, 3).as_observable().take_last(5).for_each(
+      [&](const int& result_observable) {
+        result.emplace_back(result_observable);
       });
-    ctx->run();
-    check_eq(result.size(), 1u);
-    check_eq(result.at(0), ls(1, 2));
   }
+  ctx->run();
+  check_eq(result.size(), 3u);
+  check_eq(result, ls(1, 2, 3));
 }
-
 }
 
 CAF_TEST_MAIN()

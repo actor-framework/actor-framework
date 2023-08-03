@@ -18,9 +18,7 @@ public:
 
   using output_type = T;
 
-  explicit take_last(size_t num)
-    : last_elements_count_(num),
-      elements_(caf::detail::ring_buffer<output_type>(num)) {
+  explicit take_last(size_t num) : elements_(num) {
     // nop
   }
 
@@ -51,7 +49,6 @@ public:
   }
 
 private:
-  size_t last_elements_count_;
   caf::detail::ring_buffer<output_type> elements_;
 };
 

@@ -6,6 +6,7 @@
 
 #include "caf/config.hpp"
 
+#include <algorithm>
 #include <memory>
 
 namespace caf::detail {
@@ -14,38 +15,47 @@ namespace caf::detail {
 template <class T>
 class ring_buffer {
 public:
-  ring_buffer(size_t buffer_size)
-    : write_pos_(0),
-      max_size_(buffer_size),
-      size_(0),
-      buf_(std::unique_ptr<T[]>(new T[buffer_size])) {
-    // nop
+  explicit ring_buffer(size_t max_size)
+    : max_size_(max_size), size_(0), write_pos_(0) {
+    if (max_size > 0)
+      buf_ = std::make_unique<T[]>(max_size);
   }
 
-  ring_buffer(const ring_buffer& other)
-    : write_pos_(other.write_pos_),
-      max_size_(other.max_size_),
-      size_(other.size_),
-      buf_(std::unique_ptr<T[]>(new T[other.max_size_])) {
-    for (int i = 0; i < max_size_; ++i)
-      buf_[i] = other.buf_[i];
+  ring_buffer(ring_buffer&& other) noexcept = default;
+
+  ring_buffer& operator=(ring_buffer&& other) noexcept = default;
+
+  explicit ring_buffer(const ring_buffer& other) {
+    max_size_ = other.max_size_;
+    write_pos_ = other.write_pos_;
+    size_ = other.size_;
+    buf_ = std::make_unique<T[]>(max_size_);
+    if (max_size_ > 0)
+      std::copy(other.buf_.get(), other.buf_.get() + other.max_size_,
+                buf_.get());
+  }
+
+  ring_buffer& operator=(const ring_buffer& other) {
+    ring_buffer copy_ring_buffer{other.max_size_};
+    if (max_size_ > 0)
+      std::copy(other.buf_.get(), other.buf_.get() + other.max_size_,
+                copy_ring_buffer.buf_);
   }
 
   T& front() {
-    return buf_[(write_pos_ + max_size_ - size_ + 1) % max_size_];
+    return buf_[(write_pos_ + max_size_ - size_) % max_size_];
   }
 
   void pop_front() {
-    if (empty())
-      return;
+    CAF_ASSERT(!empty());
     --size_;
   }
 
   void push_back(const T& x) {
-    if (max_size_ <= 0)
+    if (max_size_ == 0)
       return;
-    write_pos_ = (write_pos_ + 1) % max_size_;
     buf_[write_pos_] = x;
+    write_pos_ = (write_pos_ + 1) % max_size_;
     if (!full())
       ++size_;
   }
@@ -63,13 +73,13 @@ public:
   }
 
 private:
-  // current head, indicates the index of the front of the buffer
-  std::size_t write_pos_;
-  // current tail, this is the index where new items will be added
-  std::size_t max_size_;
-  // number of elements in the buffer
-  std::size_t size_;
-  // Stores events in a circular ringbuffer
+  /// write index for the buffer, new elements will be added in this index
+  size_t write_pos_;
+  /// maximum size of the buffer
+  size_t max_size_;
+  /// number of elements in the buffer
+  size_t size_;
+  /// Stores events in a circular ringbuffer
   std::unique_ptr<T[]> buf_;
 };
 

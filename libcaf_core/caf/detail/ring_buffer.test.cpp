@@ -12,7 +12,7 @@ using namespace caf;
 using detail::ring_buffer;
 
 TEST("push_back adds element") {
-  ring_buffer<int> buf(3);
+  ring_buffer<int> buf{3};
   info("full capacity of ring buffer");
   for (int i = 1; i <= 3; ++i) {
     buf.push_back(i);
@@ -36,7 +36,7 @@ TEST("push_back adds element") {
 }
 
 TEST("pop_front removes element") {
-  ring_buffer<int> buf(3);
+  ring_buffer<int> buf{3};
   info("full capacity of ring buffer");
   for (int i = 1; i <= 3; ++i) {
     buf.push_back(i);
@@ -57,8 +57,33 @@ TEST("pop_front removes element") {
   check_eq(buf.empty(), true);
 }
 
-TEST("circular buffer functions properly") {
-  ring_buffer<int> buf(5);
+TEST("circular buffer overwrites oldest element after it is full") {
+  ring_buffer<int> buf{5};
+  info("full capacity of ring buffer");
+  for (int i = 1; i <= 5; ++i) {
+    buf.push_back(i);
+  }
+  check_eq(buf.full(), true);
+  check_eq(buf.empty(), false);
+  check_eq(buf.front(), 1);
+  info("add some elements into buffer");
+  buf.push_back(6);
+  buf.push_back(7);
+  check_eq(buf.full(), true);
+  check_eq(buf.empty(), false);
+  check_eq(buf.front(), 3);
+  buf.push_back(8);
+  check_eq(buf.full(), true);
+  check_eq(buf.empty(), false);
+  check_eq(buf.front(), 4);
+  buf.push_back(9);
+  check_eq(buf.full(), true);
+  check_eq(buf.empty(), false);
+  check_eq(buf.front(), 5);
+}
+
+TEST("new elements overwrite old elements that are popped") {
+  ring_buffer<int> buf{5};
   info("full capacity of ring buffer");
   for (int i = 1; i <= 5; ++i) {
     buf.push_back(i);
@@ -90,8 +115,8 @@ TEST("circular buffer functions properly") {
   check_eq(buf.front(), 5);
 }
 
-TEST("empty buffer is handled correctly") {
-  ring_buffer<int> buf(0);
+TEST("empty ring buffer ignores call to push_back") {
+  ring_buffer<int> buf{0};
   info("empty buffer is initialized");
   check_eq(buf.size(), 0u);
   for (int i = 1; i <= 3; ++i) {
@@ -102,7 +127,7 @@ TEST("empty buffer is handled correctly") {
 }
 
 TEST("buffer size is calculated correctly") {
-  ring_buffer<int> buf(5);
+  ring_buffer<int> buf{5};
   info("empty buffer is initialized");
   check_eq(buf.size(), 0u);
   for (int i = 1; i <= 3; ++i) {
