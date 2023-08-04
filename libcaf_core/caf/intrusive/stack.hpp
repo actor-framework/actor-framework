@@ -6,6 +6,7 @@
 
 namespace caf::intrusive {
 
+/// A simple stack implementation with singly-linked nodes.
 template <class T>
 class stack {
 public:

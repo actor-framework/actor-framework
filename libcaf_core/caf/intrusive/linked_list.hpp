@@ -65,9 +65,7 @@ public:
 
   linked_list& operator=(linked_list&& other) noexcept {
     clear();
-    if (other.empty()) {
-      init();
-    } else {
+    if (!other.empty()) {
       head_.next = other.head_.next;
       tail_.next = other.tail_.next;
       tail_.next->next = &tail_;
@@ -92,28 +90,28 @@ public:
     return size_;
   }
 
-  /// Returns whether the queue has no elements.
+  /// Returns whether the list has no elements.
   bool empty() const noexcept {
     return size() == 0;
   }
 
   // -- modifiers -------------------------------------------------------------
 
-  /// Removes all elements from the queue.
+  /// Removes all elements from the list.
   void clear() noexcept {
     typename unique_pointer::deleter_type fn;
     drain(fn);
   }
 
-  /// Removes the first element from the queue and returns it.
+  /// Removes the first element from the list and returns it.
   unique_pointer pop_front() {
     unique_pointer result;
     if (!empty()) {
       auto ptr = promote(head_.next);
       head_.next = ptr->next;
       if (--size_ == 0) {
-        CAF_ASSERT(head_.next == &(tail_));
-        tail_.next = &(head_);
+        CAF_ASSERT(head_.next == &tail_);
+        tail_.next = &head_;
       }
       result.reset(ptr);
     }
@@ -158,7 +156,7 @@ public:
   }
 
   /// Returns an iterator to the last element or to the dummy before the first
-  /// element if the queue is empty.
+  /// element if the list is empty.
   iterator before_end() noexcept {
     return tail_.next;
   }
@@ -176,14 +174,14 @@ public:
     return promote(tail_.next);
   }
 
-  /// Like `front`, but returns `nullptr` if the queue is empty.
+  /// Like `front`, but returns `nullptr` if the list is empty.
   pointer peek() noexcept {
     return size_ > 0 ? front() : nullptr;
   }
 
   // -- insertion --------------------------------------------------------------
 
-  /// Appends `ptr` to the queue.
+  /// Appends `ptr` to the list.
   /// @pre `ptr != nullptr`
   void push_back(pointer ptr) noexcept {
     CAF_ASSERT(ptr != nullptr);
@@ -193,7 +191,7 @@ public:
     ++size_;
   }
 
-  /// Appends `ptr` to the queue.
+  /// Appends `ptr` to the list.
   /// @pre `ptr != nullptr`
   void push_back(unique_pointer ptr) noexcept {
     push_back(ptr.release());
@@ -241,7 +239,7 @@ public:
 
   // -- algorithms -------------------------------------------------------------
 
-  /// Tries to find an element in the queue that matches the given predicate.
+  /// Tries to find an element in the list that matches the given predicate.
   template <class Predicate>
   pointer find_if(Predicate pred) {
     for (auto i = begin(); i != end(); ++i)
@@ -275,10 +273,10 @@ private:
   node_type head_;
 
   /// Dummy past-the-last-element node. The `tail_->next` pointer is pointing to
-  /// the last element in the queue or to `head_` if the queue is empty.
+  /// the last element in the list or to `head_` if the list is empty.
   node_type tail_;
 
-  /// Stores the total size of all items in the queue.
+  /// Stores the total size of all items in the list.
   size_t size_ = 0;
 };
 

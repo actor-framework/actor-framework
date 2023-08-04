@@ -143,4 +143,15 @@ TEST("lists allow iterator-based access") {
            12);
 }
 
+TEST("pop_front removes the oldest element of a list and returns it") {
+  list_type uut;
+  fill(uut, 1, 2, 3);
+  check_eq(uut.pop_front()->value, 1);
+  if (check_eq(uut.size(), 2u))
+    check_eq(uut.pop_front()->value, 1);
+  if (check_eq(uut.size(), 1u))
+    check_eq(uut.pop_front()->value, 1);
+  check(uut.empty());
+}
+
 CAF_TEST_MAIN()
