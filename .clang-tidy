@@ -1,5 +1,5 @@
 ---
-Checks:          '-*,bugprone-*'
+Checks:          '-*,bugprone-*,-bugprone-easily-swappable-parameters,-bugprone-macro-parentheses'
 WarningsAsErrors: ''
 HeaderFilterRegex: '/caf/'
 AnalyzeTemporaryDtors: false

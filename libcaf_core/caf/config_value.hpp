@@ -628,7 +628,7 @@ struct variant_inspector_traits<config_value> {
 
   template <class U>
   static void assign(value_type& x, U&& value) {
-    x = std::move(value);
+    x = std::forward<U>(value);
   }
 
   template <class F>
