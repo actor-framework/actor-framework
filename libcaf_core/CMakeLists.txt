@@ -135,6 +135,7 @@ caf_add_component(
     caf/detail/private_thread_pool.cpp
     caf/detail/rfc3629.cpp
     caf/detail/rfc3629.test.cpp
+    caf/detail/ring_buffer.test.cpp
     caf/detail/set_thread_name.cpp
     caf/detail/stream_bridge.cpp
     caf/detail/stringification_inspector.cpp
@@ -152,6 +153,7 @@ caf_add_component(
     caf/flow/observable_builder.cpp
     caf/flow/op/interval.cpp
     caf/flow/scoped_coordinator.cpp
+    caf/flow/step/take_last.test.cpp
     caf/flow/subscription.cpp
     caf/forwarding_actor_proxy.cpp
     caf/group.cpp

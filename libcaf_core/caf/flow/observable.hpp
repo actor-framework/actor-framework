@@ -223,6 +223,11 @@ public:
     return add_step(step::take<output_type>{n});
   }
 
+  /// @copydoc observable::take_last
+  auto take_last(size_t n) && {
+    return add_step(step::take_last<output_type>{n});
+  }
+
   /// @copydoc observable::buffer
   auto buffer(size_t count) && {
     return materialize().buffer(count);
@@ -586,6 +591,11 @@ transformation<step::skip<T>> observable<T>::skip(size_t n) {
 template <class T>
 transformation<step::take<T>> observable<T>::take(size_t n) {
   return transform(step::take<T>{n});
+}
+
+template <class T>
+transformation<step::take_last<T>> observable<T>::take_last(size_t n) {
+  return transform(step::take_last<T>{n});
 }
 
 template <class T>

@@ -34,6 +34,9 @@ template <class>
 class take;
 
 template <class>
+class take_last;
+
+template <class>
 class take_while;
 
 } // namespace caf::flow::step
