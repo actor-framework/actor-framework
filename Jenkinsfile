@@ -18,6 +18,7 @@ config = [
         'CAF_ENABLE_ACTOR_PROFILER:BOOL=ON',
         'CAF_ENABLE_EXAMPLES:BOOL=ON',
         'CAF_ENABLE_RUNTIME_CHECKS:BOOL=ON',
+        'CMAKE_CXX_FLAGS:STRING=-Werror',
     ],
     // Our build matrix. Keys are the operating system labels and values are build configurations.
     buildMatrix: [
