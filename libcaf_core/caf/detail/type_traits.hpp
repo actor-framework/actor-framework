@@ -820,24 +820,6 @@ public:
   static constexpr bool value = sfinae_type::value;
 };
 
-template <class T, class Arg>
-struct can_apply {
-  template <class U>
-  static auto sfinae(U* x)
-    -> decltype(CAF_IGNORE_UNUSED(x->apply(std::declval<Arg>())),
-                std::true_type{});
-
-  template <class U>
-  static auto sfinae(...) -> std::false_type;
-
-  using type = decltype(sfinae<T>(nullptr));
-
-  static constexpr bool value = type::value;
-};
-
-template <class T, class Arg>
-constexpr bool can_apply_v = can_apply<T, Arg>::value;
-
 /// Evaluates to `true` for all types that specialize `std::tuple_size`, i.e.,
 /// `std::tuple`, `std::pair`, and `std::array`.
 template <class T>
