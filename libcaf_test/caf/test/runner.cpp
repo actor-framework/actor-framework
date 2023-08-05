@@ -190,7 +190,7 @@ int runner::run(int argc, char** argv) {
     default_reporter->end_suite(suite_name);
   }
   default_reporter->stop();
-  return default_reporter->success() > 0 ? EXIT_SUCCESS : EXIT_FAILURE;
+  return default_reporter->success() ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
 runner::parse_cli_result runner::parse_cli(int argc, char** argv) {
