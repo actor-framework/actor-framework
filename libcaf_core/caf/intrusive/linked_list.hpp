@@ -47,9 +47,7 @@ public:
 
   // -- constructors, destructors, and assignment operators -------------------
 
-  linked_list() noexcept {
-    init();
-  }
+  linked_list() noexcept = default;
 
   linked_list(linked_list&& other) noexcept {
     if (other.empty()) {
@@ -270,11 +268,11 @@ private:
   // -- member variables ------------------------------------------------------
 
   /// Dummy before-the-first-element node.
-  node_type head_;
+  node_type head_{&tail_};
 
   /// Dummy past-the-last-element node. The `tail_->next` pointer is pointing to
   /// the last element in the list or to `head_` if the list is empty.
-  node_type tail_;
+  node_type tail_{&head_};
 
   /// Stores the total size of all items in the list.
   size_t size_ = 0;
