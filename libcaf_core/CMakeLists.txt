@@ -224,8 +224,8 @@ caf_add_component(
     caf/uri_builder.cpp
     caf/uuid.cpp
   LEGACY_TEST_SOURCES
-    test/core-test.cpp
-    test/nasty.cpp
+    tests/legacy/core-test.cpp
+    tests/legacy/nasty.cpp
   LEGACY_TEST_SUITES
     action
     actor_clock
@@ -386,5 +386,5 @@ if(NOT CAF_USE_STD_FORMAT)
 endif()
 
 if(CAF_ENABLE_TESTING AND CAF_ENABLE_EXCEPTIONS)
-  caf_add_test_suites(caf-core-legacy-test custom_exception_handler)
+  caf_add_legacy_test_suites(caf-core-legacy-test custom_exception_handler)
 endif()

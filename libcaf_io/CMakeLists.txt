@@ -60,7 +60,7 @@ caf_add_component(
     caf/policy/tcp.cpp
     caf/policy/udp.cpp
   LEGACY_TEST_SOURCES
-    test/io-test.cpp
+    tests/legacy/io-test.cpp
   LEGACY_TEST_SUITES
     detail.prometheus_broker
     io.basp.message_queue
@@ -77,5 +77,5 @@ caf_add_component(
     io.worker)
 
 if(CAF_ENABLE_TESTING AND UNIX)
-  caf_add_test_suites(caf-io-legacy-test io.middleman)
+  caf_add_legacy_test_suites(caf-io-legacy-test io.middleman)
 endif()

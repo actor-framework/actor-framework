@@ -22,7 +22,7 @@ caf_add_component(
     caf/openssl/remote_actor.cpp
     caf/openssl/session.cpp
   LEGACY_TEST_SUITES
-    test/openssl-test.cpp
+    tests/legacy/openssl-test.cpp
   LEGACY_TEST_SUITES
     openssl.authentication
     openssl.remote_actor)

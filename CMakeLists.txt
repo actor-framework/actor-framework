@@ -109,16 +109,16 @@ elseif(MSVC)
   target_compile_options(caf_internal INTERFACE /EHsc)
 endif()
 
-# -- unit testing setup / caf_add_test_suites function  ------------------------
+# -- unit testing setup / caf_add_legacy_test_suites function  ------------------------
 
 if(CAF_ENABLE_TESTING)
   enable_testing()
-  function(caf_add_test_suites target)
+  function(caf_add_legacy_test_suites target)
     foreach(suiteName ${ARGN})
       if(NOT ${suiteName} IN_LIST CAF_EXCLUDE_TESTS)
         string(REPLACE "." "/" suitePath ${suiteName})
         target_sources(${target} PRIVATE
-          "${CMAKE_CURRENT_SOURCE_DIR}/test/${suitePath}.cpp")
+          "${CMAKE_CURRENT_SOURCE_DIR}/tests/legacy/${suitePath}.cpp")
         add_test(NAME ${suiteName}
                  COMMAND ${target} -r300 -n -v5 -s "^${suiteName}$")
       endif()
@@ -313,14 +313,14 @@ endfunction()
 #     ...
 #   SOURCES
 #     ...
-#   TEST_SOURCES
+#   LEGACY_TEST_SOURCES
 #     ...
-#   TEST_SUITES
+#   LEGACY_TEST_SUITES
 #     ...
 # )
 function(caf_add_component name)
-  set(varargs DEPENDENCIES HEADERS SOURCES TEST_SOURCES TEST_SUITES ENUM_TYPES
-              LEGACY_TEST_SOURCES LEGACY_TEST_SUITES)
+  set(varargs DEPENDENCIES HEADERS SOURCES ENUM_TYPES LEGACY_TEST_SOURCES 
+              LEGACY_TEST_SUITES)
   cmake_parse_arguments(CAF_ADD_COMPONENT "" "" "${varargs}" ${ARGN})
   if(NOT CAF_ADD_COMPONENT_HEADERS)
     message(FATAL_ERROR "Cannot add CAF component without at least one header.")
@@ -369,20 +369,6 @@ function(caf_add_component name)
         "${PROJECT_SOURCE_DIR}/cmake/dummy.cpp"
         $<TARGET_OBJECTS:${obj_lib_target}>)
   endif()
-  if(CAF_ENABLE_TESTING AND CAF_ADD_COMPONENT_TEST_SOURCES)
-    set(tst_bin_target "caf-${name}-test")
-    list(APPEND targets ${tst_bin_target})
-    add_executable(${tst_bin_target}
-                   ${CAF_ADD_COMPONENT_TEST_SOURCES}
-                   $<TARGET_OBJECTS:${obj_lib_target}>)
-    target_link_libraries(${tst_bin_target} PRIVATE libcaf_test
-                          ${CAF_ADD_COMPONENT_DEPENDENCIES})
-    target_include_directories(${tst_bin_target} PRIVATE
-                               "${CMAKE_CURRENT_SOURCE_DIR}/test")
-    if(CAF_ADD_COMPONENT_TEST_SUITES)
-      caf_add_test_suites(${tst_bin_target} ${CAF_ADD_COMPONENT_TEST_SUITES})
-    endif()
-  endif()
   if(CAF_ENABLE_TESTING AND CAF_ADD_COMPONENT_LEGACY_TEST_SOURCES)
     set(tst_bin_target "caf-${name}-legacy-test")
     list(APPEND targets ${tst_bin_target})
@@ -392,9 +378,9 @@ function(caf_add_component name)
     target_link_libraries(${tst_bin_target} PRIVATE libcaf_test
                           ${CAF_ADD_COMPONENT_DEPENDENCIES})
     target_include_directories(${tst_bin_target} PRIVATE
-                               "${CMAKE_CURRENT_SOURCE_DIR}/test")
+                               "${CMAKE_CURRENT_SOURCE_DIR}/tests/legacy")
     if(CAF_ADD_COMPONENT_LEGACY_TEST_SUITES)
-      caf_add_test_suites(${tst_bin_target} ${CAF_ADD_COMPONENT_LEGACY_TEST_SUITES})
+      caf_add_legacy_test_suites(${tst_bin_target} ${CAF_ADD_COMPONENT_LEGACY_TEST_SUITES})
     endif()
   endif()
   target_link_libraries(${pub_lib_target} ${CAF_ADD_COMPONENT_DEPENDENCIES})

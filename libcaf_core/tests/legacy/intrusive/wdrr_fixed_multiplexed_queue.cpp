@@ -1,0 +1,194 @@
+// This file is part of CAF, the C++ Actor Framework. See the file LICENSE in
+// the main distribution directory for license terms and copyright or visit
+// https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
+
+#define CAF_SUITE intrusive.wdrr_fixed_multiplexed_queue
+
+#include "caf/intrusive/wdrr_fixed_multiplexed_queue.hpp"
+
+#include "caf/intrusive/drr_queue.hpp"
+#include "caf/intrusive/singly_linked.hpp"
+
+#include "core-test.hpp"
+
+#include <memory>
+
+using namespace caf;
+using namespace caf::intrusive;
+
+namespace {
+
+struct inode : singly_linked<inode> {
+  int value;
+  inode(int x = 0) : value(x) {
+    // nop
+  }
+};
+
+std::string to_string(const inode& x) {
+  return std::to_string(x.value);
+}
+
+class high_prio_queue;
+
+struct inode_policy {
+  using mapped_type = inode;
+
+  using task_size_type = int;
+
+  using deficit_type = int;
+
+  using deleter_type = std::default_delete<mapped_type>;
+
+  using unique_pointer = std::unique_ptr<mapped_type, deleter_type>;
+
+  static inline task_size_type task_size(const mapped_type&) {
+    return 1;
+  }
+
+  static inline size_t id_of(const inode& x) {
+    return x.value % 3;
+  }
+
+  template <class Queue>
+  deficit_type quantum(const Queue&, deficit_type x) {
+    return x;
+  }
+
+  deficit_type quantum(const high_prio_queue&, deficit_type x) {
+    return enable_priorities ? 2 * x : x;
+  }
+
+  bool enable_priorities = false;
+};
+
+class high_prio_queue : public drr_queue<inode_policy> {
+public:
+  using super = drr_queue<inode_policy>;
+
+  using super::super;
+};
+
+using nested_queue_type = drr_queue<inode_policy>;
+
+using queue_type
+  = wdrr_fixed_multiplexed_queue<inode_policy, high_prio_queue,
+                                 nested_queue_type, nested_queue_type>;
+
+struct fetch_helper {
+  std::string result;
+
+  template <size_t I, class Queue>
+  task_result
+  operator()(std::integral_constant<size_t, I>, const Queue&, inode& x) {
+    if (!result.empty())
+      result += ',';
+    result += std::to_string(I);
+    result += ':';
+    result += to_string(x);
+    return task_result::resume;
+  }
+};
+
+struct fixture {
+  inode_policy policy;
+  queue_type queue{policy, policy, policy, policy};
+
+  void fill(queue_type&) {
+    // nop
+  }
+
+  template <class T, class... Ts>
+  void fill(queue_type& q, T x, Ts... xs) {
+    q.emplace_back(x);
+    fill(q, xs...);
+  }
+
+  std::string fetch(int quantum) {
+    std::string result;
+    auto f = [&](size_t id, drr_queue<inode_policy>&, inode& x) {
+      if (!result.empty())
+        result += ',';
+      result += std::to_string(id);
+      result += ':';
+      result += to_string(x);
+      return task_result::resume;
+    };
+    queue.new_round(quantum, f);
+    return result;
+  }
+};
+
+auto make_new_round_result(size_t consumed_items, bool stop_all) {
+  return new_round_result{consumed_items, stop_all};
+}
+
+} // namespace
+
+BEGIN_FIXTURE_SCOPE(fixture)
+
+CAF_TEST(default_constructed) {
+  CAF_REQUIRE_EQUAL(queue.empty(), true);
+}
+
+CAF_TEST(new_round) {
+  fill(queue, 1, 2, 3, 4, 5, 6, 7, 8, 9, 12);
+  // Allow f to consume 2 items per nested queue.
+  fetch_helper f;
+  auto round_result = queue.new_round(2, f);
+  CHECK_EQ(round_result, make_new_round_result(6, false));
+  CHECK_EQ(f.result, "0:3,0:6,1:1,1:4,2:2,2:5");
+  CAF_REQUIRE_EQUAL(queue.empty(), false);
+  // Allow f to consume one more item from each queue.
+  f.result.clear();
+  round_result = queue.new_round(1, f);
+  CHECK_EQ(round_result, make_new_round_result(3, false));
+  CHECK_EQ(f.result, "0:9,1:7,2:8");
+  CAF_REQUIRE_EQUAL(queue.empty(), false);
+  // Allow f to consume the remainder, i.e., 12.
+  f.result.clear();
+  round_result = queue.new_round(1000, f);
+  CHECK_EQ(round_result, make_new_round_result(1, false));
+  CHECK_EQ(f.result, "0:12");
+  CAF_REQUIRE_EQUAL(queue.empty(), true);
+}
+
+CAF_TEST(priorities) {
+  queue.policy().enable_priorities = true;
+  fill(queue, 1, 2, 3, 4, 5, 6, 7, 8, 9);
+  // Allow f to consume 2 items from the high priority and 1 item otherwise.
+  CHECK_EQ(fetch(1), "0:3,0:6,1:1,2:2");
+  CAF_REQUIRE_EQUAL(queue.empty(), false);
+  // Drain the high-priority queue with one item left per other queue.
+  CHECK_EQ(fetch(1), "0:9,1:4,2:5");
+  CAF_REQUIRE_EQUAL(queue.empty(), false);
+  // Drain queue.
+  CHECK_EQ(fetch(1000), "1:7,2:8");
+  CAF_REQUIRE_EQUAL(queue.empty(), true);
+}
+
+CAF_TEST(peek_all) {
+  auto queue_to_string = [&] {
+    std::string str;
+    auto peek_fun = [&](const inode& x) {
+      if (!str.empty())
+        str += ", ";
+      str += std::to_string(x.value);
+    };
+    queue.peek_all(peek_fun);
+    return str;
+  };
+  CHECK_EQ(queue_to_string(), "");
+  queue.emplace_back(1);
+  CHECK_EQ(queue_to_string(), "1");
+  queue.emplace_back(2);
+  CHECK_EQ(queue_to_string(), "1, 2");
+  queue.emplace_back(3);
+  // Lists are iterated in order and 3 is stored in the first queue for
+  // `x mod 3 == 0` values.
+  CHECK_EQ(queue_to_string(), "3, 1, 2");
+  queue.emplace_back(4);
+  CHECK_EQ(queue_to_string(), "3, 1, 4, 2");
+}
+
+END_FIXTURE_SCOPE()
