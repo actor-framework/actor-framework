@@ -4,7 +4,7 @@ file(GLOB_RECURSE CAF_NET_HEADERS "caf/*.hpp")
 
 # -- add targets ---------------------------------------------------------------
 
-configure_file(test/pem.cpp.in test/pem.cpp @ONLY)
+configure_file(tests/legacy/pem.cpp.in tests/legacy/pem.cpp @ONLY)
 
 caf_add_component(
   net
@@ -94,8 +94,8 @@ caf_add_component(
     caf/net/web_socket/server.cpp
     caf/net/web_socket/upper_layer.cpp
   LEGACY_TEST_SOURCES
-    ${CMAKE_CURRENT_BINARY_DIR}/test/pem.cpp
-    test/net-test.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/tests/legacy/pem.cpp
+    tests/legacy/net-test.cpp
   LEGACY_TEST_SUITES
     detail.convert_ip_endpoint
     net.accept_socket

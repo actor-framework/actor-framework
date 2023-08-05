@@ -124,6 +124,17 @@ if(CAF_ENABLE_TESTING)
       endif()
     endforeach()
   endfunction()
+  function(caf_add_legacy_test_suites target)
+    foreach(suiteName ${ARGN})
+      if(NOT ${suiteName} IN_LIST CAF_EXCLUDE_TESTS)
+        string(REPLACE "." "/" suitePath ${suiteName})
+        target_sources(${target} PRIVATE
+          "${CMAKE_CURRENT_SOURCE_DIR}/tests/legacy/${suitePath}.cpp")
+        add_test(NAME ${suiteName}
+                 COMMAND ${target} -r300 -n -v5 -s "^${suiteName}$")
+      endif()
+    endforeach()
+  endfunction()
 endif()
 
 # -- make sure we have at least C++17 available --------------------------------
@@ -378,7 +389,7 @@ function(caf_add_component name)
     target_link_libraries(${tst_bin_target} PRIVATE libcaf_test
                           ${CAF_ADD_COMPONENT_DEPENDENCIES})
     target_include_directories(${tst_bin_target} PRIVATE
-                               "${CMAKE_CURRENT_SOURCE_DIR}/test")
+                               "${CMAKE_CURRENT_SOURCE_DIR}/tests/legacy")
     if(CAF_ADD_COMPONENT_TEST_SUITES)
       caf_add_test_suites(${tst_bin_target} ${CAF_ADD_COMPONENT_TEST_SUITES})
     endif()
@@ -392,9 +403,9 @@ function(caf_add_component name)
     target_link_libraries(${tst_bin_target} PRIVATE libcaf_test
                           ${CAF_ADD_COMPONENT_DEPENDENCIES})
     target_include_directories(${tst_bin_target} PRIVATE
-                               "${CMAKE_CURRENT_SOURCE_DIR}/test")
+                               "${CMAKE_CURRENT_SOURCE_DIR}/tests/legacy")
     if(CAF_ADD_COMPONENT_LEGACY_TEST_SUITES)
-      caf_add_test_suites(${tst_bin_target} ${CAF_ADD_COMPONENT_LEGACY_TEST_SUITES})
+      caf_add_legacy_test_suites(${tst_bin_target} ${CAF_ADD_COMPONENT_LEGACY_TEST_SUITES})
     endif()
   endif()
   target_link_libraries(${pub_lib_target} ${CAF_ADD_COMPONENT_DEPENDENCIES})
