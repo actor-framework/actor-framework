@@ -834,8 +834,8 @@ auto scheduled_actor::reactivate(mailbox_element& x) -> activation_result {
     handle_exception(std::current_exception());
   }
   finalize();
-  return activation_result::terminated;
 #endif // CAF_ENABLE_EXCEPTIONS
+  return activation_result::terminated;
 }
 
 // -- behavior management ----------------------------------------------------

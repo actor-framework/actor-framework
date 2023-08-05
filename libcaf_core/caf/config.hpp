@@ -89,6 +89,9 @@
 #  define CAF_PUSH_DEPRECATED_WARNING                                          \
     _Pragma("clang diagnostic push")                                           \
     _Pragma("clang diagnostic ignored \"-Wdeprecated-declarations\"")
+#  define CAF_PUSH_UNUSED_RESULT_WARNING                                       \
+    _Pragma("clang diagnostic push")                                           \
+    _Pragma("clang diagnostic ignored \"-Wunused-result\"")
 #  define CAF_POP_WARNINGS                                                     \
     _Pragma("clang diagnostic pop")
 #  define CAF_ANNOTATE_FALLTHROUGH [[clang::fallthrough]]
@@ -118,6 +121,9 @@
 #  define CAF_PUSH_DEPRECATED_WARNING                                          \
     _Pragma("GCC diagnostic push")                                             \
     _Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\"")
+#  define CAF_PUSH_UNUSED_RESULT_WARNING                                       \
+    _Pragma("GCC diagnostic push")                                           \
+    _Pragma("GCC diagnostic ignored \"-Wunused-result\"")
 #  define CAF_POP_WARNINGS                                                     \
     _Pragma("GCC diagnostic pop")
 #  if __GNUC__ >= 7
