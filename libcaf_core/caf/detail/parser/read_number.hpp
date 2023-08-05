@@ -95,7 +95,8 @@ void read_negative_number(State& ps, Consumer& consumer, EnableFloat = {},
     transition(neg_dec, decimal_chars, sub_ascii<10>(result, ch),
                pec::integer_underflow)
     fsm_epsilon_static_if(enable_float,
-                          read_floating_point(ps, consumer, odbl{result}, true),
+                          read_floating_point(ps, consumer, 
+                                      odbl{static_cast<double>(result)}, true),
                           done, "eE", g.disable())
     transition_static_if(enable_float || enable_range, neg_dot, '.')
   }
@@ -104,7 +105,8 @@ void read_negative_number(State& ps, Consumer& consumer, EnableFloat = {},
                              read_number_range(ps, consumer, result),
                              done, '.', g.disable())
     fsm_epsilon_static_if(enable_float,
-                          read_floating_point(ps, consumer, odbl{result}, true),
+                          read_floating_point(ps, consumer, 
+                                      odbl{static_cast<double>(result)}, true),
                           done, any_char, g.disable())
     epsilon(done)
   }
@@ -174,7 +176,8 @@ void read_positive_number(State& ps, Consumer& consumer, EnableFloat = {},
     transition(pos_dec, decimal_chars, add_ascii<10>(result, ch),
                pec::integer_overflow)
     fsm_epsilon_static_if(enable_float,
-                          read_floating_point(ps, consumer, odbl{result}),
+                          read_floating_point(ps, consumer, 
+                                      odbl{static_cast<double>(result)}),
                           done, "eE", g.disable())
     transition_static_if(enable_float || enable_range, pos_dot, '.')
   }
@@ -184,7 +187,8 @@ void read_positive_number(State& ps, Consumer& consumer, EnableFloat = {},
                              read_number_range(ps, consumer, result),
                              done, '.', g.disable())
     fsm_epsilon_static_if(enable_float,
-                          read_floating_point(ps, consumer, odbl{result}),
+                          read_floating_point(ps, consumer, 
+                                      odbl{static_cast<double>(result)}),
                           done, any_char, g.disable())
     epsilon(done)
   }
