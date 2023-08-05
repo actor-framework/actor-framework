@@ -13,7 +13,6 @@
 #include "caf/detail/meta_object.hpp"
 #include "caf/detail/pretty_type_name.hpp"
 #include "caf/detail/set_thread_name.hpp"
-#include "caf/intrusive/task_result.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/message.hpp"
 #include "caf/string_algorithms.hpp"

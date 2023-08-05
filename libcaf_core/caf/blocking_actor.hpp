@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/abstract_mailbox.hpp"
 #include "caf/actor_config.hpp"
 #include "caf/actor_traits.hpp"
 #include "caf/after.hpp"
@@ -11,15 +12,12 @@
 #include "caf/detail/apply_args.hpp"
 #include "caf/detail/blocking_behavior.hpp"
 #include "caf/detail/core_export.hpp"
+#include "caf/detail/default_mailbox.hpp"
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/extend.hpp"
 #include "caf/fwd.hpp"
-#include "caf/intrusive/drr_cached_queue.hpp"
-#include "caf/intrusive/drr_queue.hpp"
-#include "caf/intrusive/fifo_inbox.hpp"
-#include "caf/intrusive/wdrr_dynamic_multiplexed_queue.hpp"
-#include "caf/intrusive/wdrr_fixed_multiplexed_queue.hpp"
+#include "caf/intrusive/stack.hpp"
 #include "caf/is_timeout_or_catch_all.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/mailbox_element.hpp"
@@ -28,9 +26,6 @@
 #include "caf/mixin/subscriber.hpp"
 #include "caf/none.hpp"
 #include "caf/policy/arg.hpp"
-#include "caf/policy/categorized.hpp"
-#include "caf/policy/normal_messages.hpp"
-#include "caf/policy/urgent_messages.hpp"
 #include "caf/send.hpp"
 #include "caf/typed_actor.hpp"
 
@@ -57,35 +52,6 @@ public:
 
   /// Base type.
   using super = extended_base;
-
-  /// Stores asynchronous messages with default priority.
-  using normal_queue = intrusive::drr_cached_queue<policy::normal_messages>;
-
-  /// Stores asynchronous messages with high priority.
-  using urgent_queue = intrusive::drr_cached_queue<policy::urgent_messages>;
-
-  /// Configures the FIFO inbox with two nested queues:
-  ///
-  ///   1. Default asynchronous messages
-  ///   2. High-priority asynchronous messages
-  struct mailbox_policy {
-    using deficit_type = size_t;
-
-    using mapped_type = mailbox_element;
-
-    using unique_pointer = mailbox_element_ptr;
-
-    using queue_type
-      = intrusive::wdrr_fixed_multiplexed_queue<policy::categorized,
-                                                normal_queue, urgent_queue>;
-
-    static constexpr size_t normal_queue_index = 0;
-
-    static constexpr size_t urgent_queue_index = 1;
-  };
-
-  /// A queue optimized for single-reader-many-writers.
-  using mailbox_type = intrusive::fifo_inbox<mailbox_policy>;
 
   /// Absolute timeout type.
   using timeout_type = std::chrono::high_resolution_clock::time_point;
@@ -191,23 +157,6 @@ public:
     void until(const bool& bvalue) {
       until([&] { return bvalue; });
     }
-  };
-
-  struct mailbox_visitor {
-    blocking_actor* self;
-    bool& done;
-    receive_cond& rcc;
-    message_id mid;
-    detail::blocking_behavior& bhvr;
-
-    // Dispatches messages with high and normal priority to the same handler.
-    template <class Queue>
-    intrusive::task_result operator()(size_t, Queue&, mailbox_element& x) {
-      return (*this)(x);
-    }
-
-    // Consumes `x`.
-    intrusive::task_result operator()(mailbox_element& x);
   };
 
   // -- constructors and destructors -------------------------------------------
@@ -344,7 +293,7 @@ public:
   virtual mailbox_element_ptr dequeue();
 
   /// Returns the queue for storing incoming messages.
-  mailbox_type& mailbox() {
+  abstract_mailbox& mailbox() {
     return mailbox_;
   }
   /// @cond PRIVATE
@@ -405,6 +354,8 @@ private:
 
   size_t attach_functor(const strong_actor_ptr&);
 
+  void unstash();
+
   template <class... Ts>
   size_t attach_functor(const typed_actor<Ts...>& x) {
     return attach_functor(actor_cast<strong_actor_ptr>(x));
@@ -420,8 +371,11 @@ private:
 
   // -- member variables -------------------------------------------------------
 
-  // used by both event-based and blocking actors
-  mailbox_type mailbox_;
+  /// Stores incoming messages.
+  detail::default_mailbox mailbox_;
+
+  /// Stashes skipped messages until the actor processes the next message.
+  intrusive::stack<mailbox_element> stash_;
 };
 
 } // namespace caf

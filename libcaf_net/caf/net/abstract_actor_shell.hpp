@@ -6,19 +6,18 @@
 
 #include "caf/net/fwd.hpp"
 
+#include "caf/abstract_mailbox.hpp"
 #include "caf/actor_traits.hpp"
 #include "caf/async/execution_context.hpp"
 #include "caf/callback.hpp"
+#include "caf/detail/default_mailbox.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/extend.hpp"
 #include "caf/fwd.hpp"
-#include "caf/intrusive/drr_queue.hpp"
-#include "caf/intrusive/fifo_inbox.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/mixin/requester.hpp"
 #include "caf/mixin/sender.hpp"
 #include "caf/none.hpp"
-#include "caf/policy/normal_messages.hpp"
 #include "caf/unordered_flat_map.hpp"
 
 namespace caf::net {
@@ -29,18 +28,6 @@ public:
   // -- member types -----------------------------------------------------------
 
   using super = local_actor;
-
-  struct mailbox_policy {
-    using queue_type = intrusive::drr_queue<policy::normal_messages>;
-
-    using deficit_type = policy::normal_messages::deficit_type;
-
-    using mapped_type = policy::normal_messages::mapped_type;
-
-    using unique_pointer = policy::normal_messages::unique_pointer;
-  };
-
-  using mailbox_type = intrusive::fifo_inbox<mailbox_policy>;
 
   using fallback_handler_sig = result<message>(abstract_actor_shell*, message&);
 
@@ -82,7 +69,7 @@ public:
 
   // -- mailbox access ---------------------------------------------------------
 
-  auto& mailbox() noexcept {
+  abstract_mailbox& mailbox() noexcept {
     return mailbox_;
   }
 
@@ -120,7 +107,7 @@ protected:
 
 private:
   /// Stores incoming actor messages.
-  mailbox_type mailbox_;
+  detail::default_mailbox mailbox_;
 
   /// Guards access to loop_.
   std::mutex loop_mtx_;

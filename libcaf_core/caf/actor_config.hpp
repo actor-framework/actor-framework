@@ -34,6 +34,7 @@ public:
   int flags;
   input_range<const group>* groups;
   detail::unique_function<behavior(local_actor*)> init_fun;
+  detail::mailbox_factory* mbox_factory = nullptr;
 
   // -- properties -------------------------------------------------------------
 

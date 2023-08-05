@@ -126,6 +126,18 @@ public:
     *this = unique_function{ptr};
   }
 
+  template <class Fn>
+  void emplace(Fn fn) {
+    destroy();
+    if constexpr (std::is_convertible<Fn, raw_pointer>::value) {
+      holds_wrapper_ = false;
+      fptr_ = fn;
+    } else {
+      holds_wrapper_ = true;
+      new (&wptr_) wrapper_pointer{make_wrapper(std::move(fn))};
+    }
+  }
+
   // -- properties -------------------------------------------------------------
 
   bool is_nullptr() const noexcept {

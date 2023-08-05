@@ -58,7 +58,6 @@ caf_add_component(
     exit_reason
     flow.op.state
     intrusive.inbox_result
-    intrusive.task_result
     invoke_message_result
     message_priority
     pec
@@ -70,6 +69,7 @@ caf_add_component(
     caf/abstract_actor.cpp
     caf/abstract_channel.cpp
     caf/abstract_group.cpp
+    caf/abstract_mailbox.cpp
     caf/action.cpp
     caf/actor.cpp
     caf/actor_addr.cpp
@@ -111,6 +111,8 @@ caf_add_component(
     caf/detail/behavior_stack.cpp
     caf/detail/blocking_behavior.cpp
     caf/detail/config_consumer.cpp
+    caf/detail/default_mailbox.cpp
+    caf/detail/default_mailbox.test.cpp
     caf/detail/get_process_id.cpp
     caf/detail/glob_match.cpp
     caf/detail/group_tunnel.cpp
@@ -118,6 +120,8 @@ caf_add_component(
     caf/detail/json.cpp
     caf/detail/latch.cpp
     caf/detail/local_group_module.cpp
+    caf/detail/mailbox_factory.cpp
+    caf/detail/mailbox_factory.test.cpp
     caf/detail/message_builder_element.cpp
     caf/detail/message_data.cpp
     caf/detail/meta_object.cpp
@@ -156,6 +160,9 @@ caf_add_component(
     caf/hash/fnv.test.cpp
     caf/hash/sha1.cpp
     caf/init_global_meta_objects.cpp
+    caf/intrusive/lifo_inbox.test.cpp
+    caf/intrusive/linked_list.test.cpp
+    caf/intrusive/stack.test.cpp
     caf/ipv4_address.cpp
     caf/ipv4_endpoint.cpp
     caf/ipv4_subnet.cpp
@@ -306,13 +313,6 @@ caf_add_component(
     function_view
     handles
     hash.sha1
-    intrusive.drr_cached_queue
-    intrusive.drr_queue
-    intrusive.fifo_inbox
-    intrusive.lifo_inbox
-    intrusive.task_queue
-    intrusive.wdrr_dynamic_multiplexed_queue
-    intrusive.wdrr_fixed_multiplexed_queue
     intrusive_ptr
     ipv4_address
     ipv4_endpoint
@@ -341,7 +341,6 @@ caf_add_component(
     node_id
     optional
     or_else
-    policy.categorized
     policy.select_all
     policy.select_any
     request_timeout
