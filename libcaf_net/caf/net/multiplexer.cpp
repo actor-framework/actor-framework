@@ -434,7 +434,8 @@ public:
   }
 
   /// Handles an I/O event on given manager.
-  void handle(const socket_manager_ptr& mgr, short events, short revents) {
+  void handle(const socket_manager_ptr& mgr, [[maybe_unused]] short events,
+              short revents) {
     CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id)
                   << CAF_ARG(events) << CAF_ARG(revents));
     CAF_ASSERT(mgr != nullptr);
