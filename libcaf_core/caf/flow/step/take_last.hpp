@@ -37,7 +37,7 @@ public:
   void on_complete(Next& next, Steps&... steps) {
     while (!elements_.empty()) {
       if (!next.on_next(elements_.front(), steps...))
-        break;
+        return;
       elements_.pop_front();
     };
     next.on_complete(steps...);

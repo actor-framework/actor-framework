@@ -24,7 +24,7 @@ public:
 
   ring_buffer& operator=(ring_buffer&& other) noexcept = default;
 
-  explicit ring_buffer(const ring_buffer& other) {
+  ring_buffer(const ring_buffer& other) {
     max_size_ = other.max_size_;
     write_pos_ = other.write_pos_;
     size_ = other.size_;
@@ -72,10 +72,11 @@ public:
   }
 
   friend void swap(ring_buffer& first, ring_buffer& second) noexcept {
-    std::swap(first.buf_, second.buf_);
-    std::swap(first.size_, second.size_);
-    std::swap(first.max_size_, second.max_size_);
-    std::swap(first.write_pos_, second.write_pos_);
+    using std::swap;
+    swap(first.buf_, second.buf_);
+    swap(first.size_, second.size_);
+    swap(first.max_size_, second.max_size_);
+    swap(first.write_pos_, second.write_pos_);
   }
 
 private:
