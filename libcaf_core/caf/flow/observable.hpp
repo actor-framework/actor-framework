@@ -218,6 +218,11 @@ public:
     return add_step(step::skip<output_type>{n});
   }
 
+  /// @copydoc observable::skip_last
+  auto skip_last(size_t n) && {
+    return add_step(step::skip_last<output_type>{n});
+  }
+
   /// @copydoc observable::take
   auto take(size_t n) && {
     return add_step(step::take<output_type>{n});
@@ -586,6 +591,11 @@ observable<T>::reduce(Init init, Reducer reducer) {
 template <class T>
 transformation<step::skip<T>> observable<T>::skip(size_t n) {
   return transform(step::skip<T>{n});
+}
+
+template <class T>
+transformation<step::skip_last<T>> observable<T>::skip_last(size_t n) {
+  return transform(step::skip_last<T>{n});
 }
 
 template <class T>

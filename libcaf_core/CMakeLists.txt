@@ -153,6 +153,7 @@ caf_add_component(
     caf/flow/observable_builder.cpp
     caf/flow/op/interval.cpp
     caf/flow/scoped_coordinator.cpp
+    caf/flow/step/skip_last.test.cpp
     caf/flow/step/take_last.test.cpp
     caf/flow/subscription.cpp
     caf/forwarding_actor_proxy.cpp
