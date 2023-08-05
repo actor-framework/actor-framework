@@ -121,7 +121,7 @@ public:
       if (auto res = caf::get_as<T>(val))
         return std::move(*res);
     }
-    return {};
+    return std::nullopt;
   }
 
   /// Executes the provided callable `f` for each field in the request header.

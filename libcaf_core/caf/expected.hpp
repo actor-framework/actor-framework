@@ -804,7 +804,7 @@ public:
     if (has_value())
       return f();
     else
-      return res_t{std::move(*error_)};
+      return res_t{*error_};
   }
 
   template <class F>
@@ -864,7 +864,7 @@ public:
     if constexpr (std::is_void_v<res_t>) {
       if (!has_value())
         f(std::move(*error_));
-      return std::move(*this);
+      return *this;
     } else {
       static_assert(std::is_same_v<expected, res_t>,
                     "F must return expected<T> or void");
@@ -916,7 +916,7 @@ public:
     if (has_value())
       return detail::expected_from_fn(std::forward<F>(f));
     else
-      return expected<res_t>{std::move(*error_)};
+      return expected<res_t>{*error_};
   }
 
   template <class F>
