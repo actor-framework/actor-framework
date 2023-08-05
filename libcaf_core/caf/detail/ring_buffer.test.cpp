@@ -11,6 +11,12 @@ using namespace caf;
 
 using detail::ring_buffer;
 
+int pop(ring_buffer<int>& buf) {
+  auto result = buf.front();
+  buf.pop_front();
+  return result;
+}
+
 TEST("push_back adds element") {
   ring_buffer<int> buf{3};
   info("full capacity of ring buffer");
@@ -137,24 +143,39 @@ TEST("size() returns the number of elements in a buffer") {
   check_eq(buf.size(), 3u);
 }
 
-TEST("copy-assignment copies and swaps a ring buffer") {
+TEST("ring-buffers are copiable") {
   ring_buffer<int> buf{5};
   info("empty buffer is initialized");
   check_eq(buf.size(), 0u);
   for (int i = 1; i <= 3; ++i) {
     buf.push_back(i);
   }
-  ring_buffer<int> new_buf{0};
   check_eq(buf.size(), 3u);
-  check_eq(new_buf.size(), 0u);
-  new_buf = buf;
-  info("check size and elements of new_buf after copy-assignment");
-  check_eq(new_buf.size(), 3u);
-  check_eq(new_buf.front(), 1);
-  new_buf.pop_front();
-  check_eq(new_buf.front(), 2);
-  info("check size of buf after copy-assignment");
+  SECTION("copy-assignment") {
+    ring_buffer<int> new_buf{0};
+    new_buf = buf;
+    info("check size and elements of new_buf after copy-assignment");
+    check_eq(new_buf.size(), 3u);
+    check_eq(pop(new_buf), 1);
+    check_eq(pop(new_buf), 2);
+    check_eq(pop(new_buf), 3);
+    check_eq(new_buf.empty(), true);
+  }
+  SECTION("copy constructor") {
+    ring_buffer<int> new_buf{buf};
+    info("check size and elements of new_buf after copy constructor");
+    check_eq(new_buf.size(), 3u);
+    check_eq(pop(new_buf), 1);
+    check_eq(pop(new_buf), 2);
+    check_eq(pop(new_buf), 3);
+    check_eq(new_buf.empty(), true);
+  }
+  info("check size and elements of buf after copy");
   check_eq(buf.size(), 3u);
+  check_eq(pop(buf), 1);
+  check_eq(pop(buf), 2);
+  check_eq(pop(buf), 3);
+  check_eq(buf.empty(), true);
 }
 
 CAF_TEST_MAIN()
