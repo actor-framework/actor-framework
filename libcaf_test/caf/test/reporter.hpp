@@ -75,7 +75,8 @@ public:
   info(std::string_view msg, const detail::source_location& location)
     = 0;
 
-  virtual void verbosity(unsigned level) = 0;
+  /// Sets the verbosity level of the reporter and returns the previous value.
+  virtual unsigned verbosity(unsigned level) = 0;
 
   /// Sets whether the reporter disables colored output even when writing to a
   /// TTY.
