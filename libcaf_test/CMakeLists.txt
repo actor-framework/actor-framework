@@ -22,6 +22,8 @@ caf_add_component(
     caf/test/block.cpp
     caf/test/context.cpp
     caf/test/factory.cpp
+    caf/test/fixture/deterministic.cpp
+    caf/test/fixture/deterministic.test.cpp
     caf/test/given.cpp
     caf/test/nesting_error.cpp
     caf/test/registry.cpp

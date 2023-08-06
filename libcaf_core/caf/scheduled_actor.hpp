@@ -241,6 +241,11 @@ public:
     return *mailbox_;
   }
 
+  /// Checks whether this actor is fully initialized.
+  bool initialized() const noexcept {
+    return getf(is_initialized_flag);
+  }
+
   // -- event handlers ---------------------------------------------------------
 
   /// Sets a custom handler for unexpected messages.
