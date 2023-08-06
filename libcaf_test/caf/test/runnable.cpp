@@ -10,13 +10,23 @@
 #include "caf/test/scope.hpp"
 #include "caf/test/test.hpp"
 
+#include "caf/detail/scope_guard.hpp"
+
 namespace caf::test {
+
+namespace {
+
+thread_local runnable* current_runnable;
+
+} // namespace
 
 runnable::~runnable() {
   // nop
 }
 
 void runnable::run() {
+  current_runnable = this;
+  auto guard = detail::make_scope_guard([] { current_runnable = nullptr; });
   switch (root_type_) {
     case block_type::scenario:
       if (auto guard = ctx_->get<scenario>(0, description_, loc_)->commit()) {
@@ -46,6 +56,13 @@ bool runnable::check(bool value, const detail::source_location& location) {
     reporter::instance->fail("should be true", location);
   }
   return value;
+}
+
+runnable& runnable::current() {
+  auto ptr = current_runnable;
+  if (!ptr)
+    CAF_RAISE_ERROR(std::logic_error, "no current runnable");
+  return *ptr;
 }
 
 block& runnable::current_block() {
