@@ -38,7 +38,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - We renamed `caf::flow::item_publisher` to `caf::flow::multicaster` to better
   reflect its purpose and to avoid confusion with the new
   `caf::async::publisher`.
-- When failing to deserialize a request, the sender will receive an error of 
+- When failing to deserialize a request, the sender will receive an error of
   kind `sec::malformed_message`.
 
 ### Fixed
@@ -48,6 +48,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   malformed output.
 - Fix handling of WebSocket frames that are exactly on the 65535 byte limit.
 - Fix crash when using a fallback value for optional values (#1427).
+- Fix the comparison operator of `intrusive_ptr` to make sure comparing to raw
+  pointers does not accidentally create a new `intrusive_ptr` instances.
 
 ## [0.19.2] - 2023-06-13
 
