@@ -24,6 +24,7 @@ add_core_example(. hello_world)
 add_core_example(config read-json)
 
 # basic message passing primitives
+add_core_example(message_passing after)
 add_core_example(message_passing calculator)
 add_core_example(message_passing cell)
 add_core_example(message_passing dancing_kirby)
