@@ -11,7 +11,7 @@ using std::endl;
 
 using namespace caf;
 
-// Sends random caracters to buddy, and then waits for a letter back
+// Sends random characters to buddy, and then waits for a letter back
 behavior noisy_buddy(event_based_actor* self, actor buddy) {
   using namespace std::chrono_literals;
   std::random_device rd;
