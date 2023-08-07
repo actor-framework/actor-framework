@@ -23,6 +23,15 @@ struct my_int {
   int value;
 };
 
+template <class Inspector>
+auto inspect(Inspector& f, my_int& x) {
+  return f.object(x).fields(f.field("value", x.value));
+}
+
+bool operator==(my_int lhs, my_int rhs) noexcept {
+  return lhs.value == rhs.value;
+}
+
 bool operator==(my_int lhs, int rhs) noexcept {
   return lhs.value == rhs;
 }
@@ -31,71 +40,15 @@ bool operator==(int lhs, my_int rhs) noexcept {
   return lhs == rhs.value;
 }
 
-TEST("value predicates check or extract individual values") {
-  using predicate_t = value_predicate<int>;
-  SECTION("catch-all predicates are constructible from std::ignore") {
-    predicate_t f{std::ignore};
-    check(f(1));
-    check(f(2));
-    check(f(3));
-  }
-
-  SECTION("a default-constructed predicate always returns true") {
-    predicate_t f;
-    check(f(1));
-    check(f(2));
-    check(f(3));
-  }
-  SECTION("exact match predicates are constructible from a value") {
-    predicate_t f{2};
-    check(!f(1));
-    check(f(2));
-    check(!f(3));
-  }
-  SECTION("exact match predicates are constructible from any comparable type") {
-    predicate_t f{my_int{2}};
-    check(!f(1));
-    check(f(2));
-    check(!f(3));
-  }
-  SECTION("custom predicates are constructible from a function object") {
-    predicate_t f{[](int x) { return x <= 2; }};
-    check(f(1));
-    check(f(2));
-    check(!f(3));
-  }
-  SECTION("extractors are constructible from a reference wrapper") {
-    int x = 0;
-    predicate_t f{std::ref(x)};
-    check(f(1)) && check_eq(x, 1);
-    check(f(2)) && check_eq(x, 2);
-    check(f(3)) && check_eq(x, 3);
-  }
+bool operator!=(my_int lhs, my_int rhs) noexcept {
+  return lhs.value != rhs.value;
 }
 
-TEST("message predicates check all values in a message") {
-  using predicate_t = message_predicate<int, std::string, double>;
-  SECTION("a default-constructed message predicate matches anything") {
-    predicate_t f;
-    check(f(caf::make_message(1, "two", 3.0)));
-    check(f(caf::make_message(42, "hello world", 7.7)));
-  }
-  SECTION("message predicates can match values") {
-    predicate_t f{1, "two", [](double x) { return x < 5.0; }};
-    check(f(caf::make_message(1, "two", 3.0)));
-    check(!f(caf::make_message(1, "two", 6.0)));
-  }
-  SECTION("message predicates can extract values") {
-    auto x0 = 0;
-    auto x1 = std::string{};
-    auto x2 = 0.0;
-    predicate_t f{std::ref(x0), std::ref(x1), std::ref(x2)};
-    check(f(caf::make_message(1, "two", 3.0)));
-    check_eq(x0, 1);
-    check_eq(x1, "two");
-    check_eq(x2, 3.0);
-  }
-}
+CAF_BEGIN_TYPE_ID_BLOCK(test, caf::first_custom_type_id)
+
+  CAF_ADD_TYPE_ID(test, (my_int))
+
+CAF_END_TYPE_ID_BLOCK(test)
 
 WITH_FIXTURE(fixture::deterministic) {
 
@@ -333,6 +286,67 @@ TEST("the deterministic fixture provides a deterministic scheduler") {
   }
 }
 
+TEST("evaluator expressions can check or extract individual values") {
+  auto worker = sys.spawn([](caf::event_based_actor* self) -> caf::behavior {
+    self->set_default_handler(caf::drop);
+    return {
+      [](int32_t) {},
+    };
+  });
+  SECTION("omitting with() matches on the types only") {
+    anon_send(worker, 1);
+    check(!allow<std::string>().to(worker));
+    check(allow<int>().to(worker));
+    anon_send(worker, 1, "two", 3.0);
+    check(!allow<int>().to(worker));
+    check(allow<int, std::string, double>().to(worker));
+    anon_send(worker, 42, "hello world", 7.7);
+    check(allow<int, std::string, double>().to(worker));
+  }
+  SECTION("reference wrappers turn evaluators into extractors") {
+    auto tmp = 0;
+    anon_send(worker, 1);
+    check(allow<int>().with(std::ref(tmp)).to(worker));
+    check_eq(tmp, 1);
+  }
+  SECTION("std::ignore matches any value") {
+    anon_send(worker, 1);
+    check(allow<int>().with(std::ignore).to(worker));
+    anon_send(worker, 2);
+    check(allow<int>().with(std::ignore).to(worker));
+    anon_send(worker, 3);
+    check(allow<int>().with(std::ignore).to(worker));
+    anon_send(worker, 1, 2, 3);
+    check(!allow<int, int, int>().with(1, std::ignore, 4).to(worker));
+    check(!allow<int, int, int>().with(2, std::ignore, 3).to(worker));
+    check(allow<int, int, int>().with(1, std::ignore, 3).to(worker));
+  }
+  SECTION("value predicates allow user-defined types") {
+    anon_send(worker, my_int{1});
+    check(allow<my_int>().to(worker));
+    anon_send(worker, my_int{1});
+    check(allow<my_int>().with(std::ignore).to(worker));
+    anon_send(worker, my_int{1});
+    check(!allow<my_int>().with(my_int{2}).to(worker));
+    check(allow<my_int>().with(my_int{1}).to(worker));
+    anon_send(worker, my_int{1});
+    check(allow<my_int>().with(1).to(worker));
+    auto tmp = my_int{0};
+    anon_send(worker, my_int{42});
+    check(allow<my_int>().with(std::ref(tmp)).to(worker));
+    check_eq(tmp.value, 42);
+  }
+  SECTION("value predicates allow user-defined predicates") {
+    auto le2 = [](my_int x) { return x.value <= 2; };
+    anon_send(worker, my_int{1});
+    check(allow<my_int>().with(le2).to(worker));
+    anon_send(worker, my_int{2});
+    check(allow<my_int>().with(le2).to(worker));
+    anon_send(worker, my_int{3});
+    check(!allow<my_int>().with(le2).to(worker));
+  }
+}
+
 } // WITH_FIXTURE(fixture::deterministic)
 
-CAF_TEST_MAIN()
+CAF_TEST_MAIN(caf::id_block::test)

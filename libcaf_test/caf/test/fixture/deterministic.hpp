@@ -206,6 +206,7 @@ public:
 
     template <class... Us>
     evaluator&& with(Us... xs) && {
+      static_assert((std::is_constructible_v<value_predicate<Ts>, Us> && ...));
       with_ = message_predicate<Ts...>(std::move(xs)...);
       return std::move(*this);
     }
