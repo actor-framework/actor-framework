@@ -29,16 +29,16 @@ public:
   template <class Next, class... Steps>
   bool on_next(const input_type& item, Next& next, Steps&... steps) {
     if (remaining_ > 0) {
-      if (next.on_next(item, steps...)) {
-        if (--remaining_ > 0) {
-          return true;
-        } else {
-          next.on_complete(steps...);
-          return false;
-        }
-      }
+      if (next.on_next(item, steps...))
+        --remaining_;
+      else
+        return false;
     }
-    return false;
+    if (remaining_ == 0) {
+      next.on_complete(steps...);
+      return false;
+    }
+    return true;
   }
 
   template <class Next, class... Steps>

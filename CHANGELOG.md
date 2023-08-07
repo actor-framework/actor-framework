@@ -48,6 +48,10 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   malformed output.
 - Fix handling of WebSocket frames that are exactly on the 65535 byte limit.
 - Fix crash when using a fallback value for optional values (#1427).
+- Using `take(0)` on an observable now properly creates an observable that calls
+  `on_complete` on its subscriber on the first activity of the source
+  observable. Previously, the created observable would never reach its threshold
+  and attempt to buffer all values indefinitely.
 
 ## [0.19.2] - 2023-06-13
 
