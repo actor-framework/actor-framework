@@ -31,6 +31,9 @@ template <class>
 class skip;
 
 template <class>
+class skip_last;
+
+template <class>
 class take;
 
 template <class>
