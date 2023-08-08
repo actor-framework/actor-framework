@@ -4,10 +4,7 @@
 
 #pragma once
 
-#include "caf/detail/ring_buffer.hpp"
 #include "caf/fwd.hpp"
-
-#include <cstddef>
 
 namespace caf::flow::step {
 
@@ -18,17 +15,8 @@ public:
 
   using output_type = T;
 
-  explicit ignore_elements() {
-    // nop
-  }
-
-  ignore_elements(ignore_elements&&) = default;
-  ignore_elements(const ignore_elements&) = default;
-  ignore_elements& operator=(ignore_elements&&) = default;
-  ignore_elements& operator=(const ignore_elements&) = default;
-
   template <class Next, class... Steps>
-  bool on_next(const input_type& item, Next& next, Steps&... steps) {
+  bool on_next(const input_type&, Next&, Steps&...) {
     return true;
   }
 

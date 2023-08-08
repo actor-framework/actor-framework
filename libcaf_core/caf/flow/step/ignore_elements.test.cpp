@@ -27,28 +27,6 @@ struct fixture {
 
 WITH_FIXTURE(fixture) {
 
-TEST("calling take(5) after ignore_elements on range(1, 10) produces []") {
-  auto result = std::vector<int>{};
-  SECTION("blueprint") {
-    ctx->make_observable().range(1, 10).ignore_elements().take(5).for_each(
-      [&](const int& result_observable) {
-        result.emplace_back(result_observable);
-      });
-  }
-  SECTION("observable") {
-    ctx->make_observable()
-      .range(1, 10)
-      .as_observable()
-      .ignore_elements()
-      .take(5)
-      .for_each([&](const int& result_observable) {
-        result.emplace_back(result_observable);
-      });
-  }
-  ctx->run();
-  check_eq(result.size(), 0u);
-}
-
 TEST("calling ignore_elements on range(1, 10) produces []") {
   auto result = std::vector<int>{};
   SECTION("blueprint") {
