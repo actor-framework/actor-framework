@@ -150,6 +150,7 @@ caf_add_component(
     caf/execution_unit.cpp
     caf/flow/coordinated.cpp
     caf/flow/coordinator.cpp
+    caf/flow/observable.test.cpp
     caf/flow/observable_builder.cpp
     caf/flow/op/interval.cpp
     caf/flow/scoped_coordinator.cpp
