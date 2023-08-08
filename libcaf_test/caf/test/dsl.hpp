@@ -164,8 +164,7 @@ public:
     return *this;
   }
 
-  template <class T,
-            class E = caf::detail::enable_if_t<!std::is_pointer<T>::value>>
+  template <class T, class E = caf::detail::enable_if_t<!std::is_pointer_v<T>>>
   caf_handle& operator=(const T& x) {
     set(x);
     return *this;

@@ -165,7 +165,7 @@ public:
     line_builder();
 
     template <class T>
-    detail::enable_if_t<!std::is_pointer<T>::value, line_builder&>
+    detail::enable_if_t<!std::is_pointer_v<T>, line_builder&>
     operator<<(const T& x) {
       if (!str_.empty())
         str_ += " ";

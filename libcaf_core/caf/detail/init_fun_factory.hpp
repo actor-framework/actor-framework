@@ -124,7 +124,7 @@ public:
     using arg_types = typename trait::arg_types;
     using res_type = typename trait::result_type;
     using first_arg = typename detail::tl_head<arg_types>::type;
-    constexpr bool selfptr = std::is_pointer<first_arg>::value;
+    constexpr bool selfptr = std::is_pointer_v<first_arg>;
     constexpr bool rets = std::is_convertible<res_type, behavior>::value;
     using tuple_type = decltype(std::make_tuple(detail::spawn_fwd<Ts>(xs)...));
     using helper = init_fun_factory_helper<Base, F, tuple_type, rets, selfptr>;

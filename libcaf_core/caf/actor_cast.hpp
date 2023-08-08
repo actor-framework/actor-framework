@@ -71,7 +71,7 @@ public:
   }
 
   template <class T,
-            class = typename std::enable_if<!std::is_pointer<T>::value>::type>
+            class = typename std::enable_if<!std::is_pointer_v<T>>::type>
   To operator()(const T& x) const {
     return x.get();
   }
@@ -89,7 +89,7 @@ public:
   }
 
   template <class T,
-            class = typename std::enable_if<!std::is_pointer<T>::value>::type>
+            class = typename std::enable_if<!std::is_pointer_v<T>>::type>
   To* operator()(const T& x) const {
     return (*this)(x.get());
   }
@@ -107,7 +107,7 @@ public:
   }
 
   template <class T,
-            class = typename std::enable_if<!std::is_pointer<T>::value>::type>
+            class = typename std::enable_if<!std::is_pointer_v<T>>::type>
   actor_control_block* operator()(const T& x) const {
     return x.get();
   }
@@ -148,10 +148,10 @@ T actor_cast(U&& what) {
   using from_type =
     typename std::remove_const<typename std::remove_reference<U>::type>::type;
   // query traits for T
-  constexpr bool to_raw = std::is_pointer<T>::value;
+  constexpr bool to_raw = std::is_pointer_v<T>;
   constexpr bool to_weak = is_weak_ptr<T>::value;
   // query traits for U
-  constexpr bool from_raw = std::is_pointer<from_type>::value;
+  constexpr bool from_raw = std::is_pointer_v<from_type>;
   constexpr bool from_weak = is_weak_ptr<from_type>::value;
   // calculate x and y
   constexpr int x = to_raw ? 0 : (to_weak ? 2 : 1);

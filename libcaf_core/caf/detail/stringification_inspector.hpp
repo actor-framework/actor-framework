@@ -221,7 +221,7 @@ public:
     if constexpr (std::is_same_v<std::nullptr_t, T>) {
       return "null";
     } else if constexpr (std::is_constructible<std::string_view, T>::value) {
-      if constexpr (std::is_pointer<T>::value) {
+      if constexpr (std::is_pointer_v<T>) {
         if (x == nullptr)
           return "null";
       }
