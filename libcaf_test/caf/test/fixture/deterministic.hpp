@@ -145,7 +145,7 @@ private:
 
   private:
     template <size_t... Is>
-    bool do_check(const_typed_message_view<Ts...> view, //
+    bool do_check([[maybe_unused]] const_typed_message_view<Ts...> view, //
                   std::index_sequence<Is...>) {
       return (((std::get<Is>(*predicates_))(get<Is>(view))) && ...);
     }

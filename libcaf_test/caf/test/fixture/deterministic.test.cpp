@@ -13,12 +13,6 @@
 
 namespace fixture = caf::test::fixture;
 
-template <class T>
-using value_predicate = fixture::deterministic::value_predicate<T>;
-
-template <class... Ts>
-using message_predicate = fixture::deterministic::message_predicate<Ts...>;
-
 struct my_int {
   int value;
 };
