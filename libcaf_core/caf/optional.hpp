@@ -34,7 +34,7 @@ public:
   /// Creates an valid instance from `value`.
   template <class U,
             class E
-            = typename std::enable_if<std::is_convertible<U, T>::value>::type>
+            = typename std::enable_if<std::is_convertible_v<U, T>>::type>
   optional(U x) : m_valid(false) {
     cr(std::move(x));
   }

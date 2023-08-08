@@ -152,7 +152,7 @@ public:
 
   template <class T>
   std::enable_if_t<has_to_string<T>::value
-                     && !std::is_convertible<T, std::string_view>::value,
+                     && !std::is_convertible_v<T, std::string_view>,
                    bool>
   builtin_inspect(const T& x) {
     auto str = to_string(x);

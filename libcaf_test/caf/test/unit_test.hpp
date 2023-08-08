@@ -68,9 +68,9 @@ struct equality_operator {
 
   template <class T, class U,
             detail::enable_if_t<((std::is_floating_point<T>::value
-                                  && std::is_convertible<U, double>::value)
+                                  && std::is_convertible_v<U, double>)
                                  || (std::is_floating_point<U>::value
-                                     && std::is_convertible<T, double>::value))
+                                     && std::is_convertible_v<T, double>) )
                                   && detail::is_comparable<T, U>::value,
                                 int>
             = 0>
@@ -84,9 +84,9 @@ struct equality_operator {
 
   template <class T, class U,
             detail::enable_if_t<!((std::is_floating_point<T>::value
-                                   && std::is_convertible<U, double>::value)
+                                   && std::is_convertible_v<U, double>)
                                   || (std::is_floating_point<U>::value
-                                      && std::is_convertible<T, double>::value))
+                                      && std::is_convertible_v<T, double>) )
                                   && detail::is_comparable<T, U>::value,
                                 int>
             = 0>
@@ -294,7 +294,7 @@ public:
     };
     using fwd =
       typename std::conditional<std::is_same_v<char, T>
-                                  || std::is_convertible<T, std::string>::value
+                                  || std::is_convertible_v<T, std::string>
                                   || std::is_same_v<caf::term, T>,
                                 simple_fwd_t, deep_to_string_t>::type;
     fwd f;

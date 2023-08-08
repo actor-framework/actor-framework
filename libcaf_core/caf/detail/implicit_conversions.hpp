@@ -40,7 +40,7 @@ struct implicit_actor_conversions<actor_control_block, false, false> {
 
 template <class T>
 struct implicit_conversions {
-  using type = std::conditional_t<std::is_convertible<T, error>::value, error,
+  using type = std::conditional_t<std::is_convertible_v<T, error>, error,
                                   squash_if_int_t<T>>;
 };
 

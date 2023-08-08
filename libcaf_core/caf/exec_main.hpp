@@ -95,7 +95,7 @@ int exec_main(F fun, int argc, char** argv) {
   }
   helper f;
   using result_type = decltype(f(fun, system, cfg));
-  if constexpr (std::is_convertible<result_type, int>::value) {
+  if constexpr (std::is_convertible_v<result_type, int>) {
     return f(fun, system, cfg);
   } else {
     f(fun, system, cfg);

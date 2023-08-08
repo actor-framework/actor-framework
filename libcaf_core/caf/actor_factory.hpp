@@ -36,7 +36,7 @@ public:
   }
 
   void operator()(Ts... xs) {
-    if constexpr (std::is_convertible<R, Bhvr>::value) {
+    if constexpr (std::is_convertible_v<R, Bhvr>) {
       auto bhvr = f_(xs...);
       *bhvr_ = std::move(bhvr.unbox());
     } else {
@@ -59,7 +59,7 @@ public:
   }
 
   void operator()(Ts... xs) {
-    if constexpr (std::is_convertible<R, Bhvr>::value) {
+    if constexpr (std::is_convertible_v<R, Bhvr>) {
       auto bhvr = f_(ptr_, xs...);
       *bhvr_ = std::move(bhvr.unbox());
     } else {

@@ -85,7 +85,7 @@ public:
   template <
     class T,
     class = typename std::enable_if<
-      !std::is_convertible<T, raw_pointer>::value
+      !std::is_convertible_v<T, raw_pointer>
       && std::is_same<decltype((std::declval<T&>())(std::declval<Ts>()...)),
                       R>::value>::type>
   explicit unique_function(T f) : unique_function(make_wrapper(std::move(f))) {
@@ -129,7 +129,7 @@ public:
   template <class Fn>
   void emplace(Fn fn) {
     destroy();
-    if constexpr (std::is_convertible<Fn, raw_pointer>::value) {
+    if constexpr (std::is_convertible_v<Fn, raw_pointer>) {
       holds_wrapper_ = false;
       fptr_ = fn;
     } else {

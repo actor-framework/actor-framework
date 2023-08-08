@@ -87,8 +87,7 @@ public:
 
   template <class Y>
   intrusive_ptr(intrusive_ptr<Y> other) noexcept : ptr_(other.detach()) {
-    static_assert(std::is_convertible<Y*, T*>::value,
-                  "Y* is not assignable to T*");
+    static_assert(std::is_convertible_v<Y*, T*>, "Y* is not assignable to T*");
   }
 
   ~intrusive_ptr() {

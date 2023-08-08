@@ -88,7 +88,7 @@ private:
   using result = decltype(sfinae(std::declval<const T&>()));
 
 public:
-  static constexpr bool value = std::is_convertible<result, std::string>::value;
+  static constexpr bool value = std::is_convertible_v<result, std::string>;
 };
 
 template <bool X>
@@ -136,9 +136,9 @@ struct is_duration<std::chrono::duration<Period, Rep>> : std::true_type {};
 /// convertible to one of STL's string types.
 template <class T>
 struct is_primitive {
-  static constexpr bool value = std::is_convertible<T, std::string>::value
-                                || std::is_convertible<T, std::u16string>::value
-                                || std::is_convertible<T, std::u32string>::value
+  static constexpr bool value = std::is_convertible_v<T, std::string>
+                                || std::is_convertible_v<T, std::u16string>
+                                || std::is_convertible_v<T, std::u32string>
                                 || std::is_arithmetic<T>::value;
 };
 
@@ -449,8 +449,8 @@ CAF_HAS_MEMBER_TRAIT(size);
 template <class F, class T>
 struct is_handler_for {
   static constexpr bool value
-    = std::is_convertible<F, std::function<void(T&)>>::value
-      || std::is_convertible<F, std::function<void(const T&)>>::value;
+    = std::is_convertible_v<F, std::function<void(T&)>>
+      || std::is_convertible_v<F, std::function<void(const T&)>>;
 };
 
 template <class T>
@@ -808,8 +808,9 @@ template <class T, class To>
 class has_convertible_data_member {
 private:
   template <class U>
-  static auto sfinae(U* x) -> std::integral_constant<
-    bool, std::is_convertible<decltype(x->data()), To*>::value>;
+  static auto sfinae(U* x)
+    -> std::integral_constant<bool,
+                              std::is_convertible_v<decltype(x->data()), To*>>;
 
   template <class U>
   static auto sfinae(...) -> std::false_type;
@@ -917,7 +918,7 @@ struct is_trivial_inspector_value<true, T> {
 
 template <class T>
 struct is_trivial_inspector_value<false, T> {
-  static constexpr bool value = std::is_convertible<T, std::string_view>::value;
+  static constexpr bool value = std::is_convertible_v<T, std::string_view>;
 };
 
 #define CAF_ADD_TRIVIAL_LOAD_INSPECTOR_VALUE(type)                             \

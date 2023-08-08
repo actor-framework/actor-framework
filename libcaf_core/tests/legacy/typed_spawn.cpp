@@ -28,17 +28,17 @@ using dummy1 = typed_actor<result<void>(int, int), result<double>(double)>;
 
 using dummy2 = dummy1::extend<result<void>(ok_atom)>;
 
-static_assert(std::is_convertible<dummy2, dummy1>::value,
+static_assert(std::is_convertible_v<dummy2, dummy1>,
               "handle not assignable to narrower definition");
 
 using dummy3 = typed_actor<result<void>(float, int)>;
 using dummy4 = typed_actor<result<double>(int)>;
 using dummy5 = dummy4::extend_with<dummy3>;
 
-static_assert(std::is_convertible<dummy5, dummy3>::value,
+static_assert(std::is_convertible_v<dummy5, dummy3>,
               "handle not assignable to narrower definition");
 
-static_assert(std::is_convertible<dummy5, dummy4>::value,
+static_assert(std::is_convertible_v<dummy5, dummy4>,
               "handle not assignable to narrower definition");
 
 // -- simple request/response test ---------------------------------------------
