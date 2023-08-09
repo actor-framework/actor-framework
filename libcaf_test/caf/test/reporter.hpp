@@ -94,8 +94,11 @@ public:
   /// Returns statistics for the entire run.
   virtual stats total_stats() = 0;
 
-  /// Stores a pointer to the currently active reporter.
-  static reporter* instance;
+  /// Returns the registered reporter instance.
+  static reporter& instance();
+
+  /// Sets the reporter instance for the current test run.
+  static void instance(reporter* ptr);
 
   /// Creates a default reporter that writes to the standard output.
   static std::unique_ptr<reporter> make_default();

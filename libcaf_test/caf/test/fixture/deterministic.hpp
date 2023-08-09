@@ -204,38 +204,63 @@ public:
 
     evaluator& operator=(const evaluator&) = delete;
 
+    /// Matches the values of the message. The evaluator will match a message
+    /// only if all individual values match the corresponding predicate.
+    ///
+    /// The template parameter pack `xs...` contains a list of match expressions
+    /// that all must evaluate to true for a message to match. For each match
+    /// expression:
+    ///
+    /// - Passing a value creates a predicate that matches the value exactly.
+    /// - Passing a predicate (a function object taking one argument and
+    ///   returning `bool`) will match any value for which the predicate returns
+    ///   `true`.
+    /// - Passing `std::ignore` accepts any value at that position.
+    /// - Passing a `std::reference_wrapper<T>` will match any value and stores
+    ///   the value in the reference wrapper.
     template <class... Us>
     evaluator&& with(Us... xs) && {
+      static_assert(sizeof...(Ts) == sizeof...(Us));
       static_assert((std::is_constructible_v<value_predicate<Ts>, Us> && ...));
       with_ = message_predicate<Ts...>(std::move(xs)...);
       return std::move(*this);
     }
 
+    /// Adds a predicate for the sender of the next message that matches only if
+    /// the sender is `src`.
     evaluator&& from(const strong_actor_ptr& src) && {
       from_ = value_predicate<strong_actor_ptr>{std::move(src)};
       return std::move(*this);
     }
 
-    evaluator&& from(std::nullptr_t) && {
-      return std::move(*this).from(strong_actor_ptr{});
-    }
-
+    /// Adds a predicate for the sender of the next message that matches only if
+    /// the sender is `src`.
     evaluator&& from(const actor& src) && {
       from_ = value_predicate<strong_actor_ptr>{std::move(src)};
       return std::move(*this);
     }
 
+    /// Adds a predicate for the sender of the next message that matches only if
+    /// the sender is `src`.
     template <class... Us>
     evaluator&& from(const typed_actor<Us...>& src) && {
       from_ = value_predicate<strong_actor_ptr>{std::move(src)};
       return std::move(*this);
     }
 
+    /// Adds a predicate for the sender of the next message that matches only
+    /// anonymous messages, i.e., messages without a sender.
+    evaluator&& from(std::nullptr_t) && {
+      return std::move(*this).from(strong_actor_ptr{});
+    }
+
+    /// Causes the evaluator to store the sender of a matched message in `src`.
     evaluator&& from(std::reference_wrapper<strong_actor_ptr> src) && {
       from_ = value_predicate<strong_actor_ptr>{src};
       return std::move(*this);
     }
 
+    /// Sets the target actor for this evaluator and evaluate the predicate.
     template <class T>
     bool to(const T& dst) && {
       auto dst_ptr = actor_cast<strong_actor_ptr>(dst);
@@ -276,7 +301,7 @@ public:
       if (fail_on_mismatch) {
         if (!fix_->dispatch_message())
           ctx.fail({"failed to dispatch message", loc_});
-        reporter::instance->pass(loc_);
+        reporter::instance().pass(loc_);
         return true;
       }
       return fix_->dispatch_message();
@@ -379,6 +404,15 @@ public:
 
   // -- member variables -------------------------------------------------------
 
+private:
+  // Note: this is put here because this member variable must be destroyed
+  //       *after* the actor system (and thus must come before `sys` in
+  //       the declaration order).
+
+  /// Stores all pending messages of scheduled actors.
+  std::list<std::unique_ptr<scheduling_event>> events_;
+
+public:
   /// Configures the actor system with deterministic scheduling.
   config cfg;
 
@@ -386,6 +420,9 @@ public:
   actor_system sys;
 
 private:
+  /// Removes all events from the queue.
+  void drop_events();
+
   /// Tries find a message in `events_` that matches the given predicate and
   /// moves it to the front of the queue.
   bool prepone_event_impl(const strong_actor_ptr& receiver);
@@ -401,9 +438,6 @@ private:
 
   /// Removes the next message for `receiver` from the queue and returns it.
   mailbox_element_ptr pop_msg_impl(scheduled_actor* receiver);
-
-  /// Stores all pending messages of scheduled actors.
-  std::list<std::unique_ptr<scheduling_event>> events_;
 };
 
 } // namespace caf::test

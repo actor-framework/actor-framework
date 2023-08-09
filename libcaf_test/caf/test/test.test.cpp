@@ -8,8 +8,8 @@
 using caf::test::block_type;
 
 TEST("tests can contain different types of checks") {
-  auto* rep = caf::test::reporter::instance;
-  auto stats = rep->test_stats();
+  auto& rep = caf::test::reporter::instance();
+  auto stats = rep.test_stats();
   SECTION("check_ne checks for inequality") {
     check_ne(0, 1);
     should_fail([this]() { check_ne(0, 0); });
@@ -38,16 +38,16 @@ TEST("tests can contain different types of checks") {
     should_fail([this]() { check_lt(1, 1); });
     should_fail([this]() { check_lt(2, 1); });
   }
-  info("this test had {} checks", rep->test_stats().total());
+  info("this test had {} checks", rep.test_stats().total());
 }
 
 TEST("failed checks increment the failed counter") {
   check_eq(1, 2);
-  auto stats = caf::test::reporter::instance->test_stats();
+  auto stats = caf::test::reporter::instance().test_stats();
   check_eq(stats.passed, 0u);
   check_eq(stats.failed, 1u);
   info("reset error count to not fail the test");
-  caf::test::reporter::instance->test_stats({2, 0});
+  caf::test::reporter::instance().test_stats({2, 0});
 }
 
 TEST("each run starts with fresh local variables") {

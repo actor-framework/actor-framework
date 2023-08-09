@@ -22,8 +22,6 @@ reporter::~reporter() {
   // nop
 }
 
-reporter* reporter::instance;
-
 namespace {
 
 /// Implements a mini-DSL for colored output:
@@ -472,7 +470,19 @@ private:
   context_ptr current_ctx_;
 };
 
+reporter* global_instance;
+
 } // namespace
+
+reporter& reporter::instance() {
+  if (global_instance == nullptr)
+    CAF_RAISE_ERROR("no reporter instance available");
+  return *global_instance;
+}
+
+void reporter::instance(reporter* ptr) {
+  global_instance = ptr;
+}
 
 std::unique_ptr<reporter> reporter::make_default() {
   return std::make_unique<default_reporter>();

@@ -151,7 +151,7 @@ protected:
   }
 
   void stop() override {
-    // nop
+    fix_->drop_events();
   }
 
   void enqueue(resumable* ptr) override {
@@ -216,16 +216,18 @@ deterministic::~deterministic() {
   // Note: we need clean up all remaining messages manually. This in turn may
   //       clean up actors as unreachable if the test did not consume all
   //       messages. Otherwise, the destructor of `sys` will wait for all
-  //       actors, potentially waiting forever. However, we cannot just call
-  //       `events_.clear()`, because that would potentially cause an actor to
-  //       become unreachable and close its mailbox. This would call
-  //       `pop_msg_impl` in turn, which then tries to alter the list while
-  //       we're clearing it.
+  //       actors, potentially waiting forever.
+  drop_events();
+}
+
+void deterministic::drop_events() {
+  // Note: We cannot just call `events_.clear()`, because that would potentially
+  //       cause an actor to become unreachable and close its mailbox. This
+  //       could call `pop_msg_impl` in turn, which then tries to alter the list
+  //       while we're clearing it.
   while (!events_.empty()) {
     std::list<std::unique_ptr<scheduling_event>> tmp;
     tmp.splice(tmp.end(), events_);
-    // Here, tmp will be destroyed and cleanup code of actors might send more
-    // messages. Hence the loop.
   }
 }
 
