@@ -230,7 +230,7 @@ message make_message_from_tuple(Tuple&& xs, std::index_sequence<Is...>) {
 template <class Tuple>
 message make_message_from_tuple(Tuple&& xs) {
   using tuple_type = std::decay_t<Tuple>;
-  std::make_index_sequence<std::tuple_size<tuple_type>::value> seq;
+  std::make_index_sequence<std::tuple_size_v<tuple_type>> seq;
   return make_message_from_tuple(std::forward<Tuple>(xs), seq);
 }
 

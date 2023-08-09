@@ -28,7 +28,7 @@ public:
 /// on whether `State::make_behavior()` exists.
 template <class State, class Base>
 using stateful_actor_base_t
-  = std::conditional_t<has_make_behavior_member<State>::value,
+  = std::conditional_t<has_make_behavior_member_v<State>,
                        stateful_actor_base<State, Base>, Base>;
 
 } // namespace caf::detail

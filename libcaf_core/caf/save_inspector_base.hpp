@@ -81,7 +81,7 @@ public:
 
   template <class T>
   bool tuple(const T& xs) {
-    return tuple(xs, std::make_index_sequence<std::tuple_size<T>::value>{});
+    return tuple(xs, std::make_index_sequence<std::tuple_size_v<T>>{});
   }
 
   template <class T, size_t N>

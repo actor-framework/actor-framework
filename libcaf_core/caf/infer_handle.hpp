@@ -137,4 +137,8 @@ struct is_handle<strong_actor_ptr> : std::true_type {};
 template <class... Ts>
 struct is_handle<typed_actor<Ts...>> : std::true_type {};
 
+/// Convenience alias for `is_handle<T>::value`.
+template <class T>
+inline constexpr bool is_handle_v = is_handle<T>::value;
+
 } // namespace caf

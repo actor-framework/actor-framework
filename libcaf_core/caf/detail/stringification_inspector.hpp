@@ -90,7 +90,7 @@ public:
   bool value(bool x);
 
   template <class Integral>
-  std::enable_if_t<std::is_integral<Integral>::value, bool> value(Integral x) {
+  std::enable_if_t<std::is_integral_v<Integral>, bool> value(Integral x) {
     if constexpr (std::is_signed<Integral>::value)
       return int_value(static_cast<int64_t>(x));
     else
@@ -151,9 +151,8 @@ public:
   }
 
   template <class T>
-  std::enable_if_t<has_to_string<T>::value
-                     && !std::is_convertible_v<T, std::string_view>,
-                   bool>
+  std::enable_if_t<
+    has_to_string_v<T> && !std::is_convertible_v<T, std::string_view>, bool>
   builtin_inspect(const T& x) {
     auto str = to_string(x);
     if constexpr (std::is_convertible<decltype(str), const char*>::value) {

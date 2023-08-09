@@ -312,7 +312,7 @@ public:
     filtered tk;
     behavior bhvr{apply_moved_args(make_behavior_impl, get_indices(tk), tup)};
     using tail_indices =
-      typename il_range<tl_size<filtered>::value, sizeof...(Ts)>::type;
+      typename il_range<tl_size_v<filtered>, sizeof...(Ts)>::type;
     make_blocking_behavior_t factory;
     auto fun = apply_moved_args_prefixed(factory, tail_indices{}, tup, &bhvr);
     receive_impl(rcc, mid, fun);

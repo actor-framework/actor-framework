@@ -48,6 +48,10 @@ struct is_weak_ptr {
   static constexpr bool value = T::has_weak_ptr_semantics;
 };
 
+/// Convenience alias for `is_weak_ptr_v`.
+template <class T>
+constexpr bool is_weak_ptr_v = is_weak_ptr<T>::value;
+
 template <class T>
 struct is_weak_ptr<T*> : std::false_type {};
 
@@ -149,10 +153,10 @@ T actor_cast(U&& what) {
     typename std::remove_const<typename std::remove_reference<U>::type>::type;
   // query traits for T
   constexpr bool to_raw = std::is_pointer_v<T>;
-  constexpr bool to_weak = is_weak_ptr<T>::value;
+  constexpr bool to_weak = is_weak_ptr_v<T>;
   // query traits for U
   constexpr bool from_raw = std::is_pointer_v<from_type>;
-  constexpr bool from_weak = is_weak_ptr<from_type>::value;
+  constexpr bool from_weak = is_weak_ptr_v<from_type>;
   // calculate x and y
   constexpr int x = to_raw ? 0 : (to_weak ? 2 : 1);
   constexpr int y = from_raw ? 0 : (from_weak ? 3 : 6);

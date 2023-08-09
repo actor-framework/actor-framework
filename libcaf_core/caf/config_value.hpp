@@ -297,7 +297,7 @@ private:
     } else {
       static_assert(detail::is_iterable<T>::value);
       using value_type = typename T::value_type;
-      detail::bool_token<detail::is_pair<value_type>::value> is_map_type;
+      detail::bool_token<detail::is_pair_v<value_type>> is_map_type;
       set_range(x, is_map_type);
     }
   }

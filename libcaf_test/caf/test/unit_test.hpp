@@ -67,7 +67,7 @@ struct equality_operator {
   static constexpr bool default_value = false;
 
   template <class T, class U,
-            detail::enable_if_t<((std::is_floating_point<T>::value
+            detail::enable_if_t<((std::is_floating_point_v<T>
                                   && std::is_convertible_v<U, double>)
                                  || (std::is_floating_point<U>::value
                                      && std::is_convertible_v<T, double>) )
@@ -83,7 +83,7 @@ struct equality_operator {
   }
 
   template <class T, class U,
-            detail::enable_if_t<!((std::is_floating_point<T>::value
+            detail::enable_if_t<!((std::is_floating_point_v<T>
                                    && std::is_convertible_v<U, double>)
                                   || (std::is_floating_point<U>::value
                                       && std::is_convertible_v<T, double>) )
@@ -106,7 +106,7 @@ struct inequality_operator {
   static constexpr bool default_value = true;
 
   template <class T, class U,
-            typename std::enable_if<(std::is_floating_point<T>::value
+            typename std::enable_if<(std::is_floating_point_v<T>
                                      || std::is_floating_point<U>::value)
                                       && detail::is_comparable<T, U>::value,
                                     int>::type
@@ -117,7 +117,7 @@ struct inequality_operator {
   }
 
   template <class T, class U,
-            typename std::enable_if<!std::is_floating_point<T>::value
+            typename std::enable_if<!std::is_floating_point_v<T>
                                       && !std::is_floating_point<U>::value
                                       && detail::is_comparable<T, U>::value,
                                     int>::type

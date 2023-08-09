@@ -31,13 +31,12 @@ struct is_string_like {
     const U* x,
     // check if `x->data()` returns  const char*
     std::enable_if_t<
-      std::is_same<const char*, decltype(x->data())>::value>* = nullptr,
+      std::is_same_v<const char*, decltype(x->data())>>* = nullptr,
     // check if `x->size()` returns an integer
-    std::enable_if_t<std::is_integral<decltype(x->size())>::value>* = nullptr,
+    std::enable_if_t<std::is_integral_v<decltype(x->size())>>* = nullptr,
     // check if `x->find('?', 0)` is well-formed and returns an integer
     // (distinguishes vectors from strings)
-    std::enable_if_t<
-      std::is_integral<decltype(x->find('?', 0))>::value>* = nullptr);
+    std::enable_if_t<std::is_integral_v<decltype(x->find('?', 0))>>* = nullptr);
 
   // SFINAE fallback.
   static void sfinae(void*);

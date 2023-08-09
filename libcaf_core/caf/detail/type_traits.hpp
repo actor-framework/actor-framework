@@ -34,7 +34,9 @@
                                                                                \
   public:                                                                      \
     static constexpr bool value = sfinae_type::value;                          \
-  }
+  };                                                                           \
+  template <class T>                                                           \
+  constexpr bool has_##name##_member_v = has_##name##_member<T>::value;
 
 #define CAF_HAS_ALIAS_TRAIT(name)                                              \
   template <class T>                                                           \
@@ -90,6 +92,11 @@ private:
 public:
   static constexpr bool value = std::is_convertible_v<result, std::string>;
 };
+
+/// Convenience alias for `has_to_string<T>::value`.
+/// @relates has_to_string
+template <class T>
+constexpr bool has_to_string_v = has_to_string<T>::value;
 
 template <bool X>
 using bool_token = std::integral_constant<bool, X>;
@@ -369,6 +376,11 @@ public:
   static constexpr bool value = std::is_same_v<bool, result_type>;
 };
 
+/// Convenience alias for `is_callable<T>::value`.
+/// @relates is_callable
+template <class T>
+constexpr bool is_callable_v = is_callable<T>::value;
+
 /// Checks whether `F` is callable with arguments of types `Ts...`.
 template <class F, class... Ts>
 struct is_callable_with {
@@ -467,7 +479,7 @@ template <class T>
 using value_type_of_t = typename value_type_of<T>::type;
 
 template <class T>
-using is_callable_t = typename std::enable_if<is_callable<T>::value>::type;
+using is_callable_t = typename std::enable_if<is_callable_v<T>>::type;
 
 template <class F, class T>
 using is_handler_for_ef =
