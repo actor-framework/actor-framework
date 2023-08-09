@@ -122,3 +122,10 @@ caf_add_component(
     net.web_socket.framing
     net.web_socket.handshake
     net.web_socket.server)
+
+caf_add_test_executable(
+  caf-net-autobahn-driver
+  SOURCES
+    tests/drivers/autobahn.cpp
+  DEPENDENCIES
+    CAF::net)
