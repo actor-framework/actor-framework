@@ -100,7 +100,8 @@ public:
   template <class Predicate>
   transformation<step::filter<Predicate>> filter(Predicate prediate);
 
-  /// Returns a transformation that ignores all items and only forwards complete
+  /// Returns a transformation that ignores all items and only forwards calls to
+  /// `on_complete` and `on_error`.
   transformation<step::ignore_elements<T>> ignore_elements();
 
   /// Returns a transformation that applies `f` to each input and emits the

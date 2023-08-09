@@ -8,6 +8,8 @@
 
 namespace caf::flow::step {
 
+/// A step that ignores all elements and only forwards calls to `on_complete`
+/// and `on_error`.
 template <class T>
 class ignore_elements {
 public:
