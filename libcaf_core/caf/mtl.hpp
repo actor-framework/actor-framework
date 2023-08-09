@@ -102,7 +102,7 @@ private:
 ///               @ref deserializer directly or that provides a compatible API.
 template <class Self, class Adapter, class Reader>
 auto make_mtl(Self* self, Adapter adapter, Reader* reader) {
-  if constexpr (std::is_base_of<non_blocking_actor_base, Self>::value) {
+  if constexpr (std::is_base_of_v<non_blocking_actor_base, Self>) {
     return event_based_mtl{self, adapter, reader};
   } else {
     static_assert(detail::always_false_v<Self>,

@@ -118,7 +118,7 @@ public:
 
   template <class... Ts>
   ptr_type make(F f, Ts&&... xs) {
-    static_assert(std::is_base_of<local_actor, Base>::value,
+    static_assert(std::is_base_of_v<local_actor, Base>,
                   "Given Base does not extend local_actor");
     using trait = typename detail::get_callable_trait<F>::type;
     using arg_types = typename trait::arg_types;

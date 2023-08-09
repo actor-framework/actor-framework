@@ -66,8 +66,8 @@ struct infer_handle_from_fun_impl<typed_behavior<Sigs...>, Impl, false> {
 // statically typed actor with self pointer
 template <class... Sigs, class Impl>
 struct infer_handle_from_fun_impl<typed_behavior<Sigs...>, Impl*, true> {
-  static_assert(std::is_base_of<typed_event_based_actor<Sigs...>, Impl>::value
-                  || std::is_base_of<io::typed_broker<Sigs...>, Impl>::value,
+  static_assert(std::is_base_of_v<typed_event_based_actor<Sigs...>, Impl>
+                  || std::is_base_of_v<io::typed_broker<Sigs...>, Impl>,
                 "Self pointer does not match the returned behavior type.");
   using type = typed_actor<Sigs...>;
   using impl = Impl;
@@ -109,7 +109,7 @@ struct infer_handle_from_behavior<typed_behavior<Sigs...>> {
 
 /// Deduces `actor` for dynamically typed actors, otherwise `typed_actor<...>`
 /// is deduced.
-template <class T, bool = std::is_base_of<abstract_actor, T>::value>
+template <class T, bool = std::is_base_of_v<abstract_actor, T>>
 struct infer_handle_from_class {
   using type =
     typename infer_handle_from_behavior<typename T::behavior_type>::type;

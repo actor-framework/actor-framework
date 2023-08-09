@@ -16,8 +16,8 @@
 namespace caf::detail {
 
 template <class T,
-          bool IsDyn = std::is_base_of<dynamically_typed_actor_base, T>::value,
-          bool IsStat = std::is_base_of<statically_typed_actor_base, T>::value>
+          bool IsDyn = std::is_base_of_v<dynamically_typed_actor_base, T>,
+          bool IsStat = std::is_base_of_v<statically_typed_actor_base, T>>
 struct implicit_actor_conversions {
   using type = T;
 };

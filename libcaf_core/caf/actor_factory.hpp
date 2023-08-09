@@ -145,7 +145,7 @@ actor_factory make_actor_factory() {
   static_assert(
     detail::conjunction<std::is_lvalue_reference<Ts>::value...>::value,
     "all Ts must be lvalue references");
-  static_assert(std::is_base_of<local_actor, T>::value,
+  static_assert(std::is_base_of_v<local_actor, T>,
                 "T is not derived from local_actor");
   return &dyn_spawn_class<T, Ts...>;
 }

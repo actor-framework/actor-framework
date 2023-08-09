@@ -230,8 +230,7 @@ private:
   }
 
   template <class T = Base>
-  detail::enable_if_t<std::is_base_of<abstract_actor, T>::value, Subtype*>
-  dptr() {
+  detail::enable_if_t<std::is_base_of_v<abstract_actor, T>, Subtype*> dptr() {
     return static_cast<Subtype*>(this);
   }
 

@@ -778,7 +778,7 @@ public:
 private:
   template <class T>
   void check_invariants() {
-    static_assert(!std::is_base_of<prohibit_top_level_spawn_marker, T>::value,
+    static_assert(!std::is_base_of_v<prohibit_top_level_spawn_marker, T>,
                   "This actor type cannot be spawned through an actor system. "
                   "Probably you have tried to spawn a broker.");
   }
