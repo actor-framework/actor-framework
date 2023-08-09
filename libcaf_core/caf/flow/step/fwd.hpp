@@ -19,6 +19,9 @@ template <class>
 class filter;
 
 template <class>
+class ignore_elements;
+
+template <class>
 class map;
 
 template <class>
