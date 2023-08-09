@@ -11,6 +11,8 @@
 #include "caf/system_messages.hpp"
 #include "caf/thread_owner.hpp"
 
+#include <iostream>
+
 namespace caf::detail {
 
 thread_safe_actor_clock::thread_safe_actor_clock() {
@@ -19,7 +21,9 @@ thread_safe_actor_clock::thread_safe_actor_clock() {
 
 disposable thread_safe_actor_clock::schedule(time_point abs_time, action f) {
   queue_.emplace_back(schedule_entry_ptr{new schedule_entry{abs_time, f}});
-  return std::move(f).as_disposable();
+  auto disp = std::move(f).as_disposable();
+  std::cout << "Making " << disp.ptr() << std::endl;
+  return disp;
 }
 
 void thread_safe_actor_clock::run() {

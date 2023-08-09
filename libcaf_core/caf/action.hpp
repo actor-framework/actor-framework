@@ -132,17 +132,22 @@ inline bool operator!=(const action& lhs, const action& rhs) noexcept {
 namespace caf::detail {
 
 template <class F, bool IsSingleShot>
-struct default_action_impl : detail::atomic_ref_counted, action::impl {
-  std::atomic<action::state> state_;
-  F f_;
-
+class default_action_impl : public detail::atomic_ref_counted,
+                            public action::impl {
+public:
   default_action_impl(F fn)
-    : state_(action::state::scheduled), f_(std::move(fn)) {
+    : state_(action::state::scheduled), f_{std::move(fn)} {
     // nop
   }
 
+  ~default_action_impl() {
+    if (state_.load() == action::state::scheduled)
+      f_.~F();
+  }
+
   void dispose() override {
-    state_ = action::state::disposed;
+    state_.store(action::state::disposed);
+    f_.~F();
   }
 
   bool disposed() const noexcept override {
@@ -156,8 +161,9 @@ struct default_action_impl : detail::atomic_ref_counted, action::impl {
   void run() override {
     if (state_.load() == action::state::scheduled) {
       f_();
-      if constexpr (IsSingleShot)
-        state_ = action::state::disposed;
+      if constexpr (IsSingleShot) {
+        dispose();
+      }
       // else: allow the action to re-register itself when needed by *not*
       //       setting the state to disposed, e.g., to implement time loops.
     }
@@ -178,6 +184,12 @@ struct default_action_impl : detail::atomic_ref_counted, action::impl {
   friend void intrusive_ptr_release(const default_action_impl* ptr) noexcept {
     ptr->deref();
   }
+
+private:
+  std::atomic<action::state> state_;
+  union {
+    F f_;
+  };
 };
 
 } // namespace caf::detail

@@ -7,6 +7,8 @@
 #include "caf/detail/type_traits.hpp"
 #include "caf/disposable.hpp"
 
+#include <iostream>
+
 namespace caf::detail {
 
 template <class Signature>
@@ -17,6 +19,7 @@ struct dispose_on_call_t<R(Ts...)> {
   template <class F>
   auto operator()(disposable resource, F f) {
     return [resource{std::move(resource)}, f{std::move(f)}](Ts... xs) mutable {
+      std::cout << "Disposing " << resource.ptr() << std::endl;
       resource.dispose();
       return f(xs...);
     };
