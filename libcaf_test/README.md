@@ -271,10 +271,15 @@ as well as CAF modules. For example, wen writing tests that use feature from
 `caf::net`, use `CAF_TEST_MAIN(caf::net::middleman)` to properly initialize the
 meta object tables and networking.
 
-When running a test binary, it will run all tests and scenarios in all suites.
-However, the binary provides a command line interface to filter suites,
-configure the verbosity, etc. Please run the binary with `--help` to see the
-available options.
+Command Line Interface
+----------------------
+
+When using the `CAF_TEST_MAIN` macro, the resulting binary will provide a
+command line interface to list and run tests. Running the binary without any
+arguments will run all tests and scenarios in all suites. However, there are
+several command line options to filter suites and tests using a regex, configure
+the verbosity, etc. Please run the binary with `--help` to see all available
+options.
 
 Migrating from the Legacy Test Framework
 ========================================
