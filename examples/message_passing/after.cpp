@@ -1,4 +1,4 @@
-// This example shows how to use caf::after
+// This example shows how to use caf::after.
 
 #include "caf/after.hpp"
 
@@ -16,7 +16,7 @@ using std::endl;
 
 using namespace caf;
 
-// Sends a random number of printable characters to buddy and exits
+// Sends a random number of printable characters to `sink` and then quits.
 void generator(event_based_actor* self, actor sink) {
   std::random_device rd;
   std::minstd_rand gen{rd()};
