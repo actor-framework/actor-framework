@@ -629,7 +629,7 @@ template <class T, class... Ts, class U, class... Us>
 struct all_constructible<type_list<T, Ts...>, type_list<U, Us...>> {
   static constexpr bool value
     = std::is_constructible_v<T, U>
-      && all_constructible_v<type_list<Ts...>, type_list<Us...>>;
+      && all_constructible<type_list<Ts...>, type_list<Us...>>::value;
 };
 
 /// Convenience alias for `all_constructible<Ts, Us>::value`.
