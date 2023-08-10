@@ -3,9 +3,9 @@ ignore:
   - examples
   - libcaf_core/caf/decorator
   - libcaf_core/src/decorator
-  - libcaf_core/test
-  - libcaf_io/test
-  - libcaf_net/test
+  - libcaf_core/tests
+  - libcaf_io/tests
+  - libcaf_net/tests
   - libcaf_openssl
   - libcaf_test
   - tools
