@@ -240,7 +240,7 @@ bool save(Inspector& f, T& x) {
 
 template <class Inspector, class T>
 bool save(Inspector& f, const T& x) {
-  if constexpr (!std::is_function<T>::value) {
+  if constexpr (!std::is_function_v<T>) {
     return save(f, as_mutable_ref(x), inspect_access_type<Inspector, T>());
   } else {
     // Only inspector such as the stringification_inspector are going to accept

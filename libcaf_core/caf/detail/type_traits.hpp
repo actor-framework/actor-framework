@@ -146,7 +146,7 @@ struct is_primitive {
   static constexpr bool value = std::is_convertible_v<T, std::string>
                                 || std::is_convertible_v<T, std::u16string>
                                 || std::is_convertible_v<T, std::u32string>
-                                || std::is_arithmetic<T>::value;
+                                || std::is_arithmetic_v<T>;
 };
 
 /// Checks whether `T1` is comparable with `T2`.
@@ -327,9 +327,9 @@ struct has_apply_operator {
 // matches (IsFun || IsMemberFun)
 template <class T,
           bool IsFun
-          = std::is_function<T>::value
+          = std::is_function_v<T>
             || std::is_function<typename std::remove_pointer<T>::type>::value
-            || std::is_member_function_pointer<T>::value,
+            || std::is_member_function_pointer_v<T>,
           bool HasApplyOp = has_apply_operator<T>::value>
 struct get_callable_trait_helper {
   using type = callable_trait<T>;
@@ -422,7 +422,7 @@ struct type_at<0, T0, Ts...> {
 };
 
 // Checks whether T has a member variable named `name`.
-template <class T, bool IsScalar = std::is_scalar<T>::value>
+template <class T, bool IsScalar = std::is_scalar_v<T>>
 class has_name {
 private:
   // a simple struct with a member called `name`
@@ -556,15 +556,14 @@ constexpr bool is_expected_v = is_expected<T>::value;
 // Checks whether `T` and `U` are integers of the same size and signedness.
 // clang-format off
 template <class T, class U,
-          bool Enable = std::is_integral<T>::value
-                        && std::is_integral<U>::value
+          bool Enable = std::is_integral_v<T>
+                        && std::is_integral_v<U>
                         && !std::is_same_v<T, bool>
                         && !std::is_same_v<U, bool>>
 // clang-format on
 struct is_equal_int_type {
   static constexpr bool value = sizeof(T) == sizeof(U)
-                                && std::is_signed<T>::value
-                                     == std::is_signed<U>::value;
+                                && std::is_signed_v<T> == std::is_signed_v<U>;
 };
 
 template <class T, typename U>
@@ -865,7 +864,7 @@ template <class T>
 struct is_stl_tuple_type {
   template <class U>
   static auto sfinae(U*)
-    -> decltype(std::integral_constant<bool, std::tuple_size<U>::value >= 0>{});
+    -> decltype(std::integral_constant<bool, std::tuple_size<U>::value>{});
 
   template <class U>
   static auto sfinae(...) -> std::false_type;
@@ -1003,7 +1002,7 @@ constexpr bool accepts_opaque_value_v
 /// convertible to one of STL's string types.
 template <class T, bool IsLoading>
 struct is_builtin_inspector_type {
-  static constexpr bool value = std::is_arithmetic<T>::value;
+  static constexpr bool value = std::is_arithmetic_v<T>;
 };
 
 template <bool IsLoading>

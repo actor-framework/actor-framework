@@ -28,8 +28,7 @@ template <class State, class Consumer>
 void read_signed_integer(State& ps, Consumer&& consumer) {
   using consumer_type = typename std::decay<Consumer>::type;
   using value_type = typename consumer_type::value_type;
-  static_assert(std::is_integral<value_type>::value
-                  && std::is_signed<value_type>::value,
+  static_assert(std::is_integral_v<value_type> && std::is_signed_v<value_type>,
                 "expected a signed integer type");
   value_type result = 0;
   // Computes the result on success.

@@ -12,7 +12,9 @@
 #include "caf/config.hpp"
 #include "caf/init_global_meta_objects.hpp"
 
+#include <tuple>
 #include <type_traits>
+
 
 CAF_PUSH_WARNINGS
 

@@ -42,7 +42,7 @@ struct dmi<typed_response_promise<Out...>(In...)> {
 
 // -- dmfou = deduce_mpi_function_object_unboxing
 
-template <class T, bool isClass = std::is_class<T>::value>
+template <class T, bool isClass = std::is_class_v<T>>
 struct dmfou;
 
 // case #1a: const member function pointer

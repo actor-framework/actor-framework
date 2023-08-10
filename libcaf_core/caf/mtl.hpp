@@ -21,9 +21,9 @@ class event_based_mtl {
 public:
   // -- sanity checks ----------------------------------------------------------
 
-  static_assert(std::is_nothrow_copy_assignable<Adapter>::value);
+  static_assert(std::is_nothrow_copy_assignable_v<Adapter>);
 
-  static_assert(std::is_nothrow_move_assignable<Adapter>::value);
+  static_assert(std::is_nothrow_move_assignable_v<Adapter>);
 
   // -- constructors, destructors, and assignment operators --------------------
 

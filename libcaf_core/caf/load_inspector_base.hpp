@@ -105,7 +105,7 @@ public:
 
   template <class T>
   [[nodiscard]] bool apply(T& x) {
-    static_assert(!std::is_const<T>::value);
+    static_assert(!std::is_const_v<T>);
     return detail::load(dref(), x);
   }
 

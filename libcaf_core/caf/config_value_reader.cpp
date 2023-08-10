@@ -406,7 +406,7 @@ bool pull(config_value_reader& reader, T& x) {
   using internal_type
     = std::conditional_t<std::is_floating_point_v<T>, config_value::real, T>;
   auto assign = [&x](auto& result) {
-    if constexpr (std::is_floating_point<T>::value) {
+    if constexpr (std::is_floating_point_v<T>) {
       x = static_cast<T>(result);
     } else {
       x = result;

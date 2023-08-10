@@ -133,7 +133,7 @@ std::enable_if_t<std::is_integral_v<T>> print(Buffer& buf, T x) {
   char stack_buffer[24];
   char* p = stack_buffer;
   // Convert negative values into positives as necessary.
-  if constexpr (std::is_signed<T>::value) {
+  if constexpr (std::is_signed_v<T>) {
     if (x == std::numeric_limits<T>::min()) {
       using namespace std::literals;
       // The code below would fail for the smallest value, because this value

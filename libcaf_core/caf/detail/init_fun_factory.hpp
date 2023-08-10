@@ -47,7 +47,7 @@ class init_fun_factory_helper final : public init_fun_factory_helper_base {
 public:
   using args_pointer = std::shared_ptr<Tuple>;
 
-  static constexpr bool args_empty = std::tuple_size<Tuple>::value == 0;
+  static constexpr bool args_empty = std::tuple_size_v<Tuple> == 0;
 
   init_fun_factory_helper(F fun, args_pointer args)
     : fun_(std::move(fun)), args_(std::move(args)) {

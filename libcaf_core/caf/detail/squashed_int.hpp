@@ -50,7 +50,7 @@ struct squashed_int {
 template <class T>
 using squashed_int_t = typename squashed_int<T>::type;
 
-template <class T, bool = std::is_integral<T>::value>
+template <class T, bool = std::is_integral_v<T>>
 struct squash_if_int {
   using type = T;
 };

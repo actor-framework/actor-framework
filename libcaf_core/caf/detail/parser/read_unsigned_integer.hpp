@@ -28,8 +28,8 @@ template <class State, class Consumer>
 void read_unsigned_integer(State& ps, Consumer&& consumer) {
   using consumer_type = typename std::decay<Consumer>::type;
   using value_type = typename consumer_type::value_type;
-  static_assert(std::is_integral<value_type>::value
-                  && std::is_unsigned<value_type>::value,
+  static_assert(std::is_integral_v<value_type>
+                  && std::is_unsigned_v<value_type>,
                 "expected an unsigned integer type");
   value_type result = 0;
   // Computes the result on success.

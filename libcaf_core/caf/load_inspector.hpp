@@ -343,7 +343,7 @@ public:
 
   template <class T>
   static auto field(std::string_view name, T& x) {
-    static_assert(!std::is_const<T>::value);
+    static_assert(!std::is_const_v<T>);
     return field_t<T>{name, &x};
   }
 

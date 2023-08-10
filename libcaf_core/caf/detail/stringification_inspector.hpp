@@ -91,7 +91,7 @@ public:
 
   template <class Integral>
   std::enable_if_t<std::is_integral_v<Integral>, bool> value(Integral x) {
-    if constexpr (std::is_signed<Integral>::value)
+    if constexpr (std::is_signed_v<Integral>)
       return int_value(static_cast<int64_t>(x));
     else
       return int_value(static_cast<uint64_t>(x));
