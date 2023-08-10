@@ -126,13 +126,13 @@ bool load(Inspector& f, T& x, inspector_access_type::list) {
 }
 
 template <class Inspector, class T>
-std::enable_if_t<accepts_opaque_value<Inspector, T>::value, bool>
+std::enable_if_t<accepts_opaque_value_v<Inspector, T>, bool>
 load(Inspector& f, T& x, inspector_access_type::none) {
   return f.opaque_value(x);
 }
 
 template <class Inspector, class T>
-std::enable_if_t<!accepts_opaque_value<Inspector, T>::value, bool>
+std::enable_if_t<!accepts_opaque_value_v<Inspector, T>, bool>
 load(Inspector&, T&, inspector_access_type::none) {
   static_assert(
     detail::assertion_failed_v<T>,
@@ -219,13 +219,13 @@ bool save(Inspector& f, T& x, inspector_access_type::list) {
 }
 
 template <class Inspector, class T>
-std::enable_if_t<accepts_opaque_value<Inspector, T>::value, bool>
+std::enable_if_t<accepts_opaque_value_v<Inspector, T>, bool>
 save(Inspector& f, T& x, inspector_access_type::none) {
   return f.opaque_value(x);
 }
 
 template <class Inspector, class T>
-std::enable_if_t<!accepts_opaque_value<Inspector, T>::value, bool>
+std::enable_if_t<!accepts_opaque_value_v<Inspector, T>, bool>
 save(Inspector&, T&, inspector_access_type::none) {
   static_assert(
     detail::assertion_failed_v<T>,

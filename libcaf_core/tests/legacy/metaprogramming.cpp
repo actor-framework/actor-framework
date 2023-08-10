@@ -231,14 +231,14 @@ private:
 };
 
 CAF_TEST(is_comparable) {
-  CHECK((is_comparable<double, std::string>::value) == false);
-  CHECK((is_comparable<foo, foo>::value) == false);
-  CHECK((is_comparable<bar, bar>::value) == true);
-  CHECK((is_comparable<double, bar>::value) == false);
-  CHECK((is_comparable<bar, double>::value) == false);
-  CHECK((is_comparable<baz, baz>::value) == true);
-  CHECK((is_comparable<double, baz>::value) == false);
-  CHECK((is_comparable<baz, double>::value) == false);
-  CHECK((is_comparable<std::string, baz>::value) == false);
-  CHECK((is_comparable<baz, std::string>::value) == false);
+  CHECK((is_comparable_v<double, std::string>) == false);
+  CHECK((is_comparable_v<foo, foo>) == false);
+  CHECK((is_comparable_v<bar, bar>) == true);
+  CHECK((is_comparable_v<double, bar>) == false);
+  CHECK((is_comparable_v<bar, double>) == false);
+  CHECK((is_comparable_v<baz, baz>) == true);
+  CHECK((is_comparable_v<double, baz>) == false);
+  CHECK((is_comparable_v<baz, double>) == false);
+  CHECK((is_comparable_v<std::string, baz>) == false);
+  CHECK((is_comparable_v<baz, std::string>) == false);
 }

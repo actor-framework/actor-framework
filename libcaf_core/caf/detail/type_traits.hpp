@@ -36,7 +36,7 @@
     static constexpr bool value = sfinae_type::value;                          \
   };                                                                           \
   template <class T>                                                           \
-  constexpr bool has_##name##_member_v = has_##name##_member<T>::value;
+  constexpr bool has_##name##_member_v = has_##name##_member<T>::value
 
 #define CAF_HAS_ALIAS_TRAIT(name)                                              \
   template <class T>                                                           \
@@ -175,13 +175,14 @@ class is_comparable {
   using result_type = decltype(cmp_help_fun(
     static_cast<T1*>(nullptr), static_cast<T2*>(nullptr),
     static_cast<bool*>(nullptr),
-    std::integral_constant<bool, std::is_arithmetic<T1>::value
-                                   && std::is_arithmetic<T2>::value>{}));
+    std::integral_constant<bool, std::is_arithmetic_v<T1>
+                                   && std::is_arithmetic_v<T2>>{}));
 
 public:
   static constexpr bool value = std::is_same_v<bool, result_type>;
 };
 
+/// Convenience alias for `is_comparable<T1, T2>::value`.
 template <class T1, class T2>
 constexpr bool is_comparable_v = is_comparable<T1, T2>::value;
 
@@ -465,6 +466,10 @@ struct is_handler_for {
       || std::is_convertible_v<F, std::function<void(const T&)>>;
 };
 
+/// Convenience alias for `is_handler_for<F, T>::value`.
+template <class F, class T>
+constexpr bool is_handler_for_v = is_handler_for<F, T>::value;
+
 template <class T>
 struct value_type_of {
   using type = typename T::value_type;
@@ -482,8 +487,7 @@ template <class T>
 using is_callable_t = typename std::enable_if<is_callable_v<T>>::type;
 
 template <class F, class T>
-using is_handler_for_ef =
-  typename std::enable_if<is_handler_for<F, T>::value>::type;
+using is_handler_for_ef = typename std::enable_if<is_handler_for_v<F, T>>::type;
 
 template <class T>
 struct strip_reference_wrapper {
@@ -624,9 +628,13 @@ struct all_constructible<type_list<>, type_list<>> : std::true_type {};
 template <class T, class... Ts, class U, class... Us>
 struct all_constructible<type_list<T, Ts...>, type_list<U, Us...>> {
   static constexpr bool value
-    = std::is_constructible<T, U>::value
-      && all_constructible<type_list<Ts...>, type_list<Us...>>::value;
+    = std::is_constructible_v<T, U>
+      && all_constructible_v<type_list<Ts...>, type_list<Us...>>;
 };
+
+/// Convenience alias for `all_constructible<Ts, Us>::value`.
+template <class Ts, class Us>
+constexpr bool all_constructible_v = all_constructible<Ts, Us>::value;
 
 /// Checks whether T behaves like `std::map`.
 template <class T>
@@ -985,6 +993,11 @@ private:
 public:
   static constexpr bool value = sfinae_result::value;
 };
+
+/// Convenience alias for `accepts_opaque_value<Inspector, T>::value`.
+template <class Inspector, class T>
+constexpr bool accepts_opaque_value_v
+  = accepts_opaque_value<Inspector, T>::value;
 
 /// Checks whether `T` is primitive, i.e., either an arithmetic type or
 /// convertible to one of STL's string types.

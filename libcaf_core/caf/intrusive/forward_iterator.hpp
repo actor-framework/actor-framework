@@ -29,8 +29,8 @@ public:
   using const_reference = const value_type&;
 
   using node_type =
-    typename std::conditional<std::is_const_v<T>, const typename T::node_type,
-                              typename T::node_type>::type;
+    typename std::conditional_t<std::is_const_v<T>, const typename T::node_type,
+                                typename T::node_type>;
 
   using node_pointer = node_type*;
 

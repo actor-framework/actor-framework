@@ -223,7 +223,7 @@ void check_integer_options(std::false_type) {
 // only works with an integral types and double
 template <class T>
 void check_integer_options() {
-  std::integral_constant<bool, std::is_unsigned<T>::value> tk;
+  std::integral_constant<bool, std::is_unsigned_v<T>> tk;
   check_integer_options<T>(tk);
 }
 

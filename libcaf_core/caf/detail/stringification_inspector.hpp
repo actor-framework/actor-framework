@@ -219,7 +219,7 @@ public:
   static std::string render(const T& x) {
     if constexpr (std::is_same_v<std::nullptr_t, T>) {
       return "null";
-    } else if constexpr (std::is_constructible<std::string_view, T>::value) {
+    } else if constexpr (std::is_constructible_v<std::string_view, T>) {
       if constexpr (std::is_pointer_v<T>) {
         if (x == nullptr)
           return "null";
