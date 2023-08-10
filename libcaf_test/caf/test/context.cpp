@@ -15,13 +15,13 @@ void context::on_enter(block* ptr) {
   call_stack.push_back(ptr);
   unwind_stack.clear();
   path.push_back(ptr);
-  reporter::instance->begin_step(ptr);
+  reporter::instance().begin_step(ptr);
 }
 
 void context::on_leave(block* ptr) {
   call_stack.pop_back();
   unwind_stack.push_back(ptr);
-  reporter::instance->end_step(ptr);
+  reporter::instance().end_step(ptr);
 }
 
 bool context::activated(block* ptr) const noexcept {

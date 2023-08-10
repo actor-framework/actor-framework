@@ -231,27 +231,31 @@ bool operator!=(std::nullptr_t, const intrusive_ptr<T>& x) {
 // -- comparison to raw pointer ------------------------------------------------
 
 /// @relates intrusive_ptr
-template <class T>
-bool operator==(const intrusive_ptr<T>& x, const T* y) {
-  return x.get() == y;
+template <class T, class U>
+detail::enable_if_t<detail::is_comparable<T*, U*>::value, bool>
+operator==(const intrusive_ptr<T>& lhs, const U* rhs) {
+  return lhs.get() == rhs;
 }
 
 /// @relates intrusive_ptr
-template <class T>
-bool operator==(const T* x, const intrusive_ptr<T>& y) {
-  return x == y.get();
+template <class T, class U>
+detail::enable_if_t<detail::is_comparable<T*, U*>::value, bool>
+operator==(const T* lhs, const intrusive_ptr<U>& rhs) {
+  return lhs == rhs.get();
 }
 
 /// @relates intrusive_ptr
-template <class T>
-bool operator!=(const intrusive_ptr<T>& x, const T* y) {
-  return x.get() != y;
+template <class T, class U>
+detail::enable_if_t<detail::is_comparable<T*, U*>::value, bool>
+operator!=(const intrusive_ptr<T>& lhs, const U* rhs) {
+  return lhs.get() != rhs;
 }
 
 /// @relates intrusive_ptr
-template <class T>
-bool operator!=(const T* x, const intrusive_ptr<T>& y) {
-  return x != y.get();
+template <class T, class U>
+detail::enable_if_t<detail::is_comparable<T*, U*>::value, bool>
+operator!=(const T* lhs, const intrusive_ptr<U>& rhs) {
+  return lhs != rhs.get();
 }
 
 // -- comparison to intrusive_pointer ------------------------------------------

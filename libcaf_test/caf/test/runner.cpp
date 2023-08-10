@@ -131,7 +131,7 @@ runner::runner() : suites_(caf::test::registry::suites()) {
 
 int runner::run(int argc, char** argv) {
   auto default_reporter = reporter::make_default();
-  reporter::instance = default_reporter.get();
+  reporter::instance(default_reporter.get());
   if (auto [ok, help_printed] = parse_cli(argc, argv); !ok) {
     return EXIT_FAILURE;
   } else if (help_printed) {
@@ -240,7 +240,7 @@ runner::parse_cli_result runner::parse_cli(int argc, char** argv) {
                 *verbosity);
       return {false, true};
     }
-    reporter::instance->verbosity(*level);
+    reporter::instance().verbosity(*level);
   }
   return {true, false};
 }

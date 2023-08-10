@@ -22,8 +22,6 @@ reporter::~reporter() {
   // nop
 }
 
-reporter* reporter::instance;
-
 namespace {
 
 /// Implements a mini-DSL for colored output:
@@ -334,8 +332,8 @@ public:
     set_live();
     format_to(colored(),
               "{0:{1}}$R(error): check failed\n"
-              "{0:{1}}    loc: $C({3}):$Y({4})$0\n"
-              "{0:{1}}  check: {5}\n",
+              "{0:{1}}    loc: $C({2}):$Y({3})$0\n"
+              "{0:{1}}  check: {4}\n",
               ' ', indent_, location.file_name(), location.line(), arg);
   }
 
@@ -388,8 +386,10 @@ public:
               ' ', indent_, location.file_name(), location.line(), msg);
   }
 
-  void verbosity(unsigned level) override {
+  unsigned verbosity(unsigned level) override {
+    auto result = level_;
     level_ = level;
+    return result;
   }
 
   void no_colors(bool new_value) override {
@@ -470,7 +470,19 @@ private:
   context_ptr current_ctx_;
 };
 
+reporter* global_instance;
+
 } // namespace
+
+reporter& reporter::instance() {
+  if (global_instance == nullptr)
+    CAF_RAISE_ERROR("no reporter instance available");
+  return *global_instance;
+}
+
+void reporter::instance(reporter* ptr) {
+  global_instance = ptr;
+}
 
 std::unique_ptr<reporter> reporter::make_default() {
   return std::make_unique<default_reporter>();

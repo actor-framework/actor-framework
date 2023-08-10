@@ -75,7 +75,8 @@ public:
   info(std::string_view msg, const detail::source_location& location)
     = 0;
 
-  virtual void verbosity(unsigned level) = 0;
+  /// Sets the verbosity level of the reporter and returns the previous value.
+  virtual unsigned verbosity(unsigned level) = 0;
 
   /// Sets whether the reporter disables colored output even when writing to a
   /// TTY.
@@ -93,8 +94,11 @@ public:
   /// Returns statistics for the entire run.
   virtual stats total_stats() = 0;
 
-  /// Stores a pointer to the currently active reporter.
-  static reporter* instance;
+  /// Returns the registered reporter instance.
+  static reporter& instance();
+
+  /// Sets the reporter instance for the current test run.
+  static void instance(reporter* ptr);
 
   /// Creates a default reporter that writes to the standard output.
   static std::unique_ptr<reporter> make_default();

@@ -12,8 +12,10 @@
 #include "caf/config.hpp"
 #include "caf/deep_to_string.hpp"
 #include "caf/detail/format.hpp"
+#include "caf/detail/scope_guard.hpp"
 #include "caf/detail/source_location.hpp"
 #include "caf/detail/test_export.hpp"
+#include "caf/raise_error.hpp"
 
 #include <string_view>
 
@@ -44,12 +46,24 @@ public:
 
   /// Generates a message with the INFO severity level.
   template <class... Ts>
+  [[noreturn]] void fail(detail::format_string_with_location fwl, Ts&&... xs) {
+    if constexpr (sizeof...(Ts) > 0) {
+      auto msg = detail::format(fwl.value, std::forward<Ts>(xs)...);
+      reporter::instance().fail(msg, fwl.location);
+    } else {
+      reporter::instance().fail(fwl.value, fwl.location);
+    }
+    CAF_RAISE_ERROR(std::logic_error, "requirement failed: abort test");
+  }
+
+  /// Generates a message with the INFO severity level.
+  template <class... Ts>
   void info(detail::format_string_with_location fwl, Ts&&... xs) {
     if constexpr (sizeof...(Ts) > 0) {
       auto msg = detail::format(fwl.value, std::forward<Ts>(xs)...);
-      reporter::instance->info(msg, fwl.location);
+      reporter::instance().info(msg, fwl.location);
     } else {
-      reporter::instance->info(fwl.value, fwl.location);
+      reporter::instance().info(fwl.value, fwl.location);
     }
   }
 
@@ -60,11 +74,11 @@ public:
                 = detail::source_location::current()) {
     assert_save_comparison<T0, T1>();
     if (lhs == rhs) {
-      reporter::instance->pass(location);
+      reporter::instance().pass(location);
       return true;
     }
-    reporter::instance->fail(binary_predicate::eq, stringify(lhs),
-                             stringify(rhs), location);
+    reporter::instance().fail(binary_predicate::eq, stringify(lhs),
+                              stringify(rhs), location);
     return false;
   }
 
@@ -75,11 +89,11 @@ public:
                 = detail::source_location::current()) {
     assert_save_comparison<T0, T1>();
     if (lhs != rhs) {
-      reporter::instance->pass(location);
+      reporter::instance().pass(location);
       return true;
     }
-    reporter::instance->fail(binary_predicate::ne, stringify(lhs),
-                             stringify(rhs), location);
+    reporter::instance().fail(binary_predicate::ne, stringify(lhs),
+                              stringify(rhs), location);
     return false;
   }
 
@@ -90,11 +104,11 @@ public:
                 = detail::source_location::current()) {
     assert_save_comparison<T0, T1>();
     if (lhs < rhs) {
-      reporter::instance->pass(location);
+      reporter::instance().pass(location);
       return true;
     }
-    reporter::instance->fail(binary_predicate::lt, stringify(lhs),
-                             stringify(rhs), location);
+    reporter::instance().fail(binary_predicate::lt, stringify(lhs),
+                              stringify(rhs), location);
     return false;
   }
 
@@ -105,11 +119,11 @@ public:
                 = detail::source_location::current()) {
     assert_save_comparison<T0, T1>();
     if (lhs <= rhs) {
-      reporter::instance->pass(location);
+      reporter::instance().pass(location);
       return true;
     }
-    reporter::instance->fail(binary_predicate::le, stringify(lhs),
-                             stringify(rhs), location);
+    reporter::instance().fail(binary_predicate::le, stringify(lhs),
+                              stringify(rhs), location);
     return false;
   }
 
@@ -120,11 +134,11 @@ public:
                 = detail::source_location::current()) {
     assert_save_comparison<T0, T1>();
     if (lhs > rhs) {
-      reporter::instance->pass(location);
+      reporter::instance().pass(location);
       return true;
     }
-    reporter::instance->fail(binary_predicate::gt, stringify(lhs),
-                             stringify(rhs), location);
+    reporter::instance().fail(binary_predicate::gt, stringify(lhs),
+                              stringify(rhs), location);
     return false;
   }
 
@@ -135,57 +149,117 @@ public:
                 = detail::source_location::current()) {
     assert_save_comparison<T0, T1>();
     if (lhs >= rhs) {
-      reporter::instance->pass(location);
+      reporter::instance().pass(location);
       return true;
     }
-    reporter::instance->fail(binary_predicate::ge, stringify(lhs),
-                             stringify(rhs), location);
+    reporter::instance().fail(binary_predicate::ge, stringify(lhs),
+                              stringify(rhs), location);
     return false;
   }
 
+  /// Checks whether `value` is `true`.
   bool check(bool value, const detail::source_location& location
                          = detail::source_location::current());
 
-  block& current_block();
+  /// Returns the `runnable` instance that is currently running.
+  static runnable& current();
 
-#ifdef CAF_ENABLE_EXCEPTIONS
-  template <class Exception = void, class CodeBlock>
-  void check_throws(CodeBlock&& fn, const detail::source_location& location
-                                    = detail::source_location::current()) {
-    if constexpr (std::is_same_v<Exception, void>) {
-      try {
-        fn();
-      } catch (...) {
-        reporter::instance->pass(location);
-        return;
-      }
-      reporter::instance->fail("throws", location);
-    } else {
-      try {
-        fn();
-      } catch (const Exception&) {
-        reporter::instance->pass(location);
-        return;
-      } catch (...) {
-        reporter::instance->fail("throws Exception", location);
-        return;
-      }
-      reporter::instance->fail("throws Exception", location);
-    }
-  }
-#endif
+  block& current_block();
 
   template <class Expr>
   void should_fail(Expr&& expr, const caf::detail::source_location& location
                                 = caf::detail::source_location::current()) {
-    auto* rep = reporter::instance;
-    auto before = rep->test_stats();
-    expr();
-    auto after = rep->test_stats();
-    check_eq(before.passed, after.passed, location);
-    if (check_eq(before.failed + 1, after.failed, location))
-      rep->test_stats({before.passed + 1, before.failed});
+    auto& rep = reporter::instance();
+    auto lvl = rep.verbosity(CAF_LOG_LEVEL_QUIET);
+    auto before = rep.test_stats();
+    {
+      auto lvl_guard = detail::make_scope_guard([&] { rep.verbosity(lvl); });
+      expr();
+    }
+    auto after = rep.test_stats();
+    auto passed_count_ok = before.passed == after.passed;
+    auto failed_count_ok = before.failed + 1 == after.failed;
+    if (passed_count_ok && failed_count_ok) {
+      reporter::instance().pass(location);
+      rep.test_stats({before.passed + 1, before.failed});
+    } else {
+      reporter::instance().fail("nested check should fail", location);
+      rep.test_stats({before.passed, before.failed + 1});
+    }
   }
+
+#ifdef CAF_ENABLE_EXCEPTIONS
+
+  /// Checks whether `expr()` throws an exception of type `Exception`.
+  template <class Exception = void, class Expr>
+  void check_throws(Expr&& expr, const detail::source_location& location
+                                 = detail::source_location::current()) {
+    if constexpr (std::is_same_v<Exception, void>) {
+      try {
+        expr();
+      } catch (...) {
+        reporter::instance().pass(location);
+        return;
+      }
+      reporter::instance().fail("throws", location);
+    } else {
+      try {
+        expr();
+      } catch (const Exception&) {
+        reporter::instance().pass(location);
+        return;
+      } catch (...) {
+        reporter::instance().fail("throws Exception", location);
+        return;
+      }
+      reporter::instance().fail("throws Exception", location);
+    }
+  }
+
+  /// Checks whether `expr()` throws an exception of type `Exception` and
+  /// increases the failure count.
+  template <class Exception = void, class Expr>
+  void should_fail_with_exception(Expr&& expr,
+                                  const caf::detail::source_location& location
+                                  = caf::detail::source_location::current()) {
+    auto& rep = reporter::instance();
+    auto before = rep.test_stats();
+    auto lvl = rep.verbosity(CAF_LOG_LEVEL_QUIET);
+    auto caught = false;
+    if constexpr (std::is_same_v<Exception, void>) {
+      try {
+        expr();
+      } catch (...) {
+        caught = true;
+      }
+    } else {
+      try {
+        expr();
+      } catch (const Exception&) {
+        caught = true;
+      } catch (...) {
+        // TODO: print error message
+      }
+    }
+    rep.verbosity(lvl);
+    auto after = rep.test_stats();
+    auto passed_count_ok = before.passed == after.passed;
+    auto failed_count_ok = before.failed + 1 == after.failed;
+    if (caught && passed_count_ok && failed_count_ok) {
+      reporter::instance().pass(location);
+      rep.test_stats({before.passed + 1, before.failed});
+    } else {
+      if (!caught) {
+        reporter::instance().fail("nested check should throw an Exception",
+                                  location);
+      } else if (!passed_count_ok || !failed_count_ok) {
+        reporter::instance().fail("nested check should fail", location);
+      }
+      rep.test_stats({before.passed, before.failed + 1});
+    }
+  }
+
+#endif
 
 protected:
   context_ptr ctx_;

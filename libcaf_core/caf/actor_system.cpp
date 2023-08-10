@@ -541,4 +541,8 @@ void actor_system::release_private_thread(detail::private_thread* ptr) {
   private_threads_.release(ptr);
 }
 
+detail::mailbox_factory* actor_system::mailbox_factory() {
+  return cfg_.mailbox_factory();
+}
+
 } // namespace caf

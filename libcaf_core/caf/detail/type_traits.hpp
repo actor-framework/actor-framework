@@ -175,6 +175,9 @@ public:
   static constexpr bool value = std::is_same_v<bool, result_type>;
 };
 
+template <class T1, class T2>
+constexpr bool is_comparable_v = is_comparable<T1, T2>::value;
+
 /// Checks whether `T` behaves like a forward iterator.
 template <class T>
 class is_forward_iterator {

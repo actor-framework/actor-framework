@@ -398,6 +398,7 @@ public:
   infer_handle_from_class_t<C> spawn(Ts&&... xs) {
     check_invariants<C>();
     actor_config cfg;
+    cfg.mbox_factory = mailbox_factory();
     return spawn_impl<C, Os>(cfg, detail::spawn_fwd<Ts>(xs)...);
   }
 
@@ -436,6 +437,7 @@ public:
     static_assert(spawnable,
                   "cannot spawn function-based actor with given arguments");
     actor_config cfg;
+    cfg.mbox_factory = mailbox_factory();
     return spawn_functor<Os>(detail::bool_token<spawnable>{}, cfg, fun,
                              std::forward<Ts>(xs)...);
   }
@@ -500,6 +502,7 @@ public:
   infer_handle_from_fun_t<F>
   spawn_in_groups(std::initializer_list<group> gs, F fun, Ts&&... xs) {
     actor_config cfg;
+    cfg.mbox_factory = mailbox_factory();
     return spawn_fun_in_groups<Os>(cfg, gs.begin(), gs.end(), fun,
                                    std::forward<Ts>(xs)...);
   }
@@ -508,6 +511,7 @@ public:
   template <spawn_options Os = no_spawn_options, class Gs, class F, class... Ts>
   infer_handle_from_fun_t<F> spawn_in_groups(const Gs& gs, F fun, Ts&&... xs) {
     actor_config cfg;
+    cfg.mbox_factory = mailbox_factory();
     return spawn_fun_in_groups<Os>(cfg, gs.begin(), gs.end(), fun,
                                    std::forward<Ts>(xs)...);
   }
@@ -524,6 +528,7 @@ public:
   infer_handle_from_class_t<T>
   spawn_in_groups(std::initializer_list<group> gs, Ts&&... xs) {
     actor_config cfg;
+    cfg.mbox_factory = mailbox_factory();
     return spawn_class_in_groups<T, Os>(cfg, gs.begin(), gs.end(),
                                         std::forward<Ts>(xs)...);
   }
@@ -532,6 +537,7 @@ public:
   template <class T, spawn_options Os = no_spawn_options, class Gs, class... Ts>
   infer_handle_from_class_t<T> spawn_in_groups(const Gs& gs, Ts&&... xs) {
     actor_config cfg;
+    cfg.mbox_factory = mailbox_factory();
     return spawn_class_in_groups<T, Os>(cfg, gs.begin(), gs.end(),
                                         std::forward<Ts>(xs)...);
   }
@@ -696,6 +702,7 @@ public:
                   "only scheduled actors may get spawned inactively");
     CAF_SET_LOGGER_SYS(this);
     actor_config cfg{dummy_execution_unit(), nullptr};
+    cfg.mbox_factory = mailbox_factory();
     auto res = make_actor<Impl>(next_actor_id(), node(), this, cfg,
                                 std::forward<Ts>(xs)...);
     auto ptr = static_cast<Impl*>(actor_cast<abstract_actor*>(res));
@@ -789,6 +796,8 @@ private:
   void config_serv(strong_actor_ptr x) {
     config_serv_ = std::move(x);
   }
+
+  detail::mailbox_factory* mailbox_factory();
 
   // -- member variables -------------------------------------------------------
 
