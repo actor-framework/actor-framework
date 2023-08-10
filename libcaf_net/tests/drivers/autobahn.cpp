@@ -8,7 +8,6 @@
 #include "caf/actor_system_config.hpp"
 #include "caf/caf_main.hpp"
 
-#include <cstdio>
 #include <iostream>
 #include <utility>
 
@@ -30,6 +29,9 @@ struct config : caf::actor_system_config {
     opt_group{custom_options_, "global"} //
       .add<uint16_t>("port,p", "port to listen for incoming connections")
       .add<size_t>("max-connections,m", "limit for concurrent clients");
+    opt_group{custom_options_, "tls"} //
+      .add<std::string>("key-file,k", "path to the private key file")
+      .add<std::string>("cert-file,c", "path to the certificate file");
   }
 };
 
@@ -84,7 +86,6 @@ public:
 
 int caf_main(caf::actor_system& sys, const config& cfg) {
   // Read the configuration.
-  auto interval = caf::get_or(cfg, "interval", caf::timespan{1s});
   auto port = caf::get_or(cfg, "port", default_port);
   auto pem = ssl::format::pem;
   auto key_file = caf::get_as<std::string>(cfg, "tls.key-file");
@@ -96,7 +97,6 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
     return EXIT_FAILURE;
   }
   // Open up a TCP port for incoming connections and start the server.
-  using trait = ws::default_trait;
   auto server
     = ws::with(sys)
         // Optionally enable TLS.
@@ -121,10 +121,9 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
               << to_string(server.error()) << '\n';
     return EXIT_FAILURE;
   }
-  // Run until the user stops the server by pressing enter.
-  std::cout << "*** running on port " << port << '\n'
-            << "*** press [enter] to quit" << std::endl;
-  getchar();
+  while (server->valid()) {
+    std::this_thread::sleep_for(1s);
+  }
   return EXIT_SUCCESS;
 }
 
