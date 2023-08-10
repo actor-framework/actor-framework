@@ -864,7 +864,7 @@ template <class T>
 struct is_stl_tuple_type {
   template <class U>
   static auto sfinae(U*)
-    -> decltype(std::integral_constant<bool, std::tuple_size<U>::value>{});
+    -> decltype(std::integral_constant<bool, std::tuple_size<U>::value >= 0>{});
 
   template <class U>
   static auto sfinae(...) -> std::false_type;

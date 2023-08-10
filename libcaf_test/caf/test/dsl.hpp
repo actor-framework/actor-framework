@@ -15,7 +15,6 @@
 #include <tuple>
 #include <type_traits>
 
-
 CAF_PUSH_WARNINGS
 
 /// The type of `_`.

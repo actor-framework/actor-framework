@@ -30,7 +30,6 @@
 #include <string_view>
 #include <tuple>
 
-
 namespace {
 
 std::atomic<uint8_t> system_id;
