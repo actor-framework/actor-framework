@@ -106,7 +106,44 @@ ptrdiff_t framing::consume(byte_span buffer, byte_span) {
   // Wait for more data if necessary.
   size_t frame_size = hdr_bytes + hdr.payload_len;
   if (buffer.size() < frame_size) {
-    down_->configure_read(receive_policy::exactly(frame_size));
+    // when handling a text frame we want to fail early on invalid UTF-8
+    if (hdr.opcode == detail::rfc6455::text_frame
+        || opcode_ == detail::rfc6455::text_frame) {
+      down_->configure_read(
+        receive_policy::between(buffer.size() + 1, frame_size));
+      if (hdr.opcode == detail::rfc6455::text_frame) {
+        auto arrived_payload
+          = std::vector<std::byte>{buffer.begin() + hdr_bytes, buffer.end()};
+        if (hdr.mask_key != 0) {
+          detail::rfc6455::mask_data(hdr.mask_key, arrived_payload);
+        }
+        if (auto [index, incomplete]
+            = detail::rfc3629::validate(arrived_payload);
+            index != arrived_payload.size() && !incomplete) {
+          abort_and_shutdown(sec::malformed_message, "invalid UTF-8 sequence");
+          return -1;
+        }
+      } else {
+        auto unvalidated_payload = std::vector<std::byte>{
+          payload_buf_.begin() + static_cast<ptrdiff_t>(validation_offset_),
+          payload_buf_.end()};
+        unvalidated_payload.insert(unvalidated_payload.end(),
+                                   buffer.begin() + hdr_bytes, buffer.end());
+        if (hdr.mask_key != 0) {
+          detail::rfc6455::mask_data(
+            hdr.mask_key, make_span(unvalidated_payload)
+                            .subspan(payload_buf_.size() - validation_offset_));
+        }
+        if (auto [index, incomplete]
+            = detail::rfc3629::validate(unvalidated_payload);
+            index != unvalidated_payload.size() && !incomplete) {
+          abort_and_shutdown(sec::malformed_message, "invalid UTF-8 sequence");
+          return -1;
+        }
+      }
+    } else {
+      down_->configure_read(receive_policy::exactly(frame_size));
+    }
     return 0;
   }
   // Decode frame.
