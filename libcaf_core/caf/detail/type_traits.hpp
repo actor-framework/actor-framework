@@ -96,7 +96,7 @@ public:
 /// Convenience alias for `has_to_string<T>::value`.
 /// @relates has_to_string
 template <class T>
-constexpr bool has_to_string_v = has_to_string<T>::value;
+inline constexpr bool has_to_string_v = has_to_string<T>::value;
 
 template <bool X>
 using bool_token = std::integral_constant<bool, X>;
@@ -184,7 +184,7 @@ public:
 
 /// Convenience alias for `is_comparable<T1, T2>::value`.
 template <class T1, class T2>
-constexpr bool is_comparable_v = is_comparable<T1, T2>::value;
+inline constexpr bool is_comparable_v = is_comparable<T1, T2>::value;
 
 /// Checks whether `T` behaves like a forward iterator.
 template <class T>
@@ -380,7 +380,7 @@ public:
 /// Convenience alias for `is_callable<T>::value`.
 /// @relates is_callable
 template <class T>
-constexpr bool is_callable_v = is_callable<T>::value;
+inline constexpr bool is_callable_v = is_callable<T>::value;
 
 /// Checks whether `F` is callable with arguments of types `Ts...`.
 template <class F, class... Ts>
@@ -468,7 +468,7 @@ struct is_handler_for {
 
 /// Convenience alias for `is_handler_for<F, T>::value`.
 template <class F, class T>
-constexpr bool is_handler_for_v = is_handler_for<F, T>::value;
+inline constexpr bool is_handler_for_v = is_handler_for<F, T>::value;
 
 template <class T>
 struct value_type_of {
@@ -633,7 +633,7 @@ struct all_constructible<type_list<T, Ts...>, type_list<U, Us...>> {
 
 /// Convenience alias for `all_constructible<Ts, Us>::value`.
 template <class Ts, class Us>
-constexpr bool all_constructible_v = all_constructible<Ts, Us>::value;
+inline constexpr bool all_constructible_v = all_constructible<Ts, Us>::value;
 
 /// Checks whether T behaves like `std::map`.
 template <class T>
@@ -995,7 +995,7 @@ public:
 
 /// Convenience alias for `accepts_opaque_value<Inspector, T>::value`.
 template <class Inspector, class T>
-constexpr bool accepts_opaque_value_v
+inline constexpr bool accepts_opaque_value_v
   = accepts_opaque_value<Inspector, T>::value;
 
 /// Checks whether `T` is primitive, i.e., either an arithmetic type or

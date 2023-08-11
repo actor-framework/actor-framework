@@ -48,9 +48,9 @@ struct is_weak_ptr {
   static constexpr bool value = T::has_weak_ptr_semantics;
 };
 
-/// Convenience alias for `is_weak_ptr_v`.
+/// Convenience alias for `is_weak_ptr<T>::value`.
 template <class T>
-constexpr bool is_weak_ptr_v = is_weak_ptr<T>::value;
+inline constexpr bool is_weak_ptr_v = is_weak_ptr<T>::value;
 
 template <class T>
 struct is_weak_ptr<T*> : std::false_type {};
