@@ -109,7 +109,7 @@ public:
       else
         return pec::integer_overflow;
     } else {
-      return value_impl(config_value{x});
+      return value_impl(config_value{std::forward<T>(x)});
     }
   }
 

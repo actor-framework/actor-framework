@@ -31,10 +31,10 @@ config_list_consumer::config_list_consumer(config_value_consumer* parent)
 pec config_list_consumer::end_list() {
   auto f = make_overload([](none_t) { return pec::success; },
                          [this](config_consumer* ptr) {
-                           return ptr->value(config_value{result});
+                           return ptr->value(config_value{std::move(result)});
                          },
                          [this](auto* ptr) {
-                           ptr->value(config_value{result});
+                           ptr->value(config_value{std::move(result)});
                            return pec::success;
                          });
   return visit(f, parent_);
