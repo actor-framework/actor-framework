@@ -128,12 +128,12 @@ void print(Buffer& buf, bool x) {
 }
 
 template <class Buffer, class T>
-std::enable_if_t<std::is_integral<T>::value> print(Buffer& buf, T x) {
+std::enable_if_t<std::is_integral_v<T>> print(Buffer& buf, T x) {
   // An integer can at most have 20 digits (UINT64_MAX).
   char stack_buffer[24];
   char* p = stack_buffer;
   // Convert negative values into positives as necessary.
-  if constexpr (std::is_signed<T>::value) {
+  if constexpr (std::is_signed_v<T>) {
     if (x == std::numeric_limits<T>::min()) {
       using namespace std::literals;
       // The code below would fail for the smallest value, because this value
@@ -172,7 +172,7 @@ std::enable_if_t<std::is_integral<T>::value> print(Buffer& buf, T x) {
 }
 
 template <class Buffer, class T>
-std::enable_if_t<std::is_floating_point<T>::value> print(Buffer& buf, T x) {
+std::enable_if_t<std::is_floating_point_v<T>> print(Buffer& buf, T x) {
   // TODO: Check whether to_chars is available on supported compilers and
   //       re-implement using the new API as soon as possible.
   auto str = std::to_string(x);

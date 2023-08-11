@@ -28,6 +28,7 @@
 #include <random>
 #include <sstream>
 #include <string_view>
+#include <tuple>
 
 namespace {
 
@@ -181,7 +182,7 @@ node_id make_node_id(uint32_t process_id,
 std::optional<node_id> make_node_id(uint32_t process_id,
                                     std::string_view host_hash) {
   using id_type = hashed_node_id::host_id_type;
-  if (host_hash.size() != std::tuple_size<id_type>::value * 2)
+  if (host_hash.size() != std::tuple_size_v<id_type> * 2)
     return std::nullopt;
   detail::parser::ascii_to_int<16, uint8_t> xvalue;
   id_type host_id;

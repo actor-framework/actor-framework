@@ -206,7 +206,7 @@ inline message make_message() {
 template <class... Ts>
 message make_message(Ts&&... xs) {
   using namespace detail;
-  static_assert((!std::is_pointer<strip_and_convert_t<Ts>>::value && ...));
+  static_assert((!std::is_pointer_v<strip_and_convert_t<Ts>> && ...));
   static_assert((is_complete<type_id<strip_and_convert_t<Ts>>> && ...));
   static constexpr size_t data_size
     = sizeof(message_data) + (padded_size_v<strip_and_convert_t<Ts>> + ...);
@@ -230,7 +230,7 @@ message make_message_from_tuple(Tuple&& xs, std::index_sequence<Is...>) {
 template <class Tuple>
 message make_message_from_tuple(Tuple&& xs) {
   using tuple_type = std::decay_t<Tuple>;
-  std::make_index_sequence<std::tuple_size<tuple_type>::value> seq;
+  std::make_index_sequence<std::tuple_size_v<tuple_type>> seq;
   return make_message_from_tuple(std::forward<Tuple>(xs), seq);
 }
 

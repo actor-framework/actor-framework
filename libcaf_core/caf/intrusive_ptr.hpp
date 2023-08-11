@@ -87,8 +87,7 @@ public:
 
   template <class Y>
   intrusive_ptr(intrusive_ptr<Y> other) noexcept : ptr_(other.detach()) {
-    static_assert(std::is_convertible<Y*, T*>::value,
-                  "Y* is not assignable to T*");
+    static_assert(std::is_convertible_v<Y*, T*>, "Y* is not assignable to T*");
   }
 
   ~intrusive_ptr() {
@@ -262,14 +261,14 @@ operator!=(const T* lhs, const intrusive_ptr<U>& rhs) {
 
 /// @relates intrusive_ptr
 template <class T, class U>
-detail::enable_if_t<detail::is_comparable<T*, U*>::value, bool>
+detail::enable_if_t<detail::is_comparable_v<T*, U*>, bool>
 operator==(const intrusive_ptr<T>& x, const intrusive_ptr<U>& y) {
   return x.get() == y.get();
 }
 
 /// @relates intrusive_ptr
 template <class T, class U>
-detail::enable_if_t<detail::is_comparable<T*, U*>::value, bool>
+detail::enable_if_t<detail::is_comparable_v<T*, U*>, bool>
 operator!=(const intrusive_ptr<T>& x, const intrusive_ptr<U>& y) {
   return x.get() != y.get();
 }

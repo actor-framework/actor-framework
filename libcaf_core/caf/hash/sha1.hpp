@@ -100,7 +100,7 @@ public:
   }
 
   template <class Integral>
-  std::enable_if_t<std::is_integral<Integral>::value, bool>
+  std::enable_if_t<std::is_integral_v<Integral>, bool>
   value(Integral x) noexcept {
     auto begin = reinterpret_cast<const uint8_t*>(&x);
     append(begin, begin + sizeof(Integral));

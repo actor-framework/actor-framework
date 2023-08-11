@@ -75,8 +75,7 @@ public:
 
   /// Satisfies the promise by sending a non-error response message.
   template <class... Us>
-  std::enable_if_t<(std::is_constructible<Ts, Us>::value && ...)>
-  deliver(Us... xs) {
+  std::enable_if_t<(std::is_constructible_v<Ts, Us> && ...)> deliver(Us... xs) {
     promise_.deliver(Ts{std::forward<Us>(xs)}...);
   }
 

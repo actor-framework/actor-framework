@@ -446,7 +446,7 @@ public:
   /// with the arguments stored in `args`.
   /// @experimental
   template <class Handle,
-            class E = typename std::enable_if<is_handle<Handle>::value>::type>
+            class E = typename std::enable_if<is_handle_v<Handle>>::type>
   expected<Handle>
   spawn(const std::string& name, message args, execution_unit* ctx = nullptr,
         bool check_interface = true, const mpi* expected_ifs = nullptr) {
@@ -778,7 +778,7 @@ public:
 private:
   template <class T>
   void check_invariants() {
-    static_assert(!std::is_base_of<prohibit_top_level_spawn_marker, T>::value,
+    static_assert(!std::is_base_of_v<prohibit_top_level_spawn_marker, T>,
                   "This actor type cannot be spawned through an actor system. "
                   "Probably you have tried to spawn a broker.");
   }

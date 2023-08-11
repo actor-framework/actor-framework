@@ -45,9 +45,9 @@ struct is_type_list<type_list<Ts...>> {
   static constexpr bool value = true;
 };
 
-// Uncomment after having switched to C++14
-// template <class T>
-// inline constexpr bool is_type_list_v = is_type_list<T>::value;
+/// Convenience alias for `is_type_list<T>::value`.
+template <class T>
+inline constexpr bool is_type_list_v = is_type_list<T>::value;
 
 // T head(type_list)
 
@@ -101,9 +101,9 @@ struct tl_size<type_list<Ts...>> {
 template <class... Ts>
 constexpr size_t tl_size<type_list<Ts...>>::value;
 
-// Uncomment after having switched to C++14
-// template <class List>
-// inline constexpr size_t tl_size_v = tl_size<List>::value;
+/// Convenience alias for `tl_size<List>::value`.
+template <class List>
+inline constexpr size_t tl_size_v = tl_size<List>::value;
 
 // T back(type_list)
 

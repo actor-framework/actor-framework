@@ -28,7 +28,7 @@ public:
 /// on whether `State::make_behavior()` exists.
 template <class State, class Base>
 using stateful_actor_base_t
-  = std::conditional_t<has_make_behavior_member<State>::value,
+  = std::conditional_t<has_make_behavior_member_v<State>,
                        stateful_actor_base<State, Base>, Base>;
 
 } // namespace caf::detail
@@ -46,7 +46,7 @@ public:
 
   template <class... Ts>
   explicit stateful_actor(actor_config& cfg, Ts&&... xs) : super(cfg) {
-    if constexpr (std::is_constructible<State, Ts&&...>::value)
+    if constexpr (std::is_constructible_v<State, Ts&&...>)
       new (&state) State(std::forward<Ts>(xs)...);
     else
       new (&state) State(this, std::forward<Ts>(xs)...);

@@ -66,14 +66,14 @@ struct compare_visitor {
 struct equality_operator {
   static constexpr bool default_value = false;
 
-  template <class T, class U,
-            detail::enable_if_t<((std::is_floating_point<T>::value
-                                  && std::is_convertible<U, double>::value)
-                                 || (std::is_floating_point<U>::value
-                                     && std::is_convertible<T, double>::value))
-                                  && detail::is_comparable<T, U>::value,
-                                int>
-            = 0>
+  template <
+    class T, class U,
+    detail::enable_if_t<
+      ((std::is_floating_point_v<T> && std::is_convertible_v<U, double>)
+       || (std::is_floating_point_v<U> && std::is_convertible_v<T, double>) )
+        && detail::is_comparable_v<T, U>,
+      int>
+    = 0>
   bool operator()(const T& t, const U& u) const {
     auto x = static_cast<long double>(t);
     auto y = static_cast<long double>(u);
@@ -82,21 +82,20 @@ struct equality_operator {
     return dif <= max * 1e-5l;
   }
 
-  template <class T, class U,
-            detail::enable_if_t<!((std::is_floating_point<T>::value
-                                   && std::is_convertible<U, double>::value)
-                                  || (std::is_floating_point<U>::value
-                                      && std::is_convertible<T, double>::value))
-                                  && detail::is_comparable<T, U>::value,
-                                int>
-            = 0>
+  template <
+    class T, class U,
+    detail::enable_if_t<
+      !((std::is_floating_point_v<T> && std::is_convertible_v<U, double>)
+        || (std::is_floating_point_v<U> && std::is_convertible_v<T, double>) )
+        && detail::is_comparable_v<T, U>,
+      int>
+    = 0>
   bool operator()(const T& x, const U& y) const {
     return x == y;
   }
 
-  template <
-    class T, class U,
-    typename std::enable_if<!detail::is_comparable<T, U>::value, int>::type = 0>
+  template <class T, class U,
+            typename std::enable_if<!detail::is_comparable_v<T, U>>::type = 0>
   bool operator()(const T&, const U&) const {
     return default_value;
   }
@@ -106,10 +105,10 @@ struct inequality_operator {
   static constexpr bool default_value = true;
 
   template <class T, class U,
-            typename std::enable_if<(std::is_floating_point<T>::value
-                                     || std::is_floating_point<U>::value)
-                                      && detail::is_comparable<T, U>::value,
-                                    int>::type
+            typename std::enable_if<
+              (std::is_floating_point_v<T>
+               || std::is_floating_point_v<U>) &&detail::is_comparable_v<T, U>,
+              int>::type
             = 0>
   bool operator()(const T& x, const U& y) const {
     equality_operator f;
@@ -117,18 +116,17 @@ struct inequality_operator {
   }
 
   template <class T, class U,
-            typename std::enable_if<!std::is_floating_point<T>::value
-                                      && !std::is_floating_point<U>::value
-                                      && detail::is_comparable<T, U>::value,
+            typename std::enable_if<!std::is_floating_point_v<T>
+                                      && !std::is_floating_point_v<U>
+                                      && detail::is_comparable_v<T, U>,
                                     int>::type
             = 0>
   bool operator()(const T& x, const U& y) const {
     return x != y;
   }
 
-  template <
-    class T, class U,
-    typename std::enable_if<!detail::is_comparable<T, U>::value, int>::type = 0>
+  template <class T, class U,
+            typename std::enable_if<!detail::is_comparable_v<T, U>>::type = 0>
   bool operator()(const T&, const U&) const {
     return default_value;
   }
@@ -294,7 +292,7 @@ public:
     };
     using fwd =
       typename std::conditional<std::is_same_v<char, T>
-                                  || std::is_convertible<T, std::string>::value
+                                  || std::is_convertible_v<T, std::string>
                                   || std::is_same_v<caf::term, T>,
                                 simple_fwd_t, deep_to_string_t>::type;
     fwd f;

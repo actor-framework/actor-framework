@@ -12,6 +12,7 @@
 #include "caf/config.hpp"
 #include "caf/init_global_meta_objects.hpp"
 
+#include <tuple>
 #include <type_traits>
 
 CAF_PUSH_WARNINGS
@@ -164,8 +165,7 @@ public:
     return *this;
   }
 
-  template <class T,
-            class E = caf::detail::enable_if_t<!std::is_pointer<T>::value>>
+  template <class T, class E = caf::detail::enable_if_t<!std::is_pointer_v<T>>>
   caf_handle& operator=(const T& x) {
     set(x);
     return *this;

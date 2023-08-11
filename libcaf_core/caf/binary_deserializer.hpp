@@ -174,7 +174,7 @@ public:
   bool value(uint64_t& x) noexcept;
 
   template <class T>
-  std::enable_if_t<std::is_integral<T>::value, bool> value(T& x) noexcept {
+  std::enable_if_t<std::is_integral_v<T>, bool> value(T& x) noexcept {
     auto tmp = detail::squashed_int_t<T>{0};
     if (value(tmp)) {
       x = static_cast<T>(tmp);

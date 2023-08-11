@@ -88,7 +88,7 @@ public:
 
   template <class T>
   bool tuple(T& xs) {
-    return tuple(xs, std::make_index_sequence<std::tuple_size<T>::value>{});
+    return tuple(xs, std::make_index_sequence<std::tuple_size_v<T>>{});
   }
 
   template <class T, size_t N>
@@ -105,7 +105,7 @@ public:
 
   template <class T>
   [[nodiscard]] bool apply(T& x) {
-    static_assert(!std::is_const<T>::value);
+    static_assert(!std::is_const_v<T>);
     return detail::load(dref(), x);
   }
 
@@ -134,7 +134,7 @@ public:
         return false;
       }
     } else {
-      static_assert(std::is_convertible<setter_result, error>::value,
+      static_assert(std::is_convertible_v<setter_result, error>,
                     "a setter must return caf::error, bool or void");
       if (dref().apply(tmp)) {
         if (auto err = set(std::move(tmp)); !err) {

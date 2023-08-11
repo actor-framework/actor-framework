@@ -58,7 +58,7 @@ template <class... Ts>
 void append(prometheus::char_buffer&, double, Ts&&...);
 
 template <class T, class... Ts>
-std::enable_if_t<std::is_integral<T>::value>
+std::enable_if_t<std::is_integral_v<T>>
 append(prometheus::char_buffer& buf, T val, Ts&&... xs);
 
 template <class... Ts>
@@ -120,7 +120,7 @@ void append(prometheus::char_buffer& buf, double val, Ts&&... xs) {
 }
 
 template <class T, class... Ts>
-std::enable_if_t<std::is_integral<T>::value>
+std::enable_if_t<std::is_integral_v<T>>
 append(prometheus::char_buffer& buf, T val, Ts&&... xs) {
   append(buf, std::to_string(val));
   append(buf, std::forward<Ts>(xs)...);

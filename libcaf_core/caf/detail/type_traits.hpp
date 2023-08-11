@@ -34,7 +34,9 @@
                                                                                \
   public:                                                                      \
     static constexpr bool value = sfinae_type::value;                          \
-  }
+  };                                                                           \
+  template <class T>                                                           \
+  constexpr bool has_##name##_member_v = has_##name##_member<T>::value
 
 #define CAF_HAS_ALIAS_TRAIT(name)                                              \
   template <class T>                                                           \
@@ -88,8 +90,13 @@ private:
   using result = decltype(sfinae(std::declval<const T&>()));
 
 public:
-  static constexpr bool value = std::is_convertible<result, std::string>::value;
+  static constexpr bool value = std::is_convertible_v<result, std::string>;
 };
+
+/// Convenience alias for `has_to_string<T>::value`.
+/// @relates has_to_string
+template <class T>
+inline constexpr bool has_to_string_v = has_to_string<T>::value;
 
 template <bool X>
 using bool_token = std::integral_constant<bool, X>;
@@ -136,10 +143,10 @@ struct is_duration<std::chrono::duration<Period, Rep>> : std::true_type {};
 /// convertible to one of STL's string types.
 template <class T>
 struct is_primitive {
-  static constexpr bool value = std::is_convertible<T, std::string>::value
-                                || std::is_convertible<T, std::u16string>::value
-                                || std::is_convertible<T, std::u32string>::value
-                                || std::is_arithmetic<T>::value;
+  static constexpr bool value = std::is_convertible_v<T, std::string>
+                                || std::is_convertible_v<T, std::u16string>
+                                || std::is_convertible_v<T, std::u32string>
+                                || std::is_arithmetic_v<T>;
 };
 
 /// Checks whether `T1` is comparable with `T2`.
@@ -168,15 +175,16 @@ class is_comparable {
   using result_type = decltype(cmp_help_fun(
     static_cast<T1*>(nullptr), static_cast<T2*>(nullptr),
     static_cast<bool*>(nullptr),
-    std::integral_constant<bool, std::is_arithmetic<T1>::value
-                                   && std::is_arithmetic<T2>::value>{}));
+    std::integral_constant<bool, std::is_arithmetic_v<T1>
+                                   && std::is_arithmetic_v<T2>>{}));
 
 public:
   static constexpr bool value = std::is_same_v<bool, result_type>;
 };
 
+/// Convenience alias for `is_comparable<T1, T2>::value`.
 template <class T1, class T2>
-constexpr bool is_comparable_v = is_comparable<T1, T2>::value;
+inline constexpr bool is_comparable_v = is_comparable<T1, T2>::value;
 
 /// Checks whether `T` behaves like a forward iterator.
 template <class T>
@@ -319,9 +327,9 @@ struct has_apply_operator {
 // matches (IsFun || IsMemberFun)
 template <class T,
           bool IsFun
-          = std::is_function<T>::value
+          = std::is_function_v<T>
             || std::is_function<typename std::remove_pointer<T>::type>::value
-            || std::is_member_function_pointer<T>::value,
+            || std::is_member_function_pointer_v<T>,
           bool HasApplyOp = has_apply_operator<T>::value>
 struct get_callable_trait_helper {
   using type = callable_trait<T>;
@@ -369,6 +377,11 @@ public:
   static constexpr bool value = std::is_same_v<bool, result_type>;
 };
 
+/// Convenience alias for `is_callable<T>::value`.
+/// @relates is_callable
+template <class T>
+inline constexpr bool is_callable_v = is_callable<T>::value;
+
 /// Checks whether `F` is callable with arguments of types `Ts...`.
 template <class F, class... Ts>
 struct is_callable_with {
@@ -409,7 +422,7 @@ struct type_at<0, T0, Ts...> {
 };
 
 // Checks whether T has a member variable named `name`.
-template <class T, bool IsScalar = std::is_scalar<T>::value>
+template <class T, bool IsScalar = std::is_scalar_v<T>>
 class has_name {
 private:
   // a simple struct with a member called `name`
@@ -449,9 +462,13 @@ CAF_HAS_MEMBER_TRAIT(size);
 template <class F, class T>
 struct is_handler_for {
   static constexpr bool value
-    = std::is_convertible<F, std::function<void(T&)>>::value
-      || std::is_convertible<F, std::function<void(const T&)>>::value;
+    = std::is_convertible_v<F, std::function<void(T&)>>
+      || std::is_convertible_v<F, std::function<void(const T&)>>;
 };
+
+/// Convenience alias for `is_handler_for<F, T>::value`.
+template <class F, class T>
+inline constexpr bool is_handler_for_v = is_handler_for<F, T>::value;
 
 template <class T>
 struct value_type_of {
@@ -467,11 +484,10 @@ template <class T>
 using value_type_of_t = typename value_type_of<T>::type;
 
 template <class T>
-using is_callable_t = typename std::enable_if<is_callable<T>::value>::type;
+using is_callable_t = typename std::enable_if<is_callable_v<T>>::type;
 
 template <class F, class T>
-using is_handler_for_ef =
-  typename std::enable_if<is_handler_for<F, T>::value>::type;
+using is_handler_for_ef = typename std::enable_if<is_handler_for_v<F, T>>::type;
 
 template <class T>
 struct strip_reference_wrapper {
@@ -540,15 +556,14 @@ constexpr bool is_expected_v = is_expected<T>::value;
 // Checks whether `T` and `U` are integers of the same size and signedness.
 // clang-format off
 template <class T, class U,
-          bool Enable = std::is_integral<T>::value
-                        && std::is_integral<U>::value
+          bool Enable = std::is_integral_v<T>
+                        && std::is_integral_v<U>
                         && !std::is_same_v<T, bool>
                         && !std::is_same_v<U, bool>>
 // clang-format on
 struct is_equal_int_type {
   static constexpr bool value = sizeof(T) == sizeof(U)
-                                && std::is_signed<T>::value
-                                     == std::is_signed<U>::value;
+                                && std::is_signed_v<T> == std::is_signed_v<U>;
 };
 
 template <class T, typename U>
@@ -612,9 +627,13 @@ struct all_constructible<type_list<>, type_list<>> : std::true_type {};
 template <class T, class... Ts, class U, class... Us>
 struct all_constructible<type_list<T, Ts...>, type_list<U, Us...>> {
   static constexpr bool value
-    = std::is_constructible<T, U>::value
+    = std::is_constructible_v<T, U>
       && all_constructible<type_list<Ts...>, type_list<Us...>>::value;
 };
+
+/// Convenience alias for `all_constructible<Ts, Us>::value`.
+template <class Ts, class Us>
+inline constexpr bool all_constructible_v = all_constructible<Ts, Us>::value;
 
 /// Checks whether T behaves like `std::map`.
 template <class T>
@@ -808,8 +827,9 @@ template <class T, class To>
 class has_convertible_data_member {
 private:
   template <class U>
-  static auto sfinae(U* x) -> std::integral_constant<
-    bool, std::is_convertible<decltype(x->data()), To*>::value>;
+  static auto sfinae(U* x)
+    -> std::integral_constant<bool,
+                              std::is_convertible_v<decltype(x->data()), To*>>;
 
   template <class U>
   static auto sfinae(...) -> std::false_type;
@@ -917,7 +937,7 @@ struct is_trivial_inspector_value<true, T> {
 
 template <class T>
 struct is_trivial_inspector_value<false, T> {
-  static constexpr bool value = std::is_convertible<T, std::string_view>::value;
+  static constexpr bool value = std::is_convertible_v<T, std::string_view>;
 };
 
 #define CAF_ADD_TRIVIAL_LOAD_INSPECTOR_VALUE(type)                             \
@@ -973,11 +993,16 @@ public:
   static constexpr bool value = sfinae_result::value;
 };
 
+/// Convenience alias for `accepts_opaque_value<Inspector, T>::value`.
+template <class Inspector, class T>
+inline constexpr bool accepts_opaque_value_v
+  = accepts_opaque_value<Inspector, T>::value;
+
 /// Checks whether `T` is primitive, i.e., either an arithmetic type or
 /// convertible to one of STL's string types.
 template <class T, bool IsLoading>
 struct is_builtin_inspector_type {
-  static constexpr bool value = std::is_arithmetic<T>::value;
+  static constexpr bool value = std::is_arithmetic_v<T>;
 };
 
 template <bool IsLoading>

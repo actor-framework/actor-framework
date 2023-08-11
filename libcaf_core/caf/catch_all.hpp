@@ -16,7 +16,7 @@ template <class F>
 struct catch_all {
   using fun_type = std::function<skippable_result(message&)>;
 
-  static_assert(std::is_convertible<F, fun_type>::value,
+  static_assert(std::is_convertible_v<F, fun_type>,
                 "catch-all handler must have signature "
                 "skippable_result (message&)");
 

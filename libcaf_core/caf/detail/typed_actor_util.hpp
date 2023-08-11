@@ -125,9 +125,8 @@ struct is_normalized_signature {
 };
 
 template <class T>
-constexpr bool is_decayed = !std::is_reference<T>::value
-                            && !std::is_const<T>::value
-                            && !std::is_volatile<T>::value;
+inline constexpr bool is_decayed
+  = !std::is_reference_v<T> && !std::is_const_v<T> && !std::is_volatile_v<T>;
 
 template <class... Out, class... In>
 struct is_normalized_signature<result<Out...>(In...)> {

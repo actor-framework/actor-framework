@@ -90,8 +90,8 @@ public:
   bool value(bool x);
 
   template <class Integral>
-  std::enable_if_t<std::is_integral<Integral>::value, bool> value(Integral x) {
-    if constexpr (std::is_signed<Integral>::value)
+  std::enable_if_t<std::is_integral_v<Integral>, bool> value(Integral x) {
+    if constexpr (std::is_signed_v<Integral>)
       return int_value(static_cast<int64_t>(x));
     else
       return int_value(static_cast<uint64_t>(x));
@@ -151,9 +151,8 @@ public:
   }
 
   template <class T>
-  std::enable_if_t<has_to_string<T>::value
-                     && !std::is_convertible<T, std::string_view>::value,
-                   bool>
+  std::enable_if_t<
+    has_to_string_v<T> && !std::is_convertible_v<T, std::string_view>, bool>
   builtin_inspect(const T& x) {
     auto str = to_string(x);
     if constexpr (std::is_convertible<decltype(str), const char*>::value) {
@@ -220,8 +219,8 @@ public:
   static std::string render(const T& x) {
     if constexpr (std::is_same_v<std::nullptr_t, T>) {
       return "null";
-    } else if constexpr (std::is_constructible<std::string_view, T>::value) {
-      if constexpr (std::is_pointer<T>::value) {
+    } else if constexpr (std::is_constructible_v<std::string_view, T>) {
+      if constexpr (std::is_pointer_v<T>) {
         if (x == nullptr)
           return "null";
       }

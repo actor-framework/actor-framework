@@ -36,7 +36,7 @@ public:
   }
 
   void operator()(Ts... xs) {
-    if constexpr (std::is_convertible<R, Bhvr>::value) {
+    if constexpr (std::is_convertible_v<R, Bhvr>) {
       auto bhvr = f_(xs...);
       *bhvr_ = std::move(bhvr.unbox());
     } else {
@@ -59,7 +59,7 @@ public:
   }
 
   void operator()(Ts... xs) {
-    if constexpr (std::is_convertible<R, Bhvr>::value) {
+    if constexpr (std::is_convertible_v<R, Bhvr>) {
       auto bhvr = f_(ptr_, xs...);
       *bhvr_ = std::move(bhvr.unbox());
     } else {
@@ -142,10 +142,9 @@ actor_factory_result dyn_spawn_class(actor_config& cfg, message& msg) {
 
 template <class T, class... Ts>
 actor_factory make_actor_factory() {
-  static_assert(
-    detail::conjunction<std::is_lvalue_reference<Ts>::value...>::value,
-    "all Ts must be lvalue references");
-  static_assert(std::is_base_of<local_actor, T>::value,
+  static_assert(detail::conjunction<std::is_lvalue_reference_v<Ts>...>::value,
+                "all Ts must be lvalue references");
+  static_assert(std::is_base_of_v<local_actor, T>,
                 "T is not derived from local_actor");
   return &dyn_spawn_class<T, Ts...>;
 }

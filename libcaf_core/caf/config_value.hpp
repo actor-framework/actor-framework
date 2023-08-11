@@ -290,14 +290,14 @@ private:
   void set(T x) {
     if constexpr (detail::is_config_value_type_v<T>) {
       data_ = std::move(x);
-    } else if constexpr (std::is_integral<T>::value) {
+    } else if constexpr (std::is_integral_v<T>) {
       data_ = static_cast<int64_t>(x);
     } else if constexpr (std::is_convertible<T, const char*>::value) {
       data_ = std::string{x};
     } else {
       static_assert(detail::is_iterable<T>::value);
       using value_type = typename T::value_type;
-      detail::bool_token<detail::is_pair<value_type>::value> is_map_type;
+      detail::bool_token<detail::is_pair_v<value_type>> is_map_type;
       set_range(x, is_map_type);
     }
   }
@@ -365,7 +365,7 @@ expected<T> get_as(const config_value& x, inspector_access_type::builtin) {
     return to_string(x);
   } else if constexpr (std::is_same_v<T, bool>) {
     return x.to_boolean();
-  } else if constexpr (std::is_integral<T>::value) {
+  } else if constexpr (std::is_integral_v<T>) {
     if (auto result = x.to_integer()) {
       if (detail::bounds_checker<T>::check(*result))
         return static_cast<T>(*result);
@@ -374,7 +374,7 @@ expected<T> get_as(const config_value& x, inspector_access_type::builtin) {
     } else {
       return std::move(result.error());
     }
-  } else if constexpr (std::is_floating_point<T>::value) {
+  } else if constexpr (std::is_floating_point_v<T>) {
     if (auto result = x.to_real()) {
       if constexpr (sizeof(T) >= sizeof(config_value::real)) {
         return *result;
@@ -419,10 +419,9 @@ get_as_tuple(const config_value::list& x, std::index_sequence<Is...>) {
 
 template <class T>
 expected<T> get_as(const config_value& x, inspector_access_type::tuple) {
-  static_assert(!std::is_array<T>::value,
-                "cannot return an array from a function");
+  static_assert(!std::is_array_v<T>, "cannot return an array from a function");
   if (auto wrapped_values = x.to_list()) {
-    static constexpr size_t n = std::tuple_size<T>::value;
+    static constexpr size_t n = std::tuple_size_v<T>;
     if (wrapped_values->size() == n)
       return get_as_tuple<T>(*wrapped_values, std::make_index_sequence<n>{});
     else

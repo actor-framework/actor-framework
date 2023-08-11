@@ -47,7 +47,7 @@ class init_fun_factory_helper final : public init_fun_factory_helper_base {
 public:
   using args_pointer = std::shared_ptr<Tuple>;
 
-  static constexpr bool args_empty = std::tuple_size<Tuple>::value == 0;
+  static constexpr bool args_empty = std::tuple_size_v<Tuple> == 0;
 
   init_fun_factory_helper(F fun, args_pointer args)
     : fun_(std::move(fun)), args_(std::move(args)) {
@@ -118,14 +118,14 @@ public:
 
   template <class... Ts>
   ptr_type make(F f, Ts&&... xs) {
-    static_assert(std::is_base_of<local_actor, Base>::value,
+    static_assert(std::is_base_of_v<local_actor, Base>,
                   "Given Base does not extend local_actor");
     using trait = typename detail::get_callable_trait<F>::type;
     using arg_types = typename trait::arg_types;
     using res_type = typename trait::result_type;
     using first_arg = typename detail::tl_head<arg_types>::type;
-    constexpr bool selfptr = std::is_pointer<first_arg>::value;
-    constexpr bool rets = std::is_convertible<res_type, behavior>::value;
+    constexpr bool selfptr = std::is_pointer_v<first_arg>;
+    constexpr bool rets = std::is_convertible_v<res_type, behavior>;
     using tuple_type = decltype(std::make_tuple(detail::spawn_fwd<Ts>(xs)...));
     using helper = init_fun_factory_helper<Base, F, tuple_type, rets, selfptr>;
     return ptr_type{new helper{std::move(f), sizeof...(Ts) > 0

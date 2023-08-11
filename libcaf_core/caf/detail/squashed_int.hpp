@@ -42,7 +42,7 @@ struct int_types_by_size<8> {
 template <class T>
 struct squashed_int {
   using tpair = int_types_by_size<sizeof(T)>;
-  using type = std::conditional_t<std::is_signed<T>::value,    //
+  using type = std::conditional_t<std::is_signed_v<T>,         //
                                   typename tpair::signed_type, //
                                   typename tpair::unsigned_type>;
 };
@@ -50,7 +50,7 @@ struct squashed_int {
 template <class T>
 using squashed_int_t = typename squashed_int<T>::type;
 
-template <class T, bool = std::is_integral<T>::value>
+template <class T, bool = std::is_integral_v<T>>
 struct squash_if_int {
   using type = T;
 };
