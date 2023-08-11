@@ -113,7 +113,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
           // Ignore all header fields and accept the connection.
           acc.accept();
         })
-        // When started, run our worker actor to handle incoming connections.
+        // Create instances of our app to handle incoming connections.
         .start([] { return web_socket_app::make(); });
   // Report any error to the user.
   if (!server) {
@@ -121,6 +121,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
               << to_string(server.error()) << '\n';
     return EXIT_FAILURE;
   }
+  // Wait until the server shuts down.
   while (server->valid()) {
     std::this_thread::sleep_for(1s);
   }

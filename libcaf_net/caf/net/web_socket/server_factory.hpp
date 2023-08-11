@@ -144,7 +144,7 @@ private:
   size_t max_consecutive_reads_;
 };
 
-/// Specializes @ref connection_factory for custom upper layer implementation.
+/// Specializes @ref connection_factory for custom upper layer implementations.
 template <class Transport, class MakeApp>
 class ws_simple_conn_factory
   : public connection_factory<typename Transport::connection_handle> {
@@ -164,8 +164,7 @@ public:
     auto transport = Transport::make(std::move(conn), std::move(ws));
     transport->max_consecutive_reads(max_consecutive_reads_);
     transport->active_policy().accept();
-    auto mgr = net::socket_manager::make(mpx, std::move(transport));
-    return mgr;
+    return net::socket_manager::make(mpx, std::move(transport));
   }
 
 private:
