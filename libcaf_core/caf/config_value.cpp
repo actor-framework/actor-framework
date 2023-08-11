@@ -167,12 +167,12 @@ type_id_t config_value::type_id() const noexcept {
 error_code<sec> config_value::default_construct(type_id_t id) {
   switch (id) {
     case type_id_v<bool>:
-      set(false);
+      data_ = false;
       return sec::none;
     case type_id_v<double>:
     case type_id_v<float>:
     case type_id_v<long double>:
-      set(0.0);
+      data_ = 0.0;
       return sec::none;
     case type_id_v<int16_t>:
     case type_id_v<int32_t>:
@@ -182,16 +182,16 @@ error_code<sec> config_value::default_construct(type_id_t id) {
     case type_id_v<uint32_t>:
     case type_id_v<uint64_t>:
     case type_id_v<uint8_t>:
-      set(0);
+      data_ = int64_t{0};
       return sec::none;
     case type_id_v<std::string>:
-      set(std::string{});
+      data_ = std::string{};
       return sec::none;
     case type_id_v<timespan>:
-      set(timespan{});
+      data_ = timespan{};
       return sec::none;
     case type_id_v<uri>:
-      set(uri{});
+      data_ = uri{};
       return sec::none;
     default:
       if (auto meta = detail::global_meta_object_or_null(id)) {

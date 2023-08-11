@@ -229,14 +229,14 @@ public:
     /// Adds a predicate for the sender of the next message that matches only if
     /// the sender is `src`.
     evaluator&& from(const strong_actor_ptr& src) && {
-      from_ = value_predicate<strong_actor_ptr>{std::move(src)};
+      from_ = value_predicate<strong_actor_ptr>{src};
       return std::move(*this);
     }
 
     /// Adds a predicate for the sender of the next message that matches only if
     /// the sender is `src`.
     evaluator&& from(const actor& src) && {
-      from_ = value_predicate<strong_actor_ptr>{std::move(src)};
+      from_ = value_predicate<strong_actor_ptr>{src};
       return std::move(*this);
     }
 
@@ -244,7 +244,7 @@ public:
     /// the sender is `src`.
     template <class... Us>
     evaluator&& from(const typed_actor<Us...>& src) && {
-      from_ = value_predicate<strong_actor_ptr>{std::move(src)};
+      from_ = value_predicate<strong_actor_ptr>{src};
       return std::move(*this);
     }
 

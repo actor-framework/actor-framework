@@ -140,7 +140,7 @@ public:
 
   template <class T>
   void value(T&& x) {
-    result = config_value{std::forward<T>(x)};
+    result = std::forward<T>(x);
   }
 
   config_list_consumer begin_list();

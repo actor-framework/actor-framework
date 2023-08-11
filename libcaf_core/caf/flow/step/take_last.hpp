@@ -28,7 +28,7 @@ public:
   take_last& operator=(const take_last&) = default;
 
   template <class Next, class... Steps>
-  bool on_next(const input_type& item, Next& next, Steps&... steps) {
+  bool on_next(const input_type& item, Next&, Steps&...) {
     elements_.push_back(item);
     return true;
   }

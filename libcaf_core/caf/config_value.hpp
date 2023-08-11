@@ -99,8 +99,8 @@ public:
 
   template <class T, class E = detail::enable_if_t<
                        !std::is_same_v<detail::decay_t<T>, config_value>>>
-  explicit config_value(T&& x) {
-    set(std::forward<T>(x));
+  explicit config_value(T&& x) : data_(lift(std::forward<T>(x))) {
+    // nop
   }
 
   config_value& operator=(config_value&& other) = default;
@@ -110,7 +110,7 @@ public:
   template <class T, class E = detail::enable_if_t<
                        !std::is_same_v<detail::decay_t<T>, config_value>>>
   config_value& operator=(T&& x) {
-    set(std::forward<T>(x));
+    data_ = lift(std::forward<T>(x));
     return *this;
   }
 
@@ -271,47 +271,33 @@ private:
   // -- auto conversion of related types ---------------------------------------
 
   template <class T>
-  void set_range(T& xs, std::true_type) {
-    auto& dict = as_dictionary();
-    dict.clear();
-    for (auto& [key, val] : xs)
-      dict.emplace(key, std::move(val));
-  }
-
-  template <class T>
-  void set_range(T& xs, std::false_type) {
-    auto& ls = as_list();
-    ls.clear();
-    ls.insert(ls.end(), std::make_move_iterator(xs.begin()),
-              std::make_move_iterator(xs.end()));
-  }
-
-  template <class T>
-  void set(T x) {
+  auto lift(T x) {
     if constexpr (detail::is_config_value_type_v<T>) {
-      data_ = std::move(x);
+      return x;
     } else if constexpr (std::is_integral<T>::value) {
-      data_ = static_cast<int64_t>(x);
-    } else if constexpr (std::is_convertible<T, const char*>::value) {
-      data_ = std::string{x};
+      return static_cast<int64_t>(x);
+    } else if constexpr (std::is_same<T, float>::value) {
+      return static_cast<double>(x);
+    } else if constexpr (std::is_convertible_v<T, const char*>) {
+      return std::string{x};
+    } else if constexpr (std::is_same_v<T, std::string_view>) {
+      return std::string{x};
     } else {
-      static_assert(detail::is_iterable<T>::value);
+      static_assert(detail::is_iterable_v<T>);
       using value_type = typename T::value_type;
-      detail::bool_token<detail::is_pair<value_type>::value> is_map_type;
-      set_range(x, is_map_type);
+      if constexpr (detail::is_pair<value_type>::value) {
+        dictionary result;
+        for (auto& [key, val] : x)
+          result.emplace(std::move(key), std::move(val));
+        return result;
+      } else {
+        list result;
+        result.reserve(x.size());
+        for (auto& val : x)
+          result.emplace_back(std::move(val));
+        return result;
+      }
     }
-  }
-
-  void set(float x) {
-    data_ = static_cast<double>(x);
-  }
-
-  void set(const char* x) {
-    data_ = std::string{x};
-  }
-
-  void set(std::string_view x) {
-    data_ = std::string{x.begin(), x.end()};
   }
 
   // -- member variables -------------------------------------------------------
