@@ -61,11 +61,11 @@ constexpr auto inspect_access_type() {
   else if constexpr (detail::is_builtin_inspector_type<
                        T, Inspector::is_loading>::value)
     return inspector_access_type::builtin{};
-  else if constexpr (has_builtin_inspect<Inspector, T>::value)
+  else if constexpr (has_builtin_inspect_v<Inspector, T>)
     return inspector_access_type::builtin_inspect{};
   else if constexpr (detail::is_complete<inspector_access<T>>)
     return inspector_access_type::specialization{};
-  else if constexpr (has_inspect_overload<Inspector, T>::value)
+  else if constexpr (has_inspect_overload_v<Inspector, T>)
     return inspector_access_type::inspect{};
   else if constexpr (std::is_empty<T>::value)
     return inspector_access_type::empty{};

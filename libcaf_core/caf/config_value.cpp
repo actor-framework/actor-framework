@@ -34,9 +34,9 @@ template <class To, class From>
 auto no_conversion() {
   return [](const From&) {
     std::string msg = "cannot convert ";
-    msg += type_names[detail::tl_index_of<config_value::types, From>::value];
+    msg += type_names[detail::tl_index_of_v<config_value::types, From>];
     msg += " to ";
-    msg += type_names[detail::tl_index_of<config_value::types, To>::value];
+    msg += type_names[detail::tl_index_of_v<config_value::types, To>];
     auto err = make_error(sec::conversion_failed, std::move(msg));
     return expected<To>{std::move(err)};
   };

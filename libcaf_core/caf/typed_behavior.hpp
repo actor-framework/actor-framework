@@ -103,12 +103,16 @@ struct valid_input {
                                      adjusted_slist>::template inner>::value;
 };
 
+/// Convenience alias for `valid_input<SList, IList>::value`.
+template <class SList, class IList>
+inline constexpr bool valid_input_v = valid_input<SList, IList>::value;
+
 // this function is called from typed_behavior<...>::set and its whole
 // purpose is to give users a nicer error message on a type mismatch
 // (this function only has the type information needed to understand the error)
 template <class SignatureList, class InputList>
 void static_check_typed_behavior_input() {
-  constexpr bool is_valid = valid_input<SignatureList, InputList>::value;
+  constexpr bool is_valid = valid_input_v<SignatureList, InputList>;
   // note: it might be worth considering to allow a wildcard in the
   //     InputList if its return type is identical to all "missing"
   //     input types ... however, it might lead to unexpected results

@@ -261,7 +261,7 @@ public:
   using mpi = std::set<std::string>;
 
   template <class T,
-            class E = typename std::enable_if<!is_typed_actor<T>::value>::type>
+            class E = typename std::enable_if<!is_typed_actor_v<T>>::type>
   mpi message_types(detail::type_list<T>) const {
     return mpi{};
   }
@@ -274,8 +274,7 @@ public:
   }
 
   template <class T,
-            class E
-            = typename std::enable_if<!detail::is_type_list<T>::value>::type>
+            class E = typename std::enable_if<!detail::is_type_list_v<T>>::type>
   mpi message_types(const T&) const {
     detail::type_list<T> token;
     return message_types(token);

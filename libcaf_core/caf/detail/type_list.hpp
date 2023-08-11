@@ -356,9 +356,9 @@ struct tl_exists<empty_type_list, Pred> {
   static constexpr bool value = false;
 };
 
-// Uncomment after having switched to C++14
-// template <class List, template <class> class Pred>
-// inline constexpr bool tl_exists_v = tl_exists<List, Pred>::value;
+/// Convenience alias for `tl_exists<List, Pred>::value`.
+template <class List, template <class> class Pred>
+inline constexpr bool tl_exists_v = tl_exists<List, Pred>::value;
 
 // size_t count(predicate)
 
@@ -925,9 +925,9 @@ template <class T, class... Ts, class X>
 struct tl_contains<type_list<T, Ts...>, X> : tl_contains<type_list<Ts...>, X> {
 };
 
-// Uncomment after having switched to C++14
-// template <class List, class X>
-// inline constexpr bool tl_contains_v = tl_contains<List, X>::value;
+/// Convenience alias for `tl_contains<List, X>::value`.
+template <class List, class X>
+inline constexpr bool tl_contains_v = tl_contains<List, X>::value;
 
 // subset_of(list, list)
 
@@ -944,17 +944,16 @@ template <class T, class... Ts, class List>
 struct tl_subset_of<type_list<T, Ts...>, List>
   : tl_subset_of<type_list<Ts...>, List, tl_contains<List, T>::value> {};
 
-// Uncomment after having switched to C++14
-// template <class ListA, class ListB, bool Fwd = true>
-// inline constexpr bool tl_subset_of_v = tl_subset_of<ListA, ListB,
-// Fwd>::value;
+/// Convenience alias for `tl_contains<List, X>::value`.
+template <class ListA, class ListB, bool Fwd = true>
+inline constexpr bool tl_subset_of_v = tl_subset_of<ListA, ListB, Fwd>::value;
 
 /// Tests whether ListA contains the same elements as ListB
 /// and vice versa. This comparison ignores element positions.
 template <class ListA, class ListB>
 struct tl_equal {
-  static constexpr bool value = tl_subset_of<ListA, ListB>::value
-                                && tl_subset_of<ListB, ListA>::value;
+  static constexpr bool value = tl_subset_of_v<ListA, ListB>
+                                && tl_subset_of_v<ListB, ListA>;
 };
 
 // Uncomment after having switched to C++14

@@ -14,6 +14,10 @@ namespace caf::mixin {
 template <class T>
 struct is_blocking_requester : std::false_type {};
 
+/// Convenience alias for `is_blocking_requester<T>::value`.
+template <class T>
+inline constexpr bool is_blocking_requester_v = is_blocking_requester<T>::value;
+
 } // namespace caf::mixin
 
 namespace caf {
@@ -68,7 +72,7 @@ struct default_actor_traits<T, true> {
 
   /// Denotes whether `T` is a blocking actor type.
   static constexpr bool is_blocking = std::is_base_of_v<blocking_actor_base, T>
-                                      || mixin::is_blocking_requester<T>::value;
+                                      || mixin::is_blocking_requester_v<T>;
 
   /// Denotes whether `T` is a non-blocking actor type.
   static constexpr bool is_non_blocking
