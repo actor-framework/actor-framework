@@ -319,7 +319,7 @@ endfunction()
 #     ...
 # )
 function(caf_add_component name)
-  set(varargs DEPENDENCIES HEADERS SOURCES ENUM_TYPES LEGACY_TEST_SOURCES 
+  set(varargs DEPENDENCIES HEADERS SOURCES ENUM_TYPES LEGACY_TEST_SOURCES
               LEGACY_TEST_SUITES)
   cmake_parse_arguments(CAF_ADD_COMPONENT "" "" "${varargs}" ${ARGN})
   if(NOT CAF_ADD_COMPONENT_HEADERS)
@@ -405,6 +405,29 @@ function(caf_add_component name)
     endif()
   endforeach()
   caf_export_and_install_lib(${name})
+endfunction()
+
+# -- convenience function for adding executable targets of tests ---------------
+
+# Usage:
+# caf_add_test_executable(
+#   foo
+#   DEPENDENCIES
+#     ...
+#   SOURCES
+#     ...
+# )
+function(caf_add_test_executable name)
+  if(NOT CAF_ENABLE_TESTING)
+    return()
+  endif()
+  set(varargs DEPENDENCIES SOURCES)
+  cmake_parse_arguments(args "" "" "${varargs}" ${ARGN})
+  if(NOT args_SOURCES)
+    message(FATAL_ERROR "Cannot add a CAF test executable without sources.")
+  endif()
+  add_executable(${name} ${args_SOURCES})
+  target_link_libraries(${name} PRIVATE CAF::internal ${args_DEPENDENCIES})
 endfunction()
 
 # -- build all components the user asked for -----------------------------------
