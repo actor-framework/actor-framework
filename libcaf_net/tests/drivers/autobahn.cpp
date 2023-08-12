@@ -61,7 +61,7 @@ public:
     return true;
   }
 
-  void abort(const caf::error& reason) override {
+  void abort([[maybe_unused]] const caf::error& reason) override {
     CAF_LOG_ERROR(reason);
   }
 
