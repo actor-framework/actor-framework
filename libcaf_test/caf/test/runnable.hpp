@@ -21,6 +21,20 @@
 
 namespace caf::test {
 
+#ifdef CAF_ENABLE_EXCEPTIONS
+
+class requirement_failed : public std::exception {
+public:
+  requirement_failed(std::string msg);
+
+  const char* what() const noexcept override;
+
+private:
+  std::string what_;
+};
+
+#endif // CAF_ENABLE_EXCEPTIONS
+
 /// A runnable definition of a test case or scenario.
 class CAF_TEST_EXPORT runnable {
 public:
@@ -53,7 +67,7 @@ public:
     } else {
       reporter::instance().fail(fwl.value, fwl.location);
     }
-    CAF_RAISE_ERROR(std::logic_error, "requirement failed: abort test");
+    CAF_RAISE_ERROR(requirement_failed, "requirement failed: abort test");
   }
 
   /// Generates a message with the INFO severity level.
