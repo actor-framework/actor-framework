@@ -64,16 +64,14 @@ public:
     // nop
   }
 
-  template <class C,
-            class = std::enable_if_t<
-              detail::has_convertible_data_member<C, value_type>::value>>
+  template <class C, class = std::enable_if_t<
+                       detail::has_convertible_data_member_v<C, value_type>>>
   span(C& xs) noexcept : begin_(xs.data()), size_(xs.size()) {
     // nop
   }
 
-  template <class C,
-            class = std::enable_if_t<
-              detail::has_convertible_data_member<C, value_type>::value>>
+  template <class C, class = std::enable_if_t<
+                       detail::has_convertible_data_member_v<C, value_type>>>
   span(const C& xs) noexcept : begin_(xs.data()), size_(xs.size()) {
     // nop
   }

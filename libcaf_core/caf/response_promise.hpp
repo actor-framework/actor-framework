@@ -100,9 +100,9 @@ public:
   template <class... Ts>
   void deliver(Ts... xs) {
     using arg_types = detail::type_list<Ts...>;
-    static_assert(!detail::tl_exists<arg_types, detail::is_result>::value,
+    static_assert(!detail::tl_exists_v<arg_types, detail::is_result>,
                   "delivering a result<T> is not supported");
-    static_assert(!detail::tl_exists<arg_types, detail::is_expected>::value,
+    static_assert(!detail::tl_exists_v<arg_types, detail::is_expected>,
                   "mixing expected<T> with regular values is not supported");
     if (pending()) {
       state_->deliver_impl(make_message(std::move(xs)...));

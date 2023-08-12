@@ -841,6 +841,11 @@ public:
   static constexpr bool value = sfinae_type::value;
 };
 
+/// Convenience alias for `has_convertible_data_member<T, To>::value`.
+template <class T, class To>
+inline constexpr bool has_convertible_data_member_v
+  = has_convertible_data_member<T, To>::value;
+
 /// Evaluates to `true` for all types that specialize `std::tuple_size`, i.e.,
 /// `std::tuple`, `std::pair`, and `std::array`.
 template <class T>
@@ -891,6 +896,11 @@ public:
   static constexpr bool value = result_type::value;
 };
 
+/// Convenience alias for `has_inspect_overload<Inspector, T>::value`.
+template <class Inspector, class T>
+inline constexpr bool has_inspect_overload_v
+  = has_inspect_overload<Inspector, T>::value;
+
 /// Checks whether the inspector has a `builtin_inspect` overload for `T`.
 template <class Inspector, class T>
 class has_builtin_inspect {
@@ -908,6 +918,11 @@ private:
 public:
   static constexpr bool value = sfinae_result::value;
 };
+
+/// Convenience alias for `has_builtin_inspect<Inspector, T>::value`.
+template <class Inspector, class T>
+inline constexpr bool has_builtin_inspect_v
+  = has_builtin_inspect<Inspector, T>::value;
 
 /// Checks whether inspectors are required to provide a `value` overload for T.
 template <bool IsLoading, class T>

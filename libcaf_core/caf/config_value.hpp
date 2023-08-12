@@ -59,7 +59,7 @@ CAF_ADD_CONFIG_VALUE_TYPE(dictionary<config_value>);
 #undef CAF_ADD_CONFIG_VALUE_TYPE
 
 template <class T>
-constexpr bool is_config_value_type_v = is_config_value_type<T>::value;
+inline constexpr bool is_config_value_type_v = is_config_value_type<T>::value;
 
 } // namespace caf::detail
 
@@ -252,7 +252,7 @@ public:
   template <class T>
   static constexpr std::string_view mapped_type_name() {
     if constexpr (detail::is_complete<caf::type_name<T>>) {
-      return caf::type_name<T>::value;
+      return caf::type_name_v<T>;
     } else if constexpr (detail::is_list_like_v<T>) {
       return "list";
     } else {

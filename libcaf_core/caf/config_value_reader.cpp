@@ -31,7 +31,7 @@ PRETTY_NAME(caf::config_value_reader::sequence, "sequence");
 PRETTY_NAME(caf::config_value_reader::associative_array, "associative array");
 
 template <class T>
-constexpr auto pretty_name_v = pretty_name<T>::value;
+inline constexpr auto pretty_name_v = pretty_name<T>::value;
 
 auto get_pretty_name(const caf::config_value_reader::value_type& x) {
   const char* pretty_names[] = {

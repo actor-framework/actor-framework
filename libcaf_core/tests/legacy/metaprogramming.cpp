@@ -54,10 +54,10 @@ CAF_TEST(metaprogramming) {
   /* test tl_subset_of */ {
     using list_a = type_list<int, float, double>;
     using list_b = type_list<float, int, double, std::string>;
-    CHECK((tl_subset_of<list_a, list_b>::value));
-    CHECK(!(tl_subset_of<list_b, list_a>::value));
-    CHECK((tl_subset_of<list_a, list_a>::value));
-    CHECK((tl_subset_of<list_b, list_b>::value));
+    CHECK((tl_subset_of_v<list_a, list_b>) );
+    CHECK(!(tl_subset_of_v<list_b, list_a>) );
+    CHECK((tl_subset_of_v<list_a, list_a>) );
+    CHECK((tl_subset_of_v<list_b, list_b>) );
   }
 }
 
