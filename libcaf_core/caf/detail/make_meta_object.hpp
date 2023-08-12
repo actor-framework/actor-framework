@@ -56,7 +56,7 @@ bool load(deserializer& source, void* ptr) {
 }
 
 template <class T>
-void stringify(std::string& buf, const void* ptr) {
+void stringify(std::string& buf, [[maybe_unused]] const void* ptr) {
   if constexpr (is_allowed_unsafe_message_type_v<T>) {
     auto tn = type_name_v<T>;
     buf.insert(buf.end(), tn.begin(), tn.end());

@@ -9,7 +9,6 @@ using caf::test::block_type;
 
 TEST("tests can contain different types of checks") {
   auto& rep = caf::test::reporter::instance();
-  auto stats = rep.test_stats();
   SECTION("check_ne checks for inequality") {
     check_ne(0, 1);
     should_fail([this]() { check_ne(0, 0); });

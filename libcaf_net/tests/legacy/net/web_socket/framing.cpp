@@ -420,7 +420,7 @@ struct rejecting_fixture {
 
 } // namespace
 
-BEGIN_FIXTURE_SCOPE(rejecting_fixture);
+BEGIN_FIXTURE_SCOPE(rejecting_fixture)
 
 SCENARIO("apps can return errors to shut down the framing layer") {
   GIVEN("an app that returns -1 for any frame it receives") {
@@ -612,7 +612,7 @@ SCENARIO("the application shuts down on invalid frame fragments") {
   }
 }
 
-END_FIXTURE_SCOPE();
+END_FIXTURE_SCOPE()
 
 TEST_CASE("empty closing payload is valid") {
   auto error

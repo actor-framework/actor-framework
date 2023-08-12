@@ -12,7 +12,7 @@ using namespace caf;
 
 #define ASSERT_COMPILES(expr, msg)                                             \
   static_assert(                                                               \
-    std::is_void_v<decltype(std::declval<scheduled_actor*>()->expr)>, msg);
+    std::is_void_v<decltype(std::declval<scheduled_actor*>()->expr)>, msg)
 
 namespace {
 

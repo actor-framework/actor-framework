@@ -41,7 +41,6 @@ time_t tm_to_time_t(tm& time_buf) noexcept {
 } // namespace
 
 #else
-#  define _GNU_SOURCE
 #  include <ctime>
 #  include <ratio>
 

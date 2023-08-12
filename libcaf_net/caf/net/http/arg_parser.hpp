@@ -29,7 +29,7 @@ struct builtin_arg_parser {
     if (auto err = detail::parse(str, tmp); !err)
       return tmp;
     else
-      return {};
+      return std::nullopt;
   }
 };
 

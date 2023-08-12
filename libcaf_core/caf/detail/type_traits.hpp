@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/config.hpp"
 #include "caf/detail/is_complete.hpp"
 #include "caf/detail/is_one_of.hpp"
 #include "caf/detail/type_list.hpp"
@@ -840,24 +841,6 @@ public:
   static constexpr bool value = sfinae_type::value;
 };
 
-template <class T, class Arg>
-struct can_apply {
-  template <class U>
-  static auto sfinae(U* x)
-    -> decltype(CAF_IGNORE_UNUSED(x->apply(std::declval<Arg>())),
-                std::true_type{});
-
-  template <class U>
-  static auto sfinae(...) -> std::false_type;
-
-  using type = decltype(sfinae<T>(nullptr));
-
-  static constexpr bool value = type::value;
-};
-
-template <class T, class Arg>
-constexpr bool can_apply_v = can_apply<T, Arg>::value;
-
 /// Evaluates to `true` for all types that specialize `std::tuple_size`, i.e.,
 /// `std::tuple`, `std::pair`, and `std::array`.
 template <class T>
@@ -1077,8 +1060,17 @@ constexpr bool is_64bit_integer_v = std::is_same_v<T, int64_t>
 /// Checks whether `T` has a static member function called `init_host_system`.
 template <class T>
 struct has_init_host_system {
+// GNU g++ 8.5.0 (almalinux-8) has a known bug where [[nodiscard] values are
+// reported as warnings, even in unevaluated context.
+// https://gcc.gnu.org/bugzilla/show_bug.cgi?id=89070
+#if !defined(__clang__) && defined(__GNUC__)
+  CAF_PUSH_UNUSED_RESULT_WARNING
+#endif
   template <class U>
   static auto sfinae(U*) -> decltype(U::init_host_system(), std::true_type());
+#if !defined(__clang__) && defined(__GNUC__)
+  CAF_POP_WARNINGS
+#endif
 
   template <class U>
   static auto sfinae(...) -> std::false_type;

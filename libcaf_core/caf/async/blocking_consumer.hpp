@@ -32,7 +32,8 @@ public:
     }
 
     template <class ErrorPolicy, class TimePoint>
-    read_result pull(ErrorPolicy policy, T& item, TimePoint timeout) {
+    read_result
+    pull(ErrorPolicy policy, T& item, [[maybe_unused]] TimePoint timeout) {
       if (!buf_) {
         return abort_reason_ ? read_result::abort : read_result::stop;
       }

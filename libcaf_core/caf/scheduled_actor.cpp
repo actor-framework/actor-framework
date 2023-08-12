@@ -526,7 +526,7 @@ scheduled_actor::categorize(mailbox_element& x) {
     auto& what = content.get_as<std::string>(2);
     if (what == "info") {
       CAF_LOG_DEBUG("reply to 'info' message");
-      rp.deliver(ok_atom_v, std::move(what), strong_actor_ptr{ctrl()}, name());
+      rp.deliver(ok_atom_v, what, strong_actor_ptr{ctrl()}, name());
     } else {
       rp.deliver(make_error(sec::unsupported_sys_key));
     }
@@ -834,8 +834,8 @@ auto scheduled_actor::reactivate(mailbox_element& x) -> activation_result {
     handle_exception(std::current_exception());
   }
   finalize();
-  return activation_result::terminated;
 #endif // CAF_ENABLE_EXCEPTIONS
+  return activation_result::terminated;
 }
 
 // -- behavior management ----------------------------------------------------
