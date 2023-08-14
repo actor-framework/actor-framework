@@ -167,39 +167,41 @@ pipeline {
                 getSources(config)
             }
         }
-        stage('Build') {
-            steps {
-                buildParallel(config)
+        parallel {
+            stage('Build') {
+                steps {
+                    buildParallel(config)
+                }
             }
-        }
-        stage('Autobahn Testsuite') {
-            steps {
-                    script {
-                    def baseDir = pwd()
-                    def sourceDir = "$baseDir/sources"
-                    def buildDir = "$baseDir/build"
-                    def installDir = "$baseDir/autobahn"
-                    def initFile = "$baseDir/init.cmake"
-                    def init = new StringBuilder()
-                    writeFile([
-                        file: 'init.cmake',
-                        text: """
-                            set(CAF_ENABLE_EXAMPLES OFF CACHE BOOL "")
-                            set(CAF_ENABLE_RUNTIME_CHECKS ON CACHE BOOL "")
-                            set(CAF_ENABLE_SHARED_LIBS OFF CACHE BOOL "")
-                            set(CAF_ENABLE_IO_MODULE OFF CACHE BOOL "")
-                            set(CAF_ENABLE_IO_TOOLS OFF CACHE BOOL "")
-                            set(CAF_BUILD_INFO_FILE_PATH "$baseDir/build-autobahn.info" CACHE FILEPATH "")
-                            set(CMAKE_INSTALL_PREFIX "$installDir" CACHE PATH "")
-                            set(CMAKE_BUILD_TYPE "release" CACHE STRING "")
-                        """
-                    ])
-                    def image = docker.build(imageName, "sources/.ci/autobahn-testsuite")
-                    image.inside("--cap-add SYS_PTRACE") {
-                        sh "./sources/.ci/run.sh build '$initFile' '$sourceDir' '$buildDir'"
-                        warnError('Unit Tests failed!') {
-                            sh "./sources/.ci/autobahn-testsuite/run.sh"
-                            writeFile file: "build-${index}.success", text: "success\n"
+            stage('Autobahn Testsuite') {
+                steps {
+                        script {
+                        def baseDir = pwd()
+                        def sourceDir = "$baseDir/sources"
+                        def buildDir = "$baseDir/build"
+                        def installDir = "$baseDir/autobahn"
+                        def initFile = "$baseDir/init.cmake"
+                        def init = new StringBuilder()
+                        writeFile([
+                            file: 'init.cmake',
+                            text: """
+                                set(CAF_ENABLE_EXAMPLES OFF CACHE BOOL "")
+                                set(CAF_ENABLE_RUNTIME_CHECKS ON CACHE BOOL "")
+                                set(CAF_ENABLE_SHARED_LIBS OFF CACHE BOOL "")
+                                set(CAF_ENABLE_IO_MODULE OFF CACHE BOOL "")
+                                set(CAF_ENABLE_IO_TOOLS OFF CACHE BOOL "")
+                                set(CAF_BUILD_INFO_FILE_PATH "$baseDir/build-autobahn.info" CACHE FILEPATH "")
+                                set(CMAKE_INSTALL_PREFIX "$installDir" CACHE PATH "")
+                                set(CMAKE_BUILD_TYPE "release" CACHE STRING "")
+                            """
+                        ])
+                        def image = docker.build(imageName, "sources/.ci/autobahn-testsuite")
+                        image.inside("--cap-add SYS_PTRACE") {
+                            sh "./sources/.ci/run.sh build '$initFile' '$sourceDir' '$buildDir'"
+                            warnError('Unit Tests failed!') {
+                                sh "./sources/.ci/autobahn-testsuite/run.sh"
+                                writeFile file: "build-${index}.success", text: "success\n"
+                            }
                         }
                     }
                 }
