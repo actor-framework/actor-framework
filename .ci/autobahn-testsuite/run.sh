@@ -1,8 +1,10 @@
 #! /bin/bash
 
+SCRIPT_DIR=$(dirname "$0")
+
 BUILD_DIR=$1
 
-AUTOBAHN_CONFIG=$(cat << EOF
+cat > test_config.json << EOF
 {
   "options": {},
   "outdir": "./reports/",
@@ -17,10 +19,9 @@ AUTOBAHN_CONFIG=$(cat << EOF
   "exclude-agent-cases": {}
 }
 EOF
-)
 
 "${BUILD_DIR}"/libcaf_net/caf-net-autobahn-driver -p 7788 >/dev/null &
 
-wstest -m fuzzingclient -s /config/fuzzingclient.json
+wstest -m fuzzingclient -s test_config.json
 
 kill %1
