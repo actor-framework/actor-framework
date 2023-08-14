@@ -171,6 +171,7 @@ pipeline {
             steps {
                 node(docker) {
                     steps {
+                    script {
                     def baseDir = pwd()
                     def sourceDir = "$baseDir/sources"
                     def buildDir = "$baseDir/build"
@@ -199,6 +200,7 @@ pipeline {
                         }
                     }
                 }
+            }
             }
             }
         }
