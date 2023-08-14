@@ -170,6 +170,8 @@ int runner::run(int argc, char** argv) {
       } catch (const nesting_error& ex) {
         default_reporter->unhandled_exception(ex.message(), ex.location());
         default_reporter->end_test();
+      } catch (const requirement_error& ex) {
+        default_reporter->end_test();
       } catch (const std::exception& ex) {
         default_reporter->unhandled_exception(ex.what());
         default_reporter->end_test();

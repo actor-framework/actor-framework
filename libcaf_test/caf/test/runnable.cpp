@@ -24,19 +24,6 @@ runnable::~runnable() {
   // nop
 }
 
-#ifdef CAF_ENABLE_EXCEPTIONS
-
-requirement_failed::requirement_failed(std::string msg)
-  : what_(std::move(msg)) {
-  // nop
-}
-
-const char* requirement_failed::what() const noexcept {
-  return what_.c_str();
-}
-
-#endif // CAF_ENABLE_EXCEPTIONS
-
 void runnable::run() {
   current_runnable = this;
   auto guard = detail::make_scope_guard([] { current_runnable = nullptr; });

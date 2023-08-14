@@ -8,6 +8,7 @@
 #include "caf/test/block_type.hpp"
 #include "caf/test/fwd.hpp"
 #include "caf/test/reporter.hpp"
+#include "caf/test/requirement_error.hpp"
 
 #include "caf/config.hpp"
 #include "caf/deep_to_string.hpp"
@@ -20,20 +21,6 @@
 #include <string_view>
 
 namespace caf::test {
-
-#ifdef CAF_ENABLE_EXCEPTIONS
-
-class requirement_failed : public std::exception {
-public:
-  requirement_failed(std::string msg);
-
-  const char* what() const noexcept override;
-
-private:
-  std::string what_;
-};
-
-#endif // CAF_ENABLE_EXCEPTIONS
 
 /// A runnable definition of a test case or scenario.
 class CAF_TEST_EXPORT runnable {
@@ -67,7 +54,7 @@ public:
     } else {
       reporter::instance().fail(fwl.value, fwl.location);
     }
-    CAF_RAISE_ERROR(requirement_failed, "requirement failed: abort test");
+    requirement_error::raise_failed(fwl.location);
   }
 
   /// Generates a message with the INFO severity level.
