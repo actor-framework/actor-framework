@@ -176,6 +176,7 @@ pipeline {
                 }
                 stage('Autobahn Testsuite') {
                     steps {
+                    node(docker) {
                             script {
                             def baseDir = pwd()
                             def sourceDir = "$baseDir/sources"
@@ -205,6 +206,7 @@ pipeline {
                                 }
                             }
                         }
+                    }
                     }
                 }
             }
