@@ -1,12 +1,26 @@
-#! /bin/sh
+#! /bin/bash
 
+BUILD_DIR=$1
 
-echo "This is a very hard test"
+AUTOBAHN_CONFIG=$(cat << EOF
+{
+  "options": {},
+  "outdir": "./reports/",
+  "servers": [
+    {
+      "agent": "CAF Websocket Autobahn Driver",
+      "url": "ws://localhost:7788"
+    }
+  ],
+  "cases": [ "*" ],
+  "exclude-cases": [],
+  "exclude-agent-cases": {}
+}
+EOF
+)
 
-HERE=$(dirname "$0")
+"${BUILD_DIR}"/libcaf_net/caf-net-autobahn-driver -p 7788 >/dev/null &
 
-ls "$HERE"
-ls "$HERE/.."
-ls "$HERE/../.."
+wstest -m fuzzingclient -s /config/fuzzingclient.json
 
-exit 1
+kill %1
