@@ -146,6 +146,22 @@ config = [
                 'LDFLAGS=-fno-sanitize-recover=undefined',
             ],
         ]],
+        ['autobahn-testsuite', [
+            numCores: 4,
+            tags: ['docker'],
+            builds: ['release'],
+            extraBuildFlags: [
+                'BUILD_SHARED_LIBS:BOOL=OFF',
+                'CAF_ENABLE_EXAMPLES:BOOL=OFF',
+                'CAF_ENABLE_IO_MODULE:BOOL=OFF',
+                'CAF_ENABLE_IO_TOOLS:BOOL=OFF',
+                'CMAKE_CXX_FLAGS:STRING=-Werror',
+            ],
+            extraBuildEnv: [
+                'CXXFLAGS=-fno-sanitize-recover=undefined -D_GLIBCXX_DEBUG',
+                'LDFLAGS=-fno-sanitize-recover=undefined',
+            ],
+        ]],
     ],
 ]
 
