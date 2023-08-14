@@ -195,7 +195,7 @@ pipeline {
                                 set(CMAKE_BUILD_TYPE "release" CACHE STRING "")
                             """
                         ])
-                        def image = docker.build(imageName, "sources/.ci/autobahn-testsuite")
+                        def image = docker.build('autobahn-testsuite', "sources/.ci/autobahn-testsuite")
                         image.inside("--cap-add SYS_PTRACE") {
                             sh "./sources/.ci/run.sh build '$initFile' '$sourceDir' '$buildDir'"
                             warnError('Unit Tests failed!') {
