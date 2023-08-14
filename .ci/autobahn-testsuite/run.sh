@@ -2,7 +2,7 @@
 
 SCRIPT_DIR=$(dirname "$0")
 
-BUILD_DIR=$1
+BUILD_DIR=${1:-$SCRIPT_DIR/../../build}
 
 cat > test_config.json << EOF
 {

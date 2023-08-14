@@ -167,14 +167,10 @@ pipeline {
                 getSources(config)
             }
         }
-        stage('Build') {
-            steps {
-                buildParallel(config)
-            }
-        }
         stage('Autobahn Testsuite') {
             steps {
-                script {
+                node(docker) {
+                    steps {
                     def baseDir = pwd()
                     def sourceDir = "$baseDir/sources"
                     def buildDir = "$baseDir/build"
@@ -203,6 +199,7 @@ pipeline {
                         }
                     }
                 }
+            }
             }
         }
         stage('Notify') {
