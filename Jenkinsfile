@@ -174,30 +174,32 @@ pipeline {
         }
         stage('Autobahn Testsuite') {
             steps {
-                def baseDir = pwd()
-                def sourceDir = "$baseDir/sources"
-                def buildDir = "$baseDir/build"
-                def installDir = "$baseDir/autobahn"
-                def initFile = "$baseDir/init.cmake"
-                def init = new StringBuilder()
-                init << """set(CAF_ENABLE_EXAMPLES OFF CACHE BOOL "")\n""" \
-                     << """set(CAF_ENABLE_RUNTIME_CHECKS ON CACHE BOOL "")\n""" \
-                     << """set(CAF_ENABLE_SHARED_LIBS OFF CACHE BOOL "")\n""" \
-                     << """set(CAF_ENABLE_IO_MODULE OFF CACHE BOOL "")\n""" \
-                     << """set(CAF_ENABLE_IO_TOOLS OFF CACHE BOOL "")\n""" \
-                     << """set(CAF_BUILD_INFO_FILE_PATH "$baseDir/build-autobahn.info" CACHE FILEPATH "")\n""" \
-                     << """set(CMAKE_INSTALL_PREFIX "$installDir" CACHE PATH "")\n""" \
-                     << """set(CMAKE_BUILD_TYPE "release" CACHE STRING "")\n"""
-                writeFile([
-                    file: 'init.cmake',
-                    text: init.toString()
-                ])
-                def image = docker.build(imageName, "sources/.ci/autobahn-testsuite")
-                image.inside("--cap-add SYS_PTRACE") {
-                    sh "./sources/.ci/run.sh build '$initFile' '$sourceDir' '$buildDir'"
-                    warnError('Unit Tests failed!') {
-                        sh "./sources/.ci/autobahn-testsuite/run.sh"
-                        writeFile file: "build-${index}.success", text: "success\n"
+                    script {
+                    def baseDir = pwd()
+                    def sourceDir = "$baseDir/sources"
+                    def buildDir = "$baseDir/build"
+                    def installDir = "$baseDir/autobahn"
+                    def initFile = "$baseDir/init.cmake"
+                    def init = new StringBuilder()
+                    init << """set(CAF_ENABLE_EXAMPLES OFF CACHE BOOL "")\n""" \
+                         << """set(CAF_ENABLE_RUNTIME_CHECKS ON CACHE BOOL "")\n""" \
+                         << """set(CAF_ENABLE_SHARED_LIBS OFF CACHE BOOL "")\n""" \
+                         << """set(CAF_ENABLE_IO_MODULE OFF CACHE BOOL "")\n""" \
+                         << """set(CAF_ENABLE_IO_TOOLS OFF CACHE BOOL "")\n""" \
+                         << """set(CAF_BUILD_INFO_FILE_PATH "$baseDir/build-autobahn.info" CACHE FILEPATH "")\n""" \
+                         << """set(CMAKE_INSTALL_PREFIX "$installDir" CACHE PATH "")\n""" \
+                         << """set(CMAKE_BUILD_TYPE "release" CACHE STRING "")\n"""
+                    writeFile([
+                        file: 'init.cmake',
+                        text: init.toString()
+                    ])
+                    def image = docker.build(imageName, "sources/.ci/autobahn-testsuite")
+                    image.inside("--cap-add SYS_PTRACE") {
+                        sh "./sources/.ci/run.sh build '$initFile' '$sourceDir' '$buildDir'"
+                        warnError('Unit Tests failed!') {
+                            sh "./sources/.ci/autobahn-testsuite/run.sh"
+                            writeFile file: "build-${index}.success", text: "success\n"
+                        }
                     }
                 }
             }
