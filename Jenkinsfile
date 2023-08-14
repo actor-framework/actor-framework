@@ -167,17 +167,24 @@ pipeline {
                 getSources(config)
             }
         }
+        stage('Build') {
+            steps {
+                buildParallel(config)
+            }
+        }
         stage('Autobahn Testsuite') {
             steps {
                 node(docker) {
                     steps {
                         script {
+                            echo "Starting autobahn docker"
                             def baseDir = pwd()
                             def sourceDir = "$baseDir/sources"
                             def buildDir = "$baseDir/build"
                             def installDir = "$baseDir/autobahn"
                             def initFile = "$baseDir/init.cmake"
                             def init = new StringBuilder()
+                            echo "Writing file"
                             writeFile([
                                 file: 'init.cmake',
                                 text: """
@@ -191,11 +198,14 @@ pipeline {
                                     set(CMAKE_BUILD_TYPE "release" CACHE STRING "")
                                 """
                             ])
+                            echo "start docker"
                             def image = docker.build('autobahn-testsuite', "sources/.ci/autobahn-testsuite")
                             image.inside("--cap-add SYS_PTRACE") {
+                                echo "start build"
                                 sh "./sources/.ci/run.sh build '$initFile' '$sourceDir' '$buildDir'"
                                 warnError('Unit Tests failed!') {
-                                    sh "./sources/.ci/autobahn-testsuite/run.sh"
+                                    echo "start build"
+                                    sh "./sources/.ci/autobahn-testsuite/run.sh $buildDir"
                                     writeFile file: "build-autobahn.success", text: "success\n"
                                 }
                             }
