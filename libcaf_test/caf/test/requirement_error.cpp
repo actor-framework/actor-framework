@@ -13,6 +13,9 @@ std::string requirement_error::message() const {
     case code::failed:
       return detail::format("requirement failed at {}:{}", loc_.file_name(),
                             static_cast<int>(loc_.line()));
+    default:
+      return detail::format("requirement error at {}:{}", loc_.file_name(),
+                            static_cast<int>(loc_.line()));
   }
 }
 
@@ -22,7 +25,7 @@ requirement_error::raise_impl(requirement_error::code what,
 #ifdef CAF_ENABLE_EXCEPTIONS
   throw requirement_error{what, loc};
 #else
-  auto msg = nesting_error{what, parent, child, loc}.message();
+  auto msg = requirement_error{what, loc}.message();
   fprintf(stderr, "[FATAL] critical error: %s\n", msg.c_str());
   abort();
 #endif
