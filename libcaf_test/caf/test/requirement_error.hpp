@@ -35,7 +35,8 @@ public:
   }
 
 private:
-  constexpr requirement_error(const detail::source_location& loc) noexcept
+  constexpr explicit requirement_error(
+    const detail::source_location& loc) noexcept
     : loc_(loc) {
     // nop
   }

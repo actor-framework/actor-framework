@@ -10,7 +10,7 @@ namespace caf::test {
 
 std::string requirement_error::message() const {
   return detail::format("requirement failed at {}:{}", loc_.file_name(),
-                        static_cast<int>(loc_.line()));
+                        loc_.line());
 }
 
 [[noreturn]] void
