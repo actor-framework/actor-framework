@@ -41,6 +41,8 @@ TEST("tests can contain different types of checks") {
   info("this test had {} checks", rep.test_stats().total());
 }
 
+#ifdef CAF_ENABLE_EXCEPTIONS
+
 TEST("tests fail when requirement errors occur") {
   auto& rep = caf::test::reporter::instance();
   SECTION("require_eq fails when lhs != rhs") {
@@ -81,6 +83,8 @@ TEST("tests fail when requirement errors occur") {
   }
   info("this test had {} checks", rep.test_stats().total());
 }
+
+#endif // CAF_ENABLE_EXCEPTIONS
 
 TEST("failed checks increment the failed counter") {
   check_eq(1, 2);
