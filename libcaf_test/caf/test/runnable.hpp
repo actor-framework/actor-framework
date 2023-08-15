@@ -162,6 +162,101 @@ public:
   bool check(bool value, const detail::source_location& location
                          = detail::source_location::current());
 
+  /// Evaluates whether `lhs` and `rhs` are equal and fails otherwise.
+  template <class T0, class T1>
+  void require_eq(const T0& lhs, const T1& rhs,
+                  const detail::source_location& location
+                  = detail::source_location::current()) {
+    assert_save_comparison<T0, T1>();
+    if (lhs == rhs) {
+      reporter::instance().pass(location);
+      return;
+    }
+    reporter::instance().info(binary_predicate::eq, stringify(lhs),
+                              stringify(rhs), location);
+    fail({"requirement failed", location});
+  }
+
+  /// Evaluates whether `lhs` and `rhs` are unequal and fails otherwise.
+  template <class T0, class T1>
+  void require_ne(const T0& lhs, const T1& rhs,
+                  const detail::source_location& location
+                  = detail::source_location::current()) {
+    assert_save_comparison<T0, T1>();
+    if (lhs != rhs) {
+      reporter::instance().pass(location);
+      return;
+    }
+    reporter::instance().info(binary_predicate::ne, stringify(lhs),
+                              stringify(rhs), location);
+    fail({"requirement failed", location});
+  }
+
+  /// Evaluates whether `lhs` is less than `rhs` and fails otherwise
+  template <class T0, class T1>
+  void require_lt(const T0& lhs, const T1& rhs,
+                  const detail::source_location& location
+                  = detail::source_location::current()) {
+    assert_save_comparison<T0, T1>();
+    if (lhs < rhs) {
+      reporter::instance().pass(location);
+      return;
+    }
+    reporter::instance().info(binary_predicate::lt, stringify(lhs),
+                              stringify(rhs), location);
+    fail({"requirement failed", location});
+  }
+
+  /// Evaluates whether `lhs` less than or equal to `rhs` and fails otherwise.
+  template <class T0, class T1>
+  void require_le(const T0& lhs, const T1& rhs,
+                  const detail::source_location& location
+                  = detail::source_location::current()) {
+    assert_save_comparison<T0, T1>();
+    if (lhs <= rhs) {
+      reporter::instance().pass(location);
+      return;
+    }
+    reporter::instance().info(binary_predicate::le, stringify(lhs),
+                              stringify(rhs), location);
+    fail({"requirement failed", location});
+  }
+
+  /// Evaluates whether `lhs` is greater than `rhs` and fails otherwise.
+  template <class T0, class T1>
+  void require_gt(const T0& lhs, const T1& rhs,
+                  const detail::source_location& location
+                  = detail::source_location::current()) {
+    assert_save_comparison<T0, T1>();
+    if (lhs > rhs) {
+      reporter::instance().pass(location);
+      return;
+    }
+    reporter::instance().info(binary_predicate::gt, stringify(lhs),
+                              stringify(rhs), location);
+    fail({"requirement failed", location});
+  }
+
+  /// Evaluates whether `lhs` greater than or equal to `rhs` and fails
+  /// otherwise.
+  template <class T0, class T1>
+  void require_ge(const T0& lhs, const T1& rhs,
+                  const detail::source_location& location
+                  = detail::source_location::current()) {
+    assert_save_comparison<T0, T1>();
+    if (lhs >= rhs) {
+      reporter::instance().pass(location);
+      return;
+    }
+    reporter::instance().info(binary_predicate::ge, stringify(lhs),
+                              stringify(rhs), location);
+    fail({"requirement failed", location});
+  }
+
+  /// Evaluates whether `value` is `true` and fails otherwise.
+  void require(bool value, const detail::source_location& location
+                           = detail::source_location::current());
+
   /// Returns the `runnable` instance that is currently running.
   static runnable& current();
 

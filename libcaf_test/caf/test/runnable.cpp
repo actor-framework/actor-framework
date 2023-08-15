@@ -58,6 +58,15 @@ bool runnable::check(bool value, const detail::source_location& location) {
   return value;
 }
 
+void runnable::require(bool value, const detail::source_location& location) {
+  if (value) {
+    reporter::instance().pass(location);
+  } else {
+    reporter::instance().info("should be true", location);
+    fail({"requirement failed", location});
+  }
+}
+
 runnable& runnable::current() {
   auto ptr = current_runnable;
   if (!ptr)

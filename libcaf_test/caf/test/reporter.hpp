@@ -75,6 +75,11 @@ public:
   info(std::string_view msg, const detail::source_location& location)
     = 0;
 
+  virtual void info(binary_predicate type, std::string_view lhs,
+                    std::string_view rhs,
+                    const detail::source_location& location)
+    = 0;
+
   /// Sets the verbosity level of the reporter and returns the previous value.
   virtual unsigned verbosity(unsigned level) = 0;
 
