@@ -29,26 +29,19 @@ public:
   }
 
   /// Throws a `requirement_error` to indicate that requirement check failed.
-  [[noreturn]] static void raise_failed(const detail::source_location& loc
-                                        = detail::source_location::current()) {
-    raise_impl(code::failed, loc);
+  [[noreturn]] static void raise(const detail::source_location& loc
+                                 = detail::source_location::current()) {
+    raise_impl(loc);
   }
 
 private:
-  enum class code {
-    failed,
-  };
-
-  constexpr requirement_error(code what,
-                              const detail::source_location& loc) noexcept
-    : code_(what), loc_(loc) {
+  constexpr requirement_error(const detail::source_location& loc) noexcept
+    : loc_(loc) {
     // nop
   }
 
-  [[noreturn]] static void raise_impl(code what,
-                                      const detail::source_location& loc);
+  [[noreturn]] static void raise_impl(const detail::source_location& loc);
 
-  code code_;
   detail::source_location loc_;
 };
 

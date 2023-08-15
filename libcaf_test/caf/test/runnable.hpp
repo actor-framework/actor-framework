@@ -54,7 +54,7 @@ public:
     } else {
       reporter::instance().fail(fwl.value, fwl.location);
     }
-    requirement_error::raise_failed(fwl.location);
+    requirement_error::raise(fwl.location);
   }
 
   /// Generates a message with the INFO severity level.
