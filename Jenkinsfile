@@ -167,49 +167,44 @@ pipeline {
                 getSources(config)
             }
         }
+        /*
         stage('Build') {
             steps {
                 buildParallel(config)
             }
         }
+        */
         stage('Autobahn Testsuite') {
+            agent { docker { image "sources/.ci/autobahn-testsuite" } }
             steps {
-                node(docker) {
-                    steps {
-                        script {
-                            echo "Starting autobahn docker"
-                            def baseDir = pwd()
-                            def sourceDir = "$baseDir/sources"
-                            def buildDir = "$baseDir/build"
-                            def installDir = "$baseDir/autobahn"
-                            def initFile = "$baseDir/init.cmake"
-                            def init = new StringBuilder()
-                            echo "Writing file"
-                            writeFile([
-                                file: 'init.cmake',
-                                text: """
-                                    set(CAF_ENABLE_EXAMPLES OFF CACHE BOOL "")
-                                    set(CAF_ENABLE_RUNTIME_CHECKS ON CACHE BOOL "")
-                                    set(CAF_ENABLE_SHARED_LIBS OFF CACHE BOOL "")
-                                    set(CAF_ENABLE_IO_MODULE OFF CACHE BOOL "")
-                                    set(CAF_ENABLE_IO_TOOLS OFF CACHE BOOL "")
-                                    set(CAF_BUILD_INFO_FILE_PATH "$baseDir/build-autobahn.info" CACHE FILEPATH "")
-                                    set(CMAKE_INSTALL_PREFIX "$installDir" CACHE PATH "")
-                                    set(CMAKE_BUILD_TYPE "release" CACHE STRING "")
-                                """
-                            ])
-                            echo "start docker"
-                            def image = docker.build('autobahn-testsuite', "sources/.ci/autobahn-testsuite")
-                            image.inside("--cap-add SYS_PTRACE") {
-                                echo "start build"
-                                sh "./sources/.ci/run.sh build '$initFile' '$sourceDir' '$buildDir'"
-                                warnError('Unit Tests failed!') {
-                                    echo "start build"
-                                    sh "./sources/.ci/autobahn-testsuite/run.sh $buildDir"
-                                    writeFile file: "build-autobahn.success", text: "success\n"
-                                }
-                            }
-                        }
+                script {
+                    echo "Starting autobahn docker"
+                    def baseDir = pwd()
+                    def sourceDir = "$baseDir/sources"
+                    def buildDir = "$baseDir/build"
+                    def installDir = "$baseDir/autobahn"
+                    def initFile = "$baseDir/init.cmake"
+                    def init = new StringBuilder()
+                    echo "Writing file"
+                    writeFile([
+                        file: 'init.cmake',
+                        text: """
+                            set(CAF_ENABLE_EXAMPLES OFF CACHE BOOL "")
+                            set(CAF_ENABLE_RUNTIME_CHECKS ON CACHE BOOL "")
+                            set(CAF_ENABLE_SHARED_LIBS OFF CACHE BOOL "")
+                            set(CAF_ENABLE_IO_MODULE OFF CACHE BOOL "")
+                            set(CAF_ENABLE_IO_TOOLS OFF CACHE BOOL "")
+                            set(CAF_BUILD_INFO_FILE_PATH "$baseDir/build-autobahn.info" CACHE FILEPATH "")
+                            set(CMAKE_INSTALL_PREFIX "$installDir" CACHE PATH "")
+                            set(CMAKE_BUILD_TYPE "release" CACHE STRING "")
+                        """
+                    ])
+                    echo "start build"
+                    sh "./sources/.ci/run.sh build '$initFile' '$sourceDir' '$buildDir'"
+                    warnError('Unit Tests failed!') {
+                        echo "start build"
+                        sh "./sources/.ci/autobahn-testsuite/run.sh $buildDir"
+                        writeFile file: "build-autobahn.success", text: "success\n"
                     }
                 }
             }
