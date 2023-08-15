@@ -30,6 +30,7 @@ caf_add_component(
     caf/test/nesting_error.cpp
     caf/test/registry.cpp
     caf/test/reporter.cpp
+    caf/test/requirement_error.cpp
     caf/test/runnable.cpp
     caf/test/runner.cpp
     caf/test/scenario.cpp

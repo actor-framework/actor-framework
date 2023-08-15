@@ -8,6 +8,7 @@
 #include "caf/test/block_type.hpp"
 #include "caf/test/fwd.hpp"
 #include "caf/test/reporter.hpp"
+#include "caf/test/requirement_error.hpp"
 
 #include "caf/config.hpp"
 #include "caf/deep_to_string.hpp"
@@ -53,7 +54,7 @@ public:
     } else {
       reporter::instance().fail(fwl.value, fwl.location);
     }
-    CAF_RAISE_ERROR(std::logic_error, "requirement failed: abort test");
+    requirement_error::raise(fwl.location);
   }
 
   /// Generates a message with the INFO severity level.
