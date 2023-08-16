@@ -2,21 +2,15 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE action
-
 #include "caf/action.hpp"
 
-#include "core-test.hpp"
+#include "caf/test/caf_test_main.hpp"
+#include "caf/test/fixture/deterministic.hpp"
+#include "caf/test/scenario.hpp"
+
+#include "caf/event_based_actor.hpp"
 
 using namespace caf;
-
-namespace {
-
-using fixture = test_coordinator_fixture<>;
-
-} // namespace
-
-BEGIN_FIXTURE_SCOPE(fixture)
 
 SCENARIO("actions wrap function calls") {
   GIVEN("an action wrapping a lambda") {
@@ -24,21 +18,21 @@ SCENARIO("actions wrap function calls") {
       THEN("it calls the lambda and transitions from scheduled to invoked") {
         auto called = false;
         auto uut = make_action([&called] { called = true; });
-        CHECK(uut.scheduled());
+        check(uut.scheduled());
         uut.run();
-        CHECK(called);
+        check(called);
       }
     }
     WHEN("disposing the action") {
       THEN("it transitions to disposed and run no longer calls the lambda") {
         auto called = false;
         auto uut = make_action([&called] { called = true; });
-        CHECK(uut.scheduled());
+        check(uut.scheduled());
         uut.dispose();
-        CHECK(uut.disposed());
+        check(uut.disposed());
         uut.run();
-        CHECK(!called);
-        CHECK(uut.disposed());
+        check(!called);
+        check(uut.disposed());
       }
     }
     WHEN("running the action multiple times") {
@@ -48,7 +42,7 @@ SCENARIO("actions wrap function calls") {
         uut.run();
         uut.run();
         uut.run();
-        CHECK_EQ(n, 3);
+        check_eq(n, 3);
       }
     }
     WHEN("converting an action to a disposable") {
@@ -56,12 +50,14 @@ SCENARIO("actions wrap function calls") {
         auto uut = make_action([] {});
         auto d1 = uut.as_disposable();         // const& overload
         auto d2 = action{uut}.as_disposable(); // && overload
-        CHECK_EQ(uut.ptr(), d1.ptr());
-        CHECK_EQ(uut.ptr(), d2.ptr());
+        check_eq(uut.ptr(), d1.ptr());
+        check_eq(uut.ptr(), d2.ptr());
       }
     }
   }
 }
+
+WITH_FIXTURE(test::fixture::deterministic) {
 
 SCENARIO("actors run actions that they receive") {
   GIVEN("a scheduled actor") {
@@ -73,11 +69,13 @@ SCENARIO("actors run actions that they receive") {
           };
         });
         auto n = 0;
-        inject((action), to(aut).with(make_action([&n] { ++n; })));
-        CHECK_EQ(n, 1);
+        inject().with(make_action([&n] { ++n; })).to(aut);
+        check_eq(n, 1);
       }
     }
   }
 }
 
-END_FIXTURE_SCOPE()
+} // WITH_FIXTURE(test::fixture::deterministic)
+
+CAF_TEST_MAIN()
