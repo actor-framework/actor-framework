@@ -62,9 +62,9 @@ public:
   void info(detail::format_string_with_location fwl, Ts&&... xs) {
     if constexpr (sizeof...(Ts) > 0) {
       auto msg = detail::format(fwl.value, std::forward<Ts>(xs)...);
-      reporter::instance().info(msg, fwl.location);
+      reporter::instance().print_info(msg, fwl.location);
     } else {
-      reporter::instance().info(fwl.value, fwl.location);
+      reporter::instance().print_info(fwl.value, fwl.location);
     }
   }
 
