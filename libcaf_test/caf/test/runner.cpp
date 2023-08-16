@@ -171,6 +171,7 @@ int runner::run(int argc, char** argv) {
         default_reporter->unhandled_exception(ex.message(), ex.location());
         default_reporter->end_test();
       } catch (const requirement_failed& ex) {
+        default_reporter->print_error(ex.message(), ex.location());
         default_reporter->end_test();
       } catch (const std::exception& ex) {
         default_reporter->unhandled_exception(ex.what());

@@ -167,14 +167,8 @@ public:
   void require_eq(const T0& lhs, const T1& rhs,
                   const detail::source_location& location
                   = detail::source_location::current()) {
-    assert_save_comparison<T0, T1>();
-    if (lhs == rhs) {
-      reporter::instance().pass(location);
-      return;
-    }
-    reporter::instance().info(binary_predicate::eq, stringify(lhs),
-                              stringify(rhs), location);
-    fail({"requirement failed", location});
+    if (!check_eq(lhs, rhs, location))
+      requirement_failed::raise(location);
   }
 
   /// Evaluates whether `lhs` and `rhs` are unequal and fails otherwise.
@@ -182,14 +176,8 @@ public:
   void require_ne(const T0& lhs, const T1& rhs,
                   const detail::source_location& location
                   = detail::source_location::current()) {
-    assert_save_comparison<T0, T1>();
-    if (lhs != rhs) {
-      reporter::instance().pass(location);
-      return;
-    }
-    reporter::instance().info(binary_predicate::ne, stringify(lhs),
-                              stringify(rhs), location);
-    fail({"requirement failed", location});
+    if (!check_ne(lhs, rhs, location))
+      requirement_failed::raise(location);
   }
 
   /// Evaluates whether `lhs` is less than `rhs` and fails otherwise
@@ -197,14 +185,8 @@ public:
   void require_lt(const T0& lhs, const T1& rhs,
                   const detail::source_location& location
                   = detail::source_location::current()) {
-    assert_save_comparison<T0, T1>();
-    if (lhs < rhs) {
-      reporter::instance().pass(location);
-      return;
-    }
-    reporter::instance().info(binary_predicate::lt, stringify(lhs),
-                              stringify(rhs), location);
-    fail({"requirement failed", location});
+    if (!check_lt(lhs, rhs, location))
+      requirement_failed::raise(location);
   }
 
   /// Evaluates whether `lhs` less than or equal to `rhs` and fails otherwise.
@@ -212,14 +194,8 @@ public:
   void require_le(const T0& lhs, const T1& rhs,
                   const detail::source_location& location
                   = detail::source_location::current()) {
-    assert_save_comparison<T0, T1>();
-    if (lhs <= rhs) {
-      reporter::instance().pass(location);
-      return;
-    }
-    reporter::instance().info(binary_predicate::le, stringify(lhs),
-                              stringify(rhs), location);
-    fail({"requirement failed", location});
+    if (!check_le(lhs, rhs, location))
+      requirement_failed::raise(location);
   }
 
   /// Evaluates whether `lhs` is greater than `rhs` and fails otherwise.
@@ -227,14 +203,8 @@ public:
   void require_gt(const T0& lhs, const T1& rhs,
                   const detail::source_location& location
                   = detail::source_location::current()) {
-    assert_save_comparison<T0, T1>();
-    if (lhs > rhs) {
-      reporter::instance().pass(location);
-      return;
-    }
-    reporter::instance().info(binary_predicate::gt, stringify(lhs),
-                              stringify(rhs), location);
-    fail({"requirement failed", location});
+    if (!check_gt(lhs, rhs, location))
+      requirement_failed::raise(location);
   }
 
   /// Evaluates whether `lhs` greater than or equal to `rhs` and fails
@@ -243,14 +213,8 @@ public:
   void require_ge(const T0& lhs, const T1& rhs,
                   const detail::source_location& location
                   = detail::source_location::current()) {
-    assert_save_comparison<T0, T1>();
-    if (lhs >= rhs) {
-      reporter::instance().pass(location);
-      return;
-    }
-    reporter::instance().info(binary_predicate::ge, stringify(lhs),
-                              stringify(rhs), location);
-    fail({"requirement failed", location});
+    if (!check_ge(lhs, rhs, location))
+      requirement_failed::raise(location);
   }
 
   /// Evaluates whether `value` is `true` and fails otherwise.

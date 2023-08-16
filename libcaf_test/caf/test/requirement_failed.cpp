@@ -9,8 +9,7 @@
 namespace caf::test {
 
 std::string requirement_failed::message() const {
-  return detail::format("requirement failed at {}:{}", loc_.file_name(),
-                        loc_.line());
+  return detail::format("requirement failed\n");
 }
 
 [[noreturn]] void

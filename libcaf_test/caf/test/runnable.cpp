@@ -59,12 +59,8 @@ bool runnable::check(bool value, const detail::source_location& location) {
 }
 
 void runnable::require(bool value, const detail::source_location& location) {
-  if (value) {
-    reporter::instance().pass(location);
-  } else {
-    reporter::instance().info("should be true", location);
-    fail({"requirement failed", location});
-  }
+  if (!check(value, location))
+    requirement_failed::raise(location);
 }
 
 runnable& runnable::current() {
