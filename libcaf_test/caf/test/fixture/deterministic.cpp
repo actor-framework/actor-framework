@@ -321,4 +321,4 @@ size_t deterministic::dispatch_messages() {
   return result;
 }
 
-} // namespace caf::test
+} // namespace caf::test::fixture

@@ -24,7 +24,7 @@ ConstructorInitializerAllOnOneLineOrOnePerLine: true
 ConstructorInitializerIndentWidth: 2
 ContinuationIndentWidth: 2
 Cpp11BracedListStyle: true
-FixNamespaceComments: false
+FixNamespaceComments: true
 IncludeBlocks: Regroup
 # Include order: Main header, CAF headers: test/io/openssl/net/core, 3rd-party
 # headers, standard headers.
