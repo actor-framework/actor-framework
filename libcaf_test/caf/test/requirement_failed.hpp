@@ -13,11 +13,11 @@ namespace caf::test {
 
 /// Thrown when a requirement check fails. When `CAF_ENABLE_EXCEPTIONS` is off,
 /// the `raise` functions terminate the program instead.
-class CAF_TEST_EXPORT requirement_error {
+class CAF_TEST_EXPORT requirement_failed {
 public:
-  constexpr requirement_error(const requirement_error&) noexcept = default;
+  constexpr requirement_failed(const requirement_failed&) noexcept = default;
 
-  constexpr requirement_error& operator=(const requirement_error&) noexcept
+  constexpr requirement_failed& operator=(const requirement_failed&) noexcept
     = default;
 
   /// Returns a human-readable error message.
@@ -28,14 +28,14 @@ public:
     return loc_;
   }
 
-  /// Throws a `requirement_error` to indicate that requirement check failed.
+  /// Throws a `requirement_failed` to indicate that requirement check failed.
   [[noreturn]] static void raise(const detail::source_location& loc
                                  = detail::source_location::current()) {
     raise_impl(loc);
   }
 
 private:
-  constexpr explicit requirement_error(
+  constexpr explicit requirement_failed(
     const detail::source_location& loc) noexcept
     : loc_(loc) {
     // nop

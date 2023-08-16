@@ -8,7 +8,7 @@
 #include "caf/test/block_type.hpp"
 #include "caf/test/fwd.hpp"
 #include "caf/test/reporter.hpp"
-#include "caf/test/requirement_error.hpp"
+#include "caf/test/requirement_failed.hpp"
 
 #include "caf/config.hpp"
 #include "caf/deep_to_string.hpp"
@@ -54,7 +54,7 @@ public:
     } else {
       reporter::instance().fail(fwl.value, fwl.location);
     }
-    requirement_error::raise(fwl.location);
+    requirement_failed::raise(fwl.location);
   }
 
   /// Generates a message with the INFO severity level.
