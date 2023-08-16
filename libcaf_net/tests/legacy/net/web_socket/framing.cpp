@@ -381,15 +381,16 @@ SCENARIO("the application shuts down on invalid UTF-8 message") {
     WHEN("the client sends an invalid text frame byte by byte") {
       reset();
       byte_buffer frame;
-      detail::rfc6455::assemble_frame(detail::rfc6455::text_frame, 0x0,
+      detail::rfc6455::mask_data(0xDEADC0DE, data);
+      detail::rfc6455::assemble_frame(detail::rfc6455::text_frame, 0xDEADC0DE,
                                       data_span, frame, 0);
-      for (auto i = 0; i < 14; i++) {
+      for (auto i = 0; i < 18; i++) {
         transport->push(make_span(frame).subspan(i, 1));
         CHECK_EQ(transport->handle_input(), 0);
         CHECK(!app->has_aborted());
       }
       THEN("the server aborts when receiving the invalid byte") {
-        transport->push(make_span(frame).subspan(14, 1));
+        transport->push(make_span(frame).subspan(18, 1));
         CHECK_EQ(transport->handle_input(), 0);
         CHECK_EQ(app->abort_reason, sec::malformed_message);
         CHECK_EQ(fetch_status(transport->output_buffer()),
@@ -399,8 +400,8 @@ SCENARIO("the application shuts down on invalid UTF-8 message") {
       WHEN("the client sends the first frame of a text messagee") {
         reset();
         byte_buffer frame;
-        detail::rfc6455::assemble_frame(detail::rfc6455::text_frame, 0x0,
-                                        data_span.subspan(0, 6), frame, 0);
+        detail::rfc6455::assemble_frame(detail::rfc6455::text_frame, 0xDEADC0DE,
+                                        data_span.subspan(0, 8), frame, 0);
         transport->push(frame);
         CHECK_EQ(transport->handle_input(),
                  static_cast<ptrdiff_t>(frame.size()));
@@ -409,14 +410,15 @@ SCENARIO("the application shuts down on invalid UTF-8 message") {
       AND_WHEN("sending the invalid continuation frame byte by byte") {
         byte_buffer frame;
         detail::rfc6455::assemble_frame(detail::rfc6455::continuation_frame,
-                                        0x0, data_span.subspan(6), frame);
-        for (auto i = 0; i < 8; i++) {
+                                        0xDEADC0DE, data_span.subspan(8),
+                                        frame);
+        for (auto i = 0; i < 10; i++) {
           transport->push(make_span(frame).subspan(i, 1));
           CHECK_EQ(transport->handle_input(), 0);
           CHECK(!app->has_aborted());
         }
         THEN("the server aborts the application on the invalid byte") {
-          transport->push(make_span(frame).subspan(8, 1));
+          transport->push(make_span(frame).subspan(10, 1));
           CHECK_EQ(transport->handle_input(), 0);
           CHECK_EQ(app->abort_reason, sec::malformed_message);
           CHECK_EQ(fetch_status(transport->output_buffer()),

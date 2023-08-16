@@ -10,15 +10,16 @@
 
 namespace caf::detail {
 
-void rfc6455::mask_data(uint32_t key, span<char> data) {
-  mask_data(key, as_writable_bytes(data));
+void rfc6455::mask_data(uint32_t key, span<char> data, size_t skip) {
+  mask_data(key, as_writable_bytes(data), skip);
 }
 
-void rfc6455::mask_data(uint32_t key, byte_span data) {
+void rfc6455::mask_data(uint32_t key, byte_span data, size_t skip) {
   auto no_key = to_network_order(key);
   std::byte arr[4];
   memcpy(arr, &no_key, 4);
-  size_t i = 0;
+  data = data.subspan(skip);
+  size_t i = skip % 4;
   for (auto& x : data) {
     x = x ^ arr[i];
     i = (i + 1) % 4;

@@ -63,9 +63,10 @@ void framing::abort(const error& reason) {
   up_->abort(reason);
 }
 
-ptrdiff_t framing::consume(byte_span buffer, byte_span) {
+ptrdiff_t framing::consume(byte_span buffer, byte_span delta) {
   // Make sure we're overriding any 'exactly' setting.
   down_->configure_read(receive_policy::up_to(2048));
+
   // Parse header.
   detail::rfc6455::header hdr;
   auto hdr_bytes = detail::rfc6455::decode_header(buffer, hdr);
@@ -103,20 +104,39 @@ ptrdiff_t framing::consume(byte_span buffer, byte_span) {
       return -1;
     }
   }
-  // Wait for more data if necessary.
+
   size_t frame_size = hdr_bytes + hdr.payload_len;
+
+  // unmask the arrived data
+  if (hdr.mask_key != 0) {
+    // leave out the header part
+    // leave out the already part
+    auto offset = static_cast<ptrdiff_t>(buffer.size() - delta.size())
+                  - hdr_bytes;
+    // if the delta buffer is empty this means that we got called to the framing
+    // layer, consumed one frame and returned with unconsumed bytes that
+    // represent the second frame and the transport layer called us again, so
+    // even though we saw the bytes beofre, we didn't unmask them.
+    if (delta.empty())
+      offset = 0;
+    if (offset < 0)
+      offset = 0;
+    auto payload = buffer;
+    if (buffer.size() > frame_size)
+      payload = buffer.subspan(0, frame_size);
+    detail::rfc6455::mask_data(hdr.mask_key, payload.subspan(hdr_bytes),
+                               offset);
+  }
+
+  // Wait for more data if necessary.
   if (buffer.size() < frame_size) {
     // when handling a text frame we want to fail early on invalid UTF-8
     if (hdr.opcode == detail::rfc6455::text_frame
         || opcode_ == detail::rfc6455::text_frame) {
-      down_->configure_read(
-        receive_policy::between(buffer.size() + 1, frame_size));
+      down_->configure_read(receive_policy::up_to(frame_size));
       if (hdr.opcode == detail::rfc6455::text_frame) {
         auto arrived_payload
           = std::vector<std::byte>{buffer.begin() + hdr_bytes, buffer.end()};
-        if (hdr.mask_key != 0) {
-          detail::rfc6455::mask_data(hdr.mask_key, arrived_payload);
-        }
         if (auto [index, incomplete]
             = detail::rfc3629::validate(arrived_payload);
             index != arrived_payload.size() && !incomplete) {
@@ -129,11 +149,6 @@ ptrdiff_t framing::consume(byte_span buffer, byte_span) {
           payload_buf_.end()};
         unvalidated_payload.insert(unvalidated_payload.end(),
                                    buffer.begin() + hdr_bytes, buffer.end());
-        if (hdr.mask_key != 0) {
-          detail::rfc6455::mask_data(
-            hdr.mask_key, make_span(unvalidated_payload)
-                            .subspan(payload_buf_.size() - validation_offset_));
-        }
         if (auto [index, incomplete]
             = detail::rfc3629::validate(unvalidated_payload);
             index != unvalidated_payload.size() && !incomplete) {
@@ -146,12 +161,10 @@ ptrdiff_t framing::consume(byte_span buffer, byte_span) {
     }
     return 0;
   }
+
   // Decode frame.
   auto payload_len = static_cast<size_t>(hdr.payload_len);
   auto payload = buffer.subspan(hdr_bytes, payload_len);
-  if (hdr.mask_key != 0) {
-    detail::rfc6455::mask_data(hdr.mask_key, payload);
-  }
   // Handle control frames first, since these may not me fragmented,
   // and can arrive between regular message fragments.
   if (detail::rfc6455::is_control_frame(hdr.opcode)) {

@@ -32,7 +32,7 @@ auto take(const T& xs, size_t num_bytes) {
   return std::vector<typename T::value_type>{xs.begin(), xs.begin() + n};
 }
 
-TEST("masking") {
+TEST("masking the full payload") {
   auto key = uint32_t{0xDEADC0DE};
   auto data = bytes({0x12, 0x34, 0x45, 0x67, 0x89, 0x9A});
   SECTION("masking XORs the repeated key to data") {
@@ -52,6 +52,22 @@ TEST("masking") {
     impl::mask_data(key, masked_data);
     impl::mask_data(key, masked_data);
     check_eq(masked_data, data);
+  }
+}
+
+TEST("partial making with offset") {
+  using namespace std::literals;
+  auto key = uint32_t{0xDEADC0DE};
+  auto original_data = std::string{"Hello, world!"};
+  auto masked_data = original_data;
+  impl::mask_data(key, make_span(masked_data));
+  for (auto i = 0ul; i < original_data.size(); i++) {
+    auto uut = original_data;
+    impl::mask_data(key, make_span(uut), i);
+    check_eq(std::string_view{uut}.substr(0, i),
+             std::string_view{original_data}.substr(0, i));
+    check_eq(std::string_view{uut}.substr(i),
+             std::string_view{masked_data}.substr(i));
   }
 }
 
