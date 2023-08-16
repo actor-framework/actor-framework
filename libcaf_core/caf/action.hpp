@@ -118,6 +118,16 @@ private:
   impl_ptr pimpl_;
 };
 
+/// Checks whether two actions are equal by comparing their pointers.
+inline bool operator==(const action& lhs, const action& rhs) noexcept {
+  return lhs.ptr() == rhs.ptr();
+}
+
+/// Checks whether two actions are not equal by comparing their pointers.
+inline bool operator!=(const action& lhs, const action& rhs) noexcept {
+  return !(lhs == rhs);
+}
+
 } // namespace caf
 namespace caf::detail {
 
