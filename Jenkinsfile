@@ -176,7 +176,7 @@ pipeline {
         */
         stage('Autobahn Testsuite') {
             agent { 
-                dockerfile { dir "sources/.ci/autobahn-testsuite" }
+                dockerfile { dir ".ci/autobahn-testsuite" }
             }
             steps {
                 script {
