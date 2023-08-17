@@ -203,6 +203,7 @@ pipeline {
                         """
                     ])
                     echo "start build"
+                    sh "rm -rf '$buildDir'"
                     sh "./.ci/run.sh build '$initFile' '$baseDir' '$buildDir'"
                     warnError('Unit Tests failed!') {
                         echo "Starting Autobahn Testsuite"
