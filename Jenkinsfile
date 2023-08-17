@@ -183,12 +183,10 @@ pipeline {
             }
             steps {
                 script {
-                    echo "Starting autobahn docker"
                     def baseDir = pwd()
                     def buildDir = "$baseDir/build"
                     def installDir = "$baseDir/caf-install"
                     def initFile = "$baseDir/init.cmake"
-                    echo "Writing init.cmake file"
                     writeFile([
                         file: 'init.cmake',
                         text: """
@@ -202,12 +200,10 @@ pipeline {
                             set(CMAKE_BUILD_TYPE "release" CACHE STRING "")
                         """
                     ])
-                    echo "start build"
+                    sh "rm -rf '$buildDir'"
                     sh "./.ci/run.sh build '$initFile' '$baseDir' '$buildDir'"
-                    warnError('Unit Tests failed!') {
-                        echo "Starting Autobahn Testsuite"
+                    catchError('Autobahn Tests failed!') {
                         sh "./.ci/autobahn-testsuite/run.sh $buildDir"
-                        writeFile file: "build-autobahn.success", text: "success\n"
                     }
                 }
             }
