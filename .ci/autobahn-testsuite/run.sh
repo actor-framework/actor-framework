@@ -6,6 +6,12 @@ REPORT_DIR="./reports"
 REPORT_JSON_FILE="$REPORT_DIR/index.json"
 CONFIG_FILE="test_config.json"
 
+if [ $# -ne 1 ]; then 
+  exit 255
+fi
+
+BUILD_DIR="$1"
+
 function cleanup() {
   rm -rf "$CONFIG_FILE"
   kill %1
@@ -23,10 +29,6 @@ function count_by_status() {
     fi
     echo "$NUM"
 }
-
-if [ $# -ne 1 ]; then 
-  exit 255
-fi
 
 cat > $CONFIG_FILE << EOF
 {
