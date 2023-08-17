@@ -205,7 +205,7 @@ pipeline {
                     echo "start build"
                     sh "./.ci/run.sh build '$initFile' '$baseDir' '$buildDir'"
                     warnError('Unit Tests failed!') {
-                        echo "Starting Autobahn Testsuite "
+                        echo "Starting Autobahn Testsuite"
                         sh "./.ci/autobahn-testsuite/run.sh $buildDir"
                         writeFile file: "build-autobahn.success", text: "success\n"
                     }
