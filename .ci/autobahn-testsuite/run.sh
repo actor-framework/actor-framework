@@ -45,7 +45,6 @@ cat > $CONFIG_FILE << EOF
 EOF
 trap cleanup EXIT
 
-set -x
 "$BUILD_DIR"/libcaf_net/caf-net-autobahn-driver -p 7788 >/dev/null &
 wstest -m fuzzingclient -s $CONFIG_FILE
 
