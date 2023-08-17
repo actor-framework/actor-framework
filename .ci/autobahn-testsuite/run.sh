@@ -1,6 +1,4 @@
-#! /bin/bash -x
-
-set -e
+#! /bin/bash -e
 
 REPORT_DIR="./reports"
 REPORT_JSON_FILE="$REPORT_DIR/index.json"
