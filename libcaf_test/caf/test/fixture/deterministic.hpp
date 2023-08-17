@@ -448,7 +448,7 @@ public:
 
   /// Helper class for `inject` that only provides `with`.
   struct inject_helper {
-    deterministic*fix;
+    deterministic* fix;
     detail::source_location loc;
 
     template <class... Ts>
