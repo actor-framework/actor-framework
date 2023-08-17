@@ -1,13 +1,37 @@
-#! /bin/bash
+#! /bin/bash -x
 
-SCRIPT_DIR=$(dirname "$0")
+set -e
 
-BUILD_DIR=${1:-$SCRIPT_DIR/../../build}
+REPORT_DIR="./reports"
+REPORT_JSON_FILE="$REPORT_DIR/index.json"
+CONFIG_FILE="test_config.json"
 
-cat > test_config.json << EOF
+function cleanup() {
+  rm -rf "$CONFIG_FILE"
+  kill %1
+}
+
+function count_by_status() {
+    GREP_STRING=$(printf '"behavior": "%s"' "$1")
+    NUM=$(grep -c "$GREP_STRING" $REPORT_JSON_FILE)
+    if [ "$NUM" -gt 0 ]; then 
+        echo "There are $NUM $1 Autobahn tests" >&2
+        echo "The following tests finished with status $1" >&2
+        grep "$GREP_STRING" -B1 "$REPORT_JSON_FILE" |\
+            grep -v -P "(behavior)|(--)" |\
+            cut -d: -f 1 >&2
+    fi
+    echo "$NUM"
+}
+
+if [ $# -ne 1 ]; then 
+  exit 255
+fi
+
+cat > $CONFIG_FILE << EOF
 {
   "options": {},
-  "outdir": "./reports/",
+  "outdir": "$REPORT_DIR",
   "servers": [
     {
       "agent": "CAF Websocket Autobahn Driver",
@@ -19,13 +43,16 @@ cat > test_config.json << EOF
   "exclude-agent-cases": {}
 }
 EOF
+trap cleanup EXIT
 
-"${BUILD_DIR}"/libcaf_net/caf-net-autobahn-driver -p 7788 >/dev/null &
+set -x
+"$BUILD_DIR"/libcaf_net/caf-net-autobahn-driver -p 7788 >/dev/null &
+wstest -m fuzzingclient -s $CONFIG_FILE
 
-wstest -m fuzzingclient -s test_config.json
+echo "Autobahn testsuite finished"
+echo "Test report by status:"
+grep '"behavior"' $REPORT_JSON_FILE | sort | uniq -c
 
-kill %1
-
-grep '"behavior"' ./reports/index.json | sort | uniq -c
-
-exit 1
+NUM_OF_FAILED_TESTS=$(count_by_status FAILED)
+NUM_OF_NON_STRICT=$(count_by_status NON-STRICT)
+exit $((NUM_OF_NON_STRICT + NUM_OF_FAILED_TESTS))
