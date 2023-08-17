@@ -183,7 +183,7 @@ pipeline {
                     echo "Starting autobahn docker"
                     def baseDir = pwd()
                     def buildDir = "$baseDir/build"
-                    def installDir = "$baseDir/../autobahn"
+                    def installDir = "$baseDir/caf-install"
                     def initFile = "$baseDir/init.cmake"
                     echo "Writing init.cmake file"
                     writeFile([
@@ -200,9 +200,10 @@ pipeline {
                         """
                     ])
                     echo "start build"
+                    sh export CAF_NUM_CORES=4
                     sh "./.ci/run.sh build '$initFile' '$baseDir' '$buildDir'"
                     warnError('Unit Tests failed!') {
-                        echo "start build"
+                        echo "Starting Autobahn Testsuite "
                         sh "./.ci/autobahn-testsuite/run.sh $buildDir"
                         writeFile file: "build-autobahn.success", text: "success\n"
                     }

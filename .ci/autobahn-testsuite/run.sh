@@ -25,3 +25,7 @@ EOF
 wstest -m fuzzingclient -s test_config.json
 
 kill %1
+
+grep '"behavior"' ./reports/index.json | sort | uniq -c
+
+exit 1
