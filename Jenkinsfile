@@ -202,7 +202,7 @@ pipeline {
                     ])
                     sh "rm -rf '$buildDir'"
                     sh "./.ci/run.sh build '$initFile' '$baseDir' '$buildDir'"
-                    catchError(message: 'Autobahn Tests failed!', buildResult: "FAILED", stageResult: "FAILED") {
+                    catchError(message: 'Autobahn Tests failed!', buildResult: "FAILURE", stageResult: "FAILURE") {
                         sh "./.ci/autobahn-testsuite/run.sh $buildDir"
                     }
                 }
