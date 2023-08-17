@@ -175,7 +175,12 @@ pipeline {
         }
         */
         stage('Autobahn Testsuite') {
-            agent { docker { image "sources/.ci/autobahn-testsuite" } }
+            agent { 
+                dockerfile { 
+                    dir 'sources/.ci/autobahn-testsuite', 
+                    reuseNode true
+                }
+            }
             steps {
                 script {
                     echo "Starting autobahn docker"
