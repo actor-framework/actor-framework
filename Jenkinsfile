@@ -202,7 +202,9 @@ pipeline {
                         """
                     ])
                     echo "start build"
-                    sh "./sources/.ci/run.sh build '$initFile' '$sourceDir' '$buildDir'"
+                    sh "ls .."
+                    sh "ls"
+                    sh "./.ci/run.sh build '$initFile' '$sourceDir' '$buildDir'"
                     warnError('Unit Tests failed!') {
                         echo "start build"
                         sh "./sources/.ci/autobahn-testsuite/run.sh $buildDir"
