@@ -182,12 +182,10 @@ pipeline {
                 script {
                     echo "Starting autobahn docker"
                     def baseDir = pwd()
-                    def sourceDir = "$baseDir/sources"
                     def buildDir = "$baseDir/build"
-                    def installDir = "$baseDir/autobahn"
+                    def installDir = "$baseDir/../autobahn"
                     def initFile = "$baseDir/init.cmake"
-                    def init = new StringBuilder()
-                    echo "Writing file"
+                    echo "Writing init.cmake file"
                     writeFile([
                         file: 'init.cmake',
                         text: """
@@ -202,12 +200,10 @@ pipeline {
                         """
                     ])
                     echo "start build"
-                    sh "ls .."
-                    sh "ls"
-                    sh "./.ci/run.sh build '$initFile' '$sourceDir' '$buildDir'"
+                    sh "./.ci/run.sh build '$initFile' '$baseDir' '$buildDir'"
                     warnError('Unit Tests failed!') {
                         echo "start build"
-                        sh "./sources/.ci/autobahn-testsuite/run.sh $buildDir"
+                        sh "./.ci/autobahn-testsuite/run.sh $buildDir"
                         writeFile file: "build-autobahn.success", text: "success\n"
                     }
                 }
