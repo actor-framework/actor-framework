@@ -440,4 +440,4 @@ private:
   mailbox_element_ptr pop_msg_impl(scheduled_actor* receiver);
 };
 
-} // namespace caf::test
+} // namespace caf::test::fixture
