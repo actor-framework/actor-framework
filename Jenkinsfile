@@ -178,6 +178,9 @@ pipeline {
             agent { 
                 dockerfile { dir ".ci/autobahn-testsuite" }
             }
+            environment {
+                CAF_NUM_CORES = 4
+            }
             steps {
                 script {
                     echo "Starting autobahn docker"
@@ -200,7 +203,6 @@ pipeline {
                         """
                     ])
                     echo "start build"
-                    sh export CAF_NUM_CORES=4
                     sh "./.ci/run.sh build '$initFile' '$baseDir' '$buildDir'"
                     warnError('Unit Tests failed!') {
                         echo "Starting Autobahn Testsuite "
