@@ -177,7 +177,7 @@ pipeline {
         stage('Autobahn Testsuite') {
             agent { 
                 dockerfile { 
-                    dir 'sources/.ci/autobahn-testsuite', 
+                    dir "sources/.ci/autobahn-testsuite", 
                     reuseNode true
                 }
             }
