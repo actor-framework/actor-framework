@@ -71,6 +71,7 @@ caf_add_component(
     caf/abstract_group.cpp
     caf/abstract_mailbox.cpp
     caf/action.cpp
+    caf/action.test.cpp
     caf/actor.cpp
     caf/actor_addr.cpp
     caf/actor_clock.cpp
@@ -232,7 +233,6 @@ caf_add_component(
     tests/legacy/core-test.cpp
     tests/legacy/nasty.cpp
   LEGACY_TEST_SUITES
-    action
     actor_clock
     actor_factory
     actor_lifetime

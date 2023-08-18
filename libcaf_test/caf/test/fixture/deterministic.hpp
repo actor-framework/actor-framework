@@ -318,6 +318,73 @@ public:
     message_predicate<Ts...> with_;
   };
 
+  /// Utility class for injecting messages into the mailbox of an actor and then
+  /// checking whether the actor handles the message as expected.
+  template <class... Ts>
+  class injector {
+  public:
+    injector(deterministic* fix, detail::source_location loc, Ts... values)
+      : fix_(fix), loc_(loc), values_(std::move(values)...) {
+      // nop
+    }
+
+    injector() = delete;
+
+    injector(injector&&) noexcept = default;
+
+    injector& operator=(injector&&) noexcept = default;
+
+    injector(const injector&) = delete;
+
+    injector& operator=(const injector&) = delete;
+
+    /// Adds a predicate for the sender of the next message that matches only if
+    /// the sender is `src`.
+    injector&& from(const strong_actor_ptr& src) && {
+      from_ = src;
+      return std::move(*this);
+    }
+
+    /// Adds a predicate for the sender of the next message that matches only if
+    /// the sender is `src`.
+    injector&& from(const actor& src) && {
+      from_ = actor_cast<strong_actor_ptr>(src);
+      return std::move(*this);
+    }
+
+    /// Adds a predicate for the sender of the next message that matches only if
+    /// the sender is `src`.
+    template <class... Us>
+    injector&& from(const typed_actor<Us...>& src) && {
+      from_ = actor_cast<strong_actor_ptr>(src);
+      return std::move(*this);
+    }
+
+    /// Sets the target actor for this injector, sends the message, and then
+    /// checks whether the actor handles the message as expected.
+    template <class T>
+    void to(const T& dst) && {
+      to_impl(dst, std::make_index_sequence<sizeof...(Ts)>{});
+    }
+
+  private:
+    template <class T, size_t... Is>
+    void to_impl(const T& dst, std::index_sequence<Is...>) {
+      auto ptr = actor_cast<abstract_actor*>(dst);
+      ptr->eq_impl(make_message_id(), from_, nullptr,
+                   make_message(std::get<Is>(values_)...));
+      fix_->expect<Ts...>(loc_)
+        .from(from_)
+        .with(std::get<Is>(values_)...)
+        .to(dst);
+    }
+
+    deterministic* fix_;
+    detail::source_location loc_;
+    strong_actor_ptr from_;
+    std::tuple<Ts...> values_;
+  };
+
   // -- friends ----------------------------------------------------------------
 
   friend class mailbox_impl;
@@ -377,6 +444,25 @@ public:
   auto allow(const detail::source_location& loc
              = detail::source_location::current()) {
     return evaluator<Ts...>{this, loc, evaluator_algorithm::allow};
+  }
+
+  /// Helper class for `inject` that only provides `with`.
+  struct inject_helper {
+    deterministic* fix;
+    detail::source_location loc;
+
+    template <class... Ts>
+    auto with(Ts... values) {
+      return injector<Ts...>{fix, loc, std::move(values)...};
+    }
+  };
+
+  /// Starts an `inject` clause. Inject clauses provide a shortcut for sending a
+  /// message to an actor and then calling `expect` with the same arguments to
+  /// check whether the actor handles the message as expected.
+  auto inject(const detail::source_location& loc
+              = detail::source_location::current()) {
+    return inject_helper{this, loc};
   }
 
   /// Tries to prepone a message, i.e., reorders the messages in the mailbox of
