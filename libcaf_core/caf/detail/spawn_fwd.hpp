@@ -27,9 +27,9 @@ struct spawn_fwd_convert<T*> {
 /// but simply forwards any other argument in the same way `std::forward` does.
 template <class T>
 typename std::conditional<
-  spawn_fwd_convert<typename std::remove_reference<T>::type>::value, actor,
+  spawn_fwd_convert<typename std::remove_reference_t<T>>::value, actor,
   T&&>::type
-spawn_fwd(typename std::remove_reference<T>::type& arg) noexcept {
+spawn_fwd(typename std::remove_reference_t<T>& arg) noexcept {
   return static_cast<T&&>(arg);
 }
 
@@ -37,9 +37,9 @@ spawn_fwd(typename std::remove_reference<T>::type& arg) noexcept {
 /// but simply forwards any other argument in the same way `std::forward` does.
 template <class T>
 typename std::conditional<
-  spawn_fwd_convert<typename std::remove_reference<T>::type>::value, actor,
+  spawn_fwd_convert<typename std::remove_reference_t<T>>::value, actor,
   T&&>::type
-spawn_fwd(typename std::remove_reference<T>::type&& arg) noexcept {
+spawn_fwd(typename std::remove_reference_t<T>&& arg) noexcept {
   static_assert(!std::is_lvalue_reference_v<T>,
                 "silently converting an lvalue to an rvalue");
   return static_cast<T&&>(arg);

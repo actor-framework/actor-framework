@@ -35,9 +35,15 @@ struct type_id_sequence_helper<type_id_pair<Begin, End>, Is...> {
                                                 Is..., Begin>::type;
 };
 
+/// Convenience alias for `type_id_sequence_helper<class Range,
+/// uint16_t...>::type`.
+template <class Range, uint16_t... Is>
+using type_id_sequence_helper_t =
+  typename type_id_sequence_helper<Range, Is...>::type;
+
 template <class Range>
-using make_type_id_sequence = typename type_id_sequence_helper<
-  type_id_pair<Range::begin, Range::end>>::type;
+using make_type_id_sequence =
+  typename type_id_sequence_helper_t<type_id_pair<Range::begin, Range::end>>;
 
 } // namespace caf::detail
 

@@ -34,6 +34,6 @@ constexpr socket_id invalid_socket_id = -1;
 
 /// Signed counterpart of `socket_id`.
 /// @relates socket
-using signed_socket_id = std::make_signed<socket_id>::type;
+using signed_socket_id = std::make_signed_t<socket_id>;
 
 } // namespace caf::net

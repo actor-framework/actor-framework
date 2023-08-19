@@ -95,7 +95,7 @@ struct equality_operator {
   }
 
   template <class T, class U,
-            typename std::enable_if<!detail::is_comparable_v<T, U>>::type = 0>
+            typename std::enable_if_t<!detail::is_comparable_v<T, U>> = 0>
   bool operator()(const T&, const U&) const {
     return default_value;
   }

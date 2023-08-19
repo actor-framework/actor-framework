@@ -63,7 +63,7 @@ public:
     static_assert(sizeof...(Ts) > 0, "assign without arguments called");
     static_assert(
       !detail::disjunction<
-        may_have_timeout<typename std::decay<Ts>::type>::value...>::value,
+        may_have_timeout<typename std::decay_t<Ts>>::value...>::value,
       "Timeouts are only allowed in behaviors");
     impl_ = detail::make_behavior(xs...);
   }
@@ -85,7 +85,7 @@ public:
   /// with a new handler from `xs...`.
   template <class... Ts>
   typename std::conditional<detail::disjunction<may_have_timeout<
-                              typename std::decay<Ts>::type>::value...>::value,
+                              typename std::decay_t<Ts>>::value...>::value,
                             behavior, message_handler>::type
   or_else(Ts&&... xs) const {
     // using a behavior is safe here, because we "cast"

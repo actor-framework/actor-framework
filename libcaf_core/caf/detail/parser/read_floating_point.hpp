@@ -171,7 +171,7 @@ void read_floating_point(State& ps, Consumer&& consumer,
 
 template <class State, class Consumer>
 void read_floating_point(State& ps, Consumer&& consumer) {
-  using consumer_type = typename std::decay<Consumer>::type;
+  using consumer_type = typename std::decay_t<Consumer>;
   using value_type = typename consumer_type::value_type;
   return read_floating_point(ps, consumer, std::optional<value_type>{});
 }

@@ -283,12 +283,16 @@ struct gauge_oracle<int64_t> {
   using type = telemetry::int_gauge;
 };
 
+/// Convenience alias for `detail::gauge_oracle<ValueType>::type`.
+template <class ValueType>
+using gauge_oracle_t = typename gauge_oracle<ValueType>::type;
+
 } // namespace detail
 
 namespace telemetry {
 
 template <class ValueType>
-using gauge = typename detail::gauge_oracle<ValueType>::type;
+using gauge = typename detail::gauge_oracle_t<ValueType>;
 
 } // namespace telemetry
 

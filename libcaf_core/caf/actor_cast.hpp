@@ -150,7 +150,7 @@ public:
 template <class T, class U>
 T actor_cast(U&& what) {
   using from_type =
-    typename std::remove_const<typename std::remove_reference<U>::type>::type;
+    typename std::remove_const<typename std::remove_reference_t<U>>::type;
   // query traits for T
   constexpr bool to_raw = std::is_pointer_v<T>;
   constexpr bool to_weak = is_weak_ptr_v<T>;

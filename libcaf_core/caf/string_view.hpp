@@ -43,7 +43,7 @@ struct is_string_like {
 
   // Result of SFINAE test.
   using result_type
-    = decltype(sfinae(static_cast<typename std::decay<T>::type*>(nullptr)));
+    = decltype(sfinae(static_cast<typename std::decay_t<T>*>(nullptr)));
 
   // Trait result.
   static constexpr bool value = std::is_same_v<bool, result_type>;

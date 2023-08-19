@@ -63,21 +63,21 @@ constexpr T* null_v = nullptr;
 // -- backport of C++14 additions ----------------------------------------------
 
 template <class T>
-using decay_t = typename std::decay<T>::type;
+using decay_t = typename std::decay_t<T>;
 
 template <bool B, class T, class F>
 using conditional_t = typename std::conditional<B, T, F>::type;
 
 template <bool V, class T = void>
-using enable_if_t = typename std::enable_if<V, T>::type;
+using enable_if_t = typename std::enable_if_t<V, T>;
 
 // -- custom traits ------------------------------------------------------------
 
 template <class Trait, class T = void>
-using enable_if_tt = typename std::enable_if<Trait::value, T>::type;
+using enable_if_tt = typename std::enable_if_t<Trait::value, T>;
 
 template <class T>
-using remove_reference_t = typename std::remove_reference<T>::type;
+using remove_reference_t = typename std::remove_reference_t<T>;
 
 /// Checks whether `T` defines a free function `to_string`.
 template <class T>
@@ -329,7 +329,7 @@ struct has_apply_operator {
 template <class T,
           bool IsFun
           = std::is_function_v<T>
-            || std::is_function<typename std::remove_pointer<T>::type>::value
+            || std::is_function<typename std::remove_pointer_t<T>>::value
             || std::is_member_function_pointer_v<T>,
           bool HasApplyOp = has_apply_operator<T>::value>
 struct get_callable_trait_helper {
