@@ -4,6 +4,8 @@
 
 #include "caf/test/fixture/deterministic.hpp"
 
+#include "caf/action.hpp"
+#include "caf/actor_clock.hpp"
 #include "caf/actor_control_block.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
@@ -14,6 +16,113 @@
 #include "caf/scheduled_actor.hpp"
 
 namespace caf::test::fixture {
+
+// -- clock --------------------------------------------------------------------
+
+class deterministic::clock_impl : public actor_clock {
+public:
+  // -- constructors, destructors, and assignment operators --------------------
+
+  test_actor_clock() : current_time(duration_type{1}) {
+    // This ctor makes sure that the clock isn't at the default-constructed
+    // time_point, because begin-of-epoch may have special meaning.
+  }
+
+  // -- overrides --------------------------------------------------------------
+
+  time_point now() const noexcept override {
+    return current_time;
+  }
+
+  disposable schedule(time_point abs_time, action f) override {
+    CAF_ASSERT(f.ptr() != nullptr);
+    actions.emplace(abs_time, f);
+    return std::move(f).as_disposable();
+  }
+
+  // -- testing DSL API --------------------------------------------------------
+
+  /// Returns whether the actor clock has at least one pending timeout.
+  bool has_pending_timeout() const {
+    auto not_disposed = [](const auto& kvp) { return !kvp.second.disposed(); };
+    return std::any_of(actions.begin(), actions.end(), not_disposed);
+  }
+
+  /// Triggers the next pending timeout regardless of its timestamp. Sets
+  /// `current_time` to the time point of the triggered timeout unless
+  /// `current_time` is already set to a later time.
+  /// @returns Whether a timeout was triggered.
+  bool trigger_timeout() {
+    CAF_LOG_TRACE(CAF_ARG2("actions.size", actions.size()));
+    for (;;) {
+      if (actions.empty())
+        return false;
+      auto i = actions.begin();
+      auto t = i->first;
+      if (t > current_time)
+        current_time = t;
+      if (try_trigger_once())
+        return true;
+    }
+  }
+
+  /// Triggers all pending timeouts regardless of their timestamp. Sets
+  /// `current_time` to the time point of the latest timeout unless
+  /// `current_time` is already set to a later time.
+  /// @returns The number of triggered timeouts.
+  size_t trigger_timeouts() {
+    CAF_LOG_TRACE(CAF_ARG2("actions.size", actions.size()));
+    if (actions.empty())
+      return 0u;
+    size_t result = 0;
+    while (trigger_timeout())
+      ++result;
+    return result;
+  }
+
+  /// Advances the time by `x` and dispatches timeouts and delayed messages.
+  /// @returns The number of triggered timeouts.
+  size_t advance_time(duration_type x) {
+    CAF_LOG_TRACE(CAF_ARG(x) << CAF_ARG2("actions.size", actions.size()));
+    CAF_ASSERT(x.count() >= 0);
+    current_time += x;
+    auto result = size_t{0};
+    while (!actions.empty() && actions.begin()->first <= current_time)
+      if (try_trigger_once())
+        ++result;
+    return result;
+  }
+
+  /// Triggers the next timeout and advances the time to its timestamp.
+  bool try_trigger_once() {
+    for (;;) {
+      if (actions.empty())
+        return false;
+      auto i = actions.begin();
+      auto [t, f] = *i;
+      if (t > current_time)
+        return false;
+      actions.erase(i);
+      if (!f.disposed()) {
+        f.run();
+        return true;
+      }
+    }
+  }
+
+  // -- properties -------------------------------------------------------------
+
+  /// @pre has_pending_timeout()
+  time_point next_timeout() const {
+    return actions.begin()->first;
+  }
+
+  // -- member variables -------------------------------------------------------
+
+  time_point current_time;
+
+  std::multimap<time_point, action> actions;
+};
 
 // -- mailbox ------------------------------------------------------------------
 
@@ -141,7 +250,7 @@ public:
     return false;
   }
 
-  detail::test_actor_clock& clock() noexcept override {
+  deterministic::clock_impl& clock() noexcept override {
     return clock_;
   }
 
@@ -180,7 +289,7 @@ private:
   deterministic* fix_;
 
   /// Allows users to fake time at will.
-  detail::test_actor_clock clock_;
+  deterministic::clock_impl clock_;
 };
 
 // -- config -------------------------------------------------------------------

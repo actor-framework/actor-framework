@@ -27,6 +27,8 @@ class CAF_TEST_EXPORT deterministic {
 private:
   // -- private member types (implementation details) --------------------------
 
+  class clock_impl;
+
   class mailbox_impl;
 
   class scheduler_impl;
