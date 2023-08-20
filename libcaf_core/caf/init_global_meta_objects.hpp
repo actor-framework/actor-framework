@@ -42,8 +42,8 @@ using type_id_sequence_helper_t =
   typename type_id_sequence_helper<Range, Is...>::type;
 
 template <class Range>
-using make_type_id_sequence =
-  typename type_id_sequence_helper_t<type_id_pair<Range::begin, Range::end>>;
+using make_type_id_sequence
+  = type_id_sequence_helper_t<type_id_pair<Range::begin, Range::end>>;
 
 } // namespace caf::detail
 

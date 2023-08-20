@@ -292,7 +292,7 @@ using gauge_oracle_t = typename gauge_oracle<ValueType>::type;
 namespace telemetry {
 
 template <class ValueType>
-using gauge = typename detail::gauge_oracle_t<ValueType>;
+using gauge = detail::gauge_oracle_t<ValueType>;
 
 } // namespace telemetry
 

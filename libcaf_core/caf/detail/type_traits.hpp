@@ -63,7 +63,7 @@ constexpr T* null_v = nullptr;
 // -- backport of C++14 additions ----------------------------------------------
 
 template <class T>
-using decay_t = typename std::decay_t<T>;
+using decay_t = std::decay_t<T>;
 
 template <bool B, class T, class F>
 using conditional_t = typename std::conditional<B, T, F>::type;
@@ -77,7 +77,7 @@ template <class Trait, class T = void>
 using enable_if_tt = typename std::enable_if_t<Trait::value, T>;
 
 template <class T>
-using remove_reference_t = typename std::remove_reference_t<T>;
+using remove_reference_t = std::remove_reference_t<T>;
 
 /// Checks whether `T` defines a free function `to_string`.
 template <class T>

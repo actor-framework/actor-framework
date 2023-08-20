@@ -56,7 +56,7 @@ void exec_main_load_module(actor_system_config& cfg) {
 
 template <class... Ts, class F = void (*)(actor_system&)>
 int exec_main(F fun, int argc, char** argv) {
-  using trait = typename detail::get_callable_trait_t<F>;
+  using trait = detail::get_callable_trait_t<F>;
   using arg_types = typename trait::arg_types;
   static_assert(detail::tl_size<arg_types>::value == 1
                   || detail::tl_size<arg_types>::value == 2,

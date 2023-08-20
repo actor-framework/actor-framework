@@ -26,7 +26,7 @@ namespace caf::detail::parser {
 /// `double`.
 template <class State, class Consumer>
 void read_signed_integer(State& ps, Consumer&& consumer) {
-  using consumer_type = typename std::decay_t<Consumer>;
+  using consumer_type = std::decay_t<Consumer>;
   using value_type = typename consumer_type::value_type;
   static_assert(std::is_integral_v<value_type> && std::is_signed_v<value_type>,
                 "expected a signed integer type");
