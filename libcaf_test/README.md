@@ -337,10 +337,24 @@ To migrate to the new framework:
 
 For users of the old `caf/test/dsl.hpp` header:
 
+- Include `caf/test/scenario.hpp` instead of `caf/test/dsl.hpp`.
 - The BDD-style macros still have the same names. However, CAF now runs each
   branch of a BDD-style test independently. Hence, old tests with multiple
-a `WHEN` blocks might behave slightly differently now.
+  `WHEN` blocks might behave slightly differently now.
 - Instead of using the `test_coordinator_fixture`, use
   `caf::test::fixture::deterministic`. The interface is mostly the same, but
   there are some differences. Please refer to the class documentation for more
   details.
+- Macros such as `expect`, `allow` and `inject` have been replaced by member
+  functions on the new deterministic fixture. Hence, the syntax has changed
+  slightly:
+  ```
+  old: expect((int), with(42).from(foo).to(bar))
+  new: expect<int>().with(42).from(foo).to(bar)
+
+  old: allow((int), with(42).from(foo).to(bar))
+  new: allow<int>().with(42).from(foo).to(bar)
+
+  old: inject((int), with(42).from(foo).to(bar))
+  new: inject().with(42).from(foo).to(bar)
+  ```
