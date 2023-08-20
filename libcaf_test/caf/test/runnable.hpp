@@ -59,12 +59,45 @@ public:
 
   /// Generates a message with the INFO severity level.
   template <class... Ts>
-  void info(detail::format_string_with_location fwl, Ts&&... xs) {
+  void print_info(detail::format_string_with_location fwl, Ts&&... xs) {
     if constexpr (sizeof...(Ts) > 0) {
       auto msg = detail::format(fwl.value, std::forward<Ts>(xs)...);
       reporter::instance().print_info(msg, fwl.location);
     } else {
       reporter::instance().print_info(fwl.value, fwl.location);
+    }
+  }
+
+  /// Generates a message with the DEBUG severity level.
+  template <class... Ts>
+  void print_debug(detail::format_string_with_location fwl, Ts&&... xs) {
+    if constexpr (sizeof...(Ts) > 0) {
+      auto msg = detail::format(fwl.value, std::forward<Ts>(xs)...);
+      reporter::instance().print_debug(msg, fwl.location);
+    } else {
+      reporter::instance().print_debug(fwl.value, fwl.location);
+    }
+  }
+
+  /// Generates a message with the WARNING severity level.
+  template <class... Ts>
+  void print_warning(detail::format_string_with_location fwl, Ts&&... xs) {
+    if constexpr (sizeof...(Ts) > 0) {
+      auto msg = detail::format(fwl.value, std::forward<Ts>(xs)...);
+      reporter::instance().print_warning(msg, fwl.location);
+    } else {
+      reporter::instance().print_warning(fwl.value, fwl.location);
+    }
+  }
+
+  /// Generates a message with the ERROR severity level.
+  template <class... Ts>
+  void print_error(detail::format_string_with_location fwl, Ts&&... xs) {
+    if constexpr (sizeof...(Ts) > 0) {
+      auto msg = detail::format(fwl.value, std::forward<Ts>(xs)...);
+      reporter::instance().print_error(msg, fwl.location);
+    } else {
+      reporter::instance().print_error(fwl.value, fwl.location);
     }
   }
 

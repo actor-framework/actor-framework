@@ -84,10 +84,6 @@ public:
     = 0;
 
   virtual void
-  print_trace(std::string_view msg, const detail::source_location& location)
-    = 0;
-
-  virtual void
   print_error(std::string_view msg, const detail::source_location& location)
     = 0;
 
