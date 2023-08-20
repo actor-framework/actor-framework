@@ -4,6 +4,7 @@
 #include "caf/test/test.hpp"
 
 #include "caf/test/caf_test_main.hpp"
+#include "caf/test/requirement_failed.hpp"
 
 using caf::test::block_type;
 
@@ -39,6 +40,52 @@ TEST("tests can contain different types of checks") {
   }
   info("this test had {} checks", rep.test_stats().total());
 }
+
+#ifdef CAF_ENABLE_EXCEPTIONS
+
+TEST("tests fail when requirement errors occur") {
+  using caf::test::requirement_failed;
+  auto& rep = caf::test::reporter::instance();
+  SECTION("require_eq fails when lhs != rhs") {
+    should_fail_with_exception<requirement_failed>(
+      [this]() { require_eq(1, 2); });
+    require_eq(1, 1);
+  }
+  SECTION("require_ne fails when lhs == rhs") {
+    should_fail_with_exception<requirement_failed>(
+      [this]() { require_ne(1, 1); });
+    require_ne(1, 2);
+  }
+  SECTION("require_le fails when lhs > rhs") {
+    should_fail_with_exception<requirement_failed>(
+      [this]() { require_le(2, 1); });
+    require_le(1, 2);
+    require_le(2, 2);
+  }
+  SECTION("require_lt fails when lhs >= rhs") {
+    should_fail_with_exception<requirement_failed>(
+      [this]() { require_lt(2, 2); });
+    should_fail_with_exception<requirement_failed>(
+      [this]() { require_lt(2, 1); });
+    require_lt(1, 2);
+  }
+  SECTION("require_ge fails when lhs < rhs") {
+    should_fail_with_exception<requirement_failed>(
+      [this]() { require_ge(1, 2); });
+    require_ge(2, 1);
+    require_ge(2, 2);
+  }
+  SECTION("require_gt fails when lhs <= rhs") {
+    should_fail_with_exception<requirement_failed>(
+      [this]() { require_gt(1, 1); });
+    should_fail_with_exception<requirement_failed>(
+      [this]() { require_gt(1, 2); });
+    require_gt(2, 1);
+  }
+  info("this test had {} checks", rep.test_stats().total());
+}
+
+#endif // CAF_ENABLE_EXCEPTIONS
 
 TEST("failed checks increment the failed counter") {
   check_eq(1, 2);

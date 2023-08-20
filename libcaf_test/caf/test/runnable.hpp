@@ -8,7 +8,7 @@
 #include "caf/test/block_type.hpp"
 #include "caf/test/fwd.hpp"
 #include "caf/test/reporter.hpp"
-#include "caf/test/requirement_error.hpp"
+#include "caf/test/requirement_failed.hpp"
 
 #include "caf/config.hpp"
 #include "caf/deep_to_string.hpp"
@@ -54,7 +54,7 @@ public:
     } else {
       reporter::instance().fail(fwl.value, fwl.location);
     }
-    requirement_error::raise(fwl.location);
+    requirement_failed::raise(fwl.location);
   }
 
   /// Generates a message with the INFO severity level.
@@ -161,6 +161,65 @@ public:
   /// Checks whether `value` is `true`.
   bool check(bool value, const detail::source_location& location
                          = detail::source_location::current());
+
+  /// Evaluates whether `lhs` and `rhs` are equal and fails otherwise.
+  template <class T0, class T1>
+  void require_eq(const T0& lhs, const T1& rhs,
+                  const detail::source_location& location
+                  = detail::source_location::current()) {
+    if (!check_eq(lhs, rhs, location))
+      requirement_failed::raise(location);
+  }
+
+  /// Evaluates whether `lhs` and `rhs` are unequal and fails otherwise.
+  template <class T0, class T1>
+  void require_ne(const T0& lhs, const T1& rhs,
+                  const detail::source_location& location
+                  = detail::source_location::current()) {
+    if (!check_ne(lhs, rhs, location))
+      requirement_failed::raise(location);
+  }
+
+  /// Evaluates whether `lhs` is less than `rhs` and fails otherwise
+  template <class T0, class T1>
+  void require_lt(const T0& lhs, const T1& rhs,
+                  const detail::source_location& location
+                  = detail::source_location::current()) {
+    if (!check_lt(lhs, rhs, location))
+      requirement_failed::raise(location);
+  }
+
+  /// Evaluates whether `lhs` less than or equal to `rhs` and fails otherwise.
+  template <class T0, class T1>
+  void require_le(const T0& lhs, const T1& rhs,
+                  const detail::source_location& location
+                  = detail::source_location::current()) {
+    if (!check_le(lhs, rhs, location))
+      requirement_failed::raise(location);
+  }
+
+  /// Evaluates whether `lhs` is greater than `rhs` and fails otherwise.
+  template <class T0, class T1>
+  void require_gt(const T0& lhs, const T1& rhs,
+                  const detail::source_location& location
+                  = detail::source_location::current()) {
+    if (!check_gt(lhs, rhs, location))
+      requirement_failed::raise(location);
+  }
+
+  /// Evaluates whether `lhs` greater than or equal to `rhs` and fails
+  /// otherwise.
+  template <class T0, class T1>
+  void require_ge(const T0& lhs, const T1& rhs,
+                  const detail::source_location& location
+                  = detail::source_location::current()) {
+    if (!check_ge(lhs, rhs, location))
+      requirement_failed::raise(location);
+  }
+
+  /// Evaluates whether `value` is `true` and fails otherwise.
+  void require(bool value, const detail::source_location& location
+                           = detail::source_location::current());
 
   /// Returns the `runnable` instance that is currently running.
   static runnable& current();

@@ -386,6 +386,19 @@ public:
               ' ', indent_, location.file_name(), location.line(), msg);
   }
 
+  void print_error(std::string_view msg,
+                   const detail::source_location& location) override {
+    using detail::format_to;
+    if (level_ < CAF_LOG_LEVEL_ERROR)
+      return;
+    set_live();
+    format_to(colored(),
+              "{0:{1}}$R(error):\n"
+              "{0:{1}}  loc: $C({2}):$Y({3})$0\n"
+              "{0:{1}}  msg: {4}\n",
+              ' ', indent_, location.file_name(), location.line(), msg);
+  }
+
   unsigned verbosity(unsigned level) override {
     auto result = level_;
     level_ = level;
