@@ -119,6 +119,10 @@ struct conjunction<X, Xs...> {
   static constexpr bool value = X && conjunction<Xs...>::value;
 };
 
+/// Convenience alias for `conjunction<BoolConstants...>::value`.
+template <bool... BoolConstants>
+bool constexpr conjunction_v = conjunction<BoolConstants...>::value;
+
 /// Joins all bool constants using operator ||.
 template <bool... BoolConstants>
 struct disjunction;
@@ -132,6 +136,10 @@ template <bool X, bool... Xs>
 struct disjunction<X, Xs...> {
   static constexpr bool value = X || disjunction<Xs...>::value;
 };
+
+/// Convenience alias for `disjunction<BoolConstants...>::value`.
+template <bool... BoolConstants>
+bool constexpr disjunction_v = disjunction<BoolConstants...>::value;
 
 /// Checks whether `T` is a `std::chrono::duration`.
 template <class T>
@@ -328,7 +336,7 @@ struct has_apply_operator {
 // matches (IsFun || IsMemberFun)
 template <class T,
           bool IsFun = std::is_function_v<T>
-                       || std::is_function<std::remove_pointer_t<T>>::value
+                       || std::is_function_v<std::remove_pointer_t<T>>
                        || std::is_member_function_pointer_v<T>,
           bool HasApplyOp = has_apply_operator<T>::value>
 struct get_callable_trait_helper {

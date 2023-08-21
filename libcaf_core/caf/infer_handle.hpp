@@ -27,8 +27,8 @@ using spawn_mode_token = std::integral_constant<spawn_mode, X>;
 
 // default: dynamically typed actor without self pointer
 template <class Result, class FirstArg,
-          bool FirstArgValid = std::is_base_of<
-            local_actor, std::remove_pointer_t<FirstArg>>::value>
+          bool FirstArgValid
+          = std::is_base_of_v<local_actor, std::remove_pointer_t<FirstArg>>>
 struct infer_handle_from_fun_impl {
   using type = actor;
   using impl = event_based_actor;

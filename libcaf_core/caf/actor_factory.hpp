@@ -142,7 +142,7 @@ actor_factory_result dyn_spawn_class(actor_config& cfg, message& msg) {
 
 template <class T, class... Ts>
 actor_factory make_actor_factory() {
-  static_assert(detail::conjunction<std::is_lvalue_reference_v<Ts>...>::value,
+  static_assert(detail::conjunction_v<std::is_lvalue_reference_v<Ts>...>,
                 "all Ts must be lvalue references");
   static_assert(std::is_base_of_v<local_actor, T>,
                 "T is not derived from local_actor");
