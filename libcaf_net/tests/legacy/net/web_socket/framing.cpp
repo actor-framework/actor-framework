@@ -46,6 +46,8 @@ auto bytes(std::initializer_list<uint8_t> xs) {
 }
 
 int fetch_status(const_byte_span payload) {
+  if (payload.size() < 4)
+    return -1;
   return (std::to_integer<int>(payload[2]) << 8)
          + std::to_integer<int>(payload[3]);
 }
@@ -324,6 +326,20 @@ SCENARIO("the application shuts down on invalid UTF-8 message") {
       byte_buffer frame;
       detail::rfc6455::assemble_frame(detail::rfc6455::text_frame, 0x0,
                                       data_span, frame);
+      transport->push(frame);
+      THEN("the server aborts the application") {
+        CHECK_EQ(transport->handle_input(), 0);
+        CHECK_EQ(app->abort_reason, sec::malformed_message);
+        CHECK_EQ(fetch_status(transport->output_buffer()),
+                 static_cast<int>(net::web_socket::status::inconsistent_data));
+        MESSAGE("Aborted with: " << app->abort_reason);
+      }
+    }
+    WHEN("the client sends a message ending with a incomplete codepoint") {
+      reset();
+      byte_buffer frame;
+      detail::rfc6455::assemble_frame(detail::rfc6455::text_frame, 0x0,
+                                      data_span.first(6), frame);
       transport->push(frame);
       THEN("the server aborts the application") {
         CHECK_EQ(transport->handle_input(), 0);

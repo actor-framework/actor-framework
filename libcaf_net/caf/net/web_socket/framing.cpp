@@ -11,6 +11,23 @@
 
 namespace caf::net::web_socket {
 
+namespace {
+
+/// Checks whether the current input is valid UTF-8. Stores the last position
+/// while scanning in order to avoid validating the same bytes again.
+bool payload_valid(const_byte_span payload, size_t& offset) noexcept {
+  // validate from the index where we left off last time
+  auto [index, incomplete] = detail::rfc3629::validate(payload.subspan(offset));
+  offset += index;
+  if (offset == payload.size())
+    return true;
+  // incomplete will be true if the last code point is missing continuation
+  // bytes but might be valid
+  return incomplete;
+}
+
+}
+
 // -- static utility functions -------------------------------------------------
 
 error framing::validate_closing_payload(const_byte_span payload) {
@@ -96,7 +113,7 @@ ptrdiff_t framing::consume(byte_span buffer, byte_span delta) {
       return -1;
     }
     // Reject any payload that exceeds max_frame_size. This covers assembled
-    //  payloads as well by including payload_buf_.
+    // payloads as well by including payload_buf_.
     if (payload_buf_.size() + hdr.payload_len > max_frame_size) {
       CAF_LOG_DEBUG("fragmented WebSocket payload exceeds maximum size");
       abort_and_shutdown(sec::protocol_error, "fragmented WebSocket payload "
@@ -104,67 +121,51 @@ ptrdiff_t framing::consume(byte_span buffer, byte_span delta) {
       return -1;
     }
   }
-
-  size_t frame_size = hdr_bytes + hdr.payload_len;
-
-  // unmask the arrived data
+  // Calculate at what point of the received buffer the delta payload begins.
+  auto offset = static_cast<ptrdiff_t>((buffer.size() - delta.size()))
+                - hdr_bytes;
+  // Offset < zero  - the delta buffer contains header bytes.
+  // Delta is empty - we didn't process the whole input last time we got called.
+  if (delta.empty() || offset < 0)
+    offset = 0;
+  // We read frame_size at most. This can leave unprocessed input.
+  auto payload = buffer.subspan(hdr_bytes, std::min(buffer.size() - hdr_bytes,
+                                                    hdr.payload_len));
+  // Unmask the arrived data.
   if (hdr.mask_key != 0) {
-    // leave out the header part
-    // leave out the already part
-    auto offset = static_cast<ptrdiff_t>(buffer.size() - delta.size())
-                  - hdr_bytes;
-    // if the delta buffer is empty this means that we got called to the framing
-    // layer, consumed one frame and returned with unconsumed bytes that
-    // represent the second frame and the transport layer called us again, so
-    // even though we saw the bytes beofre, we didn't unmask them.
-    if (delta.empty())
-      offset = 0;
-    if (offset < 0)
-      offset = 0;
-    auto payload = buffer;
-    if (buffer.size() > frame_size)
-      payload = buffer.subspan(0, frame_size);
-    detail::rfc6455::mask_data(hdr.mask_key, payload.subspan(hdr_bytes),
-                               offset);
+    detail::rfc6455::mask_data(hdr.mask_key, payload, offset);
   }
-
-  // Wait for more data if necessary.
-  if (buffer.size() < frame_size) {
-    // when handling a text frame we want to fail early on invalid UTF-8
-    if (hdr.opcode == detail::rfc6455::text_frame
-        || opcode_ == detail::rfc6455::text_frame) {
-      down_->configure_read(receive_policy::up_to(frame_size));
-      if (hdr.opcode == detail::rfc6455::text_frame) {
-        auto arrived_payload
-          = std::vector<std::byte>{buffer.begin() + hdr_bytes, buffer.end()};
-        if (auto [index, incomplete]
-            = detail::rfc3629::validate(arrived_payload);
-            index != arrived_payload.size() && !incomplete) {
-          abort_and_shutdown(sec::malformed_message, "invalid UTF-8 sequence");
-          return -1;
-        }
-      } else {
-        auto unvalidated_payload = std::vector<std::byte>{
-          payload_buf_.begin() + static_cast<ptrdiff_t>(validation_offset_),
-          payload_buf_.end()};
-        unvalidated_payload.insert(unvalidated_payload.end(),
-                                   buffer.begin() + hdr_bytes, buffer.end());
-        if (auto [index, incomplete]
-            = detail::rfc3629::validate(unvalidated_payload);
-            index != unvalidated_payload.size() && !incomplete) {
-          abort_and_shutdown(sec::malformed_message, "invalid UTF-8 sequence");
-          return -1;
-        }
+  size_t frame_size = hdr_bytes + hdr.payload_len;
+  // In case of text message, we want to validate the UTF-8 encoding early.
+  if (hdr.opcode == detail::rfc6455::text_frame
+      || (hdr.opcode == detail::rfc6455::continuation_frame
+          && opcode_ == detail::rfc6455::text_frame)) {
+    if (hdr.opcode == detail::rfc6455::text_frame && hdr.fin) {
+      if (!payload_valid(payload, validation_offset_)) {
+        abort_and_shutdown(sec::malformed_message, "invalid UTF-8 sequence");
+        return -1;
       }
     } else {
-      down_->configure_read(receive_policy::exactly(frame_size));
+      payload_buf_.insert(payload_buf_.end(), payload.begin() + offset,
+                          payload.end());
+      if (!payload_valid(payload_buf_, validation_offset_)) {
+        abort_and_shutdown(sec::malformed_message, "invalid UTF-8 sequence");
+        return -1;
+      }
     }
-    return 0;
+    // Wait for more data if necessary.
+    if (buffer.size() < frame_size) {
+      down_->configure_read(receive_policy::up_to(frame_size));
+      return 0;
+    }
+  } else {
+    // Wait for more data if necessary.
+    if (buffer.size() < frame_size) {
+      down_->configure_read(receive_policy::exactly(frame_size));
+      return 0;
+    }
   }
-
-  // Decode frame.
-  auto payload_len = static_cast<size_t>(hdr.payload_len);
-  auto payload = buffer.subspan(hdr_bytes, payload_len);
+  // At this point the frame is guaranteed to have arrived completely.
   // Handle control frames first, since these may not me fragmented,
   // and can arrive between regular message fragments.
   if (detail::rfc6455::is_control_frame(hdr.opcode)) {
@@ -185,12 +186,12 @@ ptrdiff_t framing::consume(byte_span buffer, byte_span delta) {
   }
   if (hdr.fin) {
     if (opcode_ == nil_code) {
-      // Call upper layer.
       if (hdr.opcode == detail::rfc6455::text_frame
-          && !detail::rfc3629::valid(payload)) {
+          && validation_offset_ != payload.size()) {
         abort_and_shutdown(sec::malformed_message, "invalid UTF-8 sequence");
         return -1;
       }
+      // Call upper layer.
       return handle(hdr.opcode, payload, frame_size);
     }
     if (hdr.opcode != detail::rfc6455::continuation_frame) {
@@ -200,8 +201,11 @@ ptrdiff_t framing::consume(byte_span buffer, byte_span delta) {
       return -1;
     }
     // End of fragmented input.
-    payload_buf_.insert(payload_buf_.end(), payload.begin(), payload.end());
-    if (opcode_ == detail::rfc6455::text_frame && !payload_valid()) {
+    if (opcode_ != detail::rfc6455::text_frame) {
+      payload_buf_.insert(payload_buf_.end(), payload.begin(), payload.end());
+    }
+    if (opcode_ == detail::rfc6455::text_frame
+        && validation_offset_ != payload_buf_.size()) {
       abort_and_shutdown(sec::malformed_message, "invalid UTF-8 sequence");
       return -1;
     }
@@ -220,8 +224,11 @@ ptrdiff_t framing::consume(byte_span buffer, byte_span delta) {
     abort_and_shutdown(sec::protocol_error, "expected a continuation frame");
     return -1;
   }
-  payload_buf_.insert(payload_buf_.end(), payload.begin(), payload.end());
-  if (opcode_ == detail::rfc6455::text_frame && !payload_valid()) {
+  if (opcode_ != detail::rfc6455::text_frame) {
+    payload_buf_.insert(payload_buf_.end(), payload.begin(), payload.end());
+  }
+  if (opcode_ == detail::rfc6455::text_frame
+      && !payload_valid(payload_buf_, validation_offset_)) {
     abort_and_shutdown(sec::malformed_message, "invalid UTF-8 sequence");
     return -1;
   }
@@ -312,6 +319,7 @@ ptrdiff_t framing::handle(uint8_t opcode, byte_span payload,
                             payload.size()};
       if (up_->consume_text(text) < 0)
         return -1;
+      validation_offset_ = 0;
       break;
     }
     case detail::rfc6455::binary_frame:
@@ -370,18 +378,6 @@ void framing::ship_closing_message(status code, std::string_view msg) {
   detail::rfc6455::assemble_frame(detail::rfc6455::connection_close, mask_key,
                                   payload, down_->output_buffer());
   down_->end_output();
-}
-
-bool framing::payload_valid() noexcept {
-  // validate from the index where we left off last time
-  auto [index, incomplete] = detail::rfc3629::validate(
-    make_span(payload_buf_).subspan(validation_offset_));
-  validation_offset_ += index;
-  if (validation_offset_ == payload_buf_.size())
-    return true;
-  // incomplete will be true if the last code point is missing continuation
-  // bytes but might be valid
-  return incomplete;
 }
 
 } // namespace caf::net::web_socket

@@ -164,10 +164,6 @@ private:
     shutdown(err);
   }
 
-  /// Checks whether the current input is valid UTF-8. Stores the last position
-  /// while scanning in order to avoid validating the same bytes again.
-  bool payload_valid() noexcept;
-
   // -- member variables -------------------------------------------------------
 
   /// Points to the transport layer below.
