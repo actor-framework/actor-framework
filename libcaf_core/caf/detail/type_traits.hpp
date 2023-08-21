@@ -69,12 +69,12 @@ template <bool B, class T, class F>
 using conditional_t = typename std::conditional<B, T, F>::type;
 
 template <bool V, class T = void>
-using enable_if_t = typename std::enable_if_t<V, T>;
+using enable_if_t = std::enable_if_t<V, T>;
 
 // -- custom traits ------------------------------------------------------------
 
 template <class Trait, class T = void>
-using enable_if_tt = typename std::enable_if_t<Trait::value, T>;
+using enable_if_tt = std::enable_if_t<Trait::value, T>;
 
 template <class T>
 using remove_reference_t = std::remove_reference_t<T>;
@@ -327,10 +327,9 @@ struct has_apply_operator {
 
 // matches (IsFun || IsMemberFun)
 template <class T,
-          bool IsFun
-          = std::is_function_v<T>
-            || std::is_function<typename std::remove_pointer_t<T>>::value
-            || std::is_member_function_pointer_v<T>,
+          bool IsFun = std::is_function_v<T>
+                       || std::is_function<std::remove_pointer_t<T>>::value
+                       || std::is_member_function_pointer_v<T>,
           bool HasApplyOp = has_apply_operator<T>::value>
 struct get_callable_trait_helper {
   using type = callable_trait<T>;

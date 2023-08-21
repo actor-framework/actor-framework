@@ -84,9 +84,9 @@ public:
   /// Returns a new handler that concatenates this handler
   /// with a new handler from `xs...`.
   template <class... Ts>
-  typename std::conditional<detail::disjunction<may_have_timeout<
-                              typename std::decay_t<Ts>>::value...>::value,
-                            behavior, message_handler>::type
+  std::conditional_t<detail::disjunction<may_have_timeout<
+                       typename std::decay_t<Ts>>::value...>::value,
+                     behavior, message_handler>
   or_else(Ts&&... xs) const {
     // using a behavior is safe here, because we "cast"
     // it back to a message_handler when appropriate

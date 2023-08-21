@@ -83,7 +83,7 @@ public:
   template <class Handle>
   expected<uint16_t> publish(Handle&& whom, uint16_t port,
                              const char* in = nullptr, bool reuse = false) {
-    detail::type_list<typename std::decay_t<Handle>> tk;
+    detail::type_list<std::decay_t<Handle>> tk;
     return publish(actor_cast<strong_actor_ptr>(std::forward<Handle>(whom)),
                    system().message_types(tk), port, in, reuse);
   }
