@@ -61,9 +61,8 @@ expected<tcp_accept_socket> new_tcp_acceptor_impl(uint16_t port,
                                reinterpret_cast<setsockopt_ptr>(&on),
                                static_cast<socket_size_type>(sizeof(on))));
   }
-  using sockaddr_type =
-    typename std::conditional<Family == AF_INET, sockaddr_in,
-                              sockaddr_in6>::type;
+  using sockaddr_type
+    = std::conditional_t<Family == AF_INET, sockaddr_in, sockaddr_in6>;
   sockaddr_type sa;
   memset(&sa, 0, sizeof(sockaddr_type));
   detail::family_of(sa) = Family;

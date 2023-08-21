@@ -375,7 +375,7 @@ using get_callable_trait_t = typename get_callable_trait<T>::type;
 template <class T>
 struct is_callable {
   template <class C>
-  static bool _fun(C*, typename get_callable_trait<C>::type* = nullptr);
+  static bool _fun(C*, get_callable_trait_t<C>* = nullptr);
 
   static void _fun(void*);
 

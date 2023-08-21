@@ -37,13 +37,13 @@ bool cmp_one(const caf::message& x, const T& y) {
 }
 
 template <size_t I, class... Ts>
-typename std::enable_if<(I == sizeof...(Ts)), bool>::type
+typename std::enable_if_t<(I == sizeof...(Ts)), bool>
 msg_cmp_rec(const caf::message&, const std::tuple<Ts...>&) {
   return true;
 }
 
 template <size_t I, class... Ts>
-typename std::enable_if<(I < sizeof...(Ts)), bool>::type
+typename std::enable_if_t<(I < sizeof...(Ts)), bool>
 msg_cmp_rec(const caf::message& x, const std::tuple<Ts...>& ys) {
   return cmp_one<I>(x, std::get<I>(ys)) && msg_cmp_rec<I + 1>(x, ys);
 }
@@ -840,7 +840,7 @@ public:
   /// Sends a request to `hdl`, then calls `run()`, and finally fetches and
   /// returns the result.
   template <class T, class... Ts, class Handle, class... Us>
-  typename std::conditional<sizeof...(Ts) == 0, T, std::tuple<T, Ts...>>::type
+  typename std::conditional_t<sizeof...(Ts) == 0, T, std::tuple<T, Ts...>>
   request(Handle hdl, Us... args) {
     auto res_hdl = self->request(hdl, caf::infinite, std::move(args)...);
     run();

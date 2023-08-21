@@ -76,11 +76,11 @@ struct infer_handle_from_fun_impl<typed_behavior<Sigs...>, Impl*, true> {
 };
 
 /// Deduces an actor handle type from a function or function object.
-template <class F, class Trait = typename detail::get_callable_trait<F>::type>
+template <class F, class Trait = detail::get_callable_trait_t<F>>
 struct infer_handle_from_fun {
   using result_type = typename Trait::result_type;
   using arg_types = typename Trait::arg_types;
-  using first_arg = typename detail::tl_head<arg_types>::type;
+  using first_arg = detail::tl_head_t<arg_types>;
   using delegate = infer_handle_from_fun_impl<result_type, first_arg>;
   using type = typename delegate::type;
   using impl = typename delegate::impl;

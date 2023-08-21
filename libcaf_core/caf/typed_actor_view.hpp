@@ -46,13 +46,13 @@ public:
 
   /// @copydoc local_actor::spawn
   template <class T, spawn_options Os = no_spawn_options, class... Ts>
-  typename infer_handle_from_class<T>::type spawn(Ts&&... xs) {
+  infer_handle_from_class_t<T> spawn(Ts&&... xs) {
     return self_->spawn<T, Os>(std::forward<Ts>(xs)...);
   }
 
   /// @copydoc local_actor::spawn
   template <spawn_options Os = no_spawn_options, class F, class... Ts>
-  typename infer_handle_from_fun<F>::type spawn(F fun, Ts&&... xs) {
+  infer_handle_from_fun_t<F> spawn(F fun, Ts&&... xs) {
     return self_->spawn<Os>(std::move(fun), std::forward<Ts>(xs)...);
   }
 
@@ -252,8 +252,7 @@ public:
   }
 
   template <class... Ts>
-  typename detail::make_response_promise_helper<Ts...>::type
-  make_response_promise() {
+  detail::make_response_promise_helper_t<Ts...> make_response_promise() {
     return self_->make_response_promise<Ts...>();
   }
 
