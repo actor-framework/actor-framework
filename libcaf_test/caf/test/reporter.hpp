@@ -116,10 +116,9 @@ public:
   static std::unique_ptr<reporter> make_default();
 
 private:
-  virtual void print_impl(unsigned level, char color_code,
-                          std::string_view prefix, std::string_view msg,
-                          const detail::source_location& location)
-    = 0;
+  void print_impl(unsigned level, char color_code, std::string_view level_name,
+                  std::string_view msg,
+                  const detail::source_location& location);
 };
 
 } // namespace caf::test

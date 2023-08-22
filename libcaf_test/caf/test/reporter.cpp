@@ -375,7 +375,7 @@ public:
 
   void print_info(std::string_view msg,
                   const detail::source_location& location) override {
-    print_impl(CAF_LOG_LEVEL_INFO, 'C', "info", msg, location);
+    print_impl(CAF_LOG_LEVEL_INFO, 'M', "info", msg, location);
   }
 
   void print_error(std::string_view msg,
@@ -391,21 +391,6 @@ public:
   void print_warning(std::string_view msg,
                      const detail::source_location& location) override {
     print_impl(CAF_LOG_LEVEL_WARNING, 'Y', "warning", msg, location);
-  }
-
-  void print_impl(unsigned level, char color_code, std::string_view prefix,
-                  std::string_view msg,
-                  const detail::source_location& location) {
-    using detail::format_to;
-    if (level_ < level)
-      return;
-    set_live();
-    format_to(colored(),
-              "{0:{1}}${2}({3}):\n"
-              "{0:{1}}  loc: $C({4}):$Y({5})$0\n"
-              "{0:{1}}  msg: {6}\n",
-              ' ', indent_, color_code, prefix, location.file_name(),
-              location.line(), msg);
   }
 
   unsigned verbosity(unsigned level) override {
@@ -435,6 +420,21 @@ public:
   }
 
 private:
+  void print_impl(unsigned level, char color_code, std::string_view level_name,
+                  std::string_view msg,
+                  const detail::source_location& location) {
+    using detail::format_to;
+    if (level_ < level)
+      return;
+    set_live();
+    format_to(colored(),
+              "{0:{1}}${2}({3}):\n"
+              "{0:{1}}  loc: $C({4}):$Y({5})$0\n"
+              "{0:{1}}  msg: {6}\n",
+              ' ', indent_, color_code, level_name, location.file_name(),
+              location.line(), msg);
+  }
+
   void print_indent(size_t indent) {
     for (size_t i = 0; i < indent; ++i)
       std::cout << ' ';
