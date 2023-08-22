@@ -83,7 +83,6 @@ void framing::abort(const error& reason) {
 ptrdiff_t framing::consume(byte_span buffer, byte_span delta) {
   // Make sure we're overriding any 'exactly' setting.
   down_->configure_read(receive_policy::up_to(2048));
-
   // Parse header.
   detail::rfc6455::header hdr;
   auto hdr_bytes = detail::rfc6455::decode_header(buffer, hdr);
@@ -132,9 +131,8 @@ ptrdiff_t framing::consume(byte_span buffer, byte_span delta) {
   auto payload = buffer.subspan(hdr_bytes, std::min(buffer.size() - hdr_bytes,
                                                     hdr.payload_len));
   // Unmask the arrived data.
-  if (hdr.mask_key != 0) {
+  if (hdr.mask_key != 0)
     detail::rfc6455::mask_data(hdr.mask_key, payload, offset);
-  }
   size_t frame_size = hdr_bytes + hdr.payload_len;
   // In case of text message, we want to validate the UTF-8 encoding early.
   if (hdr.opcode == detail::rfc6455::text_frame
@@ -192,7 +190,9 @@ ptrdiff_t framing::consume(byte_span buffer, byte_span delta) {
         return -1;
       }
       // Call upper layer.
-      return handle(hdr.opcode, payload, frame_size);
+      auto result = handle(hdr.opcode, payload, frame_size);
+      validation_offset_ = 0;
+      return result;
     }
     if (hdr.opcode != detail::rfc6455::continuation_frame) {
       CAF_LOG_DEBUG("expected a WebSocket continuation_frame");
@@ -226,11 +226,6 @@ ptrdiff_t framing::consume(byte_span buffer, byte_span delta) {
   }
   if (opcode_ != detail::rfc6455::text_frame) {
     payload_buf_.insert(payload_buf_.end(), payload.begin(), payload.end());
-  }
-  if (opcode_ == detail::rfc6455::text_frame
-      && !payload_valid(payload_buf_, validation_offset_)) {
-    abort_and_shutdown(sec::malformed_message, "invalid UTF-8 sequence");
-    return -1;
   }
   return static_cast<ptrdiff_t>(frame_size);
 }
@@ -319,7 +314,6 @@ ptrdiff_t framing::handle(uint8_t opcode, byte_span payload,
                             payload.size()};
       if (up_->consume_text(text) < 0)
         return -1;
-      validation_offset_ = 0;
       break;
     }
     case detail::rfc6455::binary_frame:

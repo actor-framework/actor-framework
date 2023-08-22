@@ -185,12 +185,7 @@ TEST_CASE("data may arrive fragmented") {
   rfc6455_append(detail::rfc6455::continuation_frame, "Socket!\n"sv, buf);
   transport->push(buf);
   CHECK_EQ(transport->handle_input(), static_cast<ptrdiff_t>(buf.size()));
-  auto expected = "Hello WebSocket!\nBye WebSocket!\n"sv;
-  CHECK_EQ(app->text_input.size(), expected.size());
-  for (auto i = 0ul; i < expected.size(); i++) {
-    CHECK_EQ(app->text_input.at(i), expected.at(i));
-  }
-  MESSAGE(app->text_input);
+  CHECK_EQ(app->text_input, "Hello WebSocket!\nBye WebSocket!\n");
   CHECK(!app->has_aborted());
 }
 

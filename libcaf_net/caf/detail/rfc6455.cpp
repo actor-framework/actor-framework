@@ -19,7 +19,7 @@ void rfc6455::mask_data(uint32_t key, byte_span data, size_t skip) {
   std::byte arr[4];
   memcpy(arr, &no_key, 4);
   data = data.subspan(skip);
-  size_t i = skip % 4;
+  auto i = skip % 4;
   for (auto& x : data) {
     x = x ^ arr[i];
     i = (i + 1) % 4;
