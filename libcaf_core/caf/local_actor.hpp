@@ -407,9 +407,9 @@ public:
 
   template <message_priority P = message_priority::normal, class Handle = actor,
             class... Ts>
-  typename response_type<typename Handle::signatures,
-                         detail::implicit_conversions_t<
-                           typename std::decay<Ts>::type>...>::delegated_type
+  typename response_type<
+    typename Handle::signatures,
+    detail::implicit_conversions_t<std::decay_t<Ts>>...>::delegated_type
   delegate(const Handle& dest, Ts&&... xs) {
     auto rp = make_response_promise();
     return rp.template delegate<P>(dest, std::forward<Ts>(xs)...);

@@ -28,7 +28,7 @@ using socket_recv_ptr = void*;
 using socket_size_type = unsigned;
 #endif
 
-using signed_size_type = std::make_signed<size_t>::type;
+using signed_size_type = std::make_signed_t<size_t>;
 
 // More bootstrapping.
 CAF_IO_EXPORT extern const int ec_out_of_memory;

@@ -49,8 +49,7 @@ public:
   using signatures = none_t;
 
   template <class F, class... Ts>
-  typename infer_handle_from_fun<F>::type
-  fork(F fun, connection_handle hdl, Ts&&... xs) {
+  infer_handle_from_fun_t<F> fork(F fun, connection_handle hdl, Ts&&... xs) {
     CAF_ASSERT(context() != nullptr);
     auto sptr = this->take(hdl);
     CAF_ASSERT(sptr->hdl() == hdl);

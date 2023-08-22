@@ -735,9 +735,8 @@ bool ip_connect(native_socket fd, const std::string& host, uint16_t port) {
   CAF_LOG_TRACE("Family =" << (Family == AF_INET ? "AF_INET" : "AF_INET6")
                            << CAF_ARG(fd) << CAF_ARG(host));
   static_assert(Family == AF_INET || Family == AF_INET6, "invalid family");
-  using sockaddr_type =
-    typename std::conditional<Family == AF_INET, sockaddr_in,
-                              sockaddr_in6>::type;
+  using sockaddr_type
+    = std::conditional_t<Family == AF_INET, sockaddr_in, sockaddr_in6>;
   sockaddr_type sa;
   memset(&sa, 0, sizeof(sockaddr_type));
   inet_pton(Family, host.c_str(), &addr_of(sa));
@@ -830,9 +829,8 @@ expected<native_socket> new_ip_acceptor_impl(uint16_t port, const char* addr,
                          reinterpret_cast<setsockopt_ptr>(&on),
                          static_cast<socket_size_type>(sizeof(on))));
   }
-  using sockaddr_type =
-    typename std::conditional<Family == AF_INET, sockaddr_in,
-                              sockaddr_in6>::type;
+  using sockaddr_type
+    = std::conditional_t<Family == AF_INET, sockaddr_in, sockaddr_in6>;
   sockaddr_type sa;
   memset(&sa, 0, sizeof(sockaddr_type));
   family_of(sa) = Family;

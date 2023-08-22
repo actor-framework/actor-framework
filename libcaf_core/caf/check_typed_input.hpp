@@ -11,7 +11,7 @@ namespace caf {
 
 template <class T>
 struct signatures_of {
-  using type = typename std::remove_pointer<T>::type::signatures;
+  using type = typename std::remove_pointer_t<T>::signatures;
 };
 
 template <class T>
@@ -19,8 +19,7 @@ using signatures_of_t = typename signatures_of<T>::type;
 
 template <class T>
 constexpr bool statically_typed() {
-  return !std::is_same<
-    none_t, typename std::remove_pointer<T>::type::signatures>::value;
+  return !std::is_same_v<none_t, typename std::remove_pointer_t<T>::signatures>;
 }
 
 template <class T>

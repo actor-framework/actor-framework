@@ -95,7 +95,7 @@ struct equality_operator {
   }
 
   template <class T, class U,
-            typename std::enable_if<!detail::is_comparable_v<T, U>>::type = 0>
+            std::enable_if_t<!detail::is_comparable_v<T, U>> = 0>
   bool operator()(const T&, const U&) const {
     return default_value;
   }
@@ -105,10 +105,10 @@ struct inequality_operator {
   static constexpr bool default_value = true;
 
   template <class T, class U,
-            typename std::enable_if<
+            std::enable_if_t<
               (std::is_floating_point_v<T>
                || std::is_floating_point_v<U>) &&detail::is_comparable_v<T, U>,
-              int>::type
+              int>
             = 0>
   bool operator()(const T& x, const U& y) const {
     equality_operator f;
@@ -116,17 +116,17 @@ struct inequality_operator {
   }
 
   template <class T, class U,
-            typename std::enable_if<!std::is_floating_point_v<T>
-                                      && !std::is_floating_point_v<U>
-                                      && detail::is_comparable_v<T, U>,
-                                    int>::type
+            std::enable_if_t<!std::is_floating_point_v<T>
+                               && !std::is_floating_point_v<U>
+                               && detail::is_comparable_v<T, U>,
+                             int>
             = 0>
   bool operator()(const T& x, const U& y) const {
     return x != y;
   }
 
   template <class T, class U,
-            typename std::enable_if<!detail::is_comparable_v<T, U>>::type = 0>
+            std::enable_if_t<!detail::is_comparable_v<T, U>> = 0>
   bool operator()(const T&, const U&) const {
     return default_value;
   }
@@ -290,11 +290,10 @@ public:
         return y;
       }
     };
-    using fwd =
-      typename std::conditional<std::is_same_v<char, T>
-                                  || std::is_convertible_v<T, std::string>
-                                  || std::is_same_v<caf::term, T>,
-                                simple_fwd_t, deep_to_string_t>::type;
+    using fwd = std::conditional_t<std::is_same_v<char, T>
+                                     || std::is_convertible_v<T, std::string>
+                                     || std::is_same_v<caf::term, T>,
+                                   simple_fwd_t, deep_to_string_t>;
     fwd f;
     auto y = f(x);
     if (lvl <= level_console_)

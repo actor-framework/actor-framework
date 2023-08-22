@@ -104,8 +104,8 @@ private:
 /// Creates a new copy-on-write tuple from given arguments.
 /// @relates cow_tuple
 template <class... Ts>
-cow_tuple<typename std::decay<Ts>::type...> make_cow_tuple(Ts&&... xs) {
-  return cow_tuple<typename std::decay<Ts>::type...>{std::forward<Ts>(xs)...};
+cow_tuple<std::decay_t<Ts>...> make_cow_tuple(Ts&&... xs) {
+  return cow_tuple<std::decay_t<Ts>...>{std::forward<Ts>(xs)...};
 }
 
 /// Convenience function for calling `get<N>(xs.data())`.

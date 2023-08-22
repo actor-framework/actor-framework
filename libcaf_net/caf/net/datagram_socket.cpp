@@ -36,7 +36,7 @@ error allow_connreset(datagram_socket x, bool) {
 #endif // CAF_WINDOWS
 
 std::variant<size_t, sec>
-check_datagram_socket_io_res(std::make_signed<size_t>::type res) {
+check_datagram_socket_io_res(std::make_signed_t<size_t> res) {
   if (res < 0) {
     auto code = last_socket_error();
     if (code == std::errc::operation_would_block

@@ -30,8 +30,13 @@ struct make_response_promise_helper<response_promise> {
   using type = response_promise;
 };
 
+/// Convenience alias for `make_response_promise_helper<Ts...>::type`.
 template <class... Ts>
-using response_promise_t = typename make_response_promise_helper<Ts...>::type;
+using make_response_promise_helper_t =
+  typename make_response_promise_helper<Ts...>::type;
+
+template <class... Ts>
+using response_promise_t = make_response_promise_helper_t<Ts...>;
 
 template <class Output, class F>
 struct type_checker {

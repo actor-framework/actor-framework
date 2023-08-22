@@ -120,10 +120,10 @@ public:
   ptr_type make(F f, Ts&&... xs) {
     static_assert(std::is_base_of_v<local_actor, Base>,
                   "Given Base does not extend local_actor");
-    using trait = typename detail::get_callable_trait<F>::type;
+    using trait = detail::get_callable_trait_t<F>;
     using arg_types = typename trait::arg_types;
     using res_type = typename trait::result_type;
-    using first_arg = typename detail::tl_head<arg_types>::type;
+    using first_arg = detail::tl_head_t<arg_types>;
     constexpr bool selfptr = std::is_pointer_v<first_arg>;
     constexpr bool rets = std::is_convertible_v<res_type, behavior>;
     using tuple_type = decltype(std::make_tuple(detail::spawn_fwd<Ts>(xs)...));

@@ -134,13 +134,12 @@ public:
   /// @post `pending() == false`
   template <message_priority P = message_priority::normal, class Handle = actor,
             class... Ts>
-  delegated_response_type_t<
-    typename Handle::signatures,
-    detail::implicit_conversions_t<typename std::decay<Ts>::type>...>
+  delegated_response_type_t<typename Handle::signatures,
+                            detail::implicit_conversions_t<std::decay_t<Ts>>...>
   delegate(const Handle& dest, Ts&&... xs) {
     static_assert(sizeof...(Ts) > 0, "nothing to delegate");
-    using token = detail::type_list<typename detail::implicit_conversions<
-      typename std::decay<Ts>::type>::type...>;
+    using token
+      = detail::type_list<detail::implicit_conversions_t<std::decay_t<Ts>>...>;
     static_assert(response_type_unbox<signatures_of_t<Handle>, token>::valid,
                   "receiver does not accept given message");
     if (pending()) {

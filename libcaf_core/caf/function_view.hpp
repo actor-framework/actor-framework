@@ -52,6 +52,10 @@ private:
   std::tuple<Ts...>* storage_;
 };
 
+/// Convenience alias for `function_view_storage<T>::type`.
+template <class T>
+using function_view_storage_t = typename function_view_storage<T>::type;
+
 struct CAF_CORE_EXPORT function_view_storage_catch_all {
   message* storage_;
 
@@ -166,8 +170,7 @@ public:
       function_view_result<value_type> result;
       self_->request(impl_, timeout, std::forward<Ts>(xs)...)
         .receive([&](error& x) { err = std::move(x); },
-                 typename function_view_storage<value_type>::type{
-                   result.value});
+                 function_view_storage_t<value_type>{result.value});
       if (err)
         return result_type{err};
       else

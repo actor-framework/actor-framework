@@ -306,9 +306,8 @@ public:
     static_assert(sizeof...(Ts), "at least one argument required");
     // extract how many arguments are actually the behavior part,
     // i.e., neither `after(...) >> ...` nor `others >> ...`.
-    using filtered =
-      typename tl_filter_not<type_list<typename std::decay<Ts>::type...>,
-                             is_timeout_or_catch_all>::type;
+    using filtered = tl_filter_not_t<type_list<std::decay_t<Ts>...>,
+                                     is_timeout_or_catch_all>;
     filtered tk;
     behavior bhvr{apply_moved_args(make_behavior_impl, get_indices(tk), tup)};
     using tail_indices =

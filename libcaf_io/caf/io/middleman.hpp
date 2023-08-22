@@ -83,7 +83,7 @@ public:
   template <class Handle>
   expected<uint16_t> publish(Handle&& whom, uint16_t port,
                              const char* in = nullptr, bool reuse = false) {
-    detail::type_list<typename std::decay<Handle>::type> tk;
+    detail::type_list<std::decay_t<Handle>> tk;
     return publish(actor_cast<strong_actor_ptr>(std::forward<Handle>(whom)),
                    system().message_types(tk), port, in, reuse);
   }
@@ -224,7 +224,7 @@ public:
   /// Spawns a new functor-based broker.
   template <spawn_options Os = no_spawn_options,
             class F = std::function<void(broker*)>, class... Ts>
-  typename infer_handle_from_fun<F>::type spawn_broker(F fun, Ts&&... xs) {
+  infer_handle_from_fun_t<F> spawn_broker(F fun, Ts&&... xs) {
     using impl = infer_impl_from_fun_t<F>;
     static constexpr bool spawnable = detail::spawnable<F, impl, Ts...>();
     static_assert(spawnable,
@@ -240,7 +240,7 @@ public:
   /// @warning Blocks the caller for the timespan of the connection process.
   template <spawn_options Os = no_spawn_options,
             class F = std::function<void(broker*)>, class... Ts>
-  expected<typename infer_handle_from_fun<F>::type>
+  expected<infer_handle_from_fun_t<F>>
   spawn_client(F fun, const std::string& host, uint16_t port, Ts&&... xs) {
     using impl = typename infer_handle_from_fun<F>::impl;
     return spawn_client_impl<Os, impl>(std::move(fun), host, port,
@@ -251,7 +251,7 @@ public:
   /// @warning Blocks the caller until the server socket is initialized.
   template <spawn_options Os = no_spawn_options,
             class F = std::function<void(broker*)>, class... Ts>
-  expected<typename infer_handle_from_fun<F>::type>
+  expected<infer_handle_from_fun_t<F>>
   spawn_server(F fun, uint16_t& port, Ts&&... xs) {
     using impl = typename infer_handle_from_fun<F>::impl;
     return spawn_server_impl<Os, impl>(std::move(fun), port,
@@ -262,7 +262,7 @@ public:
   /// @warning Blocks the caller until the server socket is initialized.
   template <spawn_options Os = no_spawn_options,
             class F = std::function<void(broker*)>, class... Ts>
-  expected<typename infer_handle_from_fun<F>::type>
+  expected<infer_handle_from_fun_t<F>>
   spawn_server(F fun, const uint16_t& port, Ts&&... xs) {
     uint16_t dummy = port;
     using impl = typename infer_handle_from_fun<F>::impl;
@@ -315,7 +315,7 @@ protected:
 
 private:
   template <spawn_options Os, class Impl, class F, class... Ts>
-  expected<typename infer_handle_from_class<Impl>::type>
+  expected<infer_handle_from_class_t<Impl>>
   spawn_client_impl(F fun, const std::string& host, uint16_t port, Ts&&... xs) {
     auto eptr = backend().new_tcp_scribe(host, port);
     if (!eptr)
@@ -333,7 +333,7 @@ private:
   }
 
   template <spawn_options Os, class Impl, class F, class... Ts>
-  expected<typename infer_handle_from_class<Impl>::type>
+  expected<infer_handle_from_class_t<Impl>>
   spawn_server_impl(F fun, uint16_t& port, Ts&&... xs) {
     auto eptr = backend().new_tcp_doorman(port);
     if (!eptr)

@@ -63,21 +63,21 @@ constexpr T* null_v = nullptr;
 // -- backport of C++14 additions ----------------------------------------------
 
 template <class T>
-using decay_t = typename std::decay<T>::type;
+using decay_t = std::decay_t<T>;
 
 template <bool B, class T, class F>
 using conditional_t = typename std::conditional<B, T, F>::type;
 
 template <bool V, class T = void>
-using enable_if_t = typename std::enable_if<V, T>::type;
+using enable_if_t = std::enable_if_t<V, T>;
 
 // -- custom traits ------------------------------------------------------------
 
 template <class Trait, class T = void>
-using enable_if_tt = typename std::enable_if<Trait::value, T>::type;
+using enable_if_tt = std::enable_if_t<Trait::value, T>;
 
 template <class T>
-using remove_reference_t = typename std::remove_reference<T>::type;
+using remove_reference_t = std::remove_reference_t<T>;
 
 /// Checks whether `T` defines a free function `to_string`.
 template <class T>
@@ -119,6 +119,10 @@ struct conjunction<X, Xs...> {
   static constexpr bool value = X && conjunction<Xs...>::value;
 };
 
+/// Convenience alias for `conjunction<BoolConstants...>::value`.
+template <bool... BoolConstants>
+bool constexpr conjunction_v = conjunction<BoolConstants...>::value;
+
 /// Joins all bool constants using operator ||.
 template <bool... BoolConstants>
 struct disjunction;
@@ -132,6 +136,10 @@ template <bool X, bool... Xs>
 struct disjunction<X, Xs...> {
   static constexpr bool value = X || disjunction<Xs...>::value;
 };
+
+/// Convenience alias for `disjunction<BoolConstants...>::value`.
+template <bool... BoolConstants>
+bool constexpr disjunction_v = disjunction<BoolConstants...>::value;
 
 /// Checks whether `T` is a `std::chrono::duration`.
 template <class T>
@@ -327,10 +335,9 @@ struct has_apply_operator {
 
 // matches (IsFun || IsMemberFun)
 template <class T,
-          bool IsFun
-          = std::is_function_v<T>
-            || std::is_function<typename std::remove_pointer<T>::type>::value
-            || std::is_member_function_pointer_v<T>,
+          bool IsFun = std::is_function_v<T>
+                       || std::is_function_v<std::remove_pointer_t<T>>
+                       || std::is_member_function_pointer_v<T>,
           bool HasApplyOp = has_apply_operator<T>::value>
 struct get_callable_trait_helper {
   using type = callable_trait<T>;
@@ -368,7 +375,7 @@ using get_callable_trait_t = typename get_callable_trait<T>::type;
 template <class T>
 struct is_callable {
   template <class C>
-  static bool _fun(C*, typename get_callable_trait<C>::type* = nullptr);
+  static bool _fun(C*, get_callable_trait_t<C>* = nullptr);
 
   static void _fun(void*);
 

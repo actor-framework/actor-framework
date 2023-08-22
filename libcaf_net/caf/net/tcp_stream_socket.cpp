@@ -93,9 +93,8 @@ bool ip_connect(stream_socket fd, std::string host, uint16_t port,
                            << CAF_ARG(fd.id) << CAF_ARG(host) << CAF_ARG(port)
                            << CAF_ARG(timeout));
   static_assert(Family == AF_INET || Family == AF_INET6, "invalid family");
-  using sockaddr_type =
-    typename std::conditional<Family == AF_INET, sockaddr_in,
-                              sockaddr_in6>::type;
+  using sockaddr_type
+    = std::conditional_t<Family == AF_INET, sockaddr_in, sockaddr_in6>;
   sockaddr_type sa;
   memset(&sa, 0, sizeof(sockaddr_type));
   if (inet_pton(Family, host.c_str(), &detail::addr_of(sa)) == 1) {
