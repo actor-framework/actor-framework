@@ -60,24 +60,7 @@ namespace caf::detail {
 template <class T>
 constexpr T* null_v = nullptr;
 
-// -- backport of C++14 additions ----------------------------------------------
-
-template <class T>
-using decay_t = std::decay_t<T>;
-
-template <bool B, class T, class F>
-using conditional_t = typename std::conditional<B, T, F>::type;
-
-template <bool V, class T = void>
-using enable_if_t = std::enable_if_t<V, T>;
-
 // -- custom traits ------------------------------------------------------------
-
-template <class Trait, class T = void>
-using enable_if_tt = std::enable_if_t<Trait::value, T>;
-
-template <class T>
-using remove_reference_t = std::remove_reference_t<T>;
 
 /// Checks whether `T` defines a free function `to_string`.
 template <class T>
@@ -104,42 +87,6 @@ using bool_token = std::integral_constant<bool, X>;
 
 template <int X>
 using int_token = std::integral_constant<int, X>;
-
-/// Joins all bool constants using operator &&.
-template <bool... BoolConstants>
-struct conjunction;
-
-template <>
-struct conjunction<> {
-  static constexpr bool value = true;
-};
-
-template <bool X, bool... Xs>
-struct conjunction<X, Xs...> {
-  static constexpr bool value = X && conjunction<Xs...>::value;
-};
-
-/// Convenience alias for `conjunction<BoolConstants...>::value`.
-template <bool... BoolConstants>
-bool constexpr conjunction_v = conjunction<BoolConstants...>::value;
-
-/// Joins all bool constants using operator ||.
-template <bool... BoolConstants>
-struct disjunction;
-
-template <>
-struct disjunction<> {
-  static constexpr bool value = false;
-};
-
-template <bool X, bool... Xs>
-struct disjunction<X, Xs...> {
-  static constexpr bool value = X || disjunction<Xs...>::value;
-};
-
-/// Convenience alias for `disjunction<BoolConstants...>::value`.
-template <bool... BoolConstants>
-bool constexpr disjunction_v = disjunction<BoolConstants...>::value;
 
 /// Checks whether `T` is a `std::chrono::duration`.
 template <class T>
@@ -182,8 +129,7 @@ class is_comparable {
   static void cmp_help_fun(const A*, const B*, void*, C);
 
   using result_type = decltype(cmp_help_fun(
-    static_cast<T1*>(nullptr), static_cast<T2*>(nullptr),
-    static_cast<bool*>(nullptr),
+    null_v<T1>, null_v<T2>, null_v<bool>,
     std::integral_constant<bool, std::is_arithmetic_v<T1>
                                    && std::is_arithmetic_v<T2>>{}));
 
@@ -201,13 +147,13 @@ class is_forward_iterator {
   template <class C>
   static bool sfinae(C& x, C& y,
                      // check for operator*
-                     decay_t<decltype(*x)>* = nullptr,
+                     std::decay_t<decltype(*x)>* = nullptr,
                      // check for operator++ returning an iterator
-                     decay_t<decltype(x = ++y)>* = nullptr,
+                     std::decay_t<decltype(x = ++y)>* = nullptr,
                      // check for operator==
-                     decay_t<decltype(x == y)>* = nullptr,
+                     std::decay_t<decltype(x == y)>* = nullptr,
                      // check for operator!=
-                     decay_t<decltype(x != y)>* = nullptr);
+                     std::decay_t<decltype(x != y)>* = nullptr);
 
   static void sfinae(...);
 
@@ -217,23 +163,27 @@ public:
   static constexpr bool value = std::is_same_v<bool, result_type>;
 };
 
+/// Convenience alias for `is_forward_iterator<T>::value`.
+template <class T>
+inline constexpr bool is_forward_iterator_v = is_forward_iterator<T>::value;
+
 /// Checks whether `T` has `begin()` and `end()` member
 /// functions returning forward iterators.
 template <class T>
 class is_iterable {
   // this horrible code would just disappear if we had concepts
   template <class C>
-  static bool
-  sfinae(C* cc,
-         // check if 'C::begin()' returns a forward iterator
-         enable_if_tt<is_forward_iterator<decltype(cc->begin())>>* = nullptr,
-         // check if begin() and end() both exist and are comparable
-         decltype(cc->begin() != cc->end())* = nullptr);
+  static bool sfinae(
+    C* cc,
+    // check if 'C::begin()' returns a forward iterator
+    std::enable_if_t<is_forward_iterator_v<decltype(cc->begin())>>* = nullptr,
+    // check if begin() and end() both exist and are comparable
+    decltype(cc->begin() != cc->end())* = nullptr);
 
   // SFNINAE default
   static void sfinae(void*);
 
-  using result_type = decltype(sfinae(static_cast<decay_t<T>*>(nullptr)));
+  using result_type = decltype(sfinae(null_v<std::decay_t<T>>));
 
 public:
   static constexpr bool value = is_primitive<T>::value == false
@@ -366,12 +316,12 @@ struct get_callable_trait_helper<T, false, false> {};
 /// i.e., a function, member function, or a class providing
 /// the call operator.
 template <class T>
-struct get_callable_trait : get_callable_trait_helper<decay_t<T>> {};
+struct get_callable_trait : get_callable_trait_helper<std::decay_t<T>> {};
 
 template <class T>
 using get_callable_trait_t = typename get_callable_trait<T>::type;
 
-/// Checks whether `T` is a function or member function.
+/// Checks whether `T` is a function, function object or member function.
 template <class T>
 struct is_callable {
   template <class C>
@@ -379,7 +329,7 @@ struct is_callable {
 
   static void _fun(void*);
 
-  using result_type = decltype(_fun(static_cast<decay_t<T>*>(nullptr)));
+  using result_type = decltype(_fun(null_v<std::decay_t<T>>));
 
 public:
   static constexpr bool value = std::is_same_v<bool, result_type>;
@@ -389,20 +339,6 @@ public:
 /// @relates is_callable
 template <class T>
 inline constexpr bool is_callable_v = is_callable<T>::value;
-
-/// Checks whether `F` is callable with arguments of types `Ts...`.
-template <class F, class... Ts>
-struct is_callable_with {
-  template <class U>
-  static auto sfinae(U*)
-    -> decltype((std::declval<U&>())(std::declval<Ts>()...), std::true_type());
-
-  template <class U>
-  static auto sfinae(...) -> std::false_type;
-
-  using type = decltype(sfinae<F>(nullptr));
-  static constexpr bool value = type::value;
-};
 
 /// Checks whether `F` takes mutable references.
 ///
@@ -451,7 +387,7 @@ private:
   static int fun(void*);
 
 public:
-  static constexpr bool value = sizeof(fun(static_cast<derived*>(nullptr))) > 1;
+  static constexpr bool value = sizeof(fun(null_v<derived>)) > 1;
 };
 
 template <class T>
@@ -491,9 +427,6 @@ struct value_type_of<T*> {
 template <class T>
 using value_type_of_t = typename value_type_of<T>::type;
 
-template <class T>
-using is_callable_t = typename std::enable_if<is_callable_v<T>>::type;
-
 template <class F, class T>
 using is_handler_for_ef = typename std::enable_if<is_handler_for_v<F, T>>::type;
 
@@ -522,7 +455,7 @@ constexpr bool can_insert_elements_impl(void*) {
 
 template <class T>
 constexpr bool can_insert_elements() {
-  return can_insert_elements_impl<T>(static_cast<T*>(nullptr));
+  return can_insert_elements_impl<T>(null_v<T>);
 }
 
 /// Checks whether `Tpl` is a specialization of `T` or not.
@@ -625,23 +558,6 @@ CAF_HAS_ALIAS_TRAIT(key_type);
 CAF_HAS_ALIAS_TRAIT(mapped_type);
 
 // -- constexpr functions for use in enable_if & friends -----------------------
-
-template <class List1, class List2>
-struct all_constructible : std::false_type {};
-
-template <>
-struct all_constructible<type_list<>, type_list<>> : std::true_type {};
-
-template <class T, class... Ts, class U, class... Us>
-struct all_constructible<type_list<T, Ts...>, type_list<U, Us...>> {
-  static constexpr bool value
-    = std::is_constructible_v<T, U>
-      && all_constructible<type_list<Ts...>, type_list<Us...>>::value;
-};
-
-/// Convenience alias for `all_constructible<Ts, Us>::value`.
-template <class Ts, class Us>
-inline constexpr bool all_constructible_v = all_constructible<Ts, Us>::value;
 
 /// Checks whether T behaves like `std::map`.
 template <class T>
@@ -798,38 +714,6 @@ struct is_list_like {
 
 template <class T>
 constexpr bool is_list_like_v = is_list_like<T>::value;
-
-template <class F, class... Ts>
-struct is_invocable {
-private:
-  template <class U>
-  static auto sfinae(U* f)
-    -> decltype((*f)(std::declval<Ts>()...), std::true_type());
-
-  template <class U>
-  static auto sfinae(...) -> std::false_type;
-
-  using sfinae_type = decltype(sfinae<F>(nullptr));
-
-public:
-  static constexpr bool value = sfinae_type::value;
-};
-
-template <class R, class F, class... Ts>
-struct is_invocable_r {
-private:
-  template <class U>
-  static auto sfinae(U* f)
-    -> std::is_same<R, decltype((*f)(std::declval<Ts>()...))>;
-
-  template <class U>
-  static auto sfinae(...) -> std::false_type;
-
-  using sfinae_type = decltype(sfinae<F>(nullptr));
-
-public:
-  static constexpr bool value = sfinae_type::value;
-};
 
 template <class T, class To>
 class has_convertible_data_member {

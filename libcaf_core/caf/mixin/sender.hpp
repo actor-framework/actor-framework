@@ -67,7 +67,7 @@ public:
   /// Sends `{xs...}` as an asynchronous message to `dest` with priority `mp`.
   template <message_priority P = message_priority::normal, class Dest,
             class... Ts>
-  detail::enable_if_t<!std::is_same_v<group, Dest>>
+  std::enable_if_t<!std::is_same_v<group, Dest>>
   send(const Dest& dest, Ts&&... xs) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
     static_assert((detail::sendable<Ts> && ...),
@@ -99,7 +99,7 @@ public:
   /// passed already).
   template <message_priority P = message_priority::normal, class Dest = actor,
             class... Ts>
-  detail::enable_if_t<!std::is_same_v<Dest, group>, disposable>
+  std::enable_if_t<!std::is_same_v<Dest, group>, disposable>
   scheduled_send(const Dest& dest, actor_clock::time_point timeout,
                  Ts&&... xs) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
@@ -139,7 +139,7 @@ public:
   /// Sends a message after a relative timeout.
   template <message_priority P = message_priority::normal, class Rep = int,
             class Period = std::ratio<1>, class Dest = actor, class... Ts>
-  detail::enable_if_t<!std::is_same_v<Dest, group>, disposable>
+  std::enable_if_t<!std::is_same_v<Dest, group>, disposable>
   delayed_send(const Dest& dest, std::chrono::duration<Rep, Period> rel_timeout,
                Ts&&... xs) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
@@ -230,12 +230,12 @@ private:
   }
 
   template <class T = Base>
-  detail::enable_if_t<std::is_base_of_v<abstract_actor, T>, Subtype*> dptr() {
+  std::enable_if_t<std::is_base_of_v<abstract_actor, T>, Subtype*> dptr() {
     return static_cast<Subtype*>(this);
   }
 
-  template <class T = Subtype, class = detail::enable_if_t<std::is_base_of<
-                                 typed_actor_view_base, T>::value>>
+  template <class T = Subtype, class = std::enable_if_t<
+                                 std::is_base_of_v<typed_actor_view_base, T>>>
   typename T::pointer dptr() {
     return static_cast<Subtype*>(this)->internal_ptr();
   }

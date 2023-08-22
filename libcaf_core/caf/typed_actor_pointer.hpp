@@ -23,7 +23,7 @@ public:
   }
 
   template <class Supertype,
-            class = detail::enable_if_t< //
+            class = std::enable_if_t< //
               detail::tl_subset_of<detail::type_list<Sigs...>,
                                    typename Supertype::signatures>::value>>
   typed_actor_pointer(Supertype* selfptr) : view_(selfptr) {
@@ -31,7 +31,7 @@ public:
   }
 
   template <class... OtherSigs,
-            class = detail::enable_if_t< //
+            class = std::enable_if_t< //
               detail::tl_subset_of<detail::type_list<Sigs...>,
                                    detail::type_list<OtherSigs...>>::value>>
   typed_actor_pointer(typed_actor_pointer<OtherSigs...> other)
@@ -58,7 +58,7 @@ public:
   }
 
   template <class... OtherSigs,
-            class = detail::enable_if_t< //
+            class = std::enable_if_t< //
               detail::tl_subset_of<detail::type_list<Sigs...>,
                                    detail::type_list<OtherSigs...>>::value>>
   typed_actor_pointer& operator=(typed_actor_pointer<OtherSigs...> other) {

@@ -55,8 +55,7 @@ public:
   using message_id_list = std::vector<message_id>;
 
   template <class Fun>
-  using type_checker
-    = detail::type_checker<response_type, detail::decay_t<Fun>>;
+  using type_checker = detail::type_checker<response_type, std::decay_t<Fun>>;
 
   explicit select_any(message_id_list ids, disposable pending_timeouts)
     : ids_(std::move(ids)), pending_timeouts_(std::move(pending_timeouts)) {

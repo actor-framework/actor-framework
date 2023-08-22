@@ -26,4 +26,7 @@ struct may_have_timeout<timeout_definition<F>> {
   static constexpr bool value = true;
 };
 
+template <class T>
+inline constexpr bool may_have_timeout_v = may_have_timeout<T>::value;
+
 } // namespace caf

@@ -72,8 +72,7 @@ CAF_CORE_EXPORT void parse(string_parser_state& ps, uint64_t& x);
 // -- non-fixed size integer types ---------------------------------------------
 
 template <class T>
-detail::enable_if_t<std::is_integral_v<T>>
-parse(string_parser_state& ps, T& x) {
+std::enable_if_t<std::is_integral_v<T>> parse(string_parser_state& ps, T& x) {
   using squashed_type = squashed_int_t<T>;
   return parse(ps, reinterpret_cast<squashed_type&>(x));
 }
