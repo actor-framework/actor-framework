@@ -26,7 +26,7 @@ bool payload_valid(const_byte_span payload, size_t& offset) noexcept {
   return incomplete;
 }
 
-}
+} // namespace
 
 // -- static utility functions -------------------------------------------------
 
