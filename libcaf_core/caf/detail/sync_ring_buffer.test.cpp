@@ -44,18 +44,18 @@ TEST("a default-constructed ring buffer is empty") {
 
 TEST("push_back adds one element to the ring buffer") {
   int_buffer buf;
-  info("add one element");
+  print_debug("add one element");
   buf.push_back(42);
   check(!buf.empty());
   check(!buf.full());
   check_eq(buf.size(), 1u);
   check_eq(buf.front(), 42);
-  info("remove element");
+  print_debug("remove element");
   buf.pop_front();
   check(buf.empty());
   check(!buf.full());
   check_eq(buf.size(), 0u);
-  info("fill buffer");
+  print_debug("fill buffer");
   for (int i = 0; i < static_cast<int>(int_buffer_size - 1); ++i)
     buf.push_back(std::move(i));
   check(!buf.empty());
@@ -74,19 +74,19 @@ TEST("get_all returns all elements from the ring buffer") {
     auto e = buf.get_all(i);
     return vector_type(i, e);
   };
-  info("add five element");
+  print_debug("add five element");
   for (int i = 0; i < 5; ++i)
     buf.push_back(std::move(i));
   check(!buf.empty());
   check(!buf.full());
   check_eq(buf.size(), 5u);
   check_eq(buf.front(), 0);
-  info("drain elements");
+  print_debug("drain elements");
   check_eq(fetch_all(), vector_type({0, 1, 2, 3, 4}));
   check(buf.empty());
   check(!buf.full());
   check_eq(buf.size(), 0u);
-  info("add 60 elements (wraps around)");
+  print_debug("add 60 elements (wraps around)");
   vector_type expected;
   for (int i = 0; i < 60; ++i) {
     expected.push_back(i);

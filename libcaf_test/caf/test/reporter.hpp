@@ -72,7 +72,15 @@ public:
     = 0;
 
   virtual void
-  info(std::string_view msg, const detail::source_location& location)
+  print_info(std::string_view msg, const detail::source_location& location)
+    = 0;
+
+  virtual void
+  print_debug(std::string_view msg, const detail::source_location& location)
+    = 0;
+
+  virtual void
+  print_warning(std::string_view msg, const detail::source_location& location)
     = 0;
 
   virtual void

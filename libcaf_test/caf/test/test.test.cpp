@@ -38,7 +38,7 @@ TEST("tests can contain different types of checks") {
     should_fail([this]() { check_lt(1, 1); });
     should_fail([this]() { check_lt(2, 1); });
   }
-  info("this test had {} checks", rep.test_stats().total());
+  print_debug("this test had {} checks", rep.test_stats().total());
 }
 
 #ifdef CAF_ENABLE_EXCEPTIONS
@@ -82,7 +82,7 @@ TEST("tests fail when requirement errors occur") {
       [this]() { require_gt(1, 2); });
     require_gt(2, 1);
   }
-  info("this test had {} checks", rep.test_stats().total());
+  print_debug("this test had {} checks", rep.test_stats().total());
 }
 
 #endif // CAF_ENABLE_EXCEPTIONS
@@ -92,7 +92,7 @@ TEST("failed checks increment the failed counter") {
   auto stats = caf::test::reporter::instance().test_stats();
   check_eq(stats.passed, 0u);
   check_eq(stats.failed, 1u);
-  info("reset error count to not fail the test");
+  print_debug("reset error count to not fail the test");
   caf::test::reporter::instance().test_stats({2, 0});
 }
 
