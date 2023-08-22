@@ -375,54 +375,37 @@ public:
 
   void print_info(std::string_view msg,
                   const detail::source_location& location) override {
-    using detail::format_to;
-    if (level_ < CAF_LOG_LEVEL_INFO)
-      return;
-    set_live();
-    format_to(colored(),
-              "{0:{1}}$M(info):\n"
-              "{0:{1}}  loc: $C({2}):$Y({3})$0\n"
-              "{0:{1}}  msg: {4}\n",
-              ' ', indent_, location.file_name(), location.line(), msg);
+    print_impl(CAF_LOG_LEVEL_INFO, 'C', "info", msg, location);
   }
 
   void print_error(std::string_view msg,
                    const detail::source_location& location) override {
-    using detail::format_to;
-    if (level_ < CAF_LOG_LEVEL_ERROR)
-      return;
-    set_live();
-    format_to(colored(),
-              "{0:{1}}$M(info):\n"
-              "{0:{1}}  loc: $C({2}):$Y({3})$0\n"
-              "{0:{1}}  msg: {4}\n",
-              ' ', indent_, location.file_name(), location.line(), msg);
+    print_impl(CAF_LOG_LEVEL_ERROR, 'R', "error", msg, location);
   }
 
   void print_debug(std::string_view msg,
                    const detail::source_location& location) override {
-    using detail::format_to;
-    if (level_ < CAF_LOG_LEVEL_DEBUG)
-      return;
-    set_live();
-    format_to(colored(),
-              "{0:{1}}$R(debug):\n"
-              "{0:{1}}  loc: $C({2}):$Y({3})$0\n"
-              "{0:{1}}  msg: {4}\n",
-              ' ', indent_, location.file_name(), location.line(), msg);
+    print_impl(CAF_LOG_LEVEL_DEBUG, 'B', "debug", msg, location);
   }
 
   void print_warning(std::string_view msg,
                      const detail::source_location& location) override {
+    print_impl(CAF_LOG_LEVEL_WARNING, 'Y', "warning", msg, location);
+  }
+
+  void print_impl(unsigned level, char color_code, std::string_view prefix,
+                  std::string_view msg,
+                  const detail::source_location& location) {
     using detail::format_to;
-    if (level_ < CAF_LOG_LEVEL_WARNING)
+    if (level_ < level)
       return;
     set_live();
     format_to(colored(),
-              "{0:{1}}$R(warning):\n"
-              "{0:{1}}  loc: $C({2}):$Y({3})$0\n"
-              "{0:{1}}  msg: {4}\n",
-              ' ', indent_, location.file_name(), location.line(), msg);
+              "{0:{1}}${2}({3}):\n"
+              "{0:{1}}  loc: $C({4}):$Y({5})$0\n"
+              "{0:{1}}  msg: {6}\n",
+              ' ', indent_, color_code, prefix, location.file_name(),
+              location.line(), msg);
   }
 
   unsigned verbosity(unsigned level) override {
