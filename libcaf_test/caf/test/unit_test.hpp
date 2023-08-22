@@ -68,7 +68,7 @@ struct equality_operator {
 
   template <
     class T, class U,
-    detail::enable_if_t<
+    std::enable_if_t<
       ((std::is_floating_point_v<T> && std::is_convertible_v<U, double>)
        || (std::is_floating_point_v<U> && std::is_convertible_v<T, double>) )
         && detail::is_comparable_v<T, U>,
@@ -84,7 +84,7 @@ struct equality_operator {
 
   template <
     class T, class U,
-    detail::enable_if_t<
+    std::enable_if_t<
       !((std::is_floating_point_v<T> && std::is_convertible_v<U, double>)
         || (std::is_floating_point_v<U> && std::is_convertible_v<T, double>) )
         && detail::is_comparable_v<T, U>,

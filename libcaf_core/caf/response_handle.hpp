@@ -55,13 +55,13 @@ public:
   // -- non-blocking API -------------------------------------------------------
 
   template <class T = traits, class F, class OnError>
-  detail::enable_if_t<T::is_non_blocking> await(F f, OnError g) {
+  std::enable_if_t<T::is_non_blocking> await(F f, OnError g) {
     static_assert(detail::has_add_awaited_response_handler_v<ActorType>,
                   "this actor type does not support awaiting responses, "
                   "try using .then instead");
-    static_assert(detail::is_callable<F>::value,
+    static_assert(detail::is_callable_v<F>,
                   "F must provide a single, non-template operator()");
-    static_assert(detail::is_callable_with<OnError, error&>::value,
+    static_assert(std::is_invocable_v<OnError, error&>,
                   "OnError must provide an operator() that takes a caf::error");
     using result_type = typename detail::get_callable_trait<F>::result_type;
     static_assert(std::is_same_v<void, result_type>,
@@ -72,21 +72,21 @@ public:
   }
 
   template <class T = traits, class F>
-  detail::enable_if_t<detail::has_call_error_handler_v<ActorType> //
-                      && T::is_non_blocking>
+  std::enable_if_t<detail::has_call_error_handler_v<ActorType> //
+                   && T::is_non_blocking>
   await(F f) {
     auto self = self_;
     await(std::move(f), [self](error& err) { self->call_error_handler(err); });
   }
 
   template <class T = traits, class F, class OnError>
-  detail::enable_if_t<T::is_non_blocking> then(F f, OnError g) {
+  std::enable_if_t<T::is_non_blocking> then(F f, OnError g) {
     static_assert(detail::has_add_multiplexed_response_handler_v<ActorType>,
                   "this actor type does not support multiplexed responses, "
                   "try using .await instead");
-    static_assert(detail::is_callable<F>::value,
+    static_assert(detail::is_callable_v<F>,
                   "F must provide a single, non-template operator()");
-    static_assert(detail::is_callable_with<OnError, error&>::value,
+    static_assert(std::is_invocable_v<OnError, error&>,
                   "OnError must provide an operator() that takes a caf::error");
     using result_type = typename detail::get_callable_trait<F>::result_type;
     static_assert(std::is_same_v<void, result_type>,
@@ -97,8 +97,8 @@ public:
   }
 
   template <class T = traits, class F>
-  detail::enable_if_t<detail::has_call_error_handler_v<ActorType> //
-                      && T::is_non_blocking>
+  std::enable_if_t<detail::has_call_error_handler_v<ActorType> //
+                   && T::is_non_blocking>
   then(F f) {
     auto self = self_;
     then(std::move(f), [self](error& err) { self->call_error_handler(err); });
@@ -121,11 +121,11 @@ public:
   // -- blocking API -----------------------------------------------------------
 
   template <class T = traits, class F = none_t, class OnError = none_t,
-            class = detail::enable_if_t<T::is_blocking>>
+            class = std::enable_if_t<T::is_blocking>>
   detail::is_handler_for_ef<OnError, error> receive(F f, OnError g) {
-    static_assert(detail::is_callable<F>::value,
+    static_assert(detail::is_callable_v<F>,
                   "F must provide a single, non-template operator()");
-    static_assert(detail::is_callable_with<OnError, error&>::value,
+    static_assert(std::is_invocable_v<OnError, error&>,
                   "OnError must provide an operator() that takes a caf::error");
     using result_type = typename detail::get_callable_trait<F>::result_type;
     static_assert(std::is_same_v<void, result_type>,
@@ -136,7 +136,7 @@ public:
   }
 
   template <class T = traits, class OnError = none_t, class F = none_t,
-            class = detail::enable_if_t<T::is_blocking>>
+            class = std::enable_if_t<T::is_blocking>>
   detail::is_handler_for_ef<OnError, error> receive(OnError g, F f) {
     // TODO: allowing blocking actors to pass the error handler in first may be
     //       more flexible, but it makes the API asymmetric. Consider
@@ -146,7 +146,7 @@ public:
 
   template <class T = policy_type, class OnError = none_t, class F = none_t,
             class E = detail::is_handler_for_ef<OnError, error>,
-            class = detail::enable_if_t<T::is_trivial>>
+            class = std::enable_if_t<T::is_trivial>>
   void receive(OnError g, catch_all<F> f) {
     // TODO: this bypasses the policy. Either we deprecate `catch_all` or *all*
     //       policies must support it. Currently, we only enable this member
@@ -157,7 +157,7 @@ public:
 
   // -- properties -------------------------------------------------------------
 
-  template <class T = policy_type, class = detail::enable_if_t<T::is_trivial>>
+  template <class T = policy_type, class = std::enable_if_t<T::is_trivial>>
   message_id id() const noexcept {
     return policy_.id();
   }
