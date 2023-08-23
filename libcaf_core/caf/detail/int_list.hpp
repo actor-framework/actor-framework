@@ -98,7 +98,7 @@ il_indices_t<T> get_indices(const T&) {
 }
 
 template <size_t Num, class T>
-typename il_right_t<il_indices_t<T>, Num> get_right_indices(const T&) {
+il_right_t<il_indices_t<T>, Num> get_right_indices(const T&) {
   return {};
 }
 
