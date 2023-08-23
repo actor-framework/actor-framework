@@ -63,8 +63,7 @@ public:
   /// Creates a new `typed_actor` type by extending this one with another
   /// `typed_actor`.
   template <class... Ts>
-  using extend_with =
-    typename detail::extend_with_helper<typed_actor, Ts...>::type;
+  using extend_with = detail::extend_with_helper_t<typed_actor, Ts...>;
 
   /// Identifies the behavior type actors of this kind use
   /// for their behavior stack.

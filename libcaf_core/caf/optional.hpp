@@ -32,9 +32,7 @@ public:
   }
 
   /// Creates an valid instance from `value`.
-  template <class U,
-            class E
-            = typename std::enable_if<std::is_convertible_v<U, T>>::type>
+  template <class U, class E = std::enable_if_t<std::is_convertible_v<U, T>>>
   optional(U x) : m_valid(false) {
     cr(std::move(x));
   }

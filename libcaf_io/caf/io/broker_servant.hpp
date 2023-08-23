@@ -84,12 +84,12 @@ protected:
         return false;
       // tell broker it entered passive mode, this can result in
       // producing, why we check the condition again afterwards
-      using passive_t = typename std::conditional<
+      using passive_t = std::conditional_t<
         std::is_same_v<handle_type, connection_handle>,
         connection_passivated_msg,
-        typename std::conditional<std::is_same_v<handle_type, accept_handle>,
-                                  acceptor_passivated_msg,
-                                  datagram_servant_passivated_msg>::type>::type;
+        std::conditional_t<std::is_same_v<handle_type, accept_handle>,
+                           acceptor_passivated_msg,
+                           datagram_servant_passivated_msg>>;
       mailbox_element tmp{strong_actor_ptr{}, make_message_id(),
                           mailbox_element::forwarding_stack{},
                           make_message(passive_t{hdl()})};

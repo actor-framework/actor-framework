@@ -73,10 +73,9 @@ struct with_generic_timeout<false, std::tuple<Ts...>> {
 
 template <class... Ts>
 struct with_generic_timeout<true, std::tuple<Ts...>> {
-  using type =
-    typename tl_apply<typename tl_replace_back<
-                        type_list<Ts...>, generic_timeout_definition>::type,
-                      std::tuple>::type;
+  using type = tl_apply_t<
+    tl_replace_back_t<type_list<Ts...>, generic_timeout_definition>,
+    std::tuple>;
 };
 
 struct dummy_timeout_definition {
