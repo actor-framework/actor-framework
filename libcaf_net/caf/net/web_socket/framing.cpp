@@ -16,14 +16,12 @@ namespace {
 /// Checks whether the current input is valid UTF-8. Stores the last position
 /// while scanning in order to avoid validating the same bytes again.
 bool payload_valid(const_byte_span payload, size_t& offset) noexcept {
-  // validate from the index where we left off last time
+  // Continue from the index where we left off last time.
   auto [index, incomplete] = detail::rfc3629::validate(payload.subspan(offset));
   offset += index;
-  if (offset == payload.size())
-    return true;
-  // incomplete will be true if the last code point is missing continuation
-  // bytes but might be valid
-  return incomplete;
+  // Incomplete will be true if the last code point is missing continuation
+  // bytes but might be valid.
+  return offset == payload.size() || incomplete;
 }
 
 } // namespace
@@ -121,7 +119,7 @@ ptrdiff_t framing::consume(byte_span buffer, byte_span delta) {
     }
   }
   // Calculate at what point of the received buffer the delta payload begins.
-  auto offset = static_cast<ptrdiff_t>((buffer.size() - delta.size()))
+  auto offset = static_cast<ptrdiff_t>(buffer.size() - delta.size())
                 - hdr_bytes;
   // Offset < zero  - the delta buffer contains header bytes.
   // Delta is empty - we didn't process the whole input last time we got called.

@@ -42,9 +42,9 @@ struct CAF_NET_EXPORT rfc6455 {
 
   // -- utility functions ------------------------------------------------------
 
-  static void mask_data(uint32_t key, span<char> data, size_t skip = 0);
+  static void mask_data(uint32_t key, span<char> data, size_t offset = 0);
 
-  static void mask_data(uint32_t key, byte_span data, size_t skip = 0);
+  static void mask_data(uint32_t key, byte_span data, size_t offset = 0);
 
   static void assemble_frame(uint32_t mask_key, span<const char> data,
                              byte_buffer& out);
