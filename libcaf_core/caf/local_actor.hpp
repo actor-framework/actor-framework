@@ -342,7 +342,7 @@ public:
   /// is equivalent to `make_response_promise<int, int>()`.
   template <class... Ts>
   detail::response_promise_t<Ts...> make_response_promise() {
-    using result_t = typename detail::make_response_promise_helper<Ts...>::type;
+    using result_t = detail::make_response_promise_helper_t<Ts...>;
     if (current_element_ != nullptr && !current_element_->mid.is_answered()) {
       auto result = result_t{this, *current_element_};
       current_element_->mid.mark_as_answered();

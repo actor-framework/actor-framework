@@ -107,12 +107,16 @@ struct infer_handle_from_behavior<typed_behavior<Sigs...>> {
   using type = typed_actor<Sigs...>;
 };
 
+/// Convenience alias for `infer_handle_from_behavior<T>::type`.
+template <class T>
+using infer_handle_from_behavior_t =
+  typename infer_handle_from_behavior<T>::type;
+
 /// Deduces `actor` for dynamically typed actors, otherwise `typed_actor<...>`
 /// is deduced.
 template <class T, bool = std::is_base_of_v<abstract_actor, T>>
 struct infer_handle_from_class {
-  using type =
-    typename infer_handle_from_behavior<typename T::behavior_type>::type;
+  using type = infer_handle_from_behavior_t<typename T::behavior_type>;
   static constexpr spawn_mode mode = spawn_mode::clazz;
 };
 

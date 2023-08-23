@@ -74,8 +74,7 @@ public:
     return x->ctrl();
   }
 
-  template <class T,
-            class = typename std::enable_if<!std::is_pointer_v<T>>::type>
+  template <class T, class = std::enable_if_t<!std::is_pointer_v<T>>>
   To operator()(const T& x) const {
     return x.get();
   }
@@ -92,8 +91,7 @@ public:
     return static_cast<To*>(x);
   }
 
-  template <class T,
-            class = typename std::enable_if<!std::is_pointer_v<T>>::type>
+  template <class T, class = std::enable_if_t<!std::is_pointer_v<T>>>
   To* operator()(const T& x) const {
     return (*this)(x.get());
   }
@@ -110,8 +108,7 @@ public:
     return x->ctrl();
   }
 
-  template <class T,
-            class = typename std::enable_if<!std::is_pointer_v<T>>::type>
+  template <class T, class = std::enable_if_t<!std::is_pointer_v<T>>>
   actor_control_block* operator()(const T& x) const {
     return x.get();
   }

@@ -20,6 +20,10 @@ struct il_right_impl<N, Size> {
   using type = int_list<>;
 };
 
+/// Convenience alias for `il_right_impl<N, Size, Is...>::type`.
+template <size_t N, size_t Size, long... Is>
+using il_right_impl_t = typename il_right_impl<N, Size, Is...>::type;
+
 template <size_t N, size_t Size, long I, long... Is>
 struct il_right_impl<N, Size, I, Is...> : il_right_impl<N, Size - 1, Is...> {};
 
@@ -33,9 +37,13 @@ struct il_right;
 
 template <long... Is, size_t N>
 struct il_right<int_list<Is...>, N> {
-  using type = typename il_right_impl<(N > sizeof...(Is) ? sizeof...(Is) : N),
-                                      sizeof...(Is), Is...>::type;
+  using type = il_right_impl_t<(N > sizeof...(Is) ? sizeof...(Is) : N),
+                               sizeof...(Is), Is...>;
 };
+
+/// Convenience alias for `il_right<List, N>::type`.
+template <class List, size_t N>
+using il_right_t = typename il_right<List, N>::type;
 
 template <bool Done, size_t Num, class List, long... Is>
 struct il_take_impl;
@@ -51,12 +59,16 @@ struct il_take_impl<false, Num, int_list<Rs...>, I, Is...> {
     typename il_take_impl<Num == 1, Num - 1, int_list<Rs..., I>, Is...>::type;
 };
 
+/// Convenience alias for `il_take_impl<Done, Num, List, Is...>::type`.
+template <bool Done, size_t Num, class List, long... Is>
+using il_take_impl_t = typename il_take_impl<Done, Num, List, Is...>::type;
+
 template <class List, size_t N>
 struct il_take;
 
 template <long... Is, size_t N>
 struct il_take<int_list<Is...>, N> {
-  using type = typename il_take_impl<N == 0, N, int_list<>, Is...>::type;
+  using type = il_take_impl_t<N == 0, N, int_list<>, Is...>;
 };
 
 /// Creates indices for `List` beginning at `Pos`.
@@ -76,14 +88,17 @@ struct il_indices<List<T0, Ts...>, Pos, int_list<Is...>> {
     typename il_indices<type_list<Ts...>, Pos + 1, int_list<Is..., Pos>>::type;
 };
 
+/// Convenience alias for `il_indices<T>::type`.
 template <class T>
-typename il_indices<T>::type get_indices(const T&) {
+using il_indices_t = typename il_indices<T>::type;
+
+template <class T>
+il_indices_t<T> get_indices(const T&) {
   return {};
 }
 
 template <size_t Num, class T>
-typename il_right<typename il_indices<T>::type, Num>::type
-get_right_indices(const T&) {
+typename il_right_t<il_indices_t<T>, Num> get_right_indices(const T&) {
   return {};
 }
 
@@ -94,5 +109,9 @@ template <long Last, long... Is>
 struct il_range<Last, Last, Is...> {
   using type = int_list<Is...>;
 };
+
+/// Convenience alias for `il_range<long First, long Last, long... Is>::type`.
+template <long First, long Last, long... Is>
+using il_range_t = typename il_range<First, Last>::type;
 
 } // namespace caf::detail

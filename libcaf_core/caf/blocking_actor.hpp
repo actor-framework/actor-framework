@@ -310,8 +310,7 @@ public:
                                      is_timeout_or_catch_all>;
     filtered tk;
     behavior bhvr{apply_moved_args(make_behavior_impl, get_indices(tk), tup)};
-    using tail_indices =
-      typename il_range<tl_size_v<filtered>, sizeof...(Ts)>::type;
+    using tail_indices = il_range_t<tl_size_v<filtered>, sizeof...(Ts)>;
     make_blocking_behavior_t factory;
     auto fun = apply_moved_args_prefixed(factory, tail_indices{}, tup, &bhvr);
     receive_impl(rcc, mid, fun);

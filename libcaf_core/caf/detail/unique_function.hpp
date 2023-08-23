@@ -82,12 +82,11 @@ public:
     // nop
   }
 
-  template <
-    class T,
-    class = typename std::enable_if<
-      !std::is_convertible_v<T, raw_pointer>
-      && std::is_same<decltype((std::declval<T&>())(std::declval<Ts>()...)),
-                      R>::value>::type>
+  template <class T,
+            class = std::enable_if_t<
+              !std::is_convertible_v<T, raw_pointer>
+              && std::is_same_v<
+                decltype((std::declval<T&>())(std::declval<Ts>()...)), R>>>
   explicit unique_function(T f) : unique_function(make_wrapper(std::move(f))) {
     // nop
   }

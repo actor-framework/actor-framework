@@ -124,6 +124,10 @@ struct extend_with_helper<typed_actor<Xs...>, typed_actor<Ys...>, Ts...>
   // nop
 };
 
+/// Convenience alias for `extend_with_helper<Ts...>::type`.
+template <class... Ts>
+using extend_with_helper_t = typename extend_with_helper<Ts...>::type;
+
 template <class F>
 struct is_normalized_signature {
   static constexpr bool value = false;

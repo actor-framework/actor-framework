@@ -41,8 +41,7 @@ public:
   }
 
   template <class T0, class T1, class... Ts>
-  typename std::enable_if<
-    !std::is_same<keep_behavior_t, typename std::decay<T0>::type>::value>::type
+  std::enable_if_t<!std::is_same_v<keep_behavior_t, std::decay_t<T0>>>
   become(T0&& x0, T1&& x1, Ts&&... xs) {
     behavior_type bhvr{std::forward<T0>(x0), std::forward<T1>(x1),
                        std::forward<Ts>(xs)...};

@@ -63,8 +63,8 @@ int exec_main(F fun, int argc, char** argv) {
                 "main function must have one or two arguments");
   static_assert(std::is_same_v<detail::tl_head_t<arg_types>, actor_system&>,
                 "main function must take actor_system& as first parameter");
-  using arg2 = typename detail::tl_at<arg_types, 1>::type;
-  using decayed_arg2 = typename std::decay<arg2>::type;
+  using arg2 = detail::tl_at_t<arg_types, 1>;
+  using decayed_arg2 = std::decay_t<arg2>;
   static_assert(std::is_same_v<arg2, unit_t>
                   || (std::is_base_of_v<actor_system_config, decayed_arg2>
                       && std::is_same<arg2, const decayed_arg2&>::value),

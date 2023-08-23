@@ -48,6 +48,10 @@ struct is_string_like {
   static constexpr bool value = std::is_same_v<bool, result_type>;
 };
 
+/// Convenience alias for `is_string_like<T>::value`.
+template <class T>
+constexpr bool is_string_like_v = is_string_like<T>::value;
+
 } // namespace detail
 
 /// Drop-in replacement for C++17 std::string_view.
@@ -102,8 +106,7 @@ public:
 
   constexpr string_view(const string_view&) noexcept = default;
 
-  template <class T, class = typename std::enable_if<
-                       detail::is_string_like<T>::value>::type>
+  template <class T, class = std::enable_if_t<detail::is_string_like_v<T>>>
   constexpr string_view(const T& str) noexcept
     : data_(str.data()), size_(str.size()) {
     // nop

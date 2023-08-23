@@ -29,8 +29,7 @@ struct implicit_actor_conversions<T, true, false> {
 
 template <class T>
 struct implicit_actor_conversions<T, false, true> {
-  using type =
-    typename detail::tl_apply<typename T::signatures, typed_actor>::type;
+  using type = detail::tl_apply_t<typename T::signatures, typed_actor>;
 };
 
 template <>
