@@ -83,6 +83,52 @@ TEST("skip(n) skips the first n elements in a range of size m") {
   }
 }
 
+TEST("first() returns the first element in a range of size m") {
+  SECTION("first() returns the first element in a range of size >= 1") {
+    SECTION("blueprint") {
+      check_eq(collect(range(1, 1).first()), vector{1});
+      check_eq(collect(range(1, 2).first()), vector{1});
+      check_eq(collect(range(1, 3).first()), vector{1});
+    }
+    SECTION("observable") {
+      check_eq(collect(mat(range(1, 1)).first()), vector{1});
+      check_eq(collect(mat(range(1, 2)).first()), vector{1});
+      check_eq(collect(mat(range(1, 3)).first()), vector{1});
+    }
+  }
+  SECTION("first() returns an empty range if the input is empty") {
+    SECTION("blueprint") {
+      check_eq(collect(range(1, 0).first()), nil);
+    }
+    SECTION("observable") {
+      check_eq(collect(mat(range(1, 0)).first()), nil);
+    }
+  }
+}
+
+TEST("last() returns the last element in a range of size m") {
+  SECTION("last() returns the last element in a range of size >= 1") {
+    SECTION("blueprint") {
+      check_eq(collect(range(1, 1).last()), vector{1});
+      check_eq(collect(range(1, 2).last()), vector{2});
+      check_eq(collect(range(1, 3).last()), vector{3});
+    }
+    SECTION("observable") {
+      check_eq(collect(mat(range(1, 1)).last()), vector{1});
+      check_eq(collect(mat(range(1, 2)).last()), vector{2});
+      check_eq(collect(mat(range(1, 3)).last()), vector{3});
+    }
+  }
+  SECTION("last() returns an empty range if the input is empty") {
+    SECTION("blueprint") {
+      check_eq(collect(range(1, 0).last()), nil);
+    }
+    SECTION("observable") {
+      check_eq(collect(mat(range(1, 0)).last()), nil);
+    }
+  }
+}
+
 } // WITH_FIXTURE(test::fixture::flow)
 
 CAF_TEST_MAIN()
