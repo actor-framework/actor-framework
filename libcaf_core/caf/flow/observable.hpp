@@ -213,6 +213,11 @@ public:
     return fn(std::move(*this));
   }
 
+  /// @copydoc observable::element_at
+  auto element_at(size_t n) && {
+    return add_step(step::element_at<output_type>{n});
+  }
+
   /// @copydoc observable::ignore_elements
   auto ignore_elements() && {
     return add_step(step::ignore_elements<output_type>{});
@@ -601,6 +606,11 @@ transformation<step::reduce<Reducer>>
 observable<T>::reduce(Init init, Reducer reducer) {
   static_assert(std::is_invocable_r_v<Init, Reducer, Init&&, const T&>);
   return transform(step::reduce<Reducer>{std::move(init), std::move(reducer)});
+}
+
+template <class T>
+transformation<step::element_at<T>> observable<T>::element_at(size_t n) {
+  return transform(step::element_at<T>{n});
 }
 
 template <class T>

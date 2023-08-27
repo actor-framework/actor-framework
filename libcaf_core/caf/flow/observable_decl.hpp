@@ -122,6 +122,9 @@ public:
   /// Returns a transformation that selects all but the first `n` items.
   transformation<step::skip<T>> skip(size_t n);
 
+  /// Returns a transformation that selects only the item with `n` index.
+  transformation<step::element_at<T>> element_at(size_t n);
+
   /// Returns a transformation that discards only the last `n` items.
   transformation<step::skip_last<T>> skip_last(size_t n);
 
