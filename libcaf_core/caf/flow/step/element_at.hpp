@@ -17,7 +17,7 @@ public:
 
   using output_type = T;
 
-  explicit element_at(size_t ind) : element_index_(ind) {
+  explicit element_at(size_t index) : element_index_(index) {
     // nop
   }
 
@@ -29,8 +29,9 @@ public:
   template <class Next, class... Steps>
   bool on_next(const input_type& item, Next& next, Steps&... steps) {
     if (element_index_ == current_index_) {
-      if (!next.on_next(item, steps...))
-        return false;
+      if (next.on_next(item, steps...))
+        on_complete(next, steps...);
+      return false;
     }
     current_index_++;
     return true;
