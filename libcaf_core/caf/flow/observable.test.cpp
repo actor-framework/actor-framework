@@ -26,7 +26,7 @@ TEST("element_at(n) only takes the element with index n") {
       check_eq(collect(range(1, 1).element_at(0)), vector{1});
       check_eq(collect(range(1, 2).element_at(0)), vector{1});
       check_eq(collect(range(1, 3).element_at(0)), vector{1});
-    } // WITH_FIXTURE(test::fixture::flow)
+    }
     SECTION("observable") {
       check_eq(collect(mat(range(1, 1)).element_at(0)), vector{1});
       check_eq(collect(mat(range(1, 2)).element_at(0)), vector{1});
@@ -53,6 +53,16 @@ TEST("element_at(n) only takes the element with index n") {
       check_eq(collect(mat(range(1, 1)).element_at(1)), nil);
       check_eq(collect(mat(range(1, 2)).element_at(2)), nil);
       check_eq(collect(mat(range(1, 3)).element_at(3)), nil);
+    }
+  }
+  SECTION("element_at(n) propagates errors") {
+    SECTION("blueprint") {
+      check_eq(collect(obs_error(sec::runtime_error).element_at(1)),
+               sec::runtime_error);
+    }
+    SECTION("observable") {
+      check_eq(collect(mat(obs_error(sec::runtime_error)).element_at(1)),
+               sec::runtime_error);
     }
   }
 }
