@@ -33,7 +33,7 @@ public:
         on_complete(next, steps...);
       return false;
     }
-    current_index_++;
+    ++current_index_;
     return true;
   }
 
