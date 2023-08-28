@@ -20,6 +20,53 @@ WITH_FIXTURE(test::fixture::flow) {
 //       once on a blueprint and once on an actual observable. This ensures that
 //       the blueprint and the observable both offer the same functionality.
 
+TEST("element_at(n) only takes the element with index n") {
+  SECTION("element_at(0) picks the first element") {
+    SECTION("blueprint") {
+      check_eq(collect(range(1, 1).element_at(0)), vector{1});
+      check_eq(collect(range(1, 2).element_at(0)), vector{1});
+      check_eq(collect(range(1, 3).element_at(0)), vector{1});
+    }
+    SECTION("observable") {
+      check_eq(collect(mat(range(1, 1)).element_at(0)), vector{1});
+      check_eq(collect(mat(range(1, 2)).element_at(0)), vector{1});
+      check_eq(collect(mat(range(1, 3)).element_at(0)), vector{1});
+    }
+  }
+  SECTION("element_at(1) picks the second element") {
+    SECTION("blueprint") {
+      check_eq(collect(range(1, 2).element_at(1)), vector{2});
+      check_eq(collect(range(1, 3).element_at(1)), vector{2});
+    }
+    SECTION("observable") {
+      check_eq(collect(mat(range(1, 2)).element_at(1)), vector{2});
+      check_eq(collect(mat(range(1, 3)).element_at(1)), vector{2});
+    }
+  }
+  SECTION("element_at(n) does not pick any element if n >= m") {
+    SECTION("blueprint") {
+      check_eq(collect(range(1, 1).element_at(1)), nil);
+      check_eq(collect(range(1, 2).element_at(2)), nil);
+      check_eq(collect(range(1, 3).element_at(3)), nil);
+    }
+    SECTION("observable") {
+      check_eq(collect(mat(range(1, 1)).element_at(1)), nil);
+      check_eq(collect(mat(range(1, 2)).element_at(2)), nil);
+      check_eq(collect(mat(range(1, 3)).element_at(3)), nil);
+    }
+  }
+  SECTION("element_at(n) propagates errors") {
+    SECTION("blueprint") {
+      check_eq(collect(obs_error(sec::runtime_error).element_at(1)),
+               sec::runtime_error);
+    }
+    SECTION("observable") {
+      check_eq(collect(mat(obs_error(sec::runtime_error)).element_at(1)),
+               sec::runtime_error);
+    }
+  }
+}
+
 TEST("skip(n) skips the first n elements in a range of size m") {
   SECTION("skip(0) does nothing") {
     SECTION("blueprint") {

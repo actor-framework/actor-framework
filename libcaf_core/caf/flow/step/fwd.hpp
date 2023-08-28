@@ -16,6 +16,9 @@ template <class>
 class do_on_next;
 
 template <class>
+class element_at;
+
+template <class>
 class filter;
 
 template <class>
