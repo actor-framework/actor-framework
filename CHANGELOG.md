@@ -40,6 +40,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   `caf::async::publisher`.
 - When failing to deserialize a request, the sender will receive an error of
   kind `sec::malformed_message`.
+- The `delta` byte span will be reset when the `consume` function returns a 
+  non-zero byte count.
 
 ### Fixed
 
