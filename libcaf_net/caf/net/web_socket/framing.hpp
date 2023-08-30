@@ -138,6 +138,9 @@ private:
     // nop
   }
 
+  // Validate the protocol after consuming a header.
+  error validate_header(ptrdiff_t hdr_bytes) noexcept;
+
   // Consume the header for the currently parsing frame. Returns the number of
   // sonsumed bytes.
   ptrdiff_t consume_header(byte_span input, byte_span);

@@ -215,7 +215,7 @@ SCENARIO("ping messages may not be fragmented") {
                                       data, ping_frame, 0);
       transport->push(ping_frame);
       THEN("the server aborts the application") {
-        CHECK_EQ(transport->handle_input(), 2);
+        CHECK_EQ(transport->handle_input(), 0);
         CHECK(app->has_aborted());
         CHECK_EQ(app->abort_reason, sec::protocol_error);
         MESSAGE("Aborted with: " << app->abort_reason);
@@ -689,7 +689,7 @@ SCENARIO("the application shuts down on invalid frame fragments") {
         detail::rfc6455::opcode_type::continuation_frame, 0x0, data, input);
       transport->push(input);
       THEN("the app closes the connection with a protocol error") {
-        CHECK_EQ(transport->handle_input(), 2);
+        CHECK_EQ(transport->handle_input(), 0);
         CHECK_EQ(app->abort_reason, sec::protocol_error);
       }
     }
@@ -701,7 +701,7 @@ SCENARIO("the application shuts down on invalid frame fragments") {
         detail::rfc6455::opcode_type::continuation_frame, 0x0, data, input, 0);
       transport->push(input);
       THEN("the app closes the connection with a protocol error") {
-        CHECK_EQ(transport->handle_input(), 2);
+        CHECK_EQ(transport->handle_input(), 0);
         CHECK_EQ(app->abort_reason, sec::protocol_error);
       }
     }
@@ -718,7 +718,7 @@ SCENARIO("the application shuts down on invalid frame fragments") {
       }
       AND("the app closes the connection after the second frame") {
         transport->push(input);
-        CHECK_EQ(transport->handle_input(), 2);
+        CHECK_EQ(transport->handle_input(), 0);
         CHECK_EQ(app->abort_reason, sec::protocol_error);
       }
     }
@@ -738,7 +738,7 @@ SCENARIO("the application shuts down on invalid frame fragments") {
         detail::rfc6455::assemble_frame(
           detail::rfc6455::opcode_type::binary_frame, 0x0, data, input);
         transport->push(input);
-        CHECK_EQ(transport->handle_input(), 2);
+        CHECK_EQ(transport->handle_input(), 0);
         CHECK_EQ(app->abort_reason, sec::protocol_error);
       }
     }
