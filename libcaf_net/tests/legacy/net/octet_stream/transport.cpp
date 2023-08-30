@@ -163,7 +163,8 @@ CAF_TEST(consuming a non - negative byte count resets the delta) {
   auto mock = mock_application::make(
     [&byte_span_sizes](byte_span data, byte_span delta) {
       byte_span_sizes.emplace_back(data.size(), delta.size());
-      return 7;
+      // consume half the input and get called twice
+      return std::min(7l, static_cast<ptrdiff_t>(data.size()));
     });
   auto transport = os::transport::make(recv_socket_guard.release(),
                                        std::move(mock));
@@ -172,11 +173,12 @@ CAF_TEST(consuming a non - negative byte count resets the delta) {
   mpx->apply_updates();
   write(send_socket_guard.socket(), as_bytes(make_span(hello_manager)));
   run();
-  CHECK_EQ(byte_span_sizes.size(), 2u);
-  CHECK_EQ(byte_span_sizes[0].first, 14u);
-  CHECK_EQ(byte_span_sizes[0].second, 14u);
-  CHECK_EQ(byte_span_sizes[1].first, 7u);
-  CHECK_EQ(byte_span_sizes[1].second, 7u);
+  if (CHECK_EQ(byte_span_sizes.size(), 2u)) {
+    CHECK_EQ(byte_span_sizes[0].first, 14u);
+    CHECK_EQ(byte_span_sizes[0].second, 14u);
+    CHECK_EQ(byte_span_sizes[1].first, 7u);
+    CHECK_EQ(byte_span_sizes[1].second, 7u);
+  }
 }
 
 CAF_TEST(switching the protocol resets the delta) {
@@ -184,7 +186,8 @@ CAF_TEST(switching the protocol resets the delta) {
   auto mock_1 = mock_application::make(
     [&byte_span_sizes_1](byte_span data, byte_span delta) {
       byte_span_sizes_1.emplace_back(data.size(), delta.size());
-      return 7;
+      // consume the whole of the input
+      return static_cast<ptrdiff_t>(data.size());
     });
   std::vector<std::pair<size_t, size_t>> byte_span_sizes_2;
   auto mock_2 = mock_application::make();
@@ -192,7 +195,8 @@ CAF_TEST(switching the protocol resets the delta) {
                         mock = mock_2.get()](byte_span data, byte_span delta) {
     byte_span_sizes_2.emplace_back(data.size(), delta.size());
     mock->down->switch_protocol(std::move(mock_1));
-    return 7;
+    // consume half the input, leave half for the next protocol
+    return std::min(7l, static_cast<ptrdiff_t>(data.size()));
   });
   auto transport = os::transport::make(recv_socket_guard.release(),
                                        std::move(mock_2));
@@ -201,12 +205,14 @@ CAF_TEST(switching the protocol resets the delta) {
   mpx->apply_updates();
   write(send_socket_guard.socket(), as_bytes(make_span(hello_manager)));
   run();
-  CHECK_EQ(byte_span_sizes_1.size(), 1u);
-  CHECK_EQ(byte_span_sizes_2.size(), 1u);
-  CHECK_EQ(byte_span_sizes_1[0].first, 7u);
-  CHECK_EQ(byte_span_sizes_1[0].second, 7u);
-  CHECK_EQ(byte_span_sizes_2[0].first, 14u);
-  CHECK_EQ(byte_span_sizes_2[0].second, 14u);
+  if (CHECK_EQ(byte_span_sizes_1.size(), 1u)) {
+    CHECK_EQ(byte_span_sizes_1[0].first, 7u);
+    CHECK_EQ(byte_span_sizes_1[0].second, 7u);
+  }
+  if (CHECK_EQ(byte_span_sizes_2.size(), 1u)) {
+    CHECK_EQ(byte_span_sizes_2[0].first, 14u);
+    CHECK_EQ(byte_span_sizes_2[0].second, 14u);
+  }
 }
 
 END_FIXTURE_SCOPE()
