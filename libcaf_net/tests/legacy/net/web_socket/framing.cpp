@@ -406,7 +406,7 @@ SCENARIO("the application shuts down on invalid UTF-8 message") {
       detail::rfc6455::mask_data(0xDEADC0DE, data);
       detail::rfc6455::assemble_frame(detail::rfc6455::opcode_type::text_frame,
                                       0xDEADC0DE, data_span, frame, 0);
-      // Before the header.
+      // Incomplete header bytes.
       for (auto i = 0; i < 5; i++) {
         transport->push(make_span(frame).subspan(i, 1));
         CHECK_EQ(transport->handle_input(), 0);
@@ -447,14 +447,17 @@ SCENARIO("the application shuts down on invalid UTF-8 message") {
         detail::rfc6455::assemble_frame(
           detail::rfc6455::opcode_type::continuation_frame, 0xDEADC0DE,
           data_span.subspan(8), frame);
+        // Incomplete header bytes.
         for (auto i = 0; i < 5; i++) {
           transport->push(make_span(frame).subspan(i, 1));
           CHECK_EQ(transport->handle_input(), 0);
           CHECK(!app->has_aborted());
         }
+        // Header.
         transport->push(make_span(frame).subspan(5, 1));
         CHECK_EQ(transport->handle_input(), 6);
         CHECK(!app->has_aborted());
+        // From header to invalid byte.
         for (auto i = 6; i < 10; i++) {
           transport->push(make_span(frame).subspan(i, 1));
           CHECK_EQ(transport->handle_input(), 0);
@@ -474,9 +477,9 @@ SCENARIO("the application shuts down on invalid UTF-8 message") {
   }
 }
 
-SCENARIO("Send big payload") {
-  GIVEN("a big payload") {
-    WHEN("sending 4096 chunks") {
+SCENARIO("Send a payload in chucks exceeding the default receive policy") {
+  GIVEN("A client accepting a multi frame text payload") {
+    WHEN("Sending data in 4096 byte chunks") {
       reset();
       byte_buffer frame;
       const auto data = make_test_data(4096);

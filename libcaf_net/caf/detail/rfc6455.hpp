@@ -34,7 +34,7 @@ struct CAF_NET_EXPORT rfc6455 {
     uint32_t mask_key = 0;
     uint64_t payload_len = 0;
 
-    // utility funcitons
+    // utility functions.
     explicit operator bool() const noexcept {
       return opcode != opcode_type::nil_code;
     }
