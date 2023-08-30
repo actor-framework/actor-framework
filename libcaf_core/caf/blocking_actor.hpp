@@ -252,7 +252,7 @@ public:
   template <class... Ts>
   do_receive_helper do_receive(Ts&&... xs) {
     auto tup = std::make_tuple(std::forward<Ts>(xs)...);
-    auto cb = [=](receive_cond& rc) mutable {
+    auto cb = [this, tup](receive_cond& rc) mutable {
       varargs_tup_receive(rc, make_message_id(), tup);
     };
     return {cb};

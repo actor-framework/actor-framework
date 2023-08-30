@@ -29,12 +29,13 @@ public:
   }
 
   behavior make_behavior() override {
-    auto f = [=](scheduled_actor*, message& msg) -> result<message> {
+    auto f = [this](scheduled_actor*, message& msg) -> result<message> {
       auto rp = this->make_response_promise();
       split_(workset_, msg);
       for (auto& x : workset_)
         this->send(x.first, std::move(x.second));
-      auto g = [=](scheduled_actor*, message& res) mutable -> result<message> {
+      auto g = [this, rp](scheduled_actor*,
+                          message& res) mutable -> result<message> {
         join_(value_, res);
         if (--awaited_results_ == 0) {
           rp.deliver(value_);

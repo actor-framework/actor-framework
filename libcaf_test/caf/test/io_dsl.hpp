@@ -61,7 +61,7 @@ public:
     bb = mm.named_broker<caf::io::basp_broker>("BASP");
   }
 
-  test_node_fixture() : test_node_fixture([=] { this->run(); }) {
+  test_node_fixture() : test_node_fixture([this] { this->run(); }) {
     // nop
   }
 
