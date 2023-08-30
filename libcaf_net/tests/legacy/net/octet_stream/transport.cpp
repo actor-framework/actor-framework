@@ -21,6 +21,8 @@
 
 #include "net-test.hpp"
 
+#include <algorithm>
+
 using namespace caf;
 
 namespace os = net::octet_stream;
@@ -30,13 +32,7 @@ namespace {
 constexpr std::string_view hello_manager = "hello manager!";
 
 struct fixture : test_coordinator_fixture<> {
-  using byte_buffer_ptr = std::shared_ptr<byte_buffer>;
-
-  fixture()
-    : mpx(net::multiplexer::make(nullptr)),
-      recv_buf(1024),
-      shared_recv_buf{std::make_shared<byte_buffer>()},
-      shared_send_buf{std::make_shared<byte_buffer>()} {
+  fixture() : mpx(net::multiplexer::make(nullptr)), send_buf(1024) {
     mpx->set_thread_id();
     mpx->apply_updates();
     if (auto err = mpx->init())
@@ -55,32 +51,36 @@ struct fixture : test_coordinator_fixture<> {
 
   settings config;
   net::multiplexer_ptr mpx;
-  byte_buffer recv_buf;
   net::socket_guard<net::stream_socket> send_socket_guard;
   net::socket_guard<net::stream_socket> recv_socket_guard;
-  byte_buffer_ptr shared_recv_buf;
-  byte_buffer_ptr shared_send_buf;
+  byte_buffer recv_buf;
+  byte_buffer send_buf;
 };
 
 class mock_application : public os::upper_layer {
 public:
-  using byte_buffer_ptr = std::shared_ptr<byte_buffer>;
+  using consume_impl_t = std::function<ptrdiff_t(byte_span, byte_span)>;
 
-  explicit mock_application(byte_buffer_ptr recv_buf, byte_buffer_ptr send_buf)
-    : recv_buf_(std::move(recv_buf)), send_buf_(std::move(send_buf)) {
+  explicit mock_application() = default;
+
+  explicit mock_application(consume_impl_t consume_impl)
+    : consume_impl_{std::move(consume_impl)} {
     // nop
   }
 
-  static auto make(byte_buffer_ptr recv_buf, byte_buffer_ptr send_buf) {
-    return std::make_unique<mock_application>(std::move(recv_buf),
-                                              std::move(send_buf));
+  static auto make() {
+    return std::make_unique<mock_application>();
+  }
+
+  static auto make(consume_impl_t consume_impl) {
+    return std::make_unique<mock_application>(std::move(consume_impl));
   }
 
   os::lower_layer* down;
 
   error start(os::lower_layer* down_ptr) override {
     down = down_ptr;
-    down->configure_read(net::receive_policy::exactly(hello_manager.size()));
+    down->configure_read(net::receive_policy::up_to(hello_manager.size()));
     return none;
   }
 
@@ -88,11 +88,8 @@ public:
     FAIL("abort called: " << CAF_ARG(reason));
   }
 
-  ptrdiff_t consume(byte_span data, byte_span) override {
-    recv_buf_->clear();
-    recv_buf_->insert(recv_buf_->begin(), data.begin(), data.end());
-    MESSAGE("Received " << recv_buf_->size() << " bytes in mock_application");
-    return static_cast<ptrdiff_t>(recv_buf_->size());
+  ptrdiff_t consume(byte_span data, byte_span delta) override {
+    return consume_impl_(data, delta);
   }
 
   void prepare_send() override {
@@ -107,9 +104,12 @@ public:
     return true;
   }
 
+  void consume_impl(consume_impl_t consume_impl) {
+    consume_impl_ = std::move(consume_impl);
+  }
+
 private:
-  byte_buffer_ptr recv_buf_;
-  byte_buffer_ptr send_buf_;
+  consume_impl_t consume_impl_;
 };
 
 } // namespace
@@ -117,7 +117,12 @@ private:
 BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(receive) {
-  auto mock = mock_application::make(shared_recv_buf, shared_send_buf);
+  auto mock = mock_application::make([this](byte_span data, byte_span) {
+    recv_buf.clear();
+    recv_buf.insert(recv_buf.begin(), data.begin(), data.end());
+    MESSAGE("Received " << recv_buf.size() << " bytes in mock_application");
+    return static_cast<ptrdiff_t>(recv_buf.size());
+  });
   auto transport = os::transport::make(recv_socket_guard.release(),
                                        std::move(mock));
   auto mgr = net::socket_manager::make(mpx.get(), std::move(transport));
@@ -129,13 +134,13 @@ CAF_TEST(receive) {
            hello_manager.size());
   MESSAGE("wrote " << hello_manager.size() << " bytes.");
   run();
-  CHECK_EQ(std::string_view(reinterpret_cast<char*>(shared_recv_buf->data()),
-                            shared_recv_buf->size()),
+  CHECK_EQ(std::string_view(reinterpret_cast<char*>(recv_buf.data()),
+                            recv_buf.size()),
            hello_manager);
 }
 
 CAF_TEST(send) {
-  auto mock = mock_application::make(shared_recv_buf, shared_send_buf);
+  auto mock = mock_application::make();
   auto transport = os::transport::make(recv_socket_guard.release(),
                                        std::move(mock));
   auto mgr = net::socket_manager::make(mpx.get(), std::move(transport));
@@ -146,13 +151,70 @@ CAF_TEST(send) {
   mpx->apply_updates();
   while (handle_io_event())
     ;
-  recv_buf.resize(hello_manager.size());
-  auto res = read(send_socket_guard.socket(), make_span(recv_buf));
+  send_buf.resize(hello_manager.size());
+  auto res = read(send_socket_guard.socket(), make_span(send_buf));
   MESSAGE("received " << res << " bytes");
-  recv_buf.resize(res);
-  CHECK_EQ(std::string_view(reinterpret_cast<char*>(recv_buf.data()),
-                            recv_buf.size()),
+  send_buf.resize(res);
+  CHECK_EQ(std::string_view(reinterpret_cast<char*>(send_buf.data()),
+                            send_buf.size()),
            hello_manager);
+}
+
+CAF_TEST(consuming a non - negative byte count resets the delta) {
+  std::vector<std::pair<size_t, size_t>> byte_span_sizes;
+  auto mock = mock_application::make(
+    [&byte_span_sizes](byte_span data, byte_span delta) {
+      byte_span_sizes.emplace_back(data.size(), delta.size());
+      // consume half the input and get called twice
+      return std::min(ptrdiff_t{7}, static_cast<ptrdiff_t>(data.size()));
+    });
+  auto transport = os::transport::make(recv_socket_guard.release(),
+                                       std::move(mock));
+  auto mgr = net::socket_manager::make(mpx.get(), std::move(transport));
+  CHECK_EQ(mgr->start(), none);
+  mpx->apply_updates();
+  write(send_socket_guard.socket(), as_bytes(make_span(hello_manager)));
+  run();
+  if (CHECK_EQ(byte_span_sizes.size(), 2u)) {
+    CHECK_EQ(byte_span_sizes[0].first, 14u);
+    CHECK_EQ(byte_span_sizes[0].second, 14u);
+    CHECK_EQ(byte_span_sizes[1].first, 7u);
+    CHECK_EQ(byte_span_sizes[1].second, 7u);
+  }
+}
+
+CAF_TEST(switching the protocol resets the delta) {
+  std::vector<std::pair<size_t, size_t>> byte_span_sizes_1;
+  auto mock_1 = mock_application::make(
+    [&byte_span_sizes_1](byte_span data, byte_span delta) {
+      byte_span_sizes_1.emplace_back(data.size(), delta.size());
+      // consume the whole of the input
+      return static_cast<ptrdiff_t>(data.size());
+    });
+  std::vector<std::pair<size_t, size_t>> byte_span_sizes_2;
+  auto mock_2 = mock_application::make();
+  mock_2->consume_impl([&mock_1, &byte_span_sizes_2,
+                        mock = mock_2.get()](byte_span data, byte_span delta) {
+    byte_span_sizes_2.emplace_back(data.size(), delta.size());
+    mock->down->switch_protocol(std::move(mock_1));
+    // consume half the input, leave half for the next protocol
+    return std::min(ptrdiff_t{7}, static_cast<ptrdiff_t>(data.size()));
+  });
+  auto transport = os::transport::make(recv_socket_guard.release(),
+                                       std::move(mock_2));
+  auto mgr = net::socket_manager::make(mpx.get(), std::move(transport));
+  CHECK_EQ(mgr->start(), none);
+  mpx->apply_updates();
+  write(send_socket_guard.socket(), as_bytes(make_span(hello_manager)));
+  run();
+  if (CHECK_EQ(byte_span_sizes_1.size(), 1u)) {
+    CHECK_EQ(byte_span_sizes_1[0].first, 7u);
+    CHECK_EQ(byte_span_sizes_1[0].second, 7u);
+  }
+  if (CHECK_EQ(byte_span_sizes_2.size(), 1u)) {
+    CHECK_EQ(byte_span_sizes_2[0].first, 14u);
+    CHECK_EQ(byte_span_sizes_2[0].second, 14u);
+  }
 }
 
 END_FIXTURE_SCOPE()

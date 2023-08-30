@@ -40,6 +40,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   `caf::async::publisher`.
 - When failing to deserialize a request, the sender will receive an error of
   kind `sec::malformed_message`.
+- When implementing custom protocol layers that sit on top of an octet stream,
+  the `delta` byte span passed to `consume` now resets whenever returning a
+  positive value from `consume`.
 
 ### Fixed
 

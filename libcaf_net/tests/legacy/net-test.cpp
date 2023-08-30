@@ -111,9 +111,8 @@ ptrdiff_t mock_stream_transport::handle_input() {
       // Shove the unread bytes to the beginning of the buffer and continue
       // to the next loop iteration.
       result += consumed;
-      auto del = static_cast<size_t>(consumed);
-      delta_offset = static_cast<ptrdiff_t>(n - del);
-      input.erase(input.begin(), input.begin() + del);
+      delta_offset = 0;
+      input.erase(input.begin(), input.begin() + consumed);
     }
   }
   return result;

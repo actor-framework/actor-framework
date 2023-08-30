@@ -280,22 +280,18 @@ void transport::handle_buffered_data() {
         delta_offset_ = static_cast<ptrdiff_t>(n);
         if (n == std::min(buffered_, size_t{max_read_size_}))
           return;
-        // else: "Fall through".
       }
     } else {
       if (next_ && !switch_to_next_protocol())
         return;
       // Shove the unread bytes to the beginning of the buffer and continue
       // to the next loop iteration.
-      auto del = static_cast<size_t>(consumed);
-      auto prev = buffered_;
-      buffered_ -= del;
-      delta_offset_ = static_cast<ptrdiff_t>(n - del);
-      if (buffered_ > 0) {
-        auto new_begin = read_buf_.begin() + del;
-        auto new_end = read_buf_.begin() + prev;
-        std::copy(new_begin, new_end, read_buf_.begin());
-      }
+      auto prev = static_cast<ptrdiff_t>(buffered_);
+      buffered_ -= static_cast<size_t>(consumed);
+      delta_offset_ = 0;
+      if (buffered_ > 0)
+        std::copy(read_buf_.begin() + consumed, read_buf_.begin() + prev,
+                  read_buf_.begin());
     }
   }
 }
