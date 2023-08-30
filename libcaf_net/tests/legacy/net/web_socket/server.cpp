@@ -33,7 +33,8 @@ struct fixture {
     rng.seed(0xD3ADC0D3);
   }
 
-  void rfc6455_append(uint8_t opcode, const_byte_span bytes, byte_buffer& out,
+  void rfc6455_append(detail::rfc6455::opcode_type opcode,
+                      const_byte_span bytes, byte_buffer& out,
                       uint8_t flags = detail::rfc6455::fin_flag) {
     byte_buffer payload{bytes.begin(), bytes.end()};
     auto key = static_cast<uint32_t>(rng());
@@ -41,31 +42,33 @@ struct fixture {
     detail::rfc6455::assemble_frame(opcode, key, payload, out, flags);
   }
 
-  void rfc6455_append(uint8_t opcode, std::string_view text, byte_buffer& out,
+  void rfc6455_append(detail::rfc6455::opcode_type opcode,
+                      std::string_view text, byte_buffer& out,
                       uint8_t flags = detail::rfc6455::fin_flag) {
     rfc6455_append(opcode, as_bytes(make_span(text)), out, flags);
   }
 
   void rfc6455_append(const_byte_span bytes, byte_buffer& out) {
-    rfc6455_append(detail::rfc6455::binary_frame, bytes, out);
+    rfc6455_append(detail::rfc6455::opcode_type::binary_frame, bytes, out);
   }
 
   void rfc6455_append(std::string_view text, byte_buffer& out) {
-    rfc6455_append(detail::rfc6455::text_frame, as_bytes(make_span(text)), out);
+    rfc6455_append(detail::rfc6455::opcode_type::text_frame,
+                   as_bytes(make_span(text)), out);
   }
 
-  void push(uint8_t opcode, const_byte_span bytes) {
+  void push(detail::rfc6455::opcode_type opcode, const_byte_span bytes) {
     byte_buffer frame;
     rfc6455_append(opcode, bytes, frame);
     transport->push(frame);
   }
 
   void push(const_byte_span bytes) {
-    push(detail::rfc6455::binary_frame, bytes);
+    push(detail::rfc6455::opcode_type::binary_frame, bytes);
   }
 
   void push(std::string_view str) {
-    push(detail::rfc6455::text_frame, as_bytes(make_span(str)));
+    push(detail::rfc6455::opcode_type::text_frame, as_bytes(make_span(str)));
   }
 
   std::unique_ptr<mock_stream_transport> transport;
@@ -178,11 +181,14 @@ TEST_CASE("data may arrive fragmented") {
   CHECK_EQ(transport->handle_input(),
            static_cast<ptrdiff_t>(opening_handshake.size()));
   byte_buffer buf;
-  rfc6455_append(detail::rfc6455::text_frame, "Hello "sv, buf, 0);
-  rfc6455_append(detail::rfc6455::continuation_frame, "WebSocket!\n"sv, buf);
-  rfc6455_append(detail::rfc6455::text_frame, "Bye "sv, buf, 0);
-  rfc6455_append(detail::rfc6455::continuation_frame, "Web"sv, buf, 0);
-  rfc6455_append(detail::rfc6455::continuation_frame, "Socket!\n"sv, buf);
+  rfc6455_append(detail::rfc6455::opcode_type::text_frame, "Hello "sv, buf, 0);
+  rfc6455_append(detail::rfc6455::opcode_type::continuation_frame,
+                 "WebSocket!\n"sv, buf);
+  rfc6455_append(detail::rfc6455::opcode_type::text_frame, "Bye "sv, buf, 0);
+  rfc6455_append(detail::rfc6455::opcode_type::continuation_frame, "Web"sv, buf,
+                 0);
+  rfc6455_append(detail::rfc6455::opcode_type::continuation_frame,
+                 "Socket!\n"sv, buf);
   transport->push(buf);
   CHECK_EQ(transport->handle_input(), static_cast<ptrdiff_t>(buf.size()));
   CHECK_EQ(app->text_input, "Hello WebSocket!\nBye WebSocket!\n");

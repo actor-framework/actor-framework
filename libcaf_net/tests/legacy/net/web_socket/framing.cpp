@@ -35,7 +35,7 @@ struct fixture {
 };
 
 byte_buffer make_test_data(size_t requested_size) {
-  return byte_buffer{requested_size, std::byte{0xFF}};
+  return byte_buffer{requested_size, std::byte{'a'}};
 }
 
 auto bytes(std::initializer_list<uint8_t> xs) {
@@ -71,14 +71,14 @@ SCENARIO("the client sends a ping and receives a pong response") {
     std::vector<std::byte> pong_frame;
     WHEN("the client sends a ping with no data") {
       auto data = make_test_data(0);
-      detail::rfc6455::assemble_frame(detail::rfc6455::ping, 0x0, data,
-                                      ping_frame);
+      detail::rfc6455::assemble_frame(detail::rfc6455::opcode_type::ping, 0x0,
+                                      data, ping_frame);
       transport->push(ping_frame);
       CHECK_EQ(transport->handle_input(),
                static_cast<ptrdiff_t>(ping_frame.size()));
       THEN("the server responds with an empty pong") {
-        detail::rfc6455::assemble_frame(detail::rfc6455::pong, 0x0, data,
-                                        pong_frame);
+        detail::rfc6455::assemble_frame(detail::rfc6455::opcode_type::pong, 0x0,
+                                        data, pong_frame);
         CHECK_EQ(transport->output_buffer(), pong_frame);
       }
       AND("the client did not abort") {
@@ -88,14 +88,14 @@ SCENARIO("the client sends a ping and receives a pong response") {
     transport->output_buffer().clear();
     WHEN("the client sends a ping with some data") {
       auto data = make_test_data(40);
-      detail::rfc6455::assemble_frame(detail::rfc6455::ping, 0x0, data,
-                                      ping_frame);
+      detail::rfc6455::assemble_frame(detail::rfc6455::opcode_type::ping, 0x0,
+                                      data, ping_frame);
       transport->push(ping_frame);
       CHECK_EQ(transport->handle_input(),
                static_cast<ptrdiff_t>(ping_frame.size()));
       THEN("the server echoes the data back to the client") {
-        detail::rfc6455::assemble_frame(detail::rfc6455::pong, 0x0, data,
-                                        pong_frame);
+        detail::rfc6455::assemble_frame(detail::rfc6455::opcode_type::pong, 0x0,
+                                        data, pong_frame);
         CHECK_EQ(transport->output_buffer(), pong_frame);
       }
       AND("the client did not abort") {
@@ -105,14 +105,14 @@ SCENARIO("the client sends a ping and receives a pong response") {
     transport->output_buffer().clear();
     WHEN("the client sends a ping with the maximum allowed 125 bytes") {
       auto data = make_test_data(125);
-      detail::rfc6455::assemble_frame(detail::rfc6455::ping, 0x0, data,
-                                      ping_frame);
+      detail::rfc6455::assemble_frame(detail::rfc6455::opcode_type::ping, 0x0,
+                                      data, ping_frame);
       transport->push(ping_frame);
       CHECK_EQ(transport->handle_input(),
                static_cast<ptrdiff_t>(ping_frame.size()));
       THEN("the server echoes the data back to the client") {
-        detail::rfc6455::assemble_frame(detail::rfc6455::pong, 0x0, data,
-                                        pong_frame);
+        detail::rfc6455::assemble_frame(detail::rfc6455::opcode_type::pong, 0x0,
+                                        data, pong_frame);
         CHECK_EQ(transport->output_buffer(), pong_frame);
       }
       AND("the client did not abort") {
@@ -126,7 +126,7 @@ TEST_CASE("calling shutdown with protocol_error sets status in close header") {
   uut->shutdown(make_error(sec::protocol_error));
   detail::rfc6455::header hdr;
   detail::rfc6455::decode_header(transport->output_buffer(), hdr);
-  CHECK_EQ(hdr.opcode, detail::rfc6455::connection_close);
+  CHECK_EQ(hdr.opcode, detail::rfc6455::opcode_type::connection_close);
   CHECK(hdr.payload_len >= 2);
   CHECK_EQ(fetch_status(transport->output_buffer()),
            static_cast<int>(net::web_socket::status::protocol_error));
@@ -138,8 +138,8 @@ SCENARIO("the client sends an invalid ping that closes the connection") {
     std::vector<std::byte> ping_frame;
     WHEN("the client sends a ping with more data than allowed") {
       auto data = make_test_data(126);
-      detail::rfc6455::assemble_frame(detail::rfc6455::ping, 0x0, data,
-                                      ping_frame);
+      detail::rfc6455::assemble_frame(detail::rfc6455::opcode_type::ping, 0x0,
+                                      data, ping_frame);
       transport->push(ping_frame);
       THEN("the server aborts the application") {
         CHECK_EQ(transport->handle_input(), 0);
@@ -151,7 +151,7 @@ SCENARIO("the client sends an invalid ping that closes the connection") {
         detail::rfc6455::header hdr;
         detail::rfc6455::decode_header(transport->output_buffer(), hdr);
         MESSAGE("Buffer: " << transport->output_buffer());
-        CHECK_EQ(hdr.opcode, detail::rfc6455::connection_close);
+        CHECK_EQ(hdr.opcode, detail::rfc6455::opcode_type::connection_close);
         CHECK(hdr.payload_len >= 2);
         CHECK_EQ(fetch_status(transport->output_buffer()),
                  static_cast<int>(net::web_socket::status::protocol_error));
@@ -164,8 +164,9 @@ SCENARIO("the client closes the connection with a closing handshake") {
   GIVEN("a valid WebSocket connection") {
     WHEN("the client sends a closing handshake") {
       std::vector<std::byte> handshake;
-      detail::rfc6455::assemble_frame(detail::rfc6455::connection_close, 0x0,
-                                      make_test_data(0), handshake);
+      detail::rfc6455::assemble_frame(
+        detail::rfc6455::opcode_type::connection_close, 0x0, make_test_data(0),
+        handshake);
       transport->push(handshake);
     }
     THEN("the server closes the connection after sending a close frame") {
@@ -176,7 +177,7 @@ SCENARIO("the client closes the connection with a closing handshake") {
       CHECK(app->has_aborted());
       CHECK_EQ(app->abort_reason, sec::connection_closed);
       CHECK_EQ(hdr_length, 2);
-      CHECK_EQ(hdr.opcode, detail::rfc6455::connection_close);
+      CHECK_EQ(hdr.opcode, detail::rfc6455::opcode_type::connection_close);
       CHECK(hdr.fin);
       CHECK(hdr.payload_len >= 2);
       CHECK_EQ(fetch_status(transport->output_buffer()),
@@ -187,16 +188,17 @@ SCENARIO("the client closes the connection with a closing handshake") {
       std::vector<std::byte> handshake;
       // invalid status code
       auto payload = make_closing_payload(1016, ""sv);
-      detail::rfc6455::assemble_frame(detail::rfc6455::connection_close, 0x0,
-                                      payload, handshake);
+      detail::rfc6455::assemble_frame(
+        detail::rfc6455::opcode_type::connection_close, 0x0, payload,
+        handshake);
       transport->push(handshake);
     }
     THEN("the server closes the connection with protocol error") {
-      CHECK_EQ(transport->handle_input(), 0l);
+      CHECK_EQ(transport->handle_input(), 2);
       detail::rfc6455::header hdr;
       detail::rfc6455::decode_header(transport->output_buffer(), hdr);
       CHECK_EQ(app->abort_reason, sec::protocol_error);
-      CHECK_EQ(hdr.opcode, detail::rfc6455::connection_close);
+      CHECK_EQ(hdr.opcode, detail::rfc6455::opcode_type::connection_close);
       CHECK(hdr.fin);
       CHECK_EQ(fetch_status(transport->output_buffer()),
                static_cast<int>(net::web_socket::status::protocol_error));
@@ -209,11 +211,11 @@ SCENARIO("ping messages may not be fragmented") {
     std::vector<std::byte> ping_frame;
     WHEN("the client sends the first frame of a fragmented ping message") {
       auto data = make_test_data(10);
-      detail::rfc6455::assemble_frame(detail::rfc6455::ping, 0x0, data,
-                                      ping_frame, 0);
+      detail::rfc6455::assemble_frame(detail::rfc6455::opcode_type::ping, 0x0,
+                                      data, ping_frame, 0);
       transport->push(ping_frame);
       THEN("the server aborts the application") {
-        CHECK_EQ(transport->handle_input(), 0);
+        CHECK_EQ(transport->handle_input(), 2);
         CHECK(app->has_aborted());
         CHECK_EQ(app->abort_reason, sec::protocol_error);
         MESSAGE("Aborted with: " << app->abort_reason);
@@ -222,7 +224,7 @@ SCENARIO("ping messages may not be fragmented") {
         detail::rfc6455::header hdr;
         detail::rfc6455::decode_header(transport->output_buffer(), hdr);
         MESSAGE("Buffer: " << transport->output_buffer());
-        CHECK_EQ(hdr.opcode, detail::rfc6455::connection_close);
+        CHECK_EQ(hdr.opcode, detail::rfc6455::opcode_type::connection_close);
         CHECK(hdr.payload_len >= 2);
         CHECK_EQ(fetch_status(transport->output_buffer()),
                  static_cast<int>(net::web_socket::status::protocol_error));
@@ -238,16 +240,17 @@ SCENARIO("ping messages may arrive between message fragments") {
       auto fragment1 = "Hello"sv;
       auto fragment2 = ", world!"sv;
       auto data = as_bytes(make_span(fragment1));
-      detail::rfc6455::assemble_frame(detail::rfc6455::text_frame, 0x0, data,
-                                      input, 0);
+      detail::rfc6455::assemble_frame(detail::rfc6455::opcode_type::text_frame,
+                                      0x0, data, input, 0);
       transport->push(input);
       input.clear();
-      detail::rfc6455::assemble_frame(detail::rfc6455::ping, 0x0, data, input);
+      detail::rfc6455::assemble_frame(detail::rfc6455::opcode_type::ping, 0x0,
+                                      data, input);
       transport->push(input);
       input.clear();
       data = as_bytes(make_span(fragment2));
-      detail::rfc6455::assemble_frame(detail::rfc6455::continuation_frame, 0x0,
-                                      data, input);
+      detail::rfc6455::assemble_frame(
+        detail::rfc6455::opcode_type::continuation_frame, 0x0, data, input);
       transport->push(input);
       transport->handle_input();
       THEN("the server responds with a pong") {
@@ -257,7 +260,7 @@ SCENARIO("ping messages may arrive between message fragments") {
         MESSAGE("Payload: " << transport->output_buffer());
         CHECK_EQ(hdr_len, 2u);
         CHECK(hdr.fin);
-        CHECK_EQ(hdr.opcode, detail::rfc6455::pong);
+        CHECK_EQ(hdr.opcode, detail::rfc6455::opcode_type::pong);
         CHECK_EQ(hdr.payload_len, 5u);
         CHECK_EQ(hdr.mask_key, 0u);
       }
@@ -274,8 +277,8 @@ SCENARIO("ping messages may arrive between message fragments") {
       auto fragment2 = ", world!"sv;
       std::vector<std::byte> input;
       auto data = as_bytes(make_span(fragment1));
-      detail::rfc6455::assemble_frame(detail::rfc6455::text_frame, 0x0, data,
-                                      input, 0);
+      detail::rfc6455::assemble_frame(detail::rfc6455::opcode_type::text_frame,
+                                      0x0, data, input, 0);
       transport->push(input);
       transport->handle_input();
       THEN("the server receives nothing") {
@@ -283,7 +286,8 @@ SCENARIO("ping messages may arrive between message fragments") {
         CHECK(app->binary_input.empty());
       }
       input.clear();
-      detail::rfc6455::assemble_frame(detail::rfc6455::ping, 0x0, data, input);
+      detail::rfc6455::assemble_frame(detail::rfc6455::opcode_type::ping, 0x0,
+                                      data, input);
       transport->push(input);
       transport->handle_input();
       THEN("the server responds with a pong") {
@@ -292,14 +296,14 @@ SCENARIO("ping messages may arrive between message fragments") {
           = detail::rfc6455::decode_header(transport->output_buffer(), hdr);
         CHECK_EQ(hdr_len, 2u);
         CHECK(hdr.fin);
-        CHECK_EQ(hdr.opcode, detail::rfc6455::pong);
+        CHECK_EQ(hdr.opcode, detail::rfc6455::opcode_type::pong);
         CHECK_EQ(hdr.payload_len, 5u);
         CHECK_EQ(hdr.mask_key, 0u);
       }
       input.clear();
       data = as_bytes(make_span(fragment2));
-      detail::rfc6455::assemble_frame(detail::rfc6455::continuation_frame, 0x0,
-                                      data, input);
+      detail::rfc6455::assemble_frame(
+        detail::rfc6455::opcode_type::continuation_frame, 0x0, data, input);
       transport->push(input);
       transport->handle_input();
       THEN("the server receives the full text message") {
@@ -324,11 +328,11 @@ SCENARIO("the application shuts down on invalid UTF-8 message") {
     WHEN("the client sends the whole message as a single frame") {
       reset();
       byte_buffer frame;
-      detail::rfc6455::assemble_frame(detail::rfc6455::text_frame, 0x0,
-                                      data_span, frame);
+      detail::rfc6455::assemble_frame(detail::rfc6455::opcode_type::text_frame,
+                                      0x0, data_span, frame);
       transport->push(frame);
       THEN("the server aborts the application") {
-        CHECK_EQ(transport->handle_input(), 0);
+        CHECK_EQ(transport->handle_input(), 2);
         CHECK_EQ(app->abort_reason, sec::malformed_message);
         CHECK_EQ(fetch_status(transport->output_buffer()),
                  static_cast<int>(net::web_socket::status::inconsistent_data));
@@ -338,11 +342,11 @@ SCENARIO("the application shuts down on invalid UTF-8 message") {
     WHEN("the client sends a message ending with a incomplete codepoint") {
       reset();
       byte_buffer frame;
-      detail::rfc6455::assemble_frame(detail::rfc6455::text_frame, 0x0,
-                                      data_span.first(6), frame);
+      detail::rfc6455::assemble_frame(detail::rfc6455::opcode_type::text_frame,
+                                      0x0, data_span.first(6), frame);
       transport->push(frame);
       THEN("the server aborts the application") {
-        CHECK_EQ(transport->handle_input(), 0);
+        CHECK_EQ(transport->handle_input(), 2);
         CHECK_EQ(app->abort_reason, sec::malformed_message);
         CHECK_EQ(fetch_status(transport->output_buffer()),
                  static_cast<int>(net::web_socket::status::inconsistent_data));
@@ -352,8 +356,8 @@ SCENARIO("the application shuts down on invalid UTF-8 message") {
     WHEN("the client sends the first part of the message") {
       reset();
       byte_buffer frame;
-      detail::rfc6455::assemble_frame(detail::rfc6455::text_frame, 0x0,
-                                      data_span.subspan(0, 11), frame, 0);
+      detail::rfc6455::assemble_frame(detail::rfc6455::opcode_type::text_frame,
+                                      0x0, data_span.subspan(0, 11), frame, 0);
       transport->push(frame);
       THEN("the connection did not abort") {
         CHECK_EQ(transport->handle_input(),
@@ -363,11 +367,12 @@ SCENARIO("the application shuts down on invalid UTF-8 message") {
     }
     AND_WHEN("the client sends the second frame containing invalid data") {
       byte_buffer frame;
-      detail::rfc6455::assemble_frame(detail::rfc6455::continuation_frame, 0x0,
-                                      data_span.subspan(11), frame);
+      detail::rfc6455::assemble_frame(
+        detail::rfc6455::opcode_type::continuation_frame, 0x0,
+        data_span.subspan(11), frame);
       transport->push(frame);
       THEN("the server aborts the application") {
-        CHECK_EQ(transport->handle_input(), 0);
+        CHECK_EQ(transport->handle_input(), 2);
         CHECK_EQ(app->abort_reason, sec::malformed_message);
         CHECK_EQ(fetch_status(transport->output_buffer()),
                  static_cast<int>(net::web_socket::status::inconsistent_data));
@@ -377,17 +382,18 @@ SCENARIO("the application shuts down on invalid UTF-8 message") {
     WHEN("the client sends the invalid byte on a frame boundary") {
       reset();
       byte_buffer frame;
-      detail::rfc6455::assemble_frame(detail::rfc6455::text_frame, 0x0,
-                                      data_span.subspan(0, 12), frame, 0);
+      detail::rfc6455::assemble_frame(detail::rfc6455::opcode_type::text_frame,
+                                      0x0, data_span.subspan(0, 12), frame, 0);
       transport->push(frame);
       CHECK_EQ(transport->handle_input(), static_cast<ptrdiff_t>(frame.size()));
       CHECK(!app->has_aborted());
       frame.clear();
-      detail::rfc6455::assemble_frame(detail::rfc6455::continuation_frame, 0x0,
-                                      data_span.subspan(12, 1), frame, 0);
+      detail::rfc6455::assemble_frame(
+        detail::rfc6455::opcode_type::continuation_frame, 0x0,
+        data_span.subspan(12, 1), frame, 0);
       transport->push(frame);
       THEN("the server aborts the application") {
-        CHECK_EQ(transport->handle_input(), 0);
+        CHECK_EQ(transport->handle_input(), 2);
         CHECK_EQ(app->abort_reason, sec::malformed_message);
         CHECK_EQ(fetch_status(transport->output_buffer()),
                  static_cast<int>(net::web_socket::status::inconsistent_data));
@@ -398,12 +404,24 @@ SCENARIO("the application shuts down on invalid UTF-8 message") {
       reset();
       byte_buffer frame;
       detail::rfc6455::mask_data(0xDEADC0DE, data);
-      detail::rfc6455::assemble_frame(detail::rfc6455::text_frame, 0xDEADC0DE,
-                                      data_span, frame, 0);
-      for (auto i = 0; i < 18; i++) {
+      detail::rfc6455::assemble_frame(detail::rfc6455::opcode_type::text_frame,
+                                      0xDEADC0DE, data_span, frame, 0);
+      // Before the header.
+      for (auto i = 0; i < 5; i++) {
         transport->push(make_span(frame).subspan(i, 1));
         CHECK_EQ(transport->handle_input(), 0);
         CHECK(!app->has_aborted());
+      }
+      // Header.
+      transport->push(make_span(frame).subspan(5, 1));
+      CHECK_EQ(transport->handle_input(), 6);
+      CHECK(!app->has_aborted());
+      // From header to invalid byte.
+      for (auto i = 6; i < 18; i++) {
+        transport->push(make_span(frame).subspan(i, 1));
+        CHECK_EQ(transport->handle_input(), 0);
+        CHECK(!app->has_aborted());
+        MESSAGE("Aborted with: " << app->abort_reason);
       }
       THEN("the server aborts when receiving the invalid byte") {
         transport->push(make_span(frame).subspan(18, 1));
@@ -416,8 +434,9 @@ SCENARIO("the application shuts down on invalid UTF-8 message") {
       WHEN("the client sends the first frame of a text messagee") {
         reset();
         byte_buffer frame;
-        detail::rfc6455::assemble_frame(detail::rfc6455::text_frame, 0xDEADC0DE,
-                                        data_span.subspan(0, 8), frame, 0);
+        detail::rfc6455::assemble_frame(
+          detail::rfc6455::opcode_type::text_frame, 0xDEADC0DE,
+          data_span.subspan(0, 8), frame, 0);
         transport->push(frame);
         CHECK_EQ(transport->handle_input(),
                  static_cast<ptrdiff_t>(frame.size()));
@@ -425,10 +444,18 @@ SCENARIO("the application shuts down on invalid UTF-8 message") {
       }
       AND_WHEN("sending the invalid continuation frame byte by byte") {
         byte_buffer frame;
-        detail::rfc6455::assemble_frame(detail::rfc6455::continuation_frame,
-                                        0xDEADC0DE, data_span.subspan(8),
-                                        frame);
-        for (auto i = 0; i < 10; i++) {
+        detail::rfc6455::assemble_frame(
+          detail::rfc6455::opcode_type::continuation_frame, 0xDEADC0DE,
+          data_span.subspan(8), frame);
+        for (auto i = 0; i < 5; i++) {
+          transport->push(make_span(frame).subspan(i, 1));
+          CHECK_EQ(transport->handle_input(), 0);
+          CHECK(!app->has_aborted());
+        }
+        transport->push(make_span(frame).subspan(5, 1));
+        CHECK_EQ(transport->handle_input(), 6);
+        CHECK(!app->has_aborted());
+        for (auto i = 6; i < 10; i++) {
           transport->push(make_span(frame).subspan(i, 1));
           CHECK_EQ(transport->handle_input(), 0);
           CHECK(!app->has_aborted());
@@ -443,6 +470,40 @@ SCENARIO("the application shuts down on invalid UTF-8 message") {
           MESSAGE("Aborted with: " << app->abort_reason);
         }
       }
+    }
+  }
+}
+
+SCENARIO("Send big payload") {
+  GIVEN("a big payload") {
+    WHEN("sending 4096 chunks") {
+      reset();
+      byte_buffer frame;
+      const auto data = make_test_data(4096);
+      detail::rfc6455::assemble_frame(detail::rfc6455::opcode_type::text_frame,
+                                      0x0, data, frame, 0);
+      transport->push(frame);
+      CHECK_EQ(transport->handle_input(), static_cast<ptrdiff_t>(frame.size()));
+      CHECK(!app->abort_reason);
+      CHECK(app->text_input.empty());
+      frame.clear();
+      detail::rfc6455::assemble_frame(
+        detail::rfc6455::opcode_type::continuation_frame, 0x0, data, frame, 0);
+      transport->push(frame);
+      CHECK_EQ(transport->handle_input(), static_cast<ptrdiff_t>(frame.size()));
+      CHECK(!app->abort_reason);
+      CHECK(app->text_input.empty());
+      transport->push(frame);
+      CHECK_EQ(transport->handle_input(), static_cast<ptrdiff_t>(frame.size()));
+      CHECK(!app->abort_reason);
+      CHECK(app->text_input.empty());
+      frame.clear();
+      detail::rfc6455::assemble_frame(
+        detail::rfc6455::opcode_type::continuation_frame, 0x0, data, frame);
+      transport->push(frame);
+      CHECK_EQ(transport->handle_input(), static_cast<ptrdiff_t>(frame.size()));
+      CHECK(!app->abort_reason);
+      CHECK_EQ(app->text_input.size(), 4 * 4096ul);
     }
   }
 }
@@ -496,7 +557,7 @@ SCENARIO("apps can return errors to shut down the framing layer") {
         const auto data = make_test_data(4);
         detail::rfc6455::assemble_frame(0x0, data, input);
         transport->push(input);
-        CHECK_EQ(transport->handle_input(), 0);
+        CHECK_EQ(transport->handle_input(), 2);
         CHECK(app->has_aborted());
       }
     }
@@ -506,15 +567,16 @@ SCENARIO("apps can return errors to shut down the framing layer") {
         byte_buffer frame1;
         byte_buffer frame2;
         const auto data = make_test_data(4);
-        detail::rfc6455::assemble_frame(detail::rfc6455::binary_frame, 0x0,
-                                        data, frame1, 0);
+        detail::rfc6455::assemble_frame(
+          detail::rfc6455::opcode_type::binary_frame, 0x0, data, frame1, 0);
         transport->push(frame1);
-        detail::rfc6455::assemble_frame(detail::rfc6455::continuation_frame,
-                                        0x0, data, frame2);
+        detail::rfc6455::assemble_frame(
+          detail::rfc6455::opcode_type::continuation_frame, 0x0, data, frame2);
         transport->push(frame2);
-        // We only handle one frame, the second one results in an abort
+        // We only handle the first frame and the header of the second frame.
+        // The protocol aborts on the second frame payload.
         CHECK_EQ(transport->handle_input(),
-                 static_cast<ptrdiff_t>(frame1.size()));
+                 static_cast<ptrdiff_t>(frame1.size() + 2));
         CHECK(app->has_aborted());
       }
     }
@@ -525,7 +587,7 @@ SCENARIO("apps can return errors to shut down the framing layer") {
         const auto msg = "Hello, world!"sv;
         detail::rfc6455::assemble_frame(0x0, make_span(msg), input);
         transport->push(input);
-        CHECK_EQ(transport->handle_input(), 0);
+        CHECK_EQ(transport->handle_input(), 2);
         CHECK(app->has_aborted());
       }
     }
@@ -535,14 +597,16 @@ SCENARIO("apps can return errors to shut down the framing layer") {
         byte_buffer frame1;
         byte_buffer frame2;
         const auto msg = "Hello, world!"sv;
-        detail::rfc6455::assemble_frame(detail::rfc6455::text_frame, 0x0,
-                                        as_bytes(make_span(msg)), frame1, 0);
+        detail::rfc6455::assemble_frame(
+          detail::rfc6455::opcode_type::text_frame, 0x0,
+          as_bytes(make_span(msg)), frame1, 0);
         transport->push(frame1);
-        detail::rfc6455::assemble_frame(detail::rfc6455::continuation_frame,
-                                        0x0, as_bytes(make_span(msg)), frame2);
+        detail::rfc6455::assemble_frame(
+          detail::rfc6455::opcode_type::continuation_frame, 0x0,
+          as_bytes(make_span(msg)), frame2);
         transport->push(frame2);
         CHECK_EQ(transport->handle_input(),
-                 static_cast<ptrdiff_t>(frame1.size()));
+                 static_cast<ptrdiff_t>(frame1.size() + 2));
         CHECK(app->has_aborted());
       }
     }
@@ -555,7 +619,8 @@ SCENARIO("the application receives a pong") {
       reset();
       byte_buffer input;
       const auto data = make_test_data(10);
-      detail::rfc6455::assemble_frame(detail::rfc6455::pong, 0x0, data, input);
+      detail::rfc6455::assemble_frame(detail::rfc6455::opcode_type::pong, 0x0,
+                                      data, input);
       transport->push(input);
       THEN("the application handles the frame without actual input") {
         CHECK_EQ(transport->handle_input(),
@@ -591,8 +656,8 @@ SCENARIO("apps reject frames whose payload exceeds maximum allowed size") {
       reset();
       byte_buffer frame;
       auto data = make_test_data(256);
-      detail::rfc6455::assemble_frame(detail::rfc6455::binary_frame, 0x0, data,
-                                      frame, 0);
+      detail::rfc6455::assemble_frame(
+        detail::rfc6455::opcode_type::binary_frame, 0x0, data, frame, 0);
       transport->push(frame);
       CHECK_EQ(transport->handle_input(), static_cast<ptrdiff_t>(frame.size()));
       frame.clear();
@@ -617,11 +682,11 @@ SCENARIO("the application shuts down on invalid frame fragments") {
       reset();
       byte_buffer input;
       const auto data = make_test_data(10);
-      detail::rfc6455::assemble_frame(detail::rfc6455::continuation_frame, 0x0,
-                                      data, input);
+      detail::rfc6455::assemble_frame(
+        detail::rfc6455::opcode_type::continuation_frame, 0x0, data, input);
       transport->push(input);
       THEN("the app closes the connection with a protocol error") {
-        CHECK_EQ(transport->handle_input(), 0);
+        CHECK_EQ(transport->handle_input(), 2);
         CHECK_EQ(app->abort_reason, sec::protocol_error);
       }
     }
@@ -629,11 +694,11 @@ SCENARIO("the application shuts down on invalid frame fragments") {
       reset();
       byte_buffer input;
       const auto data = make_test_data(10);
-      detail::rfc6455::assemble_frame(detail::rfc6455::continuation_frame, 0x0,
-                                      data, input, 0);
+      detail::rfc6455::assemble_frame(
+        detail::rfc6455::opcode_type::continuation_frame, 0x0, data, input, 0);
       transport->push(input);
       THEN("the app closes the connection with a protocol error") {
-        CHECK_EQ(transport->handle_input(), 0);
+        CHECK_EQ(transport->handle_input(), 2);
         CHECK_EQ(app->abort_reason, sec::protocol_error);
       }
     }
@@ -641,8 +706,8 @@ SCENARIO("the application shuts down on invalid frame fragments") {
       reset();
       byte_buffer input;
       const auto data = make_test_data(10);
-      detail::rfc6455::assemble_frame(detail::rfc6455::binary_frame, 0x0, data,
-                                      input, 0);
+      detail::rfc6455::assemble_frame(
+        detail::rfc6455::opcode_type::binary_frame, 0x0, data, input, 0);
       THEN("the app accepts the first frame") {
         transport->push(input);
         CHECK_EQ(transport->handle_input(),
@@ -650,7 +715,7 @@ SCENARIO("the application shuts down on invalid frame fragments") {
       }
       AND("the app closes the connection after the second frame") {
         transport->push(input);
-        CHECK_EQ(transport->handle_input(), 0);
+        CHECK_EQ(transport->handle_input(), 2);
         CHECK_EQ(app->abort_reason, sec::protocol_error);
       }
     }
@@ -658,8 +723,8 @@ SCENARIO("the application shuts down on invalid frame fragments") {
       reset();
       byte_buffer input;
       const auto data = make_test_data(10);
-      detail::rfc6455::assemble_frame(detail::rfc6455::binary_frame, 0x0, data,
-                                      input, 0);
+      detail::rfc6455::assemble_frame(
+        detail::rfc6455::opcode_type::binary_frame, 0x0, data, input, 0);
       THEN("the app accepts the first frame") {
         transport->push(input);
         CHECK_EQ(transport->handle_input(),
@@ -667,10 +732,10 @@ SCENARIO("the application shuts down on invalid frame fragments") {
       }
       AND("the app closes the connection after the second frame") {
         input.clear();
-        detail::rfc6455::assemble_frame(detail::rfc6455::binary_frame, 0x0,
-                                        data, input);
+        detail::rfc6455::assemble_frame(
+          detail::rfc6455::opcode_type::binary_frame, 0x0, data, input);
         transport->push(input);
-        CHECK_EQ(transport->handle_input(), 0);
+        CHECK_EQ(transport->handle_input(), 2);
         CHECK_EQ(app->abort_reason, sec::protocol_error);
       }
     }

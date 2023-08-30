@@ -17,26 +17,34 @@ namespace caf::detail {
 struct CAF_NET_EXPORT rfc6455 {
   // -- member types -----------------------------------------------------------
 
+  enum class opcode_type : uint8_t {
+    continuation_frame = 0x00,
+    text_frame = 0x01,
+    binary_frame = 0x02,
+    connection_close = 0x08,
+    ping = 0x09,
+    pong = 0x0A,
+    /// Invalid opcode to mean "no opcode received yet".
+    nil_code = 0xFF,
+  };
+
   struct header {
-    bool fin;
-    uint8_t opcode;
-    uint32_t mask_key;
-    uint64_t payload_len;
+    bool fin = false;
+    opcode_type opcode = opcode_type::nil_code;
+    uint32_t mask_key = 0;
+    uint64_t payload_len = 0;
+
+    // utility funcitons
+    explicit operator bool() const noexcept {
+      return opcode != opcode_type::nil_code;
+    }
+
+    bool operator!() const noexcept {
+      return !static_cast<bool>(*this);
+    }
   };
 
   // -- constants --------------------------------------------------------------
-
-  static constexpr uint8_t continuation_frame = 0x00;
-
-  static constexpr uint8_t text_frame = 0x01;
-
-  static constexpr uint8_t binary_frame = 0x02;
-
-  static constexpr uint8_t connection_close = 0x08;
-
-  static constexpr uint8_t ping = 0x09;
-
-  static constexpr uint8_t pong = 0x0A;
 
   static constexpr uint8_t fin_flag = 0x80;
 
@@ -52,14 +60,14 @@ struct CAF_NET_EXPORT rfc6455 {
   static void assemble_frame(uint32_t mask_key, const_byte_span data,
                              byte_buffer& out);
 
-  static void assemble_frame(uint8_t opcode, uint32_t mask_key,
+  static void assemble_frame(opcode_type opcode, uint32_t mask_key,
                              const_byte_span data, byte_buffer& out,
                              uint8_t flags = fin_flag);
 
   static ptrdiff_t decode_header(const_byte_span data, header& hdr);
 
-  static constexpr bool is_control_frame(uint8_t opcode) noexcept {
-    return opcode > binary_frame;
+  static constexpr bool is_control_frame(opcode_type opcode) noexcept {
+    return opcode > opcode_type::binary_frame;
   }
 };
 
