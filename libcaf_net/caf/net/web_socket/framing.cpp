@@ -215,7 +215,7 @@ ptrdiff_t framing::consume_payload(byte_span buffer, byte_span delta) {
 ptrdiff_t framing::consume(byte_span buffer, byte_span delta) {
   // Make sure we're overriding any 'exactly' setting.
   down_->configure_read(receive_policy::up_to(2048));
-  if (!hdr_) {
+  if (!hdr_.valid()) {
     auto hdr_bytes = consume_header(buffer, delta);
     if (hdr_bytes <= 0) {
       hdr_.opcode = detail::rfc6455::opcode_type::nil_code;
@@ -225,9 +225,8 @@ ptrdiff_t framing::consume(byte_span buffer, byte_span delta) {
         && consume_payload(buffer.first(0), delta.first(0)) < 0)
       return -1;
     return hdr_bytes;
-  } else {
-    return consume_payload(buffer, delta);
   }
+  return consume_payload(buffer, delta);
 }
 
 void framing::prepare_send() {

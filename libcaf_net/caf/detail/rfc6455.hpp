@@ -21,9 +21,9 @@ struct CAF_NET_EXPORT rfc6455 {
     continuation_frame = 0x00,
     text_frame = 0x01,
     binary_frame = 0x02,
-    connection_close = 0x08,
-    ping = 0x09,
-    pong = 0x0A,
+    connection_close_frame = 0x08,
+    ping_frame = 0x09,
+    pong_frame = 0x0A,
     /// Invalid opcode to mean "no opcode received yet".
     nil_code = 0xFF,
   };
@@ -34,13 +34,8 @@ struct CAF_NET_EXPORT rfc6455 {
     uint32_t mask_key = 0;
     uint64_t payload_len = 0;
 
-    // utility functions.
-    explicit operator bool() const noexcept {
+    constexpr bool valid() const noexcept {
       return opcode != opcode_type::nil_code;
-    }
-
-    bool operator!() const noexcept {
-      return !static_cast<bool>(*this);
     }
   };
 

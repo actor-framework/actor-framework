@@ -58,16 +58,14 @@ TEST("masking the full payload") {
 TEST("partial making with offset") {
   using namespace std::literals;
   auto key = uint32_t{0xDEADC0DE};
-  auto original_data = std::string{"Hello, world!"};
+  auto original_data = "Hello, world!"s;
   auto masked_data = original_data;
   impl::mask_data(key, make_span(masked_data));
   for (auto i = 0ul; i < original_data.size(); i++) {
     auto uut = original_data;
     impl::mask_data(key, make_span(uut), i);
-    check_eq(std::string_view{uut}.substr(0, i),
-             std::string_view{original_data}.substr(0, i));
-    check_eq(std::string_view{uut}.substr(i),
-             std::string_view{masked_data}.substr(i));
+    check_eq(uut.substr(0, i), original_data.substr(0, i));
+    check_eq(uut.substr(i), masked_data.substr(i));
   }
 }
 
