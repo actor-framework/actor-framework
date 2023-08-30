@@ -166,7 +166,7 @@ CAF_TEST(consuming a non - negative byte count resets the delta) {
     [&byte_span_sizes](byte_span data, byte_span delta) {
       byte_span_sizes.emplace_back(data.size(), delta.size());
       // consume half the input and get called twice
-      return std::min(7l, static_cast<ptrdiff_t>(data.size()));
+      return std::min(ptrdiff_t{7}, static_cast<ptrdiff_t>(data.size()));
     });
   auto transport = os::transport::make(recv_socket_guard.release(),
                                        std::move(mock));
@@ -198,7 +198,7 @@ CAF_TEST(switching the protocol resets the delta) {
     byte_span_sizes_2.emplace_back(data.size(), delta.size());
     mock->down->switch_protocol(std::move(mock_1));
     // consume half the input, leave half for the next protocol
-    return std::min(7l, static_cast<ptrdiff_t>(data.size()));
+    return std::min(ptrdiff_t{7}, static_cast<ptrdiff_t>(data.size()));
   });
   auto transport = os::transport::make(recv_socket_guard.release(),
                                        std::move(mock_2));
