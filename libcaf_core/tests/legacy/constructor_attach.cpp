@@ -49,7 +49,7 @@ public:
           quit(reason);
         }
       },
-      [=](delete_atom x) {
+      [this](delete_atom x) {
         MESSAGE("spawner received delete");
         return delegate(testee_, x);
       },

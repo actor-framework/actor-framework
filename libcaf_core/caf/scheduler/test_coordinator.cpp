@@ -144,17 +144,17 @@ size_t test_coordinator::run(size_t max_count) {
 
 void test_coordinator::inline_next_enqueue() {
   CAF_LOG_TRACE("");
-  after_next_enqueue([=] { run_once_lifo(); });
+  after_next_enqueue([this] { run_once_lifo(); });
 }
 
 void test_coordinator::inline_all_enqueues() {
   CAF_LOG_TRACE("");
-  after_next_enqueue([=] { inline_all_enqueues_helper(); });
+  after_next_enqueue([this] { inline_all_enqueues_helper(); });
 }
 
 void test_coordinator::inline_all_enqueues_helper() {
   CAF_LOG_TRACE("");
-  after_next_enqueue([=] { inline_all_enqueues_helper(); });
+  after_next_enqueue([this] { inline_all_enqueues_helper(); });
   run_once_lifo();
 }
 

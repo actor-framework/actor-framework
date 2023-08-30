@@ -47,7 +47,7 @@ public:
 private:
   void run(int secs) {
     using detail::format_to;
-    thread_ = std::thread{[=] {
+    thread_ = std::thread{[this, secs] {
       caf::detail::set_thread_name("test.watchdog");
       auto tp = std::chrono::high_resolution_clock::now()
                 + std::chrono::seconds(secs);

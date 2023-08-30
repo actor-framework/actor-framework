@@ -157,7 +157,7 @@ public:
 
   ~prometheus_scraping() {
     if (mpx_supervisor_) {
-      mpx_.dispatch([=] {
+      mpx_.dispatch([this] {
         auto ptr = static_cast<broker*>(actor_cast<abstract_actor*>(broker_));
         if (!ptr->getf(abstract_actor::is_terminated_flag)) {
           ptr->context(&mpx_);
@@ -485,7 +485,7 @@ void middleman::start() {
 
 void middleman::stop() {
   CAF_LOG_TRACE("");
-  backend().dispatch([=] {
+  backend().dispatch([this] {
     CAF_LOG_TRACE("");
     // managers_ will be modified while we are stopping each manager,
     // because each manager will call remove(...)

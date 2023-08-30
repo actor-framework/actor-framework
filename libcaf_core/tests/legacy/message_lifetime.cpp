@@ -48,7 +48,7 @@ public:
     : event_based_actor(cfg),
       aut_(std::move(aut)),
       msg_(make_message(1, 2, 3)) {
-    set_down_handler([=](down_msg& dm) {
+    set_down_handler([this](down_msg& dm) {
       CHECK_EQ(dm.reason, exit_reason::normal);
       CHECK_EQ(dm.source, aut_.address());
       quit();
@@ -58,7 +58,7 @@ public:
   behavior make_behavior() override {
     monitor(aut_);
     send(aut_, msg_);
-    return {[=](int a, int b, int c) {
+    return {[this](int a, int b, int c) {
       CHECK_EQ(a, 1);
       CHECK_EQ(b, 2);
       CHECK_EQ(c, 3);

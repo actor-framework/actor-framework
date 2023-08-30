@@ -143,11 +143,11 @@ CAF_TEST(states can accept constructor arguments and provide a behavior) {
     }
     behavior make_behavior() {
       return {
-        [=](int32_t x, int32_t y) {
+        [this](int32_t x, int32_t y) {
           this->x = x;
           this->y = y;
         },
-        [=](get_atom) { return f(x, y); },
+        [this](get_atom) { return f(x, y); },
       };
     }
   };
@@ -174,7 +174,7 @@ CAF_TEST(states optionally take the self pointer as first argument) {
     }
     behavior make_behavior() {
       return {
-        [=](get_atom) { return self->name(); },
+        [this](get_atom) { return self->name(); },
       };
     }
   };
@@ -196,8 +196,8 @@ CAF_TEST(typed actors can use typed_actor_pointer as self pointer) {
       // nop
     }
     auto make_behavior() {
-      return make_typed_behavior([=](add_atom, int x) { value += x; },
-                                 [=](get_atom) { return value; });
+      return make_typed_behavior([this](add_atom, int x) { value += x; },
+                                 [this](get_atom) { return value; });
     }
   };
   using actor_type = typed_adder_actor::stateful_impl<state_type>;

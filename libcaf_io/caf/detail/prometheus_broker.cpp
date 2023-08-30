@@ -55,7 +55,7 @@ const char* prometheus_broker::name() const {
 
 behavior prometheus_broker::make_behavior() {
   return {
-    [=](const io::new_data_msg& msg) {
+    [this](const io::new_data_msg& msg) {
       auto flush_and_close = [this, &msg] {
         flush(msg.handle);
         close(msg.handle);
@@ -92,18 +92,18 @@ behavior prometheus_broker::make_behavior() {
       dst.insert(dst.end(), payload.begin(), payload.end());
       flush_and_close();
     },
-    [=](const io::new_connection_msg& msg) {
+    [this](const io::new_connection_msg& msg) {
       // Pre-allocate buffer for maximum request size.
       auto& req = requests_[msg.handle];
       req.reserve(512 * 1024);
       configure_read(msg.handle, io::receive_policy::at_most(1024));
     },
-    [=](const io::connection_closed_msg& msg) {
+    [this](const io::connection_closed_msg& msg) {
       requests_.erase(msg.handle);
       if (num_connections() + num_doormen() == 0)
         quit();
     },
-    [=](const io::acceptor_closed_msg&) {
+    [this](const io::acceptor_closed_msg&) {
       CAF_LOG_ERROR("Prometheus Broker lost its acceptor!");
       if (num_connections() + num_doormen() == 0)
         quit();
