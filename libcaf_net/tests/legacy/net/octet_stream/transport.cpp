@@ -21,6 +21,8 @@
 
 #include "net-test.hpp"
 
+#include <algorithm>
+
 using namespace caf;
 
 namespace os = net::octet_stream;
