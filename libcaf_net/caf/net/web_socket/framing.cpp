@@ -192,9 +192,7 @@ ptrdiff_t framing::consume_payload(byte_span buffer, byte_span delta) {
     // End of fragmented input.
     if (opcode_ != detail::rfc6455::opcode_type::text_frame) {
       payload_buf_.insert(payload_buf_.end(), payload.begin(), payload.end());
-    }
-    if (opcode_ == detail::rfc6455::opcode_type::text_frame
-        && validation_offset_ != payload_buf_.size()) {
+    } else if (validation_offset_ != payload_buf_.size()) {
       abort_and_shutdown(sec::malformed_message, "Invalid UTF-8 sequence");
       return -1;
     }
