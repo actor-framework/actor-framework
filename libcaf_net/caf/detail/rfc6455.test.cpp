@@ -55,7 +55,7 @@ TEST("masking the full payload") {
   }
 }
 
-TEST("partial making with offset") {
+TEST("partial masking with offset") {
   using namespace std::literals;
   auto key = uint32_t{0xDEADC0DE};
   auto original_data = "Hello, world!"s;
@@ -82,8 +82,7 @@ TEST("decoding a frame with RSV bits fails") {
 TEST("decode a header with no mask key and no data") {
   std::vector<uint8_t> data;
   byte_buffer out;
-  impl::assemble_frame(impl::opcode_type::binary_frame, 0,
-                       as_bytes(make_span(data)), out);
+  impl::assemble_frame(impl::binary_frame, 0, as_bytes(make_span(data)), out);
   check_eq(out, bytes({
                   0x82, // FIN + binary frame opcode
                   0x00, // data size = 0
@@ -92,14 +91,14 @@ TEST("decode a header with no mask key and no data") {
   check_eq(impl::decode_header(out, hdr), 2);
   check_eq(hdr.fin, true);
   check_eq(hdr.mask_key, 0u);
-  check_eq(hdr.opcode, impl::opcode_type::binary_frame);
+  check_eq(hdr.opcode, impl::binary_frame);
   check_eq(hdr.payload_len, data.size());
 }
 
 TEST("decode a header with valid mask key but no data") {
   std::vector<uint8_t> data;
   byte_buffer out;
-  impl::assemble_frame(impl::opcode_type::binary_frame, 0xDEADC0DE,
+  impl::assemble_frame(impl::binary_frame, 0xDEADC0DE,
                        as_bytes(make_span(data)), out);
   check_eq(out, bytes({
                   0x82,                   // FIN + binary frame opcode
@@ -110,15 +109,14 @@ TEST("decode a header with valid mask key but no data") {
   check_eq(impl::decode_header(out, hdr), 6);
   check_eq(hdr.fin, true);
   check_eq(hdr.mask_key, 0xDEADC0DE);
-  check_eq(hdr.opcode, impl::opcode_type::binary_frame);
+  check_eq(hdr.opcode, impl::binary_frame);
   check_eq(hdr.payload_len, data.size());
 }
 
 TEST("decode a header with no mask key plus small data") {
   std::vector<uint8_t> data{0x12, 0x34, 0x45, 0x67};
   byte_buffer out;
-  impl::assemble_frame(impl::opcode_type::binary_frame, 0,
-                       as_bytes(make_span(data)), out);
+  impl::assemble_frame(impl::binary_frame, 0, as_bytes(make_span(data)), out);
   check_eq(out, bytes({
                   0x82,                   // FIN + binary frame opcode
                   0x04,                   // data size = 4
@@ -128,14 +126,14 @@ TEST("decode a header with no mask key plus small data") {
   check_eq(impl::decode_header(out, hdr), 2);
   check_eq(hdr.fin, true);
   check_eq(hdr.mask_key, 0u);
-  check_eq(hdr.opcode, impl::opcode_type::binary_frame);
+  check_eq(hdr.opcode, impl::binary_frame);
   check_eq(hdr.payload_len, data.size());
 }
 
 TEST("decode a header with valid mask key plus small data") {
   std::vector<uint8_t> data{0x12, 0x34, 0x45, 0x67};
   byte_buffer out;
-  impl::assemble_frame(impl::opcode_type::binary_frame, 0xDEADC0DE,
+  impl::assemble_frame(impl::binary_frame, 0xDEADC0DE,
                        as_bytes(make_span(data)), out);
   check_eq(out, bytes({
                   0x82,                   // FIN + binary frame opcode
@@ -147,7 +145,7 @@ TEST("decode a header with valid mask key plus small data") {
   check_eq(impl::decode_header(out, hdr), 6);
   check_eq(hdr.fin, true);
   check_eq(hdr.mask_key, 0xDEADC0DE);
-  check_eq(hdr.opcode, impl::opcode_type::binary_frame);
+  check_eq(hdr.opcode, impl::binary_frame);
   check_eq(hdr.payload_len, data.size());
 }
 
@@ -155,8 +153,7 @@ TEST("decode a header with no mask key plus upper bound on small data") {
   std::vector<uint8_t> data;
   data.resize(125, 0xFF);
   byte_buffer out;
-  impl::assemble_frame(impl::opcode_type::binary_frame, 0,
-                       as_bytes(make_span(data)), out);
+  impl::assemble_frame(impl::binary_frame, 0, as_bytes(make_span(data)), out);
   check_eq(take(out, 6), bytes({
                            0x82,                   // FIN + binary frame opcode
                            0x7D,                   // data size = 125
@@ -166,7 +163,7 @@ TEST("decode a header with no mask key plus upper bound on small data") {
   check_eq(impl::decode_header(out, hdr), 2);
   check_eq(hdr.fin, true);
   check_eq(hdr.mask_key, 0u);
-  check_eq(hdr.opcode, impl::opcode_type::binary_frame);
+  check_eq(hdr.opcode, impl::binary_frame);
   check_eq(hdr.payload_len, data.size());
 }
 
@@ -174,7 +171,7 @@ TEST("decode a header with valid mask key plus upper bound on small data") {
   std::vector<uint8_t> data;
   data.resize(125, 0xFF);
   byte_buffer out;
-  impl::assemble_frame(impl::opcode_type::binary_frame, 0xDEADC0DE,
+  impl::assemble_frame(impl::binary_frame, 0xDEADC0DE,
                        as_bytes(make_span(data)), out);
   check_eq(take(out, 10), bytes({
                             0x82,                   // FIN + binary frame opcode
@@ -186,7 +183,7 @@ TEST("decode a header with valid mask key plus upper bound on small data") {
   check_eq(impl::decode_header(out, hdr), 6);
   check_eq(hdr.fin, true);
   check_eq(hdr.mask_key, 0xDEADC0DE);
-  check_eq(hdr.opcode, impl::opcode_type::binary_frame);
+  check_eq(hdr.opcode, impl::binary_frame);
   check_eq(hdr.payload_len, data.size());
 }
 
@@ -194,8 +191,7 @@ TEST("decode a header with no mask key plus medium data") {
   std::vector<uint8_t> data;
   data.resize(126, 0xFF);
   byte_buffer out;
-  impl::assemble_frame(impl::opcode_type::binary_frame, 0,
-                       as_bytes(make_span(data)), out);
+  impl::assemble_frame(impl::binary_frame, 0, as_bytes(make_span(data)), out);
   check_eq(take(out, 8),
            bytes({
              0x82,                   // FIN + binary frame opcode
@@ -207,7 +203,7 @@ TEST("decode a header with no mask key plus medium data") {
   check_eq(impl::decode_header(out, hdr), 4);
   check_eq(hdr.fin, true);
   check_eq(hdr.mask_key, 0u);
-  check_eq(hdr.opcode, impl::opcode_type::binary_frame);
+  check_eq(hdr.opcode, impl::binary_frame);
   check_eq(hdr.payload_len, data.size());
 }
 
@@ -215,7 +211,7 @@ TEST("decode a header with valid mask key plus medium data") {
   std::vector<uint8_t> data;
   data.resize(126, 0xFF);
   byte_buffer out;
-  impl::assemble_frame(impl::opcode_type::binary_frame, 0xDEADC0DE,
+  impl::assemble_frame(impl::binary_frame, 0xDEADC0DE,
                        as_bytes(make_span(data)), out);
   check_eq(take(out, 12),
            bytes({
@@ -229,7 +225,7 @@ TEST("decode a header with valid mask key plus medium data") {
   check_eq(impl::decode_header(out, hdr), 8);
   check_eq(hdr.fin, true);
   check_eq(hdr.mask_key, 0xDEADC0DE);
-  check_eq(hdr.opcode, impl::opcode_type::binary_frame);
+  check_eq(hdr.opcode, impl::binary_frame);
   check_eq(hdr.payload_len, data.size());
 }
 
@@ -237,8 +233,7 @@ TEST("decode a header with no mask key plus upper bound on medium data") {
   std::vector<uint8_t> data;
   data.resize(65535, 0xFF);
   byte_buffer out;
-  impl::assemble_frame(impl::opcode_type::binary_frame, 0,
-                       as_bytes(make_span(data)), out);
+  impl::assemble_frame(impl::binary_frame, 0, as_bytes(make_span(data)), out);
   check_eq(take(out, 8),
            bytes({
              0x82,                   // FIN + binary frame opcode
@@ -250,7 +245,7 @@ TEST("decode a header with no mask key plus upper bound on medium data") {
   check_eq(impl::decode_header(out, hdr), 4);
   check_eq(hdr.fin, true);
   check_eq(hdr.mask_key, 0u);
-  check_eq(hdr.opcode, impl::opcode_type::binary_frame);
+  check_eq(hdr.opcode, impl::binary_frame);
   check_eq(hdr.payload_len, data.size());
 }
 
@@ -258,7 +253,7 @@ TEST("decode a header with valid mask key plus upper bound on medium data") {
   std::vector<uint8_t> data;
   data.resize(65535, 0xFF);
   byte_buffer out;
-  impl::assemble_frame(impl::opcode_type::binary_frame, 0xDEADC0DE,
+  impl::assemble_frame(impl::binary_frame, 0xDEADC0DE,
                        as_bytes(make_span(data)), out);
   check_eq(take(out, 12),
            bytes({
@@ -272,7 +267,7 @@ TEST("decode a header with valid mask key plus upper bound on medium data") {
   check_eq(impl::decode_header(out, hdr), 8);
   check_eq(hdr.fin, true);
   check_eq(hdr.mask_key, 0xDEADC0DE);
-  check_eq(hdr.opcode, impl::opcode_type::binary_frame);
+  check_eq(hdr.opcode, impl::binary_frame);
   check_eq(hdr.payload_len, data.size());
 }
 
@@ -280,8 +275,7 @@ TEST("decode a header with no mask key plus large data") {
   std::vector<uint8_t> data;
   data.resize(65536, 0xFF);
   byte_buffer out;
-  impl::assemble_frame(impl::opcode_type::binary_frame, 0,
-                       as_bytes(make_span(data)), out);
+  impl::assemble_frame(impl::binary_frame, 0, as_bytes(make_span(data)), out);
   check_eq(take(out, 14),
            bytes({
              0x82, // FIN + binary frame opcode
@@ -293,7 +287,7 @@ TEST("decode a header with no mask key plus large data") {
   check_eq(impl::decode_header(out, hdr), 10);
   check_eq(hdr.fin, true);
   check_eq(hdr.mask_key, 0u);
-  check_eq(hdr.opcode, impl::opcode_type::binary_frame);
+  check_eq(hdr.opcode, impl::binary_frame);
   check_eq(hdr.payload_len, data.size());
 }
 
@@ -301,7 +295,7 @@ TEST("decode a header with valid mask key plus large data") {
   std::vector<uint8_t> data;
   data.resize(65536, 0xFF);
   byte_buffer out;
-  impl::assemble_frame(impl::opcode_type::binary_frame, 0xDEADC0DE,
+  impl::assemble_frame(impl::binary_frame, 0xDEADC0DE,
                        as_bytes(make_span(data)), out);
   check_eq(take(out, 18),
            bytes({
@@ -315,7 +309,7 @@ TEST("decode a header with valid mask key plus large data") {
   check_eq(impl::decode_header(out, hdr), 14);
   check_eq(hdr.fin, true);
   check_eq(hdr.mask_key, 0xDEADC0DE);
-  check_eq(hdr.opcode, impl::opcode_type::binary_frame);
+  check_eq(hdr.opcode, impl::binary_frame);
   check_eq(hdr.payload_len, data.size());
 }
 

@@ -139,7 +139,7 @@ private:
   }
 
   // Validate the protocol after consuming a header.
-  error validate_header(ptrdiff_t hdr_bytes) noexcept;
+  error validate_header(ptrdiff_t hdr_bytes) const noexcept;
 
   // Consume the header for the currently parsing frame. Returns the number of
   // sonsumed bytes.
@@ -150,8 +150,7 @@ private:
   ptrdiff_t consume_payload(byte_span buffer, byte_span delta);
 
   // Returns `frame_size` on success and -1 on error.
-  ptrdiff_t handle(detail::rfc6455::opcode_type opcode, byte_span payload,
-                   size_t frame_size);
+  ptrdiff_t handle(uint8_t opcode, byte_span payload, size_t frame_size);
 
   void ship_pong(byte_span payload);
 
@@ -191,7 +190,7 @@ private:
   detail::rfc6455::header hdr_;
 
   /// Caches the opcode while decoding.
-  detail::rfc6455::opcode_type opcode_ = detail::rfc6455::opcode_type::nil_code;
+  uint8_t opcode_ = detail::rfc6455::invalid_frame;
 
   /// Assembles fragmented payloads.
   binary_buffer payload_buf_;

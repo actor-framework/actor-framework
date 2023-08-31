@@ -17,7 +17,7 @@ namespace caf::detail {
 struct CAF_NET_EXPORT rfc6455 {
   // -- member types -----------------------------------------------------------
 
-  enum class opcode_type : uint8_t {
+  enum opcode_type : uint8_t {
     continuation_frame = 0x00,
     text_frame = 0x01,
     binary_frame = 0x02,
@@ -25,17 +25,17 @@ struct CAF_NET_EXPORT rfc6455 {
     ping_frame = 0x09,
     pong_frame = 0x0A,
     /// Invalid opcode to mean "no opcode received yet".
-    nil_code = 0xFF,
+    invalid_frame = 0xFF,
   };
 
   struct header {
     bool fin = false;
-    opcode_type opcode = opcode_type::nil_code;
+    uint8_t opcode = invalid_frame;
     uint32_t mask_key = 0;
     uint64_t payload_len = 0;
 
     constexpr bool valid() const noexcept {
-      return opcode != opcode_type::nil_code;
+      return opcode != invalid_frame;
     }
   };
 
@@ -55,14 +55,14 @@ struct CAF_NET_EXPORT rfc6455 {
   static void assemble_frame(uint32_t mask_key, const_byte_span data,
                              byte_buffer& out);
 
-  static void assemble_frame(opcode_type opcode, uint32_t mask_key,
+  static void assemble_frame(uint8_t opcode, uint32_t mask_key,
                              const_byte_span data, byte_buffer& out,
                              uint8_t flags = fin_flag);
 
   static ptrdiff_t decode_header(const_byte_span data, header& hdr);
 
-  static constexpr bool is_control_frame(opcode_type opcode) noexcept {
-    return opcode > opcode_type::binary_frame;
+  static constexpr bool is_control_frame(uint8_t opcode) noexcept {
+    return opcode > binary_frame;
   }
 };
 
