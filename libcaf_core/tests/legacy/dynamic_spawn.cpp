@@ -38,12 +38,12 @@ class event_testee : public event_based_actor {
 public:
   event_testee(actor_config& cfg) : event_based_actor(cfg) {
     inc_actor_instances();
-    wait4string.assign([=](const std::string&) { become(wait4int); },
-                       [=](get_atom) { return "wait4string"; });
-    wait4float.assign([=](float) { become(wait4string); },
-                      [=](get_atom) { return "wait4float"; });
-    wait4int.assign([=](int) { become(wait4float); },
-                    [=](get_atom) { return "wait4int"; });
+    wait4string.assign([this](const std::string&) { become(wait4int); },
+                       [this](get_atom) { return "wait4string"; });
+    wait4float.assign([this](float) { become(wait4string); },
+                      [this](get_atom) { return "wait4float"; });
+    wait4int.assign([this](int) { become(wait4float); },
+                    [this](get_atom) { return "wait4int"; });
   }
 
   ~event_testee() override {
@@ -73,7 +73,7 @@ actor spawn_event_testee2(scoped_actor& parent) {
     behavior wait4timeout(int remaining) {
       return {
         after(std::chrono::milliseconds(1)) >>
-          [=] {
+          [this, remaining] {
             MESSAGE("remaining: " << std::to_string(remaining));
             if (remaining == 1) {
               send(parent, ok_atom_v);
@@ -142,7 +142,7 @@ public:
 
   behavior make_behavior() override {
     return {
-      after(std::chrono::milliseconds(10)) >> [=] { unbecome(); },
+      after(std::chrono::milliseconds(10)) >> [this] { unbecome(); },
     };
   }
 };
@@ -388,7 +388,7 @@ CAF_TEST(constructor_attach) {
     testee(actor_config& cfg, actor buddy)
       : event_based_actor(cfg), buddy_(buddy) {
       attach_functor(
-        [=](const error& reason) { send(buddy, ok_atom_v, reason); });
+        [this, buddy](const error& reason) { send(buddy, ok_atom_v, reason); });
     }
 
     behavior make_behavior() override {
@@ -412,18 +412,18 @@ CAF_TEST(constructor_attach) {
       : event_based_actor(cfg),
         downs_(0),
         testee_(spawn<testee, monitored>(this)) {
-      set_down_handler([=](down_msg& msg) {
+      set_down_handler([this](down_msg& msg) {
         CHECK_EQ(msg.reason, exit_reason::user_shutdown);
         if (++downs_ == 2)
           quit(msg.reason);
       });
       set_exit_handler(
-        [=](exit_msg& msg) { send_exit(testee_, std::move(msg.reason)); });
+        [this](exit_msg& msg) { send_exit(testee_, std::move(msg.reason)); });
     }
 
     behavior make_behavior() override {
       return {
-        [=](ok_atom, const error& reason) {
+        [this](ok_atom, const error& reason) {
           CHECK_EQ(reason, exit_reason::user_shutdown);
           if (++downs_ == 2)
             quit(reason);

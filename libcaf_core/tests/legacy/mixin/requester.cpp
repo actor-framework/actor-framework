@@ -75,8 +75,8 @@ BEGIN_FIXTURE_SCOPE(fixture)
 CAF_TEST(requests without result) {
   auto server = discarding_server;
   SUBTEST("request.then") {
-    auto client = sys.spawn([=](event_based_actor* self) {
-      self->request(server, infinite, 1, 2).then([=] { *result = unit; });
+    auto client = sys.spawn([this, server](event_based_actor* self) {
+      self->request(server, infinite, 1, 2).then([this] { *result = unit; });
     });
     run_once();
     expect((int, int), from(client).to(server).with(1, 2));
@@ -84,8 +84,8 @@ CAF_TEST(requests without result) {
     CHECK_EQ(*result, result_type{unit});
   }
   SUBTEST("request.await") {
-    auto client = sys.spawn([=](event_based_actor* self) {
-      self->request(server, infinite, 1, 2).await([=] { *result = unit; });
+    auto client = sys.spawn([this, server](event_based_actor* self) {
+      self->request(server, infinite, 1, 2).await([this] { *result = unit; });
     });
     run_once();
     expect((int, int), from(client).to(server).with(1, 2));
@@ -103,8 +103,10 @@ CAF_TEST(requests without result) {
 CAF_TEST(requests with integer result) {
   auto server = adding_server;
   SUBTEST("request.then") {
-    auto client = sys.spawn([=](event_based_actor* self) {
-      self->request(server, infinite, 1, 2).then([=](int x) { *result = x; });
+    auto client = sys.spawn([this, server](event_based_actor* self) {
+      self->request(server, infinite, 1, 2).then([this](int x) {
+        *result = x;
+      });
     });
     run_once();
     expect((int, int), from(client).to(server).with(1, 2));
@@ -112,8 +114,10 @@ CAF_TEST(requests with integer result) {
     CHECK_EQ(*result, result_type{3});
   }
   SUBTEST("request.await") {
-    auto client = sys.spawn([=](event_based_actor* self) {
-      self->request(server, infinite, 1, 2).await([=](int x) { *result = x; });
+    auto client = sys.spawn([this, server](event_based_actor* self) {
+      self->request(server, infinite, 1, 2).await([this](int x) {
+        *result = x;
+      });
     });
     run_once();
     expect((int, int), from(client).to(server).with(1, 2));
@@ -131,8 +135,8 @@ CAF_TEST(requests with integer result) {
 CAF_TEST(delegated request with integer result) {
   auto worker = adding_server;
   auto server = make_delegator(worker);
-  auto client = sys.spawn([=](event_based_actor* self) {
-    self->request(server, infinite, 1, 2).then([=](int x) { *result = x; });
+  auto client = sys.spawn([this, server](event_based_actor* self) {
+    self->request(server, infinite, 1, 2).then([this](int x) { *result = x; });
   });
   run_once();
   expect((int, int), from(client).to(server).with(1, 2));
@@ -150,7 +154,7 @@ CAF_TEST(requesters support fan_out_request) {
   };
   run();
   auto sum = std::make_shared<int>(0);
-  auto client = sys.spawn([=](event_based_actor* self) {
+  auto client = sys.spawn([this, workers, sum](event_based_actor* self) {
     self->fan_out_request<select_all>(workers, infinite, 1, 2)
       .then([=](std::vector<int> results) {
         for (auto result : results)

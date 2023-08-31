@@ -100,20 +100,20 @@ public:
     // we only accept one message per state and skip others in the meantime
     set_default_handler(skip);
     // a philosopher that receives {eat} stops thinking and becomes hungry
-    thinking_.assign([=](eat_atom) {
+    thinking_.assign([this](eat_atom) {
       become(hungry_);
       send(left_, take_atom_v);
       send(right_, take_atom_v);
     });
     // wait for the first answer of a chopstick
-    hungry_.assign([=](taken_atom, bool result) {
+    hungry_.assign([this](taken_atom, bool result) {
       if (result)
         become(granted_);
       else
         become(denied_);
     });
     // philosopher was able to obtain the first chopstick
-    granted_.assign([=](taken_atom, bool result) {
+    granted_.assign([this](taken_atom, bool result) {
       if (result) {
         aout(this) << name_ << " has picked up chopsticks with IDs "
                    << left_->id() << " and " << right_->id()
@@ -128,14 +128,14 @@ public:
       }
     });
     // philosopher was *not* able to obtain the first chopstick
-    denied_.assign([=](taken_atom, bool result) {
+    denied_.assign([this](taken_atom, bool result) {
       if (result)
         send(current_sender() == left_ ? left_ : right_, put_atom_v);
       send(this, eat_atom_v);
       become(thinking_);
     });
     // philosopher obtained both chopstick and eats (for five seconds)
-    eating_.assign([=](think_atom) {
+    eating_.assign([this](think_atom) {
       send(left_, put_atom_v);
       send(right_, put_atom_v);
       delayed_send(this, seconds(5), eat_atom_v);
@@ -154,7 +154,7 @@ protected:
     send(this, think_atom_v);
     // philosophers start to think after receiving {think}
     return {
-      [=](think_atom) {
+      [this](think_atom) {
         aout(this) << name_ << " starts to think\n";
         delayed_send(this, seconds(5), eat_atom_v);
         become(thinking_);

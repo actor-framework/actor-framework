@@ -34,8 +34,8 @@ struct cell_state {
 
   cell::behavior_type make_behavior() {
     return {
-      [=](put_atom, int32_t val) { value = val; },
-      [=](get_atom) { return value; },
+      [this](put_atom, int32_t val) { value = val; },
+      [this](get_atom) { return value; },
     };
   }
 };
@@ -46,14 +46,14 @@ using cell_impl = cell::stateful_impl<cell_state>;
 // --(rst-testees-begin)--
 void waiting_testee(event_based_actor* self, vector<cell> cells) {
   for (auto& x : cells)
-    self->request(x, seconds(1), get_atom_v).await([=](int32_t y) {
+    self->request(x, seconds(1), get_atom_v).await([self, x](int32_t y) {
       aout(self) << "cell #" << x.id() << " -> " << y << endl;
     });
 }
 
 void multiplexed_testee(event_based_actor* self, vector<cell> cells) {
   for (auto& x : cells)
-    self->request(x, seconds(1), get_atom_v).then([=](int32_t y) {
+    self->request(x, seconds(1), get_atom_v).then([self, x](int32_t y) {
       aout(self) << "cell #" << x.id() << " -> " << y << endl;
     });
 }

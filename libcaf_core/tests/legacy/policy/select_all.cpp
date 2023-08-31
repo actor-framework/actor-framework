@@ -93,14 +93,15 @@ CAF_TEST(select_all combines two integer results into one vector) {
   }
   SUBTEST("request.then") {
     int_list results;
-    auto client = sys.spawn([=, &results](event_based_actor* client_ptr) {
-      auto r1 = client_ptr->request(server1, infinite, 1, 2);
-      auto r2 = client_ptr->request(server2, infinite, 2, 3);
-      auto merge = fuse(r1, r2);
-      merge.then(
-        client_ptr, [&results](int_list xs) { results = std::move(xs); },
-        make_error_handler());
-    });
+    auto client = sys.spawn(
+      [this, server1, server2, &results](event_based_actor* client_ptr) {
+        auto r1 = client_ptr->request(server1, infinite, 1, 2);
+        auto r2 = client_ptr->request(server2, infinite, 2, 3);
+        auto merge = fuse(r1, r2);
+        merge.then(
+          client_ptr, [&results](int_list xs) { results = std::move(xs); },
+          make_error_handler());
+      });
     run_once();
     expect((int, int), from(client).to(server1).with(1, 2));
     expect((int, int), from(client).to(server2).with(2, 3));
@@ -111,14 +112,15 @@ CAF_TEST(select_all combines two integer results into one vector) {
   }
   SUBTEST("request.await") {
     int_list results;
-    auto client = sys.spawn([=, &results](event_based_actor* client_ptr) {
-      auto r1 = client_ptr->request(server1, infinite, 1, 2);
-      auto r2 = client_ptr->request(server2, infinite, 2, 3);
-      auto merge = fuse(r1, r2);
-      merge.await(
-        client_ptr, [&results](int_list xs) { results = std::move(xs); },
-        make_error_handler());
-    });
+    auto client = sys.spawn(
+      [this, server1, server2, &results](event_based_actor* client_ptr) {
+        auto r1 = client_ptr->request(server1, infinite, 1, 2);
+        auto r2 = client_ptr->request(server2, infinite, 2, 3);
+        auto merge = fuse(r1, r2);
+        merge.await(
+          client_ptr, [&results](int_list xs) { results = std::move(xs); },
+          make_error_handler());
+      });
     run_once();
     expect((int, int), from(client).to(server1).with(1, 2));
     expect((int, int), from(client).to(server2).with(2, 3));
@@ -150,15 +152,16 @@ CAF_TEST(select_all calls the error handler at most once) {
   }
   SUBTEST("request.then") {
     size_t errors = 0;
-    auto client = sys.spawn([=, &errors](event_based_actor* client_ptr) {
-      auto r1 = client_ptr->request(server1, infinite, 1, 2);
-      auto r2 = client_ptr->request(server2, infinite, 2, 3);
-      auto merge = fuse(r1, r2);
-      merge.then(
-        client_ptr,
-        [](int_list) { CAF_FAIL("fan-in policy called the result handler"); },
-        make_counting_error_handler(&errors));
-    });
+    auto client = sys.spawn(
+      [this, server1, server2, &errors](event_based_actor* client_ptr) {
+        auto r1 = client_ptr->request(server1, infinite, 1, 2);
+        auto r2 = client_ptr->request(server2, infinite, 2, 3);
+        auto merge = fuse(r1, r2);
+        merge.then(
+          client_ptr,
+          [](int_list) { CAF_FAIL("fan-in policy called the result handler"); },
+          make_counting_error_handler(&errors));
+      });
     run_once();
     expect((int, int), from(client).to(server1).with(1, 2));
     expect((int, int), from(client).to(server2).with(2, 3));
@@ -168,15 +171,16 @@ CAF_TEST(select_all calls the error handler at most once) {
   }
   SUBTEST("request.await") {
     size_t errors = 0;
-    auto client = sys.spawn([=, &errors](event_based_actor* client_ptr) {
-      auto r1 = client_ptr->request(server1, infinite, 1, 2);
-      auto r2 = client_ptr->request(server2, infinite, 2, 3);
-      auto merge = fuse(r1, r2);
-      merge.await(
-        client_ptr,
-        [](int_list) { CAF_FAIL("fan-in policy called the result handler"); },
-        make_counting_error_handler(&errors));
-    });
+    auto client = sys.spawn(
+      [this, server1, server2, &errors](event_based_actor* client_ptr) {
+        auto r1 = client_ptr->request(server1, infinite, 1, 2);
+        auto r2 = client_ptr->request(server2, infinite, 2, 3);
+        auto merge = fuse(r1, r2);
+        merge.await(
+          client_ptr,
+          [](int_list) { CAF_FAIL("fan-in policy called the result handler"); },
+          make_counting_error_handler(&errors));
+      });
     run_once();
     expect((int, int), from(client).to(server1).with(1, 2));
     expect((int, int), from(client).to(server2).with(2, 3));

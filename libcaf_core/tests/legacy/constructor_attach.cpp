@@ -15,12 +15,13 @@ namespace {
 class testee : public event_based_actor {
 public:
   testee(actor_config& cfg, actor buddy) : event_based_actor(cfg) {
-    attach_functor([=](const error& rsn) { send(buddy, ok_atom_v, rsn); });
+    attach_functor(
+      [this, buddy](const error& rsn) { send(buddy, ok_atom_v, rsn); });
   }
 
   behavior make_behavior() override {
     return {
-      [=](delete_atom) {
+      [this](delete_atom) {
         MESSAGE("testee received delete");
         quit(exit_reason::user_shutdown);
       },
@@ -31,7 +32,7 @@ public:
 class spawner : public event_based_actor {
 public:
   spawner(actor_config& cfg) : event_based_actor(cfg), downs_(0) {
-    set_down_handler([=](down_msg& msg) {
+    set_down_handler([this](down_msg& msg) {
       CHECK_EQ(msg.reason, exit_reason::user_shutdown);
       CHECK_EQ(msg.source, testee_.address());
       if (++downs_ == 2)
@@ -42,13 +43,13 @@ public:
   behavior make_behavior() override {
     testee_ = spawn<testee, monitored>(this);
     return {
-      [=](ok_atom, const error& reason) {
+      [this](ok_atom, const error& reason) {
         CHECK_EQ(reason, exit_reason::user_shutdown);
         if (++downs_ == 2) {
           quit(reason);
         }
       },
-      [=](delete_atom x) {
+      [this](delete_atom x) {
         MESSAGE("spawner received delete");
         return delegate(testee_, x);
       },
