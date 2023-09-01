@@ -128,7 +128,7 @@ void framing::shutdown(status code, std::string_view msg) {
 
 void framing::request_messages() {
   if (!down_->is_reading())
-    down_->configure_read(receive_policy::up_to(2048));
+    down_->configure_read(default_receive_policy);
 }
 
 void framing::begin_binary_message() {
@@ -226,10 +226,10 @@ ptrdiff_t framing::consume_payload(byte_span buffer, byte_span delta) {
   // Unmask the arrived data.
   if (hdr_.mask_key != 0)
     detail::rfc6455::mask_data(hdr_.mask_key, buffer, offset);
-  // Control frames may not me fragmented and can arrive between regular message fragments.
-  if (detail::rfc6455::is_control_frame(hdr_.opcode)) {
+  // Control frames may not me fragmented and can arrive between regular message
+  // fragments.
+  if (detail::rfc6455::is_control_frame(hdr_.opcode))
     return handle(hdr_.opcode, buffer, hdr_.payload_len);
-  }
   // Handle the fragmentation logic of text and binary messages.
   if (hdr_.opcode == detail::rfc6455::text_frame
       || opcode_ == detail::rfc6455::text_frame) {
@@ -282,7 +282,7 @@ ptrdiff_t framing::consume_payload(byte_span buffer, byte_span delta) {
   if (opcode_ == detail::rfc6455::invalid_frame)
     opcode_ = hdr_.opcode;
   // Clean up the state since we finished processing this frame
-  down_->configure_read(receive_policy::up_to(2048));
+  down_->configure_read(default_receive_policy);
   hdr_.opcode = detail::rfc6455::invalid_frame;
   return static_cast<ptrdiff_t>(hdr_.payload_len);
 }
@@ -317,7 +317,7 @@ ptrdiff_t framing::handle(uint8_t opcode, byte_span payload,
       break;
   }
   // Clean up the state since we finished processing this frame
-  down_->configure_read(receive_policy::up_to(2048));
+  down_->configure_read(default_receive_policy);
   hdr_.opcode = detail::rfc6455::invalid_frame;
   return static_cast<ptrdiff_t>(frame_size);
 }

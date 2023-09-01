@@ -72,22 +72,22 @@ void rfc6455::assemble_frame(uint8_t opcode, uint32_t mask_key,
   out.insert(out.end(), data.begin(), data.end());
 }
 
-ptrdiff_t rfc6455::decode_header(const_byte_span data, header& hdr) {
+ptrdiff_t rfc6455::decode_header(const_byte_span data, header& result) {
   if (data.size() < 2)
     return 0;
-  header temp_hdr;
+  header hdr;
   auto byte1 = std::to_integer<uint8_t>(data[0]);
   auto byte2 = std::to_integer<uint8_t>(data[1]);
   // Fetch FIN flag and opcode.
-  temp_hdr.fin = (byte1 & 0x80) != 0;
-  temp_hdr.opcode = byte1 & 0x0F;
+  hdr.fin = (byte1 & 0x80) != 0;
+  hdr.opcode = byte1 & 0x0F;
   // Decode mask bit and payload length field.
   bool masked = (byte2 & 0x80) != 0;
   auto len_field = byte2 & 0x7F;
   size_t header_length;
   if (len_field < 126) {
     header_length = 2 + (masked ? 4 : 0);
-    temp_hdr.payload_len = len_field;
+    hdr.payload_len = len_field;
   } else if (len_field == 126) {
     header_length = 4 + (masked ? 4 : 0);
   } else {
@@ -102,35 +102,35 @@ ptrdiff_t rfc6455::decode_header(const_byte_span data, header& hdr) {
   if (len_field == 126) {
     uint16_t no_len;
     memcpy(&no_len, p, 2);
-    temp_hdr.payload_len = from_network_order(no_len);
+    hdr.payload_len = from_network_order(no_len);
     p += 2;
   } else if (len_field == 127) {
     uint64_t no_len;
     memcpy(&no_len, p, 8);
-    temp_hdr.payload_len = from_network_order(no_len);
+    hdr.payload_len = from_network_order(no_len);
     p += 8;
   }
   // Fetch mask key.
   if (masked) {
     uint32_t no_key;
     memcpy(&no_key, p, 4);
-    temp_hdr.mask_key = from_network_order(no_key);
+    hdr.mask_key = from_network_order(no_key);
     p += 4;
   } else {
-    temp_hdr.mask_key = 0;
+    hdr.mask_key = 0;
   }
   // No extension bits allowed.
   if (byte1 & 0x70)
     return -1;
   // Verify opcode and return number of consumed bytes.
-  switch (temp_hdr.opcode) {
+  switch (hdr.opcode) {
     case continuation_frame:
     case text_frame:
     case binary_frame:
     case connection_close_frame:
     case ping_frame:
     case pong_frame:
-      hdr = temp_hdr;
+      result = hdr;
       return static_cast<ptrdiff_t>(header_length);
     default:
       return -1;

@@ -41,6 +41,9 @@ public:
   /// Restricts the size of received frames (including header).
   static constexpr size_t max_frame_size = INT32_MAX;
 
+  /// Default receive policy for a new frame.
+  static constexpr auto default_receive_policy = receive_policy::up_to(2048);
+
   // -- static utility functions -----------------------------------------------
 
   /// Checks whether the payload of a closing frame contains a valid status
