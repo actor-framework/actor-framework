@@ -41,8 +41,8 @@ public:
   /// Restricts the size of received frames (including header).
   static constexpr size_t max_frame_size = INT32_MAX;
 
-  /// Stored as currently active opcode to mean "no opcode received yet".
-  static constexpr size_t nil_code = 0xFF;
+  /// Default receive policy for a new frame.
+  static constexpr auto default_receive_policy = receive_policy::up_to(2048);
 
   // -- static utility functions -----------------------------------------------
 
@@ -141,6 +141,17 @@ private:
     // nop
   }
 
+  // Validate the protocol after consuming a header.
+  error validate_header(ptrdiff_t hdr_bytes) const noexcept;
+
+  // Consume the header for the currently parsing frame. Returns the number of
+  // sonsumed bytes.
+  ptrdiff_t consume_header(byte_span input, byte_span);
+
+  // Consume the payload for the currently parsing frame. Returns the number of
+  // consumed bytes.
+  ptrdiff_t consume_payload(byte_span buffer, byte_span delta);
+
   // Returns `frame_size` on success and -1 on error.
   ptrdiff_t handle(uint8_t opcode, byte_span payload, size_t frame_size);
 
@@ -164,10 +175,6 @@ private:
     shutdown(err);
   }
 
-  /// Checks whether the current input is valid UTF-8. Stores the last position
-  /// while scanning in order to avoid validating the same bytes again.
-  bool payload_valid() noexcept;
-
   // -- member variables -------------------------------------------------------
 
   /// Points to the transport layer below.
@@ -182,8 +189,11 @@ private:
   /// A 32-bit random number generator.
   std::mt19937 rng_;
 
+  /// Header of the currently parsing frame.
+  detail::rfc6455::header hdr_;
+
   /// Caches the opcode while decoding.
-  uint8_t opcode_ = nil_code;
+  uint8_t opcode_ = detail::rfc6455::invalid_frame;
 
   /// Assembles fragmented payloads.
   binary_buffer payload_buf_;

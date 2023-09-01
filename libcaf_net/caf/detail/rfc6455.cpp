@@ -10,17 +10,17 @@
 
 namespace caf::detail {
 
-void rfc6455::mask_data(uint32_t key, span<char> data) {
-  mask_data(key, as_writable_bytes(data));
+void rfc6455::mask_data(uint32_t key, span<char> data, size_t offset) {
+  mask_data(key, as_writable_bytes(data), offset);
 }
 
-void rfc6455::mask_data(uint32_t key, byte_span data) {
+void rfc6455::mask_data(uint32_t key, byte_span data, size_t offset) {
   auto no_key = to_network_order(key);
   std::byte arr[4];
   memcpy(arr, &no_key, 4);
-  size_t i = 0;
-  for (auto& x : data) {
-    x = x ^ arr[i];
+  auto i = offset % 4;
+  for (auto it = data.begin() + offset; it < data.end(); ++it) {
+    *it ^= arr[i];
     i = (i + 1) % 4;
   }
 }
@@ -39,7 +39,7 @@ void rfc6455::assemble_frame(uint8_t opcode, uint32_t mask_key,
                              const_byte_span data, byte_buffer& out,
                              uint8_t flags) {
   // First 8 bits: flags + opcode
-  out.push_back(std::byte{static_cast<uint8_t>(flags | opcode)});
+  out.push_back(static_cast<std::byte>(flags | static_cast<uint8_t>(opcode)));
   // Mask flag + payload length (7 bits, 7+16 bits, or 7+64 bits)
   auto mask_bit = std::byte{static_cast<uint8_t>(mask_key == 0 ? 0x00 : 0x80)};
   if (data.size() < 126) {
@@ -72,9 +72,10 @@ void rfc6455::assemble_frame(uint8_t opcode, uint32_t mask_key,
   out.insert(out.end(), data.begin(), data.end());
 }
 
-ptrdiff_t rfc6455::decode_header(const_byte_span data, header& hdr) {
+ptrdiff_t rfc6455::decode_header(const_byte_span data, header& result) {
   if (data.size() < 2)
     return 0;
+  header hdr;
   auto byte1 = std::to_integer<uint8_t>(data[0]);
   auto byte2 = std::to_integer<uint8_t>(data[1]);
   // Fetch FIN flag and opcode.
@@ -126,9 +127,10 @@ ptrdiff_t rfc6455::decode_header(const_byte_span data, header& hdr) {
     case continuation_frame:
     case text_frame:
     case binary_frame:
-    case connection_close:
-    case ping:
-    case pong:
+    case connection_close_frame:
+    case ping_frame:
+    case pong_frame:
+      result = hdr;
       return static_cast<ptrdiff_t>(header_length);
     default:
       return -1;

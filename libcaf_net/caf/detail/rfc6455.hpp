@@ -18,10 +18,14 @@ struct CAF_NET_EXPORT rfc6455 {
   // -- member types -----------------------------------------------------------
 
   struct header {
-    bool fin;
-    uint8_t opcode;
-    uint32_t mask_key;
-    uint64_t payload_len;
+    bool fin = false;
+    uint8_t opcode = invalid_frame;
+    uint32_t mask_key = 0;
+    uint64_t payload_len = 0;
+
+    constexpr bool valid() const noexcept {
+      return opcode != invalid_frame;
+    }
   };
 
   // -- constants --------------------------------------------------------------
@@ -32,19 +36,22 @@ struct CAF_NET_EXPORT rfc6455 {
 
   static constexpr uint8_t binary_frame = 0x02;
 
-  static constexpr uint8_t connection_close = 0x08;
+  static constexpr uint8_t connection_close_frame = 0x08;
 
-  static constexpr uint8_t ping = 0x09;
+  static constexpr uint8_t ping_frame = 0x09;
 
-  static constexpr uint8_t pong = 0x0A;
+  static constexpr uint8_t pong_frame = 0x0A;
+
+  /// Invalid opcode to mean "no opcode received yet".
+  static constexpr uint8_t invalid_frame = 0xFF;
 
   static constexpr uint8_t fin_flag = 0x80;
 
   // -- utility functions ------------------------------------------------------
 
-  static void mask_data(uint32_t key, span<char> data);
+  static void mask_data(uint32_t key, span<char> data, size_t offset = 0);
 
-  static void mask_data(uint32_t key, byte_span data);
+  static void mask_data(uint32_t key, byte_span data, size_t offset = 0);
 
   static void assemble_frame(uint32_t mask_key, span<const char> data,
                              byte_buffer& out);
@@ -56,7 +63,7 @@ struct CAF_NET_EXPORT rfc6455 {
                              const_byte_span data, byte_buffer& out,
                              uint8_t flags = fin_flag);
 
-  static ptrdiff_t decode_header(const_byte_span data, header& hdr);
+  static ptrdiff_t decode_header(const_byte_span data, header& result);
 
   static constexpr bool is_control_frame(uint8_t opcode) noexcept {
     return opcode > binary_frame;
