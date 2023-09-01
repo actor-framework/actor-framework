@@ -226,9 +226,7 @@ ptrdiff_t framing::consume_payload(byte_span buffer, byte_span delta) {
   // Unmask the arrived data.
   if (hdr_.mask_key != 0)
     detail::rfc6455::mask_data(hdr_.mask_key, buffer, offset);
-
-  // Handle control frames first, since these may not me fragmented,
-  // and can arrive between regular message fragments.
+  // Control frames may not me fragmented and can arrive between regular message fragments.
   if (detail::rfc6455::is_control_frame(hdr_.opcode)) {
     return handle(hdr_.opcode, buffer, hdr_.payload_len);
   }
