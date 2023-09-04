@@ -149,6 +149,33 @@ config = [
     ],
 ]
 
+def autobahnTest() {
+    script {
+        def baseDir = pwd()
+        def buildDir = "$baseDir/build"
+        def installDir = "$baseDir/caf-install"
+        def initFile = "$baseDir/init.cmake"
+        writeFile([
+            file: 'init.cmake',
+            text: """
+                set(CAF_ENABLE_EXAMPLES OFF CACHE BOOL "")
+                set(CAF_ENABLE_RUNTIME_CHECKS ON CACHE BOOL "")
+                set(CAF_ENABLE_SHARED_LIBS OFF CACHE BOOL "")
+                set(CAF_ENABLE_IO_MODULE OFF CACHE BOOL "")
+                set(CAF_ENABLE_IO_TOOLS OFF CACHE BOOL "")
+                set(CAF_BUILD_INFO_FILE_PATH "$baseDir/build-autobahn.info" CACHE FILEPATH "")
+                set(CMAKE_INSTALL_PREFIX "$installDir" CACHE PATH "")
+                set(CMAKE_BUILD_TYPE "release" CACHE STRING "")
+            """
+        ])
+        sh "rm -rf '$buildDir'"
+        sh "./.ci/run.sh build '$initFile' '$baseDir' '$buildDir'"
+        catchError(message: 'Autobahn Tests failed!', buildResult: "FAILURE", stageResult: "FAILURE") {
+            sh "./.ci/autobahn-testsuite/run.sh $buildDir"
+        }
+    }
+}
+
 // Declarative pipeline for triggering all stages.
 pipeline {
     options {
@@ -181,32 +208,8 @@ pipeline {
                     environment {
                         CAF_NUM_CORES = 4
                     }
-
                     steps {
-                        script {
-                            def baseDir = pwd()
-                            def buildDir = "$baseDir/build"
-                            def installDir = "$baseDir/caf-install"
-                            def initFile = "$baseDir/init.cmake"
-                            writeFile([
-                                file: 'init.cmake',
-                                text: """
-                                    set(CAF_ENABLE_EXAMPLES OFF CACHE BOOL "")
-                                    set(CAF_ENABLE_RUNTIME_CHECKS ON CACHE BOOL "")
-                                    set(CAF_ENABLE_SHARED_LIBS OFF CACHE BOOL "")
-                                    set(CAF_ENABLE_IO_MODULE OFF CACHE BOOL "")
-                                    set(CAF_ENABLE_IO_TOOLS OFF CACHE BOOL "")
-                                    set(CAF_BUILD_INFO_FILE_PATH "$baseDir/build-autobahn.info" CACHE FILEPATH "")
-                                    set(CMAKE_INSTALL_PREFIX "$installDir" CACHE PATH "")
-                                    set(CMAKE_BUILD_TYPE "release" CACHE STRING "")
-                                """
-                            ])
-                            sh "rm -rf '$buildDir'"
-                            sh "./.ci/run.sh build '$initFile' '$baseDir' '$buildDir'"
-                            catchError(message: 'Autobahn Tests failed!', buildResult: "FAILURE", stageResult: "FAILURE") {
-                                sh "./.ci/autobahn-testsuite/run.sh $buildDir"
-                            }
-                        }
+                        autobahnTest()                        
                     }
                 }
             }
