@@ -181,6 +181,7 @@ pipeline {
                     environment {
                         CAF_NUM_CORES = 4
                     }
+
                     steps {
                         script {
                             def baseDir = pwd()
