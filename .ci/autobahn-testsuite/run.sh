@@ -3,6 +3,7 @@
 REPORT_DIR="./reports"
 REPORT_JSON_FILE="$REPORT_DIR/index.json"
 CONFIG_FILE="test_config.json"
+PORT="7788"
 
 if [ $# -ne 1 ]; then 
   exit 255
@@ -28,14 +29,14 @@ function count_by_status() {
     echo "$NUM"
 }
 
-cat > $CONFIG_FILE << EOF
+cat > "$CONFIG_FILE" << EOF
 {
   "options": {},
   "outdir": "$REPORT_DIR",
   "servers": [
     {
       "agent": "CAF Websocket Autobahn Driver",
-      "url": "ws://localhost:7788"
+      "url": "ws://localhost:$PORT"
     }
   ],
   "cases": [ "*" ],
@@ -45,8 +46,8 @@ cat > $CONFIG_FILE << EOF
 EOF
 trap cleanup EXIT
 
-"$BUILD_DIR"/libcaf_net/caf-net-autobahn-driver -p 7788 >/dev/null &
-wstest -m fuzzingclient -s $CONFIG_FILE
+"$BUILD_DIR"/libcaf_net/caf-net-autobahn-driver -p "$PORT" >/dev/null &
+wstest -m fuzzingclient -s "$CONFIG_FILE"
 
 echo "Autobahn testsuite finished"
 echo "Test report by status:"
