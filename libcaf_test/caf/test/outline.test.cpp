@@ -30,6 +30,24 @@ OUTLINE("eating cucumbers") {
   )";
 }
 
+OUTLINE("adding two numbers") {
+  GIVEN("the numbers <x> and <y>") {
+    auto [x, y] = block_parameters<double, double>();
+    WHEN("adding both numbers") {
+      auto result = x + y;
+      THEN("the result should be <sum>") {
+        auto sum = block_parameters<double>();
+        check_eq(result, sum);
+      }
+    }
+  }
+  EXAMPLES = R"(
+    |   x |   y | sum |
+    |   1 |   2 |   3 |
+    | 2.5 | 3.5 |   6 |
+  )";
+}
+
 OUTLINE("counting numbers") {
   GIVEN("the list <values>") {
     auto values = block_parameters<std::vector<int>>();

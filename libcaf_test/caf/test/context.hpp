@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "caf/test/block.hpp"
 #include "caf/test/fwd.hpp"
 
 #include "caf/detail/source_location.hpp"
@@ -23,31 +22,15 @@ namespace caf::test {
 /// multiple runs of the test in order to select one execution path per run.
 class CAF_TEST_EXPORT context {
 public:
+  // -- member types -----------------------------------------------------------
+
   /// Stores the parameters for a test run.
   using parameter_map = std::map<std::string, std::string>;
 
-  /// Returns whether the test is still active. A test is active as long as
-  /// no unwinding is in progress.
-  bool active() const noexcept {
-    return unwind_stack.empty();
-  }
+  /// The ID of a step in the test.
+  using step_id = std::pair<int, size_t>;
 
-  /// Clears the call and unwind stacks.
-  void clear_stacks() {
-    call_stack.clear();
-    unwind_stack.clear();
-    path.clear();
-  }
-
-  bool can_run();
-
-  void on_enter(block* ptr);
-
-  void on_leave(block* ptr);
-
-  /// Checks whether `ptr` has been activated this run, i.e., whether we can
-  /// find it in `unwind_stack`.
-  bool activated(block* ptr) const noexcept;
+  // -- member variables -------------------------------------------------------
 
   /// Stores the current execution stack for the run.
   std::vector<block*> call_stack;
@@ -57,9 +40,6 @@ public:
 
   /// Stores all steps that we have reached at least once during the run.
   std::vector<block*> path;
-
-  /// The ID of a step in the test.
-  using step_id = std::pair<int, size_t>;
 
   /// Stores all steps of the test with their run-time ID.
   std::map<step_id, std::unique_ptr<block>> steps;
@@ -76,6 +56,34 @@ public:
   /// Stores the names of each example.
   std::vector<std::string> example_names;
 
+  // -- properties -------------------------------------------------------------
+
+  /// Returns whether the test is still active. A test is active as long as
+  /// no unwinding is in progress.
+  bool active() const noexcept;
+
+  /// Checks whether this block has at least one branch that can be executed.
+  bool can_run() const noexcept;
+
+  /// Checks whether `ptr` has been activated this run, i.e., whether we can
+  /// find it in `unwind_stack`.
+  bool activated(block* ptr) const noexcept;
+
+  /// Tries to find `name` in `parameters` and otherwise raises an exception.
+  const std::string& parameter(const std::string& name) const;
+
+  // -- mutators ---------------------------------------------------------------
+
+  /// Clears the call and unwind stacks.
+  void clear_stacks();
+
+  /// Callback for `block::enter`.
+  void on_enter(block* ptr);
+
+  /// Callback for `block::leave`.
+  void on_leave(block* ptr);
+
+  /// Returns a new block with the given ID or creates a new one if necessary.
   template <class T>
   T* get(int id, std::string_view description,
          const detail::source_location& loc) {
@@ -86,18 +94,11 @@ public:
     return static_cast<T*>(result.get());
   }
 
+  /// Tries to find the first step that immediately precedes `caller_id` in the
+  /// execution path. Returns `nullptr` if no such step exists.
   template <class T>
   T* find_predecessor(int caller_id) {
     return static_cast<T*>(find_predecessor_block(caller_id, T::type_token));
-  }
-
-  const std::string& parameter(const std::string& name) {
-    auto i = parameters.find(name);
-    if (i == parameters.end()) {
-      auto msg = "missing parameter: " + name;
-      CAF_RAISE_ERROR(std::runtime_error, msg.c_str());
-    }
-    return i->second;
   }
 
 private:

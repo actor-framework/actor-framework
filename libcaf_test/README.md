@@ -214,6 +214,31 @@ runs are numbered in the test output. The example above would print
 `EXAMPLES` block and `Scenario: eating cucumbers #2` when using the values from
 the second row.
 
+A block may have any number of placeholders. When calling `block_parameters`,
+the number of template parameters must match the number of placeholders in the
+description. When passing more than one template parameter, the function returns
+a `std::tuple`:
+
+```cpp
+OUTLINE("adding two numbers") {
+  GIVEN("the numbers <x> and <y>") {
+    auto [x, y] = block_parameters<double, double>();
+    WHEN("adding both numbers") {
+      auto result = x + y;
+      THEN("the result should be <sum>") {
+        auto sum = block_parameters<double>();
+        check_eq(result, sum);
+      }
+    }
+  }
+  EXAMPLES = R"(
+    |   x |   y | sum |
+    |   1 |   2 |   3 |
+    | 2.5 | 3.5 |   6 |
+  )";
+}
+```
+
 Suites
 ------
 

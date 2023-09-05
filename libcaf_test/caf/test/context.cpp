@@ -10,6 +10,41 @@
 #include <algorithm>
 
 namespace caf::test {
+// -- properties ---------------------------------------------------------------
+
+bool context::active() const noexcept {
+  return unwind_stack.empty();
+}
+
+/// Checks whether this block has at least one branch that can be executed.
+bool context::can_run() const noexcept {
+  auto pred = [](auto& kvp) { return kvp.second->can_run(); };
+  return std::any_of(steps.begin(), steps.end(), pred);
+}
+
+/// Checks whether `ptr` has been activated this run, i.e., whether we can
+/// find it in `unwind_stack`.
+bool context::activated(block* ptr) const noexcept {
+  return std::find(path.begin(), path.end(), ptr) != path.end();
+}
+
+/// Tries to find `name` in `parameters` and otherwise raises an exception.
+const std::string& context::parameter(const std::string& name) const {
+  auto i = parameters.find(name);
+  if (i == parameters.end()) {
+    auto msg = "missing parameter: " + name;
+    CAF_RAISE_ERROR(std::runtime_error, msg.c_str());
+  }
+  return i->second;
+}
+
+// -- mutators -----------------------------------------------------------------
+
+void context::clear_stacks() {
+  call_stack.clear();
+  unwind_stack.clear();
+  path.clear();
+}
 
 void context::on_enter(block* ptr) {
   call_stack.push_back(ptr);
@@ -22,15 +57,6 @@ void context::on_leave(block* ptr) {
   call_stack.pop_back();
   unwind_stack.push_back(ptr);
   reporter::instance().end_step(ptr);
-}
-
-bool context::activated(block* ptr) const noexcept {
-  return std::find(path.begin(), path.end(), ptr) != path.end();
-}
-
-bool context::can_run() {
-  auto pred = [](auto& kvp) { return kvp.second->can_run(); };
-  return std::any_of(steps.begin(), steps.end(), pred);
 }
 
 block* context::find_predecessor_block(int caller_id, block_type type) {

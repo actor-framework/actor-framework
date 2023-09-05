@@ -109,8 +109,6 @@ public:
 protected:
   std::unique_ptr<block>& get_nested_or_construct(int id);
 
-  void lazy_init();
-
   context* ctx_;
   int id_ = 0;
   std::string_view raw_description_;
@@ -122,7 +120,7 @@ protected:
   std::vector<std::string> parameter_names_;
 
 private:
-  void layz_init();
+  void lazy_init();
 };
 
 } // namespace caf::test

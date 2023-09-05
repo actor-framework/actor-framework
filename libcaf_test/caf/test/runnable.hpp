@@ -370,17 +370,15 @@ protected:
 
 private:
   template <class... Ts, class Array, size_t... Is>
-  std::tuple<expected<Ts>...>
-  convert_all(Array& arr, std::index_sequence<Is...>, bool& ok) {
+  auto convert_all(Array& arr, std::index_sequence<Is...>, bool& ok) {
     auto result = std::make_tuple(get_as<Ts>(arr[Is])...);
     ok = (std::get<Is>(result).has_value() && ...);
     return result;
   }
 
   template <class... Ts, size_t... Is>
-  std::tuple<Ts...>
-  unbox_all(std::tuple<expected<Ts>...>& vals, std::index_sequence<Is...>) {
-    return std::make_tuple((*std::move(std::get<Is>(vals)) && ...));
+  auto unbox_all(std::tuple<Ts...>& vals, std::index_sequence<Is...>) {
+    return std::make_tuple(*std::move(std::get<Is>(vals))...);
   }
 
   template <class T0, class T1>
@@ -392,7 +390,7 @@ private:
   }
 
   template <class T>
-  std::string stringify(const T& value) {
+  static auto stringify(const T& value) {
     if constexpr (std::is_convertible_v<T, std::string>) {
       return std::string{value};
     } else {

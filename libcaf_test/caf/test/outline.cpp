@@ -22,10 +22,11 @@ bool has_duplicates(const std::vector<std::string_view>& elements) {
 }
 
 void remove_empty_entries(std::vector<std::string_view>& elements) {
-  auto i = std::remove_if(elements.begin(), elements.end(),
-                          [](const auto& x) { return x.empty(); });
-  elements.erase(i, elements.end());
+  elements.erase(std::remove_if(elements.begin(), elements.end(),
+                                [](const auto& x) { return x.empty(); }),
+                 elements.end());
 }
+
 } // namespace
 
 namespace caf::test {
@@ -71,7 +72,7 @@ outline::examples_setter::operator=(std::string_view str) {
                       "invalid examples table: wrong number of columns");
     std::map<std::string, std::string> row;
     for (size_t j = 0; j < names.size(); ++j)
-      row.emplace(std::string{names[j]}, std::string{values[j]});
+      row.emplace(names[j], values[j]);
     examples_->emplace_back(std::move(row));
   }
   return *this;
