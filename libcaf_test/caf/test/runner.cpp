@@ -159,10 +159,13 @@ int runner::run(int argc, char** argv) {
         continue;
       auto state = std::make_shared<context>();
 #ifdef CAF_ENABLE_EXCEPTIONS
+      // Must be outside of the try block to make sure the object still exists
+      // in the catch block.
+      std::unique_ptr<runnable> def;
       try {
         do {
           default_reporter->begin_test(state, test_name);
-          auto def = factory_instance->make(state);
+          def = factory_instance->make(state);
           def->run();
           default_reporter->end_test();
           state->clear_stacks();

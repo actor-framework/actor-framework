@@ -35,7 +35,7 @@ bool context::can_run() {
 
 block* context::find_predecessor_block(int caller_id, block_type type) {
   // Find the caller.
-  auto i = steps.find(caller_id);
+  auto i = steps.find(std::make_pair(caller_id, example_id));
   if (i == steps.end())
     return nullptr;
   // Find the first step of type `T` that precedes the caller.

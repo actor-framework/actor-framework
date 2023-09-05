@@ -9,6 +9,7 @@
 #include "caf/detail/source_location.hpp"
 #include "caf/detail/test_export.hpp"
 
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -31,6 +32,11 @@ public:
   /// Returns the user-defined description of this block.
   std::string_view description() const noexcept {
     return description_;
+  }
+
+  /// Returns the parameters names from the description of this block.
+  const std::vector<std::string>& parameter_names() const noexcept {
+    return parameter_names_;
   }
 
   /// Returns the source location of this block.
@@ -103,13 +109,20 @@ public:
 protected:
   std::unique_ptr<block>& get_nested_or_construct(int id);
 
+  void lazy_init();
+
   context* ctx_;
   int id_ = 0;
-  std::string_view description_;
+  std::string_view raw_description_;
+  std::string description_;
   bool active_ = false;
   bool executed_ = false;
   std::vector<block*> nested_;
   detail::source_location loc_;
+  std::vector<std::string> parameter_names_;
+
+private:
+  void layz_init();
 };
 
 } // namespace caf::test

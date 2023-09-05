@@ -13,7 +13,7 @@ namespace caf::test {
 
 block::block(context* ctx, int id, std::string_view description,
              const detail::source_location& loc)
-  : ctx_(ctx), id_(id), description_(description), loc_(loc) {
+  : ctx_(ctx), id_(id), raw_description_(description), loc_(loc) {
   // nop
 }
 
@@ -22,6 +22,7 @@ block::~block() {
 }
 
 void block::enter() {
+  lazy_init();
   executed_ = true;
   ctx_->on_enter(this);
 }
@@ -81,7 +82,69 @@ but* block::get_but(int, std::string_view, const detail::source_location& loc) {
 std::unique_ptr<block>& block::get_nested_or_construct(int id) {
   // Note: we only need this trivial getter to have avoid including
   // "context.hpp" from "block.hpp".
-  return ctx_->steps[id];
+  return ctx_->steps[std::make_pair(id, ctx_->example_id)];
+}
+
+namespace {
+
+enum class cpy_state {
+  verbatim,
+  start_name,
+  read_name,
+};
+
+} // namespace
+
+void block::lazy_init() {
+  // Note: we need to delay the initialization of the description until the
+  //       block is actually executed, because the context might not be fully
+  //       initialized when the block is constructed.
+  if (!description_.empty() || raw_description_.empty())
+    return;
+  description_.reserve(raw_description_.size());
+  std::string parameter_name;
+  auto state = cpy_state::verbatim;
+  for (auto c : raw_description_) {
+    switch (state) {
+      default: // cpy_state::verbatim:
+        switch (c) {
+          case '<':
+            state = cpy_state::start_name;
+            break;
+          default:
+            description_ += c;
+            break;
+        }
+        break;
+      case cpy_state::start_name:
+        switch (c) {
+          case ' ':
+          case '>':
+            description_ += '<';
+            description_ += c;
+            state = cpy_state::verbatim;
+            break;
+          default:
+            parameter_name.clear();
+            parameter_name += c;
+            state = cpy_state::read_name;
+            break;
+        }
+        break;
+      case cpy_state::read_name:
+        switch (c) {
+          case '>':
+            description_ += ctx_->parameter(parameter_name);
+            parameter_names_.push_back(std::move(parameter_name));
+            state = cpy_state::verbatim;
+            break;
+          default:
+            parameter_name += c;
+            break;
+        }
+        break;
+    }
+  }
 }
 
 } // namespace caf::test

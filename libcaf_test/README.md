@@ -169,6 +169,51 @@ will see the vector with its two initial elements. However, since `AND_*` blocks
 run after the previous block, the `AND_WHEN` block in the example above will see
 the vector with three elements.
 
+Scenario Outlines
+-----------------
+
+Scenario outlines allow users to run the same scenario with different inputs.
+The `GIVEN`, `WHEN`, `THEN`, etc. blocks inside of a scenario outline can use
+Gherkin-style placeholders to refer to input values using the syntax `<name>`.
+Further, an outline must contain an `EXAMPLE` block that defines the input
+values in Markdown table notation.
+
+To retrieve the values(s) for the placeholder(s) in a block, users can call
+`block_parameters<...>()` with `...` replaced by the desired type(s).
+
+The following example generates two scenarios from the outline. The first
+scenario will have `start = 12`, `eat = 5`, and `left = 7`. The second scenario
+will have `start = 20`, `eat = 5`, and `left = 15`.
+
+```cpp
+OUTLINE("eating cucumbers") {
+  GIVEN("there are <start> cucumbers") {
+    auto start = block_parameters<int>();
+    auto cucumbers = start;
+    WHEN("I eat <eat> cucumbers") {
+      auto eat = block_parameters<int>();
+      cucumbers -= eat;
+      THEN("I should have <left> cucumbers") {
+        auto left = block_parameters<int>();
+        check_eq(cucumbers, left);
+      }
+    }
+  }
+  EXAMPLES = R"(
+    | start | eat | left |
+    |    12 |   5 |    7 |
+    |    20 |   5 |   15 |
+  )";
+}
+```
+
+At runtime, CAF will replace all placeholders with their corresponding values
+from the `EXAMPLES` block in the test output. Further, the individual scenario
+runs are numbered in the test output. The example above would print
+`Scenario: eating cucumbers #1` when using the values from the first row of the
+`EXAMPLES` block and `Scenario: eating cucumbers #2` when using the values from
+the second row.
+
 Suites
 ------
 

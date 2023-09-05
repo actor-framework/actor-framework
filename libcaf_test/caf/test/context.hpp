@@ -9,6 +9,7 @@
 
 #include "caf/detail/source_location.hpp"
 #include "caf/detail/test_export.hpp"
+#include "caf/raise_error.hpp"
 
 #include <map>
 #include <memory>
@@ -22,6 +23,9 @@ namespace caf::test {
 /// multiple runs of the test in order to select one execution path per run.
 class CAF_TEST_EXPORT context {
 public:
+  /// Stores the parameters for a test run.
+  using parameter_map = std::map<std::string, std::string>;
+
   /// Returns whether the test is still active. A test is active as long as
   /// no unwinding is in progress.
   bool active() const noexcept {
@@ -54,13 +58,28 @@ public:
   /// Stores all steps that we have reached at least once during the run.
   std::vector<block*> path;
 
+  /// The ID of a step in the test.
+  using step_id = std::pair<int, size_t>;
+
   /// Stores all steps of the test with their run-time ID.
-  std::map<int, std::unique_ptr<block>> steps;
+  std::map<step_id, std::unique_ptr<block>> steps;
+
+  /// Stores the parameters for the current run.
+  parameter_map parameters;
+
+  /// Stores the current example ID.
+  size_t example_id = 0;
+
+  /// Stores the parameters for each example.
+  std::vector<parameter_map> example_parameters;
+
+  /// Stores the names of each example.
+  std::vector<std::string> example_names;
 
   template <class T>
   T* get(int id, std::string_view description,
          const detail::source_location& loc) {
-    auto& result = steps[id];
+    auto& result = steps[std::make_pair(id, example_id)];
     if (!result) {
       result = std::make_unique<T>(this, id, description, loc);
     }
@@ -70,6 +89,15 @@ public:
   template <class T>
   T* find_predecessor(int caller_id) {
     return static_cast<T*>(find_predecessor_block(caller_id, T::type_token));
+  }
+
+  const std::string& parameter(const std::string& name) {
+    auto i = parameters.find(name);
+    if (i == parameters.end()) {
+      auto msg = "missing parameter: " + name;
+      CAF_RAISE_ERROR(std::runtime_error, msg.c_str());
+    }
+    return i->second;
   }
 
 private:

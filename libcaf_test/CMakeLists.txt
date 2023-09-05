@@ -28,6 +28,8 @@ caf_add_component(
     caf/test/fixture/flow.test.cpp
     caf/test/given.cpp
     caf/test/nesting_error.cpp
+    caf/test/outline.cpp
+    caf/test/outline.test.cpp
     caf/test/registry.cpp
     caf/test/reporter.cpp
     caf/test/requirement_failed.cpp
