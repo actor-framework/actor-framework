@@ -16,18 +16,20 @@ namespace fixture = caf::test::fixture;
 WITH_FIXTURE(fixture::deterministic) {
 
 #ifdef CAF_ENABLE_EXCEPTIONS
-TEST("delegates pass on the response properly") {
+TEST("delegates pass on the response properly to the sender") {
   using namespace caf;
-  auto worker = sys.spawn([] {
-    return behavior{[](int32_t value) { return value * 2; },
-                    [](std::string value) {
-                      return make_error(caf::sec::runtime_error,
-                                        "Invalid type");
-                    }};
+  auto count = std::make_shared<int32_t>(0);
+  auto worker = sys.spawn([count] {
+    return behavior{
+      [count](int32_t value) {
+        *count = *count + value;
+        return *count;
+      },
+    };
   });
   auto delegator = sys.spawn(
     [](event_based_actor* self, caf::actor worker) {
-      return caf::behavior{
+      return behavior{
         [self, worker](int32_t x) {
           auto promise = self->make_response_promise<int>();
           return promise.delegate(worker, x);
@@ -39,20 +41,65 @@ TEST("delegates pass on the response properly") {
       };
     },
     worker);
-  scoped_actor self{sys};
-  SECTION("successful requests are propagated to sender") {
-    self->send(delegator, 2);
-    check_eq(mail_count(delegator), 1u);
-    check(dispatch_messages());
-    self->receive([&](int32_t result) { check_eq(result, 4); });
-  }
-  SECTION("failed requests are propagated to sender") {
-    self->send(delegator, "2");
-    check_eq(mail_count(delegator), 1u);
-    check(dispatch_messages());
-    self->receive([&](caf::error& err) {
-      check_eq(err, make_error(sec::runtime_error, "Invalid type"));
+  SECTION("handled messages are received by client") {
+    auto client = sys.spawn([delegator](event_based_actor* self) {
+      self->send(delegator, 2);
+      self->send(delegator, 3);
+      return behavior{[](int32_t) {}};
     });
+    expect<int32_t>().with(2).from(client).to(delegator);
+    expect<int32_t>().with(2).from(client).to(worker);
+    expect<int32_t>().with(2).from(worker).to(client);
+    check_eq(*count, 2);
+    expect<int32_t>().with(3).from(client).to(delegator);
+    expect<int32_t>().with(3).from(client).to(worker);
+    expect<int32_t>().with(5).from(worker).to(client);
+    check_eq(*count, 5);
+  }
+  SECTION("unhandled messages respond with error") {
+    auto client = sys.spawn([count, delegator](event_based_actor* self) {
+      self->send(delegator, "2");
+      return behavior{[](int32_t) {}};
+    });
+    expect<std::string>().with("2").from(client).to(delegator);
+    expect<std::string>().with("2").from(client).to(worker);
+    expect<error>().with(sec::unexpected_message).from(worker).to(client);
+  }
+  SECTION("consecutive messages are handled after unhandled message") {
+    auto client = sys.spawn([count, delegator](event_based_actor* self) {
+      self->send(delegator, "2");
+      self->send(delegator, 3);
+      self->send(delegator, 4);
+      return behavior{[](int32_t) {}};
+    });
+    expect<std::string>().with("2").from(client).to(delegator);
+    expect<std::string>().with("2").from(client).to(worker);
+    expect<error>().with(sec::unexpected_message).from(worker).to(client);
+    expect<int32_t>().with(3).from(client).to(delegator);
+    expect<int32_t>().with(3).from(client).to(worker);
+    expect<int32_t>().with(3).from(worker).to(client);
+    check_eq(*count, 3);
+    expect<int32_t>().with(4).from(client).to(delegator);
+    expect<int32_t>().with(4).from(client).to(worker);
+    expect<int32_t>().with(4).from(worker).to(client);
+    check_eq(*count, 7);
+  }
+  SECTION("consecutive unhandlded messages respond with error") {
+    auto client = sys.spawn([count, delegator](event_based_actor* self) {
+      self->send(delegator, "2");
+      self->send(delegator, "3");
+      self->send(delegator, "4");
+      return behavior{[](int32_t) {}};
+    });
+    expect<std::string>().with("2").from(client).to(delegator);
+    expect<std::string>().with("2").from(client).to(worker);
+    expect<error>().with(sec::unexpected_message).from(worker).to(client);
+    expect<std::string>().with("3").from(client).to(delegator);
+    expect<std::string>().with("3").from(client).to(worker);
+    expect<error>().with(sec::unexpected_message).from(worker).to(client);
+    expect<std::string>().with("4").from(client).to(delegator);
+    expect<std::string>().with("4").from(client).to(worker);
+    expect<error>().with(sec::unexpected_message).from(worker).to(client);
   }
 }
 #endif // CAF_ENABLE_EXCEPTIONS
