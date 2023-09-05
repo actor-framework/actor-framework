@@ -23,6 +23,23 @@
 
 using namespace caf;
 
+using adder = caf::typed_actor<caf::result<int32_t>(int32_t, int32_t)>;
+
+CAF_BEGIN_TYPE_ID_BLOCK(middleman_block, (first_custom_type_id + 2))
+
+  CAF_ADD_TYPE_ID(middleman_block, (adder))
+
+CAF_END_TYPE_ID_BLOCK(middleman_block)
+
+adder::behavior_type adder_fun(adder::pointer self) {
+  return {
+    [=](int32_t a, int32_t b) {
+      aout(self) << "received task from a remote node" << std::endl;
+      return a + b;
+    },
+  };
+}
+
 namespace {
 
 // Unlike our usual fixtures, this test suite does *not* use the test
@@ -30,6 +47,7 @@ namespace {
 struct node_fixture {
   struct config : actor_system_config {
     config() {
+      add_actor_type("adder", adder_fun);
       load<io::middleman>();
       set("caf.scheduler.policy", "sharing");
       set("caf.scheduler.max-threads", 1);
@@ -115,6 +133,33 @@ CAF_TEST(failing to deserialize a request reports an error to the sender) {
     .receive([](int32_t) { CAF_FAIL("Expected an error"); },
              [](caf::error& err) { CHECK_EQ(err, sec::malformed_message); });
   anon_send_exit(testee, exit_reason::user_shutdown);
+}
+
+CAF_TEST(monitor a remotely spawned actor) {
+  auto trigger = false;
+  auto observer_impl = [&trigger](event_based_actor* self,
+                                  actor other) -> behavior {
+    self->monitor(other);
+    self->set_down_handler([&, self](down_msg& msg) {
+      trigger = true;
+      std::cerr << "Hi: " << to_string(msg.reason) << std::endl;
+      self->quit();
+    });
+    return {
+      [](int) {},
+    };
+  };
+  auto type = "adder";
+  auto args = make_message();
+  auto tout = std::chrono::seconds(1);
+  auto expected_adder = earth.mm.remote_spawn<adder>(mars.sys.node(), type,
+                                                     args, tout);
+  REQUIRE(expected_adder);
+  auto remote_adder = actor_cast<actor>(*expected_adder);
+  auto observer = earth.sys.spawn(observer_impl, remote_adder);
+  anon_send_exit(remote_adder, exit_reason::user_shutdown);
+  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  CHECK(trigger);
 }
 
 END_FIXTURE_SCOPE()
