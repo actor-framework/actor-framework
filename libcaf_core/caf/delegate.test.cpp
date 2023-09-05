@@ -20,7 +20,7 @@ TEST("delegates pass on the response properly") {
   using namespace caf;
   auto worker = sys.spawn([] {
     return behavior{[](int32_t value) { return value * 2; },
-                    [](std::string value) {
+                    [](std::string&) {
                       return make_error(caf::sec::runtime_error,
                                         "Invalid type");
                     }};
