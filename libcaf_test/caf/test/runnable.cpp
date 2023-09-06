@@ -49,6 +49,12 @@ void runnable::run() {
   }
 }
 
+void runnable::call_do_run() {
+  current_runnable = this;
+  auto guard = detail::make_scope_guard([] { current_runnable = nullptr; });
+  do_run();
+}
+
 bool runnable::check(bool value, const detail::source_location& location) {
   if (value) {
     reporter::instance().pass(location);

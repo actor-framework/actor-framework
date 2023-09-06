@@ -5,17 +5,21 @@
 #pragma once
 
 #include "caf/test/binary_predicate.hpp"
+#include "caf/test/block.hpp"
 #include "caf/test/block_type.hpp"
+#include "caf/test/context.hpp"
 #include "caf/test/fwd.hpp"
 #include "caf/test/reporter.hpp"
 #include "caf/test/requirement_failed.hpp"
 
 #include "caf/config.hpp"
+#include "caf/config_value.hpp"
 #include "caf/deep_to_string.hpp"
 #include "caf/detail/format.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/detail/source_location.hpp"
 #include "caf/detail/test_export.hpp"
+#include "caf/expected.hpp"
 #include "caf/raise_error.hpp"
 
 #include <string_view>
@@ -43,7 +47,7 @@ public:
   virtual ~runnable();
 
   /// Runs the next branch of the test.
-  void run();
+  virtual void run();
 
   /// Generates a message with the INFO severity level.
   template <class... Ts>
@@ -261,6 +265,28 @@ public:
     }
   }
 
+  template <class... Ts>
+  auto block_parameters() {
+    static_assert(sizeof...(Ts) != 0);
+    const auto& params = current_block().parameter_names();
+    if (params.size() != sizeof...(Ts))
+      CAF_RAISE_ERROR(std::logic_error,
+                      "block_parameters: invalid number of parameters");
+    std::array<config_value, sizeof...(Ts)> cfg_vals;
+    for (size_t index = 0; index < sizeof...(Ts); ++index)
+      cfg_vals[index] = ctx_->parameter(params[index]);
+    auto ok = false;
+    auto vals = convert_all<Ts...>(cfg_vals, std::index_sequence_for<Ts...>{},
+                                   ok);
+    if (!ok)
+      CAF_RAISE_ERROR(std::logic_error,
+                      "block_parameters: conversion(s) failed");
+    if constexpr (sizeof...(Ts) == 1)
+      return std::move(*std::get<0>(vals));
+    else
+      return unbox_all(vals, std::index_sequence_for<Ts...>{});
+  }
+
 #ifdef CAF_ENABLE_EXCEPTIONS
 
   /// Checks whether `expr()` throws an exception of type `Exception`.
@@ -335,12 +361,26 @@ public:
 #endif
 
 protected:
+  void call_do_run();
+
   context_ptr ctx_;
   std::string_view description_;
   block_type root_type_;
   detail::source_location loc_;
 
 private:
+  template <class... Ts, class Array, size_t... Is>
+  static auto convert_all(Array& arr, std::index_sequence<Is...>, bool& ok) {
+    auto result = std::make_tuple(get_as<Ts>(arr[Is])...);
+    ok = (std::get<Is>(result).has_value() && ...);
+    return result;
+  }
+
+  template <class... Ts, size_t... Is>
+  static auto unbox_all(std::tuple<Ts...>& vals, std::index_sequence<Is...>) {
+    return std::make_tuple(*std::move(std::get<Is>(vals))...);
+  }
+
   template <class T0, class T1>
   static void assert_save_comparison() {
     if constexpr (std::is_integral_v<T0> && std::is_integral_v<T1>) {
@@ -350,7 +390,7 @@ private:
   }
 
   template <class T>
-  std::string stringify(const T& value) {
+  static auto stringify(const T& value) {
     if constexpr (std::is_convertible_v<T, std::string>) {
       return std::string{value};
     } else {
