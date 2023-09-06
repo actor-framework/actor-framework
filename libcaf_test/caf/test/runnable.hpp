@@ -370,14 +370,14 @@ protected:
 
 private:
   template <class... Ts, class Array, size_t... Is>
-  auto convert_all(Array& arr, std::index_sequence<Is...>, bool& ok) {
+  static auto convert_all(Array& arr, std::index_sequence<Is...>, bool& ok) {
     auto result = std::make_tuple(get_as<Ts>(arr[Is])...);
     ok = (std::get<Is>(result).has_value() && ...);
     return result;
   }
 
   template <class... Ts, size_t... Is>
-  auto unbox_all(std::tuple<Ts...>& vals, std::index_sequence<Is...>) {
+  static auto unbox_all(std::tuple<Ts...>& vals, std::index_sequence<Is...>) {
     return std::make_tuple(*std::move(std::get<Is>(vals))...);
   }
 
