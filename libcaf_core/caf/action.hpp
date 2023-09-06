@@ -136,7 +136,7 @@ class default_action_impl : public detail::atomic_ref_counted,
                             public action::impl {
 public:
   default_action_impl(F fn)
-    : state_(action::state::scheduled), f_{std::move(fn)} {
+    : state_(action::state::scheduled), f_(std::move(fn)) {
     // nop
   }
 
