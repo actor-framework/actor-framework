@@ -765,6 +765,18 @@ public:
     return tracing_context_;
   }
 
+  std::mutex& logger_dtor_mtx() noexcept {
+    return logger_dtor_mtx_;
+  }
+
+  std::condition_variable& logger_dtor_cv() noexcept {
+    return logger_dtor_cv_;
+  }
+
+  void logger_dtor_done(bool new_logger_dtor_done) noexcept {
+    logger_dtor_done_ = new_logger_dtor_done;
+  }
+
   detail::private_thread* acquire_private_thread();
 
   void release_private_thread(detail::private_thread*);

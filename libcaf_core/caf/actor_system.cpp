@@ -268,7 +268,7 @@ actor_system::actor_system(actor_system_config& cfg)
     ids_(0),
     metrics_(cfg),
     base_metrics_(make_base_metrics(metrics_)),
-    logger_(new caf::logger(*this), false),
+    logger_(caf::logger::make(*this)),
     registry_(*this),
     groups_(*this),
     dummy_execution_unit_(this),
@@ -351,9 +351,6 @@ actor_system::actor_system(actor_system_config& cfg)
   // Initialize state for each module and give each module the opportunity to
   // adapt the system configuration.
   logger_->init(cfg);
-  // When running with the test coordinator, generate logs in the same thread.
-  if (!scheduler().detaches_utility_actors())
-    logger_->inline_output(true);
   CAF_SET_LOGGER_SYS(this);
   for (auto& mod : modules_)
     if (mod)
