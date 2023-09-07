@@ -363,4 +363,23 @@ TEST_CASE("GH-1299 regression blocking") {
   }
 }
 
+TEST_CASE("GH-698 regression responding to a request drops the strong "
+          "reference count") {
+  auto weak_client_ref = [this] {
+    return actor_cast<weak_actor_ptr>(
+      sys.spawn([this](event_based_actor* self) {
+        self->request(adding_server, std::chrono::seconds{10}, 1, 2)
+          .then([this](int r) { *result = r; });
+      }));
+  }();
+  CHECK_EQ(weak_client_ref->strong_refs, 1u);
+  run_once();
+  CHECK_EQ(weak_client_ref->strong_refs, 2u);
+  expect((int, int), from(weak_client_ref).to(adding_server).with(1, 2));
+  CHECK_EQ(weak_client_ref->strong_refs, 2u);
+  expect((int), from(adding_server).to(weak_client_ref));
+  CHECK_EQ(weak_client_ref->strong_refs, 0u);
+  CHECK_EQ(*result, result_type{3});
+}
+
 END_FIXTURE_SCOPE()
