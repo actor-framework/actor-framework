@@ -18,13 +18,8 @@ WITH_FIXTURE(fixture::deterministic) {
 #ifdef CAF_ENABLE_EXCEPTIONS
 TEST("delegates pass on the response properly") {
   using namespace caf;
-  auto worker = sys.spawn([] {
-    return behavior{[](int32_t value) { return value * 2; },
-                    [](std::string&) {
-                      return make_error(caf::sec::runtime_error,
-                                        "Invalid type");
-                    }};
-  });
+  auto worker = sys.spawn(
+    [] { return behavior{[](int32_t value) { return value * 2; }}; });
   auto delegator = sys.spawn(
     [](event_based_actor* self, caf::actor worker) {
       return caf::behavior{
@@ -53,9 +48,26 @@ TEST("delegates pass on the response properly") {
     self->receive([&](caf::error& err) {
       check_eq(err, make_error(sec::runtime_error, "Invalid type"));
     });
+    scoped_actor self{sys};
+    SECTION("delegator delegates responses to the sender") {
+      SECTION("successful requests are propagated to sender") {
+        self->send(delegator, 2);
+        check_eq(mail_count(delegator), 1u);
+        check(dispatch_messages());
+        self->receive([&](int32_t result) { check_eq(result, 4); });
+      }
+      SECTION("failed requests are propagated to sender") {
+        self->send(delegator, "2");
+        check_eq(mail_count(delegator), 1u);
+        check(dispatch_messages());
+        self->receive([&](caf::error& err) {
+          check_eq(err, make_error(sec::runtime_error, "Invalid type"));
+        });
+      }
+    }
   }
-}
 #endif // CAF_ENABLE_EXCEPTIONS
+}
 
 } // WITH_FIXTURE(fixture::deterministic)
 
