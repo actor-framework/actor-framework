@@ -1,6 +1,6 @@
 #!/usr/bin/env groovy
 
-@Library('caf-continuous-integration') _
+@Library('caf-continuous-integration@topic/neverlord/extra-scripts') _
 
 // Configures the behavior of our stages.
 config = [
@@ -146,6 +146,22 @@ config = [
                 'LDFLAGS=-fno-sanitize-recover=undefined',
             ],
         ]],
+        // Run the Autobahn test suite for WebSocket conformance.
+        ['autobahn-testsuite', [
+            numCores: 4,
+            tags: ['docker'],
+            builds: ['release'],
+            extraScripts: [
+                "./sources/.ci/autobahn-testsuite/run.sh build",
+            ],
+            extraBuildFlags: [
+                'CAF_ENABLE_EXAMPLES:BOOL=OFF',
+                'CAF_ENABLE_IO_MODULE:BOOL=OFF',
+                'CAF_ENABLE_IO_TOOLS:BOOL=OFF',
+                'CAF_ENABLE_RUNTIME_CHECKS:BOOL=ON',
+                'CAF_ENABLE_SHARED_LIBS:BOOL=OFF',
+            ],
+        ]],
     ],
 ]
 
@@ -194,24 +210,9 @@ pipeline {
                 getSources(config)
             }
         }
-        stage('Build and Test') {
-            parallel {
-                stage('Build') {
-                    steps {
-                        buildParallel(config)
-                    }
-                }
-                stage('Autobahn Testsuite') {
-                    agent { 
-                        dockerfile { dir ".ci/autobahn-testsuite" }
-                    }
-                    environment {
-                        CAF_NUM_CORES = 4
-                    }
-                    steps {
-                        autobahnTest()                        
-                    }
-                }
+        stage('Build') {
+            steps {
+                buildParallel(config)
             }
         }
         stage('Notify') {
