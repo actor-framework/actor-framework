@@ -1,5 +1,19 @@
 find_package(Python COMPONENTS Interpreter)
 
+execute_process(
+  COMMAND pip show robotframework
+  RESULT_VARIABLE EXIT_CODE
+  OUTPUT_QUIET
+)
+
+if (NOT ${EXIT_CODE} EQUAL 0) 
+  message(
+    FATAL_ERROR
+    "The python package 'robotframework' could not be found"
+  )
+endif()
+
+
 add_test(
   NAME "robot-config-read-config-file"
   COMMAND
