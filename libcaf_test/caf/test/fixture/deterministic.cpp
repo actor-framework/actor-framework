@@ -128,6 +128,45 @@ private:
 
 // -- scheduler ----------------------------------------------------------------
 
+namespace {
+
+class actor_local_printer_impl : public detail::actor_local_printer {
+public:
+  explicit actor_local_printer_impl(local_actor* self) : self_(self) {
+    // nop
+  }
+
+  void write(std::string&& arg) override {
+    append(arg);
+  }
+
+  void write(const char* arg) override {
+    append(std::string_view{arg});
+  }
+
+  void flush() override {
+    auto str = std::string{line_.begin(), line_.end()};
+    reporter::instance().print_actor_output(self_, str);
+    line_.clear();
+  }
+
+private:
+  void append(std::string_view str) {
+    for (auto c : str) {
+      if (c == '\n') {
+        flush();
+      } else {
+        line_.push_back(c);
+      }
+    }
+  }
+
+  local_actor* self_;
+  std::vector<char> line_;
+};
+
+} // namespace
+
 class deterministic::scheduler_impl : public scheduler::abstract_coordinator {
 public:
   using super = caf::scheduler::abstract_coordinator;
@@ -135,6 +174,13 @@ public:
   scheduler_impl(actor_system& sys, deterministic* fix)
     : super(sys), fix_(fix) {
     // nop
+  }
+
+  detail::actor_local_printer_ptr printer_for(local_actor* self) override {
+    auto& ptr = printers_[self->id()];
+    if (!ptr)
+      ptr = make_counted<actor_local_printer_impl>(self);
+    return ptr;
   }
 
   bool detaches_utility_actors() const override {
@@ -181,6 +227,9 @@ private:
 
   /// Allows users to fake time at will.
   detail::test_actor_clock clock_;
+
+  /// Maps actors to their designated printer.
+  std::map<actor_id, detail::actor_local_printer_ptr> printers_;
 };
 
 // -- config -------------------------------------------------------------------

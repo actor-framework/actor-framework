@@ -106,6 +106,7 @@ caf_add_component(
     caf/deserializer.cpp
     caf/detail/abstract_worker.cpp
     caf/detail/abstract_worker_hub.cpp
+    caf/detail/actor_local_printer.cpp
     caf/detail/atomic_ref_counted.cpp
     caf/detail/base64.cpp
     caf/detail/behavior_impl.cpp
@@ -148,6 +149,7 @@ caf_add_component(
     caf/disposable.cpp
     caf/error.cpp
     caf/event_based_actor.cpp
+    caf/event_based_actor.test.cpp
     caf/execution_unit.cpp
     caf/flow/coordinated.cpp
     caf/flow/coordinator.cpp
