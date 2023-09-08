@@ -1,6 +1,6 @@
 #!/usr/bin/env groovy
 
-@Library('caf-continuous-integration') _
+@Library('caf-continuous-integration@topic/neverlord/extra-scripts') _
 
 // Configures the behavior of our stages.
 config = [
@@ -146,8 +146,51 @@ config = [
                 'LDFLAGS=-fno-sanitize-recover=undefined',
             ],
         ]],
+        // Run the Autobahn test suite for WebSocket conformance.
+        ['autobahn-testsuite', [
+            numCores: 4,
+            tags: ['docker'],
+            builds: ['release'],
+            extraScripts: [
+                "./sources/.ci/autobahn-testsuite/run.sh build",
+            ],
+            extraBuildFlags: [
+                'CAF_ENABLE_EXAMPLES:BOOL=OFF',
+                'CAF_ENABLE_IO_MODULE:BOOL=OFF',
+                'CAF_ENABLE_IO_TOOLS:BOOL=OFF',
+                'CAF_ENABLE_RUNTIME_CHECKS:BOOL=ON',
+                'CAF_ENABLE_SHARED_LIBS:BOOL=OFF',
+            ],
+        ]],
     ],
 ]
+
+def autobahnTest() {
+    script {
+        def baseDir = pwd()
+        def buildDir = "$baseDir/build"
+        def installDir = "$baseDir/caf-install"
+        def initFile = "$baseDir/init.cmake"
+        writeFile([
+            file: 'init.cmake',
+            text: """
+                set(CAF_ENABLE_EXAMPLES OFF CACHE BOOL "")
+                set(CAF_ENABLE_RUNTIME_CHECKS ON CACHE BOOL "")
+                set(CAF_ENABLE_SHARED_LIBS OFF CACHE BOOL "")
+                set(CAF_ENABLE_IO_MODULE OFF CACHE BOOL "")
+                set(CAF_ENABLE_IO_TOOLS OFF CACHE BOOL "")
+                set(CAF_BUILD_INFO_FILE_PATH "$baseDir/build-autobahn.info" CACHE FILEPATH "")
+                set(CMAKE_INSTALL_PREFIX "$installDir" CACHE PATH "")
+                set(CMAKE_BUILD_TYPE "release" CACHE STRING "")
+            """
+        ])
+        sh "rm -rf '$buildDir'"
+        sh "./.ci/run.sh build '$initFile' '$baseDir' '$buildDir'"
+        catchError(message: 'Autobahn Tests failed!', buildResult: "FAILURE", stageResult: "FAILURE") {
+            sh "./.ci/autobahn-testsuite/run.sh $buildDir"
+        }
+    }
+}
 
 // Declarative pipeline for triggering all stages.
 pipeline {
