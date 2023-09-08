@@ -10,7 +10,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - uses: egor-tensin/vs-shell@v2
-    - run: pip install robotframework robotframework-requests robotframework-websocketclient
+    - run: python3.exe -m pip install robotframework robotframework-requests robotframework-websocketclient
     - name: Build
       run: .ci/windows/build.cmd
     - name: Test
