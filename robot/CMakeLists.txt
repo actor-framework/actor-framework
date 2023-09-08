@@ -1,7 +1,7 @@
 find_package(Python COMPONENTS Interpreter)
 
 execute_process(
-  COMMAND ${Python_EXECUTABLE} -c "import robotframework"
+  COMMAND ${Python_EXECUTABLE} -c "import robot"
   RESULT_VARIABLE EXIT_CODE
   OUTPUT_QUIET
 )
