@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5...3.18 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.13..3.27 FATAL_ERROR)
 project(CAF CXX)
 
 # -- includes ------------------------------------------------------------------
@@ -94,6 +94,7 @@ endif()
 # some properties predefined in order to force compiler flags or dependencies.
 if(NOT TARGET caf_internal)
   add_library(caf_internal INTERFACE)
+  target_compile_features(caf_internal INTERFACE cxx_std_17)
 endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU")
@@ -124,39 +125,6 @@ if(CAF_ENABLE_TESTING)
       endif()
     endforeach()
   endfunction()
-endif()
-
-# -- make sure we have at least C++17 available --------------------------------
-
-# TODO: simply set CXX_STANDARD when switching to CMake ≥ 3.9.6
-if(NOT CMAKE_CROSSCOMPILING)
-  try_compile(caf_has_cxx_17
-              "${CMAKE_CURRENT_BINARY_DIR}"
-              "${CMAKE_CURRENT_SOURCE_DIR}/cmake/check-compiler-features.cpp")
-  if(NOT caf_has_cxx_17)
-    if(MSVC)
-      set(cxx_flag "/std:c++17")
-    else()
-      if(CMAKE_CXX_COMPILER_ID MATCHES "Clang"
-         AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5)
-        set(cxx_flag "-std=c++1z")
-      else()
-        set(cxx_flag "-std=c++17")
-      endif()
-    endif()
-    # Re-run compiler check.
-    try_compile(caf_has_cxx_17
-                "${CMAKE_CURRENT_BINARY_DIR}"
-                "${CMAKE_CURRENT_SOURCE_DIR}/cmake/check-compiler-features.cpp"
-                COMPILE_DEFINITIONS "${cxx_flag}"
-                OUTPUT_VARIABLE cxx_check_output)
-    if(NOT caf_has_cxx_17)
-      message(FATAL_ERROR "\nFatal error: unable activate C++17 mode!\
-                           \nPlease see README.md for supported compilers.\
-                           \n\ntry_compile output:\n${cxx_check_output}")
-    endif()
-    target_compile_options(caf_internal INTERFACE "${cxx_flag}")
-  endif()
 endif()
 
 # -- check whether we can use std::format --------------------------------------
@@ -269,34 +237,6 @@ function(caf_export_and_install_lib component)
           DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/caf/detail/")
 endfunction()
 
-# TODO: remove when switching to CMake > 3.12
-function(caf_target_link_libraries target)
-  if(CMAKE_VERSION VERSION_LESS 3.12)
-    get_target_property(target_type ${target} TYPE)
-    if (NOT target_type STREQUAL OBJECT_LIBRARY)
-      target_link_libraries(${target} ${ARGN})
-    else()
-      cmake_parse_arguments(CAF_TARGET_LINK_LIBRARIES "" ""
-                            "PUBLIC;PRIVATE;INTERFACE" ${ARGN})
-      # If we can't link against it, at least make sure to pull in include paths
-      # and compiler options.
-      foreach(arg IN LISTS CAF_TARGET_LINK_LIBRARIES_PUBLIC
-                           CAF_TARGET_LINK_LIBRARIES_PRIVATE)
-        if (TARGET ${arg})
-          target_include_directories(
-            ${target} PRIVATE
-            $<TARGET_PROPERTY:${arg},INTERFACE_INCLUDE_DIRECTORIES>)
-          target_compile_options(
-            ${target} PRIVATE
-            $<TARGET_PROPERTY:${arg},INTERFACE_COMPILE_OPTIONS>)
-        endif()
-      endforeach()
-    endif()
-  else()
-    target_link_libraries(${target} ${ARGN})
-  endif()
-endfunction()
-
 # -- convenience function for automating our component setup -------------------
 
 # Usage:
@@ -338,7 +278,7 @@ function(caf_add_component name)
   set(targets ${pub_lib_target} ${obj_lib_target})
   add_library(${obj_lib_target} OBJECT ${CAF_ADD_COMPONENT_HEADERS})
   set_property(TARGET ${obj_lib_target} PROPERTY POSITION_INDEPENDENT_CODE ON)
-  caf_target_link_libraries(${obj_lib_target}
+  target_link_libraries(${obj_lib_target}
                             ${CAF_ADD_COMPONENT_DEPENDENCIES})
   foreach(source_file ${CAF_ADD_COMPONENT_SOURCES})
     get_filename_component(ext ${source_file} EXT)
