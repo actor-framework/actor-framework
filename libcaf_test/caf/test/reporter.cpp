@@ -11,6 +11,7 @@
 
 #include "caf/detail/format.hpp"
 #include "caf/detail/log_level.hpp"
+#include "caf/local_actor.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/term.hpp"
 
@@ -391,6 +392,18 @@ public:
   void print_warning(std::string_view msg,
                      const detail::source_location& location) override {
     print_impl(CAF_LOG_LEVEL_WARNING, 'Y', "warning", msg, location);
+  }
+
+  void print_actor_output(local_actor* self, std::string_view msg) override {
+    using detail::format_to;
+    if (level_ < CAF_LOG_LEVEL_INFO)
+      return;
+    set_live();
+    format_to(colored(),
+              "{0:{1}}$M(info):\n"
+              "{0:{1}}  src: $0{2} [ID {3}]\n"
+              "{0:{1}}  msg: {4}\n",
+              ' ', indent_, self->name(), self->id(), msg);
   }
 
   unsigned verbosity(unsigned level) override {

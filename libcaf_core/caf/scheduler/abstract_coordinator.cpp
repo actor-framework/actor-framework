@@ -35,6 +35,36 @@ namespace caf::scheduler {
 
 namespace {
 
+class actor_local_printer_impl : public detail::actor_local_printer {
+public:
+  actor_local_printer_impl(abstract_actor* self, actor printer)
+    : self_(self->id()), printer_(std::move(printer)) {
+    CAF_ASSERT(printer_ != nullptr);
+    if (!self->getf(abstract_actor::has_used_aout_flag))
+      self->setf(abstract_actor::has_used_aout_flag);
+  }
+
+  void write(std::string&& arg) override {
+    printer_->enqueue(make_mailbox_element(nullptr, make_message_id(), {},
+                                           add_atom_v, self_, std::move(arg)),
+                      nullptr);
+  }
+
+  void write(const char* arg) override {
+    write(std::string{arg});
+  }
+
+  void flush() override {
+    printer_->enqueue(make_mailbox_element(nullptr, make_message_id(), {},
+                                           flush_atom_v, self_),
+                      nullptr);
+  }
+
+private:
+  actor_id self_;
+  actor printer_;
+};
+
 using string_sink = std::function<void(std::string&&)>;
 
 using string_sink_ptr = std::shared_ptr<string_sink>;
@@ -163,6 +193,11 @@ public:
 } // namespace
 
 // -- implementation of coordinator --------------------------------------------
+
+detail::actor_local_printer_ptr
+abstract_coordinator::printer_for(local_actor* self) {
+  return make_counted<actor_local_printer_impl>(self, printer());
+}
 
 const actor_system_config& abstract_coordinator::config() const {
   return system_.config();

@@ -9,6 +9,7 @@
 #include "caf/actor_cast.hpp"
 #include "caf/actor_clock.hpp"
 #include "caf/actor_system.hpp"
+#include "caf/detail/actor_local_printer.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/message.hpp"
@@ -33,6 +34,8 @@ public:
   actor printer() const {
     return actor_cast<actor>(utility_actors_[printer_id]);
   }
+
+  virtual detail::actor_local_printer_ptr printer_for(local_actor* self);
 
   /// Returns the number of utility actors.
   size_t num_utility_actors() const {

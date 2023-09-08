@@ -8,6 +8,7 @@
 
 #include "caf/detail/source_location.hpp"
 #include "caf/detail/test_export.hpp"
+#include "caf/fwd.hpp"
 
 #include <cstddef>
 #include <string_view>
@@ -86,6 +87,8 @@ public:
   virtual void
   print_error(std::string_view msg, const detail::source_location& location)
     = 0;
+
+  virtual void print_actor_output(local_actor* self, std::string_view msg) = 0;
 
   /// Sets the verbosity level of the reporter and returns the previous value.
   virtual unsigned verbosity(unsigned level) = 0;

@@ -13,33 +13,22 @@
 namespace caf {
 
 actor_ostream::actor_ostream(local_actor* self)
-  : self_(self->id()), printer_(self->home_system().scheduler().printer()) {
-  init(self);
+  : printer_(self->home_system().scheduler().printer_for(self)) {
+  // nop
 }
 
 actor_ostream::actor_ostream(scoped_actor& self)
-  : self_(self->id()), printer_(self->home_system().scheduler().printer()) {
-  init(actor_cast<abstract_actor*>(self));
-}
-
-actor_ostream& actor_ostream::write(std::string arg) {
-  printer_->enqueue(make_mailbox_element(nullptr, make_message_id(), {},
-                                         add_atom_v, self_, std::move(arg)),
-                    nullptr);
-  return *this;
-}
-
-actor_ostream& actor_ostream::flush() {
-  printer_->enqueue(make_mailbox_element(nullptr, make_message_id(), {},
-                                         flush_atom_v, self_),
-                    nullptr);
-  return *this;
+  : actor_ostream(
+    static_cast<local_actor*>(actor_cast<abstract_actor*>(self))) {
+  // nop
 }
 
 void actor_ostream::redirect(abstract_actor* self, std::string fn, int flags) {
   if (self == nullptr)
     return;
   auto pr = self->home_system().scheduler().printer();
+  if (!pr)
+    return;
   pr->enqueue(make_mailbox_element(nullptr, make_message_id(), {},
                                    redirect_atom_v, self->id(), std::move(fn),
                                    flags),
@@ -48,14 +37,11 @@ void actor_ostream::redirect(abstract_actor* self, std::string fn, int flags) {
 
 void actor_ostream::redirect_all(actor_system& sys, std::string fn, int flags) {
   auto pr = sys.scheduler().printer();
+  if (!pr)
+    return;
   pr->enqueue(make_mailbox_element(nullptr, make_message_id(), {},
                                    redirect_atom_v, std::move(fn), flags),
               nullptr);
-}
-
-void actor_ostream::init(abstract_actor* self) {
-  if (!self->getf(abstract_actor::has_used_aout_flag))
-    self->setf(abstract_actor::has_used_aout_flag);
 }
 
 actor_ostream aout(local_actor* self) {
