@@ -12,7 +12,7 @@ jobs:
     - uses: egor-tensin/vs-shell@v2
     - uses: actions/setup-python@v4
       with:
-        python-version: '3.9'
+        python-version: '3.11'
         cache: 'pip'
     - run: pip install robotframework robotframework-requests robotframework-websocketclient
     - name: Build
