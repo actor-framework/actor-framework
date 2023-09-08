@@ -146,8 +146,9 @@ public:
   }
 
   void dispose() override {
-    state_.store(action::state::disposed);
-    f_.~F();
+    auto expected = action::state::scheduled;
+    if (state_.compare_exchange_weak(expected, action::state::disposed))
+      f_.~F();
   }
 
   bool disposed() const noexcept override {
