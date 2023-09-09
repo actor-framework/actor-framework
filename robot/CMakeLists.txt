@@ -1,5 +1,15 @@
 find_package(Python COMPONENTS Interpreter)
 
+execute_process(
+  COMMAND ${Python_EXECUTABLE} -c "import robot"
+  RESULT_VARIABLE EXIT_CODE
+  OUTPUT_QUIET
+)
+
+if (NOT ${EXIT_CODE} EQUAL 0)
+  message(FATAL_ERROR "Failed to import the 'robot' Python package")
+endif()
+
 add_test(
   NAME "robot-config-read-config-file"
   COMMAND
