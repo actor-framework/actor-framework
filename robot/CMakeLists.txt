@@ -6,13 +6,9 @@ execute_process(
   OUTPUT_QUIET
 )
 
-if (NOT ${EXIT_CODE} EQUAL 0) 
-  message(
-    FATAL_ERROR
-    "The python package 'robotframework' could not be found"
-  )
+if (NOT ${EXIT_CODE} EQUAL 0)
+  message(FATAL_ERROR "Failed to import the 'robot' Python package")
 endif()
-
 
 add_test(
   NAME "robot-config-read-config-file"
