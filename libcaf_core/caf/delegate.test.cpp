@@ -7,19 +7,18 @@
 #include "caf/test/test.hpp"
 
 #include "caf/event_based_actor.hpp"
-#include "caf/scoped_actor.hpp"
 #include "caf/sec.hpp"
-#include "caf/send.hpp"
 
-WITH_FIXTURE(caf::test::fixture::deterministic) {
+using namespace caf;
+
+WITH_FIXTURE(test::fixture::deterministic) {
 
 TEST("delegation moves responsibility for a request to another actor") {
-  using namespace caf;
   auto count = std::make_shared<int32_t>(0);
   auto worker = sys.spawn([count] {
     return behavior{
       [count](int32_t value) {
-        *count = *count + value;
+        *count += value;
         return *count;
       },
     };
@@ -27,7 +26,9 @@ TEST("delegation moves responsibility for a request to another actor") {
   auto delegator = sys.spawn([worker](event_based_actor* self) {
     return behavior{
       [self, worker](int32_t x) { return self->delegate(worker, x); },
-      [self, worker](std::string x) { return self->delegate(worker, x); },
+      [self, worker](std::string& x) {
+        return self->delegate(worker, std::move(x));
+      },
     };
   });
   SECTION("the delegatee responds to the original sender") {
@@ -47,32 +48,30 @@ TEST("delegation moves responsibility for a request to another actor") {
     expect<int32_t>().with(5).from(worker).to(client);
     check_eq(*count, 5);
   }
-  SECTION("errors at the delegatee are sent to the original sender") {
+  SECTION("the delegatee sends errors to the original sender") {
     auto client = sys.spawn([count, delegator](event_based_actor* self) {
       self->send(delegator, "foo");
       return behavior{
         [](int32_t) {},
       };
     });
-    auto observer_client = sys.spawn([&](event_based_actor* self) {
+    auto observer = sys.spawn([client](event_based_actor* self) {
       self->monitor(client);
-      self->set_down_handler([=](down_msg& dm) {
-        check_eq(dm.reason, sec::unexpected_message);
-        check_eq(dm.source, client);
-        check_eq(*count, 0);
-        self->quit();
-      });
+      self->set_down_handler([](down_msg&) {});
       return behavior{
-        [self, count](down_msg&) {},
+        [](int32_t) {},
       };
     });
     expect<std::string>().with("foo").from(client).to(delegator);
     expect<std::string>().with("foo").from(client).to(worker);
     expect<error>().with(sec::unexpected_message).from(worker).to(client);
-    expect<down_msg>().from(client).to(observer_client);
+    expect<down_msg>()
+      .with(down_msg{client->address(), sec::unexpected_message})
+      .from(client)
+      .to(observer);
   }
 }
 
-} // WITH_FIXTURE(caf::test::fixture::deterministic)
+} // WITH_FIXTURE(test::fixture::deterministic)
 
 CAF_TEST_MAIN()
