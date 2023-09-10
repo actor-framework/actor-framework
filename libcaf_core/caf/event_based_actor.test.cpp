@@ -19,7 +19,7 @@ WITH_FIXTURE(test::fixture::deterministic) {
 TEST("unexpected messages result in an error by default") {
   auto receiver = sys.spawn([](event_based_actor*) -> behavior {
     return {
-      [](int32_t) {},
+      [](int32_t x) { return ++x; },
     };
   });
   auto sender = sys.spawn([receiver](event_based_actor* self) -> behavior {
@@ -29,7 +29,21 @@ TEST("unexpected messages result in an error by default") {
     };
   });
   expect<std::string>().from(sender).to(receiver);
-  expect<error>().with(sec::unexpected_message).from(receiver).to(sender);
+  SECTION("receiver sends an unexpected_message error to sender") {
+    expect<error>().with(sec::unexpected_message).from(receiver).to(sender);
+  }
+  SECTION("receiver continues to receive message after returning error") {
+    expect<error>().with(sec::unexpected_message).from(receiver).to(sender);
+    auto integer_sender
+      = sys.spawn([receiver](event_based_actor* self) -> behavior {
+          self->send(receiver, 2);
+          return {
+            [](int32_t) {},
+          };
+        });
+    expect<int32_t>().with(2).from(integer_sender).to(receiver);
+    expect<int32_t>().with(3).from(receiver).to(integer_sender);
+  }
 }
 
 } // WITH_FIXTURE(test::fixture::deterministic)
