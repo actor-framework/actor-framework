@@ -49,7 +49,7 @@ TEST("delegation moves responsibility for a request to another actor") {
     check_eq(*count, 5);
   }
   SECTION("the delegatee sends errors to the original sender") {
-    auto client = sys.spawn([count, delegator](event_based_actor* self) {
+    auto client = sys.spawn([delegator](event_based_actor* self) {
       self->send(delegator, "foo");
       return behavior{
         [](int32_t) {},
@@ -57,7 +57,7 @@ TEST("delegation moves responsibility for a request to another actor") {
     });
     auto observer = sys.spawn([client](event_based_actor* self) {
       self->monitor(client);
-      self->set_down_handler([](down_msg&) {});
+      self->set_down_handler([](const down_msg&) {});
       return behavior{
         [](int32_t) {},
       };
@@ -66,7 +66,7 @@ TEST("delegation moves responsibility for a request to another actor") {
     expect<std::string>().with("foo").from(client).to(worker);
     expect<error>().with(sec::unexpected_message).from(worker).to(client);
     expect<down_msg>()
-      .with(down_msg{client->address(), sec::unexpected_message})
+      .with(down_msg{client.address(), sec::unexpected_message})
       .from(client)
       .to(observer);
   }
