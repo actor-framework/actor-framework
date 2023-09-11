@@ -15,6 +15,7 @@
 #include <numeric>
 
 using namespace caf;
+using namespace std::literals;
 
 namespace {
 
@@ -154,7 +155,7 @@ CAF_TEST(requesters support fan_out_request) {
   };
   run();
   auto sum = std::make_shared<int>(0);
-  auto client = sys.spawn([this, workers, sum](event_based_actor* self) {
+  auto client = sys.spawn([workers, sum](event_based_actor* self) {
     self->fan_out_request<select_all>(workers, infinite, 1, 2)
       .then([=](std::vector<int> results) {
         for (auto result : results)
@@ -363,23 +364,23 @@ TEST_CASE("GH-1299 regression blocking") {
   }
 }
 
-TEST_CASE("GH-698 regression responding to a request drops the strong "
-          "reference count") {
-  auto weak_client_ref = [this] {
-    return actor_cast<weak_actor_ptr>(
-      sys.spawn([this](event_based_actor* self) {
-        self->request(adding_server, std::chrono::seconds{10}, 1, 2)
-          .then([this](int r) { *result = r; });
-      }));
-  }();
-  CHECK_EQ(weak_client_ref->strong_refs, 1u);
-  run_once();
-  CHECK_EQ(weak_client_ref->strong_refs, 2u);
-  expect((int, int), from(weak_client_ref).to(adding_server).with(1, 2));
-  CHECK_EQ(weak_client_ref->strong_refs, 2u);
-  expect((int), from(adding_server).to(weak_client_ref));
-  CHECK_EQ(weak_client_ref->strong_refs, 0u);
-  CHECK_EQ(*result, result_type{3});
+TEST_CASE("GH-698 regression") {
+  auto server = actor_cast<actor>(adding_server);
+  auto client = actor_cast<strong_actor_ptr>(
+    sys.spawn([](event_based_actor* self) -> behavior {
+      return [self](actor server) {
+        self->request(server, 10s, 1, 2).then([](int) {});
+      };
+    }));
+  run();
+  CHECK_EQ(client->strong_refs, 1u);
+  inject((actor), with(server).to(client));
+  CHECK(sched.has_pending_timeout());
+  expect((int, int), from(client).to(server));
+  expect((int), from(server).to(client));
+  CHECK(!sched.has_pending_timeout());
+  // The scheduler may no longer hold a reference to the client.
+  CHECK_EQ(client->strong_refs, 1u);
 }
 
 END_FIXTURE_SCOPE()
