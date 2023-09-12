@@ -30,16 +30,15 @@ TEST("unexpected messages result in an error by default") {
   });
   expect<std::string>().from(sender1).to(receiver);
   expect<error>().with(sec::unexpected_message).from(receiver).to(sender1);
-  SECTION("receiver continues to receive message after returning error") {
-    auto sender2 = sys.spawn([receiver](event_based_actor* self) -> behavior {
-      self->send(receiver, 2);
-      return {
-        [](int32_t) {},
-      };
-    });
-    expect<int32_t>().with(2).from(sender2).to(receiver);
-    expect<int32_t>().with(3).from(receiver).to(sender2);
-  }
+  // Receivers continue receiving messages after unexpected messages.
+  auto sender2 = sys.spawn([receiver](event_based_actor* self) -> behavior {
+    self->send(receiver, 2);
+    return {
+      [](int32_t) {},
+    };
+  });
+  expect<int32_t>().with(2).from(sender2).to(receiver);
+  expect<int32_t>().with(3).from(receiver).to(sender2);
 }
 
 } // WITH_FIXTURE(test::fixture::deterministic)
