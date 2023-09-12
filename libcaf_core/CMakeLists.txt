@@ -72,6 +72,7 @@ caf_add_component(
     caf/abstract_mailbox.cpp
     caf/action.cpp
     caf/action.test.cpp
+    caf/delegate.test.cpp
     caf/actor.cpp
     caf/actor_addr.cpp
     caf/actor_clock.cpp
