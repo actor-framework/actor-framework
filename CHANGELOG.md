@@ -43,6 +43,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - When implementing custom protocol layers that sit on top of an octet stream,
   the `delta` byte span passed to `consume` now resets whenever returning a
   positive value from `consume`.
+- When constructing a `behavior` or `message_handler`, callbacks that take a
+  `message` argument are now treated as catch-all handlers.
 
 ### Fixed
 

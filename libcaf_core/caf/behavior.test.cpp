@@ -97,6 +97,59 @@ TEST("the first matching handler wins") {
   check(!*f2_called);
 }
 
+TEST("a handler that takes a message argument is a catch-all handler") {
+  SECTION("using signature (message)") {
+    auto f = behavior{
+      [](message) { return 1; },
+      [](int) { return 2; },
+      [](int, int) { return 3; },
+      [](int, int, int) { return 4; },
+    };
+    check_eq(res_of(f, m1), 1);
+    check_eq(res_of(f, m2), 1);
+    check_eq(res_of(f, m3), 1);
+  }
+  SECTION("using signature (message&)") {
+    auto f = behavior{
+      [](message&) { return 1; },
+      [](int) { return 2; },
+      [](int, int) { return 3; },
+      [](int, int, int) { return 4; },
+    };
+    check_eq(res_of(f, m1), 1);
+    check_eq(res_of(f, m2), 1);
+    check_eq(res_of(f, m3), 1);
+  }
+  SECTION("using signature (const message&)") {
+    auto f = behavior{
+      [](const message&) { return 1; },
+      [](int) { return 2; },
+      [](int, int) { return 3; },
+      [](int, int, int) { return 4; },
+    };
+    check_eq(res_of(f, m1), 1);
+    check_eq(res_of(f, m2), 1);
+    check_eq(res_of(f, m3), 1);
+  }
+  SECTION("returning void from a catch-all handler") {
+    auto cb_id = std::make_shared<int>(0);
+    auto f = behavior{
+      [cb_id](message&) { *cb_id = 1; },
+      [cb_id](int) { *cb_id = 2; },
+      [cb_id](int, int) { *cb_id = 3; },
+      [cb_id](int, int, int) { *cb_id = 4; },
+    };
+    auto call_with = [cb_id, &f](message& msg) {
+      *cb_id = 0;
+      f(msg);
+      return *cb_id;
+    };
+    check_eq(call_with(m1), 1);
+    check_eq(call_with(m2), 1);
+    check_eq(call_with(m3), 1);
+  }
+}
+
 } // WITH_FIXTURE(fixture)
 
 CAF_TEST_MAIN()
