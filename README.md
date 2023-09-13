@@ -6,6 +6,7 @@ transparent messaging, and more.
 
 [![Gitter][gitter-badge]](https://gitter.im/actor-framework/chat)
 [![Documentation Status][docs-badge]](http://actor-framework.readthedocs.io/en/latest/?badge=latest)
+[![Coverage][coverage-badge]](https://codecov.io/gh/actor-framework/actor-framework)
 
 ## Online Resources
 
@@ -158,3 +159,5 @@ http://dx.doi.org/10.1016/j.cl.2016.01.002.
 [docs-badge]: https://readthedocs.org/projects/actor-framework/badge/?version=latest
 
 [gitter-badge]: https://img.shields.io/badge/gitter-join%20chat%20%E2%86%92-brightgreen.svg
+
+[coverage-badge]: https://codecov.io/gh/actor-framework/actor-framework/graph/badge.svg?token=SjJQQ5dCbV
