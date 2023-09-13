@@ -199,7 +199,7 @@ public:
     if (!state_.compare_exchange_strong(expected, action::state::running))
       return;
     f_();
-    // Once run, we can stay in the running state or swith to deferred dispose.
+    // Once run, we can stay in the running state or switch to deferred dispose.
     expected = state_.load();
     if (expected == action::state::running
         && state_.compare_exchange_strong(expected, action::state::scheduled))
