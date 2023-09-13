@@ -252,7 +252,6 @@ caf_add_component(
     async.promise
     async.publisher
     async.spsc_buffer
-    behavior
     binary_deserializer
     binary_serializer
     blocking_actor
