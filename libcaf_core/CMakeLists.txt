@@ -92,6 +92,7 @@ caf_add_component(
     caf/async/producer.cpp
     caf/attachable.cpp
     caf/behavior.cpp
+    caf/behavior.test.cpp
     caf/binary_deserializer.cpp
     caf/binary_serializer.cpp
     caf/blocking_actor.cpp
