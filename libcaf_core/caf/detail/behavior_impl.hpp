@@ -114,18 +114,31 @@ public:
     [[maybe_unused]] auto dispatch = [&](auto& fun) {
       using fun_type = std::decay_t<decltype(fun)>;
       using trait = get_callable_trait_t<fun_type>;
-      auto arg_types = to_type_id_list<typename trait::decayed_arg_types>();
-      if (arg_types == msg.types()) {
-        typename trait::message_view_type xs{msg};
-        using fun_result = decltype(detail::apply_args(fun, xs));
+      using decayed_args = typename trait::decayed_arg_types;
+      if constexpr (std::is_same_v<decayed_args, type_list<message>>) {
+        using fun_result = decltype(fun(msg));
         if constexpr (std::is_same_v<void, fun_result>) {
-          detail::apply_args(fun, xs);
+          fun(msg);
           f(unit);
         } else {
-          auto invoke_res = detail::apply_args(fun, xs);
+          auto invoke_res = fun(msg);
           f(invoke_res);
         }
         return true;
+      } else {
+        auto arg_types = to_type_id_list<decayed_args>();
+        if (arg_types == msg.types()) {
+          typename trait::message_view_type xs{msg};
+          using fun_result = decltype(detail::apply_args(fun, xs));
+          if constexpr (std::is_same_v<void, fun_result>) {
+            detail::apply_args(fun, xs);
+            f(unit);
+          } else {
+            auto invoke_res = detail::apply_args(fun, xs);
+            f(invoke_res);
+          }
+          return true;
+        }
       }
       return false;
     };
