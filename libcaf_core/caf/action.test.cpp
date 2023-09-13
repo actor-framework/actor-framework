@@ -15,12 +15,15 @@ using namespace caf;
 SCENARIO("actions wrap function calls") {
   GIVEN("an action wrapping a lambda") {
     WHEN("running the action") {
+      auto called = false;
+      auto uut = make_action([&called] { called = true; });
       THEN("it calls the lambda and transitions from scheduled to invoked") {
-        auto called = false;
-        auto uut = make_action([&called] { called = true; });
         check(uut.scheduled());
         uut.run();
         check(called);
+      }
+      AND_THEN("the action is returned to the scheduled state") {
+        check_eq(uut.ptr()->current_state(), action::state::scheduled);
       }
     }
     WHEN("disposing the action") {
@@ -33,6 +36,25 @@ SCENARIO("actions wrap function calls") {
         uut.run();
         check(!called);
         check(uut.disposed());
+      }
+    }
+    WHEN("disposing an running action") {
+      auto called = false;
+      action* uut_ptr = nullptr;
+      auto uut = make_action([this, &called, &uut_ptr] {
+        called = true;
+        uut_ptr->dispose();
+        check_eq(uut_ptr->ptr()->current_state(),
+                 action::state::deferred_dispose);
+      });
+      uut_ptr = &uut;
+      THEN("it transitions to deferred_dispose") {
+        check(uut.scheduled());
+        uut.run();
+        check(called);
+      }
+      AND_THEN("the action transitions into disposed") {
+        check_eq(uut_ptr->ptr()->current_state(), action::state::disposed);
       }
     }
     WHEN("running the action multiple times") {
@@ -52,6 +74,41 @@ SCENARIO("actions wrap function calls") {
         auto d2 = action{uut}.as_disposable(); // && overload
         check_eq(uut.ptr(), d1.ptr());
         check_eq(uut.ptr(), d2.ptr());
+      }
+    }
+  }
+  GIVEN("a single shot action") {
+    WHEN("running the action once") {
+      auto called = false;
+      auto uut = make_single_shot_action([&called] { called = true; });
+      THEN("it transitions to disposed") {
+        check(uut.scheduled());
+        uut.run();
+        check(called);
+        check(uut.disposed());
+      }
+      AND_THEN("run no longer calls the lambda") {
+        called = false;
+        uut.run();
+        check(!called);
+        check(uut.disposed());
+      }
+    }
+    WHEN("disposing an running single shot action") {
+      THEN("it transitions to disposed state") {
+        auto called = false;
+        action* uut_ptr = nullptr;
+        auto uut = make_single_shot_action([this, &called, &uut_ptr] {
+          called = true;
+          uut_ptr->dispose();
+          // No deferred dispose for single shot actions.
+          check_eq(uut_ptr->ptr()->current_state(), action::state::disposed);
+        });
+        uut_ptr = &uut;
+        check(uut.scheduled());
+        uut.run();
+        check(called);
+        check_eq(uut_ptr->ptr()->current_state(), action::state::disposed);
       }
     }
   }

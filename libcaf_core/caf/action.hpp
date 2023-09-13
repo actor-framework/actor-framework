@@ -10,6 +10,7 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/disposable.hpp"
 #include "caf/make_counted.hpp"
+#include "caf/raise_error.hpp"
 
 #include <atomic>
 #include <cstddef>
@@ -24,8 +25,10 @@ public:
 
   /// Describes the current state of an `action`.
   enum class state {
-    disposed,  /// The action may no longer run.
-    scheduled, /// The action is scheduled for execution.
+    scheduled,        /// The action is scheduled for execution.
+    running,          /// The action is currently running in another thread.
+    deferred_dispose, /// The action is currently running, and will be disposed.
+    disposed,         /// The action may no longer run.
   };
 
   /// Internal interface of `action`.
@@ -60,11 +63,12 @@ public:
   // -- observers --------------------------------------------------------------
 
   [[nodiscard]] bool disposed() const {
-    return pimpl_->current_state() == state::disposed;
+    auto state = pimpl_->current_state();
+    return state == state::disposed || state == state::deferred_dispose;
   }
 
   [[nodiscard]] bool scheduled() const {
-    return pimpl_->current_state() == state::scheduled;
+    return !disposed();
   }
 
   // -- mutators ---------------------------------------------------------------
@@ -141,32 +145,78 @@ public:
   }
 
   ~default_action_impl() {
+    // The action going out of scope can't be running or deferred dispose.
+    CAF_ASSERT(state_.load() != action::state::running);
+    CAF_ASSERT(state_.load() != action::state::deferred_dispose);
     if (state_.load() == action::state::scheduled)
       f_.~F();
   }
 
   void dispose() override {
-    auto expected = action::state::scheduled;
-    if (state_.compare_exchange_weak(expected, action::state::disposed))
-      f_.~F();
+    // Try changing the state to disposed
+    while (true) {
+      if (auto expected = state_.load(); expected == action::state::scheduled) {
+        if (state_.compare_exchange_weak(expected, action::state::disposed)) {
+          f_.~F();
+          return;
+        }
+      } else if (expected == action::state::running) {
+        if (state_.compare_exchange_weak(expected,
+                                         action::state::deferred_dispose))
+          return;
+      } else { // action::state::{deferred_dispose, disposed}
+        return;
+      }
+    }
+  }
+
+  void handle_deferred_dispose() {
   }
 
   bool disposed() const noexcept override {
-    return state_.load() == action::state::disposed;
+    auto current_state = state_.load();
+    return current_state == action::state::disposed
+           || current_state == action::state::deferred_dispose;
   }
 
   action::state current_state() const noexcept override {
     return state_.load();
   }
 
+  void run_single_shot() {
+    // We can only run a scheduled action
+    auto expected = action::state::scheduled;
+    if (!state_.compare_exchange_strong(expected, action::state::disposed))
+      return;
+    f_();
+    f_.~F();
+    return;
+  }
+
+  void run_multi_shot() {
+    // We can only run a scheduled action
+    auto expected = action::state::scheduled;
+    if (!state_.compare_exchange_strong(expected, action::state::running))
+      return;
+    f_();
+    // Once run, we can stay in the running state or swith to deferred dispose.
+    expected = state_.load();
+    if (expected == action::state::running
+        && state_.compare_exchange_strong(expected, action::state::scheduled))
+      return;
+    if (expected == action::state::deferred_dispose
+        && state_.compare_exchange_strong(expected, action::state::disposed)) {
+      f_.~F();
+      return;
+    }
+    CAF_RAISE_ERROR("Invalid state found after running an action.");
+  }
+
   void run() override {
-    if (state_.load() == action::state::scheduled) {
-      f_();
-      if constexpr (IsSingleShot) {
-        dispose();
-      }
-      // else: allow the action to re-register itself when needed by *not*
-      //       setting the state to disposed, e.g., to implement time loops.
+    if constexpr (IsSingleShot)
+      return run_single_shot();
+    else {
+      return run_multi_shot();
     }
   }
 
