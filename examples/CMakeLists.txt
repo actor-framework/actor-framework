@@ -129,4 +129,18 @@ if(TARGET CAF::net AND CAF_ENABLE_QT6_EXAMPLES)
     set_property(TARGET qt_group_chat PROPERTY CXX_STANDARD 17)
   endif()
   add_dependencies(qt_group_chat all_examples)
+
+  add_executable(issue-973
+                 issue-973/main.cpp)
+  target_link_libraries(issue-973
+                        CAF::io
+                        CAF::internal
+                        Qt6::Widgets)
+  target_include_directories(issue-973 PRIVATE
+                             issue-973
+                             ${Qt6Core_INCLUDE_DIRS}
+                             ${Qt6Gui_INCLUDE_DIRS}
+                             ${Qt6Widgets_INCLUDE_DIRS})
+  set_property(TARGET issue-973 PROPERTY CXX_STANDARD 17)
+  add_dependencies(issue-973 all_examples)
 endif()
