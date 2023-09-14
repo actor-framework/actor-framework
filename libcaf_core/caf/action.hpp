@@ -170,9 +170,6 @@ public:
     }
   }
 
-  void handle_deferred_dispose() {
-  }
-
   bool disposed() const noexcept override {
     auto current_state = state_.load();
     return current_state == action::state::disposed
@@ -199,16 +196,14 @@ public:
       return;
     f_();
     // Once run, we can stay in the running state or switch to deferred dispose.
-    expected = state_.load();
-    if (expected == action::state::running
-        && state_.compare_exchange_strong(expected, action::state::scheduled))
+    expected = action::state::running;
+    if (state_.compare_exchange_strong(expected, action::state::scheduled))
       return;
-    if (expected == action::state::deferred_dispose
-        && state_.compare_exchange_strong(expected, action::state::disposed)) {
-      f_.~F();
-      return;
-    }
-    CAF_RAISE_ERROR("Invalid state found after running an action.");
+    CAF_ASSERT(expected == action::state::deferred_dispose);
+    [[maybe_unused]] auto ok
+      = state_.compare_exchange_strong(expected, action::state::disposed);
+    CAF_ASSERT(ok);
+    f_.~F();
   }
 
   void run() override {

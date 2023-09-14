@@ -39,19 +39,18 @@ SCENARIO("actions wrap function calls") {
       }
     }
     WHEN("disposing an running action") {
-      auto called = false;
-      action uut;
-      uut = make_action([&called, &uut] {
-        called = true;
-        uut.dispose();
-      });
-      THEN("it transitions to deferred_dispose") {
+      THEN("it transitions to deferred_dispose and finally to disposed") {
+        auto called = false;
+        action uut;
+        uut = make_action([this, &called, &uut] {
+          called = true;
+          uut.dispose();
+          check_eq(uut.ptr()->current_state(), action::state::deferred_dispose);
+        });
         check(uut.scheduled());
         uut.run();
         check(called);
-      }
-      AND_THEN("the action transitions into disposed") {
-        check_eq(uut_ptr->ptr()->current_state(), action::state::disposed);
+        check_eq(uut.ptr()->current_state(), action::state::disposed);
       }
     }
     WHEN("running the action multiple times") {
@@ -94,18 +93,17 @@ SCENARIO("actions wrap function calls") {
     WHEN("disposing an running single shot action") {
       THEN("dispose() has no effect since it is already disposed") {
         auto called = false;
-        action* uut_ptr = nullptr;
-        auto uut = make_single_shot_action([this, &called, &uut_ptr] {
+        action uut;
+        uut = make_single_shot_action([this, &called, &uut] {
           called = true;
-          uut_ptr->dispose();
+          uut.dispose();
           // No deferred dispose for single shot actions.
-          check_eq(uut_ptr->ptr()->current_state(), action::state::disposed);
+          check_eq(uut.ptr()->current_state(), action::state::disposed);
         });
-        uut_ptr = &uut;
         check(uut.scheduled());
         uut.run();
         check(called);
-        check_eq(uut_ptr->ptr()->current_state(), action::state::disposed);
+        check_eq(uut.ptr()->current_state(), action::state::disposed);
       }
     }
   }
