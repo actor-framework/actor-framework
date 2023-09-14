@@ -10,7 +10,6 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/disposable.hpp"
 #include "caf/make_counted.hpp"
-#include "caf/raise_error.hpp"
 
 #include <atomic>
 #include <cstddef>
