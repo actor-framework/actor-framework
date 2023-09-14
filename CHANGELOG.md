@@ -62,6 +62,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Fix function object lifetimes in actions. This bug caused CAF to hold onto a
   strong reference to actors that canceled a timeout until the timeout expired.
   This could lead to actors being kept alive longer than necessary (#698).
+- Key lookups in `caf::net::http::request_header` are now case-insensitive, as
+  required by the HTTP specification. Further, `field_at` is now a `const`
+  member function (#1554).
 
 ## [0.19.2] - 2023-06-13
 

@@ -52,8 +52,8 @@ void request_header::assign(const request_header& other) {
     auto base = other.raw_.data();
     auto new_base = raw_.data();
     version_ = remap(base, other.version_, new_base);
-    auto& fields = fields_.container();
-    auto& other_fields = other.fields_.container();
+    auto& fields = fields_;
+    auto& other_fields = other.fields_;
     fields.resize(other_fields.size());
     for (size_t index = 0; index < fields.size(); ++index) {
       fields[index].first = remap(base, other_fields[index].first, new_base);
@@ -131,7 +131,7 @@ request_header::parse(std::string_view raw) {
       auto m = static_cast<size_t>(std::distance(sep + 1, line.end()));
       auto val = trim(std::string_view{std::addressof(*(sep + 1)), m});
       if (!key.empty()) {
-        fields_.emplace(key, val);
+        fields_.emplace_back(key, val);
         return true;
       }
     }
