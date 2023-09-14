@@ -23,9 +23,6 @@ namespace caf::net::http {
 /// query, fragment, version, and fields.
 class CAF_NET_EXPORT request_header {
 public:
-  friend class http::server;
-  friend class web_socket::server;
-
   /// Default constructor.
   request_header() = default;
 
@@ -75,38 +72,38 @@ public:
   }
 
   /// Returns the field at the specified index as a key-value pair.
-  std::pair<std::string_view, std::string_view> field_at(size_t index) {
-    return fields_.container().at(index);
+  std::pair<std::string_view, std::string_view> field_at(size_t index) const {
+    return fields_.at(index);
   }
 
   /// Checks if the request header has a field with the specified key.
   bool has_field(std::string_view key) const noexcept {
-    return fields_.find(key) != fields_.end();
+    return find_by_key_icase(key) != fields_.end();
   }
 
   /// Returns the value of the field with the specified key, or an empty view if
   /// the field is not found.
   std::string_view field(std::string_view key) const noexcept {
-    if (auto i = fields_.find(key); i != fields_.end())
+    if (auto i = find_by_key_icase(key); i != fields_.end())
       return i->second;
     else
       return {};
   }
 
   ///  Checks whether the field `key` exists and equals `val` when using
-  ///  case-insensitive compare.
+  ///  case-insensitive compare of the value.
   bool field_equals(ignore_case_t, std::string_view key,
                     std::string_view val) const noexcept {
-    if (auto i = fields_.find(key); i != fields_.end())
+    if (auto i = find_by_key_icase(key); i != fields_.end())
       return icase_equal(val, i->second);
     else
       return false;
   }
 
   ///  Checks whether the field `key` exists and equals `val` when using
-  ///  case-insensitive compare.
+  ///  case-sensitive compare of the value.
   bool field_equals(std::string_view key, std::string_view val) const noexcept {
-    if (auto i = fields_.find(key); i != fields_.end())
+    if (auto i = find_by_key_icase(key); i != fields_.end())
       return val == i->second;
     else
       return false;
@@ -116,7 +113,7 @@ public:
   /// type T, or std::nullopt if the field is not found or cannot be converted.
   template <class T>
   std::optional<T> field_as(std::string_view key) const noexcept {
-    if (auto i = fields_.find(key); i != fields_.end()) {
+    if (auto i = find_by_key_icase(key); i != fields_.end()) {
       caf::config_value val{std::string{i->second}};
       if (auto res = caf::get_as<T>(val))
         return std::move(*res);
@@ -151,6 +148,18 @@ public:
   std::pair<status, std::string_view> parse(std::string_view raw);
 
 private:
+  // An unsorted "map" type for storing key/value pairs.
+  using fields_map = std::vector<std::pair<std::string_view, std::string_view>>;
+
+  // Finds a field by using case insensitive key comparison. Returns the
+  // iterator pointing to the found field, or to the end if no field is found.
+  fields_map::const_iterator
+  find_by_key_icase(std::string_view key) const noexcept {
+    return std::find_if(fields_.begin(), fields_.end(), [&key](const auto& i) {
+      return icase_equal(i.first, key);
+    });
+  }
+
   /// Stores the raw HTTP input.
   std::vector<char> raw_;
 
@@ -164,7 +173,7 @@ private:
   std::string_view version_;
 
   /// A shallow map for looking up individual header fields.
-  unordered_flat_map<std::string_view, std::string_view> fields_;
+  fields_map fields_;
 };
 
 } // namespace caf::net::http
