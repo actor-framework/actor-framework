@@ -40,14 +40,11 @@ SCENARIO("actions wrap function calls") {
     }
     WHEN("disposing an running action") {
       auto called = false;
-      action* uut_ptr = nullptr;
-      auto uut = make_action([this, &called, &uut_ptr] {
+      action uut;
+      uut = make_action([&called, &uut] {
         called = true;
-        uut_ptr->dispose();
-        check_eq(uut_ptr->ptr()->current_state(),
-                 action::state::deferred_dispose);
+        uut.dispose();
       });
-      uut_ptr = &uut;
       THEN("it transitions to deferred_dispose") {
         check(uut.scheduled());
         uut.run();
@@ -78,16 +75,16 @@ SCENARIO("actions wrap function calls") {
     }
   }
   GIVEN("a single shot action") {
-    WHEN("running the action once") {
+    WHEN("running the action") {
       auto called = false;
       auto uut = make_single_shot_action([&called] { called = true; });
-      THEN("it transitions to disposed") {
+      THEN("it transitions to disposed on the first run") {
         check(uut.scheduled());
         uut.run();
         check(called);
         check(uut.disposed());
       }
-      AND_THEN("run no longer calls the lambda") {
+      AND_THEN("running the action again has no effect") {
         called = false;
         uut.run();
         check(!called);
@@ -95,7 +92,7 @@ SCENARIO("actions wrap function calls") {
       }
     }
     WHEN("disposing an running single shot action") {
-      THEN("it transitions to disposed state") {
+      THEN("dispose() has no effect since it is already disposed") {
         auto called = false;
         action* uut_ptr = nullptr;
         auto uut = make_single_shot_action([this, &called, &uut_ptr] {

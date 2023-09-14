@@ -154,7 +154,7 @@ public:
 
   void dispose() override {
     // Try changing the state to disposed
-    while (true) {
+    for (;;) {
       if (auto expected = state_.load(); expected == action::state::scheduled) {
         if (state_.compare_exchange_weak(expected, action::state::disposed)) {
           f_.~F();
@@ -184,17 +184,16 @@ public:
   }
 
   void run_single_shot() {
-    // We can only run a scheduled action
+    // We can only run a scheduled action.
     auto expected = action::state::scheduled;
     if (!state_.compare_exchange_strong(expected, action::state::disposed))
       return;
     f_();
     f_.~F();
-    return;
   }
 
   void run_multi_shot() {
-    // We can only run a scheduled action
+    // We can only run a scheduled action.
     auto expected = action::state::scheduled;
     if (!state_.compare_exchange_strong(expected, action::state::running))
       return;
