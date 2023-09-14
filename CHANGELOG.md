@@ -57,6 +57,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   and attempt to buffer all values indefinitely.
 - The comparison operator of `intrusive_ptr` no longer accidentally creates new
   `intrusive_ptr` instances when comparing to raw pointers.
+- Fix function object lifetimes in actions. This bug caused CAF to hold onto a
+  strong reference to actors that canceled a timeout until the timeout expired.
+  This could lead to actors being kept alive longer than necessary (#698).
 
 ## [0.19.2] - 2023-06-13
 
