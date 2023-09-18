@@ -18,6 +18,7 @@ config = [
         'CAF_ENABLE_ACTOR_PROFILER:BOOL=ON',
         'CAF_ENABLE_EXAMPLES:BOOL=ON',
         'CAF_ENABLE_RUNTIME_CHECKS:BOOL=ON',
+        'CMAKE_CXX_FLAGS:STRING=-Werror -Wconversion',
     ],
     // Our build matrix. Keys are the operating system labels and values are build configurations.
     buildMatrix: [
@@ -26,56 +27,41 @@ config = [
             numCores: 4,
             tags: ['docker'],
             builds: ['release'],
-            extraBuildFlags: [
-                'CMAKE_CXX_FLAGS:STRING=-Werror',
-            ],
         ]],
         ['almalinux-9', [ // EOL: May 2032
             numCores: 4,
             tags: ['docker'],
             builds: ['release'],
-            extraBuildFlags: [
-                'CMAKE_CXX_FLAGS:STRING=-Werror',
-            ],
         ]],
         ['alpinelinux-3.18', [ // EOL: May 2025
             numCores: 4,
             tags: ['docker'],
             builds: ['release'],
             extraBuildFlags: [
-                'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wno-array-bounds',
+                'CMAKE_CXX_FLAGS:STRING=-Werror -Wconversion -Wno-maybe-uninitialized -Wno-array-bounds',
             ],
         ]],
         ['centos-7', [ // EOL July 2024
             numCores: 4,
             tags: ['docker'],
             builds: ['release'],
-            extraBuildFlags: [
-                'CMAKE_CXX_FLAGS:STRING=-Werror',
-            ],
         ]],
         ['debian-10', [ // EOL June 2024
             numCores: 4,
             tags: ['docker'],
             builds: ['release'],
-            extraBuildFlags: [
-                'CMAKE_CXX_FLAGS:STRING=-Werror',
-            ],
         ]],
         ['debian-11', [ // EOL June 2026
             numCores: 4,
             tags: ['docker'],
             builds: ['release'],
-            extraBuildFlags: [
-                'CMAKE_CXX_FLAGS:STRING=-Werror',
-            ],
         ]],
         ['fedora-37', [ // EOL December 2023
             numCores: 4,
             tags: ['docker'],
             builds: ['release'],
             extraBuildFlags: [
-                'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wno-array-bounds',
+                'CMAKE_CXX_FLAGS:STRING=-Werror -Wconversion -Wno-maybe-uninitialized -Wno-array-bounds',
             ],
         ]],
         ['fedora-38', [ // EOL June 2024
@@ -83,24 +69,18 @@ config = [
             tags: ['docker'],
             builds: ['release'],
             extraBuildFlags: [
-                'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wno-array-bounds',
+                'CMAKE_CXX_FLAGS:STRING=-Werror -Wconversion -Wno-maybe-uninitialized -Wno-array-bounds',
             ],
         ]],
         ['ubuntu-20.04', [ // April 2025
             numCores: 4,
             tags: ['docker'],
             builds: ['release'],
-            extraBuildFlags: [
-                'CMAKE_CXX_FLAGS:STRING=-Werror',
-            ],
         ]],
         ['ubuntu-22.04', [ // April 2027
             numCores: 4,
             tags: ['docker'],
             builds: ['release'],
-            extraBuildFlags: [
-                'CMAKE_CXX_FLAGS:STRING=-Werror',
-            ],
         ]],
         // Debug build with exceptions disabled.
         ['fedora-38:no-exceptions', [
@@ -111,7 +91,7 @@ config = [
                 'CAF_LOG_LEVEL:STRING=TRACE',
                 'CAF_ENABLE_ROBOT_TESTS:BOOL=ON',
                 'CAF_ENABLE_EXCEPTIONS:BOOL=OFF',
-                'CMAKE_CXX_FLAGS:STRING=-Werror -fno-exceptions',
+                'CMAKE_CXX_FLAGS:STRING=-Werror -Wconversion -fno-exceptions',
             ],
         ]],
         // Debug build for LeakSanitizer.
@@ -139,7 +119,6 @@ config = [
                 'CAF_LOG_LEVEL:STRING=TRACE',
                 'CAF_ENABLE_ROBOT_TESTS:BOOL=ON',
                 'CAF_SANITIZERS:STRING=address,undefined',
-                'CMAKE_CXX_FLAGS:STRING=-Werror',
             ],
             extraBuildEnv: [
                 'CXXFLAGS=-fno-sanitize-recover=undefined -D_GLIBCXX_DEBUG',
