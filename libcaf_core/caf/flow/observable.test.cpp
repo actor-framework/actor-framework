@@ -176,6 +176,40 @@ TEST("last() returns the last element in a range of size m") {
   }
 }
 
+TEST("on_error_complete() returns all of the elements in a range of size n "
+     "without error") {
+  SECTION(
+    "on_error_complete() returns all of the elements in a range of size >= 1") {
+    SECTION("blueprint") {
+      check_eq(collect(range(1, 1).on_error_complete()), vector{1});
+      check_eq(collect(range(1, 2).on_error_complete()), vector{1, 2});
+      check_eq(collect(range(1, 3).on_error_complete()), vector{1, 2, 3});
+    }
+    SECTION("observable") {
+      check_eq(collect(mat(range(1, 1)).on_error_complete()), vector{1});
+      check_eq(collect(mat(range(1, 2)).on_error_complete()), vector{1, 2});
+      check_eq(collect(mat(range(1, 3)).on_error_complete()), vector{1, 2, 3});
+    }
+  }
+  SECTION("on_error_complete() returns an empty range if the input is empty") {
+    SECTION("blueprint") {
+      check_eq(collect(range(1, 0).on_error_complete()), nil);
+    }
+    SECTION("observable") {
+      check_eq(collect(mat(range(1, 0)).on_error_complete()), nil);
+    }
+  }
+  SECTION("on_error_complete() does not propagate errors") {
+    SECTION("blueprint") {
+      check_eq(collect(obs_error(sec::runtime_error).on_error_complete()), nil);
+    }
+    SECTION("observable") {
+      check_eq(collect(mat(obs_error(sec::runtime_error)).on_error_complete()),
+               nil);
+    }
+  }
+}
+
 } // WITH_FIXTURE(test::fixture::flow)
 
 CAF_TEST_MAIN()
