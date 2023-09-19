@@ -36,6 +36,14 @@ add_test(
       "${CMAKE_CURRENT_SOURCE_DIR}/http/rest.robot")
 
 add_test(
+  NAME "robot-logging-output"
+  COMMAND
+    ${Python_EXECUTABLE}
+      -m robot
+      --variable BINARY_PATH:$<TARGET_FILE:caf-core-logging-driver>
+      "${CMAKE_CURRENT_SOURCE_DIR}/logging/output.robot")
+
+add_test(
   NAME "robot-web-socket-quote-server"
   COMMAND
     ${Python_EXECUTABLE}

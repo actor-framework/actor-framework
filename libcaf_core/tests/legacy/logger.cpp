@@ -52,15 +52,6 @@ struct fixture {
     cfg.set("caf.logger.file.path", "");
   }
 
-  void add(logger::field_type kind) {
-    lf.emplace_back(logger::field{kind, std::string{}});
-  }
-
-  template <size_t N>
-  void add(logger::field_type kind, const char (&str)[N]) {
-    lf.emplace_back(logger::field{kind, std::string{str, str + (N - 1)}});
-  }
-
   template <class F, class... Ts>
   string render(F f, Ts&&... xs) {
     std::ostringstream oss;
@@ -69,7 +60,6 @@ struct fixture {
   }
 
   actor_system_config cfg;
-  logger::line_format lf;
 };
 
 void fun() {
@@ -117,8 +107,6 @@ struct tpl {
 };
 
 } // namespace foo
-
-constexpr const char* file_format = "%r %c %p %a %t %C %M %F:%L %m%n";
 
 } // namespace
 

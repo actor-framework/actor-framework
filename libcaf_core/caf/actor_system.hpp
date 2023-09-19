@@ -765,18 +765,6 @@ public:
     return tracing_context_;
   }
 
-  std::mutex& logger_dtor_mtx() noexcept {
-    return logger_dtor_mtx_;
-  }
-
-  std::condition_variable& logger_dtor_cv() noexcept {
-    return logger_dtor_cv_;
-  }
-
-  void logger_dtor_done(bool new_logger_dtor_done) noexcept {
-    logger_dtor_done_ = new_logger_dtor_done;
-  }
-
   detail::private_thread* acquire_private_thread();
 
   void release_private_thread(detail::private_thread*);
@@ -850,16 +838,6 @@ private:
 
   /// The system-wide, user-provided configuration.
   actor_system_config& cfg_;
-
-  /// Stores whether the logger has run its destructor and stopped any thread,
-  /// file handle, etc.
-  std::atomic<bool> logger_dtor_done_;
-
-  /// Guards `logger_dtor_done_`.
-  mutable std::mutex logger_dtor_mtx_;
-
-  /// Allows waiting on specific values for `logger_dtor_done_`.
-  mutable std::condition_variable logger_dtor_cv_;
 
   /// Stores the system-wide factory for deserializing tracing data.
   tracing_data_factory* tracing_context_;

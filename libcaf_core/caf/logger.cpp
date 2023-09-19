@@ -213,18 +213,19 @@ public:
     }
   };
 
+  /// Represents a single format string field.
+  struct field {
+    field_type kind;
+    std::string text;
+  };
+
+  /// Stores a parsed format string as list of fields.
+  using line_format = std::vector<field>;
+
   // -- constructors, destructors, and assignment operators --------------------
 
   default_logger(actor_system& sys) : t0_(make_timestamp()), system_(sys) {
     // nop
-  }
-
-  virtual ~default_logger() {
-    stop();
-    // tell system our dtor is done
-    std::unique_lock<std::mutex> guard{system_.logger_dtor_mtx()};
-    system_.logger_dtor_done(true);
-    system_.logger_dtor_cv().notify_one();
   }
 
   // -- logging ----------------------------------------------------------------
@@ -376,16 +377,9 @@ public:
     this->deref();
   }
 
-private:
-  // -- called by the actor_system when running with a test coordinator --------
-
-  void inline_output(bool value) noexcept {
-    cfg_.inline_output = value;
-  }
-
   // -- initialization ---------------------------------------------------------
 
-  void init(actor_system_config& cfg) {
+  void init(const actor_system_config& cfg) override {
     CAF_IGNORE_UNUSED(cfg);
     namespace lg = defaults::logger;
     using std::string;
@@ -399,6 +393,7 @@ private:
       if (auto lst = get_as<string_list>(cfg, key))
         var = std::move(*lst);
     };
+    cfg_.inline_output = get_or(cfg, "caf.scheduler.policy", "") == "testing";
     cfg_.file_verbosity = get_verbosity("caf.logger.file.verbosity");
     cfg_.console_verbosity = get_verbosity("caf.logger.console.verbosity");
     cfg_.verbosity = std::max(cfg_.file_verbosity, cfg_.console_verbosity);
@@ -544,7 +539,7 @@ private:
     }
   }
 
-  void start() {
+  void start() override {
     parent_thread_ = std::this_thread::get_id();
     if (verbosity() == CAF_LOG_LEVEL_QUIET)
       return;
@@ -596,7 +591,7 @@ private:
     }
   }
 
-  void stop() {
+  void stop() override {
     if (cfg_.inline_output) {
       log_last_line();
       return;
@@ -788,30 +783,6 @@ std::string_view logger::skip_path(std::string_view path) {
   for (auto p = find_slash(); p != std::string_view::npos; p = find_slash())
     path.remove_prefix(p + 1);
   return path;
-}
-
-std::string to_string(logger::field_type x) {
-  static constexpr const char* names[]
-    = {"invalid", "category", "class_name", "date",         "file",
-       "line",    "message",  "method",     "newline",      "priority",
-       "runtime", "thread",   "actor",      "percent_sign", "plain_text"};
-  return names[static_cast<size_t>(x)];
-}
-
-std::string to_string(const logger::field& x) {
-  std::string result = "field{";
-  result += to_string(x.kind);
-  if (x.kind == logger::plain_text_field) {
-    result += ", \"";
-    result += x.text;
-    result += '\"';
-  }
-  result += "}";
-  return result;
-}
-
-bool operator==(const logger::field& x, const logger::field& y) {
-  return x.kind == y.kind && x.text == y.text;
 }
 
 } // namespace caf

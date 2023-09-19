@@ -274,7 +274,6 @@ actor_system::actor_system(actor_system_config& cfg)
     dummy_execution_unit_(this),
     await_actors_before_shutdown_(true),
     cfg_(cfg),
-    logger_dtor_done_(false),
     tracing_context_(cfg.tracing_context),
     private_threads_(this) {
   CAF_SET_LOGGER_SYS(this);
@@ -400,10 +399,8 @@ actor_system::~actor_system() {
   }
   // reset logger and wait until dtor was called
   CAF_SET_LOGGER_SYS(nullptr);
+  logger_->stop();
   logger_.reset();
-  std::unique_lock<std::mutex> guard{logger_dtor_mtx_};
-  while (!logger_dtor_done_)
-    logger_dtor_cv_.wait(guard);
 }
 
 /// Returns the scheduler instance.
