@@ -48,6 +48,8 @@ namespace caf {
 /// default, the logger generates log4j compatible output.
 class CAF_CORE_EXPORT logger {
 public:
+  // -- member types -----------------------------------------------------------
+
   /// Encapsulates a single logging event.
   struct CAF_CORE_EXPORT event {
     // -- constructors, destructors, and assignment operators ------------------
@@ -116,15 +118,6 @@ public:
     percent_sign_field,
     plain_text_field
   };
-
-  /// Represents a single format string field.
-  struct field {
-    field_type kind;
-    std::string text;
-  };
-
-  /// Stores a parsed format string as list of fields.
-  using line_format = std::vector<field>;
 
   /// Utility class for building user-defined log messages with `CAF_ARG`.
   class CAF_CORE_EXPORT line_builder {
@@ -217,18 +210,15 @@ public:
 
   // -- initialization ---------------------------------------------------------
 
-  virtual void init(actor_system_config& cfg) = 0;
+  /// Allows the logger to read its configuration from the actor system config.
+  virtual void init(const actor_system_config& cfg) = 0;
 
+  /// Starts any background threads needed by the logger.
   virtual void start() = 0;
+
+  /// Stops all background threads of the logger.
+  virtual void stop() = 0;
 };
-
-CAF_CORE_EXPORT std::string to_string(logger::field_type x);
-
-/// @relates logger::field
-CAF_CORE_EXPORT std::string to_string(const logger::field& x);
-
-/// @relates logger::field
-CAF_CORE_EXPORT bool operator==(const logger::field& x, const logger::field& y);
 
 } // namespace caf
 

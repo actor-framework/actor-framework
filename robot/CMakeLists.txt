@@ -35,6 +35,17 @@ add_test(
       --variable SSL_PATH:${CMAKE_CURRENT_SOURCE_DIR}
       "${CMAKE_CURRENT_SOURCE_DIR}/http/rest.robot")
 
+# The logging test assumes that the CAF_LOG_LEVEL is set to TRACE.
+if (CAF_LOG_LEVEL STREQUAL "TRACE")
+  add_test(
+    NAME "robot-logging-output"
+    COMMAND
+      ${Python_EXECUTABLE}
+        -m robot
+        --variable BINARY_PATH:$<TARGET_FILE:caf-core-logging-driver>
+        "${CMAKE_CURRENT_SOURCE_DIR}/logging/output.robot")
+endif()
+
 add_test(
   NAME "robot-web-socket-quote-server"
   COMMAND
