@@ -23,6 +23,8 @@ message_data::message_data(type_id_list types) noexcept
 }
 
 message_data::~message_data() noexcept {
+  // Note: no need to perform bound checks or nullptr checks here, because
+  //       we verify the type IDs while constructing the message.
   auto gmos = global_meta_objects();
   auto ptr = storage();
   if (constructed_elements_ == types_.size()) {
@@ -41,6 +43,8 @@ message_data::~message_data() noexcept {
 }
 
 message_data* message_data::copy() const {
+  // Note: no need to perform bound checks or nullptr checks here, because
+  //       we verify the type IDs while constructing the original message.
   auto gmos = global_meta_objects();
   size_t storage_size = 0;
   for (auto id : types_)
@@ -64,10 +68,9 @@ message_data* message_data::copy() const {
 
 intrusive_ptr<message_data>
 message_data::make_uninitialized(type_id_list types) {
-  auto gmos = global_meta_objects();
   size_t storage_size = 0;
   for (auto id : types)
-    storage_size += gmos[id].padded_size;
+    storage_size += global_meta_object(id).padded_size;
   auto total_size = sizeof(message_data) + storage_size;
   auto vptr = malloc(total_size);
   if (vptr == nullptr)

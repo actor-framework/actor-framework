@@ -45,6 +45,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   positive value from `consume`.
 - When constructing a `behavior` or `message_handler`, callbacks that take a
   `message` argument are now treated as catch-all handlers.
+- When creating a message with a non-existing type ID, CAF now prints a
+  human-readable error message and calls `abort` instead of crashing the
+  application.
 
 ### Fixed
 
