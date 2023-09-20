@@ -52,15 +52,6 @@ struct fixture {
     cfg.set("caf.logger.file.path", "");
   }
 
-  void add(logger::field_type kind) {
-    lf.emplace_back(logger::field{kind, std::string{}});
-  }
-
-  template <size_t N>
-  void add(logger::field_type kind, const char (&str)[N]) {
-    lf.emplace_back(logger::field{kind, std::string{str, str + (N - 1)}});
-  }
-
   template <class F, class... Ts>
   string render(F f, Ts&&... xs) {
     std::ostringstream oss;
@@ -69,7 +60,6 @@ struct fixture {
   }
 
   actor_system_config cfg;
-  logger::line_format lf;
 };
 
 void fun() {
@@ -118,39 +108,9 @@ struct tpl {
 
 } // namespace foo
 
-constexpr const char* file_format = "%r %c %p %a %t %C %M %F:%L %m%n";
-
 } // namespace
 
 BEGIN_FIXTURE_SCOPE(fixture)
-
-// copy construction, copy assign, move construction, move assign
-// and finally serialization round-trip
-CAF_TEST(parse_default_format_strings) {
-  actor_system sys{cfg};
-  add(logger::runtime_field);
-  add(logger::plain_text_field, " ");
-  add(logger::category_field);
-  add(logger::plain_text_field, " ");
-  add(logger::priority_field);
-  add(logger::plain_text_field, " ");
-  add(logger::actor_field);
-  add(logger::plain_text_field, " ");
-  add(logger::thread_field);
-  add(logger::plain_text_field, " ");
-  add(logger::class_name_field);
-  add(logger::plain_text_field, " ");
-  add(logger::method_field);
-  add(logger::plain_text_field, " ");
-  add(logger::file_field);
-  add(logger::plain_text_field, ":");
-  add(logger::line_field);
-  add(logger::plain_text_field, " ");
-  add(logger::message_field);
-  add(logger::newline_field);
-  CHECK_EQ(logger::parse_format(file_format), lf);
-  CHECK_EQ(sys.logger().file_format(), lf);
-}
 
 CAF_TEST(rendering) {
   // Rendering of time points.
@@ -158,8 +118,6 @@ CAF_TEST(rendering) {
   time_t t0_t = 0;
   char t0_buf[50];
   strftime(t0_buf, sizeof(t0_buf), "%Y-%m-%dT%H:%M:%S", localtime(&t0_t));
-  // Note: we use starts_with because we cannot predict the exact time zone.
-  CHECK(starts_with(render(logger::render_date, t0), t0_buf));
   // Rendering of events.
   logger::event e{
     CAF_LOG_LEVEL_WARNING,
@@ -173,16 +131,7 @@ CAF_TEST(rendering) {
     0,
     t0,
   };
-  CHECK_EQ(render(logger::render_fun_name, e), "bar"sv);
   CHECK_EQ(render(logger::render_fun_prefix, e), "ns.foo"sv);
-  // Exclude %r and %t from rendering test because they are nondeterministic.
-  actor_system sys{cfg};
-  auto lf = logger::parse_format("%c %p %a %C %M %F:%L %m");
-  auto& lg = sys.logger();
-  using namespace std::placeholders;
-  auto render_event = bind(&logger::render, &lg, _1, _2, _3);
-  CHECK_EQ(render(render_event, lf, e),
-           "unit_test WARN actor0 ns.foo bar foo.cpp:42 hello world");
 }
 
 CAF_TEST(render_fun_prefix) {

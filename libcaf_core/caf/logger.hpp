@@ -46,40 +46,9 @@ namespace caf {
 /// Centrally logs events from all actors in an actor system. To enable
 /// logging in your application, you need to define `CAF_LOG_LEVEL`. Per
 /// default, the logger generates log4j compatible output.
-class CAF_CORE_EXPORT logger : public ref_counted {
+class CAF_CORE_EXPORT logger {
 public:
-  // -- friends ----------------------------------------------------------------
-
-  friend class actor_system;
-
-  // -- constants --------------------------------------------------------------
-
-  /// Configures the size of the circular event queue.
-  static constexpr size_t queue_size = 128;
-
   // -- member types -----------------------------------------------------------
-
-  /// Combines various logging-related flags and parameters into a bitfield.
-  struct config {
-    /// Stores `max(file_verbosity, console_verbosity)`.
-    unsigned verbosity : 4;
-
-    /// Configures the verbosity for file output.
-    unsigned file_verbosity : 4;
-
-    /// Configures the verbosity for console output.
-    unsigned console_verbosity : 4;
-
-    /// Configures whether the logger immediately writes its output in the
-    /// calling thread, bypassing its queue. Use this option only in
-    /// single-threaded test environments.
-    bool inline_output : 1;
-
-    /// Configures whether the logger generates colored output.
-    bool console_coloring : 1;
-
-    config();
-  };
 
   /// Encapsulates a single logging event.
   struct CAF_CORE_EXPORT event {
@@ -150,15 +119,6 @@ public:
     plain_text_field
   };
 
-  /// Represents a single format string field.
-  struct field {
-    field_type kind;
-    std::string text;
-  };
-
-  /// Stores a parsed format string as list of fields.
-  using line_format = std::vector<field>;
-
   /// Utility class for building user-defined log messages with `CAF_ARG`.
   class CAF_CORE_EXPORT line_builder {
   public:
@@ -191,13 +151,13 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  ~logger() override;
+  virtual ~logger() = default;
 
   // -- logging ----------------------------------------------------------------
 
   /// Writes an entry to the event-queue of the logger.
   /// @thread-safe
-  void log(event&& x);
+  virtual void log(event&& x) = 0;
 
   // -- properties -------------------------------------------------------------
 
@@ -209,52 +169,18 @@ public:
 
   /// Returns whether the logger is configured to accept input for given
   /// component and log level.
-  bool accepts(unsigned level, std::string_view component_name);
-
-  /// Returns the output format used for the log file.
-  const line_format& file_format() const {
-    return file_format_;
-  }
-
-  /// Returns the output format used for the console.
-  const line_format& console_format() const {
-    return console_format_;
-  }
-
-  unsigned verbosity() const noexcept {
-    return cfg_.verbosity;
-  }
-
-  unsigned file_verbosity() const noexcept {
-    return cfg_.file_verbosity;
-  }
-
-  unsigned console_verbosity() const noexcept {
-    return cfg_.console_verbosity;
-  }
+  virtual bool accepts(unsigned level, std::string_view component_name) = 0;
 
   // -- static utility functions -----------------------------------------------
+
+  /// Creates a new logger instance.
+  static intrusive_ptr<logger> make(actor_system& sys);
 
   /// Renders the prefix (namespace and class) of a fully qualified function.
   static void render_fun_prefix(std::ostream& out, const event& x);
 
-  /// Renders the name of a fully qualified function.
-  static void render_fun_name(std::ostream& out, const event& x);
-
-  /// Renders the date of `x` in ISO 8601 format.
-  static void render_date(std::ostream& out, timestamp x);
-
-  /// Parses `format_str` into a format description vector.
-  /// @warning The returned vector can have pointers into `format_str`.
-  static line_format parse_format(const std::string& format_str);
-
   /// Skips path in `filename`.
   static std::string_view skip_path(std::string_view filename);
-
-  // -- utility functions ------------------------------------------------------
-
-  /// Renders `x` using the line format `lf` to `out`.
-  void render(std::ostream& out, const line_format& lf, const event& x) const;
 
   // -- thread-local properties ------------------------------------------------
 
@@ -265,93 +191,34 @@ public:
   /// registered.
   static logger* current_logger();
 
-private:
-  // -- constructors, destructors, and assignment operators --------------------
+  // -- reference counting -----------------------------------------------------
 
-  logger(actor_system& sys);
+  /// Increases the reference count of the logger.
+  virtual void ref_logger() const noexcept = 0;
 
-  // -- called by the actor_system when running with a test coordinator --------
+  /// Decreases the reference count of the logger and destroys the object
+  /// if necessary.
+  virtual void deref_logger() const noexcept = 0;
 
-  void inline_output(bool value) noexcept {
-    cfg_.inline_output = value;
+  friend void intrusive_ptr_add_ref(const logger* ptr) noexcept {
+    ptr->ref_logger();
+  }
+
+  friend void intrusive_ptr_release(const logger* ptr) noexcept {
+    ptr->deref_logger();
   }
 
   // -- initialization ---------------------------------------------------------
 
-  void init(actor_system_config& cfg);
+  /// Allows the logger to read its configuration from the actor system config.
+  virtual void init(const actor_system_config& cfg) = 0;
 
-  bool open_file();
+  /// Starts any background threads needed by the logger.
+  virtual void start() = 0;
 
-  // -- event handling ---------------------------------------------------------
-
-  void handle_event(const event& x);
-
-  void handle_file_event(const event& x);
-
-  void handle_console_event(const event& x);
-
-  void log_first_line();
-
-  void log_last_line();
-
-  // -- thread management ------------------------------------------------------
-
-  void run();
-
-  void start();
-
-  void stop();
-
-  // -- member variables -------------------------------------------------------
-
-  // Configures verbosity and output generation.
-  config cfg_;
-
-  // Filters events by component name before enqueuing a log event. Intersection
-  // of file_filter_ and console_filter_ if both outputs are enabled.
-  std::vector<std::string> global_filter_;
-
-  // Filters events by component name for file output.
-  std::vector<std::string> file_filter_;
-
-  // Filters events by component name for console output.
-  std::vector<std::string> console_filter_;
-
-  // References the parent system.
-  actor_system& system_;
-
-  // Identifies the thread that called `logger::start`.
-  std::thread::id parent_thread_;
-
-  // Timestamp of the first log event.
-  timestamp t0_;
-
-  // Format for generating file output.
-  line_format file_format_;
-
-  // Format for generating console output.
-  line_format console_format_;
-
-  // Stream for file output.
-  std::fstream file_;
-
-  // Filled with log events by other threads.
-  detail::sync_ring_buffer<event, queue_size> queue_;
-
-  // Stores the assembled name of the log file.
-  std::string file_name_;
-
-  // Executes `logger::run`.
-  std::thread thread_;
+  /// Stops all background threads of the logger.
+  virtual void stop() = 0;
 };
-
-CAF_CORE_EXPORT std::string to_string(logger::field_type x);
-
-/// @relates logger::field
-CAF_CORE_EXPORT std::string to_string(const logger::field& x);
-
-/// @relates logger::field
-CAF_CORE_EXPORT bool operator==(const logger::field& x, const logger::field& y);
 
 } // namespace caf
 

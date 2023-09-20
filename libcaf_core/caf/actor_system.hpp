@@ -839,16 +839,6 @@ private:
   /// The system-wide, user-provided configuration.
   actor_system_config& cfg_;
 
-  /// Stores whether the logger has run its destructor and stopped any thread,
-  /// file handle, etc.
-  std::atomic<bool> logger_dtor_done_;
-
-  /// Guards `logger_dtor_done_`.
-  mutable std::mutex logger_dtor_mtx_;
-
-  /// Allows waiting on specific values for `logger_dtor_done_`.
-  mutable std::condition_variable logger_dtor_cv_;
-
   /// Stores the system-wide factory for deserializing tracing data.
   tracing_data_factory* tracing_context_;
 

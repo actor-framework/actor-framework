@@ -396,3 +396,10 @@ endif()
 if(CAF_ENABLE_TESTING AND CAF_ENABLE_EXCEPTIONS)
   caf_add_legacy_test_suites(caf-core-legacy-test custom_exception_handler)
 endif()
+
+caf_add_test_executable(
+  caf-core-logging-driver
+  SOURCES
+    tests/integration/logging.cpp
+  DEPENDENCIES
+    CAF::core)

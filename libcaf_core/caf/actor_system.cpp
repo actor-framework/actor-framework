@@ -268,13 +268,12 @@ actor_system::actor_system(actor_system_config& cfg)
     ids_(0),
     metrics_(cfg),
     base_metrics_(make_base_metrics(metrics_)),
-    logger_(new caf::logger(*this), false),
+    logger_(caf::logger::make(*this)),
     registry_(*this),
     groups_(*this),
     dummy_execution_unit_(this),
     await_actors_before_shutdown_(true),
     cfg_(cfg),
-    logger_dtor_done_(false),
     tracing_context_(cfg.tracing_context),
     private_threads_(this) {
   CAF_SET_LOGGER_SYS(this);
@@ -351,9 +350,6 @@ actor_system::actor_system(actor_system_config& cfg)
   // Initialize state for each module and give each module the opportunity to
   // adapt the system configuration.
   logger_->init(cfg);
-  // When running with the test coordinator, generate logs in the same thread.
-  if (!scheduler().detaches_utility_actors())
-    logger_->inline_output(true);
   CAF_SET_LOGGER_SYS(this);
   for (auto& mod : modules_)
     if (mod)
@@ -403,10 +399,8 @@ actor_system::~actor_system() {
   }
   // reset logger and wait until dtor was called
   CAF_SET_LOGGER_SYS(nullptr);
+  logger_->stop();
   logger_.reset();
-  std::unique_lock<std::mutex> guard{logger_dtor_mtx_};
-  while (!logger_dtor_done_)
-    logger_dtor_cv_.wait(guard);
 }
 
 /// Returns the scheduler instance.
