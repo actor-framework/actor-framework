@@ -3,7 +3,7 @@
 #include "caf/caf_main.hpp"
 #include "caf/logger.hpp"
 
-void foo(int value) {
+void foo([[maybe_unused]] int value) {
   CAF_LOG_TRACE(CAF_ARG(value));
   CAF_LOG_DEBUG("this is a debug message");
   CAF_LOG_INFO("this is an info message");
