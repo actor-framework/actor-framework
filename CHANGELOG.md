@@ -25,6 +25,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   member function: `observe_on`. It converts the publisher back into an
   observable. This new abstraction allows users to set up asynchronous flows
   without having to manually deal with SPSC buffers.
+- The flow API received additional operators: `first`, `last`, `take_last`,
+  `skip_last`, `element_at`, and `ignore_elements`.
 
 ### Changed
 

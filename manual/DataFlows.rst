@@ -206,6 +206,14 @@ been emitted in the past.
 
 .. image:: op/distinct.svg
 
+Element At
+++++++++++
+
+The ``element_at`` operator re-emits the item at a given index while ignoring
+all other items.
+
+.. image:: op/element_at.svg
+
 Filter
 ++++++
 
@@ -213,6 +221,13 @@ The ``filter`` operator re-emits items from its input observable that pass a
 predicate test.
 
 .. image:: op/filter.svg
+
+First
++++++
+
+The ``first`` operator re-emits only the first item of the input observable.
+
+.. image:: op/first.svg
 
 Flat Map
 ++++++++
@@ -229,6 +244,22 @@ The ``head_and_tail`` operator splits an ``observable`` into its first item and
 an ``observable`` for the remainder.
 
 .. image:: op/head_and_tail.svg
+
+Ignore Elements
++++++++++++++++
+
+The ``ignore_elements`` operator ignores all items of the input observable and
+only emits the completion (or error) signal.
+
+.. image:: op/ignore_elements.svg
+
+Last
+++++
+
+The ``last`` operator re-emits only the last item of the input observable.
+
+.. image:: op/last.svg
+
 
 Map
 +++
@@ -283,6 +314,14 @@ more subscription), the ``ref_count`` operators unsubscribes from its source.
 
 .. image:: op/ref_count.svg
 
+Skip Last
++++++++++
+
+The ``skip_last`` operator re-emits all but the last ``n`` items from its input
+observable.
+
+.. image:: op/skip_last.svg
+
 Skip
 ++++
 
@@ -298,6 +337,14 @@ The ``sum`` operator accumulates all items and emits the result after the input
 ``observable`` has completed.
 
 .. image:: op/sum.svg
+
+Take Last
++++++++++
+
+The ``take_last`` operator re-emits the last ``n`` items from its input
+observable.
+
+.. image:: op/take_last.svg
 
 Take
 ++++
