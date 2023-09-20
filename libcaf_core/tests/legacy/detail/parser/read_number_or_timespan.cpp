@@ -29,8 +29,10 @@ struct number_or_timespan_parser_consumer {
 
 struct res_t {
   std::variant<pec, double, int64_t, timespan> val;
-  template <class T>
-  explicit res_t(T&& x) : val(std::forward<T>(x)) {
+  res_t(const res_t&) = default;
+  res_t(res_t&&) = default;
+  template <class T, class E = std::enable_if_t<!std::is_same_v<T, res_t>>>
+  res_t(T&& x) : val(std::forward<T>(x)) {
     // nop
   }
 };

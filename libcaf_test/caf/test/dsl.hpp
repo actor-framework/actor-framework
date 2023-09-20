@@ -22,7 +22,7 @@ struct wildcard {};
 
 /// Allows ignoring individual messages elements in `expect` clauses, e.g.
 /// `expect((int, int), from(foo).to(bar).with(1, _))`.
-constexpr wildcard _ = wildcard{};
+constexpr wildcard _ = wildcard{}; // NOLINT(bugprone-reserved-identifier)
 
 /// @relates wildcard
 constexpr bool operator==(const wildcard&, const wildcard&) {
@@ -564,16 +564,14 @@ public:
     if (!dest_) {
       return false;
     }
-    if (auto msg_ptr = dest_->peek_at_next_mailbox_element(); !msg_ptr) {
+    if (auto msg_ptr = dest_->peek_at_next_mailbox_element();
+        !msg_ptr || (src_ && msg_ptr->sender != src_))
       return false;
-    } else if (src_ && msg_ptr->sender != src_) {
-      return false;
-    } else if (peek_()) {
+    if (peek_()) {
       run_once();
       return true;
-    } else {
-      return false;
     }
+    return false;
   }
 
 protected:

@@ -76,7 +76,7 @@ TEST("lists are movable") {
   SECTION("move constructor") {
     fill(uut, 1, 2, 3);
     list_type q2 = std::move(uut);
-    check_eq(uut.empty(), true);
+    check_eq(uut.empty(), true); // NOLINT(bugprone-use-after-move)
     check_eq(q2.empty(), false);
     check_eq(deep_to_string(q2), "[1, 2, 3]");
   }
@@ -84,7 +84,7 @@ TEST("lists are movable") {
     list_type q2;
     fill(q2, 1, 2, 3);
     uut = std::move(q2);
-    check_eq(q2.empty(), true);
+    check_eq(q2.empty(), true); // NOLINT(bugprone-use-after-move)
     check_eq(uut.empty(), false);
     check_eq(deep_to_string(uut), "[1, 2, 3]");
   }

@@ -46,7 +46,7 @@ time_t tm_to_time_t(tm& time_buf) noexcept {
 
 namespace {
 
-int utc_offset(const tm& time_buf) noexcept {
+long int utc_offset(const tm& time_buf) noexcept {
   return time_buf.tm_gmtoff;
 }
 

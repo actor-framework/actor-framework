@@ -123,7 +123,7 @@ bool framing::end_message() {
   using detail::to_network_order;
   auto& buf = down_->output_buffer();
   CAF_ASSERT(message_offset_ < buf.size());
-  auto msg_begin = buf.begin() + message_offset_;
+  auto msg_begin = buf.begin() + static_cast<ptrdiff_t>(message_offset_);
   auto msg_size = std::distance(msg_begin + 4, buf.end());
   if (msg_size > 0 && static_cast<size_t>(msg_size) < max_message_length) {
     auto u32_size = to_network_order(static_cast<uint32_t>(msg_size));

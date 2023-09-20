@@ -132,17 +132,17 @@ TEST_CASE("resources may be moved") {
   CHECK(wr);
   // Test move constructor.
   async::consumer_resource<int> rd2{std::move(rd)};
-  CHECK(!rd);
+  CHECK(!rd); // NOLINT(bugprone-use-after-move)
   CHECK(rd2);
   async::producer_resource<int> wr2{std::move(wr)};
-  CHECK(!wr);
+  CHECK(!wr); // NOLINT(bugprone-use-after-move)
   CHECK(wr2);
   // Test move-assignment.
   async::consumer_resource<int> rd3{std::move(rd2)};
-  CHECK(!rd2);
+  CHECK(!rd2); // NOLINT(bugprone-use-after-move)
   CHECK(rd3);
   async::producer_resource<int> wr3{std::move(wr2)};
-  CHECK(!wr2);
+  CHECK(!wr2); // NOLINT(bugprone-use-after-move)
   CHECK(wr3);
 }
 

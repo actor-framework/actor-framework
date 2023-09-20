@@ -65,9 +65,7 @@ public:
   fixed_stack(actor_config& cfg, size_t stack_size)
     : event_based_actor(cfg), size_(stack_size) {
     full_.assign( //
-      [this](push_atom, int) -> error {
-        return fixed_stack_errc::push_to_full;
-      },
+      [](push_atom, int) -> error { return fixed_stack_errc::push_to_full; },
       [this](pop_atom) -> int {
         auto result = data_.back();
         data_.pop_back();

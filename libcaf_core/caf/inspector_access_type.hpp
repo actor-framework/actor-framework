@@ -56,7 +56,7 @@ constexpr auto inspect_access_type() {
   //        > inspector_access > inspect > trivial > defaults.
   if constexpr (is_allowed_unsafe_message_type_v<T>)
     return inspector_access_type::unsafe{};
-  else if constexpr (std::is_array<T>::value)
+  else if constexpr (std::is_array<T>::value || is_stl_tuple_type_v<T>)
     return inspector_access_type::tuple{};
   else if constexpr (detail::is_builtin_inspector_type<
                        T, Inspector::is_loading>::value)
@@ -69,8 +69,6 @@ constexpr auto inspect_access_type() {
     return inspector_access_type::inspect{};
   else if constexpr (std::is_empty<T>::value)
     return inspector_access_type::empty{};
-  else if constexpr (is_stl_tuple_type_v<T>)
-    return inspector_access_type::tuple{};
   else if constexpr (is_map_like_v<T>)
     return inspector_access_type::map{};
   else if constexpr (is_list_like_v<T>)

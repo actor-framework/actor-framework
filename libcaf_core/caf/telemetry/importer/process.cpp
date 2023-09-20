@@ -251,9 +251,9 @@ sys_stats read_sys_stats() {
     }
     result.rss = static_cast<int64_t>(rss_pages) * page_size;
     result.vms = static_cast<int64_t>(vmsize_bytes);
-    result.cpu_time = utime_ticks;
-    result.cpu_time += stime_ticks;
-    result.cpu_time /= ticks_per_second;
+    result.cpu_time = static_cast<double>(utime_ticks);
+    result.cpu_time += static_cast<double>(stime_ticks);
+    result.cpu_time /= static_cast<double>(ticks_per_second);
   }
   result.fds = count_entries_in_directory("/proc/self/fd");
   return result;

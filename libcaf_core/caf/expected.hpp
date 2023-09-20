@@ -4,6 +4,8 @@
 
 #pragma once
 
+// NOLINTBEGIN(bugprone-unchecked-optional-access)
+
 #include "caf/config.hpp"
 #include "caf/deep_to_string.hpp"
 #include "caf/detail/type_traits.hpp"
@@ -1005,3 +1007,5 @@ operator<<(ostream& oss, const caf::expected<T>& x) -> decltype(oss << *x) {
 }
 
 } // namespace std
+
+// NOLINTEND(bugprone-unchecked-optional-access)

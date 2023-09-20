@@ -56,7 +56,9 @@ struct range_consumer {
 
 struct res_t {
   std::variant<pec, double, int64_t> val;
-  template <class T>
+  res_t(const res_t&) = default;
+  res_t(res_t&&) = default;
+  template <class T, class E = std::enable_if_t<!std::is_same_v<T, res_t>>>
   res_t(T&& x) : val(std::forward<T>(x)) {
     // nop
   }

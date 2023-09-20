@@ -27,8 +27,8 @@ public:
   }
 
   promise& operator=(const promise& other) noexcept {
-    promise copy{other};
-    cell_.swap(copy.cell_);
+    if (this != &other)
+      return *this = promise{other};
     return *this;
   }
 

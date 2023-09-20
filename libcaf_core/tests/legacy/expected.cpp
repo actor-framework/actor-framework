@@ -44,6 +44,8 @@ using e_iptr = expected<counted_int_ptr>;
 
 } // namespace
 
+// NOLINTBEGIN(bugprone-use-after-move)
+
 TEST_CASE("expected reports its status via has_value() or operator bool()") {
   e_int x{42};
   CHECK(x);
@@ -935,3 +937,5 @@ TEST_CASE("transform_or does nothing when called with a value") {
     CHECK(v5);
   }
 }
+
+// NOLINTEND(bugprone-use-after-move)

@@ -366,11 +366,9 @@ void scheduled_actor::quit(error x) {
 void scheduled_actor::set_receive_timeout() {
   CAF_LOG_TRACE("");
   pending_timeout_.dispose();
-  if (bhvr_stack_.empty()) {
-    // nop
-  } else if (auto delay = bhvr_stack_.back().timeout(); delay == infinite) {
-    // nop
-  } else {
+  if (bhvr_stack_.empty())
+    return;
+  if (auto delay = bhvr_stack_.back().timeout(); delay != infinite) {
     pending_timeout_ = run_delayed(delay, [this] {
       if (!bhvr_stack_.empty())
         bhvr_stack_.back().handle_timeout();

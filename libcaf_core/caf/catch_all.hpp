@@ -16,17 +16,17 @@ template <class F>
 struct catch_all {
   using fun_type = std::function<skippable_result(message&)>;
 
-  static_assert(std::is_convertible_v<F, fun_type>,
-                "catch-all handler must have signature "
-                "skippable_result (message&)");
+  static_assert(
+    std::is_convertible_v<F, fun_type>,
+    "catch-all handler must have signature skippable_result (message&)");
 
   F handler;
 
-  catch_all(catch_all&& x) : handler(std::move(x.handler)) {
-    // nop
-  }
+  catch_all(const catch_all& x) = default;
 
-  template <class T>
+  catch_all(catch_all&& x) = default;
+
+  template <class T, class = std::enable_if_t<!std::is_same_v<T, catch_all>>>
   catch_all(T&& x) : handler(std::forward<T>(x)) {
     // nop
   }

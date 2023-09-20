@@ -57,8 +57,8 @@ struct copy_state {
   // Callback for the format string parser.
   void after_width() {
     CAF_ASSERT(width.has_value());
-    if (align == 0) // if alignment is set, we manage the width ourselves
-      print(fstr, *width);
+    if (align == 0)        // if alignment is set, we manage the width ourselves
+      print(fstr, *width); // NOLINT(bugprone-unchecked-optional-access)
   }
 
   // Callback for the format string parser.

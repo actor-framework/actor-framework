@@ -16,7 +16,7 @@ namespace caf::detail {
 namespace {
 
 // Cap incoming HTTP requests.
-constexpr size_t max_request_size = 512 * 1024;
+constexpr size_t max_request_size = 512 * 1024ul;
 
 // HTTP response for requests that exceed the size limit.
 constexpr std::string_view request_too_large
@@ -95,7 +95,7 @@ behavior prometheus_broker::make_behavior() {
     [this](const io::new_connection_msg& msg) {
       // Pre-allocate buffer for maximum request size.
       auto& req = requests_[msg.handle];
-      req.reserve(512 * 1024);
+      req.reserve(max_request_size);
       configure_read(msg.handle, io::receive_policy::at_most(1024));
     },
     [this](const io::connection_closed_msg& msg) {

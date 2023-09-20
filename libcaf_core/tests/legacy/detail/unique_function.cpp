@@ -89,6 +89,8 @@ CAF_TEST(custom wrapper construction) {
   CHECK(instances == 0);
 }
 
+// NOLINTBEGIN(bugprone-use-after-move)
+
 CAF_TEST(function move construction) {
   int_fun f{forty_two};
   int_fun g{std::move(f)};
@@ -162,3 +164,5 @@ CAF_TEST(move assign) {
   CHECK_INVALID(g);
   CHECK_INVALID(h);
 }
+
+// NOLINTEND(bugprone-use-after-move)

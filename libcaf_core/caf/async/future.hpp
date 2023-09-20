@@ -62,7 +62,8 @@ public:
       }
     }
     if (fire_immediately)
-      event.first->schedule(std::move(event.second));
+      event.first->schedule(      // NOLINT(bugprone-use-after-move)
+        std::move(event.second)); // NOLINT(bugprone-use-after-move)
     auto res = std::move(cb_action).as_disposable();
     ctx_->watch(res);
     return res;

@@ -41,7 +41,7 @@ CAF_TEST(copy_construction) {
 CAF_TEST(move_construction) {
   cow_tuple<int, int> x{1, 2};
   cow_tuple<int, int> y{std::move(x)};
-  CHECK_EQ(x.ptr(), nullptr);
+  CHECK_EQ(x.ptr(), nullptr); // NOLINT(bugprone-use-after-move)
   CHECK_EQ(y, make_tuple(1, 2));
   CHECK_EQ(y.unique(), true);
 }

@@ -93,7 +93,7 @@ public:
   behavior_type wait4string() {
     return {
       partial_behavior_init,
-      [this](get_state_atom) { return "wait4string"; },
+      [](get_state_atom) { return "wait4string"; },
       [this](const string&) { become(wait4int()); },
     };
   }
@@ -101,7 +101,7 @@ public:
   behavior_type wait4int() {
     return {
       partial_behavior_init,
-      [this](get_state_atom) { return "wait4int"; },
+      [](get_state_atom) { return "wait4int"; },
       [this](int) -> int {
         become(wait4float());
         return 42;
@@ -112,7 +112,7 @@ public:
   behavior_type wait4float() {
     return {
       partial_behavior_init,
-      [this](get_state_atom) { return "wait4float"; },
+      [](get_state_atom) { return "wait4float"; },
       [this](float) { become(wait4string()); },
     };
   }

@@ -111,7 +111,7 @@ public:
   val& operator=(const val&) = default;
 
   const T& get() const noexcept {
-    return *data_;
+    return *data_; // NOLINT(bugprone-unchecked-optional-access)
   }
 
   explicit operator bool() const noexcept {

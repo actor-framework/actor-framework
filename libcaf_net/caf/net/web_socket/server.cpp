@@ -38,7 +38,7 @@ ptrdiff_t server::consume(byte_span input, byte_span) {
   } else if (!handle_header(hdr)) {
     return -1;
   } else {
-    return hdr.size();
+    return static_cast<ptrdiff_t>(hdr.size());
   }
 }
 
