@@ -76,6 +76,7 @@ meta_object make_meta_object(std::string_view type_name) {
   return {
     type_name,
     padded_size_v<T>,
+    sizeof(T),
     default_function::destroy<T>,
     default_function::default_construct<T>,
     default_function::copy_construct<T>,

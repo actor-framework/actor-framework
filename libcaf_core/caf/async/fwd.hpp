@@ -39,9 +39,4 @@ class spsc_buffer;
 
 using execution_context_ptr = intrusive_ptr<execution_context>;
 
-// -- free function templates --------------------------------------------------
-
-template <class T>
-batch make_batch(span<const T> items);
-
 } // namespace caf::async

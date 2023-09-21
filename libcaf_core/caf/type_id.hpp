@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/async/fwd.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/is_complete.hpp"
 #include "caf/detail/pp.hpp"
@@ -400,6 +401,7 @@ CAF_BEGIN_TYPE_ID_BLOCK(core_module, 0)
   CAF_ADD_TYPE_ID(core_module, (caf::action))
   CAF_ADD_TYPE_ID(core_module, (caf::actor))
   CAF_ADD_TYPE_ID(core_module, (caf::actor_addr))
+  CAF_ADD_TYPE_ID(core_module, (caf::async::batch))
   CAF_ADD_TYPE_ID(core_module, (caf::byte_buffer))
   CAF_ADD_TYPE_ID(core_module, (caf::config_value))
   CAF_ADD_TYPE_ID(core_module, (caf::cow_string))

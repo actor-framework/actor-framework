@@ -10,6 +10,14 @@ if (NOT ${EXIT_CODE} EQUAL 0)
   message(FATAL_ERROR "Failed to import the 'robot' Python package")
 endif()
 
+caf_add_test_executable(
+  caf-robot-stream-driver
+  SOURCES
+    stream/driver.cpp
+  DEPENDENCIES
+    CAF::core
+    CAF::io)
+
 add_test(
   NAME "robot-config-read-config-file"
   COMMAND
@@ -45,6 +53,14 @@ if (CAF_LOG_LEVEL STREQUAL "TRACE")
         --variable BINARY_PATH:$<TARGET_FILE:caf-core-logging-driver>
         "${CMAKE_CURRENT_SOURCE_DIR}/logging/output.robot")
 endif()
+
+add_test(
+  NAME "robot-stream-remote"
+  COMMAND
+    ${Python_EXECUTABLE}
+      -m robot
+      --variable BINARY_PATH:$<TARGET_FILE:caf-robot-stream-driver>
+      "${CMAKE_CURRENT_SOURCE_DIR}/stream/remote.robot")
 
 add_test(
   NAME "robot-web-socket-quote-server"

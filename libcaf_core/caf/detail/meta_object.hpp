@@ -24,6 +24,9 @@ struct meta_object {
   /// aligning to `max_align_t`.
   size_t padded_size;
 
+  /// Stores the result of `sizeof` for the type.
+  size_t simple_size;
+
   /// Calls the destructor for given object.
   void (*destroy)(void*) noexcept;
 
