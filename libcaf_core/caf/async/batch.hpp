@@ -32,14 +32,11 @@
 
 namespace caf::async {
 
-/// A reference-counted container for transferring items from publishers to
-/// subscribers.
+/// A reference-counted, type-erased container for transferring items from
+/// producers to consumers.
 class CAF_CORE_EXPORT batch {
 public:
-  template <class T>
-  friend batch make_batch(span<const T> items);
-
-  using item_destructor = void (*)(type_id_t, uint16_t, size_t, std::byte*);
+  using item_destructor = void (*)(type_id_t, size_t, size_t, std::byte*);
 
   batch() = default;
   batch(batch&&) = default;
@@ -55,14 +52,15 @@ public:
     return data_ ? data_->size() == 0 : true;
   }
 
-  template <class T>
-  span<T> items() noexcept {
-    return data_ ? data_->items<T>() : span<T>{};
+  type_id_t item_type() const noexcept {
+    return data_ ? data_->item_type_ : invalid_type_id;
   }
 
   template <class T>
-  span<const T> items() const noexcept {
-    return data_ ? data_->items<T>() : span<const T>{};
+  span<const T> items() const {
+    if (item_type() == type_id_v<T>)
+      return data_->items<T>();
+    return span<const T>{};
   }
 
   bool save(serializer& f) const;
@@ -77,6 +75,37 @@ public:
     data_.swap(other.data_);
   }
 
+  template <class List>
+  static batch from(const List& items) {
+    if (items.empty())
+      return {};
+    using value_type = typename List::value_type;
+    static_assert(sizeof(value_type) < 0xFFFF);
+    auto total_size = sizeof(batch::data) + (items.size() * sizeof(value_type));
+    auto vptr = malloc(total_size);
+    if (vptr == nullptr)
+      CAF_RAISE_ERROR(std::bad_alloc, "failed to allocate memory for batch");
+    auto destroy_items = [](type_id_t, size_t, size_t size,
+                            std::byte* storage) {
+      auto ptr = reinterpret_cast<value_type*>(storage);
+      std::destroy(ptr, ptr + size);
+    };
+    // We start the item count at 0 and increment it for each successfully
+    // loaded item. This makes sure that the destructor only destroys fully
+    // constructed items in case of an error or exception.
+    intrusive_ptr<batch::data> ptr{
+      new (vptr) batch::data(destroy_items, type_id_or_invalid<value_type>(),
+                             sizeof(value_type), 0),
+      false};
+    auto* storage = ptr->storage_;
+    for (const auto& item : items) {
+      new (storage) value_type(item);
+      ++ptr->size_;
+      storage += sizeof(value_type);
+    }
+    return batch{std::move(ptr)};
+  }
+
 private:
   template <class Inspector>
   bool save_impl(Inspector& f) const;
@@ -86,13 +115,15 @@ private:
 
   class data {
   public:
+    friend class batch;
+
     data() = delete;
 
     data(const data&) = delete;
 
     data& operator=(const data&) = delete;
 
-    data(item_destructor destroy_items, type_id_t item_type, uint16_t item_size,
+    data(item_destructor destroy_items, type_id_t item_type, size_t item_size,
          size_t size)
       : rc_(1),
         destroy_items_(destroy_items),
@@ -134,25 +165,16 @@ private:
 
     // -- properties -----------------------------------------------------------
 
-    type_id_t item_type() {
+    type_id_t item_type() const noexcept {
       return item_type_;
     }
 
-    size_t size() noexcept {
+    size_t size() const noexcept {
       return size_;
-    }
-
-    std::byte* storage() noexcept {
-      return storage_;
     }
 
     const std::byte* storage() const noexcept {
       return storage_;
-    }
-
-    template <class T>
-    span<T> items() noexcept {
-      return {reinterpret_cast<T*>(storage_), size_};
     }
 
     template <class T>
@@ -166,14 +188,11 @@ private:
     template <class Inspector>
     bool save(Inspector& sink) const;
 
-    template <class Inspector>
-    bool load(Inspector& source);
-
   private:
     mutable std::atomic<size_t> rc_;
     item_destructor destroy_items_;
     type_id_t item_type_;
-    uint16_t item_size_;
+    size_t item_size_;
     size_t size_;
     std::byte storage_[];
   };
@@ -197,25 +216,9 @@ auto inspect(Inspector& f, batch& x)
   return x.load(f);
 }
 
-template <class T>
-batch make_batch(span<const T> items) {
-  static_assert(sizeof(T) < 0xFFFF);
-  auto total_size = sizeof(batch::data) + (items.size() * sizeof(T));
-  auto vptr = malloc(total_size);
-  if (vptr == nullptr)
-    CAF_RAISE_ERROR(std::bad_alloc, "make_batch");
-  auto destroy_items = [](type_id_t, uint16_t, size_t size,
-                          std::byte* storage) {
-    auto ptr = reinterpret_cast<T*>(storage);
-    std::destroy(ptr, ptr + size);
-  };
-  intrusive_ptr<batch::data> ptr{
-    new (vptr) batch::data(destroy_items, type_id_or_invalid<T>(),
-                           static_cast<uint16_t>(sizeof(T)), items.size()),
-    false};
-  std::uninitialized_copy(items.begin(), items.end(),
-                          reinterpret_cast<T*>(ptr->storage()));
-  return batch{std::move(ptr)};
+template <class List>
+batch make_batch(const List& items) {
+  return batch::from(items);
 }
 
 } // namespace caf::async

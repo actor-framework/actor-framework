@@ -6,6 +6,11 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ## [Unreleased]
 
+### Fixed
+
+- Stream batches are now properly serialized and deserialized when subscribing
+  to a stream from a remote node (#1566).
+
 ## [0.19.3] - 2023-09-20
 
 ### Added
