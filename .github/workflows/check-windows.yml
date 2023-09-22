@@ -15,6 +15,7 @@ jobs:
         python-version: '3.11'
         cache: 'pip'
     - run: python -m pip install robotframework robotframework-requests robotframework-websocketclient
+    - run: choco install openssl --no-progress
     - name: Build
       run: .ci/windows/build.cmd
     - name: Test
