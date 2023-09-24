@@ -208,17 +208,14 @@ TEST("on_error_complete() suppresses errors") {
       check_eq(collect(obs_error(sec::runtime_error).on_error_complete()), nil);
     }
     SECTION("observable") {
-      check_eq(collect(mat(range(1, 1)
-                             .concat(obs_error(sec::runtime_error))
-                             .on_error_complete())),
+      check_eq(collect(mat(range(1, 1).concat(obs_error(sec::runtime_error)))
+                         .on_error_complete()),
                vector{1});
-      check_eq(collect(mat(range(1, 2)
-                             .concat(obs_error(sec::runtime_error))
-                             .on_error_complete())),
+      check_eq(collect(mat(range(1, 2).concat(obs_error(sec::runtime_error)))
+                         .on_error_complete()),
                vector{1, 2});
-      check_eq(collect(mat(range(1, 3)
-                             .concat(obs_error(sec::runtime_error))
-                             .on_error_complete())),
+      check_eq(collect(mat(range(1, 3).concat(obs_error(sec::runtime_error)))
+                         .on_error_complete()),
                vector{1, 2, 3});
       check_eq(collect(mat(obs_error(sec::runtime_error)).on_error_complete()),
                nil);
@@ -246,23 +243,21 @@ TEST("on_error_complete() suppresses errors") {
                vector{1, 2, 3});
     }
     SECTION("observable") {
-      check_eq(collect(mat(obs_error(sec::runtime_error))
-                         .concat(mat(range(1, 1)))
+      check_eq(collect(mat(obs_error(sec::runtime_error).concat(range(1, 1)))
                          .on_error_complete()),
                nil);
-      check_eq(collect(mat(obs_error(sec::runtime_error))
-                         .concat(mat(range(1, 2)))
+      check_eq(collect(mat(obs_error(sec::runtime_error).concat(range(1, 2)))
                          .on_error_complete()),
                nil);
       check_eq(collect(mat(range(1, 2)
                              .concat(obs_error(sec::runtime_error))
-                             .concat(range(1, 2))
-                             .on_error_complete())),
+                             .concat(range(1, 2)))
+                         .on_error_complete()),
                vector{1, 2});
       check_eq(collect(mat(range(1, 3)
                              .concat(obs_error(sec::runtime_error))
-                             .concat(range(1, 3))
-                             .on_error_complete())),
+                             .concat(range(1, 3)))
+                         .on_error_complete()),
                vector{1, 2, 3});
     }
   }
