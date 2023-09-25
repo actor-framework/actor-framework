@@ -1,6 +1,5 @@
 #include "caf/net/http/request_header.hpp"
 
-#include "caf/expected.hpp"
 #include "caf/logger.hpp"
 #include "caf/string_algorithms.hpp"
 
