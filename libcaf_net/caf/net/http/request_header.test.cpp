@@ -30,43 +30,43 @@ TEST("parsing a http request") {
     check_eq(hdr.field("User-Agent"), "AwesomeLib/1.0");
     check_eq(hdr.field("Accept-Encoding"), "gzip");
   }
-  SECTION("fields access is case insensitive") {
-    check_eq(hdr.field("HOST"), "localhost:8090");
-    check_eq(hdr.field("USER-agent"), "AwesomeLib/1.0");
-    check_eq(hdr.field("accept-ENCODING"), "gzip");
+}
+
+TEST("rule of five") {
+  net::http::request_header source;
+  source.parse("GET /foo/bar?user=foo&pw=bar#baz HTTP/1.1\r\n"
+               "Host: localhost:8090\r\n"
+               "User-Agent: AwesomeLib/1.0\r\n"
+               "Accept-Encoding: gzip\r\n"
+               "Number: 150\r\n\r\n"sv);
+  auto check_equality = [this](const auto& uut) {
+    check_eq(uut.method(), net::http::method::get);
+    check_eq(uut.version(), "HTTP/1.1");
+    check_eq(uut.path(), "/foo/bar");
+    check_eq(uut.query().at("user"), "foo");
+    check_eq(uut.query().at("pw"), "bar");
+    check_eq(uut.fragment(), "baz");
+    check_eq(uut.num_fields(), 4ul);
+    check_eq(uut.field("Host"), "localhost:8090");
+    check_eq(uut.field("User-Agent"), "AwesomeLib/1.0");
+    check_eq(uut.field("Accept-Encoding"), "gzip");
+  };
+  SECTION("copy ctor") {
+    auto uut = source;
+    check_equality(uut);
   }
-  SECTION("non existing field returns an empty view") {
-    check_eq(hdr.field("Foo"), "");
+  SECTION("move ctor") {
+    auto uut = std::move(source);
+    check_equality(uut);
   }
-  SECTION("field access by position") {
-    check_eq(hdr.field_at(0), std::pair{"Host"sv, "localhost:8090"sv});
-    check_eq(hdr.field_at(1), std::pair("User-Agent"sv, "AwesomeLib/1.0"sv));
-    check_eq(hdr.field_at(2), std::pair("Accept-Encoding"sv, "gzip"sv));
-    check_eq(hdr.field_at(3), std::pair("Number"sv, "150"sv));
-#ifdef CAF_ENABLE_EXCEPTIONS
-    check_throws([&hdr]() { hdr.field_at(4); });
-#endif
+  net::http::request_header uut;
+  SECTION("copy operator=") {
+    uut = source;
+    check_equality(uut);
   }
-  SECTION("has_field checks if a field exists") {
-    check(hdr.has_field("HOST"));
-    check(!hdr.has_field("Foo"));
-  }
-  SECTION("field_equals return true if a field exists") {
-    check(hdr.field_equals("Host", "localhost:8090"));
-    check(hdr.field_equals("HOST", "localhost:8090"));
-    check(hdr.field_equals(ignore_case, "Host", "LOCALHOST:8090"));
-  }
-  SECTION("field_equals return false if a field doesn't exists") {
-    check(!hdr.field_equals("Host", "Foo"));
-    check(!hdr.field_equals("FOO", "localhost:8090"));
-    check(!hdr.field_equals(ignore_case, "Host", "Foo"));
-    check(!hdr.field_equals(ignore_case, "FOO", "localhost:8090"));
-    check(!hdr.field_equals("Host", "LOCALHOST:8090"));
-  }
-  SECTION("field_as converts the type") {
-    check_eq(hdr.field_as<int>("number"), 150);
-    check_eq(hdr.field_as<float>("number"), 150.0);
-    check_eq(hdr.field_as<int>("Host"), std::nullopt);
+  SECTION("move operator=") {
+    uut = std::move(source);
+    check_equality(uut);
   }
 }
 

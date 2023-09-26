@@ -1,3 +1,7 @@
+// This file is part of CAF, the C++ Actor Framework. See the file LICENSE in
+// the main distribution directory for license terms and copyright or visit
+// https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
+
 #include "caf/net/http/request_header.hpp"
 
 #include "caf/logger.hpp"
@@ -9,27 +13,10 @@ namespace {
 
 constexpr std::string_view eol = "\r\n";
 
-template <class F>
-bool for_each_line(std::string_view input, F&& f) {
-  auto input_end = input.data() + input.size();
-  for (auto pos = input.data();;) {
-    auto line_end = std::search(pos, input_end, eol.begin(), eol.end());
-    if (line_end == input_end || std::distance(pos, input_end) == 2) {
-      // Reaching the end or hitting the last empty line tells us we're done.
-      return true;
-    }
-    auto to_line_end = std::distance(pos, line_end);
-    CAF_ASSERT(to_line_end >= 0);
-    if (!f(std::string_view{pos, static_cast<size_t>(to_line_end)}))
-      return false;
-    pos = line_end + eol.size();
-  }
-  return true;
-}
-
 } // namespace
 
-request_header::request_header(const request_header& other) {
+request_header::request_header(const request_header& other)
+  : header_fields(other) {
   assign(other);
 }
 
@@ -39,11 +26,6 @@ request_header& request_header::operator=(const request_header& other) {
 }
 
 void request_header::assign(const request_header& other) {
-  auto remap = [](const char* base, std::string_view src,
-                  const char* new_base) {
-    auto offset = std::distance(base, src.data());
-    return std::string_view{new_base + offset, src.size()};
-  };
   method_ = other.method_;
   uri_ = other.uri_;
   if (other.valid()) {
@@ -51,13 +33,7 @@ void request_header::assign(const request_header& other) {
     auto base = other.raw_.data();
     auto new_base = raw_.data();
     version_ = remap(base, other.version_, new_base);
-    auto& fields = fields_;
-    auto& other_fields = other.fields_;
-    fields.resize(other_fields.size());
-    for (size_t index = 0; index < fields.size(); ++index) {
-      fields[index].first = remap(base, other_fields[index].first, new_base);
-      fields[index].second = remap(base, other_fields[index].second, new_base);
-    }
+    reassign_fields(other);
   } else {
     raw_.clear();
     version_ = std::string_view{};
@@ -122,20 +98,7 @@ request_header::parse(std::string_view raw) {
   // Store the remaining header fields.
   version_ = version;
   fields_.clear();
-  bool ok = for_each_line(remainder, [this](std::string_view line) {
-    if (auto sep = std::find(line.begin(), line.end(), ':');
-        sep != line.end()) {
-      auto n = static_cast<size_t>(std::distance(line.begin(), sep));
-      auto key = trim(std::string_view{line.data(), n});
-      auto m = static_cast<size_t>(std::distance(sep + 1, line.end()));
-      auto val = trim(std::string_view{std::addressof(*(sep + 1)), m});
-      if (!key.empty()) {
-        fields_.emplace_back(key, val);
-        return true;
-      }
-    }
-    return false;
-  });
+  auto ok = parse_fields(remainder);
   if (ok) {
     return {status::ok, "OK"};
   } else {
@@ -144,14 +107,6 @@ request_header::parse(std::string_view raw) {
     fields_.clear();
     return {status::bad_request, "Malformed header fields."};
   }
-}
-
-bool request_header::chunked_transfer_encoding() const {
-  return field("Transfer-Encoding").find("chunked") != std::string_view::npos;
-}
-
-std::optional<size_t> request_header::content_length() const {
-  return field_as<size_t>("Content-Length");
 }
 
 } // namespace caf::net::http

@@ -10,19 +10,6 @@
 using namespace caf;
 using namespace std::literals;
 
-TEST("parsing status string") {
-  auto x = "Foo.Bar"sv;
-  auto cfg = config_value(x);
-  net::http::status status;
-  auto res = get_as<uint16_t>(cfg);
-  if (auto res = get_as<uint16_t>(cfg);
-      !res.has_value() || !from_integer(*res, status)) {
-    check(true);
-  } else {
-    check(false);
-  }
-}
-
 TEST("parsing a valid http response") {
   net::http::response_header hdr;
   hdr.parse("HTTP/1.1 200 OK\r\n"
@@ -36,7 +23,7 @@ TEST("parsing a valid http response") {
   require(hdr.valid());
   SECTION("check version and status") {
     check_eq(hdr.version(), "HTTP/1.1");
-    check_eq(hdr.status(), caf::net::http::status::ok);
+    check_eq(hdr.status(), 200ul);
     check_eq(hdr.status_text(), "OK");
   }
   SECTION("check fields") {
@@ -45,29 +32,16 @@ TEST("parsing a valid http response") {
     check_eq(hdr.field("Content-Length"), "88");
     check_eq(hdr.field("Content-Type"), "text/html");
   }
-  SECTION("fields access is case insensitive") {
-    check_eq(hdr.field("SERVER"), "Apache");
-    check_eq(hdr.field("CONTENT-lENGTH"), "88");
-    check_eq(hdr.field("CONTENT-TYPE"), "text/html");
-  }
-  SECTION("non existing field returns an empty view") {
-    check_eq(hdr.field("Foo"), "");
-  }
-  SECTION("has_field checks if a field exists") {
-    check(hdr.has_field("SERVER"));
-    check(!hdr.has_field("Foo"));
-  }
 }
 
 TEST("parsing a response body") {
   net::http::response_header hdr;
-  auto r = hdr.parse("HTTP/1.1 200 OK\r\n"
-                     "Content-Length: 88\r\n"
-                     "Content-Type: text/html\r\n"
-                     "Connection: Closed\r\n"
-                     "\r\n"
-                     "This is the body");
-  print_debug(r.second);
+  hdr.parse("HTTP/1.1 200 OK\r\n"
+            "Content-Length: 88\r\n"
+            "Content-Type: text/html\r\n"
+            "Connection: Closed\r\n"
+            "\r\n"
+            "This is the body");
   check(hdr.valid());
   check_eq(hdr.body(), "This is the body"sv);
 }
@@ -80,7 +54,6 @@ TEST("parsing an invalid http response") {
   }
   SECTION("header must have the status code") {
     hdr.parse("HTTP/1.1 Foo.Bar OK\r\n\r\n");
-    print_debug("GRESKA: {}", static_cast<int>(hdr.status()));
     check(!hdr.valid());
   }
   SECTION("header must have the status text") {
@@ -93,6 +66,44 @@ TEST("parsing an invalid http response") {
   SECTION("header must end with an empty line") {
     hdr.parse("HTTP/1.1 200 OK\r\n\r\n");
     // check(!hdr.valid());
+  }
+}
+
+TEST("rule of five") {
+  net::http::response_header source;
+  source.parse("HTTP/1.1 200 OK\r\n"
+               "Server: Apache\r\n"
+               "Content-Length: 88\r\n"
+               "Content-Type: text/html\r\n"
+               "\r\n"
+               "This is the body");
+  auto check_equality = [this](const auto& uut) {
+    check_eq(uut.version(), "HTTP/1.1");
+    check_eq(uut.status(), 200ul);
+    check_eq(uut.status_text(), "OK");
+    check_eq(uut.num_fields(), 3ul);
+    check_eq(uut.field("Server"), "Apache");
+    check_eq(uut.field("Content-Length"), "88");
+    check_eq(uut.field("Content-Type"), "text/html");
+    check_eq(uut.body(), "This is the body"sv);
+  };
+  check_equality(source);
+  SECTION("copy ctor") {
+    auto uut = source;
+    check_equality(uut);
+  }
+  SECTION("move ctor") {
+    auto uut = std::move(source);
+    check_equality(uut);
+  }
+  net::http::response_header uut;
+  SECTION("copy operator=") {
+    uut = source;
+    check_equality(uut);
+  }
+  SECTION("move operator=") {
+    uut = std::move(source);
+    check_equality(uut);
   }
 }
 
