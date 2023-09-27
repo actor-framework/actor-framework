@@ -28,8 +28,9 @@ expected<std::string_view> for_each_line(std::string_view input, F&& f) {
                                  static_cast<size_t>(to_line_end)};
     pos = line_end + eol.size();
     if (line.empty())
-      return std::string_view{pos, static_cast<size_t>(
-                                     std::distance(pos, input.end()))};
+      return std::string_view{std::addressof(*pos),
+                              static_cast<size_t>(
+                                std::distance(pos, input.end()))};
     if (!f(line))
       return make_error(sec::logic_error, "Predicate function failed");
   }
