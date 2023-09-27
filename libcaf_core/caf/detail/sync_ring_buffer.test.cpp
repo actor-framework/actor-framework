@@ -29,8 +29,8 @@ std::vector<int> consumer(int_buffer& buf, size_t num) {
 }
 
 void producer(int_buffer& buf, int first, int last) {
-  for (auto i = first; i != last; ++i)
-    buf.push_back(int{i});
+  for (auto i = first; i != last; ++i) // NOLINT(bugprone-use-after-move)
+    buf.push_back(std::move(i));
 }
 
 } // namespace
@@ -56,8 +56,9 @@ TEST("push_back adds one element to the ring buffer") {
   check(!buf.full());
   check_eq(buf.size(), 0u);
   print_debug("fill buffer");
+  // NOLINTNEXTLINE(bugprone-use-after-move)
   for (int i = 0; i < static_cast<int>(int_buffer_size - 1); ++i)
-    buf.push_back(int{i});
+    buf.push_back(std::move(i));
   check(!buf.empty());
   check(buf.full());
   check_eq(buf.size(), int_buffer_size - 1);
@@ -75,8 +76,8 @@ TEST("get_all returns all elements from the ring buffer") {
     return vector_type(i, e);
   };
   print_debug("add five element");
-  for (int i = 0; i < 5; ++i)
-    buf.push_back(int{i});
+  for (int i = 0; i < 5; ++i) // NOLINT(bugprone-use-after-move)
+    buf.push_back(std::move(i));
   check(!buf.empty());
   check(!buf.full());
   check_eq(buf.size(), 5u);
@@ -88,9 +89,9 @@ TEST("get_all returns all elements from the ring buffer") {
   check_eq(buf.size(), 0u);
   print_debug("add 60 elements (wraps around)");
   vector_type expected;
-  for (int i = 0; i < 60; ++i) {
+  for (int i = 0; i < 60; ++i) { // NOLINT(bugprone-use-after-move)
     expected.push_back(i);
-    buf.push_back(int{i});
+    buf.push_back(std::move(i));
   }
   check_eq(buf.size(), 60u);
   check_eq(fetch_all(), expected);
