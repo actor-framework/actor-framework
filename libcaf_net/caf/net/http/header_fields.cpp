@@ -24,7 +24,8 @@ expected<std::string_view> for_each_line(std::string_view input, F&& f) {
       return make_error(sec::logic_error, "EOL delimiter not found");
     auto to_line_end = std::distance(pos, line_end);
     CAF_ASSERT(to_line_end >= 0);
-    auto line = std::string_view{pos, static_cast<size_t>(to_line_end)};
+    auto line = std::string_view{std::addressof(*pos),
+                                 static_cast<size_t>(to_line_end)};
     pos = line_end + eol.size();
     if (line.empty())
       return std::string_view{pos, static_cast<size_t>(

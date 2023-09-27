@@ -135,7 +135,7 @@ protected:
                             src.size()};
   };
 
-  /// Reassigns the shallow map frome one address to another.
+  /// Reassigns the shallow map from one address to another.
   void reassign_fields(const header_fields& other) noexcept;
 
   /// Stores the raw HTTP input.
