@@ -22,12 +22,11 @@ struct catch_all {
 
   F handler;
 
-  catch_all(const catch_all& x) = default;
-
   catch_all(catch_all&& x) = default;
 
-  template <class T, class = std::enable_if_t<!std::is_same_v<T, catch_all>>>
-  catch_all(T&& x) : handler(std::forward<T>(x)) {
+  template <class T, class = std::enable_if_t<
+                       !std::is_same_v<std::decay_t<T>, catch_all>>>
+  explicit catch_all(T&& x) : handler(std::forward<T>(x)) {
     // nop
   }
 

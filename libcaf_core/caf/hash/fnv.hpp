@@ -144,7 +144,7 @@ public:
   /// Convenience function for computing an FNV1a hash value for given
   /// arguments in one shot.
   template <class... Ts>
-  static T compute(Ts&&... xs) {
+  static T compute(Ts&&... xs) noexcept {
     using detail::as_mutable_ref;
     fnv f;
     auto unused = (f.apply(xs) && ...);

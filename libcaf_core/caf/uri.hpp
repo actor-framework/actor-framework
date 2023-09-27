@@ -292,7 +292,7 @@ namespace std {
 
 template <>
 struct hash<caf::uri> {
-  size_t operator()(const caf::uri& x) const {
+  size_t operator()(const caf::uri& x) const noexcept {
     return caf::hash::fnv<size_t>::compute(x);
   }
 };

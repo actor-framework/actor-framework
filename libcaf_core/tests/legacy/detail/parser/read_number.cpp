@@ -58,8 +58,9 @@ struct res_t {
   std::variant<pec, double, int64_t> val;
   res_t(const res_t&) = default;
   res_t(res_t&&) = default;
-  template <class T, class E = std::enable_if_t<!std::is_same_v<T, res_t>>>
-  res_t(T&& x) : val(std::forward<T>(x)) {
+  template <class T,
+            class E = std::enable_if_t<!std::is_same_v<std::decay_t<T>, res_t>>>
+  explicit res_t(T&& x) : val(std::forward<T>(x)) {
     // nop
   }
 };
@@ -108,12 +109,12 @@ struct range_parser {
 
 template <class T>
 std::enable_if_t<std::is_integral_v<T>, res_t> res(T x) {
-  return {static_cast<int64_t>(x)};
+  return res_t{static_cast<int64_t>(x)};
 }
 
 template <class T>
 std::enable_if_t<std::is_floating_point_v<T>, res_t> res(T x) {
-  return {static_cast<double>(x)};
+  return res_t{static_cast<double>(x)};
 }
 
 struct fixture {
@@ -191,7 +192,7 @@ CAF_TEST(octal numbers) {
   CHECK_NUMBER(-00);
   CHECK_NUMBER(-0123);
   // invalid numbers
-  CHECK_EQ(p("018"), pec::trailing_character);
+  CHECK_EQ(p("018"), res_t{pec::trailing_character});
 }
 
 CAF_TEST(decimal numbers) {
@@ -212,9 +213,11 @@ CAF_TEST(hexadecimal numbers) {
   CHECK_NUMBER(-0x123);
   CHECK_NUMBER(-0xaf01);
   // invalid numbers
-  CHECK_EQ(p("0xFG"), pec::trailing_character);
-  CHECK_EQ(p("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"), pec::integer_overflow);
-  CHECK_EQ(p("-0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"), pec::integer_underflow);
+  CHECK_EQ(p("0xFG"), res_t{pec::trailing_character});
+  CHECK_EQ(p("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"),
+           res_t{pec::integer_overflow});
+  CHECK_EQ(p("-0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"),
+           res_t{pec::integer_underflow});
 }
 
 CAF_TEST(floating point numbers) {
@@ -265,8 +268,8 @@ CAF_TEST(integer mantissa with negative exponent) {
   CHECK_NUMBER(1e-5);
   CHECK_NUMBER(1e-6);
   // invalid numbers
-  CHECK_EQ(p("-9.9999e-e511"), pec::unexpected_character);
-  CHECK_EQ(p("-9.9999e-511"), pec::exponent_underflow);
+  CHECK_EQ(p("-9.9999e-e511"), res_t{pec::unexpected_character});
+  CHECK_EQ(p("-9.9999e-511"), res_t{pec::exponent_underflow});
 }
 
 CAF_TEST(fractional mantissa with positive exponent) {

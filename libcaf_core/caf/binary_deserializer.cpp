@@ -116,7 +116,7 @@ bool binary_deserializer::begin_field(std::string_view,
                     "received type index out of bounds");
       return false;
     }
-    index = static_cast<unsigned char>(tmp);
+    index = static_cast<size_t>(tmp);
     return true;
   };
   if (types.size() < max_value<int8_t>) {
@@ -146,7 +146,7 @@ bool binary_deserializer::begin_field(std::string_view, bool& is_present,
       return false;
     }
     is_present = true;
-    index = static_cast<unsigned char>(tmp);
+    index = static_cast<size_t>(tmp);
     return true;
   };
   if (types.size() < max_value<int8_t>) {

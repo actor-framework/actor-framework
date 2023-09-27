@@ -288,7 +288,7 @@ namespace std {
 
 template <>
 struct hash<caf::node_id> {
-  size_t operator()(const caf::node_id& x) const {
+  size_t operator()(const caf::node_id& x) const noexcept {
     return caf::hash::fnv<size_t>::compute(x);
   }
 };

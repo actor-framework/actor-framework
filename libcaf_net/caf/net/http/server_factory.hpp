@@ -217,9 +217,9 @@ private:
     auto producer = detail::http_request_producer::make(cfg.mpx,
                                                         push.try_open());
     routes.push_back(make_route([producer](responder& res) {
-      if (!producer->push(std::move(res).to_request())) {
+      if (!producer->push(responder{res}.to_request())) {
         auto err = make_error(sec::runtime_error, "flow disconnected");
-        res.router()->shutdown(err); // NOLINT(bugprone-use-after-move)
+        res.router()->shutdown(err);
       }
     }));
     auto factory = std::make_unique<factory_t>(std::move(routes),
