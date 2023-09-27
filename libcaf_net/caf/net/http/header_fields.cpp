@@ -13,26 +13,24 @@ namespace {
 
 constexpr std::string_view eol = "\r\n";
 
-// Applies f to all lines separated by eol until an empty line.
+// Iterates through lines separated by eol and applies f to them, until an empty
+// line is found (containing only eol). Returns the unprocessed input or error
+// if no eol is found or f fails.
 template <class F>
 expected<std::string_view> for_each_line(std::string_view input, F&& f) {
   for (auto pos = input.begin();;) {
     auto line_end = std::search(pos, input.end(), eol.begin(), eol.end());
-    if (line_end == input.end()) {
-      // No delimiter found
-      return make_error(sec::logic_error, "Malformed header section");
-    }
+    if (line_end == input.end())
+      return make_error(sec::logic_error, "EOL delimiter not found");
     auto to_line_end = std::distance(pos, line_end);
     CAF_ASSERT(to_line_end >= 0);
     auto line = std::string_view{pos, static_cast<size_t>(to_line_end)};
     pos = line_end + eol.size();
-    if (line.empty()) {
-      // mepty line headers and body
-      auto to_line_end = static_cast<size_t>(std::distance(pos, input.end()));
-      return std::string_view{pos, to_line_end};
-    }
+    if (line.empty())
+      return std::string_view{pos, static_cast<size_t>(
+                                     std::distance(pos, input.end()))};
     if (!f(line))
-      return make_error(sec::logic_error);
+      return make_error(sec::logic_error, "Predicate function failed");
   }
 }
 
@@ -59,7 +57,7 @@ header_fields& header_fields::operator=(const header_fields& other) {
   return *this;
 }
 
-void header_fields::reassign_fields(const header_fields& other) {
+void header_fields::reassign_fields(const header_fields& other) noexcept {
   auto base = other.raw_.data();
   auto new_base = raw_.data();
   fields_.resize(other.fields_.size());
@@ -69,9 +67,9 @@ void header_fields::reassign_fields(const header_fields& other) {
   }
 }
 
-// Note: does not take ownership of the raw.
-expected<std::string_view> header_fields::parse_fields(std::string_view raw) {
-  auto ok = for_each_line(raw, [this](std::string_view line) {
+// Note: does not take ownership of the data.
+expected<std::string_view> header_fields::parse_fields(std::string_view data) {
+  auto remainder = for_each_line(data, [this](std::string_view line) {
     if (auto sep = std::find(line.begin(), line.end(), ':');
         sep != line.end()) {
       auto n = static_cast<size_t>(std::distance(line.begin(), sep));
@@ -85,14 +83,11 @@ expected<std::string_view> header_fields::parse_fields(std::string_view raw) {
     }
     return false;
   });
-  // If set, ok holds the remaining input from the raw.
-  if (ok) {
-    return ok;
-  } else {
+  if (!remainder) {
     raw_.clear();
     fields_.clear();
-    return ok;
   }
+  return remainder;
 }
 
 bool header_fields::chunked_transfer_encoding() const {

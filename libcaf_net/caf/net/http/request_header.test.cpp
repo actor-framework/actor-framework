@@ -34,6 +34,13 @@ TEST("parsing a http request") {
 
 TEST("rule of five") {
   net::http::request_header source;
+  SECTION("default constructor") {
+    check(!source.valid());
+    check_eq(source.num_fields(), 0ul);
+    check_eq(source.version(), "");
+    check_eq(source.path(), "");
+    check(source.query().empty());
+  }
   source.parse("GET /foo/bar?user=foo&pw=bar#baz HTTP/1.1\r\n"
                "Host: localhost:8090\r\n"
                "User-Agent: AwesomeLib/1.0\r\n"
@@ -51,20 +58,20 @@ TEST("rule of five") {
     check_eq(uut.field("User-Agent"), "AwesomeLib/1.0");
     check_eq(uut.field("Accept-Encoding"), "gzip");
   };
-  SECTION("copy ctor") {
-    auto uut = source;
+  SECTION("copy constructor") {
+    auto uut{source};
     check_equality(uut);
   }
-  SECTION("move ctor") {
-    auto uut = std::move(source);
+  SECTION("move constructor") {
+    auto uut{std::move(source)};
     check_equality(uut);
   }
   net::http::request_header uut;
-  SECTION("copy operator=") {
+  SECTION("copy assignment operator") {
     uut = source;
     check_equality(uut);
   }
-  SECTION("move operator=") {
+  SECTION("move assignment operator") {
     uut = std::move(source);
     check_equality(uut);
   }

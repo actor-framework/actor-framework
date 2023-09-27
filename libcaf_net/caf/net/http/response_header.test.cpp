@@ -12,38 +12,54 @@ using namespace std::literals;
 
 TEST("parsing a valid http response") {
   net::http::response_header hdr;
-  hdr.parse("HTTP/1.1 200 OK\r\n"
-            "Date: Mon, 27 Jul 2009 12:28:53 GMT\r\n"
-            "Server: Apache\r\n"
-            "Last-Modified: Wed, 22 Jul 2009 19:15:56 GMT\r\n"
-            "Content-Length: 88\r\n"
-            "Content-Type: text/html\r\n"
-            "Connection: Closed\r\n"
-            "\r\n");
-  require(hdr.valid());
-  SECTION("check version and status") {
+  SECTION("parsing a one line header") {
+    hdr.parse("HTTP/1.1 200 OK\r\n\r\n");
+    require(hdr.valid());
     check_eq(hdr.version(), "HTTP/1.1");
     check_eq(hdr.status(), 200ul);
     check_eq(hdr.status_text(), "OK");
+    check_eq(hdr.num_fields(), 0ul);
+    check_eq(hdr.body(), "");
   }
-  SECTION("check fields") {
+  SECTION("parsing a header without a body") {
+    hdr.parse("HTTP/1.1 200 OK\r\n"
+              "Date: Mon, 27 Jul 2009 12:28:53 GMT\r\n"
+              "Server: Apache\r\n"
+              "Last-Modified: Wed, 22 Jul 2009 19:15:56 GMT\r\n"
+              "Content-Length: 88\r\n"
+              "Content-Type: text/html\r\n"
+              "Connection: Closed\r\n"
+              "\r\n");
+    require(hdr.valid());
+    check_eq(hdr.version(), "HTTP/1.1");
+    check_eq(hdr.status(), 200ul);
+    check_eq(hdr.status_text(), "OK");
     check_eq(hdr.num_fields(), 6ul);
     check_eq(hdr.field("Server"), "Apache");
     check_eq(hdr.field("Content-Length"), "88");
     check_eq(hdr.field("Content-Type"), "text/html");
+    check_eq(hdr.body(), "");
   }
-}
-
-TEST("parsing a response body") {
-  net::http::response_header hdr;
-  hdr.parse("HTTP/1.1 200 OK\r\n"
-            "Content-Length: 88\r\n"
-            "Content-Type: text/html\r\n"
-            "Connection: Closed\r\n"
-            "\r\n"
-            "This is the body");
-  check(hdr.valid());
-  check_eq(hdr.body(), "This is the body"sv);
+  SECTION("parsing a header with a body") {
+    hdr.parse("HTTP/1.1 200 OK\r\n"
+              "Date: Mon, 27 Jul 2009 12:28:53 GMT\r\n"
+              "Server: Apache\r\n"
+              "Last-Modified: Wed, 22 Jul 2009 19:15:56 GMT\r\n"
+              "Content-Length: 88\r\n"
+              "Content-Type: text/html\r\n"
+              "Connection: Closed\r\n"
+              "\r\n"
+              "Response body");
+    require(hdr.valid());
+    check_eq(hdr.version(), "HTTP/1.1");
+    check_eq(hdr.status(), 200ul);
+    check_eq(hdr.status_text(), "OK");
+    check_eq(hdr.num_fields(), 6ul);
+    check_eq(hdr.field("Server"), "Apache");
+    check_eq(hdr.field("Content-Length"), "88");
+    check_eq(hdr.field("Content-Type"), "text/html");
+    check_eq(hdr.body(), "Response body");
+  }
 }
 
 TEST("parsing an invalid http response") {
@@ -57,26 +73,38 @@ TEST("parsing an invalid http response") {
     check(!hdr.valid());
   }
   SECTION("header must have the status text") {
-    // TODO
-    // hdr.parse("HTTP/1.1 200  \r\n\r\n");
-    hdr.parse("HTTP/1.1 200\r\n\r\n");
+    hdr.parse("HTTP/1.1 200  \r\n\r\n");
     check(!hdr.valid());
   }
-  // TODO
   SECTION("header must end with an empty line") {
-    hdr.parse("HTTP/1.1 200 OK\r\n\r\n");
-    // check(!hdr.valid());
+    hdr.parse("HTTP/1.1 200 OK\r\n");
+    check(!hdr.valid());
+  }
+  SECTION("empty input is invalid") {
+    hdr.parse("");
+    check(!hdr.valid());
+  }
+  SECTION("only eol is an invalid") {
+    hdr.parse("\r\n");
+    check(!hdr.valid());
   }
 }
 
 TEST("rule of five") {
   net::http::response_header source;
+  SECTION("default constructor") {
+    check(!source.valid());
+    check_eq(source.num_fields(), 0ul);
+    check_eq(source.version(), "");
+    check_eq(source.status_text(), "");
+    check_eq(source.body(), "");
+  }
   source.parse("HTTP/1.1 200 OK\r\n"
                "Server: Apache\r\n"
                "Content-Length: 88\r\n"
                "Content-Type: text/html\r\n"
                "\r\n"
-               "This is the body");
+               "Response body");
   auto check_equality = [this](const auto& uut) {
     check_eq(uut.version(), "HTTP/1.1");
     check_eq(uut.status(), 200ul);
@@ -85,23 +113,23 @@ TEST("rule of five") {
     check_eq(uut.field("Server"), "Apache");
     check_eq(uut.field("Content-Length"), "88");
     check_eq(uut.field("Content-Type"), "text/html");
-    check_eq(uut.body(), "This is the body"sv);
+    check_eq(uut.body(), "Response body"sv);
   };
   check_equality(source);
-  SECTION("copy ctor") {
-    auto uut = source;
+  SECTION("copy constructor") {
+    auto uut{source};
     check_equality(uut);
   }
-  SECTION("move ctor") {
-    auto uut = std::move(source);
+  SECTION("move constructor") {
+    auto uut{std::move(source)};
     check_equality(uut);
   }
   net::http::response_header uut;
-  SECTION("copy operator=") {
+  SECTION("copy assignment operator") {
     uut = source;
     check_equality(uut);
   }
-  SECTION("move operator=") {
+  SECTION("move assignment operator") {
     uut = std::move(source);
     check_equality(uut);
   }

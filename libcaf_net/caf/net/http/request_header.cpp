@@ -16,8 +16,14 @@ constexpr std::string_view eol = "\r\n";
 } // namespace
 
 request_header::request_header(const request_header& other)
-  : header_fields(other) {
-  assign(other);
+  : header_fields{other} {
+  if (other.valid()) {
+    method_ = other.method_;
+    uri_ = other.uri_;
+    version_ = remap(other.raw_.data(), other.version_, raw_.data());
+  } else {
+    version_ = std::string_view{};
+  }
 }
 
 request_header& request_header::operator=(const request_header& other) {
@@ -30,9 +36,7 @@ void request_header::assign(const request_header& other) {
   uri_ = other.uri_;
   if (other.valid()) {
     raw_.assign(other.raw_.begin(), other.raw_.end());
-    auto base = other.raw_.data();
-    auto new_base = raw_.data();
-    version_ = remap(base, other.version_, new_base);
+    version_ = remap(other.raw_.data(), other.version_, raw_.data());
     reassign_fields(other);
   } else {
     raw_.clear();

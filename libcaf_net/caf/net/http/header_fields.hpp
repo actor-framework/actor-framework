@@ -5,21 +5,19 @@
 #pragma once
 
 #include "caf/net/fwd.hpp"
-#include "caf/net/http/method.hpp"
-#include "caf/net/http/status.hpp"
 
 #include "caf/config_value.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/string_algorithms.hpp"
-#include "caf/uri.hpp"
 
 #include <string_view>
 #include <vector>
 
 namespace caf::net::http {
 
-/// Encapsulates meta data for HTTP requests. This class represents an HTTP
-/// request header, providing methods for accessing the HTTP fields.
+/// Encapsulates meta data for HTTP header fields. This class represents a base
+/// class used for HTTP request and response representations, each providing
+/// additional message specific methods.
 class CAF_NET_EXPORT header_fields {
 public:
   /// Default constructor.
@@ -112,9 +110,10 @@ public:
     return !raw_.empty();
   }
 
-  /// Parses header fields from a string and returns the remaining string_view
-  /// after consuming the header lines. Does not take ownership.
-  expected<std::string_view> parse_fields(std::string_view raw);
+  /// Parses header fields from the provided data and returns the unprocessed
+  /// input or error on invalid format.
+  /// @note: Does not take ownership of the raw data.
+  expected<std::string_view> parse_fields(std::string_view data);
 
 protected:
   // An unsorted "map" type for storing key/value pairs.
@@ -137,7 +136,7 @@ protected:
   };
 
   /// Reassigns the shallow map frome one address to another.
-  void reassign_fields(const header_fields& other);
+  void reassign_fields(const header_fields& other) noexcept;
 
   /// Stores the raw HTTP input.
   std::vector<char> raw_;

@@ -17,17 +17,13 @@ constexpr std::string_view eol = "\r\n";
 // Validate the version string.
 bool validate_http_version(std::string_view str) {
   using namespace std::literals;
-  auto begin = "HTTP/"sv;
-  if (str.find(begin) != 0)
+  auto http_prefix = "HTTP/"sv;
+  if (str.find(http_prefix) != 0)
     return false;
-  str.remove_prefix(begin.size());
-  if (str == "1")
+  str.remove_prefix(http_prefix.size());
+  if (str == "1" || str == "1.0" || str == "1.1")
     return true;
-  if (str == "1.0")
-    return true;
-  if (str == "1.1")
-    return true;
-  // We dont support HTTP 0, 2 and 3.
+  // We don't support HTTP 0, 2 and 3.
   return false;
 }
 
@@ -35,7 +31,18 @@ bool validate_http_version(std::string_view str) {
 
 response_header::response_header(const response_header& other)
   : header_fields(other) {
-  assign(other);
+  if (other.valid()) {
+    auto base = other.raw_.data();
+    auto new_base = raw_.data();
+    version_ = remap(base, other.version_, new_base);
+    status_ = other.status_;
+    status_text_ = remap(base, other.status_text_, new_base);
+    body_ = remap(base, other.body_, new_base);
+  } else {
+    version_ = std::string_view{};
+    status_text_ = std::string_view{};
+    body_ = std::string_view{};
+  }
 }
 
 response_header& response_header::operator=(const response_header& other) {
@@ -81,7 +88,7 @@ response_header::parse(std::string_view raw) {
     return {status::bad_request, "Invalid HTTP version."};
   }
   version_ = version_str;
-  // Parse the status from the string
+  // Parse the status from the string.
   if (auto res = get_as<uint16_t>(config_value{status_str}); !res) {
     CAF_LOG_DEBUG("Invalid status");
     raw_.clear();
@@ -89,17 +96,16 @@ response_header::parse(std::string_view raw) {
   } else {
     status_ = *res;
   }
-  if (status_text.empty()) {
+  status_text_ = trim(status_text);
+  if (status_text_.empty()) {
     CAF_LOG_DEBUG("Empty status text.");
     raw_.clear();
     return {status::bad_request, "Invalid HTTP status text."};
   }
-  status_text_ = status_text;
   fields_.clear();
-  auto ok = parse_fields(remainder);
-  // If set, ok holds the remaining input from the raw.
-  if (ok) {
-    body_ = *ok;
+  auto remaining_text = parse_fields(remainder);
+  if (remaining_text) {
+    body_ = *remaining_text;
     return {status::ok, "OK"};
   } else {
     raw_.clear();
