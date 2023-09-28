@@ -11,7 +11,7 @@ using namespace caf;
 using namespace std::literals;
 
 TEST("parsing a http request") {
-  net::http::header hdr;
+  // net::http::header hdr;
   //   hdr.parse_fields("Host: localhost:8090\r\n"
   //                    "User-Agent: AwesomeLib/1.0\r\n"
   //                    "Accept-Encoding: gzip\r\n"
