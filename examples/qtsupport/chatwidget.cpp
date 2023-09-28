@@ -44,8 +44,9 @@ void ChatWidget::init(actor_system& system, const std::string& name,
       auto str = std::string_view{reinterpret_cast<const char*>(bytes.data()),
                                   bytes.size()};
       if (std::all_of(str.begin(), str.end(), ::isprint)) {
-        print(
-          QString::fromUtf8(str.data(), static_cast<qsizetype>(str.size())));
+        auto qstr = QString::fromUtf8(str.data(),
+                                      static_cast<qsizetype>(str.size()));
+        print(qstr);
       } else {
         QString msg = "<non-ascii-data of size ";
         msg += QString::number(bytes.size());

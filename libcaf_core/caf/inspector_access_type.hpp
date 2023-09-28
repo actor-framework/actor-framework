@@ -56,25 +56,26 @@ constexpr auto inspect_access_type() {
   //        > inspector_access > inspect > trivial > defaults.
   if constexpr (is_allowed_unsafe_message_type_v<T>)
     return inspector_access_type::unsafe{};
-  else if constexpr (std::is_array<T>::value || is_stl_tuple_type_v<T>)
+  if constexpr (std::is_array<T>::value)
     return inspector_access_type::tuple{};
-  else if constexpr (detail::is_builtin_inspector_type<
-                       T, Inspector::is_loading>::value)
+  if constexpr (detail::is_builtin_inspector_type<T,
+                                                  Inspector::is_loading>::value)
     return inspector_access_type::builtin{};
-  else if constexpr (has_builtin_inspect_v<Inspector, T>)
+  if constexpr (has_builtin_inspect_v<Inspector, T>)
     return inspector_access_type::builtin_inspect{};
-  else if constexpr (detail::is_complete<inspector_access<T>>)
+  if constexpr (detail::is_complete<inspector_access<T>>)
     return inspector_access_type::specialization{};
-  else if constexpr (has_inspect_overload_v<Inspector, T>)
+  if constexpr (has_inspect_overload_v<Inspector, T>)
     return inspector_access_type::inspect{};
-  else if constexpr (std::is_empty<T>::value)
+  if constexpr (std::is_empty<T>::value)
     return inspector_access_type::empty{};
-  else if constexpr (is_map_like_v<T>)
+  if constexpr (is_stl_tuple_type_v<T>)
+    return inspector_access_type::tuple{};
+  if constexpr (is_map_like_v<T>)
     return inspector_access_type::map{};
-  else if constexpr (is_list_like_v<T>)
+  if constexpr (is_list_like_v<T>)
     return inspector_access_type::list{};
-  else
-    return inspector_access_type::none{};
+  return inspector_access_type::none{};
 }
 
 } // namespace caf
