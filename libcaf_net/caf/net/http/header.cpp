@@ -2,7 +2,7 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#include "caf/net/http/header_fields.hpp"
+#include "caf/net/http/header.hpp"
 
 #include "caf/logger.hpp"
 #include "caf/string_algorithms.hpp"
@@ -38,7 +38,7 @@ expected<std::string_view> for_each_line(std::string_view input, F&& f) {
 
 } // namespace
 
-header_fields::header_fields(const header_fields& other) {
+header::header(const header& other) {
   if (!other.raw_.empty()) {
     raw_.assign(other.raw_.begin(), other.raw_.end());
     reassign_fields(other);
@@ -48,7 +48,7 @@ header_fields::header_fields(const header_fields& other) {
   }
 }
 
-header_fields& header_fields::operator=(const header_fields& other) {
+header& header::operator=(const header& other) {
   if (!other.raw_.empty()) {
     raw_.assign(other.raw_.begin(), other.raw_.end());
     reassign_fields(other);
@@ -59,7 +59,7 @@ header_fields& header_fields::operator=(const header_fields& other) {
   return *this;
 }
 
-void header_fields::reassign_fields(const header_fields& other) noexcept {
+void header::reassign_fields(const header& other) noexcept {
   auto base = other.raw_.data();
   auto new_base = raw_.data();
   fields_.resize(other.fields_.size());
@@ -70,7 +70,7 @@ void header_fields::reassign_fields(const header_fields& other) noexcept {
 }
 
 // Note: does not take ownership of the data.
-expected<std::string_view> header_fields::parse_fields(std::string_view data) {
+expected<std::string_view> header::parse_fields(std::string_view data) {
   auto remainder = for_each_line(data, [this](std::string_view line) {
     if (auto sep = std::find(line.begin(), line.end(), ':');
         sep != line.end()) {
@@ -92,11 +92,11 @@ expected<std::string_view> header_fields::parse_fields(std::string_view data) {
   return remainder;
 }
 
-bool header_fields::chunked_transfer_encoding() const {
+bool header::chunked_transfer_encoding() const {
   return field("Transfer-Encoding").find("chunked") != std::string_view::npos;
 }
 
-std::optional<size_t> header_fields::content_length() const {
+std::optional<size_t> header::content_length() const {
   return field_as<size_t>("Content-Length");
 }
 

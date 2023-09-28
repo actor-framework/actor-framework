@@ -38,8 +38,8 @@ caf_add_component(
     caf/net/generic_lower_layer.cpp
     caf/net/generic_upper_layer.cpp
     caf/net/http/config.cpp
-    caf/net/http/header_fields.cpp
-    caf/net/http/header_fields.test.cpp
+    caf/net/http/header.cpp
+    caf/net/http/header.test.cpp
     caf/net/http/lower_layer.cpp
     caf/net/http/method.cpp
     caf/net/http/request.cpp

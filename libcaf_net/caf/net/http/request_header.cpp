@@ -15,8 +15,7 @@ constexpr std::string_view eol = "\r\n";
 
 } // namespace
 
-request_header::request_header(const request_header& other)
-  : header_fields{other} {
+request_header::request_header(const request_header& other) : header{other} {
   if (other.valid()) {
     method_ = other.method_;
     uri_ = other.uri_;

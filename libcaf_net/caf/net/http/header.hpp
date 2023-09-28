@@ -18,22 +18,25 @@ namespace caf::net::http {
 /// Encapsulates meta data for HTTP header fields. This class represents a base
 /// class used for HTTP request and response representations, each providing
 /// additional message specific methods.
-class CAF_NET_EXPORT header_fields {
+class CAF_NET_EXPORT header {
 public:
+  /// Virtual destructor.
+  virtual ~header() = default;
+
   /// Default constructor.
-  header_fields() = default;
+  header() = default;
 
   /// Move constructor.
-  header_fields(header_fields&&) = default;
+  header(header&&) = default;
 
   /// Move assignment operator.
-  header_fields& operator=(header_fields&&) = default;
+  header& operator=(header&&) = default;
 
   /// Copy constructor.
-  header_fields(const header_fields&);
+  header(const header&);
 
   /// Copy assignment operator.
-  header_fields& operator=(const header_fields&);
+  header& operator=(const header&);
 
   /// Returns the number of fields in the request header.
   size_t num_fields() const noexcept {
@@ -136,7 +139,7 @@ protected:
   };
 
   /// Reassigns the shallow map from one address to another.
-  void reassign_fields(const header_fields& other) noexcept;
+  void reassign_fields(const header& other) noexcept;
 
   /// Stores the raw HTTP input.
   std::vector<char> raw_;

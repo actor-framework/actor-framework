@@ -2,7 +2,7 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#include "caf/net/http/header_fields.hpp"
+#include "caf/net/http/header.hpp"
 
 #include "caf/test/caf_test_main.hpp"
 #include "caf/test/test.hpp"
@@ -11,7 +11,7 @@ using namespace caf;
 using namespace std::literals;
 
 TEST("parsing a http request") {
-  net::http::header_fields hdr;
+  net::http::header hdr;
   hdr.parse_fields("Host: localhost:8090\r\n"
                    "User-Agent: AwesomeLib/1.0\r\n"
                    "Accept-Encoding: gzip\r\n"

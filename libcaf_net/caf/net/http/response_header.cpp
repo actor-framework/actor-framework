@@ -29,8 +29,7 @@ bool validate_http_version(std::string_view str) {
 
 } // namespace
 
-response_header::response_header(const response_header& other)
-  : header_fields(other) {
+response_header::response_header(const response_header& other) : super(other) {
   if (other.valid()) {
     auto base = other.raw_.data();
     auto new_base = raw_.data();

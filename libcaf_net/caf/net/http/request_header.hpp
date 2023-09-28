@@ -5,7 +5,7 @@
 #pragma once
 
 #include "caf/net/fwd.hpp"
-#include "caf/net/http/header_fields.hpp"
+#include "caf/net/http/header.hpp"
 #include "caf/net/http/method.hpp"
 #include "caf/net/http/status.hpp"
 
@@ -22,8 +22,10 @@ namespace caf::net::http {
 /// Encapsulates meta data for HTTP requests. This class represents an HTTP
 /// request header, providing methods for accessing the HTTP method, path,
 /// query, fragment, version, and fields.
-class CAF_NET_EXPORT request_header : public header_fields {
+class CAF_NET_EXPORT request_header : public header {
 public:
+  using super = header;
+
   /// Default constructor.
   request_header() = default;
 

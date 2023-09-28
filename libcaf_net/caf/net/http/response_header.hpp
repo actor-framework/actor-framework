@@ -5,7 +5,7 @@
 #pragma once
 
 #include "caf/net/fwd.hpp"
-#include "caf/net/http/header_fields.hpp"
+#include "caf/net/http/header.hpp"
 #include "caf/net/http/status.hpp"
 
 #include "caf/config_value.hpp"
@@ -21,8 +21,9 @@ namespace caf::net::http {
 /// Encapsulates meta data for HTTP response. This class represents a HTTP
 /// response header, providing methods for accessing the HTTP version, status,
 /// fields and body.
-class CAF_NET_EXPORT response_header : public header_fields {
+class CAF_NET_EXPORT response_header : public header {
 public:
+  using super = header;
   /// Default constructor.
   response_header() = default;
 
