@@ -6,6 +6,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ## [Unreleased]
 
+## [0.19.4] - 2023-09-29
+
 ### Fixed
 
 - Stream batches are now properly serialized and deserialized when subscribing
@@ -1072,7 +1074,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Setting the log level to `quiet` now properly suppresses any log output.
 - Configuring colored terminal output should now print colored output.
 
-[Unreleased]: https://github.com/actor-framework/actor-framework/compare/0.19.3...master
+[Unreleased]: https://github.com/actor-framework/actor-framework/compare/0.19.4...master
+[0.19.4]: https://github.com/actor-framework/actor-framework/releases/0.19.4
 [0.19.3]: https://github.com/actor-framework/actor-framework/releases/0.19.3
 [0.19.2]: https://github.com/actor-framework/actor-framework/releases/0.19.2
 [0.19.1]: https://github.com/actor-framework/actor-framework/releases/0.19.1
