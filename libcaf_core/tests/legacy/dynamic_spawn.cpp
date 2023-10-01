@@ -39,11 +39,11 @@ public:
   event_testee(actor_config& cfg) : event_based_actor(cfg) {
     inc_actor_instances();
     wait4string.assign([this](const std::string&) { become(wait4int); },
-                       [this](get_atom) { return "wait4string"; });
+                       [](get_atom) { return "wait4string"; });
     wait4float.assign([this](float) { become(wait4string); },
-                      [this](get_atom) { return "wait4float"; });
+                      [](get_atom) { return "wait4float"; });
     wait4int.assign([this](int) { become(wait4float); },
-                    [this](get_atom) { return "wait4int"; });
+                    [](get_atom) { return "wait4int"; });
   }
 
   ~event_testee() override {
