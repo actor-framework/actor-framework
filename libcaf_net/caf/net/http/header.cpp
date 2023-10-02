@@ -18,41 +18,27 @@ constexpr std::string_view eol = "\r\n";
 // if no eol is found or f fails.
 template <class F>
 expected<std::string_view> for_each_line(std::string_view input, F&& f) {
-  std::cout << "FOR EACH LINE ARG " << input << std::endl;
   for (auto pos = input.begin();;) {
-    std::cout << "FOR LOOP" << std::endl;
-    if (pos == input.begin()) {
-      std::cout << "pos is beginning" << std::endl;
-    } else if (pos > input.begin() && pos < input.end()) {
-      std::cout << "pos beginning end" << std::endl;
-    } else if (pos >= input.end()) {
-      std::cout << "pos after end" << std::endl;
-    }
     auto line_end = std::search(pos, input.end(), eol.begin(), eol.end());
-    if (line_end == input.end()) {
-      std::cout << "EOL not found" << std::endl;
+    if (line_end == input.end())
       return make_error(sec::logic_error, "EOL delimiter not found");
-    }
     auto to_line_end = std::distance(pos, line_end);
-    std::cout << "Distance is" << to_line_end << std::endl;
     CAF_ASSERT(to_line_end >= 0);
     auto line = std::string_view{std::addressof(*pos),
                                  static_cast<size_t>(to_line_end)};
-    std::cout << "Line is" << line << std::endl;
     pos = line_end + eol.size();
     if (line.empty()) {
-      auto gen_len = std::distance(pos, input.end());
-      if (gen_len == 0)
+      auto remainder_length = std::distance(pos, input.end());
+      // Constructing an expected<string_view> from a zero-sized string view
+      // failed on the windows runner and broke the pipeline. This is a
+      // workaround to return a default constructed string_view.
+      if (remainder_length == 0)
         return std::string_view{};
-      std::cout << "Empty line - returning " << gen_len << std::endl;
       return std::string_view{std::addressof(*pos),
-                              static_cast<size_t>(gen_len)};
+                              static_cast<size_t>(remainder_length)};
     }
-    if (!f(line)) {
-      std::cout << "Predicate failed - returning error " << std::endl;
+    if (!f(line))
       return make_error(sec::logic_error, "Predicate function failed");
-    }
-    std::cout << "Predicate success - loop" << std::endl;
   }
 }
 
@@ -89,34 +75,29 @@ void header::reassign_fields(const header& other) noexcept {
   }
 }
 
+void header::clear() noexcept {
+  fields_.clear();
+  raw_.clear();
+}
+
 // Note: does not take ownership of the data.
 expected<std::string_view> header::parse_fields(std::string_view data) {
-  std::cout << "PARSE PROCESSING OF" << data << std::endl;
   auto remainder = for_each_line(data, [this](std::string_view line) {
-    std::cout << "  lambda: arg <" << line << ">" << std::endl;
     if (auto sep = std::find(line.begin(), line.end(), ':');
         sep != line.end()) {
-      std::cout << "  lambda if: found" << std::endl;
       auto n = static_cast<size_t>(std::distance(line.begin(), sep));
       auto key = trim(std::string_view{line.data(), n});
       auto m = static_cast<size_t>(std::distance(sep + 1, line.end()));
       auto val = trim(std::string_view{std::addressof(*(sep + 1)), m});
-      std::cout << "  lambda if key: " << key << " val: " << val << std::endl;
       if (!key.empty()) {
         fields_.emplace_back(key, val);
-        std::cout << "  lambda if returning true" << std::endl;
         return true;
       }
     }
-    std::cout << "  lambda if not found returning false" << std::endl;
     return false;
   });
-  if (!remainder) {
-    std::cout << "PARSE remainder is an error" << std::endl;
-    raw_.clear();
-    fields_.clear();
-  }
-  std::cout << "PARSE remainder is " << *remainder << std::endl;
+  if (!remainder)
+    clear();
   return remainder;
 }
 

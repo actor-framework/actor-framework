@@ -38,6 +38,9 @@ public:
   /// Copy assignment operator.
   header& operator=(const header&);
 
+  /// Clears the header content and fields.
+  virtual void clear() noexcept;
+
   /// Returns the number of fields in the request header.
   size_t num_fields() const noexcept {
     return fields_.size();
