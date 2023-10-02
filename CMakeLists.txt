@@ -121,7 +121,8 @@ if(CAF_ENABLE_TESTING)
         target_sources(${target} PRIVATE
           "${CMAKE_CURRENT_SOURCE_DIR}/tests/legacy/${suitePath}.cpp")
         add_test(NAME ${suiteName}
-                 COMMAND ${target} -r300 -n -v5 -s "^${suiteName}$")
+                 COMMAND ${target} -n -v5 -s "^${suiteName}$")
+        set_tests_properties(${suiteName} PROPERTIES TIMEOUT 300)
       endif()
     endforeach()
   endfunction()
@@ -294,7 +295,8 @@ function(caf_add_component name)
       target_include_directories(${test_name} PRIVATE
                                  "${CMAKE_CURRENT_SOURCE_DIR}"
                                  "${CMAKE_CURRENT_BINARY_DIR}")
-      add_test(NAME ${test_name} COMMAND ${test_name})
+      add_test(NAME ${test_name} COMMAND ${test_name} -n -v5)
+      set_tests_properties(${test_name} PROPERTIES TIMEOUT 300)
     endif()
   endforeach()
   if(NOT TARGET ${pub_lib_target})
