@@ -15,7 +15,8 @@ TEST("parsing a http request") {
   hdr.parse_fields("Host: localhost:8090\r\n"
                    "User-Agent: AwesomeLib/1.0\r\n"
                    "Accept-Encoding: gzip\r\n"
-                   "Number: 150\r\n\r\n");
+                   "Number: 150\r\n\r\n"
+                   "test\r\n");
   check(false);
   //   SECTION("check value accessors") {
   //     check_eq(hdr.num_fields(), 4ul);
