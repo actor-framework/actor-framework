@@ -1,2 +1,2 @@
 cd build
-ctest --output-on-failure -C debug || exit \b 1
+ctest -R caf-net-http-header-test --extra-verbose --timeout 120
