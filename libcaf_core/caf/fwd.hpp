@@ -73,7 +73,6 @@ template <class...> class typed_response_promise;
 class [[deprecated("use std::string_view instead")]] string_view;
 class [[nodiscard]] error;
 class abstract_actor;
-class abstract_group;
 class abstract_mailbox;
 class action;
 class actor;
@@ -102,8 +101,6 @@ class disposable;
 class event_based_actor;
 class execution_unit;
 class forwarding_actor_proxy;
-class group;
-class group_module;
 class hashed_node_id;
 class ipv4_address;
 class ipv4_endpoint;
@@ -150,7 +147,6 @@ class stateful_actor;
 
 struct down_msg;
 struct exit_msg;
-struct group_down_msg;
 struct illegal_message_element;
 struct invalid_actor_addr_t;
 struct invalid_actor_t;
@@ -346,7 +342,6 @@ class abstract_worker;
 class abstract_worker_hub;
 class disposer;
 class dynamic_message_data;
-class group_manager;
 class message_data;
 class private_thread;
 class stream_bridge;
@@ -370,7 +365,6 @@ using weak_actor_ptr = weak_intrusive_ptr<actor_control_block>;
 
 // -- intrusive pointer aliases ------------------------------------------------
 
-using group_module_ptr = intrusive_ptr<group_module>;
 using strong_actor_ptr = intrusive_ptr<actor_control_block>;
 
 // -- unique pointer aliases ---------------------------------------------------

@@ -44,8 +44,7 @@ bool abstract_actor::enqueue(strong_actor_ptr sender, message_id mid,
   return enqueue(make_mailbox_element(sender, mid, {}, std::move(msg)), host);
 }
 
-abstract_actor::abstract_actor(actor_config& cfg)
-  : abstract_channel(cfg.flags) {
+abstract_actor::abstract_actor(actor_config& cfg) : flags_(cfg.flags) {
   // nop
 }
 

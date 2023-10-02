@@ -11,7 +11,6 @@
 #include "caf/actor_system.hpp"
 #include "caf/config_value.hpp"
 #include "caf/detail/io_export.hpp"
-#include "caf/detail/remote_group_module.hpp"
 #include "caf/detail/unique_function.hpp"
 #include "caf/expected.hpp"
 #include "caf/fwd.hpp"
@@ -88,14 +87,6 @@ public:
                    system().message_types(tk), port, in, reuse);
   }
 
-  /// Makes *all* local groups accessible via network
-  /// on address `addr` and `port`.
-  /// @returns The actual port the OS uses after `bind()`. If `port == 0`
-  ///          the OS chooses a random high-level port.
-  expected<uint16_t> publish_local_groups(uint16_t port,
-                                          const char* in = nullptr,
-                                          bool reuse = false);
-
   /// Unpublishes `whom` by closing `port` or all assigned ports if `port == 0`.
   /// @param whom Actor that should be unpublished at `port`.
   /// @param port TCP port.
@@ -118,22 +109,6 @@ public:
     CAF_ASSERT(x && *x);
     return actor_cast<ActorHandle>(std::move(*x));
   }
-
-  /// Tries to connect to a group that runs on a different node in the network.
-  /// @param group_locator Locator in the format `<group-name>@<host>:<port>`.
-  expected<group> remote_group(const std::string& group_locator);
-
-  /// Tries to connect to a group that runs on a different node in the network.
-  /// @param group_identifier Unique identifier of the group.
-  /// @param host Hostname or IP address of the remote CAF node.
-  /// @param port TCP port for connecting to the group name server of the node.
-  expected<group> remote_group(const std::string& group_identifier,
-                               const std::string& host, uint16_t port);
-
-  /// @private
-  void resolve_remote_group_intermediary(const node_id& origin,
-                                         const std::string& group_identifier,
-                                         std::function<void(actor)> callback);
 
   /// Returns the enclosing actor system.
   actor_system& system() {
@@ -382,9 +357,6 @@ private:
 
   /// Handles to tasks that we spin up in start() and destroy in stop().
   std::vector<background_task_ptr> background_tasks_;
-
-  /// Manages groups that run on a different node in the network.
-  detail::remote_group_module_ptr remote_groups_;
 
   /// Stores the port where the Prometheus scraper is listening at (0 if no
   /// scraper is running in the background).

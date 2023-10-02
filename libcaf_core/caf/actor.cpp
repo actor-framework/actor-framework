@@ -6,7 +6,6 @@
 
 #include "caf/actor_addr.hpp"
 #include "caf/actor_proxy.hpp"
-#include "caf/decorator/sequencer.hpp"
 #include "caf/deserializer.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/local_actor.hpp"
@@ -63,14 +62,6 @@ void actor::swap(actor& other) noexcept {
 
 actor_addr actor::address() const noexcept {
   return actor_cast<actor_addr>(ptr_);
-}
-
-actor operator*(actor f, actor g) {
-  auto& sys = f->home_system();
-  return make_actor<decorator::sequencer, actor>(
-    sys.next_actor_id(), sys.node(), &sys,
-    actor_cast<strong_actor_ptr>(std::move(f)),
-    actor_cast<strong_actor_ptr>(std::move(g)), std::set<std::string>{});
 }
 
 bool operator==(const actor& lhs, abstract_actor* rhs) {

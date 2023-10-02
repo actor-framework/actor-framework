@@ -5,8 +5,6 @@
 #pragma once
 
 #include "caf/abstract_actor.hpp"
-#include "caf/abstract_channel.hpp"
-#include "caf/abstract_group.hpp"
 #include "caf/actor.hpp"
 #include "caf/actor_addr.hpp"
 #include "caf/actor_clock.hpp"
@@ -34,7 +32,6 @@
 #include "caf/config_value_reader.hpp"
 #include "caf/config_value_writer.hpp"
 #include "caf/const_typed_message_view.hpp"
-#include "caf/decorator/sequencer.hpp"
 #include "caf/deep_to_string.hpp"
 #include "caf/defaults.hpp"
 #include "caf/deserializer.hpp"
@@ -46,7 +43,6 @@
 #include "caf/expected.hpp"
 #include "caf/extend.hpp"
 #include "caf/function_view.hpp"
-#include "caf/group.hpp"
 #include "caf/hash/fnv.hpp"
 #include "caf/init_global_meta_objects.hpp"
 #include "caf/local_actor.hpp"

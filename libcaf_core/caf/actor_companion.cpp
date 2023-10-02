@@ -34,12 +34,6 @@ bool actor_companion::enqueue(mailbox_element_ptr ptr, execution_unit*) {
   }
 }
 
-bool actor_companion::enqueue(strong_actor_ptr src, message_id mid,
-                              message content, execution_unit* eu) {
-  auto ptr = make_mailbox_element(std::move(src), mid, {}, std::move(content));
-  return enqueue(std::move(ptr), eu);
-}
-
 void actor_companion::launch(execution_unit*, bool, bool hide) {
   if (!hide)
     register_at_system();

@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "caf/abstract_channel.hpp"
 #include "caf/attachable.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/functor_attachable.hpp"
@@ -36,11 +35,11 @@ using actor_id = uint64_t;
 constexpr actor_id invalid_actor_id = 0;
 
 /// Base class for all actor implementations.
-class CAF_CORE_EXPORT abstract_actor : public abstract_channel {
+class CAF_CORE_EXPORT abstract_actor {
 public:
   actor_control_block* ctrl() const;
 
-  ~abstract_actor() override;
+  virtual ~abstract_actor();
 
   abstract_actor(const abstract_actor&) = delete;
   abstract_actor& operator=(const abstract_actor&) = delete;
@@ -52,8 +51,13 @@ public:
   /// implementation is required to call `super::destroy()` at the end.
   virtual void on_destroy();
 
+  /// Enqueues a new message without forwarding stack to the channel.
+  /// @returns `true` if the message has been dispatches successful, `false`
+  ///          otherwise. In the latter case, the channel has been closed and
+  ///          the message has been dropped. Once this function returns `false`,
+  ///          it returns `false` for all future invocations.
   bool enqueue(strong_actor_ptr sender, message_id mid, message msg,
-               execution_unit* host) override;
+               execution_unit* host);
 
   /// Enqueues a new message wrapped in a `mailbox_element` to the actor.
   /// This `enqueue` variant allows to define forwarding chains.
@@ -117,6 +121,7 @@ public:
   }
 
   // flags storing runtime information                      used by ...
+  static constexpr int is_hidden_flag = 0x10000000;    // (several actors)
   static constexpr int is_registered_flag = 0x0008;    // (several actors)
   static constexpr int is_initialized_flag = 0x0010;   // event-based actors
   static constexpr int is_blocking_flag = 0x0020;      // blocking_actor
@@ -207,6 +212,26 @@ protected:
   // Guards potentially concurrent access to the state. For example,
   // `exit_state_`, `attachables_`, and `links_` in a `monitorable_actor`.
   mutable std::mutex mtx_;
+
+  // note: *both* operations use relaxed memory order, this is because
+  // only the actor itself is granted write access while all access
+  // from other actors or threads is always read-only; further, only
+  // flags that are considered constant after an actor has launched are
+  // read by others, i.e., there is no acquire/release semantic between
+  // setting and reading flags
+  int flags() const {
+    return flags_.load(std::memory_order_relaxed);
+  }
+
+  void flags(int new_value) {
+    flags_.store(new_value, std::memory_order_relaxed);
+  }
+
+private:
+  // Accumulates several state and type flags. Subtypes may use only the
+  // first 20 bits, i.e., the bitmask 0xFFF00000 is reserved for
+  // channel-related flags.
+  std::atomic<int> flags_;
 };
 
 } // namespace caf

@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "caf/abstract_channel.hpp"
 #include "caf/behavior.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/unique_function.hpp"
@@ -32,7 +31,6 @@ public:
   execution_unit* host;
   local_actor* parent;
   int flags;
-  input_range<const group>* groups;
   detail::unique_function<behavior(local_actor*)> init_fun;
   detail::mailbox_factory* mbox_factory = nullptr;
 

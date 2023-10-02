@@ -19,7 +19,6 @@ caf_add_component(
     ${CAF_IO_HEADERS}
   SOURCES
     caf/detail/prometheus_broker.cpp
-    caf/detail/remote_group_module.cpp
     caf/detail/socket_guard.cpp
     caf/io/abstract_broker.cpp
     caf/io/basp/header.cpp
@@ -71,7 +70,6 @@ caf_add_component(
     io.network.default_multiplexer
     io.network.ip_endpoint
     io.remote_actor
-    io.remote_group
     io.remote_spawn
     io.unpublish
     io.worker)

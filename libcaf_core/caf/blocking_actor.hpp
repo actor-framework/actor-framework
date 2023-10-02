@@ -23,7 +23,6 @@
 #include "caf/mailbox_element.hpp"
 #include "caf/mixin/requester.hpp"
 #include "caf/mixin/sender.hpp"
-#include "caf/mixin/subscriber.hpp"
 #include "caf/none.hpp"
 #include "caf/policy/arg.hpp"
 #include "caf/send.hpp"
@@ -41,9 +40,7 @@ namespace caf {
 class CAF_CORE_EXPORT blocking_actor
   // clang-format off
   : public extend<local_actor, blocking_actor>::
-           with<mixin::requester,
-                mixin::sender,
-                mixin::subscriber>,
+           with<mixin::requester, mixin::sender>,
     public dynamically_typed_actor_base,
     public blocking_actor_base {
   // clang-format on

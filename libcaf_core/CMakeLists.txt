@@ -67,8 +67,6 @@ caf_add_component(
     ${CAF_CORE_HEADERS}
   SOURCES
     caf/abstract_actor.cpp
-    caf/abstract_channel.cpp
-    caf/abstract_group.cpp
     caf/abstract_mailbox.cpp
     caf/action.cpp
     caf/action.test.cpp
@@ -105,7 +103,6 @@ caf_add_component(
     caf/config_value.cpp
     caf/config_value_reader.cpp
     caf/config_value_writer.cpp
-    caf/decorator/sequencer.cpp
     caf/default_attachable.cpp
     caf/deserializer.cpp
     caf/detail/abstract_worker.cpp
@@ -121,11 +118,9 @@ caf_add_component(
     caf/detail/default_mailbox.test.cpp
     caf/detail/get_process_id.cpp
     caf/detail/glob_match.cpp
-    caf/detail/group_tunnel.cpp
     caf/detail/invoke_result_visitor.cpp
     caf/detail/json.cpp
     caf/detail/latch.cpp
-    caf/detail/local_group_module.cpp
     caf/detail/mailbox_factory.cpp
     caf/detail/mailbox_factory.test.cpp
     caf/detail/message_builder_element.cpp
@@ -166,9 +161,6 @@ caf_add_component(
     caf/flow/step/take_last.test.cpp
     caf/flow/subscription.cpp
     caf/forwarding_actor_proxy.cpp
-    caf/group.cpp
-    caf/group_manager.cpp
-    caf/group_module.cpp
     caf/hash/fnv.test.cpp
     caf/hash/sha1.cpp
     caf/init_global_meta_objects.cpp
@@ -273,11 +265,9 @@ caf_add_component(
     detail.bounds_checker
     detail.config_consumer
     detail.format
-    detail.group_tunnel
     detail.ieee_754
     detail.json
     detail.latch
-    detail.local_group_module
     detail.meta_object
     detail.monotonic_buffer_resource
     detail.parse

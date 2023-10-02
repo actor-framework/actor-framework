@@ -8,7 +8,6 @@
 #include "caf/async/batch.hpp"
 #include "caf/deep_to_string.hpp"
 #include "caf/fwd.hpp"
-#include "caf/group.hpp"
 #include "caf/type_id.hpp"
 
 #include <cstdint>
@@ -64,18 +63,6 @@ template <class Inspector>
 bool inspect(Inspector& f, down_msg& x) {
   return f.object(x).fields(f.field("source", x.source),
                             f.field("reason", x.reason));
-}
-
-/// Sent to all members of a group when it goes offline.
-struct group_down_msg {
-  /// The source of this message, i.e., the now unreachable group.
-  group source;
-};
-
-/// @relates group_down_msg
-template <class Inspector>
-bool inspect(Inspector& f, group_down_msg& x) {
-  return f.object(x).fields(f.field("source", x.source));
 }
 
 /// Sent to all actors monitoring a node when CAF loses connection to it.

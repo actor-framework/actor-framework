@@ -159,18 +159,6 @@ auto middleman_actor_impl::make_behavior() -> behavior_type {
                             std::move(ifs)));
       return delegated<strong_actor_ptr>{};
     },
-    [this](get_atom, group_atom, node_id& nid,
-           std::string& group_id) -> result<actor> {
-      CAF_LOG_TRACE("");
-      if (!nid)
-        return make_error(sec::invalid_argument,
-                          "cannot get group intermediaries from invalid nodes");
-      auto id = basp::header::config_server_id;
-      delegate(broker_, forward_atom_v, nid, id,
-               make_message(get_atom_v, group_atom_v, std::move(nid),
-                            std::move(group_id)));
-      return delegated<actor>{};
-    },
     [this](get_atom,
            node_id& nid) -> delegated<node_id, std::string, uint16_t> {
       CAF_LOG_TRACE("");

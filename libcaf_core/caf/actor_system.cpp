@@ -121,10 +121,6 @@ behavior config_serv_impl(stateful_actor<kvstate>* self) {
     [=](registry_lookup_atom, const std::string& name) {
       return self->home_system().registry().get(name);
     },
-    // get the intermediary of a local group
-    [=](get_atom, group_atom, const std::string& id) {
-      return self->home_system().groups().get_local(id).get()->intermediary();
-    },
   };
 }
 
@@ -270,7 +266,6 @@ actor_system::actor_system(actor_system_config& cfg)
     base_metrics_(make_base_metrics(metrics_)),
     logger_(caf::logger::make(*this)),
     registry_(*this),
-    groups_(*this),
     dummy_execution_unit_(this),
     await_actors_before_shutdown_(true),
     cfg_(cfg),
@@ -354,7 +349,6 @@ actor_system::actor_system(actor_system_config& cfg)
   for (auto& mod : modules_)
     if (mod)
       mod->init(cfg);
-  groups_.init(cfg);
   // Spawn config and spawn servers (lazily to not access the scheduler yet).
   static constexpr auto Flags = hidden + lazy_init;
   spawn_serv(actor_cast<strong_actor_ptr>(spawn<Flags>(spawn_serv_impl)));
@@ -367,7 +361,6 @@ actor_system::actor_system(actor_system_config& cfg)
   for (auto& mod : modules_)
     if (mod)
       mod->start();
-  groups_.start();
   logger_->start();
 }
 
@@ -384,8 +377,6 @@ actor_system::~actor_system() {
     };
     drop(spawn_serv_);
     drop(config_serv_);
-    // group module is the first one, relies on MM
-    groups_.stop();
     // stop modules in reverse order
     for (auto i = modules_.rbegin(); i != modules_.rend(); ++i) {
       auto& ptr = *i;
@@ -415,10 +406,6 @@ caf::logger& actor_system::logger() {
 
 actor_registry& actor_system::registry() {
   return registry_;
-}
-
-group_manager& actor_system::groups() {
-  return groups_;
 }
 
 bool actor_system::has_middleman() const {

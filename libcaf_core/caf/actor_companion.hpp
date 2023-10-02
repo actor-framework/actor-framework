@@ -10,7 +10,6 @@
 #include "caf/mailbox_element.hpp"
 #include "caf/mixin/behavior_changer.hpp"
 #include "caf/mixin/sender.hpp"
-#include "caf/mixin/subscriber.hpp"
 #include "caf/scheduled_actor.hpp"
 
 #include <functional>
@@ -32,9 +31,7 @@ public:
 class CAF_CORE_EXPORT actor_companion
   // clang-format off
   : public extend<scheduled_actor, actor_companion>::
-           with<mixin::sender,
-                mixin::subscriber,
-                mixin::behavior_changer> {
+           with<mixin::sender, mixin::behavior_changer> {
   // clang-format on
 public:
   // -- member types -----------------------------------------------------------
@@ -59,10 +56,9 @@ public:
 
   // -- overridden functions ---------------------------------------------------
 
-  bool enqueue(mailbox_element_ptr ptr, execution_unit* host) override;
+  using scheduled_actor::enqueue;
 
-  bool enqueue(strong_actor_ptr src, message_id mid, message content,
-               execution_unit* eu) override;
+  bool enqueue(mailbox_element_ptr ptr, execution_unit* host) override;
 
   void launch(execution_unit* eu, bool lazy, bool hide) override;
 
