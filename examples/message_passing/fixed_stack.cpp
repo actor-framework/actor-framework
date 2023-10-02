@@ -64,8 +64,8 @@ class fixed_stack : public event_based_actor {
 public:
   fixed_stack(actor_config& cfg, size_t stack_size)
     : event_based_actor(cfg), size_(stack_size) {
-    full_.assign( //
-      [this](push_atom, int) -> error {
+    full_.assign(
+      [](push_atom, int) -> error { //
         return fixed_stack_errc::push_to_full;
       },
       [this](pop_atom) -> int {
@@ -74,7 +74,7 @@ public:
         become(filled_);
         return result;
       });
-    filled_.assign( //
+    filled_.assign(
       [this](push_atom, int what) {
         data_.push_back(what);
         if (data_.size() == size_)
@@ -87,7 +87,7 @@ public:
           become(empty_);
         return result;
       });
-    empty_.assign( //
+    empty_.assign(
       [this](push_atom, int what) {
         data_.push_back(what);
         become(filled_);

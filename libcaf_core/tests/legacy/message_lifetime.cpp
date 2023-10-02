@@ -58,11 +58,13 @@ public:
   behavior make_behavior() override {
     monitor(aut_);
     send(aut_, msg_);
-    return {[this](int a, int b, int c) {
-      CHECK_EQ(a, 1);
-      CHECK_EQ(b, 2);
-      CHECK_EQ(c, 3);
-    }};
+    return {
+      [](int a, int b, int c) {
+        CHECK_EQ(a, 1);
+        CHECK_EQ(b, 2);
+        CHECK_EQ(c, 3);
+      },
+    };
   }
 
 private:
