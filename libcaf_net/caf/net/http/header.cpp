@@ -41,10 +41,10 @@ expected<std::string_view> for_each_line(std::string_view input, F&& f) {
     std::cout << "Line is" << line << std::endl;
     pos = line_end + eol.size();
     if (line.empty()) {
-      std::cout << "Empty line - returning" << std::endl;
+      auto gen_len = std::distance(pos, input.end());
+      std::cout << "Empty line - returning " << gen_len << std::endl;
       return std::string_view{std::addressof(*pos),
-                              static_cast<size_t>(
-                                std::distance(pos, input.end()))};
+                              static_cast<size_t>(gen_len)};
     }
     if (!f(line)) {
       std::cout << "Predicate failed - returning error " << std::endl;
