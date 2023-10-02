@@ -42,6 +42,8 @@ expected<std::string_view> for_each_line(std::string_view input, F&& f) {
     pos = line_end + eol.size();
     if (line.empty()) {
       auto gen_len = std::distance(pos, input.end());
+      if (gen_len == 0)
+        return std::string_view{};
       std::cout << "Empty line - returning " << gen_len << std::endl;
       return std::string_view{std::addressof(*pos),
                               static_cast<size_t>(gen_len)};

@@ -12,9 +12,15 @@ using namespace std::literals;
 
 expected<std::string_view> foo() {
   auto constexpr data = "Lorem Ipsum"sv;
-  std::cout << "returning" << std::endl;
+  std::cout << "returning 1" << std::endl;
   return std::string_view(data.data(), 0);
 };
+
+expected<std::string_view> bar() {
+  auto r = foo();
+  std::cout << "returning 2" << std::endl;
+  return r;
+}
 
 TEST("returning a expected std::string_view") {
   std::cout << "Before call." << std::endl;
@@ -25,11 +31,21 @@ TEST("returning a expected std::string_view") {
 
 TEST("parsing a http request") {
   net::http::header hdr;
-  hdr.parse_fields("Host: localhost:8090\r\n"
-                   "User-Agent: AwesomeLib/1.0\r\n"
-                   "Accept-Encoding: gzip\r\n"
-                   "Number: 150\r\n\r\n");
-  check(false);
+  SECTION("one") {
+    hdr.parse_fields("Host: localhost:8090\r\n"
+                     "User-Agent: AwesomeLib/1.0\r\n"
+                     "Accept-Encoding: gzip\r\n"
+                     "Number: 150\r\n\r\n");
+    check(true);
+  }
+  SECTION("two") {
+    hdr.parse_fields("Host: localhost:8090\r\n"
+                     "User-Agent: AwesomeLib/1.0\r\n"
+                     "Accept-Encoding: gzip\r\n"
+                     "Number: 150\r\n\r\n"
+                     "test\r\n");
+    check(true);
+  }
   //   SECTION("check value accessors") {
   //     check_eq(hdr.num_fields(), 4ul);
   //     check_eq(hdr.field("Host"), "localhost:8090");
