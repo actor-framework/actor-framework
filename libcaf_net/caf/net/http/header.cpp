@@ -15,31 +15,26 @@ constexpr std::string_view eol = "\r\n";
 
 // Iterates through lines separated by eol and applies f to them, until an empty
 // line is found (containing only eol). Returns the unprocessed input or error
-// if no eol is found or f fails.
+// if no eol is found or `f` returns false.
 template <class F>
-expected<std::string_view> for_each_line(std::string_view input, F&& f) {
-  for (auto pos = input.begin();;) {
-    auto line_end = std::search(pos, input.end(), eol.begin(), eol.end());
-    if (line_end == input.end())
+expected<std::string_view> process_lines(std::string_view input, F&& f) {
+  for (;;) {
+    size_t pos = input.find(eol);
+    // Stop when not finding the delimiter.
+    if (pos == std::string_view::npos)
       return make_error(sec::logic_error, "EOL delimiter not found");
-    auto to_line_end = std::distance(pos, line_end);
-    CAF_ASSERT(to_line_end >= 0);
-    auto line = std::string_view{std::addressof(*pos),
-                                 static_cast<size_t>(to_line_end)};
-    pos = line_end + eol.size();
-    if (line.empty()) {
-      auto remainder_length = std::distance(pos, input.end());
-      // Constructing an expected<string_view> from a zero-sized string view
-      // failed on the windows runner and broke the pipeline. This is a
-      // workaround to return a default constructed string_view.
-      if (remainder_length == 0)
-        return std::string_view{};
-      return std::string_view{std::addressof(*pos),
-                              static_cast<size_t>(remainder_length)};
+    // Stop at the first empty line and return the remainder.
+    if (pos == 0) {
+      input.remove_suffix(eol.size());
+      return {input};
     }
-    if (!f(line))
+    // Stop if the predicate returns false.
+    if (!f(input.substr(0, pos)))
       return make_error(sec::logic_error, "Predicate function failed");
+    // Drop the consumed line from the input for the next iteration.
+    input.remove_prefix(pos + eol.size());
   }
+}
 }
 
 } // namespace

@@ -37,10 +37,6 @@ response_header::response_header(const response_header& other) : super(other) {
     status_ = other.status_;
     status_text_ = remap(base, other.status_text_, new_base);
     body_ = remap(base, other.body_, new_base);
-  } else {
-    version_ = std::string_view{};
-    status_text_ = std::string_view{};
-    body_ = std::string_view{};
   }
 }
 

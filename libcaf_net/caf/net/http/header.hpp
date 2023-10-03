@@ -21,7 +21,7 @@ namespace caf::net::http {
 class CAF_NET_EXPORT header {
 public:
   /// Virtual destructor.
-  virtual ~header() = default;
+  virtual ~header();
 
   /// Default constructor.
   header() = default;

@@ -15,13 +15,11 @@ constexpr std::string_view eol = "\r\n";
 
 } // namespace
 
-request_header::request_header(const request_header& other) : header{other} {
+request_header::request_header(const request_header& other) : header(other) {
   if (other.valid()) {
     method_ = other.method_;
     uri_ = other.uri_;
     version_ = remap(other.raw_.data(), other.version_, raw_.data());
-  } else {
-    version_ = std::string_view{};
   }
 }
 

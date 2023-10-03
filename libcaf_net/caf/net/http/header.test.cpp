@@ -29,7 +29,7 @@ TEST("parsing a http request") {
     check_eq(hdr.field("accept-ENCODING"), "gzip");
     check_eq(hdr.field("NUMBER"), "150");
   }
-  SECTION("non existing field returns an empty view") {
+  SECTION("non-existing fields are mapped to empty strings") {
     check_eq(hdr.field("Foo"), "");
   }
   SECTION("field access by position") {
@@ -45,7 +45,7 @@ TEST("parsing a http request") {
     check(hdr.has_field("HOST"));
     check(!hdr.has_field("Foo"));
   }
-  SECTION("field_equals return true if a field exists") {
+  SECTION("field_equals tests the content of a field") {
     check(hdr.field_equals("Host", "localhost:8090"));
     check(hdr.field_equals("HOST", "localhost:8090"));
     check(hdr.field_equals(ignore_case, "Host", "LOCALHOST:8090"));
@@ -57,12 +57,12 @@ TEST("parsing a http request") {
     check(!hdr.field_equals(ignore_case, "FOO", "localhost:8090"));
     check(!hdr.field_equals("Host", "LOCALHOST:8090"));
   }
-  SECTION("field_as converts the type") {
+  SECTION("field_as converts strings to user-defined types") {
     check_eq(hdr.field_as<int>("number"), 150);
     check_eq(hdr.field_as<float>("number"), 150.0);
     check_eq(hdr.field_as<int>("Host"), std::nullopt);
   }
-  SECTION("parsing a remainder") {
+  SECTION("parse_fields returns the HTTP body as remainder") {
     hdr.clear();
     auto remainder = hdr.parse_fields("Host: localhost:8090\r\n"
                                       "User-Agent: AwesomeLib/1.0\r\n"
