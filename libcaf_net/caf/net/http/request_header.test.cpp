@@ -32,20 +32,22 @@ TEST("parsing a http request") {
   }
 }
 
-TEST("rule of five") {
-  net::http::request_header source;
-  SECTION("default constructor") {
-    check(!source.valid());
-    check_eq(source.num_fields(), 0ul);
-    check_eq(source.version(), "");
-    check_eq(source.path(), "");
-    check(source.query().empty());
-  }
-  source.parse("GET /foo/bar?user=foo&pw=bar#baz HTTP/1.1\r\n"
-               "Host: localhost:8090\r\n"
-               "User-Agent: AwesomeLib/1.0\r\n"
-               "Accept-Encoding: gzip\r\n"
-               "Number: 150\r\n\r\n"sv);
+TEST("default-constructed request headers are invalid") {
+  net::http::request_header uut;
+  check(!uut.valid());
+  check_eq(uut.num_fields(), 0ul);
+  check_eq(uut.version(), "");
+  check_eq(uut.path(), "");
+  check(uut.query().empty());
+}
+
+TEST("request headers are copyable and movable") {
+  net::http::request_header uut;
+  uut.parse("GET /foo/bar?user=foo&pw=bar#baz HTTP/1.1\r\n"
+            "Host: localhost:8090\r\n"
+            "User-Agent: AwesomeLib/1.0\r\n"
+            "Accept-Encoding: gzip\r\n"
+            "Number: 150\r\n\r\n"sv);
   auto check_equality = [this](const auto& uut) {
     check_eq(uut.method(), net::http::method::get);
     check_eq(uut.version(), "HTTP/1.1");
@@ -58,22 +60,52 @@ TEST("rule of five") {
     check_eq(uut.field("User-Agent"), "AwesomeLib/1.0");
     check_eq(uut.field("Accept-Encoding"), "gzip");
   };
-  SECTION("copy constructor") {
-    auto uut{source};
-    check_equality(uut);
+  SECTION("copy-construction") {
+    auto other{uut};
+    check_equality(other);
   }
-  SECTION("move constructor") {
-    auto uut{std::move(source)};
-    check_equality(uut);
+  SECTION("copy-assignment") {
+    net::http::request_header other;
+    other = uut;
+    check_equality(other);
   }
+  SECTION("move-construction") {
+    auto other{std::move(uut)};
+    check_equality(other);
+  }
+  SECTION("move-assignment") {
+    net::http::request_header other;
+    other = std::move(uut);
+    check_equality(other);
+  }
+}
+
+TEST("invalid request headers are copyable and movable") {
+  auto check_invalid = [this](const auto& uut) {
+    check(!uut.valid());
+    check_eq(uut.num_fields(), 0ul);
+    check_eq(uut.version(), "");
+    check_eq(uut.path(), "");
+    check(uut.query().empty());
+  };
   net::http::request_header uut;
-  SECTION("copy assignment operator") {
-    uut = source;
-    check_equality(uut);
+  SECTION("copy-construction") {
+    auto other{uut};
+    check_invalid(other);
   }
-  SECTION("move assignment operator") {
-    uut = std::move(source);
-    check_equality(uut);
+  SECTION("copy-assignment") {
+    net::http::request_header other;
+    other = uut;
+    check_invalid(other);
+  }
+  SECTION("move-construction") {
+    auto other{std::move(uut)};
+    check_invalid(other);
+  }
+  SECTION("move-assignment") {
+    net::http::request_header other;
+    other = std::move(uut);
+    check_invalid(other);
   }
 }
 

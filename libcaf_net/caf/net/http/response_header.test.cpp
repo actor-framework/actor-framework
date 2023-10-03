@@ -88,17 +88,34 @@ TEST("parsing an invalid http response") {
     hdr.parse("\r\n");
     check(!hdr.valid());
   }
+  SECTION("malformed header field") {
+    hdr.parse("HTTP/1.1 200 OK\r\n"
+              "ServerApache\r\n\r\n");
+    check(!hdr.valid());
+  }
+  SECTION("malformed header field - missing :") {
+    hdr.parse("HTTP/1.1 200 OK\r\n"
+              "ServerApache\r\n\r\n");
+    check(!hdr.valid());
+  }
+  SECTION("malformed header field - empty key") {
+    hdr.parse("HTTP/1.1 200 OK\r\n"
+              ":Apache\r\n\r\n");
+    check(!hdr.valid());
+  }
 }
 
-TEST("rule of five") {
+TEST("default-constructed response headers are invalid") {
+  net::http::response_header uut;
+  check(!uut.valid());
+  check_eq(uut.num_fields(), 0ul);
+  check_eq(uut.version(), "");
+  check_eq(uut.status_text(), "");
+  check_eq(uut.body(), "");
+}
+
+TEST("response headers are copyable and movable") {
   net::http::response_header source;
-  SECTION("default constructor") {
-    check(!source.valid());
-    check_eq(source.num_fields(), 0ul);
-    check_eq(source.version(), "");
-    check_eq(source.status_text(), "");
-    check_eq(source.body(), "");
-  }
   source.parse("HTTP/1.1 200 OK\r\n"
                "Server: Apache\r\n"
                "Content-Length: 88\r\n"
@@ -116,22 +133,52 @@ TEST("rule of five") {
     check_eq(uut.body(), "Response body"sv);
   };
   check_equality(source);
-  SECTION("copy constructor") {
+  SECTION("copy-construction") {
     auto uut{source};
     check_equality(uut);
   }
-  SECTION("move constructor") {
-    auto uut{std::move(source)};
-    check_equality(uut);
-  }
-  net::http::response_header uut;
-  SECTION("copy assignment operator") {
+  SECTION("copy-assignment") {
+    net::http::response_header uut;
     uut = source;
     check_equality(uut);
   }
-  SECTION("move assignment operator") {
+  SECTION("move-construction") {
+    auto uut{std::move(source)};
+    check_equality(uut);
+  }
+  SECTION("move-assignment") {
+    net::http::response_header uut;
     uut = std::move(source);
     check_equality(uut);
+  }
+}
+
+TEST("copying and moving invalid response header results in invalid requests") {
+  auto check_invalid = [this](const auto& uut) {
+    check(!uut.valid());
+    check_eq(uut.num_fields(), 0ul);
+    check_eq(uut.version(), "");
+    check_eq(uut.status_text(), "");
+    check_eq(uut.body(), "");
+  };
+  net::http::response_header source;
+  SECTION("copy-construction") {
+    auto uut{source};
+    check_invalid(uut);
+  }
+  SECTION("copy-assignment") {
+    net::http::response_header uut;
+    uut = source;
+    check(!uut.valid());
+  }
+  SECTION("move-construction") {
+    auto uut{std::move(source)};
+    check(!uut.valid());
+  }
+  SECTION("move-assignment") {
+    net::http::response_header uut;
+    uut = std::move(source);
+    check(!uut.valid());
   }
 }
 
