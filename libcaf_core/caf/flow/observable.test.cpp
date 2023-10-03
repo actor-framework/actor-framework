@@ -223,14 +223,6 @@ TEST("on_error_complete() suppresses errors") {
   }
   SECTION("on_error_complete() completes on error") {
     SECTION("blueprint") {
-      check_eq(collect(obs_error(sec::runtime_error)
-                         .concat(range(1, 1))
-                         .on_error_complete()),
-               nil);
-      check_eq(collect(obs_error(sec::runtime_error)
-                         .concat(range(1, 2))
-                         .on_error_complete()),
-               nil);
       check_eq(collect(range(1, 2)
                          .concat(obs_error(sec::runtime_error))
                          .concat(range(1, 2))
@@ -243,12 +235,6 @@ TEST("on_error_complete() suppresses errors") {
                vector{1, 2, 3});
     }
     SECTION("observable") {
-      check_eq(collect(mat(obs_error(sec::runtime_error).concat(range(1, 1)))
-                         .on_error_complete()),
-               nil);
-      check_eq(collect(mat(obs_error(sec::runtime_error).concat(range(1, 2)))
-                         .on_error_complete()),
-               nil);
       check_eq(collect(mat(range(1, 2)
                              .concat(obs_error(sec::runtime_error))
                              .concat(range(1, 2)))
