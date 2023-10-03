@@ -56,9 +56,8 @@ void response_header::assign(const response_header& other) {
     reassign_fields(other);
     body_ = remap(base, other.body_, new_base);
   } else {
-    raw_.clear();
+    clear();
     version_ = std::string_view{};
-    fields_.clear();
   }
 }
 
@@ -67,10 +66,9 @@ response_header::parse(std::string_view raw) {
   using namespace literals;
   CAF_LOG_TRACE(CAF_ARG(raw));
   // Sanity checking and copying of the raw input.
-  if (raw.empty()) {
-    raw_.clear();
+  super::clear();
+  if (raw.empty())
     return {status::bad_request, "Empty header."};
-  };
   raw_.assign(raw.begin(), raw.end());
   // Parse the first line, i.e., "VERSION STATUS STATUS-TEXT".
   auto [first_line, remainder]
@@ -97,16 +95,14 @@ response_header::parse(std::string_view raw) {
     raw_.clear();
     return {status::bad_request, "Invalid HTTP status text."};
   }
-  fields_.clear();
   auto remaining_text = parse_fields(remainder);
   if (remaining_text) {
     body_ = *remaining_text;
     return {status::ok, "OK"};
   } else {
-    raw_.clear();
+    clear();
     version_ = std::string_view{};
     status_text_ = std::string_view{};
-    fields_.clear();
     return {status::bad_request, "Malformed header fields."};
   }
 }

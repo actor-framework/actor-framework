@@ -147,6 +147,7 @@ protected:
   /// Stores the raw HTTP input.
   std::vector<char> raw_;
 
+private:
   /// A shallow map for looking up individual header fields.
   fields_map fields_;
 };

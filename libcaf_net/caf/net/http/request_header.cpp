@@ -36,9 +36,8 @@ void request_header::assign(const request_header& other) {
     version_ = remap(other.raw_.data(), other.version_, raw_.data());
     reassign_fields(other);
   } else {
-    raw_.clear();
+    clear();
     version_ = std::string_view{};
-    fields_.clear();
   }
 }
 
@@ -47,10 +46,9 @@ request_header::parse(std::string_view raw) {
   CAF_LOG_TRACE(CAF_ARG(raw));
   // Sanity checking and copying of the raw input.
   using namespace literals;
-  if (raw.empty()) {
-    raw_.clear();
+  super::clear();
+  if (raw.empty())
     return {status::bad_request, "Empty header."};
-  };
   raw_.assign(raw.begin(), raw.end());
   // Parse the first line, i.e., "METHOD REQUEST-URI VERSION".
   auto [first_line, remainder]
@@ -98,14 +96,12 @@ request_header::parse(std::string_view raw) {
   }
   // Store the remaining header fields.
   version_ = version;
-  fields_.clear();
   auto ok = parse_fields(remainder);
   if (ok) {
     return {status::ok, "OK"};
   } else {
-    raw_.clear();
+    clear();
     version_ = std::string_view{};
-    fields_.clear();
     return {status::bad_request, "Malformed header fields."};
   }
 }

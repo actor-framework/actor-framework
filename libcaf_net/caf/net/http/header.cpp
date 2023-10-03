@@ -25,7 +25,7 @@ expected<std::string_view> process_lines(std::string_view input, F&& f) {
       return make_error(sec::logic_error, "EOL delimiter not found");
     // Stop at the first empty line and return the remainder.
     if (pos == 0) {
-      input.remove_suffix(eol.size());
+      input.remove_prefix(eol.size());
       return {input};
     }
     // Stop if the predicate returns false.
@@ -35,9 +35,12 @@ expected<std::string_view> process_lines(std::string_view input, F&& f) {
     input.remove_prefix(pos + eol.size());
   }
 }
-}
 
 } // namespace
+
+header::~header() {
+  // nop
+}
 
 header::header(const header& other) {
   if (!other.raw_.empty()) {
@@ -77,7 +80,7 @@ void header::clear() noexcept {
 
 // Note: does not take ownership of the data.
 expected<std::string_view> header::parse_fields(std::string_view data) {
-  auto remainder = for_each_line(data, [this](std::string_view line) {
+  auto remainder = process_lines(data, [this](std::string_view line) {
     if (auto sep = std::find(line.begin(), line.end(), ':');
         sep != line.end()) {
       auto n = static_cast<size_t>(std::distance(line.begin(), sep));
