@@ -194,6 +194,7 @@ caf_add_component(
     caf/make_config_option.cpp
     caf/message.cpp
     caf/message_builder.cpp
+    caf/message_builder.test.cpp
     caf/message_handler.cpp
     caf/monitorable_actor.cpp
     caf/node_id.cpp
@@ -340,7 +341,6 @@ caf_add_component(
     logger
     mailbox_element
     message
-    message_builder
     message_id
     message_lifetime
     messaging

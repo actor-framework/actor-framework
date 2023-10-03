@@ -38,6 +38,10 @@ struct meta_object {
   /// constructor.
   void (*copy_construct)(void*, const void*);
 
+  /// Creates a new object at given memory location by calling the move
+  /// constructor.
+  void (*move_construct)(void*, void*);
+
   /// Applies an object to a binary serializer.
   bool (*save_binary)(caf::binary_serializer&, const void*);
 
