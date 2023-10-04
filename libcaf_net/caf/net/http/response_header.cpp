@@ -65,7 +65,7 @@ response_header::parse(std::string_view raw) {
   using namespace literals;
   CAF_LOG_TRACE(CAF_ARG(raw));
   // Sanity checking and copying of the raw input.
-  super::clear();
+  clear();
   if (raw.empty())
     return {status::bad_request, "Empty header."};
   raw_.assign(raw.begin(), raw.end());

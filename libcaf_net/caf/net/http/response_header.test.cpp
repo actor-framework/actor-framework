@@ -81,16 +81,12 @@ TEST("parsing an invalid http response") {
     check(!hdr.valid());
   }
   SECTION("empty input is invalid") {
-    hdr.parse("");
+    auto [status, text] = hdr.parse("");
+    check_eq(status, net::http::status::bad_request);
     check(!hdr.valid());
   }
   SECTION("only eol is an invalid") {
     hdr.parse("\r\n");
-    check(!hdr.valid());
-  }
-  SECTION("malformed header field") {
-    hdr.parse("HTTP/1.1 200 OK\r\n"
-              "ServerApache\r\n\r\n");
     check(!hdr.valid());
   }
   SECTION("malformed header field - missing :") {
@@ -101,11 +97,6 @@ TEST("parsing an invalid http response") {
   SECTION("malformed header field - empty key") {
     hdr.parse("HTTP/1.1 200 OK\r\n"
               ":Apache\r\n\r\n");
-    check(!hdr.valid());
-  }
-  SECTION("parsing empty data") {
-    auto [status, _] = hdr.parse("");
-    check_eq(status, net::http::status::bad_request);
     check(!hdr.valid());
   }
 }

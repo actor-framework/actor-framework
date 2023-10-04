@@ -61,8 +61,7 @@ public:
   std::string_view field(std::string_view key) const noexcept {
     if (auto i = find_by_key_icase(key); i != fields_.end())
       return i->second;
-    else
-      return {};
+    return {};
   }
 
   ///  Checks whether the field `key` exists and equals `val` when using
@@ -71,8 +70,7 @@ public:
                     std::string_view val) const noexcept {
     if (auto i = find_by_key_icase(key); i != fields_.end())
       return icase_equal(val, i->second);
-    else
-      return false;
+    return false;
   }
 
   ///  Checks whether the field `key` exists and equals `val` when using
@@ -80,8 +78,7 @@ public:
   bool field_equals(std::string_view key, std::string_view val) const noexcept {
     if (auto i = find_by_key_icase(key); i != fields_.end())
       return val == i->second;
-    else
-      return false;
+    return false;
   }
 
   /// Returns the value of the field with the specified key as the requested

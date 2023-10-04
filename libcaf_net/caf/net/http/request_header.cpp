@@ -43,7 +43,7 @@ request_header::parse(std::string_view raw) {
   CAF_LOG_TRACE(CAF_ARG(raw));
   // Sanity checking and copying of the raw input.
   using namespace literals;
-  super::clear();
+  clear();
   if (raw.empty())
     return {status::bad_request, "Empty header."};
   raw_.assign(raw.begin(), raw.end());
@@ -94,13 +94,10 @@ request_header::parse(std::string_view raw) {
   // Store the remaining header fields.
   version_ = version;
   auto ok = parse_fields(remainder);
-  if (ok) {
+  if (ok)
     return {status::ok, "OK"};
-  } else {
-    clear();
-    version_ = std::string_view{};
-    return {status::bad_request, "Malformed header fields."};
-  }
+  clear();
+  return {status::bad_request, "Malformed header fields."};
 }
 
 } // namespace caf::net::http

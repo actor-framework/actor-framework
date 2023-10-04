@@ -5,6 +5,7 @@
 #include "caf/net/http/request_header.hpp"
 
 #include "caf/test/caf_test_main.hpp"
+#include "caf/test/outline.hpp"
 #include "caf/test/test.hpp"
 
 using namespace caf;
@@ -29,6 +30,74 @@ TEST("parsing a http request") {
     check_eq(hdr.field("Host"), "localhost:8090");
     check_eq(hdr.field("User-Agent"), "AwesomeLib/1.0");
     check_eq(hdr.field("Accept-Encoding"), "gzip");
+  }
+}
+
+OUTLINE("parsing requests") {
+  GIVEN("a http request with <method> method") {
+    auto method_name = block_parameters<std::string>();
+    auto request = detail::format("{} /foo/bar HTTP/1.1\r\n\r\n", method_name);
+    WHEN("parsing the request") {
+      net::http::request_header hdr;
+      hdr.parse(request);
+      THEN("the parsed request method is equal to <enum value>") {
+        auto expected = block_parameters<uint8_t>();
+        require(hdr.valid());
+        check_eq(static_cast<uint8_t>(hdr.method()), expected);
+        check_eq(hdr.version(), "HTTP/1.1");
+        check_eq(hdr.path(), "/foo/bar");
+      }
+    }
+  }
+  EXAMPLES = R"(
+    |  method  | enum value |
+    | GET      |     0      |
+    | HEAD     |     1      |
+    | POST     |     2      | 
+    | PUT      |     3      | 
+    | DELETE   |     4      |
+    | CONNECT  |     5      |
+    | OPTIONS  |     6      |
+    | TRACE    |     7      |
+  )";
+}
+
+TEST("parsing an invalid http request") {
+  net::http::request_header hdr;
+  SECTION("header must have a valid http method") {
+    hdr.parse("EXTERMINATE /foo/bar HTTP/1.1\r\n\r\n");
+    check(!hdr.valid());
+  }
+  SECTION("header must have the uri") {
+    hdr.parse("GET \r\n\r\n");
+    check(!hdr.valid());
+  }
+  SECTION("header must have a valid uri") {
+    hdr.parse("GET foobar HTTP/1.1\r\n\r\n");
+    check(!hdr.valid());
+  }
+  SECTION("header must end with an empty line") {
+    hdr.parse("GET /foo/bar HTTP/1.1");
+    check(!hdr.valid());
+  }
+  SECTION("empty input is invalid") {
+    auto [status, text] = hdr.parse("");
+    check_eq(status, net::http::status::bad_request);
+    check(!hdr.valid());
+  }
+  SECTION("only eol is invalid") {
+    hdr.parse("\r\n");
+    check(!hdr.valid());
+  }
+  SECTION("malformed header field - missing :") {
+    hdr.parse("GET /foo/bar HTTP/1.1\r\n"
+              "ServerApache\r\n\r\n");
+    check(!hdr.valid());
+  }
+  SECTION("malformed header field - empty key") {
+    hdr.parse("HTTP/1.1 200 OK\r\n"
+              ":Apache\r\n\r\n");
+    check(!hdr.valid());
   }
 }
 
