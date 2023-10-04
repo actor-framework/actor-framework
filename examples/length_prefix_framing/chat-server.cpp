@@ -32,6 +32,13 @@ struct config : caf::actor_system_config {
       .add<std::string>("key-file,k", "path to the private key file")
       .add<std::string>("cert-file,c", "path to the certificate file");
   }
+
+  caf::settings dump_content() const override {
+    auto result = actor_system_config::dump_content();
+    caf::put_missing(result, "port", default_port);
+    caf::put_missing(result, "max-connections", default_max_connections);
+    return result;
+  }
 };
 
 // -- multiplexing logic -------------------------------------------------------

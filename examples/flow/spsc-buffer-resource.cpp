@@ -12,6 +12,8 @@
 
 namespace {
 
+constexpr size_t default_num_values = 100;
+
 // --(rst-source-begin)--
 // Simple source for generating a stream of integers from 1 to n.
 void source(caf::event_based_actor* self,
@@ -44,17 +46,22 @@ void sink(caf::event_based_actor* self, caf::async::consumer_resource<int> in) {
 struct config : caf::actor_system_config {
   config() {
     opt_group{custom_options_, "global"} //
-      .add(n, "num-values,n", "number of values produced by the source");
+      .add<size_t>("num-values,n", "number of values produced by the source");
   }
 
-  size_t n = 100;
+  caf::settings dump_content() const override {
+    auto result = actor_system_config::dump_content();
+    caf::put_missing(result, "num-values", default_num_values);
+    return result;
+  }
 };
 
 // --(rst-main-begin)--
 void caf_main(caf::actor_system& sys, const config& cfg) {
   auto [snk_res, src_res] = caf::async::make_spsc_buffer_resource<int>();
+  auto n = get_or(cfg, "num-values", default_num_values);
   sys.spawn(sink, std::move(snk_res));
-  sys.spawn(source, std::move(src_res), cfg.n);
+  sys.spawn(source, std::move(src_res), n);
 }
 // --(rst-main-end)--
 
