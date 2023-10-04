@@ -101,21 +101,31 @@ void client_repl(function_view<calculator> f) {
   }
 }
 
+constexpr uint16_t default_port = 0;
+constexpr std::string_view default_host = "localhost";
+constexpr bool default_server_mode = false;
+
 struct config : actor_system_config {
   config() {
     add_actor_type("calculator", calculator_fun);
     opt_group{custom_options_, "global"}
-      .add(port, "port,p", "set port")
-      .add(host, "host,H", "set node (ignored in server mode)")
-      .add(server_mode, "server-mode,s", "enable server mode");
+      .add<uint16_t>("port,p", "set port")
+      .add<std::string>("host,H", "set node (ignored in server mode)")
+      .add<bool>("server-mode,s", "enable server mode");
   }
-  uint16_t port = 0;
-  string host = "localhost";
-  bool server_mode = false;
+
+  caf::settings dump_content() const override {
+    auto result = actor_system_config::dump_content();
+    put_missing(result, "port", default_port);
+    put_missing(result, "host", default_host);
+    put_missing(result, "server-mode", default_server_mode);
+    return result;
+  }
 };
 
 void server(actor_system& system, const config& cfg) {
-  auto res = system.middleman().open(cfg.port);
+  const auto port = get_or(cfg, "port", default_port);
+  auto res = system.middleman().open(port);
   if (!res) {
     cerr << "*** cannot open port: " << to_string(res.error()) << endl;
     return;
@@ -127,7 +137,9 @@ void server(actor_system& system, const config& cfg) {
 
 // --(rst-client-begin)--
 void client(actor_system& system, const config& cfg) {
-  auto node = system.middleman().connect(cfg.host, cfg.port);
+  auto host = get_or(cfg, "host", default_host);
+  auto port = get_or(cfg, "port", default_port);
+  auto node = system.middleman().connect(host, port);
   if (!node) {
     cerr << "*** connect failed: " << to_string(node.error()) << endl;
     return;
@@ -149,7 +161,8 @@ void client(actor_system& system, const config& cfg) {
 // --(rst-client-end)--
 
 void caf_main(actor_system& system, const config& cfg) {
-  auto f = cfg.server_mode ? server : client;
+  const auto server_mode = get_or(cfg, "server-mode", default_server_mode);
+  auto f = server_mode ? server : client;
   f(system, cfg);
 }
 

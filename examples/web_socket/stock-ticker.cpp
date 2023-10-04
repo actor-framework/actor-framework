@@ -28,6 +28,8 @@ static constexpr uint16_t default_port = 8080;
 
 static constexpr size_t default_max_connections = 128;
 
+static constexpr caf::timespan default_interval = 1s;
+
 // -- custom types -------------------------------------------------------------
 
 namespace stock {
@@ -153,6 +155,14 @@ struct config : caf::actor_system_config {
       .add<std::string>("key-file,k", "path to the private key file")
       .add<std::string>("cert-file,c", "path to the certificate file");
   }
+
+  caf::settings dump_content() const override {
+    auto result = actor_system_config::dump_content();
+    caf::put_missing(result, "port", default_port);
+    caf::put_missing(result, "max-connections", default_max_connections);
+    caf::put_missing(result, "interval", default_interval);
+    return result;
+  }
 };
 
 // -- main ---------------------------------------------------------------------
@@ -162,7 +172,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
   namespace ssl = caf::net::ssl;
   namespace ws = caf::net::web_socket;
   // Read the configuration.
-  auto interval = caf::get_or(cfg, "interval", caf::timespan{1s});
+  auto interval = caf::get_or(cfg, "interval", default_interval);
   auto port = caf::get_or(cfg, "port", default_port);
   auto pem = ssl::format::pem;
   auto key_file = caf::get_as<std::string>(cfg, "tls.key-file");

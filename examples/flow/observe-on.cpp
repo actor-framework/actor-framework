@@ -9,19 +9,26 @@
 
 namespace {
 
+constexpr size_t default_num_values = 10;
+
 struct config : caf::actor_system_config {
   config() {
     opt_group{custom_options_, "global"} //
-      .add(n, "num-values,n", "number of values produced by the source");
+      .add<size_t>("num-values,n", "number of values produced by the source");
   }
 
-  size_t n = 10;
+  caf::settings dump_content() const override {
+    auto result = actor_system_config::dump_content();
+    caf::put_missing(result, "num-values", default_num_values);
+    return result;
+  }
 };
 
 // --(rst-main-begin)--
 void caf_main(caf::actor_system& sys, const config& cfg) {
   // Create two actors without actually running them yet.
   using actor_t = caf::event_based_actor;
+  auto n = get_or(cfg, "num-values", default_num_values);
   auto [src, launch_src] = sys.spawn_inactive<actor_t>();
   auto [snk, launch_snk] = sys.spawn_inactive<actor_t>();
   // Define our data flow: generate data on `src` and print it on `snk`.
@@ -31,7 +38,7 @@ void caf_main(caf::actor_system& sys, const config& cfg) {
     // Produce an integer sequence starting at 1, i.e., 1, 2, 3, ...
     .iota(1)
     // Only take the requested number of items from the infinite sequence.
-    .take(cfg.n)
+    .take(n)
     // Switch to `snk` for further processing.
     .observe_on(snk)
     // Print each integer.
