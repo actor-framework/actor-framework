@@ -28,7 +28,7 @@ static constexpr uint16_t default_port = 8080;
 
 static constexpr size_t default_max_connections = 128;
 
-static constexpr caf::timespan default_interval = caf::timespan{1s};
+static constexpr caf::timespan default_interval = 1s;
 
 // -- custom types -------------------------------------------------------------
 
