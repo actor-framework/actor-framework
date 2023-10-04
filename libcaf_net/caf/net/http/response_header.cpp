@@ -29,6 +29,13 @@ bool validate_http_version(std::string_view str) {
 
 } // namespace
 
+void response_header::clear() noexcept {
+  super::clear();
+  version_ = std::string_view{};
+  status_text_ = std::string_view{};
+  body_ = std::string_view{};
+}
+
 response_header::response_header(const response_header& other) : super(other) {
   if (other.valid()) {
     auto base = other.raw_.data();
@@ -41,24 +48,16 @@ response_header::response_header(const response_header& other) : super(other) {
 }
 
 response_header& response_header::operator=(const response_header& other) {
-  assign(other);
-  return *this;
-}
-
-void response_header::assign(const response_header& other) {
+  super::operator=(other);
   if (other.valid()) {
-    raw_.assign(other.raw_.begin(), other.raw_.end());
     auto base = other.raw_.data();
     auto new_base = raw_.data();
     version_ = remap(base, other.version_, new_base);
     status_ = other.status_;
     status_text_ = remap(base, other.status_text_, new_base);
-    reassign_fields(other);
     body_ = remap(base, other.body_, new_base);
-  } else {
-    clear();
-    version_ = std::string_view{};
   }
+  return *this;
 }
 
 std::pair<status, std::string_view>

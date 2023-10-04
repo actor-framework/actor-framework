@@ -32,17 +32,14 @@ public:
   /// Move constructor.
   request_header(request_header&&) = default;
 
-  /// Move assignment operator.
-  request_header& operator=(request_header&&) = default;
-
   /// Copy constructor.
   request_header(const request_header&);
 
   /// Copy assignment operator.
   request_header& operator=(const request_header&);
 
-  /// Assigns the content of another request_header.
-  void assign(const request_header&);
+  /// Clears the header content and fields.
+  void clear() noexcept override;
 
   /// Returns the HTTP method of the request.
   http::method method() const noexcept {

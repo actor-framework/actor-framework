@@ -13,16 +13,16 @@ using namespace std::literals;
 TEST("parsing a valid http response") {
   net::http::response_header hdr;
   SECTION("parsing a one line header") {
-    hdr.parse("HTTP/1.1 200 OK\r\n\r\n");
+    hdr.parse("HTTP/1 200 OK\r\n\r\n");
     require(hdr.valid());
-    check_eq(hdr.version(), "HTTP/1.1");
+    check_eq(hdr.version(), "HTTP/1");
     check_eq(hdr.status(), 200ul);
     check_eq(hdr.status_text(), "OK");
     check_eq(hdr.num_fields(), 0ul);
     check_eq(hdr.body(), "");
   }
   SECTION("parsing a header without a body") {
-    hdr.parse("HTTP/1.1 200 OK\r\n"
+    hdr.parse("HTTP/1.0 200 OK\r\n"
               "Date: Mon, 27 Jul 2009 12:28:53 GMT\r\n"
               "Server: Apache\r\n"
               "Last-Modified: Wed, 22 Jul 2009 19:15:56 GMT\r\n"
@@ -31,7 +31,7 @@ TEST("parsing a valid http response") {
               "Connection: Closed\r\n"
               "\r\n");
     require(hdr.valid());
-    check_eq(hdr.version(), "HTTP/1.1");
+    check_eq(hdr.version(), "HTTP/1.0");
     check_eq(hdr.status(), 200ul);
     check_eq(hdr.status_text(), "OK");
     check_eq(hdr.num_fields(), 6ul);
@@ -101,6 +101,11 @@ TEST("parsing an invalid http response") {
   SECTION("malformed header field - empty key") {
     hdr.parse("HTTP/1.1 200 OK\r\n"
               ":Apache\r\n\r\n");
+    check(!hdr.valid());
+  }
+  SECTION("parsing empty data") {
+    auto [status, _] = hdr.parse("");
+    check_eq(status, net::http::status::bad_request);
     check(!hdr.valid());
   }
 }

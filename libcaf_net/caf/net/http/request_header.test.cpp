@@ -41,6 +41,13 @@ TEST("default-constructed request headers are invalid") {
   check(uut.query().empty());
 }
 
+TEST("headers created by parsing empty data are invalid") {
+  net::http::request_header uut;
+  auto [status, _] = uut.parse("");
+  check_eq(status, net::http::status::bad_request);
+  check(!uut.valid());
+}
+
 TEST("request headers are copyable and movable") {
   net::http::request_header uut;
   uut.parse("GET /foo/bar?user=foo&pw=bar#baz HTTP/1.1\r\n"

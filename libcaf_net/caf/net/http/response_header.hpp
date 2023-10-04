@@ -39,8 +39,8 @@ public:
   /// Copy assignment operator.
   response_header& operator=(const response_header&);
 
-  /// Assigns the content of another response_header.
-  void assign(const response_header&);
+  /// Clears the header content and fields.
+  void clear() noexcept override;
 
   /// Returns the HTTP version of the request.
   std::string_view version() const noexcept {

@@ -15,6 +15,11 @@ constexpr std::string_view eol = "\r\n";
 
 } // namespace
 
+void request_header::clear() noexcept {
+  super::clear();
+  version_ = std::string_view{};
+}
+
 request_header::request_header(const request_header& other) : header(other) {
   if (other.valid()) {
     method_ = other.method_;
@@ -24,21 +29,13 @@ request_header::request_header(const request_header& other) : header(other) {
 }
 
 request_header& request_header::operator=(const request_header& other) {
-  assign(other);
-  return *this;
-}
-
-void request_header::assign(const request_header& other) {
-  method_ = other.method_;
-  uri_ = other.uri_;
+  super::operator=(other);
   if (other.valid()) {
-    raw_.assign(other.raw_.begin(), other.raw_.end());
+    method_ = other.method_;
+    uri_ = other.uri_;
     version_ = remap(other.raw_.data(), other.version_, raw_.data());
-    reassign_fields(other);
-  } else {
-    clear();
-    version_ = std::string_view{};
   }
+  return *this;
 }
 
 std::pair<status, std::string_view>
