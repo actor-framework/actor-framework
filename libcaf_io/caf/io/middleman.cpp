@@ -427,7 +427,7 @@ strong_actor_ptr middleman::remote_lookup(std::string name,
       return message{};
     },
     after(std::chrono::minutes(5)) >>
-      [&] { CAF_LOG_WARNING("remote_lookup for" << name << "timed out"); });
+      [&] { CAF_LOG_WARNING("remote_lookup timed out"); });
   return result;
 }
 

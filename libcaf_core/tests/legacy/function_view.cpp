@@ -87,7 +87,7 @@ CAF_TEST(single_res_function_view) {
   CHECK(nullptr != f);
   function_view<calculator> g;
   g = std::move(f);
-  CHECK(f == nullptr);
+  CHECK(f == nullptr); // NOLINT(bugprone-use-after-move)
   CHECK(nullptr == f);
   CHECK(g != nullptr);
   CHECK(nullptr != g);

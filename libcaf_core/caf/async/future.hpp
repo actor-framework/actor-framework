@@ -62,6 +62,8 @@ public:
       }
     }
     if (fire_immediately)
+      // Note: clang-tidy gets confused by fire_immediately.
+      // NOLINTNEXTLINE(bugprone-use-after-move)
       event.first->schedule(std::move(event.second));
     auto res = std::move(cb_action).as_disposable();
     ctx_->watch(res);

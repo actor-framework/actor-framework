@@ -217,7 +217,7 @@ private:
     auto producer = detail::http_request_producer::make(cfg.mpx,
                                                         push.try_open());
     routes.push_back(make_route([producer](responder& res) {
-      if (!producer->push(std::move(res).to_request())) {
+      if (!producer->push(responder{res}.to_request())) {
         auto err = make_error(sec::runtime_error, "flow disconnected");
         res.router()->shutdown(err);
       }
