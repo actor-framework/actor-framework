@@ -69,7 +69,7 @@ public:
 
   // -- constants --------------------------------------------------------------
 
-  static constexpr size_t default_buf_size = 4 * 1024; // 4 KiB
+  static constexpr size_t default_buf_size = 4 * 1024ul; // 4 KiB
 
   // -- constructors, destructors, and assignment operators --------------------
 
