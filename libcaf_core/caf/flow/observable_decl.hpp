@@ -273,6 +273,42 @@ public:
   /// Creates a publisher that makes emitted items available asynchronously.
   async::publisher<T> to_publisher();
 
+  /// Creates a type-erased stream that makes emitted items available in
+  /// batches. Requires that this observable runs on an actor, otherwise returns
+  /// an invalid stream.
+  /// @param name The human-readable name for this stream.
+  /// @param max_delay The maximum delay between emitting two batches.
+  /// @param max_items_per_batch The maximum amount of items per batch.
+  /// @returns a @ref stream that makes this observable available to other
+  ///          actors or an invalid stream if this observable does not run on an
+  ///          actor.
+  template <class U = T>
+  stream
+  to_stream(cow_string name, timespan max_delay, size_t max_items_per_batch);
+
+  /// @copydoc to_stream(cow_string, timespan, size_t)
+  template <class U = T>
+  stream
+  to_stream(std::string name, timespan max_delay, size_t max_items_per_batch);
+
+  /// Creates a stream that makes emitted items available in batches. Requires
+  /// that this observable runs on an actor, otherwise returns an invalid
+  /// stream.
+  /// @param name The human-readable name for this stream.
+  /// @param max_delay The maximum delay between emitting two batches.
+  /// @param max_items_per_batch The maximum amount of items per batch.
+  /// @returns a @ref typed_stream that makes this observable available to other
+  ///          actors or an invalid stream if this observable does not run on an
+  ///          actor.
+  template <class U = T>
+  typed_stream<U> to_typed_stream(cow_string name, timespan max_delay,
+                                  size_t max_items_per_batch);
+
+  /// @copydoc to_typed_stream(cow_string, timespan, size_t)
+  template <class U = T>
+  typed_stream<U> to_typed_stream(std::string name, timespan max_delay,
+                                  size_t max_items_per_batch);
+
   const observable& as_observable() const& noexcept {
     return *this;
   }

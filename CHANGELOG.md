@@ -6,10 +6,20 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ## [Unreleased]
 
+### Added
+
+- An `observable` that runs on an actor can now be converted to a `stream` or
+  `typed_stream` directly by calling `to_stream` or `to_typed_stream` on it.
+
 ### Fixed
 
 - The class `caf::test::outline` is now properly exported from the test module.
   This fixes builds with dynamic linking against `libcaf_test`.
+
+### Deprecated
+
+- Calling `to_stream` or `to_typed_stream` on an actor is now deprecated. Simply
+  call `to_stream` or `to_typed_stream` directly on the `observable` instead.
 
 ## [0.19.4] - 2023-09-29
 

@@ -6,6 +6,8 @@
 
 #include "caf/action.hpp"
 #include "caf/async/execution_context.hpp"
+#include "caf/async/fwd.hpp"
+#include "caf/cow_string.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/flow/fwd.hpp"
 #include "caf/flow/subscription.hpp"
@@ -22,6 +24,11 @@ namespace caf::flow {
 /// objects since the coordinator guarantees synchronous execution.
 class CAF_CORE_EXPORT coordinator : public async::execution_context {
 public:
+  // -- friends ----------------------------------------------------------------
+
+  template <class>
+  friend class observable;
+
   // -- member types -----------------------------------------------------------
 
   /// A time point of the monotonic clock.
@@ -31,7 +38,7 @@ public:
 
   virtual ~coordinator();
 
-  // -- conversions ------------------------------------------------------------
+  // -- factories --------------------------------------------------------------
 
   /// Returns a factory object for new observable objects on this coordinator.
   [[nodiscard]] observable_builder make_observable();
@@ -80,6 +87,12 @@ public:
     return delay_until(steady_time() + rel_time,
                        make_action(std::forward<F>(what)));
   }
+
+private:
+  virtual stream
+  to_stream_impl(cow_string name,
+                 intrusive_ptr<flow::op::base<async::batch>> batch_op,
+                 type_id_t item_type, size_t max_items_per_batch);
 };
 
 /// @relates coordinator

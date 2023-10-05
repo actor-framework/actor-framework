@@ -319,10 +319,13 @@ public:
     return self->make_observable();
   }
 
+  CAF_PUSH_DEPRECATED_WARNING
+
   /// @copydoc scheduled_actor::to_stream
   template <class Observable>
-  auto to_stream(cow_string name, timespan max_delay,
-                 size_t max_items_per_batch, Observable&& obs) {
+  [[deprecated("call to_stream on the observable instead")]] auto
+  to_stream(cow_string name, timespan max_delay, size_t max_items_per_batch,
+            Observable&& obs) {
     auto self = typed_actor_view_flow_access<Observable>(self_);
     return self->to_stream(std::move(name), max_delay, max_items_per_batch,
                            std::forward<Observable>(obs));
@@ -330,29 +333,33 @@ public:
 
   /// @copydoc scheduled_actor::to_stream
   template <class Observable>
-  auto to_stream(std::string name, timespan max_delay,
-                 size_t max_items_per_batch, Observable&& obs) {
+  [[deprecated("call to_stream on the observable instead")]] auto
+  to_stream(std::string name, timespan max_delay, size_t max_items_per_batch,
+            Observable&& obs) {
     return to_stream(cow_string{std::move(name)}, max_delay,
                      max_items_per_batch, std::forward<Observable>(obs));
   }
 
   /// Returns a function object for passing it to @c compose.
-  scheduled_actor::to_stream_t to_stream(cow_string name, timespan max_delay,
-                                         size_t max_items_per_batch) {
+  [[deprecated("call to_stream on the observable instead")]] //
+  scheduled_actor::to_stream_t
+  to_stream(cow_string name, timespan max_delay, size_t max_items_per_batch) {
     return {self_, std::move(name), max_delay, max_items_per_batch};
   }
 
   /// Returns a function object for passing it to @c compose.
-  scheduled_actor::to_stream_t to_stream(std::string name, timespan max_delay,
-                                         size_t max_items_per_batch) {
+  [[deprecated("call to_stream on the observable instead")]] //
+  scheduled_actor::to_stream_t
+  to_stream(std::string name, timespan max_delay, size_t max_items_per_batch) {
     return to_stream(cow_string{std::move(name)}, max_delay,
                      max_items_per_batch);
   }
 
   /// @copydoc scheduled_actor::to_typed_stream
   template <class Observable>
-  auto to_typed_stream(cow_string name, timespan max_delay,
-                       size_t max_items_per_batch, Observable obs) {
+  [[deprecated("call to_typed_stream on the observable instead")]] auto
+  to_typed_stream(cow_string name, timespan max_delay,
+                  size_t max_items_per_batch, Observable obs) {
     auto self = typed_actor_view_flow_access<Observable>(self_);
     return self->to_typed_stream(std::move(name), max_delay,
                                  max_items_per_batch, std::move(obs));
@@ -360,13 +367,15 @@ public:
 
   /// @copydoc scheduled_actor::to_typed_stream
   template <class Observable>
-  auto to_typed_stream(std::string name, timespan max_delay,
-                       size_t max_items_per_batch, Observable obs) {
+  [[deprecated("call to_typed_stream on the observable instead")]] auto
+  to_typed_stream(std::string name, timespan max_delay,
+                  size_t max_items_per_batch, Observable obs) {
     return to_typed_stream(cow_string{std::move(name)}, max_delay,
                            max_items_per_batch, std::move(obs));
   }
 
   /// Returns a function object for passing it to @c compose.
+  [[deprecated("call to_typed_stream on the observable instead")]] //
   scheduled_actor::to_typed_stream_t
   to_typed_stream(cow_string name, timespan max_delay,
                   size_t max_items_per_batch) {
@@ -374,12 +383,15 @@ public:
   }
 
   /// Returns a function object for passing it to @c compose.
+  [[deprecated("call to_typed_stream on the observable instead")]] //
   scheduled_actor::to_typed_stream_t
   to_typed_stream(std::string name, timespan max_delay,
                   size_t max_items_per_batch) {
     return to_typed_stream(cow_string{std::move(name)}, max_delay,
                            max_items_per_batch);
   }
+
+  CAF_POP_WARNINGS
 
   /// @copydoc scheduled_actor::observe
   template <class T>

@@ -17,4 +17,10 @@ observable_builder coordinator::make_observable() {
   return observable_builder{this};
 }
 
+stream coordinator::to_stream_impl(cow_string,
+                                   intrusive_ptr<flow::op::base<async::batch>>,
+                                   type_id_t, size_t) {
+  return stream{};
+}
+
 } // namespace caf::flow
