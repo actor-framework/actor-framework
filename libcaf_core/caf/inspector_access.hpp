@@ -284,12 +284,12 @@ struct inspector_access;
 struct optional_inspector_traits_base {
   template <class T>
   static auto& deref_load(T& x) {
-    return *x;
+    return *x; // NOLINT(bugprone-unchecked-optional-access)
   }
 
   template <class T>
   static auto& deref_save(T& x) {
-    return *x;
+    return *x; // NOLINT(bugprone-unchecked-optional-access)
   }
 };
 
