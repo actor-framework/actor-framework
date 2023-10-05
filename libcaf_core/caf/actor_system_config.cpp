@@ -11,6 +11,7 @@
 #include "caf/detail/config_consumer.hpp"
 #include "caf/detail/parser/read_config.hpp"
 #include "caf/detail/parser/read_string.hpp"
+#include "caf/logger.hpp"
 #include "caf/message_builder.hpp"
 #include "caf/pec.hpp"
 #include "caf/sec.hpp"
@@ -25,7 +26,9 @@ namespace caf {
 
 namespace {
 
-constexpr const char* default_config_file = "caf-application.conf";
+constexpr std::string_view default_program_name = "unknown-caf-app";
+
+constexpr std::string_view default_config_file = "caf-application.conf";
 
 } // namespace
 
@@ -37,12 +40,10 @@ actor_system_config::~actor_system_config() {
 // by (2) config file contents that are in turn overridden by (3) CLI arguments
 
 actor_system_config::actor_system_config()
-  : cli_helptext_printed(false),
-    program_name("unknown-caf-app"),
-    slave_mode(false),
-    config_file_path(default_config_file),
-    slave_mode_fun(nullptr) {
-  // fill our options vector for creating config file and CLI parsers
+  : program_name(default_program_name), config_file_path(default_config_file) {
+  // Set default factories.
+  logger_factory_ = +[](actor_system& sys) { return logger::make(sys); };
+  // Fill our options vector for creating config file and CLI parsers.
   using std::string;
   using string_list = std::vector<string>;
   opt_group{custom_options_, "global"}

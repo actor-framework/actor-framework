@@ -117,6 +117,7 @@ class json_reader;
 class json_value;
 class json_writer;
 class local_actor;
+class logger;
 class mailbox_element;
 class message;
 class message_builder;
