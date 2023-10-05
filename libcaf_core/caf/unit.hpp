@@ -20,7 +20,8 @@ struct unit_t : detail::comparable<unit_t> {
 
   constexpr unit_t& operator=(const unit_t&) noexcept = default;
 
-  template <class T>
+  template <class T,
+            class = std::enable_if_t<!std::is_same_v<std::decay_t<T>, unit_t>>>
   explicit constexpr unit_t(T&&) noexcept {
     // nop
   }

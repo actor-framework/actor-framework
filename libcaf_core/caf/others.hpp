@@ -18,7 +18,7 @@ struct others_t {
 
   template <class F>
   catch_all<F> operator>>(F fun) const {
-    return {fun};
+    return catch_all<F>{fun};
   }
 };
 
