@@ -74,7 +74,8 @@ void client_repl(function_view<calculator> f) {
   // read next line, split it, and evaluate user input
   string line;
   while (std::getline(std::cin, line)) {
-    if ((line = trim(std::move(line))) == "quit")
+    line = trim(std::move(line));
+    if (line == "quit")
       return;
     std::vector<string> words;
     split(words, line, is_any_of(" "), token_compress_on);

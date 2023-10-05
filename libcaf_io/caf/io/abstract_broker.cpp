@@ -49,7 +49,7 @@ bool abstract_broker::cleanup(error&& reason, execution_unit* host) {
   CAF_ASSERT(doormen_.empty());
   CAF_ASSERT(scribes_.empty());
   CAF_ASSERT(datagram_servants_.empty());
-  return local_actor::cleanup(std::move(reason), host);
+  return scheduled_actor::cleanup(std::move(reason), host);
 }
 
 abstract_broker::~abstract_broker() {

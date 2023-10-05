@@ -637,7 +637,7 @@ void multiplexer::block_sigpipe() {
   sigemptyset(&sigpipe_mask);
   sigaddset(&sigpipe_mask, SIGPIPE);
   sigset_t saved_mask;
-  if (pthread_sigmask(SIG_BLOCK, &sigpipe_mask, &saved_mask) == -1) {
+  if (pthread_sigmask(SIG_BLOCK, &sigpipe_mask, &saved_mask) != 0) {
     perror("pthread_sigmask");
     exit(1);
   }
