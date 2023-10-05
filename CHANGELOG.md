@@ -6,6 +6,11 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ## [Unreleased]
 
+### Fixed
+
+- The class `caf::test::outline` is now properly exported from the test module.
+  This fixes builds with dynamic linking against `libcaf_test`.
+
 ## [0.19.4] - 2023-09-29
 
 ### Fixed
