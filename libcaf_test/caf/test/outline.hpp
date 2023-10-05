@@ -9,7 +9,7 @@
 
 namespace caf::test {
 
-class outline : public runnable {
+class CAF_TEST_EXPORT outline : public runnable {
 public:
   using super = runnable;
 
