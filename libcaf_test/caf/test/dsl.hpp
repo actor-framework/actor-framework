@@ -22,7 +22,7 @@ struct wildcard {};
 
 /// Allows ignoring individual messages elements in `expect` clauses, e.g.
 /// `expect((int, int), from(foo).to(bar).with(1, _))`.
-constexpr wildcard _ = wildcard{};
+constexpr wildcard _ = wildcard{}; // NOLINT(bugprone-reserved-identifier)
 
 /// @relates wildcard
 constexpr bool operator==(const wildcard&, const wildcard&) {
