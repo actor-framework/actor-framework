@@ -56,11 +56,11 @@ struct range_consumer {
 
 struct res_t {
   std::variant<pec, double, int64_t> val;
-  res_t(const res_t&) = default;
-  res_t(res_t&&) = default;
+  res_t(const res_t&) noexcept = default;
+  
   template <class T,
-            class E = std::enable_if_t<!std::is_same_v<std::decay_t<T>, res_t>>>
-  explicit res_t(T&& x) : val(std::forward<T>(x)) {
+            class E = std::enable_if_t<!std::is_same_v<T, res_t>>>
+  explicit res_t(T x) noexcept : val(x) {
     // nop
   }
 };
