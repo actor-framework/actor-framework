@@ -109,6 +109,7 @@ bool match(const char* text, const char* glob) {
           if (last < 0x10ffff && *glob == '-' && glob[1] != ']'
                   && glob[1] != '\0'
                 ? chr <= utf8(&++glob) && chr >= last
+                // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
                 : chr == (last = utf8(&glob)))
             matched = true;
         if (matched == reverse)

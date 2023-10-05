@@ -278,9 +278,8 @@ private:
       return static_cast<int64_t>(x);
     } else if constexpr (std::is_same_v<T, float>) {
       return static_cast<double>(x);
-    } else if constexpr (std::is_convertible_v<T, const char*>) {
-      return std::string{x};
-    } else if constexpr (std::is_same_v<T, std::string_view>) {
+    } else if constexpr (std::is_convertible_v<T, const char*>
+                         || std::is_same_v<T, std::string_view>) {
       return std::string{x};
     } else {
       static_assert(detail::is_iterable_v<T>);

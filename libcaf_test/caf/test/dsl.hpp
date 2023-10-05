@@ -561,14 +561,12 @@ public:
       << term::yellow << "  -> " << term::reset
       << test::logger::stream::reset_flags_t{} << "allow" << type_str << "."
       << fields_str << " [line " << src_line_ << "]\n";
-    if (!dest_) {
+    if (!dest_)
       return false;
-    }
-    if (auto msg_ptr = dest_->peek_at_next_mailbox_element(); !msg_ptr) {
+    if (auto msg_ptr = dest_->peek_at_next_mailbox_element();
+        !msg_ptr || (src_ && msg_ptr->sender != src_))
       return false;
-    } else if (src_ && msg_ptr->sender != src_) {
-      return false;
-    } else if (peek_()) {
+    if (peek_()) {
       run_once();
       return true;
     } else {

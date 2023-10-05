@@ -171,7 +171,8 @@ public:
       sep();
       result_ += "null";
       return true;
-    } else if constexpr (std::is_same_v<T, char>) {
+    }
+    if constexpr (std::is_same_v<T, char>) {
       return value(std::string_view{x, strlen(x)});
     } else if constexpr (std::is_same_v<T, void>) {
       sep();

@@ -55,12 +55,12 @@ config_value unpack(const settings& x, std::string_view key) {
 template <class... Ts>
 config_value unpack(const settings& x, std::string_view key,
                     const char* next_key, Ts... keys) {
-  if (auto i = x.find(key); i == x.end())
+  auto i = x.find(key);
+  if (i == x.end())
     return {};
-  else if (auto ptr = get_if<settings>(std::addressof(i->second)))
+  if (auto ptr = get_if<settings>(std::addressof(i->second)))
     return unpack(*ptr, {next_key, strlen(next_key)}, keys...);
-  else
-    return {};
+  return {};
 }
 
 struct foobar {
