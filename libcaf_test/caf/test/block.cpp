@@ -136,6 +136,7 @@ void block::lazy_init() {
           case '>':
             description_ += ctx_->parameter(parameter_name);
             parameter_names_.push_back(std::move(parameter_name));
+            parameter_name.clear();
             state = cpy_state::verbatim;
             break;
           default:

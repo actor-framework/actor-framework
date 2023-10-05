@@ -54,7 +54,7 @@ SCENARIO("COW string are constructible from STD strings") {
       CHECK(!str.empty());
       CHECK_NE(str.begin(), str.end());
       CHECK_NE(str.rbegin(), str.rend());
-      CHECK_NE(str, std_str);
+      CHECK_NE(str, std_str); // NOLINT(bugprone-use-after-move)
       CHECK_EQ(str, "hello world");
     }
     AND("the reference count is exactly 1") {
