@@ -73,6 +73,8 @@ struct fixture : test_coordinator_fixture<> {
 
 BEGIN_FIXTURE_SCOPE(fixture)
 
+CAF_PUSH_DEPRECATED_WARNING
+
 SCENARIO("typed actors may use the flow API") {
   GIVEN("a typed actor") {
     WHEN("the actor calls make_observable") {
@@ -179,5 +181,7 @@ SCENARIO("typed actors may use the flow API") {
     }
   }
 }
+
+CAF_POP_WARNINGS
 
 END_FIXTURE_SCOPE()

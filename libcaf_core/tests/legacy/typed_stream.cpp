@@ -69,6 +69,8 @@ TEST_CASE("value-constructed") {
   CHECK_EQ(uut, deep_copy(uut));
 }
 
+CAF_PUSH_DEPRECATED_WARNING
+
 TEST_CASE("streams allow actors to transmit flow items to others") {
   auto res = ivec{};
   res.resize(256);
@@ -98,5 +100,7 @@ TEST_CASE("streams allow actors to transmit flow items to others") {
   CHECK_EQ(*r1, res);
   CHECK_EQ(*r2, res);
 }
+
+CAF_POP_WARNINGS
 
 END_FIXTURE_SCOPE()

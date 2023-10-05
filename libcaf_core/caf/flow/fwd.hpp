@@ -133,3 +133,10 @@ using assert_scheduled_actor_hdr_t
   = std::enable_if_t<assert_scheduled_actor_hdr<T>::value, V>;
 
 } // namespace caf::flow
+
+namespace caf::flow::op {
+
+template <class T>
+class base;
+
+} // namespace caf::flow::op

@@ -8,6 +8,7 @@ ignore:
   - libcaf_net/tests
   - libcaf_openssl
   - libcaf_test
+  - robot
   - tools
   - "**/*.test.cpp"
 coverage:

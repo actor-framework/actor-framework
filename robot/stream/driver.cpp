@@ -51,7 +51,7 @@ behavior producer(event_based_actor* self) {
         .map([](int x) {
           return point{x, x * x};
         })
-        .compose(self->to_stream("points", max_batch_delay, max_batch_size));
+        .to_stream("points", max_batch_delay, max_batch_size);
     },
   };
 }

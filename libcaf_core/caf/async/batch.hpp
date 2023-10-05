@@ -230,3 +230,45 @@ batch make_batch(const List& items) {
 #elif defined(CAF_MSVC)
 #  pragma warning(pop)
 #endif
+
+namespace caf::detail {
+
+template <class T>
+class unbatch {
+public:
+  using input_type = async::batch;
+
+  using output_type = T;
+
+  template <class Next, class... Steps>
+  bool on_next(const async::batch& xs, Next& next, Steps&... steps) {
+    for (const auto& item : xs.template items<T>())
+      if (!next.on_next(item, steps...))
+        return false;
+    return true;
+  }
+
+  template <class Next, class... Steps>
+  void on_complete(Next& next, Steps&... steps) {
+    next.on_complete(steps...);
+  }
+
+  template <class Next, class... Steps>
+  void on_error(const error& what, Next& next, Steps&... steps) {
+    next.on_error(what, steps...);
+  }
+};
+
+template <class T>
+struct batching_trait {
+  static constexpr bool skip_empty = true;
+  using input_type = T;
+  using output_type = async::batch;
+  using select_token_type = int64_t;
+
+  output_type operator()(const std::vector<input_type>& xs) {
+    return async::make_batch(make_span(xs));
+  }
+};
+
+} // namespace caf::detail

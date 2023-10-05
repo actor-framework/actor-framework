@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/async/batch.hpp"
 #include "caf/async/consumer.hpp"
 #include "caf/async/producer.hpp"
 #include "caf/async/publisher.hpp"
@@ -36,6 +37,8 @@
 #include "caf/make_counted.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/sec.hpp"
+#include "caf/stream.hpp"
+#include "caf/typed_stream.hpp"
 #include "caf/unordered_flat_map.hpp"
 
 #include <cstddef>
@@ -408,9 +411,41 @@ public:
     return materialize().to_resource(buffer_size, min_request_size);
   }
 
-  /// @copydoc observable::to_resource
+  /// @copydoc observable::to_publisher
   async::publisher<output_type> to_publisher() && {
     return materialize().to_publisher();
+  }
+
+  /// @copydoc observable::to_stream
+  template <class U = output_type>
+  stream to_stream(cow_string name, timespan max_delay,
+                   size_t max_items_per_batch) && {
+    return materialize().template to_stream<U>(std::move(name), max_delay,
+                                               max_items_per_batch);
+  }
+
+  /// @copydoc observable::to_stream
+  template <class U = output_type>
+  stream to_stream(std::string name, timespan max_delay,
+                   size_t max_items_per_batch) && {
+    return materialize().template to_stream<U>(std::move(name), max_delay,
+                                               max_items_per_batch);
+  }
+
+  /// @copydoc observable::to_typed_stream
+  template <class U = output_type>
+  auto to_typed_stream(cow_string name, timespan max_delay,
+                       size_t max_items_per_batch) && {
+    return materialize().template to_typed_stream<U>(std::move(name), max_delay,
+                                                     max_items_per_batch);
+  }
+
+  /// @copydoc observable::to_typed_stream
+  template <class U = output_type>
+  auto to_typed_stream(std::string name, timespan max_delay,
+                       size_t max_items_per_batch) && {
+    return materialize().template to_typed_stream<U>(std::move(name), max_delay,
+                                                     max_items_per_batch);
   }
 
   /// @copydoc observable::observe_on
@@ -831,6 +866,47 @@ observable<T>::to_resource(size_t buffer_size, size_t min_request_size) {
 template <class T>
 async::publisher<T> observable<T>::to_publisher() {
   return async::publisher<T>::from(*this);
+}
+
+template <class T>
+template <class U>
+stream observable<T>::to_stream(cow_string name, timespan max_delay,
+                                size_t max_items_per_batch) {
+  static_assert(std::is_same_v<T, U> && has_type_id_v<U>,
+                "T must have a type ID when converting to a stream");
+  using trait_t = detail::batching_trait<U>;
+  using impl_t = flow::op::buffer<trait_t>;
+  auto batch_op = make_counted<impl_t>(
+    ctx(), max_items_per_batch, *this,
+    flow::make_observable<flow::op::interval>(ctx(), max_delay, max_delay));
+  return ctx()->to_stream_impl(cow_string{std::move(name)}, std::move(batch_op),
+                               type_id_v<U>, max_items_per_batch);
+}
+
+template <class T>
+template <class U>
+stream observable<T>::to_stream(std::string name, timespan max_delay,
+                                size_t max_items_per_batch) {
+  return to_stream<U>(cow_string{std::move(name)}, max_delay,
+                      max_items_per_batch);
+}
+
+template <class T>
+template <class U>
+typed_stream<U> observable<T>::to_typed_stream(cow_string name,
+                                               timespan max_delay,
+                                               size_t max_items_per_batch) {
+  auto res = to_stream<U>(std::move(name), max_delay, max_items_per_batch);
+  return {res.source(), res.name(), res.id()};
+}
+
+template <class T>
+template <class U>
+typed_stream<U> observable<T>::to_typed_stream(std::string name,
+                                               timespan max_delay,
+                                               size_t max_items_per_batch) {
+  auto res = to_stream<U>(std::move(name), max_delay, max_items_per_batch);
+  return {res.source(), res.name(), res.id()};
 }
 
 } // namespace caf::flow

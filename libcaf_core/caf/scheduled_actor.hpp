@@ -440,12 +440,14 @@ public:
   /// @param obs An observable sequence of items.
   /// @returns a @ref stream that makes @p obs available to other actors.
   template <class Observable>
+  [[deprecated("call to_stream on the observable instead")]] //
   flow::assert_scheduled_actor_hdr_t<Observable, stream>
   to_stream(std::string name, timespan max_delay, size_t max_items_per_batch,
             Observable&& obs);
 
   /// @copydoc to_stream
   template <class Observable>
+  [[deprecated("call to_stream on the observable instead")]] //
   flow::assert_scheduled_actor_hdr_t<Observable, stream>
   to_stream(cow_string name, timespan max_delay, size_t max_items_per_batch,
             Observable&& obs);
@@ -459,20 +461,22 @@ public:
     size_t max_items_per_batch;
     template <class Observable>
     auto operator()(Observable&& what) {
-      return self->to_stream(name, max_delay, max_items_per_batch,
-                             std::forward<Observable>(what));
+      return std::forward<Observable>(what).to_stream(name, max_delay,
+                                                      max_items_per_batch);
     }
   };
 
   /// Returns a function object for passing it to @c compose.
-  to_stream_t to_stream(std::string name, timespan max_delay,
-                        size_t max_items_per_batch) {
+  [[deprecated("call to_stream on the observable instead")]] //
+  to_stream_t
+  to_stream(std::string name, timespan max_delay, size_t max_items_per_batch) {
     return {this, cow_string{std::move(name)}, max_delay, max_items_per_batch};
   }
 
   /// Returns a function object for passing it to @c compose.
-  to_stream_t to_stream(cow_string name, timespan max_delay,
-                        size_t max_items_per_batch) {
+  [[deprecated("call to_stream on the observable instead")]] //
+  to_stream_t
+  to_stream(cow_string name, timespan max_delay, size_t max_items_per_batch) {
     return {this, std::move(name), max_delay, max_items_per_batch};
   }
 
@@ -484,6 +488,7 @@ public:
   /// @param obs An observable sequence of items.
   /// @returns a @ref stream that makes @p obs available to other actors.
   template <class Observable>
+  [[deprecated("call to_typed_stream on the observable instead")]] //
   flow::assert_scheduled_actor_hdr_t<
     Observable, typed_stream<typename Observable::output_type>>
   to_typed_stream(std::string name, timespan max_delay,
@@ -491,6 +496,7 @@ public:
 
   /// @copydoc to_stream
   template <class Observable>
+  [[deprecated("call to_typed_stream on the observable instead")]] //
   flow::assert_scheduled_actor_hdr_t<
     Observable, typed_stream<typename Observable::output_type>>
   to_typed_stream(cow_string name, timespan max_delay,
@@ -505,20 +511,24 @@ public:
     size_t max_items_per_batch;
     template <class Observable>
     auto operator()(Observable&& what) {
-      return self->to_typed_stream(name, max_delay, max_items_per_batch,
-                                   std::forward<Observable>(what));
+      return std::forward<Observable>(what).to_typed_stream(
+        name, max_delay, max_items_per_batch);
     }
   };
 
   /// Returns a function object for passing it to @c compose.
-  to_typed_stream_t to_typed_stream(std::string name, timespan max_delay,
-                                    size_t max_items_per_batch) {
+  [[deprecated("call to_typed_stream on the observable instead")]] //
+  to_typed_stream_t
+  to_typed_stream(std::string name, timespan max_delay,
+                  size_t max_items_per_batch) {
     return {this, cow_string{std::move(name)}, max_delay, max_items_per_batch};
   }
 
   /// Returns a function object for passing it to @c compose.
-  to_typed_stream_t to_typed_stream(cow_string name, timespan max_delay,
-                                    size_t max_items_per_batch) {
+  [[deprecated("call to_typed_stream on the observable instead")]] //
+  to_typed_stream_t
+  to_typed_stream(cow_string name, timespan max_delay,
+                  size_t max_items_per_batch) {
     return {this, std::move(name), max_delay, max_items_per_batch};
   }
 
@@ -777,7 +787,8 @@ private:
 
   /// Implementation detail for to_stream.
   stream to_stream_impl(cow_string name, batch_op_ptr batch_op,
-                        type_id_t item_type, size_t max_items_per_batch);
+                        type_id_t item_type,
+                        size_t max_items_per_batch) override;
 
   /// Registers a stream bridge at the actor (callback for
   /// detail::stream_bridge).
