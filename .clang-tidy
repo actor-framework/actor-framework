@@ -1,5 +1,11 @@
 ---
-Checks:          '-*,bugprone-*,-bugprone-easily-swappable-parameters,-bugprone-macro-parentheses'
+Checks: >
+  -*,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-macro-parentheses,
+  -bugprone-forward-declaration-namespace,
+  -bugprone-branch-clone,
 WarningsAsErrors: ''
 HeaderFilterRegex: '/caf/'
 AnalyzeTemporaryDtors: false
