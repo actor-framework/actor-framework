@@ -96,11 +96,11 @@ expected<std::string_view> header::parse_fields(std::string_view data) {
   return remainder;
 }
 
-bool header::chunked_transfer_encoding() const {
+bool header::chunked_transfer_encoding() const noexcept {
   return field("Transfer-Encoding").find("chunked") != std::string_view::npos;
 }
 
-std::optional<size_t> header::content_length() const {
+std::optional<size_t> header::content_length() const noexcept {
   return field_as<size_t>("Content-Length");
 }
 

@@ -103,10 +103,10 @@ public:
   }
 
   /// Checks whether the client has defined `Transfer-Encoding` as `chunked`.
-  bool chunked_transfer_encoding() const;
+  bool chunked_transfer_encoding() const noexcept;
 
   /// Convenience function for `field_as<size_t>("Content-Length")`.
-  std::optional<size_t> content_length() const;
+  std::optional<size_t> content_length() const noexcept;
 
   /// Checks if the request header is valid (non-empty).
   bool valid() const noexcept {
