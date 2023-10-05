@@ -56,10 +56,6 @@ struct range_consumer {
 
 struct res_t {
   std::variant<pec, double, int64_t> val;
-  template <class T>
-  explicit res_t(T x) noexcept : val(x) {
-    // nop
-  }
 };
 
 std::string to_string(const res_t& x) {

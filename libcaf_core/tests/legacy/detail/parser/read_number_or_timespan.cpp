@@ -29,10 +29,6 @@ struct number_or_timespan_parser_consumer {
 
 struct res_t {
   std::variant<pec, double, int64_t, timespan> val;
-  template <class T>
-  explicit res_t(T x) : val(x) {
-    // nop
-  }
 };
 
 std::string to_string(const res_t& x) {
