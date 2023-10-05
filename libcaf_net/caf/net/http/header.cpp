@@ -46,9 +46,6 @@ header::header(const header& other) {
   if (!other.raw_.empty()) {
     raw_.assign(other.raw_.begin(), other.raw_.end());
     reassign_fields(other);
-  } else {
-    raw_.clear();
-    fields_.clear();
   }
 }
 
@@ -63,7 +60,7 @@ header& header::operator=(const header& other) {
   return *this;
 }
 
-void header::reassign_fields(const header& other) noexcept {
+void header::reassign_fields(const header& other) {
   auto base = other.raw_.data();
   auto new_base = raw_.data();
   fields_.resize(other.fields_.size());
