@@ -63,7 +63,7 @@ void sha1::process_message_block() {
   };
   uint32_t W[80];         // Word sequence.
   uint32_t A, B, C, D, E; // Word buffers.
-  for (auto t = 0; t < 16; t++) {
+  for (auto t = 0ul; t < 16ul; t++) {
     W[t] = message_block_[t * 4] << 24;
     W[t] |= message_block_[t * 4 + 1] << 16;
     W[t] |= message_block_[t * 4 + 2] << 8;

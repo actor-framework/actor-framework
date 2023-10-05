@@ -13,8 +13,8 @@ namespace caf::detail {
 
 monotonic_buffer_resource::monotonic_buffer_resource() {
   // 8kb blocks for the small and medium sized buckets.
-  small_.block_size = 8 * 1024;
-  medium_.block_size = 8 * 1024;
+  small_.block_size = 8 * 1024ul;
+  medium_.block_size = 8 * 1024ul;
 }
 
 monotonic_buffer_resource::~monotonic_buffer_resource() {

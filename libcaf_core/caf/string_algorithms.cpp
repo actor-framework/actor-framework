@@ -94,11 +94,12 @@ void replace_all(std::string& str, std::string_view what,
   };
   auto i = next(str.begin());
   while (i != str.end()) {
-    auto before = static_cast<size_t>(std::distance(str.begin(), i));
-    str.replace(i, i + what.size(), with.begin(), with.end());
+    auto before = std::distance(str.begin(), i);
+    str.replace(i, i + static_cast<ptrdiff_t>(what.size()), with.begin(),
+                with.end());
     // Iterator i became invalidated -> use new iterator pointing to the first
     // character after the replaced text.
-    i = next(str.begin() + before + with.size());
+    i = next(str.begin() + before + static_cast<ptrdiff_t>(with.size()));
   }
 }
 

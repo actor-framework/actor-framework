@@ -606,10 +606,10 @@ bool json_reader::value(double& x) {
         x = std::get<double>(val.data);
         return true;
       case detail::json::value::integer_index:
-        x = std::get<int64_t>(val.data);
+        x = static_cast<double>(std::get<int64_t>(val.data));
         return true;
       case detail::json::value::unsigned_index:
-        x = std::get<uint64_t>(val.data);
+        x = static_cast<double>(std::get<uint64_t>(val.data));
         return true;
       default:
         emplace_error(sec::runtime_error, class_name, fn, current_field_name(),

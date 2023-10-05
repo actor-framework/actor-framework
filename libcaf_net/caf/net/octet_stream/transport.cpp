@@ -155,7 +155,7 @@ error transport::start(socket_manager* owner) {
   if (auto socket_buf_size = send_buffer_size(policy_->handle())) {
     max_write_buf_size_ = *socket_buf_size;
     CAF_ASSERT(max_write_buf_size_ > 0);
-    write_buf_.reserve(max_write_buf_size_ * 2);
+    write_buf_.reserve(max_write_buf_size_ * 2ul);
   } else {
     CAF_LOG_ERROR("send_buffer_size: " << socket_buf_size.error());
     return std::move(socket_buf_size.error());
