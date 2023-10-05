@@ -563,9 +563,8 @@ public:
       << fields_str << " [line " << src_line_ << "]\n";
     if (!dest_)
       return false;
-    if (auto msg_ptr = dest_->peek_at_next_mailbox_element(); !msg_ptr)
-      return false;
-    if (src_ && msg_ptr->sender != src_)
+    if (auto msg_ptr = dest_->peek_at_next_mailbox_element();
+        !msg_ptr || (src_ && msg_ptr->sender != src_))
       return false;
     if (peek_()) {
       run_once();
