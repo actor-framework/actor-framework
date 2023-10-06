@@ -15,6 +15,7 @@
 #include "caf/dictionary.hpp"
 #include "caf/fwd.hpp"
 #include "caf/is_typed_actor.hpp"
+#include "caf/raise_error.hpp"
 #include "caf/settings.hpp"
 #include "caf/thread_hook.hpp"
 
@@ -172,6 +173,8 @@ public:
   /// Overrides the default logger factory.
   /// @pre `new_factory != nullptr`
   actor_system_config& logger_factory(logger_factory_t new_factory) {
+    if (new_factory == nullptr)
+      CAF_RAISE_ERROR(std::invalid_argument, "logger factory may not be null");
     logger_factory_ = std::move(new_factory);
     return *this;
   }
