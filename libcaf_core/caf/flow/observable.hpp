@@ -330,6 +330,11 @@ public:
     return add_step(step::on_error_complete<output_type>{});
   }
 
+  auto on_error_return_item(output_type&& f) {
+    return add_step(
+      step::on_error_return_item<output_type>{std::forward<output_type>(f)});
+  }
+
   /// Materializes the @ref observable.
   observable<output_type> as_observable() && {
     return materialize();
@@ -633,6 +638,12 @@ transformation<step::map<F>> observable<T>::map(F f) {
 template <class T>
 transformation<step::on_error_complete<T>> observable<T>::on_error_complete() {
   return transform(step::on_error_complete<T>{});
+}
+
+template <class T>
+transformation<step::on_error_return_item<T>>
+observable<T>::on_error_return_item(T&& t) {
+  return transform(step::on_error_return_item<T>{std::forward<T>(t)});
 }
 
 template <class T>

@@ -8,6 +8,7 @@
 #include "caf/flow/step/ignore_elements.hpp"
 #include "caf/flow/step/map.hpp"
 #include "caf/flow/step/on_error_complete.hpp"
+#include "caf/flow/step/on_error_return_item.hpp"
 #include "caf/flow/step/reduce.hpp"
 #include "caf/flow/step/skip.hpp"
 #include "caf/flow/step/skip_last.hpp"

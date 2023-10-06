@@ -31,6 +31,9 @@ template <class>
 class on_error_complete;
 
 template <class>
+class on_error_return_item;
+
+template <class>
 class reduce;
 
 template <class>
