@@ -15,6 +15,7 @@
 #include "caf/dictionary.hpp"
 #include "caf/fwd.hpp"
 #include "caf/is_typed_actor.hpp"
+#include "caf/raise_error.hpp"
 #include "caf/settings.hpp"
 #include "caf/thread_hook.hpp"
 
@@ -38,22 +39,24 @@ public:
 
   // -- member types -----------------------------------------------------------
 
+  template <class K, class V>
+  using hash_map [[deprecated]] = std::unordered_map<K, V>;
+
+  using logger_factory_t = std::function<intrusive_ptr<logger>(actor_system&)>;
+
   using hook_factory = std::function<io::hook*(actor_system&)>;
 
   using hook_factory_vector = std::vector<hook_factory>;
 
   using thread_hooks = std::vector<std::unique_ptr<thread_hook>>;
 
-  template <class K, class V>
-  using hash_map = std::unordered_map<K, V>;
-
   using module_factory = std::function<actor_system::module*(actor_system&)>;
 
   using module_factory_vector = std::vector<module_factory>;
 
-  using actor_factory_map = hash_map<std::string, actor_factory>;
+  using actor_factory_map = std::unordered_map<std::string, actor_factory>;
 
-  using portable_name_map = hash_map<std::type_index, std::string>;
+  using portable_name_map = std::unordered_map<std::type_index, std::string>;
 
   using group_module_factory = std::function<group_module*()>;
 
@@ -167,12 +170,21 @@ public:
     return *this;
   }
 
+  /// Overrides the default logger factory.
+  /// @pre `new_factory != nullptr`
+  actor_system_config& logger_factory(logger_factory_t new_factory) {
+    if (new_factory == nullptr)
+      CAF_RAISE_ERROR(std::invalid_argument, "logger factory may not be null");
+    logger_factory_ = std::move(new_factory);
+    return *this;
+  }
+
   // -- parser and CLI state ---------------------------------------------------
 
   /// Stores whether the help text was printed. If set to `true`, the
   /// application should not use this config to initialize an `actor_system`
   /// and instead return from `main` immediately.
-  bool cli_helptext_printed;
+  bool cli_helptext_printed = false;
 
   /// Stores the content of `argv[0]` from the arguments passed to `parse`.
   std::string program_name;
@@ -191,7 +203,7 @@ public:
   // -- caf-run parameters -----------------------------------------------------
 
   /// Stores whether this node was started in slave mode.
-  bool slave_mode;
+  bool slave_mode = false;
 
   /// Name of this node when started in slave mode.
   std::string slave_name;
@@ -239,7 +251,7 @@ public:
 
   // -- utility for caf-run ----------------------------------------------------
 
-  int (*slave_mode_fun)(actor_system&, const actor_system_config&);
+  int (*slave_mode_fun)(actor_system&, const actor_system_config&) = nullptr;
 
   // -- config file parsing ----------------------------------------------------
 
@@ -317,6 +329,8 @@ private:
   actor_system_config& set_impl(std::string_view name, config_value value);
 
   std::pair<error, std::string> extract_config_file_path(string_list& args);
+
+  logger_factory_t logger_factory_;
 };
 
 /// Returns all user-provided configuration parameters.

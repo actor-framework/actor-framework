@@ -268,7 +268,7 @@ actor_system::actor_system(actor_system_config& cfg)
     ids_(0),
     metrics_(cfg),
     base_metrics_(make_base_metrics(metrics_)),
-    logger_(caf::logger::make(*this)),
+    logger_(cfg.logger_factory_(*this)),
     registry_(*this),
     groups_(*this),
     dummy_execution_unit_(this),
