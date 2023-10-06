@@ -43,14 +43,14 @@ TEST("exit_msg is serializable") {
     check_eq(msg1, msg2);
   }
   SECTION("valid actor address") {
+    // Note: serializing an actor puts it into the registry. Hence, we need to
+    //       shut down the actor manually before the end because its reference
+    //       count will not drop to zero otherwise.
     auto dummy = sys.spawn([] { return behavior{[](int) {}}; });
+    auto dummy_guard = make_actor_scope_guard(dummy);
     auto msg1 = exit_msg{dummy.address(), sec::runtime_error};
     auto msg2 = serialization_roundtrip(msg1);
     check_eq(msg1, msg2);
-    // Note: serializing an actor puts it into the registry. Hence, we need to
-    //       shut down the actor manually before the end.
-    anon_send_exit(dummy, exit_reason::user_shutdown);
-    dispatch_messages();
   }
 }
 

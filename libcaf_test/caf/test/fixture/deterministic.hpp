@@ -402,6 +402,44 @@ public:
     std::tuple<Ts...> values_;
   };
 
+  /// Utility class for unconditionally killing an actor at scope exit.
+  class actor_scope_guard {
+  public:
+    template <class Handle>
+    actor_scope_guard(deterministic* fix, const Handle& dst) noexcept
+      : fix_(fix) {
+      if (dst)
+        dst_ = actor_cast<strong_actor_ptr>(dst);
+    }
+
+    actor_scope_guard(actor_scope_guard&&) noexcept = default;
+
+    actor_scope_guard() = delete;
+    actor_scope_guard(const actor_scope_guard&) = delete;
+    actor_scope_guard& operator=(const actor_scope_guard&) = delete;
+
+    ~actor_scope_guard() {
+      if (!dst_)
+        return;
+      auto emsg = exit_msg{dst_->address(), exit_reason::kill};
+      if (!dst_->enqueue(nullptr, make_message_id(), make_message(emsg),
+                         nullptr)) {
+        // Nothing to do here. The actor already terminated.
+        return;
+      }
+      actor_predicate is_anon{nullptr};
+      message_predicate<exit_msg> is_kill_msg{emsg};
+      [[maybe_unused]] auto preponed = fix_->prepone_event_impl(dst_, is_anon,
+                                                                is_kill_msg);
+      assert(preponed);
+      fix_->dispatch_message();
+    }
+
+  private:
+    deterministic* fix_;
+    strong_actor_ptr dst_;
+  };
+
   // -- friends ----------------------------------------------------------------
 
   friend class mailbox_impl;
@@ -410,6 +448,8 @@ public:
 
   template <class... Ts>
   friend class evaluator;
+
+  friend class actor_scope_guard;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -544,7 +584,13 @@ public:
     return result;
   }
 
-  // -- member variables -------------------------------------------------------
+  // -- factories --------------------------------------------------------------
+
+  /// Creates a new guard for `hdl` that will kill the actor at scope exit.
+  template <class Handle>
+  [[nodiscard]] actor_scope_guard make_actor_scope_guard(const Handle& hdl) {
+    return {this, hdl};
+  }
 
 private:
   // Note: this is put here because this member variable must be destroyed
