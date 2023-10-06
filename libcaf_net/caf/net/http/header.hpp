@@ -139,7 +139,7 @@ protected:
   };
 
   /// Reassigns the shallow map from one address to another.
-  void reassign_fields(const header& other) noexcept;
+  void reassign_fields(const header& other);
 
   /// Stores the raw HTTP input.
   std::vector<char> raw_;
