@@ -5,6 +5,7 @@
 #include "caf/net/http/request_header.hpp"
 
 #include "caf/test/caf_test_main.hpp"
+#include "caf/test/outline.hpp"
 #include "caf/test/test.hpp"
 
 using namespace caf;
@@ -30,43 +31,157 @@ TEST("parsing a http request") {
     check_eq(hdr.field("User-Agent"), "AwesomeLib/1.0");
     check_eq(hdr.field("Accept-Encoding"), "gzip");
   }
-  SECTION("fields access is case insensitive") {
-    check_eq(hdr.field("HOST"), "localhost:8090");
-    check_eq(hdr.field("USER-agent"), "AwesomeLib/1.0");
-    check_eq(hdr.field("accept-ENCODING"), "gzip");
+}
+
+OUTLINE("parsing requests") {
+  GIVEN("a http request with <method> method") {
+    auto method_name = block_parameters<std::string>();
+    auto request = detail::format("{} /foo/bar HTTP/1.1\r\n\r\n", method_name);
+    WHEN("parsing the request") {
+      net::http::request_header hdr;
+      hdr.parse(request);
+      THEN("the parsed request method is equal to <enum value>") {
+        auto expected = block_parameters<uint8_t>();
+        require(hdr.valid());
+        check_eq(static_cast<uint8_t>(hdr.method()), expected);
+        check_eq(hdr.version(), "HTTP/1.1");
+        check_eq(hdr.path(), "/foo/bar");
+      }
+    }
   }
-  SECTION("non existing field returns an empty view") {
-    check_eq(hdr.field("Foo"), "");
+  EXAMPLES = R"(
+    |  method  | enum value |
+    | GET      |     0      |
+    | HEAD     |     1      |
+    | POST     |     2      | 
+    | PUT      |     3      | 
+    | DELETE   |     4      |
+    | CONNECT  |     5      |
+    | OPTIONS  |     6      |
+    | TRACE    |     7      |
+  )";
+}
+
+TEST("parsing an invalid http request") {
+  net::http::request_header hdr;
+  SECTION("header must have a valid http method") {
+    hdr.parse("EXTERMINATE /foo/bar HTTP/1.1\r\n\r\n");
+    check(!hdr.valid());
   }
-  SECTION("field access by position") {
-    check_eq(hdr.field_at(0), std::pair{"Host"sv, "localhost:8090"sv});
-    check_eq(hdr.field_at(1), std::pair("User-Agent"sv, "AwesomeLib/1.0"sv));
-    check_eq(hdr.field_at(2), std::pair("Accept-Encoding"sv, "gzip"sv));
-    check_eq(hdr.field_at(3), std::pair("Number"sv, "150"sv));
-#ifdef CAF_ENABLE_EXCEPTIONS
-    check_throws([&hdr]() { hdr.field_at(4); });
-#endif
+  SECTION("header must have the uri") {
+    hdr.parse("GET \r\n\r\n");
+    check(!hdr.valid());
   }
-  SECTION("has_field checks if a field exists") {
-    check(hdr.has_field("HOST"));
-    check(!hdr.has_field("Foo"));
+  SECTION("header must have a valid uri") {
+    hdr.parse("GET foobar HTTP/1.1\r\n\r\n");
+    check(!hdr.valid());
   }
-  SECTION("field_equals return true if a field exists") {
-    check(hdr.field_equals("Host", "localhost:8090"));
-    check(hdr.field_equals("HOST", "localhost:8090"));
-    check(hdr.field_equals(ignore_case, "Host", "LOCALHOST:8090"));
+  SECTION("header must end with an empty line") {
+    hdr.parse("GET /foo/bar HTTP/1.1");
+    check(!hdr.valid());
   }
-  SECTION("field_equals return false if a field doesn't exists") {
-    check(!hdr.field_equals("Host", "Foo"));
-    check(!hdr.field_equals("FOO", "localhost:8090"));
-    check(!hdr.field_equals(ignore_case, "Host", "Foo"));
-    check(!hdr.field_equals(ignore_case, "FOO", "localhost:8090"));
-    check(!hdr.field_equals("Host", "LOCALHOST:8090"));
+  SECTION("empty input is invalid") {
+    auto [status, text] = hdr.parse("");
+    check_eq(status, net::http::status::bad_request);
+    check(!hdr.valid());
   }
-  SECTION("field_as converts the type") {
-    check_eq(hdr.field_as<int>("number"), 150);
-    check_eq(hdr.field_as<float>("number"), 150.0);
-    check_eq(hdr.field_as<int>("Host"), std::nullopt);
+  SECTION("only eol is invalid") {
+    hdr.parse("\r\n");
+    check(!hdr.valid());
+  }
+  SECTION("malformed header field - missing :") {
+    hdr.parse("GET /foo/bar HTTP/1.1\r\n"
+              "ServerApache\r\n\r\n");
+    check(!hdr.valid());
+  }
+  SECTION("malformed header field - empty key") {
+    hdr.parse("HTTP/1.1 200 OK\r\n"
+              ":Apache\r\n\r\n");
+    check(!hdr.valid());
+  }
+}
+
+TEST("default-constructed request headers are invalid") {
+  net::http::request_header uut;
+  check(!uut.valid());
+  check_eq(uut.num_fields(), 0ul);
+  check_eq(uut.version(), "");
+  check_eq(uut.path(), "");
+  check(uut.query().empty());
+}
+
+TEST("headers created by parsing empty data are invalid") {
+  net::http::request_header uut;
+  auto [status, _] = uut.parse("");
+  check_eq(status, net::http::status::bad_request);
+  check(!uut.valid());
+}
+
+TEST("request headers are copyable and movable") {
+  net::http::request_header uut;
+  uut.parse("GET /foo/bar?user=foo&pw=bar#baz HTTP/1.1\r\n"
+            "Host: localhost:8090\r\n"
+            "User-Agent: AwesomeLib/1.0\r\n"
+            "Accept-Encoding: gzip\r\n"
+            "Number: 150\r\n\r\n"sv);
+  auto check_equality = [this](const auto& uut) {
+    check_eq(uut.method(), net::http::method::get);
+    check_eq(uut.version(), "HTTP/1.1");
+    check_eq(uut.path(), "/foo/bar");
+    check_eq(uut.query().at("user"), "foo");
+    check_eq(uut.query().at("pw"), "bar");
+    check_eq(uut.fragment(), "baz");
+    check_eq(uut.num_fields(), 4ul);
+    check_eq(uut.field("Host"), "localhost:8090");
+    check_eq(uut.field("User-Agent"), "AwesomeLib/1.0");
+    check_eq(uut.field("Accept-Encoding"), "gzip");
+  };
+  SECTION("copy-construction") {
+    auto other{uut};
+    check_equality(other);
+  }
+  SECTION("copy-assignment") {
+    net::http::request_header other;
+    other = uut;
+    check_equality(other);
+  }
+  SECTION("move-construction") {
+    auto other{std::move(uut)};
+    check_equality(other);
+  }
+  SECTION("move-assignment") {
+    net::http::request_header other;
+    other = std::move(uut);
+    check_equality(other);
+  }
+}
+
+TEST("invalid request headers are copyable and movable") {
+  auto check_invalid = [this](const auto& uut) {
+    check(!uut.valid());
+    check_eq(uut.num_fields(), 0ul);
+    check_eq(uut.version(), "");
+    check_eq(uut.path(), "");
+    check(uut.query().empty());
+  };
+  net::http::request_header uut;
+  SECTION("copy-construction") {
+    auto other{uut};
+    check_invalid(other);
+  }
+  SECTION("copy-assignment") {
+    net::http::request_header other;
+    other = uut;
+    check_invalid(other);
+  }
+  SECTION("move-construction") {
+    auto other{std::move(uut)};
+    check_invalid(other);
+  }
+  SECTION("move-assignment") {
+    net::http::request_header other;
+    other = std::move(uut);
+    check_invalid(other);
   }
 }
 

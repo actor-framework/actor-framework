@@ -38,6 +38,8 @@ caf_add_component(
     caf/net/generic_lower_layer.cpp
     caf/net/generic_upper_layer.cpp
     caf/net/http/config.cpp
+    caf/net/http/header.cpp
+    caf/net/http/header.test.cpp
     caf/net/http/lower_layer.cpp
     caf/net/http/method.cpp
     caf/net/http/request.cpp
@@ -45,6 +47,8 @@ caf_add_component(
     caf/net/http/request_header.test.cpp
     caf/net/http/responder.cpp
     caf/net/http/response.cpp
+    caf/net/http/response_header.cpp
+    caf/net/http/response_header.test.cpp
     caf/net/http/route.cpp
     caf/net/http/router.cpp
     caf/net/http/server.cpp
