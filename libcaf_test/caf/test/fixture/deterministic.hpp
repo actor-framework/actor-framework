@@ -17,6 +17,7 @@
 #include "caf/resumable.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
 
+#include <cassert>
 #include <list>
 #include <memory>
 
