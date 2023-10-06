@@ -299,6 +299,31 @@ TEST("on_error_return_item() returns item on error") {
                vector{1, 2, 3, 42});
     }
   }
+  SECTION(
+    "on_error_return_item() forwards error when an item can not be returned") {
+    SECTION("blueprint") {
+      check_eq(collect(range(1, 2)
+                         .concat(obs_error(sec::runtime_error))
+                         .on_error_return_item(42)
+                         .take(2)),
+               make_error(sec::runtime_error));
+      check_eq(collect(range(1, 3)
+                         .concat(obs_error(sec::runtime_error))
+                         .on_error_return_item(42)
+                         .take(3)),
+               make_error(sec::runtime_error));
+    }
+    SECTION("observable") {
+      check_eq(collect(mat(range(1, 2).concat(obs_error(sec::runtime_error)))
+                         .on_error_return_item(42)
+                         .take(2)),
+               make_error(sec::runtime_error));
+      check_eq(collect(mat(range(1, 3).concat(obs_error(sec::runtime_error)))
+                         .on_error_return_item(42)
+                         .take(3)),
+               make_error(sec::runtime_error));
+    }
+  }
 }
 
 } // WITH_FIXTURE(test::fixture::flow)
