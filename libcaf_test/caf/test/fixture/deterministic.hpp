@@ -8,10 +8,13 @@
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
+#include "caf/binary_deserializer.hpp"
+#include "caf/binary_serializer.hpp"
 #include "caf/detail/source_location.hpp"
 #include "caf/detail/test_actor_clock.hpp"
 #include "caf/detail/test_export.hpp"
 #include "caf/detail/type_traits.hpp"
+#include "caf/resumable.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
 
 #include <list>
@@ -520,6 +523,25 @@ public:
   auto prepone_and_allow(const detail::source_location& loc
                          = detail::source_location::current()) {
     return evaluator<Ts...>{this, loc, evaluator_algorithm::prepone_and_allow};
+  }
+
+  // -- serialization ----------------------------------------------------------
+
+  template <class T>
+  expected<T> serialization_roundtrip(const T& value) {
+    byte_buffer buf;
+    {
+      binary_serializer sink{sys.dummy_execution_unit(), buf};
+      if (!sink.apply(value))
+        return sink.get_error();
+    }
+    T result;
+    {
+      binary_deserializer source{sys.dummy_execution_unit(), buf};
+      if (!source.apply(result))
+        return source.get_error();
+    }
+    return result;
   }
 
   // -- member variables -------------------------------------------------------
