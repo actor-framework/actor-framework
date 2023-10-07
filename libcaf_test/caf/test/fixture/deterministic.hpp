@@ -419,6 +419,15 @@ public:
     return mail_count(actor_cast<strong_actor_ptr>(receiver));
   }
 
+  /// Checks whether `hdl` has terminated.
+  bool terminated(const strong_actor_ptr& hdl);
+
+  /// Checks whether `hdl` has terminated.
+  template <class Handle>
+  bool terminated(const Handle& hdl) {
+    return terminated(actor_cast<strong_actor_ptr>(hdl));
+  }
+
   // -- control flow -----------------------------------------------------------
 
   /// Tries to dispatch a single message.

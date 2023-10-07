@@ -348,6 +348,15 @@ size_t deterministic::mail_count(const strong_actor_ptr& receiver) {
   return mail_count(dynamic_cast<scheduled_actor*>(raw_ptr));
 }
 
+bool deterministic::terminated(const strong_actor_ptr& hdl) {
+  auto base_ptr = actor_cast<abstract_actor*>(hdl);
+  auto derived_ptr = dynamic_cast<scheduled_actor*>(base_ptr);
+  if (derived_ptr == nullptr)
+    CAF_RAISE_ERROR(std::invalid_argument,
+                    "terminated: actor is not a scheduled actor");
+  return derived_ptr->mailbox().closed();
+}
+
 bool deterministic::dispatch_message() {
   if (events_.empty())
     return false;
