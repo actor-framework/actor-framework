@@ -41,6 +41,15 @@ TEST("unexpected messages result in an error by default") {
   expect<int32_t>().with(3).from(receiver).to(sender2);
 }
 
+TEST("GH-1589 regression") {
+  auto dummy2 = sys.spawn([](event_based_actor* self) {
+    self->set_default_handler(skip);
+    return behavior{[](int) {}};
+  });
+  inject().with(dummy2.address()).to(dummy2);
+  // No crash means success.
+}
+
 } // WITH_FIXTURE(test::fixture::deterministic)
 
 CAF_TEST_MAIN()

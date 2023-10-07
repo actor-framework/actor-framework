@@ -240,13 +240,21 @@ bool scheduled_actor::cleanup(error&& fail_state, execution_unit* host) {
     watched_disposables_.clear();
     run_actions();
   }
-  // Clear mailbox.
-  if (!mailbox().closed()) {
-    unstash();
-    auto dropped = mailbox().close(fail_state);
-    if (dropped > 0 && metrics_.mailbox_size)
-      metrics_.mailbox_size->dec(static_cast<int64_t>(dropped));
+  // Discard stashed messages.
+  auto dropped = size_t{0};
+  if (!stash_.empty()) {
+    detail::sync_request_bouncer bounce{fail_state};
+    while (auto stashed = stash_.pop()) {
+      bounce(*stashed);
+      delete stashed;
+      ++dropped;
+    }
   }
+  // Clear mailbox.
+  if (!mailbox().closed())
+    dropped += mailbox().close(fail_state);
+  if (dropped > 0 && metrics_.mailbox_size)
+    metrics_.mailbox_size->dec(static_cast<int64_t>(dropped));
   // Dispatch to parent's `cleanup` function.
   return super::cleanup(std::move(fail_state), host);
 }
