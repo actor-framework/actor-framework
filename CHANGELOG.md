@@ -17,6 +17,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   This fixes builds with dynamic linking against `libcaf_test`.
 - Fix a crash with the new deterministic test fixture when cleaning up actors
   with stashed messages (#1589).
+- When using `request(...).await(...)`, the actor no longer suspends handling of
+  system messages while waiting for the response (#1584).
 
 ### Deprecated
 
