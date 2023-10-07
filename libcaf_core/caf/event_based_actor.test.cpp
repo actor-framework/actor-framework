@@ -6,6 +6,7 @@
 
 #include "caf/test/caf_test_main.hpp"
 #include "caf/test/fixture/deterministic.hpp"
+#include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
 #include "caf/event_based_actor.hpp"
@@ -48,6 +49,45 @@ TEST("GH-1589 regression") {
   });
   inject().with(dummy2.address()).to(dummy2);
   // No crash means success.
+}
+
+SCENARIO("request(...).await(...) suspends the regular actor behavior") {
+  GIVEN("an actor that responds to integers in its regular behavior") {
+    auto count = std::make_shared<int>(0);
+    auto server_impl = []() -> behavior { return {[](int x) { return x; }}; };
+    auto uut_impl = [count](event_based_actor* self, actor buddy) {
+      self->request(buddy, infinite, 42).await([](int) {});
+      return behavior{
+        [count](int x) {
+          *count += x;
+          return *count;
+        },
+      };
+    };
+    WHEN("the actor receives an integer while waiting for the response") {
+      THEN("the actor skips the message until the response arrives") {
+        auto server = sys.spawn(server_impl);
+        auto aut = sys.spawn(uut_impl, server);
+        inject().with(23).to(aut); // skipped
+        check_eq(*count, 0);
+        expect<int>().with(42).from(aut).to(server);
+        expect<int>().with(42).from(server).to(aut);
+        expect<int>().with(23).to(aut); // put back to the mailbox after await
+        check_eq(*count, 23);
+      }
+    }
+    WHEN("the actor receives an exit_msg while waiting for the response") {
+      THEN("the actor processes the exit messages immediately") {
+        auto server = sys.spawn(server_impl);
+        printf("server is %d\n", (int) server.id());
+        auto aut = sys.spawn(uut_impl, server);
+        printf("aut is %d\n", (int) aut.id());
+        inject().with(exit_msg{server.address(), exit_reason::kill}).to(aut);
+        check(terminated(aut));
+        expect<int>().with(42).from(aut).to(server);
+      }
+    }
+  }
 }
 
 } // WITH_FIXTURE(test::fixture::deterministic)
