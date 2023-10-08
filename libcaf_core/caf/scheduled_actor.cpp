@@ -687,9 +687,19 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
     if (!awaited_responses_.empty()) {
       auto invoke = select_invoke_fun();
       auto& pr = awaited_responses_.front();
-      // skip all messages until we receive the currently awaited response
-      if (x.mid != pr.first)
+      // Skip all other messages until we receive the currently awaited response
+      // except for internal (system) messages.
+      if (x.mid != pr.first) {
+        // Responses are never internal messages and must be skipped here.
+        // Otherwise, an error to a response would run into the default handler.
+        if (x.mid.is_response())
+          return invoke_message_result::skipped;
+        if (categorize(x) == message_category::internal) {
+          CAF_LOG_DEBUG("handled system message");
+          return invoke_message_result::consumed;
+        }
         return invoke_message_result::skipped;
+      }
       auto f = std::move(pr.second);
       awaited_responses_.pop_front();
       if (!invoke(this, f, x)) {
