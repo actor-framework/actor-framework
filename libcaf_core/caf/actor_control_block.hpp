@@ -127,7 +127,12 @@ CAF_CORE_EXPORT bool intrusive_ptr_upgrade_weak(actor_control_block* x);
 
 /// @relates actor_control_block
 inline void intrusive_ptr_add_weak_ref(actor_control_block* x) {
+#ifdef NDEBUG
   x->weak_refs.fetch_add(1, std::memory_order_relaxed);
+#else
+  if (x->weak_refs.fetch_add(1, std::memory_order_relaxed) == 0)
+    CAF_CRITICAL("increased the weak reference count of an expired actor");
+#endif
 }
 
 /// @relates actor_control_block
@@ -135,7 +140,12 @@ CAF_CORE_EXPORT void intrusive_ptr_release_weak(actor_control_block* x);
 
 /// @relates actor_control_block
 inline void intrusive_ptr_add_ref(actor_control_block* x) {
+#ifdef NDEBUG
   x->strong_refs.fetch_add(1, std::memory_order_relaxed);
+#else
+  if (x->strong_refs.fetch_add(1, std::memory_order_relaxed) == 0)
+    CAF_CRITICAL("increased the strong reference count of an expired actor");
+#endif
 }
 
 /// @relates actor_control_block

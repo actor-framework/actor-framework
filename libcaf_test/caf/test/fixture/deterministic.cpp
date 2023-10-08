@@ -72,10 +72,11 @@ public:
     closed_ = true;
     close_reason_ = reason;
     auto result = size_t{0};
+    auto bounce = detail::sync_request_bouncer{reason};
     auto envelope = fix_->pop_msg_impl(owner_);
     while (envelope != nullptr) {
-      detail::sync_request_bouncer bouncer{reason};
       ++result;
+      bounce(*envelope);
       envelope = fix_->pop_msg_impl(owner_);
     }
     return result;
@@ -354,7 +355,11 @@ bool deterministic::dispatch_message() {
     // Regular resumable.
     auto ev = std::move(events_.front());
     events_.pop_front();
-    ev->target->resume(sys.dummy_execution_unit(), 0);
+    auto hdl = ev->target;
+    auto res = hdl->resume(sys.dummy_execution_unit(), 1);
+    while (res == resumable::resume_later) {
+      res = hdl->resume(sys.dummy_execution_unit(), 0);
+    }
     return true;
   }
   // Actor: we simply resume the next actor and it will pick up its message.

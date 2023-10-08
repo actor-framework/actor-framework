@@ -15,6 +15,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 - The class `caf::test::outline` is now properly exported from the test module.
   This fixes builds with dynamic linking against `libcaf_test`.
+- Fix a crash with the new deterministic test fixture when cleaning up actors
+  with stashed messages (#1589).
 
 ### Deprecated
 
