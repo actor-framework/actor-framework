@@ -18,9 +18,14 @@ public:
 
   using output_type = T;
 
-  explicit on_error_return_item(T&& item) : item_(std::forward<T>(item)) {
+  explicit on_error_return_item(T item) : item_(std::move(item)) {
     // nop
   }
+
+  on_error_return_item(on_error_return_item&&) = default;
+  on_error_return_item(const on_error_return_item&) = default;
+  on_error_return_item& operator=(on_error_return_item&&) = default;
+  on_error_return_item& operator=(const on_error_return_item&) = default;
 
   template <class Next, class... Steps>
   bool on_next(const T& item, Next& next, Steps&... steps) {
@@ -36,8 +41,6 @@ public:
   void on_error(const error& what, Next& next, Steps&... steps) {
     if (next.on_next(item_, steps...))
       next.on_complete(steps...);
-    else
-      next.on_error(what, steps...);
   }
 
 private:

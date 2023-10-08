@@ -249,7 +249,7 @@ TEST("on_error_complete() suppresses errors") {
   }
 }
 
-TEST("on_error_return_item() returns item on error") {
+TEST("on_error_return_item() replaces an error with a value") {
   SECTION("on_error_return_item() does nothing if no error occurs") {
     SECTION("blueprint") {
       check_eq(collect(range(1, 1).on_error_return_item(42)), vector{1});
@@ -266,7 +266,7 @@ TEST("on_error_return_item() returns item on error") {
       check_eq(collect(mat(range(1, 0)).on_error_return_item(42)), nil);
     }
   }
-  SECTION("on_error_return_item() returns item when an error occurs") {
+  SECTION("on_error_return_item() returns the item when an error occurs") {
     SECTION("blueprint") {
       check_eq(collect(range(1, 0)
                          .concat(obs_error(sec::runtime_error))
@@ -282,6 +282,16 @@ TEST("on_error_return_item() returns item on error") {
                          .concat(range(1, 3))
                          .on_error_return_item(42)),
                vector{1, 2, 3, 42});
+      check_eq(collect(range(1, 2)
+                         .concat(obs_error(sec::runtime_error))
+                         .on_error_return_item(42)
+                         .take(2)),
+               vector{1, 2});
+      check_eq(collect(range(1, 3)
+                         .concat(obs_error(sec::runtime_error))
+                         .on_error_return_item(42)
+                         .take(3)),
+               vector{1, 2, 3});
     }
     SECTION("observable") {
       check_eq(collect(mat(range(1, 0).concat(obs_error(sec::runtime_error)))
@@ -297,31 +307,14 @@ TEST("on_error_return_item() returns item on error") {
                              .concat(range(1, 3)))
                          .on_error_return_item(42)),
                vector{1, 2, 3, 42});
-    }
-  }
-  SECTION(
-    "on_error_return_item() forwards error when an item can not be returned") {
-    SECTION("blueprint") {
-      check_eq(collect(range(1, 2)
-                         .concat(obs_error(sec::runtime_error))
-                         .on_error_return_item(42)
-                         .take(2)),
-               make_error(sec::runtime_error));
-      check_eq(collect(range(1, 3)
-                         .concat(obs_error(sec::runtime_error))
-                         .on_error_return_item(42)
-                         .take(3)),
-               make_error(sec::runtime_error));
-    }
-    SECTION("observable") {
       check_eq(collect(mat(range(1, 2).concat(obs_error(sec::runtime_error)))
                          .on_error_return_item(42)
                          .take(2)),
-               make_error(sec::runtime_error));
+               vector{1, 2});
       check_eq(collect(mat(range(1, 3).concat(obs_error(sec::runtime_error)))
                          .on_error_return_item(42)
                          .take(3)),
-               make_error(sec::runtime_error));
+               vector{1, 2, 3});
     }
   }
 }
