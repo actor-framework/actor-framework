@@ -19,6 +19,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   with stashed messages (#1589).
 - When using `request(...).await(...)`, the actor no longer suspends handling of
   system messages while waiting for the response (#1584).
+- Fix compiler errors and warnings for GCC 13 in C++23 mode (#1583).
 
 ### Deprecated
 

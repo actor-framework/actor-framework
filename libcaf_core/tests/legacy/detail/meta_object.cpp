@@ -39,7 +39,7 @@ BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(meta objects allow construction and destruction of objects) {
   auto meta_i32_wrapper = make_meta_object<i32_wrapper>("i32_wrapper");
-  std::aligned_storage_t<sizeof(i32_wrapper), alignof(i32_wrapper)> storage;
+  alignas(i32_wrapper) std::byte storage[sizeof(i32_wrapper)];
   meta_i32_wrapper.default_construct(&storage);
   CHECK_EQ(i32_wrapper::instances, 1u);
   meta_i32_wrapper.destroy(&storage);
@@ -49,7 +49,7 @@ CAF_TEST(meta objects allow construction and destruction of objects) {
 CAF_TEST(meta objects allow serialization of objects) {
   byte_buffer buf;
   auto meta_i32_wrapper = make_meta_object<i32_wrapper>("i32_wrapper");
-  std::aligned_storage_t<sizeof(i32_wrapper), alignof(i32_wrapper)> storage;
+  alignas(i32_wrapper) std::byte storage[sizeof(i32_wrapper)];
   binary_serializer sink{nullptr, buf};
   meta_i32_wrapper.default_construct(&storage);
   CHECK_EQ(i32_wrapper::instances, 1u);

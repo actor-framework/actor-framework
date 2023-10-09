@@ -46,6 +46,7 @@ cmake_dependent_option(CAF_ENABLE_OPENSSL_MODULE "Build OpenSSL module" ON
 
 # -- CAF options with non-boolean values ---------------------------------------
 
+set(CAF_CXX_VERSION 17 CACHE STRING "Set the C++ version to use for CAF")
 set(CAF_LOG_LEVEL "QUIET" CACHE STRING "Set log verbosity of CAF components")
 set(CAF_EXCLUDE_TESTS "" CACHE STRING "List of excluded test suites")
 set(CAF_SANITIZERS "" CACHE STRING
@@ -93,8 +94,9 @@ endif()
 # their own CMake scaffold (e.g., via FetchContent) may pass this target in with
 # some properties predefined in order to force compiler flags or dependencies.
 if(NOT TARGET caf_internal)
+  message(STATUS "Build CAF with C++${CAF_CXX_VERSION}")
   add_library(caf_internal INTERFACE)
-  target_compile_features(caf_internal INTERFACE cxx_std_17)
+  target_compile_features(caf_internal INTERFACE cxx_std_${CAF_CXX_VERSION})
 endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU")

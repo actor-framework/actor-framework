@@ -89,6 +89,25 @@ config_value_reader::associative_array::current() {
 
 // -- constructors, destructors, and assignment operators ----------------------
 
+config_value_reader::config_value_reader(const config_value* input,
+                                         actor_system& sys)
+  : super(sys) {
+  st_.push(input);
+  has_human_readable_format_ = true;
+}
+
+config_value_reader::config_value_reader(const config_value* input,
+                                         execution_unit* ctx)
+  : super(ctx) {
+  st_.push(input);
+  has_human_readable_format_ = true;
+}
+
+config_value_reader::config_value_reader(const config_value* input)
+  : config_value_reader(input, nullptr) {
+  // nop
+}
+
 config_value_reader::~config_value_reader() {
   // nop
 }

@@ -460,7 +460,8 @@ json_writer::type json_writer::top() {
 
 // Enters a new level of nesting.
 void json_writer::push(type t) {
-  stack_.push_back({t, false});
+  auto tmp = entry{t, false};
+  stack_.push_back(tmp);
 }
 
 // Backs up one level of nesting.
