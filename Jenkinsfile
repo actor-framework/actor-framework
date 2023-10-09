@@ -84,6 +84,7 @@ config = [
             builds: ['release'],
             extraBuildFlags: [
                 'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wno-array-bounds',
+                'CAF_CXX_VERSION:STRING=23',
             ],
         ]],
         ['ubuntu-20.04', [ // April 2025

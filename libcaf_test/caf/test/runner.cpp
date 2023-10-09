@@ -46,7 +46,6 @@ public:
 
 private:
   void run(int secs) {
-    using detail::format_to;
     thread_ = std::thread{[this, secs] {
       caf::detail::set_thread_name("test.watchdog");
       auto tp = std::chrono::high_resolution_clock::now()
@@ -57,9 +56,8 @@ private:
       }
       if (!canceled_) {
         auto err_out = [] { return std::ostream_iterator<char>{std::cerr}; };
-        format_to(err_out(),
-                  "WATCHDOG: unit test did not finish within {} seconds\n",
-                  secs);
+        detail::format_to(err_out(),
+                          "WATCHDOG: unit test exceeded {} seconds\n", secs);
         abort();
       }
     }};
@@ -105,17 +103,17 @@ std::optional<unsigned> parse_log_level(std::string_view x) {
 
 std::optional<std::regex> to_regex(std::string_view regex_string) {
 #ifdef CAF_ENABLE_EXCEPTIONS
-  using detail::format_to;
   auto err_out = [] { return std::ostream_iterator<char>{std::cerr}; };
   try {
     return std::regex{regex_string.begin(), regex_string.end()};
   } catch (const std::exception& err) {
-    format_to(err_out(), "error while parsing argument '{}': {}\n",
-              regex_string, err.what());
+    detail::format_to(err_out(), "error while parsing argument '{}': {}\n",
+                      regex_string, err.what());
     return std::nullopt;
   } catch (...) {
-    format_to(err_out(), "error while parsing argument '{}': unknown error\n",
-              regex_string);
+    detail::format_to(err_out(),
+                      "error while parsing argument '{}': unknown error\n",
+                      regex_string);
     return std::nullopt;
   }
 #else
@@ -200,50 +198,49 @@ int runner::run(int argc, char** argv) {
 }
 
 runner::parse_cli_result runner::parse_cli(int argc, char** argv) {
-  using detail::format_to;
   std::vector<std::string> args_cpy{argv + 1, argv + argc};
   auto options = make_option_set();
   auto res = options.parse(cfg_, args_cpy);
   auto err = std::ostream_iterator<char>{std::cerr};
   if (res.first != caf::pec::success) {
-    format_to(err, "error while parsing argument '{}': {}\n\n{}\n", *res.second,
-              to_string(res.first), options.help_text());
+    detail::format_to(err, "error while parsing argument '{}': {}\n\n{}\n",
+                      *res.second, to_string(res.first), options.help_text());
     return {false, true};
   }
   if (get_or(cfg_, "help", false)) {
-    format_to(err, "{}\n", options.help_text());
+    detail::format_to(err, "{}\n", options.help_text());
     return {true, true};
   }
   if (get_or(cfg_, "available-suites", false)) {
-    format_to(err, "available suites:\n");
+    detail::format_to(err, "available suites:\n");
     for (auto& [suite_name, suite] : suites_)
-      format_to(err, "- {}\n", suite_name);
+      detail::format_to(err, "- {}\n", suite_name);
     return {true, true};
   }
   if (auto suite_name = get_as<std::string>(cfg_, "available-tests")) {
     auto i = suites_.find(*suite_name);
     if (i == suites_.end()) {
-      format_to(err, "no such suite: {}\n", *suite_name);
+      detail::format_to(err, "no such suite: {}\n", *suite_name);
       return {false, true};
     }
-    format_to(err, "available tests in suite {}:\n", i->first);
+    detail::format_to(err, "available tests in suite {}:\n", i->first);
     for (const auto& [test_name, factory_instance] : i->second)
-      format_to(err, "- {}\n", test_name);
+      detail::format_to(err, "- {}\n", test_name);
     return {true, true};
   }
   if (auto verbosity = get_as<std::string>(cfg_, "verbosity")) {
     auto level = parse_log_level(*verbosity);
     if (!level) {
-      format_to(err,
-                "unrecognized verbosity level: '{}'\n"
-                "expected one of:\n"
-                "- quiet\n"
-                "- error\n"
-                "- warning\n"
-                "- info\n"
-                "- debug\n"
-                "- trace\n",
-                *verbosity);
+      detail::format_to(err,
+                        "unrecognized verbosity level: '{}'\n"
+                        "expected one of:\n"
+                        "- quiet\n"
+                        "- error\n"
+                        "- warning\n"
+                        "- info\n"
+                        "- debug\n"
+                        "- trace\n",
+                        *verbosity);
       return {false, true};
     }
     reporter::instance().verbosity(*level);
