@@ -38,7 +38,7 @@ public:
   }
 
   template <class Next, class... Steps>
-  void on_error(const error& what, Next& next, Steps&... steps) {
+  void on_error(const error&, Next& next, Steps&... steps) {
     if (next.on_next(item_, steps...))
       next.on_complete(steps...);
   }

@@ -331,8 +331,7 @@ public:
   }
 
   auto on_error_return_item(output_type f) {
-    return add_step(
-      step::on_error_return_item<output_type>{std::move(f)});
+    return add_step(step::on_error_return_item<output_type>{std::move(f)});
   }
 
   /// Materializes the @ref observable.
