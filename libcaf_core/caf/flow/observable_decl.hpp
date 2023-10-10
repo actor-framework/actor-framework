@@ -113,7 +113,7 @@ public:
   transformation<step::on_error_complete<T>> on_error_complete();
 
   /// Recovers from errors by returning an item.
-  transformation<step::on_error_return_item<T>> on_error_return_item(T t);
+  transformation<step::on_error_return_item<T>> on_error_return_item(T item);
 
   /// Reduces the entire sequence of items to a single value. Other names for
   /// the algorithm are `accumulate` and `fold`.

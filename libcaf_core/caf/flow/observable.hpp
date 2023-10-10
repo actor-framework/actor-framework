@@ -330,8 +330,8 @@ public:
     return add_step(step::on_error_complete<output_type>{});
   }
 
-  auto on_error_return_item(output_type f) {
-    return add_step(step::on_error_return_item<output_type>{std::move(f)});
+  auto on_error_return_item(output_type item) {
+    return add_step(step::on_error_return_item<output_type>{std::move(item)});
   }
 
   /// Materializes the @ref observable.
@@ -641,8 +641,8 @@ transformation<step::on_error_complete<T>> observable<T>::on_error_complete() {
 
 template <class T>
 transformation<step::on_error_return_item<T>>
-observable<T>::on_error_return_item(T t) {
-  return transform(step::on_error_return_item<T>{std::move(t)});
+observable<T>::on_error_return_item(T item) {
+  return transform(step::on_error_return_item<T>{std::move(item)});
 }
 
 template <class T>
