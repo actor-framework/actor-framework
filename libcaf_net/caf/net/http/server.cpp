@@ -2,6 +2,8 @@
 
 #include "caf/net/octet_stream/lower_layer.hpp"
 
+#include "caf/detail/format.hpp"
+
 namespace caf::net::http {
 
 // -- factories ----------------------------------------------------------------
@@ -65,10 +67,9 @@ bool server::send_payload(const_byte_span bytes) {
 bool server::send_chunk(const_byte_span bytes) {
   down_->begin_output();
   auto& buf = down_->output_buffer();
-  auto size = bytes.size();
-  detail::append_hex(buf, &size, sizeof(size));
-  buf.emplace_back(std::byte{'\r'});
-  buf.emplace_back(std::byte{'\n'});
+  auto size_str = detail::format("{:X}\r\n", bytes.size());
+  std::transform(size_str.begin(), size_str.end(), std::back_inserter(buf),
+                 [](auto c) { return static_cast<std::byte>(c); });
   buf.insert(buf.end(), bytes.begin(), bytes.end());
   buf.emplace_back(std::byte{'\r'});
   buf.emplace_back(std::byte{'\n'});
