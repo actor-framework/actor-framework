@@ -9,6 +9,7 @@
 
 #include "caf/actor_system_config.hpp"
 #include "caf/event_based_actor.hpp"
+#include "caf/scoped_actor.hpp"
 
 #include <memory>
 
@@ -39,18 +40,35 @@ TEST("spawn_inactive creates an actor without launching it") {
   actor_system_config cfg;
   put(cfg.content, "caf.scheduler.max-threads", 1);
   actor_system sys{cfg};
+  scoped_actor self{sys};
   SECTION("users may launch the actor manually") {
-    auto [self, launch] = sys.spawn_inactive<dummy_actor>(flag);
-    check(!*flag);
-    launch();
-    check(*flag);
-  }
-  SECTION("the actor launches automatically at scope exit") {
+    actor hdl;
     {
       auto [self, launch] = sys.spawn_inactive<dummy_actor>(flag);
+      check_eq(self->ctrl()->strong_refs, 1u); // 1 ref by launch
+      hdl = self;
+      check(!*flag);
+      launch();
+      check(*flag);
+      print_debug("calling launch() twice is a no-op");
+      *flag = false;
+      launch();
       check(!*flag);
     }
+    self->wait_for(hdl);
+    check_eq(hdl->ctrl()->strong_refs, 1u); // launch must have dropped its ref
+  }
+  SECTION("the actor launches automatically at scope exit") {
+    actor hdl;
+    {
+      auto [self, launch] = sys.spawn_inactive<dummy_actor>(flag);
+      check_eq(self->ctrl()->strong_refs, 1u); // 1 ref by launch
+      hdl = self;
+      check(!*flag);
+    }
+    self->wait_for(hdl);
     check(*flag);
+    check_eq(hdl->ctrl()->strong_refs, 1u); // launch must have dropped its ref
   }
 }
 
