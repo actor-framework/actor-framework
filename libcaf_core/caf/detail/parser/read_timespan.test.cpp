@@ -2,13 +2,12 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE detail.parser.read_timespan
-
 #include "caf/detail/parser/read_timespan.hpp"
 
-#include "caf/parser_state.hpp"
+#include "caf/test/caf_test_main.hpp"
+#include "caf/test/test.hpp"
 
-#include "core-test.hpp"
+#include "caf/parser_state.hpp"
 
 #include <chrono>
 #include <string_view>
@@ -60,11 +59,13 @@ std::optional<timespan> read(std::string_view str) {
 
 } // namespace
 
-CAF_TEST(todo) {
-  CHECK_EQ(read("12ns"), 12_ns);
-  CHECK_EQ(read("34us"), 34_us);
-  CHECK_EQ(read("56ms"), 56_ms);
-  CHECK_EQ(read("78s"), 78_s);
-  CHECK_EQ(read("60min"), 1_h);
-  CHECK_EQ(read("90h"), 90_h);
+TEST("todo") {
+  check_eq(read("12ns"), 12_ns);
+  check_eq(read("34us"), 34_us);
+  check_eq(read("56ms"), 56_ms);
+  check_eq(read("78s"), 78_s);
+  check_eq(read("60min"), 1_h);
+  check_eq(read("90h"), 90_h);
 }
+
+CAF_TEST_MAIN()

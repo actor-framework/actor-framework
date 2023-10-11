@@ -458,50 +458,6 @@ struct fail_on_copy {
   }
 };
 
-struct i32_wrapper {
-  // Initialized in meta_object.cpp.
-  static size_t instances;
-
-  int32_t value;
-
-  i32_wrapper() : value(0) {
-    ++instances;
-  }
-
-  ~i32_wrapper() {
-    --instances;
-  }
-
-  template <class Inspector>
-  friend bool inspect(Inspector& f, i32_wrapper& x) {
-    return f.apply(x.value);
-  }
-};
-
-struct i64_wrapper {
-  // Initialized in meta_object.cpp.
-  static size_t instances;
-
-  int64_t value;
-
-  i64_wrapper() : value(0) {
-    ++instances;
-  }
-
-  explicit i64_wrapper(int64_t val) : value(val) {
-    ++instances;
-  }
-
-  ~i64_wrapper() {
-    --instances;
-  }
-
-  template <class Inspector>
-  friend bool inspect(Inspector& f, i64_wrapper& x) {
-    return f.apply(x.value);
-  }
-};
-
 struct my_request {
   int32_t a = 0;
   int32_t b = 0;
@@ -819,8 +775,6 @@ CAF_BEGIN_TYPE_ID_BLOCK(core_test, caf::first_custom_type_id)
   ADD_TYPE_ID((fail_on_copy))
   ADD_TYPE_ID((float_actor))
   ADD_TYPE_ID((foo_actor))
-  ADD_TYPE_ID((i32_wrapper))
-  ADD_TYPE_ID((i64_wrapper))
   ADD_TYPE_ID((int_actor))
   ADD_TYPE_ID((level))
   ADD_TYPE_ID((my_request))

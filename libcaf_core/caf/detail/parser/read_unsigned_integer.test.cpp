@@ -2,13 +2,12 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE detail.parser.read_unsigned_integer
-
 #include "caf/detail/parser/read_unsigned_integer.hpp"
 
-#include "caf/parser_state.hpp"
+#include "caf/test/caf_test_main.hpp"
+#include "caf/test/test.hpp"
 
-#include "core-test.hpp"
+#include "caf/parser_state.hpp"
 
 #include <string_view>
 
@@ -52,18 +51,18 @@ T max_val() {
 
 } // namespace
 
-#define ZERO_VALUE(type, literal) CHECK_EQ(read<type>(#literal), type(0));
+#define ZERO_VALUE(type, literal) check_eq(read<type>(#literal), type(0));
 
 #define MAX_VALUE(type, literal)                                               \
-  CHECK_EQ(read<type>(#literal), max_val<type>());
+  check_eq(read<type>(#literal), max_val<type>());
 
 #ifdef OVERFLOW
 #  undef OVERFLOW
 #endif // OVERFLOW
 
-#define OVERFLOW(type, literal) CHECK(overflow<type>(#literal));
+#define OVERFLOW(type, literal) check(overflow<type>(#literal));
 
-CAF_TEST(read zeros) {
+TEST("read zeros") {
   ZERO_VALUE(uint8_t, 0);
   ZERO_VALUE(uint8_t, 00);
   ZERO_VALUE(uint8_t, 0x0);
@@ -78,7 +77,7 @@ CAF_TEST(read zeros) {
   ZERO_VALUE(uint8_t, +0B00);
 }
 
-CAF_TEST(maximal value) {
+TEST("maximal value") {
   MAX_VALUE(uint8_t, 0b11111111);
   MAX_VALUE(uint8_t, 0377);
   MAX_VALUE(uint8_t, 255);
@@ -114,3 +113,5 @@ CAF_TEST(maximal value) {
   OVERFLOW(uint64_t, 18446744073709551616);
   OVERFLOW(uint64_t, 0x10000000000000000);
 }
+
+CAF_TEST_MAIN()

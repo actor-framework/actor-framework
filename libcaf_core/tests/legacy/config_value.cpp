@@ -610,6 +610,19 @@ SCENARIO("get_as can convert config values to custom types") {
   }
 }
 
+namespace {
+
+struct i64_wrapper {
+  int64_t value;
+};
+
+template <class Inspector>
+bool inspect(Inspector& f, i64_wrapper& x) {
+  return f.apply(x.value);
+}
+
+} // namespace
+
 SCENARIO("get_or converts or returns a fallback value") {
   using namespace caf::literals;
   GIVEN("the config value 42") {
