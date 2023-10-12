@@ -2,33 +2,32 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE detail.private_thread_pool
-
 #include "caf/detail/private_thread_pool.hpp"
 
-#include "caf/detail/private_thread.hpp"
+#include "caf/test/caf_test_main.hpp"
+#include "caf/test/fixture/deterministic.hpp"
+#include "caf/test/scenario.hpp"
 
-#include "core-test.hpp"
+#include "caf/detail/private_thread.hpp"
+#include "caf/resumable.hpp"
 
 using namespace caf;
 
-BEGIN_FIXTURE_SCOPE(test_coordinator_fixture<>)
+WITH_FIXTURE(test::fixture::deterministic) {
 
 SCENARIO("private threads count towards detached actors") {
   GIVEN("an actor system with a private thread pool") {
     detail::private_thread* t1 = nullptr;
     detail::private_thread* t2 = nullptr;
-    WHEN("acquiring new private threads") {
+    WHEN("acquiring and then releasing new private threads") {
       THEN("the detached_actors counter increases") {
-        CHECK_EQ(sys.detached_actors(), 0u);
+        check_eq(sys.detached_actors(), 0u);
         t1 = sys.acquire_private_thread();
-        CHECK_EQ(sys.detached_actors(), 1u);
+        check_eq(sys.detached_actors(), 1u);
         t2 = sys.acquire_private_thread();
-        CHECK_EQ(sys.detached_actors(), 2u);
+        check_eq(sys.detached_actors(), 2u);
       }
-    }
-    WHEN("releasing the private threads") {
-      THEN("the detached_actors counter eventually decreases again") {
+      AND_THEN("the detached_actors counter eventually decreases again") {
         auto next_value = [this, old_value{2u}]() mutable {
           using namespace std::literals::chrono_literals;
           size_t result = 0;
@@ -38,9 +37,9 @@ SCENARIO("private threads count towards detached actors") {
           return result;
         };
         sys.release_private_thread(t2);
-        CHECK_EQ(next_value(), 1u);
+        check_eq(next_value(), 1u);
         sys.release_private_thread(t1);
-        CHECK_EQ(next_value(), 0u);
+        check_eq(next_value(), 0u);
       }
     }
   }
@@ -76,11 +75,13 @@ SCENARIO("private threads rerun their resumable when it returns resume_later") {
           std::this_thread::sleep_for(1ms);
         while (sys.detached_actors() != 0)
           std::this_thread::sleep_for(1ms);
-        CHECK_EQ(f.refs_added, 0u);
-        CHECK_EQ(f.refs_released, 1u);
+        check_eq(f.refs_added, 0u);
+        check_eq(f.refs_released, 1u);
       }
     }
   }
 }
 
-END_FIXTURE_SCOPE()
+} // WITH_FIXTURE(test::fixture::deterministic)
+
+CAF_TEST_MAIN()

@@ -2,21 +2,18 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE detail.parser.read_config
-
 #include "caf/detail/parser/read_config.hpp"
+
+#include "caf/test/caf_test_main.hpp"
+#include "caf/test/test.hpp"
 
 #include "caf/config_value.hpp"
 #include "caf/parser_state.hpp"
 #include "caf/pec.hpp"
 
-#include "core-test.hpp"
-
 #include <string_view>
 
 using namespace caf;
-
-namespace {
 
 using log_type = std::vector<std::string>;
 
@@ -71,8 +68,10 @@ struct fixture {
     string_parser_state res{str.begin(), str.end()};
     detail::parser::read_config(res, f);
     if ((res.code == pec::success) != expect_success) {
-      MESSAGE("unexpected parser result state: " << res.code);
-      MESSAGE("input remainder: " << std::string(res.i, res.e));
+      auto& this_test = test::runnable::current();
+      this_test.print_error("unexpected parser result state: {}",
+                            to_string(res.code));
+      this_test.print_error("input remainder: {}", std::string(res.i, res.e));
     }
     return std::move(f.log);
   }
@@ -212,13 +211,13 @@ const auto conf1_log = make_log(
 );
 // clang-format on
 
-} // namespace
+WITH_FIXTURE(fixture) {
 
-BEGIN_FIXTURE_SCOPE(fixture)
-
-CAF_TEST(read_config feeds into a consumer) {
-  CHECK_EQ(parse(conf0), conf0_log);
-  CHECK_EQ(parse(conf1), conf1_log);
+TEST("read_config feeds into a consumer") {
+  check_eq(parse(conf0), conf0_log);
+  check_eq(parse(conf1), conf1_log);
 }
 
-END_FIXTURE_SCOPE()
+} // WITH_FIXTURE(fixture)
+
+CAF_TEST_MAIN()

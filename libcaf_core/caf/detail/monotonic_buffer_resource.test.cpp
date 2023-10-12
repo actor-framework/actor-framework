@@ -2,11 +2,10 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE detail.monotonic_buffer_resource
-
 #include "caf/detail/monotonic_buffer_resource.hpp"
 
-#include "core-test.hpp"
+#include "caf/test/caf_test_main.hpp"
+#include "caf/test/scenario.hpp"
 
 #include <list>
 #include <map>
@@ -19,13 +18,13 @@ SCENARIO("monotonic buffers group allocations") {
     detail::monotonic_buffer_resource mbr;
     WHEN("calling allocate multiple times for the same size") {
       THEN("the resource returns consecutive pointers") {
-        CHECK_EQ(mbr.blocks(8), 0u);
+        check_eq(mbr.blocks(8), 0u);
         auto p1 = mbr.allocate(8);
         auto p2 = mbr.allocate(8);
         auto p3 = mbr.allocate(8);
-        CHECK_EQ(mbr.blocks(8), 1u);
-        CHECK(p1 < p2);
-        CHECK(p2 < p3);
+        check_eq(mbr.blocks(8), 1u);
+        check(p1 < p2);
+        check(p2 < p3);
       }
     }
   }
@@ -34,27 +33,27 @@ SCENARIO("monotonic buffers group allocations") {
     WHEN("calling allocate with various sizes") {
       THEN("the resource puts allocations into buckets") {
         void* unused = nullptr; // For silencing nodiscard warnings.
-        CHECK_EQ(mbr.blocks(), 0u);
-        MESSAGE("perform small allocations");
+        check_eq(mbr.blocks(), 0u);
+        print_debug("perform small allocations");
         unused = mbr.allocate(64);
-        CHECK_EQ(mbr.blocks(), 1u);
+        check_eq(mbr.blocks(), 1u);
         unused = mbr.allocate(64);
-        CHECK_EQ(mbr.blocks(), 1u);
-        MESSAGE("perform medium allocations");
+        check_eq(mbr.blocks(), 1u);
+        print_debug("perform medium allocations");
         unused = mbr.allocate(65);
-        CHECK_EQ(mbr.blocks(), 2u);
+        check_eq(mbr.blocks(), 2u);
         unused = mbr.allocate(512);
-        CHECK_EQ(mbr.blocks(), 2u);
-        MESSAGE("perform large allocations <= 1 MB (pools allocations)");
+        check_eq(mbr.blocks(), 2u);
+        print_debug("perform large allocations <= 1 MB (pools allocations)");
         unused = mbr.allocate(513);
-        CHECK_EQ(mbr.blocks(), 3u);
+        check_eq(mbr.blocks(), 3u);
         unused = mbr.allocate(1023);
-        CHECK_EQ(mbr.blocks(), 3u);
-        MESSAGE("perform large allocations  > 1 MB (allocates individually)");
+        check_eq(mbr.blocks(), 3u);
+        print_debug("perform large allocations > 1 MB (individual allocation)");
         unused = mbr.allocate(1'048'577);
-        CHECK_EQ(mbr.blocks(), 4u);
+        check_eq(mbr.blocks(), 4u);
         unused = mbr.allocate(1'048'577);
-        CHECK_EQ(mbr.blocks(), 5u);
+        check_eq(mbr.blocks(), 5u);
         static_cast<void>(unused);
       }
     }
@@ -72,12 +71,12 @@ SCENARIO("monotonic buffers re-use small memory blocks after calling reclaim") {
     WHEN("calling reclaim on the resource") {
       mbr.reclaim();
       THEN("performing the same allocations returns the same addresses again") {
-        if (CHECK_EQ(mbr.blocks(), 2u)) {
-          CHECK_EQ(locations[0], mbr.allocate(64));
-          CHECK_EQ(locations[1], mbr.allocate(64));
-          CHECK_EQ(locations[2], mbr.allocate(65));
-          CHECK_EQ(locations[3], mbr.allocate(512));
-          CHECK_EQ(mbr.blocks(), 2u);
+        if (check_eq(mbr.blocks(), 2u)) {
+          check_eq(locations[0], mbr.allocate(64));
+          check_eq(locations[1], mbr.allocate(64));
+          check_eq(locations[2], mbr.allocate(65));
+          check_eq(locations[3], mbr.allocate(512));
+          check_eq(mbr.blocks(), 2u);
         }
       }
     }
@@ -90,11 +89,11 @@ SCENARIO("monotonic buffers provide storage for STL containers") {
     detail::monotonic_buffer_resource mbr;
     WHEN("pushing to the vector") {
       THEN("the memory resource fills up") {
-        CHECK_EQ(mbr.blocks(), 0u);
+        check_eq(mbr.blocks(), 0u);
         std::vector<int32_t, int_allocator> xs{int_allocator{&mbr}};
         xs.push_back(42);
-        CHECK_EQ(xs.size(), 1u);
-        CHECK_EQ(mbr.blocks(), 1u);
+        check_eq(xs.size(), 1u);
+        check_eq(mbr.blocks(), 1u);
         xs.insert(xs.end(), 17, 0);
       }
     }
@@ -104,12 +103,14 @@ SCENARIO("monotonic buffers provide storage for STL containers") {
     detail::monotonic_buffer_resource mbr;
     WHEN("pushing to the list") {
       THEN("the memory resource fills up") {
-        CHECK_EQ(mbr.blocks(), 0u);
+        check_eq(mbr.blocks(), 0u);
         std::list<int32_t, int_allocator> xs{int_allocator{&mbr}};
         xs.push_back(42);
-        CHECK_EQ(xs.size(), 1u);
-        CHECK_EQ(mbr.blocks(), 1u);
+        check_eq(xs.size(), 1u);
+        check_eq(mbr.blocks(), 1u);
       }
     }
   }
 }
+
+CAF_TEST_MAIN()

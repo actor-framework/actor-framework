@@ -2,14 +2,12 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE detail.json
-
 #include "caf/detail/json.hpp"
 
-#include "core-test.hpp"
+#include "caf/test/caf_test_main.hpp"
+#include "caf/test/test.hpp"
 
 using namespace caf;
-using namespace caf::literals;
 
 namespace {
 
@@ -163,15 +161,17 @@ std::string stringify(const detail::json::value& val) {
 
 } // namespace
 
-CAF_TEST(json baselines) {
+TEST("json baselines") {
   size_t baseline_index = 0;
   detail::monotonic_buffer_resource resource;
   for (auto [input, output] : baselines) {
-    MESSAGE("test baseline at index " << baseline_index++);
+    print_debug("test baseline at index {}", baseline_index++);
     string_parser_state ps{input.begin(), input.end()};
     auto val = detail::json::parse(ps, &resource);
-    CHECK_EQ(ps.code, pec::success);
-    CHECK_EQ(stringify(*val), output);
+    check_eq(ps.code, pec::success);
+    check_eq(::stringify(*val), output);
     resource.reclaim();
   }
 }
+
+CAF_TEST_MAIN()

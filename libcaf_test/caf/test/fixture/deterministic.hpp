@@ -175,6 +175,7 @@ public:
   enum class evaluator_algorithm {
     expect,
     allow,
+    disallow,
     prepone,
     prepone_and_expect,
     prepone_and_allow
@@ -269,6 +270,12 @@ public:
           return eval_dispatch(dst_ptr, true);
         case evaluator_algorithm::allow:
           return eval_dispatch(dst_ptr, false);
+        case evaluator_algorithm::disallow:
+          if (dry_run(dst_ptr)) {
+            auto& ctx = runnable::current();
+            ctx.fail({"disallow message found", loc_});
+          }
+          return true;
         case evaluator_algorithm::prepone:
           return eval_prepone(dst_ptr);
         case evaluator_algorithm::prepone_and_expect:
@@ -305,6 +312,13 @@ public:
         return true;
       }
       return fix_->dispatch_message();
+    }
+
+    bool dry_run(const strong_actor_ptr& dst) {
+      auto* event = fix_->find_event_impl(dst);
+      if (!event)
+        return false;
+      return from_(event->item->sender) && !with_(event->item->payload);
     }
 
     bool eval_prepone(const strong_actor_ptr& dst) {
@@ -453,6 +467,14 @@ public:
   auto allow(const detail::source_location& loc
              = detail::source_location::current()) {
     return evaluator<Ts...>{this, loc, evaluator_algorithm::allow};
+  }
+
+  /// Tries to match a message with types `Ts...` and executes it if it is the
+  /// next message in the mailbox of the receiver.
+  template <class... Ts>
+  auto disallow(const detail::source_location& loc
+                = detail::source_location::current()) {
+    return evaluator<Ts...>{this, loc, evaluator_algorithm::disallow};
   }
 
   /// Helper class for `inject` that only provides `with`.

@@ -113,32 +113,52 @@ caf_add_component(
     caf/detail/actor_local_printer.cpp
     caf/detail/atomic_ref_counted.cpp
     caf/detail/base64.cpp
+    caf/detail/base64.test.cpp
     caf/detail/behavior_impl.cpp
     caf/detail/behavior_stack.cpp
     caf/detail/blocking_behavior.cpp
+    caf/detail/bounds_checker.test.cpp
     caf/detail/config_consumer.cpp
+    caf/detail/config_consumer.test.cpp
     caf/detail/default_mailbox.cpp
     caf/detail/default_mailbox.test.cpp
+    caf/detail/format.test.cpp
     caf/detail/get_process_id.cpp
     caf/detail/glob_match.cpp
     caf/detail/group_tunnel.cpp
+    caf/detail/ieee_754.test.cpp
     caf/detail/invoke_result_visitor.cpp
     caf/detail/json.cpp
+    caf/detail/json.test.cpp
     caf/detail/latch.cpp
+    caf/detail/latch.test.cpp
     caf/detail/local_group_module.cpp
     caf/detail/mailbox_factory.cpp
     caf/detail/mailbox_factory.test.cpp
     caf/detail/message_builder_element.cpp
     caf/detail/message_data.cpp
     caf/detail/meta_object.cpp
+    caf/detail/meta_object.test.cpp
     caf/detail/monotonic_buffer_resource.cpp
+    caf/detail/monotonic_buffer_resource.test.cpp
     caf/detail/parse.cpp
+    caf/detail/parse.test.cpp
     caf/detail/parser/chars.cpp
+    caf/detail/parser/read_bool.test.cpp
+    caf/detail/parser/read_config.test.cpp
+    caf/detail/parser/read_floating_point.test.cpp
+    caf/detail/parser/read_number.test.cpp
+    caf/detail/parser/read_number_or_timespan.test.cpp
+    caf/detail/parser/read_signed_integer.test.cpp
+    caf/detail/parser/read_string.test.cpp
+    caf/detail/parser/read_timespan.test.cpp
+    caf/detail/parser/read_unsigned_integer.test.cpp
     caf/detail/plain_ref_counted.cpp
     caf/detail/pretty_type_name.cpp
     caf/detail/print.cpp
     caf/detail/private_thread.cpp
     caf/detail/private_thread_pool.cpp
+    caf/detail/private_thread_pool.test.cpp
     caf/detail/rfc3629.cpp
     caf/detail/rfc3629.test.cpp
     caf/detail/ring_buffer.test.cpp
@@ -150,6 +170,8 @@ caf_add_component(
     caf/detail/test_actor_clock.cpp
     caf/detail/thread_safe_actor_clock.cpp
     caf/detail/type_id_list_builder.cpp
+    caf/detail/type_id_list_builder.test.cpp
+    caf/detail/unique_function.test.cpp
     caf/disposable.cpp
     caf/error.cpp
     caf/event_based_actor.cpp
@@ -270,30 +292,8 @@ caf_add_component(
     cow_tuple
     deep_to_string
     detached_actors
-    detail.base64
-    detail.bounds_checker
-    detail.config_consumer
-    detail.format
     detail.group_tunnel
-    detail.ieee_754
-    detail.json
-    detail.latch
     detail.local_group_module
-    detail.meta_object
-    detail.monotonic_buffer_resource
-    detail.parse
-    detail.parser.read_bool
-    detail.parser.read_config
-    detail.parser.read_floating_point
-    detail.parser.read_number
-    detail.parser.read_number_or_timespan
-    detail.parser.read_signed_integer
-    detail.parser.read_string
-    detail.parser.read_timespan
-    detail.parser.read_unsigned_integer
-    detail.private_thread_pool
-    detail.type_id_list_builder
-    detail.unique_function
     dictionary
     dsl
     dynamic_spawn

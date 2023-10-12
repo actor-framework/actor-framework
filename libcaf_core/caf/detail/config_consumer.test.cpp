@@ -2,13 +2,12 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE detail.config_consumer
-
 #include "caf/detail/config_consumer.hpp"
 
-#include "caf/detail/parser/read_config.hpp"
+#include "caf/test/caf_test_main.hpp"
+#include "caf/test/test.hpp"
 
-#include "core-test.hpp"
+#include "caf/detail/parser/read_config.hpp"
 
 using std::string;
 
@@ -59,39 +58,41 @@ struct fixture {
 
 } // namespace
 
-BEGIN_FIXTURE_SCOPE(fixture)
+WITH_FIXTURE(fixture) {
 
-CAF_TEST(config_consumer) {
+TEST("config_consumer") {
   std::string_view str = test_config1;
   detail::config_consumer consumer{options, config};
   string_parser_state res{str.begin(), str.end()};
   detail::parser::read_config(res, consumer);
-  CHECK(res.i == res.e);
-  CHECK_EQ(res.code, pec::success);
-  CHECK_EQ(get_as<bool>(config, "is_server"), true);
-  CHECK_EQ(get_as<uint16_t>(config, "port"), 4242u);
-  CHECK_EQ(get_as<ls>(config, "nodes"), ls({"sun", "venus"}));
-  CHECK_EQ(get_as<string>(config, "logger.file-name"), "foobar.conf");
-  CHECK_EQ(get_as<timespan>(config, "scheduler.timing"), timespan(2000));
+  check(res.i == res.e);
+  check_eq(res.code, pec::success);
+  check_eq(get_as<bool>(config, "is_server"), true);
+  check_eq(get_as<uint16_t>(config, "port"), 4242u);
+  check_eq(get_as<ls>(config, "nodes"), ls({"sun", "venus"}));
+  check_eq(get_as<string>(config, "logger.file-name"), "foobar.conf");
+  check_eq(get_as<timespan>(config, "scheduler.timing"), timespan(2000));
 }
 
-CAF_TEST(simplified syntax) {
-  MESSAGE("read test_config");
+TEST("simplified syntax") {
+  print_debug("read test_config");
   {
     detail::config_consumer consumer{options, config};
     string_parser_state res{test_config1.begin(), test_config1.end()};
     detail::parser::read_config(res, consumer);
-    CHECK_EQ(res.code, pec::success);
+    check_eq(res.code, pec::success);
+    print_debug("read test_config2");
   }
   settings config2;
-  MESSAGE("read test_config2");
   {
     detail::config_consumer consumer{options, config2};
     string_parser_state res{test_config2.begin(), test_config2.end()};
     detail::parser::read_config(res, consumer);
-    CHECK_EQ(res.code, pec::success);
+    check_eq(res.code, pec::success);
   }
-  CHECK_EQ(config, config2);
+  check_eq(config, config2);
 }
 
-END_FIXTURE_SCOPE()
+} // WITH_FIXTURE(fixture)
+
+CAF_TEST_MAIN()

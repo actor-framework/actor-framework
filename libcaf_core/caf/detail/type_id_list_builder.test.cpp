@@ -2,11 +2,10 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE detail.type_id_list_builder
-
 #include "caf/detail/type_id_list_builder.hpp"
 
-#include "core-test.hpp"
+#include "caf/test/caf_test_main.hpp"
+#include "caf/test/test.hpp"
 
 using namespace caf;
 
@@ -16,10 +15,12 @@ struct fixture {};
 
 } // namespace
 
-BEGIN_FIXTURE_SCOPE(fixture)
+WITH_FIXTURE(fixture) {
 
-CAF_TEST(todo) {
+TEST("todo") {
   // implement me
 }
 
-END_FIXTURE_SCOPE()
+} // WITH_FIXTURE(fixture)
+
+CAF_TEST_MAIN()

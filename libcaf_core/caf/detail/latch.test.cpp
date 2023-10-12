@@ -2,11 +2,10 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE detail.latch
-
 #include "caf/detail/latch.hpp"
 
-#include "core-test.hpp"
+#include "caf/test/caf_test_main.hpp"
+#include "caf/test/scenario.hpp"
 
 using namespace caf;
 
@@ -20,10 +19,12 @@ SCENARIO("latches synchronize threads") {
         threads.emplace_back([&sync] { sync.count_down_and_wait(); });
         threads.emplace_back([&sync] { sync.wait(); });
         sync.wait();
-        CHECK(sync.is_ready());
+        check(sync.is_ready());
       }
     }
     for (auto& t : threads)
       t.join();
   }
 }
+
+CAF_TEST_MAIN()

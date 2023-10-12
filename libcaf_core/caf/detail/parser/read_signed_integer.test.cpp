@@ -2,13 +2,12 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE detail.parser.read_signed_integer
-
 #include "caf/detail/parser/read_signed_integer.hpp"
 
-#include "caf/parser_state.hpp"
+#include "caf/test/caf_test_main.hpp"
+#include "caf/test/test.hpp"
 
-#include "core-test.hpp"
+#include "caf/parser_state.hpp"
 
 #include <string_view>
 
@@ -65,27 +64,27 @@ T max_val() {
 
 } // namespace
 
-#define ZERO_VALUE(type, literal) CHECK_EQ(read<type>(#literal), type(0));
+#define ZERO_VALUE(type, literal) check_eq(read<type>(#literal), type(0));
 
 #define MAX_VALUE(type, literal)                                               \
-  CHECK_EQ(read<type>(#literal), max_val<type>());
+  check_eq(read<type>(#literal), max_val<type>());
 
 #define MIN_VALUE(type, literal)                                               \
-  CHECK_EQ(read<type>(#literal), min_val<type>());
+  check_eq(read<type>(#literal), min_val<type>());
 
 #ifdef OVERFLOW
 #  undef OVERFLOW
 #endif // OVERFLOW
 
-#define OVERFLOW(type, literal) CHECK(overflow<type>(#literal));
+#define OVERFLOW(type, literal) check(overflow<type>(#literal));
 
 #ifdef UNDERFLOW
 #  undef UNDERFLOW
 #endif // UNDERFLOW
 
-#define UNDERFLOW(type, literal) CHECK(underflow<type>(#literal));
+#define UNDERFLOW(type, literal) check(underflow<type>(#literal));
 
-CAF_TEST(read zeros) {
+TEST("read zeros") {
   ZERO_VALUE(int8_t, 0);
   ZERO_VALUE(int8_t, 00);
   ZERO_VALUE(int8_t, 0x0);
@@ -106,7 +105,7 @@ CAF_TEST(read zeros) {
   ZERO_VALUE(int8_t, -0B00);
 }
 
-CAF_TEST(minimal value) {
+TEST("minimal value") {
   MIN_VALUE(int8_t, -0b10000000);
   MIN_VALUE(int8_t, -0200);
   MIN_VALUE(int8_t, -128);
@@ -139,7 +138,7 @@ CAF_TEST(minimal value) {
   UNDERFLOW(int64_t, -0x8000000000000001);
 }
 
-CAF_TEST(maximal value) {
+TEST("maximal value") {
   MAX_VALUE(int8_t, 0b1111111);
   MAX_VALUE(int8_t, 0177);
   MAX_VALUE(int8_t, 127);
@@ -175,3 +174,5 @@ CAF_TEST(maximal value) {
   OVERFLOW(int64_t, 9223372036854775808);
   OVERFLOW(int64_t, 0x8000000000000000);
 }
+
+CAF_TEST_MAIN()

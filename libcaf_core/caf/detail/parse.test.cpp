@@ -2,9 +2,10 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE detail.parse
-
 #include "caf/detail/parse.hpp"
+
+#include "caf/test/caf_test_main.hpp"
+#include "caf/test/test.hpp"
 
 #include "caf/expected.hpp"
 #include "caf/ipv4_address.hpp"
@@ -14,8 +15,6 @@
 #include "caf/ipv6_endpoint.hpp"
 #include "caf/ipv6_subnet.hpp"
 #include "caf/uri.hpp"
-
-#include "core-test.hpp"
 
 #include <string_view>
 
@@ -57,14 +56,14 @@ expected<T> read(std::string_view str) {
 
 } // namespace
 
-#define CHECK_NUMBER(type, value) CHECK_EQ(read<type>(#value), type(value))
+#define CHECK_NUMBER(type, value) check_eq(read<type>(#value), type(value))
 
 #define CHECK_NUMBER_3(type, value, cpp_value)                                 \
-  CHECK_EQ(read<type>(#value), type(cpp_value))
+  check_eq(read<type>(#value), type(cpp_value))
 
-#define CHECK_INVALID(type, str, code) CHECK_EQ(read<type>(str), code)
+#define CHECK_INVALID(type, str, code) check_eq(read<type>(str), code)
 
-CAF_TEST(valid signed integers) {
+TEST("valid signed integers") {
   CHECK_NUMBER(int8_t, -128);
   CHECK_NUMBER(int8_t, 127);
   CHECK_NUMBER(int8_t, +127);
@@ -79,7 +78,7 @@ CAF_TEST(valid signed integers) {
   CHECK_NUMBER(int64_t, +9223372036854775807);
 }
 
-CAF_TEST(invalid signed integers) {
+TEST("invalid signed integers") {
   CHECK_INVALID(int8_t, "--1", pec::unexpected_character);
   CHECK_INVALID(int8_t, "++1", pec::unexpected_character);
   CHECK_INVALID(int8_t, "-129", pec::integer_underflow);
@@ -90,7 +89,7 @@ CAF_TEST(invalid signed integers) {
   CHECK_INVALID(int8_t, "-", pec::unexpected_eof);
 }
 
-CAF_TEST(valid unsigned integers) {
+TEST("valid unsigned integers") {
   CHECK_NUMBER(uint8_t, 0);
   CHECK_NUMBER(uint8_t, +0);
   CHECK_NUMBER(uint8_t, 255);
@@ -109,7 +108,7 @@ CAF_TEST(valid unsigned integers) {
   CHECK_NUMBER_3(uint64_t, +18446744073709551615, 18446744073709551615ULL);
 }
 
-CAF_TEST(invalid unsigned integers) {
+TEST("invalid unsigned integers") {
   CHECK_INVALID(uint8_t, "-1", pec::unexpected_character);
   CHECK_INVALID(uint8_t, "++1", pec::unexpected_character);
   CHECK_INVALID(uint8_t, "256", pec::integer_overflow);
@@ -118,7 +117,7 @@ CAF_TEST(invalid unsigned integers) {
   CHECK_INVALID(uint8_t, "+", pec::unexpected_eof);
 }
 
-CAF_TEST(valid floating point numbers) {
+TEST("valid floating point numbers") {
   CHECK_NUMBER(float, 1);
   CHECK_NUMBER(double, 1);
   CHECK_NUMBER(double, 0.01e10);
@@ -126,7 +125,7 @@ CAF_TEST(valid floating point numbers) {
   CHECK_NUMBER(double, -10e-10);
 }
 
-CAF_TEST(invalid floating point numbers) {
+TEST("invalid floating point numbers") {
   CHECK_INVALID(float, "1..", pec::trailing_character);
   CHECK_INVALID(double, "..1", pec::unexpected_character);
   CHECK_INVALID(double, "+", pec::unexpected_eof);
@@ -136,77 +135,77 @@ CAF_TEST(invalid floating point numbers) {
   CHECK_INVALID(double, "++10e-10", pec::unexpected_character);
 }
 
-CAF_TEST(valid timespans) {
-  CHECK_EQ(read<timespan>("12ns"), 12_ns);
-  CHECK_EQ(read<timespan>("34us"), 34_us);
-  CHECK_EQ(read<timespan>("56ms"), 56_ms);
-  CHECK_EQ(read<timespan>("78s"), 78_s);
-  CHECK_EQ(read<timespan>("60min"), 1_h);
-  CHECK_EQ(read<timespan>("90h"), 90_h);
+TEST("valid timespans") {
+  check_eq(read<timespan>("12ns"), 12_ns);
+  check_eq(read<timespan>("34us"), 34_us);
+  check_eq(read<timespan>("56ms"), 56_ms);
+  check_eq(read<timespan>("78s"), 78_s);
+  check_eq(read<timespan>("60min"), 1_h);
+  check_eq(read<timespan>("90h"), 90_h);
 }
 
-CAF_TEST(invalid timespans) {
-  CHECK_EQ(read<timespan>("12"), pec::unexpected_eof);
-  CHECK_EQ(read<timespan>("12nas"), pec::unexpected_character);
-  CHECK_EQ(read<timespan>("34usec"), pec::trailing_character);
-  CHECK_EQ(read<timespan>("56m"), pec::unexpected_eof);
+TEST("invalid timespans") {
+  check_eq(read<timespan>("12"), pec::unexpected_eof);
+  check_eq(read<timespan>("12nas"), pec::unexpected_character);
+  check_eq(read<timespan>("34usec"), pec::trailing_character);
+  check_eq(read<timespan>("56m"), pec::unexpected_eof);
 }
 
-CAF_TEST(strings) {
-  CHECK_EQ(read<std::string>("    foo\t  "), "foo");
-  CHECK_EQ(read<std::string>("  \"  foo\t\"  "), "  foo\t");
+TEST("strings") {
+  check_eq(read<std::string>("    foo\t  "), "foo");
+  check_eq(read<std::string>("  \"  foo\t\"  "), "  foo\t");
 }
 
-CAF_TEST(uris) {
-  if (auto x_res = read<uri>("foo:bar")) {
-    auto x = *x_res;
-    CHECK_EQ(x.scheme(), "foo");
-    CHECK_EQ(x.path(), "bar");
-  } else {
-    CAF_ERROR("my:path not recognized as URI");
+TEST("uris") {
+  auto x = read<uri>("foo:bar");
+  if (check(x.has_value())) {
+    check_eq(x->scheme(), "foo");
+    check_eq(x->path(), "bar");
   }
 }
 
-CAF_TEST(IPv4 address) {
-  CHECK_EQ(read<ipv4_address>("1.2.3.4"), ipv4_address({1, 2, 3, 4}));
-  CHECK_EQ(read<ipv4_address>("127.0.0.1"), ipv4_address({127, 0, 0, 1}));
-  CHECK_EQ(read<ipv4_address>("256.0.0.1"), pec::integer_overflow);
+TEST("IPv4 address") {
+  check_eq(read<ipv4_address>("1.2.3.4"), ipv4_address({1, 2, 3, 4}));
+  check_eq(read<ipv4_address>("127.0.0.1"), ipv4_address({127, 0, 0, 1}));
+  check_eq(read<ipv4_address>("256.0.0.1"), pec::integer_overflow);
 }
 
-CAF_TEST(IPv4 subnet) {
-  CHECK_EQ(read<ipv4_subnet>("1.2.3.0/24"),
+TEST("IPv4 subnet") {
+  check_eq(read<ipv4_subnet>("1.2.3.0/24"),
            ipv4_subnet(ipv4_address({1, 2, 3, 0}), 24));
-  CHECK_EQ(read<ipv4_subnet>("1.2.3.0/33"), pec::integer_overflow);
+  check_eq(read<ipv4_subnet>("1.2.3.0/33"), pec::integer_overflow);
 }
 
-CAF_TEST(IPv4 endpoint) {
-  CHECK_EQ(read<ipv4_endpoint>("127.0.0.1:0"),
+TEST("IPv4 endpoint") {
+  check_eq(read<ipv4_endpoint>("127.0.0.1:0"),
            ipv4_endpoint(ipv4_address({127, 0, 0, 1}), 0));
-  CHECK_EQ(read<ipv4_endpoint>("127.0.0.1:65535"),
+  check_eq(read<ipv4_endpoint>("127.0.0.1:65535"),
            ipv4_endpoint(ipv4_address({127, 0, 0, 1}), 65535));
-  CHECK_EQ(read<ipv4_endpoint>("127.0.0.1:65536"), pec::integer_overflow);
+  check_eq(read<ipv4_endpoint>("127.0.0.1:65536"), pec::integer_overflow);
 }
 
-CAF_TEST(IPv6 address) {
-  CHECK_EQ(read<ipv6_address>("1.2.3.4"), ipv4_address({1, 2, 3, 4}));
-  CHECK_EQ(read<ipv6_address>("1::"), ipv6_address({{1}, {}}));
-  CHECK_EQ(read<ipv6_address>("::2"), ipv6_address({{}, {2}}));
-  CHECK_EQ(read<ipv6_address>("1::2"), ipv6_address({{1}, {2}}));
+TEST("IPv6 address") {
+  check_eq(read<ipv6_address>("1.2.3.4"), ipv4_address({1, 2, 3, 4}));
+  check_eq(read<ipv6_address>("1::"), ipv6_address({{1}, {}}));
+  check_eq(read<ipv6_address>("::2"), ipv6_address({{}, {2}}));
+  check_eq(read<ipv6_address>("1::2"), ipv6_address({{1}, {2}}));
 }
 
-CAF_TEST(IPv6 subnet) {
-  CHECK_EQ(read<ipv6_subnet>("1.2.3.0/24"),
+TEST("IPv6 subnet") {
+  check_eq(read<ipv6_subnet>("1.2.3.0/24"),
            ipv6_subnet(ipv4_address({1, 2, 3, 0}), 24));
-  CHECK_EQ(read<ipv6_subnet>("1::/128"),
+  check_eq(read<ipv6_subnet>("1::/128"),
            ipv6_subnet(ipv6_address({1}, {}), 128));
-  CHECK_EQ(read<ipv6_subnet>("1::/129"), pec::integer_overflow);
+  check_eq(read<ipv6_subnet>("1::/129"), pec::integer_overflow);
 }
 
-CAF_TEST(IPv6 endpoint) {
-  CHECK_EQ(read<ipv6_endpoint>("127.0.0.1:0"),
+TEST("IPv6 endpoint") {
+  check_eq(read<ipv6_endpoint>("127.0.0.1:0"),
            ipv6_endpoint(ipv4_address({127, 0, 0, 1}), 0));
-  CHECK_EQ(read<ipv6_endpoint>("127.0.0.1:65535"),
+  check_eq(read<ipv6_endpoint>("127.0.0.1:65535"),
            ipv6_endpoint(ipv4_address({127, 0, 0, 1}), 65535));
-  CHECK_EQ(read<ipv6_endpoint>("127.0.0.1:65536"), pec::integer_overflow);
-  CHECK_EQ(read<ipv6_endpoint>("[1::2]:8080"), ipv6_endpoint({{1}, {2}}, 8080));
+  check_eq(read<ipv6_endpoint>("127.0.0.1:65536"), pec::integer_overflow);
+  check_eq(read<ipv6_endpoint>("[1::2]:8080"), ipv6_endpoint({{1}, {2}}, 8080));
 }
+
+CAF_TEST_MAIN()
