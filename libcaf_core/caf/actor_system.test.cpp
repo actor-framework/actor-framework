@@ -50,10 +50,11 @@ TEST("spawn_inactive creates an actor without launching it") {
       check(!*flag);
       launch();
       check(*flag);
-      print_debug("calling launch() twice is a no-op");
-      *flag = false;
-      launch();
-      check(!*flag);
+      SECTION("calling launch() twice is a no-op") {
+        *flag = false;
+        launch();
+        check(!*flag);
+      }
     }
     self->wait_for(hdl);
     check_eq(hdl->ctrl()->strong_refs, 1u); // launch must have dropped its ref
