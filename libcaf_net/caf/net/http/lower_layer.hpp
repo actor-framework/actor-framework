@@ -18,6 +18,10 @@ namespace caf::net::http {
 /// Parses HTTP requests and passes them to the upper layer.
 class CAF_NET_EXPORT lower_layer : public generic_lower_layer {
 public:
+  class server;
+
+  class client;
+
   virtual ~lower_layer();
 
   /// Start or re-start reading data from the client.
@@ -68,5 +72,7 @@ public:
   virtual void switch_protocol(std::unique_ptr<octet_stream::upper_layer> next)
     = 0;
 };
+
+class lower_layer::server : public lower_layer {};
 
 } // namespace caf::net::http

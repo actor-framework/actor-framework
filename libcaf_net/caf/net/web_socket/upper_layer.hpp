@@ -19,7 +19,7 @@ class CAF_NET_EXPORT upper_layer : public generic_upper_layer {
 public:
   class server;
 
-  class client;
+  // class client;
 
   virtual ~upper_layer();
 

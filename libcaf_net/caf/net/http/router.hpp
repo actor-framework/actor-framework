@@ -28,7 +28,7 @@ namespace caf::net::http {
 
 /// Sits on top of a @ref server and dispatches incoming requests to
 /// user-defined handlers.
-class CAF_NET_EXPORT router : public upper_layer {
+class CAF_NET_EXPORT router : public upper_layer::server {
 public:
   // -- constructors and destructors -------------------------------------------
 

@@ -6,7 +6,7 @@
 
 #include "caf/net/fwd.hpp"
 #include "caf/net/http/lower_layer.hpp"
-#include "caf/net/http/request_header.hpp"
+#include "caf/net/http/response_header.hpp"
 #include "caf/net/http/status.hpp"
 #include "caf/net/http/upper_layer.hpp"
 #include "caf/net/http/v1.hpp"
@@ -29,8 +29,8 @@
 
 namespace caf::net::http {
 
-/// Implements the server part for the HTTP Protocol as defined in RFC 7231.
-class CAF_NET_EXPORT server : public octet_stream::upper_layer,
+/// Implements the client part for the HTTP Protocol as defined in RFC 7231.
+class CAF_NET_EXPORT client : public octet_stream::upper_layer,
                               public http::lower_layer {
 public:
   // -- member types -----------------------------------------------------------
@@ -41,7 +41,7 @@ public:
     read_chunks,
   };
 
-  using upper_layer_ptr = std::unique_ptr<http::upper_layer::server>;
+  using upper_layer_ptr = std::unique_ptr<http::upper_layer::client>;
 
   // -- constants --------------------------------------------------------------
 
@@ -50,13 +50,13 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit server(upper_layer_ptr up) : up_(std::move(up)) {
+  explicit client(upper_layer_ptr up) : up_(std::move(up)) {
     // nop
   }
 
   // -- factories --------------------------------------------------------------
 
-  static std::unique_ptr<server> make(upper_layer_ptr up);
+  static std::unique_ptr<client> make(upper_layer_ptr up);
 
   // -- properties -------------------------------------------------------------
 
@@ -121,6 +121,11 @@ public:
 private:
   // -- utility functions ------------------------------------------------------
 
+  void abort_and_error(http::status status, std::string_view message) {
+    up_->abort(make_error(sec::protocol_error, message));
+    write_response(status, message);
+  }
+
   void write_response(status code, std::string_view content);
 
   bool invoke_upper_layer(const_byte_span payload);
@@ -132,7 +137,7 @@ private:
   upper_layer_ptr up_;
 
   /// Buffer for re-using memory.
-  request_header hdr_;
+  response_header hdr_;
 
   /// Stores whether we are currently waiting for the payload.
   mode mode_ = mode::read_header;

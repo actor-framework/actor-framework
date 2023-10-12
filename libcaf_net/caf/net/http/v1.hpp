@@ -20,15 +20,15 @@ using string_view_pair = std::pair<std::string_view, std::string_view>;
 /// remainder (`second`). Returns an empty `string_view` as `first` for
 /// incomplete HTTP headers.
 CAF_NET_EXPORT std::pair<std::string_view, byte_span>
-split_header(byte_span bytes);
+split_header(const byte_span bytes);
 
 /// Writes an HTTP header to @p buf.
-CAF_NET_EXPORT void write_header(status code,
-                                 span<const string_view_pair> fields,
-                                 byte_buffer& buf);
+CAF_NET_EXPORT void write_response_header(status code,
+                                          span<const string_view_pair> fields,
+                                          byte_buffer& buf);
 
 /// Write the status code for an HTTP header to @p buf.
-CAF_NET_EXPORT void begin_header(status code, byte_buffer& buf);
+CAF_NET_EXPORT void begin_response_header(status code, byte_buffer& buf);
 
 /// Write a header field to @p buf.
 CAF_NET_EXPORT void add_header_field(std::string_view key, std::string_view val,

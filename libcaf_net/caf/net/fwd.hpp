@@ -119,10 +119,12 @@ enum class status : uint16_t;
 
 namespace caf::net::http {
 
+class header;
 class lower_layer;
 class request;
 class request_header;
 class responder;
+class response_header;
 class route;
 class router;
 class server;

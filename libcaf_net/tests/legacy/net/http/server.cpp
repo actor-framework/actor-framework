@@ -13,7 +13,7 @@ using namespace std::literals;
 
 namespace {
 
-class app_t : public net::http::upper_layer {
+class app_t : public net::http::upper_layer::server {
 public:
   // -- member variables -------------------------------------------------------
 

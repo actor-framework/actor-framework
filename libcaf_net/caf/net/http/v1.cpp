@@ -32,8 +32,8 @@ writer& operator<<(writer& out, const std::string& str) {
 
 } // namespace
 
-std::pair<std::string_view, byte_span> split_header(byte_span bytes) {
-  std::array<std::byte, 4> end_of_header{{
+std::pair<std::string_view, byte_span> split_header(const byte_span bytes) {
+  constexpr std::array<std::byte, 4> end_of_header{{
     std::byte{'\r'},
     std::byte{'\n'},
     std::byte{'\r'},
@@ -52,8 +52,8 @@ std::pair<std::string_view, byte_span> split_header(byte_span bytes) {
   }
 }
 
-void write_header(status code, span<const string_view_pair> fields,
-                  byte_buffer& buf) {
+void write_response_header(status code, span<const string_view_pair> fields,
+                           byte_buffer& buf) {
   writer out{&buf};
   out << "HTTP/1.1 "sv << std::to_string(static_cast<int>(code)) << ' '
       << phrase(code) << "\r\n"sv;
@@ -62,7 +62,7 @@ void write_header(status code, span<const string_view_pair> fields,
   out << "\r\n"sv;
 }
 
-void begin_header(status code, byte_buffer& buf) {
+void begin_response_header(status code, byte_buffer& buf) {
   writer out{&buf};
   out << "HTTP/1.1 "sv << std::to_string(static_cast<int>(code)) << ' '
       << phrase(code) << "\r\n"sv;
