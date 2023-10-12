@@ -21,6 +21,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   system messages while waiting for the response (#1584).
 - Fix compiler errors and warnings for GCC 13 in C++23 mode (#1583).
 - Fix encoding of chunk size in chunked HTTP responses (#1587).
+- Fix leak when using `spawn_inactive` and not launching the actor explicitly
+  (#1597).
 
 ### Deprecated
 

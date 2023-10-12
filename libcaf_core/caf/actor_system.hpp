@@ -661,8 +661,10 @@ public:
     launcher& operator=(const launcher&) = delete;
 
     ~launcher() {
-      if (ready)
+      if (ready) {
         fn();
+        fn.~F();
+      }
     }
 
     void operator()() {
@@ -705,10 +707,10 @@ public:
 #ifdef CAF_ENABLE_ACTOR_PROFILER
     profiler_add_actor(*ptr, cfg.parent);
 #endif
-    auto launch = [res, host{cfg.host}] {
+    auto launch = [strong_ptr = std::move(res), host{cfg.host}] {
       // Note: we pass `res` to this lambda instead of `ptr` to keep a strong
       //       reference to the actor.
-      static_cast<Impl*>(actor_cast<abstract_actor*>(res))
+      static_cast<Impl*>(actor_cast<abstract_actor*>(strong_ptr))
         ->launch(host, false, false);
     };
     return std::make_tuple(ptr, launcher<decltype(launch)>(std::move(launch)));

@@ -86,6 +86,7 @@ caf_add_component(
     caf/actor_proxy.cpp
     caf/actor_registry.cpp
     caf/actor_system.cpp
+    caf/actor_system.test.cpp
     caf/actor_system_config.cpp
     caf/async/batch.cpp
     caf/async/batch.test.cpp
