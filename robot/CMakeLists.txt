@@ -11,6 +11,13 @@ if (NOT ${EXIT_CODE} EQUAL 0)
 endif()
 
 caf_add_test_executable(
+  caf-robot-logging-driver
+  SOURCES
+    logging/driver.cpp
+  DEPENDENCIES
+    CAF::core)
+
+caf_add_test_executable(
   caf-robot-stream-driver
   SOURCES
     stream/driver.cpp
@@ -50,7 +57,7 @@ if (CAF_LOG_LEVEL STREQUAL "TRACE")
     COMMAND
       ${Python_EXECUTABLE}
         -m robot
-        --variable BINARY_PATH:$<TARGET_FILE:caf-core-logging-driver>
+        --variable BINARY_PATH:$<TARGET_FILE:caf-robot-logging-driver>
         "${CMAKE_CURRENT_SOURCE_DIR}/logging/output.robot")
 endif()
 
