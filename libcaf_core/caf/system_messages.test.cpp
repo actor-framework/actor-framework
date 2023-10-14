@@ -98,7 +98,7 @@ TEST("group_down_msg is serializable") {
   auto msg1 = group_down_msg{sys.groups().anonymous()};
   auto msg2 = serialization_roundtrip(msg1);
   if (check(msg2.has_value()))
-    check_eq(msg1.source, msg2.value().source);
+    check_eq(msg1.source, msg2->source);
 }
 
 TEST("node_down_msg is comparable") {
@@ -151,9 +151,9 @@ TEST("stream_open_msg is serializable") {
     auto msg1 = stream_open_msg{42, nullptr, 43};
     auto msg2 = serialization_roundtrip(msg1);
     if (check(msg2.has_value())) {
-      check_eq(msg1.id, msg2.value().id);
-      check_eq(msg1.sink, msg2.value().sink);
-      check_eq(msg1.sink_flow_id, msg2.value().sink_flow_id);
+      check_eq(msg1.id, msg2->id);
+      check_eq(msg1.sink, msg2->sink);
+      check_eq(msg1.sink_flow_id, msg2->sink_flow_id);
     }
   }
   SECTION("valid strong_actor_ptr") {
@@ -164,9 +164,9 @@ TEST("stream_open_msg is serializable") {
       = stream_open_msg{42, actor_control_block::from(dummy_abstract_ptr), 43};
     auto msg2 = serialization_roundtrip(msg1);
     if (check(msg2.has_value())) {
-      check_eq(msg1.id, msg2.value().id);
-      check_eq(msg1.sink, msg2.value().sink);
-      check_eq(msg1.sink_flow_id, msg2.value().sink_flow_id);
+      check_eq(msg1.id, msg2->id);
+      check_eq(msg1.sink, msg2->sink);
+      check_eq(msg1.sink_flow_id, msg2->sink_flow_id);
     }
   }
 }
@@ -175,8 +175,8 @@ TEST("stream_demand_msg is serializable") {
   auto msg1 = stream_demand_msg{42, 43};
   auto msg2 = serialization_roundtrip(msg1);
   if (check(msg2.has_value())) {
-    check_eq(msg1.demand, msg2.value().demand);
-    check_eq(msg1.source_flow_id, msg2.value().source_flow_id);
+    check_eq(msg1.demand, msg2->demand);
+    check_eq(msg1.source_flow_id, msg2->source_flow_id);
   }
 }
 
@@ -184,7 +184,7 @@ TEST("stream_cancel_msg is serializable") {
   auto msg1 = stream_cancel_msg{42};
   auto msg2 = serialization_roundtrip(msg1);
   if (check(msg2.has_value()))
-    check_eq(msg1.source_flow_id, msg2.value().source_flow_id);
+    check_eq(msg1.source_flow_id, msg2->source_flow_id);
 }
 
 TEST("stream_ack_msg is serializable") {
@@ -192,10 +192,10 @@ TEST("stream_ack_msg is serializable") {
     auto msg1 = stream_ack_msg{nullptr, 42, 43, 44};
     auto msg2 = serialization_roundtrip(msg1);
     if (check(msg2.has_value())) {
-      check_eq(msg1.source, msg2.value().source);
-      check_eq(msg1.source_flow_id, msg2.value().source_flow_id);
-      check_eq(msg1.sink_flow_id, msg2.value().sink_flow_id);
-      check_eq(msg1.max_items_per_batch, msg2.value().max_items_per_batch);
+      check_eq(msg1.source, msg2->source);
+      check_eq(msg1.source_flow_id, msg2->source_flow_id);
+      check_eq(msg1.sink_flow_id, msg2->sink_flow_id);
+      check_eq(msg1.max_items_per_batch, msg2->max_items_per_batch);
     }
   }
   SECTION("valid strong_actor_ptr") {
@@ -206,10 +206,10 @@ TEST("stream_ack_msg is serializable") {
                                42, 43, 44};
     auto msg2 = serialization_roundtrip(msg1);
     if (check(msg2.has_value())) {
-      check_eq(msg1.source, msg2.value().source);
-      check_eq(msg1.source_flow_id, msg2.value().source_flow_id);
-      check_eq(msg1.sink_flow_id, msg2.value().sink_flow_id);
-      check_eq(msg1.max_items_per_batch, msg2.value().max_items_per_batch);
+      check_eq(msg1.source, msg2->source);
+      check_eq(msg1.source_flow_id, msg2->source_flow_id);
+      check_eq(msg1.sink_flow_id, msg2->sink_flow_id);
+      check_eq(msg1.max_items_per_batch, msg2->max_items_per_batch);
     }
   }
 }
@@ -219,9 +219,9 @@ TEST("stream_batch_msg is serializable") {
     auto msg1 = stream_batch_msg{42, async::make_batch(std::vector<int>{})};
     auto msg2 = serialization_roundtrip(msg1);
     if (check(msg2.has_value())) {
-      check_eq(msg1.sink_flow_id, msg2.value().sink_flow_id);
-      check_eq(msg1.content.empty(), msg2.value().content.empty());
-      check_eq(msg1.content.item_type(), msg2.value().content.item_type());
+      check_eq(msg1.sink_flow_id, msg2->sink_flow_id);
+      check_eq(msg1.content.empty(), msg2->content.empty());
+      check_eq(msg1.content.item_type(), msg2->content.item_type());
     }
   }
   SECTION("batch with data") {
@@ -229,9 +229,9 @@ TEST("stream_batch_msg is serializable") {
                                  async::make_batch(std::vector<int>{1, 2, 3})};
     auto msg2 = serialization_roundtrip(msg1);
     if (check(msg2.has_value())) {
-      check_eq(msg1.sink_flow_id, msg2.value().sink_flow_id);
-      check_eq(msg1.content.size(), msg2.value().content.size());
-      check_eq(msg1.content.item_type(), msg2.value().content.item_type());
+      check_eq(msg1.sink_flow_id, msg2->sink_flow_id);
+      check_eq(msg1.content.size(), msg2->content.size());
+      check_eq(msg1.content.item_type(), msg2->content.item_type());
     }
   }
 }
@@ -240,15 +240,15 @@ TEST("stream_close_msg is serializable") {
   auto msg1 = stream_close_msg{42};
   auto msg2 = serialization_roundtrip(msg1);
   if (check(msg2.has_value()))
-    check_eq(msg1.sink_flow_id, msg2.value().sink_flow_id);
+    check_eq(msg1.sink_flow_id, msg2->sink_flow_id);
 }
 
 TEST("stream_abort_msg is serializable") {
   auto msg1 = stream_abort_msg{42, sec::runtime_error};
   auto msg2 = serialization_roundtrip(msg1);
   if (check(msg2.has_value())) {
-    check_eq(msg1.sink_flow_id, msg2.value().sink_flow_id);
-    check_eq(msg1.reason, msg2.value().reason);
+    check_eq(msg1.sink_flow_id, msg2->sink_flow_id);
+    check_eq(msg1.reason, msg2->reason);
   }
 }
 

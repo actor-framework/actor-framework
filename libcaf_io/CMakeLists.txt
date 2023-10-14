@@ -35,6 +35,7 @@ caf_add_component(
     caf/io/middleman.cpp
     caf/io/middleman_actor.cpp
     caf/io/middleman_actor_impl.cpp
+    caf/io/system_messages.test.cpp
     caf/io/network/acceptor.cpp
     caf/io/network/acceptor_manager.cpp
     caf/io/network/datagram_handler.cpp
