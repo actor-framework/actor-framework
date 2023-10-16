@@ -244,12 +244,19 @@ caf_add_component(
     caf/string_algorithms.cpp
     caf/string_view.cpp
     caf/telemetry/collector/prometheus.cpp
+    caf/telemetry/collector/prometheus.test.cpp
+    caf/telemetry/counter.test.cpp
+    caf/telemetry/gauge.test.cpp
+    caf/telemetry/histogram.test.cpp
     caf/telemetry/importer/process.cpp
     caf/telemetry/label.cpp
+    caf/telemetry/label.test.cpp
     caf/telemetry/label_view.cpp
     caf/telemetry/metric.cpp
     caf/telemetry/metric_family.cpp
     caf/telemetry/metric_registry.cpp
+    caf/telemetry/metric_registry.test.cpp
+    caf/telemetry/timer.test.cpp
     caf/term.cpp
     caf/thread_hook.cpp
     caf/timestamp.cpp
@@ -372,13 +379,6 @@ caf_add_component(
     stream
     string_algorithms
     string_view
-    telemetry.collector.prometheus
-    telemetry.counter
-    telemetry.gauge
-    telemetry.histogram
-    telemetry.label
-    telemetry.metric_registry
-    telemetry.timer
     thread_hook
     tracing_data
     type_id_list
