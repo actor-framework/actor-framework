@@ -1,5 +1,9 @@
 #include "caf/net/http/v1.hpp"
 
+#include "caf/net/http/method.hpp"
+
+#include "caf/uri.hpp"
+
 #include <algorithm>
 #include <array>
 #include <cstddef>
@@ -66,6 +70,11 @@ void begin_response_header(status code, byte_buffer& buf) {
   writer out{&buf};
   out << "HTTP/1.1 "sv << std::to_string(static_cast<int>(code)) << ' '
       << phrase(code) << "\r\n"sv;
+}
+
+void begin_request_header(http::method method, uri resource, byte_buffer& buf) {
+  writer out{&buf};
+  out << to_string(method) << " "sv << to_string(resource) << " HTTP/1.1\r\n"sv;
 }
 
 void add_header_field(std::string_view key, std::string_view val,

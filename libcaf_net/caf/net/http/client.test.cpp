@@ -214,7 +214,7 @@ public:
 
   // -- implementation of http::upper_layer ------------------------------------
 
-  error start(net::http::lower_layer* down_ptr) override {
+  error start(net::http::lower_layer::client* down_ptr) override {
     down = down_ptr;
     down->request_messages();
     return none;

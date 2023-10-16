@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/net/http/method.hpp"
 #include "caf/net/http/status.hpp"
 
 #include "caf/byte_span.hpp"
@@ -29,6 +30,9 @@ CAF_NET_EXPORT void write_response_header(status code,
 
 /// Write the status code for an HTTP header to @p buf.
 CAF_NET_EXPORT void begin_response_header(status code, byte_buffer& buf);
+
+/// Write the status code for an HTTP header to @p buf.
+void begin_request_header(http::method method, uri resource, byte_buffer& buf);
 
 /// Write a header field to @p buf.
 CAF_NET_EXPORT void add_header_field(std::string_view key, std::string_view val,

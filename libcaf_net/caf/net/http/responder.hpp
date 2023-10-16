@@ -29,7 +29,7 @@ public:
   /// Implementation detail for `promise`.
   class CAF_NET_EXPORT promise_state : public ref_counted {
   public:
-    explicit promise_state(lower_layer* down) : down_(down) {
+    explicit promise_state(lower_layer::server* down) : down_(down) {
       // nop
     }
 
@@ -40,7 +40,7 @@ public:
     ~promise_state() override;
 
     /// Returns a pointer to the HTTP layer.
-    lower_layer* down() {
+    lower_layer::server* down() {
       return down_;
     }
 
@@ -50,7 +50,7 @@ public:
     }
 
   private:
-    lower_layer* down_;
+    lower_layer::server* down_;
     bool completed_ = false;
   };
 
@@ -95,7 +95,7 @@ public:
     }
 
     /// Returns a pointer to the HTTP layer.
-    lower_layer* down() {
+    lower_layer::server* down() {
       return impl_->down();
     }
 
@@ -144,7 +144,7 @@ public:
   actor_shell* self();
 
   /// Returns a pointer to the HTTP layer.
-  lower_layer* down();
+  lower_layer::server* down();
 
   // -- responding -------------------------------------------------------------
 

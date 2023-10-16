@@ -31,7 +31,7 @@ namespace caf::net::http {
 
 /// Implements the client part for the HTTP Protocol as defined in RFC 7231.
 class CAF_NET_EXPORT client : public octet_stream::upper_layer,
-                              public http::lower_layer {
+                              public http::lower_layer::client {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -92,7 +92,7 @@ public:
 
   void suspend_reading() override;
 
-  void begin_header(status code) override;
+  void begin_header(http::method method, uri resource) override;
 
   void add_header_field(std::string_view key, std::string_view val) override;
 

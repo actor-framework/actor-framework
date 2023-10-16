@@ -30,9 +30,6 @@ public:
   /// Stops reading messages until calling `request_messages`.
   virtual void suspend_reading() = 0;
 
-  /// Starts writing an HTTP header.
-  virtual void begin_header(status code) = 0;
-
   /// Adds a header field. Users may only call this function between
   /// `begin_header` and `end_header`.
   virtual void add_header_field(std::string_view key, std::string_view val) = 0;
@@ -50,6 +47,18 @@ public:
   /// Sends the last chunk, completing a chunked payload.
   virtual bool send_end_of_chunks() = 0;
 
+  /// Asks the stream to swap the HTTP layer with `next` after returning from
+  /// `consume`.
+  /// @note may only be called from the upper layer in `consume`.
+  virtual void switch_protocol(std::unique_ptr<octet_stream::upper_layer> next)
+    = 0;
+};
+
+class lower_layer::server : public lower_layer {
+public:
+  /// Starts writing an HTTP resounse header.
+  virtual void begin_header(status code) = 0;
+
   /// Sends a response that only consists of a header with a status code such as
   /// `status::no_content`.
   bool send_response(status code);
@@ -65,14 +74,12 @@ public:
 
   /// @copydoc send_response
   bool send_response(status code, const error& err);
-
-  /// Asks the stream to swap the HTTP layer with `next` after returning from
-  /// `consume`.
-  /// @note may only be called from the upper layer in `consume`.
-  virtual void switch_protocol(std::unique_ptr<octet_stream::upper_layer> next)
-    = 0;
 };
 
-class lower_layer::server : public lower_layer {};
+class lower_layer::client : public lower_layer {
+public:
+  /// Starts writing an HTTP request header.
+  virtual void begin_header(http::method method, uri resource) = 0;
+};
 
 } // namespace caf::net::http

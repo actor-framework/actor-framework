@@ -83,7 +83,7 @@ void router::abort(const error&) {
   pending_.clear();
 }
 
-error router::start(lower_layer* down) {
+error router::start(lower_layer::server* down) {
   down_ = down;
   down_->request_messages();
   return {};

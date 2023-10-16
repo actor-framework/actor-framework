@@ -6,6 +6,7 @@
 
 #include "caf/net/fwd.hpp"
 #include "caf/net/generic_upper_layer.hpp"
+#include "caf/net/http/lower_layer.hpp"
 
 #include "caf/error.hpp"
 #include "caf/fwd.hpp"
@@ -20,11 +21,6 @@ public:
   class client;
 
   virtual ~upper_layer();
-
-  /// Initializes the upper layer.
-  /// @param down A pointer to the lower layer that remains valid for the
-  ///             lifetime of the upper layer.
-  virtual error start(lower_layer* down) = 0;
 };
 
 class CAF_NET_EXPORT upper_layer::server : public upper_layer {
@@ -38,6 +34,11 @@ public:
   /// @note Discarded data is lost permanently.
   virtual ptrdiff_t consume(const request_header& hdr, const_byte_span payload)
     = 0;
+
+  /// Initializes the upper layer.
+  /// @param down A pointer to the lower layer that remains valid for the
+  ///             lifetime of the upper layer.
+  virtual error start(lower_layer::server* down) = 0;
 };
 
 class CAF_NET_EXPORT upper_layer::client : public upper_layer {
@@ -51,6 +52,11 @@ public:
   /// @note Discarded data is lost permanently.
   virtual ptrdiff_t consume(const response_header& hdr, const_byte_span payload)
     = 0;
+
+  /// Initializes the upper layer.
+  /// @param down A pointer to the lower layer that remains valid for the
+  ///             lifetime of the upper layer.
+  virtual error start(lower_layer::client* down) = 0;
 };
 
 } // namespace caf::net::http

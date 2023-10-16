@@ -21,7 +21,7 @@ public:
 
   caf::byte_buffer payload;
 
-  net::http::lower_layer* down = nullptr;
+  net::http::lower_layer::server* down = nullptr;
 
   bool chunked_response = false;
 
@@ -43,7 +43,7 @@ public:
 
   // -- implementation of http::upper_layer ------------------------------------
 
-  error start(net::http::lower_layer* down_ptr) override {
+  error start(net::http::lower_layer::server* down_ptr) override {
     down = down_ptr;
     down->request_messages();
     return none;

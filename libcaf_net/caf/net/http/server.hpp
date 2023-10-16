@@ -31,7 +31,7 @@ namespace caf::net::http {
 
 /// Implements the server part for the HTTP Protocol as defined in RFC 7231.
 class CAF_NET_EXPORT server : public octet_stream::upper_layer,
-                              public http::lower_layer {
+                              public http::lower_layer::server {
 public:
   // -- member types -----------------------------------------------------------
 

@@ -21,7 +21,7 @@ actor_shell* responder::self() {
   return router_->self();
 }
 
-lower_layer* responder::down() {
+lower_layer::server* responder::down() {
   return router_->down();
 }
 

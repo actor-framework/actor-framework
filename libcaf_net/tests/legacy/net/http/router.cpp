@@ -19,7 +19,7 @@ using http::make_route;
 using http::responder;
 using http::router;
 
-class mock_server : public http::lower_layer {
+class mock_server : public http::lower_layer::server {
 public:
   mock_server(net::multiplexer* mpx) : mpx_(mpx) {
     // nop

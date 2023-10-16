@@ -42,9 +42,9 @@ void client::suspend_reading() {
 }
 
 // TODO
-void client::begin_header(status code) {
-  down_->begin_output();
-  v1::begin_response_header(code, down_->output_buffer());
+void client::begin_header(http::method method, uri resource) {
+  // down_->begin_output();
+  // v1::begin_response_header(code, down_->output_buffer());
 }
 
 // TODO
