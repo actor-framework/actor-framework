@@ -10,6 +10,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 - An `observable` that runs on an actor can now be converted to a `stream` or
   `typed_stream` directly by calling `to_stream` or `to_typed_stream` on it.
+- New `caf::async` API to read a file asynchronously in a separate thread and
+  consume it as an observable (via a `publisher`, #1573).
 
 ### Fixed
 

@@ -290,8 +290,12 @@ function(caf_add_component name)
       get_filename_component(test_name ${source_file} NAME_WE)
       get_filename_component(test_path ${source_file} DIRECTORY)
       string(REPLACE "/" "-" test_name "${test_path}/${test_name}-test")
+      string(REPLACE "_" "-" test_name "${test_name}")
       add_executable("${test_name}" ${source_file}
                      $<TARGET_OBJECTS:${obj_lib_target}>)
+      target_compile_definitions(
+        "${test_name}" PRIVATE
+        CAF_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/data")
       target_link_libraries(${test_name} PRIVATE libcaf_test
                             ${CAF_ADD_COMPONENT_DEPENDENCIES})
       target_include_directories(${test_name} PRIVATE

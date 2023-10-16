@@ -694,12 +694,16 @@ public:
   /// @returns A pointer to the new actor and a function object that the caller
   ///          must invoke to launch the actor. After the actor started running,
   ///          the caller *must not* access the pointer again.
-  template <class Impl, spawn_options = no_spawn_options, class... Ts>
+  template <class Impl, spawn_options Os = no_spawn_options, class... Ts>
   auto spawn_inactive(Ts&&... xs) {
     static_assert(std::is_base_of_v<scheduled_actor, Impl>,
                   "only scheduled actors may get spawned inactively");
     CAF_SET_LOGGER_SYS(this);
     actor_config cfg{dummy_execution_unit(), nullptr};
+    if constexpr (has_detach_flag(Os))
+      cfg.flags |= abstract_actor::is_detached_flag;
+    if constexpr (has_hide_flag(Os))
+      cfg.flags |= abstract_actor::is_hidden_flag;
     cfg.mbox_factory = mailbox_factory();
     auto res = make_actor<Impl>(next_actor_id(), node(), this, cfg,
                                 std::forward<Ts>(xs)...);
@@ -711,7 +715,7 @@ public:
       // Note: we pass `res` to this lambda instead of `ptr` to keep a strong
       //       reference to the actor.
       static_cast<Impl*>(actor_cast<abstract_actor*>(strong_ptr))
-        ->launch(host, false, false);
+        ->launch(host, has_lazy_init_flag(Os), has_hide_flag(Os));
     };
     return std::make_tuple(ptr, launcher<decltype(launch)>(std::move(launch)));
   }

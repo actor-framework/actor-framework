@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/async/fwd.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/is_complete.hpp"
 #include "caf/detail/is_one_of.hpp"
@@ -61,6 +62,29 @@ template <class T>
 constexpr T* null_v = nullptr;
 
 // -- custom traits ------------------------------------------------------------
+
+/// Checks whether `T` is a `stream` or `typed_stream`.
+template <class T>
+struct is_stream : std::false_type {};
+
+template <>
+struct is_stream<stream> : std::true_type {};
+
+template <class T>
+struct is_stream<typed_stream<T>> : std::true_type {};
+
+template <class T>
+inline constexpr bool is_stream_v = is_stream<T>::value;
+
+/// Checks whether `T` is a `publisher`.
+template <class T>
+struct is_publisher : std::false_type {};
+
+template <class T>
+struct is_publisher<async::publisher<T>> : std::true_type {};
+
+template <class T>
+inline constexpr bool is_publisher_v = is_publisher<T>::value;
 
 /// Checks whether `T` defines a free function `to_string`.
 template <class T>

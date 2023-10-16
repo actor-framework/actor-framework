@@ -92,6 +92,7 @@ caf_add_component(
     caf/async/batch.test.cpp
     caf/async/consumer.cpp
     caf/async/execution_context.cpp
+    caf/async/file.test.cpp
     caf/async/producer.cpp
     caf/attachable.cpp
     caf/behavior.cpp
@@ -187,6 +188,7 @@ caf_add_component(
     caf/flow/step/ignore_elements.test.cpp
     caf/flow/step/skip_last.test.cpp
     caf/flow/step/take_last.test.cpp
+    caf/flow/string.test.cpp
     caf/flow/subscription.cpp
     caf/forwarding_actor_proxy.cpp
     caf/group.cpp
