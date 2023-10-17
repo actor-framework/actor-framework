@@ -6,7 +6,6 @@
 
 #include "caf/net/http/client.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/scenario.hpp"
 
 #include "caf/net/octet_stream/lower_layer.hpp"
@@ -241,12 +240,6 @@ public:
   }
 };
 
-// std::string_view res = "HTTP/1.1 200 OK\r\n"
-//                        "Content-Type: text/plain\r\n"
-//                        "Content-Length: 12\r\n"
-//                        "\r\n"
-//                        "Hello world!";
-
 SCENARIO("the client parses HTTP response into header fields") {
   auto app_ptr = app_t::make();
   auto app = app_ptr.get();
@@ -302,5 +295,3 @@ SCENARIO("the client parses HTTP response into header fields") {
 }
 
 } // namespace
-
-CAF_TEST_MAIN()
