@@ -8,12 +8,16 @@
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
+#include "caf/binary_deserializer.hpp"
+#include "caf/binary_serializer.hpp"
 #include "caf/detail/source_location.hpp"
 #include "caf/detail/test_actor_clock.hpp"
 #include "caf/detail/test_export.hpp"
 #include "caf/detail/type_traits.hpp"
+#include "caf/resumable.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
 
+#include <cassert>
 #include <list>
 #include <memory>
 
@@ -399,6 +403,44 @@ public:
     std::tuple<Ts...> values_;
   };
 
+  /// Utility class for unconditionally killing an actor at scope exit.
+  class actor_scope_guard {
+  public:
+    template <class Handle>
+    actor_scope_guard(deterministic* fix, const Handle& dst) noexcept
+      : fix_(fix) {
+      if (dst)
+        dst_ = actor_cast<strong_actor_ptr>(dst);
+    }
+
+    actor_scope_guard(actor_scope_guard&&) noexcept = default;
+
+    actor_scope_guard() = delete;
+    actor_scope_guard(const actor_scope_guard&) = delete;
+    actor_scope_guard& operator=(const actor_scope_guard&) = delete;
+
+    ~actor_scope_guard() {
+      if (!dst_)
+        return;
+      auto emsg = exit_msg{dst_->address(), exit_reason::kill};
+      if (!dst_->enqueue(nullptr, make_message_id(), make_message(emsg),
+                         nullptr)) {
+        // Nothing to do here. The actor already terminated.
+        return;
+      }
+      actor_predicate is_anon{nullptr};
+      message_predicate<exit_msg> is_kill_msg{emsg};
+      [[maybe_unused]] auto preponed = fix_->prepone_event_impl(dst_, is_anon,
+                                                                is_kill_msg);
+      assert(preponed);
+      fix_->dispatch_message();
+    }
+
+  private:
+    deterministic* fix_;
+    strong_actor_ptr dst_;
+  };
+
   // -- friends ----------------------------------------------------------------
 
   friend class mailbox_impl;
@@ -407,6 +449,8 @@ public:
 
   template <class... Ts>
   friend class evaluator;
+
+  friend class actor_scope_guard;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -522,7 +566,32 @@ public:
     return evaluator<Ts...>{this, loc, evaluator_algorithm::prepone_and_allow};
   }
 
-  // -- member variables -------------------------------------------------------
+  // -- serialization ----------------------------------------------------------
+
+  template <class T>
+  expected<T> serialization_roundtrip(const T& value) {
+    byte_buffer buf;
+    {
+      binary_serializer sink{sys.dummy_execution_unit(), buf};
+      if (!sink.apply(value))
+        return sink.get_error();
+    }
+    T result;
+    {
+      binary_deserializer source{sys.dummy_execution_unit(), buf};
+      if (!source.apply(result))
+        return source.get_error();
+    }
+    return result;
+  }
+
+  // -- factories --------------------------------------------------------------
+
+  /// Creates a new guard for `hdl` that will kill the actor at scope exit.
+  template <class Handle>
+  [[nodiscard]] actor_scope_guard make_actor_scope_guard(const Handle& hdl) {
+    return {this, hdl};
+  }
 
 private:
   // Note: this is put here because this member variable must be destroyed

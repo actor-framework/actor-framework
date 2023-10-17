@@ -34,6 +34,11 @@ inline bool operator==(const exit_msg& x, const exit_msg& y) noexcept {
 }
 
 /// @relates exit_msg
+inline bool operator!=(const exit_msg& x, const exit_msg& y) noexcept {
+  return !(x == y);
+}
+
+/// @relates exit_msg
 template <class Inspector>
 bool inspect(Inspector& f, exit_msg& x) {
   return f.object(x).fields(f.field("source", x.source),
