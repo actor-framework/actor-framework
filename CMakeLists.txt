@@ -282,6 +282,18 @@ function(caf_add_component name)
   add_library(${obj_lib_target} OBJECT ${CAF_ADD_COMPONENT_HEADERS})
   set_property(TARGET ${obj_lib_target} PROPERTY POSITION_INDEPENDENT_CODE ON)
   target_link_libraries(${obj_lib_target} ${CAF_ADD_COMPONENT_DEPENDENCIES})
+  if(CAF_ENABLE_TESTING)
+    add_executable("caf-${name}-test" ${CMAKE_CURRENT_SOURCE_DIR}/main.test.cpp
+                   $<TARGET_OBJECTS:${obj_lib_target}>)
+    target_compile_definitions(
+      "caf-${name}-test" PRIVATE
+      CAF_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/data")
+    target_link_libraries("caf-${name}-test" PRIVATE libcaf_test
+                          ${CAF_ADD_COMPONENT_DEPENDENCIES})
+    target_include_directories("caf-${name}-test" PRIVATE
+                               "${CMAKE_CURRENT_SOURCE_DIR}"
+                               "${CMAKE_CURRENT_BINARY_DIR}")
+  endif()
   foreach(source_file ${CAF_ADD_COMPONENT_SOURCES})
     get_filename_component(ext ${source_file} EXT)
     if(ext STREQUAL ".cpp")
@@ -289,19 +301,11 @@ function(caf_add_component name)
     elseif(ext STREQUAL ".test.cpp" AND CAF_ENABLE_TESTING)
       get_filename_component(test_name ${source_file} NAME_WE)
       get_filename_component(test_path ${source_file} DIRECTORY)
-      string(REPLACE "/" "-" test_name "${test_path}/${test_name}-test")
-      string(REPLACE "_" "-" test_name "${test_name}")
-      add_executable("${test_name}" ${source_file}
-                     $<TARGET_OBJECTS:${obj_lib_target}>)
-      target_compile_definitions(
-        "${test_name}" PRIVATE
-        CAF_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/data")
-      target_link_libraries(${test_name} PRIVATE libcaf_test
-                            ${CAF_ADD_COMPONENT_DEPENDENCIES})
-      target_include_directories(${test_name} PRIVATE
-                                 "${CMAKE_CURRENT_SOURCE_DIR}"
-                                 "${CMAKE_CURRENT_BINARY_DIR}")
-      add_test(NAME ${test_name} COMMAND ${test_name} -n -v5)
+      string(REPLACE "/" "." test_name "${test_path}/${test_name}")
+      target_sources("caf-${name}-test" PRIVATE ${source_file})
+      set_property(SOURCE ${source_file} PROPERTY COMPILE_DEFINITIONS
+                   CAF_TEST_SUITE_NAME=${test_name})
+      add_test(NAME ${test_name} COMMAND "caf-${name}-test" -s "^${test_name}$" -n -v5)
       set_tests_properties(${test_name} PROPERTIES TIMEOUT 300)
     endif()
   endforeach()

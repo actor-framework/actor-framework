@@ -4,10 +4,11 @@
 
 #include "caf/detail/bounds_checker.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/test.hpp"
 
 #include <cstdint>
+
+namespace {
 
 template <class T, class U>
 bool bounds_check(U x) {
@@ -41,4 +42,4 @@ TEST("large unsigned integers") {
   check_eq(bounds_check<uint64_t>(std::numeric_limits<uint64_t>::max()), true);
 }
 
-CAF_TEST_MAIN()
+} // namespace

@@ -4,8 +4,10 @@
 
 #include "caf/message_builder.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/test.hpp"
+
+#include "caf/init_global_meta_objects.hpp"
+#include "caf/type_id.hpp"
 
 using namespace caf;
 
@@ -53,12 +55,14 @@ bool inspect(Inspector& f, counted_int_ptr& x) {
   }
 }
 
-CAF_BEGIN_TYPE_ID_BLOCK(counted_int_block, caf::first_custom_type_id)
+CAF_BEGIN_TYPE_ID_BLOCK(message_builder_test, caf::first_custom_type_id)
 
-  CAF_ADD_TYPE_ID(counted_int_block, (counted_int))
-  CAF_ADD_TYPE_ID(counted_int_block, (counted_int_ptr))
+  CAF_ADD_TYPE_ID(message_builder_test, (counted_int))
+  CAF_ADD_TYPE_ID(message_builder_test, (counted_int_ptr))
 
-CAF_END_TYPE_ID_BLOCK(counted_int_block)
+CAF_END_TYPE_ID_BLOCK(message_builder_test)
+
+namespace {
 
 TEST("message_builder can build messages incrementally") {
   message_builder builder;
@@ -201,4 +205,8 @@ TEST("message_builder can build messages from iterator pairs") {
   check_eq(msg.get_as<int32_t>(2), 3);
 }
 
-CAF_TEST_MAIN(id_block::counted_int_block)
+TEST_INIT() {
+  init_global_meta_objects<id_block::message_builder_test>();
+}
+
+} // namespace

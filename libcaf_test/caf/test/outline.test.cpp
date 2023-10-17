@@ -4,9 +4,9 @@
 
 #include "caf/test/outline.hpp"
 
-#include "caf/test/caf_test_main.hpp"
-
 #include <numeric>
+
+namespace {
 
 OUTLINE("eating cucumbers") {
   GIVEN("there are <start> cucumbers") {
@@ -69,4 +69,4 @@ OUTLINE("counting numbers") {
   )";
 }
 
-CAF_TEST_MAIN()
+} // namespace

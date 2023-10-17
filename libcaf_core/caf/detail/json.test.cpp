@@ -4,7 +4,6 @@
 
 #include "caf/detail/json.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/test.hpp"
 
 using namespace caf;
@@ -159,8 +158,6 @@ std::string stringify(const detail::json::value& val) {
   return result;
 }
 
-} // namespace
-
 TEST("json baselines") {
   size_t baseline_index = 0;
   detail::monotonic_buffer_resource resource;
@@ -174,4 +171,4 @@ TEST("json baselines") {
   }
 }
 
-CAF_TEST_MAIN()
+} // namespace

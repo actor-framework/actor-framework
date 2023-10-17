@@ -4,10 +4,11 @@
 
 #include "caf/behavior.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/test.hpp"
 
 using namespace caf;
+
+namespace {
 
 class nocopy_fun {
 public:
@@ -152,4 +153,4 @@ TEST("a handler that takes a message argument is a catch-all handler") {
 
 } // WITH_FIXTURE(fixture)
 
-CAF_TEST_MAIN()
+} // namespace

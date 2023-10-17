@@ -4,7 +4,6 @@
 
 #include "caf/detail/serialized_size.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/test.hpp"
 
 #include "caf/binary_serializer.hpp"
@@ -29,8 +28,6 @@ struct fixture : test_coordinator_fixture<> {
     return buf.size();
   }
 };
-
-} // namespace
 
 #define check_SAME_SIZE(value)                                                 \
   check_eq(serialized_size(value), actual_size(value))
@@ -64,4 +61,4 @@ TEST("messages") {
 
 } // WITH_FIXTURE(fixture)
 
-CAF_TEST_MAIN()
+} // namespace

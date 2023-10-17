@@ -4,8 +4,9 @@
 
 #include "caf/intrusive/lifo_inbox.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/test.hpp"
+
+#include "caf/intrusive/singly_linked.hpp"
 
 #include <memory>
 #include <numeric>
@@ -13,6 +14,8 @@
 using namespace caf;
 
 using intrusive::inbox_result;
+
+namespace {
 
 struct inode : intrusive::singly_linked<inode> {
   explicit inode(int x = 0) : value(x) {
@@ -67,4 +70,4 @@ TEST("push_front unblocks a blocked reader") {
   check_eq(drain(uut), "[2, 1]");
 }
 
-CAF_TEST_MAIN()
+} // namespace

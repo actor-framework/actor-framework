@@ -4,7 +4,6 @@
 
 #include "caf/detail/base64.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/test.hpp"
 
 #include <string_view>
@@ -14,6 +13,8 @@ using namespace std::literals;
 using namespace std::literals::string_literals;
 
 using caf::detail::base64;
+
+namespace {
 
 TEST("encoding") {
   check_eq(base64::encode("A"sv), "QQ=="sv);
@@ -31,4 +32,4 @@ TEST("decoding") {
            "https://actor-framework.org"s);
 }
 
-CAF_TEST_MAIN()
+} // namespace

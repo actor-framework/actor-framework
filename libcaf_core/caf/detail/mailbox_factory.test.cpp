@@ -4,9 +4,10 @@
 
 #include "caf/detail/mailbox_factory.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/test.hpp"
 
+#include "caf/actor_system.hpp"
+#include "caf/actor_system_config.hpp"
 #include "caf/blocking_actor.hpp"
 #include "caf/detail/default_mailbox.hpp"
 #include "caf/event_based_actor.hpp"
@@ -14,6 +15,8 @@
 #include "caf/scheduler/test_coordinator.hpp"
 
 using namespace caf;
+
+namespace {
 
 class dummy_mailbox_factory : public detail::mailbox_factory {
 public:
@@ -79,4 +82,4 @@ TEST("a mailbox factory creates mailboxes for actors") {
   }
 }
 
-CAF_TEST_MAIN()
+} // namespace

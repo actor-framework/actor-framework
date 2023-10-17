@@ -4,7 +4,6 @@
 
 #include "caf/flow/observable.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/fixture/flow.hpp"
 #include "caf/test/nil.hpp"
 #include "caf/test/test.hpp"
@@ -13,6 +12,8 @@ using caf::test::nil;
 using std::vector;
 
 using namespace caf;
+
+namespace {
 
 WITH_FIXTURE(test::fixture::flow) {
 
@@ -321,4 +322,4 @@ TEST("on_error_return_item() replaces an error with a value") {
 
 } // WITH_FIXTURE(test::fixture::flow)
 
-CAF_TEST_MAIN()
+} // namespace

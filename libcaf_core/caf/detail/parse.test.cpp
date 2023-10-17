@@ -4,7 +4,6 @@
 
 #include "caf/detail/parse.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/test.hpp"
 
 #include "caf/expected.hpp"
@@ -53,8 +52,6 @@ expected<T> read(std::string_view str) {
     return result;
   return make_error(ps);
 }
-
-} // namespace
 
 #define CHECK_NUMBER(type, value) check_eq(read<type>(#value), type(value))
 
@@ -208,4 +205,4 @@ TEST("IPv6 endpoint") {
   check_eq(read<ipv6_endpoint>("[1::2]:8080"), ipv6_endpoint({{1}, {2}}, 8080));
 }
 
-CAF_TEST_MAIN()
+} // namespace

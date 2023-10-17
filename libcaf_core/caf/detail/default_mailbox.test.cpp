@@ -4,10 +4,11 @@
 
 #include "caf/detail/default_mailbox.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/test.hpp"
 
 using namespace caf;
+
+namespace {
 
 using ires = intrusive::inbox_result;
 
@@ -76,4 +77,4 @@ TEST("calling push_front inserts messages at the beginning") {
   }
 }
 
-CAF_TEST_MAIN()
+} // namespace

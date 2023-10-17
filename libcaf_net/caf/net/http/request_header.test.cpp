@@ -4,12 +4,13 @@
 
 #include "caf/net/http/request_header.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/outline.hpp"
 #include "caf/test/test.hpp"
 
 using namespace caf;
 using namespace std::literals;
+
+namespace {
 
 TEST("parsing a http request") {
   net::http::request_header hdr;
@@ -53,8 +54,8 @@ OUTLINE("parsing requests") {
     |  method  | enum value |
     | GET      |     0      |
     | HEAD     |     1      |
-    | POST     |     2      | 
-    | PUT      |     3      | 
+    | POST     |     2      |
+    | PUT      |     3      |
     | DELETE   |     4      |
     | CONNECT  |     5      |
     | OPTIONS  |     6      |
@@ -185,4 +186,4 @@ TEST("invalid request headers are copyable and movable") {
   }
 }
 
-CAF_TEST_MAIN()
+} // namespace

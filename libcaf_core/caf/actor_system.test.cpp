@@ -4,7 +4,6 @@
 
 #include "caf/actor_system.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/test.hpp"
 
 #include "caf/actor_system_config.hpp"
@@ -14,6 +13,8 @@
 #include <memory>
 
 using namespace caf;
+
+namespace {
 
 using shared_bool_ptr = std::shared_ptr<bool>;
 
@@ -40,37 +41,30 @@ TEST("spawn_inactive creates an actor without launching it") {
   actor_system_config cfg;
   put(cfg.content, "caf.scheduler.max-threads", 1);
   actor_system sys{cfg};
-  scoped_actor self{sys};
   SECTION("users may launch the actor manually") {
-    actor hdl;
-    {
-      auto [self, launch] = sys.spawn_inactive<dummy_actor>(flag);
-      check_eq(self->ctrl()->strong_refs, 1u); // 1 ref by launch
-      hdl = self;
-      check(!*flag);
+    auto [self, launch] = sys.spawn_inactive<dummy_actor>(flag);
+    check_eq(self->ctrl()->strong_refs, 1u); // 1 ref by launch
+    check(!*flag);
+    launch();
+    check(*flag);
+    SECTION("calling launch() twice is a no-op") {
+      *flag = false;
       launch();
-      check(*flag);
-      SECTION("calling launch() twice is a no-op") {
-        *flag = false;
-        launch();
-        check(!*flag);
-      }
+      check(!*flag);
     }
-    self->wait_for(hdl);
-    check_eq(hdl->ctrl()->strong_refs, 1u); // launch must have dropped its ref
   }
   SECTION("the actor launches automatically at scope exit") {
-    actor hdl;
     {
       auto [self, launch] = sys.spawn_inactive<dummy_actor>(flag);
       check_eq(self->ctrl()->strong_refs, 1u); // 1 ref by launch
-      hdl = self;
       check(!*flag);
     }
-    self->wait_for(hdl);
+    sys.await_all_actors_done();
     check(*flag);
-    check_eq(hdl->ctrl()->strong_refs, 1u); // launch must have dropped its ref
   }
+  // Note: checking the ref count at the end to verify that `launch` has dropped
+  //       its reference to the actor is unreliable, because the scheduler holds
+  //       on to a reference as well that may not be dropped yet.
 }
 
-CAF_TEST_MAIN()
+} // namespace

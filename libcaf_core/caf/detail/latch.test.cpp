@@ -4,10 +4,13 @@
 
 #include "caf/detail/latch.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/scenario.hpp"
 
+#include <thread>
+
 using namespace caf;
+
+namespace {
 
 SCENARIO("latches synchronize threads") {
   GIVEN("a latch and three threads") {
@@ -27,4 +30,4 @@ SCENARIO("latches synchronize threads") {
   }
 }
 
-CAF_TEST_MAIN()
+} // namespace

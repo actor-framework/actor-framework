@@ -4,7 +4,7 @@
 
 #include "caf/detail/meta_object.hpp"
 
-#include "caf/test/caf_test_main.hpp"
+#include "caf/test/registry.hpp"
 #include "caf/test/test.hpp"
 
 #include "caf/binary_deserializer.hpp"
@@ -18,7 +18,8 @@
 struct i32_wrapper;
 struct i64_wrapper;
 
-CAF_BEGIN_TYPE_ID_BLOCK(meta_object_test, caf::first_custom_type_id)
+// +5 to avoid clash with caf.message_builder test
+CAF_BEGIN_TYPE_ID_BLOCK(meta_object_test, caf::first_custom_type_id + 5)
   CAF_ADD_TYPE_ID(meta_object_test, (i32_wrapper))
   CAF_ADD_TYPE_ID(meta_object_test, (i64_wrapper))
 CAF_END_TYPE_ID_BLOCK(meta_object_test)
@@ -76,6 +77,8 @@ size_t i32_wrapper::instances = 0;
 
 size_t i64_wrapper::instances = 0;
 
+namespace {
+
 TEST("meta objects allow construction and destruction of objects") {
   auto meta_i32_wrapper = make_meta_object<i32_wrapper>("i32_wrapper");
   alignas(i32_wrapper) std::byte storage[sizeof(i32_wrapper)];
@@ -119,4 +122,8 @@ TEST("init_global_meta_objects takes care of creating a meta object table") {
   check(std::equal(xs.begin(), xs.end(), ys.begin(), ys.end(), same));
 }
 
-CAF_TEST_MAIN(caf::id_block::meta_object_test)
+TEST_INIT() {
+  init_global_meta_objects<id_block::meta_object_test>();
+}
+
+} // namespace

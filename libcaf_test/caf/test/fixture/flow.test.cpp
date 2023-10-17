@@ -4,12 +4,13 @@
 
 #include "caf/test/fixture/flow.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/test.hpp"
 
 #include "caf/flow/observable.hpp"
 
 using namespace caf;
+
+namespace {
 
 WITH_FIXTURE(test::fixture::flow) {
 
@@ -31,4 +32,4 @@ TEST("collect() eagerly evaluates an observable and returns a vector") {
 
 } // WITH_FIXTURE(test::fixture::flow)
 
-CAF_TEST_MAIN()
+} // namespace

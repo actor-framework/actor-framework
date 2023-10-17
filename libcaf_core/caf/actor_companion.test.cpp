@@ -4,13 +4,14 @@
 
 #include "caf/actor_companion.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/fixture/deterministic.hpp"
 #include "caf/test/test.hpp"
 
 #include "caf/mailbox_element.hpp"
 
 using namespace caf;
+
+namespace {
 
 WITH_FIXTURE(test::fixture::deterministic) {
 
@@ -41,4 +42,4 @@ TEST("actor_companion calls the on_exit handler on shutdown") {
 
 } // WITH_FIXTURE(test::fixture::deterministic)
 
-CAF_TEST_MAIN()
+} // namespace

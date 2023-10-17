@@ -4,7 +4,6 @@
 
 #include "caf/event_based_actor.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/fixture/deterministic.hpp"
 #include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
@@ -14,6 +13,8 @@
 #include "caf/send.hpp"
 
 using namespace caf;
+
+namespace {
 
 WITH_FIXTURE(test::fixture::deterministic) {
 
@@ -79,9 +80,7 @@ SCENARIO("request(...).await(...) suspends the regular actor behavior") {
     WHEN("the actor receives an exit_msg while waiting for the response") {
       THEN("the actor processes the exit messages immediately") {
         auto server = sys.spawn(server_impl);
-        printf("server is %d\n", (int) server.id());
         auto aut = sys.spawn(uut_impl, server);
-        printf("aut is %d\n", (int) aut.id());
         inject().with(exit_msg{server.address(), exit_reason::kill}).to(aut);
         check(terminated(aut));
         expect<int>().with(42).from(aut).to(server);
@@ -92,4 +91,4 @@ SCENARIO("request(...).await(...) suspends the regular actor behavior") {
 
 } // WITH_FIXTURE(test::fixture::deterministic)
 
-CAF_TEST_MAIN()
+} // namespace

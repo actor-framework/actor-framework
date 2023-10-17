@@ -4,10 +4,11 @@
 
 #include "caf/test/fixture/deterministic.hpp"
 
-#include "caf/test/caf_test_main.hpp"
+#include "caf/test/registry.hpp"
 #include "caf/test/test.hpp"
 
 #include "caf/event_based_actor.hpp"
+#include "caf/init_global_meta_objects.hpp"
 #include "caf/scoped_actor.hpp"
 #include "caf/send.hpp"
 
@@ -38,11 +39,13 @@ bool operator!=(my_int lhs, my_int rhs) noexcept {
   return lhs.value != rhs.value;
 }
 
-CAF_BEGIN_TYPE_ID_BLOCK(test, caf::first_custom_type_id)
+CAF_BEGIN_TYPE_ID_BLOCK(deterministic_fixture_test, caf::first_custom_type_id)
 
-  CAF_ADD_TYPE_ID(test, (my_int))
+  CAF_ADD_TYPE_ID(deterministic_fixture_test, (my_int))
 
-CAF_END_TYPE_ID_BLOCK(test)
+CAF_END_TYPE_ID_BLOCK(deterministic_fixture_test)
+
+namespace {
 
 WITH_FIXTURE(fixture::deterministic) {
 
@@ -343,4 +346,8 @@ TEST("evaluator expressions can check or extract individual values") {
 
 } // WITH_FIXTURE(fixture::deterministic)
 
-CAF_TEST_MAIN(caf::id_block::test)
+TEST_INIT() {
+  caf::init_global_meta_objects<caf::id_block::deterministic_fixture_test>();
+}
+
+} // namespace

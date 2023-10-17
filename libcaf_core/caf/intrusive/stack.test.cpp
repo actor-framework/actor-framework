@@ -4,10 +4,13 @@
 
 #include "caf/intrusive/stack.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/test.hpp"
 
+#include "caf/intrusive/singly_linked.hpp"
+
 using namespace caf;
+
+namespace {
 
 struct int_node : intrusive::singly_linked<int_node> {
   explicit int_node(int x) : value(x) {
@@ -60,4 +63,4 @@ TEST("popping values from a stack returns the last pushed value") {
   check(uut.empty());
 }
 
-CAF_TEST_MAIN()
+} // namespace

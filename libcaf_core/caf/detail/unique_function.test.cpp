@@ -4,10 +4,11 @@
 
 #include "caf/detail/unique_function.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/test.hpp"
 
 using int_fun = caf::detail::unique_function<int()>;
+
+namespace {
 
 int forty_two() {
   return 42;
@@ -162,4 +163,4 @@ TEST("move assign") {
 
 // NOLINTEND(bugprone-use-after-move)
 
-CAF_TEST_MAIN()
+} // namespace

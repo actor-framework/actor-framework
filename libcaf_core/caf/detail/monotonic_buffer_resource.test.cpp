@@ -4,7 +4,6 @@
 
 #include "caf/detail/monotonic_buffer_resource.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/scenario.hpp"
 
 #include <list>
@@ -12,6 +11,8 @@
 #include <vector>
 
 using namespace caf;
+
+namespace {
 
 SCENARIO("monotonic buffers group allocations") {
   GIVEN("a monotonic buffer resource") {
@@ -113,4 +114,4 @@ SCENARIO("monotonic buffers provide storage for STL containers") {
   }
 }
 
-CAF_TEST_MAIN()
+} // namespace

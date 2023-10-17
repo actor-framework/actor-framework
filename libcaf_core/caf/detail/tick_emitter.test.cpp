@@ -16,7 +16,6 @@
 
 #include "caf/detail/tick_emitter.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/test.hpp"
 
 #include "caf/detail/gcd.hpp"
@@ -34,8 +33,6 @@ namespace {
 
 timespan credit_interval{200};
 timespan force_batch_interval{50};
-
-} // namespace
 
 TEST("start_and_stop") {
   detail::tick_emitter x;
@@ -134,4 +131,4 @@ TEST("next_timeout") {
   check_eq(next, start + timespan((2 * 7) * interval));
 }
 
-CAF_TEST_MAIN()
+} // namespace

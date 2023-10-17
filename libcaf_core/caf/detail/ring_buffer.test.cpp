@@ -4,12 +4,13 @@
 
 #include "caf/detail/ring_buffer.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/test.hpp"
 
 using namespace caf;
 
 using detail::ring_buffer;
+
+namespace {
 
 int pop(ring_buffer<int>& buf) {
   auto result = buf.front();
@@ -178,4 +179,4 @@ TEST("ring-buffers are copiable") {
   check_eq(buf.empty(), true);
 }
 
-CAF_TEST_MAIN()
+} // namespace

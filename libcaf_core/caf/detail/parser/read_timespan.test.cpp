@@ -4,7 +4,6 @@
 
 #include "caf/detail/parser/read_timespan.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/test.hpp"
 
 #include "caf/parser_state.hpp"
@@ -57,8 +56,6 @@ std::optional<timespan> read(std::string_view str) {
   return consumer.x;
 }
 
-} // namespace
-
 TEST("todo") {
   check_eq(read("12ns"), 12_ns);
   check_eq(read("34us"), 34_us);
@@ -68,4 +65,4 @@ TEST("todo") {
   check_eq(read("90h"), 90_h);
 }
 
-CAF_TEST_MAIN()
+} // namespace

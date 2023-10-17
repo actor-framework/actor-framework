@@ -4,7 +4,6 @@
 
 #include "caf/detail/parser/read_config.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/test.hpp"
 
 #include "caf/config_value.hpp"
@@ -14,6 +13,8 @@
 #include <string_view>
 
 using namespace caf;
+
+namespace {
 
 using log_type = std::vector<std::string>;
 
@@ -220,4 +221,4 @@ TEST("read_config feeds into a consumer") {
 
 } // WITH_FIXTURE(fixture)
 
-CAF_TEST_MAIN()
+} // namespace

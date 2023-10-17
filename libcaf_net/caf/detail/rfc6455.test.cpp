@@ -4,7 +4,6 @@
 
 #include "caf/detail/rfc6455.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/test.hpp"
 
 #include "caf/byte_buffer.hpp"
@@ -18,6 +17,8 @@
 using namespace caf;
 
 using impl = detail::rfc6455;
+
+namespace {
 
 auto bytes(std::initializer_list<uint8_t> xs) {
   byte_buffer result;
@@ -313,4 +314,4 @@ TEST("decode a header with valid mask key plus large data") {
   check_eq(hdr.payload_len, data.size());
 }
 
-CAF_TEST_MAIN()
+} // namespace

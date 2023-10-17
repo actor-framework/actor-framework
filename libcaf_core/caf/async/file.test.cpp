@@ -4,11 +4,12 @@
 
 #include "caf/async/file.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/fixture/flow.hpp"
 #include "caf/test/nil.hpp"
 #include "caf/test/test.hpp"
 
+#include "caf/actor_system.hpp"
+#include "caf/actor_system_config.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/flow/observable.hpp"
 
@@ -18,6 +19,8 @@
 
 using namespace caf;
 using namespace std::literals;
+
+namespace {
 
 constexpr const char* quotes_file = CAF_TEST_DATA_DIR "/quotes.txt";
 
@@ -112,4 +115,4 @@ TEST("async file I/O") {
   }
 }
 
-CAF_TEST_MAIN()
+} // namespace

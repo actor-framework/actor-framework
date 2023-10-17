@@ -4,7 +4,6 @@
 
 #include "caf/io/network/receive_buffer.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/test.hpp"
 
 #include <algorithm>
@@ -13,6 +12,8 @@
 using namespace std::literals;
 
 using caf::io::network::receive_buffer;
+
+namespace {
 
 TEST("construction") {
   SECTION("default-constructed buffers are empty") {
@@ -175,4 +176,4 @@ TEST("swap exchanges the content of two buffers") {
   check(buf2.data() == buf1_data);
 }
 
-CAF_TEST_MAIN()
+} // namespace
