@@ -2,14 +2,12 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE telemetry.collector.prometheus
-
 #include "caf/telemetry/collector/prometheus.hpp"
+
+#include "caf/test/test.hpp"
 
 #include "caf/telemetry/metric_registry.hpp"
 #include "caf/telemetry/metric_type.hpp"
-
-#include "core-test.hpp"
 
 using namespace caf;
 using namespace caf::telemetry;
@@ -23,11 +21,9 @@ struct fixture {
   metric_registry registry;
 };
 
-} // namespace
+WITH_FIXTURE(fixture) {
 
-BEGIN_FIXTURE_SCOPE(fixture)
-
-CAF_TEST(the Prometheus collector generates text output) {
+TEST("the Prometheus collector generates text output") {
   auto fb = registry.gauge_family("foo", "bar", {},
                                   "Some value without labels.", "seconds");
   auto sv = registry.gauge_family("some", "value", {"label-1", "label-2"},
@@ -45,7 +41,7 @@ CAF_TEST(the Prometheus collector generates text output) {
   h->observe(3);
   h->observe(4);
   h->observe(7);
-  CHECK_EQ(exporter.collect_from(registry, timestamp{42s}),
+  check_eq(exporter.collect_from(registry, timestamp{42s}),
            R"(# HELP foo_bar_seconds Some value without labels.
 # TYPE foo_bar_seconds gauge
 foo_bar_seconds 123 42000
@@ -64,14 +60,16 @@ some_request_duration_seconds_bucket{x="get",le="+Inf"} 3 42000
 some_request_duration_seconds_sum{x="get"} 14 42000
 some_request_duration_seconds_count{x="get"} 3 42000
 )"sv);
-  MESSAGE("multiple runs with the same timestamp generate the same output");
+  print_debug("multiple runs with the same timestamp generate the same output");
   auto ts = make_timestamp();
   std::string res1;
   {
     auto buf = exporter.collect_from(registry, ts);
     res1.assign(buf.begin(), buf.end());
   }
-  CHECK_EQ(res1, exporter.collect_from(registry, ts));
+  check_eq(res1, exporter.collect_from(registry, ts));
 }
 
-END_FIXTURE_SCOPE()
+} // WITH_FIXTURE(fixture)
+
+} // namespace

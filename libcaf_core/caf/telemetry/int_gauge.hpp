@@ -76,10 +76,22 @@ public:
     return ++value_;
   }
 
+  /// Increments the gauge by 1.
+  /// @returns The old value of the gauge.
+  int64_t operator++(int) noexcept {
+    return value_++;
+  }
+
   /// Decrements the gauge by 1.
   /// @returns The new value of the gauge.
   int64_t operator--() noexcept {
     return --value_;
+  }
+
+  /// Decrements the gauge by 1.
+  /// @returns The old value of the gauge.
+  int64_t operator--(int) noexcept {
+    return value_--;
   }
 
   // -- observers --------------------------------------------------------------

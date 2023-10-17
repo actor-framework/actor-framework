@@ -63,6 +63,13 @@ public:
     return ++gauge_;
   }
 
+  /// Increments the counter by 1.
+  /// @returns The old value of the counter.
+  template <class T = ValueType>
+  std::enable_if_t<std::is_same_v<T, int64_t>, T> operator++(int) noexcept {
+    return gauge_++;
+  }
+
   // -- observers --------------------------------------------------------------
 
   /// Returns the current value of the counter.
