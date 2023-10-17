@@ -253,5 +253,3 @@ TEST("stream_abort_msg is serializable") {
 }
 
 } // WITH_FIXTURE(test::fixture::deterministic)
-
-CAF_TEST_MAIN()

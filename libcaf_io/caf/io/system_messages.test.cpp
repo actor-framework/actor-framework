@@ -164,5 +164,3 @@ TEST("dataram_servant_closed_msg is serializable") {
 }
 
 } // WITH_FIXTURE(test::fixture::deterministic)
-
-CAF_TEST_MAIN()
