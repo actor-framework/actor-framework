@@ -24,6 +24,7 @@ namespace caf::net::http {
 class CAF_NET_EXPORT response_header : public header {
 public:
   using super = header;
+
   /// Default constructor.
   response_header() = default;
 

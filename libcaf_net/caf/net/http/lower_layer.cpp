@@ -17,6 +17,10 @@ lower_layer::~lower_layer() {
   // nop
 }
 
+lower_layer::server::~server() {
+  // nop
+}
+
 bool lower_layer::server::send_response(status code) {
   begin_header(code);
   add_header_field("Content-Length"sv, "0"sv);
@@ -42,6 +46,10 @@ bool lower_layer::server::send_response(status code,
 bool lower_layer::server::send_response(status code, const error& err) {
   auto msg = to_string(err);
   return send_response(code, "text/plain", msg);
+}
+
+lower_layer::client::~client() {
+  // nop
 }
 
 } // namespace caf::net::http

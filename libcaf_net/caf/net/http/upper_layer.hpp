@@ -26,6 +26,7 @@ public:
 class CAF_NET_EXPORT upper_layer::server : public upper_layer {
 public:
   virtual ~server();
+
   /// Consumes an HTTP message.
   /// @param hdr The header fields for the received message.
   /// @param payload The payload of the received message.
@@ -44,6 +45,7 @@ public:
 class CAF_NET_EXPORT upper_layer::client : public upper_layer {
 public:
   virtual ~client();
+
   /// Consumes an HTTP message.
   /// @param hdr The header fields for the received message.
   /// @param payload The payload of the received message.

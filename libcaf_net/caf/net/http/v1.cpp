@@ -37,7 +37,7 @@ writer& operator<<(writer& out, const std::string& str) {
 } // namespace
 
 std::pair<std::string_view, byte_span> split_header(const byte_span bytes) {
-  constexpr std::array<std::byte, 4> end_of_header{{
+  static constexpr std::array<std::byte, 4> end_of_header{{
     std::byte{'\r'},
     std::byte{'\n'},
     std::byte{'\r'},
@@ -74,7 +74,7 @@ void begin_response_header(status code, byte_buffer& buf) {
 
 void begin_request_header(http::method method, uri resource, byte_buffer& buf) {
   writer out{&buf};
-  out << to_string(method) << " "sv << to_string(resource) << " HTTP/1.1\r\n"sv;
+  out << to_string(method) << " "sv << resource.str() << " HTTP/1.1\r\n"sv;
 }
 
 void add_header_field(std::string_view key, std::string_view val,

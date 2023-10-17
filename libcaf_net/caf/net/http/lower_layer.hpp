@@ -56,6 +56,8 @@ public:
 
 class lower_layer::server : public lower_layer {
 public:
+  virtual ~server();
+
   /// Starts writing an HTTP resounse header.
   virtual void begin_header(status code) = 0;
 
@@ -78,6 +80,8 @@ public:
 
 class lower_layer::client : public lower_layer {
 public:
+  virtual ~client();
+
   /// Starts writing an HTTP request header.
   virtual void begin_header(http::method method, uri resource) = 0;
 };

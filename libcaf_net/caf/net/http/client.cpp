@@ -41,23 +41,19 @@ void client::suspend_reading() {
   down_->configure_read(receive_policy::stop());
 }
 
-// TODO
 void client::begin_header(http::method method, uri resource) {
-  // down_->begin_output();
-  // v1::begin_response_header(code, down_->output_buffer());
+  down_->begin_output();
+  v1::begin_request_header(method, resource, down_->output_buffer());
 }
 
-// TODO
 void client::add_header_field(std::string_view key, std::string_view val) {
   v1::add_header_field(key, val, down_->output_buffer());
 }
 
-// TODO
 bool client::end_header() {
   return v1::end_header(down_->output_buffer()) && down_->end_output();
 }
 
-// TODO
 bool client::send_payload(const_byte_span bytes) {
   down_->begin_output();
   auto& buf = down_->output_buffer();
@@ -66,7 +62,6 @@ bool client::send_payload(const_byte_span bytes) {
   return true;
 }
 
-// TODO
 bool client::send_chunk(const_byte_span bytes) {
   down_->begin_output();
   auto& buf = down_->output_buffer();
@@ -80,7 +75,6 @@ bool client::send_chunk(const_byte_span bytes) {
   return down_->end_output();
 }
 
-// TODO
 bool client::send_end_of_chunks() {
   std::string_view str = "0\r\n\r\n";
   auto bytes = as_bytes(make_span(str));
@@ -125,7 +119,6 @@ ptrdiff_t client::consume(byte_span input, byte_span) {
       }
       auto [hdr, remainder] = v1::split_header(input);
       // Wait for more data.
-      // TODO consumed or zero
       if (hdr.empty())
         return consumed;
       // Note: handle_header already calls up_->abort().
@@ -159,7 +152,6 @@ ptrdiff_t client::consume(byte_span input, byte_span) {
         if (!invoke_upper_layer(input.subspan(0, payload_len_)))
           return -1;
         consumed += static_cast<ptrdiff_t>(payload_len_);
-        // TODO: add line to server
         input.subspan(payload_len_);
         mode_ = mode::read_header;
       } else {
@@ -177,7 +169,6 @@ ptrdiff_t client::consume(byte_span input, byte_span) {
 
 // -- utility functions ------------------------------------------------------
 
-// TODO
 void client::write_response(status code, std::string_view content) {
   down_->begin_output();
   v1::write_response(code, "text/plain", content, down_->output_buffer());

@@ -48,15 +48,15 @@ public:
   /// Default maximum size for incoming HTTP requests: 64KiB.
   static constexpr uint32_t default_max_request_size = 65'536;
 
+  // -- factories --------------------------------------------------------------
+
+  static std::unique_ptr<client> make(upper_layer_ptr up);
+
   // -- constructors, destructors, and assignment operators --------------------
 
   explicit client(upper_layer_ptr up) : up_(std::move(up)) {
     // nop
   }
-
-  // -- factories --------------------------------------------------------------
-
-  static std::unique_ptr<client> make(upper_layer_ptr up);
 
   // -- properties -------------------------------------------------------------
 
@@ -76,7 +76,7 @@ public:
     max_request_size_ = value;
   }
 
-  // -- http::lower_layer implementation ---------------------------------------
+  // -- http::lower_layer::client implementation -------------------------------
 
   multiplexer& mpx() noexcept override;
 
@@ -132,8 +132,10 @@ private:
 
   bool handle_header(std::string_view http);
 
+  /// Points to the transport layer below.
   octet_stream::lower_layer* down_;
 
+  /// Next layer in the processing chain.
   upper_layer_ptr up_;
 
   /// Buffer for re-using memory.
