@@ -4,10 +4,10 @@
 
 #include "caf/detail/sync_ring_buffer.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/test.hpp"
 
 #include <algorithm>
+#include <thread>
 #include <vector>
 
 using namespace caf;
@@ -32,8 +32,6 @@ void producer(int_buffer& buf, int first, int last) {
   for (auto i = first; i != last; ++i) // NOLINT(bugprone-use-after-move)
     buf.push_back(std::move(i));
 }
-
-} // namespace
 
 TEST("a default-constructed ring buffer is empty") {
   int_buffer buf;
@@ -116,4 +114,4 @@ TEST("sync_ring_buffer can be used with multiple producers") {
     t.join();
 }
 
-CAF_TEST_MAIN()
+} // namespace

@@ -4,13 +4,14 @@
 
 #include "caf/action.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/fixture/deterministic.hpp"
 #include "caf/test/scenario.hpp"
 
 #include "caf/event_based_actor.hpp"
 
 using namespace caf;
+
+namespace {
 
 SCENARIO("actions wrap function calls") {
   GIVEN("an action wrapping a lambda") {
@@ -130,4 +131,4 @@ SCENARIO("actors run actions that they receive") {
 
 } // WITH_FIXTURE(test::fixture::deterministic)
 
-CAF_TEST_MAIN()
+} // namespace

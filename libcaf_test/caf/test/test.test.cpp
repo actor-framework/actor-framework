@@ -3,10 +3,11 @@
 
 #include "caf/test/test.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/requirement_failed.hpp"
 
 using caf::test::block_type;
+
+namespace {
 
 TEST("tests can contain different types of checks") {
   auto& rep = caf::test::reporter::instance();
@@ -127,4 +128,4 @@ TEST("each run starts with a fresh fixture") {
 
 } // WITH_FIXTURE(int_fixture)
 
-CAF_TEST_MAIN()
+} // namespace

@@ -4,7 +4,6 @@
 
 #include "caf/detail/private_thread_pool.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/fixture/deterministic.hpp"
 #include "caf/test/scenario.hpp"
 
@@ -12,6 +11,8 @@
 #include "caf/resumable.hpp"
 
 using namespace caf;
+
+namespace {
 
 WITH_FIXTURE(test::fixture::deterministic) {
 
@@ -84,4 +85,4 @@ SCENARIO("private threads rerun their resumable when it returns resume_later") {
 
 } // WITH_FIXTURE(test::fixture::deterministic)
 
-CAF_TEST_MAIN()
+} // namespace

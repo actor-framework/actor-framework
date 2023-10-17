@@ -4,11 +4,12 @@
 
 #include "caf/net/http/header.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/test.hpp"
 
 using namespace caf;
 using namespace std::literals;
+
+namespace {
 
 TEST("parsing a http request") {
   net::http::header hdr;
@@ -73,4 +74,4 @@ TEST("parsing a http request") {
   }
 }
 
-CAF_TEST_MAIN()
+} // namespace

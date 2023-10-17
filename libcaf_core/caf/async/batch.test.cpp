@@ -4,7 +4,6 @@
 
 #include "caf/async/batch.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/scenario.hpp"
 
 #include "caf/binary_deserializer.hpp"
@@ -18,6 +17,8 @@
 
 using namespace caf;
 using namespace std::literals;
+
+namespace {
 
 template <class T>
 auto to_vec(span<const T> xs) {
@@ -259,4 +260,4 @@ SCENARIO("serializing and then deserializing a batch makes a deep copy") {
   }
 }
 
-CAF_TEST_MAIN()
+} // namespace

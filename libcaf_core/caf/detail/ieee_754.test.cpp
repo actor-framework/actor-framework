@@ -4,15 +4,14 @@
 
 #include "caf/detail/ieee_754.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/test.hpp"
 
 #include <limits>
 
-namespace {
-
 using caf::detail::pack754;
 using caf::detail::unpack754;
+
+namespace {
 
 template <class T>
 T roundtrip(T x) {
@@ -22,8 +21,6 @@ T roundtrip(T x) {
 using flimits = std::numeric_limits<float>;
 
 using dlimits = std::numeric_limits<double>;
-
-} // namespace
 
 #define CHECK_RT(value) check_eq(roundtrip(value), value)
 
@@ -100,4 +97,4 @@ TEST("packing and then unpacking doubles returns the original value") {
   }
 }
 
-CAF_TEST_MAIN()
+} // namespace

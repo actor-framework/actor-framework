@@ -4,7 +4,6 @@
 
 #include "caf/flow/string.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/fixture/flow.hpp"
 #include "caf/test/scenario.hpp"
 
@@ -15,6 +14,8 @@
 
 using namespace caf;
 using namespace std::literals;
+
+namespace {
 
 auto tostr(const std::vector<char>& chars) {
   return std::string{chars.begin(), chars.end()};
@@ -124,4 +125,4 @@ SCENARIO("to_lines splits a character sequence into lines") {
 
 } // WITH_FIXTURE(test::fixture::flow)
 
-CAF_TEST_MAIN()
+} // namespace

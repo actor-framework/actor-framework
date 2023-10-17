@@ -4,7 +4,6 @@
 
 #include "caf/actor_system.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/test.hpp"
 
 #include "caf/actor_system_config.hpp"
@@ -14,6 +13,8 @@
 #include <memory>
 
 using namespace caf;
+
+namespace {
 
 using shared_bool_ptr = std::shared_ptr<bool>;
 
@@ -73,4 +74,4 @@ TEST("spawn_inactive creates an actor without launching it") {
   }
 }
 
-CAF_TEST_MAIN()
+} // namespace

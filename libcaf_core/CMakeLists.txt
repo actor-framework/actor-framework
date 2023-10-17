@@ -172,7 +172,6 @@ caf_add_component(
     caf/detail/test_actor_clock.cpp
     caf/detail/thread_safe_actor_clock.cpp
     caf/detail/type_id_list_builder.cpp
-    caf/detail/type_id_list_builder.test.cpp
     caf/detail/unique_function.test.cpp
     caf/disposable.cpp
     caf/error.cpp

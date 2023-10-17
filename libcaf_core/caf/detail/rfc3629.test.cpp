@@ -4,13 +4,14 @@
 
 #include "caf/detail/rfc3629.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/test.hpp"
 
 using namespace caf;
 using detail::rfc3629;
 
 using res_t = std::pair<size_t, bool>;
+
+namespace {
 
 bool valid_utf8(const_byte_span bytes) noexcept {
   return detail::rfc3629::valid(bytes);
@@ -220,4 +221,4 @@ TEST("rfc3629::validate stops at the first invalid byte") {
   }
 }
 
-CAF_TEST_MAIN()
+} // namespace

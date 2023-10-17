@@ -15,6 +15,11 @@ registry::~registry() {
     delete head_;
     head_ = next;
   }
+  while (init_stack_ != nullptr) {
+    auto next = init_stack_->next;
+    delete init_stack_;
+    init_stack_ = next;
+  }
 }
 
 registry::suites_map registry::suites() {
@@ -37,6 +42,24 @@ ptrdiff_t registry::add(factory* new_factory) {
     tail_->next_ = new_factory;
   tail_ = new_factory;
   return reinterpret_cast<ptrdiff_t>(new_factory);
+}
+
+ptrdiff_t registry::add_init_callback(void_function callback) {
+  return instance().add(callback);
+}
+
+ptrdiff_t registry::add(void_function callback) {
+  auto* ptr = new init_callback{init_stack_, callback};
+  init_stack_ = ptr;
+  return reinterpret_cast<ptrdiff_t>(ptr);
+}
+
+void registry::run_init_callbacks() {
+  auto* ptr = instance().init_stack_;
+  while (ptr != nullptr) {
+    ptr->callback();
+    ptr = ptr->next;
+  }
 }
 
 namespace {

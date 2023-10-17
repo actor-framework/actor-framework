@@ -4,7 +4,6 @@
 
 #include "caf/detail/parser/read_string.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/test.hpp"
 
 #include "caf/expected.hpp"
@@ -39,8 +38,6 @@ struct string_parser {
 struct fixture {
   string_parser p;
 };
-
-} // namespace
 
 WITH_FIXTURE(fixture) {
 
@@ -99,4 +96,4 @@ TEST("invalid strings") {
 
 } // WITH_FIXTURE(fixture)
 
-CAF_TEST_MAIN()
+} // namespace

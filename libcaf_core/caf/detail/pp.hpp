@@ -72,6 +72,8 @@
 #define CAF_PP_STR_9(x1, x2, x3, x4, x5, x6, x7, x8, x9) #x1 ", " #x2 ", " #x3 ", " #x4 ", " #x5 ", " #x6 ", " #x7 ", " #x8 ", " #x9
 // clang-format on
 
+#define CAF_PP_XSTR(arg) CAF_PP_STR_1(arg)
+
 #ifdef CAF_MSVC
 #  define CAF_PP_STR(...)                                                      \
     CAF_PP_CAT(CAF_PP_OVERLOAD(CAF_PP_STR_, __VA_ARGS__)(__VA_ARGS__),         \

@@ -4,7 +4,6 @@
 
 #include "caf/detail/parser/read_bool.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/test.hpp"
 
 #include "caf/parser_state.hpp"
@@ -14,6 +13,8 @@
 #include <variant>
 
 using namespace caf;
+
+namespace {
 
 struct bool_parser_consumer {
   bool x;
@@ -64,4 +65,4 @@ TEST("invalid booleans") {
 
 } // WITH_FIXTURE(fixture)
 
-CAF_TEST_MAIN()
+} // namespace

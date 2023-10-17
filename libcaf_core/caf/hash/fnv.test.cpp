@@ -4,12 +4,13 @@
 
 #include "caf/hash/fnv.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/test.hpp"
 
 #include <string>
 
 using namespace std::literals;
+
+namespace {
 
 TEST("hash::fnv can build hash values incrementally") {
   caf::hash::fnv<uint32_t> f;
@@ -54,4 +55,4 @@ TEST("fnv::compute can create hash values for types with inspect overloads") {
   check_eq(hash_type::compute(foo{"C++ Actor Framework"}), 0x2FF91FE5u);
 }
 
-CAF_TEST_MAIN()
+} // namespace

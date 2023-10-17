@@ -2,7 +2,6 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/fixture/deterministic.hpp"
 #include "caf/test/test.hpp"
 
@@ -10,6 +9,8 @@
 #include "caf/sec.hpp"
 
 using namespace caf;
+
+namespace {
 
 WITH_FIXTURE(test::fixture::deterministic) {
 
@@ -74,4 +75,4 @@ TEST("delegation moves responsibility for a request to another actor") {
 
 } // WITH_FIXTURE(test::fixture::deterministic)
 
-CAF_TEST_MAIN()
+} // namespace

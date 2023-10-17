@@ -4,7 +4,6 @@
 
 #include "caf/detail/config_consumer.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/test.hpp"
 
 #include "caf/detail/parser/read_config.hpp"
@@ -56,8 +55,6 @@ struct fixture {
   }
 };
 
-} // namespace
-
 WITH_FIXTURE(fixture) {
 
 TEST("config_consumer") {
@@ -95,4 +92,4 @@ TEST("simplified syntax") {
 
 } // WITH_FIXTURE(fixture)
 
-CAF_TEST_MAIN()
+} // namespace

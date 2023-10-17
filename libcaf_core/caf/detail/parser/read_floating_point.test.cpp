@@ -4,7 +4,6 @@
 
 #include "caf/detail/parser/read_floating_point.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/test.hpp"
 
 #include "caf/parser_state.hpp"
@@ -14,6 +13,8 @@
 #include <variant>
 
 using namespace caf;
+
+namespace {
 
 struct double_consumer {
   using value_type = double;
@@ -84,4 +85,4 @@ TEST("scientific noation") {
   check_eq(read("-12e-3"), -12e-3);
 }
 
-CAF_TEST_MAIN()
+} // namespace

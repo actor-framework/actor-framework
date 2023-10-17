@@ -4,15 +4,18 @@
 
 #include "caf/intrusive/linked_list.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/test.hpp"
+
+#include "caf/intrusive/singly_linked.hpp"
 
 #include <memory>
 #include <numeric>
 
 using namespace caf;
 
-struct inode : intrusive::singly_linked<inode> {
+namespace {
+
+struct inode : caf::intrusive::singly_linked<inode> {
   explicit inode(int x = 0) : value(x) {
     // nop
   }
@@ -154,4 +157,4 @@ TEST("pop_front removes the oldest element of a list and returns it") {
   check(uut.empty());
 }
 
-CAF_TEST_MAIN()
+} // namespace

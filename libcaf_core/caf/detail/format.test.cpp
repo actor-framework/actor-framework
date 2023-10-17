@@ -4,7 +4,6 @@
 
 #include "caf/detail/format.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/test.hpp"
 
 #if !defined(CAF_USE_STD_FORMAT) && !defined(CAF_USE_SYSTEM_LIBFMT)
@@ -13,6 +12,8 @@
 
 using namespace caf;
 using namespace std::literals;
+
+namespace {
 
 TEST("format strings without placeholders copies verbatim") {
   check_eq(detail::format("hello world"), "hello world");
@@ -106,4 +107,4 @@ TEST("ill-formatted formatting strings throw") {
 
 #endif
 
-CAF_TEST_MAIN()
+} // namespace

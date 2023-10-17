@@ -4,11 +4,12 @@
 
 #include "caf/net/http/response_header.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/test.hpp"
 
 using namespace caf;
 using namespace std::literals;
+
+namespace {
 
 TEST("parsing a valid http response") {
   net::http::response_header hdr;
@@ -178,4 +179,4 @@ TEST("copying and moving invalid response header results in invalid requests") {
   }
 }
 
-CAF_TEST_MAIN()
+} // namespace

@@ -4,7 +4,6 @@
 
 #include "caf/detail/parser/read_number.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/test.hpp"
 
 #include "caf/detail/nearly_equal.hpp"
@@ -19,6 +18,8 @@
 #include <variant>
 
 using namespace caf;
+
+namespace {
 
 struct number_consumer {
   std::variant<int64_t, double> x;
@@ -348,4 +349,4 @@ TEST("the parser rejects invalid step values") {
 
 } // WITH_FIXTURE(fixture)
 
-CAF_TEST_MAIN()
+} // namespace

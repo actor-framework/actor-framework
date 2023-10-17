@@ -4,7 +4,6 @@
 
 #include "caf/detail/parser/read_signed_integer.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/test.hpp"
 
 #include "caf/parser_state.hpp"
@@ -61,8 +60,6 @@ template <class T>
 T max_val() {
   return std::numeric_limits<T>::max();
 }
-
-} // namespace
 
 #define ZERO_VALUE(type, literal) check_eq(read<type>(#literal), type(0));
 
@@ -175,4 +172,4 @@ TEST("maximal value") {
   OVERFLOW(int64_t, 0x8000000000000000);
 }
 
-CAF_TEST_MAIN()
+} // namespace

@@ -4,7 +4,6 @@
 
 #include "caf/detail/parser/read_number_or_timespan.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/test.hpp"
 
 #include "caf/detail/nearly_equal.hpp"
@@ -16,6 +15,8 @@
 
 using namespace caf;
 using namespace std::chrono;
+
+namespace {
 
 struct number_or_timespan_parser_consumer {
   std::variant<int64_t, double, timespan> x;
@@ -108,4 +109,4 @@ TEST("invalid timespans") {
 
 } // WITH_FIXTURE(fixture)
 
-CAF_TEST_MAIN()
+} // namespace
