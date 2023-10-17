@@ -108,7 +108,7 @@ TEST("meta objects allow serialization of objects") {
 
 TEST("init_global_meta_objects takes care of creating a meta object table") {
   auto xs = global_meta_objects();
-  require_eq(xs.size(), caf::id_block::meta_object_test::end);
+  require_ge(xs.size(), caf::id_block::meta_object_test::end);
   check_eq(type_name_by_id_v<type_id_v<i32_wrapper>>, "i32_wrapper"s);
   check_eq(type_name_by_id_v<type_id_v<i64_wrapper>>, "i64_wrapper"s);
   check_eq(xs[type_id_v<i32_wrapper>].type_name, "i32_wrapper"s);

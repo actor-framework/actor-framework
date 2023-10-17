@@ -417,12 +417,16 @@ public:
       buf->cancel();
   }
 
-  explicit operator bool() const noexcept {
+  [[nodiscard]] bool valid() const noexcept {
     return ctrl_ != nullptr;
   }
 
+  explicit operator bool() const noexcept {
+    return valid();
+  }
+
   bool operator!() const noexcept {
-    return ctrl_ == nullptr;
+    return !valid();
   }
 
   friend bool operator==(const consumer_resource& lhs,
@@ -495,12 +499,16 @@ public:
       buf->abort(std::move(reason));
   }
 
-  explicit operator bool() const noexcept {
+  [[nodiscard]] bool valid() const noexcept {
     return ctrl_ != nullptr;
   }
 
+  explicit operator bool() const noexcept {
+    return valid();
+  }
+
   bool operator!() const noexcept {
-    return ctrl_ == nullptr;
+    return !valid();
   }
 
   friend bool operator==(const producer_resource& lhs,

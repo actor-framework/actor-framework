@@ -2,14 +2,14 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE async.promise
-
 #include "caf/async/promise.hpp"
 
+#include "caf/test/fixture/deterministic.hpp"
+#include "caf/test/scenario.hpp"
+
+#include "caf/event_based_actor.hpp"
 #include "caf/flow/scoped_coordinator.hpp"
 #include "caf/scheduled_actor/flow.hpp"
-
-#include "core-test.hpp"
 
 using namespace caf;
 using namespace std::literals;
@@ -27,9 +27,7 @@ auto make_observer(std::shared_ptr<std::variant<none_t, T, error>> ptr) {
                              [ptr](const error& what) { *ptr = what; });
 }
 
-} // namespace
-
-BEGIN_FIXTURE_SCOPE(test_coordinator_fixture<>)
+WITH_FIXTURE(test::fixture::deterministic) {
 
 SCENARIO("actors can observe futures") {
   GIVEN("a promise and future pair") {
@@ -42,12 +40,12 @@ SCENARIO("actors can observe futures") {
           fut.bind_to(self).then([val](const std::string& str) { *val = str; },
                                  [val](const error& err) { *val = err; });
         });
-        run();
-        CHECK(std::holds_alternative<none_t>(*val));
+        dispatch_messages();
+        check(std::holds_alternative<none_t>(*val));
         uut.set_value("hello world"s);
-        expect((action), to(testee));
-        if (CHECK(std::holds_alternative<std::string>(*val)))
-          CHECK_EQ(std::get<std::string>(*val), "hello world");
+        expect<action>().to(testee);
+        if (check(std::holds_alternative<std::string>(*val)))
+          check_eq(std::get<std::string>(*val), "hello world");
       }
       AND_THEN("it can observe the value via .observe_on() later") {
         auto val = make_shared_val_ptr<std::string>();
@@ -56,12 +54,12 @@ SCENARIO("actors can observe futures") {
         auto testee = sys.spawn([val, fut](event_based_actor* self) {
           fut.observe_on(self).subscribe(make_observer(val));
         });
-        run();
-        CHECK(std::holds_alternative<none_t>(*val));
+        dispatch_messages();
+        check(std::holds_alternative<none_t>(*val));
         uut.set_value("hello world"s);
-        expect((action), to(testee));
-        if (CHECK(std::holds_alternative<std::string>(*val)))
-          CHECK_EQ(std::get<std::string>(*val), "hello world");
+        expect<action>().to(testee);
+        if (check(std::holds_alternative<std::string>(*val)))
+          check_eq(std::get<std::string>(*val), "hello world");
       }
     }
     WHEN("passing a ready future to an actor") {
@@ -74,9 +72,9 @@ SCENARIO("actors can observe futures") {
           fut.bind_to(self).then([val](const std::string& str) { *val = str; },
                                  [val](const error& err) { *val = err; });
         });
-        run();
-        if (CHECK(std::holds_alternative<std::string>(*val)))
-          CHECK_EQ(std::get<std::string>(*val), "hello world");
+        dispatch_messages();
+        if (check(std::holds_alternative<std::string>(*val)))
+          check_eq(std::get<std::string>(*val), "hello world");
       }
       AND_THEN("it can observe the value via .observe_on() immediately") {
         auto val = make_shared_val_ptr<std::string>();
@@ -86,9 +84,9 @@ SCENARIO("actors can observe futures") {
         auto testee = sys.spawn([val, fut](event_based_actor* self) {
           fut.observe_on(self).subscribe(make_observer(val));
         });
-        run();
-        if (CHECK(std::holds_alternative<std::string>(*val)))
-          CHECK_EQ(std::get<std::string>(*val), "hello world");
+        dispatch_messages();
+        if (check(std::holds_alternative<std::string>(*val)))
+          check_eq(std::get<std::string>(*val), "hello world");
       }
     }
     WHEN("passing a non-ready future to an actor and disposing the action") {
@@ -102,12 +100,12 @@ SCENARIO("actors can observe futures") {
             [val](const std::string& str) { *val = str; },
             [val](const error& err) { *val = err; });
         });
-        run();
-        CHECK(std::holds_alternative<none_t>(*val));
+        dispatch_messages();
+        check(std::holds_alternative<none_t>(*val));
         hdl.dispose();
         uut.set_value("hello world"s);
-        run();
-        CHECK(std::holds_alternative<none_t>(*val));
+        dispatch_messages();
+        check(std::holds_alternative<none_t>(*val));
       }
     }
   }
@@ -123,42 +121,42 @@ SCENARIO("never setting a value or an error breaks the promises") {
         {
           auto uut = promise_t{};
           fut = uut.get_future();
-          CHECK(fut.pending());
+          check(fut.pending());
           {
             // copy ctor
             promise_t cpy{uut};
-            CHECK(fut.pending());
+            check(fut.pending());
             // move ctor
             promise_t mv{std::move(cpy)};
-            CHECK(fut.pending());
+            check(fut.pending());
             {
               // copy assign
               promise_t cpy2;
               cpy2 = mv;
-              CHECK(fut.pending());
+              check(fut.pending());
               // move assign
               promise_t mv2;
               mv2 = std::move(mv);
-              CHECK(fut.pending());
+              check(fut.pending());
             }
-            CHECK(fut.pending());
+            check(fut.pending());
           }
-          CHECK(fut.pending());
+          check(fut.pending());
         }
-        CHECK(!fut.pending());
+        check(!fut.pending());
         auto ctx = flow::scoped_coordinator::make();
         size_t observed_events = 0;
         fut.bind_to(ctx.get()).then(
-          [&observed_events](int32_t) {
+          [this, &observed_events](int32_t) {
             ++observed_events;
-            FAIL("unexpected value");
+            fail("unexpected value");
           },
-          [&observed_events](const error& err) {
+          [this, &observed_events](const error& err) {
             ++observed_events;
-            CHECK_EQ(err, make_error(sec::broken_promise));
+            check_eq(err, make_error(sec::broken_promise));
           });
         ctx->run();
-        CHECK_EQ(observed_events, 1u);
+        check_eq(observed_events, 1u);
       }
       AND_THEN("the future reports a broken promise when using .observe_on()") {
         using promise_t = async::promise<int32_t>;
@@ -167,19 +165,21 @@ SCENARIO("never setting a value or an error breaks the promises") {
         {
           auto uut = promise_t{};
           fut = uut.get_future();
-          CHECK(fut.pending());
+          check(fut.pending());
         }
-        CHECK(!fut.pending());
+        check(!fut.pending());
         auto val = make_shared_val_ptr<int32_t>();
         sys.spawn([val, fut](event_based_actor* self) {
           fut.observe_on(self).subscribe(make_observer(val));
         });
-        run();
-        if (CHECK(std::holds_alternative<error>(*val)))
-          CHECK_EQ(std::get<error>(*val), sec::broken_promise);
+        dispatch_messages();
+        if (check(std::holds_alternative<error>(*val)))
+          check_eq(std::get<error>(*val), sec::broken_promise);
       }
     }
   }
 }
 
-END_FIXTURE_SCOPE()
+} // WITH_FIXTURE(test::fixture::deterministic)
+
+} // namespace

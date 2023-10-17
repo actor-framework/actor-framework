@@ -2,15 +2,15 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE async.consumer_adapter
-
 #include "caf/async/consumer_adapter.hpp"
 
+#include "caf/test/scenario.hpp"
+
+#include "caf/actor_system.hpp"
+#include "caf/actor_system_config.hpp"
 #include "caf/async/blocking_producer.hpp"
 #include "caf/flow/scoped_coordinator.hpp"
 #include "caf/scheduled_actor/flow.hpp"
-
-#include "core-test.hpp"
 
 #include <mutex>
 
@@ -60,7 +60,8 @@ public:
         case async::read_result::try_again_later:
           return;
         default:
-          CAF_FAIL("unexpected pull result: " << res);
+          test::runnable::current().fail("unexpected pull result: {}",
+                                         to_string(res));
           do_wakeup_.dispose();
           return;
       }
@@ -81,9 +82,7 @@ private:
   std::vector<int> values_;
 };
 
-} // namespace
-
-BEGIN_FIXTURE_SCOPE(fixture)
+WITH_FIXTURE(fixture) {
 
 SCENARIO("consumer adapters allow integrating consumers into event loops") {
   GIVEN("a producers running in a separate thread") {
@@ -99,12 +98,14 @@ SCENARIO("consumer adapters allow integrating consumers into event loops") {
         auto& got = runner.values();
         auto want = std::vector<int>(5000);
         std::iota(want.begin(), want.end(), 0);
-        CHECK_EQ(got.size(), 5000u);
-        CHECK_EQ(got, want);
+        check_eq(got.size(), 5000u);
+        check_eq(got, want);
         producer.join();
       }
     }
   }
 }
 
-END_FIXTURE_SCOPE()
+} // WITH_FIXTURE(fixture)
+
+} // namespace

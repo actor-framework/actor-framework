@@ -2,14 +2,15 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE async.blocking_consumer
-
 #include "caf/async/blocking_consumer.hpp"
 
+#include "caf/test/scenario.hpp"
+#include "caf/test/test.hpp"
+
+#include "caf/actor_system.hpp"
+#include "caf/actor_system_config.hpp"
 #include "caf/async/blocking_producer.hpp"
 #include "caf/scheduled_actor/flow.hpp"
-
-#include "core-test.hpp"
 
 #include <mutex>
 
@@ -34,9 +35,7 @@ void produce(async::producer_resource<int> push) {
     out.push(i);
 }
 
-} // namespace
-
-BEGIN_FIXTURE_SCOPE(fixture)
+WITH_FIXTURE(fixture) {
 
 SCENARIO("blocking consumers allow threads to receive data") {
   GIVEN("a producers running in a separate thread") {
@@ -57,22 +56,24 @@ SCENARIO("blocking consumers allow threads to receive data") {
               done = true;
               break;
             case async::read_result::abort:
-              CAF_FAIL("did not expect async::read_result::abort");
+              fail("did not expect async::read_result::abort");
               done = true;
               break;
             default:
-              CAF_FAIL("unexpected pull result");
+              fail("unexpected pull result");
               done = true;
           }
         }
         auto want = std::vector<int>(5000);
         std::iota(want.begin(), want.end(), 0);
-        CHECK_EQ(got.size(), 5000u);
-        CHECK_EQ(got, want);
+        check_eq(got.size(), 5000u);
+        check_eq(got, want);
         producer.join();
       }
     }
   }
 }
 
-END_FIXTURE_SCOPE()
+} // WITH_FIXTURE(fixture)
+
+} // namespace
