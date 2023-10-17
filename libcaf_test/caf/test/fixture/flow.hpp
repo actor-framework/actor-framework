@@ -83,6 +83,11 @@ public:
   /// Runs all flows created by this fixture.
   void run_flows();
 
+  /// Returns the coordinator used by this fixture.
+  [[nodiscard]] caf::flow::coordinator* this_coordinator() {
+    return coordinator_.get();
+  }
+
 private:
   caf::flow::scoped_coordinator_ptr coordinator_;
 };

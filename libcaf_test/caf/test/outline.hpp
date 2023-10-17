@@ -33,14 +33,15 @@ public:
 
   using super::super;
 
-  void run() override;
-
   auto make_examples_setter() {
     if (ctx_->example_parameters.empty())
       return examples_setter{&ctx_->example_parameters};
     else
       return examples_setter{nullptr};
   }
+
+protected:
+  void run() override;
 };
 
 } // namespace caf::test

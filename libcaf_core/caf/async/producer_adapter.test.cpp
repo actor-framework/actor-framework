@@ -2,15 +2,25 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE async.blocking_producer
+#include "caf/async/producer_adapter.hpp"
 
+#include "caf/test/scenario.hpp"
+
+#include "caf/actor_system.hpp"
+#include "caf/actor_system_config.hpp"
 #include "caf/async/blocking_producer.hpp"
-
+#include "caf/event_based_actor.hpp"
+#include "caf/flow/scoped_coordinator.hpp"
+#include "caf/init_global_meta_objects.hpp"
 #include "caf/scheduled_actor/flow.hpp"
-
-#include "core-test.hpp"
+#include "caf/scoped_actor.hpp"
 
 #include <mutex>
+
+// Some offset to avoid collisions with other type IDs.
+CAF_BEGIN_TYPE_ID_BLOCK(producer_adapter_test, caf::first_custom_type_id + 10)
+  CAF_ADD_TYPE_ID(producer_adapter_test, (caf::cow_vector<int>) )
+CAF_END_TYPE_ID_BLOCK(producer_adapter_test)
 
 using namespace caf;
 
@@ -52,14 +62,44 @@ using push_resource_t = async::producer_resource<pull_val_t>;
 
 using pull_resource_t = async::consumer_resource<pull_val_t>;
 
+class runner_t {
+public:
+  runner_t(async::spsc_buffer_ptr<int> buf, async::execution_context_ptr ctx,
+           int first, int last)
+    : n(first), end(last) {
+    do_resume_ = make_action([this] { resume(); });
+    do_cancel_ = make_action([this] { do_resume_.dispose(); });
+    out = make_producer_adapter(buf, ctx, do_resume_, do_cancel_);
+  }
+
+  disposable as_disposable() {
+    return do_resume_.as_disposable();
+  }
+
+  void resume() {
+    while (n < end)
+      if (out.push(n++) == 0)
+        return;
+    do_resume_.dispose();
+  }
+
+private:
+  int n;
+  int end;
+  async::producer_adapter<int> out;
+  action do_resume_;
+  action do_cancel_;
+};
+
 void do_push(sync_t* sync, push_val_t push, int begin, int end) {
   auto buf = push.try_open();
   if (!buf) {
     CAF_RAISE_ERROR("push.try_open failed");
   }
-  async::blocking_producer out{std::move(buf)};
-  for (auto i = begin; i != end; ++i)
-    out.push(i);
+  auto loop = flow::make_scoped_coordinator();
+  runner_t runner{buf, loop, begin, end};
+  loop->watch(runner.as_disposable());
+  loop->run();
   sync->release();
 }
 
@@ -75,6 +115,8 @@ void run(push_resource_t push) {
   if (!buf) {
     CAF_RAISE_ERROR("push.try_open failed");
   }
+  // Note: using the adapter here as well would be tricky since we would need to
+  // wait for available threads.
   async::blocking_producer out{std::move(buf)};
   sync_t sync;
   std::vector<std::thread> threads;
@@ -109,26 +151,26 @@ void receiver_impl(event_based_actor* self, pull_resource_t inputs,
     });
 }
 
-} // namespace
+WITH_FIXTURE(fixture) {
 
-BEGIN_FIXTURE_SCOPE(fixture)
-
-SCENARIO("blocking producers allow threads to generate data") {
+SCENARIO("producers adapters allow integrating producers into event loops") {
   GIVEN("a dynamic set of blocking producers") {
     WHEN("consuming the generated values from an actor via flat_map") {
       THEN("the actor merges all values from all buffers into one") {
         auto [pull, push] = async::make_spsc_buffer_resource<pull_val_t>();
+        auto loop = flow::make_scoped_coordinator();
+
         scoped_actor self{sys};
         auto receiver = self->spawn(receiver_impl, std::move(pull),
                                     actor{self});
-        std::thread runner{run, std::move(push)};
-        self->receive([](const cow_vector<int>& values) {
+        std::thread runner{::run, std::move(push)};
+        self->receive([this](const cow_vector<int>& values) {
           auto want = std::vector<int>(5000);
           std::iota(want.begin(), want.end(), 0);
           auto got = values.std();
           std::sort(got.begin(), got.end());
-          CHECK_EQ(got.size(), 5000u);
-          CHECK_EQ(got, want);
+          check_eq(got.size(), 5000u);
+          check_eq(got, want);
         });
         runner.join();
       }
@@ -136,4 +178,10 @@ SCENARIO("blocking producers allow threads to generate data") {
   }
 }
 
-END_FIXTURE_SCOPE()
+} // WITH_FIXTURE(fixture)
+
+TEST_INIT() {
+  init_global_meta_objects<id_block::producer_adapter_test>();
+}
+
+} // namespace

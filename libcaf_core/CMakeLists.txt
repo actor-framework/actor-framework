@@ -72,7 +72,6 @@ caf_add_component(
     caf/abstract_mailbox.cpp
     caf/action.cpp
     caf/action.test.cpp
-    caf/delegate.test.cpp
     caf/actor.cpp
     caf/actor_addr.cpp
     caf/actor_clock.cpp
@@ -90,12 +89,20 @@ caf_add_component(
     caf/actor_system_config.cpp
     caf/async/batch.cpp
     caf/async/batch.test.cpp
+    caf/async/blocking_consumer.test.cpp
+    caf/async/blocking_producer.test.cpp
     caf/async/consumer.cpp
+    caf/async/consumer_adapter.test.cpp
     caf/async/execution_context.cpp
     caf/async/file.test.cpp
     caf/async/producer.cpp
+    caf/async/producer_adapter.test.cpp
+    caf/async/promise.test.cpp
+    caf/async/publisher.test.cpp
+    caf/async/spsc_buffer.test.cpp
     caf/attachable.cpp
     caf/behavior.cpp
+    caf/delegate.test.cpp
     caf/behavior.test.cpp
     caf/binary_deserializer.cpp
     caf/binary_serializer.cpp
@@ -195,6 +202,7 @@ caf_add_component(
     caf/group_module.cpp
     caf/hash/fnv.test.cpp
     caf/hash/sha1.cpp
+    caf/hash/sha1.test.cpp
     caf/init_global_meta_objects.cpp
     caf/intrusive/lifo_inbox.test.cpp
     caf/intrusive/linked_list.test.cpp
@@ -272,13 +280,6 @@ caf_add_component(
     actor_registry
     actor_system_config
     actor_termination
-    async.blocking_consumer
-    async.blocking_producer
-    async.consumer_adapter
-    async.producer_adapter
-    async.promise
-    async.publisher
-    async.spsc_buffer
     binary_deserializer
     binary_serializer
     blocking_actor
@@ -325,7 +326,6 @@ caf_add_component(
     flow.single
     function_view
     handles
-    hash.sha1
     intrusive_ptr
     ipv4_address
     ipv4_endpoint

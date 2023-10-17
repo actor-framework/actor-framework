@@ -416,6 +416,9 @@ public:
 
   // -- properties -------------------------------------------------------------
 
+  /// Returns the number of pending messages in the system.
+  size_t mail_count();
+
   /// Returns the number of pending messages for `receiver`.
   size_t mail_count(scheduled_actor* receiver);
 

@@ -29,6 +29,9 @@ namespace caf::test {
 /// A runnable definition of a test case or scenario.
 class CAF_TEST_EXPORT runnable {
 public:
+  friend class outline;
+  friend class runner;
+
   /// Creates a new runnable.
   /// @param ctx The test context.
   /// @param description A description of the test or scenario.
@@ -45,9 +48,6 @@ public:
   }
 
   virtual ~runnable();
-
-  /// Runs the next branch of the test.
-  virtual void run();
 
   /// Generates a message with the INFO severity level.
   template <class... Ts>
@@ -369,6 +369,9 @@ protected:
   detail::source_location loc_;
 
 private:
+  /// Runs the next branch of the test.
+  virtual void run();
+
   template <class... Ts, class Array, size_t... Is>
   static auto convert_all(Array& arr, std::index_sequence<Is...>, bool& ok) {
     auto result = std::make_tuple(get_as<Ts>(arr[Is])...);

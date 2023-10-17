@@ -336,6 +336,14 @@ mailbox_element_ptr deterministic::pop_msg_impl(scheduled_actor* receiver) {
   return result;
 }
 
+size_t deterministic::mail_count() {
+  size_t result = 0;
+  for (auto& event : events_)
+    if (event->target)
+      ++result;
+  return result;
+}
+
 size_t deterministic::mail_count(scheduled_actor* receiver) {
   if (receiver == nullptr)
     return 0;

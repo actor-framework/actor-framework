@@ -2,16 +2,17 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE async.spsc_buffer
-
 #include "caf/async/spsc_buffer.hpp"
 
+#include "caf/test/fixture/deterministic.hpp"
+#include "caf/test/scenario.hpp"
+#include "caf/test/test.hpp"
+
+#include "caf/event_based_actor.hpp"
 #include "caf/flow/coordinator.hpp"
 #include "caf/flow/observable_builder.hpp"
 #include "caf/flow/observer.hpp"
 #include "caf/scheduled_actor/flow.hpp"
-
-#include "core-test.hpp"
 
 #include <memory>
 
@@ -104,46 +105,44 @@ struct dummy_observer {
   error err;
 };
 
-} // namespace
+WITH_FIXTURE(test::fixture::deterministic) {
 
-BEGIN_FIXTURE_SCOPE(test_coordinator_fixture<>)
-
-TEST_CASE("resources may be copied") {
+TEST("resources may be copied") {
   auto [rd, wr] = async::make_spsc_buffer_resource<int>(6, 2);
   // Test copy constructor.
   async::consumer_resource<int> rd2{rd};
-  CHECK_EQ(rd, rd2);
+  check_eq(rd, rd2);
   async::producer_resource<int> wr2{wr};
-  CHECK_EQ(wr, wr2);
+  check_eq(wr, wr2);
   // Test copy-assignment.
   async::consumer_resource<int> rd3;
-  CHECK_NE(rd2, rd3);
+  check_ne(rd2, rd3);
   rd3 = rd2;
-  CHECK_EQ(rd2, rd3);
+  check_eq(rd2, rd3);
   async::producer_resource<int> wr3;
-  CHECK_NE(wr2, wr3);
+  check_ne(wr2, wr3);
   wr3 = wr2;
-  CHECK_EQ(wr2, wr3);
+  check_eq(wr2, wr3);
 }
 
-TEST_CASE("resources may be moved") {
+TEST("resources may be moved") {
   auto [rd, wr] = async::make_spsc_buffer_resource<int>(6, 2);
-  CHECK(rd);
-  CHECK(wr);
+  check(static_cast<bool>(rd));
+  check(static_cast<bool>(wr));
   // Test move constructor.
   async::consumer_resource<int> rd2{std::move(rd)};
-  CHECK(!rd); // NOLINT(bugprone-use-after-move)
-  CHECK(rd2);
+  check(!rd); // NOLINT(bugprone-use-after-move)
+  check(rd2.valid());
   async::producer_resource<int> wr2{std::move(wr)};
-  CHECK(!wr); // NOLINT(bugprone-use-after-move)
-  CHECK(wr2);
+  check(!wr); // NOLINT(bugprone-use-after-move)
+  check(wr2.valid());
   // Test move-assignment.
   async::consumer_resource<int> rd3{std::move(rd2)};
-  CHECK(!rd2); // NOLINT(bugprone-use-after-move)
-  CHECK(rd3);
+  check(!rd2); // NOLINT(bugprone-use-after-move)
+  check(rd3.valid());
   async::producer_resource<int> wr3{std::move(wr2)};
-  CHECK(!wr2); // NOLINT(bugprone-use-after-move)
-  CHECK(wr3);
+  check(!wr2); // NOLINT(bugprone-use-after-move)
+  check(wr3.valid());
 }
 
 SCENARIO("SPSC buffers may go past their capacity") {
@@ -153,39 +152,37 @@ SCENARIO("SPSC buffers may go past their capacity") {
     auto buf = make_counted<async::spsc_buffer<int>>(10, 2);
     buf->set_producer(prod);
     buf->set_consumer(cons);
-    CHECK_EQ(prod->consumer_ready, true);
-    CHECK_EQ(prod->consumer_cancel, false);
-    CHECK_EQ(prod->demand, 10u);
-    CHECK_EQ(cons->producer_ready, true);
-    CHECK_EQ(cons->producer_wakeups, 0u);
+    check_eq(prod->consumer_ready, true);
+    check_eq(prod->consumer_cancel, false);
+    check_eq(prod->demand, 10u);
+    check_eq(cons->producer_ready, true);
+    check_eq(cons->producer_wakeups, 0u);
     WHEN("pushing into the buffer") {
       buf->push(1);
-      CHECK_EQ(cons->producer_wakeups, 1u);
+      check_eq(cons->producer_wakeups, 1u);
       buf->push(2);
-      CHECK_EQ(cons->producer_wakeups, 1u);
+      check_eq(cons->producer_wakeups, 1u);
       THEN("excess items are stored but do not trigger demand when consumed") {
         auto tmp = std::vector<int>{3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14};
         buf->push(make_span(tmp));
         prod->demand = 0;
-        CHECK_EQ(cons->producer_wakeups, 1u);
-        MESSAGE("consume one element");
-        {
-          dummy_observer obs;
-          auto [ok, consumed] = buf->pull(async::prioritize_errors, 1, obs);
-          CHECK_EQ(ok, true);
-          CHECK_EQ(consumed, 1u);
-          CHECK_EQ(obs.consumed, 1u);
-          CHECK_EQ(prod->demand, 0u);
-        }
-        MESSAGE("consume all remaining elements");
-        {
-          dummy_observer obs;
-          auto [ok, consumed] = buf->pull(async::prioritize_errors, 20, obs);
-          CHECK_EQ(ok, true);
-          CHECK_EQ(consumed, 13u);
-          CHECK_EQ(obs.consumed, 13u);
-          CHECK_EQ(prod->demand, 10u);
-        }
+        check_eq(cons->producer_wakeups, 1u);
+      }
+      AND_THEN("pull(1) consumes one element") {
+        dummy_observer obs;
+        auto [ok, consumed] = buf->pull(async::prioritize_errors, 1, obs);
+        check_eq(ok, true);
+        check_eq(consumed, 1u);
+        check_eq(obs.consumed, 1u);
+        check_eq(prod->demand, 0u);
+      }
+      AND_THEN("pull(20) consumes all remaining elements") {
+        dummy_observer obs;
+        auto [ok, consumed] = buf->pull(async::prioritize_errors, 20, obs);
+        check_eq(ok, true);
+        check_eq(consumed, 13u);
+        check_eq(obs.consumed, 13u);
+        check_eq(prod->demand, 10u);
       }
     }
   }
@@ -193,33 +190,31 @@ SCENARIO("SPSC buffers may go past their capacity") {
 
 SCENARIO("the prioritize_errors policy skips processing of pending items") {
   GIVEN("an SPSC buffer with consumer and produer") {
+    auto prod = make_counted<dummy_producer>();
+    auto cons = make_counted<dummy_consumer>();
+    auto buf = make_counted<async::spsc_buffer<int>>(10, 2);
+    auto tmp = std::vector<int>{1, 2, 3, 4, 5};
     WHEN("pushing into the buffer and then aborting") {
       THEN("pulling items with prioritize_errors skips remaining items") {
-        auto prod = make_counted<dummy_producer>();
-        auto cons = make_counted<dummy_consumer>();
-        auto buf = make_counted<async::spsc_buffer<int>>(10, 2);
-        auto tmp = std::vector<int>{1, 2, 3, 4, 5};
         buf->set_producer(prod);
         buf->push(make_span(tmp));
         buf->set_consumer(cons);
-        CHECK_EQ(cons->producer_wakeups, 1u);
-        MESSAGE("consume one element");
-        {
-          dummy_observer obs;
-          auto [ok, consumed] = buf->pull(async::prioritize_errors, 1, obs);
-          CHECK_EQ(ok, true);
-          CHECK_EQ(consumed, 1u);
-          CHECK_EQ(obs.consumed, 1u);
-        }
-        MESSAGE("set an error and try consuming remaining elements");
-        {
-          buf->abort(sec::runtime_error);
-          dummy_observer obs;
-          auto [ok, consumed] = buf->pull(async::prioritize_errors, 1, obs);
-          CHECK_EQ(ok, false);
-          CHECK_EQ(consumed, 0u);
-          CHECK_EQ(obs.err, sec::runtime_error);
-        }
+        check_eq(cons->producer_wakeups, 1u);
+      }
+      AND_THEN("pull(1) consumes one element") {
+        dummy_observer obs;
+        auto [ok, consumed] = buf->pull(async::prioritize_errors, 1, obs);
+        check_eq(ok, true);
+        check_eq(consumed, 1u);
+        check_eq(obs.consumed, 1u);
+      }
+      AND_THEN("calling abort will cause the next pull(1) to return an error") {
+        buf->abort(sec::runtime_error);
+        dummy_observer obs;
+        auto [ok, consumed] = buf->pull(async::prioritize_errors, 1, obs);
+        check_eq(ok, false);
+        check_eq(consumed, 0u);
+        check_eq(obs.err, sec::runtime_error);
       }
     }
   }
@@ -245,8 +240,8 @@ SCENARIO("SPSC buffers moves data between actors") {
             .from_resource(rd)
             .for_each([&outputs](int x) { outputs.emplace_back(x); });
         });
-        run();
-        CHECK_EQ(inputs, outputs);
+        dispatch_messages();
+        check_eq(inputs, outputs);
       }
     }
   }
@@ -270,9 +265,9 @@ SCENARIO("SPSC buffers appear empty when only one actor is connected") {
           });
         }
         // At scope exit, `wr` gets destroyed, closing the buffer.
-        run();
-        CHECK(finalized);
-        CHECK(outputs.empty());
+        dispatch_messages();
+        check(finalized);
+        check(outputs.empty());
       }
     }
     WHEN("destroying the write end after adding a subscriber") {
@@ -291,12 +286,12 @@ SCENARIO("SPSC buffers appear empty when only one actor is connected") {
           });
           // Only difference to before: have the actor create the observable
           // from `rd` handle before destroying `wr`.
-          run();
+          dispatch_messages();
         }
         // At scope exit, `wr` gets destroyed, closing the buffer.
-        run();
-        CHECK(finalized);
-        CHECK(outputs.empty());
+        dispatch_messages();
+        check(finalized);
+        check(outputs.empty());
       }
     }
     WHEN("aborting the write end") {
@@ -305,21 +300,21 @@ SCENARIO("SPSC buffers appear empty when only one actor is connected") {
         auto outputs = std::vector<int>{};
         auto on_error_called = false;
         auto [rd, wr] = async::make_spsc_buffer_resource<int>(6, 2);
-        sys.spawn([rd{rd}, &outputs, &on_error_called](actor_t* snk) {
+        sys.spawn([this, rd{rd}, &outputs, &on_error_called](actor_t* snk) {
           snk
             ->make_observable() //
             .from_resource(rd)
-            .do_on_error([&on_error_called](const error& err) {
+            .do_on_error([this, &on_error_called](const error& err) {
               on_error_called = true;
-              CHECK_EQ(err, sec::runtime_error);
+              check_eq(err, sec::runtime_error);
             })
             .for_each([&outputs](int x) { outputs.emplace_back(x); });
         });
         wr.abort(sec::runtime_error);
         wr.abort(sec::runtime_error); // Calling twice must have no side effect.
-        run();
-        CHECK(on_error_called);
-        CHECK(outputs.empty());
+        dispatch_messages();
+        check(on_error_called);
+        check(outputs.empty());
       }
     }
     WHEN("closing the write end") {
@@ -339,9 +334,9 @@ SCENARIO("SPSC buffers appear empty when only one actor is connected") {
         });
         wr.close();
         wr.close(); // Calling twice must have no side effect.
-        run();
-        CHECK(on_complete_called);
-        CHECK(outputs.empty());
+        dispatch_messages();
+        check(on_complete_called);
+        check(outputs.empty());
       }
     }
   }
@@ -363,8 +358,8 @@ SCENARIO("SPSC buffers drop data when discarding the read end") {
           });
         }
         // At scope exit, `rd` gets destroyed, closing the buffer.
-        run();
-        CHECK(outputs.empty());
+        dispatch_messages();
+        check(outputs.empty());
       }
     }
     WHEN("destroying the read end before adding a publisher") {
@@ -381,11 +376,11 @@ SCENARIO("SPSC buffers drop data when discarding the read end") {
           });
           // Only difference to before: have the actor add an observer that
           // writes to `wr` before destroying `rd`.
-          run();
+          dispatch_messages();
         }
         // At scope exit, `rd` gets destroyed, closing the buffer.
-        run();
-        CHECK(outputs.empty());
+        dispatch_messages();
+        check(outputs.empty());
       }
     }
     WHEN("canceling the read end before adding a publisher") {
@@ -401,8 +396,8 @@ SCENARIO("SPSC buffers drop data when discarding the read end") {
         });
         rd.cancel();
         rd.cancel(); // Calling twice must have no side effect.
-        run();
-        CHECK(outputs.empty());
+        dispatch_messages();
+        check(outputs.empty());
       }
     }
   }
@@ -413,10 +408,10 @@ SCENARIO("resources are invalid after calling try_open") {
     WHEN("opening it twice") {
       THEN("the second try_open fails") {
         auto [rd, wr] = async::make_spsc_buffer_resource<int>(6, 2);
-        CHECK(rd);
-        CHECK_NE(rd.try_open(), nullptr);
-        CHECK(!rd);
-        CHECK_EQ(rd.try_open(), nullptr);
+        check(rd.valid());
+        check_ne(rd.try_open(), nullptr);
+        check(!rd);
+        check_eq(rd.try_open(), nullptr);
       }
     }
   }
@@ -435,18 +430,19 @@ SCENARIO("producer resources may be subscribed to flows only once") {
             .iota(1)
             .subscribe(wr);
         });
-        self->monitor(prod1);
-        run();
         auto prod2 = sys.spawn([wr{wr}](actor_t* src) {
           src
             ->make_observable() //
             .iota(1)
             .subscribe(wr);
         });
-        self->monitor(prod2);
-        run();
-        expect((down_msg), to(self).with(down_msg{prod2.address(), error{}}));
-        CHECK(self->mailbox().empty());
+        dispatch_messages();
+        check(!terminated(prod1));
+        check(terminated(prod2));
+        rd.cancel();
+        dispatch_messages();
+        check(terminated(prod1));
+        check(terminated(prod2));
       }
     }
   }
@@ -465,19 +461,18 @@ SCENARIO("consumer resources may be converted to flows only once") {
             .from_resource(rd)
             .for_each([&outputs](int x) { outputs.emplace_back(x); });
         });
-        self->monitor(snk1);
-        run();
         auto snk2 = sys.spawn([rd{rd}, &outputs](actor_t* snk) {
           snk
             ->make_observable() //
             .from_resource(rd)
             .for_each([&outputs](int x) { outputs.emplace_back(x); });
         });
-        self->monitor(snk2);
-        run();
-        expect((down_msg), to(self).with(down_msg{snk2.address(), error{}}));
-        CHECK(self->mailbox().empty());
-        CHECK(outputs.empty());
+        check(!terminated(snk1));
+        check(terminated(snk2));
+        wr.close();
+        dispatch_messages();
+        check(terminated(snk1));
+        check(terminated(snk2));
       }
     }
   }
@@ -501,17 +496,16 @@ SCENARIO("SPSC buffers reject multiple producers") {
         auto prod1 = sys.spawn([wr1](actor_t* src) {
           src->make_observable().iota(1).subscribe(wr1);
         });
-        self->monitor(prod1);
-        run();
         auto prod2 = sys.spawn([wr2](actor_t* src) {
           src->make_observable().iota(1).subscribe(wr2);
         });
-        self->monitor(prod2);
-        run();
-        // prod2 dies immediately to the exception.
-        expect((down_msg),
-               to(self).with(down_msg{prod2.address(), sec::runtime_error}));
-        CHECK(self->mailbox().empty());
+        dispatch_messages();
+        check(!terminated(prod1));
+        check(terminated(prod2));
+        rd.cancel();
+        dispatch_messages();
+        check(terminated(prod1));
+        check(terminated(prod2));
       }
     }
   }
@@ -537,21 +531,19 @@ SCENARIO("SPSC buffers reject multiple consumers") {
             .from_resource(rd1)
             .for_each([&outputs](int x) { outputs.emplace_back(x); });
         });
-        self->monitor(snk1);
-        run();
         auto snk2 = sys.spawn([rd2, &outputs](actor_t* snk) {
           snk
             ->make_observable() //
             .from_resource(rd2)
             .for_each([&outputs](int x) { outputs.emplace_back(x); });
         });
-        self->monitor(snk2);
-        run();
-        // snk2 dies immediately to the exception.
-        expect((down_msg),
-               to(self).with(down_msg{snk2.address(), sec::runtime_error}));
-        CHECK(self->mailbox().empty());
-        CHECK(outputs.empty());
+        dispatch_messages();
+        check(!terminated(snk1));
+        check(terminated(snk2));
+        wr.close();
+        dispatch_messages();
+        check(terminated(snk1));
+        check(terminated(snk2));
       }
     }
   }
@@ -559,4 +551,6 @@ SCENARIO("SPSC buffers reject multiple consumers") {
 
 #endif // CAF_ENABLE_EXCEPTIONS
 
-END_FIXTURE_SCOPE()
+} // WITH_FIXTURE(test::fixture::deterministic)
+
+} // namespace
