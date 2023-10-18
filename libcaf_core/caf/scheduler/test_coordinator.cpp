@@ -9,6 +9,7 @@
 #include "caf/raise_error.hpp"
 #include "caf/resumable.hpp"
 
+#include <cstdio>
 #include <limits>
 
 namespace caf::scheduler {
@@ -33,8 +34,9 @@ private:
 class dummy_printer : public monitorable_actor {
 public:
   dummy_printer(actor_config& cfg) : monitorable_actor(cfg) {
-    mh_.assign(
-      [&](add_atom, actor_id, const std::string& str) { std::cout << str; });
+    mh_.assign([&](add_atom, actor_id, const std::string& str) {
+      printf("%s", str.c_str());
+    });
   }
 
   bool enqueue(mailbox_element_ptr what, execution_unit*) override {

@@ -20,6 +20,7 @@
 #include "caf/make_counted.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
 
+#include <cstdio>
 #include <optional>
 #include <utility>
 
@@ -512,7 +513,7 @@ void default_multiplexer::wr_dispatch_request(resumable* ptr) {
     intrusive_ptr_release(ptr);
   } else if (static_cast<size_t>(res) < sizeof(ptrval)) {
     // must not happen: wrote invalid pointer to pipe
-    std::cerr << "[CAF] Fatal error: wrote invalid data to pipe" << std::endl;
+    fprintf(stderr, "[CAF] Fatal error: wrote invalid data to pipe\n");
     abort();
   }
 }

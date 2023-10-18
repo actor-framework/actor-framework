@@ -16,6 +16,7 @@
 #include "caf/sec.hpp"
 
 #include <algorithm>
+#include <thread>
 
 #ifndef CAF_WINDOWS
 #  include <poll.h>
