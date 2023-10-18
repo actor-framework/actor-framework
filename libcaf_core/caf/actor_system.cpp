@@ -332,10 +332,10 @@ actor_system::actor_system(actor_system_config& cfg)
     else if (sr_policy == "testing")
       sc = testing;
     else if (sr_policy != "stealing")
-      std::cerr << "[WARNING] " << deep_to_string(sr_policy)
-                << " is an unrecognized scheduler pollicy, "
-                   "falling back to 'stealing' (i.e. work-stealing)"
-                << std::endl;
+      fprintf(stderr,
+              "[WARNING] '%s' is an unrecognized scheduler policy, falling "
+              "back to 'stealing' (i.e. work-stealing)\n",
+              sr_policy.c_str());
     switch (sc) {
       default: // any invalid configuration falls back to work stealing
         sched.reset(new steal(*this));

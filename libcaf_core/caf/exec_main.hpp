@@ -10,6 +10,8 @@
 #include "caf/detail/type_traits.hpp"
 #include "caf/init_global_meta_objects.hpp"
 
+#include <cstdio>
+
 namespace caf {
 
 template <class>
@@ -76,8 +78,9 @@ int exec_main(F fun, int argc, char** argv) {
   (exec_main_load_module<Ts>(cfg), ...);
   // Pass CLI options to config.
   if (auto err = cfg.parse(argc, argv)) {
-    std::cerr << "error while parsing CLI and file options: " << to_string(err)
-              << std::endl;
+    auto err_str = to_string(err);
+    fprintf(stderr, "error while parsing CLI and file options: %s\n",
+            err_str.c_str());
     return EXIT_FAILURE;
   }
   // Return immediately if a help text was printed.
@@ -87,7 +90,7 @@ int exec_main(F fun, int argc, char** argv) {
   actor_system system{cfg};
   if (cfg.slave_mode) {
     if (!cfg.slave_mode_fun) {
-      std::cerr << "cannot run slave mode, I/O module not loaded" << std::endl;
+      fprintf(stderr, "cannot run slave mode, I/O module not loaded\n");
       return EXIT_FAILURE;
     }
     return cfg.slave_mode_fun(system, cfg);

@@ -348,7 +348,6 @@ caf_add_component(
     json_value
     json_writer
     load_inspector
-    logger
     mailbox_element
     message
     message_id

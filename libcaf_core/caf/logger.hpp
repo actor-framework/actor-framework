@@ -9,24 +9,18 @@
 #include "caf/deep_to_string.hpp"
 #include "caf/detail/arg_wrapper.hpp"
 #include "caf/detail/core_export.hpp"
+#include "caf/detail/format.hpp"
 #include "caf/detail/log_level.hpp"
 #include "caf/detail/pp.hpp"
 #include "caf/detail/pretty_type_name.hpp"
 #include "caf/detail/scope_guard.hpp"
-#include "caf/detail/sync_ring_buffer.hpp"
 #include "caf/fwd.hpp"
-#include "caf/ref_counted.hpp"
-#include "caf/timestamp.hpp"
 
 #include <cstring>
-#include <fstream>
-#include <iostream>
 #include <sstream>
 #include <string_view>
-#include <thread>
 #include <type_traits>
 #include <typeinfo>
-#include <unordered_map>
 
 /*
  * To enable logging, you have to define CAF_DEBUG. This enables
@@ -48,75 +42,67 @@ namespace caf {
 /// default, the logger generates log4j compatible output.
 class CAF_CORE_EXPORT logger {
 public:
+  // -- friends ----------------------------------------------------------------
+
+  class trace_exit_guard;
+
+  friend class actor_system;
+
+  friend class trace_exit_guard;
+
   // -- member types -----------------------------------------------------------
 
-  /// Encapsulates a single logging event.
-  struct CAF_CORE_EXPORT event {
-    // -- constructors, destructors, and assignment operators ------------------
-
-    event() = default;
-
-    event(event&&) = default;
-
-    event(const event&) = default;
-
-    event& operator=(event&&) = default;
-
-    event& operator=(const event&) = default;
-
-    event(unsigned lvl, unsigned line, std::string_view cat,
-          std::string_view full_fun, std::string_view fun, std::string_view fn,
-          std::string msg, std::thread::id t, actor_id a, timestamp ts);
-
-    // -- member variables -----------------------------------------------------
-
-    /// Level/priority of the event.
+  /// Stores context information for a log message.
+  struct context {
+    /// Severity of the message.
     unsigned level;
+
+    /// Name of the component logging the event.
+    std::string_view component;
 
     /// Current line in the file.
     unsigned line_number;
 
-    /// Name of the category (component) logging the event.
-    std::string_view category_name;
-
-    /// Name of the current function as reported by `__PRETTY_FUNCTION__`.
-    std::string_view pretty_fun;
-
-    /// Name of the current function as reported by `__func__`.
-    std::string_view simple_fun;
-
     /// Name of the current file.
-    std::string_view file_name;
+    const char* file_name;
 
-    /// User-provided message.
-    std::string message;
-
-    /// Thread ID of the caller.
-    std::thread::id tid;
-
-    /// Actor ID of the caller.
-    actor_id aid;
-
-    /// Timestamp of the event.
-    timestamp tstamp;
+    /// Name of the current function.
+    const char* function_name;
   };
 
-  enum field_type {
-    invalid_field,
-    category_field,
-    class_name_field,
-    date_field,
-    file_field,
-    line_field,
-    message_field,
-    method_field,
-    newline_field,
-    priority_field,
-    runtime_field,
-    thread_field,
-    actor_field,
-    percent_sign_field,
-    plain_text_field
+  /// Helper class to print exit trace messages on scope exit.
+  class trace_exit_guard {
+  public:
+    trace_exit_guard() = default;
+
+    trace_exit_guard(logger* instance, context ctx)
+      : instance_(instance), ctx_(ctx) {
+      // nop
+    }
+
+    trace_exit_guard(trace_exit_guard&& other) {
+      instance_ = other.instance_;
+      if (instance_) {
+        other.instance_ = nullptr;
+        ctx_ = other.ctx_;
+      }
+    }
+
+    trace_exit_guard& operator=(trace_exit_guard&& other) {
+      using std::swap;
+      swap(instance_, other.instance_);
+      swap(ctx_, other.ctx_);
+      return *this;
+    }
+
+    ~trace_exit_guard() {
+      if (instance_)
+        instance_->do_log(ctx_, std::string{"EXIT"});
+    }
+
+  private:
+    logger* instance_ = nullptr;
+    context ctx_;
   };
 
   /// Utility class for building user-defined log messages with `CAF_ARG`.
@@ -125,25 +111,27 @@ public:
     line_builder();
 
     template <class T>
-    std::enable_if_t<!std::is_pointer_v<T>, line_builder&>
-    operator<<(const T& x) {
+    std::enable_if_t<!std::is_pointer_v<T>, line_builder&&>
+    operator<<(const T& x) && {
       if (!str_.empty())
         str_ += " ";
       str_ += deep_to_string(x);
-      return *this;
+      return std::move(*this);
     }
 
-    line_builder& operator<<(const local_actor* self);
+    line_builder&& operator<<(const local_actor* self) &&;
 
-    line_builder& operator<<(const std::string& str);
+    line_builder&& operator<<(const std::string& str) &&;
 
-    line_builder& operator<<(std::string_view str);
+    line_builder&& operator<<(std::string_view str) &&;
 
-    line_builder& operator<<(const char* str);
+    line_builder&& operator<<(const char* str) &&;
 
-    line_builder& operator<<(char x);
+    line_builder&& operator<<(char x) &&;
 
-    std::string get() const;
+    std::string get() && {
+      return std::move(str_);
+    }
 
   private:
     std::string str_;
@@ -155,9 +143,103 @@ public:
 
   // -- logging ----------------------------------------------------------------
 
-  /// Writes an entry to the event-queue of the logger.
-  /// @thread-safe
-  virtual void log(event&& x) = 0;
+  /// Logs a message.
+  /// @param level Severity of the message.
+  /// @param component Name of the component logging the message.
+  /// @param fmt_str The format string (with source location) for the message.
+  /// @param args Arguments for the format string.
+  template <class... Ts>
+  static void log(unsigned level, std::string_view component,
+                  detail::format_string_with_location fmt_str, Ts&&... args) {
+    auto* instance = current_logger();
+    if (instance && instance->accepts(level, component)) {
+      auto& loc = fmt_str.location;
+      context ctx{level, component, loc.line(), loc.file_name(),
+                  loc.function_name()};
+      instance->do_log(ctx, detail::format(fmt_str.value,
+                                           std::forward<Ts>(args)...));
+    }
+  }
+
+  /// Logs a message with `trace` severity.
+  /// @param component Name of the component logging the message.
+  /// @param fmt_str The format string (with source location) for the message.
+  /// @param args Arguments for the format string.
+  template <class... Ts>
+  [[nodiscard]] static trace_exit_guard
+  trace(std::string_view component, detail::format_string_with_location fmt_str,
+        Ts&&... args) {
+    auto* instance = current_logger();
+    if (instance && instance->accepts(CAF_LOG_LEVEL_TRACE, component)) {
+      std::string msg = "ENTRY ";
+      detail::format_to(std::back_inserter(msg), fmt_str.value,
+                        std::forward<Ts>(args)...);
+      auto& loc = fmt_str.location;
+      context ctx{CAF_LOG_LEVEL_TRACE, component, loc.line(), loc.file_name(),
+                  loc.function_name()};
+      instance->do_log(ctx, std::move(msg));
+      return {instance, ctx};
+    }
+    return {nullptr, {}};
+  }
+
+  /// Logs a message with `debug` severity.
+  /// @param component Name of the component logging the message.
+  /// @param fmt_str The format string (with source location) for the message.
+  /// @param args Arguments for the format string.
+  template <class... Ts>
+  static void debug(std::string_view component,
+                    detail::format_string_with_location fmt_str, Ts&&... args) {
+    log(CAF_LOG_LEVEL_DEBUG, component, fmt_str, std::forward<Ts>(args)...);
+  }
+
+  /// Logs a message with `info` severity.
+  /// @param component Name of the component logging the message.
+  /// @param fmt_str The format string (with source location) for the message.
+  /// @param args Arguments for the format string.
+  template <class... Ts>
+  static void info(std::string_view component,
+                   detail::format_string_with_location fmt_str, Ts&&... args) {
+    log(CAF_LOG_LEVEL_INFO, component, fmt_str, std::forward<Ts>(args)...);
+  }
+
+  /// Logs a message with `warning` severity.
+  /// @param component Name of the component logging the message.
+  /// @param fmt_str The format string (with source location) for the message.
+  /// @param args Arguments for the format string.
+  template <class... Ts>
+  static void warning(std::string_view component,
+                      detail::format_string_with_location fmt_str,
+                      Ts&&... args) {
+    log(CAF_LOG_LEVEL_WARNING, component, fmt_str, std::forward<Ts>(args)...);
+  }
+
+  /// Logs a message with `error` severity.
+  /// @param component Name of the component logging the message.
+  /// @param fmt_str The format string (with source location) for the message.
+  /// @param args Arguments for the format string.
+  template <class... Ts>
+  static void error(std::string_view component,
+                    detail::format_string_with_location fmt_str, Ts&&... args) {
+    log(CAF_LOG_LEVEL_ERROR, component, fmt_str, std::forward<Ts>(args)...);
+  }
+
+  // -- legacy API (for the logging macros) ------------------------------------
+
+  /// @private
+  void legacy_api_log(unsigned level, std::string_view component,
+                      std::string msg,
+                      detail::source_location loc
+                      = detail::source_location::current());
+
+  /// @private
+  [[nodiscard]] trace_exit_guard legacy_api_log_trace(
+    unsigned level, std::string_view component, std::string msg,
+    detail::source_location loc = detail::source_location::current()) {
+    legacy_api_log(level, component, std::move(msg), loc);
+    return {current_logger(), context{level, component, loc.line(),
+                                      loc.file_name(), loc.function_name()}};
+  }
 
   // -- properties -------------------------------------------------------------
 
@@ -175,12 +257,6 @@ public:
 
   /// Creates a new logger instance.
   static intrusive_ptr<logger> make(actor_system& sys);
-
-  /// Renders the prefix (namespace and class) of a fully qualified function.
-  static void render_fun_prefix(std::ostream& out, const event& x);
-
-  /// Skips path in `filename`.
-  static std::string_view skip_path(std::string_view filename);
 
   // -- thread-local properties ------------------------------------------------
 
@@ -208,7 +284,12 @@ public:
     ptr->deref_logger();
   }
 
-  // -- initialization ---------------------------------------------------------
+private:
+  // -- internal logging API ---------------------------------------------------
+
+  virtual void do_log(const context& ctx, std::string&& msg) = 0;
+
+  // -- initialization (called by the actor_system) ----------------------------
 
   /// Allows the logger to read its configuration from the actor system config.
   virtual void init(const actor_system_config& cfg) = 0;
@@ -247,13 +328,6 @@ public:
 /// Concatenates `a` and `b` to a single preprocessor token.
 #define CAF_CAT(a, b) a##b
 
-#define CAF_LOG_MAKE_EVENT(aid, component, loglvl, message)                    \
-  ::caf::logger::event(loglvl, __LINE__, component, CAF_PRETTY_FUN, __func__,  \
-                       caf::logger::skip_path(__FILE__),                       \
-                       (::caf::logger::line_builder{} << message).get(),       \
-                       ::std::this_thread::get_id(), aid,                      \
-                       ::caf::make_timestamp())
-
 /// Expands to `argument = <argument>` in log output.
 #define CAF_ARG(argument) caf::detail::make_arg_wrapper(#argument, argument)
 
@@ -268,12 +342,12 @@ public:
 
 #define CAF_LOG_IMPL(component, loglvl, message)                               \
   do {                                                                         \
-    auto CAF_PP_UNIFYN(caf_logger) = caf::logger::current_logger();            \
-    if (CAF_PP_UNIFYN(caf_logger) != nullptr                                   \
-        && CAF_PP_UNIFYN(caf_logger)->accepts(loglvl, component))              \
-      CAF_PP_UNIFYN(caf_logger)                                                \
-        ->log(CAF_LOG_MAKE_EVENT(caf::logger::thread_local_aid(), component,   \
-                                 loglvl, message));                            \
+    if (auto* caf_logger_instance = caf::logger::current_logger();             \
+        caf_logger_instance                                                    \
+        && caf_logger_instance->accepts(loglvl, component)) {                  \
+      caf_logger_instance->legacy_api_log(                                     \
+        loglvl, component, (caf::logger::line_builder{} << message).get());    \
+    }                                                                          \
   } while (false)
 
 #define CAF_PUSH_AID(aarg)                                                     \
@@ -298,11 +372,23 @@ public:
 #else // CAF_LOG_LEVEL < CAF_LOG_LEVEL_TRACE
 
 #  define CAF_LOG_TRACE(entry_message)                                         \
-    CAF_LOG_IMPL(CAF_LOG_COMPONENT, CAF_LOG_LEVEL_TRACE,                       \
-                 "ENTRY" << entry_message);                                    \
-    auto CAF_PP_UNIFYN(caf_log_trace_guard_)                                   \
-      = ::caf::detail::make_scope_guard(                                       \
-        [=] { CAF_LOG_IMPL(CAF_LOG_COMPONENT, CAF_LOG_LEVEL_TRACE, "EXIT"); })
+    caf::logger::trace_exit_guard caf_trace_log_auto_guard;                    \
+    if (auto* caf_logger_instance = caf::logger::current_logger();             \
+        caf_logger_instance                                                    \
+        && caf_logger_instance->accepts(CAF_LOG_LEVEL_TRACE,                   \
+                                        CAF_LOG_COMPONENT)) {                  \
+      caf_logger_instance->legacy_api_log(                                     \
+        CAF_LOG_LEVEL_TRACE, CAF_LOG_COMPONENT,                                \
+        (caf::logger::line_builder{} << "ENTRY" << entry_message).get());      \
+      auto caf_trace_loc = caf::detail::source_location::current();            \
+      caf_trace_log_auto_guard = caf::logger::trace_exit_guard{                \
+        caf_logger_instance,                                                   \
+        caf::logger::context{CAF_LOG_LEVEL_TRACE, CAF_LOG_COMPONENT,           \
+                             static_cast<unsigned>(caf_trace_loc.line()),      \
+                             caf_trace_loc.file_name(),                        \
+                             caf_trace_loc.function_name()}};                  \
+    }                                                                          \
+    static_cast<void>(0)
 
 #endif // CAF_LOG_LEVEL < CAF_LOG_LEVEL_TRACE
 
