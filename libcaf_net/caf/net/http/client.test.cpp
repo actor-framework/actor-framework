@@ -219,8 +219,8 @@ public:
     return none;
   }
 
-  // TODO
-  void abort(const error& reason) override {
+  // TODO: Impossible to FAIL outside a test section in new testing framework?
+  void abort(const error&) override {
     // CAF_FAIL("app::abort called: " << reason);
   }
 
