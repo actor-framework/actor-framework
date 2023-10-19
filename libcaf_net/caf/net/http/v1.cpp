@@ -53,6 +53,7 @@ constexpr std::string_view format(http::method m) {
     case http::method::trace:
       return "TRACE"sv;
   }
+  return "unknown"sv;
 }
 
 } // namespace

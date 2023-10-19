@@ -254,7 +254,7 @@ SCENARIO("the client sends HTTP requests") {
     WHEN("the client sends the message") {
       client->begin_header(net::http::method::get, "/foo/bar/index.html"sv);
       client->end_header();
-      THEN("the output contains the formated request") {
+      THEN("the output contains the formatted request") {
         check_eq(transport->output_as_str(),
                  "GET /foo/bar/index.html HTTP/1.1\r\n\r\n"sv);
       }
@@ -271,7 +271,7 @@ SCENARIO("the client sends HTTP requests") {
       client->add_header_field("User-Agent", "AwesomeLib/1.0");
       client->add_header_field("Accept-Encoding", "chunked");
       client->end_header();
-      THEN("the output contains the formated request") {
+      THEN("the output contains the formatted request") {
         check_eq(transport->output_as_str(), expected);
       }
     }
@@ -288,7 +288,7 @@ SCENARIO("the client sends HTTP requests") {
       client->add_header_field("Content-Type", "plain/text");
       client->end_header();
       client->send_payload(as_bytes(make_span("Hello, world!"sv)));
-      THEN("the output contains the formated request") {
+      THEN("the output contains the formatted request") {
         check_eq(transport->output_as_str(), expected);
       }
     }
@@ -312,7 +312,7 @@ SCENARIO("the client sends HTTP requests") {
       client->send_chunk(as_bytes(make_span("Hello, world!"sv)));
       client->send_chunk(as_bytes(make_span("Developer Network"sv)));
       client->send_end_of_chunks();
-      THEN("the output contains the formated request") {
+      THEN("the output contains the formatted request") {
         check_eq(transport->output_as_str(), expected);
       }
     }
@@ -332,7 +332,7 @@ OUTLINE("Sending all available HTTP methods") {
       auto method = static_cast<net::http::method>(block_parameters<uint8_t>());
       client->begin_header(method, "/foo/bar"sv);
       client->end_header();
-      THEN("the output contains the formated request") {
+      THEN("the output contains the formatted request") {
         check_eq(transport->output_as_str(), expected);
       }
     }
