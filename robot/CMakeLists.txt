@@ -1,3 +1,7 @@
+if (DEFINED Python3_ROOT_DIR)
+  set(Python_FIND_STRATEGY "LOCATION")
+endif()
+
 find_package(Python COMPONENTS Interpreter)
 
 execute_process(
