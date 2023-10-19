@@ -15,6 +15,7 @@
 #include "caf/none.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
 #include "caf/span.hpp"
+#include "caf/thread_local_aid.hpp"
 
 namespace caf::io {
 
@@ -25,12 +26,12 @@ bool abstract_broker::enqueue(strong_actor_ptr src, message_id mid, message msg,
 }
 
 bool abstract_broker::enqueue(mailbox_element_ptr ptr, execution_unit*) {
-  CAF_PUSH_AID(id());
+  thread_local_aid_guard guard{id()};
   return scheduled_actor::enqueue(std::move(ptr), backend_);
 }
 
 void abstract_broker::launch(execution_unit* eu, bool lazy, bool hide) {
-  CAF_PUSH_AID_FROM_PTR(this);
+  thread_local_aid_guard guard{id()};
   CAF_ASSERT(eu != nullptr);
   CAF_ASSERT(dynamic_cast<network::multiplexer*>(eu) != nullptr);
   backend_ = static_cast<network::multiplexer*>(eu);

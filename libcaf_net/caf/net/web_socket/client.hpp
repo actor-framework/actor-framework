@@ -16,7 +16,6 @@
 #include "caf/detail/message_flow_bridge.hpp"
 #include "caf/error.hpp"
 #include "caf/hash/sha1.hpp"
-#include "caf/logger.hpp"
 #include "caf/pec.hpp"
 #include "caf/settings.hpp"
 

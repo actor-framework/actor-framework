@@ -33,7 +33,6 @@
 #include "caf/flow/step/all.hpp"
 #include "caf/flow/subscription.hpp"
 #include "caf/intrusive_ptr.hpp"
-#include "caf/logger.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/sec.hpp"
@@ -551,7 +550,6 @@ disposable observable<T>::subscribe(async::producer_resource<T> resource) {
   using buffer_type = typename async::consumer_resource<T>::buffer_type;
   using adapter_type = buffer_writer_impl<buffer_type>;
   if (auto buf = resource.try_open()) {
-    CAF_LOG_DEBUG("subscribe producer resource to flow");
     auto adapter = make_counted<adapter_type>(pimpl_->ctx());
     adapter->init(buf);
     auto obs = adapter->as_observer();
@@ -559,7 +557,6 @@ disposable observable<T>::subscribe(async::producer_resource<T> resource) {
     pimpl_->ctx()->watch(sub);
     return sub;
   } else {
-    CAF_LOG_DEBUG("failed to open producer resource");
     return {};
   }
 }

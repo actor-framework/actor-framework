@@ -21,7 +21,6 @@
 #include "caf/group_manager.hpp"
 #include "caf/infer_handle.hpp"
 #include "caf/is_typed_actor.hpp"
-#include "caf/logger.hpp"
 #include "caf/make_actor.hpp"
 #include "caf/prohibit_top_level_spawn_marker.hpp"
 #include "caf/scoped_execution_unit.hpp"
@@ -150,6 +149,10 @@ public:
       middleman,
       openssl_manager,
       network_manager,
+      reserved1,
+      reserved2,
+      reserved3,
+      reserved4,
       num_ids
     };
 
@@ -581,7 +584,7 @@ public:
   std::thread launch_thread(const char* thread_name, thread_owner tag, F fun) {
     auto body = [this, thread_name, tag, f{std::move(fun)}](auto guard) {
       CAF_IGNORE_UNUSED(guard);
-      CAF_SET_LOGGER_SYS(this);
+      set_logger();
       detail::set_thread_name(thread_name);
       thread_started(tag);
       f();
@@ -612,7 +615,7 @@ public:
       cfg.flags |= abstract_actor::is_hidden_flag;
     if (cfg.host == nullptr)
       cfg.host = dummy_execution_unit();
-    CAF_SET_LOGGER_SYS(this);
+    set_logger();
     auto res = make_actor<C>(next_actor_id(), node(), this, cfg,
                              std::forward<Ts>(xs)...);
     auto ptr = static_cast<C*>(actor_cast<abstract_actor*>(res));
@@ -698,7 +701,7 @@ public:
   auto spawn_inactive(Ts&&... xs) {
     static_assert(std::is_base_of_v<scheduled_actor, Impl>,
                   "only scheduled actors may get spawned inactively");
-    CAF_SET_LOGGER_SYS(this);
+    set_logger();
     actor_config cfg{dummy_execution_unit(), nullptr};
     if constexpr (has_detach_flag(Os))
       cfg.flags |= abstract_actor::is_detached_flag;
@@ -774,6 +777,9 @@ public:
   detail::private_thread* acquire_private_thread();
 
   void release_private_thread(detail::private_thread*);
+
+  /// Registers the logger of this actor system at the current thread.
+  void set_logger();
 
   /// @endcond
 

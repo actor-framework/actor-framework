@@ -9,6 +9,7 @@
 #include "caf/defaults.hpp"
 #include "caf/detail/meta_object.hpp"
 #include "caf/event_based_actor.hpp"
+#include "caf/logger.hpp"
 #include "caf/policy/work_sharing.hpp"
 #include "caf/policy/work_stealing.hpp"
 #include "caf/raise_error.hpp"
@@ -261,6 +262,13 @@ auto make_actor_metric_families(telemetry::metric_registry& reg) {
   };
 }
 
+auto alloc_logger(actor_system_config::logger_factory_t& factory,
+                  actor_system& sys) {
+  if (factory)
+    return factory(sys);
+  return logger::make(sys);
+}
+
 } // namespace
 
 actor_system::actor_system(actor_system_config& cfg)
@@ -268,7 +276,7 @@ actor_system::actor_system(actor_system_config& cfg)
     ids_(0),
     metrics_(cfg),
     base_metrics_(make_base_metrics(metrics_)),
-    logger_(cfg.logger_factory_(*this)),
+    logger_(alloc_logger(cfg.logger_factory_, *this)),
     registry_(*this),
     groups_(*this),
     dummy_execution_unit_(this),
@@ -276,7 +284,7 @@ actor_system::actor_system(actor_system_config& cfg)
     cfg_(cfg),
     tracing_context_(cfg.tracing_context),
     private_threads_(this) {
-  CAF_SET_LOGGER_SYS(this);
+  set_logger();
   meta_objects_guard_ = detail::global_meta_objects_guard();
   if (!meta_objects_guard_)
     CAF_CRITICAL("unable to obtain the global meta objects guard");
@@ -350,7 +358,7 @@ actor_system::actor_system(actor_system_config& cfg)
   // Initialize state for each module and give each module the opportunity to
   // adapt the system configuration.
   logger_->init(cfg);
-  CAF_SET_LOGGER_SYS(this);
+  set_logger();
   for (auto& mod : modules_)
     if (mod)
       mod->init(cfg);
@@ -398,7 +406,7 @@ actor_system::~actor_system() {
     registry_.stop();
   }
   // reset logger and wait until dtor was called
-  CAF_SET_LOGGER_SYS(nullptr);
+  logger::set_current_actor_system(nullptr);
   logger_->stop();
   logger_.reset();
 }
@@ -525,6 +533,10 @@ actor_system::dyn_spawn_impl(const std::string& name, message& args,
   if (check_interface && !assignable(res.second, *expected_ifs))
     return sec::unexpected_actor_messaging_interface;
   return std::move(res.first);
+}
+
+void actor_system::set_logger() {
+  logger::set_current_actor_system(this);
 }
 
 detail::private_thread* actor_system::acquire_private_thread() {

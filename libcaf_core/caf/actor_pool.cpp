@@ -7,6 +7,7 @@
 #include "caf/default_attachable.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/send.hpp"
+#include "caf/thread_local_aid.hpp"
 
 #include <atomic>
 #include <random>
@@ -114,7 +115,7 @@ actor_pool::actor_pool(actor_config& cfg)
 }
 
 void actor_pool::on_destroy() {
-  CAF_PUSH_AID_FROM_PTR(this);
+  thread_local_aid_guard guard{id()};
   if (!getf(is_cleaned_up_flag)) {
     cleanup(exit_reason::unreachable, nullptr);
     monitorable_actor::on_destroy();
@@ -123,7 +124,7 @@ void actor_pool::on_destroy() {
 }
 
 void actor_pool::on_cleanup(const error& reason) {
-  CAF_PUSH_AID_FROM_PTR(this);
+  thread_local_aid_guard guard{id()};
   CAF_IGNORE_UNUSED(reason);
   CAF_LOG_TERMINATE_EVENT(this, reason);
 }

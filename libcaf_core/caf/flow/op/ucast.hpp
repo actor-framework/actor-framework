@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/detail/scope_guard.hpp"
 #include "caf/flow/coordinator.hpp"
 #include "caf/flow/observer.hpp"
 #include "caf/flow/op/empty.hpp"
@@ -11,6 +12,7 @@
 #include "caf/flow/subscription.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/make_counted.hpp"
+#include "caf/sec.hpp"
 
 #include <deque>
 #include <memory>

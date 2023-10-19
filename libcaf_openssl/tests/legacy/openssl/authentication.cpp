@@ -147,10 +147,11 @@ struct fixture {
   sched_t& sched_by_sys(actor_system& sys) {
     return &sys == &server_side ? *ssched : *csched;
   }
+
   bool exec_one(actor_system& sys) {
     CAF_ASSERT(initialized);
-    CAF_PUSH_AID(0);
-    CAF_SET_LOGGER_SYS(&sys);
+    thread_local_aid_guard guard{0};
+    sys.set_logger();
     return sched_by_sys(sys).try_run_once()
            || sys.middleman().backend().try_run_once();
   }

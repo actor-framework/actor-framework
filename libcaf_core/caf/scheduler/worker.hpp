@@ -7,7 +7,6 @@
 #include "caf/detail/double_ended_queue.hpp"
 #include "caf/detail/set_thread_name.hpp"
 #include "caf/execution_unit.hpp"
-#include "caf/logger.hpp"
 #include "caf/resumable.hpp"
 #include "caf/thread_owner.hpp"
 
@@ -88,7 +87,7 @@ public:
 
 private:
   void run() {
-    CAF_SET_LOGGER_SYS(&system());
+    system().set_logger();
     // scheduling loop
     for (;;) {
       auto job = policy_.dequeue(this);

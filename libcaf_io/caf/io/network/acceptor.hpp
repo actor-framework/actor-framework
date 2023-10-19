@@ -11,7 +11,6 @@
 #include "caf/io/network/operation.hpp"
 
 #include "caf/detail/io_export.hpp"
-#include "caf/logger.hpp"
 #include "caf/ref_counted.hpp"
 
 namespace caf::io::network {
@@ -48,7 +47,6 @@ public:
 protected:
   template <class Policy>
   void handle_event_impl(io::network::operation op, Policy& policy) {
-    CAF_LOG_TRACE(CAF_ARG(fd()) << CAF_ARG(op));
     if (mgr_ && op == operation::read) {
       native_socket sockfd = invalid_native_socket;
       if (policy.try_accept(sockfd, fd())) {

@@ -19,6 +19,7 @@
 #include "caf/message.hpp"
 #include "caf/string_algorithms.hpp"
 #include "caf/term.hpp"
+#include "caf/thread_local_aid.hpp"
 #include "caf/thread_owner.hpp"
 #include "caf/timestamp.hpp"
 
@@ -36,9 +37,6 @@
 namespace caf {
 
 namespace {
-
-// Stores the ID of the currently running actor.
-thread_local actor_id current_actor_id;
 
 // Stores a pointer to the system-wide logger.
 thread_local intrusive_ptr<logger> current_logger_ptr;
@@ -192,7 +190,7 @@ public:
              ctx.function_name,
              std::move(msg),
              std::this_thread::get_id(),
-             logger::thread_local_aid(),
+             thread_local_aid(),
              make_timestamp()};
     if (cfg_.inline_output)
       handle_event(ev);
@@ -663,15 +661,6 @@ void logger::legacy_api_log(unsigned level, std::string_view component,
   context ctx{level, component, loc.line(), loc.file_name(),
               loc.function_name()};
   do_log(ctx, std::move(msg));
-}
-
-actor_id logger::thread_local_aid() {
-  return current_actor_id;
-}
-
-actor_id logger::thread_local_aid(actor_id aid) {
-  std::swap(current_actor_id, aid);
-  return aid;
 }
 
 intrusive_ptr<logger> logger::make(actor_system& sys) {

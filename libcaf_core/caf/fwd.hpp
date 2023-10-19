@@ -123,6 +123,7 @@ class message;
 class message_builder;
 class message_handler;
 class message_id;
+class monitorable_actor;
 class node_id;
 class node_id_data;
 class proxy_registry;

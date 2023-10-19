@@ -9,6 +9,7 @@
 #include "caf/flow/op/empty.hpp"
 #include "caf/flow/subscription.hpp"
 #include "caf/make_counted.hpp"
+#include "caf/unordered_flat_map.hpp"
 
 #include <deque>
 #include <memory>
@@ -120,7 +121,6 @@ public:
   // -- callbacks for the forwarders -------------------------------------------
 
   void fwd_on_subscribe(input_key key, subscription sub) {
-    CAF_LOG_TRACE(CAF_ARG(key));
     if (auto ptr = get(key); ptr && !*ptr) {
       *ptr = std::move(sub);
       ptr->request(max_pending_per_input_);
@@ -130,7 +130,6 @@ public:
   }
 
   void fwd_on_complete(input_key key) {
-    CAF_LOG_TRACE(CAF_ARG(key));
     if (inputs_.erase(key) == 0)
       return;
     if (sub_) {
@@ -145,7 +144,6 @@ public:
   }
 
   void fwd_on_error(input_key key, const error& what) {
-    CAF_LOG_TRACE(CAF_ARG(key) << CAF_ARG(what));
     if (inputs_.erase(key) == 0)
       return;
     err_ = what;
@@ -157,7 +155,6 @@ public:
   }
 
   void fwd_on_next(input_key key, const T& item) {
-    CAF_LOG_TRACE(CAF_ARG(key) << CAF_ARG(item));
     if (auto ptr = get(key)) {
       if (!running_ && demand_ > 0) {
         CAF_ASSERT(out_.valid());

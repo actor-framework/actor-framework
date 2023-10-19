@@ -9,7 +9,6 @@
 #include "caf/extend.hpp"
 #include "caf/fwd.hpp"
 #include "caf/local_actor.hpp"
-#include "caf/logger.hpp"
 #include "caf/mixin/behavior_changer.hpp"
 #include "caf/mixin/requester.hpp"
 #include "caf/mixin/sender.hpp"

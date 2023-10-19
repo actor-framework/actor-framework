@@ -10,6 +10,7 @@
 #include "caf/flow/op/cold.hpp"
 #include "caf/flow/op/state.hpp"
 #include "caf/flow/subscription.hpp"
+#include "caf/sec.hpp"
 #include "caf/unit.hpp"
 
 #include <vector>

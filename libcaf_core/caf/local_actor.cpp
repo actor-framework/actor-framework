@@ -66,7 +66,7 @@ local_actor::~local_actor() {
 }
 
 void local_actor::on_destroy() {
-  CAF_PUSH_AID_FROM_PTR(this);
+  thread_local_aid_guard guard{id()};
 #ifdef CAF_ENABLE_ACTOR_PROFILER
   system().profiler_remove_actor(*this);
 #endif

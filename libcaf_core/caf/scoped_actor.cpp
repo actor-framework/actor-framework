@@ -7,6 +7,7 @@
 #include "caf/actor_registry.hpp"
 #include "caf/scoped_execution_unit.hpp"
 #include "caf/spawn_options.hpp"
+#include "caf/thread_local_aid.hpp"
 
 namespace caf {
 
@@ -27,7 +28,7 @@ public:
   }
 
   void launch(execution_unit*, bool, bool hide) override {
-    CAF_PUSH_AID_FROM_PTR(this);
+    thread_local_aid_guard guard{id()};
     CAF_LOG_TRACE(CAF_ARG(hide));
     CAF_ASSERT(getf(is_blocking_flag));
     if (!hide)
@@ -39,13 +40,13 @@ public:
 } // namespace
 
 scoped_actor::scoped_actor(actor_system& sys, bool hide) : context_(&sys) {
-  CAF_SET_LOGGER_SYS(&sys);
+  sys.set_logger();
   actor_config cfg{&context_};
   if (hide)
     cfg.flags |= abstract_actor::is_hidden_flag;
   auto hdl = sys.spawn_impl<impl, no_spawn_options>(cfg);
   self_ = actor_cast<strong_actor_ptr>(std::move(hdl));
-  prev_ = CAF_SET_AID(self_->id());
+  prev_ = thread_local_aid(self_->id());
 }
 
 scoped_actor::~scoped_actor() {
@@ -54,7 +55,7 @@ scoped_actor::~scoped_actor() {
   auto x = ptr();
   if (!x->getf(abstract_actor::is_terminated_flag))
     x->cleanup(exit_reason::normal, &context_);
-  CAF_SET_AID(prev_);
+  thread_local_aid(prev_);
 }
 
 blocking_actor* scoped_actor::ptr() const {

@@ -42,8 +42,6 @@ actor_system_config::~actor_system_config() {
 
 actor_system_config::actor_system_config()
   : program_name(default_program_name), config_file_path(default_config_file) {
-  // Set default factories.
-  logger_factory_ = +[](actor_system& sys) { return logger::make(sys); };
   // Fill our options vector for creating config file and CLI parsers.
   using std::string;
   using string_list = std::vector<string>;

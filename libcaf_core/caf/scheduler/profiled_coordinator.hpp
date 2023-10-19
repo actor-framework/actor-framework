@@ -17,7 +17,6 @@
 
 #include "caf/actor_system_config.hpp"
 #include "caf/defaults.hpp"
-#include "caf/logger.hpp"
 #include "caf/policy/profiled.hpp"
 #include "caf/policy/work_stealing.hpp"
 #include "caf/scheduler/coordinator.hpp"
@@ -194,7 +193,6 @@ public:
   }
 
   void stop() override {
-    CAF_LOG_TRACE("");
     super::stop();
     auto now = clock_type::now().time_since_epoch();
     auto wallclock = system_start_ + (now - clock_start_);

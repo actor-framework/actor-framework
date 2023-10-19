@@ -204,7 +204,7 @@ const char* scheduled_actor::name() const {
 
 void scheduled_actor::launch(execution_unit* ctx, bool lazy, bool hide) {
   CAF_ASSERT(ctx != nullptr);
-  CAF_PUSH_AID_FROM_PTR(this);
+  thread_local_aid_guard guard{id()};
   CAF_LOG_TRACE(CAF_ARG(lazy) << CAF_ARG(hide));
   CAF_ASSERT(!getf(is_blocking_flag));
   if (!hide)
@@ -275,7 +275,7 @@ void scheduled_actor::intrusive_ptr_release_impl() {
 
 resumable::resume_result scheduled_actor::resume(execution_unit* ctx,
                                                  size_t max_throughput) {
-  CAF_PUSH_AID(id());
+  thread_local_aid_guard aid_guard{id()};
   CAF_LOG_TRACE(CAF_ARG(max_throughput));
   if (!activate(ctx))
     return resumable::done;

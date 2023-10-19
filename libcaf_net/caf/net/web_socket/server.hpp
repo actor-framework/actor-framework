@@ -23,7 +23,6 @@
 #include "caf/detail/message_flow_bridge.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/error.hpp"
-#include "caf/logger.hpp"
 #include "caf/pec.hpp"
 #include "caf/settings.hpp"
 #include "caf/string_algorithms.hpp"

@@ -31,7 +31,6 @@
 #include "caf/intrusive/stack.hpp"
 #include "caf/invoke_message_result.hpp"
 #include "caf/local_actor.hpp"
-#include "caf/logger.hpp"
 #include "caf/mixin/behavior_changer.hpp"
 #include "caf/mixin/requester.hpp"
 #include "caf/mixin/sender.hpp"

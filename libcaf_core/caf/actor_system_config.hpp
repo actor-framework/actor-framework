@@ -173,10 +173,13 @@ public:
   /// Overrides the default logger factory.
   /// @pre `new_factory != nullptr`
   actor_system_config& logger_factory(logger_factory_t new_factory) {
-    if (new_factory == nullptr)
-      CAF_RAISE_ERROR(std::invalid_argument, "logger factory may not be null");
     logger_factory_ = std::move(new_factory);
     return *this;
+  }
+
+  /// Checks whether the config contains a custom logger factory.
+  bool has_logger_factory() const noexcept {
+    return logger_factory_ != nullptr;
   }
 
   // -- parser and CLI state ---------------------------------------------------

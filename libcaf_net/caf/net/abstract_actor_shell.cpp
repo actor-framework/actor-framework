@@ -153,7 +153,7 @@ mailbox_element* abstract_actor_shell::peek_at_next_mailbox_element() {
 // -- overridden functions of local_actor --------------------------------------
 
 void abstract_actor_shell::launch(execution_unit*, bool, bool hide) {
-  CAF_PUSH_AID_FROM_PTR(this);
+  thread_local_aid_guard guard{id()};
   CAF_LOG_TRACE(CAF_ARG(hide));
   CAF_ASSERT(!getf(is_blocking_flag));
   if (!hide)

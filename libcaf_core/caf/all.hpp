@@ -83,6 +83,7 @@
 #include "caf/system_messages.hpp"
 #include "caf/term.hpp"
 #include "caf/thread_hook.hpp"
+#include "caf/thread_local_aid.hpp"
 #include "caf/timeout_definition.hpp"
 #include "caf/tracing_data.hpp"
 #include "caf/tracing_data_factory.hpp"

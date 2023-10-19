@@ -11,7 +11,6 @@
 #include "caf/detail/typed_actor_util.hpp"
 #include "caf/disposable.hpp"
 #include "caf/error.hpp"
-#include "caf/logger.hpp"
 #include "caf/message_id.hpp"
 
 #include <cstddef>
@@ -56,7 +55,6 @@ struct select_all_helper<F, T, Ts...> {
   }
 
   void operator()(T& x, Ts&... xs) {
-    CAF_LOG_TRACE(CAF_ARG2("pending", *pending));
     if (*pending > 0) {
       results.emplace_back(std::move(x), std::move(xs)...);
       if (--*pending == 0) {
@@ -86,7 +84,6 @@ struct select_all_helper<F> {
   }
 
   void operator()() {
-    CAF_LOG_TRACE(CAF_ARG2("pending", *pending));
     if (*pending > 0 && --*pending == 0) {
       timeouts.dispose();
       f();
@@ -154,7 +151,6 @@ public:
 
   template <class Self, class F, class OnError>
   void await(Self* self, F&& f, OnError&& g) {
-    CAF_LOG_TRACE(CAF_ARG(ids_));
     auto bhvr = make_behavior(std::forward<F>(f), std::forward<OnError>(g));
     for (auto id : ids_)
       self->add_awaited_response_handler(id, bhvr);
@@ -162,7 +158,6 @@ public:
 
   template <class Self, class F, class OnError>
   void then(Self* self, F&& f, OnError&& g) {
-    CAF_LOG_TRACE(CAF_ARG(ids_));
     auto bhvr = make_behavior(std::forward<F>(f), std::forward<OnError>(g));
     for (auto id : ids_)
       self->add_multiplexed_response_handler(id, bhvr);
@@ -170,7 +165,6 @@ public:
 
   template <class Self, class F, class G>
   void receive(Self* self, F&& f, G&& g) {
-    CAF_LOG_TRACE(CAF_ARG(ids_));
     using helper_type = detail::select_all_helper_t<std::decay_t<F>>;
     helper_type helper{ids_.size(), pending_timeouts_, std::forward<F>(f)};
     auto error_handler = [&](error& err) mutable {
@@ -206,7 +200,6 @@ private:
     auto error_handler = [pending{std::move(pending)},
                           timeouts{pending_timeouts_},
                           g{std::forward<OnError>(g)}](error& err) mutable {
-      CAF_LOG_TRACE(CAF_ARG2("pending", *pending));
       if (*pending > 0) {
         timeouts.dispose();
         *pending = 0;

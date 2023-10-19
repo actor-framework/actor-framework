@@ -43,7 +43,7 @@ bool forwarding_actor_proxy::forward_msg(strong_actor_ptr sender,
 
 bool forwarding_actor_proxy::enqueue(mailbox_element_ptr what,
                                      execution_unit*) {
-  CAF_PUSH_AID(0);
+  thread_local_aid_guard guard{0};
   CAF_ASSERT(what);
   return forward_msg(std::move(what->sender), what->mid,
                      std::move(what->payload), &what->stages);

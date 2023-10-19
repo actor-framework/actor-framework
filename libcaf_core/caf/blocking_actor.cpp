@@ -15,6 +15,7 @@
 #include "caf/logger.hpp"
 #include "caf/scheduled_actor.hpp"
 #include "caf/telemetry/timer.hpp"
+#include "caf/thread_local_aid.hpp"
 
 #include <utility>
 
@@ -112,7 +113,7 @@ public:
   }
 
   resumable::resume_result resume(execution_unit* ctx, size_t) override {
-    CAF_PUSH_AID_FROM_PTR(self_);
+    thread_local_aid_guard guard{self_->id()};
     self_->context(ctx);
     self_->initialize();
     error rsn;
@@ -163,7 +164,7 @@ private:
 } // namespace
 
 void blocking_actor::launch(execution_unit*, bool, bool hide) {
-  CAF_PUSH_AID_FROM_PTR(this);
+  thread_local_aid_guard guard{id()};
   CAF_LOG_TRACE(CAF_ARG(hide));
   CAF_ASSERT(getf(is_blocking_flag));
   // Try to acquire a thread before incrementing the running count, since this

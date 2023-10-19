@@ -180,7 +180,6 @@ public:
   }
 
   void dispose() override {
-    CAF_LOG_TRACE("");
     if (!disposed_) {
       disposed_ = true;
       demand_ = 0;
@@ -194,7 +193,6 @@ public:
   }
 
   void request(size_t n) override {
-    CAF_LOG_TRACE(CAF_ARG(n));
     if (demand_ != 0) {
       demand_ += n;
     } else {

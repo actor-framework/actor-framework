@@ -45,7 +45,6 @@ public:
   }
 
   void dispose() override {
-    CAF_LOG_TRACE("");
     if (!disposed_) {
       disposed_ = true;
       if (!running_)
@@ -54,7 +53,6 @@ public:
   }
 
   void request(size_t n) override {
-    CAF_LOG_TRACE(CAF_ARG(n));
     if (demand_ != 0) {
       demand_ += n;
     } else {
@@ -70,9 +68,7 @@ public:
   }
 
   void on_producer_wakeup() override {
-    CAF_LOG_TRACE("");
     ctx_->schedule_fn([ptr = strong_this()] {
-      CAF_LOG_TRACE("");
       ptr->running_ = true;
       ptr->do_run();
     });
@@ -124,7 +120,6 @@ private:
   }
 
   void do_run() {
-    CAF_LOG_TRACE("");
     auto guard = detail::make_scope_guard([this] { running_ = false; });
     if (disposed_) {
       do_dispose();
@@ -195,13 +190,11 @@ public:
   // -- implementation of observable_impl<T> -----------------------------------
 
   disposable subscribe(observer<T> out) override {
-    CAF_LOG_TRACE("");
     CAF_ASSERT(out);
     if (resource_) {
       if (auto buf = resource_.try_open()) {
         resource_ = nullptr;
         using buffer_type = typename resource_type::buffer_type;
-        CAF_LOG_DEBUG("add subscriber");
         using impl_t = from_resource_sub<buffer_type>;
         auto ptr = make_counted<impl_t>(super::ctx_, buf, out);
         buf->set_consumer(ptr);
@@ -210,14 +203,12 @@ public:
         return ptr->as_disposable();
       } else {
         resource_ = nullptr;
-        CAF_LOG_WARNING("failed to open an async resource");
         auto err = make_error(sec::cannot_open_resource,
                               "failed to open an async resource");
         out.on_error(err);
         return disposable{};
       }
     } else {
-      CAF_LOG_WARNING("may only subscribe once to an async resource");
       auto err = make_error(sec::too_many_observers,
                             "may only subscribe once to an async resource");
       out.on_error(err);

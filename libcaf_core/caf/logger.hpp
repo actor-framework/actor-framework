@@ -13,7 +13,6 @@
 #include "caf/detail/log_level.hpp"
 #include "caf/detail/pp.hpp"
 #include "caf/detail/pretty_type_name.hpp"
-#include "caf/detail/scope_guard.hpp"
 #include "caf/fwd.hpp"
 
 #include <cstring>
@@ -243,15 +242,23 @@ public:
 
   // -- properties -------------------------------------------------------------
 
-  /// Returns the ID of the actor currently associated to the calling thread.
-  static actor_id thread_local_aid();
-
-  /// Associates an actor ID to the calling thread and returns the last value.
-  static actor_id thread_local_aid(actor_id aid);
-
   /// Returns whether the logger is configured to accept input for given
   /// component and log level.
   virtual bool accepts(unsigned level, std::string_view component_name) = 0;
+
+  // -- unsafe logging ---------------------------------------------------------
+
+  /// Logs a message without checking whether the logger is configured to
+  /// accept input for given component and log level.
+  template <class... Ts>
+  void log_unchecked(unsigned level, std::string_view component,
+                     detail::format_string_with_location fmt_str,
+                     Ts&&... args) {
+    auto& loc = fmt_str.location;
+    context ctx{level, component, loc.line(), loc.file_name(),
+                loc.function_name()};
+    do_log(ctx, detail::format(fmt_str.value, std::forward<Ts>(args)...));
+  }
 
   // -- static utility functions -----------------------------------------------
 
@@ -349,21 +356,6 @@ private:
         loglvl, component, (caf::logger::line_builder{} << message).get());    \
     }                                                                          \
   } while (false)
-
-#define CAF_PUSH_AID(aarg)                                                     \
-  caf::actor_id CAF_PP_UNIFYN(caf_aid_tmp)                                     \
-    = caf::logger::thread_local_aid(aarg);                                     \
-  auto CAF_PP_UNIFYN(caf_aid_tmp_guard) = caf::detail::make_scope_guard(       \
-    [=] { caf::logger::thread_local_aid(CAF_PP_UNIFYN(caf_aid_tmp)); })
-
-#define CAF_PUSH_AID_FROM_PTR(some_ptr)                                        \
-  auto CAF_PP_UNIFYN(caf_aid_ptr) = some_ptr;                                  \
-  CAF_PUSH_AID(CAF_PP_UNIFYN(caf_aid_ptr) ? CAF_PP_UNIFYN(caf_aid_ptr)->id()   \
-                                          : 0)
-
-#define CAF_SET_AID(aid_arg) caf::logger::thread_local_aid(aid_arg)
-
-#define CAF_SET_LOGGER_SYS(ptr) caf::logger::set_current_actor_system(ptr)
 
 #if CAF_LOG_LEVEL < CAF_LOG_LEVEL_TRACE
 

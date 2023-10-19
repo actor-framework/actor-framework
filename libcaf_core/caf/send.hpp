@@ -9,6 +9,7 @@
 #include "caf/actor_cast.hpp"
 #include "caf/check_typed_input.hpp"
 #include "caf/local_actor.hpp"
+#include "caf/logger.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/message.hpp"
 #include "caf/message_id.hpp"

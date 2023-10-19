@@ -223,6 +223,7 @@ caf_add_component(
     caf/local_actor.cpp
     caf/logger.cpp
     caf/mailbox_element.cpp
+    caf/make_actor.cpp
     caf/make_config_option.cpp
     caf/message.cpp
     caf/message_builder.cpp
@@ -268,6 +269,7 @@ caf_add_component(
     caf/telemetry/timer.test.cpp
     caf/term.cpp
     caf/thread_hook.cpp
+    caf/thread_local_aid.cpp
     caf/timestamp.cpp
     caf/tracing_data.cpp
     caf/tracing_data_factory.cpp

@@ -10,7 +10,6 @@
 #include "caf/async/producer_adapter.hpp"
 #include "caf/async/spsc_buffer.hpp"
 #include "caf/fwd.hpp"
-#include "caf/logger.hpp"
 #include "caf/sec.hpp"
 
 #include <utility>
@@ -108,7 +107,6 @@ public:
   }
 
   void abort(const error& reason) override {
-    CAF_LOG_TRACE(CAF_ARG(reason));
     if (out_) {
       if (!reason || reason == sec::connection_closed
           || reason == sec::socket_disconnected || reason == sec::disposed)
