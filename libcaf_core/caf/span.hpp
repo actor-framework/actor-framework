@@ -232,4 +232,10 @@ span<T> make_span(T* first, T* last) {
   return {first, last};
 }
 
+/// Convenience function to make using `caf::span` more convenient without the
+/// deduction guides.
+inline span<const std::string_view::value_type> make_span(std::string_view xs) {
+  return {xs.data(), xs.size()};
+}
+
 } // namespace caf

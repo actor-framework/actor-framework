@@ -6,7 +6,7 @@
 
 #include "caf/net/http/client.hpp"
 
-#include "caf/test/scenario.hpp"
+#include "caf/test/outline.hpp"
 
 #include "caf/net/octet_stream/lower_layer.hpp"
 
@@ -77,6 +77,10 @@ public:
 
   byte_buffer& output_buffer() {
     return output;
+  }
+
+  std::string_view output_as_str() {
+    return {reinterpret_cast<char*>(output.data()), output.size()};
   }
 
   bool end_output() {
@@ -239,6 +243,112 @@ public:
     return static_cast<ptrdiff_t>(body.size());
   }
 };
+
+SCENARIO("the client sends HTTP requests") {
+  auto app_ptr = app_t::make();
+  auto client_ptr = net::http::client::make(std::move(app_ptr));
+  auto client = client_ptr.get();
+  auto transport = mock_stream_transport::make(std::move(client_ptr));
+  require_eq(transport->start(nullptr), error{});
+  GIVEN("a single line HTTP request") {
+    WHEN("the client sends the message") {
+      client->begin_header(net::http::method::get, "/foo/bar/index.html"sv);
+      client->end_header();
+      THEN("the output contains the formated request") {
+        check_eq(transport->output_as_str(),
+                 "GET /foo/bar/index.html HTTP/1.1\r\n\r\n"sv);
+      }
+    }
+  }
+  GIVEN("a multi-line HTTP request") {
+    auto expected = "GET /foo/bar/index.html HTTP/1.1\r\n"
+                    "Host: localhost:8090\r\n"
+                    "User-Agent: AwesomeLib/1.0\r\n"
+                    "Accept-Encoding: chunked\r\n\r\n"sv;
+    WHEN("the client sends the message") {
+      client->begin_header(net::http::method::get, "/foo/bar/index.html"sv);
+      client->add_header_field("Host", "localhost:8090");
+      client->add_header_field("User-Agent", "AwesomeLib/1.0");
+      client->add_header_field("Accept-Encoding", "chunked");
+      client->end_header();
+      THEN("the output contains the formated request") {
+        check_eq(transport->output_as_str(), expected);
+      }
+    }
+  }
+  GIVEN("a multi-line HTTP request with a payload") {
+    auto expected = "GET /foo/bar/index.html HTTP/1.1\r\n"
+                    "Content-Length: 13\r\n"
+                    "Content-Type: plain/text\r\n"
+                    "\r\n"
+                    "Hello, world!"sv;
+    WHEN("the client sends the message") {
+      client->begin_header(net::http::method::get, "/foo/bar/index.html"sv);
+      client->add_header_field("Content-Length", "13");
+      client->add_header_field("Content-Type", "plain/text");
+      client->end_header();
+      client->send_payload(as_bytes(make_span("Hello, world!"sv)));
+      THEN("the output contains the formated request") {
+        check_eq(transport->output_as_str(), expected);
+      }
+    }
+  }
+  GIVEN("a multi-line HTTP request with a chunked payload") {
+    auto expected = "GET /foo/bar/index.html HTTP/1.1\r\n"
+                    "Content-Type: plain/text\r\n"
+                    "Transfer-Encoding: chunked\r\n"
+                    "\r\n"
+                    "D\r\n"
+                    "Hello, world!\r\n"
+                    "11\r\n"
+                    "Developer Network\r\n"
+                    "0\r\n"
+                    "\r\n"sv;
+    WHEN("the client sends the message") {
+      client->begin_header(net::http::method::get, "/foo/bar/index.html"sv);
+      client->add_header_field("Content-Type", "plain/text");
+      client->add_header_field("Transfer-Encoding", "chunked");
+      client->end_header();
+      client->send_chunk(as_bytes(make_span("Hello, world!"sv)));
+      client->send_chunk(as_bytes(make_span("Developer Network"sv)));
+      client->send_end_of_chunks();
+      THEN("the output contains the formated request") {
+        check_eq(transport->output_as_str(), expected);
+      }
+    }
+  }
+}
+
+OUTLINE("Sending all available HTTP methods") {
+  auto app_ptr = app_t::make();
+  auto client_ptr = net::http::client::make(std::move(app_ptr));
+  auto client = client_ptr.get();
+  auto transport = mock_stream_transport::make(std::move(client_ptr));
+  require_eq(transport->start(nullptr), error{});
+  GIVEN("a http request with <method> method") {
+    auto method_name = block_parameters<std::string>();
+    auto expected = detail::format("{} /foo/bar HTTP/1.1\r\n\r\n", method_name);
+    WHEN("the client sends the <enum value> message") {
+      auto method = static_cast<net::http::method>(block_parameters<uint8_t>());
+      client->begin_header(method, "/foo/bar"sv);
+      client->end_header();
+      THEN("the output contains the formated request") {
+        check_eq(transport->output_as_str(), expected);
+      }
+    }
+  }
+  EXAMPLES = R"(
+    |  method  | enum value |
+    | GET      |     0      |
+    | HEAD     |     1      |
+    | POST     |     2      |
+    | PUT      |     3      |
+    | DELETE   |     4      |
+    | CONNECT  |     5      |
+    | OPTIONS  |     6      |
+    | TRACE    |     7      |
+  )";
+}
 
 SCENARIO("the client parses HTTP response into header fields") {
   auto app_ptr = app_t::make();

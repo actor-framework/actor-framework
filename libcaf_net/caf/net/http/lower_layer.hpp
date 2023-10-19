@@ -83,7 +83,7 @@ public:
   virtual ~client();
 
   /// Starts writing an HTTP request header.
-  virtual void begin_header(http::method method, uri resource) = 0;
+  virtual void begin_header(http::method method, std::string_view path) = 0;
 };
 
 } // namespace caf::net::http

@@ -34,6 +34,27 @@ writer& operator<<(writer& out, const std::string& str) {
   return out << std::string_view{str};
 }
 
+constexpr std::string_view format(http::method m) {
+  switch (m) {
+    case http::method::get:
+      return "GET"sv;
+    case http::method::head:
+      return "HEAD"sv;
+    case http::method::post:
+      return "POST"sv;
+    case http::method::put:
+      return "PUT"sv;
+    case http::method::del:
+      return "DELETE"sv;
+    case http::method::connect:
+      return "CONNECT"sv;
+    case http::method::options:
+      return "OPTIONS"sv;
+    case http::method::trace:
+      return "TRACE"sv;
+  }
+}
+
 } // namespace
 
 std::pair<std::string_view, byte_span> split_header(const byte_span bytes) {
@@ -72,9 +93,10 @@ void begin_response_header(status code, byte_buffer& buf) {
       << phrase(code) << "\r\n"sv;
 }
 
-void begin_request_header(http::method method, uri resource, byte_buffer& buf) {
+void begin_request_header(http::method method, std::string_view path,
+                          byte_buffer& buf) {
   writer out{&buf};
-  out << to_string(method) << " "sv << resource.str() << " HTTP/1.1\r\n"sv;
+  out << format(method) << " "sv << path << " HTTP/1.1\r\n"sv;
 }
 
 void add_header_field(std::string_view key, std::string_view val,

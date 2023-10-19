@@ -92,7 +92,7 @@ public:
 
   void suspend_reading() override;
 
-  void begin_header(http::method method, uri resource) override;
+  void begin_header(http::method method, std::string_view path) override;
 
   void add_header_field(std::string_view key, std::string_view val) override;
 
