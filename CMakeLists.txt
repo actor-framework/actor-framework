@@ -5,7 +5,6 @@ project(CAF CXX)
 
 include(CMakeDependentOption)
 include(CMakePackageConfigHelpers)
-include(CMakePrintHelpers)
 include(CheckCXXSourceCompiles)
 include(CheckCXXSourceRuns)
 include(GNUInstallDirs)
@@ -64,7 +63,6 @@ endif()
 # -- project-specific CMake settings -------------------------------------------
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-cmake_print_variables(Python3_ROOT_DIR)
 
 # -- sanity checking -----------------------------------------------------------
 
