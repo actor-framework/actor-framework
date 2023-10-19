@@ -63,6 +63,9 @@ endif()
 # -- project-specific CMake settings -------------------------------------------
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+set(Python3_ROOT_DIR
+    ${Python3_ROOT_DIR}
+    CACHE PATH "Which installation or virtual environment of Python to use" FORCE)
 
 # -- sanity checking -----------------------------------------------------------
 
