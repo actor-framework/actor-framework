@@ -8,6 +8,7 @@ cmake.exe ^
   -DBUILD_SHARED_LIBS=OFF ^
   -DCMAKE_C_COMPILER=cl.exe ^
   -DCMAKE_CXX_COMPILER=cl.exe ^
-  -DCMAKE_CXX_FLAGS="/WX"
+  -DCMAKE_CXX_FLAGS="/WX" ^
+  -DPython3_ROOT_DIR=%Python3_ROOT_DIR%
 
 cmake.exe --build build --parallel %NUMBER_OF_PROCESSORS% --target install --config debug || exit \b 1
