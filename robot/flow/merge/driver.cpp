@@ -43,17 +43,16 @@ auto apply_limit(std::optional<size_t> limit) {
 struct publisher {
   int init;
   size_t num;
-  std::optional<caf::timespan> delay;
 
   int_publisher make(caf::actor_system& sys) const {
     auto prom = std::promise<int_publisher>();
     auto future = prom.get_future();
     sys.spawn<caf::detached>(
       [cfg = *this, p = std::move(prom)](caf::event_based_actor* self) mutable {
-        auto out = self->make_observable()
+        auto out = self //
+                     ->make_observable()
                      .iota(cfg.init)
                      .take(cfg.num)
-                     //.compose(apply_delay(self, cfg.delay))
                      .to_publisher();
         p.set_value(std::move(out));
       });
@@ -63,8 +62,7 @@ struct publisher {
 
 template <class Inspector>
 bool inspect(Inspector& f, publisher& x) {
-  return f.object(x).fields(f.field("init", x.init), f.field("num", x.num),
-                            f.field("delay", x.delay));
+  return f.object(x).fields(f.field("init", x.init), f.field("num", x.num));
 }
 
 void start_fast_consumer(caf::actor_system& sys,
