@@ -8,6 +8,7 @@
 
 #include <cstdint>
 #include <future>
+#include <iostream>
 
 CAF_BEGIN_TYPE_ID_BLOCK(merge_test, caf::first_custom_type_id)
   CAF_ADD_TYPE_ID(merge_test, (caf::cow_vector<int>) )

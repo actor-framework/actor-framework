@@ -4,7 +4,6 @@
 
 #include "caf/flow/op/mcast.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/fixture/flow.hpp"
 #include "caf/test/nil.hpp"
 #include "caf/test/scenario.hpp"
@@ -13,6 +12,8 @@
 #include "caf/flow/scoped_coordinator.hpp"
 
 using namespace caf;
+
+namespace {
 
 using int_mcast = flow::op::mcast<int>;
 
@@ -119,4 +120,4 @@ SCENARIO("mcast operators buffer items that they cannot ship immediately") {
 
 } // WITH_FIXTURE(fixture)
 
-CAF_TEST_MAIN()
+} // namespace
