@@ -62,20 +62,18 @@ bool load_data(Deserializer& source, message::data_ptr& data) {
     }
     detail::type_id_list_builder ids;
     ids.reserve(msg_size);
+    size_t data_size = 0;
     for (size_t i = 0; i < msg_size; ++i) {
       type_id_t id = 0;
       GUARDED(source.value(id));
-      ids.push_back(id);
-    }
-    GUARDED(source.end_sequence());
-    CAF_ASSERT(ids.size() == msg_size);
-    size_t data_size = 0;
-    for (auto id : ids) {
       if (auto meta = detail::global_meta_object_or_null(id))
         data_size += meta->padded_size;
       else
         STOP(sec::unknown_type);
+      ids.push_back(id);
     }
+    GUARDED(source.end_sequence());
+    CAF_ASSERT(ids.size() == msg_size);
     intrusive_ptr<detail::message_data> ptr;
     if (auto vptr = malloc(sizeof(detail::message_data) + data_size)) {
       // We don't need to worry about exceptions here: the message_data
