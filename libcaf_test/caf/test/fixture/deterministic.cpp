@@ -4,6 +4,8 @@
 
 #include "caf/test/fixture/deterministic.hpp"
 
+#include "caf/test/fixture/deterministic_logger.hpp"
+
 #include "caf/actor_control_block.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
@@ -436,7 +438,10 @@ deterministic::abstract_message_predicate::~abstract_message_predicate() {
 
 // -- constructors, destructors, and assignment operators ----------------------
 
-deterministic::deterministic() : cfg(this), sys(cfg) {
+deterministic::deterministic()
+  : cfg(this), sys(cfg.logger_factory([](caf::actor_system& sys) {
+      return make_counted<deterministic_logger>(sys);
+    })) {
   // nop
 }
 

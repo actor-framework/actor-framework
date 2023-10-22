@@ -412,6 +412,10 @@ public:
     return result;
   }
 
+  unsigned verbosity() override {
+    return level_;
+  }
+
   void no_colors(bool new_value) override {
     no_colors_ = new_value;
   }
