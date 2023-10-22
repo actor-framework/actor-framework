@@ -43,16 +43,6 @@ public:
   /// @pre `index < size()`
   type_id_t operator[](size_t index) const noexcept;
 
-  // -- iterator access --------------------------------------------------------
-
-  auto begin() const noexcept {
-    return storage_;
-  }
-
-  auto end() const noexcept {
-    return storage_ + size_;
-  }
-
   // -- conversions ------------------------------------------------------------
 
   /// Convertes the internal buffer to a @ref type_id_list and returns it.

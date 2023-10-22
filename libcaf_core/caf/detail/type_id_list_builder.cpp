@@ -102,7 +102,7 @@ void type_id_list_builder::reserve(size_t num_elements) {
 }
 
 void type_id_list_builder::push_back(type_id_t id) {
-  if ((size_ + 1) >= reserved_)
+  if (size_ >= reserved_)
     reserve(reserved_ + block_size);
   storage_[size_++] = id;
 }
