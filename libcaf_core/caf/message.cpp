@@ -60,8 +60,7 @@ bool load_data(Deserializer& source, message::data_ptr& data) {
              && source.end_field()           //
              && source.end_object();
     }
-    detail::type_id_list_builder ids;
-    ids.reserve(msg_size);
+    detail::type_id_list_builder ids{msg_size};
     size_t data_size = 0;
     for (size_t i = 0; i < msg_size; ++i) {
       type_id_t id = 0;
