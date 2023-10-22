@@ -25,6 +25,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Fix encoding of chunk size in chunked HTTP responses (#1587).
 - Fix leak when using `spawn_inactive` and not launching the actor explicitly
   (#1597).
+- Fix a minor bug in the deserialization of messages that caused CAF to allocate
+  more storage than necessary (#1614).
 
 ### Deprecated
 
