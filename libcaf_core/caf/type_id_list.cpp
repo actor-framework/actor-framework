@@ -39,8 +39,7 @@ type_id_list type_id_list::concat(span<type_id_list> lists) {
   auto total_size = size_t{0};
   for (auto ls : lists)
     total_size += ls.size();
-  detail::type_id_list_builder builder;
-  builder.reserve(total_size);
+  detail::type_id_list_builder builder{total_size};
   for (auto ls : lists)
     for (auto id : ls)
       builder.push_back(id);

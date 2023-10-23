@@ -76,21 +76,29 @@ const type_id_t* get_or_set_type_id_buf(type_id_t* ptr) {
 
 } // namespace
 
-type_id_list_builder::type_id_list_builder()
-  : size_(0), reserved_(0), storage_(nullptr) {
-  // nop
+type_id_list_builder::type_id_list_builder(size_t size_hint) {
+  // Ignore size hints of 0.
+  if (size_hint == 0)
+    return;
+  // Round the size hint up to the next multiple of the block size such that we
+  // can hold at least one extra value (the size dummy).
+  reserve(((size_hint + block_size) / block_size) * block_size);
 }
 
 type_id_list_builder::~type_id_list_builder() {
   free(storage_);
 }
 
-void type_id_list_builder::reserve(size_t num_elements) {
-  auto new_capacity = num_elements + 1; // One extra slot for the size prefix.
-  if (reserved_ >= new_capacity)
+void type_id_list_builder::reserve(size_t new_capacity) {
+  // We need at least two elements: one for the size prefix and one for the
+  // first type ID.
+  CAF_ASSERT(new_capacity > 1);
+  // The number of elements must be a multiple of the block size.
+  CAF_ASSERT(new_capacity % block_size == 0);
+  if (capacity_ >= new_capacity)
     return;
-  reserved_ = new_capacity;
-  auto ptr = realloc(storage_, reserved_ * sizeof(type_id_t));
+  capacity_ = new_capacity;
+  auto ptr = realloc(storage_, capacity_ * sizeof(type_id_t));
   if (ptr == nullptr)
     CAF_RAISE_ERROR(std::bad_alloc, "bad_alloc");
   storage_ = reinterpret_cast<type_id_t*>(ptr);
@@ -102,9 +110,18 @@ void type_id_list_builder::reserve(size_t num_elements) {
 }
 
 void type_id_list_builder::push_back(type_id_t id) {
-  if (size_ >= reserved_)
-    reserve(reserved_ + block_size);
+  if (size_ >= capacity_)
+    reserve(capacity_ + block_size);
   storage_[size_++] = id;
+}
+
+void type_id_list_builder::clear() noexcept {
+  if (storage_) {
+    size_ = 1;
+  } else {
+    size_ = 0;
+    capacity_ = 0;
+  }
 }
 
 size_t type_id_list_builder::size() const noexcept {
