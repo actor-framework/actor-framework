@@ -277,13 +277,13 @@ SCENARIO("the client sends HTTP requests") {
     }
   }
   GIVEN("a multi-line HTTP request with a payload") {
-    auto expected = "GET /foo/bar/index.html HTTP/1.1\r\n"
+    auto expected = "POST /foo/bar/index.html HTTP/1.1\r\n"
                     "Content-Length: 13\r\n"
                     "Content-Type: plain/text\r\n"
                     "\r\n"
                     "Hello, world!"sv;
     WHEN("the client sends the message") {
-      client->begin_header(net::http::method::get, "/foo/bar/index.html"sv);
+      client->begin_header(net::http::method::post, "/foo/bar/index.html"sv);
       client->add_header_field("Content-Length", "13");
       client->add_header_field("Content-Type", "plain/text");
       client->end_header();
@@ -294,7 +294,7 @@ SCENARIO("the client sends HTTP requests") {
     }
   }
   GIVEN("a multi-line HTTP request with a chunked payload") {
-    auto expected = "GET /foo/bar/index.html HTTP/1.1\r\n"
+    auto expected = "POST /foo/bar/index.html HTTP/1.1\r\n"
                     "Content-Type: plain/text\r\n"
                     "Transfer-Encoding: chunked\r\n"
                     "\r\n"
@@ -305,7 +305,7 @@ SCENARIO("the client sends HTTP requests") {
                     "0\r\n"
                     "\r\n"sv;
     WHEN("the client sends the message") {
-      client->begin_header(net::http::method::get, "/foo/bar/index.html"sv);
+      client->begin_header(net::http::method::post, "/foo/bar/index.html"sv);
       client->add_header_field("Content-Type", "plain/text");
       client->add_header_field("Transfer-Encoding", "chunked");
       client->end_header();

@@ -36,7 +36,7 @@ void client::shutdown() {
 
 void client::request_messages() {
   if (!down_->is_reading())
-    down_->configure_read(receive_policy::up_to(max_request_size_));
+    down_->configure_read(receive_policy::up_to(max_response_size_));
 }
 
 void client::suspend_reading() {
@@ -113,7 +113,7 @@ ptrdiff_t client::consume(byte_span input, byte_span) {
   ptrdiff_t consumed = 0;
   for (;;) {
     if (mode_ == mode::read_header) {
-      if (input.size() >= max_request_size_) {
+      if (input.size() >= max_response_size_) {
         abort_and_error(status::request_header_fields_too_large,
                         "Header exceeds maximum size.");
         return -1;
@@ -133,7 +133,7 @@ ptrdiff_t client::consume(byte_span input, byte_span) {
         mode_ = mode::read_chunks;
       } else if (auto len = hdr_.content_length()) {
         // Protect against payloads that exceed the maximum size.
-        if (*len >= max_request_size_) {
+        if (*len >= max_response_size_) {
           abort_and_error(status::payload_too_large,
                           "Payload exceeds maximum size.");
           return -1;

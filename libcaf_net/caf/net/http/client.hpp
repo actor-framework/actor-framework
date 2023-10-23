@@ -45,8 +45,8 @@ public:
 
   // -- constants --------------------------------------------------------------
 
-  /// Default maximum size for incoming HTTP requests: 64KiB.
-  static constexpr uint32_t default_max_request_size = 65'536;
+  /// Default maximum size for incoming HTTP responses: 512KiB.
+  static constexpr uint32_t default_max_response_size = 512 * 1024;
 
   // -- factories --------------------------------------------------------------
 
@@ -69,11 +69,11 @@ public:
   }
 
   size_t max_request_size() const noexcept {
-    return max_request_size_;
+    return max_response_size_;
   }
 
   void max_request_size(size_t value) noexcept {
-    max_request_size_ = value;
+    max_response_size_ = value;
   }
 
   // -- http::lower_layer::client implementation -------------------------------
@@ -148,7 +148,7 @@ private:
   size_t payload_len_ = 0;
 
   /// Maximum size for incoming HTTP requests.
-  size_t max_request_size_ = default_max_request_size;
+  size_t max_response_size_ = default_max_response_size;
 };
 
 } // namespace caf::net::http

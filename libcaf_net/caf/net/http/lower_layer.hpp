@@ -54,7 +54,7 @@ public:
     = 0;
 };
 
-class lower_layer::server : public lower_layer {
+class CAF_NET_EXPORT lower_layer::server : public lower_layer {
 public:
   virtual ~server();
 
@@ -78,7 +78,7 @@ public:
   bool send_response(status code, const error& err);
 };
 
-class lower_layer::client : public lower_layer {
+class CAF_NET_EXPORT lower_layer::client : public lower_layer {
 public:
   virtual ~client();
 

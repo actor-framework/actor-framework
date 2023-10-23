@@ -97,7 +97,7 @@ void begin_response_header(status code, byte_buffer& buf) {
 void begin_request_header(http::method method, std::string_view path,
                           byte_buffer& buf) {
   writer out{&buf};
-  out << format(method) << " "sv << path << " HTTP/1.1\r\n"sv;
+  out << format(method) << ' ' << path << " HTTP/1.1\r\n"sv;
 }
 
 void add_header_field(std::string_view key, std::string_view val,
