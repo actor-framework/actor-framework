@@ -35,7 +35,7 @@ SCENARIO("a default-constructed type_id_list_builder is empty") {
       }
     }
     WHEN("we call move_to_list") {
-      auto list = builder.copy_to_list();
+      auto list = builder.move_to_list();
       THEN("the returned list is empty") {
         check_eq(list.size(), 0u);
       }
@@ -111,7 +111,7 @@ OUTLINE("passing an size hint to the builder pre-allocates memory") {
     auto hint = block_parameters<size_t>();
     WHEN("constructing a builder with the size hint") {
       detail::type_id_list_builder builder{hint};
-      THEN("the capacity capacity is <capacity>") {
+      THEN("the capacity is <capacity>") {
         auto capacity = block_parameters<size_t>();
         check_eq(builder.capacity(), capacity);
       }
