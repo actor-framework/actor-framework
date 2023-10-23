@@ -4,7 +4,7 @@
 
 #include "caf/test/fixture/deterministic.hpp"
 
-#include "caf/test/fixture/deterministic_logger.hpp"
+#include "caf/test/reporter.hpp"
 
 #include "caf/actor_control_block.hpp"
 #include "caf/actor_system.hpp"
@@ -17,11 +17,93 @@
 #include "caf/scheduled_actor.hpp"
 
 #include <numeric>
+#include <string>
 #include <string_view>
+#include <utility>
 
 using namespace std::literals;
 
 namespace caf::test::fixture {
+
+/// A logger implementation for deterministic fixture to log into console
+class deterministic_logger : public caf::logger,
+                             public caf::detail::atomic_ref_counted {
+public:
+  /// Increases the reference count of the coordinated.
+  void ref_logger() const noexcept final {
+    this->ref();
+  }
+
+  /// Decreases the reference count of the coordinated and destroys the object
+  /// if necessary.
+  void deref_logger() const noexcept final {
+    this->deref();
+  }
+
+  // -- constructors, destructors, and assignment operators --------------------
+
+  deterministic_logger(actor_system& sys) : system_(sys) {
+    // nop
+  }
+
+  // -- logging ----------------------------------------------------------------
+
+  /// Writes an entry to the event-queue of the logger.
+  /// @thread-safe
+  void do_log(const context& ctx, std::string&& msg) override {
+    const auto location = caf::detail::source_location::current(
+      ctx.file_name, ctx.function_name, ctx.line_number);
+    switch (ctx.level) {
+      case CAF_LOG_LEVEL_ERROR:
+        reporter::instance().print_error(std::move(msg), location);
+        return;
+      case CAF_LOG_LEVEL_WARNING:
+        reporter::instance().print_warning(std::move(msg), location);
+        return;
+      case CAF_LOG_LEVEL_INFO:
+        reporter::instance().print_info(std::move(msg), location);
+        return;
+      case CAF_LOG_LEVEL_DEBUG:
+        reporter::instance().print_debug(std::move(msg), location);
+        return;
+      case CAF_LOG_LEVEL_TRACE:
+        return;
+    }
+  }
+
+  /// Returns whether the logger is configured to accept input for given
+  /// component and log level.
+  bool accepts(unsigned level, std::string_view) override {
+    return level <= verbosity_;
+  }
+
+  // -- initialization ---------------------------------------------------------
+
+  /// Allows the logger to read its configuration from the actor system config.
+  void init(const actor_system_config&) override {
+    // nop
+  }
+
+  // -- event handling ---------------------------------------------------------
+
+  /// Starts any background threads needed by the logger.
+  void start() override {
+    // nop
+  }
+
+  /// Stops all background threads of the logger.
+  void stop() override {
+    // nop
+  }
+
+  // -- member variables -------------------------------------------------------
+
+  // Stores logger verbosity to ignore log messages.
+  uint32_t verbosity_;
+
+  // References the parent system.
+  actor_system& system_;
+};
 
 // -- mailbox ------------------------------------------------------------------
 
