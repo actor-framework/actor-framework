@@ -28,6 +28,14 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Fix a minor bug in the deserialization of messages that caused CAF to allocate
   more storage than necessary (#1614).
 
+### Changed
+
+- Calling `to_string` on any of CAF's enum types now represents the enum value
+  using the short name instead of the fully qualified name. For example,
+  `to_string(sec::none)` now returns `"none"` instead of `"caf::sec::none"`.
+  Accordingly, `from_string` now accepts the short name (in additional to the
+  fully qualified name).
+
 ### Deprecated
 
 - Calling `to_stream` or `to_typed_stream` on an actor is now deprecated. Simply
