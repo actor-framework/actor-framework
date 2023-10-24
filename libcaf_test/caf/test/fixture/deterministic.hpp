@@ -6,16 +6,15 @@
 
 #include "caf/test/runnable.hpp"
 
+#include "caf/actor_clock.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/detail/source_location.hpp"
-#include "caf/detail/test_actor_clock.hpp"
 #include "caf/detail/test_export.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/resumable.hpp"
-#include "caf/scheduler/abstract_coordinator.hpp"
 
 #include <cassert>
 #include <list>
@@ -497,6 +496,48 @@ public:
   /// Dispatches all pending messages.
   size_t dispatch_messages();
 
+  // -- time management --------------------------------------------------------
+
+  /// Sets the time to an arbitrary point in time.
+  /// @returns the number of triggered timeouts.
+  size_t set_time(actor_clock::time_point value,
+                  const detail::source_location& loc
+                  = detail::source_location::current());
+
+  /// Advances the clock by `amount`.
+  /// @returns the number of triggered timeouts.
+  size_t advance_time(actor_clock::duration_type amount,
+                      const detail::source_location& loc
+                      = detail::source_location::current());
+
+  /// Tries to trigger the next pending timeout. Returns `true` if a timeout
+  /// was triggered, `false` otherwise.
+  bool trigger_timeout(const detail::source_location& loc
+                       = detail::source_location::current());
+
+  /// Triggers all pending timeouts by advancing the clock to the point in time
+  /// where the last timeout is due.
+  size_t trigger_all_timeouts(const detail::source_location& loc
+                              = detail::source_location::current());
+
+  /// Returns the number of pending timeouts.
+  [[nodiscard]] size_t num_timeouts() noexcept;
+
+  /// Returns whether there is at least one pending timeout.
+  [[nodiscard]] bool has_pending_timeout() noexcept {
+    return num_timeouts() > 0;
+  }
+
+  /// Returns the time of the next pending timeout.
+  [[nodiscard]] actor_clock::time_point
+  next_timeout(const detail::source_location& loc
+               = detail::source_location::current());
+
+  /// Returns the time of the last pending timeout.
+  [[nodiscard]] actor_clock::time_point
+  last_timeout(const detail::source_location& loc
+               = detail::source_location::current());
+
   // -- message-based predicates -----------------------------------------------
 
   /// Expects a message with types `Ts...` as the next message in the mailbox of
@@ -621,6 +662,9 @@ private:
   bool prepone_event_impl(const strong_actor_ptr& receiver,
                           actor_predicate& sender_pred,
                           abstract_message_predicate& payload_pred);
+
+  /// Returns the scheduler implementation.
+  scheduler_impl& sched_impl();
 
   /// Returns the next event for `receiver` or `nullptr` if there is none.
   scheduling_event* find_event_impl(const strong_actor_ptr& receiver);
