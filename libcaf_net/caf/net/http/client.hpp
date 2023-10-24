@@ -68,11 +68,11 @@ public:
     return *up_;
   }
 
-  size_t max_request_size() const noexcept {
+  size_t max_response_size() const noexcept {
     return max_response_size_;
   }
 
-  void max_request_size(size_t value) noexcept {
+  void max_response_size(size_t value) noexcept {
     max_response_size_ = value;
   }
 
@@ -121,12 +121,9 @@ public:
 private:
   // -- utility functions ------------------------------------------------------
 
-  void abort_and_error(http::status status, std::string_view message) {
+  void abort(std::string_view message) {
     up_->abort(make_error(sec::protocol_error, message));
-    write_response(status, message);
   }
-
-  void write_response(status code, std::string_view content);
 
   bool invoke_upper_layer(const_byte_span payload);
 

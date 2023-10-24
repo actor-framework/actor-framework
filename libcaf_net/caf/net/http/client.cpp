@@ -114,8 +114,7 @@ ptrdiff_t client::consume(byte_span input, byte_span) {
   for (;;) {
     if (mode_ == mode::read_header) {
       if (input.size() >= max_response_size_) {
-        abort_and_error(status::request_header_fields_too_large,
-                        "Header exceeds maximum size.");
+        abort("Header exceeds maximum size.");
         return -1;
       }
       auto [hdr, remainder] = v1::split_header(input);
@@ -134,8 +133,7 @@ ptrdiff_t client::consume(byte_span input, byte_span) {
       } else if (auto len = hdr_.content_length()) {
         // Protect against payloads that exceed the maximum size.
         if (*len >= max_response_size_) {
-          abort_and_error(status::payload_too_large,
-                          "Payload exceeds maximum size.");
+          abort("Payload exceeds maximum size.");
           return -1;
         }
         // Transition to read_payload mode and continue.
@@ -161,20 +159,13 @@ ptrdiff_t client::consume(byte_span input, byte_span) {
       }
     } else { // mode_ == mode::read_chunks
       // TODO: implement me
-      write_response(status::not_implemented,
-                     "Chunked transfer not implemented yet.");
+      abort("Chunked transfer not implemented yet.");
       return -1;
     }
   }
 }
 
 // -- utility functions ------------------------------------------------------
-
-void client::write_response(status code, std::string_view content) {
-  down_->begin_output();
-  v1::write_response(code, "text/plain", content, down_->output_buffer());
-  down_->end_output();
-}
 
 bool client::invoke_upper_layer(const_byte_span payload) {
   return up_->consume(hdr_, payload) >= 0;
@@ -185,7 +176,7 @@ bool client::handle_header(std::string_view http) {
   auto [code, msg] = hdr_.parse(http);
   if (code != status::ok) {
     CAF_LOG_DEBUG("received malformed header");
-    abort_and_error(code, msg);
+    abort(msg);
     return false;
   }
   return true;

@@ -205,6 +205,8 @@ public:
 
   net::http::lower_layer* down = nullptr;
 
+  caf::error abort_reason;
+
   // -- properties -------------------------------------------------------------
   std::string_view payload_as_str() const noexcept {
     return {reinterpret_cast<const char*>(payload.data()), payload.size()};
@@ -223,9 +225,8 @@ public:
     return none;
   }
 
-  // TODO: Impossible to FAIL outside a test section in new testing framework?
-  void abort(const error&) override {
-    // CAF_FAIL("app::abort called: " << reason);
+  void abort(const error& err) override {
+    abort_reason = err;
   }
 
   void prepare_send() override {
@@ -399,6 +400,64 @@ SCENARIO("the client parses HTTP response into header fields") {
         check_eq(app->hdr.field("Content-Type"), "text/plain");
         check_eq(app->hdr.field("Content-Length"), "13");
         check_eq(app->payload_as_str(), "Hello, world!");
+      }
+    }
+  }
+}
+
+SCENARIO("the client receives invalid HTTP responses") {
+  auto app_ptr = app_t::make();
+  auto app = app_ptr.get();
+  auto client_ptr = net::http::client::make(std::move(app_ptr));
+  auto client = client_ptr.get();
+  auto transport = mock_stream_transport::make(std::move(client_ptr));
+  require_eq(transport->start(nullptr), error{});
+  GIVEN("a response with an invalid header field") {
+    std::string_view res = "HTTP/1.1 200 OK\r\n"
+                           "FooBar\r\n"
+                           "\r\n";
+    WHEN("receiving from an HTTP server") {
+      transport->push(res);
+      check_eq(transport->handle_input(), 0);
+      THEN("the HTTP layer parses the data and calls abort") {
+        check(!app->abort_reason.empty());
+      }
+    }
+  }
+  GIVEN("a response that is too long") {
+    std::string_view res = "HTTP/1.1 200 OK\r\n"
+                           "Content-Type: text/plain\r\n\r\n";
+    WHEN("receiving from an HTTP server") {
+      client->max_response_size(10);
+      transport->push(res);
+      check_eq(transport->handle_input(), 0);
+      THEN("the HTTP layer parses the data and calls abort") {
+        check(!app->abort_reason.empty());
+      }
+    }
+  }
+  GIVEN("a response with a too big content length") {
+    std::string_view res = "HTTP/1.1 200 OK\r\n"
+                           "Content-Type: text/plain\r\n"
+                           "Content-Length: 10000000\r\n\r\nHello, world";
+    WHEN("receiving from an HTTP server") {
+      transport->push(res);
+      check_eq(transport->handle_input(), 0);
+      THEN("the HTTP layer parses the data and calls abort") {
+        check(!app->abort_reason.empty());
+      }
+    }
+  }
+  GIVEN("a response using chunked encoding") {
+    std::string_view res = "HTTP/1.1 200 OK\r\n"
+                           "Content-Type: text/plain\r\n"
+                           "Transfer-Encoding: chunked\r\n"
+                           "\r\n";
+    WHEN("receiving from an HTTP server") {
+      transport->push(res);
+      check_eq(transport->handle_input(), 0);
+      THEN("the HTTP layer parses the data and calls abort") {
+        check(!app->abort_reason.empty());
       }
     }
   }
