@@ -22,8 +22,9 @@
 #include <utility>
 
 using namespace std::literals;
+namespace {
 
-namespace caf::test::fixture {
+using namespace caf;
 
 /// A logger implementation for deterministic fixture to log into console
 class deterministic_logger : public caf::logger,
@@ -42,7 +43,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  deterministic_logger(actor_system& sys) : system_(sys) {
+  deterministic_logger(actor_system&) {
     // nop
   }
 
@@ -74,7 +75,7 @@ public:
   /// Returns whether the logger is configured to accept input for given
   /// component and log level.
   bool accepts(unsigned level, std::string_view) override {
-    return level <= verbosity_;
+    return level <= reporter::instance().verbosity();
   }
 
   // -- initialization ---------------------------------------------------------
@@ -95,15 +96,11 @@ public:
   void stop() override {
     // nop
   }
-
-  // -- member variables -------------------------------------------------------
-
-  // Stores logger verbosity to ignore log messages.
-  uint32_t verbosity_;
-
-  // References the parent system.
-  actor_system& system_;
 };
+
+} // namespace
+
+namespace caf::test::fixture {
 
 // -- mailbox ------------------------------------------------------------------
 

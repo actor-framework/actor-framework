@@ -412,7 +412,7 @@ public:
     return result;
   }
 
-  unsigned verbosity() override {
+  unsigned verbosity() const noexcept override {
     return level_;
   }
 
