@@ -334,6 +334,12 @@ public:
     return add_step(step::on_error_return_item<output_type>{std::move(item)});
   }
 
+  template <class ErrorHandler>
+  auto on_error_return(ErrorHandler error_handler) && {
+    return add_step(
+      step::on_error_return<ErrorHandler>{std::move(error_handler)});
+  }
+
   /// Materializes the @ref observable.
   observable<output_type> as_observable() && {
     return materialize();
@@ -637,6 +643,13 @@ transformation<step::map<F>> observable<T>::map(F f) {
 template <class T>
 transformation<step::on_error_complete<T>> observable<T>::on_error_complete() {
   return transform(step::on_error_complete<T>{});
+}
+
+template <class T>
+template <class ErrorHandler>
+transformation<step::on_error_return<ErrorHandler>>
+observable<T>::on_error_return(ErrorHandler error_handler) {
+  return transform(step::on_error_return{std::move(error_handler)});
 }
 
 template <class T>
