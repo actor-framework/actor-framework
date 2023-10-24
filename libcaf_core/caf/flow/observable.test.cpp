@@ -68,6 +68,106 @@ TEST("element_at(n) only takes the element with index n") {
   }
 }
 
+TEST("reduce(z, f) applies a function to each item, sequentially, and emits "
+     "the final value") {
+  SECTION("reduce(z, f) emits final value for a range of size m") {
+    SECTION("blueprint") {
+      check_eq(collect(range(1, 1).reduce(0, std::plus<int>())), vector{1});
+      check_eq(collect(range(1, 2).reduce(0, std::plus<int>())), vector{3});
+      check_eq(collect(range(1, 3).reduce(0, std::plus<int>())), vector{6});
+    }
+    SECTION("observable") {
+      check_eq(collect(mat(range(1, 1)).reduce(0, std::plus<int>())),
+               vector{1});
+      check_eq(collect(mat(range(1, 2)).reduce(0, std::plus<int>())),
+               vector{3});
+      check_eq(collect(mat(range(1, 3)).reduce(0, std::plus<int>())),
+               vector{6});
+    }
+  }
+  SECTION("reduce(z, f) emits 0 for a range of size 0") {
+    SECTION("blueprint") {
+      check_eq(collect(range(1, 0).reduce(0, std::plus<int>())), vector{0});
+    }
+    SECTION("observable") {
+      check_eq(collect(mat(range(1, 0)).reduce(0, std::plus<int>())),
+               vector{0});
+    }
+  }
+  SECTION("reduce(z, f) propagates errors") {
+    SECTION("blueprint") {
+      check_eq(collect(
+                 range(1, 1).concat(obs_error()).reduce(0, std::plus<int>())),
+               sec::runtime_error);
+      check_eq(collect(
+                 range(1, 3).concat(obs_error()).reduce(0, std::plus<int>())),
+               sec::runtime_error);
+      check_eq(collect(obs_error().reduce(0, std::plus<int>())),
+               sec::runtime_error);
+    }
+    SECTION("observable") {
+      check_eq(
+        collect(
+          mat(range(1, 1).concat(obs_error())).reduce(0, std::plus<int>())),
+        sec::runtime_error);
+      check_eq(
+        collect(
+          mat(range(1, 3).concat(obs_error())).reduce(0, std::plus<int>())),
+        sec::runtime_error);
+      check_eq(collect(mat(obs_error()).reduce(0, std::plus<int>())),
+               sec::runtime_error);
+    }
+  }
+}
+
+TEST("scan(z, f) applies a function to each item sequentially, and emits each "
+     "successive value") {
+  SECTION("scan(z, f) emits successive value for a range of size m") {
+    SECTION("blueprint") {
+      check_eq(collect(range(1, 1).scan(0, std::plus<int>())), vector{1});
+      check_eq(collect(range(1, 2).scan(0, std::plus<int>())), vector{1, 3});
+      check_eq(collect(range(1, 3).scan(0, std::plus<int>())), vector{1, 3, 6});
+    }
+    SECTION("observable") {
+      check_eq(collect(mat(range(1, 1)).scan(0, std::plus<int>())), vector{1});
+      check_eq(collect(mat(range(1, 2)).scan(0, std::plus<int>())),
+               vector{1, 3});
+      check_eq(collect(mat(range(1, 3)).scan(0, std::plus<int>())),
+               vector{1, 3, 6});
+    }
+  }
+  SECTION("scan(z, f) emits 0 for a range of size 0") {
+    SECTION("blueprint") {
+      check_eq(collect(range(1, 0).scan(0, std::plus<int>())), nil);
+    }
+    SECTION("observable") {
+      check_eq(collect(mat(range(1, 0)).scan(0, std::plus<int>())), nil);
+    }
+  }
+  SECTION("scan(z, f) propagates errors") {
+    SECTION("blueprint") {
+      check_eq(collect(
+                 range(1, 1).concat(obs_error()).scan(0, std::plus<int>())),
+               sec::runtime_error);
+      check_eq(collect(
+                 range(1, 3).concat(obs_error()).scan(0, std::plus<int>())),
+               sec::runtime_error);
+      check_eq(collect(obs_error().scan(0, std::plus<int>())),
+               sec::runtime_error);
+    }
+    SECTION("observable") {
+      check_eq(
+        collect(mat(range(1, 1).concat(obs_error())).scan(0, std::plus<int>())),
+        sec::runtime_error);
+      check_eq(
+        collect(mat(range(1, 3).concat(obs_error())).scan(0, std::plus<int>())),
+        sec::runtime_error);
+      check_eq(collect(mat(obs_error()).scan(0, std::plus<int>())),
+               sec::runtime_error);
+    }
+  }
+}
+
 TEST("skip(n) skips the first n elements in a range of size m") {
   SECTION("skip(0) does nothing") {
     SECTION("blueprint") {

@@ -37,6 +37,9 @@ template <class>
 class reduce;
 
 template <class>
+class scan;
+
+template <class>
 class skip;
 
 template <class>
