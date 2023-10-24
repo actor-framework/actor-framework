@@ -31,7 +31,7 @@ public:
   /// Creates a @ref flow::observable that reads and emits all values from this
   /// publisher.
   flow::observable<T> observe_on(flow::coordinator* ctx, size_t buffer_size,
-                                 size_t min_request_size) {
+                                 size_t min_request_size) const {
     if (impl_)
       return impl_->observe_on(ctx, buffer_size, min_request_size);
     auto err = make_error(sec::invalid_observable,
@@ -43,7 +43,7 @@ public:
 
   /// Creates a @ref flow::observable that reads and emits all values from this
   /// publisher.
-  flow::observable<T> observe_on(flow::coordinator* ctx) {
+  flow::observable<T> observe_on(flow::coordinator* ctx) const {
     return observe_on(ctx, defaults::flow::buffer_size,
                       defaults::flow::min_demand);
   }
@@ -71,7 +71,7 @@ private:
     }
 
     flow::observable<T> observe_on(flow::coordinator* ctx, size_t buffer_size,
-                                   size_t min_request_size) {
+                                   size_t min_request_size) const {
       // Short circuit if we are already on the target coordinator.
       if (ctx == source_.get())
         return decorated_;
