@@ -14,10 +14,6 @@ namespace caf::flow::step {
 template <class ErrorHandler>
 class on_error_return {
 public:
-  using trait = detail::get_callable_trait_t<ErrorHandler>;
-
-  static_assert(trait::num_args == 1, "error_handler must take an argument");
-
   using handler_res
     = decltype(std::declval<ErrorHandler&>()(std::declval<const error&>()));
 
