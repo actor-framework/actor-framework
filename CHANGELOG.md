@@ -3,7 +3,6 @@
 All notable changes to this project will be documented in this file. The format
 is based on [Keep a Changelog](https://keepachangelog.com).
 
-
 ## [Unreleased]
 
 ### Added
@@ -27,6 +26,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   (#1597).
 - Fix a minor bug in the deserialization of messages that caused CAF to allocate
   more storage than necessary (#1614).
+- Add missing `const` to `publisher<T>::observe_on`.
 
 ### Deprecated
 
