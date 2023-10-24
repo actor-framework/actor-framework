@@ -207,6 +207,8 @@ public:
 
   caf::error abort_reason;
 
+  bool should_fail = false;
+
   // -- properties -------------------------------------------------------------
   std::string_view payload_as_str() const noexcept {
     return {reinterpret_cast<const char*>(payload.data()), payload.size()};
@@ -241,6 +243,10 @@ public:
                     const_byte_span body) override {
     hdr = response_hdr;
     payload.assign(body.begin(), body.end());
+    if (should_fail) {
+      should_fail = false;
+      return -1;
+    }
     return static_cast<ptrdiff_t>(body.size());
   }
 };
@@ -354,14 +360,14 @@ OUTLINE("Sending all available HTTP methods") {
 SCENARIO("the client parses HTTP response into header fields") {
   auto app_ptr = app_t::make();
   auto app = app_ptr.get();
-  auto http_ptr = net::http::client::make(std::move(app_ptr));
-  auto serv = mock_stream_transport::make(std::move(http_ptr));
-  require_eq(serv->start(nullptr), error{});
+  auto client_ptr = net::http::client::make(std::move(app_ptr));
+  auto transport = mock_stream_transport::make(std::move(client_ptr));
+  require_eq(transport->start(nullptr), error{});
   GIVEN("a single line HTTP response") {
     std::string_view res = "HTTP/1.1 200 OK\r\n\r\n";
     WHEN("receiving from an HTTP server") {
-      serv->push(res);
-      check_eq(serv->handle_input(), static_cast<ptrdiff_t>(res.size()));
+      transport->push(res);
+      check_eq(transport->handle_input(), static_cast<ptrdiff_t>(res.size()));
       THEN("the HTTP layer parses the data and calls the application layer") {
         check_eq(app->hdr.version(), "HTTP/1.1");
         check_eq(app->hdr.status(), 200u);
@@ -374,8 +380,8 @@ SCENARIO("the client parses HTTP response into header fields") {
     std::string_view res = "HTTP/1.1 200 OK\r\n"
                            "Content-Type: text/plain\r\n\r\n";
     WHEN("receiving from an HTTP server") {
-      serv->push(res);
-      check_eq(serv->handle_input(), static_cast<ptrdiff_t>(res.size()));
+      transport->push(res);
+      check_eq(transport->handle_input(), static_cast<ptrdiff_t>(res.size()));
       THEN("the HTTP layer parses the data and calls the application layer") {
         check_eq(app->hdr.version(), "HTTP/1.1");
         check_eq(app->hdr.status(), 200u);
@@ -391,8 +397,54 @@ SCENARIO("the client parses HTTP response into header fields") {
                            "Content-Type: text/plain\r\n\r\n"
                            "Hello, world!";
     WHEN("receiving from an HTTP server") {
-      serv->push(res);
-      check_eq(serv->handle_input(), static_cast<ptrdiff_t>(res.size()));
+      transport->push(res);
+      check_eq(transport->handle_input(), static_cast<ptrdiff_t>(res.size()));
+      THEN("the HTTP layer parses the data and calls the application layer") {
+        check_eq(app->hdr.version(), "HTTP/1.1");
+        check_eq(app->hdr.status(), 200u);
+        check_eq(app->hdr.status_text(), "OK");
+        check_eq(app->hdr.field("Content-Type"), "text/plain");
+        check_eq(app->hdr.field("Content-Length"), "13");
+        check_eq(app->payload_as_str(), "Hello, world!");
+      }
+    }
+  }
+  GIVEN("a HTTP response arriving line by line") {
+    auto line1 = "HTTP/1.1 200 OK\r\n"sv;
+    auto line2 = "Content-Length: 13\r\n"sv;
+    auto line3 = "Content-Type: text/plain\r\n\r\n"sv;
+    auto line4 = "Hello, world!"sv;
+    WHEN("receiving from an HTTP server") {
+      transport->push(line1);
+      check_eq(transport->handle_input(), 0);
+      transport->push(line2);
+      check_eq(transport->handle_input(), 0);
+      transport->push(line3);
+      check_eq(transport->handle_input(),
+               static_cast<ptrdiff_t>(line1.size() + line2.size()
+                                      + line3.size()));
+      transport->push(line4);
+      check_eq(transport->handle_input(), static_cast<ptrdiff_t>(line4.size()));
+      THEN("the HTTP layer parses the data and calls the application layer") {
+        check_eq(app->hdr.version(), "HTTP/1.1");
+        check_eq(app->hdr.status(), 200u);
+        check_eq(app->hdr.status_text(), "OK");
+        check_eq(app->hdr.field("Content-Type"), "text/plain");
+        check_eq(app->hdr.field("Content-Length"), "13");
+        check_eq(app->payload_as_str(), "Hello, world!");
+      }
+    }
+  }
+  GIVEN("a HTTP response containing more data than content length") {
+    auto res = "HTTP/1.1 200 OK\r\n"
+               "Content-Length: 13\r\n"
+               "Content-Type: text/plain\r\n\r\n"
+               "Hello, world!"sv;
+    auto extra = "<secret>"sv;
+    WHEN("receiving from an HTTP server") {
+      transport->push(res);
+      transport->push(extra);
+      check_eq(transport->handle_input(), static_cast<ptrdiff_t>(res.size()));
       THEN("the HTTP layer parses the data and calls the application layer") {
         check_eq(app->hdr.version(), "HTTP/1.1");
         check_eq(app->hdr.status(), 200u);
@@ -457,6 +509,27 @@ SCENARIO("the client receives invalid HTTP responses") {
       transport->push(res);
       check_eq(transport->handle_input(), 0);
       THEN("the HTTP layer parses the data and calls abort") {
+        check(!app->abort_reason.empty());
+      }
+    }
+  }
+}
+
+SCENARIO("apps can return errors to abort the HTTP layer") {
+  auto app_ptr = app_t::make();
+  auto app = app_ptr.get();
+  auto client_ptr = net::http::client::make(std::move(app_ptr));
+  auto transport = mock_stream_transport::make(std::move(client_ptr));
+  require_eq(transport->start(nullptr), error{});
+  GIVEN("an app that fails consuming the HTTP response") {
+    std::string_view res = "HTTP/1.1 200 OK\r\n"
+                           "FooBar\r\n"
+                           "\r\n";
+    app->should_fail = true;
+    WHEN("the app returns -1 for the response in receives") {
+      transport->push(res);
+      check_eq(transport->handle_input(), 0);
+      THEN("the client calls abort") {
         check(!app->abort_reason.empty());
       }
     }

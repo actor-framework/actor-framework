@@ -111,57 +111,58 @@ bool client::done_sending() {
 ptrdiff_t client::consume(byte_span input, byte_span) {
   CAF_LOG_TRACE(CAF_ARG2("bytes", input.size()));
   ptrdiff_t consumed = 0;
-  for (;;) {
-    if (mode_ == mode::read_header) {
-      if (input.size() >= max_response_size_) {
-        abort("Header exceeds maximum size.");
-        return -1;
-      }
-      auto [hdr, remainder] = v1::split_header(input);
-      // Wait for more data.
-      if (hdr.empty())
-        return consumed;
-      // Note: handle_header already calls up_->abort().
-      if (!handle_header(hdr))
-        return -1;
-      // Prepare for next loop iteration.
-      consumed += static_cast<ptrdiff_t>(hdr.size());
-      input = remainder;
-      // Transition to the next mode.
-      if (hdr_.chunked_transfer_encoding()) {
-        mode_ = mode::read_chunks;
-      } else if (auto len = hdr_.content_length()) {
-        // Protect against payloads that exceed the maximum size.
-        if (*len >= max_response_size_) {
-          abort("Payload exceeds maximum size.");
-          return -1;
-        }
-        // Transition to read_payload mode and continue.
-        payload_len_ = *len;
-        mode_ = mode::read_payload;
-      } else {
-        // TODO: we may *still* have a payload since HTTP can omit the
-        //       Content-Length field and simply close the connection
-        //       after the payload.
-        if (!invoke_upper_layer(const_byte_span{}))
-          return -1;
-      }
-    } else if (mode_ == mode::read_payload) {
-      if (input.size() >= payload_len_) {
-        if (!invoke_upper_layer(input.subspan(0, payload_len_)))
-          return -1;
-        consumed += static_cast<ptrdiff_t>(payload_len_);
-        input.subspan(payload_len_);
-        mode_ = mode::read_header;
-      } else {
-        // Wait for more data.
-        return consumed;
-      }
-    } else { // mode_ == mode::read_chunks
-      // TODO: implement me
-      abort("Chunked transfer not implemented yet.");
+  if (mode_ == mode::read_header) {
+    if (input.size() >= max_response_size_) {
+      abort("Header exceeds maximum size.");
       return -1;
     }
+    auto [hdr, remainder] = v1::split_header(input);
+    // Wait for more data.
+    if (hdr.empty())
+      return 0;
+    // Note: handle_header already calls up_->abort().
+    if (!handle_header(hdr))
+      return -1;
+    // Prepare for next loop iteration.
+    consumed = static_cast<ptrdiff_t>(hdr.size());
+    input = remainder;
+    // Transition to the next mode.
+    if (hdr_.chunked_transfer_encoding()) {
+      mode_ = mode::read_chunks;
+    } else if (auto len = hdr_.content_length()) {
+      // Protect against payloads that exceed the maximum size.
+      if (*len >= max_response_size_) {
+        abort("Payload exceeds maximum size.");
+        return -1;
+      }
+      // Transition to read_payload mode and continue.
+      payload_len_ = *len;
+      mode_ = mode::read_payload;
+    } else {
+      // TODO: we may *still* have a payload since HTTP can omit the
+      //       Content-Length field and simply close the connection
+      //       after the payload.
+      if (!invoke_upper_layer(const_byte_span{}))
+        return -1;
+      return consumed;
+    }
+  }
+  if (mode_ == mode::read_payload) {
+    if (input.size() >= payload_len_) {
+      if (!invoke_upper_layer(input.subspan(0, payload_len_)))
+        return -1;
+      consumed += static_cast<ptrdiff_t>(payload_len_);
+      input.subspan(payload_len_);
+      mode_ = mode::read_header;
+      return consumed;
+    } else {
+      // Wait for more data.
+      return consumed;
+    }
+  } else { // if (mode_ == mode::read_chunks) {
+    // TODO: implement me
+    abort("Chunked transfer not implemented yet.");
+    return -1;
   }
 }
 
