@@ -5,12 +5,18 @@
 #include "caf/test/fixture/deterministic.hpp"
 
 #include "caf/test/registry.hpp"
+#include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
+#include "caf/chrono.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/init_global_meta_objects.hpp"
 #include "caf/scoped_actor.hpp"
 #include "caf/send.hpp"
+
+#include <chrono>
+
+using namespace std::literals;
 
 namespace fixture = caf::test::fixture;
 
@@ -343,6 +349,158 @@ TEST("evaluator expressions can check or extract individual values") {
     check(!allow<my_int>().with(le2).to(worker));
   }
 }
+
+SCENARIO("the deterministic fixture allows setting the actor clock at will") {
+  caf::chrono::datetime caf_epoch_dt; // Date and time of the first CAF commit.
+  if (auto err = caf::chrono::parse("2011-03-04T16:03:40+0100", caf_epoch_dt)) {
+    fail("failed to parse datetime: {}", to_string(err));
+  }
+  using time_point = caf::actor_clock::time_point;
+  auto to_timestamp = [](time_point tp) {
+    return caf::timestamp{tp.time_since_epoch()};
+  };
+  auto caf_epoch = time_point{caf_epoch_dt.to_local_time().time_since_epoch()};
+  auto& clock = sys.clock();
+  require_le(clock.now(), caf_epoch);
+  WHEN("scheduling an action") {
+    THEN("CAF will create a pending timeout") {
+      check_eq(num_timeouts(), 0u);
+      clock.schedule(caf::make_action([] {}));
+      check_eq(num_timeouts(), 1u);
+      clock.schedule(caf::make_action([] {}));
+      check_eq(num_timeouts(), 2u);
+    }
+  }
+  WHEN("scheduling an action with a time point") {
+    THEN("CAF will create a pending timeout") {
+      auto t = clock.now();
+      check_eq(num_timeouts(), 0u);
+      clock.schedule(t, caf::make_action([] {}));
+      check_eq(num_timeouts(), 1u);
+      check_eq(to_timestamp(next_timeout()), to_timestamp(t));
+      check_eq(to_timestamp(last_timeout()), to_timestamp(t));
+      auto last = clock.schedule(t + 5s, caf::make_action([] {}));
+      check_eq(num_timeouts(), 2u);
+      check_eq(to_timestamp(next_timeout()), to_timestamp(t));
+      check_eq(to_timestamp(last_timeout()), to_timestamp(t + 5s));
+      clock.schedule(t + 3s, caf::make_action([] {}));
+      check_eq(num_timeouts(), 3u);
+      check_eq(to_timestamp(next_timeout()), to_timestamp(t));
+      check_eq(to_timestamp(last_timeout()), to_timestamp(t + 5s));
+      last.dispose();
+      check_eq(num_timeouts(), 2u);
+      check_eq(to_timestamp(next_timeout()), to_timestamp(t));
+      check_eq(to_timestamp(last_timeout()), to_timestamp(t + 3s));
+    }
+  }
+  WHEN("calling set_time with a time point after the current time") {
+    auto triggered = std::make_shared<bool>(false);
+    clock.schedule(caf::make_action([triggered] { *triggered = true; }));
+    THEN("the clock advances to the new time and timeouts will trigger") {
+      check_eq(set_time(caf_epoch), 1u);
+      check_eq(to_timestamp(clock.now()), to_timestamp(caf_epoch));
+      check(*triggered);
+    }
+  }
+  WHEN("calling set_time with a time point prior to the current time") {
+    auto t = caf_epoch - 8766h;
+    set_time(caf_epoch);
+    auto triggered = std::make_shared<bool>(false);
+    clock.schedule(caf::make_action([triggered] { *triggered = true; }));
+    THEN("the clock rewinds to the new time and no timeouts will trigger") {
+      check_eq(set_time(t), 0u);
+      check_eq(to_timestamp(clock.now()), to_timestamp(t));
+      check(!*triggered);
+    }
+  }
+  WHEN("calling set_time with the current time") {
+    auto triggered = std::make_shared<bool>(false);
+    clock.schedule(caf::make_action([triggered] { *triggered = true; }));
+    THEN("nothing changes and no timeouts will trigger") {
+      auto now = clock.now();
+      check_eq(set_time(now), 0u);
+      check_eq(to_timestamp(clock.now()), to_timestamp(now));
+      check(!*triggered);
+    }
+  }
+  WHEN("calling advance_time") {
+    THEN("the clock advances to the new time and timeouts will trigger") {
+      set_time(caf_epoch);
+      auto a1 = std::make_shared<bool>(false);
+      clock.schedule(caf_epoch + 1s, caf::make_action([a1] { *a1 = true; }));
+      auto a2 = std::make_shared<bool>(false);
+      clock.schedule(caf_epoch + 2s, caf::make_action([a2] { *a2 = true; }));
+      auto a3 = std::make_shared<bool>(false);
+      clock.schedule(caf_epoch + 3s, caf::make_action([a3] { *a3 = true; }));
+      check_eq(advance_time(2s), 2u);
+      check_eq(to_timestamp(clock.now()), to_timestamp(caf_epoch + 2s));
+      check(*a1);
+      check(*a2);
+      check(!*a3);
+    }
+  }
+  WHEN("calling trigger_timeout") {
+    THEN("the next pending timeout will trigger and the time advances") {
+      set_time(caf_epoch);
+      auto a1 = std::make_shared<bool>(false);
+      clock.schedule(caf_epoch + 1s, caf::make_action([a1] { *a1 = true; }));
+      auto a2 = std::make_shared<bool>(false);
+      clock.schedule(caf_epoch + 2s, caf::make_action([a2] { *a2 = true; }));
+      auto a3 = std::make_shared<bool>(false);
+      clock.schedule(caf_epoch + 3s, caf::make_action([a3] { *a3 = true; }));
+      check(trigger_timeout());
+      check_eq(to_timestamp(clock.now()), to_timestamp(caf_epoch + 1s));
+      check(*a1);
+      check(!*a2);
+      check(!*a3);
+    }
+  }
+  WHEN("calling trigger_all_timeouts with pending timeouts in the future") {
+    THEN("all pending timeouts will trigger and the time advances") {
+      set_time(caf_epoch);
+      auto a1 = std::make_shared<bool>(false);
+      clock.schedule(caf_epoch + 1s, caf::make_action([a1] { *a1 = true; }));
+      auto a2 = std::make_shared<bool>(false);
+      clock.schedule(caf_epoch + 2s, caf::make_action([a2] { *a2 = true; }));
+      auto a3 = std::make_shared<bool>(false);
+      clock.schedule(caf_epoch + 3s, caf::make_action([a3] { *a3 = true; }));
+      check_eq(trigger_all_timeouts(), 3u);
+      check_eq(to_timestamp(clock.now()), to_timestamp(caf_epoch + 3s));
+      check(*a1);
+      check(*a2);
+      check(*a3);
+    }
+  }
+  WHEN("calling trigger_all_timeouts with pending timeouts in the past") {
+    THEN("all pending timeouts will trigger but the time stays the same") {
+      auto t = clock.now();
+      set_time(caf_epoch);
+      auto a1 = std::make_shared<bool>(false);
+      clock.schedule(t, caf::make_action([a1] { *a1 = true; }));
+      auto a2 = std::make_shared<bool>(false);
+      clock.schedule(t, caf::make_action([a2] { *a2 = true; }));
+      auto a3 = std::make_shared<bool>(false);
+      clock.schedule(t, caf::make_action([a3] { *a3 = true; }));
+      check_eq(trigger_all_timeouts(), 3u);
+      check_eq(to_timestamp(clock.now()), to_timestamp(caf_epoch));
+      check(*a1);
+      check(*a2);
+      check(*a3);
+    }
+  }
+}
+
+#ifdef CAF_ENABLE_EXCEPTIONS
+TEST("advance_time requires a positive duration") {
+  should_fail_with_exception([this] { advance_time(0s); });
+  should_fail_with_exception([this] { advance_time(-1s); });
+}
+
+TEST("calling next_timeout or last_timeout with no pending timeout throws") {
+  should_fail_with_exception([this] { std::ignore = next_timeout(); });
+  should_fail_with_exception([this] { std::ignore = last_timeout(); });
+}
+#endif // CAF_ENABLE_EXCEPTIONS
 
 } // WITH_FIXTURE(fixture::deterministic)
 

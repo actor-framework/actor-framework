@@ -8,10 +8,16 @@
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/detail/mailbox_factory.hpp"
+#include "caf/detail/print.hpp"
 #include "caf/detail/source_location.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/detail/test_export.hpp"
 #include "caf/scheduled_actor.hpp"
+
+#include <numeric>
+#include <string_view>
+
+using namespace std::literals;
 
 namespace caf::test::fixture {
 
@@ -166,6 +172,178 @@ private:
   std::vector<char> line_;
 };
 
+class deterministic_actor_clock : public actor_clock {
+public:
+  // -- constructors, destructors, and assignment operators --------------------
+
+  deterministic_actor_clock() : current_time(duration_type{1}) {
+    // nop
+  }
+
+  // -- overrides --------------------------------------------------------------
+
+  time_point now() const noexcept override {
+    return current_time;
+  }
+
+  disposable schedule(time_point abs_time, action f) override {
+    CAF_ASSERT(f.ptr() != nullptr);
+    actions.emplace(abs_time, f);
+    return std::move(f).as_disposable();
+  }
+
+  // -- testing DSL API --------------------------------------------------------
+
+  /// Triggers the next pending timeout regardless of its timestamp. Sets
+  /// `current_time` to the time point of the triggered timeout unless
+  /// `current_time` is already set to a later time.
+  /// @returns Whether a timeout was triggered.
+  bool trigger_timeout(const detail::source_location& loc) {
+    if (num_timeouts() == 0) {
+      reporter::instance().print_debug("no pending timeout to trigger"sv, loc);
+      return false;
+    }
+    reporter::instance().print_debug("trigger next pending timeout"sv, loc);
+    if (auto delta = next_timeout(loc) - current_time; delta.count() > 0) {
+      auto msg = detail::format("advance time by {}",
+                                duration_to_string(delta));
+      reporter::instance().print_debug(msg, loc);
+      current_time += delta;
+    }
+    if (!try_trigger_once()) {
+      CAF_RAISE_ERROR("trigger_timeout failed to trigger a pending timeout");
+    }
+    return true;
+  }
+
+  /// Triggers all pending timeouts regardless of their timestamp. Sets
+  /// `current_time` to the time point of the latest timeout unless
+  /// `current_time` is already set to a later time.
+  /// @returns The number of triggered timeouts.
+  size_t trigger_all_timeouts(const detail::source_location& loc) {
+    if (num_timeouts() == 0)
+      return 0;
+    if (auto t = last_timeout(loc); t > current_time)
+      return advance_time(t - current_time, loc);
+    auto result = size_t{0};
+    while (try_trigger_once()) {
+      ++result;
+    }
+    return result;
+  }
+
+  /// Advances the time by `x` and dispatches timeouts and delayed messages.
+  /// @returns The number of triggered timeouts.
+  size_t advance_time(duration_type x, const detail::source_location& loc) {
+    auto msg = detail::format("advance time by {}", duration_to_string(x));
+    reporter::instance().print_debug(msg, loc);
+    if (x.count() <= 0) {
+      runnable::current().fail(
+        {"advance_time requires a positive duration", loc});
+    }
+    current_time += x;
+    auto result = size_t{0};
+    drop_disposed();
+    while (!actions.empty() && actions.begin()->first <= current_time) {
+      if (try_trigger_once())
+        ++result;
+      drop_disposed(); // May have disposed timeouts.
+    }
+    return result;
+  }
+
+  /// Sets the current time.
+  /// @returns The number of triggered timeouts.
+  size_t set_time(actor_clock::time_point value,
+                  const detail::source_location& loc) {
+    auto diff = value - current_time;
+    if (diff.count() > 0)
+      return advance_time(value - current_time, loc);
+    auto msg = detail::format("set time back by {}", duration_to_string(diff));
+    current_time = value;
+    return 0;
+  }
+
+  // -- properties -------------------------------------------------------------
+
+  /// Returns the number of pending timeouts.
+  size_t num_timeouts() const noexcept {
+    auto fn = [](size_t n, const auto& kvp) {
+      return !kvp.second.disposed() ? n + 1 : n;
+    };
+    return std::accumulate(actions.begin(), actions.end(), size_t{0}, fn);
+  }
+
+  /// Returns the time of the next pending timeout.
+  time_point next_timeout(const detail::source_location& loc) {
+    auto i = std::find_if(actions.begin(), actions.end(), is_not_disposed);
+    if (i == actions.end())
+      runnable::current().fail({"no pending timeout found", loc});
+    return i->first;
+  }
+
+  /// Returns the time of the last pending timeout.
+  time_point last_timeout(const detail::source_location& loc) {
+    auto i = std::find_if(actions.rbegin(), actions.rend(), is_not_disposed);
+    if (i == actions.rend())
+      runnable::current().fail({"no pending timeout found", loc});
+    return i->first;
+  }
+
+  // -- member variables -------------------------------------------------------
+
+  /// Stores the current time.
+  time_point current_time;
+
+  /// A map type for storing timeouts.
+  using actions_map = std::multimap<time_point, action>;
+
+  /// Stores the pending timeouts.
+  actions_map actions;
+
+private:
+  /// Predicate that checks whether an action is not yet disposed.
+  static bool is_not_disposed(const actions_map::value_type& x) noexcept {
+    return !x.second.disposed();
+  }
+
+  /// Converts a duration to a string via `detail::print`.
+  static std::string duration_to_string(actor_clock::duration_type x) {
+    std::string result;
+    detail::print(result, x);
+    return result;
+  }
+
+  /// Removes all disposed actions from the actions map.
+  void drop_disposed() {
+    auto i = actions.begin();
+    auto e = actions.end();
+    while (i != e) {
+      if (i->second.disposed())
+        i = actions.erase(i);
+      else
+        ++i;
+    }
+  }
+
+  /// Triggers the next timeout if it is due.
+  bool try_trigger_once() {
+    for (;;) {
+      if (actions.empty())
+        return false;
+      auto i = actions.begin();
+      auto [t, f] = *i;
+      if (t > current_time)
+        return false;
+      actions.erase(i);
+      if (!f.disposed()) {
+        f.run();
+        return true;
+      }
+    }
+  }
+};
+
 } // namespace
 
 class deterministic::scheduler_impl : public scheduler::abstract_coordinator {
@@ -188,7 +366,7 @@ public:
     return false;
   }
 
-  detail::test_actor_clock& clock() noexcept override {
+  deterministic_actor_clock& clock() noexcept override {
     return clock_;
   }
 
@@ -227,7 +405,7 @@ private:
   deterministic* fix_;
 
   /// Allows users to fake time at will.
-  detail::test_actor_clock clock_;
+  deterministic_actor_clock clock_;
 
   /// Maps actors to their designated printer.
   std::map<actor_id, detail::actor_local_printer_ptr> printers_;
@@ -256,7 +434,7 @@ deterministic::abstract_message_predicate::~abstract_message_predicate() {
   // nop
 }
 
-// -- fixture ------------------------------------------------------------------
+// -- constructors, destructors, and assignment operators ----------------------
 
 deterministic::deterministic() : cfg(this), sys(cfg) {
   // nop
@@ -269,6 +447,8 @@ deterministic::~deterministic() {
   //       actors, potentially waiting forever.
   drop_events();
 }
+
+// -- private utilities --------------------------------------------------------
 
 void deterministic::drop_events() {
   // Note: We cannot just call `events_.clear()`, because that would potentially
@@ -336,6 +516,8 @@ mailbox_element_ptr deterministic::pop_msg_impl(scheduled_actor* receiver) {
   return result;
 }
 
+// -- properties ---------------------------------------------------------------
+
 size_t deterministic::mail_count() {
   size_t result = 0;
   for (auto& event : events_)
@@ -355,6 +537,8 @@ size_t deterministic::mail_count(const strong_actor_ptr& receiver) {
   auto raw_ptr = actor_cast<abstract_actor*>(receiver);
   return mail_count(dynamic_cast<scheduled_actor*>(raw_ptr));
 }
+
+// -- control flow -------------------------------------------------------------
 
 bool deterministic::terminated(const strong_actor_ptr& hdl) {
   auto base_ptr = actor_cast<abstract_actor*>(hdl);
@@ -390,6 +574,46 @@ size_t deterministic::dispatch_messages() {
   while (dispatch_message())
     ++result;
   return result;
+}
+
+// -- time management ----------------------------------------------------------
+
+size_t deterministic::set_time(actor_clock::time_point value,
+                               const detail::source_location& loc) {
+  return sched_impl().clock().set_time(value, loc);
+}
+
+size_t deterministic::advance_time(actor_clock::duration_type amount,
+                                   const detail::source_location& loc) {
+  return sched_impl().clock().advance_time(amount, loc);
+}
+
+bool deterministic::trigger_timeout(const detail::source_location& loc) {
+  return sched_impl().clock().trigger_timeout(loc);
+}
+
+size_t deterministic::trigger_all_timeouts(const detail::source_location& loc) {
+  return sched_impl().clock().trigger_all_timeouts(loc);
+}
+
+size_t deterministic::num_timeouts() noexcept {
+  return sched_impl().clock().num_timeouts();
+}
+
+actor_clock::time_point
+deterministic::next_timeout(const detail::source_location& loc) {
+  return sched_impl().clock().next_timeout(loc);
+}
+
+actor_clock::time_point
+deterministic::last_timeout(const detail::source_location& loc) {
+  return sched_impl().clock().last_timeout(loc);
+}
+
+// -- private utilities --------------------------------------------------------
+
+deterministic::scheduler_impl& deterministic::sched_impl() {
+  return static_cast<scheduler_impl&>(sys.scheduler());
 }
 
 } // namespace caf::test::fixture
