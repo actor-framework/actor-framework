@@ -348,15 +348,15 @@ OUTLINE("Sending all available HTTP methods") {
     }
   }
   EXAMPLES = R"(
-    |  method  |            enum value             |
-    | GET      |  caf::net::http::method::get      |
-    | HEAD     |  caf::net::http::method::head     |
-    | POST     |  caf::net::http::method::post     |
-    | PUT      |  caf::net::http::method::put      |
-    | DELETE   |  caf::net::http::method::del      |
-    | CONNECT  |  caf::net::http::method::connect  |
-    | OPTIONS  |  caf::net::http::method::options  |
-    | TRACE    |  caf::net::http::method::trace    |
+    | method   | enum value |
+    | GET      | get        |
+    | HEAD     | head       |
+    | POST     | post       |
+    | PUT      | put        |
+    | DELETE   | del        |
+    | CONNECT  | connect    |
+    | OPTIONS  | options    |
+    | TRACE    | trace      |
   )";
 }
 

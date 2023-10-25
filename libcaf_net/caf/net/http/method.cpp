@@ -2,7 +2,7 @@
 
 namespace caf::net::http {
 
-std::string_view to_rfc_string(method x) {
+std::string_view to_rfc_string(method x) noexcept {
   using namespace std::literals;
   switch (x) {
     case method::get:

@@ -36,8 +36,8 @@ writer& operator<<(writer& out, const std::string& str) {
 
 } // namespace
 
-std::pair<std::string_view, byte_span> split_header(const byte_span bytes) {
-  static constexpr std::array<std::byte, 4> end_of_header{{
+std::pair<std::string_view, byte_span> split_header(byte_span bytes) {
+  constexpr auto end_of_header = std::array<std::byte, 4>{{
     std::byte{'\r'},
     std::byte{'\n'},
     std::byte{'\r'},
