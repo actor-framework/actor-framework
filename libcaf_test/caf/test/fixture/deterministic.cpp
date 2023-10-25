@@ -22,13 +22,13 @@
 #include <utility>
 
 using namespace std::literals;
+
+namespace caf::test::fixture {
+
 namespace {
 
-using namespace caf;
-
-/// A logger implementation for deterministic fixture to log into console
-class deterministic_logger : public caf::logger,
-                             public caf::detail::atomic_ref_counted {
+/// A logger implementation that delegates to the test reporter.
+class deterministic_logger : public logger, public detail::atomic_ref_counted {
 public:
   /// Increases the reference count of the coordinated.
   void ref_logger() const noexcept final {
@@ -99,8 +99,6 @@ public:
 };
 
 } // namespace
-
-namespace caf::test::fixture {
 
 // -- mailbox ------------------------------------------------------------------
 
