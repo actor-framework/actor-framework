@@ -11,6 +11,7 @@
 #include "caf/flow/step/on_error_return.hpp"
 #include "caf/flow/step/on_error_return_item.hpp"
 #include "caf/flow/step/reduce.hpp"
+#include "caf/flow/step/scan.hpp"
 #include "caf/flow/step/skip.hpp"
 #include "caf/flow/step/skip_last.hpp"
 #include "caf/flow/step/take.hpp"

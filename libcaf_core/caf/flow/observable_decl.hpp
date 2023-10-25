@@ -127,6 +127,13 @@ public:
   template <class Init, class Reducer>
   transformation<step::reduce<Reducer>> reduce(Init init, Reducer reducer);
 
+  /// Applies a function to a sequence of items, and emit each successive value.
+  /// Other name for the algorithm is `accumulator`.
+  /// @param init The initial value for the reduction.
+  /// @param reducer Binary operation function that will be applied.
+  template <class Init, class Scanner>
+  transformation<step::scan<Scanner>> scan(Init init, Scanner scanner);
+
   /// Returns a transformation that selects all but the first `n` items.
   transformation<step::skip<T>> skip(size_t n);
 

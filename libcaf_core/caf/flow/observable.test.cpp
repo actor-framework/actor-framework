@@ -68,6 +68,86 @@ TEST("element_at(n) only takes the element with index n") {
   }
 }
 
+TEST("reduce(init, fn) combines all items into one final value using fn") {
+  std::plus<int> adder;
+  SECTION("reduce(init, fn) emits final value for a range of size m") {
+    SECTION("blueprint") {
+      check_eq(collect(range(1, 1).reduce(0, adder)), vector{1});
+      check_eq(collect(range(1, 2).reduce(0, adder)), vector{3});
+      check_eq(collect(range(1, 3).reduce(0, adder)), vector{6});
+    }
+    SECTION("observable") {
+      check_eq(collect(mat(range(1, 1)).reduce(0, adder)), vector{1});
+      check_eq(collect(mat(range(1, 2)).reduce(0, adder)), vector{3});
+      check_eq(collect(mat(range(1, 3)).reduce(0, adder)), vector{6});
+    }
+  }
+  SECTION("reduce(init, fn) emits 0 for a range of size 0") {
+    SECTION("blueprint") {
+      check_eq(collect(range(1, 0).reduce(0, adder)), vector{0});
+    }
+    SECTION("observable") {
+      check_eq(collect(mat(range(1, 0)).reduce(0, adder)), vector{0});
+    }
+  }
+  SECTION("reduce(init, fn) propagates errors") {
+    SECTION("blueprint") {
+      check_eq(collect(range(1, 1).concat(obs_error()).reduce(0, adder)),
+               sec::runtime_error);
+      check_eq(collect(range(1, 3).concat(obs_error()).reduce(0, adder)),
+               sec::runtime_error);
+      check_eq(collect(obs_error().reduce(0, adder)), sec::runtime_error);
+    }
+    SECTION("observable") {
+      check_eq(collect(mat(range(1, 1).concat(obs_error())).reduce(0, adder)),
+               sec::runtime_error);
+      check_eq(collect(mat(range(1, 3).concat(obs_error())).reduce(0, adder)),
+               sec::runtime_error);
+      check_eq(collect(mat(obs_error()).reduce(0, adder)), sec::runtime_error);
+    }
+  }
+}
+
+TEST("scan(init, fn) creates successive reduced values using fn") {
+  std::plus<int> adder;
+  SECTION("scan(init, fn) emits successive value for a range of size m") {
+    SECTION("blueprint") {
+      check_eq(collect(range(1, 1).scan(0, adder)), vector{1});
+      check_eq(collect(range(1, 2).scan(0, adder)), vector{1, 3});
+      check_eq(collect(range(1, 3).scan(0, adder)), vector{1, 3, 6});
+    }
+    SECTION("observable") {
+      check_eq(collect(mat(range(1, 1)).scan(0, adder)), vector{1});
+      check_eq(collect(mat(range(1, 2)).scan(0, adder)), vector{1, 3});
+      check_eq(collect(mat(range(1, 3)).scan(0, adder)), vector{1, 3, 6});
+    }
+  }
+  SECTION("scan(init, fn) emits 0 for a range of size 0") {
+    SECTION("blueprint") {
+      check_eq(collect(range(1, 0).scan(0, adder)), nil);
+    }
+    SECTION("observable") {
+      check_eq(collect(mat(range(1, 0)).scan(0, adder)), nil);
+    }
+  }
+  SECTION("scan(init, fn) propagates errors") {
+    SECTION("blueprint") {
+      check_eq(collect(range(1, 1).concat(obs_error()).scan(0, adder)),
+               sec::runtime_error);
+      check_eq(collect(range(1, 3).concat(obs_error()).scan(0, adder)),
+               sec::runtime_error);
+      check_eq(collect(obs_error().scan(0, adder)), sec::runtime_error);
+    }
+    SECTION("observable") {
+      check_eq(collect(mat(range(1, 1).concat(obs_error())).scan(0, adder)),
+               sec::runtime_error);
+      check_eq(collect(mat(range(1, 3).concat(obs_error())).scan(0, adder)),
+               sec::runtime_error);
+      check_eq(collect(mat(obs_error()).scan(0, adder)), sec::runtime_error);
+    }
+  }
+}
+
 TEST("skip(n) skips the first n elements in a range of size m") {
   SECTION("skip(0) does nothing") {
     SECTION("blueprint") {

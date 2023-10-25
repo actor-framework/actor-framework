@@ -282,6 +282,13 @@ public:
     return add_step(step::reduce<Reducer>{std::move(init), std::move(reducer)});
   }
 
+  template <class Init, class Scanner>
+  auto scan(Init init, Scanner scanner) && {
+    using val_t = output_type;
+    static_assert(std::is_invocable_r_v<Init, Scanner, Init&&, const val_t&>);
+    return add_step(step::scan<Scanner>{std::move(init), std::move(scanner)});
+  }
+
   auto sum() && {
     return std::move(*this).reduce(output_type{}, std::plus<output_type>{});
   }
@@ -664,6 +671,14 @@ transformation<step::reduce<Reducer>>
 observable<T>::reduce(Init init, Reducer reducer) {
   static_assert(std::is_invocable_r_v<Init, Reducer, Init&&, const T&>);
   return transform(step::reduce<Reducer>{std::move(init), std::move(reducer)});
+}
+
+template <class T>
+template <class Init, class Scanner>
+transformation<step::scan<Scanner>>
+observable<T>::scan(Init init, Scanner scanner) {
+  static_assert(std::is_invocable_r_v<Init, Scanner, Init&&, const T&>);
+  return transform(step::scan<Scanner>{std::move(init), std::move(scanner)});
 }
 
 template <class T>
