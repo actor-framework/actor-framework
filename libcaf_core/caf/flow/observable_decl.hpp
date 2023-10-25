@@ -130,7 +130,7 @@ public:
   /// Applies a function to a sequence of items, and emit each successive value.
   /// Other name for the algorithm is `accumulator`.
   /// @param init The initial value for the reduction.
-  /// @param reducer Binary operation function that will be applied.
+  /// @param scanner Binary operation function that will be applied.
   template <class Init, class Scanner>
   transformation<step::scan<Scanner>> scan(Init init, Scanner scanner);
 
