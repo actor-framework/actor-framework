@@ -4,7 +4,6 @@
 
 #include "caf/io/system_messages.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/fixture/deterministic.hpp"
 #include "caf/test/test.hpp"
 
@@ -12,6 +11,8 @@
 
 using namespace caf;
 using namespace caf::io;
+
+namespace {
 
 WITH_FIXTURE(test::fixture::deterministic) {
 
@@ -164,3 +165,5 @@ TEST("dataram_servant_closed_msg is serializable") {
 }
 
 } // WITH_FIXTURE(test::fixture::deterministic)
+
+} // namespace

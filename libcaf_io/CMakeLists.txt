@@ -13,6 +13,7 @@ caf_add_component(
     PRIVATE
       CAF::internal
   ENUM_TYPES
+    io.basp.connection_state
     io.basp.message_type
     io.network.operation
   HEADERS
@@ -22,9 +23,12 @@ caf_add_component(
     caf/detail/remote_group_module.cpp
     caf/detail/socket_guard.cpp
     caf/io/abstract_broker.cpp
+    caf/io/basp/connection_state.test.cpp
     caf/io/basp/header.cpp
+    caf/io/basp/header.test.cpp
     caf/io/basp/instance.cpp
     caf/io/basp/message_queue.cpp
+    caf/io/basp/message_queue.test.cpp
     caf/io/basp/routing_table.cpp
     caf/io/basp/worker.cpp
     caf/io/basp_broker.cpp
@@ -64,7 +68,6 @@ caf_add_component(
     tests/legacy/io-test.cpp
   LEGACY_TEST_SUITES
     detail.prometheus_broker
-    io.basp.message_queue
     io.basp_broker
     io.broker
     io.http_broker

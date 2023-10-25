@@ -10,29 +10,6 @@ namespace caf::io::basp {
 
 const uint8_t header::named_receiver_flag;
 
-std::string to_bin(uint8_t x) {
-  std::string res;
-  for (auto offset = 7; offset > -1; --offset)
-    res += std::to_string((x >> offset) & 0x01);
-  return res;
-}
-
-std::string to_string(const header& hdr) {
-  std::ostringstream oss;
-  oss << "{" << to_string(hdr.operation) << ", " << to_bin(hdr.flags) << ", "
-      << hdr.payload_len << ", " << hdr.operation_data << ", "
-      << hdr.source_actor << ", " << hdr.dest_actor << "}";
-  return oss.str();
-}
-
-bool operator==(const header& lhs, const header& rhs) {
-  return lhs.operation == rhs.operation && lhs.flags == rhs.flags
-         && lhs.payload_len == rhs.payload_len
-         && lhs.operation_data == rhs.operation_data
-         && lhs.source_actor == rhs.source_actor
-         && lhs.dest_actor == rhs.dest_actor;
-}
-
 namespace {
 
 template <class T>

@@ -4,8 +4,13 @@
 
 #pragma once
 
+#include "caf/default_enum_inspect.hpp"
 #include "caf/detail/io_export.hpp"
 #include "caf/sec.hpp"
+
+#include <cstdint>
+#include <string>
+#include <type_traits>
 
 namespace caf::io::basp {
 
@@ -66,7 +71,21 @@ inline sec to_sec(connection_state x) noexcept {
   }
 }
 
+/// @relates connection_state
 CAF_IO_EXPORT std::string to_string(connection_state x);
+
+/// @relates connection_state
+CAF_IO_EXPORT bool from_string(std::string_view, connection_state&);
+
+/// @relates connection_state
+CAF_IO_EXPORT bool from_integer(std::underlying_type_t<connection_state>,
+                                connection_state&);
+
+/// @relates connection_state
+template <class Inspector>
+bool inspect(Inspector& f, connection_state& x) {
+  return default_enum_inspect(f, x);
+}
 
 /// @}
 
