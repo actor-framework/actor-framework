@@ -93,6 +93,9 @@ public:
   /// Sets the verbosity level of the reporter and returns the previous value.
   virtual unsigned verbosity(unsigned level) = 0;
 
+  /// returns the current verbosity level.
+  virtual unsigned verbosity() const noexcept = 0;
+
   /// Sets whether the reporter disables colored output even when writing to a
   /// TTY.
   virtual void no_colors(bool new_value) = 0;
