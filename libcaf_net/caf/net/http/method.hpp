@@ -52,7 +52,7 @@ CAF_NET_EXPORT std::string to_string(method);
 
 /// Converts @p x to the RFC string representation, i.e., all-uppercase.
 /// @relates method
-CAF_NET_EXPORT std::string to_rfc_string(method x);
+CAF_NET_EXPORT std::string_view to_rfc_string(method x);
 
 /// @relates method
 CAF_NET_EXPORT bool from_string(std::string_view, method&);

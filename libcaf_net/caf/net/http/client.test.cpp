@@ -294,7 +294,8 @@ SCENARIO("the client sends HTTP requests") {
       client->add_header_field("Content-Length", "13");
       client->add_header_field("Content-Type", "plain/text");
       client->end_header();
-      client->send_payload(as_bytes(make_span("Hello, world!"sv)));
+      auto body = "Hello, world!"sv;
+      client->send_payload(as_bytes(make_span(body)));
       THEN("the output contains the formatted request") {
         check_eq(transport->output_as_str(), expected);
       }
@@ -316,8 +317,10 @@ SCENARIO("the client sends HTTP requests") {
       client->add_header_field("Content-Type", "plain/text");
       client->add_header_field("Transfer-Encoding", "chunked");
       client->end_header();
-      client->send_chunk(as_bytes(make_span("Hello, world!"sv)));
-      client->send_chunk(as_bytes(make_span("Developer Network"sv)));
+      auto chunk1 = "Hello, world!"sv;
+      auto chunk2 = "Developer Network"sv;
+      client->send_chunk(as_bytes(make_span(chunk1)));
+      client->send_chunk(as_bytes(make_span(chunk2)));
       client->send_end_of_chunks();
       THEN("the output contains the formatted request") {
         check_eq(transport->output_as_str(), expected);
@@ -336,7 +339,7 @@ OUTLINE("Sending all available HTTP methods") {
     auto method_name = block_parameters<std::string>();
     auto expected = detail::format("{} /foo/bar HTTP/1.1\r\n\r\n", method_name);
     WHEN("the client sends the <enum value> message") {
-      auto method = static_cast<net::http::method>(block_parameters<uint8_t>());
+      auto method = block_parameters<net::http::method>();
       client->begin_header(method, "/foo/bar"sv);
       client->end_header();
       THEN("the output contains the formatted request") {
@@ -345,15 +348,15 @@ OUTLINE("Sending all available HTTP methods") {
     }
   }
   EXAMPLES = R"(
-    |  method  | enum value |
-    | GET      |     0      |
-    | HEAD     |     1      |
-    | POST     |     2      |
-    | PUT      |     3      |
-    | DELETE   |     4      |
-    | CONNECT  |     5      |
-    | OPTIONS  |     6      |
-    | TRACE    |     7      |
+    |  method  |            enum value             |
+    | GET      |  caf::net::http::method::get      |
+    | HEAD     |  caf::net::http::method::head     |
+    | POST     |  caf::net::http::method::post     |
+    | PUT      |  caf::net::http::method::put      |
+    | DELETE   |  caf::net::http::method::del      |
+    | CONNECT  |  caf::net::http::method::connect  |
+    | OPTIONS  |  caf::net::http::method::options  |
+    | TRACE    |  caf::net::http::method::trace    |
   )";
 }
 

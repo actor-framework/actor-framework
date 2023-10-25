@@ -123,7 +123,7 @@ ptrdiff_t client::consume(byte_span input, byte_span) {
     // Note: handle_header already calls up_->abort().
     if (!handle_header(hdr))
       return -1;
-    // Prepare for next loop iteration.
+    // Prepare for next call to consume.
     consumed = static_cast<ptrdiff_t>(hdr.size());
     input = remainder;
     // Transition to the next mode.
@@ -148,22 +148,20 @@ ptrdiff_t client::consume(byte_span input, byte_span) {
     }
   }
   if (mode_ == mode::read_payload) {
-    if (input.size() >= payload_len_) {
-      if (!invoke_upper_layer(input.subspan(0, payload_len_)))
-        return -1;
-      consumed += static_cast<ptrdiff_t>(payload_len_);
-      input.subspan(payload_len_);
-      mode_ = mode::read_header;
-      return consumed;
-    } else {
+    if (input.size() < payload_len_)
       // Wait for more data.
       return consumed;
-    }
-  } else { // if (mode_ == mode::read_chunks) {
-    // TODO: implement me
-    abort("Chunked transfer not implemented yet.");
-    return -1;
+    if (!invoke_upper_layer(input.subspan(0, payload_len_)))
+      return -1;
+    consumed += static_cast<ptrdiff_t>(payload_len_);
+    input.subspan(payload_len_);
+    mode_ = mode::read_header;
+    return consumed;
   }
+  // else  if (mode_ == mode::read_chunks) {
+  // TODO: implement me
+  abort("Chunked transfer not implemented yet.");
+  return -1;
 }
 
 // -- utility functions ------------------------------------------------------
