@@ -56,7 +56,7 @@ macro(write_enum_file)
   foreach(label IN LISTS enum_values)
     list(APPEND out
       "    case ${label_prefix}${label}:\n"
-      "      return \"${namespace_str}::${enum_name}::${label}\"\;\n")
+      "      return \"${label}\"\;\n")
   endforeach()
   list(APPEND out
     "  }\n"
@@ -67,7 +67,8 @@ macro(write_enum_file)
     "bool from_string(std::string_view in, ${enum_name}& out) {\n")
   foreach(label IN LISTS enum_values)
     list(APPEND out
-      "  if (in == \"${namespace_str}::${enum_name}::${label}\") {\n"
+      "  if (in == \"${label}\"\n"
+      "      || in == \"${namespace_str}::${enum_name}::${label}\") {\n"
       "    out = ${label_prefix}${label}\;\n"
       "    return true\;\n"
       "  }\n")

@@ -102,7 +102,6 @@ caf_add_component(
     caf/async/spsc_buffer.test.cpp
     caf/attachable.cpp
     caf/behavior.cpp
-    caf/delegate.test.cpp
     caf/behavior.test.cpp
     caf/binary_deserializer.cpp
     caf/binary_serializer.cpp
@@ -116,6 +115,7 @@ caf_add_component(
     caf/config_value_writer.cpp
     caf/decorator/sequencer.cpp
     caf/default_attachable.cpp
+    caf/delegate.test.cpp
     caf/deserializer.cpp
     caf/detail/abstract_worker.cpp
     caf/detail/abstract_worker_hub.cpp
@@ -246,6 +246,7 @@ caf_add_component(
     caf/scheduler/test_coordinator.cpp
     caf/scoped_actor.cpp
     caf/scoped_execution_unit.cpp
+    caf/sec.test.cpp
     caf/serializer.cpp
     caf/settings.cpp
     caf/skip.cpp

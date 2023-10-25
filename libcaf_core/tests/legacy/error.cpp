@@ -50,19 +50,19 @@ SCENARIO("errors provide human-readable to_string output") {
   GIVEN("an error object") {
     WHEN("converting an error without context to a string") {
       THEN("the output is only the error code") {
-        CHECK_EQ(err_str(sec::invalid_argument), "caf::sec::invalid_argument");
+        CHECK_EQ(err_str(sec::invalid_argument), "invalid_argument");
       }
     }
     WHEN("converting an error with a context containing one element") {
       THEN("the output is the error code plus the context") {
         CHECK_EQ(err_str(sec::invalid_argument, "foo is not bar"),
-                 R"_(caf::sec::invalid_argument("foo is not bar"))_");
+                 R"_(invalid_argument("foo is not bar"))_");
       }
     }
     WHEN("converting an error with a context containing two or more elements") {
       THEN("the output is the error code plus all elements in the context") {
         CHECK_EQ(err_str(sec::invalid_argument, "want foo", "got bar"),
-                 R"_(caf::sec::invalid_argument("want foo", "got bar"))_");
+                 R"_(invalid_argument("want foo", "got bar"))_");
       }
     }
   }
