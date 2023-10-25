@@ -14,28 +14,6 @@ if (NOT ${EXIT_CODE} EQUAL 0)
   message(FATAL_ERROR "Failed to import the 'robot' Python package")
 endif()
 
-caf_add_test_executable(
-  caf-robot-logging-driver
-  SOURCES
-    logging/driver.cpp
-  DEPENDENCIES
-    CAF::core)
-
-caf_add_test_executable(
-  caf-robot-stream-driver
-  SOURCES
-    stream/driver.cpp
-  DEPENDENCIES
-    CAF::core
-    CAF::io)
-
-caf_add_test_executable(
-  caf-robot-flow-merge-driver
-  SOURCES
-    flow/merge/driver.cpp
-  DEPENDENCIES
-    CAF::core)
-
 add_test(
   NAME "robot-config-read-config-file"
   COMMAND
@@ -51,6 +29,13 @@ add_test(
       -m robot
       --variable BINARY_PATH:$<TARGET_FILE:hello_world>
       "${CMAKE_CURRENT_SOURCE_DIR}/config/dump-config.robot")
+
+caf_add_test_executable(
+  caf-robot-flow-merge-driver
+  SOURCES
+    flow/merge/driver.cpp
+  DEPENDENCIES
+    CAF::core)
 
 add_test(
   NAME "caf-robot-flow-merge"
@@ -71,6 +56,12 @@ add_test(
 
 # The logging test assumes that the CAF_LOG_LEVEL is set to TRACE.
 if (CAF_LOG_LEVEL STREQUAL "TRACE")
+  caf_add_test_executable(
+    caf-robot-logging-driver
+    SOURCES
+      logging/driver.cpp
+    DEPENDENCIES
+      CAF::core)
   add_test(
     NAME "robot-logging-output"
     COMMAND
@@ -80,6 +71,14 @@ if (CAF_LOG_LEVEL STREQUAL "TRACE")
         "${CMAKE_CURRENT_SOURCE_DIR}/logging/output.robot")
 endif()
 
+caf_add_test_executable(
+  caf-robot-stream-driver
+  SOURCES
+    stream/driver.cpp
+  DEPENDENCIES
+    CAF::core
+    CAF::io)
+
 add_test(
   NAME "robot-stream-remote"
   COMMAND
@@ -87,6 +86,22 @@ add_test(
       -m robot
       --variable BINARY_PATH:$<TARGET_FILE:caf-robot-stream-driver>
       "${CMAKE_CURRENT_SOURCE_DIR}/stream/remote.robot")
+
+caf_add_test_executable(
+  caf-robot-middleman-driver
+  SOURCES
+    middleman/driver.cpp
+  DEPENDENCIES
+    CAF::core
+    CAF::io)
+
+add_test(
+  NAME "robot-middleman"
+  COMMAND
+    ${Python_EXECUTABLE}
+      -m robot
+      --variable BINARY_PATH:$<TARGET_FILE:caf-robot-middleman-driver>
+      "${CMAKE_CURRENT_SOURCE_DIR}/middleman/middleman.robot")
 
 add_test(
   NAME "robot-web-socket-quote-server"

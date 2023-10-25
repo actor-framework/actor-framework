@@ -60,26 +60,6 @@ caf_add_component(
     caf/io/network/scribe_impl.cpp
     caf/io/network/stream.cpp
     caf/io/network/stream_manager.cpp
-    caf/io/network/test_multiplexer.cpp
     caf/io/scribe.cpp
     caf/policy/tcp.cpp
-    caf/policy/udp.cpp
-  LEGACY_TEST_SOURCES
-    tests/legacy/io-test.cpp
-  LEGACY_TEST_SUITES
-    detail.prometheus_broker
-    io.basp_broker
-    io.broker
-    io.http_broker
-    io.monitor
-    io.network.default_multiplexer
-    io.network.ip_endpoint
-    io.remote_actor
-    io.remote_group
-    io.remote_spawn
-    io.unpublish
-    io.worker)
-
-if(CAF_ENABLE_TESTING AND UNIX)
-  caf_add_legacy_test_suites(caf-io-legacy-test io.middleman)
-endif()
+    caf/policy/udp.cpp)
