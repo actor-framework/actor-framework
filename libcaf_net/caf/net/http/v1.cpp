@@ -1,5 +1,9 @@
 #include "caf/net/http/v1.hpp"
 
+#include "caf/net/http/method.hpp"
+
+#include "caf/uri.hpp"
+
 #include <algorithm>
 #include <array>
 #include <cstddef>
@@ -33,7 +37,7 @@ writer& operator<<(writer& out, const std::string& str) {
 } // namespace
 
 std::pair<std::string_view, byte_span> split_header(byte_span bytes) {
-  std::array<std::byte, 4> end_of_header{{
+  constexpr auto end_of_header = std::array<std::byte, 4>{{
     std::byte{'\r'},
     std::byte{'\n'},
     std::byte{'\r'},
@@ -52,8 +56,8 @@ std::pair<std::string_view, byte_span> split_header(byte_span bytes) {
   }
 }
 
-void write_header(status code, span<const string_view_pair> fields,
-                  byte_buffer& buf) {
+void write_response_header(status code, span<const string_view_pair> fields,
+                           byte_buffer& buf) {
   writer out{&buf};
   out << "HTTP/1.1 "sv << std::to_string(static_cast<int>(code)) << ' '
       << phrase(code) << "\r\n"sv;
@@ -62,10 +66,16 @@ void write_header(status code, span<const string_view_pair> fields,
   out << "\r\n"sv;
 }
 
-void begin_header(status code, byte_buffer& buf) {
+void begin_response_header(status code, byte_buffer& buf) {
   writer out{&buf};
   out << "HTTP/1.1 "sv << std::to_string(static_cast<int>(code)) << ' '
       << phrase(code) << "\r\n"sv;
+}
+
+void begin_request_header(http::method method, std::string_view path,
+                          byte_buffer& buf) {
+  writer out{&buf};
+  out << to_rfc_string(method) << ' ' << path << " HTTP/1.1\r\n"sv;
 }
 
 void add_header_field(std::string_view key, std::string_view val,

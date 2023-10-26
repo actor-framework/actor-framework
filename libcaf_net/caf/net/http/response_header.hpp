@@ -19,11 +19,12 @@
 namespace caf::net::http {
 
 /// Encapsulates meta data for HTTP response. This class represents a HTTP
-/// response header, providing methods for accessing the HTTP version, status,
-/// fields and body.
+/// response header, providing methods for accessing the HTTP version, status
+/// and fields.
 class CAF_NET_EXPORT response_header : public header {
 public:
   using super = header;
+
   /// Default constructor.
   response_header() = default;
 
@@ -57,11 +58,6 @@ public:
     return status_text_;
   }
 
-  /// Returns the HTTP body of the request.
-  std::string_view body() const noexcept {
-    return body_;
-  }
-
   /// Parses a raw response header string and returns a pair containing the
   /// status and a description for the status.
   /// @returns `status::bad_request` on error with a human-readable description
@@ -77,9 +73,6 @@ private:
 
   /// Stores the status text of the parsed HTTP input.
   std::string_view status_text_;
-
-  /// Stores the body of the parsed HTTP input.
-  std::string_view body_;
 };
 
 } // namespace caf::net::http

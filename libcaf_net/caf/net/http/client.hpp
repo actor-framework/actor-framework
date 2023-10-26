@@ -6,7 +6,7 @@
 
 #include "caf/net/fwd.hpp"
 #include "caf/net/http/lower_layer.hpp"
-#include "caf/net/http/request_header.hpp"
+#include "caf/net/http/response_header.hpp"
 #include "caf/net/http/status.hpp"
 #include "caf/net/http/upper_layer.hpp"
 #include "caf/net/http/v1.hpp"
@@ -29,9 +29,9 @@
 
 namespace caf::net::http {
 
-/// Implements the server part for the HTTP Protocol as defined in RFC 7231.
-class CAF_NET_EXPORT server : public octet_stream::upper_layer,
-                              public http::lower_layer::server {
+/// Implements the client part for the HTTP Protocol as defined in RFC 7231.
+class CAF_NET_EXPORT client : public octet_stream::upper_layer,
+                              public http::lower_layer::client {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -41,22 +41,22 @@ public:
     read_chunks,
   };
 
-  using upper_layer_ptr = std::unique_ptr<http::upper_layer::server>;
+  using upper_layer_ptr = std::unique_ptr<http::upper_layer::client>;
 
   // -- constants --------------------------------------------------------------
 
-  /// Default maximum size for incoming HTTP requests: 64KiB.
-  static constexpr uint32_t default_max_request_size = 65'536;
-
-  // -- constructors, destructors, and assignment operators --------------------
-
-  explicit server(upper_layer_ptr up) : up_(std::move(up)) {
-    // nop
-  }
+  /// Default maximum size for incoming HTTP responses: 512KiB.
+  static constexpr uint32_t default_max_response_size = 512 * 1024;
 
   // -- factories --------------------------------------------------------------
 
-  static std::unique_ptr<server> make(upper_layer_ptr up);
+  static std::unique_ptr<client> make(upper_layer_ptr up);
+
+  // -- constructors, destructors, and assignment operators --------------------
+
+  explicit client(upper_layer_ptr up) : up_(std::move(up)) {
+    // nop
+  }
 
   // -- properties -------------------------------------------------------------
 
@@ -68,15 +68,15 @@ public:
     return *up_;
   }
 
-  size_t max_request_size() const noexcept {
-    return max_request_size_;
+  size_t max_response_size() const noexcept {
+    return max_response_size_;
   }
 
-  void max_request_size(size_t value) noexcept {
-    max_request_size_ = value;
+  void max_response_size(size_t value) noexcept {
+    max_response_size_ = value;
   }
 
-  // -- http::lower_layer implementation ---------------------------------------
+  // -- http::lower_layer::client implementation -------------------------------
 
   multiplexer& mpx() noexcept override;
 
@@ -92,7 +92,7 @@ public:
 
   void suspend_reading() override;
 
-  void begin_header(status code) override;
+  void begin_header(http::method method, std::string_view path) override;
 
   void add_header_field(std::string_view key, std::string_view val) override;
 
@@ -121,18 +121,22 @@ public:
 private:
   // -- utility functions ------------------------------------------------------
 
-  void write_response(status code, std::string_view content);
+  void abort(std::string_view message) {
+    up_->abort(make_error(sec::protocol_error, message));
+  }
 
   bool invoke_upper_layer(const_byte_span payload);
 
   bool handle_header(std::string_view http);
 
+  /// Points to the transport layer below.
   octet_stream::lower_layer* down_;
 
+  /// Next layer in the processing chain.
   upper_layer_ptr up_;
 
   /// Buffer for re-using memory.
-  request_header hdr_;
+  response_header hdr_;
 
   /// Stores whether we are currently waiting for the payload.
   mode mode_ = mode::read_header;
@@ -141,7 +145,7 @@ private:
   size_t payload_len_ = 0;
 
   /// Maximum size for incoming HTTP requests.
-  size_t max_request_size_ = default_max_request_size;
+  size_t max_response_size_ = default_max_response_size;
 };
 
 } // namespace caf::net::http

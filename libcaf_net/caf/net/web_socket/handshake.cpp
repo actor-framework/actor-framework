@@ -121,7 +121,7 @@ void handshake::write_http_1_response(byte_buffer& buf) const {
       << response_key() << "\r\n\r\n";
 }
 
-void handshake::write_response(http::lower_layer* down) const {
+void handshake::write_response(http::lower_layer::server* down) const {
   down->begin_header(http::status::switching_protocols);
   down->add_header_field("Upgrade", "websocket");
   down->add_header_field("Connection", "Upgrade");

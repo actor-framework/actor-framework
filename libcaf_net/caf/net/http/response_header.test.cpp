@@ -20,9 +20,8 @@ TEST("parsing a valid http response") {
     check_eq(hdr.status(), 200ul);
     check_eq(hdr.status_text(), "OK");
     check_eq(hdr.num_fields(), 0ul);
-    check_eq(hdr.body(), "");
   }
-  SECTION("parsing a header without a body") {
+  SECTION("parsing a header with fields") {
     hdr.parse("HTTP/1.0 200 OK\r\n"
               "Date: Mon, 27 Jul 2009 12:28:53 GMT\r\n"
               "Server: Apache\r\n"
@@ -39,27 +38,6 @@ TEST("parsing a valid http response") {
     check_eq(hdr.field("Server"), "Apache");
     check_eq(hdr.field("Content-Length"), "88");
     check_eq(hdr.field("Content-Type"), "text/html");
-    check_eq(hdr.body(), "");
-  }
-  SECTION("parsing a header with a body") {
-    hdr.parse("HTTP/1.1 200 OK\r\n"
-              "Date: Mon, 27 Jul 2009 12:28:53 GMT\r\n"
-              "Server: Apache\r\n"
-              "Last-Modified: Wed, 22 Jul 2009 19:15:56 GMT\r\n"
-              "Content-Length: 88\r\n"
-              "Content-Type: text/html\r\n"
-              "Connection: Closed\r\n"
-              "\r\n"
-              "Response body");
-    require(hdr.valid());
-    check_eq(hdr.version(), "HTTP/1.1");
-    check_eq(hdr.status(), 200ul);
-    check_eq(hdr.status_text(), "OK");
-    check_eq(hdr.num_fields(), 6ul);
-    check_eq(hdr.field("Server"), "Apache");
-    check_eq(hdr.field("Content-Length"), "88");
-    check_eq(hdr.field("Content-Type"), "text/html");
-    check_eq(hdr.body(), "Response body");
   }
 }
 
@@ -108,7 +86,6 @@ TEST("default-constructed response headers are invalid") {
   check_eq(uut.num_fields(), 0ul);
   check_eq(uut.version(), "");
   check_eq(uut.status_text(), "");
-  check_eq(uut.body(), "");
 }
 
 TEST("response headers are copyable and movable") {
@@ -117,8 +94,7 @@ TEST("response headers are copyable and movable") {
                "Server: Apache\r\n"
                "Content-Length: 88\r\n"
                "Content-Type: text/html\r\n"
-               "\r\n"
-               "Response body");
+               "\r\n");
   auto check_equality = [this](const auto& uut) {
     check_eq(uut.version(), "HTTP/1.1");
     check_eq(uut.status(), 200ul);
@@ -127,7 +103,6 @@ TEST("response headers are copyable and movable") {
     check_eq(uut.field("Server"), "Apache");
     check_eq(uut.field("Content-Length"), "88");
     check_eq(uut.field("Content-Type"), "text/html");
-    check_eq(uut.body(), "Response body"sv);
   };
   check_equality(source);
   SECTION("copy-construction") {
@@ -156,7 +131,6 @@ TEST("copying and moving invalid response header results in invalid requests") {
     check_eq(uut.num_fields(), 0ul);
     check_eq(uut.version(), "");
     check_eq(uut.status_text(), "");
-    check_eq(uut.body(), "");
   };
   net::http::response_header source;
   SECTION("copy-construction") {

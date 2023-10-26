@@ -45,7 +45,7 @@ void server::suspend_reading() {
 
 void server::begin_header(status code) {
   down_->begin_output();
-  v1::begin_header(code, down_->output_buffer());
+  v1::begin_response_header(code, down_->output_buffer());
 }
 
 void server::add_header_field(std::string_view key, std::string_view val) {

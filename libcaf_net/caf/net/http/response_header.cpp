@@ -33,7 +33,6 @@ void response_header::clear() noexcept {
   super::clear();
   version_ = std::string_view{};
   status_text_ = std::string_view{};
-  body_ = std::string_view{};
 }
 
 response_header::response_header(const response_header& other) : super(other) {
@@ -43,7 +42,6 @@ response_header::response_header(const response_header& other) : super(other) {
     version_ = remap(base, other.version_, new_base);
     status_ = other.status_;
     status_text_ = remap(base, other.status_text_, new_base);
-    body_ = remap(base, other.body_, new_base);
   }
 }
 
@@ -55,7 +53,6 @@ response_header& response_header::operator=(const response_header& other) {
     version_ = remap(base, other.version_, new_base);
     status_ = other.status_;
     status_text_ = remap(base, other.status_text_, new_base);
-    body_ = remap(base, other.body_, new_base);
   }
   return *this;
 }
@@ -95,15 +92,10 @@ response_header::parse(std::string_view raw) {
     return {status::bad_request, "Invalid HTTP status text."};
   }
   auto remaining_text = parse_fields(remainder);
-  if (remaining_text) {
-    body_ = *remaining_text;
+  if (remaining_text)
     return {status::ok, "OK"};
-  } else {
-    clear();
-    version_ = std::string_view{};
-    status_text_ = std::string_view{};
-    return {status::bad_request, "Malformed header fields."};
-  }
+  clear();
+  return {status::bad_request, "Malformed header fields."};
 }
 
 } // namespace caf::net::http

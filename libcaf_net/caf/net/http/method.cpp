@@ -2,27 +2,27 @@
 
 namespace caf::net::http {
 
-std::string to_rfc_string(method x) {
+std::string_view to_rfc_string(method x) noexcept {
   using namespace std::literals;
   switch (x) {
     case method::get:
-      return "GET"s;
+      return "GET"sv;
     case method::head:
-      return "HEAD"s;
+      return "HEAD"sv;
     case method::post:
-      return "POST"s;
+      return "POST"sv;
     case method::put:
-      return "PUT"s;
+      return "PUT"sv;
     case method::del:
-      return "DELETE"s;
+      return "DELETE"sv;
     case method::connect:
-      return "CONNECT"s;
+      return "CONNECT"sv;
     case method::options:
-      return "OPTIONS"s;
+      return "OPTIONS"sv;
     case method::trace:
-      return "TRACE"s;
+      return "TRACE"sv;
     default:
-      return "INVALID"s;
+      return "INVALID"sv;
   }
 }
 
