@@ -65,7 +65,7 @@ protected:
     auto pfac = self->proxy_registry_ptr();
     if (pfac)
       ctx->proxy_registry_ptr(pfac);
-    auto guard = detail::make_scope_guard([=] {
+    auto guard = detail::make_scope_guard([=]() noexcept {
       if (pfac)
         ctx->proxy_registry_ptr(nullptr);
     });

@@ -125,7 +125,7 @@ private:
 
   void do_run() {
     CAF_LOG_TRACE("");
-    auto guard = detail::make_scope_guard([this] { running_ = false; });
+    auto guard = detail::scope_guard([this]() noexcept { running_ = false; });
     if (disposed_) {
       do_dispose();
       return;

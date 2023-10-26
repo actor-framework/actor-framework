@@ -406,7 +406,7 @@ public:
               ' ', indent_, self->name(), self->id(), msg);
   }
 
-  unsigned verbosity(unsigned level) override {
+  unsigned verbosity(unsigned level) noexcept override {
     auto result = level_;
     level_ = level;
     return result;

@@ -309,7 +309,7 @@ void copy_verbatim(ParserState& ps, copy_state& cs);
 template <class ParserState>
 void copy_formatted(ParserState& ps, copy_state& cs) {
   cs.reset();
-  auto guard = make_scope_guard([&] {
+  auto guard = make_scope_guard([&]() noexcept {
     if (ps.code <= pec::trailing_character)
       cs.fn = copy_verbatim<string_parser_state>;
   });

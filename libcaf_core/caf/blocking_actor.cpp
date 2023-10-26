@@ -279,7 +279,8 @@ void blocking_actor::receive_impl(receive_cond& rcc, message_id mid,
     // Blocking actors can nest receives => push/pop `current_element_`
     auto prev_element = current_element_;
     current_element_ = ptr.get();
-    auto g = detail::make_scope_guard([&] { current_element_ = prev_element; });
+    auto g = detail::make_scope_guard(
+      [&]() noexcept { current_element_ = prev_element; });
     // Dispatch on the current mailbox element.
     if (consume()) {
       unstash();

@@ -115,7 +115,7 @@ public:
 
   /// Returns the name of the configuration type.
   std::string_view name() const noexcept override {
-    auto f = [](const auto& val) {
+    auto f = [](const auto& val) noexcept {
       using val_t = std::decay_t<decltype(val)>;
       return get_name<val_t>::value;
     };

@@ -91,7 +91,7 @@ public:
   virtual void print_actor_output(local_actor* self, std::string_view msg) = 0;
 
   /// Sets the verbosity level of the reporter and returns the previous value.
-  virtual unsigned verbosity(unsigned level) = 0;
+  virtual unsigned verbosity(unsigned level) noexcept = 0;
 
   /// returns the current verbosity level.
   virtual unsigned verbosity() const noexcept = 0;

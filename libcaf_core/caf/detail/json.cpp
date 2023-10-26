@@ -215,7 +215,7 @@ template <class ParserState, class Consumer>
 void read_json_null_or_nan(ParserState& ps, Consumer consumer) {
   enum { nil, is_null, is_nan };
   auto res_type = nil;
-  auto g = make_scope_guard([&] {
+  auto g = make_scope_guard([&]() noexcept {
     if (ps.code <= pec::trailing_character) {
       CAF_ASSERT(res_type != nil);
       if (res_type == is_null)

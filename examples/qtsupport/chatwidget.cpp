@@ -71,7 +71,8 @@ void ChatWidget::init(actor_system& system, const std::string& name,
 }
 
 void ChatWidget::sendChatMessage() {
-  auto cleanup = detail::make_scope_guard([=] { input()->setText(QString()); });
+  auto cleanup
+    = detail::make_scope_guard([=]() noexcept { input()->setText(QString()); });
   QString line = input()->text();
   if (line.isEmpty()) {
     // Ignore empty lines.

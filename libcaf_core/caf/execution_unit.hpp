@@ -42,7 +42,7 @@ public:
   }
 
   /// Associated a new proxy factory to this unit.
-  void proxy_registry_ptr(proxy_registry* ptr) {
+  void proxy_registry_ptr(proxy_registry* ptr) noexcept {
     proxies_ = ptr;
   }
 
