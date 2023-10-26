@@ -116,10 +116,8 @@ public:
       };
       std::apply(fn, steps_);
       pull();
-      if (!running_) {
-        running_ = true;
+      if (!running_)
         do_run();
-      }
     }
   }
 
@@ -130,10 +128,8 @@ public:
         step.on_complete(steps..., term);
       };
       std::apply(fn, steps_);
-      if (!running_) {
-        running_ = true;
+      if (!running_)
         do_run();
-      }
     }
   }
 
@@ -145,10 +141,8 @@ public:
           step.on_error(what, steps..., term);
         };
         std::apply(fn, steps_);
-        if (!running_) {
-          running_ = true;
+        if (!running_)
           do_run();
-        }
       }
     } else if (out_) {
       // This may only happen if subscribing to the input fails.
@@ -157,10 +151,8 @@ public:
         step.on_error(what, steps..., term);
       };
       std::apply(fn, steps_);
-      if (!running_) {
-        running_ = true;
+      if (!running_)
         do_run();
-      }
     }
   }
 
@@ -215,12 +207,22 @@ private:
 
   void run_later() {
     if (!running_) {
-      running_ = true;
-      ctx_->delay_fn([ptr = strong_this()] { ptr->do_run(); });
+      ctx_->delay_fn([ptr = strong_this()] { ptr->do_run_impl(); });
     }
   }
 
   void do_run() {
+    // Note: external references to this object may be discarded while running
+    //       do_run_impl. Hence, we need to make sure that the object is alive
+    //       during the entire execution of do_run_impl. Otherwise, we might
+    //       trigger a heap-use-after-free.
+    ref();
+    auto guard = detail::make_scope_guard([this] { deref(); });
+    running_ = true;
+    do_run_impl();
+  }
+
+  void do_run_impl() {
     auto guard = detail::make_scope_guard([this] { running_ = false; });
     if (!disposed_) {
       CAF_ASSERT(out_);

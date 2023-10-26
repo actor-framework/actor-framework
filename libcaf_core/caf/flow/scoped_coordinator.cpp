@@ -16,27 +16,23 @@ intrusive_ptr<scoped_coordinator> scoped_coordinator::make() {
 
 void scoped_coordinator::run() {
   for (;;) {
+    drop_disposed_flows();
     auto f = next(!watched_disposables_.empty());
-    if (f.ptr() != nullptr) {
-      f.run();
-      drop_disposed_flows();
-    } else {
+    if (!f)
       return;
-    }
+    f.run();
   }
 }
 
 size_t scoped_coordinator::run_some() {
   size_t result = 0;
   for (;;) {
+    drop_disposed_flows();
     auto f = next(false);
-    if (f.ptr() != nullptr) {
-      ++result;
-      f.run();
-      drop_disposed_flows();
-    } else {
+    if (!f)
       return result;
-    }
+    ++result;
+    f.run();
   }
 }
 

@@ -29,6 +29,13 @@ caf_add_test_executable(
     CAF::core
     CAF::io)
 
+caf_add_test_executable(
+  caf-robot-flow-merge-driver
+  SOURCES
+    flow/merge/driver.cpp
+  DEPENDENCIES
+    CAF::core)
+
 add_test(
   NAME "robot-config-read-config-file"
   COMMAND
@@ -44,6 +51,14 @@ add_test(
       -m robot
       --variable BINARY_PATH:$<TARGET_FILE:hello_world>
       "${CMAKE_CURRENT_SOURCE_DIR}/config/dump-config.robot")
+
+add_test(
+  NAME "caf-robot-flow-merge"
+  COMMAND
+    ${Python_EXECUTABLE}
+      -m robot
+      --variable BINARY_PATH:$<TARGET_FILE:caf-robot-flow-merge-driver>
+      "${CMAKE_CURRENT_SOURCE_DIR}/flow/merge/merge.robot")
 
 add_test(
   NAME "robot-http-rest"

@@ -10,6 +10,7 @@
 #include "caf/flow/subscription.hpp"
 #include "caf/sec.hpp"
 
+#include <deque>
 #include <tuple>
 #include <utility>
 

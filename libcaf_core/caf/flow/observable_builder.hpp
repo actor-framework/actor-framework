@@ -183,20 +183,13 @@ public:
   /// Creates an @ref observable that combines the items emitted from all passed
   /// source observables.
   template <class Input, class... Inputs>
-  auto merge(Input&& x, Inputs&&... xs) {
-    using in_t = std::decay_t<Input>;
-    if constexpr (is_observable_v<in_t>) {
-      using impl_t = op::merge<output_type_t<in_t>>;
-      return make_observable<impl_t>(ctx_, std::forward<Input>(x),
-                                     std::forward<Inputs>(xs)...);
-    } else {
-      static_assert(detail::is_iterable_v<in_t>);
-      using val_t = typename in_t::value_type;
-      static_assert(is_observable_v<val_t>);
-      using impl_t = op::merge<output_type_t<val_t>>;
-      return make_observable<impl_t>(ctx_, std::forward<Input>(x),
-                                     std::forward<Inputs>(xs)...);
-    }
+  auto merge(Input x, Inputs... xs) {
+    static_assert(is_observable_v<Input> && (is_observable_v<Inputs> && ...));
+    using out_t = output_type_t<Input>;
+    static_assert((std::is_same_v<out_t, output_type_t<Inputs>> && ...));
+    using impl_t = op::merge<out_t>;
+    return make_observable<impl_t>(ctx_, std::move(x).as_observable(),
+                                   std::move(xs).as_observable()...);
   }
 
   /// Creates an @ref observable that concatenates the items emitted from all
