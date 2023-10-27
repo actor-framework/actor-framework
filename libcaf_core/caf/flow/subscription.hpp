@@ -117,6 +117,12 @@ public:
   subscription& operator=(subscription&&) noexcept = default;
   subscription& operator=(const subscription&) noexcept = default;
 
+  // -- factory functions ------------------------------------------------------
+
+  /// Creates a trivial subscription that simply wraps a boolean flag and
+  /// ignores all requests.
+  static subscription make_trivial();
+
   // -- demand signaling -------------------------------------------------------
 
   /// Causes the publisher to stop producing items for the subscriber. Any

@@ -321,10 +321,9 @@ public:
     auto ptr = make_counted<buffer_sub<Trait>>(super::ctx_, max_items_, out);
     ptr->init(in_, select_);
     if (!ptr->running()) {
-      auto err = ptr->err().or_else(sec::runtime_error,
-                                    "failed to initialize buffer subscription");
-      out.on_error(err);
-      return {};
+      return fail_subscription(
+        out, ptr->err().or_else(sec::runtime_error,
+                                "failed to initialize buffer subscription"));
     }
     out.on_subscribe(subscription{ptr});
     return ptr->as_disposable();

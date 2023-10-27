@@ -27,6 +27,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Fix a minor bug in the deserialization of messages that caused CAF to allocate
   more storage than necessary (#1614).
 - Add missing `const` to `publisher<T>::observe_on`.
+- All `observable` implementations now properly call `on_subscribe` on their
+  subscriber before calling `on_error`.
 
 ### Changed
 

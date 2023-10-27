@@ -116,6 +116,30 @@ private:
 template <class T>
 using observer_impl = typename observer<T>::impl;
 
+/// Calls `on_subscribe` and `on_error` on `out` to immediately fail a
+/// subscription.
+/// @relates observer
+template <class T>
+disposable fail_subscription(observer<T>& out, const error& err) {
+  auto sub = subscription::make_trivial();
+  out.on_subscribe(sub);
+  if (!sub.disposed())
+    out.on_error(err);
+  return sub.as_disposable();
+}
+
+/// Calls `on_subscribe` and `on_complete` on `out` to immediately complete a
+/// subscription.
+/// @relates observer
+template <class T>
+disposable empty_subscription(observer<T>& out) {
+  auto sub = subscription::make_trivial();
+  out.on_subscribe(sub);
+  if (!sub.disposed())
+    out.on_complete();
+  return sub.as_disposable();
+}
+
 /// Simple base type observer implementations that implements the reference
 /// counting member functions with a plain (i.e., not thread-safe) reference
 /// count.

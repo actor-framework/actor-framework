@@ -219,12 +219,11 @@ public:
 
   disposable subscribe(observer<T> out) override {
     if (inputs() == 0) {
-      return make_counted<empty<T>>(super::ctx_)->subscribe(std::move(out));
-    } else {
-      auto ptr = make_counted<concat_sub<T>>(super::ctx_, out, inputs_);
-      out.on_subscribe(subscription{ptr});
-      return ptr->as_disposable();
+      return empty_subscription(out);
     }
+    auto ptr = make_counted<concat_sub<T>>(super::ctx_, out, inputs_);
+    out.on_subscribe(subscription{ptr});
+    return ptr->as_disposable();
   }
 
 private:

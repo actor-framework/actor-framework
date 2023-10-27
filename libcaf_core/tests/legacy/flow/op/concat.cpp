@@ -15,33 +15,6 @@ using namespace caf;
 
 namespace {
 
-// Like op::empty, but calls on_complete immediately instead of waiting for the
-// observer to request items. We use this to get more coverage on edge cases.
-template <class T>
-class insta_empty : public flow::op::cold<T> {
-public:
-  // -- member types -----------------------------------------------------------
-
-  using super = flow::op::cold<T>;
-
-  using output_type = T;
-
-  // -- constructors, destructors, and assignment operators --------------------
-
-  explicit insta_empty(flow::coordinator* ctx) : super(ctx) {
-    // nop
-  }
-
-  // -- implementation of observable<T>::impl ----------------------------------
-
-  disposable subscribe(flow::observer<output_type> out) override {
-    auto sub = make_counted<flow::passive_subscription_impl>();
-    out.on_subscribe(flow::subscription{sub});
-    out.on_complete();
-    return sub->as_disposable();
-  }
-};
-
 struct fixture : test_coordinator_fixture<> {
   flow::scoped_coordinator_ptr ctx = flow::make_scoped_coordinator();
 
@@ -62,11 +35,6 @@ struct fixture : test_coordinator_fixture<> {
     auto ptr = make_counted<flow::op::concat_sub<T>>(ctx.get(), out, vec);
     out.on_subscribe(flow::subscription{ptr});
     return ptr;
-  }
-
-  template <class T>
-  auto make_insta_empty() {
-    return flow::observable<T>{make_counted<insta_empty<T>>(ctx.get())};
   }
 };
 
@@ -118,7 +86,7 @@ SCENARIO("concat operators combine inputs") {
           .from_container(
             std::vector{ctx->make_observable().just(1).as_observable(),
                         ctx->make_observable().just(2).as_observable(),
-                        make_insta_empty<int>()})
+                        ctx->make_observable().empty<int>().as_observable()})
           .concat(ctx->make_observable().just(3))
           .subscribe(snk->as_observer());
         ctx->run();

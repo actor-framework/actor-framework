@@ -196,12 +196,11 @@ public:
       auto ptr = make_counted<mcast_sub<T>>(super::ctx_, add_state(out));
       out.on_subscribe(subscription{ptr});
       return disposable{std::move(ptr)};
-    } else if (!err_) {
-      return make_counted<op::empty<T>>(super::ctx_)->subscribe(out);
-    } else {
-      out.on_error(err_);
-      return disposable{};
     }
+    if (!err_) {
+      return empty_subscription(out);
+    }
+    return fail_subscription(out, err_);
   }
 
   // -- implementation of ucast_sub_state_listener -----------------------------

@@ -147,8 +147,7 @@ stream_bridge::stream_bridge(scheduled_actor* self, strong_actor_ptr src,
 
 disposable stream_bridge::subscribe(flow::observer<async::batch> out) {
   if (!src_) {
-    out.on_error(make_error(sec::cannot_resubscribe_stream));
-    return {};
+    return fail_subscription(out, make_error(sec::cannot_resubscribe_stream));
   }
   auto self = self_ptr();
   auto local_id = self->new_u64_id();
