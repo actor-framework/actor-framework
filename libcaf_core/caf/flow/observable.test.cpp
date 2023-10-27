@@ -435,141 +435,106 @@ TEST("on_error_return() replaces an error with a value") {
                nil);
     }
   }
-  SECTION("on_error_return() returns from predicate when an error occurs") {
+  SECTION("on_error_return() replaces an error with a value from the handler") {
+    auto return_42 = [](const error&) { return expected<int>{42}; };
     SECTION("blueprint") {
       check_eq(collect(range(1, 0)
                          .concat(obs_error(sec::runtime_error))
-                         .on_error_return(
-                           [](const error&) { return expected<int>{42}; })),
+                         .on_error_return(return_42)),
                vector{42});
       check_eq(collect(range(1, 2)
                          .concat(obs_error(sec::runtime_error))
                          .concat(range(1, 2))
-                         .on_error_return(
-                           [](const error&) { return expected<int>{42}; })),
+                         .on_error_return(return_42)),
                vector{1, 2, 42});
       check_eq(collect(range(1, 3)
                          .concat(obs_error(sec::runtime_error))
                          .concat(range(1, 3))
-                         .on_error_return(
-                           [](const error&) { return expected<int>{42}; })),
+                         .on_error_return(return_42)),
                vector{1, 2, 3, 42});
       check_eq(collect(range(1, 2)
                          .concat(obs_error(sec::runtime_error))
-                         .on_error_return(
-                           [](const error&) { return expected<int>{42}; })
+                         .on_error_return(return_42)
                          .take(2)),
                vector{1, 2});
       check_eq(collect(range(1, 3)
                          .concat(obs_error(sec::runtime_error))
-                         .on_error_return(
-                           [](const error&) { return expected<int>{42}; })
+                         .on_error_return(return_42)
                          .take(3)),
                vector{1, 2, 3});
     }
     SECTION("observable") {
       check_eq(collect(mat(range(1, 0).concat(obs_error(sec::runtime_error)))
-                         .on_error_return(
-                           [](const error&) { return expected<int>{42}; })),
+                         .on_error_return(return_42)),
                vector{42});
       check_eq(collect(mat(range(1, 2)
                              .concat(obs_error(sec::runtime_error))
                              .concat(range(1, 2)))
-                         .on_error_return(
-                           [](const error&) { return expected<int>{42}; })),
+                         .on_error_return(return_42)),
                vector{1, 2, 42});
       check_eq(collect(mat(range(1, 3)
                              .concat(obs_error(sec::runtime_error))
                              .concat(range(1, 3)))
-                         .on_error_return(
-                           [](const error&) { return expected<int>{42}; })),
+                         .on_error_return(return_42)),
                vector{1, 2, 3, 42});
       check_eq(collect(mat(range(1, 2).concat(obs_error(sec::runtime_error)))
-                         .on_error_return(
-                           [](const error&) { return expected<int>{42}; })
+                         .on_error_return(return_42)
                          .take(2)),
                vector{1, 2});
       check_eq(collect(mat(range(1, 3).concat(obs_error(sec::runtime_error)))
-                         .on_error_return(
-                           [](const error&) { return expected<int>{42}; })
+                         .on_error_return(return_42)
                          .take(3)),
                vector{1, 2, 3});
     }
   }
-  SECTION("on_error_return() returns error from predicate") {
+  SECTION("on_error_return() forwards errors from the handler") {
+    auto return_unexpected = [](const error&) {
+      return expected<int>{make_error(sec::unexpected_message)};
+    };
+    auto return_err = [](const error& err) { return expected<int>{err}; };
     SECTION("blueprint") {
       check_eq(collect(range(1, 0)
                          .concat(obs_error(sec::runtime_error))
-                         .on_error_return([](const error&) {
-                           return expected<int>{
-                             make_error(sec::unexpected_message)};
-                         })),
+                         .on_error_return(return_unexpected)),
                sec::unexpected_message);
       check_eq(collect(range(1, 2)
                          .concat(obs_error(sec::runtime_error))
                          .concat(range(1, 2))
-                         .on_error_return([](const error&) {
-                           return expected<int>{
-                             make_error(sec::unexpected_message)};
-                         })),
+                         .on_error_return(return_unexpected)),
                sec::unexpected_message);
       check_eq(collect(range(1, 3)
                          .concat(obs_error(sec::runtime_error))
                          .concat(range(1, 3))
-                         .on_error_return([](const error& what) {
-                           return expected<int>{what};
-                         })),
+                         .on_error_return(return_err)),
                sec::runtime_error);
       check_eq(collect(range(1, 2)
                          .concat(obs_error(sec::runtime_error))
-                         .on_error_return([](const error& what) {
-                           return expected<int>{what};
-                         })
-                         .take(2)),
+                         .on_error_return(return_err)),
                sec::runtime_error);
       check_eq(collect(range(1, 3)
                          .concat(obs_error(sec::runtime_error))
-                         .on_error_return([](const error&) {
-                           return expected<int>{
-                             make_error(sec::unexpected_message)};
-                         })
-                         .take(3)),
+                         .on_error_return(return_unexpected)),
                sec::unexpected_message);
     }
     SECTION("observable") {
       check_eq(collect(mat(range(1, 0).concat(obs_error(sec::runtime_error)))
-                         .on_error_return([](const error&) {
-                           return expected<int>{
-                             make_error(sec::unexpected_message)};
-                         })),
+                         .on_error_return(return_unexpected)),
                sec::unexpected_message);
       check_eq(collect(mat(range(1, 2)
                              .concat(obs_error(sec::runtime_error))
                              .concat(range(1, 2)))
-                         .on_error_return([](const error&) {
-                           return expected<int>{
-                             make_error(sec::unexpected_message)};
-                         })),
+                         .on_error_return(return_unexpected)),
                sec::unexpected_message);
       check_eq(collect(mat(range(1, 3)
                              .concat(obs_error(sec::runtime_error))
                              .concat(range(1, 3)))
-                         .on_error_return([](const error& what) {
-                           return expected<int>{what};
-                         })),
+                         .on_error_return(return_err)),
                sec::runtime_error);
       check_eq(collect(mat(range(1, 2).concat(obs_error(sec::runtime_error)))
-                         .on_error_return([](const error& what) {
-                           return expected<int>{what};
-                         })
-                         .take(2)),
+                         .on_error_return(return_err)),
                sec::runtime_error);
       check_eq(collect(mat(range(1, 3).concat(obs_error(sec::runtime_error)))
-                         .on_error_return([](const error&) {
-                           return expected<int>{
-                             make_error(sec::unexpected_message)};
-                         })
-                         .take(3)),
+                         .on_error_return(return_unexpected)),
                sec::unexpected_message);
     }
   }
