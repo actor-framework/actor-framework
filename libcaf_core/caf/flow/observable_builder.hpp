@@ -31,37 +31,39 @@ namespace caf::flow {
 
 // -- generation ---------------------------------------------------------------
 
-/// Materializes an @ref observable from a `Generator` that produces items and
-/// any number of processing steps that immediately transform the produced
-/// items.
+/// Builds an @ref observable from a `Generator` that produces items and any
+/// number of processing steps that immediately transform the produced items.
 template <class Generator>
-class generation_materializer {
+class generation_builder {
 public:
+  template <class Builder, class... Steps>
+  friend class observable_def;
+
   using output_type = typename Generator::output_type;
 
-  generation_materializer(coordinator* ctx, Generator generator)
+  generation_builder(coordinator* ctx, Generator generator)
     : ctx_(ctx), gen_(std::move(generator)) {
     // nop
   }
 
-  generation_materializer() = delete;
-  generation_materializer(const generation_materializer&) = delete;
-  generation_materializer& operator=(const generation_materializer&) = delete;
+  generation_builder() = delete;
+  generation_builder(const generation_builder&) = delete;
+  generation_builder& operator=(const generation_builder&) = delete;
 
-  generation_materializer(generation_materializer&&) = default;
-  generation_materializer& operator=(generation_materializer&&) = default;
-
-  template <class... Steps>
-  auto materialize(std::tuple<Steps...>&& steps) && {
-    using impl_t = op::from_generator<Generator, Steps...>;
-    return make_observable<impl_t>(ctx_, std::move(gen_), std::move(steps));
-  }
+  generation_builder(generation_builder&&) = default;
+  generation_builder& operator=(generation_builder&&) = default;
 
   bool valid() const noexcept {
     return ctx_ != nullptr;
   }
 
 private:
+  template <class... Steps>
+  auto build(std::tuple<Steps...>&& steps) && {
+    using impl_t = op::from_generator<Generator, Steps...>;
+    return make_observable<impl_t>(ctx_, std::move(gen_), std::move(steps));
+  }
+
   coordinator* ctx_;
   Generator gen_;
 };
@@ -81,8 +83,8 @@ public:
   /// `generator.pull(...)`.
   template <class Generator>
   generation<Generator> from_generator(Generator generator) const {
-    using materializer_t = generation_materializer<Generator>;
-    return generation<Generator>{materializer_t{ctx_, std::move(generator)}};
+    using builder_t = generation_builder<Generator>;
+    return generation<Generator>{builder_t{ctx_, std::move(generator)}};
   }
 
   /// Creates a @ref generation that emits `value` once.

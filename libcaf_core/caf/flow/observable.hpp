@@ -180,11 +180,11 @@ private:
   pimpl_type pimpl_;
 };
 
-/// Captures the *definition* of an observable that has not materialized yet.
-template <class Materializer, class... Steps>
+/// Captures the *definition* of an observable that has not assembled yet.
+template <class Builder, class... Steps>
 class observable_def {
 public:
-  using output_type = output_type_t<Materializer, Steps...>;
+  using output_type = output_type_t<Builder, Steps...>;
 
   observable_def() = delete;
   observable_def(const observable_def&) = delete;
@@ -194,19 +194,18 @@ public:
   observable_def& operator=(observable_def&&) = default;
 
   template <size_t N = sizeof...(Steps), class = std::enable_if_t<N == 0>>
-  explicit observable_def(Materializer&& materializer)
-    : materializer_(std::move(materializer)) {
+  explicit observable_def(Builder&& builder) : builder_(std::move(builder)) {
     // nop
   }
 
-  observable_def(Materializer&& materializer, std::tuple<Steps...>&& steps)
-    : materializer_(std::move(materializer)), steps_(std::move(steps)) {
+  observable_def(Builder&& builder, std::tuple<Steps...>&& steps)
+    : builder_(std::move(builder)), steps_(std::move(steps)) {
     // nop
   }
 
   /// @copydoc observable::transform
   template <class NewStep>
-  observable_def<Materializer, Steps..., NewStep> transform(NewStep step) && {
+  observable_def<Builder, Steps..., NewStep> transform(NewStep step) && {
     return add_step(std::move(step));
   }
 
@@ -258,11 +257,11 @@ public:
 
   /// @copydoc observable::buffer
   auto buffer(size_t count) && {
-    return materialize().buffer(count);
+    return build().buffer(count);
   }
 
   auto buffer(size_t count, timespan period) {
-    return materialize().buffer(count, period);
+    return build().buffer(count, period);
   }
 
   template <class Predicate>
@@ -347,187 +346,185 @@ public:
       step::on_error_return<ErrorHandler>{std::move(error_handler)});
   }
 
-  /// Materializes the @ref observable.
+  /// builds the @ref observable.
   observable<output_type> as_observable() && {
-    return materialize();
+    return build();
   }
 
   /// @copydoc observable::for_each
   template <class OnNext>
   auto for_each(OnNext on_next) && {
-    return materialize().for_each(std::move(on_next));
+    return build().for_each(std::move(on_next));
   }
 
   /// @copydoc observable::merge
   template <class... Inputs>
   auto merge(Inputs&&... xs) && {
-    return materialize().merge(std::forward<Inputs>(xs)...);
+    return build().merge(std::forward<Inputs>(xs)...);
   }
 
   /// @copydoc observable::concat
   template <class... Inputs>
   auto concat(Inputs&&... xs) && {
-    return materialize().concat(std::forward<Inputs>(xs)...);
+    return build().concat(std::forward<Inputs>(xs)...);
   }
 
   /// @copydoc observable::flat_map
   template <class F>
   auto flat_map(F f) && {
-    return materialize().flat_map(std::move(f));
+    return build().flat_map(std::move(f));
   }
 
   /// @copydoc observable::concat_map
   template <class F>
   auto concat_map(F f) && {
-    return materialize().concat_map(std::move(f));
+    return build().concat_map(std::move(f));
   }
 
   /// @copydoc observable::zip_with
   template <class F, class T0, class... Ts>
   auto zip_with(F fn, T0 input0, Ts... inputs) {
-    return materialize().zip_with(std::move(fn), std::move(input0),
-                                  std::move(inputs)...);
+    return build().zip_with(std::move(fn), std::move(input0),
+                            std::move(inputs)...);
   }
 
   /// @copydoc observable::publish
   auto publish() && {
-    return materialize().publish();
+    return build().publish();
   }
 
   /// @copydoc observable::share
   auto share(size_t subscriber_threshold = 1) && {
-    return materialize().share(subscriber_threshold);
+    return build().share(subscriber_threshold);
   }
 
   /// @copydoc observable::prefix_and_tail
   observable<cow_tuple<cow_vector<output_type>, observable<output_type>>>
   prefix_and_tail(size_t prefix_size) && {
-    return materialize().prefix_and_tail(prefix_size);
+    return build().prefix_and_tail(prefix_size);
   }
 
   /// @copydoc observable::head_and_tail
   observable<cow_tuple<output_type, observable<output_type>>>
   head_and_tail() && {
-    return materialize().head_and_tail();
+    return build().head_and_tail();
   }
 
   /// @copydoc observable::subscribe
   template <class Out>
   disposable subscribe(Out&& out) && {
-    return materialize().subscribe(std::forward<Out>(out));
+    return build().subscribe(std::forward<Out>(out));
   }
 
   /// @copydoc observable::to_resource
   async::consumer_resource<output_type> to_resource() && {
-    return materialize().to_resource();
+    return build().to_resource();
   }
 
   /// @copydoc observable::to_resource
   async::consumer_resource<output_type>
   to_resource(size_t buffer_size, size_t min_request_size) && {
-    return materialize().to_resource(buffer_size, min_request_size);
+    return build().to_resource(buffer_size, min_request_size);
   }
 
   /// @copydoc observable::to_publisher
   async::publisher<output_type> to_publisher() && {
-    return materialize().to_publisher();
+    return build().to_publisher();
   }
 
   /// @copydoc observable::to_stream
   template <class U = output_type>
   stream to_stream(cow_string name, timespan max_delay,
                    size_t max_items_per_batch) && {
-    return materialize().template to_stream<U>(std::move(name), max_delay,
-                                               max_items_per_batch);
+    return build().template to_stream<U>(std::move(name), max_delay,
+                                         max_items_per_batch);
   }
 
   /// @copydoc observable::to_stream
   template <class U = output_type>
   stream to_stream(std::string name, timespan max_delay,
                    size_t max_items_per_batch) && {
-    return materialize().template to_stream<U>(std::move(name), max_delay,
-                                               max_items_per_batch);
+    return build().template to_stream<U>(std::move(name), max_delay,
+                                         max_items_per_batch);
   }
 
   /// @copydoc observable::to_typed_stream
   template <class U = output_type>
   auto to_typed_stream(cow_string name, timespan max_delay,
                        size_t max_items_per_batch) && {
-    return materialize().template to_typed_stream<U>(std::move(name), max_delay,
-                                                     max_items_per_batch);
+    return build().template to_typed_stream<U>(std::move(name), max_delay,
+                                               max_items_per_batch);
   }
 
   /// @copydoc observable::to_typed_stream
   template <class U = output_type>
   auto to_typed_stream(std::string name, timespan max_delay,
                        size_t max_items_per_batch) && {
-    return materialize().template to_typed_stream<U>(std::move(name), max_delay,
-                                                     max_items_per_batch);
+    return build().template to_typed_stream<U>(std::move(name), max_delay,
+                                               max_items_per_batch);
   }
 
   /// @copydoc observable::observe_on
   observable<output_type> observe_on(coordinator* other) && {
-    return materialize().observe_on(other);
+    return build().observe_on(other);
   }
 
   /// @copydoc observable::observe_on
   observable<output_type> observe_on(coordinator* other, size_t buffer_size,
                                      size_t min_request_size) && {
-    return materialize().observe_on(other, buffer_size, min_request_size);
+    return build().observe_on(other, buffer_size, min_request_size);
   }
 
   bool valid() const noexcept {
-    return materializer_.valid();
+    return builder_.valid();
   }
 
 private:
   template <class NewStep>
-  observable_def<Materializer, Steps..., NewStep> add_step(NewStep step) {
+  observable_def<Builder, Steps..., NewStep> add_step(NewStep step) {
     static_assert(std::is_same_v<output_type, typename NewStep::input_type>);
-    return {std::move(materializer_),
+    return {std::move(builder_),
             std::tuple_cat(std::move(steps_),
                            std::make_tuple(std::move(step)))};
   }
 
-  observable<output_type> materialize() {
-    return std::move(materializer_).materialize(std::move(steps_));
+  observable<output_type> build() {
+    return std::move(builder_).build(std::move(steps_));
   }
 
   /// Encapsulates logic for allocating a flow operator.
-  Materializer materializer_;
+  Builder builder_;
 
-  /// Stores processing steps that the materializer fuses into a single flow
+  /// Stores processing steps that the builder fuses into a single flow
   /// operator.
   std::tuple<Steps...> steps_;
 };
 
 // -- transformation -----------------------------------------------------------
 
-/// Materializes an @ref observable from a source @ref observable and one or
+/// builds an @ref observable from a source @ref observable and one or
 /// more processing steps.
 template <class Input>
-class transformation_materializer {
+class transformation_builder {
 public:
   using output_type = Input;
 
-  explicit transformation_materializer(observable<Input> source)
+  explicit transformation_builder(observable<Input> source)
     : source_(std::move(source).pimpl()) {
     // nop
   }
 
-  explicit transformation_materializer(intrusive_ptr<op::base<Input>> source)
+  explicit transformation_builder(intrusive_ptr<op::base<Input>> source)
     : source_(std::move(source)) {
     // nop
   }
 
-  transformation_materializer() = delete;
-  transformation_materializer(const transformation_materializer&) = delete;
-  transformation_materializer& operator=(const transformation_materializer&)
-    = delete;
+  transformation_builder() = delete;
+  transformation_builder(const transformation_builder&) = delete;
+  transformation_builder& operator=(const transformation_builder&) = delete;
 
-  transformation_materializer(transformation_materializer&&) = default;
-  transformation_materializer& operator=(transformation_materializer&&)
-    = default;
+  transformation_builder(transformation_builder&&) = default;
+  transformation_builder& operator=(transformation_builder&&) = default;
 
   bool valid() const noexcept {
     return source_ != nullptr;
@@ -538,7 +535,7 @@ public:
   }
 
   template <class Step, class... Steps>
-  auto materialize(std::tuple<Step, Steps...>&& steps) && {
+  auto build(std::tuple<Step, Steps...>&& steps) && {
     using impl_t = op::from_steps<Input, Step, Steps...>;
     return make_observable<impl_t>(ctx(), source_, std::move(steps));
   }
@@ -599,7 +596,7 @@ template <class Step>
 transformation<Step> observable<T>::transform(Step step) {
   static_assert(std::is_same_v<typename Step::input_type, T>,
                 "step object does not match the input type");
-  return {transformation_materializer<T>{pimpl()}, std::move(step)};
+  return {transformation_builder<T>{pimpl()}, std::move(step)};
 }
 
 template <class T>
@@ -774,9 +771,7 @@ auto observable<T>::concat(Inputs&&... xs) {
     using impl_t = op::concat<value_t>;
     return make_observable<impl_t>(ctx(), *this, std::forward<Inputs>(xs)...);
   } else {
-    static_assert(
-      sizeof...(Inputs) > 0,
-      "concat without arguments expects this observable to emit observables");
+    static_assert(sizeof...(Inputs) > 0, "no observable to concatenate");
     static_assert(
       (std::is_same_v<Out, output_type_t<std::decay_t<Inputs>>> && ...),
       "can only concatenate observables with the same observed type");

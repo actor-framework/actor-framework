@@ -38,11 +38,11 @@ class observer;
 template <class T>
 class observable;
 
-template <class Materializer, class... Steps>
+template <class Builder, class... Steps>
 class observable_def;
 
 template <class Generator>
-class generation_materializer;
+class generation_builder;
 
 template <class T>
 class multicaster;
@@ -50,16 +50,16 @@ class multicaster;
 /// A blueprint for an @ref observer that generates items and applies any number
 /// of processing steps immediately before emitting them.
 template <class Generator, class... Steps>
-using generation = observable_def<generation_materializer<Generator>, Steps...>;
+using generation = observable_def<generation_builder<Generator>, Steps...>;
 
 template <class Input>
-class transformation_materializer;
+class transformation_builder;
 
 /// A blueprint for an @ref observer that applies a series of transformation
 /// steps to its inputs and emits the results.
 template <class Step, class... Steps>
 using transformation
-  = observable_def<transformation_materializer<typename Step::input_type>, Step,
+  = observable_def<transformation_builder<typename Step::input_type>, Step,
                    Steps...>;
 
 template <class T>
@@ -75,8 +75,8 @@ struct is_observable<observable<T>> {
   static constexpr bool value = true;
 };
 
-template <class Materializer, class... Steps>
-struct is_observable<observable_def<Materializer, Steps...>> {
+template <class Builder, class... Steps>
+struct is_observable<observable_def<Builder, Steps...>> {
   static constexpr bool value = true;
 };
 
