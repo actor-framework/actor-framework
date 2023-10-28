@@ -40,15 +40,11 @@ template <class State, class Consumer, class EnableFloat = std::true_type,
           class EnableRange = std::false_type>
 void read_negative_number(State& ps, Consumer& consumer, EnableFloat = {},
                           EnableRange = {}) {
-  static constexpr bool enable_float = EnableFloat::value;
-  static constexpr bool enable_range = EnableRange::value;
+  constexpr bool enable_float = EnableFloat::value;
+  constexpr bool enable_range = EnableRange::value;
   // Our result when reading an integer number.
-  int64_t result = 0;
-  // Computes the result on success.
-  auto g = caf::detail::make_scope_guard([&] {
-    if (ps.code <= pec::trailing_character)
-      apply_consumer(consumer, result, ps.code);
-  });
+  auto result = int64_t{0};
+  auto disabled = false;
   using odbl = std::optional<double>;
   // clang-format off
   start();
@@ -56,7 +52,7 @@ void read_negative_number(State& ps, Consumer& consumer, EnableFloat = {},
   state(init) {
     fsm_epsilon_static_if(enable_float,
                           read_floating_point(ps, consumer, odbl{0.}, true),
-                          done, '.', g.disable())
+                          done, '.', disabled = true)
     transition(neg_zero, '0')
     epsilon(neg_dec)
   }
@@ -95,19 +91,19 @@ void read_negative_number(State& ps, Consumer& consumer, EnableFloat = {},
     transition(neg_dec, decimal_chars, sub_ascii<10>(result, ch),
                pec::integer_underflow)
     fsm_epsilon_static_if(enable_float,
-                          read_floating_point(ps, consumer, 
+                          read_floating_point(ps, consumer,
                                       odbl{static_cast<double>(result)}, true),
-                          done, "eE", g.disable())
+                          done, "eE", disabled = true)
     transition_static_if(enable_float || enable_range, neg_dot, '.')
   }
   unstable_state(neg_dot) {
     fsm_transition_static_if(enable_range,
                              read_number_range(ps, consumer, result),
-                             done, '.', g.disable())
+                             done, '.', disabled = true)
     fsm_epsilon_static_if(enable_float,
-                          read_floating_point(ps, consumer, 
+                          read_floating_point(ps, consumer,
                                       odbl{static_cast<double>(result)}, true),
-                          done, any_char, g.disable())
+                          done, any_char, disabled = true)
     epsilon(done)
   }
   term_state(done) {
@@ -115,21 +111,19 @@ void read_negative_number(State& ps, Consumer& consumer, EnableFloat = {},
   }
   fin();
   // clang-format on
+  if (!disabled && ps.code <= pec::trailing_character)
+    apply_consumer(consumer, result, ps.code);
 }
 
 template <class State, class Consumer, class EnableFloat = std::true_type,
           class EnableRange = std::false_type>
 void read_positive_number(State& ps, Consumer& consumer, EnableFloat = {},
                           EnableRange = {}) {
-  static constexpr bool enable_float = EnableFloat::value;
-  static constexpr bool enable_range = EnableRange::value;
+  constexpr bool enable_float = EnableFloat::value;
+  constexpr bool enable_range = EnableRange::value;
   // Our result when reading an integer number.
-  uint64_t result = 0;
-  // Computes the result on success.
-  auto g = caf::detail::make_scope_guard([&] {
-    if (ps.code <= pec::trailing_character)
-      apply_consumer(consumer, result, ps.code);
-  });
+  auto result = uint64_t{0};
+  auto disabled = false;
   using odbl = std::optional<double>;
   // clang-format off
   start();
@@ -137,7 +131,7 @@ void read_positive_number(State& ps, Consumer& consumer, EnableFloat = {},
   state(init) {
     fsm_epsilon_static_if(enable_float,
                           read_floating_point(ps, consumer, odbl{0.}),
-                          done, '.', g.disable())
+                          done, '.', disabled = true)
     transition(pos_zero, '0')
     epsilon(pos_dec)
   }
@@ -176,20 +170,20 @@ void read_positive_number(State& ps, Consumer& consumer, EnableFloat = {},
     transition(pos_dec, decimal_chars, add_ascii<10>(result, ch),
                pec::integer_overflow)
     fsm_epsilon_static_if(enable_float,
-                          read_floating_point(ps, consumer, 
+                          read_floating_point(ps, consumer,
                                       odbl{static_cast<double>(result)}),
-                          done, "eE", g.disable())
+                          done, "eE", disabled = true)
     transition_static_if(enable_float || enable_range, pos_dot, '.')
   }
   // Reads the integer part of the mantissa or a negative decimal integer.
   unstable_state(pos_dot) {
     fsm_transition_static_if(enable_range,
                              read_number_range(ps, consumer, result),
-                             done, '.', g.disable())
+                             done, '.', disabled = true)
     fsm_epsilon_static_if(enable_float,
-                          read_floating_point(ps, consumer, 
+                          read_floating_point(ps, consumer,
                                       odbl{static_cast<double>(result)}),
-                          done, any_char, g.disable())
+                          done, any_char, disabled = true)
     epsilon(done)
   }
   term_state(done) {
@@ -197,6 +191,8 @@ void read_positive_number(State& ps, Consumer& consumer, EnableFloat = {},
   }
   fin();
   // clang-format on
+  if (!disabled && ps.code <= pec::trailing_character)
+    apply_consumer(consumer, result, ps.code);
 }
 
 /// Reads a number, i.e., on success produces an `int64_t`, an `uint64_t` or a
@@ -205,7 +201,7 @@ template <class State, class Consumer, class EnableFloat = std::true_type,
           class EnableRange = std::false_type>
 void read_number(State& ps, Consumer& consumer, EnableFloat fl_token = {},
                  EnableRange rng_token = {}) {
-  static constexpr bool enable_float = EnableFloat::value;
+  constexpr bool enable_float = EnableFloat::value;
   using odbl = std::optional<double>;
   // clang-format off
   // Definition of our parser FSM.
@@ -323,19 +319,7 @@ void read_number_range(State& ps, Consumer& consumer, ValueType begin) {
   std::optional<int64_t> step;
   auto end_consumer = make_consumer(end);
   auto step_consumer = make_consumer(step);
-  auto g = caf::detail::make_scope_guard([&] {
-    if (ps.code <= pec::trailing_character) {
-      auto fn = [&](auto end_val) {
-        if constexpr (std::is_same_v<decltype(end_val), none_t>) {
-          ps.code = pec::invalid_range_expression;
-        } else {
-          generate_range(ps.code, consumer, begin, end_val, step);
-        }
-      };
-      std::visit(fn, end);
-    }
-  });
-  static constexpr std::false_type no_float = std::false_type{};
+  constexpr std::false_type no_float = std::false_type{};
   // clang-format off
   // Definition of our parser FSM.
   start();
@@ -356,6 +340,16 @@ void read_number_range(State& ps, Consumer& consumer, ValueType begin) {
   }
   fin();
   // clang-format on
+  if (ps.code > pec::trailing_character)
+    return;
+  auto fn = [&](auto end_val) {
+    if constexpr (std::is_same_v<decltype(end_val), none_t>) {
+      ps.code = pec::invalid_range_expression;
+    } else {
+      generate_range(ps.code, consumer, begin, end_val, step);
+    }
+  };
+  std::visit(fn, end);
 }
 
 } // namespace caf::detail::parser

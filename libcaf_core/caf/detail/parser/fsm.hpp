@@ -15,7 +15,7 @@
   if constexpr (std::is_same_v<pec, decltype(action_impl())>) {                \
     if (auto code = action_impl(); code != pec::success) {                     \
       ps.code = code;                                                          \
-      return;                                                                  \
+      goto fsm_after_fin;                                                      \
     }                                                                          \
   } else {                                                                     \
     action_impl();                                                             \
@@ -26,17 +26,14 @@
     ps.code = ch != '\n' ? mismatch_ec : caf::pec::unexpected_newline;         \
   else                                                                         \
     ps.code = mismatch_ec;                                                     \
-  return;
+  goto fsm_after_fin;
 
 /// Starts the definition of an FSM.
 #define start()                                                                \
   char ch = ps.current();                                                      \
   goto s_init;                                                                 \
-  s_unexpected_eof:                                                            \
-  ps.code = caf::pec::unexpected_eof;                                          \
-  return;                                                                      \
-  {                                                                            \
-    static_cast<void>(0); // dummy; init state closes parentheses
+  { /* dummy scope; closed by the init state */                                \
+    static_cast<void>(0)
 
 /// Defines a non-terminal state in the FSM.
 #define state(name)                                                            \
@@ -45,8 +42,8 @@
     /* jumps back up here if no transition matches */                          \
     ps.code = ch != '\n' ? caf::pec::unexpected_character                      \
                          : caf::pec::unexpected_newline;                       \
-    return;                                                                    \
-    s_##name : if (ch == '\0') goto s_unexpected_eof;                          \
+    goto fsm_after_fin;                                                        \
+    s_##name : if (ch == '\0') goto fsm_unexpected_eof;                        \
     e_##name:
 
 /// Defines a state in the FSM that doesn't check for end-of-input. Unstable
@@ -59,9 +56,13 @@
 /// Ends the definition of an FSM.
 #define fin()                                                                  \
   }                                                                            \
-  s_fin:                                                                       \
+  fsm_unexpected_eof:                                                          \
+  ps.code = caf::pec::unexpected_eof;                                          \
+  goto fsm_after_fin;                                                          \
+  fsm_fin:                                                                     \
   ps.code = caf::pec::success;                                                 \
-  return;
+  fsm_after_fin:                                                               \
+  static_cast<void>(0)
 
 /// Defines a terminal state in the FSM.
 #define CAF_TERM_STATE_IMPL1(name)                                             \
@@ -69,8 +70,8 @@
   for (;;) {                                                                   \
     /* jumps back up here if no transition matches */                          \
     ps.code = caf::pec::trailing_character;                                    \
-    return;                                                                    \
-    s_##name : if (ch == '\0') goto s_fin;                                     \
+    goto fsm_after_fin;                                                        \
+    s_##name : if (ch == '\0') goto fsm_fin;                                   \
     e_##name:
 
 /// Defines a terminal state in the FSM that runs `exit_statement` when leaving
@@ -81,10 +82,10 @@
     /* jumps back up here if no transition matches */                          \
     ps.code = caf::pec::trailing_character;                                    \
     exit_statement;                                                            \
-    return;                                                                    \
+    goto fsm_after_fin;                                                        \
     s_##name : if (ch == '\0') {                                               \
       exit_statement;                                                          \
-      goto s_fin;                                                              \
+      goto fsm_fin;                                                            \
     }                                                                          \
     e_##name:
 
@@ -107,7 +108,7 @@
   if (::caf::detail::parser::in_whitelist(whitelist, ch)) {                    \
     if (!action) {                                                             \
       ps.code = error_code;                                                    \
-      return;                                                                  \
+      goto fsm_after_fin;                                                      \
     }                                                                          \
     CAF_TRANSITION_IMPL1(target)                                               \
   }
@@ -115,12 +116,12 @@
 #define CAF_ERROR_TRANSITION_IMPL2(error_code, whitelist)                      \
   if (::caf::detail::parser::in_whitelist(whitelist, ch)) {                    \
     ps.code = error_code;                                                      \
-    return;                                                                    \
+    goto fsm_after_fin;                                                        \
   }
 
 #define CAF_ERROR_TRANSITION_IMPL1(error_code)                                 \
   ps.code = error_code;                                                        \
-  return;
+  goto fsm_after_fin;
 
 #define CAF_EPSILON_IMPL1(target) goto s_##target;
 
@@ -139,7 +140,7 @@
   if (::caf::detail::parser::in_whitelist(whitelist, ch)) {                    \
     if (!action) {                                                             \
       ps.code = error_code;                                                    \
-      return;                                                                  \
+      goto fsm_after_fin;                                                      \
     }                                                                          \
     CAF_EPSILON_IMPL1(target)                                                  \
   }
@@ -148,7 +149,7 @@
   ps.next();                                                                   \
   fsm_call;                                                                    \
   if (ps.code > caf::pec::trailing_character)                                  \
-    return;                                                                    \
+    goto fsm_after_fin;                                                        \
   ch = ps.current();                                                           \
   goto s_##target;
 
@@ -168,7 +169,7 @@
   if (::caf::detail::parser::in_whitelist(whitelist, ch)) {                    \
     if (!action) {                                                             \
       ps.code = error_code;                                                    \
-      return;                                                                  \
+      goto fsm_after_fin;                                                      \
     }                                                                          \
     CAF_FSM_TRANSITION_IMPL2(fsm_call, target)                                 \
   }
@@ -176,7 +177,7 @@
 #define CAF_FSM_EPSILON_IMPL2(fsm_call, target)                                \
   fsm_call;                                                                    \
   if (ps.code > caf::pec::trailing_character)                                  \
-    return;                                                                    \
+    goto fsm_after_fin;                                                        \
   ch = ps.current();                                                           \
   goto s_##target;
 
@@ -195,7 +196,7 @@
   if (::caf::detail::parser::in_whitelist(whitelist, ch)) {                    \
     if (!action) {                                                             \
       ps.code = error_code;                                                    \
-      return;                                                                  \
+      goto fsm_after_fin;                                                      \
     }                                                                          \
     CAF_FSM_EPSILON_IMPL2(fsm_call, target)                                    \
   }

@@ -34,15 +34,10 @@ void read_string(State& ps, Consumer&& consumer) {
       return std::string{};
     }
   };
-  res_type res = init_res(consumer);
-  auto g = caf::detail::make_scope_guard([&] {
-    if constexpr (std::is_same_v<res_type, std::string>)
-      if (ps.code <= pec::trailing_character)
-        consumer.value(std::move(res));
-  });
-  static constexpr char single_quote = '\'';
-  static constexpr char double_quote = '"';
-  char quote_mark = '\0';
+  constexpr auto single_quote = '\'';
+  constexpr auto double_quote = '"';
+  auto&& res = init_res(consumer);
+  auto quote_mark = '\0';
   // clang-format off
   start();
   state(init) {
@@ -78,6 +73,9 @@ void read_string(State& ps, Consumer&& consumer) {
   }
   fin();
   // clang-format on
+  if constexpr (std::is_same_v<res_type, std::string>)
+    if (ps.code <= pec::trailing_character)
+      consumer.value(std::move(res));
 }
 
 } // namespace caf::detail::parser
