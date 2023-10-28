@@ -384,46 +384,28 @@ TEST("on_error_return_item() replaces an error with a value") {
 }
 
 TEST("on_error_return() replaces an error with a value") {
+  auto return_42 = [](const error&) { return expected<int>{42}; };
   SECTION("on_error_return() does nothing if no error occurs") {
     SECTION("blueprint") {
-      check_eq(collect(range(1, 1).on_error_return(
-                 [](const error&) { return expected<int>{42}; })),
-               vector{1});
-      check_eq(collect(range(1, 2).on_error_return(
-                 [](const error&) { return expected<int>{42}; })),
-               vector{1, 2});
-      check_eq(collect(range(1, 3).on_error_return(
-                 [](const error&) { return expected<int>{42}; })),
+      check_eq(collect(range(1, 1).on_error_return(return_42)), vector{1});
+      check_eq(collect(range(1, 2).on_error_return(return_42)), vector{1, 2});
+      check_eq(collect(range(1, 3).on_error_return(return_42)),
                vector{1, 2, 3});
-      check_eq(collect(range(1, 0).on_error_return(
-                 [](const error&) { return expected<int>{42}; })),
-               nil);
+      check_eq(collect(range(1, 0).on_error_return(return_42)), nil);
     }
     SECTION("observable") {
-      check_eq(collect(build(range(1, 1)).on_error_return([](const error&) {
-                 return expected<int>{42};
-               })),
+      check_eq(collect(build(range(1, 1)).on_error_return(return_42)),
                vector{1});
-      check_eq(collect(build(range(1, 2)).on_error_return([](const error&) {
-                 return expected<int>{42};
-               })),
+      check_eq(collect(build(range(1, 2)).on_error_return(return_42)),
                vector{1, 2});
-      check_eq(collect(build(range(1, 3)).on_error_return([](const error&) {
-                 return expected<int>{42};
-               })),
+      check_eq(collect(build(range(1, 3)).on_error_return(return_42)),
                vector{1, 2, 3});
-      check_eq(collect(build(range(1, 0)).on_error_return([](const error&) {
-                 return expected<int>{42};
-               })),
-               nil);
+      check_eq(collect(build(range(1, 0)).on_error_return(return_42)), nil);
     }
   }
   SECTION("on_error_return() replaces an error with a value from the handler") {
-    auto return_42 = [](const error&) { return expected<int>{42}; };
     SECTION("blueprint") {
-      check_eq(collect(
-                 range(1, 0).concat(obs_error()).on_error_return(return_42)),
-               vector{42});
+      check_eq(collect(obs_error().on_error_return(return_42)), vector{42});
       check_eq(collect(range(1, 2)
                          .concat(obs_error())
                          .concat(range(1, 2))
@@ -444,10 +426,8 @@ TEST("on_error_return() replaces an error with a value") {
         vector{1, 2, 3});
     }
     SECTION("observable") {
-      check_eq(
-        collect(
-          build(range(1, 0).concat(obs_error())).on_error_return(return_42)),
-        vector{42});
+      check_eq(collect(build(obs_error()).on_error_return(return_42)),
+               vector{42});
       check_eq(collect(
                  build(range(1, 2).concat(obs_error()).concat(range(1, 2)))
                    .on_error_return(return_42)),
