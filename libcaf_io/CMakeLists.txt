@@ -50,11 +50,13 @@ caf_add_component(
     caf/io/network/event_handler.cpp
     caf/io/network/interfaces.cpp
     caf/io/network/ip_endpoint.cpp
+    caf/io/network/ip_endpoint.test.cpp
     caf/io/network/manager.cpp
     caf/io/network/multiplexer.cpp
     caf/io/network/native_socket.cpp
     caf/io/network/pipe_reader.cpp
     caf/io/network/protocol.cpp
+    caf/io/network/protocol.test.cpp
     caf/io/network/receive_buffer.cpp
     caf/io/network/receive_buffer.test.cpp
     caf/io/network/scribe_impl.cpp
