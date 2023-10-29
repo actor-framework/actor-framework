@@ -45,4 +45,30 @@ void subscription::fwd_impl::dispose() {
   }
 }
 
+namespace {
+
+class trivial_subscription : public subscription::impl_base {
+public:
+  bool disposed() const noexcept override {
+    return disposed_;
+  }
+
+  void request(size_t) override {
+    // nop
+  }
+
+  void dispose() override {
+    disposed_ = true;
+  }
+
+private:
+  bool disposed_ = false;
+};
+
+} // namespace
+
+subscription subscription::make_trivial() {
+  return subscription{make_counted<trivial_subscription>()};
+}
+
 } // namespace caf::flow

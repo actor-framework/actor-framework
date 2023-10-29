@@ -208,21 +208,17 @@ public:
         super::ctx_->watch(ptr->as_disposable());
         out.on_subscribe(subscription{ptr});
         return ptr->as_disposable();
-      } else {
-        resource_ = nullptr;
-        CAF_LOG_WARNING("failed to open an async resource");
-        auto err = make_error(sec::cannot_open_resource,
-                              "failed to open an async resource");
-        out.on_error(err);
-        return disposable{};
       }
-    } else {
-      CAF_LOG_WARNING("may only subscribe once to an async resource");
-      auto err = make_error(sec::too_many_observers,
-                            "may only subscribe once to an async resource");
-      out.on_error(err);
-      return disposable{};
+      resource_ = nullptr;
+      CAF_LOG_WARNING("failed to open an async resource");
+      return fail_subscription(out,
+                               make_error(sec::cannot_open_resource,
+                                          "failed to open an async resource"));
     }
+    CAF_LOG_WARNING("may only subscribe once to an async resource");
+    return fail_subscription(
+      out, make_error(sec::too_many_observers,
+                      "may only subscribe once to an async resource"));
   }
 
 private:

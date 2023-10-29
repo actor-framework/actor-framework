@@ -211,9 +211,9 @@ public:
 
   // -- conversion functions ---------------------------------------------------
 
-  /// Materializes an observable by calling `as_observable` on it.
+  /// Builds a blueprint by calling `as_observable` on it.
   template <class Observable>
-  [[nodiscard]] static auto mat(Observable&& x) {
+  [[nodiscard]] static auto build(Observable&& x) {
     return std::forward<Observable>(x).as_observable();
   }
 

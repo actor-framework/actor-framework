@@ -6,7 +6,6 @@
 
 #include "caf/flow/coordinator.hpp"
 #include "caf/flow/observer.hpp"
-#include "caf/flow/op/empty.hpp"
 #include "caf/flow/op/hot.hpp"
 #include "caf/flow/op/pullable.hpp"
 #include "caf/flow/subscription.hpp"
@@ -320,16 +319,14 @@ public:
   disposable subscribe(observer<T> out) override {
     if (state_->closed) {
       if (state_->err) {
-        out.on_error(state_->err);
-        return disposable{};
+        return fail_subscription(out, state_->err);
       }
-      return make_counted<op::empty<T>>(super::ctx_)->subscribe(out);
+      return empty_subscription(out);
     }
     if (state_->out) {
-      auto err = make_error(sec::too_many_observers,
-                            "may only subscribe once to an unicast operator");
-      out.on_error(err);
-      return disposable{};
+      return fail_subscription(
+        out, make_error(sec::too_many_observers,
+                        "may only subscribe once to an unicast operator"));
     }
     state_->out = out;
     auto sub_ptr = make_counted<ucast_sub<T>>(super::ctx(), state_);

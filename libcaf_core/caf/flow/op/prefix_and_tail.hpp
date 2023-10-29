@@ -242,8 +242,8 @@ public:
   disposable subscribe(observer<tuple_t> out) override {
     using impl_t = prefix_and_tail_sub<T>;
     auto obs = make_counted<impl_t>(super::ctx(), out, prefix_size_);
-    decorated_.subscribe(observer<T>{obs});
     out.on_subscribe(subscription{obs});
+    decorated_.subscribe(observer<T>{obs});
     return obs->as_disposable();
   }
 

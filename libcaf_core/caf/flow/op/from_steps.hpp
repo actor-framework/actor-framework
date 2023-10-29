@@ -48,11 +48,11 @@ public:
     }
 
     void on_error(const error& what) {
+      sub->err_ = what;
       if (sub->in_) {
         auto tmp = std::move(sub->in_);
         tmp.dispose();
       }
-      sub->err_ = what;
     }
   };
 
@@ -91,10 +91,6 @@ public:
   }
 
   // -- properties -------------------------------------------------------------
-
-  bool subscribed() const noexcept {
-    return in_.valid();
-  }
 
   const error& fail_reason() const {
     return err_;
@@ -135,17 +131,6 @@ public:
 
   void on_error(const error& what) override {
     if (in_) {
-      if (!err_) {
-        auto fn = [this, &what](auto& step, auto&... steps) {
-          term_step term{this};
-          step.on_error(what, steps..., term);
-        };
-        std::apply(fn, steps_);
-        if (!running_)
-          do_run();
-      }
-    } else if (out_) {
-      // This may only happen if subscribing to the input fails.
       auto fn = [this, &what](auto& step, auto&... steps) {
         term_step term{this};
         step.on_error(what, steps..., term);
@@ -189,10 +174,10 @@ public:
     CAF_LOG_TRACE(CAF_ARG(n));
     if (demand_ != 0) {
       demand_ += n;
-    } else {
-      demand_ = n;
-      run_later();
+      return;
     }
+    demand_ = n;
+    run_later();
   }
 
 private:
@@ -291,12 +276,9 @@ public:
   disposable subscribe(observer<output_type> out) override {
     using sub_t = from_steps_sub<Input, Steps...>;
     auto ptr = make_counted<sub_t>(super::ctx_, out, steps_);
+    out.on_subscribe(subscription{ptr});
     input_->subscribe(observer<input_type>{ptr});
-    if (ptr->subscribed()) {
-      out.on_subscribe(subscription{ptr});
-      return ptr->as_disposable();
-    }
-    return disposable{};
+    return ptr->as_disposable();
   }
 
 private:

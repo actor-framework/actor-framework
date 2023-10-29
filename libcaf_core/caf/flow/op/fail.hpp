@@ -12,6 +12,7 @@
 
 namespace caf::flow::op {
 
+/// Emits an error to the subscriber immediately after subscribing.
 template <class T>
 class fail : public cold<T> {
 public:
@@ -28,8 +29,7 @@ public:
   // -- implementation of observable_impl<T> -----------------------------------
 
   disposable subscribe(observer<T> out) override {
-    out.on_error(err_);
-    return {};
+    return fail_subscription(out, err_);
   }
 
 private:
