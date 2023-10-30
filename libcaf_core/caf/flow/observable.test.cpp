@@ -21,6 +21,55 @@ WITH_FIXTURE(test::fixture::flow) {
 //       once on a blueprint and once on an actual observable. This ensures that
 //       the blueprint and the observable both offer the same functionality.
 
+TEST("do_finally(fn) executes the passed function before exit") {
+  auto x = std::make_shared<int>(0);
+  auto fn = [&x]() { ++(*x); };
+  SECTION("do_finally(fn) executes function for successful observable") {
+    SECTION("blueprint") {
+      check_eq(collect(range(1, 1).do_finally(fn)), vector{1});
+      check_eq(*x, 1);
+      check_eq(collect(range(1, 2).do_finally(fn)), vector{1, 2});
+      check_eq(*x, 2);
+      check_eq(collect(range(1, 3).do_finally(fn)), vector{1, 2, 3});
+      check_eq(*x, 3);
+    }
+    SECTION("observable") {
+      check_eq(collect(build(range(1, 1)).do_finally(fn)), vector{1});
+      check_eq(*x, 1);
+      check_eq(collect(build(range(1, 2)).do_finally(fn)), vector{1, 2});
+      check_eq(*x, 2);
+      check_eq(collect(build(range(1, 3)).do_finally(fn)), vector{1, 2, 3});
+      check_eq(*x, 3);
+    }
+  }
+  SECTION("do_finally(fn) executes function for failed observable") {
+    SECTION("blueprint") {
+      check_eq(collect(obs_error().do_finally(fn)), sec::runtime_error);
+      check_eq(*x, 1);
+      check_eq(collect(range(1, 3).concat(obs_error()).do_finally(fn)),
+               sec::runtime_error);
+      check_eq(*x, 2);
+      check_eq(
+        collect(
+          range(1, 3).concat(obs_error()).concat(range(1, 2)).do_finally(fn)),
+        sec::runtime_error);
+      check_eq(*x, 3);
+    }
+    SECTION("observable") {
+      check_eq(collect(build(obs_error()).do_finally(fn)), sec::runtime_error);
+      check_eq(*x, 1);
+      check_eq(collect(build(range(1, 3).concat(obs_error())).do_finally(fn)),
+               sec::runtime_error);
+      check_eq(*x, 2);
+      check_eq(collect(
+                 build(range(1, 3).concat(obs_error()).concat(range(1, 2)))
+                   .do_finally(fn)),
+               sec::runtime_error);
+      check_eq(*x, 3);
+    }
+  }
+}
+
 TEST("element_at(n) only takes the element with index n") {
   SECTION("element_at(0) picks the first element") {
     SECTION("blueprint") {
