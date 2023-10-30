@@ -23,8 +23,8 @@ WITH_FIXTURE(test::fixture::flow) {
 
 TEST("do_finally(fn) executes the passed function before exit") {
   auto x = std::make_shared<int>(0);
-  auto fn = [&x]() { ++(*x); };
-  SECTION("do_finally(fn) executes function for successful observable") {
+  auto fn = [x]() { ++(*x); };
+  SECTION("do_finally(fn) invokes fn for completed observables") {
     SECTION("blueprint") {
       check_eq(collect(range(1, 1).do_finally(fn)), vector{1});
       check_eq(*x, 1);
@@ -42,7 +42,7 @@ TEST("do_finally(fn) executes the passed function before exit") {
       check_eq(*x, 3);
     }
   }
-  SECTION("do_finally(fn) executes function for failed observable") {
+  SECTION("do_finally(fn) invokes fn on error") {
     SECTION("blueprint") {
       check_eq(collect(obs_error().do_finally(fn)), sec::runtime_error);
       check_eq(*x, 1);
