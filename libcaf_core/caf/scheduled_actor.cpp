@@ -281,7 +281,6 @@ resumable::resume_result scheduled_actor::resume(execution_unit* ctx,
     return resumable::done;
   size_t consumed = 0;
   auto guard = detail::make_scope_guard([this, &consumed]() noexcept {
-    CAF_LOG_DEBUG("resume consumed" << consumed << "messages");
     if (consumed > 0) {
       auto val = static_cast<int64_t>(consumed);
       home_system().base_metrics().processed_messages->inc(val);

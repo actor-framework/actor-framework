@@ -9,7 +9,6 @@
 #include "caf/detail/parser/is_char.hpp"
 #include "caf/detail/parser/read_bool.hpp"
 #include "caf/detail/parser/read_number.hpp"
-#include "caf/detail/scope_guard.hpp"
 #include "caf/pec.hpp"
 #include "caf/span.hpp"
 
@@ -215,15 +214,6 @@ template <class ParserState, class Consumer>
 void read_json_null_or_nan(ParserState& ps, Consumer consumer) {
   enum { nil, is_null, is_nan };
   auto res_type = nil;
-  auto g = make_scope_guard([&]() noexcept {
-    if (ps.code <= pec::trailing_character) {
-      CAF_ASSERT(res_type != nil);
-      if (res_type == is_null)
-        consumer.value(json::null_t{});
-      else
-        consumer.value(std::numeric_limits<double>::quiet_NaN());
-    }
-  });
   // clang-format off
   start();
   state(init) {
@@ -248,6 +238,13 @@ void read_json_null_or_nan(ParserState& ps, Consumer consumer) {
   }
   fin();
   // clang-format on
+  if (ps.code <= pec::trailing_character) {
+    CAF_ASSERT(res_type != nil);
+    if (res_type == is_null)
+      consumer.value(json::null_t{});
+    else
+      consumer.value(std::numeric_limits<double>::quiet_NaN());
+  }
 }
 
 // If we have an iterator into a contiguous memory block, we simply store the

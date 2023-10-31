@@ -247,7 +247,7 @@ public:
   static actor_id thread_local_aid();
 
   /// Associates an actor ID to the calling thread and returns the last value.
-  static actor_id thread_local_aid(actor_id aid);
+  static actor_id thread_local_aid(actor_id aid) noexcept;
 
   /// Returns whether the logger is configured to accept input for given
   /// component and log level.

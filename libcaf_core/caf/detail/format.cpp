@@ -10,7 +10,6 @@
 #include "caf/detail/parser/is_char.hpp"
 #include "caf/detail/parser/read_unsigned_integer.hpp"
 #include "caf/detail/print.hpp"
-#include "caf/detail/scope_guard.hpp"
 #include "caf/parser_state.hpp"
 #include "caf/pec.hpp"
 #include "caf/raise_error.hpp"
@@ -309,10 +308,6 @@ void copy_verbatim(ParserState& ps, copy_state& cs);
 template <class ParserState>
 void copy_formatted(ParserState& ps, copy_state& cs) {
   cs.reset();
-  auto guard = make_scope_guard([&]() noexcept {
-    if (ps.code <= pec::trailing_character)
-      cs.fn = copy_verbatim<string_parser_state>;
-  });
   size_t tmp = 0;
   auto make_tmp_consumer = [&tmp] {
     tmp = 0;
@@ -407,6 +402,8 @@ void copy_formatted(ParserState& ps, copy_state& cs) {
   }
   fin();
   // clang-format on
+  if (ps.code <= pec::trailing_character)
+    cs.fn = copy_verbatim<string_parser_state>;
 }
 
 // Copies the input verbatim to the output buffer until finding a format string.

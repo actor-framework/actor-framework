@@ -330,15 +330,15 @@ public:
     level lvl_;
   };
 
-  auto levels() {
+  auto levels() noexcept {
     return std::make_pair(level_console_, level_file_);
   }
 
-  void levels(std::pair<level, level> values) {
+  void levels(std::pair<level, level> values) noexcept {
     std::tie(level_console_, level_file_) = values;
   }
 
-  void levels(level console_lvl, level file_lvl) {
+  void levels(level console_lvl, level file_lvl) noexcept {
     level_console_ = console_lvl;
     level_file_ = file_lvl;
   }
