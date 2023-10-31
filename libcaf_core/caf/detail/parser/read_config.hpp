@@ -192,10 +192,6 @@ void read_config_map(State& ps, Consumer&& consumer) {
 template <class State, class Consumer>
 void read_config_uri(State& ps, Consumer&& consumer) {
   uri_builder builder;
-  auto g = make_scope_guard([&] {
-    if (ps.code <= pec::trailing_character)
-      consumer.value(builder.make());
-  });
   // clang-format off
   start();
   state(init) {
@@ -215,6 +211,8 @@ void read_config_uri(State& ps, Consumer&& consumer) {
   }
   fin();
   // clang-format on
+  if (ps.code <= pec::trailing_character)
+    consumer.value(builder.make());
 }
 
 template <class State, class Consumer, class InsideList>

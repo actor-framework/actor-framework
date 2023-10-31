@@ -31,12 +31,6 @@ void read_signed_integer(State& ps, Consumer&& consumer) {
   static_assert(std::is_integral_v<value_type> && std::is_signed_v<value_type>,
                 "expected a signed integer type");
   value_type result = 0;
-  // Computes the result on success.
-  auto g = caf::detail::make_scope_guard([&] {
-    if (ps.code <= pec::trailing_character) {
-      consumer.value(std::move(result));
-    }
-  });
   // clang-format off
   // Definition of our parser FSM.
   start();
@@ -121,6 +115,9 @@ void read_signed_integer(State& ps, Consumer&& consumer) {
   }
   fin();
   // clang-format on
+  if (ps.code <= pec::trailing_character) {
+    consumer.value(std::move(result));
+  }
 }
 
 } // namespace caf::detail::parser

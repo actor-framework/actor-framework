@@ -32,12 +32,6 @@ void read_unsigned_integer(State& ps, Consumer&& consumer) {
                   && std::is_unsigned_v<value_type>,
                 "expected an unsigned integer type");
   value_type result = 0;
-  // Computes the result on success.
-  auto g = caf::detail::make_scope_guard([&] {
-    if (ps.code <= pec::trailing_character) {
-      consumer.value(std::move(result));
-    }
-  });
   // clang-format off
   // Definition of our parser FSM.
   start();
@@ -87,6 +81,9 @@ void read_unsigned_integer(State& ps, Consumer&& consumer) {
   }
   fin();
   // clang-format on
+  if (ps.code <= pec::trailing_character) {
+    consumer.value(std::move(result));
+  }
 }
 
 } // namespace caf::detail::parser

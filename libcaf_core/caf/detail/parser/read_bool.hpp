@@ -23,10 +23,6 @@ namespace caf::detail::parser {
 template <class State, class Consumer>
 void read_bool(State& ps, Consumer&& consumer) {
   bool res = false;
-  auto g = make_scope_guard([&] {
-    if (ps.code <= pec::trailing_character)
-      consumer.value(std::move(res));
-  });
   // clang-format off
   start();
   state(init) {
@@ -59,6 +55,8 @@ void read_bool(State& ps, Consumer&& consumer) {
   }
   fin();
   // clang-format on
+  if (ps.code <= pec::trailing_character)
+    consumer.value(std::move(res));
 }
 
 } // namespace caf::detail::parser

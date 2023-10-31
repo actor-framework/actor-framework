@@ -23,11 +23,6 @@ namespace caf::detail::parser {
 template <class State, class Consumer>
 void read_two_digit_int(State& ps, Consumer&& consumer) {
   auto result = 0;
-  auto g = make_scope_guard([&] {
-    if (ps.code <= pec::trailing_character) {
-      consumer.value(result);
-    }
-  });
   // clang-format off
   start();
   state(init) {
@@ -41,6 +36,8 @@ void read_two_digit_int(State& ps, Consumer&& consumer) {
   }
   fin();
   // clang-format on
+  if (ps.code <= pec::trailing_character)
+    consumer.value(result);
 }
 
 /// Reads a UTC offset in ISO 8601 format, i.e., a string of the form
@@ -50,12 +47,6 @@ void read_utc_offset(State& ps, Consumer&& consumer) {
   bool negative = false;
   auto hh = 0;
   auto mm = 0;
-  auto g = make_scope_guard([&] {
-    if (ps.code <= pec::trailing_character) {
-      auto result = hh * 3600 + mm * 60;
-      consumer.value(negative ? -result : result);
-    }
-  });
   // clang-format off
   start();
   state(init) {
@@ -72,6 +63,10 @@ void read_utc_offset(State& ps, Consumer&& consumer) {
   }
   fin();
   // clang-format on
+  if (ps.code <= pec::trailing_character) {
+    auto result = hh * 3600 + mm * 60;
+    consumer.value(negative ? -result : result);
+  }
 }
 
 /// Reads a date and time in ISO 8601 format.
@@ -84,20 +79,6 @@ void read_timestamp(State& ps, Consumer&& consumer) {
     return add_ascii<10>(fractional_seconds, ch);
   };
   chrono::datetime result;
-  auto g = make_scope_guard([&] {
-    if (ps.code <= pec::trailing_character) {
-      if (fractional_seconds_decimals > 0) {
-        auto divisor = 1;
-        for (auto i = 0; i < fractional_seconds_decimals; ++i)
-          divisor *= 10;
-        result.nanosecond = fractional_seconds * (1'000'000'000 / divisor);
-      }
-      if (result.valid())
-        consumer.value(result);
-      else
-        ps.code = pec::invalid_argument;
-    }
-  });
   // clang-format off
   start();
   state(init) {
@@ -154,6 +135,18 @@ void read_timestamp(State& ps, Consumer&& consumer) {
   }
   fin();
   // clang-format on
+  if (ps.code <= pec::trailing_character) {
+    if (fractional_seconds_decimals > 0) {
+      auto divisor = 1;
+      for (auto i = 0; i < fractional_seconds_decimals; ++i)
+        divisor *= 10;
+      result.nanosecond = fractional_seconds * (1'000'000'000 / divisor);
+    }
+    if (result.valid())
+      consumer.value(result);
+    else
+      ps.code = pec::invalid_argument;
+  }
 }
 
 } // namespace caf::detail::parser

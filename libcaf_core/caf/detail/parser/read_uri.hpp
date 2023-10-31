@@ -33,10 +33,6 @@ namespace caf::detail::parser {
 template <class State>
 void read_uri_percent_encoded(State& ps, std::string& str) {
   uint8_t char_code = 0;
-  auto g = make_scope_guard([&] {
-    if (ps.code <= pec::trailing_character)
-      str += static_cast<char>(char_code);
-  });
   // clang-format off
   start();
   state(init) {
@@ -50,6 +46,8 @@ void read_uri_percent_encoded(State& ps, std::string& str) {
   }
   fin();
   // clang-format on
+  if (ps.code <= pec::trailing_character)
+    str += static_cast<char>(char_code);
 }
 
 inline bool uri_unprotected_char(char c) noexcept {
@@ -77,11 +75,6 @@ void read_uri_query(State& ps, Consumer&& consumer) {
     return res;
   };
   auto push = [&] { result.emplace(take_str(key), take_str(value)); };
-  // Call consumer on exit.
-  auto g = make_scope_guard([&] {
-    if (ps.code <= pec::trailing_character)
-      consumer.query(std::move(result));
-  });
   // clang-format off
   start();
   // Query may be empty.
@@ -98,6 +91,8 @@ void read_uri_query(State& ps, Consumer&& consumer) {
   }
   fin();
   // clang-format on
+  if (ps.code <= pec::trailing_character)
+    consumer.query(std::move(result));
 }
 
 template <class State, class Consumer>
