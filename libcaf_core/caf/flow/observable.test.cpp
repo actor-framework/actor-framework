@@ -543,6 +543,27 @@ TEST("on_error_return() replaces an error with a value") {
   }
 }
 
+TEST("start_with(fn) makes an observable that emits output of fn()") {
+  const auto fn = [] { return 1; };
+  const auto make_start_with = [&](auto fn) {
+    return make_observable().start_with(fn);
+  };
+  SECTION("blueprint") {
+    check_eq(collect(make_start_with(fn)), vector{1});
+    check_eq(collect(make_start_with(fn).concat(range(2, 3))),
+             vector{1, 2, 3, 4});
+    check_eq(collect(make_start_with(fn).concat(range(2, 3)).take(3)),
+             vector{1, 2, 3});
+  }
+  SECTION("observable") {
+    check_eq(collect(build(make_start_with(fn))), vector{1});
+    check_eq(collect(build(make_start_with(fn).concat(range(2, 3)))),
+             vector{1, 2, 3, 4});
+    check_eq(collect(build(make_start_with(fn).concat(range(2, 3)).take(3))),
+             vector{1, 2, 3});
+  }
+}
+
 } // WITH_FIXTURE(test::fixture::flow)
 
 } // namespace
