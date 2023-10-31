@@ -11,6 +11,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   `typed_stream` directly by calling `to_stream` or `to_typed_stream` on it.
 - New `caf::async` API to read a file asynchronously in a separate thread and
   consume it as an observable (via a `publisher`, #1573).
+- The class `caf::unordered_flat_map` now has the `contains` and
+  `insert_or_assign` member functions.
 
 ### Fixed
 
@@ -29,6 +31,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Add missing `const` to `publisher<T>::observe_on`.
 - All `observable` implementations now properly call `on_subscribe` on their
   subscriber before calling `on_error`.
+- Comparing two  `caf::unordered_flat_map` previously relied on the order of
+  elements in the map and thus could result in false negatives. The new
+  implementation is correct and no longer relies on the order of elements.
 
 ### Changed
 
@@ -42,6 +47,12 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 - Calling `to_stream` or `to_typed_stream` on an actor is now deprecated. Simply
   call `to_stream` or `to_typed_stream` directly on the `observable` instead.
+
+### Removed
+
+- The implementation of `operator<` for `caf::unordered_flat_map` was broken and
+  relied on the order of elements in the map. We have removed it, since it has
+  never worked correctly and a correct implementation would be too expensive.
 
 ## [0.19.4] - 2023-09-29
 
