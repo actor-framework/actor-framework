@@ -319,7 +319,7 @@ void read_number_range(State& ps, Consumer& consumer, ValueType begin) {
   std::optional<int64_t> step;
   auto end_consumer = make_consumer(end);
   auto step_consumer = make_consumer(step);
-  constexpr std::false_type no_float = std::false_type{};
+  constexpr auto no_float = std::false_type{};
   // clang-format off
   // Definition of our parser FSM.
   start();

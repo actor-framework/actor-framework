@@ -36,9 +36,8 @@ void read_two_digit_int(State& ps, Consumer&& consumer) {
   }
   fin();
   // clang-format on
-  if (ps.code <= pec::trailing_character) {
+  if (ps.code <= pec::trailing_character)
     consumer.value(result);
-  }
 }
 
 /// Reads a UTC offset in ISO 8601 format, i.e., a string of the form

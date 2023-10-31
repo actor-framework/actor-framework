@@ -67,7 +67,7 @@ void read_number_or_timespan(State& ps, Consumer& consumer,
   auto has_dbl = [&] { return std::holds_alternative<double>(ic.interim); };
   auto get_int = [&] { return std::get<int64_t>(ic.interim); };
   auto disabled = false;
-  constexpr std::true_type enable_float = std::true_type{};
+  constexpr auto enable_float = std::true_type{};
   // clang-format off
   start();
   state(init) {
