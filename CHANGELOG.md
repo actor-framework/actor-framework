@@ -29,6 +29,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Add missing `const` to `publisher<T>::observe_on`.
 - All `observable` implementations now properly call `on_subscribe` on their
   subscriber before calling `on_error`.
+- The function `config_value::parse` now properly handles leading and trailing
+  whitespaces.
 
 ### Changed
 

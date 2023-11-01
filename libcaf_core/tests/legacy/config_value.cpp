@@ -875,6 +875,12 @@ SCENARIO("config_value::parse returns an error for invalid inputs") {
   }
 }
 
+SCENARIO("config_value::parse ignores trailing and leading whitespaces") {
+  CHECK_EQ(config_value::parse(" 123  "), config_value{123});
+  CHECK_EQ(config_value::parse(" hello world   "), config_value{"hello world"});
+  CHECK_EQ(config_value::parse(""), config_value{""});
+}
+
 END_FIXTURE_SCOPE()
 
 // -- end of scenario testing, here come several baseline checks for parsing ---
