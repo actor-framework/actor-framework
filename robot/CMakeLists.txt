@@ -4,6 +4,8 @@ endif()
 
 find_package(Python COMPONENTS Interpreter)
 
+# -- tests for the CAF::core module --------------------------------------------
+
 execute_process(
   COMMAND ${Python_EXECUTABLE} -c "import robot"
   RESULT_VARIABLE EXIT_CODE
@@ -71,52 +73,60 @@ if (CAF_LOG_LEVEL STREQUAL "TRACE")
         "${CMAKE_CURRENT_SOURCE_DIR}/logging/output.robot")
 endif()
 
-caf_add_test_executable(
-  caf-robot-stream-driver
-  SOURCES
-    stream/driver.cpp
-  DEPENDENCIES
-    CAF::core
-    CAF::io)
+# -- tests for the CAF::io module ----------------------------------------------
+if(TARGET CAF::io)
 
-add_test(
-  NAME "robot-stream-remote"
-  COMMAND
-    ${Python_EXECUTABLE}
-      -m robot
-      --variable BINARY_PATH:$<TARGET_FILE:caf-robot-stream-driver>
-      "${CMAKE_CURRENT_SOURCE_DIR}/stream/remote.robot")
+  caf_add_test_executable(
+    caf-robot-stream-driver
+    SOURCES
+      stream/driver.cpp
+    DEPENDENCIES
+      CAF::io)
 
-caf_add_test_executable(
-  caf-robot-middleman-driver
-  SOURCES
-    middleman/driver.cpp
-  DEPENDENCIES
-    CAF::core
-    CAF::io)
+  add_test(
+    NAME "robot-stream-remote"
+    COMMAND
+      ${Python_EXECUTABLE}
+        -m robot
+        --variable BINARY_PATH:$<TARGET_FILE:caf-robot-stream-driver>
+        "${CMAKE_CURRENT_SOURCE_DIR}/stream/remote.robot")
 
-add_test(
-  NAME "robot-middleman"
-  COMMAND
-    ${Python_EXECUTABLE}
-      -m robot
-      --variable BINARY_PATH:$<TARGET_FILE:caf-robot-middleman-driver>
-      "${CMAKE_CURRENT_SOURCE_DIR}/middleman/middleman.robot")
+  caf_add_test_executable(
+    caf-robot-middleman-driver
+    SOURCES
+      middleman/driver.cpp
+    DEPENDENCIES
+      CAF::io)
 
-add_test(
-  NAME "robot-web-socket-quote-server"
-  COMMAND
-    ${Python_EXECUTABLE}
-      -m robot
-      --variable BINARY_PATH:$<TARGET_FILE:quote-server>
-      --variable SSL_PATH:${CMAKE_CURRENT_SOURCE_DIR}
-      "${CMAKE_CURRENT_SOURCE_DIR}/web_socket/quote-server.robot")
+  add_test(
+    NAME "robot-middleman"
+    COMMAND
+      ${Python_EXECUTABLE}
+        -m robot
+        --variable BINARY_PATH:$<TARGET_FILE:caf-robot-middleman-driver>
+        "${CMAKE_CURRENT_SOURCE_DIR}/middleman/middleman.robot")
 
-add_test(
-  NAME "robot-web-socket-echo"
-  COMMAND
-    ${Python_EXECUTABLE}
-      -m robot
-      --variable BINARY_PATH:$<TARGET_FILE:echo>
-      --variable SSL_PATH:${CMAKE_CURRENT_SOURCE_DIR}
-      "${CMAKE_CURRENT_SOURCE_DIR}/web_socket/echo.robot")
+endif()
+
+# -- tests for the CAF::net module ---------------------------------------------
+if(TARGET CAF::net)
+
+  add_test(
+    NAME "robot-web-socket-quote-server"
+    COMMAND
+      ${Python_EXECUTABLE}
+        -m robot
+        --variable BINARY_PATH:$<TARGET_FILE:quote-server>
+        --variable SSL_PATH:${CMAKE_CURRENT_SOURCE_DIR}
+        "${CMAKE_CURRENT_SOURCE_DIR}/web_socket/quote-server.robot")
+
+  add_test(
+    NAME "robot-web-socket-echo"
+    COMMAND
+      ${Python_EXECUTABLE}
+        -m robot
+        --variable BINARY_PATH:$<TARGET_FILE:echo>
+        --variable SSL_PATH:${CMAKE_CURRENT_SOURCE_DIR}
+        "${CMAKE_CURRENT_SOURCE_DIR}/web_socket/echo.robot")
+
+endif()
