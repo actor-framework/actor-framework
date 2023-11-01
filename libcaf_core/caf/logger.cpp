@@ -9,6 +9,7 @@
 #include "caf/actor_system_config.hpp"
 #include "caf/config.hpp"
 #include "caf/defaults.hpp"
+#include "caf/detail/atomic_ref_counted.hpp"
 #include "caf/detail/get_process_id.hpp"
 #include "caf/detail/meta_object.hpp"
 #include "caf/detail/pretty_type_name.hpp"
@@ -103,7 +104,7 @@ public:
     thread_field,
     actor_field,
     percent_sign_field,
-    plain_text_field
+    plain_text_field,
   };
 
   /// Encapsulates a single logging event.
@@ -134,6 +135,21 @@ public:
 
     /// Timestamp of the event.
     timestamp tstamp;
+
+    event(unsigned lvl, unsigned ln, std::string_view cat, const char* fn,
+          const char* fun, std::string&& msg, std::thread::id t,
+          actor_id a = invalid_actor_id, timestamp ts = make_timestamp())
+      : level(lvl),
+        line_number(ln),
+        component(cat),
+        file_name(fn),
+        function_name(fun),
+        message(std::move(msg)),
+        tid(t),
+        aid(a),
+        tstamp(ts) {
+      // nop
+    }
   };
 
   /// Combines various logging-related flags and parameters into a bitfield.
@@ -185,19 +201,15 @@ public:
   /// Writes an entry to the event-queue of the logger.
   /// @thread-safe
   void do_log(const context& ctx, std::string&& msg) override {
-    event ev{ctx.level,
-             ctx.line_number,
-             ctx.component,
-             ctx.file_name,
-             ctx.function_name,
-             std::move(msg),
-             std::this_thread::get_id(),
-             logger::thread_local_aid(),
-             make_timestamp()};
+    auto ev
+      = std::make_unique<event>(ctx.level, ctx.line_number, ctx.component,
+                                ctx.file_name, ctx.function_name,
+                                std::move(msg), std::this_thread::get_id(),
+                                logger::thread_local_aid(), make_timestamp());
     if (cfg_.inline_output)
-      handle_event(ev);
+      handle_event(*ev);
     else
-      queue_.push_back(std::move(ev));
+      queue_.push(std::move(ev));
   }
 
   // -- properties -------------------------------------------------------------
@@ -252,12 +264,11 @@ public:
     for (; i != format_str.end(); ++i) {
       if (read_percent_sign) {
         field_type ft;
-        // clang-format off
-        switch (*i) {
+        switch (*i) { // clang-format off
           case 'c': ft = category_field;     break;
           case 'C': ft = class_name_field;   break;
           case 'd': ft = date_field;         break;
-          case 'F': ft =  file_field;        break;
+          case 'F': ft = file_field;         break;
           case 'L': ft = line_field;         break;
           case 'm': ft = message_field;      break;
           case 'M': ft = method_field;       break;
@@ -267,12 +278,11 @@ public:
           case 't': ft = thread_field;       break;
           case 'a': ft = actor_field;        break;
           case '%': ft = percent_sign_field; break;
-          default:
+          default: // clang-format on
             ft = invalid_field;
-            std::cerr << "invalid field specifier in format string: "
-                      << *i << std::endl;
+            std::cerr << "invalid field specifier in format string: " << *i
+                      << std::endl;
         }
-        // clang-format on
         if (ft != invalid_field)
           res.emplace_back(field{ft, std::string{}});
         plain_text_first = i + 1;
@@ -494,24 +504,22 @@ public:
   void run() {
     // Bail out without printing anything if the first event we receive is the
     // shutdown (empty) event.
-    queue_.wait_nonempty();
-    if (queue_.front().message.empty())
+    if (auto first = queue_.pop(); first == nullptr) {
       return;
-    if (!open_file() && console_verbosity() == CAF_LOG_LEVEL_QUIET)
-      return;
-    log_first_line();
+    } else {
+      if (!open_file() && console_verbosity() == CAF_LOG_LEVEL_QUIET)
+        return;
+      log_first_line();
+      handle_event(*first);
+    }
     // Loop until receiving an empty message.
     for (;;) {
-      // Handle current head of the queue.
-      auto& e = queue_.front();
-      if (e.message.empty()) {
+      if (auto next = queue_.pop()) {
+        handle_event(*next);
+      } else {
         log_last_line();
         return;
       }
-      handle_event(e);
-      // Prepare next iteration.
-      queue_.pop_front();
-      queue_.wait_nonempty();
     }
   }
 
@@ -574,8 +582,8 @@ public:
     }
     if (!thread_.joinable())
       return;
-    // A default-constructed event causes the logger to shutdown.
-    queue_.push_back(event{});
+    // Send an empty message to the logger thread to make it terminate.
+    queue_.push(std::unique_ptr<event>{});
     thread_.join();
   }
 
@@ -607,7 +615,7 @@ public:
   std::fstream file_;
 
   // Filled with log events by other threads.
-  detail::sync_ring_buffer<event, queue_size> queue_;
+  detail::sync_ring_buffer<std::unique_ptr<event>, queue_size> queue_;
 
   // Stores the assembled name of the log file.
   std::string file_name_;
