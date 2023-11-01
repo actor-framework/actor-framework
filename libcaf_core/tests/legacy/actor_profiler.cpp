@@ -88,7 +88,7 @@ actor_system_config& init(actor_system_config& cfg, recorder& rec) {
 }
 
 struct fixture {
-  using scheduler_type = caf::scheduler::test_coordinator;
+  using scheduler_type = test_coordinator_fixture<>::scheduler_type;
 
   fixture()
     : sys(init(cfg, rec)),

@@ -281,10 +281,39 @@ bool received(caf_handle x) {
   return try_extract<T, Ts...>(x) != std::nullopt;
 }
 
+class test_coordinator : public caf::scheduler::abstract_coordinator {
+public:
+  using super = caf::scheduler::abstract_coordinator;
+
+  using super::super;
+
+  /// A double-ended queue representing our current job queue.
+  std::deque<caf::resumable*> jobs;
+
+  template <class T = caf::resumable>
+  T& next_job() {
+    if (jobs.empty())
+      CAF_RAISE_ERROR("jobs.empty()");
+    return dynamic_cast<T&>(*jobs.front());
+  }
+
+  template <class Handle>
+  bool prioritize(const Handle& x) {
+    auto ptr
+      = dynamic_cast<caf::resumable*>(caf::actor_cast<caf::abstract_actor*>(x));
+    return prioritize_impl(ptr);
+  }
+
+  virtual void run_once() = 0;
+
+private:
+  virtual bool prioritize_impl(caf::resumable* ptr) = 0;
+};
+
 template <class... Ts>
 class expect_clause {
 public:
-  explicit expect_clause(caf::scheduler::test_coordinator& sched, int src_line)
+  explicit expect_clause(test_coordinator& sched, int src_line)
     : sched_(sched), src_line_(src_line) {
     peek_ = [this] {
       /// The extractor will call CAF_FAIL on a type mismatch, essentially
@@ -357,7 +386,7 @@ protected:
       dptr->dequeue(); // Drop message.
   }
 
-  caf::scheduler::test_coordinator& sched_;
+  test_coordinator& sched_;
   caf::strong_actor_ptr src_;
   caf::abstract_actor* dest_ = nullptr;
   std::function<void()> peek_;
@@ -367,7 +396,7 @@ protected:
 template <>
 class expect_clause<void> {
 public:
-  explicit expect_clause(caf::scheduler::test_coordinator& sched, int src_line)
+  explicit expect_clause(test_coordinator& sched, int src_line)
     : sched_(sched), src_line_(src_line) {
     // nop
   }
@@ -424,7 +453,7 @@ protected:
       dptr->dequeue(); // Drop message.
   }
 
-  caf::scheduler::test_coordinator& sched_;
+  test_coordinator& sched_;
   caf::strong_actor_ptr src_;
   caf::abstract_actor* dest_ = nullptr;
   int src_line_;
@@ -433,7 +462,7 @@ protected:
 template <class... Ts>
 class inject_clause {
 public:
-  explicit inject_clause(caf::scheduler::test_coordinator& sched, int src_line)
+  explicit inject_clause(test_coordinator& sched, int src_line)
     : sched_(sched), src_line_(src_line) {
     // nop
   }
@@ -498,7 +527,7 @@ protected:
       dptr->dequeue(); // Drop message.
   }
 
-  caf::scheduler::test_coordinator& sched_;
+  test_coordinator& sched_;
   caf::strong_actor_ptr src_;
   caf::strong_actor_ptr dest_;
   caf::message msg_;
@@ -508,7 +537,7 @@ protected:
 template <class... Ts>
 class allow_clause {
 public:
-  explicit allow_clause(caf::scheduler::test_coordinator& sched, int src_line)
+  explicit allow_clause(test_coordinator& sched, int src_line)
     : sched_(sched), src_line_(src_line) {
     peek_ = [this] {
       if (dest_ != nullptr)
@@ -583,7 +612,7 @@ protected:
       dptr->dequeue(); // Drop message.
   }
 
-  caf::scheduler::test_coordinator& sched_;
+  test_coordinator& sched_;
   caf::strong_actor_ptr src_;
   caf::abstract_actor* dest_ = nullptr;
   std::function<bool()> peek_;
@@ -689,8 +718,350 @@ class test_coordinator_fixture {
 public:
   // -- member types -----------------------------------------------------------
 
+  class test_actor_clock : public caf::actor_clock {
+  public:
+    // -- constructors, destructors, and assignment operators ------------------
+
+    test_actor_clock() : current_time(duration_type{1}) {
+      // This ctor makes sure that the clock isn't at the default-constructed
+      // time_point, because begin-of-epoch may have special meaning.
+    }
+
+    // -- overrides ------------------------------------------------------------
+
+    time_point now() const noexcept override {
+      return current_time;
+    }
+
+    caf::disposable schedule(time_point abs_time, caf::action f) override {
+      CAF_ASSERT(f.ptr() != nullptr);
+      actions.emplace(abs_time, f);
+      return std::move(f).as_disposable();
+    }
+
+    // -- testing DSL API ------------------------------------------------------
+
+    /// Returns whether the actor clock has at least one pending timeout.
+    bool has_pending_timeout() const {
+      auto not_disposed = [](const auto& kvp) {
+        return !kvp.second.disposed();
+      };
+      return std::any_of(actions.begin(), actions.end(), not_disposed);
+    }
+
+    /// Triggers the next pending timeout regardless of its timestamp. Sets
+    /// `current_time` to the time point of the triggered timeout unless
+    /// `current_time` is already set to a later time.
+    /// @returns Whether a timeout was triggered.
+    bool trigger_timeout() {
+      for (;;) {
+        if (actions.empty())
+          return false;
+        auto i = actions.begin();
+        auto t = i->first;
+        if (t > current_time)
+          current_time = t;
+        if (try_trigger_once())
+          return true;
+      }
+    }
+
+    /// Triggers all pending timeouts regardless of their timestamp. Sets
+    /// `current_time` to the time point of the latest timeout unless
+    /// `current_time` is already set to a later time.
+    /// @returns The number of triggered timeouts.
+    size_t trigger_timeouts() {
+      if (actions.empty())
+        return 0u;
+      size_t result = 0;
+      while (trigger_timeout())
+        ++result;
+      return result;
+    }
+
+    /// Advances the time by `x` and dispatches timeouts and delayed messages.
+    /// @returns The number of triggered timeouts.
+    size_t advance_time(duration_type x) {
+      current_time += x;
+      auto result = size_t{0};
+      while (!actions.empty() && actions.begin()->first <= current_time)
+        if (try_trigger_once())
+          ++result;
+      return result;
+    }
+
+    // -- properties -----------------------------------------------------------
+
+    /// @pre has_pending_timeout()
+    time_point next_timeout() const {
+      return actions.begin()->first;
+    }
+
+    // -- member variables -----------------------------------------------------
+
+    time_point current_time;
+
+    std::multimap<time_point, caf::action> actions;
+
+  private:
+    bool try_trigger_once() {
+      for (;;) {
+        if (actions.empty())
+          return false;
+        auto i = actions.begin();
+        auto [t, f] = *i;
+        if (t > current_time)
+          return false;
+        actions.erase(i);
+        if (!f.disposed()) {
+          f.run();
+          return true;
+        }
+      }
+    }
+  };
+
   /// A deterministic scheduler type.
-  using scheduler_type = caf::scheduler::test_coordinator;
+  class test_coordinator_impl : public test_coordinator {
+  public:
+    using super = abstract_coordinator;
+
+    class dummy_worker : public caf::execution_unit {
+    public:
+      dummy_worker(test_coordinator* parent)
+        : execution_unit(&parent->system()), parent_(parent) {
+        // nop
+      }
+
+      void exec_later(caf::resumable* ptr) override {
+        parent_->jobs.push_back(ptr);
+      }
+
+    private:
+      test_coordinator* parent_;
+    };
+
+    class dummy_printer : public caf::monitorable_actor {
+    public:
+      dummy_printer(caf::actor_config& cfg) : monitorable_actor(cfg) {
+        mh_.assign([&](caf::add_atom, caf::actor_id, const std::string& str) {
+          printf("%s", str.c_str());
+        });
+      }
+
+      bool enqueue(caf::mailbox_element_ptr what,
+                   caf::execution_unit*) override {
+        mh_(what->content());
+        return true;
+      }
+
+      void setup_metrics() {
+        // nop
+      }
+
+    private:
+      caf::message_handler mh_;
+    };
+
+    /// A type-erased boolean predicate.
+    using bool_predicate = std::function<bool()>;
+
+    test_coordinator_impl(caf::actor_system& sys) : test_coordinator(sys) {
+      // nop
+    }
+
+    /// Returns whether at least one job is in the queue.
+    bool has_job() const {
+      return !jobs.empty();
+    }
+
+    /// Peeks into the mailbox of `next_job<scheduled_actor>()`.
+    template <class... Ts>
+    decltype(auto) peek() {
+      auto ptr
+        = next_job<caf::scheduled_actor>().peek_at_next_mailbox_element();
+      CAF_ASSERT(ptr != nullptr);
+      if (auto view = caf::make_const_typed_message_view<Ts...>(ptr->payload)) {
+        if constexpr (sizeof...(Ts) == 1)
+          return get<0>(view);
+        else
+          return to_tuple(view);
+      } else {
+        CAF_RAISE_ERROR("Mailbox element does not match.");
+      }
+    }
+
+    /// Puts `x` at the front of the queue unless it cannot be found in the
+    /// queue. Returns `true` if `x` exists in the queue and was put in front,
+    /// `false` otherwise.
+    bool prioritize_impl(caf::resumable* ptr) override {
+      if (!ptr)
+        return false;
+      auto b = jobs.begin();
+      auto e = jobs.end();
+      auto i = std::find(b, e, ptr);
+      if (i == e)
+        return false;
+      if (i == b)
+        return true;
+      std::rotate(b, i, i + 1);
+      return true;
+    }
+
+    /// Runs all jobs that satisfy the predicate.
+    template <class Predicate>
+    size_t run_jobs_filtered(Predicate predicate) {
+      size_t result = 0;
+      while (!jobs.empty()) {
+        auto b = jobs.begin();
+        auto e = jobs.end();
+        auto i = std::find_if(b, e, predicate);
+        if (i == e)
+          return result;
+        if (i != b)
+          std::rotate(b, i, i + 1);
+        run_once();
+        ++result;
+      }
+      return result;
+    }
+
+    /// Tries to execute a single event in FIFO order.
+    bool try_run_once() {
+      if (jobs.empty())
+        return false;
+      auto job = jobs.front();
+      jobs.pop_front();
+      dummy_worker worker{this};
+      switch (job->resume(&worker, 1)) {
+        case caf::resumable::resume_later:
+          jobs.push_front(job);
+          break;
+        case caf::resumable::done:
+        case caf::resumable::awaiting_message:
+          intrusive_ptr_release(job);
+          break;
+        case caf::resumable::shutdown_execution_unit:
+          break;
+      }
+      return true;
+    }
+
+    /// Tries to execute a single event in LIFO order.
+    bool try_run_once_lifo() {
+      if (jobs.empty())
+        return false;
+      if (jobs.size() >= 2)
+        std::rotate(jobs.rbegin(), jobs.rbegin() + 1, jobs.rend());
+      return try_run_once();
+    }
+
+    /// Executes a single event in FIFO order or fails if no event is available.
+    void run_once() override {
+      if (jobs.empty())
+        CAF_RAISE_ERROR("No job to run available.");
+      try_run_once();
+    }
+
+    /// Executes a single event in LIFO order or fails if no event is available.
+    void run_once_lifo() {
+      if (jobs.empty())
+        CAF_RAISE_ERROR("No job to run available.");
+      try_run_once_lifo();
+    }
+
+    /// Executes events until the job queue is empty and no pending timeouts are
+    /// left. Returns the number of processed events.
+    size_t run(size_t max_count = std::numeric_limits<size_t>::max()) {
+      size_t res = 0;
+      while (res < max_count && try_run_once())
+        ++res;
+      return res;
+    }
+
+    /// Returns whether at least one pending timeout exists.
+    bool has_pending_timeout() const {
+      return clock_.has_pending_timeout();
+    }
+
+    /// Tries to trigger a single timeout.
+    bool trigger_timeout() {
+      return clock_.trigger_timeout();
+    }
+
+    /// Triggers all pending timeouts.
+    size_t trigger_timeouts() {
+      return clock_.trigger_timeouts();
+    }
+
+    /// Advances simulation time and returns the number of triggered timeouts.
+    size_t advance_time(caf::timespan x) {
+      return clock_.advance_time(x);
+    }
+
+    template <class F>
+    void after_next_enqueue(F f) {
+      after_next_enqueue_ = f;
+    }
+
+    /// Executes the next enqueued job immediately by using the
+    /// `after_next_enqueue` hook.
+    void inline_next_enqueue() {
+      after_next_enqueue([this] { run_once_lifo(); });
+    }
+
+    /// Executes all enqueued jobs immediately by using the `after_next_enqueue`
+    /// hook.
+    void inline_all_enqueues() {
+      after_next_enqueue([this] { inline_all_enqueues_helper(); });
+    }
+
+    bool detaches_utility_actors() const override {
+      return false;
+    }
+
+    test_actor_clock& clock() noexcept override {
+      return clock_;
+    }
+
+  protected:
+    void start() override {
+      dummy_worker worker{this};
+      caf::actor_config cfg{&worker};
+      auto& sys = system();
+      utility_actors_[printer_id] = caf::make_actor<dummy_printer, caf::actor>(
+        sys.next_actor_id(), sys.node(), &sys, cfg);
+    }
+
+    void stop() override {
+      while (run() > 0)
+        trigger_timeouts();
+    }
+
+    void enqueue(caf::resumable* ptr) override {
+      jobs.push_back(ptr);
+      if (after_next_enqueue_ != nullptr) {
+        CAF_LOG_DEBUG("inline this enqueue");
+        std::function<void()> f;
+        f.swap(after_next_enqueue_);
+        f();
+      }
+    }
+
+  private:
+    void inline_all_enqueues_helper() {
+      after_next_enqueue([this] { inline_all_enqueues_helper(); });
+      run_once_lifo();
+    }
+
+    /// Allows users to fake time at will.
+    test_actor_clock clock_;
+
+    /// User-provided callback for triggering custom code in `enqueue`.
+    std::function<void()> after_next_enqueue_;
+  };
+
+  using scheduler_type = test_coordinator_impl;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -698,7 +1069,10 @@ public:
     if (auto err = cfg.parse(caf::test::engine::argc(),
                              caf::test::engine::argv()))
       CAF_FAIL("failed to parse config: " << to_string(err));
-    cfg.set("caf.scheduler.policy", "testing");
+    cfg.module_factories.push_back(
+      [](caf::actor_system& sys) -> caf::actor_system::module* {
+        return new scheduler_type(sys);
+      });
     if (cfg.custom_options().has_category("caf.middleman")) {
       cfg.set("caf.middleman.network-backend", "testing");
       cfg.set("caf.middleman.manual-multiplexing", true);

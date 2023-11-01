@@ -104,7 +104,7 @@ actor_system_config& init(actor_system_config& cfg, actor_profiler& profiler,
 }
 
 struct fixture {
-  using scheduler_type = caf::scheduler::test_coordinator;
+  using scheduler_type = test_coordinator_fixture<>::scheduler_type;
 
   fixture()
     : sys(init(cfg, profiler, factory)),
