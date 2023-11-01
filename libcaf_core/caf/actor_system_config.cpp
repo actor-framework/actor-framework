@@ -33,6 +33,8 @@ constexpr std::string_view default_config_file = "caf-application.conf";
 
 } // namespace
 
+// -- constructors, destructors, and assignment operators ----------------------
+
 actor_system_config::~actor_system_config() {
   // nop
 }
@@ -42,8 +44,6 @@ actor_system_config::~actor_system_config() {
 
 actor_system_config::actor_system_config()
   : program_name(default_program_name), config_file_path(default_config_file) {
-  // Set default factories.
-  logger_factory_ = +[](actor_system& sys) { return logger::make(sys); };
   // Fill our options vector for creating config file and CLI parsers.
   using std::string;
   using string_list = std::vector<string>;
@@ -88,6 +88,8 @@ actor_system_config::actor_system_config()
     .add<string_list>("excludes", "excludes actors from run-time metrics");
 }
 
+// -- properties ---------------------------------------------------------------
+
 settings actor_system_config::dump_content() const {
   settings result = content;
   // Hide options that make no sense in a config file.
@@ -131,6 +133,8 @@ settings actor_system_config::dump_content() const {
   put_missing(console_group, "excluded-components", std::vector<std::string>{});
   return result;
 }
+
+// -- modifiers ----------------------------------------------------------------
 
 error actor_system_config::parse(int argc, char** argv) {
   string_list args;
@@ -486,6 +490,15 @@ detail::mailbox_factory* actor_system_config::mailbox_factory() {
 
 const settings& content(const actor_system_config& cfg) {
   return cfg.content;
+}
+
+// -- factories ----------------------------------------------------------------
+
+intrusive_ptr<logger>
+actor_system_config::make_logger(actor_system& sys) const {
+  if (logger_factory_)
+    return logger_factory_(sys);
+  return logger::make(sys);
 }
 
 } // namespace caf
