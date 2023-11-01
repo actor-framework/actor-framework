@@ -60,7 +60,7 @@ const char* middleman_actor_impl::name() const {
 
 auto middleman_actor_impl::make_behavior() -> behavior_type {
   CAF_LOG_TRACE("");
-  return {
+  auto res = behavior{
     [this](publish_atom, uint16_t port, strong_actor_ptr& whom, mpi_set& sigs,
            std::string& addr, bool reuse) -> put_res {
       CAF_LOG_TRACE("");
@@ -71,6 +71,11 @@ auto middleman_actor_impl::make_behavior() -> behavior_type {
       strong_actor_ptr whom;
       mpi_set sigs;
       return put(port, whom, sigs, addr.c_str(), reuse);
+    },
+    [this](delete_atom, std::string& hostname, uint16_t port) {
+      // Undocumented (on purpose): manually removes an entry from the cache.
+      CAF_LOG_TRACE(CAF_ARG(hostname) << CAF_ARG(port));
+      cached_tcp_.erase(endpoint{std::move(hostname), port});
     },
     [this](connect_atom, std::string& hostname, uint16_t port) -> get_res {
       CAF_LOG_TRACE(CAF_ARG(hostname) << CAF_ARG(port));
@@ -178,6 +183,8 @@ auto middleman_actor_impl::make_behavior() -> behavior_type {
       return {};
     },
   };
+  // Note: needed to sneak the extra `delete_atom` handler into the behavior.
+  return behavior_type{unsafe_behavior_init, std::move(res)};
 }
 
 middleman_actor_impl::put_res

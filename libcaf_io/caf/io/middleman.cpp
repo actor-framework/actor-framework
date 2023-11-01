@@ -8,7 +8,6 @@
 #include "caf/io/basp_broker.hpp"
 #include "caf/io/network/default_multiplexer.hpp"
 #include "caf/io/network/interfaces.hpp"
-#include "caf/io/network/test_multiplexer.hpp"
 #include "caf/io/system_messages.hpp"
 
 #include "caf/actor.hpp"
@@ -227,10 +226,7 @@ void middleman::add_module_options(actor_system_config& cfg) {
 actor_system::module* middleman::make(actor_system& sys, detail::type_list<>) {
   auto impl = get_or(sys.config(), "caf.middleman.network-backend",
                      defaults::middleman::network_backend);
-  if (impl == "testing")
-    return new mm_impl<network::test_multiplexer>(sys);
-  else
-    return new mm_impl<network::default_multiplexer>(sys);
+  return new mm_impl<network::default_multiplexer>(sys);
 }
 
 middleman::middleman(actor_system& sys) : system_(sys) {
@@ -447,24 +443,18 @@ void middleman::start() {
     }
   }
   // Launch backend.
-  if (!get_or(config(), "caf.middleman.manual-multiplexing", false))
-    backend_supervisor_ = backend().make_supervisor();
-  // The only backend that returns a `nullptr` by default is the
-  // `test_multiplexer` which does not have its own thread but uses the main
-  // thread instead. Other backends can set `middleman_detach_multiplexer` to
-  // false to suppress creation of the supervisor.
-  if (backend_supervisor_ != nullptr) {
-    detail::latch sync{1};
-    auto run_backend = [this, sync_ptr{&sync}] {
-      CAF_LOG_TRACE("");
-      backend().thread_id(std::this_thread::get_id());
-      sync_ptr->count_down();
-      backend().run();
-    };
-    thread_ = system().launch_thread("caf.io.mpx", thread_owner::system,
-                                     run_backend);
-    sync.wait();
-  }
+  backend_supervisor_ = backend().make_supervisor();
+  CAF_ASSERT(backend_supervisor_ != nullptr);
+  detail::latch sync{1};
+  auto run_backend = [this, sync_ptr{&sync}] {
+    CAF_LOG_TRACE("");
+    backend().thread_id(std::this_thread::get_id());
+    sync_ptr->count_down();
+    backend().run();
+  };
+  thread_ = system().launch_thread("caf.io.mpx", thread_owner::system,
+                                   run_backend);
+  sync.wait();
   // Spawn utility actors.
   auto basp = named_broker<basp_broker>("BASP");
   manager_ = make_middleman_actor(system(), basp);

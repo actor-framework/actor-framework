@@ -21,6 +21,14 @@ struct protocol {
   network net;
 };
 
+constexpr bool operator==(const protocol& lhs, const protocol& rhs) noexcept {
+  return lhs.trans == rhs.trans && lhs.net == rhs.net;
+}
+
+constexpr bool operator!=(const protocol& lhs, const protocol& rhs) noexcept {
+  return !(lhs == rhs);
+}
+
 inline std::string to_string(protocol::transport x) {
   return x == protocol::tcp ? "TCP" : "UDP";
 }
