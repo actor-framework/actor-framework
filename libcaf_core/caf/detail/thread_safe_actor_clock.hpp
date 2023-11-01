@@ -36,10 +36,6 @@ public:
   /// @relates schedule_entry
   using schedule_entry_ptr = std::unique_ptr<schedule_entry>;
 
-  // -- constructors, destructors, and assignment operators --------------------
-
-  thread_safe_actor_clock();
-
   // -- overrides --------------------------------------------------------------
 
   using super::schedule;
@@ -53,7 +49,12 @@ public:
   void stop_dispatch_loop();
 
 private:
-  void run();
+  // -- member types -----------------------------------------------------------
+  using queue_type = detail::sync_ring_buffer<schedule_entry_ptr, buffer_size>;
+
+  // -- internal API -----------------------------------------------------------
+
+  static void run(queue_type* queue);
 
   // -- member variables -------------------------------------------------------
 
@@ -62,12 +63,6 @@ private:
 
   /// Handle to the dispatcher thread.
   std::thread dispatcher_;
-
-  /// Internal data of the dispatcher.
-  bool running_ = true;
-
-  /// Internal data of the dispatcher.
-  std::vector<schedule_entry_ptr> tbl_;
 };
 
 } // namespace caf::detail
