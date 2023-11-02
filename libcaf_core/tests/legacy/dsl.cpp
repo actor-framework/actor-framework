@@ -252,7 +252,7 @@ SCENARIO("passing requirements increment the 'good' counter") {
       auto silent_expr = [&] {                                                 \
         auto bk = caf::test::logger::instance().make_quiet();                  \
         auto guard = caf::detail::make_scope_guard(                            \
-          [bk] { caf::test::logger::instance().levels(bk); });                 \
+          [bk]() noexcept { caf::test::logger::instance().levels(bk); });      \
         expr;                                                                  \
       };                                                                       \
       CHECK_THROWS_AS(silent_expr(), test::requirement_error);                 \

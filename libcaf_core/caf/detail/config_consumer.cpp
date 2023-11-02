@@ -82,14 +82,16 @@ config_consumer::config_consumer(settings& cfg) : cfg_(&cfg) {
 }
 
 config_consumer::config_consumer(config_consumer&& other)
-  : options_(other.options_), parent_(other.parent_), cfg_(other.cfg_) {
+  : options_(other.options_),
+    parent_(std::move(other.parent_)),
+    cfg_(other.cfg_) {
   other.parent_ = none;
 }
 
 config_consumer& config_consumer::operator=(config_consumer&& other) {
   destroy();
   options_ = other.options_;
-  parent_ = other.parent_;
+  parent_ = std::move(other.parent_);
   cfg_ = other.cfg_;
   other.parent_ = none;
   return *this;

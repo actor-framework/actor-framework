@@ -426,8 +426,8 @@ proxy_registry* basp_broker::proxy_registry_ptr() {
 
 resumable::resume_result basp_broker::resume(execution_unit* ctx, size_t mt) {
   ctx->proxy_registry_ptr(&instance.proxies());
-  auto guard
-    = detail::make_scope_guard([=] { ctx->proxy_registry_ptr(nullptr); });
+  auto guard = detail::make_scope_guard(
+    [=]() noexcept { ctx->proxy_registry_ptr(nullptr); });
   return super::resume(ctx, mt);
 }
 

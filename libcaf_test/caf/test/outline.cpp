@@ -107,8 +107,8 @@ void outline::run() {
     }
   }
   ctx_->parameters = ctx_->example_parameters[ctx_->example_id];
-  auto guard = detail::make_scope_guard([this] {
-    auto& ptr = ctx_->steps[std::make_pair(0, ctx_->example_id)];
+  auto& ptr = ctx_->steps[std::make_pair(0, ctx_->example_id)];
+  auto guard = detail::make_scope_guard([this, &ptr]() noexcept {
     if (!ptr->can_run()
         && ctx_->example_id + 1 < ctx_->example_parameters.size())
       ++ctx_->example_id;

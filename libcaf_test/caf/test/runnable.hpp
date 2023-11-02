@@ -250,7 +250,8 @@ public:
     auto lvl = rep.verbosity(CAF_LOG_LEVEL_QUIET);
     auto before = rep.test_stats();
     {
-      auto lvl_guard = detail::make_scope_guard([&] { rep.verbosity(lvl); });
+      auto lvl_guard
+        = detail::scope_guard([&]() noexcept { rep.verbosity(lvl); });
       expr();
     }
     auto after = rep.test_stats();

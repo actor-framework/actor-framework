@@ -71,7 +71,6 @@ void ChatWidget::init(actor_system& system, const std::string& name,
 }
 
 void ChatWidget::sendChatMessage() {
-  auto cleanup = detail::make_scope_guard([=] { input()->setText(QString()); });
   QString line = input()->text();
   if (line.isEmpty()) {
     // Ignore empty lines.
@@ -88,7 +87,6 @@ void ChatWidget::sendChatMessage() {
     } else {
       print("*** list of commands:\n"
             "/setName <new name>\n");
-      return;
     }
   } else {
     auto msg = name_;
@@ -99,6 +97,7 @@ void ChatWidget::sendChatMessage() {
       publisher_->push(msg);
     }
   }
+  input()->setText(QString());
 }
 
 void ChatWidget::changeName() {

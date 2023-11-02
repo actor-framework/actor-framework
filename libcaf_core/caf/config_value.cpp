@@ -200,9 +200,10 @@ error_code<sec> config_value::default_construct(type_id_t id) {
       if (auto meta = detail::global_meta_object_or_null(id)) {
         using detail::make_scope_guard;
         auto ptr = malloc(meta->padded_size);
-        auto free_guard = make_scope_guard([ptr] { free(ptr); });
+        auto free_guard = make_scope_guard([ptr]() noexcept { free(ptr); });
         meta->default_construct(ptr);
-        auto destroy_guard = make_scope_guard([=] { meta->destroy(ptr); });
+        auto destroy_guard
+          = make_scope_guard([=]() noexcept { meta->destroy(ptr); });
         config_value_writer writer{this};
         if (meta->save(writer, ptr)) {
           return sec::none;

@@ -69,7 +69,7 @@ expected<std::pair<stream_socket, stream_socket>> make_stream_socket_pair() {
   a.inaddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
   a.inaddr.sin_port = 0;
   // makes sure all sockets are closed in case of an error
-  auto guard = detail::make_scope_guard([&] {
+  auto guard = detail::make_scope_guard([&]() noexcept {
     auto e = WSAGetLastError();
     close(socket{listener});
     close(socket{socks[0]});

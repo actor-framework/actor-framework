@@ -11,6 +11,8 @@ namespace caf::detail {
 /// A lightweight scope guard implementation.
 template <class Fun>
 class scope_guard {
+  static_assert(noexcept(std::declval<Fun>()()),
+                "Scope guard function must be declared noexcept");
   scope_guard() = delete;
   scope_guard(const scope_guard&) = delete;
   scope_guard& operator=(const scope_guard&) = delete;

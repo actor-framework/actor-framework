@@ -56,7 +56,7 @@ public:
   /// @returns a pointer to the null-terminated string.
   const char* get() const noexcept {
     return std::visit(
-      [](auto& arg) -> const char* {
+      [](auto& arg) noexcept -> const char* {
         using T = std::decay_t<decltype(arg)>;
         if constexpr (std::is_same_v<T, const char*>) {
           return arg;

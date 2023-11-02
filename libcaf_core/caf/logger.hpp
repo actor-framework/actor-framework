@@ -247,7 +247,7 @@ public:
   static actor_id thread_local_aid();
 
   /// Associates an actor ID to the calling thread and returns the last value.
-  static actor_id thread_local_aid(actor_id aid);
+  static actor_id thread_local_aid(actor_id aid) noexcept;
 
   /// Returns whether the logger is configured to accept input for given
   /// component and log level.
@@ -353,8 +353,10 @@ private:
 #define CAF_PUSH_AID(aarg)                                                     \
   caf::actor_id CAF_PP_UNIFYN(caf_aid_tmp)                                     \
     = caf::logger::thread_local_aid(aarg);                                     \
-  auto CAF_PP_UNIFYN(caf_aid_tmp_guard) = caf::detail::make_scope_guard(       \
-    [=] { caf::logger::thread_local_aid(CAF_PP_UNIFYN(caf_aid_tmp)); })
+  auto CAF_PP_UNIFYN(caf_aid_tmp_guard)                                        \
+    = caf::detail::scope_guard([=]() noexcept {                                \
+        caf::logger::thread_local_aid(CAF_PP_UNIFYN(caf_aid_tmp));             \
+      })
 
 #define CAF_PUSH_AID_FROM_PTR(some_ptr)                                        \
   auto CAF_PP_UNIFYN(caf_aid_ptr) = some_ptr;                                  \

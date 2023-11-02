@@ -677,7 +677,7 @@ actor_id logger::thread_local_aid() {
   return current_actor_id;
 }
 
-actor_id logger::thread_local_aid(actor_id aid) {
+actor_id logger::thread_local_aid(actor_id aid) noexcept {
   std::swap(current_actor_id, aid);
   return aid;
 }
