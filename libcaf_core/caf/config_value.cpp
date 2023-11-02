@@ -65,14 +65,17 @@ config_value::~config_value() {
 expected<config_value> config_value::parse(std::string_view::iterator first,
                                            std::string_view::iterator last) {
   using namespace detail;
-  auto i = first;
   // Sanity check.
-  if (i == last)
-    return make_error(pec::unexpected_eof);
-  // Skip to beginning of the argument.
-  while (isspace(*i))
-    if (++i == last)
-      return make_error(pec::unexpected_eof);
+  if (first == last)
+    return config_value{""};
+  // Skip to beginning of the argument (drop leading whitespaces).
+  while (isspace(*first))
+    if (++first == last)
+      return config_value{""};
+  auto i = first;
+  // Drop trailing whitespaces.
+  while (isspace(*(last - 1)))
+    --last;
   // Dispatch to parser.
   detail::config_value_consumer f;
   string_parser_state res{i, last};
