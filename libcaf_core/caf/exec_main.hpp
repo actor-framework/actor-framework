@@ -17,22 +17,22 @@ namespace caf {
 template <class>
 struct exec_main_helper;
 
-template <>
-struct exec_main_helper<detail::type_list<actor_system&>> {
+template <class System>
+struct exec_main_helper<detail::type_list<System&>> {
   using config = actor_system_config;
 
   template <class F>
-  auto operator()(F& fun, actor_system& sys, const config&) {
+  auto operator()(F& fun, System& sys, const config&) {
     return fun(sys);
   }
 };
 
-template <class T>
-struct exec_main_helper<detail::type_list<actor_system&, const T&>> {
-  using config = T;
+template <class System, class Config>
+struct exec_main_helper<detail::type_list<System&, const Config&>> {
+  using config = Config;
 
   template <class F>
-  auto operator()(F& fun, actor_system& sys, const config& cfg) {
+  auto operator()(F& fun, System& sys, const Config& cfg) {
     return fun(sys, cfg);
   }
 };
