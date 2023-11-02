@@ -897,14 +897,12 @@ public:
     bool prioritize_impl(caf::resumable* ptr) override {
       if (!ptr)
         return false;
-      auto b = jobs.begin();
-      auto e = jobs.end();
-      auto i = std::find(b, e, ptr);
-      if (i == e)
+      auto i = std::find(jobs.begin(), jobs.end(), ptr);
+      if (i == jobs.end())
         return false;
-      if (i == b)
+      if (i == jobs.begin())
         return true;
-      std::rotate(b, i, i + 1);
+      std::rotate(jobs.begin(), i, i + 1);
       return true;
     }
 
@@ -913,13 +911,11 @@ public:
     size_t run_jobs_filtered(Predicate predicate) {
       size_t result = 0;
       while (!jobs.empty()) {
-        auto b = jobs.begin();
-        auto e = jobs.end();
-        auto i = std::find_if(b, e, predicate);
-        if (i == e)
+        auto i = std::find_if(jobs.begin(), jobs.end(), predicate);
+        if (i == jobs.end())
           return result;
-        if (i != b)
-          std::rotate(b, i, i + 1);
+        if (i != jobs.begin())
+          std::rotate(jobs.begin(), i, i + 1);
         run_once();
         ++result;
       }
@@ -999,6 +995,7 @@ public:
       return clock_.advance_time(x);
     }
 
+    /// Call `f` after the next enqueue operation.
     template <class F>
     void after_next_enqueue(F f) {
       after_next_enqueue_ = f;
