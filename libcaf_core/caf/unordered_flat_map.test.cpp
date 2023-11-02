@@ -38,7 +38,7 @@ TEST("default constructed maps are empty") {
 TEST("reserve increases the capacity of the decorated container") {
   int_map xs;
   xs.reserve(10);
-  check_gt(xs.container().capacity(), 0u);
+  check_ge(xs.container().capacity(), 10u);
   xs.emplace(1, 10);
   // Note: we call this here for coverage, but since this is a "non-binding
   // request" to the underlying container, we cannot check whether this actually
@@ -138,7 +138,7 @@ TEST("erase removes elements from a map") {
 
 TEST("element lookup") {
   int_map xs{{1, 10}, {2, 20}, {3, 30}, {4, 40}};
-  SECTION("at() accesses existing elements or inserts new ones") {
+  SECTION("at() accesses existing elements") {
     check_eq(xs.at(1), 10);
     check_eq(xs.at(2), 20);
     check_eq(xs.at(3), 30);

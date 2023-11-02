@@ -195,8 +195,15 @@ public:
 
   // -- removal ----------------------------------------------------------------
 
+  iterator erase(iterator i) {
+    if (auto tail = end() - 1; i != tail)
+      std::iter_swap(i, tail);
+    xs_.pop_back();
+    return i; // Now points to the element that was tail or to end().
+  }
+
   iterator erase(const_iterator i) {
-    return xs_.erase(i);
+    return erase(begin() + (i - begin()));
   }
 
   iterator erase(const_iterator first, const_iterator last) {
@@ -204,8 +211,7 @@ public:
   }
 
   size_type erase(const key_type& x) {
-    auto pred = [&](const value_type& y) { return x == y.first; };
-    if (auto i = std::remove_if(begin(), end(), pred); i != end()) {
+    if (auto i = find(x); i != end()) {
       erase(i);
       return 1;
     }
