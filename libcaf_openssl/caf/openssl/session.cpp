@@ -31,15 +31,16 @@ CAF_POP_WARNINGS
       perror("pthread_sigmask");                                               \
       exit(1);                                                                 \
     }                                                                          \
-    auto sigpipe_restore_guard                                                 \
-      = ::caf::detail::make_scope_guard([&]() noexcept {                       \
-          struct timespec zerotime = {};                                       \
-          sigtimedwait(&sigpipe_mask, 0, &zerotime);                           \
-          if (pthread_sigmask(SIG_SETMASK, &saved_mask, 0) == -1) {            \
-            perror("pthread_sigmask");                                         \
-            exit(1);                                                           \
-          }                                                                    \
-        })
+    auto sigpipe_restore_guard = ::caf::detail::scope_guard {                  \
+      [&]() noexcept {                                                         \
+        struct timespec zerotime = {};                                         \
+        sigtimedwait(&sigpipe_mask, 0, &zerotime);                             \
+        if (pthread_sigmask(SIG_SETMASK, &saved_mask, 0) == -1) {              \
+          perror("pthread_sigmask");                                           \
+          exit(1);                                                             \
+        }                                                                      \
+      }                                                                        \
+    }
 
 #else
 

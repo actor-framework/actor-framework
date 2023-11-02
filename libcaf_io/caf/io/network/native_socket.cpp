@@ -294,13 +294,13 @@ std::pair<native_socket, native_socket> create_pipe() {
   a.inaddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
   a.inaddr.sin_port = 0;
   // makes sure all sockets are closed in case of an error
-  auto guard = detail::make_scope_guard([&]() noexcept {
+  auto guard = detail::scope_guard{[&]() noexcept {
     auto e = WSAGetLastError();
     close_socket(listener);
     close_socket(socks[0]);
     close_socket(socks[1]);
     WSASetLastError(e);
-  });
+  }};
   // bind listener to a local port
   int reuse = 1;
   CALL_CRITICAL_CFUN(tmp1, detail::cc_zero, "setsockopt",

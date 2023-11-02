@@ -27,7 +27,7 @@ runnable::~runnable() {
 void runnable::run() {
   current_runnable = this;
   auto guard
-    = detail::make_scope_guard([]() noexcept { current_runnable = nullptr; });
+    = detail::scope_guard{[]() noexcept { current_runnable = nullptr; }};
   switch (root_type_) {
     case block_type::scenario:
       if (auto guard = ctx_->get<scenario>(0, description_, loc_)->commit()) {
@@ -53,7 +53,7 @@ void runnable::run() {
 void runnable::call_do_run() {
   current_runnable = this;
   auto guard
-    = detail::make_scope_guard([]() noexcept { current_runnable = nullptr; });
+    = detail::scope_guard{[]() noexcept { current_runnable = nullptr; }};
   do_run();
 }
 

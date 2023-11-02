@@ -109,7 +109,7 @@ void dummy_tls_server(stream_socket fd, const char* cert_file,
   namespace ssl = caf::net::ssl;
   multiplexer::block_sigpipe();
   // Make sure we close our socket.
-  auto guard = detail::make_scope_guard([fd]() noexcept { close(fd); });
+  auto guard = detail::scope_guard{[fd]() noexcept { close(fd); }};
   // Get and configure our SSL context.
   auto ctx = unbox(ssl::context::make_server(ssl::tls::any));
   if (!ctx.use_certificate_file(cert_file, ssl::format::pem)) {
@@ -149,7 +149,7 @@ void dummy_tls_server(stream_socket fd, const char* cert_file,
 void dummy_tls_client(stream_socket fd) {
   multiplexer::block_sigpipe();
   // Make sure we close our socket.
-  auto guard = detail::make_scope_guard([fd]() noexcept { close(fd); });
+  auto guard = detail::scope_guard{[fd]() noexcept { close(fd); }};
   // Perform SSL handshake.
   auto ctx = unbox(ssl::context::make_client(ssl::tls::any));
   auto conn = unbox(ctx.new_connection(fd));

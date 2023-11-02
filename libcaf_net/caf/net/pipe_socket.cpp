@@ -53,10 +53,10 @@ expected<std::pair<pipe_socket, pipe_socket>> make_pipe() {
   if (pipe(pipefds) != 0)
     return make_error(sec::network_syscall_failed, "pipe",
                       last_socket_error_as_string());
-  auto guard = detail::make_scope_guard([&]() noexcept {
+  auto guard = detail::scope_guard{[&]() noexcept {
     close(socket{pipefds[0]});
     close(socket{pipefds[1]});
-  });
+  }};
   // Note: for pipe2 it is better to avoid races by setting CLOEXEC (but not on
   // POSIX).
   if (auto err = child_process_inherit(socket{pipefds[0]}, false))

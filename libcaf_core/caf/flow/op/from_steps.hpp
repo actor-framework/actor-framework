@@ -202,14 +202,13 @@ private:
     //       during the entire execution of do_run_impl. Otherwise, we might
     //       trigger a heap-use-after-free.
     ref();
-    auto guard = detail::make_scope_guard([this]() noexcept { deref(); });
+    auto guard = detail::scope_guard{[this]() noexcept { deref(); }};
     running_ = true;
     do_run_impl();
   }
 
   void do_run_impl() {
-    auto guard
-      = detail::make_scope_guard([this]() noexcept { running_ = false; });
+    auto guard = detail::scope_guard{[this]() noexcept { running_ = false; }};
     if (!disposed_) {
       CAF_ASSERT(out_);
       while (demand_ > 0 && !buf_.empty()) {
