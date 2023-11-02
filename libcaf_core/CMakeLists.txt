@@ -277,6 +277,7 @@ caf_add_component(
     caf/tracing_data_factory.cpp
     caf/type_id.cpp
     caf/type_id_list.cpp
+    caf/unordered_flat_map.test.cpp
     caf/uri.cpp
     caf/uri_builder.cpp
     caf/uuid.cpp
@@ -392,7 +393,6 @@ caf_add_component(
     typed_spawn
     typed_stream
     unit
-    unordered_flat_map
     uri
     uuid)
 

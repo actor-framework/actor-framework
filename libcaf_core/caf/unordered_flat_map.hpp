@@ -158,13 +158,8 @@ public:
     return {i, false};
   }
 
-  iterator insert(iterator hint, value_type x) {
-    return insert(static_cast<const_iterator>(hint), std::move(x));
-  }
-
-  iterator insert(const_iterator hint, value_type x) {
-    auto i = find(x.first);
-    return i == end() ? xs_.insert(hint, std::move(x)) : i;
+  iterator insert(const_iterator, value_type x) {
+    return insert(std::move(x)).first;
   }
 
   template <class InputIterator>
@@ -183,10 +178,32 @@ public:
     return insert(hint, value_type(std::forward<Ts>(xs)...));
   }
 
+  std::pair<iterator, bool> insert_or_assign(const key_type& key,
+                                             mapped_type val) {
+    if (auto i = find(key); i != end()) {
+      i->second = std::move(val);
+      return {i, false};
+    }
+    xs_.emplace_back(value_type{key, std::move(val)});
+    return {xs_.end() - 1, true};
+  }
+
+  iterator insert_or_assign(const_iterator, const key_type& key,
+                            mapped_type val) {
+    return insert_or_assign(key, std::move(val)).first;
+  }
+
   // -- removal ----------------------------------------------------------------
 
+  iterator erase(iterator i) {
+    if (auto tail = end() - 1; i != tail)
+      std::iter_swap(i, tail);
+    xs_.pop_back();
+    return i; // Now points to the element that was tail or to end().
+  }
+
   iterator erase(const_iterator i) {
-    return xs_.erase(i);
+    return erase(begin() + (i - begin()));
   }
 
   iterator erase(const_iterator first, const_iterator last) {
@@ -194,37 +211,35 @@ public:
   }
 
   size_type erase(const key_type& x) {
-    auto pred = [&](const value_type& y) { return x == y.first; };
-    auto i = std::remove_if(begin(), end(), pred);
-    if (i == end())
-      return 0;
-    erase(i);
-    return 1;
+    if (auto i = find(x); i != end()) {
+      erase(i);
+      return 1;
+    }
+    return 0;
   }
 
-  // -- lookup ----------------------------------------------------------------
+  // -- lookup -----------------------------------------------------------------
 
   template <class K>
   mapped_type& at(const K& key) {
-    auto i = find(key);
-    if (i == end())
-      CAF_RAISE_ERROR(std::out_of_range,
-                      "caf::unordered_flat_map::at out of range");
-    return i->second;
+    if (auto i = find(key); i != end())
+      return i->second;
+    CAF_RAISE_ERROR(std::out_of_range,
+                    "caf::unordered_flat_map::at out of range");
   }
 
   template <class K>
   const mapped_type& at(const K& key) const {
-    /// We call the non-const version in order to avoid code duplication but
-    /// restore the const-ness when returning from the function.
-    return const_cast<unordered_flat_map&>(*this).at(key);
+    if (auto i = find(key); i != end())
+      return i->second;
+    CAF_RAISE_ERROR(std::out_of_range,
+                    "caf::unordered_flat_map::at out of range");
   }
 
   mapped_type& operator[](const key_type& key) {
-    auto i = find(key);
-    if (i != end())
+    if (auto i = find(key); i != end())
       return i->second;
-    return xs_.insert(i, value_type{key, mapped_type{}})->second;
+    return xs_.emplace_back(key, mapped_type{}).second;
   }
 
   template <class K>
@@ -235,14 +250,17 @@ public:
 
   template <class K>
   const_iterator find(const K& key) const {
-    /// We call the non-const version in order to avoid code duplication but
-    /// restore the const-ness when returning from the function.
-    return const_cast<unordered_flat_map&>(*this).find(key);
+    auto pred = [&](const value_type& y) { return key == y.first; };
+    return std::find_if(xs_.begin(), xs_.end(), pred);
   }
 
   template <class K>
   size_type count(const K& key) const {
     return find(key) == end() ? 0 : 1;
+  }
+
+  bool contains(const key_type& key) const {
+    return find(key) != end();
   }
 
 private:
@@ -251,31 +269,22 @@ private:
 
 /// @relates unordered_flat_map
 template <class K, class T, class A>
-bool operator==(const unordered_flat_map<K, T, A>& xs,
-                const unordered_flat_map<K, T, A>& ys) {
-  return xs.size() == ys.size() && std::equal(xs.begin(), xs.end(), ys.begin());
+bool operator==(const unordered_flat_map<K, T, A>& lhs,
+                const unordered_flat_map<K, T, A>& rhs) {
+  if (lhs.size() != rhs.size())
+    return false;
+  for (const auto& [key, val] : lhs) {
+    if (auto i = rhs.find(key); i == rhs.end() || i->second != val)
+      return false;
+  }
+  return true;
 }
 
 /// @relates unordered_flat_map
 template <class K, class T, class A>
-bool operator!=(const unordered_flat_map<K, T, A>& xs,
-                const unordered_flat_map<K, T, A>& ys) {
-  return !(xs == ys);
-}
-
-/// @relates unordered_flat_map
-template <class K, class T, class A>
-bool operator<(const unordered_flat_map<K, T, A>& xs,
-               const unordered_flat_map<K, T, A>& ys) {
-  return std::lexicographical_compare(xs.begin(), xs.end(), ys.begin(),
-                                      ys.end());
-}
-
-/// @relates unordered_flat_map
-template <class K, class T, class A>
-bool operator>=(const unordered_flat_map<K, T, A>& xs,
-                const unordered_flat_map<K, T, A>& ys) {
-  return !(xs < ys);
+bool operator!=(const unordered_flat_map<K, T, A>& lhs,
+                const unordered_flat_map<K, T, A>& rhs) {
+  return !(lhs == rhs);
 }
 
 } // namespace caf
