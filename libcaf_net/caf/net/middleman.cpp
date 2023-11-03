@@ -79,16 +79,12 @@ middleman::~middleman() {
 }
 
 void middleman::start() {
-  if (!get_or(config(), "caf.middleman.manual-multiplexing", false)) {
-    auto fn = [this] {
-      mpx_->set_thread_id();
-      launch_background_tasks(sys_);
-      mpx_->run();
-    };
-    mpx_thread_ = sys_.launch_thread("caf.net.mpx", thread_owner::system, fn);
-  } else {
+  auto fn = [this] {
     mpx_->set_thread_id();
-  }
+    launch_background_tasks(sys_);
+    mpx_->run();
+  };
+  mpx_thread_ = sys_.launch_thread("caf.net.mpx", thread_owner::system, fn);
 }
 
 void middleman::stop() {
