@@ -20,9 +20,4 @@ caf_add_component(
     caf/openssl/middleman_actor.cpp
     caf/openssl/publish.cpp
     caf/openssl/remote_actor.cpp
-    caf/openssl/session.cpp
-  LEGACY_TEST_SUITES
-    tests/legacy/openssl-test.cpp
-  LEGACY_TEST_SUITES
-    openssl.authentication
-    openssl.remote_actor)
+    caf/openssl/session.cpp)

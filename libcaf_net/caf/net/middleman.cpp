@@ -79,16 +79,12 @@ middleman::~middleman() {
 }
 
 void middleman::start() {
-  if (!get_or(config(), "caf.middleman.manual-multiplexing", false)) {
-    auto fn = [this] {
-      mpx_->set_thread_id();
-      launch_background_tasks(sys_);
-      mpx_->run();
-    };
-    mpx_thread_ = sys_.launch_thread("caf.net.mpx", thread_owner::system, fn);
-  } else {
+  auto fn = [this] {
     mpx_->set_thread_id();
-  }
+    launch_background_tasks(sys_);
+    mpx_->run();
+  };
+  mpx_thread_ = sys_.launch_thread("caf.net.mpx", thread_owner::system, fn);
 }
 
 void middleman::stop() {
@@ -119,9 +115,6 @@ actor_system::module* middleman::make(actor_system& sys, detail::type_list<>) {
 }
 
 void middleman::add_module_options(actor_system_config& cfg) {
-  config_option_adder{cfg.custom_options(), "caf.middleman"} //
-    .add<bool>("manual-multiplexing",
-               "disables background activity of the multiplexer");
   config_option_adder{cfg.custom_options(), "caf.middleman.prometheus-http"}
     .add<uint16_t>("port", "listening port for incoming scrapes")
     .add<std::string>("address", "bind address for the HTTP server socket");
