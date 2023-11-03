@@ -189,8 +189,6 @@ void middleman::init_global_meta_objects() {
 void middleman::add_module_options(actor_system_config& cfg) {
   // Add options to the CLI parser.
   config_option_adder{cfg.custom_options(), "caf.middleman"}
-    .add<std::string>("network-backend",
-                      "either 'default' or 'asio' (if available)")
     .add<std::vector<std::string>>("app-identifiers",
                                    "valid application identifiers of this node")
     .add<bool>("enable-automatic-connections",
@@ -203,8 +201,6 @@ void middleman::add_module_options(actor_system_config& cfg) {
                    "(disabled if 0, ignored if heartbeats are disabled)")
     .add<bool>("attach-utility-actors",
                "schedule utility actors instead of dedicating threads")
-    .add<bool>("manual-multiplexing",
-               "disables background activity of the multiplexer")
     .add<size_t>("workers", "number of deserialization workers");
   config_option_adder{cfg.custom_options(), "caf.middleman.prometheus-http"}
     .add<uint16_t>("port", "listening port for incoming scrapes")
@@ -224,8 +220,6 @@ void middleman::add_module_options(actor_system_config& cfg) {
 }
 
 actor_system::module* middleman::make(actor_system& sys, detail::type_list<>) {
-  auto impl = get_or(sys.config(), "caf.middleman.network-backend",
-                     defaults::middleman::network_backend);
   return new mm_impl<network::default_multiplexer>(sys);
 }
 
@@ -489,14 +483,9 @@ void middleman::stop() {
       }
     }
   });
-  if (!get_or(config(), "caf.middleman.manual-multiplexing", false)) {
-    backend_supervisor_.reset();
-    if (thread_.joinable())
-      thread_.join();
-  } else {
-    while (backend().try_run_once())
-      ; // nop
-  }
+  backend_supervisor_.reset();
+  if (thread_.joinable())
+    thread_.join();
   named_brokers_.clear();
   scoped_actor self{system(), true};
   self->send_exit(manager_, exit_reason::kill);
@@ -507,14 +496,6 @@ void middleman::stop() {
 }
 
 void middleman::init(actor_system_config& cfg) {
-  // Note: logging is not available at this stage.
-  // Never detach actors when using the testing multiplexer.
-  auto network_backend = get_or(cfg, "caf.middleman.network-backend",
-                                defaults::middleman::network_backend);
-  if (network_backend == "testing") {
-    cfg.set("caf.middleman.attach-utility-actors", true)
-      .set("caf.middleman.manual-multiplexing", true);
-  }
   // Compute and set ID for this network node.
   auto this_node = node_id::default_data::local(cfg);
   system().node_.swap(this_node);

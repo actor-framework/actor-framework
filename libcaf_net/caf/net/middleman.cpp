@@ -115,9 +115,6 @@ actor_system::module* middleman::make(actor_system& sys, detail::type_list<>) {
 }
 
 void middleman::add_module_options(actor_system_config& cfg) {
-  config_option_adder{cfg.custom_options(), "caf.middleman"} //
-    .add<bool>("manual-multiplexing",
-               "disables background activity of the multiplexer");
   config_option_adder{cfg.custom_options(), "caf.middleman.prometheus-http"}
     .add<uint16_t>("port", "listening port for incoming scrapes")
     .add<std::string>("address", "bind address for the HTTP server socket");

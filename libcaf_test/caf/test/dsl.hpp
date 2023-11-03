@@ -1071,7 +1071,6 @@ public:
         return new scheduler_type(sys);
       });
     if (cfg.custom_options().has_category("caf.middleman")) {
-      cfg.set("caf.middleman.network-backend", "testing");
       cfg.set("caf.middleman.workers", size_t{0});
       cfg.set("caf.middleman.heartbeat-interval", caf::timespan{0});
     }
