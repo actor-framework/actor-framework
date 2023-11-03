@@ -108,6 +108,27 @@ if(TARGET CAF::io)
 
 endif()
 
+# -- tests for the CAF::openssl module -----------------------------------------
+if(TARGET CAF::openssl)
+
+  caf_add_test_executable(
+    caf-robot-openssl-middleman-driver
+    SOURCES
+      middleman/openssl-driver.cpp
+    DEPENDENCIES
+      CAF::openssl)
+
+  add_test(
+    NAME "robot-openssl-middleman"
+    COMMAND
+      ${Python_EXECUTABLE}
+        -m robot
+        --variable BINARY_PATH:$<TARGET_FILE:caf-robot-openssl-middleman-driver>
+        --variable SSL_PATH:${CMAKE_CURRENT_SOURCE_DIR}
+        "${CMAKE_CURRENT_SOURCE_DIR}/middleman/openssl-middleman.robot")
+
+endif()
+
 # -- tests for the CAF::net module ---------------------------------------------
 if(TARGET CAF::net)
 

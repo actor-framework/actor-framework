@@ -27,7 +27,7 @@ expected<void> unpublish(const Handle& whom, uint16_t port = 0) {
     return sec::invalid_argument;
   auto& sys = whom.home_system();
   auto f = make_function_view(sys.openssl_manager().actor_handle());
-  return f(unpublish_atom::value, port);
+  return f(unpublish_atom_v, whom.address(), port);
 }
 
 } // namespace caf::openssl
