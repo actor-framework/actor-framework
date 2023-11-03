@@ -14,7 +14,6 @@
 #include "caf/raise_error.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
 #include "caf/scheduler/coordinator.hpp"
-#include "caf/scheduler/test_coordinator.hpp"
 #include "caf/send.hpp"
 #include "caf/stateful_actor.hpp"
 
@@ -322,15 +321,12 @@ actor_system::actor_system(actor_system_config& cfg)
     enum sched_conf {
       stealing = 0x0001,
       sharing = 0x0002,
-      testing = 0x0003,
     };
     sched_conf sc = stealing;
     namespace sr = defaults::scheduler;
     auto sr_policy = get_or(cfg, "caf.scheduler.policy", sr::policy);
     if (sr_policy == "sharing")
       sc = sharing;
-    else if (sr_policy == "testing")
-      sc = testing;
     else if (sr_policy != "stealing")
       fprintf(stderr,
               "[WARNING] '%s' is an unrecognized scheduler policy, falling "
@@ -343,8 +339,6 @@ actor_system::actor_system(actor_system_config& cfg)
       case sharing:
         sched.reset(new share(*this));
         break;
-      case testing:
-        sched.reset(new test_coordinator(*this));
     }
   }
   // Initialize state for each module and give each module the opportunity to

@@ -326,7 +326,6 @@ class middleman;
 namespace scheduler {
 
 class abstract_worker;
-class test_coordinator;
 class abstract_coordinator;
 
 } // namespace scheduler

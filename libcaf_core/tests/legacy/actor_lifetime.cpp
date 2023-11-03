@@ -93,31 +93,15 @@ behavior tester(event_based_actor* self, const actor& aut) {
   };
 }
 
-struct config : actor_system_config {
-  config() {
-    set("caf.scheduler.policy", "testing");
-  }
-};
-
-struct fixture {
-  using sched_t = scheduler::test_coordinator;
-
-  config cfg;
-  actor_system system;
-  sched_t& sched;
-
-  fixture() : system(cfg), sched(dynamic_cast<sched_t&>(system.scheduler())) {
-    // nop
-  }
-
+struct fixture : public test_coordinator_fixture<> {
   template <spawn_options Os, class... Ts>
   actor spawn(Ts&&... xs) {
-    return system.spawn<Os>(xs...);
+    return sys.spawn<Os>(xs...);
   }
 
   template <class T, spawn_options Os, class... Ts>
   actor spawn(Ts&&... xs) {
-    return system.spawn<T, Os>(xs...);
+    return sys.spawn<T, Os>(xs...);
   }
 
   template <class ExitMsgType, spawn_options TesterOptions,

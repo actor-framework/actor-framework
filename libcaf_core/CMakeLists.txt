@@ -143,7 +143,6 @@ caf_add_component(
     caf/detail/latch.test.cpp
     caf/detail/local_group_module.cpp
     caf/detail/mailbox_factory.cpp
-    caf/detail/mailbox_factory.test.cpp
     caf/detail/message_builder_element.cpp
     caf/detail/message_data.cpp
     caf/detail/meta_object.cpp
@@ -176,7 +175,6 @@ caf_add_component(
     caf/detail/stringification_inspector.cpp
     caf/detail/sync_request_bouncer.cpp
     caf/detail/sync_ring_buffer.test.cpp
-    caf/detail/test_actor_clock.cpp
     caf/detail/thread_safe_actor_clock.cpp
     caf/detail/type_id_list_builder.cpp
     caf/detail/type_id_list_builder.test.cpp
@@ -245,7 +243,6 @@ caf_add_component(
     caf/save_inspector.cpp
     caf/scheduled_actor.cpp
     caf/scheduler/abstract_coordinator.cpp
-    caf/scheduler/test_coordinator.cpp
     caf/scoped_actor.cpp
     caf/scoped_execution_unit.cpp
     caf/sec.test.cpp
@@ -285,7 +282,6 @@ caf_add_component(
     tests/legacy/core-test.cpp
     tests/legacy/nasty.cpp
   LEGACY_TEST_SUITES
-    actor_clock
     actor_factory
     actor_lifetime
     actor_pool
