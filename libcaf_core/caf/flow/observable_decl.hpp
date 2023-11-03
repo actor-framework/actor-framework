@@ -178,6 +178,12 @@ public:
     return reduce(T{}, [](T x, T y) { return x + y; });
   }
 
+  /// Adds the output of fn() to the beginning of current observable.
+  template <class F>
+  auto start_with(F fn) {
+    return ctx()->make_observable().just(fn()).concat(*this);
+  }
+
   /// Collects all values and emits all values at once in a @ref cow_vector.
   auto to_vector() {
     using vector_type = cow_vector<output_type>;

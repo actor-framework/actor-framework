@@ -545,22 +545,28 @@ TEST("on_error_return() replaces an error with a value") {
 
 TEST("start_with(fn) makes an observable that emits output of fn()") {
   const auto fn = [] { return 1; };
-  const auto make_start_with = [&](auto fn) {
-    return make_observable().start_with(fn);
-  };
-  SECTION("blueprint") {
-    check_eq(collect(make_start_with(fn)), vector{1});
-    check_eq(collect(make_start_with(fn).concat(range(2, 3))),
-             vector{1, 2, 3, 4});
-    check_eq(collect(make_start_with(fn).concat(range(2, 3)).take(3)),
-             vector{1, 2, 3});
+  SECTION("start_with(fn) adds fn() as first element") {
+    SECTION("blueprint") {
+      check_eq(collect(range(2, 3).start_with(fn)), vector{1, 2, 3, 4});
+      check_eq(collect(range(2, 3).start_with(fn).take(3)), vector{1, 2, 3});
+      check_eq(collect(range(2, 3).start_with(fn).first()), vector{1});
+      check_eq(collect(range(2, 3).start_with(fn).last()), vector{4});
+    }
+    SECTION("observable") {
+      check_eq(collect(build(range(2, 3).start_with(fn))), vector{1, 2, 3, 4});
+      check_eq(collect(build(range(2, 3).start_with(fn).take(3))),
+               vector{1, 2, 3});
+      check_eq(collect(build(range(2, 3).start_with(fn).first())), vector{1});
+      check_eq(collect(build(range(2, 3).start_with(fn).last())), vector{4});
+    }
   }
-  SECTION("observable") {
-    check_eq(collect(build(make_start_with(fn))), vector{1});
-    check_eq(collect(build(make_start_with(fn).concat(range(2, 3)))),
-             vector{1, 2, 3, 4});
-    check_eq(collect(build(make_start_with(fn).concat(range(2, 3)).take(3))),
-             vector{1, 2, 3});
+  SECTION("start_with(fn) forwards error)") {
+    SECTION("blueprint") {
+      check_eq(collect(obs_error().start_with(fn)), sec::runtime_error);
+    }
+    SECTION("observable") {
+      check_eq(collect(build(obs_error().start_with(fn))), sec::runtime_error);
+    }
   }
 }
 

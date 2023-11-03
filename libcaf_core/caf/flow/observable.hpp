@@ -376,6 +376,12 @@ public:
     return materialize().concat(std::forward<Inputs>(xs)...);
   }
 
+  /// @copydoc observable::start_with
+  template <class F>
+  auto start_with(F fn) && {
+    return materialize().start_with(std::forward<F>(fn));
+  }
+
   /// @copydoc observable::flat_map
   template <class F>
   auto flat_map(F f) && {

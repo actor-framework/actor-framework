@@ -136,12 +136,6 @@ public:
     return iota(init).take(num);
   }
 
-  /// Creates a @ref generation that emits `value` once by invoking fn.
-  template <class F>
-  auto start_with(F fn) const {
-    return just(fn());
-  }
-
   /// Creates an @ref observable that reads and emits all values from `res`.
   template <class T>
   observable<T> from_resource(async::consumer_resource<T> res) const {
