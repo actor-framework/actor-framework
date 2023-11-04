@@ -108,6 +108,7 @@ caf_add_component(
     caf/blocking_actor.cpp
     caf/chrono.cpp
     caf/config_option.cpp
+    caf/config_option.test.cpp
     caf/config_option_adder.cpp
     caf/config_option_set.cpp
     caf/config_value.cpp
@@ -293,7 +294,6 @@ caf_add_component(
     binary_serializer
     blocking_actor
     chrono
-    config_option
     config_option_set
     config_value
     config_value_reader

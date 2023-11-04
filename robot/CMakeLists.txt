@@ -16,6 +16,22 @@ if (NOT ${EXIT_CODE} EQUAL 0)
   message(FATAL_ERROR "Failed to import the 'robot' Python package")
 endif()
 
+caf_add_test_executable(
+  caf-robot-config-options-driver
+  SOURCES
+    config/options-driver.cpp
+  DEPENDENCIES
+    CAF::core)
+
+add_test(
+  NAME "robot-config-options"
+  COMMAND
+    ${Python_EXECUTABLE}
+      -m robot
+      --variable BINARY_PATH:$<TARGET_FILE:caf-robot-config-options-driver>
+      --variable CONFIG_FILE_DIR:${CMAKE_CURRENT_SOURCE_DIR}/config
+      "${CMAKE_CURRENT_SOURCE_DIR}/config/options.robot")
+
 add_test(
   NAME "robot-config-read-config-file"
   COMMAND

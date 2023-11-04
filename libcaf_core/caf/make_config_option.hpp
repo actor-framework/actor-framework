@@ -19,17 +19,14 @@ namespace caf::detail {
 
 template <class T>
 error sync_impl(void* ptr, config_value& x) {
-  if (auto val = get_as<T>(x)) {
-    if (auto err = x.assign(*val); !err) {
-      if (ptr)
-        *static_cast<T*>(ptr) = std::move(*val);
-      return none;
-    } else {
-      return err;
-    }
-  } else {
+  auto val = get_as<T>(x);
+  if (!val)
     return std::move(val.error());
-  }
+  if (auto err = x.assign(*val))
+    return err;
+  if (ptr)
+    *static_cast<T*>(ptr) = std::move(*val);
+  return {};
 }
 
 template <class T>

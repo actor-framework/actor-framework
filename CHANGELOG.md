@@ -13,6 +13,15 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   consume it as an observable (via a `publisher`, #1573).
 - The class `caf::unordered_flat_map` now has the `contains` and
   `insert_or_assign` member functions.
+- CAF now supports setting custom configuration options via environment
+  variables. The new priority order is: CLI arguments, environment variables,
+  configuration files, and default values. The environment variable name is
+  the full name of the option in uppercase, with all non-alphanumeric
+  characters replaced by underscores. For example, the environment variable
+  `FOO_BAR` sets the option `foo.bar`. Users may also override the default
+  name by putting the environment name after the short names, separated by a
+  comma. For example, `opt_group{custom_options_, "foo"}.add("bar,b,MY_BAR")`
+  overrides the default environment variable name `FOO_BAR` with `MY_BAR`.
 
 ### Fixed
 
@@ -36,6 +45,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Comparing two  `caf::unordered_flat_map` previously relied on the order of
   elements in the map and thus could result in false negatives. The new
   implementation is correct and no longer relies on the order of elements.
+- When using `--dump-config`, CAF now properly renders nested dictionaries.
+  Previously, dictionaries in lists missed surrounding braces.
 
 ### Changed
 

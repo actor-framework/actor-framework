@@ -17,6 +17,7 @@
 #include "caf/sec.hpp"
 #include "caf/type_id.hpp"
 
+#include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <limits>
@@ -247,7 +248,8 @@ class config_printer {
 public:
   config_printer() = default;
 
-  explicit config_printer(indentation indent) : indent_(indent) {
+  explicit config_printer(indentation indent, bool nested = false)
+    : indent_(indent), nested_(nested) {
     // nop
   }
 
@@ -285,7 +287,7 @@ public:
     auto nestd_indent = indent_ + 2;
     for (auto& x : xs) {
       std::cout << nestd_indent;
-      std::visit(config_printer{nestd_indent}, x.get_data());
+      std::visit(config_printer{nestd_indent, true}, x.get_data());
       std::cout << ",\n";
     }
     std::cout << indent_ << "]";
@@ -296,11 +298,25 @@ public:
       std::cout << "{}";
       return;
     }
+    if (!nested_) {
+      auto pos = dict.begin();
+      for (;;) {
+        print_kvp(*pos++);
+        if (pos == dict.end())
+          return;
+        std::cout << '\n';
+      }
+    }
+    std::cout << "{\n";
+    auto nestd_indent = indent_ + 2;
     auto pos = dict.begin();
     for (;;) {
-      print_kvp(*pos++);
-      if (pos == dict.end())
+      config_printer{nestd_indent, true}.print_kvp(*pos++);
+      if (pos == dict.end()) {
+        std::cout << '\n';
+        std::cout << indent_ << "}";
         return;
+      }
       std::cout << '\n';
     }
   }
@@ -320,6 +336,7 @@ private:
   }
 
   indentation indent_;
+  bool nested_ = false;
   cout_pseudo_buf out_;
 };
 
@@ -335,7 +352,21 @@ error actor_system_config::parse(string_list args, std::istream& config) {
     if (auto fname = get_if<std::string>(&content, "config-file"))
       return make_error(sec::cannot_open_file, *fname);
   }
-  // CLI options override the content of the config file.
+  // Environment variables override the content of the config file.
+  for (auto& opt : custom_options_) {
+    if (auto* env_var = getenv(opt.env_var_name_cstr())) {
+      config_value value{env_var};
+      if (auto err = opt.sync(value); !err) {
+        if (opt.category() == "global")
+          put(content, opt.long_name(), std::move(value));
+        else
+          put(content, opt.full_name(), std::move(value));
+      } else {
+        return err;
+      }
+    }
+  }
+  // CLI options override everything.
   using std::make_move_iterator;
   auto res = custom_options_.parse(content, args);
   if (res.second != args.end()) {
@@ -357,9 +388,7 @@ error actor_system_config::parse(string_list args, std::istream& config) {
   }
   // Generate config dump if needed.
   if (!cli_helptext_printed && get_or(content, "dump-config", false)) {
-    config_printer printer;
-    printer(dump_content());
-    std::cout << std::endl;
+    print_content();
     cli_helptext_printed = true;
   }
   return none;
@@ -410,9 +439,8 @@ actor_system_config& actor_system_config::set_impl(std::string_view name,
     std::cerr << "*** failed to set config parameter " << name << ": "
               << to_string(err) << std::endl;
   } else {
-    auto category = opt->category();
-    if (category == "global")
-      content[opt->long_name()] = std::move(value);
+    if (opt->category() == "global")
+      put(content, opt->long_name(), std::move(value));
     else
       put(content, name, std::move(value));
   }
@@ -490,6 +518,12 @@ detail::mailbox_factory* actor_system_config::mailbox_factory() {
 
 const settings& content(const actor_system_config& cfg) {
   return cfg.content;
+}
+
+void actor_system_config::print_content() const {
+  config_printer printer;
+  printer(dump_content());
+  std::cout << std::endl;
 }
 
 // -- factories ----------------------------------------------------------------
