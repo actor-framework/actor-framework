@@ -77,11 +77,18 @@ public:
   /// Returns the category of the option.
   std::string_view category() const noexcept;
 
-  /// Returns the name of the option.
+  /// Returns the full name of the option.
   std::string_view long_name() const noexcept;
 
   /// Returns (optional) one-letter short names of the option.
   std::string_view short_names() const noexcept;
+
+  /// Returns the environment variable name of the option.
+  std::string_view env_var_name() const noexcept;
+
+  /// Returns the environment variable name of the option as a null-terminated
+  /// C-string.
+  const char* env_var_name_cstr() const noexcept;
 
   /// Returns a human-readable description of the option.
   std::string_view description() const noexcept;
@@ -118,7 +125,8 @@ private:
   uint16_t category_separator_;
   uint16_t long_name_separator_;
   uint16_t short_names_separator_;
-  uint16_t buf_size_;
+  uint16_t env_var_name_separator_;
+  size_t buf_size_;
   const meta_state* meta_;
   mutable void* value_;
 };

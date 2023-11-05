@@ -324,6 +324,9 @@ public:
     return custom_options_;
   }
 
+  /// @private
+  void print_content() const;
+
 protected:
   config_option_set custom_options_;
 

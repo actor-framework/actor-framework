@@ -17,6 +17,7 @@
 #include "caf/sec.hpp"
 #include "caf/type_id.hpp"
 
+#include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <limits>
@@ -47,11 +48,13 @@ actor_system_config::actor_system_config()
   // Fill our options vector for creating config file and CLI parsers.
   using std::string;
   using string_list = std::vector<string>;
+  // Note: set an empty environment variable name for our global flags to have
+  //       them only available via CLI.
   opt_group{custom_options_, "global"}
-    .add<bool>("help,h?", "print help text to STDERR and exit")
-    .add<bool>("long-help",
+    .add<bool>("help,h?,", "print help text to STDERR and exit")
+    .add<bool>("long-help,,",
                "same as --help but list options that are omitted by default")
-    .add<bool>("dump-config", "print configuration and exit")
+    .add<bool>("dump-config,,", "print configuration and exit")
     .add<string>("config-file", "sets a path to a configuration file");
   opt_group{custom_options_, "caf.scheduler"}
     .add<string>("policy", "'stealing' (default) or 'sharing'")
@@ -247,7 +250,8 @@ class config_printer {
 public:
   config_printer() = default;
 
-  explicit config_printer(indentation indent) : indent_(indent) {
+  explicit config_printer(indentation indent, bool nested = false)
+    : indent_(indent), nested_(nested) {
     // nop
   }
 
@@ -285,7 +289,7 @@ public:
     auto nestd_indent = indent_ + 2;
     for (auto& x : xs) {
       std::cout << nestd_indent;
-      std::visit(config_printer{nestd_indent}, x.get_data());
+      std::visit(config_printer{nestd_indent, true}, x.get_data());
       std::cout << ",\n";
     }
     std::cout << indent_ << "]";
@@ -296,11 +300,25 @@ public:
       std::cout << "{}";
       return;
     }
+    if (!nested_) {
+      auto pos = dict.begin();
+      for (;;) {
+        print_kvp(*pos++);
+        if (pos == dict.end())
+          return;
+        std::cout << '\n';
+      }
+    }
+    std::cout << "{\n";
+    auto nestd_indent = indent_ + 2;
     auto pos = dict.begin();
     for (;;) {
-      print_kvp(*pos++);
-      if (pos == dict.end())
+      config_printer{nestd_indent, true}.print_kvp(*pos++);
+      if (pos == dict.end()) {
+        std::cout << '\n';
+        std::cout << indent_ << "}";
         return;
+      }
       std::cout << '\n';
     }
   }
@@ -320,6 +338,7 @@ private:
   }
 
   indentation indent_;
+  bool nested_ = false;
   cout_pseudo_buf out_;
 };
 
@@ -335,7 +354,28 @@ error actor_system_config::parse(string_list args, std::istream& config) {
     if (auto fname = get_if<std::string>(&content, "config-file"))
       return make_error(sec::cannot_open_file, *fname);
   }
-  // CLI options override the content of the config file.
+  // Environment variables override the content of the config file.
+  for (auto& opt : custom_options_) {
+    const auto* env_var_name = opt.env_var_name_cstr();
+    CAF_ASSERT(env_var_name != nullptr);
+    if (env_var_name[0] == '\0') {
+      // Passing an empty string to `getenv` will set `errno`, so we simply skip
+      // empty environment variable names to avoid this.
+      continue;
+    }
+    if (auto* env_var = getenv(env_var_name)) {
+      config_value value{env_var};
+      if (auto err = opt.sync(value); !err) {
+        if (opt.category() == "global")
+          put(content, opt.long_name(), std::move(value));
+        else
+          put(content, opt.full_name(), std::move(value));
+      } else {
+        return err;
+      }
+    }
+  }
+  // CLI options override everything.
   using std::make_move_iterator;
   auto res = custom_options_.parse(content, args);
   if (res.second != args.end()) {
@@ -357,9 +397,7 @@ error actor_system_config::parse(string_list args, std::istream& config) {
   }
   // Generate config dump if needed.
   if (!cli_helptext_printed && get_or(content, "dump-config", false)) {
-    config_printer printer;
-    printer(dump_content());
-    std::cout << std::endl;
+    print_content();
     cli_helptext_printed = true;
   }
   return none;
@@ -410,9 +448,8 @@ actor_system_config& actor_system_config::set_impl(std::string_view name,
     std::cerr << "*** failed to set config parameter " << name << ": "
               << to_string(err) << std::endl;
   } else {
-    auto category = opt->category();
-    if (category == "global")
-      content[opt->long_name()] = std::move(value);
+    if (opt->category() == "global")
+      put(content, opt->long_name(), std::move(value));
     else
       put(content, name, std::move(value));
   }
@@ -465,23 +502,33 @@ std::pair<error, std::string>
 actor_system_config::extract_config_file_path(string_list& args) {
   auto ptr = custom_options_.qualified_name_lookup("global.config-file");
   CAF_ASSERT(ptr != nullptr);
-  auto [first, last, path] = ptr->find_by_long_name(args.begin(), args.end());
-  if (first == args.end()) {
-    return {none, std::string{}};
-  } else if (path.empty()) {
-    return {make_error(pec::missing_argument, "no argument to --config-file"),
-            std::string{}};
-  } else {
-    auto path_str = std::string{path};
-    args.erase(first, last);
-    config_value val{path_str};
-    if (auto err = ptr->sync(val); !err) {
-      put(content, "config-file", std::move(val));
-      return {none, std::move(path_str)};
-    } else {
-      return {std::move(err), std::string{}};
+  auto result = std::string{};
+  // Look for the environment variable first.
+  const auto* env_var_name = ptr->env_var_name_cstr();
+  CAF_ASSERT(env_var_name != nullptr);
+  if (env_var_name[0] != '\0') {
+    if (auto* path = getenv(env_var_name)) {
+      result = path;
+      put(content, "config-file", result);
     }
   }
+  // Look for the command line argument second (overrides the env var).
+  auto [first, last, path] = ptr->find_by_long_name(args.begin(), args.end());
+  if (first == args.end()) {
+    return {none, result};
+  }
+  if (path.empty()) {
+    return {make_error(pec::missing_argument, "no argument to --config-file"),
+            std::string{}};
+  }
+  auto path_str = std::string{path};
+  args.erase(first, last);
+  config_value val{path_str};
+  if (auto err = ptr->sync(val)) {
+    return {std::move(err), std::string{}};
+  }
+  put(content, "config-file", std::move(val));
+  return {none, std::move(path_str)};
 }
 
 detail::mailbox_factory* actor_system_config::mailbox_factory() {
@@ -490,6 +537,12 @@ detail::mailbox_factory* actor_system_config::mailbox_factory() {
 
 const settings& content(const actor_system_config& cfg) {
   return cfg.content;
+}
+
+void actor_system_config::print_content() const {
+  config_printer printer;
+  printer(dump_content());
+  std::cout << std::endl;
 }
 
 // -- factories ----------------------------------------------------------------

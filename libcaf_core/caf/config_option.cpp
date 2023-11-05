@@ -17,6 +17,27 @@ using std::string;
 
 namespace caf {
 
+namespace {
+
+template <class OutputIterator>
+auto copy_uppercase(std::string_view str, OutputIterator dst) {
+  for (auto c : str) {
+    if (isalnum(c))
+      *dst++ = toupper(c);
+    else
+      *dst++ = '_';
+  }
+  return dst;
+}
+
+auto skip_question_mark(std::string_view str) {
+  if (str.size() > 0 && str.front() == '?')
+    return str.substr(1);
+  return str;
+}
+
+} // namespace
+
 // -- constructors, destructors, and assignment operators ----------------------
 
 config_option::config_option(std::string_view category, std::string_view name,
@@ -25,18 +46,45 @@ config_option::config_option(std::string_view category, std::string_view name,
   : meta_(meta), value_(value) {
   using std::accumulate;
   using std::copy;
-  auto comma = name.find(',');
-  auto long_name = name.substr(0, comma);
-  auto short_names = comma == std::string_view::npos ? std::string_view{}
-                                                     : name.substr(comma + 1);
-  auto total_size = [](std::initializer_list<std::string_view> xs) {
+  // The first comma separates the long name from the short names.
+  auto first_comma = name.find(',');
+  auto long_name = name.substr(0, first_comma);
+  auto short_names = std::string_view{};
+  auto env_var_name = std::string_view{};
+  auto has_env_var_name = false;
+  if (first_comma != std::string_view::npos) {
+    // The second comma separates the short names from the environment variable.
+    auto remainder = name.substr(first_comma + 1);
+    auto second_comma = remainder.find(',');
+    if (second_comma == std::string_view::npos) {
+      short_names = remainder;
+    } else {
+      // Use the provided environment variable name even if it is empty.
+      short_names = remainder.substr(0, second_comma);
+      env_var_name = remainder.substr(second_comma + 1);
+      has_env_var_name = true;
+    }
+  }
+  // Computes the total size without the environment variable.
+  auto sub_total_size = [](std::initializer_list<std::string_view> xs) {
     return (xs.size() - 1) // one separator between all fields
            + accumulate(xs.begin(), xs.end(), size_t{0},
                         [](size_t x, std::string_view sv) {
                           return x + sv.size();
                         });
   };
-  auto ts = total_size({category, long_name, short_names, description});
+  auto ts = sub_total_size({category, long_name, short_names, description}) + 1;
+  if (!has_env_var_name) {
+    // By default, the environment variable name is <category>_<long-name> in
+    // upper case. However, we always omit the question mark prefix and skip the
+    // category if it is "global".
+    if (category != "global")
+      ts += sub_total_size({skip_question_mark(category), long_name});
+    else
+      ts += sub_total_size({long_name});
+  } else {
+    ts += env_var_name.size();
+  }
   CAF_ASSERT(ts <= std::numeric_limits<uint16_t>::max());
   buf_size_ = static_cast<uint16_t>(ts);
   buf_.reset(new char[ts]);
@@ -56,18 +104,31 @@ config_option::config_option(std::string_view category, std::string_view name,
   i = copy(short_names.begin(), short_names.end(), i);
   short_names_separator_ = pos();
   *i++ = ',';
+  // <env-var-name>,
+  if (!has_env_var_name) {
+    if (category != "global") {
+      i = copy_uppercase(skip_question_mark(category), i);
+      *i++ = '_';
+    }
+    i = copy_uppercase(long_name, i);
+  } else {
+    i = copy_uppercase(env_var_name, i);
+  }
+  env_var_name_separator_ = pos();
+  *i++ = '\0'; // Note: add null terminator for env_var_name_cstr.
   // <description>
   i = copy(description.begin(), description.end(), i);
   CAF_ASSERT(pos() == buf_size_);
 }
 
 config_option::config_option(const config_option& other)
-  : category_separator_{other.category_separator_},
-    long_name_separator_{other.long_name_separator_},
-    short_names_separator_{other.short_names_separator_},
-    buf_size_{other.buf_size_},
-    meta_{other.meta_},
-    value_{other.value_} {
+  : category_separator_(other.category_separator_),
+    long_name_separator_(other.long_name_separator_),
+    short_names_separator_(other.short_names_separator_),
+    env_var_name_separator_(other.env_var_name_separator_),
+    buf_size_(other.buf_size_),
+    meta_(other.meta_),
+    value_(other.value_) {
   buf_.reset(new char[buf_size_]);
   std::copy_n(other.buf_.get(), buf_size_, buf_.get());
 }
@@ -84,6 +145,7 @@ void swap(config_option& first, config_option& second) noexcept {
   swap(first.category_separator_, second.category_separator_);
   swap(first.long_name_separator_, second.long_name_separator_);
   swap(first.short_names_separator_, second.short_names_separator_);
+  swap(first.env_var_name_separator_, second.env_var_name_separator_);
   swap(first.buf_size_, second.buf_size_);
   swap(first.meta_, second.meta_);
   swap(first.value_, second.value_);
@@ -103,8 +165,16 @@ std::string_view config_option::short_names() const noexcept {
   return buf_slice(long_name_separator_ + 1, short_names_separator_);
 }
 
+std::string_view config_option::env_var_name() const noexcept {
+  return buf_slice(short_names_separator_ + 1, env_var_name_separator_);
+}
+
+const char* config_option::env_var_name_cstr() const noexcept {
+  return buf_.get() + short_names_separator_ + 1;
+}
+
 std::string_view config_option::description() const noexcept {
-  return buf_slice(short_names_separator_ + 1, buf_size_);
+  return buf_slice(env_var_name_separator_ + 1, buf_size_);
 }
 
 std::string_view config_option::full_name() const noexcept {

@@ -728,9 +728,7 @@ SCENARIO("config values can default-construct all registered types") {
         auto val = from(type_id_v<my_request>);
         CHECK_EQ(val.get_data().index(), 8u);
         auto& dict = val.as_dictionary();
-        CHECK_EQ(keys(dict), std::vector<std::string>({"@type", "a", "b"}));
-        CHECK_EQ(dict["@type"].get_data().index(), 6u);
-        CHECK_EQ(get_as<std::string>(dict["@type"]), "my_request"s);
+        CHECK_EQ(keys(dict), std::vector<std::string>({"a", "b"}));
         CHECK_EQ(dict["a"].get_data().index(), 1u);
         CHECK_EQ(get_as<int32_t>(dict["a"]), 0);
         CHECK_EQ(dict["b"].get_data().index(), 1u);
@@ -764,12 +762,9 @@ SCENARIO("config values can parse their own to_string output") {
         CHECK_ROUNDTRIP(0, "0");
         CHECK_ROUNDTRIP("hello world"s, "hello world");
         CHECK_ROUNDTRIP(std::vector<int>({1, 2, 3}), "[1, 2, 3]");
-        CHECK_ROUNDTRIP(my_request(1, 2),
-                        R"_({"@type" = "my_request", a = 1, b = 2})_");
-        CHECK_ROUNDTRIP(std::make_tuple(add_atom_v, 1, 2),
-                        R"_([{"@type" = "caf::add_atom"}, 1, 2])_");
-        CHECK_ROUNDTRIP(make_message(add_atom_v, 1, 2),
-                        R"_([{"@type" = "caf::add_atom"}, 1, 2])_");
+        CHECK_ROUNDTRIP(my_request(1, 2), R"_({a = 1, b = 2})_");
+        CHECK_ROUNDTRIP(std::make_tuple(add_atom_v, 1, 2), R"_([{}, 1, 2])_");
+        CHECK_ROUNDTRIP(make_message(add_atom_v, 1, 2), R"_([{}, 1, 2])_");
       }
     }
   }
@@ -838,8 +833,7 @@ SCENARIO("config values can parse messages") {
           CHECK_EQ(msg->get_as<my_request>(0), my_request(1, 2));
         }
       }
-      if (auto msg = parse(R"_([{"@type" = "caf::add_atom"}, 1, 2])_");
-          CHECK(msg)) {
+      if (auto msg = parse(R"_([{}, 1, 2])_"); CHECK(msg)) {
         if (CHECK((msg->match_elements<add_atom, int32_t, int32_t>()))) {
           CHECK_EQ(msg->get_as<int32_t>(1), 1);
           CHECK_EQ(msg->get_as<int32_t>(2), 2);
