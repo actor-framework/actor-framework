@@ -6,7 +6,6 @@
 
 #include "caf/test/caf_test_main.hpp"
 #include "caf/test/outline.hpp"
-#include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
 #include "caf/config_value.hpp"
@@ -18,19 +17,18 @@
 using namespace caf;
 using namespace std::literals;
 
-using std::string;
-
 namespace {
 
-config_option::meta_state dummy_meta_state() {
+config_option::meta_state
+dummy_meta_state(std::string_view type_name = "dummy") {
   return {
     [](void*, config_value&) { return error{}; },
     [](const void*) { return config_value{}; },
-    "dummy",
+    type_name,
   };
 }
 
-OUTLINE("config options parse their parameters for log, short and env names") {
+OUTLINE("config options parse their parameters for long, short and env names") {
   using std::string;
   auto dummy = dummy_meta_state();
   GIVEN("category <category>, name <name> and description <desc>") {
@@ -52,7 +50,7 @@ OUTLINE("config options parse their parameters for log, short and env names") {
         check_eq(desc, uut.description());
         check_eq(full_name, uut.full_name());
         check_eq(flat, uut.has_flat_cli_name());
-        check(strcmp(ename.c_str(), uut.env_var_name_cstr()) == 0);
+        check_eq(ename, uut.env_var_name_cstr());
         print_debug("copying the config option must produce an equal object");
         auto equal_to_uut = [&uut, this](const config_option& other,
                                          const detail::source_location& loc
@@ -98,22 +96,27 @@ OUTLINE("config options parse their parameters for log, short and env names") {
 }
 
 TEST("swapping two config options exchanges their values") {
-  auto dummy = dummy_meta_state();
-  auto one = config_option{"cat1", "one", "option 1", &dummy};
-  auto two = config_option{"?cat2", "two", "option 2", &dummy};
+  auto dummy1 = dummy_meta_state("dummy1");
+  auto dummy2 = dummy_meta_state("dummy2");
+  auto one = config_option{"cat1", "one", "option 1", &dummy1};
+  auto two = config_option{"?cat2", "two", "option 2", &dummy2};
   check(!one.has_flat_cli_name());
   check_eq(one.category(), "cat1");
   check_eq(one.long_name(), "one");
+  check_eq(one.type_name(), "dummy1");
   check(two.has_flat_cli_name());
   check_eq(two.category(), "cat2");
   check_eq(two.long_name(), "two");
+  check_eq(two.type_name(), "dummy2");
   swap(one, two);
   check(one.has_flat_cli_name());
   check_eq(one.category(), "cat2");
   check_eq(one.long_name(), "two");
+  check_eq(one.type_name(), "dummy2");
   check(!two.has_flat_cli_name());
   check_eq(two.category(), "cat1");
   check_eq(two.long_name(), "one");
+  check_eq(two.type_name(), "dummy1");
 }
 
 TEST("boolean options are flags") {

@@ -51,6 +51,7 @@ config_option::config_option(std::string_view category, std::string_view name,
   auto long_name = name.substr(0, first_comma);
   auto short_names = std::string_view{};
   auto env_var_name = std::string_view{};
+  auto has_env_var_name = false;
   if (first_comma != std::string_view::npos) {
     // The second comma separates the short names from the environment variable.
     auto remainder = name.substr(first_comma + 1);
@@ -58,8 +59,10 @@ config_option::config_option(std::string_view category, std::string_view name,
     if (second_comma == std::string_view::npos) {
       short_names = remainder;
     } else {
+      // Use the provided environment variable name even if it is empty.
       short_names = remainder.substr(0, second_comma);
       env_var_name = remainder.substr(second_comma + 1);
+      has_env_var_name = true;
     }
   }
   // Computes the total size without the environment variable.
@@ -71,7 +74,7 @@ config_option::config_option(std::string_view category, std::string_view name,
                         });
   };
   auto ts = sub_total_size({category, long_name, short_names, description}) + 1;
-  if (env_var_name.empty()) {
+  if (!has_env_var_name) {
     // By default, the environment variable name is <category>_<long-name> in
     // upper case. However, we always omit the question mark prefix and skip the
     // category if it is "global".
@@ -102,7 +105,7 @@ config_option::config_option(std::string_view category, std::string_view name,
   short_names_separator_ = pos();
   *i++ = ',';
   // <env-var-name>,
-  if (env_var_name.empty()) {
+  if (!has_env_var_name) {
     if (category != "global") {
       i = copy_uppercase(skip_question_mark(category), i);
       *i++ = '_';
