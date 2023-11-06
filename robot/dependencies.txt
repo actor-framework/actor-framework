@@ -1,3 +1,4 @@
 robotframework
 robotframework-requests
 robotframework-websocketclient
+robotframework-httpctrl

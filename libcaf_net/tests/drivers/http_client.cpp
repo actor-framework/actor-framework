@@ -96,8 +96,8 @@ public:
 int caf_main(caf::actor_system& sys, const config& cfg) {
   auto port = caf::get_or(cfg, "port", default_port);
   auto method = caf::get_or(cfg, "method", default_method);
-  auto resource = caf::get_or<std::string>(cfg, "method", "/");
-  auto payload = caf::get_or<std::string>(cfg, "method", "");
+  auto resource = caf::get_or<std::string>(cfg, "resource", "/");
+  auto payload = caf::get_or<std::string>(cfg, "payload", "");
   auto sock = caf::net::make_connected_tcp_stream_socket(
     caf::ip_endpoint{caf::make_ipv4_address(127, 0, 0, 1), port});
   if (!sock)
