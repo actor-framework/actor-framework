@@ -1,5 +1,7 @@
 FROM alpine:3.18
 
+ADD . /foo
+
 RUN apk add --no-cache \
          cmake\
          g++ \
@@ -12,7 +14,6 @@ RUN apk add --no-cache \
          python3 \
          py3-pip
 
-RUN python3 -m pip install \
-      robotframework \
-      robotframework-requests \
-      robotframework-websocketclient
+RUN ls -la /foo
+
+RUN python3 -m pip install -r sources/robot/dependencies.txt

@@ -6,7 +6,8 @@ set -e
 set -x
 
 env ASSUME_ALWAYS_YES=YES pkg bootstrap
-pkg install -y bash git cmake
+pkg install -y bash git cmake python py39-pip
+pip install -r robot/dependencies.txt
 
 # Make sure network tests fail early.
 sysctl -w net.inet.tcp.blackhole=0
