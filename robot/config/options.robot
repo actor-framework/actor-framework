@@ -10,14 +10,14 @@ ${CONFIG_FILE_DIR}      /path/to/the/config/file/dir
 
 *** Test Cases ***
 Test Files
-    FOR  ${i}  IN RANGE  1  5
+    FOR  ${i}  IN RANGE  1  6
       Run Configuration File  ${CONFIG_FILE_DIR}/options-test${i}.cfg
     END
 
 Test Config File Path via Environment Variable
     # Our first config file has empty ENV nor CLI, so we can use it to test
     # the environment variable CONFIG_FILE.
-    ${file_path}=  Set Variable  ${CONFIG_FILE_DIR}/options-test1.cfg
+    ${file_path}=  Set Variable  ${CONFIG_FILE_DIR}/options-test2.cfg
     ${file_content}=    Get File    ${file_path}
     # Run the program with no CLI argument but CONFIG_FILE and HELP defined.
     # The latter checks that CAF will not accept this argument, i.e. CAF will

@@ -110,8 +110,13 @@ void lift_config_list(State& ps, Consumer&& consumer) {
   // clang-format on
 }
 
+/// Reads a dictionary of key-value pairs.
+/// @param ps The parser state.
+/// @param consumer The consumer to invoke for each key-value pair.
+/// @param after_dot Whether the parser is currently after a dot in a nested
+///                  key name.
 template <bool Nested = true, class State, class Consumer>
-void read_config_map(State& ps, Consumer&& consumer) {
+void read_config_map(State& ps, Consumer&& consumer, bool after_dot = false) {
   std::string key;
   auto alnum_or_dash = [](char x) {
     return isalnum(x) || x == '-' || x == '_';
@@ -121,13 +126,18 @@ void read_config_map(State& ps, Consumer&& consumer) {
     tmp.swap(key);
     consumer.key(std::move(tmp));
   };
-  auto recurse = [&consumer, &set_key]() -> decltype(auto) {
+  auto recurse = [&set_key, &consumer]() -> decltype(auto) {
     set_key();
     return consumer.begin_map();
   };
   // clang-format off
   start();
-  term_state(init) {
+  // Input may not be empty if we read a nested key.
+  unstable_state(init) {
+    epsilon_if(after_dot, await_nested_key_name)
+    epsilon(after_init)
+  }
+  term_state(after_init) {
     epsilon(await_key_name)
   }
   state(await_key_name) {
@@ -140,11 +150,16 @@ void read_config_map(State& ps, Consumer&& consumer) {
   // Reads a key of a "key=value" line.
   state(read_key_name) {
     transition(read_key_name, alnum_or_dash, key += ch)
-    fsm_transition(read_config_map(ps, recurse()), done, '.')
+    fsm_transition(read_config_map(ps, recurse(), true), after_value, '.')
     epsilon(await_assignment)
+  }
+  state(await_nested_key_name) {
+    transition(read_key_name, alnum_or_dash, key = ch)
+    fsm_epsilon(read_string(ps, key), await_assignment, quote_marks)
   }
   // Reads the assignment operator in a "key=value" line.
   state(await_assignment) {
+    fsm_transition(read_config_map(ps, recurse(), true), after_value, '.')
     transition(await_assignment, " \t")
     transition(await_value, "=:", set_key())
     epsilon(await_value, '{', set_key())
@@ -154,8 +169,10 @@ void read_config_map(State& ps, Consumer&& consumer) {
     transition(await_value, " \t")
     fsm_epsilon(read_config_value(ps, consumer), after_value)
   }
-  // Waits for end-of-line after reading a value
+  // Waits for end-of-line after reading a value. When called to read a single
+  // value, stop at this point to return to the caller.
   unstable_state(after_value) {
+    epsilon_if(after_dot, done, any_char, consumer.end_map())
     transition(after_value, " \t")
     transition(had_newline, "\n")
     transition_if(!Nested, after_comma, ',')
