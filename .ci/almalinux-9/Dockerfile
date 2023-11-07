@@ -12,7 +12,7 @@ RUN dnf update -y \
          make \
          openssl-devel \
          python39 \
-         python39-pip \
+         python3-pip \
     && dnf clean all
 
 RUN python3 -m pip install -r dependencies.txt

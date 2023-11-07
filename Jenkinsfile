@@ -17,6 +17,7 @@ config = [
     buildFlags: [
         'CAF_ENABLE_ACTOR_PROFILER:BOOL=ON',
         'CAF_ENABLE_EXAMPLES:BOOL=ON',
+        'CAF_ENABLE_ROBOT_TESTS:BOOL=ON',
         'CAF_ENABLE_RUNTIME_CHECKS:BOOL=ON',
     ],
     // Our build matrix. Keys are the operating system labels and values are build configurations.
@@ -27,7 +28,6 @@ config = [
             tags: ['docker'],
             builds: ['release'],
             extraBuildFlags: [
-                'CAF_ENABLE_ROBOT_TESTS:BOOL=ON',
                 'CMAKE_CXX_FLAGS:STRING=-Werror',
             ],
         ]],
@@ -36,7 +36,6 @@ config = [
             tags: ['docker'],
             builds: ['release'],
             extraBuildFlags: [
-                'CAF_ENABLE_ROBOT_TESTS:BOOL=ON',
                 'CMAKE_CXX_FLAGS:STRING=-Werror',
             ],
         ]],
@@ -45,7 +44,6 @@ config = [
             tags: ['docker'],
             builds: ['release'],
             extraBuildFlags: [
-                'CAF_ENABLE_ROBOT_TESTS:BOOL=ON',
                 'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wno-array-bounds',
             ],
         ]],
@@ -54,7 +52,6 @@ config = [
             tags: ['docker'],
             builds: ['release'],
             extraBuildFlags: [
-                'CAF_ENABLE_ROBOT_TESTS:BOOL=ON',
                 'CMAKE_CXX_FLAGS:STRING=-Werror',
             ],
         ]],
@@ -63,7 +60,6 @@ config = [
             tags: ['docker'],
             builds: ['release'],
             extraBuildFlags: [
-                'CAF_ENABLE_ROBOT_TESTS:BOOL=ON',
                 'CMAKE_CXX_FLAGS:STRING=-Werror',
             ],
         ]],
@@ -72,7 +68,6 @@ config = [
             tags: ['docker'],
             builds: ['release'],
             extraBuildFlags: [
-                'CAF_ENABLE_ROBOT_TESTS:BOOL=ON',
                 'CMAKE_CXX_FLAGS:STRING=-Werror',
             ],
         ]],
@@ -81,7 +76,6 @@ config = [
             tags: ['docker'],
             builds: ['release'],
             extraBuildFlags: [
-                'CAF_ENABLE_ROBOT_TESTS:BOOL=ON',
                 'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wno-array-bounds',
             ],
         ]],
@@ -90,7 +84,6 @@ config = [
             tags: ['docker'],
             builds: ['release'],
             extraBuildFlags: [
-                'CAF_ENABLE_ROBOT_TESTS:BOOL=ON',
                 'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wno-array-bounds',
                 'CAF_CXX_VERSION:STRING=23',
             ],
@@ -100,7 +93,6 @@ config = [
             tags: ['docker'],
             builds: ['release'],
             extraBuildFlags: [
-                'CAF_ENABLE_ROBOT_TESTS:BOOL=ON',
                 'CMAKE_CXX_FLAGS:STRING=-Werror',
             ],
         ]],
@@ -109,7 +101,6 @@ config = [
             tags: ['docker'],
             builds: ['release'],
             extraBuildFlags: [
-                'CAF_ENABLE_ROBOT_TESTS:BOOL=ON',
                 'CMAKE_CXX_FLAGS:STRING=-Werror',
             ],
         ]],
@@ -120,7 +111,6 @@ config = [
             builds: ['debug'],
             extraBuildFlags: [
                 'CAF_LOG_LEVEL:STRING=TRACE',
-                'CAF_ENABLE_ROBOT_TESTS:BOOL=ON',
                 'CAF_ENABLE_EXCEPTIONS:BOOL=OFF',
                 'CMAKE_CXX_FLAGS:STRING=-Werror -fno-exceptions',
             ],
@@ -133,7 +123,6 @@ config = [
             extraBuildFlags: [
                 'BUILD_SHARED_LIBS:BOOL=OFF',
                 'CAF_LOG_LEVEL:STRING=TRACE',
-                'CAF_ENABLE_ROBOT_TESTS:BOOL=ON',
                 'CAF_SANITIZERS:STRING=address',
             ],
             extraBuildEnv: [
@@ -148,7 +137,6 @@ config = [
             extraBuildFlags: [
                 'BUILD_SHARED_LIBS:BOOL=OFF',
                 'CAF_LOG_LEVEL:STRING=TRACE',
-                'CAF_ENABLE_ROBOT_TESTS:BOOL=ON',
                 'CAF_SANITIZERS:STRING=address,undefined',
                 'CMAKE_CXX_FLAGS:STRING=-Werror',
             ],
@@ -169,6 +157,7 @@ config = [
                 'CAF_ENABLE_EXAMPLES:BOOL=OFF',
                 'CAF_ENABLE_IO_MODULE:BOOL=OFF',
                 'CAF_ENABLE_IO_TOOLS:BOOL=OFF',
+                'CAF_ENABLE_ROBOT_TESTS:BOOL=OFF',
                 'CAF_ENABLE_RUNTIME_CHECKS:BOOL=ON',
                 'CAF_ENABLE_SHARED_LIBS:BOOL=OFF',
             ],

@@ -12,6 +12,7 @@ RUN dnf update -y \
          libubsan \
          make \
          openssl-devel \
+         python3 \
          python3-pip \
     && dnf clean all
 
