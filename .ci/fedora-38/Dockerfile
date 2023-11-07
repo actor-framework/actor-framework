@@ -1,6 +1,8 @@
 FROM fedora:38
 
-ADD /sources /sources
+ADD . /sources
+RUN ls -la
+RUN ls -la /sources
 
 RUN dnf update -y \
     && dnf clean all \
