@@ -1,6 +1,7 @@
 FROM alpine:3.18
 
 ADD . /foo
+RUN ls -la /foo
 
 RUN apk add --no-cache \
          cmake\

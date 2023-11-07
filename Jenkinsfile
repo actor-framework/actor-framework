@@ -1,6 +1,6 @@
 #!/usr/bin/env groovy
 
-@Library('caf-continuous-integration@topic/neverlord/extra-scripts') _
+@Library('caf-continuous-integration@topic/riemass/docker-workdir') _
 
 // Configures the behavior of our stages.
 config = [
