@@ -15,11 +15,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: install-robot
-      run:  |
-        pip install \
-          robotframework \
-          robotframework-requests \
-          robotframework-websocketclient
+      run:  pip install -r robot/dependencies.txt
     - name: configure
       run: |
         cmake \
