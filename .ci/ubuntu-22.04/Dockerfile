@@ -1,6 +1,6 @@
 FROM ubuntu:22.04
 
-ADD ./robot/dependencies.txt .
+COPY ./robot/dependencies.txt .
 
 RUN apt update -y \
     && apt upgrade -y \

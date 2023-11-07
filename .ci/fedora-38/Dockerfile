@@ -1,6 +1,6 @@
 FROM fedora:38
 
-ADD ./robot/dependencies.txt .
+COPY ./robot/dependencies.txt .
 
 RUN dnf update -y \
     && dnf clean all \

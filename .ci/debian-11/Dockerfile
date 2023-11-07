@@ -1,6 +1,6 @@
 FROM debian:11
 
-ADD ./robot/dependencies.txt .
+COPY ./robot/dependencies.txt .
 
 RUN apt update -y \
     && apt upgrade -y \

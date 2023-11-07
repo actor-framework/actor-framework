@@ -1,6 +1,6 @@
 FROM almalinux:9
 
-ADD ./robot/dependencies.txt .
+COPY ./robot/dependencies.txt .
 
 RUN dnf update -y \
     && dnf install -y \

@@ -1,6 +1,6 @@
 FROM mcr.microsoft.com/dotnet/framework/sdk:4.8-windowsservercore-ltsc2019
 
-ADD ./robot/dependencies.txt .
+COPY ./robot/dependencies.txt .
 
 SHELL [ "powershell" ]
 

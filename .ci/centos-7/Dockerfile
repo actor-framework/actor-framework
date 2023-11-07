@@ -1,6 +1,6 @@
 FROM centos:7
 
-ADD ./robot/dependencies.txt .
+COPY ./robot/dependencies.txt .
 
 RUN yum update -y \
     && yum install -y centos-release-scl \

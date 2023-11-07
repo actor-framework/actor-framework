@@ -1,6 +1,6 @@
 FROM alpine:3.18
 
-ADD ./robot/dependencies.txt .
+COPY ./robot/dependencies.txt .
 
 RUN apk add --no-cache \
          cmake\
