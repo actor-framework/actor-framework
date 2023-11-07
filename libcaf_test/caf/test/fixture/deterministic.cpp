@@ -52,24 +52,7 @@ public:
   /// Writes an entry to the event-queue of the logger.
   /// @thread-safe
   void do_log(const context& ctx, std::string&& msg) override {
-    const auto location = caf::detail::source_location::current(
-      ctx.file_name, ctx.function_name, ctx.line_number);
-    switch (ctx.level) {
-      case CAF_LOG_LEVEL_ERROR:
-        reporter::instance().print_error(std::move(msg), location);
-        return;
-      case CAF_LOG_LEVEL_WARNING:
-        reporter::instance().print_warning(std::move(msg), location);
-        return;
-      case CAF_LOG_LEVEL_INFO:
-        reporter::instance().print_info(std::move(msg), location);
-        return;
-      case CAF_LOG_LEVEL_DEBUG:
-        reporter::instance().print_debug(std::move(msg), location);
-        return;
-      case CAF_LOG_LEVEL_TRACE:
-        return;
-    }
+    reporter::instance().print(ctx, msg);
   }
 
   /// Returns whether the logger is configured to accept input for given
@@ -279,14 +262,13 @@ public:
   /// @returns Whether a timeout was triggered.
   bool trigger_timeout(const detail::source_location& loc) {
     if (num_timeouts() == 0) {
-      reporter::instance().print_debug("no pending timeout to trigger"sv, loc);
+      reporter::instance().print_debug({"no pending timeout to trigger", loc});
       return false;
     }
-    reporter::instance().print_debug("trigger next pending timeout"sv, loc);
+    reporter::instance().print_debug({"trigger next pending timeout", loc});
     if (auto delta = next_timeout(loc) - current_time; delta.count() > 0) {
-      auto msg = detail::format("advance time by {}",
-                                duration_to_string(delta));
-      reporter::instance().print_debug(msg, loc);
+      reporter::instance().print_debug({"advance time by {}", loc},
+                                       duration_to_string(delta));
       current_time += delta;
     }
     if (!try_trigger_once()) {
@@ -314,8 +296,8 @@ public:
   /// Advances the time by `x` and dispatches timeouts and delayed messages.
   /// @returns The number of triggered timeouts.
   size_t advance_time(duration_type x, const detail::source_location& loc) {
-    auto msg = detail::format("advance time by {}", duration_to_string(x));
-    reporter::instance().print_debug(msg, loc);
+    reporter::instance().print_debug({"advance time by {}", loc},
+                                     duration_to_string(x));
     if (x.count() <= 0) {
       runnable::current().fail(
         {"advance_time requires a positive duration", loc});

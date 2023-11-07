@@ -6,9 +6,12 @@
 
 #include "caf/test/fwd.hpp"
 
+#include "caf/detail/log_level.hpp"
 #include "caf/detail/source_location.hpp"
 #include "caf/detail/test_export.hpp"
+#include "caf/format_string_with_location.hpp"
 #include "caf/fwd.hpp"
+#include "caf/logger.hpp"
 
 #include <cstddef>
 #include <string_view>
@@ -19,8 +22,8 @@ namespace caf::test {
 class CAF_TEST_EXPORT reporter {
 public:
   struct stats {
-    size_t passed;
-    size_t failed;
+    size_t passed = 0;
+    size_t failed = 0;
 
     size_t total() const noexcept {
       return passed + failed;
@@ -72,21 +75,40 @@ public:
                                    const detail::source_location& location)
     = 0;
 
-  virtual void
-  print_info(std::string_view msg, const detail::source_location& location)
-    = 0;
+  /// Prints a message to the output stream if `verbosity() >= level`.
+  virtual void print(const logger::context& ctx, std::string_view msg) = 0;
 
-  virtual void
-  print_debug(std::string_view msg, const detail::source_location& location)
-    = 0;
+  /// Generates a message with the DEBUG severity level.
+  template <class... Ts>
+  void print_debug(format_string_with_location fwl, Ts&&... xs) {
+    auto ctx = logger::context::make(CAF_LOG_LEVEL_DEBUG, "caf.test",
+                                     fwl.location);
+    print(ctx, detail::format(fwl.value, std::forward<Ts>(xs)...));
+  }
 
-  virtual void
-  print_warning(std::string_view msg, const detail::source_location& location)
-    = 0;
+  /// Generates a message with the INFO severity level.
+  template <class... Ts>
+  void print_info(format_string_with_location fwl, Ts&&... xs) {
+    auto ctx = logger::context::make(CAF_LOG_LEVEL_INFO, "caf.test",
+                                     fwl.location);
+    print(ctx, detail::format(fwl.value, std::forward<Ts>(xs)...));
+  }
 
-  virtual void
-  print_error(std::string_view msg, const detail::source_location& location)
-    = 0;
+  /// Generates a message with the WARNING severity level.
+  template <class... Ts>
+  void print_warning(format_string_with_location fwl, Ts&&... xs) {
+    auto ctx = logger::context::make(CAF_LOG_LEVEL_WARNING, "caf.test",
+                                     fwl.location);
+    print(ctx, detail::format(fwl.value, std::forward<Ts>(xs)...));
+  }
+
+  /// Generates a message with the ERROR severity level.
+  template <class... Ts>
+  void print_error(format_string_with_location fwl, Ts&&... xs) {
+    auto ctx = logger::context::make(CAF_LOG_LEVEL_ERROR, "caf.test",
+                                     fwl.location);
+    print(ctx, detail::format(fwl.value, std::forward<Ts>(xs)...));
+  }
 
   virtual void print_actor_output(local_actor* self, std::string_view msg) = 0;
 

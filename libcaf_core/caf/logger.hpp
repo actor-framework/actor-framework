@@ -69,6 +69,12 @@ public:
 
     /// Name of the current function.
     const char* function_name;
+
+    static context make(unsigned level, std::string_view component,
+                        const detail::source_location& location) {
+      return {level, component, location.line(), location.file_name(),
+              location.function_name()};
+    }
   };
 
   /// Helper class to print exit trace messages on scope exit.

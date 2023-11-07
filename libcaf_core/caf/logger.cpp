@@ -11,6 +11,7 @@
 #include "caf/defaults.hpp"
 #include "caf/detail/atomic_ref_counted.hpp"
 #include "caf/detail/get_process_id.hpp"
+#include "caf/detail/log_level_map.hpp"
 #include "caf/detail/meta_object.hpp"
 #include "caf/detail/pretty_type_name.hpp"
 #include "caf/detail/set_thread_name.hpp"
@@ -58,26 +59,6 @@ struct print_adapter {
       out.put(*iter++);
   }
 };
-
-constexpr std::string_view log_level_name[] = {
-  "QUIET", "",     "", "ERROR", "",      "", "WARN", "",
-  "",      "INFO", "", "",      "DEBUG", "", "",     "TRACE",
-};
-
-/// Converts a verbosity level to its integer counterpart.
-unsigned to_level_int(std::string_view x) {
-  if (x == "error")
-    return CAF_LOG_LEVEL_ERROR;
-  if (x == "warning")
-    return CAF_LOG_LEVEL_WARNING;
-  if (x == "info")
-    return CAF_LOG_LEVEL_INFO;
-  if (x == "debug")
-    return CAF_LOG_LEVEL_DEBUG;
-  if (x == "trace")
-    return CAF_LOG_LEVEL_TRACE;
-  return CAF_LOG_LEVEL_QUIET;
-}
 
 // Default logger implementation.
 class default_logger : public logger, public detail::atomic_ref_counted {
@@ -193,7 +174,7 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   default_logger(actor_system& sys) : t0_(make_timestamp()), system_(sys) {
-    // nop
+    log_level_names_.set("WARN", CAF_LOG_LEVEL_WARNING);
   }
 
   // -- logging ----------------------------------------------------------------
@@ -319,7 +300,7 @@ public:
         case message_field:      out << x.message;                   break;
         case method_field:       out << x.function_name;             break;
         case newline_field:      out << std::endl;                   break;
-        case priority_field:     out << log_level_name[x.level];     break;
+        case priority_field:     out << log_level_names_[x.level];   break;
         case runtime_field:      out << ms_time_diff(t0_, x.tstamp); break;
         case thread_field:       out << x.tid;                       break;
         case actor_field:        out << "actor" << x.aid;            break;
@@ -351,8 +332,12 @@ public:
     using std::string;
     using string_list = std::vector<std::string>;
     auto get_verbosity = [&cfg](std::string_view key) -> unsigned {
+      // Note: for historic reasons, we override the name of
+      //       CAF_LOG_LEVEL_WARNING for the output to 'WARN' but keep
+      //       the name 'WARNING' (default) for the config option.
+      detail::log_level_map tmp;
       if (auto str = get_if<string>(&cfg, key))
-        return to_level_int(*str);
+        return tmp.by_name(*str);
       return CAF_LOG_LEVEL_QUIET;
     };
     auto read_filter = [&cfg](string_list& var, std::string_view key) {
@@ -456,7 +441,7 @@ public:
     if (!accepts(CAF_LOG_LEVEL_DEBUG, "caf"))
       return;
     auto make_message = [&](int level, const auto& filter) {
-      auto lvl_str = log_level_name[level];
+      auto lvl_str = log_level_names_[level];
       std::string msg = "verbosity = ";
       msg.insert(msg.end(), lvl_str.begin(), lvl_str.end());
       msg += ", node = ";
@@ -628,6 +613,9 @@ public:
 
   // References the parent system.
   actor_system& system_;
+
+  // Maps log levels to their string representation and vice versa.
+  detail::log_level_map log_level_names_;
 };
 
 } // namespace

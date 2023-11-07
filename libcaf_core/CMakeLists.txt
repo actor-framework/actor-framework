@@ -144,6 +144,8 @@ caf_add_component(
     caf/detail/latch.cpp
     caf/detail/latch.test.cpp
     caf/detail/local_group_module.cpp
+    caf/detail/log_level_map.cpp
+    caf/detail/log_level_map.test.cpp
     caf/detail/mailbox_factory.cpp
     caf/detail/message_builder_element.cpp
     caf/detail/message_data.cpp

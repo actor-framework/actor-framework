@@ -58,32 +58,28 @@ public:
     requirement_failed::raise(fwl.location);
   }
 
-  /// Generates a message with the INFO severity level.
-  template <class... Ts>
-  void print_info(format_string_with_location fwl, Ts&&... xs) {
-    auto msg = detail::format(fwl.value, std::forward<Ts>(xs)...);
-    reporter::instance().print_info(msg, fwl.location);
-  }
-
   /// Generates a message with the DEBUG severity level.
   template <class... Ts>
   void print_debug(format_string_with_location fwl, Ts&&... xs) {
-    auto msg = detail::format(fwl.value, std::forward<Ts>(xs)...);
-    reporter::instance().print_debug(msg, fwl.location);
+    reporter::instance().print_debug(fwl, std::forward<Ts>(xs)...);
+  }
+
+  /// Generates a message with the INFO severity level.
+  template <class... Ts>
+  void print_info(format_string_with_location fwl, Ts&&... xs) {
+    reporter::instance().print_info(fwl, std::forward<Ts>(xs)...);
   }
 
   /// Generates a message with the WARNING severity level.
   template <class... Ts>
   void print_warning(format_string_with_location fwl, Ts&&... xs) {
-    auto msg = detail::format(fwl.value, std::forward<Ts>(xs)...);
-    reporter::instance().print_warning(msg, fwl.location);
+    reporter::instance().print_warning(fwl, std::forward<Ts>(xs)...);
   }
 
   /// Generates a message with the ERROR severity level.
   template <class... Ts>
   void print_error(format_string_with_location fwl, Ts&&... xs) {
-    auto msg = detail::format(fwl.value, std::forward<Ts>(xs)...);
-    reporter::instance().print_error(msg, fwl.location);
+    reporter::instance().print_error(fwl, std::forward<Ts>(xs)...);
   }
 
   /// Checks whether `lhs` and `rhs` are equal.
