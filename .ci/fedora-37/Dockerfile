@@ -1,5 +1,7 @@
 FROM fedora:37
 
+COPY ./robot/dependencies.txt .
+
 RUN dnf update -y \
     && dnf clean all \
     && dnf install -y \
@@ -10,4 +12,8 @@ RUN dnf update -y \
          libubsan \
          make \
          openssl-devel \
+         python3 \
+         python3-pip \
     && dnf clean all
+
+RUN python3 -m pip install -r dependencies.txt

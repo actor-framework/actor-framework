@@ -1,5 +1,7 @@
 FROM fedora:38
 
+COPY ./robot/dependencies.txt .
+
 RUN dnf update -y \
     && dnf clean all \
     && dnf install -y \
@@ -14,7 +16,4 @@ RUN dnf update -y \
          python3-pip \
     && dnf clean all
 
-RUN python3 -m pip install \
-      robotframework \
-      robotframework-requests \
-      robotframework-websocketclient
+RUN python3 -m pip install -r dependencies.txt
