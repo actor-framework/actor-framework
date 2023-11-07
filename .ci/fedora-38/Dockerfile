@@ -1,8 +1,6 @@
 FROM fedora:38
 
-ADD . /sources
-RUN ls -la
-RUN ls -la /sources
+ADD ./robot/dependencies.txt .
 
 RUN dnf update -y \
     && dnf clean all \
@@ -18,7 +16,4 @@ RUN dnf update -y \
          python3-pip \
     && dnf clean all
 
-RUN ls -la
-RUN ls -la /sources
-
-RUN python3 -m pip install -r /sources/robot/dependencies.txt
+RUN python3 -m pip install -r dependencies.txt

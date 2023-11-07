@@ -1,5 +1,7 @@
 FROM centos:7
 
+ADD ./robot/dependencies.txt .
+
 RUN yum update -y \
     && yum install -y centos-release-scl \
     && yum install -y epel-release \
@@ -14,4 +16,5 @@ RUN yum update -y \
          openssl-devel \
     && yum clean all
 
+RUN python3 -m pip install -r dependencies.txt
 ENV CXX=/opt/rh/devtoolset-8/root/usr/bin/g++

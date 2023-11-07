@@ -1,5 +1,7 @@
 FROM mcr.microsoft.com/dotnet/framework/sdk:4.8-windowsservercore-ltsc2019
 
+ADD ./robot/dependencies.txt .
+
 SHELL [ "powershell" ]
 
 RUN Set-ExecutionPolicy Unrestricted -Force
@@ -17,10 +19,7 @@ RUN choco install -y --no-progress visualstudio2022-workload-vctools
 RUN choco install -y --no-progress msysgit openssl python
 
 # Install Robot Framework and dependencies.
-RUN python.exe -m pip install \
-      robotframework \
-      robotframework-requests \
-      robotframework-websocketclient
+RUN python.exe -m pip install -r dependencies.txt
 
 # Add git to the global PATH
 SHELL [ "cmd", "/c" ]

@@ -1,9 +1,6 @@
 FROM alpine:3.18
 
-ADD ./robot/dependencies.txt /bar
-RUN ls -la /bar
 ADD ./robot/dependencies.txt .
-RUN ls -la .
 
 RUN apk add --no-cache \
          cmake\
@@ -17,6 +14,4 @@ RUN apk add --no-cache \
          python3 \
          py3-pip
 
-RUN ls -la /foo
-
-RUN python3 -m pip install -r /bar/robot/dependencies.txt
+RUN python3 -m pip install -r dependencies.txt

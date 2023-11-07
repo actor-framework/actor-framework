@@ -1,5 +1,7 @@
 FROM almalinux:8
 
+ADD ./robot/dependencies.txt .
+
 RUN dnf update -y \
     && dnf install -y \
          cmake \
@@ -10,3 +12,5 @@ RUN dnf update -y \
          make \
          openssl-devel \
     && dnf clean all
+
+RUN python3 -m pip install -r dependencies.txt

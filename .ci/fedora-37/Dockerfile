@@ -1,5 +1,7 @@
 FROM fedora:37
 
+ADD ./robot/dependencies.txt .
+
 RUN dnf update -y \
     && dnf clean all \
     && dnf install -y \
@@ -11,3 +13,5 @@ RUN dnf update -y \
          make \
          openssl-devel \
     && dnf clean all
+
+RUN python3 -m pip install -r dependencies.txt

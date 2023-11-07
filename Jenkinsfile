@@ -27,6 +27,7 @@ config = [
             tags: ['docker'],
             builds: ['release'],
             extraBuildFlags: [
+                'CAF_ENABLE_ROBOT_TESTS:BOOL=ON',
                 'CMAKE_CXX_FLAGS:STRING=-Werror',
             ],
         ]],
@@ -35,6 +36,7 @@ config = [
             tags: ['docker'],
             builds: ['release'],
             extraBuildFlags: [
+                'CAF_ENABLE_ROBOT_TESTS:BOOL=ON',
                 'CMAKE_CXX_FLAGS:STRING=-Werror',
             ],
         ]],
@@ -43,6 +45,7 @@ config = [
             tags: ['docker'],
             builds: ['release'],
             extraBuildFlags: [
+                'CAF_ENABLE_ROBOT_TESTS:BOOL=ON',
                 'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wno-array-bounds',
             ],
         ]],
@@ -51,6 +54,7 @@ config = [
             tags: ['docker'],
             builds: ['release'],
             extraBuildFlags: [
+                'CAF_ENABLE_ROBOT_TESTS:BOOL=ON',
                 'CMAKE_CXX_FLAGS:STRING=-Werror',
             ],
         ]],
@@ -59,6 +63,7 @@ config = [
             tags: ['docker'],
             builds: ['release'],
             extraBuildFlags: [
+                'CAF_ENABLE_ROBOT_TESTS:BOOL=ON',
                 'CMAKE_CXX_FLAGS:STRING=-Werror',
             ],
         ]],
@@ -67,6 +72,7 @@ config = [
             tags: ['docker'],
             builds: ['release'],
             extraBuildFlags: [
+                'CAF_ENABLE_ROBOT_TESTS:BOOL=ON',
                 'CMAKE_CXX_FLAGS:STRING=-Werror',
             ],
         ]],
@@ -75,6 +81,7 @@ config = [
             tags: ['docker'],
             builds: ['release'],
             extraBuildFlags: [
+                'CAF_ENABLE_ROBOT_TESTS:BOOL=ON',
                 'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wno-array-bounds',
             ],
         ]],
@@ -83,6 +90,7 @@ config = [
             tags: ['docker'],
             builds: ['release'],
             extraBuildFlags: [
+                'CAF_ENABLE_ROBOT_TESTS:BOOL=ON',
                 'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wno-array-bounds',
                 'CAF_CXX_VERSION:STRING=23',
             ],
@@ -92,6 +100,7 @@ config = [
             tags: ['docker'],
             builds: ['release'],
             extraBuildFlags: [
+                'CAF_ENABLE_ROBOT_TESTS:BOOL=ON',
                 'CMAKE_CXX_FLAGS:STRING=-Werror',
             ],
         ]],
@@ -100,6 +109,7 @@ config = [
             tags: ['docker'],
             builds: ['release'],
             extraBuildFlags: [
+                'CAF_ENABLE_ROBOT_TESTS:BOOL=ON',
                 'CMAKE_CXX_FLAGS:STRING=-Werror',
             ],
         ]],
