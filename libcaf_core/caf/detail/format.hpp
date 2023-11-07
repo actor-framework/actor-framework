@@ -114,32 +114,3 @@ std::string format(std::string_view fstr, Args&&... args) {
 } // namespace caf::detail
 
 #endif
-
-namespace caf::detail {
-
-/// Wraps a format string and its source location. Useful for logging functions
-/// that have a variadic list of arguments and thus cannot use the usual way of
-/// passing in a source location via default argument.
-struct format_string_with_location {
-  constexpr format_string_with_location(std::string_view str,
-                                        const source_location& loc
-                                        = source_location::current())
-    : value(str), location(loc) {
-    // nop
-  }
-
-  constexpr format_string_with_location(const char* str,
-                                        const source_location& loc
-                                        = source_location::current())
-    : value(str), location(loc) {
-    // nop
-  }
-
-  /// The format string.
-  std::string_view value;
-
-  /// The source location of the format string.
-  source_location location;
-};
-
-} // namespace caf::detail

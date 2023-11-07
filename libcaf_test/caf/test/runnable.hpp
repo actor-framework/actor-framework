@@ -20,6 +20,7 @@
 #include "caf/detail/source_location.hpp"
 #include "caf/detail/test_export.hpp"
 #include "caf/expected.hpp"
+#include "caf/format_string_with_location.hpp"
 #include "caf/raise_error.hpp"
 
 #include <string_view>
@@ -51,7 +52,7 @@ public:
 
   /// Generates a message with the INFO severity level.
   template <class... Ts>
-  [[noreturn]] void fail(detail::format_string_with_location fwl, Ts&&... xs) {
+  [[noreturn]] void fail(format_string_with_location fwl, Ts&&... xs) {
     auto msg = detail::format(fwl.value, std::forward<Ts>(xs)...);
     reporter::instance().fail(msg, fwl.location);
     requirement_failed::raise(fwl.location);
@@ -59,28 +60,28 @@ public:
 
   /// Generates a message with the INFO severity level.
   template <class... Ts>
-  void print_info(detail::format_string_with_location fwl, Ts&&... xs) {
+  void print_info(format_string_with_location fwl, Ts&&... xs) {
     auto msg = detail::format(fwl.value, std::forward<Ts>(xs)...);
     reporter::instance().print_info(msg, fwl.location);
   }
 
   /// Generates a message with the DEBUG severity level.
   template <class... Ts>
-  void print_debug(detail::format_string_with_location fwl, Ts&&... xs) {
+  void print_debug(format_string_with_location fwl, Ts&&... xs) {
     auto msg = detail::format(fwl.value, std::forward<Ts>(xs)...);
     reporter::instance().print_debug(msg, fwl.location);
   }
 
   /// Generates a message with the WARNING severity level.
   template <class... Ts>
-  void print_warning(detail::format_string_with_location fwl, Ts&&... xs) {
+  void print_warning(format_string_with_location fwl, Ts&&... xs) {
     auto msg = detail::format(fwl.value, std::forward<Ts>(xs)...);
     reporter::instance().print_warning(msg, fwl.location);
   }
 
   /// Generates a message with the ERROR severity level.
   template <class... Ts>
-  void print_error(detail::format_string_with_location fwl, Ts&&... xs) {
+  void print_error(format_string_with_location fwl, Ts&&... xs) {
     auto msg = detail::format(fwl.value, std::forward<Ts>(xs)...);
     reporter::instance().print_error(msg, fwl.location);
   }

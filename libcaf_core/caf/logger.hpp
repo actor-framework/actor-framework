@@ -14,6 +14,7 @@
 #include "caf/detail/pp.hpp"
 #include "caf/detail/pretty_type_name.hpp"
 #include "caf/detail/scope_guard.hpp"
+#include "caf/format_string_with_location.hpp"
 #include "caf/fwd.hpp"
 
 #include <cstring>
@@ -150,7 +151,7 @@ public:
   /// @param args Arguments for the format string.
   template <class... Ts>
   static void log(unsigned level, std::string_view component,
-                  detail::format_string_with_location fmt_str, Ts&&... args) {
+                  format_string_with_location fmt_str, Ts&&... args) {
     auto* instance = current_logger();
     if (instance && instance->accepts(level, component)) {
       auto& loc = fmt_str.location;
@@ -167,7 +168,7 @@ public:
   /// @param args Arguments for the format string.
   template <class... Ts>
   [[nodiscard]] static trace_exit_guard
-  trace(std::string_view component, detail::format_string_with_location fmt_str,
+  trace(std::string_view component, format_string_with_location fmt_str,
         Ts&&... args) {
     auto* instance = current_logger();
     if (instance && instance->accepts(CAF_LOG_LEVEL_TRACE, component)) {
@@ -189,7 +190,7 @@ public:
   /// @param args Arguments for the format string.
   template <class... Ts>
   static void debug(std::string_view component,
-                    detail::format_string_with_location fmt_str, Ts&&... args) {
+                    format_string_with_location fmt_str, Ts&&... args) {
     log(CAF_LOG_LEVEL_DEBUG, component, fmt_str, std::forward<Ts>(args)...);
   }
 
@@ -199,7 +200,7 @@ public:
   /// @param args Arguments for the format string.
   template <class... Ts>
   static void info(std::string_view component,
-                   detail::format_string_with_location fmt_str, Ts&&... args) {
+                   format_string_with_location fmt_str, Ts&&... args) {
     log(CAF_LOG_LEVEL_INFO, component, fmt_str, std::forward<Ts>(args)...);
   }
 
@@ -209,8 +210,7 @@ public:
   /// @param args Arguments for the format string.
   template <class... Ts>
   static void warning(std::string_view component,
-                      detail::format_string_with_location fmt_str,
-                      Ts&&... args) {
+                      format_string_with_location fmt_str, Ts&&... args) {
     log(CAF_LOG_LEVEL_WARNING, component, fmt_str, std::forward<Ts>(args)...);
   }
 
@@ -220,7 +220,7 @@ public:
   /// @param args Arguments for the format string.
   template <class... Ts>
   static void error(std::string_view component,
-                    detail::format_string_with_location fmt_str, Ts&&... args) {
+                    format_string_with_location fmt_str, Ts&&... args) {
     log(CAF_LOG_LEVEL_ERROR, component, fmt_str, std::forward<Ts>(args)...);
   }
 
