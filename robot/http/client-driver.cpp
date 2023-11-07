@@ -36,16 +36,13 @@ constexpr auto default_method = http::method::get;
 // -- http client sending get request and awaiting response --------------------
 class http_app : public http::upper_layer::client {
 public:
-  static auto make(http::method method, std::string resource,
-                   std::string payload) {
-    return std::make_unique<http_app>(method, std::move(resource),
+  static auto make(http::method method, std::string path, std::string payload) {
+    return std::make_unique<http_app>(method, std::move(path),
                                       std::move(payload));
   }
 
-  http_app(http::method method, std::string resource, std::string payload)
-    : method_{method},
-      resource_{std::move(resource)},
-      payload_{std::move(payload)} {
+  http_app(http::method method, std::string path, std::string payload)
+    : method_{method}, path_{std::move(path)}, payload_{std::move(payload)} {
     latch_ = std::make_shared<detail::latch>(2);
   }
 
@@ -70,7 +67,7 @@ public:
   caf::error start(http::lower_layer::client* ll) override {
     down = ll;
     // Send request.
-    down->begin_header(method_, resource_);
+    down->begin_header(method_, path_);
     if (!payload_.empty())
       down->add_header_field("Content-Length", std::to_string(payload_.size()));
     down->end_header();
@@ -102,7 +99,7 @@ public:
 private:
   http::lower_layer::client* down = nullptr;
   http::method method_;
-  std::string resource_;
+  std::string path_;
   std::string payload_;
   std::shared_ptr<detail::latch> latch_;
 };

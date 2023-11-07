@@ -148,7 +148,7 @@ if(TARGET CAF::net)
   caf_add_test_executable(
     caf-robot-http-client-driver
     SOURCES
-      http/client_driver.cpp
+      http/client-driver.cpp
     DEPENDENCIES
       CAF::net)
 
