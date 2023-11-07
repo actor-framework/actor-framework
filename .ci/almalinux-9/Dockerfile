@@ -11,6 +11,7 @@ RUN dnf update -y \
          libubsan \
          make \
          openssl-devel \
+         python39 \
     && dnf clean all
 
-RUN python -m pip install -r dependencies.txt
+RUN python3 -m pip install -r dependencies.txt

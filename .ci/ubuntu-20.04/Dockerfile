@@ -10,6 +10,8 @@ RUN apt update -y \
          git \
          libssl-dev \
          make \
+         python3 \
+         python3-pip \
     && apt-get autoclean
 
-RUN python -m pip install -r dependencies.txt
+RUN python3 -m pip install -r dependencies.txt
