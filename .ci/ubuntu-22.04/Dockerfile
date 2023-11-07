@@ -12,4 +12,4 @@ RUN apt update -y \
          make \
     && apt autoclean
 
-RUN python3 -m pip install -r dependencies.txt
+RUN python -m pip install -r dependencies.txt

@@ -13,4 +13,4 @@ RUN dnf update -y \
          openssl-devel \
     && dnf clean all
 
-RUN python3 -m pip install -r dependencies.txt
+RUN python -m pip install -r dependencies.txt
