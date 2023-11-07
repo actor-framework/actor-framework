@@ -179,9 +179,12 @@ public:
   }
 
   /// Adds the output of fn() to the beginning of current observable.
-  template <class F>
-  auto start_with(F fn) {
-    return ctx()->make_observable().just(fn()).concat(*this);
+  template <class Input>
+  auto start_with(Input value) {
+    if constexpr (is_observable_v<Input>)
+      return std::move(value).concat(*this);
+    else
+      return parent()->make_observable().just(std::move(value)).concat(*this);
   }
 
   /// Collects all values and emits all values at once in a @ref cow_vector.

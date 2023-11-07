@@ -377,9 +377,9 @@ public:
   }
 
   /// @copydoc observable::start_with
-  template <class F>
-  auto start_with(F fn) && {
-    return materialize().start_with(std::forward<F>(fn));
+  template <class Input>
+  auto start_with(Input&& value) && {
+    return materialize().start_with(std::forward<Input>(value));
   }
 
   /// @copydoc observable::flat_map
