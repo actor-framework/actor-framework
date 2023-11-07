@@ -47,6 +47,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   implementation is correct and no longer relies on the order of elements.
 - When using `--dump-config`, CAF now properly renders nested dictionaries.
   Previously, dictionaries in lists missed surrounding braces.
+- CAF now parses `foo.bar = 42` in a config file as `foo { bar = 42 }`, just as
+  it does for CLI arguments.
 
 ### Changed
 

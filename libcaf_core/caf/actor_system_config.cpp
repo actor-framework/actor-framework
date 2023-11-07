@@ -327,14 +327,25 @@ private:
   void print_kvp(const config_value::dictionary::value_type& kvp) {
     const auto& [key, val] = kvp;
     if (auto* submap = get_if<config_value::dictionary>(&val)) {
-      std::cout << indent_ << key << " {\n";
+      std::cout << indent_;
+      print_key(key);
+      std::cout << " {\n";
       auto sub_printer = config_printer{indent_ + 2};
       sub_printer(*submap);
       std::cout << "\n" << indent_ << "}";
     } else {
-      std::cout << indent_ << key << " = ";
+      std::cout << indent_;
+      print_key(key);
+      std::cout << " = ";
       std::visit(*this, val.get_data());
     }
+  }
+
+  void print_key(const std::string& key) {
+    if (key.find('.') == std::string::npos)
+      std::cout << key;
+    else
+      detail::print_escaped(out_, key);
   }
 
   indentation indent_;
