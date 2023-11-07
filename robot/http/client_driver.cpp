@@ -62,11 +62,12 @@ public:
   }
 
   virtual void abort(const caf::error& reason) override {
-    printf("%s\n", to_string(reason).c_str());
+    std::cerr << "*** abort called with error - " << to_string(reason)
+              << std::endl;
+    exit(EXIT_FAILURE);
   }
 
   caf::error start(http::lower_layer::client* ll) override {
-    std::cout << "HTTP Client started" << std::endl;
     down = ll;
     // Send request.
     down->begin_header(method_, resource_);
@@ -82,12 +83,15 @@ public:
 
   ptrdiff_t consume(const http::response_header& hdr,
                     caf::const_byte_span payload) override {
-    std::cout
-      << "Got response: " << hdr.status() << ' ' << hdr.status_text()
-      << std::endl
-      // << std::string_view{reinterpret_cast<const char*>(payload.data()),
-      //                     payload.size()}
-      << std::endl;
+    std::cout << hdr.version() << ' ' << hdr.status() << ' '
+              << hdr.status_text() << std::endl;
+    hdr.for_each_field([](const auto& key, const auto& val) {
+      if (key != "Date")
+        std::cout << key << ':' << val << std::endl;
+    });
+    std::cout << std::string_view{reinterpret_cast<const char*>(payload.data()),
+                                  payload.size()}
+              << std::endl;
     return static_cast<ptrdiff_t>(payload.size());
   }
 

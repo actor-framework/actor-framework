@@ -145,4 +145,19 @@ if(TARGET CAF::net)
         --variable SSL_PATH:${CMAKE_CURRENT_SOURCE_DIR}
         "${CMAKE_CURRENT_SOURCE_DIR}/web_socket/echo.robot")
 
+  caf_add_test_executable(
+    caf-robot-http-client-driver
+    SOURCES
+      http/client_driver.cpp
+    DEPENDENCIES
+      CAF::net)
+
+  add_test(
+    NAME "robot-http-client"
+    COMMAND
+      ${Python_EXECUTABLE}
+        -m robot
+        --variable BINARY_PATH:$<TARGET_FILE:caf-robot-http-client-driver>
+        "${CMAKE_CURRENT_SOURCE_DIR}/http/client.robot")
+
 endif()

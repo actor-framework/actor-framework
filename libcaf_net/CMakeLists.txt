@@ -136,10 +136,3 @@ caf_add_test_executable(
     tests/drivers/autobahn.cpp
   DEPENDENCIES
     CAF::net)
-
-caf_add_test_executable(
-  caf-net-http-client
-  SOURCES
-    tests/drivers/http_client.cpp
-  DEPENDENCIES
-    CAF::net)
