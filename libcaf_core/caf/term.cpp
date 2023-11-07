@@ -55,22 +55,35 @@ int tty_codes[] = {
   win_white    // bold white
 };
 
-void set_term_color(std::ostream& out, int c) {
-  static WORD default_color = 0xFFFF;
-  auto hdl = GetStdHandle(&out == &std::cout ? STD_OUTPUT_HANDLE
-                                             : STD_ERROR_HANDLE);
-  if (default_color == 0xFFFF) {
+thread_local WORD term_default_color = 0xFFFF;
+
+template <class Handle>
+void set_term_color_impl(Handle hdl, int c) {
+  if (term_default_color == 0xFFFF) {
     CONSOLE_SCREEN_BUFFER_INFO info;
     if (!GetConsoleScreenBufferInfo(hdl, &info))
       return;
-    default_color = info.wAttributes;
+    term_default_color = info.wAttributes;
   }
   // always pick background from the default color
-  auto x = c < 0 ? default_color
-                 : static_cast<WORD>((0xF0 & default_color) | (0x0F & c));
+  auto x = c < 0 ? term_default_color
+                 : static_cast<WORD>((0xF0 & term_default_color) | (0x0F & c));
   SetConsoleTextAttribute(hdl, x);
+}
+
+void set_term_color(std::ostream& out, int c) {
+  auto hdl = GetStdHandle(&out == &std::cout ? STD_OUTPUT_HANDLE
+                                             : STD_ERROR_HANDLE);
+  set_term_color_impl(hdl, c);
   if (c == -2)
     out << '\n';
+}
+
+void set_term_color(FILE* out, int c) {
+  auto hdl = GetStdHandle(out == stdout ? STD_OUTPUT_HANDLE : STD_ERROR_HANDLE);
+  set_term_color_impl(hdl, c);
+  if (c == -2)
+    fputc('\n', out);
 }
 
 #  define STDOUT_FILENO 1
@@ -101,13 +114,25 @@ const char* tty_codes[] = {
   "\033[1m\033[37m"  // bold_white
 };
 
-void set_term_color(std::ostream& out, const char* x) {
-  out << x;
+void set_term_color(std::ostream& out, const char* color) {
+  out << color;
+}
+
+void set_term_color(FILE* out, const char* color) {
+  fputs(color, out);
 }
 
 #  define ISATTY_FUN ::isatty
 
 #endif
+
+bool is_tty(FILE* out) {
+  if (out == stdout)
+    return ISATTY_FUN(STDOUT_FILENO) != 0;
+  if (out == stderr)
+    return ISATTY_FUN(STDERR_FILENO) != 0;
+  return false;
+}
 
 bool is_tty(const std::ostream& out) {
   if (&out == &std::cout)
@@ -128,3 +153,18 @@ std::ostream& operator<<(std::ostream& out, term x) {
 }
 
 } // namespace caf
+
+namespace caf::detail {
+
+bool is_tty(FILE* out) noexcept {
+  return caf::is_tty(out);
+}
+
+void set_color(FILE* out, term color) {
+  if (is_tty(out))
+    set_term_color(out, tty_codes[static_cast<size_t>(color)]);
+  else if (color == term::reset_endl)
+    fputc('\n', out);
+}
+
+} // namespace caf::detail

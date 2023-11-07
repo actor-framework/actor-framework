@@ -4,9 +4,14 @@
 
 #pragma once
 
+#include "caf/default_enum_inspect.hpp"
 #include "caf/detail/core_export.hpp"
 
+#include <cstdio>
 #include <iosfwd>
+#include <string>
+#include <string_view>
+#include <type_traits>
 
 namespace caf {
 
@@ -50,6 +55,31 @@ enum class term {
   bold_white
 };
 
+/// @relates term
+CAF_CORE_EXPORT std::string to_string(term);
+
+/// @relates term
+CAF_CORE_EXPORT bool from_string(std::string_view, term&);
+
+/// @relates term
+CAF_CORE_EXPORT bool from_integer(std::underlying_type_t<term>, term&);
+
 CAF_CORE_EXPORT std::ostream& operator<<(std::ostream& out, term x);
 
+/// @relates sec
+template <class Inspector>
+bool inspect(Inspector& f, term& x) {
+  return default_enum_inspect(f, x);
+}
+
 } // namespace caf
+
+namespace caf::detail {
+
+/// Checks whether `out` points to a TTY.
+CAF_CORE_EXPORT bool is_tty(FILE* out) noexcept;
+
+/// Sets the terminal color to `color` if `out` is a TTY.
+CAF_CORE_EXPORT void set_color(FILE* out, term color);
+
+} // namespace caf::detail
