@@ -114,7 +114,7 @@ constexpr auto relaxed_sleep_duration = timespan{10'000'000};
 
 namespace caf::defaults::logger::file {
 
-constexpr auto format = std::string_view{"%r %c %p %a %t %C %M %F:%L %m%n"};
+constexpr auto format = std::string_view{"%r %c %p %a %t %M %F:%L %m%n"};
 constexpr auto path
   = std::string_view{"actor_log_[PID]_[TIMESTAMP]_[NODE].log"};
 
