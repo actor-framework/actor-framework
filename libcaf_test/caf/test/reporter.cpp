@@ -11,6 +11,7 @@
 
 #include "caf/detail/format.hpp"
 #include "caf/detail/log_level.hpp"
+#include "caf/detail/log_level_map.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/term.hpp"
@@ -166,6 +167,15 @@ public:
 
   using fractional_seconds = std::chrono::duration<double>;
 
+  default_reporter() {
+    // Install lower-case log level names for more consistent output.
+    log_level_names_.set("error", CAF_LOG_LEVEL_ERROR);
+    log_level_names_.set("warning", CAF_LOG_LEVEL_WARNING);
+    log_level_names_.set("info", CAF_LOG_LEVEL_INFO);
+    log_level_names_.set("debug", CAF_LOG_LEVEL_DEBUG);
+    log_level_names_.set("trace", CAF_LOG_LEVEL_TRACE);
+  }
+
   bool success() const noexcept override {
     return total_stats_.failed == 0;
   }
@@ -185,26 +195,25 @@ public:
   }
 
   void stop() override {
-    using detail::format_to;
     using std::chrono::duration_cast;
     auto elapsed = clock_type::now() - start_time_;
-    format_to(colored(),
-              "$B(Summary):\n"
-              "  $B(Time):   $Y({0:.3f}s)\n"
-              "  $B(Suites): ${1}({2} / {3})\n"
-              "  $B(Checks): ${1}({4} / {5})\n"
-              "  $B(Status): ${1}({6})\n",
-              duration_cast<fractional_seconds>(elapsed).count(), // {0}
-              total_stats_.failed > 0 ? 'R' : 'G',                // {1}
-              num_suites_ - failed_suites_.size(),                // {2}
-              num_suites_,                                        // {3}
-              total_stats_.passed,                                // {4}
-              total_stats_.total(),                               // {5}
-              total_stats_.failed > 0 ? "failed" : "passed");     // {6}
+    detail::format_to(colored(),
+                      "$B(Summary):\n"
+                      "  $B(Time):   $Y({0:.3f}s)\n"
+                      "  $B(Suites): ${1}({2} / {3})\n"
+                      "  $B(Checks): ${1}({4} / {5})\n"
+                      "  $B(Status): ${1}({6})\n",
+                      duration_cast<fractional_seconds>(elapsed).count(), // {0}
+                      total_stats_.failed > 0 ? 'R' : 'G',                // {1}
+                      num_suites_ - failed_suites_.size(),                // {2}
+                      num_suites_,                                        // {3}
+                      total_stats_.passed,                                // {4}
+                      total_stats_.total(),                               // {5}
+                      total_stats_.failed > 0 ? "failed" : "passed");     // {6}
     if (!failed_suites_.empty()) {
-      format_to(colored(), "  $B(Failed Suites):\n");
+      detail::format_to(colored(), "  $B(Failed Suites):\n");
       for (auto name : failed_suites_)
-        format_to(colored(), "  - $R({})\n", name);
+        detail::format_to(colored(), "  - $R({})\n", name);
     }
     std::cout << std::endl;
   }
@@ -218,7 +227,6 @@ public:
   }
 
   void end_suite(std::string_view name) override {
-    using detail::format_to;
     using std::chrono::duration_cast;
     total_stats_ += suite_stats_;
     if (suite_stats_.failed > 0)
@@ -226,21 +234,21 @@ public:
     else if (level_ < CAF_LOG_LEVEL_DEBUG)
       return;
     auto elapsed = clock_type::now() - suite_start_time_;
-    format_to(colored(),
-              "$B(Suite Summary): $C({0})\n"
-              "  $B(Time):   $Y({1:.3f}s)\n"
-              "  $B(Checks): ${2}({3} / {4})\n"
-              "  $B(Status): ${2}({5})\n",
-              name != "$" ? name : "(default suite)",             // {0}
-              duration_cast<fractional_seconds>(elapsed).count(), // {1}
-              suite_stats_.failed > 0 ? 'R' : 'G',                // {2}
-              suite_stats_.passed,                                // {3}
-              suite_stats_.total(),                               // {4}
-              suite_stats_.failed > 0 ? "failed" : "passed");     // {5}
+    detail::format_to(colored(),
+                      "$B(Suite Summary): $C({0})\n"
+                      "  $B(Time):   $Y({1:.3f}s)\n"
+                      "  $B(Checks): ${2}({3} / {4})\n"
+                      "  $B(Status): ${2}({5})\n",
+                      name != "$" ? name : "(default suite)",             // {0}
+                      duration_cast<fractional_seconds>(elapsed).count(), // {1}
+                      suite_stats_.failed > 0 ? 'R' : 'G',                // {2}
+                      suite_stats_.passed,                                // {3}
+                      suite_stats_.total(),                               // {4}
+                      suite_stats_.failed > 0 ? "failed" : "passed");     // {5}
     if (!failed_tests_.empty()) {
-      format_to(colored(), "  $B(Failed tests):\n");
+      detail::format_to(colored(), "  $B(Failed tests):\n");
       for (auto name : failed_tests_)
-        format_to(colored(), "  - $R({})\n", name);
+        detail::format_to(colored(), "  - $R({})\n", name);
     }
     std::cout << std::endl;
   }
@@ -264,11 +272,10 @@ public:
   void set_live() {
     if (live_)
       return;
-    using detail::format_to;
     if (current_ctx_ == nullptr)
       CAF_RAISE_ERROR(std::logic_error, "begin_test was not called");
     if (current_suite_ != "$") {
-      format_to(colored(), "$C(Suite): $0{}\n", current_suite_);
+      detail::format_to(colored(), "$C(Suite): $0{}\n", current_suite_);
       indent_ = 2;
     } else {
       indent_ = 0;
@@ -279,13 +286,12 @@ public:
   }
 
   void begin_step(block* ptr) override {
-    using detail::format_to;
     if (!live_)
       return;
     if (indent_ > 0 && is_extension(ptr->type()))
       indent_ -= 2;
-    format_to(colored(), "{0:{1}}$C({2}): $0{3}\n", ' ', indent_,
-              as_prefix(ptr->type()), ptr->description());
+    detail::format_to(colored(), "{0:{1}}$C({2}): $0{3}\n", ' ', indent_,
+                      as_prefix(ptr->type()), ptr->description());
     indent_ += 2;
   }
 
@@ -299,111 +305,102 @@ public:
   }
 
   void pass(const detail::source_location& location) override {
-    using detail::format_to;
     test_stats_.passed++;
     if (level_ < CAF_LOG_LEVEL_DEBUG)
       return;
     set_live();
-    format_to(colored(), "{0:{1}}$G(pass) $C({2}):$Y({3})$0\n", ' ', indent_,
-              location.file_name(), location.line());
+    detail::format_to(colored(), "{0:{1}}$G(pass) $C({2}):$Y({3})$0\n", ' ',
+                      indent_, location.file_name(), location.line());
   }
 
   void fail(binary_predicate type, std::string_view lhs, std::string_view rhs,
             const detail::source_location& location) override {
-    using detail::format_to;
     test_stats_.failed++;
     if (level_ < CAF_LOG_LEVEL_ERROR)
       return;
     set_live();
-    format_to(colored(),
-              "{0:{1}}$R(error): lhs {2} rhs\n"
-              "{0:{1}}  loc: $C({3}):$Y({4})$0\n"
-              "{0:{1}}  lhs: {5}\n"
-              "{0:{1}}  rhs: {6}\n",
-              ' ', indent_, str(negate(type)), location.file_name(),
-              location.line(), lhs, rhs);
+    detail::format_to(colored(),
+                      "{0:{1}}$R({2}): lhs {3} rhs\n"
+                      "{0:{1}}  loc: $C({4}):$Y({5})$0\n"
+                      "{0:{1}}  lhs: {6}\n"
+                      "{0:{1}}  rhs: {7}\n",
+                      ' ', indent_, log_level_names_[CAF_LOG_LEVEL_ERROR],
+                      str(negate(type)), location.file_name(), location.line(),
+                      lhs, rhs);
   }
 
   void fail(std::string_view arg,
             const detail::source_location& location) override {
-    using detail::format_to;
     test_stats_.failed++;
     if (level_ < CAF_LOG_LEVEL_ERROR)
       return;
     set_live();
-    format_to(colored(),
-              "{0:{1}}$R(error): check failed\n"
-              "{0:{1}}    loc: $C({2}):$Y({3})$0\n"
-              "{0:{1}}  check: {4}\n",
-              ' ', indent_, location.file_name(), location.line(), arg);
+    detail::format_to(colored(),
+                      "{0:{1}}$R({2}): check failed\n"
+                      "{0:{1}}    loc: $C({3}):$Y({4})$0\n"
+                      "{0:{1}}  check: {5}\n",
+                      ' ', indent_, log_level_names_[CAF_LOG_LEVEL_ERROR],
+                      location.file_name(), location.line(), arg);
   }
 
   void unhandled_exception(std::string_view msg) override {
-    using detail::format_to;
     test_stats_.failed++;
     if (level_ < CAF_LOG_LEVEL_ERROR)
       return;
     set_live();
     if (current_ctx_ == nullptr || current_ctx_->unwind_stack.empty()) {
-      format_to(colored(),
-                "{0:{1}}$R(unhandled exception): abort test run\n"
-                "{0:{1}}  loc: $R(unknown)$0\n"
-                "{0:{1}}  msg: {2}\n",
-                ' ', indent_, msg);
+      detail::format_to(colored(),
+                        "{0:{1}}$R(unhandled exception): abort test run\n"
+                        "{0:{1}}  loc: $R(unknown)$0\n"
+                        "{0:{1}}  msg: {2}\n",
+                        ' ', indent_, msg);
     } else {
       auto& location = current_ctx_->unwind_stack.front()->location();
-      format_to(colored(),
-                "{0:{1}}$R(unhandled exception): abort test run\n"
-                "{0:{1}}  loc: in block starting at $C({2}):$Y({3})$0\n"
-                "{0:{1}}  msg: {4}\n",
-                ' ', indent_, location.file_name(), location.line(), msg);
+      detail::format_to(colored(),
+                        "{0:{1}}$R(unhandled exception): abort test run\n"
+                        "{0:{1}}  loc: in block starting at $C({2}):$Y({3})$0\n"
+                        "{0:{1}}  msg: {4}\n",
+                        ' ', indent_, location.file_name(), location.line(),
+                        msg);
     }
   }
 
   void unhandled_exception(std::string_view msg,
                            const detail::source_location& location) override {
-    using detail::format_to;
     test_stats_.failed++;
     if (level_ < CAF_LOG_LEVEL_ERROR)
       return;
     set_live();
-    format_to(colored(),
-              "{0:{1}}$R(unhandled exception): abort test run\n"
-              "{0:{1}}  loc: $C({2}):$Y({3})$0\n"
-              "{0:{1}}  msg: {4}\n",
-              ' ', indent_, location.file_name(), location.line(), msg);
+    detail::format_to(colored(),
+                      "{0:{1}}$R(unhandled exception): abort test run\n"
+                      "{0:{1}}  loc: $C({2}):$Y({3})$0\n"
+                      "{0:{1}}  msg: {4}\n",
+                      ' ', indent_, location.file_name(), location.line(), msg);
   }
 
-  void print_info(std::string_view msg,
-                  const detail::source_location& location) override {
-    print_impl(CAF_LOG_LEVEL_INFO, 'M', "info", msg, location);
-  }
-
-  void print_error(std::string_view msg,
-                   const detail::source_location& location) override {
-    print_impl(CAF_LOG_LEVEL_ERROR, 'R', "error", msg, location);
-  }
-
-  void print_debug(std::string_view msg,
-                   const detail::source_location& location) override {
-    print_impl(CAF_LOG_LEVEL_DEBUG, 'B', "debug", msg, location);
-  }
-
-  void print_warning(std::string_view msg,
-                     const detail::source_location& location) override {
-    print_impl(CAF_LOG_LEVEL_WARNING, 'Y', "warning", msg, location);
+  void print(const logger::context& ctx, std::string_view msg) override {
+    if (level_ < ctx.level)
+      return;
+    set_live();
+    detail::format_to(colored(),
+                      "{0:{1}}${2}({3}):\n"
+                      "{0:{1}}  loc: $C({4}):$Y({5})$0\n"
+                      "{0:{1}}  msg: {6}\n",
+                      ' ', indent_, color_by_log_level(ctx.level),
+                      log_level_names_[ctx.level], ctx.file_name,
+                      ctx.line_number, msg);
   }
 
   void print_actor_output(local_actor* self, std::string_view msg) override {
-    using detail::format_to;
     if (level_ < CAF_LOG_LEVEL_INFO)
       return;
     set_live();
-    format_to(colored(),
-              "{0:{1}}$M(info):\n"
-              "{0:{1}}  src: $0{2} [ID {3}]\n"
-              "{0:{1}}  msg: {4}\n",
-              ' ', indent_, self->name(), self->id(), msg);
+    detail::format_to(colored(),
+                      "{0:{1}}$M({2}):\n"
+                      "{0:{1}}  src: $0{3} [ID {4}]\n"
+                      "{0:{1}}  msg: {5}\n",
+                      ' ', indent_, log_level_names_[CAF_LOG_LEVEL_INFO],
+                      self->name(), self->id(), msg);
   }
 
   unsigned verbosity(unsigned level) noexcept override {
@@ -437,19 +434,14 @@ public:
   }
 
 private:
-  void print_impl(unsigned level, char color_code, std::string_view level_name,
-                  std::string_view msg,
-                  const detail::source_location& location) {
-    using detail::format_to;
-    if (level_ < level)
-      return;
-    set_live();
-    format_to(colored(),
-              "{0:{1}}${2}({3}):\n"
-              "{0:{1}}  loc: $C({4}):$Y({5})$0\n"
-              "{0:{1}}  msg: {6}\n",
-              ' ', indent_, color_code, level_name, location.file_name(),
-              location.line(), msg);
+  static char color_by_log_level(unsigned level) {
+    if (level >= CAF_LOG_LEVEL_DEBUG)
+      return 'B';
+    if (level >= CAF_LOG_LEVEL_INFO)
+      return 'M';
+    if (level >= CAF_LOG_LEVEL_WARNING)
+      return 'Y';
+    return 'R';
   }
 
   void print_indent(size_t indent) {
@@ -465,13 +457,13 @@ private:
   size_t indent_ = 0;
 
   /// Stores statistics for the current test.
-  stats test_stats_ = {0, 0};
+  stats test_stats_;
 
   /// Stores statistics for the current suite.
-  stats suite_stats_ = {0, 0};
+  stats suite_stats_;
 
   /// Stores statistics for all suites.
-  stats total_stats_ = {0, 0};
+  stats total_stats_;
 
   /// Counts the number of test suites.
   size_t num_suites_ = 0;
@@ -507,6 +499,9 @@ private:
 
   /// Stores the state for the current test.
   context_ptr current_ctx_;
+
+  /// Maps log levels to their names.
+  detail::log_level_map log_level_names_;
 };
 
 reporter* global_instance;
