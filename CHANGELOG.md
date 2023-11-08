@@ -57,6 +57,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   `to_string(sec::none)` now returns `"none"` instead of `"caf::sec::none"`.
   Accordingly, `from_string` now accepts the short name (in additional to the
   fully qualified name).
+- Log format strings no longer support `%C`. CAF still recognizes this option
+  but it will always print `null`.
 
 ### Deprecated
 
