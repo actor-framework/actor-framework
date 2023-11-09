@@ -44,6 +44,9 @@ public:
 
   /// Store actors that the server should monitor.
   std::vector<strong_actor_ptr> monitored_actors;
+
+  /// Store the maximum request size.
+  size_t max_request_size = 0;
 };
 
 } // namespace caf::net::http
