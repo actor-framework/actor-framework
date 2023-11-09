@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/detail/core_export.hpp"
+#include "caf/detail/type_traits.hpp"
 #include "caf/fwd.hpp"
 #include "caf/parser_state.hpp"
 
@@ -14,9 +15,18 @@
 #include <string>
 #include <string_view>
 
+namespace caf::chrono {
+
+/// Tag type for converting timestamps to strings with a fixed number of
+/// fractional digits.
+struct fixed {};
+
+} // namespace caf::chrono
+
 namespace caf::detail {
 
-/// The size of the buffer used for formatting.
+/// The size of the buffer used for formatting. Large enough to hold the longest
+/// possible ISO 8601 string.
 constexpr size_t format_buffer_size = 40;
 
 /// Splits the time point into seconds and nanoseconds since epoch.
@@ -38,11 +48,31 @@ std::pair<time_t, int> split_time_point(TimePoint ts) {
 /// @param buf_size The size of `buf` in bytes.
 /// @param secs The number of seconds since epoch.
 /// @param nsecs The number of nanoseconds since the last full second.
+/// @param precision The number of fractional digits to print.
+/// @param is_fixed Whether to print a fixed number of digits.
 /// @returns A pointer to the null terminator of `buf`.
 /// @pre `buf_size >= 36`.
 CAF_CORE_EXPORT
-char* print_localtime(char* buf, size_t buf_size, time_t secs,
-                      int nsecs) noexcept;
+char* print_localtime(char* buf, size_t buf_size, time_t secs, int nsecs,
+                      int precision, bool is_fixed) noexcept;
+
+/// Maps a resolution (seconds, milliseconds, microseconds, or nanoseconds) to
+/// the number of fractional digits (0, 3, 6 or 9).
+template <class Resolution>
+constexpr int to_precision() noexcept {
+  if constexpr (std::is_same_v<Resolution, std::chrono::seconds>) {
+    return 0;
+  } else if constexpr (std::is_same_v<Resolution, std::chrono::milliseconds>) {
+    return 3;
+  } else if constexpr (std::is_same_v<Resolution, std::chrono::microseconds>) {
+    return 6;
+  } else {
+    static_assert(std::is_same_v<Resolution, std::chrono::nanoseconds>,
+                  "expected seconds, milliseconds, "
+                  "microseconds, or nanoseconds");
+    return 9;
+  }
+}
 
 } // namespace caf::detail
 
@@ -53,25 +83,41 @@ template <class Duration>
 using sys_time = std::chrono::time_point<std::chrono::system_clock, Duration>;
 
 /// Formats `ts` in ISO 8601 format.
+/// @tparam Resolution The resolution for the fractional part of the seconds.
+/// @tparam Policy Either `fixed` to force a fixed number of fractional digits
+///                or `unit_t` (default) to use a variable number.
 /// @param ts The time point to format.
 /// @returns The formatted string.
-template <class Duration>
+template <class Resolution = std::chrono::nanoseconds, class Policy = unit_t,
+          class Duration>
 std::string to_string(sys_time<Duration> ts) {
   char buf[detail::format_buffer_size];
   auto [secs, nsecs] = detail::split_time_point(ts);
-  detail::print_localtime(buf, sizeof(buf), secs, nsecs);
-  return buf;
+  auto end = detail::print_localtime(buf, sizeof(buf), secs, nsecs,
+                                     detail::to_precision<Resolution>(),
+                                     std::is_same_v<Policy, fixed>);
+  return std::string{buf, end};
 }
 
 /// Prints `ts` to `out` in ISO 8601 format.
+/// @tparam Resolution The resolution for the fractional part of the seconds.
+/// @tparam Policy Either `fixed` to force a fixed number of fractional digits
+///                or `unit_t` (default) to use a variable number.
 /// @param out The buffer to write to.
 /// @param ts The time point to print.
-template <class Buffer, class Duration>
-void print(Buffer& out, sys_time<Duration> ts) {
+template <class Resolution = std::chrono::nanoseconds, class Policy = unit_t,
+          class BufferOrIterator, class Duration>
+auto print(BufferOrIterator&& out, sys_time<Duration> ts) {
   char buf[detail::format_buffer_size];
   auto [secs, nsecs] = detail::split_time_point(ts);
-  auto end = detail::print_localtime(buf, sizeof(buf), secs, nsecs);
-  out.insert(out.end(), buf, end);
+  auto end = detail::print_localtime(buf, sizeof(buf), secs, nsecs,
+                                     detail::to_precision<Resolution>(),
+                                     std::is_same_v<Policy, fixed>);
+  if constexpr (detail::has_insert_v<std::decay_t<BufferOrIterator>>) {
+    out.insert(out.end(), buf, end);
+  } else {
+    return std::copy(buf, end, out);
+  }
 }
 
 /// Represents a point in time, expressed as a date and time of day. Also
@@ -112,6 +158,15 @@ public:
   /// Convenience function for converting a string to a `datetime` object.
   static expected<datetime> from_string(std::string_view str);
 
+  /// Converts a local time to a `datetime` object.
+  template <class Duration>
+  static datetime from_local_time(sys_time<Duration> src) {
+    auto [secs, nsecs] = detail::split_time_point(src);
+    datetime result;
+    result.read_local_time(secs, nsecs);
+    return result;
+  }
+
   /// Overrides the current date and time with the values from `x`.
   void value(const datetime& x) noexcept {
     *this = x;
@@ -130,12 +185,53 @@ public:
     return sc::time_point_cast<Duration>(result);
   }
 
+  /// Formats this object in ISO 8601 format.
+  /// @tparam Resolution The resolution for the fractional part of the seconds.
+  /// @tparam Policy Either `fixed` to force a fixed number of fractional digits
+  ///                or `unit_t` (default) to use a variable number.
+  template <class Resolution = std::chrono::nanoseconds, class Policy = unit_t>
+  std::string to_string() const {
+    std::string result;
+    result.resize(detail::format_buffer_size);
+    auto end = print_to<Resolution, Policy>(result.data());
+    result.resize(end - result.data());
+    return result;
+  }
+
+  /// Converts this object to UTC.
+  /// @post `utc_offset == 0`
+  void force_utc();
+
+  /// Formats this object in ISO 8601 format and writes the result to `out`.
+  /// @tparam Resolution The resolution for the fractional part of the seconds.
+  /// @tparam Policy Either `fixed` to force a fixed number of fractional digits
+  ///                or `unit_t` (default) to use a variable number.
+  template <class Resolution = std::chrono::nanoseconds, class Policy = unit_t,
+            class OutputIterator>
+  OutputIterator print_to(OutputIterator out) const {
+    char buf[detail::format_buffer_size];
+    auto end = print_to_buf(buf, detail::to_precision<Resolution>(),
+                            std::is_same_v<Policy, fixed>);
+    return std::copy(buf, end, out);
+  }
+
 private:
+  void read_local_time(time_t secs, int nsecs);
+
+  /// Assigns a time_t (UTC) value to this object.
+  void assign_utc_secs(time_t secs) noexcept;
+
   /// Converts this object to a time_t value.
   time_t to_time_t() const noexcept;
-};
 
-// -- free functions -----------------------------------------------------------
+  /// Prints this object to a buffer.
+  /// @param buf The buffer to write to.
+  /// @param precision  The number of digits to print for the fractional part.
+  /// @param is_fixed Whether to print a fixed number of digits.
+  /// @returns A pointer to the null terminator of `buf`.
+  /// @pre `buf_size >= format_buffer_size`.
+  char* print_to_buf(char* buf, int precision, bool is_fixed) const noexcept;
+};
 
 /// @relates datetime
 inline bool operator==(const datetime& x, const datetime& y) noexcept {
