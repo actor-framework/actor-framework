@@ -48,8 +48,8 @@ public:
   }
 
   void schedule_next(coordinator::steady_time_point timeout) {
-    auto act = make_single_shot_action([this] { fire(); });
-    pending_ = ctx_->delay_until(timeout, std::move(act));
+    pending_ = ctx_->delay_until(timeout,
+                                 make_single_shot_action([this] { fire(); }));
   }
 
   void fire() {

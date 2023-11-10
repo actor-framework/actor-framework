@@ -811,6 +811,10 @@ private:
   /// detail::stream_bridge_sub).
   void try_push_stream(uint64_t local_id);
 
+  /// Cleans up any state associated to flows and streams and cancels all
+  /// ongoing activities.
+  void cancel_flows_and_streams();
+
   /// Stores actions that the actor executes after processing the current
   /// message.
   std::vector<action> actions_;

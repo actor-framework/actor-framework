@@ -228,30 +228,10 @@ bool scheduled_actor::cleanup(error&& fail_state, execution_unit* host) {
   // Shutdown hosting thread when running detached.
   if (private_thread_)
     home_system().release_private_thread(private_thread_);
-  // Clear state for open requests.
+  // Clear state for open requests, flows and streams.
   awaited_responses_.clear();
   multiplexed_responses_.clear();
-  // Cancel flows and streams.
-  stream_sources_.clear();
-  if (!stream_subs_.empty()) {
-    decltype(stream_subs_) subs;
-    subs.swap(stream_subs_);
-    for (auto& [id, ptr] : subs)
-      ptr->cancel();
-  }
-  if (!stream_bridges_.empty()) {
-    decltype(stream_bridges_) bridges;
-    bridges.swap(stream_bridges_);
-    for (auto& [id, ptr] : bridges)
-      ptr->drop();
-  }
-  while (!watched_disposables_.empty()) {
-    decltype(watched_disposables_) disposables;
-    disposables.swap(watched_disposables_);
-    for (auto& ptr : disposables)
-      ptr.dispose();
-  }
-  run_actions();
+  cancel_flows_and_streams();
   // Discard stashed messages.
   auto dropped = size_t{0};
   if (!stash_.empty()) {
@@ -371,27 +351,8 @@ void scheduled_actor::quit(error x) {
   set_error_handler(silently_ignore<error>);
   // Drop future messages and produce sec::request_receiver_down for requests.
   set_default_handler(drop_after_quit);
-  // Cancel flows and streams.
-  stream_sources_.clear();
-  if (!stream_subs_.empty()) {
-    decltype(stream_subs_) subs;
-    subs.swap(stream_subs_);
-    for (auto& [id, ptr] : subs)
-      ptr->cancel();
-  }
-  if (!stream_bridges_.empty()) {
-    decltype(stream_bridges_) bridges;
-    bridges.swap(stream_bridges_);
-    for (auto& [id, ptr] : bridges)
-      ptr->drop();
-  }
-  while (!watched_disposables_.empty()) {
-    decltype(watched_disposables_) disposables;
-    disposables.swap(watched_disposables_);
-    for (auto& ptr : disposables)
-      ptr.dispose();
-  }
-  run_actions();
+  // Make sure we're not waiting for flows or stream anymore.
+  cancel_flows_and_streams();
 }
 
 // -- timeout management -------------------------------------------------------
@@ -1048,6 +1009,31 @@ void scheduled_actor::try_push_stream(uint64_t local_id) {
 void scheduled_actor::unstash() {
   while (auto stashed = stash_.pop())
     mailbox().push_front(mailbox_element_ptr{stashed});
+}
+
+void scheduled_actor::cancel_flows_and_streams() {
+  // Note: we always swap out a map before iterating it, because some callbacks
+  //       may call erase on the map while we are iterating it.
+  stream_sources_.clear();
+  if (!stream_subs_.empty()) {
+    decltype(stream_subs_) subs;
+    subs.swap(stream_subs_);
+    for (auto& [id, ptr] : subs)
+      ptr->cancel();
+  }
+  if (!stream_bridges_.empty()) {
+    decltype(stream_bridges_) bridges;
+    bridges.swap(stream_bridges_);
+    for (auto& [id, ptr] : bridges)
+      ptr->drop();
+  }
+  while (!watched_disposables_.empty()) {
+    decltype(watched_disposables_) disposables;
+    disposables.swap(watched_disposables_);
+    for (auto& ptr : disposables)
+      ptr.dispose();
+  }
+  run_actions();
 }
 
 } // namespace caf
