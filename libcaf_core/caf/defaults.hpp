@@ -164,10 +164,13 @@ namespace caf::defaults::net {
 /// previous connection has been closed.
 constexpr auto max_connections = make_parameter("max-connections", size_t{64});
 
+/// Default maximum size for incoming HTTP requests: 64KiB.
+constexpr auto http_max_request_size = uint32_t{65'536};
+
 /// The default port for HTTP servers.
-constexpr uint16_t http_default_port = 80;
+constexpr auto http_default_port = uint16_t{80};
 
 /// The default port for HTTPS servers.
-constexpr uint16_t https_default_port = 443;
+constexpr auto https_default_port = uint16_t{443};
 
 } // namespace caf::defaults::net

@@ -16,6 +16,7 @@
 #include "caf/net/socket_manager.hpp"
 
 #include "caf/byte_span.hpp"
+#include "caf/defaults.hpp"
 #include "caf/detail/append_hex.hpp"
 #include "caf/detail/message_flow_bridge.hpp"
 #include "caf/detail/net_export.hpp"
@@ -43,11 +44,6 @@ public:
 
   using upper_layer_ptr = std::unique_ptr<http::upper_layer::server>;
 
-  // -- constants --------------------------------------------------------------
-
-  /// Default maximum size for incoming HTTP requests: 64KiB.
-  static constexpr uint32_t default_max_request_size = 65'536;
-
   // -- constructors, destructors, and assignment operators --------------------
 
   explicit server(upper_layer_ptr up) : up_(std::move(up)) {
@@ -73,7 +69,8 @@ public:
   }
 
   void max_request_size(size_t value) noexcept {
-    max_request_size_ = value;
+    if (value > 0)
+      max_request_size_ = value;
   }
 
   // -- http::lower_layer implementation ---------------------------------------
@@ -141,7 +138,7 @@ private:
   size_t payload_len_ = 0;
 
   /// Maximum size for incoming HTTP requests.
-  size_t max_request_size_ = default_max_request_size;
+  size_t max_request_size_ = caf::defaults::net::http_max_request_size;
 };
 
 } // namespace caf::net::http

@@ -84,8 +84,7 @@ public:
                                connection_handle conn) override {
     auto app = net::http::router::make(routes_);
     auto serv = net::http::server::make(std::move(app));
-    if (max_request_size_ > 0)
-      serv->max_request_size(max_request_size_);
+    serv->max_request_size(max_request_size_);
     auto transport = Transport::make(std::move(conn), std::move(serv));
     transport->max_consecutive_reads(max_consecutive_reads_);
     transport->active_policy().accept();

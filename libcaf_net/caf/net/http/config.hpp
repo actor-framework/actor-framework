@@ -45,7 +45,7 @@ public:
   /// Store actors that the server should monitor.
   std::vector<strong_actor_ptr> monitored_actors;
 
-  /// Store the maximum request size.
+  /// Store the maximum request size with 0 meaning "default".
   size_t max_request_size = 0;
 };
 

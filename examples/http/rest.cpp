@@ -10,6 +10,7 @@
 #include "caf/actor_system_config.hpp"
 #include "caf/caf_main.hpp"
 #include "caf/deep_to_string.hpp"
+#include "caf/defaults.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/scheduled_actor/flow.hpp"
 
@@ -26,9 +27,6 @@ namespace http = caf::net::http;
 static constexpr uint16_t default_port = 8080;
 
 static constexpr size_t default_max_connections = 128;
-
-static constexpr size_t default_max_request_size
-  = caf::net::http::server::default_max_request_size;
 
 // -- configuration ------------------------------------------------------------
 
@@ -47,7 +45,8 @@ struct config : caf::actor_system_config {
     auto result = actor_system_config::dump_content();
     caf::put_missing(result, "port", default_port);
     caf::put_missing(result, "max-connections", default_max_connections);
-    caf::put_missing(result, "max-request-size", default_max_request_size);
+    caf::put_missing(result, "max-request-size",
+                     caf::defaults::net::http_max_request_size);
     return result;
   }
 };
@@ -100,8 +99,8 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
   auto cert_file = caf::get_as<std::string>(cfg, "tls.cert-file");
   auto max_connections = caf::get_or(cfg, "max-connections",
                                      default_max_connections);
-  auto max_request_size = caf::get_or(cfg, "max-request-size",
-                                      default_max_request_size);
+  auto max_request_size = caf::get_or(
+    cfg, "max-request-size", caf::defaults::net::http_max_request_size);
   if (!key_file != !cert_file) {
     std::cerr << "*** inconsistent TLS config: declare neither file or both\n";
     return EXIT_FAILURE;
