@@ -127,9 +127,10 @@ private:
     return detail::tcp_try_connect(std::move(addr.host), addr.port,
                                    data.connection_timeout,
                                    data.max_retry_count, data.retry_delay)
-      .and_then(data.connection_with_ctx([this, &cfg, &on_start](auto& conn) {
-        return this->do_start_impl(cfg, std::move(conn), on_start);
-      }));
+      .and_then(
+        connection_with_ctx(cfg.ctx, [this, &cfg, &on_start](auto& conn) {
+          return this->do_start_impl(cfg, std::move(conn), on_start);
+        }));
   }
 
   template <class OnStart>
@@ -146,21 +147,20 @@ private:
       return do_start(cfg, err, on_start);
     }
     if (addr.scheme() == "ws") {
-      if (data.ctx) {
-        auto err = make_error(sec::logic_error,
-                              "found SSL config with scheme ws");
-        return do_start(cfg, err, on_start);
-      }
       if (port == 0)
         port = defaults::net::http_default_port;
     } else if (addr.scheme() == "wss") {
       if (port == 0)
         port = defaults::net::https_default_port;
-      if (!data.ctx) { // Auto-initialize SSL context for wss.
-        auto ctx = ssl::context::make_client(ssl::tls::v1_0);
-        if (!ctx)
-          return do_start(cfg, ctx.error(), on_start);
-        data.ctx = std::make_shared<ssl::context>(std::move(*ctx));
+      // Lazy-initialize SSL context for wss.
+      auto result = data.make_ctx();
+      if (!result)
+        return do_start(cfg, result.error(), on_start);
+      cfg.ctx = std::move(*result);
+      if (!cfg.ctx) {
+        auto err = make_error(sec::invalid_argument,
+                              "No SSL context set up for wss scheme");
+        return do_start(cfg, err, on_start);
       }
     } else {
       auto err = make_error(sec::invalid_argument,
@@ -174,9 +174,10 @@ private:
     return detail::tcp_try_connect(std::move(host), port,
                                    data.connection_timeout,
                                    data.max_retry_count, data.retry_delay)
-      .and_then(data.connection_with_ctx([this, &cfg, &on_start](auto& conn) {
-        return this->do_start_impl(cfg, std::move(conn), on_start);
-      }));
+      .and_then(
+        connection_with_ctx(cfg.ctx, [this, &cfg, &on_start](auto& conn) {
+          return this->do_start_impl(cfg, std::move(conn), on_start);
+        }));
   }
 
   template <class OnStart>
@@ -196,9 +197,10 @@ private:
     return sanity_check(cfg)
       .transform([&data] { return data.take_fd(); })
       .and_then(check_socket)
-      .and_then(data.connection_with_ctx([this, &cfg, &on_start](auto& conn) {
-        return this->do_start_impl(cfg, std::move(conn), on_start);
-      }));
+      .and_then(
+        connection_with_ctx(cfg.ctx, [this, &cfg, &on_start](auto& conn) {
+          return this->do_start_impl(cfg, std::move(conn), on_start);
+        }));
   }
 
   template <class OnStart>

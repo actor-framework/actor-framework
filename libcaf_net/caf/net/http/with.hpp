@@ -9,6 +9,9 @@
 #include "caf/net/dsl/has_accept.hpp"
 #include "caf/net/dsl/has_connect.hpp"
 #include "caf/net/dsl/has_context.hpp"
+#include "caf/net/dsl/has_lazy_context.hpp"
+#include "caf/net/dsl/has_uri_connect.hpp"
+#include "caf/net/http/client_factory.hpp"
 #include "caf/net/http/config.hpp"
 #include "caf/net/http/request.hpp"
 #include "caf/net/http/router.hpp"
@@ -25,8 +28,11 @@ namespace caf::net::http {
 
 /// Entry point for the `with(...)` DSL.
 class with_t : public extend<dsl::base, with_t>:: //
-               with<dsl::has_accept, dsl::has_context> {
+               with<dsl::has_accept, dsl::has_lazy_context, dsl::has_context,
+                    dsl::has_uri_connect> {
 public:
+  using config_type = base_config;
+
   template <class... Ts>
   explicit with_t(multiplexer* mpx) : config_(make_counted<base_config>(mpx)) {
     // nop
@@ -49,6 +55,12 @@ public:
   template <class T, class... Ts>
   auto make(dsl::server_config_tag<T> token, Ts&&... xs) {
     return server_factory{token, *config_, std::forward<Ts>(xs)...};
+  }
+
+  /// @private
+  template <class T, class... Ts>
+  auto make(dsl::client_config_tag<T> token, Ts&&... xs) {
+    return client_factory{token, *config_, std::forward<Ts>(xs)...};
   }
 
 private:

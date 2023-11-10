@@ -48,7 +48,7 @@ public:
   auto accept(ssl::tcp_acceptor acc) {
     auto& dref = static_cast<Subtype&>(*this);
     auto& cfg = dref.config();
-    auto ptr = cfg.as_has_ctx();
+    auto ptr = cfg.as_has_make_ctx();
     // The SSL acceptor has its own context, we cannot have two.
     if (!ptr) {
       return dref.make(server_config::fail_v, cfg, cfg.cannot_add_ctx());

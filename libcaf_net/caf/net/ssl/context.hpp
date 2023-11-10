@@ -7,6 +7,7 @@
 #include "caf/net/dsl/arg.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/socket_guard.hpp"
+#include "caf/net/ssl/connection.hpp"
 #include "caf/net/ssl/dtls.hpp"
 #include "caf/net/ssl/format.hpp"
 #include "caf/net/ssl/password.hpp"
@@ -479,6 +480,24 @@ inline auto use_private_key_file_if(dsl::arg::cstring path,
     bool (context::*fn)(const char*, format) = &context::use_private_key_file;
     return detail::ssl_ctx_chain_if(ctx, "use_private_key_file failed", fn,
                                     arg1, arg2);
+  };
+}
+
+/// Returns a function that, when called with a @ref stream_socket, calls
+/// `f` either with a new SSL connection from `ctx` or with the file the
+/// file descriptor if no SSL context is defined.
+template <class F>
+auto connection_with_ctx(std::shared_ptr<ssl::context>& ctx, F&& f) {
+  return [ctx, g = std::forward<F>(f)](stream_socket fd) mutable {
+    using res_t = decltype(g(fd));
+    if (ctx) {
+      auto conn = ctx->new_connection(fd);
+      if (conn)
+        return g(*conn);
+      close(fd);
+      return res_t{std::move(conn.error())};
+    }
+    return g(fd);
   };
 }
 

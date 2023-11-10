@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/net/dsl/client_config.hpp"
 #include "caf/net/dsl/generic_config.hpp"
 #include "caf/net/dsl/server_config.hpp"
 #include "caf/net/http/route.hpp"
@@ -39,6 +40,9 @@ public:
     return ptr;
   }
 
+  /// Stores the optional SSL context for secure connections.
+  std::shared_ptr<ssl::context> ctx;
+
   /// Stores the available routes on the HTTP server.
   std::vector<route_ptr> routes;
 
@@ -47,6 +51,36 @@ public:
 
   /// Store the maximum request size with 0 meaning "default".
   size_t max_request_size = 0;
+};
+
+struct CAF_NET_EXPORT client_config
+  : public dsl::config_impl<dsl::client_config::lazy> {
+  // Not used, still declared since client_factory_base depends on it.
+  using trait_type = void;
+
+  using super = dsl::config_impl<dsl::client_config::lazy>;
+
+  using super::super;
+
+  template <class T, class... Args>
+  static auto
+  make(dsl::client_config_tag<T>, const base_config& from, Args&&... args) {
+    auto ptr = super::make_impl(std::in_place_type<client_config>, from,
+                                std::in_place_type<T>,
+                                std::forward<Args>(args)...);
+    return ptr;
+  }
+
+  /// Stores the optional SSL context for secure connections.
+  std::shared_ptr<ssl::context> ctx;
+
+  http::method method;
+
+  std::string path;
+
+  caf::unordered_flat_map<std::string, std::string> fields;
+
+  std::string payload;
 };
 
 } // namespace caf::net::http

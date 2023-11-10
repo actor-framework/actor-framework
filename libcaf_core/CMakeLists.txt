@@ -107,6 +107,7 @@ caf_add_component(
     caf/binary_deserializer.cpp
     caf/binary_serializer.cpp
     caf/blocking_actor.cpp
+    caf/byte_span.cpp
     caf/chrono.cpp
     caf/chrono.test.cpp
     caf/config_option.cpp

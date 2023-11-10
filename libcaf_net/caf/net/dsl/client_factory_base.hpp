@@ -18,7 +18,7 @@
 
 namespace caf::net::dsl {
 
-/// Base type for client factories for use with `can_connect`.
+/// Base type for client factories for use with `has_connect`.
 template <class Config, class Derived>
 class client_factory_base {
 public:

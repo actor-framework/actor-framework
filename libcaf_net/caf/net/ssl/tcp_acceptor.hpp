@@ -10,6 +10,7 @@
 
 #include "caf/detail/net_export.hpp"
 #include "caf/expected.hpp"
+#include "caf/logger.hpp"
 
 #include <variant>
 
@@ -97,5 +98,19 @@ void CAF_NET_EXPORT close(tcp_acceptor& acc);
 /// Tries to accept a new connection on `acc`. On success, wraps the new socket
 /// into an SSL @ref connection and returns it.
 expected<connection> CAF_NET_EXPORT accept(tcp_acceptor& acc);
+
+/// Returns a function that, when called with an accept socket, calls `f`
+/// either with a new SSL acceptor from `ctx` or with the file the file
+/// descriptor if no SSL context is defined.
+template <class F>
+auto acceptor_with_ctx(std::shared_ptr<ssl::context> ctx, F&& f) {
+  return [ctx, g = std::forward<F>(f)](auto fd) mutable {
+    if (ctx) {
+      auto acc = ssl::tcp_acceptor{fd, std::move(*ctx)};
+      return g(acc);
+    }
+    return g(fd);
+  };
+}
 
 } // namespace caf::net::ssl

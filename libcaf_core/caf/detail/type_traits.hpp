@@ -1021,6 +1021,12 @@ struct has_init_host_system {
 template <class T>
 constexpr bool has_init_host_system_v = has_init_host_system<T>::value;
 
+/// Drop-in replacement for C++23's std::to_underlying.
+template <class Enum>
+[[nodiscard]] constexpr auto to_underlying(Enum e) noexcept {
+  return static_cast<std::underlying_type_t<Enum>>(e);
+}
+
 } // namespace caf::detail
 
 #undef CAF_HAS_MEMBER_TRAIT

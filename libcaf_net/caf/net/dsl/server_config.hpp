@@ -30,7 +30,7 @@ struct server_config_tag {
 class server_config {
 public:
   /// Configuration for a server that creates the socket on demand.
-  class lazy : public has_ctx {
+  class lazy : public has_make_ctx {
   public:
     static constexpr std::string_view name = "lazy";
 
@@ -54,7 +54,7 @@ public:
   static constexpr auto lazy_v = lazy_t{};
 
   /// Configuration for a server that uses a user-provided socket.
-  class socket : public has_ctx {
+  class socket : public has_make_ctx {
   public:
     static constexpr std::string_view name = "socket";
 
