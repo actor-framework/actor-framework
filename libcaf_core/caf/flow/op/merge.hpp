@@ -87,6 +87,8 @@ public:
 
   void on_next(const observable<T>& what) override {
     CAF_ASSERT(what);
+    if (!sub_)
+      return;
     auto key = next_key_++;
     inputs_.emplace(key, merge_input<T>{});
     using fwd_impl = forwarder<T, merge_sub, size_t>;
@@ -306,6 +308,7 @@ private:
       else
         ++i;
     }
+    sub_.dispose();
   }
 
   bool done() const noexcept {
