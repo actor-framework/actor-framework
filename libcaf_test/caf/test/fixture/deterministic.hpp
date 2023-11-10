@@ -419,20 +419,7 @@ public:
     actor_scope_guard& operator=(const actor_scope_guard&) = delete;
 
     ~actor_scope_guard() {
-      if (!dst_)
-        return;
-      auto emsg = exit_msg{dst_->address(), exit_reason::kill};
-      if (!dst_->enqueue(nullptr, make_message_id(), make_message(emsg),
-                         nullptr)) {
-        // Nothing to do here. The actor already terminated.
-        return;
-      }
-      actor_predicate is_anon{nullptr};
-      message_predicate<exit_msg> is_kill_msg{emsg};
-      [[maybe_unused]] auto preponed = fix_->prepone_event_impl(dst_, is_anon,
-                                                                is_kill_msg);
-      assert(preponed);
-      fix_->dispatch_message();
+      fix_->inject_exit(dst_, exit_reason::kill);
     }
 
   private:
@@ -495,6 +482,21 @@ public:
 
   /// Dispatches all pending messages.
   size_t dispatch_messages();
+
+  // -- actor management -------------------------------------------------------
+
+  /// Injects an exit message into the mailbox of `hdl` and dispatches it
+  /// immediately.
+  void inject_exit(const strong_actor_ptr& hdl,
+                   error reason = exit_reason::user_shutdown);
+
+  /// Injects an exit message into the mailbox of `hdl` and dispatches it
+  /// immediately.
+  template <class Handle>
+  void
+  inject_exit(const Handle& hdl, error reason = exit_reason::user_shutdown) {
+    inject_exit(actor_cast<strong_actor_ptr>(hdl), std::move(reason));
+  }
 
   // -- time management --------------------------------------------------------
 

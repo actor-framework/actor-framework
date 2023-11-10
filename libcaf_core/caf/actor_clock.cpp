@@ -17,8 +17,7 @@ namespace caf {
 
 namespace {
 
-// Unlike the regular action implementation, this one is *not* thread-safe!
-// Only the clock itself may access this.
+/// Decorates an action by adding a worker to it that will run the action.
 template <class WorkerPtr>
 class action_decorator : public ref_counted, public action::impl {
 public:
@@ -32,6 +31,8 @@ public:
 
   void dispose() override {
     decorated_->dispose();
+    std::unique_lock guard(mtx_);
+    worker_ = nullptr;
   }
 
   bool disposed() const noexcept override {
@@ -49,16 +50,20 @@ public:
   void run() override {
     CAF_ASSERT(decorated_ != nullptr);
     CAF_ASSERT(worker_ != nullptr);
+    WorkerPtr tmp;
+    {
+      std::unique_lock guard(mtx_);
+      tmp = std::move(worker_);
+    }
     if constexpr (std::is_same_v<WorkerPtr, weak_actor_ptr>) {
-      if (auto ptr = actor_cast<strong_actor_ptr>(worker_)) {
+      if (auto ptr = actor_cast<strong_actor_ptr>(tmp)) {
         do_run(ptr);
       } else {
         decorated_->dispose();
       }
     } else {
-      do_run(worker_);
+      do_run(tmp);
     }
-    worker_ = nullptr;
   }
 
   state current_state() const noexcept override {
@@ -80,6 +85,7 @@ private:
                    nullptr);
   }
 
+  std::mutex mtx_;
   action::impl_ptr decorated_;
   WorkerPtr worker_;
 };
@@ -114,14 +120,16 @@ disposable actor_clock::schedule(action f) {
 
 disposable actor_clock::schedule(time_point t, action f,
                                  strong_actor_ptr worker) {
-  schedule(t, decorate(f, std::move(worker)));
-  return std::move(f).as_disposable();
+  auto decorated = decorate(std::move(f), std::move(worker));
+  schedule(t, decorated);
+  return std::move(decorated).as_disposable();
 }
 
 disposable actor_clock::schedule(time_point t, action f,
                                  weak_actor_ptr worker) {
-  schedule(t, decorate(f, std::move(worker)));
-  return std::move(f).as_disposable();
+  auto decorated = decorate(std::move(f), std::move(worker));
+  schedule(t, decorated);
+  return std::move(decorated).as_disposable();
 }
 
 disposable actor_clock::schedule_message(time_point t,

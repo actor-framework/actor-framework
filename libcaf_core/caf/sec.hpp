@@ -87,6 +87,8 @@ enum class sec : uint8_t {
   invalid_stream = 30,
   /// Subscribing to a stream failed because it can only be subscribed to once.
   cannot_resubscribe_stream,
+  /// A stream was aborted by the hosting actor, usually because it terminated.
+  stream_aborted,
   /// A function view was called without assigning an actor first.
   bad_function_call = 40,
   /// Feature is disabled in the actor system config.

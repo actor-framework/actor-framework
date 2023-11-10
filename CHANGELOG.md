@@ -49,6 +49,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   Previously, dictionaries in lists missed surrounding braces.
 - CAF now parses `foo.bar = 42` in a config file as `foo { bar = 42 }`, just as
   it does for CLI arguments.
+- Fix shutdown logic for actors with open streams. This resolves an issue where
+  actors would not terminate correctly after receiving an exit message (#1657).
 
 ### Changed
 

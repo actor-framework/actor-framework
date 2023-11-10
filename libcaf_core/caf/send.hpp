@@ -54,6 +54,16 @@ void unsafe_send_as(Source* src, const Dest& dest, Ts&&... xs) {
                                                std::forward<Ts>(xs)...);
 }
 
+template <message_priority P = message_priority::normal, class Dest,
+          class... Ts>
+void unsafe_anon_send(const Dest& dest, Ts&&... xs) {
+  static_assert(sizeof...(Ts) > 0, "no message to send");
+  if (dest)
+    actor_cast<abstract_actor*>(dest)->eq_impl(make_message_id(P), nullptr,
+                                               nullptr,
+                                               std::forward<Ts>(xs)...);
+}
+
 template <class... Ts>
 void unsafe_response(local_actor* self, strong_actor_ptr src,
                      std::vector<strong_actor_ptr> stages, message_id mid,

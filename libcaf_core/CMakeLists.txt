@@ -254,6 +254,7 @@ caf_add_component(
     caf/settings.cpp
     caf/skip.cpp
     caf/stream.cpp
+    caf/stream.test.cpp
     caf/string_algorithms.cpp
     caf/string_view.cpp
     caf/system_messages.test.cpp
@@ -379,7 +380,6 @@ caf_add_component(
     simple_timeout
     span
     stateful_actor
-    stream
     string_algorithms
     string_view
     thread_hook

@@ -228,18 +228,10 @@ bool scheduled_actor::cleanup(error&& fail_state, execution_unit* host) {
   // Shutdown hosting thread when running detached.
   if (private_thread_)
     home_system().release_private_thread(private_thread_);
-  // Clear state for open requests.
+  // Clear state for open requests, flows and streams.
   awaited_responses_.clear();
   multiplexed_responses_.clear();
-  // Cancel any active flow.
-  while (!watched_disposables_.empty()) {
-    CAF_LOG_DEBUG("clean up" << watched_disposables_.size()
-                             << "remaining disposables");
-    for (auto& ptr : watched_disposables_)
-      ptr.dispose();
-    watched_disposables_.clear();
-    run_actions();
-  }
+  cancel_flows_and_streams();
   // Discard stashed messages.
   auto dropped = size_t{0};
   if (!stash_.empty()) {
@@ -359,13 +351,8 @@ void scheduled_actor::quit(error x) {
   set_error_handler(silently_ignore<error>);
   // Drop future messages and produce sec::request_receiver_down for requests.
   set_default_handler(drop_after_quit);
-  // Cancel any active flow.
-  while (!watched_disposables_.empty()) {
-    for (auto& ptr : watched_disposables_)
-      ptr.dispose();
-    watched_disposables_.clear();
-    run_actions();
-  }
+  // Make sure we're not waiting for flows or stream anymore.
+  cancel_flows_and_streams();
 }
 
 // -- timeout management -------------------------------------------------------
@@ -385,22 +372,31 @@ void scheduled_actor::set_receive_timeout() {
 
 // -- caf::flow API ------------------------------------------------------------
 
-namespace {
+namespace detail {
 
 // Forwards batches from a local flow to another actor.
 class batch_forwarder_impl : public scheduled_actor::batch_forwarder,
                              public flow::observer_impl<async::batch> {
 public:
   batch_forwarder_impl(scheduled_actor* self, actor sink_hdl,
-                       uint64_t sink_flow_id)
-    : self_(self), sink_hdl_(sink_hdl), sink_flow_id_(sink_flow_id) {
+                       uint64_t sink_flow_id, uint64_t source_flow_id)
+    : self_(self),
+      sink_hdl_(sink_hdl),
+      sink_flow_id_(sink_flow_id),
+      source_flow_id_(source_flow_id) {
     // nop
   }
 
   void cancel() override {
+    if (sink_hdl_) {
+      // Note: must send this as anonymous message, because this can be called
+      // from on_destroy().
+      anon_send(sink_hdl_,
+                stream_abort_msg{sink_flow_id_, sec::stream_aborted});
+      sink_hdl_ = nullptr;
+    }
     if (sub_) {
       sub_.dispose();
-      sink_hdl_ = nullptr;
       sub_ = nullptr;
     }
   }
@@ -430,12 +426,14 @@ public:
     unsafe_send_as(self_, sink_hdl_, stream_abort_msg{sink_flow_id_, err});
     sink_hdl_ = nullptr;
     sub_ = nullptr;
+    self_->stream_subs_.erase(source_flow_id_);
   }
 
   void on_complete() override {
     unsafe_send_as(self_, sink_hdl_, stream_close_msg{sink_flow_id_});
     sink_hdl_ = nullptr;
     sub_ = nullptr;
+    self_->stream_subs_.erase(source_flow_id_);
   }
 
   void on_subscribe(flow::subscription sub) override {
@@ -457,10 +455,11 @@ private:
   scheduled_actor* self_;
   actor sink_hdl_;
   uint64_t sink_flow_id_;
+  uint64_t source_flow_id_;
   flow::subscription sub_;
 };
 
-} // namespace
+} // namespace detail
 
 flow::coordinator::steady_time_point scheduled_actor::steady_time() {
   return clock().now();
@@ -584,11 +583,12 @@ scheduled_actor::categorize(mailbox_element& x) {
       auto sink_hdl = actor_cast<actor>(ptr);
       if (auto i = stream_sources_.find(str_id); i != stream_sources_.end()) {
         // Create a forwarder that turns observed items into batches.
-        auto fwd = make_counted<batch_forwarder_impl>(this, sink_hdl, sink_id);
+        auto flow_id = new_u64_id();
+        auto fwd = make_counted<detail::batch_forwarder_impl>(this, sink_hdl,
+                                                              sink_id, flow_id);
         auto sub = i->second.obs->subscribe(flow::observer<async::batch>{fwd});
         if (fwd->subscribed()) {
           // Inform the sink that the stream is now open.
-          auto flow_id = new_u64_id();
           stream_subs_.emplace(flow_id, std::move(fwd));
           auto mipb = static_cast<uint32_t>(i->second.max_items_per_batch);
           unsafe_send_as(this, sink_hdl,
@@ -604,23 +604,23 @@ scheduled_actor::categorize(mailbox_element& x) {
                 anon_send(actor_cast<actor>(sptr), stream_cancel_msg{flow_id});
             });
           }
-        } else {
-          CAF_LOG_ERROR("failed to subscribe a batch forwarder");
-          sub.dispose();
+          return message_category::internal;
         }
-      } else {
-        // Abort the flow immediately.
-        CAF_LOG_DEBUG("requested stream does not exist");
-        auto err = make_error(sec::invalid_stream);
-        unsafe_send_as(this, sink_hdl,
-                       stream_abort_msg{sink_id, std::move(err)});
+        CAF_LOG_ERROR("failed to subscribe a batch forwarder");
+        sub.dispose();
       }
+      // Abort the flow immediately.
+      CAF_LOG_DEBUG("requested stream does not exist");
+      auto err = make_error(sec::invalid_stream);
+      unsafe_send_as(this, sink_hdl, stream_abort_msg{sink_id, std::move(err)});
       return message_category::internal;
     }
     case type_id_v<stream_demand_msg>: {
       auto [sub_id, new_demand] = content.get_as<stream_demand_msg>(0);
       if (auto i = stream_subs_.find(sub_id); i != stream_subs_.end()) {
-        i->second->request(new_demand);
+        // Note: `i` might become invalid as a result of calling `request`.
+        auto ptr = i->second;
+        ptr->request(new_demand);
       }
       return message_category::internal;
     }
@@ -628,38 +628,43 @@ scheduled_actor::categorize(mailbox_element& x) {
       auto [sub_id] = content.get_as<stream_cancel_msg>(0);
       if (auto i = stream_subs_.find(sub_id); i != stream_subs_.end()) {
         CAF_LOG_DEBUG("canceled stream " << sub_id);
-        i->second->cancel();
+        auto ptr = i->second;
         stream_subs_.erase(i);
+        ptr->cancel();
       }
       return message_category::internal;
     }
     case type_id_v<stream_ack_msg>: {
       auto [ptr, sink_id, src_id, mipb] = content.get_as<stream_ack_msg>(0);
       if (auto i = stream_bridges_.find(sink_id); i != stream_bridges_.end()) {
-        i->second->ack(src_id, mipb);
+        auto ptr = i->second;
+        ptr->ack(src_id, mipb);
       }
       return message_category::internal;
     }
     case type_id_v<stream_batch_msg>: {
       const auto& [sink_id, xs] = content.get_as<stream_batch_msg>(0);
       if (auto i = stream_bridges_.find(sink_id); i != stream_bridges_.end()) {
-        i->second->push(xs);
+        auto ptr = i->second;
+        ptr->push(xs);
       }
       return message_category::internal;
     }
     case type_id_v<stream_close_msg>: {
       auto [sink_id] = content.get_as<stream_close_msg>(0);
       if (auto i = stream_bridges_.find(sink_id); i != stream_bridges_.end()) {
-        i->second->drop();
+        auto ptr = i->second;
         stream_bridges_.erase(i);
+        ptr->drop();
       }
       return message_category::internal;
     }
     case type_id_v<stream_abort_msg>: {
       const auto& [sink_id, reason] = content.get_as<stream_abort_msg>(0);
       if (auto i = stream_bridges_.find(sink_id); i != stream_bridges_.end()) {
-        i->second->drop(reason);
+        auto ptr = i->second;
         stream_bridges_.erase(i);
+        ptr->drop(reason);
       }
       return message_category::internal;
     }
@@ -1004,6 +1009,31 @@ void scheduled_actor::try_push_stream(uint64_t local_id) {
 void scheduled_actor::unstash() {
   while (auto stashed = stash_.pop())
     mailbox().push_front(mailbox_element_ptr{stashed});
+}
+
+void scheduled_actor::cancel_flows_and_streams() {
+  // Note: we always swap out a map before iterating it, because some callbacks
+  //       may call erase on the map while we are iterating it.
+  stream_sources_.clear();
+  if (!stream_subs_.empty()) {
+    decltype(stream_subs_) subs;
+    subs.swap(stream_subs_);
+    for (auto& [id, ptr] : subs)
+      ptr->cancel();
+  }
+  if (!stream_bridges_.empty()) {
+    decltype(stream_bridges_) bridges;
+    bridges.swap(stream_bridges_);
+    for (auto& [id, ptr] : bridges)
+      ptr->drop();
+  }
+  while (!watched_disposables_.empty()) {
+    decltype(watched_disposables_) disposables;
+    disposables.swap(watched_disposables_);
+    for (auto& ptr : disposables)
+      ptr.dispose();
+  }
+  run_actions();
 }
 
 } // namespace caf

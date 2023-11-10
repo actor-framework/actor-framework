@@ -47,6 +47,12 @@
 #include <type_traits>
 #include <unordered_map>
 
+namespace caf::detail {
+
+class batch_forwarder_impl;
+
+} // namespace caf::detail
+
 namespace caf {
 
 // -- related free functions ---------------------------------------------------
@@ -76,6 +82,8 @@ class CAF_CORE_EXPORT scheduled_actor : public local_actor,
                                         public flow::coordinator {
 public:
   // -- friends ----------------------------------------------------------------
+
+  friend class detail::batch_forwarder_impl;
 
   friend class detail::stream_bridge;
 
@@ -802,6 +810,10 @@ private:
   /// Tries to emit more items on a stream bridge (callback for
   /// detail::stream_bridge_sub).
   void try_push_stream(uint64_t local_id);
+
+  /// Cleans up any state associated to flows and streams and cancels all
+  /// ongoing activities.
+  void cancel_flows_and_streams();
 
   /// Stores actions that the actor executes after processing the current
   /// message.
