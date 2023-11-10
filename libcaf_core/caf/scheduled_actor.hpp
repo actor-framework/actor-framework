@@ -47,6 +47,12 @@
 #include <type_traits>
 #include <unordered_map>
 
+namespace caf::detail {
+
+class batch_forwarder_impl;
+
+} // namespace caf::detail
+
 namespace caf {
 
 // -- related free functions ---------------------------------------------------
@@ -76,6 +82,8 @@ class CAF_CORE_EXPORT scheduled_actor : public local_actor,
                                         public flow::coordinator {
 public:
   // -- friends ----------------------------------------------------------------
+
+  friend class detail::batch_forwarder_impl;
 
   friend class detail::stream_bridge;
 

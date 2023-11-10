@@ -10,51 +10,7 @@ namespace caf::flow::op {
 
 class interval_action;
 
-class interval_sub_base : public subscription::impl_base {
-public:
-  virtual void fire(interval_action*) = 0;
-};
-
-using interval_sub_ptr = intrusive_ptr<interval_sub_base>;
-
-class interval_action : public detail::plain_ref_counted, public action::impl {
-public:
-  interval_action(interval_sub_ptr sub)
-    : state_(action::state::scheduled), sub_(std::move(sub)) {
-    // nop
-  }
-
-  void dispose() override {
-    state_ = action::state::disposed;
-  }
-
-  bool disposed() const noexcept override {
-    return state_.load() == action::state::disposed;
-  }
-
-  action::state current_state() const noexcept override {
-    return state_.load();
-  }
-
-  void run() override {
-    if (state_.load() == action::state::scheduled)
-      sub_->fire(this);
-  }
-
-  void ref_disposable() const noexcept override {
-    ref();
-  }
-
-  void deref_disposable() const noexcept override {
-    deref();
-  }
-
-private:
-  std::atomic<action::state> state_;
-  interval_sub_ptr sub_;
-};
-
-class interval_sub : public interval_sub_base {
+class interval_sub : public subscription::impl_base {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -87,12 +43,16 @@ public:
         last_ = ctx_->steady_time() + initial_delay_;
       else
         last_ = ctx_->steady_time() + period_;
-      pending_ = ctx_->delay_until(last_,
-                                   action{make_counted<interval_action>(this)});
+      schedule_next(last_);
     }
   }
 
-  void fire(interval_action* act) override {
+  void schedule_next(coordinator::steady_time_point timeout) {
+    auto act = make_single_shot_action([this] { fire(); });
+    pending_ = ctx_->delay_until(timeout, std::move(act));
+  }
+
+  void fire() {
     if (out_) {
       --demand_;
       out_.on_next(val_);
@@ -106,7 +66,7 @@ public:
         while (next <= now)
           next += period_;
         last_ = next;
-        pending_ = ctx_->delay_until(next, action{act});
+        schedule_next(next);
       } else {
         pending_ = nullptr;
       }

@@ -46,16 +46,30 @@ void stream_bridge_sub::ack(uint64_t src_flow_id,
 
 void stream_bridge_sub::drop() {
   CAF_LOG_TRACE("");
-  src_ = nullptr;
-  out_.on_complete();
-  out_ = nullptr;
+  if (src_) {
+    // Note: must send this as anonymous message, because this can be called
+    // from on_destroy().
+    unsafe_anon_send(src_, stream_cancel_msg{src_flow_id_});
+    src_ = nullptr;
+  }
+  if (out_) {
+    auto out = std::move(out_);
+    out.on_complete();
+  }
 }
 
 void stream_bridge_sub::drop(const error& reason) {
   CAF_LOG_TRACE(CAF_ARG(reason));
-  src_ = nullptr;
-  out_.on_error(reason);
-  out_ = nullptr;
+  if (src_) {
+    // Note: must send this as anonymous message, because this can be called
+    // from on_destroy().
+    unsafe_anon_send(src_, stream_cancel_msg{src_flow_id_});
+    src_ = nullptr;
+  }
+  if (out_) {
+    auto out = std::move(out_);
+    out.on_error(reason);
+  }
 }
 
 void stream_bridge_sub::push(const async::batch& input) {

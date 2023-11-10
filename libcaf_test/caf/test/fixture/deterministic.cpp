@@ -52,7 +52,15 @@ public:
   /// Writes an entry to the event-queue of the logger.
   /// @thread-safe
   void do_log(const context& ctx, std::string&& msg) override {
-    reporter::instance().print(ctx, msg);
+    if (ctx.component == "caf") {
+      // Filter out all internal CAF logging except for the caf_flow events,
+      // because the output gets too noisy otherwise.
+      // TODO: make this configurable.
+      return;
+    }
+    auto enriched = detail::format("[{}, aid: {}] {}", ctx.component,
+                                   logger::thread_local_aid(), msg);
+    reporter::instance().print(ctx, enriched);
   }
 
   /// Returns whether the logger is configured to accept input for given
@@ -261,6 +269,7 @@ public:
   /// `current_time` is already set to a later time.
   /// @returns Whether a timeout was triggered.
   bool trigger_timeout(const detail::source_location& loc) {
+    drop_disposed();
     if (num_timeouts() == 0) {
       reporter::instance().print_debug({"no pending timeout to trigger", loc});
       return false;
@@ -282,6 +291,7 @@ public:
   /// `current_time` is already set to a later time.
   /// @returns The number of triggered timeouts.
   size_t trigger_all_timeouts(const detail::source_location& loc) {
+    drop_disposed();
     if (num_timeouts() == 0)
       return 0;
     if (auto t = last_timeout(loc); t > current_time)
@@ -323,6 +333,12 @@ public:
     auto msg = detail::format("set time back by {}", duration_to_string(diff));
     current_time = value;
     return 0;
+  }
+
+  void drop_actions() {
+    for (auto [timeout, callback] : actions)
+      callback.dispose();
+    actions.clear();
   }
 
   // -- properties -------------------------------------------------------------
@@ -508,7 +524,9 @@ deterministic::~deterministic() {
   // Note: we need clean up all remaining messages manually. This in turn may
   //       clean up actors as unreachable if the test did not consume all
   //       messages. Otherwise, the destructor of `sys` will wait for all
-  //       actors, potentially waiting forever.
+  //       actors, potentially waiting forever. The same holds true for pending
+  //       timeouts.
+  sched_impl().clock().drop_actions();
   drop_events();
 }
 
@@ -638,6 +656,22 @@ size_t deterministic::dispatch_messages() {
   while (dispatch_message())
     ++result;
   return result;
+}
+
+void deterministic::inject_exit(const strong_actor_ptr& hdl, error reason) {
+  if (!hdl)
+    return;
+  auto emsg = exit_msg{hdl->address(), std::move(reason)};
+  if (!hdl->enqueue(nullptr, make_message_id(), make_message(emsg), nullptr)) {
+    // Nothing to do here. The actor already terminated.
+    return;
+  }
+  actor_predicate is_anon{nullptr};
+  message_predicate<exit_msg> is_kill_msg{emsg};
+  [[maybe_unused]] auto preponed = prepone_event_impl(hdl, is_anon,
+                                                      is_kill_msg);
+  assert(preponed);
+  dispatch_message();
 }
 
 // -- time management ----------------------------------------------------------
