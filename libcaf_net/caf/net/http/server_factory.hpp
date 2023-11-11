@@ -73,9 +73,10 @@ public:
   using connection_handle = typename Transport::connection_handle;
 
   http_conn_factory(std::vector<net::http::route_ptr> routes,
-                    size_t max_consecutive_reads)
+                    size_t max_consecutive_reads, size_t max_request_size)
     : routes_(std::move(routes)),
-      max_consecutive_reads_(max_consecutive_reads) {
+      max_consecutive_reads_(max_consecutive_reads),
+      max_request_size_(max_request_size) {
     // nop
   }
 
@@ -83,6 +84,7 @@ public:
                                connection_handle conn) override {
     auto app = net::http::router::make(routes_);
     auto serv = net::http::server::make(std::move(app));
+    serv->max_request_size(max_request_size_);
     auto transport = Transport::make(std::move(conn), std::move(serv));
     transport->max_consecutive_reads(max_consecutive_reads_);
     transport->active_policy().accept();
@@ -94,6 +96,7 @@ public:
 private:
   std::vector<net::http::route_ptr> routes_;
   size_t max_consecutive_reads_;
+  size_t max_request_size_;
   action monitor_;
 };
 
@@ -110,6 +113,12 @@ public:
   using config_type = typename super::config_type;
 
   using super::super;
+
+  /// Sets the maximum request size to @p value.
+  server_factory& max_request_size(size_t value) noexcept {
+    super::config().max_request_size = value;
+    return *this;
+  }
 
   /// Monitors the actor handle @p hdl and stops the server if the monitored
   /// actor terminates.
@@ -196,7 +205,8 @@ private:
     using factory_t = detail::http_conn_factory<transport_t>;
     using impl_t = detail::accept_handler<Acceptor>;
     auto factory = std::make_unique<factory_t>(cfg.routes,
-                                               cfg.max_consecutive_reads);
+                                               cfg.max_consecutive_reads,
+                                               cfg.max_request_size);
     auto impl = impl_t::make(std::move(acc), std::move(factory),
                              cfg.max_connections, cfg.monitored_actors);
     auto impl_ptr = impl.get();

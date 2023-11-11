@@ -1,5 +1,6 @@
 *** Settings ***
 Documentation     A test suite for examples/http/rest.hpp.
+Library           String
 Library           Process
 Library           RequestsLibrary
 
@@ -7,10 +8,11 @@ Suite Setup       Start Servers
 Suite Teardown    Stop Servers
 
 *** Variables ***
-${HTTP_URL}       http://localhost:55501
-${HTTPS_URL}      https://localhost:55502
-${BINARY_PATH}    /path/to/the/server
-${SSL_PATH}       /path/to/the/pem/files
+${HTTP_URL}             http://localhost:55501
+${HTTPS_URL}            https://localhost:55502
+${BINARY_PATH}          /path/to/the/server
+${SSL_PATH}             /path/to/the/pem/files
+${MAX_REQUEST_SIZE}     2048
 
 *** Test Cases ***
 HTTP Test Add Key Value Pair
@@ -47,10 +49,15 @@ HTTPS Test Delete Key Value Pair
     Delete Key Value Pair    ${HTTPS_URL}    foo
     Key Should Not Exist     ${HTTPS_URL}    foo
 
+HTTPS Test Request Exceeds Maximum Size
+    [Tags]    POST
+    ${large_value}=    Generate Random String    ${MAX_REQUEST_SIZE}
+    POST    ${HTTP_URL}/api/foo    data=${large_value}    expected_status=413    verify=${False}
+
 *** Keywords ***
 Start Servers
-    Start Process    ${BINARY_PATH}  -p  55501
-    Start Process    ${BINARY_PATH}  -p  55502  -k  ${SSL_PATH}/key.pem  -c  ${SSL_PATH}/cert.pem
+    Start Process  ${BINARY_PATH}  -p  55501  -r  ${MAX_REQUEST_SIZE}
+    Start Process  ${BINARY_PATH}  -p  55502  -r  ${MAX_REQUEST_SIZE}  -k  ${SSL_PATH}/key.pem  -c  ${SSL_PATH}/cert.pem
     Wait Until Keyword Succeeds    5s    125ms    Check If HTTP Server Is Reachable
     Wait Until Keyword Succeeds    5s    125ms    Check If HTTPS Server Is Reachable
 

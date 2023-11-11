@@ -10,6 +10,7 @@
 #include "caf/actor_system_config.hpp"
 #include "caf/caf_main.hpp"
 #include "caf/deep_to_string.hpp"
+#include "caf/defaults.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/scheduled_actor/flow.hpp"
 
@@ -33,7 +34,8 @@ struct config : caf::actor_system_config {
   config() {
     opt_group{custom_options_, "global"} //
       .add<uint16_t>("port,p", "port to listen for incoming connections")
-      .add<size_t>("max-connections,m", "limit for concurrent clients");
+      .add<size_t>("max-connections,m", "limit for concurrent clients")
+      .add<size_t>("max-request-size,r", "limit for single request size");
     opt_group{custom_options_, "tls"} //
       .add<std::string>("key-file,k", "path to the private key file")
       .add<std::string>("cert-file,c", "path to the certificate file");
@@ -43,6 +45,8 @@ struct config : caf::actor_system_config {
     auto result = actor_system_config::dump_content();
     caf::put_missing(result, "port", default_port);
     caf::put_missing(result, "max-connections", default_max_connections);
+    caf::put_missing(result, "max-request-size",
+                     caf::defaults::net::http_max_request_size);
     return result;
   }
 };
@@ -95,6 +99,8 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
   auto cert_file = caf::get_as<std::string>(cfg, "tls.cert-file");
   auto max_connections = caf::get_or(cfg, "max-connections",
                                      default_max_connections);
+  auto max_request_size = caf::get_or(
+    cfg, "max-request-size", caf::defaults::net::http_max_request_size);
   if (!key_file != !cert_file) {
     std::cerr << "*** inconsistent TLS config: declare neither file or both\n";
     return EXIT_FAILURE;
@@ -113,6 +119,8 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
         .accept(port)
         // Limit how many clients may be connected at any given time.
         .max_connections(max_connections)
+        // Limit the maximum request size.
+        .max_request_size(max_request_size)
         // Stop the server if our key-value store actor terminates.
         .monitor(kvs)
         // Forward incoming requests to the kvs actor.
