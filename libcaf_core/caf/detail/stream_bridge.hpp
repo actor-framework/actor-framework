@@ -15,6 +15,7 @@
 
 namespace caf::detail {
 
+/// Acts as an intermediary between a stream subscriber and the internal flow.
 class stream_bridge_sub : public flow::subscription::impl_base {
 public:
   stream_bridge_sub(scheduled_actor* self, strong_actor_ptr src,

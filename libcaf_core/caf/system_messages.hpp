@@ -138,7 +138,7 @@ struct stream_demand_msg {
   /// The ID of the flow at the source.
   uint64_t source_flow_id;
 
-  /// Additional demand from the sink.
+  /// Additional demand from the sink. Note: one unit of demand is one *batch*.
   uint32_t demand;
 };
 

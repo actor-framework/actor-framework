@@ -6,6 +6,7 @@
 
 #include "caf/test/caf_test_main.hpp"
 #include "caf/test/fixture/deterministic.hpp"
+#include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
 #include "caf/binary_deserializer.hpp"
@@ -19,6 +20,8 @@ using namespace std::literals;
 namespace {
 
 using ivec = std::vector<int>;
+
+constexpr size_t max_batch_size = 10;
 
 behavior int_sink(event_based_actor* self, std::shared_ptr<ivec> results) {
   caf::logger::debug("stream.test", "started sink with ID {}", self->id());
@@ -169,6 +172,139 @@ TEST("streams allow actors to transmit flow items to other actors") {
     check(terminated(s1));
     prepone_and_expect<stream_cancel_msg>().to(src);
     check(!terminated(src)); // Must clean up state but not terminate.
+  }
+}
+
+SCENARIO("actors transparently translate between stream messages and flows") {
+  GIVEN("a stream source that produces up to 256 items") {
+    auto vals = std::make_shared<stream>();
+    auto uut = sys.spawn([vals](event_based_actor* self) {
+      *vals = self //
+                ->make_observable()
+                .iota(1)
+                .take(256)
+                .to_stream("foo", 10ms, max_batch_size);
+    });
+    require_ne(vals, nullptr);
+    auto dummy = make_null_actor();
+    auto dummy_ptr = actor_cast<strong_actor_ptr>(dummy);
+    WHEN("the consumer sends the open handshake as anonymous message") {
+      THEN("the message has no effect") {
+        anon_send(uut, stream_open_msg{vals->id(), dummy_ptr, 42});
+        expect<stream_open_msg>().to(uut);
+        // Note: the only thing we could maybe check is that the actor logs an
+        //       error message. However, there's no API for that at the moment.
+      }
+    }
+    WHEN("the consumer requests a non-existing ID") {
+      THEN("the source responds with an abort message") {
+        inject()
+          .with(stream_open_msg{vals->id() + 1, dummy_ptr, 42})
+          .from(dummy)
+          .to(uut);
+        expect<stream_abort_msg>()
+          .with([](const stream_abort_msg& msg) {
+            return msg.sink_flow_id == 42 && msg.reason == sec::invalid_stream;
+          })
+          .from(uut)
+          .to(dummy);
+      }
+    }
+    WHEN("the consumer requests an existing ID") {
+      THEN("the source responds with an ack message containing the flow ID") {
+        inject()
+          .with(stream_open_msg{vals->id(), dummy_ptr, 42})
+          .from(dummy)
+          .to(uut);
+        auto flow_id = uint64_t{0};
+        auto max_items_per_batch = uint32_t{0};
+        expect<stream_ack_msg>()
+          .with([&](const stream_ack_msg& msg) {
+            flow_id = msg.source_flow_id;
+            max_items_per_batch = msg.max_items_per_batch;
+            return true;
+          })
+          .from(uut)
+          .to(dummy);
+        check_gt(flow_id, 0u);
+        inject().with(stream_cancel_msg{flow_id}).from(dummy).to(uut);
+      }
+    }
+    WHEN("the consumer sends credit for consuming all items at once") {
+      THEN("the source responds all batches followed by a close message") {
+        inject()
+          .with(stream_open_msg{vals->id(), dummy_ptr, 42})
+          .from(dummy)
+          .to(uut);
+        auto flow_id = uint64_t{0};
+        auto max_items_per_batch = uint32_t{0};
+        expect<stream_ack_msg>()
+          .with([&](const stream_ack_msg& msg) {
+            flow_id = msg.source_flow_id;
+            max_items_per_batch = msg.max_items_per_batch;
+            return true;
+          })
+          .from(uut)
+          .to(dummy);
+        check_gt(flow_id, 0u);
+        auto total = size_t{0};
+        auto pred = [&total](const stream_batch_msg& msg) {
+          total += msg.content.size();
+          return true;
+        };
+        inject().with(stream_demand_msg{flow_id, 50}).from(dummy).to(uut);
+        while (allow<stream_batch_msg>().with(pred).from(uut).to(dummy)) {
+          // repeat
+        }
+        check_eq(total, 256u);
+        expect<stream_close_msg>().from(uut).to(dummy);
+      }
+    }
+    WHEN("the consumer sends credit consuming only a subset at a time") {
+      THEN("the source uses up the credit before waiting for more demand") {
+        inject()
+          .with(stream_open_msg{vals->id(), dummy_ptr, 42})
+          .from(dummy)
+          .to(uut);
+        auto flow_id = uint64_t{0};
+        auto max_items_per_batch = uint32_t{0};
+        expect<stream_ack_msg>()
+          .with([&](const stream_ack_msg& msg) {
+            flow_id = msg.source_flow_id;
+            max_items_per_batch = msg.max_items_per_batch;
+            return true;
+          })
+          .from(uut)
+          .to(dummy);
+        check_gt(flow_id, 0u);
+        auto total = size_t{0};
+        auto pred = [this, &total](const stream_batch_msg& msg) {
+          check_le(msg.content.size(), max_batch_size);
+          total += msg.content.size();
+          return true;
+        };
+        // Pull 10 items (one batch).
+        inject().with(stream_demand_msg{flow_id, 1}).from(dummy).to(uut);
+        expect<stream_batch_msg>().with(pred).from(uut).to(dummy);
+        check_eq(mail_count(), 0u);
+        check_eq(total, 10u);
+        // Pull 20 more items (two batches).
+        inject().with(stream_demand_msg{flow_id, 2}).from(dummy).to(uut);
+        expect<stream_batch_msg>().with(pred).from(uut).to(dummy);
+        expect<stream_batch_msg>().with(pred).from(uut).to(dummy);
+        check_eq(mail_count(), 0u);
+        check_eq(total, 30u);
+        // Pull the remaining items.
+        inject().with(stream_demand_msg{flow_id, 50}).from(dummy).to(uut);
+        while (allow<stream_batch_msg>().with(pred).from(uut).to(dummy)) {
+          // repeat
+        }
+        check_eq(mail_count(), 1u);
+        check_eq(total, 256u);
+        // Source must close the stream.
+        expect<stream_close_msg>().from(uut).to(dummy);
+      }
+    }
   }
 }
 

@@ -390,10 +390,14 @@ public:
       auto ptr = actor_cast<abstract_actor*>(dst);
       ptr->eq_impl(make_message_id(), from_, nullptr,
                    make_message(std::get<Is>(values_)...));
-      fix_->expect<Ts...>(loc_)
-        .from(from_)
-        .with(std::get<Is>(values_)...)
-        .to(dst);
+      if constexpr ((detail::is_comparable_v<Ts, Ts> && ...)) {
+        fix_->expect<Ts...>(loc_)
+          .from(from_)
+          .with(std::get<Is>(values_)...)
+          .to(dst);
+      } else {
+        fix_->expect<Ts...>(loc_).from(from_).to(dst);
+      }
     }
 
     deterministic* fix_;
@@ -635,6 +639,13 @@ public:
   [[nodiscard]] actor_scope_guard make_actor_scope_guard(const Handle& hdl) {
     return {this, hdl};
   }
+
+  /// Returns a "null" actor, i.e., an actor that discards all messages it
+  /// receives (even system messages) except `exit_msg`. A hollow actor is
+  /// basically a sinkhole for messages that never responds to anything.
+  /// Combined with `send_as`, this implementation is ideal for faking any
+  /// sequence of messages without having to implement a full-blown actor.
+  [[nodiscard]] actor make_null_actor();
 
 private:
   // Note: this is put here because this member variable must be destroyed

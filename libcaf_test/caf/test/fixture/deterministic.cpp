@@ -14,6 +14,7 @@
 #include "caf/detail/source_location.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/detail/test_export.hpp"
+#include "caf/event_based_actor.hpp"
 #include "caf/scheduled_actor.hpp"
 
 #include <numeric>
@@ -488,6 +489,53 @@ private:
   std::map<actor_id, detail::actor_local_printer_ptr> printers_;
 };
 
+// -- null actor ---------------------------------------------------------------
+
+// Discards any message it receives except exit messages.
+class null_actor : public event_based_actor {
+public:
+  using super = event_based_actor;
+
+  explicit null_actor(actor_config& cfg) : super(cfg) {
+    // nop
+  }
+
+  const char* name() const override {
+    return "caf.test.null-actor";
+  }
+
+  resume_result resume(execution_unit*, size_t n) override {
+    if (n == 0) {
+      if (mailbox().try_block())
+        return resumable::awaiting_message;
+      return resumable::resume_later;
+    }
+    CAF_PUSH_AID(id());
+    auto ptr = mailbox().pop_front();
+    while (!ptr) {
+      if (mailbox().try_block())
+        return resumable::awaiting_message;
+      ptr = mailbox().pop_front();
+    }
+    auto& msg = ptr->content();
+    if (msg.match_elements<exit_msg>()) {
+      auto& em = msg.get_as<exit_msg>(0);
+      if (em.reason) {
+        quit(std::move(em.reason));
+        return resumable::done;
+      }
+    }
+    if (mailbox().try_block())
+      return resumable::awaiting_message;
+    return resumable::resume_later;
+  }
+
+protected:
+  behavior make_behavior() override {
+    return {[](int) {}};
+  }
+};
+
 // -- config -------------------------------------------------------------------
 
 deterministic::config::config(deterministic* fix) {
@@ -528,6 +576,12 @@ deterministic::~deterministic() {
   //       timeouts.
   sched_impl().clock().drop_actions();
   drop_events();
+}
+
+// -- factories ----------------------------------------------------------------
+
+actor deterministic::make_null_actor() {
+  return sys.spawn<null_actor, hidden>();
 }
 
 // -- private utilities --------------------------------------------------------
