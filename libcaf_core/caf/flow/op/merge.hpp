@@ -100,7 +100,7 @@ public:
     sub_ = nullptr;
     err_ = what;
     stop_inputs();
-    if (inputs_.empty()) {
+    if (out_ && inputs_.empty()) {
       auto out = std::move(out_);
       out.on_error(what);
     }
@@ -308,7 +308,8 @@ private:
       else
         ++i;
     }
-    sub_.dispose();
+    auto sub = std::move(sub_);
+    sub.dispose();
   }
 
   bool done() const noexcept {

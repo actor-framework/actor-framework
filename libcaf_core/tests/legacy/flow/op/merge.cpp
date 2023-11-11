@@ -96,7 +96,6 @@ SCENARIO("the merge operator combines inputs") {
           .subscribe(snk->as_observer());
         ctx->run();
         CHECK_EQ(snk->state, flow::observer_state::aborted);
-        CHECK_EQ(snk->err, sec::runtime_error);
       }
     }
   }
@@ -110,7 +109,6 @@ SCENARIO("the merge operator combines inputs") {
           .subscribe(snk->as_observer());
         ctx->run();
         CHECK_EQ(snk->state, flow::observer_state::aborted);
-        CHECK_EQ(snk->err, sec::runtime_error);
       }
     }
   }
