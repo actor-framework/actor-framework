@@ -22,9 +22,8 @@ jobs:
           -S . \
           -B build \
           -DCAF_ENABLE_ROBOT_TESTS:BOOL=ON \
-          -DCAF_ENABLE_EXCEPTIONS:BOOL=OFF \
           -DCAF_LOG_LEVEL:STRING=TRACE \
-          -DCMAKE_CXX_FLAGS:STRING="-fno-exceptions --coverage -O0" \
+          -DCMAKE_CXX_FLAGS:STRING="--coverage -O0" \
           -DCMAKE_BUILD_TYPE:STRING=Debug \
           -DBUILD_SHARED_LIBS:BOOL=OFF
     - name: build
@@ -36,4 +35,5 @@ jobs:
       with:
         fail_ci_if_error: true
         gcov: true
+        gcov_args: --exclude-throw-branches
         token: ${{ secrets.CODECOV_TOKEN  }}
