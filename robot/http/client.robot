@@ -9,7 +9,7 @@ Test Teardown       Terminate HTTP Server
 
 
 *** Variables ***
-${HTTP_URL}         http://localhost:8000
+${HTTP_URL}         http://localhost:55516
 ${BINARY_PATH}      /path/to/the/client
 
 ${RES1}=            SEPARATOR=\n
@@ -61,7 +61,7 @@ Send PUT request to server with a payload
 
 *** Keywords ***
 Initialize HTTP Server
-    Start Server    127.0.0.1    8000
+    Start Server    127.0.0.1    55516
 
 Terminate HTTP Server
     Stop Server
