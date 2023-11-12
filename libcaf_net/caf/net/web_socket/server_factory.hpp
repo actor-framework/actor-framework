@@ -218,22 +218,20 @@ public:
   template <class OnStart>
   expected<disposable> start(OnStart on_start) {
     auto& cfg = super::config();
-    if constexpr (std::is_invocable_v<OnStart, acceptor_resource>) {
-      return cfg.visit([this, &cfg, &on_start](auto& data) {
-        return this->do_start(cfg, data, on_start, flow_impl_token{})
-          .or_else([&cfg](const error& err) { cfg.call_on_error(err); });
-      });
-    } else {
+    using token_t
+      = std::conditional_t<std::is_invocable_v<OnStart, acceptor_resource>,
+                           flow_impl_token, custom_impl_token>;
+    if constexpr (std::is_same_v<token_t, custom_impl_token>) {
       using server_t = web_socket::upper_layer::server;
       using server_ptr_t = std::unique_ptr<server_t>;
       static_assert(std::is_invocable_r_v<server_ptr_t, OnStart>,
                     "OnStart must have signature 'void(acceptor_resource)' or "
                     "unique_ptr<web_socket::upper_layer::server>()'");
-      return cfg.visit([this, &cfg, &on_start](auto& data) {
-        return this->do_start(cfg, data, on_start, custom_impl_token{})
-          .or_else([&cfg](const error& err) { cfg.call_on_error(err); });
-      });
     }
+    return cfg.visit([this, &cfg, &on_start](auto& data) {
+      return this->do_start(cfg, data, on_start, token_t{})
+        .or_else([&cfg](const error& err) { cfg.call_on_error(err); });
+    });
   }
 
 private:
