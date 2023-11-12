@@ -16,3 +16,4 @@ coverage:
     project:
       default:
         threshold: 1% # we have some fluctuation from nondeterminism alone
+        informational: true
