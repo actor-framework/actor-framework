@@ -27,9 +27,9 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  publish(coordinator* ctx, src_ptr src,
+  publish(coordinator* parent, src_ptr src,
           size_t max_buf_size = defaults::flow::buffer_size)
-    : super(ctx), max_buf_size_(max_buf_size), source_(std::move(src)) {
+    : super(parent), max_buf_size_(max_buf_size), source_(std::move(src)) {
     try_request_more_ = make_action([this] { this->try_request_more(); });
   }
 
@@ -38,6 +38,10 @@ public:
   }
 
   // -- ref counting (and disambiguation due to multiple base types) -----------
+
+  coordinator* parent() const noexcept override {
+    return super::parent_;
+  }
 
   void ref_coordinated() const noexcept override {
     this->ref();
@@ -127,7 +131,7 @@ public:
   void on_consumed_some(state_type*, size_t, size_t) override {
     if (!try_request_more_pending_) {
       try_request_more_pending_ = true;
-      super::ctx_->delay(try_request_more_);
+      super::parent_->delay(try_request_more_);
     }
   }
 

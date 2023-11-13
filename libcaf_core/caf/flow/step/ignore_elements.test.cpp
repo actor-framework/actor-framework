@@ -14,8 +14,6 @@
 
 using namespace caf;
 
-using caf::flow::make_observer;
-
 namespace {
 
 WITH_FIXTURE(test::fixture::flow) {

@@ -22,14 +22,14 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  fail(coordinator* ctx, error err) : super(ctx), err_(std::move(err)) {
+  fail(coordinator* parent, error err) : super(parent), err_(std::move(err)) {
     // nop
   }
 
   // -- implementation of observable_impl<T> -----------------------------------
 
   disposable subscribe(observer<T> out) override {
-    return fail_subscription(out, err_);
+    return super::fail_subscription(out, err_);
   }
 
 private:

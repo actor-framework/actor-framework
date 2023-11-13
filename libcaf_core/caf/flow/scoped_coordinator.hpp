@@ -4,8 +4,9 @@
 
 #pragma once
 
+#include "caf/flow/coordinated.hpp"
 #include "caf/flow/coordinator.hpp"
-#include "caf/make_counted.hpp"
+#include "caf/intrusive_ptr.hpp"
 #include "caf/ref_counted.hpp"
 
 #include <condition_variable>
@@ -43,6 +44,8 @@ public:
 
   // -- lifetime management ----------------------------------------------------
 
+  void release_later(coordinated_ptr& child) override;
+
   void watch(disposable what) override;
 
   // -- time -------------------------------------------------------------------
@@ -64,8 +67,13 @@ private:
 
   void drop_disposed_flows();
 
+  /// Stores objects that need to be disposed before returning from `run`.
   std::vector<disposable> watched_disposables_;
 
+  /// Stores children that were marked for release while running an action.
+  std::vector<coordinated_ptr> released_;
+
+  /// Stores delayed actions until they are due.
   std::multimap<steady_time_point, action> delayed_;
 
   mutable std::mutex mtx_;

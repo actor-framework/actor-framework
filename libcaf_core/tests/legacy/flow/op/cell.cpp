@@ -39,8 +39,9 @@ SCENARIO("a null cell emits zero items") {
   GIVEN("an integer cell with an observer") {
     WHEN("calling set_null on the cell") {
       THEN("the observer receives the completed event") {
+        using snk_t = flow::passive_observer<int>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto uut = make_cell();
-        auto snk = flow::make_passive_observer<int>();
         lift(uut).subscribe(snk->as_observer());
         REQUIRE(snk->subscribed());
         snk->sub.request(128);
@@ -56,9 +57,10 @@ SCENARIO("a null cell emits zero items") {
   GIVEN("an integer cell without on bserver") {
     WHEN("calling set_null on the cell") {
       THEN("observers receive completed events immediately after subscribing") {
+        using snk_t = flow::passive_observer<int>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto uut = make_cell();
         uut->set_null();
-        auto snk = flow::make_passive_observer<int>();
         lift(uut).subscribe(snk->as_observer());
         REQUIRE(snk->subscribed());
         snk->sub.request(128);
@@ -74,8 +76,9 @@ SCENARIO("a cell with a value emits exactly one item") {
   GIVEN("an integer cell with an observer") {
     WHEN("calling set_value on the cell") {
       THEN("the observer receives on_next and then on_complete") {
+        using snk_t = flow::passive_observer<int>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto uut = make_cell();
-        auto snk = flow::make_passive_observer<int>();
         lift(uut).subscribe(snk->as_observer());
         REQUIRE(snk->subscribed());
         snk->sub.request(128);
@@ -89,8 +92,9 @@ SCENARIO("a cell with a value emits exactly one item") {
     }
     WHEN("disposing the subscription before calling set_value on the cell") {
       THEN("the observer does not receive the item") {
+        using snk_t = flow::passive_observer<int>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto uut = make_cell();
-        auto snk = flow::make_passive_observer<int>();
         lift(uut).subscribe(snk->as_observer());
         REQUIRE(snk->subscribed());
         snk->request(128);
@@ -113,9 +117,10 @@ SCENARIO("a cell with a value emits exactly one item") {
   GIVEN("an integer cell without on bserver") {
     WHEN("calling set_null on the cell") {
       THEN("the observer receives on_next and then on_complete immediately") {
+        using snk_t = flow::passive_observer<int>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto uut = make_cell();
         uut->set_value(42);
-        auto snk = flow::make_passive_observer<int>();
         lift(uut).subscribe(snk->as_observer());
         REQUIRE(snk->subscribed());
         snk->sub.request(128);
@@ -131,8 +136,9 @@ SCENARIO("a failed cell emits zero item") {
   GIVEN("an integer cell with an observer") {
     WHEN("calling set_error on the cell") {
       THEN("the observer receives on_error") {
+        using snk_t = flow::passive_observer<int>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto uut = make_cell();
-        auto snk = flow::make_passive_observer<int>();
         lift(uut).subscribe(snk->as_observer());
         REQUIRE(snk->subscribed());
         snk->sub.request(128);
@@ -149,9 +155,10 @@ SCENARIO("a failed cell emits zero item") {
   GIVEN("an integer cell without on bserver") {
     WHEN("calling set_error on the cell") {
       THEN("the observer receives on_error immediately when subscribing") {
+        using snk_t = flow::passive_observer<int>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto uut = make_cell();
         uut->set_error(sec::runtime_error);
-        auto snk = flow::make_passive_observer<int>();
         lift(uut).subscribe(snk->as_observer());
         REQUIRE(snk->subscribed());
         snk->sub.request(128);

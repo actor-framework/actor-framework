@@ -15,13 +15,9 @@ namespace caf::flow::op {
 template <class T>
 class cold : public detail::atomic_ref_counted, public base<T> {
 public:
-  // -- member types -----------------------------------------------------------
-
-  using output_type = T;
-
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit cold(coordinator* ctx) : ctx_(ctx) {
+  explicit cold(coordinator* parent) : parent_(parent) {
     // nop
   }
 
@@ -37,14 +33,14 @@ public:
 
   // -- implementation of observable_impl<T> -----------------------------------
 
-  coordinator* ctx() const noexcept override {
-    return ctx_;
+  coordinator* parent() const noexcept override {
+    return parent_;
   }
 
 protected:
   // -- member variables -------------------------------------------------------
 
-  coordinator* ctx_;
+  coordinator* parent_;
 };
 
 } // namespace caf::flow::op

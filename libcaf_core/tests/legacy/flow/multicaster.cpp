@@ -32,8 +32,8 @@ BEGIN_FIXTURE_SCOPE(fixture)
 SCENARIO("a multicaster pushes items to all subscribers") {
   GIVEN("a multicaster with two subscribers") {
     auto uut = flow::multicaster<int>{ctx.get()};
-    auto snk1 = flow::make_passive_observer<int>();
-    auto snk2 = flow::make_passive_observer<int>();
+    auto snk1 = ctx->add_child(std::in_place_type<flow::passive_observer<int>>);
+    auto snk2 = ctx->add_child(std::in_place_type<flow::passive_observer<int>>);
     uut.subscribe(snk1->as_observer());
     uut.subscribe(snk2->as_observer());
     CHECK(uut.impl().has_observers());
@@ -121,9 +121,10 @@ SCENARIO("a multicaster pushes items to all subscribers") {
 SCENARIO("a multicaster discards items that arrive before a subscriber") {
   WHEN("pushing items") {
     THEN("observers see only items that were pushed after subscribing") {
+      using snk_t = flow::auto_observer<int>;
       auto uut = flow::multicaster<int>{ctx.get()};
       uut.push({1, 2, 3});
-      auto snk = flow::make_auto_observer<int>();
+      auto snk = ctx->add_child(std::in_place_type<snk_t>);
       uut.subscribe(snk->as_observer());
       ctx->run();
       uut.push({4, 5, 6});

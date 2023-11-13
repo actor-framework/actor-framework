@@ -14,9 +14,9 @@ class interval_sub : public subscription::impl_base {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
-  interval_sub(coordinator* ctx, timespan initial_delay, timespan period,
+  interval_sub(coordinator* parent, timespan initial_delay, timespan period,
                int64_t max_val, observer<int64_t> out)
-    : ctx_(ctx),
+    : parent_(parent),
       initial_delay_(initial_delay),
       period_(period),
       max_(max_val),
@@ -26,9 +26,13 @@ public:
 
   // -- implementation of subscription_impl ------------------------------------
 
+  coordinator* parent() const noexcept override {
+    return parent_;
+  }
+
   void dispose() override {
     if (out_) {
-      ctx_->delay_fn([ptr = strong_this()] { ptr->do_cancel(); });
+      parent_->delay_fn([ptr = strong_this()] { ptr->do_cancel(); });
     }
   }
 
@@ -40,16 +44,16 @@ public:
     demand_ += n;
     if (!pending_) {
       if (val_ == 0)
-        last_ = ctx_->steady_time() + initial_delay_;
+        last_ = parent_->steady_time() + initial_delay_;
       else
-        last_ = ctx_->steady_time() + period_;
+        last_ = parent_->steady_time() + period_;
       schedule_next(last_);
     }
   }
 
   void schedule_next(coordinator::steady_time_point timeout) {
-    pending_ = ctx_->delay_until(timeout,
-                                 make_single_shot_action([this] { fire(); }));
+    pending_ = parent_->delay_until(timeout, make_single_shot_action(
+                                               [this] { fire(); }));
   }
 
   void fire() {
@@ -58,10 +62,9 @@ public:
       out_.on_next(val_);
       if (++val_ == max_) {
         out_.on_complete();
-        out_ = nullptr;
         pending_ = nullptr;
       } else if (demand_ > 0) {
-        auto now = ctx_->steady_time();
+        auto now = parent_->steady_time();
         auto next = last_ + period_;
         while (next <= now)
           next += period_;
@@ -75,21 +78,16 @@ public:
 
 private:
   void do_cancel() {
-    if (out_) {
+    if (out_)
       out_.on_complete();
-      out_ = nullptr;
-    }
-    if (pending_) {
-      pending_.dispose();
-      pending_ = nullptr;
-    }
+    pending_.dispose();
   }
 
   intrusive_ptr<interval_sub> strong_this() {
     return intrusive_ptr<interval_sub>{this};
   }
 
-  coordinator* ctx_;
+  coordinator* parent_;
   disposable pending_;
   timespan initial_delay_;
   timespan period_;
@@ -100,23 +98,27 @@ private:
   observer<int64_t> out_;
 };
 
-interval::interval(coordinator* ctx, timespan initial_delay, timespan period)
-  : interval(ctx, initial_delay, period, std::numeric_limits<int64_t>::max()) {
+interval::interval(coordinator* parent, timespan initial_delay, timespan period)
+  : interval(parent, initial_delay, period,
+             std::numeric_limits<int64_t>::max()) {
   // nop
 }
 
-interval::interval(coordinator* ctx, timespan initial_delay, timespan period,
+interval::interval(coordinator* parent, timespan initial_delay, timespan period,
                    int64_t max_val)
-  : super(ctx), initial_delay_(initial_delay), period_(period), max_(max_val) {
+  : super(parent),
+    initial_delay_(initial_delay),
+    period_(period),
+    max_(max_val) {
   // nop
 }
 
 disposable interval::subscribe(observer<int64_t> out) {
   // Intervals introduce a time dependency, so we need to watch them in order
   // to prevent actors from shutting down while timeouts are still pending.
-  auto ptr = make_counted<interval_sub>(ctx_, initial_delay_, period_, max_,
-                                        out);
-  ctx_->watch(ptr->as_disposable());
+  auto ptr = parent_->add_child(std::in_place_type<interval_sub>,
+                                initial_delay_, period_, max_, out);
+  parent_->watch(ptr->as_disposable());
   out.on_subscribe(subscription{ptr});
   return ptr->as_disposable();
 }

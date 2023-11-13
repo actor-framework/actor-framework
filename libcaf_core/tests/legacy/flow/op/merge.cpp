@@ -74,7 +74,8 @@ SCENARIO("the merge operator combines inputs") {
     WHEN("merging them to a single observable") {
       THEN("the observer receives the output of both sources") {
         using ivec = std::vector<int>;
-        auto snk = flow::make_auto_observer<int>();
+        using snk_t = flow::auto_observer<int>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         make_observable()
           .repeat(11)
           .take(113)
@@ -89,7 +90,8 @@ SCENARIO("the merge operator combines inputs") {
   GIVEN("one fail observable with one successful observable") {
     WHEN("merging them to a single observable") {
       THEN("the observer aborts with error") {
-        auto snk = flow::make_auto_observer<int>();
+        using snk_t = flow::auto_observer<int>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         make_observable()
           .fail<int>(sec::runtime_error)
           .merge(make_observable().repeat(22).take(223))
@@ -102,7 +104,8 @@ SCENARIO("the merge operator combines inputs") {
   GIVEN("two fail observables") {
     WHEN("merging them to a single observable") {
       THEN("the observer receives the error of first observable") {
-        auto snk = flow::make_auto_observer<int>();
+        using snk_t = flow::auto_observer<int>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         make_observable()
           .fail<int>(sec::runtime_error)
           .merge(make_observable().fail<int>(sec::end_of_stream))
@@ -118,10 +121,11 @@ SCENARIO("mergers round-robin over their inputs") {
   GIVEN("a merger with inputs observables that produce no inputs") {
     WHEN("subscribing to the merger") {
       THEN("the merger immediately closes") {
+        using ops_t = flow::op::merge<int>;
+        using snk_t = flow::auto_observer<int>;
         auto nil = make_observable().empty<int>().as_observable();
-        auto uut = flow::make_observable<flow::op::merge<int>>(ctx.get(), nil,
-                                                               nil);
-        auto snk = flow::make_auto_observer<int>();
+        auto uut = ctx->add_child_hdl(std::in_place_type<ops_t>, nil, nil);
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         uut.subscribe(snk->as_observer());
         ctx->run();
         CHECK_EQ(snk->state, flow::observer_state::completed);
@@ -131,11 +135,12 @@ SCENARIO("mergers round-robin over their inputs") {
   }
   GIVEN("a merger with one input that completes") {
     WHEN("subscribing to the merger and requesting before the first push") {
+      using snk_t = flow::passive_observer<int>;
       auto src = flow::multicaster<int>{ctx.get()};
       auto nil = make_observable().empty<int>().as_observable();
       auto uut = make_counted<flow::op::merge<int>>(ctx.get(),
                                                     src.as_observable(), nil);
-      auto snk = flow::make_passive_observer<int>();
+      auto snk = ctx->add_child(std::in_place_type<snk_t>);
       uut->subscribe(snk->as_observer());
       ctx->run();
       THEN("the merger forwards all items from the source") {
@@ -165,12 +170,14 @@ SCENARIO("mergers round-robin over their inputs") {
       }
     }
     WHEN("subscribing to the merger pushing before the first request") {
+      using ops_t = flow::op::merge<int>;
+      using snk_t = flow::passive_observer<int>;
       auto src = flow::multicaster<int>{ctx.get()};
       auto nil = make_observable().empty<int>().as_observable();
-      auto uut = make_counted<flow::op::merge<int>>(ctx.get(),
-                                                    src.as_observable(), nil);
+      auto uut = ctx->add_child(std::in_place_type<ops_t>, src.as_observable(),
+                                nil);
       ctx->run();
-      auto snk = flow::make_passive_observer<int>();
+      auto snk = ctx->add_child(std::in_place_type<snk_t>);
       uut->subscribe(snk->as_observer());
       ctx->run();
       THEN("the merger forwards all items from the source") {
@@ -202,11 +209,13 @@ SCENARIO("mergers round-robin over their inputs") {
   }
   GIVEN("a merger with one input that aborts after some items") {
     WHEN("subscribing to the merger") {
+      using ops_t = flow::op::merge<int>;
+      using snk_t = flow::passive_observer<int>;
       auto src = flow::multicaster<int>{ctx.get()};
       auto nil = make_observable().empty<int>().as_observable();
-      auto uut = make_counted<flow::op::merge<int>>(ctx.get(),
-                                                    src.as_observable(), nil);
-      auto snk = flow::make_passive_observer<int>();
+      auto uut = ctx->add_child(std::in_place_type<ops_t>, src.as_observable(),
+                                nil);
+      auto snk = ctx->add_child(std::in_place_type<snk_t>);
       uut->subscribe(snk->as_observer());
       ctx->run();
       THEN("the merger forwards all items from the source until the error") {
@@ -231,12 +240,13 @@ SCENARIO("mergers round-robin over their inputs") {
   GIVEN("a merger that operates on an observable of observables") {
     WHEN("subscribing to the merger") {
       THEN("the subscribers receives all values from all observables") {
+        using snk_t = flow::auto_observer<int>;
         auto inputs = std::vector<flow::observable<int>>{
           make_observable().iota(1).take(3).as_observable(),
           make_observable().iota(4).take(3).as_observable(),
           make_observable().iota(7).take(3).as_observable(),
         };
-        auto snk = flow::make_auto_observer<int>();
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         make_observable()
           .from_container(std::move(inputs))
           .merge()
@@ -253,10 +263,11 @@ SCENARIO("empty merge operators only call on_complete") {
   GIVEN("a merge operator with no inputs") {
     WHEN("subscribing to it") {
       THEN("the observer only receives an on_complete event") {
+        using snk_t = flow::auto_observer<int>;
         auto nil = make_observable() //
                      .empty<flow::observable<int>>()
                      .as_observable();
-        auto snk = flow::make_auto_observer<int>();
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto sub = make_operator<int>(nil)->subscribe(snk->as_observer());
         ctx->run();
         CHECK(sub.disposed());
@@ -271,11 +282,13 @@ SCENARIO("the merge operator disposes unexpected subscriptions") {
   GIVEN("a merge operator with no inputs") {
     WHEN("subscribing to it") {
       THEN("the observer only receives an on_complete event") {
-        auto snk = flow::make_passive_observer<int>();
+        using snk_t = flow::passive_observer<int>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto r1 = make_observable().just(1).as_observable();
         auto r2 = make_observable().just(2).as_observable();
         auto uut = raw_sub(snk->as_observer(), r1, r2);
-        auto sub = make_counted<flow::passive_subscription_impl>();
+        using sub_t = flow::passive_subscription_impl;
+        auto sub = ctx->add_child(std::in_place_type<sub_t>);
         ctx->run();
         CHECK(!sub->disposed());
         uut->fwd_on_subscribe(42, flow::subscription{sub});
@@ -290,11 +303,12 @@ SCENARIO("the merge operator disposes unexpected subscriptions") {
 }
 
 SCENARIO("the merge operator emits already buffered data on error") {
+  using snk_t = flow::passive_observer<int>;
   GIVEN("an observable source that emits an error after the first observable") {
     WHEN("the error occurs while data is buffered") {
       THEN("the merger forwards the buffered items before the error") {
         auto src = flow::multicaster<flow::observable<int>>{ctx.get()};
-        auto snk = flow::make_passive_observer<int>();
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto uut = raw_sub(snk->as_observer(), src.as_observable());
         // First observable emits 3 items and then does nothing.
         src.push(make_observable()
@@ -321,7 +335,7 @@ SCENARIO("the merge operator emits already buffered data on error") {
     WHEN("the error occurs while no data is buffered") {
       THEN("the merger forwards the error immediately") {
         auto src = flow::multicaster<flow::observable<int>>{ctx.get()};
-        auto snk = flow::make_passive_observer<int>();
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto uut = raw_sub(snk->as_observer(), src.as_observable());
         // First observable emits 3 items and then does nothing.
         src.push(make_observable()
@@ -347,7 +361,7 @@ SCENARIO("the merge operator emits already buffered data on error") {
       THEN("the merger forwards the buffered items before the error") {
         auto src = flow::multicaster<int>{ctx.get()};
         auto nil = make_observable().never<int>().as_observable();
-        auto snk = flow::make_passive_observer<int>();
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto uut = raw_sub(snk->as_observer(), src.as_observable(), nil);
         ctx->run();
         src.push({1, 2, 3, 4, 5, 6, 7});
@@ -372,7 +386,7 @@ SCENARIO("the merge operator emits already buffered data on error") {
       THEN("the merger forwards the error immediately") {
         auto src = flow::multicaster<int>{ctx.get()};
         auto nil = make_observable().never<int>().as_observable();
-        auto snk = flow::make_passive_observer<int>();
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto uut = raw_sub(snk->as_observer(), src.as_observable(), nil);
         ctx->run();
         CHECK_EQ(src.demand(), 8u);
@@ -404,7 +418,8 @@ SCENARIO("the merge operator drops inputs with no pending data on error") {
   GIVEN("a merge operator with two inputs") {
     WHEN("one of the inputs fails") {
       THEN("the operator drops the other input right away") {
-        auto snk = flow::make_auto_observer<int>();
+        using snk_t = flow::auto_observer<int>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto uut = raw_sub(snk->as_observer(), make_observable().never<int>(),
                            make_observable().fail<int>(sec::runtime_error));
         ctx->run();
@@ -418,7 +433,8 @@ SCENARIO("the merge operator drops inputs when disposed") {
   GIVEN("a merge operator with two inputs") {
     WHEN("one of the inputs fails") {
       THEN("the operator drops the other input right away") {
-        auto snk = flow::make_auto_observer<int>();
+        using snk_t = flow::auto_observer<int>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto uut = raw_sub(snk->as_observer(), make_observable().never<int>(),
                            make_observable().never<int>());
         ctx->run();
@@ -432,7 +448,8 @@ SCENARIO("the merge operator drops inputs when disposed") {
 }
 
 TEST_CASE("merge operators ignore on_subscribe calls past the first one") {
-  auto snk = flow::make_auto_observer<int>();
+  using snk_t = flow::auto_observer<int>;
+  auto snk = ctx->add_child(std::in_place_type<snk_t>);
   auto uut = raw_sub(snk->as_observer());
   CHECK(!uut->subscribed());
   make_observable()
@@ -448,7 +465,8 @@ TEST_CASE("merge operators ignore on_subscribe calls past the first one") {
 }
 
 TEST_CASE("merge operators ignore fwd_on_complete calls with unknown keys") {
-  auto snk = flow::make_auto_observer<int>();
+  using snk_t = flow::auto_observer<int>;
+  auto snk = ctx->add_child(std::in_place_type<snk_t>);
   auto uut = raw_sub(snk->as_observer());
   CHECK(!uut->subscribed());
   make_observable()
@@ -462,7 +480,8 @@ TEST_CASE("merge operators ignore fwd_on_complete calls with unknown keys") {
 }
 
 TEST_CASE("merge operators ignore fwd_on_error calls with unknown keys") {
-  auto snk = flow::make_auto_observer<int>();
+  using snk_t = flow::auto_observer<int>;
+  auto snk = ctx->add_child(std::in_place_type<snk_t>);
   auto uut = raw_sub(snk->as_observer());
   CHECK(!uut->subscribed());
   make_observable()
@@ -477,7 +496,8 @@ TEST_CASE("merge operators ignore fwd_on_error calls with unknown keys") {
 }
 
 TEST_CASE("the merge operator merges any number of input observables") {
-  auto snk = flow::make_passive_observer<int>();
+  using snk_t = flow::passive_observer<int>;
+  auto snk = ctx->add_child(std::in_place_type<snk_t>);
   auto inputs = std::vector<flow::observable<int>>{};
   for (int i = 0; i < 1'000; ++i)
     inputs.push_back(make_observable().just(i).as_observable());
@@ -499,7 +519,8 @@ TEST_CASE("the merge operator merges any number of input observables") {
 }
 
 TEST_CASE("the merge operator ignores request() calls with no subscriber") {
-  auto snk = flow::make_auto_observer<int>();
+  using snk_t = flow::auto_observer<int>;
+  auto snk = ctx->add_child(std::in_place_type<snk_t>);
   auto uut = raw_sub(snk->as_observer());
   make_observable()
     .just(make_observable().iota(1).take(5).as_observable())

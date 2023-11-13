@@ -27,7 +27,8 @@ SCENARIO("an empty observable terminates normally") {
   GIVEN("an empty<int32>") {
     WHEN("an observer subscribes") {
       THEN("the observer receives on_complete") {
-        auto snk = flow::make_passive_observer<int32_t>();
+        using snk_t = flow::passive_observer<int32_t>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         ctx->make_observable().empty<int32_t>().subscribe(snk->as_observer());
         ctx->run();
         CHECK(snk->subscribed());

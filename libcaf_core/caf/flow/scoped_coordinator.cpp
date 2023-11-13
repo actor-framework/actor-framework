@@ -18,9 +18,12 @@ void scoped_coordinator::run() {
   for (;;) {
     drop_disposed_flows();
     auto f = next(!watched_disposables_.empty());
-    if (!f)
+    if (!f) {
+      released_.clear();
       return;
+    }
     f.run();
+    released_.clear();
   }
 }
 
@@ -29,10 +32,13 @@ size_t scoped_coordinator::run_some() {
   for (;;) {
     drop_disposed_flows();
     auto f = next(false);
-    if (!f)
+    if (!f) {
+      released_.clear();
       return result;
+    }
     ++result;
     f.run();
+    released_.clear();
   }
 }
 
@@ -47,6 +53,11 @@ void scoped_coordinator::deref_execution_context() const noexcept {
 }
 
 // -- lifetime management ------------------------------------------------------
+
+void scoped_coordinator::release_later(coordinated_ptr& child) {
+  CAF_ASSERT(child != nullptr);
+  released_.emplace_back().swap(child);
+}
 
 void scoped_coordinator::watch(disposable what) {
   watched_disposables_.emplace_back(std::move(what));

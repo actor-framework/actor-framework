@@ -68,22 +68,23 @@ disposable make_trivial_disposable();
 template <class T>
 class passive_observer : public observer_impl_base<T> {
 public:
+  explicit passive_observer(coordinator* parent) : parent_(parent) {
+    // nop
+  }
+
   // -- implementation of observer_impl<T> -------------------------------------
 
+  coordinator* parent() const noexcept override {
+    return parent_;
+  }
+
   void on_complete() override {
-    if (sub) {
-      subscription tmp;
-      tmp.swap(sub);
-      tmp.dispose();
-    }
+    sub.release_later();
     state = observer_state::completed;
   }
 
   void on_error(const error& what) override {
-    if (sub) {
-      sub.dispose();
-      sub = nullptr;
-    }
+    sub.release_later();
     err = what;
     state = observer_state::aborted;
   }
@@ -159,6 +160,9 @@ public:
 
   /// Stores all items received via `on_next`.
   std::vector<T> buf;
+
+protected:
+  coordinator* parent_;
 };
 
 template <class T>
@@ -194,35 +198,35 @@ template <class T1, class T2, class... Ts>
 auto make_unsubscribe_guard(intrusive_ptr<T1> ptr1, intrusive_ptr<T2> ptr2,
                             Ts... ptrs) {
   return std::make_tuple(make_unsubscribe_guard(std::move(ptr1)),
-                         make_unsubscribe_guard(ptr2),
+                         make_unsubscribe_guard(std::move(ptr2)),
                          make_unsubscribe_guard(std::move(ptrs))...);
 }
 
 template <class T>
 class canceling_observer : public flow::observer_impl_base<T> {
 public:
-  explicit canceling_observer(bool accept_first) : accept_next(accept_first) {
+  explicit canceling_observer(coordinator* parent, bool accept_first)
+    : accept_next(accept_first), parent_(parent) {
     // nop
+  }
+
+  coordinator* parent() const noexcept override {
+    return parent_;
   }
 
   void on_next(const T&) override {
     ++on_next_calls;
-    if (sub) {
-      sub.dispose();
-      sub = nullptr;
-    }
+    sub.dispose();
   }
 
   void on_error(const error&) override {
     ++on_error_calls;
-    if (sub)
-      sub = nullptr;
+    sub.release_later();
   }
 
   void on_complete() override {
     ++on_complete_calls;
-    if (sub)
-      sub = nullptr;
+    sub.release_later();
   }
 
   void on_subscribe(flow::subscription sub) override {
@@ -240,17 +244,14 @@ public:
   int on_complete_calls = 0;
   bool accept_next = false;
   flow::subscription sub;
+
+private:
+  coordinator* parent_;
 };
 
 template <class T>
 auto make_canceling_observer(bool accept_first = false) {
   return make_counted<canceling_observer<T>>(accept_first);
-}
-
-/// @relates passive_observer
-template <class T>
-intrusive_ptr<passive_observer<T>> make_passive_observer() {
-  return make_counted<passive_observer<T>>();
 }
 
 /// Similar to @ref passive_observer but automatically requests items until
@@ -259,6 +260,8 @@ template <class T>
 class auto_observer : public passive_observer<T> {
 public:
   using super = passive_observer<T>;
+
+  using super::super;
 
   void on_subscribe(subscription new_sub) override {
     if (this->state == observer_state::idle) {
@@ -278,31 +281,30 @@ public:
   }
 };
 
-/// @relates auto_observer
-template <class T>
-intrusive_ptr<auto_observer<T>> make_auto_observer() {
-  return make_counted<auto_observer<T>>();
-}
-
 /// A subscription implementation without internal logic.
 class passive_subscription_impl final : public subscription::impl_base {
 public:
+  explicit passive_subscription_impl(coordinator* parent) : parent_(parent) {
+    // nop
+  }
+
   /// Incremented by `request`.
   size_t demand = 0;
 
   /// Flipped by `dispose`.
   bool disposed_flag = false;
 
+  coordinator* parent() const noexcept override;
+
   void request(size_t n) override;
 
   void dispose() override;
 
   bool disposed() const noexcept override;
-};
 
-inline auto make_passive_subscription() {
-  return make_counted<passive_subscription_impl>();
-}
+private:
+  coordinator* parent_;
+};
 
 namespace op {
 
@@ -315,8 +317,8 @@ public:
 
   using shared_count = std::shared_ptr<size_t>;
 
-  nil_observable(coordinator* ctx, shared_count subscribe_count)
-    : super(ctx), subscribe_count_(std::move(subscribe_count)) {
+  nil_observable(coordinator* parent, shared_count subscribe_count)
+    : super(parent), subscribe_count_(std::move(subscribe_count)) {
     // nop
   }
 
@@ -337,15 +339,16 @@ public:
 
   using shared_count = std::shared_ptr<size_t>;
 
-  trivial_observable(coordinator* ctx, shared_count subscribe_count)
-    : super(ctx), subscribe_count_(std::move(subscribe_count)) {
+  trivial_observable(coordinator* parent, shared_count subscribe_count)
+    : super(parent), subscribe_count_(std::move(subscribe_count)) {
     // nop
   }
 
   disposable subscribe(observer<T> out) override {
     if (subscribe_count_)
       *subscribe_count_ += 1;
-    auto ptr = make_counted<passive_subscription_impl>();
+    using impl_t = passive_subscription_impl;
+    auto ptr = super::parent_->add_child(std::in_place_type<impl_t>);
     out.on_subscribe(subscription{ptr});
     return make_trivial_disposable();
   }
@@ -357,17 +360,17 @@ public:
 
 template <class T>
 observable<T>
-make_nil_observable(coordinator* ctx,
+make_nil_observable(coordinator* parent,
                     std::shared_ptr<size_t> subscribe_count = nullptr) {
-  auto ptr = make_counted<op::nil_observable<T>>(ctx, subscribe_count);
+  auto ptr = make_counted<op::nil_observable<T>>(parent, subscribe_count);
   return observable<T>{std::move(ptr)};
 }
 
 template <class T>
 observable<T>
-make_trivial_observable(coordinator* ctx,
+make_trivial_observable(coordinator* parent,
                         std::shared_ptr<size_t> subscribe_count = nullptr) {
-  auto ptr = make_counted<op::trivial_observable<T>>(ctx, subscribe_count);
+  auto ptr = make_counted<op::trivial_observable<T>>(parent, subscribe_count);
   return observable<T>{std::move(ptr)};
 }
 

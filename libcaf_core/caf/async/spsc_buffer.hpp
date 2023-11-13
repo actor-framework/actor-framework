@@ -260,10 +260,10 @@ public:
       return {true, consumed};
     } else {
       consumer_ = nullptr;
-      if (err_)
-        dst.on_error(err_);
-      else
+      if (!err_)
         dst.on_complete();
+      else
+        dst.on_error(err_);
       return {false, consumed};
     }
   }

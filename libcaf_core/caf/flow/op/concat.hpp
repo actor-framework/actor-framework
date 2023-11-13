@@ -30,8 +30,9 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  concat_sub(coordinator* ctx, observer<T> out, std::vector<input_type> inputs)
-    : ctx_(ctx), out_(out), inputs_(std::move(inputs)) {
+  concat_sub(coordinator* parent, observer<T> out,
+             std::vector<input_type> inputs)
+    : parent_(parent), out_(out), inputs_(std::move(inputs)) {
     CAF_ASSERT(!inputs_.empty());
     subscribe_next();
   }
@@ -42,8 +43,9 @@ public:
     CAF_ASSERT(!active_sub_);
     active_key_ = next_key_++;
     using fwd_t = forwarder<T, concat_sub, size_t>;
-    auto fwd = make_counted<fwd_t>(this, active_key_);
-    what.subscribe(fwd->as_observer());
+    auto fwd = parent_->add_child_hdl(std::in_place_type<fwd_t>, this,
+                                      active_key_);
+    what.subscribe(std::move(fwd));
   }
 
   void subscribe_to(observable<observable<T>> what) {
@@ -51,8 +53,9 @@ public:
     CAF_ASSERT(!factory_sub_);
     factory_key_ = next_key_++;
     using fwd_t = forwarder<observable<T>, concat_sub, size_t>;
-    auto fwd = make_counted<fwd_t>(this, factory_key_);
-    what.subscribe(fwd->as_observer());
+    auto fwd = parent_->add_child_hdl(std::in_place_type<fwd_t>, this,
+                                      factory_key_);
+    what.subscribe(std::move(fwd));
   }
 
   void subscribe_next() {
@@ -88,10 +91,10 @@ public:
 
   void fwd_on_complete(input_key key) {
     if (active_key_ == key && active_sub_) {
-      active_sub_ = nullptr;
+      active_sub_.release_later();
       subscribe_next();
     } else if (factory_key_ == key && factory_sub_) {
-      factory_sub_ = nullptr;
+      factory_sub_.release_later();
       factory_key_ = 0;
       if (!active_sub_)
         subscribe_next();
@@ -122,13 +125,17 @@ public:
 
   // -- implementation of subscription -----------------------------------------
 
+  coordinator* parent() const noexcept override {
+    return parent_;
+  }
+
   bool disposed() const noexcept override {
     return !out_;
   }
 
   void dispose() override {
     if (out_) {
-      ctx_->delay_fn([strong_this = intrusive_ptr<concat_sub>{this}] {
+      parent_->delay_fn([strong_this = intrusive_ptr<concat_sub>{this}] {
         if (strong_this->out_) {
           strong_this->fin();
         }
@@ -146,25 +153,18 @@ public:
 private:
   void fin(const error* err = nullptr) {
     CAF_ASSERT(out_);
-    if (factory_sub_) {
-      auto tmp = std::move(factory_sub_);
-      tmp.dispose();
-    }
-    if (active_sub_) {
-      auto tmp = std::move(active_sub_);
-      tmp.dispose();
-    }
+    factory_sub_.dispose();
+    active_sub_.dispose();
     factory_key_ = 0;
     active_key_ = 0;
-    auto tmp = std::move(out_);
-    if (err)
-      tmp.on_error(*err);
+    if (!err)
+      out_.on_complete();
     else
-      tmp.on_complete();
+      out_.on_error(*err);
   }
 
   /// Stores the context (coordinator) that runs this flow.
-  coordinator* ctx_;
+  coordinator* parent_;
 
   /// Stores a handle to the subscribed observer.
   observer<T> out_;
@@ -205,7 +205,7 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   template <class... Ts, class... Inputs>
-  explicit concat(coordinator* ctx, Inputs&&... inputs) : super(ctx) {
+  explicit concat(coordinator* parent, Inputs&&... inputs) : super(parent) {
     (add(std::forward<Inputs>(inputs)), ...);
   }
 
@@ -219,9 +219,10 @@ public:
 
   disposable subscribe(observer<T> out) override {
     if (inputs() == 0) {
-      return empty_subscription(out);
+      return super::empty_subscription(out);
     }
-    auto ptr = make_counted<concat_sub<T>>(super::ctx_, out, inputs_);
+    auto ptr = super::parent_->add_child(std::in_place_type<concat_sub<T>>, out,
+                                         inputs_);
     out.on_subscribe(subscription{ptr});
     return ptr->as_disposable();
   }

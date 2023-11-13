@@ -43,6 +43,8 @@ public:
 
   // -- implementation of subscription -----------------------------------------
 
+  flow::coordinator* parent() const noexcept override;
+
   bool disposed() const noexcept override;
 
   void dispose() override;

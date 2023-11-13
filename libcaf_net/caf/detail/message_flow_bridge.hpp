@@ -152,7 +152,7 @@ private:
   action do_cancel_cb() {
     return make_action([this] {
       if (out_) {
-        out_ = nullptr;
+        out_.release_later();
         down_->shutdown();
       }
     });

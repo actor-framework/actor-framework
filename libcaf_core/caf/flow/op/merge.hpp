@@ -12,7 +12,6 @@
 #include "caf/flow/op/from_generator.hpp"
 #include "caf/flow/op/pullable.hpp"
 #include "caf/flow/subscription.hpp"
-#include "caf/make_counted.hpp"
 
 #include <deque>
 #include <map>
@@ -45,7 +44,8 @@ struct merge_input {
 /// Receives observables from the pre-merge step and merges their inputs for the
 /// observer.
 template <class T>
-class merge_sub : public subscription::impl_base,
+class merge_sub : public detail::plain_ref_counted,
+                  public subscription::impl,
                   public observer_impl<observable<T>>,
                   public pullable {
 public:
@@ -66,9 +66,9 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  merge_sub(coordinator* ctx, observer<T> out, size_t max_concurrent,
+  merge_sub(coordinator* parent, observer<T> out, size_t max_concurrent,
             size_t max_pending_per_input = default_max_pending_per_input)
-    : ctx_(ctx),
+    : parent_(parent),
       out_(std::move(out)),
       max_concurrent_(max_concurrent),
       max_pending_per_input_(max_pending_per_input) {
@@ -77,12 +77,8 @@ public:
 
   // -- implementation of observer_impl ----------------------------------------
 
-  void ref_coordinated() const noexcept override {
-    ref();
-  }
-
-  void deref_coordinated() const noexcept override {
-    deref();
+  coordinator* parent() const noexcept override {
+    return parent_;
   }
 
   void on_next(const observable<T>& what) override {
@@ -92,26 +88,22 @@ public:
     auto key = next_key_++;
     inputs_.emplace(key, merge_input<T>{});
     using fwd_impl = forwarder<T, merge_sub, size_t>;
-    auto fwd = make_counted<fwd_impl>(this, key);
+    auto fwd = parent_->add_child(std::in_place_type<fwd_impl>, this, key);
     what.pimpl()->subscribe(fwd->as_observer());
   }
 
   void on_error(const error& what) override {
-    sub_ = nullptr;
+    sub_.release_later();
     err_ = what;
     stop_inputs();
-    if (out_ && inputs_.empty()) {
-      auto out = std::move(out_);
-      out.on_error(what);
-    }
+    if (out_ && inputs_.empty())
+      out_.on_error(what);
   }
 
   void on_complete() override {
-    sub_ = nullptr;
-    if (out_ && inputs_.empty() && buffered_ == 0) {
-      auto out = std::move(out_);
-      out.on_complete();
-    }
+    sub_.release_later();
+    if (out_ && inputs_.empty() && buffered_ == 0)
+      out_.on_complete();
   }
 
   void on_subscribe(flow::subscription sub) override {
@@ -121,6 +113,24 @@ public:
     } else {
       sub.dispose();
     }
+  }
+
+  // -- reference counting -----------------------------------------------------
+
+  void ref_disposable() const noexcept final {
+    ref();
+  }
+
+  void deref_disposable() const noexcept final {
+    deref();
+  }
+
+  void ref_coordinated() const noexcept final {
+    ref();
+  }
+
+  void deref_coordinated() const noexcept final {
+    deref();
   }
 
   friend void intrusive_ptr_add_ref(const merge_sub* ptr) noexcept {
@@ -149,7 +159,7 @@ public:
     if (i == inputs_.end())
       return;
     if (!i->second.buf.empty()) {
-      i->second.sub = nullptr;
+      i->second.sub.release_later();
       return;
     }
     inputs_.erase(i);
@@ -157,10 +167,8 @@ public:
       sub_.request(1);
       return;
     }
-    if (inputs_.empty()) {
-      auto out = std::move(out_);
-      out.on_complete();
-    }
+    if (inputs_.empty())
+      out_.on_complete();
   }
 
   void fwd_on_error(input_key key, const error& what) {
@@ -172,10 +180,8 @@ public:
       return;
     err_ = what;
     stop_inputs();
-    if (inputs_.empty()) {
-      auto out = std::move(out_);
-      out.on_error(what);
-    }
+    if (inputs_.empty())
+      out_.on_error(what);
   }
 
   void fwd_on_next(input_key key, const T& item) {
@@ -202,15 +208,14 @@ public:
 
   void dispose() override {
     if (out_) {
-      ctx_->delay_fn([out = std::move(out_)]() mutable { out.on_complete(); });
+      parent_->delay_fn([out = std::move(out_)]() mutable { //
+        out.on_complete();
+      });
       input_map xs;
       xs.swap(inputs_);
       for (auto& kvp : xs)
         kvp.second.sub.dispose();
-      if (sub_) {
-        auto sub = std::move(sub_);
-        sub.dispose();
-      }
+      sub_.dispose();
     }
   }
 
@@ -220,7 +225,7 @@ public:
     if (buffered_ == 0)
       demand_ += n;
     else
-      this->pull(ctx_, n);
+      this->pull(parent_, n);
   }
 
   // -- properties -------------------------------------------------------------
@@ -238,7 +243,7 @@ public:
   }
 
   bool subscribed() const noexcept {
-    return sub_.ptr() != nullptr;
+    return sub_.valid();
   }
 
   size_t max_concurrent() const noexcept {
@@ -280,11 +285,10 @@ private:
       ++pos_;
     // Check if we can call it a day.
     if (out_ && done()) {
-      auto out = std::move(out_);
       if (!err_)
-        out.on_complete();
+        out_.on_complete();
       else
-        out.on_error(err_);
+        out_.on_error(err_);
     }
   }
 
@@ -348,7 +352,7 @@ private:
   }
 
   /// Stores the context (coordinator) that runs this flow.
-  coordinator* ctx_;
+  coordinator* parent_;
 
   /// Stores the first error that occurred on any input.
   error err_;
@@ -391,9 +395,9 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   template <class... Ts, class... Inputs>
-  explicit merge(coordinator* ctx, observable<T> input0, observable<T> input1,
-                 Inputs... inputs)
-    : super(ctx) {
+  explicit merge(coordinator* parent, observable<T> input0,
+                 observable<T> input1, Inputs... inputs)
+    : super(parent) {
     static_assert((std::is_same_v<observable<T>, Inputs> && ...));
     using vector_t = std::vector<observable<T>>;
     using gen_t = gen::from_container<vector_t>;
@@ -403,20 +407,20 @@ public:
     xs.emplace_back(std::move(input0));
     xs.emplace_back(std::move(input1));
     (xs.emplace_back(std::move(inputs)), ...);
-    inputs_ = make_counted<obs_t>(super::ctx(), gen_t{std::move(xs)},
-                                  std::tuple{});
+    inputs_ = super::parent_->add_child(std::in_place_type<obs_t>,
+                                        gen_t{std::move(xs)}, std::tuple{});
   }
 
-  explicit merge(coordinator* ctx, observable<observable<T>> inputs)
-    : super(ctx), inputs_(std::move(inputs)) {
+  explicit merge(coordinator* parent, observable<observable<T>> inputs)
+    : super(parent), inputs_(std::move(inputs)) {
     // nop
   }
 
   // -- implementation of observable_impl<T> -----------------------------------
 
   disposable subscribe(observer<T> out) override {
-    using sub_t = merge_sub<T>;
-    auto sub = make_counted<sub_t>(super::ctx_, out, max_concurrent_);
+    auto sub = super::parent_->add_child(std::in_place_type<merge_sub<T>>, out,
+                                         max_concurrent_);
     inputs_.subscribe(sub->as_observer());
     out.on_subscribe(subscription{sub});
     return sub->as_disposable();

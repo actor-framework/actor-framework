@@ -41,7 +41,16 @@ public:
   template <class T>
   class passive_observer : public caf::flow::observer_impl_base<T> {
   public:
+    explicit passive_observer(caf::flow::coordinator* parent)
+      : parent_(parent) {
+      // nop
+    }
+
     // -- implementation of observer_impl<T> -----------------------------------
+
+    caf::flow::coordinator* parent() const noexcept override {
+      return parent_;
+    }
 
     void on_complete() override {
       if (sub) {
@@ -53,10 +62,7 @@ public:
     }
 
     void on_error(const error& what) override {
-      if (sub) {
-        sub.dispose();
-        sub = nullptr;
-      }
+      sub.dispose();
       err = what;
       state = observer_state::aborted;
     }
@@ -133,6 +139,9 @@ public:
 
     /// Stores all items received via `on_next`.
     std::vector<T> buf;
+
+  private:
+    caf::flow::coordinator* parent_;
   };
 
   /// Similar to @ref passive_observer but automatically requests items until
@@ -141,6 +150,8 @@ public:
   class auto_observer : public passive_observer<T> {
   public:
     using super = passive_observer<T>;
+
+    using super::super;
 
     void on_subscribe(caf::flow::subscription new_sub) override {
       if (this->state == observer_state::idle) {
@@ -183,13 +194,13 @@ public:
   /// Returns a new passive observer.
   template <class T>
   intrusive_ptr<passive_observer<T>> make_passive_observer() {
-    return make_counted<passive_observer<T>>();
+    return coordinator()->add_child(std::in_place_type<passive_observer<T>>);
   }
 
   /// Returns a new auto observer.
   template <class T>
   intrusive_ptr<auto_observer<T>> make_auto_observer() {
-    return make_counted<auto_observer<T>>();
+    return coordinator()->add_child(std::in_place_type<auto_observer<T>>);
   }
 
   /// Shortcut for creating an observable error via

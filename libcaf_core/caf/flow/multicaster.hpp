@@ -8,7 +8,6 @@
 #include "caf/flow/observable_decl.hpp"
 #include "caf/flow/op/mcast.hpp"
 #include "caf/intrusive_ptr.hpp"
-#include "caf/make_counted.hpp"
 
 #include <cstdint>
 
@@ -20,8 +19,8 @@ class multicaster {
 public:
   using impl_ptr = intrusive_ptr<op::mcast<T>>;
 
-  explicit multicaster(coordinator* ctx) {
-    pimpl_ = make_counted<op::mcast<T>>(ctx);
+  explicit multicaster(coordinator* parent) {
+    pimpl_ = parent->add_child(std::in_place_type<op::mcast<T>>);
   }
 
   explicit multicaster(impl_ptr ptr) noexcept : pimpl_(std::move(ptr)) {

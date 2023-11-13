@@ -436,6 +436,8 @@ public:
 
   void delay(action what) override;
 
+  void release_later(flow::coordinated_ptr& child) override;
+
   disposable delay_until(steady_time_point abs_time, action what) override;
 
   void watch(disposable what) override;
@@ -818,6 +820,9 @@ private:
   /// Stores actions that the actor executes after processing the current
   /// message.
   std::vector<action> actions_;
+
+  /// Stores children that were marked for release while running an action.
+  std::vector<flow::coordinated_ptr> released_;
 
   /// Counter for scheduled_actor::delay to make sure
   /// scheduled_actor::run_actions does not end up in a busy loop that might

@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/config.hpp"
 #include "caf/flow/observer.hpp"
 #include "caf/flow/op/cold.hpp"
 #include "caf/flow/subscription.hpp"
@@ -17,12 +18,16 @@ class never_sub : public subscription::impl_base {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
-  never_sub(coordinator* ctx, observer<T> out)
-    : ctx_(ctx), out_(std::move(out)) {
+  never_sub(coordinator* parent, observer<T> out)
+    : parent_(parent), out_(std::move(out)) {
     // nop
   }
 
   // -- implementation of subscription -----------------------------------------
+
+  coordinator* parent() const noexcept override {
+    return parent_;
+  }
 
   bool disposed() const noexcept override {
     return !out_;
@@ -30,7 +35,9 @@ public:
 
   void dispose() override {
     if (out_)
-      ctx_->delay_fn([out = std::move(out_)]() mutable { out.on_complete(); });
+      parent_->delay_fn([out = std::move(out_)]() mutable { //
+        out.on_complete();
+      });
   }
 
   void request(size_t) override {
@@ -39,7 +46,7 @@ public:
 
 private:
   /// Stores the context (coordinator) that runs this flow.
-  coordinator* ctx_;
+  coordinator* parent_;
 
   /// Stores a handle to the subscribed observer.
   observer<T> out_;
@@ -53,20 +60,20 @@ public:
 
   using super = cold<T>;
 
-  using output_type = T;
-
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit never(coordinator* ctx) : super(ctx) {
+  explicit never(coordinator* parent) : super(parent) {
     // nop
   }
 
   // -- implementation of observable_impl<T> -----------------------------------
 
-  disposable subscribe(observer<output_type> out) override {
-    auto ptr = make_counted<never_sub<T>>(super::ctx_, out);
-    out.on_subscribe(subscription{ptr});
-    return disposable{std::move(ptr)};
+  disposable subscribe(observer<T> out) override {
+    CAF_ASSERT(out.valid());
+    auto sub = super::parent_->add_child_hdl(std::in_place_type<never_sub<T>>,
+                                             out);
+    out.on_subscribe(sub);
+    return disposable{std::move(sub).as_disposable()};
   }
 };
 

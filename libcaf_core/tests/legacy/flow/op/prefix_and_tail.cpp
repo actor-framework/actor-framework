@@ -56,7 +56,8 @@ SCENARIO("prefix_and_tail splits off initial elements") {
   GIVEN("a generation with 0 values") {
     WHEN("calling prefix_and_tail(2)") {
       THEN("the observer of prefix_and_tail only receives on_complete") {
-        auto snk = flow::make_auto_observer<tuple_t>();
+        using snk_t = flow::auto_observer<tuple_t>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         ctx->make_observable()
           .empty<int>() //
           .prefix_and_tail(2)
@@ -71,7 +72,8 @@ SCENARIO("prefix_and_tail splits off initial elements") {
   GIVEN("a generation with 1 values") {
     WHEN("calling prefix_and_tail(2)") {
       THEN("the observer of prefix_and_tail only receives on_complete") {
-        auto snk = flow::make_auto_observer<tuple_t>();
+        using snk_t = flow::auto_observer<tuple_t>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         ctx->make_observable()
           .just(1) //
           .prefix_and_tail(2)
@@ -86,7 +88,8 @@ SCENARIO("prefix_and_tail splits off initial elements") {
   GIVEN("a generation with 2 values") {
     WHEN("calling prefix_and_tail(2)") {
       THEN("the observer receives the first 2 elements plus empty remainder") {
-        auto snk = flow::make_auto_observer<int>();
+        using snk_t = flow::auto_observer<int>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto flat_map_calls = 0;
         ctx->make_observable()
           .iota(1)
@@ -110,7 +113,8 @@ SCENARIO("prefix_and_tail splits off initial elements") {
   GIVEN("a generation with 8 values") {
     WHEN("calling prefix_and_tail(2)") {
       THEN("the observer receives the first 2 elements plus remainder") {
-        auto snk = flow::make_auto_observer<int>();
+        using snk_t = flow::auto_observer<int>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto flat_map_calls = 0;
         ctx->make_observable()
           .iota(1)
@@ -134,7 +138,8 @@ SCENARIO("prefix_and_tail splits off initial elements") {
   GIVEN("a generation with 256 values") {
     WHEN("calling prefix_and_tail(7)") {
       THEN("the observer receives the first 7 elements plus remainder") {
-        auto snk = flow::make_auto_observer<int>();
+        using snk_t = flow::auto_observer<int>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto flat_map_calls = 0;
         ctx->make_observable()
           .iota(1)
@@ -162,7 +167,8 @@ SCENARIO("head_and_tail splits off the first element") {
   GIVEN("a generation with 0 values") {
     WHEN("calling head_and_tail") {
       THEN("the observer of head_and_tail only receives on_complete") {
-        auto snk = flow::make_auto_observer<tuple_t>();
+        using snk_t = flow::auto_observer<tuple_t>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         ctx->make_observable()
           .empty<int>() //
           .head_and_tail()
@@ -177,7 +183,8 @@ SCENARIO("head_and_tail splits off the first element") {
   GIVEN("a generation with 1 values") {
     WHEN("calling head_and_tail()") {
       THEN("the observer receives the first element plus empty remainder") {
-        auto snk = flow::make_auto_observer<int>();
+        using snk_t = flow::auto_observer<int>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto flat_map_calls = 0;
         ctx->make_observable()
           .just(1)
@@ -200,7 +207,8 @@ SCENARIO("head_and_tail splits off the first element") {
   GIVEN("a generation with 2 values") {
     WHEN("calling head_and_tail()") {
       THEN("the observer receives the first element plus remainder") {
-        auto snk = flow::make_auto_observer<int>();
+        using snk_t = flow::auto_observer<int>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto flat_map_calls = 0;
         ctx->make_observable()
           .iota(1)
@@ -282,11 +290,13 @@ SCENARIO("head_and_tail requests the prefix as soon as possible") {
   GIVEN("an observable that delays the call to on_subscribe") {
     WHEN("the observer requests before on_subscribe from the input arrives") {
       THEN("head_and_tail requests the prefix immediately") {
-        auto snk = flow::make_passive_observer<tuple_t>();
+        using snk_t = flow::auto_observer<tuple_t>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto uut = raw_sub<int>(snk->as_observer(), 7);
         snk->request(42);
         ctx->run();
-        auto in_sub = flow::make_passive_subscription();
+        using sub_t = flow::passive_subscription_impl;
+        auto in_sub = ctx->add_child(std::in_place_type<sub_t>);
         uut->on_subscribe(flow::subscription{in_sub});
         CHECK_EQ(in_sub->demand, 7u);
       }
@@ -299,10 +309,12 @@ SCENARIO("head_and_tail disposes unexpected subscriptions") {
   GIVEN("a subscribed head_and_tail operator") {
     WHEN("on_subscribe gets called again") {
       THEN("the unexpected subscription gets disposed") {
-        auto snk = flow::make_passive_observer<tuple_t>();
+        using snk_t = flow::passive_observer<tuple_t>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto uut = raw_sub<int>(snk->as_observer(), 7);
-        auto sub1 = flow::make_passive_subscription();
-        auto sub2 = flow::make_passive_subscription();
+        using sub_t = flow::passive_subscription_impl;
+        auto sub1 = ctx->add_child(std::in_place_type<sub_t>);
+        auto sub2 = ctx->add_child(std::in_place_type<sub_t>);
         uut->on_subscribe(flow::subscription{sub1});
         uut->on_subscribe(flow::subscription{sub2});
         CHECK(!sub1->disposed());
@@ -317,9 +329,11 @@ SCENARIO("disposing head_and_tail disposes the input subscription") {
   GIVEN("a subscribed head_and_tail operator") {
     WHEN("calling dispose on the operator") {
       THEN("the operator disposes its input") {
-        auto snk = flow::make_passive_observer<tuple_t>();
+        using snk_t = flow::passive_observer<tuple_t>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto uut = raw_sub<int>(snk->as_observer(), 7);
-        auto sub = flow::make_passive_subscription();
+        using sub_t = flow::passive_subscription_impl;
+        auto sub = ctx->add_child(std::in_place_type<sub_t>);
         uut->on_subscribe(flow::subscription{sub});
         CHECK(!uut->disposed());
         CHECK(!sub->disposed());
@@ -336,9 +350,10 @@ SCENARIO("disposing the tail of head_and_tail disposes the operator") {
   GIVEN("a subscribed head_and_tail operator") {
     WHEN("calling dispose the subscription to the tail") {
       THEN("the operator gets disposed") {
+        using snk_t = flow::passive_observer<int>;
         auto got_tail = false;
         auto tail_values = 0;
-        auto snk = flow::make_passive_observer<int>();
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto sub = //
           ctx->make_observable()
             .iota(1) //
@@ -356,6 +371,7 @@ SCENARIO("disposing the tail of head_and_tail disposes the operator") {
         CHECK(sub.disposed());
         CHECK(snk->completed());
       }
+      ctx->run();
     }
   }
 }

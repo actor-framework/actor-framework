@@ -52,10 +52,8 @@ void stream_bridge_sub::drop() {
     unsafe_anon_send(src_, stream_cancel_msg{src_flow_id_});
     src_ = nullptr;
   }
-  if (out_) {
-    auto out = std::move(out_);
-    out.on_complete();
-  }
+  if (out_)
+    out_.on_complete();
 }
 
 void stream_bridge_sub::drop(const error& reason) {
@@ -66,10 +64,8 @@ void stream_bridge_sub::drop(const error& reason) {
     unsafe_anon_send(src_, stream_cancel_msg{src_flow_id_});
     src_ = nullptr;
   }
-  if (out_) {
-    auto out = std::move(out_);
-    out.on_error(reason);
-  }
+  if (out_)
+    out_.on_error(reason);
 }
 
 void stream_bridge_sub::push(const async::batch& input) {
@@ -100,6 +96,10 @@ void stream_bridge_sub::push() {
     buf_.pop_front();
   }
   do_check_credit();
+}
+
+flow::coordinator* stream_bridge_sub::parent() const noexcept {
+  return self_;
 }
 
 bool stream_bridge_sub::disposed() const noexcept {
@@ -133,7 +133,6 @@ void stream_bridge_sub::do_abort(const error& reason) {
   });
   self_->delay(std::move(fn));
   out_.on_error(reason);
-  out_ = nullptr;
   unsafe_send_as(self_, src_, stream_cancel_msg{src_flow_id_});
   src_ = nullptr;
 }
@@ -178,7 +177,7 @@ disposable stream_bridge::subscribe(flow::observer<async::batch> out) {
 scheduled_actor* stream_bridge::self_ptr() {
   // This cast is safe, because the stream_bridge may only be constructed with
   // a scheduled actor pointer.
-  return static_cast<scheduled_actor*>(super::ctx());
+  return static_cast<scheduled_actor*>(super::parent());
 }
 
 } // namespace caf::detail

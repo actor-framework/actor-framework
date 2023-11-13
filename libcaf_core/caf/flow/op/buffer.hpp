@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/cow_vector.hpp"
+#include "caf/flow/coordinator.hpp"
 #include "caf/flow/observable_decl.hpp"
 #include "caf/flow/observer.hpp"
 #include "caf/flow/op/cold.hpp"
@@ -64,12 +65,17 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  buffer_sub(coordinator* ctx, size_t max_buf_size, observer<output_type> out)
-    : ctx_(ctx), max_buf_size_(max_buf_size), out_(std::move(out)) {
+  buffer_sub(coordinator* parent, size_t max_buf_size,
+             observer<output_type> out)
+    : parent_(parent), max_buf_size_(max_buf_size), out_(std::move(out)) {
     // nop
   }
 
   // -- properties -------------------------------------------------------------
+
+  coordinator* parent() const noexcept override {
+    return parent_;
+  }
 
   bool running() const noexcept {
     return state_ == state::running;
@@ -92,13 +98,14 @@ public:
   void init(observable<input_type> vals, observable<select_token_type> ctrl) {
     using val_fwd_t = forwarder<input_type, buffer_sub, buffer_input_t>;
     using ctrl_fwd_t = forwarder<select_token_type, buffer_sub, buffer_emit_t>;
-    vals.subscribe(
-      make_counted<val_fwd_t>(this, buffer_input_t{})->as_observer());
+    auto fwd = parent_->add_child(std::in_place_type<val_fwd_t>, this,
+                                  buffer_input_t{});
+    vals.subscribe(fwd->as_observer());
     // Note: the previous subscribe might call on_error, in which case we don't
     // need to try to subscribe to the control observable.
     if (running())
-      ctrl.subscribe(
-        make_counted<ctrl_fwd_t>(this, buffer_emit_t{})->as_observer());
+      ctrl.subscribe(parent_->add_child_hdl(std::in_place_type<ctrl_fwd_t>,
+                                            this, buffer_emit_t{}));
   }
 
   // -- callbacks for the forwarders -------------------------------------------
@@ -113,12 +120,12 @@ public:
   }
 
   void fwd_on_complete(buffer_input_t) {
-    value_sub_ = nullptr;
+    value_sub_.release_later();
     shutdown();
   }
 
   void fwd_on_error(buffer_input_t, const error& what) {
-    value_sub_ = nullptr;
+    value_sub_.release_later();
     err_ = what;
     shutdown();
   }
@@ -141,7 +148,7 @@ public:
   }
 
   void fwd_on_complete(buffer_emit_t) {
-    control_sub_ = nullptr;
+    control_sub_.release_later();
     if (state_ == state::running)
       err_ = make_error(sec::end_of_stream,
                         "buffer: unexpected end of the control stream");
@@ -149,7 +156,7 @@ public:
   }
 
   void fwd_on_error(buffer_emit_t, const error& what) {
-    control_sub_ = nullptr;
+    control_sub_.release_later();
     err_ = what;
     shutdown();
   }
@@ -172,7 +179,7 @@ public:
 
   void dispose() override {
     if (out_) {
-      ctx_->delay_fn([strong_this = intrusive_ptr<buffer_sub>{this}] {
+      parent_->delay_fn([strong_this = intrusive_ptr<buffer_sub>{this}] {
         strong_this->do_dispose();
       });
     }
@@ -183,7 +190,7 @@ public:
     demand_ += n;
     // If we can ship a batch, schedule an event to do so.
     if (demand_ == n && can_emit()) {
-      ctx_->delay_fn([strong_this = intrusive_ptr<buffer_sub>{this}] {
+      parent_->delay_fn([strong_this = intrusive_ptr<buffer_sub>{this}] {
         strong_this->on_request();
       });
     }
@@ -204,11 +211,10 @@ private:
           out_.on_next(f(buf_));
           buf_.clear();
         }
-        auto tmp = std::move(out_);
-        if (err_)
-          tmp.on_error(err_);
+        if (!err_)
+          out_.on_complete();
         else
-          tmp.on_complete();
+          out_.on_error(err_);
         state_ = state::disposed;
         break;
       }
@@ -227,11 +233,10 @@ private:
     }
     if (!buf_.empty())
       do_emit();
-    auto tmp = std::move(out_);
-    if (err_)
-      tmp.on_error(err_);
+    if (!err_)
+      out_.on_complete();
     else
-      tmp.on_complete();
+      out_.on_error(err_);
   }
 
   void do_emit() {
@@ -247,17 +252,15 @@ private:
   }
 
   void do_dispose() {
+    state_ = state::disposed;
     value_sub_.dispose();
     control_sub_.dispose();
-    if (out_) {
-      auto tmp = std::move(out_);
-      tmp.on_complete();
-    }
-    state_ = state::disposed;
+    if (out_)
+      out_.on_complete();
   }
 
   /// Stores the context (coordinator) that runs this flow.
-  coordinator* ctx_;
+  coordinator* parent_;
 
   /// Stores the maximum buffer size before forcing a batch.
   size_t max_buf_size_;
@@ -307,8 +310,8 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  buffer(coordinator* ctx, size_t max_items, input in, selector select)
-    : super(ctx),
+  buffer(coordinator* parent, size_t max_items, input in, selector select)
+    : super(parent),
       max_items_(max_items),
       in_(std::move(in)),
       select_(std::move(select)) {
@@ -318,10 +321,11 @@ public:
   // -- implementation of observable<T> -----------------------------------
 
   disposable subscribe(observer<output_type> out) override {
-    auto ptr = make_counted<buffer_sub<Trait>>(super::ctx_, max_items_, out);
+    auto ptr = super::parent_->add_child(std::in_place_type<buffer_sub<Trait>>,
+                                         max_items_, out);
     ptr->init(in_, select_);
     if (!ptr->running()) {
-      return fail_subscription(
+      return super::fail_subscription(
         out, ptr->err().or_else(sec::runtime_error,
                                 "failed to initialize buffer subscription"));
     }

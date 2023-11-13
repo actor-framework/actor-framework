@@ -10,7 +10,6 @@
 #include "caf/flow/op/pullable.hpp"
 #include "caf/flow/subscription.hpp"
 #include "caf/intrusive_ptr.hpp"
-#include "caf/make_counted.hpp"
 
 #include <deque>
 #include <memory>
@@ -20,7 +19,9 @@ namespace caf::flow::op {
 /// Shared state between an operator that emits values and the subscribed
 /// observer.
 template <class T>
-class ucast_sub_state : public detail::plain_ref_counted, public pullable {
+class ucast_sub_state : public detail::plain_ref_counted,
+                        public pullable,
+                        public coordinated {
 public:
   // -- friends ----------------------------------------------------------------
 
@@ -65,17 +66,14 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit ucast_sub_state(coordinator* ptr) : ctx(ptr) {
-    // nop
+  explicit ucast_sub_state(coordinator* parent) : parent_(parent) {
+    CAF_ASSERT(parent_ != nullptr);
   }
 
-  ucast_sub_state(coordinator* ptr, observer<T> obs)
-    : ctx(ptr), out(std::move(obs)) {
-    // nop
+  ucast_sub_state(coordinator* parent, observer<T> obs)
+    : out(std::move(obs)), parent_(parent) {
+    CAF_ASSERT(parent_ != nullptr);
   }
-
-  /// The coordinator for scheduling delayed function calls.
-  coordinator* ctx;
 
   /// The buffer for storing items until the observer requests them.
   std::deque<T> buf;
@@ -123,10 +121,8 @@ public:
       if (!this->is_pulling() && buf.empty()) {
         disposed = true;
         listener = nullptr;
-        if (out) {
-          auto tmp = std::move(out);
-          tmp.on_complete();
-        }
+        if (out)
+          out.on_complete();
       }
     }
   }
@@ -142,7 +138,7 @@ public:
       if (listener)
         listener->on_demand_changed(this);
     } else {
-      this->pull(ctx, n);
+      this->pull(parent_, n);
     }
   }
 
@@ -153,10 +149,8 @@ public:
       if (!this->is_pulling() && buf.empty()) {
         disposed = true;
         listener = nullptr;
-        if (out) {
-          auto tmp = std::move(out);
-          tmp.on_error(reason);
-        }
+        if (out)
+          out.on_error(reason);
       }
     }
   }
@@ -170,10 +164,22 @@ public:
       listener = nullptr;
       lptr->on_disposed(this);
     }
-    if (out) {
-      auto tmp = std::move(out);
-      tmp.on_complete();
-    }
+    if (out)
+      out.on_complete();
+  }
+
+  // -- implementation of coordinated ------------------------------------------
+
+  coordinator* parent() const noexcept override {
+    return parent_;
+  }
+
+  void ref_coordinated() const noexcept override {
+    ref();
+  }
+
+  void deref_coordinated() const noexcept override {
+    deref();
   }
 
 private:
@@ -193,11 +199,10 @@ private:
         --demand;
       }
       if (buf.empty() && closed) {
-        auto tmp = std::move(out);
-        if (err)
-          tmp.on_error(err);
+        if (!err)
+          out.on_complete();
         else
-          tmp.on_complete();
+          out.on_error(err);
         dispose();
       } else if (got_some && listener) {
         listener->on_consumed_some(this, old_buf_size, buf.size());
@@ -212,6 +217,9 @@ private:
   void do_deref() override {
     this->deref();
   }
+
+  /// The coordinator for scheduling delayed function calls.
+  coordinator* parent_;
 };
 
 template <class T>
@@ -225,12 +233,16 @@ class ucast_sub : public subscription::impl_base {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
-  ucast_sub(coordinator* ctx, ucast_sub_state_ptr<T> state)
-    : ctx_(ctx), state_(std::move(state)) {
-    // nop
+  ucast_sub(coordinator* parent, ucast_sub_state_ptr<T> state)
+    : parent_(parent), state_(std::move(state)) {
+    CAF_ASSERT(parent_ != nullptr);
   }
 
   // -- implementation of subscription -----------------------------------------
+
+  coordinator* parent() const noexcept override {
+    return parent_;
+  }
 
   bool disposed() const noexcept override {
     return !state_ || state_->disposed;
@@ -250,7 +262,7 @@ public:
 
 private:
   /// Stores the context (coordinator) that runs this flow.
-  coordinator* ctx_;
+  coordinator* parent_;
 
   /// Stores a handle to the state.
   ucast_sub_state_ptr<T> state_;
@@ -272,8 +284,8 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit ucast(coordinator* ctx) : super(ctx) {
-    state_ = make_counted<ucast_sub_state<T>>(ctx);
+  explicit ucast(coordinator* parent) : super(parent) {
+    state_ = parent->add_child(std::in_place_type<ucast_sub_state<T>>);
   }
 
   /// Pushes @p item to the subscriber or buffers them until subscribed.
@@ -319,19 +331,20 @@ public:
   disposable subscribe(observer<T> out) override {
     if (state_->closed) {
       if (state_->err) {
-        return fail_subscription(out, state_->err);
+        return super::fail_subscription(out, state_->err);
       }
-      return empty_subscription(out);
+      return super::empty_subscription(out);
     }
     if (state_->out) {
-      return fail_subscription(
+      return super::fail_subscription(
         out, make_error(sec::too_many_observers,
                         "may only subscribe once to an unicast operator"));
     }
     state_->out = out;
-    auto sub_ptr = make_counted<ucast_sub<T>>(super::ctx(), state_);
-    out.on_subscribe(subscription{sub_ptr});
-    return disposable{sub_ptr};
+    auto sub = super::parent_->add_child_hdl(std::in_place_type<ucast_sub<T>>,
+                                             state_);
+    out.on_subscribe(sub);
+    return disposable{std::move(sub).as_disposable()};
   }
 
 private:

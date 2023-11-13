@@ -30,21 +30,22 @@ public:
 
   /// Creates a @ref flow::observable that reads and emits all values from this
   /// publisher.
-  flow::observable<T> observe_on(flow::coordinator* ctx, size_t buffer_size,
+  flow::observable<T> observe_on(flow::coordinator* parent, size_t buffer_size,
                                  size_t min_request_size) const {
     if (impl_)
-      return impl_->observe_on(ctx, buffer_size, min_request_size);
+      return impl_->observe_on(parent, buffer_size, min_request_size);
     auto err = make_error(sec::invalid_observable,
                           "cannot subscribe to default-constructed observable");
-    // Note: cannot use ctx->make_observable() here because it would create a
+    // Note: cannot use parent->make_observable() here because it would create a
     //       circular dependency between observable_builder and publisher.
-    return flow::make_observable<flow::op::fail<T>>(ctx, std::move(err));
+    return parent->add_child_hdl(std::in_place_type<flow::op::fail<T>>,
+                                 std::move(err));
   }
 
   /// Creates a @ref flow::observable that reads and emits all values from this
   /// publisher.
-  flow::observable<T> observe_on(flow::coordinator* ctx) const {
-    return observe_on(ctx, defaults::flow::buffer_size,
+  flow::observable<T> observe_on(flow::coordinator* parent) const {
+    return observe_on(parent, defaults::flow::buffer_size,
                       defaults::flow::min_demand);
   }
 
@@ -52,10 +53,11 @@ public:
   static publisher from(flow::observable<T> decorated) {
     if (!decorated)
       return {};
-    auto* ctx = decorated.ctx();
+    auto* parent = decorated.parent();
     auto flag = disposable::make_flag();
-    ctx->watch(flag);
-    auto pimpl = make_counted<impl>(ctx, std::move(decorated), std::move(flag));
+    parent->watch(flag);
+    auto pimpl = make_counted<impl>(parent, std::move(decorated),
+                                    std::move(flag));
     return publisher{std::move(pimpl)};
   }
 
@@ -70,10 +72,11 @@ private:
       // nop
     }
 
-    flow::observable<T> observe_on(flow::coordinator* ctx, size_t buffer_size,
+    flow::observable<T> observe_on(flow::coordinator* parent,
+                                   size_t buffer_size,
                                    size_t min_request_size) const {
       // Short circuit if we are already on the target coordinator.
-      if (ctx == source_.get())
+      if (parent == source_.get())
         return decorated_;
       // Otherwise, create a new SPSC buffer and connect it to the source.
       auto [pull, push] = async::make_spsc_buffer_resource<T>(buffer_size,
@@ -82,7 +85,7 @@ private:
         [push = std::move(push), decorated = decorated_]() mutable {
           decorated.subscribe(std::move(push));
         });
-      return pull.observe_on(ctx);
+      return pull.observe_on(parent);
     }
 
     ~impl() {

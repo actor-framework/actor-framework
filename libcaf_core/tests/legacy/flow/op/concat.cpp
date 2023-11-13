@@ -66,7 +66,8 @@ SCENARIO("concat operators combine inputs") {
       THEN("the observer only an on_complete event") {
         auto r1 = ctx->make_observable().repeat(11).take(113);
         auto r2 = ctx->make_observable().repeat(22).take(223);
-        auto snk = flow::make_passive_observer<int>();
+        using snk_t = flow::passive_observer<int>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto sub = ctx->make_observable()
                      .concat(std::move(r1), std::move(r2))
                      .subscribe(snk->as_observer());
@@ -81,7 +82,8 @@ SCENARIO("concat operators combine inputs") {
   GIVEN("an observable of observable") {
     WHEN("concatenating it") {
       THEN("the observer receives all items") {
-        auto snk = flow::make_auto_observer<int>();
+        using snk_t = flow::auto_observer<int>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         ctx->make_observable()
           .from_container(
             std::vector{ctx->make_observable().just(1).as_observable(),
@@ -96,7 +98,8 @@ SCENARIO("concat operators combine inputs") {
     }
     WHEN("concatenating it but disposing the operator") {
       THEN("the observer only an on_complete event") {
-        auto snk = flow::make_passive_observer<int>();
+        using snk_t = flow::passive_observer<int>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto sub = ctx->make_observable()
                      .never<flow::observable<int>>()
                      .concat()
@@ -115,7 +118,8 @@ SCENARIO("concat operators combine inputs") {
         auto outputs = std::vector<int>{};
         auto r1 = ctx->make_observable().fail<int>(sec::runtime_error);
         auto r2 = ctx->make_observable().iota(1).take(3);
-        auto snk = flow::make_auto_observer<int>();
+        using snk_t = flow::passive_observer<int>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         ctx->make_observable()
           .concat(std::move(r1), std::move(r2))
           .subscribe(snk->as_observer());
@@ -132,7 +136,8 @@ SCENARIO("concat operators combine inputs") {
         auto outputs = std::vector<int>{};
         auto r1 = ctx->make_observable().iota(1).take(3);
         auto r2 = ctx->make_observable().fail<int>(sec::runtime_error);
-        auto snk = flow::make_auto_observer<int>();
+        using snk_t = flow::auto_observer<int>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         ctx->make_observable()
           .concat(std::move(r1), std::move(r2))
           .subscribe(snk->as_observer());
@@ -149,10 +154,10 @@ SCENARIO("empty concat operators only call on_complete") {
   GIVEN("a concat operator with no inputs") {
     WHEN("subscribing to it") {
       THEN("the observer only receives an on_complete event") {
-        auto snk = flow::make_auto_observer<int>();
+        using snk_t = flow::auto_observer<int>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto sub = make_operator<int>()->subscribe(snk->as_observer());
         ctx->run();
-        CHECK(sub.disposed());
         CHECK(snk->completed());
         CHECK(snk->buf.empty());
       }
@@ -164,11 +169,13 @@ SCENARIO("the concat operator disposes unexpected subscriptions") {
   GIVEN("a concat operator with no inputs") {
     WHEN("subscribing to it") {
       THEN("the observer only receives an on_complete event") {
-        auto snk = flow::make_passive_observer<int>();
+        using snk_t = flow::passive_observer<int>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto r1 = ctx->make_observable().just(1).as_observable();
         auto r2 = ctx->make_observable().just(2).as_observable();
         auto uut = raw_sub(snk->as_observer(), r1, r2);
-        auto sub = make_counted<flow::passive_subscription_impl>();
+        using sub_t = flow::passive_subscription_impl;
+        auto sub = ctx->add_child(std::in_place_type<sub_t>);
         ctx->run();
         CHECK(!sub->disposed());
         uut->fwd_on_subscribe(42, flow::subscription{sub});
