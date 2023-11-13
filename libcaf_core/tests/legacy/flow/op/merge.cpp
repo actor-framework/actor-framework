@@ -70,7 +70,7 @@ struct fixture : test_coordinator_fixture<> {
 BEGIN_FIXTURE_SCOPE(fixture)
 
 SCENARIO("the merge operator combines inputs") {
-  GIVEN("two observables") {
+  GIVEN("two successful observables") {
     WHEN("merging them to a single observable") {
       THEN("the observer receives the output of both sources") {
         using ivec = std::vector<int>;
@@ -83,6 +83,32 @@ SCENARIO("the merge operator combines inputs") {
         ctx->run();
         CHECK_EQ(snk->state, flow::observer_state::completed);
         CHECK_EQ(snk->sorted_buf(), concat(ivec(113, 11), ivec(223, 22)));
+      }
+    }
+  }
+  GIVEN("one fail observable with one successful observable") {
+    WHEN("merging them to a single observable") {
+      THEN("the observer aborts with error") {
+        auto snk = flow::make_auto_observer<int>();
+        make_observable()
+          .fail<int>(sec::runtime_error)
+          .merge(make_observable().repeat(22).take(223))
+          .subscribe(snk->as_observer());
+        ctx->run();
+        CHECK_EQ(snk->state, flow::observer_state::aborted);
+      }
+    }
+  }
+  GIVEN("two fail observables") {
+    WHEN("merging them to a single observable") {
+      THEN("the observer receives the error of first observable") {
+        auto snk = flow::make_auto_observer<int>();
+        make_observable()
+          .fail<int>(sec::runtime_error)
+          .merge(make_observable().fail<int>(sec::end_of_stream))
+          .subscribe(snk->as_observer());
+        ctx->run();
+        CHECK_EQ(snk->state, flow::observer_state::aborted);
       }
     }
   }

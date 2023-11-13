@@ -87,6 +87,8 @@ public:
 
   void on_next(const observable<T>& what) override {
     CAF_ASSERT(what);
+    if (!sub_)
+      return;
     auto key = next_key_++;
     inputs_.emplace(key, merge_input<T>{});
     using fwd_impl = forwarder<T, merge_sub, size_t>;
@@ -98,7 +100,7 @@ public:
     sub_ = nullptr;
     err_ = what;
     stop_inputs();
-    if (inputs_.empty()) {
+    if (out_ && inputs_.empty()) {
       auto out = std::move(out_);
       out.on_error(what);
     }
@@ -306,6 +308,8 @@ private:
       else
         ++i;
     }
+    auto sub = std::move(sub_);
+    sub.dispose();
   }
 
   bool done() const noexcept {
