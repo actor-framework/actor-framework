@@ -67,7 +67,7 @@ public:
   }
 
   optional& operator=(optional&& other) noexcept(
-    std::is_nothrow_destructible_v<T>&& std::is_nothrow_move_assignable_v<T>) {
+    std::is_nothrow_destructible_v<T> && std::is_nothrow_move_assignable_v<T>) {
     if (m_valid) {
       if (other.m_valid)
         m_value = std::move(other.m_value);
