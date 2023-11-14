@@ -203,7 +203,7 @@ public:
     return value_;
   }
 
-  void swap(expected& other) noexcept(nothrow_move&& nothrow_swap) {
+  void swap(expected& other) noexcept(nothrow_move && nothrow_swap) {
     expected tmp{std::move(other)};
     other = std::move(*this);
     *this = std::move(tmp);
