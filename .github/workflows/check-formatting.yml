@@ -8,8 +8,8 @@ jobs:
   formatting:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Run clang-format.
-      uses: jidicula/clang-format-action@v4.10.1
+      uses: jidicula/clang-format-action@v4.11.0
       with:
-        clang-format-version: '16'
+        clang-format-version: '17'
