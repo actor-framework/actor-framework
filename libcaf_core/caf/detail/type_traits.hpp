@@ -611,6 +611,9 @@ public:
 };
 
 template <class T>
+inline constexpr bool has_insert_v = has_insert<T>::value;
+
+template <class T>
 struct has_size {
 private:
   template <class List>

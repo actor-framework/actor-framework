@@ -45,21 +45,6 @@ thread_local actor_id current_actor_id;
 // Stores a pointer to the system-wide logger.
 thread_local intrusive_ptr<logger> current_logger_ptr;
 
-struct print_adapter {
-  std::ostream& out;
-  void push_back(char c) {
-    out.put(c);
-  }
-  int end() {
-    return 0;
-  }
-  template <class Iterator, class Sentinel>
-  void insert(int, Iterator iter, Sentinel sentinel) {
-    while (iter != sentinel)
-      out.put(*iter++);
-  }
-};
-
 // Default logger implementation.
 class default_logger : public logger, public detail::atomic_ref_counted {
 public:
@@ -231,7 +216,7 @@ public:
 
   /// Renders the date of `x` in ISO 8601 format.
   static void render_date(std::ostream& out, timestamp x) {
-    print_adapter adapter{out};
+    detail::print_iterator_adapter adapter{std::ostreambuf_iterator<char>{out}};
     detail::print(adapter, x);
   }
 

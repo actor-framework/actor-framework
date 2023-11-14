@@ -9,7 +9,7 @@
 
 namespace {
 
-int utc_offset(const tm& time_buf) noexcept {
+int get_utc_offset(const tm& time_buf) noexcept {
 #  if !defined(WINAPI_FAMILY) || (WINAPI_FAMILY == WINAPI_FAMILY_DESKTOP_APP)
   // Call _tzset once to initialize the timezone information.
   static bool unused = [] {
@@ -30,8 +30,12 @@ int utc_offset(const tm& time_buf) noexcept {
   return static_cast<int>(-offset);
 }
 
-void to_localtime(time_t ts, tm& time_buf) noexcept {
+void to_local_time(time_t ts, tm& time_buf) noexcept {
   localtime_s(&time_buf, &ts);
+}
+
+void to_utc_time(time_t ts, tm& time_buf) noexcept {
+  gmtime_s(&time_buf, &ts);
 }
 
 time_t tm_to_time_t(tm& time_buf) noexcept {
@@ -46,12 +50,16 @@ time_t tm_to_time_t(tm& time_buf) noexcept {
 
 namespace {
 
-auto utc_offset(const tm& time_buf) noexcept {
+auto get_utc_offset(const tm& time_buf) noexcept {
   return time_buf.tm_gmtoff;
 }
 
-void to_localtime(time_t ts, tm& time_buf) noexcept {
+void to_local_time(time_t ts, tm& time_buf) noexcept {
   localtime_r(&ts, &time_buf);
+}
+
+void to_utc_time(time_t ts, tm& time_buf) noexcept {
+  gmtime_r(&ts, &time_buf);
 }
 
 time_t tm_to_time_t(tm& time_buf) noexcept {
@@ -69,11 +77,13 @@ time_t tm_to_time_t(tm& time_buf) noexcept {
 #include "caf/expected.hpp"
 #include "caf/parser_state.hpp"
 
+namespace caf::detail {
+
 namespace {
 
 // Prints a fractional part of a timestamp, i.e., a value between 0 and 999.
 // Adds leading zeros.
-char* print_localtime_fraction(char* pos, int val) noexcept {
+char* print_3digits(char* pos, int val) noexcept {
   CAF_ASSERT(val < 1000);
   *pos++ = static_cast<char>((val / 100) + '0');
   *pos++ = static_cast<char>(((val % 100) / 10) + '0');
@@ -81,35 +91,68 @@ char* print_localtime_fraction(char* pos, int val) noexcept {
   return pos;
 }
 
-char* print_localtime_impl(char* buf, size_t buf_size, time_t ts,
-                           int ns) noexcept {
-  // Max size of a timestamp is 35 bytes: "2019-12-31T23:59:59.111222333+01:00".
-  // We need at least 36 bytes to store the timestamp and the null terminator.
-  CAF_ASSERT(buf_size >= 36);
-  // Read the time into a tm struct and print year plus time using strftime.
-  auto time_buf = tm{};
-  to_localtime(ts, time_buf);
-  auto index = strftime(buf, buf_size, "%FT%T", &time_buf);
-  auto pos = buf + index;
-  // Add the fractional component.
-  if (ns > 0) {
-    *pos++ = '.';
+char* print_fractional_component(char* pos, int ns, int precision,
+                                 bool is_fixed) noexcept {
+  if (precision > 0 && (ns > 0 || is_fixed)) {
     auto ms_val = ns / 1'000'000;
     auto us_val = (ns / 1'000) % 1'000;
     auto ns_val = ns % 1'000;
-    pos = print_localtime_fraction(pos, ms_val);
-    if (ns_val > 0) {
-      pos = print_localtime_fraction(pos, us_val);
-      pos = print_localtime_fraction(pos, ns_val);
-    } else if (us_val > 0) {
-      pos = print_localtime_fraction(pos, us_val);
+    if (is_fixed) {
+      *pos++ = '.';
+      switch (precision) {
+        case 3:
+          pos = print_3digits(pos, ms_val);
+          break;
+        case 6:
+          pos = print_3digits(pos, ms_val);
+          pos = print_3digits(pos, us_val);
+          break;
+        default: // chrono::precision::nano:
+          pos = print_3digits(pos, ms_val);
+          pos = print_3digits(pos, us_val);
+          pos = print_3digits(pos, ns_val);
+          break;
+      }
+      return pos;
+    }
+    // Check what the maximum precision is that we can actually print.
+    auto effective_precision = precision;
+    if (ns_val > 0 && precision == 9) {
+      effective_precision = 9;
+    } else if (us_val > 0 && precision >= 6) {
+      effective_precision = 6;
+    } else if (ms_val > 0 && precision >= 3) {
+      effective_precision = 3;
+    } else {
+      effective_precision = 0;
+    }
+    // Print the fractional part.
+    switch (effective_precision) {
+      default: // chrono::precision::unit
+        break;
+      case 3:
+        *pos++ = '.';
+        pos = print_3digits(pos, ms_val);
+        break;
+      case 6:
+        *pos++ = '.';
+        pos = print_3digits(pos, ms_val);
+        pos = print_3digits(pos, us_val);
+        break;
+      case 9:
+        *pos++ = '.';
+        pos = print_3digits(pos, ms_val);
+        pos = print_3digits(pos, us_val);
+        pos = print_3digits(pos, ns_val);
+        break;
     }
   }
-  // Add the timezone part.
-  auto offset = utc_offset(time_buf);
+  return pos;
+}
+
+char* print_utf_offset(char* pos, int offset) {
   if (offset == 0) {
     *pos++ = 'Z';
-    *pos = '\0';
     return pos;
   }
   if (offset > 0) {
@@ -118,24 +161,33 @@ char* print_localtime_impl(char* buf, size_t buf_size, time_t ts,
     *pos++ = '-';
     offset = -offset;
   }
-  auto hours = offset / 3600;
-  auto minutes = (offset % 3600) / 60;
-  *pos++ = static_cast<char>(hours / 10 + '0');
-  *pos++ = static_cast<char>(hours % 10 + '0');
+  auto add_two_digits = [&](int x) {
+    *pos++ = static_cast<char>((x / 10) + '0');
+    *pos++ = static_cast<char>((x % 10) + '0');
+  };
+  add_two_digits(offset / 3600); // hours
   *pos++ = ':';
-  *pos++ = static_cast<char>(minutes / 10 + '0');
-  *pos++ = static_cast<char>(minutes % 10 + '0');
-  *pos = '\0';
+  add_two_digits((offset % 3600) / 60); // minutes
   return pos;
 }
 
 } // namespace
 
-namespace caf::detail {
-
-char* print_localtime(char* buf, size_t buf_size, time_t secs,
-                      int nsecs) noexcept {
-  return print_localtime_impl(buf, buf_size, secs, nsecs);
+char* print_localtime(char* buf, size_t buf_size, time_t ts, int ns,
+                      int precision, bool is_fixed) noexcept {
+  // Max size of a timestamp is 35 bytes: "2019-12-31T23:59:59.111222333+01:00".
+  // We need at least 36 bytes to store the timestamp and the null terminator.
+  CAF_ASSERT(buf_size >= 36);
+  // Read the time into a tm struct and print year plus time using strftime.
+  auto time_buf = tm{};
+  to_local_time(ts, time_buf);
+  auto index = strftime(buf, buf_size, "%FT%T", &time_buf);
+  auto pos = buf + index;
+  // Add fractional part and UTC offset.
+  pos = print_fractional_component(pos, ns, precision, is_fixed);
+  pos = print_utf_offset(pos, get_utc_offset(time_buf));
+  *pos = '\0';
+  return pos;
 }
 
 } // namespace caf::detail
@@ -196,6 +248,43 @@ bool datetime::equals(const datetime& other) const noexcept {
   return to_time_t() == other.to_time_t() && nanosecond == other.nanosecond;
 }
 
+void datetime::force_utc() {
+  if (!utc_offset) {
+    utc_offset = 0;
+    return;
+  }
+  if (utc_offset == 0)
+    return;
+  auto offset = *utc_offset;
+  utc_offset = 0;
+  auto ts = to_time_t();
+  assign_utc_secs(ts + offset);
+}
+
+void datetime::read_local_time(time_t secs, int nsecs) {
+  auto time_buf = tm{};
+  ::to_local_time(secs, time_buf);
+  year = time_buf.tm_year + 1900;
+  month = time_buf.tm_mon + 1;
+  day = time_buf.tm_mday;
+  hour = time_buf.tm_hour;
+  minute = time_buf.tm_min;
+  second = time_buf.tm_sec;
+  nanosecond = nsecs;
+  utc_offset = get_utc_offset(time_buf);
+}
+
+void datetime::assign_utc_secs(time_t secs) noexcept {
+  auto time_buf = tm{};
+  to_utc_time(secs, time_buf);
+  year = time_buf.tm_year + 1900;
+  month = time_buf.tm_mon + 1;
+  day = time_buf.tm_mday;
+  hour = time_buf.tm_hour;
+  minute = time_buf.tm_min;
+  second = time_buf.tm_sec;
+}
+
 time_t datetime::to_time_t() const noexcept {
   auto time_buf = tm{};
   time_buf.tm_year = year - 1900;
@@ -215,6 +304,39 @@ expected<datetime> datetime::from_string(std::string_view str) {
   return tmp;
 }
 
+char* datetime::print_to_buf(char* buf, int precision,
+                             bool is_fixed) const noexcept {
+  detail::print_iterator_adapter result{buf};
+  auto add_two_digits = [&result](int x) {
+    if (x < 10)
+      result.push_back('0');
+    detail::print(result, x);
+  };
+  auto seal = [&result] {
+    *result.pos = '\0';
+    return result.pos;
+  };
+  // Generate "YYYY-MM-DDThh:mm:ss".
+  detail::print(result, year);
+  result.push_back('-');
+  add_two_digits(month);
+  result.push_back('-');
+  add_two_digits(day);
+  result.push_back('T');
+  add_two_digits(hour);
+  result.push_back(':');
+  add_two_digits(minute);
+  result.push_back(':');
+  add_two_digits(second);
+  // Add (optional) fractional component and UTC offset.
+  result.pos = detail::print_fractional_component(result.pos, nanosecond,
+                                                  precision, is_fixed);
+  if (!utc_offset)
+    return seal();
+  result.pos = detail::print_utf_offset(result.pos, *utc_offset);
+  return seal();
+}
+
 // -- free functions -----------------------------------------------------------
 
 error parse(std::string_view str, datetime& dest) {
@@ -227,62 +349,8 @@ void parse(string_parser_state& ps, datetime& dest) {
   detail::parser::read_timestamp(ps, dest);
 }
 
-std::string to_string(const datetime& x) {
-  std::string result;
-  result.reserve(32);
-  auto add_two_digits = [&](int x) {
-    if (x < 10)
-      result.push_back('0');
-    detail::print(result, x);
-  };
-  auto add_three_digits = [&](int x) {
-    if (x < 10)
-      result += "00";
-    else if (x < 100)
-      result.push_back('0');
-    detail::print(result, x);
-  };
-  detail::print(result, x.year);
-  result.push_back('-');
-  add_two_digits(x.month);
-  result.push_back('-');
-  add_two_digits(x.day);
-  result.push_back('T');
-  add_two_digits(x.hour);
-  result.push_back(':');
-  add_two_digits(x.minute);
-  result.push_back(':');
-  add_two_digits(x.second);
-  if (x.nanosecond > 0) {
-    result.push_back('.');
-    auto ms = x.nanosecond / 1'000'000;
-    add_three_digits(ms);
-    if ((x.nanosecond % 1'000'000) > 0) {
-      auto us = (x.nanosecond % 1'000'000) / 1'000;
-      add_three_digits(us);
-      if ((x.nanosecond % 1'000) > 0) {
-        auto ns = x.nanosecond % 1'000;
-        add_three_digits(ns);
-      }
-    }
-  }
-  if (!x.utc_offset)
-    return result;
-  auto utc_offset = *x.utc_offset;
-  if (utc_offset == 0) {
-    result.push_back('Z');
-    return result;
-  }
-  if (utc_offset > 0) {
-    result.push_back('+');
-  } else {
-    result.push_back('-');
-    utc_offset = -utc_offset;
-  }
-  add_two_digits(utc_offset / 3600); // hours
-  result.push_back(':');
-  add_two_digits((utc_offset % 3600) / 60); // minutes
-  return result;
+std::string to_string(const datetime& dest) {
+  return dest.to_string();
 }
 
 } // namespace caf::chrono

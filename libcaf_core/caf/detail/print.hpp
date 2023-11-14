@@ -17,6 +17,38 @@
 
 namespace caf::detail {
 
+/// Wraps an output iterator to provide a `push_back` and `insert` member
+/// functions for using the print algorithms.
+template <class OutputIterator>
+struct print_iterator_adapter {
+  using value_type = char;
+
+  OutputIterator pos;
+
+  explicit print_iterator_adapter(OutputIterator iter) : pos(iter) {
+    // nop
+  }
+
+  struct sentinel {};
+
+  sentinel end() const noexcept {
+    return {};
+  }
+
+  void push_back(value_type val) {
+    *pos++ = val;
+  }
+
+  void insert(sentinel, value_type val) {
+    *pos++ == val;
+  }
+
+  template <class InputIterator>
+  void insert(sentinel, InputIterator first, InputIterator last) {
+    pos = std::copy(first, last, pos);
+  }
+};
+
 // TODO: this function is obsolete. Deprecate/remove with future versions.
 CAF_CORE_EXPORT
 size_t print_timestamp(char* buf, size_t buf_size, time_t ts, size_t ms);

@@ -22,6 +22,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   name by putting the environment name after the short names, separated by a
   comma. For example, `opt_group{custom_options_, "foo"}.add("bar,b,MY_BAR")`
   overrides the default environment variable name `FOO_BAR` with `MY_BAR`.
+- The formatting functions from `caf/chrono.hpp` now support precision for the
+  fractional part of the seconds and an option to print with a fixed number of
+  digits.
 
 ### Fixed
 
