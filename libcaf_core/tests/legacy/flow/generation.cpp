@@ -38,7 +38,8 @@ SCENARIO("repeater sources repeat one value indefinitely") {
   GIVEN("a repeater source") {
     WHEN("subscribing to its output") {
       THEN("the observer receives the same value over and over again") {
-        auto snk = flow::make_passive_observer<int>();
+        using snk_t = flow::passive_observer<int>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         ctx->make_observable().repeat(42).subscribe(snk->as_observer());
         CHECK_EQ(snk->state, flow::observer_state::subscribed);
         CHECK(snk->buf.empty());
@@ -62,8 +63,9 @@ SCENARIO("container sources stream their input values") {
   GIVEN("a container source") {
     WHEN("subscribing to its output") {
       THEN("the observer receives the values from the container in order") {
+        using snk_t = flow::passive_observer<int>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto xs = ivec{1, 2, 3, 4, 5, 6, 7};
-        auto snk = flow::make_passive_observer<int>();
         ctx->make_observable()
           .from_container(std::move(xs))
           .subscribe(snk->as_observer());
@@ -82,8 +84,9 @@ SCENARIO("container sources stream their input values") {
     }
     WHEN("combining it with with a step that limits the amount of items") {
       THEN("the observer receives the defined subset of values") {
+        using snk_t = flow::passive_observer<int>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto xs = iota_vec(713);
-        auto snk = flow::make_passive_observer<int>();
         auto res = ivec{};
         ctx->make_observable()
           .from_container(std::move(xs))
@@ -100,7 +103,8 @@ SCENARIO("value sources produce exactly one input") {
   GIVEN("a value source") {
     WHEN("subscribing to its output") {
       THEN("the observer receives one value") {
-        auto snk = flow::make_passive_observer<int>();
+        using snk_t = flow::passive_observer<int>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         ctx->make_observable().just(42).subscribe(snk->as_observer());
         CHECK_EQ(snk->state, flow::observer_state::subscribed);
         CHECK(snk->buf.empty());
@@ -119,8 +123,9 @@ SCENARIO("callable sources stream values generated from a function object") {
   GIVEN("a callable source returning non-optional values") {
     WHEN("subscribing to its output") {
       THEN("the observer receives an indefinite amount of values") {
+        using snk_t = flow::passive_observer<int>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto f = [n = 1]() mutable { return n++; };
-        auto snk = flow::make_passive_observer<int>();
         ctx->make_observable().from_callable(f).subscribe(snk->as_observer());
         CHECK_EQ(snk->state, flow::observer_state::subscribed);
         CHECK(snk->buf.empty());
@@ -160,7 +165,8 @@ SCENARIO("callable sources stream values generated from a function object") {
           else
             return std::nullopt;
         };
-        auto snk = flow::make_passive_observer<int>();
+        using snk_t = flow::passive_observer<int>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         ctx->make_observable().from_callable(f).subscribe(snk->as_observer());
         CHECK_EQ(snk->state, flow::observer_state::subscribed);
         CHECK(snk->buf.empty());
@@ -309,18 +315,21 @@ SCENARIO("asynchronous buffers can generate flow items") {
       THEN("the different pointer types manipulate the same ref count") {
         using buf_t = async::spsc_buffer<int>;
         using impl_t = flow::op::from_resource_sub<buf_t>;
-        auto obs = flow::make_auto_observer<int>();
-        auto ptr = make_counted<impl_t>(ctx.get(), nullptr, obs->as_observer());
+        using snk_t = flow::auto_observer<int>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
+        auto ptr = make_counted<impl_t>(ctx.get(), nullptr, snk->as_observer());
         CHECK_EQ(ptr->get_reference_count(), 1u);
         {
           auto sub = flow::subscription{ptr.get()};
           CHECK_EQ(ptr->get_reference_count(), 2u);
         }
+        ctx->run(); // clean up the subscription
         CHECK_EQ(ptr->get_reference_count(), 1u);
         {
           auto cptr = async::consumer_ptr{ptr.get()};
           CHECK_EQ(ptr->get_reference_count(), 2u);
         }
+        ctx->run(); // clean up the subscription
         CHECK_EQ(ptr->get_reference_count(), 1u);
       }
     }
@@ -362,9 +371,9 @@ public:
         auto err = make_error(sec::runtime_error, "something went wrong");
         step.on_error(err, steps...);
         return;
-      } else if (!step.on_next(value_++, steps...)) {
-        return;
       }
+      if (!step.on_next(value_++, steps...))
+        return;
     }
   }
 
@@ -378,7 +387,8 @@ SCENARIO("users can provide custom generators") {
   GIVEN("an implementation of the generator concept") {
     WHEN("subscribing to its output") {
       THEN("the observer receives the generated values") {
-        auto snk = flow::make_passive_observer<int>();
+        using snk_t = flow::passive_observer<int>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto f = i7_generator{};
         ctx->make_observable().from_generator(f).subscribe(snk->as_observer());
         CHECK_EQ(snk->state, flow::observer_state::subscribed);
@@ -397,7 +407,8 @@ SCENARIO("users can provide custom generators") {
   GIVEN("an implementation of the generator concept that calls on_error") {
     WHEN("subscribing to its output") {
       THEN("the observer receives the generated values followed by an error") {
-        auto snk = flow::make_passive_observer<int>();
+        using snk_t = flow::passive_observer<int>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto f = broken_generator{};
         ctx->make_observable().from_generator(f).subscribe(snk->as_observer());
         CHECK_EQ(snk->state, flow::observer_state::subscribed);

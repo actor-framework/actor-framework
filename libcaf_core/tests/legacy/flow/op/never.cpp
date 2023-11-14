@@ -27,9 +27,10 @@ SCENARIO("the never operator never invokes callbacks except when disposed") {
   GIVEN("a never operator") {
     WHEN("an observer subscribes and disposing the subscription") {
       THEN("the observer receives on_complete") {
+        using snk_t = flow::auto_observer<int32_t>;
         auto uut = ctx->make_observable().never<int32_t>();
-        auto snk1 = flow::make_auto_observer<int32_t>();
-        auto snk2 = flow::make_auto_observer<int32_t>();
+        auto snk1 = ctx->add_child(std::in_place_type<snk_t>);
+        auto snk2 = ctx->add_child(std::in_place_type<snk_t>);
         auto sub1 = uut.subscribe(snk1->as_observer());
         ctx->run();
         CHECK(snk1->buf.empty());

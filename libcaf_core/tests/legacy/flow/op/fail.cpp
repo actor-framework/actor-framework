@@ -25,8 +25,9 @@ SCENARIO("the fail operator immediately calls on_error on any subscriber") {
   GIVEN("a fail<int32> operator") {
     WHEN("an observer subscribes") {
       THEN("the observer receives on_error") {
+        using snk_t = flow::passive_observer<int32_t>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto uut = ctx->make_observable().fail<int32_t>(sec::runtime_error);
-        auto snk = flow::make_auto_observer<int32_t>();
         uut.subscribe(snk->as_observer());
         ctx->run();
         CHECK(!snk->sub);

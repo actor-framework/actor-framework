@@ -11,7 +11,6 @@
 #include "caf/flow/op/ucast.hpp"
 #include "caf/flow/subscription.hpp"
 #include "caf/intrusive_ptr.hpp"
-#include "caf/make_counted.hpp"
 
 #include <algorithm>
 #include <deque>
@@ -32,12 +31,16 @@ class mcast_sub : public subscription::impl_base {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
-  mcast_sub(coordinator* ctx, mcast_sub_state_ptr<T> state)
-    : ctx_(ctx), state_(std::move(state)) {
+  mcast_sub(coordinator* parent, mcast_sub_state_ptr<T> state)
+    : parent_(parent), state_(std::move(state)) {
     // nop
   }
 
   // -- implementation of subscription -----------------------------------------
+
+  coordinator* parent() const noexcept override {
+    return parent_;
+  }
 
   bool disposed() const noexcept override {
     return !state_ || state_->disposed;
@@ -56,7 +59,7 @@ public:
 
 private:
   /// Stores the context (coordinator) that runs this flow.
-  coordinator* ctx_;
+  coordinator* parent_;
 
   /// Stores a handle to the state.
   mcast_sub_state_ptr<T> state_;
@@ -78,7 +81,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit mcast(coordinator* ctx) : super(ctx) {
+  explicit mcast(coordinator* parent) : super(parent) {
     // nop
   }
 
@@ -182,7 +185,8 @@ public:
 
   /// Adds state for a new observer to the operator.
   state_ptr_type add_state(observer_type out) {
-    auto state = make_counted<state_type>(super::ctx_, std::move(out));
+    auto state = super::parent_->add_child(std::in_place_type<state_type>,
+                                           std::move(out));
     state->listener = this;
     states_.push_back(state);
     return state;
@@ -193,20 +197,21 @@ public:
   /// Adds a new observer to the operator.
   disposable subscribe(observer_type out) override {
     if (!closed_) {
-      auto ptr = make_counted<mcast_sub<T>>(super::ctx_, add_state(out));
+      auto ptr = super::parent_->add_child(std::in_place_type<mcast_sub<T>>,
+                                           add_state(out));
       out.on_subscribe(subscription{ptr});
       return disposable{std::move(ptr)};
     }
     if (!err_) {
-      return empty_subscription(out);
+      return super::empty_subscription(out);
     }
-    return fail_subscription(out, err_);
+    return super::fail_subscription(out, err_);
   }
 
   // -- implementation of ucast_sub_state_listener -----------------------------
 
   void on_disposed(state_type* ptr) final {
-    super::ctx_->delay_fn([mc = strong_this(), sptr = state_ptr_type{ptr}] {
+    super::parent_->delay_fn([mc = strong_this(), sptr = state_ptr_type{ptr}] {
       if (auto i = std::find(mc->states_.begin(), mc->states_.end(), sptr);
           i != mc->states_.end()) {
         // We don't care about preserving the order of elements in the vector.

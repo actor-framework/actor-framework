@@ -69,6 +69,7 @@ public:
     }
 
     void on_complete() {
+      // nop
     }
 
     void on_error(const caf::error& abort_reason) {

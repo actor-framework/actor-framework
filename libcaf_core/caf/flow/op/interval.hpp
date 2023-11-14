@@ -21,9 +21,9 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  interval(coordinator* ctx, timespan initial_delay, timespan period);
+  interval(coordinator* parent, timespan initial_delay, timespan period);
 
-  interval(coordinator* ctx, timespan initial_delay, timespan period,
+  interval(coordinator* parent, timespan initial_delay, timespan period,
            int64_t max_val);
 
   // -- implementation of observable_impl<T> -----------------------------------

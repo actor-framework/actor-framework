@@ -8,6 +8,7 @@
 #include "caf/flow/observer.hpp"
 #include "caf/flow/op/cold.hpp"
 #include "caf/flow/subscription.hpp"
+#include "caf/make_counted.hpp"
 
 #include <algorithm>
 #include <deque>
@@ -60,19 +61,23 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  zip_with_sub(coordinator* ctx, F fn, observer<output_type> out,
+  zip_with_sub(coordinator* parent, F fn, observer<output_type> out,
                std::tuple<observable<Ts>...>& srcs)
-    : ctx_(ctx), fn_(std::move(fn)), out_(std::move(out)) {
+    : parent_(parent), fn_(std::move(fn)), out_(std::move(out)) {
     for_each_input([this, &srcs](auto index, auto& input) {
       using index_type = decltype(index);
       using value_type = typename std::decay_t<decltype(input)>::value_type;
       using fwd_impl = forwarder<value_type, zip_with_sub, index_type>;
-      auto fwd = make_counted<fwd_impl>(this, index);
+      auto fwd = parent_->add_child(std::in_place_type<fwd_impl>, this, index);
       std::get<index_type::value>(srcs).subscribe(fwd->as_observer());
     });
   }
 
   // -- implementation of subscription -----------------------------------------
+
+  coordinator* parent() const noexcept override {
+    return parent_;
+  }
 
   bool disposed() const noexcept override {
     return !out_;
@@ -157,7 +162,7 @@ public:
     if (out_) {
       auto& input = at(index);
       if (input.sub)
-        input.sub = nullptr;
+        input.sub.release_later();
       if (input.buf.empty())
         fin();
     }
@@ -170,7 +175,7 @@ public:
         err_ = what;
       auto& input = at(index);
       if (input.sub)
-        input.sub = nullptr;
+        input.sub.release_later();
       if (input.buf.empty())
         fin();
     }
@@ -202,20 +207,19 @@ private:
     for_each_input([](auto, auto& input) {
       if (input.sub) {
         input.sub.dispose();
-        input.sub = nullptr;
+        input.sub.release_later();
       }
       input.buf.clear();
     });
     // Set out_ to null and emit the final event.
-    auto out = std::move(out_);
-    if (err_)
-      out.on_error(err_);
+    if (!err_)
+      out_.on_complete();
     else
-      out.on_complete();
+      out_.on_error(err_);
   }
 
   /// Stores the context (coordinator) that runs this flow.
-  coordinator* ctx_;
+  coordinator* parent_;
 
   /// Reduces n inputs to 1 output.
   F fn_;
@@ -245,16 +249,17 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  zip_with(coordinator* ctx, F fn, observable<Ts>... inputs)
-    : super(ctx), fn_(std::move(fn)), inputs_(inputs...) {
+  zip_with(coordinator* parent, F fn, observable<Ts>... inputs)
+    : super(parent), fn_(std::move(fn)), inputs_(inputs...) {
     // nop
   }
 
   // -- implementation of observable<T>::impl ----------------------------------
 
   disposable subscribe(observer<output_type> out) override {
-    auto ptr = make_counted<zip_with_sub<F, Ts...>>(super::ctx_, fn_, out,
-                                                    inputs_);
+    using sub_t = zip_with_sub<F, Ts...>;
+    auto ptr = super::parent_->add_child(std::in_place_type<sub_t>, fn_, out,
+                                         inputs_);
     out.on_subscribe(subscription{ptr});
     return ptr->as_disposable();
   }
@@ -269,7 +274,8 @@ private:
 
 /// Creates a new zip-with operator from given inputs.
 template <class F, class T0, class T1, class... Ts>
-auto make_zip_with(coordinator* ctx, F fn, T0 input0, T1 input1, Ts... inputs) {
+auto make_zip_with(coordinator* parent, F fn, T0 input0, T1 input1,
+                   Ts... inputs) {
   using output_type = zip_with_output_t<F,                        //
                                         typename T0::output_type, //
                                         typename T1::output_type, //
@@ -279,10 +285,10 @@ auto make_zip_with(coordinator* ctx, F fn, T0 input0, T1 input1, Ts... inputs) {
                           typename T1::output_type, //
                           typename Ts::output_type...>;
   if (input0.valid() && input1.valid() && (inputs.valid() && ...)) {
-    auto ptr = make_counted<impl_t>(ctx, std::move(fn),
-                                    std::move(input0).as_observable(),
-                                    std::move(input1).as_observable(),
-                                    std::move(inputs).as_observable()...);
+    auto ptr = parent->add_child(std::in_place_type<impl_t>, std::move(fn),
+                                 std::move(input0).as_observable(),
+                                 std::move(input1).as_observable(),
+                                 std::move(inputs).as_observable()...);
     return observable<output_type>{std::move(ptr)};
   }
   return observable<output_type>{};

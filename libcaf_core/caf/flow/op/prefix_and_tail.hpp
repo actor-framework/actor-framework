@@ -12,7 +12,6 @@
 #include "caf/flow/op/ucast.hpp"
 #include "caf/flow/subscription.hpp"
 #include "caf/intrusive_ptr.hpp"
-#include "caf/make_counted.hpp"
 
 #include <memory>
 #include <vector>
@@ -34,9 +33,9 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  prefix_and_tail_sub(coordinator* ctx, observer<tuple_t> out,
+  prefix_and_tail_sub(coordinator* parent, observer<tuple_t> out,
                       size_t prefix_size)
-    : ctx_(ctx), out_(std::move(out)), prefix_size_(prefix_size) {
+    : parent_(parent), out_(std::move(out)), prefix_size_(prefix_size) {
     prefix_buf_.reserve(prefix_size);
   }
 
@@ -48,6 +47,10 @@ public:
   }
 
   // -- implementation of observer ---------------------------------------------
+
+  coordinator* parent() const noexcept override {
+    return parent_;
+  }
 
   void ref_coordinated() const noexcept override {
     ref();
@@ -68,7 +71,7 @@ public:
       prefix_buf_.push_back(item);
       if (prefix_buf_.size() == prefix_size_) {
         // Create the sink to deliver to tail lazily and deliver the prefix.
-        sink_ = make_counted<ucast<T>>(ctx_);
+        sink_ = parent_->add_child(std::in_place_type<ucast<T>>);
         sink_->state().listener = this;
         // Force member to be null before calling on_next / on_complete.
         auto out = std::move(out_);
@@ -84,10 +87,9 @@ public:
     if (sink_) {
       sink_->state().listener = nullptr;
       sink_->abort(reason);
-      sub_ = nullptr;
+      sub_.release_later();
     } else if (out_) {
-      auto tmp = std::move(out_);
-      tmp.on_error(reason);
+      out_.on_error(reason);
     }
   }
 
@@ -95,10 +97,9 @@ public:
     if (sink_) {
       sink_->state().listener = nullptr;
       sink_->close();
-      sub_ = nullptr;
+      sub_.release_later();
     } else if (out_) {
-      auto tmp = std::move(out_);
-      tmp.on_complete();
+      out_.on_complete();
     }
   }
 
@@ -119,13 +120,7 @@ public:
   // -- implementation of disposable -------------------------------------------
 
   void dispose() override {
-    if (out_) {
-      out_ = nullptr;
-      if (sub_) {
-        auto tmp = std::move(sub_);
-        tmp.dispose();
-      }
-    }
+    parent_->delay_fn([sptr = strong_this()] { sptr->do_dispose(); });
   }
 
   bool disposed() const noexcept override {
@@ -152,7 +147,7 @@ public:
   // -- implementation of ucast_sub_state_listener -----------------------------
 
   void on_disposed(state_type*) override {
-    ctx_->delay_fn([sptr = strong_this()] { sptr->do_dispose(); });
+    dispose();
   }
 
   void on_demand_changed(state_type*) override {
@@ -174,14 +169,13 @@ private:
 
   void do_dispose() {
     sink_ = nullptr;
-    if (out_) {
-      auto tmp = std::move(out_);
-      tmp.on_complete();
-    }
+    sub_.dispose();
+    if (out_)
+      out_.on_complete();
   }
 
   /// Our scheduling context.
-  coordinator* ctx_;
+  coordinator* parent_;
 
   /// The observer for the initial prefix-and-tail tuple.
   observer<tuple_t> out_;
@@ -233,15 +227,18 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit prefix_and_tail(coordinator* ctx, observable<T> decorated,
+  explicit prefix_and_tail(coordinator* parent, observable<T> decorated,
                            size_t prefix_size)
-    : super(ctx), decorated_(std::move(decorated)), prefix_size_(prefix_size) {
+    : super(parent),
+      decorated_(std::move(decorated)),
+      prefix_size_(prefix_size) {
     // nop
   }
 
   disposable subscribe(observer<tuple_t> out) override {
     using impl_t = prefix_and_tail_sub<T>;
-    auto obs = make_counted<impl_t>(super::ctx(), out, prefix_size_);
+    auto obs = super::parent_->add_child(std::in_place_type<impl_t>, out,
+                                         prefix_size_);
     out.on_subscribe(subscription{obs});
     decorated_.subscribe(observer<T>{obs});
     return obs->as_disposable();

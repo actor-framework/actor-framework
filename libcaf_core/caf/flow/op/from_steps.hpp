@@ -58,9 +58,9 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  from_steps_sub(coordinator* ctx, observer<output_type> out,
+  from_steps_sub(coordinator* parent, observer<output_type> out,
                  std::tuple<Steps...> steps)
-    : ctx_(ctx), out_(std::move(out)), steps_(std::move(steps)) {
+    : parent_(parent), out_(std::move(out)), steps_(std::move(steps)) {
     // nop
   }
 
@@ -101,6 +101,10 @@ public:
   }
 
   // -- implementation of observer_impl<Input> ---------------------------------
+
+  coordinator* parent() const noexcept override {
+    return parent_;
+  }
 
   void on_next(const Input& item) override {
     CAF_ASSERT(!in_ || in_flight_ > 0);
@@ -162,12 +166,10 @@ public:
       disposed_ = true;
       demand_ = 0;
       buf_.clear();
-      ctx_->delay_fn([out = std::move(out_)]() mutable { out.on_complete(); });
+      parent_->delay_fn(
+        [out = std::move(out_)]() mutable { out.on_complete(); });
     }
-    if (in_) {
-      auto tmp = std::move(in_);
-      tmp.dispose();
-    }
+    in_.dispose();
   }
 
   void request(size_t n) override {
@@ -192,7 +194,7 @@ private:
 
   void run_later() {
     if (!running_) {
-      ctx_->delay_fn([ptr = strong_this()] { ptr->do_run_impl(); });
+      parent_->delay_fn([ptr = strong_this()] { ptr->do_run_impl(); });
     }
   }
 
@@ -224,11 +226,10 @@ private:
         pull();
       } else if (buf_.empty()) {
         disposed_ = true;
-        auto tmp = std::move(out_);
-        if (err_)
-          tmp.on_error(err_);
+        if (!err_)
+          out_.on_complete();
         else
-          tmp.on_complete();
+          out_.on_error(err_);
       }
     }
   }
@@ -237,7 +238,7 @@ private:
     return {this};
   }
 
-  coordinator* ctx_;
+  coordinator* parent_;
   subscription in_;
   observer<output_type> out_;
   std::tuple<Steps...> steps_;
@@ -265,9 +266,9 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  from_steps(coordinator* ctx, intrusive_ptr<base<input_type>> input,
+  from_steps(coordinator* parent, intrusive_ptr<base<input_type>> input,
              std::tuple<Steps...> steps)
-    : super(ctx), input_(std::move(input)), steps_(std::move(steps)) {
+    : super(parent), input_(std::move(input)), steps_(std::move(steps)) {
     // nop
   }
 
@@ -275,7 +276,8 @@ public:
 
   disposable subscribe(observer<output_type> out) override {
     using sub_t = from_steps_sub<Input, Steps...>;
-    auto ptr = make_counted<sub_t>(super::ctx_, out, steps_);
+    auto ptr = super::parent_->add_child(std::in_place_type<sub_t>, out,
+                                         steps_);
     out.on_subscribe(subscription{ptr});
     input_->subscribe(observer<input_type>{ptr});
     return ptr->as_disposable();

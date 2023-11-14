@@ -68,9 +68,10 @@ struct fixture : test_coordinator_fixture<> {
 
   template <class Impl>
   void add_subs(intrusive_ptr<Impl> uut) {
-    auto data_sub = make_counted<flow::passive_subscription_impl>();
+    using sub_t = flow::passive_subscription_impl;
+    auto data_sub = ctx->add_child(std::in_place_type<sub_t>);
     uut->fwd_on_subscribe(fwd_data, flow::subscription{std::move(data_sub)});
-    auto ctrl_sub = make_counted<flow::passive_subscription_impl>();
+    auto ctrl_sub = ctx->add_child(std::in_place_type<sub_t>);
     uut->fwd_on_subscribe(fwd_ctrl, flow::subscription{std::move(ctrl_sub)});
   }
 
@@ -214,12 +215,14 @@ SCENARIO("buffers start to emit items once subscribed") {
   GIVEN("a buffer operator") {
     WHEN("the selector never calls on_subscribe") {
       THEN("the buffer still emits batches") {
-        auto snk = flow::make_passive_observer<cow_vector<int>>();
+        using snk_t = flow::passive_observer<cow_vector<int>>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto grd = make_unsubscribe_guard(snk);
         auto uut = raw_sub(3, flow::make_nil_observable<int>(ctx.get()),
                            flow::make_nil_observable<int64_t>(ctx.get()),
                            snk->as_observer());
-        auto data_sub = make_counted<flow::passive_subscription_impl>();
+        using sub_t = flow::passive_subscription_impl;
+        auto data_sub = ctx->add_child(std::in_place_type<sub_t>);
         uut->fwd_on_subscribe(fwd_data, flow::subscription{data_sub});
         ctx->run();
         REQUIRE_GE(data_sub->demand, 3u);
@@ -240,7 +243,8 @@ SCENARIO("buffers never subscribe to their control observable on error") {
   GIVEN("a buffer operator") {
     WHEN("the data observable calls on_error on subscribing it") {
       THEN("the buffer never tries to subscribe to their control observable") {
-        auto snk = flow::make_passive_observer<cow_vector<int>>();
+        using snk_t = flow::passive_observer<cow_vector<int>>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto cnt = std::make_shared<size_t>(0);
         auto uut = raw_sub(3,
                            ctx->make_observable().fail<int>(sec::runtime_error),
@@ -258,18 +262,20 @@ SCENARIO("buffers dispose unexpected subscriptions") {
   GIVEN("an initialized buffer operator") {
     WHEN("calling on_subscribe with unexpected subscriptions") {
       THEN("the buffer disposes them immediately") {
-        auto snk = flow::make_passive_observer<cow_vector<int>>();
+        using snk_t = flow::passive_observer<cow_vector<int>>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto grd = make_unsubscribe_guard(snk);
         auto uut = raw_sub(3, flow::make_nil_observable<int>(ctx.get()),
                            flow::make_nil_observable<int64_t>(ctx.get()),
                            snk->as_observer());
-        auto data_sub = make_counted<flow::passive_subscription_impl>();
-        auto ctrl_sub = make_counted<flow::passive_subscription_impl>();
+        using sub_t = flow::passive_subscription_impl;
+        auto data_sub = ctx->add_child(std::in_place_type<sub_t>);
+        auto ctrl_sub = ctx->add_child(std::in_place_type<sub_t>);
         uut->fwd_on_subscribe(fwd_data, flow::subscription{data_sub});
         uut->fwd_on_subscribe(fwd_ctrl, flow::subscription{ctrl_sub});
         ctx->run();
-        auto data_sub_2 = make_counted<flow::passive_subscription_impl>();
-        auto ctrl_sub_2 = make_counted<flow::passive_subscription_impl>();
+        auto data_sub_2 = ctx->add_child(std::in_place_type<sub_t>);
+        auto ctrl_sub_2 = ctx->add_child(std::in_place_type<sub_t>);
         uut->fwd_on_subscribe(fwd_data, flow::subscription{data_sub_2});
         uut->fwd_on_subscribe(fwd_ctrl, flow::subscription{ctrl_sub_2});
         ctx->run();
@@ -284,10 +290,11 @@ SCENARIO("buffers dispose unexpected subscriptions") {
 }
 
 SCENARIO("buffers emit final items after an on_error event") {
+  using snk_t = flow::passive_observer<cow_vector<int>>;
   GIVEN("an initialized buffer operator") {
     WHEN("calling on_error(data) on a buffer without pending data") {
       THEN("the buffer forward on_error immediately") {
-        auto snk = flow::make_passive_observer<cow_vector<int>>();
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto uut = raw_sub(3, trivial_obs<int>(), trivial_obs<int64_t>(),
                            snk->as_observer());
         snk->request(42);
@@ -303,7 +310,7 @@ SCENARIO("buffers emit final items after an on_error event") {
     }
     WHEN("calling on_error(data) on a buffer with pending data") {
       THEN("the buffer still emits pending data before closing") {
-        auto snk = flow::make_passive_observer<cow_vector<int>>();
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto uut = raw_sub(3, trivial_obs<int>(), trivial_obs<int64_t>(),
                            snk->as_observer());
         ctx->run();
@@ -321,7 +328,7 @@ SCENARIO("buffers emit final items after an on_error event") {
     }
     WHEN("calling on_error(control) on a buffer without pending data") {
       THEN("the buffer forward on_error immediately") {
-        auto snk = flow::make_passive_observer<cow_vector<int>>();
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto uut = raw_sub(3, trivial_obs<int>(), trivial_obs<int64_t>(),
                            snk->as_observer());
         snk->request(42);
@@ -337,7 +344,7 @@ SCENARIO("buffers emit final items after an on_error event") {
     }
     WHEN("calling on_error(control) on a buffer with pending data") {
       THEN("the buffer still emits pending data before closing") {
-        auto snk = flow::make_passive_observer<cow_vector<int>>();
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto uut = raw_sub(3, trivial_obs<int>(), trivial_obs<int64_t>(),
                            snk->as_observer());
         ctx->run();
@@ -357,10 +364,11 @@ SCENARIO("buffers emit final items after an on_error event") {
 }
 
 SCENARIO("buffers emit final items after an on_complete event") {
+  using snk_t = flow::passive_observer<cow_vector<int>>;
   GIVEN("an initialized buffer operator") {
     WHEN("calling on_complete(data) on a buffer without pending data") {
       THEN("the buffer forward on_complete immediately") {
-        auto snk = flow::make_passive_observer<cow_vector<int>>();
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto uut = raw_sub(3, trivial_obs<int>(), trivial_obs<int64_t>(),
                            snk->as_observer());
         snk->request(42);
@@ -376,7 +384,7 @@ SCENARIO("buffers emit final items after an on_complete event") {
     }
     WHEN("calling on_complete(data) on a buffer with pending data") {
       THEN("the buffer still emits pending data before closing") {
-        auto snk = flow::make_passive_observer<cow_vector<int>>();
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto uut = raw_sub(3, trivial_obs<int>(), trivial_obs<int64_t>(),
                            snk->as_observer());
         ctx->run();
@@ -394,7 +402,7 @@ SCENARIO("buffers emit final items after an on_complete event") {
     }
     WHEN("calling on_complete(control) on a buffer without pending data") {
       THEN("the buffer raises an error immediately") {
-        auto snk = flow::make_passive_observer<cow_vector<int>>();
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto uut = raw_sub(3, trivial_obs<int>(), trivial_obs<int64_t>(),
                            snk->as_observer());
         snk->request(42);
@@ -410,7 +418,7 @@ SCENARIO("buffers emit final items after an on_complete event") {
     }
     WHEN("calling on_complete(control) on a buffer with pending data") {
       THEN("the buffer raises an error after shipping pending items") {
-        auto snk = flow::make_passive_observer<cow_vector<int>>();
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto uut = raw_sub(3, trivial_obs<int>(), trivial_obs<int64_t>(),
                            snk->as_observer());
         ctx->run();
@@ -430,10 +438,11 @@ SCENARIO("buffers emit final items after an on_complete event") {
 }
 
 SCENARIO("skip policies suppress empty batches") {
+  using snk_t = flow::passive_observer<cow_vector<int>>;
   GIVEN("a buffer operator") {
     WHEN("the control observable fires with no pending data") {
       THEN("the operator omits the batch") {
-        auto snk = flow::make_passive_observer<cow_vector<int>>();
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto grd = make_unsubscribe_guard(snk);
         auto uut = raw_sub<skip_trait>(3, trivial_obs<int>(),
                                        trivial_obs<int64_t>(),
@@ -448,7 +457,7 @@ SCENARIO("skip policies suppress empty batches") {
     }
     WHEN("the control observable fires with pending data") {
       THEN("the operator emits a partial batch") {
-        auto snk = flow::make_passive_observer<cow_vector<int>>();
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto grd = make_unsubscribe_guard(snk);
         auto uut = raw_sub<skip_trait>(3, trivial_obs<int>(),
                                        trivial_obs<int64_t>(),
@@ -466,10 +475,11 @@ SCENARIO("skip policies suppress empty batches") {
 }
 
 SCENARIO("no-skip policies emit empty batches") {
+  using snk_t = flow::passive_observer<cow_vector<int>>;
   GIVEN("a buffer operator") {
     WHEN("the control observable fires with no pending data") {
       THEN("the operator emits an empty batch") {
-        auto snk = flow::make_passive_observer<cow_vector<int>>();
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto grd = make_unsubscribe_guard(snk);
         auto uut = raw_sub<noskip_trait>(3, trivial_obs<int>(),
                                          trivial_obs<int64_t>(),
@@ -484,7 +494,7 @@ SCENARIO("no-skip policies emit empty batches") {
     }
     WHEN("the control observable fires with pending data") {
       THEN("the operator emits a partial batch") {
-        auto snk = flow::make_passive_observer<cow_vector<int>>();
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto grd = make_unsubscribe_guard(snk);
         auto uut = raw_sub<noskip_trait>(3, trivial_obs<int>(),
                                          trivial_obs<int64_t>(),
@@ -505,7 +515,8 @@ SCENARIO("disposing a buffer operator completes the flow") {
   GIVEN("a buffer operator") {
     WHEN("disposing the subscription operator of the operator") {
       THEN("the observer receives an on_complete event") {
-        auto snk = flow::make_passive_observer<cow_vector<int>>();
+        using snk_t = flow::passive_observer<cow_vector<int>>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto uut = raw_sub<skip_trait>(3, trivial_obs<int>(),
                                        trivial_obs<int64_t>(),
                                        snk->as_observer());
@@ -524,7 +535,8 @@ SCENARIO("on_request actions can turn into no-ops") {
   GIVEN("a buffer operator") {
     WHEN("the sink requests more data right before a timeout triggers") {
       THEN("the batch gets shipped and the on_request action does nothing") {
-        auto snk = flow::make_passive_observer<cow_vector<int>>();
+        using snk_t = flow::passive_observer<cow_vector<int>>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto grd = make_unsubscribe_guard(snk);
         auto uut = raw_sub<skip_trait>(3, trivial_obs<int>(),
                                        trivial_obs<int64_t>(),

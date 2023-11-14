@@ -29,7 +29,7 @@ public:
   }
 
 protected:
-  void pull(flow::coordinator* ctx, size_t n);
+  void pull(flow::coordinator* parent, size_t n);
 
 private:
   virtual void do_pull(size_t in_flight_demand) = 0;

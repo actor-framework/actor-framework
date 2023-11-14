@@ -27,6 +27,12 @@ namespace caf::flow {
 
 class coordinator;
 
+using coordinator_ptr = intrusive_ptr<coordinator>;
+
+class coordinated;
+
+using coordinated_ptr = intrusive_ptr<coordinated>;
+
 class subscription;
 
 template <class T>

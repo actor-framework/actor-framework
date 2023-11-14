@@ -24,10 +24,10 @@ pullable::~pullable() {
   pull_cb_.dispose();
 }
 
-void pullable::pull(flow::coordinator* ctx, size_t n) {
+void pullable::pull(flow::coordinator* parent, size_t n) {
   CAF_ASSERT(n > 0);
   if (in_flight_demand_ == 0)
-    ctx->delay(pull_cb_);
+    parent->delay(pull_cb_);
   in_flight_demand_ += n;
 }
 

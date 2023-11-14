@@ -28,14 +28,15 @@ SCENARIO("the defer operator produces a fresh observable for each observer") {
     WHEN("two observers subscribes") {
       THEN("each observer subscribes to a fresh observable") {
         using ivec = std::vector<int>;
+        using snk_t = flow::passive_observer<int>;
         size_t factory_calls = 0;
         auto factory = [this, &factory_calls] {
           ++factory_calls;
           return ctx->make_observable().iota(1).take(5);
         };
         auto uut = ctx->make_observable().defer(factory);
-        auto snk1 = flow::make_passive_observer<int>();
-        auto snk2 = flow::make_passive_observer<int>();
+        auto snk1 = ctx->add_child(std::in_place_type<snk_t>);
+        auto snk2 = ctx->add_child(std::in_place_type<snk_t>);
         uut.subscribe(snk1->as_observer());
         CHECK_EQ(factory_calls, 1u);
         REQUIRE(snk1->sub);

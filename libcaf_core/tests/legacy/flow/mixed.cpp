@@ -16,8 +16,6 @@
 
 using namespace caf;
 
-using caf::flow::make_observer;
-
 namespace {
 
 struct fixture : test_coordinator_fixture<> {
@@ -39,7 +37,8 @@ BEGIN_FIXTURE_SCOPE(fixture)
 
 SCENARIO("sum up all the multiples of 3 or 5 below 1000") {
   SUB_CASE("solution 1") {
-    auto snk = flow::make_auto_observer<int>();
+    using snk_t = flow::auto_observer<int>;
+    auto snk = ctx->add_child(std::in_place_type<snk_t>);
     ctx->make_observable()
       .range(1, 999)
       .filter([](int x) { return x % 3 == 0 || x % 5 == 0; })
@@ -50,7 +49,8 @@ SCENARIO("sum up all the multiples of 3 or 5 below 1000") {
     CHECK_EQ(snk->buf, ls(233'168));
   }
   SUB_CASE("solution 2") {
-    auto snk = flow::make_auto_observer<int>();
+    using snk_t = flow::auto_observer<int>;
+    auto snk = ctx->add_child(std::in_place_type<snk_t>);
     ctx->make_observable()
       .merge(ctx->make_observable()
                .iota(1)

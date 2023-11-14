@@ -32,6 +32,8 @@ public:
   public:
     using input_type = T;
 
+    using handle_type = observer;
+
     virtual void on_subscribe(subscription sub) = 0;
 
     virtual void on_next(const T& item) = 0;
@@ -52,26 +54,52 @@ public:
     // nop
   }
 
-  observer& operator=(std::nullptr_t) noexcept {
-    pimpl_.reset();
-    return *this;
-  }
-
   observer() noexcept = default;
   observer(observer&&) noexcept = default;
   observer(const observer&) noexcept = default;
   observer& operator=(observer&&) noexcept = default;
   observer& operator=(const observer&) noexcept = default;
 
+  // -- mutators ---------------------------------------------------------------
+
+  /// Resets this handle but releases the reference count after the current
+  /// coordinator cycle.
+  /// @post `!valid()`
+  void release_later() {
+    if (pimpl_) {
+      auto* parent = pimpl_->parent();
+      parent->release_later(pimpl_);
+      CAF_ASSERT(pimpl_ == nullptr);
+    }
+  }
+
+  // -- callbacks for the subscription -----------------------------------------
+
   /// @pre `valid()`
+  /// @post `!valid()`
   void on_complete() {
-    pimpl_->on_complete();
+    CAF_ASSERT(pimpl_ != nullptr);
+    // Defend against impl::on_complete() indirectly calling member functions on
+    // this object again.
+    auto ptr = intrusive_ptr<impl>{pimpl_.release(), false};
+    auto* parent = ptr->parent();
+    ptr->on_complete();
+    parent->release_later(ptr);
   }
 
   /// @pre `valid()`
+  /// @post `!valid()`
   void on_error(const error& what) {
-    pimpl_->on_error(what);
+    CAF_ASSERT(pimpl_ != nullptr);
+    // Defend against impl::on_error() indirectly calling member functions on
+    // this object again.
+    auto ptr = intrusive_ptr<impl>{pimpl_.release(), false};
+    auto* parent = ptr->parent();
+    ptr->on_error(what);
+    parent->release_later(ptr);
   }
+
+  // -- properties -------------------------------------------------------------
 
   /// @pre `valid()`
   void on_subscribe(subscription sub) {
@@ -108,6 +136,14 @@ public:
     return pimpl_.compare(other.pimpl_);
   }
 
+  impl* ptr() noexcept {
+    return pimpl_.get();
+  }
+
+  const impl* ptr() const noexcept {
+    return pimpl_.get();
+  }
+
 private:
   intrusive_ptr<impl> pimpl_;
 };
@@ -115,30 +151,6 @@ private:
 /// @relates observer
 template <class T>
 using observer_impl = typename observer<T>::impl;
-
-/// Calls `on_subscribe` and `on_error` on `out` to immediately fail a
-/// subscription.
-/// @relates observer
-template <class T>
-disposable fail_subscription(observer<T>& out, const error& err) {
-  auto sub = subscription::make_trivial();
-  out.on_subscribe(sub);
-  if (!sub.disposed())
-    out.on_error(err);
-  return sub.as_disposable();
-}
-
-/// Calls `on_subscribe` and `on_complete` on `out` to immediately complete a
-/// subscription.
-/// @relates observer
-template <class T>
-disposable empty_subscription(observer<T>& out) {
-  auto sub = subscription::make_trivial();
-  out.on_subscribe(sub);
-  if (!sub.disposed())
-    out.on_complete();
-  return sub.as_disposable();
-}
 
 /// Simple base type observer implementations that implements the reference
 /// counting member functions with a plain (i.e., not thread-safe) reference
@@ -193,22 +205,30 @@ public:
 
   using input_type = T;
 
-  explicit default_observer_impl(OnNext&& on_next_fn)
-    : on_next_(std::move(on_next_fn)) {
+  default_observer_impl(flow::coordinator* parent, OnNext&& on_next_fn)
+    : parent_(parent), on_next_(std::move(on_next_fn)) {
     // nop
   }
 
-  default_observer_impl(OnNext&& on_next_fn, OnError&& on_error_fn)
-    : on_next_(std::move(on_next_fn)), on_error_(std::move(on_error_fn)) {
+  default_observer_impl(flow::coordinator* parent, OnNext&& on_next_fn,
+                        OnError&& on_error_fn)
+    : parent_(parent),
+      on_next_(std::move(on_next_fn)),
+      on_error_(std::move(on_error_fn)) {
     // nop
   }
 
-  default_observer_impl(OnNext&& on_next_fn, OnError&& on_error_fn,
-                        OnComplete&& on_complete_fn)
-    : on_next_(std::move(on_next_fn)),
+  default_observer_impl(flow::coordinator* parent, OnNext&& on_next_fn,
+                        OnError&& on_error_fn, OnComplete&& on_complete_fn)
+    : parent_(parent),
+      on_next_(std::move(on_next_fn)),
       on_error_(std::move(on_error_fn)),
       on_complete_(std::move(on_complete_fn)) {
     // nop
+  }
+
+  flow::coordinator* parent() const noexcept override {
+    return parent_;
   }
 
   void on_next(const input_type& item) override {
@@ -219,14 +239,14 @@ public:
   void on_error(const error& what) override {
     if (sub_) {
       on_error_(what);
-      sub_ = nullptr;
+      sub_.release_later();
     }
   }
 
   void on_complete() override {
     if (sub_) {
       on_complete_();
-      sub_ = nullptr;
+      sub_.release_later();
     }
   }
 
@@ -240,6 +260,7 @@ public:
   }
 
 private:
+  flow::coordinator* parent_;
   OnNext on_next_;
   OnError on_error_;
   OnComplete on_complete_;
@@ -249,54 +270,6 @@ private:
 } // namespace caf::detail
 
 namespace caf::flow {
-
-/// Creates an observer from given callbacks.
-/// @param on_next Callback for handling incoming elements.
-/// @param on_error Callback for handling an error.
-/// @param on_complete Callback for handling the end-of-stream event.
-template <class OnNext, class OnError, class OnComplete>
-auto make_observer(OnNext on_next, OnError on_error, OnComplete on_complete) {
-  using input_type = detail::on_next_value_type<OnNext>;
-  using impl_type
-    = detail::default_observer_impl<input_type, OnNext, OnError, OnComplete>;
-  auto ptr = make_counted<impl_type>(std::move(on_next), std::move(on_error),
-                                     std::move(on_complete));
-  return observer<input_type>{std::move(ptr)};
-}
-
-/// Creates an observer from given callbacks.
-/// @param on_next Callback for handling incoming elements.
-/// @param on_error Callback for handling an error.
-template <class OnNext, class OnError>
-auto make_observer(OnNext on_next, OnError on_error) {
-  using input_type = detail::on_next_value_type<OnNext>;
-  using impl_type = detail::default_observer_impl<input_type, OnNext, OnError>;
-  auto ptr = make_counted<impl_type>(std::move(on_next), std::move(on_error));
-  return observer<input_type>{std::move(ptr)};
-}
-
-/// Creates an observer from given callbacks.
-/// @param on_next Callback for handling incoming elements.
-template <class OnNext>
-auto make_observer(OnNext on_next) {
-  using input_type = detail::on_next_value_type<OnNext>;
-  using impl_type = detail::default_observer_impl<input_type, OnNext>;
-  auto ptr = make_counted<impl_type>(std::move(on_next));
-  return observer<input_type>{std::move(ptr)};
-}
-
-/// Creates an observer from a smart pointer to a custom object that implements
-/// `on_next`, `on_error` and `on_complete` as member functions.
-/// @param ptr Smart pointer to a custom object.
-template <class SmartPointer>
-auto make_observer_from_ptr(SmartPointer ptr) {
-  using obj_t = std::remove_reference_t<decltype(*ptr)>;
-  using on_next_fn = decltype(&obj_t::on_next);
-  using value_type = typename detail::on_next_trait_t<on_next_fn>::value_type;
-  return make_observer([ptr](const value_type& x) { ptr->on_next(x); },
-                       [ptr](const error& what) { ptr->on_error(what); },
-                       [ptr] { ptr->on_complete(); });
-}
 
 // -- writing observed values to an async buffer -------------------------------
 
@@ -314,8 +287,8 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  buffer_writer_impl(coordinator* ctx) : ctx_(ctx) {
-    CAF_ASSERT(ctx_ != nullptr);
+  buffer_writer_impl(coordinator* parent) : parent_(parent) {
+    CAF_ASSERT(parent_ != nullptr);
   }
 
   ~buffer_writer_impl() {
@@ -360,6 +333,10 @@ public:
 
   // -- implementation of observer<T>::impl ------------------------------------
 
+  coordinator* parent() const noexcept override {
+    return parent_.get();
+  }
+
   void on_next(const value_type& item) override {
     CAF_LOG_TRACE(CAF_ARG(item));
     if (buf_)
@@ -371,7 +348,7 @@ public:
     if (buf_) {
       buf_->close();
       buf_ = nullptr;
-      sub_ = nullptr;
+      sub_.release_later();
     }
   }
 
@@ -380,7 +357,7 @@ public:
     if (buf_) {
       buf_->abort(what);
       buf_ = nullptr;
-      sub_ = nullptr;
+      sub_.release_later();
     }
   }
 
@@ -403,7 +380,7 @@ public:
 
   void on_consumer_cancel() override {
     CAF_LOG_TRACE("");
-    ctx_->schedule_fn([ptr{strong_ptr()}] {
+    parent_->schedule_fn([ptr{strong_ptr()}] {
       CAF_LOG_TRACE("");
       ptr->on_cancel();
     });
@@ -411,7 +388,7 @@ public:
 
   void on_consumer_demand(size_t demand) override {
     CAF_LOG_TRACE(CAF_ARG(demand));
-    ctx_->schedule_fn([ptr{strong_ptr()}, demand] { //
+    parent_->schedule_fn([ptr{strong_ptr()}, demand] { //
       CAF_LOG_TRACE(CAF_ARG(demand));
       ptr->on_demand(demand);
     });
@@ -428,7 +405,7 @@ private:
     CAF_LOG_TRACE("");
     if (sub_) {
       sub_.dispose();
-      sub_ = nullptr;
+      sub_.release_later();
     }
     buf_ = nullptr;
   }
@@ -437,7 +414,7 @@ private:
     return {this};
   }
 
-  coordinator_ptr ctx_;
+  coordinator_ptr parent_;
   buffer_ptr buf_;
   subscription sub_;
 };
@@ -445,48 +422,54 @@ private:
 // -- utility observer ---------------------------------------------------------
 
 /// Forwards all events to its parent.
-template <class T, class Parent, class Token>
+template <class T, class Target, class Token>
 class forwarder : public observer_impl_base<T> {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit forwarder(intrusive_ptr<Parent> parent, Token token)
-    : parent_(std::move(parent)), token_(std::move(token)) {
+  explicit forwarder(coordinator* parent, intrusive_ptr<Target> target,
+                     Token token)
+    : parent_(parent), target_(std::move(target)), token_(std::move(token)) {
     // nop
   }
 
   // -- implementation of observer_impl<T> -------------------------------------
 
+  flow::coordinator* parent() const noexcept override {
+    return parent_;
+  }
+
   void on_complete() override {
-    if (parent_) {
-      parent_->fwd_on_complete(token_);
-      parent_ = nullptr;
+    if (target_) {
+      target_->fwd_on_complete(token_);
+      target_ = nullptr;
     }
   }
 
   void on_error(const error& what) override {
-    if (parent_) {
-      parent_->fwd_on_error(token_, what);
-      parent_ = nullptr;
+    if (target_) {
+      target_->fwd_on_error(token_, what);
+      target_ = nullptr;
     }
   }
 
   void on_subscribe(subscription new_sub) override {
-    if (parent_) {
-      parent_->fwd_on_subscribe(token_, std::move(new_sub));
+    if (target_) {
+      target_->fwd_on_subscribe(token_, std::move(new_sub));
     } else {
       new_sub.dispose();
     }
   }
 
   void on_next(const T& item) override {
-    if (parent_) {
-      parent_->fwd_on_next(token_, item);
+    if (target_) {
+      target_->fwd_on_next(token_, item);
     }
   }
 
 private:
-  intrusive_ptr<Parent> parent_;
+  coordinator* parent_;
+  intrusive_ptr<Target> target_;
   Token token_;
 };
 

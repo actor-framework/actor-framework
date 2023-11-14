@@ -21,7 +21,7 @@ using int_mcast_ptr = intrusive_ptr<int_mcast>;
 
 struct fixture : test::fixture::flow {
   int_mcast_ptr make_mcast() {
-    return make_counted<int_mcast>(coordinator());
+    return coordinator()->add_child(std::in_place_type<int_mcast>);
   }
 
   auto lift(int_mcast_ptr mcast) {

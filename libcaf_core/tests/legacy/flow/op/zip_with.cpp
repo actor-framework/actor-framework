@@ -36,7 +36,8 @@ SCENARIO("zip_with combines inputs") {
   GIVEN("two observables") {
     WHEN("merging them with zip_with") {
       THEN("the observer receives the combined output of both sources") {
-        auto snk = flow::make_passive_observer<int>();
+        using snk_t = flow::passive_observer<int>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto grd = make_unsubscribe_guard(snk);
         ctx->make_observable()
           .zip_with([](int x, int y) { return x + y; },
@@ -63,7 +64,8 @@ SCENARIO("zip_with emits nothing when zipping an empty observable") {
   GIVEN("two observables, one of them empty") {
     WHEN("merging them with zip_with") {
       THEN("the observer sees on_complete immediately") {
-        auto snk = flow::make_auto_observer<int>();
+        using snk_t = flow::auto_observer<int>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         ctx->make_observable()
           .zip_with([](int x, int y, int z) { return x + y + z; },
                     ctx->make_observable().repeat(11),
@@ -82,8 +84,9 @@ SCENARIO("zip_with aborts if an input emits an error") {
   GIVEN("two observables, one of them emits an error after some items") {
     WHEN("merging them with zip_with") {
       THEN("the observer receives all items up to the error") {
+        using snk_t = flow::auto_observer<int>;
         auto obs = ctx->make_observable();
-        auto snk = flow::make_auto_observer<int>();
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         obs //
           .iota(1)
           .take(3)
@@ -99,8 +102,9 @@ SCENARIO("zip_with aborts if an input emits an error") {
   GIVEN("two observables, one of them emits an error immediately") {
     WHEN("merging them with zip_with") {
       THEN("the observer only receives on_error") {
+        using snk_t = flow::auto_observer<int>;
         auto obs = ctx->make_observable();
-        auto snk = flow::make_auto_observer<int>();
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         obs //
           .iota(1)
           .take(3)
@@ -119,8 +123,9 @@ SCENARIO("zip_with on an invalid observable produces an invalid observable") {
   GIVEN("a default-constructed (invalid) observable") {
     WHEN("calling zip_with on it") {
       THEN("the result is another invalid observable") {
+        using snk_t = flow::auto_observer<int>;
         auto obs = ctx->make_observable();
-        auto snk = flow::make_auto_observer<int>();
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         flow::observable<int>{}
           .zip_with([](int x, int y) { return x + y; }, obs.iota(1).take(10))
           .subscribe(snk->as_observer());
@@ -133,8 +138,9 @@ SCENARIO("zip_with on an invalid observable produces an invalid observable") {
   GIVEN("a valid observable") {
     WHEN("calling zip_with on it with an invalid observable") {
       THEN("the result is another invalid observable") {
+        using snk_t = flow::auto_observer<int>;
         auto obs = ctx->make_observable();
-        auto snk = flow::make_auto_observer<int>();
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         obs //
           .iota(1)
           .take(10)
@@ -149,11 +155,12 @@ SCENARIO("zip_with on an invalid observable produces an invalid observable") {
 }
 
 SCENARIO("zip_with operators can be disposed at any time") {
+  auto obs = ctx->make_observable();
   GIVEN("a zip_with operator that produces some items") {
     WHEN("calling dispose before requesting any items") {
       THEN("the observer never receives any item") {
-        auto obs = ctx->make_observable();
-        auto snk = flow::make_passive_observer<int>();
+        using snk_t = flow::passive_observer<int>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto sub = //
           obs      //
             .iota(1)
@@ -168,8 +175,8 @@ SCENARIO("zip_with operators can be disposed at any time") {
     }
     WHEN("calling dispose in on_subscribe") {
       THEN("the observer receives no item") {
-        auto obs = ctx->make_observable();
-        auto snk = flow::make_canceling_observer<int>();
+        using snk_t = flow::canceling_observer<int>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>, false);
         obs //
           .iota(1)
           .take(10)
@@ -181,8 +188,8 @@ SCENARIO("zip_with operators can be disposed at any time") {
     }
     WHEN("calling dispose in on_next") {
       THEN("the observer receives no additional item") {
-        auto obs = ctx->make_observable();
-        auto snk = flow::make_canceling_observer<int>(true);
+        using snk_t = flow::canceling_observer<int>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>, true);
         obs //
           .iota(1)
           .take(10)
@@ -200,15 +207,17 @@ SCENARIO("observers may request from zip_with operators before on_subscribe") {
     WHEN("the observer calls request before the inputs call on_subscribe") {
       THEN("the observer receives the item") {
         using flow::op::zip_index;
-        auto snk = flow::make_passive_observer<int>();
+        using snk_t = flow::passive_observer<int>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto grd = make_unsubscribe_guard(snk);
         auto uut = make_zip_with_sub([](int, int) { return 0; },
                                      snk->as_observer(),
                                      flow::make_nil_observable<int>(ctx.get()),
                                      flow::make_nil_observable<int>(ctx.get()));
         snk->request(128);
-        auto sub1 = flow::make_passive_subscription();
-        auto sub2 = flow::make_passive_subscription();
+        using sub_t = flow::passive_subscription_impl;
+        auto sub1 = ctx->add_child(std::in_place_type<sub_t>);
+        auto sub2 = ctx->add_child(std::in_place_type<sub_t>);
         uut->fwd_on_subscribe(zip_index<0>{}, flow::subscription{sub1});
         uut->fwd_on_subscribe(zip_index<1>{}, flow::subscription{sub2});
         CHECK_EQ(sub1->demand, 128u);
@@ -223,14 +232,16 @@ SCENARIO("the zip_with operators disposes unexpected subscriptions") {
     WHEN("on_subscribe is called twice for the same input") {
       THEN("the operator disposes the subscription") {
         using flow::op::zip_index;
-        auto snk = flow::make_passive_observer<int>();
+        using snk_t = flow::passive_observer<int>;
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto grd = make_unsubscribe_guard(snk);
         auto uut = make_zip_with_sub([](int, int) { return 0; },
                                      snk->as_observer(),
                                      flow::make_nil_observable<int>(ctx.get()),
                                      flow::make_nil_observable<int>(ctx.get()));
-        auto sub1 = flow::make_passive_subscription();
-        auto sub2 = flow::make_passive_subscription();
+        using sub_t = flow::passive_subscription_impl;
+        auto sub1 = ctx->add_child(std::in_place_type<sub_t>);
+        auto sub2 = ctx->add_child(std::in_place_type<sub_t>);
         uut->fwd_on_subscribe(zip_index<0>{}, flow::subscription{sub1});
         uut->fwd_on_subscribe(zip_index<0>{}, flow::subscription{sub2});
         CHECK(!sub1->disposed());

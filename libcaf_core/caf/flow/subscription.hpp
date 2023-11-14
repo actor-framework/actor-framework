@@ -8,6 +8,7 @@
 #include "caf/detail/plain_ref_counted.hpp"
 #include "caf/disposable.hpp"
 #include "caf/flow/coordinated.hpp"
+#include "caf/flow/coordinator.hpp"
 #include "caf/flow/fwd.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/ref_counted.hpp"
@@ -23,12 +24,22 @@ public:
   // -- nested types -----------------------------------------------------------
 
   /// Internal interface of a `subscription`.
-  class CAF_CORE_EXPORT impl : public disposable::impl {
+  class CAF_CORE_EXPORT impl : public coordinated, public disposable::impl {
   public:
+    using handle_type = subscription;
+
     ~impl() override;
 
     /// Signals demand for `n` more items.
     virtual void request(size_t n) = 0;
+
+    friend void intrusive_ptr_add_ref(const impl* ptr) noexcept {
+      ptr->ref_disposable();
+    }
+
+    friend void intrusive_ptr_release(const impl* ptr) noexcept {
+      ptr->deref_disposable();
+    }
   };
 
   /// Simple base type for all subscription implementations that implements the
@@ -39,6 +50,10 @@ public:
     void ref_disposable() const noexcept final;
 
     void deref_disposable() const noexcept final;
+
+    void ref_coordinated() const noexcept final;
+
+    void deref_coordinated() const noexcept final;
   };
 
   /// Describes a listener to the subscription that will receive an event
@@ -56,8 +71,8 @@ public:
   /// `cancel` to a @ref listener.
   class CAF_CORE_EXPORT fwd_impl final : public impl_base {
   public:
-    fwd_impl(coordinator* ctx, listener* src, coordinated* snk)
-      : ctx_(ctx), src_(src), snk_(snk) {
+    fwd_impl(coordinator* parent, listener* src, coordinated* snk)
+      : parent_(parent), src_(src), snk_(snk) {
       // nop
     }
 
@@ -67,36 +82,56 @@ public:
 
     void dispose() override;
 
-    auto* ctx() const noexcept {
-      return ctx_;
+    coordinator* parent() const noexcept override {
+      return parent_;
     }
 
     /// Creates a new subscription object.
-    /// @param ctx The owner of @p src and @p snk.
+    /// @param parent The owner of @p src and @p snk.
     /// @param src The @ref observable that emits items.
     /// @param snk the @ref observer that consumes items.
     /// @returns an instance of @ref fwd_impl in a @ref subscription handle.
     template <class Observable, class Observer>
-    static subscription make(coordinator* ctx, Observable* src, Observer* snk) {
+    static subscription
+    make(coordinator* parent, Observable* src, Observer* snk) {
       static_assert(std::is_base_of_v<listener, Observable>);
       static_assert(std::is_base_of_v<coordinated, Observer>);
       static_assert(std::is_same_v<typename Observable::output_type,
                                    typename Observer::input_type>);
-      intrusive_ptr<impl> ptr{new fwd_impl(ctx, src, snk), false};
+      auto ptr = parent->template add_child<fwd_impl>(src, snk);
       return subscription{std::move(ptr)};
     }
 
     /// Like @ref make but without any type checking.
-    static subscription make_unsafe(coordinator* ctx, listener* src,
+    static subscription make_unsafe(coordinator* parent, listener* src,
                                     coordinated* snk) {
-      intrusive_ptr<impl> ptr{new fwd_impl(ctx, src, snk), false};
+      intrusive_ptr<impl> ptr{new fwd_impl(parent, src, snk), false};
       return subscription{std::move(ptr)};
     }
 
   private:
-    coordinator* ctx_;
+    coordinator* parent_;
     intrusive_ptr<listener> src_;
     intrusive_ptr<coordinated> snk_;
+  };
+
+  class CAF_CORE_EXPORT trivial_impl final : public subscription::impl_base {
+  public:
+    explicit trivial_impl(coordinator* parent) : parent_(parent) {
+      // nop
+    }
+
+    coordinator* parent() const noexcept override;
+
+    bool disposed() const noexcept override;
+
+    void request(size_t) override;
+
+    void dispose() override;
+
+  private:
+    coordinator* parent_;
+    bool disposed_ = false;
   };
 
   // -- constructors, destructors, and assignment operators --------------------
@@ -106,31 +141,38 @@ public:
     // nop
   }
 
-  subscription& operator=(std::nullptr_t) noexcept {
-    pimpl_.reset();
-    return *this;
-  }
-
   subscription() noexcept = default;
   subscription(subscription&&) noexcept = default;
   subscription(const subscription&) noexcept = default;
   subscription& operator=(subscription&&) noexcept = default;
   subscription& operator=(const subscription&) noexcept = default;
 
-  // -- factory functions ------------------------------------------------------
+  // -- mutators ---------------------------------------------------------------
 
-  /// Creates a trivial subscription that simply wraps a boolean flag and
-  /// ignores all requests.
-  static subscription make_trivial();
+  /// Resets this handle but releases the reference count after the current
+  /// coordinator cycle.
+  /// @post `!valid()`
+  void release_later() {
+    if (pimpl_) {
+      auto* parent = pimpl_->parent();
+      parent->release_later(pimpl_);
+      CAF_ASSERT(pimpl_ == nullptr);
+    }
+  }
 
   // -- demand signaling -------------------------------------------------------
 
   /// Causes the publisher to stop producing items for the subscriber. Any
   /// in-flight items may still get dispatched.
+  /// @post `!valid()`
   void dispose() {
     if (pimpl_) {
-      pimpl_->dispose();
-      pimpl_ = nullptr;
+      // Defend against impl::dispose() indirectly calling member functions on
+      // this object again.
+      auto ptr = intrusive_ptr<impl>{pimpl_.release(), false};
+      auto* parent = ptr->parent();
+      ptr->dispose();
+      parent->release_later(ptr);
     }
   }
 

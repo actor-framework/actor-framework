@@ -387,6 +387,10 @@ public:
     // nop
   }
 
+  flow::coordinator* parent() const noexcept override {
+    return self_;
+  }
+
   void cancel() override {
     if (sink_hdl_) {
       // Note: must send this as anonymous message, because this can be called
@@ -395,10 +399,8 @@ public:
                 stream_abort_msg{sink_flow_id_, sec::stream_aborted});
       sink_hdl_ = nullptr;
     }
-    if (sub_) {
+    if (sub_)
       sub_.dispose();
-      sub_ = nullptr;
-    }
   }
 
   void request(size_t num_items) override {
@@ -425,14 +427,14 @@ public:
   void on_error(const error& err) override {
     unsafe_send_as(self_, sink_hdl_, stream_abort_msg{sink_flow_id_, err});
     sink_hdl_ = nullptr;
-    sub_ = nullptr;
+    sub_.release_later();
     self_->stream_subs_.erase(source_flow_id_);
   }
 
   void on_complete() override {
     unsafe_send_as(self_, sink_hdl_, stream_close_msg{sink_flow_id_});
     sink_hdl_ = nullptr;
-    sub_ = nullptr;
+    sub_.release_later();
     self_->stream_subs_.erase(source_flow_id_);
   }
 
@@ -953,11 +955,17 @@ scheduled_actor::do_observe(stream what, size_t buf_capacity,
   CAF_LOG_TRACE(CAF_ARG(what)
                 << CAF_ARG(buf_capacity) << CAF_ARG(request_threshold));
   if (const auto& src = what.source()) {
-    using impl_t = detail::stream_bridge;
-    return flow::make_observable<impl_t>(this, src, what.id(), buf_capacity,
-                                         request_threshold);
+    auto ptr = make_counted<detail::stream_bridge>(this, src, what.id(),
+                                                   buf_capacity,
+                                                   request_threshold);
+    return flow::observable<async::batch>{std::move(ptr)};
   }
   return make_observable().fail<async::batch>(make_error(sec::invalid_stream));
+}
+
+void scheduled_actor::release_later(flow::coordinated_ptr& child) {
+  CAF_ASSERT(child != nullptr);
+  released_.emplace_back().swap(child);
 }
 
 void scheduled_actor::watch(disposable obj) {
@@ -982,6 +990,7 @@ void scheduled_actor::run_actions() {
     actions_.clear();
   }
   update_watched_disposables();
+  released_.clear();
 }
 
 void scheduled_actor::update_watched_disposables() {

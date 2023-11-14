@@ -70,12 +70,17 @@ public:
   /// Creates a new observer that pushes all observed items to the resource.
   disposable subscribe(async::producer_resource<T> resource);
 
-  /// Subscribes a new observer to the items emitted by this observable.
+  /// Subscribes a new observer that discards all items it receives.
   disposable subscribe(ignore_t);
 
   /// Calls `on_next` for each item emitted by this observable.
   template <class OnNext>
   disposable for_each(OnNext on_next);
+
+  /// Calls `on_next` for each item emitted by this observable and `on_error` in
+  /// case of an error.
+  template <class OnNext, class OnError>
+  disposable for_each(OnNext on_next, OnError on_error);
 
   // -- transforming -----------------------------------------------------------
 
@@ -363,8 +368,8 @@ public:
   }
 
   /// @pre `valid()`
-  coordinator* ctx() const {
-    return pimpl_->ctx();
+  coordinator* parent() const {
+    return pimpl_->parent();
   }
 
   // -- swapping ---------------------------------------------------------------
@@ -378,18 +383,6 @@ private:
 
   pimpl_type pimpl_;
 };
-
-/// Convenience function for creating an @ref observable from a concrete
-/// operator type.
-/// @relates observable
-template <class Operator, class CoordinatorType, class... Ts>
-observable<typename Operator::output_type>
-make_observable(CoordinatorType* ctx, Ts&&... xs) {
-  using out_t = typename Operator::output_type;
-  using ptr_t = intrusive_ptr<op::base<out_t>>;
-  ptr_t ptr{new Operator(ctx, std::forward<Ts>(xs)...), false};
-  return observable<out_t>{std::move(ptr)};
-}
 
 // Note: the definition of all member functions is in observable.hpp.
 

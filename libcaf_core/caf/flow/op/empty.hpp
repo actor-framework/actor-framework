@@ -21,18 +21,16 @@ public:
 
   using super = cold<T>;
 
-  using output_type = T;
-
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit empty(coordinator* ctx) : super(ctx) {
+  explicit empty(coordinator* parent) : super(parent) {
     // nop
   }
 
   // -- implementation of observable<T>::impl ----------------------------------
 
-  disposable subscribe(observer<output_type> out) override {
-    return empty_subscription(out);
+  disposable subscribe(observer<T> out) override {
+    return super::empty_subscription(out);
   }
 };
 

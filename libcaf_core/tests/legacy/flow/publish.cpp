@@ -13,8 +13,6 @@
 
 using namespace caf;
 
-using caf::flow::make_observer;
-
 namespace {
 
 struct fixture : test_coordinator_fixture<> {
@@ -56,6 +54,7 @@ auto make_hot_generator() {
 BEGIN_FIXTURE_SCOPE(fixture)
 
 SCENARIO("publish creates a connectable observable") {
+  using snk_t = flow::auto_observer<int>;
   GIVEN("a connectable with a hot generator") {
     WHEN("connecting without any subscriber") {
       THEN("all items get dropped") {
@@ -68,8 +67,8 @@ SCENARIO("publish creates a connectable observable") {
     WHEN("connecting after two observers have subscribed") {
       THEN("each observer receives all items from the generator") {
         auto [n, fn] = make_hot_generator();
-        auto snk1 = flow::make_auto_observer<int>();
-        auto snk2 = flow::make_auto_observer<int>();
+        auto snk1 = ctx->add_child(std::in_place_type<snk_t>);
+        auto snk2 = ctx->add_child(std::in_place_type<snk_t>);
         ctx->make_observable()
           .from_callable(fn)
           .publish()
@@ -86,8 +85,8 @@ SCENARIO("publish creates a connectable observable") {
     WHEN("adding two observers with auto_connect(2)") {
       THEN("each observer receives all items from the generator") {
         auto [n, fn] = make_hot_generator();
-        auto snk1 = flow::make_auto_observer<int>();
-        auto snk2 = flow::make_auto_observer<int>();
+        auto snk1 = ctx->add_child(std::in_place_type<snk_t>);
+        auto snk2 = ctx->add_child(std::in_place_type<snk_t>);
         ctx->make_observable()
           .from_callable(fn)
           .publish()
@@ -104,8 +103,8 @@ SCENARIO("publish creates a connectable observable") {
     WHEN("adding two observers with share(2)") {
       THEN("each observer receives all items from the generator") {
         auto [n, fn] = make_hot_generator();
-        auto snk1 = flow::make_auto_observer<int>();
-        auto snk2 = flow::make_auto_observer<int>();
+        auto snk1 = ctx->add_child(std::in_place_type<snk_t>);
+        auto snk2 = ctx->add_child(std::in_place_type<snk_t>);
         ctx->make_observable()
           .from_callable(fn) //
           .share(2)
@@ -122,12 +121,13 @@ SCENARIO("publish creates a connectable observable") {
 }
 
 SCENARIO("connectable observables forward errors") {
+  using snk_t = flow::auto_observer<int>;
   GIVEN("a connectable with a cell and two subscribers") {
     WHEN("the cell fails") {
       THEN("all subscribers receive the error") {
         auto cell = make_counted<flow::op::cell<int>>(ctx.get());
-        auto snk1 = flow::make_auto_observer<int>();
-        auto snk2 = flow::make_auto_observer<int>();
+        auto snk1 = ctx->add_child(std::in_place_type<snk_t>);
+        auto snk2 = ctx->add_child(std::in_place_type<snk_t>);
         flow::observable<int>{cell}.share(2).compose(subscribe_all(snk1, snk2));
         ctx->run();
         CHECK(snk1->subscribed());
@@ -146,14 +146,13 @@ SCENARIO("connectable observables forward errors") {
         auto conn = flow::observable<int>{cell}.share();
         cell->set_error(sec::runtime_error);
         // First subscriber to trigger subscription to the cell.
-        auto snk1 = flow::make_auto_observer<int>();
+        auto snk1 = ctx->add_child(std::in_place_type<snk_t>);
         conn.subscribe(snk1->as_observer());
         ctx->run();
         CHECK(snk1->aborted());
         // After this point, new subscribers should be aborted right away.
-        auto snk2 = flow::make_auto_observer<int>();
+        auto snk2 = ctx->add_child(std::in_place_type<snk_t>);
         auto sub = conn.subscribe(snk2->as_observer());
-        CHECK(sub.disposed());
         CHECK(snk2->aborted());
         ctx->run();
       }
@@ -162,12 +161,13 @@ SCENARIO("connectable observables forward errors") {
 }
 
 SCENARIO("observers that dispose their subscription do not affect others") {
+  using snk_t = flow::passive_observer<int>;
   GIVEN("a connectable with two subscribers") {
     WHEN("one of the subscribers disposes its subscription") {
       THEN("the other subscriber still receives all data") {
         using impl_t = flow::op::publish<int>;
-        auto snk1 = flow::make_passive_observer<int>();
-        auto snk2 = flow::make_passive_observer<int>();
+        auto snk1 = ctx->add_child(std::in_place_type<snk_t>);
+        auto snk2 = ctx->add_child(std::in_place_type<snk_t>);
         auto grd = make_unsubscribe_guard(snk1, snk2);
         auto iota = ctx->make_observable().iota(1).take(12).as_observable();
         auto uut = make_counted<impl_t>(ctx.get(), iota.pimpl(), 5);
@@ -191,12 +191,13 @@ SCENARIO("observers that dispose their subscription do not affect others") {
 }
 
 SCENARIO("publishers with auto_disconnect auto-dispose their subscription") {
+  using snk_t = flow::passive_observer<int>;
   GIVEN("a connectable with two subscribers") {
     WHEN("both subscribers drop out and auto_disconnect is enabled") {
       THEN("the publisher becomes disconnected") {
         using impl_t = flow::op::publish<int>;
-        auto snk1 = flow::make_passive_observer<int>();
-        auto snk2 = flow::make_passive_observer<int>();
+        auto snk1 = ctx->add_child(std::in_place_type<snk_t>);
+        auto snk2 = ctx->add_child(std::in_place_type<snk_t>);
         auto grd = make_unsubscribe_guard(snk1, snk2);
         auto iota = ctx->make_observable().iota(1).take(12).as_observable();
         auto uut = make_counted<impl_t>(ctx.get(), iota.pimpl(), 5);
@@ -221,17 +222,19 @@ SCENARIO("publishers with auto_disconnect auto-dispose their subscription") {
 }
 
 SCENARIO("publishers dispose unexpected subscriptions") {
+  using snk_t = flow::passive_observer<int>;
   GIVEN("an initialized publish operator") {
     WHEN("calling on_subscribe with unexpected subscriptions") {
       THEN("the operator disposes them immediately") {
         using impl_t = flow::op::publish<int>;
-        auto snk = flow::make_passive_observer<int>();
+        auto snk = ctx->add_child(std::in_place_type<snk_t>);
         auto grd = make_unsubscribe_guard(snk);
         auto iota = ctx->make_observable().iota(1).take(12).as_observable();
         auto uut = make_counted<impl_t>(ctx.get(), iota.pimpl());
         uut->subscribe(snk->as_observer());
         uut->connect();
-        auto sub = flow::make_passive_subscription();
+        using sub_t = flow::passive_subscription_impl;
+        auto sub = ctx->add_child(std::in_place_type<sub_t>);
         uut->on_subscribe(flow::subscription{sub});
         CHECK(sub->disposed());
       }

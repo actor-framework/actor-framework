@@ -101,6 +101,10 @@ disposable make_trivial_disposable() {
   return disposable{make_counted<trivial_impl>()};
 }
 
+coordinator* passive_subscription_impl::parent() const noexcept {
+  return parent_;
+}
+
 void passive_subscription_impl::request(size_t n) {
   demand += n;
 }

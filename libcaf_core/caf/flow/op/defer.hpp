@@ -33,7 +33,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  defer(coordinator* ctx, Factory fn) : super(ctx), fn_(std::move(fn)) {
+  defer(coordinator* parent, Factory fn) : super(parent), fn_(std::move(fn)) {
     // nop
   }
 
