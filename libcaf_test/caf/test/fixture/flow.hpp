@@ -214,10 +214,16 @@ public:
       return make_observable().fail<T>(make_error(std::forward<Args>(args)...));
   }
 
-  /// Shortcut for `make_observable<T>().range(init, num)`.
+  /// Shortcut for `make_observable().range(init, num)`.
   template <class T>
   [[nodiscard]] auto range(T init, size_t num) {
     return make_observable().range(init, num);
+  }
+
+  /// Shortcut for `make_observable().just(arg)`
+  template <class T>
+  [[nodiscard]] auto just(T&& arg) {
+    return make_observable().just(std::forward<T>(arg));
   }
 
   // -- conversion functions ---------------------------------------------------

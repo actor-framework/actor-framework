@@ -30,9 +30,10 @@ struct fixture : test_coordinator_fixture<> {
   template <class T, class... Ts>
   auto raw_sub(flow::observer<T> out, Ts&&... xs) {
     using flow::observable;
-    using input_type = std::variant<observable<T>, observable<observable<T>>>;
-    auto vec = std::vector<input_type>{std::forward<Ts>(xs).as_observable()...};
-    auto ptr = make_counted<flow::op::concat_sub<T>>(ctx.get(), out, vec);
+    auto ptr = make_counted<flow::op::concat_sub<T>>(ctx.get(), out);
+    ctx->make_observable()
+      .from_container(std::vector{std::forward<Ts>(xs).as_observable()...})
+      .subscribe(ptr->as_observer());
     out.on_subscribe(flow::subscription{ptr});
     return ptr;
   }
@@ -87,9 +88,9 @@ SCENARIO("concat operators combine inputs") {
         ctx->make_observable()
           .from_container(
             std::vector{ctx->make_observable().just(1).as_observable(),
-                        ctx->make_observable().just(2).as_observable(),
+                        ctx->make_observable().iota(2).take(2).as_observable(),
                         ctx->make_observable().empty<int>().as_observable()})
-          .concat(ctx->make_observable().just(3))
+          .concat()
           .subscribe(snk->as_observer());
         ctx->run();
         CHECK(snk->completed());
@@ -145,21 +146,6 @@ SCENARIO("concat operators combine inputs") {
         CHECK(snk->aborted());
         CHECK_EQ(snk->buf, std::vector<int>({1, 2, 3}));
         CHECK_EQ(snk->err, sec::runtime_error);
-      }
-    }
-  }
-}
-
-SCENARIO("empty concat operators only call on_complete") {
-  GIVEN("a concat operator with no inputs") {
-    WHEN("subscribing to it") {
-      THEN("the observer only receives an on_complete event") {
-        using snk_t = flow::auto_observer<int>;
-        auto snk = ctx->add_child(std::in_place_type<snk_t>);
-        auto sub = make_operator<int>()->subscribe(snk->as_observer());
-        ctx->run();
-        CHECK(snk->completed());
-        CHECK(snk->buf.empty());
       }
     }
   }

@@ -41,18 +41,13 @@ public:
     }
 
     void on_complete() {
-      if (sub->in_) {
-        auto tmp = std::move(sub->in_);
-        tmp.dispose();
-      }
+      // If a step calls on_complete from on_next, it must return `false`. This
+      // will cause on_next on the from_term_sub to dispose its input.
     }
 
     void on_error(const error& what) {
+      // Same as for on_complete, except that we store the error.
       sub->err_ = what;
-      if (sub->in_) {
-        auto tmp = std::move(sub->in_);
-        tmp.dispose();
-      }
     }
   };
 
@@ -108,41 +103,46 @@ public:
 
   void on_next(const Input& item) override {
     CAF_ASSERT(!in_ || in_flight_ > 0);
-    if (in_) {
-      --in_flight_;
-      auto fn = [this, &item](auto& step, auto&... steps) {
-        term_step term{this};
-        step.on_next(item, steps..., term);
-      };
-      std::apply(fn, steps_);
+    if (!in_)
+      return;
+    --in_flight_;
+    auto fn = [this, &item](auto& step, auto&... steps) {
+      term_step term{this};
+      return step.on_next(item, steps..., term);
+    };
+    if (!std::apply(fn, steps_)) {
+      in_.dispose();
+    } else {
       pull();
-      if (!running_)
-        do_run();
     }
+    if (!running_)
+      do_run();
   }
 
   void on_complete() override {
-    if (in_) {
-      auto fn = [this](auto& step, auto&... steps) {
-        term_step term{this};
-        step.on_complete(steps..., term);
-      };
-      std::apply(fn, steps_);
-      if (!running_)
-        do_run();
-    }
+    if (!in_)
+      return;
+    in_.release_later();
+    auto fn = [this](auto& step, auto&... steps) {
+      term_step term{this};
+      step.on_complete(steps..., term);
+    };
+    std::apply(fn, steps_);
+    if (!running_)
+      do_run();
   }
 
   void on_error(const error& what) override {
-    if (in_) {
-      auto fn = [this, &what](auto& step, auto&... steps) {
-        term_step term{this};
-        step.on_error(what, steps..., term);
-      };
-      std::apply(fn, steps_);
-      if (!running_)
-        do_run();
-    }
+    if (!in_)
+      return;
+    in_.release_later();
+    auto fn = [this, &what](auto& step, auto&... steps) {
+      term_step term{this};
+      step.on_error(what, steps..., term);
+    };
+    std::apply(fn, steps_);
+    if (!running_)
+      do_run();
   }
 
   void on_subscribe(subscription in) override {

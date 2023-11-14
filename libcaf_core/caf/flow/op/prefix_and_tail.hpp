@@ -120,7 +120,16 @@ public:
   // -- implementation of disposable -------------------------------------------
 
   void dispose() override {
-    parent_->delay_fn([sptr = strong_this()] { sptr->do_dispose(); });
+    if (disposed())
+      return;
+    sub_.dispose();
+    if (sink_) {
+      CAF_ASSERT(!out_); // Either in tail mode or in prefix mode.
+      sink_ = nullptr;
+      return;
+    }
+    CAF_ASSERT(out_);
+    parent_->delay_fn([out = std::move(out_)]() mutable { out.on_complete(); });
   }
 
   bool disposed() const noexcept override {
@@ -165,13 +174,6 @@ public:
 private:
   intrusive_ptr<prefix_and_tail_sub> strong_this() {
     return {this};
-  }
-
-  void do_dispose() {
-    sink_ = nullptr;
-    sub_.dispose();
-    if (out_)
-      out_.on_complete();
   }
 
   /// Our scheduling context.
