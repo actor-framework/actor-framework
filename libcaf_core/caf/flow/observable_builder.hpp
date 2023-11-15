@@ -88,8 +88,13 @@ public:
 
   /// Creates a @ref generation that emits `value` once.
   template <class T>
-  generation<gen::just<T>> just(T value) const {
-    return from_generator(gen::just<T>{std::move(value)});
+  auto just(T value) const {
+    if constexpr (is_observable_v<T>) {
+      using out_t = observable<output_type_t<T>>;
+      return from_generator(gen::just<out_t>{std::move(value).as_observable()});
+    } else {
+      return from_generator(gen::just<T>{std::move(value)});
+    }
   }
 
   /// Creates a @ref generation that emits `value` repeatedly.
@@ -189,9 +194,11 @@ public:
   /// source observables.
   template <class Input, class... Inputs>
   auto merge(Input x, Inputs... xs) {
-    static_assert(is_observable_v<Input> && (is_observable_v<Inputs> && ...));
+    static_assert(is_observable_v<Input> && (is_observable_v<Inputs> && ...),
+                  "all parameters must be observables");
     using out_t = output_type_t<Input>;
-    static_assert((std::is_same_v<out_t, output_type_t<Inputs>> && ...));
+    static_assert((std::is_same_v<out_t, output_type_t<Inputs>> && ...),
+                  "all observables must have the same output type");
     using impl_t = op::merge<out_t>;
     return parent_->add_child_hdl(std::in_place_type<impl_t>,
                                   std::move(x).as_observable(),
@@ -202,21 +209,15 @@ public:
   /// passed source observables.
   template <class Input, class... Inputs>
   auto concat(Input&& x, Inputs&&... xs) {
-    using in_t = std::decay_t<Input>;
-    if constexpr (is_observable_v<in_t>) {
-      using impl_t = op::concat<output_type_t<in_t>>;
-      return parent_->add_child_hdl(std::in_place_type<impl_t>,
-                                    std::forward<Input>(x),
-                                    std::forward<Inputs>(xs)...);
-    } else {
-      static_assert(detail::is_iterable_v<in_t>);
-      using val_t = typename in_t::value_type;
-      static_assert(is_observable_v<val_t>);
-      using impl_t = op::concat<output_type_t<val_t>>;
-      return parent_->add_child_hdl(std::in_place_type<impl_t>,
-                                    std::forward<Input>(x),
-                                    std::forward<Inputs>(xs)...);
-    }
+    static_assert(is_observable_v<Input> && (is_observable_v<Inputs> && ...),
+                  "all parameters must be observables");
+    using out_t = output_type_t<Input>;
+    static_assert((std::is_same_v<out_t, output_type_t<Inputs>> && ...),
+                  "all observables must have the same output type");
+    using impl_t = op::concat<out_t>;
+    return parent_->add_child_hdl(std::in_place_type<impl_t>,
+                                  std::forward<Input>(x).as_observable(),
+                                  std::forward<Inputs>(xs).as_observable()...);
   }
 
   /// Creates an @ref observable that combines the emitted from all passed

@@ -777,7 +777,7 @@ template <class Out, class... Inputs>
 auto observable<T>::merge(Inputs&&... xs) {
   if constexpr (is_observable_v<Out>) {
     static_assert(sizeof...(Inputs) == 0,
-                  "merge on an observable<observable<T>> expects no arguments");
+                  "merge on an observable<observable<T>> allows no arguments");
     using value_t = output_type_t<Out>;
     return parent()->add_child_hdl(std::in_place_type<op::merge<value_t>>,
                                    *this);
@@ -795,18 +795,18 @@ template <class T>
 template <class Out, class... Inputs>
 auto observable<T>::concat(Inputs&&... xs) {
   if constexpr (is_observable_v<Out>) {
+    static_assert(sizeof...(Inputs) == 0,
+                  "concat on an observable<observable<T>> allows no arguments");
     using value_t = output_type_t<Out>;
     return parent()->add_child_hdl(std::in_place_type<op::concat<value_t>>,
-                                   *this, std::forward<Inputs>(xs)...);
+                                   *this);
   } else {
-    static_assert(
-      sizeof...(Inputs) > 0,
-      "concat without arguments expects this observable to emit observables");
+    static_assert(sizeof...(Inputs) > 0, "no observable to concatenate");
     static_assert(
       (std::is_same_v<Out, output_type_t<std::decay_t<Inputs>>> && ...),
       "can only concatenate observables with the same observed type");
     return parent()->add_child_hdl(std::in_place_type<op::concat<Out>>, *this,
-                                   std::forward<Inputs>(xs)...);
+                                   std::forward<Inputs>(xs).as_observable()...);
   }
 }
 

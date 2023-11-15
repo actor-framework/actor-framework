@@ -394,9 +394,9 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  template <class... Ts, class... Inputs>
-  explicit merge(coordinator* parent, observable<T> input0,
-                 observable<T> input1, Inputs... inputs)
+  template <class... Inputs>
+  merge(coordinator* parent, observable<T> input0, observable<T> input1,
+        Inputs... inputs)
     : super(parent) {
     static_assert((std::is_same_v<observable<T>, Inputs> && ...));
     using vector_t = std::vector<observable<T>>;
@@ -411,7 +411,7 @@ public:
                                         gen_t{std::move(xs)}, std::tuple{});
   }
 
-  explicit merge(coordinator* parent, observable<observable<T>> inputs)
+  merge(coordinator* parent, observable<observable<T>> inputs)
     : super(parent), inputs_(std::move(inputs)) {
     // nop
   }

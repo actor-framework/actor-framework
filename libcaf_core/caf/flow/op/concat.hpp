@@ -4,9 +4,11 @@
 
 #pragma once
 
+#include "caf/flow/gen/from_container.hpp"
 #include "caf/flow/observer.hpp"
 #include "caf/flow/op/cold.hpp"
 #include "caf/flow/op/empty.hpp"
+#include "caf/flow/op/from_generator.hpp"
 #include "caf/flow/subscription.hpp"
 
 #include <deque>
@@ -20,114 +22,138 @@ namespace caf::flow::op {
 
 /// Combines items from any number of observables.
 template <class T>
-class concat_sub : public subscription::impl_base {
+class concat_sub : public detail::plain_ref_counted,
+                   public subscription::impl,
+                   public observer_impl<observable<T>> {
 public:
   // -- member types -----------------------------------------------------------
 
   using input_key = size_t;
 
-  using input_type = std::variant<observable<T>, observable<observable<T>>>;
+  using input_type = observable<observable<T>>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  concat_sub(coordinator* parent, observer<T> out,
-             std::vector<input_type> inputs)
-    : parent_(parent), out_(out), inputs_(std::move(inputs)) {
-    CAF_ASSERT(!inputs_.empty());
-    subscribe_next();
+  concat_sub(coordinator* parent, observer<T> out)
+    : parent_(parent), out_(out) {
+    // nop
   }
 
-  // -- input management -------------------------------------------------------
+  // -- implementation of observer_impl ----------------------------------------
 
-  void subscribe_to(observable<T> what) {
-    CAF_ASSERT(!active_sub_);
-    active_key_ = next_key_++;
-    using fwd_t = forwarder<T, concat_sub, size_t>;
-    auto fwd = parent_->add_child_hdl(std::in_place_type<fwd_t>, this,
-                                      active_key_);
-    what.subscribe(std::move(fwd));
+  coordinator* parent() const noexcept override {
+    return parent_;
   }
 
-  void subscribe_to(observable<observable<T>> what) {
-    CAF_ASSERT(!active_sub_);
-    CAF_ASSERT(!factory_sub_);
-    factory_key_ = next_key_++;
-    using fwd_t = forwarder<observable<T>, concat_sub, size_t>;
-    auto fwd = parent_->add_child_hdl(std::in_place_type<fwd_t>, this,
-                                      factory_key_);
-    what.subscribe(std::move(fwd));
+  void on_next(const observable<T>& what) override {
+    CAF_ASSERT(what);
+    if (!sub_)
+      return;
+    ++key_;
+    using fwd_impl = forwarder<T, concat_sub, size_t>;
+    auto fwd = parent_->add_child(std::in_place_type<fwd_impl>, this, key_);
+    what.pimpl()->subscribe(fwd->as_observer());
   }
 
-  void subscribe_next() {
-    if (factory_key_ != 0) {
-      // Ask the factory for the next observable.
-      CAF_ASSERT(!active_sub_);
-      factory_sub_.request(1);
-    } else if (!inputs_.empty()) {
-      // Subscribe to the next observable from the list.
-      std::visit([this](auto& x) { this->subscribe_to(x); }, inputs_.front());
-      inputs_.erase(inputs_.begin());
-    } else {
-      // Done!
-      fin();
+  void on_error(const error& what) override {
+    sub_.release_later();
+    err_ = what;
+    if (!fwd_sub_ && out_) {
+      ++key_; // Increment the key to ignore any events from the last forwarder.
+      out_.on_error(err_);
     }
   }
 
-  // -- callbacks for the forwarders -------------------------------------------
+  void on_complete() override {
+    sub_.release_later();
+    if (!fwd_sub_ && out_) {
+      ++key_; // Increment the key to ignore any events from the last forwarder.
+      out_.on_complete();
+    }
+  }
 
-  void fwd_on_subscribe(input_key key, subscription sub) {
-    if (active_key_ == key && !active_sub_) {
-      active_sub_ = std::move(sub);
-      if (in_flight_ > 0)
-        active_sub_.request(in_flight_);
-    } else if (factory_key_ == key && !factory_sub_) {
-      CAF_ASSERT(!active_sub_);
-      factory_sub_ = std::move(sub);
-      factory_sub_.request(1);
+  void on_subscribe(flow::subscription sub) override {
+    if (!sub_ && out_) {
+      sub_ = std::move(sub);
+      sub_.request(1);
     } else {
       sub.dispose();
     }
   }
 
-  void fwd_on_complete(input_key key) {
-    if (active_key_ == key && active_sub_) {
-      active_sub_.release_later();
-      subscribe_next();
-    } else if (factory_key_ == key && factory_sub_) {
-      factory_sub_.release_later();
-      factory_key_ = 0;
-      if (!active_sub_)
-        subscribe_next();
+  // -- reference counting -----------------------------------------------------
+
+  void ref_disposable() const noexcept final {
+    ref();
+  }
+
+  void deref_disposable() const noexcept final {
+    deref();
+  }
+
+  void ref_coordinated() const noexcept final {
+    ref();
+  }
+
+  void deref_coordinated() const noexcept final {
+    deref();
+  }
+
+  friend void intrusive_ptr_add_ref(const concat_sub* ptr) noexcept {
+    ptr->ref();
+  }
+
+  friend void intrusive_ptr_release(const concat_sub* ptr) noexcept {
+    ptr->deref();
+  }
+
+  // -- callbacks for the forwarders -------------------------------------------
+
+  void fwd_on_subscribe(input_key key, subscription sub) {
+    if (key != key_ || fwd_sub_) {
+      sub.dispose();
+      return;
     }
+    fwd_sub_ = std::move(sub);
+    if (in_flight_ > 0)
+      fwd_sub_.request(in_flight_);
+  }
+
+  void fwd_on_complete(input_key key) {
+    if (key != key_)
+      return;
+    fwd_sub_.release_later();
+    // Fetch next observable if the source is still alive.
+    if (sub_) {
+      sub_.request(1);
+      return;
+    }
+    // Otherwise, we're done.
+    ++key_;
+    if (!err_)
+      out_.on_complete();
+    else
+      out_.on_error(err_);
   }
 
   void fwd_on_error(input_key key, const error& what) {
-    if (key == active_key_ || key == factory_key_) {
-      CAF_ASSERT(out_);
-      fin(&what);
-    }
+    if (key != key_)
+      return;
+    ++key_;
+    sub_.dispose();
+    fwd_sub_.release_later();
+    out_.on_error(what);
   }
 
   void fwd_on_next(input_key key, const T& item) {
-    if (key == active_key_) {
-      CAF_ASSERT(out_);
-      --in_flight_;
-      out_.on_next(item);
-    }
-  }
-
-  void fwd_on_next(input_key key, const observable<T>& item) {
-    if (key == factory_key_) {
-      CAF_ASSERT(!active_sub_);
-      subscribe_to(item);
-    }
+    if (key != key_)
+      return;
+    CAF_ASSERT(in_flight_ > 0);
+    --in_flight_;
+    out_.on_next(item);
   }
 
   // -- implementation of subscription -----------------------------------------
-
-  coordinator* parent() const noexcept override {
-    return parent_;
-  }
 
   bool disposed() const noexcept override {
     return !out_;
@@ -135,58 +161,42 @@ public:
 
   void dispose() override {
     if (out_) {
-      parent_->delay_fn([strong_this = intrusive_ptr<concat_sub>{this}] {
-        if (strong_this->out_) {
-          strong_this->fin();
-        }
+      ++key_;
+      sub_.dispose();
+      fwd_sub_.dispose();
+      parent_->delay_fn([out = std::move(out_)]() mutable { //
+        out.on_complete();
       });
     }
   }
 
   void request(size_t n) override {
     CAF_ASSERT(out_.valid());
-    if (active_sub_)
-      active_sub_.request(n);
+    if (fwd_sub_)
+      fwd_sub_.request(n);
     in_flight_ += n;
   }
 
 private:
-  void fin(const error* err = nullptr) {
-    CAF_ASSERT(out_);
-    factory_sub_.dispose();
-    active_sub_.dispose();
-    factory_key_ = 0;
-    active_key_ = 0;
-    if (!err)
-      out_.on_complete();
-    else
-      out_.on_error(*err);
-  }
-
   /// Stores the context (coordinator) that runs this flow.
   coordinator* parent_;
 
   /// Stores a handle to the subscribed observer.
   observer<T> out_;
 
-  /// Stores our input sources. The first input is active (subscribed to) while
-  /// the others are pending (not subscribed to).
-  std::vector<input_type> inputs_;
-
-  /// If set, identifies the subscription to an observable factory.
-  subscription factory_sub_;
+  /// Subscription to the operator that emits the obbservables to concatenate.
+  subscription sub_;
 
   /// Our currently active subscription.
-  subscription active_sub_;
+  subscription fwd_sub_;
 
-  /// Identifies the active forwarder.
-  input_key factory_key_ = 0;
+  /// Caches the error of the input source to delay the error until the current
+  /// observable completes.
+  error err_;
 
-  /// Identifies the active forwarder.
-  input_key active_key_ = 0;
-
-  /// Stores the next available key.
-  input_key next_key_ = 1;
+  /// Stores the key for the current observable. The operator will discard any
+  /// data from previous observables.
+  input_key key_ = 0;
 
   /// Stores how much demand we have left. When switching to a new input, we
   /// pass any demand unused by the previous input to the new one.
@@ -204,38 +214,40 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  template <class... Ts, class... Inputs>
-  explicit concat(coordinator* parent, Inputs&&... inputs) : super(parent) {
-    (add(std::forward<Inputs>(inputs)), ...);
+  template <class... Inputs>
+  concat(coordinator* parent, observable<T> input0, observable<T> input1,
+         Inputs... inputs)
+    : super(parent) {
+    static_assert((std::is_same_v<observable<T>, Inputs> && ...));
+    using vector_t = std::vector<observable<T>>;
+    using gen_t = gen::from_container<vector_t>;
+    using obs_t = from_generator<gen::from_container<vector_t>>;
+    auto xs = vector_t{};
+    xs.reserve(sizeof...(Inputs) + 2);
+    xs.emplace_back(std::move(input0));
+    xs.emplace_back(std::move(input1));
+    (xs.emplace_back(std::move(inputs)), ...);
+    inputs_ = super::parent_->add_child(std::in_place_type<obs_t>,
+                                        gen_t{std::move(xs)}, std::tuple{});
   }
 
-  // -- properties -------------------------------------------------------------
-
-  size_t inputs() const noexcept {
-    return inputs_.size();
+  concat(coordinator* parent, observable<observable<T>> inputs)
+    : super(parent), inputs_(std::move(inputs)) {
+    // nop
   }
 
   // -- implementation of observable<T> -----------------------------------
 
   disposable subscribe(observer<T> out) override {
-    if (inputs() == 0) {
-      return super::empty_subscription(out);
-    }
-    auto ptr = super::parent_->add_child(std::in_place_type<concat_sub<T>>, out,
-                                         inputs_);
-    out.on_subscribe(subscription{ptr});
-    return ptr->as_disposable();
+    auto sub = super::parent_->add_child(std::in_place_type<concat_sub<T>>,
+                                         out);
+    inputs_.subscribe(sub->as_observer());
+    out.on_subscribe(subscription{sub});
+    return sub->as_disposable();
   }
 
 private:
-  template <class Input>
-  void add(Input&& x) {
-    using input_t = std::decay_t<Input>;
-    static_assert(is_observable_v<input_t>);
-    inputs_.emplace_back(std::forward<Input>(x).as_observable());
-  }
-
-  std::vector<input_type> inputs_;
+  observable<observable<T>> inputs_;
 };
 
 } // namespace caf::flow::op
