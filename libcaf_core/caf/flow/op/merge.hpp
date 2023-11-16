@@ -44,8 +44,7 @@ struct merge_input {
 /// Receives observables from the pre-merge step and merges their inputs for the
 /// observer.
 template <class T>
-class merge_sub : public detail::plain_ref_counted,
-                  public subscription::impl,
+class merge_sub : public subscription::impl_base,
                   public observer_impl<observable<T>>,
                   public pullable {
 public:
@@ -111,19 +110,11 @@ public:
       sub_ = std::move(sub);
       sub_.request(max_concurrent_);
     } else {
-      sub.dispose();
+      sub.cancel();
     }
   }
 
   // -- reference counting -----------------------------------------------------
-
-  void ref_disposable() const noexcept final {
-    ref();
-  }
-
-  void deref_disposable() const noexcept final {
-    deref();
-  }
 
   void ref_coordinated() const noexcept final {
     ref();
@@ -149,7 +140,7 @@ public:
       ptr->sub = std::move(sub);
       ptr->sub.request(max_pending_per_input_);
     } else {
-      sub.dispose();
+      sub.cancel();
     }
   }
 
@@ -206,19 +197,6 @@ public:
     return !out_;
   }
 
-  void dispose() override {
-    if (out_) {
-      parent_->delay_fn([out = std::move(out_)]() mutable { //
-        out.on_complete();
-      });
-      input_map xs;
-      xs.swap(inputs_);
-      for (auto& kvp : xs)
-        kvp.second.sub.dispose();
-      sub_.dispose();
-    }
-  }
-
   void request(size_t n) override {
     if (!out_)
       return;
@@ -251,6 +229,22 @@ public:
   }
 
 private:
+  // -- implementation of subscription::impl_base ------------------------------
+
+  void do_dispose(bool from_external) override {
+    if (!out_)
+      return;
+    input_map xs;
+    xs.swap(inputs_);
+    for (auto& kvp : xs)
+      kvp.second.sub.cancel();
+    sub_.cancel();
+    if (from_external)
+      out_.on_complete();
+    else
+      out_.release_later();
+  }
+
   // -- implementation of pullable ---------------------------------------------
 
   void do_pull(size_t n) override {
@@ -303,17 +297,13 @@ private:
   void stop_inputs() {
     auto i = inputs_.begin();
     while (i != inputs_.end()) {
-      if (i->second.sub) {
-        auto sub = std::move(i->second.sub);
-        sub.dispose();
-      }
+      i->second.sub.cancel();
       if (i->second.buf.empty())
         i = inputs_.erase(i);
       else
         ++i;
     }
-    auto sub = std::move(sub_);
-    sub.dispose();
+    sub_.cancel();
   }
 
   bool done() const noexcept {

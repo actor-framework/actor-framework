@@ -106,17 +106,6 @@ bool stream_bridge_sub::disposed() const noexcept {
   return src_ != nullptr;
 }
 
-void stream_bridge_sub::dispose() {
-  if (!src_)
-    return;
-  unsafe_send_as(self_, src_, stream_cancel_msg{src_flow_id_});
-  auto fn = make_action([self = self_, snk_flow_id = snk_flow_id_] {
-    self->drop_flow_state(snk_flow_id);
-  });
-  self_->delay(std::move(fn));
-  src_ = nullptr;
-}
-
 void stream_bridge_sub::request(size_t n) {
   demand_ += n;
   if (!buf_.empty()) {
@@ -125,6 +114,17 @@ void stream_bridge_sub::request(size_t n) {
     });
     self_->delay(std::move(fn));
   }
+}
+
+void stream_bridge_sub::do_dispose(bool) {
+  if (!src_)
+    return;
+  unsafe_send_as(self_, src_, stream_cancel_msg{src_flow_id_});
+  auto fn = make_action([self = self_, snk_flow_id = snk_flow_id_] {
+    self->drop_flow_state(snk_flow_id);
+  });
+  self_->delay(std::move(fn));
+  src_ = nullptr;
 }
 
 void stream_bridge_sub::do_abort(const error& reason) {

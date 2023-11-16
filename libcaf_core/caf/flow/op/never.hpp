@@ -33,18 +33,20 @@ public:
     return !out_;
   }
 
-  void dispose() override {
-    if (out_)
-      parent_->delay_fn([out = std::move(out_)]() mutable { //
-        out.on_complete();
-      });
-  }
-
   void request(size_t) override {
     // nop
   }
 
 private:
+  void do_dispose(bool from_external) override {
+    if (!out_)
+      return;
+    if (from_external)
+      out_.on_complete();
+    else
+      out_.release_later();
+  }
+
   /// Stores the context (coordinator) that runs this flow.
   coordinator* parent_;
 
@@ -70,10 +72,9 @@ public:
 
   disposable subscribe(observer<T> out) override {
     CAF_ASSERT(out.valid());
-    auto sub = super::parent_->add_child_hdl(std::in_place_type<never_sub<T>>,
-                                             out);
-    out.on_subscribe(sub);
-    return disposable{std::move(sub).as_disposable()};
+    auto ptr = super::parent_->add_child(std::in_place_type<never_sub<T>>, out);
+    out.on_subscribe(subscription{ptr});
+    return disposable{ptr->as_disposable()};
   }
 };
 

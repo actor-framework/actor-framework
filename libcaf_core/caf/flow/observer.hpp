@@ -255,7 +255,7 @@ public:
       sub_ = std::move(sub);
       sub_.request(defaults::flow::buffer_size);
     } else {
-      sub.dispose();
+      sub.cancel();
     }
   }
 
@@ -368,7 +368,7 @@ public:
       sub_ = std::move(sub);
     } else {
       CAF_LOG_DEBUG("already have a subscription or buffer no longer valid");
-      sub.dispose();
+      sub.cancel();
     }
   }
 
@@ -404,7 +404,7 @@ private:
   void on_cancel() {
     CAF_LOG_TRACE("");
     if (sub_) {
-      sub_.dispose();
+      sub_.cancel();
       sub_.release_later();
     }
     buf_ = nullptr;
@@ -457,7 +457,7 @@ public:
     if (target_) {
       target_->fwd_on_subscribe(token_, std::move(new_sub));
     } else {
-      new_sub.dispose();
+      new_sub.cancel();
     }
   }
 

@@ -113,6 +113,7 @@ SCENARIO("mcast operators buffer items that they cannot ship immediately") {
         check_eq(uut->min_buffered(), 1u);
         sub2.dispose();
         sub3.dispose();
+        run_flows();
       }
     }
   }

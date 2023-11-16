@@ -44,7 +44,7 @@ public:
     }
 
     /// Called when the `ucast_sub_state` is disposed.
-    virtual void on_disposed(ucast_sub_state*) = 0;
+    virtual void on_disposed(ucast_sub_state* state, bool from_external) = 0;
 
     /// Called when the `ucast_sub_state` receives new demand.
     virtual void on_demand_changed(ucast_sub_state*) {
@@ -156,16 +156,32 @@ public:
   }
 
   void dispose() {
+    if (disposed)
+      return;
     buf.clear();
     demand = 0;
     disposed = true;
     if (listener) {
       auto* lptr = listener;
       listener = nullptr;
-      lptr->on_disposed(this);
+      lptr->on_disposed(this, true);
     }
     if (out)
       out.on_complete();
+  }
+
+  void cancel() {
+    if (disposed)
+      return;
+    buf.clear();
+    demand = 0;
+    disposed = true;
+    if (listener) {
+      auto* lptr = listener;
+      listener = nullptr;
+      lptr->on_disposed(this, false);
+    }
+    out.release_later();
   }
 
   // -- implementation of coordinated ------------------------------------------
@@ -248,19 +264,22 @@ public:
     return !state_ || state_->disposed;
   }
 
-  void dispose() override {
-    if (state_) {
-      auto state = std::move(state_);
-      state->dispose();
-    }
-  }
-
   void request(size_t n) override {
     if (state_)
       state_->request(n);
   }
 
 private:
+  void do_dispose(bool from_external) override {
+    if (state_) {
+      auto state = std::move(state_);
+      if (from_external)
+        state->dispose();
+      else
+        state->cancel();
+    }
+  }
+
   /// Stores the context (coordinator) that runs this flow.
   coordinator* parent_;
 
@@ -341,10 +360,10 @@ public:
                         "may only subscribe once to an unicast operator"));
     }
     state_->out = out;
-    auto sub = super::parent_->add_child_hdl(std::in_place_type<ucast_sub<T>>,
-                                             state_);
-    out.on_subscribe(sub);
-    return disposable{std::move(sub).as_disposable()};
+    auto ptr = super::parent_->add_child(std::in_place_type<ucast_sub<T>>,
+                                         state_);
+    out.on_subscribe(subscription{ptr});
+    return disposable{disposable{std::move(ptr)}};
   }
 
 private:

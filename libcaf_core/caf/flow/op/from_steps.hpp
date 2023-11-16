@@ -20,9 +20,8 @@ using from_steps_output_t =
   typename detail::tl_back_t<detail::type_list<Steps...>>::output_type;
 
 template <class Input, class... Steps>
-class from_steps_sub : public detail::plain_ref_counted,
-                       public observer_impl<Input>,
-                       public subscription_impl {
+class from_steps_sub : public subscription::impl_base,
+                       public observer_impl<Input> {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -60,14 +59,6 @@ public:
   }
 
   // -- ref counting -----------------------------------------------------------
-
-  void ref_disposable() const noexcept final {
-    this->ref();
-  }
-
-  void deref_disposable() const noexcept final {
-    this->deref();
-  }
 
   void ref_coordinated() const noexcept final {
     this->ref();
@@ -111,7 +102,7 @@ public:
       return step.on_next(item, steps..., term);
     };
     if (!std::apply(fn, steps_)) {
-      in_.dispose();
+      in_.cancel();
     } else {
       pull();
     }
@@ -149,27 +140,15 @@ public:
     if (!in_) {
       in_ = std::move(in);
       pull();
-    } else {
-      in.dispose();
+      return;
     }
+    in.cancel();
   }
 
   // -- implementation of subscription_impl ------------------------------------
 
   bool disposed() const noexcept override {
-    return disposed_;
-  }
-
-  void dispose() override {
-    CAF_LOG_TRACE("");
-    if (!disposed_) {
-      disposed_ = true;
-      demand_ = 0;
-      buf_.clear();
-      parent_->delay_fn(
-        [out = std::move(out_)]() mutable { out.on_complete(); });
-    }
-    in_.dispose();
+    return !out_;
   }
 
   void request(size_t n) override {
@@ -183,6 +162,19 @@ public:
   }
 
 private:
+  void do_dispose(bool from_external) override {
+    CAF_LOG_TRACE("");
+    if (!out_)
+      return;
+    in_.cancel();
+    demand_ = 0;
+    buf_.clear();
+    if (from_external)
+      out_.on_complete();
+    else
+      out_.release_later();
+  }
+
   void pull() {
     if (auto pending = buf_.size() + in_flight_;
         in_ && pending < max_buf_size_) {
@@ -194,43 +186,33 @@ private:
 
   void run_later() {
     if (!running_) {
-      parent_->delay_fn([ptr = strong_this()] { ptr->do_run_impl(); });
+      parent_->delay_fn([ptr = strong_this()] { ptr->do_run(); });
     }
   }
 
   void do_run() {
-    // Note: external references to this object may be discarded while running
-    //       do_run_impl. Hence, we need to make sure that the object is alive
-    //       during the entire execution of do_run_impl. Otherwise, we might
-    //       trigger a heap-use-after-free.
-    ref();
-    auto guard = detail::scope_guard{[this]() noexcept { deref(); }};
     running_ = true;
-    do_run_impl();
-  }
-
-  void do_run_impl() {
     auto guard = detail::scope_guard{[this]() noexcept { running_ = false; }};
-    if (!disposed_) {
-      CAF_ASSERT(out_);
-      while (demand_ > 0 && !buf_.empty()) {
-        auto item = std::move(buf_.front());
-        buf_.pop_front();
-        --demand_;
-        out_.on_next(item);
-        // Note: on_next() may call dispose() and set out_ to nullptr.
-        if (!out_)
-          return;
-      }
-      if (in_) {
-        pull();
-      } else if (buf_.empty()) {
-        disposed_ = true;
-        if (!err_)
-          out_.on_complete();
-        else
-          out_.on_error(err_);
-      }
+    if (!out_)
+      return;
+    while (demand_ > 0 && !buf_.empty()) {
+      auto item = std::move(buf_.front());
+      buf_.pop_front();
+      --demand_;
+      out_.on_next(item);
+      // Note: on_next() may call dispose() and set out_ to nullptr.
+      if (!out_)
+        return;
+    }
+    if (in_) {
+      pull();
+      return;
+    }
+    if (buf_.empty() && out_) {
+      if (!err_)
+        out_.on_complete();
+      else
+        out_.on_error(err_);
     }
   }
 
@@ -246,7 +228,6 @@ private:
   size_t demand_ = 0;
   size_t in_flight_ = 0;
   size_t max_buf_size_ = defaults::flow::buffer_size;
-  bool disposed_ = false;
   bool running_ = false;
   error err_;
 };

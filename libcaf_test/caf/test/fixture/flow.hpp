@@ -56,13 +56,13 @@ public:
       if (sub) {
         caf::flow::subscription tmp;
         tmp.swap(sub);
-        tmp.dispose();
+        tmp.cancel();
       }
       state = observer_state::completed;
     }
 
     void on_error(const error& what) override {
-      sub.dispose();
+      sub.cancel();
       err = what;
       state = observer_state::aborted;
     }
@@ -73,7 +73,7 @@ public:
         sub = std::move(new_sub);
         state = observer_state::subscribed;
       } else {
-        new_sub.dispose();
+        new_sub.cancel();
       }
     }
 
@@ -99,7 +99,7 @@ public:
 
     void unsubscribe() {
       if (sub) {
-        sub.dispose();
+        sub.cancel();
         state = observer_state::idle;
       }
     }
@@ -160,7 +160,7 @@ public:
         this->state = observer_state::subscribed;
         this->sub.request(64);
       } else {
-        new_sub.dispose();
+        new_sub.cancel();
       }
     }
 

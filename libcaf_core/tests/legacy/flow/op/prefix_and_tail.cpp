@@ -340,7 +340,7 @@ SCENARIO("disposing head_and_tail disposes the input subscription") {
         CHECK(!uut->disposed());
         CHECK(!sub->disposed());
         uut->dispose();
-        run();
+        ctx->run();
         CHECK(uut->disposed());
         CHECK(sub->disposed());
       }

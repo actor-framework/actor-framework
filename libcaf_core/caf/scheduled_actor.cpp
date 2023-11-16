@@ -399,8 +399,7 @@ public:
                 stream_abort_msg{sink_flow_id_, sec::stream_aborted});
       sink_hdl_ = nullptr;
     }
-    if (sub_)
-      sub_.dispose();
+    sub_.cancel();
   }
 
   void request(size_t num_items) override {
@@ -442,7 +441,7 @@ public:
     if (!sub_ && sink_hdl_)
       sub_ = sub;
     else
-      sub.dispose();
+      sub.cancel();
   }
 
   friend void intrusive_ptr_add_ref(const batch_forwarder_impl* ptr) noexcept {
@@ -989,8 +988,8 @@ void scheduled_actor::run_actions() {
     }
     actions_.clear();
   }
-  update_watched_disposables();
   released_.clear();
+  update_watched_disposables();
 }
 
 void scheduled_actor::update_watched_disposables() {

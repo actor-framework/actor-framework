@@ -258,14 +258,13 @@ public:
     }
     if (!buf_.empty() || !flags_.closed) {
       return {true, consumed};
-    } else {
-      consumer_ = nullptr;
-      if (!err_)
-        dst.on_complete();
-      else
-        dst.on_error(err_);
-      return {false, consumed};
     }
+    consumer_ = nullptr;
+    if (!err_)
+      dst.on_complete();
+    else
+      dst.on_error(err_);
+    return {false, consumed};
   }
 
 private:

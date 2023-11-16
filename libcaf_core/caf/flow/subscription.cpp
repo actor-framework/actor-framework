@@ -28,6 +28,18 @@ void subscription::impl_base::deref_coordinated() const noexcept {
   this->deref();
 }
 
+void subscription::impl_base::dispose() {
+  if (!disposed()) {
+    parent()->delay_fn([sptr = intrusive_ptr<impl_base>{this}] { //
+      sptr->do_dispose(true);
+    });
+  }
+}
+
+void subscription::impl_base::cancel() {
+  do_dispose(false);
+}
+
 subscription::listener::~listener() {
   // nop
 }
@@ -36,21 +48,22 @@ bool subscription::fwd_impl::disposed() const noexcept {
   return src_ == nullptr;
 }
 
+void subscription::fwd_impl::do_dispose(bool from_external) {
+  if (src_) {
+    auto src = std::move(src_);
+    auto snk = std::move(snk_);
+    if (from_external)
+      src->on_dispose(snk.get());
+    else
+      src->on_cancel(snk.get());
+  }
+}
+
 void subscription::fwd_impl::request(size_t n) {
   if (src_)
     parent()->delay_fn([src = src_, snk = snk_, n] { //
       src->on_request(snk.get(), n);
     });
-}
-
-void subscription::fwd_impl::dispose() {
-  if (src_) {
-    parent()->delay_fn([src = src_, snk = snk_] { //
-      src->on_cancel(snk.get());
-    });
-    src_.reset();
-    snk_.reset();
-  }
 }
 
 coordinator* subscription::trivial_impl::parent() const noexcept {
@@ -61,12 +74,12 @@ bool subscription::trivial_impl::disposed() const noexcept {
   return disposed_;
 }
 
-void subscription::trivial_impl::request(size_t) {
-  // nop
+void subscription::trivial_impl::do_dispose(bool) {
+  disposed_ = true;
 }
 
-void subscription::trivial_impl::dispose() {
-  disposed_ = true;
+void subscription::trivial_impl::request(size_t) {
+  // nop
 }
 
 } // namespace caf::flow

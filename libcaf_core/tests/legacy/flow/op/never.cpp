@@ -45,6 +45,7 @@ SCENARIO("the never operator never invokes callbacks except when disposed") {
         ctx->run();
         CHECK_EQ(snk2->state, flow::observer_state::subscribed);
         sub2.dispose();
+        ctx->run();
       }
     }
   }

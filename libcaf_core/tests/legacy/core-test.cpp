@@ -109,7 +109,7 @@ void passive_subscription_impl::request(size_t n) {
   demand += n;
 }
 
-void passive_subscription_impl::dispose() {
+void passive_subscription_impl::do_dispose(bool) {
   disposed_flag = true;
 }
 
