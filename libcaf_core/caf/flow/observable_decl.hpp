@@ -178,7 +178,7 @@ public:
     return reduce(T{}, [](T x, T y) { return x + y; });
   }
 
-  /// Adds the output of fn() to the beginning of current observable.
+  /// Adds a value or observable to the beginning of current observable.
   template <class Input>
   auto start_with(Input value) {
     if constexpr (is_observable_v<Input>)
