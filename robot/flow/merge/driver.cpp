@@ -65,37 +65,6 @@ bool inspect(Inspector& f, publisher& x) {
   return f.object(x).fields(f.field("init", x.init), f.field("num", x.num));
 }
 
-void start_fast_consumer(caf::actor_system& sys,
-                         caf::flow::observable<int>& src,
-                         std::optional<size_t> limit,
-                         std::promise<int_cow_vector> prom) {
-  auto [self, launch] = sys.spawn_inactive<caf::event_based_actor>();
-  src //
-    .observe_on(self)
-    .to_vector()
-    .compose(apply_limit(limit))
-    .for_each([res = std::move(prom)](const int_cow_vector& xs) mutable {
-      res.set_value(xs);
-    });
-}
-
-void start_slow_consumer(caf::actor_system& sys,
-                         caf::flow::observable<int>& src,
-                         std::optional<size_t> limit,
-                         std::promise<int_cow_vector> prom,
-                         caf::timespan delay) {
-  auto [self, launch] = sys.spawn_inactive<caf::event_based_actor>();
-  src //
-    .observe_on(self)
-    .zip_with([](int value, int64_t) { return value; },
-              self->make_observable().interval(delay))
-    .compose(apply_limit(limit))
-    .to_vector()
-    .for_each([res = std::move(prom)](const int_cow_vector& xs) mutable {
-      res.set_value(xs);
-    });
-}
-
 struct subscriber {
   std::optional<size_t> limit;
   std::optional<caf::timespan> delay;
@@ -174,7 +143,8 @@ void caf_main(caf::actor_system& sys, const config& cfg) {
                     .map([self](const publisher& src) {
                       return src.make(self->system()).observe_on(self);
                     })
-                    .merge();
+                    .merge()
+                    .share(cfg.subscribers.size());
     for (size_t index = 0; index < cfg.subscribers.size(); index++) {
       results[index] = cfg.subscribers[index].start(self->system(), inputs);
     }
