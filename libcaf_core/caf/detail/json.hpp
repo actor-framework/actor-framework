@@ -444,19 +444,19 @@ using object = value::object;
 
 // -- factory functions --------------------------------------------------------
 
-value* make_value(monotonic_buffer_resource* storage);
+CAF_CORE_EXPORT value* make_value(monotonic_buffer_resource* storage);
 
 inline value* make_value(const storage_ptr& ptr) {
   return make_value(&ptr->buf);
 }
 
-array* make_array(monotonic_buffer_resource* storage);
+CAF_CORE_EXPORT array* make_array(monotonic_buffer_resource* storage);
 
 inline array* make_array(const storage_ptr& ptr) {
   return make_array(&ptr->buf);
 }
 
-object* make_object(monotonic_buffer_resource* storage);
+CAF_CORE_EXPORT object* make_object(monotonic_buffer_resource* storage);
 
 inline object* make_object(const storage_ptr& ptr) {
   return make_object(&ptr->buf);
@@ -687,16 +687,6 @@ template <class Deserializer>
 bool load(Deserializer& source, value& val, const storage_ptr& ptr) {
   return load(source, val, std::addressof(ptr->buf));
 }
-
-// -- singletons ---------------------------------------------------------------
-
-const value* null_value() noexcept;
-
-const value* undefined_value() noexcept;
-
-const object* empty_object() noexcept;
-
-const array* empty_array() noexcept;
 
 // -- parsing ------------------------------------------------------------------
 

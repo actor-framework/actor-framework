@@ -20,9 +20,7 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   /// Creates a @c null JSON value.
-  json_value() noexcept : val_(detail::json::null_value()) {
-    // nop
-  }
+  json_value() noexcept;
 
   json_value(const detail::json::value* val,
              detail::json::storage_ptr sptr) noexcept
@@ -42,9 +40,7 @@ public:
 
   /// Creates an undefined JSON value. This special state usually indicates that
   /// a previous key lookup failed.
-  static json_value undefined() noexcept {
-    return json_value{detail::json::undefined_value(), nullptr};
-  }
+  static json_value undefined() noexcept;
 
   // -- properties -------------------------------------------------------------
 

@@ -13,7 +13,29 @@
 #include <cstdint>
 #include <fstream>
 
+namespace caf::detail {
+namespace {
+
+const json::value null_value_instance;
+
+const json::value undefined_value_instance = json::value{json::undefined_t{}};
+
+} // namespace
+} // namespace caf::detail
+
 namespace caf {
+
+// -- constructors, destructors, and assignment operators ----------------------
+
+json_value::json_value() noexcept : val_(&detail::null_value_instance) {
+  // nop
+}
+
+// -- factories ----------------------------------------------------------------
+
+json_value json_value::undefined() noexcept {
+  return json_value{&detail::undefined_value_instance, nullptr};
+}
 
 // -- properties ---------------------------------------------------------------
 

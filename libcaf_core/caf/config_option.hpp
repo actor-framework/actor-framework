@@ -70,7 +70,7 @@ public:
 
   // -- swap function ----------------------------------------------------------
 
-  friend void swap(config_option& first, config_option& second) noexcept;
+  void swap(config_option& other) noexcept;
 
   // -- properties -------------------------------------------------------------
 

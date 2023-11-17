@@ -77,9 +77,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  json_array() noexcept : arr_(detail::json::empty_array()) {
-    // nop
-  }
+  json_array() noexcept;
 
   json_array(json_array&&) noexcept = default;
 
