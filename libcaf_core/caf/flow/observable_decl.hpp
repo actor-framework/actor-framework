@@ -178,6 +178,15 @@ public:
     return reduce(T{}, [](T x, T y) { return x + y; });
   }
 
+  /// Adds a value or observable to the beginning of current observable.
+  template <class Input>
+  auto start_with(Input value) {
+    if constexpr (is_observable_v<Input>)
+      return std::move(value).concat(*this);
+    else
+      return parent()->make_observable().just(std::move(value)).concat(*this);
+  }
+
   /// Collects all values and emits all values at once in a @ref cow_vector.
   auto to_vector() {
     using vector_type = cow_vector<output_type>;

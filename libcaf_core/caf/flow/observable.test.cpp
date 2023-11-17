@@ -543,6 +543,62 @@ TEST("on_error_return() replaces an error with a value") {
   }
 }
 
+TEST("start_with(value) builds observable that emits value first") {
+  const auto value = 1;
+  SECTION("start_with(value) adds value as first element") {
+    SECTION("blueprint") {
+      check_eq(collect(range(2, 3).start_with(value)), vector{1, 2, 3, 4});
+      check_eq(collect(range(2, 3).start_with(value).take(3)), vector{1, 2, 3});
+      check_eq(collect(range(2, 3).start_with(value).first()), vector{1});
+      check_eq(collect(range(2, 3).start_with(value).last()), vector{4});
+    }
+    SECTION("observable") {
+      check_eq(collect(build(range(2, 3).start_with(value))),
+               vector{1, 2, 3, 4});
+      check_eq(collect(build(range(2, 3).start_with(value).take(3))),
+               vector{1, 2, 3});
+      check_eq(collect(build(range(2, 3).start_with(value).first())),
+               vector{1});
+      check_eq(collect(build(range(2, 3).start_with(value).last())), vector{4});
+    }
+  }
+  SECTION("start_with(value) adds observable as first element") {
+    SECTION("blueprint") {
+      check_eq(collect(range(2, 3).start_with(range(1, 2))),
+               vector{1, 2, 2, 3, 4});
+      check_eq(collect(range(2, 3).start_with(make_observable().empty<int>())),
+               vector{2, 3, 4});
+      check_eq(collect(range(2, 3).start_with(range(1, 0))), vector{2, 3, 4});
+    }
+    SECTION("observable") {
+      check_eq(collect(build(range(2, 3).start_with(range(1, 2)))),
+               vector{1, 2, 2, 3, 4});
+      check_eq(collect(
+                 build(range(2, 3).start_with(make_observable().empty<int>()))),
+               vector{2, 3, 4});
+      check_eq(collect(build(range(2, 3).start_with(range(1, 0)))),
+               vector{2, 3, 4});
+    }
+  }
+  SECTION("start_with(value) forwards error)") {
+    SECTION("blueprint") {
+      check_eq(collect(obs_error().start_with(value)), sec::runtime_error);
+      check_eq(collect(obs_error().start_with(range(1, 2))),
+               sec::runtime_error);
+      check_eq(collect(range(1, 2).start_with(obs_error())),
+               sec::runtime_error);
+    }
+    SECTION("observable") {
+      check_eq(collect(build(obs_error().start_with(value))),
+               sec::runtime_error);
+      check_eq(collect(build(obs_error().start_with(range(1, 2)))),
+               sec::runtime_error);
+      check_eq(collect(build(range(1, 2).start_with(obs_error()))),
+               sec::runtime_error);
+    }
+  }
+}
+
 } // WITH_FIXTURE(test::fixture::flow)
 
 } // namespace
