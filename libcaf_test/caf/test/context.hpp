@@ -30,6 +30,14 @@ public:
   /// The ID of a step in the test.
   using step_id = std::pair<int, size_t>;
 
+  context() = default;
+
+  context(const context&) = delete;
+
+  context& operator=(const context&) = delete;
+
+  ~context();
+
   // -- member variables -------------------------------------------------------
 
   /// Stores the current execution stack for the run.
