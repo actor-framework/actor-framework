@@ -328,6 +328,7 @@ function(caf_add_component name)
   if(CAF_ADD_COMPONENT_ENUM_TYPES)
     # OBJECT lib: workaround for https://gitlab.kitware.com/cmake/cmake/-/issues/18399
     add_library(${name}_enums OBJECT)
+    set_property(TARGET ${name}_enums PROPERTY POSITION_INDEPENDENT_CODE ON)
     target_link_libraries(${name}_enums CAF::internal)
     if(NOT name STREQUAL core)
       # Implementations need access to headers such as config.hpp.
