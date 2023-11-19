@@ -45,7 +45,7 @@ private:
 
 } // namespace
 
-disposable make_trivial_disposable() {
+caf::disposable flow::make_trivial_disposable() {
   return disposable{make_counted<trivial_impl>()};
 }
 

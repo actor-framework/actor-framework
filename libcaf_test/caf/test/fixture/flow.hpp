@@ -17,9 +17,6 @@
 
 namespace caf::test::fixture {
 
-/// Returns a trivial disposable that wraps an atomic flag.
-disposable make_trivial_disposable();
-
 /// A fixture for testing the flow API.
 class CAF_CORE_EXPORT flow {
 public:
@@ -207,7 +204,7 @@ public:
   }
 
   template <class T>
-  caf::flow::observable<T>
+  [[nodiscard]] static caf::flow::observable<T>
   make_nil_observable(caf::flow::coordinator* ctx,
                       std::shared_ptr<size_t> subscribe_count = nullptr) {
     auto ptr = make_counted<nil_observable<T>>(ctx, subscribe_count);
@@ -215,7 +212,7 @@ public:
   }
 
   template <class T>
-  caf::flow::observable<T>
+  [[nodiscard]] static caf::flow::observable<T>
   make_trivial_observable(caf::flow::coordinator* ctx,
                           std::shared_ptr<size_t> subscribe_count = nullptr) {
     auto ptr = make_counted<trivial_observable<T>>(ctx, subscribe_count);
@@ -291,6 +288,9 @@ public:
   [[nodiscard]] caf::flow::coordinator* this_coordinator() {
     return coordinator_.get();
   }
+
+  /// Returns a trivial disposable that wraps an atomic flag.
+  [[nodiscard]] static caf::disposable make_trivial_disposable();
 
   /// An observable that does nothing when subscribed except returning a trivial
   /// disposable. Allows tests to call on_subscribe some time later.

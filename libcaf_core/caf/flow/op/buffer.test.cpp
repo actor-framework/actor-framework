@@ -51,15 +51,17 @@ struct fixture_deterministic : test::fixture::deterministic {
 
   template <class Impl>
   void add_subs(intrusive_ptr<Impl> uut) {
-    auto data_sub = make_counted<flow::passive_subscription_impl>(ctx.get());
+    auto data_sub
+      = make_counted<test::fixture::flow::passive_subscription_impl>(ctx.get());
     uut->fwd_on_subscribe(fwd_data, flow::subscription{std::move(data_sub)});
-    auto ctrl_sub = make_counted<flow::passive_subscription_impl>(ctx.get());
+    auto ctrl_sub
+      = make_counted<test::fixture::flow::passive_subscription_impl>(ctx.get());
     uut->fwd_on_subscribe(fwd_ctrl, flow::subscription{std::move(ctrl_sub)});
   }
 
   template <class T>
   auto trivial_obs() {
-    return flow::make_trivial_observable<T>(ctx.get());
+    return test::fixture::flow::make_trivial_observable<T>(ctx.get());
   }
 };
 
@@ -79,7 +81,8 @@ struct fixture_flow : test::fixture::flow {
 
   template <class Impl>
   void add_subs(intrusive_ptr<Impl> uut) {
-    auto data_sub = make_counted<passive_subscription_impl>(coordinator());
+    auto data_sub
+      = make_counted<flow::passive_subscription_impl>(coordinator());
     uut->fwd_on_subscribe(fwd_data,
                           caf::flow::subscription{std::move(data_sub)});
     auto ctrl_sub = make_counted<passive_subscription_impl>(coordinator());
@@ -130,7 +133,7 @@ SCENARIO("the buffer operator forces items at regular intervals") {
           cow_vector<int>{},        cow_vector<int>{128, 256, 512},
         };
         auto closed = std::make_shared<bool>(false);
-        auto pub = flow::multicaster<int>{ctx.get()};
+        auto pub = caf::flow::multicaster<int>{ctx.get()};
         sys.spawn([&pub, outputs, closed](caf::event_based_actor* self) {
           pub.as_observable()
             .observe_on(self) //
