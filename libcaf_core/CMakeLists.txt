@@ -195,6 +195,7 @@ caf_add_component(
     caf/flow/observable_builder.cpp
     caf/flow/op/concat.test.cpp
     caf/flow/op/interval.cpp
+    caf/flow/op/buffer.test.cpp
     caf/flow/op/mcast.test.cpp
     caf/flow/op/pullable.cpp
     caf/flow/scoped_coordinator.cpp
