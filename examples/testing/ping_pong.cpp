@@ -10,8 +10,8 @@
 #include "caf/event_based_actor.hpp"
 
 using namespace caf;
-using namespace caf::test;
 
+// --(rst-ping-pong-begin)--
 namespace {
 
 behavior ping(event_based_actor* self, actor pong_actor, int n) {
@@ -30,7 +30,7 @@ behavior pong() {
   };
 }
 
-WITH_FIXTURE(fixture::deterministic) {
+WITH_FIXTURE(caf::test::fixture::deterministic) {
 
 TEST("two actors can communicate with each other") {
   // Spawn the Ping actor and run its initialization code.
@@ -46,7 +46,7 @@ TEST("two actors can communicate with each other") {
   check_eq(mail_count(), 0u);
 }
 
-} // WITH_FIXTURE(fixture::deterministic)
+} // WITH_FIXTURE(caf::test::fixture::deterministic)
 
 } // namespace
 
