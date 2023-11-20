@@ -16,9 +16,9 @@
 namespace caf::detail {
 namespace {
 
-const json::value null_value_instance;
+const auto null_value_instance = json::value{};
 
-const json::value undefined_value_instance = json::value{json::undefined_t{}};
+const auto undefined_value_instance = json::value{json::undefined_t{}};
 
 } // namespace
 } // namespace caf::detail

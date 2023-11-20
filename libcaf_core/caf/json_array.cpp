@@ -7,7 +7,7 @@
 namespace caf::detail {
 namespace {
 
-const json::array empty_array_instance;
+const auto empty_array_instance = json::array{};
 
 } // namespace
 } // namespace caf::detail

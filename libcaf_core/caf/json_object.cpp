@@ -7,7 +7,7 @@
 namespace caf::detail {
 namespace {
 
-const json::object empty_object_instance;
+const auto empty_object_instance = json::object{};
 
 } // namespace
 } // namespace caf::detail
