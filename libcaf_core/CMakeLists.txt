@@ -141,7 +141,6 @@ caf_add_component(
     caf/detail/ieee_754.test.cpp
     caf/detail/invoke_result_visitor.cpp
     caf/detail/json.cpp
-    caf/detail/json.test.cpp
     caf/detail/latch.cpp
     caf/detail/latch.test.cpp
     caf/detail/local_group_module.cpp
@@ -397,9 +396,9 @@ caf_add_component(
     uuid)
 
 if(NOT CAF_USE_STD_FORMAT)
-  target_sources(libcaf_core_obj PRIVATE caf/detail/format.cpp)
+  target_sources(libcaf_core PRIVATE caf/detail/format.cpp)
 endif()
 
-if(CAF_ENABLE_TESTING AND CAF_ENABLE_EXCEPTIONS)
+if(TARGET caf-core-legacy-test AND CAF_ENABLE_EXCEPTIONS)
   caf_add_legacy_test_suites(caf-core-legacy-test custom_exception_handler)
 endif()

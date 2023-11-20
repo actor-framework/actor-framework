@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "caf/detail/core_export.hpp"
+#include "caf/detail/test_export.hpp"
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
 #include "caf/flow/observable_builder.hpp"
@@ -18,7 +18,7 @@
 namespace caf::test::fixture {
 
 /// A fixture for testing the flow API.
-class CAF_CORE_EXPORT flow {
+class CAF_TEST_EXPORT flow {
 public:
   // -- member types -----------------------------------------------------------
 

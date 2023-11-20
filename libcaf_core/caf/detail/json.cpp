@@ -475,14 +475,6 @@ T* make_impl(monotonic_buffer_resource* storage) {
   return result;
 }
 
-const value null_value_instance;
-
-const value undefined_value_instance = value{undefined_t{}};
-
-const object empty_object_instance;
-
-const array empty_array_instance;
-
 } // namespace
 
 std::string_view realloc(std::string_view str, monotonic_buffer_resource* res) {
@@ -518,22 +510,6 @@ array* make_array(monotonic_buffer_resource* storage) {
 object* make_object(monotonic_buffer_resource* storage) {
   auto result = make_impl<object>(storage);
   return result;
-}
-
-const value* null_value() noexcept {
-  return &null_value_instance;
-}
-
-const value* undefined_value() noexcept {
-  return &undefined_value_instance;
-}
-
-const object* empty_object() noexcept {
-  return &empty_object_instance;
-}
-
-const array* empty_array() noexcept {
-  return &empty_array_instance;
 }
 
 value* parse(string_parser_state& ps, monotonic_buffer_resource* storage) {

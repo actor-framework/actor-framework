@@ -105,7 +105,7 @@ private:
   using actor_predicate = value_predicate<strong_actor_ptr>;
 
   /// Abstract base type for message predicates.
-  class abstract_message_predicate {
+  class CAF_TEST_EXPORT abstract_message_predicate {
   public:
     virtual ~abstract_message_predicate();
 

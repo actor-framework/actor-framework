@@ -108,7 +108,7 @@ TEST("swapping two config options exchanges their values") {
   check_eq(two.category(), "cat2");
   check_eq(two.long_name(), "two");
   check_eq(two.type_name(), "dummy2");
-  swap(one, two);
+  one.swap(two);
   check(one.has_flat_cli_name());
   check_eq(one.category(), "cat2");
   check_eq(one.long_name(), "two");

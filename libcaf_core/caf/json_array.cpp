@@ -4,7 +4,19 @@
 
 #include "caf/json_array.hpp"
 
+namespace caf::detail {
+namespace {
+
+const auto empty_array_instance = json::array{};
+
+} // namespace
+} // namespace caf::detail
+
 namespace caf {
+
+json_array::json_array() noexcept : arr_(&detail::empty_array_instance) {
+  // nop
+}
 
 std::string to_string(const json_array& arr) {
   std::string result;

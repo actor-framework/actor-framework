@@ -4,7 +4,21 @@
 
 #include "caf/json_object.hpp"
 
+namespace caf::detail {
+namespace {
+
+const auto empty_object_instance = json::object{};
+
+} // namespace
+} // namespace caf::detail
+
 namespace caf {
+
+// -- constructors, destructors, and assignment operators ----------------------
+
+json_object::json_object() noexcept : obj_(&detail::empty_object_instance) {
+  // nop
+}
 
 // -- properties ---------------------------------------------------------------
 

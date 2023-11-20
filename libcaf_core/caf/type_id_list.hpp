@@ -18,7 +18,7 @@
 namespace caf {
 
 /// A list of type IDs, stored in a size-prefix, contiguous memory block.
-class type_id_list : detail::comparable<type_id_list> {
+class CAF_CORE_EXPORT type_id_list : detail::comparable<type_id_list> {
 public:
   using pointer = const type_id_t*;
 

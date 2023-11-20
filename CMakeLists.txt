@@ -214,10 +214,6 @@ endfunction()
 function(caf_export_and_install_lib component)
   add_library(CAF::${component} ALIAS libcaf_${component})
   string(TOUPPER "CAF_${component}_EXPORT" export_macro_name)
-  target_include_directories(libcaf_${component} INTERFACE
-                             $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-                             $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
-                             $<INSTALL_INTERFACE:include>)
   generate_export_header(
     libcaf_${component}
     EXPORT_MACRO_NAME ${export_macro_name}
@@ -276,28 +272,34 @@ function(caf_add_component name)
       message(FATAL_ERROR "caf_add_component(): missing parameter ${param}")
     endif()
   endforeach()
-  set(pub_lib_target "libcaf_${name}")
-  set(obj_lib_target "libcaf_${name}_obj")
-  set(targets ${pub_lib_target} ${obj_lib_target})
-  add_library(${obj_lib_target} OBJECT ${CAF_ADD_COMPONENT_HEADERS})
-  set_property(TARGET ${obj_lib_target} PROPERTY POSITION_INDEPENDENT_CODE ON)
-  target_link_libraries(${obj_lib_target} ${CAF_ADD_COMPONENT_DEPENDENCIES})
+  set(lib_target "libcaf_${name}")
+  if(NOT TARGET ${lib_target})
+    add_library(${lib_target} "${PROJECT_SOURCE_DIR}/cmake/dummy.cpp")
+  endif()
+  set_property(TARGET ${lib_target} PROPERTY POSITION_INDEPENDENT_CODE ON)
+  target_link_libraries(${lib_target} ${CAF_ADD_COMPONENT_DEPENDENCIES})
+  target_compile_definitions(${lib_target} PRIVATE "libcaf_${name}_EXPORTS")
+  target_include_directories(${lib_target} PUBLIC
+                             $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+                             $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
+                             $<INSTALL_INTERFACE:include>)
+  if(BUILD_SHARED_LIBS)
+    set_target_properties(${lib_target} PROPERTIES
+                          CXX_VISIBILITY_PRESET hidden
+                          VISIBILITY_INLINES_HIDDEN ON)
+  endif()
   if(CAF_ENABLE_TESTING)
-    add_executable("caf-${name}-test" ${CMAKE_CURRENT_SOURCE_DIR}/main.test.cpp
-                   $<TARGET_OBJECTS:${obj_lib_target}>)
+    add_executable("caf-${name}-test" ${CMAKE_CURRENT_SOURCE_DIR}/main.test.cpp)
     target_compile_definitions(
       "caf-${name}-test" PRIVATE
       CAF_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/data")
     target_link_libraries("caf-${name}-test" PRIVATE libcaf_test
-                          ${CAF_ADD_COMPONENT_DEPENDENCIES})
-    target_include_directories("caf-${name}-test" PRIVATE
-                               "${CMAKE_CURRENT_SOURCE_DIR}"
-                               "${CMAKE_CURRENT_BINARY_DIR}")
+                          ${CAF_ADD_COMPONENT_DEPENDENCIES} ${lib_target})
   endif()
   foreach(source_file ${CAF_ADD_COMPONENT_SOURCES})
     get_filename_component(ext ${source_file} EXT)
     if(ext STREQUAL ".cpp")
-      target_sources(${obj_lib_target} PRIVATE ${source_file})
+      target_sources(${lib_target} PRIVATE ${source_file})
     elseif(ext STREQUAL ".test.cpp" AND CAF_ENABLE_TESTING)
       get_filename_component(test_name ${source_file} NAME_WE)
       get_filename_component(test_path ${source_file} DIRECTORY)
@@ -309,52 +311,37 @@ function(caf_add_component name)
       set_tests_properties(${test_name} PROPERTIES TIMEOUT 300)
     endif()
   endforeach()
-  if(NOT TARGET ${pub_lib_target})
-    add_library(${pub_lib_target}
-                "${PROJECT_SOURCE_DIR}/cmake/dummy.cpp"
-                $<TARGET_OBJECTS:${obj_lib_target}>)
-  else()
-    target_sources(
-      ${pub_lib_target}
-      PRIVATE
-        "${PROJECT_SOURCE_DIR}/cmake/dummy.cpp"
-        $<TARGET_OBJECTS:${obj_lib_target}>)
-  endif()
   if(CAF_ENABLE_TESTING AND CAF_ADD_COMPONENT_LEGACY_TEST_SOURCES)
     set(tst_bin_target "caf-${name}-legacy-test")
     list(APPEND targets ${tst_bin_target})
     add_executable(${tst_bin_target}
-                   ${CAF_ADD_COMPONENT_LEGACY_TEST_SOURCES}
-                   $<TARGET_OBJECTS:${obj_lib_target}>)
+                   ${CAF_ADD_COMPONENT_LEGACY_TEST_SOURCES})
     target_link_libraries(${tst_bin_target} PRIVATE libcaf_test
-                          ${CAF_ADD_COMPONENT_DEPENDENCIES})
+                          ${CAF_ADD_COMPONENT_DEPENDENCIES} ${lib_target})
     target_include_directories(${tst_bin_target} PRIVATE
                                "${CMAKE_CURRENT_SOURCE_DIR}/tests/legacy")
     if(CAF_ADD_COMPONENT_LEGACY_TEST_SUITES)
       caf_add_legacy_test_suites(${tst_bin_target} ${CAF_ADD_COMPONENT_LEGACY_TEST_SUITES})
     endif()
   endif()
-  target_link_libraries(${pub_lib_target} ${CAF_ADD_COMPONENT_DEPENDENCIES})
+  target_link_libraries(${lib_target} ${CAF_ADD_COMPONENT_DEPENDENCIES})
   if(CAF_ADD_COMPONENT_ENUM_TYPES)
-    foreach(enum_name ${CAF_ADD_COMPONENT_ENUM_TYPES})
-      if(obj_lib_target)
-        caf_add_enum_type(${obj_lib_target} ${enum_name})
-      else()
-        caf_add_enum_type(${pub_lib_target} ${enum_name})
-      endif()
-    endforeach()
-  endif()
-  foreach(target ${targets})
-    target_compile_definitions(${target} PRIVATE "libcaf_${name}_EXPORTS")
-    target_include_directories(${target} PRIVATE
-                               "${CMAKE_CURRENT_SOURCE_DIR}"
-                               "${CMAKE_CURRENT_BINARY_DIR}")
-    if(BUILD_SHARED_LIBS)
-      set_target_properties(${target} PROPERTIES
-                            CXX_VISIBILITY_PRESET hidden
-                            VISIBILITY_INLINES_HIDDEN ON)
+    # OBJECT lib: workaround for https://gitlab.kitware.com/cmake/cmake/-/issues/18399
+    add_library(${name}_enums OBJECT)
+    set_property(TARGET ${name}_enums PROPERTY POSITION_INDEPENDENT_CODE ON)
+    target_link_libraries(${name}_enums CAF::internal)
+    if(NOT name STREQUAL core)
+      # Implementations need access to headers such as config.hpp.
+      target_link_libraries(${name}_enums CAF::core)
     endif()
-  endforeach()
+    target_include_directories(${name}_enums PRIVATE
+                               ${CMAKE_CURRENT_SOURCE_DIR}
+                               ${CMAKE_CURRENT_BINARY_DIR})
+    foreach(enum_name ${CAF_ADD_COMPONENT_ENUM_TYPES})
+      caf_add_enum_type(${name}_enums ${enum_name})
+    endforeach()
+    target_sources(${lib_target} PRIVATE $<TARGET_OBJECTS:${name}_enums>)
+  endif()
   caf_export_and_install_lib(${name})
 endfunction()
 

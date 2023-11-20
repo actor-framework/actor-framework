@@ -16,6 +16,7 @@ caf_add_component(
     OpenSSL::SSL
   PRIVATE
     CAF::internal
+    CAF::core
   ENUM_TYPES
     net.http.method
     net.http.status

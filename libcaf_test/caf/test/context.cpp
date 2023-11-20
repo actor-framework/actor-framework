@@ -10,6 +10,12 @@
 #include <algorithm>
 
 namespace caf::test {
+
+context::~context() {
+  // Out-of-line for the `steps` member variable since the header only has a
+  // forward declaration to `block`.
+}
+
 // -- properties ---------------------------------------------------------------
 
 bool context::active() const noexcept {

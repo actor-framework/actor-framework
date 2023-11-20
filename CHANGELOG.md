@@ -54,6 +54,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   it does for CLI arguments.
 - Fix shutdown logic for actors with open streams. This resolves an issue where
   actors would not terminate correctly after receiving an exit message (#1657).
+- Fix compilation error on MSVC when building `caf_test` with shared libraries
+  enabled (#1669).
 
 ### Changed
 

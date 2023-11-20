@@ -7,13 +7,15 @@
 #include "caf/test/context.hpp"
 #include "caf/test/scenario.hpp"
 
+#include "caf/detail/test_export.hpp"
+
 namespace caf::test {
 
 class CAF_TEST_EXPORT outline : public runnable {
 public:
   using super = runnable;
 
-  class examples_setter {
+  class CAF_TEST_EXPORT examples_setter {
   public:
     using examples_t = std::vector<std::map<std::string, std::string>>;
 

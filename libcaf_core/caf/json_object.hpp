@@ -78,9 +78,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  json_object() noexcept : obj_(detail::json::empty_object()) {
-    // nop
-  }
+  json_object() noexcept;
 
   json_object(json_object&&) noexcept = default;
 

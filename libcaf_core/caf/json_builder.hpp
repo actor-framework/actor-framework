@@ -13,7 +13,7 @@
 namespace caf {
 
 /// Serializes an inspectable object to a @ref json_value.
-class json_builder : public serializer {
+class CAF_CORE_EXPORT json_builder : public serializer {
 public:
   // -- member types -----------------------------------------------------------
 
