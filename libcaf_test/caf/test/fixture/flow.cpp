@@ -4,49 +4,13 @@
 
 #include "caf/test/fixture/flow.hpp"
 
+#include "caf/flow/subscription.hpp"
+
 namespace caf::test::fixture {
 
-namespace {
-
-/// A trivial disposable with an atomic flag.
-class trivial_impl : public caf::ref_counted, public caf::disposable::impl {
-public:
-  trivial_impl() : flag_(false) {
-    // nop
-  }
-
-  void dispose() override {
-    flag_ = true;
-  }
-
-  bool disposed() const noexcept override {
-    return flag_.load();
-  }
-
-  void ref_disposable() const noexcept override {
-    ref();
-  }
-
-  void deref_disposable() const noexcept override {
-    deref();
-  }
-
-  friend void intrusive_ptr_add_ref(const trivial_impl* ptr) noexcept {
-    ptr->ref();
-  }
-
-  friend void intrusive_ptr_release(const trivial_impl* ptr) noexcept {
-    ptr->deref();
-  }
-
-private:
-  std::atomic<bool> flag_;
-};
-
-} // namespace
-
-caf::disposable flow::make_trivial_disposable() {
-  return disposable{make_counted<trivial_impl>()};
+caf::disposable flow::make_trivial_disposable(caf::flow::coordinator* parent) {
+  return disposable{
+    make_counted<caf::flow::subscription::trivial_impl>(parent)};
 }
 
 caf::flow::coordinator*

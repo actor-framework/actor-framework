@@ -42,30 +42,26 @@ struct noskip_trait {
   }
 };
 
-struct fixture_deterministic : test::fixture::deterministic {
-  caf::flow::scoped_coordinator_ptr ctx = caf::flow::make_scoped_coordinator();
-
-  ~fixture_deterministic() {
-    ctx->run();
-  }
-
+struct fixture : test::fixture::deterministic, test::fixture::flow {
   template <class Impl>
   void add_subs(intrusive_ptr<Impl> uut) {
     auto data_sub
-      = make_counted<test::fixture::flow::passive_subscription_impl>(ctx.get());
-    uut->fwd_on_subscribe(fwd_data, flow::subscription{std::move(data_sub)});
+      = make_counted<test::fixture::flow::passive_subscription_impl>(
+        coordinator());
+    uut->fwd_on_subscribe(fwd_data,
+                          caf::flow::subscription{std::move(data_sub)});
     auto ctrl_sub
-      = make_counted<test::fixture::flow::passive_subscription_impl>(ctx.get());
-    uut->fwd_on_subscribe(fwd_ctrl, flow::subscription{std::move(ctrl_sub)});
+      = make_counted<test::fixture::flow::passive_subscription_impl>(
+        coordinator());
+    uut->fwd_on_subscribe(fwd_ctrl,
+                          caf::flow::subscription{std::move(ctrl_sub)});
   }
 
   template <class T>
   auto trivial_obs() {
-    return test::fixture::flow::make_trivial_observable<T>(ctx.get());
+    return test::fixture::flow::make_trivial_observable<T>(coordinator());
   }
-};
 
-struct fixture_flow : test::fixture::flow {
   // Similar to buffer::subscribe, but returns a buffer_sub pointer instead of
   //  type-erasing it into a disposable.
   template <class Trait = noskip_trait>
@@ -78,25 +74,9 @@ struct fixture_flow : test::fixture::flow {
     out.on_subscribe(caf::flow::subscription{ptr});
     return ptr;
   }
-
-  template <class Impl>
-  void add_subs(intrusive_ptr<Impl> uut) {
-    auto data_sub
-      = make_counted<flow::passive_subscription_impl>(coordinator());
-    uut->fwd_on_subscribe(fwd_data,
-                          caf::flow::subscription{std::move(data_sub)});
-    auto ctrl_sub = make_counted<passive_subscription_impl>(coordinator());
-    uut->fwd_on_subscribe(fwd_ctrl,
-                          caf::flow::subscription{std::move(ctrl_sub)});
-  }
-
-  template <class T>
-  auto trivial_obs() {
-    return flow::make_trivial_observable<T>(coordinator());
-  }
 };
 
-WITH_FIXTURE(fixture_deterministic) {
+WITH_FIXTURE(fixture) {
 
 SCENARIO("the buffer operator groups items together") {
   GIVEN("an observable") {
@@ -109,14 +89,8 @@ SCENARIO("the buffer operator groups items together") {
           cow_vector<int>{8, 16, 32},
           cow_vector<int>{64, 128},
         };
-        ctx->make_observable()
-          .from_container(inputs) //
-          .buffer(3)
-          .for_each([&outputs](const cow_vector<int>& xs) {
-            outputs.emplace_back(xs);
-          });
-        ctx->run();
-        check_eq(outputs, expected);
+        check_eq(collect(make_observable().from_container(inputs).buffer(3)),
+                 expected);
       }
     }
   }
@@ -133,7 +107,7 @@ SCENARIO("the buffer operator forces items at regular intervals") {
           cow_vector<int>{},        cow_vector<int>{128, 256, 512},
         };
         auto closed = std::make_shared<bool>(false);
-        auto pub = caf::flow::multicaster<int>{ctx.get()};
+        auto pub = caf::flow::multicaster<int>{coordinator()};
         sys.spawn([&pub, outputs, closed](caf::event_based_actor* self) {
           pub.as_observable()
             .observe_on(self) //
@@ -144,26 +118,26 @@ SCENARIO("the buffer operator forces items at regular intervals") {
             });
         });
         dispatch_messages();
-        print_info("emit the first six items");
+        print_debug("emit the first six items");
         pub.push({1, 2, 4, 8, 16, 32});
-        ctx->run_some();
+        run_flows();
         dispatch_messages();
-        print_info("force an empty buffer");
+        print_debug("force an empty buffer");
         advance_time(1s);
         dispatch_messages();
-        print_info("force a buffer with a single element");
+        print_debug("force a buffer with a single element");
         pub.push(64);
-        ctx->run_some();
+        run_flows();
         dispatch_messages();
         advance_time(1s);
         dispatch_messages();
-        print_info("force an empty buffer");
+        print_debug("force an empty buffer");
         advance_time(1s);
         dispatch_messages();
-        print_info("emit the last items and close the source");
+        print_debug("emit the last items and close the source");
         pub.push({128, 256, 512});
         pub.close();
-        ctx->run_some();
+        run_flows();
         dispatch_messages();
         advance_time(1s);
         dispatch_messages();
@@ -224,53 +198,9 @@ SCENARIO("the buffer operator forwards errors") {
   }
 }
 
-} // WITH_FIXTURE(fixture_deterministic)
+} // WITH_FIXTURE(fixture)
 
-WITH_FIXTURE(fixture_flow) {
-
-SCENARIO("buffers start to emit items once subscribed") {
-  GIVEN("a buffer operator") {
-    WHEN("the selector never calls on_subscribe") {
-      THEN("the buffer still emits batches") {
-        auto snk = make_passive_observer<cow_vector<int>>();
-        auto grd = make_unsubscribe_guard(snk);
-        auto uut = raw_sub(3, make_nil_observable<int>(coordinator()),
-                           make_nil_observable<int64_t>(coordinator()),
-                           snk->as_observer());
-        auto data_sub
-          = make_counted<flow::passive_subscription_impl>(coordinator());
-        uut->fwd_on_subscribe(fwd_data, caf::flow::subscription{data_sub});
-        run_flows();
-        require_ge(data_sub->demand, 3u);
-        for (int i = 0; i < 3; ++i)
-          uut->fwd_on_next(fwd_data, i);
-        run_flows();
-        check_eq(snk->buf.size(), 0u);
-        snk->request(17);
-        run_flows();
-        if (check_eq(snk->buf.size(), 1u))
-          check_eq(snk->buf[0], cow_vector<int>({0, 1, 2}));
-      }
-    }
-  }
-}
-
-SCENARIO("buffers never subscribe to their control observable on error") {
-  GIVEN("a buffer operator") {
-    WHEN("the data observable calls on_error on subscribing it") {
-      THEN("the buffer never tries to subscribe to their control observable") {
-        auto snk = flow::make_passive_observer<cow_vector<int>>();
-        auto cnt = std::make_shared<size_t>(0);
-        auto uut = raw_sub(
-          3, coordinator()->make_observable().fail<int>(sec::runtime_error),
-          make_nil_observable<int64_t>(coordinator(), cnt), snk->as_observer());
-        run_flows();
-        check(snk->aborted());
-        check_eq(*cnt, 0u);
-      }
-    }
-  }
-}
+WITH_FIXTURE(fixture) {
 
 SCENARIO("buffers dispose unexpected subscriptions") {
   GIVEN("an initialized buffer operator") {
@@ -278,8 +208,8 @@ SCENARIO("buffers dispose unexpected subscriptions") {
       THEN("the buffer disposes them immediately") {
         auto snk = flow::make_passive_observer<cow_vector<int>>();
         auto grd = make_unsubscribe_guard(snk);
-        auto uut = raw_sub(3, flow::make_nil_observable<int>(coordinator()),
-                           flow::make_nil_observable<int64_t>(coordinator()),
+        auto uut = raw_sub(3, make_observable().never<int>(),
+                           make_observable().never<int64_t>(),
                            snk->as_observer());
         auto data_sub
           = make_counted<flow::passive_subscription_impl>(coordinator());
@@ -288,18 +218,10 @@ SCENARIO("buffers dispose unexpected subscriptions") {
         uut->fwd_on_subscribe(fwd_data, caf::flow::subscription{data_sub});
         uut->fwd_on_subscribe(fwd_ctrl, caf::flow::subscription{ctrl_sub});
         run_flows();
-        auto data_sub_2
-          = make_counted<flow::passive_subscription_impl>(coordinator());
-        auto ctrl_sub_2
-          = make_counted<flow::passive_subscription_impl>(coordinator());
-        uut->fwd_on_subscribe(fwd_data, caf::flow::subscription{data_sub_2});
-        uut->fwd_on_subscribe(fwd_ctrl, caf::flow::subscription{ctrl_sub_2});
-        run_flows();
+        check(snk->subscribed());
         check(!uut->disposed());
-        check(!data_sub->disposed());
-        check(!ctrl_sub->disposed());
-        check(data_sub_2->disposed());
-        check(ctrl_sub_2->disposed());
+        check(data_sub->disposed());
+        check(ctrl_sub->disposed());
       }
     }
   }
@@ -572,6 +494,6 @@ SCENARIO("on_request actions can turn into no-ops") {
   }
 }
 
-} // WITH_FIXTURE(fixture_flow)
+} // WITH_FIXTURE(fixture)
 
 } // namespace

@@ -205,14 +205,6 @@ public:
 
   template <class T>
   [[nodiscard]] static caf::flow::observable<T>
-  make_nil_observable(caf::flow::coordinator* ctx,
-                      std::shared_ptr<size_t> subscribe_count = nullptr) {
-    auto ptr = make_counted<nil_observable<T>>(ctx, subscribe_count);
-    return caf::flow::observable<T>{std::move(ptr)};
-  }
-
-  template <class T>
-  [[nodiscard]] static caf::flow::observable<T>
   make_trivial_observable(caf::flow::coordinator* ctx,
                           std::shared_ptr<size_t> subscribe_count = nullptr) {
     auto ptr = make_counted<trivial_observable<T>>(ctx, subscribe_count);
@@ -290,30 +282,8 @@ public:
   }
 
   /// Returns a trivial disposable that wraps an atomic flag.
-  [[nodiscard]] static caf::disposable make_trivial_disposable();
-
-  /// An observable that does nothing when subscribed except returning a trivial
-  /// disposable. Allows tests to call on_subscribe some time later.
-  template <class T>
-  class nil_observable : public caf::flow::op::cold<T> {
-  public:
-    using super = caf::flow::op::cold<T>;
-
-    using shared_count = std::shared_ptr<size_t>;
-
-    nil_observable(caf::flow::coordinator* ctx, shared_count subscribe_count)
-      : super(ctx), subscribe_count_(std::move(subscribe_count)) {
-      // nop
-    }
-
-    disposable subscribe(caf::flow::observer<T>) override {
-      if (subscribe_count_)
-        *subscribe_count_ += 1;
-      return make_trivial_disposable();
-    }
-
-    shared_count subscribe_count_;
-  };
+  [[nodiscard]] static caf::disposable
+  make_trivial_disposable(caf::flow::coordinator* parent);
 
   /// An observable that passes a trivial disposable to any observer.
   template <class T>
@@ -335,7 +305,7 @@ public:
       using impl_t = passive_subscription_impl;
       auto ptr = super::parent_->add_child(std::in_place_type<impl_t>);
       out.on_subscribe(caf::flow::subscription{ptr});
-      return make_trivial_disposable();
+      return make_trivial_disposable(super::parent());
     }
 
     shared_count subscribe_count_;
