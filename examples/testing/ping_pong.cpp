@@ -49,5 +49,6 @@ TEST("two actors can communicate with each other") {
 } // WITH_FIXTURE(caf::test::fixture::deterministic)
 
 } // namespace
+// --(rst-ping-pong-end)--
 
 CAF_TEST_MAIN()
