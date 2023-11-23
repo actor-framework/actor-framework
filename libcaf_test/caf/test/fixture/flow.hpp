@@ -203,14 +203,6 @@ public:
     return coordinator()->add_child(std::in_place_type<auto_observer<T>>);
   }
 
-  template <class T>
-  [[nodiscard]] static caf::flow::observable<T>
-  make_trivial_observable(caf::flow::coordinator* ctx,
-                          std::shared_ptr<size_t> subscribe_count = nullptr) {
-    auto ptr = make_counted<trivial_observable<T>>(ctx, subscribe_count);
-    return caf::flow::observable<T>{std::move(ptr)};
-  }
-
   /// Shortcut for creating an observable error via
   /// `make_observable<T>().fail<T>(args...)`. When passing an empty parameter
   /// pack, the error is constructed from sec::runtime_error.
@@ -279,73 +271,6 @@ public:
   /// Returns the coordinator used by this fixture.
   [[nodiscard]] caf::flow::coordinator* this_coordinator() {
     return coordinator_.get();
-  }
-
-  /// Returns a trivial disposable that wraps an atomic flag.
-  [[nodiscard]] static caf::disposable
-  make_trivial_disposable(caf::flow::coordinator* parent);
-
-  /// An observable that passes a trivial disposable to any observer.
-  template <class T>
-  class trivial_observable : public caf::flow::op::cold<T> {
-  public:
-    using super = caf::flow::op::cold<T>;
-
-    using shared_count = std::shared_ptr<size_t>;
-
-    trivial_observable(caf::flow::coordinator* parent,
-                       shared_count subscribe_count)
-      : super(parent), subscribe_count_(std::move(subscribe_count)) {
-      // nop
-    }
-
-    disposable subscribe(caf::flow::observer<T> out) override {
-      if (subscribe_count_)
-        *subscribe_count_ += 1;
-      using impl_t = passive_subscription_impl;
-      auto ptr = super::parent_->add_child(std::in_place_type<impl_t>);
-      out.on_subscribe(caf::flow::subscription{ptr});
-      return make_trivial_disposable(super::parent());
-    }
-
-    shared_count subscribe_count_;
-  };
-
-  template <class T>
-  struct unsubscribe_guard {
-  public:
-    explicit unsubscribe_guard(intrusive_ptr<T> ptr) : ptr_(std::move(ptr)) {
-      // nop
-    }
-
-    unsubscribe_guard(unsubscribe_guard&&) = default;
-
-    unsubscribe_guard& operator=(unsubscribe_guard&&) = delete;
-
-    unsubscribe_guard(const unsubscribe_guard&) = delete;
-
-    unsubscribe_guard& operator=(const unsubscribe_guard&) = delete;
-
-    ~unsubscribe_guard() {
-      if (ptr_)
-        ptr_->unsubscribe();
-    }
-
-  private:
-    intrusive_ptr<T> ptr_;
-  };
-
-  template <class T>
-  auto make_unsubscribe_guard(intrusive_ptr<T> ptr) {
-    return unsubscribe_guard<T>{std::move(ptr)};
-  }
-
-  template <class T1, class T2, class... Ts>
-  auto make_unsubscribe_guard(intrusive_ptr<T1> ptr1, intrusive_ptr<T2> ptr2,
-                              Ts... ptrs) {
-    return std::make_tuple(make_unsubscribe_guard(std::move(ptr1)),
-                           make_unsubscribe_guard(ptr2),
-                           make_unsubscribe_guard(std::move(ptrs))...);
   }
 
   /// A subscription implementation without internal logic.

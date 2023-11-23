@@ -43,25 +43,6 @@ struct noskip_trait {
 };
 
 struct fixture : test::fixture::deterministic, test::fixture::flow {
-  template <class Impl>
-  void add_subs(intrusive_ptr<Impl> uut) {
-    auto data_sub
-      = make_counted<test::fixture::flow::passive_subscription_impl>(
-        coordinator());
-    uut->fwd_on_subscribe(fwd_data,
-                          caf::flow::subscription{std::move(data_sub)});
-    auto ctrl_sub
-      = make_counted<test::fixture::flow::passive_subscription_impl>(
-        coordinator());
-    uut->fwd_on_subscribe(fwd_ctrl,
-                          caf::flow::subscription{std::move(ctrl_sub)});
-  }
-
-  template <class T>
-  auto trivial_obs() {
-    return test::fixture::flow::make_trivial_observable<T>(coordinator());
-  }
-
   // Similar to buffer::subscribe, but returns a buffer_sub pointer instead of
   //  type-erasing it into a disposable.
   template <class Trait = noskip_trait>
@@ -198,16 +179,11 @@ SCENARIO("the buffer operator forwards errors") {
   }
 }
 
-} // WITH_FIXTURE(fixture)
-
-WITH_FIXTURE(fixture) {
-
 SCENARIO("buffers dispose unexpected subscriptions") {
   GIVEN("an initialized buffer operator") {
     WHEN("calling on_subscribe with unexpected subscriptions") {
       THEN("the buffer disposes them immediately") {
         auto snk = flow::make_passive_observer<cow_vector<int>>();
-        auto grd = make_unsubscribe_guard(snk);
         auto uut = raw_sub(3, make_observable().never<int>(),
                            make_observable().never<int64_t>(),
                            snk->as_observer());
@@ -222,6 +198,9 @@ SCENARIO("buffers dispose unexpected subscriptions") {
         check(!uut->disposed());
         check(data_sub->disposed());
         check(ctrl_sub->disposed());
+        uut->dispose();
+        run_flows();
+        check(uut->disposed());
       }
     }
   }
@@ -232,7 +211,8 @@ SCENARIO("buffers emit final items after an on_error event") {
     WHEN("calling on_error(data) on a buffer without pending data") {
       THEN("the buffer forward on_error immediately") {
         auto snk = flow::make_passive_observer<cow_vector<int>>();
-        auto uut = raw_sub(3, trivial_obs<int>(), trivial_obs<int64_t>(),
+        auto uut = raw_sub(3, make_observable().never<int>(),
+                           make_observable().never<int64_t>(),
                            snk->as_observer());
         snk->request(42);
         run_flows();
@@ -248,7 +228,8 @@ SCENARIO("buffers emit final items after an on_error event") {
     WHEN("calling on_error(data) on a buffer with pending data") {
       THEN("the buffer still emits pending data before closing") {
         auto snk = flow::make_passive_observer<cow_vector<int>>();
-        auto uut = raw_sub(3, trivial_obs<int>(), trivial_obs<int64_t>(),
+        auto uut = raw_sub(3, make_observable().never<int>(),
+                           make_observable().never<int64_t>(),
                            snk->as_observer());
         run_flows();
         uut->fwd_on_next(fwd_data, 1);
@@ -258,6 +239,7 @@ SCENARIO("buffers emit final items after an on_error event") {
         check(snk->buf.empty());
         check(!snk->aborted());
         snk->request(42);
+        uut->dispose();
         run_flows();
         check_eq(snk->buf, std::vector{cow_vector<int>({1, 2})});
         check(snk->aborted());
@@ -266,7 +248,8 @@ SCENARIO("buffers emit final items after an on_error event") {
     WHEN("calling on_error(control) on a buffer without pending data") {
       THEN("the buffer forward on_error immediately") {
         auto snk = flow::make_passive_observer<cow_vector<int>>();
-        auto uut = raw_sub(3, trivial_obs<int>(), trivial_obs<int64_t>(),
+        auto uut = raw_sub(3, make_observable().never<int>(),
+                           make_observable().never<int64_t>(),
                            snk->as_observer());
         snk->request(42);
         run_flows();
@@ -277,12 +260,15 @@ SCENARIO("buffers emit final items after an on_error event") {
         uut->fwd_on_error(fwd_ctrl, sec::runtime_error);
         check_eq(snk->buf, std::vector{cow_vector<int>({1, 2, 3})});
         check(snk->aborted());
+        uut->dispose();
+        run_flows();
       }
     }
     WHEN("calling on_error(control) on a buffer with pending data") {
       THEN("the buffer still emits pending data before closing") {
         auto snk = flow::make_passive_observer<cow_vector<int>>();
-        auto uut = raw_sub(3, trivial_obs<int>(), trivial_obs<int64_t>(),
+        auto uut = raw_sub(3, make_observable().never<int>(),
+                           make_observable().never<int64_t>(),
                            snk->as_observer());
         run_flows();
         uut->fwd_on_next(fwd_data, 1);
@@ -292,6 +278,7 @@ SCENARIO("buffers emit final items after an on_error event") {
         check(snk->buf.empty());
         check(!snk->aborted());
         snk->request(42);
+        uut->dispose();
         run_flows();
         check_eq(snk->buf, std::vector{cow_vector<int>({1, 2})});
         check(snk->aborted());
@@ -305,7 +292,8 @@ SCENARIO("buffers emit final items after an on_complete event") {
     WHEN("calling on_complete(data) on a buffer without pending data") {
       THEN("the buffer forward on_complete immediately") {
         auto snk = flow::make_passive_observer<cow_vector<int>>();
-        auto uut = raw_sub(3, trivial_obs<int>(), trivial_obs<int64_t>(),
+        auto uut = raw_sub(3, make_observable().never<int>(),
+                           make_observable().never<int64_t>(),
                            snk->as_observer());
         snk->request(42);
         run_flows();
@@ -321,7 +309,8 @@ SCENARIO("buffers emit final items after an on_complete event") {
     WHEN("calling on_complete(data) on a buffer with pending data") {
       THEN("the buffer still emits pending data before closing") {
         auto snk = flow::make_passive_observer<cow_vector<int>>();
-        auto uut = raw_sub(3, trivial_obs<int>(), trivial_obs<int64_t>(),
+        auto uut = raw_sub(3, make_observable().never<int>(),
+                           make_observable().never<int64_t>(),
                            snk->as_observer());
         run_flows();
         uut->fwd_on_next(fwd_data, 1);
@@ -339,7 +328,8 @@ SCENARIO("buffers emit final items after an on_complete event") {
     WHEN("calling on_complete(control) on a buffer without pending data") {
       THEN("the buffer raises an error immediately") {
         auto snk = flow::make_passive_observer<cow_vector<int>>();
-        auto uut = raw_sub(3, trivial_obs<int>(), trivial_obs<int64_t>(),
+        auto uut = raw_sub(3, make_observable().never<int>(),
+                           make_observable().never<int64_t>(),
                            snk->as_observer());
         snk->request(42);
         run_flows();
@@ -355,7 +345,8 @@ SCENARIO("buffers emit final items after an on_complete event") {
     WHEN("calling on_complete(control) on a buffer with pending data") {
       THEN("the buffer raises an error after shipping pending items") {
         auto snk = flow::make_passive_observer<cow_vector<int>>();
-        auto uut = raw_sub(3, trivial_obs<int>(), trivial_obs<int64_t>(),
+        auto uut = raw_sub(3, make_observable().never<int>(),
+                           make_observable().never<int64_t>(),
                            snk->as_observer());
         run_flows();
         uut->fwd_on_next(fwd_data, 1);
@@ -365,6 +356,7 @@ SCENARIO("buffers emit final items after an on_complete event") {
         check(snk->buf.empty());
         check(!snk->completed());
         snk->request(42);
+        uut->dispose();
         run_flows();
         check_eq(snk->buf, std::vector{cow_vector<int>({1, 2})});
         check(snk->aborted());
@@ -378,14 +370,13 @@ SCENARIO("skip policies suppress empty batches") {
     WHEN("the control observable fires with no pending data") {
       THEN("the operator omits the batch") {
         auto snk = flow::make_passive_observer<cow_vector<int>>();
-        auto grd = make_unsubscribe_guard(snk);
-        auto uut = raw_sub<skip_trait>(3, trivial_obs<int>(),
-                                       trivial_obs<int64_t>(),
+        auto uut = raw_sub<skip_trait>(3, make_observable().never<int>(),
+                                       make_observable().never<int64_t>(),
                                        snk->as_observer());
-        add_subs(uut);
         snk->request(42);
         run_flows();
         uut->fwd_on_next(fwd_ctrl, 1);
+        uut->dispose();
         run_flows();
         check(snk->buf.empty());
       }
@@ -393,15 +384,14 @@ SCENARIO("skip policies suppress empty batches") {
     WHEN("the control observable fires with pending data") {
       THEN("the operator emits a partial batch") {
         auto snk = flow::make_passive_observer<cow_vector<int>>();
-        auto grd = make_unsubscribe_guard(snk);
-        auto uut = raw_sub<skip_trait>(3, trivial_obs<int>(),
-                                       trivial_obs<int64_t>(),
+        auto uut = raw_sub<skip_trait>(3, make_observable().never<int>(),
+                                       make_observable().never<int64_t>(),
                                        snk->as_observer());
-        add_subs(uut);
         snk->request(42);
         run_flows();
         uut->fwd_on_next(fwd_data, 17);
         uut->fwd_on_next(fwd_ctrl, 1);
+        uut->dispose();
         run_flows();
         check_eq(snk->buf, std::vector{cow_vector<int>{17}});
       }
@@ -414,14 +404,13 @@ SCENARIO("no-skip policies emit empty batches") {
     WHEN("the control observable fires with no pending data") {
       THEN("the operator emits an empty batch") {
         auto snk = flow::make_passive_observer<cow_vector<int>>();
-        auto grd = make_unsubscribe_guard(snk);
-        auto uut = raw_sub<noskip_trait>(3, trivial_obs<int>(),
-                                         trivial_obs<int64_t>(),
+        auto uut = raw_sub<noskip_trait>(3, make_observable().never<int>(),
+                                         make_observable().never<int64_t>(),
                                          snk->as_observer());
-        add_subs(uut);
         snk->request(42);
         run_flows();
         uut->fwd_on_next(fwd_ctrl, 1);
+        uut->dispose();
         run_flows();
         check_eq(snk->buf, std::vector{cow_vector<int>()});
       }
@@ -429,15 +418,14 @@ SCENARIO("no-skip policies emit empty batches") {
     WHEN("the control observable fires with pending data") {
       THEN("the operator emits a partial batch") {
         auto snk = flow::make_passive_observer<cow_vector<int>>();
-        auto grd = make_unsubscribe_guard(snk);
-        auto uut = raw_sub<noskip_trait>(3, trivial_obs<int>(),
-                                         trivial_obs<int64_t>(),
+        auto uut = raw_sub<noskip_trait>(3, make_observable().never<int>(),
+                                         make_observable().never<int64_t>(),
                                          snk->as_observer());
-        add_subs(uut);
         snk->request(42);
         run_flows();
         uut->fwd_on_next(fwd_data, 17);
         uut->fwd_on_next(fwd_ctrl, 1);
+        uut->dispose();
         run_flows();
         check_eq(snk->buf, std::vector{cow_vector<int>{17}});
       }
@@ -450,10 +438,9 @@ SCENARIO("disposing a buffer operator completes the flow") {
     WHEN("disposing the subscription operator of the operator") {
       THEN("the observer receives an on_complete event") {
         auto snk = flow::make_passive_observer<cow_vector<int>>();
-        auto uut = raw_sub<skip_trait>(3, trivial_obs<int>(),
-                                       trivial_obs<int64_t>(),
+        auto uut = raw_sub<skip_trait>(3, make_observable().never<int>(),
+                                       make_observable().never<int64_t>(),
                                        snk->as_observer());
-        add_subs(uut);
         snk->request(42);
         run_flows();
         uut->dispose();
@@ -469,11 +456,9 @@ SCENARIO("on_request actions can turn into no-ops") {
     WHEN("the sink requests more data right before a timeout triggers") {
       THEN("the batch gets shipped and the on_request action does nothing") {
         auto snk = flow::make_passive_observer<cow_vector<int>>();
-        auto grd = make_unsubscribe_guard(snk);
-        auto uut = raw_sub<skip_trait>(3, trivial_obs<int>(),
-                                       trivial_obs<int64_t>(),
+        auto uut = raw_sub<skip_trait>(3, make_observable().never<int>(),
+                                       make_observable().never<int64_t>(),
                                        snk->as_observer());
-        add_subs(uut);
         run_flows();
         // Add three items that we can't push yet because no downstream demand.
         for (int i = 0; i < 3; ++i)
@@ -487,6 +472,7 @@ SCENARIO("on_request actions can turn into no-ops") {
         uut->fwd_on_next(fwd_ctrl, 1);
         check_eq(uut->pending(), 0u);
         // Run the scheduled action: turns into a no-op now.
+        uut->dispose();
         run_flows();
         check_eq(snk->buf, std::vector{cow_vector<int>({0, 1, 2})});
       }

@@ -4,14 +4,7 @@
 
 #include "caf/test/fixture/flow.hpp"
 
-#include "caf/flow/subscription.hpp"
-
 namespace caf::test::fixture {
-
-caf::disposable flow::make_trivial_disposable(caf::flow::coordinator* parent) {
-  return disposable{
-    make_counted<caf::flow::subscription::trivial_impl>(parent)};
-}
 
 caf::flow::coordinator*
 flow::passive_subscription_impl::parent() const noexcept {
