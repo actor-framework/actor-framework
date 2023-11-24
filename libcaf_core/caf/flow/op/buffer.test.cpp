@@ -55,6 +55,11 @@ struct fixture : test::fixture::deterministic, test::fixture::flow {
     out.on_subscribe(caf::flow::subscription{ptr});
     return ptr;
   }
+
+  template <class T>
+  auto make_never_sub(caf::flow::observer<T> out) {
+    return make_counted<caf::flow::op::never_sub<T>>(coordinator(), out);
+  }
 };
 
 WITH_FIXTURE(fixture) {
@@ -187,15 +192,13 @@ SCENARIO("buffers dispose unexpected subscriptions") {
         auto uut = raw_sub(3, make_observable().never<int>(),
                            make_observable().never<int64_t>(),
                            snk->as_observer());
-        auto data_sub
-          = make_counted<flow::passive_subscription_impl>(coordinator());
-        auto ctrl_sub
-          = make_counted<flow::passive_subscription_impl>(coordinator());
+        auto data_sub = make_never_sub<cow_vector<int>>(snk->as_observer());
+        auto ctrl_sub = make_never_sub<cow_vector<int>>(snk->as_observer());
         uut->fwd_on_subscribe(fwd_data, caf::flow::subscription{data_sub});
         uut->fwd_on_subscribe(fwd_ctrl, caf::flow::subscription{ctrl_sub});
-        run_flows();
         check(snk->subscribed());
         check(!uut->disposed());
+        run_flows();
         check(data_sub->disposed());
         check(ctrl_sub->disposed());
         uut->dispose();

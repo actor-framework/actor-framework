@@ -6,23 +6,6 @@
 
 namespace caf::test::fixture {
 
-caf::flow::coordinator*
-flow::passive_subscription_impl::parent() const noexcept {
-  return parent_;
-}
-
-void flow::passive_subscription_impl::request(size_t n) {
-  demand += n;
-}
-
-void flow::passive_subscription_impl::dispose() {
-  disposed_flag = true;
-}
-
-bool flow::passive_subscription_impl::disposed() const noexcept {
-  return disposed_flag;
-}
-
 std::string flow::to_string(observer_state x) {
   switch (x) {
     case observer_state::idle:

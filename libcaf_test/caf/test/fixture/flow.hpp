@@ -273,33 +273,6 @@ public:
     return coordinator_.get();
   }
 
-  /// A subscription implementation without internal logic.
-  class passive_subscription_impl final
-    : public caf::flow::subscription::impl_base {
-  public:
-    explicit passive_subscription_impl(caf::flow::coordinator* parent)
-      : parent_(parent) {
-      // nop
-    }
-
-    /// Incremented by `request`.
-    size_t demand = 0;
-
-    /// Flipped by `dispose`.
-    bool disposed_flag = false;
-
-    caf::flow::coordinator* parent() const noexcept override;
-
-    void request(size_t n) override;
-
-    void dispose() override;
-
-    bool disposed() const noexcept override;
-
-  private:
-    caf::flow::coordinator* parent_;
-  };
-
 private:
   caf::flow::scoped_coordinator_ptr coordinator_;
 };
