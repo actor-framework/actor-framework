@@ -130,7 +130,7 @@ public:
 
   ///@copydoc delay_for
   template <class F>
-  void delay_for_fn(timespan rel_time, F&& what) {
+  disposable delay_for_fn(timespan rel_time, F&& what) {
     return delay_until(steady_time() + rel_time,
                        make_action(std::forward<F>(what)));
   }
