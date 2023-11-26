@@ -8,10 +8,13 @@
 #include "caf/flow/coordinator.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/ref_counted.hpp"
+#include "caf/timespan.hpp"
 
 #include <condition_variable>
+#include <deque>
 #include <map>
 #include <mutex>
+#include <vector>
 
 namespace caf::flow {
 
@@ -27,6 +30,13 @@ public:
   void run();
 
   size_t run_some();
+
+  template <class Rep, class Period>
+  size_t run_some(std::chrono::duration<Rep, Period> relative_timeout) {
+    return run_some(steady_time() + relative_timeout);
+  }
+
+  size_t run_some(steady_time_point timeout);
 
   // -- reference counting -----------------------------------------------------
 
@@ -69,6 +79,8 @@ private:
 
   action next(bool blocking);
 
+  action next(steady_time_point timeout);
+
   void drop_disposed_flows();
 
   /// Stores objects that need to be disposed before returning from `run`.
@@ -82,7 +94,7 @@ private:
 
   mutable std::mutex mtx_;
   std::condition_variable cv_;
-  std::vector<action> actions_;
+  std::deque<action> actions_;
 };
 
 using scoped_coordinator_ptr = intrusive_ptr<scoped_coordinator>;

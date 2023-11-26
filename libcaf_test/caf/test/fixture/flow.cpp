@@ -28,4 +28,8 @@ void flow::run_flows() {
   coordinator_->run_some();
 }
 
+void flow::run_flows(caf::flow::coordinator::steady_time_point timeout) {
+  coordinator_->run_some(timeout);
+}
+
 } // namespace caf::test::fixture
