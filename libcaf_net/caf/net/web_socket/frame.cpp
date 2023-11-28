@@ -20,40 +20,6 @@ size_t calc_total_size(span<const Buffer> buffers) {
 
 } // namespace
 
-frame::data::data(const_byte_span bytes) : data(true, bytes.size()) {
-  memcpy(storage(), bytes.data(), bytes.size());
-}
-
-frame::data::data(std::string_view str) : data(false, str.size()) {
-  memcpy(storage(), str.data(), str.size());
-}
-
-frame::data::data(size_t total_size, span<const const_byte_span> bufs)
-  : data(true, total_size) {
-  std::byte* pos = storage_;
-  for (const auto& buf : bufs) {
-    if (!buf.empty()) {
-      memcpy(pos, buf.data(), buf.size());
-      pos += buf.size();
-    }
-  }
-}
-
-frame::data::data(size_t total_size, span<const std::string_view> bufs)
-  : data(false, total_size) {
-  std::byte* pos = storage_;
-  for (const auto& buf : bufs) {
-    if (!buf.empty()) {
-      memcpy(pos, buf.data(), buf.size());
-      pos += buf.size();
-    }
-  }
-}
-
-frame::frame(const_byte_span bytes) {
-  init(bytes.size(), bytes);
-}
-
 frame::frame(std::string_view text) {
   init(text.size(), text);
 }
@@ -80,17 +46,10 @@ std::string_view frame::as_text() const noexcept {
                : res_t{};
 }
 
-void frame::data::deref() noexcept {
-  if (unique() || rc_.fetch_sub(1, std::memory_order_acq_rel) == 1) {
-    this->~data();
-    free(this);
-  }
-}
-
 template <class... Args>
 void frame::init(size_t payload_size, Args&&... args) {
-  auto vptr = malloc(sizeof(data) + payload_size);
-  data_.reset(new (vptr) data(std::forward<Args>(args)...), false);
+  auto vptr = malloc(sizeof(chunk::data) + payload_size);
+  data_.reset(new (vptr) chunk::data(std::forward<Args>(args)...), false);
 }
 
 } // namespace caf::net::web_socket

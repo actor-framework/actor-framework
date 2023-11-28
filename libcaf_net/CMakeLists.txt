@@ -63,7 +63,6 @@ caf_add_component(
     caf/net/http/v1.cpp
     caf/net/ip.cpp
     caf/net/lp/default_trait.cpp
-    caf/net/lp/frame.cpp
     caf/net/lp/framing.cpp
     caf/net/lp/lower_layer.cpp
     caf/net/lp/upper_layer.cpp

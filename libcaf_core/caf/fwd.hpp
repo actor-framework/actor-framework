@@ -93,6 +93,7 @@ class behavior;
 class binary_deserializer;
 class binary_serializer;
 class blocking_actor;
+class chunk;
 class config_option;
 class config_option_adder;
 class config_option_set;
