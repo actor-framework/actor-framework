@@ -79,9 +79,64 @@ public:
     return *cfg_;
   }
 
-private:
+protected:
   Derived& dref() {
     return static_cast<Derived&>(*this);
+  }
+
+  template <class Fn>
+  auto with_ssl_connection(Fn&& fn) {
+    return [this, fn = std::forward<Fn>(fn)](auto&& fd) mutable {
+      using fd_t = decltype(fd);
+      using res_t = decltype(fn(std::forward<fd_t>(fd)));
+      auto* sub = cfg_->as_has_make_ctx();
+      if (sub == nullptr) {
+        auto err = make_error(sec::logic_error,
+                              "required SSL but no context available");
+        return res_t{std::move(err)};
+      }
+      auto& make_ctx = sub->make_ctx();
+      if (!make_ctx)
+        make_ctx = [] { return ssl::context::make_client(ssl::tls::v1_2); };
+      auto ctx = make_ctx();
+      if (!ctx)
+        return res_t{ctx.error()};
+      auto conn = ctx->new_connection(std::forward<fd_t>(fd));
+      if (!conn)
+        return res_t{ctx.error()};
+      return fn(std::move(*conn));
+    };
+  }
+
+  template <class Fn>
+  auto with_ssl_connection_or_socket(Fn&& fn) {
+    return [this, fn = std::forward<Fn>(fn)](auto&& fd) mutable {
+      using fd_t = decltype(fd);
+      using res_t = decltype(fn(std::forward<fd_t>(fd)));
+      if (auto* sub = cfg_->as_has_make_ctx(); sub && sub->make_ctx_valid()) {
+        auto& make_ctx = sub->make_ctx();
+        auto ctx = make_ctx();
+        if (!ctx)
+          return res_t{ctx.error()};
+        auto conn = ctx->new_connection(std::forward<fd_t>(fd));
+        if (!conn)
+          return res_t{ctx.error()};
+        return fn(std::move(*conn));
+      }
+      return fn(std::forward<fd_t>(fd));
+    };
+  }
+
+  template <class Fn>
+  auto with_ssl_connection_or_socket_select(bool use_ssl, Fn&& fn) {
+    return [this, use_ssl, fn = std::forward<Fn>(fn)](auto&& fd) mutable {
+      using fd_t = decltype(fd);
+      if (use_ssl) {
+        auto g = with_ssl_connection(std::move(fn));
+        return g(std::forward<fd_t>(fd));
+      }
+      return fn(std::forward<fd_t>(fd));
+    };
   }
 
   config_pointer cfg_;

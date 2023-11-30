@@ -20,22 +20,23 @@ public:
   Subtype& context(ssl::context ctx) {
     auto& dref = static_cast<Subtype&>(*this);
     auto& cfg = dref.config();
-    if (auto* ptr = cfg.as_has_make_ctx())
-      ptr->context_factory(
-        [ctx = std::make_shared<ssl::context>(std::move(
-           ctx))]() -> expected<std::shared_ptr<ssl::context>> { return ctx; });
-    else if (cfg)
+    if (auto* ptr = cfg.as_has_make_ctx()) {
+      auto ctx_ptr = std::make_shared<ssl::context>(std::move(ctx));
+      ptr->make_ctx([ctx_ptr]() -> expected<ssl::context> { //
+        return std::move(*ctx_ptr);
+      });
+    } else if (cfg) {
       cfg.fail(cfg.cannot_add_ctx());
+    }
     return dref;
   }
 
   /// Sets the optional SSL context.
-  /// @param ctx The SSL context for encryption.
+  /// @param ctx The SSL context for encryption. Passing an `expected` with a
+  ///            default-constructed `error` results in a no-op.
   /// @returns a reference to `*this`.
   Subtype& context(expected<ssl::context> ctx) {
     auto& dref = static_cast<Subtype&>(*this);
-    // If we pass a default constructed error inside the expected type, we don't
-    // want to fail, but use the default SSL factory.
     if (ctx)
       context(std::move(*ctx));
     else if (ctx.error())

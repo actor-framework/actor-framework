@@ -20,9 +20,7 @@ namespace caf::net::dsl {
 /// networking.
 class has_make_ctx {
 public:
-  using ctx_ptr = std::shared_ptr<ssl::context>;
-
-  using ctx_factory = std::function<expected<ctx_ptr>()>;
+  using ctx_factory = std::function<expected<ssl::context>()>;
 
   has_make_ctx() = default;
 
@@ -35,20 +33,10 @@ public:
   has_make_ctx& operator=(const has_make_ctx&) = default;
 
   template <class SumType>
-  static has_make_ctx* from(SumType& data) noexcept {
-    auto get_ptr = [](auto& val) -> has_make_ctx* {
-      using val_t = std::decay_t<decltype(val)>;
-      if constexpr (std::is_base_of_v<has_make_ctx, val_t>)
-        return &val;
-      else
-        return nullptr;
-    };
-    return std::visit(get_ptr, data);
-  }
-
-  template <class SumType>
-  static const has_make_ctx* from(const SumType& data) noexcept {
-    auto get_ptr = [](const auto& val) -> const has_make_ctx* {
+  static auto from(SumType& data) noexcept {
+    using result_t = std::conditional_t<std::is_const_v<SumType>,
+                                        const has_make_ctx*, has_make_ctx*>;
+    auto get_ptr = [](auto& val) -> result_t {
       using val_t = std::decay_t<decltype(val)>;
       if constexpr (std::is_base_of_v<has_make_ctx, val_t>)
         return &val;
@@ -59,39 +47,25 @@ public:
   }
 
   template <typename F>
-  void context_factory(F&& factory) noexcept {
-    using invoke_res_t = std::decay_t<std::invoke_result_t<F>>;
-    if constexpr (std::is_same_v<invoke_res_t, expected<ssl::context>>)
-      context_factory_
-        = [ctx = expected<ctx_ptr>{nullptr},
-           factory = std::forward<F>(factory)]() mutable -> expected<ctx_ptr> {
-        if (!ctx.has_value() || ctx == nullptr) {
-          ctx = factory().and_then([](auto c) -> expected<ctx_ptr> {
-            return std::make_shared<ssl::context>(std::move(c));
-          });
-        }
-        return ctx;
-      };
-    else
-      context_factory_ = std::forward<F>(factory);
+  void make_ctx(F&& factory) noexcept {
+    make_ctx_ = std::forward<F>(factory);
   }
 
-  auto make_ctx() noexcept {
-    return context_factory_();
+  auto& make_ctx() noexcept {
+    return make_ctx_;
+  }
+
+  bool make_ctx_valid() const noexcept {
+    return static_cast<bool>(make_ctx_);
   }
 
   void assign(const has_make_ctx* other) noexcept {
-    context_factory_ = other->context_factory_;
+    make_ctx_ = other->make_ctx_;
   }
 
 private:
-  // Default factory function. If not manually set up, don't use a SSL at all.
-  static expected<std::shared_ptr<ssl::context>> default_ssl_factory() {
-    return nullptr;
-  };
-
   /// SSL context factory for lazy loading SSL on demand.
-  ctx_factory context_factory_ = default_ssl_factory;
+  ctx_factory make_ctx_;
 };
 
 } // namespace caf::net::dsl

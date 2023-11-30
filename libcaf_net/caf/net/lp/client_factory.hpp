@@ -83,14 +83,6 @@ public:
   [[nodiscard]] expected<disposable> start(OnStart on_start) {
     using input_res_t = typename Trait::input_resource;
     using output_res_t = typename Trait::output_resource;
-    auto& cfg = super::config();
-    // Try lazy loading the SSL context.
-    if (auto ptr = cfg.as_has_make_ctx()) {
-      auto result = ptr->make_ctx();
-      if (!result)
-        cfg.call_on_error(result.error());
-      cfg.ctx = *result;
-    }
     static_assert(std::is_invocable_v<OnStart, input_res_t, output_res_t>);
     return super::config().visit([this, &on_start](auto& data) {
       return do_start(super::config(), data, on_start);
@@ -133,9 +125,10 @@ private:
     return detail::tcp_try_connect(std::move(addr.host), addr.port,
                                    data.connection_timeout,
                                    data.max_retry_count, data.retry_delay)
-      .and_then(
-        connection_with_ctx(cfg.ctx, [this, &cfg, &on_start](auto& conn) {
-          return this->do_start_impl(cfg, std::move(conn), on_start);
+      .and_then(this->with_ssl_connection_or_socket(
+        [this, &cfg, &on_start](auto&& conn) {
+          using conn_t = decltype(conn);
+          return this->do_start_impl(cfg, std::forward<conn_t>(conn), on_start);
         }));
   }
 
@@ -144,9 +137,10 @@ private:
                                 dsl::client_config::socket& data,
                                 OnStart& on_start) {
     return checked_socket(data.take_fd())
-      .and_then(
-        connection_with_ctx(cfg.ctx, [this, &cfg, &on_start](auto& conn) {
-          return this->do_start_impl(cfg, std::move(conn), on_start);
+      .and_then(this->with_ssl_connection_or_socket(
+        [this, &cfg, &on_start](auto&& conn) {
+          using conn_t = decltype(conn);
+          return this->do_start_impl(cfg, std::forward<conn_t>(conn), on_start);
         }));
   }
 

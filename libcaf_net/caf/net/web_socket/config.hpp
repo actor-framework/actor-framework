@@ -54,9 +54,6 @@ public:
   }
 
   Trait trait;
-
-  /// Stores the optional SSL context for secure connections.
-  std::shared_ptr<ssl::context> ctx;
 };
 
 /// The configuration for a length-prefix framing client.
@@ -82,9 +79,6 @@ public:
 
   Trait trait;
   handshake hs;
-
-  /// Stores the optional SSL context for secure connections.
-  std::shared_ptr<ssl::context> ctx;
 };
 
 } // namespace caf::net::web_socket

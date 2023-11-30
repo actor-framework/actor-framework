@@ -218,15 +218,6 @@ public:
   /// protocol.
   template <class OnStart>
   expected<disposable> start(OnStart on_start) {
-    auto& cfg = super::config();
-    if (auto ptr = cfg.as_has_make_ctx()) {
-      auto result = ptr->make_ctx();
-      if (!result) {
-        cfg.call_on_error(result.error());
-        return result.error();
-      }
-      cfg.ctx = *result;
-    }
     using token_t
       = std::conditional_t<std::is_invocable_v<OnStart, acceptor_resource>,
                            flow_impl_token, custom_impl_token>;
@@ -237,6 +228,7 @@ public:
                     "OnStart must have signature 'void(acceptor_resource)' or "
                     "unique_ptr<web_socket::upper_layer::server>()'");
     }
+    auto& cfg = super::config();
     return cfg.visit([this, &cfg, &on_start](auto& data) {
       return this->do_start(cfg, data, on_start, token_t{})
         .or_else([&cfg](const error& err) { cfg.call_on_error(err); });
@@ -291,9 +283,12 @@ private:
                                 dsl::server_config::socket& data,
                                 OnStart& on_start, Token) {
     return checked_socket(data.take_fd())
-      .and_then(acceptor_with_ctx(cfg.ctx, [this, &cfg, &on_start](auto& acc) {
-        return this->do_start_impl(cfg, std::move(acc), on_start, Token{});
-      }));
+      .and_then(
+        this->with_ssl_acceptor_or_socket([this, &cfg, &on_start](auto&& acc) {
+          using acc_t = decltype(acc);
+          return this->do_start_impl(cfg, std::forward<acc_t>(acc), on_start,
+                                     Token{});
+        }));
   }
 
   template <class OnStart, class Token>
@@ -301,9 +296,12 @@ private:
                                 dsl::server_config::lazy& data,
                                 OnStart& on_start, Token) {
     return make_tcp_accept_socket(data.port, data.bind_address, data.reuse_addr)
-      .and_then(acceptor_with_ctx(cfg.ctx, [this, &cfg, &on_start](auto& acc) {
-        return this->do_start_impl(cfg, std::move(acc), on_start, Token{});
-      }));
+      .and_then(
+        this->with_ssl_acceptor_or_socket([this, &cfg, &on_start](auto&& acc) {
+          using acc_t = decltype(acc);
+          return this->do_start_impl(cfg, std::forward<acc_t>(acc), on_start,
+                                     Token{});
+        }));
   }
 
   template <class OnStart, class Token>

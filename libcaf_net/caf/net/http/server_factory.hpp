@@ -182,12 +182,6 @@ public:
     for (auto& ptr : super::config().routes)
       ptr->init();
     auto& cfg = super::config();
-    if (auto ptr = cfg.as_has_make_ctx()) {
-      auto result = ptr->make_ctx();
-      if (!result)
-        cfg.call_on_error(result.error());
-      cfg.ctx = std::move(*result);
-    }
     return cfg.visit([this, &cfg, &on_start](auto& data) {
       return this->do_start(cfg, data, on_start)
         .or_else([&cfg](const error& err) { cfg.call_on_error(err); });
@@ -255,9 +249,11 @@ private:
                                 dsl::server_config::socket& data,
                                 OnStart& on_start) {
     return checked_socket(data.take_fd())
-      .and_then(acceptor_with_ctx(cfg.ctx, [this, &cfg, &on_start](auto& acc) {
-        return this->do_start_impl(cfg, std::move(acc), on_start);
-      }));
+      .and_then(
+        this->with_ssl_acceptor_or_socket([this, &cfg, &on_start](auto&& acc) {
+          using acc_t = std::decay_t<decltype(acc)>;
+          return this->do_start_impl(cfg, std::forward<acc_t>(acc), on_start);
+        }));
   }
 
   template <class OnStart>
@@ -265,9 +261,11 @@ private:
                                 dsl::server_config::lazy& data,
                                 OnStart& on_start) {
     return make_tcp_accept_socket(data.port, data.bind_address, data.reuse_addr)
-      .and_then(acceptor_with_ctx(cfg.ctx, [this, &cfg, &on_start](auto& acc) {
-        return this->do_start_impl(cfg, std::move(acc), on_start);
-      }));
+      .and_then(
+        this->with_ssl_acceptor_or_socket([this, &cfg, &on_start](auto&& acc) {
+          using acc_t = std::decay_t<decltype(acc)>;
+          return this->do_start_impl(cfg, std::forward<acc_t>(acc), on_start);
+        }));
   }
 
   template <class OnStart>

@@ -40,9 +40,6 @@ public:
     return ptr;
   }
 
-  /// Stores the optional SSL context for secure connections.
-  std::shared_ptr<ssl::context> ctx;
-
   /// Stores the available routes on the HTTP server.
   std::vector<route_ptr> routes;
 
@@ -70,9 +67,6 @@ struct CAF_NET_EXPORT client_config
                                 std::forward<Args>(args)...);
     return ptr;
   }
-
-  /// Stores the optional SSL context for secure connections.
-  std::shared_ptr<ssl::context> ctx;
 
   http::method method;
 

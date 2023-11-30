@@ -29,6 +29,7 @@ client_factory::do_start(config_type& cfg, dsl::client_config::lazy& data) {
   CAF_ASSERT(std::holds_alternative<uri>(data.server));
   const auto& resource = std::get<uri>(data.server);
   auto auth = resource.authority();
+  auto use_ssl = false;
   // Sanity checking.
   if (auth.host_str().empty())
     return do_start(cfg, make_error(sec::invalid_argument,
@@ -39,26 +40,19 @@ client_factory::do_start(config_type& cfg, dsl::client_config::lazy& data) {
   } else if (resource.scheme() == "https") {
     if (auth.port == 0)
       auth.port = defaults::net::https_default_port;
-    // Auto-initialize SSL context for https.
-    auto result = data.make_ctx();
-    if (!result)
-      return do_start(cfg, result.error());
-    cfg.ctx = std::move(*result);
-    if (!cfg.ctx) {
-      auto err = make_error(sec::logic_error,
-                            "No SSL context set up for HTTPS schema");
-    }
+    use_ssl = true;
   } else {
     auto err = make_error(sec::invalid_argument,
-                          "URI must use http or https scheme");
-    return do_start(cfg, err);
+                          "unsupported URI scheme: expected http or https");
+    return return_t{std::move(err)};
   }
-  // Try to connect.
   return detail::tcp_try_connect(auth, data.connection_timeout,
                                  data.max_retry_count, data.retry_delay)
-    .and_then(connection_with_ctx(cfg.ctx, [this, &cfg](auto& conn) {
-      return this->do_start_impl(cfg, std::move(conn));
-    }));
+    .and_then(this->with_ssl_connection_or_socket_select(
+      use_ssl, [this, &cfg](auto&& conn) {
+        using conn_t = std::decay_t<decltype(conn)>;
+        return this->do_start_impl(cfg, std::forward<conn_t>(conn));
+      }));
 }
 
 } // namespace caf::net::http

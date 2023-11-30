@@ -23,7 +23,7 @@ public:
     auto& dref = static_cast<Subtype&>(*this);
     auto& cfg = dref.config();
     if (auto* ptr = cfg.as_has_make_ctx())
-      ptr->context_factory(std::forward<F>(factory));
+      ptr->make_ctx(std::forward<F>(factory));
     else if (cfg)
       cfg.fail(cfg.cannot_add_ctx());
     return dref;
