@@ -452,7 +452,7 @@ public:
 
   template <class F>
   auto transform(F&& f) && {
-    using res_t = decltype(f(value_));
+    using res_t = decltype(f(std::move(value_)));
     static_assert(!detail::is_expected_v<res_t>,
                   "F must not return an expected");
     if (has_value())
@@ -474,7 +474,7 @@ public:
 
   template <class F>
   auto transform(F&& f) const&& {
-    using res_t = decltype(f(value_));
+    using res_t = decltype(f(std::move(value_)));
     static_assert(!detail::is_expected_v<res_t>,
                   "F must not return an expected");
     if (has_value())
