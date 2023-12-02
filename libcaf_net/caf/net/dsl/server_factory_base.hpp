@@ -77,11 +77,11 @@ protected:
     return [this, fn = std::forward<Fn>(fn)](auto&& fd) mutable {
       using fd_t = decltype(fd);
       using res_t = decltype(fn(std::forward<fd_t>(fd)));
-      if (auto* sub = cfg_->as_has_make_ctx(); sub && sub->make_ctx_valid()) {
-        auto& make_ctx = sub->make_ctx();
-        auto ctx = make_ctx();
-        if (!ctx)
-          return res_t{ctx.error()};
+      if (auto* sub = cfg_->as_has_make_ctx(); sub && sub->make_ctx) {
+        auto maybe_ctx = sub->make_ctx();
+        if (!maybe_ctx)
+          return res_t{maybe_ctx.error()};
+        auto& ctx = *maybe_ctx;
         auto acc = ssl::tcp_acceptor{std::forward<fd_t>(fd), std::move(*ctx)};
         return fn(std::move(acc));
       }

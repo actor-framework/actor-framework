@@ -18,7 +18,7 @@
 
 namespace caf::net::http {
 
-// -- http client sending get request and awaiting response --------------------
+/// HTTP client for sending requests and receiving responses via promises.
 class CAF_NET_EXPORT async_client : public http::upper_layer::client {
 public:
   static auto make(http::method method, std::string path,

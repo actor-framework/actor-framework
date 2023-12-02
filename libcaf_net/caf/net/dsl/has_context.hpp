@@ -22,9 +22,9 @@ public:
     auto& cfg = dref.config();
     if (auto* ptr = cfg.as_has_make_ctx()) {
       auto ctx_ptr = std::make_shared<ssl::context>(std::move(ctx));
-      ptr->make_ctx([ctx_ptr]() -> expected<ssl::context> { //
-        return std::move(*ctx_ptr);
-      });
+      ptr->make_ctx = [ctx_ptr]() -> expected<std::shared_ptr<ssl::context>> {
+        return ctx_ptr;
+      };
     } else if (cfg) {
       cfg.fail(cfg.cannot_add_ctx());
     }

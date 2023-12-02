@@ -14,6 +14,7 @@
 #include "caf/make_counted.hpp"
 
 #include <cstdint>
+#include <memory>
 #include <string>
 
 namespace caf::net::dsl {
@@ -95,15 +96,21 @@ protected:
                               "required SSL but no context available");
         return res_t{std::move(err)};
       }
-      auto& make_ctx = sub->make_ctx();
-      if (!make_ctx)
-        make_ctx = [] { return ssl::context::make_client(ssl::tls::v1_2); };
-      auto ctx = make_ctx();
-      if (!ctx)
-        return res_t{ctx.error()};
+      std::shared_ptr<ssl::context> ctx;
+      if (auto& make_ctx = sub->make_ctx) {
+        auto maybe_ctx = make_ctx();
+        if (!maybe_ctx)
+          return res_t{maybe_ctx.error()};
+        ctx = std::move(*maybe_ctx);
+      } else {
+        auto maybe_ctx = ssl::context::make_client(ssl::tls::v1_2);
+        if (!maybe_ctx)
+          return res_t{maybe_ctx.error()};
+        ctx = std::make_shared<ssl::context>(std::move(*maybe_ctx));
+      }
       auto conn = ctx->new_connection(std::forward<fd_t>(fd));
       if (!conn)
-        return res_t{ctx.error()};
+        return res_t{conn.error()};
       return fn(std::move(*conn));
     };
   }
@@ -113,14 +120,15 @@ protected:
     return [this, fn = std::forward<Fn>(fn)](auto&& fd) mutable {
       using fd_t = decltype(fd);
       using res_t = decltype(fn(std::forward<fd_t>(fd)));
-      if (auto* sub = cfg_->as_has_make_ctx(); sub && sub->make_ctx_valid()) {
-        auto& make_ctx = sub->make_ctx();
-        auto ctx = make_ctx();
-        if (!ctx)
-          return res_t{ctx.error()};
+      if (auto* sub = cfg_->as_has_make_ctx(); sub && sub->make_ctx) {
+        auto& make_ctx = sub->make_ctx;
+        auto maybe_ctx = make_ctx();
+        if (!maybe_ctx)
+          return res_t{maybe_ctx.error()};
+        auto& ctx = *maybe_ctx;
         auto conn = ctx->new_connection(std::forward<fd_t>(fd));
         if (!conn)
-          return res_t{ctx.error()};
+          return res_t{conn.error()};
         return fn(std::move(*conn));
       }
       return fn(std::forward<fd_t>(fd));

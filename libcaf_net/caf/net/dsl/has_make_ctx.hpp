@@ -16,21 +16,13 @@
 
 namespace caf::net::dsl {
 
-/// Configuration for an endpoint that stores a SSL context for secure
+/// Configuration for an endpoint that stores a SSL context factory for secure
 /// networking.
 class has_make_ctx {
 public:
-  using ctx_factory = std::function<expected<ssl::context>()>;
+  using ctx_ptr = std::shared_ptr<ssl::context>;
 
-  has_make_ctx() = default;
-
-  has_make_ctx(has_make_ctx&&) = default;
-
-  has_make_ctx(const has_make_ctx&) = default;
-
-  has_make_ctx& operator=(has_make_ctx&&) = default;
-
-  has_make_ctx& operator=(const has_make_ctx&) = default;
+  using ctx_factory = std::function<expected<ctx_ptr>()>;
 
   template <class SumType>
   static auto from(SumType& data) noexcept {
@@ -46,26 +38,12 @@ public:
     return std::visit(get_ptr, data);
   }
 
-  template <typename F>
-  void make_ctx(F&& factory) noexcept {
-    make_ctx_ = std::forward<F>(factory);
-  }
-
-  auto& make_ctx() noexcept {
-    return make_ctx_;
-  }
-
-  bool make_ctx_valid() const noexcept {
-    return static_cast<bool>(make_ctx_);
-  }
-
   void assign(const has_make_ctx* other) noexcept {
-    make_ctx_ = other->make_ctx_;
+    make_ctx = other->make_ctx;
   }
 
-private:
   /// SSL context factory for lazy loading SSL on demand.
-  ctx_factory make_ctx_;
+  ctx_factory make_ctx;
 };
 
 } // namespace caf::net::dsl

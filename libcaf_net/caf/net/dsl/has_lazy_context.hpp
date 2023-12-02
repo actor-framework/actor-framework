@@ -8,6 +8,8 @@
 
 #include "caf/expected.hpp"
 
+#include <memory>
+
 namespace caf::net::dsl {
 
 /// DSL entry point for postponing the creation of a ssl context, if and when
@@ -19,11 +21,17 @@ public:
   /// @param factory The function creating the SSL context for encryption.
   /// @returns a reference to `*this`.
   template <typename F>
-  Subtype& context_factory(F&& factory) {
+  Subtype& context_factory(F factory) {
+    static_assert(std::is_same_v<decltype(factory()), expected<ssl::context>>);
     auto& dref = static_cast<Subtype&>(*this);
     auto& cfg = dref.config();
     if (auto* ptr = cfg.as_has_make_ctx())
-      ptr->make_ctx(std::forward<F>(factory));
+      ptr->make_ctx = [f = std::move(factory)]() mutable {
+        auto lift = [](ssl::context&& ctx) {
+          return std::make_shared<ssl::context>(std::move(ctx));
+        };
+        return f().transform(lift);
+      };
     else if (cfg)
       cfg.fail(cfg.cannot_add_ctx());
     return dref;
