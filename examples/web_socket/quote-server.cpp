@@ -17,7 +17,9 @@
 #include "caf/scheduled_actor/flow.hpp"
 #include "caf/span.hpp"
 
+#include <atomic>
 #include <cassert>
+#include <csignal>
 #include <iostream>
 #include <random>
 #include <utility>

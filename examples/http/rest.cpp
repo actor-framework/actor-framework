@@ -15,7 +15,9 @@
 #include "caf/scheduled_actor/flow.hpp"
 
 #include <algorithm>
+#include <atomic>
 #include <cctype>
+#include <csignal>
 #include <iostream>
 #include <string>
 #include <utility>
