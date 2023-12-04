@@ -70,6 +70,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   fully qualified name).
 - Log format strings no longer support `%C`. CAF still recognizes this option
   but it will always print `null`.
+- The function `caf::telemetry::counter::inc` now allows passing 0 as an
+  argument. Previously, passing 0 triggered an assertion when building CAF with
+  runtime checks enabled.
 
 ### Deprecated
 
