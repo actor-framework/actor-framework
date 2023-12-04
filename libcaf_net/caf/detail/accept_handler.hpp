@@ -92,7 +92,7 @@ public:
   void handle_read_event() override {
     CAF_LOG_TRACE("");
     CAF_ASSERT(owner_ != nullptr);
-    if (open_connections_ == max_connections_) {
+    if (open_connections_.size() == max_connections_) {
       owner_->deregister_reading();
     } else if (auto conn = accept(acc_)) {
       auto child = factory_->make(owner_->mpx_ptr(), std::move(*conn));
@@ -102,7 +102,8 @@ public:
         owner_->shutdown();
         return;
       }
-      if (++open_connections_ == max_connections_)
+      open_connections_.push_back(child->as_disposable());
+      if (open_connections_.size() == max_connections_)
         owner_->deregister_reading();
       child->add_cleanup_listener(on_conn_close_);
       std::ignore = child->start();
@@ -126,6 +127,9 @@ public:
     factory_->abort(reason);
     on_conn_close_.dispose();
     self_ref_ = nullptr;
+    for (auto& hdl : open_connections_)
+      hdl.dispose();
+    open_connections_.clear();
   }
 
   void self_ref(disposable ref) {
@@ -134,9 +138,14 @@ public:
 
 private:
   void connection_closed() {
-    if (open_connections_ == max_connections_)
+    auto& conns = open_connections_;
+    auto new_end = std::remove_if(conns.begin(), conns.end(),
+                                  [](auto& ptr) { return ptr.disposed(); });
+    if (new_end == conns.end())
+      return;
+    if (open_connections_.size() == max_connections_)
       owner_->register_reading();
-    --open_connections_;
+    conns.erase(new_end, conns.end());
   }
 
   Acceptor acc_;
@@ -145,7 +154,7 @@ private:
 
   size_t max_connections_;
 
-  size_t open_connections_ = 0;
+  std::vector<disposable> open_connections_;
 
   net::socket_manager* owner_ = nullptr;
 

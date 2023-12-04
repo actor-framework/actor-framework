@@ -15,12 +15,14 @@
 #include "caf/scheduled_actor/flow.hpp"
 
 #include <algorithm>
+#include <atomic>
 #include <cctype>
+#include <csignal>
 #include <iostream>
 #include <string>
 #include <utility>
 
-namespace http = caf::net::http;
+using namespace std::literals;
 
 // -- constants ----------------------------------------------------------------
 
@@ -89,9 +91,22 @@ std::string to_ascii(caf::span<const std::byte> buffer) {
 
 // -- main ---------------------------------------------------------------------
 
+namespace {
+
+std::atomic<bool> shutdown_flag;
+
+void set_shutdown_flag(int) {
+  shutdown_flag = true;
+}
+
+} // namespace
+
 int caf_main(caf::actor_system& sys, const config& cfg) {
-  using namespace std::literals;
   namespace ssl = caf::net::ssl;
+  namespace http = caf::net::http;
+  // Do a regular shutdown for CTRL+C and SIGTERM.
+  signal(SIGTERM, set_shutdown_flag);
+  signal(SIGINT, set_shutdown_flag);
   // Read the configuration.
   auto port = caf::get_or(cfg, "port", default_port);
   auto pem = ssl::format::pem;
@@ -188,8 +203,11 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
               << to_string(server.error()) << '\n';
     return EXIT_FAILURE;
   }
-  // Note: the actor system will keep the application running for as long as the
-  // kvs actor stays alive.
+  // Wait for CTRL+C or SIGTERM.
+  while (!shutdown_flag)
+    std::this_thread::sleep_for(250ms);
+  std::cerr << "*** shutting down\n";
+  server->dispose();
   return EXIT_SUCCESS;
 }
 

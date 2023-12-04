@@ -28,7 +28,9 @@
 #include <caf/stateful_actor.hpp>
 #include <caf/type_id.hpp>
 
+#include <atomic>
 #include <chrono>
+#include <csignal>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -47,6 +49,16 @@ CAF_BEGIN_TYPE_ID_BLOCK(io_test, caf::first_custom_type_id)
   CAF_ADD_TYPE_ID(io_test, (non_deserializable_t))
 
 CAF_END_TYPE_ID_BLOCK(io_test)
+
+namespace {
+
+std::atomic<bool> shutdown_flag;
+
+void set_shutdown_flag(int) {
+  shutdown_flag = true;
+}
+
+} // namespace
 
 using namespace caf;
 using namespace std::literals;
@@ -68,8 +80,10 @@ behavior actor_hdl_cell_impl() {
 }
 
 behavior controller_impl(event_based_actor* self) {
+  self->attach_functor([](const error&) { set_shutdown_flag(0); });
   return {
     [self](ok_atom) -> result<void> {
+      set_shutdown_flag(0);
       if (auto ok = self->system().middleman().unpublish(actor{self}); !ok)
         return std::move(ok.error());
       return {};
@@ -94,6 +108,11 @@ struct config : actor_system_config {
 };
 
 int server(actor_system& sys, std::string_view mode, uint16_t port) {
+  auto wait_for_shutdown = [] {
+    while (!shutdown_flag)
+      std::this_thread::sleep_for(250ms);
+    return EXIT_SUCCESS;
+  };
   auto& mm = sys.middleman();
   if (mode == "remote_actor") {
     auto cell = sys.spawn(cell_impl, 42);
@@ -112,9 +131,7 @@ int server(actor_system& sys, std::string_view mode, uint16_t port) {
                 << to_string(actual_port.error()) << '\n';
       return EXIT_FAILURE;
     }
-    for (;;) // Simply wait until Robot terminates this process.
-      std::this_thread::sleep_for(360s);
-    return EXIT_SUCCESS;
+    return wait_for_shutdown();
   }
   if (mode == "remote_lookup") {
     auto cell = sys.spawn(cell_impl, 23);
@@ -125,22 +142,25 @@ int server(actor_system& sys, std::string_view mode, uint16_t port) {
                 << to_string(actual_port.error()) << '\n';
       return EXIT_FAILURE;
     }
+    wait_for_shutdown();
+    anon_send_exit(cell, exit_reason::user_shutdown);
     return EXIT_SUCCESS;
   }
   if (mode == "unpublish" || mode == "monitor_node"
       || mode == "deserialization_error") {
-    auto actual_port = io::publish(sys.spawn(controller_impl), port);
+    auto ctrl = sys.spawn(controller_impl);
+    auto actual_port = io::publish(ctrl, port);
     if (!actual_port) {
       std::cout << "failed to open port " << port << ": "
                 << to_string(actual_port.error()) << '\n';
       return EXIT_FAILURE;
     }
+    wait_for_shutdown();
+    anon_send_exit(ctrl, exit_reason::user_shutdown);
     return EXIT_SUCCESS;
   }
   if (mode == "prometheus") {
-    for (;;) // Simply wait until Robot terminates this process.
-      std::this_thread::sleep_for(360s);
-    return EXIT_SUCCESS;
+    return wait_for_shutdown();
   }
   if (mode == "rendesvous") {
     auto cell = sys.spawn(actor_hdl_cell_impl);
@@ -150,6 +170,8 @@ int server(actor_system& sys, std::string_view mode, uint16_t port) {
                 << to_string(actual_port.error()) << '\n';
       return EXIT_FAILURE;
     }
+    wait_for_shutdown();
+    anon_send_exit(cell, exit_reason::user_shutdown);
     return EXIT_SUCCESS;
   }
   std::cout << "unknown mode: " << mode << '\n';
@@ -332,6 +354,8 @@ int client(actor_system& sys, std::string_view mode, const std::string& host,
 }
 
 int caf_main(actor_system& sys, const config& cfg) {
+  signal(SIGTERM, set_shutdown_flag);
+  signal(SIGINT, set_shutdown_flag);
   if (cfg.server)
     return server(sys, cfg.mode, cfg.port);
   else

@@ -12,6 +12,7 @@
 #include "caf/detail/latch.hpp"
 #include "caf/ipv4_address.hpp"
 
+#include <csignal>
 #include <iostream>
 #include <memory>
 #include <utility>
@@ -104,7 +105,14 @@ private:
   std::shared_ptr<detail::latch> latch_;
 };
 
+namespace {
+
+std::atomic<bool> shutdown_flag;
+
+} // namespace
+
 int caf_main(caf::actor_system& sys, const config& cfg) {
+  signal(SIGTERM, [](int) { shutdown_flag = true; });
   auto maybe_resource = caf::get_as<uri>(cfg, "resource");
   if (!maybe_resource) {
     std::cerr << "*** missing mandatory option --resource" << std::endl;

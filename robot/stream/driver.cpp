@@ -6,7 +6,19 @@
 #include "caf/event_based_actor.hpp"
 #include "caf/scheduled_actor/flow.hpp"
 
+#include <atomic>
+#include <csignal>
 #include <iostream>
+
+namespace {
+
+std::atomic<bool> shutdown_flag;
+
+void set_shutdown_flag(int) {
+  shutdown_flag = true;
+}
+
+} // namespace
 
 using namespace caf;
 using namespace std::literals;
@@ -71,6 +83,9 @@ int server(actor_system& sys, uint16_t port) {
               << to_string(actual_port.error()) << '\n';
     return EXIT_FAILURE;
   }
+  while (!shutdown_flag)
+    std::this_thread::sleep_for(250ms);
+  anon_send_exit(src, exit_reason::user_shutdown);
   return EXIT_SUCCESS;
 }
 
@@ -90,6 +105,8 @@ int client(actor_system& sys, const std::string& host, uint16_t port) {
 }
 
 int caf_main(actor_system& sys, const config& cfg) {
+  signal(SIGTERM, set_shutdown_flag);
+  signal(SIGINT, set_shutdown_flag);
   if (cfg.server_mode)
     return server(sys, cfg.port);
   else

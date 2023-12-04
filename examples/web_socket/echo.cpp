@@ -9,8 +9,12 @@
 #include "caf/event_based_actor.hpp"
 #include "caf/scheduled_actor/flow.hpp"
 
+#include <atomic>
+#include <csignal>
 #include <iostream>
 #include <utility>
+
+using namespace std::literals;
 
 // -- constants ----------------------------------------------------------------
 
@@ -41,10 +45,23 @@ struct config : caf::actor_system_config {
 // -- main ---------------------------------------------------------------------
 
 // --(rst-main-begin)--
+namespace {
+
+std::atomic<bool> shutdown_flag;
+
+void set_shutdown_flag(int) {
+  shutdown_flag = true;
+}
+
+} // namespace
+
 int caf_main(caf::actor_system& sys, const config& cfg) {
   namespace http = caf::net::http;
   namespace ssl = caf::net::ssl;
   namespace ws = caf::net::web_socket;
+  // Do a regular shutdown for CTRL+C and SIGTERM.
+  signal(SIGTERM, set_shutdown_flag);
+  signal(SIGINT, set_shutdown_flag);
   // Read the configuration.
   auto port = caf::get_or(cfg, "port", default_port);
   auto pem = ssl::format::pem;
@@ -129,8 +146,11 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
               << to_string(server.error()) << '\n';
     return EXIT_FAILURE;
   }
-  // Note: the actor system will keep the application running for as long as the
-  // worker from .start() is still alive.
+  // Wait for CTRL+C or SIGTERM.
+  while (!shutdown_flag)
+    std::this_thread::sleep_for(250ms);
+  std::cerr << "*** shutting down\n";
+  server->dispose();
   return EXIT_SUCCESS;
 }
 // --(rst-main-end)--

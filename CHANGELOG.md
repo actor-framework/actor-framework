@@ -58,6 +58,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   enabled (#1669).
 - Calling `delay_for_fn` on a flow coordinator now returns a `disposable` in
   order to be consistent with `delay_for` and `delay_until`.
+- Calling `dispose` on a server (e.g. an HTTP server) now properly closes all
+  open connections.
 
 ### Changed
 
