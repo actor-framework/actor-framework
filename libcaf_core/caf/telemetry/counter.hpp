@@ -50,9 +50,9 @@ public:
   }
 
   /// Increments the counter by `amount`.
-  /// @pre `amount > 0`
+  /// @pre `amount >= 0`
   void inc(value_type amount) noexcept {
-    CAF_ASSERT(amount > 0);
+    CAF_ASSERT(amount >= 0);
     gauge_.inc(amount);
   }
 
