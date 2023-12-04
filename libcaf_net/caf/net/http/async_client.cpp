@@ -56,7 +56,7 @@ caf::error async_client::send_request() {
     down->add_header_field("Content-Length", std::to_string(payload_.size()));
   down->end_header();
   if (!payload_.empty())
-    down->send_payload(as_bytes(make_span(payload_)));
+    down->send_payload(payload_);
   // Await response.
   down->request_messages();
   return caf::none;

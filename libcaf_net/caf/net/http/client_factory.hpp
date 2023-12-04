@@ -95,24 +95,19 @@ public:
   expected<std::pair<async::future<response>, disposable>>
   request(http::method method, std::string_view payload = std::string_view{});
 
+  /// Utility function to make a request with given parameters.
+  expected<std::pair<async::future<response>, disposable>>
+  request(http::method method, const_byte_span payload);
+
 private:
   using return_t = expected<std::pair<async::future<response>, disposable>>;
 
   template <typename Conn>
-  return_t do_start_impl(config_type& cfg, Conn conn) {
-    using transport_t = typename Conn::transport_type;
-    auto app_t = async_client::make(cfg.method, cfg.path, cfg.fields,
-                                    cfg.payload);
-    auto ret = app_t->get_future();
-    auto http_client = http::client::make(std::move(app_t));
-    auto transport = transport_t::make(std::move(conn), std::move(http_client));
-    transport->active_policy().connect();
-    auto ptr = net::socket_manager::make(cfg.mpx, std::move(transport));
-    cfg.mpx->start(ptr);
-    return std::pair{std::move(ret), disposable{std::move(ptr)}};
-  }
+  return_t do_start_impl(config_type& cfg, Conn conn, http::method method,
+                         const_byte_span payload);
 
-  return_t do_start(config_type& cfg, dsl::client_config::lazy& data);
+  return_t do_start(config_type& cfg, dsl::client_config::lazy& data,
+                    http::method method, const_byte_span payload);
 
   return_t do_start(config_type& cfg, error err) {
     cfg.call_on_error(err);

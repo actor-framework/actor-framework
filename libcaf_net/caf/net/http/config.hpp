@@ -68,13 +68,9 @@ struct CAF_NET_EXPORT client_config
     return ptr;
   }
 
-  http::method method;
-
   std::string path;
 
   caf::unordered_flat_map<std::string, std::string> fields;
-
-  std::string payload;
 };
 
 } // namespace caf::net::http

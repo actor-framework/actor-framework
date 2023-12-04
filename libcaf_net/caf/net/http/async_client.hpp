@@ -23,14 +23,15 @@ class CAF_NET_EXPORT async_client : public http::upper_layer::client {
 public:
   static auto make(http::method method, std::string path,
                    unordered_flat_map<std::string, std::string> fields,
-                   std::string payload) {
+                   const_byte_span payload) {
     return std::make_unique<async_client>(method, std::move(path), fields,
-                                          std::move(payload));
+                                          byte_buffer{payload.begin(),
+                                                      payload.end()});
   }
 
   async_client(http::method method, std::string path,
                unordered_flat_map<std::string, std::string> fields,
-               std::string payload)
+               byte_buffer payload)
     : method_{method},
       path_{std::move(path)},
       fields_{std::move(fields)},
@@ -64,7 +65,7 @@ private:
   http::method method_;
   std::string path_;
   unordered_flat_map<std::string, std::string> fields_;
-  std::string payload_;
+  byte_buffer payload_;
   async::promise<response> response_;
 };
 
