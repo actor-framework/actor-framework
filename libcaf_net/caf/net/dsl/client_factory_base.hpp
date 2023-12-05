@@ -14,11 +14,12 @@
 #include "caf/make_counted.hpp"
 
 #include <cstdint>
+#include <memory>
 #include <string>
 
 namespace caf::net::dsl {
 
-/// Base type for client factories for use with `can_connect`.
+/// Base type for client factories for use with `has_connect`.
 template <class Config, class Derived>
 class client_factory_base {
 public:
@@ -79,9 +80,71 @@ public:
     return *cfg_;
   }
 
-private:
+protected:
   Derived& dref() {
     return static_cast<Derived&>(*this);
+  }
+
+  template <class Fn>
+  auto with_ssl_connection(Fn&& fn) {
+    return [this, fn = std::forward<Fn>(fn)](auto&& fd) mutable {
+      using fd_t = decltype(fd);
+      using res_t = decltype(fn(std::forward<fd_t>(fd)));
+      auto* sub = cfg_->as_has_make_ctx();
+      if (sub == nullptr) {
+        auto err = make_error(sec::logic_error,
+                              "required SSL but no context available");
+        return res_t{std::move(err)};
+      }
+      std::shared_ptr<ssl::context> ctx;
+      if (auto& make_ctx = sub->make_ctx) {
+        auto maybe_ctx = make_ctx();
+        if (!maybe_ctx)
+          return res_t{maybe_ctx.error()};
+        ctx = std::move(*maybe_ctx);
+      } else {
+        auto maybe_ctx = ssl::context::make_client(ssl::tls::v1_2);
+        if (!maybe_ctx)
+          return res_t{maybe_ctx.error()};
+        ctx = std::make_shared<ssl::context>(std::move(*maybe_ctx));
+      }
+      auto conn = ctx->new_connection(std::forward<fd_t>(fd));
+      if (!conn)
+        return res_t{conn.error()};
+      return fn(std::move(*conn));
+    };
+  }
+
+  template <class Fn>
+  auto with_ssl_connection_or_socket(Fn&& fn) {
+    return [this, fn = std::forward<Fn>(fn)](auto&& fd) mutable {
+      using fd_t = decltype(fd);
+      using res_t = decltype(fn(std::forward<fd_t>(fd)));
+      if (auto* sub = cfg_->as_has_make_ctx(); sub && sub->make_ctx) {
+        auto& make_ctx = sub->make_ctx;
+        auto maybe_ctx = make_ctx();
+        if (!maybe_ctx)
+          return res_t{maybe_ctx.error()};
+        auto& ctx = *maybe_ctx;
+        auto conn = ctx->new_connection(std::forward<fd_t>(fd));
+        if (!conn)
+          return res_t{conn.error()};
+        return fn(std::move(*conn));
+      }
+      return fn(std::forward<fd_t>(fd));
+    };
+  }
+
+  template <class Fn>
+  auto with_ssl_connection_or_socket_select(bool use_ssl, Fn&& fn) {
+    return [this, use_ssl, fn = std::forward<Fn>(fn)](auto&& fd) mutable {
+      using fd_t = decltype(fd);
+      if (use_ssl) {
+        auto g = with_ssl_connection(std::move(fn));
+        return g(std::forward<fd_t>(fd));
+      }
+      return fn(std::forward<fd_t>(fd));
+    };
   }
 
   config_pointer cfg_;

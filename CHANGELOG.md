@@ -60,6 +60,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   order to be consistent with `delay_for` and `delay_until`.
 - Calling `dispose` on a server (e.g. an HTTP server) now properly closes all
   open connections.
+- Fix static assert in `expected` when calling `transform` on an rvalue with a
+  function object that only accepts an rvalue.
 
 ### Changed
 

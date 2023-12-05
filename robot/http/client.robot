@@ -2,6 +2,7 @@
 Documentation       A test suite for the http client functionality
 
 Library             Process
+Library             String
 Library             HttpCtrl.Server
 
 Test Setup          Initialize HTTP Server
@@ -13,26 +14,48 @@ ${HTTP_URL}         http://localhost:55516
 ${BINARY_PATH}      /path/to/the/client
 
 ${RES1}=            SEPARATOR=\n
-...                 HTTP/1.0 200 OK
-...                 Server:HttpCtrl.Server/
-...                 ${EMPTY}
+...                 Server responded with HTTP 200: OK
+...                 Header fields:
+...                 - Server: HttpCtrl.Server/
+...                 - Date:
 
 ${RES2}=            SEPARATOR=\n
-...                 HTTP/1.0 200 OK
-...                 Server:HttpCtrl.Server/
-...                 Content-Length:25
+...                 Server responded with HTTP 200: OK
+...                 Header fields:
+...                 - Server: HttpCtrl.Server/
+...                 - Date:
+...                 - Content-Length: 25
+...                 Payload:
 ...                 { "status": "accepted" }
 ...                 ${EMPTY}
 
+${RES3}=            SEPARATOR=\n
+...                 Server responded with HTTP 200: OK
+...                 Header fields:
+...                 - Server: HttpCtrl.Server/
+...                 - Date:
+...                 - Content-Length: 8
+...                 Payload:
+...                 ff00ff00ff00ff00
+
 
 *** Test Cases ***
-Send GET request to server
+Send GET request to server and receive UTF8 payload
     Send Request
     Wait For Request
     Reply By    200    { "status": "accepted" }\n
     Check Request Equals    GET    /    ${None}
     ${response}=    Await Response
     Should Be Equal As Strings    ${response}    ${RES2}
+
+Send GET request to server and receive binary payload
+    Send Request
+    Wait For Request
+    ${data}=    Convert To Bytes    FF 00 FF 00 FF 00 FF 00    input_type=hex
+    Reply By    200    ${data}
+    Check Request Equals    GET    /    ${None}
+    ${response}=    Await Response
+    Should Be Equal As Strings    ${response}    ${RES3}
 
 Send HEAD request to server
     Send Request    -m    head
@@ -68,11 +91,12 @@ Terminate HTTP Server
 
 Send Request
     [Arguments]    @{args}
-    Start Process    ${BINARY_PATH}    -r    ${HTTP_URL}    @{args}    alias=client
+    Start Process    ${BINARY_PATH}    @{args}    ${HTTP_URL}    alias=client
 
 Await Response
     ${result}=    Wait For Process    client
-    RETURN    ${result.stdout}
+    ${output}=    Replace String Using Regexp    ${result.stdout}    - Date: .*    - Date:
+    RETURN    ${output}
 
 Check Request Equals
     [Arguments]    ${expected_method}    ${expected_url}    ${expected_body}

@@ -25,7 +25,8 @@ namespace caf::net::web_socket {
 /// Entry point for the `with(...)` DSL.
 template <class Trait>
 class with_t : public extend<dsl::base, with_t<Trait>>::template //
-               with<dsl::has_accept, dsl::has_uri_connect, dsl::has_context> {
+               with<dsl::has_accept, dsl::has_connect, dsl::has_uri_connect,
+                    dsl::has_context> {
 public:
   using config_type = base_config<Trait>;
 

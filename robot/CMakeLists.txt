@@ -63,15 +63,6 @@ add_test(
       --variable BINARY_PATH:$<TARGET_FILE:caf-robot-flow-merge-driver>
       "${CMAKE_CURRENT_SOURCE_DIR}/flow/merge/merge.robot")
 
-add_test(
-  NAME "robot-http-rest"
-  COMMAND
-    ${Python_EXECUTABLE}
-      -m robot
-      --variable BINARY_PATH:$<TARGET_FILE:rest>
-      --variable SSL_PATH:${CMAKE_CURRENT_SOURCE_DIR}
-      "${CMAKE_CURRENT_SOURCE_DIR}/http/rest.robot")
-
 # The logging test assumes that the CAF_LOG_LEVEL is set to TRACE.
 if (CAF_LOG_LEVEL STREQUAL "TRACE")
   caf_add_test_executable(
@@ -125,7 +116,7 @@ if(TARGET CAF::io)
 endif()
 
 # -- tests for the CAF::net module ---------------------------------------------
-if(TARGET CAF::net)
+if(TARGET CAF::net AND CAF_ENABLE_EXAMPLES)
 
   add_test(
     NAME "robot-web-socket-quote-server"
@@ -145,19 +136,22 @@ if(TARGET CAF::net)
         --variable SSL_PATH:${CMAKE_CURRENT_SOURCE_DIR}
         "${CMAKE_CURRENT_SOURCE_DIR}/web_socket/echo.robot")
 
-  caf_add_test_executable(
-    caf-robot-http-client-driver
-    SOURCES
-      http/client-driver.cpp
-    DEPENDENCIES
-      CAF::net)
+add_test(
+  NAME "robot-http-rest"
+  COMMAND
+    ${Python_EXECUTABLE}
+      -m robot
+      --variable BINARY_PATH:$<TARGET_FILE:rest>
+      --variable SSL_PATH:${CMAKE_CURRENT_SOURCE_DIR}
+      "${CMAKE_CURRENT_SOURCE_DIR}/http/rest.robot")
+
 
   add_test(
     NAME "robot-http-client"
     COMMAND
       ${Python_EXECUTABLE}
         -m robot
-        --variable BINARY_PATH:$<TARGET_FILE:caf-robot-http-client-driver>
+        --variable BINARY_PATH:$<TARGET_FILE:client>
         "${CMAKE_CURRENT_SOURCE_DIR}/http/client.robot")
 
 endif()

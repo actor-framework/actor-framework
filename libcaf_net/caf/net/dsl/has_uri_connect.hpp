@@ -20,12 +20,8 @@ namespace caf::net::dsl {
 
 /// DSL entry point for creating a client from an URI.
 template <class Base, class Subtype>
-class has_uri_connect : public has_connect<Base, Subtype> {
+class has_uri_connect : public Base {
 public:
-  using super = has_connect<Base, Subtype>;
-
-  using super::connect;
-
   /// Creates a `connect_factory` object for the given TCP `endpoint`.
   ///
   /// @param endpoint The endpoint of the TCP server to connect to.

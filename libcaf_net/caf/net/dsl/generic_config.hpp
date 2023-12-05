@@ -31,7 +31,7 @@ public:
   static constexpr size_t fail_index = 0;
 
   /// Configuration for a client that creates the socket on demand.
-  class lazy : public has_ctx {
+  class lazy : public has_make_ctx {
   public:
     static constexpr std::string_view name = "lazy";
   };

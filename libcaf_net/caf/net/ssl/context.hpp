@@ -7,6 +7,7 @@
 #include "caf/net/dsl/arg.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/socket_guard.hpp"
+#include "caf/net/ssl/connection.hpp"
 #include "caf/net/ssl/dtls.hpp"
 #include "caf/net/ssl/format.hpp"
 #include "caf/net/ssl/password.hpp"

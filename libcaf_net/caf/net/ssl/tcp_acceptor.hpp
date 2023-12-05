@@ -10,7 +10,9 @@
 
 #include "caf/detail/net_export.hpp"
 #include "caf/expected.hpp"
+#include "caf/logger.hpp"
 
+#include <memory>
 #include <variant>
 
 namespace caf::net::ssl {
@@ -35,7 +37,12 @@ public:
   tcp_acceptor& operator=(tcp_acceptor&& other);
 
   tcp_acceptor(tcp_accept_socket fd, context ctx)
-    : fd_(fd), ctx_(std::move(ctx)) {
+    : fd_(fd), ctx_(std::make_shared<context>(std::move(ctx))) {
+    // nop
+  }
+
+  tcp_acceptor(tcp_accept_socket fd, std::shared_ptr<context> ctx)
+    : fd_(fd), ctx_(ctx) {
     // nop
   }
 
@@ -74,16 +81,16 @@ public:
   }
 
   context& ctx() noexcept {
-    return ctx_;
+    return *ctx_;
   }
 
   const context& ctx() const noexcept {
-    return ctx_;
+    return *ctx_;
   }
 
 private:
   tcp_accept_socket fd_;
-  context ctx_;
+  std::shared_ptr<context> ctx_;
 };
 
 // -- free functions -----------------------------------------------------------

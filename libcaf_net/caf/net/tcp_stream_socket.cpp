@@ -187,11 +187,8 @@ expected<tcp_stream_socket> make_connected_tcp_stream_socket(std::string host,
 namespace caf::detail {
 
 expected<net::tcp_stream_socket>
-tcp_try_connect(std::string host, uint16_t port, timespan connection_timeout,
+tcp_try_connect(const uri::authority_type& auth, timespan connection_timeout,
                 size_t max_retry_count, timespan retry_delay) {
-  uri::authority_type auth;
-  auth.host = std::move(host);
-  auth.port = port;
   auto result = net::make_connected_tcp_stream_socket(auth, connection_timeout);
   if (result)
     return result;
@@ -202,6 +199,16 @@ tcp_try_connect(std::string host, uint16_t port, timespan connection_timeout,
       return result;
   }
   return result;
+}
+
+expected<net::tcp_stream_socket>
+tcp_try_connect(std::string host, uint16_t port, timespan connection_timeout,
+                size_t max_retry_count, timespan retry_delay) {
+  uri::authority_type auth;
+  auth.host = std::move(host);
+  auth.port = port;
+  return tcp_try_connect(auth, connection_timeout, max_retry_count,
+                         retry_delay);
 }
 
 } // namespace caf::detail

@@ -90,6 +90,7 @@ else()
   endfunction()
 endif()
 
+add_net_example(http client)
 add_net_example(http rest)
 add_net_example(http time-server)
 

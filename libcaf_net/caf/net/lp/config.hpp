@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/net/dsl/client_config.hpp"
 #include "caf/net/dsl/generic_config.hpp"
 #include "caf/net/dsl/server_config.hpp"
 #include "caf/net/stream_socket.hpp"

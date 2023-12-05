@@ -169,9 +169,11 @@ private:
                                 dsl::server_config::socket& data,
                                 OnStart& on_start) {
     return checked_socket(data.take_fd())
-      .and_then(data.acceptor_with_ctx([this, &cfg, &on_start](auto& acc) {
-        return this->do_start_impl(cfg, std::move(acc), on_start);
-      }));
+      .and_then(
+        this->with_ssl_acceptor_or_socket([this, &cfg, &on_start](auto&& acc) {
+          using acc_t = decltype(acc);
+          return this->do_start_impl(cfg, std::forward<acc_t>(acc), on_start);
+        }));
   }
 
   template <class OnStart>
@@ -179,9 +181,11 @@ private:
                                 dsl::server_config::lazy& data,
                                 OnStart& on_start) {
     return make_tcp_accept_socket(data.port, data.bind_address, data.reuse_addr)
-      .and_then(data.acceptor_with_ctx([this, &cfg, &on_start](auto& acc) {
-        return this->do_start_impl(cfg, std::move(acc), on_start);
-      }));
+      .and_then(
+        this->with_ssl_acceptor_or_socket([this, &cfg, &on_start](auto&& acc) {
+          using acc_t = decltype(acc);
+          return this->do_start_impl(cfg, std::forward<acc_t>(acc), on_start);
+        }));
   }
 
   template <class OnStart>

@@ -125,9 +125,11 @@ private:
     return detail::tcp_try_connect(std::move(addr.host), addr.port,
                                    data.connection_timeout,
                                    data.max_retry_count, data.retry_delay)
-      .and_then(data.connection_with_ctx([this, &cfg, &on_start](auto& conn) {
-        return this->do_start_impl(cfg, std::move(conn), on_start);
-      }));
+      .and_then(this->with_ssl_connection_or_socket(
+        [this, &cfg, &on_start](auto&& conn) {
+          using conn_t = decltype(conn);
+          return this->do_start_impl(cfg, std::forward<conn_t>(conn), on_start);
+        }));
   }
 
   template <class OnStart>
@@ -135,9 +137,11 @@ private:
                                 dsl::client_config::socket& data,
                                 OnStart& on_start) {
     return checked_socket(data.take_fd())
-      .and_then(data.connection_with_ctx([this, &cfg, &on_start](auto& conn) {
-        return this->do_start_impl(cfg, std::move(conn), on_start);
-      }));
+      .and_then(this->with_ssl_connection_or_socket(
+        [this, &cfg, &on_start](auto&& conn) {
+          using conn_t = decltype(conn);
+          return this->do_start_impl(cfg, std::forward<conn_t>(conn), on_start);
+        }));
   }
 
   template <class OnStart>

@@ -42,7 +42,7 @@ struct server_address {
 class client_config {
 public:
   /// Configuration for a client that creates the socket on demand.
-  class CAF_NET_EXPORT lazy : public has_ctx {
+  class CAF_NET_EXPORT lazy : public has_make_ctx {
   public:
     /// Type for holding a client address.
     using server_t = std::variant<server_address, uri>;
@@ -76,7 +76,7 @@ public:
   static constexpr auto lazy_v = lazy_t{};
 
   /// Configuration for a client that uses a user-provided socket.
-  class CAF_NET_EXPORT socket : public has_ctx {
+  class CAF_NET_EXPORT socket : public has_make_ctx {
   public:
     static constexpr std::string_view name = "socket";
 
