@@ -6,7 +6,6 @@
 
 #include "caf/net/stream_socket.hpp"
 
-#include "caf/byte.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/detail/socket_sys_aliases.hpp"
 #include "caf/detail/socket_sys_includes.hpp"
