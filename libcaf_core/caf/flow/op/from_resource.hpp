@@ -161,7 +161,7 @@ private:
         buf_ = nullptr;
       }
       if (out_)
-        out_.on_complete();
+        out_.on_error(make_error(sec::disposed));
       return;
     }
     while (demand_ > 0) {

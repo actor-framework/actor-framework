@@ -74,7 +74,12 @@ public:
     /// Called either from an event to safely dispose the subscription or from
     /// `cancel` directly.
     /// @param from_external Whether the call originates from outside of the
-    ///                      event loop.
+    ///                      event loop. When `true`, the implementation shall
+    ///                      call `on_error` on the observer with error code
+    ///                      `sec::disposed`. Otherwise, the implementation
+    ///                      can safely assume that the subscriber has invoked
+    ///                      this call and thus the implementation can simply
+    ///                      drop its reference to the observer.
     virtual void do_dispose(bool from_external) = 0;
   };
 

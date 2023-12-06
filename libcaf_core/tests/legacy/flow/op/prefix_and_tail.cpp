@@ -372,7 +372,7 @@ SCENARIO("disposing the tail of head_and_tail disposes the operator") {
         CHECK(got_tail);
         CHECK_EQ(tail_values, 0);
         CHECK(sub.disposed());
-        CHECK(snk->completed());
+        CHECK(snk->aborted());
       }
       ctx->run();
     }

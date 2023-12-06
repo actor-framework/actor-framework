@@ -196,7 +196,7 @@ private:
     value_sub_.cancel();
     control_sub_.cancel();
     if (from_external)
-      out_.on_complete();
+      out_.on_error(make_error(sec::disposed));
     else
       out_.release_later();
   }

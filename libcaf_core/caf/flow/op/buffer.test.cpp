@@ -448,7 +448,7 @@ SCENARIO("disposing a buffer operator completes the flow") {
         run_flows();
         uut->dispose();
         run_flows();
-        check(snk->completed());
+        check(snk->aborted());
       }
     }
   }

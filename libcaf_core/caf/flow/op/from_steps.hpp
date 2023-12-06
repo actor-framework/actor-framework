@@ -170,7 +170,7 @@ private:
     demand_ = 0;
     buf_.clear();
     if (from_external)
-      out_.on_complete();
+      out_.on_error(make_error(sec::disposed));
     else
       out_.release_later();
   }

@@ -69,10 +69,12 @@ private:
       return;
     completed_ = true;
     buf_.clear();
-    if (from_external)
+    if (from_external) {
+      err_ = make_error(sec::disposed);
       fin();
-    else
+    } else {
       out_.release_later();
+    }
   }
 
   void run_later() {

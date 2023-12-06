@@ -75,7 +75,7 @@ SCENARIO("concat operators combine inputs") {
         ctx->run();
         sub.dispose();
         ctx->run();
-        CHECK(snk->completed());
+        CHECK(snk->aborted());
         CHECK(snk->buf.empty());
       }
     }
@@ -108,7 +108,7 @@ SCENARIO("concat operators combine inputs") {
         ctx->run();
         sub.dispose();
         ctx->run();
-        CHECK(snk->completed());
+        CHECK(snk->aborted());
         CHECK(snk->buf.empty());
       }
     }

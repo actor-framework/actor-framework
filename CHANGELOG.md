@@ -75,6 +75,10 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The function `caf::telemetry::counter::inc` now allows passing 0 as an
   argument. Previously, passing 0 triggered an assertion when building CAF with
   runtime checks enabled.
+- Calling `dispose` on a flow subscription now calls `on_error(sec::disposed)`
+  on the observer. Previously, CAF would simply call `on_complete()` on the
+  observer, making it impossible to distinguish between a normal completion and
+  disposal.
 
 ### Deprecated
 

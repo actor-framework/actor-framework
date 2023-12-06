@@ -163,7 +163,7 @@ private:
     }
     CAF_ASSERT(out_);
     if (from_external)
-      out_.on_complete();
+      out_.on_error(make_error(sec::disposed));
     else
       out_.release_later();
   }

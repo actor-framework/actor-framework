@@ -167,7 +167,7 @@ public:
       lptr->on_disposed(this, true);
     }
     if (out)
-      out.on_complete();
+      out.on_error(make_error(sec::disposed));
   }
 
   void cancel() {
