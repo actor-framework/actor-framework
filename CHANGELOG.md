@@ -86,6 +86,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The implementation of `operator<` for `caf::unordered_flat_map` was broken and
   relied on the order of elements in the map. We have removed it, since it has
   never worked correctly and a correct implementation would be too expensive.
+- We removed the already deprecated file `caf/byte.hpp`, since we use the c++ 17
+  standard.
 
 ## [0.19.4] - 2023-09-29
 
