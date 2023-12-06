@@ -2,7 +2,7 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE flow.prefix_and_tail
+#define CAF_SUITE flow.op.prefix_and_tail
 
 #include "caf/flow/op/prefix_and_tail.hpp"
 
@@ -299,6 +299,7 @@ SCENARIO("head_and_tail requests the prefix as soon as possible") {
         auto in_sub = ctx->add_child(std::in_place_type<sub_t>);
         uut->on_subscribe(flow::subscription{in_sub});
         CHECK_EQ(in_sub->demand, 7u);
+        snk->unsubscribe();
       }
     }
   }
@@ -319,6 +320,7 @@ SCENARIO("head_and_tail disposes unexpected subscriptions") {
         uut->on_subscribe(flow::subscription{sub2});
         CHECK(!sub1->disposed());
         CHECK(sub2->disposed());
+        snk->unsubscribe();
       }
     }
   }
