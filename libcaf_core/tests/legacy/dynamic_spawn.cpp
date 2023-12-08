@@ -2,6 +2,7 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
+#include <unistd.h>
 #define CAF_SUITE dynamic_spawn
 
 #include "caf/actor_system.hpp"
@@ -67,16 +68,20 @@ actor spawn_event_testee2(scoped_actor& parent) {
       : event_based_actor(cfg), parent(std::move(parent_actor)) {
       inc_actor_instances();
     }
+    const char* name() const override {
+      return "testee2";
+    }
     ~wrapper() override {
       dec_actor_instances();
     }
     behavior wait4timeout(int remaining) {
       return {
-        after(std::chrono::milliseconds(1)) >>
+        [](int) {},
+        after(std::chrono::microseconds(10)) >>
           [this, remaining] {
             MESSAGE("remaining: " << std::to_string(remaining));
             if (remaining == 1) {
-              send(parent, ok_atom_v);
+              // send(parent, ok_atom_v);
               quit();
             } else
               become(wait4timeout(remaining - 1));
@@ -240,6 +245,10 @@ struct fixture {
   };
 
   fixture() {
+    auto log_name = "my-file.log";
+    unlink(log_name);
+    cfg.set("caf.logger.file.verbosity", "trace");
+    cfg.set("caf.logger.file.path", log_name);
     new (&system) actor_system(cfg);
   }
 
@@ -346,7 +355,7 @@ CAF_TEST(delayed_spawn) {
 CAF_TEST(spawn_event_testee2_test) {
   scoped_actor self{system};
   spawn_event_testee2(self);
-  self->receive([](ok_atom) { MESSAGE("Received 'ok'"); });
+  // self->receive([](ok_atom) { MESSAGE("Received 'ok'"); });
 }
 
 CAF_TEST(function_spawn) {

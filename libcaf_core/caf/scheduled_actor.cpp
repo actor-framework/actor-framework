@@ -983,6 +983,7 @@ void scheduled_actor::run_actions() {
   if (!actions_.empty()) {
     // Note: can't use iterators here since actions may add to the vector.
     for (auto index = size_t{0}; index < actions_.size(); ++index) {
+      CAF_LOG_DEBUG("Running action");
       auto f = std::move(actions_[index]);
       f.run();
     }

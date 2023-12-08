@@ -9,6 +9,7 @@
 #include "caf/actor_control_block.hpp"
 #include "caf/disposable.hpp"
 #include "caf/group.hpp"
+#include "caf/logger.hpp"
 #include "caf/sec.hpp"
 
 namespace caf {
@@ -30,6 +31,7 @@ public:
   }
 
   void dispose() override {
+    CAF_LOG_TRACE("disposing a decorated action");
     decorated_->dispose();
     std::unique_lock guard(mtx_);
     worker_ = nullptr;
