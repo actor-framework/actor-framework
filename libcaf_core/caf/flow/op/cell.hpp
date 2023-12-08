@@ -140,15 +140,6 @@ public:
     return !state_;
   }
 
-  void dispose() override {
-    if (state_) {
-      state_->drop(this);
-      state_ = nullptr;
-    }
-    if (out_)
-      out_.on_complete();
-  }
-
   void request(size_t) override {
     if (!listening_) {
       listening_ = true;
@@ -187,6 +178,19 @@ public:
   }
 
 private:
+  void do_dispose(bool from_external) override {
+    if (state_) {
+      state_->drop(this);
+      state_ = nullptr;
+    }
+    if (out_) {
+      if (from_external)
+        out_.on_error(make_error(sec::disposed));
+      else
+        out_.release_later();
+    }
+  }
+
   coordinator* parent_;
   bool listening_ = false;
   cell_sub_state_ptr<T> state_;

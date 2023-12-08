@@ -50,7 +50,7 @@ SCENARIO("repeater sources repeat one value indefinitely") {
           snk->sub.request(4);
           ctx->run();
           CHECK_EQ(snk->buf, ivec({42, 42, 42, 42, 42, 42, 42}));
-          snk->sub.dispose();
+          snk->sub.cancel();
           ctx->run();
           CHECK_EQ(snk->buf, ivec({42, 42, 42, 42, 42, 42, 42}));
         }
@@ -136,7 +136,7 @@ SCENARIO("callable sources stream values generated from a function object") {
           snk->sub.request(4);
           ctx->run();
           CHECK_EQ(snk->buf, ivec({1, 2, 3, 4, 5, 6, 7}));
-          snk->sub.dispose();
+          snk->sub.cancel();
           ctx->run();
           CHECK_EQ(snk->buf, ivec({1, 2, 3, 4, 5, 6, 7}));
         }
@@ -265,6 +265,7 @@ SCENARIO("asynchronous buffers can generate flow items") {
         auto bg_thread = std::thread{producer_impl, push, &cancelled};
         sub.dispose();
         ctx->run();
+        CHECK_EQ(ctx->watched_disposables_count(), 0u);
         CHECK(res.empty());
         bg_thread.join();
         CHECK(cancelled);

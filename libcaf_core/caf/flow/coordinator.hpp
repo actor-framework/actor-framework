@@ -105,7 +105,7 @@ public:
   ///@copydoc delay
   template <class F>
   void delay_fn(F&& what) {
-    return delay(make_action(std::forward<F>(what)));
+    return delay(make_single_shot_action(std::forward<F>(what)));
   }
 
   /// Delays execution of an action with an absolute timeout.
@@ -117,7 +117,8 @@ public:
   ///@copydoc delay
   template <class F>
   disposable delay_until_fn(steady_time_point abs_time, F&& what) {
-    return delay_until(abs_time, make_action(std::forward<F>(what)));
+    return delay_until(abs_time,
+                       make_single_shot_action(std::forward<F>(what)));
   }
 
   /// Delays execution of an action with a relative timeout.
@@ -131,7 +132,7 @@ public:
   ///@copydoc delay_for
   template <class F>
   disposable delay_for_fn(timespan rel_time, F&& what) {
-    return delay_for(rel_time, make_action(std::forward<F>(what)));
+    return delay_for(rel_time, make_single_shot_action(std::forward<F>(what)));
   }
 
 private:

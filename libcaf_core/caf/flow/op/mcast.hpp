@@ -46,18 +46,18 @@ public:
     return !state_ || state_->disposed;
   }
 
-  void dispose() override {
+  void request(size_t n) override {
+    state_->request(n);
+  }
+
+private:
+  void do_dispose(bool) override {
     if (state_) {
       auto state = std::move(state_);
       state->dispose();
     }
   }
 
-  void request(size_t n) override {
-    state_->request(n);
-  }
-
-private:
   /// Stores the context (coordinator) that runs this flow.
   coordinator* parent_;
 
@@ -210,19 +210,20 @@ public:
 
   // -- implementation of ucast_sub_state_listener -----------------------------
 
-  void on_disposed(state_type* ptr) final {
-    super::parent_->delay_fn([mc = strong_this(), sptr = state_ptr_type{ptr}] {
-      if (auto i = std::find(mc->states_.begin(), mc->states_.end(), sptr);
-          i != mc->states_.end()) {
-        // We don't care about preserving the order of elements in the vector.
-        // Hence, we can swap the element to the back and then pop it.
-        auto last = mc->states_.end() - 1;
-        if (i != last)
-          std::swap(*i, *last);
-        mc->states_.pop_back();
-        mc->do_dispose(sptr);
-      }
-    });
+  void on_disposed(state_type* ptr, bool from_external) final {
+    super::parent_->delay_fn(
+      [mc = strong_this(), sptr = state_ptr_type{ptr}, from_external] {
+        if (auto i = std::find(mc->states_.begin(), mc->states_.end(), sptr);
+            i != mc->states_.end()) {
+          // We don't care about preserving the order of elements in the vector.
+          // Hence, we can swap the element to the back and then pop it.
+          auto last = mc->states_.end() - 1;
+          if (i != last)
+            std::swap(*i, *last);
+          mc->states_.pop_back();
+          mc->do_dispose(sptr, from_external);
+        }
+      });
   }
 
 protected:
@@ -236,7 +237,7 @@ private:
   }
 
   /// Called whenever a state is disposed.
-  virtual void do_dispose(const state_ptr_type&) {
+  virtual void do_dispose(const state_ptr_type&, bool) {
     // nop
   }
 };

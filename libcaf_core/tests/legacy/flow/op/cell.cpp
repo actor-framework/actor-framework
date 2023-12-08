@@ -102,10 +102,9 @@ SCENARIO("a cell with a value emits exactly one item") {
         // Normally, we'd call snk->unsubscribe() here. However, that nulls the
         // subscription. We want the sub.disposed() call below actually call
         // cell_sub::disposed() to have coverage on that member function.
-        snk->sub.ptr()->dispose();
+        snk->sub.ptr()->cancel();
         snk->state = flow::observer_state::idle;
         ctx->run();
-        CHECK(snk->sub.disposed());
         CHECK(snk->idle());
         uut->set_value(42);
         ctx->run();

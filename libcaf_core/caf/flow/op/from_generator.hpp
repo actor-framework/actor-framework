@@ -57,14 +57,6 @@ public:
     return !out_;
   }
 
-  void dispose() override {
-    if (out_) {
-      completed_ = true;
-      buf_.clear();
-      run_later();
-    }
-  }
-
   void request(size_t n) override {
     CAF_ASSERT(out_.valid());
     demand_ += n;
@@ -72,6 +64,19 @@ public:
   }
 
 private:
+  void do_dispose(bool from_external) override {
+    if (!out_)
+      return;
+    completed_ = true;
+    buf_.clear();
+    if (from_external) {
+      err_ = make_error(sec::disposed);
+      fin();
+    } else {
+      out_.release_later();
+    }
+  }
+
   void run_later() {
     if (!running_) {
       running_ = true;
@@ -154,9 +159,8 @@ public:
     using impl_t = from_generator_sub<Generator, Steps...>;
     auto ptr = super::parent_->add_child(std::in_place_type<impl_t>, out, gen_,
                                          steps_);
-    auto sub = subscription{std::move(ptr)};
-    out.on_subscribe(sub);
-    return std::move(sub).as_disposable();
+    out.on_subscribe(subscription{ptr});
+    return ptr->as_disposable();
   }
 
 private:

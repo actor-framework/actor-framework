@@ -20,9 +20,8 @@ namespace caf::flow::op {
 
 /// @relates prefix_and_tail
 template <class T>
-class prefix_and_tail_sub : public detail::plain_ref_counted,
+class prefix_and_tail_sub : public subscription::impl_base,
                             public observer_impl<T>,
-                            public subscription_impl,
                             public ucast_sub_state_listener<T> {
 public:
   // -- member types -----------------------------------------------------------
@@ -113,35 +112,14 @@ public:
         requested_prefix_ = true;
       }
     } else {
-      sub.dispose();
+      sub.cancel();
     }
   }
 
   // -- implementation of disposable -------------------------------------------
 
-  void dispose() override {
-    if (disposed())
-      return;
-    sub_.dispose();
-    if (sink_) {
-      CAF_ASSERT(!out_); // Either in tail mode or in prefix mode.
-      sink_ = nullptr;
-      return;
-    }
-    CAF_ASSERT(out_);
-    parent_->delay_fn([out = std::move(out_)]() mutable { out.on_complete(); });
-  }
-
   bool disposed() const noexcept override {
     return !out_ && !sink_;
-  }
-
-  void ref_disposable() const noexcept override {
-    ref();
-  }
-
-  void deref_disposable() const noexcept override {
-    deref();
   }
 
   void request(size_t demand) override {
@@ -155,8 +133,8 @@ public:
 
   // -- implementation of ucast_sub_state_listener -----------------------------
 
-  void on_disposed(state_type*) override {
-    dispose();
+  void on_disposed(state_type*, bool from_external) override {
+    do_dispose(from_external);
   }
 
   void on_demand_changed(state_type*) override {
@@ -172,9 +150,25 @@ public:
   }
 
 private:
-  intrusive_ptr<prefix_and_tail_sub> strong_this() {
-    return {this};
+  // -- implementation of subscription::impl_base ------------------------------
+
+  void do_dispose(bool from_external) override {
+    if (disposed())
+      return;
+    sub_.cancel();
+    if (sink_) {
+      CAF_ASSERT(!out_); // Either in tail mode or in prefix mode.
+      sink_ = nullptr;
+      return;
+    }
+    CAF_ASSERT(out_);
+    if (from_external)
+      out_.on_error(make_error(sec::disposed));
+    else
+      out_.release_later();
   }
+
+  // -- member variables -------------------------------------------------------
 
   /// Our scheduling context.
   coordinator* parent_;

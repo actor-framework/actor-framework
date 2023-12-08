@@ -24,36 +24,63 @@ public:
   // -- nested types -----------------------------------------------------------
 
   /// Internal interface of a `subscription`.
-  class CAF_CORE_EXPORT impl : public coordinated, public disposable::impl {
+  class CAF_CORE_EXPORT impl : public coordinated {
   public:
     using handle_type = subscription;
 
     ~impl() override;
 
+    /// Signals that the observer is no longer interested in receiving items.
+    /// Only the observer may call this member function. The difference between
+    /// `cancel` and `dispose` is that the latter will call `on_complete` on the
+    /// observer if it has not been called yet. Furthermore, `dispose` has to
+    /// assume that it has been called from outside of the event loop and thus
+    /// usually schedules an event to clean up the subscription. In contrast,
+    /// `cancel` can assume that it has been called from within the event loop
+    /// and thus can clean up the subscription immediately.
+    virtual void cancel() = 0;
+
     /// Signals demand for `n` more items.
     virtual void request(size_t n) = 0;
-
-    friend void intrusive_ptr_add_ref(const impl* ptr) noexcept {
-      ptr->ref_disposable();
-    }
-
-    friend void intrusive_ptr_release(const impl* ptr) noexcept {
-      ptr->deref_disposable();
-    }
   };
 
   /// Simple base type for all subscription implementations that implements the
   /// reference counting member functions.
   class CAF_CORE_EXPORT impl_base : public detail::plain_ref_counted,
-                                    public impl {
+                                    public impl,
+                                    public disposable_impl {
   public:
-    void ref_disposable() const noexcept final;
+    void ref_disposable() const noexcept override;
 
-    void deref_disposable() const noexcept final;
+    void deref_disposable() const noexcept override;
 
-    void ref_coordinated() const noexcept final;
+    void ref_coordinated() const noexcept override;
 
-    void deref_coordinated() const noexcept final;
+    void deref_coordinated() const noexcept override;
+
+    void dispose() final;
+
+    void cancel() final;
+
+    friend void intrusive_ptr_add_ref(const impl_base* ptr) noexcept {
+      ptr->ref();
+    }
+
+    friend void intrusive_ptr_release(const impl_base* ptr) noexcept {
+      ptr->deref();
+    }
+
+  private:
+    /// Called either from an event to safely dispose the subscription or from
+    /// `cancel` directly.
+    /// @param from_external Whether the call originates from outside of the
+    ///                      event loop. When `true`, the implementation shall
+    ///                      call `on_error` on the observer with error code
+    ///                      `sec::disposed`. Otherwise, the implementation
+    ///                      can safely assume that the subscriber has invoked
+    ///                      this call and thus the implementation can simply
+    ///                      drop its reference to the observer.
+    virtual void do_dispose(bool from_external) = 0;
   };
 
   /// Describes a listener to the subscription that will receive an event
@@ -65,6 +92,8 @@ public:
     virtual void on_request(coordinated* sink, size_t n) = 0;
 
     virtual void on_cancel(coordinated* sink) = 0;
+
+    virtual void on_dispose(coordinated* sink) = 0;
   };
 
   /// Default implementation for subscriptions that forward `request` and
@@ -79,8 +108,6 @@ public:
     bool disposed() const noexcept override;
 
     void request(size_t n) override;
-
-    void dispose() override;
 
     coordinator* parent() const noexcept override {
       return parent_;
@@ -105,11 +132,14 @@ public:
     /// Like @ref make but without any type checking.
     static subscription make_unsafe(coordinator* parent, listener* src,
                                     coordinated* snk) {
-      intrusive_ptr<impl> ptr{new fwd_impl(parent, src, snk), false};
+      intrusive_ptr<subscription::impl> ptr{new fwd_impl(parent, src, snk),
+                                            false};
       return subscription{std::move(ptr)};
     }
 
   private:
+    void do_dispose(bool from_external) override;
+
     coordinator* parent_;
     intrusive_ptr<listener> src_;
     intrusive_ptr<coordinated> snk_;
@@ -127,9 +157,9 @@ public:
 
     void request(size_t) override;
 
-    void dispose() override;
-
   private:
+    void do_dispose(bool from_external) override;
+
     coordinator* parent_;
     bool disposed_ = false;
   };
@@ -165,13 +195,13 @@ public:
   /// Causes the publisher to stop producing items for the subscriber. Any
   /// in-flight items may still get dispatched.
   /// @post `!valid()`
-  void dispose() {
+  void cancel() {
     if (pimpl_) {
-      // Defend against impl::dispose() indirectly calling member functions on
+      // Defend against impl::cancel() indirectly calling member functions on
       // this object again.
       auto ptr = intrusive_ptr<impl>{pimpl_.release(), false};
       auto* parent = ptr->parent();
-      ptr->dispose();
+      ptr->cancel();
       parent->release_later(ptr);
     }
   }
@@ -210,18 +240,6 @@ public:
 
   intrusive_ptr<impl>&& as_intrusive_ptr() && noexcept {
     return std::move(pimpl_);
-  }
-
-  disposable as_disposable() const& noexcept {
-    return disposable{pimpl_};
-  }
-
-  disposable as_disposable() && noexcept {
-    return disposable{std::move(pimpl_)};
-  }
-
-  bool disposed() const noexcept {
-    return !pimpl_ || pimpl_->disposed();
   }
 
   // -- swapping ---------------------------------------------------------------

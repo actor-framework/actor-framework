@@ -170,7 +170,7 @@ SCENARIO("zip_with operators can be disposed at any time") {
         CHECK(!sub.disposed());
         sub.dispose();
         ctx->run();
-        CHECK(snk->completed());
+        CHECK(snk->aborted());
       }
     }
     WHEN("calling dispose in on_subscribe") {

@@ -4,8 +4,10 @@
 
 #pragma once
 
+#include "caf/async/consumer.hpp"
 #include "caf/detail/atomic_ref_counted.hpp"
 #include "caf/detail/scope_guard.hpp"
+#include "caf/disposable.hpp"
 #include "caf/flow/observer.hpp"
 #include "caf/flow/op/hot.hpp"
 #include "caf/flow/subscription.hpp"
@@ -19,6 +21,7 @@ namespace caf::flow::op {
 template <class Buffer>
 class from_resource_sub : public detail::atomic_ref_counted,
                           public subscription::impl,
+                          public disposable::impl,
                           public async::consumer {
 public:
   // -- member types -----------------------------------------------------------
@@ -51,11 +54,25 @@ public:
 
   void dispose() override {
     CAF_LOG_TRACE("");
-    if (!disposed_) {
-      disposed_ = true;
-      if (!running_)
-        do_dispose();
+    if (disposed_)
+      return;
+    disposed_ = true;
+    run_later();
+  }
+
+  void cancel() override {
+    CAF_LOG_TRACE("");
+    if (disposed_)
+      return;
+    disposed_ = true;
+    if (!running_) {
+      if (buf_) {
+        buf_->cancel();
+        buf_ = nullptr;
+      }
+      out_.release_later();
     }
+    // else: called from do_run. Just tag as disposed.
   }
 
   void request(size_t n) override {
@@ -78,8 +95,10 @@ public:
     CAF_LOG_TRACE("");
     parent_->schedule_fn([ptr = strong_this()] {
       CAF_LOG_TRACE("");
-      ptr->running_ = true;
-      ptr->do_run();
+      if (!ptr->disposed_) {
+        ptr->running_ = true;
+        ptr->do_run();
+      }
     });
   }
 
@@ -121,44 +140,50 @@ private:
   void run_later() {
     if (!running_) {
       running_ = true;
-      parent_->delay_fn([ptr = strong_this()] { ptr->do_run(); });
+      parent_->delay_fn([ptr = strong_this()] {
+        if (!ptr->disposed_) {
+          ptr->do_run();
+          return;
+        }
+        ptr->running_ = false;
+      });
     }
-  }
-
-  void do_dispose() {
-    if (buf_) {
-      auto tmp = std::move(buf_);
-      tmp->cancel();
-    }
-    if (out_)
-      out_.on_complete();
   }
 
   void do_run() {
     CAF_LOG_TRACE("");
     auto guard = detail::scope_guard([this]() noexcept { running_ = false; });
-    if (disposed_) {
-      do_dispose();
-      return;
-    }
     CAF_ASSERT(out_);
     CAF_ASSERT(buf_);
+    if (disposed_) {
+      if (buf_) {
+        buf_->cancel();
+        buf_ = nullptr;
+      }
+      if (out_)
+        out_.on_error(make_error(sec::disposed));
+      return;
+    }
     while (demand_ > 0) {
       auto [again, pulled] = buf_->pull(async::delay_errors, demand_, out_);
       if (!again) {
+        // The buffer must call on_complete or on_error before it returns false.
+        CAF_ASSERT(!out_);
+        disposed_ = true;
+        buf_ = nullptr;
+        return;
+      }
+      if (disposed_) {
+        buf_->cancel();
         buf_ = nullptr;
         out_.release_later();
-        disposed_ = true;
         return;
-      } else if (disposed_) {
-        do_dispose();
-        return;
-      } else if (pulled == 0) {
-        return;
-      } else {
-        CAF_ASSERT(demand_ >= pulled);
-        demand_ -= pulled;
       }
+      if (pulled == 0) {
+        return;
+      }
+      CAF_ASSERT(demand_ >= pulled);
+      demand_ -= pulled;
     }
   }
 

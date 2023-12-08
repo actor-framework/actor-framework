@@ -83,19 +83,6 @@ public:
     return !out_;
   }
 
-  void dispose() override {
-    if (out_) {
-      for_each_input([](auto, auto& input) {
-        if (input.sub) {
-          auto tmp = std::move(input.sub);
-          tmp.dispose();
-        }
-        input.buf.clear();
-      });
-      fin();
-    }
-  }
-
   void request(size_t n) override {
     if (out_) {
       demand_ += n;
@@ -154,7 +141,7 @@ public:
         return;
       }
     }
-    sub.dispose();
+    sub.cancel();
   }
 
   template <size_t I>
@@ -190,12 +177,28 @@ public:
   }
 
 private:
+  void do_dispose(bool from_external) override {
+    if (!out_)
+      return;
+    for_each_input([](auto, auto& input) {
+      input.sub.cancel();
+      input.buf.clear();
+    });
+    if (from_external) {
+      if (!err_)
+        err_ = make_error(sec::disposed);
+      out_.on_error(err_);
+    } else {
+      out_.release_later();
+    }
+  }
+
   void push() {
     if (auto n = std::min(buffered(), demand_); n > 0) {
       demand_ -= n;
       for (size_t i = 0; i < n; ++i) {
         fold([this](auto&... x) { out_.on_next(fn_(x.pop()...)); });
-        if (!out_) // on_next might call dispose()
+        if (!out_) // on_next might call cancel()
           return;
       }
     }
@@ -205,10 +208,7 @@ private:
 
   void fin() {
     for_each_input([](auto, auto& input) {
-      if (input.sub) {
-        input.sub.dispose();
-        input.sub.release_later();
-      }
+      input.sub.cancel();
       input.buf.clear();
     });
     // Set out_ to null and emit the final event.

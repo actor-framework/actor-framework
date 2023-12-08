@@ -58,34 +58,33 @@ public:
   void on_next(const input_type& item) override {
     if (!result_) {
       result_.emplace(item);
-    } else {
-      sub_.dispose();
-      sub_.release_later();
-      auto err = make_error(sec::runtime_error,
-                            "single emitted more than one item");
-      on_error_(err);
+      return;
     }
+    sub_.cancel();
+    auto err = make_error(sec::runtime_error,
+                          "caf::flow::single emitted more than one item");
+    on_error_(err);
   }
 
   void on_complete() override {
-    if (sub_) {
-      sub_.release_later();
-      if (result_) {
-        on_success_(*result_);
-        result_ = std::nullopt;
-      } else {
-        auto err = make_error(sec::broken_promise,
-                              "single failed to produce an item");
-        on_error_(err);
-      }
+    if (!sub_)
+      return;
+    sub_.release_later();
+    if (result_) {
+      on_success_(*result_);
+      result_ = std::nullopt;
+      return;
     }
+    auto err = make_error(sec::broken_promise,
+                          "caf::flow::single failed to produce an item");
+    on_error_(err);
   }
 
   void on_error(const error& what) override {
-    if (sub_) {
-      sub_.release_later();
-      on_error_(what);
-    }
+    if (!sub_)
+      return;
+    sub_.release_later();
+    on_error_(what);
   }
 
 private:

@@ -47,11 +47,11 @@ public:
 
   bool disposed() const noexcept override;
 
-  void dispose() override;
-
   void request(size_t n) override;
 
 private:
+  void do_dispose(bool from_external) override;
+
   bool initialized() const noexcept {
     return src_flow_id_ != 0;
   }

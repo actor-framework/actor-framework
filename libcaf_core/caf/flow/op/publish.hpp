@@ -122,7 +122,7 @@ public:
       in_flight_ = max_buf_size_;
       in_.request(max_buf_size_);
     } else {
-      in.dispose();
+      in.cancel();
     }
   }
 
@@ -149,12 +149,11 @@ protected:
   }
 
 private:
-  void do_dispose(const state_ptr_type&) override {
+  void do_dispose(const state_ptr_type&, bool) override {
     try_request_more();
     if (auto_disconnect_ && connected_ && super::observer_count() == 0) {
       connected_ = false;
-      auto tmp = std::move(in_);
-      tmp.dispose();
+      in_.cancel();
     }
   }
 

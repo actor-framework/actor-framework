@@ -95,7 +95,7 @@ public:
       sub = std::move(new_sub);
       state = observer_state::subscribed;
     } else {
-      new_sub.dispose();
+      new_sub.cancel();
     }
   }
 
@@ -120,7 +120,7 @@ public:
 
   void unsubscribe() {
     if (sub) {
-      sub.dispose();
+      sub.cancel();
       state = observer_state::idle;
     }
   }
@@ -216,7 +216,7 @@ public:
 
   void on_next(const T&) override {
     ++on_next_calls;
-    sub.dispose();
+    sub.cancel();
   }
 
   void on_error(const error&) override {
@@ -236,7 +236,7 @@ public:
       this->sub = std::move(sub);
       return;
     }
-    sub.dispose();
+    sub.cancel();
   }
 
   int on_next_calls = 0;
@@ -270,7 +270,7 @@ public:
       this->state = observer_state::subscribed;
       this->sub.request(64);
     } else {
-      new_sub.dispose();
+      new_sub.cancel();
     }
   }
 
@@ -298,11 +298,11 @@ public:
 
   void request(size_t n) override;
 
-  void dispose() override;
-
   bool disposed() const noexcept override;
 
 private:
+  void do_dispose(bool from_external) override;
+
   coordinator* parent_;
 };
 

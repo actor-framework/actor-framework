@@ -30,12 +30,6 @@ public:
     return parent_;
   }
 
-  void dispose() override {
-    if (out_) {
-      parent_->delay_fn([ptr = strong_this()] { ptr->do_cancel(); });
-    }
-  }
-
   bool disposed() const noexcept override {
     return !out_;
   }
@@ -52,8 +46,14 @@ public:
   }
 
   void schedule_next(coordinator::steady_time_point timeout) {
-    pending_ = parent_->delay_until(timeout, make_single_shot_action(
-                                               [this] { fire(); }));
+    if (!out_) {
+      // Ignore scheduled events after disposal.
+      return;
+    }
+    pending_ = parent_->delay_until_fn(
+      timeout, [sptr = intrusive_ptr<interval_sub>{this}] { //
+        sptr->fire();
+      });
   }
 
   void fire() {
@@ -77,14 +77,16 @@ public:
   }
 
 private:
-  void do_cancel() {
-    if (out_)
-      out_.on_complete();
+  void do_dispose(bool from_external) override {
+    if (!out_) {
+      CAF_ASSERT(!pending_);
+      return;
+    }
     pending_.dispose();
-  }
-
-  intrusive_ptr<interval_sub> strong_this() {
-    return intrusive_ptr<interval_sub>{this};
+    if (from_external)
+      out_.on_error(make_error(sec::disposed));
+    else
+      out_.release_later();
   }
 
   coordinator* parent_;

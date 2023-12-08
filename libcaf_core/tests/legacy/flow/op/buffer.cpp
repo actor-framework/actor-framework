@@ -525,7 +525,7 @@ SCENARIO("disposing a buffer operator completes the flow") {
         ctx->run();
         uut->dispose();
         ctx->run();
-        CHECK(snk->completed());
+        CHECK(snk->aborted());
       }
     }
   }

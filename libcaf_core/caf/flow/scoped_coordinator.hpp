@@ -48,6 +48,10 @@ public:
 
   void watch(disposable what) override;
 
+  size_t watched_disposables_count() const noexcept {
+    return watched_disposables_.size();
+  }
+
   // -- time -------------------------------------------------------------------
 
   steady_time_point steady_time() override;

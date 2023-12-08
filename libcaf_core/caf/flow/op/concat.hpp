@@ -22,8 +22,7 @@ namespace caf::flow::op {
 
 /// Combines items from any number of observables.
 template <class T>
-class concat_sub : public detail::plain_ref_counted,
-                   public subscription::impl,
+class concat_sub : public subscription::impl_base,
                    public observer_impl<observable<T>> {
 public:
   // -- member types -----------------------------------------------------------
@@ -77,19 +76,11 @@ public:
       sub_ = std::move(sub);
       sub_.request(1);
     } else {
-      sub.dispose();
+      sub.cancel();
     }
   }
 
   // -- reference counting -----------------------------------------------------
-
-  void ref_disposable() const noexcept final {
-    ref();
-  }
-
-  void deref_disposable() const noexcept final {
-    deref();
-  }
 
   void ref_coordinated() const noexcept final {
     ref();
@@ -111,7 +102,7 @@ public:
 
   void fwd_on_subscribe(input_key key, subscription sub) {
     if (key != key_ || fwd_sub_) {
-      sub.dispose();
+      sub.cancel();
       return;
     }
     fwd_sub_ = std::move(sub);
@@ -140,7 +131,7 @@ public:
     if (key != key_)
       return;
     ++key_;
-    sub_.dispose();
+    sub_.cancel();
     fwd_sub_.release_later();
     out_.on_error(what);
   }
@@ -159,17 +150,6 @@ public:
     return !out_;
   }
 
-  void dispose() override {
-    if (out_) {
-      ++key_;
-      sub_.dispose();
-      fwd_sub_.dispose();
-      parent_->delay_fn([out = std::move(out_)]() mutable { //
-        out.on_complete();
-      });
-    }
-  }
-
   void request(size_t n) override {
     CAF_ASSERT(out_.valid());
     if (fwd_sub_)
@@ -178,6 +158,18 @@ public:
   }
 
 private:
+  void do_dispose(bool from_external) override {
+    if (!out_)
+      return;
+    ++key_;
+    sub_.cancel();
+    fwd_sub_.cancel();
+    if (from_external)
+      out_.on_error(make_error(sec::disposed));
+    else
+      out_.release_later();
+  }
+
   /// Stores the context (coordinator) that runs this flow.
   coordinator* parent_;
 

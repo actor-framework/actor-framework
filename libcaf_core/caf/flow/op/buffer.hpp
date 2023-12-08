@@ -112,7 +112,7 @@ public:
 
   void fwd_on_subscribe(buffer_input_t, subscription sub) {
     if (!running() || value_sub_ || !out_) {
-      sub.dispose();
+      sub.cancel();
       return;
     }
     value_sub_ = std::move(sub);
@@ -140,7 +140,7 @@ public:
 
   void fwd_on_subscribe(buffer_emit_t, subscription sub) {
     if (!running() || control_sub_ || !out_) {
-      sub.dispose();
+      sub.cancel();
       return;
     }
     control_sub_ = std::move(sub);
@@ -177,14 +177,6 @@ public:
     return !out_;
   }
 
-  void dispose() override {
-    if (out_) {
-      parent_->delay_fn([strong_this = intrusive_ptr<buffer_sub>{this}] {
-        strong_this->do_dispose();
-      });
-    }
-  }
-
   void request(size_t n) override {
     CAF_ASSERT(out_.valid());
     demand_ += n;
@@ -197,9 +189,21 @@ public:
   }
 
 private:
+  void do_dispose(bool from_external) override {
+    if (!out_)
+      return;
+    state_ = state::disposed;
+    value_sub_.cancel();
+    control_sub_.cancel();
+    if (from_external)
+      out_.on_error(make_error(sec::disposed));
+    else
+      out_.release_later();
+  }
+
   void shutdown() {
-    value_sub_.dispose();
-    control_sub_.dispose();
+    value_sub_.cancel();
+    control_sub_.cancel();
     switch (state_) {
       case state::running: {
         if (!buf_.empty()) {
@@ -249,14 +253,6 @@ private:
     buf_.clear();
     if (value_sub_ && buffered > 0)
       value_sub_.request(buffered);
-  }
-
-  void do_dispose() {
-    state_ = state::disposed;
-    value_sub_.dispose();
-    control_sub_.dispose();
-    if (out_)
-      out_.on_complete();
   }
 
   /// Stores the context (coordinator) that runs this flow.

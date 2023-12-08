@@ -180,7 +180,7 @@ SCENARIO("observers that dispose their subscription do not affect others") {
         ctx->run();
         CHECK_EQ(snk1->buf, ls(1, 2, 3, 4, 5, 6, 7));
         CHECK_EQ(snk2->buf, ls(1, 2, 3));
-        snk2->sub.dispose();
+        snk2->sub.cancel();
         ctx->run();
         snk1->request(42);
         ctx->run();
@@ -212,8 +212,8 @@ SCENARIO("publishers with auto_disconnect auto-dispose their subscription") {
         ctx->run();
         CHECK_EQ(snk1->buf, ls(1, 2, 3, 4, 5, 6, 7));
         CHECK_EQ(snk2->buf, ls(1, 2, 3));
-        snk1->sub.dispose();
-        snk2->sub.dispose();
+        snk1->sub.cancel();
+        snk2->sub.cancel();
         ctx->run();
         CHECK(!uut->connected());
       }
