@@ -6,6 +6,7 @@
 
 #include "caf/async/fwd.hpp"
 #include "caf/byte_span.hpp"
+#include "caf/chunk.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/fwd.hpp"
@@ -17,176 +18,131 @@
 #include <cstddef>
 #include <string_view>
 
-#ifdef CAF_CLANG
-#  pragma clang diagnostic push
-#  pragma clang diagnostic ignored "-Wc99-extensions"
-#elif defined(CAF_GCC)
-#  pragma GCC diagnostic push
-#  pragma GCC diagnostic ignored "-Wpedantic"
-#elif defined(CAF_MSVC)
-#  pragma warning(push)
-#  pragma warning(disable : 4200)
-#endif
-
 namespace caf::net::web_socket {
 
 /// An implicitly shared type for passing along WebSocket data frames, i.e.,
 /// text or binary frames.
 class CAF_NET_EXPORT frame {
 public:
-  // -- member types -----------------------------------------------------------
-
-  class data {
-  public:
-    data() = delete;
-
-    data(const data&) = delete;
-
-    data& operator=(const data&) = delete;
-
-    data(bool is_bin, size_t size) : rc_(1), bin_(is_bin), size_(size) {
-      static_cast<void>(padding_); // Silence unused-private-field warning.
-    }
-
-    explicit data(const_byte_span bytes);
-
-    explicit data(std::string_view str);
-
-    data(size_t total_size, span<const const_byte_span> bufs);
-
-    data(size_t total_size, span<const std::string_view> bufs);
-
-    // -- reference counting ---------------------------------------------------
-
-    bool unique() const noexcept {
-      return rc_ == 1;
-    }
-
-    void ref() const noexcept {
-      rc_.fetch_add(1, std::memory_order_relaxed);
-    }
-
-    void deref() noexcept;
-
-    friend void intrusive_ptr_add_ref(const data* ptr) {
-      ptr->ref();
-    }
-
-    friend void intrusive_ptr_release(data* ptr) {
-      ptr->deref();
-    }
-
-    // -- properties -----------------------------------------------------------
-
-    size_t size() noexcept {
-      return size_;
-    }
-
-    bool is_binary() const noexcept {
-      return bin_;
-    }
-
-    std::byte* storage() noexcept {
-      return storage_;
-    }
-
-    const std::byte* storage() const noexcept {
-      return storage_;
-    }
-
-  private:
-    static constexpr size_t padding_size = CAF_CACHE_LINE_SIZE
-                                           - sizeof(std::atomic<size_t>);
-    mutable std::atomic<size_t> rc_;
-    std::byte padding_[padding_size];
-    bool bin_;
-    size_t size_;
-    std::byte storage_[];
-  };
-
   // -- constructors, destructors, and assignment operators --------------------
 
   frame() = default;
 
-  frame(frame&&) = default;
+  explicit frame(intrusive_ptr<chunk::data> ptr) : data_(std::move(ptr)) {
+    // nop
+  }
 
-  frame(const frame&) = default;
+  explicit frame(const_byte_span buffer)
+    : data_(chunk::data::make(buffer), false) {
+    // nop
+  }
 
-  frame& operator=(frame&&) = default;
+  explicit frame(caf::span<const const_byte_span> buffers)
+    : data_(chunk::data::make(buffers), false) {
+    // nop
+  }
 
-  frame& operator=(const frame&) = default;
+  explicit frame(std::string_view text)
+    : data_(chunk::data::make(text), false) {
+    // nop
+  }
 
-  explicit frame(const_byte_span bytes);
-
-  explicit frame(std::string_view text);
+  explicit frame(caf::span<const std::string_view> texts)
+    : data_(chunk::data::make(texts), false) {
+    // nop
+  }
 
   // -- factory functions ------------------------------------------------------
 
+  /// Creates a frame from a chunk.
+  [[nodiscard]] static frame from_chunk(chunk ch) {
+    return frame{std::move(ch).get_data()};
+  }
+
+  /// Creates a frame from one or more buffers.
   template <class... Buffers>
-  static frame from_buffers(const Buffers&... buffers) {
+  [[nodiscard]] static frame from_buffers(const Buffers&... buffers) {
     static_assert(sizeof...(Buffers) > 0);
     const_byte_span bufs[sizeof...(Buffers)] = {make_span(buffers)...};
     return frame(make_span(bufs));
   }
 
-  template <class... Buffers>
-  static frame from_strings(const Buffers&... buffers) {
-    static_assert(sizeof...(Buffers) > 0);
-    std::string_view bufs[sizeof...(Buffers)] = {std::string_view(buffers)...};
+  /// Creates a frame from one or more strings.
+  template <class... Texts>
+  [[nodiscard]] static frame from_strings(const Texts&... texts) {
+    static_assert(sizeof...(Texts) > 0);
+    std::string_view bufs[sizeof...(Texts)] = {std::string_view(texts)...};
     return frame(make_span(bufs));
   }
 
   // -- properties -------------------------------------------------------------
 
+  /// Checks whether `get_data()` returns a non-null pointer.
   explicit operator bool() const noexcept {
     return static_cast<bool>(data_);
   }
 
-  size_t size() const noexcept {
+  /// Returns the number of bytes stored in this frame.
+  [[nodiscard]] size_t size() const noexcept {
     return data_ ? data_->size() : 0;
   }
 
-  bool empty() const noexcept {
+  /// Returns whether `size() == 0`.
+  [[nodiscard]] bool empty() const noexcept {
     return data_ ? data_->size() == 0 : true;
   }
 
-  void swap(frame& other) {
+  /// Exchange the contents of this frame with `other`.
+  void swap(frame& other) noexcept {
     data_.swap(other.data_);
   }
 
-  bool is_binary() const noexcept {
+  /// Returns the bytes stored in this frame.
+  [[nodiscard]] const_byte_span bytes() const noexcept {
+    return data_ ? const_byte_span{data_->storage(), data_->size()}
+                 : const_byte_span{};
+  }
+
+  /// Returns the underlying data object.
+  [[nodiscard]] const intrusive_ptr<chunk::data>& get_data() const& noexcept {
+    return data_;
+  }
+
+  /// Returns the underlying data object.
+  [[nodiscard]] intrusive_ptr<chunk::data>&& get_data() && noexcept {
+    return std::move(data_);
+  }
+
+  /// Checks whether this frame contains binary data.
+  [[nodiscard]] bool is_binary() const noexcept {
     return data_ && data_->is_binary();
   }
 
-  bool is_text() const noexcept {
+  /// Checks whether this frame contains text data.
+  [[nodiscard]] bool is_text() const noexcept {
     return data_ && !data_->is_binary();
   }
 
-  const_byte_span as_binary() const noexcept;
+  // -- conversions ------------------------------------------------------------
 
-  std::string_view as_text() const noexcept;
+  /// Returns the bytes stored in this frame.
+  [[nodiscard]] const_byte_span as_binary() const noexcept;
 
-private:
-  explicit frame(intrusive_ptr<data> ptr) : data_(std::move(ptr)) {
-    // nop
+  /// Returns the characters stored in this frame.
+  [[nodiscard]] std::string_view as_text() const noexcept;
+
+  /// Converts this frame to a chunk.
+  [[nodiscard]] chunk as_chunk() const& noexcept {
+    return chunk{data_};
   }
 
-  explicit frame(caf::span<const const_byte_span> buffers);
+  /// Converts this frame to a chunk.
+  [[nodiscard]] chunk as_chunk() && noexcept {
+    return chunk{std::move(data_)};
+  }
 
-  explicit frame(caf::span<const std::string_view> buffers);
-
-  template <class... Args>
-  void init(size_t payload_size, Args&&... arg);
-
-  intrusive_ptr<data> data_;
+private:
+  intrusive_ptr<chunk::data> data_;
 };
 
 } // namespace caf::net::web_socket
-
-#ifdef CAF_CLANG
-#  pragma clang diagnostic pop
-#elif defined(CAF_GCC)
-#  pragma GCC diagnostic pop
-#elif defined(CAF_MSVC)
-#  pragma warning(pop)
-#endif

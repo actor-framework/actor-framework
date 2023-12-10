@@ -110,6 +110,7 @@ caf_add_component(
     caf/byte_span.cpp
     caf/chrono.cpp
     caf/chrono.test.cpp
+    caf/chunk.cpp
     caf/config_option.cpp
     caf/config_option.test.cpp
     caf/config_option_adder.cpp

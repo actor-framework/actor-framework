@@ -93,11 +93,12 @@ enum class errc;
 namespace caf::net::lp {
 
 class client;
-class frame;
 class framing;
 class lower_layer;
 class server;
 class upper_layer;
+
+using frame = caf::chunk;
 
 } // namespace caf::net::lp
 
