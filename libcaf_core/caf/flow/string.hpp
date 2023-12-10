@@ -2,6 +2,7 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
+#include "caf/chunk.hpp"
 #include "caf/cow_string.hpp"
 
 #include <string>

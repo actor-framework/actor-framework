@@ -39,7 +39,7 @@ constexpr std::string_view quotes_numbered_lines = R"_(1:
 7:
 )_";
 
-TEST("async file I/O") {
+TEST("async text file I/O") {
   actor_system_config cfg;
   actor_system sys{cfg};
   auto prom = std::make_shared<std::promise<expected<std::string>>>();
@@ -112,6 +112,57 @@ TEST("async file I/O") {
       }
       check_eq(res.get(), error{sec::cannot_open_file});
     }
+  }
+}
+
+constexpr const char* byte_range_file = CAF_TEST_DATA_DIR "/range.bin";
+
+TEST("async binary file I/O") {
+  byte_buffer bytes;
+  for (auto i = 255; i >= 0; i--)
+    bytes.push_back(static_cast<std::byte>(i));
+  actor_system_config cfg;
+  actor_system sys{cfg};
+  auto prom = std::make_shared<std::promise<expected<byte_buffer>>>();
+  auto res = prom->get_future();
+  SECTION("read bytes from file") {
+    auto pub
+      = async::file(sys, byte_range_file).read_bytes().run([](auto&& src) {
+          return std::forward<decltype(src)>(src)
+            .map([](std::byte b) { return b ^ std::byte{0xFF}; })
+            .take(10)
+            .to_publisher();
+        });
+    sys.spawn([pub, prom](event_based_actor* self) mutable {
+      auto buffer = std::make_shared<byte_buffer>();
+      pub.observe_on(self)
+        .do_on_error([prom](const error& err) { prom->set_value(err); })
+        .do_on_complete([prom, buffer] { prom->set_value(std::move(*buffer)); })
+        .for_each([buffer](std::byte b) mutable { buffer->push_back(b); });
+    });
+    if (res.wait_for(2s) != std::future_status::ready)
+      fail("timeout");
+    expected<byte_buffer> expected = byte_buffer{bytes.begin(),
+                                                 bytes.begin() + 10};
+    check_eq(res.get(), expected);
+  }
+  SECTION("read chunks from file") {
+    auto pub = async::file(sys, byte_range_file).read_chunks(10).run();
+    sys.spawn([pub, prom](event_based_actor* self) mutable {
+      auto buffer = std::make_shared<byte_buffer>();
+      pub.observe_on(self)
+        .do_on_error([prom](const error& err) { prom->set_value(err); })
+        .do_on_complete([prom, buffer] { prom->set_value(std::move(*buffer)); })
+        .for_each([buffer](const chunk& ch) mutable {
+          for (auto& c : ch.bytes()) {
+            buffer->push_back(c ^ std::byte{0xFF});
+          }
+        });
+    });
+    if (res.wait_for(2s) != std::future_status::ready) {
+      fail("timeout");
+    }
+    check_eq(res.get(), expected<byte_buffer>{bytes});
   }
 }
 
