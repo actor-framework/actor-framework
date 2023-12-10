@@ -13,11 +13,13 @@
 
 namespace caf::detail {
 
-/// A generator that emits characters from a file.
+/// A generator that emits characters or bytes from a file.
 template <class T>
 class file_reader {
 public:
-  static_assert(detail::is_one_of_v<T, std::byte, char>);
+  static_assert(detail::is_one_of_v<T, std::byte, char>,
+                "T must be either std::byte or char");
+
   using output_type = T;
 
   explicit file_reader(std::string path) : path_(std::move(path)) {
@@ -107,6 +109,9 @@ public:
     // nop
   }
 
+  /// Runs the source in a background thread and returns a publisher or stream.
+  /// @param init A function object that takes the source as argument and
+  ///             turns it into a publisher or stream.
   template <class F>
   auto run(F&& init) && {
     auto [self, launch] = sys_->spawn_inactive<event_based_actor, detached>();
@@ -117,6 +122,7 @@ public:
     return res;
   }
 
+  /// Runs the source in a background thread and returns a publisher or stream.
   auto run() && {
     return std::move(*this).run([](auto&& src) { //
       return std::forward<decltype(src)>(src).to_publisher();
@@ -172,33 +178,51 @@ private: // must come before the public interface for return type deduction
   }
 
 public:
-  explicit file(actor_system& sys, std::string path)
+  file(actor_system& sys, std::string path)
     : sys_(&sys), path_(std::move(path)) {
     // nop
   }
 
-  auto read_chars() && {
+  /// Asynchronously reads the entire file, character by character.
+  [[nodiscard]] auto read_chars() && {
     return read_chars_impl(sys_, std::move(path_));
   }
 
-  auto read_chars() const& {
+  /// Asynchronously reads the entire file, character by character.
+  [[nodiscard]] auto read_chars() const& {
     return read_chars_impl(sys_, path_);
   }
 
-  auto read_lines() && {
+  /// Asynchronously reads the entire file, line by line.
+  [[nodiscard]] auto read_lines() && {
     return read_lines_impl(sys_, std::move(path_));
   }
 
-  auto read_lines() const& {
+  /// Asynchronously reads the entire file, line by line.
+  [[nodiscard]] auto read_lines() const& {
     return read_lines_impl(sys_, path_);
   }
 
-  auto read_bytes() && {
+  /// Asynchronously reads the entire file, byte by byte.
+  [[nodiscard]] auto read_bytes() const& {
+    return read_bytes_impl(sys_, path_);
+  }
+
+  /// Asynchronously reads the entire file, byte by byte.
+  [[nodiscard]] auto read_bytes() && {
     return read_bytes_impl(sys_, std::move(path_));
   }
 
-  auto read_chunks(size_t num) && {
-    return read_chunks_impl(sys_, std::move(path_), num);
+  /// Asynchronously reads the entire file, grouped into chunks of size
+  /// `chunk_size`.
+  [[nodiscard]] auto read_chunks(size_t chunk_size) const& {
+    return read_chunks_impl(sys_, path_, chunk_size);
+  }
+
+  /// Asynchronously reads the entire file, grouped into chunks of size
+  /// `chunk_size`.
+  [[nodiscard]] auto read_chunks(size_t chunk_size) && {
+    return read_chunks_impl(sys_, std::move(path_), chunk_size);
   }
 
 private:

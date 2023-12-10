@@ -9,8 +9,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 - An `observable` that runs on an actor can now be converted to a `stream` or
   `typed_stream` directly by calling `to_stream` or `to_typed_stream` on it.
-- New `caf::async` API to read a file asynchronously in a separate thread and
-  consume it as an observable (via a `publisher`, #1573).
+- New `caf::async` API to read text and binary files asynchronously in a
+  separate thread. The contents of the files are consumed as flows (#1573).
 - The class `caf::unordered_flat_map` now has the `contains` and
   `insert_or_assign` member functions.
 - CAF now supports setting custom configuration options via environment

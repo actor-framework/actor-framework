@@ -4,6 +4,8 @@
 
 #include "caf/chunk.hpp"
 
+#include <cstddef>
+
 namespace caf::detail {
 
 /// Turns a sequence of bytes into a sequence of chunks.
@@ -13,39 +15,42 @@ public:
 
   using output_type = chunk;
 
-  explicit to_chunks_step(size_t num) noexcept : num_(num) {
+  explicit to_chunks_step(size_t chunk_size) noexcept
+    : chunk_size_(chunk_size) {
     // nop
   }
 
   template <class Next, class... Steps>
   bool on_next(const std::byte& b, Next& next, Steps&... steps) {
     buf_.push_back(b);
-    if (buf_.size() == num_)
+    if (buf_.size() == chunk_size_)
       return do_emit(next, steps...);
     return true;
   }
 
   template <class Next, class... Steps>
   void on_complete(Next& next, Steps&... steps) {
-    if (do_emit(next, steps...))
-      next.on_complete(steps...);
+    if (!buf_.empty() && !do_emit(next, steps...))
+      return;
+    next.on_complete(steps...);
   }
 
   template <class Next, class... Steps>
   void on_error(const error& what, Next& next, Steps&... steps) {
+    if (!buf_.empty() && !do_emit(next, steps...))
+      return;
     next.on_error(what, steps...);
   }
 
 private:
   template <class Next, class... Steps>
   bool do_emit(Next& next, Steps&... steps) {
-    chunk ch;
-    ch = chunk::from_buffers(buf_);
+    auto item = chunk{buf_};
     buf_.clear();
-    return next.on_next(std::move(ch), steps...);
+    return next.on_next(item, steps...);
   }
 
-  size_t num_;
+  size_t chunk_size_;
   byte_buffer buf_;
 };
 
@@ -58,8 +63,9 @@ class byte {
 public:
   /// Returns a transformation step that converts a sequence of bytes into
   /// a sequence of chunks.
-  static auto to_chunks(size_t num) {
-    return detail::to_chunks_step{num};
+  /// @param chunk_size The maximum number of bytes per chunk.
+  static auto to_chunks(size_t chunk_size) noexcept {
+    return detail::to_chunks_step{chunk_size};
   }
 };
 
