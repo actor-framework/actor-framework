@@ -44,13 +44,13 @@ public:
       static_cast<void>(padding_); // Silence unused-private-field warning.
     }
 
-    explicit data(const_byte_span bytes);
+    static data* make(const_byte_span buffer);
 
-    explicit data(std::string_view str);
+    static data* make(std::string_view text);
 
-    data(size_t total_size, span<const const_byte_span> bufs);
+    static data* make(span<const const_byte_span> buffers);
 
-    data(size_t total_size, span<const std::string_view> bufs);
+    static data* make(span<const std::string_view> texts);
 
     // -- reference counting ---------------------------------------------------
 
@@ -91,6 +91,8 @@ public:
     }
 
   private:
+    static data* make(bool is_binary, size_t payload_size);
+
     static constexpr size_t padding_size = CAF_CACHE_LINE_SIZE
                                            - sizeof(std::atomic<size_t>);
     mutable std::atomic<size_t> rc_;
@@ -104,7 +106,14 @@ public:
 
   chunk() noexcept = default;
 
-  explicit chunk(const_byte_span buf);
+  explicit chunk(const_byte_span buffer) : data_(data::make(buffer), false) {
+    // nop
+  }
+
+  explicit chunk(caf::span<const const_byte_span> buffers)
+    : data_(data::make(buffers), false) {
+    // nop
+  }
 
   explicit chunk(intrusive_ptr<data> data) noexcept : data_(std::move(data)) {
     // nop
@@ -121,41 +130,43 @@ public:
 
   // -- properties -------------------------------------------------------------
 
+  /// Checks whether `get_data()` returns a non-null pointer.
   explicit operator bool() const noexcept {
     return static_cast<bool>(data_);
   }
 
-  size_t size() const noexcept {
+  /// Returns the number of bytes stored in this chunk.
+  [[nodiscard]] size_t size() const noexcept {
     return data_ ? data_->size() : 0;
   }
 
-  bool empty() const noexcept {
+  /// Returns whether `size() == 0`.
+  [[nodiscard]] bool empty() const noexcept {
     return data_ ? data_->size() == 0 : true;
   }
 
-  void swap(chunk& other) {
+  /// Exchange the contents of this chunk with `other`.
+  void swap(chunk& other) noexcept {
     data_.swap(other.data_);
   }
 
-  const_byte_span bytes() const noexcept {
+  /// Returns the bytes stored in this chunk.
+  [[nodiscard]] const_byte_span bytes() const noexcept {
     return data_ ? const_byte_span{data_->storage(), data_->size()}
                  : const_byte_span{};
   }
 
-  const intrusive_ptr<data>& get_data() const& {
+  /// Returns the underlying data object.
+  [[nodiscard]] const intrusive_ptr<data>& get_data() const& noexcept {
     return data_;
   }
 
-  intrusive_ptr<data>&& get_data() && {
+  /// Returns the underlying data object.
+  [[nodiscard]] intrusive_ptr<data>&& get_data() && noexcept {
     return std::move(data_);
   }
 
 private:
-  explicit chunk(caf::span<const const_byte_span> bufs);
-
-  template <class... Args>
-  void init(size_t payload_size, Args&&... arg);
-
   intrusive_ptr<data> data_;
 };
 

@@ -25,6 +25,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The formatting functions from `caf/chrono.hpp` now support precision for the
   fractional part of the seconds and an option to print with a fixed number of
   digits.
+- The new class `caf::chunk` represents an immutable sequence of bytes with a
+  fixed size. Unlike `std::span`, a `chunk` owns its data and can be (cheaply)
+  copied and moved.
 
 ### Fixed
 

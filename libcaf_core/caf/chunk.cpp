@@ -20,34 +20,47 @@ size_t calc_total_size(span<const Buffer> buffers) {
 
 } // namespace
 
-chunk::data::data(const_byte_span bytes) : data(true, bytes.size()) {
-  memcpy(storage(), bytes.data(), bytes.size());
+chunk::data* chunk::data::make(bool is_binary, size_t payload_size) {
+  auto vptr = malloc(sizeof(data) + payload_size);
+  if (vptr == nullptr)
+    CAF_RAISE_ERROR(std::bad_alloc, "chunk::data::make");
+  return new (vptr) data(is_binary, payload_size);
 }
 
-chunk::data::data(std::string_view str) : data(false, str.size()) {
-  memcpy(storage(), str.data(), str.size());
+chunk::data* chunk::data::make(const_byte_span buffer) {
+  auto* result = make(true, buffer.size());
+  memcpy(result->storage(), buffer.data(), buffer.size());
+  return result;
 }
 
-chunk::data::data(size_t total_size, span<const const_byte_span> bufs)
-  : data(true, total_size) {
-  std::byte* pos = storage_;
-  for (const auto& buf : bufs) {
-    if (!buf.empty()) {
-      memcpy(pos, buf.data(), buf.size());
-      pos += buf.size();
+chunk::data* chunk::data::make(std::string_view text) {
+  auto* result = make(false, text.size());
+  memcpy(result->storage(), text.data(), text.size());
+  return result;
+}
+
+chunk::data* chunk::data::make(span<const const_byte_span> buffers) {
+  auto* result = make(true, calc_total_size(buffers));
+  auto pos = result->storage();
+  for (const auto& buffer : buffers) {
+    if (!buffer.empty()) {
+      memcpy(pos, buffer.data(), buffer.size());
+      pos += buffer.size();
     }
   }
+  return result;
 }
 
-chunk::data::data(size_t total_size, span<const std::string_view> bufs)
-  : data(false, total_size) {
-  std::byte* pos = storage_;
-  for (const auto& buf : bufs) {
-    if (!buf.empty()) {
-      memcpy(pos, buf.data(), buf.size());
-      pos += buf.size();
+chunk::data* chunk::data::make(span<const std::string_view> texts) {
+  auto* result = make(false, calc_total_size(texts));
+  auto pos = result->storage();
+  for (const auto& text : texts) {
+    if (!text.empty()) {
+      memcpy(pos, text.data(), text.size());
+      pos += text.size();
     }
   }
+  return result;
 }
 
 void chunk::data::deref() noexcept {
@@ -55,21 +68,6 @@ void chunk::data::deref() noexcept {
     this->~data();
     free(this);
   }
-}
-
-chunk::chunk(const_byte_span buf) {
-  init(buf.size(), buf);
-}
-
-chunk::chunk(caf::span<const const_byte_span> bufs) {
-  auto payload_size = calc_total_size(bufs);
-  init(payload_size, payload_size, bufs);
-}
-
-template <class... Args>
-void chunk::init(size_t payload_size, Args&&... args) {
-  auto vptr = malloc(sizeof(data) + payload_size);
-  data_.reset(new (vptr) data(std::forward<Args>(args)...), false);
 }
 
 } // namespace caf
