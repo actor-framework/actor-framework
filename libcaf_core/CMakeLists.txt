@@ -194,9 +194,9 @@ caf_add_component(
     caf/flow/coordinator.cpp
     caf/flow/observable.test.cpp
     caf/flow/observable_builder.cpp
+    caf/flow/op/buffer.test.cpp
     caf/flow/op/concat.test.cpp
     caf/flow/op/interval.cpp
-    caf/flow/op/buffer.test.cpp
     caf/flow/op/mcast.test.cpp
     caf/flow/op/pullable.cpp
     caf/flow/scoped_coordinator.cpp
@@ -228,6 +228,8 @@ caf_add_component(
     caf/json_reader.cpp
     caf/json_value.cpp
     caf/json_writer.cpp
+    caf/linked_string_chunk.cpp
+    caf/linked_string_chunk.test.cpp
     caf/load_inspector.cpp
     caf/local_actor.cpp
     caf/logger.cpp

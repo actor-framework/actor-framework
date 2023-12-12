@@ -156,6 +156,7 @@ struct group_down_msg;
 struct illegal_message_element;
 struct invalid_actor_addr_t;
 struct invalid_actor_t;
+struct linked_string_chunk;
 struct node_down_msg;
 struct none_t;
 struct prohibit_top_level_spawn_marker;
@@ -271,6 +272,7 @@ using int_gauge_family = metric_family_impl<int_gauge>;
 namespace detail {
 
 class mailbox_factory;
+class monotonic_buffer_resource;
 
 template <class>
 struct gauge_oracle;

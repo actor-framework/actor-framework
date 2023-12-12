@@ -53,48 +53,54 @@ struct print_iterator_adapter {
 CAF_CORE_EXPORT
 size_t print_timestamp(char* buf, size_t buf_size, time_t ts, size_t ms);
 
+template <class Output>
+auto print_escaped_to(Output&& out, char c) {
+  static constexpr bool is_container
+    = detail::has_push_back_v<std::decay_t<Output>>;
+  auto append = [&out](auto... chars) {
+    if constexpr (is_container)
+      (out.push_back(chars), ...);
+    else
+      ((*out++ = chars), ...);
+  };
+  switch (c) {
+    default:
+      append(c);
+      break;
+    case '\\':
+      append('\\', '\\');
+      break;
+    case '\b':
+      append('\\', 'b');
+      break;
+    case '\f':
+      append('\\', 'f');
+      break;
+    case '\n':
+      append('\\', 'n');
+      break;
+    case '\r':
+      append('\\', 'r');
+      break;
+    case '\t':
+      append('\\', 't');
+      break;
+    case '\v':
+      append('\\', 'v');
+      break;
+    case '"':
+      append('\\', '"');
+      break;
+  }
+  if constexpr (!is_container)
+    return out;
+}
+
 template <class Buffer>
 void print_escaped(Buffer& buf, std::string_view str) {
   buf.push_back('"');
-  for (auto c : str) {
-    switch (c) {
-      default:
-        buf.push_back(c);
-        break;
-      case '\\':
-        buf.push_back('\\');
-        buf.push_back('\\');
-        break;
-      case '\b':
-        buf.push_back('\\');
-        buf.push_back('b');
-        break;
-      case '\f':
-        buf.push_back('\\');
-        buf.push_back('f');
-        break;
-      case '\n':
-        buf.push_back('\\');
-        buf.push_back('n');
-        break;
-      case '\r':
-        buf.push_back('\\');
-        buf.push_back('r');
-        break;
-      case '\t':
-        buf.push_back('\\');
-        buf.push_back('t');
-        break;
-      case '\v':
-        buf.push_back('\\');
-        buf.push_back('v');
-        break;
-      case '"':
-        buf.push_back('\\');
-        buf.push_back('"');
-        break;
-    }
-  }
+  for (auto c : str)
+    print_escaped_to(buf, c);
   buf.push_back('"');
 }
 

@@ -231,6 +231,8 @@ std::ostream& operator<<(std::ostream& out, indentation indent) {
 }
 
 struct cout_pseudo_buf {
+  using value_type = char;
+
   void push_back(char ch) {
     std::cout.put(ch);
   }

@@ -464,6 +464,24 @@ struct strip_reference_wrapper<std::reference_wrapper<T>> {
   using type = T;
 };
 
+// Checks whether T has a member function named `push_back` that takes an
+// element of type `T::value_type`.
+template <class T>
+class has_push_back {
+private:
+  template <class U>
+  static char fun(U*, decltype(std::declval<U&>().push_back(
+                        std::declval<typename U::value_type>()))* = nullptr);
+
+  static int fun(void*);
+
+public:
+  static constexpr bool value = sizeof(fun(null_v<T>)) == 1;
+};
+
+template <class T>
+inline constexpr bool has_push_back_v = has_push_back<T>::value;
+
 template <class T>
 constexpr bool can_insert_elements_impl(
   T*, decltype(std::declval<T&>().insert(
