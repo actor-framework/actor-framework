@@ -111,6 +111,8 @@ caf_add_component(
     caf/chrono.cpp
     caf/chrono.test.cpp
     caf/chunk.cpp
+    caf/chunked_string.cpp
+    caf/chunked_string.test.cpp
     caf/config_option.cpp
     caf/config_option.test.cpp
     caf/config_option_adder.cpp
@@ -194,9 +196,9 @@ caf_add_component(
     caf/flow/coordinator.cpp
     caf/flow/observable.test.cpp
     caf/flow/observable_builder.cpp
+    caf/flow/op/buffer.test.cpp
     caf/flow/op/concat.test.cpp
     caf/flow/op/interval.cpp
-    caf/flow/op/buffer.test.cpp
     caf/flow/op/mcast.test.cpp
     caf/flow/op/pullable.cpp
     caf/flow/scoped_coordinator.cpp

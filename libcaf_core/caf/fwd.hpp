@@ -150,6 +150,7 @@ class stateful_actor;
 
 // -- structs ------------------------------------------------------------------
 
+struct chunked_string;
 struct down_msg;
 struct exit_msg;
 struct group_down_msg;
@@ -271,6 +272,7 @@ using int_gauge_family = metric_family_impl<int_gauge>;
 namespace detail {
 
 class mailbox_factory;
+class monotonic_buffer_resource;
 
 template <class>
 struct gauge_oracle;

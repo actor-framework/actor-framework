@@ -33,6 +33,7 @@ struct copy_state {
   maybe_uint arg_index;      // The current argument index.
   maybe_uint width;          // The current width for formatting.
   bool is_number = false;    // Whether we are currently parsing a number.
+  bool is_quoted = false;    // Whether to generate quoted output.
   char fill = ' ';           // The fill character when setting an alignment.
   char align = 0;            // Alignment; '<': left, '>': right, '^': center.
   char type = 0;             // Selects an integer/float representation.
@@ -49,6 +50,7 @@ struct copy_state {
     align = 0;
     type = 0;
     is_number = false;
+    is_quoted = false;
     fstr.clear();
     fstr.push_back('%');
   }
@@ -295,6 +297,15 @@ struct copy_state {
     buf.insert(buf.end(), val.begin(), val.end());
   }
 
+  // Writes a chunked string to the buffer.
+  void render_val(chunked_string val) {
+    auto out = std::back_inserter(buf);
+    if (is_quoted)
+      val.copy_quoted_to(out);
+    else
+      val.copy_to(out);
+  }
+
   // Writes a pointer (address) to the buffer.
   void render_val(const void* val) {
     print(buf, val);
@@ -334,6 +345,7 @@ void copy_formatted(ParserState& ps, copy_state& cs) {
     transition(read_format_spec, ':')
   }
   state(read_format_spec) {
+    transition(after_quote_token, '?', cs.is_quoted = true)
     transition(disambiguate_fill, any_char, maybe_fill = ps.i)
   }
   state(disambiguate_fill) {
@@ -395,6 +407,9 @@ void copy_formatted(ParserState& ps, copy_state& cs) {
     transition(has_close_brace, '}', cs.render())
   }
   state(after_type) {
+    transition(has_close_brace, '}', cs.render())
+  }
+  state(after_quote_token) {
     transition(has_close_brace, '}', cs.render())
   }
   term_state(has_close_brace) {

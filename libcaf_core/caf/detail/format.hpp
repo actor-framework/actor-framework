@@ -36,6 +36,7 @@ std::string format(std::format_string<Args...> fstr, Args&&... args) {
 
 #else // here comes the poor man's version
 
+#  include "caf/chunked_string.hpp"
 #  include "caf/detail/core_export.hpp"
 #  include "caf/span.hpp"
 
@@ -48,8 +49,9 @@ std::string format(std::format_string<Args...> fstr, Args&&... args) {
 
 namespace caf::detail {
 
-using format_arg = std::variant<bool, char, int64_t, uint64_t, double,
-                                const char*, std::string_view, const void*>;
+using format_arg
+  = std::variant<bool, char, int64_t, uint64_t, double, const char*,
+                 std::string_view, chunked_string, const void*>;
 
 template <class T>
 format_arg make_format_arg(const T& arg) {
@@ -65,6 +67,8 @@ format_arg make_format_arg(const T& arg) {
     return format_arg{static_cast<double>(arg)};
   } else if constexpr (std::is_same_v<T, std::string>) {
     return format_arg{std::string_view{arg}};
+  } else if constexpr (std::is_same_v<T, chunked_string>) {
+    return format_arg{arg};
   } else {
     static_assert(std::is_pointer_v<T>, "unsupported argument type");
     return format_arg{static_cast<const void*>(arg)};
