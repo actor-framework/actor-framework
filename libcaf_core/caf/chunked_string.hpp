@@ -75,12 +75,16 @@ CAF_CORE_EXPORT std::string to_string(const chunked_string& str);
 /// Builds a chunked string by allocating each chunk on a monotonic buffer.
 class CAF_CORE_EXPORT chunked_string_builder {
 public:
+  using list_type = detail::json::linked_list<std::string_view>;
+
+  using resource_type = detail::monotonic_buffer_resource;
+
   /// The size of a single chunk.
   static constexpr size_t chunk_size = 128;
 
-  explicit chunked_string_builder(
-    detail::monotonic_buffer_resource* resource) noexcept
-    : chunks_(resource) {
+  explicit chunked_string_builder(resource_type* resource) noexcept;
+
+  ~chunked_string_builder() noexcept {
     // nop
   }
 
@@ -92,13 +96,15 @@ public:
   chunked_string build();
 
 private:
-  [[nodiscard]] detail::monotonic_buffer_resource* resource() noexcept {
+  [[nodiscard]] resource_type* resource() noexcept {
     return chunks_.get_allocator().resource();
   }
 
   char* current_block_ = nullptr;
   size_t write_pos_ = 0;
-  detail::json::linked_list<std::string_view> chunks_;
+  union { // Suppress the dtor call for chunks_.
+    list_type chunks_;
+  };
 };
 
 /// An output iterator that appends characters to a linked string chunk builder.

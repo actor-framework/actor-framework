@@ -232,6 +232,8 @@ caf_add_component(
     caf/json_writer.cpp
     caf/load_inspector.cpp
     caf/local_actor.cpp
+    caf/log_event.cpp
+    caf/log_event.test.cpp
     caf/logger.cpp
     caf/mailbox_element.cpp
     caf/make_config_option.cpp

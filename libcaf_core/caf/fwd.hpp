@@ -119,6 +119,9 @@ class json_reader;
 class json_value;
 class json_writer;
 class local_actor;
+class log_event;
+class log_event_builder;
+class log_event_fields;
 class logger;
 class mailbox_element;
 class message;
@@ -366,6 +369,10 @@ intrusive_cow_ptr_unshare(dynamic_message_data*&);
 using global_meta_objects_guard_type = intrusive_ptr<ref_counted>;
 
 } // namespace detail
+
+// -- intrusive pointer aliases ------------------------------------------------
+
+using log_event_ptr = intrusive_ptr<log_event>;
 
 // -- weak pointer aliases -----------------------------------------------------
 
