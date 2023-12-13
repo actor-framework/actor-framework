@@ -111,6 +111,8 @@ caf_add_component(
     caf/chrono.cpp
     caf/chrono.test.cpp
     caf/chunk.cpp
+    caf/chunked_string.cpp
+    caf/chunked_string.test.cpp
     caf/config_option.cpp
     caf/config_option.test.cpp
     caf/config_option_adder.cpp
@@ -228,8 +230,6 @@ caf_add_component(
     caf/json_reader.cpp
     caf/json_value.cpp
     caf/json_writer.cpp
-    caf/linked_string_chunk.cpp
-    caf/linked_string_chunk.test.cpp
     caf/load_inspector.cpp
     caf/local_actor.cpp
     caf/logger.cpp

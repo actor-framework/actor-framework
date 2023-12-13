@@ -150,13 +150,13 @@ class stateful_actor;
 
 // -- structs ------------------------------------------------------------------
 
+struct chunked_string;
 struct down_msg;
 struct exit_msg;
 struct group_down_msg;
 struct illegal_message_element;
 struct invalid_actor_addr_t;
 struct invalid_actor_t;
-struct linked_string_chunk;
 struct node_down_msg;
 struct none_t;
 struct prohibit_top_level_spawn_marker;

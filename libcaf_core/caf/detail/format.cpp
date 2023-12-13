@@ -298,12 +298,12 @@ struct copy_state {
   }
 
   // Writes a chunked string to the buffer.
-  void render_val(const linked_string_chunk* val) {
+  void render_val(chunked_string val) {
     auto out = std::back_inserter(buf);
     if (is_quoted)
-      val->copy_quoted_to(out);
+      val.copy_quoted_to(out);
     else
-      val->copy_to(out);
+      val.copy_to(out);
   }
 
   // Writes a pointer (address) to the buffer.
