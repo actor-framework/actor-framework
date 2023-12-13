@@ -33,7 +33,7 @@ public:
   Trait trait;
 };
 
-/// The configuration for a length-prefix framing server.
+/// The configuration for a WebSocket server.
 template <class Trait>
 class server_config : public dsl::server_config_value {
 public:
@@ -56,7 +56,7 @@ public:
   Trait trait;
 };
 
-/// The configuration for a length-prefix framing client.
+/// The configuration for a WebSocket client.
 template <class Trait>
 class client_config : public dsl::client_config_value {
 public:
