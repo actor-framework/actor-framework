@@ -14,6 +14,11 @@ ${BINARY_PATH}          /path/to/the/server
 ${SSL_PATH}             /path/to/the/pem/files
 ${MAX_REQUEST_SIZE}     2048
 
+# Prometheus variables
+${PR_SERVER_PORT}       55516
+${PR_HTTP_URL}          http://localhost:55516/metrics
+${PR_HTTP_BAD_URL}      http://localhost:55516/foobar
+
 *** Test Cases ***
 HTTP Test Add Key Value Pair
     [Tags]    POST
@@ -54,9 +59,16 @@ HTTPS Test Request Exceeds Maximum Size
     ${large_value}=    Generate Random String    ${MAX_REQUEST_SIZE}
     POST    ${HTTP_URL}/api/foo    data=${large_value}    expected_status=413    verify=${False}
 
+HTTP Propetheus endpoint
+    [Tags]    GET
+    ${resp}=    GET    ${PR_HTTP_URL}
+    ${content}=    Decode Bytes To String    ${resp.content}    utf-8
+    Should Contain    ${content}    caf_system_running_actors
+    Run Keyword And Expect Error    *    GET    ${PR_HTTP_BAD_URL}
+
 *** Keywords ***
 Start Servers
-    Start Process  ${BINARY_PATH}  -p  55501  -r  ${MAX_REQUEST_SIZE}
+    Start Process  ${BINARY_PATH}  -p  55501  -r  ${MAX_REQUEST_SIZE}  --caf.middleman.prometheus-http.port  ${PR_SERVER_PORT}
     Start Process  ${BINARY_PATH}  -p  55502  -r  ${MAX_REQUEST_SIZE}  -k  ${SSL_PATH}/key.pem  -c  ${SSL_PATH}/cert.pem
     Wait Until Keyword Succeeds    5s    125ms    Check If HTTP Server Is Reachable
     Wait Until Keyword Succeeds    5s    125ms    Check If HTTPS Server Is Reachable
