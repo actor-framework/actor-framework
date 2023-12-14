@@ -140,6 +140,9 @@ operator!=(linked_list_iterator<T> lhs, linked_list_iterator<T> rhs) {
 //
 // The default-constructed list object is an empty list that does not allow
 // push_back.
+//
+// TODO: should not be part of the json namespace. Probably should be merged
+//       into intrusive::linked_list.
 template <class T>
 class linked_list {
 public:
@@ -158,6 +161,8 @@ public:
   using const_pointer = const value_type*;
 
   using node_pointer = node_type*;
+
+  using const_node_pointer = const node_type*;
 
   using iterator = linked_list_iterator<value_type>;
 
@@ -179,6 +184,11 @@ public:
 
   explicit linked_list(allocator_type allocator) noexcept
     : allocator_(allocator) {
+    // nop
+  }
+
+  explicit linked_list(monotonic_buffer_resource* resource) noexcept
+    : allocator_(resource) {
     // nop
   }
 
@@ -259,7 +269,7 @@ public:
 
   void push_back(T value) {
     ++size_;
-    auto new_node = allocator_->allocate(1);
+    auto new_node = allocator_.allocate(1);
     new (new_node) node_type{std::move(value), nullptr};
     if (head_ == nullptr) {
       head_ = tail_ = new_node;
@@ -281,6 +291,14 @@ public:
       tail_ = new_node;
     }
     return new_node->value;
+  }
+
+  node_pointer head() noexcept {
+    return head_;
+  }
+
+  const_node_pointer head() const noexcept {
+    return head_;
   }
 
 private:

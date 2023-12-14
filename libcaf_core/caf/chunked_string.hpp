@@ -6,6 +6,7 @@
 
 #include "caf/detail/build_config.hpp"
 #include "caf/detail/core_export.hpp"
+#include "caf/detail/json.hpp"
 #include "caf/detail/print.hpp"
 #include "caf/fwd.hpp"
 
@@ -17,25 +18,38 @@
 
 namespace caf {
 
-/// Represents a chunked string that as a linked list of string views.
-struct chunked_string {
-  /// A single node in the linked list.
-  struct node {
-    /// The characters of this chunk.
-    std::string_view content;
+/// Represents a chunked string as a linked list of string views.
+class CAF_CORE_EXPORT chunked_string {
+public:
+  using node_type = detail::json::linked_list_node<std::string_view>;
 
-    /// Points to the next chunk in the list.
-    node* next = nullptr;
-  };
+  using const_iterator
+    = detail::json::linked_list_iterator<const std::string_view>;
 
-  /// Points to the first chunk in the list.
-  node* head = nullptr;
+  explicit chunked_string(const node_type* head) noexcept : head_(head) {
+    // nop
+  }
+
+  chunked_string() noexcept = default;
+
+  /// Returns an iterator to the first chunk.
+  auto begin() const noexcept {
+    return const_iterator{head_};
+  }
+
+  /// Returns the past-the-end iterator.
+  auto end() const noexcept {
+    return const_iterator{};
+  }
+
+  /// Returns the size of the string, i.e., the sum of all chunk sizes.
+  size_t size() const noexcept;
 
   /// Copies the chunked string to an output iterator.
   template <class OutputIterator>
   OutputIterator copy_to(OutputIterator out) const {
-    for (const auto* chunk = head; chunk != nullptr; chunk = chunk->next)
-      out = std::copy(chunk->content.begin(), chunk->content.end(), out);
+    for (auto chunk : *this)
+      out = std::copy(chunk.begin(), chunk.end(), out);
     return out;
   }
 
@@ -44,12 +58,15 @@ struct chunked_string {
   template <class OutputIterator>
   OutputIterator copy_quoted_to(OutputIterator out) const {
     *out++ = '"';
-    for (const auto* chunk = head; chunk != nullptr; chunk = chunk->next)
-      for (auto ch : chunk->content)
+    for (auto chunk : *this)
+      for (auto ch : chunk)
         out = detail::print_escaped_to(out, ch);
     *out++ = '"';
     return out;
   }
+
+private:
+  const node_type* head_;
 };
 
 /// Converts a linked string chunk to a `std::string`.
@@ -61,21 +78,27 @@ public:
   /// The size of a single chunk.
   static constexpr size_t chunk_size = 128;
 
-  explicit chunked_string_builder(detail::monotonic_buffer_resource* resource);
+  explicit chunked_string_builder(
+    detail::monotonic_buffer_resource* resource) noexcept
+    : chunks_(resource) {
+    // nop
+  }
 
   /// Appends a character to the current chunk or creates a new chunk if the
   /// current chunk reached its capacity.
   void append(char ch);
 
   /// Seals the current chunk and returns the first chunk.
-  chunked_string seal();
+  chunked_string build();
 
 private:
+  [[nodiscard]] detail::monotonic_buffer_resource* resource() noexcept {
+    return chunks_.get_allocator().resource();
+  }
+
   char* current_block_ = nullptr;
   size_t write_pos_ = 0;
-  detail::monotonic_buffer_resource* resource_;
-  chunked_string::node* first_chunk_ = nullptr;
-  chunked_string::node* last_chunk_ = nullptr;
+  detail::json::linked_list<std::string_view> chunks_;
 };
 
 /// An output iterator that appends characters to a linked string chunk builder.

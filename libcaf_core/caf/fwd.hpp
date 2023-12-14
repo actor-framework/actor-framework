@@ -94,6 +94,7 @@ class binary_deserializer;
 class binary_serializer;
 class blocking_actor;
 class chunk;
+class chunked_string;
 class config_option;
 class config_option_adder;
 class config_option_set;
@@ -150,7 +151,6 @@ class stateful_actor;
 
 // -- structs ------------------------------------------------------------------
 
-struct chunked_string;
 struct down_msg;
 struct exit_msg;
 struct group_down_msg;
