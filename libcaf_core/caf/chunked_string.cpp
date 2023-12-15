@@ -8,6 +8,7 @@
 
 #include <new>
 #include <numeric>
+#include <ostream>
 
 namespace caf {
 
@@ -31,6 +32,12 @@ std::string to_string(const chunked_string& str) {
   for (auto chunk : str)
     result.insert(result.end(), chunk.begin(), chunk.end());
   return result;
+}
+
+std::ostream& operator<<(std::ostream& out, const chunked_string& str) {
+  for (auto chunk : str)
+    out << chunk;
+  return out;
 }
 
 chunked_string_builder::chunked_string_builder(

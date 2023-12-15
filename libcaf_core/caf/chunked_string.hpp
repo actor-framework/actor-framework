@@ -12,6 +12,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <iosfwd>
 #include <iterator>
 #include <string>
 #include <string_view>
@@ -71,6 +72,10 @@ private:
 
 /// Converts a linked string chunk to a `std::string`.
 CAF_CORE_EXPORT std::string to_string(const chunked_string& str);
+
+/// Prints a chunked string to an output stream.
+CAF_CORE_EXPORT std::ostream& operator<<(std::ostream& out,
+                                         const chunked_string& str);
 
 /// Builds a chunked string by allocating each chunk on a monotonic buffer.
 class CAF_CORE_EXPORT chunked_string_builder {

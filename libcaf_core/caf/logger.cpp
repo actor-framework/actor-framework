@@ -39,6 +39,45 @@ namespace caf {
 
 namespace {
 
+// Note: not part of the public API on purpose. This is only used for render()
+//       and the format may change at any time.
+void render_fields(std::ostream& out, log_event::field_list fields) {
+  if (fields.empty())
+    return;
+  auto i = fields.begin();
+  auto e = fields.end();
+  for (;;) {
+    auto fn = [&out, i](const auto& value) {
+      using value_t = std::decay_t<decltype(value)>;
+      if constexpr (std::is_same_v<value_t, std::nullopt_t>) {
+        out << i->key << " = null";
+      } else if constexpr (std::is_same_v<value_t, log_event::field_list>) {
+        out << i->key << " { ";
+        render_fields(out, value);
+        out << " }";
+      } else {
+        out << i->key << " = " << value;
+      }
+    };
+    std::visit(fn, i->value);
+    if (++i == e)
+      return;
+    out << ", ";
+  }
+}
+
+struct fields_formatter {
+  log_event::field_list fields;
+};
+
+std::ostream& operator<<(std::ostream& out, fields_formatter wrapper) {
+  if (wrapper.fields.empty())
+    return out;
+  out << " ; "; // separates the message from the fields
+  render_fields(out, wrapper.fields);
+  return out;
+}
+
 // Stores the ID of the currently running actor.
 thread_local actor_id current_actor_id;
 
@@ -71,51 +110,6 @@ public:
     actor_field,
     percent_sign_field,
     plain_text_field,
-  };
-
-  /// Encapsulates a single logging event.
-  struct event {
-    /// Level/priority of the event.
-    unsigned level;
-
-    /// Current line in the file.
-    unsigned line_number;
-
-    /// Name of the category (component) logging the event.
-    std::string_view component;
-
-    /// Name of the current file.
-    const char* file_name;
-
-    /// Name of the current function as reported by `__func__`.
-    const char* function_name;
-
-    /// User-provided message.
-    std::string message;
-
-    /// Thread ID of the caller.
-    std::thread::id tid;
-
-    /// Actor ID of the caller.
-    actor_id aid;
-
-    /// Timestamp of the event.
-    timestamp tstamp;
-
-    event(unsigned lvl, unsigned ln, std::string_view cat, const char* fn,
-          const char* fun, std::string&& msg, std::thread::id t,
-          actor_id a = invalid_actor_id, timestamp ts = make_timestamp())
-      : level(lvl),
-        line_number(ln),
-        component(cat),
-        file_name(fn),
-        function_name(fun),
-        message(std::move(msg)),
-        tid(t),
-        aid(a),
-        tstamp(ts) {
-      // nop
-    }
   };
 
   /// Combines various logging-related flags and parameters into a bitfield.
@@ -166,16 +160,11 @@ public:
 
   /// Writes an entry to the event-queue of the logger.
   /// @thread-safe
-  void do_log(const context& ctx, std::string&& msg) override {
-    auto ev
-      = std::make_unique<event>(ctx.level, ctx.line_number, ctx.component,
-                                ctx.file_name, ctx.function_name,
-                                std::move(msg), std::this_thread::get_id(),
-                                logger::thread_local_aid(), make_timestamp());
+  void do_log(log_event_ptr&& event) override {
     if (cfg_.inline_output)
-      handle_event(*ev);
+      handle_event(*event);
     else
-      queue_.push(std::move(ev));
+      queue_.push(std::move(event));
   }
 
   // -- properties -------------------------------------------------------------
@@ -269,7 +258,8 @@ public:
   }
 
   /// Renders `x` using the line format `lf` to `out`.
-  void render(std::ostream& out, const line_format& lf, const event& x) const {
+  void render(std::ostream& out, const line_format& lf,
+              const log_event& x) const {
     auto ms_time_diff = [](timestamp t0, timestamp tn) {
       using namespace std::chrono;
       return duration_cast<milliseconds>(tn - t0).count();
@@ -277,20 +267,21 @@ public:
     // clang-format off
     for (auto& f : lf)
       switch (f.kind) {
-        case category_field:     out << x.component;                 break;
-        case class_name_field:   out << "null";                      break;
-        case date_field:         render_date(out, x.tstamp);         break;
-        case file_field:         out << x.file_name;                 break;
-        case line_field:         out << x.line_number;               break;
-        case message_field:      out << x.message;                   break;
-        case method_field:       out << x.function_name;             break;
-        case newline_field:      out << std::endl;                   break;
-        case priority_field:     out << log_level_names_[x.level];   break;
-        case runtime_field:      out << ms_time_diff(t0_, x.tstamp); break;
-        case thread_field:       out << x.tid;                       break;
-        case actor_field:        out << "actor" << x.aid;            break;
-        case percent_sign_field: out << '%';                         break;
-        case plain_text_field:   out << f.text;                      break;
+        case category_field:     out << x.component();                    break;
+        case class_name_field:   out << "null";                           break;
+        case date_field:         render_date(out, x.timestamp());         break;
+        case file_field:         out << x.file_name();                    break;
+        case line_field:         out << x.line_number();                  break;
+        case method_field:       out << x.function_name();                break;
+        case newline_field:      out << std::endl;                        break;
+        case priority_field:     out << log_level_names_[x.level()];      break;
+        case runtime_field:      out << ms_time_diff(t0_, x.timestamp()); break;
+        case thread_field:       out << x.thread_id();;                   break;
+        case actor_field:        out << "actor" << x.actor_id();          break;
+        case percent_sign_field: out << '%';                              break;
+        case plain_text_field:   out << f.text;                           break;
+        case message_field:      out << x.message()
+                                     << fields_formatter{x.fields()};     break;
         default: ; // nop
       }
     // clang-format on
@@ -300,13 +291,13 @@ public:
 
   /// Increases the reference count of the coordinated.
   void ref_logger() const noexcept final {
-    this->ref();
+    ref();
   }
 
   /// Decreases the reference count of the coordinated and destroys the object
   /// if necessary.
   void deref_logger() const noexcept final {
-    this->deref();
+    deref();
   }
 
   // -- initialization ---------------------------------------------------------
@@ -373,29 +364,31 @@ public:
 
   // -- event handling ---------------------------------------------------------
 
-  void handle_event(const event& x) {
+  void handle_event(const log_event& x) {
     handle_file_event(x);
     handle_console_event(x);
   }
 
-  void handle_file_event(const event& x) {
+  void handle_file_event(const log_event& x) {
     // Print to file if available.
-    if (file_ && x.level <= file_verbosity()
+    if (file_ && x.level() <= file_verbosity()
         && none_of(file_filter_.begin(), file_filter_.end(),
-                   [&x](std::string_view name) { return name == x.component; }))
+                   [&x](std::string_view name) {
+                     return name == x.component();
+                   }))
       render(file_, file_format_, x);
   }
 
-  void handle_console_event(const event& x) {
-    if (x.level > console_verbosity())
+  void handle_console_event(const log_event& x) {
+    if (x.level() > console_verbosity())
       return;
     if (std::any_of(console_filter_.begin(), console_filter_.end(),
                     [&x](std::string_view name) {
-                      return name == x.component;
+                      return name == x.component();
                     }))
       return;
     if (cfg_.console_coloring) {
-      switch (x.level) {
+      switch (x.level()) {
         default:
           break;
         case CAF_LOG_LEVEL_ERROR:
@@ -425,9 +418,11 @@ public:
   void log_first_line() {
     if (!accepts(CAF_LOG_LEVEL_DEBUG, "caf"))
       return;
-    auto make_message = [&](int level, const auto& filter) {
+    std::string msg;
+    msg.reserve(128);
+    auto set_message = [&](int level, const auto& filter) {
       auto lvl_str = log_level_names_[level];
-      std::string msg = "verbosity = ";
+      msg = "verbosity = ";
       msg.insert(msg.end(), lvl_str.begin(), lvl_str.end());
       msg += ", node = ";
       msg += to_string(system_.node());
@@ -437,36 +432,22 @@ public:
       return msg;
     };
     namespace lg = defaults::logger;
-    auto loc = detail::source_location::current();
-    event ev{CAF_LOG_LEVEL_DEBUG,
-             static_cast<unsigned>(loc.line()),
-             "caf.logger",
-             loc.file_name(),
-             loc.function_name(),
-             "",
-             std::this_thread::get_id(),
-             0,
-             make_timestamp()};
-    ev.message = make_message(cfg_.file_verbosity, file_filter_);
-    handle_file_event(ev);
-    ev.message = make_message(cfg_.console_verbosity, console_filter_);
-    handle_console_event(ev);
+    set_message(cfg_.file_verbosity, file_filter_);
+    auto file_event = log_event::make(CAF_LOG_LEVEL_DEBUG, "caf.logger",
+                                      detail::source_location::current(), 0,
+                                      msg);
+    handle_file_event(*file_event);
+    set_message(cfg_.console_verbosity, console_filter_);
+    auto console_event = file_event->with_message(msg, keep_timestamp);
+    handle_console_event(*console_event);
   }
 
   void log_last_line() {
     if (!accepts(CAF_LOG_LEVEL_DEBUG, "caf"))
       return;
-    auto loc = detail::source_location::current();
-    event ev{CAF_LOG_LEVEL_DEBUG,
-             static_cast<unsigned>(loc.line()),
-             "caf.logger",
-             loc.file_name(),
-             loc.function_name(),
-             "bye",
-             std::this_thread::get_id(),
-             0,
-             make_timestamp()};
-    handle_event(ev);
+    auto event = log_event::make(CAF_LOG_LEVEL_DEBUG, "caf.logger",
+                                 detail::source_location::current(), 0, "stop");
+    handle_event(*event);
   }
 
   // -- thread management ------------------------------------------------------
@@ -553,7 +534,7 @@ public:
     if (!thread_.joinable())
       return;
     // Send an empty message to the logger thread to make it terminate.
-    queue_.push(std::unique_ptr<event>{});
+    queue_.push(log_event_ptr{});
     thread_.join();
   }
 
@@ -585,7 +566,7 @@ public:
   std::fstream file_;
 
   // Filled with log events by other threads.
-  detail::sync_ring_buffer<std::unique_ptr<event>, queue_size> queue_;
+  detail::sync_ring_buffer<log_event_ptr, queue_size> queue_;
 
   // Stores the assembled name of the log file.
   std::string file_name_;
@@ -641,9 +622,7 @@ logger::line_builder&& logger::line_builder::operator<<(char x) && {
 
 void logger::legacy_api_log(unsigned level, std::string_view component,
                             std::string msg, detail::source_location loc) {
-  context ctx{level, component, loc.line(), loc.file_name(),
-              loc.function_name()};
-  do_log(ctx, std::move(msg));
+  do_log(log_event::make(level, component, loc, thread_local_aid(), msg));
 }
 
 actor_id logger::thread_local_aid() {

@@ -172,9 +172,10 @@ int runner::run(int argc, char** argv) {
         default_reporter->unhandled_exception(ex.message(), ex.location());
         default_reporter->end_test();
       } catch (const requirement_failed& ex) {
-        auto ctx = logger::context::make(CAF_LOG_LEVEL_ERROR, "caf.test",
-                                         ex.location());
-        default_reporter->print(ctx, ex.message());
+        auto event = log_event::make(CAF_LOG_LEVEL_ERROR, "caf.test",
+                                     ex.location(), 0, "requirement failed: {}",
+                                     ex.message());
+        default_reporter->print(event);
         default_reporter->end_test();
       } catch (const std::exception& ex) {
         default_reporter->unhandled_exception(ex.what());

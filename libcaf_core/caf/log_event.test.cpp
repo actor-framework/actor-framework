@@ -73,7 +73,7 @@ TEST("fields builder") {
 TEST("log event builder") {
   auto loc = detail::source_location::current();
   SECTION("trivial message") {
-    auto event = log_event_builder(CAF_LOG_LEVEL_DEBUG, "foo", loc, "hello")
+    auto event = log_event_builder(CAF_LOG_LEVEL_DEBUG, "foo", loc, 0, "hello")
                    .add_field("foo", 42)
                    .add_field("bar", "baz")
                    .build();
@@ -82,14 +82,15 @@ TEST("log event builder") {
     check_eq(event->line_number(), loc.line());
     check_eq(event->file_name(), loc.file_name());
     check_eq(event->function_name(), loc.function_name());
+    check_eq(event->actor_id(), 0u);
     check_eq(to_string(event->message()), "hello"sv);
     auto fields = event->fields();
     check_eq(get_at<int64_t>(0, fields), std::pair{"foo"sv, int64_t{42}});
     check_eq(get_at<std::string_view>(1, fields), std::pair{"bar"sv, "baz"sv});
   }
   SECTION("formatted message") {
-    auto event = log_event_builder(CAF_LOG_LEVEL_DEBUG, "foo", loc, "{}, {}!",
-                                   "Hello", "World")
+    auto event = log_event_builder(CAF_LOG_LEVEL_DEBUG, "foo", loc, 123,
+                                   "{}, {}!", "Hello", "World")
                    .add_field("foo", 42)
                    .add_field("bar", "baz")
                    .build();
@@ -98,6 +99,7 @@ TEST("log event builder") {
     check_eq(event->line_number(), loc.line());
     check_eq(event->file_name(), loc.file_name());
     check_eq(event->function_name(), loc.function_name());
+    check_eq(event->actor_id(), 123u);
     check_eq(to_string(event->message()), "Hello, World!"sv);
     auto fields = event->fields();
     check_eq(get_at<int64_t>(0, fields), std::pair{"foo"sv, int64_t{42}});

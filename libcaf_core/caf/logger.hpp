@@ -16,9 +16,11 @@
 #include "caf/detail/scope_guard.hpp"
 #include "caf/format_string_with_location.hpp"
 #include "caf/fwd.hpp"
+#include "caf/log_event.hpp"
 
 #include <cstring>
 #include <sstream>
+#include <string>
 #include <string_view>
 #include <type_traits>
 #include <typeinfo>
@@ -53,37 +55,13 @@ public:
 
   // -- member types -----------------------------------------------------------
 
-  /// Stores context information for a log message.
-  struct context {
-    /// Severity of the message.
-    unsigned level;
-
-    /// Name of the component logging the event.
-    std::string_view component;
-
-    /// Current line in the file.
-    unsigned line_number;
-
-    /// Name of the current file.
-    const char* file_name;
-
-    /// Name of the current function.
-    const char* function_name;
-
-    static context make(unsigned level, std::string_view component,
-                        const detail::source_location& location) {
-      return {level, component, location.line(), location.file_name(),
-              location.function_name()};
-    }
-  };
-
   /// Helper class to print exit trace messages on scope exit.
   class trace_exit_guard {
   public:
     trace_exit_guard() = default;
 
-    trace_exit_guard(logger* instance, context ctx)
-      : instance_(instance), ctx_(ctx) {
+    trace_exit_guard(logger* instance, log_event_ptr event)
+      : instance_(instance), event_(std::move(event)) {
       // nop
     }
 
@@ -91,25 +69,25 @@ public:
       instance_ = other.instance_;
       if (instance_) {
         other.instance_ = nullptr;
-        ctx_ = other.ctx_;
+        event_ = other.event_;
       }
     }
 
     trace_exit_guard& operator=(trace_exit_guard&& other) {
       using std::swap;
       swap(instance_, other.instance_);
-      swap(ctx_, other.ctx_);
+      swap(event_, other.event_);
       return *this;
     }
 
     ~trace_exit_guard() {
       if (instance_)
-        instance_->do_log(ctx_, std::string{"EXIT"});
+        instance_->do_log(event_->with_message("EXIT"));
     }
 
   private:
     logger* instance_ = nullptr;
-    context ctx_;
+    log_event_ptr event_;
   };
 
   /// Utility class for building user-defined log messages with `CAF_ARG`.
@@ -160,11 +138,9 @@ public:
                   format_string_with_location fmt_str, Ts&&... args) {
     auto* instance = current_logger();
     if (instance && instance->accepts(level, component)) {
-      auto& loc = fmt_str.location;
-      context ctx{level, component, loc.line(), loc.file_name(),
-                  loc.function_name()};
-      instance->do_log(ctx, detail::format(fmt_str.value,
-                                           std::forward<Ts>(args)...));
+      instance->do_log(log_event::make(level, component, fmt_str.location,
+                                       thread_local_aid(), fmt_str.value,
+                                       std::forward<Ts>(args)...));
     }
   }
 
@@ -178,14 +154,13 @@ public:
         Ts&&... args) {
     auto* instance = current_logger();
     if (instance && instance->accepts(CAF_LOG_LEVEL_TRACE, component)) {
-      std::string msg = "ENTRY ";
-      detail::format_to(std::back_inserter(msg), fmt_str.value,
-                        std::forward<Ts>(args)...);
-      auto& loc = fmt_str.location;
-      context ctx{CAF_LOG_LEVEL_TRACE, component, loc.line(), loc.file_name(),
-                  loc.function_name()};
-      instance->do_log(ctx, std::move(msg));
-      return {instance, ctx};
+      auto msg = "ENTRY " + std::string{fmt_str.value};
+      auto event = log_event::make(CAF_LOG_LEVEL_TRACE, component,
+                                   fmt_str.location, thread_local_aid(), msg,
+                                   std::forward<Ts>(args)...);
+      auto event_cpy = event;
+      instance->do_log(std::move(event_cpy));
+      return {instance, event};
     }
     return {nullptr, {}};
   }
@@ -239,12 +214,15 @@ public:
                       = detail::source_location::current());
 
   /// @private
-  [[nodiscard]] trace_exit_guard legacy_api_log_trace(
-    unsigned level, std::string_view component, std::string msg,
-    detail::source_location loc = detail::source_location::current()) {
-    legacy_api_log(level, component, std::move(msg), loc);
-    return {current_logger(), context{level, component, loc.line(),
-                                      loc.file_name(), loc.function_name()}};
+  [[nodiscard]] trace_exit_guard
+  legacy_api_log_trace(std::string_view component, std::string msg,
+                       detail::source_location loc
+                       = detail::source_location::current()) {
+    auto event = log_event::make(CAF_LOG_LEVEL_TRACE, component, loc,
+                                 thread_local_aid(), msg);
+    auto event_cpy = event;
+    do_log(std::move(event_cpy));
+    return {this, event};
   }
 
   // -- properties -------------------------------------------------------------
@@ -293,7 +271,7 @@ public:
 private:
   // -- internal logging API ---------------------------------------------------
 
-  virtual void do_log(const context& ctx, std::string&& msg) = 0;
+  virtual void do_log(log_event_ptr&& event) = 0;
 
   // -- initialization (called by the actor_system) ----------------------------
 
@@ -385,16 +363,9 @@ private:
         caf_logger_instance                                                    \
         && caf_logger_instance->accepts(CAF_LOG_LEVEL_TRACE,                   \
                                         CAF_LOG_COMPONENT)) {                  \
-      caf_logger_instance->legacy_api_log(                                     \
-        CAF_LOG_LEVEL_TRACE, CAF_LOG_COMPONENT,                                \
+      caf_trace_log_auto_guard = caf_logger_instance->legacy_api_log_trace(    \
+        CAF_LOG_COMPONENT,                                                     \
         (caf::logger::line_builder{} << "ENTRY" << entry_message).get());      \
-      auto caf_trace_loc = caf::detail::source_location::current();            \
-      caf_trace_log_auto_guard = caf::logger::trace_exit_guard{                \
-        caf_logger_instance,                                                   \
-        caf::logger::context{CAF_LOG_LEVEL_TRACE, CAF_LOG_COMPONENT,           \
-                             static_cast<unsigned>(caf_trace_loc.line()),      \
-                             caf_trace_loc.file_name(),                        \
-                             caf_trace_loc.function_name()}};                  \
     }                                                                          \
     static_cast<void>(0)
 

@@ -17,9 +17,17 @@
 #include <cstdint>
 #include <optional>
 #include <string_view>
+#include <thread>
 #include <variant>
 
 namespace caf {
+
+/// Tag type for `log_event::with_message` that indicates that the event should
+/// keep its original timestamp.
+struct keep_timestamp_t {};
+
+/// Configures `log_event::with_message` to keep the original timestamp.
+constexpr keep_timestamp_t keep_timestamp{};
 
 /// Captures a single event for a logger.
 class CAF_CORE_EXPORT log_event : public ref_counted {
@@ -41,6 +49,9 @@ public:
     auto end() const noexcept {
       return detail::json::linked_list_iterator<const field>{};
     }
+    [[nodiscard]] bool empty() const noexcept {
+      return head == nullptr;
+    }
   };
 
   /// A single, user-defined field.
@@ -59,12 +70,15 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   log_event(unsigned level, std::string_view component,
-            const detail::source_location& loc) noexcept
+            const detail::source_location& loc, actor_id aid) noexcept
     : level_(level),
       component_(component),
       line_number_(loc.line()),
       file_name_(loc.file_name()),
-      function_name_(loc.function_name()) {
+      function_name_(loc.function_name()),
+      aid_(aid),
+      timestamp_(caf::make_timestamp()),
+      tid_(std::this_thread::get_id()) {
     // nop
   }
 
@@ -76,9 +90,9 @@ public:
 
   template <class Arg, class... Args>
   static log_event_ptr make(unsigned level, std::string_view component,
-                            const detail::source_location& loc,
+                            const detail::source_location& loc, actor_id aid,
                             std::string_view fmt, Arg&& arg, Args&&... args) {
-    auto event = make(level, component, loc);
+    auto event = make(level, component, loc, aid);
     chunked_string_builder cs_builder{&event->resource_};
     chunked_string_builder_output_iterator out{&cs_builder};
     detail::format_to(out, fmt, std::forward<Arg>(arg),
@@ -88,8 +102,16 @@ public:
   }
 
   static log_event_ptr make(unsigned level, std::string_view component,
-                            const detail::source_location& loc,
+                            const detail::source_location& loc, actor_id aid,
                             std::string_view msg);
+
+  /// Returns a deep copy of `this` with a new message without changing the
+  /// timestamp.
+  [[nodiscard]] log_event_ptr with_message(std::string_view msg,
+                                           keep_timestamp_t) const;
+
+  /// Returns a copy of `this` with a new message and an updated timestamp.
+  [[nodiscard]] log_event_ptr with_message(std::string_view msg) const;
 
   // -- properties -------------------------------------------------------------
 
@@ -128,9 +150,27 @@ public:
     return field_list{first_field_};
   }
 
+  /// Returns the ID of the actor that generated the event.
+  [[nodiscard]] caf::actor_id actor_id() const noexcept {
+    return aid_;
+  }
+
+  /// Returns the timestamp of the event.
+  [[nodiscard]] caf::timestamp timestamp() const noexcept {
+    return timestamp_;
+  }
+
+  /// Returns the ID of the thread that generated the event.
+  [[nodiscard]] std::thread::id thread_id() const noexcept {
+    return tid_;
+  }
+
 private:
+  log_event() = default;
+
   static log_event_ptr make(unsigned level, std::string_view component,
-                            const detail::source_location& loc);
+                            const detail::source_location& loc,
+                            caf::actor_id aid);
 
   /// The severity level of the event.
   unsigned level_;
@@ -146,6 +186,15 @@ private:
 
   /// The name of the function in which the event was generated.
   const char* function_name_;
+
+  /// The ID of the actor that generated the event.
+  caf::actor_id aid_;
+
+  /// The timestamp of the event.
+  caf::timestamp timestamp_;
+
+  /// The ID of the thread that generated the event.
+  std::thread::id tid_;
 
   /// The user-defined message of the event.
   chunked_string message_;
@@ -172,6 +221,8 @@ private:
 
 public:
   // -- member types -----------------------------------------------------------
+
+  friend class log_event;
 
   using list_type = detail::json::linked_list<log_event::field>;
 
@@ -242,6 +293,15 @@ public:
   }
 
 private:
+  void add_field(std::string_view key, std::nullopt_t) {
+    auto& field = fields_.emplace_back(std::string_view{}, std::nullopt);
+    field.key = deep_copy(key);
+  }
+
+  void add_field(std::string_view key, chunked_string);
+
+  void add_field(std::string_view key, log_event::field_list);
+
   [[nodiscard]] resource_type* resource() noexcept {
     return fields_.get_allocator().resource();
   }
@@ -264,10 +324,10 @@ public:
 
   template <class... Args>
   log_event_builder(unsigned level, std::string_view component,
-                    const detail::source_location& loc, std::string_view fmt,
-                    Args&&... args)
-    : event_(
-      log_event::make(level, component, loc, fmt, std::forward<Args>(args)...)),
+                    const detail::source_location& loc, actor_id aid,
+                    std::string_view fmt, Args&&... args)
+    : event_(log_event::make(level, component, loc, aid, fmt,
+                             std::forward<Args>(args)...)),
       fields_(&event_->resource_) {
     // nop
   }
