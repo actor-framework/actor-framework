@@ -47,9 +47,7 @@ log_event_fields_builder::log_event_fields_builder(
 }
 
 std::string_view log_event_fields_builder::deep_copy(std::string_view str) {
-  auto* buf = allocator_t<char>{resource()}.allocate(str.size());
-  memcpy(buf, str.data(), str.size());
-  return std::string_view{buf, str.size()};
+  return deep_copy_impl(resource(), str);
 }
 
 intrusive_ptr<log_event> log_event_builder::build() && {

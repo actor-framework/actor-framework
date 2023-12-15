@@ -21,8 +21,6 @@
 
 namespace caf {
 
-// -- log_event ----------------------------------------------------------------
-
 /// Captures a single event for a logger.
 class CAF_CORE_EXPORT log_event : public ref_counted {
 public:
@@ -36,7 +34,7 @@ public:
 
   /// A list of user-defined fields.
   struct field_list {
-    const field_node* head;
+    const field_node* head = nullptr;
     auto begin() const noexcept {
       return detail::json::linked_list_iterator<const field>{head};
     }
@@ -255,7 +253,7 @@ private:
   };
 };
 
-/// Builds a chunked string by allocating each chunk on a monotonic buffer.
+/// Builds a log event by allocating each field on a monotonic buffer.
 class CAF_CORE_EXPORT log_event_builder {
 public:
   // -- member types -----------------------------------------------------------
