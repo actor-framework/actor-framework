@@ -4,6 +4,7 @@
 
 #include "caf/log_event.hpp"
 
+#include "caf/logger.hpp"
 #include "caf/make_counted.hpp"
 
 #include <new>
@@ -62,11 +63,12 @@ log_event_ptr log_event::with_message(std::string_view msg,
   copy->function_name_ = function_name_;
   copy->aid_ = aid_;
   copy->timestamp_ = timestamp_;
+  copy->tid_ = tid_;
   copy->message_ = chunked_string{deep_copy_to_node(resource, msg)};
   auto fields_builder = log_event_fields_builder{resource};
   for (auto field : fields()) {
     auto add = [&fields_builder, key = field.key](const auto& val) {
-      fields_builder.add_field(key, val);
+      fields_builder.field(key, val);
     };
     std::visit(add, field.value);
   }
@@ -100,24 +102,24 @@ log_event_ptr log_event::make(unsigned level, std::string_view component,
 
 log_event_fields_builder::log_event_fields_builder(
   resource_type* resource) noexcept {
-  new (&fields_) list_type(resource);
+  if (resource)
+    new (&fields_) list_type(resource);
 }
 
-void log_event_fields_builder::add_field(std::string_view key,
-                                         chunked_string str) {
+void log_event_fields_builder::field(std::string_view key, chunked_string str) {
   auto& field = fields_.emplace_back(std::string_view{}, std::nullopt);
   field.key = deep_copy(key);
   field.value = deep_copy_impl(resource(), str);
 }
 
-void log_event_fields_builder::add_field(std::string_view key,
-                                         log_event::field_list list) {
+void log_event_fields_builder::field(std::string_view key,
+                                     log_event::field_list list) {
   auto& field = fields_.emplace_back(std::string_view{}, std::nullopt);
   field.key = deep_copy(key);
   auto nested = log_event_fields_builder{resource()};
   for (auto field : list) {
     auto add = [&nested, key = field.key](const auto& val) {
-      nested.add_field(key, val);
+      nested.field(key, val);
     };
     std::visit(add, field.value);
   }
@@ -128,9 +130,11 @@ std::string_view log_event_fields_builder::deep_copy(std::string_view str) {
   return deep_copy_impl(resource(), str);
 }
 
-intrusive_ptr<log_event> log_event_builder::build() && {
-  event_->first_field_ = fields_.build().head;
-  return std::move(event_);
+void log_event_sender::send() && {
+  if (logger_) {
+    event_->first_field_ = fields_.build().head;
+    logger_->do_log(std::move(event_));
+  }
 }
 
 } // namespace caf

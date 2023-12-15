@@ -25,19 +25,6 @@
 #include <type_traits>
 #include <typeinfo>
 
-/*
- * To enable logging, you have to define CAF_DEBUG. This enables
- * CAF_LOG_ERROR messages. To enable more debugging output, you can
- * define CAF_LOG_LEVEL to:
- * 1: + warning
- * 2: + info
- * 3: + debug
- * 4: + trace (prints for each logged method entry and exit message)
- *
- * Note: this logger emits log4j style output; logs are best viewed
- *       using a log4j viewer, e.g., http://code.google.com/p/otroslogviewer/
- *
- */
 namespace caf {
 
 /// Centrally logs events from all actors in an actor system. To enable
@@ -53,7 +40,39 @@ public:
 
   friend class trace_exit_guard;
 
+  friend class log_event_sender;
+
   // -- member types -----------------------------------------------------------
+
+  /// Provides an API entry point for sending a log event to the current logger.
+  class entrypoint {
+  public:
+    entrypoint(unsigned level, std::string_view component,
+               detail::source_location loc)
+      : level_(level), component_(component), loc_(loc) {
+      // nop
+    }
+
+    template <class... Args>
+    log_event_sender message(std::string_view fmt, Args&&... args) {
+      auto* instance = current_logger();
+      if (instance && instance->accepts(level_, component_)) {
+        return {instance,
+                level_,
+                component_,
+                loc_,
+                logger::thread_local_aid(),
+                fmt,
+                std::forward<Args>(args)...};
+      }
+      return {};
+    }
+
+  private:
+    unsigned level_;
+    std::string_view component_;
+    detail::source_location loc_;
+  };
 
   /// Helper class to print exit trace messages on scope exit.
   class trace_exit_guard {
@@ -175,6 +194,14 @@ public:
     log(CAF_LOG_LEVEL_DEBUG, component, fmt_str, std::forward<Ts>(args)...);
   }
 
+  /// Starts a new log event with `debug` severity.
+  /// @param component Name of the component logging the message.
+  static entrypoint
+  debug(std::string_view component,
+        detail::source_location loc = detail::source_location::current()) {
+    return {CAF_LOG_LEVEL_DEBUG, component, loc};
+  }
+
   /// Logs a message with `info` severity.
   /// @param component Name of the component logging the message.
   /// @param fmt_str The format string (with source location) for the message.
@@ -183,6 +210,14 @@ public:
   static void info(std::string_view component,
                    format_string_with_location fmt_str, Ts&&... args) {
     log(CAF_LOG_LEVEL_INFO, component, fmt_str, std::forward<Ts>(args)...);
+  }
+
+  /// Starts a new log event with `info` severity.
+  /// @param component Name of the component logging the message.
+  static entrypoint
+  info(std::string_view component,
+       detail::source_location loc = detail::source_location::current()) {
+    return {CAF_LOG_LEVEL_INFO, component, loc};
   }
 
   /// Logs a message with `warning` severity.
@@ -195,6 +230,14 @@ public:
     log(CAF_LOG_LEVEL_WARNING, component, fmt_str, std::forward<Ts>(args)...);
   }
 
+  /// Starts a new log event with `warning` severity.
+  /// @param component Name of the component logging the message.
+  static entrypoint
+  warning(std::string_view component,
+          detail::source_location loc = detail::source_location::current()) {
+    return {CAF_LOG_LEVEL_WARNING, component, loc};
+  }
+
   /// Logs a message with `error` severity.
   /// @param component Name of the component logging the message.
   /// @param fmt_str The format string (with source location) for the message.
@@ -203,6 +246,14 @@ public:
   static void error(std::string_view component,
                     format_string_with_location fmt_str, Ts&&... args) {
     log(CAF_LOG_LEVEL_ERROR, component, fmt_str, std::forward<Ts>(args)...);
+  }
+
+  /// Starts a new log event with `error` severity.
+  /// @param component Name of the component logging the message.
+  static entrypoint
+  error(std::string_view component,
+        detail::source_location loc = detail::source_location::current()) {
+    return {CAF_LOG_LEVEL_ERROR, component, loc};
   }
 
   // -- legacy API (for the logging macros) ------------------------------------
@@ -244,12 +295,20 @@ public:
 
   // -- thread-local properties ------------------------------------------------
 
-  /// Stores the actor system for the current thread.
-  static void set_current_actor_system(actor_system*);
+  static void set_current_actor_system();
 
   /// Returns the logger for the current thread or `nullptr` if none is
   /// registered.
   static logger* current_logger();
+
+  /// Sets the logger for the current thread.
+  static void current_logger(actor_system* sys);
+
+  /// Sets the logger for the current thread.
+  static void current_logger(logger* ptr);
+
+  /// Sets the logger for the current thread.
+  static void current_logger(std::nullptr_t);
 
   // -- reference counting -----------------------------------------------------
 
@@ -349,7 +408,7 @@ private:
 
 #define CAF_SET_AID(aid_arg) caf::logger::thread_local_aid(aid_arg)
 
-#define CAF_SET_LOGGER_SYS(ptr) caf::logger::set_current_actor_system(ptr)
+#define CAF_SET_LOGGER_SYS(ptr) caf::logger::current_logger(ptr)
 
 #if CAF_LOG_LEVEL < CAF_LOG_LEVEL_TRACE
 

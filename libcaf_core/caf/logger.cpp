@@ -638,12 +638,20 @@ intrusive_ptr<logger> logger::make(actor_system& sys) {
   return make_counted<default_logger>(sys);
 }
 
-void logger::set_current_actor_system(actor_system* x) {
-  current_logger_ptr.reset(x != nullptr ? &x->logger() : nullptr);
-}
-
 logger* logger::current_logger() {
   return current_logger_ptr.get();
+}
+
+void logger::current_logger(actor_system* sys) {
+  current_logger_ptr.reset(sys != nullptr ? &sys->logger() : nullptr);
+}
+
+void logger::current_logger(logger* ptr) {
+  current_logger_ptr.reset(ptr);
+}
+
+void logger::current_logger(std::nullptr_t) {
+  current_logger_ptr.reset();
 }
 
 } // namespace caf

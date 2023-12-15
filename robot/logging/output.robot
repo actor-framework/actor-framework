@@ -11,28 +11,42 @@ ${BINARY_PATH}          /path/to/the/test/binary
 ${TRACE_BASELINE}=      SEPARATOR=
 ...                     TRACE app ENTRY value = 42\n
 ...                     DEBUG app this is a debug message\n
+...                     DEBUG app this is another debug message ; foo = bar\n
 ...                     INFO app this is an info message\n
+...                     INFO app this is another info message ; foo = bar\n
 ...                     WARN app this is a warning message\n
+...                     WARN app this is another warning message ; foo = bar\n
 ...                     ERROR app this is an error message\n
+...                     ERROR app this is another error message ; foo = bar\n
 ...                     TRACE app EXIT\n
 
 ${DEBUG_BASELINE}=      SEPARATOR=
 ...                     DEBUG app this is a debug message\n
+...                     DEBUG app this is another debug message ; foo = bar\n
 ...                     INFO app this is an info message\n
+...                     INFO app this is another info message ; foo = bar\n
 ...                     WARN app this is a warning message\n
+...                     WARN app this is another warning message ; foo = bar\n
 ...                     ERROR app this is an error message\n
+...                     ERROR app this is another error message ; foo = bar\n
 
 ${INFO_BASELINE}=       SEPARATOR=
 ...                     INFO app this is an info message\n
+...                     INFO app this is another info message ; foo = bar\n
 ...                     WARN app this is a warning message\n
+...                     WARN app this is another warning message ; foo = bar\n
 ...                     ERROR app this is an error message\n
+...                     ERROR app this is another error message ; foo = bar\n
 
 ${WARN_BASELINE}=       SEPARATOR=
 ...                     WARN app this is a warning message\n
+...                     WARN app this is another warning message ; foo = bar\n
 ...                     ERROR app this is an error message\n
+...                     ERROR app this is another error message ; foo = bar\n
 
 ${ERROR_BASELINE}=      SEPARATOR=
 ...                     ERROR app this is an error message\n
+...                     ERROR app this is another error message ; foo = bar\n
 
 
 *** Keywords ***

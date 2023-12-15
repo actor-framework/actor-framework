@@ -6,6 +6,9 @@
 
 #include "caf/test/test.hpp"
 
+#include "caf/logger.hpp"
+#include "caf/ref_counted.hpp"
+
 using namespace caf;
 using namespace std::literals;
 
@@ -23,6 +26,41 @@ get_at(size_t index, const log_event::field_list& fields) {
   return {i->key, std::get<T>(i->value)};
 }
 
+// A trivial logger implementation that stores the last event.
+class mock_logger : public logger, public ref_counted {
+public:
+  log_event_ptr event;
+
+  void ref_logger() const noexcept override {
+    ref();
+  }
+
+  void deref_logger() const noexcept override {
+    deref();
+  }
+
+  bool accepts(unsigned, std::string_view) override {
+    return true;
+  }
+
+private:
+  void do_log(log_event_ptr&& ptr) override {
+    event = std::move(ptr);
+  }
+
+  void init(const actor_system_config&) override {
+    // nop
+  }
+
+  void start() override {
+    // nop
+  }
+
+  void stop() override {
+    // nop
+  }
+};
+
 std::pair<std::string_view, std::string>
 de_chunk(const std::pair<std::string_view, chunked_string>& x) {
   return {x.first, to_string(x.second)};
@@ -31,23 +69,23 @@ de_chunk(const std::pair<std::string_view, chunked_string>& x) {
 TEST("fields builder") {
   auto init_sub_fields = [](auto& builder) {
     auto init_sub_sub_fields = [](auto& builder) {
-      builder.add_field("foo-7-3-1", 3);
-      builder.add_field("foo-7-3-2", 4);
+      builder.field("foo-7-3-1", 3);
+      builder.field("foo-7-3-2", 4);
     };
-    builder.add_field("foo-7-1", 1);
-    builder.add_field("foo-7-2", 2);
-    builder.add_field("foo-7-3", init_sub_sub_fields);
+    builder.field("foo-7-1", 1);
+    builder.field("foo-7-2", 2);
+    builder.field("foo-7-3", init_sub_sub_fields);
   };
   auto resource = detail::monotonic_buffer_resource{};
-  auto builder = log_event_fields_builder{&resource};
-  builder.add_field("foo-1", true);
-  builder.add_field("foo-2", 23);
-  builder.add_field("foo-3", 42u);
-  builder.add_field("foo-4", 2.0);
-  builder.add_field("foo-5", "bar");
-  builder.add_field("foo-6", "{}, {}!", "Hello", "World");
-  builder.add_field("foo-7", init_sub_fields);
-  auto fields = builder.build();
+  auto fields = log_event_fields_builder{&resource}
+                  .field("foo-1", true)
+                  .field("foo-2", 23)
+                  .field("foo-3", 42u)
+                  .field("foo-4", 2.0)
+                  .field("foo-5", "bar")
+                  .field("foo-6", "{}, {}!", "Hello", "World")
+                  .field("foo-7", init_sub_fields)
+                  .build();
   check_eq(get_at<bool>(0, fields), std::pair{"foo-1"sv, true});
   check_eq(get_at<int64_t>(1, fields), std::pair{"foo-2"sv, int64_t{23}});
   check_eq(get_at<uint64_t>(2, fields), std::pair{"foo-3"sv, uint64_t{42}});
@@ -70,13 +108,17 @@ TEST("fields builder") {
            std::pair{"foo-7-3-2"sv, int64_t{4}});
 }
 
-TEST("log event builder") {
+TEST("log event sender") {
   auto loc = detail::source_location::current();
+  auto mlog = mock_logger{};
   SECTION("trivial message") {
-    auto event = log_event_builder(CAF_LOG_LEVEL_DEBUG, "foo", loc, 0, "hello")
-                   .add_field("foo", 42)
-                   .add_field("bar", "baz")
-                   .build();
+    log_event_sender(&mlog, CAF_LOG_LEVEL_DEBUG, "foo", loc, 0, "hello")
+      .field("foo", 42)
+      .field("bar", "baz")
+      .send();
+    auto event = mlog.event;
+    if (!check_ne(event, nullptr))
+      return;
     check_eq(event->level(), unsigned{CAF_LOG_LEVEL_DEBUG});
     check_eq(event->component(), "foo"sv);
     check_eq(event->line_number(), loc.line());
@@ -89,11 +131,14 @@ TEST("log event builder") {
     check_eq(get_at<std::string_view>(1, fields), std::pair{"bar"sv, "baz"sv});
   }
   SECTION("formatted message") {
-    auto event = log_event_builder(CAF_LOG_LEVEL_DEBUG, "foo", loc, 123,
-                                   "{}, {}!", "Hello", "World")
-                   .add_field("foo", 42)
-                   .add_field("bar", "baz")
-                   .build();
+    log_event_sender(&mlog, CAF_LOG_LEVEL_DEBUG, "foo", loc, 123, "{}, {}!",
+                     "Hello", "World")
+      .field("foo", 42)
+      .field("bar", "baz")
+      .send();
+    auto event = mlog.event;
+    if (!check_ne(event, nullptr))
+      return;
     check_eq(event->level(), unsigned{CAF_LOG_LEVEL_DEBUG});
     check_eq(event->component(), "foo"sv);
     check_eq(event->line_number(), loc.line());

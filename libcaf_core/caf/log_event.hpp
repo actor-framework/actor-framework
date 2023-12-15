@@ -34,7 +34,7 @@ class CAF_CORE_EXPORT log_event : public ref_counted {
 public:
   // -- member types -----------------------------------------------------------
 
-  friend class log_event_builder;
+  friend class log_event_sender;
 
   struct field;
 
@@ -240,30 +240,34 @@ public:
 
   /// Adds a boolean or integer field.
   template <class T>
-  std::enable_if_t<std::is_integral_v<T>>
-  add_field(std::string_view key, T value) {
+  std::enable_if_t<std::is_integral_v<T>, log_event_fields_builder&>
+  field(std::string_view key, T value) {
     auto& field = fields_.emplace_back(std::string_view{},
                                        lift_integral(value));
     field.key = deep_copy(key);
+    return *this;
   }
 
   /// Adds a floating point field.
-  void add_field(std::string_view key, double value) {
+  log_event_fields_builder& field(std::string_view key, double value) {
     auto& field = fields_.emplace_back(std::string_view{}, value);
     field.key = deep_copy(key);
+    return *this;
   }
 
   /// Adds a string field.
-  void add_field(std::string_view key, std::string_view value) {
+  log_event_fields_builder& field(std::string_view key,
+                                  std::string_view value) {
     auto& field = fields_.emplace_back(std::string_view{}, std::nullopt);
     field.key = deep_copy(key);
     field.value = deep_copy(value);
+    return *this;
   }
 
   /// Adds a formatted string field.
   template <class Arg, class... Args>
-  void add_field(std::string_view key, std::string_view fmt, Arg&& arg,
-                 Args&&... args) {
+  log_event_fields_builder&
+  field(std::string_view key, std::string_view fmt, Arg&& arg, Args&&... args) {
     auto& field = fields_.emplace_back(std::string_view{}, std::nullopt);
     field.key = deep_copy(key);
     chunked_string_builder cs_builder{resource()};
@@ -271,18 +275,22 @@ public:
     detail::format_to(out, fmt, std::forward<Arg>(arg),
                       std::forward<Args>(args)...);
     field.value = cs_builder.build();
+    return *this;
   }
 
   /// Adds nested fields.
   template <class SubFieldsInitializer>
-  auto add_field(std::string_view key, SubFieldsInitializer&& init)
-    -> std::enable_if_t<std::is_same_v<
-      decltype(init(std::declval<log_event_fields_builder&>())), void>> {
+  auto field(std::string_view key, SubFieldsInitializer&& init)
+    -> std::enable_if_t<
+      std::is_same_v<decltype(init(std::declval<log_event_fields_builder&>())),
+                     void>,
+      log_event_fields_builder&> {
     auto& field = fields_.emplace_back(std::string_view{}, std::nullopt);
     field.key = deep_copy(key);
     log_event_fields_builder nested_builder{resource()};
     init(nested_builder);
     field.value = nested_builder.build();
+    return *this;
   }
 
   // -- build ------------------------------------------------------------------
@@ -293,14 +301,14 @@ public:
   }
 
 private:
-  void add_field(std::string_view key, std::nullopt_t) {
+  void field(std::string_view key, std::nullopt_t) {
     auto& field = fields_.emplace_back(std::string_view{}, std::nullopt);
     field.key = deep_copy(key);
   }
 
-  void add_field(std::string_view key, chunked_string);
+  void field(std::string_view key, chunked_string);
 
-  void add_field(std::string_view key, log_event::field_list);
+  void field(std::string_view key, log_event::field_list);
 
   [[nodiscard]] resource_type* resource() noexcept {
     return fields_.get_allocator().resource();
@@ -313,8 +321,9 @@ private:
   };
 };
 
-/// Builds a log event by allocating each field on a monotonic buffer.
-class CAF_CORE_EXPORT log_event_builder {
+/// Builds a log event by allocating each field on a monotonic buffer and then
+/// sends it to the current logger.
+class CAF_CORE_EXPORT log_event_sender {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -322,11 +331,16 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
+  log_event_sender() : fields_(nullptr) {
+    // nop
+  }
+
   template <class... Args>
-  log_event_builder(unsigned level, std::string_view component,
-                    const detail::source_location& loc, actor_id aid,
-                    std::string_view fmt, Args&&... args)
-    : event_(log_event::make(level, component, loc, aid, fmt,
+  log_event_sender(logger* ptr, unsigned level, std::string_view component,
+                   const detail::source_location& loc, actor_id aid,
+                   std::string_view fmt, Args&&... args)
+    : logger_(ptr),
+      event_(log_event::make(level, component, loc, aid, fmt,
                              std::forward<Args>(args)...)),
       fields_(&event_->resource_) {
     // nop
@@ -336,54 +350,60 @@ public:
 
   /// Adds a boolean or integer field.
   template <class T>
-  std::enable_if_t<std::is_integral_v<T>, log_event_builder&&>
-  add_field(std::string_view key, T value) && {
-    fields_.add_field(key, value);
+  std::enable_if_t<std::is_integral_v<T>, log_event_sender&&>
+  field(std::string_view key, T value) && {
+    if (logger_)
+      fields_.field(key, value);
     return std::move(*this);
   }
 
   /// Adds a floating point field.
-  log_event_builder&& add_field(std::string_view key, double value) && {
-    fields_.add_field(key, value);
+  log_event_sender&& field(std::string_view key, double value) && {
+    if (logger_)
+      fields_.field(key, value);
     return std::move(*this);
   }
 
   /// Adds a string field.
-  log_event_builder&& add_field(std::string_view key,
-                                std::string_view value) && {
-    fields_.add_field(key, value);
+  log_event_sender&& field(std::string_view key, std::string_view value) && {
+    if (logger_)
+      fields_.field(key, value);
     return std::move(*this);
   }
 
   /// Adds a formatted string field.
   template <class Arg, class... Args>
-  log_event_builder&& add_field(std::string_view key, std::string_view fmt,
-                                Arg&& arg, Args&&... args) && {
-    fields_.add_field(key, fmt, std::forward<Arg>(arg),
-                      std::forward<Args>(args)...);
+  log_event_sender&& field(std::string_view key, std::string_view fmt,
+                           Arg&& arg, Args&&... args) && {
+    if (logger_)
+      fields_.field(key, fmt, std::forward<Arg>(arg),
+                    std::forward<Args>(args)...);
     return std::move(*this);
   }
 
   /// Adds nested fields.
   template <class SubFieldsInitializer>
-  auto add_field(std::string_view key, SubFieldsInitializer&& init)
+  auto field(std::string_view key, SubFieldsInitializer&& init)
     -> std::enable_if_t<
       std::is_same_v<decltype(init(std::declval<log_event_fields_builder&>())),
                      void>,
-      log_event_builder&&> {
-    fields_.add_field(key, std::forward<SubFieldsInitializer>(init));
+      log_event_sender&&> {
+    if (logger_)
+      fields_.field(key, std::forward<SubFieldsInitializer>(init));
     return std::move(*this);
   }
 
   // -- build ------------------------------------------------------------------
 
-  /// Seals the event and returns it.
-  [[nodiscard]] log_event_ptr build() &&;
+  /// Seals the event and passes it to the logger.
+  void send() &&;
 
 private:
   [[nodiscard]] resource_type* resource() noexcept {
     return &event_->resource_;
   }
+
+  logger* logger_ = nullptr;
 
   log_event_ptr event_;
 
