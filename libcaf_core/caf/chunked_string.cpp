@@ -6,6 +6,7 @@
 
 #include "caf/detail/monotonic_buffer_resource.hpp"
 
+#include <new>
 #include <numeric>
 
 namespace caf {
@@ -30,6 +31,11 @@ std::string to_string(const chunked_string& str) {
   for (auto chunk : str)
     result.insert(result.end(), chunk.begin(), chunk.end());
   return result;
+}
+
+chunked_string_builder::chunked_string_builder(
+  resource_type* resource) noexcept {
+  new (&chunks_) list_type(resource);
 }
 
 void chunked_string_builder::chunked_string_builder::append(char ch) {
