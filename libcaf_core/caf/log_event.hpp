@@ -70,7 +70,7 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   log_event(unsigned level, std::string_view component,
-            const detail::source_location& loc, actor_id aid) noexcept
+            const detail::source_location& loc, caf::actor_id aid) noexcept
     : level_(level),
       component_(component),
       line_number_(loc.line()),
@@ -90,8 +90,9 @@ public:
 
   template <class Arg, class... Args>
   static log_event_ptr make(unsigned level, std::string_view component,
-                            const detail::source_location& loc, actor_id aid,
-                            std::string_view fmt, Arg&& arg, Args&&... args) {
+                            const detail::source_location& loc,
+                            caf::actor_id aid, std::string_view fmt, Arg&& arg,
+                            Args&&... args) {
     auto event = make(level, component, loc, aid);
     chunked_string_builder cs_builder{&event->resource_};
     chunked_string_builder_output_iterator out{&cs_builder};
@@ -102,8 +103,8 @@ public:
   }
 
   static log_event_ptr make(unsigned level, std::string_view component,
-                            const detail::source_location& loc, actor_id aid,
-                            std::string_view msg);
+                            const detail::source_location& loc,
+                            caf::actor_id aid, std::string_view msg);
 
   /// Returns a deep copy of `this` with a new message without changing the
   /// timestamp.
