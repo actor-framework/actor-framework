@@ -144,6 +144,57 @@ public:
     caf::flow::coordinator* parent_;
   };
 
+  /// Returns a new canceling observer. The subscriber will either call `cancel`
+  /// on its subscription immediately in `on_subscribe` or wait until the first
+  /// call to `on_next` when `accept_subscription` is set to `true`.
+  template <class T>
+  class canceling_observer : public caf::flow::observer_impl_base<T> {
+  public:
+    explicit canceling_observer(caf::flow::coordinator* parent,
+                                bool accept_subscription)
+      : accept_subscription(accept_subscription), parent_(parent) {
+      // nop
+    }
+
+    caf::flow::coordinator* parent() const noexcept override {
+      return parent_;
+    }
+
+    void on_next(const T&) override {
+      ++on_next_calls;
+      sub.cancel();
+    }
+
+    void on_error(const error&) override {
+      ++on_error_calls;
+      sub.release_later();
+    }
+
+    void on_complete() override {
+      ++on_complete_calls;
+      sub.release_later();
+    }
+
+    void on_subscribe(caf::flow::subscription sub) override {
+      if (accept_subscription) {
+        accept_subscription = false;
+        sub.request(128);
+        this->sub = std::move(sub);
+        return;
+      }
+      sub.cancel();
+    }
+
+    int on_next_calls = 0;
+    int on_error_calls = 0;
+    int on_complete_calls = 0;
+    bool accept_subscription = false;
+    caf::flow::subscription sub;
+
+  private:
+    caf::flow::coordinator* parent_;
+  };
+
   /// Similar to @ref passive_observer but automatically requests items until
   /// completed. Useful for writing unit tests.
   template <class T>
@@ -201,6 +252,12 @@ public:
   template <class T>
   intrusive_ptr<auto_observer<T>> make_auto_observer() {
     return coordinator()->add_child(std::in_place_type<auto_observer<T>>);
+  }
+
+  /// Returns a new canceling observer.
+  template <class T>
+  auto make_canceling_observer(bool accept_first = false) {
+    return make_counted<canceling_observer<T>>(accept_first);
   }
 
   /// Shortcut for creating an observable error via

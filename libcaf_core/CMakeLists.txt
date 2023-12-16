@@ -204,10 +204,20 @@ caf_add_component(
     caf/flow/observe_on.test.cpp
     caf/flow/observable_builder.cpp
     caf/flow/op/buffer.test.cpp
+    caf/flow/op/cell.test.cpp
     caf/flow/op/concat.test.cpp
+    caf/flow/op/defer.test.cpp
+    caf/flow/op/empty.test.cpp
+    caf/flow/op/fail.test.cpp
     caf/flow/op/interval.cpp
+    caf/flow/op/interval.test.cpp
     caf/flow/op/mcast.test.cpp
+    caf/flow/op/merge.test.cpp
+    caf/flow/op/never.test.cpp
+    caf/flow/op/prefix_and_tail.test.cpp
     caf/flow/op/publish.test.cpp
+    caf/flow/op/ucast.test.cpp
+    caf/flow/op/zip_with.test.cpp
     caf/flow/op/pullable.cpp
     caf/flow/single.test.cpp
     caf/flow/scoped_coordinator.cpp
@@ -331,18 +341,6 @@ caf_add_component(
     dynamic_spawn
     error
     expected
-    flow.op.buffer
-    flow.op.cell
-    flow.op.concat
-    flow.op.defer
-    flow.op.empty
-    flow.op.fail
-    flow.op.interval
-    flow.op.merge
-    flow.op.never
-    flow.op.prefix_and_tail
-    flow.op.ucast
-    flow.op.zip_with
     function_view
     handles
     intrusive_ptr
