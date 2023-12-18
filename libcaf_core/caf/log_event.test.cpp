@@ -152,4 +152,43 @@ TEST("log event sender") {
   }
 }
 
+TEST("with_message") {
+  auto loc = detail::source_location::current();
+  auto mlog = mock_logger{};
+  log_event_sender(&mlog, CAF_LOG_LEVEL_DEBUG, "foo", loc, 0, "message 1")
+    .field("foo", 42)
+    .field("str", "{}, {}!", "Hello", "World")
+    .field("nested", [](auto& sub) { sub.field("key-1", 1).field("key-2", 2); })
+    .send();
+  auto event_1 = mlog.event;
+  auto event_2 = event_1->with_message("message 2", keep_timestamp);
+  check_eq(to_string(event_1->message()), "message 1"sv);
+  check_eq(to_string(event_2->message()), "message 2"sv);
+  auto fields_1 = event_1->fields();
+  auto fields_1_3 = get_at<log_event::field_list>(2, fields_1).second;
+  auto fields_2 = event_2->fields();
+  auto fields_2_3 = get_at<log_event::field_list>(2, fields_2).second;
+  check_eq(get_at<int64_t>(0, fields_1), std::pair{"foo"sv, int64_t{42}});
+  check_eq(de_chunk(get_at<chunked_string>(1, fields_1)),
+           std::pair{"str"sv, "Hello, World!"s});
+  check_eq(get_at<int64_t>(0, fields_1_3), std::pair{"key-1"sv, int64_t{1}});
+  check_eq(get_at<int64_t>(1, fields_1_3), std::pair{"key-2"sv, int64_t{2}});
+  check_eq(get_at<int64_t>(0, fields_2), std::pair{"foo"sv, int64_t{42}});
+  check_eq(de_chunk(get_at<chunked_string>(1, fields_2)),
+           std::pair{"str"sv, "Hello, World!"s});
+  check_eq(get_at<int64_t>(0, fields_2_3), std::pair{"key-1"sv, int64_t{1}});
+  check_eq(get_at<int64_t>(1, fields_2_3), std::pair{"key-2"sv, int64_t{2}});
+  check_eq(event_1->level(), event_2->level());
+  check_eq(event_1->component(), event_2->component());
+  check_eq(event_1->line_number(), event_2->line_number());
+  check_eq(event_1->file_name(), event_2->file_name());
+  check_eq(event_1->function_name(), event_2->function_name());
+  check_eq(event_1->actor_id(), event_2->actor_id());
+  check_eq(event_1->thread_id(), event_2->thread_id());
+  check_eq(event_1->timestamp(), event_2->timestamp());
+  std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  auto event_3 = event_2->with_message("message 2");
+  check_ne(event_2->timestamp(), event_3->timestamp());
+}
+
 } // namespace
