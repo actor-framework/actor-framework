@@ -136,14 +136,14 @@ if(TARGET CAF::net AND CAF_ENABLE_EXAMPLES)
         --variable SSL_PATH:${CMAKE_CURRENT_SOURCE_DIR}
         "${CMAKE_CURRENT_SOURCE_DIR}/web_socket/echo.robot")
 
-add_test(
-  NAME "robot-http-rest"
-  COMMAND
-    ${Python_EXECUTABLE}
-      -m robot
-      --variable BINARY_PATH:$<TARGET_FILE:rest>
-      --variable SSL_PATH:${CMAKE_CURRENT_SOURCE_DIR}
-      "${CMAKE_CURRENT_SOURCE_DIR}/http/rest.robot")
+  add_test(
+    NAME "robot-http-rest"
+    COMMAND
+      ${Python_EXECUTABLE}
+        -m robot
+        --variable BINARY_PATH:$<TARGET_FILE:rest>
+        --variable SSL_PATH:${CMAKE_CURRENT_SOURCE_DIR}
+        "${CMAKE_CURRENT_SOURCE_DIR}/http/rest.robot")
 
 
   add_test(
@@ -153,5 +153,13 @@ add_test(
         -m robot
         --variable BINARY_PATH:$<TARGET_FILE:client>
         "${CMAKE_CURRENT_SOURCE_DIR}/http/client.robot")
+
+  add_test(
+    NAME "robot-socket-datagram"
+    COMMAND
+      ${Python_EXECUTABLE}
+        -m robot
+        --variable BINARY_PATH:$<TARGET_FILE:transport>
+        "${CMAKE_CURRENT_SOURCE_DIR}/socket/datagram.robot")
 
 endif()

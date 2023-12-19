@@ -16,7 +16,6 @@ namespace caf::net {
 
 // -- templates ----------------------------------------------------------------
 
-template <class Factory>
 class datagram_transport;
 
 template <class... Sigs>
