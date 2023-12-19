@@ -11,7 +11,7 @@ ${BINARY_PATH}          /path/to/the/test/binary
 ${TRACE_BASELINE}=      SEPARATOR=
 ...                     TRACE app ENTRY value = 42\n
 ...                     DEBUG app this is a debug message\n
-...                     DEBUG app this is another debug message ; foo = bar\n
+...                     DEBUG app this is another debug message with foobar("one", "two") ; field = foobar("three", "four")\n
 ...                     INFO app this is an info message\n
 ...                     INFO app this is another info message ; foo = bar\n
 ...                     WARN app this is a warning message\n
@@ -22,7 +22,7 @@ ${TRACE_BASELINE}=      SEPARATOR=
 
 ${DEBUG_BASELINE}=      SEPARATOR=
 ...                     DEBUG app this is a debug message\n
-...                     DEBUG app this is another debug message ; foo = bar\n
+...                     DEBUG app this is another debug message with foobar("one", "two") ; field = foobar("three", "four")\n
 ...                     INFO app this is an info message\n
 ...                     INFO app this is another info message ; foo = bar\n
 ...                     WARN app this is a warning message\n
