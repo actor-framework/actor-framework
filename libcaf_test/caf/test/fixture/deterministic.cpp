@@ -51,16 +51,17 @@ public:
 
   /// Writes an entry to the event-queue of the logger.
   /// @thread-safe
-  void do_log(const context& ctx, std::string&& msg) override {
-    if (ctx.component == "caf") {
+  void do_log(log_event_ptr&& event) override {
+    if (event->component() == "caf") {
       // Filter out all internal CAF logging except for the caf_flow events,
       // because the output gets too noisy otherwise.
       // TODO: make this configurable.
       return;
     }
-    auto enriched = detail::format("[{}, aid: {}] {}", ctx.component,
-                                   logger::thread_local_aid(), msg);
-    reporter::instance().print(ctx, enriched);
+    auto enriched = detail::format("[{}, aid: {}] {}", event->component(),
+                                   logger::thread_local_aid(),
+                                   event->message());
+    reporter::instance().print(event->with_message(enriched, keep_timestamp));
   }
 
   /// Returns whether the logger is configured to accept input for given

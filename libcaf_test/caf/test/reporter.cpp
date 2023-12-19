@@ -378,17 +378,19 @@ public:
                       ' ', indent_, location.file_name(), location.line(), msg);
   }
 
-  void print(const logger::context& ctx, std::string_view msg) override {
-    if (level_ < ctx.level)
+  void print(const log_event& event) override {
+    if (level_ < event.level())
       return;
     set_live();
     detail::format_to(colored(),
                       "{0:{1}}${2}({3}):\n"
                       "{0:{1}}  loc: $C({4}):$Y({5})$0\n"
                       "{0:{1}}  msg: {6}\n",
-                      ' ', indent_, color_by_log_level(ctx.level),
-                      log_level_names_[ctx.level], ctx.file_name,
-                      ctx.line_number, msg);
+                      ' ', indent_, color_by_log_level(event.level()),
+                      log_level_names_[event.level()], event.file_name(),
+                      event.line_number(), event.message());
+    for (const auto& field : event.fields())
+      do_print(field);
   }
 
   void print_actor_output(local_actor* self, std::string_view msg) override {
@@ -434,6 +436,26 @@ public:
   }
 
 private:
+  void do_print(const log_event::field& field) {
+    auto fn = [this, &field](const auto& value) {
+      using value_t = std::decay_t<decltype(value)>;
+      if constexpr (std::is_same_v<value_t, std::nullopt_t>) {
+        detail::format_to(plain(), "{0:{1}}  {2}: null\n", ' ', indent_,
+                          field.key);
+      } else if constexpr (std::is_same_v<value_t, log_event::field_list>) {
+        detail::format_to(plain(), "{0:{1}}  {2}:\n", ' ', indent_, field.key);
+        indent_ += 2;
+        for (const auto& nested_field : value)
+          do_print(nested_field);
+        indent_ -= 2;
+      } else {
+        detail::format_to(plain(), "{0:{1}}  {2}: {3}\n", ' ', indent_,
+                          field.key, value);
+      }
+    };
+    std::visit(fn, field.value);
+  }
+
   static char color_by_log_level(unsigned level) {
     if (level >= CAF_LOG_LEVEL_DEBUG)
       return 'B';
