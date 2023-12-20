@@ -42,6 +42,21 @@ size_t scoped_coordinator::run_some() {
   }
 }
 
+size_t scoped_coordinator::run_some(steady_time_point timeout) {
+  size_t result = 0;
+  for (;;) {
+    drop_disposed_flows();
+    auto f = next(timeout);
+    if (!f) {
+      released_.clear();
+      return result;
+    }
+    ++result;
+    f.run();
+    released_.clear();
+  }
+}
+
 // -- reference counting -------------------------------------------------------
 
 void scoped_coordinator::ref_execution_context() const noexcept {
@@ -119,18 +134,37 @@ action scoped_coordinator::next(bool blocking) {
     auto res = std::move(actions_[0]);
     actions_.erase(actions_.begin());
     return res;
-  } else {
-    std::unique_lock guard{mtx_};
-    if (blocking) {
-      while (actions_.empty())
-        cv_.wait(guard);
-    } else if (actions_.empty()) {
-      return action{};
-    }
-    auto res = std::move(actions_[0]);
-    actions_.erase(actions_.begin());
-    return res;
   }
+  std::unique_lock guard{mtx_};
+  if (blocking) {
+    while (actions_.empty())
+      cv_.wait(guard);
+  } else if (actions_.empty()) {
+    return action{};
+  }
+  auto res = std::move(actions_[0]);
+  actions_.erase(actions_.begin());
+  return res;
+}
+
+action scoped_coordinator::next(steady_time_point timeout) {
+  // Dispatch to the regular blocking version if we have an action that becomes
+  // due before the timeout.
+  if (!delayed_.empty() && delayed_.begin()->first <= timeout)
+    return next(true);
+  // Short-circuit if we have no watched disposables, i.e., have no dependencies
+  // on external events.
+  if (watched_disposables_.empty())
+    return next(false);
+  // Otherwise, wait on the condition variable if necessary.
+  std::unique_lock guard{mtx_};
+  while (actions_.empty()) {
+    if (cv_.wait_until(guard, timeout) == std::cv_status::timeout)
+      return action{};
+  }
+  auto res = std::move(actions_.front());
+  actions_.pop_front();
+  return res;
 }
 
 } // namespace caf::flow

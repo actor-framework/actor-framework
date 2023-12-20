@@ -2,21 +2,21 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE flow.observe_on
+#include "caf/test/caf_test_main.hpp"
+#include "caf/test/fixture/deterministic.hpp"
+#include "caf/test/scenario.hpp"
+#include "caf/test/test.hpp"
 
-#include "caf/flow/coordinator.hpp"
-#include "caf/flow/observable.hpp"
+#include "caf/event_based_actor.hpp"
 #include "caf/flow/observable_builder.hpp"
-#include "caf/flow/observer.hpp"
-#include "caf/scheduled_actor/flow.hpp"
-
-#include "core-test.hpp"
 
 #include <memory>
 
 using namespace caf;
 
-BEGIN_FIXTURE_SCOPE(test_coordinator_fixture<>)
+namespace {
+
+WITH_FIXTURE(test::fixture::deterministic) {
 
 SCENARIO("observe_on moves data between actors") {
   GIVEN("a generation") {
@@ -34,11 +34,13 @@ SCENARIO("observe_on moves data between actors") {
           .for_each([&outputs](int x) { outputs.emplace_back(x); });
         launch_src();
         launch_snk();
-        run();
-        CHECK_EQ(inputs, outputs);
+        dispatch_messages();
+        check_eq(inputs, outputs);
       }
     }
   }
 }
 
-END_FIXTURE_SCOPE()
+} // WITH_FIXTURE(test::fixture::deterministic)
+
+} // namespace

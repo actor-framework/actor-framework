@@ -265,10 +265,22 @@ public:
     return result_type{std::move(*values)};
   }
 
-  /// Runs all flows created by this fixture.
+  /// Runs all actions from the flows that are ready.
   void run_flows();
 
-  /// Returns the coordinator used by this fixture.
+  /// Runs all actions from active flows that are ready or become ready before
+  /// the relative timeout expires.
+  template <class Rep, class Period>
+  void run_flows(std::chrono::duration<Rep, Period> relative_timeout) {
+    return run_flows(coordinator_->steady_time() + relative_timeout);
+  }
+
+  /// Runs all actions from active flows that are ready or become ready before
+  /// the relative timeout expires.
+  void run_flows(caf::flow::coordinator::steady_time_point timeout);
+
+  /// Runs all actions from active flows that are ready or become ready before
+  /// the absolute timeout expires.
   [[nodiscard]] caf::flow::coordinator* this_coordinator() {
     return coordinator_.get();
   }
