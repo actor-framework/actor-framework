@@ -11,8 +11,11 @@
 //       The wrappers should also add support for types that provide an
 //       `inspect` overload.
 
+#include "caf/deep_to_string.hpp"
 #include "caf/detail/build_config.hpp"
+#include "caf/detail/is_complete.hpp"
 #include "caf/detail/source_location.hpp"
+#include "caf/detail/type_traits.hpp"
 
 #include <string>
 
@@ -22,14 +25,51 @@
 
 namespace caf::detail {
 
+template <class T>
+inline constexpr bool is_formattable = is_complete<std::formatter<T, char>>;
+
+template <class T>
+inline constexpr bool fmt_needs_to_string
+  = !is_formattable<T> && has_inspect_overload_v<stringification_inspector, T>;
+
+template <class T>
+constexpr T&&
+fmt_fwd(std::remove_reference_t<T>& arg,
+        std::enable_if_t<is_formattable<std::decay_t<T>>>* = nullptr) noexcept {
+  return static_cast<T&&>(arg);
+}
+
+template <class T>
+constexpr T&&
+fmt_fwd(std::remove_reference_t<T>&& arg,
+        std::enable_if_t<is_formattable<std::decay_t<T>>>* = nullptr) noexcept {
+  static_assert(!std::is_lvalue_reference_v<T>);
+  return static_cast<T&&>(arg);
+}
+
+template <class T>
+std::string
+fmt_fwd(std::remove_reference_t<T>& arg,
+        std::enable_if_t<fmt_needs_to_string<std::decay_t<T>>>* = nullptr) {
+  return deep_to_string(arg);
+}
+
+template <class T>
+std::string
+fmt_fwd(std::remove_reference_t<T>&& t,
+        std::enable_if_t<fmt_needs_to_string<std::decay_t<T>>>* = nullptr) {
+  static_assert(!std::is_lvalue_reference_v<T>);
+  return deep_to_string(arg);
+}
+
 template <class OutputIt, class... Args>
 auto format_to(OutputIt out, std::format_string<Args...> fstr, Args&&... args) {
-  return std::format_to(out, fstr, std::forward<Args>(args)...);
+  return std::format_to(out, fstr, fmt_fwd<Args>(args)...);
 }
 
 template <class... Args>
 std::string format(std::format_string<Args...> fstr, Args&&... args) {
-  return std::format(fstr, std::forward<Args>(args)...);
+  return std::format(fstr, fmt_fwd<Args>(args)...);
 }
 
 } // namespace caf::detail
@@ -37,6 +77,7 @@ std::string format(std::format_string<Args...> fstr, Args&&... args) {
 #else // here comes the poor man's version
 
 #  include "caf/chunked_string.hpp"
+#  include "caf/deep_to_string.hpp"
 #  include "caf/detail/core_export.hpp"
 #  include "caf/span.hpp"
 
@@ -45,13 +86,14 @@ std::string format(std::format_string<Args...> fstr, Args&&... args) {
 #  include <iterator>
 #  include <memory>
 #  include <string_view>
+#  include <type_traits>
 #  include <variant>
 
 namespace caf::detail {
 
 using format_arg
   = std::variant<bool, char, int64_t, uint64_t, double, const char*,
-                 std::string_view, chunked_string, const void*>;
+                 std::string_view, chunked_string, std::string, const void*>;
 
 template <class T>
 format_arg make_format_arg(const T& arg) {
@@ -69,6 +111,8 @@ format_arg make_format_arg(const T& arg) {
     return format_arg{std::string_view{arg}};
   } else if constexpr (std::is_same_v<T, chunked_string>) {
     return format_arg{arg};
+  } else if constexpr (has_inspect_overload_v<stringification_inspector, T>) {
+    return format_arg{deep_to_string(arg)};
   } else {
     static_assert(std::is_pointer_v<T>, "unsupported argument type");
     return format_arg{static_cast<const void*>(arg)};
