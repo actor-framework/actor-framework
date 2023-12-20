@@ -8,9 +8,8 @@
 
 namespace caf::detail {
 
-void log_cstring_error(const char* cstring) {
-  CAF_IGNORE_UNUSED(cstring);
-  CAF_LOG_ERROR(cstring);
+void log_cstring_error(const char*) {
+  // TODO: remove with 1.0.
 }
 
 } // namespace caf::detail

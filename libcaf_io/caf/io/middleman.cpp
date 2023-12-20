@@ -24,6 +24,7 @@
 #include "caf/function_view.hpp"
 #include "caf/group_module.hpp"
 #include "caf/init_global_meta_objects.hpp"
+#include "caf/log/system.hpp"
 #include "caf/logger.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/node_id.hpp"
@@ -132,7 +133,7 @@ public:
       dptr = std::move(*maybe_dptr);
     } else {
       auto& err = maybe_dptr.error();
-      CAF_LOG_ERROR("failed to expose Prometheus metrics:" << err);
+      log::system::error("failed to expose Prometheus metrics: {}", err);
       return std::move(err);
     }
     auto actual_port = dptr->port();
@@ -412,8 +413,7 @@ strong_actor_ptr middleman::remote_lookup(std::string name,
   self->receive(
     [&](strong_actor_ptr& addr) { result = std::move(addr); },
     others >> []([[maybe_unused]] message& msg) -> skippable_result {
-      CAF_LOG_ERROR(
-        "middleman received unexpected remote_lookup result:" << msg);
+      log::system::error("received unexpected remote_lookup result: {}", msg);
       return message{};
     },
     after(std::chrono::minutes(5)) >>

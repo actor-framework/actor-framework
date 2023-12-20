@@ -7,6 +7,7 @@
 #include "caf/test/test.hpp"
 
 #include "caf/config_value.hpp"
+#include "caf/log/test.hpp"
 #include "caf/parser_state.hpp"
 #include "caf/pec.hpp"
 
@@ -69,10 +70,8 @@ struct fixture {
     string_parser_state res{str.begin(), str.end()};
     detail::parser::read_config(res, f);
     if ((res.code == pec::success) != expect_success) {
-      auto& this_test = test::runnable::current();
-      this_test.print_error("unexpected parser result state: {}",
-                            to_string(res.code));
-      this_test.print_error("input remainder: {}", std::string(res.i, res.e));
+      log::test::error("unexpected parser result state: {}", res.code);
+      log::test::error("input remainder: {}", std::string{res.i, res.e});
     }
     return std::move(f.log);
   }

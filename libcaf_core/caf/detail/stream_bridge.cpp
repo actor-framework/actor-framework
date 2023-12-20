@@ -4,6 +4,7 @@
 
 #include "caf/detail/stream_bridge.hpp"
 
+#include "caf/log/system.hpp"
 #include "caf/scheduled_actor.hpp"
 
 namespace caf::detail {
@@ -25,7 +26,7 @@ void stream_bridge_sub::ack(uint64_t src_flow_id,
   CAF_LOG_TRACE(CAF_ARG(src_flow_id) << CAF_ARG(max_items_per_batch));
   // Sanity checking.
   if (max_items_per_batch == 0) {
-    CAF_LOG_ERROR("stream ACK announced a batch size of 0");
+    log::system::error("stream ACK announced a batch size of 0");
     do_abort(make_error(sec::protocol_error));
     return;
   }
@@ -72,7 +73,7 @@ void stream_bridge_sub::push(const async::batch& input) {
   CAF_LOG_TRACE(CAF_ARG2("input.size", input.size()));
   // Sanity checking.
   if (in_flight_batches_ == 0) {
-    CAF_LOG_ERROR("source exceeded its allowed credit!");
+    log::system::error("source exceeded its allowed credit!");
     do_abort(make_error(sec::protocol_error));
     return;
   }

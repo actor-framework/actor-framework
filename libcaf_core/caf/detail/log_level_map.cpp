@@ -1,7 +1,7 @@
 #include "caf/detail/log_level_map.hpp"
 
 #include "caf/config.hpp"
-#include "caf/detail/log_level.hpp"
+#include "caf/log/level.hpp"
 #include "caf/string_algorithms.hpp"
 
 #include <algorithm>
@@ -29,11 +29,11 @@ struct predicate {
 log_level_map::log_level_map() {
   // Elements are sorted in descending order for efficient lookup.
   mapping_.reserve(8);
-  mapping_.emplace_back(CAF_LOG_LEVEL_TRACE, "TRACE");
-  mapping_.emplace_back(CAF_LOG_LEVEL_DEBUG, "DEBUG");
-  mapping_.emplace_back(CAF_LOG_LEVEL_INFO, "INFO");
-  mapping_.emplace_back(CAF_LOG_LEVEL_WARNING, "WARNING");
-  mapping_.emplace_back(CAF_LOG_LEVEL_ERROR, "ERROR");
+  mapping_.emplace_back(log::level::trace, "TRACE");
+  mapping_.emplace_back(log::level::debug, "DEBUG");
+  mapping_.emplace_back(log::level::info, "INFO");
+  mapping_.emplace_back(log::level::warning, "WARNING");
+  mapping_.emplace_back(log::level::error, "ERROR");
 }
 
 std::string_view log_level_map::operator[](unsigned level) const noexcept {

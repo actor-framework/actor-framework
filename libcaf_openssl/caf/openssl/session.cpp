@@ -13,6 +13,7 @@ CAF_POP_WARNINGS
 #include "caf/openssl/manager.hpp"
 
 #include "caf/actor_system_config.hpp"
+#include "caf/log/system.hpp"
 
 // On Linux we need to block SIGPIPE whenever we access OpenSSL functions.
 // Unfortunately there's no sane way to configure OpenSSL properly.
@@ -75,7 +76,7 @@ bool session::init() {
   ctx_ = create_ssl_context();
   ssl_ = SSL_new(ctx_);
   if (ssl_ == nullptr) {
-    CAF_LOG_ERROR("cannot create SSL session");
+    log::system::error("cannot create SSL session");
     return false;
   }
   return true;

@@ -21,6 +21,7 @@
 #include "caf/detail/test_export.hpp"
 #include "caf/expected.hpp"
 #include "caf/format_string_with_location.hpp"
+#include "caf/log/level.hpp"
 #include "caf/raise_error.hpp"
 
 #include <string_view>
@@ -56,30 +57,6 @@ public:
     auto msg = detail::format(fwl.value, std::forward<Ts>(xs)...);
     reporter::instance().fail(msg, fwl.location);
     requirement_failed::raise(fwl.location);
-  }
-
-  /// Generates a message with the DEBUG severity level.
-  template <class... Ts>
-  void print_debug(format_string_with_location fwl, Ts&&... xs) {
-    reporter::instance().print_debug(fwl, std::forward<Ts>(xs)...);
-  }
-
-  /// Generates a message with the INFO severity level.
-  template <class... Ts>
-  void print_info(format_string_with_location fwl, Ts&&... xs) {
-    reporter::instance().print_info(fwl, std::forward<Ts>(xs)...);
-  }
-
-  /// Generates a message with the WARNING severity level.
-  template <class... Ts>
-  void print_warning(format_string_with_location fwl, Ts&&... xs) {
-    reporter::instance().print_warning(fwl, std::forward<Ts>(xs)...);
-  }
-
-  /// Generates a message with the ERROR severity level.
-  template <class... Ts>
-  void print_error(format_string_with_location fwl, Ts&&... xs) {
-    reporter::instance().print_error(fwl, std::forward<Ts>(xs)...);
   }
 
   /// Checks whether `lhs` and `rhs` are equal.
@@ -244,7 +221,7 @@ public:
   void should_fail(Expr&& expr, const caf::detail::source_location& location
                                 = caf::detail::source_location::current()) {
     auto& rep = reporter::instance();
-    auto lvl = rep.verbosity(CAF_LOG_LEVEL_QUIET);
+    auto lvl = rep.verbosity(log::level::quiet);
     auto before = rep.test_stats();
     {
       auto lvl_guard
@@ -321,7 +298,7 @@ public:
                                   = caf::detail::source_location::current()) {
     auto& rep = reporter::instance();
     auto before = rep.test_stats();
-    auto lvl = rep.verbosity(CAF_LOG_LEVEL_QUIET);
+    auto lvl = rep.verbosity(log::level::quiet);
     auto caught = false;
     if constexpr (std::is_same_v<Exception, void>) {
       try {

@@ -17,6 +17,7 @@
 #include "caf/flow/observable.hpp"
 #include "caf/flow/observable_builder.hpp"
 #include "caf/flow/op/mcast.hpp"
+#include "caf/log/system.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
 #include "caf/stream.hpp"
 
@@ -39,7 +40,8 @@ skippable_result reflect_and_quit(scheduled_actor* ptr, message& msg) {
 }
 
 skippable_result print_and_drop(scheduled_actor* ptr, message& msg) {
-  CAF_LOG_WARNING("unexpected message:" << msg);
+  log::system::warning("discarded unexpected message (id: {}, name: {}): {}",
+                       ptr->id(), ptr->name(), msg);
   aout(ptr) << "*** unexpected message [id: " << ptr->id()
             << ", name: " << ptr->name() << "]: " << to_string(msg)
             << std::endl;
@@ -525,7 +527,7 @@ scheduled_actor::categorize(mailbox_element& x) {
   if (content.match_elements<sys_atom, get_atom, std::string>()) {
     auto rp = make_response_promise();
     if (!rp.pending()) {
-      CAF_LOG_WARNING("received anonymous ('get', 'sys', $key) message");
+      log::system::warning("received anonymous ('get', 'sys', $key) message");
       return message_category::internal;
     }
     auto& what = content.get_as<std::string>(2);
@@ -578,7 +580,7 @@ scheduled_actor::categorize(mailbox_element& x) {
       // Try to subscribe the sink to the observable.
       auto& [str_id, ptr, sink_id] = content.get_as<stream_open_msg>(0);
       if (!ptr) {
-        CAF_LOG_ERROR("received a stream_open_msg with a null sink");
+        log::system::error("received a stream_open_msg with a null sink");
         return message_category::internal;
       }
       auto sink_hdl = actor_cast<actor>(ptr);
@@ -607,7 +609,7 @@ scheduled_actor::categorize(mailbox_element& x) {
           }
           return message_category::internal;
         }
-        CAF_LOG_ERROR("failed to subscribe a batch forwarder");
+        log::system::error("failed to subscribe a batch forwarder");
         sub.dispose();
       }
       // Abort the flow immediately.
@@ -782,7 +784,9 @@ bool scheduled_actor::activate(execution_unit* ctx) {
   CAF_ASSERT(!getf(is_blocking_flag));
   context(ctx);
   if (getf(is_initialized_flag) && !alive()) {
-    CAF_LOG_ERROR("activate called on a terminated actor");
+    log::system::warning("activate called on a terminated actor "
+                         "with id {} and name {}",
+                         id(), name());
     return false;
   }
 #ifdef CAF_ENABLE_EXCEPTIONS
@@ -798,7 +802,7 @@ bool scheduled_actor::activate(execution_unit* ctx) {
     }
 #ifdef CAF_ENABLE_EXCEPTIONS
   } catch (...) {
-    CAF_LOG_ERROR("actor died during initialization");
+    CAF_LOG_DEBUG("failed to initialize actor due to an exception");
     auto eptr = std::current_exception();
     quit(call_handler(exception_handler_, this, eptr));
     finalize();
@@ -863,7 +867,7 @@ auto scheduled_actor::reactivate(mailbox_element& x) -> activation_result {
 
 void scheduled_actor::do_become(behavior bhvr, bool discard_old) {
   if (getf(is_terminated_flag | is_shutting_down_flag)) {
-    CAF_LOG_WARNING("called become() on a terminated actor");
+    log::system::warning("called become() on a terminated actor");
     return;
   }
   if (discard_old && !bhvr_stack_.empty())

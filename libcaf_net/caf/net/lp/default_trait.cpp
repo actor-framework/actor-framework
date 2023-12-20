@@ -7,7 +7,7 @@
 #include "caf/net/lp/frame.hpp"
 
 #include "caf/error.hpp"
-#include "caf/logger.hpp"
+#include "caf/log/system.hpp"
 #include "caf/sec.hpp"
 
 namespace caf::net::lp {
@@ -24,7 +24,7 @@ bool default_trait::convert(const_byte_span bytes, input_type& x) {
 }
 
 error default_trait::last_error() {
-  CAF_LOG_ERROR("lp::default_trait::last_error called");
+  log::system::error("lp::default_trait::last_error called");
   return {sec::logic_error};
 }
 

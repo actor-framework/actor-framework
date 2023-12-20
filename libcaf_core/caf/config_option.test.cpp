@@ -10,6 +10,7 @@
 
 #include "caf/config_value.hpp"
 #include "caf/expected.hpp"
+#include "caf/log/test.hpp"
 #include "caf/make_config_option.hpp"
 
 #include <sstream>
@@ -51,7 +52,7 @@ OUTLINE("config options parse their parameters for long, short and env names") {
         check_eq(full_name, uut.full_name());
         check_eq(flat, uut.has_flat_cli_name());
         check_eq(ename, uut.env_var_name_cstr());
-        print_debug("copying the config option must produce an equal object");
+        log::test::debug("copying config options must return equal objects");
         auto equal_to_uut = [&uut, this](const config_option& other,
                                          const detail::source_location& loc
                                          = detail::source_location::current()) {
@@ -65,12 +66,12 @@ OUTLINE("config options parse their parameters for long, short and env names") {
           check(strcmp(uut.env_var_name_cstr(), other.env_var_name_cstr()) == 0,
                 loc);
         };
-        print_debug("copy and move construction must produce an equal object");
+        log::test::debug("copy and move construct must return equal objects");
         auto cpy = uut;
         equal_to_uut(cpy);
         auto mv = std::move(cpy);
         equal_to_uut(mv);
-        print_debug("copy and move assignment must produce an equal object");
+        log::test::debug("copy and move assignment must return equal objects");
         auto cpy2 = config_option{"abc", "def", "ghi", &dummy};
         cpy2 = uut;
         equal_to_uut(cpy2);

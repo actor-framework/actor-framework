@@ -7,6 +7,7 @@
 #include "caf/test/test.hpp"
 
 #include "caf/init_global_meta_objects.hpp"
+#include "caf/log/test.hpp"
 #include "caf/type_id.hpp"
 
 using namespace caf;
@@ -72,7 +73,7 @@ TEST("message_builder can build messages incrementally") {
     check_eq(builder.size(), 0u);
   }
   SECTION("append() adds values to a builder") {
-    print_debug("after adding 1, the message is (1)");
+    log::test::debug("after adding 1, the message is (1)");
     {
       builder.append(int32_t{1});
       auto msg = builder.to_message();
@@ -80,7 +81,7 @@ TEST("message_builder can build messages incrementally") {
       check_eq(msg.types(), make_type_id_list<int32_t>());
       check_eq(msg.get_as<int32_t>(0), 1);
     }
-    print_debug("after adding [2, 3], the message is (1, 2, 3)");
+    log::test::debug("after adding [2, 3], the message is (1, 2, 3)");
     {
       std::vector<int32_t> xs{2, 3};
       builder.append(xs.begin(), xs.end());

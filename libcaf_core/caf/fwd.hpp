@@ -119,9 +119,6 @@ class json_reader;
 class json_value;
 class json_writer;
 class local_actor;
-class log_event;
-class log_event_fields;
-class log_event_sender;
 class logger;
 class mailbox_element;
 class message;
@@ -336,6 +333,18 @@ class abstract_coordinator;
 
 } // namespace scheduler
 
+// -- log classes --------------------------------------------------------------
+
+namespace log {
+
+class event;
+class event_fields;
+class event_sender;
+
+using event_ptr = intrusive_ptr<event>;
+
+} // namespace log
+
 // -- OpenSSL classes ----------------------------------------------------------
 
 namespace openssl {
@@ -369,10 +378,6 @@ intrusive_cow_ptr_unshare(dynamic_message_data*&);
 using global_meta_objects_guard_type = intrusive_ptr<ref_counted>;
 
 } // namespace detail
-
-// -- intrusive pointer aliases ------------------------------------------------
-
-using log_event_ptr = intrusive_ptr<log_event>;
 
 // -- weak pointer aliases -----------------------------------------------------
 

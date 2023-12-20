@@ -1,7 +1,8 @@
 #define CAF_LOG_COMPONENT "app"
 
 #include "caf/caf_main.hpp"
-#include "caf/logger.hpp"
+#include "caf/log/core.hpp"
+#include "caf/log/level.hpp"
 #include "caf/type_id.hpp"
 
 #include <string_view>
@@ -14,7 +15,67 @@ CAF_BEGIN_TYPE_ID_BLOCK(driver, caf::first_custom_type_id)
 
 CAF_END_TYPE_ID_BLOCK(driver)
 
+namespace app {
+
 constexpr std::string_view component = "app";
+
+/// Logs a message for the `caf.core` component with `debug` severity.
+/// @param fmt_str The format string (with source location) for the message.
+/// @param args Arguments for the format string.
+template <class... Ts>
+void debug(caf::format_string_with_location fmt_str, Ts&&... args) {
+  caf::logger::log(caf::log::level::debug, component, fmt_str,
+                   std::forward<Ts>(args)...);
+}
+
+/// Starts a new log event for the `caf.core` component with `debug` severity.
+inline auto debug() {
+  return caf::logger::log(caf::log::level::debug, component);
+}
+
+/// Logs a message for the `caf.core` component with `info` severity.
+/// @param fmt_str The format string (with source location) for the message.
+/// @param args Arguments for the format string.
+template <class... Ts>
+void info(caf::format_string_with_location fmt_str, Ts&&... args) {
+  caf::logger::log(caf::log::level::info, component, fmt_str,
+                   std::forward<Ts>(args)...);
+}
+
+/// Starts a new log event for the `caf.core` component with `info` severity.
+inline auto info() {
+  return caf::logger::log(caf::log::level::info, component);
+}
+
+/// Logs a message for the `caf.core` component with `warning` severity.
+/// @param fmt_str The format string (with source location) for the message.
+/// @param args Arguments for the format string.
+template <class... Ts>
+void warning(caf::format_string_with_location fmt_str, Ts&&... args) {
+  caf::logger::log(caf::log::level::warning, component, fmt_str,
+                   std::forward<Ts>(args)...);
+}
+
+/// Starts a new log event for the `caf.core` component with `warning` severity.
+inline auto warning() {
+  return caf::logger::log(caf::log::level::warning, component);
+}
+
+/// Logs a message for the `caf.core` component with `error` severity.
+/// @param fmt_str The format string (with source location) for the message.
+/// @param args Arguments for the format string.
+template <class... Ts>
+void error(caf::format_string_with_location fmt_str, Ts&&... args) {
+  caf::logger::log(caf::log::level::error, component, fmt_str,
+                   std::forward<Ts>(args)...);
+}
+
+/// Starts a new log event for the `caf.core` component with `error` severity.
+inline auto error() {
+  return caf::logger::log(caf::log::level::error, component);
+}
+
+} // namespace app
 
 struct foobar {
   std::string foo;
@@ -40,25 +101,25 @@ void foo([[maybe_unused]] int value, bool use_legacy_api) {
     CAF_LOG_ERROR("this is another error message ; foo = bar");
   } else {
     using caf::logger;
-    auto trace_guard = logger::trace(component, "value = {}", value);
-    logger::debug(component, "this is a debug message");
-    logger::debug(component)
+    auto trace_guard = logger::trace(app::component, "value = {}", value);
+    app::debug("this is a debug message");
+    app::debug()
       .message("this is {} with {}", "another debug message",
                foobar{"one", "two"})
       .field("field", "{}", foobar{"three", "four"})
       .send();
-    logger::info(component, "this is an info message");
-    logger::info(component)
+    app::info("this is an info message");
+    app::info()
       .message("this is {}", "another info message")
       .field("foo", "bar")
       .send();
-    logger::warning(component, "this is a warning message");
-    logger::warning(component)
+    app::warning("this is a warning message");
+    app::warning()
       .message("this is {}", "another warning message")
       .field("foo", "bar")
       .send();
-    logger::error(component, "this is an error message");
-    logger::error(component)
+    app::error("this is an error message");
+    app::error()
       .message("this is {}", "another error message")
       .field("foo", "bar")
       .send();

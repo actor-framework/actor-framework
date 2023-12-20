@@ -4,7 +4,7 @@
 
 #include "caf/telemetry/importer/process.hpp"
 
-#include "caf/logger.hpp"
+#include "caf/log/system.hpp"
 #include "caf/telemetry/gauge.hpp"
 #include "caf/telemetry/metric_registry.hpp"
 
@@ -172,7 +172,7 @@ bool load_system_setting(std::atomic<long>& cache_var, long& var, int name,
     case 0:
       var = sysconf(name);
       if (var <= 0) {
-        CAF_LOG_ERROR("failed to read" << pretty_name << "from sysconf");
+        caf::log::system::error("failed to read {} from sysconf", pretty_name);
         var = -1;
         cache_var = var;
         return false;
@@ -244,7 +244,7 @@ sys_stats read_sys_stats() {
                      &utime_ticks, &stime_ticks, &vmsize_bytes, &rss_pages);
     fclose(f);
     if (rd != 4) {
-      CAF_LOG_ERROR("failed to read content of /proc/self/stat");
+      caf::log::system::warning("failed to read /proc/self/stat");
       global_ticks_per_second = -1;
       global_page_size = -1;
       return result;
@@ -283,7 +283,7 @@ sys_stats read_sys_stats() {
   if (!TRY_LOAD(page_size, _SC_PAGE_SIZE))
     return result;
   if (sysctl(mib, 6, &kip2, &kip2_size, nullptr, size_t{0}) != 0) {
-    CAF_LOG_ERROR("failed to call sysctl in read_sys_stats");
+    caf::log::system::error("failed to call sysctl in read_sys_stats");
     global_page_size = -1;
     return result;
   }

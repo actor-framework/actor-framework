@@ -20,6 +20,7 @@
 #include "caf/detail/net_export.hpp"
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
+#include "caf/log/system.hpp"
 #include "caf/logger.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/ref_counted.hpp"
@@ -311,7 +312,7 @@ public:
             break;
           }
           case std::errc::not_enough_memory: {
-            CAF_LOG_ERROR("poll() failed due to insufficient memory");
+            log::system::error("poll() failed due to insufficient memory");
             // There's not much we can do other than try again in hope someone
             // else releases memory.
             break;
@@ -607,7 +608,7 @@ void pollset_updater::handle_read_event() {
             mpx_->do_shutdown();
             break;
           default:
-            CAF_LOG_ERROR("opcode not recognized: " << CAF_ARG(opcode));
+            log::system::error("invalid opcode in pollset updater: {}", opcode);
             break;
         }
       }
@@ -618,7 +619,7 @@ void pollset_updater::handle_read_event() {
     } else if (last_socket_error_is_temporary()) {
       return;
     } else {
-      CAF_LOG_ERROR("pollset updater failed to read from the pipe");
+      log::system::error("pollset updater failed to read from its pipe");
       owner_->deregister();
       return;
     }

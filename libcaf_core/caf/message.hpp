@@ -17,6 +17,12 @@
 #include <tuple>
 #include <type_traits>
 
+namespace caf::detail {
+
+class stringification_inspector;
+
+} // namespace caf::detail
+
 namespace caf {
 
 /// Describes a fixed-length, copy-on-write, type-erased
@@ -124,6 +130,8 @@ public:
   bool save(serializer& sink) const;
 
   bool save(binary_serializer& sink) const;
+
+  bool save(detail::stringification_inspector& sink) const;
 
   bool load(deserializer& source);
 

@@ -13,6 +13,8 @@
 #include "caf/detail/log_level.hpp"
 #include "caf/detail/log_level_map.hpp"
 #include "caf/local_actor.hpp"
+#include "caf/log/event.hpp"
+#include "caf/log/level.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/term.hpp"
 
@@ -169,11 +171,11 @@ public:
 
   default_reporter() {
     // Install lower-case log level names for more consistent output.
-    log_level_names_.set("error", CAF_LOG_LEVEL_ERROR);
-    log_level_names_.set("warning", CAF_LOG_LEVEL_WARNING);
-    log_level_names_.set("info", CAF_LOG_LEVEL_INFO);
-    log_level_names_.set("debug", CAF_LOG_LEVEL_DEBUG);
-    log_level_names_.set("trace", CAF_LOG_LEVEL_TRACE);
+    log_level_names_.set("error", log::level::error);
+    log_level_names_.set("warning", log::level::warning);
+    log_level_names_.set("info", log::level::info);
+    log_level_names_.set("debug", log::level::debug);
+    log_level_names_.set("trace", log::level::trace);
   }
 
   bool success() const noexcept override {
@@ -231,7 +233,7 @@ public:
     total_stats_ += suite_stats_;
     if (suite_stats_.failed > 0)
       failed_suites_.push_back(name);
-    else if (level_ < CAF_LOG_LEVEL_DEBUG)
+    else if (level_ < log::level::debug)
       return;
     auto elapsed = clock_type::now() - suite_start_time_;
     detail::format_to(colored(),
@@ -306,7 +308,7 @@ public:
 
   void pass(const detail::source_location& location) override {
     test_stats_.passed++;
-    if (level_ < CAF_LOG_LEVEL_DEBUG)
+    if (level_ < log::level::debug)
       return;
     set_live();
     detail::format_to(colored(), "{0:{1}}$G(pass) $C({2}):$Y({3})$0\n", ' ',
@@ -316,7 +318,7 @@ public:
   void fail(binary_predicate type, std::string_view lhs, std::string_view rhs,
             const detail::source_location& location) override {
     test_stats_.failed++;
-    if (level_ < CAF_LOG_LEVEL_ERROR)
+    if (level_ < log::level::error)
       return;
     set_live();
     detail::format_to(colored(),
@@ -324,7 +326,7 @@ public:
                       "{0:{1}}  loc: $C({4}):$Y({5})$0\n"
                       "{0:{1}}  lhs: {6}\n"
                       "{0:{1}}  rhs: {7}\n",
-                      ' ', indent_, log_level_names_[CAF_LOG_LEVEL_ERROR],
+                      ' ', indent_, log_level_names_[log::level::error],
                       str(negate(type)), location.file_name(), location.line(),
                       lhs, rhs);
   }
@@ -332,20 +334,20 @@ public:
   void fail(std::string_view arg,
             const detail::source_location& location) override {
     test_stats_.failed++;
-    if (level_ < CAF_LOG_LEVEL_ERROR)
+    if (level_ < log::level::error)
       return;
     set_live();
     detail::format_to(colored(),
                       "{0:{1}}$R({2}): check failed\n"
                       "{0:{1}}    loc: $C({3}):$Y({4})$0\n"
                       "{0:{1}}  check: {5}\n",
-                      ' ', indent_, log_level_names_[CAF_LOG_LEVEL_ERROR],
+                      ' ', indent_, log_level_names_[log::level::error],
                       location.file_name(), location.line(), arg);
   }
 
   void unhandled_exception(std::string_view msg) override {
     test_stats_.failed++;
-    if (level_ < CAF_LOG_LEVEL_ERROR)
+    if (level_ < log::level::error)
       return;
     set_live();
     if (current_ctx_ == nullptr || current_ctx_->unwind_stack.empty()) {
@@ -368,7 +370,7 @@ public:
   void unhandled_exception(std::string_view msg,
                            const detail::source_location& location) override {
     test_stats_.failed++;
-    if (level_ < CAF_LOG_LEVEL_ERROR)
+    if (level_ < log::level::error)
       return;
     set_live();
     detail::format_to(colored(),
@@ -378,7 +380,7 @@ public:
                       ' ', indent_, location.file_name(), location.line(), msg);
   }
 
-  void print(const log_event& event) override {
+  void print(const log::event& event) override {
     if (level_ < event.level())
       return;
     set_live();
@@ -394,15 +396,19 @@ public:
   }
 
   void print_actor_output(local_actor* self, std::string_view msg) override {
-    if (level_ < CAF_LOG_LEVEL_INFO)
+    if (level_ < log::level::info)
       return;
     set_live();
     detail::format_to(colored(),
                       "{0:{1}}$M({2}):\n"
                       "{0:{1}}  src: $0{3} [ID {4}]\n"
                       "{0:{1}}  msg: {5}\n",
-                      ' ', indent_, log_level_names_[CAF_LOG_LEVEL_INFO],
+                      ' ', indent_, log_level_names_[log::level::info],
                       self->name(), self->id(), msg);
+  }
+
+  unsigned verbosity() const noexcept override {
+    return level_;
   }
 
   unsigned verbosity(unsigned level) noexcept override {
@@ -411,8 +417,12 @@ public:
     return result;
   }
 
-  unsigned verbosity() const noexcept override {
-    return level_;
+  std::vector<std::string> log_component_filter() const override {
+    return log_component_filter_;
+  }
+
+  void log_component_filter(std::vector<std::string> new_filter) override {
+    log_component_filter_ = std::move(new_filter);
   }
 
   void no_colors(bool new_value) override {
@@ -436,13 +446,13 @@ public:
   }
 
 private:
-  void do_print(const log_event::field& field) {
+  void do_print(const log::event::field& field) {
     auto fn = [this, &field](const auto& value) {
       using value_t = std::decay_t<decltype(value)>;
       if constexpr (std::is_same_v<value_t, std::nullopt_t>) {
         detail::format_to(plain(), "{0:{1}}  {2}: null\n", ' ', indent_,
                           field.key);
-      } else if constexpr (std::is_same_v<value_t, log_event::field_list>) {
+      } else if constexpr (std::is_same_v<value_t, log::event::field_list>) {
         detail::format_to(plain(), "{0:{1}}  {2}:\n", ' ', indent_, field.key);
         indent_ += 2;
         for (const auto& nested_field : value)
@@ -457,11 +467,11 @@ private:
   }
 
   static char color_by_log_level(unsigned level) {
-    if (level >= CAF_LOG_LEVEL_DEBUG)
+    if (level >= log::level::debug)
       return 'B';
-    if (level >= CAF_LOG_LEVEL_INFO)
+    if (level >= log::level::info)
       return 'M';
-    if (level >= CAF_LOG_LEVEL_WARNING)
+    if (level >= log::level::warning)
       return 'Y';
     return 'R';
   }
@@ -497,7 +507,7 @@ private:
   time_point suite_start_time_;
 
   /// Configures the verbosity of the reporter.
-  unsigned level_ = CAF_LOG_LEVEL_INFO;
+  unsigned level_ = log::level::info;
 
   /// Configures whether we render text without colors.
   bool no_colors_ = false;
@@ -524,6 +534,9 @@ private:
 
   /// Maps log levels to their names.
   detail::log_level_map log_level_names_;
+
+  /// Stores the current log component filter.
+  std::vector<std::string> log_component_filter_;
 };
 
 reporter* global_instance;

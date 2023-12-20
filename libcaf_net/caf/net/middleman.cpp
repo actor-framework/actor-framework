@@ -14,6 +14,7 @@
 #include "caf/actor_system_config.hpp"
 #include "caf/detail/set_thread_name.hpp"
 #include "caf/expected.hpp"
+#include "caf/log/system.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/sec.hpp"
 #include "caf/send.hpp"
@@ -97,7 +98,7 @@ void middleman::stop() {
 
 void middleman::init(actor_system_config&) {
   if (auto err = mpx_->init()) {
-    CAF_LOG_ERROR("mpx_->init() failed: " << err);
+    log::system::error("failed to initialize multiplexer: {}", err);
     CAF_RAISE_ERROR("mpx_->init() failed");
   }
 }

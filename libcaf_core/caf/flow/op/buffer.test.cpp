@@ -9,7 +9,9 @@
 #include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
-#include "caf/all.hpp"
+#include "caf/event_based_actor.hpp"
+#include "caf/flow/multicaster.hpp"
+#include "caf/log/test.hpp"
 
 using namespace caf;
 using namespace std::literals;
@@ -104,23 +106,23 @@ SCENARIO("the buffer operator forces items at regular intervals") {
             });
         });
         dispatch_messages();
-        print_debug("emit the first six items");
+        log::test::debug("emit the first six items");
         pub.push({1, 2, 4, 8, 16, 32});
         run_flows();
         dispatch_messages();
-        print_debug("force an empty buffer");
+        log::test::debug("force an empty buffer");
         advance_time(1s);
         dispatch_messages();
-        print_debug("force a buffer with a single element");
+        log::test::debug("force a buffer with a single element");
         pub.push(64);
         run_flows();
         dispatch_messages();
         advance_time(1s);
         dispatch_messages();
-        print_debug("force an empty buffer");
+        log::test::debug("force an empty buffer");
         advance_time(1s);
         dispatch_messages();
-        print_debug("emit the last items and close the source");
+        log::test::debug("emit the last items and close the source");
         pub.push({128, 256, 512});
         pub.close();
         run_flows();
