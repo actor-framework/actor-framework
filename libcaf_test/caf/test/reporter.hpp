@@ -76,45 +76,27 @@ public:
     = 0;
 
   /// Prints a message to the output stream if `verbosity() >= level`.
-  virtual void print(const log_event& event) = 0;
+  virtual void print(const log::event& event) = 0;
 
   /// Prints a message to the output stream if `verbosity() >= level`.
-  virtual void print(const log_event_ptr& event) {
+  virtual void print(const log::event_ptr& event) {
     if (event != nullptr)
       print(*event);
   }
 
-  /// Generates a message with the DEBUG severity level.
-  template <class... Ts>
-  void print_debug(format_string_with_location fwl, Ts&&... xs) {
-    do_print(CAF_LOG_LEVEL_DEBUG, fwl, std::forward<Ts>(xs)...);
-  }
-
-  /// Generates a message with the INFO severity level.
-  template <class... Ts>
-  void print_info(format_string_with_location fwl, Ts&&... xs) {
-    do_print(CAF_LOG_LEVEL_INFO, fwl, std::forward<Ts>(xs)...);
-  }
-
-  /// Generates a message with the WARNING severity level.
-  template <class... Ts>
-  void print_warning(format_string_with_location fwl, Ts&&... xs) {
-    do_print(CAF_LOG_LEVEL_WARNING, fwl, std::forward<Ts>(xs)...);
-  }
-
-  /// Generates a message with the ERROR severity level.
-  template <class... Ts>
-  void print_error(format_string_with_location fwl, Ts&&... xs) {
-    do_print(CAF_LOG_LEVEL_ERROR, fwl, std::forward<Ts>(xs)...);
-  }
-
   virtual void print_actor_output(local_actor* self, std::string_view msg) = 0;
+
+  /// Returns the current verbosity level.
+  virtual unsigned verbosity() const noexcept = 0;
 
   /// Sets the verbosity level of the reporter and returns the previous value.
   virtual unsigned verbosity(unsigned level) noexcept = 0;
 
-  /// returns the current verbosity level.
-  virtual unsigned verbosity() const noexcept = 0;
+  /// Returns the current filter for log messages.
+  virtual std::vector<std::string> log_component_filter() const = 0;
+
+  /// Sets the filter for log messages.
+  virtual void log_component_filter(std::vector<std::string> new_filter) = 0;
 
   /// Sets whether the reporter disables colored output even when writing to a
   /// TTY.
@@ -140,14 +122,6 @@ public:
 
   /// Creates a default reporter that writes to the standard output.
   static std::unique_ptr<reporter> make_default();
-
-private:
-  template <class... Ts>
-  void do_print(unsigned level, format_string_with_location fwl, Ts&&... xs) {
-    print(log_event::make(level, "caf.test", fwl.location,
-                          logger::thread_local_aid(), fwl.value,
-                          std::forward<Ts>(xs)...));
-  }
 };
 
 } // namespace caf::test

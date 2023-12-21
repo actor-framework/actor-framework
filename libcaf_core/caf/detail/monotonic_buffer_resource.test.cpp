@@ -6,6 +6,8 @@
 
 #include "caf/test/scenario.hpp"
 
+#include "caf/log/test.hpp"
+
 #include <list>
 #include <map>
 #include <vector>
@@ -35,22 +37,24 @@ SCENARIO("monotonic buffers group allocations") {
       THEN("the resource puts allocations into buckets") {
         void* unused = nullptr; // For silencing nodiscard warnings.
         check_eq(mbr.blocks(), 0u);
-        print_debug("perform small allocations");
+        log::test::debug("perform small allocations");
         unused = mbr.allocate(64);
         check_eq(mbr.blocks(), 1u);
         unused = mbr.allocate(64);
         check_eq(mbr.blocks(), 1u);
-        print_debug("perform medium allocations");
+        log::test::debug("perform medium allocations");
         unused = mbr.allocate(65);
         check_eq(mbr.blocks(), 2u);
         unused = mbr.allocate(512);
         check_eq(mbr.blocks(), 2u);
-        print_debug("perform large allocations <= 1 MB (pools allocations)");
+        log::test::debug("perform large allocations <= 1 MB "
+                         "(pools allocations)");
         unused = mbr.allocate(513);
         check_eq(mbr.blocks(), 3u);
         unused = mbr.allocate(1023);
         check_eq(mbr.blocks(), 3u);
-        print_debug("perform large allocations > 1 MB (individual allocation)");
+        log::test::debug("perform large allocations > 1 MB "
+                         "(individual allocation)");
         unused = mbr.allocate(1'048'577);
         check_eq(mbr.blocks(), 4u);
         unused = mbr.allocate(1'048'577);

@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "caf/abstract_actor.hpp"
 #include "caf/config.hpp"
 #include "caf/deep_to_string.hpp"
 #include "caf/detail/arg_wrapper.hpp"
@@ -16,7 +15,8 @@
 #include "caf/detail/scope_guard.hpp"
 #include "caf/format_string_with_location.hpp"
 #include "caf/fwd.hpp"
-#include "caf/log_event.hpp"
+#include "caf/log/event.hpp"
+#include "caf/log/level.hpp"
 
 #include <cstring>
 #include <sstream>
@@ -40,7 +40,7 @@ public:
 
   friend class trace_exit_guard;
 
-  friend class log_event_sender;
+  friend class log::event_sender;
 
   // -- member types -----------------------------------------------------------
 
@@ -54,7 +54,7 @@ public:
     }
 
     template <class... Args>
-    log_event_sender message(std::string_view fmt, Args&&... args) {
+    log::event_sender message(std::string_view fmt, Args&&... args) {
       auto* instance = current_logger();
       if (instance && instance->accepts(level_, component_)) {
         return {instance,
@@ -79,7 +79,7 @@ public:
   public:
     trace_exit_guard() = default;
 
-    trace_exit_guard(logger* instance, log_event_ptr event)
+    trace_exit_guard(logger* instance, log::event_ptr event)
       : instance_(instance), event_(std::move(event)) {
       // nop
     }
@@ -106,7 +106,7 @@ public:
 
   private:
     logger* instance_ = nullptr;
-    log_event_ptr event_;
+    log::event_ptr event_;
   };
 
   /// Utility class for building user-defined log messages with `CAF_ARG`.
@@ -157,10 +157,19 @@ public:
                   format_string_with_location fmt_str, Ts&&... args) {
     auto* instance = current_logger();
     if (instance && instance->accepts(level, component)) {
-      instance->do_log(log_event::make(level, component, fmt_str.location,
-                                       thread_local_aid(), fmt_str.value,
-                                       std::forward<Ts>(args)...));
+      instance->do_log(log::event::make(level, component, fmt_str.location,
+                                        thread_local_aid(), fmt_str.value,
+                                        std::forward<Ts>(args)...));
     }
+  }
+
+  /// Starts a new log event.
+  /// @param component Name of the component logging the message.
+  template <class... Ts>
+  static entrypoint
+  log(unsigned level, std::string_view component,
+      detail::source_location loc = detail::source_location::current()) {
+    return {level, component, loc};
   }
 
   /// Logs a message with `trace` severity.
@@ -172,88 +181,16 @@ public:
   trace(std::string_view component, format_string_with_location fmt_str,
         Ts&&... args) {
     auto* instance = current_logger();
-    if (instance && instance->accepts(CAF_LOG_LEVEL_TRACE, component)) {
+    if (instance && instance->accepts(log::level::trace, component)) {
       auto msg = "ENTRY " + std::string{fmt_str.value};
-      auto event = log_event::make(CAF_LOG_LEVEL_TRACE, component,
-                                   fmt_str.location, thread_local_aid(), msg,
-                                   std::forward<Ts>(args)...);
+      auto event = log::event::make(log::level::trace, component,
+                                    fmt_str.location, thread_local_aid(), msg,
+                                    std::forward<Ts>(args)...);
       auto event_cpy = event;
       instance->do_log(std::move(event_cpy));
       return {instance, event};
     }
     return {nullptr, {}};
-  }
-
-  /// Logs a message with `debug` severity.
-  /// @param component Name of the component logging the message.
-  /// @param fmt_str The format string (with source location) for the message.
-  /// @param args Arguments for the format string.
-  template <class... Ts>
-  static void debug(std::string_view component,
-                    format_string_with_location fmt_str, Ts&&... args) {
-    log(CAF_LOG_LEVEL_DEBUG, component, fmt_str, std::forward<Ts>(args)...);
-  }
-
-  /// Starts a new log event with `debug` severity.
-  /// @param component Name of the component logging the message.
-  static entrypoint
-  debug(std::string_view component,
-        detail::source_location loc = detail::source_location::current()) {
-    return {CAF_LOG_LEVEL_DEBUG, component, loc};
-  }
-
-  /// Logs a message with `info` severity.
-  /// @param component Name of the component logging the message.
-  /// @param fmt_str The format string (with source location) for the message.
-  /// @param args Arguments for the format string.
-  template <class... Ts>
-  static void info(std::string_view component,
-                   format_string_with_location fmt_str, Ts&&... args) {
-    log(CAF_LOG_LEVEL_INFO, component, fmt_str, std::forward<Ts>(args)...);
-  }
-
-  /// Starts a new log event with `info` severity.
-  /// @param component Name of the component logging the message.
-  static entrypoint
-  info(std::string_view component,
-       detail::source_location loc = detail::source_location::current()) {
-    return {CAF_LOG_LEVEL_INFO, component, loc};
-  }
-
-  /// Logs a message with `warning` severity.
-  /// @param component Name of the component logging the message.
-  /// @param fmt_str The format string (with source location) for the message.
-  /// @param args Arguments for the format string.
-  template <class... Ts>
-  static void warning(std::string_view component,
-                      format_string_with_location fmt_str, Ts&&... args) {
-    log(CAF_LOG_LEVEL_WARNING, component, fmt_str, std::forward<Ts>(args)...);
-  }
-
-  /// Starts a new log event with `warning` severity.
-  /// @param component Name of the component logging the message.
-  static entrypoint
-  warning(std::string_view component,
-          detail::source_location loc = detail::source_location::current()) {
-    return {CAF_LOG_LEVEL_WARNING, component, loc};
-  }
-
-  /// Logs a message with `error` severity.
-  /// @param component Name of the component logging the message.
-  /// @param fmt_str The format string (with source location) for the message.
-  /// @param args Arguments for the format string.
-  template <class... Ts>
-  static void error(std::string_view component,
-                    format_string_with_location fmt_str, Ts&&... args) {
-    log(CAF_LOG_LEVEL_ERROR, component, fmt_str, std::forward<Ts>(args)...);
-  }
-
-  /// Starts a new log event with `error` severity.
-  /// @param component Name of the component logging the message.
-  static entrypoint
-  error(std::string_view component,
-        detail::source_location loc = detail::source_location::current()) {
-    return {CAF_LOG_LEVEL_ERROR, component, loc};
   }
 
   // -- legacy API (for the logging macros) ------------------------------------
@@ -269,8 +206,8 @@ public:
   legacy_api_log_trace(std::string_view component, std::string msg,
                        detail::source_location loc
                        = detail::source_location::current()) {
-    auto event = log_event::make(CAF_LOG_LEVEL_TRACE, component, loc,
-                                 thread_local_aid(), msg);
+    auto event = log::event::make(log::level::trace, component, loc,
+                                  thread_local_aid(), msg);
     auto event_cpy = event;
     do_log(std::move(event_cpy));
     return {this, event};
@@ -330,7 +267,7 @@ public:
 private:
   // -- internal logging API ---------------------------------------------------
 
-  virtual void do_log(log_event_ptr&& event) = 0;
+  virtual void do_log(log::event_ptr&& event) = 0;
 
   // -- initialization (called by the actor_system) ----------------------------
 

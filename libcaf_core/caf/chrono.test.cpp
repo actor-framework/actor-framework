@@ -7,6 +7,8 @@
 #include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
+#include "caf/log/test.hpp"
+
 using namespace caf;
 
 namespace {
@@ -355,12 +357,12 @@ TEST("chrono::to_string generates valid input for datetime::parse") {
   // can only check that the string is valid by parsing it again.
   SECTION("std::chrono time point") {
     auto str = chrono::to_string(std::chrono::system_clock::now());
-    print_debug("str = {}", str);
+    log::test::debug("str = {}", str);
     check(datetime::from_string(str).has_value());
   }
   SECTION("caf::timestamp") {
     auto str = chrono::to_string(make_timestamp());
-    print_debug("str = {}", str);
+    log::test::debug("str = {}", str);
     check(datetime::from_string(str).has_value());
   }
 }

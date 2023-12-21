@@ -11,6 +11,7 @@
 #include "caf/binary_serializer.hpp"
 #include "caf/detail/make_meta_object.hpp"
 #include "caf/init_global_meta_objects.hpp"
+#include "caf/log/test.hpp"
 
 #include <tuple>
 #include <type_traits>
@@ -113,7 +114,7 @@ TEST("init_global_meta_objects takes care of creating a meta object table") {
   check_eq(type_name_by_id_v<type_id_v<i64_wrapper>>, "i64_wrapper"s);
   check_eq(xs[type_id_v<i32_wrapper>].type_name, "i32_wrapper"s);
   check_eq(xs[type_id_v<i64_wrapper>].type_name, "i64_wrapper"s);
-  print_debug("calling init_global_meta_objects again is a no-op");
+  log::test::debug("calling init_global_meta_objects again is a no-op");
   init_global_meta_objects<id_block::meta_object_test>();
   auto ys = global_meta_objects();
   auto same = [](const auto& x, const auto& y) {

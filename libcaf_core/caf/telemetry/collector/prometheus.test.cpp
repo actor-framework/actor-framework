@@ -6,6 +6,7 @@
 
 #include "caf/test/test.hpp"
 
+#include "caf/log/test.hpp"
 #include "caf/telemetry/metric_registry.hpp"
 #include "caf/telemetry/metric_type.hpp"
 
@@ -60,7 +61,8 @@ some_request_duration_seconds_bucket{x="get",le="+Inf"} 3 42000
 some_request_duration_seconds_sum{x="get"} 14 42000
 some_request_duration_seconds_count{x="get"} 3 42000
 )"sv);
-  print_debug("multiple runs with the same timestamp generate the same output");
+  log::test::debug("multiple runs with the same timestamp produce "
+                   "the same output");
   auto ts = make_timestamp();
   std::string res1;
   {

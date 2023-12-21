@@ -10,6 +10,7 @@
 
 #include "caf/flow/observable.hpp"
 #include "caf/flow/scoped_coordinator.hpp"
+#include "caf/log/test.hpp"
 
 using namespace caf;
 
@@ -65,7 +66,7 @@ SCENARIO("mcast operators buffer items that they cannot ship immediately") {
   GIVEN("an mcast operator with three observers") {
     WHEN("pushing more data than the observers have requested") {
       THEN("items are buffered individually") {
-        print_debug("subscribe three observers to a fresh mcast operator");
+        log::test::debug("subscribe three observers to a fresh mcast operator");
         auto uut = make_mcast();
         check(!uut->has_observers());
         check_eq(uut->observer_count(), 0u);
@@ -88,7 +89,7 @@ SCENARIO("mcast operators buffer items that they cannot ship immediately") {
         check_eq(uut->min_demand(), 0u);
         check_eq(uut->max_buffered(), 0u);
         check_eq(uut->min_buffered(), 0u);
-        print_debug("trigger request for items");
+        log::test::debug("trigger request for items");
         o1->request(3);
         o2->request(5);
         o3->request(7);
@@ -97,14 +98,14 @@ SCENARIO("mcast operators buffer items that they cannot ship immediately") {
         check_eq(uut->min_demand(), 3u);
         check_eq(uut->max_buffered(), 0u);
         check_eq(uut->min_buffered(), 0u);
-        print_debug("push more items than we have demand for");
+        log::test::debug("push more items than we have demand for");
         for (auto i = 0; i < 8; ++i)
           uut->push_all(i);
         check_eq(uut->max_demand(), 0u);
         check_eq(uut->min_demand(), 0u);
         check_eq(uut->max_buffered(), 5u);
         check_eq(uut->min_buffered(), 1u);
-        print_debug("drop the subscriber with the largest buffer");
+        log::test::debug("drop the subscriber with the largest buffer");
         sub1.dispose();
         run_flows();
         check_eq(uut->max_demand(), 0u);

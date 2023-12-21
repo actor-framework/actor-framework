@@ -7,6 +7,7 @@
 #include "caf/net/web_socket/frame.hpp"
 
 #include "caf/error.hpp"
+#include "caf/log/system.hpp"
 #include "caf/logger.hpp"
 #include "caf/sec.hpp"
 
@@ -39,7 +40,7 @@ bool default_trait::convert(std::string_view text, input_type& x) {
 }
 
 error default_trait::last_error() {
-  CAF_LOG_ERROR("default_trait::last_error called");
+  log::system::error("web_socket::default_trait::last_error called");
   return {sec::logic_error};
 }
 

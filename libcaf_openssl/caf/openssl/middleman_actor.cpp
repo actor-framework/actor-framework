@@ -24,6 +24,7 @@
 #include "caf/actor_proxy.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/detail/socket_guard.hpp"
+#include "caf/log/system.hpp"
 #include "caf/logger.hpp"
 #include "caf/node_id.hpp"
 #include "caf/sec.hpp"
@@ -214,7 +215,7 @@ public:
     io::network::nonblocking(fd, true);
     auto sssn = make_session(parent()->system(), fd, true);
     if (sssn == nullptr) {
-      CAF_LOG_ERROR("Unable to create SSL session for accepted socket");
+      log::system::error("unable to create SSL session for accepted socket");
       return false;
     }
     auto scrb = make_counted<scribe_impl>(dm, fd, std::move(sssn));
@@ -246,7 +247,7 @@ protected:
     io::network::nonblocking(*fd, true);
     auto sssn = make_session(system(), *fd, false);
     if (!sssn) {
-      CAF_LOG_ERROR("Unable to create SSL session for connection");
+      log::system::error("unable to create SSL session for connection");
       return sec::cannot_connect_to_node;
     }
     CAF_LOG_DEBUG("successfully created an SSL session for:" << CAF_ARG(host)

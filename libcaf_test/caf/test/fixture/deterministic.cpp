@@ -14,6 +14,7 @@
 #include "caf/detail/source_location.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/detail/test_export.hpp"
+#include "caf/log/test.hpp"
 #include "caf/scheduled_actor.hpp"
 
 #include <numeric>
@@ -51,30 +52,36 @@ public:
 
   /// Writes an entry to the event-queue of the logger.
   /// @thread-safe
-  void do_log(log_event_ptr&& event) override {
-    if (event->component() == "caf") {
-      // Filter out all internal CAF logging except for the caf_flow events,
-      // because the output gets too noisy otherwise.
-      // TODO: make this configurable.
+  void do_log(log::event_ptr&& event) override {
+    // We omit fields such as component and actor ID. When not filtering
+    // non-test log messages, we add these fields to the message in order to be
+    // able to distinguish between different actors and components.
+    if (event->component() != "caf.test") {
+      auto enriched = detail::format("[{}, aid: {}] {}", event->component(),
+                                     logger::thread_local_aid(),
+                                     event->message());
+      auto enriched_event = event->with_message(enriched, log::keep_timestamp);
+      reporter::instance().print(enriched_event);
       return;
     }
-    auto enriched = detail::format("[{}, aid: {}] {}", event->component(),
-                                   logger::thread_local_aid(),
-                                   event->message());
-    reporter::instance().print(event->with_message(enriched, keep_timestamp));
+    reporter::instance().print(event);
   }
 
   /// Returns whether the logger is configured to accept input for given
   /// component and log level.
-  bool accepts(unsigned level, std::string_view) override {
-    return level <= reporter::instance().verbosity();
+  bool accepts(unsigned level, std::string_view component) override {
+    return level <= reporter::instance().verbosity()
+           && !std::any_of(filter_.begin(), filter_.end(),
+                           [component](const std::string& excluded) {
+                             return component == excluded;
+                           });
   }
 
   // -- initialization ---------------------------------------------------------
 
   /// Allows the logger to read its configuration from the actor system config.
   void init(const actor_system_config&) override {
-    // nop
+    filter_ = reporter::instance().log_component_filter();
   }
 
   // -- event handling ---------------------------------------------------------
@@ -88,6 +95,9 @@ public:
   void stop() override {
     // nop
   }
+
+private:
+  std::vector<std::string> filter_;
 };
 
 } // namespace
@@ -272,13 +282,12 @@ public:
   bool trigger_timeout(const detail::source_location& loc) {
     drop_disposed();
     if (num_timeouts() == 0) {
-      reporter::instance().print_debug({"no pending timeout to trigger", loc});
+      log::test::debug({"no pending timeout to trigger", loc});
       return false;
     }
-    reporter::instance().print_debug({"trigger next pending timeout", loc});
+    log::test::debug({"trigger next pending timeout", loc});
     if (auto delta = next_timeout(loc) - current_time; delta.count() > 0) {
-      reporter::instance().print_debug({"advance time by {}", loc},
-                                       duration_to_string(delta));
+      log::test::debug({"advance time by {}", loc}, duration_to_string(delta));
       current_time += delta;
     }
     if (!try_trigger_once()) {
@@ -307,8 +316,7 @@ public:
   /// Advances the time by `x` and dispatches timeouts and delayed messages.
   /// @returns The number of triggered timeouts.
   size_t advance_time(duration_type x, const detail::source_location& loc) {
-    reporter::instance().print_debug({"advance time by {}", loc},
-                                     duration_to_string(x));
+    log::test::debug({"advance time by {}", loc}, duration_to_string(x));
     if (x.count() <= 0) {
       runnable::current().fail(
         {"advance_time requires a positive duration", loc});

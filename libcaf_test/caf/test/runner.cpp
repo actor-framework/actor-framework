@@ -14,6 +14,7 @@
 #include "caf/config_option_set.hpp"
 #include "caf/detail/log_level.hpp"
 #include "caf/detail/set_thread_name.hpp"
+#include "caf/log/level.hpp"
 
 #include <condition_variable>
 #include <iostream>
@@ -79,7 +80,8 @@ config_option_set make_option_set() {
     .add<std::string>("suites,s", "regex for selecting suites")
     .add<std::string>("tests,t", "regex for selecting tests")
     .add<std::string>("available-tests,A", "print tests for a suite")
-    .add<std::string>("verbosity,v", "set verbosity level of the reporter");
+    .add<std::string>("verbosity,v", "set verbosity level of the reporter")
+    .add<std::vector<std::string>>("log-component-filter,l", "set log filter");
   return result;
 }
 
@@ -87,17 +89,17 @@ std::optional<unsigned> parse_log_level(std::string_view x) {
   // Note: the 0-5 aliases are for compatibility with the old unit testing
   //       framework.
   if (x == "quiet" || x == "0")
-    return CAF_LOG_LEVEL_QUIET;
+    return log::level::quiet;
   if (x == "error" || x == "1")
-    return CAF_LOG_LEVEL_ERROR;
+    return log::level::error;
   if (x == "warning" || x == "2")
-    return CAF_LOG_LEVEL_WARNING;
+    return log::level::warning;
   if (x == "info" || x == "3")
-    return CAF_LOG_LEVEL_INFO;
+    return log::level::info;
   if (x == "debug" || x == "4")
-    return CAF_LOG_LEVEL_DEBUG;
+    return log::level::debug;
   if (x == "trace" || x == "5")
-    return CAF_LOG_LEVEL_TRACE;
+    return log::level::trace;
   return {};
 }
 
@@ -121,6 +123,18 @@ std::optional<std::regex> to_regex(std::string_view regex_string) {
 #endif
 }
 
+auto default_log_component_filter() {
+  using namespace std::literals;
+  return std::vector{
+    "caf"s,        // legacy CAF logging
+    "caf_flow"s,   // legacy CAF logging
+    "caf.core"s,   // events from log::core
+    "caf.io"s,     // events from log::io
+    "caf.net"s,    // events from log::net
+    "caf.openssl"s // events from log::openssl
+  };
+}
+
 } // namespace
 
 runner::runner() : suites_(caf::test::registry::suites()) {
@@ -141,6 +155,8 @@ int runner::run(int argc, char** argv) {
     return EXIT_FAILURE;
   }
   default_reporter->no_colors(get_or(cfg_, "no-colors", false));
+  default_reporter->log_component_filter(
+    get_or(cfg_, "log-component-filter", default_log_component_filter()));
   default_reporter->start();
   auto enabled = [](const std::regex& selected,
                     std::string_view search_string) {
@@ -172,9 +188,9 @@ int runner::run(int argc, char** argv) {
         default_reporter->unhandled_exception(ex.message(), ex.location());
         default_reporter->end_test();
       } catch (const requirement_failed& ex) {
-        auto event = log_event::make(CAF_LOG_LEVEL_ERROR, "caf.test",
-                                     ex.location(), 0, "requirement failed: {}",
-                                     ex.message());
+        auto event = log::event::make(log::level::error, "caf.test",
+                                      ex.location(), 0,
+                                      "requirement failed: {}", ex.message());
         default_reporter->print(event);
         default_reporter->end_test();
       } catch (const std::exception& ex) {

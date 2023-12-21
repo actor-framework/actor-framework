@@ -241,8 +241,8 @@ caf_add_component(
     caf/json_writer.cpp
     caf/load_inspector.cpp
     caf/local_actor.cpp
-    caf/log_event.cpp
-    caf/log_event.test.cpp
+    caf/log/event.cpp
+    caf/log/event.test.cpp
     caf/logger.cpp
     caf/mailbox_element.cpp
     caf/make_config_option.cpp
@@ -401,6 +401,9 @@ caf_add_component(
     unit
     uri
     uuid)
+
+# Additional log component for (potentially critical) system-wide events.
+caf_add_log_component(system)
 
 if(NOT CAF_USE_STD_FORMAT)
   target_sources(libcaf_core PRIVATE caf/detail/format.cpp)

@@ -7,6 +7,7 @@
 #include "caf/test/test.hpp"
 
 #include "caf/detail/parser/read_config.hpp"
+#include "caf/log/test.hpp"
 
 using std::string;
 
@@ -72,15 +73,15 @@ TEST("config_consumer") {
 }
 
 TEST("simplified syntax") {
-  print_debug("read test_config");
+  log::test::debug("read test_config");
   {
     detail::config_consumer consumer{options, config};
     string_parser_state res{test_config1.begin(), test_config1.end()};
     detail::parser::read_config(res, consumer);
     check_eq(res.code, pec::success);
-    print_debug("read test_config2");
   }
   settings config2;
+  log::test::debug("read test_config2");
   {
     detail::config_consumer consumer{options, config2};
     string_parser_state res{test_config2.begin(), test_config2.end()};

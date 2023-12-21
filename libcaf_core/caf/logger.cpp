@@ -17,6 +17,8 @@
 #include "caf/detail/set_thread_name.hpp"
 #include "caf/detail/sync_ring_buffer.hpp"
 #include "caf/local_actor.hpp"
+#include "caf/log/core.hpp"
+#include "caf/log/level.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/message.hpp"
 #include "caf/string_algorithms.hpp"
@@ -41,7 +43,7 @@ namespace {
 
 // Note: not part of the public API on purpose. This is only used for render()
 //       and the format may change at any time.
-void render_fields(std::ostream& out, log_event::field_list fields) {
+void render_fields(std::ostream& out, log::event::field_list fields) {
   if (fields.empty())
     return;
   auto i = fields.begin();
@@ -51,7 +53,7 @@ void render_fields(std::ostream& out, log_event::field_list fields) {
       using value_t = std::decay_t<decltype(value)>;
       if constexpr (std::is_same_v<value_t, std::nullopt_t>) {
         out << i->key << " = null";
-      } else if constexpr (std::is_same_v<value_t, log_event::field_list>) {
+      } else if constexpr (std::is_same_v<value_t, log::event::field_list>) {
         out << i->key << " { ";
         render_fields(out, value);
         out << " }";
@@ -67,7 +69,7 @@ void render_fields(std::ostream& out, log_event::field_list fields) {
 }
 
 struct fields_formatter {
-  log_event::field_list fields;
+  log::event::field_list fields;
 };
 
 std::ostream& operator<<(std::ostream& out, fields_formatter wrapper) {
@@ -153,14 +155,14 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   default_logger(actor_system& sys) : t0_(make_timestamp()), system_(sys) {
-    log_level_names_.set("WARN", CAF_LOG_LEVEL_WARNING);
+    log_level_names_.set("WARN", log::level::warning);
   }
 
   // -- logging ----------------------------------------------------------------
 
   /// Writes an entry to the event-queue of the logger.
   /// @thread-safe
-  void do_log(log_event_ptr&& event) override {
+  void do_log(log::event_ptr&& event) override {
     if (cfg_.inline_output)
       handle_event(*event);
     else
@@ -259,7 +261,7 @@ public:
 
   /// Renders `x` using the line format `lf` to `out`.
   void render(std::ostream& out, const line_format& lf,
-              const log_event& x) const {
+              const log::event& x) const {
     auto ms_time_diff = [](timestamp t0, timestamp tn) {
       using namespace std::chrono;
       return duration_cast<milliseconds>(tn - t0).count();
@@ -309,12 +311,12 @@ public:
     using string_list = std::vector<std::string>;
     auto get_verbosity = [&cfg](std::string_view key) -> unsigned {
       // Note: for historic reasons, we override the name of
-      //       CAF_LOG_LEVEL_WARNING for the output to 'WARN' but keep
+      //       log::level::warning for the output to 'WARN' but keep
       //       the name 'WARNING' (default) for the config option.
       detail::log_level_map tmp;
       if (auto str = get_if<string>(&cfg, key))
         return tmp.by_name(*str);
-      return CAF_LOG_LEVEL_QUIET;
+      return log::level::quiet;
     };
     auto read_filter = [&cfg](string_list& var, std::string_view key) {
       if (auto lst = get_as<string_list>(cfg, key))
@@ -324,10 +326,10 @@ public:
     cfg_.file_verbosity = get_verbosity("caf.logger.file.verbosity");
     cfg_.console_verbosity = get_verbosity("caf.logger.console.verbosity");
     cfg_.verbosity = std::max(cfg_.file_verbosity, cfg_.console_verbosity);
-    if (cfg_.verbosity == CAF_LOG_LEVEL_QUIET)
+    if (cfg_.verbosity == log::level::quiet)
       return;
-    if (cfg_.file_verbosity > CAF_LOG_LEVEL_QUIET
-        && cfg_.console_verbosity > CAF_LOG_LEVEL_QUIET) {
+    if (cfg_.file_verbosity > log::level::quiet
+        && cfg_.console_verbosity > log::level::quiet) {
       read_filter(file_filter_, "caf.logger.file.excluded-components");
       read_filter(console_filter_, "caf.logger.console.excluded-components");
       std::sort(file_filter_.begin(), file_filter_.end());
@@ -335,7 +337,7 @@ public:
       std::set_intersection(file_filter_.begin(), file_filter_.end(),
                             console_filter_.begin(), console_filter_.end(),
                             std::back_inserter(global_filter_));
-    } else if (cfg_.file_verbosity > CAF_LOG_LEVEL_QUIET) {
+    } else if (cfg_.file_verbosity > log::level::quiet) {
       read_filter(file_filter_, "caf.logger.file.excluded-components");
       global_filter_ = file_filter_;
     } else {
@@ -352,7 +354,7 @@ public:
   }
 
   bool open_file() {
-    if (file_verbosity() == CAF_LOG_LEVEL_QUIET || file_name_.empty())
+    if (file_verbosity() == log::level::quiet || file_name_.empty())
       return false;
     file_.open(file_name_, std::ios::out | std::ios::app);
     if (!file_) {
@@ -364,12 +366,12 @@ public:
 
   // -- event handling ---------------------------------------------------------
 
-  void handle_event(const log_event& x) {
+  void handle_event(const log::event& x) {
     handle_file_event(x);
     handle_console_event(x);
   }
 
-  void handle_file_event(const log_event& x) {
+  void handle_file_event(const log::event& x) {
     // Print to file if available.
     if (file_ && x.level() <= file_verbosity()
         && none_of(file_filter_.begin(), file_filter_.end(),
@@ -379,7 +381,7 @@ public:
       render(file_, file_format_, x);
   }
 
-  void handle_console_event(const log_event& x) {
+  void handle_console_event(const log::event& x) {
     if (x.level() > console_verbosity())
       return;
     if (std::any_of(console_filter_.begin(), console_filter_.end(),
@@ -391,19 +393,19 @@ public:
       switch (x.level()) {
         default:
           break;
-        case CAF_LOG_LEVEL_ERROR:
+        case log::level::error:
           std::clog << term::red;
           break;
-        case CAF_LOG_LEVEL_WARNING:
+        case log::level::warning:
           std::clog << term::yellow;
           break;
-        case CAF_LOG_LEVEL_INFO:
+        case log::level::info:
           std::clog << term::green;
           break;
-        case CAF_LOG_LEVEL_DEBUG:
+        case log::level::debug:
           std::clog << term::cyan;
           break;
-        case CAF_LOG_LEVEL_TRACE:
+        case log::level::trace:
           std::clog << term::blue;
           break;
       }
@@ -416,7 +418,7 @@ public:
   }
 
   void log_first_line() {
-    if (!accepts(CAF_LOG_LEVEL_DEBUG, "caf"))
+    if (!accepts(log::level::debug, log::core::component))
       return;
     std::string msg;
     msg.reserve(128);
@@ -433,20 +435,21 @@ public:
     };
     namespace lg = defaults::logger;
     set_message(cfg_.file_verbosity, file_filter_);
-    auto file_event = log_event::make(CAF_LOG_LEVEL_DEBUG, "caf.logger",
-                                      detail::source_location::current(), 0,
-                                      msg);
+    auto file_event = log::event::make(log::level::debug, log::core::component,
+                                       detail::source_location::current(), 0,
+                                       msg);
     handle_file_event(*file_event);
     set_message(cfg_.console_verbosity, console_filter_);
-    auto console_event = file_event->with_message(msg, keep_timestamp);
+    auto console_event = file_event->with_message(msg, log::keep_timestamp);
     handle_console_event(*console_event);
   }
 
   void log_last_line() {
-    if (!accepts(CAF_LOG_LEVEL_DEBUG, "caf"))
+    if (!accepts(log::level::debug, log::core::component))
       return;
-    auto event = log_event::make(CAF_LOG_LEVEL_DEBUG, "caf.logger",
-                                 detail::source_location::current(), 0, "stop");
+    auto event = log::event::make(log::level::debug, log::core::component,
+                                  detail::source_location::current(), 0,
+                                  "stop");
     handle_event(*event);
   }
 
@@ -458,7 +461,7 @@ public:
     if (auto first = queue_.pop(); first == nullptr) {
       return;
     } else {
-      if (!open_file() && console_verbosity() == CAF_LOG_LEVEL_QUIET)
+      if (!open_file() && console_verbosity() == log::level::quiet)
         return;
       log_first_line();
       handle_event(*first);
@@ -476,13 +479,13 @@ public:
 
   void start() override {
     parent_thread_ = std::this_thread::get_id();
-    if (verbosity() == CAF_LOG_LEVEL_QUIET)
+    if (verbosity() == log::level::quiet)
       return;
     file_name_ = get_or(system_.config(), "caf.logger.file.path",
                         defaults::logger::file::path);
     if (file_name_.empty()) {
       // No need to continue if console and log file are disabled.
-      if (console_verbosity() == CAF_LOG_LEVEL_QUIET)
+      if (console_verbosity() == log::level::quiet)
         return;
     } else {
       // Replace placeholders.
@@ -534,7 +537,7 @@ public:
     if (!thread_.joinable())
       return;
     // Send an empty message to the logger thread to make it terminate.
-    queue_.push(log_event_ptr{});
+    queue_.push(log::event_ptr{});
     thread_.join();
   }
 
@@ -566,7 +569,7 @@ public:
   std::fstream file_;
 
   // Filled with log events by other threads.
-  detail::sync_ring_buffer<log_event_ptr, queue_size> queue_;
+  detail::sync_ring_buffer<log::event_ptr, queue_size> queue_;
 
   // Stores the assembled name of the log file.
   std::string file_name_;
@@ -622,7 +625,7 @@ logger::line_builder&& logger::line_builder::operator<<(char x) && {
 
 void logger::legacy_api_log(unsigned level, std::string_view component,
                             std::string msg, detail::source_location loc) {
-  do_log(log_event::make(level, component, loc, thread_local_aid(), msg));
+  do_log(log::event::make(level, component, loc, thread_local_aid(), msg));
 }
 
 actor_id logger::thread_local_aid() {

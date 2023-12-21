@@ -4,6 +4,8 @@
 
 #include "caf/test/outline.hpp"
 
+#include "caf/log/test.hpp"
+
 #include <numeric>
 
 namespace {
@@ -12,11 +14,11 @@ OUTLINE("eating cucumbers") {
   GIVEN("there are <start> cucumbers") {
     auto start = block_parameters<int>();
     auto cucumbers = start;
-    print_debug("cucumbers: {}", cucumbers);
+    caf::log::test::debug("cucumbers: {}", cucumbers);
     WHEN("I eat <eat> cucumbers") {
       auto eat = block_parameters<int>();
       cucumbers -= eat;
-      print_debug("cucumbers: {}", cucumbers);
+      caf::log::test::debug("cucumbers: {}", cucumbers);
       THEN("I should have <left> cucumbers") {
         auto left = block_parameters<int>();
         check_eq(cucumbers, left);

@@ -238,6 +238,15 @@ endfunction()
 
 # -- convenience function for automating our component setup -------------------
 
+function(caf_add_log_component name)
+  set(CAF_COMPONENT_NAME ${name})
+  configure_file("${PROJECT_SOURCE_DIR}/cmake/log.hpp.in"
+                 "${CMAKE_CURRENT_BINARY_DIR}/caf/log/${name}.hpp"
+                 @ONLY)
+  install(FILES "${CMAKE_CURRENT_BINARY_DIR}/caf/log/${name}.hpp"
+          DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/caf/log/")
+endfunction()
+
 # Usage:
 # caf_add_component(
 #   foo
@@ -283,6 +292,7 @@ function(caf_add_component name)
                              $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
                              $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
                              $<INSTALL_INTERFACE:include>)
+  caf_add_log_component(${name})
   if(BUILD_SHARED_LIBS)
     set_target_properties(${lib_target} PROPERTIES
                           CXX_VISIBILITY_PRESET hidden

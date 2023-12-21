@@ -276,6 +276,11 @@ bool message::save(binary_serializer& sink) const {
   return save_data(sink, data_);
 }
 
+bool message::save(detail::stringification_inspector& sink) const {
+  auto str = to_string(*this);
+  return sink.value(str);
+}
+
 // -- related non-members ------------------------------------------------------
 
 std::string to_string(const message& msg) {

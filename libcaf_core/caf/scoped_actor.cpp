@@ -5,6 +5,7 @@
 #include "caf/scoped_actor.hpp"
 
 #include "caf/actor_registry.hpp"
+#include "caf/log/system.hpp"
 #include "caf/scoped_execution_unit.hpp"
 #include "caf/spawn_options.hpp"
 
@@ -19,7 +20,7 @@ public:
   }
 
   void act() override {
-    CAF_LOG_ERROR("act() of scoped_actor impl called");
+    log::system::error("act() of scoped_actor impl called");
   }
 
   const char* name() const override {

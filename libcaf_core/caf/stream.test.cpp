@@ -11,6 +11,7 @@
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/event_based_actor.hpp"
+#include "caf/log/test.hpp"
 #include "caf/scheduled_actor/flow.hpp"
 
 using namespace caf;
@@ -21,14 +22,14 @@ namespace {
 using ivec = std::vector<int>;
 
 behavior int_sink(event_based_actor* self, std::shared_ptr<ivec> results) {
-  caf::logger::debug("stream.test", "started sink with ID {}", self->id());
+  log::test::debug("stream.test", "started sink with ID {}", self->id());
   return {
     [self, results](const stream& input) {
       self //
         ->observe_as<int>(input, 30, 10)
         .do_finally([self] {
-          caf::logger::debug("stream.test", "sink with ID {} shuts down",
-                             self->id());
+          log::test::debug("stream.test", "sink with ID {} shuts down",
+                           self->id());
           self->quit();
         })
         .for_each([results](int x) { results->push_back(x); });

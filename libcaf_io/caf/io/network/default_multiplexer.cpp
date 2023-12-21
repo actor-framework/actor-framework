@@ -17,6 +17,7 @@
 #include "caf/defaults.hpp"
 #include "caf/detail/call_cfun.hpp"
 #include "caf/detail/socket_guard.hpp"
+#include "caf/log/system.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
 
@@ -142,7 +143,7 @@ default_multiplexer::default_multiplexer(actor_system* sys)
   init();
   epollfd_ = epoll_create1(EPOLL_CLOEXEC);
   if (epollfd_ == -1) {
-    CAF_LOG_ERROR("epoll_create1: " << strerror(errno));
+    log::system::error("epoll_create1 failed: {}", strerror(errno));
     exit(errno);
   }
   // handle at most 64 events at a time
@@ -153,7 +154,7 @@ default_multiplexer::default_multiplexer(actor_system* sys)
   ee.events = input_mask;
   ee.data.ptr = &pipe_reader_;
   if (epoll_ctl(epollfd_, EPOLL_CTL_ADD, pipe_reader_.fd(), &ee) < 0) {
-    CAF_LOG_ERROR("epoll_ctl: " << strerror(errno));
+    log::system::error("epoll_ctl failed: {}", strerror(errno));
     exit(errno);
   }
 }
@@ -236,20 +237,19 @@ void default_multiplexer::handle(const default_multiplexer::event& e) {
     switch (last_socket_error()) {
       // supplied file descriptor is already registered
       case EEXIST:
-        CAF_LOG_ERROR("file descriptor registered twice");
+        log::system::error("epoll_ctl: file descriptor registered twice");
         --shadow_;
         break;
       // op was EPOLL_CTL_MOD or EPOLL_CTL_DEL,
       // and fd is not registered with this epoll instance.
       case ENOENT:
-        CAF_LOG_ERROR("cannot delete file descriptor "
-                      "because it isn't registered");
+        log::system::error("epoll_ctl: cannot delete unknown file descriptor");
         if (e.mask == 0) {
           ++shadow_;
         }
         break;
       default:
-        CAF_LOG_ERROR(strerror(errno));
+        log::system::error("epoll_ctl failed: {}", strerror(errno));
         perror("epoll_ctl() failed");
         CAF_CRITICAL("epoll_ctl() failed");
     }
@@ -327,7 +327,7 @@ bool default_multiplexer::poll_once_impl(bool block) {
           break;
         }
         case ENOMEM: {
-          CAF_LOG_ERROR("poll() failed for reason ENOMEM");
+          log::system::error("poll() failed: ENOMEM");
           // there's not much we can do other than try again
           // in hope someone else releases memory
           break;
@@ -449,7 +449,7 @@ int add_flag(operation op, int bf) {
     case operation::write:
       return bf | output_mask;
     case operation::propagate_error:
-      CAF_LOG_ERROR("unexpected operation");
+      log::system::error("tried to add operation::propagate_error flag");
       break;
   }
   // weird stuff going on
@@ -463,7 +463,7 @@ int del_flag(operation op, int bf) {
     case operation::write:
       return bf & ~output_mask;
     case operation::propagate_error:
-      CAF_LOG_ERROR("unexpected operation");
+      log::system::error("tried to remove operation::propagate_error flag");
       break;
   }
   // weird stuff going on

@@ -2,10 +2,11 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#include "caf/log_event.hpp"
+#include "caf/log/event.hpp"
 
 #include "caf/test/test.hpp"
 
+#include "caf/log/level.hpp"
 #include "caf/logger.hpp"
 #include "caf/ref_counted.hpp"
 
@@ -16,7 +17,7 @@ namespace {
 
 template <class T>
 std::pair<std::string_view, T>
-get_at(size_t index, const log_event::field_list& fields) {
+get_at(size_t index, const log::event::field_list& fields) {
   auto i = fields.begin();
   if (i == fields.end())
     CAF_RAISE_ERROR(std::logic_error, "fields list is empty");
@@ -29,7 +30,7 @@ get_at(size_t index, const log_event::field_list& fields) {
 // A trivial logger implementation that stores the last event.
 class mock_logger : public logger, public ref_counted {
 public:
-  log_event_ptr event;
+  log::event_ptr event;
 
   void ref_logger() const noexcept override {
     ref();
@@ -44,7 +45,7 @@ public:
   }
 
 private:
-  void do_log(log_event_ptr&& ptr) override {
+  void do_log(log::event_ptr&& ptr) override {
     event = std::move(ptr);
   }
 
@@ -77,7 +78,7 @@ TEST("fields builder") {
     builder.field("foo-7-3", init_sub_sub_fields);
   };
   auto resource = detail::monotonic_buffer_resource{};
-  auto fields = log_event_fields_builder{&resource}
+  auto fields = log::event_fields_builder{&resource}
                   .field("foo-1", true)
                   .field("foo-2", 23)
                   .field("foo-3", 42u)
@@ -93,14 +94,14 @@ TEST("fields builder") {
   check_eq(get_at<std::string_view>(4, fields), std::pair{"foo-5"sv, "bar"sv});
   check_eq(de_chunk(get_at<chunked_string>(5, fields)),
            std::pair{"foo-6"sv, "Hello, World!"s});
-  auto [foo_7, foo_7_fields] = get_at<log_event::field_list>(6, fields);
+  auto [foo_7, foo_7_fields] = get_at<log::event::field_list>(6, fields);
   check_eq(foo_7, "foo-7"sv);
   check_eq(get_at<int64_t>(0, foo_7_fields),
            std::pair{"foo-7-1"sv, int64_t{1}});
   check_eq(get_at<int64_t>(1, foo_7_fields),
            std::pair{"foo-7-2"sv, int64_t{2}});
-  auto [foo_7_3, foo_7_3_fields] = get_at<log_event::field_list>(2,
-                                                                 foo_7_fields);
+  auto [foo_7_3, foo_7_3_fields] = get_at<log::event::field_list>(2,
+                                                                  foo_7_fields);
   check_eq(foo_7_3, "foo-7-3"sv);
   check_eq(get_at<int64_t>(0, foo_7_3_fields),
            std::pair{"foo-7-3-1"sv, int64_t{3}});
@@ -112,14 +113,14 @@ TEST("log event sender") {
   auto loc = detail::source_location::current();
   auto mlog = mock_logger{};
   SECTION("trivial message") {
-    log_event_sender(&mlog, CAF_LOG_LEVEL_DEBUG, "foo", loc, 0, "hello")
+    log::event_sender(&mlog, log::level::debug, "foo", loc, 0, "hello")
       .field("foo", 42)
       .field("bar", "baz")
       .send();
     auto event = mlog.event;
     if (!check_ne(event, nullptr))
       return;
-    check_eq(event->level(), unsigned{CAF_LOG_LEVEL_DEBUG});
+    check_eq(event->level(), log::level::debug);
     check_eq(event->component(), "foo"sv);
     check_eq(event->line_number(), loc.line());
     check_eq(event->file_name(), loc.file_name());
@@ -131,15 +132,15 @@ TEST("log event sender") {
     check_eq(get_at<std::string_view>(1, fields), std::pair{"bar"sv, "baz"sv});
   }
   SECTION("formatted message") {
-    log_event_sender(&mlog, CAF_LOG_LEVEL_DEBUG, "foo", loc, 123, "{}, {}!",
-                     "Hello", "World")
+    log::event_sender(&mlog, log::level::debug, "foo", loc, 123, "{}, {}!",
+                      "Hello", "World")
       .field("foo", 42)
       .field("bar", "baz")
       .send();
     auto event = mlog.event;
     if (!check_ne(event, nullptr))
       return;
-    check_eq(event->level(), unsigned{CAF_LOG_LEVEL_DEBUG});
+    check_eq(event->level(), log::level::debug);
     check_eq(event->component(), "foo"sv);
     check_eq(event->line_number(), loc.line());
     check_eq(event->file_name(), loc.file_name());
@@ -155,19 +156,19 @@ TEST("log event sender") {
 TEST("with_message") {
   auto loc = detail::source_location::current();
   auto mlog = mock_logger{};
-  log_event_sender(&mlog, CAF_LOG_LEVEL_DEBUG, "foo", loc, 0, "message 1")
+  log::event_sender(&mlog, log::level::debug, "foo", loc, 0, "message 1")
     .field("foo", 42)
     .field("str", "{}, {}!", "Hello", "World")
     .field("nested", [](auto& sub) { sub.field("key-1", 1).field("key-2", 2); })
     .send();
   auto event_1 = mlog.event;
-  auto event_2 = event_1->with_message("message 2", keep_timestamp);
+  auto event_2 = event_1->with_message("message 2", log::keep_timestamp);
   check_eq(to_string(event_1->message()), "message 1"sv);
   check_eq(to_string(event_2->message()), "message 2"sv);
   auto fields_1 = event_1->fields();
-  auto fields_1_3 = get_at<log_event::field_list>(2, fields_1).second;
+  auto fields_1_3 = get_at<log::event::field_list>(2, fields_1).second;
   auto fields_2 = event_2->fields();
-  auto fields_2_3 = get_at<log_event::field_list>(2, fields_2).second;
+  auto fields_2_3 = get_at<log::event::field_list>(2, fields_2).second;
   check_eq(get_at<int64_t>(0, fields_1), std::pair{"foo"sv, int64_t{42}});
   check_eq(de_chunk(get_at<chunked_string>(1, fields_1)),
            std::pair{"str"sv, "Hello, World!"s});

@@ -7,7 +7,7 @@
 #include "caf/io/network/native_socket.hpp"
 
 #include "caf/hash/fnv.hpp"
-#include "caf/logger.hpp"
+#include "caf/log/system.hpp"
 #include "caf/sec.hpp"
 
 // clang-format off
@@ -96,7 +96,8 @@ size_t ep_hash::operator()(const sockaddr& sa) const noexcept {
     case AF_INET6:
       return hash(reinterpret_cast<const struct sockaddr_in6*>(&sa));
     default:
-      CAF_LOG_ERROR("Only IPv4 and IPv6 are supported.");
+      log::system::error("failed to hash socket address: "
+                         "only IPv4 and IPv6 are supported");
       return 0;
   }
 }

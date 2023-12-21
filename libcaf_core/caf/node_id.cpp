@@ -13,7 +13,7 @@
 #include "caf/detail/parse.hpp"
 #include "caf/detail/parser/ascii_to_int.hpp"
 #include "caf/expected.hpp"
-#include "caf/logger.hpp"
+#include "caf/log/core.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/parser_state.hpp"
 #include "caf/sec.hpp"
@@ -212,7 +212,7 @@ error parse(std::string_view str, node_id& dest) {
       dest = std::move(*nid);
       return none;
     }
-    CAF_LOG_ERROR("make_node_id failed after can_parse returned true");
+    log::core::error("make_node_id failed after can_parse returned true");
     return sec::invalid_argument;
   }
   if (auto nid_uri = make_uri(str)) {

@@ -6,28 +6,16 @@
 
 #include "caf/test/test.hpp"
 
-#include "caf/detail/log_level.hpp"
+#include "caf/log/level.hpp"
 
 #include <map>
 
 using namespace caf;
 using namespace std::literals;
 
+using caf::log::level;
+
 namespace {
-
-struct level {
-  static constexpr unsigned quiet = CAF_LOG_LEVEL_QUIET;
-
-  static constexpr unsigned error = CAF_LOG_LEVEL_ERROR;
-
-  static constexpr unsigned warning = CAF_LOG_LEVEL_WARNING;
-
-  static constexpr unsigned info = CAF_LOG_LEVEL_INFO;
-
-  static constexpr unsigned debug = CAF_LOG_LEVEL_DEBUG;
-
-  static constexpr unsigned trace = CAF_LOG_LEVEL_TRACE;
-};
 
 TEST("log level maps render the default log levels") {
   detail::log_level_map uut;

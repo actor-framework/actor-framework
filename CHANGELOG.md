@@ -82,6 +82,18 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   on the observer. Previously, CAF would simply call `on_complete()` on the
   observer, making it impossible to distinguish between a normal completion and
   disposal.
+- The `caf::logger` received a complete overhaul and became an interface class.
+  By turning the class into an interface, users can now install custom logger
+  implementations. CAF uses the previous implementation as the default logger if
+  no custom logger is configured. To install a logger, users can call
+  `cfg.logger_factory(my_logger_factory)` on the `actor_system_config` before
+  constructing the `actor_system`. The logger factory is a function object with
+  signature `caf::intrusive_ptr<caf::logger>(caf::actor_system&)`. Furthermore,
+  log messages are now formatted using `std::format` when compiling CAF with
+  C++20 or later. Otherwise, CAF will fall back to a minimal formatting
+  implementation with compatible syntax. The logging API will also automatically
+  convert any type with a suitable `inspect` overload to a string if the type is
+  not recognized by `format`.
 
 ### Deprecated
 
