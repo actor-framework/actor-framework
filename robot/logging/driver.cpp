@@ -19,58 +19,42 @@ namespace app {
 
 constexpr std::string_view component = "app";
 
-/// Logs a message for the `caf.core` component with `debug` severity.
-/// @param fmt_str The format string (with source location) for the message.
-/// @param args Arguments for the format string.
 template <class... Ts>
 void debug(caf::format_string_with_location fmt_str, Ts&&... args) {
   caf::logger::log(caf::log::level::debug, component, fmt_str,
                    std::forward<Ts>(args)...);
 }
 
-/// Starts a new log event for the `caf.core` component with `debug` severity.
 inline auto debug() {
   return caf::logger::log(caf::log::level::debug, component);
 }
 
-/// Logs a message for the `caf.core` component with `info` severity.
-/// @param fmt_str The format string (with source location) for the message.
-/// @param args Arguments for the format string.
 template <class... Ts>
 void info(caf::format_string_with_location fmt_str, Ts&&... args) {
   caf::logger::log(caf::log::level::info, component, fmt_str,
                    std::forward<Ts>(args)...);
 }
 
-/// Starts a new log event for the `caf.core` component with `info` severity.
 inline auto info() {
   return caf::logger::log(caf::log::level::info, component);
 }
 
-/// Logs a message for the `caf.core` component with `warning` severity.
-/// @param fmt_str The format string (with source location) for the message.
-/// @param args Arguments for the format string.
 template <class... Ts>
 void warning(caf::format_string_with_location fmt_str, Ts&&... args) {
   caf::logger::log(caf::log::level::warning, component, fmt_str,
                    std::forward<Ts>(args)...);
 }
 
-/// Starts a new log event for the `caf.core` component with `warning` severity.
 inline auto warning() {
   return caf::logger::log(caf::log::level::warning, component);
 }
 
-/// Logs a message for the `caf.core` component with `error` severity.
-/// @param fmt_str The format string (with source location) for the message.
-/// @param args Arguments for the format string.
 template <class... Ts>
 void error(caf::format_string_with_location fmt_str, Ts&&... args) {
   caf::logger::log(caf::log::level::error, component, fmt_str,
                    std::forward<Ts>(args)...);
 }
 
-/// Starts a new log event for the `caf.core` component with `error` severity.
 inline auto error() {
   return caf::logger::log(caf::log::level::error, component);
 }
@@ -138,5 +122,4 @@ void caf_main(caf::actor_system&, const config& cfg) {
   foo(42, get_or(cfg, "api", "default") == "legacy");
 }
 
-// creates a main function for us that calls our caf_main
 CAF_MAIN(caf::id_block::driver)
