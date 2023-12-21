@@ -148,10 +148,6 @@ bool transport::switching_protocol() const noexcept {
 
 error transport::start(socket_manager* owner) {
   parent_ = owner;
-  // if (auto err = nodelay(fd_, true)) {
-  //   CAF_LOG_ERROR("nodelay failed: " << err);
-  //   return err;
-  // }
   if (auto socket_buf_size = send_buffer_size(policy_->handle())) {
     max_write_buf_size_ = *socket_buf_size;
     CAF_ASSERT(max_write_buf_size_ > 0);

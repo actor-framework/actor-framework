@@ -25,8 +25,6 @@ class CAF_NET_EXPORT transport : public socket_event_layer,
 public:
   // -- member types -----------------------------------------------------------
 
-  using socket_type = stream_socket;
-
   using connection_handle = stream_socket;
 
   /// An owning smart pointer type for storing an upper layer object.
@@ -206,7 +204,7 @@ protected:
   /// Processes incoming data and generates outgoing data.
   upper_layer_ptr up_;
 
-  /// Configures how we read and write to the socket.
+  /// Points to the associated socket manager below.
   socket_manager* parent_ = nullptr;
 
   /// Configures how we read and write to the socket.
