@@ -2,18 +2,19 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE unit
-
 #include "caf/unit.hpp"
+
+#include "caf/test/test.hpp"
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/event_based_actor.hpp"
+#include "caf/log/test.hpp"
 #include "caf/scoped_actor.hpp"
 
-#include "core-test.hpp"
-
 using namespace caf;
+
+namespace {
 
 behavior testee(event_based_actor* self) {
   return {
@@ -29,7 +30,7 @@ behavior testee(event_based_actor* self) {
   };
 }
 
-CAF_TEST(unit_results) {
+TEST("unit_results") {
   actor_system_config cfg;
   actor_system sys{cfg};
   scoped_actor self{sys};
@@ -43,10 +44,13 @@ CAF_TEST(unit_results) {
     self->request(aut, infinite, a)
       .receive(
         [&] {
-          MESSAGE("actor under test correctly replied to " << to_string(a));
+          log::test::debug("actor under test correctly replied to {}",
+                           to_string(a));
         },
         [&](const error&) {
-          CAF_FAIL("actor under test failed at input " << to_string(a));
+          fail("actor under test failed at input {}", to_string(a));
         });
   }
 }
+
+} // namespace
