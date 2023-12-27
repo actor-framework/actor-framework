@@ -112,14 +112,15 @@ public:
 template <class Base, class F>
 class init_fun_factory {
 public:
+  static_assert(std::is_base_of_v<local_actor, Base>,
+                "Base does not extend local_actor");
+
   using ptr_type = std::unique_ptr<init_fun_factory_helper_base>;
 
   using fun = unique_function<behavior(local_actor*)>;
 
   template <class... Ts>
   ptr_type make(F f, Ts&&... xs) {
-    static_assert(std::is_base_of_v<local_actor, Base>,
-                  "Given Base does not extend local_actor");
     using trait = detail::get_callable_trait_t<F>;
     using arg_types = typename trait::arg_types;
     using res_type = typename trait::result_type;
@@ -137,6 +138,36 @@ public:
   template <class... Ts>
   fun operator()(F f, Ts&&... xs) {
     return fun{make(std::move(f), std::forward<Ts>(xs)...).release()};
+  }
+};
+
+template <class Base, class State>
+class init_fun_factory<Base, actor_from_state_t<State>> {
+public:
+  static_assert(std::is_base_of_v<local_actor, Base>,
+                "Base does not extend local_actor");
+
+  using fun = unique_function<behavior(local_actor*)>;
+
+  template <class... Ts>
+  fun operator()(actor_from_state_t<State> f, Ts&&... xs) {
+    using impl_t = typename actor_from_state_t<State>::impl_type;
+    if constexpr (sizeof...(Ts) > 0) {
+      return fun{[f, args = std::make_tuple(detail::spawn_fwd<Ts>(xs)...)] //
+                 (local_actor * self) mutable {
+                   return std::apply(
+                     [self, f](auto&&... xs) {
+                       return f(static_cast<impl_t*>(self),
+                                std::forward<decltype(xs)>(xs)...)
+                         .unbox();
+                     },
+                     std::move(args));
+                 }};
+    } else {
+      return fun{[f](local_actor* self) mutable {
+        return f(static_cast<impl_t*>(self)).unbox();
+      }};
+    }
   }
 };
 

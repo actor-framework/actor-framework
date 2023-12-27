@@ -35,6 +35,7 @@ template <class> class span;
 template <class> class typed_stream;
 template <class> class weak_intrusive_ptr;
 
+template <class> struct actor_from_state_t;
 template <class> struct inspector_access;
 template <class> struct timeout_definition;
 template <class> struct type_id;
@@ -62,6 +63,7 @@ template <class...> class result;
 template <class...> class typed_actor;
 template <class...> class typed_actor_pointer;
 template <class...> class typed_actor_view;
+template <class...> class typed_behavior;
 template <class...> class typed_event_based_actor;
 template <class...> class typed_message_view;
 template <class...> class typed_response_promise;

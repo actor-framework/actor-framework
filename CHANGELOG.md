@@ -28,6 +28,11 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The new class `caf::chunk` represents an immutable sequence of bytes with a
   fixed size. Unlike `std::span`, a `chunk` owns its data and can be (cheaply)
   copied and moved.
+- Users can now convert state classes with a `make_behavior` member function
+  into a "function-based actor" via the new `actor_from_state` utility. For
+  example, `sys.spawn(caf::actor_from_state<my_state>, args...)` creates a new
+  actor that initializes its state with `my_state{args...}` and then calls
+  `make_behavior()` on the state object to obtain the initial behavior.
 
 ### Fixed
 

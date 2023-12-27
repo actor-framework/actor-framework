@@ -14,6 +14,8 @@
 #include "caf/timespan.hpp"
 #include "caf/unsafe_behavior_init.hpp"
 
+#include <utility>
+
 namespace caf ::detail {
 
 template <class Signature>
@@ -224,8 +226,12 @@ public:
 
   /// @cond PRIVATE
 
-  behavior& unbox() {
+  behavior& unbox() & {
     return bhvr_;
+  }
+
+  behavior&& unbox() && {
+    return std::move(bhvr_);
   }
 
   static typed_behavior make_empty_behavior() {
