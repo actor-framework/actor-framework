@@ -91,7 +91,9 @@ caf_add_component(
     caf/net/ssl/verify.cpp
     caf/net/stream_socket.cpp
     caf/net/tcp_accept_socket.cpp
+    caf/net/tcp_accept_socket.test.cpp
     caf/net/tcp_stream_socket.cpp
+    caf/net/tcp_stream_socket.test.cpp
     caf/net/this_host.cpp
     caf/net/udp_datagram_socket.cpp
     caf/net/web_socket/client.cpp
@@ -123,7 +125,6 @@ caf_add_component(
     net.socket_guard
     net.ssl.transport
     net.stream_socket
-    net.tcp_socket
     net.typed_actor_shell
     net.udp_datagram_socket
     net.web_socket.client
