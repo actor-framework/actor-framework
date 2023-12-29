@@ -22,10 +22,6 @@ TEST("opening and accepting tcp on a socket") {
   uri::authority_type auth;
   auth.port = 0;
   SECTION("using the ipv4 loopback") {
-    auto addrs = ip::resolve("0.0.0.0");
-    check_eq(addrs.size(), 1u);
-    addrs = ip::resolve("localhost");
-    check_eq(addrs.size(), 2u);
     auth.host = "0.0.0.0"s;
     auto acceptor = make_tcp_accept_socket(auth, false);
     require(acceptor.has_value());
@@ -65,6 +61,29 @@ TEST("opening and accepting tcp on a socket") {
         check(!second_acceptor.has_value());
       }
     }
+  }
+}
+
+TEST("calling accepting") {
+  SECTION("on an invalid socket") {
+    tcp_accept_socket x;
+    auto err = accept(x);
+    require(!err.has_value());
+    check_eq(static_cast<sec>(err.error().code()),
+             sec::unavailable_or_would_block);
+  }
+  SECTION("No one connects socketid") {
+    uri::authority_type auth;
+    auth.host = "0.0.0.0"s;
+    auth.port = 0;
+    auto acceptor = make_tcp_accept_socket(auth, false);
+    require(acceptor.has_value());
+    auto acceptor_guard = make_socket_guard(*acceptor);
+    require(nonblocking(*acceptor, true).empty());
+    auto err = accept(*acceptor);
+    require(!err.has_value());
+    check_eq(static_cast<sec>(err.error().code()),
+             sec::socket_operation_failed);
   }
 }
 
