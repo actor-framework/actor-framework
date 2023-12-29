@@ -144,9 +144,8 @@ public:
     caf::flow::coordinator* parent_;
   };
 
-  /// Returns a new canceling observer. The subscriber will either call `cancel`
-  /// on its subscription immediately in `on_subscribe` or wait until the first
-  /// call to `on_next` when `accept_subscription` is set to `true`.
+  /// A trivial observer that cancels its subscription, either immediately or
+  /// when receiving the first item.
   template <class T>
   class canceling_observer : public caf::flow::observer_impl_base<T> {
   public:
@@ -254,7 +253,9 @@ public:
     return coordinator()->add_child(std::in_place_type<auto_observer<T>>);
   }
 
-  /// Returns a new canceling observer.
+  /// Returns a new canceling observer. The subscriber will either call `cancel`
+  /// on its subscription immediately in `on_subscribe` or wait until the first
+  /// call to `on_next` when setting `accept_first_subscription` to `true`.
   template <class T>
   auto make_canceling_observer(bool accept_first = false) {
     return make_counted<canceling_observer<T>>(accept_first);
