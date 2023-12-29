@@ -2,7 +2,7 @@ name: build-caf
 on:
   pull_request:
   push:
-    branches: 
+    branches:
       - master
 jobs:
   Windows:
@@ -20,3 +20,9 @@ jobs:
       run: .ci/windows/build.cmd
     - name: Test
       run: .ci/windows/test.cmd
+    - name: Archive Robot logs
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: robot-logs
+        path: build/robot-output/
