@@ -89,7 +89,7 @@ TEST("opening and connecting to ipv6 using tcp socket") {
     log::test::debug("opened ipv6 acceptor on port {}", port);
     SECTION("connecting using auth") {
       uri::authority_type dst;
-      dst.host = "ip6-localhost"s;
+      dst.host = "::1"s;
       dst.port = port;
       auto conn = unbox(make_connected_tcp_stream_socket(dst));
       auto conn_guard = make_socket_guard(conn);
@@ -100,8 +100,7 @@ TEST("opening and connecting to ipv6 using tcp socket") {
       log::test::debug("connected");
     }
     SECTION("connecting using host and port") {
-      auto conn
-        = unbox(make_connected_tcp_stream_socket("ip6-localhost"s, port));
+      auto conn = unbox(make_connected_tcp_stream_socket("::1"s, port));
       auto conn_guard = make_socket_guard(conn);
       check_ne(conn, invalid_socket);
       auto accepted = unbox(accept(acceptor));
