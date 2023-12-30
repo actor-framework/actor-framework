@@ -2,14 +2,11 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE flow.op.cell
-
 #include "caf/flow/op/cell.hpp"
 
-#include "caf/flow/observable.hpp"
-#include "caf/flow/scoped_coordinator.hpp"
-
-#include "core-test.hpp"
+#include "caf/test/fixture/deterministic.hpp"
+#include "caf/test/fixture/flow.hpp"
+#include "caf/test/scenario.hpp"
 
 using namespace caf;
 
@@ -19,38 +16,34 @@ using int_cell = flow::op::cell<int>;
 
 using int_cell_ptr = intrusive_ptr<int_cell>;
 
-struct fixture : test_coordinator_fixture<> {
-  flow::scoped_coordinator_ptr ctx = flow::make_scoped_coordinator();
-
+struct fixture : test::fixture::deterministic, test::fixture::flow {
   int_cell_ptr make_cell() {
-    return make_counted<int_cell>(ctx.get());
+    return make_counted<int_cell>(coordinator());
   }
 
-  flow::observable<int> lift(int_cell_ptr cell) {
-    return flow::observable<int>{cell};
+  caf::flow::observable<int> lift(int_cell_ptr cell) {
+    return caf::flow::observable<int>{cell};
   }
 };
 
-} // namespace
-
-BEGIN_FIXTURE_SCOPE(fixture)
+WITH_FIXTURE(fixture) {
 
 SCENARIO("a null cell emits zero items") {
   GIVEN("an integer cell with an observer") {
     WHEN("calling set_null on the cell") {
       THEN("the observer receives the completed event") {
         using snk_t = flow::passive_observer<int>;
-        auto snk = ctx->add_child(std::in_place_type<snk_t>);
+        auto snk = coordinator()->add_child(std::in_place_type<snk_t>);
         auto uut = make_cell();
         lift(uut).subscribe(snk->as_observer());
-        REQUIRE(snk->subscribed());
+        require(snk->subscribed());
         snk->sub.request(128);
-        ctx->run();
-        REQUIRE(snk->subscribed());
+        run_flows();
+        require(snk->subscribed());
         uut->set_null();
-        ctx->run();
-        CHECK(snk->completed());
-        CHECK(snk->buf.empty());
+        run_flows();
+        check(snk->completed());
+        check(snk->buf.empty());
       }
     }
   }
@@ -58,15 +51,15 @@ SCENARIO("a null cell emits zero items") {
     WHEN("calling set_null on the cell") {
       THEN("observers receive completed events immediately after subscribing") {
         using snk_t = flow::passive_observer<int>;
-        auto snk = ctx->add_child(std::in_place_type<snk_t>);
+        auto snk = coordinator()->add_child(std::in_place_type<snk_t>);
         auto uut = make_cell();
         uut->set_null();
         lift(uut).subscribe(snk->as_observer());
-        REQUIRE(snk->subscribed());
+        require(snk->subscribed());
         snk->sub.request(128);
-        ctx->run();
-        CHECK(snk->completed());
-        CHECK(snk->buf.empty());
+        run_flows();
+        check(snk->completed());
+        check(snk->buf.empty());
       }
     }
   }
@@ -77,39 +70,39 @@ SCENARIO("a cell with a value emits exactly one item") {
     WHEN("calling set_value on the cell") {
       THEN("the observer receives on_next and then on_complete") {
         using snk_t = flow::passive_observer<int>;
-        auto snk = ctx->add_child(std::in_place_type<snk_t>);
+        auto snk = coordinator()->add_child(std::in_place_type<snk_t>);
         auto uut = make_cell();
         lift(uut).subscribe(snk->as_observer());
-        REQUIRE(snk->subscribed());
+        require(snk->subscribed());
         snk->sub.request(128);
-        ctx->run();
-        REQUIRE(snk->subscribed());
+        run_flows();
+        require(snk->subscribed());
         uut->set_value(42);
-        ctx->run();
-        CHECK(snk->completed());
-        CHECK_EQ(snk->buf, std::vector<int>{42});
+        run_flows();
+        check(snk->completed());
+        check_eq(snk->buf, std::vector<int>{42});
       }
     }
     WHEN("disposing the subscription before calling set_value on the cell") {
       THEN("the observer does not receive the item") {
         using snk_t = flow::passive_observer<int>;
-        auto snk = ctx->add_child(std::in_place_type<snk_t>);
+        auto snk = coordinator()->add_child(std::in_place_type<snk_t>);
         auto uut = make_cell();
         lift(uut).subscribe(snk->as_observer());
-        REQUIRE(snk->subscribed());
+        require(snk->subscribed());
         snk->request(128);
-        ctx->run();
+        run_flows();
         // Normally, we'd call snk->unsubscribe() here. However, that nulls the
         // subscription. We want the sub.disposed() call below actually call
         // cell_sub::disposed() to have coverage on that member function.
         snk->sub.ptr()->cancel();
         snk->state = flow::observer_state::idle;
-        ctx->run();
-        CHECK(snk->idle());
+        run_flows();
+        check(snk->idle());
         uut->set_value(42);
-        ctx->run();
-        CHECK(snk->idle());
-        CHECK(snk->buf.empty());
+        run_flows();
+        check(snk->idle());
+        check(snk->buf.empty());
       }
     }
   }
@@ -117,15 +110,15 @@ SCENARIO("a cell with a value emits exactly one item") {
     WHEN("calling set_null on the cell") {
       THEN("the observer receives on_next and then on_complete immediately") {
         using snk_t = flow::passive_observer<int>;
-        auto snk = ctx->add_child(std::in_place_type<snk_t>);
+        auto snk = coordinator()->add_child(std::in_place_type<snk_t>);
         auto uut = make_cell();
         uut->set_value(42);
         lift(uut).subscribe(snk->as_observer());
-        REQUIRE(snk->subscribed());
+        require(snk->subscribed());
         snk->sub.request(128);
-        ctx->run();
-        CHECK(snk->completed());
-        CHECK_EQ(snk->buf, std::vector<int>{42});
+        run_flows();
+        check(snk->completed());
+        check_eq(snk->buf, std::vector<int>{42});
       }
     }
   }
@@ -136,18 +129,18 @@ SCENARIO("a failed cell emits zero item") {
     WHEN("calling set_error on the cell") {
       THEN("the observer receives on_error") {
         using snk_t = flow::passive_observer<int>;
-        auto snk = ctx->add_child(std::in_place_type<snk_t>);
+        auto snk = coordinator()->add_child(std::in_place_type<snk_t>);
         auto uut = make_cell();
         lift(uut).subscribe(snk->as_observer());
-        REQUIRE(snk->subscribed());
+        require(snk->subscribed());
         snk->sub.request(128);
-        ctx->run();
-        REQUIRE(snk->subscribed());
+        run_flows();
+        require(snk->subscribed());
         uut->set_error(sec::runtime_error);
-        ctx->run();
-        CHECK(snk->aborted());
-        CHECK(snk->buf.empty());
-        CHECK_EQ(snk->err, sec::runtime_error);
+        run_flows();
+        check(snk->aborted());
+        check(snk->buf.empty());
+        check_eq(snk->err, sec::runtime_error);
       }
     }
   }
@@ -155,19 +148,21 @@ SCENARIO("a failed cell emits zero item") {
     WHEN("calling set_error on the cell") {
       THEN("the observer receives on_error immediately when subscribing") {
         using snk_t = flow::passive_observer<int>;
-        auto snk = ctx->add_child(std::in_place_type<snk_t>);
+        auto snk = coordinator()->add_child(std::in_place_type<snk_t>);
         auto uut = make_cell();
         uut->set_error(sec::runtime_error);
         lift(uut).subscribe(snk->as_observer());
-        REQUIRE(snk->subscribed());
+        require(snk->subscribed());
         snk->sub.request(128);
-        ctx->run();
-        CHECK(snk->aborted());
-        CHECK(snk->buf.empty());
-        CHECK_EQ(snk->err, sec::runtime_error);
+        run_flows();
+        check(snk->aborted());
+        check(snk->buf.empty());
+        check_eq(snk->err, sec::runtime_error);
       }
     }
   }
 }
 
-END_FIXTURE_SCOPE()
+} // WITH_FIXTURE(fixture)
+
+} // namespace
