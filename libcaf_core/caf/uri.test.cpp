@@ -2,15 +2,15 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE uri
-
 #include "caf/uri.hpp"
 
+#include "caf/test/test.hpp"
+
+#include "caf/binary_deserializer.hpp"
+#include "caf/binary_serializer.hpp"
 #include "caf/byte_buffer.hpp"
 #include "caf/ipv4_address.hpp"
 #include "caf/uri_builder.hpp"
-
-#include "core-test.hpp"
 
 using namespace caf;
 
@@ -122,7 +122,8 @@ struct fixture {
     byte_buffer buf;
     binary_serializer sink{nullptr, buf};
     if (!sink.apply(x))
-      CAF_FAIL("unable to serialize " << x << ": " << sink.get_error());
+      test::runnable::current().fail("unable to serialize {}: {}", x.str(),
+                                     sink.get_error());
     return buf;
   }
 
@@ -130,7 +131,8 @@ struct fixture {
     uri result;
     binary_deserializer source{nullptr, buf};
     if (!source.apply(result))
-      CAF_FAIL("unable to deserialize from buffer: " << source.get_error());
+      test::runnable::current().fail("unable to deserialize from buffer: {}",
+                                     source.get_error());
     return result;
   }
 };
@@ -196,44 +198,44 @@ uri operator"" _u(const char* cstr, size_t cstr_len) {
   std::string_view str{cstr, cstr_len};
   auto err = parse(str, result);
   if (err)
-    CAF_FAIL("error while parsing " << str << ": " << to_string(err));
+    test::runnable::current().fail("error while parsing {} : {}", str,
+                                   to_string(err));
   return result;
 }
 
 bool operator"" _i(const char* cstr, size_t cstr_len) {
   uri result;
   std::string_view str{cstr, cstr_len};
-  CHECK(!uri::can_parse(str));
+  if (uri::can_parse(str))
+    test::runnable::current().fail("parse possible for invalid uri : {}", str);
   auto err = parse(str, result);
   return err != none;
 }
 
-} // namespace
+WITH_FIXTURE(fixture) {
 
-BEGIN_FIXTURE_SCOPE(fixture)
-
-CAF_TEST(default URIs are empty) {
+TEST("default URIs are empty") {
   uri x;
-  CHECK_EQ(x.empty(), true);
-  CHECK_EQ(x.str(), "");
+  check_eq(x.empty(), true);
+  check_eq(x.str(), "");
 }
 
-CAF_TEST(URIs recognize IP addresses while parsing) {
+TEST("URIs recognize IP addresses while parsing") {
   auto v6_localhost = "tcp://[::1]:8080"_u;
-  CHECK(holds_alternative<ip_address>(v6_localhost.authority().host));
+  check(holds_alternative<ip_address>(v6_localhost.authority().host));
   auto v4_localhost = "tcp://127.0.0.1:8080"_u;
-  CHECK(holds_alternative<ip_address>(v4_localhost.authority().host));
+  check(holds_alternative<ip_address>(v4_localhost.authority().host));
   auto str_localhost = "tcp://localhost:8080"_u;
-  CHECK(holds_alternative<std::string>(str_localhost.authority().host));
+  check(holds_alternative<std::string>(str_localhost.authority().host));
 }
 
 #define BUILD(components)                                                      \
-  CHECK_EQ(*(http << components), *(http_str << components))
+  check_eq(*(http << components), *(http_str << components))
 
-CAF_TEST(builder construction) {
+TEST("builder construction") {
   auto minimal = *(http << file);
-  CHECK_EQ(minimal.empty(), false);
-  CHECK_EQ(minimal, "http:file");
+  check_eq(minimal.empty(), false);
+  check_eq(minimal, "http:file");
   // all combinations of components
   BUILD(file);
   BUILD(file << kvp);
@@ -279,16 +281,16 @@ CAF_TEST(builder construction) {
                    .path("file 1")
                    .fragment("[42]")
                    .make();
-  CHECK_EQ(escaped, "hi%20there://it%27s@me%2F/file%201#%5B42%5D");
+  check_eq(escaped, "hi%20there://it%27s@me%2F/file%201#%5B42%5D");
 }
 
 #define ROUNDTRIP(str)                                                         \
   do {                                                                         \
-    CHECK(uri::can_parse(str));                                                \
-    CHECK_EQ(str##_u, str);                                                    \
+    check(uri::can_parse(str));                                                \
+    check_eq(str##_u, str);                                                    \
   } while (false)
 
-CAF_TEST(from string) {
+TEST("from string") {
   // all combinations of components
   ROUNDTRIP("http:file");
   ROUNDTRIP("http:foo-bar");
@@ -368,30 +370,30 @@ CAF_TEST(from string) {
 
 #undef ROUNDTRIP
 
-CAF_TEST(empty components) {
-  CHECK_EQ("foo:/"_u, "foo:/");
-  CHECK_EQ("foo:///"_u, "foo:/");
-  CHECK_EQ("foo:/#"_u, "foo:/");
-  CHECK_EQ("foo:/?"_u, "foo:/");
-  CHECK_EQ("foo:/?#"_u, "foo:/");
-  CHECK_EQ("foo:bar#"_u, "foo:bar");
-  CHECK_EQ("foo:bar?"_u, "foo:bar");
-  CHECK_EQ("foo:bar?#"_u, "foo:bar");
-  CHECK_EQ("foo://bar#"_u, "foo://bar");
-  CHECK_EQ("foo://bar?"_u, "foo://bar");
-  CHECK_EQ("foo://bar?#"_u, "foo://bar");
+TEST("empty components") {
+  check_eq("foo:/"_u, "foo:/");
+  check_eq("foo:///"_u, "foo:/");
+  check_eq("foo:/#"_u, "foo:/");
+  check_eq("foo:/?"_u, "foo:/");
+  check_eq("foo:/?#"_u, "foo:/");
+  check_eq("foo:bar#"_u, "foo:bar");
+  check_eq("foo:bar?"_u, "foo:bar");
+  check_eq("foo:bar?#"_u, "foo:bar");
+  check_eq("foo://bar#"_u, "foo://bar");
+  check_eq("foo://bar?"_u, "foo://bar");
+  check_eq("foo://bar?#"_u, "foo://bar");
 }
 
-CAF_TEST(invalid uris) {
-  CHECK("http"_i);
-  CHECK("http://"_i);
-  CHECK("http://foo:66000"_i);
+TEST("invalid uris") {
+  check("http"_i);
+  check("http://"_i);
+  check("http://foo:66000"_i);
 }
 
 #define SERIALIZATION_ROUNDTRIP(str)                                           \
-  CHECK_EQ(deserialize(serialize(str##_u)), str)
+  check_eq(deserialize(serialize(str##_u)), str)
 
-CAF_TEST(serialization) {
+TEST("serialization") {
   // all combinations of components
   SERIALIZATION_ROUNDTRIP("http:file");
   SERIALIZATION_ROUNDTRIP("http:file?a=1&b=2");
@@ -468,4 +470,6 @@ CAF_TEST(serialization) {
 
 #undef SERIALIZATION_ROUNDTRIP
 
-END_FIXTURE_SCOPE()
+} // WITH_FIXTURE(fixture)
+
+} // namespace

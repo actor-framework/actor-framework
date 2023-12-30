@@ -283,7 +283,9 @@ caf_add_component(
     caf/stream.cpp
     caf/stream.test.cpp
     caf/string_algorithms.cpp
+    caf/string_algorithms.test.cpp
     caf/string_view.cpp
+    caf/string_view.test.cpp
     caf/system_messages.test.cpp
     caf/telemetry/collector/prometheus.cpp
     caf/telemetry/collector/prometheus.test.cpp
@@ -306,10 +308,16 @@ caf_add_component(
     caf/tracing_data_factory.cpp
     caf/type_id.cpp
     caf/type_id_list.cpp
+    caf/type_id_list.test.cpp
+    caf/typed_behavior.test.cpp
+    caf/typed_message_view.test.cpp
+    caf/unit.test.cpp
     caf/unordered_flat_map.test.cpp
     caf/uri.cpp
+    caf/uri.test.cpp
     caf/uri_builder.cpp
     caf/uuid.cpp
+    caf/uuid.test.cpp
   LEGACY_TEST_SOURCES
     tests/legacy/core-test.cpp
     tests/legacy/nasty.cpp
@@ -385,20 +393,12 @@ caf_add_component(
     simple_timeout
     span
     stateful_actor
-    string_algorithms
-    string_view
     thread_hook
     tracing_data
-    type_id_list
     typed_actor_view
-    typed_behavior
-    typed_message_view
     typed_response_promise
     typed_spawn
-    typed_stream
-    unit
-    uri
-    uuid)
+    typed_stream)
 
 # Additional log component for (potentially critical) system-wide events.
 caf_add_log_component(system)
