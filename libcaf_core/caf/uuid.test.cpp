@@ -49,14 +49,12 @@ TEST("default generated UUIDs have all 128 bits set to zero") {
 SCENARIO("UUIDs are parsable") {
   GIVEN("version 1 and version 4 UUIDs") {
     uuid nil; // 00000000-0000-0000-0000-000000000000
-
     // A couple of UUIDs for version 1.
     uuid v1[3] = {
       "cbba341a-6ceb-11ea-bc55-0242ac130003"_uuid,
       "cbba369a-6ceb-11ea-bc55-0242ac130003"_uuid,
       "cbba38fc-6ceb-11ea-bc55-0242ac130003"_uuid,
     };
-
     // A couple of UUIDs for version 4.
     uuid v4[3] = {
       "2ee4ded7-69c0-4dd6-876d-02e446b21784"_uuid,

@@ -39,7 +39,7 @@ bool inspect(Inspector& f, protocol& x) {
 // https://github.com/actor-framework/actor-framework/issues/1195. We don't need
 // to actually use these types, only check whether the code compiles.
 
-CAF_BEGIN_TYPE_ID_BLOCK(type_id_test, caf::first_custom_type_id + 120)
+CAF_BEGIN_TYPE_ID_BLOCK(type_id_test, caf::first_custom_type_id + 20)
 
   CAF_ADD_TYPE_ID(type_id_test, (detail::my_secret))
   CAF_ADD_TYPE_ID(type_id_test, (io::protocol))
