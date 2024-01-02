@@ -2,17 +2,18 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE simple_timeout
+#include "caf/test/fixture/deterministic.hpp"
+#include "caf/test/test.hpp"
 
 #include "caf/after.hpp"
 #include "caf/all.hpp"
-
-#include "core-test.hpp"
+#include "caf/log/test.hpp"
 
 #include <chrono>
 #include <memory>
 
 using namespace caf;
+using namespace std::literals;
 
 namespace {
 
@@ -25,16 +26,16 @@ struct timer_state {
 };
 
 timer::behavior_type timer_impl(timer::stateful_pointer<timer_state> self) {
-  self->delayed_send(self, ms(100), reset_atom_v);
+  self->delayed_send(self, 100ms, reset_atom_v);
   return {
     [=](reset_atom) {
-      MESSAGE("timer reset");
+      log::test::debug("timer reset");
       self->state.had_reset = true;
     },
-    after(ms(600)) >>
+    after(600ms) >>
       [=] {
-        MESSAGE("timer expired");
-        CAF_REQUIRE(self->state.had_reset);
+        log::test::debug("timer expired");
+        test::runnable::current().require(self->state.had_reset);
         self->quit();
       },
   };
@@ -42,31 +43,39 @@ timer::behavior_type timer_impl(timer::stateful_pointer<timer_state> self) {
 
 timer::behavior_type timer_impl2(timer::pointer self) {
   auto had_reset = std::make_shared<bool>(false);
-  delayed_anon_send(self, ms(100), reset_atom_v);
+  delayed_anon_send(self, 100ms, reset_atom_v);
   return {
     [=](reset_atom) {
-      MESSAGE("timer reset");
+      log::test::debug("timer reset");
       *had_reset = true;
     },
-    after(ms(600)) >>
+    after(600ms) >>
       [=] {
-        MESSAGE("timer expired");
-        CAF_REQUIRE(*had_reset);
+        log::test::debug("timer expired");
+        test::runnable::current().require(*had_reset);
         self->quit();
       },
   };
 }
 
-} // namespace
+WITH_FIXTURE(test::fixture::deterministic) {
 
-BEGIN_FIXTURE_SCOPE(test_coordinator_fixture<>)
-
-CAF_TEST(single_timeout) {
+TEST("single_timeout") {
   sys.spawn(timer_impl);
+  advance_time(100ms);
+  dispatch_messages();
+  advance_time(600ms);
+  dispatch_messages();
 }
 
-CAF_TEST(single_anon_timeout) {
+TEST("single_anon_timeout") {
   sys.spawn(timer_impl2);
+  advance_time(100ms);
+  dispatch_messages();
+  advance_time(600ms);
+  dispatch_messages();
 }
 
-END_FIXTURE_SCOPE()
+} // WITH_FIXTURE(test::fixture::deterministic)
+
+} // namespace

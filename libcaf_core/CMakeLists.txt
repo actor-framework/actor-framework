@@ -270,16 +270,24 @@ caf_add_component(
     caf/ref_counted.cpp
     caf/replies_to.cpp
     caf/response_promise.cpp
+    caf/result.test.cpp
     caf/resumable.cpp
+    caf/run_delayed.test.cpp
+    caf/run_scheduled.test.cpp
     caf/save_inspector.cpp
     caf/scheduled_actor.cpp
+    caf/scheduled_actor.test.cpp
     caf/scheduler/abstract_coordinator.cpp
     caf/scoped_actor.cpp
     caf/scoped_execution_unit.cpp
     caf/sec.test.cpp
+    caf/serial_reply.test.cpp
     caf/serializer.cpp
     caf/settings.cpp
+    caf/settings.test.cpp
+    caf/simple_timeout.test.cpp
     caf/skip.cpp
+    caf/span.test.cpp
     caf/stream.cpp
     caf/stream.test.cpp
     caf/string_algorithms.cpp
@@ -382,16 +390,8 @@ caf_add_component(
     request_timeout
     response_handle
     response_promise
-    result
-    run_delayed
-    run_scheduled
     save_inspector
-    scheduled_actor
-    serial_reply
     serialization
-    settings
-    simple_timeout
-    span
     stateful_actor
     thread_hook
     tracing_data

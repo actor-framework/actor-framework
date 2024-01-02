@@ -2,11 +2,14 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE run_delayed
+#include "caf/test/fixture/deterministic.hpp"
+#include "caf/test/scenario.hpp"
+#include "caf/test/test.hpp"
 
 #include "caf/event_based_actor.hpp"
-
-#include "core-test.hpp"
+#include "caf/typed_actor.hpp"
+#include "caf/typed_actor_pointer.hpp"
+#include "caf/typed_event_based_actor.hpp"
 
 using namespace caf;
 using namespace std::literals;
@@ -44,15 +47,13 @@ struct int_actor_state {
 
 using int_actor_impl = int_actor::stateful_impl<int_actor_state>;
 
-struct fixture : test_coordinator_fixture<> {
+struct fixture : test::fixture::deterministic {
   int_actor spawn_int_actor(int_actor_state::init_fn init) {
     return sys.spawn<int_actor_impl>(std::move(init));
   }
 };
 
-} // namespace
-
-BEGIN_FIXTURE_SCOPE(fixture)
+WITH_FIXTURE(fixture) {
 
 SCENARIO("run_delayed triggers an action after a relative timeout") {
   GIVEN("a scheduled actor") {
@@ -63,11 +64,11 @@ SCENARIO("run_delayed triggers an action after a relative timeout") {
           self->run_delayed(1s, [called] { *called = true; });
           return int_behavior();
         });
-        sched.run();
-        CHECK(!*called);
+        dispatch_messages();
+        check(!*called);
         advance_time(1s);
-        sched.run();
-        CHECK(*called);
+        dispatch_messages();
+        check(*called);
       }
       AND_THEN("disposing the pending timeout cancels the action") {
         auto called = std::make_shared<bool>(false);
@@ -76,12 +77,12 @@ SCENARIO("run_delayed triggers an action after a relative timeout") {
           pending = self->run_delayed(1s, [called] { *called = true; });
           return int_behavior();
         });
-        sched.run();
-        CHECK(!*called);
+        dispatch_messages();
+        check(!*called);
         pending.dispose();
         advance_time(1s);
-        sched.run();
-        CHECK(!*called);
+        dispatch_messages();
+        check(!*called);
       }
     }
   }
@@ -92,11 +93,11 @@ SCENARIO("run_delayed triggers an action after a relative timeout") {
         auto aut = spawn_int_actor([called](int_actor_ptr self) {
           self->run_delayed(1s, [called] { *called = true; });
         });
-        sched.run();
-        CHECK(!*called);
+        dispatch_messages();
+        check(!*called);
         advance_time(1s);
-        sched.run();
-        CHECK(*called);
+        dispatch_messages();
+        check(*called);
       }
       AND_THEN("disposing the pending timeout cancels the action") {
         auto called = std::make_shared<bool>(false);
@@ -104,12 +105,12 @@ SCENARIO("run_delayed triggers an action after a relative timeout") {
         auto aut = spawn_int_actor([called, &pending](int_actor_ptr self) {
           pending = self->run_delayed(1s, [called] { *called = true; });
         });
-        sched.run();
-        CHECK(!*called);
+        dispatch_messages();
+        check(!*called);
         pending.dispose();
         advance_time(1s);
-        sched.run();
-        CHECK(!*called);
+        dispatch_messages();
+        check(!*called);
       }
     }
   }
@@ -124,11 +125,11 @@ SCENARIO("run_delayed_weak triggers an action after a relative timeout") {
           self->run_delayed_weak(1s, [called] { *called = true; });
           return int_behavior();
         });
-        sched.run();
-        CHECK(!*called);
+        dispatch_messages();
+        check(!*called);
         advance_time(1s);
-        sched.run();
-        CHECK(*called);
+        dispatch_messages();
+        check(*called);
       }
       AND_THEN("no action triggers for terminated actors") {
         auto called = std::make_shared<bool>(false);
@@ -136,11 +137,11 @@ SCENARIO("run_delayed_weak triggers an action after a relative timeout") {
           self->run_delayed_weak(1s, [called] { *called = true; });
           return int_behavior();
         });
-        sched.run(); // Note: actor cleaned up after this line.
-        CHECK(!*called);
+        dispatch_messages(); // Note: actor cleaned up after this line.
+        check(!*called);
         advance_time(1s);
-        sched.run();
-        CHECK(!*called);
+        dispatch_messages();
+        check(!*called);
       }
       AND_THEN("disposing the pending timeout cancels the action") {
         auto called = std::make_shared<bool>(false);
@@ -149,12 +150,12 @@ SCENARIO("run_delayed_weak triggers an action after a relative timeout") {
           pending = self->run_delayed_weak(1s, [called] { *called = true; });
           return int_behavior();
         });
-        sched.run();
-        CHECK(!*called);
+        dispatch_messages();
+        check(!*called);
         pending.dispose();
         advance_time(1s);
-        sched.run();
-        CHECK(!*called);
+        dispatch_messages();
+        check(!*called);
       }
     }
   }
@@ -165,22 +166,22 @@ SCENARIO("run_delayed_weak triggers an action after a relative timeout") {
         auto aut = spawn_int_actor([called](int_actor_ptr self) {
           self->run_delayed_weak(1s, [called] { *called = true; });
         });
-        sched.run();
-        CHECK(!*called);
+        dispatch_messages();
+        check(!*called);
         advance_time(1s);
-        sched.run();
-        CHECK(*called);
+        dispatch_messages();
+        check(*called);
       }
       AND_THEN("no action triggers for terminated actors") {
         auto called = std::make_shared<bool>(false);
         spawn_int_actor([called](int_actor_ptr self) {
           self->run_delayed_weak(1s, [called] { *called = true; });
         });
-        sched.run(); // Note: actor cleaned up after this line.
-        CHECK(!*called);
+        dispatch_messages(); // Note: actor cleaned up after this line.
+        check(!*called);
         advance_time(1s);
-        sched.run();
-        CHECK(!*called);
+        dispatch_messages();
+        check(!*called);
       }
       AND_THEN("disposing the pending timeout cancels the action") {
         auto called = std::make_shared<bool>(false);
@@ -188,15 +189,17 @@ SCENARIO("run_delayed_weak triggers an action after a relative timeout") {
         auto aut = spawn_int_actor([called, &pending](int_actor_ptr self) {
           pending = self->run_delayed_weak(1s, [called] { *called = true; });
         });
-        sched.run();
-        CHECK(!*called);
+        dispatch_messages();
+        check(!*called);
         pending.dispose();
         advance_time(1s);
-        sched.run();
-        CHECK(!*called);
+        dispatch_messages();
+        check(!*called);
       }
     }
   }
 }
 
-END_FIXTURE_SCOPE()
+} // WITH_FIXTURE(fixture)
+
+} // namespace
