@@ -71,14 +71,6 @@ config = [
                 'CMAKE_CXX_FLAGS:STRING=-Werror',
             ],
         ]],
-        ['fedora-37', [ // EOL December 2023
-            numCores: 4,
-            tags: ['docker'],
-            builds: ['release'],
-            extraBuildFlags: [
-                'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wno-array-bounds',
-            ],
-        ]],
         ['fedora-38', [ // EOL June 2024
             numCores: 4,
             tags: ['docker'],
@@ -86,6 +78,14 @@ config = [
             extraBuildFlags: [
                 'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wno-array-bounds',
                 'CAF_CXX_VERSION:STRING=23',
+            ],
+        ]],
+        ['fedora-39', [ // EOL November 2024
+            numCores: 4,
+            tags: ['docker'],
+            builds: ['release'],
+            extraBuildFlags: [
+                'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wno-array-bounds',
             ],
         ]],
         ['ubuntu-20.04', [ // April 2025
@@ -105,7 +105,7 @@ config = [
             ],
         ]],
         // Debug build with exceptions disabled.
-        ['fedora-38:no-exceptions', [
+        ['fedora-39:no-exceptions', [
             numCores: 4,
             tags: ['docker'],
             builds: ['debug'],
@@ -116,7 +116,7 @@ config = [
             ],
         ]],
         // Debug build for LeakSanitizer.
-        ['fedora-38:leak-checks', [
+        ['fedora-39:leak-checks', [
             numCores: 4,
             tags: ['docker', 'LeakSanitizer'],
             builds: ['debug'],
@@ -130,7 +130,7 @@ config = [
             ],
         ]],
         // Debug build with static libs, UBSan and hardening flags.
-        ['fedora-38:ub-checks', [
+        ['fedora-39:ub-checks', [
             numCores: 4,
             tags: ['docker', 'UBSanitizer'],
             builds: ['debug'],
