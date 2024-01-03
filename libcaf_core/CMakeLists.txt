@@ -80,6 +80,7 @@ caf_add_component(
     caf/actor_companion.test.cpp
     caf/actor_config.cpp
     caf/actor_control_block.cpp
+    caf/actor_from_state.test.cpp
     caf/actor_ostream.cpp
     caf/actor_pool.cpp
     caf/actor_profiler.cpp
@@ -195,14 +196,14 @@ caf_add_component(
     caf/flow/concat_map.test.cpp
     caf/flow/coordinated.cpp
     caf/flow/coordinator.cpp
-    caf/flow/for_each.test.cpp
     caf/flow/flat_map.test.cpp
+    caf/flow/for_each.test.cpp
     caf/flow/generation.test.cpp
     caf/flow/mixed.test.cpp
     caf/flow/multicaster.test.cpp
     caf/flow/observable.test.cpp
-    caf/flow/observe_on.test.cpp
     caf/flow/observable_builder.cpp
+    caf/flow/observe_on.test.cpp
     caf/flow/op/buffer.test.cpp
     caf/flow/op/cell.test.cpp
     caf/flow/op/concat.test.cpp
@@ -219,8 +220,8 @@ caf_add_component(
     caf/flow/op/ucast.test.cpp
     caf/flow/op/zip_with.test.cpp
     caf/flow/op/pullable.cpp
-    caf/flow/single.test.cpp
     caf/flow/scoped_coordinator.cpp
+    caf/flow/single.test.cpp
     caf/flow/step/ignore_elements.test.cpp
     caf/flow/step/skip_last.test.cpp
     caf/flow/step/take_last.test.cpp

@@ -76,6 +76,19 @@ struct is_stream<typed_stream<T>> : std::true_type {};
 template <class T>
 inline constexpr bool is_stream_v = is_stream<T>::value;
 
+/// Checks whether  `T` is a `behavior` or `typed_behavior`.
+template <class T>
+struct is_behavior : std::false_type {};
+
+template <>
+struct is_behavior<behavior> : std::true_type {};
+
+template <class... Ts>
+struct is_behavior<typed_behavior<Ts...>> : std::true_type {};
+
+template <class T>
+inline constexpr bool is_behavior_v = is_behavior<T>::value;
+
 /// Checks whether `T` is a `publisher`.
 template <class T>
 struct is_publisher : std::false_type {};

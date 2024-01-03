@@ -112,8 +112,12 @@ public:
     // nop
   }
 
-  behavior& unbox() {
+  behavior& unbox() & {
     return *this;
+  }
+
+  behavior&& unbox() && {
+    return std::move(*this);
   }
 
   /// @endcond
