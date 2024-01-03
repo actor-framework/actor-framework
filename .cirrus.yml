@@ -10,17 +10,7 @@ branch_filter: &BRANCH_FILTER
     $CIRRUS_PR != '' ||
     $CIRRUS_BRANCH == 'master'
 
-# FreeBSD 12.4 EOL: December 2023
-freebsd12_task:
-  freebsd_instance:
-    image_family: freebsd-12-4
-    << : *RESOURCES_TEMPLATE
-  prepare_script: .ci/freebsd-12/prepare.sh
-  build_script: .ci/run.sh build .ci/debug-flags.cmake . build
-  test_script: .ci/run.sh test build net.udp_datagram_socket
-  << : *BRANCH_FILTER
-
-# FreeBSD 13.2 EOL: Release of 13.3 + 3 months
+# FreeBSD 13.2 EOL: January 2026
 freebsd13_task:
   freebsd_instance:
     image_family: freebsd-13-2
@@ -29,3 +19,14 @@ freebsd13_task:
   build_script: .ci/run.sh build .ci/debug-flags.cmake . build
   test_script: .ci/run.sh test build net.udp_datagram_socket
   << : *BRANCH_FILTER
+
+# FreeBSD 14 EOL: November 2028
+freebsd14_task:
+  freebsd_instance:
+    image_family: freebsd-14-0
+    << : *RESOURCES_TEMPLATE
+  prepare_script: .ci/freebsd-14/prepare.sh
+  build_script: .ci/run.sh build .ci/debug-flags.cmake . build
+  test_script: .ci/run.sh test build net.udp_datagram_socket
+  << : *BRANCH_FILTER
+
