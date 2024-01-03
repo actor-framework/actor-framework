@@ -17,8 +17,6 @@ using namespace std::literals;
 
 namespace {
 
-using ms = std::chrono::milliseconds;
-
 using timer = typed_actor<result<void>(reset_atom)>;
 
 struct timer_state {

@@ -12,7 +12,7 @@
 
 using namespace caf;
 
-CAF_BEGIN_TYPE_ID_BLOCK(serial_reply_test, caf::first_custom_type_id + 150)
+CAF_BEGIN_TYPE_ID_BLOCK(serial_reply_test, caf::first_custom_type_id + 30)
 
   CAF_ADD_ATOM(serial_reply_test, sub0_atom)
   CAF_ADD_ATOM(serial_reply_test, sub1_atom)
@@ -75,7 +75,7 @@ TEST("test_serial_reply") {
   log::test::debug("ID of main: {}", self->id());
   self->request(master, infinite, hi_atom_v)
     .receive([](ho_atom) { log::test::debug("received 'ho'"); },
-             [&](const error& err) { return fail("Error: {}", err); });
+             [this](const error& err) { return fail("Error: {}", err); });
   require(self->mailbox().empty());
 }
 

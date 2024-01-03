@@ -90,7 +90,7 @@ bool inspect(Inspector& f, dummy_struct& x) {
 
 } // namespace
 
-CAF_BEGIN_TYPE_ID_BLOCK(settings_test, caf::first_custom_type_id + 130)
+CAF_BEGIN_TYPE_ID_BLOCK(settings_test, caf::first_custom_type_id + 40)
 
   CAF_ADD_TYPE_ID(settings_test, (dummy_struct))
 
