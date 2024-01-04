@@ -48,14 +48,14 @@ struct cell_state {
 void waiting_testee(event_based_actor* self, vector<cell> cells) {
   for (auto& x : cells)
     self->request(x, 1s, get_atom_v).await([self, x](int32_t y) {
-      aout(self) << "cell #" << x.id() << " -> " << y << endl;
+      aout(self).println("cell #{} -> {}", x.id(), y);
     });
 }
 
 void multiplexed_testee(event_based_actor* self, vector<cell> cells) {
   for (auto& x : cells)
     self->request(x, 1s, get_atom_v).then([self, x](int32_t y) {
-      aout(self) << "cell #" << x.id() << " -> " << y << endl;
+      aout(self).println("cell #{} -> {}", x.id(), y);
     });
 }
 
@@ -63,12 +63,8 @@ void blocking_testee(scoped_actor& self, vector<cell> cells) {
   for (auto& x : cells)
     self->request(x, 1s, get_atom_v)
       .receive(
-        [&](int32_t y) {
-          aout(self) << "cell #" << x.id() << " -> " << y << endl;
-        },
-        [&](error& err) {
-          aout(self) << "cell #" << x.id() << " -> " << to_string(err) << endl;
-        });
+        [&](int32_t y) { aout(self).println("cell #{} -> {}", x.id(), y); },
+        [&](error& err) { aout(self).println("cell #{} -> {}", x.id(), err); });
 }
 // --(rst-testees-end)--
 
@@ -78,13 +74,13 @@ void caf_main(actor_system& sys) {
   for (int32_t i = 0; i < 5; ++i)
     cells.emplace_back(sys.spawn(actor_from_state<cell_state>, i * i));
   scoped_actor self{sys};
-  aout(self) << "waiting_testee" << endl;
+  aout(self).println("spawn waiting testee");
   auto x1 = self->spawn(waiting_testee, cells);
   self->wait_for(x1);
-  aout(self) << "multiplexed_testee" << endl;
+  aout(self).println("spawn multiplexed testee");
   auto x2 = self->spawn(multiplexed_testee, cells);
   self->wait_for(x2);
-  aout(self) << "blocking_testee" << endl;
+  aout(self).println("run blocking testee");
   blocking_testee(self, cells);
 }
 // --(rst-main-end)--

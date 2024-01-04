@@ -16,9 +16,9 @@ behavior mirror(event_based_actor* self) {
   return {
     // a handler for messages containing a single string
     // that replies with a string
-    [=](const std::string& what) -> std::string {
+    [self](const std::string& what) -> std::string {
       // prints "Hello World!" via aout (thread-safe cout wrapper)
-      aout(self) << what << std::endl;
+      aout(self).println("{}", what);
       // reply "!dlroW olleH"
       return std::string{what.rbegin(), what.rend()};
     },
@@ -30,9 +30,9 @@ void hello_world(event_based_actor* self, const actor& buddy) {
   self->request(buddy, 10s, "Hello World!")
     .then(
       // ... wait up to 10s for a response ...
-      [=](const std::string& what) {
+      [self](const std::string& what) {
         // ... and print it
-        aout(self) << what << std::endl;
+        aout(self).println("{}", what);
       });
 }
 

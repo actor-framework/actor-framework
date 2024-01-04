@@ -46,11 +46,11 @@ using namespace caf;
 calculator::behavior_type calculator_fun(calculator::pointer self) {
   return {
     [self](add_atom, int32_t a, int32_t b) {
-      aout(self) << "received task from a remote node" << endl;
+      aout(self).println("received task from a remote node");
       return a + b;
     },
     [self](sub_atom, int32_t a, int32_t b) {
-      aout(self) << "received task from a remote node" << endl;
+      aout(self).println("received task from a remote node");
       return a - b;
     },
   };
@@ -77,6 +77,7 @@ void client_repl(actor_system& sys, calculator hdl) {
   };
   usage();
   scoped_actor self{sys};
+  self->link_to(hdl);
   // read next line, split it, and evaluate user input
   string line;
   while (std::getline(std::cin, line)) {
@@ -106,7 +107,9 @@ void client_repl(actor_system& sys, calculator hdl) {
       self->send(hdl, add_atom_v, *x, *y);
     else
       self->send(hdl, sub_atom_v, *x, *y);
-    self->receive([](int32_t result) { cout << " = " << result << std::endl; });
+    self->receive([&self, x = *x, y = *y, op = words[1][0]](int32_t result) {
+      aout(self).println("{} {} {} = {}", x, op, y, result);
+    });
   }
 }
 

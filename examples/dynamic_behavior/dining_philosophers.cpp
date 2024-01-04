@@ -118,9 +118,9 @@ public:
     // philosopher was able to obtain the first chopstick
     granted.assign([this](taken_atom, bool result) {
       if (result) {
-        aout(self) << name << " has picked up chopsticks with IDs "
-                   << left->id() << " and " << right->id()
-                   << " and starts to eat\n";
+        aout(self).println("{} has picked up chopsticks with "
+                           "IDs {} and {} and starts to eat",
+                           name, left->id(), right->id());
         // eat some time
         self->delayed_send(self, 5s, think_atom_v);
         self->become(eating);
@@ -142,7 +142,8 @@ public:
       self->send(left, put_atom_v);
       self->send(right, put_atom_v);
       self->delayed_send(self, 5s, eat_atom_v);
-      aout(self) << name << " puts down his chopsticks and starts to think\n";
+      aout(self).println("{} puts down his chopsticks and starts to think",
+                         name);
       self->become(thinking);
     });
   }
@@ -153,7 +154,7 @@ public:
     // philosophers start to think after receiving {think}
     return {
       [this](think_atom) {
-        aout(self) << name << " starts to think\n";
+        aout(self).println("{} starts to think", name);
         self->delayed_send(self, 5s, eat_atom_v);
         self->become(thinking);
       },
@@ -174,13 +175,12 @@ public:
 void caf_main(actor_system& sys) {
   scoped_actor self{sys};
   // create five chopsticks
-  aout(self) << "chopstick ids are:";
+  aout(self).println("chopstick ids are:");
   auto chopsticks = std::vector<chopstick>{};
   for (size_t i = 0; i < 5; ++i) {
     chopsticks.push_back(self->spawn(actor_from_state<chopstick_state>));
-    aout(self) << " " << chopsticks.back()->id();
+    aout(self).println("- {}", chopsticks.back()->id());
   }
-  aout(self) << endl;
   // spawn five philosophers
   auto names = std::vector{"Plato"s, "Hume"s, "Kant"s, "Nietzsche"s,
                            "Descartes"s};

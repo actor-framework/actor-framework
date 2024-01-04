@@ -74,7 +74,7 @@ bool inspect(Inspector& f, foo& x) {
 
 behavior testee(event_based_actor* self) {
   return {
-    [self](const foo& x) { aout(self) << deep_to_string(x) << endl; },
+    [self](const foo& x) { aout(self).println("{}", x); },
   };
 }
 

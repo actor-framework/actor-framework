@@ -58,10 +58,10 @@ struct config : caf::actor_system_config {
 
 // --(rst-main-begin)--
 void caf_main(caf::actor_system& sys, const config& cfg) {
-  auto [snk_res, src_res] = caf::async::make_spsc_buffer_resource<int>();
+  auto [pull, push] = caf::async::make_spsc_buffer_resource<int>();
   auto n = get_or(cfg, "num-values", default_num_values);
-  sys.spawn(sink, std::move(snk_res));
-  sys.spawn(source, std::move(src_res), n);
+  sys.spawn(sink, std::move(pull));
+  sys.spawn(source, std::move(push), n);
 }
 // --(rst-main-end)--
 

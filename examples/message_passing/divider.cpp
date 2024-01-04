@@ -88,12 +88,11 @@ void caf_main(actor_system& system) {
   auto div = system.spawn(divider_impl);
   scoped_actor self{system};
   self->request(div, std::chrono::seconds(10), div_atom_v, x, y)
-    .receive(
-      [&](double z) { aout(self) << x << " / " << y << " = " << z << endl; },
-      [&](const error& err) {
-        aout(self) << "*** cannot compute " << x << " / " << y << " => "
-                   << to_string(err) << endl;
-      });
+    .receive([&](double z) { aout(self).println("{} / {} = {}", x, y, z); },
+             [&](const error& err) {
+               aout(self).println("*** cannot compute {} / {} => {}", x, y,
+                                  err);
+             });
   // --(rst-request-end)--
 }
 

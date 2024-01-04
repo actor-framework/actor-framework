@@ -81,12 +81,11 @@ void tester(scoped_actor& self, const Handle& hdl, int32_t x, int32_t y,
   // test: x + y = z
   self->request(hdl, infinite, add_atom_v, x, y)
     .receive(
-      [&self, x, y](int32_t z) {
-        aout(self) << x << " + " << y << " = " << z << endl;
+      [&self, x, y](int32_t z) { //
+        aout(self).println("{} + {} = {}", x, y, z);
       },
       [&self](const error& err) {
-        aout(self) << "AUT (actor under test) failed: " << to_string(err)
-                   << endl;
+        aout(self).println("AUT (actor under test) failed: {}", err);
       });
   tester(self, std::forward<Ts>(xs)...);
 }

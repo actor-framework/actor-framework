@@ -42,9 +42,8 @@ skippable_result reflect_and_quit(scheduled_actor* ptr, message& msg) {
 skippable_result print_and_drop(scheduled_actor* ptr, message& msg) {
   log::system::warning("discarded unexpected message (id: {}, name: {}): {}",
                        ptr->id(), ptr->name(), msg);
-  aout(ptr) << "*** unexpected message [id: " << ptr->id()
-            << ", name: " << ptr->name() << "]: " << to_string(msg)
-            << std::endl;
+  aout(ptr).println("*** unexpected message [id: {}, name: {}]: {}", ptr->id(),
+                    ptr->name(), msg);
   return make_error(sec::unexpected_message);
 }
 
@@ -76,16 +75,14 @@ void scheduled_actor::default_error_handler(scheduled_actor* ptr, error& x) {
 }
 
 void scheduled_actor::default_down_handler(scheduled_actor* ptr, down_msg& x) {
-  aout(ptr) << "*** unhandled down message [id: " << ptr->id()
-            << ", name: " << ptr->name() << "]: " << deep_to_string(x)
-            << std::endl;
+  aout(ptr).println("*** unhandled down message [id: {}, name: {}]: {}",
+                    ptr->id(), ptr->name(), x);
 }
 
 void scheduled_actor::default_node_down_handler(scheduled_actor* ptr,
                                                 node_down_msg& x) {
-  aout(ptr) << "*** unhandled node down message [id: " << ptr->id()
-            << ", name: " << ptr->name() << "]: " << deep_to_string(x)
-            << std::endl;
+  aout(ptr).println("*** unhandled node down message [id: {} , name: {}]: {}",
+                    ptr->id(), ptr->name(), x);
 }
 
 void scheduled_actor::default_exit_handler(scheduled_actor* ptr, exit_msg& x) {
@@ -101,15 +98,14 @@ error scheduled_actor::default_exception_handler(local_actor* ptr,
     std::rethrow_exception(x);
   } catch (std::exception& e) {
     auto pretty_type = detail::pretty_type_name(typeid(e));
-    aout(ptr) << "*** unhandled exception: [id: " << ptr->id()
-              << ", name: " << ptr->name()
-              << ", exception typeid: " << pretty_type << "]: " << e.what()
-              << std::endl;
+    aout(ptr).println(
+      "*** unhandled exception: [id: {}, name: {}, exception typeid {}]: {}",
+      ptr->id(), ptr->name(), pretty_type, e.what());
     return make_error(sec::runtime_error, std::move(pretty_type), e.what());
   } catch (...) {
-    aout(ptr) << "*** unhandled exception: [id: " << ptr->id()
-              << ", name: " << ptr->name() << "]: unknown exception"
-              << std::endl;
+    aout(ptr).println(
+      "*** unhandled exception: [id: {}, name: {}]: unknown exception",
+      ptr->id(), ptr->name());
     return sec::runtime_error;
   }
 }

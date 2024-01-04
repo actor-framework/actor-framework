@@ -35,7 +35,7 @@ void client_impl(event_based_actor* self, adder_actor adder, int32_t x,
                  int32_t y) {
   using namespace std::literals::chrono_literals;
   self->request(adder, 10s, add_atom_v, x, y).then([=](int32_t result) {
-    aout(self) << x << " + " << y << " = " << result << std::endl;
+    aout(self).println("{} + {} = {}", x, y, result);
   });
 }
 
