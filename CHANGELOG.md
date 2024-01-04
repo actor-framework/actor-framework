@@ -33,6 +33,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   example, `sys.spawn(caf::actor_from_state<my_state>, args...)` creates a new
   actor that initializes its state with `my_state{args...}` and then calls
   `make_behavior()` on the state object to obtain the initial behavior.
+- The `aout` utility received a `println` member function that adds a formatted
+  line to the output stream. The function uses the same formatting backend as
+  the logging API.
 
 ### Fixed
 
