@@ -19,24 +19,18 @@ error datagram_transport::start(socket_manager* owner) {
   auto tg = logger::trace(component, "Starting");
   parent_ = owner;
   parent_->register_reading();
-  self->set_behavior(
-    [this](ip_endpoint dest, std::string& line) {
-      log::net::debug("queueing message of length {} to {}:{}", line,
-                      dest.address(), dest.port());
-      dest_ = dest;
-      parent_->register_writing();
-      std::transform(line.begin(), line.end(), std::back_inserter(write_buf_),
-                     [](char c) { return static_cast<std::byte>(c); });
-    },
-    [this](const exit_msg&) { //
-      parent_->shutdown();
-    });
+  self->set_behavior([this](ip_endpoint dest, std::string& line) {
+    log::net::debug("queueing message of length {} to {}:{}", line,
+                    dest.address(), dest.port());
+    dest_ = dest;
+    parent_->register_writing();
+    std::transform(line.begin(), line.end(), std::back_inserter(write_buf_),
+                   [](char c) { return static_cast<std::byte>(c); });
+  });
   self->set_fallback(
-    [](net::abstract_actor_shell* self, message&) -> result<message> {
+    [](net::abstract_actor_shell*, message&) -> result<message> {
       log::net::error("received unexpected message");
-      auto err = make_error(sec::unexpected_message);
-      self->quit(err);
-      return err;
+      return make_error(sec::unexpected_message);
     });
   return none;
 }

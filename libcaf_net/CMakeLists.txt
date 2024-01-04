@@ -36,6 +36,7 @@ caf_add_component(
     caf/net/actor_shell.cpp
     caf/net/datagram_socket.cpp
     caf/net/datagram_transport.cpp
+    caf/net/datagram_transport.test.cpp
     caf/net/dsl/config_base.cpp
     caf/net/generic_lower_layer.cpp
     caf/net/generic_upper_layer.cpp

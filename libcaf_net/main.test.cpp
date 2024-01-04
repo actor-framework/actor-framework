@@ -4,4 +4,6 @@
 
 #include "caf/test/caf_test_main.hpp"
 
-CAF_TEST_MAIN()
+#include "caf/net/middleman.hpp"
+
+CAF_TEST_MAIN(caf::net::middleman)
