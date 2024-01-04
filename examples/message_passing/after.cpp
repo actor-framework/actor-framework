@@ -1,4 +1,4 @@
-// This example shows how to use caf::after.
+// This example shows how to use caf::after for scheduling an idle timeout.
 
 #include "caf/after.hpp"
 

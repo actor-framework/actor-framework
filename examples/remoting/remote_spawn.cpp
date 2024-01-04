@@ -7,9 +7,14 @@
 // Run client at the same host:
 // - remote_spawn -H localhost -p 4242
 
-#include "caf/io/all.hpp"
+#include "caf/io/middleman.hpp"
 
-#include "caf/all.hpp"
+#include "caf/actor_ostream.hpp"
+#include "caf/actor_system.hpp"
+#include "caf/caf_main.hpp"
+#include "caf/event_based_actor.hpp"
+#include "caf/scoped_actor.hpp"
+#include "caf/typed_event_based_actor.hpp"
 
 #include <array>
 #include <cassert>
@@ -40,11 +45,11 @@ using namespace caf;
 
 calculator::behavior_type calculator_fun(calculator::pointer self) {
   return {
-    [=](add_atom, int32_t a, int32_t b) {
+    [self](add_atom, int32_t a, int32_t b) {
       aout(self) << "received task from a remote node" << endl;
       return a + b;
     },
-    [=](sub_atom, int32_t a, int32_t b) {
+    [self](sub_atom, int32_t a, int32_t b) {
       aout(self) << "received task from a remote node" << endl;
       return a - b;
     },
@@ -62,7 +67,7 @@ string trim(string s) {
 }
 
 // implements our main loop for reading user input
-void client_repl(function_view<calculator> f) {
+void client_repl(actor_system& sys, calculator hdl) {
   auto usage = [] {
     cout << "Usage:" << endl
          << "  quit                  : terminate program" << endl
@@ -71,6 +76,7 @@ void client_repl(function_view<calculator> f) {
          << endl;
   };
   usage();
+  scoped_actor self{sys};
   // read next line, split it, and evaluate user input
   string line;
   while (std::getline(std::cin, line)) {
@@ -92,13 +98,15 @@ void client_repl(function_view<calculator> f) {
     };
     auto x = to_int32_t(words[0]);
     auto y = to_int32_t(words[2]);
-    if (!x || !y || (words[1] != "+" && words[1] != "-"))
+    if (!x || !y || (words[1] != "+" && words[1] != "-")) {
       usage();
+      continue;
+    }
+    if (words[1] == "+")
+      self->send(hdl, add_atom_v, *x, *y);
     else
-      cout << " = "
-           << caf::to_string(words[1] == "+" ? f(add_atom_v, *x, *y)
-                                             : f(sub_atom_v, *x, *y))
-           << std::endl;
+      self->send(hdl, sub_atom_v, *x, *y);
+    self->receive([](int32_t result) { cout << " = " << result << std::endl; });
   }
 }
 
@@ -124,9 +132,9 @@ struct config : actor_system_config {
   }
 };
 
-void server(actor_system& system, const config& cfg) {
+void server(actor_system& sys, const config& cfg) {
   const auto port = get_or(cfg, "port", default_port);
-  auto res = system.middleman().open(port);
+  auto res = sys.middleman().open(port);
   if (!res) {
     cerr << "*** cannot open port: " << to_string(res.error()) << endl;
     return;
@@ -137,10 +145,10 @@ void server(actor_system& system, const config& cfg) {
 }
 
 // --(rst-client-begin)--
-void client(actor_system& system, const config& cfg) {
+void client(actor_system& sys, const config& cfg) {
   auto host = get_or(cfg, "host", default_host);
   auto port = get_or(cfg, "port", default_port);
-  auto node = system.middleman().connect(host, port);
+  auto node = sys.middleman().connect(host, port);
   if (!node) {
     cerr << "*** connect failed: " << to_string(node.error()) << endl;
     return;
@@ -148,23 +156,23 @@ void client(actor_system& system, const config& cfg) {
   auto type = "calculator";             // type of the actor we wish to spawn
   auto args = make_message();           // arguments to construct the actor
   auto tout = std::chrono::seconds(30); // wait no longer than 30s
-  auto worker = system.middleman().remote_spawn<calculator>(*node, type, args,
-                                                            tout);
+  auto worker = sys.middleman().remote_spawn<calculator>(*node, type, args,
+                                                         tout);
   if (!worker) {
     cerr << "*** remote spawn failed: " << to_string(worker.error()) << endl;
     return;
   }
   // start using worker in main loop
-  client_repl(make_function_view(*worker));
+  client_repl(sys, *worker);
   // be a good citizen and terminate remotely spawned actor before exiting
   anon_send_exit(*worker, exit_reason::kill);
 }
 // --(rst-client-end)--
 
-void caf_main(actor_system& system, const config& cfg) {
+void caf_main(actor_system& sys, const config& cfg) {
   const auto server_mode = get_or(cfg, "server-mode", default_server_mode);
   auto f = server_mode ? server : client;
-  f(system, cfg);
+  f(sys, cfg);
 }
 
 CAF_MAIN(id_block::remote_spawn, io::middleman)

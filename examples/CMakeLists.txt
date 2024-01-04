@@ -26,15 +26,12 @@ add_core_example(config read-json)
 # basic message passing primitives
 add_core_example(message_passing after)
 add_core_example(message_passing calculator)
-add_core_example(message_passing cell)
 add_core_example(message_passing dancing_kirby)
 add_core_example(message_passing delegating)
 add_core_example(message_passing divider)
 add_core_example(message_passing fan_out_request)
-add_core_example(message_passing fixed_stack)
 add_core_example(message_passing promises)
 add_core_example(message_passing request)
-add_core_example(message_passing typed_calculator)
 
 # flow API
 add_core_example(flow iota)

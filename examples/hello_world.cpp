@@ -1,3 +1,5 @@
+// The obligatory "Hello World!" example.
+
 #include "caf/actor_ostream.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/caf_main.hpp"
@@ -7,6 +9,7 @@
 #include <string>
 
 using namespace caf;
+using namespace std::literals;
 
 behavior mirror(event_based_actor* self) {
   // return the (initial) actor behavior
@@ -24,7 +27,7 @@ behavior mirror(event_based_actor* self) {
 
 void hello_world(event_based_actor* self, const actor& buddy) {
   // send "Hello World!" to our buddy ...
-  self->request(buddy, std::chrono::seconds(10), "Hello World!")
+  self->request(buddy, 10s, "Hello World!")
     .then(
       // ... wait up to 10s for a response ...
       [=](const std::string& what) {

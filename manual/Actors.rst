@@ -8,14 +8,11 @@ are active objects in the sense that they own their state and do not allow
 others to access it. The only way to modify the state of an actor is sending
 messages to it.
 
-CAF provides several actor implementations, each covering a particular use
-case. The available implementations differ in three characteristics: (1)
-dynamically or statically typed, (2) class-based or function-based, and (3)
-using asynchronous event handlers or blocking receives. These three
-characteristics can be combined freely, with one exception: statically typed
-actors are always event-based. For example, an actor can have dynamically typed
-messaging, implement a class, and use blocking receives. The common base class
-for all user-defined actors is called ``local_actor``.
+CAF provides several ways to implement actors, each covering a particular use
+case. We distinguish between these characteristics: (1) dynamically or
+statically typed, and (2) state-based or function-based. These characteristics
+can be combined freely. For example, an actor can have dynamically typed
+messaging and implement a state class.
 
 Dynamically typed actors are more familiar to developers coming from Erlang or
 Akka. They (usually) enable faster prototyping but require extensive unit
@@ -25,12 +22,11 @@ developers can freely mix both kinds of actors to get the best of both worlds.
 A good rule of thumb is to make use of static type checking for actors that are
 visible across multiple translation units.
 
-Actors that utilize the blocking receive API always require an exclusive thread
-of execution. Event-based actors, on the other hand, are usually scheduled
-cooperatively and are very lightweight with a memory footprint of only few
-hundred bytes. Developers can exclude---detach---event-based actors that
-potentially starve others from the cooperative scheduling while spawning it. A
-detached actor lives in its own thread of execution.
+Actors in CAF are event-based, which means that they are scheduled
+cooperatively. The implementation is lightweight with a memory footprint of only
+few hundred bytes per actor. Developers can exclude---detach---event-based
+actors that potentially starve others from the cooperative scheduling while
+spawning it. A detached actor lives in its own thread of execution.
 
 .. _actor-system:
 
@@ -47,8 +43,8 @@ schedulers). For configuration and fine-tuning options of actor systems see
 connected actor systems. We also refer to interconnected ``actor_system``
 instances as a *distributed actor system*.
 
-Common Actor Base Types
------------------------
+Common Actor Types
+------------------
 
 The following pseudo-UML depicts the class diagram for actors in CAF.
 Irrelevant member functions and classes as well as mixins are omitted for
@@ -63,12 +59,13 @@ following sections.
 Class ``local_actor``
 ~~~~~~~~~~~~~~~~~~~~~
 
-The class ``local_actor`` is the root type for all user-defined actors
-in CAF. It defines all common operations. However, users of the library
-usually do not inherit from this class directly. Proper base classes for
-user-defined actors are ``event_based_actor`` or
-``blocking_actor``. The following table also includes member function
-inherited from ``monitorable_actor`` and ``abstract_actor``.
+The class ``local_actor`` is the root type for locally executed actors in CAF.
+It defines all common operations. However, users of the library usually do not
+interact with this class directly and instead use one of the derived classes
+``event_based_actor`` or ``typed_event_based_actor``. The following table also
+includes member function inherited from ``monitorable_actor`` and
+``abstract_actor`` (implementation details that we only mention here for the
+sake of completeness).
 
 +-------------------------------------+--------------------------------------------------------+
 | **Types**                           |                                                        |
@@ -95,14 +92,6 @@ inherited from ``monitorable_actor`` and ``abstract_actor``.
 +-------------------------------------+--------------------------------------------------------+
 |                                     |                                                        |
 +-------------------------------------+--------------------------------------------------------+
-| **Customization Points**            |                                                        |
-+-------------------------------------+--------------------------------------------------------+
-| ``on_exit()``                       | Can be overridden to perform cleanup code.             |
-+-------------------------------------+--------------------------------------------------------+
-| ``const char* name()``              | Returns a debug name for this actor type.              |
-+-------------------------------------+--------------------------------------------------------+
-|                                     |                                                        |
-+-------------------------------------+--------------------------------------------------------+
 | **Actor Management**                |                                                        |
 +-------------------------------------+--------------------------------------------------------+
 | ``link_to(other)``                  | Links to ``other`` (see :ref:`link`).                  |
@@ -126,7 +115,6 @@ inherited from ``monitorable_actor`` and ``abstract_actor``.
 | ``T response(xs...)``               | Convenience function for creating fulfilled promises.  |
 +-------------------------------------+--------------------------------------------------------+
 
-
 Class ``scheduled_actor``
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -136,8 +124,6 @@ statically and dynamically typed event-based actors as well as brokers
 
 +-------------------------------+--------------------------------------------------------------------------+
 | **Types**                     |                                                                          |
-+-------------------------------+--------------------------------------------------------------------------+
-| ``pointer``                   | ``scheduled_actor*``                                                     |
 +-------------------------------+--------------------------------------------------------------------------+
 | ``exception_handler``         | ``function<error (pointer, std::exception_ptr&)>``                       |
 +-------------------------------+--------------------------------------------------------------------------+
@@ -181,26 +167,13 @@ statically and dynamically typed event-based actors as well as brokers
 Class ``blocking_actor``
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-A blocking actor always lives in its own thread of execution. They are not as
-lightweight as event-based actors and thus do not scale up to large numbers.
-The primary use case for blocking actors is to use a ``scoped_actor``
-for ad-hoc communication to selected actors. Unlike scheduled actors, CAF does
-**not** dispatch system messages to special-purpose handlers. A blocking
-actor receives *all* messages regularly through its mailbox. A blocking
-actor is considered *done* only after it returned from ``act`` (or
-from the implementation in function-based actors). A ``scoped_actor``
-sends its exit messages as part of its destruction.
+A blocking actor provides a blocking API for message passing. Users generally
+only interact with blocking actors through a ``scoped_actor``.
 
 +----------------------------------+---------------------------------------------------+
 | **Constructors**                 |                                                   |
 +----------------------------------+---------------------------------------------------+
 | ``(actor_config&)``              | Constructs the actor using a config.              |
-+----------------------------------+---------------------------------------------------+
-|                                  |                                                   |
-+----------------------------------+---------------------------------------------------+
-| **Customization Points**         |                                                   |
-+----------------------------------+---------------------------------------------------+
-| ``void act()``                   | Implements the behavior of the actor.             |
 +----------------------------------+---------------------------------------------------+
 |                                  |                                                   |
 +----------------------------------+---------------------------------------------------+
@@ -296,9 +269,15 @@ Spawning Actors
 ---------------
 
 Both statically and dynamically typed actors are spawned from an
-``actor_system`` using the member function ``spawn``. The
-function either takes a function as first argument or a class as first template
-parameter. For example, the following functions and classes represent actors.
+``actor_system`` using the member function ``spawn``. The function takes a
+function (or function object) as first argument, followed by any number of
+arguments to pass to the function. The return value of ``spawn`` is a handle to
+the newly spawned actor.
+
+When spawning an actor from a state class ``State``, users can pass the function
+object ``caf::actor_from_state<State>`` to ``spawn`` to have CAF automatically
+pick the correct actor type for the state class and initialize the actor by
+calling ``State::make_behavior()`` (this member function is required).
 
 .. literalinclude:: /examples/message_passing/calculator.cpp
    :language: C++
@@ -312,10 +291,10 @@ Spawning an actor for each implementation is illustrated below.
    :start-after: --(rst-spawn-begin)--
    :end-before: --(rst-spawn-end)--
 
-Additional arguments to ``spawn`` are passed to the constructor of a
-class or used as additional function arguments, respectively. In the example
-above, none of the three functions takes any argument other than the implicit
-but optional ``self`` pointer.
+Additional arguments to ``spawn`` are passed to the constructor of a class or
+used as additional function arguments, respectively. In the example above, none
+of the functions takes any argument other than the implicit but optional
+``self`` pointer.
 
 .. _function-based:
 
@@ -353,60 +332,34 @@ dynamically typed).
 
 .. _class-based:
 
-Class-based Actors
+State-based Actors
 ------------------
 
-Implementing an actor using a class requires the following:
+Implementing an actor using a state class only requires implementing a member
+function called ``make_behavior`` that returns either a ``behavior`` or a
+``typed_behavior<...>``. Call will automatically deduce the type of the actor
+from the return type, i.e., returning ``behavior`` creates a dynamically typed
+actor, whereas returning ``typed_behavior<...>`` creates a statically typed
+actor.
 
-* Provide a constructor taking a reference of type  ``actor_config&`` as first
-  argument, which is forwarded to the base  class. The config is passed
-  implicitly to the constructor when calling  ``spawn``, which also forwards any
-  number of additional arguments  to the constructor.
-* Override ``make_behavior`` for event-based actors and  ``act`` for blocking
-  actors.
+The constructor of the class can take any number of arguments. Optionally, the
+first argument may be a pointer to the actor itself. The type of this pointer
+must match the return type of ``make_behavior`` and is either
+``event_based_actor*`` or ``typed_event_based_actor<...>*``.
 
-Implementing actors with classes works for all kinds of actors and allows
-simple management of state via member variables. However, composing states via
-inheritance can get quite tedious. For dynamically typed actors, composing
-states is particularly hard, because the compiler cannot provide much help.
+When using typed actors, the usual pattern is to define an alias ``T`` for the
+actor handle and then use ``T::behavior_type`` as return type for
+``make_behavior`` and ``T::pointer`` for the ``self`` pointer.
 
-The following three classes implement the prototypes shown in spawn_ by
-delegating to the function-based implementations we have seen before:
+The following example shows the implementation of the prototypes shown in spawn_
+by delegating to the function-based implementations we have seen before:
 
 .. literalinclude:: /examples/message_passing/calculator.cpp
    :language: C++
-   :start-after: --(rst-class-based-begin)--
-   :end-before: --(rst-class-based-end)--
+   :start-after: --(rst-state-based-begin)--
+   :end-before: --(rst-state-based-end)--
 
 .. _stateful-actor:
-
-Stateful Actors
----------------
-
-The stateful actor API makes it easy to maintain state in function-based
-actors. It is also safer than putting state in member variables, because the
-state ceases to exist after an actor is done and is not delayed until the
-destructor runs. For example, if two actors hold a reference to each other via
-member variables, they produce a cycle and neither will get destroyed. Using
-stateful actors instead breaks the cycle, because references are destroyed when
-an actor calls ``self->quit()`` (or is killed externally). The
-following example illustrates how to implement stateful actors with static
-typing as well as with dynamic typing.
-
-.. literalinclude:: /examples/message_passing/cell.cpp
-   :language: C++
-   :start-after: --(rst-cell-begin)--
-   :end-before: --(rst-cell-end)--
-
-Stateful actors are spawned in the same way as any other function-based actor
-function-based_.
-
-.. literalinclude:: /examples/message_passing/cell.cpp
-   :language: C++
-   :start-after: --(rst-spawn-cell-begin)--
-   :end-before: --(rst-spawn-cell-end)--
-
-.. _attach:
 
 Attaching Cleanup Code to Actors
 --------------------------------
@@ -596,4 +549,3 @@ at scope end.
      // self will be destroyed automatically here; any
      // actor monitoring it will receive down messages etc.
    }
-
