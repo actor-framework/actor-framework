@@ -2,11 +2,9 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE scheduled_actor
-
 #include "caf/scheduled_actor.hpp"
 
-#include "core-test.hpp"
+#include "caf/test/test.hpp"
 
 using namespace caf;
 
