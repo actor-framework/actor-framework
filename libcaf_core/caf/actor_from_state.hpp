@@ -28,6 +28,10 @@ public:
     // nop
   }
 
+  ~actor_from_state_impl() override {
+    // nop; must be implemented due to the union member
+  }
+
   void on_exit() override {
     if (has_state_)
       state.~State();
