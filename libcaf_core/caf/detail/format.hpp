@@ -16,6 +16,7 @@
 #include "caf/detail/is_complete.hpp"
 #include "caf/detail/source_location.hpp"
 #include "caf/detail/type_traits.hpp"
+#include "caf/inspector_access_type.hpp"
 
 #include <string>
 
@@ -30,7 +31,10 @@ inline constexpr bool is_formattable = is_complete<std::formatter<T, char>>;
 
 template <class T>
 inline constexpr bool fmt_needs_to_string
-  = !is_formattable<T> && has_inspect_overload_v<stringification_inspector, T>;
+  = !is_formattable<T>
+    && !std::is_same_v<
+      decltype(inspect_access_type<stringification_inspector, T>()),
+      inspector_access_type::none>;
 
 template <class T>
 constexpr T&&
@@ -111,7 +115,10 @@ format_arg make_format_arg(const T& arg) {
     return format_arg{std::string_view{arg}};
   } else if constexpr (std::is_same_v<T, chunked_string>) {
     return format_arg{arg};
-  } else if constexpr (has_inspect_overload_v<stringification_inspector, T>) {
+  } else if constexpr (!std::is_same_v<
+                         decltype(inspect_access_type<stringification_inspector,
+                                                      T>()),
+                         inspector_access_type::none>) {
     return format_arg{deep_to_string(arg)};
   } else {
     static_assert(std::is_pointer_v<T>, "unsupported argument type");
