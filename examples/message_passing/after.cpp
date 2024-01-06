@@ -2,19 +2,21 @@
 
 #include "caf/after.hpp"
 
+#include "caf/actor_from_state.hpp"
+#include "caf/actor_ostream.hpp"
 #include "caf/caf_main.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/stateful_actor.hpp"
 
 #include <chrono>
-#include <iostream>
 #include <random>
-#include <string>
-
-using std::cout;
-using std::endl;
+#include <string_view>
+#include <vector>
 
 using namespace caf;
+using namespace std::literals;
+
+constexpr size_t flush_threshold = 60;
 
 // Sends a random number of printable characters to `sink` and then quits.
 void generator(event_based_actor* self, actor sink) {
@@ -29,33 +31,48 @@ void generator(event_based_actor* self, actor sink) {
 
 // Collects the incoming characters until no new characters arrive for 500ms.
 // Prints every 60 characters.
-behavior collector(stateful_actor<std::string>* self) {
-  using namespace std::chrono_literals;
-  return {
-    [self](char c) {
-      self->state.push_back(c);
-      constexpr auto flush_threshold = 60;
-      if (self->state.size() == flush_threshold) {
-        cout << "Received message length: " << self->state.size() << endl
-             << "Message content: " << self->state << endl;
-        self->state.clear();
-      }
-    },
-    caf::after(500ms) >>
-      [self]() {
-        cout << "Timeout reached!" << endl;
-        if (!self->state.empty()) {
-          cout << "Received message length: " << self->state.size() << endl
-               << "Message content: " << self->state << endl;
-        }
-        self->quit();
-      },
-  };
-}
+struct collector_state {
+  explicit collector_state(event_based_actor* selfptr) : self(selfptr) {
+    // nop
+  }
 
-void caf_main(actor_system& system) {
-  auto col = system.spawn(collector);
-  system.spawn(generator, col);
+  behavior make_behavior() {
+    return {
+      [this](char c) {
+        buf.push_back(c);
+        if (buf.size() == flush_threshold) {
+          aout(self)
+            .println("Received message length: {}", buf.size())
+            .println("Message content: {}", str());
+          buf.clear();
+        }
+      },
+      caf::after(500ms) >>
+        [this] {
+          if (!buf.empty()) {
+            aout(self)
+              .println("Timeout reached!")
+              .println("Received message length: {}", buf.size())
+              .println("Message content: {}", str());
+          } else {
+            aout(self).println("Timeout reached with an empty buffer!");
+          }
+          self->quit();
+        },
+    };
+  }
+
+  std::string_view str() {
+    return {buf.data(), buf.size()};
+  }
+
+  event_based_actor* self;
+  std::vector<char> buf;
+};
+
+void caf_main(actor_system& sys) {
+  auto col = sys.spawn(actor_from_state<collector_state>);
+  sys.spawn(generator, col);
 }
 
 CAF_MAIN()

@@ -83,7 +83,7 @@ struct client_state {
     // transition to `unconnected` on server failure
     self->set_down_handler([this](const down_msg& dm) {
       if (dm.source == current_server) {
-        aout(self) << "*** lost connection to server" << endl;
+        aout(self).println("*** lost connection to server");
         current_server = nullptr;
         self->become(unconnected());
       }
@@ -118,24 +118,24 @@ struct client_state {
         [this, host, port](const node_id&, strong_actor_ptr serv,
                            const std::set<std::string>& ifs) {
           if (!serv) {
-            aout(self) << R"(*** no server found at ")" << host << R"(":)"
-                       << port << endl;
+            aout(self).println("*** no server found at {}:{}", host, port);
             return;
           }
           if (!ifs.empty()) {
-            aout(self) << R"(*** typed actor found at ")" << host << R"(":)"
-                       << port << ", but expected an untyped actor " << endl;
+            aout(self).println(
+              "*** typed actor found at {}:{}, but expected an untyped actor",
+              host, port);
             return;
           }
-          aout(self) << "*** successfully connected to server" << endl;
+          aout(self).println("*** successfully connected to server");
           current_server = serv;
           auto hdl = actor_cast<actor>(serv);
           self->monitor(hdl);
           self->become(running(hdl));
         },
         [this, host, port](const error& err) {
-          aout(self) << R"(*** cannot connect to ")" << host << R"(":)" << port
-                     << " => " << to_string(err) << endl;
+          aout(self).println("*** cannot connect to {}:{} => {}", host, port,
+                             err);
           self->become(unconnected());
         });
   }
@@ -145,12 +145,12 @@ struct client_state {
       self->request(calculator, task_timeout, op, x, y)
         .then(
           [this, x, y](int result) {
-            const char* op_str;
+            char op_ch;
             if constexpr (std::is_same_v<add_atom, decltype(op)>)
-              op_str = " + ";
+              op_ch = '+';
             else
-              op_str = " - ";
-            aout(self) << x << op_str << y << " = " << result << endl;
+              op_ch = '-';
+            aout(self).println("{} {} {} = {}", x, op_ch, y, result);
           },
           [this, op, x, y](const error&) {
             // simply try again by enqueueing the task to the mailbox again

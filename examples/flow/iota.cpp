@@ -1,4 +1,4 @@
-// Non-interactive example to showcase `from_callable`.
+// Non-interactive example to showcase the `iota` generator.
 
 #include "caf/actor_system.hpp"
 #include "caf/caf_main.hpp"

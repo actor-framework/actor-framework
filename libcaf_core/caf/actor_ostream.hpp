@@ -8,7 +8,11 @@
 #include "caf/deep_to_string.hpp"
 #include "caf/detail/actor_local_printer.hpp"
 #include "caf/detail/core_export.hpp"
+#include "caf/detail/format.hpp"
 #include "caf/typed_actor_pointer.hpp"
+
+#include <string>
+#include <string_view>
 
 namespace caf {
 
@@ -37,6 +41,15 @@ public:
   explicit actor_ostream(const typed_actor_pointer<Sigs...>& ptr)
     : actor_ostream(ptr.internal_ptr()) {
     // nop
+  }
+
+  /// Adds a new line to the actor output stream.
+  template <class... Args>
+  actor_ostream& println(std::string_view fmt, Args&&... args) {
+    auto buf = detail::format(fmt, std::forward<Args>(args)...);
+    buf.push_back('\n');
+    printer_->write(std::move(buf));
+    return *this;
   }
 
   /// Writes `arg` to the buffer allocated for the calling actor.
