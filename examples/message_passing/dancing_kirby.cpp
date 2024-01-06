@@ -1,14 +1,13 @@
-// This example illustrates how to do time-triggered loops in CAF.
+// This example illustrates how to do time-triggered loops in CAF using
+// delayed_send.
 
-#include "caf/all.hpp"
+#include "caf/actor_system.hpp"
+#include "caf/caf_main.hpp"
+#include "caf/event_based_actor.hpp"
 
 #include <algorithm>
 #include <chrono>
 #include <iostream>
-
-// This file is partially included in the manual, do not modify
-// without updating the references in the *.tex files!
-// Manual references: lines 58-75 (MessagePassing.tex)
 
 using std::cout;
 using std::endl;
@@ -60,7 +59,7 @@ behavior dancing_kirby(event_based_actor* self) {
   // let's get it started
   self->send(self, update_atom_v, size_t{0});
   return {
-    [=](update_atom, size_t step) {
+    [self](update_atom, size_t step) {
       if (step == sizeof(animation_step)) {
         // we've printed all animation steps (done)
         cout << endl;
