@@ -254,14 +254,21 @@ caf_add_component(
     caf/message_builder.cpp
     caf/message_builder.test.cpp
     caf/message_handler.cpp
+    caf/message_lifetime.test.cpp
+    caf/messaging.test.cpp
+    caf/metaprogramming.test.cpp
     caf/monitorable_actor.cpp
+    caf/mtl.test.cpp
     caf/node_id.cpp
+    caf/node_id.test.cpp
+    caf/or_else.test.cpp
     caf/policy/unprofiled.cpp
     caf/policy/work_sharing.cpp
     caf/policy/work_stealing.cpp
     caf/proxy_registry.cpp
     caf/raise_error.cpp
     caf/ref_counted.cpp
+    caf/response_handle.test.cpp
     caf/response_promise.cpp
     caf/result.test.cpp
     caf/resumable.cpp
@@ -365,18 +372,11 @@ caf_add_component(
     mailbox_element
     message
     message_id
-    message_lifetime
-    messaging
-    metaprogramming
     mixin.requester
     mixin.sender
-    mtl
-    node_id
-    or_else
     policy.select_all
     policy.select_any
     request_timeout
-    response_handle
     response_promise
     save_inspector
     serialization

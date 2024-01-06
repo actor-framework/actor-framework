@@ -2,13 +2,17 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE response_handle
-
 #include "caf/response_handle.hpp"
 
-#include "caf/scheduled_actor/flow.hpp"
+#include "caf/test/fixture/deterministic.hpp"
+#include "caf/test/scenario.hpp"
+#include "caf/test/test.hpp"
 
-#include "core-test.hpp"
+#include "caf/event_based_actor.hpp"
+#include "caf/result.hpp"
+#include "caf/scheduled_actor/flow.hpp"
+#include "caf/stateful_actor.hpp"
+#include "caf/typed_actor.hpp"
 
 using namespace caf;
 
@@ -33,20 +37,18 @@ struct dummy_state {
 
 using dummy_actor = stateful_actor<dummy_state>;
 
-struct fixture : test_coordinator_fixture<> {
+struct fixture : test::fixture::deterministic {
   actor dummy;
   i32_worker typed_dummy;
 
   fixture() {
     dummy = sys.spawn<dummy_actor>();
     typed_dummy = actor_cast<i32_worker>(sys.spawn<dummy_actor>());
-    sched.run();
+    dispatch_messages();
   }
 };
 
-} // namespace
-
-BEGIN_FIXTURE_SCOPE(fixture)
+WITH_FIXTURE(fixture) {
 
 SCENARIO("response handles are convertible to observables and singles") {
   GIVEN("a response handle with dynamic typing that produces a valid result") {
@@ -61,10 +63,10 @@ SCENARIO("response handles are convertible to observables and singles") {
                      [&result](const error& what) { result = what; });
         auto aut = actor{self};
         launch();
-        expect((int32_t), from(aut).to(dummy).with(42));
-        expect((int32_t), from(dummy).to(aut).with(84));
-        CHECK(!sched.has_job());
-        CHECK_EQ(result, result_t{84});
+        expect<int32_t>().with(42).from(aut).to(dummy);
+        expect<int32_t>().with(84).from(dummy).to(aut);
+        check(!mail_count());
+        check_eq(result, result_t{84});
       }
     }
     WHEN("calling as_observable") {
@@ -84,12 +86,12 @@ SCENARIO("response handles are convertible to observables and singles") {
           });
         auto aut = actor{self};
         launch();
-        expect((int32_t), from(aut).to(dummy).with(42));
-        expect((int32_t), from(dummy).to(aut).with(84));
-        CHECK(!sched.has_job());
-        CHECK_EQ(result, result_t{84});
-        CHECK_EQ(on_next_calls, 1u);
-        CHECK(completed);
+        expect<int32_t>().with(42).from(aut).to(dummy);
+        expect<int32_t>().with(84).from(dummy).to(aut);
+        check(!mail_count());
+        check_eq(result, result_t{84});
+        check_eq(on_next_calls, 1u);
+        check(completed);
       }
     }
   }
@@ -105,10 +107,10 @@ SCENARIO("response handles are convertible to observables and singles") {
                      [&result](const error& what) { result = what; });
         auto aut = actor{self};
         launch();
-        expect((int32_t), from(aut).to(typed_dummy).with(42));
-        expect((int32_t), from(typed_dummy).to(aut).with(84));
-        CHECK(!sched.has_job());
-        CHECK_EQ(result, result_t{84});
+        expect<int32_t>().with(42).from(aut).to(typed_dummy);
+        expect<int32_t>().with(84).from(typed_dummy).to(aut);
+        check(!mail_count());
+        check_eq(result, result_t{84});
       }
     }
     WHEN("calling as_observable") {
@@ -128,12 +130,12 @@ SCENARIO("response handles are convertible to observables and singles") {
           });
         auto aut = actor{self};
         launch();
-        expect((int32_t), from(aut).to(typed_dummy).with(42));
-        expect((int32_t), from(typed_dummy).to(aut).with(84));
-        CHECK(!sched.has_job());
-        CHECK_EQ(result, result_t{84});
-        CHECK_EQ(on_next_calls, 1u);
-        CHECK(completed);
+        expect<int32_t>().with(42).from(aut).to(typed_dummy);
+        expect<int32_t>().with(84).from(typed_dummy).to(aut);
+        check(!mail_count());
+        check_eq(result, result_t{84});
+        check_eq(on_next_calls, 1u);
+        check(completed);
       }
     }
   }
@@ -149,10 +151,10 @@ SCENARIO("response handles are convertible to observables and singles") {
                      [&result](const error& what) { result = what; });
         auto aut = actor{self};
         launch();
-        expect((int32_t), from(aut).to(dummy).with(13));
-        expect((error), from(dummy).to(aut));
-        CHECK(!sched.has_job());
-        CHECK_EQ(result, result_t{make_error(sec::invalid_argument)});
+        expect<int32_t>().with(13).from(aut).to(dummy);
+        expect<error>().from(dummy).to(aut);
+        check(!mail_count());
+        check_eq(result, result_t{make_error(sec::invalid_argument)});
       }
     }
     WHEN("calling as_observable") {
@@ -172,12 +174,12 @@ SCENARIO("response handles are convertible to observables and singles") {
           });
         auto aut = actor{self};
         launch();
-        expect((int32_t), from(aut).to(dummy).with(13));
-        expect((error), from(dummy).to(aut));
-        CHECK(!sched.has_job());
-        CHECK_EQ(result, result_t{make_error(sec::invalid_argument)});
-        CHECK_EQ(on_next_calls, 0u);
-        CHECK(!completed);
+        expect<int32_t>().with(13).from(aut).to(dummy);
+        expect<error>().from(dummy).to(aut);
+        check(!mail_count());
+        check_eq(result, result_t{make_error(sec::invalid_argument)});
+        check_eq(on_next_calls, 0u);
+        check(!completed);
       }
     }
   }
@@ -193,10 +195,10 @@ SCENARIO("response handles are convertible to observables and singles") {
                      [&result](const error& what) { result = what; });
         auto aut = actor{self};
         launch();
-        expect((int32_t), from(aut).to(typed_dummy).with(13));
-        expect((error), from(typed_dummy).to(aut));
-        CHECK(!sched.has_job());
-        CHECK_EQ(result, result_t{make_error(sec::invalid_argument)});
+        expect<int32_t>().with(13).from(aut).to(typed_dummy);
+        expect<error>().from(typed_dummy).to(aut);
+        check(!mail_count());
+        check_eq(result, result_t{make_error(sec::invalid_argument)});
       }
     }
     WHEN("calling as_observable") {
@@ -216,15 +218,17 @@ SCENARIO("response handles are convertible to observables and singles") {
           });
         auto aut = actor{self};
         launch();
-        expect((int32_t), from(aut).to(typed_dummy).with(13));
-        expect((error), from(typed_dummy).to(aut));
-        CHECK(!sched.has_job());
-        CHECK_EQ(result, result_t{make_error(sec::invalid_argument)});
-        CHECK_EQ(on_next_calls, 0u);
-        CHECK(!completed);
+        expect<int32_t>().with(13).from(aut).to(typed_dummy);
+        expect<error>().from(typed_dummy).to(aut);
+        check(!mail_count());
+        check_eq(result, result_t{make_error(sec::invalid_argument)});
+        check_eq(on_next_calls, 0u);
+        check(!completed);
       }
     }
   }
 }
 
-END_FIXTURE_SCOPE()
+} // WITH_FIXTURE(fixture)
+
+} // namespace

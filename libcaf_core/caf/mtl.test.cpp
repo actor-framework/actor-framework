@@ -2,16 +2,21 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE mtl
-
 #include "caf/mtl.hpp"
 
+#include "caf/test/fixture/deterministic.hpp"
+#include "caf/test/scenario.hpp"
+#include "caf/test/test.hpp"
+
+#include "caf/event_based_actor.hpp"
 #include "caf/json_reader.hpp"
 #include "caf/json_writer.hpp"
+#include "caf/log/test.hpp"
+#include "caf/scoped_actor.hpp"
+#include "caf/stateful_actor.hpp"
+#include "caf/type_id.hpp"
 #include "caf/typed_actor.hpp"
 #include "caf/typed_event_based_actor.hpp"
-
-#include "core-test.hpp"
 
 using namespace caf;
 
@@ -109,20 +114,23 @@ struct driver_state {
              const std::string& json_text) -> result<message> {
         reader.load(json_text);
         auto mtl = make_mtl(self, adapter{}, &reader);
-        CHECK(mtl.self() == self);
-        CHECK(std::addressof(mtl.reader()) == &reader);
+        auto& this_test = test::runnable::current();
+        this_test.check(mtl.self() == self);
+        this_test.check(std::addressof(mtl.reader()) == &reader);
         if (mode == "try_send") {
-          CHECK(mtl.try_send(kvs));
-          MESSAGE("adapter generated: " << mtl.adapter().last_read);
+          this_test.check(mtl.try_send(kvs));
+          log::test::debug("adapter generated: {}",
+                           to_string(mtl.adapter().last_read));
           return make_message();
         } else {
           CAF_ASSERT(mode == "try_request");
           auto rp = self->make_response_promise();
-          auto on_result = [this, rp](auto&... xs) mutable {
+          auto on_result = [this, rp, &this_test](auto&... xs) mutable {
             // Must receive either an int32_t or an empty message.
             if constexpr (sizeof...(xs) == 1) {
-              CHECK_EQ(make_type_id_list<int32_t>(),
-                       make_type_id_list<std::decay_t<decltype(xs)>...>());
+              this_test.check_eq(
+                make_type_id_list<int32_t>(),
+                make_type_id_list<std::decay_t<decltype(xs)>...>());
             } else {
               static_assert(sizeof...(xs) == 0);
             }
@@ -134,8 +142,9 @@ struct driver_state {
           auto on_error = [rp](error& err) mutable {
             rp.deliver(std::move(err));
           };
-          CHECK(mtl.try_request(kvs, infinite, on_result, on_error));
-          MESSAGE("adapter generated: " << mtl.adapter().last_read);
+          this_test.check(mtl.try_request(kvs, infinite, on_result, on_error));
+          log::test::debug("adapter generated: {}",
+                           to_string(mtl.adapter().last_read));
           return rp;
         }
       },
@@ -148,10 +157,11 @@ struct driver_state {
 
 using driver_impl = stateful_actor<driver_state>;
 
-struct fixture : test_coordinator_fixture<> {
+struct fixture : test::fixture::deterministic {
   testee_actor testee;
-
   actor driver;
+
+  scoped_actor self{sys};
 
   fixture() {
     testee = sys.spawn<testee_impl, lazy_init>();
@@ -161,28 +171,33 @@ struct fixture : test_coordinator_fixture<> {
 
 } // namespace
 
-BEGIN_FIXTURE_SCOPE(fixture)
+WITH_FIXTURE(fixture) {
 
 SCENARIO("an MTL allows sending asynchronous messages") {
   GIVEN("a driver using an MTL to communicate to the testee") {
     WHEN("sending a JSON put message to the driver") {
       std::string put = R"({"@type": "caf::put_atom", "key": "a", "value": 1})";
       THEN("try_send generates a CAF put message to the testee") {
-        inject((std::string, std::string),
-               from(self).to(driver).with("try_send", put));
-        expect((put_atom, std::string, int32_t),
-               from(driver).to(testee).with(_, "a", 1));
-        CHECK(!sched.has_job());
+        inject().with(std::string{"try_send"}, put).from(self).to(driver);
+        expect<put_atom, std::string, int32_t>()
+          .with(put_atom_v, "a", 1)
+          .from(driver)
+          .to(testee);
+        dispatch_messages();
+        check_eq(mail_count(), 0u);
       }
     }
-    WHEN("send a JSON get message to the driver afterwards") {
+    AND_WHEN("send a JSON get message to the driver afterwards") {
       std::string get = R"({"@type": "caf::get_atom", "key": "a"})";
       THEN("try_send generates a CAF get message to the testee") {
-        inject((std::string, std::string),
-               from(self).to(driver).with("try_send", get));
-        expect((get_atom, std::string), from(driver).to(testee).with(_, "a"));
-        expect((int32_t), from(testee).to(driver).with(1));
-        CHECK(!sched.has_job());
+        inject().with(std::string{"try_send"}, get).from(self).to(driver);
+        expect<get_atom, std::string>()
+          .with(get_atom_v, "a")
+          .from(driver)
+          .to(testee);
+        expect<int32_t>().with(1).from(testee).to(driver);
+        dispatch_messages();
+        check_eq(mail_count(), 0u);
       }
     }
   }
@@ -193,28 +208,40 @@ SCENARIO("an MTL allows sending requests") {
     WHEN("sending a JSON put message to the driver") {
       std::string put = R"({"@type": "caf::put_atom", "key": "a", "value": 1})";
       THEN("try_request generates a CAF put message to the testee") {
-        inject((std::string, std::string),
-               from(self).to(driver).with("try_request", put));
-        expect((put_atom, std::string, int32_t),
-               from(driver).to(testee).with(_, "a", 1));
-        expect((void), from(testee).to(driver));
-        expect((std::string),
-               from(driver).to(self).with(R"({"@type": "caf::unit_t"})"));
-        CHECK(!sched.has_job());
+        inject().with(std::string{"try_request"}, put).from(self).to(driver);
+        expect<put_atom, std::string, int32_t>()
+          .with(put_atom_v, "a", 1)
+          .from(driver)
+          .to(testee);
+        dispatch_message();
+        auto received_response = std::make_shared<bool>(false);
+        self->receive([this, &received_response](std::string& response) {
+          *received_response = true;
+          check_eq(response, R"({"@type": "caf::unit_t"})");
+        });
+        check_eq(mail_count(), 0u);
+        check(*received_response);
       }
     }
-    WHEN("send a JSON get message to the driver afterwards") {
+    AND_WHEN("send a JSON get message to the driver afterwards") {
       std::string get = R"({"@type": "caf::get_atom", "key": "a"})";
       THEN("try_request generates a CAF get message to the testee") {
-        inject((std::string, std::string),
-               from(self).to(driver).with("try_request", get));
-        expect((get_atom, std::string), from(driver).to(testee).with(_, "a"));
-        expect((int32_t), from(testee).to(driver).with(1));
-        expect((std::string), from(driver).to(self).with("1"));
-        CHECK(!sched.has_job());
+        inject().with(std::string{"try_request"}, get).from(self).to(driver);
+        expect<get_atom, std::string>()
+          .with(get_atom_v, "a")
+          .from(driver)
+          .to(testee);
+        expect<int32_t>().with(1).from(testee).to(driver);
+        auto received_response = std::make_shared<bool>(false);
+        self->receive([this, &received_response](std::string& response) {
+          *received_response = true;
+          check_eq(response, "1");
+        });
+        check_eq(mail_count(), 0u);
+        check(*received_response);
       }
     }
   }
 }
 
-END_FIXTURE_SCOPE()
+} // WITH_FIXTURE(fixture)

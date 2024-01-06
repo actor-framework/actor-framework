@@ -435,32 +435,6 @@ constexpr bool operator==(dummy_tag_type, dummy_tag_type) {
   return true;
 }
 
-// Fails the test when copied. Implemented in message_lifetime.cpp.
-struct fail_on_copy {
-  int value;
-
-  fail_on_copy() : value(0) {
-    // nop
-  }
-
-  explicit fail_on_copy(int x) : value(x) {
-    // nop
-  }
-
-  fail_on_copy(fail_on_copy&&) = default;
-
-  fail_on_copy& operator=(fail_on_copy&&) = default;
-
-  fail_on_copy(const fail_on_copy&);
-
-  fail_on_copy& operator=(const fail_on_copy&);
-
-  template <class Inspector>
-  friend bool inspect(Inspector& f, fail_on_copy& x) {
-    return f.object(x).fields(f.field("value", x.value));
-  }
-};
-
 struct my_request {
   int32_t a = 0;
   int32_t b = 0;
@@ -775,7 +749,6 @@ CAF_BEGIN_TYPE_ID_BLOCK(core_test, caf::first_custom_type_id)
   ADD_TYPE_ID((dummy_struct))
   ADD_TYPE_ID((dummy_tag_type))
   ADD_TYPE_ID((dummy_user))
-  ADD_TYPE_ID((fail_on_copy))
   ADD_TYPE_ID((float_actor))
   ADD_TYPE_ID((foo_actor))
   ADD_TYPE_ID((int_actor))
