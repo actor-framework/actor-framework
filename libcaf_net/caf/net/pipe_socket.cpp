@@ -24,11 +24,9 @@ namespace caf::net {
 #ifdef CAF_WINDOWS
 
 expected<std::pair<pipe_socket, pipe_socket>> make_pipe() {
-  // Windows has no support for unidirectional pipes. Emulate pipes by using a
-  // pair of regular TCP sockets with read/write channels closed appropriately.
+  // Windows has no support for unidirectional pipes. Hence, we emulate pipes by
+  // using a regular connected socket pair.
   if (auto result = make_stream_socket_pair()) {
-    shutdown_write(result->first);
-    shutdown_read(result->second);
     return std::make_pair(socket_cast<pipe_socket>(result->first),
                           socket_cast<pipe_socket>(result->second));
   } else {

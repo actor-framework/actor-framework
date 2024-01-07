@@ -73,6 +73,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   open connections.
 - Fix static assert in `expected` when calling `transform` on an rvalue with a
   function object that only accepts an rvalue.
+- The function `caf::net::make_pipe` no longer closes read/write channels of the
+  connected socket pair on Windows. This fixes a bug where the pipe would close
+  after two minutes of inactivity.
 
 ### Changed
 
