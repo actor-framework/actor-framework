@@ -121,7 +121,6 @@ caf_add_component(
     caf/config_value.cpp
     caf/config_value_reader.cpp
     caf/config_value_writer.cpp
-    caf/decorator/sequencer.cpp
     caf/default_attachable.cpp
     caf/delegate.test.cpp
     caf/deserializer.cpp
@@ -269,7 +268,6 @@ caf_add_component(
     caf/proxy_registry.cpp
     caf/raise_error.cpp
     caf/ref_counted.cpp
-    caf/replies_to.cpp
     caf/response_promise.cpp
     caf/result.test.cpp
     caf/resumable.cpp
@@ -293,8 +291,6 @@ caf_add_component(
     caf/stream.test.cpp
     caf/string_algorithms.cpp
     caf/string_algorithms.test.cpp
-    caf/string_view.cpp
-    caf/string_view.test.cpp
     caf/system_messages.test.cpp
     caf/telemetry/collector/prometheus.cpp
     caf/telemetry/collector/prometheus.test.cpp
@@ -384,7 +380,6 @@ caf_add_component(
     mixin.sender
     mtl
     node_id
-    optional
     or_else
     policy.select_all
     policy.select_any

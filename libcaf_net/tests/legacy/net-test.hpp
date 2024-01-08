@@ -11,7 +11,6 @@
 #include "caf/error.hpp"
 #include "caf/settings.hpp"
 #include "caf/span.hpp"
-#include "caf/string_view.hpp"
 
 /// Implements a trivial transport layer that stores the contents of all
 /// received frames in a respective output buffer, it can propagate the content

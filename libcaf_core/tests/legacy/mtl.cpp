@@ -129,7 +129,7 @@ struct driver_state {
             // Convert input to JSON and fulfill the promise using the string.
             writer.reset();
             adapter{}.write(writer, xs...);
-            rp.deliver(to_string(writer.str()));
+            rp.deliver(std::string{writer.str()});
           };
           auto on_error = [rp](error& err) mutable {
             rp.deliver(std::move(err));

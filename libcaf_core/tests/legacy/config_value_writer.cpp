@@ -86,14 +86,12 @@ CAF_TEST(empty types and maps become dictionaries) {
     if (auto v1 = v4->front(); CHECK(holds_alternative<settings>(v1))) {
       auto& v1_xs = get<settings>(v1);
       CHECK_EQ(get<double>(v1_xs, "content"), 0.0);
-      CHECK_EQ(get<std::string>(v1_xs, "@content-type"),
-               to_string(type_name_v<double>));
+      CHECK_EQ(get<std::string>(v1_xs, "@content-type"), type_name_v<double>);
     }
     if (auto v2 = v4->back(); CHECK(holds_alternative<settings>(v2))) {
       auto& v2_xs = get<settings>(v2);
       CHECK_EQ(get<double>(v2_xs, "content"), 1.0);
-      CHECK_EQ(get<std::string>(v2_xs, "@content-type"),
-               to_string(type_name_v<double>));
+      CHECK_EQ(get<std::string>(v2_xs, "@content-type"), type_name_v<double>);
     }
   }
   CHECK_EQ(get_as<i64_list>(xs(), "v5"), i64_list({10, 20}));

@@ -6,10 +6,10 @@
 
 #include "caf/default_enum_inspect.hpp"
 #include "caf/detail/net_export.hpp"
-#include "caf/string_view.hpp"
 
 #include <cstdint>
 #include <string>
+#include <string_view>
 #include <type_traits>
 
 namespace caf::net::http {

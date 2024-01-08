@@ -69,8 +69,6 @@ TEST_CASE("value-constructed") {
   CHECK_EQ(uut, deep_copy(uut));
 }
 
-CAF_PUSH_DEPRECATED_WARNING
-
 TEST_CASE("streams allow actors to transmit flow items to others") {
   auto res = ivec{};
   res.resize(256);
@@ -85,7 +83,7 @@ TEST_CASE("streams allow actors to transmit flow items to others") {
                   ->make_observable()
                   .iota(int32_t{1})
                   .take(256)
-                  .compose(self->to_typed_stream("foo", 10ms, 10));
+                  .to_typed_stream("foo", 10ms, 10);
     self->send(s1, vals);
     self->send(s2, vals);
   });
@@ -100,7 +98,5 @@ TEST_CASE("streams allow actors to transmit flow items to others") {
   CHECK_EQ(*r1, res);
   CHECK_EQ(*r2, res);
 }
-
-CAF_POP_WARNINGS
 
 END_FIXTURE_SCOPE()

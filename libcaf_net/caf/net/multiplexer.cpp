@@ -14,7 +14,6 @@
 #include "caf/action.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/async/execution_context.hpp"
-#include "caf/byte.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/atomic_ref_counted.hpp"
 #include "caf/detail/net_export.hpp"

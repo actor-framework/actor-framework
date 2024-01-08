@@ -8,7 +8,6 @@
 
 #include "caf/byte_buffer.hpp"
 #include "caf/span.hpp"
-#include "caf/string_view.hpp"
 
 #include <cstdint>
 #include <initializer_list>

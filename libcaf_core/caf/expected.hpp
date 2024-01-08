@@ -187,11 +187,6 @@ public:
     return has_value_;
   }
 
-  /// Returns `true` if the object holds a value (is engaged).
-  [[deprecated("use has_value() instead")]] bool engaged() const noexcept {
-    return has_value_;
-  }
-
   // -- modifiers --------------------------------------------------------------
 
   template <class... Args>
@@ -213,34 +208,27 @@ public:
 
   /// Returns the contained value.
   /// @pre `has_value() == true`.
-  [[deprecated("use value() instead")]] const T& cvalue() const noexcept {
-    if (!has_value())
-      CAF_RAISE_ERROR("bad_expected_access");
-    return value_;
-  }
-
-  /// @copydoc cvalue
   T& value() & {
     if (!has_value())
       CAF_RAISE_ERROR("bad_expected_access");
     return value_;
   }
 
-  /// @copydoc cvalue
+  /// @copydoc value
   const T& value() const& {
     if (!has_value())
       CAF_RAISE_ERROR("bad_expected_access");
     return value_;
   }
 
-  /// @copydoc cvalue
+  /// @copydoc value
   T&& value() && {
     if (!has_value())
       CAF_RAISE_ERROR("bad_expected_access");
     return std::move(value_);
   }
 
-  /// @copydoc cvalue
+  /// @copydoc value
   const T&& value() const&& {
     if (!has_value())
       CAF_RAISE_ERROR("bad_expected_access");
@@ -296,14 +284,6 @@ public:
   }
 
   // -- error access -----------------------------------------------------------
-
-  /// Returns the contained error.
-  /// @pre `has_value() == false`.
-  [[deprecated("use error() instead")]] const caf::error&
-  cerror() const noexcept {
-    CAF_ASSERT(!has_value_);
-    return error_;
-  }
 
   /// @copydoc cerror
   caf::error& error() & noexcept {
@@ -673,11 +653,6 @@ public:
 
   expected() noexcept = default;
 
-  [[deprecated("use the default constructor instead")]] //
-  expected(unit_t) noexcept {
-    // nop
-  }
-
   expected(caf::error err) noexcept : error_(std::move(err)) {
     // nop
   }
@@ -972,13 +947,6 @@ inline bool operator!=(const expected<void>& x, const expected<void>& y) {
   return !(x == y);
 }
 
-template <>
-class [[deprecated("use expected<void> instead")]] expected<unit_t>
-  : public expected<void> {
-public:
-  using expected<void>::expected;
-};
-
 template <class T>
 std::string to_string(const expected<T>& x) {
   if (x)
@@ -993,19 +961,5 @@ inline std::string to_string(const expected<void>& x) {
 }
 
 } // namespace caf
-
-namespace std {
-
-template <class T>
-[[deprecated("use caf::to_string instead")]] auto
-operator<<(ostream& oss, const caf::expected<T>& x) -> decltype(oss << *x) {
-  if (x)
-    oss << *x;
-  else
-    oss << "!" << to_string(x.error());
-  return oss;
-}
-
-} // namespace std
 
 // NOLINTEND(bugprone-unchecked-optional-access)

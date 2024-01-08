@@ -15,7 +15,6 @@
 #include "caf/net/stream_socket.hpp"
 
 #include "caf/binary_serializer.hpp"
-#include "caf/byte.hpp"
 #include "caf/byte_buffer.hpp"
 #include "caf/byte_span.hpp"
 #include "caf/detail/network_order.hpp"

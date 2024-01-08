@@ -59,7 +59,6 @@ response_header& response_header::operator=(const response_header& other) {
 
 std::pair<status, std::string_view>
 response_header::parse(std::string_view raw) {
-  using namespace literals;
   CAF_LOG_TRACE(CAF_ARG(raw));
   // Sanity checking and copying of the raw input.
   clear();

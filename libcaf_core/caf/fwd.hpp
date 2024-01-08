@@ -20,7 +20,6 @@ namespace caf {
 
 // -- 1 param templates --------------------------------------------------------
 
-template <class> class [[deprecated ("use std::optional instead")]] optional;
 template <class> class [[nodiscard]] error_code;
 template <class> class basic_cow_string;
 template <class> class behavior_type_of;
@@ -72,7 +71,6 @@ template <class...> class typed_response_promise;
 
 // -- classes ------------------------------------------------------------------
 
-class [[deprecated("use std::string_view instead")]] string_view;
 class [[nodiscard]] error;
 class abstract_actor;
 class abstract_group;
@@ -194,7 +192,6 @@ enum class thread_owner;
 // -- aliases ------------------------------------------------------------------
 
 using actor_id = uint64_t;
-using byte [[deprecated("use std::byte instead")]] = std::byte;
 using byte_buffer = std::vector<std::byte>;
 using byte_span = span<std::byte>;
 using const_byte_span = span<const std::byte>;

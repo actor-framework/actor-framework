@@ -12,7 +12,6 @@
 #include "caf/net/socket_guard.hpp"
 #include "caf/net/socket_manager.hpp"
 
-#include "caf/byte.hpp"
 #include "caf/byte_span.hpp"
 #include "caf/callback.hpp"
 #include "caf/typed_actor.hpp"

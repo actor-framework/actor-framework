@@ -171,7 +171,7 @@ ptrdiff_t write(stream_socket x, std::initializer_list<const_byte_span> bufs) {
   CAF_ASSERT(bufs.size() < 10);
   WSABUF buf_array[10];
   auto convert = [](const_byte_span buf) {
-    auto data = const_cast<byte*>(buf.data());
+    auto data = const_cast<std::byte*>(buf.data());
     return WSABUF{static_cast<ULONG>(buf.size()),
                   reinterpret_cast<CHAR*>(data)};
   };

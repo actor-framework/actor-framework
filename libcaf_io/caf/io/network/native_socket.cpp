@@ -219,7 +219,7 @@ string socket_error_as_string(int errcode) {
 
 expected<void> child_process_inherit(native_socket fd, bool new_value) {
   // nop; FIXME: possible to implement via SetHandleInformation ?
-  return unit;
+  return {};
 }
 
 expected<void> keepalive(native_socket fd, bool new_value) {
@@ -228,19 +228,19 @@ expected<void> keepalive(native_socket fd, bool new_value) {
   CALL_CFUN(res, detail::cc_zero, "setsockopt",
             setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &value,
                        static_cast<int>(sizeof(value))));
-  return unit;
+  return {};
 }
 
 expected<void> nonblocking(native_socket fd, bool new_value) {
   u_long mode = new_value ? 1 : 0;
   CALL_CFUN(res, detail::cc_zero, "ioctlsocket",
             ioctlsocket(fd, FIONBIO, &mode));
-  return unit;
+  return {};
 }
 
 expected<void> allow_sigpipe(native_socket, bool) {
   // nop; SIGPIPE does not exist on Windows
-  return unit;
+  return {};
 }
 
 expected<void> allow_udp_connreset(native_socket fd, bool new_value) {
@@ -248,7 +248,7 @@ expected<void> allow_udp_connreset(native_socket fd, bool new_value) {
   CALL_CFUN(res, detail::cc_zero, "WSAIoctl",
             WSAIoctl(fd, _WSAIOW(IOC_VENDOR, 12), &new_value, sizeof(new_value),
                      NULL, 0, &bytes_returned, NULL, NULL));
-  return unit;
+  return {};
 }
 
 // Based on work of others;
