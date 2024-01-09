@@ -7,8 +7,6 @@
 #include "caf/config.hpp"
 #include "caf/config_option_set.hpp"
 
-CAF_PUSH_DEPRECATED_WARNING
-
 namespace caf {
 
 config_option_adder::config_option_adder(config_option_set& target,
@@ -30,5 +28,3 @@ config_option_adder& config_option_adder::add_impl(config_option&& opt) {
 }
 
 } // namespace caf
-
-CAF_POP_WARNINGS

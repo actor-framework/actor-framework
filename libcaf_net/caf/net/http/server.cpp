@@ -109,7 +109,6 @@ bool server::done_sending() {
 }
 
 ptrdiff_t server::consume(byte_span input, byte_span) {
-  using namespace literals;
   CAF_LOG_TRACE(CAF_ARG2("bytes", input.size()));
   ptrdiff_t consumed = 0;
   for (;;) {

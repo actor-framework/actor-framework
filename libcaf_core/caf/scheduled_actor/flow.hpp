@@ -44,42 +44,6 @@ flow::single<T> scheduled_actor::single_from_response_impl(Policy& policy) {
   return flow::single<T>{std::move(cell)};
 }
 
-template <class Observable>
-flow::assert_scheduled_actor_hdr_t<Observable, stream>
-scheduled_actor::to_stream(std::string name, timespan max_delay,
-                           size_t max_items_per_batch, Observable&& obs) {
-  return std::forward<Observable>(obs).to_stream(std::move(name), max_delay,
-                                                 max_items_per_batch);
-}
-
-template <class Observable>
-flow::assert_scheduled_actor_hdr_t<Observable, stream>
-scheduled_actor::to_stream(cow_string name, timespan max_delay,
-                           size_t max_items_per_batch, Observable&& obs) {
-  return std::forward<Observable>(obs).to_stream(std::move(name), max_delay,
-                                                 max_items_per_batch);
-}
-
-template <class Observable>
-flow::assert_scheduled_actor_hdr_t<
-  Observable, typed_stream<typename Observable::output_type>>
-scheduled_actor::to_typed_stream(std::string name, timespan max_delay,
-                                 size_t max_items_per_batch, Observable obs) {
-  return std::forward<Observable>(obs).to_typed_stream(std::move(name),
-                                                       max_delay,
-                                                       max_items_per_batch);
-}
-
-template <class Observable>
-flow::assert_scheduled_actor_hdr_t<
-  Observable, typed_stream<typename Observable::output_type>>
-scheduled_actor::to_typed_stream(cow_string name, timespan max_delay,
-                                 size_t max_items_per_batch, Observable obs) {
-  return std::forward<Observable>(obs).to_typed_stream(std::move(name),
-                                                       max_delay,
-                                                       max_items_per_batch);
-}
-
 template <class T>
 flow::assert_scheduled_actor_hdr_t<flow::observable<T>>
 scheduled_actor::observe(typed_stream<T> what, size_t buf_capacity,

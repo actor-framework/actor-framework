@@ -8,8 +8,6 @@
 #include "caf/actor.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/actor_system.hpp"
-#include "caf/composed_type.hpp"
-#include "caf/decorator/sequencer.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/make_actor.hpp"
@@ -20,6 +18,7 @@
 #include "caf/typed_response_promise.hpp"
 
 #include <cstddef>
+#include <functional>
 
 namespace caf {
 
@@ -296,26 +295,6 @@ template <class... Xs>
 bool operator!=(std::nullptr_t, const typed_actor<Xs...>& x) noexcept {
   return !(x == nullptr);
 }
-
-CAF_PUSH_DEPRECATED_WARNING
-
-/// Returns a new actor that implements the composition `f.g(x) = f(g(x))`.
-/// @relates typed_actor
-template <class... Xs, class... Ys>
-[[deprecated]] composed_type_t<detail::type_list<Xs...>,
-                               detail::type_list<Ys...>>
-operator*(typed_actor<Xs...> f, typed_actor<Ys...> g) {
-  using result
-    = composed_type_t<detail::type_list<Xs...>, detail::type_list<Ys...>>;
-  auto& sys = g->home_system();
-  auto mts = sys.message_types(detail::type_list<result>{});
-  return make_actor<decorator::sequencer, result>(
-    sys.next_actor_id(), sys.node(), &sys,
-    actor_cast<strong_actor_ptr>(std::move(f)),
-    actor_cast<strong_actor_ptr>(std::move(g)), std::move(mts));
-}
-
-CAF_POP_WARNINGS
 
 } // namespace caf
 

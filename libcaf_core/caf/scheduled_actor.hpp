@@ -24,7 +24,6 @@
 #include "caf/extend.hpp"
 #include "caf/flow/coordinator.hpp"
 #include "caf/flow/fwd.hpp"
-#include "caf/flow/item_publisher.hpp" // deprecated
 #include "caf/flow/multicaster.hpp"
 #include "caf/flow/observer.hpp"
 #include "caf/fwd.hpp"
@@ -441,106 +440,6 @@ public:
   disposable delay_until(steady_time_point abs_time, action what) override;
 
   void watch(disposable what) override;
-
-  /// Converts an @ref observable into a @ref stream to allow other actors to
-  /// consume its items.
-  /// @param name The human-readable name for this stream.
-  /// @param max_delay The maximum delay between emitting two batches.
-  /// @param max_items_per_batch The maximum amount of items per batch.
-  /// @param obs An observable sequence of items.
-  /// @returns a @ref stream that makes @p obs available to other actors.
-  template <class Observable>
-  [[deprecated("call to_stream on the observable instead")]] //
-  flow::assert_scheduled_actor_hdr_t<Observable, stream>
-  to_stream(std::string name, timespan max_delay, size_t max_items_per_batch,
-            Observable&& obs);
-
-  /// @copydoc to_stream
-  template <class Observable>
-  [[deprecated("call to_stream on the observable instead")]] //
-  flow::assert_scheduled_actor_hdr_t<Observable, stream>
-  to_stream(cow_string name, timespan max_delay, size_t max_items_per_batch,
-            Observable&& obs);
-
-  /// Utility class that converts an @ref observable to a @ref stream when
-  /// passed to @c compose.
-  struct to_stream_t {
-    scheduled_actor* self;
-    cow_string name;
-    timespan max_delay;
-    size_t max_items_per_batch;
-    template <class Observable>
-    auto operator()(Observable&& what) {
-      return std::forward<Observable>(what).to_stream(name, max_delay,
-                                                      max_items_per_batch);
-    }
-  };
-
-  /// Returns a function object for passing it to @c compose.
-  [[deprecated("call to_stream on the observable instead")]] //
-  to_stream_t
-  to_stream(std::string name, timespan max_delay, size_t max_items_per_batch) {
-    return {this, cow_string{std::move(name)}, max_delay, max_items_per_batch};
-  }
-
-  /// Returns a function object for passing it to @c compose.
-  [[deprecated("call to_stream on the observable instead")]] //
-  to_stream_t
-  to_stream(cow_string name, timespan max_delay, size_t max_items_per_batch) {
-    return {this, std::move(name), max_delay, max_items_per_batch};
-  }
-
-  /// Converts an @ref observable into a @ref stream to allow other actors to
-  /// consume its items.
-  /// @param name The human-readable name for this stream.
-  /// @param max_delay The maximum delay between emitting two batches.
-  /// @param max_items_per_batch The maximum amount of items per batch.
-  /// @param obs An observable sequence of items.
-  /// @returns a @ref stream that makes @p obs available to other actors.
-  template <class Observable>
-  [[deprecated("call to_typed_stream on the observable instead")]] //
-  flow::assert_scheduled_actor_hdr_t<
-    Observable, typed_stream<typename Observable::output_type>>
-  to_typed_stream(std::string name, timespan max_delay,
-                  size_t max_items_per_batch, Observable obs);
-
-  /// @copydoc to_stream
-  template <class Observable>
-  [[deprecated("call to_typed_stream on the observable instead")]] //
-  flow::assert_scheduled_actor_hdr_t<
-    Observable, typed_stream<typename Observable::output_type>>
-  to_typed_stream(cow_string name, timespan max_delay,
-                  size_t max_items_per_batch, Observable obs);
-
-  /// Utility class that converts an @ref observable to a @ref stream when
-  /// passed to @c compose.
-  struct to_typed_stream_t {
-    scheduled_actor* self;
-    cow_string name;
-    timespan max_delay;
-    size_t max_items_per_batch;
-    template <class Observable>
-    auto operator()(Observable&& what) {
-      return std::forward<Observable>(what).to_typed_stream(
-        name, max_delay, max_items_per_batch);
-    }
-  };
-
-  /// Returns a function object for passing it to @c compose.
-  [[deprecated("call to_typed_stream on the observable instead")]] //
-  to_typed_stream_t
-  to_typed_stream(std::string name, timespan max_delay,
-                  size_t max_items_per_batch) {
-    return {this, cow_string{std::move(name)}, max_delay, max_items_per_batch};
-  }
-
-  /// Returns a function object for passing it to @c compose.
-  [[deprecated("call to_typed_stream on the observable instead")]] //
-  to_typed_stream_t
-  to_typed_stream(cow_string name, timespan max_delay,
-                  size_t max_items_per_batch) {
-    return {this, std::move(name), max_delay, max_items_per_batch};
-  }
 
   /// Lifts a statically typed stream into an @ref observable.
   /// @param what The input stream.

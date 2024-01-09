@@ -12,12 +12,10 @@
 #include "caf/net/web_socket/status.hpp"
 #include "caf/net/web_socket/upper_layer.hpp"
 
-#include "caf/byte.hpp"
 #include "caf/byte_span.hpp"
 #include "caf/detail/rfc6455.hpp"
 #include "caf/sec.hpp"
 #include "caf/span.hpp"
-#include "caf/string_view.hpp"
 
 #include <memory>
 #include <random>

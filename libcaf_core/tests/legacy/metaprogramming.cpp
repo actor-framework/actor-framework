@@ -89,11 +89,6 @@ constexpr token<none_t> res(T, U) {
   return {};
 }
 
-template <class T, class U>
-constexpr token<composed_type_t<T, U>> dot_op(token<T>, token<U>) {
-  return {};
-}
-
 // -- lift a list of callback types into a list of MPIs
 
 // -- typed behavior dummy class

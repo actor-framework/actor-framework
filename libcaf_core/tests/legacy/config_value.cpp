@@ -624,7 +624,6 @@ bool inspect(Inspector& f, i64_wrapper& x) {
 } // namespace
 
 SCENARIO("get_or converts or returns a fallback value") {
-  using namespace caf::literals;
   GIVEN("the config value 42") {
     auto x = config_value{42};
     WHEN("using get_or with type int") {

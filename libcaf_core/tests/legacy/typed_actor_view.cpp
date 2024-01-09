@@ -73,8 +73,6 @@ struct fixture : test_coordinator_fixture<> {
 
 BEGIN_FIXTURE_SCOPE(fixture)
 
-CAF_PUSH_DEPRECATED_WARNING
-
 SCENARIO("typed actors may use the flow API") {
   GIVEN("a typed actor") {
     WHEN("the actor calls make_observable") {
@@ -91,52 +89,17 @@ SCENARIO("typed actors may use the flow API") {
         CHECK_EQ(*res, 55);
       }
     }
-    WHEN("the actor creates a stream via compose") {
-      THEN("other actors may observe the values") {
-        auto res = std::make_shared<int>(0);
-        auto err = std::make_shared<error>();
-        spawn_int_actor([=](int_actor_ptr self) {
-          auto str = self
-                       ->make_observable() //
-                       .iota(1)
-                       .take(10)
-                       .compose(self->to_stream("foo", 10ms, 10));
-          self->spawn(stream_observer, str, res, err);
-        });
-        run();
-        CHECK_EQ(*res, 55);
-        CHECK_EQ(*err, sec::none);
-      }
-    }
     WHEN("the actor creates a stream via to_stream") {
       THEN("other actors may observe the values") {
         auto res = std::make_shared<int>(0);
         auto err = std::make_shared<error>();
         spawn_int_actor([=](int_actor_ptr self) {
-          auto obs = self
-                       ->make_observable() //
-                       .iota(1)
-                       .take(10)
-                       .as_observable();
-          auto str = self->to_stream("foo", 10ms, 10, obs);
-          self->spawn(stream_observer, str, res, err);
-        });
-        run();
-        CHECK_EQ(*res, 55);
-        CHECK(!*err);
-      }
-    }
-    WHEN("the actor creates a typed stream via compose") {
-      THEN("other actors may observe the values") {
-        auto res = std::make_shared<int>(0);
-        auto err = std::make_shared<error>();
-        spawn_int_actor([=](int_actor_ptr self) {
           auto str = self
                        ->make_observable() //
                        .iota(1)
                        .take(10)
-                       .compose(self->to_typed_stream("foo", 10ms, 10));
-          self->spawn(typed_stream_observer, str, res, err);
+                       .to_stream("foo", 10ms, 10);
+          self->spawn(stream_observer, str, res, err);
         });
         run();
         CHECK_EQ(*res, 55);
@@ -148,12 +111,11 @@ SCENARIO("typed actors may use the flow API") {
         auto res = std::make_shared<int>(0);
         auto err = std::make_shared<error>();
         spawn_int_actor([=](int_actor_ptr self) {
-          auto obs = self
+          auto str = self
                        ->make_observable() //
                        .iota(1)
                        .take(10)
-                       .as_observable();
-          auto str = self->to_typed_stream("foo", 10ms, 10, obs);
+                       .to_typed_stream("foo", 10ms, 10);
           self->spawn(typed_stream_observer, str, res, err);
         });
         run();
@@ -171,7 +133,7 @@ SCENARIO("typed actors may use the flow API") {
                      ->make_observable() //
                      .iota(1)
                      .take(10)
-                     .compose(self->to_stream("foo", 10ms, 10));
+                     .to_stream("foo", 10ms, 10);
         self->spawn(stream_observer, str, res, err);
         self->deregister_stream(str.id());
       });
@@ -181,7 +143,5 @@ SCENARIO("typed actors may use the flow API") {
     }
   }
 }
-
-CAF_POP_WARNINGS
 
 END_FIXTURE_SCOPE()

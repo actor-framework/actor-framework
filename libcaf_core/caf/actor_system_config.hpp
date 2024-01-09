@@ -39,9 +39,6 @@ public:
 
   // -- member types -----------------------------------------------------------
 
-  template <class K, class V>
-  using hash_map [[deprecated]] = std::unordered_map<K, V>;
-
   using logger_factory_t = std::function<intrusive_ptr<logger>(actor_system&)>;
 
   using hook_factory = std::function<io::hook*(actor_system&)>;

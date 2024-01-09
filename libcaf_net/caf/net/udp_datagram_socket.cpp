@@ -6,7 +6,6 @@
 
 #include "caf/net/socket_guard.hpp"
 
-#include "caf/byte.hpp"
 #include "caf/byte_buffer.hpp"
 #include "caf/detail/convert_ip_endpoint.hpp"
 #include "caf/detail/net_syscall.hpp"

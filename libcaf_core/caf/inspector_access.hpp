@@ -15,7 +15,6 @@
 #include "caf/inspector_access_type.hpp"
 #include "caf/intrusive_cow_ptr.hpp"
 #include "caf/intrusive_ptr.hpp"
-#include "caf/optional.hpp"
 #include "caf/sec.hpp"
 #include "caf/span.hpp"
 
@@ -296,22 +295,6 @@ struct optional_inspector_traits_base {
 template <class T>
 struct optional_inspector_traits;
 
-CAF_PUSH_DEPRECATED_WARNING
-
-template <class T>
-struct optional_inspector_traits<optional<T>> : optional_inspector_traits_base {
-  using container_type = optional<T>;
-
-  using value_type = T;
-
-  template <class... Ts>
-  static void emplace(container_type& container, Ts&&... xs) {
-    container.emplace(std::forward<Ts>(xs)...);
-  }
-};
-
-CAF_POP_WARNINGS
-
 template <class T>
 struct optional_inspector_traits<intrusive_ptr<T>>
   : optional_inspector_traits_base {
@@ -423,15 +406,6 @@ struct optional_inspector_access {
 };
 
 // -- inspection support for optional<T> ---------------------------------------
-
-CAF_PUSH_DEPRECATED_WARNING
-
-template <class T>
-struct inspector_access<optional<T>> : optional_inspector_access<optional<T>> {
-  // nop
-};
-
-CAF_POP_WARNINGS
 
 template <class T>
 struct optional_inspector_traits<std::optional<T>>

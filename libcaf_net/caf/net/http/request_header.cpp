@@ -42,7 +42,6 @@ std::pair<status, std::string_view>
 request_header::parse(std::string_view raw) {
   CAF_LOG_TRACE(CAF_ARG(raw));
   // Sanity checking and copying of the raw input.
-  using namespace literals;
   clear();
   if (raw.empty())
     return {status::bad_request, "Empty header."};
