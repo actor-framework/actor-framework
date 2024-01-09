@@ -55,10 +55,6 @@ public:
 
   using portable_name_map = std::unordered_map<std::type_index, std::string>;
 
-  using group_module_factory = std::function<group_module*()>;
-
-  using group_module_factory_vector = std::vector<group_module_factory>;
-
   using config_map = dictionary<config_value::dictionary>;
 
   using string_list = std::vector<std::string>;
@@ -230,7 +226,6 @@ public:
   actor_factory_map actor_factories;
   module_factory_vector module_factories;
   hook_factory_vector hook_factories;
-  group_module_factory_vector group_module_factories;
 
   // -- hooks ------------------------------------------------------------------
 

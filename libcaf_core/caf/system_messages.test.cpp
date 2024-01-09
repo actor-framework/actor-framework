@@ -94,13 +94,6 @@ TEST("down_msg is serializable") {
   }
 }
 
-TEST("group_down_msg is serializable") {
-  auto msg1 = group_down_msg{sys.groups().anonymous()};
-  auto msg2 = serialization_roundtrip(msg1);
-  if (check(msg2.has_value()))
-    check_eq(msg1.source, msg2->source);
-}
-
 TEST("node_down_msg is comparable") {
   SECTION("empty node") {
     auto msg1 = node_down_msg{node_id{}, sec::runtime_error};

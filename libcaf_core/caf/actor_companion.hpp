@@ -10,7 +10,6 @@
 #include "caf/mailbox_element.hpp"
 #include "caf/mixin/behavior_changer.hpp"
 #include "caf/mixin/sender.hpp"
-#include "caf/mixin/subscriber.hpp"
 #include "caf/scheduled_actor.hpp"
 
 #include <functional>
@@ -33,7 +32,6 @@ class CAF_CORE_EXPORT actor_companion
   // clang-format off
   : public extend<scheduled_actor, actor_companion>::
            with<mixin::sender,
-                mixin::subscriber,
                 mixin::behavior_changer> {
   // clang-format on
 public:

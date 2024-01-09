@@ -44,31 +44,9 @@ public:
   // -- send function family ---------------------------------------------------
 
   /// Sends `{xs...}` as an asynchronous message to `dest` with priority `mp`.
-  template <message_priority P = message_priority::normal, class... Ts>
-  void send(const group& dest, Ts&&... xs) {
-    static_assert(sizeof...(Ts) > 0, "no message to send");
-    static_assert((detail::sendable<Ts> && ...),
-                  "at least one type has no ID, "
-                  "did you forgot to announce it via CAF_ADD_TYPE_ID?");
-    static_assert(!statically_typed<Subtype>(),
-                  "statically typed actors can only send() to other "
-                  "statically typed actors; use anon_send() when "
-                  "communicating to groups");
-    auto self = dptr();
-    // TODO: consider whether it's feasible to track messages to groups
-    if (dest) {
-      dest->eq_impl(make_message_id(P), self->ctrl(), self->context(),
-                    std::forward<Ts>(xs)...);
-    } else {
-      self->home_system().base_metrics().rejected_messages->inc();
-    }
-  }
-
-  /// Sends `{xs...}` as an asynchronous message to `dest` with priority `mp`.
   template <message_priority P = message_priority::normal, class Dest,
             class... Ts>
-  std::enable_if_t<!std::is_same_v<group, Dest>>
-  send(const Dest& dest, Ts&&... xs) {
+  void send(const Dest& dest, Ts&&... xs) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
     static_assert((detail::sendable<Ts> && ...),
                   "at least one type has no ID, "
@@ -99,9 +77,8 @@ public:
   /// passed already).
   template <message_priority P = message_priority::normal, class Dest = actor,
             class... Ts>
-  std::enable_if_t<!std::is_same_v<Dest, group>, disposable>
-  scheduled_send(const Dest& dest, actor_clock::time_point timeout,
-                 Ts&&... xs) {
+  disposable scheduled_send(const Dest& dest, actor_clock::time_point timeout,
+                            Ts&&... xs) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
     static_assert((detail::sendable<Ts> && ...),
                   "at least one type has no ID, "
@@ -114,34 +91,12 @@ public:
                                  make_message_id(P), std::forward<Ts>(xs)...);
   }
 
-  /// Sends a message at given time point (or immediately if `timeout` has
-  /// passed already).
-  template <class... Ts>
-  disposable scheduled_send(const group& dest, actor_clock::time_point timeout,
-                            Ts&&... xs) {
-    static_assert(sizeof...(Ts) > 0, "no message to send");
-    static_assert((detail::sendable<Ts> && ...),
-                  "at least one type has no ID, "
-                  "did you forgot to announce it via CAF_ADD_TYPE_ID?");
-    static_assert(!statically_typed<Subtype>(),
-                  "statically typed actors are not allowed to send to groups");
-    // TODO: consider whether it's feasible to track messages to groups
-    auto self = dptr();
-    if (dest) {
-      auto& clock = self->system().clock();
-      return clock.schedule_message(timeout, dest, self->ctrl(),
-                                    make_message(std::forward<Ts>(xs)...));
-    }
-    self->home_system().base_metrics().rejected_messages->inc();
-    return {};
-  }
-
   /// Sends a message after a relative timeout.
   template <message_priority P = message_priority::normal, class Rep = int,
             class Period = std::ratio<1>, class Dest = actor, class... Ts>
-  std::enable_if_t<!std::is_same_v<Dest, group>, disposable>
-  delayed_send(const Dest& dest, std::chrono::duration<Rep, Period> rel_timeout,
-               Ts&&... xs) {
+  disposable delayed_send(const Dest& dest,
+                          std::chrono::duration<Rep, Period> rel_timeout,
+                          Ts&&... xs) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
     static_assert((detail::sendable<Ts> && ...),
                   "at least one type has no ID, "
@@ -153,30 +108,6 @@ public:
     auto timeout = clock.now() + rel_timeout;
     return detail::profiled_send(self, self->ctrl(), dest, clock, timeout,
                                  make_message_id(P), std::forward<Ts>(xs)...);
-  }
-
-  /// Sends a message after a relative timeout.
-  template <class Rep = int, class Period = std::ratio<1>, class Dest = actor,
-            class... Ts>
-  disposable delayed_send(const group& dest,
-                          std::chrono::duration<Rep, Period> rtime,
-                          Ts&&... xs) {
-    static_assert(sizeof...(Ts) > 0, "no message to send");
-    static_assert((detail::sendable<Ts> && ...),
-                  "at least one type has no ID, "
-                  "did you forgot to announce it via CAF_ADD_TYPE_ID?");
-    static_assert(!statically_typed<Subtype>(),
-                  "statically typed actors are not allowed to send to groups");
-    // TODO: consider whether it's feasible to track messages to groups
-    auto self = dptr();
-    if (dest) {
-      auto& clock = self->system().clock();
-      auto timeout = clock.now() + rtime;
-      return clock.schedule_message(timeout, dest, self->ctrl(),
-                                    make_message(std::forward<Ts>(xs)...));
-    }
-    self->home_system().base_metrics().rejected_messages->inc();
-    return {};
   }
 
   template <message_priority P = message_priority::normal, class Dest = actor,

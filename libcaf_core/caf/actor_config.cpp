@@ -11,14 +11,11 @@ namespace caf {
 actor_config::actor_config(execution_unit* host, local_actor* parent)
   : host(host),
     parent(parent),
-    flags(abstract_channel::is_abstract_actor_flag),
-    groups(nullptr) {
+    flags(abstract_channel::is_abstract_actor_flag) {
   // nop
 }
 
 std::string to_string(const actor_config& x) {
-  // Note: x.groups is an input range. Traversing it is emptying it, hence we
-  // cannot look inside the range here.
   std::string result = "actor_config(";
   auto add = [&](int flag, const char* name) {
     if ((x.flags & flag) != 0) {

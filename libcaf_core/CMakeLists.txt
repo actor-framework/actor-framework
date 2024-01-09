@@ -69,7 +69,6 @@ caf_add_component(
   SOURCES
     caf/abstract_actor.cpp
     caf/abstract_channel.cpp
-    caf/abstract_group.cpp
     caf/abstract_mailbox.cpp
     caf/action.cpp
     caf/action.test.cpp
@@ -141,13 +140,11 @@ caf_add_component(
     caf/detail/format.test.cpp
     caf/detail/get_process_id.cpp
     caf/detail/glob_match.cpp
-    caf/detail/group_tunnel.cpp
     caf/detail/ieee_754.test.cpp
     caf/detail/invoke_result_visitor.cpp
     caf/detail/json.cpp
     caf/detail/latch.cpp
     caf/detail/latch.test.cpp
-    caf/detail/local_group_module.cpp
     caf/detail/log_level_map.cpp
     caf/detail/log_level_map.test.cpp
     caf/detail/mailbox_factory.cpp
@@ -227,9 +224,6 @@ caf_add_component(
     caf/flow/string.test.cpp
     caf/flow/subscription.cpp
     caf/forwarding_actor_proxy.cpp
-    caf/group.cpp
-    caf/group_manager.cpp
-    caf/group_module.cpp
     caf/hash/fnv.test.cpp
     caf/hash/sha1.cpp
     caf/hash/sha1.test.cpp
@@ -347,8 +341,6 @@ caf_add_component(
     cow_tuple
     deep_to_string
     detached_actors
-    detail.group_tunnel
-    detail.local_group_module
     dictionary
     dsl
     dynamic_spawn

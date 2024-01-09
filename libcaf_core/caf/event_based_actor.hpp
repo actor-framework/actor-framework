@@ -13,7 +13,6 @@
 #include "caf/mixin/behavior_changer.hpp"
 #include "caf/mixin/requester.hpp"
 #include "caf/mixin/sender.hpp"
-#include "caf/mixin/subscriber.hpp"
 #include "caf/response_handle.hpp"
 #include "caf/scheduled_actor.hpp"
 
@@ -35,7 +34,6 @@ class CAF_CORE_EXPORT event_based_actor
   : public extend<scheduled_actor, event_based_actor>::
            with<mixin::sender,
                 mixin::requester,
-                mixin::subscriber,
                 mixin::behavior_changer>,
     public dynamically_typed_actor_base {
   // clang-format on

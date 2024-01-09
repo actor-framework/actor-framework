@@ -9,13 +9,12 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/unique_function.hpp"
 #include "caf/fwd.hpp"
-#include "caf/input_range.hpp"
 
 #include <string>
 
 namespace caf {
 
-/// Stores spawn-time flags and groups.
+/// Stores spawn-time settings and flags.
 class CAF_CORE_EXPORT actor_config {
 public:
   // -- member types -----------------------------------------------------------
@@ -32,7 +31,6 @@ public:
   execution_unit* host;
   local_actor* parent;
   int flags;
-  input_range<const group>* groups;
   detail::unique_function<behavior(local_actor*)> init_fun;
   detail::mailbox_factory* mbox_factory = nullptr;
 

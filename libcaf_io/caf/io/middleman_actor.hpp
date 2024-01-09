@@ -87,8 +87,6 @@ using middleman_actor = typed_actor< //
   result<strong_actor_ptr>(spawn_atom, node_id, std::string, message,
                            std::set<std::string>),
 
-  result<actor>(get_atom, group_atom, node_id, std::string),
-
   result<node_id, std::string, uint16_t>(get_atom, node_id)>;
 
 /// Spawns the default implementation for the `middleman_actor` interface.

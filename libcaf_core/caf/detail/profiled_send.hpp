@@ -38,16 +38,11 @@ disposable profiled_send(Self* self, SelfHandle&& src, const Handle& dst,
                          actor_clock& clock, actor_clock::time_point timeout,
                          [[maybe_unused]] message_id msg_id, Ts&&... xs) {
   if (dst) {
-    if constexpr (std::is_same_v<Handle, group>) {
-      return clock.schedule_message(timeout, dst, std::forward<SelfHandle>(src),
-                                    make_message(std::forward<Ts>(xs)...));
-    } else {
-      auto element = make_mailbox_element(std::forward<SelfHandle>(src), msg_id,
-                                          no_stages, std::forward<Ts>(xs)...);
-      CAF_BEFORE_SENDING_SCHEDULED(self, timeout, *element);
-      return clock.schedule_message(timeout, actor_cast<strong_actor_ptr>(dst),
-                                    std::move(element));
-    }
+    auto element = make_mailbox_element(std::forward<SelfHandle>(src), msg_id,
+                                        no_stages, std::forward<Ts>(xs)...);
+    CAF_BEFORE_SENDING_SCHEDULED(self, timeout, *element);
+    return clock.schedule_message(timeout, actor_cast<strong_actor_ptr>(dst),
+                                  std::move(element));
   } else {
     self->home_system().base_metrics().rejected_messages->inc();
     return {};

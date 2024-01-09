@@ -8,7 +8,6 @@
 #include "caf/actor_cast.hpp"
 #include "caf/actor_control_block.hpp"
 #include "caf/disposable.hpp"
-#include "caf/group.hpp"
 #include "caf/sec.hpp"
 
 namespace caf {
@@ -149,17 +148,6 @@ disposable actor_clock::schedule_message(time_point t, weak_actor_ptr receiver,
       if (auto ptr = actor_cast<strong_actor_ptr>(rptr))
         ptr->enqueue(std::move(cptr), nullptr);
     });
-  return schedule(t, std::move(f));
-}
-
-disposable actor_clock::schedule_message(time_point t, group target,
-                                         strong_actor_ptr sender,
-                                         message content) {
-  auto f = make_action([=]() mutable {
-    if (auto dst = target->get())
-      dst->enqueue(std::move(sender), make_message_id(), std::move(content),
-                   nullptr);
-  });
   return schedule(t, std::move(f));
 }
 

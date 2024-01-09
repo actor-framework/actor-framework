@@ -71,13 +71,12 @@ using string_sink_ptr = std::shared_ptr<string_sink>;
 
 using sink_cache = std::map<std::string, string_sink_ptr>;
 
-string_sink make_sink(actor_system& sys, const std::string& fn, int flags) {
+string_sink make_sink(actor_system&, const std::string& fn, int flags) {
   if (fn.empty()) {
     return nullptr;
   } else if (fn.front() == ':') {
-    // "virtual file" name given, translate this to group communication
-    auto grp = sys.groups().get_local(fn);
-    return [grp, fn](std::string&& out) { anon_send(grp, fn, std::move(out)); };
+    // TODO: re-implement "virtual files" or remove
+    return nullptr;
   } else {
     auto append = (flags & actor_ostream::append) != 0;
     auto fs = std::make_shared<std::ofstream>();
