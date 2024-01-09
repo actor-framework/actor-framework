@@ -6,9 +6,6 @@ macro(add name)
   add_dependencies(${name} all_tools)
 endmacro()
 
-add(caf-vec)
-target_link_libraries(caf-vec PRIVATE CAF::internal CAF::core)
-
 if(TARGET CAF::io)
   if(WIN32)
     message(STATUS "Skip caf-run (not supported on Windows)")

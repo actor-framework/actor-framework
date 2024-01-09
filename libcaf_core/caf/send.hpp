@@ -100,9 +100,8 @@ void anon_send(const Dest& dest, Ts&&... xs) {
 
 template <message_priority P = message_priority::normal, class Dest = actor,
           class Rep = int, class Period = std::ratio<1>, class... Ts>
-std::enable_if_t<!std::is_same_v<Dest, group>>
-delayed_anon_send(const Dest& dest, std::chrono::duration<Rep, Period> rtime,
-                  Ts&&... xs) {
+void delayed_anon_send(const Dest& dest,
+                       std::chrono::duration<Rep, Period> rtime, Ts&&... xs) {
   static_assert(sizeof...(Ts) > 0, "no message to send");
   static_assert((detail::sendable<Ts> && ...),
                 "at least one type has no ID, "
@@ -117,18 +116,6 @@ delayed_anon_send(const Dest& dest, std::chrono::duration<Rep, Period> rtime,
                            make_mailbox_element(nullptr, make_message_id(P),
                                                 no_stages,
                                                 std::forward<Ts>(xs)...));
-  }
-}
-
-template <class Rep = int, class Period = std::ratio<1>, class... Ts>
-void delayed_anon_send(const group& dest,
-                       std::chrono::duration<Rep, Period> rtime, Ts&&... xs) {
-  static_assert(sizeof...(Ts) > 0, "no message to send");
-  if (dest) {
-    auto& clock = dest->system().clock();
-    auto timeout = clock.now() + rtime;
-    clock.schedule_message(timeout, dest,
-                           make_message(std::forward<Ts>(xs)...));
   }
 }
 

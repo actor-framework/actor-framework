@@ -76,10 +76,6 @@ public:
   /// Schedules an arbitrary message to `receiver` for time point `t`.
   disposable schedule_message(time_point t, weak_actor_ptr receiver,
                               mailbox_element_ptr content);
-
-  /// Schedules an arbitrary message to `target` for time point `t`.
-  disposable schedule_message(time_point t, group target,
-                              strong_actor_ptr sender, message content);
 };
 
 } // namespace caf

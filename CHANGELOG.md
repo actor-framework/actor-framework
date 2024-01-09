@@ -12,6 +12,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The obsolete `operator*` for "combining" two actor handles.
 - All `to_stream` and `to_typed_stream` member functions on actors (they are
   available on `caf::flow::observable` directly).
+- The `group` API has been removed entirely.
 
 ## [0.19.5] - 2024-01-08
 

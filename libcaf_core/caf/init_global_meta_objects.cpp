@@ -14,7 +14,6 @@
 #include "caf/config_value.hpp"
 #include "caf/cow_string.hpp"
 #include "caf/error.hpp"
-#include "caf/group.hpp"
 #include "caf/ipv4_address.hpp"
 #include "caf/ipv4_endpoint.hpp"
 #include "caf/ipv4_subnet.hpp"
