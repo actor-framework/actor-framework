@@ -135,7 +135,6 @@ public:
 
   /// Returns `true` if a path to destination existed, `false` otherwise.
   bool dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
-                const std::vector<strong_actor_ptr>& forwarding_stack,
                 const node_id& dest_node, uint64_t dest_actor, uint8_t flags,
                 message_id mid, const message& msg);
 

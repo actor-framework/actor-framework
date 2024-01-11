@@ -22,18 +22,15 @@ forwarding_actor_proxy::~forwarding_actor_proxy() {
 }
 
 bool forwarding_actor_proxy::forward_msg(strong_actor_ptr sender,
-                                         message_id mid, message msg,
-                                         const forwarding_stack* fwd) {
+                                         message_id mid, message msg) {
   CAF_LOG_TRACE(CAF_ARG(id())
                 << CAF_ARG(sender) << CAF_ARG(mid) << CAF_ARG(msg));
   if (msg.match_elements<exit_msg>())
     unlink_from(msg.get_as<exit_msg>(0).source);
-  forwarding_stack tmp;
   std::shared_lock guard{broker_mtx_};
   if (broker_)
     return broker_->enqueue(nullptr, make_message_id(),
                             make_message(forward_atom_v, std::move(sender),
-                                         fwd != nullptr ? *fwd : tmp,
                                          strong_actor_ptr{ctrl()}, mid,
                                          std::move(msg)),
                             nullptr);
@@ -46,7 +43,7 @@ bool forwarding_actor_proxy::enqueue(mailbox_element_ptr what,
   CAF_PUSH_AID(0);
   CAF_ASSERT(what);
   return forward_msg(std::move(what->sender), what->mid,
-                     std::move(what->payload), &what->stages);
+                     std::move(what->payload));
 }
 
 bool forwarding_actor_proxy::add_backlink(abstract_actor* x) {

@@ -42,7 +42,7 @@ struct fixture : test::fixture::deterministic {
     queue.push(nullptr, static_cast<uint64_t>(msg_id),
                actor_cast<strong_actor_ptr>(snk),
                make_mailbox_element(actor_cast<strong_actor_ptr>(src),
-                                    make_message_id(), {}, ok_atom_v, msg_id));
+                                    make_message_id(), ok_atom_v, msg_id));
   }
 };
 

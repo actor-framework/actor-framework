@@ -13,7 +13,6 @@
 #include "caf/message.hpp"
 #include "caf/message_id.hpp"
 #include "caf/message_priority.hpp"
-#include "caf/no_stages.hpp"
 #include "caf/response_type.hpp"
 #include "caf/system_messages.hpp"
 #include "caf/typed_actor.hpp"
@@ -65,24 +64,16 @@ void unsafe_anon_send(const Dest& dest, Ts&&... xs) {
 }
 
 template <class... Ts>
-void unsafe_response(local_actor* self, strong_actor_ptr src,
-                     std::vector<strong_actor_ptr> stages, message_id mid,
+void unsafe_response(local_actor* self, strong_actor_ptr src, message_id mid,
                      Ts&&... xs) {
   static_assert(sizeof...(Ts) > 0, "no message to send");
-  strong_actor_ptr next;
-  if (stages.empty()) {
-    next = src;
-    src = self->ctrl();
-    if (mid.is_request())
-      mid = mid.response_id();
-  } else {
-    next = std::move(stages.back());
-    stages.pop_back();
-  }
-  if (next)
-    next->enqueue(make_mailbox_element(std::move(src), mid, std::move(stages),
-                                       std::forward<Ts>(xs)...),
-                  self->context());
+  src = self->ctrl();
+  if (mid.is_request())
+    mid = mid.response_id();
+  if (src)
+    src->enqueue(make_mailbox_element(std::move(src), mid,
+                                      std::forward<Ts>(xs)...),
+                 self->context());
 }
 
 /// Anonymously sends `dest` a message.
@@ -114,7 +105,6 @@ void delayed_anon_send(const Dest& dest,
     auto timeout = clock.now() + rtime;
     clock.schedule_message(timeout, actor_cast<strong_actor_ptr>(dest),
                            make_mailbox_element(nullptr, make_message_id(P),
-                                                no_stages,
                                                 std::forward<Ts>(xs)...));
   }
 }

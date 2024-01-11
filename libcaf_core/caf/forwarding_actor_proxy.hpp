@@ -15,8 +15,6 @@ namespace caf {
 /// Implements a simple proxy forwarding all operations to a manager.
 class CAF_CORE_EXPORT forwarding_actor_proxy : public actor_proxy {
 public:
-  using forwarding_stack = std::vector<strong_actor_ptr>;
-
   forwarding_actor_proxy(actor_config& cfg, actor dest);
 
   ~forwarding_actor_proxy() override;
@@ -30,8 +28,7 @@ public:
   void kill_proxy(execution_unit* ctx, error rsn) override;
 
 private:
-  bool forward_msg(strong_actor_ptr sender, message_id mid, message msg,
-                   const forwarding_stack* fwd = nullptr);
+  bool forward_msg(strong_actor_ptr sender, message_id mid, message msg);
 
   mutable std::shared_mutex broker_mtx_;
   actor broker_;

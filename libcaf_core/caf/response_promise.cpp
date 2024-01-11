@@ -7,7 +7,6 @@
 #include "caf/detail/profiled_send.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/logger.hpp"
-#include "caf/no_stages.hpp"
 
 #include <algorithm>
 #include <utility>
@@ -25,7 +24,7 @@ bool requires_response(const mailbox_element& src) {
 }
 
 bool has_response_receiver(const mailbox_element& src) {
-  return src.sender || !src.stages.empty();
+  return src.sender != nullptr;
 }
 
 } // namespace
@@ -33,7 +32,7 @@ bool has_response_receiver(const mailbox_element& src) {
 // -- constructors, destructors, and assignment operators ----------------------
 
 response_promise::response_promise(local_actor* self, strong_actor_ptr source,
-                                   forwarding_stack stages, message_id mid) {
+                                   message_id mid) {
   CAF_ASSERT(self != nullptr);
   // Form an invalid request promise when initialized from a response ID, since
   // we always drop messages in this case. Also don't create promises for
@@ -42,14 +41,12 @@ response_promise::response_promise(local_actor* self, strong_actor_ptr source,
     state_ = make_counted<state>();
     state_->self = self->ctrl();
     state_->source.swap(source);
-    state_->stages.swap(stages);
     state_->id = mid;
   }
 }
 
 response_promise::response_promise(local_actor* self, mailbox_element& src)
-  : response_promise(self, std::move(src.sender), std::move(src.stages),
-                     src.mid) {
+  : response_promise(self, std::move(src.sender), src.mid) {
   // nop
 }
 
@@ -66,20 +63,6 @@ bool response_promise::pending() const noexcept {
 strong_actor_ptr response_promise::source() const noexcept {
   if (state_)
     return state_->source;
-  else
-    return nullptr;
-}
-
-response_promise::forwarding_stack response_promise::stages() const {
-  if (state_)
-    return state_->stages;
-  else
-    return {};
-}
-
-strong_actor_ptr response_promise::next() const noexcept {
-  if (state_)
-    return state_->stages.empty() ? state_->source : state_->stages[0];
   else
     return nullptr;
 }
@@ -124,7 +107,6 @@ void response_promise::respond_to(local_actor* self, mailbox_element* request,
     state tmp;
     tmp.self = self->ctrl();
     tmp.source.swap(request->sender);
-    tmp.stages.swap(request->stages);
     tmp.id = request->mid;
     tmp.deliver_impl(std::move(response));
     request->mid.mark_as_answered();
@@ -138,7 +120,6 @@ void response_promise::respond_to(local_actor* self, mailbox_element* request,
     state tmp;
     tmp.self = self->ctrl();
     tmp.source.swap(request->sender);
-    tmp.stages.swap(request->stages);
     tmp.id = request->mid;
     tmp.deliver_impl(make_message(std::move(response)));
     request->mid.mark_as_answered();
@@ -153,7 +134,7 @@ response_promise::state::~state() {
   //       deliver_impl here since it calls self->context().
   if (self && source) {
     CAF_LOG_DEBUG("broken promise!");
-    auto element = make_mailbox_element(self, id.response_id(), no_stages,
+    auto element = make_mailbox_element(self, id.response_id(),
                                         make_error(sec::broken_promise));
     source->enqueue(std::move(element), nullptr);
   }
@@ -171,16 +152,9 @@ void response_promise::state::deliver_impl(message msg) {
   auto selfptr = static_cast<local_actor*>(self->get());
   if (msg.empty() && id.is_async()) {
     CAF_LOG_DEBUG("drop response: empty response to asynchronous input");
-  } else if (!stages.empty()) {
-    auto next = std::move(stages.back());
-    stages.pop_back();
-    detail::profiled_send(selfptr, std::move(source), next, id,
-                          std::move(stages), selfptr->context(),
-                          std::move(msg));
   } else if (source != nullptr) {
     detail::profiled_send(selfptr, self, source, id.response_id(),
-                          forwarding_stack{}, selfptr->context(),
-                          std::move(msg));
+                          selfptr->context(), std::move(msg));
   }
   cancel();
 }
@@ -191,8 +165,7 @@ void response_promise::state::delegate_impl(abstract_actor* receiver,
   if (receiver != nullptr) {
     auto selfptr = static_cast<local_actor*>(self->get());
     detail::profiled_send(selfptr, std::move(source), receiver, id,
-                          std::move(stages), selfptr->context(),
-                          std::move(msg));
+                          selfptr->context(), std::move(msg));
   } else {
     CAF_LOG_DEBUG("drop response: invalid delegation target");
   }

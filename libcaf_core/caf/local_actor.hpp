@@ -210,42 +210,6 @@ public:
     current_element_->mid.mark_as_answered();
   }
 
-  /// Returns a pointer to the next stage from the forwarding path of the
-  /// current message or `nullptr` if the path is empty.
-  strong_actor_ptr current_next_stage() noexcept {
-    CAF_ASSERT(current_element_);
-    auto& stages = current_element_->stages;
-    if (!stages.empty())
-      return stages.back();
-    return nullptr;
-  }
-
-  /// Returns a pointer to the next stage from the forwarding path of the
-  /// current message and removes it from the path. Returns `nullptr` if the
-  /// path is empty.
-  strong_actor_ptr take_current_next_stage() {
-    CAF_ASSERT(current_element_);
-    auto& stages = current_element_->stages;
-    if (!stages.empty()) {
-      auto result = stages.back();
-      stages.pop_back();
-      return result;
-    }
-    return nullptr;
-  }
-
-  /// Returns the forwarding stack from the current mailbox element.
-  const mailbox_element::forwarding_stack& current_forwarding_stack() noexcept {
-    CAF_ASSERT(current_element_);
-    return current_element_->stages;
-  }
-
-  /// Moves the forwarding stack from the current mailbox element.
-  mailbox_element::forwarding_stack take_current_forwarding_stack() noexcept {
-    CAF_ASSERT(current_element_);
-    return std::move(current_element_->stages);
-  }
-
   /// Returns a pointer to the currently processed mailbox element.
   mailbox_element* current_mailbox_element() noexcept {
     return current_element_;

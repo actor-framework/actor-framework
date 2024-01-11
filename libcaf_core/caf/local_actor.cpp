@@ -93,7 +93,7 @@ disposable local_actor::request_response_timeout(timespan timeout,
   auto t = clock().now() + timeout;
   return clock().schedule_message(
     t, strong_actor_ptr{ctrl()},
-    make_mailbox_element(nullptr, mid.response_id(), {},
+    make_mailbox_element(nullptr, mid.response_id(),
                          make_error(sec::request_timeout)));
 }
 

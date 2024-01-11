@@ -14,8 +14,7 @@ using ires = intrusive::inbox_result;
 
 template <message_priority P = message_priority::normal>
 auto make_int_msg(int value) {
-  return make_mailbox_element(nullptr, make_message_id(P), {},
-                              make_message(value));
+  return make_mailbox_element(nullptr, make_message_id(P), make_message(value));
 }
 
 TEST("a default-constructed mailbox is empty") {

@@ -144,9 +144,8 @@ behavior basp_broker::make_behavior() {
       }
     },
     // received from proxy instances
-    [this](forward_atom, strong_actor_ptr& src,
-           const std::vector<strong_actor_ptr>& fwd_stack,
-           strong_actor_ptr& dest, message_id mid, const message& msg) {
+    [this](forward_atom, strong_actor_ptr& src, strong_actor_ptr& dest,
+           message_id mid, const message& msg) {
       CAF_LOG_TRACE(CAF_ARG(src)
                     << CAF_ARG(dest) << CAF_ARG(mid) << CAF_ARG(msg));
       if (!dest || system().node() == dest->node()) {
@@ -157,8 +156,8 @@ behavior basp_broker::make_behavior() {
       }
       if (src && system().node() == src->node())
         system().registry().put(src->id(), src);
-      if (!instance.dispatch(context(), src, fwd_stack, dest->node(),
-                             dest->id(), 0, mid, msg)
+      if (!instance.dispatch(context(), src, dest->node(), dest->id(), 0, mid,
+                             msg)
           && mid.is_request()) {
         detail::sync_request_bouncer srb{exit_reason::remote_link_unreachable};
         srb(src, mid);
@@ -176,7 +175,7 @@ behavior basp_broker::make_behavior() {
       auto& sender = cme->sender;
       if (system().node() == sender->node())
         system().registry().put(sender->id(), sender);
-      if (!instance.dispatch(context(), sender, cme->stages, dest_node, dest_id,
+      if (!instance.dispatch(context(), sender, dest_node, dest_id,
                              basp::header::named_receiver_flag, cme->mid,
                              msg)) {
         detail::sync_request_bouncer srb{exit_reason::remote_link_unreachable};
@@ -265,7 +264,7 @@ behavior basp_broker::make_behavior() {
       auto& q = instance.queue();
       auto msg_id = q.new_id();
       q.push(context(), msg_id, ctrl(),
-             make_mailbox_element(nullptr, make_message_id(), {}, delete_atom_v,
+             make_mailbox_element(nullptr, make_message_id(), delete_atom_v,
                                   msg.handle));
     },
     // received from the message handler above for connection_closed_msg
@@ -279,7 +278,7 @@ behavior basp_broker::make_behavior() {
       auto& q = instance.queue();
       auto msg_id = q.new_id();
       q.push(context(), msg_id, ctrl(),
-             make_mailbox_element(nullptr, make_message_id(), {}, delete_atom_v,
+             make_mailbox_element(nullptr, make_message_id(), delete_atom_v,
                                   msg.handle));
     },
     // received from the message handler above for acceptor_closed_msg
@@ -598,9 +597,7 @@ void basp_broker::learned_new_node(const node_id& nid) {
   using namespace detail;
   auto tmp_ptr = actor_cast<strong_actor_ptr>(tmp);
   system().registry().put(tmp.id(), tmp_ptr);
-  std::vector<strong_actor_ptr> stages;
-  if (!instance.dispatch(context(), tmp_ptr, stages, nid,
-                         basp::header::spawn_server_id,
+  if (!instance.dispatch(context(), tmp_ptr, nid, basp::header::spawn_server_id,
                          basp::header::named_receiver_flag, make_message_id(),
                          make_message(sys_atom_v, get_atom_v, "info"))) {
     CAF_LOG_ERROR("learned_new_node called, but no route to remote node"
@@ -629,11 +626,10 @@ void basp_broker::learned_new_node_indirectly(const node_id& nid) {
                : system().spawn<detached + hidden>(connection_helper, this);
   auto sender = actor_cast<strong_actor_ptr>(tmp);
   system().registry().put(sender->id(), sender);
-  std::vector<strong_actor_ptr> fwd_stack;
-  if (!instance.dispatch(
-        context(), sender, fwd_stack, nid, basp::header::config_server_id,
-        basp::header::named_receiver_flag, make_message_id(),
-        make_message(get_atom_v, "basp.default-connectivity-tcp"))) {
+  if (!instance.dispatch(context(), sender, nid, basp::header::config_server_id,
+                         basp::header::named_receiver_flag, make_message_id(),
+                         make_message(get_atom_v,
+                                      "basp.default-connectivity-tcp"))) {
     CAF_LOG_ERROR("learned_new_node_indirectly called, but no route to nid");
   }
 }

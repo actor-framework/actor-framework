@@ -45,7 +45,7 @@ public:
   }
 
   void write(std::string&& arg) override {
-    printer_->enqueue(make_mailbox_element(nullptr, make_message_id(), {},
+    printer_->enqueue(make_mailbox_element(nullptr, make_message_id(),
                                            add_atom_v, self_, std::move(arg)),
                       nullptr);
   }
@@ -55,7 +55,7 @@ public:
   }
 
   void flush() override {
-    printer_->enqueue(make_mailbox_element(nullptr, make_message_id(), {},
+    printer_->enqueue(make_mailbox_element(nullptr, make_message_id(),
                                            flush_atom_v, self_),
                       nullptr);
   }

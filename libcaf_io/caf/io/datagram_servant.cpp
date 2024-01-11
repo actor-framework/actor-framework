@@ -52,7 +52,6 @@ void datagram_servant::datagram_sent(execution_unit* ctx, datagram_handle hdl,
     return;
   using sent_t = datagram_sent_msg;
   mailbox_element tmp{strong_actor_ptr{}, make_message_id(),
-                      mailbox_element::forwarding_stack{},
                       make_message(sent_t{hdl, written, std::move(buffer)})};
   invoke_mailbox_element_impl(ctx, tmp);
 }

@@ -450,8 +450,6 @@ private:
                         ::caf::strong_actor_ptr{this->ctrl()})                 \
                         .c_str()                                               \
                    << "; FROM =" << ::caf::deep_to_string(ptr->sender).c_str() \
-                   << "; STAGES ="                                             \
-                   << ::caf::deep_to_string(ptr->stages).c_str()               \
                    << "; CONTENT ="                                            \
                    << ::caf::deep_to_string(ptr->content()).c_str())
 
@@ -459,8 +457,6 @@ private:
     CAF_LOG_IMPL(CAF_LOG_FLOW_COMPONENT, CAF_LOG_LEVEL_DEBUG,                  \
                  "RECEIVE ; FROM ="                                            \
                    << ::caf::deep_to_string(ptr->sender).c_str()               \
-                   << "; STAGES ="                                             \
-                   << ::caf::deep_to_string(ptr->stages).c_str()               \
                    << "; CONTENT ="                                            \
                    << ::caf::deep_to_string(ptr->content()).c_str())
 

@@ -34,7 +34,6 @@
 #include "caf/mixin/behavior_changer.hpp"
 #include "caf/mixin/requester.hpp"
 #include "caf/mixin/sender.hpp"
-#include "caf/no_stages.hpp"
 #include "caf/policy/arg.hpp"
 #include "caf/response_handle.hpp"
 #include "caf/sec.hpp"

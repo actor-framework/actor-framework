@@ -221,7 +221,7 @@ void blocking_actor::receive_impl(receive_cond& rcc, message_id mid,
         if (mid.is_response()) {
           auto& x = *current_element_;
           auto err = make_error(sec::unexpected_response, std::move(x.payload));
-          mailbox_element tmp{std::move(x.sender), x.mid, std::move(x.stages),
+          mailbox_element tmp{std::move(x.sender), x.mid,
                               make_message(std::move(err))};
           current_element_ = &tmp;
           bhvr.nested(tmp.content());
