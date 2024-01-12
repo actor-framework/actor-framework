@@ -232,11 +232,17 @@ caf_add_component(
     caf/intrusive/linked_list.test.cpp
     caf/intrusive/stack.test.cpp
     caf/ipv4_address.cpp
+    caf/ipv4_address.test.cpp
     caf/ipv4_endpoint.cpp
+    caf/ipv4_endpoint.test.cpp
     caf/ipv4_subnet.cpp
+    caf/ipv4_subnet.test.cpp
     caf/ipv6_address.cpp
+    caf/ipv6_address.test.cpp
     caf/ipv6_endpoint.cpp
+    caf/ipv6_endpoint.test.cpp
     caf/ipv6_subnet.cpp
+    caf/ipv6_subnet.test.cpp
     caf/json_array.cpp
     caf/json_builder.cpp
     caf/json_object.cpp
@@ -249,19 +255,18 @@ caf_add_component(
     caf/log/event.test.cpp
     caf/logger.cpp
     caf/mailbox_element.cpp
+    caf/mailbox_element.test.cpp
     caf/make_config_option.cpp
     caf/message.cpp
     caf/message_builder.cpp
     caf/message_builder.test.cpp
     caf/message_handler.cpp
-    caf/message_lifetime.test.cpp
-    caf/messaging.test.cpp
-    caf/metaprogramming.test.cpp
+    caf/message_id.test.cpp
     caf/monitorable_actor.cpp
     caf/mtl.test.cpp
     caf/node_id.cpp
-    caf/node_id.test.cpp
-    caf/or_else.test.cpp
+    caf/policy/select_all.test.cpp
+    caf/policy/select_any.test.cpp
     caf/policy/unprofiled.cpp
     caf/policy/work_sharing.cpp
     caf/policy/work_stealing.cpp
@@ -356,12 +361,6 @@ caf_add_component(
     function_view
     handles
     intrusive_ptr
-    ipv4_address
-    ipv4_endpoint
-    ipv4_subnet
-    ipv6_address
-    ipv6_endpoint
-    ipv6_subnet
     json_array
     json_builder
     json_object
@@ -369,13 +368,9 @@ caf_add_component(
     json_value
     json_writer
     load_inspector
-    mailbox_element
     message
-    message_id
     mixin.requester
     mixin.sender
-    policy.select_all
-    policy.select_any
     request_timeout
     response_promise
     save_inspector
