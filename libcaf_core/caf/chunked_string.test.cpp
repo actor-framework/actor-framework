@@ -13,7 +13,7 @@ using namespace std::literals;
 
 namespace {
 
-using list_type = detail::json::linked_list<std::string_view>;
+using list_type = detail::forward_list<std::string_view>;
 
 using node_type = list_type::node_type;
 

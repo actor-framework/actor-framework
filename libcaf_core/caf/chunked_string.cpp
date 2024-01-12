@@ -6,7 +6,6 @@
 
 #include "caf/detail/monotonic_buffer_resource.hpp"
 
-#include <new>
 #include <numeric>
 #include <ostream>
 

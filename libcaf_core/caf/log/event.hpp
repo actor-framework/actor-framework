@@ -7,7 +7,7 @@
 #include "caf/chunked_string.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/format.hpp"
-#include "caf/detail/json.hpp"
+#include "caf/detail/forward_list.hpp"
 #include "caf/detail/monotonic_buffer_resource.hpp"
 #include "caf/detail/source_location.hpp"
 #include "caf/fwd.hpp"
@@ -38,16 +38,16 @@ public:
 
   struct field;
 
-  using field_node = detail::json::linked_list_node<field>;
+  using field_node = detail::forward_list_node<field>;
 
   /// A list of user-defined fields.
   struct field_list {
     const field_node* head = nullptr;
     auto begin() const noexcept {
-      return detail::json::linked_list_iterator<const field>{head};
+      return detail::forward_list_iterator<const field>{head};
     }
     auto end() const noexcept {
-      return detail::json::linked_list_iterator<const field>{};
+      return detail::forward_list_iterator<const field>{};
     }
     [[nodiscard]] bool empty() const noexcept {
       return head == nullptr;
@@ -223,7 +223,7 @@ public:
 
   friend class event;
 
-  using list_type = detail::json::linked_list<event::field>;
+  using list_type = detail::forward_list<event::field>;
 
   using resource_type = detail::monotonic_buffer_resource;
 
