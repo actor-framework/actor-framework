@@ -7,11 +7,8 @@
 #include "caf/io/basp/header.hpp"
 #include "caf/io/basp_broker.hpp"
 #include "caf/io/network/default_multiplexer.hpp"
-#include "caf/io/network/interfaces.hpp"
-#include "caf/io/system_messages.hpp"
 
 #include "caf/actor.hpp"
-#include "caf/actor_proxy.hpp"
 #include "caf/actor_registry.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/after.hpp"
@@ -19,28 +16,19 @@
 #include "caf/defaults.hpp"
 #include "caf/detail/latch.hpp"
 #include "caf/detail/prometheus_broker.hpp"
-#include "caf/detail/set_thread_name.hpp"
-#include "caf/event_based_actor.hpp"
 #include "caf/function_view.hpp"
 #include "caf/init_global_meta_objects.hpp"
 #include "caf/log/system.hpp"
 #include "caf/logger.hpp"
-#include "caf/make_counted.hpp"
 #include "caf/node_id.hpp"
 #include "caf/others.hpp"
-#include "caf/scheduler/abstract_coordinator.hpp"
 #include "caf/scoped_actor.hpp"
 #include "caf/sec.hpp"
 #include "caf/send.hpp"
 #include "caf/thread_owner.hpp"
-#include "caf/typed_event_based_actor.hpp"
 
-#include <cerrno>
 #include <cstring>
 #include <memory>
-#include <sstream>
-#include <stdexcept>
-#include <tuple>
 
 #ifdef CAF_WINDOWS
 #  include <fcntl.h>
@@ -316,17 +304,14 @@ strong_actor_ptr middleman::remote_lookup(std::string name,
 
 void middleman::start() {
   CAF_LOG_TRACE("");
-  // Launch background tasks unless caf-net is also available. In that case, the
-  // net::middleman takes care of these.
-  if (!system().has_network_manager()) {
-    if (auto prom = get_if<config_value::dictionary>(
-          &system().config(), "caf.middleman.prometheus-http")) {
-      auto ptr = std::make_unique<prometheus_scraping>(system());
-      if (auto port = ptr->start(*prom)) {
-        CAF_ASSERT(*port != 0);
-        prometheus_scraping_port_ = *port;
-        background_tasks_.emplace_back(std::move(ptr));
-      }
+  // Consider using net::middleman for prometheus if caf-net is available.
+  if (auto prom = get_if<config_value::dictionary>(
+        &system().config(), "caf.middleman.prometheus-http")) {
+    auto ptr = std::make_unique<prometheus_scraping>(system());
+    if (auto port = ptr->start(*prom)) {
+      CAF_ASSERT(*port != 0);
+      prometheus_scraping_port_ = *port;
+      background_tasks_.emplace_back(std::move(ptr));
     }
   }
   // Launch backend.

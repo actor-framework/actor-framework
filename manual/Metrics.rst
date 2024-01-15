@@ -585,6 +585,11 @@ below.
         port = 8080
         # the bind address (optional parameter; default is 0.0.0.0)
         address = "0.0.0.0"
+        # optionally enable TLS for the prometheus server. Disabled by default.
+        tls {
+          key-file = "/path/to/key.pem"
+          cert-file = "/path/to/cert.pem"
+        }
       }
     }
   }
