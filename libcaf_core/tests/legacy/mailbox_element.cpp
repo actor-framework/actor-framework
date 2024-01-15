@@ -38,15 +38,14 @@ std::optional<tuple<Ts...>> fetch(const mailbox_element& x) {
 } // namespace
 
 CAF_TEST(empty_message) {
-  auto m1 = make_mailbox_element(nullptr, make_message_id(), no_stages,
-                                 make_message());
+  auto m1 = make_mailbox_element(nullptr, make_message_id(), make_message());
   CHECK(m1->mid.is_async());
   CHECK(m1->mid.category() == message_id::normal_message_category);
   CHECK(m1->content().empty());
 }
 
 CAF_TEST(non_empty_message) {
-  auto m1 = make_mailbox_element(nullptr, make_message_id(), no_stages,
+  auto m1 = make_mailbox_element(nullptr, make_message_id(),
                                  make_message(1, 2, 3));
   CHECK(m1->mid.is_async());
   CHECK(m1->mid.category() == message_id::normal_message_category);
@@ -56,8 +55,7 @@ CAF_TEST(non_empty_message) {
 }
 
 CAF_TEST(tuple) {
-  auto m1 = make_mailbox_element(nullptr, make_message_id(), no_stages, 1, 2,
-                                 3);
+  auto m1 = make_mailbox_element(nullptr, make_message_id(), 1, 2, 3);
   CHECK(m1->mid.is_async());
   CHECK(m1->mid.category() == message_id::normal_message_category);
   CHECK(!m1->content().empty());
@@ -67,7 +65,6 @@ CAF_TEST(tuple) {
 
 CAF_TEST(high_priority) {
   auto m1 = make_mailbox_element(nullptr,
-                                 make_message_id(message_priority::high),
-                                 no_stages, 42);
+                                 make_message_id(message_priority::high), 42);
   CHECK(m1->mid.category() == message_id::urgent_message_category);
 }

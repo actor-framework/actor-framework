@@ -57,8 +57,8 @@ public:
     auto req_id = self->new_request_id(P);
     auto pending_msg = disposable{};
     if (dest) {
-      detail::profiled_send(self, self->ctrl(), dest, req_id, {},
-                            self->context(), std::forward<Ts>(xs)...);
+      detail::profiled_send(self, self->ctrl(), dest, req_id, self->context(),
+                            std::forward<Ts>(xs)...);
       pending_msg = self->request_response_timeout(timeout, req_id);
     } else {
       self->eq_impl(req_id.response_id(), self->ctrl(), self->context(),

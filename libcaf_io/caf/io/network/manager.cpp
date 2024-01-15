@@ -41,7 +41,7 @@ void manager::detach(execution_unit*, bool invoke_disconnect_message) {
     ptr.swap(parent_);
     detach_from(raw_ptr);
     if (invoke_disconnect_message) {
-      auto mptr = make_mailbox_element(nullptr, make_message_id(), {},
+      auto mptr = make_mailbox_element(nullptr, make_message_id(),
                                        detach_message());
       switch (raw_ptr->consume(*mptr)) {
         case invoke_message_result::consumed:

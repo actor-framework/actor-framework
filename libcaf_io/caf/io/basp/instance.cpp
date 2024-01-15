@@ -154,7 +154,6 @@ size_t instance::remove_published_actor(const actor_addr& whom, uint16_t port,
 }
 
 bool instance::dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
-                        const std::vector<strong_actor_ptr>& forwarding_stack,
                         const node_id& dest_node, uint64_t dest_actor,
                         uint8_t flags, message_id mid, const message& msg) {
   CAF_LOG_TRACE(CAF_ARG(sender)
@@ -172,7 +171,7 @@ bool instance::dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
                sender ? sender->id() : invalid_actor_id,
                dest_actor};
     auto writer = make_callback([&](binary_serializer& sink) { //
-      return sink.apply(forwarding_stack) && sink.apply(msg);
+      return sink.apply(msg);
     });
     write(ctx, callee_.get_buffer(path->hdl), hdr, &writer);
   } else {
@@ -183,12 +182,11 @@ bool instance::dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
                sender ? sender->id() : invalid_actor_id,
                dest_actor};
     auto writer = make_callback([&](binary_serializer& sink) {
-      CAF_LOG_DEBUG("send routed message: "
-                    << CAF_ARG(source_node) << CAF_ARG(dest_node)
-                    << CAF_ARG(forwarding_stack) << CAF_ARG(msg));
-      return sink.apply(source_node)         //
-             && sink.apply(dest_node)        //
-             && sink.apply(forwarding_stack) //
+      CAF_LOG_DEBUG("send routed message: " << CAF_ARG(source_node)
+                                            << CAF_ARG(dest_node)
+                                            << CAF_ARG(msg));
+      return sink.apply(source_node)  //
+             && sink.apply(dest_node) //
              && sink.apply(msg);
     });
     write(ctx, callee_.get_buffer(path->hdl), hdr, &writer);
@@ -489,7 +487,7 @@ connection_state instance::handle(execution_unit* ctx, connection_handle hdl,
       if (dest_node == this_node_) {
         // Delay this message to make sure we don't skip in-flight messages.
         auto msg_id = queue_.new_id();
-        auto ptr = make_mailbox_element(nullptr, make_message_id(), {},
+        auto ptr = make_mailbox_element(nullptr, make_message_id(),
                                         delete_atom_v, source_node,
                                         hdr.source_actor,
                                         std::move(fail_state));

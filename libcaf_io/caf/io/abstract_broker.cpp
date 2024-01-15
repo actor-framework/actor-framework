@@ -20,7 +20,7 @@ namespace caf::io {
 
 bool abstract_broker::enqueue(strong_actor_ptr src, message_id mid, message msg,
                               execution_unit*) {
-  return enqueue(make_mailbox_element(std::move(src), mid, {}, std::move(msg)),
+  return enqueue(make_mailbox_element(std::move(src), mid, std::move(msg)),
                  backend_);
 }
 

@@ -23,7 +23,6 @@ public:
   broker_servant(handle_type x)
     : hdl_(x),
       value_(strong_actor_ptr{}, make_message_id(),
-             mailbox_element::forwarding_stack{},
              make_message(SysMsgType{x, {}})) {
     // nop
   }
@@ -91,7 +90,6 @@ protected:
                            acceptor_passivated_msg,
                            datagram_servant_passivated_msg>>;
       mailbox_element tmp{strong_actor_ptr{}, make_message_id(),
-                          mailbox_element::forwarding_stack{},
                           make_message(passive_t{hdl()})};
       invoke_mailbox_element_impl(ctx, tmp);
       return activity_tokens_ != size_t{0};

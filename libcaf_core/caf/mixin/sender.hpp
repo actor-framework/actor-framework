@@ -14,7 +14,6 @@
 #include "caf/fwd.hpp"
 #include "caf/message.hpp"
 #include "caf/message_priority.hpp"
-#include "caf/no_stages.hpp"
 #include "caf/response_handle.hpp"
 #include "caf/response_type.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
@@ -54,7 +53,7 @@ public:
     detail::type_list<detail::strip_and_convert_t<Ts>...> args_token;
     type_check(dest, args_token);
     auto self = dptr();
-    detail::profiled_send(self, self->ctrl(), dest, make_message_id(P), {},
+    detail::profiled_send(self, self->ctrl(), dest, make_message_id(P),
                           self->context(), std::forward<Ts>(xs)...);
   }
 
@@ -69,7 +68,7 @@ public:
     static_assert(response_type_unbox<signatures_of_t<Dest>, token>::valid,
                   "receiver does not accept given message");
     auto self = dptr();
-    detail::profiled_send(self, nullptr, dest, make_message_id(P), {},
+    detail::profiled_send(self, nullptr, dest, make_message_id(P),
                           self->context(), std::forward<Ts>(xs)...);
   }
 

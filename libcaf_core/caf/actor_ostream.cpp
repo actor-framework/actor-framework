@@ -29,9 +29,8 @@ void actor_ostream::redirect(abstract_actor* self, std::string fn, int flags) {
   auto pr = self->home_system().scheduler().printer();
   if (!pr)
     return;
-  pr->enqueue(make_mailbox_element(nullptr, make_message_id(), {},
-                                   redirect_atom_v, self->id(), std::move(fn),
-                                   flags),
+  pr->enqueue(make_mailbox_element(nullptr, make_message_id(), redirect_atom_v,
+                                   self->id(), std::move(fn), flags),
               nullptr);
 }
 
@@ -39,8 +38,8 @@ void actor_ostream::redirect_all(actor_system& sys, std::string fn, int flags) {
   auto pr = sys.scheduler().printer();
   if (!pr)
     return;
-  pr->enqueue(make_mailbox_element(nullptr, make_message_id(), {},
-                                   redirect_atom_v, std::move(fn), flags),
+  pr->enqueue(make_mailbox_element(nullptr, make_message_id(), redirect_atom_v,
+                                   std::move(fn), flags),
               nullptr);
 }
 

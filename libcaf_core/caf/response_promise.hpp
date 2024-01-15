@@ -32,10 +32,6 @@ public:
   template <class...>
   friend class typed_response_promise;
 
-  // -- member types -----------------------------------------------------------
-
-  using forwarding_stack = std::vector<strong_actor_ptr>;
-
   // -- constructors, destructors, and assignment operators --------------------
 
   response_promise() = default;
@@ -58,13 +54,6 @@ public:
 
   /// Returns the source of the corresponding request.
   strong_actor_ptr source() const noexcept;
-
-  /// Returns the remaining stages for the corresponding request.
-  forwarding_stack stages() const;
-
-  /// Returns the actor that will receive the response, i.e.,
-  /// `stages().front()` if `!stages().empty()` or `source()` otherwise.
-  strong_actor_ptr next() const noexcept;
 
   /// Returns the message ID of the corresponding request.
   message_id id() const noexcept;
@@ -160,8 +149,7 @@ public:
 private:
   // -- constructors that are visible only to friends --------------------------
 
-  response_promise(local_actor* self, strong_actor_ptr source,
-                   forwarding_stack stages, message_id id);
+  response_promise(local_actor* self, strong_actor_ptr source, message_id id);
 
   response_promise(local_actor* self, mailbox_element& src);
 
@@ -197,7 +185,6 @@ private:
     mutable size_t ref_count = 1;
     strong_actor_ptr self;
     strong_actor_ptr source;
-    forwarding_stack stages;
     message_id id;
 
     friend void intrusive_ptr_add_ref(const state* ptr) {

@@ -37,7 +37,6 @@ public:
     auto& sys = *dref.system_;
     strong_actor_ptr src;
     strong_actor_ptr dst;
-    std::vector<strong_actor_ptr> stages;
     message msg;
     auto mid = make_message_id(dref.hdr_.operation_data);
     binary_deserializer source{ctx, dref.payload_};
@@ -95,10 +94,6 @@ public:
       return;
     }
     // Get the remainder of the message.
-    if (!source.apply(stages)) {
-      CAF_LOG_ERROR("failed to read stages:" << source.get_error());
-      return;
-    }
     auto& mm_metrics = ctx->system().middleman().metric_singletons;
     auto t0 = telemetry::timer::clock_type::now();
     if (!source.apply(msg)) {
@@ -134,7 +129,7 @@ public:
     guard.disable();
     dref.queue_->push(ctx, dref.msg_id_, std::move(dst),
                       make_mailbox_element(std::move(src), mid,
-                                           std::move(stages), std::move(msg)));
+                                           std::move(msg)));
   }
 };
 

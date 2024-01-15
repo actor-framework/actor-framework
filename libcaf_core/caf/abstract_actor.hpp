@@ -111,7 +111,7 @@ public:
   template <class... Ts>
   bool eq_impl(message_id mid, strong_actor_ptr sender, execution_unit* ctx,
                Ts&&... xs) {
-    return enqueue(make_mailbox_element(std::move(sender), mid, {},
+    return enqueue(make_mailbox_element(std::move(sender), mid,
                                         std::forward<Ts>(xs)...),
                    ctx);
   }
