@@ -138,6 +138,7 @@ caf_add_component(
     caf/detail/default_mailbox.cpp
     caf/detail/default_mailbox.test.cpp
     caf/detail/format.test.cpp
+    caf/detail/forward_list.test.cpp
     caf/detail/get_process_id.cpp
     caf/detail/glob_match.cpp
     caf/detail/ieee_754.test.cpp

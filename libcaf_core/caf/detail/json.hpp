@@ -66,9 +66,6 @@ template <class T>
 using linked_list_iterator = caf::detail::forward_list_iterator<T>;
 
 template <class T>
-using linked_list_iterator = caf::detail::forward_list_iterator<T>;
-
-template <class T>
 using linked_list = caf::detail::forward_list<T>;
 
 /// Re-allocates the given string at the buffer resource.
