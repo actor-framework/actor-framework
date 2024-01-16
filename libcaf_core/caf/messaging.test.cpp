@@ -2,11 +2,11 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE messaging
+#include "caf/test/fixture/deterministic.hpp"
+#include "caf/test/scenario.hpp"
+#include "caf/test/test.hpp"
 
 #include "caf/event_based_actor.hpp"
-
-#include "core-test.hpp"
 
 using namespace caf;
 using namespace std::literals;
@@ -15,7 +15,7 @@ using self_ptr = event_based_actor*;
 
 namespace {
 
-struct fixture : test_coordinator_fixture<> {
+struct fixture : test::fixture::deterministic {
   actor uut1;
   actor uut2;
   disposable dis;
@@ -24,7 +24,7 @@ struct fixture : test_coordinator_fixture<> {
 
 } // namespace
 
-BEGIN_FIXTURE_SCOPE(fixture)
+WITH_FIXTURE(fixture) {
 
 SCENARIO("send transfers a message from one actor to another") {
   GIVEN("two actors: uut1 and uut2") {
@@ -34,15 +34,15 @@ SCENARIO("send transfers a message from one actor to another") {
           return {
             [this, self](int i) {
               had_message = true;
-              CHECK_EQ(i, 42);
-              CHECK_EQ(self->current_sender(), uut2);
+              check_eq(i, 42);
+              check_eq(self->current_sender(), uut2);
             },
-            [](float) { CAF_FAIL("float handler called"); },
+            [this](float) { fail("float handler called"); },
           };
         });
         uut2 = sys.spawn([this](self_ptr self) { self->send(uut1, 42); });
-        run();
-        CHECK(had_message);
+        dispatch_messages();
+        check(had_message);
       }
     }
   }
@@ -56,20 +56,20 @@ SCENARIO("delayed_send transfers the message after a relative timeout") {
           return {
             [this, self](int i) {
               had_message = true;
-              CHECK_EQ(i, 42);
-              CHECK_EQ(self->current_sender(), uut2);
+              check_eq(i, 42);
+              check_eq(self->current_sender(), uut2);
             },
-            [](float) { CAF_FAIL("float handler called"); },
+            [this](float) { fail("float handler called"); },
           };
         });
         uut2 = sys.spawn([this](self_ptr self) { //
           self->delayed_send(uut1, 1s, 42);
         });
-        sched.run();
-        CHECK(!had_message);
+        dispatch_messages();
+        check(!had_message);
         advance_time(1s);
-        sched.run();
-        CHECK(had_message);
+        dispatch_messages();
+        check(had_message);
       }
     }
   }
@@ -83,21 +83,21 @@ SCENARIO("scheduled_send transfers the message after an absolute timeout") {
           return {
             [this, self](int i) {
               had_message = true;
-              CHECK_EQ(i, 42);
-              CHECK_EQ(self->current_sender(), uut2);
+              check_eq(i, 42);
+              check_eq(self->current_sender(), uut2);
             },
-            [](float) { CAF_FAIL("float handler called"); },
+            [this](float) { fail("float handler called"); },
           };
         });
         uut2 = sys.spawn([this](self_ptr self) { //
           auto timeout = self->clock().now() + 1s;
           self->scheduled_send(uut1, timeout, 42);
         });
-        sched.run();
-        CHECK(!had_message);
+        dispatch_messages();
+        check(!had_message);
         advance_time(1s);
-        sched.run();
-        CHECK(had_message);
+        dispatch_messages();
+        check(had_message);
       }
     }
   }
@@ -111,15 +111,15 @@ SCENARIO("anon_send hides the sender of a message") {
           return {
             [this, self](int i) {
               had_message = true;
-              CHECK_EQ(i, 42);
-              CHECK_EQ(self->current_sender(), nullptr);
+              check_eq(i, 42);
+              check_eq(self->current_sender(), nullptr);
             },
-            [](float) { CAF_FAIL("float handler called"); },
+            [this](float) { fail("float handler called"); },
           };
         });
         uut2 = sys.spawn([this](self_ptr self) { self->anon_send(uut1, 42); });
-        run();
-        CHECK(had_message);
+        dispatch_messages();
+        check(had_message);
       }
     }
   }
@@ -133,20 +133,20 @@ SCENARIO("delayed_anon_send hides the sender of a message") {
           return {
             [this, self](int i) {
               had_message = true;
-              CHECK_EQ(i, 42);
-              CHECK_EQ(self->current_sender(), nullptr);
+              check_eq(i, 42);
+              check_eq(self->current_sender(), nullptr);
             },
-            [](float) { CAF_FAIL("float handler called"); },
+            [this](float) { fail("float handler called"); },
           };
         });
         uut2 = sys.spawn([this](self_ptr self) { //
           self->delayed_anon_send(uut1, 1s, 42);
         });
-        sched.run();
-        CHECK(!had_message);
+        dispatch_messages();
+        check(!had_message);
         advance_time(1s);
-        sched.run();
-        CHECK(had_message);
+        dispatch_messages();
+        check(had_message);
       }
     }
   }
@@ -160,21 +160,21 @@ SCENARIO("scheduled_anon_send hides the sender of a message") {
           return {
             [this, self](int i) {
               had_message = true;
-              CHECK_EQ(i, 42);
-              CHECK_EQ(self->current_sender(), nullptr);
+              check_eq(i, 42);
+              check_eq(self->current_sender(), nullptr);
             },
-            [](float) { CAF_FAIL("float handler called"); },
+            [this](float) { fail("float handler called"); },
           };
         });
         uut2 = sys.spawn([this](self_ptr self) { //
           auto timeout = self->clock().now() + 1s;
           self->scheduled_anon_send(uut1, timeout, 42);
         });
-        sched.run();
-        CHECK(!had_message);
+        dispatch_messages();
+        check(!had_message);
         advance_time(1s);
-        sched.run();
-        CHECK(had_message);
+        dispatch_messages();
+        check(had_message);
       }
     }
   }
@@ -188,20 +188,20 @@ SCENARIO("a delayed message may be canceled before its timeout") {
           return {
             [this, self](int) {
               had_message = true;
-              CHECK_EQ(self->current_sender(), uut2);
+              check_eq(self->current_sender(), uut2);
             },
-            [](float) { CAF_FAIL("float handler called"); },
+            [this](float) { fail("float handler called"); },
           };
         });
         uut2 = sys.spawn([this](self_ptr self) { //
           dis = self->delayed_send(uut1, 1s, 42);
         });
-        sched.run();
-        CHECK(!had_message);
+        dispatch_messages();
+        check(!had_message);
         dis.dispose();
         advance_time(1s);
-        run();
-        CHECK(!had_message);
+        dispatch_messages();
+        check(!had_message);
       }
     }
     WHEN("when disposing the message of delayed_anon_send before it arrives") {
@@ -210,20 +210,20 @@ SCENARIO("a delayed message may be canceled before its timeout") {
           return {
             [this, self](int) {
               had_message = true;
-              CHECK_EQ(self->current_sender(), uut2);
+              check_eq(self->current_sender(), uut2);
             },
-            [](float) { CAF_FAIL("float handler called"); },
+            [this](float) { fail("float handler called"); },
           };
         });
         uut2 = sys.spawn([this](self_ptr self) { //
           dis = self->delayed_anon_send(uut1, 1s, 42);
         });
-        sched.run();
-        CHECK(!had_message);
+        dispatch_messages();
+        check(!had_message);
         dis.dispose();
         advance_time(1s);
-        run();
-        CHECK(!had_message);
+        dispatch_messages();
+        check(!had_message);
       }
     }
   }
@@ -237,21 +237,21 @@ SCENARIO("a scheduled message may be canceled before its timeout") {
           return {
             [this, self](int) {
               had_message = true;
-              CHECK_EQ(self->current_sender(), uut2);
+              check_eq(self->current_sender(), uut2);
             },
-            [](float) { CAF_FAIL("float handler called"); },
+            [this](float) { fail("float handler called"); },
           };
         });
         uut2 = sys.spawn([this](self_ptr self) { //
           auto timeout = self->clock().now() + 1s;
           dis = self->scheduled_send(uut1, timeout, 42);
         });
-        sched.run();
-        CHECK(!had_message);
+        dispatch_messages();
+        check(!had_message);
         dis.dispose();
         advance_time(1s);
-        run();
-        CHECK(!had_message);
+        dispatch_messages();
+        check(!had_message);
       }
     }
     WHEN(
@@ -261,24 +261,24 @@ SCENARIO("a scheduled message may be canceled before its timeout") {
           return {
             [this, self](int) {
               had_message = true;
-              CHECK_EQ(self->current_sender(), uut2);
+              check_eq(self->current_sender(), uut2);
             },
-            [](float) { CAF_FAIL("float handler called"); },
+            [this](float) { fail("float handler called"); },
           };
         });
         uut2 = sys.spawn([this](self_ptr self) { //
           auto timeout = self->clock().now() + 1s;
           dis = self->scheduled_anon_send(uut1, timeout, 42);
         });
-        sched.run();
-        CHECK(!had_message);
+        dispatch_messages();
+        check(!had_message);
         dis.dispose();
         advance_time(1s);
-        run();
-        CHECK(!had_message);
+        dispatch_messages();
+        check(!had_message);
       }
     }
   }
 }
 
-END_FIXTURE_SCOPE()
+} // WITH_FIXTURE(fixture)

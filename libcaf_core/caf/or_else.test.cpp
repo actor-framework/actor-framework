@@ -2,13 +2,13 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE or_else
+#include "caf/test/test.hpp"
 
-#include "caf/all.hpp"
-
-#include "core-test.hpp"
-
-#define ERROR_HANDLER [&](error& err) { CAF_FAIL(err); }
+#include "caf/actor_system.hpp"
+#include "caf/actor_system_config.hpp"
+#include "caf/event_based_actor.hpp"
+#include "caf/response_handle.hpp"
+#include "caf/scoped_actor.hpp"
 
 using namespace caf;
 
@@ -42,35 +42,42 @@ struct fixture {
 
   void run_testee(const actor& testee) {
     scoped_actor self{system};
+    const auto& error_handler = [&](error& err) {
+      test::runnable::current().fail("{}", err);
+    };
+    auto& this_test = test::runnable::current();
     self->request(testee, infinite, int8_t{1})
-      .receive([](const std::string& str) { CHECK_EQ(str, "a"); },
-               ERROR_HANDLER);
+      .receive([&this_test](
+                 const std::string& str) { this_test.check_eq(str, "a"); },
+               error_handler);
     self->request(testee, infinite, int16_t{1})
-      .receive([](const std::string& str) { CHECK_EQ(str, "b"); },
-               ERROR_HANDLER);
+      .receive([&this_test](
+                 const std::string& str) { this_test.check_eq(str, "b"); },
+               error_handler);
     self->request(testee, infinite, int32_t{1})
-      .receive([](const std::string& str) { CHECK_EQ(str, "c"); },
-               ERROR_HANDLER);
+      .receive([&this_test](
+                 const std::string& str) { this_test.check_eq(str, "c"); },
+               error_handler);
     self->send_exit(testee, exit_reason::user_shutdown);
   }
 };
 
 } // namespace
 
-BEGIN_FIXTURE_SCOPE(fixture)
+WITH_FIXTURE(fixture) {
 
-CAF_TEST(composition1) {
+TEST("composition1") {
   run_testee(system.spawn(
     [=] { return handle_a().or_else(handle_b()).or_else(handle_c()); }));
 }
 
-CAF_TEST(composition2) {
+TEST("composition2") {
   run_testee(system.spawn([=] {
     return handle_a().or_else(handle_b()).or_else([](int32_t) { return "c"; });
   }));
 }
 
-CAF_TEST(composition3) {
+TEST("composition3") {
   run_testee(system.spawn([=] {
     return message_handler{[](int8_t) { return "a"; }}
       .or_else(handle_b())
@@ -78,4 +85,4 @@ CAF_TEST(composition3) {
   }));
 }
 
-END_FIXTURE_SCOPE()
+} // WITH_FIXTURE(fixture)

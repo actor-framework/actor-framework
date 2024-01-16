@@ -2,13 +2,14 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE metaprogramming
+#include "caf/test/test.hpp"
 
-#include "caf/all.hpp"
+#include "caf/deduce_mpi.hpp"
 #include "caf/detail/int_list.hpp"
 #include "caf/detail/type_list.hpp"
-
-#include "core-test.hpp"
+#include "caf/interface_mismatch.hpp"
+#include "caf/response_type.hpp"
+#include "caf/result.hpp"
 
 #include <cstdint>
 #include <string>
@@ -30,34 +31,34 @@ struct is_int<int> : std::true_type {};
 
 } // namespace
 
-CAF_TEST(metaprogramming) {
+TEST("metaprogramming") {
   using std::is_same;
   using l1 = type_list<int, float, std::string>;
   using r1 = tl_reverse<l1>::type;
-  CHECK((is_same<int, tl_at<l1, 0>::type>::value));
-  CHECK((is_same<float, tl_at<l1, 1>::type>::value));
-  CHECK((is_same<std::string, tl_at<l1, 2>::type>::value));
-  CHECK_EQ(3u, tl_size<l1>::value);
-  CHECK_EQ(tl_size<r1>::value, tl_size<l1>::value);
-  CHECK((is_same<tl_at<l1, 0>::type, tl_at<r1, 2>::type>::value));
-  CHECK((is_same<tl_at<l1, 1>::type, tl_at<r1, 1>::type>::value));
-  CHECK((is_same<tl_at<l1, 2>::type, tl_at<r1, 0>::type>::value));
+  check((is_same<int, tl_at<l1, 0>::type>::value));
+  check((is_same<float, tl_at<l1, 1>::type>::value));
+  check((is_same<std::string, tl_at<l1, 2>::type>::value));
+  check_eq(3u, tl_size<l1>::value);
+  check_eq(tl_size<r1>::value, tl_size<l1>::value);
+  check((is_same<tl_at<l1, 0>::type, tl_at<r1, 2>::type>::value));
+  check((is_same<tl_at<l1, 1>::type, tl_at<r1, 1>::type>::value));
+  check((is_same<tl_at<l1, 2>::type, tl_at<r1, 0>::type>::value));
   using l2 = tl_concat<type_list<int>, l1>::type;
-  CHECK((is_same<int, tl_head<l2>::type>::value));
-  CHECK((is_same<l1, tl_tail<l2>::type>::value));
-  CHECK_EQ((detail::tl_count<l1, is_int>::value), 1u);
-  CHECK_EQ((detail::tl_count<l2, is_int>::value), 2u);
+  check((is_same<int, tl_head<l2>::type>::value));
+  check((is_same<l1, tl_tail<l2>::type>::value));
+  check_eq((detail::tl_count<l1, is_int>::value), 1u);
+  check_eq((detail::tl_count<l2, is_int>::value), 2u);
   using il0 = int_list<0, 1, 2, 3, 4, 5>;
   using il1 = int_list<4, 5>;
   using il2 = il_right<il0, 2>::type;
-  CHECK((is_same<il2, il1>::value));
+  check((is_same<il2, il1>::value));
   /* test tl_subset_of */ {
     using list_a = type_list<int, float, double>;
     using list_b = type_list<float, int, double, std::string>;
-    CHECK((tl_subset_of_v<list_a, list_b>) );
-    CHECK(!(tl_subset_of_v<list_b, list_a>) );
-    CHECK((tl_subset_of_v<list_a, list_a>) );
-    CHECK((tl_subset_of_v<list_b, list_b>) );
+    check((tl_subset_of_v<list_a, list_b>) );
+    check(!(tl_subset_of_v<list_b, list_a>) );
+    check((tl_subset_of_v<list_a, list_a>) );
+    check((tl_subset_of_v<list_b, list_b>) );
   }
 }
 
@@ -136,7 +137,7 @@ ostream& operator<<(ostream& out, const pair<bool, int>& x) {
 
 } // namespace std
 
-CAF_TEST(typed_behavior_assignment) {
+TEST("typed_behavior_assignment") {
   using bh1 = typed_beh<result<double>(int), result<int, int>(double, double)>;
   // compatible handlers resulting in perfect match
   auto f1 = [=](int) { return 0.; };
@@ -145,24 +146,24 @@ CAF_TEST(typed_behavior_assignment) {
   auto e1 = [=](int) { return 0.f; };
   auto e2 = [=](double, double) { return std::make_tuple(0.f, 0.f); };
   // omit one handler
-  CHECK_EQ(bi_pair(false, -1), tb_assign<bh1>(f1));
-  CHECK_EQ(bi_pair(false, -1), tb_assign<bh1>(f2));
-  CHECK_EQ(bi_pair(false, -1), tb_assign<bh1>(e1));
-  CHECK_EQ(bi_pair(false, -1), tb_assign<bh1>(e2));
+  check_eq(bi_pair(false, -1), tb_assign<bh1>(f1));
+  check_eq(bi_pair(false, -1), tb_assign<bh1>(f2));
+  check_eq(bi_pair(false, -1), tb_assign<bh1>(e1));
+  check_eq(bi_pair(false, -1), tb_assign<bh1>(e2));
   // any valid alteration of (f1, f2)
-  CHECK_EQ(bi_pair(true, 2), tb_assign<bh1>(f1, f2));
-  CHECK_EQ(bi_pair(true, 2), tb_assign<bh1>(f2, f1));
+  check_eq(bi_pair(true, 2), tb_assign<bh1>(f1, f2));
+  check_eq(bi_pair(true, 2), tb_assign<bh1>(f2, f1));
   // any invalid alteration of (f1, f2, e1, e2)
-  CHECK_EQ(bi_pair(false, 1), tb_assign<bh1>(f1, e1));
-  CHECK_EQ(bi_pair(false, 1), tb_assign<bh1>(f1, e2));
-  CHECK_EQ(bi_pair(false, 0), tb_assign<bh1>(e1, f1));
-  CHECK_EQ(bi_pair(false, 0), tb_assign<bh1>(e1, f2));
-  CHECK_EQ(bi_pair(false, 0), tb_assign<bh1>(e1, e2));
-  CHECK_EQ(bi_pair(false, 1), tb_assign<bh1>(f2, e1));
-  CHECK_EQ(bi_pair(false, 1), tb_assign<bh1>(f2, e2));
-  CHECK_EQ(bi_pair(false, 0), tb_assign<bh1>(e2, f1));
-  CHECK_EQ(bi_pair(false, 0), tb_assign<bh1>(e2, f2));
-  CHECK_EQ(bi_pair(false, 0), tb_assign<bh1>(e2, e1));
+  check_eq(bi_pair(false, 1), tb_assign<bh1>(f1, e1));
+  check_eq(bi_pair(false, 1), tb_assign<bh1>(f1, e2));
+  check_eq(bi_pair(false, 0), tb_assign<bh1>(e1, f1));
+  check_eq(bi_pair(false, 0), tb_assign<bh1>(e1, f2));
+  check_eq(bi_pair(false, 0), tb_assign<bh1>(e1, e2));
+  check_eq(bi_pair(false, 1), tb_assign<bh1>(f2, e1));
+  check_eq(bi_pair(false, 1), tb_assign<bh1>(f2, e2));
+  check_eq(bi_pair(false, 0), tb_assign<bh1>(e2, f1));
+  check_eq(bi_pair(false, 0), tb_assign<bh1>(e2, f2));
+  check_eq(bi_pair(false, 0), tb_assign<bh1>(e2, e1));
   using bh2
     = typed_beh<result<void>(int),           //
                 result<void>(int, int),      //
@@ -184,29 +185,29 @@ CAF_TEST(typed_behavior_assignment) {
   auto h7 = [](int, int, int, int, int, int, int, int) {};
   auto h8 = [](int, int, int, int, int, int, int, int, int) {};
   auto h9 = [](int, int, int, int, int, int, int, int, int, int) {};
-  CHECK_EQ(bi_pair(true, 10),
+  check_eq(bi_pair(true, 10),
            tb_assign<bh2>(h0, h1, h2, h3, h4, h5, h6, h7, h8, h9));
-  CHECK_EQ(bi_pair(false, 0),
+  check_eq(bi_pair(false, 0),
            tb_assign<bh2>(e1, h1, h2, h3, h4, h5, h6, h7, h8, h9));
-  CHECK_EQ(bi_pair(false, 1),
+  check_eq(bi_pair(false, 1),
            tb_assign<bh2>(h0, e1, h2, h3, h4, h5, h6, h7, h8, h9));
-  CHECK_EQ(bi_pair(false, 2),
+  check_eq(bi_pair(false, 2),
            tb_assign<bh2>(h0, h1, e1, h3, h4, h5, h6, h7, h8, h9));
-  CHECK_EQ(bi_pair(false, 3),
+  check_eq(bi_pair(false, 3),
            tb_assign<bh2>(h0, h1, h2, e1, h4, h5, h6, h7, h8, h9));
-  CHECK_EQ(bi_pair(false, 4),
+  check_eq(bi_pair(false, 4),
            tb_assign<bh2>(h0, h1, h2, h3, e1, h5, h6, h7, h8, h9));
-  CHECK_EQ(bi_pair(false, 5),
+  check_eq(bi_pair(false, 5),
            tb_assign<bh2>(h0, h1, h2, h3, h4, e1, h6, h7, h8, h9));
-  CHECK_EQ(bi_pair(false, 6),
+  check_eq(bi_pair(false, 6),
            tb_assign<bh2>(h0, h1, h2, h3, h4, h5, e1, h7, h8, h9));
-  CHECK_EQ(bi_pair(false, 7),
+  check_eq(bi_pair(false, 7),
            tb_assign<bh2>(h0, h1, h2, h3, h4, h5, h6, e1, h8, h9));
-  CHECK_EQ(bi_pair(false, 8),
+  check_eq(bi_pair(false, 8),
            tb_assign<bh2>(h0, h1, h2, h3, h4, h5, h6, h7, e1, h9));
-  CHECK_EQ(bi_pair(false, 9),
+  check_eq(bi_pair(false, 9),
            tb_assign<bh2>(h0, h1, h2, h3, h4, h5, h6, h7, h8, e1));
-  CHECK_EQ(bi_pair(false, -1),
+  check_eq(bi_pair(false, -1),
            tb_assign<bh2>(h0, h1, h2, h3, h4, h5, h6, h7, h8));
 }
 
@@ -225,15 +226,15 @@ private:
   std::string str_;
 };
 
-CAF_TEST(is_comparable) {
-  CHECK((is_comparable_v<double, std::string>) == false);
-  CHECK((is_comparable_v<foo, foo>) == false);
-  CHECK((is_comparable_v<bar, bar>) == true);
-  CHECK((is_comparable_v<double, bar>) == false);
-  CHECK((is_comparable_v<bar, double>) == false);
-  CHECK((is_comparable_v<baz, baz>) == true);
-  CHECK((is_comparable_v<double, baz>) == false);
-  CHECK((is_comparable_v<baz, double>) == false);
-  CHECK((is_comparable_v<std::string, baz>) == false);
-  CHECK((is_comparable_v<baz, std::string>) == false);
+TEST("is_comparable") {
+  check((is_comparable_v<double, std::string>) == false);
+  check((is_comparable_v<foo, foo>) == false);
+  check((is_comparable_v<bar, bar>) == true);
+  check((is_comparable_v<double, bar>) == false);
+  check((is_comparable_v<bar, double>) == false);
+  check((is_comparable_v<baz, baz>) == true);
+  check((is_comparable_v<double, baz>) == false);
+  check((is_comparable_v<baz, double>) == false);
+  check((is_comparable_v<std::string, baz>) == false);
+  check((is_comparable_v<baz, std::string>) == false);
 }
