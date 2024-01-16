@@ -12,9 +12,6 @@
 
 using namespace caf;
 
-#define ERROR_HANDLER                                                          \
-  [&](error& err) { test::runnable::current().fail("{}", err); }
-
 namespace {
 
 message_handler handle_a() {
@@ -45,19 +42,22 @@ struct fixture {
 
   void run_testee(const actor& testee) {
     scoped_actor self{system};
+    const auto& error_handler = [&](error& err) {
+      test::runnable::current().fail("{}", err);
+    };
     auto& this_test = test::runnable::current();
     self->request(testee, infinite, int8_t{1})
       .receive([&this_test](
                  const std::string& str) { this_test.check_eq(str, "a"); },
-               ERROR_HANDLER);
+               error_handler);
     self->request(testee, infinite, int16_t{1})
       .receive([&this_test](
                  const std::string& str) { this_test.check_eq(str, "b"); },
-               ERROR_HANDLER);
+               error_handler);
     self->request(testee, infinite, int32_t{1})
       .receive([&this_test](
                  const std::string& str) { this_test.check_eq(str, "c"); },
-               ERROR_HANDLER);
+               error_handler);
     self->send_exit(testee, exit_reason::user_shutdown);
   }
 };

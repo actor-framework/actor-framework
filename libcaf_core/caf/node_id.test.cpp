@@ -51,7 +51,7 @@ T unbox(std::optional<T> x) {
 
 } // namespace
 
-#define check_PARSE_OK(str, ...)                                               \
+#define CHECK_PARSE_OK(str, ...)                                               \
   do {                                                                         \
     check(node_id::can_parse(str));                                            \
     node_id nid;                                                               \
@@ -64,19 +64,19 @@ TEST("node IDs are convertible from string") {
     1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
   }};
   auto uri_id = unbox(make_uri("ip://foo:8080"));
-  check_PARSE_OK("0102030405060708090A0B0C0D0E0F1011121314#1", 1, hash);
-  check_PARSE_OK("0102030405060708090A0B0C0D0E0F1011121314#123", 123, hash);
-  check_PARSE_OK("ip://foo:8080", uri_id);
+  CHECK_PARSE_OK("0102030405060708090A0B0C0D0E0F1011121314#1", 1, hash);
+  CHECK_PARSE_OK("0102030405060708090A0B0C0D0E0F1011121314#123", 123, hash);
+  CHECK_PARSE_OK("ip://foo:8080", uri_id);
 }
 
-#define check_PARSE_FAIL(str) check(!node_id::can_parse(str))
+#define CHECK_PARSE_FAIL(str) check(!node_id::can_parse(str))
 
 TEST("node IDs reject malformed strings") {
   // not URIs
-  check_PARSE_FAIL("foobar");
-  check_PARSE_FAIL("CAF#1");
+  CHECK_PARSE_FAIL("foobar");
+  CHECK_PARSE_FAIL("CAF#1");
   // uint32_t overflow on the process ID
-  check_PARSE_FAIL("0102030405060708090A0B0C0D0E0F1011121314#42949672950");
+  CHECK_PARSE_FAIL("0102030405060708090A0B0C0D0E0F1011121314#42949672950");
 }
 
 TEST("node IDs are serializable") {
