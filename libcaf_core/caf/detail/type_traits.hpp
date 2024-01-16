@@ -648,7 +648,8 @@ template <class T>
 struct has_size {
 private:
   template <class List>
-  static auto sfinae(List* l) -> decltype(l->size(), std::true_type());
+  static auto sfinae(List* l)
+    -> decltype(static_cast<void>(l->size()), std::true_type());
 
   template <class U>
   static auto sfinae(...) -> std::false_type;
