@@ -59,7 +59,9 @@ public:
   }
 
   forward_list_iterator operator++(int) noexcept {
-    return forward_list_iterator{ptr_->next};
+    auto temp = ptr_;
+    ptr_ = ptr_->next;
+    return forward_list_iterator{temp};
   }
 
   T& operator*() const noexcept {
