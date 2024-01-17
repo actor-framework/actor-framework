@@ -5,7 +5,6 @@
 #pragma once
 
 #include "caf/abstract_actor.hpp"
-#include "caf/abstract_channel.hpp"
 #include "caf/actor.hpp"
 #include "caf/actor_addr.hpp"
 #include "caf/actor_clock.hpp"

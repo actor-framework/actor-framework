@@ -6,6 +6,7 @@
 
 #include "caf/default_attachable.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
+#include "caf/mailbox_element.hpp"
 #include "caf/send.hpp"
 
 #include <atomic>
@@ -41,7 +42,7 @@ void broadcast_dispatch(actor_system&, actor_pool::guard_type&,
   CAF_ASSERT(!vec.empty());
   auto msg = ptr->payload;
   for (auto& worker : vec)
-    worker->enqueue(ptr->sender, ptr->mid, msg, host);
+    worker->enqueue(make_mailbox_element(ptr->sender, ptr->mid, msg), host);
 }
 
 } // namespace
@@ -194,8 +195,8 @@ bool actor_pool::filter(guard_type& guard, const strong_actor_ptr& sender,
   if (content.match_elements<sys_atom, get_atom>()) {
     auto cpy = workers_;
     guard.unlock();
-    sender->enqueue(nullptr, mid.response_id(), make_message(std::move(cpy)),
-                    eu);
+    sender->enqueue(
+      make_mailbox_element(nullptr, mid.response_id(), std::move(cpy)), eu);
     return true;
   }
   if (workers_.empty()) {
@@ -203,7 +204,8 @@ bool actor_pool::filter(guard_type& guard, const strong_actor_ptr& sender,
     if (mid.is_request() && sender != nullptr) {
       // Tell client we have ignored this request message by sending and empty
       // message back.
-      sender->enqueue(nullptr, mid.response_id(), message{}, eu);
+      sender->enqueue(
+        make_mailbox_element(nullptr, mid.response_id(), message{}), eu);
     }
     return true;
   }

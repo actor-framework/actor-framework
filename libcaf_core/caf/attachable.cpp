@@ -61,9 +61,9 @@ public:
   void actor_exited(const error& rsn, execution_unit* host) override {
     if (auto observer = actor_cast<strong_actor_ptr>(observer_)) {
       auto observed = actor_cast<strong_actor_ptr>(observed_);
-      observer->enqueue(std::move(observed), make_message_id(),
-                        make_message(stream_abort_msg{sink_flow_id_, rsn}),
-                        host);
+      auto ptr = make_mailbox_element(std::move(observed), make_message_id(),
+                                      stream_abort_msg{sink_flow_id_, rsn});
+      observer->enqueue(std::move(ptr), host);
     }
   }
 

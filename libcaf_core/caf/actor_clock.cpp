@@ -8,6 +8,7 @@
 #include "caf/actor_cast.hpp"
 #include "caf/actor_control_block.hpp"
 #include "caf/disposable.hpp"
+#include "caf/mailbox_element.hpp"
 #include "caf/sec.hpp"
 
 namespace caf {
@@ -79,9 +80,11 @@ public:
 
 private:
   void do_run(strong_actor_ptr& ptr) {
-    if (!decorated_->disposed())
-      ptr->enqueue(nullptr, make_message_id(), make_message(action{decorated_}),
+    if (!decorated_->disposed()) {
+      ptr->enqueue(make_mailbox_element(nullptr, make_message_id(),
+                                        action{decorated_}),
                    nullptr);
+    }
   }
 
   std::mutex mtx_;

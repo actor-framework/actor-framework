@@ -18,7 +18,7 @@ namespace caf::detail {
 void sync_request_bouncer::operator()(const strong_actor_ptr& sender,
                                       const message_id& mid) const {
   if (sender && mid.is_request())
-    sender->enqueue(nullptr, mid.response_id(), make_message(rsn),
+    sender->enqueue(make_mailbox_element(nullptr, mid.response_id(), rsn),
                     // TODO: this breaks out of the execution unit
                     nullptr);
 }

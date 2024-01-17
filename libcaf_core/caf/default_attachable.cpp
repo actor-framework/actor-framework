@@ -6,6 +6,7 @@
 
 #include "caf/actor.hpp"
 #include "caf/actor_cast.hpp"
+#include "caf/mailbox_element.hpp"
 #include "caf/message.hpp"
 #include "caf/system_messages.hpp"
 
@@ -26,9 +27,10 @@ void default_attachable::actor_exited(const error& rsn, execution_unit* host) {
 
   if (auto observer = actor_cast<strong_actor_ptr>(observer_)) {
     auto observed = actor_cast<strong_actor_ptr>(observed_);
-    observer->enqueue(std::move(observed), make_message_id(priority_),
-                      factory(actor_cast<abstract_actor*>(observed_), rsn),
-                      host);
+    auto ptr = make_mailbox_element(
+      std::move(observed), make_message_id(priority_),
+      factory(actor_cast<abstract_actor*>(observed_), rsn));
+    observer->enqueue(std::move(ptr), host);
   }
 }
 

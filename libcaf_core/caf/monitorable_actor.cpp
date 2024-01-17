@@ -9,6 +9,7 @@
 #include "caf/default_attachable.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/logger.hpp"
+#include "caf/mailbox_element.hpp"
 #include "caf/message_handler.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
 #include "caf/sec.hpp"
@@ -128,9 +129,11 @@ void monitorable_actor::add_link(abstract_actor* x) {
       attach_impl(tmp);
     }
   });
-  if (send_exit_immediately)
-    x->enqueue(nullptr, make_message_id(),
-               make_message(exit_msg{address(), fail_state}), nullptr);
+  if (send_exit_immediately) {
+    auto ptr = make_mailbox_element(nullptr, make_message_id(),
+                                    exit_msg{address(), fail_state});
+    x->enqueue(std::move(ptr), nullptr);
+  }
 }
 
 void monitorable_actor::remove_link(abstract_actor* x) {
@@ -158,9 +161,11 @@ bool monitorable_actor::add_backlink(abstract_actor* x) {
     attach_impl(tmp);
     success = true;
   }
-  if (send_exit_immediately)
-    x->enqueue(nullptr, make_message_id(),
-               make_message(exit_msg{address(), fail_state}), nullptr);
+  if (send_exit_immediately) {
+    auto ptr = make_mailbox_element(nullptr, make_message_id(),
+                                    exit_msg{address(), fail_state});
+    x->enqueue(std::move(ptr), nullptr);
+  }
   return success;
 }
 
