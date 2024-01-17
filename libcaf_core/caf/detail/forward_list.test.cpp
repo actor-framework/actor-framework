@@ -38,7 +38,6 @@ TEST("lists are convertible to strings") {
 TEST("push_back adds elements to the back of the list") {
   detail::monotonic_buffer_resource resource;
   list_type uut{&resource};
-  // list_type uut;
   uut.push_back(1);
   uut.push_back(2);
   uut.push_back(3);

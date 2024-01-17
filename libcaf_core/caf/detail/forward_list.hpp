@@ -94,9 +94,6 @@ operator!=(forward_list_iterator<T> lhs, forward_list_iterator<T> rhs) {
 //
 // The default-constructed list object is an empty list that does not allow
 // push_back.
-//
-// TODO: should not be part of the json namespace. Probably should be merged
-//       into intrusive::linked_list.
 template <class T>
 class forward_list {
 public:
