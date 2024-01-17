@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/detail/build_config.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/forward_list.hpp"
 #include "caf/detail/print.hpp"
