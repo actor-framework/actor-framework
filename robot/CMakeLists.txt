@@ -6,6 +6,18 @@ find_package(Python COMPONENTS Interpreter)
 
 # -- tests for the CAF::core module --------------------------------------------
 
+function(add_robot_test dir name)
+  set(test_name caf-robot-${dir}-${name})
+  add_test(
+    NAME ${test_name}
+    COMMAND
+      ${Python_EXECUTABLE}
+        -m robot
+        ${ARGN}
+        "${CMAKE_CURRENT_SOURCE_DIR}/${dir}/${name}.robot")
+  set_tests_properties(${test_name} PROPERTIES TIMEOUT 300)
+endfunction()
+
 execute_process(
   COMMAND ${Python_EXECUTABLE} -c "import robot"
   RESULT_VARIABLE EXIT_CODE
@@ -23,45 +35,28 @@ caf_add_test_executable(
   DEPENDENCIES
     CAF::core)
 
-add_test(
-  NAME "robot-config-options"
-  COMMAND
-    ${Python_EXECUTABLE}
-      -m robot
-      --variable BINARY_PATH:$<TARGET_FILE:caf-robot-config-options-driver>
-      --variable CONFIG_FILE_DIR:${CMAKE_CURRENT_SOURCE_DIR}/config
-      "${CMAKE_CURRENT_SOURCE_DIR}/config/options.robot")
+add_robot_test(
+  config
+  options
+  --variable BINARY_PATH:$<TARGET_FILE:caf-robot-config-options-driver>
+  --variable CONFIG_FILE_DIR:${CMAKE_CURRENT_SOURCE_DIR}/config)
 
-add_test(
-  NAME "robot-config-read-config-file"
-  COMMAND
-    ${Python_EXECUTABLE}
-      -m robot
-      --variable BINARY_PATH:$<TARGET_FILE:hello_world>
-      "${CMAKE_CURRENT_SOURCE_DIR}/config/read-config-file.robot")
-
-add_test(
-  NAME "robot-config-dump-config"
-  COMMAND
-    ${Python_EXECUTABLE}
-      -m robot
-      --variable BINARY_PATH:$<TARGET_FILE:hello_world>
-      "${CMAKE_CURRENT_SOURCE_DIR}/config/dump-config.robot")
+add_robot_test(
+  config
+  dump-config
+  --variable BINARY_PATH:$<TARGET_FILE:hello_world>)
 
 caf_add_test_executable(
   caf-robot-flow-merge-driver
   SOURCES
-    flow/merge/driver.cpp
+    flow/merge-driver.cpp
   DEPENDENCIES
     CAF::core)
 
-add_test(
-  NAME "caf-robot-flow-merge"
-  COMMAND
-    ${Python_EXECUTABLE}
-      -m robot
-      --variable BINARY_PATH:$<TARGET_FILE:caf-robot-flow-merge-driver>
-      "${CMAKE_CURRENT_SOURCE_DIR}/flow/merge/merge.robot")
+add_robot_test(
+  flow
+  merge
+  --variable BINARY_PATH:$<TARGET_FILE:caf-robot-flow-merge-driver>)
 
 # The logging test assumes that the CAF_LOG_LEVEL is set to TRACE.
 if (CAF_LOG_LEVEL STREQUAL "TRACE")
@@ -71,13 +66,10 @@ if (CAF_LOG_LEVEL STREQUAL "TRACE")
       logging/driver.cpp
     DEPENDENCIES
       CAF::core)
-  add_test(
-    NAME "robot-logging-output"
-    COMMAND
-      ${Python_EXECUTABLE}
-        -m robot
-        --variable BINARY_PATH:$<TARGET_FILE:caf-robot-logging-driver>
-        "${CMAKE_CURRENT_SOURCE_DIR}/logging/output.robot")
+  add_robot_test(
+    logging
+    output
+    --variable BINARY_PATH:$<TARGET_FILE:caf-robot-logging-driver>)
 endif()
 
 # -- tests for the CAF::io module ----------------------------------------------
@@ -90,13 +82,10 @@ if(TARGET CAF::io)
     DEPENDENCIES
       CAF::io)
 
-  add_test(
-    NAME "robot-stream-remote"
-    COMMAND
-      ${Python_EXECUTABLE}
-        -m robot
-        --variable BINARY_PATH:$<TARGET_FILE:caf-robot-stream-driver>
-        "${CMAKE_CURRENT_SOURCE_DIR}/stream/remote.robot")
+  add_robot_test(
+    stream
+    remote
+    --variable BINARY_PATH:$<TARGET_FILE:caf-robot-stream-driver>)
 
   caf_add_test_executable(
     caf-robot-middleman-driver
@@ -105,53 +94,37 @@ if(TARGET CAF::io)
     DEPENDENCIES
       CAF::io)
 
-  add_test(
-    NAME "robot-middleman"
-    COMMAND
-      ${Python_EXECUTABLE}
-        -m robot
-        --variable BINARY_PATH:$<TARGET_FILE:caf-robot-middleman-driver>
-        "${CMAKE_CURRENT_SOURCE_DIR}/middleman/middleman.robot")
+  add_robot_test(
+    middleman
+    middleman
+    --variable BINARY_PATH:$<TARGET_FILE:caf-robot-middleman-driver>)
 
 endif()
 
 # -- tests for the CAF::net module ---------------------------------------------
 if(TARGET CAF::net AND CAF_ENABLE_EXAMPLES)
 
-  add_test(
-    NAME "robot-web-socket-quote-server"
-    COMMAND
-      ${Python_EXECUTABLE}
-        -m robot
-        --variable BINARY_PATH:$<TARGET_FILE:quote-server>
-        --variable SSL_PATH:${CMAKE_CURRENT_SOURCE_DIR}
-        "${CMAKE_CURRENT_SOURCE_DIR}/web_socket/quote-server.robot")
+  add_robot_test(
+    web-socket
+    quote-server
+    --variable BINARY_PATH:$<TARGET_FILE:quote-server>
+    --variable SSL_PATH:${CMAKE_CURRENT_SOURCE_DIR})
 
-  add_test(
-    NAME "robot-web-socket-echo"
-    COMMAND
-      ${Python_EXECUTABLE}
-        -m robot
-        --variable BINARY_PATH:$<TARGET_FILE:echo>
-        --variable SSL_PATH:${CMAKE_CURRENT_SOURCE_DIR}
-        "${CMAKE_CURRENT_SOURCE_DIR}/web_socket/echo.robot")
+  add_robot_test(
+    web-socket
+    echo
+    --variable BINARY_PATH:$<TARGET_FILE:echo>
+    --variable SSL_PATH:${CMAKE_CURRENT_SOURCE_DIR})
 
-add_test(
-  NAME "robot-http-rest"
-  COMMAND
-    ${Python_EXECUTABLE}
-      -m robot
-      --variable BINARY_PATH:$<TARGET_FILE:rest>
-      --variable SSL_PATH:${CMAKE_CURRENT_SOURCE_DIR}
-      "${CMAKE_CURRENT_SOURCE_DIR}/http/rest.robot")
+  add_robot_test(
+    http
+    rest
+    --variable BINARY_PATH:$<TARGET_FILE:rest>
+    --variable SSL_PATH:${CMAKE_CURRENT_SOURCE_DIR})
 
-
-  add_test(
-    NAME "robot-http-client"
-    COMMAND
-      ${Python_EXECUTABLE}
-        -m robot
-        --variable BINARY_PATH:$<TARGET_FILE:client>
-        "${CMAKE_CURRENT_SOURCE_DIR}/http/client.robot")
+  add_robot_test(
+    http
+    client
+    --variable BINARY_PATH:$<TARGET_FILE:client>)
 
 endif()
