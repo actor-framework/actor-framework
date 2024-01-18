@@ -2,9 +2,10 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE ipv6_endpoint
-
 #include "caf/ipv6_endpoint.hpp"
+
+#include "caf/test/caf_test_main.hpp"
+#include "caf/test/test.hpp"
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
@@ -14,8 +15,6 @@
 #include "caf/ipv4_endpoint.hpp"
 #include "caf/ipv6_address.hpp"
 #include "caf/span.hpp"
-
-#include "core-test.hpp"
 
 #include <cassert>
 #include <vector>
@@ -27,7 +26,7 @@ namespace {
 ipv6_endpoint operator"" _ep(const char* str, size_t size) {
   ipv6_endpoint result;
   if (auto err = detail::parse(std::string_view{str, size}, result))
-    CAF_FAIL("unable to parse input: " << err);
+    test::runnable::current().fail("unable to parse input: {}", err);
   return result;
 }
 
@@ -40,61 +39,61 @@ struct fixture {
     byte_buffer buf;
     binary_serializer sink(sys, buf);
     if (!sink.apply(x))
-      CAF_FAIL("serialization failed: " << sink.get_error());
+      test::runnable::current().fail("serialization failed: {}",
+                                     sink.get_error());
     binary_deserializer source(sys, make_span(buf));
     T y;
     if (!source.apply(y))
-      CAF_FAIL("serialization failed: " << source.get_error());
+      test::runnable::current().fail("serialization failed: {}",
+                                     source.get_error());
     return y;
   }
 };
 
-#define CHECK_TO_STRING(addr) CHECK_EQ(addr, to_string(addr##_ep))
+#define CHECK_TO_STRING(addr) check_eq(addr, to_string(addr##_ep))
 
 #define CHECK_COMPARISON(addr1, addr2)                                         \
-  CHECK_GT(addr2##_ep, addr1##_ep);                                            \
-  CHECK_GE(addr2##_ep, addr1##_ep);                                            \
-  CHECK_GE(addr1##_ep, addr1##_ep);                                            \
-  CHECK_GE(addr2##_ep, addr2##_ep);                                            \
-  CHECK_EQ(addr1##_ep, addr1##_ep);                                            \
-  CHECK_EQ(addr2##_ep, addr2##_ep);                                            \
-  CHECK_LE(addr1##_ep, addr2##_ep);                                            \
-  CHECK_LE(addr1##_ep, addr1##_ep);                                            \
-  CHECK_LE(addr2##_ep, addr2##_ep);                                            \
-  CHECK_NE(addr1##_ep, addr2##_ep);                                            \
-  CHECK_NE(addr2##_ep, addr1##_ep);
+  check_gt(addr2##_ep, addr1##_ep);                                            \
+  check_ge(addr2##_ep, addr1##_ep);                                            \
+  check_ge(addr1##_ep, addr1##_ep);                                            \
+  check_ge(addr2##_ep, addr2##_ep);                                            \
+  check_eq(addr1##_ep, addr1##_ep);                                            \
+  check_eq(addr2##_ep, addr2##_ep);                                            \
+  check_le(addr1##_ep, addr2##_ep);                                            \
+  check_le(addr1##_ep, addr1##_ep);                                            \
+  check_le(addr2##_ep, addr2##_ep);                                            \
+  check_ne(addr1##_ep, addr2##_ep);                                            \
+  check_ne(addr2##_ep, addr1##_ep);
 
-#define CHECK_SERIALIZATION(addr) CHECK_EQ(addr##_ep, roundtrip(addr##_ep))
+#define CHECK_SERIALIZATION(addr) check_eq(addr##_ep, roundtrip(addr##_ep))
 
-} // namespace
+WITH_FIXTURE(fixture) {
 
-BEGIN_FIXTURE_SCOPE(fixture)
-
-CAF_TEST(constructing assigning and hash_code) {
+TEST("constructing assigning and hash_code") {
   const uint16_t port = 8888;
   ipv6_address::array_type bytes{0, 0, 0, 0, 0, 0, 0, 0,
                                  0, 0, 0, 0, 0, 0, 0, 1};
   auto addr = ipv6_address{bytes};
   ipv6_endpoint ep1(addr, port);
-  CHECK_EQ(ep1.address(), addr);
-  CHECK_EQ(ep1.port(), port);
+  check_eq(ep1.address(), addr);
+  check_eq(ep1.port(), port);
   ipv6_endpoint ep2;
   ep2.address(addr);
   ep2.port(port);
-  CHECK_EQ(ep2.address(), addr);
-  CHECK_EQ(ep2.port(), port);
-  CHECK_EQ(ep1, ep2);
-  CHECK_EQ(ep1.hash_code(), ep2.hash_code());
+  check_eq(ep2.address(), addr);
+  check_eq(ep2.port(), port);
+  check_eq(ep1, ep2);
+  check_eq(ep1.hash_code(), ep2.hash_code());
 }
 
-CAF_TEST(comparison to IPv4) {
+TEST("comparison to IPv4") {
   ipv4_endpoint v4{ipv4_address({127, 0, 0, 1}), 8080};
   ipv6_endpoint v6{v4.address(), v4.port()};
-  CHECK_EQ(v4, v6);
-  CHECK_EQ(v6, v4);
+  check_eq(v4, v6);
+  check_eq(v6, v4);
 }
 
-CAF_TEST(to_string) {
+TEST("to_string") {
   CHECK_TO_STRING("[::1]:8888");
   CHECK_TO_STRING("[4e::d00:0:ed00:0:1]:1234");
   CHECK_TO_STRING("[::1]:1111");
@@ -110,7 +109,7 @@ CAF_TEST(to_string) {
   CHECK_TO_STRING("[4432::33:1]:999");
 }
 
-CAF_TEST(comparison) {
+TEST("comparison") {
   CHECK_COMPARISON("[::1]:8888", "[::2]:8888");
   CHECK_COMPARISON("[4e::d00:0:ed00:0:1]:1234", "[4f::d00:12:ed00:0:1]:1234");
   CHECK_COMPARISON("[::1]:1111", "[4f::1]:2222");
@@ -121,7 +120,7 @@ CAF_TEST(comparison) {
   CHECK_COMPARISON("[4432::33:1]:872", "[4432::33:1]:999");
 }
 
-CAF_TEST(serialization) {
+TEST("serialization") {
   CHECK_SERIALIZATION("[::1]:8888");
   CHECK_SERIALIZATION("[4e::d00:0:ed00:0:1]:1234");
   CHECK_SERIALIZATION("[::1]:1111");
@@ -137,4 +136,6 @@ CAF_TEST(serialization) {
   CHECK_SERIALIZATION("[4432::33:1]:999");
 }
 
-END_FIXTURE_SCOPE()
+} // WITH_FIXTURE(fixture)
+
+} // namespace
