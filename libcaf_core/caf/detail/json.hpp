@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "caf/detail/forward_list.hpp"
+#include "caf/detail/mbr_list.hpp"
 #include "caf/detail/monotonic_buffer_resource.hpp"
 #include "caf/detail/print.hpp"
 #include "caf/intrusive_ptr.hpp"
@@ -60,13 +60,13 @@ constexpr bool operator!=(undefined_t, undefined_t) {
 }
 
 template <class T>
-using linked_list_node = caf::detail::forward_list_node<T>;
+using linked_list_node = caf::detail::mbr_list_node<T>;
 
 template <class T>
-using linked_list_iterator = caf::detail::forward_list_iterator<T>;
+using linked_list_iterator = caf::detail::mbr_list_iterator<T>;
 
 template <class T>
-using linked_list = caf::detail::forward_list<T>;
+using linked_list = caf::detail::mbr_list<T>;
 
 /// Re-allocates the given string at the buffer resource.
 CAF_CORE_EXPORT std::string_view realloc(std::string_view str,

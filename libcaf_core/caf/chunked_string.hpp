@@ -6,7 +6,7 @@
 
 #include "caf/detail/build_config.hpp"
 #include "caf/detail/core_export.hpp"
-#include "caf/detail/forward_list.hpp"
+#include "caf/detail/mbr_list.hpp"
 #include "caf/detail/print.hpp"
 #include "caf/fwd.hpp"
 
@@ -22,9 +22,9 @@ namespace caf {
 /// Represents a chunked string as a linked list of string views.
 class CAF_CORE_EXPORT chunked_string {
 public:
-  using node_type = detail::forward_list_node<std::string_view>;
+  using node_type = detail::mbr_list_node<std::string_view>;
 
-  using const_iterator = detail::forward_list_iterator<const std::string_view>;
+  using const_iterator = detail::mbr_list_iterator<const std::string_view>;
 
   explicit chunked_string(const node_type* head) noexcept : head_(head) {
     // nop
@@ -79,7 +79,7 @@ CAF_CORE_EXPORT std::ostream& operator<<(std::ostream& out,
 /// Builds a chunked string by allocating each chunk on a monotonic buffer.
 class CAF_CORE_EXPORT chunked_string_builder {
 public:
-  using list_type = detail::forward_list<std::string_view>;
+  using list_type = detail::mbr_list<std::string_view>;
 
   using resource_type = detail::monotonic_buffer_resource;
 

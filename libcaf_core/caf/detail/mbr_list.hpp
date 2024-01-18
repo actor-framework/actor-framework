@@ -12,13 +12,13 @@
 namespace caf::detail {
 
 template <class T>
-struct forward_list_node {
+struct mbr_list_node {
   T value;
-  forward_list_node* next;
+  mbr_list_node* next;
 };
 
 template <class T>
-class forward_list_iterator {
+class mbr_list_iterator {
 public:
   using difference_type = ptrdiff_t;
 
@@ -32,36 +32,33 @@ public:
 
   using node_pointer
     = std::conditional_t<std::is_const_v<T>,
-                         const forward_list_node<std::remove_const_t<T>>*,
-                         forward_list_node<value_type>*>;
+                         const mbr_list_node<std::remove_const_t<T>>*,
+                         mbr_list_node<value_type>*>;
 
-  constexpr forward_list_iterator() noexcept = default;
+  constexpr mbr_list_iterator() noexcept = default;
 
-  constexpr explicit forward_list_iterator(node_pointer ptr) noexcept
-    : ptr_(ptr) {
+  constexpr explicit mbr_list_iterator(node_pointer ptr) noexcept : ptr_(ptr) {
     // nop
   }
 
-  constexpr forward_list_iterator(const forward_list_iterator&) noexcept
-    = default;
+  constexpr mbr_list_iterator(const mbr_list_iterator&) noexcept = default;
 
-  constexpr forward_list_iterator&
-  operator=(const forward_list_iterator&) noexcept
+  constexpr mbr_list_iterator& operator=(const mbr_list_iterator&) noexcept
     = default;
 
   constexpr node_pointer get() const noexcept {
     return ptr_;
   }
 
-  forward_list_iterator& operator++() noexcept {
+  mbr_list_iterator& operator++() noexcept {
     ptr_ = ptr_->next;
     return *this;
   }
 
-  forward_list_iterator operator++(int) noexcept {
+  mbr_list_iterator operator++(int) noexcept {
     auto temp = ptr_;
     ptr_ = ptr_->next;
-    return forward_list_iterator{temp};
+    return mbr_list_iterator{temp};
   }
 
   T& operator*() const noexcept {
@@ -77,14 +74,12 @@ private:
 };
 
 template <class T>
-constexpr bool
-operator==(forward_list_iterator<T> lhs, forward_list_iterator<T> rhs) {
+constexpr bool operator==(mbr_list_iterator<T> lhs, mbr_list_iterator<T> rhs) {
   return lhs.get() == rhs.get();
 }
 
 template <class T>
-constexpr bool
-operator!=(forward_list_iterator<T> lhs, forward_list_iterator<T> rhs) {
+constexpr bool operator!=(mbr_list_iterator<T> lhs, mbr_list_iterator<T> rhs) {
   return !(lhs == rhs);
 }
 
@@ -95,11 +90,11 @@ operator!=(forward_list_iterator<T> lhs, forward_list_iterator<T> rhs) {
 // The default-constructed list object is an empty list that does not allow
 // push_back.
 template <class T>
-class forward_list {
+class mbr_list {
 public:
   using value_type = T;
 
-  using node_type = forward_list_node<value_type>;
+  using node_type = mbr_list_node<value_type>;
 
   using allocator_type = monotonic_buffer_resource::allocator<node_type>;
 
@@ -115,15 +110,15 @@ public:
 
   using const_node_pointer = const node_type*;
 
-  using iterator = forward_list_iterator<value_type>;
+  using iterator = mbr_list_iterator<value_type>;
 
-  using const_iterator = forward_list_iterator<const value_type>;
+  using const_iterator = mbr_list_iterator<const value_type>;
 
-  forward_list() noexcept {
+  mbr_list() noexcept {
     // nop
   }
 
-  ~forward_list() {
+  ~mbr_list() {
     auto* ptr = head_;
     while (ptr != nullptr) {
       auto* next = ptr->next;
@@ -133,19 +128,18 @@ public:
     }
   }
 
-  explicit forward_list(allocator_type allocator) noexcept
-    : allocator_(allocator) {
+  explicit mbr_list(allocator_type allocator) noexcept : allocator_(allocator) {
     // nop
   }
 
-  explicit forward_list(monotonic_buffer_resource* resource) noexcept
+  explicit mbr_list(monotonic_buffer_resource* resource) noexcept
     : allocator_(resource) {
     // nop
   }
 
-  forward_list(const forward_list&) = delete;
+  mbr_list(const mbr_list&) = delete;
 
-  forward_list(forward_list&& other)
+  mbr_list(mbr_list&& other)
     : size_(other.size_),
       head_(other.head_),
       tail_(other.tail_),
@@ -155,9 +149,9 @@ public:
     other.tail_ = nullptr;
   }
 
-  forward_list& operator=(const forward_list&) = delete;
+  mbr_list& operator=(const mbr_list&) = delete;
 
-  forward_list& operator=(forward_list&& other) {
+  mbr_list& operator=(mbr_list&& other) {
     using std::swap;
     swap(size_, other.size_);
     swap(head_, other.head_);
@@ -260,12 +254,12 @@ private:
 };
 
 template <class T>
-bool operator==(const forward_list<T>& lhs, const forward_list<T>& rhs) {
+bool operator==(const mbr_list<T>& lhs, const mbr_list<T>& rhs) {
   return std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
 }
 
 template <class T>
-bool operator!=(const forward_list<T>& lhs, const forward_list<T>& rhs) {
+bool operator!=(const mbr_list<T>& lhs, const mbr_list<T>& rhs) {
   return !(lhs == rhs);
 }
 

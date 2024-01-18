@@ -2,7 +2,7 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#include "caf/detail/forward_list.hpp"
+#include "caf/detail/mbr_list.hpp"
 
 #include "caf/test/test.hpp"
 
@@ -12,7 +12,7 @@ using namespace caf;
 
 namespace {
 
-using list_type = detail::forward_list<int>;
+using list_type = detail::mbr_list<int>;
 
 template <class... Ts>
 void fill(list_type& xs, Ts... args) {
