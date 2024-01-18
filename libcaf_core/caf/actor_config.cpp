@@ -9,9 +9,7 @@
 namespace caf {
 
 actor_config::actor_config(execution_unit* host, local_actor* parent)
-  : host(host),
-    parent(parent),
-    flags(abstract_channel::is_abstract_actor_flag) {
+  : host(host), parent(parent) {
   // nop
 }
 
@@ -24,8 +22,6 @@ std::string to_string(const actor_config& x) {
       result += name;
     }
   };
-  add(abstract_channel::is_actor_bind_decorator_flag, "bind_decorator_flag");
-  add(abstract_channel::is_actor_dot_decorator_flag, "dot_decorator_flag");
   add(abstract_actor::is_detached_flag, "detached_flag");
   add(abstract_actor::is_blocking_flag, "blocking_flag");
   add(abstract_actor::is_hidden_flag, "hidden_flag");

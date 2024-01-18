@@ -82,8 +82,6 @@ public:
 
   bool enqueue(mailbox_element_ptr, execution_unit*) override;
 
-  bool enqueue(strong_actor_ptr, message_id, message, execution_unit*) override;
-
   // -- overridden modifiers of local_actor ------------------------------------
 
   void launch(execution_unit* eu, bool lazy, bool hide) override;

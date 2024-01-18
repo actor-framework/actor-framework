@@ -27,15 +27,13 @@ bool forwarding_actor_proxy::forward_msg(strong_actor_ptr sender,
                 << CAF_ARG(sender) << CAF_ARG(mid) << CAF_ARG(msg));
   if (msg.match_elements<exit_msg>())
     unlink_from(msg.get_as<exit_msg>(0).source);
+  auto ptr = make_mailbox_element(nullptr, make_message_id(), forward_atom_v,
+                                  std::move(sender), strong_actor_ptr{ctrl()},
+                                  mid, std::move(msg));
   std::shared_lock guard{broker_mtx_};
   if (broker_)
-    return broker_->enqueue(nullptr, make_message_id(),
-                            make_message(forward_atom_v, std::move(sender),
-                                         strong_actor_ptr{ctrl()}, mid,
-                                         std::move(msg)),
-                            nullptr);
-  else
-    return false;
+    return broker_->enqueue(std::move(ptr), nullptr);
+  return false;
 }
 
 bool forwarding_actor_proxy::enqueue(mailbox_element_ptr what,

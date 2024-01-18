@@ -16,6 +16,7 @@
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/execution_unit.hpp"
 #include "caf/logger.hpp"
+#include "caf/mailbox_element.hpp"
 #include "caf/message.hpp"
 #include "caf/message_id.hpp"
 #include "caf/node_id.hpp"
@@ -98,8 +99,9 @@ public:
     auto t0 = telemetry::timer::clock_type::now();
     if (!source.apply(msg)) {
       CAF_LOG_ERROR("failed to read message content:" << source.get_error());
-      src->enqueue(nullptr, mid.response_id(),
-                   make_message(make_error(sec::malformed_message)), nullptr);
+      auto ptr = make_mailbox_element(nullptr, mid.response_id(),
+                                      make_error(sec::malformed_message));
+      src->enqueue(std::move(ptr), nullptr);
       return;
     }
     telemetry::timer::observe(mm_metrics.deserialization_time, t0);

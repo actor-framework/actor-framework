@@ -113,9 +113,11 @@ void delayed_anon_send(const Dest& dest,
 template <class Dest>
 void anon_send_exit(const Dest& dest, exit_reason reason) {
   CAF_LOG_TRACE(CAF_ARG(dest) << CAF_ARG(reason));
-  if (dest)
-    dest->enqueue(nullptr, make_message_id(),
-                  make_message(exit_msg{dest->address(), reason}), nullptr);
+  if (dest) {
+    auto ptr = make_mailbox_element(nullptr, make_message_id(),
+                                    exit_msg{dest->address(), reason});
+    dest->enqueue(std::move(ptr), nullptr);
+  }
 }
 
 /// Anonymously sends `to` an exit message.

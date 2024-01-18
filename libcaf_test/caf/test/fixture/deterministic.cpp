@@ -15,6 +15,7 @@
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/detail/test_export.hpp"
 #include "caf/log/test.hpp"
+#include "caf/mailbox_element.hpp"
 #include "caf/scheduled_actor.hpp"
 
 #include <numeric>
@@ -671,7 +672,8 @@ void deterministic::inject_exit(const strong_actor_ptr& hdl, error reason) {
   if (!hdl)
     return;
   auto emsg = exit_msg{hdl->address(), std::move(reason)};
-  if (!hdl->enqueue(nullptr, make_message_id(), make_message(emsg), nullptr)) {
+  if (!hdl->enqueue(make_mailbox_element(nullptr, make_message_id(), emsg),
+                    nullptr)) {
     // Nothing to do here. The actor already terminated.
     return;
   }

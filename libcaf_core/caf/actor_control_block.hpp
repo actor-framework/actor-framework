@@ -114,9 +114,6 @@ public:
     return nid;
   }
 
-  bool enqueue(strong_actor_ptr sender, message_id mid, message content,
-               execution_unit* host);
-
   bool enqueue(mailbox_element_ptr what, execution_unit* host);
 
   /// @endcond

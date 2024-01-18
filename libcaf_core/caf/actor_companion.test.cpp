@@ -19,12 +19,13 @@ TEST("actor_companion forwards messages to a custom handler") {
   auto companion = actor_cast<strong_actor_ptr>(sys.spawn<actor_companion>());
   auto self
     = static_cast<actor_companion*>(actor_cast<abstract_actor*>(companion));
-  check_eq(self->enqueue(nullptr, make_message_id(), make_message("42"),
+  check_eq(self->enqueue(make_mailbox_element(nullptr, make_message_id(), "42"),
                          nullptr),
            false);
   message msg;
   self->on_enqueue([&msg](mailbox_element_ptr ptr) { msg = ptr->content(); });
-  check(self->enqueue(nullptr, make_message_id(), make_message("42"), nullptr));
+  check(self->enqueue(make_mailbox_element(nullptr, make_message_id(), "42"),
+                      nullptr));
   check_eq(to_string(msg), R"_(message("42"))_");
   check_eq(self->mailbox().size(), 0u);
 }

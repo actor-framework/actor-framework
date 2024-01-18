@@ -17,11 +17,6 @@ actor_addr actor_control_block::address() {
   return {this, true};
 }
 
-bool actor_control_block::enqueue(strong_actor_ptr sender, message_id mid,
-                                  message content, execution_unit* host) {
-  return get()->enqueue(std::move(sender), mid, std::move(content), host);
-}
-
 bool actor_control_block::enqueue(mailbox_element_ptr what,
                                   execution_unit* host) {
   return get()->enqueue(std::move(what), host);

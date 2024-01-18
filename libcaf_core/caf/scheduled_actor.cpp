@@ -18,6 +18,7 @@
 #include "caf/flow/observable_builder.hpp"
 #include "caf/flow/op/mcast.hpp"
 #include "caf/log/system.hpp"
+#include "caf/mailbox_element.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
 #include "caf/stream.hpp"
 
@@ -473,7 +474,8 @@ void scheduled_actor::deref_execution_context() const noexcept {
 }
 
 void scheduled_actor::schedule(action what) {
-  enqueue(nullptr, make_message_id(), make_message(std::move(what)), nullptr);
+  enqueue(make_mailbox_element(nullptr, make_message_id(), std::move(what)),
+          nullptr);
 }
 
 void scheduled_actor::delay(action what) {
@@ -491,7 +493,7 @@ void scheduled_actor::delay(action what) {
     }};
   }
   auto res_id = new_request_id(message_priority::normal).response_id();
-  enqueue(nullptr, res_id, make_message(std::move(what)), context_);
+  enqueue(make_mailbox_element(nullptr, res_id, std::move(what)), context_);
   add_multiplexed_response_handler(res_id, delay_bhvr_);
 }
 

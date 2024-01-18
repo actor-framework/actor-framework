@@ -68,7 +68,6 @@ caf_add_component(
     ${CAF_CORE_HEADERS}
   SOURCES
     caf/abstract_actor.cpp
-    caf/abstract_channel.cpp
     caf/abstract_mailbox.cpp
     caf/action.cpp
     caf/action.test.cpp
