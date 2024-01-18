@@ -50,9 +50,7 @@ public:
   linked_list() noexcept = default;
 
   linked_list(linked_list&& other) noexcept {
-    if (other.empty()) {
-      init();
-    } else {
+    if (!other.empty()) {
       head_.next = other.head_.next;
       tail_.next = other.tail_.next;
       tail_.next->next = &tail_;

@@ -147,6 +147,7 @@ caf_add_component(
     caf/detail/log_level_map.cpp
     caf/detail/log_level_map.test.cpp
     caf/detail/mailbox_factory.cpp
+    caf/detail/mbr_list.test.cpp
     caf/detail/message_builder_element.cpp
     caf/detail/message_data.cpp
     caf/detail/meta_object.cpp

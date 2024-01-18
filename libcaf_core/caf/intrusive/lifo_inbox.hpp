@@ -8,9 +8,7 @@
 #include "caf/intrusive/inbox_result.hpp"
 
 #include <atomic>
-#include <condition_variable>
 #include <memory>
-#include <mutex>
 
 namespace caf::intrusive {
 
