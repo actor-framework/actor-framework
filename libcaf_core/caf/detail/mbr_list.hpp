@@ -8,6 +8,8 @@
 
 #include <cstddef>
 #include <iterator>
+#include <new>
+#include <utility>
 
 namespace caf::detail {
 
