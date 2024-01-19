@@ -22,7 +22,6 @@
 #include "caf/message_handler.hpp"
 #include "caf/message_id.hpp"
 #include "caf/message_priority.hpp"
-#include "caf/monitorable_actor.hpp"
 #include "caf/response_promise.hpp"
 #include "caf/response_type.hpp"
 #include "caf/resumable.hpp"
@@ -43,7 +42,7 @@ namespace caf {
 
 /// Base class for actors running on this node, either
 /// living in an own thread or cooperatively scheduled.
-class CAF_CORE_EXPORT local_actor : public monitorable_actor {
+class CAF_CORE_EXPORT local_actor : public abstract_actor {
 public:
   // -- member types -----------------------------------------------------------
 

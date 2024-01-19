@@ -6,7 +6,7 @@
 
 namespace caf {
 
-actor_proxy::actor_proxy(actor_config& cfg) : monitorable_actor(cfg) {
+actor_proxy::actor_proxy(actor_config& cfg) : abstract_actor(cfg) {
   // nop
 }
 

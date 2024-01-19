@@ -174,13 +174,13 @@ public:
 
   // -- linking and monitoring -------------------------------------------------
 
-  /// @copydoc monitorable_actor::link_to
+  /// @copydoc abstract_actor::link_to
   template <class ActorHandle>
   void link_to(const ActorHandle& x) {
     self_->link_to(x);
   }
 
-  /// @copydoc monitorable_actor::unlink_from
+  /// @copydoc abstract_actor::unlink_from
   template <class ActorHandle>
   void unlink_from(const ActorHandle& x) {
     self_->unlink_from(x);

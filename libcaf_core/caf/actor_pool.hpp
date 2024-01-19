@@ -9,7 +9,6 @@
 #include "caf/detail/split_join.hpp"
 #include "caf/execution_unit.hpp"
 #include "caf/mailbox_element.hpp"
-#include "caf/monitorable_actor.hpp"
 
 #include <functional>
 #include <mutex>
@@ -39,7 +38,7 @@ namespace caf {
 /// messages with as little overhead as possible, because the dispatching
 /// runs in the context of the sender.
 /// @experimental
-class CAF_CORE_EXPORT actor_pool : public monitorable_actor {
+class CAF_CORE_EXPORT actor_pool : public abstract_actor {
 public:
   using actor_vec = std::vector<actor>;
   using factory = std::function<actor()>;
@@ -88,6 +87,8 @@ public:
   bool enqueue(mailbox_element_ptr what, execution_unit* eu) override;
 
   actor_pool(actor_config& cfg);
+
+  const char* name() const override;
 
   void on_destroy() override;
 

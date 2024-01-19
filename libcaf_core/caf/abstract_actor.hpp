@@ -17,6 +17,7 @@
 #include "caf/node_id.hpp"
 
 #include <atomic>
+#include <condition_variable>
 #include <cstdint>
 #include <memory>
 #include <mutex>
@@ -24,6 +25,13 @@
 #include <string>
 #include <type_traits>
 #include <vector>
+
+namespace caf::io::basp {
+
+template <class>
+class remote_message_handler;
+
+} // namespace caf::io::basp
 
 namespace caf {
 
@@ -37,35 +45,27 @@ constexpr actor_id invalid_actor_id = 0;
 /// Base class for all actor implementations.
 class CAF_CORE_EXPORT abstract_actor {
 public:
-  actor_control_block* ctrl() const;
+  // -- friends ----------------------------------------------------------------
+
+  template <class T>
+  friend class actor_storage;
+
+  template <class>
+  friend class caf::io::basp::remote_message_handler;
+
+  // -- constructors, destructors, and assignment operators --------------------
 
   virtual ~abstract_actor();
 
   abstract_actor(const abstract_actor&) = delete;
+
   abstract_actor& operator=(const abstract_actor&) = delete;
 
-  /// Cleans up any remaining state before the destructor is called.
-  /// This function makes sure it is safe to call virtual functions
-  /// in sub classes before destroying the object, because calling
-  /// virtual function in the destructor itself is not safe. Any override
-  /// implementation is required to call `super::destroy()` at the end.
-  virtual void on_destroy();
-
-  /// Enqueues a new message wrapped in a `mailbox_element` to the actor.
-  /// This `enqueue` variant allows to define forwarding chains.
-  /// @returns `true` if the message has added to the mailbox, `false`
-  ///          otherwise. In the latter case, the actor terminated and the
-  ///          message has been dropped. Once this function returns `false`, it
-  ///          returns `false` for all future invocations.
-  /// @note The returned value is purely informational and may be used to
-  ///       discard actor handles early. Messages may still get dropped later
-  ///       even if this function returns `true`. In particular when dealing
-  ///       with remote actors.
-  virtual bool enqueue(mailbox_element_ptr what, execution_unit* host) = 0;
+  // -- attachables ------------------------------------------------------------
 
   /// Attaches `ptr` to this actor. The actor will call `ptr->detach(...)` on
   /// exit, or immediately if it already finished execution.
-  virtual void attach(attachable_ptr ptr) = 0;
+  void attach(attachable_ptr ptr);
 
   /// Convenience function that attaches the functor `f` to this actor. The
   /// actor executes `f()` on exit or immediately if it is not running.
@@ -74,11 +74,41 @@ public:
     attach(attachable_ptr{new detail::functor_attachable<F>(std::move(f))});
   }
 
-  /// Returns the logical actor address.
-  actor_addr address() const noexcept;
-
   /// Detaches the first attached object that matches `what`.
-  virtual size_t detach(const attachable::token& what) = 0;
+  size_t detach(const attachable::token& what);
+
+  // -- linking ----------------------------------------------------------------
+
+  /// Links this actor to `other`.
+  void link_to(const actor_addr& other);
+
+  /// Links this actor to `other`.
+  template <class ActorHandle>
+  void link_to(const ActorHandle& other) {
+    if (other) {
+      if (auto* ptr = other.get()->get(); ptr != this)
+        add_link(other.get()->get());
+    }
+  }
+
+  /// Unlinks this actor from `addr`.
+  void unlink_from(const actor_addr& other);
+
+  /// Links this actor to `hdl`.
+  template <class ActorHandle>
+  void unlink_from(const ActorHandle& other) {
+    if (other) {
+      if (auto* ptr = other.get()->get(); ptr != this)
+        remove_link(other.get()->get());
+    }
+  }
+
+  // -- properties -------------------------------------------------------------
+
+  /// Returns an implementation-dependent name for logging purposes, which
+  /// is only valid as long as the actor is running. The default
+  /// implementation simply returns "actor".
+  virtual const char* name() const = 0;
 
   /// Returns the set of accepted messages types as strings or
   /// an empty set if this actor is untyped.
@@ -93,9 +123,25 @@ public:
   /// Returns the system that created this actor (or proxy).
   actor_system& home_system() const noexcept;
 
-  // -- here be dragons: end of public interface -------------------------------
+  /// Returns the control block for this actor.
+  actor_control_block* ctrl() const;
 
-  /// @cond PRIVATE
+  /// Returns the logical actor address.
+  actor_addr address() const noexcept;
+
+  // -- messaging --------------------------------------------------------------
+
+  /// Enqueues a new message wrapped in a `mailbox_element` to the actor.
+  /// This `enqueue` variant allows to define forwarding chains.
+  /// @returns `true` if the message has added to the mailbox, `false`
+  ///          otherwise. In the latter case, the actor terminated and the
+  ///          message has been dropped. Once this function returns `false`, it
+  ///          returns `false` for all future invocations.
+  /// @note The returned value is purely informational and may be used to
+  ///       discard actor handles early. Messages may still get dropped later
+  ///       even if this function returns `true`. In particular when dealing
+  ///       with remote actors.
+  virtual bool enqueue(mailbox_element_ptr what, execution_unit* host) = 0;
 
   /// Called by the testing DSL to peek at the next element in the mailbox. Do
   /// not call this function in production code! The default implementation
@@ -103,6 +149,17 @@ public:
   /// @returns A pointer to the next mailbox element or `nullptr` if the
   ///          mailbox is empty or the actor does not have a mailbox.
   virtual mailbox_element* peek_at_next_mailbox_element();
+
+  /// Called by the runtime system to perform cleanup actions for this actor.
+  /// Subtypes should always call this member function when overriding it.
+  /// This member function is thread-safe, and if the actor has already exited
+  /// upon invocation, nothing is done. The return value of this member
+  /// function is ignored by scheduled actors.
+  virtual bool cleanup(error&& reason, execution_unit* host);
+
+  // -- here be dragons: end of public interface -------------------------------
+
+  /// @cond PRIVATE
 
   template <class... Ts>
   bool eq_impl(message_id mid, strong_actor_ptr sender, execution_unit* ctx,
@@ -146,22 +203,6 @@ public:
   /// Unsets `is_registered_flag` and calls `system().registry().dec_running()`.
   void unregister_from_system();
 
-  /// Causes the actor to establish a link to `other`.
-  virtual void add_link(abstract_actor* other) = 0;
-
-  /// Causes the actor to remove any established link to `other`.
-  virtual void remove_link(abstract_actor* other) = 0;
-
-  /// Adds an entry to `other` to the link table of this actor.
-  /// @warning Must be called inside a critical section, i.e.,
-  ///          while holding `mtx_`.
-  virtual bool add_backlink(abstract_actor* other) = 0;
-
-  /// Removes an entry to `other` from the link table of this actor.
-  /// @warning Must be called inside a critical section, i.e.,
-  ///          while holding `mtx_`.
-  virtual bool remove_backlink(abstract_actor* other) = 0;
-
   /// Calls `fun` with exclusive access to an actor's state.
   template <class F>
   auto exclusive_critical_section(F fun) -> decltype(fun()) {
@@ -199,6 +240,22 @@ public:
   /// @endcond
 
 protected:
+  // -- callbacks --------------------------------------------------------------
+
+  /// Cleans up any remaining state before the destructor is called.
+  /// This function makes sure it is safe to call virtual functions
+  /// in sub classes before destroying the object, because calling
+  /// virtual function in the destructor itself is not safe. Any override
+  /// implementation is required to call `super::destroy()` at the end.
+  virtual void on_destroy();
+
+  /// Allows subclasses to add additional cleanup code to the
+  /// critical section in `cleanup`. This member function is
+  /// called inside of a critical section.
+  virtual void on_cleanup(const error& reason);
+
+  // -- properties -------------------------------------------------------------
+
   // note: *both* operations use relaxed memory order, this is because
   // only the actor itself is granted write access while all access
   // from other actors or threads is always read-only; further, only
@@ -213,16 +270,54 @@ protected:
     flags_.store(new_value, std::memory_order_relaxed);
   }
 
+  // -- constructors, destructors, and assignment operators --------------------
+
   explicit abstract_actor(actor_config& cfg);
 
-  // Accumulates several state and type flags. Subtypes may use only the
-  // first 20 bits, i.e., the bitmask 0xFFF00000 is reserved for
-  // channel-related flags.
+  // -- attachables ------------------------------------------------------------
+
+  // precondition: `mtx_` is acquired
+  void attach_impl(attachable_ptr& ptr);
+
+  // precondition: `mtx_` is acquired
+  size_t detach_impl(const attachable::token& what, bool stop_on_hit = false,
+                     bool dry_run = false);
+
+  // -- linking ----------------------------------------------------------------
+
+  /// Causes the actor to establish a link to `other`.
+  void add_link(abstract_actor* other);
+
+  /// Causes the actor to remove any established link to `other`.
+  void remove_link(abstract_actor* other);
+
+  /// Adds an entry to `other` to the link table of this actor.
+  /// @warning Must be called inside a critical section, i.e.,
+  ///          while holding `mtx_`.
+  virtual bool add_backlink(abstract_actor* other);
+
+  /// Removes an entry to `other` from the link table of this actor.
+  /// @warning Must be called inside a critical section, i.e.,
+  ///          while holding `mtx_`.
+  virtual bool remove_backlink(abstract_actor* other);
+
+  // -- member variables -------------------------------------------------------
+
+  /// Holds several state and type flags.
   std::atomic<int> flags_;
 
-  // Guards potentially concurrent access to the state. For example,
-  // `exit_state_`, `attachables_`, and `links_` in a `monitorable_actor`.
+  /// Guards members that may be subject to concurrent access . For example,
+  /// `exit_state_`, `attachables_`, and `links_`.
   mutable std::mutex mtx_;
+
+  /// Allows blocking actors to actively wait for incoming messages.
+  mutable std::condition_variable cv_;
+
+  /// Stores the user-defined exit reason if this actor has finished execution.
+  error fail_state_;
+
+  /// Points to the first attachable in the linked list of attachables (if any).
+  attachable_ptr attachables_head_;
 };
 
 } // namespace caf

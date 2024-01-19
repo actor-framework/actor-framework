@@ -28,8 +28,10 @@ class CAF_CORE_EXPORT actor : detail::comparable<actor>,
                               detail::comparable<actor, actor_addr>,
                               detail::comparable<actor, strong_actor_ptr> {
 public:
-  // -- friend types that need access to private ctors
+  // -- friends ----------------------------------------------------------------
+
   friend class local_actor;
+  friend class abstract_actor;
 
   using signatures = none_t;
 

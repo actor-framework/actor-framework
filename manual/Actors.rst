@@ -63,9 +63,8 @@ The class ``local_actor`` is the root type for locally executed actors in CAF.
 It defines all common operations. However, users of the library usually do not
 interact with this class directly and instead use one of the derived classes
 ``event_based_actor`` or ``typed_event_based_actor``. The following table also
-includes member function inherited from ``monitorable_actor`` and
-``abstract_actor`` (implementation details that we only mention here for the
-sake of completeness).
+includes member function inherited from ``abstract_actor`` (implementation
+details that we only mention here for the sake of completeness).
 
 +-------------------------------------+--------------------------------------------------------+
 | **Types**                           |                                                        |

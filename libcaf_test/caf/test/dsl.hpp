@@ -841,9 +841,9 @@ public:
       test_coordinator* parent_;
     };
 
-    class dummy_printer : public caf::monitorable_actor {
+    class dummy_printer : public caf::abstract_actor {
     public:
-      dummy_printer(caf::actor_config& cfg) : monitorable_actor(cfg) {
+      dummy_printer(caf::actor_config& cfg) : abstract_actor(cfg) {
         mh_.assign([&](caf::add_atom, caf::actor_id, const std::string& str) {
           printf("%s", str.c_str());
         });
@@ -857,6 +857,10 @@ public:
 
       void setup_metrics() {
         // nop
+      }
+
+      const char* name() const override {
+        return "test.dummy-printer";
       }
 
     private:
