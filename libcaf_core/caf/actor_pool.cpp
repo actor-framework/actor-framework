@@ -118,14 +118,6 @@ const char* actor_pool::name() const {
   return "caf.actor-pool";
 }
 
-void actor_pool::on_destroy() {
-  CAF_PUSH_AID_FROM_PTR(this);
-  if (!getf(is_cleaned_up_flag)) {
-    cleanup(exit_reason::unreachable, nullptr);
-    unregister_from_system();
-  }
-}
-
 void actor_pool::on_cleanup(const error& reason) {
   CAF_PUSH_AID_FROM_PTR(this);
   CAF_IGNORE_UNUSED(reason);

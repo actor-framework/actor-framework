@@ -66,17 +66,6 @@ local_actor::~local_actor() {
   // nop
 }
 
-void local_actor::on_destroy() {
-  CAF_PUSH_AID_FROM_PTR(this);
-#ifdef CAF_ENABLE_ACTOR_PROFILER
-  system().profiler_remove_actor(*this);
-#endif
-  if (!getf(is_cleaned_up_flag)) {
-    on_exit();
-    cleanup(exit_reason::unreachable, nullptr);
-  }
-}
-
 void local_actor::setup_metrics() {
   metrics_ = make_instance_metrics(this);
 }
@@ -167,13 +156,13 @@ void local_actor::initialize() {
   CAF_LOG_TRACE(CAF_ARG2("id", id()) << CAF_ARG2("name", name()));
 }
 
-bool local_actor::cleanup(error&& fail_state, execution_unit* host) {
-  CAF_LOG_TRACE(CAF_ARG(fail_state));
-  // tell registry we're done
-  unregister_from_system();
-  CAF_LOG_TERMINATE_EVENT(this, fail_state);
-  abstract_actor::cleanup(std::move(fail_state), host);
-  return true;
+void local_actor::on_cleanup([[maybe_unused]] const error& reason) {
+  CAF_LOG_TRACE(CAF_ARG(reason));
+  on_exit();
+  CAF_LOG_TERMINATE_EVENT(this, reason);
+#ifdef CAF_ENABLE_ACTOR_PROFILER
+  system().profiler_remove_actor(*this);
+#endif
 }
 
 // -- send functions -----------------------------------------------------------

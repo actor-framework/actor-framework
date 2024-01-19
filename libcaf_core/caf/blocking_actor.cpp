@@ -124,15 +124,9 @@ public:
       auto ptr = std::current_exception();
       rsn = scheduled_actor::default_exception_handler(self_, ptr);
     }
-    try {
-      self_->on_exit();
-    } catch (...) {
-      // simply ignore exception
-    }
 #else
     self_->act();
     rsn = self_->fail_state();
-    self_->on_exit();
 #endif
     self_->cleanup(std::move(rsn), ctx);
     intrusive_ptr_release(self_->ctrl());
@@ -365,17 +359,18 @@ size_t blocking_actor::attach_functor(const strong_actor_ptr& ptr) {
   return 1;
 }
 
-bool blocking_actor::cleanup(error&& fail_state, execution_unit* host) {
+void blocking_actor::on_cleanup(const error& reason) {
   if (!mailbox_.closed()) {
     unstash();
-    auto dropped = mailbox_.close(fail_state);
+    auto dropped = mailbox_.close(reason);
     while (dropped > 0 && getf(abstract_actor::collects_metrics_flag)) {
       auto val = static_cast<int64_t>(dropped);
       metrics_.mailbox_size->dec(val);
     }
   }
+  on_exit();
   // Dispatch to parent's `cleanup` function.
-  return super::cleanup(std::move(fail_state), host);
+  return super::on_cleanup(reason);
 }
 
 void blocking_actor::unstash() {

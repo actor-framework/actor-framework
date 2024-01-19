@@ -90,7 +90,7 @@ public:
 
   ~local_actor() override;
 
-  void on_destroy() override;
+  void on_cleanup(const error&) override;
 
   // This function performs additional steps to initialize actor-specific
   // metrics. It calls virtual functions and thus cannot run as part of the
@@ -368,8 +368,6 @@ public:
   }
 
   virtual void initialize();
-
-  bool cleanup(error&& fail_state, execution_unit* host) override;
 
   message_id new_request_id(message_priority mp) noexcept;
 

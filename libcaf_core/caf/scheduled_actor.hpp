@@ -206,7 +206,7 @@ public:
 
   void launch(execution_unit* eu, bool lazy, bool hide) override;
 
-  bool cleanup(error&& fail_state, execution_unit* host) override;
+  void on_cleanup(const error& reason) override;
 
   // -- overridden functions of resumable --------------------------------------
 

@@ -160,11 +160,11 @@ void abstract_actor_shell::launch(execution_unit*, bool, bool hide) {
     register_at_system();
 }
 
-bool abstract_actor_shell::cleanup(error&& fail_state, execution_unit* host) {
-  CAF_LOG_TRACE(CAF_ARG(fail_state));
+void abstract_actor_shell::on_cleanup(const error& reason) {
+  CAF_LOG_TRACE(CAF_ARG(reason));
   // Clear mailbox.
   if (!mailbox_.closed()) {
-    auto dropped = mailbox_.close(fail_state);
+    auto dropped = mailbox_.close(reason);
     while (dropped > 0 && getf(abstract_actor::collects_metrics_flag)) {
       auto val = static_cast<int64_t>(dropped);
       metrics_.mailbox_size->dec(val);
@@ -177,7 +177,7 @@ bool abstract_actor_shell::cleanup(error&& fail_state, execution_unit* host) {
     resume_.dispose();
   }
   // Dispatch to parent's `cleanup` function.
-  return super::cleanup(std::move(fail_state), host);
+  return super::on_cleanup(reason);
 }
 
 } // namespace caf::net

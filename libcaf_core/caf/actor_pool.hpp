@@ -90,8 +90,6 @@ public:
 
   const char* name() const override;
 
-  void on_destroy() override;
-
   void setup_metrics() {
     // nop
   }

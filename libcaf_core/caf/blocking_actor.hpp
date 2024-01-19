@@ -326,7 +326,7 @@ public:
   void receive_impl(receive_cond& rcc, message_id mid,
                     detail::blocking_behavior& bhvr);
 
-  bool cleanup(error&& fail_state, execution_unit* host) override;
+  void on_cleanup(const error& reason) override;
 
   // -- backwards compatibility ------------------------------------------------
 

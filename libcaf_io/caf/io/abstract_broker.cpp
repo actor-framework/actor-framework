@@ -36,13 +36,13 @@ void abstract_broker::launch(execution_unit* eu, bool lazy, bool hide) {
   eu->exec_later(this);
 }
 
-bool abstract_broker::cleanup(error&& reason, execution_unit* host) {
+void abstract_broker::on_cleanup(const error& reason) {
   CAF_LOG_TRACE(CAF_ARG(reason));
   close_all();
   CAF_ASSERT(doormen_.empty());
   CAF_ASSERT(scribes_.empty());
   CAF_ASSERT(datagram_servants_.empty());
-  return scheduled_actor::cleanup(std::move(reason), host);
+  return scheduled_actor::on_cleanup(reason);
 }
 
 abstract_broker::~abstract_broker() {
