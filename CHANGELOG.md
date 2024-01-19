@@ -14,6 +14,13 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   available on `caf::flow::observable` directly).
 - The `group` API has been removed entirely.
 
+### Changed
+
+- When using the caf-net module, users may enable Prometheus metric export by
+  setting the configuration option `caf.net.prometheus-http`. The option has the
+  following fields: `port`, `address`, `tls.key-file`, and `tls.cert-file`. When
+  setting the TLS options, the server will use HTTPS instead of HTTP.
+
 ## [0.19.5] - 2024-01-08
 
 ### Added
