@@ -54,7 +54,7 @@ local_actor::metrics_t make_instance_metrics(local_actor* self) {
 } // namespace
 
 local_actor::local_actor(actor_config& cfg)
-  : monitorable_actor(cfg),
+  : abstract_actor(cfg),
     context_(cfg.host),
     current_element_(nullptr),
     initial_behavior_fac_(std::move(cfg.init_fun)) {
@@ -73,7 +73,6 @@ void local_actor::on_destroy() {
   if (!getf(is_cleaned_up_flag)) {
     on_exit();
     cleanup(exit_reason::unreachable, nullptr);
-    monitorable_actor::on_destroy();
   }
 }
 
@@ -171,7 +170,7 @@ bool local_actor::cleanup(error&& fail_state, execution_unit* host) {
   // tell registry we're done
   unregister_from_system();
   CAF_LOG_TERMINATE_EVENT(this, fail_state);
-  monitorable_actor::cleanup(std::move(fail_state), host);
+  abstract_actor::cleanup(std::move(fail_state), host);
   return true;
 }
 

@@ -110,15 +110,18 @@ bool actor_pool::enqueue(mailbox_element_ptr what, execution_unit* eu) {
 }
 
 actor_pool::actor_pool(actor_config& cfg)
-  : monitorable_actor(cfg), planned_reason_(exit_reason::normal) {
+  : abstract_actor(cfg), planned_reason_(exit_reason::normal) {
   register_at_system();
+}
+
+const char* actor_pool::name() const {
+  return "caf.actor-pool";
 }
 
 void actor_pool::on_destroy() {
   CAF_PUSH_AID_FROM_PTR(this);
   if (!getf(is_cleaned_up_flag)) {
     cleanup(exit_reason::unreachable, nullptr);
-    monitorable_actor::on_destroy();
     unregister_from_system();
   }
 }

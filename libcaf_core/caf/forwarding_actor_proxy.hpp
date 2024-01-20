@@ -19,6 +19,8 @@ public:
 
   ~forwarding_actor_proxy() override;
 
+  const char* name() const override;
+
   bool enqueue(mailbox_element_ptr what, execution_unit* context) override;
 
   bool add_backlink(abstract_actor* x) override;

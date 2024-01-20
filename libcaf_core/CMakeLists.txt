@@ -263,7 +263,6 @@ caf_add_component(
     caf/message_builder.test.cpp
     caf/message_handler.cpp
     caf/message_id.test.cpp
-    caf/monitorable_actor.cpp
     caf/mtl.test.cpp
     caf/node_id.cpp
     caf/policy/select_all.test.cpp

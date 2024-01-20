@@ -36,8 +36,10 @@ public:
                 "Function signatures must be normalized to the format "
                 "'result<Out...>(In...)', no qualifiers or references allowed");
 
-  // -- friend types that need access to private ctors
+  // -- friends ----------------------------------------------------------------
+
   friend class local_actor;
+  friend class abstract_actor;
 
   template <class>
   friend class data_processor;

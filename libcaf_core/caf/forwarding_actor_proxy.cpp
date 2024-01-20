@@ -21,6 +21,10 @@ forwarding_actor_proxy::~forwarding_actor_proxy() {
   anon_send(broker_, make_message(delete_atom_v, node(), id()));
 }
 
+const char* forwarding_actor_proxy::name() const {
+  return "caf.forwarding-actor-proxy";
+}
+
 bool forwarding_actor_proxy::forward_msg(strong_actor_ptr sender,
                                          message_id mid, message msg) {
   CAF_LOG_TRACE(CAF_ARG(id())
@@ -45,7 +49,7 @@ bool forwarding_actor_proxy::enqueue(mailbox_element_ptr what,
 }
 
 bool forwarding_actor_proxy::add_backlink(abstract_actor* x) {
-  if (monitorable_actor::add_backlink(x)) {
+  if (abstract_actor::add_backlink(x)) {
     forward_msg(ctrl(), make_message_id(),
                 make_message(link_atom_v, x->ctrl()));
     return true;
@@ -54,7 +58,7 @@ bool forwarding_actor_proxy::add_backlink(abstract_actor* x) {
 }
 
 bool forwarding_actor_proxy::remove_backlink(abstract_actor* x) {
-  if (monitorable_actor::remove_backlink(x)) {
+  if (abstract_actor::remove_backlink(x)) {
     forward_msg(ctrl(), make_message_id(),
                 make_message(unlink_atom_v, x->ctrl()));
     return true;

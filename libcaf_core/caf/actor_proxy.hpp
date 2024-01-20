@@ -6,7 +6,6 @@
 
 #include "caf/abstract_actor.hpp"
 #include "caf/detail/core_export.hpp"
-#include "caf/monitorable_actor.hpp"
 
 #include <atomic>
 #include <cstdint>
@@ -15,7 +14,7 @@ namespace caf {
 
 /// Represents an actor running on a remote machine,
 /// or different hardware, or in a separate process.
-class CAF_CORE_EXPORT actor_proxy : public monitorable_actor {
+class CAF_CORE_EXPORT actor_proxy : public abstract_actor {
 public:
   explicit actor_proxy(actor_config& cfg);
 
