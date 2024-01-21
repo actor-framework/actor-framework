@@ -118,7 +118,7 @@ public:
 };
 
 /// Dispatches to @ref query_type_name and @ref query_type_id.
-class default_type_id_mapper : public type_id_mapper {
+class CAF_CORE_EXPORT default_type_id_mapper : public type_id_mapper {
 public:
   std::string_view operator()(type_id_t type) const override;
 
