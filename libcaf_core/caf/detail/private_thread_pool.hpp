@@ -17,7 +17,7 @@ namespace caf::detail {
 
 class CAF_CORE_EXPORT private_thread_pool {
 public:
-  struct node {
+  struct CAF_CORE_EXPORT node {
     virtual ~node();
     node* next = nullptr;
     // Called by the private thread pool to stop the node. Regular nodes should
