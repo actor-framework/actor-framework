@@ -56,7 +56,7 @@ private:
 template <class T>
 using function_view_storage_t = typename function_view_storage<T>::type;
 
-struct CAF_CORE_EXPORT function_view_storage_catch_all {
+struct function_view_storage_catch_all {
   message* storage_;
 
   explicit function_view_storage_catch_all(message& ptr) : storage_(&ptr) {
