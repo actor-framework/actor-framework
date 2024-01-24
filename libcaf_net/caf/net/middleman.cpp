@@ -7,50 +7,78 @@
 #include "caf/net/http/with.hpp"
 #include "caf/net/prometheus.hpp"
 #include "caf/net/ssl/startup.hpp"
-#include "caf/net/tcp_accept_socket.hpp"
-#include "caf/net/tcp_stream_socket.hpp"
 #include "caf/net/this_host.hpp"
 
 #include "caf/actor_system_config.hpp"
-#include "caf/detail/set_thread_name.hpp"
 #include "caf/expected.hpp"
 #include "caf/log/system.hpp"
 #include "caf/raise_error.hpp"
-#include "caf/sec.hpp"
-#include "caf/send.hpp"
 #include "caf/thread_owner.hpp"
-#include "caf/uri.hpp"
 
 namespace caf::net {
 
 namespace {
 
+struct prom_tls_config {
+  std::string key_file;
+  std::string cert_file;
+};
+
+template <class Inspector>
+bool inspect(Inspector& f, prom_tls_config& x) {
+  return f.object(x).fields(f.field("key-file", x.key_file),
+                            f.field("cert-file", x.cert_file));
+}
+
+std::optional<std::string> key_file(const std::optional<prom_tls_config>& cfg) {
+  if (cfg)
+    return cfg->key_file;
+  return {};
+}
+
+std::optional<std::string>
+cert_file(const std::optional<prom_tls_config>& cfg) {
+  if (cfg)
+    return cfg->cert_file;
+  return {};
+}
+
 struct prom_config {
   uint16_t port;
   std::string address = "0.0.0.0";
   bool reuse_address = true;
+  std::optional<prom_tls_config> tls;
 };
 
 template <class Inspector>
 bool inspect(Inspector& f, prom_config& x) {
   return f.object(x).fields(
-    f.field("port", x.port), f.field("address", x.address).fallback("0.0.0.0"),
-    f.field("reuse-address", x.reuse_address).fallback(true));
+    f.field("port", x.port), //
+    f.field("address", x.address).fallback("0.0.0.0"),
+    f.field("reuse-address", x.reuse_address).fallback(true),
+    f.field("tls", x.tls));
 }
 
 void launch_prom_server(actor_system& sys, const prom_config& cfg) {
-  auto server = http::with(sys)
-                  .accept(cfg.port, cfg.address)
-                  .reuse_address(cfg.reuse_address)
-                  .route("/metrics", prometheus::scraper(sys))
-                  .start();
+  constexpr auto pem = ssl::format::pem;
+  auto server
+    = http::with(sys)
+        .context(
+          ssl::context::enable(cfg.tls.has_value())
+            .and_then(ssl::emplace_server(ssl::tls::v1_2))
+            .and_then(ssl::use_private_key_file(key_file(cfg.tls), pem))
+            .and_then(ssl::use_certificate_file(cert_file(cfg.tls), pem)))
+        .accept(cfg.port, cfg.address)
+        .reuse_address(cfg.reuse_address)
+        .route("/metrics", prometheus::scraper(sys))
+        .start();
   if (!server)
     CAF_LOG_WARNING("failed to start Prometheus server: " << server.error());
 }
 
 void launch_background_tasks(actor_system& sys) {
   auto& cfg = sys.config();
-  if (auto pcfg = get_as<prom_config>(cfg, "caf.middleman.prometheus-http")) {
+  if (auto pcfg = get_as<prom_config>(cfg, "caf.net.prometheus-http")) {
     launch_prom_server(sys, *pcfg);
   }
 }
@@ -116,9 +144,12 @@ actor_system::module* middleman::make(actor_system& sys, detail::type_list<>) {
 }
 
 void middleman::add_module_options(actor_system_config& cfg) {
-  config_option_adder{cfg.custom_options(), "caf.middleman.prometheus-http"}
+  config_option_adder{cfg.custom_options(), "caf.net.prometheus-http"}
     .add<uint16_t>("port", "listening port for incoming scrapes")
     .add<std::string>("address", "bind address for the HTTP server socket");
+  config_option_adder{cfg.custom_options(), "caf.net.prometheus-http.tls"}
+    .add<std::string>("key-file", "path to the Promehteus private key file")
+    .add<std::string>("cert-file", "path to the Promehteus private cert file");
 }
 
 } // namespace caf::net
