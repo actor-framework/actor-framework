@@ -8,13 +8,16 @@ find_package(Python COMPONENTS Interpreter)
 
 function(add_robot_test dir name)
   set(test_name caf-robot-${dir}-${name})
+  set(test_wdir "${CMAKE_BINARY_DIR}/robot-output/${dir}/${name}")
+  file(MAKE_DIRECTORY "${test_wdir}")
   add_test(
     NAME ${test_name}
     COMMAND
       ${Python_EXECUTABLE}
         -m robot
         ${ARGN}
-        "${CMAKE_CURRENT_SOURCE_DIR}/${dir}/${name}.robot")
+        "${CMAKE_CURRENT_SOURCE_DIR}/${dir}/${name}.robot"
+    WORKING_DIRECTORY "${test_wdir}")
   set_tests_properties(${test_name} PROPERTIES TIMEOUT 300)
 endfunction()
 
@@ -126,5 +129,11 @@ if(TARGET CAF::net AND CAF_ENABLE_EXAMPLES)
     http
     client
     --variable BINARY_PATH:$<TARGET_FILE:client>)
+
+  add_robot_test(
+    lp
+    communication
+    --variable SERVER_PATH:$<TARGET_FILE:chat-server>
+    --variable CLIENT_PATH:$<TARGET_FILE:chat-client>)
 
 endif()

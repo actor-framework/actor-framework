@@ -1,0 +1,70 @@
+*** Settings ***
+Documentation       A test suite for the length previx framing communication
+
+Library             Process
+Library             String
+Library             OperatingSystem
+
+Test Setup          Start Chat Server
+Test Teardown       Terminate All Processes
+
+
+*** Variables ***
+${SERVER_HOST}      localhost
+${SERVER_PORT}      55519
+${SERVER_PATH}      /path/to/the/server
+${CLIENT_PATH}      /path/to/the/client
+
+${INPUT}            Hello\nToday is a wonderful day!\n
+${BASELINE}         bob: Hello\nbob: Today is a wonderful day!
+
+
+*** Test Cases ***
+Send Some message
+    Start Chat Client  alice  PIPE
+    Wait For Client    ${1}
+    Start Chat Client  bob    ${INPUT}
+    Wait For Client    ${2}
+    Wait Until Contains Baseline  alice.out
+
+
+*** Keywords ***
+Start Chat Server
+    Start Process
+    ...  ${SERVER_PATH}
+    ...  -p    ${SERVER_PORT}
+    ...  --caf.logger.file.verbosity  trace
+    ...  --caf.logger.file.path  server.log
+    ...  stdout=server.out
+    ...  stderr=server.err
+
+Start Chat Client
+    [Arguments]    ${name}   ${stdin}
+    Start Process
+    ...  ${CLIENT_PATH}
+    ...  -p    ${SERVER_PORT}
+    ...  -n    ${name}
+    ...  --caf.logger.file.verbosity  trace
+    ...  --caf.logger.file.path  ${name}.log
+    ...  stdin=${stdin}
+    ...  stdout=${name}.out
+    ...  stderr=${name}.err
+
+Has Baseline
+    [Arguments]     ${file_path}
+    ${output}       Get File      ${file_path}
+    Should Contain  ${output}     ${BASELINE}
+
+Wait Until Contains Baseline
+    [Arguments]     ${file_path}
+    Wait Until Keyword Succeeds    5s    125ms    Has Baseline    ${file_path}
+
+Count Connected Clients
+    [Arguments]     ${client_count}
+    ${output}=      Grep File        server.out    accepted new connection
+    ${lc}=          Get Line Count   ${output}
+    Should Be True  ${lc} >= ${client_count}
+
+Wait For Client
+    [Arguments]    ${client_count}
+    Wait Until Keyword Succeeds    5s    125ms    Count Connected Clients    ${client_count}

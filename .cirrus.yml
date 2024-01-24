@@ -18,6 +18,9 @@ freebsd13_task:
   prepare_script: .ci/freebsd-13/prepare.sh
   build_script: .ci/run.sh build .ci/debug-flags.cmake . build
   test_script: .ci/run.sh test build net.udp_datagram_socket
+  always:
+    robot_artifacts:
+      path: "build/robot-output/**"
   << : *BRANCH_FILTER
 
 # FreeBSD 14 EOL: November 2028
@@ -28,5 +31,8 @@ freebsd14_task:
   prepare_script: .ci/freebsd-14/prepare.sh
   build_script: .ci/run.sh build .ci/debug-flags.cmake . build
   test_script: .ci/run.sh test build net.udp_datagram_socket
+  always:
+    robot_artifacts:
+      path: "build/robot-output/**"
   << : *BRANCH_FILTER
 
