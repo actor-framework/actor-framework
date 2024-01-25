@@ -5,8 +5,8 @@
 #pragma once
 
 #include "caf/actor_system.hpp"
+#include "caf/keep_behavior.hpp"
 #include "caf/local_actor.hpp"
-#include "caf/mixin/behavior_changer.hpp"
 #include "caf/mixin/requester.hpp"
 #include "caf/scheduled_actor.hpp"
 #include "caf/typed_actor.hpp"
@@ -26,12 +26,12 @@ public:
 template <class... Sigs>
 class typed_event_based_actor
   : public extend<scheduled_actor, typed_event_based_actor<Sigs...>>::
-      template with<mixin::sender, mixin::requester, mixin::behavior_changer>,
+      template with<mixin::sender, mixin::requester>,
     public statically_typed_actor_base {
 public:
   using super =
     typename extend<scheduled_actor, typed_event_based_actor<Sigs...>>::
-      template with<mixin::sender, mixin::requester, mixin::behavior_changer>;
+      template with<mixin::sender, mixin::requester>;
 
   explicit typed_event_based_actor(actor_config& cfg) : super(cfg) {
     // nop
@@ -60,6 +60,23 @@ public:
       CAF_LOG_DEBUG("make_behavior() did return a valid behavior");
       this->do_become(std::move(bhvr.unbox()), true);
     }
+  }
+
+  /// @copydoc event_based_actor::become
+  template <class T, class... Ts>
+  void become(T&& arg, Ts&&... args) {
+    if constexpr (std::is_same_v<keep_behavior_t, std::decay_t<T>>) {
+      static_assert(sizeof...(Ts) > 0);
+      this->do_become(behavior_type{std::forward<Ts>(args)...}.unbox(), false);
+    } else {
+      behavior_type bhv{std::forward<T>(arg), std::forward<Ts>(args)...};
+      this->do_become(std::move(bhv).unbox(), true);
+    }
+  }
+
+  /// @copydoc event_based_actor::unbecome
+  void unbecome() {
+    this->bhvr_stack_.pop_back();
   }
 
 protected:

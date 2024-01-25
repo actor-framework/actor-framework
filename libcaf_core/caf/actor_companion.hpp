@@ -7,8 +7,8 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/extend.hpp"
 #include "caf/fwd.hpp"
+#include "caf/keep_behavior.hpp"
 #include "caf/mailbox_element.hpp"
-#include "caf/mixin/behavior_changer.hpp"
 #include "caf/mixin/sender.hpp"
 #include "caf/scheduled_actor.hpp"
 
@@ -29,11 +29,7 @@ public:
 /// allow any object to interact with other actors.
 /// @extends local_actor
 class CAF_CORE_EXPORT actor_companion
-  // clang-format off
-  : public extend<scheduled_actor, actor_companion>::
-           with<mixin::sender,
-                mixin::behavior_changer> {
-  // clang-format on
+  : public extend<scheduled_actor, actor_companion>::with<mixin::sender> {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -75,6 +71,25 @@ public:
 
   /// Sets the handler for incoming messages.
   void on_exit(on_exit_handler handler);
+
+  // -- behavior management ----------------------------------------------------
+
+  /// @copydoc event_based_actor::become
+  template <class T, class... Ts>
+  void become(T&& arg, Ts&&... args) {
+    if constexpr (std::is_same_v<keep_behavior_t, std::decay_t<T>>) {
+      static_assert(sizeof...(Ts) > 0);
+      do_become(behavior{std::forward<Ts>(args)...}, false);
+    } else {
+      do_become(behavior{std::forward<T>(arg), std::forward<Ts>(args)...},
+                true);
+    }
+  }
+
+  /// @copydoc event_based_actor::unbecome
+  void unbecome() {
+    bhvr_stack_.pop_back();
+  }
 
 private:
   // set by parent to define custom enqueue action

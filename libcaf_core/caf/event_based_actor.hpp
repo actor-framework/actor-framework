@@ -8,9 +8,9 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/extend.hpp"
 #include "caf/fwd.hpp"
+#include "caf/keep_behavior.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/logger.hpp"
-#include "caf/mixin/behavior_changer.hpp"
 #include "caf/mixin/requester.hpp"
 #include "caf/mixin/sender.hpp"
 #include "caf/response_handle.hpp"
@@ -33,8 +33,7 @@ class CAF_CORE_EXPORT event_based_actor
   // clang-format off
   : public extend<scheduled_actor, event_based_actor>::
            with<mixin::sender,
-                mixin::requester,
-                mixin::behavior_changer>,
+                mixin::requester>,
     public dynamically_typed_actor_base {
   // clang-format on
 public:
@@ -58,9 +57,27 @@ public:
 
   void initialize() override;
 
-protected:
   // -- behavior management ----------------------------------------------------
 
+  /// Changes the behavior of this actor.
+  template <class T, class... Ts>
+  void become(T&& arg, Ts&&... args) {
+    if constexpr (std::is_same_v<keep_behavior_t, std::decay_t<T>>) {
+      static_assert(sizeof...(Ts) > 0);
+      do_become(behavior{std::forward<Ts>(args)...}, false);
+    } else {
+      do_become(behavior{std::forward<T>(arg), std::forward<Ts>(args)...},
+                true);
+    }
+  }
+
+  /// Removes the last added behavior. Terminates the actor if there are no
+  /// behaviors left.
+  void unbecome() {
+    bhvr_stack_.pop_back();
+  }
+
+protected:
   /// Returns the initial actor behavior.
   virtual behavior make_behavior();
 };

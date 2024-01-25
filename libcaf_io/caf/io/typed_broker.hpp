@@ -13,10 +13,10 @@
 #include "caf/detail/scope_guard.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/extend.hpp"
+#include "caf/keep_behavior.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/logger.hpp"
 #include "caf/make_counted.hpp"
-#include "caf/mixin/behavior_changer.hpp"
 #include "caf/mixin/requester.hpp"
 #include "caf/mixin/sender.hpp"
 #include "caf/none.hpp"
@@ -34,7 +34,9 @@ public:
   using type = typed_behavior<Sigs...>;
 };
 
-namespace io {
+} // namespace caf
+
+namespace caf::io {
 
 /// Denotes a minimal "client" broker managing one or more connection
 /// handles by reacting to `new_data_msg` and `connection_closed_msg`.
@@ -58,8 +60,7 @@ class typed_broker
   // clang-format off
   : public extend<abstract_broker, typed_broker<Sigs...>>::template
            with<mixin::sender,
-                mixin::requester,
-                mixin::behavior_changer>,
+                mixin::requester>,
     public statically_typed_actor_base {
   // clang-format on
 public:
@@ -71,7 +72,7 @@ public:
 
   using super =
     typename extend<abstract_broker, typed_broker<Sigs...>>::template with<
-      mixin::sender, mixin::requester, mixin::behavior_changer>;
+      mixin::sender, mixin::requester>;
 
   /// @cond PRIVATE
 
@@ -151,6 +152,23 @@ public:
     // nop
   }
 
+  /// @copydoc event_based_actor::become
+  template <class T, class... Ts>
+  void become(T&& arg, Ts&&... args) {
+    if constexpr (std::is_same_v<keep_behavior_t, std::decay_t<T>>) {
+      static_assert(sizeof...(Ts) > 0);
+      this->do_become(behavior_type{std::forward<Ts>(args)...}.unbox(), false);
+    } else {
+      behavior_type bhv{std::forward<T>(arg), std::forward<Ts>(args)...};
+      this->do_become(std::move(bhv).unbox(), true);
+    }
+  }
+
+  /// @copydoc event_based_actor::unbecome
+  void unbecome() {
+    this->bhvr_stack_.pop_back();
+  }
+
 protected:
   virtual behavior_type make_behavior() {
     if (this->initial_behavior_fac_) {
@@ -163,5 +181,4 @@ protected:
   }
 };
 
-} // namespace io
-} // namespace caf
+} // namespace caf::io
