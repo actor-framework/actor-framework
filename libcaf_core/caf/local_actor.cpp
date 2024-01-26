@@ -14,6 +14,7 @@
 #include "caf/disposable.hpp"
 #include "caf/exit_reason.hpp"
 #include "caf/logger.hpp"
+#include "caf/mailbox_element.hpp"
 #include "caf/resumable.hpp"
 #include "caf/scheduler.hpp"
 #include "caf/sec.hpp"
@@ -142,11 +143,12 @@ void local_actor::send_exit(const actor_addr& whom, error reason) {
   send_exit(actor_cast<strong_actor_ptr>(whom), std::move(reason));
 }
 
-void local_actor::send_exit(const strong_actor_ptr& dest, error reason) {
-  if (!dest)
-    return;
-  dest->get()->eq_impl(make_message_id(), nullptr, context(),
-                       exit_msg{address(), std::move(reason)});
+void local_actor::send_exit(const strong_actor_ptr& receiver, error reason) {
+  if (receiver)
+    receiver->enqueue(make_mailbox_element(nullptr, make_message_id(),
+                                           exit_msg{address(),
+                                                    std::move(reason)}),
+                      context());
 }
 
 const char* local_actor::name() const {
@@ -172,6 +174,60 @@ bool local_actor::cleanup(error&& fail_state, execution_unit* host) {
   CAF_LOG_TERMINATE_EVENT(this, fail_state);
   abstract_actor::cleanup(std::move(fail_state), host);
   return true;
+}
+
+// -- send functions -----------------------------------------------------------
+
+void local_actor::do_send(abstract_actor* receiver, message_priority priority,
+                          message&& msg) {
+  if (receiver != nullptr) {
+    auto item = make_mailbox_element(ctrl(), make_message_id(priority),
+                                     std::move(msg));
+    CAF_BEFORE_SENDING(this, *item);
+    receiver->enqueue(std::move(item), context());
+    return;
+  }
+  system().base_metrics().rejected_messages->inc();
+}
+
+disposable local_actor::do_scheduled_send(strong_actor_ptr receiver,
+                                          message_priority priority,
+                                          actor_clock::time_point timeout,
+                                          message&& msg) {
+  if (receiver != nullptr) {
+    auto item = make_mailbox_element(ctrl(), make_message_id(priority),
+                                     std::move(msg));
+    CAF_BEFORE_SENDING_SCHEDULED(this, timeout, *item);
+    return clock().schedule_message(timeout, receiver, std::move(item));
+  }
+  system().base_metrics().rejected_messages->inc();
+  return {};
+}
+
+void local_actor::do_anon_send(abstract_actor* receiver,
+                               message_priority priority, message&& msg) {
+  if (receiver != nullptr) {
+    auto item = make_mailbox_element(nullptr, make_message_id(priority),
+                                     std::move(msg));
+    CAF_BEFORE_SENDING(this, *item);
+    receiver->enqueue(std::move(item), context());
+    return;
+  }
+  system().base_metrics().rejected_messages->inc();
+}
+
+disposable local_actor::do_scheduled_anon_send(strong_actor_ptr receiver,
+                                               message_priority priority,
+                                               actor_clock::time_point timeout,
+                                               message&& msg) {
+  if (receiver != nullptr) {
+    auto item = make_mailbox_element(nullptr, make_message_id(priority),
+                                     std::move(msg));
+    CAF_BEFORE_SENDING_SCHEDULED(this, timeout, *item);
+    return clock().schedule_message(timeout, receiver, std::move(item));
+  }
+  system().base_metrics().rejected_messages->inc();
+  return {};
 }
 
 } // namespace caf

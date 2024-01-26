@@ -29,10 +29,6 @@ void broker::initialize() {
   }
 }
 
-broker::broker(actor_config& cfg) : super(cfg) {
-  // nop
-}
-
 behavior broker::make_behavior() {
   behavior res;
   if (initial_behavior_fac_) {

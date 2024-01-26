@@ -37,14 +37,11 @@ namespace caf::io {
 /// @extends abstract_broker
 /// @ingroup Broker
 class CAF_IO_EXPORT broker
-  // clang-format off
-  : public extend<abstract_broker, broker>::
-           with<mixin::sender, mixin::requester>,
+  : public extend<abstract_broker, broker>::with<mixin::sender,
+                                                 mixin::requester>,
     public dynamically_typed_actor_base {
-  // clang-format on
 public:
-  using super
-    = extend<abstract_broker, broker>::with<mixin::sender, mixin::requester>;
+  using super = extended_base;
 
   using signatures = none_t;
 
@@ -67,15 +64,9 @@ public:
 
   void initialize() override;
 
-  explicit broker(actor_config& cfg);
+  using super::super;
 
-  broker(broker&&) = delete;
-
-  broker(const broker&) = delete;
-
-  broker& operator=(broker&&) = delete;
-
-  broker& operator=(const broker&) = delete;
+  // -- behavior management ----------------------------------------------------
 
   /// @copydoc event_based_actor::become
   template <class T, class... Ts>

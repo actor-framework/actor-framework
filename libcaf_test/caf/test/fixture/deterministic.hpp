@@ -14,6 +14,7 @@
 #include "caf/detail/source_location.hpp"
 #include "caf/detail/test_export.hpp"
 #include "caf/detail/type_traits.hpp"
+#include "caf/mailbox_element.hpp"
 #include "caf/resumable.hpp"
 
 #include <cassert>
@@ -388,8 +389,9 @@ public:
     template <class T, size_t... Is>
     void to_impl(const T& dst, std::index_sequence<Is...>) {
       auto ptr = actor_cast<abstract_actor*>(dst);
-      ptr->eq_impl(make_message_id(), from_, nullptr,
-                   make_message(std::get<Is>(values_)...));
+      ptr->enqueue(make_mailbox_element(from_, make_message_id(),
+                                        std::get<Is>(values_)...),
+                   nullptr);
       fix_->expect<Ts...>(loc_)
         .from(from_)
         .with(std::get<Is>(values_)...)

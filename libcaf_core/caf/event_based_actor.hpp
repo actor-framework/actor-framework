@@ -30,12 +30,9 @@ public:
 /// recommended base class for user-defined actors.
 /// @extends scheduled_actor
 class CAF_CORE_EXPORT event_based_actor
-  // clang-format off
-  : public extend<scheduled_actor, event_based_actor>::
-           with<mixin::sender,
-                mixin::requester>,
+  : public extend<scheduled_actor, event_based_actor>::with<mixin::sender,
+                                                            mixin::requester>,
     public dynamically_typed_actor_base {
-  // clang-format on
 public:
   // -- member types -----------------------------------------------------------
 

@@ -9,6 +9,7 @@
 #include "caf/actor_control_block.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
+#include "caf/detail/actor_local_printer.hpp"
 #include "caf/detail/mailbox_factory.hpp"
 #include "caf/detail/print.hpp"
 #include "caf/detail/source_location.hpp"
@@ -17,6 +18,7 @@
 #include "caf/log/test.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/scheduled_actor.hpp"
+#include "caf/scheduler/abstract_coordinator.hpp"
 
 #include <numeric>
 #include <string>

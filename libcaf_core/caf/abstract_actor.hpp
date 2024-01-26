@@ -161,14 +161,6 @@ public:
 
   /// @cond PRIVATE
 
-  template <class... Ts>
-  bool eq_impl(message_id mid, strong_actor_ptr sender, execution_unit* ctx,
-               Ts&&... xs) {
-    return enqueue(make_mailbox_element(std::move(sender), mid,
-                                        std::forward<Ts>(xs)...),
-                   ctx);
-  }
-
   // flags storing runtime information                    used by ...
   static constexpr int is_hidden_flag = 0x0004;        // scheduled_actor
   static constexpr int is_registered_flag = 0x0008;    // (several actors)

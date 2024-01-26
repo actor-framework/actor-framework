@@ -497,8 +497,8 @@ public:
     else if (src_ == nullptr)
       caf::anon_send(caf::actor_cast<caf::actor>(dest_), msg_);
     else
-      caf::send_as(caf::actor_cast<caf::actor>(src_),
-                   caf::actor_cast<caf::actor>(dest_), msg_);
+      caf::detail::send_as(caf::actor_cast<caf::actor>(src_),
+                           caf::actor_cast<caf::actor>(dest_), msg_);
     if (!sched_.prioritize(dest_))
       CAF_FAIL("inject: failed to schedule destination actor", src_line_);
     auto dest_ptr = &sched_.next_job<caf::abstract_actor>();
