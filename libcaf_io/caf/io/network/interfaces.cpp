@@ -253,10 +253,10 @@ interfaces::server_address(uint16_t port, const char* host,
                            family == AF_INET ? protocol::ipv4 : protocol::ipv6);
     }
   }
-  std::stable_sort(std::begin(results), std::end(results),
-                   [](const addr_pair& lhs, const addr_pair& rhs) {
-                     return lhs.second > rhs.second;
-                   });
+  std::stable_partition(std::begin(results), std::end(results),
+                        [](const addr_pair& addr) {
+                          return addr.second == protocol::ipv6;
+                        });
   return results;
 }
 

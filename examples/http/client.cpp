@@ -84,6 +84,8 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
         // If we don't succeed at first, try up to 5 times with 1s delay.
         .retry_delay(1s)
         .max_retry_count(5)
+        // Wait up to 250ms for establishing a connection.
+        .connection_timeout(250ms)
         // After connecting, send a get request.
         .add_header_field("User-Agent", "CAF-Client")
         .request(method, payload);
