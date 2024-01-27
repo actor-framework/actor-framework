@@ -5,6 +5,10 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ## [Unreleased]
 
+### Fixed
+
+- Fix building CAF with shared libraries (DLLs) enabled on Windows (#1715).
+
 ### Removed
 
 - The obsolete CAF types `caf::string_view`, `caf::byte`, `caf::optional`,

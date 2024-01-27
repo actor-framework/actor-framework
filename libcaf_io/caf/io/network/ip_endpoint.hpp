@@ -71,7 +71,7 @@ public:
 
 private:
   struct impl;
-  struct impl_deleter {
+  struct CAF_IO_EXPORT impl_deleter {
     void operator()(impl*) const;
   };
   std::unique_ptr<impl, impl_deleter> ptr_;
