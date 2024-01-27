@@ -32,7 +32,7 @@ namespace caf {
 class CAF_CORE_EXPORT chunk {
 public:
   // -- member types -----------------------------------------------------------
-  class data {
+  class CAF_CORE_EXPORT data {
   public:
     data() = delete;
 
