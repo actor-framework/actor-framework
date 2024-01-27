@@ -37,6 +37,18 @@ public:
       state.~State();
   }
 
+  const char* name() const override {
+    if constexpr (detail::has_name<State>::value) {
+      if constexpr (!std::is_member_pointer<decltype(&State::name)>::value) {
+        if constexpr (std::is_convertible<decltype(State::name),
+                                          const char*>::value) {
+          return State::name;
+        }
+      }
+    }
+    return super::name();
+  }
+
   union {
     State state;
   };
