@@ -263,8 +263,13 @@ caf_add_component(
     caf/message_builder.test.cpp
     caf/message_handler.cpp
     caf/message_id.test.cpp
+    caf/message_lifetime.test.cpp
+    caf/messaging.test.cpp
+    caf/metaprogramming.test.cpp
     caf/mtl.test.cpp
     caf/node_id.cpp
+    caf/node_id.test.cpp
+    caf/or_else.test.cpp
     caf/policy/select_all.test.cpp
     caf/policy/select_any.test.cpp
     caf/policy/unprofiled.cpp
