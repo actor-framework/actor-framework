@@ -18,12 +18,6 @@
 
 namespace caf {
 
-template <>
-class behavior_type_of<actor_companion> {
-public:
-  using type = behavior;
-};
-
 /// An co-existing actor forwarding all messages through a user-defined
 /// callback to another object, thus serving as gateway to
 /// allow any object to interact with other actors.

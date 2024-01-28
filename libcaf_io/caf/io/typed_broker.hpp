@@ -26,16 +26,6 @@
 #include <type_traits>
 #include <vector>
 
-namespace caf {
-
-template <class... Sigs>
-class behavior_type_of<io::typed_broker<Sigs...>> {
-public:
-  using type = typed_behavior<Sigs...>;
-};
-
-} // namespace caf
-
 namespace caf::io {
 
 /// Denotes a minimal "client" broker managing one or more connection

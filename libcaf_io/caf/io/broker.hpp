@@ -21,16 +21,6 @@
 #include <map>
 #include <vector>
 
-namespace caf {
-
-template <>
-class behavior_type_of<io::broker> {
-public:
-  using type = behavior;
-};
-
-} // namespace caf
-
 namespace caf::io {
 
 /// Describes a dynamically typed broker.
