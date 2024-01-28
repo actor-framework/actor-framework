@@ -33,10 +33,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  template <class... Ts>
-  requester(Ts&&... xs) : Base(std::forward<Ts>(xs)...) {
-    // nop
-  }
+  using Base::Base;
 
   // -- request ----------------------------------------------------------------
 
