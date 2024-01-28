@@ -6,10 +6,6 @@
 
 namespace caf {
 
-actor_companion::actor_companion(actor_config& cfg) : extended_base(cfg) {
-  // nop
-}
-
 actor_companion::~actor_companion() {
   // nop
 }

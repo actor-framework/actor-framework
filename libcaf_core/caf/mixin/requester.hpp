@@ -5,10 +5,10 @@
 #pragma once
 
 #include "caf/actor.hpp"
-#include "caf/check_typed_input.hpp"
 #include "caf/detail/profiled_send.hpp"
 #include "caf/disposable.hpp"
 #include "caf/fwd.hpp"
+#include "caf/mailbox_element.hpp"
 #include "caf/message.hpp"
 #include "caf/message_id.hpp"
 #include "caf/message_priority.hpp"
@@ -61,8 +61,9 @@ public:
                             std::forward<Ts>(xs)...);
       pending_msg = self->request_response_timeout(timeout, req_id);
     } else {
-      self->eq_impl(req_id.response_id(), self->ctrl(), self->context(),
-                    make_error(sec::invalid_argument));
+      self->enqueue(make_mailbox_element(self->ctrl(), req_id.response_id(),
+                                         make_error(sec::invalid_argument)),
+                    self->context());
       self->home_system().base_metrics().rejected_messages->inc();
     }
     using response_type
@@ -114,16 +115,18 @@ public:
       if (!dest)
         continue;
       auto req_id = dptr->new_request_id(Prio);
-      dest->eq_impl(req_id, dptr->ctrl(), dptr->context(),
-                    std::forward<Ts>(xs)...);
+      dest->enqueue(make_mailbox_element(dptr->ctrl(), req_id,
+                                         std::forward<Ts>(xs)...),
+                    dptr->context());
       pending_msgs.emplace_back(
         dptr->request_response_timeout(timeout, req_id));
       ids.emplace_back(req_id.response_id());
     }
     if (ids.empty()) {
       auto req_id = dptr->new_request_id(Prio);
-      dptr->eq_impl(req_id.response_id(), dptr->ctrl(), dptr->context(),
-                    make_error(sec::invalid_argument));
+      dptr->enqueue(make_mailbox_element(dptr->ctrl(), req_id.response_id(),
+                                         make_error(sec::invalid_argument)),
+                    dptr->context());
       ids.emplace_back(req_id.response_id());
     }
     using response_type

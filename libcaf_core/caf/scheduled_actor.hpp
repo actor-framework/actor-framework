@@ -32,7 +32,6 @@
 #include "caf/local_actor.hpp"
 #include "caf/logger.hpp"
 #include "caf/mixin/requester.hpp"
-#include "caf/mixin/sender.hpp"
 #include "caf/policy/arg.hpp"
 #include "caf/response_handle.hpp"
 #include "caf/sec.hpp"

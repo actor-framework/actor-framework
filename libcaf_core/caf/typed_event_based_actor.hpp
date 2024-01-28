@@ -8,6 +8,7 @@
 #include "caf/keep_behavior.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/mixin/requester.hpp"
+#include "caf/mixin/sender.hpp"
 #include "caf/scheduled_actor.hpp"
 #include "caf/typed_actor.hpp"
 #include "caf/typed_behavior.hpp"
@@ -29,19 +30,23 @@ class typed_event_based_actor
       template with<mixin::sender, mixin::requester>,
     public statically_typed_actor_base {
 public:
+  // -- member types -----------------------------------------------------------
+
   using super =
     typename extend<scheduled_actor, typed_event_based_actor<Sigs...>>::
       template with<mixin::sender, mixin::requester>;
-
-  explicit typed_event_based_actor(actor_config& cfg) : super(cfg) {
-    // nop
-  }
 
   using signatures = detail::type_list<Sigs...>;
 
   using behavior_type = typed_behavior<Sigs...>;
 
   using actor_hdl = typed_actor<Sigs...>;
+
+  // -- constructors, destructors, and assignment operators --------------------
+
+  using super::super;
+
+  // -- overrides --------------------------------------------------------------
 
   std::set<std::string> message_types() const override {
     detail::type_list<typed_actor<Sigs...>> token;
@@ -61,6 +66,8 @@ public:
       this->do_become(std::move(bhvr.unbox()), true);
     }
   }
+
+  // -- behavior management ----------------------------------------------------
 
   /// @copydoc event_based_actor::become
   template <class T, class... Ts>

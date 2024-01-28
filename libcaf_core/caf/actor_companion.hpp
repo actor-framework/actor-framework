@@ -33,6 +33,8 @@ class CAF_CORE_EXPORT actor_companion
 public:
   // -- member types -----------------------------------------------------------
 
+  using super = extended_base;
+
   /// Required by `spawn` for type deduction.
   using signatures = none_t;
 
@@ -47,7 +49,7 @@ public:
 
   // -- constructors, destructors ----------------------------------------------
 
-  actor_companion(actor_config& cfg);
+  using super::super;
 
   ~actor_companion() override;
 

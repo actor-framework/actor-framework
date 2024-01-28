@@ -602,7 +602,8 @@ scheduled_actor::categorize(mailbox_element& x) {
             auto weak_self = weak_actor_ptr{ctrl()};
             sink_hdl->attach_functor([weak_self, flow_id] {
               if (auto sptr = weak_self.lock())
-                anon_send(actor_cast<actor>(sptr), stream_cancel_msg{flow_id});
+                caf::anon_send(actor_cast<actor>(sptr),
+                               stream_cancel_msg{flow_id});
             });
           }
           return message_category::internal;

@@ -228,6 +228,20 @@ message make_message(Ts&&... xs) {
   return message{std::move(ptr)};
 }
 
+/// Same as `make_message` except when called with a single `message` argument.
+/// In the latter case, simply returns the `message` instead of wrapping it into
+/// another message.
+/// @relates message
+template <class T, class... Ts>
+message make_message_nowrap(T&& arg, Ts&&... args) {
+  if constexpr (sizeof...(Ts) == 0
+                && std::is_same_v<std::decay_t<T>, message>) {
+    return std::forward<T>(arg);
+  } else {
+    return make_message(std::forward<T>(arg), std::forward<Ts>(args)...);
+  }
+}
+
 /// @relates message
 template <class Tuple, size_t... Is>
 message make_message_from_tuple(Tuple&& xs, std::index_sequence<Is...>) {

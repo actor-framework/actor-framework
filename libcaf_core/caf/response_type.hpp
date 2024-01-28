@@ -35,26 +35,17 @@ struct response_type<detail::type_list<>, Xs...> {
 };
 
 // case #1: no match
-template <class Out, class... In, class... Fs, class... Xs>
-struct response_type<detail::type_list<Out(In...), Fs...>, Xs...>
+template <class... Out, class... In, class... Fs, class... Xs>
+struct response_type<detail::type_list<result<Out...>(In...), Fs...>, Xs...>
   : response_type<detail::type_list<Fs...>, Xs...> {};
 
-// case #2.a: match `result<Out...>(In...)`
+// case #2: match `result<Out...>(In...)`
 template <class... Out, class... In, class... Fs>
 struct response_type<detail::type_list<result<Out...>(In...), Fs...>, In...> {
   static constexpr bool valid = true;
   using type = detail::type_list<Out...>;
   using tuple_type = std::tuple<Out...>;
   using delegated_type = delegated<Out...>;
-};
-
-// case #2.b: match `Out(In...)`
-template <class Out, class... In, class... Fs>
-struct response_type<detail::type_list<Out(In...), Fs...>, In...> {
-  static constexpr bool valid = true;
-  using type = detail::type_list<Out>;
-  using tuple_type = std::tuple<Out>;
-  using delegated_type = delegated<Out>;
 };
 
 /// Computes the response message type for input `In...` from the list of

@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/behavior.hpp"
 #include "caf/detail/apply_args.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/spawn_fwd.hpp"

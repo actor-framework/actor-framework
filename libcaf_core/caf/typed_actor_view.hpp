@@ -30,8 +30,8 @@ auto typed_actor_view_flow_access(caf::scheduled_actor* self) {
 /// interface.
 template <class... Sigs>
 class typed_actor_view
-  : public extend<typed_actor_view_base, typed_actor_view<Sigs...>>::
-      template with<mixin::sender, mixin::requester> {
+  : public extend<typed_actor_view_base,
+                  typed_actor_view<Sigs...>>::template with<mixin::requester> {
 public:
   /// Stores the template parameter pack.
   using signatures = detail::type_list<Sigs...>;
@@ -266,11 +266,6 @@ public:
 
   response_promise make_response_promise() {
     return self_->make_response_promise();
-  }
-
-  template <class... Ts>
-  void eq_impl(Ts&&... xs) {
-    self_->eq_impl(std::forward<Ts>(xs)...);
   }
 
   void add_awaited_response_handler(message_id response_id, behavior bhvr) {

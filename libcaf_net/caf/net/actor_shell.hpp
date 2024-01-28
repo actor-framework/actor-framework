@@ -30,8 +30,7 @@ public:
 
   // -- member types -----------------------------------------------------------
 
-  using super = extend<abstract_actor_shell,
-                       actor_shell>::with<mixin::sender, mixin::requester>;
+  using super = extended_base;
 
   using signatures = none_t;
 

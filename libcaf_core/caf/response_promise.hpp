@@ -7,8 +7,8 @@
 #include "caf/actor.hpp"
 #include "caf/actor_addr.hpp"
 #include "caf/actor_cast.hpp"
-#include "caf/check_typed_input.hpp"
 #include "caf/detail/core_export.hpp"
+#include "caf/detail/send_type_check.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/message.hpp"
 #include "caf/message_id.hpp"
@@ -121,26 +121,23 @@ public:
 
   /// Satisfies the promise by delegating to another actor.
   /// @post `pending() == false`
-  template <message_priority P = message_priority::normal, class Handle = actor,
+  template <message_priority P = message_priority::normal, class Handle,
             class... Ts>
   delegated_response_type_t<typename Handle::signatures,
                             detail::implicit_conversions_t<std::decay_t<Ts>>...>
-  delegate(const Handle& dest, Ts&&... xs) {
-    static_assert(sizeof...(Ts) > 0, "nothing to delegate");
-    using token
-      = detail::type_list<detail::implicit_conversions_t<std::decay_t<Ts>>...>;
-    static_assert(response_type_unbox<signatures_of_t<Handle>, token>::valid,
-                  "receiver does not accept given message");
+  delegate(const Handle& receiver, Ts&&... args) {
+    static_assert(sizeof...(Ts) > 0, "no message to send");
+    detail::send_type_check<none_t, Handle, Ts...>();
     if (pending()) {
       if constexpr (P == message_priority::high)
         state_->id = state_->id.with_high_priority();
-      if constexpr (std::is_same<detail::type_list<message>,
-                                 detail::type_list<std::decay_t<Ts>...>>::value)
-        state_->delegate_impl(actor_cast<abstract_actor*>(dest),
-                              std::forward<Ts>(xs)...);
+      if constexpr (std::is_same_v<detail::type_list<message>,
+                                   detail::type_list<std::decay_t<Ts>...>>)
+        state_->delegate_impl(actor_cast<abstract_actor*>(receiver),
+                              std::forward<Ts>(args)...);
       else
-        state_->delegate_impl(actor_cast<abstract_actor*>(dest),
-                              make_message(std::forward<Ts>(xs)...));
+        state_->delegate_impl(actor_cast<abstract_actor*>(receiver),
+                              make_message(std::forward<Ts>(args)...));
       state_.reset();
     }
     return {};

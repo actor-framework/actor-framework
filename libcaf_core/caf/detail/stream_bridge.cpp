@@ -6,6 +6,7 @@
 
 #include "caf/log/system.hpp"
 #include "caf/scheduled_actor.hpp"
+#include "caf/send.hpp"
 
 namespace caf::detail {
 
