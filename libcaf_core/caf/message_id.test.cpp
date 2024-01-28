@@ -4,7 +4,6 @@
 
 #include "caf/message_id.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/test.hpp"
 
 using namespace caf;

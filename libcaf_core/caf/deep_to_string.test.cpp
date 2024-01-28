@@ -2,18 +2,20 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE deep_to_string
-
 #include "caf/deep_to_string.hpp"
 
-#include "core-test.hpp"
+#include "caf/test/test.hpp"
+
+#include <list>
 
 using namespace caf;
 
-#define CHECK_DEEP_TO_STRING(val, str) CHECK_EQ(deep_to_string(val), str)
+#define CHECK_DEEP_TO_STRING(val, str) check_eq(deep_to_string(val), str)
 
-CAF_TEST(timespans use the highest unit available when printing) {
-  CHECK_EQ(to_string(config_value{timespan{0}}), "0s");
+namespace {
+
+TEST("timespans use the highest unit available when printing") {
+  check_eq(to_string(config_value{timespan{0}}), "0s");
   CHECK_DEEP_TO_STRING(timespan{0}, "0s");
   CHECK_DEEP_TO_STRING(timespan{1}, "1ns");
   CHECK_DEEP_TO_STRING(timespan{1'000}, "1us");
@@ -22,7 +24,7 @@ CAF_TEST(timespans use the highest unit available when printing) {
   CHECK_DEEP_TO_STRING(timespan{60'000'000'000}, "1min");
 }
 
-CAF_TEST(lists use square brackets) {
+TEST("lists use square brackets") {
   int i32_array[] = {1, 2, 3, 4};
   using i32_array_type = std::array<int, 4>;
   CHECK_DEEP_TO_STRING(std::list<int>({1, 2, 3, 4}), "[1, 2, 3, 4]");
@@ -39,7 +41,7 @@ CAF_TEST(lists use square brackets) {
   CHECK_DEEP_TO_STRING(bool_array, "[false, true]");
 }
 
-CAF_TEST(pointers and optionals use dereference syntax) {
+TEST("pointers and optionals use dereference syntax") {
   auto i = 42;
   CHECK_DEEP_TO_STRING(&i, "*42");
   CHECK_DEEP_TO_STRING(static_cast<int*>(nullptr), "null");
@@ -47,18 +49,20 @@ CAF_TEST(pointers and optionals use dereference syntax) {
   CHECK_DEEP_TO_STRING(std::optional<int>{23}, "*23");
 }
 
-CAF_TEST(buffers) {
+TEST("buffers") {
   // Use `signed char` explicitly to make sure all compilers agree.
   std::vector<signed char> buf;
-  CHECK_EQ(deep_to_string(buf), "[]");
+  check_eq(deep_to_string(buf), "[]");
   buf.push_back(-1);
-  CHECK_EQ(deep_to_string(buf), "[-1]");
+  check_eq(deep_to_string(buf), "[-1]");
   buf.push_back(0);
-  CHECK_EQ(deep_to_string(buf), "[-1, 0]");
+  check_eq(deep_to_string(buf), "[-1, 0]");
   buf.push_back(127);
-  CHECK_EQ(deep_to_string(buf), "[-1, 0, 127]");
+  check_eq(deep_to_string(buf), "[-1, 0, 127]");
   buf.push_back(10);
-  CHECK_EQ(deep_to_string(buf), "[-1, 0, 127, 10]");
+  check_eq(deep_to_string(buf), "[-1, 0, 127, 10]");
   buf.push_back(16);
-  CHECK_EQ(deep_to_string(buf), "[-1, 0, 127, 10, 16]");
+  check_eq(deep_to_string(buf), "[-1, 0, 127, 10, 16]");
 }
+
+} // namespace

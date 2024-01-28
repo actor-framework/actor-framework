@@ -2,14 +2,15 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE detached_actors
+#include "caf/test/scenario.hpp"
+#include "caf/test/test.hpp"
 
 #include "caf/all.hpp"
 
-#include "core-test.hpp"
-
 using namespace caf;
 using namespace std::literals;
+
+namespace {
 
 SCENARIO("an actor system shuts down after the last actor terminates") {
   GIVEN("an actor system and a detached actor") {
@@ -20,7 +21,7 @@ SCENARIO("an actor system shuts down after the last actor terminates") {
         actor_system sys{cfg};
         sys.spawn<detached>([=] { *ran = true; });
       }
-      CHECK(*ran);
+      check(*ran);
     }
     WHEN("the actor uses delayed_send but ignores the message") {
       auto ran = std::make_shared<bool>(false);
@@ -32,7 +33,7 @@ SCENARIO("an actor system shuts down after the last actor terminates") {
           self->delayed_send(self, 1h, ok_atom_v);
         });
       }
-      CHECK(*ran);
+      check(*ran);
     }
     WHEN("the actor uses delayed_send and waits for the message") {
       auto ran = std::make_shared<bool>(false);
@@ -51,8 +52,8 @@ SCENARIO("an actor system shuts down after the last actor terminates") {
           };
         });
       }
-      CHECK(*ran);
-      CHECK(*message_handled);
+      check(*ran);
+      check(*message_handled);
     }
     WHEN("the actor uses run_delayed() to wait some time") {
       auto ran = std::make_shared<bool>(false);
@@ -74,8 +75,8 @@ SCENARIO("an actor system shuts down after the last actor terminates") {
           };
         });
       }
-      CHECK(*ran);
-      CHECK(*timeout_handled);
+      check(*ran);
+      check(*timeout_handled);
     }
     WHEN("the actor uses after() to wait some time") {
       auto ran = std::make_shared<bool>(false);
@@ -94,8 +95,10 @@ SCENARIO("an actor system shuts down after the last actor terminates") {
           };
         });
       }
-      CHECK(*ran);
-      CHECK(*timeout_handled);
+      check(*ran);
+      check(*timeout_handled);
     }
   }
 }
+
+} // namespace

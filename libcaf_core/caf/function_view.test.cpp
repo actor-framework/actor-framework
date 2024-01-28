@@ -2,11 +2,13 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE function_view
-
 #include "caf/function_view.hpp"
 
-#include "core-test.hpp"
+#include "caf/test/test.hpp"
+
+#include "caf/actor_system.hpp"
+#include "caf/actor_system_config.hpp"
+#include "caf/typed_event_based_actor.hpp"
 
 #include <string>
 #include <vector>
@@ -71,45 +73,45 @@ struct fixture {
   actor_system system;
 };
 
-} // namespace
+WITH_FIXTURE(fixture) {
 
-BEGIN_FIXTURE_SCOPE(fixture)
-
-CAF_TEST(empty_function_view) {
+TEST("empty_function_view") {
   function_view<calculator> f;
-  CHECK_EQ(f(10, 20), sec::bad_function_call);
+  check_eq(f(10, 20), sec::bad_function_call);
 }
 
-CAF_TEST(single_res_function_view) {
+TEST("single_res_function_view") {
   auto f = make_function_view(system.spawn(adder));
-  CHECK_EQ(f(3, 4), 7);
-  CHECK(f != nullptr);
-  CHECK(nullptr != f);
+  check_eq(f(3, 4), 7);
+  check(f != nullptr);
+  check(nullptr != f);
   function_view<calculator> g;
   g = std::move(f);
-  CHECK(f == nullptr); // NOLINT(bugprone-use-after-move)
-  CHECK(nullptr == f);
-  CHECK(g != nullptr);
-  CHECK(nullptr != g);
-  CHECK_EQ(g(10, 20), 30);
+  check(f == nullptr); // NOLINT(bugprone-use-after-move)
+  check(nullptr == f);
+  check(g != nullptr);
+  check(nullptr != g);
+  check_eq(g(10, 20), 30);
   g.assign(system.spawn(multiplier));
-  CHECK_EQ(g(10, 20), 200);
+  check_eq(g(10, 20), 200);
   g.assign(system.spawn(divider));
-  CHECK(!g(1, 0));
+  check(!g(1, 0));
   g.assign(system.spawn(divider));
-  CHECK_EQ(g(4, 2), 2);
+  check_eq(g(4, 2), 2);
 }
 
-CAF_TEST(tuple_res_function_view) {
+TEST("tuple_res_function_view") {
   auto f = make_function_view(system.spawn(simple_doubler));
-  CHECK_EQ(f(10), std::make_tuple(10, 10));
+  check_eq(f(10), std::make_tuple(10, 10));
 }
 
-CAF_TEST(cell_function_view) {
+TEST("cell_function_view") {
   auto f = make_function_view(system.spawn(simple_cell));
-  CHECK_EQ(f(get_atom_v), 0);
+  check_eq(f(get_atom_v), 0);
   f(put_atom_v, 1024);
-  CHECK_EQ(f(get_atom_v), 1024);
+  check_eq(f(get_atom_v), 1024);
 }
 
-END_FIXTURE_SCOPE()
+} // WITH_FIXTURE(fixture)
+
+} // namespace

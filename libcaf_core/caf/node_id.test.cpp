@@ -49,8 +49,6 @@ T unbox(std::optional<T> x) {
   return std::move(*x);
 }
 
-} // namespace
-
 #define CHECK_PARSE_OK(str, ...)                                               \
   do {                                                                         \
     check(node_id::can_parse(str));                                            \
@@ -97,3 +95,5 @@ TEST("node IDs are serializable") {
     check_eq(uri_based_id, roundtrip(uri_based_id));
   }
 }
+
+} // namespace

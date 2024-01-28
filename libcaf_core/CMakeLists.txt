@@ -78,15 +78,19 @@ caf_add_component(
     caf/actor_companion.test.cpp
     caf/actor_config.cpp
     caf/actor_control_block.cpp
+    caf/actor_factory.test.cpp
     caf/actor_from_state.test.cpp
     caf/actor_ostream.cpp
     caf/actor_pool.cpp
+    caf/actor_pool.test.cpp
     caf/actor_profiler.cpp
     caf/actor_proxy.cpp
     caf/actor_registry.cpp
+    caf/actor_registry.test.cpp
     caf/actor_system.cpp
     caf/actor_system.test.cpp
     caf/actor_system_config.cpp
+    caf/actor_system_config.test.cpp
     caf/async/batch.cpp
     caf/async/batch.test.cpp
     caf/async/blocking_consumer.test.cpp
@@ -106,6 +110,7 @@ caf_add_component(
     caf/binary_deserializer.cpp
     caf/binary_serializer.cpp
     caf/blocking_actor.cpp
+    caf/blocking_actor.test.cpp
     caf/byte_span.cpp
     caf/chrono.cpp
     caf/chrono.test.cpp
@@ -119,9 +124,14 @@ caf_add_component(
     caf/config_value.cpp
     caf/config_value_reader.cpp
     caf/config_value_writer.cpp
+    caf/const_typed_message_view.test.cpp
+    caf/cow_string.test.cpp
+    caf/cow_tuple.test.cpp
+    caf/deep_to_string.test.cpp
     caf/default_attachable.cpp
     caf/delegate.test.cpp
     caf/deserializer.cpp
+    caf/detached_actors.test.cpp
     caf/detail/abstract_worker.cpp
     caf/detail/abstract_worker_hub.cpp
     caf/detail/actor_local_printer.cpp
@@ -184,11 +194,14 @@ caf_add_component(
     caf/detail/type_id_list_builder.cpp
     caf/detail/type_id_list_builder.test.cpp
     caf/detail/unique_function.test.cpp
+    caf/dictionary.test.cpp
     caf/disposable.cpp
     caf/error.cpp
+    caf/error.test.cpp
     caf/event_based_actor.cpp
     caf/event_based_actor.test.cpp
     caf/execution_unit.cpp
+    caf/expected.test.cpp
     caf/flow/concat_map.test.cpp
     caf/flow/coordinated.cpp
     caf/flow/coordinator.cpp
@@ -225,6 +238,8 @@ caf_add_component(
     caf/flow/string.test.cpp
     caf/flow/subscription.cpp
     caf/forwarding_actor_proxy.cpp
+    caf/function_view.test.cpp
+    caf/handles.test.cpp
     caf/hash/fnv.test.cpp
     caf/hash/sha1.cpp
     caf/hash/sha1.test.cpp
@@ -232,6 +247,7 @@ caf_add_component(
     caf/intrusive/lifo_inbox.test.cpp
     caf/intrusive/linked_list.test.cpp
     caf/intrusive/stack.test.cpp
+    caf/intrusive_ptr.test.cpp
     caf/ipv4_address.cpp
     caf/ipv4_address.test.cpp
     caf/ipv4_endpoint.cpp
@@ -338,34 +354,18 @@ caf_add_component(
     tests/legacy/core-test.cpp
     tests/legacy/nasty.cpp
   LEGACY_TEST_SUITES
-    actor_factory
     actor_lifetime
-    actor_pool
     actor_profiler
-    actor_registry
-    actor_system_config
     actor_termination
     binary_deserializer
     binary_serializer
-    blocking_actor
     config_option_set
     config_value
     config_value_reader
     config_value_writer
-    const_typed_message_view
     constructor_attach
-    cow_string
-    cow_tuple
-    deep_to_string
-    detached_actors
-    dictionary
     dsl
     dynamic_spawn
-    error
-    expected
-    function_view
-    handles
-    intrusive_ptr
     json_array
     json_builder
     json_object
