@@ -20,12 +20,6 @@
 
 namespace caf {
 
-template <>
-class behavior_type_of<event_based_actor> {
-public:
-  using type = behavior;
-};
-
 /// A cooperatively scheduled, event-based actor implementation. This is the
 /// recommended base class for user-defined actors.
 /// @extends scheduled_actor

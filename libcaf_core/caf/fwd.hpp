@@ -22,14 +22,12 @@ namespace caf {
 
 template <class> class [[nodiscard]] error_code;
 template <class> class basic_cow_string;
-template <class> class behavior_type_of;
 template <class> class callback;
 template <class> class cow_vector;
 template <class> class dictionary;
 template <class> class expected;
 template <class> class intrusive_cow_ptr;
 template <class> class intrusive_ptr;
-template <class> class param;
 template <class> class span;
 template <class> class typed_stream;
 template <class> class weak_intrusive_ptr;

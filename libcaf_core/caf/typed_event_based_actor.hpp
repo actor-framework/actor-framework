@@ -15,12 +15,6 @@
 
 namespace caf {
 
-template <class... Sigs>
-class behavior_type_of<typed_event_based_actor<Sigs...>> {
-public:
-  using type = typed_behavior<Sigs...>;
-};
-
 /// A cooperatively scheduled, event-based actor
 /// implementation with static type-checking.
 /// @extends local_actor

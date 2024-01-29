@@ -22,20 +22,6 @@ struct type_list {
   }
 };
 
-template <class T>
-struct strip_param {
-  using type = T;
-};
-
-template <class T>
-struct strip_param<param<T>> {
-  using type = T;
-};
-
-/// Convenience alias for `strip_param<T>::type`.
-template <class T>
-using strip_param_t = typename strip_param<T>::type;
-
 /// Denotes the empty list.
 using empty_type_list = type_list<>;
 

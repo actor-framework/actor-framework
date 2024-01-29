@@ -146,7 +146,7 @@ struct to_type_id_list_helper;
 template <class... Ts>
 struct to_type_id_list_helper<type_list<Ts...>> {
   static constexpr type_id_list get() {
-    return make_type_id_list<strip_param_t<Ts>...>();
+    return make_type_id_list<Ts...>();
   }
 };
 
