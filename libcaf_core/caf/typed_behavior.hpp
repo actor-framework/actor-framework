@@ -97,12 +97,12 @@ struct valid_input {
   // (1) has an identical input type list
   // (2)  has an identical output type list
   //   OR the output of the element in IList is skip_t
-  static_assert(detail::tl_is_distinct<IList>::value,
+  static_assert(detail::tl_is_distinct_v<IList>,
                 "given pattern is not distinct");
   static constexpr bool value
-    = tl_size<adjusted_slist>::value == tl_size<adjusted_ilist>::value
-      && tl_forall<adjusted_ilist, valid_input_predicate<
-                                     adjusted_slist>::template inner>::value;
+    = tl_size_v<adjusted_slist> == tl_size_v<adjusted_ilist>
+      && tl_forall_v<adjusted_ilist,
+                     valid_input_predicate<adjusted_slist>::template inner>;
 };
 
 /// Convenience alias for `valid_input<SList, IList>::value`.

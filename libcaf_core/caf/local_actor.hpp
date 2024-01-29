@@ -129,7 +129,7 @@ public:
                   "cannot spawn function-based actor with given arguments");
     actor_config cfg{context(), this};
     static constexpr spawn_options unbound = make_unbound(Os);
-    detail::bool_token<spawnable> enabled;
+    std::bool_constant<spawnable> enabled;
     return eval_opts(Os, system().spawn_functor<unbound>(
                            enabled, cfg, fun, std::forward<Ts>(xs)...));
   }
