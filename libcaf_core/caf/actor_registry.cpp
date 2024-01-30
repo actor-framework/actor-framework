@@ -8,7 +8,7 @@
 #include "caf/attachable.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/exit_reason.hpp"
-#include "caf/logger.hpp"
+#include "caf/log/core.hpp"
 #include "caf/scoped_actor.hpp"
 #include "caf/sec.hpp"
 #include "caf/stateful_actor.hpp"
@@ -41,7 +41,8 @@ strong_actor_ptr actor_registry::get_impl(actor_id key) const {
   auto i = entries_.find(key);
   if (i != entries_.end())
     return i->second;
-  CAF_LOG_DEBUG("key invalid, assume actor no longer exists:" << CAF_ARG(key));
+  log::core::debug("key invalid, assume actor no longer exists: {}",
+                   CAF_ARG(key));
   return nullptr;
 }
 
@@ -55,7 +56,7 @@ void actor_registry::put_impl(actor_id key, strong_actor_ptr val) {
       return;
   }
   // attach functor without lock
-  CAF_LOG_DEBUG("added actor:" << CAF_ARG(key));
+  log::core::debug("added actor: {}", CAF_ARG(key));
   actor_registry* reg = this;
   val->get()->attach_functor([key, reg]() { reg->erase(key); });
 }
@@ -98,7 +99,7 @@ void actor_registry::await_running_count_equal(size_t expected) const {
   CAF_LOG_TRACE(CAF_ARG(expected));
   std::unique_lock<std::mutex> guard{running_mtx_};
   while (running() != expected) {
-    CAF_LOG_DEBUG(CAF_ARG(running()));
+    log::core::debug("{}", CAF_ARG(running()));
     running_cv_.wait(guard);
   }
 }

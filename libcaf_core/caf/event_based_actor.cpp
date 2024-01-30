@@ -27,7 +27,7 @@ void event_based_actor::initialize() {
                             << CAF_ARG2("alive", alive()));
   if (bhvr) {
     // make_behavior() did return a behavior instead of using become()
-    CAF_LOG_DEBUG("make_behavior() did return a valid behavior");
+    log::core::debug("make_behavior() did return a valid behavior");
     become(std::move(bhvr));
   }
 }

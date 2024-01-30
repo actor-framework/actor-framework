@@ -12,7 +12,7 @@
 #include "caf/config.hpp"
 #include "caf/default_attachable.hpp"
 #include "caf/execution_unit.hpp"
-#include "caf/logger.hpp"
+#include "caf/log/core.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/system_messages.hpp"
 
@@ -46,7 +46,7 @@ void abstract_actor::attach(attachable_ptr ptr) {
     return true;
   });
   if (!attached) {
-    CAF_LOG_DEBUG(
+    log::core::debug(
       "cannot attach functor to terminated actor: call immediately");
     ptr->actor_exited(fail_state, nullptr);
   }
@@ -72,7 +72,7 @@ size_t abstract_actor::detach_impl(const attachable::token& what,
     if ((*i)->matches(what)) {
       ++count;
       if (!dry_run) {
-        CAF_LOG_DEBUG("removed element");
+        log::core::debug("removed element");
         attachable_ptr next;
         next.swap((*i)->next);
         (*i).swap(next);
@@ -161,8 +161,8 @@ bool abstract_actor::cleanup(error&& reason, execution_unit* host) {
   });
   if (!set_fail_state)
     return false;
-  CAF_LOG_DEBUG("cleanup" << CAF_ARG(id()) << CAF_ARG(node())
-                          << CAF_ARG(fail_state_));
+  log::core::debug("cleanup {} {} {}", CAF_ARG(id()), CAF_ARG(node()),
+                   CAF_ARG(fail_state_));
   // send exit messages
   for (attachable* i = head.get(); i != nullptr; i = i->next.get())
     i->actor_exited(fail_state_, host);
@@ -185,7 +185,7 @@ void abstract_actor::register_at_system() {
     return;
   setf(is_registered_flag);
   [[maybe_unused]] auto count = home_system().registry().inc_running();
-  CAF_LOG_DEBUG("actor" << id() << "increased running count to" << count);
+  log::core::debug("actor {} increased running count to {}", id(), count);
 }
 
 void abstract_actor::unregister_from_system() {
@@ -193,7 +193,7 @@ void abstract_actor::unregister_from_system() {
     return;
   unsetf(is_registered_flag);
   [[maybe_unused]] auto count = home_system().registry().dec_running();
-  CAF_LOG_DEBUG("actor" << id() << "decreased running count to" << count);
+  log::core::debug("actor {} decreased running count to {}", count);
 }
 
 void abstract_actor::add_link(abstract_actor* x) {

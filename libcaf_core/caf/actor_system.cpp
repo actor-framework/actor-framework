@@ -356,7 +356,7 @@ actor_system::actor_system(actor_system_config& cfg)
 actor_system::~actor_system() {
   {
     CAF_LOG_TRACE("");
-    CAF_LOG_DEBUG("shutdown actor system");
+    log::core::debug("shutdown actor system");
     if (await_actors_before_shutdown_)
       await_all_actors_done();
     // shutdown internal actors
@@ -370,7 +370,7 @@ actor_system::~actor_system() {
     for (auto i = modules_.rbegin(); i != modules_.rend(); ++i) {
       auto& ptr = *i;
       if (ptr != nullptr) {
-        CAF_LOG_DEBUG("stop module" << ptr->name());
+        log::core::debug("stop module {}", ptr->name());
         ptr->stop();
       }
     }
