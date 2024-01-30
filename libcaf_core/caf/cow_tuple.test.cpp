@@ -4,7 +4,6 @@
 
 #include "caf/cow_tuple.hpp"
 
-#include "caf/test/fixture/deterministic.hpp"
 #include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
@@ -19,32 +18,30 @@ using namespace caf;
 
 namespace {
 
-struct fixture : test::fixture::deterministic {
-  template <class... Ts>
-  caf::byte_buffer serialize(const Ts&... xs) {
-    caf::byte_buffer buf;
-    caf::binary_serializer sink{sys, buf};
-    if (!(sink.apply(xs) && ...))
-      test::runnable::current().fail("serialization failed: {}",
-                                     sink.get_error());
-    return buf;
-  }
+template <class... Ts>
+caf::byte_buffer serialize(const Ts&... xs) {
+  caf::byte_buffer buf;
+  caf::binary_serializer sink{nullptr, buf};
+  if (!(sink.apply(xs) && ...))
+    test::runnable::current().fail("serialization failed: {}",
+                                   sink.get_error());
+  return buf;
+}
 
-  template <class... Ts>
-  void deserialize(const caf::byte_buffer& buf, Ts&... xs) {
-    caf::binary_deserializer source{sys, buf};
-    if (!(source.apply(xs) && ...))
-      test::runnable::current().fail("deserialization failed: {}",
-                                     source.get_error());
-  }
+template <class... Ts>
+void deserialize(const caf::byte_buffer& buf, Ts&... xs) {
+  caf::binary_deserializer source{nullptr, buf};
+  if (!(source.apply(xs) && ...))
+    test::runnable::current().fail("deserialization failed: {}",
+                                   source.get_error());
+}
 
-  template <class T>
-  T roundtrip(const T& x) {
-    T result;
-    deserialize(serialize(x), result);
-    return result;
-  }
-};
+template <class T>
+T roundtrip(const T& x) {
+  T result;
+  deserialize(serialize(x), result);
+  return result;
+}
 
 TEST("default_construction") {
   cow_tuple<string, string> x;
@@ -123,8 +120,6 @@ TEST("to_string") {
   check_eq(deep_to_string(x), R"__([1, "abc"])__");
 }
 
-WITH_FIXTURE(fixture) {
-
 TEST("serialization") {
   auto x = make_cow_tuple(1, 2, 3);
   auto y = roundtrip(x);
@@ -133,7 +128,5 @@ TEST("serialization") {
   check_eq(y.unique(), true);
   check_ne(x.ptr(), y.ptr());
 }
-
-} // WITH_FIXTURE(fixture)
 
 } // namespace

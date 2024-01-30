@@ -9,6 +9,8 @@
 
 #include "caf/message.hpp"
 
+#include <optional>
+
 using namespace caf;
 
 namespace {
@@ -32,6 +34,21 @@ TEST("const message views allow access via get") {
   check_eq(get<1>(view), 2);
   check_eq(get<2>(view), 3);
   check_eq(get<3>(view), "four");
+}
+
+TEST("to_tuple can convert messages to tuples") {
+  auto msg = make_message(1, 2, 3, "four");
+  SECTION("to_tuple returns nullopt if the types mismatch") {
+    check_eq(to_tuple<int, int, int, int>(msg), std::nullopt);
+  }
+  SECTION("to_tuple returns the values if the types match") {
+    auto msg_tuple = to_tuple<int, int, int, std::string>(msg);
+    require(msg_tuple.has_value());
+    check_eq(std::get<0>(*msg_tuple), 1);
+    check_eq(std::get<1>(*msg_tuple), 2);
+    check_eq(std::get<2>(*msg_tuple), 3);
+    check_eq(std::get<3>(*msg_tuple), "four");
+  }
 }
 
 } // WITH_FIXTURE(test::fixture::deterministic)

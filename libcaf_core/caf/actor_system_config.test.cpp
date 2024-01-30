@@ -22,6 +22,36 @@
 using namespace caf;
 using namespace std::literals;
 
+// Checks whether both a synced variable and the corresponding entry in
+// content(cfg) are equal to `value`.
+#define CHECK_SYNCED(var, ...)                                                 \
+  do {                                                                         \
+    using ref_value_type = std::decay_t<decltype(var)>;                        \
+    ref_value_type value{__VA_ARGS__};                                         \
+    check_eq(var, value);                                                      \
+    if (auto maybe_val = get_as<decltype(var)>(cfg, #var)) {                   \
+      check_eq(*maybe_val, value);                                             \
+    } else {                                                                   \
+      auto cv = get_if(std::addressof(cfg.content), #var);                     \
+      fail("expected type {}, got {}",                                         \
+           config_value::mapped_type_name<decltype(var)>(), cv->type_name());  \
+    }                                                                          \
+  } while (false)
+
+// Checks whether an entry in content(cfg) is equal to `value`.
+#define CHECK_TEXT_ONLY(type, var, value)                                      \
+  check_eq(get_as<type>(cfg, #var), value)
+
+#define ADD(var) add(var, #var, "...")
+
+#define VAR(type)                                                              \
+  auto some_##type = type{};                                                   \
+  options("global").add(some_##type, "some_" #type, "...")
+
+#define NAMED_VAR(type, name)                                                  \
+  auto name = type{};                                                          \
+  options("global").add(name, #name, "...")
+
 namespace {
 
 template <class T>
@@ -152,36 +182,6 @@ TEST("file input overrides defaults but CLI args always win") {
   put(res, "group2.arg2", 2);
   check_eq(content(cfg), res);
 }
-
-// Checks whether both a synced variable and the corresponding entry in
-// content(cfg) are equal to `value`.
-#define CHECK_SYNCED(var, ...)                                                 \
-  do {                                                                         \
-    using ref_value_type = std::decay_t<decltype(var)>;                        \
-    ref_value_type value{__VA_ARGS__};                                         \
-    check_eq(var, value);                                                      \
-    if (auto maybe_val = get_as<decltype(var)>(cfg, #var)) {                   \
-      check_eq(*maybe_val, value);                                             \
-    } else {                                                                   \
-      auto cv = get_if(std::addressof(cfg.content), #var);                     \
-      fail("expected type {}, got {}",                                         \
-           config_value::mapped_type_name<decltype(var)>(), cv->type_name());  \
-    }                                                                          \
-  } while (false)
-
-// Checks whether an entry in content(cfg) is equal to `value`.
-#define CHECK_TEXT_ONLY(type, var, value)                                      \
-  check_eq(get_as<type>(cfg, #var), value)
-
-#define ADD(var) add(var, #var, "...")
-
-#define VAR(type)                                                              \
-  auto some_##type = type{};                                                   \
-  options("global").add(some_##type, "some_" #type, "...")
-
-#define NAMED_VAR(type, name)                                                  \
-  auto name = type{};                                                          \
-  options("global").add(name, #name, "...")
 
 TEST("integers and integer containers options") {
   // Use a wild mess of "list-like" and "map-like" containers from the STL.

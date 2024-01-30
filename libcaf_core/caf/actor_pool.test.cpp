@@ -12,6 +12,12 @@
 
 using namespace caf;
 
+#define HANDLE_ERROR                                                           \
+  [](const error& err) {                                                       \
+    test::runnable::current().fail("AUT responded with an error: {}",          \
+                                   to_string(err));                            \
+  }
+
 namespace {
 
 std::atomic<size_t> s_ctors;
@@ -64,12 +70,6 @@ struct fixture {
     }
   }
 };
-
-#define HANDLE_ERROR                                                           \
-  [](const error& err) {                                                       \
-    test::runnable::current().fail("AUT responded with an error: {}",          \
-                                   to_string(err));                            \
-  }
 
 WITH_FIXTURE(fixture) {
 
