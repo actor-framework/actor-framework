@@ -25,6 +25,7 @@
 #include <memory>
 #include <mutex>
 #include <thread>
+#include <type_traits>
 #include <vector>
 
 namespace caf::io {
@@ -205,8 +206,7 @@ public:
     static_assert(spawnable,
                   "cannot spawn function-based broker with given arguments");
     actor_config cfg{&backend()};
-    detail::bool_token<spawnable> enabled;
-    return system().spawn_functor<Os>(enabled, cfg, fun,
+    return system().spawn_functor<Os>(std::bool_constant<spawnable>{}, cfg, fun,
                                       std::forward<Ts>(xs)...);
   }
 

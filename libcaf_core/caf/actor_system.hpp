@@ -431,7 +431,7 @@ public:
                   "cannot spawn function-based actor with given arguments");
     actor_config cfg;
     cfg.mbox_factory = mailbox_factory();
-    return spawn_functor<Os>(detail::bool_token<spawnable>{}, cfg, fun,
+    return spawn_functor<Os>(std::bool_constant<spawnable>{}, cfg, fun,
                              std::forward<Ts>(xs)...);
   }
 

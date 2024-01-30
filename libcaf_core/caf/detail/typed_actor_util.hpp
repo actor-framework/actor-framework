@@ -41,8 +41,8 @@ using response_promise_t = make_response_promise_helper_t<Ts...>;
 template <class Output, class F>
 struct type_checker {
   static void check() {
-    using arg_types = typename tl_map<typename get_callable_trait<F>::arg_types,
-                                      std::decay>::type;
+    using arg_types
+      = tl_map_t<typename get_callable_trait<F>::arg_types, std::decay>;
     static_assert(std::is_same_v<Output, arg_types>
                     || (std::is_same_v<Output, type_list<void>>
                         && std::is_same_v<arg_types, type_list<>>),

@@ -103,8 +103,8 @@ public:
       = detail::spawnable<F, impl, decltype(hdl), Ts...>();
     static_assert(spawnable,
                   "cannot spawn function-based broker with given arguments");
-    detail::bool_token<spawnable> enabled;
-    auto res = this->system().spawn_functor(enabled, cfg, fun, hdl,
+    auto res = this->system().spawn_functor(std::bool_constant<spawnable>{},
+                                            cfg, fun, hdl,
                                             std::forward<Ts>(xs)...);
     auto forked = static_cast<impl*>(actor_cast<abstract_actor*>(res));
     forked->move_scribe(std::move(sptr));
