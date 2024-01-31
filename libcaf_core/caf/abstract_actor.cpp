@@ -161,8 +161,8 @@ bool abstract_actor::cleanup(error&& reason, execution_unit* host) {
   });
   if (!set_fail_state)
     return false;
-  log::core::debug("cleanup {} {} {}", CAF_ARG(id()), CAF_ARG(node()),
-                   CAF_ARG(fail_state_));
+  log::core::debug("cleanup id = {} node = {} fail-state = {}", id(), node(),
+                   fail_state_);
   // send exit messages
   for (attachable* i = head.get(); i != nullptr; i = i->next.get())
     i->actor_exited(fail_state_, host);

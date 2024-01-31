@@ -41,8 +41,7 @@ strong_actor_ptr actor_registry::get_impl(actor_id key) const {
   auto i = entries_.find(key);
   if (i != entries_.end())
     return i->second;
-  log::core::debug("key invalid, assume actor no longer exists: {}",
-                   CAF_ARG(key));
+  log::core::debug("key invalid, assume actor no longer exists: key = {}", key);
   return nullptr;
 }
 
@@ -56,7 +55,7 @@ void actor_registry::put_impl(actor_id key, strong_actor_ptr val) {
       return;
   }
   // attach functor without lock
-  log::core::debug("added actor: {}", CAF_ARG(key));
+  log::core::debug("added actor: key = {}", key);
   actor_registry* reg = this;
   val->get()->attach_functor([key, reg]() { reg->erase(key); });
 }
@@ -99,7 +98,7 @@ void actor_registry::await_running_count_equal(size_t expected) const {
   CAF_LOG_TRACE(CAF_ARG(expected));
   std::unique_lock<std::mutex> guard{running_mtx_};
   while (running() != expected) {
-    log::core::debug("{}", CAF_ARG(running()));
+    log::core::debug("running = {}", running());
     running_cv_.wait(guard);
   }
 }

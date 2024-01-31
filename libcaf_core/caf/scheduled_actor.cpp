@@ -793,7 +793,7 @@ bool scheduled_actor::activate(execution_unit* ctx) {
           "finalize() returned true right after make_behavior()");
         return false;
       }
-      log::core::debug("initialized actor: {}", CAF_ARG(name()));
+      log::core::debug("initialized actor: name = {}", name());
     }
 #ifdef CAF_ENABLE_EXCEPTIONS
   } catch (...) {
