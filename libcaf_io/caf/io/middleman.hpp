@@ -14,6 +14,7 @@
 #include "caf/detail/unique_function.hpp"
 #include "caf/expected.hpp"
 #include "caf/fwd.hpp"
+#include "caf/infer_handle.hpp"
 #include "caf/node_id.hpp"
 #include "caf/proxy_registry.hpp"
 #include "caf/send.hpp"
@@ -217,7 +218,7 @@ public:
             class F = std::function<void(broker*)>, class... Ts>
   expected<infer_handle_from_fun_t<F>>
   spawn_client(F fun, const std::string& host, uint16_t port, Ts&&... xs) {
-    using impl = typename infer_handle_from_fun<F>::impl;
+    using impl = typename infer_handle_from_fun_trait_t<F>::impl;
     return spawn_client_impl<Os, impl>(std::move(fun), host, port,
                                        std::forward<Ts>(xs)...);
   }
@@ -228,7 +229,7 @@ public:
             class F = std::function<void(broker*)>, class... Ts>
   expected<infer_handle_from_fun_t<F>>
   spawn_server(F fun, uint16_t& port, Ts&&... xs) {
-    using impl = typename infer_handle_from_fun<F>::impl;
+    using impl = typename infer_handle_from_fun_trait_t<F>::impl;
     return spawn_server_impl<Os, impl>(std::move(fun), port,
                                        std::forward<Ts>(xs)...);
   }
@@ -240,7 +241,7 @@ public:
   expected<infer_handle_from_fun_t<F>>
   spawn_server(F fun, const uint16_t& port, Ts&&... xs) {
     uint16_t dummy = port;
-    using impl = typename infer_handle_from_fun<F>::impl;
+    using impl = typename infer_handle_from_fun_trait_t<F>::impl;
     return spawn_server_impl<Os, impl>(std::move(fun), dummy,
                                        std::forward<Ts>(xs)...);
   }

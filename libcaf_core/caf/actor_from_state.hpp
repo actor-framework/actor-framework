@@ -4,71 +4,32 @@
 
 #pragma once
 
-#include "caf/detail/type_traits.hpp"
+#include "caf/actor_system.hpp"
+#include "caf/behavior.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/fwd.hpp"
+#include "caf/infer_handle.hpp"
+#include "caf/spawn_options.hpp"
+#include "caf/stateful_actor.hpp"
 #include "caf/typed_event_based_actor.hpp"
-
-#include <new>
-#include <type_traits>
-#include <utility>
 
 namespace caf::detail {
 
-/// An event-based actor with managed state. The state is constructed separately
-/// and destroyed when the actor calls `quit`.
-template <class State, class Base>
-class actor_from_state_impl : public Base {
-public:
-  using super = Base;
-
-  friend actor_from_state_t<State>;
-
-  explicit actor_from_state_impl(actor_config& cfg) : super(cfg) {
-    // nop
-  }
-
-  ~actor_from_state_impl() override {
-    // nop; must be implemented due to the union member
-  }
-
-  void on_exit() override {
-    if (has_state_)
-      state.~State();
-  }
-
-  const char* name() const override {
-    if constexpr (detail::has_name<State>::value) {
-      if constexpr (!std::is_member_pointer<decltype(&State::name)>::value) {
-        if constexpr (std::is_convertible<decltype(State::name),
-                                          const char*>::value) {
-          return State::name;
-        }
-      }
-    }
-    return super::name();
-  }
-
-  union {
-    State state;
-  };
-
-private:
-  bool has_state_ = false;
-};
-
 template <class T>
-struct actor_from_state_impl_base;
+struct actor_base_from_behavior;
 
 template <>
-struct actor_from_state_impl_base<behavior> {
+struct actor_base_from_behavior<behavior> {
   using type = event_based_actor;
 };
 
 template <class... Ts>
-struct actor_from_state_impl_base<typed_behavior<Ts...>> {
+struct actor_base_from_behavior<typed_behavior<Ts...>> {
   using type = typed_event_based_actor<Ts...>;
 };
+
+template <class T>
+using actor_base_from_behavior_t = typename actor_base_from_behavior<T>::type;
 
 } // namespace caf::detail
 
@@ -77,35 +38,32 @@ namespace caf {
 /// Helper class for automating the creation of an event-based actor with
 /// managed state.
 template <class State>
-struct actor_from_state_t {
+class actor_from_state_t {
+public:
+  friend class actor_system;
+  friend class local_actor;
+
   /// The behavior type of the actor.
   using behavior_type = decltype(std::declval<State*>()->make_behavior());
 
+  /// Make sure the state provides a valid behavior type.
   static_assert(detail::is_behavior_v<behavior_type>,
                 "State::make_behavior() must return a behavior");
 
   /// The base class for the actor implementation. Either `event_based_actor`
-  /// or `typed_event_based_actor`.
-  using base_type =
-    typename detail::actor_from_state_impl_base<behavior_type>::type;
+  /// or `typed_event_based_actor<...>`.
+  using base_type = detail::actor_base_from_behavior_t<behavior_type>;
 
-  /// The actual actor implementation.
-  using impl_type = detail::actor_from_state_impl<State, base_type>;
+  /// The handle type for the actor.
+  using handle_type = infer_handle_from_behavior_t<behavior_type>;
 
-  /// Constructs the state from the given arguments and returns the initial
-  /// behavior for the actor.
-  template <class... Args>
-  behavior_type operator()(impl_type* self, Args&&... args) const {
-    if constexpr (std::is_constructible_v<State, Args...>) {
-      new (&self->state) State(std::forward<Args>(args)...);
-    } else {
-      static_assert(std::is_constructible_v<State, base_type*, Args...>,
-                    "cannot construct state from given arguments");
-      auto ptr = static_cast<base_type*>(self);
-      new (&self->state) State(ptr, std::forward<Args>(args)...);
-    }
-    self->has_state_ = true;
-    return self->state.make_behavior();
+private:
+  template <spawn_options Os, class... Args>
+  static auto do_spawn(actor_system& sys, Args&&... args) {
+    actor_config cfg;
+    cfg.mbox_factory = sys.mailbox_factory();
+    return sys.template spawn_impl<stateful_actor<State, base_type>, Os>(
+      cfg, std::forward<Args>(args)...);
   }
 };
 

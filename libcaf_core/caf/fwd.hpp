@@ -21,6 +21,8 @@ namespace caf {
 // -- 1 param templates --------------------------------------------------------
 
 template <class> class [[nodiscard]] error_code;
+
+template <class> class actor_from_state_t;
 template <class> class basic_cow_string;
 template <class> class callback;
 template <class> class cow_vector;
@@ -32,7 +34,6 @@ template <class> class span;
 template <class> class typed_stream;
 template <class> class weak_intrusive_ptr;
 
-template <class> struct actor_from_state_t;
 template <class> struct inspector_access;
 template <class> struct timeout_definition;
 template <class> struct type_id;

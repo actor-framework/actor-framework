@@ -91,36 +91,31 @@ struct infer_handle_from_fun_impl<typed_behavior<Sigs...>, Impl*, true> {
 };
 
 /// Deduces an actor handle type from a function or function object.
-template <class F>
-struct infer_handle_from_fun {
-  using trait = detail::get_callable_trait_t<F>;
-  using result_type = typename trait::result_type;
-  using arg_types = typename trait::arg_types;
+template <class Trait>
+struct infer_handle_from_fun_trait {
+  using result_type = typename Trait::result_type;
+  using arg_types = typename Trait::arg_types;
   using first_arg = detail::tl_head_t<arg_types>;
   using delegate = infer_handle_from_fun_impl<result_type, first_arg>;
   using type = typename delegate::type;
   using impl = typename delegate::impl;
   using behavior_type = typename delegate::behavior_type;
-  using fun_type = typename trait::fun_type;
+  using fun_type = typename Trait::fun_type;
   static constexpr spawn_mode mode = delegate::mode;
-};
-
-template <class State>
-struct infer_handle_from_fun<actor_from_state_t<State>> {
-  using fun_type = actor_from_state_t<State>;
-  using behavior_type = typename fun_type::behavior_type;
-  using type = infer_handle_from_behavior_t<behavior_type>;
-  using impl = typename fun_type::impl_type;
-  static constexpr spawn_mode mode = spawn_mode::function_with_selfptr;
 };
 
 /// @relates infer_handle_from_fun
 template <class F>
-using infer_handle_from_fun_t = typename infer_handle_from_fun<F>::type;
+using infer_handle_from_fun_trait_t
+  = infer_handle_from_fun_trait<detail::get_callable_trait_t<F>>;
 
 /// @relates infer_handle_from_fun
-template <class T>
-using infer_impl_from_fun_t = typename infer_handle_from_fun<T>::impl;
+template <class F>
+using infer_handle_from_fun_t = typename infer_handle_from_fun_trait_t<F>::type;
+
+/// @relates infer_handle_from_fun
+template <class F>
+using infer_impl_from_fun_t = typename infer_handle_from_fun_trait_t<F>::impl;
 
 /// Deduces `actor` for dynamically typed actors, otherwise `typed_actor<...>`
 /// is deduced.

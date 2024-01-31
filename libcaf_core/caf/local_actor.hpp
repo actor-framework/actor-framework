@@ -121,6 +121,13 @@ public:
                            cfg, std::forward<Ts>(xs)...));
   }
 
+  template <spawn_options Options = no_spawn_options, class CustomSpawn,
+            class... Args>
+  typename CustomSpawn::handle_type spawn(CustomSpawn, Args&&... args) {
+    return CustomSpawn::template do_spawn<Options>(system(),
+                                                   std::forward<Args>(args)...);
+  }
+
   template <spawn_options Os = no_spawn_options, class F, class... Ts>
   infer_handle_from_fun_t<F> spawn(F fun, Ts&&... xs) {
     using impl = infer_impl_from_fun_t<F>;
