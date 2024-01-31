@@ -319,12 +319,7 @@ class middleman;
 
 // -- scheduler classes --------------------------------------------------------
 
-namespace scheduler {
-
-class abstract_worker;
-class abstract_coordinator;
-
-} // namespace scheduler
+class scheduler;
 
 // -- log classes --------------------------------------------------------------
 

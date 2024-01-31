@@ -5,7 +5,7 @@
 #include "caf/scoped_execution_unit.hpp"
 
 #include "caf/actor_system.hpp"
-#include "caf/scheduler/abstract_coordinator.hpp"
+#include "caf/scheduler.hpp"
 
 namespace caf {
 

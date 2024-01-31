@@ -14,14 +14,10 @@
 #include "caf/execution_unit.hpp"
 #include "caf/logger.hpp"
 #include "caf/mailbox_element.hpp"
-#include "caf/message.hpp"
-#include "caf/scheduler/abstract_coordinator.hpp"
 #include "caf/system_messages.hpp"
 
 #include <atomic>
-#include <map>
 #include <mutex>
-#include <stdexcept>
 
 namespace caf {
 
@@ -172,7 +168,7 @@ bool abstract_actor::cleanup(error&& reason, execution_unit* host) {
     i->actor_exited(fail_state_, host);
   // tell printer to purge its state for us if we ever used aout()
   if (getf(abstract_actor::has_used_aout_flag)) {
-    auto pr = home_system().scheduler().printer();
+    auto pr = home_system().printer();
     pr->enqueue(make_mailbox_element(nullptr, make_message_id(), delete_atom_v,
                                      id()),
                 nullptr);

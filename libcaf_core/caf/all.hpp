@@ -63,7 +63,7 @@
 #include "caf/response_handle.hpp"
 #include "caf/result.hpp"
 #include "caf/resumable.hpp"
-#include "caf/scheduler/abstract_coordinator.hpp"
+#include "caf/scheduler.hpp"
 #include "caf/scoped_actor.hpp"
 #include "caf/scoped_execution_unit.hpp"
 #include "caf/sec.hpp"

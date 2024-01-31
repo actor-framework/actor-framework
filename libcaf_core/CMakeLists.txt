@@ -288,9 +288,6 @@ caf_add_component(
     caf/or_else.test.cpp
     caf/policy/select_all.test.cpp
     caf/policy/select_any.test.cpp
-    caf/policy/unprofiled.cpp
-    caf/policy/work_sharing.cpp
-    caf/policy/work_stealing.cpp
     caf/proxy_registry.cpp
     caf/raise_error.cpp
     caf/ref_counted.cpp
@@ -303,7 +300,7 @@ caf_add_component(
     caf/save_inspector.cpp
     caf/scheduled_actor.cpp
     caf/scheduled_actor.test.cpp
-    caf/scheduler/abstract_coordinator.cpp
+    caf/scheduler.cpp
     caf/scoped_actor.cpp
     caf/scoped_execution_unit.cpp
     caf/sec.test.cpp

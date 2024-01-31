@@ -17,9 +17,7 @@
 #include "caf/node_id.hpp"
 #include "caf/resumable.hpp"
 
-#include <atomic>
 #include <cstdint>
-#include <vector>
 
 namespace caf::io::basp {
 
@@ -34,8 +32,6 @@ public:
   // -- member types -----------------------------------------------------------
 
   using super = detail::abstract_worker;
-
-  using scheduler_type = scheduler::abstract_coordinator;
 
   using hub_type = detail::worker_hub<worker>;
 

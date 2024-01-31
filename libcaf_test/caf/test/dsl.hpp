@@ -281,9 +281,9 @@ bool received(caf_handle x) {
   return try_extract<T, Ts...>(x) != std::nullopt;
 }
 
-class test_coordinator : public caf::scheduler::abstract_coordinator {
+class test_coordinator : public caf::scheduler {
 public:
-  using super = caf::scheduler::abstract_coordinator;
+  using super = caf::scheduler;
 
   using super::super;
 
@@ -824,7 +824,7 @@ public:
   /// A deterministic scheduler type.
   class test_coordinator_impl : public test_coordinator {
   public:
-    using super = abstract_coordinator;
+    using super = scheduler;
 
     class dummy_worker : public caf::execution_unit {
     public:
@@ -1017,10 +1017,6 @@ public:
       after_next_enqueue([this] { inline_all_enqueues_helper(); });
     }
 
-    bool detaches_utility_actors() const override {
-      return false;
-    }
-
     test_actor_clock& clock() noexcept override {
       return clock_;
     }
@@ -1030,8 +1026,8 @@ public:
       dummy_worker worker{this};
       caf::actor_config cfg{&worker};
       auto& sys = system();
-      utility_actors_[printer_id] = caf::make_actor<dummy_printer, caf::actor>(
-        sys.next_actor_id(), sys.node(), &sys, cfg);
+      super::start_printer(caf::make_actor<dummy_printer, caf::actor>(
+        sys.next_actor_id(), sys.node(), &sys, cfg));
     }
 
     void stop() override {

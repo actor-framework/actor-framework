@@ -15,7 +15,7 @@
 #include "caf/message_priority.hpp"
 #include "caf/response_handle.hpp"
 #include "caf/response_type.hpp"
-#include "caf/scheduler/abstract_coordinator.hpp"
+#include "caf/scheduler.hpp"
 #include "caf/send.hpp"
 #include "caf/typed_actor_view_base.hpp"
 

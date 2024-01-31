@@ -19,7 +19,7 @@
 #include "caf/detail/socket_guard.hpp"
 #include "caf/log/system.hpp"
 #include "caf/make_counted.hpp"
-#include "caf/scheduler/abstract_coordinator.hpp"
+#include "caf/scheduler.hpp"
 
 #include <cstdio>
 #include <optional>
@@ -627,7 +627,7 @@ default_multiplexer::~default_multiplexer() {
   nonblocking(pipe_.first, true);
   auto ptr = pipe_reader_.try_read_next();
   while (ptr != nullptr) {
-    scheduler::abstract_coordinator::cleanup_and_release(ptr);
+    scheduler::cleanup_and_release(ptr);
     ptr = pipe_reader_.try_read_next();
   }
   // do cleanup for pipe reader manually, since WSACleanup needs to happen last
