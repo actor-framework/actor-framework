@@ -4,7 +4,6 @@
 
 #include "caf/ipv6_endpoint.hpp"
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/test.hpp"
 
 #include "caf/actor_system.hpp"

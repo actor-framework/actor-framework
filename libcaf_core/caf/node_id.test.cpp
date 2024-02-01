@@ -12,6 +12,16 @@
 
 using namespace caf;
 
+#define CHECK_PARSE_OK(str, ...)                                               \
+  do {                                                                         \
+    check(node_id::can_parse(str));                                            \
+    node_id nid;                                                               \
+    check_eq(parse(str, nid), none);                                           \
+    check_eq(nid, make_node_id(__VA_ARGS__));                                  \
+  } while (false)
+
+#define CHECK_PARSE_FAIL(str) check(!node_id::can_parse(str))
+
 namespace {
 
 node_id roundtrip(node_id nid) {
@@ -49,16 +59,6 @@ T unbox(std::optional<T> x) {
   return std::move(*x);
 }
 
-} // namespace
-
-#define CHECK_PARSE_OK(str, ...)                                               \
-  do {                                                                         \
-    check(node_id::can_parse(str));                                            \
-    node_id nid;                                                               \
-    check_eq(parse(str, nid), none);                                           \
-    check_eq(nid, make_node_id(__VA_ARGS__));                                  \
-  } while (false)
-
 TEST("node IDs are convertible from string") {
   node_id::default_data::host_id_type hash{{
     1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
@@ -68,8 +68,6 @@ TEST("node IDs are convertible from string") {
   CHECK_PARSE_OK("0102030405060708090A0B0C0D0E0F1011121314#123", 123, hash);
   CHECK_PARSE_OK("ip://foo:8080", uri_id);
 }
-
-#define CHECK_PARSE_FAIL(str) check(!node_id::can_parse(str))
 
 TEST("node IDs reject malformed strings") {
   // not URIs
@@ -97,3 +95,5 @@ TEST("node IDs are serializable") {
     check_eq(uri_based_id, roundtrip(uri_based_id));
   }
 }
+
+} // namespace
