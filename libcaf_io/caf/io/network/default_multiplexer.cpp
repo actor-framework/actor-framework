@@ -908,7 +908,7 @@ new_local_udp_endpoint_impl(uint16_t port, const char* addr, bool reuse,
                       addr_str);
   bool any = addr_str.empty() || addr_str == "::" || addr_str == "0.0.0.0";
   auto fd = invalid_native_socket;
-  protocol::network proto;
+  protocol::network proto{};
   for (auto& elem : addrs) {
     auto host = elem.first.c_str();
     auto p
