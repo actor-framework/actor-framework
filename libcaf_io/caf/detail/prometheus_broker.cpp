@@ -4,6 +4,7 @@
 
 #include "caf/detail/prometheus_broker.hpp"
 
+#include "caf/log/io.hpp"
 #include "caf/span.hpp"
 #include "caf/string_algorithms.hpp"
 #include "caf/telemetry/dbl_gauge.hpp"
@@ -104,7 +105,7 @@ behavior prometheus_broker::make_behavior() {
         quit();
     },
     [this](const io::acceptor_closed_msg&) {
-      CAF_LOG_ERROR("Prometheus Broker lost its acceptor!");
+      log::io::error("Prometheus Broker lost its acceptor!");
       if (num_connections() + num_doormen() == 0)
         quit();
     },

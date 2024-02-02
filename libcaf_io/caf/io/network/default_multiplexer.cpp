@@ -17,6 +17,7 @@
 #include "caf/defaults.hpp"
 #include "caf/detail/call_cfun.hpp"
 #include "caf/detail/socket_guard.hpp"
+#include "caf/log/io.hpp"
 #include "caf/log/system.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
@@ -166,8 +167,8 @@ bool default_multiplexer::poll_once_impl(bool block) {
   for (;;) {
     int presult = epoll_wait(epollfd_, pollset_.data(),
                              static_cast<int>(pollset_.size()), block ? -1 : 0);
-    CAF_LOG_DEBUG("epoll_wait() on" << shadow_ << "sockets reported" << presult
-                                    << "event(s)");
+    log::io::debug("epoll_wait() on {} sockets reported {} event(s)", shadow_,
+                   presult);
     if (presult < 0) {
       switch (errno) {
         case EINTR: {
@@ -219,18 +220,17 @@ void default_multiplexer::handle(const default_multiplexer::event& e) {
   ee.data.ptr = e.ptr;
   int op;
   if (e.mask == 0) {
-    CAF_LOG_DEBUG("attempt to remove socket " << CAF_ARG(e.fd)
-                                              << " from epoll");
+    log::io::debug("attempt to remove socket e.fd = {} from epoll", e.fd);
     op = EPOLL_CTL_DEL;
     --shadow_;
   } else if (old == 0) {
-    CAF_LOG_DEBUG("attempt to add socket " << CAF_ARG(e.fd) << " to epoll");
+    log::io::debug("attempt to add socket e.fd = {} to epoll", e.fd);
     op = EPOLL_CTL_ADD;
     ++shadow_;
   } else {
-    CAF_LOG_DEBUG("modify epoll event mask for socket "
-                  << CAF_ARG(e.fd) << ": " << CAF_ARG(old) << " -> "
-                  << CAF_ARG(e.mask));
+    log::io::debug(
+      "modify epoll event mask for socket e.fd = {}: old = {} -> e.mask = {}",
+      e.fd, old, e.mask);
     op = EPOLL_CTL_MOD;
   }
   if (epoll_ctl(epollfd_, op, e.fd, &ee) < 0) {
@@ -321,7 +321,7 @@ bool default_multiplexer::poll_once_impl(bool block) {
     if (presult < 0) {
       switch (last_socket_error()) {
         case EINTR: {
-          CAF_LOG_DEBUG("received EINTR, try again");
+          log::io::debug("received EINTR, try again");
           // a signal was caught
           // just try again
           break;
@@ -339,24 +339,24 @@ bool default_multiplexer::poll_once_impl(bool block) {
       }
       continue; // rinse and repeat
     }
-    CAF_LOG_DEBUG("poll() on" << pollset_.size() << "sockets reported"
-                              << presult << "event(s)");
+    log::io::debug("poll() on {} sockets reported {} event(s)", pollset_.size(),
+                   presult);
     if (presult == 0)
       return false;
     // scan pollset for events first, because we might alter pollset_
     // while running callbacks (not a good idea while traversing it)
-    CAF_LOG_DEBUG("scan pollset for socket events");
+    log::io::debug("scan pollset for socket events");
     for (size_t i = 0; i < pollset_.size() && presult > 0; ++i) {
       auto& pfd = pollset_[i];
       if (pfd.revents != 0) {
-        CAF_LOG_DEBUG("event on socket:" << CAF_ARG(pfd.fd)
-                                         << CAF_ARG(pfd.revents));
+        log::io::debug("event on socket: pfd.fd = {} pfd.revents = {}", pfd.fd,
+                       pfd.revents);
         poll_res.push_back({pfd.fd, pfd.revents, shadow_[i]});
         pfd.revents = 0;
         --presult; // stop as early as possible
       }
     }
-    CAF_LOG_DEBUG(CAF_ARG(poll_res.size()));
+    log::io::debug("poll-res.size = {}", poll_res.size());
     for (auto& e : poll_res) {
       // we try to read/write as much as possible by ignoring
       // error states as long as there are still valid
@@ -557,9 +557,9 @@ void default_multiplexer::handle_socket_event(native_socket fd, int mask,
     ptr->handle_event(operation::write);
   }
   if (checkerror && ((mask & error_mask) != 0)) {
-    CAF_LOG_DEBUG("error occurred on socket:"
-                  << CAF_ARG(fd) << CAF_ARG(last_socket_error())
-                  << CAF_ARG(last_socket_error_as_string()));
+    log::io::debug("error occurred on socket: fd = {} last-socket-error = {} "
+                   "last-socket-error-as-string = {}",
+                   fd, last_socket_error(), last_socket_error_as_string());
     ptr->handle_event(operation::propagate_error);
     del(operation::read, fd, ptr);
     del(operation::write, fd, ptr);
@@ -750,10 +750,10 @@ expected<native_socket>
 new_tcp_connection(const std::string& host, uint16_t port,
                    std::optional<protocol::network> preferred) {
   CAF_LOG_TRACE(CAF_ARG(host) << CAF_ARG(port) << CAF_ARG(preferred));
-  CAF_LOG_DEBUG("try to connect to:" << CAF_ARG(host) << CAF_ARG(port));
+  log::io::debug("try to connect to: host = {} port = {}", host, port);
   auto res = interfaces::native_address(host, std::move(preferred));
   if (!res) {
-    CAF_LOG_DEBUG("no such host");
+    log::io::debug("no such host");
     return make_error(sec::cannot_connect_to_node, "no such host", host, port);
   }
   auto proto = res->second;
@@ -768,8 +768,8 @@ new_tcp_connection(const std::string& host, uint16_t port,
   detail::socket_guard sguard(fd);
   if (proto == ipv6) {
     if (ip_connect<AF_INET6>(fd, res->first, port)) {
-      CAF_LOG_INFO("successfully connected to (IPv6):" << CAF_ARG(host)
-                                                       << CAF_ARG(port));
+      log::io::info("successfully connected to (IPv6): host = {} port = {}",
+                    host, port);
       return sguard.release();
     }
     sguard.close();
@@ -777,12 +777,12 @@ new_tcp_connection(const std::string& host, uint16_t port,
     return new_tcp_connection(host, port, ipv4);
   }
   if (!ip_connect<AF_INET>(fd, res->first, port)) {
-    CAF_LOG_WARNING("could not connect to:" << CAF_ARG(host) << CAF_ARG(port));
+    log::io::warning("could not connect to: host = {} port = {}", host, port);
     return make_error(sec::cannot_connect_to_node, "ip_connect failed", host,
                       port);
   }
-  CAF_LOG_INFO("successfully connected to (IPv4):" << CAF_ARG(host)
-                                                   << CAF_ARG(port));
+  log::io::info("successfully connected to (IPv4): host = {} port = {}", host,
+                port);
   return sguard.release();
 }
 
@@ -863,22 +863,22 @@ expected<native_socket> new_tcp_acceptor_impl(uint16_t port, const char* addr,
                : new_ip_acceptor_impl<AF_INET6>(port, hostname, reuse_addr,
                                                 any);
     if (!p) {
-      CAF_LOG_DEBUG(p.error());
+      log::io::debug("{}", p.error());
       continue;
     }
     fd = *p;
     break;
   }
   if (fd == invalid_native_socket) {
-    CAF_LOG_WARNING("could not open tcp socket on:" << CAF_ARG(port)
-                                                    << CAF_ARG(addr_str));
+    log::io::warning("could not open tcp socket on: port = {} addr_str = {}",
+                     port, addr_str);
     return make_error(sec::cannot_open_port, "tcp socket creation failed", port,
                       addr_str);
   }
   detail::socket_guard sguard{fd};
   CALL_CFUN(tmp2, detail::cc_zero, "listen", listen(fd, SOMAXCONN));
   // ok, no errors so far
-  CAF_LOG_DEBUG(CAF_ARG(fd));
+  log::io::debug("fd = {}", fd);
   return sguard.release();
 }
 
@@ -916,7 +916,7 @@ new_local_udp_endpoint_impl(uint16_t port, const char* addr, bool reuse,
           ? new_ip_acceptor_impl<AF_INET, SOCK_DGRAM>(port, host, reuse, any)
           : new_ip_acceptor_impl<AF_INET6, SOCK_DGRAM>(port, host, reuse, any);
     if (!p) {
-      CAF_LOG_DEBUG(p.error());
+      log::io::debug("{}", p.error());
       continue;
     }
     fd = *p;
@@ -924,12 +924,12 @@ new_local_udp_endpoint_impl(uint16_t port, const char* addr, bool reuse,
     break;
   }
   if (fd == invalid_native_socket) {
-    CAF_LOG_WARNING("could not open udp socket on:" << CAF_ARG(port)
-                                                    << CAF_ARG(addr_str));
+    log::io::warning("could not open udp socket on: port = {} addr_str = {}",
+                     port, addr_str);
     return make_error(sec::cannot_open_port, "udp socket creation failed", port,
                       addr_str);
   }
-  CAF_LOG_DEBUG(CAF_ARG(fd));
+  log::io::debug("fd = {}", fd);
   return std::make_pair(fd, proto);
 }
 

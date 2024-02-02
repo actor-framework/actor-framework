@@ -6,7 +6,7 @@
 
 #include "caf/io/network/default_multiplexer.hpp"
 
-#include "caf/logger.hpp"
+#include "caf/log/io.hpp"
 
 #ifdef CAF_WINDOWS
 #  include <winsock2.h>
@@ -27,7 +27,7 @@ event_handler::event_handler(default_multiplexer& dm, native_socket sockfd)
 
 event_handler::~event_handler() {
   if (fd_ != invalid_native_socket) {
-    CAF_LOG_DEBUG("close socket" << CAF_ARG(fd_));
+    log::io::debug("close socket fd = {}", fd_);
     close_socket(fd_);
   }
 }

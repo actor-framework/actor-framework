@@ -138,7 +138,7 @@ public:
     thread_ = mpx_.system().launch_thread("caf.io.prom", thread_owner::system,
                                           run_mpx);
     sync.wait();
-    CAF_LOG_INFO("expose Prometheus metrics at port" << actual_port);
+    log::io::info("expose Prometheus metrics at port {}", actual_port);
     return actual_port;
   }
 
@@ -298,7 +298,7 @@ strong_actor_ptr middleman::remote_lookup(std::string name,
       return message{};
     },
     after(std::chrono::minutes(5)) >>
-      [&] { CAF_LOG_WARNING("remote_lookup timed out"); });
+      [&] { log::io::warning("remote_lookup timed out"); });
   return result;
 }
 

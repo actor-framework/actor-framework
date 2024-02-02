@@ -93,7 +93,7 @@ behavior basp_broker::make_behavior() {
     static_cast<basp_broker*>(ptr)->handle_down_msg(x);
   });
   if (get_or(config(), "caf.middleman.enable-automatic-connections", false)) {
-    CAF_LOG_DEBUG("enable automatic connections");
+    log::io::debug("enable automatic connections");
     // open a random port and store a record for our peers how to
     // connect to this broker directly in the configuration server
     auto res = add_tcp_doorman(uint16_t{0});
@@ -115,8 +115,9 @@ behavior basp_broker::make_behavior() {
     auto connection_timeout = get_or(config(),
                                      "caf.middleman.connection-timeout",
                                      defaults::middleman::connection_timeout);
-    CAF_LOG_DEBUG("enable heartbeat" << CAF_ARG(heartbeat_interval)
-                                     << CAF_ARG(connection_timeout));
+    log::io::debug(
+      "enable heartbeat heartbeat-interval = {} connection-timeout = {}",
+      heartbeat_interval, connection_timeout);
     // Note: we send the scheduled time as integer representation to avoid
     //       having to assign a type ID to the time_point type.
     scheduled_send(this, first_tick, tick_atom_v,
@@ -149,9 +150,9 @@ behavior basp_broker::make_behavior() {
       CAF_LOG_TRACE(CAF_ARG(src)
                     << CAF_ARG(dest) << CAF_ARG(mid) << CAF_ARG(msg));
       if (!dest || system().node() == dest->node()) {
-        CAF_LOG_WARNING("cannot forward to invalid "
-                        "or local actor:"
-                        << CAF_ARG(dest));
+        log::io::warning("cannot forward to invalid "
+                         "or local actor: dest = {}",
+                         dest);
         return;
       }
       if (src && system().node() == src->node())
@@ -187,16 +188,16 @@ behavior basp_broker::make_behavior() {
     // monitor_message to the origin node
     [this](monitor_atom, const strong_actor_ptr& proxy) {
       if (proxy == nullptr) {
-        CAF_LOG_WARNING("received a monitor message from an invalid proxy");
+        log::io::warning("received a monitor message from an invalid proxy");
         return;
       }
       auto route = instance.tbl().lookup(proxy->node());
       if (!route) {
-        CAF_LOG_DEBUG("connection to origin already lost, kill proxy");
+        log::io::debug("connection to origin already lost, kill proxy");
         instance.proxies().erase(proxy->node(), proxy->id());
         return;
       }
-      CAF_LOG_DEBUG("write monitor_message:" << CAF_ARG(proxy));
+      log::io::debug("write monitor_message: proxy = {}", proxy);
       // tell remote side we are monitoring this actor now
       auto hdl = route->hdl;
       instance.write_monitor_message(context(), get_buffer(hdl), proxy->node(),
@@ -378,7 +379,7 @@ behavior basp_broker::make_behavior() {
       auto scheduled = actor_clock::time_point{scheduled_tse};
       auto now = clock().now();
       if (now < scheduled) {
-        CAF_LOG_WARNING("received tick before its time, reschedule");
+        log::io::warning("received tick before its time, reschedule");
         scheduled_send(this, scheduled, tick_atom_v,
                        scheduled.time_since_epoch().count(), heartbeat_interval,
                        connection_timeout);
@@ -386,22 +387,23 @@ behavior basp_broker::make_behavior() {
       }
       auto next_tick = scheduled + heartbeat_interval;
       if (now >= next_tick) {
-        CAF_LOG_ERROR("Lagging a full heartbeat interval behind! "
-                      "Interval too low or BASP actor overloaded! "
-                      "Other nodes may disconnect.");
+        log::io::error("Lagging a full heartbeat interval behind! "
+                       "Interval too low or BASP actor overloaded! "
+                       "Other nodes may disconnect.");
         while (now >= next_tick)
           next_tick += heartbeat_interval;
 
       } else if (now >= scheduled + (heartbeat_interval / 2)) {
-        CAF_LOG_WARNING("Lagging more than 50% of a heartbeat interval behind! "
-                        "Interval too low or BASP actor overloaded!");
+        log::io::warning(
+          "Lagging more than 50% of a heartbeat interval behind! "
+          "Interval too low or BASP actor overloaded!");
       }
       // Send out heartbeats.
       instance.handle_heartbeat(context());
       // Check whether any node reached the disconnect timeout.
       for (auto i = ctx.begin(); i != ctx.end();) {
         if (i->second.last_seen + connection_timeout < now) {
-          CAF_LOG_WARNING("Disconnect BASP node: reached connection timeout!");
+          log::io::warning("Disconnect BASP node: reached connection timeout!");
           auto hdl = i->second.hdl;
           // connection_cleanup below calls ctx.erase, so we need to increase
           // the iterator now, before it gets invalidated.
@@ -506,8 +508,8 @@ void basp_broker::send_basp_down_message(const node_id& nid, actor_id aid,
   CAF_LOG_TRACE(CAF_ARG(nid) << CAF_ARG(aid) << CAF_ARG(rsn));
   auto path = instance.tbl().lookup(nid);
   if (!path) {
-    CAF_LOG_INFO(
-      "cannot send exit message for proxy, no route to host:" << CAF_ARG(nid));
+    log::io::info(
+      "cannot send exit message for proxy, no route to host: nid = {}", nid);
     return;
   }
   instance.write_down_message(context(), get_buffer(path->hdl), nid, aid, rsn);
@@ -519,7 +521,7 @@ void basp_broker::proxy_announced(const node_id& nid, actor_id aid) {
   // source node has created a proxy for one of our actors
   auto ptr = system().registry().get(aid);
   if (ptr == nullptr) {
-    CAF_LOG_DEBUG("kill proxy immediately");
+    log::io::debug("kill proxy immediately");
     // kill immediately if actor has already terminated
     send_basp_down_message(nid, aid, exit_reason::unknown);
   } else {
@@ -557,7 +559,7 @@ void basp_broker::emit_node_down_msg(const node_id& node, const error& reason) {
 void basp_broker::learned_new_node(const node_id& nid) {
   CAF_LOG_TRACE(CAF_ARG(nid));
   if (spawn_servers.count(nid) > 0) {
-    CAF_LOG_ERROR("learned_new_node called for known node " << CAF_ARG(nid));
+    log::io::error("learned_new_node called for known node nid = {}", nid);
     return;
   }
   auto tmp = system().spawn<hidden>([=](event_based_actor* tself) -> behavior {
@@ -589,7 +591,7 @@ void basp_broker::learned_new_node(const node_id& nid) {
       },
       after(std::chrono::minutes(5)) >>
         [=] {
-          CAF_LOG_INFO("no spawn server found:" << CAF_ARG(nid));
+          log::io::info("no spawn server found: nid = {}", nid);
           tself->quit();
         }};
   });
@@ -600,8 +602,8 @@ void basp_broker::learned_new_node(const node_id& nid) {
   if (!instance.dispatch(context(), tmp_ptr, nid, basp::header::spawn_server_id,
                          basp::header::named_receiver_flag, make_message_id(),
                          make_message(sys_atom_v, get_atom_v, "info"))) {
-    CAF_LOG_ERROR("learned_new_node called, but no route to remote node"
-                  << CAF_ARG(nid));
+    log::io::error(
+      "learned_new_node called, but no route to remote node nid = {}", nid);
   }
 }
 
@@ -630,7 +632,7 @@ void basp_broker::learned_new_node_indirectly(const node_id& nid) {
                          basp::header::named_receiver_flag, make_message_id(),
                          make_message(get_atom_v,
                                       "basp.default-connectivity-tcp"))) {
-    CAF_LOG_ERROR("learned_new_node_indirectly called, but no route to nid");
+    log::io::error("learned_new_node_indirectly called, but no route to nid");
   }
 }
 
@@ -639,7 +641,7 @@ void basp_broker::set_context(connection_handle hdl) {
   auto now = clock().now();
   auto i = ctx.find(hdl);
   if (i == ctx.end()) {
-    CAF_LOG_DEBUG("create new BASP context:" << CAF_ARG(hdl));
+    log::io::debug("create new BASP context: hdl = {}", hdl);
     basp::header hdr{basp::message_type::server_handshake,
                      0,
                      0,
@@ -673,7 +675,7 @@ void basp_broker::connection_cleanup(connection_handle hdl, sec code) {
     auto& ref = i->second;
     CAF_ASSERT(i->first == ref.hdl);
     if (ref.callback) {
-      CAF_LOG_DEBUG("connection closed during handshake:" << CAF_ARG(code));
+      log::io::debug("connection closed during handshake: code = {}", code);
       auto x = code != sec::none ? code : sec::disconnect_during_handshake;
       ref.callback->deliver(x);
     }

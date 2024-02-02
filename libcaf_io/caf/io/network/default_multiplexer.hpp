@@ -27,7 +27,7 @@
 #include "caf/config.hpp"
 #include "caf/detail/io_export.hpp"
 #include "caf/extend.hpp"
-#include "caf/logger.hpp"
+#include "caf/log/io.hpp"
 #include "caf/ref_counted.hpp"
 
 #include <cstdint>
@@ -185,26 +185,26 @@ private:
     if (i != last && i->fd == fd) {
       CAF_ASSERT(ptr == i->ptr);
       // squash events together
-      CAF_LOG_DEBUG("squash events:" << CAF_ARG(i->mask)
-                                     << CAF_ARG(fun(op, i->mask)));
+      log::io::debug("squash events: i->mask = {} fun(op, i->mask) = {}",
+                     i->mask, fun(op, i->mask));
       auto bf = i->mask;
       i->mask = fun(op, bf);
       if (i->mask == bf) {
         // didn't do a thing
-        CAF_LOG_DEBUG("squashing did not change the event");
+        log::io::debug("squashing did not change the event");
       } else if (i->mask == old_bf) {
         // just turned into a nop
-        CAF_LOG_DEBUG("squashing events resulted in a NOP");
+        log::io::debug("squashing events resulted in a NOP");
         events_.erase(i);
       }
     } else {
       // insert new element
       auto bf = fun(op, old_bf);
       if (bf == old_bf) {
-        CAF_LOG_DEBUG("event has no effect (discarded): " << CAF_ARG(bf) << ", "
-                                                          << CAF_ARG(old_bf));
+        log::io::debug("event has no effect (discarded): bf = {}, old-bf = {}",
+                       bf, old_bf);
       } else {
-        CAF_LOG_DEBUG("added handler:" << CAF_ARG(fd) << CAF_ARG(op));
+        log::io::debug("added handler: fd = {} op = {}", fd, op);
         events_.insert(i, event{fd, bf, ptr});
       }
     }

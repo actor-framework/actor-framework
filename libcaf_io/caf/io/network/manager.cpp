@@ -6,7 +6,7 @@
 
 #include "caf/io/abstract_broker.hpp"
 
-#include "caf/logger.hpp"
+#include "caf/log/io.hpp"
 
 namespace caf::io::network {
 
@@ -34,7 +34,7 @@ void manager::detach(execution_unit*, bool invoke_disconnect_message) {
   remove_from_loop();
   // Disconnect from the broker if not already detached.
   if (!detached()) {
-    CAF_LOG_DEBUG("disconnect servant from broker");
+    log::io::debug("disconnect servant from broker");
     auto raw_ptr = parent();
     // Keep a strong reference to our parent until we go out of scope.
     strong_actor_ptr ptr;
@@ -51,7 +51,7 @@ void manager::detach(execution_unit*, bool invoke_disconnect_message) {
           raw_ptr->push_to_cache(std::move(mptr));
           break;
         case invoke_message_result::dropped:
-          CAF_LOG_INFO("broker dropped disconnect message");
+          log::io::info("broker dropped disconnect message");
           break;
       }
     }

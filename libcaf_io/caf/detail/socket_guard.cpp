@@ -10,7 +10,7 @@
 #  include <unistd.h>
 #endif
 
-#include "caf/logger.hpp"
+#include "caf/log/io.hpp"
 
 namespace caf::detail {
 
@@ -30,7 +30,7 @@ io::network::native_socket socket_guard::release() {
 
 void socket_guard::close() {
   if (fd_ != io::network::invalid_native_socket) {
-    CAF_LOG_DEBUG("close socket" << CAF_ARG(fd_));
+    log::io::debug("close socket fd = {}", fd_);
     io::network::close_socket(fd_);
     fd_ = io::network::invalid_native_socket;
   }

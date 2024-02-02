@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include "caf/detail/io_export.hpp"
+
 #include <string>
 
 namespace caf::io::network {
@@ -14,5 +16,16 @@ enum class operation {
   write,
   propagate_error,
 };
+
+CAF_IO_EXPORT std::string to_string(operation);
+
+CAF_IO_EXPORT bool from_string(std::string_view, operation&);
+
+CAF_IO_EXPORT bool from_integer(std::underlying_type_t<operation>, operation&);
+
+template <class Inspector>
+bool inspect(Inspector& f, operation& x) {
+  return default_enum_inspect(f, x);
+}
 
 } // namespace caf::io::network
