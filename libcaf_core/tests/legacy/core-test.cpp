@@ -164,6 +164,14 @@ bool from_integer(uint8_t val, level& lvl) {
   }
 }
 
+void test_empty_non_pod::foo() {
+  // nop
+}
+
+test_empty_non_pod::~test_empty_non_pod() {
+  // nop
+}
+
 int main(int argc, char** argv) {
   using namespace caf;
   init_global_meta_objects<id_block::core_test>();

@@ -523,54 +523,6 @@ bool inspect(Inspector& f, test_empty_non_pod& x) {
   return f.object(x).fields();
 }
 
-enum class test_enum : int32_t {
-  a,
-  b,
-  c,
-};
-
-// Implemented in serialization.cpp
-std::string to_string(test_enum x);
-
-template <class Inspector>
-bool inspect(Inspector& f, test_enum& x) {
-  auto get = [&x] { return static_cast<int32_t>(x); };
-  auto set = [&x](int32_t val) {
-    if (val >= 0 && val <= 2) {
-      x = static_cast<test_enum>(val);
-      return true;
-    } else {
-      return false;
-    }
-  };
-  return f.apply(get, set);
-}
-
-// Used in serializer.cpp and deserializer.cpp
-struct test_data {
-  int32_t i32;
-  int64_t i64;
-  float f32;
-  double f64;
-  caf::timestamp ts;
-  test_enum te;
-  std::string str;
-};
-
-template <class Inspector>
-bool inspect(Inspector& f, test_data& x) {
-  return f.object(x).fields(f.field("i32", x.i32), f.field("i64", x.i64),
-                            f.field("f32", x.f32), f.field("f64", x.f64),
-                            f.field("ts", x.ts), f.field("te", x.te),
-                            f.field("str", x.str));
-}
-
-[[maybe_unused]] inline bool operator==(const test_data& x,
-                                        const test_data& y) {
-  return std::tie(x.i32, x.i64, x.f32, x.f64, x.ts, x.te, x.str)
-         == std::tie(y.i32, y.i64, y.f32, y.f64, y.ts, y.te, y.str);
-}
-
 enum class dummy_enum_class : short { foo, bar };
 
 [[maybe_unused]] inline std::string to_string(dummy_enum_class x) {
@@ -772,7 +724,6 @@ CAF_BEGIN_TYPE_ID_BLOCK(core_test, caf::first_custom_type_id)
   ADD_TYPE_ID((std::vector<std::string>) )
   ADD_TYPE_ID((test_array))
   ADD_TYPE_ID((test_empty_non_pod))
-  ADD_TYPE_ID((test_enum))
   ADD_TYPE_ID((widget))
 
   ADD_ATOM(abc_atom)
