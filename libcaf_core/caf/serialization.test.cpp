@@ -16,6 +16,8 @@
 #include "caf/raise_error.hpp"
 #include "caf/serializer.hpp"
 
+#include <regex>
+#include <unordered_set>
 #include <variant>
 
 using namespace std::literals;
@@ -33,7 +35,6 @@ CAF_BEGIN_TYPE_ID_BLOCK(serialization_test, caf::first_custom_type_id + 25)
   CAF_ADD_TYPE_ID(serialization_test, (weekday))
 
 CAF_END_TYPE_ID_BLOCK(serialization_test)
-
 
 namespace {
 
@@ -262,7 +263,7 @@ public:
   ADD_GET_SET_FIELD(weekday, field_38)
 };
 
-bool operator==(const nasty&lhs, const nasty&rhs){
+bool operator==(const nasty& lhs, const nasty& rhs) {
   return lhs.field_01 == rhs.field_01        //
          && lhs.field_02 == rhs.field_02     //
          && lhs.field_03 == rhs.field_03     //
@@ -446,7 +447,11 @@ struct fixture : caf::test::fixture::deterministic {
   }
 
   std::variant<int8_t, int16_t, int32_t, int64_t, uint8_t, uint16_t, uint32_t,
-               uint64_t, double, std::string>
+               uint64_t, double, std::string, std::vector<int32_t>,
+               std::list<int32_t>, std::map<std::string, int32_t>,
+               std::unordered_map<std::string, int32_t>, std::set<int32_t>,
+               std::unordered_set<int32_t>, std::array<int32_t, 5>,
+               std::tuple<int32_t, std::string, int32_t>>
   read_val(const std::string& type, const std::string& value) {
     if (type == "i8") {
       return static_cast<int8_t>(std::stoi(value));
@@ -478,11 +483,88 @@ struct fixture : caf::test::fixture::deterministic {
     if (type == "string") {
       return value;
     }
+    if (type == "vector") {
+      std::vector<int32_t> ivec;
+      auto parsed_value = parse_value(value, ",");
+      std::transform(parsed_value.cbegin(), parsed_value.cend(),
+                     std::back_inserter(ivec),
+                     [](const std::string& s) { return std::stoi(s); });
+      return ivec;
+    }
+    if (type == "list") {
+      std::list<int32_t> ilist;
+      auto parsed_value = parse_value(value, ",");
+      std::transform(parsed_value.cbegin(), parsed_value.cend(),
+                     std::back_inserter(ilist),
+                     [](const std::string& s) { return std::stoi(s); });
+      return ilist;
+    }
+    if (type == "map") {
+      std::map<std::string, int32_t> imap;
+      auto parsed_value = parse_value(value, ",");
+      std::transform(
+        parsed_value.cbegin(), parsed_value.cend(),
+        std::inserter(imap, imap.begin()), [this](const std::string& s) {
+          auto parsed_pair = parse_value(s, ":");
+          return std::pair{parsed_pair[0], std::stoi(parsed_pair[1])};
+        });
+      return imap;
+    }
+    if (type == "umap") {
+      std::unordered_map<std::string, int32_t> iumap;
+      auto parsed_value = parse_value(value, ",");
+      std::transform(
+        parsed_value.cbegin(), parsed_value.cend(),
+        std::inserter(iumap, iumap.begin()), [this](const std::string& s) {
+          auto parsed_pair = parse_value(s, ":");
+          return std::pair{parsed_pair[0], std::stoi(parsed_pair[1])};
+        });
+      return iumap;
+    }
+    if (type == "set") {
+      std::set<int32_t> iset;
+      auto parsed_value = parse_value(value, ",");
+      std::transform(parsed_value.cbegin(), parsed_value.cend(),
+                     std::inserter(iset, iset.begin()),
+                     [](const std::string& s) { return std::stoi(s); });
+      return iset;
+    }
+    if (type == "uset") {
+      std::unordered_set<int32_t> iuset;
+      auto parsed_value = parse_value(value, ",");
+      std::transform(parsed_value.cbegin(), parsed_value.cend(),
+                     std::inserter(iuset, iuset.begin()),
+                     [](const std::string& s) { return std::stoi(s); });
+      return iuset;
+    }
+    if (type == "array") {
+      std::array<int, 5> iarray;
+      auto parsed_value = parse_value(value, ",");
+      if (parsed_value.size() > 5) {
+        CAF_RAISE_ERROR(std::logic_error, "invalid array size");
+      }
+      std::transform(parsed_value.cbegin(), parsed_value.cend(), iarray.begin(),
+                     [](const std::string& s) { return std::stoi(s); });
+      std::fill(iarray.begin() + parsed_value.size(), iarray.end(), 0);
+      return iarray;
+    }
+    if (type == "tuple") {
+      auto parsed_value = parse_value(value, ",");
+      if (parsed_value.size() != 3) {
+        CAF_RAISE_ERROR(std::logic_error, "invalid tuple size");
+      }
+      return std::tuple{std::stoi(parsed_value[0]), parsed_value[1],
+                        std::stoi(parsed_value[2])};
+    }
     CAF_RAISE_ERROR(std::logic_error, "invalid type");
   }
 
   std::variant<int8_t, int16_t, int32_t, int64_t, uint8_t, uint16_t, uint32_t,
-               uint64_t, double, std::string>
+               uint64_t, double, std::string, std::vector<int32_t>,
+               std::list<int32_t>, std::map<std::string, int32_t>,
+               std::unordered_map<std::string, int32_t>, std::set<int32_t>,
+               std::unordered_set<int32_t>, std::array<int32_t, 5>,
+               std::tuple<int32_t, std::string, int32_t>>
   default_val(const std::string& type) {
     if (type == "i8") {
       return static_cast<int8_t>(0);
@@ -514,7 +596,41 @@ struct fixture : caf::test::fixture::deterministic {
     if (type == "string") {
       return "";
     }
+    if (type == "vector") {
+      return std::vector<int32_t>{};
+    }
+    if (type == "list") {
+      return std::list<int32_t>{};
+    }
+    if (type == "map") {
+      return std::map<std::string, int32_t>{};
+    }
+    if (type == "umap") {
+      return std::unordered_map<std::string, int32_t>{};
+    }
+    if (type == "set") {
+      return std::set<int32_t>{};
+    }
+    if (type == "uset") {
+      return std::unordered_set<int32_t>{};
+    }
+    if (type == "array") {
+      return std::array<int32_t, 5>{};
+    }
+    if (type == "tuple") {
+      return std::tuple<int32_t, std::string, int32_t>{};
+    }
     CAF_RAISE_ERROR(std::logic_error, "invalid type");
+  }
+
+private:
+  std::vector<std::string> parse_value(const std::string& list_val,
+                                       const std::string& delimiter) {
+    const std::regex delimiter_regex{delimiter};
+    return std::vector<std::string>{
+      std::sregex_token_iterator(list_val.cbegin(), list_val.cend(),
+                                 delimiter_regex, -1),
+      {}};
   }
 };
 
@@ -559,6 +675,14 @@ OUTLINE("serializing and then deserializing primitive values") {
     | binary_serializer   | u64    | 123456789     |
     | binary_serializer   | real   | 12.5          |
     | binary_serializer   | string | Hello, world! |
+    | binary_serializer   | vector | 1, 42, -31    |
+    | binary_serializer   | list   | 1, 42, -31    |
+    | binary_serializer   | map    | a:-1, b:42    |
+    | binary_serializer   | umap   | a:-1, b:42    |
+    | binary_serializer   | set    | 1, -42, 3, 3  |
+    | binary_serializer   | uset   | 1, -42, 3, 3  |
+    | binary_serializer   | array  | 1, -42, 3     |
+    | binary_serializer   | tuple  | -42, 1024, 30 |
     | json_writer         | i8     | -7            |
     | json_writer         | i16    | -999          |
     | json_writer         | i32    | -123456       |
@@ -569,6 +693,14 @@ OUTLINE("serializing and then deserializing primitive values") {
     | json_writer         | u64    | 123456789     |
     | json_writer         | real   | 12.5          |
     | json_writer         | string | Hello, world! |
+    | json_writer         | vector | 1, 42, -31    |
+    | json_writer         | list   | 1, 42, -31    |
+    | json_writer         | map    | a:-1, b:42    |
+    | json_writer         | umap   | a:-1, b:42    |
+    | json_writer         | set    | 1, -42, 3, 3  |
+    | json_writer         | uset   | 1, -42, 3, 3  |
+    | json_writer         | array  | 1, -42, 3     |
+    | json_writer         | tuple  | -42, 1024, 30 |
     | config_value_writer | i8     | -7            |
     | config_value_writer | i16    | -999          |
     | config_value_writer | i32    | -123456       |
@@ -579,6 +711,14 @@ OUTLINE("serializing and then deserializing primitive values") {
     | config_value_writer | u64    | 123456789     |
     | config_value_writer | real   | 12.5          |
     | config_value_writer | string | Hello, world! |
+    | config_value_writer | vector | 1, 42, -31    |
+    | config_value_writer | list   | 1, 42, -31    |
+    | config_value_writer | map    | a:-1, b:42    |
+    | config_value_writer | umap   | a:-1, b:42    |
+    | config_value_writer | set    | 1, -42, 3, 3  |
+    | config_value_writer | uset   | 1, -42, 3, 3  |
+    | config_value_writer | array  | 1, -42, 3     |
+    | config_value_writer | tuple  | -42, 1024, 30 |
   )_";
 }
 
