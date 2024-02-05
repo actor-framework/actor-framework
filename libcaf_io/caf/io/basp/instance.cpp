@@ -232,7 +232,9 @@ void instance::write_server_handshake(execution_unit* ctx, byte_buffer& out_buf,
     if (i != published_actors_.end())
       pa = &i->second;
   }
-  CAF_LOG_DEBUG_IF(!pa && port, "no actor published");
+  if (!pa && port) {
+    log::io::debug("no actor published");
+  }
   auto writer = make_callback([&](binary_serializer& sink) {
     using string_list = std::vector<std::string>;
     string_list app_ids;

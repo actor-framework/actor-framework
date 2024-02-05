@@ -20,8 +20,10 @@ void broker::initialize() {
   CAF_LOG_TRACE("");
   init_broker();
   auto bhvr = make_behavior();
-  CAF_LOG_DEBUG_IF(!bhvr, "make_behavior() did not return a behavior:"
-                            << CAF_ARG2("alive", alive()));
+  if (!bhvr) {
+    log::io::debug("make_behavior() did not return a behavior: alive = {}",
+                   alive());
+  }
   if (bhvr) {
     // make_behavior() did return a behavior instead of using become()
     log::io::debug("make_behavior() did return a valid behavior");

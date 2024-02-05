@@ -484,10 +484,14 @@ void basp_broker::finalize_handshake(const node_id& nid, actor_id aid,
     if (nid == this_node()) {
       // connected to self
       ptr = actor_cast<strong_actor_ptr>(system().registry().get(aid));
-      CAF_LOG_DEBUG_IF(!ptr, "actor not found:" << CAF_ARG(aid));
+      if (!ptr) {
+        log::io::debug("actor not found: aid = {}", aid);
+      }
     } else {
       ptr = namespace_.get_or_put(nid, aid);
-      CAF_LOG_ERROR_IF(!ptr, "creating actor in finalize_handshake failed");
+      if (!ptr) {
+        log::io::error("creating actor in finalize_handshake failed");
+      }
     }
   }
   cb->deliver(nid, std::move(ptr), std::move(sigs));
