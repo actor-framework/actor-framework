@@ -13,6 +13,8 @@
 #include "caf/detail/private_thread.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/flow/observable_builder.hpp"
+#include "caf/flow/op/mcast.hpp"
+#include "caf/log/core.hpp"
 #include "caf/log/system.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/scheduler.hpp"
@@ -994,8 +996,10 @@ void scheduled_actor::run_actions() {
 void scheduled_actor::update_watched_disposables() {
   CAF_LOG_TRACE("");
   [[maybe_unused]] auto n = disposable::erase_disposed(watched_disposables_);
-  CAF_LOG_DEBUG_IF(n > 0, "now watching" << watched_disposables_.size()
-                                         << "disposables");
+  if (n > 0) {
+    log::core::debug("now watching {} disposables",
+                     watched_disposables_.size());
+  }
 }
 
 void scheduled_actor::register_flow_state(uint64_t local_id,

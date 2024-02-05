@@ -5,6 +5,7 @@
 #include "caf/event_based_actor.hpp"
 
 #include "caf/detail/pretty_type_name.hpp"
+#include "caf/log/core.hpp"
 #include "caf/message_id.hpp"
 
 namespace caf {
@@ -23,8 +24,10 @@ void event_based_actor::initialize() {
   extended_base::initialize();
   setf(is_initialized_flag);
   auto bhvr = make_behavior();
-  CAF_LOG_DEBUG_IF(!bhvr, "make_behavior() did not return a behavior:"
-                            << CAF_ARG2("alive", alive()));
+  if (!bhvr) {
+    log::core::debug("make_behavior() did not return a behavior: alive = {}",
+                     alive());
+  }
   if (bhvr) {
     // make_behavior() did return a behavior instead of using become()
     log::core::debug("make_behavior() did return a valid behavior");
