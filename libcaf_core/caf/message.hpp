@@ -12,6 +12,7 @@
 #include "caf/fwd.hpp"
 #include "caf/intrusive_cow_ptr.hpp"
 #include "caf/raise_error.hpp"
+#include "caf/type_id.hpp"
 
 #include <sstream>
 #include <tuple>

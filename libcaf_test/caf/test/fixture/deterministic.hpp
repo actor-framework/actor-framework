@@ -265,6 +265,11 @@ public:
       return std::move(*this);
     }
 
+    evaluator&& priority(message_priority priority) && {
+      priority_ = priority;
+      return std::move(*this);
+    }
+
     /// Sets the target actor for this evaluator and evaluate the predicate.
     template <class T>
     bool to(const T& dst) && {
@@ -308,6 +313,13 @@ public:
           ctx.fail({"no matching message found", loc_});
         return false;
       }
+      if (priority_) {
+        if (event->item->mid.priority() != *priority_) {
+          if (fail_on_mismatch)
+            ctx.fail({"message priority does not match", loc_});
+          return false;
+        }
+      }
       fix_->prepone_event_impl(dst);
       if (fail_on_mismatch) {
         if (!fix_->dispatch_message())
@@ -334,6 +346,7 @@ public:
     evaluator_algorithm algo_;
     actor_predicate from_;
     message_predicate<Ts...> with_;
+    std::optional<message_priority> priority_;
   };
 
   /// Utility class for injecting messages into the mailbox of an actor and then

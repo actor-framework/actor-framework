@@ -104,6 +104,12 @@ public:
     return category() == normal_message_category;
   }
 
+  /// Returns the priority part from the `category()`.
+  constexpr message_priority priority() const noexcept {
+    return is_urgent_message() ? message_priority::high
+                               : message_priority::normal;
+  }
+
   /// Returns a response ID for the current request or an asynchronous ID with
   /// the same priority as this ID.
   constexpr message_id response_id() const noexcept {

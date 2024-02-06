@@ -134,24 +134,120 @@ disposable actor_clock::schedule(time_point t, action f,
   return std::move(decorated).as_disposable();
 }
 
-disposable actor_clock::schedule_message(time_point t,
+disposable actor_clock::schedule_message(time_point timeout,
                                          strong_actor_ptr receiver,
                                          mailbox_element_ptr content) {
-  auto f = make_action(
-    [rptr{std::move(receiver)}, cptr{std::move(content)}]() mutable {
-      rptr->enqueue(std::move(cptr), nullptr);
+  auto f = make_single_shot_action(
+    [dst = std::move(receiver), cptr = std::move(content)]() mutable {
+      dst->enqueue(std::move(cptr), nullptr);
     });
-  return schedule(t, std::move(f));
+  return schedule(timeout, std::move(f));
 }
 
-disposable actor_clock::schedule_message(time_point t, weak_actor_ptr receiver,
+disposable actor_clock::schedule_message(time_point timeout,
+                                         weak_actor_ptr receiver,
                                          mailbox_element_ptr content) {
-  auto f = make_action(
-    [rptr{std::move(receiver)}, cptr{std::move(content)}]() mutable {
-      if (auto ptr = actor_cast<strong_actor_ptr>(rptr))
-        ptr->enqueue(std::move(cptr), nullptr);
+  auto f = make_single_shot_action(
+    [dst = std::move(receiver), cptr = std::move(content)]() mutable {
+      if (auto strong_dst = dst.lock())
+        strong_dst->enqueue(std::move(cptr), nullptr);
     });
-  return schedule(t, std::move(f));
+  return schedule(timeout, std::move(f));
+}
+
+disposable actor_clock::schedule_message(std::nullptr_t,
+                                         strong_actor_ptr receiver,
+                                         time_point timeout, message_id mid,
+                                         message content) {
+  auto f = make_single_shot_action(
+    [dst = std::move(receiver), mid, msg = std::move(content)]() mutable {
+      dst->enqueue(make_mailbox_element(nullptr, mid, std::move(msg)), nullptr);
+    });
+  return schedule(timeout, std::move(f));
+}
+
+disposable actor_clock::schedule_message(std::nullptr_t,
+                                         weak_actor_ptr receiver,
+                                         time_point timeout, message_id mid,
+                                         message content) {
+  auto f = make_single_shot_action(
+    [dst = std::move(receiver), mid, msg = std::move(content)]() mutable {
+      if (auto sdst = dst.lock())
+        sdst->enqueue(make_mailbox_element(nullptr, mid, std::move(msg)),
+                      nullptr);
+    });
+  return schedule(timeout, std::move(f));
+}
+
+disposable actor_clock::schedule_message(strong_actor_ptr sender,
+                                         strong_actor_ptr receiver,
+                                         time_point timeout, message_id mid,
+                                         message content) {
+  auto f = make_single_shot_action([src = std::move(sender),
+                                    dst = std::move(receiver), mid,
+                                    msg = std::move(content)]() mutable {
+    dst->enqueue(make_mailbox_element(std::move(src), mid, std::move(msg)),
+                 nullptr);
+  });
+  return schedule(timeout, std::move(f));
+}
+
+disposable actor_clock::schedule_message(strong_actor_ptr sender,
+                                         weak_actor_ptr receiver,
+                                         time_point timeout, message_id mid,
+                                         message content) {
+  auto f = make_single_shot_action([src = std::move(sender),
+                                    dst = std::move(receiver), mid,
+                                    msg = std::move(content)]() mutable {
+    if (auto sdst = dst.lock()) {
+      sdst->enqueue(make_mailbox_element(std::move(src), mid, std::move(msg)),
+                    nullptr);
+    } else if (src && mid.is_request()) {
+      src->enqueue(make_mailbox_element(nullptr, mid.response_id(),
+                                        make_error(sec::request_receiver_down)),
+                   nullptr);
+    }
+  });
+  return schedule(timeout, std::move(f));
+}
+
+disposable actor_clock::schedule_message(weak_actor_ptr sender,
+                                         strong_actor_ptr receiver,
+                                         time_point timeout, message_id mid,
+                                         message content) {
+  auto f = make_single_shot_action([src = std::move(sender),
+                                    dst = std::move(receiver), mid,
+                                    msg = std::move(content)]() mutable {
+    auto ssrc = src.lock();
+    if (!ssrc)
+      return;
+    dst->enqueue(make_mailbox_element(std::move(ssrc), mid, std::move(msg)),
+                 nullptr);
+  });
+  return schedule(timeout, std::move(f));
+}
+
+disposable actor_clock::schedule_message(weak_actor_ptr sender,
+                                         weak_actor_ptr receiver,
+                                         time_point timeout, message_id mid,
+                                         message content) {
+  auto f = make_single_shot_action([src = std::move(sender),
+                                    dst = std::move(receiver), mid,
+                                    msg = std::move(content)]() mutable {
+    auto ssrc = src.lock();
+    if (!ssrc)
+      return;
+    if (auto sdst = dst.lock()) {
+      sdst->enqueue(make_mailbox_element(std::move(ssrc), mid, std::move(msg)),
+                    nullptr);
+    } else if (mid.is_request()) {
+      ssrc->enqueue(
+        make_mailbox_element(nullptr, mid.response_id(),
+                             make_error(sec::request_receiver_down)),
+        nullptr);
+    }
+  });
+  return schedule(timeout, std::move(f));
 }
 
 } // namespace caf
