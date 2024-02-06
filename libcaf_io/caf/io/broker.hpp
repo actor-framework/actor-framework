@@ -12,6 +12,7 @@
 #include "caf/detail/io_export.hpp"
 #include "caf/extend.hpp"
 #include "caf/fwd.hpp"
+#include "caf/infer_handle.hpp"
 #include "caf/keep_behavior.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/mixin/requester.hpp"
@@ -42,7 +43,8 @@ public:
     CAF_ASSERT(context() != nullptr);
     auto sptr = this->take(hdl);
     CAF_ASSERT(sptr->hdl() == hdl);
-    using impl = typename infer_handle_from_fun<F>::impl;
+    using trait = infer_handle_from_fun_trait_t<F>;
+    using impl = typename trait::impl;
     actor_config cfg{context()};
     detail::init_fun_factory<impl, F> fac;
     cfg.init_fun = fac(std::move(fun), hdl, std::forward<Ts>(xs)...);

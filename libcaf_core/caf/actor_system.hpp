@@ -89,6 +89,9 @@ public:
   friend class abstract_actor;
   friend class scheduler;
 
+  template <class>
+  friend class actor_from_state_t;
+
   /// Returns the internal actor for dynamic spawn operations.
   const strong_actor_ptr& spawn_serv() const {
     return spawn_serv_;
@@ -429,6 +432,14 @@ public:
     cfg.mbox_factory = mailbox_factory();
     return spawn_functor<Os>(std::bool_constant<spawnable>{}, cfg, fun,
                              std::forward<Ts>(xs)...);
+  }
+
+  /// Returns a new stateful actor.
+  template <spawn_options Options = no_spawn_options, class CustomSpawn,
+            class... Args>
+  typename CustomSpawn::handle_type spawn(CustomSpawn, Args&&... args) {
+    return CustomSpawn::template do_spawn<Options>(*this,
+                                                   std::forward<Args>(args)...);
   }
 
   /// Returns a new actor with run-time type `name`, constructed

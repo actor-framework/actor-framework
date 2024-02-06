@@ -94,7 +94,7 @@ struct message_verifier<spawn_mode::function_with_selfptr,
 template <class F>
 actor_factory make_actor_factory(F fun) {
   return [fun](actor_config& cfg, message& msg) -> actor_factory_result {
-    using trait = infer_handle_from_fun<F>;
+    using trait = infer_handle_from_fun_trait_t<F>;
     using handle = typename trait::type;
     using impl = typename trait::impl;
     using behavior_t = typename trait::behavior_type;

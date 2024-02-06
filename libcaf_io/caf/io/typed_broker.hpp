@@ -91,7 +91,7 @@ public:
     CAF_ASSERT(this->context() != nullptr);
     auto sptr = this->take(hdl);
     CAF_ASSERT(sptr->hdl() == hdl);
-    using impl = typename infer_handle_from_fun<F>::impl;
+    using impl = typename infer_handle_from_fun_trait_t<F>::impl;
     static_assert(
       std::is_convertible<typename impl::actor_hdl, connection_handler>::value,
       "Cannot fork: new broker misses required handlers");
