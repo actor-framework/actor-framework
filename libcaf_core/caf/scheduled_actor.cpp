@@ -6,23 +6,18 @@
 
 #include "caf/action.hpp"
 #include "caf/actor_ostream.hpp"
-#include "caf/actor_system_config.hpp"
 #include "caf/config.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/default_invoke_result_visitor.hpp"
 #include "caf/detail/mailbox_factory.hpp"
-#include "caf/detail/meta_object.hpp"
 #include "caf/detail/private_thread.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
-#include "caf/flow/observable.hpp"
 #include "caf/flow/observable_builder.hpp"
-#include "caf/flow/op/mcast.hpp"
 #include "caf/log/system.hpp"
 #include "caf/mailbox_element.hpp"
-#include "caf/scheduler/abstract_coordinator.hpp"
+#include "caf/scheduler.hpp"
+#include "caf/send.hpp"
 #include "caf/stream.hpp"
-
-#include <new>
 
 using namespace std::string_literals;
 

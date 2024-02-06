@@ -4,9 +4,11 @@
 
 #define CAF_SUITE thread_hook
 
-#include "caf/all.hpp"
+#include "caf/thread_hook.hpp"
 
 #include "core-test.hpp"
+
+#include <atomic>
 
 using namespace caf;
 
@@ -99,22 +101,17 @@ BEGIN_FIXTURE_SCOPE(fixture<counting_thread_hook>)
 
 CAF_TEST(counting_system_without_actor) {
   assumed_init_calls = 1;
-  auto fallback = scheduler::abstract_coordinator::default_thread_count();
+  auto fallback = scheduler::default_thread_count();
   assumed_thread_count = get_or(cfg, "caf.scheduler.max-threads", fallback)
-                         + 2; // clock and private thread pool
-  auto& sched = sys.scheduler();
-  if (sched.detaches_utility_actors())
-    assumed_thread_count += sched.num_utility_actors();
+                         + 3; // clock, private thread pool and printer
 }
 
 CAF_TEST(counting_system_with_actor) {
   assumed_init_calls = 1;
-  auto fallback = scheduler::abstract_coordinator::default_thread_count();
-  assumed_thread_count = get_or(cfg, "caf.scheduler.max-threads", fallback)
-                         + 3; // clock, private thread pool, and  detached actor
-  auto& sched = sys.scheduler();
-  if (sched.detaches_utility_actors())
-    assumed_thread_count += sched.num_utility_actors();
+  auto fallback = scheduler::default_thread_count();
+  assumed_thread_count
+    = get_or(cfg, "caf.scheduler.max-threads", fallback)
+      + 4; // clock, private thread pool, printer and  detached actor
   sys.spawn<detached>([] {});
   sys.spawn([] {});
 }

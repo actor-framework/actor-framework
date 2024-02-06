@@ -8,7 +8,7 @@
 
 #include "caf/actor_system.hpp"
 #include "caf/proxy_registry.hpp"
-#include "caf/scheduler/abstract_coordinator.hpp"
+#include "caf/scheduler.hpp"
 
 namespace caf::io::basp {
 

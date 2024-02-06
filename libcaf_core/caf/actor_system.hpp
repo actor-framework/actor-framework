@@ -10,7 +10,6 @@
 #include "caf/actor_config.hpp"
 #include "caf/actor_profiler.hpp"
 #include "caf/actor_registry.hpp"
-#include "caf/actor_traits.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/init_fun_factory.hpp"
 #include "caf/detail/private_thread_pool.hpp"
@@ -31,14 +30,10 @@
 
 #include <array>
 #include <atomic>
-#include <condition_variable>
 #include <cstddef>
-#include <functional>
 #include <memory>
-#include <mutex>
 #include <string>
 #include <thread>
-#include <typeinfo>
 
 namespace caf::detail {
 
@@ -92,6 +87,7 @@ public:
   friend class io::middleman;
   friend class net::middleman;
   friend class abstract_actor;
+  friend class scheduler;
 
   /// Returns the internal actor for dynamic spawn operations.
   const strong_actor_ptr& spawn_serv() const {
@@ -320,7 +316,7 @@ public:
   }
 
   /// Returns the scheduler instance.
-  scheduler::abstract_coordinator& scheduler();
+  caf::scheduler& scheduler();
 
   /// Returns the system-wide event logger.
   caf::logger& logger();
@@ -684,6 +680,11 @@ public:
 
   void release_private_thread(detail::private_thread*);
 
+  /// Returns a handle to the central printing actor.
+  actor printer() const {
+    return actor_cast<actor>(printer_actor_);
+  }
+
   /// @endcond
 
 private:
@@ -770,6 +771,12 @@ private:
 
   /// Ties the lifetime of the meta objects table to the actor system.
   detail::global_meta_objects_guard_type meta_objects_guard_;
+
+  /// Set a handle to the central printing actor.
+  void printer(caf::actor hdl);
+
+  /// Background printer.
+  actor printer_actor_;
 };
 
 } // namespace caf

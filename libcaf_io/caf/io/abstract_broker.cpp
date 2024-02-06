@@ -13,7 +13,6 @@
 #include "caf/logger.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/none.hpp"
-#include "caf/scheduler/abstract_coordinator.hpp"
 #include "caf/span.hpp"
 
 namespace caf::io {

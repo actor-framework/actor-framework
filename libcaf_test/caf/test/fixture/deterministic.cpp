@@ -18,8 +18,9 @@
 #include "caf/log/test.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/scheduled_actor.hpp"
-#include "caf/scheduler/abstract_coordinator.hpp"
+#include "caf/scheduler.hpp"
 
+#include <cassert>
 #include <numeric>
 #include <string>
 #include <string_view>
@@ -435,9 +436,9 @@ private:
 
 } // namespace
 
-class deterministic::scheduler_impl : public scheduler::abstract_coordinator {
+class deterministic::scheduler_impl : public scheduler {
 public:
-  using super = caf::scheduler::abstract_coordinator;
+  using super = caf::scheduler;
 
   scheduler_impl(actor_system& sys, deterministic* fix)
     : super(sys), fix_(fix) {
@@ -449,10 +450,6 @@ public:
     if (!ptr)
       ptr = make_counted<actor_local_printer_impl>(self);
     return ptr;
-  }
-
-  bool detaches_utility_actors() const override {
-    return false;
   }
 
   deterministic_actor_clock& clock() noexcept override {

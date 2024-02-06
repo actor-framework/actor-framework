@@ -9,14 +9,14 @@
 #include "caf/defaults.hpp"
 #include "caf/detail/meta_object.hpp"
 #include "caf/event_based_actor.hpp"
-#include "caf/policy/work_sharing.hpp"
-#include "caf/policy/work_stealing.hpp"
 #include "caf/raise_error.hpp"
-#include "caf/scheduler/abstract_coordinator.hpp"
-#include "caf/scheduler/coordinator.hpp"
+#include "caf/scheduler.hpp"
 #include "caf/send.hpp"
 #include "caf/stateful_actor.hpp"
+#include "caf/system_messages.hpp"
 
+#include <memory>
+#include <unordered_map>
 #include <unordered_set>
 
 namespace caf {
@@ -307,11 +307,6 @@ actor_system::actor_system(actor_system_config& cfg)
   }
   // Make sure we have a scheduler up and running.
   auto& sched = modules_[module::scheduler];
-  using namespace scheduler;
-  using policy::work_sharing;
-  using policy::work_stealing;
-  using share = coordinator<work_sharing>;
-  using steal = coordinator<work_stealing>;
   if (!sched) {
     enum sched_conf {
       stealing = 0x0001,
@@ -329,10 +324,10 @@ actor_system::actor_system(actor_system_config& cfg)
               sr_policy.c_str());
     switch (sc) {
       default: // any invalid configuration falls back to work stealing
-        sched.reset(new steal(*this));
+        sched = scheduler::make_work_stealing(*this);
         break;
       case sharing:
-        sched.reset(new share(*this));
+        sched = scheduler::make_work_sharing(*this);
         break;
     }
   }
@@ -389,9 +384,8 @@ actor_system::~actor_system() {
 }
 
 /// Returns the scheduler instance.
-scheduler::abstract_coordinator& actor_system::scheduler() {
-  using ptr = scheduler::abstract_coordinator*;
-  return *static_cast<ptr>(modules_[module::scheduler].get());
+caf::scheduler& actor_system::scheduler() {
+  return *static_cast<class scheduler*>(modules_[module::scheduler].get());
 }
 
 caf::logger& actor_system::logger() {
@@ -518,6 +512,14 @@ void actor_system::release_private_thread(detail::private_thread* ptr) {
 
 detail::mailbox_factory* actor_system::mailbox_factory() {
   return cfg_.mailbox_factory();
+}
+
+/// Set a handle to the central printing actor.
+void actor_system::printer(caf::actor hdl) {
+  if (printer_actor_) {
+    anon_send_exit(printer(), exit_reason::user_shutdown);
+  }
+  printer_actor_ = std::move(hdl);
 }
 
 } // namespace caf

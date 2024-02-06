@@ -5,10 +5,8 @@
 #include "caf/actor_ostream.hpp"
 
 #include "caf/abstract_actor.hpp"
-#include "caf/default_attachable.hpp"
-#include "caf/scheduler/abstract_coordinator.hpp"
+#include "caf/scheduler.hpp"
 #include "caf/scoped_actor.hpp"
-#include "caf/send.hpp"
 
 namespace caf {
 
@@ -26,7 +24,7 @@ actor_ostream::actor_ostream(scoped_actor& self)
 void actor_ostream::redirect(abstract_actor* self, std::string fn, int flags) {
   if (self == nullptr)
     return;
-  auto pr = self->home_system().scheduler().printer();
+  auto pr = self->home_system().printer();
   if (!pr)
     return;
   pr->enqueue(make_mailbox_element(nullptr, make_message_id(), redirect_atom_v,
@@ -35,7 +33,7 @@ void actor_ostream::redirect(abstract_actor* self, std::string fn, int flags) {
 }
 
 void actor_ostream::redirect_all(actor_system& sys, std::string fn, int flags) {
-  auto pr = sys.scheduler().printer();
+  auto pr = sys.printer();
   if (!pr)
     return;
   pr->enqueue(make_mailbox_element(nullptr, make_message_id(), redirect_atom_v,
