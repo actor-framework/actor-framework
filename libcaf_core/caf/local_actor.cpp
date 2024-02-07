@@ -152,6 +152,17 @@ error local_actor::load_state(deserializer&, const unsigned int) {
   CAF_RAISE_ERROR("local_actor::deserialize called");
 }
 
+void local_actor::do_delegate_error() {
+  auto& sender = current_element_->sender;
+  auto& mid = current_element_->mid;
+  if (!sender || mid.is_response() || mid.is_answered())
+    return;
+  sender->enqueue(make_mailbox_element(ctrl(), mid.response_id(),
+                                       make_error(sec::invalid_delegate)),
+                  context());
+  mid.mark_as_answered();
+}
+
 void local_actor::initialize() {
   CAF_LOG_TRACE(CAF_ARG2("id", id()) << CAF_ARG2("name", name()));
 }

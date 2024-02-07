@@ -56,9 +56,9 @@ using response_type_t = typename response_type<Fs, In...>::type;
 /// Computes the response message type for input `In...` from the list of
 /// message passing interfaces `Fs` and returns the corresponding
 /// `delegated<T>`.
-template <class Fs, class... In>
+template <class Handle, class... In>
 using delegated_response_type_t =
-  typename response_type<Fs, In...>::delegated_type;
+  typename response_type<typename Handle::signatures, In...>::delegated_type;
 
 /// Unboxes `Xs` and calls `response_type`.
 template <class Ts, class Xs>

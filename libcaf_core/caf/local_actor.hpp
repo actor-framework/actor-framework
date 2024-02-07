@@ -350,11 +350,25 @@ public:
     return res;
   }
 
-  // returns 0 if last_dequeued() is an asynchronous or sync request message,
-  // a response id generated from the request id otherwise
-  message_id get_response_id() const {
-    auto mid = current_element_->mid;
-    return (mid.is_request()) ? mid.response_id() : message_id();
+  // Send an error message to the sender of the current message as a result of a
+  // delegate operation that failed.
+  void do_delegate_error();
+
+  // Get the sender and message ID for the current message and mark the message
+  // ID as answered.
+  template <message_priority Priority>
+  std::pair<message_id, strong_actor_ptr> do_delegate() {
+    auto& mid = current_element_->mid;
+    if (mid.is_response() || mid.is_answered())
+      return {make_message_id(Priority), std::move(current_element_->sender)};
+    message_id result;
+    if constexpr (Priority == message_priority::high) {
+      result = mid.with_high_priority();
+    } else {
+      result = mid;
+    }
+    mid.mark_as_answered();
+    return {result, std::move(current_element_->sender)};
   }
 
   template <message_priority P = message_priority::normal, class Handle = actor,

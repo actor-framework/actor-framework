@@ -105,6 +105,7 @@ caf_add_component(
     caf/async/promise.test.cpp
     caf/async/publisher.test.cpp
     caf/async/spsc_buffer.test.cpp
+    caf/async_mail.test.cpp
     caf/attachable.cpp
     caf/behavior.cpp
     caf/behavior.test.cpp

@@ -123,7 +123,7 @@ public:
   /// @post `pending() == false`
   template <message_priority P = message_priority::normal, class Handle,
             class... Ts>
-  delegated_response_type_t<typename Handle::signatures,
+  delegated_response_type_t<Handle,
                             detail::implicit_conversions_t<std::decay_t<Ts>>...>
   delegate(const Handle& receiver, Ts&&... args) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
