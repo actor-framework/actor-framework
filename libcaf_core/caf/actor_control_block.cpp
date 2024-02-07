@@ -39,10 +39,27 @@ void intrusive_ptr_release_weak(actor_control_block* x) {
 }
 
 void intrusive_ptr_release(actor_control_block* x) {
-  // release implicit weak pointer if the last strong ref expires
-  // and destroy the data block
   if (x->strong_refs.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+    // When hitting 0, we need to allow the actor to clean up its state in case
+    // it is not terminated yet. For this, we need to bump the ref count to 1
+    // again, because the cleanup code might send messages to other actors that
+    // in turn reference this actor.
+    auto* ptr = x->get();
+    if (!ptr->is_terminated()) {
+      // First, make sure that other actors can no longer send messages to this
+      // actor. Then bump the reference count and do the regular cleanup.
+      ptr->force_close_mailbox();
+      x->strong_refs.fetch_add(1, std::memory_order_relaxed);
+      ptr->on_unreachable();
+      CAF_ASSERT(ptr->is_terminated());
+      if (x->strong_refs.fetch_sub(1, std::memory_order_acq_rel) != 1) {
+        // Another strong reference was added while we were cleaning up.
+        return;
+      }
+    }
     x->data_dtor(x->get());
+    // We release the implicit weak pointer if the last strong ref expires and
+    // destroy the data block.
     intrusive_ptr_release_weak(x);
   }
 }

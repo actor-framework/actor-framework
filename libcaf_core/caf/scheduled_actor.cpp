@@ -216,8 +216,8 @@ void scheduled_actor::launch(execution_unit* ctx, bool lazy, bool hide) {
   }
 }
 
-bool scheduled_actor::cleanup(error&& fail_state, execution_unit* host) {
-  CAF_LOG_TRACE(CAF_ARG(fail_state));
+void scheduled_actor::on_cleanup(const error& reason) {
+  CAF_LOG_TRACE(CAF_ARG(reason));
   pending_timeout_.dispose();
   // Shutdown hosting thread when running detached.
   if (private_thread_)
@@ -226,23 +226,9 @@ bool scheduled_actor::cleanup(error&& fail_state, execution_unit* host) {
   awaited_responses_.clear();
   multiplexed_responses_.clear();
   cancel_flows_and_streams();
-  // Discard stashed messages.
-  auto dropped = size_t{0};
-  if (!stash_.empty()) {
-    detail::sync_request_bouncer bounce{fail_state};
-    while (auto stashed = stash_.pop()) {
-      bounce(*stashed);
-      delete stashed;
-      ++dropped;
-    }
-  }
-  // Clear mailbox.
-  if (!mailbox().closed())
-    dropped += mailbox().close(fail_state);
-  if (dropped > 0 && metrics_.mailbox_size)
-    metrics_.mailbox_size->dec(static_cast<int64_t>(dropped));
-  // Dispatch to parent's `cleanup` function.
-  return super::cleanup(std::move(fail_state), host);
+  close_mailbox(reason);
+  // Dispatch to parent's `on_cleanup` function.
+  super::on_cleanup(reason);
 }
 
 // -- overridden functions of resumable ----------------------------------------
@@ -875,7 +861,7 @@ void scheduled_actor::do_become(behavior bhvr, bool discard_old) {
 bool scheduled_actor::finalize() {
   CAF_LOG_TRACE("");
   // Repeated calls always return `true` but have no side effects.
-  if (getf(is_cleaned_up_flag))
+  if (is_terminated())
     return true;
   // An actor is considered alive as long as it has a behavior, didn't set
   // the terminated flag and has no watched flows remaining.
@@ -884,10 +870,9 @@ bool scheduled_actor::finalize() {
     return false;
   CAF_LOG_DEBUG("actor has no behavior and is ready for cleanup");
   CAF_ASSERT(!has_behavior());
-  on_exit();
   bhvr_stack_.cleanup();
   cleanup(std::move(fail_state_), context());
-  CAF_ASSERT(getf(is_cleaned_up_flag));
+  CAF_ASSERT(is_terminated());
   return true;
 }
 
@@ -1040,6 +1025,28 @@ void scheduled_actor::cancel_flows_and_streams() {
       ptr.dispose();
   }
   run_actions();
+}
+
+void scheduled_actor::close_mailbox(const error& reason) {
+  // Discard stashed messages.
+  auto dropped = size_t{0};
+  if (!stash_.empty()) {
+    detail::sync_request_bouncer bounce{reason};
+    while (auto stashed = stash_.pop()) {
+      bounce(*stashed);
+      delete stashed;
+      ++dropped;
+    }
+  }
+  // Clear mailbox.
+  if (!mailbox().closed())
+    dropped += mailbox().close(reason);
+  if (dropped > 0 && metrics_.mailbox_size)
+    metrics_.mailbox_size->dec(static_cast<int64_t>(dropped));
+}
+
+void scheduled_actor::force_close_mailbox() {
+  close_mailbox(make_error(exit_reason::unreachable));
 }
 
 } // namespace caf

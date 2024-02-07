@@ -24,6 +24,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   setting the configuration option `caf.net.prometheus-http`. The option has the
   following fields: `port`, `address`, `tls.key-file`, and `tls.cert-file`. When
   setting the TLS options, the server will use HTTPS instead of HTTP.
+- Sending messages from cleanup code (e.g., the destructor of a state class) is
+  now safe. Previously, doing so could cause undefined behavior by forming a
+  strong reference to a destroyed actor.
 
 ## [0.19.5] - 2024-01-08
 

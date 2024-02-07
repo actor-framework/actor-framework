@@ -70,7 +70,6 @@ public:
 private:
   static void data_dtor(abstract_actor* ptr) {
     // safe due to static assert #3
-    ptr->on_destroy();
     static_cast<T*>(ptr)->~T();
   }
 

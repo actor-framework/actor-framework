@@ -326,7 +326,7 @@ public:
   void receive_impl(receive_cond& rcc, message_id mid,
                     detail::blocking_behavior& bhvr);
 
-  bool cleanup(error&& fail_state, execution_unit* host) override;
+  void on_cleanup(const error& reason) override;
 
   // -- backwards compatibility ------------------------------------------------
 
@@ -348,6 +348,10 @@ private:
   size_t attach_functor(const strong_actor_ptr&);
 
   void unstash();
+
+  void close_mailbox(const error& reason);
+
+  void force_close_mailbox() final;
 
   template <class... Ts>
   size_t attach_functor(const typed_actor<Ts...>& x) {

@@ -183,6 +183,43 @@ TEST("the state may take the self pointer as constructor argument") {
   }
 }
 
+TEST("the state destructor may send messages") {
+  struct state {
+    state(event_based_actor* selfptr, actor buddy_hdl,
+          std::shared_ptr<bool> is_destroyed_flag)
+      : self(selfptr),
+        buddy(std::move(buddy_hdl)),
+        is_destroyed(std::move(is_destroyed_flag)) {
+      // nop
+    }
+
+    ~state() {
+      // CAF must guarantee that we have a strong reference to `self` here, even
+      // if the actor terminates because it became unreachable.
+      runnable::current().check_eq(self->ctrl()->strong_refs.load(), 1u);
+      self->send(buddy, 42);
+      *is_destroyed = true;
+    }
+
+    behavior make_behavior() {
+      return {
+        [](get_atom) { return 42; },
+      };
+    }
+
+    event_based_actor* self;
+    actor buddy;
+    std::shared_ptr<bool> is_destroyed;
+  };
+  auto dummy = sys.spawn(dummy_impl);
+  auto is_destroyed = std::make_shared<bool>(false);
+  auto uut = sys.spawn(actor_from_state<state>, dummy, is_destroyed);
+  check(!*is_destroyed);
+  uut = nullptr;
+  check(*is_destroyed);
+  expect<int>().with(42).to(dummy);
+}
+
 } // WITH_FIXTURE(test::fixture::deterministic)
 
 } // namespace

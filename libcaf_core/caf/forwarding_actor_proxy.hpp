@@ -32,6 +32,8 @@ public:
 private:
   bool forward_msg(strong_actor_ptr sender, message_id mid, message msg);
 
+  void force_close_mailbox() final;
+
   mutable std::shared_mutex broker_mtx_;
   actor broker_;
 };

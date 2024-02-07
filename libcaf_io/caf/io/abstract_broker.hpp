@@ -88,7 +88,7 @@ public:
 
   // -- overridden modifiers of abstract_broker --------------------------------
 
-  bool cleanup(error&& reason, execution_unit* host) override;
+  void on_cleanup(const error& reason) override;
 
   // -- overridden modifiers of resumable --------------------------------------
 

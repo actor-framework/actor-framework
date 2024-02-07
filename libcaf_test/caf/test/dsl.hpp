@@ -864,6 +864,10 @@ public:
       }
 
     private:
+      void force_close_mailbox() final {
+        // nop
+      }
+
       caf::message_handler mh_;
     };
 

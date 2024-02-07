@@ -35,6 +35,8 @@ class remote_message_handler;
 
 namespace caf {
 
+CAF_CORE_EXPORT void intrusive_ptr_release(actor_control_block*);
+
 /// A unique actor ID.
 /// @relates abstract_actor
 using actor_id = uint64_t;
@@ -52,6 +54,8 @@ public:
 
   template <class>
   friend class caf::io::basp::remote_message_handler;
+
+  friend CAF_CORE_EXPORT void intrusive_ptr_release(actor_control_block*);
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -155,25 +159,42 @@ public:
   /// This member function is thread-safe, and if the actor has already exited
   /// upon invocation, nothing is done. The return value of this member
   /// function is ignored by scheduled actors.
-  virtual bool cleanup(error&& reason, execution_unit* host);
+  bool cleanup(error&& reason, execution_unit* host);
 
   // -- here be dragons: end of public interface -------------------------------
 
   /// @cond PRIVATE
 
-  // flags storing runtime information                    used by ...
-  static constexpr int is_hidden_flag = 0x0004;        // scheduled_actor
-  static constexpr int is_registered_flag = 0x0008;    // (several actors)
-  static constexpr int is_initialized_flag = 0x0010;   // event-based actors
-  static constexpr int is_blocking_flag = 0x0020;      // blocking_actor
-  static constexpr int is_detached_flag = 0x0040;      // local_actor
-  static constexpr int collects_metrics_flag = 0x0080; // local_actor
-  static constexpr int is_serializable_flag = 0x0100;  // local_actor
-  static constexpr int is_migrated_from_flag = 0x0200; // local_actor
-  static constexpr int has_used_aout_flag = 0x0400;    // local_actor
-  static constexpr int is_terminated_flag = 0x0800;    // local_actor
-  static constexpr int is_cleaned_up_flag = 0x1000;    // monitorable_actor
-  static constexpr int is_shutting_down_flag = 0x2000; // scheduled_actor
+  /// Indicates that the actor system shall not wait for this actor to
+  /// finish execution on shutdown.
+  static constexpr int is_hidden_flag = 0b0000'0000'0001;
+
+  /// Indicates that the actor is registered at the actor system.
+  static constexpr int is_registered_flag = 0b0000'0000'0010;
+
+  /// Indicates that the actor has been initialized.
+  static constexpr int is_initialized_flag = 0b0000'0000'0100;
+
+  /// Indicates that the actor uses blocking message handlers.
+  static constexpr int is_blocking_flag = 0b0000'0000'1000;
+
+  /// Indicates that the actor runs in its own thread.
+  static constexpr int is_detached_flag = 0b0000'0001'0000;
+
+  /// Indicates that the actor collects metrics.
+  static constexpr int collects_metrics_flag = 0b0000'0010'0000;
+
+  /// Indicates that the actor has used aout at least once and thus needs to
+  /// call `flush` when shutting down.
+  static constexpr int has_used_aout_flag = 0b0000'0100'0000;
+
+  /// Indicates that the actor has terminated and waits for its destructor to
+  /// run.
+  static constexpr int is_terminated_flag = 0b0000'1000'0000;
+
+  /// Indicates that the actor is currently shutting down and thus may no longer
+  /// set a new behavior.
+  static constexpr int is_shutting_down_flag = 0b0001'0000'0000;
 
   void setf(int flag) {
     auto x = flags();
@@ -234,16 +255,13 @@ public:
 protected:
   // -- callbacks --------------------------------------------------------------
 
-  /// Cleans up any remaining state before the destructor is called.
-  /// This function makes sure it is safe to call virtual functions
-  /// in sub classes before destroying the object, because calling
-  /// virtual function in the destructor itself is not safe. Any override
-  /// implementation is required to call `super::destroy()` at the end.
-  virtual void on_destroy();
+  /// Called on actor if the last strong reference to it expired without
+  /// a prior call to `quit(exit_reason::not_exited)`.
+  /// @pre `getf(is_terminated_flag) == false`
+  /// @post `getf(is_terminated_flag) == true`
+  virtual void on_unreachable();
 
-  /// Allows subclasses to add additional cleanup code to the
-  /// critical section in `cleanup`. This member function is
-  /// called inside of a critical section.
+  /// Called from `cleanup` to perform extra cleanup actions for this actor.
   virtual void on_cleanup(const error& reason);
 
   // -- properties -------------------------------------------------------------
@@ -260,6 +278,11 @@ protected:
 
   void flags(int new_value) {
     flags_.store(new_value, std::memory_order_relaxed);
+  }
+
+  /// Checks whether this actor has terminated.
+  bool is_terminated() const noexcept {
+    return getf(is_terminated_flag);
   }
 
   // -- constructors, destructors, and assignment operators --------------------
@@ -310,6 +333,13 @@ protected:
 
   /// Points to the first attachable in the linked list of attachables (if any).
   attachable_ptr attachables_head_;
+
+private:
+  /// Forces the actor to close its mailbox and drop all messages. The only
+  /// place calling this member function is
+  /// `intrusive_ptr_release(actor_control_block*)` before calling
+  /// `on_unreachable`.
+  virtual void force_close_mailbox() = 0;
 };
 
 } // namespace caf

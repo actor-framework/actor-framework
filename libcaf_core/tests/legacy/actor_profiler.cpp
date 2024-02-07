@@ -40,7 +40,7 @@ struct recorder : actor_profiler {
   }
 
   void remove_actor(const local_actor& self) override {
-    log.emplace_back("delete: ");
+    log.emplace_back("terminate: ");
     log.back() += self.name();
   }
 
@@ -134,8 +134,8 @@ CAF_TEST(profilers record actor construction) {
   CHECK_EQ(string_list({
              "new: foo",
              "new: bar, parent: foo",
-             "delete: bar",
-             "delete: foo",
+             "terminate: foo",
+             "terminate: bar",
            }),
            rec.log);
 }
@@ -170,9 +170,9 @@ CAF_TEST(profilers record asynchronous messaging) {
              R"__(bar sends: message("hello foo"))__",
              R"__(bar consumed the message)__",
              R"__(foo got: message("hello foo"))__",
-             R"__(delete: bar)__",
+             R"__(terminate: bar)__",
              R"__(foo consumed the message)__",
-             R"__(delete: foo)__",
+             R"__(terminate: foo)__",
            }),
            rec.log);
 }
@@ -210,14 +210,14 @@ CAF_TEST(profilers record request / response messaging) {
              "server got: message(19, 23)",
              "server sends: message(19, 23)",
              "server consumed the message",
-             "delete: server",
+             "terminate: server",
              "worker got: message(19, 23)",
              "worker sends: message(42)",
              "worker consumed the message",
              "client got: message(42)",
              "client consumed the message",
-             "delete: worker",
-             "delete: client",
+             "terminate: client",
+             "terminate: worker",
            }),
            rec.log);
 }

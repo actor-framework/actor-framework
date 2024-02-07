@@ -136,8 +136,9 @@ actor_addr abstract_actor::address() const noexcept {
 
 // -- callbacks ----------------------------------------------------------------
 
-void abstract_actor::on_destroy() {
-  // nop
+void abstract_actor::on_unreachable() {
+  CAF_PUSH_AID_FROM_PTR(this);
+  cleanup(make_error(exit_reason::unreachable), nullptr);
 }
 
 void abstract_actor::on_cleanup(const error&) {
@@ -147,19 +148,20 @@ void abstract_actor::on_cleanup(const error&) {
 bool abstract_actor::cleanup(error&& reason, execution_unit* host) {
   CAF_LOG_TRACE(CAF_ARG(reason));
   attachable_ptr head;
-  bool set_fail_state = exclusive_critical_section([&]() -> bool {
-    if (!getf(is_cleaned_up_flag)) {
+  auto fs = 0;
+  bool do_cleanup = exclusive_critical_section([&, this]() -> bool {
+    fs = flags();
+    if ((fs & is_terminated_flag) == 0) {
       // local actors pass fail_state_ as first argument
       if (&fail_state_ != &reason)
         fail_state_ = std::move(reason);
       attachables_head_.swap(head);
-      flags(flags() | is_terminated_flag | is_cleaned_up_flag);
-      on_cleanup(fail_state_);
+      flags(fs | is_terminated_flag);
       return true;
     }
     return false;
   });
-  if (!set_fail_state)
+  if (!do_cleanup)
     return false;
   CAF_LOG_DEBUG("cleanup" << CAF_ARG(id()) << CAF_ARG(node())
                           << CAF_ARG(fail_state_));
@@ -167,12 +169,14 @@ bool abstract_actor::cleanup(error&& reason, execution_unit* host) {
   for (attachable* i = head.get(); i != nullptr; i = i->next.get())
     i->actor_exited(fail_state_, host);
   // tell printer to purge its state for us if we ever used aout()
-  if (getf(abstract_actor::has_used_aout_flag)) {
+  if ((fs & has_used_aout_flag) != 0) {
     auto pr = home_system().printer();
-    pr->enqueue(make_mailbox_element(nullptr, make_message_id(), delete_atom_v,
+    pr->enqueue(make_mailbox_element(ctrl(), make_message_id(), delete_atom_v,
                                      id()),
-                nullptr);
+                host);
   }
+  unregister_from_system();
+  on_cleanup(fail_state_);
   return true;
 }
 
