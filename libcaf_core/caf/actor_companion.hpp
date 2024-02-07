@@ -4,7 +4,9 @@
 
 #pragma once
 
+#include "caf/async_mail.hpp"
 #include "caf/detail/core_export.hpp"
+#include "caf/dynamically_typed.hpp"
 #include "caf/extend.hpp"
 #include "caf/fwd.hpp"
 #include "caf/keep_behavior.hpp"
@@ -67,6 +69,13 @@ public:
 
   /// Sets the handler for incoming messages.
   void on_exit(on_exit_handler handler);
+
+  // -- messaging --------------------------------------------------------------
+
+  template <class... Args>
+  [[nodiscard]] auto mail(Args&&... args) {
+    return async_mail(dynamically_typed{}, this, std::forward<Args>(args)...);
+  }
 
   // -- behavior management ----------------------------------------------------
 
