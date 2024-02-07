@@ -32,6 +32,8 @@ namespace caf {
 
 namespace {
 
+// -- printer utilities --------------------------------------------------------
+
 class actor_local_printer_impl : public detail::actor_local_printer {
 public:
   actor_local_printer_impl(abstract_actor* self, actor printer)
@@ -186,43 +188,93 @@ public:
   }
 };
 
-// -- scheduler implementation -------------------------------------------------
+// -- work stealing scheduler implementation -----------------------------------
+namespace work_stealing {
 
-template <class Policy>
-class scheduler_impl;
+// Holds job queue of a worker and a random number generator.
+struct worker_data {
+  // Configuration for aggressive/moderate/relaxed poll strategies.
+  struct poll_strategy {
+    size_t attempts;
+    size_t step_size;
+    size_t steal_interval;
+    timespan sleep_duration;
+  };
 
-/// Policy-based implementation of the abstract worker base class.
-template <class Policy>
+  explicit worker_data(scheduler* p)
+    : rengine(std::random_device{}()),
+      // No need to worry about wrap-around; if `p->num_workers() < 2`,
+      // `uniform` will not be used anyway.
+      uniform(0, p->num_workers() - 2),
+      strategies{
+        {{get_or(p->config(), "caf.work-stealing.aggressive-poll-attempts",
+                 defaults::work_stealing::aggressive_poll_attempts),
+          1,
+          get_or(p->config(), "caf.work-stealing.aggressive-steal-interval",
+                 defaults::work_stealing::aggressive_steal_interval),
+          timespan{0}},
+         {get_or(p->config(), "caf.work-stealing.moderate-poll-attempts",
+                 defaults::work_stealing::moderate_poll_attempts),
+          1,
+          get_or(p->config(), "caf.work-stealing.moderate-steal-interval",
+                 defaults::work_stealing::moderate_steal_interval),
+          get_or(p->config(), "caf.work-stealing.moderate-sleep-duration",
+                 defaults::work_stealing::moderate_sleep_duration)},
+         {1, 0,
+          get_or(p->config(), "caf.work-stealing.relaxed-steal-interval",
+                 defaults::work_stealing::relaxed_steal_interval),
+          get_or(p->config(), "caf.work-stealing.relaxed-sleep-duration",
+                 defaults::work_stealing::relaxed_sleep_duration)}}} {
+    // nop
+  }
+
+  worker_data(const worker_data& other)
+    : rengine(std::random_device{}()),
+      uniform(other.uniform),
+      strategies(other.strategies) {
+    // nop
+  }
+
+  // This queue is exposed to other workers that may attempt to steal jobs
+  // from it and the central scheduling unit can push new jobs to the queue.
+  detail::double_ended_queue<resumable> queue;
+
+  // Needed to generate pseudo random numbers.
+  std::default_random_engine rengine;
+  std::uniform_int_distribution<size_t> uniform;
+  std::array<poll_strategy, 3> strategies;
+};
+
+/// Implementation of the work stealing worker class.
 class worker : public execution_unit {
 public:
   using job_ptr = resumable*;
-  using scheduler_impl_ptr = scheduler_impl<Policy>*;
-  using policy_data = typename Policy::worker_data;
 
-  worker(size_t worker_id, scheduler_impl_ptr worker_parent,
-         const policy_data& init, size_t throughput)
+  worker(size_t worker_id, scheduler* worker_parent, const worker_data& init,
+         size_t throughput)
     : execution_unit(&worker_parent->system()),
       max_throughput_(throughput),
       id_(worker_id),
-      parent_(worker_parent),
       data_(init) {
     // nop
   }
 
-  void start() {
+  worker(const worker&) = delete;
+
+  worker& operator=(const worker&) = delete;
+
+  template <class Parent>
+  void start(Parent* parent) {
     CAF_ASSERT(this_thread_.get_id() == std::thread::id{});
     this_thread_ = system().launch_thread("caf.worker", thread_owner::scheduler,
-                                          [this] { run(); });
+                                          [this, parent] { run(parent); });
   }
-
-  worker(const worker&) = delete;
-  worker& operator=(const worker&) = delete;
 
   /// Enqueues a new job to the worker's queue from an external
   /// source, i.e., from any other thread.
   void external_enqueue(job_ptr job) {
     CAF_ASSERT(job != nullptr);
-    policy_.external_enqueue(this, job);
+    data_.queue.append(job);
   }
 
   /// Enqueues a new job to the worker's queue from an internal
@@ -230,11 +282,7 @@ public:
   /// @warning Must not be called from other threads.
   void exec_later(job_ptr job) override {
     CAF_ASSERT(job != nullptr);
-    policy_.internal_enqueue(this, job);
-  }
-
-  scheduler_impl_ptr parent() {
-    return parent_;
+    data_.queue.prepend(job);
   }
 
   size_t id() const {
@@ -245,13 +293,7 @@ public:
     return this_thread_;
   }
 
-  actor_id id_of(resumable* ptr) {
-    abstract_actor* dptr = ptr != nullptr ? dynamic_cast<abstract_actor*>(ptr)
-                                          : nullptr;
-    return dptr != nullptr ? dptr->id() : 0;
-  }
-
-  policy_data& data() {
+  worker_data& data() {
     return data_;
   }
 
@@ -260,18 +302,70 @@ public:
   }
 
 private:
-  void run() {
+  // Goes on a raid in quest for a shiny new job.
+  template <typename Parent>
+  resumable* try_steal(Parent* p) {
+    if (p->num_workers() < 2) {
+      // You can't steal from yourthis, can you?
+      return nullptr;
+    }
+    // Roll the dice to pick a victim other than ourselves.
+    auto victim = data_.uniform(data_.rengine);
+    if (victim == this->id())
+      victim = p->num_workers() - 1;
+    // Steal oldest element from the victim's queue.
+    return p->worker_by_id(victim)->data_.queue.try_take_tail();
+  }
+
+  template <typename Parent>
+  resumable* policy_dequeue(Parent* parent) {
+    // We wait for new jobs by polling our external queue: first, we assume an
+    // active work load on the machine and perform aggressive polling, then we
+    // relax our polling a bit and wait 50us between dequeue attempts.
+    auto& strategies = data_.strategies;
+    auto* job = data_.queue.try_take_head();
+    if (job)
+      return job;
+    for (size_t k = 0; k < 2; ++k) { // Iterate over the first two strategies.
+      for (size_t i = 0; i < strategies[k].attempts;
+           i += strategies[k].step_size) {
+        // try to steal every X poll attempts
+        if ((i % strategies[k].steal_interval) == 0) {
+          job = try_steal(parent);
+          if (job)
+            return job;
+        }
+        // Wait for some work to appear.
+        job = data_.queue.try_take_head(strategies[k].sleep_duration);
+        if (job)
+          return job;
+      }
+    }
+    // We assume pretty much nothing is going on so we can relax polling
+    // and falling to sleep on a condition variable whose timeout is the one
+    // of the relaxed polling strategy
+    auto& relaxed = strategies[2];
+    do {
+      job = data_.queue.try_take_head(relaxed.sleep_duration);
+    } while (job == nullptr);
+    return job;
+  }
+
+  template <typename Parent>
+  void run(Parent* parent) {
     CAF_SET_LOGGER_SYS(&system());
     // scheduling loop
     for (;;) {
-      auto job = policy_.dequeue(this);
+      auto job = policy_dequeue(parent);
       CAF_ASSERT(job != nullptr);
       CAF_ASSERT(job->subtype() != resumable::io_actor);
       auto res = job->resume(this, max_throughput_);
       switch (res) {
         case resumable::resume_later: {
-          // keep reference to this actor, as it remains in the "loop"
-          policy_.resume_job_later(this, job);
+          // Keep reference to this actor, as it remains in the "loop" job has
+          // voluntarily released the CPU to let others run instead this means
+          // we are going to put this job to the very end of our queue.
+          data_.queue.unsafe_append(job);
           break;
         }
         case resumable::done: {
@@ -279,7 +373,7 @@ private:
           break;
         }
         case resumable::awaiting_message: {
-          // resumable will maybe be enqueued again later, deref it for now
+          // Resumable will maybe be enqueued again later, deref it for now.
           intrusive_ptr_release(job);
           break;
         }
@@ -289,50 +383,48 @@ private:
       }
     }
   }
-  // number of messages each actor is allowed to consume per resume
+  // Number of messages each actor is allowed to consume per resume.
   size_t max_throughput_;
-  // the worker's thread
+
+  // The worker's thread.
   std::thread this_thread_;
-  // the worker's ID received from scheduler
+
+  // The worker's ID received from scheduler.
   size_t id_;
-  // pointer to central coordinator
-  scheduler_impl_ptr parent_;
-  // policy-specific data
-  policy_data data_;
-  // instance of our policy object
-  Policy policy_;
+
+  // Policy-specific data.
+  worker_data data_;
 };
 
 /// Policy-based implementation of the scheduler base class.
-template <class Policy>
 class scheduler_impl : public scheduler {
 public:
   using super = scheduler;
 
-  using policy_data = typename Policy::coordinator_data;
-
-  scheduler_impl(actor_system& sys) : super(sys), data_(this) {
+  scheduler_impl(actor_system& sys) : super(sys) {
     // nop
   }
 
-  using worker_type = worker<Policy>;
+  using worker_type = worker;
 
   worker_type* worker_by_id(size_t x) {
     return workers_[x].get();
   }
 
-  policy_data& data() {
-    return data_;
+  // -- implementation of scheduler interface ----------------------------------
+
+  void enqueue(resumable* ptr) override {
+    auto w = this->worker_by_id(next_worker++ % this->num_workers());
+    w->external_enqueue(ptr);
   }
 
-  static actor_system::module* make(actor_system& sys, detail::type_list<>) {
-    return new scheduler_impl(sys);
+  detail::thread_safe_actor_clock& clock() noexcept override {
+    return clock_;
   }
 
-protected:
   void start() override {
     // Create initial state for all workers.
-    typename worker_type::policy_data init{this};
+    worker_data init{this};
     // Prepare workers vector.
     auto num = num_workers();
     workers_.reserve(num);
@@ -340,6 +432,217 @@ protected:
     for (size_t i = 0; i < num; ++i)
       workers_.emplace_back(
         std::make_unique<worker_type>(i, this, init, max_throughput_));
+    // Start all workers.
+    for (auto& w : workers_)
+      w->start(this);
+    // Run remaining startup code.
+    clock_.start_dispatch_loop(system());
+    super::start();
+  }
+
+  void stop() override {
+    // Shutdown workers.
+    class shutdown_helper : public resumable, public ref_counted {
+    public:
+      resumable::resume_result resume(execution_unit* ptr, size_t) override {
+        CAF_ASSERT(ptr != nullptr);
+        std::unique_lock<std::mutex> guard(mtx);
+        last_worker = ptr;
+        cv.notify_all();
+        return resumable::shutdown_execution_unit;
+      }
+      void intrusive_ptr_add_ref_impl() override {
+        intrusive_ptr_add_ref(this);
+      }
+
+      void intrusive_ptr_release_impl() override {
+        intrusive_ptr_release(this);
+      }
+      shutdown_helper() : last_worker(nullptr) {
+        // nop
+      }
+      std::mutex mtx;
+      std::condition_variable cv;
+      execution_unit* last_worker;
+    };
+    // Use a set to keep track of remaining workers.
+    shutdown_helper sh;
+    std::set<worker_type*> alive_workers;
+    auto num = num_workers();
+    for (size_t i = 0; i < num; ++i) {
+      alive_workers.insert(worker_by_id(i));
+      sh.ref(); // Make sure reference count is high enough.
+    }
+    while (!alive_workers.empty()) {
+      (*alive_workers.begin())->external_enqueue(&sh);
+      // Since jobs can be stolen, we cannot assume that we have actually shut
+      // down the worker we've enqueued sh to.
+      {
+        std::unique_lock<std::mutex> guard(sh.mtx);
+        sh.cv.wait(guard, [&] { return sh.last_worker != nullptr; });
+      }
+      alive_workers.erase(static_cast<worker_type*>(sh.last_worker));
+      sh.last_worker = nullptr;
+    }
+    // Shutdown utility actors.
+    stop_actors();
+    // Wait until all workers are done.
+    for (auto& w : workers_) {
+      w->get_thread().join();
+    }
+    // Run cleanup code for each resumable.
+    auto f = &scheduler::cleanup_and_release;
+    for (auto& w : workers_) {
+      auto next = [&] { return w->data().queue.try_take_head(); };
+      for (auto job = next(); job != nullptr; job = next())
+        f(job);
+    }
+    // Stop timer thread.
+    clock_.stop_dispatch_loop();
+  }
+
+private:
+  /// System-wide clock.
+  detail::thread_safe_actor_clock clock_;
+
+  /// Set of workers.
+  std::vector<std::unique_ptr<worker_type>> workers_;
+
+  /// Next worker.
+  std::atomic<size_t> next_worker = 0;
+
+  /// Thread for managing timeouts and delayed messages.
+  std::thread timer_;
+};
+
+} // namespace work_stealing
+
+// -- work sharing scheduler implementation ------------------------------------
+namespace work_sharing {
+
+/// Implementation of the work sharing worker class.
+template <class Parent>
+class worker : public execution_unit {
+public:
+  using job_ptr = resumable*;
+
+  worker(size_t worker_id, Parent* worker_parent, size_t throughput)
+    : execution_unit(&worker_parent->system()),
+      max_throughput_(throughput),
+      parent_{worker_parent},
+      id_(worker_id) {
+    // nop
+  }
+
+  worker(const worker&) = delete;
+
+  worker& operator=(const worker&) = delete;
+
+  void start() {
+    CAF_ASSERT(this_thread_.get_id() == std::thread::id{});
+    this_thread_ = system().launch_thread("caf.worker", thread_owner::scheduler,
+                                          [this] { run(); });
+  }
+
+  /// Enqueues a new job to the worker's queue from an external
+  /// source, i.e., from any other thread.
+  void external_enqueue(job_ptr job) {
+    CAF_ASSERT(job != nullptr);
+    parent_->enqueue(job);
+  }
+
+  /// Enqueues a new job to the worker's queue from an internal
+  /// source, i.e., a job that is currently executed by this worker.
+  /// @warning Must not be called from other threads.
+  void exec_later(job_ptr job) override {
+    CAF_ASSERT(job != nullptr);
+    parent_->enqueue(job);
+  }
+
+  size_t id() const noexcept {
+    return id_;
+  }
+
+  std::thread& get_thread() noexcept {
+    return this_thread_;
+  }
+
+  size_t max_throughput() noexcept {
+    return max_throughput_;
+  }
+
+private:
+  void run() {
+    CAF_SET_LOGGER_SYS(&system());
+    // scheduling loop
+    for (;;) {
+      auto job = parent_->dequeue();
+      CAF_ASSERT(job != nullptr);
+      CAF_ASSERT(job->subtype() != resumable::io_actor);
+      auto res = job->resume(this, max_throughput_);
+      switch (res) {
+        case resumable::resume_later:
+          // Keep reference to this actor, as it remains in the "loop".
+          parent_->enqueue(job);
+          break;
+        case resumable::awaiting_message:
+          // Resumable will maybe be enqueued again later, deref it for now.
+        case resumable::done:
+          intrusive_ptr_release(job);
+          break;
+        case resumable::shutdown_execution_unit: {
+          return;
+        }
+      }
+    }
+  }
+
+  // Number of messages each actor is allowed to consume per resume.
+  size_t max_throughput_;
+
+  // The worker's thread.
+  std::thread this_thread_;
+
+  // Pointer to the scheduler.
+  Parent* parent_;
+
+  // The worker's ID received from scheduler.
+  size_t id_;
+};
+
+class scheduler_impl : public scheduler {
+public:
+  using super = scheduler;
+
+  using worker_type = worker<scheduler_impl>;
+
+  // A thread-safe queue implementation.
+  using queue_type = std::list<resumable*>;
+
+  scheduler_impl(actor_system& sys) : super(sys) {
+    // nop
+  }
+
+  void enqueue(resumable* ptr) override {
+    queue_type l;
+    l.push_back(ptr);
+    std::unique_lock<std::mutex> guard(lock);
+    queue.splice(queue.end(), l);
+    cv.notify_one();
+  }
+
+  detail::thread_safe_actor_clock& clock() noexcept override {
+    return clock_;
+  }
+
+  void start() override {
+    // Prepare workers vector.
+    auto num = num_workers();
+    workers_.reserve(num);
+    // Create worker instances.
+    for (size_t i = 0; i < num; ++i)
+      workers_.emplace_back(
+        std::make_unique<worker_type>(i, this, max_throughput_));
     // Start all workers.
     for (auto& w : workers_)
       w->start();
@@ -400,272 +703,26 @@ protected:
     }
     // Run cleanup code for each resumable.
     auto f = &scheduler::cleanup_and_release;
-    for (auto& w : workers_)
-      policy_.foreach_resumable(w.get(), f);
-    policy_.foreach_central_resumable(this, f);
+    foreach_central_resumable(f);
     // Stop timer thread.
     clock_.stop_dispatch_loop();
   }
 
-  void enqueue(resumable* ptr) override {
-    policy_.central_enqueue(this, ptr);
-  }
-
-  detail::thread_safe_actor_clock& clock() noexcept override {
-    return clock_;
+  resumable* dequeue() {
+    std::unique_lock<std::mutex> guard(lock);
+    cv.wait(guard, [&] { return !queue.empty(); });
+    resumable* job = queue.front();
+    queue.pop_front();
+    return job;
   }
 
 private:
-  /// System-wide clock.
-  detail::thread_safe_actor_clock clock_;
-
-  /// Set of workers.
-  std::vector<std::unique_ptr<worker_type>> workers_;
-
-  /// Policy-specific data.
-  policy_data data_;
-
-  /// The policy object.
-  Policy policy_;
-
-  /// Thread for managing timeouts and delayed messages.
-  std::thread timer_;
-};
-
-// Convenience function to access the data field.
-template <class WorkerOrCoordinator>
-auto d(WorkerOrCoordinator* self) -> decltype(self->data()) {
-  return self->data();
-}
-
-/// Implements scheduling of actors via work stealing.
-class work_stealing {
-public:
-  // A thread-safe queue implementation.
-  using queue_type = detail::double_ended_queue<resumable>;
-
-  // configuration for aggressive/moderate/relaxed poll strategies.
-  struct poll_strategy {
-    size_t attempts;
-    size_t step_size;
-    size_t steal_interval;
-    timespan sleep_duration;
-  };
-
-  // The coordinator has only a counter for round-robin enqueue to its workers.
-  struct coordinator_data {
-    explicit coordinator_data(scheduler*) : next_worker(0) {
-      // nop
-    }
-
-    std::atomic<size_t> next_worker;
-  };
-
-  // Holds job job queue of a worker and a random number generator.
-  struct worker_data {
-    explicit worker_data(scheduler* p)
-      : rengine(std::random_device{}()),
-        // no need to worry about wrap-around; if `p->num_workers() < 2`,
-        // `uniform` will not be used anyway
-        uniform(0, p->num_workers() - 2),
-        strategies{
-          {{get_or(p->config(), "caf.work-stealing.aggressive-poll-attempts",
-                   defaults::work_stealing::aggressive_poll_attempts),
-            1,
-            get_or(p->config(), "caf.work-stealing.aggressive-steal-interval",
-                   defaults::work_stealing::aggressive_steal_interval),
-            timespan{0}},
-           {get_or(p->config(), "caf.work-stealing.moderate-poll-attempts",
-                   defaults::work_stealing::moderate_poll_attempts),
-            1,
-            get_or(p->config(), "caf.work-stealing.moderate-steal-interval",
-                   defaults::work_stealing::moderate_steal_interval),
-            get_or(p->config(), "caf.work-stealing.moderate-sleep-duration",
-                   defaults::work_stealing::moderate_sleep_duration)},
-           {1, 0,
-            get_or(p->config(), "caf.work-stealing.relaxed-steal-interval",
-                   defaults::work_stealing::relaxed_steal_interval),
-            get_or(p->config(), "caf.work-stealing.relaxed-sleep-duration",
-                   defaults::work_stealing::relaxed_sleep_duration)}}} {
-      // nop
-    }
-
-    worker_data(const worker_data& other)
-      : rengine(std::random_device{}()),
-        uniform(other.uniform),
-        strategies(other.strategies) {
-      // nop
-    }
-
-    // This queue is exposed to other workers that may attempt to steal jobs
-    // from it and the central scheduling unit can push new jobs to the queue.
-    queue_type queue;
-    // needed to generate pseudo random numbers
-    std::default_random_engine rengine;
-    std::uniform_int_distribution<size_t> uniform;
-    std::array<poll_strategy, 3> strategies;
-  };
-
-  // Goes on a raid in quest for a shiny new job.
-  template <class Worker>
-  resumable* try_steal(Worker* self) {
-    auto p = self->parent();
-    if (p->num_workers() < 2) {
-      // you can't steal from yourself, can you?
-      return nullptr;
-    }
-    // roll the dice to pick a victim other than ourselves
-    auto victim = d(self).uniform(d(self).rengine);
-    if (victim == self->id())
-      victim = p->num_workers() - 1;
-    // steal oldest element from the victim's queue
-    return d(p->worker_by_id(victim)).queue.try_take_tail();
+  worker_type* worker_by_id(size_t x) {
+    return workers_[x].get();
   }
 
-  template <class Coordinator>
-  void central_enqueue(Coordinator* self, resumable* job) {
-    auto w = self->worker_by_id(d(self).next_worker++ % self->num_workers());
-    w->external_enqueue(job);
-  }
-
-  template <class Worker>
-  void external_enqueue(Worker* self, resumable* job) {
-    d(self).queue.append(job);
-  }
-
-  template <class Worker>
-  void internal_enqueue(Worker* self, resumable* job) {
-    d(self).queue.prepend(job);
-  }
-
-  template <class Worker>
-  void resume_job_later(Worker* self, resumable* job) {
-    // job has voluntarily released the CPU to let others run instead
-    // this means we are going to put this job to the very end of our queue
-    d(self).queue.unsafe_append(job);
-  }
-
-  template <class Worker>
-  resumable* dequeue(Worker* self) {
-    // we wait for new jobs by polling our external queue: first, we
-    // assume an active work load on the machine and perform aggressive
-    // polling, then we relax our polling a bit and wait 50 us between
-    // dequeue attempts
-    auto& strategies = d(self).strategies;
-    auto* job = d(self).queue.try_take_head();
-    if (job)
-      return job;
-    for (size_t k = 0; k < 2; ++k) { // iterate over the first two strategies
-      for (size_t i = 0; i < strategies[k].attempts;
-           i += strategies[k].step_size) {
-        // try to steal every X poll attempts
-        if ((i % strategies[k].steal_interval) == 0) {
-          job = try_steal(self);
-          if (job)
-            return job;
-        }
-        // wait for some work to appear
-        job = d(self).queue.try_take_head(strategies[k].sleep_duration);
-        if (job)
-          return job;
-      }
-    }
-    // we assume pretty much nothing is going on so we can relax polling
-    // and falling to sleep on a condition variable whose timeout is the one
-    // of the relaxed polling strategy
-    auto& relaxed = strategies[2];
-    do {
-      job = d(self).queue.try_take_head(relaxed.sleep_duration);
-    } while (job == nullptr);
-    return job;
-  }
-
-  template <class Worker, class UnaryFunction>
-  void foreach_resumable(Worker* self, UnaryFunction f) {
-    auto next = [&] { return d(self).queue.try_take_head(); };
-    for (auto job = next(); job != nullptr; job = next()) {
-      f(job);
-    }
-  }
-
-  template <class Coordinator, class UnaryFunction>
-  void foreach_central_resumable(Coordinator*, UnaryFunction) {
-    // nop
-  }
-};
-
-/// Implements scheduling of actors via work sharing (central job queue).
-class work_sharing {
-public:
-  // A thread-safe queue implementation.
-  using queue_type = std::list<resumable*>;
-
-  struct coordinator_data {
-    explicit coordinator_data(scheduler*) {
-      // nop
-    }
-
-    queue_type queue;
-    std::mutex lock;
-    std::condition_variable cv;
-  };
-
-  struct worker_data {
-    explicit worker_data(scheduler*) {
-      // nop
-    }
-  };
-
-  template <class Coordinator>
-  bool enqueue(Coordinator* self, resumable* job) {
-    queue_type l;
-    l.push_back(job);
-    std::unique_lock<std::mutex> guard(d(self).lock);
-    d(self).queue.splice(d(self).queue.end(), l);
-    d(self).cv.notify_one();
-    return true;
-  }
-
-  template <class Coordinator>
-  void central_enqueue(Coordinator* self, resumable* job) {
-    enqueue(self, job);
-  }
-
-  template <class Worker>
-  void external_enqueue(Worker* self, resumable* job) {
-    enqueue(self->parent(), job);
-  }
-
-  template <class Worker>
-  void internal_enqueue(Worker* self, resumable* job) {
-    enqueue(self->parent(), job);
-  }
-
-  template <class Worker>
-  void resume_job_later(Worker* self, resumable* job) {
-    // job has voluntarily released the CPU to let others run instead
-    // this means we are going to put this job to the very end of our queue
-    enqueue(self->parent(), job);
-  }
-
-  template <class Worker>
-  resumable* dequeue(Worker* self) {
-    auto& parent_data = d(self->parent());
-    std::unique_lock<std::mutex> guard(parent_data.lock);
-    parent_data.cv.wait(guard, [&] { return !parent_data.queue.empty(); });
-    resumable* job = parent_data.queue.front();
-    parent_data.queue.pop_front();
-    return job;
-  }
-
-  template <class Worker, class UnaryFunction>
-  void foreach_resumable(Worker*, UnaryFunction) {
-    // nop
-  }
-
-  template <class Coordinator, class UnaryFunction>
-  void foreach_central_resumable(Coordinator* self, UnaryFunction f) {
-    auto& queue = d(self).queue;
+  template <class UnaryFunction>
+  void foreach_central_resumable(UnaryFunction f) {
     auto next = [&]() -> resumable* {
       if (queue.empty()) {
         return nullptr;
@@ -674,23 +731,40 @@ public:
       queue.pop_front();
       return front;
     };
-    std::unique_lock<std::mutex> guard(d(self).lock);
+    std::unique_lock<std::mutex> guard(lock);
     for (auto job = next(); job != nullptr; job = next()) {
       f(job);
     }
   }
+
+  /// System-wide clock.
+  detail::thread_safe_actor_clock clock_;
+
+  /// Set of workers.
+  std::vector<std::unique_ptr<worker_type>> workers_;
+
+  queue_type queue;
+
+  std::mutex lock;
+
+  std::condition_variable cv;
+
+  /// Thread for managing timeouts and delayed messages.
+  std::thread timer_;
 };
+
+} // namespace work_sharing
 
 } // namespace
 
 // -- factory functions ------------------------------------------------------
 
 std::unique_ptr<scheduler> scheduler::make_work_stealing(actor_system& sys) {
-  return std::make_unique<scheduler_impl<work_stealing>>(sys);
+  return std::make_unique<work_stealing::scheduler_impl>(sys);
 }
 
 std::unique_ptr<scheduler> scheduler::make_work_sharing(actor_system& sys) {
-  return std::make_unique<scheduler_impl<work_sharing>>(sys);
+  return std::make_unique<work_sharing::scheduler_impl>(sys);
 }
 
 // -- constructors -------------------------------------------------------------
@@ -700,13 +774,19 @@ scheduler::scheduler(actor_system& sys)
   // nop
 }
 
-// -- implementation of actory_system::module ----------------------------------
+scheduler::~scheduler() {
+  // nop
+}
+
+// -- default implementation of scheduler --------------------------------------
 
 void scheduler::start() {
   CAF_LOG_TRACE("");
   // Launch print utility actors.
   system_.printer(system_.spawn<printer_actor, hidden + detached>());
 }
+
+// -- utility functions --------------------------------------------------------
 
 void scheduler::init(actor_system_config& cfg) {
   namespace sr = defaults::scheduler;
@@ -715,16 +795,6 @@ void scheduler::init(actor_system_config& cfg) {
   num_workers_ = get_or(cfg, "caf.scheduler.max-threads",
                         default_thread_count());
 }
-
-actor_system::module::id_t scheduler::id() const {
-  return module::scheduler;
-}
-
-void* scheduler::subtype_ptr() {
-  return this;
-}
-
-// -- utility functions --------------------------------------------------------
 
 detail::actor_local_printer_ptr scheduler::printer_for(local_actor* self) {
   return make_counted<actor_local_printer_impl>(self, system_.printer());

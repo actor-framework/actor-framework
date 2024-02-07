@@ -18,7 +18,7 @@ namespace caf {
 /// the central printer instance for {@link aout}. It also forwards
 /// sends from detached workers or non-actor threads to randomly
 /// chosen workers.
-class CAF_CORE_EXPORT scheduler : public actor_system::module {
+class CAF_CORE_EXPORT scheduler {
 public:
   // -- factory functions ------------------------------------------------------
   static std::unique_ptr<scheduler> make_work_stealing(actor_system& sys);
@@ -27,22 +27,20 @@ public:
 
   // -- scheduler interface ----------------------------------------------------
 
+  virtual ~scheduler();
+
   /// Puts `what` into the queue of a randomly chosen worker.
   virtual void enqueue(resumable* what) = 0;
 
   virtual actor_clock& clock() noexcept = 0;
 
-  // -- implementation of actor_system::module ---------------------------------
+  virtual void start();
 
-  void start() override;
-
-  void init(actor_system_config& cfg) override;
-
-  id_t id() const override;
-
-  void* subtype_ptr() override;
+  virtual void stop() = 0;
 
   // -- utility functions ------------------------------------------------------
+
+  void init(actor_system_config& cfg);
 
   static void cleanup_and_release(resumable*);
 

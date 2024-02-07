@@ -143,13 +143,7 @@ public:
   /// An (optional) component of the actor system.
   class CAF_CORE_EXPORT module {
   public:
-    enum id_t {
-      scheduler,
-      middleman,
-      openssl_manager,
-      network_manager,
-      num_ids
-    };
+    enum id_t { middleman, openssl_manager, network_manager, num_ids };
 
     virtual ~module();
 
@@ -744,6 +738,9 @@ private:
 
   /// Maps well-known actor names to actor handles.
   actor_registry registry_;
+
+  /// Stores the actor system scheduler.
+  std::unique_ptr<caf::scheduler> scheduler_;
 
   /// Stores optional actor system components.
   module_array modules_;
