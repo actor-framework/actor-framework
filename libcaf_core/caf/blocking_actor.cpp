@@ -360,22 +360,27 @@ size_t blocking_actor::attach_functor(const strong_actor_ptr& ptr) {
 }
 
 void blocking_actor::on_cleanup(const error& reason) {
-  if (!mailbox_.closed()) {
-    unstash();
-    auto dropped = mailbox_.close(reason);
-    while (dropped > 0 && getf(abstract_actor::collects_metrics_flag)) {
-      auto val = static_cast<int64_t>(dropped);
-      metrics_.mailbox_size->dec(val);
-    }
-  }
+  close_mailbox(reason);
   on_exit();
-  // Dispatch to parent's `cleanup` function.
   return super::on_cleanup(reason);
 }
 
 void blocking_actor::unstash() {
   while (auto stashed = stash_.pop())
     mailbox().push_front(mailbox_element_ptr{stashed});
+}
+
+void blocking_actor::close_mailbox(const error& reason) {
+  if (!mailbox_.closed()) {
+    unstash();
+    auto dropped = mailbox_.close(reason);
+    if (dropped > 0 && metrics_.mailbox_size)
+      metrics_.mailbox_size->dec(static_cast<int64_t>(dropped));
+  }
+}
+
+void blocking_actor::force_close_mailbox() {
+  close_mailbox(make_error(exit_reason::unreachable));
 }
 
 } // namespace caf

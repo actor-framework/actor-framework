@@ -104,6 +104,8 @@ private:
   // call without workers_mtx_ held
   void quit(execution_unit* host);
 
+  void force_close_mailbox() override;
+
   std::mutex workers_mtx_;
   std::vector<actor> workers_;
   policy policy_;

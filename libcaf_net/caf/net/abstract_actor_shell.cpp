@@ -162,14 +162,7 @@ void abstract_actor_shell::launch(execution_unit*, bool, bool hide) {
 
 void abstract_actor_shell::on_cleanup(const error& reason) {
   CAF_LOG_TRACE(CAF_ARG(reason));
-  // Clear mailbox.
-  if (!mailbox_.closed()) {
-    auto dropped = mailbox_.close(reason);
-    while (dropped > 0 && getf(abstract_actor::collects_metrics_flag)) {
-      auto val = static_cast<int64_t>(dropped);
-      metrics_.mailbox_size->dec(val);
-    }
-  }
+  close_mailbox(reason);
   // Detach from owner.
   {
     std::unique_lock<std::mutex> guard{loop_mtx_};
@@ -178,6 +171,20 @@ void abstract_actor_shell::on_cleanup(const error& reason) {
   }
   // Dispatch to parent's `cleanup` function.
   return super::on_cleanup(reason);
+}
+
+// -- private member functions -------------------------------------------------
+
+void abstract_actor_shell::close_mailbox(const error& reason) {
+  if (!mailbox_.closed()) {
+    auto dropped = mailbox_.close(reason);
+    if (dropped > 0 && metrics_.mailbox_size)
+      metrics_.mailbox_size->dec(static_cast<int64_t>(dropped));
+  }
+}
+
+void abstract_actor_shell::force_close_mailbox() {
+  close_mailbox(make_error(exit_reason::unreachable));
 }
 
 } // namespace caf::net

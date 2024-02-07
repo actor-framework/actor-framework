@@ -75,4 +75,8 @@ void forwarding_actor_proxy::kill_proxy(execution_unit* ctx, error rsn) {
   cleanup(std::move(rsn), ctx);
 }
 
+void forwarding_actor_proxy::force_close_mailbox() {
+  // nop
+}
+
 } // namespace caf

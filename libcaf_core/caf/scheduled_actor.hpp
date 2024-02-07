@@ -665,6 +665,12 @@ private:
     }
   }
 
+  // -- cleanup ----------------------------------------------------------------
+
+  void close_mailbox(const error& reason);
+
+  void force_close_mailbox() final;
+
   // -- timeout management -----------------------------------------------------
 
   disposable run_scheduled(timestamp when, action what);

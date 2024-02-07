@@ -46,6 +46,9 @@ void intrusive_ptr_release(actor_control_block* x) {
     // in turn reference this actor.
     auto* ptr = x->get();
     if (!ptr->is_terminated()) {
+      // First, make sure that other actors can no longer send messages to this
+      // actor. Then bump the reference count and do the regular cleanup.
+      ptr->force_close_mailbox();
       x->strong_refs.fetch_add(1, std::memory_order_relaxed);
       ptr->on_unreachable();
       CAF_ASSERT(ptr->is_terminated());

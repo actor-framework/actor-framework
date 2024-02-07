@@ -349,6 +349,10 @@ private:
 
   void unstash();
 
+  void close_mailbox(const error& reason);
+
+  void force_close_mailbox() final;
+
   template <class... Ts>
   size_t attach_functor(const typed_actor<Ts...>& x) {
     return attach_functor(actor_cast<strong_actor_ptr>(x));

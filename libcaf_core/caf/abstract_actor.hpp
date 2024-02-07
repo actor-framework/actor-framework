@@ -333,6 +333,13 @@ protected:
 
   /// Points to the first attachable in the linked list of attachables (if any).
   attachable_ptr attachables_head_;
+
+private:
+  /// Forces the actor to close its mailbox and drop all messages. The only
+  /// place calling this member function is
+  /// `intrusive_ptr_release(actor_control_block*)` before calling
+  /// `on_unreachable`.
+  virtual void force_close_mailbox() = 0;
 };
 
 } // namespace caf

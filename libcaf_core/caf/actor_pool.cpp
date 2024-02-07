@@ -214,4 +214,8 @@ void actor_pool::quit(execution_unit* host) {
     unregister_from_system();
 }
 
+void actor_pool::force_close_mailbox() {
+  // nop
+}
+
 } // namespace caf

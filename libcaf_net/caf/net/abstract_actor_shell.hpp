@@ -106,6 +106,10 @@ protected:
   }
 
 private:
+  void close_mailbox(const error& reason);
+
+  void force_close_mailbox() final;
+
   /// Stores incoming actor messages.
   detail::default_mailbox mailbox_;
 

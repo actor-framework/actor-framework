@@ -226,21 +226,7 @@ void scheduled_actor::on_cleanup(const error& reason) {
   awaited_responses_.clear();
   multiplexed_responses_.clear();
   cancel_flows_and_streams();
-  // Discard stashed messages.
-  auto dropped = size_t{0};
-  if (!stash_.empty()) {
-    detail::sync_request_bouncer bounce{reason};
-    while (auto stashed = stash_.pop()) {
-      bounce(*stashed);
-      delete stashed;
-      ++dropped;
-    }
-  }
-  // Clear mailbox.
-  if (!mailbox().closed())
-    dropped += mailbox().close(reason);
-  if (dropped > 0 && metrics_.mailbox_size)
-    metrics_.mailbox_size->dec(static_cast<int64_t>(dropped));
+  close_mailbox(reason);
   // Dispatch to parent's `on_cleanup` function.
   super::on_cleanup(reason);
 }
@@ -1039,6 +1025,28 @@ void scheduled_actor::cancel_flows_and_streams() {
       ptr.dispose();
   }
   run_actions();
+}
+
+void scheduled_actor::close_mailbox(const error& reason) {
+  // Discard stashed messages.
+  auto dropped = size_t{0};
+  if (!stash_.empty()) {
+    detail::sync_request_bouncer bounce{reason};
+    while (auto stashed = stash_.pop()) {
+      bounce(*stashed);
+      delete stashed;
+      ++dropped;
+    }
+  }
+  // Clear mailbox.
+  if (!mailbox().closed())
+    dropped += mailbox().close(reason);
+  if (dropped > 0 && metrics_.mailbox_size)
+    metrics_.mailbox_size->dec(static_cast<int64_t>(dropped));
+}
+
+void scheduled_actor::force_close_mailbox() {
+  close_mailbox(make_error(exit_reason::unreachable));
 }
 
 } // namespace caf
