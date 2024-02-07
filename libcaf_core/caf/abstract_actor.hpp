@@ -35,7 +35,7 @@ class remote_message_handler;
 
 namespace caf {
 
-void intrusive_ptr_release(actor_control_block*);
+CAF_CORE_EXPORT void intrusive_ptr_release(actor_control_block*);
 
 /// A unique actor ID.
 /// @relates abstract_actor
@@ -55,7 +55,7 @@ public:
   template <class>
   friend class caf::io::basp::remote_message_handler;
 
-  friend void intrusive_ptr_release(actor_control_block*);
+  friend CAF_CORE_EXPORT void intrusive_ptr_release(actor_control_block*);
 
   // -- constructors, destructors, and assignment operators --------------------
 
