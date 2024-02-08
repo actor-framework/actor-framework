@@ -15,6 +15,7 @@
 #include "caf/json_writer.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/serializer.hpp"
+#include "caf/string_algorithms.hpp"
 
 #include <regex>
 #include <unordered_set>
@@ -26,6 +27,7 @@ namespace {
 
 enum class weekday : uint8_t;
 class nasty;
+struct c_array;
 
 } // namespace
 
@@ -33,6 +35,7 @@ CAF_BEGIN_TYPE_ID_BLOCK(serialization_test, caf::first_custom_type_id + 25)
 
   CAF_ADD_TYPE_ID(serialization_test, (nasty))
   CAF_ADD_TYPE_ID(serialization_test, (weekday))
+  CAF_ADD_TYPE_ID(serialization_test, (c_array))
 
 CAF_END_TYPE_ID_BLOCK(serialization_test)
 
@@ -119,6 +122,20 @@ bool inspect(Inspector& f, weekday& x) {
     };
     return f.apply(get, set);
   }
+}
+
+struct c_array {
+  int32_t value[4];
+
+  bool operator==(const c_array& other) const {
+    return std::equal(std::begin(value), std::end(value),
+                      std::begin(other.value));
+  }
+};
+
+template <class Inspector>
+bool inspect(Inspector& f, c_array& x) {
+  return f.object(x).fields(f.field("value", x.value));
 }
 
 #define ADD_GET_SET_FIELD(type, name)                                          \
@@ -422,6 +439,7 @@ struct config_value_writer_wrapper {
   }
 };
 
+using str_list = std::vector<std::string>;
 using serializer_wrapper
   = std::variant<std::shared_ptr<binary_serializer_wrapper>,
                  std::shared_ptr<json_writer_wrapper>,
@@ -451,8 +469,9 @@ struct fixture : caf::test::fixture::deterministic {
                std::list<int32_t>, std::map<std::string, int32_t>,
                std::unordered_map<std::string, int32_t>, std::set<int32_t>,
                std::unordered_set<int32_t>, std::array<int32_t, 5>,
-               std::tuple<int32_t, std::string, int32_t>>
+               std::tuple<int32_t, std::string, int32_t>, c_array>
   read_val(const std::string& type, const std::string& value) {
+    str_list parsed_value;
     if (type == "i8") {
       return static_cast<int8_t>(std::stoi(value));
     }
@@ -485,7 +504,7 @@ struct fixture : caf::test::fixture::deterministic {
     }
     if (type == "vector") {
       std::vector<int32_t> ivec;
-      auto parsed_value = parse_value(value, ",");
+      caf::split(parsed_value, value, ",");
       std::transform(parsed_value.cbegin(), parsed_value.cend(),
                      std::back_inserter(ivec),
                      [](const std::string& s) { return std::stoi(s); });
@@ -493,7 +512,7 @@ struct fixture : caf::test::fixture::deterministic {
     }
     if (type == "list") {
       std::list<int32_t> ilist;
-      auto parsed_value = parse_value(value, ",");
+      caf::split(parsed_value, value, ",");
       std::transform(parsed_value.cbegin(), parsed_value.cend(),
                      std::back_inserter(ilist),
                      [](const std::string& s) { return std::stoi(s); });
@@ -501,29 +520,31 @@ struct fixture : caf::test::fixture::deterministic {
     }
     if (type == "map") {
       std::map<std::string, int32_t> imap;
-      auto parsed_value = parse_value(value, ",");
+      caf::split(parsed_value, value, ",");
       std::transform(
         parsed_value.cbegin(), parsed_value.cend(),
         std::inserter(imap, imap.begin()), [this](const std::string& s) {
-          auto parsed_pair = parse_value(s, ":");
+          str_list parsed_pair;
+          caf::split(parsed_pair, s, ":");
           return std::pair{parsed_pair[0], std::stoi(parsed_pair[1])};
         });
       return imap;
     }
     if (type == "umap") {
       std::unordered_map<std::string, int32_t> iumap;
-      auto parsed_value = parse_value(value, ",");
+      caf::split(parsed_value, value, ",");
       std::transform(
         parsed_value.cbegin(), parsed_value.cend(),
         std::inserter(iumap, iumap.begin()), [this](const std::string& s) {
-          auto parsed_pair = parse_value(s, ":");
+          str_list parsed_pair;
+          caf::split(parsed_pair, s, ":");
           return std::pair{parsed_pair[0], std::stoi(parsed_pair[1])};
         });
       return iumap;
     }
     if (type == "set") {
       std::set<int32_t> iset;
-      auto parsed_value = parse_value(value, ",");
+      caf::split(parsed_value, value, ",");
       std::transform(parsed_value.cbegin(), parsed_value.cend(),
                      std::inserter(iset, iset.begin()),
                      [](const std::string& s) { return std::stoi(s); });
@@ -531,7 +552,7 @@ struct fixture : caf::test::fixture::deterministic {
     }
     if (type == "uset") {
       std::unordered_set<int32_t> iuset;
-      auto parsed_value = parse_value(value, ",");
+      caf::split(parsed_value, value, ",");
       std::transform(parsed_value.cbegin(), parsed_value.cend(),
                      std::inserter(iuset, iuset.begin()),
                      [](const std::string& s) { return std::stoi(s); });
@@ -539,7 +560,7 @@ struct fixture : caf::test::fixture::deterministic {
     }
     if (type == "array") {
       std::array<int, 5> iarray;
-      auto parsed_value = parse_value(value, ",");
+      caf::split(parsed_value, value, ",");
       if (parsed_value.size() > 5) {
         CAF_RAISE_ERROR(std::logic_error, "invalid array size");
       }
@@ -549,12 +570,24 @@ struct fixture : caf::test::fixture::deterministic {
       return iarray;
     }
     if (type == "tuple") {
-      auto parsed_value = parse_value(value, ",");
+      str_list parsed_value;
+      caf::split(parsed_value, value, ",");
       if (parsed_value.size() != 3) {
         CAF_RAISE_ERROR(std::logic_error, "invalid tuple size");
       }
       return std::tuple{std::stoi(parsed_value[0]), parsed_value[1],
                         std::stoi(parsed_value[2])};
+    }
+    if (type == "carray") {
+      c_array ic_array;
+      caf::split(parsed_value, value, ",");
+      if (parsed_value.size() != 4) {
+        CAF_RAISE_ERROR(std::logic_error, "invalid c array size");
+      }
+      std::transform(parsed_value.cbegin(), parsed_value.cend(),
+                     std::begin(ic_array.value),
+                     [](const std::string& s) { return std::stoi(s); });
+      return ic_array;
     }
     CAF_RAISE_ERROR(std::logic_error, "invalid type");
   }
@@ -564,7 +597,7 @@ struct fixture : caf::test::fixture::deterministic {
                std::list<int32_t>, std::map<std::string, int32_t>,
                std::unordered_map<std::string, int32_t>, std::set<int32_t>,
                std::unordered_set<int32_t>, std::array<int32_t, 5>,
-               std::tuple<int32_t, std::string, int32_t>>
+               std::tuple<int32_t, std::string, int32_t>, c_array>
   default_val(const std::string& type) {
     if (type == "i8") {
       return static_cast<int8_t>(0);
@@ -620,17 +653,10 @@ struct fixture : caf::test::fixture::deterministic {
     if (type == "tuple") {
       return std::tuple<int32_t, std::string, int32_t>{};
     }
+    if (type == "carray") {
+      return c_array{};
+    }
     CAF_RAISE_ERROR(std::logic_error, "invalid type");
-  }
-
-private:
-  std::vector<std::string> parse_value(const std::string& list_val,
-                                       const std::string& delimiter) {
-    const std::regex delimiter_regex{delimiter};
-    return std::vector<std::string>{
-      std::sregex_token_iterator(list_val.cbegin(), list_val.cend(),
-                                 delimiter_regex, -1),
-      {}};
   }
 };
 
@@ -683,6 +709,7 @@ OUTLINE("serializing and then deserializing primitive values") {
     | binary_serializer   | uset   | 1, -42, 3, 3  |
     | binary_serializer   | array  | 1, -42, 3     |
     | binary_serializer   | tuple  | -42, 1024, 30 |
+    | binary_serializer   | carray | -42, 1, 9, 30 |
     | json_writer         | i8     | -7            |
     | json_writer         | i16    | -999          |
     | json_writer         | i32    | -123456       |
@@ -701,6 +728,7 @@ OUTLINE("serializing and then deserializing primitive values") {
     | json_writer         | uset   | 1, -42, 3, 3  |
     | json_writer         | array  | 1, -42, 3     |
     | json_writer         | tuple  | -42, 1024, 30 |
+    | json_writer         | carray | -42, 1, 9, 30 |
     | config_value_writer | i8     | -7            |
     | config_value_writer | i16    | -999          |
     | config_value_writer | i32    | -123456       |
@@ -719,6 +747,7 @@ OUTLINE("serializing and then deserializing primitive values") {
     | config_value_writer | uset   | 1, -42, 3, 3  |
     | config_value_writer | array  | 1, -42, 3     |
     | config_value_writer | tuple  | -42, 1024, 30 |
+    | config_value_writer | carray | -42, 1, 9, 30 |
   )_";
 }
 
