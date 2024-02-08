@@ -305,6 +305,7 @@ caf_add_component(
     caf/scoped_execution_unit.cpp
     caf/sec.test.cpp
     caf/serial_reply.test.cpp
+    caf/serialization.test.cpp
     caf/serializer.cpp
     caf/settings.cpp
     caf/settings.test.cpp
@@ -349,17 +350,12 @@ caf_add_component(
     caf/uuid.test.cpp
   LEGACY_TEST_SOURCES
     tests/legacy/core-test.cpp
-    tests/legacy/nasty.cpp
   LEGACY_TEST_SUITES
     actor_lifetime
     actor_profiler
     actor_termination
-    binary_deserializer
-    binary_serializer
     config_option_set
     config_value
-    config_value_reader
-    config_value_writer
     constructor_attach
     dsl
     dynamic_spawn
@@ -369,14 +365,11 @@ caf_add_component(
     json_reader
     json_value
     json_writer
-    load_inspector
     message
     mixin.requester
     mixin.sender
     request_timeout
     response_promise
-    save_inspector
-    serialization
     stateful_actor
     thread_hook
     tracing_data

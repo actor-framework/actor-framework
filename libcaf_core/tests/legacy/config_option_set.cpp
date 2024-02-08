@@ -9,7 +9,6 @@
 #include "caf/settings.hpp"
 
 #include "core-test.hpp"
-#include "inspector-tests.hpp"
 
 #include <map>
 #include <string>
@@ -21,6 +20,20 @@ using std::vector;
 using namespace caf;
 
 namespace {
+
+struct foobar {
+  std::string foo;
+  std::string bar;
+};
+
+bool operator==(const foobar& x, const foobar& y) {
+  return x.foo == y.foo && x.bar == y.bar;
+}
+
+template <class Inspector>
+bool inspect(Inspector& f, foobar& x) {
+  return f.object(x).fields(f.field("foo", x.foo), f.field("bar", x.bar));
+}
 
 struct fixture {
   config_option_set opts;
@@ -238,8 +251,10 @@ CAF_TEST(CLI arguments may use custom types) {
   settings cfg;
   opts.add<foobar>("global", "foobar,f", "test option");
   CHECK_EQ(read<foobar>(cfg, {"-f{foo=\"hello\",bar=\"world\"}"}), none);
-  if (auto fb = get_as<foobar>(cfg, "foobar"); CHECK(fb))
-    CHECK_EQ(*fb, foobar("hello", "world"));
+  if (auto fb = get_as<foobar>(cfg, "foobar"); CHECK(fb)) {
+    auto want = foobar{"hello", "world"};
+    CHECK_EQ(*fb, want);
+  }
 }
 
 END_FIXTURE_SCOPE()

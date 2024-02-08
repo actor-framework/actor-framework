@@ -17,7 +17,6 @@
 #include "caf/pec.hpp"
 
 #include "core-test.hpp"
-#include "nasty.hpp"
 
 #include <cmath>
 #include <list>
@@ -555,17 +554,16 @@ SCENARIO("get_as can convert config values to maps") {
 }
 
 SCENARIO("get_as can convert config values to custom types") {
-  std::vector<std::pair<weekday, std::string>> weekday_values{
-    {weekday::monday, "monday"s},       {weekday::tuesday, "tuesday"s},
-    {weekday::wednesday, "wednesday"s}, {weekday::thursday, "thursday"s},
-    {weekday::friday, "friday"s},       {weekday::saturday, "saturday"s},
-    {weekday::sunday, "sunday"s}};
-  for (const auto& [enum_val, str_val] : weekday_values) {
+  std::vector<std::pair<sec, std::string>> sec_values{
+    {sec::request_timeout, "request_timeout"s},
+    {sec::cannot_open_port, "cannot_open_port"s},
+    {sec::runtime_error, "runtime_error"s}};
+  for (const auto& [enum_val, str_val] : sec_values) {
     config_value x{str_val};
     GIVEN("the config value " << x) {
-      WHEN("using get_as with weekday") {
+      WHEN("using get_as with sec") {
         THEN("CAF picks up the custom inspect_value overload for conversion") {
-          auto maybe_res = get_as<weekday>(x);
+          auto maybe_res = get_as<sec>(x);
           if (CHECK(maybe_res))
             CHECK_EQ(*maybe_res, enum_val);
         }
