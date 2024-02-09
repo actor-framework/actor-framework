@@ -501,9 +501,9 @@ private:
 
 deterministic::config::config(deterministic* fix) {
   factory_ = std::make_unique<mailbox_factory_impl>(fix);
-  module_factories.push_back([fix](actor_system& sys) -> actor_system::module* {
-    return new scheduler_impl(sys, fix);
-  });
+  scheduler_factory = [fix](actor_system& sys) -> std::unique_ptr<scheduler> {
+    return std::make_unique<scheduler_impl>(sys, fix);
+  };
 }
 
 deterministic::config::~config() {

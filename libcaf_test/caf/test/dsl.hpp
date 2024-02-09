@@ -1070,10 +1070,10 @@ public:
     if (auto err = cfg.parse(caf::test::engine::argc(),
                              caf::test::engine::argv()))
       CAF_FAIL("failed to parse config: " << to_string(err));
-    cfg.module_factories.push_back(
-      [](caf::actor_system& sys) -> caf::actor_system::module* {
-        return new scheduler_type(sys);
-      });
+    cfg.scheduler_factory
+      = [](caf::actor_system& sys) -> std::unique_ptr<caf::scheduler> {
+      return std::make_unique<scheduler_type>(sys);
+    };
     if (cfg.custom_options().has_category("caf.middleman")) {
       cfg.set("caf.middleman.workers", size_t{0});
       cfg.set("caf.middleman.heartbeat-interval", caf::timespan{0});

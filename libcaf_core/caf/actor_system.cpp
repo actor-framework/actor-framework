@@ -179,8 +179,6 @@ actor_system::module::~module() {
 
 const char* actor_system::module::name() const noexcept {
   switch (id()) {
-    case scheduler:
-      return "scheduler";
     case middleman:
       return "middleman";
     case openssl_manager:
@@ -306,35 +304,28 @@ actor_system::actor_system(actor_system_config& cfg)
     }
   }
   // Make sure we have a scheduler up and running.
-  auto& sched = modules_[module::scheduler];
-  if (!sched) {
-    enum sched_conf {
-      stealing = 0x0001,
-      sharing = 0x0002,
-    };
-    sched_conf sc = stealing;
-    namespace sr = defaults::scheduler;
-    auto sr_policy = get_or(cfg, "caf.scheduler.policy", sr::policy);
-    if (sr_policy == "sharing")
-      sc = sharing;
-    else if (sr_policy != "stealing")
-      fprintf(stderr,
-              "[WARNING] '%s' is an unrecognized scheduler policy, falling "
-              "back to 'stealing' (i.e. work-stealing)\n",
-              sr_policy.c_str());
-    switch (sc) {
-      default: // any invalid configuration falls back to work stealing
-        sched = scheduler::make_work_stealing(*this);
-        break;
-      case sharing:
-        sched = scheduler::make_work_sharing(*this);
-        break;
+  if (cfg.scheduler_factory)
+    scheduler_ = cfg.scheduler_factory(*this);
+  if (!scheduler_) {
+    using defaults::scheduler::policy;
+    auto config_policy = get_or(cfg, "caf.scheduler.policy", policy);
+    if (config_policy == "sharing") {
+      scheduler_ = scheduler::make_work_sharing(*this);
+    } else {
+      // Any invalid configuration falls back to work stealing.
+      if (config_policy != "stealing")
+        fprintf(stderr,
+                "[WARNING] '%s' is an unrecognized scheduler policy, falling "
+                "back to 'stealing' (i.e. work-stealing)\n",
+                config_policy.c_str());
+      scheduler_ = scheduler::make_work_stealing(*this);
     }
   }
   // Initialize state for each module and give each module the opportunity to
   // adapt the system configuration.
   logger_->init(cfg);
   CAF_SET_LOGGER_SYS(this);
+  scheduler_->init(cfg);
   for (auto& mod : modules_)
     if (mod)
       mod->init(cfg);
@@ -347,6 +338,7 @@ actor_system::actor_system(actor_system_config& cfg)
   private_threads_.start();
   registry_.put("SpawnServ", spawn_serv());
   registry_.put("ConfigServ", config_serv());
+  scheduler_->start();
   for (auto& mod : modules_)
     if (mod)
       mod->start();
@@ -374,6 +366,8 @@ actor_system::~actor_system() {
         ptr->stop();
       }
     }
+    CAF_LOG_DEBUG("stop scheduler");
+    scheduler_->stop();
     private_threads_.stop();
     registry_.stop();
   }
@@ -385,7 +379,7 @@ actor_system::~actor_system() {
 
 /// Returns the scheduler instance.
 caf::scheduler& actor_system::scheduler() {
-  return *static_cast<class scheduler*>(modules_[module::scheduler].get());
+  return *scheduler_;
 }
 
 caf::logger& actor_system::logger() {
