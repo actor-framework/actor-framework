@@ -167,6 +167,8 @@ enum class sec : uint8_t {
   logic_error,
   /// An actor tried to delegate a message to an invalid actor handle.
   invalid_delegate = 75,
+  /// An actor tried to delegate a message to an invalid actor handle.
+  invalid_request,
 };
 // --(rst-sec-end)--
 

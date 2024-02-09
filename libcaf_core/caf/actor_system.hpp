@@ -616,6 +616,7 @@ public:
                   "only scheduled actors may get spawned inactively");
     CAF_SET_LOGGER_SYS(this);
     actor_config cfg{dummy_execution_unit(), nullptr};
+    cfg.flags = abstract_actor::is_inactive_flag;
     if constexpr (has_detach_flag(Os))
       cfg.flags |= abstract_actor::is_detached_flag;
     if constexpr (has_hide_flag(Os))
@@ -630,8 +631,9 @@ public:
     auto launch = [strong_ptr = std::move(res), host{cfg.host}] {
       // Note: we pass `res` to this lambda instead of `ptr` to keep a strong
       //       reference to the actor.
-      static_cast<Impl*>(actor_cast<abstract_actor*>(strong_ptr))
-        ->launch(host, has_lazy_init_flag(Os), has_hide_flag(Os));
+      auto dptr = static_cast<Impl*>(actor_cast<abstract_actor*>(strong_ptr));
+      dptr->unsetf(abstract_actor::is_inactive_flag);
+      dptr->launch(host, has_lazy_init_flag(Os), has_hide_flag(Os));
     };
     return std::make_tuple(ptr, launcher<decltype(launch)>(std::move(launch)));
   }

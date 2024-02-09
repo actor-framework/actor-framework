@@ -474,7 +474,7 @@ protected:
         // Actors put their messages into events_ directly. However, we do run
         // them right away if they aren't initialized yet.
         auto dptr = static_cast<scheduled_actor*>(ptr);
-        if (!dptr->initialized())
+        if (!dptr->initialized() && !dptr->inactive())
           dptr->resume(system_.dummy_execution_unit(), 0);
         break;
       }

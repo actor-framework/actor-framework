@@ -199,9 +199,14 @@ disposable actor_clock::schedule_message(strong_actor_ptr sender,
   auto f = make_single_shot_action([src = std::move(sender),
                                     dst = std::move(receiver), mid,
                                     msg = std::move(content)]() mutable {
-    if (auto sdst = dst.lock())
+    if (auto sdst = dst.lock()) {
       sdst->enqueue(make_mailbox_element(std::move(src), mid, std::move(msg)),
                     nullptr);
+    } else if (src && mid.is_request()) {
+      src->enqueue(make_mailbox_element(nullptr, mid.response_id(),
+                                        make_error(sec::request_receiver_down)),
+                   nullptr);
+    }
   });
   return schedule(timeout, std::move(f));
 }
@@ -232,9 +237,15 @@ disposable actor_clock::schedule_message(weak_actor_ptr sender,
     auto ssrc = src.lock();
     if (!ssrc)
       return;
-    if (auto sdst = dst.lock())
+    if (auto sdst = dst.lock()) {
       sdst->enqueue(make_mailbox_element(std::move(ssrc), mid, std::move(msg)),
                     nullptr);
+    } else if (mid.is_request()) {
+      ssrc->enqueue(
+        make_mailbox_element(nullptr, mid.response_id(),
+                             make_error(sec::request_receiver_down)),
+        nullptr);
+    }
   });
   return schedule(timeout, std::move(f));
 }
