@@ -7,6 +7,7 @@
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/caf_main.hpp"
+#include "caf/log/net.hpp"
 
 #include <iostream>
 #include <utility>
@@ -62,7 +63,7 @@ public:
   }
 
   void abort([[maybe_unused]] const caf::error& reason) override {
-    CAF_LOG_ERROR(reason);
+    caf::log::net::error("{}", reason);
   }
 
   ptrdiff_t consume_text(std::string_view text) override {

@@ -10,7 +10,7 @@
 #include "caf/ip_address.hpp"
 #include "caf/ip_subnet.hpp"
 #include "caf/ipv4_address.hpp"
-#include "caf/logger.hpp"
+#include "caf/log/net.hpp"
 #include "caf/string_algorithms.hpp"
 
 #include <cstddef>
@@ -70,13 +70,13 @@ void for_each_adapter(F f, bool is_link_local = false) {
   if (GetAdaptersAddresses(AF_UNSPEC, GAA_FLAG_INCLUDE_PREFIX, nullptr, nullptr,
                            &len)
       != ERROR_BUFFER_OVERFLOW) {
-    CAF_LOG_ERROR("failed to get adapter addresses buffer length");
+    log::net::error("failed to get adapter addresses buffer length");
     return;
   }
   auto adapters = adapters_ptr{
     reinterpret_cast<IP_ADAPTER_ADDRESSES*>(::malloc(len)), free};
   if (!adapters) {
-    CAF_LOG_ERROR("malloc failed");
+    log::net::error("malloc failed");
     return;
   }
   // TODO: The Microsoft WIN32 API example propopses to try three times, other
@@ -85,7 +85,7 @@ void for_each_adapter(F f, bool is_link_local = false) {
   if (GetAdaptersAddresses(AF_UNSPEC, GAA_FLAG_INCLUDE_PREFIX, nullptr,
                            adapters.get(), &len)
       != ERROR_SUCCESS) {
-    CAF_LOG_ERROR("failed to get adapter addresses");
+    log::net::error("failed to get adapter addresses");
     return;
   }
   char ip_buf[INET6_ADDRSTRLEN];
@@ -103,7 +103,7 @@ void for_each_adapter(F f, bool is_link_local = false) {
                   ip_buf, sizeof(ip_buf), nullptr, 0, NI_NUMERICHOST);
       ip_address ip;
       if (!is_link_local && starts_with(ip_buf, "fe80:")) {
-        CAF_LOG_DEBUG("skipping link-local address: " << ip_buf);
+        log::net::debug("skipping link-local address: {}", ip_buf);
         continue;
       } else if (auto err = parse(ip_buf, ip))
         continue;
@@ -127,10 +127,10 @@ void for_each_adapter(F f, bool is_link_local = false) {
     if (family != AF_UNSPEC) {
       ip_address ip;
       if (!is_link_local && starts_with(buffer, "fe80:")) {
-        CAF_LOG_DEBUG("skipping link-local address: " << buffer);
+        log::net::debug("skipping link-local address: {}", buffer);
         continue;
       } else if (auto err = parse(buffer, ip)) {
-        CAF_LOG_ERROR("could not parse into ip address " << buffer);
+        log::net::error("could not parse into ip address {}", buffer);
         continue;
       }
       f({i->ifa_name, strlen(i->ifa_name)}, ip);
@@ -163,7 +163,7 @@ std::vector<ip_address> resolve(std::string_view host) {
     if (family != AF_UNSPEC) {
       ip_address ip;
       if (auto err = parse(buffer, ip))
-        CAF_LOG_ERROR("could not parse IP address: " << buffer);
+        log::net::error("could not parse IP address: {}", buffer);
       else
         results.emplace_back(ip);
     }

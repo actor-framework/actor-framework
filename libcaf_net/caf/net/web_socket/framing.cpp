@@ -7,7 +7,7 @@
 #include "caf/net/http/v1.hpp"
 
 #include "caf/detail/rfc3629.hpp"
-#include "caf/logger.hpp"
+#include "caf/log/net.hpp"
 
 namespace caf::net::web_socket {
 
@@ -161,7 +161,7 @@ bool framing::end_text_message() {
 
 error framing::validate_header(ptrdiff_t hdr_bytes) const noexcept {
   auto make_error_with_log = [](const char* message) {
-    CAF_LOG_DEBUG(message);
+    log::net::debug(message);
     return make_error(sec::protocol_error, message);
   };
   if (detail::rfc6455::is_control_frame(hdr_.opcode)) {
@@ -197,7 +197,7 @@ ptrdiff_t framing::consume_header(byte_span buffer, byte_span) {
   // Parse header.
   auto hdr_bytes = detail::rfc6455::decode_header(buffer, hdr_);
   if (hdr_bytes < 0) {
-    CAF_LOG_DEBUG("decoded malformed data: hdr_bytes < 0");
+    log::net::debug("decoded malformed data: hdr_bytes < 0");
     abort_and_shutdown(sec::protocol_error,
                        "negative header size on WebSocket connection");
     return -1;

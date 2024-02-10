@@ -4,7 +4,7 @@
 
 #include "caf/net/http/request_header.hpp"
 
-#include "caf/logger.hpp"
+#include "caf/log/net.hpp"
 #include "caf/string_algorithms.hpp"
 
 namespace caf::net::http {
@@ -53,7 +53,7 @@ request_header::parse(std::string_view raw) {
   auto [request_uri_str, version] = split_by(first_line_remainder, " ");
   // The path must be absolute.
   if (request_uri_str.empty() || request_uri_str.front() != '/') {
-    CAF_LOG_DEBUG("Malformed Request-URI: expected an absolute path.");
+    log::net::debug("Malformed Request-URI: expected an absolute path.");
     raw_.clear();
     return {status::bad_request,
             "Malformed Request-URI: expected an absolute path."};
@@ -63,8 +63,8 @@ request_header::parse(std::string_view raw) {
   if (auto res = make_uri("nil:" + std::string{request_uri_str})) {
     uri_ = std::move(*res);
   } else {
-    CAF_LOG_DEBUG("Failed to parse URI" << request_uri_str << "->"
-                                        << res.error());
+    log::net::debug("Failed to parse URI {} -> {}", request_uri_str,
+                    res.error());
     raw_.clear();
     return {status::bad_request, "Malformed Request-URI."};
   }
@@ -86,7 +86,7 @@ request_header::parse(std::string_view raw) {
   } else if (icase_equal(method_str, "trace")) {
     method_ = method::trace;
   } else {
-    CAF_LOG_DEBUG("Invalid HTTP method.");
+    log::net::debug("Invalid HTTP method.");
     raw_.clear();
     return {status::bad_request, "Invalid HTTP method."};
   }

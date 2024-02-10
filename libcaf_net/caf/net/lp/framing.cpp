@@ -5,7 +5,7 @@
 
 #include "caf/detail/network_order.hpp"
 #include "caf/error.hpp"
-#include "caf/logger.hpp"
+#include "caf/log/net.hpp"
 #include "caf/sec.hpp"
 
 namespace caf::net::lp {
@@ -30,7 +30,7 @@ void framing::abort(const error& reason) {
 ptrdiff_t framing::consume(byte_span input, byte_span) {
   CAF_LOG_TRACE("got" << input.size() << "bytes\n");
   if (input.size() < sizeof(uint32_t)) {
-    CAF_LOG_ERROR("received too few bytes from underlying transport");
+    log::net::error("received too few bytes from underlying transport");
     up_->abort(make_error(sec::logic_error,
                           "received too few bytes from underlying transport"));
     return -1;
@@ -40,24 +40,24 @@ ptrdiff_t framing::consume(byte_span input, byte_span) {
     auto msg_size = static_cast<size_t>(detail::from_network_order(u32_size));
     if (msg_size == 0) {
       // Ignore empty messages.
-      CAF_LOG_ERROR("received empty message");
+      log::net::error("received empty message");
       up_->abort(make_error(sec::logic_error,
                             "received empty buffer from stream layer"));
       return -1;
     } else if (msg_size > max_message_length) {
-      CAF_LOG_DEBUG("exceeded maximum message size");
+      log::net::debug("exceeded maximum message size");
       up_->abort(
         make_error(sec::protocol_error, "exceeded maximum message size"));
       return -1;
     } else {
-      CAF_LOG_DEBUG("wait for payload of size" << msg_size);
+      log::net::debug("wait for payload of size {}", msg_size);
       down_->configure_read(receive_policy::exactly(hdr_size + msg_size));
       return 0;
     }
   } else {
     auto [msg_size, msg] = split(input);
     if (msg_size == msg.size() && msg_size + hdr_size == input.size()) {
-      CAF_LOG_DEBUG("got message of size" << msg_size);
+      log::net::debug("got message of size {}", msg_size);
       if (up_->consume(msg) >= 0) {
         if (down_->is_reading())
           down_->configure_read(receive_policy::exactly(hdr_size));
@@ -66,7 +66,7 @@ ptrdiff_t framing::consume(byte_span input, byte_span) {
         return -1;
       }
     } else {
-      CAF_LOG_DEBUG("received malformed message");
+      log::net::debug("received malformed message");
       up_->abort(make_error(sec::protocol_error, "received malformed message"));
       return -1;
     }
@@ -131,8 +131,10 @@ bool framing::end_message() {
     down_->end_output();
     return true;
   } else {
-    CAF_LOG_DEBUG_IF(msg_size == 0, "logic error: message of size 0");
-    CAF_LOG_DEBUG_IF(msg_size != 0, "maximum message size exceeded");
+    if (msg_size == 0)
+      log::net::debug("logic error: message of size 0");
+    if (msg_size != 0)
+      log::net::debug("maximum message size exceeded");
     return false;
   }
 }

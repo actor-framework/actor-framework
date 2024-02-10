@@ -15,7 +15,7 @@
 #include "caf/expected.hpp"
 #include "caf/ip_address.hpp"
 #include "caf/ipv4_address.hpp"
-#include "caf/logger.hpp"
+#include "caf/log/net.hpp"
 #include "caf/sec.hpp"
 
 namespace caf::net {
@@ -75,7 +75,7 @@ expected<tcp_accept_socket> new_tcp_acceptor_impl(uint16_t port,
   CAF_NET_SYSCALL("bind", res, !=, 0,
                   bind(fd, reinterpret_cast<sockaddr*>(&sa),
                        static_cast<socket_size_type>(sizeof(sa))));
-  CAF_LOG_DEBUG("bound socket" << fd << "to listen on port" << port);
+  log::net::debug("bound socket {} to listen on port {}", fd, port);
   return sguard.release();
 }
 
@@ -94,11 +94,11 @@ expected<tcp_accept_socket> make_tcp_accept_socket(ip_endpoint node,
     auto sock = socket_cast<tcp_accept_socket>(*p);
     auto sguard = make_socket_guard(sock);
     CAF_NET_SYSCALL("listen", tmp, !=, 0, listen(sock.id, SOMAXCONN));
-    CAF_LOG_DEBUG(CAF_ARG(sock.id));
+    log::net::debug("sock.id = {}", sock.id);
     return sguard.release();
   } else {
-    CAF_LOG_WARNING("could not create tcp socket:" << CAF_ARG(node)
-                                                   << CAF_ARG(p.error()));
+    log::net::warning("could not create tcp socket: node = {}, p.error = {}",
+                      node, p.error());
     return make_error(sec::cannot_open_port, "tcp socket creation failed",
                       to_string(node), std::move(p.error()));
   }
@@ -155,7 +155,7 @@ expected<tcp_stream_socket> accept(tcp_accept_socket x) {
     }
     return caf::make_error(sec::socket_operation_failed, "tcp accept failed");
   }
-  CAF_LOG_DEBUG("accepted TCP socket" << sock << "on accept socket" << x.id);
+  log::net::debug("accepted TCP socket {} on accept socket {}", sock, x.id);
   return tcp_stream_socket{sock};
 }
 

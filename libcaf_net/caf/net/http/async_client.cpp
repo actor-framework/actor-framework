@@ -4,6 +4,8 @@
 
 #include "caf/net/http/async_client.hpp"
 
+#include "caf/log/net.hpp"
+
 namespace caf::net::http {
 
 async_client::~async_client() {
@@ -21,7 +23,7 @@ bool async_client::done_sending() {
 }
 
 void async_client::abort(const caf::error& reason) {
-  CAF_LOG_ERROR("Response abortet with: " << to_string(reason));
+  log::net::error("Response abortet with: {}", to_string(reason));
   response_.set_error(reason);
 }
 
@@ -34,7 +36,7 @@ caf::error async_client::start(http::lower_layer::client* ll) {
 
 ptrdiff_t async_client::consume(const http::response_header& hdr,
                                 caf::const_byte_span payload) {
-  CAF_LOG_INFO("Received a message");
+  log::net::info("Received a message");
   http::response::fields_map fields;
   hdr.for_each_field([&fields](auto key, auto value) {
     fields.container().emplace_back(key, value);

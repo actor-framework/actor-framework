@@ -19,8 +19,8 @@
 #include "caf/detail/net_export.hpp"
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
+#include "caf/log/net.hpp"
 #include "caf/log/system.hpp"
-#include "caf/logger.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/sec.hpp"
@@ -221,7 +221,7 @@ public:
     // Note: there is no 'shortcut' when calling the function in the
     // default_multiplexer's thread, because do_shutdown calls apply_updates.
     // This must only be called from the pollset_updater.
-    CAF_LOG_DEBUG("push shutdown event to pipe");
+    log::net::debug("push shutdown event to pipe");
     write_to_pipe(pollset_updater::code::shutdown,
                   static_cast<socket_manager*>(nullptr));
   }
@@ -278,8 +278,8 @@ public:
                blocking ? -1 : 0);
 #endif
       if (presult > 0) {
-        CAF_LOG_DEBUG("poll() on" << pollset_.size() << "sockets reported"
-                                  << presult << "event(s)");
+        log::net::debug("poll() on {} sockets reported event(s) {}",
+                        pollset_.size(), presult);
         // Scan pollset for events.
         if (auto revents = pollset_[0].revents; revents != 0) {
           // Index 0 is always the pollset updater. This is the only handler
@@ -307,7 +307,7 @@ public:
         switch (code) {
           case std::errc::interrupted: {
             // A signal was caught. Simply try again.
-            CAF_LOG_DEBUG("received errc::interrupted, try again");
+            log::net::debug("received errc::interrupted, try again");
             break;
           }
           case std::errc::not_enough_memory: {
@@ -330,7 +330,7 @@ public:
   }
 
   void apply_updates() override {
-    CAF_LOG_DEBUG("apply" << updates_.size() << "updates");
+    log::net::debug("apply {} updates", updates_.size());
     for (;;) {
       if (!updates_.empty()) {
         for (auto& [fd, update] : updates_) {
@@ -367,9 +367,9 @@ public:
 
   void run() override {
     CAF_LOG_TRACE("");
-    CAF_LOG_DEBUG("run default_multiplexer" << CAF_ARG(input_mask)
-                                            << CAF_ARG(error_mask)
-                                            << CAF_ARG(output_mask));
+    log::net::debug("run default_multiplexer input_mask = {}, error_mask = {}, "
+                    "output_mask = {}",
+                    input_mask, error_mask, output_mask);
     // On systems like Linux, we cannot disable sigpipe on the socket alone. We
     // need to block the signal at thread level since some APIs (such as
     // OpenSSL) are unsafe to call otherwise.
@@ -391,7 +391,7 @@ public:
   void do_shutdown() {
     // Note: calling apply_updates here is only safe because we know that the
     // pollset updater runs outside of the for-loop in run_once.
-    CAF_LOG_DEBUG("initiate shutdown");
+    log::net::debug("initiate shutdown");
     shutting_down_ = true;
     apply_updates();
     // Skip the first manager (the pollset updater).
@@ -406,7 +406,7 @@ public:
       error err;
       err = mgr->start();
       if (err) {
-        CAF_LOG_DEBUG("mgr->init failed: " << err);
+        log::net::debug("mgr->init failed: {}", err);
         // The socket manager should not register itself for any events if
         // initialization fails. Purge any state just in case.
         update_for(mgr.get()).events = 0;
@@ -440,8 +440,8 @@ public:
                   << CAF_ARG(events) << CAF_ARG(revents));
     CAF_ASSERT(mgr != nullptr);
     bool checkerror = true;
-    CAF_LOG_DEBUG("handle event on socket"
-                  << mgr->handle().id << CAF_ARG(events) << CAF_ARG(revents));
+    log::net::debug("handle event on socket {}, events = {}, revents = {}",
+                    mgr->handle().id, events, revents);
     // Note: we double-check whether the manager is actually reading because a
     // previous action from the pipe may have disabled reading.
     if ((revents & input_mask) != 0 && is_reading(mgr.get())) {
@@ -612,7 +612,7 @@ void pollset_updater::handle_read_event() {
         }
       }
     } else if (num_bytes == 0) {
-      CAF_LOG_DEBUG("pipe closed, assume shutdown");
+      log::net::debug("pipe closed, assume shutdown");
       owner_->deregister();
       return;
     } else if (last_socket_error_is_temporary()) {
