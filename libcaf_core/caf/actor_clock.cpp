@@ -218,11 +218,9 @@ disposable actor_clock::schedule_message(weak_actor_ptr sender,
   auto f = make_single_shot_action([src = std::move(sender),
                                     dst = std::move(receiver), mid,
                                     msg = std::move(content)]() mutable {
-    auto ssrc = src.lock();
-    if (!ssrc)
-      return;
-    dst->enqueue(make_mailbox_element(std::move(ssrc), mid, std::move(msg)),
-                 nullptr);
+    if (auto ssrc = src.lock())
+      dst->enqueue(make_mailbox_element(std::move(ssrc), mid, std::move(msg)),
+                   nullptr);
   });
   return schedule(timeout, std::move(f));
 }

@@ -66,7 +66,9 @@ TEST("send delayed message") {
         .to(dummy);
     }
     SECTION("weak reference to the receiver") {
-      anon_mail("hello world").delay(1s).send(dummy, weak_ref);
+      anon_mail("hello world")
+        .schedule(sys.clock().now() + 1s)
+        .send(dummy, weak_ref);
       check_eq(mail_count(), 0u);
       check_eq(num_timeouts(), 1u);
       trigger_timeout();
