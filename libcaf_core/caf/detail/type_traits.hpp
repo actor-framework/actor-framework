@@ -263,9 +263,12 @@ struct callable_trait<R(Ts...)> {
   /// Tells whether the function takes mutable references as argument.
   static constexpr bool mutates_args = (is_mutable_ref<Ts>::value || ...);
 
+  /// A view type for passing a ::message to this function with mutable access.
+  using mutable_message_view_type = typed_message_view<std::decay_t<Ts>...>;
+
   /// Selects a suitable view type for passing a ::message to this function.
   using message_view_type
-    = std::conditional_t<mutates_args, typed_message_view<std::decay_t<Ts>...>,
+    = std::conditional_t<mutates_args, mutable_message_view_type,
                          const_typed_message_view<std::decay_t<Ts>...>>;
 
   /// Tells the number of arguments of the function.

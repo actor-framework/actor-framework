@@ -79,6 +79,11 @@ public:
     return impl_->unique();
   }
 
+  /// Queries the current reference count for this object.
+  size_t get_reference_count() const noexcept {
+    return impl_->get_reference_count();
+  }
+
   [[nodiscard]] bool empty() const noexcept {
     return impl_->str.empty();
   }
