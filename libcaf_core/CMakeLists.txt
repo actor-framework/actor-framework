@@ -91,6 +91,7 @@ caf_add_component(
     caf/actor_system.test.cpp
     caf/actor_system_config.cpp
     caf/actor_system_config.test.cpp
+    caf/anon_mail.test.cpp
     caf/async/batch.cpp
     caf/async/batch.test.cpp
     caf/async/blocking_consumer.test.cpp
