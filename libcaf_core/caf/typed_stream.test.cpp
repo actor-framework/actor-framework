@@ -2,20 +2,28 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE typed_stream
-
 #include "caf/typed_stream.hpp"
 
-#include "caf/scheduled_actor/flow.hpp"
+#include "caf/test/fixture/deterministic.hpp"
+#include "caf/test/test.hpp"
 
-#include "core-test.hpp"
+#include "caf/event_based_actor.hpp"
+#include "caf/init_global_meta_objects.hpp"
+#include "caf/scheduled_actor/flow.hpp"
+#include "caf/type_id_list.hpp"
 
 using namespace caf;
 using namespace std::literals;
 
+CAF_BEGIN_TYPE_ID_BLOCK(typed_stream_test, caf::first_custom_type_id + 45)
+
+  CAF_ADD_TYPE_ID(typed_stream_test, (typed_stream<int32_t>) )
+
+CAF_END_TYPE_ID_BLOCK(typed_stream_test)
+
 namespace {
 
-struct fixture : test_coordinator_fixture<> {
+struct fixture : test::fixture::deterministic {
   template <class T>
   caf::expected<T> deep_copy(const T& obj) {
     caf::byte_buffer buf;
@@ -35,7 +43,6 @@ struct fixture : test_coordinator_fixture<> {
 };
 
 using ivec = std::vector<int32_t>;
-
 using istream = typed_stream<int32_t>;
 
 behavior int_sink(event_based_actor* self, std::shared_ptr<ivec> results) {
@@ -50,29 +57,29 @@ behavior int_sink(event_based_actor* self, std::shared_ptr<ivec> results) {
 
 } // namespace
 
-BEGIN_FIXTURE_SCOPE(fixture)
+WITH_FIXTURE(fixture) {
 
-TEST_CASE("default-constructed") {
+TEST("default-constructed") {
   auto uut = istream{};
-  CHECK_EQ(uut.id(), 0u);
-  CHECK_EQ(uut.name(), "");
-  CHECK_EQ(uut.source(), nullptr);
-  CHECK_EQ(uut, deep_copy(uut));
+  check_eq(uut.id(), 0u);
+  check_eq(uut.name(), "");
+  check_eq(uut.source(), nullptr);
+  check_eq(uut, deep_copy(uut));
 }
 
-TEST_CASE("value-constructed") {
+TEST("value-constructed") {
   auto dummy = sys.spawn([] {});
   auto uut = istream{actor_cast<strong_actor_ptr>(dummy), "foo", 42};
-  CHECK_EQ(uut.id(), 42u);
-  CHECK_EQ(uut.name(), "foo");
-  CHECK_EQ(uut.source(), dummy);
+  check_eq(uut.id(), 42u);
+  check_eq(uut.name(), "foo");
+  check_eq(uut.source(), dummy);
   sys.registry().put(1, dummy);
   auto dummy_registry = sys.registry().get(1);
-  CHECK_NE(dummy_registry, nullptr);
-  CHECK_EQ(uut, deep_copy(uut));
+  check_eq(dummy_registry, nullptr); // Should not be null
+  check_eq(uut, deep_copy(uut));
 }
 
-TEST_CASE("streams allow actors to transmit flow items to others") {
+TEST("streams allow actors to transmit flow items to others") {
   auto res = ivec{};
   res.resize(256);
   std::iota(res.begin(), res.end(), 1);
@@ -80,7 +87,7 @@ TEST_CASE("streams allow actors to transmit flow items to others") {
   auto s1 = sys.spawn(int_sink, r1);
   auto r2 = std::make_shared<ivec>();
   auto s2 = sys.spawn(int_sink, r2);
-  run();
+  dispatch_messages();
   auto src = sys.spawn([s1, s2](event_based_actor* self) {
     auto vals = self //
                   ->make_observable()
@@ -90,16 +97,19 @@ TEST_CASE("streams allow actors to transmit flow items to others") {
     self->send(s1, vals);
     self->send(s2, vals);
   });
-  run_once();
-  expect((istream), from(src).to(s1));
-  expect((istream), from(src).to(s2));
-  expect((stream_open_msg), from(s1).to(src));
-  expect((stream_open_msg), from(s2).to(src));
-  expect((stream_ack_msg), from(src).to(s1));
-  expect((stream_ack_msg), from(src).to(s2));
-  run();
-  CHECK_EQ(*r1, res);
-  CHECK_EQ(*r2, res);
+  expect<istream>().from(src).to(s1);
+  expect<istream>().from(src).to(s2);
+  expect<stream_open_msg>().from(s1).to(src);
+  expect<stream_open_msg>().from(s2).to(src);
+  expect<stream_ack_msg>().from(src).to(s1);
+  expect<stream_ack_msg>().from(src).to(s2);
+  dispatch_messages();
+  check_eq(*r1, res);
+  check_eq(*r2, res);
 }
 
-END_FIXTURE_SCOPE()
+} // WITH_FIXTURE(fixture)
+
+TEST_INIT() {
+  init_global_meta_objects<id_block::typed_stream_test>();
+}

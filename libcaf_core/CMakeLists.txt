@@ -80,6 +80,7 @@ caf_add_component(
     caf/actor_control_block.cpp
     caf/actor_factory.test.cpp
     caf/actor_from_state.test.cpp
+    caf/actor_lifetime.test.cpp
     caf/actor_ostream.cpp
     caf/actor_pool.cpp
     caf/actor_pool.test.cpp
@@ -339,8 +340,10 @@ caf_add_component(
     caf/type_id.cpp
     caf/type_id_list.cpp
     caf/type_id_list.test.cpp
+    caf/typed_actor_view.test.cpp
     caf/typed_behavior.test.cpp
     caf/typed_message_view.test.cpp
+    caf/typed_stream.test.cpp
     caf/unit.test.cpp
     caf/unordered_flat_map.test.cpp
     caf/uri.cpp
