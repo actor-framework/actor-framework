@@ -72,6 +72,7 @@ public:
 
   // -- messaging --------------------------------------------------------------
 
+  /// Starts a new message.
   template <class... Args>
   [[nodiscard]] auto mail(Args&&... args) {
     return async_mail(dynamically_typed{}, this, std::forward<Args>(args)...);

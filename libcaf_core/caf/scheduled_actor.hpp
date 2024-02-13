@@ -250,6 +250,11 @@ public:
     return getf(is_initialized_flag);
   }
 
+  /// Checks whether this actor is currently inactive, i.e., not ready to run.
+  bool inactive() const noexcept {
+    return getf(is_inactive_flag);
+  }
+
   // -- event handlers ---------------------------------------------------------
 
   /// Sets a custom handler for unexpected messages.

@@ -319,6 +319,7 @@ template <class T,
                        || std::is_member_function_pointer_v<T>,
           bool HasApplyOp = has_apply_operator<T>::value>
 struct get_callable_trait_helper {
+  static constexpr bool valid = true;
   using type = callable_trait<T>;
   using result_type = typename type::result_type;
   using arg_types = typename type::arg_types;
@@ -330,6 +331,7 @@ struct get_callable_trait_helper {
 // assume functor providing operator()
 template <class T>
 struct get_callable_trait_helper<T, false, true> {
+  static constexpr bool valid = true;
   using type = callable_trait<decltype(&T::operator())>;
   using result_type = typename type::result_type;
   using arg_types = typename type::arg_types;
@@ -339,7 +341,9 @@ struct get_callable_trait_helper<T, false, true> {
 };
 
 template <class T>
-struct get_callable_trait_helper<T, false, false> {};
+struct get_callable_trait_helper<T, false, false> {
+  static constexpr bool valid = false;
+};
 
 /// Gets a callable trait for `T,` where `T` is a function object type,
 /// i.e., a function, member function, or a class providing

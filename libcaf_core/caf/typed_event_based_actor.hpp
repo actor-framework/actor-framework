@@ -36,6 +36,10 @@ public:
 
   using actor_hdl = typed_actor<Sigs...>;
 
+  struct trait {
+    using signatures = detail::type_list<Sigs...>;
+  };
+
   // -- constructors, destructors, and assignment operators --------------------
 
   using super::super;
@@ -59,6 +63,14 @@ public:
       CAF_LOG_DEBUG("make_behavior() did return a valid behavior");
       this->do_become(std::move(bhvr.unbox()), true);
     }
+  }
+
+  // -- messaging --------------------------------------------------------------
+
+  /// Starts a new message.
+  template <class... Args>
+  auto mail(Args&&... args) {
+    return event_based_mail(trait{}, this, std::forward<Args>(args)...);
   }
 
   // -- behavior management ----------------------------------------------------

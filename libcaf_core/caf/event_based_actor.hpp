@@ -6,6 +6,8 @@
 
 #include "caf/actor_traits.hpp"
 #include "caf/detail/core_export.hpp"
+#include "caf/dynamically_typed.hpp"
+#include "caf/event_based_mail.hpp"
 #include "caf/extend.hpp"
 #include "caf/fwd.hpp"
 #include "caf/keep_behavior.hpp"
@@ -47,6 +49,15 @@ public:
   // -- overridden functions of local_actor ------------------------------------
 
   void initialize() override;
+
+  // -- messaging --------------------------------------------------------------
+
+  /// Starts a new message.
+  template <class... Args>
+  auto mail(Args&&... args) {
+    return event_based_mail(dynamically_typed{}, this,
+                            std::forward<Args>(args)...);
+  }
 
   // -- behavior management ----------------------------------------------------
 

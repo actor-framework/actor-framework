@@ -196,6 +196,9 @@ public:
   /// set a new behavior.
   static constexpr int is_shutting_down_flag = 0b0001'0000'0000;
 
+  /// Indicates that the actor is currently inactive.
+  static constexpr int is_inactive_flag = 0b0010'0000'0000;
+
   void setf(int flag) {
     auto x = flags();
     flags(x | flag);

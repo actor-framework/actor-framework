@@ -202,6 +202,7 @@ caf_add_component(
     caf/error.test.cpp
     caf/event_based_actor.cpp
     caf/event_based_actor.test.cpp
+    caf/event_based_mail.test.cpp
     caf/execution_unit.cpp
     caf/expected.test.cpp
     caf/flow/concat_map.test.cpp
