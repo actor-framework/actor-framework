@@ -3,7 +3,7 @@
 All notable changes to this project will be documented in this file. The format
 is based on [Keep a Changelog](https://keepachangelog.com).
 
-## [Unreleased]
+## [0.19.6] - 2024-02-13
 
 ### Fixed
 
@@ -1192,6 +1192,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Configuring colored terminal output should now print colored output.
 
 [Unreleased]: https://github.com/actor-framework/actor-framework/compare/0.19.5...master
+[0.19.6]: https://github.com/actor-framework/actor-framework/releases/0.19.6
 [0.19.5]: https://github.com/actor-framework/actor-framework/releases/0.19.5
 [0.19.4]: https://github.com/actor-framework/actor-framework/releases/0.19.4
 [0.19.3]: https://github.com/actor-framework/actor-framework/releases/0.19.3
