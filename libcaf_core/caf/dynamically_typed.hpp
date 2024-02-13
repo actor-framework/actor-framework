@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "caf/actor_traits.hpp"
 #include "caf/none.hpp"
 
 namespace caf {
