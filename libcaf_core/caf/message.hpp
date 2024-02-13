@@ -75,6 +75,10 @@ public:
     return size() == 0;
   }
 
+  bool unique() const noexcept {
+    return data_ && data_->unique();
+  }
+
   template <class... Ts>
   bool match_elements() const noexcept {
     return types() == make_type_id_list<Ts...>();

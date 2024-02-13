@@ -17,6 +17,8 @@ namespace caf {
 template <class... Ts>
 class const_typed_message_view {
 public:
+  static constexpr bool is_const = true;
+
   const_typed_message_view() noexcept : ptr_(nullptr) {
     // nop
   }

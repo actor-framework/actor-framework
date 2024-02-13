@@ -114,6 +114,7 @@ public:
     [[maybe_unused]] auto dispatch = [&](auto& fun) {
       using fun_type = std::decay_t<decltype(fun)>;
       using trait = get_callable_trait_t<fun_type>;
+      using fn_args = typename trait::arg_types;
       using decayed_args = typename trait::decayed_arg_types;
       if constexpr (std::is_same_v<decayed_args, type_list<message>>) {
         using fun_result = decltype(fun(msg));
@@ -126,19 +127,35 @@ public:
         }
         return true;
       } else {
+        using detail::apply_args_auto_move;
         auto arg_types = to_type_id_list<decayed_args>();
-        if (arg_types == msg.types()) {
-          typename trait::message_view_type xs{msg};
+        if (arg_types != msg.types())
+          return false;
+        auto do_invoke = [&](auto& xs) {
           using fun_result = decltype(detail::apply_args(fun, xs));
+          auto token = detail::get_indices(xs);
           if constexpr (std::is_same_v<void, fun_result>) {
-            detail::apply_args(fun, xs);
+            apply_args_auto_move(fun, fn_args{}, token, xs);
             f(unit);
           } else {
-            auto invoke_res = detail::apply_args(fun, xs);
+            auto invoke_res = apply_args_auto_move(fun, fn_args{}, token, xs);
             f(invoke_res);
           }
-          return true;
+        };
+        using view_type = typename trait::message_view_type;
+        // If we have the only reference to a message, we can safely modify it
+        // in place, i.e., use the mutable view type and move values from the
+        // message to the function arguments.
+        if constexpr (view_type::is_const) {
+          if (msg.unique()) {
+            typename trait::mutable_message_view_type xs{msg};
+            do_invoke(xs);
+            return true;
+          }
         }
+        view_type xs{msg};
+        do_invoke(xs);
+        return true;
       }
       return false;
     };
