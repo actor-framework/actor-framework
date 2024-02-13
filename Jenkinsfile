@@ -21,6 +21,7 @@ config = [
         'CAF_ENABLE_RUNTIME_CHECKS:BOOL=ON',
     ],
     // Our build matrix. Keys are the operating system labels and values are build configurations.
+    // Note on no-maybe-uninitialized: old GCC versions have a weird bug that causes false positives.
     buildMatrix: [
         // Release builds.
         ['almalinux-8', [ // EOL: June 2029
@@ -28,7 +29,7 @@ config = [
             tags: ['docker'],
             builds: ['release'],
             extraBuildFlags: [
-                'CMAKE_CXX_FLAGS:STRING=-Werror',
+                'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized',
             ],
         ]],
         ['almalinux-9', [ // EOL: May 2032
@@ -52,7 +53,7 @@ config = [
             tags: ['docker'],
             builds: ['release'],
             extraBuildFlags: [
-                'CMAKE_CXX_FLAGS:STRING=-Werror',
+                'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized',
             ],
         ]],
         ['debian-10', [ // EOL June 2024
@@ -60,7 +61,7 @@ config = [
             tags: ['docker'],
             builds: ['release'],
             extraBuildFlags: [
-                'CMAKE_CXX_FLAGS:STRING=-Werror',
+                'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized',
             ],
         ]],
         ['debian-11', [ // EOL June 2026
@@ -68,7 +69,7 @@ config = [
             tags: ['docker'],
             builds: ['release'],
             extraBuildFlags: [
-                'CMAKE_CXX_FLAGS:STRING=-Werror',
+                'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized',
             ],
         ]],
         ['fedora-38', [ // EOL June 2024
