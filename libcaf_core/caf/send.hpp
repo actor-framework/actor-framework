@@ -4,16 +4,13 @@
 
 #pragma once
 
-#include "caf/actor.hpp"
 #include "caf/actor_addr.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/actor_clock.hpp"
-#include "caf/detail/core_export.hpp"
 #include "caf/detail/send_type_check.hpp"
 #include "caf/disposable.hpp"
 #include "caf/fwd.hpp"
 #include "caf/mailbox_element.hpp"
-#include "caf/message.hpp"
 #include "caf/message_id.hpp"
 #include "caf/message_priority.hpp"
 #include "caf/system_messages.hpp"

@@ -2,14 +2,13 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#include "caf/test/caf_test_main.hpp"
 #include "caf/test/fixture/deterministic.hpp"
 #include "caf/test/fixture/flow.hpp"
 #include "caf/test/scenario.hpp"
-#include "caf/test/test.hpp"
 
 #include "caf/event_based_actor.hpp"
 #include "caf/scheduled_actor/flow.hpp"
+#include "caf/stateful_actor.hpp"
 
 using namespace caf;
 

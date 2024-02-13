@@ -5,7 +5,6 @@
 #pragma once
 
 #include "caf/detail/type_list.hpp"
-#include "caf/detail/type_traits.hpp"
 #include "caf/typed_actor_view.hpp"
 
 namespace caf {

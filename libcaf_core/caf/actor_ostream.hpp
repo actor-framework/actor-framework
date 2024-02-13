@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "caf/actor.hpp"
 #include "caf/deep_to_string.hpp"
 #include "caf/detail/actor_local_printer.hpp"
 #include "caf/detail/core_export.hpp"
