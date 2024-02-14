@@ -6,9 +6,6 @@
 
 #include "caf/catch_all.hpp"
 
-#include <functional>
-#include <type_traits>
-
 namespace caf {
 
 struct others_t {
@@ -17,7 +14,7 @@ struct others_t {
   }
 
   template <class F>
-  auto operator>>(F fun) const {
+  [[deprecated]] auto operator>>(F fun) const {
     return catch_all<F>{fun};
   }
 };

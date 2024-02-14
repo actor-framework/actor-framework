@@ -7,10 +7,7 @@
 #include "caf/test/fixture/deterministic.hpp"
 #include "caf/test/test.hpp"
 
-#include "caf/actor_system_config.hpp"
-#include "caf/intrusive_ptr.hpp"
 #include "caf/message.hpp"
-#include "caf/others.hpp"
 #include "caf/scoped_actor.hpp"
 
 using namespace caf;
@@ -26,7 +23,7 @@ WITH_FIXTURE(fixture) {
 TEST("catch_all") {
   self->send(self, 42);
   self->receive([this](float) { fail("received unexpected float"); },
-                others >> [this](message& msg) -> skippable_result {
+                [this](message& msg) {
                   check_eq(to_tuple<int32_t>(msg), std::make_tuple(42));
                   return make_error(sec::unexpected_message);
                 });
