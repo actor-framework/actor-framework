@@ -68,6 +68,7 @@ caf_add_component(
     ${CAF_CORE_HEADERS}
   SOURCES
     caf/abstract_actor.cpp
+    caf/abstract_blocking_actor.cpp
     caf/abstract_mailbox.cpp
     caf/action.cpp
     caf/action.test.cpp
@@ -113,6 +114,7 @@ caf_add_component(
     caf/binary_serializer.cpp
     caf/blocking_actor.cpp
     caf/blocking_actor.test.cpp
+    caf/blocking_mail.test.cpp
     caf/byte_span.cpp
     caf/chrono.cpp
     caf/chrono.test.cpp
