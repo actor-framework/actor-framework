@@ -6,8 +6,8 @@
 
 #include "caf/actor_traits.hpp"
 #include "caf/config.hpp"
+#include "caf/extend.hpp"
 #include "caf/mixin/requester.hpp"
-#include "caf/mixin/sender.hpp"
 #include "caf/none.hpp"
 #include "caf/scheduled_actor.hpp"
 #include "caf/stream.hpp"

@@ -10,10 +10,8 @@
 #include "caf/actor_config.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/behavior.hpp"
-#include "caf/delegated.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/send_type_check.hpp"
-#include "caf/detail/type_traits.hpp"
 #include "caf/detail/typed_actor_util.hpp"
 #include "caf/detail/unique_function.hpp"
 #include "caf/disposable.hpp"
@@ -21,22 +19,15 @@
 #include "caf/fwd.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/message.hpp"
-#include "caf/message_handler.hpp"
 #include "caf/message_id.hpp"
 #include "caf/message_priority.hpp"
 #include "caf/response_promise.hpp"
 #include "caf/response_type.hpp"
-#include "caf/resumable.hpp"
 #include "caf/spawn_options.hpp"
 #include "caf/telemetry/histogram.hpp"
 #include "caf/timespan.hpp"
-#include "caf/typed_actor.hpp"
-#include "caf/typed_response_promise.hpp"
 
-#include <atomic>
 #include <cstdint>
-#include <exception>
-#include <functional>
 #include <type_traits>
 #include <utility>
 

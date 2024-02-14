@@ -4,9 +4,8 @@
 
 #pragma once
 
-#include "caf/actor_system.hpp"
+#include "caf/extend.hpp"
 #include "caf/keep_behavior.hpp"
-#include "caf/local_actor.hpp"
 #include "caf/mixin/requester.hpp"
 #include "caf/mixin/sender.hpp"
 #include "caf/scheduled_actor.hpp"

@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/config.hpp"
+#include "caf/resumable.hpp"
 
 #ifdef CAF_ENABLE_EXCEPTIONS
 #  include <exception>
@@ -21,25 +22,17 @@
 #include "caf/detail/stream_bridge.hpp"
 #include "caf/disposable.hpp"
 #include "caf/error.hpp"
-#include "caf/extend.hpp"
 #include "caf/flow/coordinator.hpp"
 #include "caf/flow/fwd.hpp"
 #include "caf/flow/multicaster.hpp"
-#include "caf/flow/observer.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive/stack.hpp"
 #include "caf/invoke_message_result.hpp"
 #include "caf/local_actor.hpp"
-#include "caf/logger.hpp"
-#include "caf/mixin/requester.hpp"
-#include "caf/policy/arg.hpp"
-#include "caf/response_handle.hpp"
-#include "caf/sec.hpp"
 #include "caf/telemetry/timer.hpp"
 #include "caf/unordered_flat_map.hpp"
 
 #include <forward_list>
-#include <map>
 #include <type_traits>
 #include <unordered_map>
 

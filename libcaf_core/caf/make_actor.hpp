@@ -4,15 +4,10 @@
 
 #pragma once
 
-#include "caf/actor_control_block.hpp"
 #include "caf/actor_storage.hpp"
 #include "caf/fwd.hpp"
 #include "caf/infer_handle.hpp"
-#include "caf/intrusive_ptr.hpp"
 #include "caf/logger.hpp"
-#include "caf/ref_counted.hpp"
-
-#include <type_traits>
 
 namespace caf {
 

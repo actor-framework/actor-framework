@@ -4,23 +4,13 @@
 
 #pragma once
 
-#include "caf/actor.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/actor_clock.hpp"
 #include "caf/actor_control_block.hpp"
-#include "caf/detail/profiled_send.hpp"
-#include "caf/detail/type_traits.hpp"
 #include "caf/fwd.hpp"
 #include "caf/message.hpp"
 #include "caf/message_priority.hpp"
-#include "caf/response_handle.hpp"
-#include "caf/response_type.hpp"
-#include "caf/scheduler.hpp"
 #include "caf/send.hpp"
-#include "caf/typed_actor_view_base.hpp"
-
-#include <chrono>
-#include <tuple>
 
 namespace caf::mixin {
 

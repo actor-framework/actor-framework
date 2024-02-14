@@ -17,7 +17,6 @@
 #include "caf/mailbox_element.hpp"
 #include "caf/resumable.hpp"
 
-#include <cassert>
 #include <list>
 #include <memory>
 
