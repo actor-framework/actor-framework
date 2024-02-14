@@ -305,6 +305,7 @@ caf_add_component(
     caf/scheduled_actor.cpp
     caf/scheduled_actor.test.cpp
     caf/scheduler.cpp
+    caf/scheduler.test.cpp
     caf/scoped_actor.cpp
     caf/scoped_execution_unit.cpp
     caf/sec.test.cpp
