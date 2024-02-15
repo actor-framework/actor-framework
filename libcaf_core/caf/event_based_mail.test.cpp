@@ -9,6 +9,7 @@
 
 #include "caf/dynamically_typed.hpp"
 #include "caf/event_based_actor.hpp"
+#include "caf/timespan.hpp"
 #include "caf/typed_event_based_actor.hpp"
 
 // Note: functions inherited from async_mail are tested in async_mail.test.cpp.
@@ -36,7 +37,9 @@ TEST("send request message") {
       });
       auto result = std::make_shared<int>(0);
       SECTION("regular message") {
-        self->mail(3).request(dummy).then([result](int x) { *result = x; });
+        self->mail(3)
+          .request(dummy, infinite) //
+          .then([result](int x) { *result = x; });
         launch();
         expect<int>()
           .with(3)
@@ -53,7 +56,7 @@ TEST("send request message") {
       SECTION("urgent message") {
         self->mail(3)
           .urgent()
-          .request(dummy) //
+          .request(dummy, infinite) //
           .then([result](int x) { *result = x; });
         launch();
         expect<int>()
@@ -77,7 +80,7 @@ TEST("send request message") {
       });
       auto result = std::make_shared<error>();
       self->mail(3)
-        .request(dummy) //
+        .request(dummy, infinite) //
         .then([this](int value) { fail("expected a string, got: {}", value); },
               [result](error& err) { *result = std::move(err); });
       launch();
@@ -95,13 +98,43 @@ TEST("send request message") {
     SECTION("invalid receiver") {
       auto result = std::make_shared<error>();
       self->mail(3)
-        .request(actor{}) //
+        .request(actor{}, 1s) //
         .then([this](int value) { fail("expected a string, got: {}", value); },
               [result](error& err) { *result = std::move(err); });
       check_eq(mail_count(), 1u);
       launch();
       expect<error>().to(self_hdl);
       check_eq(*result, make_error(sec::invalid_request));
+    }
+    SECTION("no response") {
+      auto result = std::make_shared<error>();
+      auto dummy = sys.spawn([](event_based_actor* self) -> behavior {
+        auto res = std::make_shared<response_promise>();
+        return {
+          [self, res](int) { *res = self->make_response_promise(); },
+        };
+      });
+      self->mail(3)
+        .request(dummy, 1s) //
+        .then([this](int) { fail("unexpected response"); },
+              [result](error& err) { *result = std::move(err); });
+      launch();
+      check_eq(mail_count(), 1u);
+      check_eq(num_timeouts(), 1u);
+      expect<int>()
+        .with(3)
+        .priority(message_priority::normal)
+        .from(self_hdl)
+        .to(dummy);
+      check_eq(mail_count(), 0u);
+      check_eq(num_timeouts(), 1u);
+      trigger_timeout();
+      expect<error>().with(make_error(sec::request_timeout)).to(self_hdl);
+      check_eq(*result, make_error(sec::request_timeout));
+      check_eq(mail_count(), 0u);
+      check_eq(num_timeouts(), 0u);
+      self->mail(exit_msg{nullptr, exit_reason::user_shutdown}).send(dummy);
+      expect<exit_msg>().to(dummy);
     }
   }
   SECTION("using .await for the response") {
@@ -113,7 +146,9 @@ TEST("send request message") {
       });
       auto result = std::make_shared<int>(0);
       SECTION("regular message") {
-        self->mail(3).request(dummy).await([result](int x) { *result = x; });
+        self->mail(3)
+          .request(dummy, infinite) //
+          .await([result](int x) { *result = x; });
         launch();
         expect<int>()
           .with(3)
@@ -130,7 +165,7 @@ TEST("send request message") {
       SECTION("urgent message") {
         self->mail(3)
           .urgent()
-          .request(dummy) //
+          .request(dummy, infinite) //
           .await([result](int x) { *result = x; });
         launch();
         expect<int>()
@@ -154,7 +189,7 @@ TEST("send request message") {
       });
       auto result = std::make_shared<error>();
       self->mail(3)
-        .request(dummy) //
+        .request(dummy, infinite) //
         .await([this](int value) { fail("expected a string, got: {}", value); },
                [result](error& err) { *result = std::move(err); });
       launch();
@@ -172,13 +207,39 @@ TEST("send request message") {
     SECTION("invalid receiver") {
       auto result = std::make_shared<error>();
       self->mail(3)
-        .request(actor{}) //
+        .request(actor{}, 1s) //
         .await([this](int value) { fail("expected a string, got: {}", value); },
                [result](error& err) { *result = std::move(err); });
       check_eq(mail_count(), 1u);
       launch();
       expect<error>().to(self_hdl);
       check_eq(*result, make_error(sec::invalid_request));
+    }
+    SECTION("no response") {
+      auto result = std::make_shared<error>();
+      auto dummy = sys.spawn([](event_based_actor* self) -> behavior {
+        auto res = std::make_shared<response_promise>();
+        return {
+          [self, res](int) { *res = self->make_response_promise(); },
+        };
+      });
+      self->mail(3)
+        .request(dummy, 1s) //
+        .await([this](int) { fail("unexpected response"); },
+               [result](error& err) { *result = std::move(err); });
+      launch();
+      expect<int>()
+        .with(3)
+        .priority(message_priority::normal)
+        .from(self_hdl)
+        .to(dummy);
+      check_eq(mail_count(), 0u);
+      check_eq(num_timeouts(), 1u);
+      trigger_timeout();
+      expect<error>().with(make_error(sec::request_timeout)).to(self_hdl);
+      check_eq(*result, make_error(sec::request_timeout));
+      self->mail(exit_msg{nullptr, exit_reason::user_shutdown}).send(dummy);
+      expect<exit_msg>().to(dummy);
     }
   }
 }
@@ -194,7 +255,10 @@ TEST("send delayed request message") {
   auto result = std::make_shared<int>(0);
   auto on_result = [result](int value) { *result = value; };
   SECTION("strong receiver reference") {
-    self->mail(3).delay(1s).request(dummy, strong_ref).first.then(on_result);
+    self->mail(3)
+      .delay(1s)
+      .request(dummy, infinite, strong_ref)
+      .first.then(on_result);
     launch();
     check_eq(mail_count(), 0u);
     check_eq(num_timeouts(), 1u);
@@ -214,7 +278,7 @@ TEST("send delayed request message") {
   SECTION("weak receiver reference") {
     self->mail(3)
       .schedule(sys.clock().now() + 1s)
-      .request(dummy, weak_ref)
+      .request(dummy, infinite, weak_ref)
       .first.then(on_result);
     launch();
     check_eq(mail_count(), 0u);
@@ -235,7 +299,7 @@ TEST("send delayed request message") {
   SECTION("weak receiver reference that expires") {
     self->mail(3)
       .schedule(sys.clock().now() + 1s)
-      .request(dummy, weak_ref)
+      .request(dummy, infinite, weak_ref)
       .first.then(on_result);
     launch();
     check_eq(mail_count(), 0u);
@@ -247,7 +311,7 @@ TEST("send delayed request message") {
   SECTION("weak sender reference that expires") {
     self->mail(3)
       .schedule(sys.clock().now() + 1s)
-      .request(dummy, strong_ref, weak_self_ref)
+      .request(dummy, infinite, strong_ref, weak_self_ref)
       .first.then(on_result);
     launch();
     check_eq(mail_count(), 0u);
@@ -257,6 +321,42 @@ TEST("send delayed request message") {
     check_eq(mail_count(), 0u);
     check_eq(num_timeouts(), 0u);
   }
+}
+
+TEST("send delayed request message with no response") {
+  auto [self, launch] = sys.spawn_inactive<event_based_actor>();
+  auto self_hdl = actor_cast<actor>(self);
+  auto result = std::make_shared<error>();
+  auto dummy = sys.spawn([](event_based_actor* self) -> behavior {
+    auto res = std::make_shared<response_promise>();
+    return {
+      [self, res](int) { *res = self->make_response_promise(); },
+    };
+  });
+  self->mail(3)
+    .delay(1s)
+    .request(dummy, 1s)
+    .first //
+    .then([this](int) { fail("unexpected response"); },
+          [result](error& err) { *result = std::move(err); });
+  launch();
+  check_eq(mail_count(), 0u);
+  check_eq(num_timeouts(), 2u);
+  advance_time(1s);
+  check_eq(mail_count(), 1u);
+  check_eq(num_timeouts(), 1u);
+  expect<int>()
+    .with(3)
+    .priority(message_priority::normal)
+    .from(self_hdl)
+    .to(dummy);
+  check_eq(mail_count(), 0u);
+  check_eq(num_timeouts(), 1u);
+  advance_time(1s);
+  expect<error>().with(make_error(sec::request_timeout)).to(self_hdl);
+  check_eq(*result, make_error(sec::request_timeout));
+  self->mail(exit_msg{nullptr, exit_reason::user_shutdown}).send(dummy);
+  expect<exit_msg>().to(dummy);
 }
 
 TEST("send request message as a typed actor") {
@@ -269,7 +369,7 @@ TEST("send request message as a typed actor") {
   auto [self, launch] = sys.spawn_inactive<sender_actor::impl>();
   auto self_hdl = actor_cast<actor>(self);
   auto result = std::make_shared<int>(0);
-  self->mail(3).request(dummy).then([result](int x) { *result = x; });
+  self->mail(3).request(dummy, infinite).then([result](int x) { *result = x; });
   launch();
   expect<int>()
     .with(3)
@@ -297,7 +397,7 @@ TEST("send request message to an invalid receiver") {
   auto err = std::make_shared<error>();
   auto on_error = [err](error x) { *err = x; };
   SECTION("regular message") {
-    self->mail("hello world").request(actor{}).then(on_result, on_error);
+    self->mail("hello world").request(actor{}, 1s).then(on_result, on_error);
     launch();
     expect<error>().with(make_error(sec::invalid_request)).to(self_hdl);
     check_eq(*result, 0);
@@ -306,7 +406,7 @@ TEST("send request message to an invalid receiver") {
   SECTION("delayed message") {
     self->mail("hello world")
       .delay(1s)
-      .request(actor{})
+      .request(actor{}, 1s)
       .first.then(on_result, on_error);
     launch();
     check_eq(mail_count(), 1u);
