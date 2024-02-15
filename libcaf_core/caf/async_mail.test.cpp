@@ -13,11 +13,16 @@
 #include "caf/event_based_actor.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/message_priority.hpp"
+#include "caf/typed_event_based_actor.hpp"
 
 using namespace caf;
 using namespace std::literals;
 
 namespace {
+
+using dummy_actor = typed_actor<result<int>(int)>;
+
+using dummy_behavior = dummy_actor::behavior_type;
 
 class testee : public event_based_actor {
 public:
@@ -730,6 +735,32 @@ TEST("delegating to a null handle is an error") {
     check_eq(mail_count(), 1u);
     expect<error>().from(delegator).to(self_hdl);
   }
+}
+
+TEST("send asynchronous message as a typed actor") {
+  using sender_actor = typed_actor<result<void>(int)>;
+  auto dummy = sys.spawn([]() -> dummy_behavior {
+    return {
+      [](int value) { return value * value; },
+    };
+  });
+  auto [self, launch] = sys.spawn_inactive<sender_actor::impl>();
+  auto self_hdl = actor_cast<actor>(self);
+  auto result = std::make_shared<int>(0);
+  self->become([result](int x) { *result = x; });
+  self->mail(3).send(dummy);
+  launch();
+  expect<int>()
+    .with(3)
+    .priority(message_priority::normal)
+    .from(self_hdl)
+    .to(dummy);
+  expect<int>()
+    .with(9)
+    .priority(message_priority::normal)
+    .from(dummy)
+    .to(self_hdl);
+  check_eq(*result, 9);
 }
 
 } // WITH_FIXTURE(test::fixture::deterministic)

@@ -6,6 +6,7 @@
 
 #include "caf/actor_traits.hpp"
 #include "caf/config.hpp"
+#include "caf/event_based_mail.hpp"
 #include "caf/extend.hpp"
 #include "caf/mixin/requester.hpp"
 #include "caf/none.hpp"
@@ -37,6 +38,10 @@ public:
   using signatures = detail::type_list<Sigs...>;
 
   using pointer = scheduled_actor*;
+
+  struct trait {
+    using signatures = detail::type_list<Sigs...>;
+  };
 
   explicit typed_actor_view(scheduled_actor* ptr) : self_(ptr) {
     // nop
@@ -206,6 +211,14 @@ public:
   template <class Handle>
   void demonitor(const Handle& whom) {
     self_->demonitor(whom);
+  }
+
+  // -- messaging --------------------------------------------------------------
+
+  /// Starts a new message.
+  template <class... Args>
+  auto mail(Args&&... args) {
+    return event_based_mail(trait{}, self_, std::forward<Args>(args)...);
   }
 
   // -- sending asynchronous messages ------------------------------------------

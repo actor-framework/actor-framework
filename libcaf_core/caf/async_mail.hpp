@@ -108,7 +108,7 @@ public:
     return result_t{delegated_t{}, hdl};
   }
 
-private:
+protected:
   local_actor* self_;
   message content_;
   actor_clock::time_point timeout_;
@@ -116,37 +116,16 @@ private:
 
 /// Provides a fluent interface for sending asynchronous messages to actors.
 template <message_priority Priority, class Trait, class... Args>
-class async_mail_t {
+class async_mail_base_t {
 public:
-  async_mail_t(local_actor* self, message&& content)
+  async_mail_base_t(local_actor* self, message&& content)
     : self_(self), content_(std::move(content)) {
     // nop
   }
 
-  async_mail_t(const async_mail_t&) = delete;
+  async_mail_base_t(const async_mail_base_t&) = delete;
 
-  async_mail_t& operator=(const async_mail_t&) = delete;
-
-  /// Tags the message as urgent, i.e., sends it with high priority.
-  template <message_priority P = Priority,
-            class E = std::enable_if_t<P == message_priority::normal>>
-  [[nodiscard]] auto urgent() && {
-    using result_t = async_mail_t<message_priority::high, Trait, Args...>;
-    return result_t{self_, std::move(content_)};
-  }
-
-  /// Schedules the message for delivery with an absolute timeout.
-  [[nodiscard]] auto schedule(actor_clock::time_point timeout) && {
-    using result_t = async_scheduled_mail_t<Priority, Trait, Args...>;
-    return result_t{self_, std::move(content_), timeout};
-  }
-
-  /// Schedules the message for delivery with a relative timeout.
-  [[nodiscard]] auto delay(actor_clock::duration_type timeout) && {
-    using clock = actor_clock::clock_type;
-    using result_t = async_scheduled_mail_t<Priority, Trait, Args...>;
-    return result_t{self_, std::move(content_), clock::now() + timeout};
-  }
+  async_mail_base_t& operator=(const async_mail_base_t&) = delete;
 
   /// Sends the message to `receiver`.
   template <class Handle>
@@ -177,9 +156,40 @@ public:
     return result_t{};
   }
 
-private:
+protected:
   local_actor* self_;
   message content_;
+};
+
+/// Provides a fluent interface for sending asynchronous messages to actors.
+template <message_priority Priority, class Trait, class... Args>
+class async_mail_t : public async_mail_base_t<Priority, Trait, Args...> {
+public:
+  using super = async_mail_base_t<Priority, Trait, Args...>;
+
+  using super::super;
+
+  /// Tags the message as urgent, i.e., sends it with high priority.
+  template <message_priority P = Priority,
+            class E = std::enable_if_t<P == message_priority::normal>>
+  [[nodiscard]] auto urgent() && {
+    using result_t = async_mail_t<message_priority::high, Trait, Args...>;
+    return result_t{super::self_, std::move(super::content_)};
+  }
+
+  /// Schedules the message for delivery with an absolute timeout.
+  [[nodiscard]] auto schedule(actor_clock::time_point timeout) && {
+    using result_t = async_scheduled_mail_t<Priority, Trait, Args...>;
+    return result_t{super::self_, std::move(super::content_), timeout};
+  }
+
+  /// Schedules the message for delivery with a relative timeout.
+  [[nodiscard]] auto delay(actor_clock::duration_type timeout) && {
+    using clock = actor_clock::clock_type;
+    using result_t = async_scheduled_mail_t<Priority, Trait, Args...>;
+    return result_t{super::self_, std::move(super::content_),
+                    clock::now() + timeout};
+  }
 };
 
 /// Entry point for sending an asynchronous message to an actor.
