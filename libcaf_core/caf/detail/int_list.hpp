@@ -4,7 +4,9 @@
 
 #pragma once
 
-#include "caf/detail/type_list.hpp"
+#include "caf/type_list.hpp"
+
+#include <cstddef>
 
 namespace caf::detail {
 

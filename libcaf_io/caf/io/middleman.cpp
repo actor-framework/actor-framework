@@ -206,7 +206,7 @@ void middleman::add_module_options(actor_system_config& cfg) {
               defaults::middleman::connection_timeout);
 }
 
-actor_system::module* middleman::make(actor_system& sys, detail::type_list<>) {
+actor_system::module* middleman::make(actor_system& sys, type_list<>) {
   return new mm_impl<network::default_multiplexer>(sys);
 }
 

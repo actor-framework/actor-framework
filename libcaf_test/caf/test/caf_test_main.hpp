@@ -12,7 +12,7 @@
 #define CAF_TEST_MAIN(...)                                                     \
   int main(int argc, char** argv) {                                            \
     [[maybe_unused]] auto host_init_guard = caf::detail::do_init_host_system(  \
-      caf::detail::type_list<>{}, caf::detail::type_list<__VA_ARGS__>{});      \
+      caf::type_list<>{}, caf::type_list<__VA_ARGS__>{});                      \
     caf::exec_main_init_meta_objects<__VA_ARGS__>();                           \
     caf::core::init_global_meta_objects();                                     \
     caf::test::registry::run_init_callbacks();                                 \

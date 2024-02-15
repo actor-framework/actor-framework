@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "caf/detail/type_list.hpp"
 #include "caf/message.hpp"
 #include "caf/response_promise.hpp"
+#include "caf/type_list.hpp"
 
 #include <type_traits>
 
@@ -66,8 +66,8 @@ public:
   }
 
   /// Satisfies the promise by sending an empty response message.
-  template <class L = detail::type_list<Ts...>>
-  std::enable_if_t<std::is_same_v<L, detail::type_list<void>>> deliver() {
+  template <class L = type_list<Ts...>>
+  std::enable_if_t<std::is_same_v<L, type_list<void>>> deliver() {
     promise_.deliver();
   }
 
@@ -80,8 +80,7 @@ public:
   /// Satisfies the promise by sending either an error or a non-error response
   /// message.
   template <class T>
-  std::enable_if_t<
-    std::is_same_v<detail::type_list<T>, detail::type_list<Ts...>>>
+  std::enable_if_t<std::is_same_v<type_list<T>, type_list<Ts...>>>
   deliver(expected<T> x) {
     promise_.deliver(std::move(x));
   }

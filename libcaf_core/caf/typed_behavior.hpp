@@ -36,7 +36,7 @@ struct input_only<type_list<Ts...>> {
   using type = type_list<typename input_args<Ts>::type...>;
 };
 
-using skip_list = detail::type_list<skip_t>;
+using skip_list = type_list<skip_t>;
 
 template <class Input, class RepliesToWith>
 struct same_input : std::is_same<Input, typename RepliesToWith::input_types> {};
@@ -159,7 +159,7 @@ public:
   // -- member types -----------------------------------------------------------
 
   /// Stores the template parameter pack in a type list.
-  using signatures = detail::type_list<Sigs...>;
+  using signatures = type_list<Sigs...>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -170,7 +170,7 @@ public:
 
   template <class... Ts>
   typed_behavior(const typed_behavior<Ts...>& other) : bhvr_(other.bhvr_) {
-    using other_signatures = detail::type_list<Ts...>;
+    using other_signatures = type_list<Ts...>;
     using m = interface_mismatch_t<other_signatures, signatures>;
     // trigger static assert on mismatch
     detail::static_error_printer<static_cast<int>(sizeof...(Ts)), m::value,
@@ -247,7 +247,7 @@ private:
   void set(intrusive_ptr<
            detail::default_behavior_impl<std::tuple<Ts...>, TimeoutDefinition>>
              bp) {
-    using found_signatures = detail::type_list<deduce_mpi_t<Ts>...>;
+    using found_signatures = type_list<deduce_mpi_t<Ts>...>;
     using m = interface_mismatch_t<found_signatures, signatures>;
     // trigger static assert on mismatch
     detail::static_error_printer<static_cast<int>(sizeof...(Ts)), m::value,

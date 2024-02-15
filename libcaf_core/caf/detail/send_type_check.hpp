@@ -5,8 +5,8 @@
 #pragma once
 
 #include "caf/detail/implicit_conversions.hpp"
-#include "caf/detail/type_list.hpp"
 #include "caf/response_type.hpp"
+#include "caf/type_list.hpp"
 
 #include <type_traits>
 
@@ -25,7 +25,7 @@ constexpr void send_type_check() {
   static_assert((detail::sendable<Ts> && ...),
                 "at least one type has no ID, "
                 "did you forgot to announce it via CAF_ADD_TYPE_ID?");
-  using inputs = detail::type_list<detail::strip_and_convert_t<Ts>...>;
+  using inputs = type_list<detail::strip_and_convert_t<Ts>...>;
   using response_opt = response_type_unbox<signatures_of_t<Handle>, inputs>;
   static_assert(response_opt::valid, "receiver does not accept given message");
   if constexpr (!std::is_same_v<SenderInterface, none_t>) {

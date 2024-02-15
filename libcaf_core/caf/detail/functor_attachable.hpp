@@ -5,7 +5,6 @@
 #pragma once
 
 #include "caf/attachable.hpp"
-#include "caf/detail/type_list.hpp"
 #include "caf/detail/type_traits.hpp"
 
 namespace caf::detail {

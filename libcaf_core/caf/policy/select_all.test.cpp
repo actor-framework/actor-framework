@@ -46,7 +46,7 @@ struct fixture : test::fixture::deterministic {
 
   template <class... ResponseHandles>
   auto fuse(ResponseHandles&... handles) {
-    return select_all<detail::type_list<int>>{
+    return select_all<type_list<int>>{
       {handles.id()...},
       disposable::make_composite({handles.policy().pending_timeouts()...})};
   }

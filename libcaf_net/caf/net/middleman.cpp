@@ -139,7 +139,7 @@ void* middleman::subtype_ptr() {
   return this;
 }
 
-actor_system::module* middleman::make(actor_system& sys, detail::type_list<>) {
+actor_system::module* middleman::make(actor_system& sys, type_list<>) {
   return new middleman(sys);
 }
 

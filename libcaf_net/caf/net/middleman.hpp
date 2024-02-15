@@ -10,8 +10,8 @@
 
 #include "caf/actor_system.hpp"
 #include "caf/detail/net_export.hpp"
-#include "caf/detail/type_list.hpp"
 #include "caf/fwd.hpp"
+#include "caf/type_list.hpp"
 
 #include <thread>
 
@@ -62,7 +62,7 @@ public:
 
   // -- factory functions ------------------------------------------------------
 
-  static module* make(actor_system& sys, detail::type_list<>);
+  static module* make(actor_system& sys, type_list<>);
 
   /// Adds module-specific options to the config before loading the module.
   static void add_module_options(actor_system_config& cfg);

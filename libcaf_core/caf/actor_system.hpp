@@ -253,12 +253,12 @@ public:
   using mpi = std::set<std::string>;
 
   template <class T, class E = std::enable_if_t<!is_typed_actor_v<T>>>
-  mpi message_types(detail::type_list<T>) const {
+  mpi message_types(type_list<T>) const {
     return mpi{};
   }
 
   template <class... Ts>
-  mpi message_types(detail::type_list<typed_actor<Ts...>>) const {
+  mpi message_types(type_list<typed_actor<Ts...>>) const {
     static_assert(sizeof...(Ts) > 0, "empty typed actor handle given");
     mpi result{detail::get_rtti_from_mpi<Ts>()...};
     return result;
@@ -266,7 +266,7 @@ public:
 
   template <class T, class E = std::enable_if_t<!detail::is_type_list_v<T>>>
   mpi message_types(const T&) const {
-    detail::type_list<T> token;
+    type_list<T> token;
     return message_types(token);
   }
 
@@ -274,7 +274,7 @@ public:
   /// interface using portable names;
   template <class T>
   mpi message_types() const {
-    detail::type_list<T> token;
+    type_list<T> token;
     return message_types(token);
   }
 

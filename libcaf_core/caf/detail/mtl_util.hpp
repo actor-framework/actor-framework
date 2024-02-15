@@ -5,8 +5,8 @@
 #pragma once
 
 #include "caf/actor.hpp"
-#include "caf/detail/type_list.hpp"
 #include "caf/fwd.hpp"
+#include "caf/type_list.hpp"
 
 #include <type_traits>
 

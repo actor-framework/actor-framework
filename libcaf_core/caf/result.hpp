@@ -5,7 +5,6 @@
 #pragma once
 
 #include "caf/delegated.hpp"
-#include "caf/detail/type_list.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
@@ -13,6 +12,7 @@
 #include "caf/message.hpp"
 #include "caf/none.hpp"
 #include "caf/skip.hpp"
+#include "caf/type_list.hpp"
 #include "caf/variant_wrapper.hpp"
 
 #include <type_traits>
@@ -35,7 +35,7 @@ class result_base {
 public:
   static_assert(sizeof...(Ts) > 0);
 
-  using types = detail::type_list<delegated<Ts...>, message, error>;
+  using types = type_list<delegated<Ts...>, message, error>;
 
   result_base() = default;
 

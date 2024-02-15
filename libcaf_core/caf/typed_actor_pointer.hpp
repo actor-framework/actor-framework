@@ -15,7 +15,7 @@ template <class... Sigs>
 class typed_actor_pointer : public typed_actor_view_base {
 public:
   /// Stores the template parameter pack.
-  using signatures = detail::type_list<Sigs...>;
+  using signatures = type_list<Sigs...>;
 
   typed_actor_pointer() : view_(nullptr) {
     // nop
@@ -23,16 +23,16 @@ public:
 
   template <class Supertype,
             class = std::enable_if_t< //
-              detail::tl_subset_of<detail::type_list<Sigs...>,
+              detail::tl_subset_of<type_list<Sigs...>,
                                    typename Supertype::signatures>::value>>
   typed_actor_pointer(Supertype* selfptr) : view_(selfptr) {
     // nop
   }
 
-  template <class... OtherSigs,
-            class = std::enable_if_t< //
-              detail::tl_subset_of<detail::type_list<Sigs...>,
-                                   detail::type_list<OtherSigs...>>::value>>
+  template <
+    class... OtherSigs,
+    class = std::enable_if_t< //
+      detail::tl_subset_of<type_list<Sigs...>, type_list<OtherSigs...>>::value>>
   typed_actor_pointer(typed_actor_pointer<OtherSigs...> other)
     : view_(other.internal_ptr()) {
     // nop
@@ -56,10 +56,10 @@ public:
     return *this;
   }
 
-  template <class... OtherSigs,
-            class = std::enable_if_t< //
-              detail::tl_subset_of<detail::type_list<Sigs...>,
-                                   detail::type_list<OtherSigs...>>::value>>
+  template <
+    class... OtherSigs,
+    class = std::enable_if_t< //
+      detail::tl_subset_of<type_list<Sigs...>, type_list<OtherSigs...>>::value>>
   typed_actor_pointer& operator=(typed_actor_pointer<OtherSigs...> other) {
     using namespace detail;
     static_assert(

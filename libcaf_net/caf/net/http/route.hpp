@@ -238,7 +238,7 @@ private:
 template <class F, class... Args>
 net::http::route_ptr
 make_http_route_impl(std::string& path, std::optional<net::http::method> method,
-                     F& f, detail::type_list<net::http::responder&, Args...>) {
+                     F& f, type_list<net::http::responder&, Args...>) {
   if constexpr (sizeof...(Args) == 0) {
     using impl_t = http_simple_route_impl<F>;
     return make_counted<impl_t>(std::move(path), method, std::move(f));

@@ -28,8 +28,7 @@ template <class F, class T, class Bhvr, spawn_mode Mode, class R, class Sig>
 class fun_decorator;
 
 template <class F, class T, class Bhvr, class R, class... Ts>
-class fun_decorator<F, T, Bhvr, spawn_mode::function, R,
-                    detail::type_list<Ts...>> {
+class fun_decorator<F, T, Bhvr, spawn_mode::function, R, type_list<Ts...>> {
 public:
   fun_decorator(F f, T*, behavior* bhvr) : f_(std::move(f)), bhvr_(bhvr) {
     // nop
@@ -51,7 +50,7 @@ private:
 
 template <class F, class T, class Bhvr, class R, class... Ts>
 class fun_decorator<F, T, Bhvr, spawn_mode::function_with_selfptr, R,
-                    detail::type_list<T*, Ts...>> {
+                    type_list<T*, Ts...>> {
 public:
   fun_decorator(F f, T* ptr, behavior* bhvr)
     : f_(std::move(f)), ptr_(ptr), bhvr_(bhvr) {
@@ -77,7 +76,7 @@ template <spawn_mode Mode, class Args>
 struct message_verifier;
 
 template <class... Ts>
-struct message_verifier<spawn_mode::function, detail::type_list<Ts...>> {
+struct message_verifier<spawn_mode::function, type_list<Ts...>> {
   bool operator()(message& msg) {
     return msg.types() == make_type_id_list<Ts...>();
   }
@@ -85,7 +84,7 @@ struct message_verifier<spawn_mode::function, detail::type_list<Ts...>> {
 
 template <class Self, class... Ts>
 struct message_verifier<spawn_mode::function_with_selfptr,
-                        detail::type_list<Self*, Ts...>> {
+                        type_list<Self*, Ts...>> {
   bool operator()(message& msg) {
     return msg.types() == make_type_id_list<Ts...>();
   }

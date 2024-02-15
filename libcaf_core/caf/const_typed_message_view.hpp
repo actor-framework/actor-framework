@@ -48,7 +48,7 @@ private:
 template <size_t Index, class... Ts>
 const auto& get(const_typed_message_view<Ts...> xs) {
   static_assert(Index < sizeof...(Ts));
-  using type = caf::detail::tl_at_t<caf::detail::type_list<Ts...>, Index>;
+  using type = caf::detail::tl_at_t<caf::type_list<Ts...>, Index>;
   return *reinterpret_cast<const type*>(xs->storage()
                                         + detail::offset_at<Index, Ts...>);
 }

@@ -6,12 +6,12 @@
 
 #include "caf/behavior.hpp"
 #include "caf/config.hpp"
-#include "caf/detail/type_list.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/detail/typed_actor_util.hpp"
 #include "caf/disposable.hpp"
 #include "caf/logger.hpp"
 #include "caf/sec.hpp"
+#include "caf/type_list.hpp"
 
 #include <cstddef>
 #include <memory>

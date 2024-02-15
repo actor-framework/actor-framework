@@ -6,6 +6,7 @@
 
 #include "caf/fwd.hpp"
 #include "caf/none.hpp"
+#include "caf/type_list.hpp"
 #include "caf/unit.hpp"
 
 #include <cstddef>
@@ -13,14 +14,6 @@
 #include <typeinfo>
 
 namespace caf::detail {
-
-/// A list of types.
-template <class... Ts>
-struct type_list {
-  constexpr type_list() {
-    // nop
-  }
-};
 
 /// Denotes the empty list.
 using empty_type_list = type_list<>;

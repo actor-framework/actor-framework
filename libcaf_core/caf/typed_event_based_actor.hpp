@@ -29,14 +29,14 @@ public:
     typename extend<scheduled_actor, typed_event_based_actor<Sigs...>>::
       template with<mixin::sender, mixin::requester>;
 
-  using signatures = detail::type_list<Sigs...>;
+  using signatures = type_list<Sigs...>;
 
   using behavior_type = typed_behavior<Sigs...>;
 
   using actor_hdl = typed_actor<Sigs...>;
 
   struct trait {
-    using signatures = detail::type_list<Sigs...>;
+    using signatures = type_list<Sigs...>;
   };
 
   // -- constructors, destructors, and assignment operators --------------------
@@ -46,7 +46,7 @@ public:
   // -- overrides --------------------------------------------------------------
 
   std::set<std::string> message_types() const override {
-    detail::type_list<typed_actor<Sigs...>> token;
+    type_list<typed_actor<Sigs...>> token;
     return this->system().message_types(token);
   }
 
