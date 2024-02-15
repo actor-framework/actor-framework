@@ -39,7 +39,7 @@ def next_element(x, pos, last):
 
 def atom_read(x):
   result = ""
-  read_chars = ((x & 0xF000000000000000) >> 60) == 0xF 
+  read_chars = ((x & 0xF000000000000000) >> 60) == 0xF
   mask = 0x0FC0000000000000
   bitshift = 54
   while bitshift >= 0:
@@ -79,10 +79,10 @@ def stringify_list(xs):
       res += ", "
     res += stringify(xs[index].strip(' '))
   return res
-  
+
 
 def decompose_typed_actor(x, first, last):
-  needle = "caf::detail::type_list<"
+  needle = "caf::type_list<"
   # first type list -> input types
   j = x.find(needle, first) + len(needle)
   k = end_of_template(x, j)

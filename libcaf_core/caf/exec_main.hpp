@@ -18,7 +18,7 @@ template <class>
 struct exec_main_helper;
 
 template <class System>
-struct exec_main_helper<detail::type_list<System&>> {
+struct exec_main_helper<type_list<System&>> {
   using config = actor_system_config;
 
   template <class F>
@@ -28,7 +28,7 @@ struct exec_main_helper<detail::type_list<System&>> {
 };
 
 template <class System, class Config>
-struct exec_main_helper<detail::type_list<System&, const Config&>> {
+struct exec_main_helper<type_list<System&, const Config&>> {
   using config = Config;
 
   template <class F>
@@ -128,7 +128,7 @@ auto do_init_host_system(type_list<Module...>, type_list<T, Ts...>) {
 #define CAF_MAIN(...)                                                          \
   int main(int argc, char** argv) {                                            \
     [[maybe_unused]] auto host_init_guard = caf::detail::do_init_host_system(  \
-      caf::detail::type_list<>{}, caf::detail::type_list<__VA_ARGS__>{});      \
+      caf::type_list<>{}, caf::type_list<__VA_ARGS__>{});                      \
     caf::exec_main_init_meta_objects<__VA_ARGS__>();                           \
     caf::core::init_global_meta_objects();                                     \
     return caf::exec_main<__VA_ARGS__>(caf_main, argc, argv);                  \

@@ -84,7 +84,7 @@ public:
   template <class Handle>
   expected<uint16_t> publish(Handle&& whom, uint16_t port,
                              const char* in = nullptr, bool reuse = false) {
-    detail::type_list<std::decay_t<Handle>> tk;
+    type_list<std::decay_t<Handle>> tk;
     return publish(actor_cast<strong_actor_ptr>(std::forward<Handle>(whom)),
                    system().message_types(tk), port, in, reuse);
   }
@@ -104,7 +104,7 @@ public:
   ///          a remote actor or an `error`.
   template <class ActorHandle = actor>
   expected<ActorHandle> remote_actor(std::string host, uint16_t port) {
-    detail::type_list<ActorHandle> tk;
+    type_list<ActorHandle> tk;
     auto x = remote_actor(system().message_types(tk), std::move(host), port);
     if (!x)
       return x.error();
@@ -250,11 +250,10 @@ public:
   static void add_module_options(actor_system_config& cfg);
 
   /// Returns a middleman using the default network backend.
-  static actor_system::module* make(actor_system&, detail::type_list<>);
+  static actor_system::module* make(actor_system&, type_list<>);
 
   template <class Backend>
-  static actor_system::module*
-  make(actor_system& sys, detail::type_list<Backend>) {
+  static actor_system::module* make(actor_system& sys, type_list<Backend>) {
     class impl : public middleman {
     public:
       impl(actor_system& ref) : middleman(ref), backend_(&ref) {

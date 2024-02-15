@@ -139,7 +139,7 @@ public:
   actor_system_config& load() {
     T::add_module_options(*this);
     module_factories.push_back([](actor_system& sys) -> actor_system::module* {
-      return T::make(sys, detail::type_list<Ts...>{});
+      return T::make(sys, type_list<Ts...>{});
     });
     return *this;
   }

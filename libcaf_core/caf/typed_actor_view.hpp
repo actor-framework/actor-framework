@@ -35,12 +35,12 @@ class typed_actor_view
                   typed_actor_view<Sigs...>>::template with<mixin::requester> {
 public:
   /// Stores the template parameter pack.
-  using signatures = detail::type_list<Sigs...>;
+  using signatures = type_list<Sigs...>;
 
   using pointer = scheduled_actor*;
 
   struct trait {
-    using signatures = detail::type_list<Sigs...>;
+    using signatures = type_list<Sigs...>;
   };
 
   explicit typed_actor_view(scheduled_actor* ptr) : self_(ptr) {

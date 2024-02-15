@@ -161,7 +161,7 @@ void manager::add_module_options(actor_system_config& cfg) {
   put_missing(grp, "cafile", cfg.openssl_cafile);
 }
 
-actor_system::module* manager::make(actor_system& sys, detail::type_list<>) {
+actor_system::module* manager::make(actor_system& sys, type_list<>) {
   if (!sys.has_middleman())
     CAF_RAISE_ERROR("Cannot start OpenSSL module without middleman.");
   auto ptr = &sys.middleman().backend();

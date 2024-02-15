@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "caf/detail/type_list.hpp"
 #include "caf/fwd.hpp"
+#include "caf/type_list.hpp"
 
 namespace caf::detail {
 
@@ -92,7 +92,6 @@ namespace caf {
 /// first mismatch. Returns the number of elements on a match.
 /// @pre len(Found) == len(Expected)
 template <class Found, class Expected>
-using interface_mismatch_t
-  = detail::imi<0, Found, Expected, detail::type_list<>>;
+using interface_mismatch_t = detail::imi<0, Found, Expected, type_list<>>;
 
 } // namespace caf

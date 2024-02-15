@@ -54,7 +54,7 @@ class typed_broker
     public statically_typed_actor_base {
   // clang-format on
 public:
-  using signatures = detail::type_list<Sigs...>;
+  using signatures = type_list<Sigs...>;
 
   using actor_hdl = typed_actor<Sigs...>;
 
@@ -67,7 +67,7 @@ public:
   /// @cond PRIVATE
 
   std::set<std::string> message_types() const override {
-    detail::type_list<typed_actor<Sigs...>> hdl;
+    type_list<typed_actor<Sigs...>> hdl;
     return this->system().message_types(hdl);
   }
 

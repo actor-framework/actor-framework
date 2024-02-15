@@ -8,7 +8,6 @@
 #include "caf/detail/as_mutable_ref.hpp"
 #include "caf/detail/parse.hpp"
 #include "caf/detail/print.hpp"
-#include "caf/detail/type_list.hpp"
 #include "caf/error.hpp"
 #include "caf/fwd.hpp"
 #include "caf/inspector_access_base.hpp"
@@ -17,6 +16,7 @@
 #include "caf/intrusive_ptr.hpp"
 #include "caf/sec.hpp"
 #include "caf/span.hpp"
+#include "caf/type_list.hpp"
 
 #include <chrono>
 #include <cstddef>
@@ -594,24 +594,23 @@ struct variant_inspector_traits<std::variant<Ts...>> {
   }
 
   template <class F>
-  static bool load(type_id_t, F&, detail::type_list<>) {
+  static bool load(type_id_t, F&, type_list<>) {
     return false;
   }
 
   template <class F, class U, class... Us>
-  static bool
-  load(type_id_t type, F& continuation, detail::type_list<U, Us...>) {
+  static bool load(type_id_t type, F& continuation, type_list<U, Us...>) {
     if (type_id_v<U> == type) {
       auto tmp = U{};
       continuation(tmp);
       return true;
     }
-    return load(type, continuation, detail::type_list<Us...>{});
+    return load(type, continuation, type_list<Us...>{});
   }
 
   template <class F>
   static bool load(type_id_t type, F continuation) {
-    return load(type, continuation, detail::type_list<Ts...>{});
+    return load(type, continuation, type_list<Ts...>{});
   }
 };
 

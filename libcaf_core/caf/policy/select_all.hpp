@@ -6,13 +6,13 @@
 
 #include "caf/behavior.hpp"
 #include "caf/config.hpp"
-#include "caf/detail/type_list.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/detail/typed_actor_util.hpp"
 #include "caf/disposable.hpp"
 #include "caf/error.hpp"
 #include "caf/logger.hpp"
 #include "caf/message_id.hpp"
+#include "caf/type_list.hpp"
 
 #include <cstddef>
 #include <functional>
@@ -102,18 +102,17 @@ template <class F, class = typename detail::get_callable_trait<F>::arg_types>
 struct select_select_all_helper;
 
 template <class F, class... Ts>
-struct select_select_all_helper<
-  F, detail::type_list<std::vector<std::tuple<Ts...>>>> {
+struct select_select_all_helper<F, type_list<std::vector<std::tuple<Ts...>>>> {
   using type = select_all_helper<F, Ts...>;
 };
 
 template <class F, class T>
-struct select_select_all_helper<F, detail::type_list<std::vector<T>>> {
+struct select_select_all_helper<F, type_list<std::vector<T>>> {
   using type = select_all_helper<F, T>;
 };
 
 template <class F>
-struct select_select_all_helper<F, detail::type_list<>> {
+struct select_select_all_helper<F, type_list<>> {
   using type = select_all_helper<F>;
 };
 

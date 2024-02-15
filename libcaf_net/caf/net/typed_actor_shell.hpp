@@ -9,12 +9,12 @@
 
 #include "caf/actor_traits.hpp"
 #include "caf/detail/net_export.hpp"
-#include "caf/detail/type_list.hpp"
 #include "caf/extend.hpp"
 #include "caf/fwd.hpp"
 #include "caf/mixin/requester.hpp"
 #include "caf/mixin/sender.hpp"
 #include "caf/none.hpp"
+#include "caf/type_list.hpp"
 #include "caf/typed_actor.hpp"
 
 namespace caf::net {
@@ -42,7 +42,7 @@ public:
              with<mixin::sender, mixin::requester>;
   // clang-format on
 
-  using signatures = detail::type_list<Sigs...>;
+  using signatures = type_list<Sigs...>;
 
   using behavior_type = typed_behavior<Sigs...>;
 

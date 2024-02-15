@@ -4,11 +4,12 @@
 
 #pragma once
 
+#include "caf/net/http/route.hpp"
 #include "caf/net/web_socket/acceptor.hpp"
 #include "caf/net/web_socket/default_trait.hpp"
 #include "caf/net/web_socket/server_factory.hpp"
 
-#include "caf/detail/type_list.hpp"
+#include "caf/type_list.hpp"
 
 #include <memory>
 
@@ -192,7 +193,7 @@ public:
 private:
   template <class OnStart, class... Out, class... Ts>
   auto make(OnStart& on_start,
-            detail::type_list<net::web_socket::acceptor<Out...>&, Ts...>) {
+            type_list<net::web_socket::acceptor<Out...>&, Ts...>) {
     using namespace detail;
     using state_t = ws_switch_protocol_state<OnRequest, OnStart>;
     using impl_t = ws_switch_protocol<Trait, state_t, type_list<Out...>, Ts...>;

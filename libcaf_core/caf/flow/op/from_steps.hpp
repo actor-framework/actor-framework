@@ -8,6 +8,7 @@
 #include "caf/detail/plain_ref_counted.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/detail/type_list.hpp"
+#include "caf/flow/observer.hpp"
 
 #include <deque>
 #include <tuple>
@@ -17,7 +18,7 @@ namespace caf::flow::op {
 
 template <class... Steps>
 using from_steps_output_t =
-  typename detail::tl_back_t<detail::type_list<Steps...>>::output_type;
+  typename detail::tl_back_t<type_list<Steps...>>::output_type;
 
 template <class Input, class... Steps>
 class from_steps_sub : public subscription::impl_base,

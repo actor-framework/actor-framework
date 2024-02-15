@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "caf/detail/type_list.hpp"
 #include "caf/message_id.hpp"
 #include "caf/scheduled_actor.hpp"
+#include "caf/type_list.hpp"
 
 #include <type_traits>
 
@@ -77,7 +77,7 @@ private:
     static_assert(std::is_same_v<typename on_error_trait::result_type, void>,
                   "OnError must return void");
     using on_error_args = typename on_error_trait::decayed_arg_types;
-    static_assert(std::is_same_v<on_error_args, detail::type_list<error>>,
+    static_assert(std::is_same_v<on_error_args, type_list<error>>,
                   "OnError must accept a single argument of type caf::error");
   }
 

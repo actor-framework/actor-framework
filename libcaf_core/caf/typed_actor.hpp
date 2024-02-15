@@ -55,7 +55,7 @@ public:
   static constexpr bool has_weak_ptr_semantics = false;
 
   /// Stores the template parameter pack.
-  using signatures = detail::type_list<Sigs...>;
+  using signatures = type_list<Sigs...>;
 
   /// Creates a new `typed_actor` type by extending this one with `Es...`.
   template <class... Es>
@@ -114,9 +114,8 @@ public:
 
   template <class... Ts>
   typed_actor(const typed_actor<Ts...>& other) : ptr_(other.ptr_) {
-    static_assert(
-      detail::tl_subset_of<signatures, detail::type_list<Ts...>>::value,
-      "Cannot assign incompatible handle");
+    static_assert(detail::tl_subset_of<signatures, type_list<Ts...>>::value,
+                  "Cannot assign incompatible handle");
   }
 
   // allow `handle_type{this}` for typed actors
@@ -140,9 +139,8 @@ public:
 
   template <class... Ts>
   typed_actor& operator=(const typed_actor<Ts...>& other) {
-    static_assert(
-      detail::tl_subset_of<signatures, detail::type_list<Ts...>>::value,
-      "Cannot assign incompatible handle");
+    static_assert(detail::tl_subset_of<signatures, type_list<Ts...>>::value,
+                  "Cannot assign incompatible handle");
     ptr_ = other.ptr_;
     return *this;
   }
