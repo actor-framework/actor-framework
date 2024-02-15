@@ -4,18 +4,9 @@
 
 #pragma once
 
-#include "caf/actor_traits.hpp"
-#include "caf/catch_all.hpp"
 #include "caf/detail/type_list.hpp"
-#include "caf/detail/typed_actor_util.hpp"
-#include "caf/event_based_actor.hpp"
-#include "caf/flow/fwd.hpp"
 #include "caf/message_id.hpp"
-#include "caf/none.hpp"
 #include "caf/scheduled_actor.hpp"
-#include "caf/sec.hpp"
-#include "caf/system_messages.hpp"
-#include "caf/typed_behavior.hpp"
 
 #include <type_traits>
 
