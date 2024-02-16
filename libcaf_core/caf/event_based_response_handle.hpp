@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/disposable.hpp"
 #include "caf/message_id.hpp"
 #include "caf/scheduled_actor.hpp"
 #include "caf/type_list.hpp"
@@ -19,8 +20,9 @@ class event_based_response_handle {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
-  event_based_response_handle(scheduled_actor* self, message_id mid)
-    : self_(self), mid_(mid) {
+  event_based_response_handle(scheduled_actor* self, message_id mid,
+                              disposable pending_timeout)
+    : self_(self), mid_(mid), pending_timeout_(std::move(pending_timeout)) {
     // nop
   }
 
@@ -28,7 +30,8 @@ public:
   void await(OnValue on_value, OnError on_error) && {
     type_check<OnValue, OnError>();
     auto bhvr = behavior{std::move(on_value), std::move(on_error)};
-    self_->add_awaited_response_handler(mid_, std::move(bhvr));
+    self_->add_awaited_response_handler(mid_, std::move(bhvr),
+                                        std::move(pending_timeout_));
   }
 
   template <class OnValue>
@@ -43,7 +46,8 @@ public:
   void then(OnValue on_value, OnError on_error) && {
     type_check<OnValue, OnError>();
     auto bhvr = behavior{std::move(on_value), std::move(on_error)};
-    self_->add_multiplexed_response_handler(mid_, std::move(bhvr));
+    self_->add_multiplexed_response_handler(mid_, std::move(bhvr),
+                                            std::move(pending_timeout_));
   }
 
   template <class OnValue>
@@ -86,6 +90,9 @@ private:
 
   /// Stores the ID of the message we are waiting for.
   message_id mid_;
+
+  /// Stores a handle to the in-flight timeout.
+  disposable pending_timeout_;
 };
 
 } // namespace caf

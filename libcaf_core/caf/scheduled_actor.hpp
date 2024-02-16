@@ -117,8 +117,8 @@ public:
     size_t max_items_per_batch;
   };
 
-  /// The message ID of an outstanding response with its callback.
-  using pending_response = std::pair<const message_id, behavior>;
+  /// The message ID of an outstanding response with its callback and timeout.
+  using pending_response = std::tuple<const message_id, behavior, disposable>;
 
   /// A pointer to a scheduled actor.
   using pointer = scheduled_actor*;
@@ -364,10 +364,12 @@ public:
   // -- message processing -----------------------------------------------------
 
   /// Adds a callback for an awaited response.
-  void add_awaited_response_handler(message_id response_id, behavior bhvr);
+  void add_awaited_response_handler(message_id response_id, behavior bhvr,
+                                    disposable pending_timeout = {});
 
   /// Adds a callback for a multiplexed response.
-  void add_multiplexed_response_handler(message_id response_id, behavior bhvr);
+  void add_multiplexed_response_handler(message_id response_id, behavior bhvr,
+                                        disposable pending_timeout = {});
 
   /// Returns the category of `x`.
   message_category categorize(mailbox_element& x);
@@ -395,11 +397,6 @@ public:
   /// Returns `true` if the behavior stack is not empty.
   bool has_behavior() const noexcept {
     return !bhvr_stack_.empty();
-  }
-
-  behavior& current_behavior() {
-    return !awaited_responses_.empty() ? awaited_responses_.front().second
-                                       : bhvr_stack_.back();
   }
 
   /// Installs a new behavior without performing any type checks.
@@ -615,7 +612,8 @@ protected:
   std::forward_list<pending_response> awaited_responses_;
 
   /// Stores callbacks for multiplexed responses.
-  unordered_flat_map<message_id, behavior> multiplexed_responses_;
+  unordered_flat_map<message_id, std::pair<behavior, disposable>>
+    multiplexed_responses_;
 
   /// Customization point for setting a default `message` callback.
   default_handler default_handler_;

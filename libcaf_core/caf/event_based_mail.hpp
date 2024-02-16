@@ -27,6 +27,7 @@ public:
   /// Sends the message to `receiver` as a request message and returns a handle
   /// for processing the response.
   /// @param receiver The actor that should receive the message.
+  /// @param relative_timeout The maximum time to wait for a response.
   /// @param ref_tag Either `strong_ref` or `weak_ref`. When passing
   ///                `strong_ref`, the system will keep a strong reference to
   ///                the receiver until the message has been delivered.
@@ -42,27 +43,35 @@ public:
   ///                     the meantime.
   template <class Handle, class RefTag = strong_ref_t,
             class SelfRefTag = strong_self_ref_t>
-  [[nodiscard]] auto request(const Handle& receiver, RefTag ref_tag = {},
+  [[nodiscard]] auto request(const Handle& receiver, timespan relative_timeout,
+                             RefTag ref_tag = {},
                              SelfRefTag self_ref_tag = {}) && {
     detail::send_type_check<typename Trait::signatures, Handle, Args...>();
     using response_type = response_type_t<typename Handle::signatures, Args...>;
     auto mid = self()->new_request_id(Priority);
-    disposable in_flight;
+    disposable in_flight_response;
+    disposable in_flight_timeout;
     if (receiver) {
       auto& clock = self()->clock();
-      in_flight = clock.schedule_message(actor_cast(super::self_, self_ref_tag),
-                                         actor_cast(receiver, ref_tag),
-                                         super::timeout_, mid,
-                                         std::move(super::content_));
+      if (relative_timeout != infinite) {
+        in_flight_timeout = clock.schedule_message(
+          nullptr, actor_cast(super::self_, weak_ref),
+          super::timeout_ + relative_timeout, mid.response_id(),
+          make_message(make_error(sec::request_timeout)));
+      }
+      in_flight_response
+        = clock.schedule_message(actor_cast(super::self_, self_ref_tag),
+                                 actor_cast(receiver, ref_tag), super::timeout_,
+                                 mid, std::move(super::content_));
 
     } else {
       self()->enqueue(make_mailbox_element(self()->ctrl(), mid.response_id(),
                                            make_error(sec::invalid_request)),
                       self()->context());
     }
-    auto hdl = event_based_response_handle<response_type>{self(),
-                                                          mid.response_id()};
-    return std::pair{std::move(hdl), std::move(in_flight)};
+    using hdl_t = event_based_response_handle<response_type>;
+    auto hdl = hdl_t{self(), mid.response_id(), std::move(in_flight_timeout)};
+    return std::pair{std::move(hdl), std::move(in_flight_response)};
   }
 
 private:
@@ -98,19 +107,28 @@ public:
 
   /// Schedules the message for delivery with a relative timeout.
   [[nodiscard]] auto delay(actor_clock::duration_type timeout) && {
-    using clock = actor_clock::clock_type;
     using result_t = event_based_scheduled_mail_t<Priority, Trait, Args...>;
-    return result_t{self(), std::move(super::content_), clock::now() + timeout};
+    return result_t{self(), std::move(super::content_),
+                    self()->clock().now() + timeout};
   }
 
   /// Sends the message to `receiver` as a request message and returns a handle
   /// for processing the response.
   template <class Handle>
-  [[nodiscard]] auto request(const Handle& receiver) && {
+  [[nodiscard]] auto
+  request(const Handle& receiver, timespan relative_timeout) && {
     detail::send_type_check<typename Trait::signatures, Handle, Args...>();
     using response_type = response_type_t<typename Handle::signatures, Args...>;
     auto mid = self()->new_request_id(Priority);
+    disposable in_flight_timeout;
     if (receiver) {
+      if (relative_timeout != infinite) {
+        auto& clock = self()->clock();
+        in_flight_timeout = clock.schedule_message(
+          nullptr, actor_cast(super::self_, weak_ref),
+          clock.now() + relative_timeout, mid.response_id(),
+          make_message(make_error(sec::request_timeout)));
+      }
       auto* ptr = actor_cast<abstract_actor*>(receiver);
       ptr->enqueue(make_mailbox_element(self()->ctrl(), mid,
                                         std::move(super::content_)),
@@ -120,8 +138,8 @@ public:
                                            make_error(sec::invalid_request)),
                       self()->context());
     }
-    return event_based_response_handle<response_type>{self(),
-                                                      mid.response_id()};
+    using hdl_t = event_based_response_handle<response_type>;
+    return hdl_t{self(), mid.response_id(), std::move(in_flight_timeout)};
   }
 
 private:

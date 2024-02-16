@@ -187,7 +187,7 @@ bool scheduled_actor::enqueue(mailbox_element_ptr ptr, execution_unit* eu) {
 mailbox_element* scheduled_actor::peek_at_next_mailbox_element() {
   return mailbox().peek(awaited_responses_.empty()
                           ? make_message_id()
-                          : awaited_responses_.begin()->first);
+                          : std::get<0>(*awaited_responses_.begin()));
 }
 
 // -- overridden functions of local_actor --------------------------------------
@@ -486,17 +486,16 @@ disposable scheduled_actor::delay_until(steady_time_point abs_time,
 // -- message processing -------------------------------------------------------
 
 void scheduled_actor::add_awaited_response_handler(message_id response_id,
-                                                   behavior bhvr) {
-  if (bhvr.timeout() != infinite)
-    request_response_timeout(bhvr.timeout(), response_id);
-  awaited_responses_.emplace_front(response_id, std::move(bhvr));
+                                                   behavior bhvr,
+                                                   disposable pending_timeout) {
+  awaited_responses_.emplace_front(response_id, std::move(bhvr),
+                                   std::move(pending_timeout));
 }
 
-void scheduled_actor::add_multiplexed_response_handler(message_id response_id,
-                                                       behavior bhvr) {
-  if (bhvr.timeout() != infinite)
-    request_response_timeout(bhvr.timeout(), response_id);
-  multiplexed_responses_.emplace(response_id, std::move(bhvr));
+void scheduled_actor::add_multiplexed_response_handler(
+  message_id response_id, behavior bhvr, disposable pending_timeout) {
+  multiplexed_responses_.emplace(
+    response_id, std::pair{std::move(bhvr), std::move(pending_timeout)});
 }
 
 scheduled_actor::message_category
@@ -676,7 +675,7 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
       auto& pr = awaited_responses_.front();
       // Skip all other messages until we receive the currently awaited response
       // except for internal (system) messages.
-      if (x.mid != pr.first) {
+      if (x.mid != std::get<0>(pr)) {
         // Responses are never internal messages and must be skipped here.
         // Otherwise, an error to a response would run into the default handler.
         if (x.mid.is_response())
@@ -687,7 +686,8 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
         }
         return invoke_message_result::skipped;
       }
-      auto f = std::move(pr.second);
+      auto f = std::move(std::get<1>(pr));
+      std::get<2>(pr).dispose(); // Stop the timeout.
       awaited_responses_.pop_front();
       if (!invoke(this, f, x)) {
         // try again with error if first attempt failed
@@ -704,7 +704,8 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
       // neither awaited nor multiplexed, probably an expired timeout
       if (mrh == multiplexed_responses_.end())
         return invoke_message_result::dropped;
-      auto bhvr = std::move(mrh->second);
+      auto bhvr = std::move(mrh->second.first);
+      mrh->second.second.dispose(); // Stop the timeout.
       multiplexed_responses_.erase(mrh);
       if (!invoke(this, bhvr, x)) {
         CAF_LOG_DEBUG("got unexpected_response");
