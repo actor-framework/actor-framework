@@ -383,4 +383,15 @@ void blocking_actor::force_close_mailbox() {
   close_mailbox(make_error(exit_reason::unreachable));
 }
 
+void blocking_actor::do_receive(message_id mid, behavior& bhvr,
+                                timespan timeout) {
+  accept_one_cond cond;
+  auto tmp = after(timeout) >> [&] {
+    auto err = make_message(make_error(sec::request_timeout));
+    bhvr(err);
+  };
+  auto fun = detail::make_blocking_behavior(&bhvr, std::move(tmp));
+  receive_impl(cond, mid, fun);
+}
+
 } // namespace caf

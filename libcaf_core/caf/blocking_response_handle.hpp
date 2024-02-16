@@ -4,10 +4,18 @@
 
 #pragma once
 
-#include "caf/disposable.hpp"
+#include "caf/abstract_blocking_actor.hpp"
+#include "caf/actor_traits.hpp"
+#include "caf/blocking_actor.hpp"
+#include "caf/catch_all.hpp"
+#include "caf/detail/type_list.hpp"
+#include "caf/detail/typed_actor_util.hpp"
+#include "caf/flow/fwd.hpp"
 #include "caf/message_id.hpp"
-#include "caf/scheduled_actor.hpp"
-#include "caf/type_list.hpp"
+#include "caf/none.hpp"
+#include "caf/sec.hpp"
+#include "caf/system_messages.hpp"
+#include "caf/typed_behavior.hpp"
 
 #include <type_traits>
 
@@ -16,46 +24,21 @@ namespace caf {
 /// This helper class identifies an expected response message and enables
 /// `request(...).then(...)`.
 template <class Result>
-class event_based_response_handle {
+class blocking_response_handle {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
-  event_based_response_handle(scheduled_actor* self, message_id mid,
-                              disposable pending_timeout)
-    : self_(self), mid_(mid), pending_timeout_(std::move(pending_timeout)) {
+  blocking_response_handle(abstract_blocking_actor* self, message_id mid,
+                           timespan timeout)
+    : self_(self), mid_(mid), timeout_(timeout) {
     // nop
   }
 
   template <class OnValue, class OnError>
-  void await(OnValue on_value, OnError on_error) && {
+  void receive(OnValue on_value, OnError on_error) && {
     type_check<OnValue, OnError>();
     auto bhvr = behavior{std::move(on_value), std::move(on_error)};
-    self_->add_awaited_response_handler(mid_, std::move(bhvr),
-                                        std::move(pending_timeout_));
-  }
-
-  template <class OnValue>
-  void await(OnValue on_value) && {
-    return std::move(*this).await(std::move(on_value),
-                                  [self = self_](error& err) {
-                                    self->call_error_handler(err);
-                                  });
-  }
-
-  template <class OnValue, class OnError>
-  void then(OnValue on_value, OnError on_error) && {
-    type_check<OnValue, OnError>();
-    auto bhvr = behavior{std::move(on_value), std::move(on_error)};
-    self_->add_multiplexed_response_handler(mid_, std::move(bhvr),
-                                            std::move(pending_timeout_));
-  }
-
-  template <class OnValue>
-  void then(OnValue on_value) && {
-    return std::move(*this).then(std::move(on_value),
-                                 [self = self_](error& err) {
-                                   self->call_error_handler(err);
-                                 });
+    self_->do_receive(mid_, bhvr, timeout_);
   }
 
 private:
@@ -86,13 +69,13 @@ private:
   }
 
   /// Points to the parent actor.
-  scheduled_actor* self_;
+  abstract_blocking_actor* self_;
 
   /// Stores the ID of the message we are waiting for.
   message_id mid_;
 
-  /// Stores a handle to the in-flight timeout.
-  disposable pending_timeout_;
+  /// Stores the timeout for the response.
+  timespan timeout_;
 };
 
 } // namespace caf

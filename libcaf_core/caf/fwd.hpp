@@ -24,6 +24,7 @@ template <class> class [[nodiscard]] error_code;
 
 template <class> class actor_from_state_t;
 template <class> class basic_cow_string;
+template <class> class blocking_response_handle;
 template <class> class callback;
 template <class> class cow_vector;
 template <class> class dictionary;

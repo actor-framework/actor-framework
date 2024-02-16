@@ -10,6 +10,7 @@
 #include "caf/dynamically_typed.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/timespan.hpp"
+#include "caf/typed_actor.hpp"
 #include "caf/typed_event_based_actor.hpp"
 
 // Note: functions inherited from async_mail are tested in async_mail.test.cpp.
