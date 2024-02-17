@@ -74,6 +74,11 @@ std::string get_rtti_from_mpi() {
   return f();
 }
 
+template <class... Ts>
+std::set<std::string> get_rtti_from_signatures(type_list<Ts...>) {
+  return std::set{get_rtti_from_mpi<Ts>()...};
+}
+
 } // namespace caf::detail
 
 namespace caf {
@@ -260,8 +265,8 @@ public:
   template <class... Ts>
   mpi message_types(type_list<typed_actor<Ts...>>) const {
     static_assert(sizeof...(Ts) > 0, "empty typed actor handle given");
-    mpi result{detail::get_rtti_from_mpi<Ts>()...};
-    return result;
+    return detail::get_rtti_from_signatures(
+      typename typed_actor<Ts...>::signatures{});
   }
 
   template <class T, class E = std::enable_if_t<!detail::is_type_list_v<T>>>

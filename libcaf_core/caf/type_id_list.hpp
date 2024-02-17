@@ -140,6 +140,12 @@ type_id_list make_argument_type_id_list() {
   return argument_type_id_list_factory<F>::make();
 }
 
+template <class... Sigs>
+std::array<type_id_list, sizeof...(Sigs)>
+make_signatures_type_id_list(type_list<Sigs...>) {
+  return {{detail::make_argument_type_id_list<Sigs>()...}};
+}
+
 template <class List>
 struct to_type_id_list_helper;
 

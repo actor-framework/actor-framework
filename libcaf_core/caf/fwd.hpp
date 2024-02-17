@@ -299,6 +299,8 @@ namespace io {
 class hook;
 class broker;
 class middleman;
+template <class...>
+class typed_broker;
 
 namespace basp {
 
