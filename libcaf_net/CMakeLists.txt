@@ -69,6 +69,8 @@ caf_add_component(
     caf/net/middleman.cpp
     caf/net/multiplexer.cpp
     caf/net/network_socket.cpp
+    caf/net/octet_stream/flow_bridge.cpp
+    caf/net/octet_stream/flow_bridge.test.cpp
     caf/net/octet_stream/lower_layer.cpp
     caf/net/octet_stream/policy.cpp
     caf/net/octet_stream/transport.cpp

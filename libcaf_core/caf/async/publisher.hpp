@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/async/spsc_buffer.hpp"
+#include "caf/detail/flow_source.hpp"
 #include "caf/flow/coordinator.hpp"
 #include "caf/flow/observable_decl.hpp"
 #include "caf/flow/op/fail.hpp"
@@ -56,16 +57,35 @@ public:
     auto* parent = decorated.parent();
     auto flag = disposable::make_flag();
     parent->watch(flag);
-    auto pimpl = make_counted<impl>(parent, std::move(decorated),
-                                    std::move(flag));
+    auto pimpl = make_counted<default_impl>(parent, std::move(decorated),
+                                            std::move(flag));
     return publisher{std::move(pimpl)};
   }
 
+  /// Creates a new asynchronous observable by decorating a flow source.
+  /// @private
+  static publisher from(detail::flow_source_ptr<T> decorated) {
+    if (!decorated)
+      return {};
+    return publisher{make_counted<source_impl>(std::move(decorated))};
+  }
+
 private:
+  // Abstracts away the implementation details of a publisher.
   class impl : public ref_counted {
   public:
-    impl(async::execution_context_ptr source, flow::observable<T> decorated,
-         disposable flag)
+    virtual flow::observable<T> observe_on(flow::coordinator* parent,
+                                           size_t buffer_size,
+                                           size_t min_request_size) const
+      = 0;
+  };
+
+  // Default implementation of the internal interface for wrapping a regular
+  // observable.
+  class default_impl : public impl {
+  public:
+    default_impl(async::execution_context_ptr source,
+                 flow::observable<T> decorated, disposable flag)
       : source_(std::move(source)),
         decorated_(std::move(decorated)),
         flag_(std::move(flag)) {
@@ -88,7 +108,7 @@ private:
       return pull.observe_on(parent);
     }
 
-    ~impl() {
+    ~default_impl() {
       source_->schedule_fn([flag = std::move(flag_)]() mutable {
         // The source called `watch` on the flag to keep the event loop alive as
         // long as there are still async references to this observable. We need
@@ -102,6 +122,28 @@ private:
     async::execution_context_ptr source_;
     flow::observable<T> decorated_;
     disposable flag_;
+  };
+
+  // Default implementation of the internal interface for wrapping a regular
+  // observable.
+  class source_impl : public impl {
+  public:
+    explicit source_impl(detail::flow_source_ptr<T> decorated)
+      : decorated_(std::move(decorated)) {
+      // nop
+    }
+
+    flow::observable<T> observe_on(flow::coordinator* parent,
+                                   size_t buffer_size,
+                                   size_t min_request_size) const {
+      auto [pull, push] = async::make_spsc_buffer_resource<T>(buffer_size,
+                                                              min_request_size);
+      decorated_->add(std::move(push));
+      return pull.observe_on(parent);
+    }
+
+  private:
+    detail::flow_source_ptr<T> decorated_;
   };
 
   using impl_ptr = caf::intrusive_ptr<impl>;

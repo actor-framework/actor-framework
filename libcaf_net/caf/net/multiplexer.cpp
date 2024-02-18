@@ -32,6 +32,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <deque>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -83,6 +84,7 @@ public:
     shutdown_reading,
     shutdown_writing,
     run_action,
+    delay_action,
     shutdown,
   };
 
@@ -201,6 +203,16 @@ public:
     }
   }
 
+  void schedule(steady_time_point when, action what) override {
+    CAF_LOG_TRACE("");
+    if (std::this_thread::get_id() == tid_) {
+      scheduled_actions.emplace(when, std::move(what));
+    } else {
+      auto ptr = new scheduled_actions_map::value_type{when, std::move(what)};
+      write_to_pipe(pollset_updater::code::delay_action, ptr);
+    }
+  }
+
   void watch(disposable what) override {
     watched_.emplace_back(what);
   }
@@ -269,13 +281,26 @@ public:
       return false;
     // We'll call poll() until poll() succeeds or fails.
     for (;;) {
+      int timeout = 0;
+      if (!blocking) {
+        // nop
+      } else if (scheduled_actions.empty()) {
+        timeout = -1;
+      } else {
+        auto now = std::chrono::steady_clock::now();
+        auto tout = scheduled_actions.begin()->first;
+        if (tout > now) {
+          namespace sc = std::chrono;
+          auto ms = sc::duration_cast<sc::milliseconds>(tout - now).count();
+          timeout = std::max(1, static_cast<int>(ms));
+        }
+      }
       int presult =
 #ifdef CAF_WINDOWS
         ::WSAPoll(pollset_.data(), static_cast<ULONG>(pollset_.size()),
-                  blocking ? -1 : 0);
+                  timeout);
 #else
-        ::poll(pollset_.data(), static_cast<nfds_t>(pollset_.size()),
-               blocking ? -1 : 0);
+        ::poll(pollset_.data(), static_cast<nfds_t>(pollset_.size()), timeout);
 #endif
       if (presult > 0) {
         CAF_LOG_DEBUG("poll() on" << pollset_.size() << "sockets reported"
@@ -297,36 +322,50 @@ public:
             --presult;
           }
         }
-        apply_updates();
+        run_timeouts();
         return true;
-      } else if (presult == 0) {
+      }
+      if (presult == 0) {
         // No activity.
+        run_timeouts();
         return false;
-      } else {
-        auto code = last_socket_error();
-        switch (code) {
-          case std::errc::interrupted: {
-            // A signal was caught. Simply try again.
-            CAF_LOG_DEBUG("received errc::interrupted, try again");
-            break;
-          }
-          case std::errc::not_enough_memory: {
-            log::system::error("poll() failed due to insufficient memory");
-            // There's not much we can do other than try again in hope someone
-            // else releases memory.
-            break;
-          }
-          default: {
-            // Must not happen.
-            auto int_code = static_cast<int>(code);
-            auto msg = std::generic_category().message(int_code);
-            std::string_view prefix = "poll() failed: ";
-            msg.insert(msg.begin(), prefix.begin(), prefix.end());
-            CAF_CRITICAL(msg.c_str());
-          }
+      }
+      auto code = last_socket_error();
+      switch (code) {
+        case std::errc::interrupted: {
+          // A signal was caught. Simply try again.
+          CAF_LOG_DEBUG("received errc::interrupted, try again");
+          break;
+        }
+        case std::errc::not_enough_memory: {
+          log::system::error("poll() failed due to insufficient memory");
+          // There's not much we can do other than try again in hope someone
+          // else releases memory.
+          break;
+        }
+        default: {
+          // Must not happen.
+          auto int_code = static_cast<int>(code);
+          auto msg = std::generic_category().message(int_code);
+          std::string_view prefix = "poll() failed: ";
+          msg.insert(msg.begin(), prefix.begin(), prefix.end());
+          CAF_CRITICAL(msg.c_str());
         }
       }
     }
+  }
+
+  void run_timeouts() {
+    // Run all timeouts.
+    auto now = std::chrono::steady_clock::now();
+    while (!scheduled_actions.empty()
+           && scheduled_actions.begin()->first <= now) {
+      auto i = scheduled_actions.begin();
+      auto next = std::move(i->second);
+      scheduled_actions.erase(i);
+      next.run();
+    }
+    apply_updates();
   }
 
   void apply_updates() override {
@@ -509,8 +548,13 @@ public:
       if (write_handle_ != invalid_socket)
         res = write(write_handle_, buf);
     }
-    if (res <= 0 && ptr)
-      intrusive_ptr_release(ptr);
+    if constexpr (std::is_base_of_v<ref_counted, T>) {
+      if (res <= 0 && ptr)
+        intrusive_ptr_release(ptr);
+    } else {
+      if (res <= 0 && ptr)
+        delete ptr;
+    }
   }
 
   /// @copydoc write_to_pipe
@@ -531,8 +575,14 @@ public:
     }
   }
 
-  /// Pending actions via `schedule`.
+  /// Pending actions to run immediately.
   std::deque<action> pending_actions;
+
+  /// The container type for delayed actions.
+  using scheduled_actions_map = std::multimap<steady_time_point, action>;
+
+  /// Scheduled actions.
+  scheduled_actions_map scheduled_actions;
 
 private:
   // -- member variables -------------------------------------------------------
@@ -584,6 +634,11 @@ void pollset_updater::handle_read_event() {
     auto f = action{intrusive_ptr{reinterpret_cast<action::impl*>(ptr), false}};
     mpx_->pending_actions.push_back(std::move(f));
   };
+  auto delay_action = [this](intptr_t ptr) {
+    using value_type = default_multiplexer::scheduled_actions_map::value_type;
+    auto val = std::unique_ptr<value_type>{reinterpret_cast<value_type*>(ptr)};
+    mpx_->scheduled_actions.emplace(val->first, std::move(val->second));
+  };
   for (;;) {
     CAF_ASSERT((buf_.size() - buf_size_) > 0);
     auto num_bytes
@@ -601,6 +656,9 @@ void pollset_updater::handle_read_event() {
             break;
           case code::run_action:
             add_action(ptr);
+            break;
+          case code::delay_action:
+            delay_action(ptr);
             break;
           case code::shutdown:
             CAF_ASSERT(ptr == 0);

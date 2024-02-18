@@ -7,6 +7,7 @@
 #include "caf/net/actor_shell.hpp"
 #include "caf/net/multiplexer.hpp"
 
+#include "caf/action.hpp"
 #include "caf/config.hpp"
 #include "caf/make_counted.hpp"
 
@@ -95,15 +96,6 @@ void socket_manager::schedule_handover() {
   });
 }
 
-void socket_manager::schedule(action what) {
-  // Wrap the action to make sure the socket manager is still alive when running
-  // the action later.
-  mpx_->schedule_fn([ptr = strong_this(), f = std::move(what)]() mutable {
-    CAF_IGNORE_UNUSED(ptr);
-    f.run();
-  });
-}
-
 void socket_manager::shutdown() {
   CAF_LOG_TRACE("");
   if (!shutting_down_) {
@@ -127,27 +119,32 @@ error socket_manager::start() {
     handler_->abort(err);
     cleanup();
     return err;
-  } else if (err = handler_->start(this); err) {
+  }
+  if (auto err = handler_->start(this); err) {
     CAF_LOG_DEBUG("failed to initialize handler:" << err);
     cleanup();
     return err;
-  } else {
-    return none;
   }
+  run_delayed_actions();
+  return none;
 }
 
 void socket_manager::handle_read_event() {
-  if (handler_)
+  if (handler_) {
     handler_->handle_read_event();
-  else
-    deregister();
+    run_delayed_actions();
+    return;
+  }
+  deregister();
 }
 
 void socket_manager::handle_write_event() {
-  if (handler_)
+  if (handler_) {
     handler_->handle_write_event();
-  else
-    deregister();
+    run_delayed_actions();
+    return;
+  }
+  deregister();
 }
 
 void socket_manager::handle_error(sec code) {
@@ -158,6 +155,7 @@ void socket_manager::handle_error(sec code) {
     if (!shutting_down_) {
       handler_->abort(make_error(code));
       shutting_down_ = true;
+      run_delayed_actions();
     }
     if (code == sec::disposed && !handler_->finalized()) {
       // When disposing the manger, the transport is still allowed to send any
@@ -167,6 +165,46 @@ void socket_manager::handle_error(sec code) {
       cleanup();
     }
   }
+}
+
+// -- implementation of coordinator --------------------------------------------
+
+void socket_manager::ref_execution_context() const noexcept {
+  ref();
+}
+
+void socket_manager::deref_execution_context() const noexcept {
+  deref();
+}
+
+void socket_manager::schedule(action what) {
+  mpx_->schedule_fn([ptr = strong_this(), f = std::move(what)]() mutable { //
+    ptr->exec(f);
+  });
+}
+
+void socket_manager::watch(disposable what) {
+  watched_.push_back(std::move(what));
+}
+
+void socket_manager::release_later(flow::coordinated_ptr& child) {
+  trash_.push_back(std::move(child));
+}
+
+socket_manager::steady_time_point socket_manager::steady_time() {
+  return std::chrono::steady_clock::now();
+}
+
+void socket_manager::delay(action what) {
+  delayed_.push_back(std::move(what));
+}
+
+disposable socket_manager::delay_until(steady_time_point abs_time,
+                                       action what) {
+  auto callback = make_single_shot_action(
+    [ptr = strong_this(), f = std::move(what)]() mutable { ptr->exec(f); });
+  mpx_->schedule(abs_time, callback);
+  return std::move(callback).as_disposable();
 }
 
 // -- implementation of disposable_impl ----------------------------------------
@@ -194,6 +232,21 @@ void socket_manager::deref_disposable() const noexcept {
 
 // -- utility functions --------------------------------------------------------
 
+void socket_manager::exec(action& f) {
+  f.run();
+  run_delayed_actions();
+}
+
+void socket_manager::run_delayed_actions() {
+  while (!delayed_.empty()) {
+    auto next = std::move(delayed_.front());
+    delayed_.pop_front();
+    next.run();
+  }
+  trash_.clear();
+  disposable::erase_disposed(watched_);
+}
+
 void socket_manager::cleanup() {
   deregister();
   handler_.reset();
@@ -210,6 +263,16 @@ void socket_manager::cleanup() {
 
 socket_manager_ptr socket_manager::strong_this() {
   return socket_manager_ptr{this};
+}
+
+// -- free functions -----------------------------------------------------------
+
+void intrusive_ptr_add_ref(socket_manager* ptr) noexcept {
+  ptr->ref();
+}
+
+void intrusive_ptr_release(socket_manager* ptr) noexcept {
+  ptr->deref();
 }
 
 } // namespace caf::net
