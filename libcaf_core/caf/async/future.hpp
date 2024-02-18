@@ -7,6 +7,7 @@
 #include "caf/async/execution_context.hpp"
 #include "caf/async/fwd.hpp"
 #include "caf/detail/async_cell.hpp"
+#include "caf/detail/beacon.hpp"
 #include "caf/disposable.hpp"
 #include "caf/error.hpp"
 #include "caf/flow/observable.hpp"
@@ -51,20 +52,8 @@ public:
       }
     };
     auto cb_action = make_single_shot_action(std::move(cb));
-    auto event = typename cell_type::event{ctx_, cb_action};
-    bool fire_immediately = false;
-    { // Critical section.
-      std::unique_lock guard{cell_->mtx};
-      if (std::holds_alternative<none_t>(cell_->value)) {
-        cell_->events.push_back(std::move(event));
-      } else {
-        fire_immediately = true;
-      }
-    }
-    if (fire_immediately)
-      // Note: clang-tidy gets confused by fire_immediately.
-      // NOLINTNEXTLINE(bugprone-use-after-move)
-      event.first->schedule(std::move(event.second));
+    if (!cell_->subscribe(ctx_, cb_action))
+      ctx_->schedule(cb_action);
     auto res = std::move(cb_action).as_disposable();
     ctx_->watch(res);
     return res;
@@ -151,6 +140,26 @@ public:
     CAF_ASSERT(valid());
     std::unique_lock guard{cell_->mtx};
     return std::holds_alternative<none_t>(cell_->value);
+  }
+
+  auto get() {
+    using res_t = expected<T>;
+    auto sync = make_counted<detail::beacon>();
+    if (cell_->subscribe(nullptr, action{sync})) {
+      std::ignore = sync->wait();
+    }
+    std::unique_lock guard{cell_->mtx};
+    switch (cell_->value.index()) {
+      default:
+        return res_t{sec::broken_promise};
+      case 1:
+        if constexpr (std::is_void_v<T>)
+          return res_t{};
+        else
+          return res_t{std::get<T>(cell_->value)};
+      case 2:
+        return res_t{std::get<error>(cell_->value)};
+    }
   }
 
 private:

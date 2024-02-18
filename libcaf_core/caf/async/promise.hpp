@@ -18,6 +18,8 @@ namespace caf::async {
 template <class T>
 class promise {
 public:
+  using value_type = std::conditional_t<std::is_void_v<T>, unit_t, T>;
+
   promise(promise&&) noexcept = default;
 
   promise& operator=(promise&&) noexcept = default;
@@ -48,8 +50,12 @@ public:
             cell_->events.swap(events);
           }
         }
-        for (auto& [listener, callback] : events)
-          listener->schedule(std::move(callback));
+        for (auto& [listener, callback] : events) {
+          if (listener)
+            listener->schedule(std::move(callback));
+          else
+            callback.run();
+        }
       }
     }
   }
@@ -67,7 +73,7 @@ public:
   }
 
   /// @pre `valid()`
-  void set_value(T value) {
+  void set_value(value_type value) {
     if (valid()) {
       do_set(value);
       cell_ = nullptr;
@@ -108,8 +114,12 @@ private:
         CAF_RAISE_ERROR("promise already satisfied");
       }
     }
-    for (auto& [listener, callback] : events)
-      listener->schedule(std::move(callback));
+    for (auto& [listener, callback] : events) {
+      if (listener)
+        listener->schedule(std::move(callback));
+      else
+        callback.run();
+    }
   }
 
   cell_ptr cell_;
