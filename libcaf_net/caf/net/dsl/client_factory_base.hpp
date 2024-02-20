@@ -25,8 +25,6 @@ class client_factory_base {
 public:
   using config_type = Config;
 
-  using trait_type = typename config_type::trait_type;
-
   using config_pointer = intrusive_ptr<config_type>;
 
   client_factory_base(const client_factory_base&) = default;
@@ -36,6 +34,10 @@ public:
   template <class T, class... Ts>
   explicit client_factory_base(dsl::client_config_tag<T> token, Ts&&... xs) {
     cfg_ = config_type::make(token, std::forward<Ts>(xs)...);
+  }
+
+  explicit client_factory_base(config_pointer cfg) : cfg_(std::move(cfg)) {
+    // nop
   }
 
   /// Sets the callback for errors.

@@ -75,6 +75,7 @@ caf_add_component(
     caf/net/octet_stream/policy.cpp
     caf/net/octet_stream/transport.cpp
     caf/net/octet_stream/upper_layer.cpp
+    caf/net/octet_stream/with.test.cpp
     caf/net/pipe_socket.cpp
     caf/net/prometheus.cpp
     caf/net/socket.cpp
