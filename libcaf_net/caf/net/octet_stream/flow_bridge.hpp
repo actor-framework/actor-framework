@@ -16,6 +16,7 @@
 #include "caf/async/producer_adapter.hpp"
 #include "caf/async/promise.hpp"
 #include "caf/async/publisher.hpp"
+#include "caf/detail/net_export.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/flow/coordinator.hpp"
 #include "caf/flow/fwd.hpp"
@@ -36,7 +37,8 @@ namespace caf::detail {
 
 /// Trivial observer that forwards all events to a
 /// `net::octet_stream::flow_bridge`.
-class octet_stream_observer : public flow::observer_impl_base<std::byte> {
+class CAF_NET_EXPORT octet_stream_observer
+  : public flow::observer_impl_base<std::byte> {
 public:
   using input_type = std::byte;
 
@@ -69,8 +71,8 @@ using ucast_sub_state = flow::op::ucast_sub_state<std::byte>;
 
 /// Translates between a byte-oriented transport and data flows. Utility class
 /// for the `with` DSL.
-class flow_bridge : public upper_layer,
-                    public ucast_sub_state::abstract_listener {
+class CAF_NET_EXPORT flow_bridge : public upper_layer,
+                                   public ucast_sub_state::abstract_listener {
 public:
   flow_bridge(uint32_t read_buffer_size, uint32_t write_buffer_size)
     : read_buffer_size_(read_buffer_size),
