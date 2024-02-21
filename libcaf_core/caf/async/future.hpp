@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/actor_clock.hpp"
 #include "caf/async/execution_context.hpp"
 #include "caf/async/fwd.hpp"
 #include "caf/detail/async_cell.hpp"
@@ -76,6 +77,8 @@ private:
 /// Represents the result of an asynchronous computation.
 template <class T>
 class future {
+  using res_t = expected<T>;
+
 public:
   friend class promise<T>;
 
@@ -143,7 +146,6 @@ public:
   }
 
   auto get() {
-    using res_t = expected<T>;
     auto sync = make_counted<detail::beacon>();
     if (cell_->subscribe(nullptr, action{sync})) {
       std::ignore = sync->wait();
@@ -159,6 +161,46 @@ public:
           return res_t{std::get<T>(cell_->value)};
       case 2:
         return res_t{std::get<error>(cell_->value)};
+    }
+  }
+
+  template <class Rep, class Period>
+  auto get(std::chrono::duration<Rep, Period> timeout) {
+    auto sync = make_counted<detail::beacon>();
+    if (cell_->subscribe(nullptr, action{sync})) {
+      std::ignore = sync->wait_for(timeout);
+    }
+    std::unique_lock guard{cell_->mtx};
+    switch (cell_->value.index()) {
+      default:
+        return std::optional<res_t>{};
+      case 1:
+        if constexpr (std::is_void_v<T>)
+          return std::optional{res_t{}};
+        else
+          return std::optional{res_t{std::get<T>(cell_->value)}};
+      case 2:
+        return std::optional{res_t{std::get<error>(cell_->value)}};
+    }
+  }
+
+  template <class Clock, class Duration>
+  auto get(std::chrono::time_point<Clock, Duration> timepoint) {
+    auto sync = make_counted<detail::beacon>();
+    if (cell_->subscribe(nullptr, action{sync})) {
+      std::ignore = sync->wait_until(timepoint);
+    }
+    std::unique_lock guard{cell_->mtx};
+    switch (cell_->value.index()) {
+      default:
+        return std::optional<res_t>{};
+      case 1:
+        if constexpr (std::is_void_v<T>)
+          return std::optional{res_t{}};
+        else
+          return std::optional{res_t{std::get<T>(cell_->value)}};
+      case 2:
+        return std::optional{res_t{std::get<error>(cell_->value)}};
     }
   }
 

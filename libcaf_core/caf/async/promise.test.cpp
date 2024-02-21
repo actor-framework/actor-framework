@@ -23,6 +23,70 @@ auto make_shared_val_ptr() {
 
 WITH_FIXTURE(test::fixture::deterministic) {
 
+SCENARIO("promises can get values and errors") {
+  auto uut = async::promise<int32_t>{};
+  auto fut = uut.get_future();
+  auto now = std::chrono::system_clock::now();
+  GIVEN("a promise and future pair that sets value") {
+    auto worker = std::thread{[&uut] {
+      std::this_thread::sleep_for(50ms);
+      uut.set_value(42);
+    }};
+    WHEN("a value is set with set_value() concurrently") {
+      THEN("the value can be retrieved with get()") {
+        check(fut.pending());
+        check_eq(fut.get(), 42);
+        worker.join();
+      }
+    }
+    WHEN("a value is set with set_value() concurrently") {
+      THEN("the value can be retrieved with get() after delay") {
+        check(fut.pending());
+        check_eq(fut.get(1ms), std::nullopt);
+        check_eq(fut.get(100ms), 42);
+        worker.join();
+      }
+    }
+    WHEN("a value is set with set_value() concurrently") {
+      THEN("the value can be retrieved with get() at a timepoint") {
+        check(fut.pending());
+        check_eq(fut.get(now), std::nullopt);
+        check_eq(fut.get(now + 100ms), 42);
+        worker.join();
+      }
+    }
+  }
+  GIVEN("a promise and future pair that sets error") {
+    auto worker = std::thread{[&uut] {
+      std::this_thread::sleep_for(50ms);
+      uut.set_error(sec::runtime_error);
+    }};
+    WHEN("an error is set with set_error() concurrently") {
+      THEN("the error can be retrieved with get()") {
+        check(fut.pending());
+        check_eq(fut.get(), sec::runtime_error);
+        worker.join();
+      }
+    }
+    WHEN("an error is set with set_error() concurrently") {
+      THEN("the error can be retrieved with get() after delay") {
+        check(fut.pending());
+        check_eq(fut.get(1ms), std::nullopt);
+        check_eq(fut.get(100ms), sec::runtime_error);
+        worker.join();
+      }
+    }
+    WHEN("an error is set with set_error() concurrently") {
+      THEN("the error can be retrieved with get() at a timepoint") {
+        check(fut.pending());
+        check_eq(fut.get(now), std::nullopt);
+        check_eq(fut.get(now + 100ms), sec::runtime_error);
+        worker.join();
+      }
+    }
+  }
+}
+
 SCENARIO("actors can observe futures") {
   GIVEN("a promise and future pair") {
     WHEN("passing a non-ready future to an actor") {
