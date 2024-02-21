@@ -278,7 +278,6 @@ void blocking_actor::receive_impl(receive_cond& rcc, message_id mid,
     // Dispatch on the current mailbox element.
     if (consume()) {
       unstash();
-      CAF_AFTER_PROCESSING(this, invoke_message_result::consumed);
       CAF_LOG_FINALIZE_EVENT();
       if (getf(abstract_actor::collects_metrics_flag)) {
         auto& builtins = builtin_metrics();
@@ -293,7 +292,6 @@ void blocking_actor::receive_impl(receive_cond& rcc, message_id mid,
       continue;
     }
     // Message was skipped.
-    CAF_AFTER_PROCESSING(this, invoke_message_result::skipped);
     CAF_LOG_SKIP_EVENT();
     stash_.push(ptr.release());
   }

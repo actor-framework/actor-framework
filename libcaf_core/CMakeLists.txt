@@ -84,7 +84,6 @@ caf_add_component(
     caf/actor_ostream.cpp
     caf/actor_pool.cpp
     caf/actor_pool.test.cpp
-    caf/actor_profiler.cpp
     caf/actor_proxy.cpp
     caf/actor_registry.cpp
     caf/actor_registry.test.cpp
@@ -339,8 +338,6 @@ caf_add_component(
     caf/term.cpp
     caf/thread_hook.cpp
     caf/timestamp.cpp
-    caf/tracing_data.cpp
-    caf/tracing_data_factory.cpp
     caf/type_id.cpp
     caf/type_id_list.cpp
     caf/type_id_list.test.cpp
@@ -357,7 +354,6 @@ caf_add_component(
     tests/legacy/core-test.cpp
   LEGACY_TEST_SUITES
     actor_lifetime
-    actor_profiler
     actor_termination
     config_option_set
     config_value
@@ -377,7 +373,6 @@ caf_add_component(
     response_promise
     stateful_actor
     thread_hook
-    tracing_data
     typed_actor_view
     typed_response_promise
     typed_spawn

@@ -659,7 +659,6 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
   CAF_LOG_TRACE(CAF_ARG(x));
   current_element_ = &x;
   CAF_LOG_RECEIVE_EVENT(current_element_);
-  CAF_BEFORE_PROCESSING(this, x);
   // Wrap the actual body for the function.
   auto body = [this, &x] {
     // Helper function for dispatching a message to a response handler.
@@ -744,7 +743,6 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
   };
   // Post-process the returned value from the function body.
   auto result = body();
-  CAF_AFTER_PROCESSING(this, result);
   CAF_LOG_SKIP_OR_FINALIZE_EVENT(result);
   return result;
 }

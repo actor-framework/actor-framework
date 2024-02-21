@@ -59,10 +59,8 @@ actor_system_config::actor_system_config()
   opt_group{custom_options_, "caf.scheduler"}
     .add<string>("policy", "'stealing' (default) or 'sharing'")
     .add<size_t>("max-threads", "maximum number of worker threads")
-    .add<size_t>("max-throughput", "nr. of messages actors can consume per run")
-    .add<bool>("enable-profiling", "enables profiler output")
-    .add<timespan>("profiling-resolution", "data collection rate")
-    .add<string>("profiling-output-file", "output file for the profiler");
+    .add<size_t>("max-throughput",
+                 "nr. of messages actors can consume per run");
   opt_group(custom_options_, "caf.work-stealing")
     .add<size_t>("aggressive-poll-attempts", "nr. of aggressive steal attempts")
     .add<size_t>("aggressive-steal-interval",
@@ -104,10 +102,6 @@ settings actor_system_config::dump_content() const {
   put_missing(scheduler_group, "policy", defaults::scheduler::policy);
   put_missing(scheduler_group, "max-throughput",
               defaults::scheduler::max_throughput);
-  put_missing(scheduler_group, "enable-profiling", false);
-  put_missing(scheduler_group, "profiling-resolution",
-              defaults::scheduler::profiling_resolution);
-  put_missing(scheduler_group, "profiling-output-file", std::string{});
   // -- work-stealing parameters
   auto& work_stealing_group = caf_group["work-stealing"].as_dictionary();
   put_missing(work_stealing_group, "aggressive-poll-attempts",

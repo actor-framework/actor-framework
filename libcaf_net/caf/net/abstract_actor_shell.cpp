@@ -66,7 +66,6 @@ bool abstract_actor_shell::consume_message() {
   if (auto msg = next_message()) {
     current_element_ = msg.get();
     CAF_LOG_RECEIVE_EVENT(current_element_);
-    CAF_BEFORE_PROCESSING(this, *msg);
     auto mid = msg->mid;
     if (!mid.is_response()) {
       detail::default_invoke_result_visitor<abstract_actor_shell> visitor{this};
@@ -88,7 +87,6 @@ bool abstract_actor_shell::consume_message() {
         bhvr(err_msg);
       }
     }
-    CAF_AFTER_PROCESSING(this, invoke_message_result::consumed);
     CAF_LOG_SKIP_OR_FINALIZE_EVENT(invoke_message_result::consumed);
     return true;
   }

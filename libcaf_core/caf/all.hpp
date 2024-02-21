@@ -76,8 +76,6 @@
 #include "caf/term.hpp"
 #include "caf/thread_hook.hpp"
 #include "caf/timeout_definition.hpp"
-#include "caf/tracing_data.hpp"
-#include "caf/tracing_data_factory.hpp"
 #include "caf/type_id.hpp"
 #include "caf/typed_actor.hpp"
 #include "caf/typed_actor_pointer.hpp"

@@ -22,7 +22,6 @@ option(THREADS_PREFER_PTHREAD_FLAG "Prefer -pthread flag if available " ON)
 
 # -- CAF options that are off by default ---------------------------------------
 
-option(CAF_ENABLE_ACTOR_PROFILER "Enable experimental profiler API" OFF)
 option(CAF_ENABLE_CPACK "Enable packaging via CPack" OFF)
 option(CAF_ENABLE_CURL_EXAMPLES "Build examples with libcurl" OFF)
 option(CAF_ENABLE_PROTOBUF_EXAMPLES "Build examples with Google Protobuf" OFF)

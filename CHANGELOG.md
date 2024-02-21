@@ -17,6 +17,10 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - All `to_stream` and `to_typed_stream` member functions on actors (they are
   available on `caf::flow::observable` directly).
 - The `group` API has been removed entirely.
+- The experimental APIs for actor profiling and inserting tracing data have been
+  removed. Neither API has a clear use case at the moment and since we have not
+  received any feedback on either API, we have decided to remove them to
+  simplify the code base.
 
 ### Changed
 

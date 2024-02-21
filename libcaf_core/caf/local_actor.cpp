@@ -171,9 +171,6 @@ void local_actor::on_cleanup([[maybe_unused]] const error& reason) {
   CAF_LOG_TRACE(CAF_ARG(reason));
   on_exit();
   CAF_LOG_TERMINATE_EVENT(this, reason);
-#ifdef CAF_ENABLE_ACTOR_PROFILER
-  system().profiler_remove_actor(*this);
-#endif
 }
 
 // -- send functions -----------------------------------------------------------
@@ -183,7 +180,6 @@ void local_actor::do_send(abstract_actor* receiver, message_priority priority,
   if (receiver != nullptr) {
     auto item = make_mailbox_element(ctrl(), make_message_id(priority),
                                      std::move(msg));
-    CAF_BEFORE_SENDING(this, *item);
     receiver->enqueue(std::move(item), context());
     return;
   }
@@ -197,7 +193,6 @@ disposable local_actor::do_scheduled_send(strong_actor_ptr receiver,
   if (receiver != nullptr) {
     auto item = make_mailbox_element(ctrl(), make_message_id(priority),
                                      std::move(msg));
-    CAF_BEFORE_SENDING_SCHEDULED(this, timeout, *item);
     return clock().schedule_message(timeout, receiver, std::move(item));
   }
   system().base_metrics().rejected_messages->inc();
@@ -207,10 +202,9 @@ disposable local_actor::do_scheduled_send(strong_actor_ptr receiver,
 void local_actor::do_anon_send(abstract_actor* receiver,
                                message_priority priority, message&& msg) {
   if (receiver != nullptr) {
-    auto item = make_mailbox_element(nullptr, make_message_id(priority),
-                                     std::move(msg));
-    CAF_BEFORE_SENDING(this, *item);
-    receiver->enqueue(std::move(item), context());
+    receiver->enqueue(make_mailbox_element(nullptr, make_message_id(priority),
+                                           std::move(msg)),
+                      context());
     return;
   }
   system().base_metrics().rejected_messages->inc();
@@ -221,10 +215,9 @@ disposable local_actor::do_scheduled_anon_send(strong_actor_ptr receiver,
                                                actor_clock::time_point timeout,
                                                message&& msg) {
   if (receiver != nullptr) {
-    auto item = make_mailbox_element(nullptr, make_message_id(priority),
-                                     std::move(msg));
-    CAF_BEFORE_SENDING_SCHEDULED(this, timeout, *item);
-    return clock().schedule_message(timeout, receiver, std::move(item));
+    return clock().schedule_message(
+      timeout, receiver,
+      make_mailbox_element(nullptr, make_message_id(priority), std::move(msg)));
   }
   system().base_metrics().rejected_messages->inc();
   return {};

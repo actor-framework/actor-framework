@@ -9,7 +9,6 @@
 #include "caf/intrusive/singly_linked.hpp"
 #include "caf/message.hpp"
 #include "caf/message_id.hpp"
-#include "caf/tracing_data.hpp"
 
 #include <chrono>
 #include <cstddef>
@@ -25,13 +24,6 @@ public:
 
   /// Denotes whether this an asynchronous message or a request.
   message_id mid;
-
-#ifdef CAF_ENABLE_ACTOR_PROFILER
-  /// Optional tracing information. This field is unused by default, but an
-  /// @ref actor_profiler can make use of it to inject application-specific
-  /// instrumentation.
-  tracing_data_ptr tracing_id;
-#endif // CAF_ENABLE_ACTOR_PROFILER
 
   /// Stores the payload.
   message payload;
@@ -85,9 +77,6 @@ public:
 template <class Inspector>
 bool inspect(Inspector& f, mailbox_element& x) {
   return f.object(x).fields(f.field("sender", x.sender), f.field("mid", x.mid),
-#ifdef CAF_ENABLE_ACTOR_PROFILER
-                            f.field("tracing_id", x.tracing_id),
-#endif // CAF_ENABLE_ACTOR_PROFILER
                             f.field("payload", x.payload));
 }
 
