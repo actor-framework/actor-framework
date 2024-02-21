@@ -60,7 +60,6 @@ Flags (use --enable-<name> to activate and --disable-<name> to deactivate):
   qt6-examples              build examples with the Qt6 framework [OFF]
   runtime-checks            build CAF with extra runtime assertions [OFF]
   utility-targets           include targets like consistency-check [OFF]
-  actor-profiler            enable experimental proiler API [OFF]
   examples                  build small programs showcasing CAF features [ON]
   io-module                 build networking I/O module [ON]
   openssl-module            build OpenSSL module [ON]
@@ -107,7 +106,6 @@ set_build_flag() {
     qt6-examples)            FlagName='CAF_ENABLE_QT6_EXAMPLES' ;;
     runtime-checks)          FlagName='CAF_ENABLE_RUNTIME_CHECKS' ;;
     utility-targets)         FlagName='CAF_ENABLE_UTILITY_TARGETS' ;;
-    actor-profiler)          FlagName='CAF_ENABLE_ACTOR_PROFILER' ;;
     examples)                FlagName='CAF_ENABLE_EXAMPLES' ;;
     io-module)               FlagName='CAF_ENABLE_IO_MODULE' ;;
     net-module)              FlagName='CAF_ENABLE_NET_MODULE' ;;

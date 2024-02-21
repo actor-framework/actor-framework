@@ -5,7 +5,6 @@
 #pragma once
 
 #include "caf/actor_factory.hpp"
-#include "caf/actor_profiler.hpp"
 #include "caf/config_option.hpp"
 #include "caf/config_option_adder.hpp"
 #include "caf/config_option_set.hpp"
@@ -234,16 +233,6 @@ public:
   // -- hooks ------------------------------------------------------------------
 
   thread_hooks thread_hooks_;
-
-  /// Provides system-wide callbacks for several actor operations.
-  /// @experimental
-  /// @note Has no effect unless building CAF with CAF_ENABLE_ACTOR_PROFILER.
-  actor_profiler* profiler = nullptr;
-
-  /// Enables CAF to deserialize application-specific tracing information.
-  /// @experimental
-  /// @note Has no effect unless building CAF with CAF_ENABLE_ACTOR_PROFILER.
-  tracing_data_factory* tracing_context = nullptr;
 
   // -- parsing parameters -----------------------------------------------------
 

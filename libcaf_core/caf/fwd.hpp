@@ -82,7 +82,6 @@ class actor_companion;
 class actor_config;
 class actor_control_block;
 class actor_pool;
-class actor_profiler;
 class actor_proxy;
 class actor_registry;
 class actor_system;
@@ -134,8 +133,6 @@ class serializer;
 class skip_t;
 class skippable_result;
 class stream;
-class tracing_data;
-class tracing_data_factory;
 class type_id_list;
 class uri;
 class uri_builder;
@@ -379,7 +376,6 @@ using strong_actor_ptr = intrusive_ptr<actor_control_block>;
 // -- unique pointer aliases ---------------------------------------------------
 
 using mailbox_element_ptr = std::unique_ptr<mailbox_element>;
-using tracing_data_ptr = std::unique_ptr<tracing_data>;
 
 // -- shared pointer aliases ---------------------------------------------------
 

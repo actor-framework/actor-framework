@@ -257,8 +257,7 @@ auto make_actor_metric_families(telemetry::metric_registry& reg) {
 } // namespace
 
 actor_system::actor_system(actor_system_config& cfg)
-  : profiler_(cfg.profiler),
-    ids_(0),
+  : ids_(0),
     metrics_(cfg),
     base_metrics_(make_base_metrics(metrics_)),
     logger_(cfg.make_logger(*this)),
@@ -266,7 +265,6 @@ actor_system::actor_system(actor_system_config& cfg)
     dummy_execution_unit_(this),
     await_actors_before_shutdown_(true),
     cfg_(cfg),
-    tracing_context_(cfg.tracing_context),
     private_threads_(this) {
   CAF_SET_LOGGER_SYS(this);
   meta_objects_guard_ = detail::global_meta_objects_guard();

@@ -94,9 +94,7 @@ constexpr auto buffer_size = int32_t{4096}; // // 32 KB for elements of size 8.
 namespace caf::defaults::scheduler {
 
 constexpr auto policy = std::string_view{"stealing"};
-constexpr auto profiling_output_file = std::string_view{""};
 constexpr auto max_throughput = std::numeric_limits<size_t>::max();
-constexpr auto profiling_resolution = timespan(100'000'000);
 
 } // namespace caf::defaults::scheduler
 
