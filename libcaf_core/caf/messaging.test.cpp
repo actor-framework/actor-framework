@@ -6,6 +6,7 @@
 #include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
+#include "caf/anon_mail.hpp"
 #include "caf/event_based_actor.hpp"
 
 using namespace caf;
@@ -40,7 +41,7 @@ SCENARIO("send transfers a message from one actor to another") {
             [this](float) { fail("float handler called"); },
           };
         });
-        uut2 = sys.spawn([this](self_ptr self) { self->send(uut1, 42); });
+        uut2 = sys.spawn([this](self_ptr self) { self->mail(42).send(uut1); });
         dispatch_messages();
         check(had_message);
       }
@@ -63,7 +64,7 @@ SCENARIO("delayed_send transfers the message after a relative timeout") {
           };
         });
         uut2 = sys.spawn([this](self_ptr self) { //
-          self->delayed_send(uut1, 1s, 42);
+          self->mail(42).delay(1s).send(uut1);
         });
         dispatch_messages();
         check(!had_message);
@@ -91,7 +92,7 @@ SCENARIO("scheduled_send transfers the message after an absolute timeout") {
         });
         uut2 = sys.spawn([this](self_ptr self) { //
           auto timeout = self->clock().now() + 1s;
-          self->scheduled_send(uut1, timeout, 42);
+          self->mail(42).schedule(timeout).send(uut1);
         });
         dispatch_messages();
         check(!had_message);
@@ -117,7 +118,7 @@ SCENARIO("anon_send hides the sender of a message") {
             [this](float) { fail("float handler called"); },
           };
         });
-        uut2 = sys.spawn([this](self_ptr self) { self->anon_send(uut1, 42); });
+        uut2 = sys.spawn([this] { anon_mail(42).send(uut1); });
         dispatch_messages();
         check(had_message);
       }
@@ -139,12 +140,10 @@ SCENARIO("delayed_anon_send hides the sender of a message") {
             [this](float) { fail("float handler called"); },
           };
         });
-        uut2 = sys.spawn([this](self_ptr self) { //
-          self->delayed_anon_send(uut1, 1s, 42);
-        });
+        uut2 = sys.spawn([this] { anon_mail(42).delay(1s).send(uut1); });
         dispatch_messages();
         check(!had_message);
-        advance_time(1s);
+        trigger_timeout();
         dispatch_messages();
         check(had_message);
       }
@@ -168,7 +167,7 @@ SCENARIO("scheduled_anon_send hides the sender of a message") {
         });
         uut2 = sys.spawn([this](self_ptr self) { //
           auto timeout = self->clock().now() + 1s;
-          self->scheduled_anon_send(uut1, timeout, 42);
+          anon_mail(42).schedule(timeout).send(uut1);
         });
         dispatch_messages();
         check(!had_message);
@@ -194,7 +193,7 @@ SCENARIO("a delayed message may be canceled before its timeout") {
           };
         });
         uut2 = sys.spawn([this](self_ptr self) { //
-          dis = self->delayed_send(uut1, 1s, 42);
+          dis = self->mail(42).delay(1s).send(uut1);
         });
         dispatch_messages();
         check(!had_message);
@@ -215,9 +214,7 @@ SCENARIO("a delayed message may be canceled before its timeout") {
             [this](float) { fail("float handler called"); },
           };
         });
-        uut2 = sys.spawn([this](self_ptr self) { //
-          dis = self->delayed_anon_send(uut1, 1s, 42);
-        });
+        uut2 = sys.spawn([this] { dis = anon_mail(42).delay(1s).send(uut1); });
         dispatch_messages();
         check(!had_message);
         dis.dispose();
@@ -244,7 +241,7 @@ SCENARIO("a scheduled message may be canceled before its timeout") {
         });
         uut2 = sys.spawn([this](self_ptr self) { //
           auto timeout = self->clock().now() + 1s;
-          dis = self->scheduled_send(uut1, timeout, 42);
+          dis = self->mail(42).schedule(timeout).send(uut1);
         });
         dispatch_messages();
         check(!had_message);
@@ -268,7 +265,7 @@ SCENARIO("a scheduled message may be canceled before its timeout") {
         });
         uut2 = sys.spawn([this](self_ptr self) { //
           auto timeout = self->clock().now() + 1s;
-          dis = self->scheduled_anon_send(uut1, timeout, 42);
+          dis = anon_mail(42).schedule(timeout).send(uut1);
         });
         dispatch_messages();
         check(!had_message);

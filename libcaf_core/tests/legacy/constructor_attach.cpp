@@ -15,8 +15,9 @@ namespace {
 class testee : public event_based_actor {
 public:
   testee(actor_config& cfg, actor buddy) : event_based_actor(cfg) {
-    attach_functor(
-      [this, buddy](const error& rsn) { send(buddy, ok_atom_v, rsn); });
+    attach_functor([this, buddy](const error& rsn) { //
+      mail(ok_atom_v, rsn).send(buddy);
+    });
   }
 
   behavior make_behavior() override {
@@ -70,7 +71,7 @@ private:
 BEGIN_FIXTURE_SCOPE(test_coordinator_fixture<>)
 
 CAF_TEST(constructor_attach) {
-  anon_send(sys.spawn<spawner>(), delete_atom_v);
+  anon_mail(delete_atom_v).send(sys.spawn<spawner>());
   run();
 }
 

@@ -52,7 +52,7 @@ behavior connection_helper(stateful_actor<connection_helper_state>* self,
                   // gotcha! send scribe to our BASP broker
                   // to initiate handshake etc.
                   log::io::info("connected directly: addr = {}", addr);
-                  self->send(b, connect_atom_v, *hdl, port);
+                  self->mail(connect_atom_v, *hdl, port).send(b);
                   return;
                 }
               }

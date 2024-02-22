@@ -13,6 +13,7 @@
 #include "caf/actor.hpp"
 #include "caf/actor_proxy.hpp"
 #include "caf/actor_system_config.hpp"
+#include "caf/anon_mail.hpp"
 #include "caf/logger.hpp"
 #include "caf/node_id.hpp"
 #include "caf/sec.hpp"
@@ -189,8 +190,9 @@ middleman_actor_impl::put(uint16_t port, strong_actor_ptr& whom, mpi_set& sigs,
     return std::move(res.error());
   auto& ptr = *res;
   actual_port = ptr->port();
-  anon_send(broker_, publish_atom_v, std::move(ptr), actual_port,
-            std::move(whom), std::move(sigs));
+  anon_mail(publish_atom_v, std::move(ptr), actual_port, std::move(whom),
+            std::move(sigs))
+    .send(broker_);
   return actual_port;
 }
 
@@ -208,8 +210,9 @@ middleman_actor_impl::put_udp(uint16_t port, strong_actor_ptr& whom,
     return std::move(res.error());
   auto& ptr = *res;
   actual_port = ptr->local_port();
-  anon_send(broker_, publish_udp_atom_v, std::move(ptr), actual_port,
-            std::move(whom), std::move(sigs));
+  anon_mail(publish_udp_atom_v, std::move(ptr), actual_port, std::move(whom),
+            std::move(sigs))
+    .send(broker_);
   return actual_port;
 }
 

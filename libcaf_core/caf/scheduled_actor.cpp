@@ -6,6 +6,7 @@
 
 #include "caf/action.hpp"
 #include "caf/actor_ostream.hpp"
+#include "caf/anon_mail.hpp"
 #include "caf/config.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/default_invoke_result_visitor.hpp"
@@ -377,8 +378,8 @@ public:
     if (sink_hdl_) {
       // Note: must send this as anonymous message, because this can be called
       // from on_destroy().
-      anon_send(sink_hdl_,
-                stream_abort_msg{sink_flow_id_, sec::stream_aborted});
+      anon_mail(stream_abort_msg{sink_flow_id_, sec::stream_aborted})
+        .send(sink_hdl_);
       sink_hdl_ = nullptr;
     }
     sub_.cancel();
@@ -584,8 +585,8 @@ scheduled_actor::categorize(mailbox_element& x) {
             auto weak_self = weak_actor_ptr{ctrl()};
             sink_hdl->attach_functor([weak_self, flow_id] {
               if (auto sptr = weak_self.lock())
-                caf::anon_send(actor_cast<actor>(sptr),
-                               stream_cancel_msg{flow_id});
+                caf::anon_mail(stream_cancel_msg{flow_id})
+                  .send(actor_cast<actor>(sptr));
             });
           }
           return message_category::internal;

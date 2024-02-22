@@ -12,6 +12,7 @@
 #include "caf/actor_registry.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/after.hpp"
+#include "caf/anon_mail.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/event_based_actor.hpp"
@@ -69,7 +70,7 @@ void basp_broker::on_exit() {
   for (const auto& [node, observer_list] : node_observers)
     for (const auto& observer : observer_list)
       if (auto hdl = actor_cast<actor>(observer))
-        anon_send(hdl, node_down_msg{node, error{}});
+        anon_mail(node_down_msg{node, error{}}).send(hdl);
   node_observers.clear();
   // Release any obsolete state.
   ctx.clear();
@@ -101,9 +102,9 @@ behavior basp_broker::make_behavior() {
       auto port = res->second;
       auto addrs = network::interfaces::list_addresses(false);
       auto config_server = system().registry().get("ConfigServ");
-      send(actor_cast<actor>(config_server), put_atom_v,
-           "basp.default-connectivity-tcp",
-           make_message(port, std::move(addrs)));
+      mail(put_atom_v, "basp.default-connectivity-tcp",
+           make_message(port, std::move(addrs)))
+        .send(actor_cast<actor>(config_server));
     }
     automatic_connections = true;
   }
@@ -120,9 +121,10 @@ behavior basp_broker::make_behavior() {
       heartbeat_interval, connection_timeout);
     // Note: we send the scheduled time as integer representation to avoid
     //       having to assign a type ID to the time_point type.
-    scheduled_send(this, first_tick, tick_atom_v,
-                   first_tick.time_since_epoch().count(), heartbeat_interval,
-                   connection_timeout);
+    mail(tick_atom_v, first_tick.time_since_epoch().count(), heartbeat_interval,
+         connection_timeout)
+      .schedule(first_tick)
+      .send(this);
   }
   return behavior{
     // received from underlying broker implementation
@@ -224,7 +226,7 @@ behavior basp_broker::make_behavior() {
           //       at least for some time. Otherwise, we'll have to send a
           //       generic "don't know" exit reason. Probably an improvement we
           //       should consider in caf_net.
-          anon_send(hdl, node_down_msg{node, sec::no_context});
+          anon_mail(node_down_msg{node, sec::no_context}).send(hdl);
         }
         return;
       }
@@ -380,9 +382,10 @@ behavior basp_broker::make_behavior() {
       auto now = clock().now();
       if (now < scheduled) {
         log::io::warning("received tick before its time, reschedule");
-        scheduled_send(this, scheduled, tick_atom_v,
-                       scheduled.time_since_epoch().count(), heartbeat_interval,
-                       connection_timeout);
+        mail(tick_atom_v, scheduled.time_since_epoch().count(),
+             heartbeat_interval, connection_timeout)
+          .schedule(scheduled)
+          .send(this);
         return;
       }
       auto next_tick = scheduled + heartbeat_interval;
@@ -415,9 +418,10 @@ behavior basp_broker::make_behavior() {
         }
       }
       // Schedule next tick.
-      scheduled_send(this, next_tick, tick_atom_v,
-                     next_tick.time_since_epoch().count(), heartbeat_interval,
-                     connection_timeout);
+      mail(tick_atom_v, next_tick.time_since_epoch().count(),
+           heartbeat_interval, connection_timeout)
+        .schedule(next_tick)
+        .send(this);
     }};
 }
 
@@ -556,7 +560,7 @@ void basp_broker::emit_node_down_msg(const node_id& node, const error& reason) {
     return;
   for (const auto& observer : i->second)
     if (auto hdl = actor_cast<actor>(observer))
-      anon_send(hdl, node_down_msg{node, reason});
+      anon_mail(node_down_msg{node, reason}).send(hdl);
   node_observers.erase(i);
 }
 

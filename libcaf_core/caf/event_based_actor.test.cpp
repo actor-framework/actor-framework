@@ -10,7 +10,6 @@
 
 #include "caf/event_based_actor.hpp"
 #include "caf/scoped_actor.hpp"
-#include "caf/send.hpp"
 
 using namespace caf;
 
@@ -25,7 +24,7 @@ TEST("unexpected messages result in an error by default") {
     };
   });
   auto sender1 = sys.spawn([receiver](event_based_actor* self) -> behavior {
-    self->send(receiver, "hello world");
+    self->mail("hello world").send(receiver);
     return {
       [](int32_t) {},
     };
@@ -34,7 +33,7 @@ TEST("unexpected messages result in an error by default") {
   expect<error>().with(sec::unexpected_message).from(receiver).to(sender1);
   // Receivers continue receiving messages after unexpected messages.
   auto sender2 = sys.spawn([receiver](event_based_actor* self) -> behavior {
-    self->send(receiver, 2);
+    self->mail(2).send(receiver);
     return {
       [](int32_t) {},
     };

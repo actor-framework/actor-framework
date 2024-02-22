@@ -8,6 +8,7 @@
 #include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
+#include "caf/anon_mail.hpp"
 #include "caf/chrono.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/init_global_meta_objects.hpp"
@@ -15,6 +16,8 @@
 #include "caf/send.hpp"
 
 #include <chrono>
+
+using caf::anon_mail;
 
 using namespace std::literals;
 
@@ -71,11 +74,11 @@ TEST("the deterministic fixture provides a deterministic scheduler") {
   caf::scoped_actor self{sys};
   check(*initialized);
   check_eq(mail_count(worker), 0u);
-  anon_send(worker, 1);
+  anon_mail(1).send(worker);
   check_eq(mail_count(worker), 1u);
-  self->send(worker, 2);
+  self->mail(2).send(worker);
   check_eq(mail_count(worker), 2u);
-  anon_send(worker, 3);
+  anon_mail(3).send(worker);
   check_eq(mail_count(worker), 3u);
   SECTION("calling dispatch_message processes a single message") {
     check(dispatch_message());
@@ -109,7 +112,7 @@ TEST("the deterministic fixture provides a deterministic scheduler") {
     });
   }
   SECTION("expect() matches the types of the next message") {
-    anon_send(worker, "4");
+    anon_mail("4").send(worker);
     should_fail_with_exception([this, worker] { //
       expect<std::string>().to(worker);
     });
@@ -147,7 +150,7 @@ TEST("the deterministic fixture provides a deterministic scheduler") {
     check_eq(*count, 3);
   }
   SECTION("prepone_and_expect() processes out of order based on types") {
-    anon_send(worker, "4");
+    anon_mail("4").send(worker);
     prepone_and_expect<std::string>().to(worker);
     check_eq(*count, 4);
     should_fail_with_exception([this, worker] { //
@@ -201,7 +204,7 @@ TEST("the deterministic fixture provides a deterministic scheduler") {
     check(!allow<int32_t>().with(3).to(worker));
   }
   SECTION("allow() matches the types of the next message") {
-    anon_send(worker, "4");
+    anon_mail("4").send(worker);
     check(!allow<std::string>().to(worker));
     check(!allow<int32_t, int32_t>().to(worker));
     check_eq(*count, 0);
@@ -241,7 +244,7 @@ TEST("the deterministic fixture provides a deterministic scheduler") {
     check(!prepone_and_allow<int32_t>().with(3).to(worker));
   }
   SECTION("prepone_and_allow() processes out of order based on types") {
-    anon_send(worker, "4");
+    anon_mail("4").send(worker);
     check(prepone_and_allow<std::string>().to(worker));
     check(!prepone_and_allow<std::string>().to(worker));
     check_eq(*count, 4);
@@ -297,55 +300,55 @@ TEST("evaluator expressions can check or extract individual values") {
     };
   });
   SECTION("omitting with() matches on the types only") {
-    anon_send(worker, 1);
+    anon_mail(1).send(worker);
     check(!allow<std::string>().to(worker));
     check(allow<int>().to(worker));
-    anon_send(worker, 1, "two", 3.0);
+    anon_mail(1, "two", 3.0).send(worker);
     check(!allow<int>().to(worker));
     check(allow<int, std::string, double>().to(worker));
-    anon_send(worker, 42, "hello world", 7.7);
+    anon_mail(42, "hello world", 7.7).send(worker);
     check(allow<int, std::string, double>().to(worker));
   }
   SECTION("reference wrappers turn evaluators into extractors") {
     auto tmp = 0;
-    anon_send(worker, 1);
+    anon_mail(1).send(worker);
     check(allow<int>().with(std::ref(tmp)).to(worker));
     check_eq(tmp, 1);
   }
   SECTION("std::ignore matches any value") {
-    anon_send(worker, 1);
+    anon_mail(1).send(worker);
     check(allow<int>().with(std::ignore).to(worker));
-    anon_send(worker, 2);
+    anon_mail(2).send(worker);
     check(allow<int>().with(std::ignore).to(worker));
-    anon_send(worker, 3);
+    anon_mail(3).send(worker);
     check(allow<int>().with(std::ignore).to(worker));
-    anon_send(worker, 1, 2, 3);
+    anon_mail(1, 2, 3).send(worker);
     check(!allow<int, int, int>().with(1, std::ignore, 4).to(worker));
     check(!allow<int, int, int>().with(2, std::ignore, 3).to(worker));
     check(allow<int, int, int>().with(1, std::ignore, 3).to(worker));
   }
   SECTION("value predicates allow user-defined types") {
-    anon_send(worker, my_int{1});
+    anon_mail(my_int{1}).send(worker);
     check(allow<my_int>().to(worker));
-    anon_send(worker, my_int{1});
+    anon_mail(my_int{1}).send(worker);
     check(allow<my_int>().with(std::ignore).to(worker));
-    anon_send(worker, my_int{1});
+    anon_mail(my_int{1}).send(worker);
     check(!allow<my_int>().with(my_int{2}).to(worker));
     check(allow<my_int>().with(my_int{1}).to(worker));
-    anon_send(worker, my_int{1});
+    anon_mail(my_int{1}).send(worker);
     check(allow<my_int>().with(1).to(worker));
     auto tmp = my_int{0};
-    anon_send(worker, my_int{42});
+    anon_mail(my_int{42}).send(worker);
     check(allow<my_int>().with(std::ref(tmp)).to(worker));
     check_eq(tmp.value, 42);
   }
   SECTION("value predicates allow user-defined predicates") {
     auto le2 = [](my_int x) { return x.value <= 2; };
-    anon_send(worker, my_int{1});
+    anon_mail(my_int{1}).send(worker);
     check(allow<my_int>().with(le2).to(worker));
-    anon_send(worker, my_int{2});
+    anon_mail(my_int{2}).send(worker);
     check(allow<my_int>().with(le2).to(worker));
-    anon_send(worker, my_int{3});
+    anon_mail(my_int{3}).send(worker);
     check(!allow<my_int>().with(le2).to(worker));
   }
 }

@@ -14,11 +14,11 @@ using namespace caf;
 namespace {
 
 behavior ping(event_based_actor* self, actor pong_actor, int n) {
-  self->send(pong_actor, ping_atom_v, n);
+  self->mail(ping_atom_v, n).send(pong_actor);
   return {
     [=](pong_atom, int x) {
       if (x > 1)
-        self->send(pong_actor, ping_atom_v, x - 1);
+        self->mail(ping_atom_v, x - 1).send(pong_actor);
     },
   };
 }

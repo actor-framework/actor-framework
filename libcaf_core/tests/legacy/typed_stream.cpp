@@ -84,8 +84,8 @@ TEST_CASE("streams allow actors to transmit flow items to others") {
                   .iota(int32_t{1})
                   .take(256)
                   .to_typed_stream("foo", 10ms, 10);
-    self->send(s1, vals);
-    self->send(s2, vals);
+    self->mail(vals).send(s1);
+    self->mail(vals).send(s2);
   });
   run_once();
   expect((istream), from(src).to(s1));

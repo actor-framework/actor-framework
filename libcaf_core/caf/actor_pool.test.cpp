@@ -77,7 +77,7 @@ TEST("round_robin_actor_pool") {
   scoped_actor self{system};
   auto pool = actor_pool::make(&context, 5, spawn_worker,
                                actor_pool::round_robin());
-  self->send(pool, sys_atom_v, put_atom_v, spawn_worker());
+  self->mail(sys_atom_v, put_atom_v, spawn_worker()).send(pool);
   std::vector<actor> workers;
   for (int32_t i = 0; i < 6; ++i) {
     self->request(pool, infinite, i, i)
@@ -139,7 +139,7 @@ TEST("broadcast_actor_pool") {
   check_eq(system.registry().running(), 1u);
   auto pool = actor_pool::make(&context, 5, spawn5, actor_pool::broadcast());
   check_eq(system.registry().running(), 32u);
-  self->send(pool, 1, 2);
+  self->mail(1, 2).send(pool);
   std::vector<int> results;
   int i = 0;
   self->receive_for(i, 25)([&](int res) { results.push_back(res); },

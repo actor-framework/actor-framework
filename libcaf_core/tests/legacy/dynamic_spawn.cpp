@@ -76,7 +76,7 @@ actor spawn_event_testee2(scoped_actor& parent) {
           [this, remaining] {
             MESSAGE("remaining: " << std::to_string(remaining));
             if (remaining == 1) {
-              send(parent, ok_atom_v);
+              mail(ok_atom_v).send(parent);
               quit();
             } else
               become(wait4timeout(remaining - 1));
@@ -221,11 +221,11 @@ public:
 
   behavior make_behavior() override {
     for (int i = 0; i < 100; ++i) {
-      send(this, ok_atom_v);
+      mail(ok_atom_v).send(this);
     }
     CHECK_EQ(mailbox().size(), 100u);
     for (int i = 0; i < 100; ++i) {
-      send(this, ok_atom_v);
+      mail(ok_atom_v).send(this);
     }
     CHECK_EQ(mailbox().size(), 200u);
     return {};
@@ -259,12 +259,12 @@ BEGIN_FIXTURE_SCOPE(test_coordinator_fixture<>)
 CAF_TEST(mirror) {
   auto mirror = self->spawn<simple_mirror>();
   auto dummy = self->spawn([=](event_based_actor* ptr) -> behavior {
-    ptr->send(mirror, "hello mirror");
+    ptr->mail("hello mirror").send(mirror);
     return {[](const std::string& msg) { CHECK_EQ(msg, "hello mirror"); }};
   });
   run();
   /*
-  self->send(mirror, "hello mirror");
+  self->mail("hello mirror").send(mirror);
   run();
   self->receive (
     [](const std::string& msg) {
@@ -288,7 +288,7 @@ CAF_TEST(detached_actors_and_schedulued_actors) {
   auto m = system.spawn<detached>(master);
   system.spawn(slave, m);
   system.spawn(slave, m);
-  self->send(m, ok_atom_v);
+  self->mail(ok_atom_v).send(m);
 }
 
 CAF_TEST(self_receive_with_zero_timeout) {
@@ -303,33 +303,33 @@ CAF_TEST(self_receive_with_zero_timeout) {
 CAF_TEST(detached_mirror) {
   scoped_actor self{system};
   auto mirror = self->spawn<simple_mirror, detached>();
-  self->send(mirror, "hello mirror");
+  self->mail("hello mirror").send(mirror);
   self->receive([](const std::string& msg) { CHECK_EQ(msg, "hello mirror"); });
 }
 
 CAF_TEST(send_to_self) {
   scoped_actor self{system};
-  self->send(self, 1, 2, 3, true);
+  self->mail(1, 2, 3, true).send(self);
   self->receive([](int a, int b, int c, bool d) {
     CHECK_EQ(a, 1);
     CHECK_EQ(b, 2);
     CHECK_EQ(c, 3);
     CHECK_EQ(d, true);
   });
-  self->send(self, message{});
+  self->mail(message{}).send(self);
   self->receive([] {});
 }
 
 CAF_TEST(echo_actor_messaging) {
   scoped_actor self{system};
   auto mecho = system.spawn<echo_actor>();
-  self->send(mecho, "hello echo");
+  self->mail("hello echo").send(mecho);
   self->receive([](const std::string& arg) { CHECK_EQ(arg, "hello echo"); });
 }
 
 CAF_TEST(delayed_send) {
   scoped_actor self{system};
-  self->delayed_send(self, std::chrono::milliseconds(1), 1, 2, 3);
+  self->mail(1, 2, 3).delay(std::chrono::milliseconds(1)).send(self);
   self->receive([](int a, int b, int c) {
     CHECK_EQ(a, 1);
     CHECK_EQ(b, 2);
@@ -356,10 +356,10 @@ CAF_TEST(function_spawn) {
   };
   auto a1 = system.spawn(f, "alice");
   auto a2 = system.spawn(f, "bob");
-  self->send(a1, get_atom_v);
+  self->mail(get_atom_v).send(a1);
   self->receive(
     [&](name_atom, const std::string& name) { CHECK_EQ(name, "alice"); });
-  self->send(a2, get_atom_v);
+  self->mail(get_atom_v).send(a2);
   self->receive(
     [&](name_atom, const std::string& name) { CHECK_EQ(name, "bob"); });
   self->send_exit(a1, exit_reason::user_shutdown);
@@ -387,8 +387,9 @@ CAF_TEST(constructor_attach) {
   public:
     testee(actor_config& cfg, actor buddy)
       : event_based_actor(cfg), buddy_(buddy) {
-      attach_functor(
-        [this, buddy](const error& reason) { send(buddy, ok_atom_v, reason); });
+      attach_functor([this, buddy](const error& reason) {
+        mail(ok_atom_v, reason).send(buddy);
+      });
     }
 
     behavior make_behavior() override {

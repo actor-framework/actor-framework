@@ -6,6 +6,7 @@
 
 #include "caf/actor_registry.hpp"
 #include "caf/actor_system.hpp"
+#include "caf/anon_mail.hpp"
 #include "caf/detail/default_invoke_result_visitor.hpp"
 #include "caf/detail/invoke_result_visitor.hpp"
 #include "caf/detail/private_thread.hpp"
@@ -353,7 +354,7 @@ size_t blocking_actor::attach_functor(const strong_actor_ptr& ptr) {
   if (!ptr)
     return 0;
   actor self{this};
-  auto f = [self](const error&) { caf::anon_send(self, wait_for_atom_v); };
+  auto f = [self](const error&) { caf::anon_mail(wait_for_atom_v).send(self); };
   ptr->get()->attach_functor(std::move(f));
   return 1;
 }

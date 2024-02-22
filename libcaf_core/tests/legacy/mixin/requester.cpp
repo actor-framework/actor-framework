@@ -240,7 +240,7 @@ SCENARIO("request.await enforces a processing order") {
     sched.run_once();
     WHEN("sending it a message before the response arrives") {
       THEN("the actor handles the asynchronous message later") {
-        self->send(client, "hello");
+        self->mail("hello").send(client);
         disallow((std::string), from(self).to(client));     // not processed yet
         expect((int32_t), from(client).to(server).with(3)); // client -> server
         disallow((std::string), from(self).to(client));     // not processed yet
@@ -292,9 +292,9 @@ TEST_CASE("GH-1299 regression non-blocking") {
     auto log = std::make_shared<std::string>();
     auto worker = sys.spawn(gh1299_worker, log);
     scoped_actor self{sys};
-    self->send<message_priority::high>(worker, "hi there");
+    self->mail("hi there").urgent().send(worker);
     run();
-    self->send(worker, int32_t{123});
+    self->mail(int32_t{123}).send(worker);
     run();
     CHECK_EQ(*log, "int: 123\nstring: hi there\n");
   }
@@ -302,9 +302,9 @@ TEST_CASE("GH-1299 regression non-blocking") {
     auto log = std::make_shared<std::string>();
     auto worker = sys.spawn(gh1299_worker, log);
     scoped_actor self{sys};
-    self->send(worker, "hi there");
+    self->mail("hi there").send(worker);
     run();
-    self->send<message_priority::high>(worker, int32_t{123});
+    self->mail(int32_t{123}).urgent().send(worker);
     run();
     CHECK_EQ(*log, "int: 123\nstring: hi there\n");
   }
@@ -345,9 +345,9 @@ TEST_CASE("GH-1299 regression blocking") {
     auto tag = 0;
     scoped_actor sender{sys};
     scoped_actor self{sys};
-    sender->send<message_priority::high>(self, "hi there");
+    sender->mail("hi there").urgent().send(self);
     gh1299_recv(self, log, tag);
-    sender->send(self, int32_t{123});
+    sender->mail(int32_t{123}).send(self);
     gh1299_recv(self, log, tag);
     CHECK_EQ(*log, "int: 123\nstring: hi there\n");
   }
@@ -356,9 +356,9 @@ TEST_CASE("GH-1299 regression blocking") {
     auto tag = 0;
     scoped_actor sender{sys};
     scoped_actor self{sys};
-    sender->send(self, "hi there");
+    sender->mail("hi there").send(self);
     gh1299_recv(self, log, tag);
-    sender->send<message_priority::high>(self, int32_t{123});
+    sender->mail(int32_t{123}).urgent().send(self);
     gh1299_recv(self, log, tag);
     CHECK_EQ(*log, "int: 123\nstring: hi there\n");
   }

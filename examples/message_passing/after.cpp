@@ -25,7 +25,7 @@ void generator(event_based_actor* self, actor sink) {
   const auto count = std::uniform_int_distribution<>{20, 100}(gen);
   std::uniform_int_distribution<> dis{33, 126};
   for (auto i = 0; i < count; i++) {
-    self->send(sink, static_cast<char>(dis(gen)));
+    self->mail(static_cast<char>(dis(gen))).send(sink);
   }
 }
 

@@ -150,7 +150,7 @@ void bootstrap(actor_system& system, const string& wdir,
                   for (auto& arg : args)
                     oss << " " << arg;
                   if (!run_ssh(system, wdir, oss.str(), slave.host))
-                    anon_send(bootstrapper, slave.host);
+                    anon_mail(slave.host).send(bootstrapper);
                 },
                 actor{self}}
       .detach();

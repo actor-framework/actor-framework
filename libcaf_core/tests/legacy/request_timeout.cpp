@@ -41,8 +41,8 @@ using test_vec = std::vector<std::pair<fptr, std::string>>;
 
 // assumes to receive a timeout (sent via delayed_send) before pong replies
 behavior ping_single1(ping_actor* self, bool* had_timeout, const actor& buddy) {
-  self->send(buddy, ping_atom_v);
-  self->delayed_send(self, std::chrono::seconds(1), timeout_atom_v);
+  self->mail(ping_atom_v).send(buddy);
+  self->mail(timeout_atom_v).delay(std::chrono::seconds(1)).send(self);
   return {
     [=](pong_atom) { CAF_FAIL("received pong atom"); },
     [=](timeout_atom) {
@@ -54,7 +54,7 @@ behavior ping_single1(ping_actor* self, bool* had_timeout, const actor& buddy) {
 
 // assumes to receive a timeout (via after()) before pong replies
 behavior ping_single2(ping_actor* self, bool* had_timeout, const actor& buddy) {
-  self->send(buddy, ping_atom_v);
+  self->mail(ping_atom_v).send(buddy);
   return {
     [=](pong_atom) { CAF_FAIL("received pong atom"); },
     after(std::chrono::seconds(1)) >>
@@ -80,8 +80,8 @@ behavior ping_single3(ping_actor* self, bool* had_timeout, const actor& buddy) {
 // assumes to receive an inner timeout (sent via delayed_send) before pong
 // replies, then second timeout fires
 behavior ping_nested1(ping_actor* self, bool* had_timeout, const actor& buddy) {
-  self->send(buddy, ping_atom_v);
-  self->delayed_send(self, std::chrono::seconds(1), timeout_atom_v);
+  self->mail(ping_atom_v).send(buddy);
+  self->mail(timeout_atom_v).delay(std::chrono::seconds(1)).send(self);
   return {
     [=](pong_atom) { CAF_FAIL("received pong atom"); },
     [=](timeout_atom) {
@@ -98,7 +98,7 @@ behavior ping_nested1(ping_actor* self, bool* had_timeout, const actor& buddy) {
 // assumes to receive an inner timeout (via after()) before pong replies, then a
 // second timeout fires
 behavior ping_nested2(ping_actor* self, bool* had_timeout, const actor& buddy) {
-  self->send(buddy, ping_atom_v);
+  self->mail(ping_atom_v).send(buddy);
   return {
     [=](pong_atom) { CAF_FAIL("received pong atom"); },
     after(std::chrono::seconds(1)) >>

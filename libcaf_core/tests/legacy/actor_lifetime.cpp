@@ -57,7 +57,7 @@ behavior tester(event_based_actor* self, const actor& aut) {
       // must be still alive at this point
       CHECK_EQ(s_testees.load(), 1);
       CHECK_EQ(msg.reason, exit_reason::user_shutdown);
-      self->send(self, ok_atom_v);
+      self->mail(ok_atom_v).send(self);
     });
     self->link_to(aut);
   } else {
@@ -69,7 +69,7 @@ behavior tester(event_based_actor* self, const actor& aut) {
       // another worker thread; by waiting some milliseconds, we make sure
       // testee had enough time to return control to the scheduler
       // which in turn destroys it by dropping the last remaining reference
-      self->send(self, ok_atom_v);
+      self->mail(ok_atom_v).send(self);
     });
     self->monitor(aut);
   }

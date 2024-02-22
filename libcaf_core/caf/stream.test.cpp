@@ -79,8 +79,8 @@ TEST("streams allow actors to transmit flow items to other actors") {
                     .iota(1)
                     .take(256)
                     .to_stream("foo", 10ms, 10);
-      self->send(s1, vals);
-      self->send(s2, vals);
+      self->mail(vals).send(s1);
+      self->mail(vals).send(s2);
     });
     expect<stream>().from(src).to(s1);
     expect<stream>().from(src).to(s2);
@@ -102,7 +102,7 @@ TEST("streams allow actors to transmit flow items to other actors") {
                     .iota(1)
                     .take(256)
                     .to_stream("foo", 10ms, 10);
-      self->send(s1, vals);
+      self->mail(vals).send(s1);
     });
     expect<stream>().from(src).to(s1);
     expect<stream_open_msg>().from(s1).to(src);
@@ -120,7 +120,7 @@ TEST("streams allow actors to transmit flow items to other actors") {
                     .iota(1)
                     .take(256)
                     .to_stream("foo", 10ms, 10);
-      self->send(s1, vals);
+      self->mail(vals).send(s1);
     });
     expect<stream>().from(src).to(s1);
     expect<stream_open_msg>().from(s1).to(src);

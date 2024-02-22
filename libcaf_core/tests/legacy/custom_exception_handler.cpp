@@ -81,7 +81,7 @@ CAF_TEST(actors can override the default exception handler) {
     throw std::logic_error("pong");
   });
   auto testee3 = self->spawn<exception_testee, monitored>();
-  self->send(testee3, "foo");
+  self->mail("foo").send(testee3);
   // receive all down messages
   self->wait_for(testee1, testee2, testee3);
 }

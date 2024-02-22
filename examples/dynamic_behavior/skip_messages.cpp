@@ -31,10 +31,10 @@ behavior server(event_based_actor* self) {
 
 behavior client(event_based_actor* self, const actor& serv) {
   self->link_to(serv);
-  self->send(serv, idle_atom_v, self);
+  self->mail(idle_atom_v, self).send(serv);
   return {
     [self, serv](ping_atom) {
-      self->send(serv, idle_atom_v, self);
+      self->mail(idle_atom_v, self).send(serv);
       return pong_atom_v;
     },
   };

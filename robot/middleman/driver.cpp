@@ -21,6 +21,7 @@
 
 #include <caf/actor_system.hpp>
 #include <caf/actor_system_config.hpp>
+#include <caf/anon_mail.hpp>
 #include <caf/caf_main.hpp>
 #include <caf/event_based_actor.hpp>
 #include <caf/expected.hpp>
@@ -208,7 +209,7 @@ int cell_tests(actor_system& sys, const actor& cell) {
   self->monitor(cell);
   if (auto res = read_cell_value(self, cell)) {
     std::cout << "cell value 1: " << *res << std::endl;
-    self->send(cell, put_atom_v, *res + 7);
+    self->mail(put_atom_v, *res + 7).send(cell);
   } else {
     return EXIT_FAILURE;
   }
@@ -225,7 +226,7 @@ int cell_tests(actor_system& sys, const actor& cell) {
 
 void purge_cache(actor_system& sys, const std::string& host, uint16_t port) {
   auto mm_hdl = actor_cast<actor>(sys.middleman().actor_handle());
-  anon_send(mm_hdl, delete_atom_v, host, port);
+  anon_mail(delete_atom_v, host, port).send(mm_hdl);
 }
 
 int client(actor_system& sys, std::string_view mode, const std::string& host,
@@ -320,7 +321,7 @@ int client(actor_system& sys, std::string_view mode, const std::string& host,
       };
     });
     scoped_actor self{sys};
-    self->send(*cell, caf::put_atom_v, pong);
+    self->mail(caf::put_atom_v, pong).send(*cell);
     self->wait_for(pong);
     return EXIT_SUCCESS;
   }
@@ -334,15 +335,15 @@ int client(actor_system& sys, std::string_view mode, const std::string& host,
       // Waiting 50ms here gives the pong process a bit of time, but also makes
       // sure that we trigger at least one BASP heartbeat message in the
       // meantime to have coverage on the heartbeat logic as well.
-      self->delayed_send(reg, 50ms, caf::get_atom_v);
+      self->mail(caf::get_atom_v).delay(50ms).send(reg);
       return caf::behavior{
         [self, reg](const actor& pong) {
           if (!pong) {
-            self->delayed_send(reg, 50ms, caf::get_atom_v);
+            self->mail(caf::get_atom_v).delay(50ms).send(reg);
             return;
           }
           self->monitor(pong);
-          self->send(pong, caf::ping_atom_v);
+          self->mail(caf::ping_atom_v).send(pong);
         },
         [](caf::pong_atom) { std::cout << "got pong" << std::endl; },
       };

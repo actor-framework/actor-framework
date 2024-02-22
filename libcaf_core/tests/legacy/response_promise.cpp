@@ -186,7 +186,7 @@ CAF_TEST("GH-1306 regression") {
     };
   });
   scoped_actor self{sys};
-  self->send(aut, 21);
+  self->mail(21).send(aut);
   self->send_exit(aut, exit_reason::kill);
   aut = nullptr;
   // Destroying the now obsolete action now destroys the promise. If the promise

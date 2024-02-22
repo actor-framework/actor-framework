@@ -14,6 +14,7 @@
 #include "caf/actor_from_state.hpp"
 #include "caf/actor_ostream.hpp"
 #include "caf/actor_system.hpp"
+#include "caf/anon_mail.hpp"
 #include "caf/caf_main.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/message_builder.hpp"
@@ -154,7 +155,7 @@ struct client_state {
           },
           [this, op, x, y](const error&) {
             // simply try again by enqueueing the task to the mailbox again
-            self->send(self, op, x, y);
+            self->mail(op, x, y).send(self);
           });
     };
     for (auto& x : tasks) {
@@ -225,7 +226,7 @@ void client_repl(actor_system& system, const config& cfg) {
   bool done = false;
   auto client = system.spawn(actor_from_state<client_state>);
   if (!cfg.host.empty() && cfg.port > 0)
-    anon_send(client, connect_atom_v, cfg.host, cfg.port);
+    anon_mail(connect_atom_v, cfg.host, cfg.port).send(client);
   else
     cout << "*** no server received via config, "
          << R"(please use "connect <host> <port>" before using the calculator)"
@@ -249,16 +250,17 @@ void client_repl(actor_system& system, const config& cfg) {
           cout << R"(")" << arg2 << R"(" > )"
                << std::numeric_limits<uint16_t>::max() << endl;
         else
-          anon_send(client, connect_atom_v, std::move(arg1),
-                    static_cast<uint16_t>(lport));
+          anon_mail(connect_atom_v, std::move(arg1),
+                    static_cast<uint16_t>(lport))
+            .send(client);
       } else {
         auto x = toint(arg0);
         auto y = toint(arg2);
         if (x && y) {
           if (arg1 == "+")
-            anon_send(client, add_atom_v, *x, *y);
+            anon_mail(add_atom_v, *x, *y).send(client);
           else if (arg1 == "-")
-            anon_send(client, sub_atom_v, *x, *y);
+            anon_mail(sub_atom_v, *x, *y).send(client);
         }
       }
     }};

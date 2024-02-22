@@ -105,8 +105,8 @@ public:
     // a philosopher that receives {eat} stops thinking and becomes hungry
     thinking.assign([this](eat_atom) {
       self->become(hungry);
-      self->send(left, take_atom_v);
-      self->send(right, take_atom_v);
+      self->mail(take_atom_v).send(left);
+      self->mail(take_atom_v).send(right);
     });
     // wait for the first answer of a chopstick
     hungry.assign([this](taken_atom, bool result) {
@@ -122,26 +122,28 @@ public:
                            "IDs {} and {} and starts to eat",
                            name, left->id(), right->id());
         // eat some time
-        self->delayed_send(self, 5s, think_atom_v);
+        self->mail(think_atom_v).delay(5s).send(self);
         self->become(eating);
       } else {
-        self->send(self->current_sender() == left ? right : left, put_atom_v);
-        self->send(self, eat_atom_v);
+        self->mail(put_atom_v)
+          .send(self->current_sender() == left ? right : left);
+        self->mail(eat_atom_v).send(self);
         self->become(thinking);
       }
     });
     // philosopher was *not* able to obtain the first chopstick
     denied.assign([this](taken_atom, bool result) {
       if (result)
-        self->send(self->current_sender() == left ? left : right, put_atom_v);
-      self->send(self, eat_atom_v);
+        self->mail(put_atom_v)
+          .send(self->current_sender() == left ? left : right);
+      self->mail(eat_atom_v).send(self);
       self->become(thinking);
     });
     // philosopher obtained both chopstick and eats (for five seconds)
     eating.assign([this](think_atom) {
-      self->send(left, put_atom_v);
-      self->send(right, put_atom_v);
-      self->delayed_send(self, 5s, eat_atom_v);
+      self->mail(put_atom_v).send(left);
+      self->mail(put_atom_v).send(right);
+      self->mail(eat_atom_v).delay(5s).send(self);
       aout(self).println("{} puts down his chopsticks and starts to think",
                          name);
       self->become(thinking);
@@ -150,12 +152,12 @@ public:
 
   behavior make_behavior() {
     // start thinking
-    self->send(self, think_atom_v);
+    self->mail(think_atom_v).send(self);
     // philosophers start to think after receiving {think}
     return {
       [this](think_atom) {
         aout(self).println("{} starts to think", name);
-        self->delayed_send(self, 5s, eat_atom_v);
+        self->mail(eat_atom_v).delay(5s).send(self);
         self->become(thinking);
       },
     };

@@ -4,10 +4,10 @@
 
 #include "caf/actor_pool.hpp"
 
+#include "caf/anon_mail.hpp"
 #include "caf/default_attachable.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/mailbox_element.hpp"
-#include "caf/send.hpp"
 
 #include <atomic>
 #include <random>
@@ -137,7 +137,7 @@ bool actor_pool::filter(guard_type& guard, const strong_actor_ptr& sender,
       workers_.swap(workers);
       guard.unlock();
       for (auto& w : workers)
-        anon_send(w, content);
+        anon_mail(content).send(w);
       unregister_from_system();
     }
     return true;

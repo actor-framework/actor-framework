@@ -104,9 +104,9 @@ void client_repl(actor_system& sys, calculator hdl) {
       continue;
     }
     if (words[1] == "+")
-      self->send(hdl, add_atom_v, *x, *y);
+      self->mail(add_atom_v, *x, *y).send(hdl);
     else
-      self->send(hdl, sub_atom_v, *x, *y);
+      self->mail(sub_atom_v, *x, *y).send(hdl);
     self->receive([&self, x = *x, y = *y, op = words[1][0]](int32_t result) {
       aout(self).println("{} {} {} = {}", x, op, y, result);
     });
