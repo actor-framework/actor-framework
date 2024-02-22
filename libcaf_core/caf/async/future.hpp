@@ -164,26 +164,6 @@ public:
     }
   }
 
-  template <class Rep, class Period>
-  auto get(std::chrono::duration<Rep, Period> timeout) {
-    auto sync = make_counted<detail::beacon>();
-    if (cell_->subscribe(nullptr, action{sync})) {
-      std::ignore = sync->wait_for(timeout);
-    }
-    std::unique_lock guard{cell_->mtx};
-    switch (cell_->value.index()) {
-      default:
-        return std::optional<res_t>{};
-      case 1:
-        if constexpr (std::is_void_v<T>)
-          return std::optional{res_t{}};
-        else
-          return std::optional{res_t{std::get<T>(cell_->value)}};
-      case 2:
-        return std::optional{res_t{std::get<error>(cell_->value)}};
-    }
-  }
-
   template <class Clock, class Duration>
   auto get(std::chrono::time_point<Clock, Duration> timepoint) {
     auto sync = make_counted<detail::beacon>();
@@ -193,15 +173,20 @@ public:
     std::unique_lock guard{cell_->mtx};
     switch (cell_->value.index()) {
       default:
-        return std::optional<res_t>{};
+        return res_t{make_error(sec::future_timeout)};
       case 1:
         if constexpr (std::is_void_v<T>)
-          return std::optional{res_t{}};
+          return res_t{};
         else
-          return std::optional{res_t{std::get<T>(cell_->value)}};
+          return res_t{std::get<T>(cell_->value)};
       case 2:
-        return std::optional{res_t{std::get<error>(cell_->value)}};
+        return res_t{std::get<error>(cell_->value)};
     }
+  }
+
+  template <class Rep, class Period>
+  auto get(std::chrono::duration<Rep, Period> timeout) {
+    return get(std::chrono::steady_clock::now() + timeout);
   }
 
 private:

@@ -21,71 +21,59 @@ auto make_shared_val_ptr() {
   return std::make_shared<std::variant<none_t, T, error>>();
 }
 
-WITH_FIXTURE(test::fixture::deterministic) {
-
-SCENARIO("promises can get values and errors") {
+SCENARIO("futures can actively wait on a promise") {
   auto uut = async::promise<int32_t>{};
   auto fut = uut.get_future();
-  auto now = std::chrono::system_clock::now();
-  GIVEN("a promise and future pair that sets value") {
-    auto worker = std::thread{[&uut] {
-      std::this_thread::sleep_for(50ms);
-      uut.set_value(42);
-    }};
-    WHEN("a value is set with set_value() concurrently") {
-      THEN("the value can be retrieved with get()") {
-        check(fut.pending());
-        check_eq(fut.get(), 42);
-        worker.join();
+  GIVEN("a promise") {
+    WHEN("future::get times out") {
+      THEN("the client observes the error code sec::future_timeout") {
+        check_eq(fut.get(1ms), make_error(sec::future_timeout));
       }
     }
-    WHEN("a value is set with set_value() concurrently") {
-      THEN("the value can be retrieved with get() after delay") {
-        check(fut.pending());
-        check_eq(fut.get(1ms), std::nullopt);
-        check_eq(fut.get(100ms), 42);
-        worker.join();
+    WHEN("future::get retrieves an error while waiting") {
+      auto worker = std::thread{[&uut] {
+        std::this_thread::sleep_for(5ms);
+        uut.set_error(sec::runtime_error);
+      }};
+      THEN("the client observes the error code from set_error") {
+        check_eq(fut.get(), make_error(sec::runtime_error));
       }
+      worker.join();
     }
-    WHEN("a value is set with set_value() concurrently") {
-      THEN("the value can be retrieved with get() at a timepoint") {
-        check(fut.pending());
-        check_eq(fut.get(now), std::nullopt);
-        check_eq(fut.get(now + 100ms), 42);
-        worker.join();
+    WHEN("future::get with a timeout retrieves an error while waiting") {
+      auto worker = std::thread{[&uut] {
+        std::this_thread::sleep_for(5ms);
+        uut.set_error(sec::runtime_error);
+      }};
+      THEN("the client observes the error code from set_error") {
+        check_eq(fut.get(60s), make_error(sec::runtime_error));
       }
+      worker.join();
     }
-  }
-  GIVEN("a promise and future pair that sets error") {
-    auto worker = std::thread{[&uut] {
-      std::this_thread::sleep_for(50ms);
-      uut.set_error(sec::runtime_error);
-    }};
-    WHEN("an error is set with set_error() concurrently") {
-      THEN("the error can be retrieved with get()") {
-        check(fut.pending());
-        check_eq(fut.get(), sec::runtime_error);
-        worker.join();
+    WHEN("future::get retrieves a value while waiting") {
+      auto worker = std::thread{[&uut] {
+        std::this_thread::sleep_for(5ms);
+        uut.set_value(42);
+      }};
+      THEN("the client observes the error code from set_error") {
+        check_eq(fut.get(), int32_t{42});
       }
+      worker.join();
     }
-    WHEN("an error is set with set_error() concurrently") {
-      THEN("the error can be retrieved with get() after delay") {
-        check(fut.pending());
-        check_eq(fut.get(1ms), std::nullopt);
-        check_eq(fut.get(100ms), sec::runtime_error);
-        worker.join();
+    WHEN("future::get with a timeout retrieves a value while waiting") {
+      auto worker = std::thread{[&uut] {
+        std::this_thread::sleep_for(5ms);
+        uut.set_value(42);
+      }};
+      THEN("the client observes the error code from set_error") {
+        check_eq(fut.get(60s), int32_t{42});
       }
-    }
-    WHEN("an error is set with set_error() concurrently") {
-      THEN("the error can be retrieved with get() at a timepoint") {
-        check(fut.pending());
-        check_eq(fut.get(now), std::nullopt);
-        check_eq(fut.get(now + 100ms), sec::runtime_error);
-        worker.join();
-      }
+      worker.join();
     }
   }
 }
+
+WITH_FIXTURE(test::fixture::deterministic) {
 
 SCENARIO("actors can observe futures") {
   GIVEN("a promise and future pair") {
