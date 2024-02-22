@@ -81,6 +81,9 @@ public:
   template <class, class>
   friend class response_handle;
 
+  template <class>
+  friend class event_based_response_handle;
+
   // -- nested enums -----------------------------------------------------------
 
   /// Categorizes incoming messages.
@@ -639,6 +642,10 @@ protected:
 #endif // CAF_ENABLE_EXCEPTIONS
 
 private:
+  template <class T>
+  flow::assert_scheduled_actor_hdr_t<flow::single<T>>
+  single_from_response(message_id mid, disposable pending_timeout);
+
   // -- utilities for instrumenting actors -------------------------------------
 
   /// Places all messages from the `stash_` back into the mailbox.
