@@ -9,7 +9,7 @@
 #include "caf/actor_system_config.hpp"
 #include "caf/config_value.hpp"
 #include "caf/defaults.hpp"
-#include "caf/logger.hpp"
+#include "caf/log/io.hpp"
 
 #include <algorithm>
 
@@ -33,7 +33,7 @@ datagram_handler::datagram_handler(default_multiplexer& backend_ref,
   allow_udp_connreset(sockfd, false);
   auto es = send_buffer_size(sockfd);
   if (!es)
-    CAF_LOG_ERROR("cannot determine socket buffer size");
+    log::io::error("cannot determine socket buffer size");
   else
     send_buffer_size_ = *es;
 }
@@ -92,8 +92,8 @@ void datagram_handler::add_endpoint(datagram_handle hdl, const ip_endpoint& ep,
   } else if (!writer_) {
     writer_ = mgr;
   } else {
-    CAF_LOG_ERROR("cannot assign a second servant to the endpoint "
-                  << to_string(ep));
+    log::io::error("cannot assign a second servant to the endpoint {}",
+                   to_string(ep));
     abort();
   }
 }

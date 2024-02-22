@@ -137,7 +137,7 @@ public:
     thread_ = mpx_.system().launch_thread("caf.io.prom", thread_owner::system,
                                           run_mpx);
     sync.wait();
-    CAF_LOG_INFO("expose Prometheus metrics at port" << actual_port);
+    log::io::info("expose Prometheus metrics at port {}", actual_port);
     return actual_port;
   }
 
@@ -290,13 +290,15 @@ strong_actor_ptr middleman::remote_lookup(std::string name,
   auto id = basp::header::config_server_id;
   self->send(basp, forward_atom_v, nid, id,
              make_message(registry_lookup_atom_v, std::move(name)));
-  self->receive([&](strong_actor_ptr& addr) { result = std::move(addr); },
-                [](message& msg) {
-                  log::system::error(
-                    "received unexpected remote_lookup result: {}", msg);
-                },
-                after(std::chrono::minutes(5)) >>
-                  [&] { CAF_LOG_WARNING("remote_lookup timed out"); });
+  self->receive(
+    [&](strong_actor_ptr& addr) { result = std::move(addr); },
+    [](message& msg) {
+      log::system::error("received unexpected remote_lookup result: {}", msg);
+    },
+    after(std::chrono::minutes(5)) >>
+      [&] {
+        log::system::error("received unexpected remote_lookup result: {}", msg);
+      });
   return result;
 }
 

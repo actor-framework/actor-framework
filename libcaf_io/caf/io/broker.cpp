@@ -10,7 +10,7 @@
 #include "caf/config.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
-#include "caf/logger.hpp"
+#include "caf/log/io.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/none.hpp"
 
@@ -20,11 +20,13 @@ void broker::initialize() {
   CAF_LOG_TRACE("");
   init_broker();
   auto bhvr = make_behavior();
-  CAF_LOG_DEBUG_IF(!bhvr, "make_behavior() did not return a behavior:"
-                            << CAF_ARG2("alive", alive()));
+  if (!bhvr) {
+    log::io::debug("make_behavior() did not return a behavior: alive = {}",
+                   alive());
+  }
   if (bhvr) {
     // make_behavior() did return a behavior instead of using become()
-    CAF_LOG_DEBUG("make_behavior() did return a valid behavior");
+    log::io::debug("make_behavior() did return a valid behavior");
     become(std::move(bhvr));
   }
 }

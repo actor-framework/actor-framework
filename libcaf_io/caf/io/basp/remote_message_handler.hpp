@@ -15,7 +15,7 @@
 #include "caf/detail/scope_guard.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/execution_unit.hpp"
-#include "caf/logger.hpp"
+#include "caf/log/io.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/message.hpp"
 #include "caf/message_id.hpp"
@@ -59,7 +59,7 @@ public:
     }
     // Short circuit if we already know there's nothing to do.
     if (dst == nullptr && !mid.is_request()) {
-      CAF_LOG_INFO("drop asynchronous remote message: unknown destination");
+      log::io::info("drop asynchronous remote message: unknown destination");
       return;
     }
     // Deserialize source and destination node for routed messages.
@@ -67,13 +67,13 @@ public:
       node_id src_node;
       node_id dst_node;
       if (!source.apply(src_node)) {
-        CAF_LOG_ERROR(
-          "failed to read source of routed message:" << source.get_error());
+        log::io::error("failed to read source of routed message: {}",
+                       source.get_error());
         return;
       }
       if (!source.apply(dst_node)) {
-        CAF_LOG_ERROR("failed to read destination of routed message:"
-                      << source.get_error());
+        log::io::error("failed to read destination of routed message: {}",
+                       source.get_error());
         return;
       }
       CAF_ASSERT(dst_node == sys.node());
@@ -89,7 +89,7 @@ public:
     // Send errors for dropped requests.
     if (dst == nullptr) {
       CAF_ASSERT(mid.is_request());
-      CAF_LOG_INFO("drop remote request: unknown destination");
+      log::io::info("drop remote request: unknown destination");
       detail::sync_request_bouncer srb{exit_reason::remote_link_unreachable};
       srb(src, mid);
       return;
@@ -98,7 +98,7 @@ public:
     auto& mm_metrics = ctx->system().middleman().metric_singletons;
     auto t0 = telemetry::timer::clock_type::now();
     if (!source.apply(msg)) {
-      CAF_LOG_ERROR("failed to read message content:" << source.get_error());
+      log::io::error("failed to read message content: {}", source.get_error());
       auto ptr = make_mailbox_element(nullptr, mid.response_id(),
                                       make_error(sec::malformed_message));
       src->enqueue(std::move(ptr), nullptr);
@@ -115,7 +115,7 @@ public:
       if (ptr != nullptr)
         static_cast<actor_proxy*>(ptr->get())->add_link(dst->get());
       else
-        CAF_LOG_WARNING("received link message with invalid target");
+        log::io::warning("received link message with invalid target");
       return;
     }
     if (auto view
@@ -124,7 +124,7 @@ public:
       if (ptr != nullptr)
         static_cast<actor_proxy*>(ptr->get())->remove_link(dst->get());
       else
-        CAF_LOG_DEBUG("received unlink message with invalid target");
+        log::io::debug("received unlink message with invalid target");
       return;
     }
     // Ship the message.

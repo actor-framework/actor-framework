@@ -10,7 +10,7 @@
 #include "caf/detail/scope_guard.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/event_based_actor.hpp"
-#include "caf/logger.hpp"
+#include "caf/log/io.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/none.hpp"
 #include "caf/span.hpp"
@@ -67,8 +67,9 @@ byte_buffer& abstract_broker::wr_buf(connection_handle hdl) {
   if (auto x = by_id(hdl)) {
     return x->wr_buf();
   } else {
-    CAF_LOG_ERROR("tried to access wr_buf() of an unknown connection_handle:"
-                  << CAF_ARG(hdl));
+    log::io::error(
+      "tried to access wr_buf() of an unknown connection_handle: hdl = {}",
+      hdl);
     return dummy_wr_buf_;
   }
 }
@@ -99,8 +100,8 @@ byte_buffer& abstract_broker::wr_buf(datagram_handle hdl) {
   if (auto x = by_id(hdl)) {
     return x->wr_buf(hdl);
   } else {
-    CAF_LOG_ERROR("tried to access wr_buf() of an unknown"
-                  "datagram_handle");
+    log::io::error("tried to access wr_buf() of an unknown"
+                   "datagram_handle");
     return dummy_wr_buf_;
   }
 }
@@ -109,8 +110,8 @@ void abstract_broker::enqueue_datagram(datagram_handle hdl, byte_buffer buf) {
   if (auto x = by_id(hdl))
     x->enqueue_datagram(hdl, std::move(buf));
   else
-    CAF_LOG_ERROR("tried to access datagram_buffer() of an unknown"
-                  "datagram_handle");
+    log::io::error("tried to access datagram_buffer() of an unknown"
+                   "datagram_handle");
 }
 
 void abstract_broker::write(datagram_handle hdl, size_t bs, const void* buf) {
