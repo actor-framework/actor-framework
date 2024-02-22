@@ -523,7 +523,7 @@ struct fixture : caf::test::fixture::deterministic {
       caf::split(parsed_value, value, ",");
       std::transform(
         parsed_value.cbegin(), parsed_value.cend(),
-        std::inserter(imap, imap.begin()), [this](const std::string& s) {
+        std::inserter(imap, imap.begin()), [](const std::string& s) {
           str_list parsed_pair;
           caf::split(parsed_pair, s, ":");
           return std::pair{parsed_pair[0], std::stoi(parsed_pair[1])};
@@ -535,7 +535,7 @@ struct fixture : caf::test::fixture::deterministic {
       caf::split(parsed_value, value, ",");
       std::transform(
         parsed_value.cbegin(), parsed_value.cend(),
-        std::inserter(iumap, iumap.begin()), [this](const std::string& s) {
+        std::inserter(iumap, iumap.begin()), [](const std::string& s) {
           str_list parsed_pair;
           caf::split(parsed_pair, s, ":");
           return std::pair{parsed_pair[0], std::stoi(parsed_pair[1])};
