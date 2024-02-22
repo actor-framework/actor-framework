@@ -113,7 +113,7 @@ template <class... Args>
 [[nodiscard]] auto anon_mail(Args&&... args) {
   using result_t = anon_mail_t<message_priority::normal,
                                detail::strip_and_convert_t<Args>...>;
-  return result_t{make_message(std::forward<Args>(args)...)};
+  return result_t{make_message_nowrap(std::forward<Args>(args)...)};
 }
 
 } // namespace caf

@@ -7,6 +7,7 @@
 #include "caf/abstract_blocking_actor.hpp"
 #include "caf/async_mail.hpp"
 #include "caf/blocking_response_handle.hpp"
+#include "caf/message.hpp"
 
 namespace caf {
 
@@ -139,7 +140,7 @@ template <class Trait, class... Args>
 blocking_mail(Trait, abstract_blocking_actor* self, Args&&... args) {
   using result_t = blocking_mail_t<message_priority::normal, Trait,
                                    detail::strip_and_convert_t<Args>...>;
-  return result_t{self, make_message(std::forward<Args>(args)...)};
+  return result_t{self, make_message_nowrap(std::forward<Args>(args)...)};
 }
 
 } // namespace caf
