@@ -194,12 +194,12 @@ TEST("a bridge may use time-based flow operators") {
   ping_pong_thread.join();
 }
 
-TEST("passing never to a flow bridge omits outputs") {
+TEST("passing never as output flow produces no output to the socket") {
   // Socket and thread setup.
   auto fd_pair = net::make_stream_socket_pair();
   require(fd_pair.has_value());
   auto [fd1, fd2] = *fd_pair;
-  auto ping_pong_thread = std::thread{iota_send, fd2, 1024};
+  auto iota_thread = std::thread{iota_send, fd2, 1024};
   // Bridge setup.
   auto received_total = std::make_shared<size_t>();
   auto rendezvous = detail::latch{2};
@@ -223,7 +223,7 @@ TEST("passing never to a flow bridge omits outputs") {
   rendezvous.count_down_and_wait();
   check_eq(*received_total, 1024u);
   // Cleanup.
-  ping_pong_thread.join();
+  iota_thread.join();
 }
 
 TEST("subscribing std::ignore to the inputs discards received data") {
