@@ -6,7 +6,7 @@
 
 #include "caf/detail/profiled_send.hpp"
 #include "caf/local_actor.hpp"
-#include "caf/logger.hpp"
+#include "caf/log/core.hpp"
 
 #include <algorithm>
 #include <utility>
@@ -133,7 +133,7 @@ response_promise::state::~state() {
   //       storing the promise in a run-later continuation. Hence, we can't call
   //       deliver_impl here since it calls self->context().
   if (self && source) {
-    CAF_LOG_DEBUG("broken promise!");
+    log::core::debug("broken promise!");
     auto element = make_mailbox_element(self, id.response_id(),
                                         make_error(sec::broken_promise));
     source->enqueue(std::move(element), nullptr);
@@ -151,7 +151,7 @@ void response_promise::state::deliver_impl(message msg) {
   // to call this function.
   auto selfptr = static_cast<local_actor*>(self->get());
   if (msg.empty() && id.is_async()) {
-    CAF_LOG_DEBUG("drop response: empty response to asynchronous input");
+    log::core::debug("drop response: empty response to asynchronous input");
   } else if (source != nullptr) {
     detail::profiled_send(selfptr, self, source, id.response_id(),
                           selfptr->context(), std::move(msg));
@@ -167,7 +167,7 @@ void response_promise::state::delegate_impl(abstract_actor* receiver,
     detail::profiled_send(selfptr, std::move(source), receiver, id,
                           selfptr->context(), std::move(msg));
   } else {
-    CAF_LOG_DEBUG("drop response: invalid delegation target");
+    log::core::debug("drop response: invalid delegation target");
   }
   cancel();
 }

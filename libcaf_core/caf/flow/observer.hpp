@@ -16,7 +16,7 @@
 #include "caf/flow/coordinator.hpp"
 #include "caf/flow/subscription.hpp"
 #include "caf/intrusive_ptr.hpp"
-#include "caf/logger.hpp"
+#include "caf/log/core.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/unit.hpp"
@@ -364,10 +364,10 @@ public:
   void on_subscribe(subscription sub) override {
     CAF_LOG_TRACE("");
     if (buf_ && !sub_) {
-      CAF_LOG_DEBUG("add subscription");
+      log::core::debug("add subscription");
       sub_ = std::move(sub);
     } else {
-      CAF_LOG_DEBUG("already have a subscription or buffer no longer valid");
+      log::core::debug("already have a subscription or buffer no longer valid");
       sub.cancel();
     }
   }

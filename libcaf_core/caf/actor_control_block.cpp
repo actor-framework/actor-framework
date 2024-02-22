@@ -6,6 +6,7 @@
 
 #include "caf/abstract_actor.hpp"
 #include "caf/actor_system.hpp"
+#include "caf/log/core.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/message.hpp"
 #include "caf/proxy_registry.hpp"
@@ -79,8 +80,8 @@ error_code<sec> load_actor(strong_actor_ptr& storage, execution_unit* ctx,
   auto& sys = ctx->system();
   if (sys.node() == nid) {
     storage = sys.registry().get(aid);
-    CAF_LOG_DEBUG("fetch actor handle from local actor registry: "
-                  << (storage ? "found" : "not found"));
+    log::core::debug("fetch actor handle from local actor registry: {}",
+                     (storage ? "found" : "not found"));
     return none;
   }
   auto prp = ctx->proxy_registry_ptr();

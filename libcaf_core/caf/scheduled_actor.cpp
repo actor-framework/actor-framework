@@ -13,6 +13,8 @@
 #include "caf/detail/private_thread.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/flow/observable_builder.hpp"
+#include "caf/flow/op/mcast.hpp"
+#include "caf/log/core.hpp"
 #include "caf/log/system.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/scheduler.hpp"
@@ -269,7 +271,7 @@ resumable::resume_result scheduled_actor::resume(execution_unit* ctx,
     if (!ptr) {
       if (mailbox().try_block()) {
         reset_timeouts_if_needed();
-        CAF_LOG_DEBUG("mailbox empty: await new messages");
+        log::core::debug("mailbox empty: await new messages");
         return resumable::awaiting_message;
       }
       continue; // Interrupted by a new message, try again.
@@ -294,11 +296,11 @@ resumable::resume_result scheduled_actor::resume(execution_unit* ctx,
   }
   reset_timeouts_if_needed();
   if (mailbox().try_block()) {
-    CAF_LOG_DEBUG("mailbox empty: await new messages");
+    log::core::debug("mailbox empty: await new messages");
     return resumable::awaiting_message;
   }
   // time's up
-  CAF_LOG_DEBUG("max throughput reached: resume later");
+  log::core::debug("max throughput reached: resume later");
   return resumable::resume_later;
 }
 
@@ -314,7 +316,7 @@ void scheduled_actor::quit(error x) {
   CAF_LOG_TRACE(CAF_ARG(x));
   // Make sure repeated calls to quit don't do anything.
   if (getf(is_shutting_down_flag)) {
-    CAF_LOG_DEBUG("already shutting down");
+    log::core::debug("already shutting down");
     return;
   }
   // Mark this actor as about-to-die.
@@ -469,7 +471,7 @@ void scheduled_actor::delay(action what) {
   // request makes sure that the action keeps the actor alive until processed.
   if (!delay_bhvr_) {
     delay_bhvr_ = behavior{[](action& f) {
-      CAF_LOG_DEBUG("run delayed action");
+      log::core::debug("run delayed action");
       f.run();
     }};
   }
@@ -510,7 +512,7 @@ scheduled_actor::categorize(mailbox_element& x) {
     }
     auto& what = content.get_as<std::string>(2);
     if (what == "info") {
-      CAF_LOG_DEBUG("reply to 'info' message");
+      log::core::debug("reply to 'info' message");
       rp.deliver(ok_atom_v, what, strong_actor_ptr{ctrl()}, name());
     } else {
       rp.deliver(make_error(sec::unsupported_sys_key));
@@ -540,7 +542,7 @@ scheduled_actor::categorize(mailbox_element& x) {
     case type_id_v<action>: {
       auto ptr = content.get_as<action>(0).ptr();
       CAF_ASSERT(ptr != nullptr);
-      CAF_LOG_DEBUG("run action");
+      log::core::debug("run action");
       ptr->run();
       return message_category::internal;
     }
@@ -592,7 +594,7 @@ scheduled_actor::categorize(mailbox_element& x) {
         sub.dispose();
       }
       // Abort the flow immediately.
-      CAF_LOG_DEBUG("requested stream does not exist");
+      log::core::debug("requested stream does not exist");
       auto err = make_error(sec::invalid_stream);
       unsafe_send_as(this, sink_hdl, stream_abort_msg{sink_id, std::move(err)});
       return message_category::internal;
@@ -609,7 +611,7 @@ scheduled_actor::categorize(mailbox_element& x) {
     case type_id_v<stream_cancel_msg>: {
       auto [sub_id] = content.get_as<stream_cancel_msg>(0);
       if (auto i = stream_subs_.find(sub_id); i != stream_subs_.end()) {
-        CAF_LOG_DEBUG("canceled stream " << sub_id);
+        log::core::debug("canceled stream {}", sub_id);
         auto ptr = i->second;
         stream_subs_.erase(i);
         ptr->cancel();
@@ -680,7 +682,7 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
         if (x.mid.is_response())
           return invoke_message_result::skipped;
         if (categorize(x) == message_category::internal) {
-          CAF_LOG_DEBUG("handled system message");
+          log::core::debug("handled system message");
           return invoke_message_result::consumed;
         }
         return invoke_message_result::skipped;
@@ -707,7 +709,7 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
       mrh->second.second.dispose(); // Stop the timeout.
       multiplexed_responses_.erase(mrh);
       if (!invoke(this, bhvr, x)) {
-        CAF_LOG_DEBUG("got unexpected_response");
+        log::core::debug("got unexpected_response");
         auto msg = make_message(
           make_error(sec::unexpected_response, std::move(x.payload)));
         bhvr(msg);
@@ -719,7 +721,7 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
       case message_category::skipped:
         return invoke_message_result::skipped;
       case message_category::internal:
-        CAF_LOG_DEBUG("handled system message");
+        log::core::debug("handled system message");
         return invoke_message_result::consumed;
       case message_category::ordinary: {
         detail::default_invoke_result_visitor<scheduled_actor> visitor{this};
@@ -774,14 +776,15 @@ bool scheduled_actor::activate(execution_unit* ctx) {
     if (!getf(is_initialized_flag)) {
       initialize();
       if (finalize()) {
-        CAF_LOG_DEBUG("finalize() returned true right after make_behavior()");
+        log::core::debug(
+          "finalize() returned true right after make_behavior()");
         return false;
       }
-      CAF_LOG_DEBUG("initialized actor:" << CAF_ARG(name()));
+      log::core::debug("initialized actor: name = {}", name());
     }
 #ifdef CAF_ENABLE_EXCEPTIONS
   } catch (...) {
-    CAF_LOG_DEBUG("failed to initialize actor due to an exception");
+    log::core::debug("failed to initialize actor due to an exception");
     auto eptr = std::current_exception();
     quit(call_handler(exception_handler_, this, eptr));
     finalize();
@@ -821,7 +824,7 @@ auto scheduled_actor::reactivate(mailbox_element& x) -> activation_result {
       case invoke_message_result::consumed:
         bhvr_stack_.cleanup();
         if (finalize()) {
-          CAF_LOG_DEBUG("actor finalized");
+          log::core::debug("actor finalized");
           return activation_result::terminated;
         }
         return activation_result::success;
@@ -830,11 +833,11 @@ auto scheduled_actor::reactivate(mailbox_element& x) -> activation_result {
     }
 #ifdef CAF_ENABLE_EXCEPTIONS
   } catch (std::exception& e) {
-    CAF_LOG_INFO("actor died because of an exception, what: " << e.what());
+    log::core::info("actor died because of an exception, what: {}", e.what());
     static_cast<void>(e); // keep compiler happy when not logging
     handle_exception(std::current_exception());
   } catch (...) {
-    CAF_LOG_INFO("actor died because of an unknown exception");
+    log::core::info("actor died because of an unknown exception");
     handle_exception(std::current_exception());
   }
   finalize();
@@ -867,7 +870,7 @@ bool scheduled_actor::finalize() {
   run_actions();
   if (alive())
     return false;
-  CAF_LOG_DEBUG("actor has no behavior and is ready for cleanup");
+  log::core::debug("actor has no behavior and is ready for cleanup");
   CAF_ASSERT(!has_behavior());
   bhvr_stack_.cleanup();
   cleanup(std::move(fail_state_), context());
@@ -952,7 +955,7 @@ void scheduled_actor::release_later(flow::coordinated_ptr& child) {
 void scheduled_actor::watch(disposable obj) {
   CAF_ASSERT(obj.valid());
   watched_disposables_.emplace_back(std::move(obj));
-  CAF_LOG_DEBUG("now watching" << watched_disposables_.size() << "disposables");
+  log::core::debug("now watching {} disposables", watched_disposables_.size());
 }
 
 void scheduled_actor::deregister_stream(uint64_t stream_id) {
@@ -977,8 +980,10 @@ void scheduled_actor::run_actions() {
 void scheduled_actor::update_watched_disposables() {
   CAF_LOG_TRACE("");
   [[maybe_unused]] auto n = disposable::erase_disposed(watched_disposables_);
-  CAF_LOG_DEBUG_IF(n > 0, "now watching" << watched_disposables_.size()
-                                         << "disposables");
+  if (n > 0) {
+    log::core::debug("now watching {} disposables",
+                     watched_disposables_.size());
+  }
 }
 
 void scheduled_actor::register_flow_state(uint64_t local_id,

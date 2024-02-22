@@ -11,7 +11,7 @@
 #include "caf/flow/observer.hpp"
 #include "caf/flow/op/hot.hpp"
 #include "caf/flow/subscription.hpp"
-#include "caf/logger.hpp"
+#include "caf/log/core.hpp"
 #include "caf/sec.hpp"
 
 #include <utility>
@@ -238,7 +238,7 @@ public:
       if (auto buf = resource_.try_open()) {
         resource_ = nullptr;
         using buffer_type = typename resource_type::buffer_type;
-        CAF_LOG_DEBUG("add subscriber");
+        log::core::debug("add subscriber");
         using impl_t = from_resource_sub<buffer_type>;
         auto ptr = super::parent_->add_child(std::in_place_type<impl_t>, buf,
                                              out);
@@ -248,12 +248,12 @@ public:
         return ptr->as_disposable();
       }
       resource_ = nullptr;
-      CAF_LOG_WARNING("failed to open an async resource");
+      log::core::warning("failed to open an async resource");
       return super::fail_subscription(
         out, make_error(sec::cannot_open_resource,
                         "failed to open an async resource"));
     }
-    CAF_LOG_WARNING("may only subscribe once to an async resource");
+    log::core::warning("may only subscribe once to an async resource");
     return super::fail_subscription(
       out, make_error(sec::too_many_observers,
                       "may only subscribe once to an async resource"));

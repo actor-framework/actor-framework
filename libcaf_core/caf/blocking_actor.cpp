@@ -12,6 +12,7 @@
 #include "caf/detail/set_thread_name.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/invoke_message_result.hpp"
+#include "caf/log/system.hpp"
 #include "caf/logger.hpp"
 #include "caf/scheduled_actor.hpp"
 #include "caf/telemetry/timer.hpp"
@@ -134,8 +135,8 @@ public:
     sys.release_private_thread(thread_);
     if (!hidden_) {
       [[maybe_unused]] auto count = sys.registry().dec_running();
-      CAF_LOG_DEBUG("actor" << self_->id() << "decreased running count to"
-                            << count);
+      log::system::debug("actor {} decreased running count to {}", self_->id(),
+                         count);
     }
     return resumable::done;
   }
@@ -168,7 +169,7 @@ void blocking_actor::launch(execution_unit*, bool, bool hide) {
   // decrementing the count before releasing the thread.
   if (!hide) {
     [[maybe_unused]] auto count = sys.registry().inc_running();
-    CAF_LOG_DEBUG("actor" << id() << "increased running count to" << count);
+    log::system::debug("actor {} increased running count to {}", id(), count);
   }
   thread->resume(new blocking_actor_runner(this, thread, hide));
 }
