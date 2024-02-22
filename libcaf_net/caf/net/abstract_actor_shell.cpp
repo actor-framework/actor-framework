@@ -13,7 +13,7 @@
 #include "caf/detail/default_invoke_result_visitor.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/invoke_message_result.hpp"
-#include "caf/logger.hpp"
+#include "caf/log/net.hpp"
 
 namespace caf::net {
 
@@ -81,7 +81,7 @@ bool abstract_actor_shell::consume_message() {
       multiplexed_responses_.erase(i);
       auto res = bhvr(msg->payload);
       if (!res) {
-        CAF_LOG_DEBUG("got unexpected_response");
+        log::net::debug("got unexpected_response");
         auto err_msg = make_message(
           make_error(sec::unexpected_response, std::move(msg->payload)));
         bhvr(err_msg);

@@ -5,7 +5,7 @@
 #include "caf/net/http/response_header.hpp"
 
 #include "caf/expected.hpp"
-#include "caf/logger.hpp"
+#include "caf/log/net.hpp"
 #include "caf/string_algorithms.hpp"
 
 namespace caf::net::http {
@@ -71,14 +71,14 @@ response_header::parse(std::string_view raw) {
   auto [version_str, first_line_remainder] = split_by(first_line, " ");
   auto [status_str, status_text] = split_by(first_line_remainder, " ");
   if (!validate_http_version(version_str)) {
-    CAF_LOG_DEBUG("Invalid http version.");
+    log::net::debug("Invalid http version.");
     raw_.clear();
     return {status::bad_request, "Invalid HTTP version."};
   }
   version_ = version_str;
   // Parse the status from the string.
   if (auto res = get_as<uint16_t>(config_value{status_str}); !res) {
-    CAF_LOG_DEBUG("Invalid status");
+    log::net::debug("Invalid status");
     raw_.clear();
     return {status::bad_request, "Invalid HTTP status."};
   } else {
@@ -86,7 +86,7 @@ response_header::parse(std::string_view raw) {
   }
   status_text_ = trim(status_text);
   if (status_text_.empty()) {
-    CAF_LOG_DEBUG("Empty status text.");
+    log::net::debug("Empty status text.");
     raw_.clear();
     return {status::bad_request, "Invalid HTTP status text."};
   }

@@ -13,7 +13,7 @@
 #include "caf/detail/socket_sys_includes.hpp"
 #include "caf/expected.hpp"
 #include "caf/ip_endpoint.hpp"
-#include "caf/logger.hpp"
+#include "caf/log/net.hpp"
 #include "caf/span.hpp"
 
 namespace {
@@ -49,7 +49,7 @@ expected<udp_datagram_socket> make_udp_datagram_socket(ip_endpoint ep,
   }
   CAF_NET_SYSCALL("bind", err1, !=, 0,
                   ::bind(sock.id, reinterpret_cast<sockaddr*>(&addr), len));
-  CAF_LOG_DEBUG(CAF_ARG(sock.id));
+  log::net::debug("sock.id = {}", sock.id);
   return sguard.release();
 }
 

@@ -4,6 +4,8 @@
 
 #include "caf/net/web_socket/server.hpp"
 
+#include "caf/log/net.hpp"
+
 namespace caf::net::web_socket {
 
 // -- octet_stream::upper_layer implementation ---------------------------------
@@ -77,7 +79,7 @@ bool server::handle_header(std::string_view http) {
   if (sec_key.empty()) {
     auto descr = "Mandatory field Sec-WebSocket-Key missing or invalid."s;
     write_response(http::status::bad_request, descr);
-    CAF_LOG_DEBUG("received invalid WebSocket handshake");
+    log::net::debug("received invalid WebSocket handshake");
     return false;
   }
   // Kindly ask the upper layer to accept a new WebSocket connection.
@@ -92,7 +94,7 @@ bool server::handle_header(std::string_view http) {
   hs.write_http_1_response(down_->output_buffer());
   down_->end_output();
   // All done. Switch to the framing protocol.
-  CAF_LOG_DEBUG("completed WebSocket handshake");
+  log::net::debug("completed WebSocket handshake");
   down_->switch_protocol(framing::make_server(std::move(up_)));
   return true;
 }

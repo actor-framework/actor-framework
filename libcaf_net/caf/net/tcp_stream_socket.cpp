@@ -12,7 +12,7 @@
 #include "caf/detail/socket_sys_includes.hpp"
 #include "caf/expected.hpp"
 #include "caf/ipv4_address.hpp"
-#include "caf/logger.hpp"
+#include "caf/log/net.hpp"
 #include "caf/sec.hpp"
 
 #include <algorithm>
@@ -109,9 +109,8 @@ bool ip_connect(stream_socket fd, std::string host, uint16_t port,
                                   timeout);
     }
   } else {
-    CAF_LOG_DEBUG("inet_pton failed to parse"
-                  << host << "for family"
-                  << (Family == AF_INET ? "AF_INET" : "AF_INET6"));
+    log::net::debug("inet_pton failed to parse {} for family", host,
+                    (Family == AF_INET ? "AF_INET" : "AF_INET6"));
     return false;
   }
 }
@@ -121,9 +120,11 @@ bool ip_connect(stream_socket fd, std::string host, uint16_t port,
 expected<tcp_stream_socket> make_connected_tcp_stream_socket(ip_endpoint node,
                                                              timespan timeout) {
   CAF_LOG_TRACE(CAF_ARG(node) << CAF_ARG(timeout));
-  CAF_LOG_DEBUG_IF(timeout == infinite, "try to connect to TCP node" << node);
-  CAF_LOG_DEBUG_IF(timeout != infinite, "try to connect to TCP node"
-                                          << node << "with timeout" << timeout);
+  if (timeout == infinite)
+    log::net::debug("try to connect to TCP node {}", node);
+  else
+    log::net::debug("try to connect to TCP node {} with timeout {}", node,
+                    timeout);
   auto proto = node.address().embeds_v4() ? AF_INET : AF_INET6;
   int socktype = SOCK_STREAM;
 #ifdef SOCK_CLOEXEC
@@ -137,16 +138,17 @@ expected<tcp_stream_socket> make_connected_tcp_stream_socket(ip_endpoint node,
   if (proto == AF_INET6) {
     if (ip_connect<AF_INET6>(sock, to_string(node.address()), node.port(),
                              timeout)) {
-      CAF_LOG_INFO("established TCP connection to IPv6 node"
-                   << to_string(node));
+      log::net::info("established TCP connection to IPv6 node {}",
+                     to_string(node));
       return sguard.release();
     }
   } else if (ip_connect<AF_INET>(sock, to_string(node.address().embedded_v4()),
                                  node.port(), timeout)) {
-    CAF_LOG_INFO("established TCP connection to IPv4 node" << to_string(node));
+    log::net::info("established TCP connection to IPv4 node {}",
+                   to_string(node));
     return sguard.release();
   }
-  CAF_LOG_INFO("failed to connect to" << node);
+  log::net::info("failed to connect to {}", node);
   return make_error(sec::cannot_connect_to_node);
 }
 

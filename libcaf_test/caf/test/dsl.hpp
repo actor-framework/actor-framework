@@ -11,6 +11,7 @@
 #include "caf/byte_buffer.hpp"
 #include "caf/config.hpp"
 #include "caf/init_global_meta_objects.hpp"
+#include "caf/log/test.hpp"
 
 #include <tuple>
 #include <type_traits>
@@ -1042,7 +1043,7 @@ public:
     void enqueue(caf::resumable* ptr) override {
       jobs.push_back(ptr);
       if (after_next_enqueue_ != nullptr) {
-        CAF_LOG_DEBUG("inline this enqueue");
+        caf::log::test::debug("inline this enqueue");
         std::function<void()> f;
         f.swap(after_next_enqueue_);
         f();
@@ -1174,7 +1175,7 @@ public:
         ++progress;
         ++events;
         if (predicate()) {
-          CAF_LOG_DEBUG("stop due to predicate:" << CAF_ARG(events));
+          caf::log::test::debug("stop due to predicate: events = {}", events);
           return events;
         }
       }
@@ -1182,7 +1183,7 @@ public:
         ++progress;
         ++events;
         if (predicate()) {
-          CAF_LOG_DEBUG("stop due to predicate:" << CAF_ARG(events));
+          caf::log::test::debug("stop due to predicate: events = {}", events);
           return events;
         }
       }
@@ -1191,7 +1192,7 @@ public:
         ++events;
       }
       if (progress == 0) {
-        CAF_LOG_DEBUG("no activity left:" << CAF_ARG(events));
+        caf::log::test::debug("no activity left: events = {}", events);
         return events;
       }
     }

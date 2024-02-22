@@ -24,8 +24,8 @@
 #include "caf/actor_proxy.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/detail/socket_guard.hpp"
+#include "caf/log/openssl.hpp"
 #include "caf/log/system.hpp"
-#include "caf/logger.hpp"
 #include "caf/node_id.hpp"
 #include "caf/sec.hpp"
 #include "caf/send.hpp"
@@ -98,7 +98,7 @@ struct ssl_policy {
       return false;
     }
     io::network::child_process_inherit(result, false);
-    CAF_LOG_DEBUG(CAF_ARG(fd) << CAF_ARG(result));
+    log::openssl::debug("fd = {}, result = {}", fd, result);
     return session_->try_accept(result);
   }
 
@@ -250,8 +250,9 @@ protected:
       log::system::error("unable to create SSL session for connection");
       return sec::cannot_connect_to_node;
     }
-    CAF_LOG_DEBUG("successfully created an SSL session for:" << CAF_ARG(host)
-                                                             << CAF_ARG(port));
+    log::openssl::debug(
+      "successfully created an SSL session for: host = {}, port = {}", host,
+      port);
     return make_counted<scribe_impl>(mpx(), *fd, std::move(sssn));
   }
 

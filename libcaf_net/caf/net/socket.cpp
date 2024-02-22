@@ -7,7 +7,7 @@
 #include "caf/config.hpp"
 #include "caf/detail/net_syscall.hpp"
 #include "caf/detail/socket_sys_includes.hpp"
-#include "caf/logger.hpp"
+#include "caf/log/net.hpp"
 #include "caf/sec.hpp"
 
 #include <system_error>
@@ -17,7 +17,7 @@ namespace caf::net {
 #ifdef CAF_WINDOWS
 
 void close(socket fd) {
-  CAF_LOG_DEBUG("close" << CAF_ARG2("socket", fd.id));
+  log::net::debug("close socket = {}", fd.id);
   closesocket(fd.id);
 }
 
@@ -149,7 +149,7 @@ error nonblocking(socket x, bool new_value) {
 #else // CAF_WINDOWS
 
 void close(socket fd) {
-  CAF_LOG_DEBUG("close" << CAF_ARG2("socket", fd.id));
+  log::net::debug("close socket = {}", fd.id);
   ::close(fd.id);
 }
 

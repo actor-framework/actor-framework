@@ -10,6 +10,7 @@
 
 #include "caf/async/execution_context.hpp"
 #include "caf/detail/connection_factory.hpp"
+#include "caf/log/net.hpp"
 #include "caf/settings.hpp"
 
 namespace caf::detail {
@@ -66,7 +67,7 @@ public:
     CAF_LOG_TRACE("");
     owner_ = owner;
     if (auto err = factory_->start(owner)) {
-      CAF_LOG_DEBUG("factory_->start failed:" << err);
+      log::net::debug("factory_->start failed: {}", err);
       return err;
     }
     if (!monitored_actors_.empty()) {
@@ -97,7 +98,7 @@ public:
     } else if (auto conn = accept(acc_)) {
       auto child = factory_->make(owner_->mpx_ptr(), std::move(*conn));
       if (!child) {
-        CAF_LOG_ERROR("factory failed to create a new child");
+        log::net::error("factory failed to create a new child");
         on_conn_close_.dispose();
         owner_->shutdown();
         return;
@@ -109,7 +110,7 @@ public:
       std::ignore = child->start();
     } else if (conn.error() == sec::unavailable_or_would_block) {
       // Encountered a "soft" error: simply try again later.
-      CAF_LOG_DEBUG("accept failed:" << conn.error());
+      log::net::debug("accept failed: {}", conn.error());
     } else {
       // Encountered a "hard" error: stop.
       abort(conn.error());
@@ -118,12 +119,12 @@ public:
   }
 
   void handle_write_event() override {
-    CAF_LOG_ERROR("connection_acceptor received write event");
+    log::net::error("connection_acceptor received write event");
     owner_->deregister_writing();
   }
 
   void abort(const error& reason) override {
-    CAF_LOG_ERROR("connection_acceptor aborts due to an error:" << reason);
+    log::net::error("connection_acceptor aborts due to an error: {}", reason);
     factory_->abort(reason);
     on_conn_close_.dispose();
     self_ref_ = nullptr;

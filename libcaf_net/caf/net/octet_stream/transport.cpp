@@ -9,6 +9,7 @@
 #include "caf/net/socket_manager.hpp"
 
 #include "caf/defaults.hpp"
+#include "caf/log/net.hpp"
 
 #include <new>
 
@@ -153,7 +154,7 @@ error transport::start(socket_manager* owner) {
     CAF_ASSERT(max_write_buf_size_ > 0);
     write_buf_.reserve(max_write_buf_size_ * 2ul);
   } else {
-    CAF_LOG_ERROR("send_buffer_size: " << socket_buf_size.error());
+    log::net::error("send_buffer_size: {}", socket_buf_size.error());
     return std::move(socket_buf_size.error());
   }
   return up_->start(this);
@@ -219,7 +220,7 @@ void transport::handle_read_event() {
     auto rd2
       = policy_->read(make_span(read_buf_.data() + buffered_, policy_buffered));
     if (rd2 != static_cast<ptrdiff_t>(policy_buffered)) {
-      CAF_LOG_ERROR("failed to read buffered data from the policy");
+      log::net::error("failed to read buffered data from the policy");
       return fail(make_error(sec::socket_operation_failed));
     }
     buffered_ += static_cast<size_t>(rd2);

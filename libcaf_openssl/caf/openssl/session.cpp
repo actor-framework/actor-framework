@@ -13,6 +13,7 @@ CAF_POP_WARNINGS
 #include "caf/openssl/manager.hpp"
 
 #include "caf/actor_system_config.hpp"
+#include "caf/log/openssl.hpp"
 #include "caf/log/system.hpp"
 
 // On Linux we need to block SIGPIPE whenever we access OpenSSL functions.
@@ -94,13 +95,13 @@ rw_state session::do_some(int (*f)(SSL*, void*, int), size_t& result, void* buf,
     result = 0;
     switch (SSL_get_error(ssl_, res)) {
       default:
-        CAF_LOG_INFO("SSL error:" << get_ssl_error());
+        log::openssl::info("SSL error: {}", get_ssl_error());
         return rw_state::failure;
       case SSL_ERROR_WANT_READ:
-        CAF_LOG_DEBUG("SSL_ERROR_WANT_READ reported");
+        log::openssl::debug("SSL_ERROR_WANT_READ reported");
         return rw_state::want_read;
       case SSL_ERROR_WANT_WRITE:
-        CAF_LOG_DEBUG("SSL_ERROR_WANT_WRITE reported");
+        log::openssl::debug("SSL_ERROR_WANT_WRITE reported");
         // Report success to poll on this socket.
         return rw_state::success;
     }
@@ -108,10 +109,10 @@ rw_state session::do_some(int (*f)(SSL*, void*, int), size_t& result, void* buf,
   CAF_LOG_TRACE(CAF_ARG(len) << CAF_ARG(debug_name));
   CAF_IGNORE_UNUSED(debug_name);
   if (connecting_) {
-    CAF_LOG_DEBUG(debug_name << ": connecting");
+    log::openssl::debug("{} : connecting", debug_name);
     auto res = SSL_connect(ssl_);
     if (res == 1) {
-      CAF_LOG_DEBUG("SSL connection established");
+      log::openssl::debug("SSL connection established");
       connecting_ = false;
     } else {
       result = 0;
@@ -119,17 +120,17 @@ rw_state session::do_some(int (*f)(SSL*, void*, int), size_t& result, void* buf,
     }
   }
   if (accepting_) {
-    CAF_LOG_DEBUG(debug_name << ": accepting");
+    log::openssl::debug("{} : accepting", debug_name);
     auto res = SSL_accept(ssl_);
     if (res == 1) {
-      CAF_LOG_DEBUG("SSL connection accepted");
+      log::openssl::debug("SSL connection accepted");
       accepting_ = false;
     } else {
       result = 0;
       return check_ssl_res(res);
     }
   }
-  CAF_LOG_DEBUG(debug_name << ": calling SSL_write or SSL_read");
+  log::openssl::debug("{} : calling SSL_write or SSL_read", debug_name);
   if (len == 0) {
     result = 0;
     return rw_state::indeterminate;
@@ -271,16 +272,16 @@ bool session::handle_ssl_result(int ret) {
   auto err = SSL_get_error(ssl_, ret);
   switch (err) {
     case SSL_ERROR_WANT_READ:
-      CAF_LOG_DEBUG("Nonblocking call to SSL returned want_read");
+      log::openssl::debug("Nonblocking call to SSL returned want_read");
       return true;
     case SSL_ERROR_WANT_WRITE:
-      CAF_LOG_DEBUG("Nonblocking call to SSL returned want_write");
+      log::openssl::debug("Nonblocking call to SSL returned want_write");
       return true;
     case SSL_ERROR_ZERO_RETURN: // Regular remote connection shutdown.
     case SSL_ERROR_SYSCALL:     // Socket connection closed.
       return false;
     default: // Other error
-      CAF_LOG_INFO("SSL call failed:" << get_ssl_error());
+      log::openssl::info("SSL call failed: {}", get_ssl_error());
       return false;
   }
 }

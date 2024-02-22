@@ -3,6 +3,7 @@
 #include "caf/net/octet_stream/lower_layer.hpp"
 
 #include "caf/detail/format.hpp"
+#include "caf/log/net.hpp"
 
 namespace caf::net::http {
 
@@ -195,7 +196,7 @@ bool server::handle_header(std::string_view http) {
   // Parse the header and reject invalid inputs.
   auto [code, msg] = hdr_.parse(http);
   if (code != status::ok) {
-    CAF_LOG_DEBUG("received malformed header");
+    log::net::debug("received malformed header");
     up_->abort(make_error(sec::protocol_error, "received malformed header"));
     write_response(code, msg);
     return false;

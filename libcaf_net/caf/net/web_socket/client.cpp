@@ -15,7 +15,7 @@
 #include "caf/detail/message_flow_bridge.hpp"
 #include "caf/error.hpp"
 #include "caf/hash/sha1.hpp"
-#include "caf/logger.hpp"
+#include "caf/log/net.hpp"
 #include "caf/pec.hpp"
 #include "caf/settings.hpp"
 
@@ -58,7 +58,7 @@ ptrdiff_t client::consume(byte_span buffer, byte_span) {
   auto [hdr, remainder] = http::v1::split_header(buffer);
   if (hdr.empty()) {
     if (buffer.size() >= handshake::max_http_size) {
-      CAF_LOG_ERROR("server response exceeded the maximum header size");
+      log::net::error("server response exceeded the maximum header size");
       up_->abort(make_error(sec::protocol_error, "server response exceeded "
                                                  "the maximum header size"));
       return -1;
@@ -93,7 +93,7 @@ bool client::handle_header(std::string_view http) {
     down_->switch_protocol(framing::make_client(std::move(up_)));
     return true;
   }
-  CAF_LOG_DEBUG("received an invalid WebSocket handshake");
+  log::net::debug("received an invalid WebSocket handshake");
   up_->abort(
     make_error(sec::protocol_error, "received an invalid WebSocket handshake"));
   return false;

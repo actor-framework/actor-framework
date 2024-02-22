@@ -8,6 +8,7 @@
 #include "caf/net/multiplexer.hpp"
 
 #include "caf/config.hpp"
+#include "caf/log/net.hpp"
 #include "caf/make_counted.hpp"
 
 namespace caf::net {
@@ -123,12 +124,12 @@ void socket_manager::shutdown() {
 error socket_manager::start() {
   CAF_LOG_TRACE("");
   if (auto err = nonblocking(fd_, true)) {
-    CAF_LOG_ERROR("failed to set nonblocking flag in socket:" << err);
+    log::net::error("failed to set nonblocking flag in socket: {}", err);
     handler_->abort(err);
     cleanup();
     return err;
   } else if (err = handler_->start(this); err) {
-    CAF_LOG_DEBUG("failed to initialize handler:" << err);
+    log::net::debug("failed to initialize handler: {}", err);
     cleanup();
     return err;
   } else {

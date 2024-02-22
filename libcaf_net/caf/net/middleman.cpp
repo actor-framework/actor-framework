@@ -11,6 +11,7 @@
 
 #include "caf/actor_system_config.hpp"
 #include "caf/expected.hpp"
+#include "caf/log/net.hpp"
 #include "caf/log/system.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/thread_owner.hpp"
@@ -73,7 +74,7 @@ void launch_prom_server(actor_system& sys, const prom_config& cfg) {
         .route("/metrics", prometheus::scraper(sys))
         .start();
   if (!server)
-    CAF_LOG_WARNING("failed to start Prometheus server: " << server.error());
+    log::net::warning("failed to start Prometheus server: {}", server.error());
 }
 
 void launch_background_tasks(actor_system& sys) {
