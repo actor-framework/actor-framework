@@ -204,17 +204,6 @@ public:
   ///       `actor_system_config` object exists.
   std::pair<int, char**> c_args_remainder() const noexcept;
 
-  // -- caf-run parameters -----------------------------------------------------
-
-  /// Stores whether this node was started in slave mode.
-  bool slave_mode = false;
-
-  /// Name of this node when started in slave mode.
-  std::string slave_name;
-
-  /// Credentials for connecting to the bootstrap node.
-  std::string bootstrap_node;
-
   // -- factories --------------------------------------------------------------
 
   actor_factory_map actor_factories;
@@ -234,10 +223,6 @@ public:
   /// Configures alternative paths for locating a config file when unable to
   /// open the default `config_file_path`.
   std::vector<std::string> config_file_path_alternatives;
-
-  // -- utility for caf-run ----------------------------------------------------
-
-  int (*slave_mode_fun)(actor_system&, const actor_system_config&) = nullptr;
 
   // -- config file parsing ----------------------------------------------------
 

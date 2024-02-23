@@ -64,7 +64,6 @@ Flags (use --enable-<name> to activate and --disable-<name> to deactivate):
   io-module                 build networking I/O module [ON]
   openssl-module            build OpenSSL module [ON]
   testing                   build unit test suites [ON]
-  tools                     build utility programs such as caf-run [ON]
   with-exceptions           build CAF with support for exceptions [ON]
 
 Influential Environment Variables (only on first invocation):
@@ -111,7 +110,6 @@ set_build_flag() {
     net-module)              FlagName='CAF_ENABLE_NET_MODULE' ;;
     openssl-module)          FlagName='CAF_ENABLE_OPENSSL_MODULE' ;;
     testing)                 FlagName='CAF_ENABLE_TESTING' ;;
-    tools)                   FlagName='CAF_ENABLE_TOOLS' ;;
     exceptions)              FlagName='CAF_ENABLE_EXCEPTIONS' ;;
     *)
       echo "Invalid flag '$1'.  Try $0 --help to see available options."

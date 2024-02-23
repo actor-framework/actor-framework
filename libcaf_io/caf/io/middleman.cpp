@@ -366,8 +366,6 @@ void middleman::init(actor_system_config& cfg) {
   // Compute and set ID for this network node.
   auto this_node = node_id::default_data::local(cfg);
   system().node_.swap(this_node);
-  // Give config access to slave mode implementation.
-  cfg.slave_mode_fun = &middleman::exec_slave_mode;
 }
 
 actor_system::module::id_t middleman::id() const {
@@ -394,11 +392,6 @@ middleman::~middleman() {
 
 middleman_actor middleman::actor_handle() {
   return manager_;
-}
-
-int middleman::exec_slave_mode(actor_system&, const actor_system_config&) {
-  // TODO
-  return 0;
 }
 
 } // namespace caf::io

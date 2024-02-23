@@ -338,8 +338,6 @@ private:
   expected<strong_actor_ptr> remote_actor(std::set<std::string> ifs,
                                           std::string host, uint16_t port);
 
-  static int exec_slave_mode(actor_system&, const actor_system_config&);
-
   /// The actor environment.
   actor_system& system_;
 

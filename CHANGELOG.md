@@ -23,6 +23,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   simplify the code base.
 - The `actor_system_config` no longer contains special member variables for the
   OpenSSL module. The module now uses the regular configuration system.
+- The `caf-run` tool no longer ships with CAF. The tool has not been maintained
+  for a long time, has never been thoroughly tested, and has no documentation.
 
 ### Changed
 
