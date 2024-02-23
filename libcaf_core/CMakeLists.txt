@@ -124,7 +124,9 @@ caf_add_component(
     caf/config_option.test.cpp
     caf/config_option_adder.cpp
     caf/config_option_set.cpp
+    caf/config_option_set.test.cpp
     caf/config_value.cpp
+    caf/config_value.test.cpp
     caf/config_value_reader.cpp
     caf/config_value_writer.cpp
     caf/const_typed_message_view.test.cpp
@@ -265,11 +267,17 @@ caf_add_component(
     caf/ipv6_subnet.cpp
     caf/ipv6_subnet.test.cpp
     caf/json_array.cpp
+    caf/json_array.test.cpp
     caf/json_builder.cpp
+    caf/json_builder.test.cpp
     caf/json_object.cpp
+    caf/json_object.test.cpp
     caf/json_reader.cpp
+    caf/json_reader.test.cpp
     caf/json_value.cpp
+    caf/json_value.test.cpp
     caf/json_writer.cpp
+    caf/json_writer.test.cpp
     caf/load_inspector.cpp
     caf/local_actor.cpp
     caf/log/event.cpp
@@ -279,6 +287,7 @@ caf_add_component(
     caf/mailbox_element.test.cpp
     caf/make_config_option.cpp
     caf/message.cpp
+    caf/message.test.cpp
     caf/message_builder.cpp
     caf/message_builder.test.cpp
     caf/message_handler.cpp
@@ -286,6 +295,8 @@ caf_add_component(
     caf/message_lifetime.test.cpp
     caf/messaging.test.cpp
     caf/metaprogramming.test.cpp
+    caf/mixin/requester.test.cpp
+    caf/mixin/sender.test.cpp
     caf/mtl.test.cpp
     caf/node_id.cpp
     caf/node_id.test.cpp
@@ -297,6 +308,7 @@ caf_add_component(
     caf/ref_counted.cpp
     caf/response_handle.test.cpp
     caf/response_promise.cpp
+    caf/response_promise.test.cpp
     caf/result.test.cpp
     caf/resumable.cpp
     caf/run_delayed.test.cpp
@@ -315,6 +327,7 @@ caf_add_component(
     caf/settings.test.cpp
     caf/skip.cpp
     caf/span.test.cpp
+    caf/stateful_actor.test.cpp
     caf/stream.cpp
     caf/stream.test.cpp
     caf/string_algorithms.cpp
@@ -336,12 +349,14 @@ caf_add_component(
     caf/telemetry/timer.test.cpp
     caf/term.cpp
     caf/thread_hook.cpp
+    caf/thread_hook.test.cpp
     caf/timestamp.cpp
     caf/type_id.cpp
     caf/type_id_list.cpp
     caf/type_id_list.test.cpp
     caf/typed_behavior.test.cpp
     caf/typed_message_view.test.cpp
+    caf/typed_response_promise.test.cpp
     caf/unit.test.cpp
     caf/unordered_flat_map.test.cpp
     caf/uri.cpp
@@ -355,26 +370,11 @@ caf_add_component(
   LEGACY_TEST_SUITES
     actor_lifetime
     actor_termination
-    config_option_set
-    config_value
     constructor_attach
     dsl
     dynamic_spawn
-    json_array
-    json_builder
-    json_object
-    json_reader
-    json_value
-    json_writer
-    message
-    mixin.requester
-    mixin.sender
     request_timeout
-    response_promise
-    stateful_actor
-    thread_hook
     typed_actor_view
-    typed_response_promise
     typed_spawn
     typed_stream)
 

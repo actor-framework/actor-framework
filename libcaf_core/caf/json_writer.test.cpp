@@ -2,17 +2,191 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE json_writer
-
 #include "caf/json_writer.hpp"
 
-#include "core-test.hpp"
+#include "caf/test/scenario.hpp"
+#include "caf/test/test.hpp"
+
+#include "caf/init_global_meta_objects.hpp"
+#include "caf/log/test.hpp"
 
 using namespace caf;
 
 using namespace std::literals::string_literals;
 
 namespace {
+
+struct circle;
+struct dummy_struct;
+struct dummy_user;
+struct my_request;
+struct phone_book;
+struct point;
+struct rectangle;
+struct widget;
+
+} // namespace
+
+CAF_BEGIN_TYPE_ID_BLOCK(json_write_test, caf::first_custom_type_id + 60)
+
+  CAF_ADD_TYPE_ID(json_write_test, (circle))
+  CAF_ADD_TYPE_ID(json_write_test, (dummy_struct))
+  CAF_ADD_TYPE_ID(json_write_test, (dummy_user))
+  CAF_ADD_TYPE_ID(json_write_test, (my_request))
+  CAF_ADD_TYPE_ID(json_write_test, (phone_book))
+  CAF_ADD_TYPE_ID(json_write_test, (point))
+  CAF_ADD_TYPE_ID(json_write_test, (rectangle))
+  CAF_ADD_TYPE_ID(json_write_test, (widget))
+
+CAF_END_TYPE_ID_BLOCK(json_write_test)
+
+namespace {
+
+struct my_request {
+  int32_t a = 0;
+  int32_t b = 0;
+  my_request() = default;
+  my_request(int a, int b) : a(a), b(b) {
+    // nop
+  }
+};
+
+inline bool operator==(const my_request& x, const my_request& y) {
+  return std::tie(x.a, x.b) == std::tie(y.a, y.b);
+}
+
+template <class Inspector>
+bool inspect(Inspector& f, my_request& x) {
+  return f.object(x).fields(f.field("a", x.a), f.field("b", x.b));
+}
+
+struct dummy_struct {
+  int a;
+  std::string b;
+};
+
+[[maybe_unused]] inline bool operator==(const dummy_struct& x,
+                                        const dummy_struct& y) {
+  return x.a == y.a && x.b == y.b;
+}
+
+template <class Inspector>
+bool inspect(Inspector& f, dummy_struct& x) {
+  return f.object(x).fields(f.field("a", x.a), f.field("b", x.b));
+}
+
+struct phone_book {
+  std::string city;
+  std::map<std::string, int64_t> entries;
+};
+
+[[maybe_unused]] constexpr bool operator==(const phone_book& x,
+                                           const phone_book& y) noexcept {
+  return std::tie(x.city, x.entries) == std::tie(y.city, y.entries);
+}
+
+[[maybe_unused]] constexpr bool operator!=(const phone_book& x,
+                                           const phone_book& y) noexcept {
+  return !(x == y);
+}
+
+template <class Inspector>
+bool inspect(Inspector& f, phone_book& x) {
+  return f.object(x).fields(f.field("city", x.city),
+                            f.field("entries", x.entries));
+}
+
+struct point {
+  int32_t x;
+  int32_t y;
+};
+
+template <class Inspector>
+bool inspect(Inspector& f, point& x) {
+  return f.object(x).fields(f.field("x", x.x), f.field("y", x.y));
+}
+
+[[maybe_unused]] constexpr bool operator==(point a, point b) noexcept {
+  return a.x == b.x && a.y == b.y;
+}
+
+[[maybe_unused]] constexpr bool operator!=(point a, point b) noexcept {
+  return !(a == b);
+}
+
+struct rectangle {
+  point top_left;
+  point bottom_right;
+};
+
+template <class Inspector>
+bool inspect(Inspector& f, rectangle& x) {
+  return f.object(x).fields(f.field("top-left", x.top_left),
+                            f.field("bottom-right", x.bottom_right));
+}
+
+[[maybe_unused]] constexpr bool operator==(const rectangle& x,
+                                           const rectangle& y) noexcept {
+  return x.top_left == y.top_left && x.bottom_right == y.bottom_right;
+}
+
+[[maybe_unused]] constexpr bool operator!=(const rectangle& x,
+                                           const rectangle& y) noexcept {
+  return !(x == y);
+}
+
+struct dummy_user {
+  std::string name;
+  std::optional<std::string> nickname;
+};
+
+template <class Inspector>
+bool inspect(Inspector& f, dummy_user& x) {
+  return f.object(x).fields(f.field("name", x.name),
+                            f.field("nickname", x.nickname));
+}
+
+struct circle {
+  point center;
+  int32_t radius;
+};
+
+template <class Inspector>
+bool inspect(Inspector& f, circle& x) {
+  return f.object(x).fields(f.field("center", x.center),
+                            f.field("radius", x.radius));
+}
+
+[[maybe_unused]] constexpr bool operator==(const circle& x,
+                                           const circle& y) noexcept {
+  return x.center == y.center && x.radius == y.radius;
+}
+
+[[maybe_unused]] constexpr bool operator!=(const circle& x,
+                                           const circle& y) noexcept {
+  return !(x == y);
+}
+
+struct widget {
+  std::string color;
+  std::variant<rectangle, circle> shape;
+};
+
+template <class Inspector>
+bool inspect(Inspector& f, widget& x) {
+  return f.object(x).fields(f.field("color", x.color),
+                            f.field("shape", x.shape));
+}
+
+[[maybe_unused]] inline bool operator==(const widget& x,
+                                        const widget& y) noexcept {
+  return x.color == y.color && x.shape == y.shape;
+}
+
+[[maybe_unused]] inline bool operator!=(const widget& x,
+                                        const widget& y) noexcept {
+  return !(x == y);
+}
 
 struct fixture {
   template <class T>
@@ -30,23 +204,21 @@ struct fixture {
       auto buf = writer.str();
       return {std::string{buf.begin(), buf.end()}};
     } else {
-      MESSAGE("partial JSON output: " << writer.str());
+      log::test::debug("partial JSON output: {}", writer.str());
       return {writer.get_error()};
     }
   }
 };
 
-} // namespace
-
-BEGIN_FIXTURE_SCOPE(fixture)
+WITH_FIXTURE(fixture) {
 
 SCENARIO("the JSON writer converts builtin types to strings") {
   GIVEN("an integer") {
     auto x = 42;
     WHEN("converting it to JSON with any indentation factor") {
       THEN("the JSON output is the number") {
-        CHECK_EQ(to_json_string(x, 0), "42"s);
-        CHECK_EQ(to_json_string(x, 2), "42"s);
+        check_eq(to_json_string(x, 0), "42"s);
+        check_eq(to_json_string(x, 2), "42"s);
       }
     }
   }
@@ -55,8 +227,8 @@ SCENARIO("the JSON writer converts builtin types to strings") {
     WHEN("converting it to JSON with any indentation factor") {
       THEN("the JSON output is the escaped string") {
         std::string out = R"_("hello \"world\"!")_";
-        CHECK_EQ(to_json_string(x, 0), out);
-        CHECK_EQ(to_json_string(x, 2), out);
+        check_eq(to_json_string(x, 0), out);
+        check_eq(to_json_string(x, 2), out);
       }
     }
   }
@@ -65,7 +237,7 @@ SCENARIO("the JSON writer converts builtin types to strings") {
     WHEN("converting it to JSON with indentation factor 0") {
       THEN("the JSON output is a single line") {
         std::string out = "[1, 2, 3]";
-        CHECK_EQ(to_json_string(x, 0), out);
+        check_eq(to_json_string(x, 0), out);
       }
     }
     WHEN("converting it to JSON with indentation factor 2") {
@@ -75,7 +247,7 @@ SCENARIO("the JSON writer converts builtin types to strings") {
   2,
   3
 ])_";
-        CHECK_EQ(to_json_string(x, 2), out);
+        check_eq(to_json_string(x, 2), out);
       }
     }
   }
@@ -86,7 +258,7 @@ SCENARIO("the JSON writer converts builtin types to strings") {
     x.emplace("c", "C");
     WHEN("converting it to JSON with indentation factor 0") {
       THEN("the JSON output is a single line") {
-        CHECK_EQ(to_json_string(x, 0), R"_({"a": "A", "b": "B", "c": "C"})_"s);
+        check_eq(to_json_string(x, 0), R"_({"a": "A", "b": "B", "c": "C"})_"s);
       }
     }
     WHEN("converting it to JSON with indentation factor 2") {
@@ -96,7 +268,7 @@ SCENARIO("the JSON writer converts builtin types to strings") {
   "b": "B",
   "c": "C"
 })_";
-        CHECK_EQ(to_json_string(x, 2), out);
+        check_eq(to_json_string(x, 2), out);
       }
     }
   }
@@ -105,7 +277,7 @@ SCENARIO("the JSON writer converts builtin types to strings") {
     WHEN("converting it to JSON with indentation factor 0") {
       THEN("the JSON output is a single line") {
         std::string out = R"_([{"@type": "caf::put_atom"}, "foo", 42])_";
-        CHECK_EQ(to_json_string(x, 0), out);
+        check_eq(to_json_string(x, 0), out);
       }
     }
     WHEN("converting it to JSON with indentation factor 2") {
@@ -117,7 +289,7 @@ SCENARIO("the JSON writer converts builtin types to strings") {
   "foo",
   42
 ])_";
-        CHECK_EQ(to_json_string(x, 2), out);
+        check_eq(to_json_string(x, 2), out);
       }
     }
   }
@@ -129,13 +301,13 @@ SCENARIO("the JSON writer converts simple structs to strings") {
     WHEN("converting it to JSON with indentation factor 0") {
       THEN("the JSON output is a single line") {
         std::string out = R"_({"@type": "dummy_struct", "a": 10, "b": "foo"})_";
-        CHECK_EQ(to_json_string(x, 0), out);
+        check_eq(to_json_string(x, 0), out);
       }
     }
     WHEN("converting it to JSON with indentation factor 0 and omitting @type") {
       THEN("the JSON output is a single line") {
         std::string out = R"_({"a": 10, "b": "foo"})_";
-        CHECK_EQ(to_json_string(x, 0, false, true), out);
+        check_eq(to_json_string(x, 0, false, true), out);
       }
     }
     WHEN("converting it to JSON with indentation factor 2") {
@@ -145,7 +317,7 @@ SCENARIO("the JSON writer converts simple structs to strings") {
   "a": 10,
   "b": "foo"
 })_";
-        CHECK_EQ(to_json_string(x, 2), out);
+        check_eq(to_json_string(x, 2), out);
       }
     }
     WHEN("converting it to JSON with indentation factor 2 and omitting @type") {
@@ -154,7 +326,7 @@ SCENARIO("the JSON writer converts simple structs to strings") {
   "a": 10,
   "b": "foo"
 })_";
-        CHECK_EQ(to_json_string(x, 2, false, true), out);
+        check_eq(to_json_string(x, 2, false, true), out);
       }
     }
   }
@@ -168,7 +340,7 @@ SCENARIO("the JSON writer converts nested structs to strings") {
         std::string out = R"({"@type": "rectangle", )"
                           R"("top-left": {"x": 100, "y": 200}, )"
                           R"("bottom-right": {"x": 10, "y": 20}})";
-        CHECK_EQ(to_json_string(x, 0), out);
+        check_eq(to_json_string(x, 0), out);
       }
     }
     WHEN("converting it to JSON with indentation factor 2") {
@@ -184,7 +356,7 @@ SCENARIO("the JSON writer converts nested structs to strings") {
     "y": 20
   }
 })_";
-        CHECK_EQ(to_json_string(x, 2), out);
+        check_eq(to_json_string(x, 2), out);
       }
     }
   }
@@ -203,7 +375,7 @@ SCENARIO("the JSON writer converts structs with member dictionaries") {
                           R"( "entries": )"
                           R"({"Bob": 5556837,)"
                           R"( "Jon": 5559347}})";
-        CHECK_EQ(to_json_string(x, 0), out);
+        check_eq(to_json_string(x, 0), out);
       }
     }
     WHEN("converting it to JSON with indentation factor 2") {
@@ -216,7 +388,7 @@ SCENARIO("the JSON writer converts structs with member dictionaries") {
     "Jon": 5559347
   }
 })";
-        CHECK_EQ(to_json_string(x, 2), out);
+        check_eq(to_json_string(x, 2), out);
       }
     }
   }
@@ -229,14 +401,14 @@ SCENARIO("the JSON writer omits or nulls missing values") {
     WHEN("converting it to JSON with skip_empty_fields = true (default)") {
       THEN("the JSON output omits the field 'nickname'") {
         std::string out = R"({"@type": "dummy_user", "name": "Bjarne"})";
-        CHECK_EQ(to_json_string(user, 0), out);
+        check_eq(to_json_string(user, 0), out);
       }
     }
     WHEN("converting it to JSON with skip_empty_fields = false") {
       THEN("the JSON output includes the field 'nickname' with a null value") {
         std::string out
           = R"({"@type": "dummy_user", "name": "Bjarne", "nickname": null})";
-        CHECK_EQ(to_json_string(user, 0, false), out);
+        check_eq(to_json_string(user, 0, false), out);
       }
     }
   }
@@ -255,7 +427,7 @@ SCENARIO("the JSON writer annotates variant fields") {
                           R"("shape": )"
                           R"({"top-left": {"x": 10, "y": 10}, )"
                           R"("bottom-right": {"x": 20, "y": 20}}})";
-        CHECK_EQ(to_json_string(x, 0), out);
+        check_eq(to_json_string(x, 0), out);
       }
     }
     WHEN("converting it to JSON with indentation factor 2") {
@@ -275,7 +447,7 @@ SCENARIO("the JSON writer annotates variant fields") {
     }
   }
 })";
-        CHECK_EQ(to_json_string(x, 2), out);
+        check_eq(to_json_string(x, 2), out);
       }
     }
   }
@@ -291,7 +463,7 @@ SCENARIO("the JSON writer annotates variant fields") {
                           R"("shape": )"
                           R"({"center": {"x": 15, "y": 15}, )"
                           R"("radius": 5}})";
-        CHECK_EQ(to_json_string(x, 0), out);
+        check_eq(to_json_string(x, 0), out);
       }
     }
     WHEN("converting it to JSON with indentation factor 2") {
@@ -308,7 +480,7 @@ SCENARIO("the JSON writer annotates variant fields") {
     "radius": 5
   }
 })";
-        CHECK_EQ(to_json_string(x, 2), out);
+        check_eq(to_json_string(x, 2), out);
       }
     }
   }
@@ -329,7 +501,7 @@ SCENARIO("the JSON compresses empty lists and objects") {
     3
   ]
 })";
-        CHECK_EQ(to_json_string(obj, 2, true, true), out);
+        check_eq(to_json_string(obj, 2, true, true), out);
       }
     }
   }
@@ -337,10 +509,16 @@ SCENARIO("the JSON compresses empty lists and objects") {
     std::map<std::string, std::vector<int>> obj;
     WHEN("converting it to JSON with indentation factor 2") {
       THEN("the JSON contains a compressed representation of the empty map") {
-        CHECK_EQ(to_json_string(obj, 2, true, true), "{}"s);
+        check_eq(to_json_string(obj, 2, true, true), "{}"s);
       }
     }
   }
 }
 
-END_FIXTURE_SCOPE()
+} // WITH_FIXTURE(fixture)
+
+TEST_INIT() {
+  caf::init_global_meta_objects<caf::id_block::json_write_test>();
+}
+
+} // namespace

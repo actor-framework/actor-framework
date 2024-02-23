@@ -2,13 +2,17 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE stateful_actor
-
 #include "caf/stateful_actor.hpp"
 
-#include "caf/event_based_actor.hpp"
+#include "caf/test/fixture/deterministic.hpp"
+#include "caf/test/test.hpp"
 
-#include "core-test.hpp"
+#include "caf/event_based_actor.hpp"
+#include "caf/scoped_actor.hpp"
+#include "caf/stateful_actor.hpp"
+#include "caf/typed_actor.hpp"
+#include "caf/typed_actor_pointer.hpp"
+#include "caf/typed_event_based_actor.hpp"
 
 using namespace caf;
 
@@ -62,18 +66,24 @@ public:
   }
 };
 
-struct fixture : test_coordinator_fixture<> {
+struct fixture : test::fixture::deterministic {
+  scoped_actor self{sys};
   fixture() {
     // nop
   }
 
   template <class ActorUnderTest>
   void test_adder(ActorUnderTest aut) {
-    inject((add_atom, int), from(self).to(aut).with(add_atom_v, 7));
-    inject((add_atom, int), from(self).to(aut).with(add_atom_v, 4));
-    inject((add_atom, int), from(self).to(aut).with(add_atom_v, 9));
-    inject((get_atom), from(self).to(aut).with(get_atom_v));
-    expect((int), from(aut).to(self).with(20));
+    inject().with(add_atom_v, 7).from(self).to(aut);
+    inject().with(add_atom_v, 4).from(self).to(aut);
+    inject().with(add_atom_v, 9).from(self).to(aut);
+    inject().with(get_atom_v).from(self).to(aut);
+    auto received = std::make_shared<bool>(false);
+    self->receive([this, received](int received_int) {
+      *received = true;
+      test::runnable::current().check_eq(received_int, 20);
+    });
+    test::runnable::current().check(*received);
   }
 
   template <class State>
@@ -86,26 +96,36 @@ struct fixture : test_coordinator_fixture<> {
         },
       };
     });
-    inject((get_atom), from(self).to(aut).with(get_atom_v));
-    expect((std::string), from(aut).to(self).with(expected));
+    inject().with(get_atom_v).from(self).to(aut);
+    auto received = std::make_shared<bool>(false);
+    self->receive([this, received, expected](std::string received_str) {
+      *received = true;
+      test::runnable::current().check_eq(expected, received_str);
+    });
+    test::runnable::current().check(*received);
+  }
+
+  template <class T = caf::scheduled_actor, class Handle = caf::actor>
+  T& deref(const Handle& hdl) {
+    auto ptr = caf::actor_cast<caf::abstract_actor*>(hdl);
+    test::runnable::current().require(ptr != nullptr);
+    return dynamic_cast<T&>(*ptr);
   }
 };
 
-} // namespace
+WITH_FIXTURE(fixture) {
 
-BEGIN_FIXTURE_SCOPE(fixture)
-
-CAF_TEST(stateful actors can be dynamically typed) {
+TEST("stateful actors can be dynamically typed") {
   test_adder(sys.spawn(adder));
   test_adder(sys.spawn<typed_adder_class>());
 }
 
-CAF_TEST(stateful actors can be statically typed) {
+TEST("stateful actors can be statically typed") {
   test_adder(sys.spawn(typed_adder));
   test_adder(sys.spawn<adder_class>());
 }
 
-CAF_TEST(stateful actors without explicit name use the name of the parent) {
+TEST("stateful actors without explicit name use the name of the parent") {
   struct state {
     // empty
   };
@@ -120,7 +140,7 @@ struct named_state {
 
 } // namespace
 
-CAF_TEST(states with static C string names override the default name) {
+TEST("states with static C string names override the default name") {
   test_name<named_state>("testee");
 }
 
@@ -132,7 +152,7 @@ int32_t add_operation(int32_t x, int32_t y) {
 
 } // namespace
 
-CAF_TEST(states can accept constructor arguments and provide a behavior) {
+TEST("states can accept constructor arguments and provide a behavior") {
   struct state_type {
     using operation_type = int32_t (*)(int32_t, int32_t);
     int32_t x;
@@ -154,18 +174,28 @@ CAF_TEST(states can accept constructor arguments and provide a behavior) {
   using actor_type = stateful_actor<state_type>;
   auto testee = sys.spawn<actor_type>(10, 20, add_operation);
   auto& state = deref<actor_type>(testee).state;
-  CHECK_EQ(state.x, 10);
-  CHECK_EQ(state.y, 20);
-  inject((get_atom), from(self).to(testee).with(get_atom_v));
-  expect((int32_t), from(testee).to(self).with(30));
-  inject((int32_t, int32_t), to(testee).with(1, 2));
-  CHECK_EQ(state.x, 1);
-  CHECK_EQ(state.y, 2);
-  inject((get_atom), from(self).to(testee).with(get_atom_v));
-  expect((int32_t), from(testee).to(self).with(3));
+  check_eq(state.x, 10);
+  check_eq(state.y, 20);
+  inject().with(get_atom_v).from(self).to(testee);
+  auto received = std::make_shared<bool>(false);
+  self->receive([this, received](int received_int) {
+    *received = true;
+    check_eq(received_int, 30);
+  });
+  check(*received);
+  inject().with(1, 2).to(testee);
+  check_eq(state.x, 1);
+  check_eq(state.y, 2);
+  inject().with(get_atom_v).from(self).to(testee);
+  *received = false;
+  self->receive([this, received](int received_int) {
+    *received = true;
+    check_eq(received_int, 3);
+  });
+  check(*received);
 }
 
-CAF_TEST(states optionally take the self pointer as first argument) {
+TEST("states optionally take the self pointer as first argument") {
   struct state_type : named_state {
     event_based_actor* self;
     int x;
@@ -181,13 +211,18 @@ CAF_TEST(states optionally take the self pointer as first argument) {
   using actor_type = stateful_actor<state_type>;
   auto testee = sys.spawn<actor_type>(10);
   auto& state = deref<actor_type>(testee).state;
-  CHECK(state.self == &deref<actor_type>(testee));
-  CHECK_EQ(state.x, 10);
-  inject((get_atom), from(self).to(testee).with(get_atom_v));
-  expect((std::string), from(testee).to(self).with("testee"s));
+  check(state.self == &deref<actor_type>(testee));
+  check_eq(state.x, 10);
+  inject().with(get_atom_v).from(self).to(testee);
+  auto received = std::make_shared<bool>(false);
+  self->receive([this, received](std::string received_str) {
+    *received = true;
+    check_eq("testee", received_str);
+  });
+  check(*received);
 }
 
-CAF_TEST(typed actors can use typed_actor_pointer as self pointer) {
+TEST("typed actors can use typed_actor_pointer as self pointer") {
   struct state_type : named_state {
     using self_pointer = typed_adder_actor::pointer_view;
     self_pointer self;
@@ -203,14 +238,18 @@ CAF_TEST(typed actors can use typed_actor_pointer as self pointer) {
   using actor_type = typed_adder_actor::stateful_impl<state_type>;
   auto testee = sys.spawn<actor_type>(10);
   auto& state = deref<actor_type>(testee).state;
-  CHECK(state.self == &deref<actor_type>(testee));
-  CHECK_EQ(state.value, 10);
-  inject((add_atom, int), from(self).to(testee).with(add_atom_v, 1));
-  inject((get_atom), from(self).to(testee).with(get_atom_v));
-  expect((int), from(testee).to(self).with(11));
+  check(state.self == &deref<actor_type>(testee));
+  check_eq(state.value, 10);
+  inject().with(add_atom_v, 1).from(self).to(testee);
+  inject().with(get_atom_v).from(self).to(testee);
+  auto received = std::make_shared<bool>(false);
+  self->receive([this, received](int received_int) {
+    *received = true;
+    check_eq(received_int, 11);
+  });
 }
 
-CAF_TEST(returned behaviors take precedence over make_behavior in the state) {
+TEST("returned behaviors take precedence over make_behavior in the state") {
   struct state_type : named_state {
     behavior make_behavior() {
       CAF_LOG_TRACE("");
@@ -226,8 +265,14 @@ CAF_TEST(returned behaviors take precedence over make_behavior in the state) {
     };
   };
   auto testee = sys.spawn<lazy_init>(fun, 10);
-  inject((int32_t, int32_t), from(self).to(testee).with(1, 2));
-  expect((int32_t), from(testee).to(self).with(13));
+  inject().with(1, 2).from(self).to(testee);
+  auto received = std::make_shared<bool>(false);
+  self->receive([this, received](int received_int) {
+    *received = true;
+    check_eq(received_int, 13);
+  });
 }
 
-END_FIXTURE_SCOPE()
+} // WITH_FIXTURE(fixture)
+
+} // namespace
