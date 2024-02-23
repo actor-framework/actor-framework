@@ -496,7 +496,7 @@ public:
     if (dest_ == nullptr)
       CAF_FAIL("missing .to() in inject() statement", src_line_);
     else if (src_ == nullptr)
-      caf::anon_send(caf::actor_cast<caf::actor>(dest_), msg_);
+      caf::anon_mail(msg_).send(caf::actor_cast<caf::actor>(dest_));
     else
       caf::detail::send_as(caf::actor_cast<caf::actor>(src_),
                            caf::actor_cast<caf::actor>(dest_), msg_);

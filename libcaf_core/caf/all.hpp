@@ -16,6 +16,7 @@
 #include "caf/actor_system_config.hpp"
 #include "caf/actor_traits.hpp"
 #include "caf/after.hpp"
+#include "caf/anon_mail.hpp"
 #include "caf/attachable.hpp"
 #include "caf/behavior.hpp"
 #include "caf/binary_deserializer.hpp"
@@ -67,7 +68,6 @@
 #include "caf/scoped_actor.hpp"
 #include "caf/scoped_execution_unit.hpp"
 #include "caf/sec.hpp"
-#include "caf/send.hpp"
 #include "caf/serializer.hpp"
 #include "caf/skip.hpp"
 #include "caf/spawn_options.hpp"
@@ -198,13 +198,13 @@
 /// using result_atom = atom_constant<atom("result")>;
 ///
 /// // send a message to a1
-/// self->send(a1, hello_atom::value, "hello a1!");
+/// self->mail(hello_atom::value, "hello a1!").send(a1);
 ///
 /// // send a message to a1, a2, and a3
 /// auto msg = make_message(compute_atom::value, 1, 2, 3);
-/// self->send(a1, msg);
-/// self->send(a2, msg);
-/// self->send(a3, msg);
+/// self->mail(msg).send(a1);
+/// self->mail(msg).send(a2);
+/// self->mail(msg).send(a3);
 /// ~~
 ///
 /// @section Receive Receive messages
@@ -322,14 +322,14 @@
 /// ~~
 /// scoped_actor self{...};
 ///
-/// self->delayed_send(self, std::chrono::seconds(1), poll_atom::value);
+/// self->mail(poll_atom::value).delay(std::chrono::seconds(1)).send(self);
 /// bool running = true;
 /// self->receive_while([&](){ return running; }) (
 ///   // ...
 ///   [&](poll_atom) {
 ///     // ... poll something ...
 ///     // and do it again after 1sec
-///     self->delayed_send(self, std::chrono::seconds(1), poll_atom::value);
+///     self->mail(poll_atom::value).delay(std::chrono::seconds(1)).send(self);
 ///   }
 /// );
 /// ~~

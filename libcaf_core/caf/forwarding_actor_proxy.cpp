@@ -4,9 +4,10 @@
 
 #include "caf/forwarding_actor_proxy.hpp"
 
+#include "caf/anon_mail.hpp"
 #include "caf/logger.hpp"
 #include "caf/mailbox_element.hpp"
-#include "caf/send.hpp"
+#include "caf/system_messages.hpp"
 
 #include <utility>
 
@@ -14,11 +15,11 @@ namespace caf {
 
 forwarding_actor_proxy::forwarding_actor_proxy(actor_config& cfg, actor dest)
   : actor_proxy(cfg), broker_(std::move(dest)) {
-  anon_send(broker_, monitor_atom_v, ctrl());
+  anon_mail(monitor_atom_v, ctrl()).send(broker_);
 }
 
 forwarding_actor_proxy::~forwarding_actor_proxy() {
-  anon_send(broker_, make_message(delete_atom_v, node(), id()));
+  anon_mail(make_message(delete_atom_v, node(), id())).send(broker_);
 }
 
 const char* forwarding_actor_proxy::name() const {

@@ -12,6 +12,7 @@
 #include "caf/actor_registry.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/after.hpp"
+#include "caf/anon_mail.hpp"
 #include "caf/config.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/latch.hpp"
@@ -288,8 +289,10 @@ strong_actor_ptr middleman::remote_lookup(std::string name,
   strong_actor_ptr result;
   scoped_actor self{system(), true};
   auto id = basp::header::config_server_id;
-  self->send(basp, forward_atom_v, nid, id,
-             make_message(registry_lookup_atom_v, std::move(name)));
+  self
+    ->mail(forward_atom_v, nid, id,
+           make_message(registry_lookup_atom_v, std::move(name)))
+    .send(basp);
   self->receive([&](strong_actor_ptr& addr) { result = std::move(addr); },
                 [](message& msg) {
                   log::system::error(
@@ -377,12 +380,12 @@ void* middleman::subtype_ptr() {
 
 void middleman::monitor(const node_id& node, const actor_addr& observer) {
   auto basp = named_broker<basp_broker>("BASP");
-  anon_send(basp, monitor_atom_v, node, observer);
+  anon_mail(monitor_atom_v, node, observer).send(basp);
 }
 
 void middleman::demonitor(const node_id& node, const actor_addr& observer) {
   auto basp = named_broker<basp_broker>("BASP");
-  anon_send(basp, demonitor_atom_v, node, observer);
+  anon_mail(demonitor_atom_v, node, observer).send(basp);
 }
 
 middleman::~middleman() {

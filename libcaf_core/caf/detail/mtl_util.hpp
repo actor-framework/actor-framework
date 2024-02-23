@@ -22,7 +22,7 @@ struct mtl_util<result<Rs...>(Ts...)> {
   send(Self& self, const actor& dst, Adapter& adapter, Inspector& f, Ts... xs) {
     f.revert();
     if (adapter.read(f, xs...)) {
-      self->send(dst, std::move(xs)...);
+      self->mail(std::move(xs)...).send(dst);
       return true;
     } else {
       return false;

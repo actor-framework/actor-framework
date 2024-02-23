@@ -30,7 +30,7 @@ SCENARIO("an actor system shuts down after the last actor terminates") {
         actor_system sys{cfg};
         sys.spawn<detached>([=](event_based_actor* self) {
           *ran = true;
-          self->delayed_send(self, 1h, ok_atom_v);
+          self->mail(ok_atom_v).delay(1h).send(self);
         });
       }
       check(*ran);
@@ -43,7 +43,7 @@ SCENARIO("an actor system shuts down after the last actor terminates") {
         actor_system sys{cfg};
         sys.spawn<detached>([=](event_based_actor* self) -> behavior {
           *ran = true;
-          self->delayed_send(self, 1ns, ok_atom_v);
+          self->mail(ok_atom_v).delay(1ns).send(self);
           return {
             [=](ok_atom) {
               *message_handled = true;

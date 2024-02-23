@@ -10,6 +10,7 @@
 #include "caf/io/scribe.hpp"
 
 #include "caf/detail/io_export.hpp"
+#include "caf/dynamically_typed.hpp"
 #include "caf/extend.hpp"
 #include "caf/fwd.hpp"
 #include "caf/infer_handle.hpp"
@@ -57,6 +58,15 @@ public:
   void initialize() override;
 
   using super::super;
+
+  // -- messaging --------------------------------------------------------------
+
+  /// Starts a new message.
+  template <class... Args>
+  auto mail(Args&&... args) {
+    return event_based_mail(dynamically_typed{}, this,
+                            std::forward<Args>(args)...);
+  }
 
   // -- behavior management ----------------------------------------------------
 

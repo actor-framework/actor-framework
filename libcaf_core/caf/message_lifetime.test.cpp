@@ -84,7 +84,7 @@ public:
 
   behavior make_behavior() override {
     monitor(aut_);
-    send(aut_, msg_);
+    mail(msg_).send(aut_);
     return {
       [](int a, int b, int c) {
         auto& this_test = test::runnable::current();
@@ -108,7 +108,7 @@ WITH_FIXTURE(fixture) {
 
 TEST("nocopy_in_scoped_actor") {
   auto msg = make_message(fail_on_copy{1});
-  self->send(self, msg);
+  self->mail(msg).send(self);
   self->receive([&](const fail_on_copy& x) {
     check_eq(x.value, 1);
     check_eq(msg.cdata().get_reference_count(), 2u);
@@ -118,7 +118,7 @@ TEST("nocopy_in_scoped_actor") {
 
 TEST("message_lifetime_in_scoped_actor") {
   auto msg = make_message(1, 2, 3);
-  self->send(self, msg);
+  self->mail(msg).send(self);
   self->receive([&](int a, int b, int c) {
     check_eq(a, 1);
     check_eq(b, 2);
@@ -127,7 +127,7 @@ TEST("message_lifetime_in_scoped_actor") {
   });
   check_eq(msg.cdata().get_reference_count(), 1u);
   msg = make_message(42);
-  self->send(self, msg);
+  self->mail(msg).send(self);
   check_eq(msg.cdata().get_reference_count(), 2u);
   self->receive([&](int& value) {
     auto addr = static_cast<void*>(&value);

@@ -28,7 +28,6 @@
 #include "caf/mixin/sender.hpp"
 #include "caf/none.hpp"
 #include "caf/policy/arg.hpp"
-#include "caf/send.hpp"
 #include "caf/typed_actor.hpp"
 
 #include <chrono>

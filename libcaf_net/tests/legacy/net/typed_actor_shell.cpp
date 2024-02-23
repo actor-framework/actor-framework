@@ -12,6 +12,7 @@
 #include "caf/net/socket_guard.hpp"
 #include "caf/net/socket_manager.hpp"
 
+#include "caf/anon_mail.hpp"
 #include "caf/byte_span.hpp"
 #include "caf/callback.hpp"
 #include "caf/typed_actor.hpp"
@@ -205,9 +206,9 @@ CAF_TEST(actor shells expose their mailbox to their owners) {
   if (auto err = mgr->start())
     CAF_FAIL("mgr->start() failed: " << err);
   auto hdl = app->self.as_actor();
-  anon_send(hdl, "line 1");
-  anon_send(hdl, "line 2");
-  anon_send(hdl, "line 3");
+  anon_mail("line 1").send(hdl);
+  anon_mail("line 2").send(hdl);
+  anon_mail("line 3").send(hdl);
   run_while([&] { return app->lines.size() != 3; });
   CAF_CHECK_EQUAL(app->lines, svec({"line 1", "line 2", "line 3"}));
   self_socket_guard.reset();

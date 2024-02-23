@@ -13,7 +13,7 @@ using namespace caf;
 behavior printer(event_based_actor* self, int32_t num, int32_t delay) {
   aout(self).println("Hi there! This is actor nr. {}!", num);
   auto timeout = std::chrono::milliseconds{delay};
-  self->delayed_send(self, timeout, timeout_atom_v);
+  self->mail(timeout_atom_v).delay(timeout).send(self);
   return {
     [=](timeout_atom) {
       aout(self).println("Actor nr. {} says goodbye after waiting for {}ms!",

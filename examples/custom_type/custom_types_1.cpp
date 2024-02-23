@@ -120,9 +120,9 @@ void caf_main(actor_system& sys) {
   auto t = sys.spawn(actor_from_state<testee_state>, 2u);
   scoped_actor self{sys};
   // send t a foo
-  self->send(t, foo{std::vector<int>{1, 2, 3, 4}, 5});
+  self->mail(foo{std::vector<int>{1, 2, 3, 4}, 5}).send(t);
   // send t a foo_pair2
-  self->send(t, foo_pair2{3, 4});
+  self->mail(foo_pair2{3, 4}).send(t);
 }
 
 CAF_MAIN(id_block::custom_types_1)

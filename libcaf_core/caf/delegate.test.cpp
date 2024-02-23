@@ -34,8 +34,8 @@ TEST("delegation moves responsibility for a request to another actor") {
   });
   SECTION("the delegatee responds to the original sender") {
     auto client = sys.spawn([delegator](event_based_actor* self) {
-      self->send(delegator, 2);
-      self->send(delegator, 3);
+      self->mail(2).send(delegator);
+      self->mail(3).send(delegator);
       return behavior{
         [](int32_t) {},
       };
@@ -51,7 +51,7 @@ TEST("delegation moves responsibility for a request to another actor") {
   }
   SECTION("the delegatee sends errors to the original sender") {
     auto client = sys.spawn([delegator](event_based_actor* self) {
-      self->send(delegator, "foo");
+      self->mail("foo").send(delegator);
       return behavior{
         [](int32_t) {},
       };

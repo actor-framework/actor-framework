@@ -313,7 +313,6 @@ caf_add_component(
     caf/serializer.cpp
     caf/settings.cpp
     caf/settings.test.cpp
-    caf/simple_timeout.test.cpp
     caf/skip.cpp
     caf/span.test.cpp
     caf/stream.cpp

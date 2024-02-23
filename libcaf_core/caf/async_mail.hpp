@@ -197,7 +197,7 @@ template <class Trait, class... Args>
 [[nodiscard]] auto async_mail(Trait, local_actor* self, Args&&... args) {
   using result_t = async_mail_t<message_priority::normal, Trait,
                                 detail::strip_and_convert_t<Args>...>;
-  return result_t{self, make_message(std::forward<Args>(args)...)};
+  return result_t{self, make_message_nowrap(std::forward<Args>(args)...)};
 }
 
 } // namespace caf

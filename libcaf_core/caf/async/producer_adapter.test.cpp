@@ -147,7 +147,7 @@ void receiver_impl(event_based_actor* self, pull_resource_t inputs,
     .flat_map([self](const pull_val_t& in) { return in.observe_on(self); })
     .to_vector()
     .for_each([self, parent](const cow_vector<int>& values) { //
-      self->send(parent, values);
+      self->mail(values).send(parent);
     });
 }
 

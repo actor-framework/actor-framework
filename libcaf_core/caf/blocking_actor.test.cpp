@@ -21,7 +21,7 @@ struct fixture : test::fixture::deterministic {
 WITH_FIXTURE(fixture) {
 
 TEST("catch_all") {
-  self->send(self, 42);
+  self->mail(42).send(self);
   self->receive([this](float) { fail("received unexpected float"); },
                 [this](message& msg) {
                   check_eq(to_tuple<int32_t>(msg), std::make_tuple(42));
@@ -33,7 +33,7 @@ TEST("catch_all") {
 
 TEST("behavior_ref") {
   behavior bhvr{[](int i) { test::runnable::current().check_eq(i, 42); }};
-  self->send(self, 42);
+  self->mail(42).send(self);
   self->receive(bhvr);
 }
 

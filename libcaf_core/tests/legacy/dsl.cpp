@@ -102,12 +102,12 @@ SCENARIO("the test scheduler allows manipulating the control flow") {
     WHEN("sending messages to event-based actors") {
       THEN("the actors become jobs in the scheduler") {
         CHECK(!sched.has_job());
-        self->send(aut1, add_atom_v, 1, 2);
+        self->mail(add_atom_v, 1, 2).send(aut1);
         CHECK(sched.has_job());
         CHECK_EQ(sched.jobs.size(), 1u);
-        self->send(aut2, add_atom_v, 2, 3);
+        self->mail(add_atom_v, 2, 3).send(aut2);
         CHECK_EQ(sched.jobs.size(), 2u);
-        self->send(aut3, add_atom_v, 3, 4);
+        self->mail(add_atom_v, 3, 4).send(aut3);
         CHECK_EQ(sched.jobs.size(), 3u);
       }
       AND("prioritize allows moving actors to the head of the job queue") {
@@ -155,7 +155,7 @@ SCENARIO("allow() turns into a no-op on mismatch") {
     }
     WHEN("allow()-ing a message but a different message is waiting") {
       THEN("allow() becomes a no-op and returns false") {
-        self->send(aut, sub_atom_v, 4, 3);
+        self->mail(sub_atom_v, 4, 3).send(aut);
         auto fake_sender = sys.spawn<testee_actor>();
         // Wrong type.
         CHECK(!(allow((add_atom, int32_t, int32_t), from(self).to(aut))));
@@ -182,7 +182,7 @@ SCENARIO("allow() turns into a no-op on mismatch") {
     }
     WHEN("allow()-ing and a matching message arrives") {
       THEN("the actor processes the message and allow() returns true") {
-        self->send(aut, sub_atom_v, 4, 3);
+        self->mail(sub_atom_v, 4, 3).send(aut);
         CHECK(sched.has_job());
         CHECK(allow((sub_atom, int32_t, int32_t),
                     from(self).to(aut).with(_, 4, 3)));
@@ -292,7 +292,7 @@ SCENARIO("disallow() throws when finding a prohibited message") {
     }
     WHEN("disallow()-ing a message if no matching message exists") {
       THEN("disallow() becomes a no-op") {
-        self->send(aut, sub_atom_v, 4, 3);
+        self->mail(sub_atom_v, 4, 3).send(aut);
         auto fake_sender = sys.spawn<testee_actor>();
         CHECK_NOTHROW(disallow((add_atom, int32_t, int32_t), to(aut)));
         CHECK_NOTHROW(disallow((add_atom, int32_t, int32_t), //
@@ -316,7 +316,7 @@ SCENARIO("disallow() throws when finding a prohibited message") {
     WHEN("disallow()-ing an existing message") {
       THEN("disallow() throws and increment the 'bad' counter") {
         auto this_test = test::engine::current_test();
-        self->send(aut, sub_atom_v, 4, 3);
+        self->mail(sub_atom_v, 4, 3).send(aut);
         CHECK_FAILS(disallow((sub_atom, int32_t, int32_t), to(aut)));
         CHECK_FAILS(disallow((sub_atom, int32_t, int32_t), //
                              to(aut).with(_, _, _)));
@@ -354,7 +354,7 @@ SCENARIO("expect() throws when not finding the required message") {
     }
     WHEN("expect()-ing a message if no matching message exists") {
       THEN("expect() throws and increment the 'bad' counter") {
-        self->send(aut, sub_atom_v, 4, 3);
+        self->mail(sub_atom_v, 4, 3).send(aut);
         auto fake_sender = sys.spawn<testee_actor>();
         CHECK_FAILS(expect((add_atom, int32_t, int32_t), to(aut)));
         CHECK_FAILS(expect((add_atom, int32_t, int32_t), //
@@ -377,17 +377,17 @@ SCENARIO("expect() throws when not finding the required message") {
     }
     WHEN("expect()-ing an existing message") {
       THEN("expect() processes the message") {
-        self->send(aut, add_atom_v, 4, 3);
+        self->mail(add_atom_v, 4, 3).send(aut);
         CHECK_NOTHROW(expect((add_atom, int32_t, int32_t), to(aut)));
         CHECK_NOTHROW(expect((int32_t), to(self)));
-        self->send(aut, add_atom_v, 4, 3);
+        self->mail(add_atom_v, 4, 3).send(aut);
         CHECK_NOTHROW(expect((add_atom, int32_t, int32_t), //
                              to(aut).with(_, _, _)));
         CHECK_NOTHROW(expect((int32_t), to(self).with(7)));
-        self->send(aut, add_atom_v, 4, 3);
+        self->mail(add_atom_v, 4, 3).send(aut);
         CHECK_NOTHROW(expect((add_atom, int32_t, int32_t), from(self).to(aut)));
         CHECK_NOTHROW(expect((int32_t), from(aut).to(self)));
-        self->send(aut, add_atom_v, 4, 3);
+        self->mail(add_atom_v, 4, 3).send(aut);
         CHECK_NOTHROW(expect((add_atom, int32_t, int32_t), //
                              from(self).to(aut).with(_, _, _)));
         CHECK_NOTHROW(expect((int32_t), from(aut).to(self).with(7)));

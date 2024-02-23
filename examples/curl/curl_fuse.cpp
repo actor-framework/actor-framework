@@ -145,8 +145,10 @@ struct client_job_state : base_state {
   behavior make_behavior() {
     if (!init(color::blue))
       return {}; // returning an empty behavior terminates the actor
-    self->send(parent, read_atom_v, "http://www.example.com/index.html",
-               uint64_t{0}, uint64_t{4095});
+    self
+      ->mail(read_atom_v, "http://www.example.com/index.html", uint64_t{0},
+             uint64_t{4095})
+      .send(parent);
     return {
       [this](reply_atom, const buffer_type& buf) {
         print() << "successfully received " << buf.size() << " bytes"
@@ -178,7 +180,7 @@ struct client_state : base_state {
     self->link_to(parent);
     if (!init(color::green))
       return {}; // returning an empty behavior terminates the actor
-    self->send(self, next_atom_v);
+    self->mail(next_atom_v).send(self);
     return {
       [this](next_atom) {
         print() << "spawn new client_job (nr. " << ++count << ")"
@@ -188,7 +190,9 @@ struct client_state : base_state {
                                        parent);
         // compute random delay until next job is launched
         auto delay = dist(re);
-        self->delayed_send(self, std::chrono::milliseconds(delay), next_atom_v);
+        self->mail(next_atom_v)
+          .delay(std::chrono::milliseconds(delay))
+          .send(self);
       },
     };
   }
@@ -267,7 +271,7 @@ struct worker_state : base_state {
                         << " bytes with 'HTTP RETURN CODE': " << hc
                         << color::reset_endl;
                 // tell parent that this worker is done
-                self->send(parent, finished_atom_v);
+                self->mail(finished_atom_v).send(parent);
                 return make_message(reply_atom_v, std::move(buf));
               case 404: // file does not exist
                 print() << "http error: download failed with "

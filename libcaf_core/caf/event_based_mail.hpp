@@ -6,6 +6,7 @@
 
 #include "caf/async_mail.hpp"
 #include "caf/event_based_response_handle.hpp"
+#include "caf/message.hpp"
 #include "caf/scheduled_actor.hpp"
 
 namespace caf {
@@ -154,7 +155,7 @@ template <class Trait, class... Args>
 event_based_mail(Trait, scheduled_actor* self, Args&&... args) {
   using result_t = event_based_mail_t<message_priority::normal, Trait,
                                       detail::strip_and_convert_t<Args>...>;
-  return result_t{self, make_message(std::forward<Args>(args)...)};
+  return result_t{self, make_message_nowrap(std::forward<Args>(args)...)};
 }
 
 } // namespace caf

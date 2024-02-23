@@ -29,7 +29,7 @@ TEST("erase") {
   auto baseline = sys.registry().named_actors().size();
   sys.registry().put("foo", sys.spawn(dummy));
   check_eq(sys.registry().named_actors().size(), baseline + 1u);
-  self->send(sys.registry().get<actor>("foo"), 42);
+  self->mail(42).send(sys.registry().get<actor>("foo"));
   dispatch_message();
   auto received = std::make_shared<bool>(false);
   self->receive([this, received](int i) {

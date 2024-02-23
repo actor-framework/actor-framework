@@ -2,6 +2,7 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
+#include "caf/anon_mail.hpp"
 #include "caf/config.hpp"
 
 // exclude this suite; seems to be too much to swallow for MSVC
@@ -59,7 +60,7 @@ class typed_server3 : public server_type::base {
 public:
   typed_server3(actor_config& cfg, const string& line, actor buddy)
     : server_type::base(cfg) {
-    anon_send(buddy, line);
+    anon_mail(line).send(buddy);
   }
 
   behavior_type make_behavior() override {
@@ -73,7 +74,7 @@ void client(event_based_actor* self, const actor& parent,
     CHECK_EQ(val1, true);
     self->request(serv, infinite, my_request{10, 20}).then([=](bool val2) {
       CHECK_EQ(val2, false);
-      self->send(parent, ok_atom_v);
+      self->mail(ok_atom_v).send(parent);
     });
   });
 }
@@ -221,7 +222,7 @@ float_actor::behavior_type float_fun(float_actor::pointer self) {
 
 int_actor::behavior_type foo3(int_actor::pointer self) {
   auto b = self->spawn<linked>(float_fun);
-  self->send(b, 1.0f);
+  self->mail(1.0f).send(b);
   return {
     [=](int) { return 0; },
   };
@@ -273,15 +274,15 @@ CAF_TEST(event_testee_series) {
                          "(int32_t) -> (int32_t)"};
   CHECK_EQ(join(sub_et->message_types(), ","), join(iface, ","));
   MESSAGE("the testee skips messages to drive its internal state machine");
-  self->send(et, 1);
-  self->send(et, 2);
-  self->send(et, 3);
-  self->send(et, .1f);
-  self->send(et, "hello event testee!"s);
-  self->send(et, .2f);
-  self->send(et, .3f);
-  self->send(et, "hello again event testee!"s);
-  self->send(et, "goodbye event testee!"s);
+  self->mail(1).send(et);
+  self->mail(2).send(et);
+  self->mail(3).send(et);
+  self->mail(.1f).send(et);
+  self->mail("hello event testee!"s).send(et);
+  self->mail(.2f).send(et);
+  self->mail(.3f).send(et);
+  self->mail("hello again event testee!"s).send(et);
+  self->mail("goodbye event testee!"s).send(et);
   run();
   expect((int), from(et).to(self).with(42));
   expect((int), from(et).to(self).with(42));
@@ -317,7 +318,7 @@ CAF_TEST(maybe_string_delegator_chain) {
 
 CAF_TEST(sending_typed_actors) {
   auto aut = sys.spawn(int_fun);
-  self->send(self->spawn(foo), 10, aut);
+  self->mail(10, aut).send(self->spawn(foo));
   run();
   expect((int), to(self).with(100));
   self->spawn(foo3);
@@ -326,7 +327,7 @@ CAF_TEST(sending_typed_actors) {
 
 CAF_TEST(sending_typed_actors_and_down_msg) {
   auto aut = sys.spawn(int_fun2);
-  self->send(self->spawn(foo2), 10, aut);
+  self->mail(10, aut).send(self->spawn(foo2));
   run();
   expect((int), to(self).with(100));
 }
@@ -345,7 +346,7 @@ CAF_TEST(check_signature) {
   };
   auto bar_action = [=](bar_type::pointer ptr) -> bar_type::behavior_type {
     auto foo = ptr->spawn<linked>(foo_action);
-    ptr->send(foo, put_atom_v);
+    ptr->mail(put_atom_v).send(foo);
     return {
       [=](ok_atom) { ptr->quit(); },
     };

@@ -79,7 +79,7 @@ behavior testee(event_based_actor* self) {
 }
 
 void caf_main(actor_system& system) {
-  anon_send(system.spawn(testee), foo{1, 2});
+  anon_mail(foo{1, 2}).send(system.spawn(testee));
 }
 
 CAF_MAIN(id_block::custom_types_3)
