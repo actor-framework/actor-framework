@@ -88,13 +88,6 @@ int exec_main(F fun, int argc, char** argv) {
     return EXIT_SUCCESS;
   // Initialize the actor system.
   actor_system system{cfg};
-  if (cfg.slave_mode) {
-    if (!cfg.slave_mode_fun) {
-      fprintf(stderr, "cannot run slave mode, I/O module not loaded\n");
-      return EXIT_FAILURE;
-    }
-    return cfg.slave_mode_fun(system, cfg);
-  }
   helper f;
   using result_type = decltype(f(fun, system, cfg));
   if constexpr (std::is_convertible_v<result_type, int>) {

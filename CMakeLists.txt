@@ -36,7 +36,6 @@ option(CAF_ENABLE_EXCEPTIONS "Build CAF with support for exceptions" ON)
 option(CAF_ENABLE_IO_MODULE "Build legacy networking I/O module" ON)
 option(CAF_ENABLE_NET_MODULE "Build networking I/O module" ON)
 option(CAF_ENABLE_TESTING "Build unit test suites" ON)
-option(CAF_ENABLE_TOOLS "Build utility programs such as caf-run" ON)
 
 # -- CAF options that depend on others -----------------------------------------
 
@@ -398,10 +397,6 @@ endif()
 
 if(CAF_ENABLE_EXAMPLES)
   add_subdirectory(examples)
-endif()
-
-if(CAF_ENABLE_TOOLS)
-  add_subdirectory(tools)
 endif()
 
 # -- optionally add the Robot tests to CTest -----------------------------------
