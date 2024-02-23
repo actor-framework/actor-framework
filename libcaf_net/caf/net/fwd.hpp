@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/async/fwd.hpp"
+#include "caf/detail/net_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/type_id.hpp"
@@ -48,6 +49,10 @@ struct udp_datagram_socket;
 
 // -- smart pointer aliases ----------------------------------------------------
 
+CAF_NET_EXPORT void intrusive_ptr_add_ref(socket_manager* ptr) noexcept;
+
+CAF_NET_EXPORT void intrusive_ptr_release(socket_manager* ptr) noexcept;
+
 using multiplexer_ptr = intrusive_ptr<multiplexer>;
 using socket_manager_ptr = intrusive_ptr<socket_manager>;
 
@@ -81,6 +86,7 @@ make_actor_shell(actor_system&, async::execution_context_ptr);
 
 namespace caf::net::octet_stream {
 
+class flow_bridge;
 class lower_layer;
 class policy;
 class transport;

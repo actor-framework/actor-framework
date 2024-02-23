@@ -43,6 +43,12 @@ public:
       // nop
     }
 
+    /// Called when an observer subscribes to the `ucast_sub_state`.
+    /// @param state The `ucast_sub_state` object that was subscribed to.
+    virtual void on_subscribed([[maybe_unused]] ucast_sub_state* state) {
+      // nop
+    }
+
     /// Called when the `ucast_sub_state` is disposed.
     virtual void on_disposed(ucast_sub_state* state, bool from_external) = 0;
 
@@ -52,7 +58,7 @@ public:
     }
 
     /// Called when the `ucast_sub_state` has consumed some items.
-    /// @param state The `ucast_sub_state` that consumed items.
+    /// @param state The `ucast_sub_state` that has consumed items.
     /// @param old_buffer_size The number of items in the buffer before
     ///                        consuming items.
     /// @param new_buffer_size The number of items in the buffer after
@@ -182,6 +188,12 @@ public:
       lptr->on_disposed(this, false);
     }
     out.release_later();
+  }
+
+  void set_observer(observer<T> obs) {
+    out = std::move(obs);
+    if (listener)
+      listener->on_subscribed(this);
   }
 
   // -- implementation of coordinated ------------------------------------------
@@ -359,7 +371,7 @@ public:
         out, make_error(sec::too_many_observers,
                         "may only subscribe once to an unicast operator"));
     }
-    state_->out = out;
+    state_->set_observer(out);
     auto ptr = super::parent_->add_child(std::in_place_type<ucast_sub<T>>,
                                          state_);
     out.on_subscribe(subscription{ptr});

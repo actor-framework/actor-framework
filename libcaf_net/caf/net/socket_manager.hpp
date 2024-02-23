@@ -19,6 +19,8 @@
 #include "caf/detail/net_export.hpp"
 #include "caf/disposable.hpp"
 #include "caf/error.hpp"
+#include "caf/flow/coordinated.hpp"
+#include "caf/flow/coordinator.hpp"
 #include "caf/fwd.hpp"
 #include "caf/sec.hpp"
 
@@ -28,7 +30,8 @@ namespace caf::net {
 
 /// Manages the lifetime of a single socket and handles any I/O events on it.
 class CAF_NET_EXPORT socket_manager : public detail::atomic_ref_counted,
-                                      public disposable_impl {
+                                      public disposable_impl,
+                                      public flow::coordinator {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -120,15 +123,6 @@ public:
   /// Schedules a call to `do_handover` on the handler.
   void schedule_handover();
 
-  /// Schedules @p what to run later.
-  void schedule(action what);
-
-  /// Schedules @p what to run later.
-  template <class F>
-  void schedule_fn(F&& what) {
-    schedule(make_action(std::forward<F>(what)));
-  }
-
   /// Shuts down this socket manager.
   void shutdown();
 
@@ -149,6 +143,24 @@ public:
   ///             @ref sec::disposed.
   void handle_error(sec code);
 
+  // -- implementation of coordinator ------------------------------------------
+
+  void ref_execution_context() const noexcept override;
+
+  void deref_execution_context() const noexcept override;
+
+  void schedule(action what) override;
+
+  void watch(disposable what) override;
+
+  void release_later(flow::coordinated_ptr& child) override;
+
+  steady_time_point steady_time() override;
+
+  void delay(action what) override;
+
+  disposable delay_until(steady_time_point abs_time, action what) override;
+
   // -- implementation of disposable_impl --------------------------------------
 
   void dispose() override;
@@ -159,8 +171,14 @@ public:
 
   void deref_disposable() const noexcept override;
 
+  // -- disambiguation ---------------------------------------------------------
+
 private:
   // -- utility functions ------------------------------------------------------
+
+  void exec(action& f);
+
+  void run_delayed_actions();
 
   void cleanup();
 
@@ -191,7 +209,26 @@ private:
 
   /// Callbacks to run when calling `cleanup`.
   std::vector<action> cleanup_listeners_;
+
+  /// Stores watched disposables.
+  std::vector<disposable> watched_;
+
+  /// Stores actions that should run at the next opportunity.
+  std::deque<action> delayed_;
+
+  /// Stores flow children that should be released at the next opportunity.
+  std::vector<flow::coordinated_ptr> trash_;
 };
+
+// -- related free functions ---------------------------------------------------
+
+/// @relates socket_manager
+CAF_NET_EXPORT void intrusive_ptr_add_ref(socket_manager* ptr) noexcept;
+
+/// @relates socket_manager
+CAF_NET_EXPORT void intrusive_ptr_release(socket_manager* ptr) noexcept;
+
+// -- related types ------------------------------------------------------------
 
 /// @relates socket_manager
 using socket_manager_ptr = intrusive_ptr<socket_manager>;

@@ -329,6 +329,7 @@ void transport::handle_write_event() {
   auto write_res = policy_->write(write_buf_);
   if (write_res > 0) {
     write_buf_.erase(write_buf_.begin(), write_buf_.begin() + write_res);
+    up_->written(static_cast<size_t>(write_res));
     if (write_buf_.empty() && up_->done_sending()) {
       if (!flags_.shutting_down) {
         parent_->deregister_writing();

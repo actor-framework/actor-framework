@@ -20,6 +20,13 @@ namespace caf::net {
 /// Multiplexes any number of ::socket_manager objects with a ::socket.
 class CAF_NET_EXPORT multiplexer : public async::execution_context {
 public:
+  // -- member types -----------------------------------------------------------
+
+  using super = async::execution_context;
+
+  /// A time point of the monotonic clock.
+  using steady_time_point = std::chrono::steady_clock::time_point;
+
   // -- static utility functions -----------------------------------------------
 
   /// Blocks the PIPE signal on the current thread when running on Linux. Has no
@@ -45,6 +52,16 @@ public:
   // -- initialization ---------------------------------------------------------
 
   virtual error init() = 0;
+
+  // -- scheduling of actions --------------------------------------------------
+
+  using super::schedule;
+
+  /// Schedules @p what to run after reaching @p when on the event loop of the
+  /// execution context. This member function may get called from external
+  /// sources or threads.
+  /// @thread-safe
+  virtual void schedule(steady_time_point when, action what) = 0;
 
   // -- properties -------------------------------------------------------------
 

@@ -10,4 +10,8 @@ upper_layer::~upper_layer() {
   // nop
 }
 
+void upper_layer::written(size_t) {
+  // nop
+}
+
 } // namespace caf::net::octet_stream
