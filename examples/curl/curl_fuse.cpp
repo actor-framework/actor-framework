@@ -145,8 +145,10 @@ struct client_job_state : base_state {
   behavior make_behavior() {
     if (!init(color::blue))
       return {}; // returning an empty behavior terminates the actor
-    self->send(parent, read_atom_v, "http://www.example.com/index.html",
-               uint64_t{0}, uint64_t{4095});
+    self
+      ->mail(read_atom_v, "http://www.example.com/index.html", uint64_t{0},
+             uint64_t{4095})
+      .send(parent);
     return {
       [this](reply_atom, const buffer_type& buf) {
         print() << "successfully received " << buf.size() << " bytes"
