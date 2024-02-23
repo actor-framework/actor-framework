@@ -215,14 +215,6 @@ public:
   /// Credentials for connecting to the bootstrap node.
   std::string bootstrap_node;
 
-  // -- OpenSSL parameters -----------------------------------------------------
-
-  std::string openssl_certificate;
-  std::string openssl_key;
-  std::string openssl_passphrase;
-  std::string openssl_capath;
-  std::string openssl_cafile;
-
   // -- factories --------------------------------------------------------------
 
   actor_factory_map actor_factories;

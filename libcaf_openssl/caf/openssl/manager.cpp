@@ -66,6 +66,16 @@ void dynlock_destroy(CRYPTO_dynlock_value* dynlock, const char*, int) {
 
 namespace caf::openssl {
 
+namespace {
+
+bool is_nonempty_string(const actor_system_config& cfg, std::string_view key) {
+  if (auto str = get_if<std::string>(&cfg, key))
+    return !str->empty();
+  return false;
+}
+
+} // namespace
+
 manager::~manager() {
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
   std::lock_guard<std::mutex> lock{init_mutex};
@@ -101,9 +111,10 @@ void manager::init(actor_system_config&) {
   SSL_library_init();
   SSL_load_error_strings();
   if (authentication_enabled()) {
-    if (system().config().openssl_certificate.empty())
+    auto& cfg = system().config();
+    if (!is_nonempty_string(cfg, "caf.openssl.certificate"))
       CAF_RAISE_ERROR("No certificate configured for SSL endpoint");
-    if (system().config().openssl_key.empty())
+    if (!is_nonempty_string(cfg, "caf.openssl.key"))
       CAF_RAISE_ERROR("No private key configured for SSL endpoint");
   }
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
@@ -130,35 +141,26 @@ void* manager::subtype_ptr() {
 
 bool manager::authentication_enabled() {
   auto& cfg = system().config();
-  return !cfg.openssl_certificate.empty() || !cfg.openssl_key.empty()
-         || !cfg.openssl_passphrase.empty() || !cfg.openssl_capath.empty()
-         || !cfg.openssl_cafile.empty();
+  return is_nonempty_string(cfg, "caf.openssl.certificate")
+         || is_nonempty_string(cfg, "caf.openssl.key")
+         || is_nonempty_string(cfg, "caf.openssl.passphrase")
+         || is_nonempty_string(cfg, "caf.openssl.capath")
+         || is_nonempty_string(cfg, "caf.openssl.cafile");
 }
 
 void manager::add_module_options(actor_system_config& cfg) {
   // Add options to the CLI parser.
   config_option_adder(cfg.custom_options(), "caf.openssl")
-    .add<std::string>(cfg.openssl_certificate, "certificate",
+    .add<std::string>("certificate",
                       "path to the PEM-formatted certificate file")
-    .add<std::string>(cfg.openssl_key, "key",
-                      "path to the private key file for this node")
-    .add<std::string>(cfg.openssl_passphrase, "passphrase",
-                      "passphrase to decrypt the private key")
+    .add<std::string>("key", "path to the private key file for this node")
+    .add<std::string>("passphrase", "passphrase to decrypt the private key")
     .add<std::string>(
-      cfg.openssl_capath, "capath",
-      "path to an OpenSSL-style directory of trusted certificates")
+      "capath", "path to an OpenSSL-style directory of trusted certificates")
     .add<std::string>(
-      cfg.openssl_cafile, "cafile",
-      "path to a file of concatenated PEM-formatted certificates")
+      "cafile", "path to a file of concatenated PEM-formatted certificates")
     .add<std::string>("cipher-list",
                       "colon-separated list of OpenSSL cipher strings to use");
-  // Add the defaults to the config so they show up in --dump-config.
-  auto& grp = put_dictionary(cfg.content, "caf.openssl");
-  put_missing(grp, "certificate", cfg.openssl_certificate);
-  put_missing(grp, "key", cfg.openssl_key);
-  put_missing(grp, "passphrase", cfg.openssl_passphrase);
-  put_missing(grp, "capath", cfg.openssl_capath);
-  put_missing(grp, "cafile", cfg.openssl_cafile);
 }
 
 actor_system::module* manager::make(actor_system& sys, type_list<>) {

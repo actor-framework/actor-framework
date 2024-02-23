@@ -21,6 +21,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   removed. Neither API has a clear use case at the moment and since we have not
   received any feedback on either API, we have decided to remove them to
   simplify the code base.
+- The `actor_system_config` no longer contains special member variables for the
+  OpenSSL module. The module now uses the regular configuration system.
 
 ### Changed
 
