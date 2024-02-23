@@ -323,6 +323,7 @@ struct get_callable_trait_helper {
   using type = callable_trait<T>;
   using result_type = typename type::result_type;
   using arg_types = typename type::arg_types;
+  using decayed_arg_types = typename type::decayed_arg_types;
   using fun_type = typename type::fun_type;
   using fun_sig = typename type::fun_sig;
   static constexpr size_t num_args = tl_size<arg_types>::value;
@@ -335,6 +336,7 @@ struct get_callable_trait_helper<T, false, true> {
   using type = callable_trait<decltype(&T::operator())>;
   using result_type = typename type::result_type;
   using arg_types = typename type::arg_types;
+  using decayed_arg_types = typename type::decayed_arg_types;
   using fun_type = typename type::fun_type;
   using fun_sig = typename type::fun_sig;
   static constexpr size_t num_args = tl_size<arg_types>::value;
@@ -343,6 +345,7 @@ struct get_callable_trait_helper<T, false, true> {
 template <class T>
 struct get_callable_trait_helper<T, false, false> {
   static constexpr bool valid = false;
+  using decayed_arg_types = type_list<>;
 };
 
 /// Gets a callable trait for `T,` where `T` is a function object type,

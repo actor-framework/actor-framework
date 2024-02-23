@@ -8,6 +8,7 @@
 #include "caf/actor_traits.hpp"
 #include "caf/blocking_actor.hpp"
 #include "caf/catch_all.hpp"
+#include "caf/detail/response_handle_expected_helper.hpp"
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/typed_actor_util.hpp"
 #include "caf/flow/fwd.hpp"
@@ -34,10 +35,25 @@ public:
     // nop
   }
 
+  /// Waits for a response message and invokes `on_value` or `on_error`.
+  /// @param on_value A callable object for handling the response message.
+  /// @param on_error A callable object for handling an error message.
   template <class OnValue, class OnError>
   void receive(OnValue on_value, OnError on_error) && {
     type_check<OnValue, OnError>();
     auto bhvr = behavior{std::move(on_value), std::move(on_error)};
+    self_->do_receive(mid_, bhvr, timeout_);
+  }
+
+  /// Waits for a response message and invokes `on_value`.
+  /// @param on_value A callable object that accepts a single argument of type
+  ///                 `expected<T>`, whereas `T` is the response type.
+  template <class OnValue>
+  void receive(OnValue on_value) && {
+    using helper = detail::response_handle_expected_helper<Result, OnValue>;
+    static_assert(helper::use_expected, "OnValue must accept an expected<T>");
+    auto bhvr = behavior{helper::on_value(on_value),
+                         helper::on_error(on_value)};
     self_->do_receive(mid_, bhvr, timeout_);
   }
 

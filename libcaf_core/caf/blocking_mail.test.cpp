@@ -22,6 +22,15 @@ using dummy_actor = typed_actor<result<int>(int)>;
 
 using dummy_behavior = dummy_actor::behavior_type;
 
+using i3_dummy_actor = typed_actor<result<int, int, int>(int)>;
+
+using i3_dummy_behavior = i3_dummy_actor::behavior_type;
+
+using void_dummy_actor = typed_actor<result<void>(int)>;
+
+using void_dummy_behavior = void_dummy_actor::behavior_type;
+
+
 struct config : actor_system_config {
   config() {
     set("caf.scheduler.max-threads", 1u);
@@ -175,6 +184,124 @@ TEST("send request message to an invalid receiver") {
       .first.receive(on_result, on_error);
     check_eq(*result, 0);
     check_eq(*err, make_error(sec::invalid_request));
+  }
+}
+
+TEST("using .receive on the response handle with a callback for expected") {
+  scoped_actor self{sys};
+  SECTION("valid response, statically typed") {
+    auto result = std::make_shared<expected<int>>(0);
+    auto dummy = sys.spawn([]() -> dummy_behavior {
+      return {
+        [](int value) { return value * value; },
+      };
+    });
+    self->mail(3)
+      .delay(5ms)
+      .request(dummy, 1s)
+      .first //
+      .receive([result](auto res) {
+        using res_t = decltype(res);
+        static_assert(std::is_same_v<res_t, expected<int>>);
+        *result = res;
+      });
+    if (check(result->has_value()))
+      check_eq(*result, 9);
+  }
+  SECTION("invalid response, dynamically typed") {
+    auto result = std::make_shared<expected<int>>(0);
+    auto dummy = sys.spawn([]() -> behavior {
+      return {
+        [](int) -> caf::result<int> { return make_error(sec::runtime_error); },
+      };
+    });
+    self->mail(3)
+      .delay(5ms)
+      .request(dummy, 1s)
+      .first //
+      .receive([result](expected<int> res) { *result = res; });
+    if (check(!*result))
+      check_eq(*result, make_error(sec::runtime_error));
+  }
+  SECTION("void return value, statically typed") {
+    auto had_result = std::make_shared<bool>(false);
+    auto dummy = sys.spawn([]() -> void_dummy_behavior {
+      return {
+        [](int) {},
+      };
+    });
+    self->mail(3)
+      .delay(5ms)
+      .request(dummy, 1s)
+      .first //
+      .receive([had_result](auto res) {
+        using res_t = decltype(res);
+        static_assert(std::is_same_v<res_t, expected<void>>);
+        *had_result = res.has_value();
+      });
+    check(*had_result);
+  }
+  SECTION("void return value, dynamically typed") {
+    auto had_result = std::make_shared<bool>(false);
+    auto dummy = sys.spawn([]() -> behavior {
+      return {
+        [](int) {},
+      };
+    });
+    self->mail(3)
+      .delay(5ms)
+      .request(dummy, 1s)
+      .first //
+      .receive([had_result](expected<void> res) {
+        using res_t = decltype(res);
+        static_assert(std::is_same_v<res_t, expected<void>>);
+        *had_result = res.has_value();
+      });
+    check(*had_result);
+  }
+  SECTION("multiple return values, statically typed") {
+    using tuple_t = std::tuple<int, int, int>;
+    auto result = std::make_shared<expected<tuple_t>>(tuple_t{0, 0, 0});
+    auto dummy = sys.spawn([]() -> i3_dummy_behavior {
+      return {
+        [](int) -> caf::result<int, int, int> {
+          return {1, 2, 3};
+        },
+      };
+    });
+    self->mail(3)
+      .delay(5ms)
+      .request(dummy, 1s)
+      .first //
+      .receive([result](auto res) {
+        using res_t = decltype(res);
+        static_assert(std::is_same_v<res_t, expected<tuple_t>>);
+        *result = res;
+      });
+    if (check(result->has_value()))
+      check_eq(*result, std::tuple{1, 2, 3});
+  }
+  SECTION("multiple return values, dynamically typed") {
+    using tuple_t = std::tuple<int, int, int>;
+    auto result = std::make_shared<expected<tuple_t>>(tuple_t{0, 0, 0});
+    auto dummy = sys.spawn([]() -> behavior {
+      return {
+        [](int) -> caf::result<int, int, int> {
+          return {1, 2, 3};
+        },
+      };
+    });
+    self->mail(3)
+      .delay(5ms)
+      .request(dummy, 1s)
+      .first //
+      .receive([result](expected<tuple_t> res) {
+        using res_t = decltype(res);
+        static_assert(std::is_same_v<res_t, expected<tuple_t>>);
+        *result = res;
+      });
+    if (check(result->has_value()))
+      check_eq(*result, std::tuple{1, 2, 3});
   }
 }
 

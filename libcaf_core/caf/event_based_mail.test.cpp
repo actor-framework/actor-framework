@@ -496,6 +496,180 @@ TEST("send request message to an invalid receiver") {
   }
 }
 
+TEST("using .await on the response handle with a callback for expected") {
+  SECTION("valid response") {
+    SECTION("statically typed messaging") {
+      auto dummy = sys.spawn([]() -> dummy_behavior {
+        return {
+          [](int value) { return value * 2; },
+        };
+      });
+      auto [self, launch] = sys.spawn_inactive<event_based_actor>();
+      auto self_hdl = actor_cast<actor>(self);
+      auto result = std::make_shared<expected<int>>(0);
+      self->mail(21).request(dummy, 1s).await([result](auto res) {
+        using res_t = decltype(res);
+        static_assert(std::is_same_v<res_t, expected<int>>);
+        *result = std::move(res);
+      });
+      launch();
+      expect<int>().with(21).from(self_hdl).to(dummy);
+      expect<int>().with(42).from(dummy).to(self_hdl);
+      if (check(result->has_value()))
+        check_eq(result->value(), 42);
+    }
+    SECTION("dynamically typed messaging") {
+      auto dummy = sys.spawn([]() -> behavior {
+        return {
+          [](int value) { return value * 2; },
+        };
+      });
+      auto [self, launch] = sys.spawn_inactive<event_based_actor>();
+      auto self_hdl = actor_cast<actor>(self);
+      auto result = std::make_shared<expected<int>>(0);
+      self->mail(21).request(dummy, 1s).await([result](expected<int> res) {
+        using res_t = decltype(res);
+        static_assert(std::is_same_v<res_t, expected<int>>);
+        *result = std::move(res);
+      });
+      launch();
+      expect<int>().with(21).from(self_hdl).to(dummy);
+      expect<int>().with(42).from(dummy).to(self_hdl);
+      if (check(result->has_value()))
+        check_eq(result->value(), 42);
+    }
+  }
+  SECTION("error response") {
+    SECTION("statically typed messaging") {
+      auto dummy = sys.spawn([]() -> dummy_behavior {
+        return {
+          [](int) -> result<int> { return make_error(sec::runtime_error); },
+        };
+      });
+      auto [self, launch] = sys.spawn_inactive<event_based_actor>();
+      auto self_hdl = actor_cast<actor>(self);
+      auto result = std::make_shared<expected<int>>(0);
+      self->mail(21).request(dummy, 1s).await([result](expected<int> res) {
+        using res_t = decltype(res);
+        static_assert(std::is_same_v<res_t, expected<int>>);
+        *result = std::move(res);
+      });
+      launch();
+      expect<int>().with(21).from(self_hdl).to(dummy);
+      expect<error>().from(dummy).to(self_hdl);
+      if (check(!result->has_value()))
+        check_eq(result->error(), sec::runtime_error);
+    }
+    SECTION("dynamically typed messaging") {
+      auto dummy = sys.spawn([]() -> behavior {
+        return {
+          [](int) -> result<int> { return make_error(sec::runtime_error); },
+        };
+      });
+      auto [self, launch] = sys.spawn_inactive<event_based_actor>();
+      auto self_hdl = actor_cast<actor>(self);
+      auto result = std::make_shared<expected<int>>(0);
+      self->mail(21).request(dummy, 1s).await([result](expected<int> res) {
+        using res_t = decltype(res);
+        static_assert(std::is_same_v<res_t, expected<int>>);
+        *result = std::move(res);
+      });
+      launch();
+      expect<int>().with(21).from(self_hdl).to(dummy);
+      expect<error>().from(dummy).to(self_hdl);
+      if (check(!result->has_value()))
+        check_eq(result->error(), sec::runtime_error);
+    }
+  }
+}
+
+TEST("using .then on the response handle with a callback for expected") {
+  SECTION("valid response") {
+    SECTION("statically typed messaging") {
+      auto dummy = sys.spawn([]() -> dummy_behavior {
+        return {
+          [](int value) { return value * 2; },
+        };
+      });
+      auto [self, launch] = sys.spawn_inactive<event_based_actor>();
+      auto self_hdl = actor_cast<actor>(self);
+      auto result = std::make_shared<expected<int>>(0);
+      self->mail(21).request(dummy, 1s).then([result](auto res) {
+        using res_t = decltype(res);
+        static_assert(std::is_same_v<res_t, expected<int>>);
+        *result = std::move(res);
+      });
+      launch();
+      expect<int>().with(21).from(self_hdl).to(dummy);
+      expect<int>().with(42).from(dummy).to(self_hdl);
+      if (check(result->has_value()))
+        check_eq(result->value(), 42);
+    }
+    SECTION("dynamically typed messaging") {
+      auto dummy = sys.spawn([]() -> behavior {
+        return {
+          [](int value) { return value * 2; },
+        };
+      });
+      auto [self, launch] = sys.spawn_inactive<event_based_actor>();
+      auto self_hdl = actor_cast<actor>(self);
+      auto result = std::make_shared<expected<int>>(0);
+      self->mail(21).request(dummy, 1s).then([result](expected<int> res) {
+        using res_t = decltype(res);
+        static_assert(std::is_same_v<res_t, expected<int>>);
+        *result = std::move(res);
+      });
+      launch();
+      expect<int>().with(21).from(self_hdl).to(dummy);
+      expect<int>().with(42).from(dummy).to(self_hdl);
+      if (check(result->has_value()))
+        check_eq(result->value(), 42);
+    }
+  }
+  SECTION("error response") {
+    SECTION("statically typed messaging") {
+      auto dummy = sys.spawn([]() -> dummy_behavior {
+        return {
+          [](int) -> result<int> { return make_error(sec::runtime_error); },
+        };
+      });
+      auto [self, launch] = sys.spawn_inactive<event_based_actor>();
+      auto self_hdl = actor_cast<actor>(self);
+      auto result = std::make_shared<expected<int>>(0);
+      self->mail(21).request(dummy, 1s).then([result](expected<int> res) {
+        using res_t = decltype(res);
+        static_assert(std::is_same_v<res_t, expected<int>>);
+        *result = std::move(res);
+      });
+      launch();
+      expect<int>().with(21).from(self_hdl).to(dummy);
+      expect<error>().from(dummy).to(self_hdl);
+      if (check(!result->has_value()))
+        check_eq(result->error(), sec::runtime_error);
+    }
+    SECTION("dynamically typed messaging") {
+      auto dummy = sys.spawn([]() -> behavior {
+        return {
+          [](int) -> result<int> { return make_error(sec::runtime_error); },
+        };
+      });
+      auto [self, launch] = sys.spawn_inactive<event_based_actor>();
+      auto self_hdl = actor_cast<actor>(self);
+      auto result = std::make_shared<expected<int>>(0);
+      self->mail(21).request(dummy, 1s).then([result](expected<int> res) {
+        using res_t = decltype(res);
+        static_assert(std::is_same_v<res_t, expected<int>>);
+        *result = std::move(res);
+      });
+      launch();
+      expect<int>().with(21).from(self_hdl).to(dummy);
+      expect<error>().from(dummy).to(self_hdl);
+      if (check(!result->has_value()))
+        check_eq(result->error(), sec::runtime_error);
+    }
+  }
+}
+
 } // WITH_FIXTURE(test::fixture::deterministic)
 
 } // namespace

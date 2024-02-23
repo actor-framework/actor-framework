@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/detail/response_handle_expected_helper.hpp"
 #include "caf/disposable.hpp"
 #include "caf/flow/fwd.hpp"
 #include "caf/message_id.hpp"
@@ -61,10 +62,18 @@ public:
 
   template <class OnValue>
   void await(OnValue on_value) && {
-    return std::move(*this).await(std::move(on_value),
-                                  [self = self_](error& err) {
-                                    self->call_error_handler(err);
-                                  });
+    using helper = detail::response_handle_expected_helper<Result, OnValue>;
+    if constexpr (helper::use_expected) {
+      auto bhvr = behavior{helper::on_value(on_value),
+                           helper::on_error(on_value)};
+      self_->add_awaited_response_handler(mid_, std::move(bhvr),
+                                          std::move(pending_timeout_));
+
+    } else {
+      std::move(*this).await(std::move(on_value), [self = self_](error& err) {
+        self->call_error_handler(err);
+      });
+    }
   }
 
   template <class OnValue, class OnError>
@@ -77,10 +86,18 @@ public:
 
   template <class OnValue>
   void then(OnValue on_value) && {
-    return std::move(*this).then(std::move(on_value),
-                                 [self = self_](error& err) {
-                                   self->call_error_handler(err);
-                                 });
+    using helper = detail::response_handle_expected_helper<Result, OnValue>;
+    if constexpr (helper::use_expected) {
+      auto bhvr = behavior{helper::on_value(on_value),
+                           helper::on_error(on_value)};
+      self_->add_multiplexed_response_handler(mid_, std::move(bhvr),
+                                              std::move(pending_timeout_));
+
+    } else {
+      std::move(*this).then(std::move(on_value), [self = self_](error& err) {
+        self->call_error_handler(err);
+      });
+    }
   }
 
   template <class T = Result, class Self = scheduled_actor>
@@ -97,7 +114,7 @@ private:
   template <class OnValue, class OnError>
   static constexpr void type_check() {
     // Type-check OnValue.
-    using on_value_trait_helper = typename detail::get_callable_trait<OnValue>;
+    using on_value_trait_helper = detail::get_callable_trait<OnValue>;
     static_assert(on_value_trait_helper::valid,
                   "OnValue must provide a single, non-template operator()");
     using on_value_trait = typename on_value_trait_helper::type;
