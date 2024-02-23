@@ -50,6 +50,8 @@ CAF_POP_WARNINGS
 
 #endif // CAF_LINUX
 
+using namespace std::literals;
+
 namespace caf::openssl {
 
 namespace {
@@ -201,29 +203,27 @@ SSL_CTX* session::create_ssl_context() {
   if (!ctx)
     CAF_RAISE_ERROR("cannot create OpenSSL context");
   auto& cfg = sys_.config();
+  auto key = get_or(cfg, "caf.openssl.key", ""sv);
+  auto certificate = get_or(cfg, "caf.openssl.certificate", ""sv);
+  openssl_passphrase_ = get_or(cfg, "caf.openssl.passphrase", ""sv);
+  auto capath = get_or(cfg, "caf.openssl.capath", ""sv);
+  auto cafile = get_or(cfg, "caf.openssl.cafile", ""sv);
   if (sys_.openssl_manager().authentication_enabled()) {
     // Require valid certificates on both sides.
-    if (!cfg.openssl_certificate.empty()
-        && SSL_CTX_use_certificate_chain_file(ctx,
-                                              cfg.openssl_certificate.c_str())
-             != 1)
+    if (!certificate.empty()
+        && SSL_CTX_use_certificate_chain_file(ctx, certificate.c_str()) != 1)
       CAF_RAISE_ERROR("cannot load certificate");
-    if (!cfg.openssl_passphrase.empty()) {
-      openssl_passphrase_ = cfg.openssl_passphrase;
+    if (!openssl_passphrase_.empty()) {
       SSL_CTX_set_default_passwd_cb(ctx, pem_passwd_cb);
       SSL_CTX_set_default_passwd_cb_userdata(ctx, this);
     }
-    if (!cfg.openssl_key.empty()
-        && SSL_CTX_use_PrivateKey_file(ctx, cfg.openssl_key.c_str(),
-                                       SSL_FILETYPE_PEM)
-             != 1)
+    if (!key.empty()
+        && SSL_CTX_use_PrivateKey_file(ctx, key.c_str(), SSL_FILETYPE_PEM) != 1)
       CAF_RAISE_ERROR("cannot load private key");
-    auto cafile = (!cfg.openssl_cafile.empty() ? cfg.openssl_cafile.c_str()
-                                               : nullptr);
-    auto capath = (!cfg.openssl_capath.empty() ? cfg.openssl_capath.c_str()
-                                               : nullptr);
-    if (cafile || capath) {
-      if (SSL_CTX_load_verify_locations(ctx, cafile, capath) != 1)
+    auto cafile_cstr = !cafile.empty() ? cafile.c_str() : nullptr;
+    auto capath_cstr = !capath.empty() ? capath.c_str() : nullptr;
+    if (cafile_cstr || capath_cstr) {
+      if (SSL_CTX_load_verify_locations(ctx, cafile_cstr, capath_cstr) != 1)
         CAF_RAISE_ERROR("cannot load trusted CA certificates");
     }
     SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
