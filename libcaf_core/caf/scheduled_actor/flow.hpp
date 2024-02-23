@@ -64,4 +64,24 @@ scheduled_actor::observe_as(stream what, size_t buf_capacity,
   return make_observable().fail<T>(make_error(sec::type_clash));
 }
 
+template <class T>
+flow::assert_scheduled_actor_hdr_t<flow::single<T>>
+scheduled_actor::single_from_response(message_id mid,
+                                      disposable pending_timeout) {
+  auto cell = make_counted<flow::op::cell<T>>(this);
+  auto bhvr = behavior{
+    [this, cell](T& val) {
+      cell->set_value(std::move(val));
+      run_actions();
+    },
+    [this, cell](error& err) {
+      cell->set_error(std::move(err));
+      run_actions();
+    },
+  };
+  add_multiplexed_response_handler(mid, std::move(bhvr),
+                                   std::move(pending_timeout));
+  return flow::single<T>{std::move(cell)};
+}
+
 } // namespace caf

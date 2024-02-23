@@ -46,7 +46,7 @@ public:
   [[nodiscard]] auto request(const Handle& receiver, timespan relative_timeout,
                              RefTag ref_tag = {},
                              SelfRefTag self_ref_tag = {}) && {
-    detail::send_type_check<typename Trait::signatures, Handle, Args...>();
+    detail::send_type_check<none_t, Handle, Args...>();
     using response_type = response_type_t<typename Handle::signatures, Args...>;
     auto mid = self()->new_request_id(Priority);
     disposable in_flight_response;
@@ -117,7 +117,7 @@ public:
   template <class Handle>
   [[nodiscard]] auto
   request(const Handle& receiver, timespan relative_timeout) && {
-    detail::send_type_check<typename Trait::signatures, Handle, Args...>();
+    detail::send_type_check<none_t, Handle, Args...>();
     using response_type = response_type_t<typename Handle::signatures, Args...>;
     auto mid = self()->new_request_id(Priority);
     disposable in_flight_timeout;

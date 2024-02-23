@@ -5,11 +5,36 @@
 #pragma once
 
 #include "caf/disposable.hpp"
+#include "caf/flow/fwd.hpp"
 #include "caf/message_id.hpp"
 #include "caf/scheduled_actor.hpp"
 #include "caf/type_list.hpp"
 
 #include <type_traits>
+
+namespace caf::detail {
+
+template <class T>
+struct event_based_response_handle_res {
+  using type = T;
+};
+
+template <class T>
+struct event_based_response_handle_res<type_list<T>> {
+  using type = T;
+};
+
+template <class T0, class T1, class... Ts>
+struct event_based_response_handle_res<type_list<T0, T1, Ts...>> {};
+
+template <>
+struct event_based_response_handle_res<message> {};
+
+template <class T>
+using event_based_response_handle_res_t =
+  typename event_based_response_handle_res<T>::type;
+
+} // namespace caf::detail
 
 namespace caf {
 
@@ -56,6 +81,16 @@ public:
                                  [self = self_](error& err) {
                                    self->call_error_handler(err);
                                  });
+  }
+
+  template <class T = Result, class Self = scheduled_actor>
+  flow::assert_scheduled_actor_hdr_t<
+    flow::observable<detail::event_based_response_handle_res_t<T>>>
+  as_observable() && {
+    using res_t = detail::event_based_response_handle_res_t<T>;
+    return static_cast<Self*>(self_)
+      ->template single_from_response<res_t>(mid_, std::move(pending_timeout_))
+      .as_observable();
   }
 
 private:
