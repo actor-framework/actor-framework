@@ -169,6 +169,8 @@ enum class sec : uint8_t {
   invalid_delegate = 75,
   /// An actor tried to delegate a message to an invalid actor handle.
   invalid_request,
+  /// Signals that `future::get` timed out.
+  future_timeout,
 };
 // --(rst-sec-end)--
 

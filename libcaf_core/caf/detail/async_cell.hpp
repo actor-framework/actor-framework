@@ -7,8 +7,11 @@
 #include "caf/action.hpp"
 #include "caf/async/execution_context.hpp"
 #include "caf/config.hpp"
+#include "caf/none.hpp"
+#include "caf/unit.hpp"
 
 #include <atomic>
+#include <condition_variable>
 #include <memory>
 #include <mutex>
 #include <variant>
@@ -26,6 +29,19 @@ struct async_cell {
     events.reserve(8);
   }
 
+  bool subscribe(async::execution_context_ptr ctx, action callback) {
+    auto ev = event{std::move(ctx), std::move(callback)};
+    { // Critical section.
+      std::unique_lock guard{mtx};
+      if (std::holds_alternative<none_t>(value)) {
+        events.push_back(std::move(ev));
+        return true;
+      } else {
+        return false;
+      }
+    }
+  }
+
   async_cell(const async_cell&) = delete;
   async_cell& operator=(const async_cell&) = delete;
 
@@ -35,8 +51,9 @@ struct async_cell {
 
   using event = std::pair<async::execution_context_ptr, action>;
   using event_list = std::vector<event>;
+  using value_type = std::conditional_t<std::is_void_v<T>, unit_t, T>;
   std::mutex mtx;
-  std::variant<none_t, T, error> value;
+  std::variant<none_t, value_type, error> value;
   event_list events;
 };
 
