@@ -245,7 +245,7 @@ TEST("send request message") {
     }
   }
   SECTION("using .to_observable for the response") {
-    SECTION("valid response") {
+    SECTION("response from dynamically typed receiver") {
       auto dummy = sys.spawn([]() -> behavior {
         return {
           [](int value) { return value * value; },
