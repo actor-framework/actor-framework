@@ -76,7 +76,7 @@ auto local_actor::now() const noexcept -> clock_type::time_point {
 
 disposable local_actor::request_response_timeout(timespan timeout,
                                                  message_id mid) {
-  CAF_LOG_TRACE(CAF_ARG(timeout) << CAF_ARG(mid));
+  auto exit_guard = log::core::trace("timeout = {}, mid = {}", timeout, mid);
   if (timeout == infinite)
     return {};
   auto t = clock().now() + timeout;
@@ -97,12 +97,12 @@ void local_actor::monitor(const node_id& node) {
 }
 
 void local_actor::demonitor(const actor_addr& whom) {
-  CAF_LOG_TRACE(CAF_ARG(whom));
+  auto exit_guard = log::core::trace("whom = {}", whom);
   demonitor(actor_cast<strong_actor_ptr>(whom));
 }
 
 void local_actor::demonitor(const strong_actor_ptr& whom) {
-  CAF_LOG_TRACE(CAF_ARG(whom));
+  auto exit_guard = log::core::trace("whom = {}", whom);
   if (whom) {
     default_attachable::observe_token tk{address(),
                                          default_attachable::monitor};
@@ -164,11 +164,11 @@ void local_actor::do_delegate_error() {
 }
 
 void local_actor::initialize() {
-  CAF_LOG_TRACE(CAF_ARG2("id", id()) << CAF_ARG2("name", name()));
+  auto exit_guard = log::core::trace("id = {}, name = {}", id(), name());
 }
 
 void local_actor::on_cleanup([[maybe_unused]] const error& reason) {
-  CAF_LOG_TRACE(CAF_ARG(reason));
+  auto exit_guard = log::core::trace("reason = {}", reason);
   on_exit();
   CAF_LOG_TERMINATE_EVENT(this, reason);
 }

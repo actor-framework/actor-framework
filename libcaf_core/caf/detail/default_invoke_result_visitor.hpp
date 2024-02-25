@@ -6,6 +6,7 @@
 
 #include "caf/detail/invoke_result_visitor.hpp"
 #include "caf/local_actor.hpp"
+#include "caf/log/core.hpp"
 
 namespace caf::detail {
 
@@ -25,12 +26,12 @@ public:
   using super::operator();
 
   void operator()(error& x) override {
-    CAF_LOG_TRACE(CAF_ARG(x));
+    auto exit_guard = log::core::trace("x = {}", x);
     self_->respond(x);
   }
 
   void operator()(message& x) override {
-    CAF_LOG_TRACE(CAF_ARG(x));
+    auto exit_guard = log::core::trace("x = {}", x);
     self_->respond(x);
   }
 

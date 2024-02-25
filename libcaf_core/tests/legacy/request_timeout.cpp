@@ -59,7 +59,7 @@ behavior ping_single2(ping_actor* self, bool* had_timeout, const actor& buddy) {
     [=](pong_atom) { CAF_FAIL("received pong atom"); },
     after(std::chrono::seconds(1)) >>
       [=] {
-        CAF_LOG_TRACE(CAF_ARG2("had_timeout", *had_timeout));
+        auto exit_guard = log::core::trace("had_timeout = {}", *had_timeout);
         *had_timeout = true;
         self->quit();
       },

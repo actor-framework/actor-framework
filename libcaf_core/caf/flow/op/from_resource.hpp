@@ -54,7 +54,7 @@ public:
   }
 
   void dispose() override {
-    CAF_LOG_TRACE("");
+    auto exit_guard = log::core::trace("");
     if (disposed_)
       return;
     disposed_ = true;
@@ -62,7 +62,7 @@ public:
   }
 
   void cancel() override {
-    CAF_LOG_TRACE("");
+    auto exit_guard = log::core::trace("");
     if (disposed_)
       return;
     disposed_ = true;
@@ -77,7 +77,7 @@ public:
   }
 
   void request(size_t n) override {
-    CAF_LOG_TRACE(CAF_ARG(n));
+    auto exit_guard = log::core::trace("n = {}", n);
     if (demand_ != 0) {
       demand_ += n;
     } else {
@@ -93,9 +93,9 @@ public:
   }
 
   void on_producer_wakeup() override {
-    CAF_LOG_TRACE("");
+    auto exit_guard = log::core::trace("");
     parent_->schedule_fn([ptr = strong_this()] {
-      CAF_LOG_TRACE("");
+      auto exit_guard = log::core::trace("");
       if (!ptr->disposed_) {
         ptr->running_ = true;
         ptr->do_run();
@@ -152,7 +152,7 @@ private:
   }
 
   void do_run() {
-    CAF_LOG_TRACE("");
+    auto exit_guard = log::core::trace("");
     auto guard = detail::scope_guard([this]() noexcept { running_ = false; });
     CAF_ASSERT(out_);
     CAF_ASSERT(buf_);
@@ -232,7 +232,7 @@ public:
   // -- implementation of observable_impl<T> -----------------------------------
 
   disposable subscribe(observer<T> out) override {
-    CAF_LOG_TRACE("");
+    auto exit_guard = log::core::trace("");
     CAF_ASSERT(out);
     if (resource_) {
       if (auto buf = resource_.try_open()) {

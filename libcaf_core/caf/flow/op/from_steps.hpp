@@ -153,7 +153,7 @@ public:
   }
 
   void request(size_t n) override {
-    CAF_LOG_TRACE(CAF_ARG(n));
+    auto exit_guard = log::core::trace("n = {}", n);
     if (demand_ != 0) {
       demand_ += n;
       return;
@@ -164,7 +164,7 @@ public:
 
 private:
   void do_dispose(bool from_external) override {
-    CAF_LOG_TRACE("");
+    auto exit_guard = log::core::trace("");
     if (!out_)
       return;
     in_.cancel();

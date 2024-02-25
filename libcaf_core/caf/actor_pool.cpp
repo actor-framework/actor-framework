@@ -126,7 +126,7 @@ void actor_pool::on_cleanup(const error& reason) {
 
 bool actor_pool::filter(guard_type& guard, const strong_actor_ptr& sender,
                         message_id mid, message& content, execution_unit* eu) {
-  CAF_LOG_TRACE(CAF_ARG(mid) << CAF_ARG(content));
+  auto exit_guard = log::core::trace("mid = {}, content = {}", mid, content);
   if (auto view = make_const_typed_message_view<exit_msg>(content)) {
     // acquire second mutex as well
     std::vector<actor> workers;

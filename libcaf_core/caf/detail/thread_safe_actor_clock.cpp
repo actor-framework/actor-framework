@@ -6,7 +6,7 @@
 
 #include "caf/actor_control_block.hpp"
 #include "caf/actor_system.hpp"
-#include "caf/logger.hpp"
+#include "caf/log/core.hpp"
 #include "caf/sec.hpp"
 #include "caf/system_messages.hpp"
 #include "caf/thread_owner.hpp"
@@ -19,7 +19,7 @@ disposable thread_safe_actor_clock::schedule(time_point abs_time, action f) {
 }
 
 void thread_safe_actor_clock::run(queue_type* queue) {
-  CAF_LOG_TRACE("");
+  auto exit_guard = log::core::trace("");
   std::vector<schedule_entry_ptr> tbl;
   tbl.reserve(buffer_size * 2);
   auto is_disposed = [](auto& x) { return !x || x->f.disposed(); };
