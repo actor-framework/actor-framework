@@ -7,6 +7,7 @@
 #include "caf/test/fixture/deterministic.hpp"
 #include "caf/test/test.hpp"
 
+#include "caf/disposable.hpp"
 #include "caf/dynamically_typed.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/scheduled_actor/flow.hpp"
@@ -334,10 +335,12 @@ TEST("send delayed request message") {
   auto result = std::make_shared<int>(0);
   auto on_result = [result](int value) { *result = value; };
   SECTION("strong receiver reference") {
-    self->mail(3)
-      .delay(1s)
-      .request(dummy, infinite, strong_ref)
-      .first.then(on_result);
+    auto [hdl, pending] = self->mail(3).delay(1s).request(dummy, infinite,
+                                                          strong_ref);
+    static_assert(std::is_same_v<decltype(hdl),
+                                 event_based_response_handle<type_list<int>>>);
+    static_assert(std::is_same_v<decltype(pending), disposable>);
+    std::move(hdl).then(on_result);
     launch();
     check_eq(mail_count(), 0u);
     check_eq(num_timeouts(), 1u);
@@ -358,7 +361,7 @@ TEST("send delayed request message") {
     self->mail(3)
       .schedule(sys.clock().now() + 1s)
       .request(dummy, infinite, weak_ref)
-      .first.then(on_result);
+      .then(on_result);
     launch();
     check_eq(mail_count(), 0u);
     check_eq(num_timeouts(), 1u);
@@ -379,7 +382,7 @@ TEST("send delayed request message") {
     self->mail(3)
       .schedule(sys.clock().now() + 1s)
       .request(dummy, infinite, weak_ref)
-      .first.then(on_result);
+      .then(on_result);
     launch();
     check_eq(mail_count(), 0u);
     check_eq(num_timeouts(), 1u);
@@ -391,7 +394,7 @@ TEST("send delayed request message") {
     self->mail(3)
       .schedule(sys.clock().now() + 1s)
       .request(dummy, infinite, strong_ref, weak_self_ref)
-      .first.then(on_result);
+      .then(on_result);
     launch();
     check_eq(mail_count(), 0u);
     check_eq(num_timeouts(), 1u);
@@ -412,12 +415,12 @@ TEST("send delayed request message with no response") {
       [self, res](int) { *res = self->make_response_promise(); },
     };
   });
-  self->mail(3)
-    .delay(1s)
-    .request(dummy, 1s)
-    .first //
-    .then([this](int) { fail("unexpected response"); },
-          [result](error& err) { *result = std::move(err); });
+  auto pending = self->mail(3)
+                   .delay(1s)
+                   .request(dummy, 1s) //
+                   .then([this](int) { fail("unexpected response"); },
+                         [result](error& err) { *result = std::move(err); });
+  static_assert(std::is_same_v<decltype(pending), disposable>);
   launch();
   check_eq(mail_count(), 0u);
   check_eq(num_timeouts(), 2u);
@@ -486,7 +489,7 @@ TEST("send request message to an invalid receiver") {
     self->mail("hello world")
       .delay(1s)
       .request(actor{}, 1s)
-      .first.then(on_result, on_error);
+      .then(on_result, on_error);
     launch();
     check_eq(mail_count(), 1u);
     check_eq(num_timeouts(), 0u);

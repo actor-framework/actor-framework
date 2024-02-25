@@ -98,11 +98,7 @@ TEST("send delayed request message") {
       };
     });
     SECTION("regular message") {
-      self->mail(3)
-        .delay(5ms)
-        .request(dummy, 1s)
-        .first //
-        .receive(on_result, on_error);
+      self->mail(3).delay(5ms).request(dummy, 1s).receive(on_result, on_error);
       check_eq(*result, 9);
     }
     SECTION("urgent message") {
@@ -110,7 +106,6 @@ TEST("send delayed request message") {
         .urgent()
         .schedule(self->clock().now() + 5ms)
         .request(dummy, 1s)
-        .first //
         .receive(on_result, on_error);
       check_eq(*result, 9);
     }
@@ -122,20 +117,18 @@ TEST("send delayed request message") {
       };
     });
     SECTION("regular message") {
-      self->mail(3)
-        .delay(5ms)
-        .request(dummy, 1s)
-        .first //
-        .receive(on_result, on_error);
+      self->mail(3).delay(5ms).request(dummy, 1s).receive(on_result, on_error);
       check_eq(*err, make_error(sec::unexpected_response));
     }
     SECTION("urgent message") {
-      self->mail(3)
-        .urgent()
-        .schedule(self->clock().now() + 5ms)
-        .request(dummy, 1s)
-        .first //
-        .receive(on_result, on_error);
+      auto [hdl, pending] = self->mail(3)
+                              .urgent()
+                              .schedule(self->clock().now() + 5ms)
+                              .request(dummy, 1s);
+      static_assert(
+        std::is_same_v<decltype(hdl), blocking_response_handle<message>>);
+      static_assert(std::is_same_v<decltype(pending), disposable>);
+      std::move(hdl).receive(on_result, on_error);
       check_eq(*err, make_error(sec::unexpected_response));
     }
     SECTION("no response") {
@@ -148,7 +141,6 @@ TEST("send delayed request message") {
       self->mail(3)
         .delay(5ms)
         .request(dummy, 10ms)
-        .first //
         .receive(on_result, on_error);
       check_eq(*err, make_error(sec::request_timeout));
       self->mail(exit_msg{self->address(), exit_reason::user_shutdown})
@@ -172,7 +164,7 @@ TEST("send request message to an invalid receiver") {
     self->mail("hello world")
       .delay(1s)
       .request(actor{}, 1s)
-      .first.receive(on_result, on_error);
+      .receive(on_result, on_error);
     check_eq(*result, 0);
     check_eq(*err, make_error(sec::invalid_request));
   }
