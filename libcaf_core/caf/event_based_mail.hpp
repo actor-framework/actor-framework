@@ -70,9 +70,9 @@ public:
                                            make_error(sec::invalid_request)),
                       self()->context());
     }
-    using hdl_t = event_based_response_handle<response_type>;
-    auto hdl = hdl_t{self(), mid.response_id(), std::move(in_flight_timeout)};
-    return std::pair{std::move(hdl), std::move(in_flight_response)};
+    using hdl_t = event_based_delayed_response_handle<response_type>;
+    return hdl_t{self(), mid.response_id(), std::move(in_flight_timeout),
+                 std::move(in_flight_response)};
   }
 
 private:

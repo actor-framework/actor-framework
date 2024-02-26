@@ -63,9 +63,9 @@ public:
                                            make_error(sec::invalid_request)),
                       self()->context());
     }
-    using hdl_t = blocking_response_handle<response_type>;
-    auto hdl = hdl_t{self(), mid.response_id(), relative_timeout};
-    return std::pair{std::move(hdl), std::move(in_flight)};
+    using hdl_t = blocking_delayed_response_handle<response_type>;
+    return hdl_t{self(), mid.response_id(), relative_timeout,
+                 std::move(in_flight)};
   }
 
 private:
