@@ -107,13 +107,21 @@ TEST("passing a value to the cell constructor overrides the default value") {
 TEST("actors can spawn stateful actors as children") {
   auto dummy = sys.spawn(dummy_impl);
   auto [parent, run_parent] = sys.spawn_inactive<event_based_actor>();
-  auto uut = parent->spawn(actor_from_state<cell_state>, 42);
-  static_assert(std::is_same_v<decltype(uut), actor>);
-  inject().with(get_atom_v).from(dummy).to(uut);
-  expect<int>().with(42).from(uut).to(dummy);
-  inject().with(put_atom_v, 23).from(dummy).to(uut);
-  inject().with(get_atom_v).from(dummy).to(uut);
-  expect<int>().with(23).from(uut).to(dummy);
+  SECTION("no flags") {
+    auto uut = parent->spawn(actor_from_state<cell_state>, 42);
+    static_assert(std::is_same_v<decltype(uut), actor>);
+    inject().with(get_atom_v).from(dummy).to(uut);
+    expect<int>().with(42).from(uut).to(dummy);
+    inject().with(put_atom_v, 23).from(dummy).to(uut);
+    inject().with(get_atom_v).from(dummy).to(uut);
+    expect<int>().with(23).from(uut).to(dummy);
+  }
+  SECTION("linked") {
+    auto uut = parent->spawn<linked>(actor_from_state<cell_state>, 42);
+    static_assert(std::is_same_v<decltype(uut), actor>);
+    run_parent();
+    expect<exit_msg>().to(uut);
+  }
 }
 
 struct id_cell_state {

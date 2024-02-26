@@ -82,10 +82,11 @@ namespace caf {
 /// components such as a middleman.
 class CAF_CORE_EXPORT actor_system {
 public:
-  friend class logger;
-  friend class io::middleman;
-  friend class net::middleman;
   friend class abstract_actor;
+  friend class io::middleman;
+  friend class local_actor;
+  friend class logger;
+  friend class net::middleman;
   friend class scheduler;
 
   template <class>
@@ -431,7 +432,9 @@ public:
   template <spawn_options Options = no_spawn_options, class CustomSpawn,
             class... Args>
   typename CustomSpawn::handle_type spawn(CustomSpawn, Args&&... args) {
-    return CustomSpawn::template do_spawn<Options>(*this,
+    actor_config cfg{dummy_execution_unit(), nullptr};
+    cfg.mbox_factory = mailbox_factory();
+    return CustomSpawn::template do_spawn<Options>(*this, cfg,
                                                    std::forward<Args>(args)...);
   }
 

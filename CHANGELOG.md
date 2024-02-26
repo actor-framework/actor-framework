@@ -8,6 +8,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 ### Fixed
 
 - Fix building CAF with shared libraries (DLLs) enabled on Windows (#1715).
+- The `actor_from_state` utility now evaluates spawn options such as `linked`
+  (#1771). Previously, passing this option to `actor_from_state` resulted in a
+  compiler error.
 
 ### Removed
 
