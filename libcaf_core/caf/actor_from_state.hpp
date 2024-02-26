@@ -59,9 +59,7 @@ public:
 
 private:
   template <spawn_options Os, class... Args>
-  static auto do_spawn(actor_system& sys, Args&&... args) {
-    actor_config cfg;
-    cfg.mbox_factory = sys.mailbox_factory();
+  static auto do_spawn(actor_system& sys, actor_config& cfg, Args&&... args) {
     return sys.template spawn_impl<stateful_actor<State, base_type>, Os>(
       cfg, std::forward<Args>(args)...);
   }

@@ -115,8 +115,11 @@ public:
   template <spawn_options Options = no_spawn_options, class CustomSpawn,
             class... Args>
   typename CustomSpawn::handle_type spawn(CustomSpawn, Args&&... args) {
-    return CustomSpawn::template do_spawn<Options>(system(),
-                                                   std::forward<Args>(args)...);
+    actor_config cfg{context(), this};
+    cfg.mbox_factory = system().mailbox_factory();
+    return eval_opts(Options,
+                     CustomSpawn::template do_spawn<make_unbound(Options)>(
+                       system(), cfg, std::forward<Args>(args)...));
   }
 
   template <spawn_options Os = no_spawn_options, class F, class... Ts>
