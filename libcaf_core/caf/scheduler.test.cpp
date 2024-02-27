@@ -5,11 +5,10 @@
 #include "caf/scheduler.hpp"
 
 #include "caf/test/outline.hpp"
-#include "caf/test/scenario.hpp"
 
 #include "caf/actor_system_config.hpp"
-#include "caf/async/file.hpp"
 #include "caf/detail/latch.hpp"
+#include "caf/resumable.hpp"
 
 #include <string>
 
@@ -23,7 +22,6 @@ struct testee : resumable, ref_counted {
   testee(std::shared_ptr<latch> latch_handle)
     : rendesvous(std::move(latch_handle)) {
   }
-  ~testee() = default;
   subtype_t subtype() const override {
     return resumable::function_object;
   }
@@ -42,7 +40,7 @@ struct testee : resumable, ref_counted {
     deref();
   }
   std::atomic<size_t> runs = 0;
-  size_t received_throughput = 0;
+  std::atomic<size_t> received_throughput = 0;
   std::shared_ptr<latch> rendesvous;
 };
 
@@ -50,8 +48,9 @@ OUTLINE("scheduling resumables") {
   GIVEN("an actor system using the work <sched> scheduler") {
     auto sched = block_parameters<std::string>();
     actor_system_config cfg;
-    cfg.set("caf.scheduler.policy", sched);
     cfg.set("caf.scheduler.max-throughput", 5);
+    cfg.set("caf.scheduler.max-threads", 2);
+    cfg.set("caf.scheduler.policy", sched);
     actor_system sys(cfg);
     auto& sut = sys.scheduler();
     WHEN("scheduling a resumable") {
@@ -70,6 +69,7 @@ OUTLINE("scheduling resumables") {
         check_eq(worker->get_reference_count(), 1u);
       }
     }
+    // TODO: Change to WHEN block after fixing issue #1776.
     AND_WHEN("scheduling multiple resumables") {
       auto workers = std::vector<intrusive_ptr<testee>>{};
       auto rendesvous = std::make_shared<latch>(11);
@@ -129,6 +129,7 @@ OUTLINE("scheduling units that are awaiting") {
     auto sched = block_parameters<std::string>();
     actor_system_config cfg;
     cfg.set("caf.scheduler.policy", sched);
+    cfg.set("caf.scheduler.max-threads", 2);
     cfg.set("caf.scheduler.max-throughput", 5);
     actor_system sys(cfg);
     auto& sut = sys.scheduler();
