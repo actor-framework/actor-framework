@@ -196,7 +196,8 @@ auto with_retry(Fn fn) {
 
 std::optional<int32_t> read_cell_value(scoped_actor& self, const actor& cell) {
   std::optional<int32_t> result;
-  self->request(cell, 5s, get_atom_v)
+  self->mail(get_atom_v)
+    .request(cell, 5s)
     .receive([&result](int32_t value) { result = value; },
              [](error& err) {
                std::cout << "error: " << to_string(err) << '\n';
@@ -275,12 +276,11 @@ int client(actor_system& sys, std::string_view mode, const std::string& host,
     auto ctrl = with_retry([&] { return mm.remote_actor(host, port); });
     bool unpublished = false;
     scoped_actor self{sys};
-    self->request(*ctrl, 5s, ok_atom_v)
-      .receive([&unpublished] { unpublished = true; },
-               [](const error& reason) {
-                 std::cout << "failed to unpublish: " << to_string(reason)
-                           << "\n";
-               });
+    self->mail(ok_atom_v).request(*ctrl, 5s).receive(
+      [&unpublished] { unpublished = true; },
+      [](const error& reason) {
+        std::cout << "failed to unpublish: " << to_string(reason) << "\n";
+      });
     if (!unpublished) {
       return EXIT_FAILURE;
     }
@@ -303,7 +303,8 @@ int client(actor_system& sys, std::string_view mode, const std::string& host,
   if (mode == "deserialization_error") {
     auto ctrl = with_retry([&] { return mm.remote_actor(host, port); });
     caf::scoped_actor self{sys};
-    self->request(*ctrl, 5s, non_deserializable_t{})
+    self->mail(non_deserializable_t{})
+      .request(*ctrl, 5s)
       .receive([] { std::cout << "server accepted the message?\n"; },
                [](const error& reason) {
                  std::cout << "error: " << to_string(reason) << "\n";

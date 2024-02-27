@@ -79,7 +79,8 @@ template <class Handle, class... Ts>
 void tester(scoped_actor& self, const Handle& hdl, int32_t x, int32_t y,
             Ts&&... xs) {
   // test: x + y = z
-  self->request(hdl, infinite, add_atom_v, x, y)
+  self->mail(add_atom_v, x, y)
+    .request(hdl, infinite)
     .receive(
       [&self, x, y](int32_t z) { //
         aout(self).println("{} + {} = {}", x, y, z);

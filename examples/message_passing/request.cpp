@@ -47,21 +47,22 @@ struct cell_state {
 // --(rst-testees-begin)--
 void waiting_testee(event_based_actor* self, vector<cell> cells) {
   for (auto& x : cells)
-    self->request(x, 1s, get_atom_v).await([self, x](int32_t y) {
+    self->mail(get_atom_v).request(x, 1s).await([self, x](int32_t y) {
       aout(self).println("cell #{} -> {}", x.id(), y);
     });
 }
 
 void multiplexed_testee(event_based_actor* self, vector<cell> cells) {
   for (auto& x : cells)
-    self->request(x, 1s, get_atom_v).then([self, x](int32_t y) {
+    self->mail(get_atom_v).request(x, 1s).then([self, x](int32_t y) {
       aout(self).println("cell #{} -> {}", x.id(), y);
     });
 }
 
 void blocking_testee(scoped_actor& self, vector<cell> cells) {
   for (auto& x : cells)
-    self->request(x, 1s, get_atom_v)
+    self->mail(get_atom_v)
+      .request(x, 1s)
       .receive(
         [&](int32_t y) { aout(self).println("cell #{} -> {}", x.id(), y); },
         [&](error& err) { aout(self).println("cell #{} -> {}", x.id(), err); });

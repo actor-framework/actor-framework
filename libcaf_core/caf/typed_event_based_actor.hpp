@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/event_based_mail.hpp"
 #include "caf/extend.hpp"
 #include "caf/keep_behavior.hpp"
 #include "caf/mixin/requester.hpp"

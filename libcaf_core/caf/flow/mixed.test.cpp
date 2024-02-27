@@ -79,7 +79,7 @@ TEST("GH-1399 regression") {
     self->make_observable()
       .iota(1)
       .flat_map([self, worker](int x) {
-        return self->request(worker, infinite, x).as_observable<int32_t>();
+        return self->mail(x).request(worker, infinite).as_observable<int32_t>();
       })
       .take(10)
       .for_each([results](int value) { results->push_back(value); });

@@ -68,7 +68,9 @@ SCENARIO("concat_map merges multiple observables") {
         self->make_observable()
           .from_container(inputs)
           .concat_map([self = self, adder](int32_t x) {
-            return self->request(adder, infinite, x).as_observable<int32_t>();
+            return self->mail(x)
+              .request(adder, infinite)
+              .as_observable<int32_t>();
           })
           .for_each([&outputs](int32_t x) { outputs.emplace_back(x); });
         launch();

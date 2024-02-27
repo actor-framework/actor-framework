@@ -11,6 +11,8 @@
 
 #include <iostream>
 
+using namespace std::literals;
+
 // --(rst-math-error-begin)--
 enum class math_error : uint8_t {
   division_by_zero = 1,
@@ -87,7 +89,8 @@ void caf_main(actor_system& system) {
   // --(rst-request-begin)--
   auto div = system.spawn(divider_impl);
   scoped_actor self{system};
-  self->request(div, std::chrono::seconds(10), div_atom_v, x, y)
+  self->mail(div_atom_v, x, y)
+    .request(div, 10s)
     .receive([&](double z) { aout(self).println("{} / {} = {}", x, y, z); },
              [&](const error& err) {
                aout(self).println("*** cannot compute {} / {} => {}", x, y,

@@ -44,7 +44,8 @@ void caf_main(actor_system& sys) {
   auto serv = sys.spawn(server);
   auto worker = sys.spawn(client, serv);
   scoped_actor self{sys};
-  self->request(serv, 10s, ping_atom_v)
+  self->mail(ping_atom_v)
+    .request(serv, 10s)
     .receive(
       [&self, worker](pong_atom) {
         aout(self).println("received response from {}",

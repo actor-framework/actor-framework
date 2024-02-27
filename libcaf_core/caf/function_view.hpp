@@ -72,7 +72,18 @@ struct function_view_storage_catch_all {
 template <>
 class function_view_storage<message> {
 public:
-  using type = catch_all<function_view_storage_catch_all>;
+  using type = function_view_storage;
+
+  explicit function_view_storage(message& ptr) : storage_(&ptr) {
+    // nop
+  }
+
+  void operator()(message& msg) {
+    *storage_ = std::move(msg);
+  }
+
+private:
+  message* storage_;
 };
 
 template <class T>
@@ -160,17 +171,19 @@ public:
       return result_type{sec::bad_function_call};
     error err;
     if constexpr (std::is_void_v<value_type>) {
-      self_->request(impl_, timeout, std::forward<Ts>(xs)...)
-        .receive([&](error& x) { err = std::move(x); }, [] {});
+      self_->mail(std::forward<Ts>(xs)...)
+        .request(impl_, timeout)
+        .receive([] {}, [&err](error& x) { err = std::move(x); });
       if (err)
         return result_type{err};
       else
         return result_type{};
     } else {
       function_view_result<value_type> result;
-      self_->request(impl_, timeout, std::forward<Ts>(xs)...)
-        .receive([&](error& x) { err = std::move(x); },
-                 function_view_storage_t<value_type>{result.value});
+      self_->mail(std::forward<Ts>(xs)...)
+        .request(impl_, timeout)
+        .receive(function_view_storage_t<value_type>{result.value},
+                 [&err](error& x) { err = std::move(x); });
       if (err)
         return result_type{err};
       else

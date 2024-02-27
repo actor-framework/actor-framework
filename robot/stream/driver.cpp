@@ -69,7 +69,7 @@ behavior producer(event_based_actor* self) {
 }
 
 void consumer(event_based_actor* self, const actor& src) {
-  self->request(src, infinite, get_atom_v).then([self](const stream& in) {
+  self->mail(get_atom_v).request(src, infinite).then([self](const stream& in) {
     self->observe_as<point>(in, max_buffered, demand_threshold)
       .for_each([](const point& x) { std::cout << deep_to_string(x) << '\n'; });
   });

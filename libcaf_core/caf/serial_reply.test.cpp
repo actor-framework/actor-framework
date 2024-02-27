@@ -49,31 +49,39 @@ TEST("test_serial_reply") {
       [=](hi_atom) mutable {
         auto rp = self->make_response_promise();
         log::test::debug("received 'hi there'");
-        self->request(c0, infinite, sub0_atom_v).then([=](sub0_atom) mutable {
-          log::test::debug("received 'sub0'");
-          self->request(c1, infinite, sub1_atom_v).then([=](sub1_atom) mutable {
-            log::test::debug("received 'sub1'");
-            self->request(c2, infinite, sub2_atom_v)
-              .then([=](sub2_atom) mutable {
-                log::test::debug("received 'sub2'");
-                self->request(c3, infinite, sub3_atom_v)
-                  .then([=](sub3_atom) mutable {
-                    log::test::debug("received 'sub3'");
-                    self->request(c4, infinite, sub4_atom_v)
-                      .then([=](sub4_atom) mutable {
-                        log::test::debug("received 'sub4'");
-                        rp.deliver(ho_atom_v);
+        self->mail(sub0_atom_v)
+          .request(c0, infinite)
+          .then([=](sub0_atom) mutable {
+            log::test::debug("received 'sub0'");
+            self->mail(sub1_atom_v)
+              .request(c1, infinite)
+              .then([=](sub1_atom) mutable {
+                log::test::debug("received 'sub1'");
+                self->mail(sub2_atom_v)
+                  .request(c2, infinite)
+                  .then([=](sub2_atom) mutable {
+                    log::test::debug("received 'sub2'");
+                    self->mail(sub3_atom_v)
+                      .request(c3, infinite)
+                      .then([=](sub3_atom) mutable {
+                        log::test::debug("received 'sub3'");
+                        self->mail(sub4_atom_v)
+                          .request(c4, infinite)
+                          .then([=](sub4_atom) mutable {
+                            log::test::debug("received 'sub4'");
+                            rp.deliver(ho_atom_v);
+                          });
                       });
                   });
               });
           });
-        });
       },
     };
   });
   scoped_actor self{system};
   log::test::debug("ID of main: {}", self->id());
-  self->request(master, infinite, hi_atom_v)
+  self->mail(hi_atom_v)
+    .request(master, infinite)
     .receive([](ho_atom) { log::test::debug("received 'ho'"); },
              [this](const error& err) { return fail("Error: {}", err); });
   require(self->mailbox().empty());

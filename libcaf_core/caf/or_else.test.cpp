@@ -46,18 +46,27 @@ struct fixture {
       test::runnable::current().fail("{}", err);
     };
     auto& this_test = test::runnable::current();
-    self->request(testee, infinite, int8_t{1})
-      .receive([&this_test](
-                 const std::string& str) { this_test.check_eq(str, "a"); },
-               error_handler);
-    self->request(testee, infinite, int16_t{1})
-      .receive([&this_test](
-                 const std::string& str) { this_test.check_eq(str, "b"); },
-               error_handler);
-    self->request(testee, infinite, int32_t{1})
-      .receive([&this_test](
-                 const std::string& str) { this_test.check_eq(str, "c"); },
-               error_handler);
+    self->mail(int8_t{1})
+      .request(testee, infinite)
+      .receive(
+        [&this_test](const std::string& str) { //
+          this_test.check_eq(str, "a");
+        },
+        error_handler);
+    self->mail(int16_t{1})
+      .request(testee, infinite)
+      .receive(
+        [&this_test](const std::string& str) { //
+          this_test.check_eq(str, "b");
+        },
+        error_handler);
+    self->mail(int32_t{1})
+      .request(testee, infinite)
+      .receive(
+        [&this_test](const std::string& str) { //
+          this_test.check_eq(str, "c");
+        },
+        error_handler);
     self->send_exit(testee, exit_reason::user_shutdown);
   }
 };
