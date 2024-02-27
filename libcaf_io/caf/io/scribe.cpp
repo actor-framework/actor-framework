@@ -4,7 +4,7 @@
 
 #include "caf/io/scribe.hpp"
 
-#include "caf/logger.hpp"
+#include "caf/log/io.hpp"
 
 namespace caf::io {
 
@@ -13,7 +13,7 @@ scribe::scribe(connection_handle conn_hdl) : scribe_base(conn_hdl) {
 }
 
 scribe::~scribe() {
-  CAF_LOG_TRACE("");
+  auto exit_guard = log::io::trace("");
 }
 
 message scribe::detach_message() {
@@ -22,7 +22,7 @@ message scribe::detach_message() {
 
 bool scribe::consume(execution_unit* ctx, const void*, size_t num_bytes) {
   CAF_ASSERT(ctx != nullptr);
-  CAF_LOG_TRACE(CAF_ARG(num_bytes));
+  auto exit_guard = log::io::trace("num_bytes = {}", num_bytes);
   if (detached())
     // we are already disconnected from the broker while the multiplexer
     // did not yet remove the socket, this can happen if an I/O event causes
@@ -47,7 +47,8 @@ bool scribe::consume(execution_unit* ctx, const void*, size_t num_bytes) {
 
 void scribe::data_transferred(execution_unit* ctx, size_t written,
                               size_t remaining) {
-  CAF_LOG_TRACE(CAF_ARG(written) << CAF_ARG(remaining));
+  auto exit_guard = log::io::trace("written = {}, remaining = {}", written,
+                                   remaining);
   if (detached())
     return;
   using transferred_t = data_transferred_msg;

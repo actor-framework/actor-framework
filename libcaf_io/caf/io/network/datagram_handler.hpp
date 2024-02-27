@@ -13,7 +13,7 @@
 
 #include "caf/byte_buffer.hpp"
 #include "caf/detail/io_export.hpp"
-#include "caf/logger.hpp"
+#include "caf/log/io.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/ref_counted.hpp"
 
@@ -96,7 +96,7 @@ public:
 protected:
   template <class Policy>
   void handle_event_impl(io::network::operation op, Policy& policy) {
-    CAF_LOG_TRACE(CAF_ARG(op));
+    auto exit_guard = log::io::trace("op = {}", op);
     auto mcr = max_consecutive_reads_;
     switch (op) {
       case io::network::operation::read: {

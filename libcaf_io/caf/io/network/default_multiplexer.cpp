@@ -161,7 +161,7 @@ default_multiplexer::default_multiplexer(actor_system* sys)
 }
 
 bool default_multiplexer::poll_once_impl(bool block) {
-  CAF_LOG_TRACE("epoll()-based multiplexer");
+  auto exit_guard = log::io::trace("epoll()-based multiplexer");
   CAF_ASSERT(block == false || internally_posted_.empty());
   // Keep running in case of `EINTR`.
   for (;;) {
@@ -197,13 +197,13 @@ bool default_multiplexer::poll_once_impl(bool block) {
 }
 
 void default_multiplexer::run() {
-  CAF_LOG_TRACE("epoll()-based multiplexer");
+  auto exit_guard = log::io::trace("epoll()-based multiplexer");
   while (shadow_ > 0)
     poll_once(true);
 }
 
 void default_multiplexer::handle(const default_multiplexer::event& e) {
-  CAF_LOG_TRACE("e.fd = " << CAF_ARG(e.fd) << ", mask = " << CAF_ARG(e.mask));
+  auto exit_guard = log::io::trace("e.fd = {}, mask = {}", e.fd, e.mask);
   // ptr is only allowed to nullptr if fd is our pipe
   // read handle which is only registered for input
   CAF_ASSERT(e.ptr != nullptr || e.fd == pipe_.first);
@@ -298,7 +298,7 @@ default_multiplexer::default_multiplexer(actor_system* sys)
 }
 
 bool default_multiplexer::poll_once_impl(bool block) {
-  CAF_LOG_TRACE("poll()-based multiplexer");
+  auto exit_guard = log::io::trace("poll()-based multiplexer");
   CAF_ASSERT(block == false || internally_posted_.empty());
   // we store the results of poll() in a separate vector , because
   // altering the pollset while traversing it is not exactly a
@@ -370,9 +370,9 @@ bool default_multiplexer::poll_once_impl(bool block) {
 }
 
 void default_multiplexer::run() {
-  CAF_LOG_TRACE("poll()-based multiplexer:" << CAF_ARG(input_mask)
-                                            << CAF_ARG(output_mask)
-                                            << CAF_ARG(error_mask));
+  auto exit_guard = log::io::trace("poll()-based multiplexer: input_mask = {}, "
+                                   "output_mask = {}, error_mask = {}",
+                                   input_mask, output_mask, error_mask);
   while (!pollset_.empty())
     poll_once(true);
 }
@@ -380,7 +380,7 @@ void default_multiplexer::run() {
 void default_multiplexer::handle(const default_multiplexer::event& e) {
   CAF_ASSERT(e.fd != invalid_native_socket);
   CAF_ASSERT(pollset_.size() == shadow_.size());
-  CAF_LOG_TRACE(CAF_ARG(e.fd) << CAF_ARG(e.mask));
+  auto exit_guard = log::io::trace("e.fd = {}, e.mask = {}", e.fd, e.mask);
   auto last = pollset_.end();
   auto i = std::lower_bound(pollset_.begin(), last, e.fd,
                             [](const pollfd& lhs, native_socket rhs) {
@@ -486,7 +486,7 @@ void default_multiplexer::add(operation op, native_socket fd,
   // ptr == nullptr is only allowed to store our pipe read handle
   // and the pipe read handle is added in the ctor (not allowed here)
   CAF_ASSERT(ptr != nullptr);
-  CAF_LOG_TRACE(CAF_ARG(op) << CAF_ARG(fd));
+  auto exit_guard = log::io::trace("op = {}, fd = {}", op, fd);
   new_event(add_flag, op, fd, ptr);
 }
 
@@ -495,7 +495,7 @@ void default_multiplexer::del(operation op, native_socket fd,
   CAF_ASSERT(fd != invalid_native_socket);
   // ptr == nullptr is only allowed when removing our pipe read handle
   CAF_ASSERT(ptr != nullptr || fd == pipe_.first);
-  CAF_LOG_TRACE(CAF_ARG(op) << CAF_ARG(fd));
+  auto exit_guard = log::io::trace("op = {}, fd = {}", op, fd);
   new_event(del_flag, op, fd, ptr);
 }
 
@@ -536,13 +536,13 @@ multiplexer::supervisor_ptr default_multiplexer::make_supervisor() {
 }
 
 void default_multiplexer::close_pipe() {
-  CAF_LOG_TRACE("");
+  auto exit_guard = log::io::trace("");
   del(operation::read, pipe_.first, nullptr);
 }
 
 void default_multiplexer::handle_socket_event(native_socket fd, int mask,
                                               event_handler* ptr) {
-  CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(mask));
+  auto exit_guard = log::io::trace("fd = {}, mask = {}", fd, mask);
   CAF_ASSERT(ptr != nullptr);
   bool checkerror = true;
   if ((mask & input_mask) != 0) {
@@ -583,7 +583,7 @@ void default_multiplexer::init() {
 }
 
 bool default_multiplexer::poll_once(bool block) {
-  CAF_LOG_TRACE(CAF_ARG(block));
+  auto exit_guard = log::io::trace("block = {}", block);
   if (!internally_posted_.empty()) {
     // Don't iterate internally_posted_ directly, because resumables can
     // enqueue new elements into it.
@@ -604,7 +604,7 @@ bool default_multiplexer::poll_once(bool block) {
 }
 
 void default_multiplexer::resume(intrusive_ptr<resumable> ptr) {
-  CAF_LOG_TRACE("");
+  auto exit_guard = log::io::trace("");
   switch (ptr->resume(this, max_throughput_)) {
     case resumable::resume_later:
       // Delay resumable until next cycle.
@@ -640,7 +640,7 @@ default_multiplexer::~default_multiplexer() {
 }
 
 void default_multiplexer::exec_later(resumable* ptr) {
-  CAF_LOG_TRACE(CAF_ARG(ptr));
+  auto exit_guard = log::io::trace("ptr = {}", ptr);
   CAF_ASSERT(ptr != nullptr);
   switch (ptr->subtype()) {
     case resumable::io_actor:
@@ -656,7 +656,7 @@ void default_multiplexer::exec_later(resumable* ptr) {
 }
 
 scribe_ptr default_multiplexer::new_scribe(native_socket fd) {
-  CAF_LOG_TRACE("");
+  auto exit_guard = log::io::trace("");
   keepalive(fd, true);
   return make_counted<scribe_impl>(*this, fd);
 }
@@ -670,7 +670,7 @@ default_multiplexer::new_tcp_scribe(const std::string& host, uint16_t port) {
 }
 
 doorman_ptr default_multiplexer::new_doorman(native_socket fd) {
-  CAF_LOG_TRACE(CAF_ARG(fd));
+  auto exit_guard = log::io::trace("fd = {}", fd);
   CAF_ASSERT(fd != network::invalid_native_socket);
   return make_counted<doorman_impl>(*this, fd);
 }
@@ -686,7 +686,7 @@ expected<doorman_ptr> default_multiplexer::new_tcp_doorman(uint16_t port,
 
 datagram_servant_ptr
 default_multiplexer::new_datagram_servant(native_socket fd) {
-  CAF_LOG_TRACE(CAF_ARG(fd));
+  auto exit_guard = log::io::trace("fd = {}", fd);
   CAF_ASSERT(fd != network::invalid_native_socket);
   return make_counted<datagram_servant_impl>(*this, fd, next_endpoint_id());
 }
@@ -694,7 +694,7 @@ default_multiplexer::new_datagram_servant(native_socket fd) {
 datagram_servant_ptr
 default_multiplexer::new_datagram_servant_for_endpoint(native_socket fd,
                                                        const ip_endpoint& ep) {
-  CAF_LOG_TRACE(CAF_ARG(ep));
+  auto exit_guard = log::io::trace("ep = {}", ep);
   auto ds = new_datagram_servant(fd);
   ds->add_endpoint(ep, ds->hdl());
   return ds;
@@ -723,7 +723,7 @@ int64_t default_multiplexer::next_endpoint_id() {
 }
 
 void default_multiplexer::handle_internal_events() {
-  CAF_LOG_TRACE(CAF_ARG2("num-events", events_.size()));
+  auto exit_guard = log::io::trace("num-events = {}", events_.size());
   for (auto& e : events_)
     handle(e);
   events_.clear();
@@ -733,8 +733,9 @@ void default_multiplexer::handle_internal_events() {
 
 template <int Family>
 bool ip_connect(native_socket fd, const std::string& host, uint16_t port) {
-  CAF_LOG_TRACE("Family =" << (Family == AF_INET ? "AF_INET" : "AF_INET6")
-                           << CAF_ARG(fd) << CAF_ARG(host));
+  auto exit_guard = log::io::trace("Family = {}, fd = {}, host = {}",
+                                   (Family == AF_INET ? "AF_INET" : "AF_INET6"),
+                                   fd, host);
   static_assert(Family == AF_INET || Family == AF_INET6, "invalid family");
   using sockaddr_type
     = std::conditional_t<Family == AF_INET, sockaddr_in, sockaddr_in6>;
@@ -749,7 +750,8 @@ bool ip_connect(native_socket fd, const std::string& host, uint16_t port) {
 expected<native_socket>
 new_tcp_connection(const std::string& host, uint16_t port,
                    std::optional<protocol::network> preferred) {
-  CAF_LOG_TRACE(CAF_ARG(host) << CAF_ARG(port) << CAF_ARG(preferred));
+  auto exit_guard = log::io::trace("host = {}, port = {}, preferred = {}", host,
+                                   port, preferred);
   log::io::debug("try to connect to: host = {} port = {}", host, port);
   auto res = interfaces::native_address(host, std::move(preferred));
   if (!res) {
@@ -814,7 +816,8 @@ template <int Family, int SockType = SOCK_STREAM>
 expected<native_socket> new_ip_acceptor_impl(uint16_t port, const char* addr,
                                              bool reuse_addr, bool any) {
   static_assert(Family == AF_INET || Family == AF_INET6, "invalid family");
-  CAF_LOG_TRACE(CAF_ARG(port) << ", addr = " << (addr ? addr : "nullptr"));
+  auto exit_guard = log::io::trace("port = {}, addr = {}", port,
+                                   (addr ? addr : "nullptr"));
   int socktype = SockType;
 #ifdef SOCK_CLOEXEC
   socktype |= SOCK_CLOEXEC;
@@ -848,7 +851,8 @@ expected<native_socket> new_ip_acceptor_impl(uint16_t port, const char* addr,
 
 expected<native_socket> new_tcp_acceptor_impl(uint16_t port, const char* addr,
                                               bool reuse_addr) {
-  CAF_LOG_TRACE(CAF_ARG(port) << ", addr = " << (addr ? addr : "nullptr"));
+  auto exit_guard = log::io::trace("port = {}, addr = {}", port,
+                                   (addr ? addr : "nullptr"));
   auto addrs = interfaces::server_address(port, addr);
   auto addr_str = std::string{addr == nullptr ? "" : addr};
   if (addrs.empty())
@@ -885,7 +889,8 @@ expected<native_socket> new_tcp_acceptor_impl(uint16_t port, const char* addr,
 expected<std::pair<native_socket, ip_endpoint>>
 new_remote_udp_endpoint_impl(const std::string& host, uint16_t port,
                              std::optional<protocol::network> preferred) {
-  CAF_LOG_TRACE(CAF_ARG(host) << CAF_ARG(port) << CAF_ARG(preferred));
+  auto exit_guard = log::io::trace("host = {}, port = {}, preferred = {}", host,
+                                   port, preferred);
   auto lep = new_local_udp_endpoint_impl(0, nullptr, false, preferred);
   if (!lep)
     return std::move(lep.error());
@@ -900,7 +905,8 @@ new_remote_udp_endpoint_impl(const std::string& host, uint16_t port,
 expected<std::pair<native_socket, protocol::network>>
 new_local_udp_endpoint_impl(uint16_t port, const char* addr, bool reuse,
                             std::optional<protocol::network> preferred) {
-  CAF_LOG_TRACE(CAF_ARG(port) << ", addr = " << (addr ? addr : "nullptr"));
+  auto exit_guard = log::io::trace("port = {}, addr = {}", port,
+                                   (addr ? addr : "nullptr"));
   auto addrs = interfaces::server_address(port, addr, preferred);
   auto addr_str = std::string{addr == nullptr ? "" : addr};
   if (addrs.empty())

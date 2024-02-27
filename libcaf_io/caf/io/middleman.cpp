@@ -130,7 +130,7 @@ public:
     broker_ = mpx_.system().spawn_impl<impl, hidden>(cfg, std::move(dptr));
     detail::latch sync{1};
     auto run_mpx = [this, sync_ptr{&sync}] {
-      CAF_LOG_TRACE("");
+      auto exit_guard = log::io::trace("");
       mpx_.thread_id(std::this_thread::get_id());
       sync_ptr->count_down();
       mpx_.run();
@@ -247,7 +247,7 @@ expected<node_id> middleman::connect(std::string host, uint16_t port) {
 expected<uint16_t> middleman::publish(const strong_actor_ptr& whom,
                                       std::set<std::string> sigs, uint16_t port,
                                       const char* cstr, bool ru) {
-  CAF_LOG_TRACE(CAF_ARG(whom) << CAF_ARG(sigs) << CAF_ARG(port));
+  auto exit_guard = log::io::trace("whom = {}, sigs = {}, port = {}", whom, sigs, port);
   if (!whom)
     return sec::cannot_publish_invalid_actor;
   std::string in;
@@ -258,7 +258,7 @@ expected<uint16_t> middleman::publish(const strong_actor_ptr& whom,
 }
 
 expected<void> middleman::unpublish(const actor_addr& whom, uint16_t port) {
-  CAF_LOG_TRACE(CAF_ARG(whom) << CAF_ARG(port));
+  auto exit_guard = log::io::trace("whom = {}, port = {}", whom, port);
   auto f = make_function_view(actor_handle());
   return f(unpublish_atom_v, whom, port);
 }
@@ -266,7 +266,7 @@ expected<void> middleman::unpublish(const actor_addr& whom, uint16_t port) {
 expected<strong_actor_ptr> middleman::remote_actor(std::set<std::string> ifs,
                                                    std::string host,
                                                    uint16_t port) {
-  CAF_LOG_TRACE(CAF_ARG(ifs) << CAF_ARG(host) << CAF_ARG(port));
+  auto exit_guard = log::io::trace("ifs = {}, host = {}, port = {}", ifs, host, port);
   auto f = make_function_view(actor_handle());
   auto res = f(connect_atom_v, std::move(host), port);
   if (!res)
@@ -282,7 +282,7 @@ expected<strong_actor_ptr> middleman::remote_actor(std::set<std::string> ifs,
 
 strong_actor_ptr middleman::remote_lookup(std::string name,
                                           const node_id& nid) {
-  CAF_LOG_TRACE(CAF_ARG(name) << CAF_ARG(nid));
+  auto exit_guard = log::io::trace("name = {}, nid = {}", name, nid);
   if (system().node() == nid)
     return system().registry().get(name);
   auto basp = named_broker<basp_broker>("BASP");
@@ -305,7 +305,7 @@ strong_actor_ptr middleman::remote_lookup(std::string name,
 }
 
 void middleman::start() {
-  CAF_LOG_TRACE("");
+  auto exit_guard = log::io::trace("");
   // Consider using net::middleman for prometheus if caf-net is available.
   if (auto prom = get_if<config_value::dictionary>(
         &system().config(), "caf.middleman.prometheus-http")) {
@@ -321,7 +321,7 @@ void middleman::start() {
   CAF_ASSERT(backend_supervisor_ != nullptr);
   detail::latch sync{1};
   auto run_backend = [this, sync_ptr{&sync}] {
-    CAF_LOG_TRACE("");
+    auto exit_guard = log::io::trace("");
     backend().thread_id(std::this_thread::get_id());
     sync_ptr->count_down();
     backend().run();
@@ -335,9 +335,9 @@ void middleman::start() {
 }
 
 void middleman::stop() {
-  CAF_LOG_TRACE("");
+  auto exit_guard = log::io::trace("");
   backend().dispatch([this] {
-    CAF_LOG_TRACE("");
+    auto exit_guard = log::io::trace("");
     // managers_ will be modified while we are stopping each manager,
     // because each manager will call remove(...)
     for (auto& kvp : named_brokers_) {

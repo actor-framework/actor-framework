@@ -7,7 +7,7 @@
 #include "caf/io/network/protocol.hpp"
 
 #include "caf/detail/call_cfun.hpp"
-#include "caf/logger.hpp"
+#include "caf/log/io.hpp"
 #include "caf/sec.hpp"
 
 // clang-format off
@@ -121,7 +121,7 @@ string socket_error_as_string(int errcode) {
 }
 
 expected<void> child_process_inherit(native_socket fd, bool new_value) {
-  CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(new_value));
+  auto exit_guard = log::io::trace("fd = {}, new_value = {}", fd, new_value);
   // read flags for fd
   CALL_CFUN(rf, detail::cc_not_minus1, "fcntl", fcntl(fd, F_GETFD));
   // calculate and set new flags
@@ -131,7 +131,7 @@ expected<void> child_process_inherit(native_socket fd, bool new_value) {
 }
 
 expected<void> keepalive(native_socket fd, bool new_value) {
-  CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(new_value));
+  auto exit_guard = log::io::trace("fd = {}, new_value = {}", fd, new_value);
   int value = new_value ? 1 : 0;
   CALL_CFUN(res, detail::cc_zero, "setsockopt",
             setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &value,
@@ -140,7 +140,7 @@ expected<void> keepalive(native_socket fd, bool new_value) {
 }
 
 expected<void> nonblocking(native_socket fd, bool new_value) {
-  CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(new_value));
+  auto exit_guard = log::io::trace("fd = {}, new_value = {}", fd, new_value);
   // read flags for fd
   CALL_CFUN(rf, detail::cc_not_minus1, "fcntl", fcntl(fd, F_GETFL, 0));
   // calculate and set new flags
@@ -223,7 +223,7 @@ expected<void> child_process_inherit(native_socket fd, bool new_value) {
 }
 
 expected<void> keepalive(native_socket fd, bool new_value) {
-  CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(new_value));
+  auto exit_guard = log::io::trace("fd = {}, new_value = {}", fd, new_value);
   char value = new_value ? 1 : 0;
   CALL_CFUN(res, detail::cc_zero, "setsockopt",
             setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &value,
@@ -354,7 +354,7 @@ expected<void> send_buffer_size(native_socket fd, int new_value) {
 }
 
 expected<void> tcp_nodelay(native_socket fd, bool new_value) {
-  CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(new_value));
+  auto exit_guard = log::io::trace("fd = {}, new_value = {}", fd, new_value);
   int flag = new_value ? 1 : 0;
   CALL_CFUN(res, detail::cc_zero, "setsockopt",
             setsockopt(fd, IPPROTO_TCP, TCP_NODELAY,

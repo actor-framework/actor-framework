@@ -18,7 +18,7 @@ doorman_impl::doorman_impl(default_multiplexer& mx, native_socket sockfd)
 }
 
 bool doorman_impl::new_connection() {
-  CAF_LOG_TRACE("");
+  auto exit_guard = log::io::trace("");
   if (detached())
     // we are already disconnected from the broker while the multiplexer
     // did not yet remove the socket, this can happen if an I/O event causes
@@ -33,13 +33,13 @@ bool doorman_impl::new_connection() {
 }
 
 void doorman_impl::graceful_shutdown() {
-  CAF_LOG_TRACE("");
+  auto exit_guard = log::io::trace("");
   acceptor_.graceful_shutdown();
   detach(&acceptor_.backend(), false);
 }
 
 void doorman_impl::launch() {
-  CAF_LOG_TRACE("");
+  auto exit_guard = log::io::trace("");
   acceptor_.start(this);
 }
 

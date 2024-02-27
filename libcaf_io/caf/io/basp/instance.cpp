@@ -44,7 +44,7 @@ instance::instance(abstract_broker* parent, callee& lstnr)
 
 connection_state instance::handle(execution_unit* ctx, new_data_msg& dm,
                                   header& hdr, bool is_payload) {
-  CAF_LOG_TRACE(CAF_ARG(dm) << CAF_ARG(is_payload));
+  auto exit_guard = log::io::trace("dm = {}, is_payload = {}", dm, is_payload);
   // function object providing cleanup code on errors
   auto err = [&](connection_state code) {
     if (auto nid = tbl_.erase_direct(dm.handle))
@@ -66,7 +66,7 @@ connection_state instance::handle(execution_unit* ctx, new_data_msg& dm,
       return err(malformed_message);
     }
     if (!valid(hdr)) {
-      log::io::warning("received invalid header: hdr = {}", CAF_ARG(hdr));
+      log::io::warning("received invalid header: hdr = {}", "hdr = {}", hdr);
       return err(malformed_message);
     }
     if (hdr.payload_len > 0) {
@@ -79,9 +79,10 @@ connection_state instance::handle(execution_unit* ctx, new_data_msg& dm,
 }
 
 void instance::handle_heartbeat(execution_unit* ctx) {
-  CAF_LOG_TRACE("");
+  auto exit_guard = log::io::trace("");
   for (auto& kvp : tbl_.direct_by_hdl_) {
-    CAF_LOG_TRACE(CAF_ARG(kvp.first) << CAF_ARG(kvp.second));
+    auto exit_guard = log::io::trace("kvp.first = {}, kvp.second = {}",
+                                     kvp.first, kvp.second);
     write_heartbeat(ctx, callee_.get_buffer(kvp.first));
     callee_.flush(kvp.first);
   }
@@ -97,7 +98,7 @@ void instance::flush(const routing_table::route& path) {
 
 void instance::write(execution_unit* ctx, const routing_table::route& r,
                      header& hdr, payload_writer* writer) {
-  CAF_LOG_TRACE(CAF_ARG(hdr));
+  auto exit_guard = log::io::trace("hdr = {}", hdr);
   CAF_ASSERT(hdr.payload_len == 0 || writer != nullptr);
   write(ctx, callee_.get_buffer(r.hdl), hdr, writer);
   flush(r);
@@ -106,8 +107,9 @@ void instance::write(execution_unit* ctx, const routing_table::route& r,
 void instance::add_published_actor(uint16_t port,
                                    strong_actor_ptr published_actor,
                                    std::set<std::string> published_interface) {
-  CAF_LOG_TRACE(CAF_ARG(port)
-                << CAF_ARG(published_actor) << CAF_ARG(published_interface));
+  auto exit_guard = log::io::trace(
+    "port = {}, published_actor = {}, published_interface = {}", port,
+    published_actor, published_interface);
   using std::swap;
   auto& entry = published_actors_[port];
   swap(entry.first, published_actor);
@@ -116,7 +118,7 @@ void instance::add_published_actor(uint16_t port,
 
 size_t instance::remove_published_actor(uint16_t port,
                                         removed_published_actor* cb) {
-  CAF_LOG_TRACE(CAF_ARG(port));
+  auto exit_guard = log::io::trace("port = {}", port);
   auto i = published_actors_.find(port);
   if (i == published_actors_.end())
     return 0;
@@ -128,7 +130,7 @@ size_t instance::remove_published_actor(uint16_t port,
 
 size_t instance::remove_published_actor(const actor_addr& whom, uint16_t port,
                                         removed_published_actor* cb) {
-  CAF_LOG_TRACE(CAF_ARG(whom) << CAF_ARG(port));
+  auto exit_guard = log::io::trace("whom = {}, port = {}", whom, port);
   size_t result = 0;
   if (port != 0) {
     auto i = published_actors_.find(port);
@@ -157,8 +159,9 @@ size_t instance::remove_published_actor(const actor_addr& whom, uint16_t port,
 bool instance::dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
                         const node_id& dest_node, uint64_t dest_actor,
                         uint8_t flags, message_id mid, const message& msg) {
-  CAF_LOG_TRACE(CAF_ARG(sender)
-                << CAF_ARG(dest_node) << CAF_ARG(mid) << CAF_ARG(msg));
+  auto exit_guard
+    = log::io::trace("sender = {}, dest_node = {}, mid = {}, msg = {}", sender,
+                     dest_node, mid, msg);
   CAF_ASSERT(dest_node && this_node_ != dest_node);
   auto path = lookup(dest_node);
   if (!path)
@@ -199,7 +202,7 @@ bool instance::dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
 void instance::write(execution_unit* ctx, byte_buffer& buf, header& hdr,
                      payload_writer* pw) {
   CAF_ASSERT(ctx != nullptr);
-  CAF_LOG_TRACE(CAF_ARG(hdr));
+  auto exit_guard = log::io::trace("hdr = {}", hdr);
   binary_serializer sink{ctx, buf};
   if (pw != nullptr) {
     // Write the BASP header after the payload.
@@ -224,7 +227,7 @@ void instance::write(execution_unit* ctx, byte_buffer& buf, header& hdr,
 
 void instance::write_server_handshake(execution_unit* ctx, byte_buffer& out_buf,
                                       std::optional<uint16_t> port) {
-  CAF_LOG_TRACE(CAF_ARG(port));
+  auto exit_guard = log::io::trace("port = {}", port);
   using namespace detail;
   published_actor* pa = nullptr;
   if (port) {
@@ -278,7 +281,7 @@ void instance::write_client_handshake(execution_unit* ctx, byte_buffer& buf) {
 
 void instance::write_monitor_message(execution_unit* ctx, byte_buffer& buf,
                                      const node_id& dest_node, actor_id aid) {
-  CAF_LOG_TRACE(CAF_ARG(dest_node) << CAF_ARG(aid));
+  auto exit_guard = log::io::trace("dest_node = {}, aid = {}", dest_node, aid);
   auto writer = make_callback([&](binary_serializer& sink) { //
     return sink.apply(this_node_) && sink.apply(dest_node);
   });
@@ -289,7 +292,8 @@ void instance::write_monitor_message(execution_unit* ctx, byte_buffer& buf,
 void instance::write_down_message(execution_unit* ctx, byte_buffer& buf,
                                   const node_id& dest_node, actor_id aid,
                                   const error& rsn) {
-  CAF_LOG_TRACE(CAF_ARG(dest_node) << CAF_ARG(aid) << CAF_ARG(rsn));
+  auto exit_guard = log::io::trace("dest_node = {}, aid = {}, rsn = {}",
+                                   dest_node, aid, rsn);
   auto writer = make_callback([&](binary_serializer& sink) {
     return sink.apply(this_node_) && sink.apply(dest_node) && sink.apply(rsn);
   });
@@ -298,7 +302,7 @@ void instance::write_down_message(execution_unit* ctx, byte_buffer& buf,
 }
 
 void instance::write_heartbeat(execution_unit* ctx, byte_buffer& buf) {
-  CAF_LOG_TRACE("");
+  auto exit_guard = log::io::trace("");
   header hdr{message_type::heartbeat, 0, 0, 0, invalid_actor_id,
              invalid_actor_id};
   write(ctx, buf, hdr);
@@ -306,7 +310,7 @@ void instance::write_heartbeat(execution_unit* ctx, byte_buffer& buf) {
 
 connection_state instance::handle(execution_unit* ctx, connection_handle hdl,
                                   header& hdr, byte_buffer* payload) {
-  CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(hdr));
+  auto exit_guard = log::io::trace("hdl = {}, hdr = {}", hdl, hdr);
   // Check payload validity.
   if (payload == nullptr) {
     if (hdr.payload_len != 0) {
@@ -505,7 +509,7 @@ connection_state instance::handle(execution_unit* ctx, connection_handle hdl,
       break;
     }
     case message_type::heartbeat: {
-      CAF_LOG_TRACE("received heartbeat");
+      auto exit_guard = log::io::trace("received heartbeat");
       callee_.handle_heartbeat();
       break;
     }
@@ -519,7 +523,8 @@ connection_state instance::handle(execution_unit* ctx, connection_handle hdl,
 
 void instance::forward(execution_unit* ctx, const node_id& dest_node,
                        const header& hdr, byte_buffer& payload) {
-  CAF_LOG_TRACE(CAF_ARG(dest_node) << CAF_ARG(hdr) << CAF_ARG(payload));
+  auto exit_guard = log::io::trace("dest_node = {}, hdr = {}, payload = {}",
+                                   dest_node, hdr, payload);
   auto path = lookup(dest_node);
   if (path) {
     binary_serializer sink{ctx, callee_.get_buffer(path->hdl)};

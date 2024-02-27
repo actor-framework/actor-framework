@@ -4,7 +4,7 @@
 
 #include "caf/io/network/acceptor.hpp"
 
-#include "caf/logger.hpp"
+#include "caf/log/io.hpp"
 
 namespace caf::io::network {
 
@@ -14,7 +14,7 @@ acceptor::acceptor(default_multiplexer& backend_ref, native_socket sockfd)
 }
 
 void acceptor::start(acceptor_manager* mgr) {
-  CAF_LOG_TRACE(CAF_ARG2("fd", fd_));
+  auto exit_guard = log::io::trace("fd = {}", fd_);
   CAF_ASSERT(mgr != nullptr);
   activate(mgr);
 }
@@ -27,13 +27,13 @@ void acceptor::activate(acceptor_manager* mgr) {
 }
 
 void acceptor::removed_from_loop(operation op) {
-  CAF_LOG_TRACE(CAF_ARG2("fd", fd_) << CAF_ARG(op));
+  auto exit_guard = log::io::trace("fd = {}, op = {}", fd_, op);
   if (op == operation::read)
     mgr_.reset();
 }
 
 void acceptor::graceful_shutdown() {
-  CAF_LOG_TRACE(CAF_ARG2("fd", fd_));
+  auto exit_guard = log::io::trace("fd = {}", fd_);
   // Ignore repeated calls.
   if (state_.shutting_down)
     return;

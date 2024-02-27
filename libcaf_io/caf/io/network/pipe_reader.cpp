@@ -47,7 +47,7 @@ resumable* pipe_reader::try_read_next() {
 }
 
 void pipe_reader::handle_event(operation op) {
-  CAF_LOG_TRACE(CAF_ARG(op));
+  auto exit_guard = log::io::trace("op = {}", op);
   if (op == operation::read) {
     auto ptr = try_read_next();
     if (ptr != nullptr)

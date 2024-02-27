@@ -32,7 +32,7 @@ template <class Subtype>
 class remote_message_handler {
 public:
   void handle_remote_message(execution_unit* ctx) {
-    CAF_LOG_TRACE("");
+    auto exit_guard = log::io::trace("");
     // Local variables.
     auto& dref = static_cast<Subtype&>(*this);
     auto& sys = *dref.system_;

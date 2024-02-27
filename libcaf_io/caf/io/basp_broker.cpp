@@ -17,7 +17,7 @@
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/forwarding_actor_proxy.hpp"
-#include "caf/logger.hpp"
+#include "caf/log/io.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/sec.hpp"
 #include "caf/send.hpp"
@@ -89,7 +89,7 @@ const char* basp_broker::name() const {
 }
 
 behavior basp_broker::make_behavior() {
-  CAF_LOG_TRACE(CAF_ARG(system().node()));
+  auto exit_guard = log::io::trace("system.node = {}", system().node());
   set_down_handler([](local_actor* ptr, down_msg& x) {
     static_cast<basp_broker*>(ptr)->handle_down_msg(x);
   });
@@ -129,7 +129,7 @@ behavior basp_broker::make_behavior() {
   return behavior{
     // received from underlying broker implementation
     [this](new_data_msg& msg) {
-      CAF_LOG_TRACE(CAF_ARG(msg.handle));
+      auto exit_guard = log::io::trace("msg.handle = {}", msg.handle);
       set_context(msg.handle);
       auto& ctx = *this_context;
       auto next = instance.handle(context(), msg, ctx.hdr,
@@ -149,8 +149,8 @@ behavior basp_broker::make_behavior() {
     // received from proxy instances
     [this](forward_atom, strong_actor_ptr& src, strong_actor_ptr& dest,
            message_id mid, const message& msg) {
-      CAF_LOG_TRACE(CAF_ARG(src)
-                    << CAF_ARG(dest) << CAF_ARG(mid) << CAF_ARG(msg));
+      auto exit_guard = log::io::trace(
+        "src = {}, dest = {}, mid = {}, msg = {}", src, dest, mid, msg);
       if (!dest || system().node() == dest->node()) {
         log::io::warning("cannot forward to invalid "
                          "or local actor: dest = {}",
@@ -172,9 +172,9 @@ behavior basp_broker::make_behavior() {
       auto cme = current_mailbox_element();
       if (cme == nullptr || cme->sender == nullptr)
         return sec::invalid_argument;
-      CAF_LOG_TRACE(CAF_ARG2("sender", cme->sender)
-                    << ", " << CAF_ARG(dest_node) << ", " << CAF_ARG(dest_id)
-                    << ", " << CAF_ARG(msg));
+      auto exit_guard
+        = log::io::trace("sender = {}, dest_node = {}, dest_id = {}, msg = {}",
+                         cme->sender, dest_node, dest_id, msg);
       auto& sender = cme->sender;
       if (system().node() == sender->node())
         system().registry().put(sender->id(), sender);
@@ -249,7 +249,7 @@ behavior basp_broker::make_behavior() {
     },
     // received from underlying broker implementation
     [this](const new_connection_msg& msg) {
-      CAF_LOG_TRACE(CAF_ARG(msg.handle));
+      auto exit_guard = log::io::trace("msg.handle = {}", msg.handle);
       auto& bi = instance;
       bi.write_server_handshake(context(), get_buffer(msg.handle),
                                 local_port(msg.source));
@@ -258,7 +258,7 @@ behavior basp_broker::make_behavior() {
     },
     // received from underlying broker implementation
     [this](const connection_closed_msg& msg) {
-      CAF_LOG_TRACE(CAF_ARG(msg.handle));
+      auto exit_guard = log::io::trace("msg.handle = {}", msg.handle);
       // We might still have pending messages from this connection. To
       // make sure there's no BASP worker deserializing a message, we are
       // sending us a message through the queue. This message gets
@@ -276,7 +276,7 @@ behavior basp_broker::make_behavior() {
     },
     // received from underlying broker implementation
     [this](const acceptor_closed_msg& msg) {
-      CAF_LOG_TRACE("");
+      auto exit_guard = log::io::trace("");
       // Same reasoning as in connection_closed_msg.
       auto& q = instance.queue();
       auto msg_id = q.new_id();
@@ -292,8 +292,8 @@ behavior basp_broker::make_behavior() {
     // received from middleman actor
     [this](publish_atom, doorman_ptr& ptr, uint16_t port,
            const strong_actor_ptr& whom, std::set<std::string>& sigs) {
-      CAF_LOG_TRACE(CAF_ARG(ptr)
-                    << CAF_ARG(port) << CAF_ARG(whom) << CAF_ARG(sigs));
+      auto exit_guard = log::io::trace(
+        "ptr = {}, port = {}, whom = {}, sigs = {}", ptr, port, whom, sigs);
       CAF_ASSERT(ptr != nullptr);
       add_doorman(std::move(ptr));
       if (whom)
@@ -303,8 +303,8 @@ behavior basp_broker::make_behavior() {
     // received from test code to set up two instances without doorman
     [this](publish_atom, scribe_ptr& ptr, uint16_t port,
            const strong_actor_ptr& whom, std::set<std::string>& sigs) {
-      CAF_LOG_TRACE(CAF_ARG(ptr)
-                    << CAF_ARG(port) << CAF_ARG(whom) << CAF_ARG(sigs));
+      auto exit_guard = log::io::trace(
+        "ptr = {}, port = {}, whom = {}, sigs = {}", ptr, port, whom, sigs);
       CAF_ASSERT(ptr != nullptr);
       auto hdl = ptr->hdl();
       add_scribe(std::move(ptr));
@@ -318,7 +318,7 @@ behavior basp_broker::make_behavior() {
     },
     // received from middleman actor (delegated)
     [this](connect_atom, scribe_ptr& ptr, uint16_t port) {
-      CAF_LOG_TRACE(CAF_ARG(ptr) << CAF_ARG(port));
+      auto exit_guard = log::io::trace("ptr = {}, port = {}", ptr, port);
       CAF_ASSERT(ptr != nullptr);
       auto rp = make_response_promise();
       auto hdl = ptr->hdl();
@@ -335,18 +335,18 @@ behavior basp_broker::make_behavior() {
       flush(hdl);
     },
     [this](delete_atom, const node_id& nid, actor_id aid) {
-      CAF_LOG_TRACE(CAF_ARG(nid) << ", " << CAF_ARG(aid));
+      auto exit_guard = log::io::trace("nid = {}, aid = {}", nid, aid);
       proxies().erase(nid, aid);
     },
     // received from the BASP instance when receiving down_message
     [this](delete_atom, const node_id& nid, actor_id aid, error& fail_state) {
-      CAF_LOG_TRACE(CAF_ARG(nid)
-                    << ", " << CAF_ARG(aid) << ", " << CAF_ARG(fail_state));
+      auto exit_guard = log::io::trace("nid = {}, aid = {}, fail_state = {}",
+                                       nid, aid, fail_state);
       proxies().erase(nid, aid, std::move(fail_state));
     },
     [this](unpublish_atom, const actor_addr& whom,
            uint16_t port) -> result<void> {
-      CAF_LOG_TRACE(CAF_ARG(whom) << CAF_ARG(port));
+      auto exit_guard = log::io::trace("whom = {}, port = {}", whom, port);
       auto cb = make_callback(
         [&](const strong_actor_ptr&, uint16_t x) { close(hdl_by_port(x)); });
       if (instance.remove_published_actor(whom, port, &cb) == 0)
@@ -437,7 +437,7 @@ resumable::resume_result basp_broker::resume(execution_unit* ctx, size_t mt) {
 }
 
 strong_actor_ptr basp_broker::make_proxy(node_id nid, actor_id aid) {
-  CAF_LOG_TRACE(CAF_ARG(nid) << CAF_ARG(aid));
+  auto exit_guard = log::io::trace("nid = {}, aid = {}", nid, aid);
   CAF_ASSERT(nid != this_node());
   if (nid == none || aid == invalid_actor_id)
     return nullptr;
@@ -476,7 +476,8 @@ void basp_broker::set_last_hop(node_id* ptr) {
 
 void basp_broker::finalize_handshake(const node_id& nid, actor_id aid,
                                      std::set<std::string>& sigs) {
-  CAF_LOG_TRACE(CAF_ARG(nid) << CAF_ARG(aid) << CAF_ARG(sigs));
+  auto exit_guard = log::io::trace("nid = {}, aid = {}, sigs = {}", nid, aid,
+                                   sigs);
   CAF_ASSERT(this_context != nullptr);
   this_context->id = nid;
   auto& cb = this_context->callback;
@@ -503,7 +504,7 @@ void basp_broker::finalize_handshake(const node_id& nid, actor_id aid,
 }
 
 void basp_broker::purge_state(const node_id& nid) {
-  CAF_LOG_TRACE(CAF_ARG(nid));
+  auto exit_guard = log::io::trace("nid = {}", nid);
   // Destroy all proxies of the lost node.
   namespace_.erase(nid);
   // Cleanup all remaining references to the lost node.
@@ -513,7 +514,8 @@ void basp_broker::purge_state(const node_id& nid) {
 
 void basp_broker::send_basp_down_message(const node_id& nid, actor_id aid,
                                          error rsn) {
-  CAF_LOG_TRACE(CAF_ARG(nid) << CAF_ARG(aid) << CAF_ARG(rsn));
+  auto exit_guard = log::io::trace("nid = {}, aid = {}, rsn = {}", nid, aid,
+                                   rsn);
   auto path = instance.tbl().lookup(nid);
   if (!path) {
     log::io::info(
@@ -525,7 +527,7 @@ void basp_broker::send_basp_down_message(const node_id& nid, actor_id aid,
 }
 
 void basp_broker::proxy_announced(const node_id& nid, actor_id aid) {
-  CAF_LOG_TRACE(CAF_ARG(nid) << CAF_ARG(aid));
+  auto exit_guard = log::io::trace("nid = {}, aid = {}", nid, aid);
   // source node has created a proxy for one of our actors
   auto ptr = system().registry().get(aid);
   if (ptr == nullptr) {
@@ -565,16 +567,16 @@ void basp_broker::emit_node_down_msg(const node_id& node, const error& reason) {
 }
 
 void basp_broker::learned_new_node(const node_id& nid) {
-  CAF_LOG_TRACE(CAF_ARG(nid));
+  auto exit_guard = log::io::trace("nid = {}", nid);
   if (spawn_servers.count(nid) > 0) {
     log::io::error("learned_new_node called for known node nid = {}", nid);
     return;
   }
   auto tmp = system().spawn<hidden>([=](event_based_actor* tself) -> behavior {
-    CAF_LOG_TRACE("");
+    auto exit_guard = log::io::trace("");
     // terminate when receiving a down message
     tself->set_down_handler([=](down_msg& dm) {
-      CAF_LOG_TRACE(CAF_ARG(dm));
+      auto exit_guard = log::io::trace("dm = {}", dm);
       tself->quit(std::move(dm.reason));
     });
     // skip messages until we receive the initial ok_atom
@@ -583,7 +585,7 @@ void basp_broker::learned_new_node(const node_id& nid) {
 
       [=](ok_atom, const std::string& /* key == "info" */,
           const strong_actor_ptr& config_serv, const std::string& /* name */) {
-        CAF_LOG_TRACE(CAF_ARG(config_serv));
+        auto exit_guard = log::io::trace("config_serv = {}", config_serv);
         // drop unexpected messages from this point on
         tself->set_default_handler(print_and_drop);
         if (!config_serv)
@@ -591,7 +593,7 @@ void basp_broker::learned_new_node(const node_id& nid) {
         tself->monitor(config_serv);
         tself->become([=](spawn_atom, std::string& type, message& args)
                         -> delegated<strong_actor_ptr, std::set<std::string>> {
-          CAF_LOG_TRACE(CAF_ARG(type) << CAF_ARG(args));
+          auto exit_guard = log::io::trace("type = {}, args = {}", type, args);
           tself->delegate(actor_cast<actor>(std::move(config_serv)), get_atom_v,
                           std::move(type), std::move(args));
           return {};
@@ -617,13 +619,13 @@ void basp_broker::learned_new_node(const node_id& nid) {
 
 void basp_broker::learned_new_node_directly(const node_id& nid,
                                             bool was_indirectly_before) {
-  CAF_LOG_TRACE(CAF_ARG(nid));
+  auto exit_guard = log::io::trace("nid = {}", nid);
   if (!was_indirectly_before)
     learned_new_node(nid);
 }
 
 void basp_broker::learned_new_node_indirectly(const node_id& nid) {
-  CAF_LOG_TRACE(CAF_ARG(nid));
+  auto exit_guard = log::io::trace("nid = {}", nid);
   learned_new_node(nid);
   if (!automatic_connections)
     return;
@@ -645,7 +647,7 @@ void basp_broker::learned_new_node_indirectly(const node_id& nid) {
 }
 
 void basp_broker::set_context(connection_handle hdl) {
-  CAF_LOG_TRACE(CAF_ARG(hdl));
+  auto exit_guard = log::io::trace("hdl = {}", hdl);
   auto now = clock().now();
   auto i = ctx.find(hdl);
   if (i == ctx.end()) {
@@ -669,7 +671,7 @@ void basp_broker::set_context(connection_handle hdl) {
 }
 
 void basp_broker::connection_cleanup(connection_handle hdl, sec code) {
-  CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(code));
+  auto exit_guard = log::io::trace("hdl = {}, code = {}", hdl, code);
   // Remove handle from the routing table, notify all observers, and clean up
   // any node-specific state we might still have.
   if (auto nid = instance.tbl().erase_direct(hdl)) {

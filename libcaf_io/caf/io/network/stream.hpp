@@ -12,7 +12,7 @@
 
 #include "caf/byte_buffer.hpp"
 #include "caf/detail/io_export.hpp"
-#include "caf/logger.hpp"
+#include "caf/log/io.hpp"
 #include "caf/ref_counted.hpp"
 
 #include <vector>
@@ -74,7 +74,7 @@ public:
 protected:
   template <class Policy>
   void handle_event_impl(io::network::operation op, Policy& policy) {
-    CAF_LOG_TRACE(CAF_ARG(op));
+    auto exit_guard = log::io::trace("op = {}", op);
     switch (op) {
       case io::network::operation::read: {
         // Loop until an error occurs or we have nothing more to read

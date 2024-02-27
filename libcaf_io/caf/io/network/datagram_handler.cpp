@@ -39,7 +39,7 @@ datagram_handler::datagram_handler(default_multiplexer& backend_ref,
 }
 
 void datagram_handler::start(datagram_manager* mgr) {
-  CAF_LOG_TRACE(CAF_ARG2("fd", fd()));
+  auto exit_guard = log::io::trace("fd = {}", fd());
   CAF_ASSERT(mgr != nullptr);
   activate(mgr);
 }
@@ -63,7 +63,8 @@ void datagram_handler::write(datagram_handle hdl, const void* buf,
 
 void datagram_handler::flush(const manager_ptr& mgr) {
   CAF_ASSERT(mgr != nullptr);
-  CAF_LOG_TRACE(CAF_ARG(wr_offline_buf_.size()));
+  auto exit_guard = log::io::trace("wr_offline_buf_.size = {}",
+                                   wr_offline_buf_.size());
   if (!wr_offline_buf_.empty() && !state_.writing) {
     backend().add(operation::write, fd(), this);
     writer_ = mgr;
@@ -99,7 +100,7 @@ void datagram_handler::add_endpoint(datagram_handle hdl, const ip_endpoint& ep,
 }
 
 void datagram_handler::remove_endpoint(datagram_handle hdl) {
-  CAF_LOG_TRACE(CAF_ARG(hdl));
+  auto exit_guard = log::io::trace("hdl = {}", hdl);
   auto itr = ep_by_hdl_.find(hdl);
   if (itr != ep_by_hdl_.end()) {
     hdl_by_ep_.erase(itr->second);
@@ -126,7 +127,7 @@ void datagram_handler::removed_from_loop(operation op) {
 }
 
 void datagram_handler::graceful_shutdown() {
-  CAF_LOG_TRACE(CAF_ARG2("fd", fd_));
+  auto exit_guard = log::io::trace("fd = {}", fd_);
   // Ignore repeated calls.
   if (state_.shutting_down)
     return;
@@ -139,13 +140,15 @@ void datagram_handler::graceful_shutdown() {
 }
 
 void datagram_handler::prepare_next_read() {
-  CAF_LOG_TRACE(CAF_ARG(wr_buf_.second.size())
-                << CAF_ARG(wr_offline_buf_.size()));
+  auto exit_guard
+    = log::io::trace("wr_buf_.second.size = {}, wr_offline_buf_.size = {}",
+                     wr_buf_.second.size(), wr_offline_buf_.size());
   rd_buf_.resize(max_datagram_size_);
 }
 
 void datagram_handler::prepare_next_write() {
-  CAF_LOG_TRACE(CAF_ARG(wr_offline_buf_.size()));
+  auto exit_guard = log::io::trace("wr_offline_buf_.size = {}",
+                                   wr_offline_buf_.size());
   wr_buf_.second.clear();
   if (wr_offline_buf_.empty()) {
     state_.writing = false;
