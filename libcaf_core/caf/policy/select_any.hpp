@@ -9,7 +9,7 @@
 #include "caf/detail/type_traits.hpp"
 #include "caf/detail/typed_actor_util.hpp"
 #include "caf/disposable.hpp"
-#include "caf/logger.hpp"
+#include "caf/log/core.hpp"
 #include "caf/sec.hpp"
 #include "caf/type_list.hpp"
 

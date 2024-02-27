@@ -10,7 +10,7 @@
 #include "caf/detail/typed_actor_util.hpp"
 #include "caf/disposable.hpp"
 #include "caf/error.hpp"
-#include "caf/logger.hpp"
+#include "caf/log/core.hpp"
 #include "caf/message_id.hpp"
 #include "caf/type_list.hpp"
 

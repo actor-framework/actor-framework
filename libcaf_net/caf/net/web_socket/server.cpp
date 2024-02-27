@@ -22,7 +22,7 @@ void server::abort(const error& err) {
 
 ptrdiff_t server::consume(byte_span input, byte_span) {
   using namespace std::literals;
-  CAF_LOG_TRACE(CAF_ARG2("bytes.size", input.size()));
+  auto exit_guard = log::net::trace("bytes.size = {}", input.size());
   // Check whether we received an HTTP header or else wait for more data.
   // Abort when exceeding the maximum size.
   auto [hdr, remainder] = http::v1::split_header(input);

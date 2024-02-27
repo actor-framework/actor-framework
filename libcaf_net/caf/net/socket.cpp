@@ -192,7 +192,7 @@ bool probe(socket x) {
 }
 
 error child_process_inherit(socket x, bool new_value) {
-  CAF_LOG_TRACE(CAF_ARG(x) << CAF_ARG(new_value));
+  auto exit_guard = log::net::trace("x = {}, new_value = {}", x, new_value);
   // read flags for x
   CAF_NET_SYSCALL("fcntl", rf, ==, -1, fcntl(x.id, F_GETFD));
   // calculate and set new flags
@@ -202,7 +202,7 @@ error child_process_inherit(socket x, bool new_value) {
 }
 
 error nonblocking(socket x, bool new_value) {
-  CAF_LOG_TRACE(CAF_ARG(x) << CAF_ARG(new_value));
+  auto exit_guard = log::net::trace("x = {}, new_value = {}", x, new_value);
   // read flags for x
   CAF_NET_SYSCALL("fcntl", rf, ==, -1, fcntl(x.id, F_GETFL, 0));
   // calculate and set new flags

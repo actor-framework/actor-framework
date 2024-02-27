@@ -98,7 +98,7 @@ void socket_manager::schedule_handover() {
 }
 
 void socket_manager::shutdown() {
-  CAF_LOG_TRACE("");
+  auto exit_guard = log::net::trace("");
   if (!shutting_down_) {
     shutting_down_ = true;
     dispose();
@@ -114,7 +114,7 @@ void socket_manager::shutdown() {
 // -- callbacks for the multiplexer --------------------------------------------
 
 error socket_manager::start() {
-  CAF_LOG_TRACE("");
+  auto exit_guard = log::net::trace("");
   if (auto err = nonblocking(fd_, true)) {
     log::net::error("failed to set nonblocking flag in socket: {}", err);
     handler_->abort(err);
@@ -149,7 +149,7 @@ void socket_manager::handle_write_event() {
 }
 
 void socket_manager::handle_error(sec code) {
-  CAF_LOG_TRACE("");
+  auto exit_guard = log::net::trace("");
   if (!disposed_)
     disposed_ = true;
   if (handler_) {

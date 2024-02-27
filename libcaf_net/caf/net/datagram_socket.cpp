@@ -6,7 +6,7 @@
 
 #include "caf/detail/net_syscall.hpp"
 #include "caf/detail/socket_sys_includes.hpp"
-#include "caf/logger.hpp"
+#include "caf/log/net.hpp"
 
 #include <variant>
 
@@ -15,7 +15,7 @@ namespace caf::net {
 #ifdef CAF_WINDOWS
 
 error allow_connreset(datagram_socket x, bool new_value) {
-  CAF_LOG_TRACE(CAF_ARG(x) << CAF_ARG(new_value));
+  auto exit_guard = log::net::trace("x = {}, new_value = {}", x, new_value);
   DWORD bytes_returned = 0;
   CAF_NET_SYSCALL("WSAIoctl", res, !=, 0,
                   WSAIoctl(x.id, _WSAIOW(IOC_VENDOR, 12), &new_value,

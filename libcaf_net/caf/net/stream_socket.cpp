@@ -11,7 +11,7 @@
 #include "caf/detail/socket_sys_aliases.hpp"
 #include "caf/detail/socket_sys_includes.hpp"
 #include "caf/expected.hpp"
-#include "caf/logger.hpp"
+#include "caf/log/net.hpp"
 #include "caf/span.hpp"
 
 #include <cstddef>
@@ -109,7 +109,7 @@ expected<std::pair<stream_socket, stream_socket>> make_stream_socket_pair() {
 }
 
 error keepalive(stream_socket x, bool new_value) {
-  CAF_LOG_TRACE(CAF_ARG(x) << CAF_ARG(new_value));
+  auto exit_guard = log::net::trace("x = {}, new_value = {}", x, new_value);
   char value = new_value ? 1 : 0;
   CAF_NET_SYSCALL("setsockopt", res, !=, 0,
                   setsockopt(x.id, SOL_SOCKET, SO_KEEPALIVE, &value,
@@ -133,7 +133,7 @@ expected<std::pair<stream_socket, stream_socket>> make_stream_socket_pair() {
 }
 
 error keepalive(stream_socket x, bool new_value) {
-  CAF_LOG_TRACE(CAF_ARG(x) << CAF_ARG(new_value));
+  auto exit_guard = log::net::trace("x = {}, new_value = {}", x, new_value);
   int value = new_value ? 1 : 0;
   CAF_NET_SYSCALL("setsockopt", res, !=, 0,
                   setsockopt(x.id, SOL_SOCKET, SO_KEEPALIVE, &value,
@@ -144,7 +144,7 @@ error keepalive(stream_socket x, bool new_value) {
 #endif // CAF_WINDOWS
 
 error nodelay(stream_socket x, bool new_value) {
-  CAF_LOG_TRACE(CAF_ARG(x) << CAF_ARG(new_value));
+  auto exit_guard = log::net::trace("x = {}, new_value = {}", x, new_value);
   int flag = new_value ? 1 : 0;
   CAF_NET_SYSCALL("setsockopt", res, !=, 0,
                   setsockopt(x.id, IPPROTO_TCP, TCP_NODELAY,
@@ -154,13 +154,15 @@ error nodelay(stream_socket x, bool new_value) {
 }
 
 ptrdiff_t read(stream_socket x, byte_span buf) {
-  CAF_LOG_TRACE(CAF_ARG2("socket", x.id) << CAF_ARG2("bytes", buf.size()));
+  auto exit_guard = log::net::trace("socket = {}, bytes = {}", x.id,
+                                    buf.size());
   return ::recv(x.id, reinterpret_cast<socket_recv_ptr>(buf.data()), buf.size(),
                 no_sigpipe_io_flag);
 }
 
 ptrdiff_t write(stream_socket x, const_byte_span buf) {
-  CAF_LOG_TRACE(CAF_ARG2("socket", x.id) << CAF_ARG2("bytes", buf.size()));
+  auto exit_guard = log::net::trace("socket = {}, bytes = {}", "socket", x.id,
+                                    buf.size());
   return ::send(x.id, reinterpret_cast<socket_send_ptr>(buf.data()), buf.size(),
                 no_sigpipe_io_flag);
 }

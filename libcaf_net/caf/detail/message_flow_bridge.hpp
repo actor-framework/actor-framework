@@ -12,6 +12,7 @@
 #include "caf/actor_system.hpp"
 #include "caf/async/consumer_adapter.hpp"
 #include "caf/async/producer_adapter.hpp"
+#include "caf/log/net.hpp"
 #include "caf/sec.hpp"
 #include "caf/settings.hpp"
 
@@ -116,7 +117,7 @@ public:
   }
 
   void abort(const error& reason) override {
-    CAF_LOG_TRACE(CAF_ARG(reason));
+    auto exit_guard = log::net::trace("reason = {}", reason);
     if (out_) {
       if (reason == sec::socket_disconnected || reason == sec::disposed)
         out_.close();
