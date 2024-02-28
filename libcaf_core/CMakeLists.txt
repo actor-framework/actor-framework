@@ -340,7 +340,9 @@ caf_add_component(
     caf/type_id.cpp
     caf/type_id_list.cpp
     caf/type_id_list.test.cpp
+    caf/typed_actor.test.cpp
     caf/typed_behavior.test.cpp
+    caf/typed_event_based_actor.test.cpp
     caf/typed_message_view.test.cpp
     caf/unit.test.cpp
     caf/unordered_flat_map.test.cpp

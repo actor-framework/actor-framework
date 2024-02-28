@@ -8,6 +8,7 @@
 #include "caf/detail/type_list.hpp"
 #include "caf/fwd.hpp"
 #include "caf/response_promise.hpp"
+#include "caf/statically_typed.hpp"
 #include "caf/system_messages.hpp"
 #include "caf/typed_response_promise.hpp"
 
@@ -114,13 +115,13 @@ template <class... Ts>
 struct extend_with_helper;
 
 template <class... Xs>
-struct extend_with_helper<typed_actor<Xs...>> {
+struct extend_with_helper<type_list<Xs...>> {
   using type = typed_actor<Xs...>;
 };
 
 template <class... Xs, class... Ys, class... Ts>
-struct extend_with_helper<typed_actor<Xs...>, typed_actor<Ys...>, Ts...>
-  : extend_with_helper<typed_actor<Xs..., Ys...>, Ts...> {
+struct extend_with_helper<type_list<Xs...>, type_list<Ys...>, Ts...>
+  : extend_with_helper<type_list<Xs..., Ys...>, Ts...> {
   // nop
 };
 
@@ -145,5 +146,26 @@ struct is_normalized_signature<result<Out...>(In...)> {
 
 template <class F>
 constexpr bool is_normalized_signature_v = is_normalized_signature<F>::value;
+
+template <class SigsList>
+struct are_signatures_normalized;
+
+template <class... Sigs>
+struct are_signatures_normalized<type_list<Sigs...>> {
+  static constexpr bool value
+    = (detail::is_normalized_signature_v<Sigs> && ...);
+};
+
+template <class SigsList>
+inline constexpr bool are_signatures_normalized_v
+  = are_signatures_normalized<SigsList>::value;
+
+template <class... Sigs>
+struct broker_from_signatures;
+
+template <class... Sigs>
+struct broker_from_signatures<type_list<Sigs...>> {
+  using type = io::typed_broker<Sigs...>;
+};
 
 } // namespace caf::detail

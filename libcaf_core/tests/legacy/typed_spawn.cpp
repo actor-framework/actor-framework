@@ -2,20 +2,14 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
+#define CAF_SUITE typed_spawn
+
 #include "caf/anon_mail.hpp"
-#include "caf/config.hpp"
+#include "caf/string_algorithms.hpp"
 
-// exclude this suite; seems to be too much to swallow for MSVC
-#ifndef CAF_WINDOWS
+#include "core-test.hpp"
 
-#  define CAF_SUITE typed_spawn
-
-#  include "caf/all.hpp"
-#  include "caf/string_algorithms.hpp"
-
-#  include "core-test.hpp"
-
-#  define ERROR_HANDLER [&](error& err) { CAF_FAIL(err); }
+#define ERROR_HANDLER [&](error& err) { CAF_FAIL(err); }
 
 using std::string;
 
@@ -384,5 +378,3 @@ SCENARIO("state classes may use typed pointers") {
 }
 
 END_FIXTURE_SCOPE()
-
-#endif // CAF_WINDOWS

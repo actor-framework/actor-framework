@@ -134,7 +134,7 @@ template <class To, class From>
 class actor_cast_access<To, From, neutral_cast> {
 public:
   To operator()(const From& x) const {
-    return x.get();
+    return To{x.get()};
   }
 
   To operator()(From&& x) const {

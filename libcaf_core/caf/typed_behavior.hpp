@@ -7,6 +7,7 @@
 #include "caf/behavior.hpp"
 #include "caf/deduce_mpi.hpp"
 #include "caf/detail/tbind.hpp"
+#include "caf/detail/to_statically_typed_trait.hpp"
 #include "caf/detail/typed_actor_util.hpp"
 #include "caf/interface_mismatch.hpp"
 #include "caf/message_handler.hpp"
@@ -142,8 +143,11 @@ struct partial_behavior_init_t {};
 constexpr partial_behavior_init_t partial_behavior_init
   = partial_behavior_init_t{};
 
-template <class... Sigs>
-class typed_behavior {
+template <class...>
+class typed_behavior;
+
+template <class TraitOrSignature>
+class typed_behavior<TraitOrSignature> {
 public:
   // -- friends ----------------------------------------------------------------
 
@@ -158,8 +162,10 @@ public:
 
   // -- member types -----------------------------------------------------------
 
+  using trait = detail::to_statically_typed_trait_t<TraitOrSignature>;
+
   /// Stores the template parameter pack in a type list.
-  using signatures = type_list<Sigs...>;
+  using signatures = typename trait::signatures;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -262,11 +268,31 @@ private:
   behavior bhvr_;
 };
 
+template <class T1, class T2, class... Ts>
+class typed_behavior<T1, T2, Ts...>
+  : public typed_behavior<statically_typed<T1, T2, Ts...>> {
+public:
+  using super = typed_behavior<statically_typed<T1, T2, Ts...>>;
+
+  using super::super;
+
+  typed_behavior(const super& other) : super(other) {
+    // nop
+  }
+
+  typed_behavior(super&& other) : super(other) {
+    // nop
+  }
+};
+
 template <class T>
 struct is_typed_behavior : std::false_type {};
 
 template <class... Sigs>
 struct is_typed_behavior<typed_behavior<Sigs...>> : std::true_type {};
+
+template <class T>
+struct is_typed_behavior<typed_behavior<T>> : std::true_type {};
 
 /// Creates a typed behavior from given function objects.
 template <class... Fs>
