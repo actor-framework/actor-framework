@@ -499,6 +499,191 @@ TEST("send request message to an invalid receiver") {
   }
 }
 
+TEST("delegate message") {
+  SECTION("asynchronous message") {
+    auto [self, launch] = sys.spawn_inactive<event_based_actor>();
+    auto delegatee = sys.spawn([](event_based_actor*) -> behavior {
+      return {
+        [=](const std::string&) {},
+      };
+    });
+    SECTION("delegate with default priority") {
+      auto delegator = sys.spawn([delegatee](event_based_actor* self) {
+        return behavior{
+          [=](std::string& str) {
+            return self->mail(std::move(str)).delegate(delegatee);
+          },
+        };
+      });
+      SECTION("regular message") {
+        self->mail("hello world").send(delegator);
+        expect<std::string>()
+          .with("hello world")
+          .priority(message_priority::normal)
+          .from(self)
+          .to(delegator);
+        expect<std::string>()
+          .with("hello world")
+          .priority(message_priority::normal)
+          .from(self)
+          .to(delegatee);
+      }
+      SECTION("urgent message") {
+        self->mail("hello world").urgent().send(delegator);
+        expect<std::string>()
+          .with("hello world")
+          .priority(message_priority::high)
+          .from(self)
+          .to(delegator);
+        expect<std::string>()
+          .with("hello world")
+          .priority(message_priority::high)
+          .from(self)
+          .to(delegatee);
+      }
+    }
+    SECTION("delegate with high priority") {
+      auto delegator = sys.spawn([delegatee](event_based_actor* self) {
+        return behavior{
+          [=](std::string& str) {
+            return self->mail(std::move(str)).urgent().delegate(delegatee);
+          },
+        };
+      });
+      SECTION("regular message") {
+        self->mail("hello world").send(delegator);
+        expect<std::string>()
+          .with("hello world")
+          .priority(message_priority::normal)
+          .from(self)
+          .to(delegator);
+        expect<std::string>()
+          .with("hello world")
+          .priority(message_priority::high)
+          .from(self)
+          .to(delegatee);
+      }
+      SECTION("urgent message") {
+        self->mail("hello world").urgent().send(delegator);
+        expect<std::string>()
+          .with("hello world")
+          .priority(message_priority::high)
+          .from(self)
+          .to(delegator);
+        expect<std::string>()
+          .with("hello world")
+          .priority(message_priority::high)
+          .from(self)
+          .to(delegatee);
+      }
+    }
+  }
+  SECTION("request message") {
+    auto [self, launch] = sys.spawn_inactive<event_based_actor>();
+    SECTION("delegate with default priority") {
+      auto delegatee = sys.spawn([](event_based_actor*) {
+        return behavior{
+          [=](const std::string& str) {
+            return std::string{str.rbegin(), str.rend()};
+          },
+        };
+      });
+      auto delegator = sys.spawn([delegatee](event_based_actor* self) {
+        return behavior{
+          [=](std::string& str) {
+            return self->mail(std::move(str)).delegate(delegatee);
+          },
+        };
+      });
+      SECTION("regular message") {
+        self->mail("hello world")
+          .request(delegator, infinite)
+          .then([](const std::string&) {});
+        auto self_hdl = actor_cast<actor>(self);
+        launch();
+        expect<std::string>()
+          .with("hello world")
+          .priority(message_priority::normal)
+          .from(self_hdl)
+          .to(delegator);
+        expect<std::string>()
+          .with("hello world")
+          .priority(message_priority::normal)
+          .from(self_hdl)
+          .to(delegatee);
+        expect<std::string>()
+          .with("dlrow olleh")
+          .priority(message_priority::normal)
+          .from(delegatee)
+          .to(self_hdl);
+      }
+      SECTION("urgent message") {
+        self->mail("hello world")
+          .urgent()
+          .request(delegator, infinite)
+          .then([](const std::string&) {});
+        auto self_hdl = actor_cast<actor>(self);
+        launch();
+        expect<std::string>()
+          .with("hello world")
+          .priority(message_priority::high)
+          .from(self_hdl)
+          .to(delegator);
+        expect<std::string>()
+          .with("hello world")
+          .priority(message_priority::high)
+          .from(self_hdl)
+          .to(delegatee);
+        expect<std::string>()
+          .with("dlrow olleh")
+          .priority(message_priority::high)
+          .from(delegatee)
+          .to(self_hdl);
+      }
+    }
+    SECTION("delegate with high priority") {
+      auto delegatee = sys.spawn([](event_based_actor*) -> behavior {
+        return {
+          [=](const std::string&) {},
+        };
+      });
+      auto delegator = sys.spawn([delegatee](event_based_actor* self) {
+        return behavior{
+          [=](std::string& str) {
+            return self->mail(std::move(str)).urgent().delegate(delegatee);
+          },
+        };
+      });
+      SECTION("regular message") {
+        self->mail("hello world").send(delegator);
+        expect<std::string>()
+          .with("hello world")
+          .priority(message_priority::normal)
+          .from(self)
+          .to(delegator);
+        expect<std::string>()
+          .with("hello world")
+          .priority(message_priority::high)
+          .from(self)
+          .to(delegatee);
+      }
+      SECTION("urgent message") {
+        self->mail("hello world").urgent().send(delegator);
+        expect<std::string>()
+          .with("hello world")
+          .priority(message_priority::high)
+          .from(self)
+          .to(delegator);
+        expect<std::string>()
+          .with("hello world")
+          .priority(message_priority::high)
+          .from(self)
+          .to(delegatee);
+      }
+    }
+  }
+}
+
 } // WITH_FIXTURE(test::fixture::deterministic)
 
 } // namespace
