@@ -89,7 +89,8 @@ behavior config_serv_impl(stateful_actor<kvstate>* self) {
     // subscribe to a key
     [=](subscribe_atom, const std::string& key) {
       auto subscriber = actor_cast<strong_actor_ptr>(self->current_sender());
-      auto exit_guard = log::core::trace("key = {}, subscriber = {}", key, subscriber);
+      auto exit_guard = log::core::trace("key = {}, subscriber = {}", key,
+                                         subscriber);
       if (!subscriber)
         return;
       self->state.data[key].second.insert(subscriber);
@@ -107,7 +108,8 @@ behavior config_serv_impl(stateful_actor<kvstate>* self) {
       auto subscriber = actor_cast<strong_actor_ptr>(self->current_sender());
       if (!subscriber)
         return;
-      auto exit_guard = log::core::trace("key = {}, subscriber = {}", key, subscriber);
+      auto exit_guard = log::core::trace("key = {}, subscriber = {}", key,
+                                         subscriber);
       if (key == wildcard) {
         unsubscribe_all(actor_cast<actor>(std::move(subscriber)));
         return;

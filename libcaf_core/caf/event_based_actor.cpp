@@ -19,8 +19,8 @@ event_based_actor::~event_based_actor() {
 }
 
 void event_based_actor::initialize() {
-  auto exit_guard = log::core::trace("subtype = {}",
-                   detail::pretty_type_name(typeid(*this)).c_str());
+  auto exit_guard = log::core::trace(
+    "subtype = {}", detail::pretty_type_name(typeid(*this)).c_str());
   extended_base::initialize();
   setf(is_initialized_flag);
   auto bhvr = make_behavior();

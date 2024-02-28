@@ -155,7 +155,7 @@ expected<tcp_stream_socket> make_connected_tcp_stream_socket(ip_endpoint node,
 expected<tcp_stream_socket>
 make_connected_tcp_stream_socket(const uri::authority_type& node,
                                  timespan timeout) {
-  auto exit_guard = log::net::trace("mode = {}, timeout = {}", node, timeout);
+  auto exit_guard = log::net::trace("node = {}, timeout = {}", node, timeout);
   auto port = node.port;
   if (port == 0)
     return make_error(sec::cannot_connect_to_node, "port is zero");

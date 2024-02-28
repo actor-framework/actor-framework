@@ -27,7 +27,8 @@ abstract_broker* manager::parent() {
 }
 
 void manager::detach(execution_unit*, bool invoke_disconnect_message) {
-  auto exit_guard = log::io::trace("invoke_disconnect_message = {}", invoke_disconnect_message);
+  auto exit_guard = log::io::trace("invoke_disconnect_message = {}",
+                                   invoke_disconnect_message);
   // This function gets called from the multiplexer when an error occurs or
   // from the broker when closing this manager. In both cases, we need to make
   // sure this manager does not receive further socket events.

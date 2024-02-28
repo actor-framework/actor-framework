@@ -66,7 +66,7 @@ connection_state instance::handle(execution_unit* ctx, new_data_msg& dm,
       return err(malformed_message);
     }
     if (!valid(hdr)) {
-      log::io::warning("received invalid header: hdr = {}", "hdr = {}", hdr);
+      log::io::warning("received invalid header: hdr = {}", hdr);
       return err(malformed_message);
     }
     if (hdr.payload_len > 0) {

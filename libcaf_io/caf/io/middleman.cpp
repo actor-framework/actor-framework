@@ -247,7 +247,8 @@ expected<node_id> middleman::connect(std::string host, uint16_t port) {
 expected<uint16_t> middleman::publish(const strong_actor_ptr& whom,
                                       std::set<std::string> sigs, uint16_t port,
                                       const char* cstr, bool ru) {
-  auto exit_guard = log::io::trace("whom = {}, sigs = {}, port = {}", whom, sigs, port);
+  auto exit_guard = log::io::trace("whom = {}, sigs = {}, port = {}", whom,
+                                   sigs, port);
   if (!whom)
     return sec::cannot_publish_invalid_actor;
   std::string in;
@@ -266,7 +267,8 @@ expected<void> middleman::unpublish(const actor_addr& whom, uint16_t port) {
 expected<strong_actor_ptr> middleman::remote_actor(std::set<std::string> ifs,
                                                    std::string host,
                                                    uint16_t port) {
-  auto exit_guard = log::io::trace("ifs = {}, host = {}, port = {}", ifs, host, port);
+  auto exit_guard = log::io::trace("ifs = {}, host = {}, port = {}", ifs, host,
+                                   port);
   auto f = make_function_view(actor_handle());
   auto res = f(connect_atom_v, std::move(host), port);
   if (!res)

@@ -43,7 +43,7 @@ expected<tcp_accept_socket> new_tcp_acceptor_impl(uint16_t port,
                                                   const char* addr,
                                                   bool reuse_addr, bool any) {
   static_assert(Family == AF_INET || Family == AF_INET6, "invalid family");
-  auto exit_guard = log::net::trace("port addr = {}",
+  auto exit_guard = log::net::trace("port = {}, addr = {}", port,
                                     (addr ? addr : "nullptr"));
   int socktype = SOCK_STREAM;
 #ifdef SOCK_CLOEXEC

@@ -75,7 +75,7 @@ session::session(actor_system& sys)
 }
 
 bool session::init() {
-  CAF_LOG_TRACE("");
+  auto exit_guard = log::openssl::trace("");
   ctx_ = create_ssl_context();
   ssl_ = SSL_new(ctx_);
   if (ssl_ == nullptr) {
@@ -108,7 +108,8 @@ rw_state session::do_some(int (*f)(SSL*, void*, int), size_t& result, void* buf,
         return rw_state::success;
     }
   };
-  CAF_LOG_TRACE(CAF_ARG(len) << CAF_ARG(debug_name));
+  auto exit_guard = log::openssl::trace("len = {}, debug_name = {}", len,
+                                        debug_name);
   CAF_IGNORE_UNUSED(debug_name);
   if (connecting_) {
     log::openssl::debug("{} : connecting", debug_name);
@@ -148,13 +149,13 @@ rw_state session::do_some(int (*f)(SSL*, void*, int), size_t& result, void* buf,
 
 rw_state session::read_some(size_t& result, native_socket, void* buf,
                             size_t len) {
-  CAF_LOG_TRACE(CAF_ARG(len));
+  auto exit_guard = log::openssl::trace("len = {}", len);
   return do_some(SSL_read, result, buf, len, "read_some");
 }
 
 rw_state session::write_some(size_t& result, native_socket, const void* buf,
                              size_t len) {
-  CAF_LOG_TRACE(CAF_ARG(len));
+  auto exit_guard = log::openssl::trace("len = {}", len);
   auto wr_fun = [](SSL* sptr, void* vptr, int ptr_size) {
     return SSL_write(sptr, vptr, ptr_size);
   };
@@ -162,7 +163,7 @@ rw_state session::write_some(size_t& result, native_socket, const void* buf,
 }
 
 bool session::try_connect(native_socket fd) {
-  CAF_LOG_TRACE(CAF_ARG(fd));
+  auto exit_guard = log::openssl::trace("fd = {}", fd);
   CAF_BLOCK_SIGPIPE();
   SSL_set_fd(ssl_, fd);
   SSL_set_connect_state(ssl_);
@@ -174,7 +175,7 @@ bool session::try_connect(native_socket fd) {
 }
 
 bool session::try_accept(native_socket fd) {
-  CAF_LOG_TRACE(CAF_ARG(fd));
+  auto exit_guard = log::openssl::trace("fd = {}", fd);
   CAF_BLOCK_SIGPIPE();
   SSL_set_fd(ssl_, fd);
   SSL_set_accept_state(ssl_);

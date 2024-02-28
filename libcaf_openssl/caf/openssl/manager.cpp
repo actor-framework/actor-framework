@@ -19,6 +19,7 @@ CAF_POP_WARNINGS
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/expected.hpp"
+#include "caf/log/openssl.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/scoped_actor.hpp"
 
@@ -91,13 +92,13 @@ manager::~manager() {
 }
 
 void manager::start() {
-  CAF_LOG_TRACE("");
+  auto exit_guard = log::openssl::trace("");
   manager_ = make_middleman_actor(
     system(), system().middleman().named_broker<io::basp_broker>("BASP"));
 }
 
 void manager::stop() {
-  CAF_LOG_TRACE("");
+  auto exit_guard = log::openssl::trace("");
   scoped_actor self{system(), true};
   self->send_exit(manager_, exit_reason::kill);
   if (!get_or(config(), "caf.middleman.attach-utility-actors", false))
