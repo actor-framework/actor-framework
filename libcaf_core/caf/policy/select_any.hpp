@@ -9,7 +9,7 @@
 #include "caf/detail/type_traits.hpp"
 #include "caf/detail/typed_actor_util.hpp"
 #include "caf/disposable.hpp"
-#include "caf/logger.hpp"
+#include "caf/log/core.hpp"
 #include "caf/sec.hpp"
 #include "caf/type_list.hpp"
 
@@ -28,7 +28,7 @@ struct select_any_factory<F, type_list<Ts...>> {
   make(std::shared_ptr<size_t> pending, disposable timeouts, Fun f) {
     return [pending{std::move(pending)}, timeouts{std::move(timeouts)},
             f{std::move(f)}](Ts... xs) mutable {
-      CAF_LOG_TRACE(CAF_ARG2("pending", *pending));
+      auto lg = log::core::trace("pending = {}", *pending);
       if (*pending > 0) {
         timeouts.dispose();
         f(xs...);
@@ -65,7 +65,7 @@ public:
 
   template <class Self, class F, class OnError>
   void await(Self* self, F&& f, OnError&& g) {
-    CAF_LOG_TRACE(CAF_ARG(ids_));
+    auto lg = log::core::trace("ids_ = {}", ids_);
     auto bhvr = make_behavior(std::forward<F>(f), std::forward<OnError>(g));
     for (auto id : ids_)
       self->add_awaited_response_handler(id, bhvr);
@@ -73,7 +73,7 @@ public:
 
   template <class Self, class F, class OnError>
   void then(Self* self, F&& f, OnError&& g) {
-    CAF_LOG_TRACE(CAF_ARG(ids_));
+    auto lg = log::core::trace("ids_ = {}", ids_);
     auto bhvr = make_behavior(std::forward<F>(f), std::forward<OnError>(g));
     for (auto id : ids_)
       self->add_multiplexed_response_handler(id, bhvr);
@@ -81,7 +81,7 @@ public:
 
   template <class Self, class F, class G>
   void receive(Self* self, F&& f, G&& g) {
-    CAF_LOG_TRACE(CAF_ARG(ids_));
+    auto lg = log::core::trace("ids_ = {}", ids_);
     using factory = detail::select_any_factory<std::decay_t<F>>;
     auto pending = std::make_shared<size_t>(ids_.size());
     auto fw = factory::make(pending, pending_timeouts_, std::forward<F>(f));

@@ -14,7 +14,7 @@ multiplexer::multiplexer(actor_system* sys)
 }
 
 multiplexer_ptr multiplexer::make(actor_system& sys) {
-  CAF_LOG_TRACE("");
+  auto lg = log::io::trace("");
   return multiplexer_ptr{new default_multiplexer(&sys)};
 }
 

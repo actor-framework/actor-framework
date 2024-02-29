@@ -17,7 +17,7 @@
 namespace caf::io {
 
 void broker::initialize() {
-  CAF_LOG_TRACE("");
+  auto lg = log::io::trace("");
   init_broker();
   auto bhvr = make_behavior();
   if (!bhvr) {

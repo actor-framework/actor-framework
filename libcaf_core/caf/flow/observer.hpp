@@ -338,13 +338,14 @@ public:
   }
 
   void on_next(const value_type& item) override {
-    CAF_LOG_TRACE(CAF_ARG(item));
+    auto lg = log::core::trace("item = {}",
+                               const_cast<const value_type*>(&item));
     if (buf_)
       buf_->push(item);
   }
 
   void on_complete() override {
-    CAF_LOG_TRACE("");
+    auto lg = log::core::trace("");
     if (buf_) {
       buf_->close();
       buf_ = nullptr;
@@ -353,7 +354,7 @@ public:
   }
 
   void on_error(const error& what) override {
-    CAF_LOG_TRACE(CAF_ARG(what));
+    auto lg = log::core::trace("what = {}", what);
     if (buf_) {
       buf_->abort(what);
       buf_ = nullptr;
@@ -362,7 +363,7 @@ public:
   }
 
   void on_subscribe(subscription sub) override {
-    CAF_LOG_TRACE("");
+    auto lg = log::core::trace("");
     if (buf_ && !sub_) {
       log::core::debug("add subscription");
       sub_ = std::move(sub);
@@ -379,30 +380,30 @@ public:
   }
 
   void on_consumer_cancel() override {
-    CAF_LOG_TRACE("");
+    auto lg = log::core::trace("");
     parent_->schedule_fn([ptr{strong_ptr()}] {
-      CAF_LOG_TRACE("");
+      auto lg = log::core::trace("");
       ptr->on_cancel();
     });
   }
 
   void on_consumer_demand(size_t demand) override {
-    CAF_LOG_TRACE(CAF_ARG(demand));
+    auto lg = log::core::trace("demand = {}", demand);
     parent_->schedule_fn([ptr{strong_ptr()}, demand] { //
-      CAF_LOG_TRACE(CAF_ARG(demand));
+      auto lg = log::core::trace("demand = {}", demand);
       ptr->on_demand(demand);
     });
   }
 
 private:
   void on_demand(size_t n) {
-    CAF_LOG_TRACE(CAF_ARG(n));
+    auto lg = log::core::trace("n = {}", n);
     if (sub_)
       sub_.request(n);
   }
 
   void on_cancel() {
-    CAF_LOG_TRACE("");
+    auto lg = log::core::trace("");
     if (sub_) {
       sub_.cancel();
       sub_.release_later();

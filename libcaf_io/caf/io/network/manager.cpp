@@ -27,7 +27,8 @@ abstract_broker* manager::parent() {
 }
 
 void manager::detach(execution_unit*, bool invoke_disconnect_message) {
-  CAF_LOG_TRACE(CAF_ARG(invoke_disconnect_message));
+  auto lg = log::io::trace("invoke_disconnect_message = {}",
+                           invoke_disconnect_message);
   // This function gets called from the multiplexer when an error occurs or
   // from the broker when closing this manager. In both cases, we need to make
   // sure this manager does not receive further socket events.
@@ -59,7 +60,7 @@ void manager::detach(execution_unit*, bool invoke_disconnect_message) {
 }
 
 void manager::io_failure(execution_unit* ctx, operation op) {
-  CAF_LOG_TRACE(CAF_ARG(op));
+  auto lg = log::io::trace("op = {}", op);
   CAF_IGNORE_UNUSED(op);
   detach(ctx, true);
 }

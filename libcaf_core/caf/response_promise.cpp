@@ -77,7 +77,7 @@ message_id response_promise::id() const noexcept {
 // -- delivery -----------------------------------------------------------------
 
 void response_promise::deliver(message msg) {
-  CAF_LOG_TRACE(CAF_ARG(msg));
+  auto lg = log::core::trace("msg = {}", msg);
   if (pending()) {
     state_->deliver_impl(std::move(msg));
     state_.reset();
@@ -85,7 +85,7 @@ void response_promise::deliver(message msg) {
 }
 
 void response_promise::deliver(error x) {
-  CAF_LOG_TRACE(CAF_ARG(x));
+  auto lg = log::core::trace("x = {}", x);
   if (pending()) {
     state_->deliver_impl(make_message(std::move(x)));
     state_.reset();
@@ -93,7 +93,7 @@ void response_promise::deliver(error x) {
 }
 
 void response_promise::deliver() {
-  CAF_LOG_TRACE(CAF_ARG(""));
+  auto lg = log::core::trace("");
   if (pending()) {
     state_->deliver_impl(make_message());
     state_.reset();
@@ -145,7 +145,7 @@ void response_promise::state::cancel() {
 }
 
 void response_promise::state::deliver_impl(message msg) {
-  CAF_LOG_TRACE(CAF_ARG(msg));
+  auto lg = log::core::trace("msg = {}", msg);
   // Even though we are holding a weak pointer, we can access the pointer
   // without any additional check here because only the actor itself is allowed
   // to call this function.
@@ -161,7 +161,7 @@ void response_promise::state::deliver_impl(message msg) {
 
 void response_promise::state::delegate_impl(abstract_actor* receiver,
                                             message msg) {
-  CAF_LOG_TRACE(CAF_ARG(msg));
+  auto lg = log::core::trace("msg = {}", msg);
   if (receiver != nullptr) {
     auto selfptr = static_cast<local_actor*>(self->get());
     detail::profiled_send(selfptr, std::move(source), receiver, id,

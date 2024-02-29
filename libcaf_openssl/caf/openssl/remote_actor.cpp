@@ -8,6 +8,7 @@
 
 #include "caf/expected.hpp"
 #include "caf/function_view.hpp"
+#include "caf/log/openssl.hpp"
 #include "caf/sec.hpp"
 
 namespace caf::openssl {
@@ -20,7 +21,8 @@ namespace caf::openssl {
 expected<strong_actor_ptr> remote_actor(actor_system& sys,
                                         const std::set<std::string>& mpi,
                                         std::string host, uint16_t port) {
-  CAF_LOG_TRACE(CAF_ARG(mpi) << CAF_ARG(host) << CAF_ARG(port));
+  auto lg = log::openssl::trace("mpi = {}, host = {}, port = {}", mpi, host,
+                                port);
   expected<strong_actor_ptr> res{strong_actor_ptr{nullptr}};
   auto f = make_function_view(sys.openssl_manager().actor_handle());
   auto x = f(connect_atom_v, std::move(host), port);

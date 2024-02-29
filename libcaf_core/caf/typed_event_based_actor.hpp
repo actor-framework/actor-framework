@@ -53,7 +53,7 @@ public:
   }
 
   void initialize() override {
-    CAF_LOG_TRACE("");
+    auto lg = log::core::trace("");
     super::initialize();
     this->setf(abstract_actor::is_initialized_flag);
     auto bhvr = make_behavior();

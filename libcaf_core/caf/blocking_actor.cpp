@@ -54,7 +54,7 @@ blocking_actor::~blocking_actor() {
 bool blocking_actor::enqueue(mailbox_element_ptr ptr, execution_unit*) {
   CAF_ASSERT(ptr != nullptr);
   CAF_ASSERT(getf(is_blocking_flag));
-  CAF_LOG_TRACE(CAF_ARG(*ptr));
+  auto lg = log::core::trace("ptr = {}", *ptr);
   CAF_LOG_SEND_EVENT(ptr);
   auto mid = ptr->mid;
   auto src = ptr->sender;
@@ -160,7 +160,7 @@ private:
 
 void blocking_actor::launch(execution_unit*, bool, bool hide) {
   CAF_PUSH_AID_FROM_PTR(this);
-  CAF_LOG_TRACE(CAF_ARG(hide));
+  auto lg = log::core::trace("hide = {}", hide);
   CAF_ASSERT(getf(is_blocking_flag));
   // Try to acquire a thread before incrementing the running count, since this
   // may throw.
@@ -191,7 +191,7 @@ void blocking_actor::await_all_other_actors_done() {
 }
 
 void blocking_actor::act() {
-  CAF_LOG_TRACE("");
+  auto lg = log::core::trace("");
   if (initial_behavior_fac_)
     initial_behavior_fac_(this);
 }
@@ -202,7 +202,7 @@ void blocking_actor::fail_state(error err) {
 
 void blocking_actor::receive_impl(receive_cond& rcc, message_id mid,
                                   detail::blocking_behavior& bhvr) {
-  CAF_LOG_TRACE(CAF_ARG(mid));
+  auto lg = log::core::trace("mid = {}", mid);
   unstash();
   // Convenience function for trying to consume a message.
   auto consume = [this, mid, &bhvr] {

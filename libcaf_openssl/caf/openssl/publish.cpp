@@ -10,6 +10,7 @@
 #include "caf/actor_system.hpp"
 #include "caf/expected.hpp"
 #include "caf/function_view.hpp"
+#include "caf/log/openssl.hpp"
 
 #include <set>
 
@@ -18,7 +19,8 @@ namespace caf::openssl {
 expected<uint16_t> publish(actor_system& sys, const strong_actor_ptr& whom,
                            std::set<std::string>&& sigs, uint16_t port,
                            const char* cstr, bool ru) {
-  CAF_LOG_TRACE(CAF_ARG(whom) << CAF_ARG(sigs) << CAF_ARG(port));
+  auto lg = log::openssl::trace("whom = {}, sigs = {}, port = {}", whom, sigs,
+                                port);
   CAF_ASSERT(whom != nullptr);
   std::string in;
   if (cstr != nullptr)

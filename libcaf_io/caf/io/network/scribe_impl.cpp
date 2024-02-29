@@ -20,14 +20,14 @@ scribe_impl::scribe_impl(default_multiplexer& mx, native_socket sockfd)
 }
 
 void scribe_impl::configure_read(receive_policy::config config) {
-  CAF_LOG_TRACE("");
+  auto lg = log::io::trace("");
   stream_.configure_read(config);
   if (!launched_)
     launch();
 }
 
 void scribe_impl::ack_writes(bool enable) {
-  CAF_LOG_TRACE(CAF_ARG(enable));
+  auto lg = log::io::trace("enable = {}", enable);
   stream_.ack_writes(enable);
 }
 
@@ -40,13 +40,13 @@ byte_buffer& scribe_impl::rd_buf() {
 }
 
 void scribe_impl::graceful_shutdown() {
-  CAF_LOG_TRACE("");
+  auto lg = log::io::trace("");
   stream_.graceful_shutdown();
   detach(&stream_.backend(), false);
 }
 
 void scribe_impl::flush() {
-  CAF_LOG_TRACE("");
+  auto lg = log::io::trace("");
   stream_.flush(this);
 }
 
@@ -65,7 +65,7 @@ uint16_t scribe_impl::port() const {
 }
 
 void scribe_impl::launch() {
-  CAF_LOG_TRACE("");
+  auto lg = log::io::trace("");
   CAF_ASSERT(!launched_);
   launched_ = true;
   stream_.start(this);

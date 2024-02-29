@@ -5,7 +5,7 @@
 #include "caf/forwarding_actor_proxy.hpp"
 
 #include "caf/anon_mail.hpp"
-#include "caf/logger.hpp"
+#include "caf/log/core.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/system_messages.hpp"
 
@@ -28,8 +28,8 @@ const char* forwarding_actor_proxy::name() const {
 
 bool forwarding_actor_proxy::forward_msg(strong_actor_ptr sender,
                                          message_id mid, message msg) {
-  CAF_LOG_TRACE(CAF_ARG(id())
-                << CAF_ARG(sender) << CAF_ARG(mid) << CAF_ARG(msg));
+  auto lg = log::core::trace("id = {}, sender = {}, mid = {}, msg = {}", id(),
+                             sender, mid, msg);
   if (msg.match_elements<exit_msg>())
     unlink_from(msg.get_as<exit_msg>(0).source);
   auto ptr = make_mailbox_element(nullptr, make_message_id(), forward_atom_v,

@@ -9,7 +9,7 @@
 #include "caf/actor_system_config.hpp"
 #include "caf/config_value.hpp"
 #include "caf/defaults.hpp"
-#include "caf/logger.hpp"
+#include "caf/log/io.hpp"
 
 #include <algorithm>
 
@@ -46,7 +46,7 @@ void stream::configure_read(receive_policy::config config) {
 }
 
 void stream::write(const void* buf, size_t num_bytes) {
-  CAF_LOG_TRACE(CAF_ARG(num_bytes));
+  auto lg = log::io::trace("num_bytes = {}", num_bytes);
   auto first = reinterpret_cast<const std::byte*>(buf);
   auto last = first + num_bytes;
   wr_offline_buf_.insert(wr_offline_buf_.end(), first, last);
@@ -54,7 +54,7 @@ void stream::write(const void* buf, size_t num_bytes) {
 
 void stream::flush(const manager_ptr& mgr) {
   CAF_ASSERT(mgr != nullptr);
-  CAF_LOG_TRACE(CAF_ARG(wr_offline_buf_.size()));
+  auto lg = log::io::trace("wr_offline_buf_.size = {}", wr_offline_buf_.size());
   if (!wr_offline_buf_.empty() && !state_.writing && !wr_op_backoff_) {
     backend().add(operation::write, fd(), this);
     writer_ = mgr;
@@ -64,7 +64,7 @@ void stream::flush(const manager_ptr& mgr) {
 }
 
 void stream::removed_from_loop(operation op) {
-  CAF_LOG_TRACE(CAF_ARG2("fd", fd_) << CAF_ARG(op));
+  auto lg = log::io::trace("fd = {}, op = {}", fd_, op);
   switch (op) {
     case operation::read:
       reader_.reset();
@@ -77,7 +77,7 @@ void stream::removed_from_loop(operation op) {
 }
 
 void stream::graceful_shutdown() {
-  CAF_LOG_TRACE(CAF_ARG2("fd", fd_));
+  auto lg = log::io::trace("fd = {}", fd_);
   // Ignore repeated calls.
   if (state_.shutting_down)
     return;
@@ -121,7 +121,8 @@ void stream::prepare_next_read() {
 }
 
 void stream::prepare_next_write() {
-  CAF_LOG_TRACE(CAF_ARG(wr_buf_.size()) << CAF_ARG(wr_offline_buf_.size()));
+  auto lg = log::io::trace("wr_buf_.size = {}, wr_offline_buf_.size = {}",
+                           wr_buf_.size(), wr_offline_buf_.size());
   written_ = 0;
   wr_buf_.clear();
   if (wr_offline_buf_.empty() || wr_op_backoff_) {
@@ -210,7 +211,7 @@ void stream::handle_error_propagation() {
 }
 
 void stream::send_fin() {
-  CAF_LOG_TRACE(CAF_ARG2("fd", fd_));
+  auto lg = log::io::trace("fd = {}", fd_);
   // Shutting down the write channel will cause TCP to send FIN for the
   // graceful shutdown sequence. The peer then closes its connection as well
   // and we will notice this by getting 0 as return value of recv without error

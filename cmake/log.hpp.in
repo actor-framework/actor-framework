@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/detail/build_config.hpp"
 #include "caf/log/level.hpp"
 #include "caf/logger.hpp"
 
@@ -13,6 +14,32 @@ namespace caf::log::@CAF_COMPONENT_NAME@ {
 
 /// The name of this component in log events.
 constexpr std::string_view component = "caf.@CAF_COMPONENT_NAME@";
+
+#if CAF_LOG_LEVEL >= CAF_LOG_LEVEL_TRACE
+
+/// Logs a message with `debug` severity.
+/// @param fmt_str The format string (with source location) for the message.
+/// @param args Arguments for the format string.
+template <class... Ts>
+[[nodiscard]] auto trace(format_string_with_location fmt_str, Ts&&... args) {
+  return logger::trace(component, fmt_str, std::forward<Ts>(args)...);
+}
+
+#else
+
+// A simple dummy type with a destructor to suppress 'unused variable' warnings
+// when using `trace` with trace logging disabled.
+struct trace_dummy {
+  ~trace_dummy() {
+  }
+};
+
+template <class... Ts>
+[[nodiscard]] auto trace(Ts&&...) {
+  return trace_dummy{};
+}
+
+#endif
 
 /// Logs a message with `debug` severity.
 /// @param fmt_str The format string (with source location) for the message.

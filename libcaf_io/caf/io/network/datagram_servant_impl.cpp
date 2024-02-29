@@ -21,7 +21,7 @@ datagram_servant_impl::datagram_servant_impl(default_multiplexer& mx,
 }
 
 bool datagram_servant_impl::new_endpoint(network::receive_buffer& buf) {
-  CAF_LOG_TRACE("");
+  auto lg = log::io::trace("");
   if (detached())
     // We are already disconnected from the broker while the multiplexer
     // did not yet remove the socket, this can happen if an I/O event
@@ -42,7 +42,7 @@ bool datagram_servant_impl::new_endpoint(network::receive_buffer& buf) {
 }
 
 void datagram_servant_impl::ack_writes(bool enable) {
-  CAF_LOG_TRACE(CAF_ARG(enable));
+  auto lg = log::io::trace("enable = {}", enable);
   handler_.ack_writes(enable);
 }
 
@@ -60,14 +60,14 @@ network::receive_buffer& datagram_servant_impl::rd_buf() {
 }
 
 void datagram_servant_impl::graceful_shutdown() {
-  CAF_LOG_TRACE("");
+  auto lg = log::io::trace("");
   handler_.graceful_shutdown();
   detach_handles();
   detach(&handler_.backend(), false);
 }
 
 void datagram_servant_impl::flush() {
-  CAF_LOG_TRACE("");
+  auto lg = log::io::trace("");
   handler_.flush(this);
 }
 
@@ -108,7 +108,7 @@ void datagram_servant_impl::remove_endpoint(datagram_handle hdl) {
 }
 
 void datagram_servant_impl::launch() {
-  CAF_LOG_TRACE("");
+  auto lg = log::io::trace("");
   CAF_ASSERT(!launched_);
   launched_ = true;
   handler_.start(this);

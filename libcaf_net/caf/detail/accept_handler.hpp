@@ -64,7 +64,7 @@ public:
   // -- implementation of socket_event_layer -----------------------------------
 
   error start(net::socket_manager* owner) override {
-    CAF_LOG_TRACE("");
+    auto lg = log::net::trace("");
     owner_ = owner;
     if (auto err = factory_->start(owner)) {
       log::net::debug("factory_->start failed: {}", err);
@@ -91,7 +91,7 @@ public:
   }
 
   void handle_read_event() override {
-    CAF_LOG_TRACE("");
+    auto lg = log::net::trace("");
     CAF_ASSERT(owner_ != nullptr);
     if (open_connections_.size() == max_connections_) {
       owner_->deregister_reading();

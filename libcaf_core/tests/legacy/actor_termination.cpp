@@ -46,7 +46,7 @@ BEGIN_FIXTURE_SCOPE(fixture)
 CAF_TEST(single_multiplexed_request) {
   auto f = [&](event_based_actor* self, actor server) {
     self->request(server, infinite, 42).then([=](int x) {
-      CAF_LOG_TRACE(CAF_ARG(x));
+      auto lg = log::core::trace("x = {}", x);
       CAF_REQUIRE_EQUAL(x, 42);
     });
   };
@@ -61,7 +61,7 @@ CAF_TEST(multiple_multiplexed_requests) {
   auto f = [&](event_based_actor* self, actor server) {
     for (int i = 0; i < 3; ++i)
       self->request(server, infinite, 42).then([=](int x) {
-        CAF_LOG_TRACE(CAF_ARG(x));
+        auto lg = log::core::trace("x = {}", x);
         CAF_REQUIRE_EQUAL(x, 42);
       });
   };

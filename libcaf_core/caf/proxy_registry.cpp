@@ -8,7 +8,7 @@
 #include "caf/actor_registry.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/deserializer.hpp"
-#include "caf/logger.hpp"
+#include "caf/log/core.hpp"
 #include "caf/node_id.hpp"
 #include "caf/serializer.hpp"
 
@@ -46,7 +46,7 @@ strong_actor_ptr proxy_registry::get(const node_id& node, actor_id aid) const {
 }
 
 strong_actor_ptr proxy_registry::get_or_put(const node_id& nid, actor_id aid) {
-  CAF_LOG_TRACE(CAF_ARG(nid) << CAF_ARG(aid));
+  auto lg = log::core::trace("nid = {}, aid = {}", nid, aid);
   std::unique_lock<std::mutex> guard{mtx_};
   auto& result = proxies_[nid][aid];
   if (!result)
@@ -73,7 +73,7 @@ bool proxy_registry::empty() const {
 }
 
 void proxy_registry::erase(const node_id& nid) {
-  CAF_LOG_TRACE(CAF_ARG(nid));
+  auto lg = log::core::trace("nid = {}", nid);
   // Move submap for `nid` to a local variable.
   proxy_map tmp;
   {
@@ -91,7 +91,7 @@ void proxy_registry::erase(const node_id& nid) {
 }
 
 void proxy_registry::erase(const node_id& nid, actor_id aid, error rsn) {
-  CAF_LOG_TRACE(CAF_ARG(nid) << CAF_ARG(aid));
+  auto lg = log::core::trace("nid = {}, aid = {}", nid, aid);
   // Try to find the actor handle in question.
   strong_actor_ptr erased_proxy;
   {
@@ -115,7 +115,7 @@ void proxy_registry::erase(const node_id& nid, actor_id aid, error rsn) {
 }
 
 void proxy_registry::clear() {
-  CAF_LOG_TRACE("");
+  auto lg = log::core::trace("");
   // Move the content of proxies_ to a local variable.
   std::unordered_map<node_id, proxy_map> tmp;
   {

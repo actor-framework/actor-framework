@@ -29,7 +29,7 @@ public:
 
   void launch(execution_unit*, bool, bool hide) override {
     CAF_PUSH_AID_FROM_PTR(this);
-    CAF_LOG_TRACE(CAF_ARG(hide));
+    std::ignore = log::system::trace("hide = {}", hide);
     CAF_ASSERT(getf(is_blocking_flag));
     if (!hide)
       register_at_system();

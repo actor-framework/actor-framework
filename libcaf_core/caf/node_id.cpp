@@ -93,7 +93,7 @@ bool hashed_node_id::can_parse(std::string_view str) noexcept {
 }
 
 node_id hashed_node_id::local(const actor_system_config&) {
-  CAF_LOG_TRACE("");
+  auto lg = log::core::trace("");
   // We add an global incrementing counter to make sure two actor systems in the
   // same process won't have the same node ID - even if the user manipulates the
   // system to always produce the same seed for its randomness.
