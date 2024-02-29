@@ -170,6 +170,246 @@ TEST("send request message to an invalid receiver") {
   }
 }
 
+TEST("receive response as an expected") {
+  using server_actor
+    = typed_actor<result<void>(get_atom),                // No response.
+                  result<int>(get_atom, int),            // One response value.
+                  result<int, int>(get_atom, int, int)>; // Two response values.
+  scoped_actor self{sys};
+  SECTION("receive without delay") {
+    SECTION("statically typed response with well-behaved server") {
+      auto server = sys.spawn([]() -> server_actor::behavior_type {
+        return {
+          [](get_atom) {},
+          [](get_atom, int x) { return x; },
+          [](get_atom, int x, int y) -> result<int, int> {
+            return {x, y};
+          },
+        };
+      });
+      SECTION("empty result") {
+        auto res = self->mail(get_atom_v).request(server, 1s).receive();
+        check(res.has_value());
+      }
+      SECTION("result with one integer") {
+        auto res = self->mail(get_atom_v, 1).request(server, 1s).receive();
+        check_eq(res, 1);
+      }
+      SECTION("result with two integers") {
+        auto res = self->mail(get_atom_v, 1, 2).request(server, 1s).receive();
+        check_eq(res, std::tuple{1, 2});
+      }
+    }
+    SECTION("dynamically typed response with well-behaved server") {
+      auto server = sys.spawn([]() -> behavior {
+        return {
+          [](get_atom) {},
+          [](get_atom, int x) { return x; },
+          [](get_atom, int x, int y) -> result<int, int> {
+            return {x, y};
+          },
+        };
+      });
+      SECTION("empty result") {
+        auto res = self->mail(get_atom_v).request(server, 1s).receive<>();
+        check(res.has_value());
+      }
+      SECTION("result with one integer") {
+        auto res = self->mail(get_atom_v, 1).request(server, 1s).receive<int>();
+        check_eq(res, 1);
+      }
+      SECTION("result with two integers") {
+        auto res = self->mail(get_atom_v, 1, 2)
+                     .request(server, 1s)
+                     .receive<int, int>();
+        check_eq(res, std::tuple{1, 2});
+      }
+    }
+    SECTION("statically typed response with a server returning errors") {
+      auto server = sys.spawn([]() -> server_actor::behavior_type {
+        return {
+          [](get_atom) -> result<void> {
+            return make_error(sec::runtime_error);
+          },
+          [](get_atom, int) -> result<int> {
+            return make_error(sec::runtime_error);
+          },
+          [](get_atom, int, int) -> result<int, int> {
+            return make_error(sec::runtime_error);
+          },
+        };
+      });
+      SECTION("empty result") {
+        auto res = self->mail(get_atom_v).request(server, 1s).receive();
+        check_eq(res, make_error(sec::runtime_error));
+      }
+      SECTION("result with one integer") {
+        auto res = self->mail(get_atom_v, 1).request(server, 1s).receive();
+        check_eq(res, make_error(sec::runtime_error));
+      }
+      SECTION("result with two integers") {
+        auto res = self->mail(get_atom_v, 1, 2).request(server, 1s).receive();
+        check_eq(res, make_error(sec::runtime_error));
+      }
+    }
+    SECTION("dynamically typed response with well-behaved server") {
+      auto server = sys.spawn([]() -> behavior {
+        return {
+          [](get_atom) -> result<void> {
+            return make_error(sec::runtime_error);
+          },
+          [](get_atom, int) -> result<int> {
+            return make_error(sec::runtime_error);
+          },
+          [](get_atom, int, int) -> result<int, int> {
+            return make_error(sec::runtime_error);
+          },
+        };
+      });
+      SECTION("empty result") {
+        auto res = self->mail(get_atom_v).request(server, 1s).receive<>();
+        check_eq(res, make_error(sec::runtime_error));
+      }
+      SECTION("result with one integer") {
+        auto res = self->mail(get_atom_v, 1).request(server, 1s).receive<int>();
+        check_eq(res, make_error(sec::runtime_error));
+      }
+      SECTION("result with two integers") {
+        auto res = self->mail(get_atom_v, 1, 2)
+                     .request(server, 1s)
+                     .receive<int, int>();
+        check_eq(res, make_error(sec::runtime_error));
+      }
+    }
+  }
+  SECTION("receive with delay") {
+    SECTION("statically typed response with well-behaved server") {
+      auto server = sys.spawn([]() -> server_actor::behavior_type {
+        return {
+          [](get_atom) {},
+          [](get_atom, int x) { return x; },
+          [](get_atom, int x, int y) -> result<int, int> {
+            return {x, y};
+          },
+        };
+      });
+      SECTION("empty result") {
+        auto res
+          = self->mail(get_atom_v).delay(10us).request(server, 1s).receive();
+        check(res.has_value());
+      }
+      SECTION("result with one integer") {
+        auto res
+          = self->mail(get_atom_v, 1).delay(10us).request(server, 1s).receive();
+        check_eq(res, 1);
+      }
+      SECTION("result with two integers") {
+        auto res = self->mail(get_atom_v, 1, 2)
+                     .delay(10us)
+                     .request(server, 1s)
+                     .receive();
+        check_eq(res, std::tuple{1, 2});
+      }
+    }
+    SECTION("dynamically typed response with well-behaved server") {
+      auto server = sys.spawn([]() -> behavior {
+        return {
+          [](get_atom) {},
+          [](get_atom, int x) { return x; },
+          [](get_atom, int x, int y) -> result<int, int> {
+            return {x, y};
+          },
+        };
+      });
+      SECTION("empty result") {
+        auto res
+          = self->mail(get_atom_v).delay(10us).request(server, 1s).receive<>();
+        check(res.has_value());
+      }
+      SECTION("result with one integer") {
+        auto res = self->mail(get_atom_v, 1)
+                     .delay(10us)
+                     .request(server, 1s)
+                     .receive<int>();
+        check_eq(res, 1);
+      }
+      SECTION("result with two integers") {
+        auto res = self->mail(get_atom_v, 1, 2)
+                     .delay(10us)
+                     .request(server, 1s)
+                     .receive<int, int>();
+        check_eq(res, std::tuple{1, 2});
+      }
+    }
+    SECTION("statically typed response with a server returning errors") {
+      auto server = sys.spawn([]() -> server_actor::behavior_type {
+        return {
+          [](get_atom) -> result<void> {
+            return make_error(sec::runtime_error);
+          },
+          [](get_atom, int) -> result<int> {
+            return make_error(sec::runtime_error);
+          },
+          [](get_atom, int, int) -> result<int, int> {
+            return make_error(sec::runtime_error);
+          },
+        };
+      });
+      SECTION("empty result") {
+        auto res
+          = self->mail(get_atom_v).delay(10us).request(server, 1s).receive();
+        check_eq(res, make_error(sec::runtime_error));
+      }
+      SECTION("result with one integer") {
+        auto res
+          = self->mail(get_atom_v, 1).delay(10us).request(server, 1s).receive();
+        check_eq(res, make_error(sec::runtime_error));
+      }
+      SECTION("result with two integers") {
+        auto res = self->mail(get_atom_v, 1, 2)
+                     .delay(10us)
+                     .request(server, 1s)
+                     .receive();
+        check_eq(res, make_error(sec::runtime_error));
+      }
+    }
+    SECTION("dynamically typed response with well-behaved server") {
+      auto server = sys.spawn([]() -> behavior {
+        return {
+          [](get_atom) -> result<void> {
+            return make_error(sec::runtime_error);
+          },
+          [](get_atom, int) -> result<int> {
+            return make_error(sec::runtime_error);
+          },
+          [](get_atom, int, int) -> result<int, int> {
+            return make_error(sec::runtime_error);
+          },
+        };
+      });
+      SECTION("empty result") {
+        auto res
+          = self->mail(get_atom_v).delay(10us).request(server, 1s).receive<>();
+        check_eq(res, make_error(sec::runtime_error));
+      }
+      SECTION("result with one integer") {
+        auto res = self->mail(get_atom_v, 1)
+                     .delay(10us)
+                     .request(server, 1s)
+                     .receive<int>();
+        check_eq(res, make_error(sec::runtime_error));
+      }
+      SECTION("result with two integers") {
+        auto res = self->mail(get_atom_v, 1, 2)
+                     .delay(10us)
+                     .request(server, 1s)
+                     .receive<int, int>();
+        check_eq(res, make_error(sec::runtime_error));
+      }
+    }
+  }
+}
+
 } // WITH_FIXTURE(fixture)
 
 } // namespace

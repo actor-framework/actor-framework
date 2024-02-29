@@ -70,7 +70,7 @@ public:
                                            make_error(sec::invalid_request)),
                       self()->context());
     }
-    using hdl_t = event_based_delayed_response_handle<response_type>;
+    using hdl_t = detail::event_based_delayed_response_handle_t<response_type>;
     return hdl_t{self(), mid.response_id(), std::move(in_flight_timeout),
                  std::move(in_flight_response)};
   }
@@ -139,7 +139,7 @@ public:
                                            make_error(sec::invalid_request)),
                       self()->context());
     }
-    using hdl_t = event_based_response_handle<response_type>;
+    using hdl_t = detail::event_based_response_handle_t<response_type>;
     return hdl_t{self(), mid.response_id(), std::move(in_flight_timeout)};
   }
 

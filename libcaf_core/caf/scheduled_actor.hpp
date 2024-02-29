@@ -81,7 +81,7 @@ public:
   template <class, class>
   friend class response_handle;
 
-  template <class>
+  template <class...>
   friend class event_based_response_handle;
 
   // -- nested enums -----------------------------------------------------------
