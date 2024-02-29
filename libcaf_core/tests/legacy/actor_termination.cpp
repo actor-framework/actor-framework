@@ -45,7 +45,7 @@ BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(single_multiplexed_request) {
   auto f = [&](event_based_actor* self, actor server) {
-    self->request(server, infinite, 42).then([=](int x) {
+    self->mail(42).request(server, infinite).then([=](int x) {
       auto lg = log::core::trace("x = {}", x);
       CAF_REQUIRE_EQUAL(x, 42);
     });
@@ -60,7 +60,7 @@ CAF_TEST(single_multiplexed_request) {
 CAF_TEST(multiple_multiplexed_requests) {
   auto f = [&](event_based_actor* self, actor server) {
     for (int i = 0; i < 3; ++i)
-      self->request(server, infinite, 42).then([=](int x) {
+      self->mail(42).request(server, infinite).then([=](int x) {
         auto lg = log::core::trace("x = {}", x);
         CAF_REQUIRE_EQUAL(x, 42);
       });
@@ -78,7 +78,7 @@ CAF_TEST(multiple_multiplexed_requests) {
 
 CAF_TEST(single_awaited_request) {
   auto f = [&](event_based_actor* self, actor server) {
-    self->request(server, infinite, 42).await([=](int x) {
+    self->mail(42).request(server, infinite).await([=](int x) {
       CAF_REQUIRE_EQUAL(x, 42);
     });
   };
@@ -92,7 +92,7 @@ CAF_TEST(single_awaited_request) {
 CAF_TEST(multiple_awaited_requests) {
   auto f = [&](event_based_actor* self, actor server) {
     for (int i = 0; i < 3; ++i)
-      self->request(server, infinite, i).await([=](int x) {
+      self->mail(i).request(server, infinite).await([=](int x) {
         MESSAGE("received response #" << (i + 1));
         CAF_REQUIRE_EQUAL(x, i);
       });

@@ -43,11 +43,13 @@ struct mtl_util<result<Rs...>(Ts...)> {
     f.revert();
     if (adapter.read(f, xs...)) {
       if constexpr (std::is_same_v<type_list<Rs...>, type_list<void>>)
-        self->request(dst, timeout, std::move(xs)...)
+        self->mail(std::move(xs)...)
+          .request(dst, timeout)
           .then([f{std::move(on_result)}]() mutable { f(); },
                 std::move(on_error));
       else
-        self->request(dst, timeout, std::move(xs)...)
+        self->mail(std::move(xs)...)
+          .request(dst, timeout)
           .then([f{std::move(on_result)}](Rs&... res) mutable { f(res...); },
                 std::move(on_error));
       return true;

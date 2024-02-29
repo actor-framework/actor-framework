@@ -105,7 +105,8 @@ auto middleman_actor_impl::make_behavior() -> behavior_type {
       auto& ptr = *r;
       std::vector<response_promise> tmp{std::move(rp)};
       pending_.emplace(key, std::move(tmp));
-      request(broker_, infinite, connect_atom_v, std::move(ptr), port)
+      mail(connect_atom_v, std::move(ptr), port)
+        .request(broker_, infinite)
         .then(
           [this, key](node_id& nid, strong_actor_ptr& addr, mpi_set& sigs) {
             auto i = pending_.find(key);

@@ -114,7 +114,8 @@ struct client_state {
     current_server = nullptr;
     // use request().await() to suspend regular behavior until MM responded
     auto mm = self->system().middleman().actor_handle();
-    self->request(mm, infinite, connect_atom_v, host, port)
+    self->mail(connect_atom_v, host, port)
+      .request(mm, infinite)
       .await(
         [this, host, port](const node_id&, strong_actor_ptr serv,
                            const std::set<std::string>& ifs) {
@@ -143,7 +144,8 @@ struct client_state {
 
   behavior running(const actor& calculator) {
     auto send_task = [this, calculator](auto op, int x, int y) {
-      self->request(calculator, task_timeout, op, x, y)
+      self->mail(op, x, y)
+        .request(calculator, task_timeout)
         .then(
           [this, x, y](int result) {
             char op_ch;

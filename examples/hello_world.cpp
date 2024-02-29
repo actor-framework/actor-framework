@@ -27,7 +27,8 @@ behavior mirror(event_based_actor* self) {
 
 void hello_world(event_based_actor* self, const actor& buddy) {
   // send "Hello World!" to our buddy ...
-  self->request(buddy, 10s, "Hello World!")
+  self->mail("Hello World!")
+    .request(buddy, 10s)
     .then(
       // ... wait up to 10s for a response ...
       [self](const std::string& what) {

@@ -11,6 +11,7 @@
 #include "caf/scoped_actor.hpp"
 
 using namespace caf;
+using namespace std::literals;
 
 #define HANDLE_ERROR                                                           \
   [](const error& err) {                                                       \
@@ -80,7 +81,8 @@ TEST("round_robin_actor_pool") {
   self->mail(sys_atom_v, put_atom_v, spawn_worker()).send(pool);
   std::vector<actor> workers;
   for (int32_t i = 0; i < 6; ++i) {
-    self->request(pool, infinite, i, i)
+    self->mail(i, i)
+      .request(pool, infinite)
       .receive(
         [&](int32_t res) {
           check_eq(res, i + i);
@@ -92,7 +94,8 @@ TEST("round_robin_actor_pool") {
   }
   check_eq(workers.size(), 6u);
   check(std::unique(workers.begin(), workers.end()) == workers.end());
-  self->request(pool, infinite, sys_atom_v, get_atom_v)
+  self->mail(sys_atom_v, get_atom_v)
+    .request(pool, infinite)
     .receive(
       [&](std::vector<actor>& ws) {
         std::sort(workers.begin(), workers.end());
@@ -110,7 +113,8 @@ TEST("round_robin_actor_pool") {
   bool success = false;
   size_t i = 0;
   while (!success && ++i <= 10) {
-    self->request(pool, infinite, sys_atom_v, get_atom_v)
+    self->mail(sys_atom_v, get_atom_v)
+      .request(pool, infinite)
       .receive(
         [&](std::vector<actor>& ws) {
           success = workers.size() == ws.size();
@@ -155,7 +159,8 @@ TEST("random_actor_pool") {
   scoped_actor self{system};
   auto pool = actor_pool::make(&context, 5, spawn_worker, actor_pool::random());
   for (int i = 0; i < 5; ++i) {
-    self->request(pool, std::chrono::milliseconds(250), 1, 2)
+    self->mail(1, 2)
+      .request(pool, 250ms)
       .receive([&](int res) { check_eq(res, 3); }, HANDLE_ERROR);
   }
   self->send_exit(pool, exit_reason::user_shutdown);

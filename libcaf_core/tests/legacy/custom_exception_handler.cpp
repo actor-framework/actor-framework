@@ -45,7 +45,8 @@ CAF_TEST(the default exception handler includes the error message) {
   actor_system system{cfg};
   scoped_actor self{system};
   auto aut = self->spawn(testee);
-  self->request(aut, infinite, "hello world")
+  self->mail("hello world")
+    .request(aut, infinite)
     .receive( //
       [] { CAF_FAIL("unexpected response"); },
       [](const error& err) {

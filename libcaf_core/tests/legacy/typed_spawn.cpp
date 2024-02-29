@@ -64,9 +64,9 @@ public:
 
 void client(event_based_actor* self, const actor& parent,
             const server_type& serv) {
-  self->request(serv, infinite, my_request{0, 0}).then([=](bool val1) {
+  self->mail(my_request{0, 0}).request(serv, infinite).then([=](bool val1) {
     CHECK_EQ(val1, true);
-    self->request(serv, infinite, my_request{10, 20}).then([=](bool val2) {
+    self->mail(my_request{10, 20}).request(serv, infinite).then([=](bool val2) {
       CHECK_EQ(val2, false);
       self->mail(ok_atom_v).send(parent);
     });

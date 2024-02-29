@@ -56,7 +56,7 @@ SCENARIO("request(...).await(...) suspends the regular actor behavior") {
     auto count = std::make_shared<int>(0);
     auto server_impl = []() -> behavior { return {[](int x) { return x; }}; };
     auto uut_impl = [count](event_based_actor* self, actor buddy) {
-      self->request(buddy, infinite, 42).await([](int) {});
+      self->mail(42).request(buddy, infinite).await([](int) {});
       return behavior{
         [count](int x) {
           *count += x;

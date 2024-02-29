@@ -41,13 +41,14 @@ TEST("unit_results") {
     make_message(update_atom_v),
   };
   for (auto a : as) {
-    self->request(aut, infinite, a)
+    self->mail(a)
+      .request(aut, infinite)
       .receive(
-        [&] {
+        [&a] {
           log::test::debug("actor under test correctly replied to {}",
                            to_string(a));
         },
-        [&](const error&) {
+        [this, &a](const error&) {
           fail("actor under test failed at input {}", to_string(a));
         });
   }
