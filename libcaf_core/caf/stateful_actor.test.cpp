@@ -79,7 +79,7 @@ struct fixture : test::fixture::deterministic {
     inject().with(add_atom_v, 9).from(self).to(aut);
     inject().with(get_atom_v).from(self).to(aut);
     auto received = std::make_shared<bool>(false);
-    self->receive([this, received](int received_int) {
+    self->receive([received](int received_int) {
       *received = true;
       test::runnable::current().check_eq(received_int, 20);
     });
@@ -98,7 +98,7 @@ struct fixture : test::fixture::deterministic {
     });
     inject().with(get_atom_v).from(self).to(aut);
     auto received = std::make_shared<bool>(false);
-    self->receive([this, received, expected](std::string received_str) {
+    self->receive([received, expected](std::string received_str) {
       *received = true;
       test::runnable::current().check_eq(expected, received_str);
     });

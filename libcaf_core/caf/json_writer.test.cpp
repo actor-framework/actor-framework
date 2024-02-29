@@ -51,10 +51,6 @@ struct my_request {
   }
 };
 
-inline bool operator==(const my_request& x, const my_request& y) {
-  return std::tie(x.a, x.b) == std::tie(y.a, y.b);
-}
-
 template <class Inspector>
 bool inspect(Inspector& f, my_request& x) {
   return f.object(x).fields(f.field("a", x.a), f.field("b", x.b));
