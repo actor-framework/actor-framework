@@ -2,15 +2,18 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE mixin.requester
-
 #include "caf/mixin/requester.hpp"
 
+#include "caf/test/fixture/deterministic.hpp"
+#include "caf/test/scenario.hpp"
+#include "caf/test/test.hpp"
+
 #include "caf/event_based_actor.hpp"
+#include "caf/log/test.hpp"
 #include "caf/policy/select_all.hpp"
 #include "caf/result.hpp"
-
-#include "core-test.hpp"
+#include "caf/scoped_actor.hpp"
+#include "caf/typed_event_based_actor.hpp"
 
 #include <numeric>
 
@@ -26,7 +29,8 @@ using no_op_server_type = typed_actor<result<void>(int, int)>;
 
 using result_type = std::variant<none_t, unit_t, int>;
 
-struct fixture : test_coordinator_fixture<> {
+struct fixture : test::fixture::deterministic {
+  scoped_actor self{sys};
   template <class F>
   auto make_server(F f) {
     using res_t = caf::result<decltype(f(1, 2))>;
@@ -43,7 +47,7 @@ struct fixture : test_coordinator_fixture<> {
     result = std::make_shared<result_type>(none);
     discarding_server = make_server([](int, int) {});
     adding_server = make_server([](int x, int y) { return x + y; });
-    run();
+    dispatch_messages();
   }
 
   template <class T>
@@ -61,47 +65,44 @@ struct fixture : test_coordinator_fixture<> {
   adding_server_type adding_server;
 };
 
-} // namespace
-
-#define ERROR_HANDLER [&](error& err) { CAF_FAIL(err); }
+#define ERROR_HANDLER                                                          \
+  [&](error& err) { test::runnable::current().fail("{}", err); }
 
 #define SUBTEST(message)                                                       \
   *result = none;                                                              \
-  run();                                                                       \
-  MESSAGE("subtest: " message);                                                \
+  dispatch_messages();                                                         \
+  log::test::debug("subtest: {}", message);                                    \
   for (int subtest_dummy = 0; subtest_dummy < 1; ++subtest_dummy)
 
-BEGIN_FIXTURE_SCOPE(fixture)
+WITH_FIXTURE(fixture) {
 
-CAF_TEST(requests without result) {
+TEST("requests without result") {
   auto server = discarding_server;
   SUBTEST("request.then") {
     auto client = sys.spawn([this, server](event_based_actor* self) {
       self->request(server, infinite, 1, 2).then([this] { *result = unit; });
     });
-    run_once();
-    expect((int, int), from(client).to(server).with(1, 2));
-    expect((void), from(server).to(client));
-    CHECK_EQ(*result, result_type{unit});
+    expect<int, int>().with(1, 2).from(client).to(server);
+    dispatch_messages();
+    check_eq(*result, result_type{unit});
   }
   SUBTEST("request.await") {
     auto client = sys.spawn([this, server](event_based_actor* self) {
       self->request(server, infinite, 1, 2).await([this] { *result = unit; });
     });
-    run_once();
-    expect((int, int), from(client).to(server).with(1, 2));
-    expect((void), from(server).to(client));
-    CHECK_EQ(*result, result_type{unit});
+    expect<int, int>().with(1, 2).from(client).to(server);
+    dispatch_messages();
+    check_eq(*result, result_type{unit});
   }
   SUBTEST("request.receive") {
     auto res_hdl = self->request(server, infinite, 1, 2);
-    run();
+    dispatch_messages();
     res_hdl.receive([&] { *result = unit; }, ERROR_HANDLER);
-    CHECK_EQ(*result, result_type{unit});
+    check_eq(*result, result_type{unit});
   }
 }
 
-CAF_TEST(requests with integer result) {
+TEST("requests with integer result") {
   auto server = adding_server;
   SUBTEST("request.then") {
     auto client = sys.spawn([this, server](event_based_actor* self) {
@@ -109,10 +110,9 @@ CAF_TEST(requests with integer result) {
         *result = x;
       });
     });
-    run_once();
-    expect((int, int), from(client).to(server).with(1, 2));
-    expect((int), from(server).to(client).with(3));
-    CHECK_EQ(*result, result_type{3});
+    expect<int, int>().with(1, 2).from(client).to(server);
+    expect<int>().with(3).from(server).to(client);
+    check_eq(*result, result_type{3});
   }
   SUBTEST("request.await") {
     auto client = sys.spawn([this, server](event_based_actor* self) {
@@ -120,100 +120,92 @@ CAF_TEST(requests with integer result) {
         *result = x;
       });
     });
-    run_once();
-    expect((int, int), from(client).to(server).with(1, 2));
-    expect((int), from(server).to(client).with(3));
-    CHECK_EQ(*result, result_type{3});
+    expect<int, int>().with(1, 2).from(client).to(server);
+    expect<int>().with(3).from(server).to(client);
+    check_eq(*result, result_type{3});
   }
   SUBTEST("request.receive") {
     auto res_hdl = self->request(server, infinite, 1, 2);
-    run();
+    dispatch_messages();
     res_hdl.receive([&](int x) { *result = x; }, ERROR_HANDLER);
-    CHECK_EQ(*result, result_type{3});
+    check_eq(*result, result_type{3});
   }
 }
 
-CAF_TEST(delegated request with integer result) {
+TEST("delegated request with integer result") {
   auto worker = adding_server;
   auto server = make_delegator(worker);
   auto client = sys.spawn([this, server](event_based_actor* self) {
     self->request(server, infinite, 1, 2).then([this](int x) { *result = x; });
   });
-  run_once();
-  expect((int, int), from(client).to(server).with(1, 2));
-  expect((int, int), from(client).to(worker).with(1, 2));
-  expect((int), from(worker).to(client).with(3));
-  CHECK_EQ(*result, result_type{3});
+  expect<int, int>().with(1, 2).from(client).to(server);
+  expect<int, int>().with(1, 2).from(client).to(worker);
+  expect<int>().with(3).from(worker).to(client);
+  check_eq(*result, result_type{3});
 }
 
-CAF_TEST(requesters support fan_out_request) {
+TEST("requesters support fan_out_request") {
   using policy::select_all;
   std::vector<adding_server_type> workers{
     make_server([](int x, int y) { return x + y; }),
     make_server([](int x, int y) { return x + y; }),
     make_server([](int x, int y) { return x + y; }),
   };
-  run();
+  dispatch_messages();
   auto sum = std::make_shared<int>(0);
   auto client = sys.spawn([workers, sum](event_based_actor* self) {
     self->fan_out_request<select_all>(workers, infinite, 1, 2)
       .then([=](std::vector<int> results) {
         for (auto result : results)
-          CHECK_EQ(result, 3);
+          test::runnable::current().check_eq(result, 3);
         *sum = std::accumulate(results.begin(), results.end(), 0);
       });
   });
-  run_once();
-  expect((int, int), from(client).to(workers[0]).with(1, 2));
-  expect((int), from(workers[0]).to(client).with(3));
-  expect((int, int), from(client).to(workers[1]).with(1, 2));
-  expect((int), from(workers[1]).to(client).with(3));
-  expect((int, int), from(client).to(workers[2]).with(1, 2));
-  expect((int), from(workers[2]).to(client).with(3));
-  CHECK_EQ(*sum, 9);
+  expect<int, int>().with(1, 2).from(client).to(workers[0]);
+  expect<int>().with(3).from(workers[0]).to(client);
+  expect<int, int>().with(1, 2).from(client).to(workers[1]);
+  expect<int>().with(3).from(workers[1]).to(client);
+  expect<int, int>().with(1, 2).from(client).to(workers[2]);
+  expect<int>().with(3).from(workers[2]).to(client);
+  check_eq(*sum, 9);
 }
 
-CAF_TEST(requesters support fan_out_request with result<void>) {
+TEST("requesters support fan_out_request with void result") {
   using policy::select_all;
   std::vector<no_op_server_type> workers{
     make_server([](int, int) {}),
     make_server([](int, int) {}),
     make_server([](int, int) {}),
   };
-  run();
   auto ran = std::make_shared<bool>(false);
   auto client = sys.spawn([=](event_based_actor* self) {
     self->fan_out_request<select_all>(workers, infinite, 1, 2).then([=]() {
       *ran = true;
     });
   });
-  run_once();
-  expect((int, int), from(client).to(workers[0]).with(1, 2));
-  expect((), from(workers[0]).to(client));
-  expect((int, int), from(client).to(workers[1]).with(1, 2));
-  expect((), from(workers[1]).to(client));
-  expect((int, int), from(client).to(workers[2]).with(1, 2));
-  expect((), from(workers[2]).to(client));
-  CHECK_EQ(*ran, true);
+  expect<int, int>().with(1, 2).from(client).to(workers[0]);
+  expect<int, int>().with(1, 2).from(client).to(workers[1]);
+  expect<int, int>().with(1, 2).from(client).to(workers[2]);
+  dispatch_messages();
+  check_eq(*ran, true);
 }
 
 #ifdef CAF_ENABLE_EXCEPTIONS
 
-CAF_TEST(exceptions while processing requests trigger error messages) {
+TEST("exceptions while processing requests trigger error messages") {
   auto worker = sys.spawn([] {
     return behavior{
       [](int) { throw std::runtime_error(""); },
     };
   });
-  run();
+  dispatch_messages();
   auto client = sys.spawn([worker](event_based_actor* self) {
     self->request(worker, infinite, 42).then([](int) {
-      CAF_FAIL("unexpected handler called");
+      test::runnable::current().fail("unexpected handler called");
     });
   });
-  run_once();
-  expect((int), from(client).to(worker).with(42));
-  expect((error), from(worker).to(client).with(sec::runtime_error));
+  expect<int>().with(42).from(client).to(worker);
+  expect<error>().with(sec::runtime_error).from(worker).to(client);
 }
 
 #endif // CAF_ENABLE_EXCEPTIONS
@@ -225,27 +217,31 @@ SCENARIO("request.await enforces a processing order") {
         [](int32_t x) { return x * x; },
       };
     });
-    run();
-    auto client = sys.spawn([server](event_based_actor* self) -> behavior {
-      self->request(server, infinite, int32_t{3}).await([](int32_t res) {
-        CHECK_EQ(res, 9);
-      });
-      return {
-        [](const std::string& str) {
-          // Received from self.
-          CHECK_EQ(str, "hello");
-        },
-      };
-    });
-    sched.run_once();
+    dispatch_messages();
+    auto received = std::make_shared<bool>(false);
+    auto client
+      = sys.spawn([server, received](event_based_actor* self) -> behavior {
+          self->request(server, infinite, int32_t{3})
+            .await([received](int32_t res) {
+              test::runnable::current().check_eq(res, 9);
+              *received = true;
+            });
+          return {
+            [](const std::string& str) {
+              // Received from self.
+              test::runnable::current().check_eq(str, "hello");
+            },
+          };
+        });
     WHEN("sending it a message before the response arrives") {
       THEN("the actor handles the asynchronous message later") {
         self->mail("hello").send(client);
-        disallow((std::string), from(self).to(client));     // not processed yet
-        expect((int32_t), from(client).to(server).with(3)); // client -> server
-        disallow((std::string), from(self).to(client));     // not processed yet
-        expect((int32_t), from(server).to(client).with(9)); // server -> client
-        expect((std::string), from(self).to(client).with("hello")); // at last
+        disallow<std::string>().from(self).to(client);     // not processed yet
+        expect<int32_t>().with(3).from(client).to(server); // client -> server
+        disallow<std::string>().from(self).to(client);     // not processed yet
+        dispatch_message();                                // server -> client
+        check(*received);
+        expect<std::string>().with("hello").from(self).to(client); // at last
       }
     }
   }
@@ -287,26 +283,26 @@ behavior gh1299_worker_bhvr2(caf::event_based_actor* self, log_ptr log) {
   };
 }
 
-TEST_CASE("GH-1299 regression non-blocking") {
+TEST("GH-1299 regression non-blocking") {
   SUBTEST("HIGH (skip) -> NORMAL") {
     auto log = std::make_shared<std::string>();
     auto worker = sys.spawn(gh1299_worker, log);
     scoped_actor self{sys};
     self->mail("hi there").urgent().send(worker);
-    run();
+    dispatch_messages();
     self->mail(int32_t{123}).send(worker);
-    run();
-    CHECK_EQ(*log, "int: 123\nstring: hi there\n");
+    dispatch_messages();
+    check_eq(*log, "int: 123\nstring: hi there\n");
   }
   SUBTEST("NORMAL (skip) -> HIGH") {
     auto log = std::make_shared<std::string>();
     auto worker = sys.spawn(gh1299_worker, log);
     scoped_actor self{sys};
     self->mail("hi there").send(worker);
-    run();
+    dispatch_messages();
     self->mail(int32_t{123}).urgent().send(worker);
-    run();
-    CHECK_EQ(*log, "int: 123\nstring: hi there\n");
+    dispatch_messages();
+    check_eq(*log, "int: 123\nstring: hi there\n");
   }
 }
 
@@ -339,7 +335,7 @@ void gh1299_recv(scoped_actor& self, log_ptr log, int& tag) {
   }
 }
 
-TEST_CASE("GH-1299 regression blocking") {
+TEST("GH-1299 regression blocking") {
   SUBTEST("HIGH (skip) -> NORMAL") {
     auto log = std::make_shared<std::string>();
     auto tag = 0;
@@ -349,7 +345,7 @@ TEST_CASE("GH-1299 regression blocking") {
     gh1299_recv(self, log, tag);
     sender->mail(int32_t{123}).send(self);
     gh1299_recv(self, log, tag);
-    CHECK_EQ(*log, "int: 123\nstring: hi there\n");
+    check_eq(*log, "int: 123\nstring: hi there\n");
   }
   SUBTEST("NORMAL (skip) -> HIGH") {
     auto log = std::make_shared<std::string>();
@@ -360,11 +356,11 @@ TEST_CASE("GH-1299 regression blocking") {
     gh1299_recv(self, log, tag);
     sender->mail(int32_t{123}).urgent().send(self);
     gh1299_recv(self, log, tag);
-    CHECK_EQ(*log, "int: 123\nstring: hi there\n");
+    check_eq(*log, "int: 123\nstring: hi there\n");
   }
 }
 
-TEST_CASE("GH-698 regression") {
+TEST("GH-698 regression") {
   auto server = actor_cast<actor>(adding_server);
   auto client = actor_cast<strong_actor_ptr>(
     sys.spawn([](event_based_actor* self) -> behavior {
@@ -372,15 +368,17 @@ TEST_CASE("GH-698 regression") {
         self->request(server, 10s, 1, 2).then([](int) {});
       };
     }));
-  run();
-  CHECK_EQ(client->strong_refs, 1u);
-  inject((actor), with(server).to(client));
-  CHECK(sched.has_pending_timeout());
-  expect((int, int), from(client).to(server));
-  expect((int), from(server).to(client));
-  CHECK(!sched.has_pending_timeout());
+  dispatch_messages();
+  check_eq(client->strong_refs, 1u);
+  inject().with(server).from(server).to(client);
+  check(has_pending_timeout());
+  expect<int, int>().from(client).to(server);
+  expect<int>().from(server).to(client);
+  check(!has_pending_timeout());
   // The scheduler may no longer hold a reference to the client.
-  CHECK_EQ(client->strong_refs, 1u);
+  check_eq(client->strong_refs, 1u);
 }
 
-END_FIXTURE_SCOPE()
+} // WITH_FIXTURE(fixture)
+
+} // namespace
