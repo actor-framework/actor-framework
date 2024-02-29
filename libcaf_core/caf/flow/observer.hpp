@@ -338,14 +338,14 @@ public:
   }
 
   void on_next(const value_type& item) override {
-    auto exit_guard = log::core::trace("item = {}",
-                                       const_cast<const value_type*>(&item));
+    auto lg = log::core::trace("item = {}",
+                               const_cast<const value_type*>(&item));
     if (buf_)
       buf_->push(item);
   }
 
   void on_complete() override {
-    auto exit_guard = log::core::trace("");
+    auto lg = log::core::trace("");
     if (buf_) {
       buf_->close();
       buf_ = nullptr;
@@ -354,7 +354,7 @@ public:
   }
 
   void on_error(const error& what) override {
-    auto exit_guard = log::core::trace("what = {}", what);
+    auto lg = log::core::trace("what = {}", what);
     if (buf_) {
       buf_->abort(what);
       buf_ = nullptr;
@@ -363,7 +363,7 @@ public:
   }
 
   void on_subscribe(subscription sub) override {
-    auto exit_guard = log::core::trace("");
+    auto lg = log::core::trace("");
     if (buf_ && !sub_) {
       log::core::debug("add subscription");
       sub_ = std::move(sub);
@@ -380,30 +380,30 @@ public:
   }
 
   void on_consumer_cancel() override {
-    auto exit_guard = log::core::trace("");
+    auto lg = log::core::trace("");
     parent_->schedule_fn([ptr{strong_ptr()}] {
-      auto exit_guard = log::core::trace("");
+      auto lg = log::core::trace("");
       ptr->on_cancel();
     });
   }
 
   void on_consumer_demand(size_t demand) override {
-    auto exit_guard = log::core::trace("demand = {}", demand);
+    auto lg = log::core::trace("demand = {}", demand);
     parent_->schedule_fn([ptr{strong_ptr()}, demand] { //
-      auto exit_guard = log::core::trace("demand = {}", demand);
+      auto lg = log::core::trace("demand = {}", demand);
       ptr->on_demand(demand);
     });
   }
 
 private:
   void on_demand(size_t n) {
-    auto exit_guard = log::core::trace("n = {}", n);
+    auto lg = log::core::trace("n = {}", n);
     if (sub_)
       sub_.request(n);
   }
 
   void on_cancel() {
-    auto exit_guard = log::core::trace("");
+    auto lg = log::core::trace("");
     if (sub_) {
       sub_.cancel();
       sub_.release_later();

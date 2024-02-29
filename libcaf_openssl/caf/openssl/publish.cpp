@@ -19,8 +19,8 @@ namespace caf::openssl {
 expected<uint16_t> publish(actor_system& sys, const strong_actor_ptr& whom,
                            std::set<std::string>&& sigs, uint16_t port,
                            const char* cstr, bool ru) {
-  auto exit_guard = log::openssl::trace("whom = {}, sigs = {}, port = {}", whom,
-                                        sigs, port);
+  auto lg = log::openssl::trace("whom = {}, sigs = {}, port = {}", whom, sigs,
+                                port);
   CAF_ASSERT(whom != nullptr);
   std::string in;
   if (cstr != nullptr)

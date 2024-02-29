@@ -14,7 +14,7 @@ multiplexer::multiplexer(actor_system* sys)
 }
 
 multiplexer_ptr multiplexer::make(actor_system& sys) {
-  auto exit_guard = log::io::trace("");
+  auto lg = log::io::trace("");
   return multiplexer_ptr{new default_multiplexer(&sys)};
 }
 

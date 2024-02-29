@@ -35,7 +35,7 @@ abstract_actor::~abstract_actor() {
 // -- attachables ------------------------------------------------------------
 
 void abstract_actor::attach(attachable_ptr ptr) {
-  auto exit_guard = log::core::trace("");
+  auto lg = log::core::trace("");
   CAF_ASSERT(ptr != nullptr);
   error fail_state;
   auto attached = exclusive_critical_section([&] {
@@ -54,7 +54,7 @@ void abstract_actor::attach(attachable_ptr ptr) {
 }
 
 size_t abstract_actor::detach(const attachable::token& what) {
-  auto exit_guard = log::core::trace("");
+  auto lg = log::core::trace("");
   std::unique_lock<std::mutex> guard{mtx_};
   return detach_impl(what);
 }
@@ -66,8 +66,8 @@ void abstract_actor::attach_impl(attachable_ptr& ptr) {
 
 size_t abstract_actor::detach_impl(const attachable::token& what,
                                    bool stop_on_hit, bool dry_run) {
-  auto exit_guard = log::core::trace("stop_on_hit = {}, dry_run = {}",
-                                     stop_on_hit, dry_run);
+  auto lg = log::core::trace("stop_on_hit = {}, dry_run = {}", stop_on_hit,
+                             dry_run);
   size_t count = 0;
   auto i = &attachables_head_;
   while (*i != nullptr) {
@@ -93,12 +93,12 @@ size_t abstract_actor::detach_impl(const attachable::token& what,
 // -- linking ------------------------------------------------------------------
 
 void abstract_actor::link_to(const actor_addr& other) {
-  auto exit_guard = log::core::trace("other = {}", other);
+  auto lg = log::core::trace("other = {}", other);
   link_to(actor_cast<strong_actor_ptr>(other));
 }
 
 void abstract_actor::unlink_from(const actor_addr& other) {
-  auto exit_guard = log::core::trace("other = {}", other);
+  auto lg = log::core::trace("other = {}", other);
   if (!other)
     return;
   if (auto hdl = actor_cast<strong_actor_ptr>(other)) {
@@ -148,7 +148,7 @@ void abstract_actor::on_cleanup(const error&) {
 }
 
 bool abstract_actor::cleanup(error&& reason, execution_unit* host) {
-  auto exit_guard = log::core::trace("reason = {}", reason);
+  auto lg = log::core::trace("reason = {}", reason);
   attachable_ptr head;
   auto fs = 0;
   bool do_cleanup = exclusive_critical_section([&, this]() -> bool {
@@ -204,7 +204,7 @@ void abstract_actor::unregister_from_system() {
 
 void abstract_actor::add_link(abstract_actor* x) {
   // Add backlink on `x` first and add the local attachable only on success.
-  auto exit_guard = log::core::trace("x = {}", x);
+  auto lg = log::core::trace("x = {}", x);
   CAF_ASSERT(x != nullptr);
   error fail_state;
   bool send_exit_immediately = false;
@@ -225,7 +225,7 @@ void abstract_actor::add_link(abstract_actor* x) {
 }
 
 void abstract_actor::remove_link(abstract_actor* x) {
-  auto exit_guard = log::core::trace("x = {}", x);
+  auto lg = log::core::trace("x = {}", x);
   default_attachable::observe_token tk{x->address(), default_attachable::link};
   joined_exclusive_critical_section(this, x, [&] {
     x->remove_backlink(this);
@@ -235,7 +235,7 @@ void abstract_actor::remove_link(abstract_actor* x) {
 
 bool abstract_actor::add_backlink(abstract_actor* x) {
   // Called in an exclusive critical section.
-  auto exit_guard = log::core::trace("x = {}", x);
+  auto lg = log::core::trace("x = {}", x);
   CAF_ASSERT(x);
   error fail_state;
   bool send_exit_immediately = false;
@@ -259,7 +259,7 @@ bool abstract_actor::add_backlink(abstract_actor* x) {
 
 bool abstract_actor::remove_backlink(abstract_actor* x) {
   // Called in an exclusive critical section.
-  auto exit_guard = log::core::trace("x = {}", x);
+  auto lg = log::core::trace("x = {}", x);
   default_attachable::observe_token tk{x->address(), default_attachable::link};
   return detach_impl(tk, true) > 0;
 }

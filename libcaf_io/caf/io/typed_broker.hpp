@@ -74,7 +74,7 @@ public:
   /// @endcond
 
   void initialize() override {
-    auto exit_guard = log::io::trace("");
+    auto lg = log::io::trace("");
     this->init_broker();
     auto bhvr = make_behavior();
     if (!bhvr) {

@@ -19,7 +19,7 @@ disposable thread_safe_actor_clock::schedule(time_point abs_time, action f) {
 }
 
 void thread_safe_actor_clock::run(queue_type* queue) {
-  auto exit_guard = log::core::trace("");
+  auto lg = log::core::trace("");
   std::vector<schedule_entry_ptr> tbl;
   tbl.reserve(buffer_size * 2);
   auto is_disposed = [](auto& x) { return !x || x->f.disposed(); };

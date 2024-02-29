@@ -52,7 +52,7 @@ void client::abort(const error& reason) {
 }
 
 ptrdiff_t client::consume(byte_span buffer, byte_span) {
-  auto exit_guard = log::net::trace("buffer = {}", buffer.size());
+  auto lg = log::net::trace("buffer = {}", buffer.size());
   // Check whether we have received the HTTP header or else wait for more
   // data. Abort when exceeding the maximum size.
   auto [hdr, remainder] = http::v1::split_header(buffer);

@@ -15,7 +15,7 @@
 namespace caf::detail {
 
 void private_thread::run(actor_system* sys) {
-  auto exit_guard = log::core::trace("");
+  auto lg = log::core::trace("");
   scoped_execution_unit ctx{sys};
   auto resume = [&ctx](resumable* job) {
     auto res = job->resume(&ctx, std::numeric_limits<size_t>::max());

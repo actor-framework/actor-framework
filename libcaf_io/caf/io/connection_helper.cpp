@@ -28,16 +28,16 @@ auto autoconnect_timeout = std::chrono::minutes(10);
 
 behavior connection_helper(stateful_actor<connection_helper_state>* self,
                            actor b) {
-  auto exit_guard = log::io::trace("b = {}", b);
+  auto lg = log::io::trace("b = {}", b);
   self->monitor(b);
   self->set_down_handler([=](down_msg& dm) {
-    auto exit_guard = log::io::trace("dm = {}", dm);
+    auto lg = log::io::trace("dm = {}", dm);
     self->quit(std::move(dm.reason));
   });
   return {
     // this config is send from the remote `ConfigServ`
     [=](const std::string& item, message& msg) {
-      auto exit_guard = log::io::trace("item = {}, msg = {}", item, msg);
+      auto lg = log::io::trace("item = {}, msg = {}", item, msg);
       log::io::debug("received requested config: msg = {}", msg);
       // whatever happens, we are done afterwards
       self->quit();
@@ -69,7 +69,7 @@ behavior connection_helper(stateful_actor<connection_helper_state>* self,
     },
     after(autoconnect_timeout) >>
       [=] {
-        auto exit_guard = log::io::trace("");
+        auto lg = log::io::trace("");
         // nothing heard in about 10 minutes... just a call it a day, then
         log::io::info("aborted direct connection attempt after 10min");
         self->quit(exit_reason::user_shutdown);

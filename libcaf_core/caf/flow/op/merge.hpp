@@ -135,7 +135,7 @@ public:
   // -- callbacks for the forwarders -------------------------------------------
 
   void fwd_on_subscribe(input_key key, subscription sub) {
-    auto exit_guard = log::core::trace("key = {}", key);
+    auto lg = log::core::trace("key = {}", key);
     if (auto ptr = get(key); ptr && !ptr->sub) {
       ptr->sub = std::move(sub);
       ptr->sub.request(max_pending_per_input_);
@@ -145,7 +145,7 @@ public:
   }
 
   void fwd_on_complete(input_key key) {
-    auto exit_guard = log::core::trace("key = {}", key);
+    auto lg = log::core::trace("key = {}", key);
     auto i = inputs_.find(key);
     if (i == inputs_.end())
       return;
@@ -163,7 +163,7 @@ public:
   }
 
   void fwd_on_error(input_key key, const error& what) {
-    auto exit_guard = log::core::trace("key = {}, what = {}", key, what);
+    auto lg = log::core::trace("key = {}, what = {}", key, what);
     if (err_)
       return;
     auto i = inputs_.find(key);
@@ -176,7 +176,7 @@ public:
   }
 
   void fwd_on_next(input_key key, const T& item) {
-    auto exit_guard = log::core::trace("key = {}, item = {}", key, item);
+    auto lg = log::core::trace("key = {}, item = {}", key, item);
     if (auto ptr = get(key)) {
       if (!this->is_pulling() && demand_ > 0) {
         CAF_ASSERT(out_.valid());

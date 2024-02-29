@@ -35,7 +35,7 @@ namespace {
 bool connect_with_timeout(stream_socket fd, const sockaddr* addr,
                           socklen_t addrlen, timespan timeout) {
   namespace sc = std::chrono;
-  auto exit_guard = log::net::trace("fd.id = {}, timeout = {}", fd.id, timeout);
+  auto lg = log::net::trace("fd.id = {}, timeout = {}", fd.id, timeout);
   // Set to non-blocking or fail.
   if (auto err = nonblocking(fd, true))
     return false;
@@ -90,7 +90,7 @@ bool connect_with_timeout(stream_socket fd, const sockaddr* addr,
 template <int Family>
 bool ip_connect(stream_socket fd, std::string host, uint16_t port,
                 timespan timeout) {
-  auto exit_guard = log::net::trace(
+  auto lg = log::net::trace(
     "Family = {}, fd.id = {}, host = {}, port = {}, timeout = {}",
     (Family == AF_INET ? "AF_INET" : "AF_INET6"), fd.id, host, port, timeout);
   static_assert(Family == AF_INET || Family == AF_INET6, "invalid family");
@@ -119,7 +119,7 @@ bool ip_connect(stream_socket fd, std::string host, uint16_t port,
 
 expected<tcp_stream_socket> make_connected_tcp_stream_socket(ip_endpoint node,
                                                              timespan timeout) {
-  auto exit_guard = log::net::trace("node = {}, timeout = {}", node, timeout);
+  auto lg = log::net::trace("node = {}, timeout = {}", node, timeout);
   if (timeout == infinite)
     log::net::debug("try to connect to TCP node {}", node);
   else
@@ -155,7 +155,7 @@ expected<tcp_stream_socket> make_connected_tcp_stream_socket(ip_endpoint node,
 expected<tcp_stream_socket>
 make_connected_tcp_stream_socket(const uri::authority_type& node,
                                  timespan timeout) {
-  auto exit_guard = log::net::trace("node = {}, timeout = {}", node, timeout);
+  auto lg = log::net::trace("node = {}, timeout = {}", node, timeout);
   auto port = node.port;
   if (port == 0)
     return make_error(sec::cannot_connect_to_node, "port is zero");
@@ -177,8 +177,8 @@ make_connected_tcp_stream_socket(const uri::authority_type& node,
 expected<tcp_stream_socket> make_connected_tcp_stream_socket(std::string host,
                                                              uint16_t port,
                                                              timespan timeout) {
-  auto exit_guard = log::net::trace("host = {}, port = {}, timeout = {}", host,
-                                    port, timeout);
+  auto lg = log::net::trace("host = {}, port = {}, timeout = {}", host, port,
+                            timeout);
   uri::authority_type auth;
   auth.host = std::move(host);
   auth.port = port;

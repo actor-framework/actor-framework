@@ -46,7 +46,7 @@ strong_actor_ptr actor_registry::get_impl(actor_id key) const {
 }
 
 void actor_registry::put_impl(actor_id key, strong_actor_ptr val) {
-  auto exit_guard = log::core::trace("key = {}", key);
+  auto lg = log::core::trace("key = {}", key);
   if (!val)
     return;
   { // lifetime scope of guard
@@ -95,7 +95,7 @@ size_t actor_registry::dec_running() {
 
 void actor_registry::await_running_count_equal(size_t expected) const {
   CAF_ASSERT(expected == 0 || expected == 1);
-  auto exit_guard = log::core::trace("expected = {}", expected);
+  auto lg = log::core::trace("expected = {}", expected);
   std::unique_lock<std::mutex> guard{running_mtx_};
   while (running() != expected) {
     log::core::debug("running = {}", running());

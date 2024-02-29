@@ -43,8 +43,8 @@ expected<tcp_accept_socket> new_tcp_acceptor_impl(uint16_t port,
                                                   const char* addr,
                                                   bool reuse_addr, bool any) {
   static_assert(Family == AF_INET || Family == AF_INET6, "invalid family");
-  auto exit_guard = log::net::trace("port = {}, addr = {}", port,
-                                    (addr ? addr : "nullptr"));
+  auto lg = log::net::trace("port = {}, addr = {}", port,
+                            (addr ? addr : "nullptr"));
   int socktype = SOCK_STREAM;
 #ifdef SOCK_CLOEXEC
   socktype |= SOCK_CLOEXEC;
@@ -84,8 +84,7 @@ expected<tcp_accept_socket> new_tcp_acceptor_impl(uint16_t port,
 
 expected<tcp_accept_socket> make_tcp_accept_socket(ip_endpoint node,
                                                    bool reuse_addr) {
-  auto exit_guard = log::net::trace("node = {}, reuse_addr = {}", node,
-                                    reuse_addr);
+  auto lg = log::net::trace("node = {}, reuse_addr = {}", node, reuse_addr);
   auto addr = to_string(node.address());
   bool is_v4 = node.address().embeds_v4();
   bool is_zero = is_v4 ? node.address().embedded_v4().bits() == 0
@@ -108,8 +107,7 @@ expected<tcp_accept_socket> make_tcp_accept_socket(ip_endpoint node,
 
 expected<tcp_accept_socket>
 make_tcp_accept_socket(const uri::authority_type& node, bool reuse_addr) {
-  auto exit_guard = log::net::trace("node = {}, reuse_addr = {}", node,
-                                    reuse_addr);
+  auto lg = log::net::trace("node = {}, reuse_addr = {}", node, reuse_addr);
   if (auto ip = std::get_if<ip_address>(&node.host))
     return make_tcp_accept_socket(ip_endpoint{*ip, node.port}, reuse_addr);
   const auto& host = std::get<std::string>(node.host);
@@ -140,8 +138,8 @@ make_tcp_accept_socket(const uri::authority_type& node, bool reuse_addr) {
 
 expected<tcp_accept_socket>
 make_tcp_accept_socket(uint16_t port, std::string addr, bool reuse_addr) {
-  auto exit_guard = log::net::trace("port = {}, addr = {}, reuse_addr = {}",
-                                    port, addr, reuse_addr);
+  auto lg = log::net::trace("port = {}, addr = {}, reuse_addr = {}", port, addr,
+                            reuse_addr);
   uri::authority_type auth;
   auth.port = port;
   auth.host = std::move(addr);
@@ -149,7 +147,7 @@ make_tcp_accept_socket(uint16_t port, std::string addr, bool reuse_addr) {
 }
 
 expected<tcp_stream_socket> accept(tcp_accept_socket x) {
-  auto exit_guard = log::net::trace("x = {}", x);
+  auto lg = log::net::trace("x = {}", x);
   auto sock = ::accept(x.id, nullptr, nullptr);
   if (sock == net::invalid_socket_id) {
     auto err = net::last_socket_error();

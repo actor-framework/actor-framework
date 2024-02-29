@@ -303,7 +303,7 @@ CAF_TEST(string_delegator_chain) {
 }
 
 CAF_TEST(maybe_string_delegator_chain) {
-  auto exit_guard = log::core::trace("self = {}", self);
+  auto lg = log::core::trace("self = {}", self);
   auto aut = sys.spawn(maybe_string_delegator,
                        sys.spawn(maybe_string_reverter));
   MESSAGE("send empty string, expect error");

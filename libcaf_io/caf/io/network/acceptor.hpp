@@ -48,7 +48,7 @@ public:
 protected:
   template <class Policy>
   void handle_event_impl(io::network::operation op, Policy& policy) {
-    auto exit_guard = log::io::trace("fd = {}, op = {}", fd(), op);
+    auto lg = log::io::trace("fd = {}, op = {}", fd(), op);
     if (mgr_ && op == operation::read) {
       native_socket sockfd = invalid_native_socket;
       if (policy.try_accept(sockfd, fd())) {

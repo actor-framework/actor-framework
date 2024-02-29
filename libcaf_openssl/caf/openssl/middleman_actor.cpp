@@ -73,18 +73,18 @@ struct ssl_policy {
   }
 
   rw_state read_some(size_t& result, native_socket fd, void* buf, size_t len) {
-    auto exit_guard = log::openssl::trace("fd = {}, len = {}", fd, len);
+    auto lg = log::openssl::trace("fd = {}, len = {}", fd, len);
     return session_->read_some(result, fd, buf, len);
   }
 
   rw_state write_some(size_t& result, native_socket fd, const void* buf,
                       size_t len) {
-    auto exit_guard = log::openssl::trace("fd = {}, len = {}", fd, len);
+    auto lg = log::openssl::trace("fd = {}, len = {}", fd, len);
     return session_->write_some(result, fd, buf, len);
   }
 
   bool try_accept(native_socket& result, native_socket fd) {
-    auto exit_guard = log::openssl::trace("fd = {}", fd);
+    auto lg = log::openssl::trace("fd = {}", fd);
     sockaddr_storage addr;
     memset(&addr, 0, sizeof(addr));
     caf::io::network::socket_size_type addrlen = sizeof(addr);
@@ -120,18 +120,18 @@ public:
   }
 
   ~scribe_impl() override {
-    auto exit_guard = log::openssl::trace("");
+    auto lg = log::openssl::trace("");
   }
 
   void configure_read(io::receive_policy::config config) override {
-    auto exit_guard = log::openssl::trace("config = {}", config);
+    auto lg = log::openssl::trace("config = {}", config);
     stream_.configure_read(config);
     if (!launched_)
       launch();
   }
 
   void ack_writes(bool enable) override {
-    auto exit_guard = log::openssl::trace("enable = {}", enable);
+    auto lg = log::openssl::trace("enable = {}", enable);
     stream_.ack_writes(enable);
   }
 
@@ -144,13 +144,13 @@ public:
   }
 
   void graceful_shutdown() override {
-    auto exit_guard = log::openssl::trace("");
+    auto lg = log::openssl::trace("");
     stream_.graceful_shutdown();
     detach(&stream_.backend(), false);
   }
 
   void flush() override {
-    auto exit_guard = log::openssl::trace("");
+    auto lg = log::openssl::trace("");
     stream_.flush(this);
   }
 
@@ -169,7 +169,7 @@ public:
   }
 
   void launch() {
-    auto exit_guard = log::openssl::trace("");
+    auto lg = log::openssl::trace("");
     CAF_ASSERT(!launched_);
     launched_ = true;
     stream_.start(this);
@@ -180,12 +180,12 @@ public:
   }
 
   void add_to_loop() override {
-    auto exit_guard = log::openssl::trace("");
+    auto lg = log::openssl::trace("");
     stream_.activate(this);
   }
 
   void remove_from_loop() override {
-    auto exit_guard = log::openssl::trace("");
+    auto lg = log::openssl::trace("");
     stream_.passivate();
   }
 
@@ -202,7 +202,7 @@ public:
   }
 
   bool new_connection() override {
-    auto exit_guard = log::openssl::trace("");
+    auto lg = log::openssl::trace("");
     if (detached())
       // we are already disconnected from the broker while the multiplexer
       // did not yet remove the socket, this can happen if an I/O event causes
@@ -240,7 +240,7 @@ public:
 protected:
   expected<io::scribe_ptr> connect(const std::string& host,
                                    uint16_t port) override {
-    auto exit_guard = log::openssl::trace("host = {}, port = {}", host, port);
+    auto lg = log::openssl::trace("host = {}, port = {}", host, port);
     auto fd = io::network::new_tcp_connection(host, port);
     if (!fd)
       return std::move(fd.error());
@@ -258,7 +258,7 @@ protected:
 
   expected<io::doorman_ptr> open(uint16_t port, const char* addr,
                                  bool reuse) override {
-    auto exit_guard = log::openssl::trace("port = {}, reuse = {}", port, reuse);
+    auto lg = log::openssl::trace("port = {}, reuse = {}", port, reuse);
     auto fd = io::network::new_tcp_acceptor_impl(port, addr, reuse);
     if (!fd)
       return std::move(fd.error());

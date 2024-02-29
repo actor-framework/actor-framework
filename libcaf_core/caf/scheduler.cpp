@@ -781,7 +781,7 @@ scheduler::~scheduler() {
 // -- default implementation of scheduler --------------------------------------
 
 void scheduler::start() {
-  auto exit_guard = log::core::trace("");
+  auto lg = log::core::trace("");
   // Launch print utility actors.
   system_.printer(system_.spawn<printer_actor, hidden + detached>());
 }
@@ -805,7 +805,7 @@ size_t scheduler::default_thread_count() noexcept {
 }
 
 void scheduler::stop_actors() {
-  auto exit_guard = log::core::trace("");
+  auto lg = log::core::trace("");
   scoped_actor self{system_, true};
   anon_send_exit(system_.printer(), exit_reason::user_shutdown);
   self->wait_for(system_.printer());

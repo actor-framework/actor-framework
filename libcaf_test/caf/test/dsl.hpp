@@ -1165,7 +1165,7 @@ public:
   ///          timeouts triggered.
   template <class BoolPredicate>
   size_t run_until(BoolPredicate predicate) {
-    auto exit_guard = caf::log::test::trace("");
+    auto lg = caf::log::test::trace("");
     // Bookkeeping.
     size_t events = 0;
     // Loop until no activity remains.

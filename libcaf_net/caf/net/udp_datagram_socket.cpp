@@ -31,7 +31,7 @@ namespace caf::net {
 
 expected<udp_datagram_socket> make_udp_datagram_socket(ip_endpoint ep,
                                                        bool reuse_addr) {
-  auto exit_guard = log::net::trace("ep = {}", ep);
+  auto lg = log::net::trace("ep = {}", ep);
   sockaddr_storage addr = {};
   detail::convert(ep, addr);
   CAF_NET_SYSCALL("socket", fd, ==, invalid_socket_id,

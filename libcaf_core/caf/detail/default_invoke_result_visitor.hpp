@@ -26,12 +26,12 @@ public:
   using super::operator();
 
   void operator()(error& x) override {
-    auto exit_guard = log::core::trace("x = {}", x);
+    auto lg = log::core::trace("x = {}", x);
     self_->respond(x);
   }
 
   void operator()(message& x) override {
-    auto exit_guard = log::core::trace("x = {}", x);
+    auto lg = log::core::trace("x = {}", x);
     self_->respond(x);
   }
 

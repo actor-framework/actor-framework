@@ -110,7 +110,7 @@ bool client::done_sending() {
 }
 
 ptrdiff_t client::consume(byte_span input, byte_span) {
-  auto exit_guard = log::net::trace("bytes = {}", input.size());
+  auto lg = log::net::trace("bytes = {}", input.size());
   ptrdiff_t consumed = 0;
   if (mode_ == mode::read_header) {
     if (input.size() >= max_response_size_) {

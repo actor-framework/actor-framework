@@ -96,7 +96,7 @@ public:
 protected:
   template <class Policy>
   void handle_event_impl(io::network::operation op, Policy& policy) {
-    auto exit_guard = log::io::trace("op = {}", op);
+    auto lg = log::io::trace("op = {}", op);
     auto mcr = max_consecutive_reads_;
     switch (op) {
       case io::network::operation::read: {

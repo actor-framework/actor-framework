@@ -28,7 +28,7 @@ void framing::abort(const error& reason) {
 }
 
 ptrdiff_t framing::consume(byte_span input, byte_span) {
-  auto exit_guard = log::net::trace("got {} bytes\n", input.size());
+  auto lg = log::net::trace("got {} bytes\n", input.size());
   if (input.size() < sizeof(uint32_t)) {
     log::net::error("received too few bytes from underlying transport");
     up_->abort(make_error(sec::logic_error,

@@ -29,7 +29,7 @@ namespace caf::policy {
 
 rw_state tcp::read_some(size_t& result, native_socket fd, void* buf,
                         size_t len) {
-  auto exit_guard = log::io::trace("fd = {}, len = {}", fd, len);
+  auto lg = log::io::trace("fd = {}, len = {}", fd, len);
   auto sres = ::recv(fd, reinterpret_cast<io::network::socket_recv_ptr>(buf),
                      len, no_sigpipe_io_flag);
   if (is_error(sres, true)) {
@@ -50,7 +50,7 @@ rw_state tcp::read_some(size_t& result, native_socket fd, void* buf,
 
 rw_state tcp::write_some(size_t& result, native_socket fd, const void* buf,
                          size_t len) {
-  auto exit_guard = log::io::trace("fd = {}, len = {}", fd, len);
+  auto lg = log::io::trace("fd = {}, len = {}", fd, len);
   auto sres = ::send(fd, reinterpret_cast<io::network::socket_send_ptr>(buf),
                      len, no_sigpipe_io_flag);
   if (is_error(sres, true)) {
@@ -67,7 +67,7 @@ rw_state tcp::write_some(size_t& result, native_socket fd, const void* buf,
 
 bool tcp::try_accept(native_socket& result, native_socket fd) {
   using namespace io::network;
-  auto exit_guard = log::io::trace("fd = {}", fd);
+  auto lg = log::io::trace("fd = {}", fd);
   sockaddr_storage addr;
   std::memset(&addr, 0, sizeof(addr));
   socket_size_type addrlen = sizeof(addr);

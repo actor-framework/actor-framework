@@ -213,14 +213,14 @@ CAF_TEST(typed actors can use typed_actor_pointer as self pointer) {
 CAF_TEST(returned behaviors take precedence over make_behavior in the state) {
   struct state_type : named_state {
     behavior make_behavior() {
-      auto exit_guard = log::core::trace("");
+      auto lg = log::core::trace("");
       return {
         [](int32_t x, int32_t y) { return x - y; },
       };
     }
   };
   auto fun = [](stateful_actor<state_type>*, int32_t num) -> behavior {
-    auto exit_guard = log::core::trace("num = {}", num);
+    auto lg = log::core::trace("num = {}", num);
     return {
       [num](int32_t x, int32_t y) { return x + y + num; },
     };

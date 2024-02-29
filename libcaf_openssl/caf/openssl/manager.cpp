@@ -92,13 +92,13 @@ manager::~manager() {
 }
 
 void manager::start() {
-  auto exit_guard = log::openssl::trace("");
+  auto lg = log::openssl::trace("");
   manager_ = make_middleman_actor(
     system(), system().middleman().named_broker<io::basp_broker>("BASP"));
 }
 
 void manager::stop() {
-  auto exit_guard = log::openssl::trace("");
+  auto lg = log::openssl::trace("");
   scoped_actor self{system(), true};
   self->send_exit(manager_, exit_reason::kill);
   if (!get_or(config(), "caf.middleman.attach-utility-actors", false))

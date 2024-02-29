@@ -15,7 +15,7 @@ namespace caf::net {
 #ifdef CAF_WINDOWS
 
 error allow_connreset(datagram_socket x, bool new_value) {
-  auto exit_guard = log::net::trace("x = {}, new_value = {}", x, new_value);
+  auto lg = log::net::trace("x = {}, new_value = {}", x, new_value);
   DWORD bytes_returned = 0;
   CAF_NET_SYSCALL("WSAIoctl", res, !=, 0,
                   WSAIoctl(x.id, _WSAIOW(IOC_VENDOR, 12), &new_value,

@@ -62,7 +62,7 @@ bool abstract_actor_shell::try_block_mailbox() {
 // -- message processing -------------------------------------------------------
 
 bool abstract_actor_shell::consume_message() {
-  auto exit_guard = log::net::trace("");
+  auto lg = log::net::trace("");
   if (auto msg = next_message()) {
     current_element_ = msg.get();
     CAF_LOG_RECEIVE_EVENT(current_element_);
@@ -105,7 +105,7 @@ void abstract_actor_shell::add_multiplexed_response_handler(
 bool abstract_actor_shell::enqueue(mailbox_element_ptr ptr, execution_unit*) {
   CAF_ASSERT(ptr != nullptr);
   CAF_ASSERT(!getf(is_blocking_flag));
-  auto exit_guard = log::net::trace("ptr = {}", *ptr);
+  auto lg = log::net::trace("ptr = {}", *ptr);
   CAF_LOG_SEND_EVENT(ptr);
   auto mid = ptr->mid;
   auto sender = ptr->sender;
@@ -152,14 +152,14 @@ mailbox_element* abstract_actor_shell::peek_at_next_mailbox_element() {
 
 void abstract_actor_shell::launch(execution_unit*, bool, bool hide) {
   CAF_PUSH_AID_FROM_PTR(this);
-  auto exit_guard = log::net::trace("hide = {}", hide);
+  auto lg = log::net::trace("hide = {}", hide);
   CAF_ASSERT(!getf(is_blocking_flag));
   if (!hide)
     register_at_system();
 }
 
 void abstract_actor_shell::on_cleanup(const error& reason) {
-  auto exit_guard = log::net::trace("reason = {}", reason);
+  auto lg = log::net::trace("reason = {}", reason);
   close_mailbox(reason);
   // Detach from owner.
   {

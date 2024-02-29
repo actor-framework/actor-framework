@@ -194,7 +194,7 @@ public:
   }
 
   void schedule(action what) override {
-    auto exit_guard = log::net::trace("");
+    auto lg = log::net::trace("");
     if (std::this_thread::get_id() == tid_) {
       pending_actions.push_back(what);
     } else {
@@ -204,7 +204,7 @@ public:
   }
 
   void schedule(steady_time_point when, action what) override {
-    auto exit_guard = log::net::trace("");
+    auto lg = log::net::trace("");
     if (std::this_thread::get_id() == tid_) {
       scheduled_actions.emplace(when, std::move(what));
     } else {
@@ -220,7 +220,7 @@ public:
   // -- thread-safe signaling --------------------------------------------------
 
   void start(socket_manager_ptr mgr) override {
-    auto exit_guard = log::net::trace("socket = {}", mgr->handle().id);
+    auto lg = log::net::trace("socket = {}", mgr->handle().id);
     if (std::this_thread::get_id() == tid_) {
       do_start(mgr);
     } else {
@@ -229,7 +229,7 @@ public:
   }
 
   void shutdown() override {
-    auto exit_guard = log::net::trace("");
+    auto lg = log::net::trace("");
     // Note: there is no 'shortcut' when calling the function in the
     // default_multiplexer's thread, because do_shutdown calls apply_updates.
     // This must only be called from the pollset_updater.
@@ -241,27 +241,27 @@ public:
   // -- callbacks for socket managers ------------------------------------------
 
   void register_reading(socket_manager* mgr) override {
-    auto exit_guard = log::net::trace("socket = {}", mgr->handle().id);
+    auto lg = log::net::trace("socket = {}", mgr->handle().id);
     update_for(mgr).events |= input_mask;
   }
 
   void register_writing(socket_manager* mgr) override {
-    auto exit_guard = log::net::trace("socket = {}", mgr->handle().id);
+    auto lg = log::net::trace("socket = {}", mgr->handle().id);
     update_for(mgr).events |= output_mask;
   }
 
   void deregister_reading(socket_manager* mgr) override {
-    auto exit_guard = log::net::trace("socket = {}", mgr->handle().id);
+    auto lg = log::net::trace("socket = {}", mgr->handle().id);
     update_for(mgr).events &= ~input_mask;
   }
 
   void deregister_writing(socket_manager* mgr) override {
-    auto exit_guard = log::net::trace("socket = {}", mgr->handle().id);
+    auto lg = log::net::trace("socket = {}", mgr->handle().id);
     update_for(mgr).events &= ~output_mask;
   }
 
   void deregister(socket_manager* mgr) override {
-    auto exit_guard = log::net::trace("socket = {}", mgr->handle().id);
+    auto lg = log::net::trace("socket = {}", mgr->handle().id);
     update_for(mgr).events = 0;
   }
 
@@ -276,7 +276,7 @@ public:
   // -- control flow -----------------------------------------------------------
 
   bool poll_once(bool blocking) override {
-    auto exit_guard = log::net::trace("blocking = {}", blocking);
+    auto lg = log::net::trace("blocking = {}", blocking);
     if (pollset_.empty())
       return false;
     // We'll call poll() until poll() succeeds or fails.
@@ -400,12 +400,12 @@ public:
   }
 
   void set_thread_id() override {
-    auto exit_guard = log::net::trace("");
+    auto lg = log::net::trace("");
     tid_ = std::this_thread::get_id();
   }
 
   void run() override {
-    auto exit_guard = log::net::trace("");
+    auto lg = log::net::trace("");
     log::net::debug("run default_multiplexer input_mask = {}, error_mask = {}, "
                     "output_mask = {}",
                     input_mask, error_mask, output_mask);
@@ -440,7 +440,7 @@ public:
   }
 
   void do_start(const socket_manager_ptr& mgr) {
-    auto exit_guard = log::net::trace("socket = {}", mgr->handle().id);
+    auto lg = log::net::trace("socket = {}", mgr->handle().id);
     if (!shutting_down_) {
       error err;
       err = mgr->start();
@@ -475,8 +475,8 @@ public:
   /// Handles an I/O event on given manager.
   void handle(const socket_manager_ptr& mgr, [[maybe_unused]] short events,
               short revents) {
-    auto exit_guard = log::net::trace("socket = {}, events = {}, revents = {}",
-                                      mgr->handle().id, events, revents);
+    auto lg = log::net::trace("socket = {}, events = {}, revents = {}",
+                              mgr->handle().id, events, revents);
     CAF_ASSERT(mgr != nullptr);
     bool checkerror = true;
     log::net::debug("handle event on socket {}, events = {}, revents = {}",
@@ -619,14 +619,14 @@ private:
 };
 
 error pollset_updater::start(socket_manager* owner) {
-  auto exit_guard = log::net::trace("");
+  auto lg = log::net::trace("");
   owner_ = owner;
   mpx_ = static_cast<default_multiplexer*>(owner->mpx_ptr());
   return nonblocking(fd_, true);
 }
 
 void pollset_updater::handle_read_event() {
-  auto exit_guard = log::net::trace("");
+  auto lg = log::net::trace("");
   auto as_mgr = [](intptr_t ptr) {
     return intrusive_ptr{reinterpret_cast<socket_manager*>(ptr), false};
   };

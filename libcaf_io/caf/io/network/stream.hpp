@@ -74,7 +74,7 @@ public:
 protected:
   template <class Policy>
   void handle_event_impl(io::network::operation op, Policy& policy) {
-    auto exit_guard = log::io::trace("op = {}", op);
+    auto lg = log::io::trace("op = {}", op);
     switch (op) {
       case io::network::operation::read: {
         // Loop until an error occurs or we have nothing more to read

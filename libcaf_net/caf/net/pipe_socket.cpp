@@ -65,15 +65,13 @@ expected<std::pair<pipe_socket, pipe_socket>> make_pipe() {
 }
 
 ptrdiff_t write(pipe_socket x, const_byte_span buf) {
-  auto exit_guard = log::net::trace("socket = {}, bytes = {}", x.id,
-                                    buf.size());
+  auto lg = log::net::trace("socket = {}, bytes = {}", x.id, buf.size());
   return ::write(x.id, reinterpret_cast<socket_send_ptr>(buf.data()),
                  buf.size());
 }
 
 ptrdiff_t read(pipe_socket x, byte_span buf) {
-  auto exit_guard = log::net::trace("socket = {}, bytes = {}", x.id,
-                                    buf.size());
+  auto lg = log::net::trace("socket = {}, bytes = {}", x.id, buf.size());
   return ::read(x.id, reinterpret_cast<socket_recv_ptr>(buf.data()),
                 buf.size());
 }

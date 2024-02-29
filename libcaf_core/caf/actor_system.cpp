@@ -33,7 +33,7 @@ struct kvstate {
 };
 
 behavior config_serv_impl(stateful_actor<kvstate>* self) {
-  auto exit_guard = log::core::trace("");
+  auto lg = log::core::trace("");
   std::string wildcard = "*";
   auto unsubscribe_all = [=](actor subscriber) {
     auto& subscribers = self->state.subscribers;
@@ -46,7 +46,7 @@ behavior config_serv_impl(stateful_actor<kvstate>* self) {
     subscribers.erase(i);
   };
   self->set_down_handler([=](down_msg& dm) {
-    auto exit_guard = log::core::trace("dm = {}", dm);
+    auto lg = log::core::trace("dm = {}", dm);
     auto ptr = actor_cast<strong_actor_ptr>(dm.source);
     if (ptr)
       unsubscribe_all(actor_cast<actor>(std::move(ptr)));
@@ -54,7 +54,7 @@ behavior config_serv_impl(stateful_actor<kvstate>* self) {
   return {
     // set a key/value pair
     [=](put_atom, const std::string& key, message& msg) {
-      auto exit_guard = log::core::trace("key = {}, msg = {}", key, msg);
+      auto lg = log::core::trace("key = {}, msg = {}", key, msg);
       if (key == "*")
         return;
       auto& vp = self->state.data[key];
@@ -73,7 +73,7 @@ behavior config_serv_impl(stateful_actor<kvstate>* self) {
     },
     // get a key/value pair
     [=](get_atom, std::string& key) -> message {
-      auto exit_guard = log::core::trace("key = {}", key);
+      auto lg = log::core::trace("key = {}", key);
       if (key == wildcard) {
         std::vector<std::pair<std::string, message>> msgs;
         for (auto& kvp : self->state.data)
@@ -89,8 +89,7 @@ behavior config_serv_impl(stateful_actor<kvstate>* self) {
     // subscribe to a key
     [=](subscribe_atom, const std::string& key) {
       auto subscriber = actor_cast<strong_actor_ptr>(self->current_sender());
-      auto exit_guard = log::core::trace("key = {}, subscriber = {}", key,
-                                         subscriber);
+      auto lg = log::core::trace("key = {}, subscriber = {}", key, subscriber);
       if (!subscriber)
         return;
       self->state.data[key].second.insert(subscriber);
@@ -108,8 +107,7 @@ behavior config_serv_impl(stateful_actor<kvstate>* self) {
       auto subscriber = actor_cast<strong_actor_ptr>(self->current_sender());
       if (!subscriber)
         return;
-      auto exit_guard = log::core::trace("key = {}, subscriber = {}", key,
-                                         subscriber);
+      auto lg = log::core::trace("key = {}, subscriber = {}", key, subscriber);
       if (key == wildcard) {
         unsubscribe_all(actor_cast<actor>(std::move(subscriber)));
         return;
@@ -135,11 +133,11 @@ struct spawn_serv_state {
 };
 
 behavior spawn_serv_impl(stateful_actor<spawn_serv_state>* self) {
-  auto exit_guard = log::core::trace("");
+  auto lg = log::core::trace("");
   return {
     [=](spawn_atom, const std::string& name, message& args,
         actor_system::mpi& xs) -> result<strong_actor_ptr> {
-      auto exit_guard = log::core::trace("name = {}, args = {}", name, args);
+      auto lg = log::core::trace("name = {}, args = {}", name, args);
       return self->system().spawn<strong_actor_ptr>(name, std::move(args),
                                                     self->context(), true, &xs);
     },
@@ -346,7 +344,7 @@ actor_system::actor_system(actor_system_config& cfg)
 
 actor_system::~actor_system() {
   {
-    auto exit_guard = log::core::trace("");
+    auto lg = log::core::trace("");
     log::core::debug("shutdown actor system");
     if (await_actors_before_shutdown_)
       await_all_actors_done();
@@ -478,7 +476,7 @@ expected<strong_actor_ptr>
 actor_system::dyn_spawn_impl(const std::string& name, message& args,
                              execution_unit* ctx, bool check_interface,
                              const mpi* expected_ifs) {
-  auto exit_guard = log::core::trace(
+  auto lg = log::core::trace(
     "name = {}, args = {}, check_interface = {}, expected_ifs = {}", name, args,
     check_interface, expected_ifs);
   if (name.empty())

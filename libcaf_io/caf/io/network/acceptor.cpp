@@ -14,7 +14,7 @@ acceptor::acceptor(default_multiplexer& backend_ref, native_socket sockfd)
 }
 
 void acceptor::start(acceptor_manager* mgr) {
-  auto exit_guard = log::io::trace("fd = {}", fd_);
+  auto lg = log::io::trace("fd = {}", fd_);
   CAF_ASSERT(mgr != nullptr);
   activate(mgr);
 }
@@ -27,13 +27,13 @@ void acceptor::activate(acceptor_manager* mgr) {
 }
 
 void acceptor::removed_from_loop(operation op) {
-  auto exit_guard = log::io::trace("fd = {}, op = {}", fd_, op);
+  auto lg = log::io::trace("fd = {}, op = {}", fd_, op);
   if (op == operation::read)
     mgr_.reset();
 }
 
 void acceptor::graceful_shutdown() {
-  auto exit_guard = log::io::trace("fd = {}", fd_);
+  auto lg = log::io::trace("fd = {}", fd_);
   // Ignore repeated calls.
   if (state_.shutting_down)
     return;

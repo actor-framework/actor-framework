@@ -24,9 +24,8 @@ constexpr size_t min_batch_request_threshold = 3;
 
 void stream_bridge_sub::ack(uint64_t src_flow_id,
                             uint32_t max_items_per_batch) {
-  auto exit_guard
-    = log::core::trace("src_flow_id = {}, max_items_per_batch = {}",
-                       src_flow_id, max_items_per_batch);
+  auto lg = log::core::trace("src_flow_id = {}, max_items_per_batch = {}",
+                             src_flow_id, max_items_per_batch);
   // Sanity checking.
   if (max_items_per_batch == 0) {
     log::system::error("stream ACK announced a batch size of 0");
@@ -49,7 +48,7 @@ void stream_bridge_sub::ack(uint64_t src_flow_id,
 }
 
 void stream_bridge_sub::drop() {
-  auto exit_guard = log::core::trace("");
+  auto lg = log::core::trace("");
   if (src_) {
     // Note: must send this as anonymous message, because this can be called
     // from on_destroy().
@@ -61,7 +60,7 @@ void stream_bridge_sub::drop() {
 }
 
 void stream_bridge_sub::drop(const error& reason) {
-  auto exit_guard = log::core::trace("reason = {}", reason);
+  auto lg = log::core::trace("reason = {}", reason);
   if (src_) {
     // Note: must send this as anonymous message, because this can be called
     // from on_destroy().
@@ -73,7 +72,7 @@ void stream_bridge_sub::drop(const error& reason) {
 }
 
 void stream_bridge_sub::push(const async::batch& input) {
-  auto exit_guard = log::core::trace("input.size = {}", input.size());
+  auto lg = log::core::trace("input.size = {}", input.size());
   // Sanity checking.
   if (in_flight_batches_ == 0) {
     log::system::error("source exceeded its allowed credit!");
@@ -93,7 +92,7 @@ void stream_bridge_sub::push(const async::batch& input) {
 }
 
 void stream_bridge_sub::push() {
-  auto exit_guard = log::core::trace("");
+  auto lg = log::core::trace("");
   while (!buf_.empty() && demand_ > 0) {
     --demand_;
     out_.on_next(buf_.front());

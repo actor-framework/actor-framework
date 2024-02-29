@@ -28,8 +28,8 @@ const char* forwarding_actor_proxy::name() const {
 
 bool forwarding_actor_proxy::forward_msg(strong_actor_ptr sender,
                                          message_id mid, message msg) {
-  auto exit_guard = log::core::trace("id = {}, sender = {}, mid = {}, msg = {}",
-                                     id(), sender, mid, msg);
+  auto lg = log::core::trace("id = {}, sender = {}, mid = {}, msg = {}", id(),
+                             sender, mid, msg);
   if (msg.match_elements<exit_msg>())
     unlink_from(msg.get_as<exit_msg>(0).source);
   auto ptr = make_mailbox_element(nullptr, make_message_id(), forward_atom_v,

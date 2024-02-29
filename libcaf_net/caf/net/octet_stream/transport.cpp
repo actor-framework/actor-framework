@@ -165,7 +165,7 @@ socket transport::handle() const {
 }
 
 void transport::handle_read_event() {
-  auto exit_guard = log::net::trace("socket = {}", handle());
+  auto lg = log::net::trace("socket = {}", handle());
   // Resume a write operation if the transport waited for the socket to be
   // readable from the last call to handle_write_event.
   if (flags_.wanted_read_from_write_event) {
@@ -230,7 +230,7 @@ void transport::handle_read_event() {
 }
 
 void transport::handle_buffered_data() {
-  auto exit_guard = log::net::trace("buffered_ = {}", buffered_);
+  auto lg = log::net::trace("buffered_ = {}", buffered_);
   // Loop until we have drained the buffer as much as we can.
   CAF_ASSERT(min_read_size_ <= max_read_size_);
   auto switch_to_next_protocol = [this] {
@@ -294,7 +294,7 @@ void transport::handle_buffered_data() {
 }
 
 void transport::fail(const error& reason) {
-  auto exit_guard = log::net::trace("reason = {}", reason);
+  auto lg = log::net::trace("reason = {}", reason);
   up_->abort(reason);
   up_.reset();
   parent_->deregister();
@@ -302,7 +302,7 @@ void transport::fail(const error& reason) {
 }
 
 void transport::handle_write_event() {
-  auto exit_guard = log::net::trace("socket = {}", handle());
+  auto lg = log::net::trace("socket = {}", handle());
   // Resume a read operation if the transport waited for the socket to be
   // writable from the last call to handle_read_event.
   if (flags_.wanted_write_from_read_event) {

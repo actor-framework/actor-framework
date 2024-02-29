@@ -179,8 +179,7 @@ private:
     // read handle which is only registered for reading
     auto old_bf = ptr ? ptr->eventbf() : input_mask;
     // auto bf = fun(op, old_bf);
-    auto exit_guard = log::io::trace("op = {}, fd = {}, old_bf = {}", op, fd,
-                                     old_bf);
+    auto lg = log::io::trace("op = {}, fd = {}, old_bf = {}", op, fd, old_bf);
     auto last = events_.end();
     auto i = std::lower_bound(events_.begin(), last, fd, event_less{});
     if (i != last && i->fd == fd) {

@@ -21,8 +21,8 @@ namespace caf::openssl {
 expected<strong_actor_ptr> remote_actor(actor_system& sys,
                                         const std::set<std::string>& mpi,
                                         std::string host, uint16_t port) {
-  auto exit_guard = log::openssl::trace("mpi = {}, host = {}, port = {}", mpi,
-                                        host, port);
+  auto lg = log::openssl::trace("mpi = {}, host = {}, port = {}", mpi, host,
+                                port);
   expected<strong_actor_ptr> res{strong_actor_ptr{nullptr}};
   auto f = make_function_view(sys.openssl_manager().actor_handle());
   auto x = f(connect_atom_v, std::move(host), port);

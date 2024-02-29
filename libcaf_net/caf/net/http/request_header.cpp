@@ -40,7 +40,7 @@ request_header& request_header::operator=(const request_header& other) {
 
 std::pair<status, std::string_view>
 request_header::parse(std::string_view raw) {
-  auto exit_guard = log::net::trace("raw = {}", raw);
+  auto lg = log::net::trace("raw = {}", raw);
   // Sanity checking and copying of the raw input.
   clear();
   if (raw.empty())
