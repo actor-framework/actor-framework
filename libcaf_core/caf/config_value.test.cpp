@@ -84,10 +84,6 @@ bool inspect(Inspector& f, my_request& x) {
 
 struct dummy_tag_type {};
 
-constexpr bool operator==(dummy_tag_type, dummy_tag_type) {
-  return true;
-}
-
 template <class T>
 T unbox(caf::expected<T> x) {
   if (!x)
