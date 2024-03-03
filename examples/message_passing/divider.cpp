@@ -66,7 +66,11 @@ using std::flush;
 using namespace caf;
 
 // --(rst-divider-begin)--
-using divider = typed_actor<result<double>(div_atom, double, double)>;
+struct divider_trait {
+  using signatures = type_list<result<double>(div_atom, double, double)>;
+};
+
+using divider = typed_actor<divider_trait>;
 
 divider::behavior_type divider_impl() {
   return {

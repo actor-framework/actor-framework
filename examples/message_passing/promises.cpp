@@ -11,7 +11,11 @@
 using namespace caf;
 
 // --(rst-promise-begin)--
-using adder_actor = typed_actor<result<int32_t>(add_atom, int32_t, int32_t)>;
+struct adder_trait {
+  using signatures
+    = caf::type_list<result<int32_t>(add_atom, int32_t, int32_t)>;
+};
+using adder_actor = typed_actor<adder_trait>;
 
 adder_actor::behavior_type worker_impl() {
   return {

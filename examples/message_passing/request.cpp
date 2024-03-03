@@ -20,9 +20,12 @@ using namespace caf;
 using namespace std::literals;
 
 // --(rst-cell-begin)--
-using cell
-  = typed_actor<result<void>(put_atom, int32_t), // 'put' writes to the cell
+struct cell_trait {
+  using signatures
+    = type_list<result<void>(put_atom, int32_t), // 'put' writes to the cell
                 result<int32_t>(get_atom)>;      // 'get 'reads from the cell
+};
+using cell = typed_actor<cell_trait>;
 
 struct cell_state {
   static constexpr inline const char* name = "cell";
