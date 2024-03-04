@@ -10,10 +10,10 @@ branch_filter: &BRANCH_FILTER
     $CIRRUS_PR != '' ||
     $CIRRUS_BRANCH == 'master'
 
-# FreeBSD 13.2 EOL: January 2026
+# FreeBSD 13.3 EOL: January 2026
 freebsd13_task:
   freebsd_instance:
-    image_family: freebsd-13-2
+    image_family: freebsd-13-3
     << : *RESOURCES_TEMPLATE
   prepare_script: .ci/freebsd-13/prepare.sh
   build_script: .ci/run.sh build .ci/debug-flags.cmake . build
