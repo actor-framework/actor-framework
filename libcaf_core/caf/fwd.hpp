@@ -24,7 +24,6 @@ template <class> class [[nodiscard]] error_code;
 
 template <class> class actor_from_state_t;
 template <class> class basic_cow_string;
-template <class> class blocking_response_handle;
 template <class> class callback;
 template <class> class cow_vector;
 template <class> class dictionary;
@@ -55,9 +54,13 @@ class unordered_flat_map;
 
 // -- variadic templates -------------------------------------------------------
 
+template <class...> class blocking_delayed_response_handle;
+template <class...> class blocking_response_handle;
 template <class...> class const_typed_message_view;
 template <class...> class cow_tuple;
 template <class...> class delegated;
+template <class...> class event_based_delayed_response_handle;
+template <class...> class event_based_response_handle;
 template <class...> class result;
 template <class...> class typed_actor;
 template <class...> class typed_actor_pointer;
@@ -146,6 +149,7 @@ class stateful_actor;
 // -- structs ------------------------------------------------------------------
 
 struct down_msg;
+struct dynamically_typed;
 struct exit_msg;
 struct illegal_message_element;
 struct invalid_actor_addr_t;

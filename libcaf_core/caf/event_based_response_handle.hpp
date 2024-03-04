@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/detail/response_type_check.hpp"
 #include "caf/disposable.hpp"
 #include "caf/flow/fwd.hpp"
 #include "caf/message_id.hpp"
@@ -14,40 +15,95 @@
 
 namespace caf::detail {
 
-template <class T>
-struct event_based_response_handle_res {
-  using type = T;
-};
-
-template <class T>
-struct event_based_response_handle_res<type_list<T>> {
-  using type = T;
-};
-
-template <class T0, class T1, class... Ts>
-struct event_based_response_handle_res<type_list<T0, T1, Ts...>> {};
+template <class Result>
+struct event_based_response_handle_oracle;
 
 template <>
-struct event_based_response_handle_res<message> {};
+struct event_based_response_handle_oracle<message> {
+  using type = event_based_response_handle<message>;
+};
+
+template <>
+struct event_based_response_handle_oracle<type_list<void>> {
+  using type = event_based_response_handle<>;
+};
+
+template <class... Results>
+struct event_based_response_handle_oracle<type_list<Results...>> {
+  using type = event_based_response_handle<Results...>;
+};
+
+template <class Result>
+using event_based_response_handle_t =
+  typename event_based_response_handle_oracle<Result>::type;
+
+template <class Result>
+struct event_based_delayed_response_handle_oracle;
+
+template <>
+struct event_based_delayed_response_handle_oracle<message> {
+  using type = event_based_delayed_response_handle<message>;
+};
+
+template <>
+struct event_based_delayed_response_handle_oracle<type_list<void>> {
+  using type = event_based_delayed_response_handle<>;
+};
+
+template <class... Results>
+struct event_based_delayed_response_handle_oracle<type_list<Results...>> {
+  using type = event_based_delayed_response_handle<Results...>;
+};
+
+template <class Result>
+using event_based_delayed_response_handle_t =
+  typename event_based_delayed_response_handle_oracle<Result>::type;
+
+template <class...>
+struct event_based_response_handle_res {
+  using type = void;
+};
 
 template <class T>
+struct event_based_response_handle_res<T> {
+  using type = T;
+};
+
+template <>
+struct event_based_response_handle_res<message> {
+  using type = void;
+};
+
+template <class... Ts>
 using event_based_response_handle_res_t =
-  typename event_based_response_handle_res<T>::type;
+  typename event_based_response_handle_res<Ts...>::type;
 
 } // namespace caf::detail
 
 namespace caf {
 
+/// Holds state for a event-based response handles.
+struct event_based_response_handle_state {
+  /// Points to the parent actor.
+  scheduled_actor* self;
+
+  /// Stores the ID of the message we are waiting for.
+  message_id mid;
+
+  /// Stores a handle to the in-flight timeout.
+  disposable pending_timeout;
+};
+
 /// This helper class identifies an expected response message and enables
 /// `request(...).then(...)`.
-template <class Result>
+template <class... Results>
 class event_based_response_handle {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
   event_based_response_handle(scheduled_actor* self, message_id mid,
                               disposable pending_timeout)
-    : self_(self), mid_(mid), pending_timeout_(std::move(pending_timeout)) {
+    : state_{self, mid, std::move(pending_timeout)} {
     // nop
   }
 
@@ -55,103 +111,128 @@ public:
 
   template <class OnValue, class OnError>
   void await(OnValue on_value, OnError on_error) && {
-    type_check<OnValue, OnError>();
+    detail::response_type_check<OnValue, OnError, Results...>();
     auto bhvr = behavior{std::move(on_value), std::move(on_error)};
-    self_->add_awaited_response_handler(mid_, std::move(bhvr),
-                                        std::move(pending_timeout_));
+    state_.self->add_awaited_response_handler(
+      state_.mid, std::move(bhvr), std::move(state_.pending_timeout));
   }
 
   template <class OnValue>
   void await(OnValue on_value) && {
     return std::move(*this).await(std::move(on_value),
-                                  [self = self_](error& err) {
+                                  [self = state_.self](error& err) {
                                     self->call_error_handler(err);
                                   });
   }
 
   template <class OnValue, class OnError>
   void then(OnValue on_value, OnError on_error) && {
-    type_check<OnValue, OnError>();
+    detail::response_type_check<OnValue, OnError, Results...>();
     auto bhvr = behavior{std::move(on_value), std::move(on_error)};
-    self_->add_multiplexed_response_handler(mid_, std::move(bhvr),
-                                            std::move(pending_timeout_));
+    state_.self->add_multiplexed_response_handler(
+      state_.mid, std::move(bhvr), std::move(state_.pending_timeout));
   }
 
   template <class OnValue>
   void then(OnValue on_value) && {
     return std::move(*this).then(std::move(on_value),
-                                 [self = self_](error& err) {
+                                 [self = state_.self](error& err) {
                                    self->call_error_handler(err);
                                  });
   }
 
   // -- conversions ------------------------------------------------------------
 
-  template <class T = Result, class Self = scheduled_actor>
-  flow::assert_scheduled_actor_hdr_t<
-    flow::observable<detail::event_based_response_handle_res_t<T>>>
-  as_observable() && {
-    using res_t = detail::event_based_response_handle_res_t<T>;
-    return static_cast<Self*>(self_)
-      ->template single_from_response<res_t>(mid_, std::move(pending_timeout_))
+  template <class T = detail::event_based_response_handle_res_t<Results...>,
+            class = std::enable_if_t<!std::is_same_v<T, void>>>
+  auto as_observable() && {
+    return state_.self
+      ->template single_from_response<T>(state_.mid,
+                                         std::move(state_.pending_timeout))
       .as_observable();
   }
 
 private:
-  template <class OnValue, class OnError>
-  static constexpr void type_check() {
-    // Type-check OnValue.
-    using on_value_trait_helper = typename detail::get_callable_trait<OnValue>;
-    static_assert(on_value_trait_helper::valid,
-                  "OnValue must provide a single, non-template operator()");
-    using on_value_trait = typename on_value_trait_helper::type;
-    static_assert(std::is_same_v<typename on_value_trait::result_type, void>,
-                  "OnValue must return void");
-    if constexpr (std::is_same_v<Result, type_list<void>>) {
-      using on_value_args = typename on_value_trait::decayed_arg_types;
-      static_assert(std::is_same_v<on_value_args, type_list<>>,
-                    "OnValue does not match the expected response types");
-    } else if constexpr (!std::is_same_v<Result, message>) {
-      using on_value_args = typename on_value_trait::decayed_arg_types;
-      static_assert(std::is_same_v<on_value_args, Result>,
-                    "OnValue does not match the expected response types");
-    }
-    // Type-check OnError.
-    using on_error_trait_helper = typename detail::get_callable_trait<OnError>;
-    static_assert(on_error_trait_helper::valid,
-                  "OnError must provide a single, non-template operator()");
-    using on_error_trait = typename on_error_trait_helper::type;
-    static_assert(std::is_same_v<typename on_error_trait::result_type, void>,
-                  "OnError must return void");
-    using on_error_args = typename on_error_trait::decayed_arg_types;
-    static_assert(std::is_same_v<on_error_args, type_list<error>>,
-                  "OnError must accept a single argument of type caf::error");
+  /// Holds the state for the handle.
+  event_based_response_handle_state state_;
+};
+
+/// This helper class identifies an expected response message and enables
+/// `request(...).then(...)`.
+template <>
+class event_based_response_handle<message> {
+public:
+  // -- constructors, destructors, and assignment operators --------------------
+
+  event_based_response_handle(scheduled_actor* self, message_id mid,
+                              disposable pending_timeout)
+    : state_{self, mid, std::move(pending_timeout)} {
+    // nop
   }
 
-  /// Points to the parent actor.
-  scheduled_actor* self_;
+  // -- then and await ---------------------------------------------------------
 
-  /// Stores the ID of the message we are waiting for.
-  message_id mid_;
+  template <class OnValue, class OnError>
+  void await(OnValue on_value, OnError on_error) && {
+    detail::response_type_check<OnValue, OnError, message>();
+    auto bhvr = behavior{std::move(on_value), std::move(on_error)};
+    state_.self->add_awaited_response_handler(
+      state_.mid, std::move(bhvr), std::move(state_.pending_timeout));
+  }
 
-  /// Stores a handle to the in-flight timeout.
-  disposable pending_timeout_;
+  template <class OnValue>
+  void await(OnValue on_value) && {
+    return std::move(*this).await(std::move(on_value),
+                                  [self = state_.self](error& err) {
+                                    self->call_error_handler(err);
+                                  });
+  }
+
+  template <class OnValue, class OnError>
+  void then(OnValue on_value, OnError on_error) && {
+    detail::response_type_check<OnValue, OnError, message>();
+    auto bhvr = behavior{std::move(on_value), std::move(on_error)};
+    state_.self->add_multiplexed_response_handler(
+      state_.mid, std::move(bhvr), std::move(state_.pending_timeout));
+  }
+
+  template <class OnValue>
+  void then(OnValue on_value) && {
+    return std::move(*this).then(std::move(on_value),
+                                 [self = state_.self](error& err) {
+                                   self->call_error_handler(err);
+                                 });
+  }
+
+  // -- conversions ------------------------------------------------------------
+
+  template <class T>
+  auto as_observable() && {
+    return state_.self
+      ->template single_from_response<T>(state_.mid,
+                                         std::move(state_.pending_timeout))
+      .as_observable();
+  }
+
+private:
+  /// Holds the state for the handle.
+  event_based_response_handle_state state_;
 };
 
 /// Similar to `event_based_response_handle`, but also holds the `disposable`
 /// for the delayed request message.
-template <class Result>
+template <class... Results>
 class event_based_delayed_response_handle {
 public:
-  using decorated_type = event_based_response_handle<Result>;
+  using decorated_type = event_based_response_handle<Results...>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
   event_based_delayed_response_handle(scheduled_actor* self, message_id mid,
                                       disposable pending_timeout,
                                       disposable pending_request)
-    : decorated_(self, mid, std::move(pending_timeout)),
-      pending_request_(std::move(pending_request)) {
+    : decorated(self, mid, std::move(pending_timeout)),
+      pending_request(std::move(pending_request)) {
     // nop
   }
 
@@ -160,102 +241,144 @@ public:
   /// @copydoc event_based_response_handle::await
   template <class OnValue, class OnError>
   disposable await(OnValue on_value, OnError on_error) && {
-    std::move(decorated_).await(std::move(on_value), std::move(on_error));
-    return std::move(pending_request_);
+    std::move(decorated).await(std::move(on_value), std::move(on_error));
+    return std::move(pending_request);
   }
 
   /// @copydoc event_based_response_handle::await
   template <class OnValue>
   disposable await(OnValue on_value) && {
-    std::move(decorated_).await(std::move(on_value));
-    return std::move(pending_request_);
+    std::move(decorated).await(std::move(on_value));
+    return std::move(pending_request);
   }
 
   /// @copydoc event_based_response_handle::then
   template <class OnValue, class OnError>
   disposable then(OnValue on_value, OnError on_error) && {
-    std::move(decorated_).then(std::move(on_value), std::move(on_error));
-    return std::move(pending_request_);
+    std::move(decorated).then(std::move(on_value), std::move(on_error));
+    return std::move(pending_request);
   }
 
   /// @copydoc event_based_response_handle::then
   template <class OnValue>
   disposable then(OnValue on_value) && {
-    std::move(decorated_).then(std::move(on_value));
-    return std::move(pending_request_);
+    std::move(decorated).then(std::move(on_value));
+    return std::move(pending_request);
   }
 
   // -- conversions ------------------------------------------------------------
 
   /// @copydoc event_based_response_handle::as_observable
-  template <class T = Result, class Self = scheduled_actor>
-  flow::assert_scheduled_actor_hdr_t<
-    flow::observable<detail::event_based_response_handle_res_t<T>>>
-  as_observable() && {
-    return std::move(decorated_).template as_observable<T, Self>();
+  template <class T = detail::event_based_response_handle_res_t<Results...>,
+            class = std::enable_if_t<!std::is_same_v<T, void>>>
+  auto as_observable() && {
+    return std::move(decorated).as_observable();
   }
 
   // -- properties -------------------------------------------------------------
 
-  /// Returns the decorated handle.
-  decorated_type& decorated() {
-    return decorated_;
-  }
-
-  /// @copydoc decorated
-  const decorated_type& decorated() const {
-    return decorated_;
-  }
-
-  /// Returns the handle to the in-flight request message if the request was
-  /// delayed/scheduled. Otherwise, returns an empty handle.
-  disposable& pending_request() {
-    return pending_request_;
-  }
-
-  /// @copydoc pending_request
-  const disposable& pending_request() const {
-    return pending_request_;
-  }
-
-private:
   /// The wrapped handle type.
-  decorated_type decorated_;
+  decorated_type decorated;
 
   /// Stores a handle to the in-flight request if the request messages was
   /// delayed/scheduled.
-  disposable pending_request_;
+  disposable pending_request;
+};
+
+// Specialization for dynamically typed messages.
+template <>
+class event_based_delayed_response_handle<message> {
+public:
+  using decorated_type = event_based_response_handle<message>;
+
+  // -- constructors, destructors, and assignment operators --------------------
+
+  event_based_delayed_response_handle(scheduled_actor* self, message_id mid,
+                                      disposable pending_timeout,
+                                      disposable pending_request)
+    : decorated(self, mid, std::move(pending_timeout)),
+      pending_request(std::move(pending_request)) {
+    // nop
+  }
+
+  // -- then and await ---------------------------------------------------------
+
+  /// @copydoc event_based_response_handle::await
+  template <class OnValue, class OnError>
+  disposable await(OnValue on_value, OnError on_error) && {
+    std::move(decorated).await(std::move(on_value), std::move(on_error));
+    return std::move(pending_request);
+  }
+
+  /// @copydoc event_based_response_handle::await
+  template <class OnValue>
+  disposable await(OnValue on_value) && {
+    std::move(decorated).await(std::move(on_value));
+    return std::move(pending_request);
+  }
+
+  /// @copydoc event_based_response_handle::then
+  template <class OnValue, class OnError>
+  disposable then(OnValue on_value, OnError on_error) && {
+    std::move(decorated).then(std::move(on_value), std::move(on_error));
+    return std::move(pending_request);
+  }
+
+  /// @copydoc event_based_response_handle::then
+  template <class OnValue>
+  disposable then(OnValue on_value) && {
+    std::move(decorated).then(std::move(on_value));
+    return std::move(pending_request);
+  }
+
+  // -- conversions ------------------------------------------------------------
+
+  /// @copydoc event_based_response_handle::as_observable
+  template <class T>
+  auto as_observable() && {
+    return std::move(decorated).template as_observable<T>();
+  }
+
+  // -- properties -------------------------------------------------------------
+
+  /// The wrapped handle type.
+  decorated_type decorated;
+
+  /// Stores a handle to the in-flight request if the request messages was
+  /// delayed/scheduled.
+  disposable pending_request;
 };
 
 // tuple-like access for event_based_delayed_response_handle
 
-template <size_t I, class Result>
-decltype(auto) get(caf::event_based_delayed_response_handle<Result>& x) {
+template <size_t I, class... Results>
+decltype(auto) get(caf::event_based_delayed_response_handle<Results...>& x) {
   if constexpr (I == 0) {
-    return x.decorated();
+    return x.decorated;
   } else {
     static_assert(I == 1);
-    return x.pending_request();
+    return x.pending_request;
   }
 }
 
-template <size_t I, class Result>
-decltype(auto) get(const caf::event_based_delayed_response_handle<Result>& x) {
+template <size_t I, class... Results>
+decltype(auto)
+get(const caf::event_based_delayed_response_handle<Results...>& x) {
   if constexpr (I == 0) {
-    return x.decorated();
+    return x.decorated;
   } else {
     static_assert(I == 1);
-    return x.pending_request();
+    return x.pending_request;
   }
 }
 
-template <size_t I, class Result>
-decltype(auto) get(caf::event_based_delayed_response_handle<Result>&& x) {
+template <size_t I, class... Results>
+decltype(auto) get(caf::event_based_delayed_response_handle<Results...>&& x) {
   if constexpr (I == 0) {
-    return std::move(x.decorated());
+    return std::move(x.decorated);
   } else {
     static_assert(I == 1);
-    return std::move(x.pending_request());
+    return std::move(x.pending_request);
   }
 }
 
@@ -265,18 +388,18 @@ decltype(auto) get(caf::event_based_delayed_response_handle<Result>&& x) {
 
 namespace std {
 
-template <class Result>
-struct tuple_size<caf::event_based_delayed_response_handle<Result>> {
+template <class... Results>
+struct tuple_size<caf::event_based_delayed_response_handle<Results...>> {
   static constexpr size_t value = 2;
 };
 
-template <class Result>
-struct tuple_element<0, caf::event_based_delayed_response_handle<Result>> {
-  using type = caf::event_based_response_handle<Result>;
+template <class... Results>
+struct tuple_element<0, caf::event_based_delayed_response_handle<Results...>> {
+  using type = caf::event_based_response_handle<Results...>;
 };
 
-template <class Result>
-struct tuple_element<1, caf::event_based_delayed_response_handle<Result>> {
+template <class... Results>
+struct tuple_element<1, caf::event_based_delayed_response_handle<Results...>> {
   using type = caf::disposable;
 };
 

@@ -15,7 +15,7 @@ namespace caf {
 /// @extends local_actor
 class CAF_CORE_EXPORT abstract_blocking_actor : public local_actor {
 public:
-  template <class>
+  template <class...>
   friend class blocking_response_handle;
 
   using super = local_actor;

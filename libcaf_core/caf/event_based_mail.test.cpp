@@ -337,8 +337,8 @@ TEST("send delayed request message") {
   SECTION("strong receiver reference") {
     auto [hdl, pending] = self->mail(3).delay(1s).request(dummy, infinite,
                                                           strong_ref);
-    static_assert(std::is_same_v<decltype(hdl),
-                                 event_based_response_handle<type_list<int>>>);
+    static_assert(
+      std::is_same_v<decltype(hdl), event_based_response_handle<int>>);
     static_assert(std::is_same_v<decltype(pending), disposable>);
     std::move(hdl).then(on_result);
     launch();
