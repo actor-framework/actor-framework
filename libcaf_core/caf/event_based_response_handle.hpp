@@ -4,11 +4,12 @@
 
 #pragma once
 
+#include "caf/abstract_scheduled_actor.hpp"
 #include "caf/detail/response_type_check.hpp"
 #include "caf/disposable.hpp"
 #include "caf/flow/fwd.hpp"
+#include "caf/fwd.hpp"
 #include "caf/message_id.hpp"
-#include "caf/scheduled_actor.hpp"
 #include "caf/type_list.hpp"
 
 #include <type_traits>
@@ -85,7 +86,7 @@ namespace caf {
 /// Holds state for a event-based response handles.
 struct event_based_response_handle_state {
   /// Points to the parent actor.
-  scheduled_actor* self;
+  abstract_scheduled_actor* self;
 
   /// Stores the ID of the message we are waiting for.
   message_id mid;
@@ -99,9 +100,13 @@ struct event_based_response_handle_state {
 template <class... Results>
 class event_based_response_handle {
 public:
+  // -- friends ----------------------------------------------------------------
+
+  friend class scheduled_actor;
+
   // -- constructors, destructors, and assignment operators --------------------
 
-  event_based_response_handle(scheduled_actor* self, message_id mid,
+  event_based_response_handle(abstract_scheduled_actor* self, message_id mid,
                               disposable pending_timeout)
     : state_{self, mid, std::move(pending_timeout)} {
     // nop
@@ -139,17 +144,6 @@ public:
                                  [self = state_.self](error& err) {
                                    self->call_error_handler(err);
                                  });
-  }
-
-  // -- conversions ------------------------------------------------------------
-
-  template <class T = detail::event_based_response_handle_res_t<Results...>,
-            class = std::enable_if_t<!std::is_same_v<T, void>>>
-  auto as_observable() && {
-    return state_.self
-      ->template single_from_response<T>(state_.mid,
-                                         std::move(state_.pending_timeout))
-      .as_observable();
   }
 
 private:
@@ -162,9 +156,13 @@ private:
 template <>
 class event_based_response_handle<message> {
 public:
+  // -- friends ----------------------------------------------------------------
+
+  friend class scheduled_actor;
+
   // -- constructors, destructors, and assignment operators --------------------
 
-  event_based_response_handle(scheduled_actor* self, message_id mid,
+  event_based_response_handle(abstract_scheduled_actor* self, message_id mid,
                               disposable pending_timeout)
     : state_{self, mid, std::move(pending_timeout)} {
     // nop
@@ -202,16 +200,6 @@ public:
                                  [self = state_.self](error& err) {
                                    self->call_error_handler(err);
                                  });
-  }
-
-  // -- conversions ------------------------------------------------------------
-
-  template <class T>
-  auto as_observable() && {
-    return state_.self
-      ->template single_from_response<T>(state_.mid,
-                                         std::move(state_.pending_timeout))
-      .as_observable();
   }
 
 private:
@@ -228,7 +216,8 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  event_based_delayed_response_handle(scheduled_actor* self, message_id mid,
+  event_based_delayed_response_handle(abstract_scheduled_actor* self,
+                                      message_id mid,
                                       disposable pending_timeout,
                                       disposable pending_request)
     : decorated(self, mid, std::move(pending_timeout)),
@@ -264,15 +253,6 @@ public:
   disposable then(OnValue on_value) && {
     std::move(decorated).then(std::move(on_value));
     return std::move(pending_request);
-  }
-
-  // -- conversions ------------------------------------------------------------
-
-  /// @copydoc event_based_response_handle::as_observable
-  template <class T = detail::event_based_response_handle_res_t<Results...>,
-            class = std::enable_if_t<!std::is_same_v<T, void>>>
-  auto as_observable() && {
-    return std::move(decorated).as_observable();
   }
 
   // -- properties -------------------------------------------------------------
@@ -293,7 +273,8 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  event_based_delayed_response_handle(scheduled_actor* self, message_id mid,
+  event_based_delayed_response_handle(abstract_scheduled_actor* self,
+                                      message_id mid,
                                       disposable pending_timeout,
                                       disposable pending_request)
     : decorated(self, mid, std::move(pending_timeout)),
@@ -329,14 +310,6 @@ public:
   disposable then(OnValue on_value) && {
     std::move(decorated).then(std::move(on_value));
     return std::move(pending_request);
-  }
-
-  // -- conversions ------------------------------------------------------------
-
-  /// @copydoc event_based_response_handle::as_observable
-  template <class T>
-  auto as_observable() && {
-    return std::move(decorated).template as_observable<T>();
   }
 
   // -- properties -------------------------------------------------------------

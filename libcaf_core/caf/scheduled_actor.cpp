@@ -883,6 +883,10 @@ void scheduled_actor::push_to_cache(mailbox_element_ptr ptr) {
   stash_.push(ptr.release());
 }
 
+  void scheduled_actor::call_error_handler(error& err) {
+    call_handler(error_handler_, this, err);
+  }
+
 disposable scheduled_actor::run_scheduled(timestamp when, action what) {
   CAF_ASSERT(what.ptr() != nullptr);
   auto lg = log::core::trace("when = {}", when);

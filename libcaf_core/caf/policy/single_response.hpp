@@ -41,7 +41,8 @@ public:
     using detail::dispose_on_call;
     behavior bhvr{dispose_on_call(pending_timeout_, std::forward<F>(f)),
                   dispose_on_call(pending_timeout_, std::forward<OnError>(g))};
-    self->add_awaited_response_handler(mid_, std::move(bhvr));
+    self->add_awaited_response_handler(mid_, std::move(bhvr),
+                                       std::move(pending_timeout_));
   }
 
   template <class Self, class F, class OnError>
@@ -49,7 +50,8 @@ public:
     using detail::dispose_on_call;
     behavior bhvr{dispose_on_call(pending_timeout_, std::forward<F>(f)),
                   dispose_on_call(pending_timeout_, std::forward<OnError>(g))};
-    self->add_multiplexed_response_handler(mid_, std::move(bhvr));
+    self->add_multiplexed_response_handler(mid_, std::move(bhvr),
+                                           std::move(pending_timeout_));
   }
 
   template <class Self, class F, class OnError>

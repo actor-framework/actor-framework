@@ -12,6 +12,7 @@
 #endif // CAF_ENABLE_EXCEPTIONS
 
 #include "caf/abstract_mailbox.hpp"
+#include "caf/abstract_scheduled_actor.hpp"
 #include "caf/action.hpp"
 #include "caf/actor_traits.hpp"
 #include "caf/async/fwd.hpp"
@@ -65,9 +66,8 @@ CAF_CORE_EXPORT skippable_result print_and_drop(scheduled_actor*, message&);
 CAF_CORE_EXPORT skippable_result drop(scheduled_actor*, message&);
 
 /// A cooperatively scheduled, event-based actor implementation.
-class CAF_CORE_EXPORT scheduled_actor : public local_actor,
+class CAF_CORE_EXPORT scheduled_actor : public abstract_scheduled_actor,
                                         public resumable,
-                                        public non_blocking_actor_base,
                                         public flow::coordinator {
 public:
   // -- friends ----------------------------------------------------------------
@@ -80,9 +80,6 @@ public:
 
   template <class, class>
   friend class response_handle;
-
-  template <class...>
-  friend class event_based_response_handle;
 
   // -- nested enums -----------------------------------------------------------
 
@@ -111,7 +108,7 @@ public:
   // -- nested and member types ------------------------------------------------
 
   /// Base type.
-  using super = local_actor;
+  using super = abstract_scheduled_actor;
 
   using batch_op_ptr = intrusive_ptr<flow::op::base<async::batch>>;
 
@@ -368,11 +365,12 @@ public:
 
   /// Adds a callback for an awaited response.
   void add_awaited_response_handler(message_id response_id, behavior bhvr,
-                                    disposable pending_timeout = {});
+                                    disposable pending_timeout = {}) override;
 
   /// Adds a callback for a multiplexed response.
-  void add_multiplexed_response_handler(message_id response_id, behavior bhvr,
-                                        disposable pending_timeout = {});
+  void
+  add_multiplexed_response_handler(message_id response_id, behavior bhvr,
+                                   disposable pending_timeout = {}) override;
 
   /// Returns the category of `x`.
   message_category categorize(mailbox_element& x);
@@ -465,6 +463,30 @@ public:
   /// flows remain unaffected.
   void deregister_stream(uint64_t stream_id);
 
+  /// Lifts a statically typed response handle into an @ref observable.
+  /// @param what The handle to the pending response.
+  template <class T>
+  flow::assert_scheduled_actor_hdr_t<flow::observable<T>>
+  observe(event_based_response_handle<T> what);
+
+  /// Lifts a statically typed response handle into an @ref observable.
+  /// @param what The handle to the pending response.
+  template <class T>
+  flow::assert_scheduled_actor_hdr_t<flow::observable<T>>
+  observe(event_based_delayed_response_handle<T> what);
+
+  /// Lifts a dynamically typed response handle into an @ref observable.
+  /// @param what The handle to the pending response.
+  template <class T>
+  flow::assert_scheduled_actor_hdr_t<flow::observable<T>>
+  observe_as(event_based_response_handle<message> what);
+
+  /// Lifts a dynamically typed response handle into an @ref observable.
+  /// @param what The handle to the pending response.
+  template <class T>
+  flow::assert_scheduled_actor_hdr_t<flow::observable<T>>
+  observe_as(event_based_delayed_response_handle<message> what);
+
   /// @cond PRIVATE
 
   // -- utility functions for invoking default handler -------------------------
@@ -495,9 +517,7 @@ public:
       swap(g, f);
   }
 
-  void call_error_handler(error& err) {
-    call_handler(error_handler_, this, err);
-  }
+  void call_error_handler(error& err) override;
 
   // -- scheduling actions -----------------------------------------------------
 

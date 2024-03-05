@@ -71,9 +71,8 @@ SCENARIO("flat_map merges multiple observables") {
         self->make_observable()
           .from_container(inputs)
           .flat_map([self = self, adder](int32_t x) {
-            return self->mail(x)
-              .request(adder, infinite)
-              .as_observable<int32_t>();
+            return self->observe_as<int32_t>(
+              self->mail(x).request(adder, infinite));
           })
           .for_each([&outputs](int32_t x) { outputs.emplace_back(x); });
         launch();

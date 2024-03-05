@@ -255,9 +255,7 @@ TEST("send request message") {
       auto err = std::make_shared<error>();
       auto result = std::make_shared<int>(0);
       SECTION("valid response") {
-        self->mail(3)
-          .request(dummy, infinite)
-          .as_observable<int>()
+        self->observe_as<int>(self->mail(3).request(dummy, infinite))
           .do_on_error([err](const error& x) { *err = x; })
           .for_each([result](int x) { *result = x; });
         launch();
@@ -275,9 +273,7 @@ TEST("send request message") {
         check_eq(*result, 9);
       }
       SECTION("error response") {
-        self->mail("hello")
-          .request(dummy, infinite)
-          .as_observable<int>()
+        self->observe_as<int>(self->mail("hello").request(dummy, infinite))
           .do_on_error([err](const error& x) { *err = x; })
           .for_each([result](int x) { *result = x; });
         launch();
@@ -302,9 +298,7 @@ TEST("send request message") {
       });
       auto err = std::make_shared<error>();
       auto result = std::make_shared<int>(0);
-      self->mail(3)
-        .request(dummy, infinite)
-        .as_observable()
+      self->observe(self->mail(3).request(dummy, infinite))
         .do_on_error([err](const error& x) { *err = x; })
         .for_each([result](int x) { *result = x; });
       launch();

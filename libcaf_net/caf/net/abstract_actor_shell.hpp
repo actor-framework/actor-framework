@@ -7,6 +7,7 @@
 #include "caf/net/fwd.hpp"
 
 #include "caf/abstract_mailbox.hpp"
+#include "caf/abstract_scheduled_actor.hpp"
 #include "caf/actor_traits.hpp"
 #include "caf/async/execution_context.hpp"
 #include "caf/callback.hpp"
@@ -22,12 +23,11 @@
 
 namespace caf::net {
 
-class CAF_NET_EXPORT abstract_actor_shell : public local_actor,
-                                            public non_blocking_actor_base {
+class CAF_NET_EXPORT abstract_actor_shell : public abstract_scheduled_actor {
 public:
   // -- member types -----------------------------------------------------------
 
-  using super = local_actor;
+  using super = abstract_scheduled_actor;
 
   using fallback_handler_sig = result<message>(abstract_actor_shell*, message&);
 
@@ -81,10 +81,15 @@ public:
   /// enqueue to register the owning socket manager for write events.
   bool try_block_mailbox();
 
-  // -- message processing -----------------------------------------------------
+  // -- overridden functions of abstract_scheduled_actor -----------------------
 
-  /// Adds a callback for a multiplexed response.
-  void add_multiplexed_response_handler(message_id response_id, behavior bhvr);
+  void add_awaited_response_handler(message_id response_id, behavior bhvr,
+                                    disposable pending_timeout) override;
+
+  void add_multiplexed_response_handler(message_id response_id, behavior bhvr,
+                                        disposable pending_timeout) override;
+
+  void call_error_handler(error& what) override;
 
   // -- overridden functions of abstract_actor ---------------------------------
 
@@ -106,6 +111,8 @@ protected:
   }
 
 private:
+  using multiplexed_response = std::pair<behavior, disposable>;
+
   void close_mailbox(const error& reason);
 
   void force_close_mailbox() final;
@@ -127,7 +134,7 @@ private:
   fallback_handler fallback_;
 
   /// Stores callbacks for multiplexed responses.
-  unordered_flat_map<message_id, behavior> multiplexed_responses_;
+  unordered_flat_map<message_id, multiplexed_response> multiplexed_responses_;
 
   /// Callback for processing the next message on the event loop.
   action resume_;

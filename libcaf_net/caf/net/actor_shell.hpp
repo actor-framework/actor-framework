@@ -9,6 +9,8 @@
 
 #include "caf/actor_traits.hpp"
 #include "caf/detail/net_export.hpp"
+#include "caf/dynamically_typed.hpp"
+#include "caf/event_based_mail.hpp"
 #include "caf/extend.hpp"
 #include "caf/fwd.hpp"
 #include "caf/mixin/requester.hpp"
@@ -48,6 +50,15 @@ public:
   template <class... Fs>
   void set_behavior(Fs... fs) {
     set_behavior_impl(behavior{std::move(fs)...});
+  }
+
+  // -- messaging --------------------------------------------------------------
+
+  /// Starts a new message.
+  template <class... Args>
+  auto mail(Args&&... args) {
+    return event_based_mail(dynamically_typed{}, this,
+                            std::forward<Args>(args)...);
   }
 
   // -- overridden functions of local_actor ------------------------------------

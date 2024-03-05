@@ -70,6 +70,7 @@ caf_add_component(
     caf/abstract_actor.cpp
     caf/abstract_blocking_actor.cpp
     caf/abstract_mailbox.cpp
+    caf/abstract_scheduled_actor.cpp
     caf/action.cpp
     caf/action.test.cpp
     caf/actor.cpp

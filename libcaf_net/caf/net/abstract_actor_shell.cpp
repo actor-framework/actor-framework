@@ -77,7 +77,8 @@ bool abstract_actor_shell::consume_message() {
       }
     } else if (auto i = multiplexed_responses_.find(mid);
                i != multiplexed_responses_.end()) {
-      auto bhvr = std::move(i->second);
+      auto [bhvr, pending_timeout] = std::move(i->second);
+      pending_timeout.dispose();
       multiplexed_responses_.erase(i);
       auto res = bhvr(msg->payload);
       if (!res) {
@@ -93,11 +94,25 @@ bool abstract_actor_shell::consume_message() {
   return false;
 }
 
+void abstract_actor_shell::add_awaited_response_handler(
+  message_id response_id, behavior bhvr, disposable pending_timeout) {
+  // TODO: re-implement consume-messages with automatic stashing to properly
+  //       support await() semantics.
+  add_multiplexed_response_handler(response_id, std::move(bhvr),
+                                   std::move(pending_timeout));
+}
+
 void abstract_actor_shell::add_multiplexed_response_handler(
-  message_id response_id, behavior bhvr) {
+  message_id response_id, behavior bhvr, disposable pending_timeout) {
   if (bhvr.timeout() != infinite)
     request_response_timeout(bhvr.timeout(), response_id);
-  multiplexed_responses_.emplace(response_id, std::move(bhvr));
+  multiplexed_responses_.emplace(
+    response_id,
+    multiplexed_response{std::move(bhvr), std::move(pending_timeout)});
+}
+
+void abstract_actor_shell::call_error_handler(error& what) {
+  quit(std::move(what));
 }
 
 // -- overridden functions of abstract_actor -----------------------------------

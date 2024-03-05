@@ -6,6 +6,7 @@
 
 #include "caf/actor.hpp"
 #include "caf/disposable.hpp"
+#include "caf/event_based_response_handle.hpp"
 #include "caf/flow/coordinator.hpp"
 #include "caf/flow/observable.hpp"
 #include "caf/flow/observable_builder.hpp"
@@ -82,6 +83,38 @@ scheduled_actor::single_from_response(message_id mid,
   add_multiplexed_response_handler(mid, std::move(bhvr),
                                    std::move(pending_timeout));
   return flow::single<T>{std::move(cell)};
+}
+
+template <class T>
+flow::assert_scheduled_actor_hdr_t<flow::observable<T>>
+scheduled_actor::observe(event_based_response_handle<T> what) {
+  static_assert(!std::is_same_v<T, message>,
+                "use observe_as to observe dynamically typed responses");
+  return this
+    ->template single_from_response<T>(what.state_.mid,
+                                       std::move(what.state_.pending_timeout))
+    .as_observable();
+}
+
+template <class T>
+flow::assert_scheduled_actor_hdr_t<flow::observable<T>>
+scheduled_actor::observe(event_based_delayed_response_handle<T> what) {
+  return observe(std::move(what.decorated));
+}
+
+template <class T>
+flow::assert_scheduled_actor_hdr_t<flow::observable<T>>
+scheduled_actor::observe_as(event_based_response_handle<message> what) {
+  return this
+    ->template single_from_response<T>(what.state_.mid,
+                                       std::move(what.state_.pending_timeout))
+    .as_observable();
+}
+
+template <class T>
+flow::assert_scheduled_actor_hdr_t<flow::observable<T>>
+scheduled_actor::observe_as(event_based_delayed_response_handle<message> what) {
+  return this->template observe_as<T>(std::move(what.decorated));
 }
 
 } // namespace caf
