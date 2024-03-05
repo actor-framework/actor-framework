@@ -101,8 +101,8 @@ bool framing::done_sending() {
 
 // -- web_socket::lower_layer implementation -----------------------------------
 
-multiplexer& framing::mpx() noexcept {
-  return down_->mpx();
+socket_manager* framing::manager() noexcept {
+  return down_->manager();
 }
 
 bool framing::can_send_more() const noexcept {

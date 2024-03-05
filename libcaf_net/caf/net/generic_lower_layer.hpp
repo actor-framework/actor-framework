@@ -18,7 +18,10 @@ public:
   virtual ~generic_lower_layer();
 
   /// Returns the @ref multiplexer instance that executes this protocol stack.
-  virtual multiplexer& mpx() noexcept = 0;
+  [[nodiscard]] multiplexer& mpx() noexcept;
+
+  /// Returns the manager that owns this layer.
+  [[nodiscard]] virtual socket_manager* manager() noexcept = 0;
 
   /// Queries whether the output device can accept more data straight away.
   [[nodiscard]] virtual bool can_send_more() const noexcept = 0;

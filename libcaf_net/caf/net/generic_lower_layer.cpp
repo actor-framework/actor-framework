@@ -4,6 +4,8 @@
 
 #include "caf/net/generic_lower_layer.hpp"
 
+#include "caf/net/socket_manager.hpp"
+
 namespace caf::net {
 
 generic_lower_layer::~generic_lower_layer() {
@@ -12,6 +14,10 @@ generic_lower_layer::~generic_lower_layer() {
 
 void generic_lower_layer::shutdown(const error&) {
   shutdown();
+}
+
+multiplexer& generic_lower_layer::mpx() noexcept {
+  return manager()->mpx();
 }
 
 } // namespace caf::net

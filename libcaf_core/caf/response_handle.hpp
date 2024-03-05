@@ -56,9 +56,6 @@ public:
 
   template <class T = traits, class F, class OnError>
   std::enable_if_t<T::is_non_blocking> await(F f, OnError g) {
-    static_assert(detail::has_add_awaited_response_handler_v<ActorType>,
-                  "this actor type does not support awaiting responses, "
-                  "try using .then instead");
     static_assert(detail::is_callable_v<F>,
                   "F must provide a single, non-template operator()");
     static_assert(std::is_invocable_v<OnError, error&>,
@@ -72,18 +69,13 @@ public:
   }
 
   template <class T = traits, class F>
-  std::enable_if_t<detail::has_call_error_handler_v<ActorType> //
-                   && T::is_non_blocking>
-  await(F f) {
-    auto self = self_;
-    await(std::move(f), [self](error& err) { self->call_error_handler(err); });
+  std::enable_if_t<T::is_non_blocking> await(F f) {
+    await(std::move(f),
+          [self = self_](error& err) { self->call_error_handler(err); });
   }
 
   template <class T = traits, class F, class OnError>
   std::enable_if_t<T::is_non_blocking> then(F f, OnError g) {
-    static_assert(detail::has_add_multiplexed_response_handler_v<ActorType>,
-                  "this actor type does not support multiplexed responses, "
-                  "try using .await instead");
     static_assert(detail::is_callable_v<F>,
                   "F must provide a single, non-template operator()");
     static_assert(std::is_invocable_v<OnError, error&>,
@@ -97,9 +89,7 @@ public:
   }
 
   template <class T = traits, class F>
-  std::enable_if_t<detail::has_call_error_handler_v<ActorType> //
-                   && T::is_non_blocking>
-  then(F f) {
+  std::enable_if_t<T::is_non_blocking> then(F f) {
     auto self = self_;
     then(std::move(f), [self](error& err) { self->call_error_handler(err); });
   }

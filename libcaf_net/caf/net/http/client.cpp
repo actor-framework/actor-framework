@@ -15,8 +15,8 @@ std::unique_ptr<client> client::make(upper_layer_ptr up) {
 
 // -- http::lower_layer implementation -----------------------------------------
 
-multiplexer& client::mpx() noexcept {
-  return down_->mpx();
+socket_manager* client::manager() noexcept {
+  return down_->manager();
 }
 
 bool client::can_send_more() const noexcept {

@@ -28,8 +28,7 @@ std::unique_ptr<router> router::make(std::vector<route_ptr> routes) {
 actor_shell* router::self() {
   if (shell_)
     return shell_.get();
-  auto& mpx = down_->mpx();
-  shell_ = make_actor_shell(mpx.system(), &mpx);
+  shell_ = make_actor_shell(down_->manager());
   return shell_.get();
 }
 

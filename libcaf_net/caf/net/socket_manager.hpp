@@ -33,6 +33,10 @@ class CAF_NET_EXPORT socket_manager : public detail::atomic_ref_counted,
                                       public disposable_impl,
                                       public flow::coordinator {
 public:
+  // -- friends ----------------------------------------------------------------
+
+  friend class abstract_actor_shell;
+
   // -- member types -----------------------------------------------------------
 
   using event_handler_ptr = std::unique_ptr<socket_event_layer>;

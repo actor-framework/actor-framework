@@ -106,7 +106,7 @@ public:
 
   using web_socket::lower_layer::shutdown;
 
-  multiplexer& mpx() noexcept override;
+  socket_manager* manager() noexcept override;
 
   bool can_send_more() const noexcept override;
 

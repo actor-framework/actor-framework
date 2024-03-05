@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "caf/async/fwd.hpp"
 #include "caf/detail/net_export.hpp"
+#include "caf/flow/fwd.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/type_id.hpp"
@@ -79,8 +79,7 @@ template <class Handle>
 using actor_shell_ptr_t = typename actor_shell_ptr_oracle<Handle>::type;
 
 template <class Handle = caf::actor>
-actor_shell_ptr_t<Handle>
-make_actor_shell(actor_system&, async::execution_context_ptr);
+actor_shell_ptr_t<Handle> make_actor_shell(socket_manager*);
 
 } // namespace caf::net
 

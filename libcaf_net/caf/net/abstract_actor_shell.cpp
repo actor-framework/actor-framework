@@ -20,8 +20,8 @@ namespace caf::net {
 // -- constructors, destructors, and assignment operators ----------------------
 
 abstract_actor_shell::abstract_actor_shell(actor_config& cfg,
-                                           async::execution_context_ptr loop)
-  : super(cfg), loop_(loop) {
+                                           socket_manager* owner)
+  : super(cfg), manager_(owner) {
   mailbox_.try_block();
   resume_ = make_action([this] {
     for (;;) {
@@ -77,7 +77,8 @@ bool abstract_actor_shell::consume_message() {
       }
     } else if (auto i = multiplexed_responses_.find(mid);
                i != multiplexed_responses_.end()) {
-      auto bhvr = std::move(i->second);
+      auto [bhvr, pending_timeout] = std::move(i->second);
+      pending_timeout.dispose();
       multiplexed_responses_.erase(i);
       auto res = bhvr(msg->payload);
       if (!res) {
@@ -93,11 +94,29 @@ bool abstract_actor_shell::consume_message() {
   return false;
 }
 
+void abstract_actor_shell::add_awaited_response_handler(
+  message_id response_id, behavior bhvr, disposable pending_timeout) {
+  // TODO: re-implement consume-messages with automatic stashing to properly
+  //       support await() semantics.
+  add_multiplexed_response_handler(response_id, std::move(bhvr),
+                                   std::move(pending_timeout));
+}
+
 void abstract_actor_shell::add_multiplexed_response_handler(
-  message_id response_id, behavior bhvr) {
+  message_id response_id, behavior bhvr, disposable pending_timeout) {
   if (bhvr.timeout() != infinite)
     request_response_timeout(bhvr.timeout(), response_id);
-  multiplexed_responses_.emplace(response_id, std::move(bhvr));
+  multiplexed_responses_.emplace(
+    response_id,
+    multiplexed_response{std::move(bhvr), std::move(pending_timeout)});
+}
+
+void abstract_actor_shell::call_error_handler(error& what) {
+  quit(std::move(what));
+}
+
+void abstract_actor_shell::run_actions() {
+  manager_->run_delayed_actions();
 }
 
 // -- overridden functions of abstract_actor -----------------------------------
@@ -122,8 +141,8 @@ bool abstract_actor_shell::enqueue(mailbox_element_ptr ptr, execution_unit*) {
       // mailbox and reset loop_ in cleanup() before acquiring the mutex here.
       // Hence, the mailbox element has already been disposed and we can simply
       // skip any further processing.
-      if (loop_)
-        loop_->schedule(resume_);
+      if (manager_)
+        manager_->schedule(resume_);
       return true;
     }
     case intrusive::inbox_result::success:
@@ -164,7 +183,7 @@ void abstract_actor_shell::on_cleanup(const error& reason) {
   // Detach from owner.
   {
     std::unique_lock<std::mutex> guard{loop_mtx_};
-    loop_ = nullptr;
+    manager_ = nullptr;
     resume_.dispose();
   }
   // Dispatch to parent's `cleanup` function.
@@ -183,6 +202,10 @@ void abstract_actor_shell::close_mailbox(const error& reason) {
 
 void abstract_actor_shell::force_close_mailbox() {
   close_mailbox(make_error(exit_reason::unreachable));
+}
+
+flow::coordinator* abstract_actor_shell::flow_context() {
+  return manager_.get();
 }
 
 } // namespace caf::net
