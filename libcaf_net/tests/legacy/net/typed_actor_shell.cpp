@@ -27,7 +27,121 @@ namespace {
 
 using svec = std::vector<std::string>;
 
-using string_consumer = typed_actor<result<void>(std::string)>;
+using string_consumer_legacy = typed_actor<result<void>(std::string)>;
+
+class legacy_app_t : public net::octet_stream::upper_layer {
+public:
+  explicit legacy_app_t(actor_system& sys, async::execution_context_ptr loop,
+                        actor hdl = {})
+    : worker(std::move(hdl)) {
+    self = net::make_actor_shell<string_consumer_legacy>(sys, loop);
+  }
+
+  static auto make(actor_system& sys, async::execution_context_ptr loop,
+                   actor hdl = {}) {
+    return std::make_unique<legacy_app_t>(sys, std::move(loop), std::move(hdl));
+  }
+
+  error start(net::octet_stream::lower_layer* down) override {
+    this->down = down;
+    self->set_behavior([this](std::string& line) {
+      CAF_MESSAGE("received an asynchronous message: " << line);
+      lines.emplace_back(std::move(line));
+    });
+    self->set_fallback([](message& msg) -> result<message> {
+      CAF_FAIL("unexpected message: " << msg);
+      return make_error(sec::unexpected_message);
+    });
+    down->configure_read(net::receive_policy::up_to(2048));
+    return none;
+  }
+
+  void prepare_send() override {
+    // nop
+  }
+
+  bool done_sending() override {
+    return true;
+  }
+
+  void abort(const error&) override {
+    // nop
+  }
+
+  ptrdiff_t consume(byte_span buf, byte_span) override {
+    // Seek newline character.
+    constexpr auto nl = std::byte{'\n'};
+    if (auto i = std::find(buf.begin(), buf.end(), nl); i != buf.end()) {
+      // Skip empty lines.
+      if (i == buf.begin()) {
+        consumed_bytes += 1;
+        auto sub_res = consume(buf.subspan(1), {});
+        return sub_res >= 0 ? sub_res + 1 : sub_res;
+      }
+      // Deserialize config value from received line.
+      auto num_bytes = std::distance(buf.begin(), i) + 1;
+      std::string_view line{reinterpret_cast<const char*>(buf.data()),
+                            static_cast<size_t>(num_bytes) - 1};
+      config_value val;
+      if (auto parsed_res = config_value::parse(line)) {
+        val = std::move(*parsed_res);
+      } else {
+        return -1;
+      }
+      // Deserialize message from received dictionary.
+      config_value_reader reader{&val};
+      caf::message msg;
+      if (!reader.apply(msg)) {
+        return -1;
+      }
+      // Dispatch message to worker.
+      CAF_MESSAGE("app received a message from its socket: " << msg);
+      self->request(worker, std::chrono::seconds{1}, std::move(msg))
+        .then(
+          [this](int32_t value) mutable {
+            ++received_responses;
+            // Respond with the value as string.
+            auto str_response = std::to_string(value);
+            str_response += '\n';
+            down->begin_output();
+            auto& buf = down->output_buffer();
+            auto bytes = as_bytes(make_span(str_response));
+            buf.insert(buf.end(), bytes.begin(), bytes.end());
+            down->end_output();
+          },
+          [this](error& err) mutable { self->quit(err); });
+      // Try consuming more from the buffer.
+      consumed_bytes += static_cast<size_t>(num_bytes);
+      auto sub_buf = buf.subspan(num_bytes);
+      auto sub_res = consume(sub_buf, {});
+      return sub_res >= 0 ? num_bytes + sub_res : sub_res;
+    }
+    return 0;
+  }
+
+  // Pointer to the layer below.
+  net::octet_stream::lower_layer* down;
+
+  // Handle to the worker-under-test.
+  actor worker;
+
+  // Lines received as asynchronous messages.
+  std::vector<std::string> lines;
+
+  // Actor shell representing this app.
+  net::actor_shell_ptr_t<string_consumer_legacy> self;
+
+  // Counts how many bytes we've consumed in total.
+  size_t consumed_bytes = 0;
+
+  // Counts how many response messages we've received from the worker.
+  size_t received_responses = 0;
+};
+
+struct string_trait {
+  using signatures = type_list<result<void>(std::string)>;
+};
+using string_consumer = typed_actor<string_trait>;
 
 class app_t : public net::octet_stream::upper_layer {
 public:
@@ -199,7 +313,7 @@ CAF_TEST_FIXTURE_SCOPE(actor_shell_tests, fixture)
 
 CAF_TEST(actor shells expose their mailbox to their owners) {
   auto fd = testee_socket_guard.release();
-  auto app_uptr = app_t::make(sys, mpx);
+  auto app_uptr = legacy_app_t::make(sys, mpx);
   auto app = app_uptr.get();
   auto transport = net::octet_stream::transport::make(fd, std::move(app_uptr));
   auto mgr = net::socket_manager::make(mpx.get(), std::move(transport));
@@ -215,6 +329,47 @@ CAF_TEST(actor shells expose their mailbox to their owners) {
 }
 
 CAF_TEST(actor shells can send requests and receive responses) {
+  auto worker = sys.spawn([] {
+    return behavior{
+      [](int32_t value) { return value * 2; },
+    };
+  });
+  auto fd = testee_socket_guard.release();
+  auto app_uptr = legacy_app_t::make(sys, mpx, worker);
+  auto app = app_uptr.get();
+  auto transport = net::octet_stream::transport::make(fd, std::move(app_uptr));
+  auto mgr = net::socket_manager::make(mpx.get(), std::move(transport));
+  if (auto err = mgr->start())
+    CAF_FAIL("mgr->start() failed: " << err);
+  send(input);
+  run_while([&] { return app->consumed_bytes != input.size(); });
+  expect((int32_t), to(worker).with(123));
+  std::string_view expected_response = "246\n";
+  run_while([&] { return recv_buf.size() < expected_response.size(); });
+  std::string_view received_response{reinterpret_cast<char*>(recv_buf.data()),
+                                     recv_buf.size()};
+  CAF_CHECK_EQUAL(received_response, expected_response);
+  self_socket_guard.reset();
+}
+
+CAF_TEST(trait based actor shells expose their mailbox to their owners) {
+  auto fd = testee_socket_guard.release();
+  auto app_uptr = app_t::make(sys, mpx);
+  auto app = app_uptr.get();
+  auto transport = net::octet_stream::transport::make(fd, std::move(app_uptr));
+  auto mgr = net::socket_manager::make(mpx.get(), std::move(transport));
+  if (auto err = mgr->start())
+    CAF_FAIL("mgr->start() failed: " << err);
+  auto hdl = app->self.as_actor();
+  anon_mail("line 1").send(hdl);
+  anon_mail("line 2").send(hdl);
+  anon_mail("line 3").send(hdl);
+  run_while([&] { return app->lines.size() != 3; });
+  CAF_CHECK_EQUAL(app->lines, svec({"line 1", "line 2", "line 3"}));
+  self_socket_guard.reset();
+}
+
+CAF_TEST(trait based actor shells can send requests and receive responses) {
   auto worker = sys.spawn([] {
     return behavior{
       [](int32_t value) { return value * 2; },
