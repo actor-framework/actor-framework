@@ -108,8 +108,10 @@ caf_add_component(
     caf/net/web_socket/client.cpp
     caf/net/web_socket/default_trait.cpp
     caf/net/web_socket/frame.cpp
+    caf/net/web_socket/frame.test.cpp
     caf/net/web_socket/framing.cpp
     caf/net/web_socket/handshake.cpp
+    caf/net/web_socket/handshake.test.cpp
     caf/net/web_socket/lower_layer.cpp
     caf/net/web_socket/server.cpp
     caf/net/web_socket/upper_layer.cpp
@@ -129,12 +131,7 @@ caf_add_component(
     net.ssl.transport
     net.stream_socket
     net.typed_actor_shell
-    net.udp_datagram_socket
-    net.web_socket.client
-    net.web_socket.frame
-    net.web_socket.framing
-    net.web_socket.handshake
-    net.web_socket.server)
+    net.udp_datagram_socket)
 
 caf_add_test_executable(
   caf-net-autobahn-driver
