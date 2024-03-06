@@ -30,22 +30,28 @@ using std::chrono::seconds;
 using namespace caf;
 
 /// A simple actor for storing an integer value.
-using cell = typed_actor<
-  // Writes a new value.
-  result<void>(put_atom, int32_t),
-  // Reads the value.
-  result<int32_t>(get_atom)>;
+struct cell_trait {
+  using signatures = type_list<
+    // Writes a new value.
+    result<void>(put_atom, int32_t),
+    // Reads the value.
+    result<int32_t>(get_atom)>;
+};
+using cell = typed_actor<cell_trait>;
 
 /// An for storing a 2-dimensional matrix of integers.
-using matrix = typed_actor<
-  // Writes a new value to given cell (x-coordinate, y-coordinate, new-value).
-  result<void>(put_atom, uint32_t, uint32_t, int32_t),
-  // Reads from given cell.
-  result<int>(get_atom, uint32_t, uint32_t),
-  // Computes the average for given row.
-  result<double>(get_atom, average_atom, row_atom, uint32_t),
-  // Computes the average for given column.
-  result<double>(get_atom, average_atom, column_atom, uint32_t)>;
+struct matrix_trait {
+  using signatures = type_list<
+    // Writes a new value to given cell (x-coordinate, y-coordinate, new-value).
+    result<void>(put_atom, uint32_t, uint32_t, int32_t),
+    // Reads from given cell.
+    result<int>(get_atom, uint32_t, uint32_t),
+    // Computes the average for given row.
+    result<double>(get_atom, average_atom, row_atom, uint32_t),
+    // Computes the average for given column.
+    result<double>(get_atom, average_atom, column_atom, uint32_t)>;
+};
+using matrix = typed_actor<matrix_trait>;
 
 struct cell_state {
   explicit cell_state(cell::pointer selfptr) : self(selfptr) {

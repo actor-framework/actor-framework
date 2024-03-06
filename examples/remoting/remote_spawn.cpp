@@ -25,9 +25,12 @@
 #include <vector>
 
 // --(rst-calculator-begin)--
-using calculator
-  = caf::typed_actor<caf::result<int32_t>(caf::add_atom, int32_t, int32_t),
+struct calculator_trait {
+  using signatures
+    = caf::type_list<caf::result<int32_t>(caf::add_atom, int32_t, int32_t),
                      caf::result<int32_t>(caf::sub_atom, int32_t, int32_t)>;
+};
+using calculator = caf::typed_actor<calculator_trait>;
 // --(rst-calculator-end)--
 
 CAF_BEGIN_TYPE_ID_BLOCK(remote_spawn, first_custom_type_id)

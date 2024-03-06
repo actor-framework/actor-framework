@@ -31,8 +31,11 @@ using namespace caf;
 using namespace std::literals;
 
 // a chopstick: either taken by a philosopher or available
-using chopstick
-  = typed_actor<result<taken_atom, bool>(take_atom), result<void>(put_atom)>;
+struct chopstick_trait {
+  using signatures
+    = type_list<result<taken_atom, bool>(take_atom), result<void>(put_atom)>;
+};
+using chopstick = typed_actor<chopstick_trait>;
 
 struct chopstick_state {
   explicit chopstick_state(chopstick::pointer selfptr) : self(selfptr) {
