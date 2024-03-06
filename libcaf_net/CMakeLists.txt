@@ -58,6 +58,7 @@ caf_add_component(
     caf/net/http/router.cpp
     caf/net/http/router.test.cpp
     caf/net/http/server.cpp
+    caf/net/http/server.test.cpp
     caf/net/http/server_factory.cpp
     caf/net/http/status.cpp
     caf/net/http/upper_layer.cpp
@@ -116,7 +117,6 @@ caf_add_component(
     net.accept_socket
     net.actor_shell
     net.datagram_socket
-    net.http.server
     net.ip
     net.length_prefix_framing
     net.lp.frame
