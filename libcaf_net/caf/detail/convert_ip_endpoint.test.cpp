@@ -2,15 +2,14 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE detail.convert_ip_endpoint
-
 #include "caf/detail/convert_ip_endpoint.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "caf/test/test.hpp"
 
 #include "caf/detail/socket_sys_includes.hpp"
 #include "caf/ipv4_endpoint.hpp"
 #include "caf/ipv6_endpoint.hpp"
+#include "caf/log/test.hpp"
 
 #include <cstring>
 
@@ -40,48 +39,48 @@ struct fixture {
   ip_endpoint ep_dst;
 };
 
-} // namespace
+WITH_FIXTURE(fixture) {
 
-CAF_TEST_FIXTURE_SCOPE(convert_ip_endpoint_tests, fixture)
-
-CAF_TEST(sockaddr_in6 roundtrip) {
+TEST("sockaddr_in6 roundtrip") {
   ip_endpoint tmp;
-  CAF_MESSAGE("converting sockaddr_in6 to ip_endpoint");
-  CAF_CHECK_EQUAL(convert(sockaddr6_src, tmp), none);
-  CAF_MESSAGE("converting ip_endpoint to sockaddr_in6");
+  log::test::debug("converting sockaddr_in6 to ip_endpoint");
+  check_eq(convert(sockaddr6_src, tmp), none);
+  log::test::debug("converting ip_endpoint to sockaddr_in6");
   convert(tmp, dst);
-  CAF_CHECK_EQUAL(memcmp(&sockaddr6_src, &dst, sizeof(sockaddr_storage)), 0);
+  check_eq(memcmp(&sockaddr6_src, &dst, sizeof(sockaddr_storage)), 0);
 }
 
-CAF_TEST(ipv6_endpoint roundtrip) {
+TEST("ipv6_endpoint roundtrip") {
   sockaddr_storage tmp = {};
   if (auto err = detail::parse("[::1]:55555", ep_src))
-    CAF_FAIL("unable to parse input: " << err);
-  CAF_MESSAGE("converting ip_endpoint to sockaddr_in6");
+    fail("unable to parse input: {}", err);
+  log::test::debug("converting ip_endpoint to sockaddr_in6");
   convert(ep_src, tmp);
-  CAF_MESSAGE("converting sockaddr_in6 to ip_endpoint");
-  CAF_CHECK_EQUAL(convert(tmp, ep_dst), none);
-  CAF_CHECK_EQUAL(ep_src, ep_dst);
+  log::test::debug("converting sockaddr_in6 to ip_endpoint");
+  check_eq(convert(tmp, ep_dst), none);
+  check_eq(ep_src, ep_dst);
 }
 
-CAF_TEST(sockaddr_in4 roundtrip) {
+TEST("sockaddr_in4 roundtrip") {
   ip_endpoint tmp;
-  CAF_MESSAGE("converting sockaddr_in to ip_endpoint");
-  CAF_CHECK_EQUAL(convert(sockaddr4_src, tmp), none);
-  CAF_MESSAGE("converting ip_endpoint to sockaddr_in");
+  log::test::debug("converting sockaddr_in to ip_endpoint");
+  check_eq(convert(sockaddr4_src, tmp), none);
+  log::test::debug("converting ip_endpoint to sockaddr_in");
   convert(tmp, dst);
-  CAF_CHECK_EQUAL(memcmp(&sockaddr4_src, &dst, sizeof(sockaddr_storage)), 0);
+  check_eq(memcmp(&sockaddr4_src, &dst, sizeof(sockaddr_storage)), 0);
 }
 
-CAF_TEST(ipv4_endpoint roundtrip) {
+TEST("ipv4_endpoint roundtrip") {
   sockaddr_storage tmp = {};
   if (auto err = detail::parse("127.0.0.1:55555", ep_src))
-    CAF_FAIL("unable to parse input: " << err);
-  CAF_MESSAGE("converting ip_endpoint to sockaddr_in");
+    fail("unable to parse input: {}", err);
+  log::test::debug("converting ip_endpoint to sockaddr_in");
   convert(ep_src, tmp);
-  CAF_MESSAGE("converting sockaddr_in to ip_endpoint");
-  CAF_CHECK_EQUAL(convert(tmp, ep_dst), none);
-  CAF_CHECK_EQUAL(ep_src, ep_dst);
+  log::test::debug("converting sockaddr_in to ip_endpoint");
+  check_eq(convert(tmp, ep_dst), none);
+  check_eq(ep_src, ep_dst);
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+} // WITH_FIXTURE(fixture)
+
+} // namespace

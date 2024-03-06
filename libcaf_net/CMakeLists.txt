@@ -30,6 +30,7 @@ caf_add_component(
     ${CAF_NET_HEADERS}
   SOURCES
     caf/detail/convert_ip_endpoint.cpp
+    caf/detail/convert_ip_endpoint.test.cpp
     caf/detail/rfc6455.cpp
     caf/detail/rfc6455.test.cpp
     caf/net/abstract_actor_shell.cpp
@@ -114,7 +115,6 @@ caf_add_component(
     ${CMAKE_CURRENT_BINARY_DIR}/tests/legacy/pem.cpp
     tests/legacy/net-test.cpp
   LEGACY_TEST_SUITES
-    detail.convert_ip_endpoint
     net.accept_socket
     net.actor_shell
     net.datagram_socket
