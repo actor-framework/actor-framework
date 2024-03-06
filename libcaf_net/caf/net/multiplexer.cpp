@@ -16,6 +16,7 @@
 #include "caf/async/execution_context.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/atomic_ref_counted.hpp"
+#include "caf/detail/latch.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
@@ -548,7 +549,7 @@ public:
       if (write_handle_ != invalid_socket)
         res = write(write_handle_, buf);
     }
-    if constexpr (std::is_base_of_v<ref_counted, T>) {
+    if constexpr (std::is_base_of_v<detail::atomic_ref_counted, T>) {
       if (res <= 0 && ptr)
         intrusive_ptr_release(ptr);
     } else {
@@ -714,6 +715,21 @@ multiplexer* multiplexer::from(actor_system& sys) {
 
 multiplexer::~multiplexer() {
   // nop
+}
+
+// -- initialization ---------------------------------------------------------
+
+std::thread multiplexer::launch() {
+  auto l = std::make_shared<detail::latch>(2);
+  auto fn = [mpx = multiplexer_ptr{this}, l]() mutable {
+    mpx->set_thread_id();
+    l->count_down();
+    l = nullptr;
+    mpx->run();
+  };
+  auto result = std::thread{fn};
+  l->count_down_and_wait();
+  return result;
 }
 
 } // namespace caf::net

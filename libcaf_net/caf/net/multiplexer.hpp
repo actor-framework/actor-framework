@@ -53,6 +53,10 @@ public:
 
   virtual error init() = 0;
 
+  /// Utility function for running the multiplexer in a background thread.
+  /// @pre `init()` has been called prior to invoking this function.
+  std::thread launch();
+
   // -- scheduling of actions --------------------------------------------------
 
   using super::schedule;
