@@ -297,6 +297,7 @@ caf_add_component(
     caf/metaprogramming.test.cpp
     caf/mixin/requester.test.cpp
     caf/mixin/sender.test.cpp
+    caf/monitor.test.cpp
     caf/mtl.test.cpp
     caf/node_id.cpp
     caf/node_id.test.cpp

@@ -11,6 +11,7 @@
 #include "caf/actor_system.hpp"
 #include "caf/behavior.hpp"
 #include "caf/detail/core_export.hpp"
+#include "caf/detail/monitor_action.hpp"
 #include "caf/detail/send_type_check.hpp"
 #include "caf/detail/typed_actor_util.hpp"
 #include "caf/detail/unique_function.hpp"
@@ -23,6 +24,7 @@
 #include "caf/message_priority.hpp"
 #include "caf/response_promise.hpp"
 #include "caf/response_type.hpp"
+#include "caf/send.hpp"
 #include "caf/spawn_options.hpp"
 #include "caf/telemetry/histogram.hpp"
 #include "caf/timespan.hpp"
@@ -262,6 +264,22 @@ public:
   template <message_priority P = message_priority::normal, class Handle>
   void monitor(const Handle& whom) {
     monitor(actor_cast<abstract_actor*>(whom), P);
+  }
+
+  /// Adds a unidirectional `monitor` to `whom` with custom callback.
+  /// @returns a disposable object for canceling the monitoring of `whom`.
+  /// @note This overload does not work with the @ref demonitor member function.
+  template <typename Handle, typename Fn>
+  disposable monitor(Handle whom, Fn func) {
+    using impl_t = detail::monitor_action<Fn>;
+    auto on_down = make_counted<impl_t>(std::move(func));
+    whom->attach_functor([self = this, whom, on_down](error reason) {
+      // Failing to set the arg means the action was disposed.
+      if (on_down->arg(down_msg{whom.address(), std::move(reason)}))
+        detail::unsafe_send_as(actor_cast<abstract_actor*>(whom), self,
+                               action{on_down});
+    });
+    return on_down->as_disposable();
   }
 
   /// Removes a monitor from `whom`.
