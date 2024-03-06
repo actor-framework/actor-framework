@@ -68,6 +68,7 @@ caf_add_component(
     caf/net/lp/default_trait.cpp
     caf/net/lp/frame.test.cpp
     caf/net/lp/framing.cpp
+    caf/net/lp/framing.test.cpp
     caf/net/lp/lower_layer.cpp
     caf/net/lp/upper_layer.cpp
     caf/net/middleman.cpp
@@ -120,7 +121,6 @@ caf_add_component(
     net.actor_shell
     net.datagram_socket
     net.ip
-    net.length_prefix_framing
     net.multiplexer
     net.network_socket
     net.pipe_socket
