@@ -43,14 +43,13 @@ TEST("construction from multiple buffers") {
   auto buf1 = to_byte_buf(1, 2);
   auto buf2 = to_byte_buf();
   auto buf3 = to_byte_buf(3, 4, 5);
-  auto buf4 = to_byte_buf(1, 2, 3, 4, 5);
   auto uut = net::lp::frame::from_buffers(buf1, buf2, buf3);
   check(static_cast<bool>(uut));
   check(!uut.empty());
   check(!uut.bytes().empty());
   check_eq(uut.size(), 5u);
   check_eq(uut.bytes().size(), 5u);
-  check_eq(to_vec(uut.bytes()), buf4);
+  check_eq(to_vec(uut.bytes()), to_byte_buf(1, 2, 3, 4, 5));
 }
 
 TEST("copying, moving and swapping") {
