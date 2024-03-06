@@ -30,14 +30,14 @@ using std::chrono::seconds;
 using namespace caf;
 
 /// A simple actor for storing an integer value.
-struct cell_triat {
+struct cell_trait {
   using signatures = type_list<
     // Writes a new value.
     result<void>(put_atom, int32_t),
     // Reads the value.
     result<int32_t>(get_atom)>;
 };
-using cell = typed_actor<cell_triat>;
+using cell = typed_actor<cell_trait>;
 
 /// An for storing a 2-dimensional matrix of integers.
 struct matrix_trait {
