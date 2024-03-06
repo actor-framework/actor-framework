@@ -161,7 +161,7 @@ struct fixture {
   std::thread mpx_thread;
 };
 
-WITH_FIXTURE(fixture){
+WITH_FIXTURE(fixture) {
 
 SCENARIO("the server parses HTTP GET requests into header fields") {
   GIVEN("valid HTTP GET request") {
