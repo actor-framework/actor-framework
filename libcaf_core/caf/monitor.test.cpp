@@ -44,7 +44,7 @@ TEST("monitoring another actor") {
     expect<down_msg>().with(std::ignore).from(client3).to(observer);
     check_eq(*call_count, 3);
   }
-  SECTION("monitoring with special lambda invokes the lambda") {
+  SECTION("monitoring with a callback") {
     auto call_count1 = std::make_shared<int32_t>(0);
     auto call_count2 = std::make_shared<int32_t>(0);
     auto call_count3 = std::make_shared<int32_t>(0);
@@ -100,7 +100,7 @@ TEST("monitoring another actor") {
     expect<down_msg>().with(std::ignore).from(client2).to(observer);
     check_eq(*call_count, 1);
   }
-  SECTION("demonitoring with special lambda invokes the lambda") {
+  SECTION("canceling a monitor with a callback") {
     auto call_count1 = std::make_shared<int32_t>(0);
     auto call_count2 = std::make_shared<int32_t>(0);
     auto observer = sys.spawn([=](event_based_actor* self) {
@@ -115,8 +115,7 @@ TEST("monitoring another actor") {
       };
     });
     inject_exit(client1);
-    // The message still exists, but wont trigger the callback.
-    expect<down_msg>().with(std::ignore).from(client1).to(observer);
+    check_eq(mail_count(observer), 0u);
     check_eq(*call_count1, 0);
     check_eq(*call_count2, 0);
     inject_exit(client2);

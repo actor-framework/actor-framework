@@ -16,29 +16,28 @@ namespace caf::detail {
 template <class F>
 class monitor_action : public detail::atomic_ref_counted, public action::impl {
 public:
-  monitor_action(F fn)
+  explicit monitor_action(F fn)
     : state_(action::state::scheduled),
       f_(function_wrapper{std::move(fn), down_msg{}}) {
     // nop
   }
 
   ~monitor_action() {
-    std::lock_guard guard_{mut};
+    std::lock_guard guard{mtx_};
     if (state_ == action::state::scheduled)
       f_.~function_wrapper();
   }
 
   void dispose() override {
-    std::lock_guard guard_{mut};
+    std::lock_guard guard{mtx_};
     if (state_ == action::state::scheduled) {
       state_ = action::state::disposed;
       f_.~function_wrapper();
-      return;
     }
   }
 
   bool disposed() const noexcept override {
-    std::lock_guard guard_{mut};
+    std::lock_guard guard{mtx_};
     return state_ == action::state::disposed
            || state_ == action::state::deferred_dispose;
   }
@@ -49,7 +48,7 @@ public:
 
   void run() override {
     // We can only run a scheduled action.
-    std::lock_guard guard_{mut};
+    std::lock_guard guard{mtx_};
     if (state_ == action::state::scheduled) {
       state_ = action::state::disposed;
       f_();
@@ -57,10 +56,13 @@ public:
     }
   }
 
-  void arg(down_msg err) {
-    std::lock_guard guard_{mut};
-    if (state_ == action::state::scheduled)
-      f_.arg = err;
+  bool arg(down_msg err) {
+    std::lock_guard guard{mtx_};
+    if (state_ == action::state::scheduled) {
+      f_.arg = std::move(err);
+      return true;
+    }
+    return false;
   }
 
   void ref_disposable() const noexcept override {
@@ -81,14 +83,14 @@ public:
 
 private:
   struct function_wrapper {
-    F f_;
+    F f;
     down_msg arg;
     auto operator()() {
-      return std::move(f_)(std::move(arg));
+      return std::move(f)(std::move(arg));
     }
   };
+  mutable std::mutex mtx_;
   action::state state_;
-  mutable std::mutex mut;
   union {
     function_wrapper f_;
   };
