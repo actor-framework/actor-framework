@@ -65,6 +65,7 @@ caf_add_component(
     caf/net/http/v1.cpp
     caf/net/ip.cpp
     caf/net/lp/default_trait.cpp
+    caf/net/lp/frame.test.cpp
     caf/net/lp/framing.cpp
     caf/net/lp/lower_layer.cpp
     caf/net/lp/upper_layer.cpp
@@ -119,7 +120,6 @@ caf_add_component(
     net.datagram_socket
     net.ip
     net.length_prefix_framing
-    net.lp.frame
     net.multiplexer
     net.network_socket
     net.octet_stream.transport
