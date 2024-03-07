@@ -2,14 +2,14 @@ name: check-typos
 on:
   pull_request:
   push:
-    branches: 
+    branches:
       - master
 jobs:
   typos:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Spell checking over all files
       uses: crate-ci/typos@master
       with:

@@ -8,7 +8,7 @@ jobs:
   Windows:
     runs-on: windows-2022
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - uses: egor-tensin/vs-shell@v2
     - uses: actions/setup-python@v4
       with:
