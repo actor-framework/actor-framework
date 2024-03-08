@@ -2,17 +2,18 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE net.multiplexer
-
 #include "caf/net/multiplexer.hpp"
+
+#include "caf/test/scenario.hpp"
+#include "caf/test/test.hpp"
 
 #include "caf/net/socket_manager.hpp"
 #include "caf/net/stream_socket.hpp"
 
 #include "caf/byte_buffer.hpp"
+#include "caf/detail/latch.hpp"
+#include "caf/log/test.hpp"
 #include "caf/span.hpp"
-
-#include "net-test.hpp"
 
 #include <new>
 #include <string_view>
@@ -30,13 +31,13 @@ public:
 
   mock_event_layer(net::stream_socket fd, std::string name, shared_count count)
     : name(std::move(name)), fd_(fd), count_(count) {
-    MESSAGE("created new mock event layer");
+    log::test::debug("created new mock event layer");
     ++*count_;
     rd_buf_.resize(1024);
   }
 
   ~mock_event_layer() {
-    MESSAGE("destroyed mock event layer");
+    log::test::debug("destroyed mock event layer");
     --*count_;
   }
 
@@ -138,7 +139,8 @@ struct fixture {
   ~fixture() {
     mpx->shutdown();
     exhaust();
-    REQUIRE_EQ(*manager_count, 0u);
+    if (*manager_count != 0u)
+      CAF_RAISE_ERROR("manager_count is not 0");
   }
 
   void exhaust() {
@@ -162,7 +164,7 @@ struct fixture {
 
   void init() {
     if (auto err = mpx->init())
-      FAIL("mpx->init failed: " << err);
+      test::runnable::current().fail("mpx->init failed: {}", err);
     exhaust();
   }
 
@@ -171,15 +173,20 @@ struct fixture {
   net::multiplexer_ptr mpx;
 };
 
-} // namespace
+template <class T>
+T unbox(caf::expected<T> x) {
+  if (!x)
+    test::runnable::current().fail("{}", to_string(x.error()));
+  return std::move(*x);
+}
 
-BEGIN_FIXTURE_SCOPE(fixture)
+WITH_FIXTURE(fixture) {
 
 SCENARIO("the multiplexer has no socket managers after default construction") {
   GIVEN("a default constructed multiplexer") {
     WHEN("querying the number of socket managers") {
       THEN("the result is 0") {
-        CHECK_EQ(mpx->num_socket_managers(), 0u);
+        check_eq(mpx->num_socket_managers(), 0u);
       }
     }
   }
@@ -189,10 +196,10 @@ SCENARIO("the multiplexer constructs the pollset updater while initializing") {
   GIVEN("an initialized multiplexer") {
     WHEN("querying the number of socket managers") {
       THEN("the result is 1") {
-        CHECK_EQ(mpx->num_socket_managers(), 0u);
-        CHECK_EQ(mpx->init(), none);
+        check_eq(mpx->num_socket_managers(), 0u);
+        check_eq(mpx->init(), none);
         exhaust();
-        CHECK_EQ(mpx->num_socket_managers(), 1u);
+        check_eq(mpx->num_socket_managers(), 1u);
       }
     }
   }
@@ -208,12 +215,12 @@ SCENARIO("socket managers can register for read and write operations") {
       alice_mgr->register_reading();
       bob_mgr->register_reading();
       apply_updates();
-      CHECK_EQ(mpx->num_socket_managers(), 3u);
+      check_eq(mpx->num_socket_managers(), 3u);
       THEN("the multiplexer runs callbacks on socket activity") {
         alice->send("Hello Bob!");
         alice_mgr->register_writing();
         exhaust();
-        CHECK_EQ(bob->receive(), "Hello Bob!");
+        check_eq(bob->receive(), "Hello Bob!");
       }
     }
   }
@@ -222,13 +229,13 @@ SCENARIO("socket managers can register for read and write operations") {
 SCENARIO("a multiplexer terminates its thread after shutting down") {
   GIVEN("a multiplexer running in its own thread and some socket managers") {
     init();
-    auto go_time = std::make_shared<barrier>(2);
+    auto go_time = std::make_shared<detail::latch>(2);
     auto mpx_thread = std::thread{[this, go_time] {
       mpx->set_thread_id();
-      go_time->arrive_and_wait();
+      go_time->count_down_and_wait();
       mpx->run();
     }};
-    go_time->arrive_and_wait();
+    go_time->count_down_and_wait();
     auto [alice_fd, bob_fd] = unbox(net::make_stream_socket_pair());
     auto [alice, alice_mgr] = make_manager(alice_fd, "Alice");
     auto [bob, bob_mgr] = make_manager(bob_fd, "Bob");
@@ -238,8 +245,8 @@ SCENARIO("a multiplexer terminates its thread after shutting down") {
       mpx->shutdown();
       THEN("the thread terminates and all socket managers get shut down") {
         mpx_thread.join();
-        CHECK(alice_mgr->disposed());
-        CHECK(bob_mgr->disposed());
+        check(alice_mgr->disposed());
+        check(bob_mgr->disposed());
       }
     }
   }
@@ -257,30 +264,32 @@ SCENARIO("a multiplexer terminates its thread after shutting down") {
 //       alice->register_reading();
 //       bob->register_reading();
 //       apply_updates();
-//       CHECK_EQ(mpx->num_socket_managers(), 3u);
+//       check_eq(mpx->num_socket_managers(), 3u);
 //       THEN("the multiplexer swaps out the socket managers for the socket") {
 //         alice->send("Hello Bob!");
 //         alice->register_writing();
 //         exhaust();
-//         CHECK_EQ(bob->receive(), "Hello Bob!");
+//         check_eq(bob->receive(), "Hello Bob!");
 //         bob->trigger_handover = true;
 //         alice->send("Hello Carl!");
 //         alice->register_writing();
 //         bob->register_reading();
 //         exhaust();
-//         CHECK_EQ(bob->receive(), "");
-//         CHECK_EQ(bob->handle(), invalid_socket);
-//         if (CHECK_NE(bob->next, nullptr)) {
+//         check_eq(bob->receive(), "");
+//         check_eq(bob->handle(), invalid_socket);
+//         if (check_ne(bob->next, nullptr)) {
 //           auto carl = bob->next;
-//           CHECK_EQ(carl->handle(), socket{bob_fd});
+//           check_eq(carl->handle(), socket{bob_fd});
 //           carl->register_reading();
 //           exhaust();
-//           CHECK_EQ(carl->name, "Carl");
-//           CHECK_EQ(carl->receive(), "Hello Carl!");
+//           check_eq(carl->name, "Carl");
+//           check_eq(carl->receive(), "Hello Carl!");
 //         }
 //       }
 //     }
 //   }
 // }
 
-END_FIXTURE_SCOPE()
+} // WITH_FIXTURE(fixture)
+
+} // namespace

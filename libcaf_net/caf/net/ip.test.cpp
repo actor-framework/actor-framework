@@ -2,11 +2,9 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE net.ip
-
 #include "caf/net/ip.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "caf/test/test.hpp"
 
 #include "caf/ip_address.hpp"
 #include "caf/ipv4_address.hpp"
@@ -34,34 +32,34 @@ struct fixture {
   std::vector<ip_address> addrs;
 };
 
-} // namespace
+WITH_FIXTURE(fixture) {
 
-CAF_TEST_FIXTURE_SCOPE(ip_tests, fixture)
-
-CAF_TEST(resolve localhost) {
+TEST("resolve localhost") {
   addrs = ip::resolve("localhost");
-  CAF_CHECK(!addrs.empty());
-  CAF_CHECK(contains(v4_local) || contains(v6_local));
-}
+  check(!addrs.empty());
+  check(contains(v4_local) || contains(v6_local));
+} // WITH_FIXTURE(fixture)
 
-CAF_TEST(resolve any) {
+TEST("resolve any") {
   addrs = ip::resolve("");
-  CAF_CHECK(!addrs.empty());
-  CAF_CHECK(contains(v4_any_addr) || contains(v6_any_addr));
+  check(!addrs.empty());
+  check(contains(v4_any_addr) || contains(v6_any_addr));
 }
 
-CAF_TEST(local addresses localhost) {
+TEST("local addresses localhost") {
   addrs = ip::local_addresses("localhost");
-  CAF_CHECK(!addrs.empty());
-  CAF_CHECK(contains(v4_local) || contains(v6_local));
+  check(!addrs.empty());
+  check(contains(v4_local) || contains(v6_local));
 }
 
-CAF_TEST(local addresses any) {
+TEST("local addresses any") {
   addrs = ip::local_addresses("0.0.0.0");
   auto tmp = ip::local_addresses("::");
   addrs.insert(addrs.end(), tmp.begin(), tmp.end());
-  CAF_CHECK(!addrs.empty());
-  CAF_CHECK(contains(v4_any_addr) || contains(v6_any_addr));
+  check(!addrs.empty());
+  check(contains(v4_any_addr) || contains(v6_any_addr));
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+} // WITH_FIXTURE(fixture)
+
+} // namespace

@@ -2,14 +2,13 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE net.tcp_accept_socket
-
-#include "caf/test/dsl.hpp"
+#include "caf/test/test.hpp"
 
 #include "caf/net/socket_guard.hpp"
 #include "caf/net/tcp_accept_socket.hpp"
 #include "caf/net/tcp_stream_socket.hpp"
 
+#include "caf/log/test.hpp"
 #include "caf/uri.hpp"
 
 using namespace caf;
@@ -18,7 +17,14 @@ using namespace std::literals::string_literals;
 
 namespace {
 
-struct fixture : test_coordinator_fixture<> {
+template <class T>
+T unbox(caf::expected<T> x) {
+  if (!x)
+    test::runnable::current().fail("{}", to_string(x.error()));
+  return std::move(*x);
+}
+
+struct fixture {
   fixture() {
     auth.port = 0;
     auth.host = "0.0.0.0"s;
@@ -27,21 +33,21 @@ struct fixture : test_coordinator_fixture<> {
   uri::authority_type auth;
 };
 
-} // namespace
+WITH_FIXTURE(fixture) {
 
-CAF_TEST_FIXTURE_SCOPE(doorman_tests, fixture)
-
-CAF_TEST(tcp connect) {
+TEST("tcp connect") {
   auto acceptor = unbox(make_tcp_accept_socket(auth, false));
   auto port = unbox(local_port(socket_cast<network_socket>(acceptor)));
   auto acceptor_guard = make_socket_guard(acceptor);
-  CAF_MESSAGE("opened acceptor on port " << port);
+  log::test::debug("opened acceptor on port {}", port);
   uri::authority_type dst;
   dst.port = port;
   dst.host = "localhost"s;
   auto conn = make_socket_guard(unbox(make_connected_tcp_stream_socket(dst)));
   auto accepted = make_socket_guard(unbox(accept(acceptor)));
-  CAF_MESSAGE("accepted connection");
+  log::test::debug("accepted connection");
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+} // WITH_FIXTURE(fixture)
+
+} // namespace
