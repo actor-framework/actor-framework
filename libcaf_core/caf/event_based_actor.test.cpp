@@ -43,6 +43,7 @@ TEST("unexpected messages result in an error by default") {
   expect<int32_t>().with(3).from(receiver).to(sender2);
 }
 
+CAF_PUSH_DEPRECATED_WARNING
 TEST("GH-1589 regression") {
   auto dummy2 = sys.spawn([](event_based_actor* self) {
     self->set_default_handler(skip);
@@ -51,6 +52,7 @@ TEST("GH-1589 regression") {
   inject().with(dummy2.address()).to(dummy2);
   // No crash means success.
 }
+CAF_POP_WARNINGS
 
 SCENARIO("request(...).await(...) suspends the regular actor behavior") {
   GIVEN("an actor that responds to integers in its regular behavior") {
@@ -213,7 +215,7 @@ SCENARIO("setting an infinite idle timeout is an error") {
         });
         auto aut_down = std::make_shared<bool>(false);
         auto observer = sys.spawn([aut, aut_down](event_based_actor* self) {
-          self->monitor(aut, [aut_down](const down_msg&) { *aut_down = true; });
+          self->monitor(aut, [aut_down](const error&) { *aut_down = true; });
           return behavior{
             [=](const std::string&) {},
           };

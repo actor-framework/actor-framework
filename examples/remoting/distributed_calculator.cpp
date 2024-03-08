@@ -78,14 +78,7 @@ struct task {
 // the client queues pending tasks
 struct client_state {
   explicit client_state(event_based_actor* selfptr) : self(selfptr) {
-    // transition to `unconnected` on server failure
-    self->set_down_handler([this](const down_msg& dm) {
-      if (dm.source == current_server) {
-        self->println("*** lost connection to server");
-        current_server = nullptr;
-        self->become(unconnected());
-      }
-    });
+    // nop
   }
 
   behavior make_behavior() {
@@ -129,7 +122,12 @@ struct client_state {
           self->println("*** successfully connected to server");
           current_server = serv;
           auto hdl = actor_cast<actor>(serv);
-          self->monitor(hdl);
+          self->monitor(hdl, [this](const error&) {
+            // Transition to `unconnected` on server failure.
+            self->println("*** lost connection to server");
+            current_server = nullptr;
+            self->become(unconnected());
+          });
           self->become(running(hdl));
         },
         [this, host, port](const error& err) {

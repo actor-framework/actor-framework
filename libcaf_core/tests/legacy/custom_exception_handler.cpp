@@ -73,16 +73,15 @@ CAF_TEST(actors can override the default exception handler) {
     return sec::runtime_error;
   };
   scoped_actor self{system};
-  auto testee1 = self->spawn<monitored>([=](event_based_actor* eb_self) {
+  auto testee1 = self->spawn([=](event_based_actor* eb_self) {
     eb_self->set_exception_handler(handler);
     throw std::runtime_error("ping");
   });
-  auto testee2 = self->spawn<monitored>([=](event_based_actor* eb_self) {
+  auto testee2 = self->spawn([=](event_based_actor* eb_self) {
     eb_self->set_exception_handler(handler);
     throw std::logic_error("pong");
   });
-  auto testee3 = self->spawn<exception_testee, monitored>();
+  auto testee3 = self->spawn<exception_testee>();
   self->mail("foo").send(testee3);
-  // receive all down messages
   self->wait_for(testee1, testee2, testee3);
 }

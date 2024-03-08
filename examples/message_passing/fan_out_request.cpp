@@ -17,6 +17,8 @@
 #include <numeric>
 #include <vector>
 
+CAF_PUSH_DEPRECATED_WARNING
+
 CAF_BEGIN_TYPE_ID_BLOCK(fan_out_request, first_custom_type_id)
 
   CAF_ADD_ATOM(fan_out_request, row_atom)
@@ -189,3 +191,5 @@ void caf_main(actor_system& sys) {
 }
 
 CAF_MAIN(id_block::fan_out_request)
+
+CAF_POP_WARNINGS

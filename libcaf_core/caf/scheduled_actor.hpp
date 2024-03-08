@@ -258,7 +258,8 @@ public:
   // -- event handlers ---------------------------------------------------------
 
   /// Sets a custom handler for unexpected messages.
-  void set_default_handler(default_handler fun) {
+  [[deprecated("pass a handler for message to the behavior instead")]] void
+  set_default_handler(default_handler fun) {
     if (fun)
       default_handler_ = std::move(fun);
     else
@@ -267,6 +268,7 @@ public:
 
   /// Sets a custom handler for unexpected messages.
   template <class F>
+  [[deprecated("pass a handler for message to the behavior instead")]] //
   std::enable_if_t<std::is_invocable_r_v<skippable_result, F, message&>>
   set_default_handler(F fun) {
     default_handler_ = [fn{std::move(fun)}](scheduled_actor*,
@@ -292,7 +294,8 @@ public:
   }
 
   /// Sets a custom handler for down messages.
-  void set_down_handler(down_handler fun) {
+  [[deprecated("use the `monitor(hdl, callback)` interface instead")]] void
+  set_down_handler(down_handler fun) {
     if (fun)
       down_handler_ = std::move(fun);
     else
@@ -301,7 +304,9 @@ public:
 
   /// Sets a custom handler for down messages.
   template <class F>
-  std::enable_if_t<std::is_invocable_v<F, down_msg&>> set_down_handler(F fun) {
+  [[deprecated("use the `monitor(hdl, callback)` interface instead")]] //
+  std::enable_if_t<std::is_invocable_v<F, down_msg&>>
+  set_down_handler(F fun) {
     down_handler_ = [fn{std::move(fun)}](scheduled_actor*,
                                          down_msg& x) mutable { fn(x); };
   }

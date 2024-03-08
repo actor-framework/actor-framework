@@ -10,6 +10,8 @@
 
 #include <chrono>
 
+CAF_PUSH_DEPRECATED_WARNING
+
 using namespace caf;
 
 using std::chrono::milliseconds;
@@ -285,3 +287,5 @@ CAF_TEST(multiplexed_timeout) {
 }
 
 END_FIXTURE_SCOPE()
+
+CAF_POP_WARNINGS

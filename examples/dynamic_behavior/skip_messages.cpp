@@ -8,6 +8,8 @@
 #include "caf/event_based_actor.hpp"
 #include "caf/scoped_actor.hpp"
 
+CAF_PUSH_DEPRECATED_WARNING
+
 using namespace caf;
 using namespace std::literals;
 
@@ -59,3 +61,5 @@ void caf_main(actor_system& sys) {
 }
 
 CAF_MAIN()
+
+CAF_POP_WARNINGS

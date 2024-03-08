@@ -1,7 +1,7 @@
 CAF User Manual
 ===============
 
-**C++ Actor Framework** version |release|.
+CAF version |release|.
 
 Contents
 ========
@@ -52,4 +52,3 @@ Contents
 
    FAQ
    CommonPitfalls
-   UsingAout

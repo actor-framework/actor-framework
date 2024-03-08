@@ -289,13 +289,19 @@ public:
   /// @note This overload does not work with the @ref demonitor member function.
   template <typename Handle, typename Fn>
   disposable monitor(Handle whom, Fn func) {
+    static_assert(!Handle::has_weak_ptr_semantics);
+    static_assert(std::is_invocable_v<Fn, error>);
+    auto* ptr = actor_cast<abstract_actor*>(whom);
     using impl_t = detail::monitor_action<Fn>;
     auto on_down = make_counted<impl_t>(std::move(func));
-    whom->attach_functor([self = this, whom, on_down](error reason) {
+    ptr->attach_functor([self = address(), on_down](error reason) {
       // Failing to set the arg means the action was disposed.
-      if (on_down->arg(down_msg{whom.address(), std::move(reason)}))
-        detail::unsafe_send_as(actor_cast<abstract_actor*>(whom), self,
-                               action{on_down});
+      if (on_down->arg(std::move(reason))) {
+        if (auto shdl = actor_cast<actor>(self))
+          shdl->enqueue(make_mailbox_element(nullptr, make_message_id(),
+                                             action{on_down}),
+                        nullptr);
+      }
     });
     return on_down->as_disposable();
   }

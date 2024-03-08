@@ -44,7 +44,8 @@ testee_actor::behavior_type requester_v1(testee_actor::pointer self,
   return {
     [=](int x, int y) {
       auto rp = self->make_response_promise<int>();
-      self->request(worker, infinite, x, y)
+      self->mail(x, y)
+        .request(worker, infinite)
         .then(
           [rp](int result) mutable {
             test::runnable::current().check(rp.pending());
@@ -58,7 +59,8 @@ testee_actor::behavior_type requester_v1(testee_actor::pointer self,
     },
     [=](ok_atom) {
       auto rp = self->make_response_promise<void>();
-      self->request(worker, infinite, ok_atom_v)
+      self->mail(ok_atom_v)
+        .request(worker, infinite)
         .then(
           [rp]() mutable {
             test::runnable::current().check(rp.pending());
@@ -82,7 +84,8 @@ testee_actor::behavior_type requester_v2(testee_actor::pointer self,
         test::runnable::current().check(rp.pending());
         rp.deliver(std::move(x));
       };
-      self->request(worker, infinite, x, y)
+      self->mail(x, y)
+        .request(worker, infinite)
         .then([deliver](int result) mutable { deliver(result); },
               [deliver](error err) mutable { deliver(std::move(err)); });
       return rp;
@@ -93,7 +96,8 @@ testee_actor::behavior_type requester_v2(testee_actor::pointer self,
         test::runnable::current().check(rp.pending());
         rp.deliver(std::move(x));
       };
-      self->request(worker, infinite, ok_atom_v)
+      self->mail(ok_atom_v)
+        .request(worker, infinite)
         .then([deliver]() mutable { deliver({}); },
               [deliver](error err) mutable { deliver(std::move(err)); });
       return rp;
@@ -126,13 +130,13 @@ SCENARIO("response promises allow delaying of response messages") {
         }
       }
       WHEN("sending ok_atom to the dispatcher synchronously") {
-        auto res = self->request(hdl, infinite, ok_atom_v);
+        auto res = self->mail(ok_atom_v).request(hdl, infinite);
         auto fetch_result = [&] {
           message result;
-          res.receive([] {}, // void result
-                      [&](const error& reason) {
-                        result = make_message(reason);
-                      });
+          std::move(res).receive([] {}, // void result
+                                 [&](const error& reason) {
+                                   result = make_message(reason);
+                                 });
           return result;
         };
         THEN("clients receive an empty response from the dispatcher") {

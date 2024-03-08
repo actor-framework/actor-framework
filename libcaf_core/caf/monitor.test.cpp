@@ -6,6 +6,9 @@
 #include "caf/test/test.hpp"
 
 #include "caf/event_based_actor.hpp"
+#include "caf/exit_reason.hpp"
+
+CAF_PUSH_DEPRECATED_WARNING
 
 using namespace caf;
 
@@ -49,34 +52,34 @@ TEST("monitoring another actor") {
     auto call_count2 = std::make_shared<int32_t>(0);
     auto call_count3 = std::make_shared<int32_t>(0);
     auto observer = sys.spawn([=](event_based_actor* self) {
-      self->monitor(client1, [call_count1, client1](const down_msg& msg) {
+      self->monitor(client1, [call_count1, client1](const error& reason) {
         *call_count1 += 1;
-        test::runnable::current().check_eq(msg.source, client1->address());
+        test::runnable::current().check_eq(reason, exit_reason::user_shutdown);
       });
-      self->monitor(client2, [call_count2, client2](const down_msg& msg) {
+      self->monitor(client2, [call_count2, client2](const error& reason) {
         *call_count2 += 1;
-        test::runnable::current().check_eq(msg.source, client2->address());
+        test::runnable::current().check_eq(reason, exit_reason::user_shutdown);
       });
-      self->monitor(client3, [call_count3, client3](const down_msg& msg) {
+      self->monitor(client3, [call_count3, client3](const error& reason) {
         *call_count3 += 1;
-        test::runnable::current().check_eq(msg.source, client3->address());
+        test::runnable::current().check_eq(reason, exit_reason::user_shutdown);
       });
       return behavior{
         [](int32_t) {},
       };
     });
     inject_exit(client1);
-    expect<down_msg>().with(std::ignore).from(client1).to(observer);
+    expect<action>().to(observer);
     check_eq(*call_count1, 1);
     check_eq(*call_count2, 0);
     check_eq(*call_count3, 0);
     inject_exit(client2);
-    expect<down_msg>().with(std::ignore).from(client2).to(observer);
+    expect<action>().to(observer);
     check_eq(*call_count1, 1);
     check_eq(*call_count2, 1);
     check_eq(*call_count3, 0);
     inject_exit(client3);
-    expect<down_msg>().with(std::ignore).from(client3).to(observer);
+    expect<action>().to(observer);
     check_eq(*call_count1, 1);
     check_eq(*call_count2, 1);
     check_eq(*call_count3, 1);
@@ -104,11 +107,11 @@ TEST("monitoring another actor") {
     auto call_count1 = std::make_shared<int32_t>(0);
     auto call_count2 = std::make_shared<int32_t>(0);
     auto observer = sys.spawn([=](event_based_actor* self) {
-      auto disp1 = self->monitor(client1, [call_count1](const down_msg&) {
+      auto disp1 = self->monitor(client1, [call_count1](const error&) {
         *call_count1 += 1;
       });
       self->monitor(client2,
-                    [call_count2](const down_msg&) { *call_count2 += 1; });
+                    [call_count2](const error&) { *call_count2 += 1; });
       disp1.dispose();
       return behavior{
         [](int32_t) {},
@@ -119,7 +122,7 @@ TEST("monitoring another actor") {
     check_eq(*call_count1, 0);
     check_eq(*call_count2, 0);
     inject_exit(client2);
-    expect<down_msg>().with(std::ignore).from(client2).to(observer);
+    expect<action>().to(observer);
     check_eq(*call_count1, 0);
     check_eq(*call_count2, 1);
   }
@@ -128,3 +131,5 @@ TEST("monitoring another actor") {
 } // WITH_FIXTURE(test::fixture::deterministic)
 
 } // namespace
+
+CAF_POP_WARNINGS

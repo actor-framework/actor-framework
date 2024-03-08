@@ -33,16 +33,16 @@ public:
 class spawner : public event_based_actor {
 public:
   spawner(actor_config& cfg) : event_based_actor(cfg), downs_(0) {
-    set_down_handler([this](down_msg& msg) {
-      CHECK_EQ(msg.reason, exit_reason::user_shutdown);
-      CHECK_EQ(msg.source, testee_.address());
-      if (++downs_ == 2)
-        quit(msg.reason);
-    });
+    //nop
   }
 
   behavior make_behavior() override {
-    testee_ = spawn<testee, monitored>(this);
+    testee_ = spawn<testee>(this);
+    monitor(testee_, [this](const error& reason) {
+      CHECK_EQ(reason, exit_reason::user_shutdown);
+      if (++downs_ == 2)
+        quit(reason);
+    });
     return {
       [this](ok_atom, const error& reason) {
         CHECK_EQ(reason, exit_reason::user_shutdown);

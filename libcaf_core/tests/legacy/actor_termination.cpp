@@ -12,10 +12,9 @@ using namespace caf;
 
 namespace {
 
-behavior mirror_impl(event_based_actor* self) {
-  self->set_default_handler(reflect);
-  return [] {
-    // nop
+behavior mirror_impl() {
+  return {
+    [](message msg) { return msg; },
   };
 }
 

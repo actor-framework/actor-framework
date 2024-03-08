@@ -29,12 +29,9 @@ namespace {
 TEST("test_serial_reply") {
   actor_system_config cfg;
   actor_system system{cfg};
-  auto mirror_behavior = [=](event_based_actor* self) -> behavior {
-    self->set_default_handler(reflect);
+  auto mirror_behavior = [=]() -> behavior {
     return {
-      [] {
-        // nop
-      },
+      [](message msg) { return msg; },
     };
   };
   auto master = system.spawn([=](event_based_actor* self) -> behavior {

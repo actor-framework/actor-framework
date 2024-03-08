@@ -330,10 +330,10 @@ void scheduled_actor::quit(error x) {
   multiplexed_responses_.clear();
   // Ignore future exit, down and error messages.
   set_exit_handler(silently_ignore<exit_msg>);
-  set_down_handler(silently_ignore<down_msg>);
+  down_handler_ = silently_ignore<down_msg>;
   set_error_handler(silently_ignore<error>);
   // Drop future messages and produce sec::request_receiver_down for requests.
-  set_default_handler(drop_after_quit);
+  default_handler_ = drop_after_quit;
   // Make sure we're not waiting for flows or stream anymore.
   cancel_flows_and_streams();
 }

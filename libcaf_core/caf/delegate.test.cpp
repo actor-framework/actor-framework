@@ -56,9 +56,9 @@ TEST("delegation moves responsibility for a request to another actor") {
         [](int32_t) {},
       };
     });
-    auto observer = sys.spawn([client](event_based_actor* self) {
-      self->monitor(client);
-      self->set_down_handler([](const down_msg&) {});
+    auto is_down = std::make_shared<bool>(false);
+    auto observer = sys.spawn([client, is_down](event_based_actor* self) {
+      self->monitor(client, [is_down](const error&) { *is_down = true; });
       return behavior{
         [](int32_t) {},
       };
@@ -66,10 +66,8 @@ TEST("delegation moves responsibility for a request to another actor") {
     expect<std::string>().with("foo").from(client).to(delegator);
     expect<std::string>().with("foo").from(client).to(worker);
     expect<error>().with(sec::unexpected_message).from(worker).to(client);
-    expect<down_msg>()
-      .with(down_msg{client.address(), sec::unexpected_message})
-      .from(client)
-      .to(observer);
+    expect<action>().to(observer);
+    check(*is_down);
   }
 }
 

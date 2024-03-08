@@ -8,9 +8,13 @@
 
 #include "core-test.hpp"
 
+#include "caf/config.hpp"
+
 #include <atomic>
 #include <condition_variable>
 #include <mutex>
+
+CAF_PUSH_DEPRECATED_WARNING
 
 using namespace caf;
 
@@ -173,3 +177,5 @@ CAF_TEST(mixed_spawn_options_and_down_msg) {
 }
 
 END_FIXTURE_SCOPE()
+
+CAF_POP_WARNINGS

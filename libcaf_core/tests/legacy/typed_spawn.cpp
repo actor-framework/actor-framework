@@ -5,6 +5,7 @@
 #define CAF_SUITE typed_spawn
 
 #include "caf/anon_mail.hpp"
+#include "caf/mail_cache.hpp"
 #include "caf/string_algorithms.hpp"
 
 #include "core-test.hpp"
@@ -81,15 +82,20 @@ using event_testee_type
 
 class event_testee : public event_testee_type::base {
 public:
-  event_testee(actor_config& cfg) : event_testee_type::base(cfg) {
-    set_default_handler(skip);
+  event_testee(actor_config& cfg)
+    : event_testee_type::base(cfg), cache(this, 10) {
+    // nop
   }
 
   behavior_type wait4string() {
     return {
       partial_behavior_init,
       [](get_state_atom) { return "wait4string"; },
-      [this](const string&) { become(wait4int()); },
+      [this](const string&) {
+        become(wait4int());
+        cache.unstash();
+      },
+      [this](message msg) { cache.stash(std::move(msg)); },
     };
   }
 
@@ -99,8 +105,10 @@ public:
       [](get_state_atom) { return "wait4int"; },
       [this](int) -> int {
         become(wait4float());
+        cache.unstash();
         return 42;
       },
+      [this](message msg) { cache.stash(std::move(msg)); },
     };
   }
 
@@ -108,13 +116,19 @@ public:
     return {
       partial_behavior_init,
       [](get_state_atom) { return "wait4float"; },
-      [this](float) { become(wait4string()); },
+      [this](float) {
+        become(wait4string());
+        cache.unstash();
+      },
+      [this](message msg) { cache.stash(std::move(msg)); },
     };
   }
 
   behavior_type make_behavior() override {
     return wait4int();
   }
+
+  mail_cache cache;
 };
 
 // -- simple 'forwarding' chain ------------------------------------------------
@@ -184,13 +198,12 @@ behavior foo(event_based_actor* self) {
 }
 
 int_actor::behavior_type int_fun2(int_actor::pointer self) {
-  self->set_down_handler([=](down_msg& dm) {
-    CHECK_EQ(dm.reason, exit_reason::normal);
-    self->quit();
-  });
   return {
     [=](int i) {
-      self->monitor(self->current_sender());
+      self->monitor(self->current_sender(), [self](const error& reason) {
+        CHECK_EQ(reason, exit_reason::normal);
+        self->quit();
+      });
       return i * i;
     },
   };
@@ -287,8 +300,7 @@ CAF_TEST(event_testee_series) {
 
 CAF_TEST(string_delegator_chain) {
   // run test series with string reverter
-  auto aut = self->spawn<monitored>(string_delegator,
-                                    sys.spawn(string_reverter), true);
+  auto aut = self->spawn(string_delegator, sys.spawn(string_reverter), true);
   std::set<string> iface{"(std::string) -> (std::string)"};
   CHECK_EQ(aut->message_types(), iface);
   inject((string), from(self).to(aut).with("Hello World!"s));

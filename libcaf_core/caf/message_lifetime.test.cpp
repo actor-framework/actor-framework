@@ -61,10 +61,12 @@ public:
 
   behavior make_behavior() override {
     // reflecting a message increases its reference count by one
-    set_default_handler(reflect_and_quit);
-    return {[] {
-      // nop
-    }};
+    return {
+      [this](message msg) {
+        quit();
+        return msg;
+      },
+    };
   }
 };
 
@@ -74,16 +76,15 @@ public:
     : event_based_actor(cfg),
       aut_(std::move(aut)),
       msg_(make_message(1, 2, 3)) {
-    set_down_handler([this](down_msg& dm) {
-      auto& this_test = test::runnable::current();
-      this_test.check_eq(dm.reason, exit_reason::normal);
-      this_test.check_eq(dm.source, aut_.address());
-      quit();
-    });
+    // nop
   }
 
   behavior make_behavior() override {
-    monitor(aut_);
+    monitor(aut_, [this](const error& reason) {
+      auto& this_test = test::runnable::current();
+      this_test.check_eq(reason, exit_reason::normal);
+      quit();
+    });
     mail(msg_).send(aut_);
     return {
       [](int a, int b, int c) {

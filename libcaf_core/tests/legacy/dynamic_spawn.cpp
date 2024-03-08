@@ -158,11 +158,8 @@ public:
   }
 
   behavior make_behavior() override {
-    set_default_handler(reflect);
     return {
-      [] {
-        // nop
-      },
+      [](message msg) { return msg; },
     };
   }
 };
@@ -178,11 +175,8 @@ public:
   }
 
   behavior make_behavior() override {
-    set_default_handler(reflect);
     return {
-      [] {
-        // nop
-      },
+      [](message msg) { return msg; },
     };
   }
 };
@@ -412,11 +406,10 @@ CAF_TEST(constructor_attach) {
     spawner(actor_config& cfg)
       : event_based_actor(cfg),
         downs_(0),
-        testee_(spawn<testee, monitored>(this)) {
-      set_down_handler([this](down_msg& msg) {
-        CHECK_EQ(msg.reason, exit_reason::user_shutdown);
+        testee_(spawn<testee>(this)) {
+      monitor(testee_, [this](const error& reason) {
         if (++downs_ == 2)
-          quit(msg.reason);
+          quit(reason);
       });
       set_exit_handler(
         [this](exit_msg& msg) { send_exit(testee_, std::move(msg.reason)); });

@@ -15,6 +15,8 @@
 
 #include <tuple>
 
+CAF_PUSH_DEPRECATED_WARNING
+
 using caf::policy::select_all;
 
 using namespace caf;
@@ -195,3 +197,5 @@ TEST("select_all calls the error handler at most once") {
 } // WITH_FIXTURE(fixture)
 
 } // namespace
+
+CAF_POP_WARNINGS

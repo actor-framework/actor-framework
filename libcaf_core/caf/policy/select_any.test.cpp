@@ -13,6 +13,8 @@
 #include "caf/scoped_actor.hpp"
 #include "caf/sec.hpp"
 
+CAF_PUSH_DEPRECATED_WARNING
+
 using caf::policy::select_any;
 
 using namespace caf;
@@ -170,3 +172,5 @@ TEST("select_any calls the error handler at most once") {
 } // WITH_FIXTURE(fixture)
 
 } // namespace
+
+CAF_POP_WARNINGS

@@ -103,14 +103,17 @@ private:
 };
 
 /// Convenience factory function for creating an actor output stream.
-CAF_CORE_EXPORT actor_ostream aout(local_actor* self);
+[[deprecated("use self->println(...) instead")]] CAF_CORE_EXPORT actor_ostream
+aout(local_actor* self);
 
 // Convenience factory function for creating an actor output stream.
-CAF_CORE_EXPORT actor_ostream aout(scoped_actor& self);
+[[deprecated("use self->println(...) instead")]] CAF_CORE_EXPORT actor_ostream
+aout(scoped_actor& self);
 
 /// Convenience factory function for creating an actor output stream.
 template <class... Sigs>
-actor_ostream aout(const typed_actor_pointer<Sigs...>& ptr) {
+[[deprecated("use self->println(...) instead")]] actor_ostream
+aout(const typed_actor_pointer<Sigs...>& ptr) {
   return actor_ostream{ptr};
 }
 

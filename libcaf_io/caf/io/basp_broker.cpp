@@ -18,6 +18,7 @@
 #include "caf/event_based_actor.hpp"
 #include "caf/forwarding_actor_proxy.hpp"
 #include "caf/log/io.hpp"
+#include "caf/mail_cache.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/sec.hpp"
 #include "caf/send.hpp"
@@ -90,9 +91,6 @@ const char* basp_broker::name() const {
 
 behavior basp_broker::make_behavior() {
   auto lg = log::io::trace("system.node = {}", system().node());
-  set_down_handler([](local_actor* ptr, down_msg& x) {
-    static_cast<basp_broker*>(ptr)->handle_down_msg(x);
-  });
   if (get_or(config(), "caf.middleman.enable-automatic-connections", false)) {
     log::io::debug("enable automatic connections");
     // open a random port and store a record for our peers how to
@@ -537,22 +535,16 @@ void basp_broker::proxy_announced(const node_id& nid, actor_id aid) {
     auto entry = ptr->address();
     auto i = monitored_actors.find(entry);
     if (i == monitored_actors.end()) {
-      monitor(ptr);
+      monitor(ptr, [this, nid, entry](const error& reason) {
+        if (monitored_actors.erase(entry) > 0)
+          send_basp_down_message(nid, entry.id(), reason);
+      });
       std::unordered_set<node_id> tmp{nid};
       monitored_actors.emplace(entry, std::move(tmp));
     } else {
       i->second.emplace(nid);
     }
   }
-}
-
-void basp_broker::handle_down_msg(down_msg& dm) {
-  auto i = monitored_actors.find(dm.source);
-  if (i == monitored_actors.end())
-    return;
-  for (auto& nid : i->second)
-    send_basp_down_message(nid, dm.source.id(), dm.reason);
-  monitored_actors.erase(i);
 }
 
 void basp_broker::emit_node_down_msg(const node_id& node, const error& reason) {
@@ -573,23 +565,18 @@ void basp_broker::learned_new_node(const node_id& nid) {
   }
   auto tmp = system().spawn<hidden>([=](event_based_actor* tself) -> behavior {
     auto lg = log::io::trace("");
-    // terminate when receiving a down message
-    tself->set_down_handler([=](down_msg& dm) {
-      auto lg = log::io::trace("dm = {}", dm);
-      tself->quit(std::move(dm.reason));
-    });
-    // skip messages until we receive the initial ok_atom
-    tself->set_default_handler(skip);
+    auto cache = std::make_shared<mail_cache>(tself, 10);
     return {
-
-      [=](ok_atom, const std::string& /* key == "info" */,
-          const strong_actor_ptr& config_serv, const std::string& /* name */) {
+      [tself, cache](ok_atom, const std::string& /* key == "info" */,
+                     const strong_actor_ptr& config_serv,
+                     const std::string& /* name */) {
         auto lg = log::io::trace("config_serv = {}", config_serv);
-        // drop unexpected messages from this point on
-        tself->set_default_handler(print_and_drop);
         if (!config_serv)
           return;
-        tself->monitor(config_serv);
+        tself->monitor(config_serv, [tself](error reason) {
+          auto lg = log::io::trace("reason = {}", reason);
+          tself->quit(std::move(reason));
+        });
         tself->become([=](spawn_atom, std::string& type, message& args)
                         -> delegated<strong_actor_ptr, std::set<std::string>> {
           auto lg = log::io::trace("type = {}, args = {}", type, args);
@@ -597,6 +584,11 @@ void basp_broker::learned_new_node(const node_id& nid) {
                           std::move(type), std::move(args));
           return {};
         });
+        cache->unstash();
+      },
+      [cache](message msg) {
+        // We skip messages until we receive the initial ok_atom.
+        cache->stash(std::move(msg));
       },
       after(std::chrono::minutes(5)) >>
         [=] {

@@ -6,6 +6,8 @@
 
 #include "caf/test/test.hpp"
 
+CAF_PUSH_DEPRECATED_WARNING
+
 using namespace caf;
 
 #define ASSERT_COMPILES(expr, msg)                                             \
@@ -139,3 +141,5 @@ ASSERT_COMPILES(set_exception_handler(const_exception_fn{}),
 #endif // CAF_ENABLE_EXCEPTIONS
 
 } // namespace
+
+CAF_POP_WARNINGS

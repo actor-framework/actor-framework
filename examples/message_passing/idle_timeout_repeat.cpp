@@ -31,9 +31,9 @@ struct testee_state {
     // actor holds a reference to it and run the callback until the actor quits.
     self->set_idle_handler(500ms, strong_ref, repeat, [this] {
       ++num_timeouts;
-      aout(self).println("[{}] Timeout #{}!",
-                         caf::chrono::to_string<ms>(system_clock::now()),
-                         num_timeouts);
+      self->println("[{}] Timeout #{}!",
+                    caf::chrono::to_string<ms>(system_clock::now()),
+                    num_timeouts);
       if (num_timeouts == 5)
         self->quit();
     });
@@ -43,9 +43,8 @@ struct testee_state {
         // When receiving a message, it cancels the current idle timeout and
         // sets a new one. Hence, the next idle timeout will happen 500ms after
         // receiving this message (unless another message arrives).
-        aout(self).println("[{}] Received: {}",
-                           caf::chrono::to_string<ms>(system_clock::now()),
-                           str);
+        self->println("[{}] Received: {}",
+                      caf::chrono::to_string<ms>(system_clock::now()), str);
       },
     };
   }

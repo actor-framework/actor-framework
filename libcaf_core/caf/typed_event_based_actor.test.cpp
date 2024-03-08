@@ -11,6 +11,7 @@
 #include "caf/event_based_actor.hpp"
 #include "caf/init_global_meta_objects.hpp"
 #include "caf/log/test.hpp"
+#include "caf/mail_cache.hpp"
 #include "caf/scoped_actor.hpp"
 #include "caf/typed_actor.hpp"
 #include "caf/typed_actor_pointer.hpp"
@@ -23,6 +24,7 @@ using namespace std::literals;
 struct my_request {
   my_request() = default;
   my_request(int a, int b) : a(a), b(b) {
+    // nop
   }
   int32_t a = 0;
   int32_t b = 0;
@@ -92,11 +94,11 @@ public:
 
 void client(event_based_actor* self, const actor& parent,
             const server_actor& serv) {
-  self->request(serv, infinite, my_request{0, 0}).then([=](bool val1) {
+  self->mail(my_request{0, 0}).request(serv, infinite).then([=](bool val1) {
     test::runnable::current().check_eq(val1, true);
-    self->request(serv, infinite, my_request{10, 20}).then([=](bool val2) {
+    self->mail(my_request{10, 20}).request(serv, infinite).then([=](bool val2) {
       test::runnable::current().check_eq(val2, false);
-      self->send(parent, ok_atom_v);
+      self->mail(ok_atom_v).send(parent);
     });
   });
 }
@@ -113,15 +115,20 @@ using event_testee_type = typed_actor<testee_trait>;
 
 class event_testee : public event_testee_type::base {
 public:
-  event_testee(actor_config& cfg) : event_testee_type::base(cfg) {
-    set_default_handler(skip);
+  event_testee(actor_config& cfg)
+    : event_testee_type::base(cfg), cache(this, 10) {
+    // nop
   }
 
   behavior_type wait4string() {
     return {
       partial_behavior_init,
       [](get_state_atom) { return "wait4string"; },
-      [this](const std::string&) { become(wait4int()); },
+      [this](const std::string&) {
+        become(wait4int());
+        cache.unstash();
+      },
+      [this](message msg) { cache.stash(std::move(msg)); },
     };
   }
 
@@ -131,8 +138,10 @@ public:
       [](get_state_atom) { return "wait4int"; },
       [this](int) -> int {
         become(wait4float());
+        cache.unstash();
         return 42;
       },
+      [this](message msg) { cache.stash(std::move(msg)); },
     };
   }
 
@@ -140,13 +149,19 @@ public:
     return {
       partial_behavior_init,
       [](get_state_atom) { return "wait4float"; },
-      [this](float) { become(wait4string()); },
+      [this](float) {
+        become(wait4string());
+        cache.unstash();
+      },
+      [this](message msg) { cache.stash(std::move(msg)); },
     };
   }
 
   behavior_type make_behavior() override {
     return wait4int();
   }
+
+  mail_cache cache;
 };
 
 // -- simple 'forwarding' chain ------------------------------------------------
@@ -264,21 +279,21 @@ TEST("chainging the behavior at runtime and skipping messages") {
                   [this](message) { fail("Unexpected message"); },
                   caf::after(10ms) >> [this]() { fail("Timeout"); });
     };
-    sf->send(et, 1);
-    sf->send(et, 2);
-    sf->send(et, 3);
-    sf->send(et, .1f);
+    sf->mail(1).send(et);
+    sf->mail(2).send(et);
+    sf->mail(3).send(et);
+    sf->mail(.1f).send(et);
     dispatch_messages();
     receive_or_fail();
-    sf->send(et, "hello event testee!"s);
-    sf->send(et, .2f);
+    sf->mail("hello event testee!"s).send(et);
+    sf->mail(.2f).send(et);
     dispatch_messages();
     receive_or_fail();
-    sf->send(et, .3f);
-    sf->send(et, "hello again event testee!"s);
+    sf->mail(.3f).send(et);
+    sf->mail("hello again event testee!"s).send(et);
     dispatch_messages();
     receive_or_fail();
-    sf->send(et, "goodbye event testee!"s);
+    sf->mail("goodbye event testee!"s).send(et);
     dispatch_message();
     inject().with(get_state_atom_v).from(self).to(sub_et);
     expect<std::string>().with("wait4int"s).from(et).to(self);
@@ -350,7 +365,7 @@ float_actor::behavior_type float_fun(float_actor::pointer self) {
 
 int_actor::behavior_type foo3(int_actor::pointer self) {
   auto b = self->spawn<linked>(float_fun);
-  self->send(b, 1.0f);
+  self->mail(1.0f).send(b);
   return {
     [=](int) { return 0; },
   };
@@ -367,13 +382,12 @@ TEST("sending typed actors") {
 }
 
 int_actor::behavior_type int_fun2(int_actor::pointer self) {
-  self->set_down_handler([=](down_msg& dm) {
-    test::runnable::current().check_eq(dm.reason, exit_reason::normal);
-    self->quit();
-  });
   return {
     [=](int i) {
-      self->monitor(self->current_sender());
+      self->monitor(self->current_sender(), [=](const error& reason) {
+        test::runnable::current().check_eq(reason, exit_reason::normal);
+        self->quit();
+      });
       return i * i;
     },
   };
@@ -401,7 +415,7 @@ TEST("check signature") {
   };
   auto bar_action = [=](bar_type::pointer ptr) -> bar_type::behavior_type {
     auto foo = ptr->spawn<linked>(foo_action);
-    ptr->send(foo, put_atom_v);
+    ptr->mail(put_atom_v).send(foo);
     return {
       [=](ok_atom) { ptr->quit(); },
     };

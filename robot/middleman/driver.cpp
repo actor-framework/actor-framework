@@ -329,10 +329,6 @@ int client(actor_system& sys, std::string_view mode, const std::string& host,
   if (mode == "ping") {
     auto cell = with_retry([&] { return mm.remote_actor(host, port); });
     auto ping = sys.spawn([reg = *cell](caf::event_based_actor* self) {
-      self->set_down_handler([self](const caf::down_msg&) {
-        std::cout << "pong down\n";
-        self->quit();
-      });
       // Waiting 50ms here gives the pong process a bit of time, but also makes
       // sure that we trigger at least one BASP heartbeat message in the
       // meantime to have coverage on the heartbeat logic as well.
@@ -343,7 +339,10 @@ int client(actor_system& sys, std::string_view mode, const std::string& host,
             self->mail(caf::get_atom_v).delay(50ms).send(reg);
             return;
           }
-          self->monitor(pong);
+          self->monitor(pong, [self](const caf::error&) {
+            std::cout << "pong down\n";
+            self->quit();
+          });
           self->mail(caf::ping_atom_v).send(pong);
         },
         [](caf::pong_atom) { std::cout << "got pong" << std::endl; },

@@ -12,6 +12,8 @@
 
 #include <chrono>
 
+CAF_PUSH_DEPRECATED_WARNING
+
 using namespace caf;
 
 using std::chrono::seconds;
@@ -103,3 +105,5 @@ TEST("exceptions while processing a message will send error to the sender") {
 } // WITH_FIXTURE(fixture)
 
 } // namespace
+
+CAF_POP_WARNINGS

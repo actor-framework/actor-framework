@@ -43,8 +43,9 @@ public:
   ///          sent message cannot be received by another actor.
   template <message_priority P = message_priority::normal, class Rep = int,
             class Period = std::ratio<1>, class Handle = actor, class... Ts>
-  auto request(const Handle& dest, std::chrono::duration<Rep, Period> timeout,
-               Ts&&... xs) {
+  [[deprecated("use the mail() API instead")]] auto
+  request(const Handle& dest, std::chrono::duration<Rep, Period> timeout,
+          Ts&&... xs) {
     using namespace detail;
     static_assert(sizeof...(Ts) > 0, "no message to send");
     using token = type_list<implicit_conversions_t<std::decay_t<Ts>>...>;
@@ -94,8 +95,9 @@ public:
   template <template <class> class MergePolicy,
             message_priority Prio = message_priority::normal, class Rep = int,
             class Period = std::ratio<1>, class Container, class... Ts>
-  auto fan_out_request(const Container& destinations,
-                       std::chrono::duration<Rep, Period> timeout, Ts&&... xs) {
+  [[deprecated("use the mail() API instead")]] auto
+  fan_out_request(const Container& destinations,
+                  std::chrono::duration<Rep, Period> timeout, Ts&&... xs) {
     using handle_type = typename Container::value_type;
     using namespace detail;
     static_assert(sizeof...(Ts) > 0, "no message to send");

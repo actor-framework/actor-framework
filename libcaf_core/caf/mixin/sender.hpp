@@ -32,7 +32,8 @@ public:
   /// priority.
   template <message_priority Priority = message_priority::normal, class Handle,
             class T, class... Ts>
-  void send(const Handle& receiver, T&& arg, Ts&&... args) {
+  [[deprecated("use the mail() API instead")]] void
+  send(const Handle& receiver, T&& arg, Ts&&... args) {
     detail::send_type_check<typename Subtype::signatures, Handle, T, Ts...>();
     this->do_send(actor_cast<abstract_actor*>(receiver), Priority,
                   make_message_nowrap(std::forward<T>(arg),
@@ -43,9 +44,9 @@ public:
   /// priority after the `timeout` expires.
   template <message_priority Priority = message_priority::normal, class Handle,
             class T, class... Ts>
-  disposable scheduled_send(const Handle& receiver,
-                            actor_clock::time_point timeout, T&& arg,
-                            Ts&&... args) {
+  [[deprecated("use the mail() API instead")]] disposable
+  scheduled_send(const Handle& receiver, actor_clock::time_point timeout,
+                 T&& arg, Ts&&... args) {
     detail::send_type_check<typename Subtype::signatures, Handle, T, Ts...>();
     return this->do_scheduled_send(
       actor_cast<strong_actor_ptr>(receiver), Priority, timeout,
@@ -56,9 +57,9 @@ public:
   /// priority after the `timeout` expires.
   template <message_priority Priority = message_priority::normal, class Handle,
             class T, class... Ts>
-  disposable delayed_send(const Handle& receiver,
-                          actor_clock::duration_type timeout, T&& arg,
-                          Ts&&... args) {
+  [[deprecated("use the mail() API instead")]] disposable
+  delayed_send(const Handle& receiver, actor_clock::duration_type timeout,
+               T&& arg, Ts&&... args) {
     return scheduled_send<Priority>(receiver, this->clock().now() + timeout,
                                     std::forward<T>(arg),
                                     std::forward<Ts>(args)...);

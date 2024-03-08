@@ -14,6 +14,8 @@
 #include "caf/stateful_actor.hpp"
 #include "caf/typed_actor.hpp"
 
+CAF_PUSH_DEPRECATED_WARNING
+
 using namespace caf;
 
 namespace {
@@ -232,3 +234,5 @@ SCENARIO("response handles are convertible to observables and singles") {
 } // WITH_FIXTURE(fixture)
 
 } // namespace
+
+CAF_POP_WARNINGS

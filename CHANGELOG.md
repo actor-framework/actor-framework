@@ -5,6 +5,16 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ## [Unreleased]
 
+### Added
+
+- Sending asynchronous and request messages has been unified into a new `mail()`
+  API. The new API is a small DSL for assembling a message first, then
+  optionally applying a timeout and priority, and finally sending the message to
+  an actor via `send` or `request`. For example:
+  `self->send("hello").after(1s).send(other)` will delay a message for one
+  second before sending it to `other`. Please refer to the manual for more
+  details and examples.
+
 ### Fixed
 
 - Fix building CAF with shared libraries (DLLs) enabled on Windows (#1715).
@@ -41,6 +51,14 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Actors will now always send an error message if an incoming message triggered
   an unhandled exception. Previously, CAF would only send an error message if
   the incoming message was a request (#1684).
+
+### Deprecated
+
+- Using `monitor(hdl)` and setting a callback via `set_down_handler(fn)` has
+  been deprecated in favor of using the new `monitor(hdl, fn)` function.
+- Introducing the new `mail` API has rendered the `send` and `request` functions
+  obsolete. Consequently, we have deprecated these functions in favor of the new
+  `mail` API.
 
 ## [0.19.5] - 2024-01-08
 

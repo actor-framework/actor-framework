@@ -293,10 +293,10 @@ TEST("the deterministic fixture provides a deterministic scheduler") {
 }
 
 TEST("evaluator expressions can check or extract individual values") {
-  auto worker = sys.spawn([](caf::event_based_actor* self) -> caf::behavior {
-    self->set_default_handler(caf::drop);
+  auto worker = sys.spawn([](caf::event_based_actor*) -> caf::behavior {
     return {
       [](int32_t) {},
+      [](const caf::message&) {},
     };
   });
   SECTION("omitting with() matches on the types only") {

@@ -143,7 +143,8 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
                [kvs](http::responder& res, std::string key) {
                  auto* self = res.self();
                  auto prom = std::move(res).to_promise();
-                 self->request(kvs, 2s, caf::get_atom_v, std::move(key))
+                 self->mail(caf::get_atom_v, std::move(key))
+                   .request(kvs, 2s)
                    .then(
                      [prom](const std::string& value) mutable {
                        prom.respond(http::status::ok, "text/plain", value);
@@ -167,9 +168,8 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
                  }
                  auto* self = res.self();
                  auto prom = std::move(res).to_promise();
-                 self
-                   ->request(kvs, 2s, caf::put_atom_v, std::move(key),
-                             to_ascii(value))
+                 self->mail(caf::put_atom_v, std::move(key), to_ascii(value))
+                   .request(kvs, 2s)
                    .then(
                      [prom]() mutable {
                        prom.respond(http::status::no_content);
@@ -182,7 +182,8 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
                [kvs](http::responder& res, std::string key) {
                  auto* self = res.self();
                  auto prom = std::move(res).to_promise();
-                 self->request(kvs, 2s, caf::delete_atom_v, std::move(key))
+                 self->mail(caf::delete_atom_v, std::move(key))
+                   .request(kvs, 2s)
                    .then(
                      [prom]() mutable {
                        prom.respond(http::status::no_content);

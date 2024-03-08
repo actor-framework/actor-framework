@@ -17,6 +17,8 @@
 
 #include <numeric>
 
+CAF_PUSH_DEPRECATED_WARNING
+
 using namespace caf;
 using namespace std::literals;
 
@@ -382,3 +384,5 @@ TEST("GH-698 regression") {
 } // WITH_FIXTURE(fixture)
 
 } // namespace
+
+CAF_POP_WARNINGS
