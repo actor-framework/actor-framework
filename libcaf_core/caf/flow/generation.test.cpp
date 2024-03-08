@@ -242,8 +242,8 @@ SCENARIO("asynchronous buffers can generate flow items") {
         // also why we spin up the thread later: making sure we're hitting the
         // code paths we want to test here.
         run_flows();
-        auto bg_thread = std::thread{producer_impl, push};
         sub.dispose();
+        auto bg_thread = std::thread{producer_impl, push};
         run_flows();
         check(res.empty());
         bg_thread.join();
