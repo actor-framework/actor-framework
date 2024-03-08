@@ -168,11 +168,11 @@ string_actor::behavior_type string_reverter() {
 
 // uses `return delegate(...)`
 string_actor::behavior_type string_delegator(string_actor::pointer self,
-                                             string_actor master) {
-  self->link_to(master);
+                                             string_actor next) {
+  self->link_to(next);
   return {
     [=](std::string& str) -> delegated<std::string> {
-      return self->delegate(master, std::move(str));
+      return self->delegate(next, std::move(str));
     },
   };
 }
@@ -294,8 +294,8 @@ TEST("starting a string delegator chain") {
     check_eq(aut->message_types(), iface);
   }
   inject().with("Hello World!"s).from(self).to(aut);
-  expect<std::string>().with(std::ignore).from(self).to(delegator);
-  expect<std::string>().with(std::ignore).from(self).to(reverter);
+  expect<std::string>().from(self).to(delegator);
+  expect<std::string>().from(self).to(reverter);
   expect<std::string>().with("!dlroW olleH"s).from(reverter).to(self);
   inject_exit(aut);
 }
