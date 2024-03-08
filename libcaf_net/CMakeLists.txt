@@ -30,6 +30,7 @@ caf_add_component(
     ${CAF_NET_HEADERS}
   SOURCES
     caf/detail/convert_ip_endpoint.cpp
+    caf/detail/convert_ip_endpoint.test.cpp
     caf/detail/rfc6455.cpp
     caf/detail/rfc6455.test.cpp
     caf/net/abstract_actor_shell.cpp
@@ -56,14 +57,18 @@ caf_add_component(
     caf/net/http/response_header.test.cpp
     caf/net/http/route.cpp
     caf/net/http/router.cpp
+    caf/net/http/router.test.cpp
     caf/net/http/server.cpp
+    caf/net/http/server.test.cpp
     caf/net/http/server_factory.cpp
     caf/net/http/status.cpp
     caf/net/http/upper_layer.cpp
     caf/net/http/v1.cpp
     caf/net/ip.cpp
     caf/net/lp/default_trait.cpp
+    caf/net/lp/frame.test.cpp
     caf/net/lp/framing.cpp
+    caf/net/lp/framing.test.cpp
     caf/net/lp/lower_layer.cpp
     caf/net/lp/upper_layer.cpp
     caf/net/middleman.cpp
@@ -74,6 +79,7 @@ caf_add_component(
     caf/net/octet_stream/lower_layer.cpp
     caf/net/octet_stream/policy.cpp
     caf/net/octet_stream/transport.cpp
+    caf/net/octet_stream/transport.test.cpp
     caf/net/octet_stream/upper_layer.cpp
     caf/net/octet_stream/with.test.cpp
     caf/net/pipe_socket.cpp
@@ -102,8 +108,10 @@ caf_add_component(
     caf/net/web_socket/client.cpp
     caf/net/web_socket/default_trait.cpp
     caf/net/web_socket/frame.cpp
+    caf/net/web_socket/frame.test.cpp
     caf/net/web_socket/framing.cpp
     caf/net/web_socket/handshake.cpp
+    caf/net/web_socket/handshake.test.cpp
     caf/net/web_socket/lower_layer.cpp
     caf/net/web_socket/server.cpp
     caf/net/web_socket/upper_layer.cpp
@@ -111,30 +119,19 @@ caf_add_component(
     ${CMAKE_CURRENT_BINARY_DIR}/tests/legacy/pem.cpp
     tests/legacy/net-test.cpp
   LEGACY_TEST_SUITES
-    detail.convert_ip_endpoint
     net.accept_socket
     net.actor_shell
     net.datagram_socket
-    net.http.router
-    net.http.server
     net.ip
-    net.length_prefix_framing
-    net.lp.frame
     net.multiplexer
     net.network_socket
-    net.octet_stream.transport
     net.pipe_socket
     net.socket
     net.socket_guard
     net.ssl.transport
     net.stream_socket
     net.typed_actor_shell
-    net.udp_datagram_socket
-    net.web_socket.client
-    net.web_socket.frame
-    net.web_socket.framing
-    net.web_socket.handshake
-    net.web_socket.server)
+    net.udp_datagram_socket)
 
 caf_add_test_executable(
   caf-net-autobahn-driver

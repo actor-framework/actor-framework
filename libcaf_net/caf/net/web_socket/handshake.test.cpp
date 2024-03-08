@@ -2,11 +2,9 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE net.web_socket.handshake
-
 #include "caf/net/web_socket/handshake.hpp"
 
-#include "net-test.hpp"
+#include "caf/test/scenario.hpp"
 
 #include <algorithm>
 #include <string_view>
@@ -57,9 +55,7 @@ struct fixture {
   byte_buffer bytes;
 };
 
-} // namespace
-
-BEGIN_FIXTURE_SCOPE(fixture)
+WITH_FIXTURE(fixture) {
 
 SCENARIO("handshake generates HTTP GET requests according to RFC 6455") {
   GIVEN("a request header object with endpoint, origin and protocol") {
@@ -72,7 +68,7 @@ SCENARIO("handshake generates HTTP GET requests according to RFC 6455") {
     WHEN("when generating the HTTP handshake") {
       THEN("CAF creates output according to RFC 6455 and omits empty fields") {
         uut.write_http_1_request(buf());
-        CHECK_EQ(str(), http_request);
+        check_eq(str(), http_request);
       }
     }
   }
@@ -85,11 +81,13 @@ SCENARIO("handshake objects validate HTTP response headers") {
     uut.key(key_to_bytes());
     WHEN("presenting a HTTP response with proper Sec-WebSocket-Accept") {
       THEN("the object recognizes the response as valid") {
-        CHECK(uut.is_valid_http_1_response(http_response));
-        CHECK(!uut.is_valid_http_1_response("HTTP/1.1 101 Bogus\r\n"));
+        check(uut.is_valid_http_1_response(http_response));
+        check(!uut.is_valid_http_1_response("HTTP/1.1 101 Bogus\r\n"));
       }
     }
   }
 }
 
-END_FIXTURE_SCOPE()
+} // WITH_FIXTURE(fixture)
+
+} // namespace
