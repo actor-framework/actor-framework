@@ -85,23 +85,6 @@ public:
   ptrdiff_t consume(const net::http::request_header& request_hdr,
                     const_byte_span body) override {
     cb(down, request_hdr, body);
-    /*
-    hdr = request_hdr;
-    payload.assign(body.begin(), body.end());
-    constexpr auto content1 = "Hello world!"sv;
-    constexpr auto content2 = "Developer Network"sv;
-    if (chunked_response) {
-      down->begin_header(net::http::status::ok);
-      down->add_header_field("Transfer-Encoding", "chunked");
-      down->end_header();
-      down->send_chunk(as_bytes(make_span(content1)));
-      down->send_chunk(as_bytes(make_span(content2)));
-      down->send_end_of_chunks();
-    } else {
-      down->send_response(net::http::status::ok, "text/plain",
-                          as_bytes(make_span(content1)));
-    }
-    */
     return static_cast<ptrdiff_t>(body.size());
   }
 };
