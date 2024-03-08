@@ -375,7 +375,6 @@ caf_add_component(
     actor_lifetime
     actor_termination
     constructor_attach
-    dsl
     dynamic_spawn
     request_timeout
     typed_actor_view
