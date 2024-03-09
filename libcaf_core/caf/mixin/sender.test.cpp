@@ -80,6 +80,26 @@ TEST("anonymous messages receive no response") {
   check(!allow<std::string>().with(hello).from(testee).to(self));
 }
 
+#ifdef CAF_ENABLE_EXCEPTIONS
+
+TEST("exceptions while processing a message will send error to the sender") {
+  auto worker = sys.spawn([] {
+    return behavior{
+      [](int) { throw std::runtime_error(""); },
+    };
+  });
+  dispatch_messages();
+  auto client = sys.spawn([worker](event_based_actor*) -> behavior {
+    return [](message) { //
+      test::runnable::current().fail("unexpected handler called");
+    };
+  });
+  inject().with(42).from(client).to(worker);
+  expect<error>().with(sec::runtime_error).from(worker).to(client);
+}
+
+#endif // CAF_ENABLE_EXCEPTIONS
+
 } // WITH_FIXTURE(fixture)
 
 } // namespace
