@@ -168,8 +168,7 @@ string_actor::behavior_type string_reverter() {
 
 // uses `return delegate(...)`
 string_actor::behavior_type string_delegator(string_actor::pointer self,
-                                             string_actor master, bool leaf) {
-  auto next = leaf ? self->spawn(string_delegator, master, false) : master;
+                                             string_actor next) {
   self->link_to(next);
   return {
     [=](std::string& str) -> delegated<std::string> {
@@ -287,14 +286,17 @@ TEST("chainging the behavior at runtime and skipping messages") {
 }
 
 TEST("starting a string delegator chain") {
-  auto aut = sys.spawn(string_delegator, sys.spawn(string_reverter), true);
+  auto reverter = sys.spawn(string_reverter);
+  auto delegator = sys.spawn(string_delegator, reverter);
+  auto aut = sys.spawn(string_delegator, delegator);
   SECTION("message_types() returns an interface description") {
     std::set<std::string> iface{"(std::string) -> (std::string)"};
     check_eq(aut->message_types(), iface);
   }
-  // inject().with("Hello World!"s).from(self).to(aut);
-  // dispatch_message();
-  // expect<std::string>().with("!dlroW olleH"s).to(self);
+  inject().with("Hello World!"s).from(self).to(aut);
+  expect<std::string>().from(self).to(delegator);
+  expect<std::string>().from(self).to(reverter);
+  expect<std::string>().with("!dlroW olleH"s).from(reverter).to(self);
   inject_exit(aut);
 }
 
