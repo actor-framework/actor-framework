@@ -22,6 +22,7 @@
 #include "caf/flow/op/base.hpp"
 #include "caf/flow/op/buffer.hpp"
 #include "caf/flow/op/concat.hpp"
+#include "caf/flow/op/debounce.hpp"
 #include "caf/flow/op/from_resource.hpp"
 #include "caf/flow/op/from_steps.hpp"
 #include "caf/flow/op/interval.hpp"
@@ -264,6 +265,11 @@ public:
 
   auto buffer(size_t count, timespan period) {
     return materialize().buffer(count, period);
+  }
+
+  /// @copydoc observable::debounce
+  auto debounce(timespan period) {
+    return materialize().debounce(period);
   }
 
   /// @copydoc observable::sample
@@ -780,6 +786,14 @@ observable<cow_vector<T>> observable<T>::buffer(size_t count, timespan period) {
                                  period);
   return pptr->add_child_hdl(std::in_place_type<impl_t>, count, *this,
                              std::move(obs));
+}
+
+template <class T>
+observable<T> observable<T>::debounce(timespan period) {
+  using impl_t = op::debounce<T>;
+  auto* pptr = parent();
+  return pptr->add_child_hdl(std::in_place_type<impl_t>, *this,
+                             std::move(period));
 }
 
 template <class T>

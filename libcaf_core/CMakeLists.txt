@@ -222,6 +222,7 @@ caf_add_component(
     caf/flow/op/buffer.test.cpp
     caf/flow/op/cell.test.cpp
     caf/flow/op/concat.test.cpp
+    caf/flow/op/debounce.test.cpp
     caf/flow/op/defer.test.cpp
     caf/flow/op/empty.test.cpp
     caf/flow/op/fail.test.cpp

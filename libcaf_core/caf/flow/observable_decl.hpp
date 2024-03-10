@@ -205,6 +205,10 @@ public:
   /// regular intervals .
   observable<cow_vector<T>> buffer(size_t count, timespan period);
 
+  /// Emit an item if timespan @p period has passed without it emitting another
+  /// item.
+  observable<T> debounce(timespan period);
+
   /// Emits the most recent item of the input observable once per interval.
   observable<T> sample(timespan period);
 
