@@ -811,10 +811,8 @@ auto scheduled_actor::reactivate(mailbox_element& x) -> activation_result {
 #ifdef CAF_ENABLE_EXCEPTIONS
   auto handle_exception = [&](std::exception_ptr eptr) {
     auto err = call_handler(exception_handler_, this, eptr);
-    if (x.mid.is_request()) {
-      auto rp = make_response_promise();
-      rp.deliver(err);
-    }
+    auto rp = make_response_promise();
+    rp.deliver(err);
     quit(std::move(err));
   };
   try {

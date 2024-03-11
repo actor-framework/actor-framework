@@ -38,6 +38,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Sending messages from cleanup code (e.g., the destructor of a state class) is
   now safe. Previously, doing so could cause undefined behavior by forming a
   strong reference to a destroyed actor.
+- Actors will now always send an error message if an incoming message triggered
+  an unhandled exception. Previously, CAF would only send an error message if
+  the incoming message was a request (#1684).
 
 ## [0.19.5] - 2024-01-08
 
