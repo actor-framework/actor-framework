@@ -131,6 +131,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
         .start([&sys](lp::default_trait::acceptor_resource accept_events) {
           sys.spawn(worker_impl, std::move(accept_events));
         });
+  std::cout << "*** server started" << std::endl;
   // Report any error to the user.
   if (!server) {
     std::cerr << "*** unable to run at port " << port << ": "

@@ -37,6 +37,7 @@ Start Chat Server
     ...  --caf.logger.file.path  server.log
     ...  stdout=server.out
     ...  stderr=server.err
+    Wait For Server Startup
 
 Start Chat Client
     [Arguments]    ${name}   ${stdin}
@@ -68,3 +69,10 @@ Count Connected Clients
 Wait For Client
     [Arguments]    ${client_count}
     Wait Until Keyword Succeeds    5s    125ms    Count Connected Clients    ${client_count}
+
+Has Server Started
+    ${output}=      Grep File        server.out    server started
+    Should Not Be Empty  ${output}
+
+Wait For Server Startup
+    Wait Until Keyword Succeeds    5s    125ms    Has Server Started
