@@ -87,7 +87,7 @@ public:
 
   // -- implementation of octet_stream::lower_layer ----------------------------
 
-  multiplexer& mpx() noexcept override;
+  socket_manager* manager() noexcept override;
 
   bool can_send_more() const noexcept override;
 

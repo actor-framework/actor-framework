@@ -46,12 +46,12 @@ using cell_listener_ptr = intrusive_ptr<cell_listener<T>>;
 /// State shared between one multicast operator and one subscribed observer.
 template <class T>
 struct cell_sub_state {
-  std::variant<none_t, unit_t, T, error> content;
+  std::variant<none_t, std::nullptr_t, T, error> content;
   std::vector<cell_listener_ptr<T>> listeners;
 
   void set_null() {
     CAF_ASSERT(std::holds_alternative<none_t>(content));
-    content = unit;
+    content = nullptr;
     std::vector<cell_listener_ptr<T>> xs;
     xs.swap(listeners);
     for (auto& listener : xs) {

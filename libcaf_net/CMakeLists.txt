@@ -35,6 +35,7 @@ caf_add_component(
     caf/detail/rfc6455.test.cpp
     caf/net/abstract_actor_shell.cpp
     caf/net/actor_shell.cpp
+    caf/net/actor_shell.test.cpp
     caf/net/datagram_socket.cpp
     caf/net/dsl/config_base.cpp
     caf/net/generic_lower_layer.cpp
@@ -90,6 +91,7 @@ caf_add_component(
     caf/net/ssl/connection.cpp
     caf/net/ssl/context.cpp
     caf/net/ssl/dtls.cpp
+    caf/net/typed_actor_shell.test.cpp
     caf/net/ssl/errc.cpp
     caf/net/ssl/format.cpp
     caf/net/ssl/password.cpp
@@ -120,7 +122,6 @@ caf_add_component(
     tests/legacy/net-test.cpp
   LEGACY_TEST_SUITES
     net.accept_socket
-    net.actor_shell
     net.datagram_socket
     net.ip
     net.multiplexer
@@ -130,7 +131,6 @@ caf_add_component(
     net.socket_guard
     net.ssl.transport
     net.stream_socket
-    net.typed_actor_shell
     net.udp_datagram_socket)
 
 caf_add_test_executable(

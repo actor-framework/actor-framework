@@ -75,8 +75,8 @@ std::unique_ptr<transport> transport::make(stream_socket fd,
 
 // -- implementation of octet_stream::lower_layer ------------------------------
 
-multiplexer& transport::mpx() noexcept {
-  return parent_->mpx();
+socket_manager* transport::manager() noexcept {
+  return parent_;
 }
 
 bool transport::can_send_more() const noexcept {

@@ -881,6 +881,10 @@ void scheduled_actor::push_to_cache(mailbox_element_ptr ptr) {
   stash_.push(ptr.release());
 }
 
+void scheduled_actor::call_error_handler(error& err) {
+  call_handler(error_handler_, this, err);
+}
+
 disposable scheduled_actor::run_scheduled(timestamp when, action what) {
   CAF_ASSERT(what.ptr() != nullptr);
   auto lg = log::core::trace("when = {}", when);
@@ -922,6 +926,10 @@ disposable scheduled_actor::run_delayed_weak(timespan delay, action what) {
 }
 
 // -- caf::flow bindings -------------------------------------------------------
+
+flow::coordinator* scheduled_actor::flow_context() {
+  return this;
+}
 
 stream scheduled_actor::to_stream_impl(cow_string name, batch_op_ptr batch_op,
                                        type_id_t item_type,

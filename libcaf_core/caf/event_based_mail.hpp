@@ -4,10 +4,10 @@
 
 #pragma once
 
+#include "caf/abstract_scheduled_actor.hpp"
 #include "caf/async_mail.hpp"
 #include "caf/event_based_response_handle.hpp"
 #include "caf/message.hpp"
-#include "caf/scheduled_actor.hpp"
 
 namespace caf {
 
@@ -19,7 +19,8 @@ class event_based_scheduled_mail_t
 public:
   using super = async_scheduled_mail_t<Priority, Trait, Args...>;
 
-  event_based_scheduled_mail_t(scheduled_actor* self, message&& content,
+  event_based_scheduled_mail_t(abstract_scheduled_actor* self,
+                               message&& content,
                                actor_clock::time_point timeout)
     : super(self, std::move(content), timeout) {
     // nop
@@ -76,8 +77,8 @@ public:
   }
 
 private:
-  scheduled_actor* self() {
-    return static_cast<scheduled_actor*>(super::self_);
+  abstract_scheduled_actor* self() {
+    return static_cast<abstract_scheduled_actor*>(super::self_);
   }
 };
 
@@ -87,7 +88,7 @@ class event_based_mail_t : public async_mail_base_t<Priority, Trait, Args...> {
 public:
   using super = async_mail_base_t<Priority, Trait, Args...>;
 
-  event_based_mail_t(scheduled_actor* self, message&& content)
+  event_based_mail_t(abstract_scheduled_actor* self, message&& content)
     : super(self, std::move(content)) {
     // nop
   }
@@ -144,15 +145,15 @@ public:
   }
 
 private:
-  scheduled_actor* self() {
-    return static_cast<scheduled_actor*>(super::self_);
+  abstract_scheduled_actor* self() {
+    return static_cast<abstract_scheduled_actor*>(super::self_);
   }
 };
 
 /// Entry point for sending an event-based message to an actor.
 template <class Trait, class... Args>
 [[nodiscard]] auto
-event_based_mail(Trait, scheduled_actor* self, Args&&... args) {
+event_based_mail(Trait, abstract_scheduled_actor* self, Args&&... args) {
   using result_t = event_based_mail_t<message_priority::normal, Trait,
                                       detail::strip_and_convert_t<Args>...>;
   return result_t{self, make_message_nowrap(std::forward<Args>(args)...)};

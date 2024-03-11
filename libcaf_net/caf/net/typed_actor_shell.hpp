@@ -65,6 +65,14 @@ public:
     this->set_behavior_impl(std::move(new_bhvr.unbox()));
   }
 
+  // -- messaging --------------------------------------------------------------
+
+  /// Starts a new message.
+  template <class... Args>
+  auto mail(Args&&... args) {
+    return event_based_mail(trait{}, this, std::forward<Args>(args)...);
+  }
+
   // -- overridden functions of local_actor ------------------------------------
 
   const char* name() const override {
@@ -130,8 +138,7 @@ public:
   // -- friends ----------------------------------------------------------------
 
   template <class Handle>
-  friend actor_shell_ptr_t<Handle>
-  make_actor_shell(actor_system&, async::execution_context_ptr);
+  friend actor_shell_ptr_t<Handle> make_actor_shell(socket_manager*);
 
   // -- member types -----------------------------------------------------------
 
@@ -222,8 +229,7 @@ public:
   // -- friends ----------------------------------------------------------------
 
   template <class Handle>
-  friend actor_shell_ptr_t<Handle>
-  make_actor_shell(actor_system&, async::execution_context_ptr);
+  friend actor_shell_ptr_t<Handle> make_actor_shell(socket_manager*);
 
   // -- member types -----------------------------------------------------------
 
