@@ -24,7 +24,7 @@ namespace {
 template <class T>
 T unbox(caf::expected<T> x) {
   if (!x)
-    CAF_RAISE_ERROR(detail::format("{}", to_string(x.error())).c_str());
+    CAF_RAISE_ERROR(to_string(x.error()).c_str());
   return std::move(*x);
 }
 

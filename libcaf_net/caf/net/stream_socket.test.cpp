@@ -25,22 +25,20 @@ namespace {
 
 struct fixture {
   fixture() : rd_buf(124) {
-    auto stream_socket_pair = make_stream_socket_pair();
-    if (!stream_socket_pair.has_value())
-      CAF_RAISE_ERROR("cannot create socket with pair");
-    std::tie(first, second) = *stream_socket_pair;
-    if (auto err = nonblocking(first, true); err != caf::none)
+    auto maybe_sockets = make_stream_socket_pair();
+    if (!maybe_sockets)
+      CAF_RAISE_ERROR("cannot create connected socket pair");
+    std::tie(first, second) = *maybe_sockets;
+    if (auto err = nonblocking(first, true))
       CAF_RAISE_ERROR(
-        detail::format("cannot create socket with error {}", err).c_str());
-    if (auto err = nonblocking(second, true); err != caf::none)
+        detail::format("failed to set socket to nonblocking: {}", err).c_str());
+    if (auto err = nonblocking(second, true))
       CAF_RAISE_ERROR(
-        detail::format("cannot create socket with error {}", err).c_str());
+        detail::format("failed to set socket to nonblocking: {}", err).c_str());
     if (auto buffer_size = send_buffer_size(first); buffer_size == 0u)
-      CAF_RAISE_ERROR(
-        detail::format("buffer size for first: {}", buffer_size).c_str());
+      CAF_RAISE_ERROR("failed to set send_buffer_size");
     if (auto buffer_size = send_buffer_size(second); buffer_size == 0u)
-      CAF_RAISE_ERROR(
-        detail::format("buffer size for first: {}", buffer_size).c_str());
+      CAF_RAISE_ERROR("failed to set send_buffer_size");
   }
 
   ~fixture() {
