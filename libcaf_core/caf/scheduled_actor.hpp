@@ -642,6 +642,8 @@ private:
   flow::assert_scheduled_actor_hdr_t<flow::single<T>>
   single_from_response(message_id mid, disposable pending_timeout);
 
+  void do_unstash(mailbox_element_ptr ptr) override;
+
   // -- utilities for instrumenting actors -------------------------------------
 
   /// Places all messages from the `stash_` back into the mailbox.

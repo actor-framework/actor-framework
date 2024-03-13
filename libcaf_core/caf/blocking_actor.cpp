@@ -383,6 +383,10 @@ void blocking_actor::force_close_mailbox() {
   close_mailbox(make_error(exit_reason::unreachable));
 }
 
+void blocking_actor::do_unstash(mailbox_element_ptr ptr) {
+  mailbox().push_front(std::move(ptr));
+}
+
 void blocking_actor::do_receive(message_id mid, behavior& bhvr,
                                 timespan timeout) {
   accept_one_cond cond;

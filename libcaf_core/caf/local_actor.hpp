@@ -39,6 +39,10 @@ namespace caf {
 /// living in an own thread or cooperatively scheduled.
 class CAF_CORE_EXPORT local_actor : public abstract_actor {
 public:
+  // -- friends ----------------------------------------------------------------
+
+  friend class mail_cache;
+
   // -- member types -----------------------------------------------------------
 
   /// Defines a monotonic clock suitable for measuring intervals.
@@ -457,6 +461,9 @@ protected:
   detail::unique_function<behavior(local_actor*)> initial_behavior_fac_;
 
   metrics_t metrics_;
+
+private:
+  virtual void do_unstash(mailbox_element_ptr ptr) = 0;
 };
 
 } // namespace caf

@@ -115,6 +115,8 @@ protected:
 private:
   using multiplexed_response = std::pair<behavior, disposable>;
 
+  void do_unstash(mailbox_element_ptr ptr) override;
+
   void close_mailbox(const error& reason);
 
   void force_close_mailbox() final;
