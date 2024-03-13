@@ -25,6 +25,23 @@ SCENARIO("a scenario may not contain a section") {
   });
   check(!entered_section);
 }
+
+// Regression test for #1799: Scenarios should not parse parameter placeholders.
+SCENARIO("scenario with <foo> syntax in description") {
+  GIVEN("given a <description>") {
+    WHEN("when <parsing> the raw description") {
+      THEN("then we copy the <description> verbatim") {
+        auto i = ctx_->call_stack.begin();
+        check_eq((*i++)->description(),
+                 "scenario with <foo> syntax in description");
+        check_eq((*i++)->description(), "given a <description>");
+        check_eq((*i++)->description(), "when <parsing> the raw description");
+        check_eq((*i++)->description(),
+                 "then we copy the <description> verbatim");
+      }
+    }
+  }
+}
 #endif
 
 SCENARIO("each run starts with fresh local variables") {

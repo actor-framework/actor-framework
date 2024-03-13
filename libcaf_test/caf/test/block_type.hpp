@@ -19,6 +19,8 @@ enum class block_type {
   test,
   /// Identifies a SECTION block in a TEST.
   section,
+  /// Identifies a parametrized BDD-style OUTLINE block.
+  outline,
   /// Identifies a BDD-style SCENARIO block.
   scenario,
   /// Identifies a BDD-style GIVEN block.
@@ -59,6 +61,8 @@ constexpr std::string_view macro_name(block_type type) noexcept {
       return "TEST";
     case block_type::section:
       return "SECTION";
+    case block_type::outline:
+      return "OUTLINE";
     case block_type::scenario:
       return "SCENARIO";
     case block_type::given:
@@ -86,6 +90,8 @@ constexpr std::string_view as_prefix(block_type type) noexcept {
       return "Test";
     case block_type::section:
       return "Section";
+    case block_type::outline:
+      return "Outline";
     case block_type::scenario:
       return "Scenario";
     case block_type::given:

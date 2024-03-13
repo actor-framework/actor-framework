@@ -102,49 +102,55 @@ void block::lazy_init() {
   if (!description_.empty() || raw_description_.empty())
     return;
   description_.reserve(raw_description_.size());
-  std::string parameter_name;
-  auto state = cpy_state::verbatim;
-  for (auto c : raw_description_) {
-    switch (state) {
-      default: // cpy_state::verbatim:
-        switch (c) {
-          case '<':
-            state = cpy_state::start_name;
-            break;
-          default:
-            description_ += c;
-            break;
-        }
-        break;
-      case cpy_state::start_name:
-        switch (c) {
-          case ' ':
-          case '>':
-            description_ += '<';
-            description_ += c;
-            state = cpy_state::verbatim;
-            break;
-          default:
-            parameter_name.clear();
-            parameter_name += c;
-            state = cpy_state::read_name;
-            break;
-        }
-        break;
-      case cpy_state::read_name:
-        switch (c) {
-          case '>':
-            description_ += ctx_->parameter(parameter_name);
-            parameter_names_.push_back(std::move(parameter_name));
-            parameter_name.clear();
-            state = cpy_state::verbatim;
-            break;
-          default:
-            parameter_name += c;
-            break;
-        }
-        break;
+  // Process <arg> syntax if the root block is an outline.
+  if (!ctx_->call_stack.empty()
+      && ctx_->call_stack.front()->type() == block_type::outline) {
+    std::string parameter_name;
+    auto state = cpy_state::verbatim;
+    for (auto c : raw_description_) {
+      switch (state) {
+        default: // cpy_state::verbatim:
+          switch (c) {
+            case '<':
+              state = cpy_state::start_name;
+              break;
+            default:
+              description_ += c;
+              break;
+          }
+          break;
+        case cpy_state::start_name:
+          switch (c) {
+            case ' ':
+            case '>':
+              description_ += '<';
+              description_ += c;
+              state = cpy_state::verbatim;
+              break;
+            default:
+              parameter_name.clear();
+              parameter_name += c;
+              state = cpy_state::read_name;
+              break;
+          }
+          break;
+        case cpy_state::read_name:
+          switch (c) {
+            case '>':
+              description_ += ctx_->parameter(parameter_name);
+              parameter_names_.push_back(std::move(parameter_name));
+              parameter_name.clear();
+              state = cpy_state::verbatim;
+              break;
+            default:
+              parameter_name += c;
+              break;
+          }
+          break;
+      }
     }
+  } else {
+    description_ = raw_description_;
   }
 }
 

@@ -31,8 +31,8 @@ void remove_empty_entries(std::vector<std::string_view>& elements) {
 
 namespace caf::test {
 
-outline::examples_setter&
-outline::examples_setter::operator=(std::string_view str) {
+outline_setter::examples_setter&
+outline_setter::examples_setter::operator=(std::string_view str) {
   if (!examples_)
     return *this;
   // Split up the string into lines.
@@ -78,13 +78,13 @@ outline::examples_setter::operator=(std::string_view str) {
   return *this;
 }
 
-void outline::run() {
+void outline_setter::run() {
   if (ctx_->example_parameters.empty()) {
-    if (auto guard = ctx_->get<scenario>(-1, description_, loc_)->commit()) {
+    if (auto guard = ctx_->get<outline>(-1, description_, loc_)->commit()) {
       // By placing a dummy scenario on the unwind stack, we render all blocks
       // inactive. We are only interested in the assignment to
       // example_parameters.
-      scenario dummy{ctx_.get(), -2, description_, loc_};
+      outline dummy{ctx_.get(), -2, description_, loc_};
       ctx_->unwind_stack.push_back(&dummy);
       call_do_run();
       if (ctx_->example_parameters.empty())
@@ -102,8 +102,8 @@ void outline::run() {
     // Create all root steps ahead of time.
     for (size_t index = 0; index < ctx_->example_parameters.size(); ++index) {
       auto& ptr = ctx_->steps[std::make_pair(0, index)];
-      ptr = std::make_unique<scenario>(ctx_.get(), 0,
-                                       ctx_->example_names[index], loc_);
+      ptr = std::make_unique<outline>(ctx_.get(), 0, ctx_->example_names[index],
+                                      loc_);
     }
   }
   ctx_->parameters = ctx_->example_parameters[ctx_->example_id];
@@ -114,6 +114,37 @@ void outline::run() {
       ++ctx_->example_id;
   }};
   super::run();
+}
+
+block_type outline::type() const noexcept {
+  return block_type::outline;
+}
+
+given* outline::get_given(int id, std::string_view description,
+                          const detail::source_location& loc) {
+  return get_nested<given>(id, description, loc);
+}
+
+and_given* outline::get_and_given(int id, std::string_view description,
+                                  const detail::source_location& loc) {
+  return get_nested<and_given>(id, description, loc);
+}
+
+when* outline::get_when(int id, std::string_view description,
+                        const detail::source_location& loc) {
+  return get_nested<when>(id, description, loc);
+}
+
+and_when* outline::get_and_when(int id, std::string_view description,
+                                const detail::source_location& loc) {
+  return get_nested<and_when>(id, description, loc);
+}
+
+scope outline::commit() {
+  if (!ctx_->active() || !can_run())
+    return {};
+  enter();
+  return scope{this};
 }
 
 } // namespace caf::test

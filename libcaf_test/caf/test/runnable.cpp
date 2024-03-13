@@ -6,6 +6,7 @@
 
 #include "caf/test/block_type.hpp"
 #include "caf/test/context.hpp"
+#include "caf/test/outline.hpp"
 #include "caf/test/scenario.hpp"
 #include "caf/test/scope.hpp"
 #include "caf/test/test.hpp"
@@ -29,6 +30,14 @@ void runnable::run() {
   auto guard
     = detail::scope_guard{[]() noexcept { current_runnable = nullptr; }};
   switch (root_type_) {
+    case block_type::outline:
+      if (auto guard = ctx_->get<outline>(0, description_, loc_)->commit()) {
+        do_run();
+        return;
+      }
+      CAF_RAISE_ERROR(std::logic_error,
+                      "failed to select  the root block for the scenario");
+      break;
     case block_type::scenario:
       if (auto guard = ctx_->get<scenario>(0, description_, loc_)->commit()) {
         do_run();
