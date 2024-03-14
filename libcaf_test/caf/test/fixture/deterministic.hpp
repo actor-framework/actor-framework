@@ -164,7 +164,7 @@ public:
   /// The configuration type for this fixture.
   class config : public actor_system_config {
   public:
-    config(deterministic* fix);
+    explicit config(deterministic* fix);
 
     ~config() override;
 
@@ -172,6 +172,21 @@ public:
     detail::mailbox_factory* mailbox_factory() override;
 
     std::unique_ptr<detail::mailbox_factory> factory_;
+  };
+
+  /// The custom system implementation for this fixture.
+  class system_impl : public actor_system {
+  public:
+    system_impl(actor_system_config& cfg, deterministic* fix);
+
+    detail::actor_local_printer_ptr printer_for(local_actor* self) override;
+
+  private:
+    static void custom_setup(actor_system& sys, actor_system_config& cfg,
+                             void* custom_setup_data);
+
+    /// Maps actors to their designated printer.
+    std::map<actor_id, detail::actor_local_printer_ptr> printers_;
   };
 
   /// Configures the algorithm to evaluate for an `evaluator` instances.
@@ -663,7 +678,7 @@ public:
   config cfg;
 
   /// The actor system instance for the tests.
-  actor_system sys;
+  system_impl sys;
 
 private:
   /// Removes all events from the queue.

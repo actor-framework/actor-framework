@@ -5,15 +5,20 @@
 #include "caf/actor_system.hpp"
 
 #include "caf/actor.hpp"
+#include "caf/actor_from_state.hpp"
+#include "caf/actor_ostream.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/meta_object.hpp"
+#include "caf/detail/thread_safe_actor_clock.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/scheduler.hpp"
+#include "caf/spawn_options.hpp"
 #include "caf/stateful_actor.hpp"
 #include "caf/system_messages.hpp"
 
+#include <fstream>
 #include <memory>
 #include <unordered_map>
 #include <unordered_set>
@@ -121,6 +126,133 @@ behavior config_serv_impl(stateful_actor<kvstate>* self) {
     },
   };
 }
+
+// -- printer actor ------------------------------------------------------------
+
+struct printer_actor_state {
+  using string_sink = std::function<void(std::string&&)>;
+
+  using string_sink_ptr = std::shared_ptr<string_sink>;
+
+  using sink_cache = std::map<std::string, string_sink_ptr>;
+
+  struct actor_data {
+    std::string current_line;
+    string_sink_ptr redirect;
+    actor_data() {
+      // nop
+    }
+  };
+
+  using data_map = std::unordered_map<actor_id, actor_data>;
+
+  string_sink make_sink(actor_system&, const std::string& fn, int flags) {
+    if (fn.empty()) {
+      return nullptr;
+    } else if (fn.front() == ':') {
+      // TODO: re-implement "virtual files" or remove
+      return nullptr;
+    } else {
+      auto append = (flags & actor_ostream::append) != 0;
+      auto fs = std::make_shared<std::ofstream>();
+      fs->open(fn, append ? std::ios_base::out | std::ios_base::app
+                          : std::ios_base::out);
+      if (fs->is_open()) {
+        return [fs](std::string&& out) { *fs << out; };
+      } else {
+        fprintf(stderr, "cannot open file: %s\n", fn.c_str());
+        return nullptr;
+      }
+    }
+  }
+
+  string_sink_ptr get_or_add_sink_ptr(actor_system& sys, sink_cache& fc,
+                                      const std::string& fn, int flags) {
+    if (auto i = fc.find(fn); i != fc.end()) {
+      return i->second;
+    } else if (auto fs = make_sink(sys, fn, flags)) {
+      if (fs) {
+        auto ptr = std::make_shared<string_sink>(std::move(fs));
+        fc.emplace(fn, ptr);
+        return ptr;
+      } else {
+        return nullptr;
+      }
+    } else {
+      return nullptr;
+    }
+  }
+
+  explicit printer_actor_state(event_based_actor* selfptr) : self(selfptr) {
+    // nop
+  }
+
+  event_based_actor* self;
+
+  sink_cache fcache;
+
+  string_sink_ptr global_redirect;
+
+  data_map data;
+
+  actor_data* get_data(actor_id addr, bool insert_missing) {
+    if (addr == invalid_actor_id)
+      return nullptr;
+    auto i = data.find(addr);
+    if (i == data.end() && insert_missing)
+      i = data.emplace(addr, actor_data{}).first;
+    if (i != data.end())
+      return &(i->second);
+    return nullptr;
+  }
+
+  void flush(actor_data* what, bool forced) {
+    if (what == nullptr)
+      return;
+    auto& line = what->current_line;
+    if (line.empty() || (line.back() != '\n' && !forced))
+      return;
+    if (what->redirect)
+      (*what->redirect)(std::move(line));
+    else if (global_redirect)
+      (*global_redirect)(std::move(line));
+    else
+      fprintf(stderr, "%s", line.c_str());
+    line.clear();
+  }
+
+  behavior make_behavior() {
+    return {
+      [this](add_atom, actor_id aid, std::string& str) {
+        if (str.empty() || aid == invalid_actor_id)
+          return;
+        auto d = get_data(aid, true);
+        if (d != nullptr) {
+          d->current_line += str;
+          flush(d, false);
+        }
+      },
+      [this](flush_atom, actor_id aid) { flush(get_data(aid, false), true); },
+      [this](delete_atom, actor_id aid) {
+        auto data_ptr = get_data(aid, false);
+        if (data_ptr != nullptr) {
+          flush(data_ptr, true);
+          data.erase(aid);
+        }
+      },
+      [this](redirect_atom, const std::string& fn, int flag) {
+        global_redirect = get_or_add_sink_ptr(self->system(), fcache, fn, flag);
+      },
+      [this](redirect_atom, actor_id aid, const std::string& fn, int flag) {
+        auto d = get_data(aid, true);
+        if (d != nullptr)
+          d->redirect = get_or_add_sink_ptr(self->system(), fcache, fn, flag);
+      },
+    };
+  }
+
+  static constexpr const char* name = "printer_actor";
+};
 
 // -- spawn server -------------------------------------------------------------
 
@@ -256,16 +388,21 @@ auto make_actor_metric_families(telemetry::metric_registry& reg) {
 } // namespace
 
 actor_system::actor_system(actor_system_config& cfg)
+  : actor_system(cfg, nullptr, nullptr) {
+  // nop
+}
+
+actor_system::actor_system(actor_system_config& cfg,
+                           custom_setup_fn custom_setup,
+                           void* custom_setup_data)
   : ids_(0),
     metrics_(cfg),
     base_metrics_(make_base_metrics(metrics_)),
-    logger_(cfg.make_logger(*this)),
     registry_(*this),
     dummy_execution_unit_(this),
     await_actors_before_shutdown_(true),
     cfg_(cfg),
     private_threads_(this) {
-  CAF_SET_LOGGER_SYS(this);
   meta_objects_guard_ = detail::global_meta_objects_guard();
   if (!meta_objects_guard_)
     CAF_CRITICAL("unable to obtain the global meta objects guard");
@@ -300,9 +437,22 @@ actor_system::actor_system(actor_system_config& cfg)
                    "caf::io::middleman::init_global_meta_objects() before");
     }
   }
+  // Allow the callback to override any configuration parameter and to
+  // initialize member variables before we set the defaults.
+  if (custom_setup != nullptr) {
+    custom_setup(*this, cfg, custom_setup_data);
+  }
+  // Initialize the logger before any other module.
+  if (!logger_) {
+    logger_ = cfg.make_logger(*this);
+    logger_->init(cfg);
+    CAF_SET_LOGGER_SYS(this);
+  }
+  // Make sure we have a clock.
+  if (!clock_) {
+    clock_ = std::make_unique<detail::thread_safe_actor_clock>(*this);
+  }
   // Make sure we have a scheduler up and running.
-  if (cfg.scheduler_factory)
-    scheduler_ = cfg.scheduler_factory(*this);
   if (!scheduler_) {
     using defaults::scheduler::policy;
     auto config_policy = get_or(cfg, "caf.scheduler.policy", policy);
@@ -318,11 +468,14 @@ actor_system::actor_system(actor_system_config& cfg)
       scheduler_ = scheduler::make_work_stealing(*this);
     }
   }
-  // Initialize state for each module and give each module the opportunity to
-  // adapt the system configuration.
-  logger_->init(cfg);
-  CAF_SET_LOGGER_SYS(this);
-  scheduler_->init(cfg);
+  scheduler_->start();
+  if (!printer_) {
+    auto p = spawn<hidden + detached + lazy_init>(
+      actor_from_state<printer_actor_state>);
+    printer_ = actor_cast<strong_actor_ptr>(std::move(p));
+  }
+  // Initialize the state for each module and give each module the opportunity
+  // to adapt the system configuration.
   for (auto& mod : modules_)
     if (mod)
       mod->init(cfg);
@@ -335,7 +488,6 @@ actor_system::actor_system(actor_system_config& cfg)
   private_threads_.start();
   registry_.put("SpawnServ", spawn_serv());
   registry_.put("ConfigServ", config_serv());
-  scheduler_->start();
   for (auto& mod : modules_)
     if (mod)
       mod->start();
@@ -363,15 +515,17 @@ actor_system::~actor_system() {
         ptr->stop();
       }
     }
+    drop(printer_);
     CAF_LOG_DEBUG("stop scheduler");
     scheduler_->stop();
     private_threads_.stop();
     registry_.stop();
+    clock_ = nullptr;
   }
   // reset logger and wait until dtor was called
   CAF_SET_LOGGER_SYS(nullptr);
   logger_->stop();
-  logger_.reset();
+  logger_ = nullptr;
 }
 
 /// Returns the scheduler instance.
@@ -455,7 +609,7 @@ void actor_system::demonitor(const node_id& node, const actor_addr& observer) {
 }
 
 actor_clock& actor_system::clock() noexcept {
-  return scheduler().clock();
+  return *clock_;
 }
 
 size_t actor_system::detached_actors() const noexcept {
@@ -502,16 +656,47 @@ void actor_system::release_private_thread(detail::private_thread* ptr) {
   private_threads_.release(ptr);
 }
 
-detail::mailbox_factory* actor_system::mailbox_factory() {
-  return cfg_.mailbox_factory();
+namespace {
+
+class actor_local_printer_impl : public detail::actor_local_printer {
+public:
+  actor_local_printer_impl(abstract_actor* self, actor printer)
+    : self_(self->id()), printer_(std::move(printer)) {
+    CAF_ASSERT(printer_ != nullptr);
+    if (!self->getf(abstract_actor::has_used_aout_flag))
+      self->setf(abstract_actor::has_used_aout_flag);
+  }
+
+  void write(std::string&& arg) override {
+    printer_->enqueue(make_mailbox_element(nullptr, make_message_id(),
+                                           add_atom_v, self_, std::move(arg)),
+                      nullptr);
+  }
+
+  void write(const char* arg) override {
+    write(std::string{arg});
+  }
+
+  void flush() override {
+    printer_->enqueue(make_mailbox_element(nullptr, make_message_id(),
+                                           flush_atom_v, self_),
+                      nullptr);
+  }
+
+private:
+  actor_id self_;
+  actor printer_;
+};
+
+} // namespace
+
+detail::actor_local_printer_ptr actor_system::printer_for(local_actor* self) {
+  return make_counted<actor_local_printer_impl>(self,
+                                                actor_cast<actor>(printer_));
 }
 
-/// Set a handle to the central printing actor.
-void actor_system::printer(caf::actor hdl) {
-  if (printer_actor_) {
-    anon_send_exit(printer(), exit_reason::user_shutdown);
-  }
-  printer_actor_ = std::move(hdl);
+detail::mailbox_factory* actor_system::mailbox_factory() {
+  return cfg_.mailbox_factory();
 }
 
 } // namespace caf

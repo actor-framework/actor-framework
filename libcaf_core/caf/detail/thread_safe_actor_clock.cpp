@@ -13,6 +13,16 @@
 
 namespace caf::detail {
 
+thread_safe_actor_clock::thread_safe_actor_clock(caf::actor_system& sys) {
+  dispatcher_ = sys.launch_thread("caf.clock", thread_owner::system,
+                                  [qptr = &queue_] { run(qptr); });
+}
+
+thread_safe_actor_clock::~thread_safe_actor_clock() {
+  queue_.push(nullptr);
+  dispatcher_.join();
+}
+
 disposable thread_safe_actor_clock::schedule(time_point abs_time, action f) {
   queue_.push(schedule_entry_ptr{new schedule_entry{abs_time, f}});
   return std::move(f).as_disposable();
@@ -53,16 +63,6 @@ void thread_safe_actor_clock::run(queue_type* queue) {
     i = std::stable_partition(i, tbl.end(), is_disposed);
     tbl.erase(tbl.begin(), i);
   }
-}
-
-void thread_safe_actor_clock::start_dispatch_loop(caf::actor_system& sys) {
-  dispatcher_ = sys.launch_thread("caf.clock", thread_owner::system,
-                                  [qptr = &queue_] { run(qptr); });
-}
-
-void thread_safe_actor_clock::stop_dispatch_loop() {
-  queue_.push(nullptr);
-  dispatcher_.join();
 }
 
 } // namespace caf::detail

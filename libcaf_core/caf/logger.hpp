@@ -38,6 +38,8 @@ public:
 
   friend class actor_system;
 
+  friend class detail::actor_system_access;
+
   friend class trace_exit_guard;
 
   friend class log::event_sender;

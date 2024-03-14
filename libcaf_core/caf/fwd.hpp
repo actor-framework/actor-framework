@@ -268,6 +268,7 @@ using int_gauge_family = metric_family_impl<int_gauge>;
 
 namespace detail {
 
+class actor_system_access;
 class mailbox_factory;
 class monotonic_buffer_resource;
 

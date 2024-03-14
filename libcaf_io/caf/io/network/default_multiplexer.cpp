@@ -16,6 +16,7 @@
 #include "caf/config.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/call_cfun.hpp"
+#include "caf/detail/cleanup_and_release.hpp"
 #include "caf/detail/socket_guard.hpp"
 #include "caf/log/io.hpp"
 #include "caf/log/system.hpp"
@@ -627,7 +628,7 @@ default_multiplexer::~default_multiplexer() {
   nonblocking(pipe_.first, true);
   auto ptr = pipe_reader_.try_read_next();
   while (ptr != nullptr) {
-    scheduler::cleanup_and_release(ptr);
+    detail::cleanup_and_release(ptr);
     ptr = pipe_reader_.try_read_next();
   }
   // do cleanup for pipe reader manually, since WSACleanup needs to happen last
@@ -651,7 +652,7 @@ void default_multiplexer::exec_later(resumable* ptr) {
         internally_posted_.emplace_back(ptr, false);
       break;
     default:
-      system().scheduler().enqueue(ptr);
+      system().scheduler().schedule(ptr);
   }
 }
 

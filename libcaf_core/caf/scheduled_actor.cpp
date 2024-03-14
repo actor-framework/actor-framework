@@ -166,7 +166,7 @@ bool scheduled_actor::enqueue(mailbox_element_ptr ptr, execution_unit* eu) {
       else if (eu != nullptr)
         eu->exec_later(this);
       else
-        home_system().scheduler().enqueue(this);
+        home_system().scheduler().schedule(this);
       return true;
     }
     case intrusive::inbox_result::success:

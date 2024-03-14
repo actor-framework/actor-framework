@@ -11,7 +11,7 @@
 namespace caf {
 
 actor_ostream::actor_ostream(local_actor* self)
-  : printer_(self->home_system().scheduler().printer_for(self)) {
+  : printer_(self->home_system().printer_for(self)) {
   // nop
 }
 
@@ -24,7 +24,7 @@ actor_ostream::actor_ostream(scoped_actor& self)
 void actor_ostream::redirect(abstract_actor* self, std::string fn, int flags) {
   if (self == nullptr)
     return;
-  auto pr = self->home_system().printer();
+  auto pr = self->home_system().printer_;
   if (!pr)
     return;
   pr->enqueue(make_mailbox_element(nullptr, make_message_id(), redirect_atom_v,
@@ -33,7 +33,7 @@ void actor_ostream::redirect(abstract_actor* self, std::string fn, int flags) {
 }
 
 void actor_ostream::redirect_all(actor_system& sys, std::string fn, int flags) {
-  auto pr = sys.printer();
+  auto pr = sys.printer_;
   if (!pr)
     return;
   pr->enqueue(make_mailbox_element(nullptr, make_message_id(), redirect_atom_v,

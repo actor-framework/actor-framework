@@ -10,6 +10,7 @@
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/detail/actor_local_printer.hpp"
+#include "caf/detail/actor_system_access.hpp"
 #include "caf/detail/mailbox_factory.hpp"
 #include "caf/detail/print.hpp"
 #include "caf/detail/source_location.hpp"
@@ -21,6 +22,7 @@
 #include "caf/scheduler.hpp"
 
 #include <cassert>
+#include <memory>
 #include <numeric>
 #include <string>
 #include <string_view>
@@ -441,31 +443,11 @@ public:
   using super = caf::scheduler;
 
   scheduler_impl(actor_system& sys, deterministic* fix)
-    : super(sys), fix_(fix) {
+    : sys_(&sys), fix_(fix) {
     // nop
   }
 
-  detail::actor_local_printer_ptr printer_for(local_actor* self) override {
-    auto& ptr = printers_[self->id()];
-    if (!ptr)
-      ptr = make_counted<actor_local_printer_impl>(self);
-    return ptr;
-  }
-
-  deterministic_actor_clock& clock() noexcept override {
-    return clock_;
-  }
-
-protected:
-  void start() override {
-    // nop
-  }
-
-  void stop() override {
-    fix_->drop_events();
-  }
-
-  void enqueue(resumable* ptr) override {
+  void schedule(resumable* ptr) override {
     using event_t = deterministic::scheduling_event;
     using subtype_t = resumable::subtype_t;
     switch (ptr->subtype()) {
@@ -473,9 +455,9 @@ protected:
       case subtype_t::io_actor: {
         // Actors put their messages into events_ directly. However, we do run
         // them right away if they aren't initialized yet.
-        auto dptr = static_cast<scheduled_actor*>(ptr);
+        auto dptr = dynamic_cast<scheduled_actor*>(ptr);
         if (!dptr->initialized() && !dptr->inactive())
-          dptr->resume(system_.dummy_execution_unit(), 0);
+          dptr->resume(sys_->dummy_execution_unit(), 0);
         break;
       }
       default:
@@ -486,24 +468,30 @@ protected:
     intrusive_ptr_release(ptr);
   }
 
+  void delay(resumable* what) override {
+    schedule(what);
+  }
+
+  void start() override {
+    // nop
+  }
+
+  void stop() override {
+    fix_->drop_events();
+  }
+
 private:
+  /// The actor system this scheduler belongs to.
+  actor_system* sys_;
+
   /// The fixture this scheduler belongs to.
   deterministic* fix_;
-
-  /// Allows users to fake time at will.
-  deterministic_actor_clock clock_;
-
-  /// Maps actors to their designated printer.
-  std::map<actor_id, detail::actor_local_printer_ptr> printers_;
 };
 
 // -- config -------------------------------------------------------------------
 
 deterministic::config::config(deterministic* fix) {
   factory_ = std::make_unique<mailbox_factory_impl>(fix);
-  scheduler_factory = [fix](actor_system& sys) -> std::unique_ptr<scheduler> {
-    return std::make_unique<scheduler_impl>(sys, fix);
-  };
 }
 
 deterministic::config::~config() {
@@ -514,6 +502,32 @@ detail::mailbox_factory* deterministic::config::mailbox_factory() {
   return factory_.get();
 }
 
+// -- system -------------------------------------------------------------------
+
+deterministic::system_impl::system_impl(actor_system_config& cfg,
+                                        deterministic* fix)
+  : actor_system(cfg, custom_setup, fix) {
+  // nop
+}
+
+detail::actor_local_printer_ptr
+deterministic::system_impl::printer_for(local_actor* self) {
+  auto& ptr = printers_[self->id()];
+  if (!ptr)
+    ptr = make_counted<actor_local_printer_impl>(self);
+  return ptr;
+}
+
+void deterministic::system_impl::custom_setup(actor_system& sys,
+                                              actor_system_config& cfg,
+                                              void* custom_setup_data) {
+  auto* fix = static_cast<deterministic*>(custom_setup_data);
+  auto setter = detail::actor_system_access{sys};
+  setter.logger(make_counted<deterministic_logger>(sys), cfg);
+  setter.clock(std::make_unique<deterministic_actor_clock>());
+  setter.scheduler(std::make_unique<scheduler_impl>(sys, fix));
+}
+
 // -- abstract_message_predicate -----------------------------------------------
 
 deterministic::abstract_message_predicate::~abstract_message_predicate() {
@@ -522,10 +536,7 @@ deterministic::abstract_message_predicate::~abstract_message_predicate() {
 
 // -- constructors, destructors, and assignment operators ----------------------
 
-deterministic::deterministic()
-  : cfg(this), sys(cfg.logger_factory([](caf::actor_system& sys) {
-      return make_counted<deterministic_logger>(sys);
-    })) {
+deterministic::deterministic() : cfg(this), sys(cfg, this) {
   // nop
 }
 
@@ -535,7 +546,7 @@ deterministic::~deterministic() {
   //       messages. Otherwise, the destructor of `sys` will wait for all
   //       actors, potentially waiting forever. The same holds true for pending
   //       timeouts.
-  sched_impl().clock().drop_actions();
+  dynamic_cast<deterministic_actor_clock&>(sys.clock()).drop_actions();
   drop_events();
 }
 
@@ -567,7 +578,7 @@ bool deterministic::prepone_event_impl(
   auto last = events_.end();
   auto i = std::find_if(first, last, [&](const auto& event) {
     auto self = actor_cast<abstract_actor*>(receiver);
-    return event->target == static_cast<scheduled_actor*>(self)
+    return event->target == dynamic_cast<scheduled_actor*>(self)
            && sender_pred(event->item->sender)
            && payload_pred(event->item->payload);
   });
@@ -588,7 +599,7 @@ deterministic::find_event_impl(const strong_actor_ptr& receiver) {
   auto last = events_.end();
   auto i = std::find_if(events_.begin(), last, [&](const auto& event) {
     auto raw_ptr = actor_cast<abstract_actor*>(receiver);
-    return event->target == static_cast<scheduled_actor*>(raw_ptr);
+    return event->target == dynamic_cast<scheduled_actor*>(raw_ptr);
   });
   if (i != last)
     return i->get();
@@ -688,40 +699,47 @@ void deterministic::inject_exit(const strong_actor_ptr& hdl, error reason) {
 
 size_t deterministic::set_time(actor_clock::time_point value,
                                const detail::source_location& loc) {
-  return sched_impl().clock().set_time(value, loc);
+  auto& clock = dynamic_cast<deterministic_actor_clock&>(sys.clock());
+  return clock.set_time(value, loc);
 }
 
 size_t deterministic::advance_time(actor_clock::duration_type amount,
                                    const detail::source_location& loc) {
-  return sched_impl().clock().advance_time(amount, loc);
+  auto& clock = dynamic_cast<deterministic_actor_clock&>(sys.clock());
+  return clock.advance_time(amount, loc);
 }
 
 bool deterministic::trigger_timeout(const detail::source_location& loc) {
-  return sched_impl().clock().trigger_timeout(loc);
+  auto& clock = dynamic_cast<deterministic_actor_clock&>(sys.clock());
+  return clock.trigger_timeout(loc);
 }
 
 size_t deterministic::trigger_all_timeouts(const detail::source_location& loc) {
-  return sched_impl().clock().trigger_all_timeouts(loc);
+  auto& clock = dynamic_cast<deterministic_actor_clock&>(sys.clock());
+  return clock.trigger_all_timeouts(loc);
 }
 
 size_t deterministic::num_timeouts() noexcept {
-  return sched_impl().clock().num_timeouts();
+  auto& clock = dynamic_cast<deterministic_actor_clock&>(sys.clock());
+  return clock.num_timeouts();
 }
 
 actor_clock::time_point
 deterministic::next_timeout(const detail::source_location& loc) {
-  return sched_impl().clock().next_timeout(loc);
+  auto& clock = dynamic_cast<deterministic_actor_clock&>(sys.clock());
+  return clock.next_timeout(loc);
 }
 
 actor_clock::time_point
 deterministic::last_timeout(const detail::source_location& loc) {
-  return sched_impl().clock().last_timeout(loc);
+  auto& clock = dynamic_cast<deterministic_actor_clock&>(sys.clock());
+  return clock.last_timeout(loc);
 }
 
 // -- private utilities --------------------------------------------------------
 
 deterministic::scheduler_impl& deterministic::sched_impl() {
-  return static_cast<scheduler_impl&>(sys.scheduler());
+  return dynamic_cast<scheduler_impl&>(sys.scheduler());
 }
 
 } // namespace caf::test::fixture

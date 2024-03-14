@@ -141,6 +141,7 @@ caf_add_component(
     caf/detail/abstract_worker.cpp
     caf/detail/abstract_worker_hub.cpp
     caf/detail/actor_local_printer.cpp
+    caf/detail/actor_system_access.cpp
     caf/detail/atomic_ref_counted.cpp
     caf/detail/base64.cpp
     caf/detail/base64.test.cpp
@@ -149,10 +150,12 @@ caf_add_component(
     caf/detail/behavior_stack.cpp
     caf/detail/blocking_behavior.cpp
     caf/detail/bounds_checker.test.cpp
+    caf/detail/cleanup_and_release.cpp
     caf/detail/config_consumer.cpp
     caf/detail/config_consumer.test.cpp
     caf/detail/default_mailbox.cpp
     caf/detail/default_mailbox.test.cpp
+    caf/detail/default_thread_count.cpp
     caf/detail/format.test.cpp
     caf/detail/get_process_id.cpp
     caf/detail/glob_match.cpp

@@ -23,6 +23,12 @@ public:
 
   static constexpr size_t buffer_size = 64;
 
+  // -- constructors, destructors, and assignment operators --------------------
+
+  thread_safe_actor_clock(actor_system& sys);
+
+  ~thread_safe_actor_clock() override;
+
   // -- member types -----------------------------------------------------------
 
   using super = actor_clock;
