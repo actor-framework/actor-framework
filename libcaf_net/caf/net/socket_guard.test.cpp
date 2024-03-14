@@ -2,11 +2,9 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE net.socket_guard
-
 #include "caf/net/socket_guard.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "caf/test/test.hpp"
 
 #include "caf/net/socket_id.hpp"
 
@@ -48,38 +46,38 @@ struct fixture {
   dummy_socket sock;
 };
 
-} // namespace
+WITH_FIXTURE(fixture) {
 
-CAF_TEST_FIXTURE_SCOPE(socket_guard_tests, fixture)
-
-CAF_TEST(cleanup) {
+TEST("cleanup") {
   {
     auto guard = make_socket_guard(sock);
-    CAF_CHECK_EQUAL(guard.socket().id, dummy_id);
+    check_eq(guard.socket().id, dummy_id);
   }
-  CAF_CHECK(sock.closed);
+  check(sock.closed);
 }
 
-CAF_TEST(reset) {
+TEST("reset") {
   {
     auto guard = make_socket_guard(sock);
-    CAF_CHECK_EQUAL(guard.socket().id, dummy_id);
+    check_eq(guard.socket().id, dummy_id);
     guard.release();
-    CAF_CHECK_EQUAL(guard.socket().id, invalid_socket_id);
+    check_eq(guard.socket().id, invalid_socket_id);
     guard.reset(sock);
-    CAF_CHECK_EQUAL(guard.socket().id, dummy_id);
+    check_eq(guard.socket().id, dummy_id);
   }
-  CAF_CHECK_EQUAL(sock.closed, true);
+  check_eq(sock.closed, true);
 }
 
-CAF_TEST(release) {
+TEST("release") {
   {
     auto guard = make_socket_guard(sock);
-    CAF_CHECK_EQUAL(guard.socket().id, dummy_id);
+    check_eq(guard.socket().id, dummy_id);
     guard.release();
-    CAF_CHECK_EQUAL(guard.socket().id, invalid_socket_id);
+    check_eq(guard.socket().id, invalid_socket_id);
   }
-  CAF_CHECK_EQUAL(sock.closed, false);
+  check_eq(sock.closed, false);
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+} // WITH_FIXTURE(fixture)
+
+} // namespace

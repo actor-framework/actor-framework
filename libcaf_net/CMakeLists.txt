@@ -34,9 +34,11 @@ caf_add_component(
     caf/detail/rfc6455.cpp
     caf/detail/rfc6455.test.cpp
     caf/net/abstract_actor_shell.cpp
+    caf/net/accept_socket.test.cpp
     caf/net/actor_shell.cpp
     caf/net/actor_shell.test.cpp
     caf/net/datagram_socket.cpp
+    caf/net/datagram_socket.test.cpp
     caf/net/dsl/config_base.cpp
     caf/net/generic_lower_layer.cpp
     caf/net/generic_upper_layer.cpp
@@ -66,6 +68,7 @@ caf_add_component(
     caf/net/http/upper_layer.cpp
     caf/net/http/v1.cpp
     caf/net/ip.cpp
+    caf/net/ip.test.cpp
     caf/net/lp/default_trait.cpp
     caf/net/lp/frame.test.cpp
     caf/net/lp/framing.cpp
@@ -74,7 +77,9 @@ caf_add_component(
     caf/net/lp/upper_layer.cpp
     caf/net/middleman.cpp
     caf/net/multiplexer.cpp
+    caf/net/multiplexer.test.cpp
     caf/net/network_socket.cpp
+    caf/net/network_socket.test.cpp
     caf/net/octet_stream/flow_bridge.cpp
     caf/net/octet_stream/flow_bridge.test.cpp
     caf/net/octet_stream/lower_layer.cpp
@@ -84,14 +89,16 @@ caf_add_component(
     caf/net/octet_stream/upper_layer.cpp
     caf/net/octet_stream/with.test.cpp
     caf/net/pipe_socket.cpp
+    caf/net/pipe_socket.test.cpp
     caf/net/prometheus.cpp
     caf/net/socket.cpp
+    caf/net/socket.test.cpp
     caf/net/socket_event_layer.cpp
+    caf/net/socket_guard.test.cpp
     caf/net/socket_manager.cpp
     caf/net/ssl/connection.cpp
     caf/net/ssl/context.cpp
     caf/net/ssl/dtls.cpp
-    caf/net/typed_actor_shell.test.cpp
     caf/net/ssl/errc.cpp
     caf/net/ssl/format.cpp
     caf/net/ssl/password.cpp
@@ -101,12 +108,15 @@ caf_add_component(
     caf/net/ssl/transport.cpp
     caf/net/ssl/verify.cpp
     caf/net/stream_socket.cpp
+    caf/net/stream_socket.test.cpp
     caf/net/tcp_accept_socket.cpp
     caf/net/tcp_accept_socket.test.cpp
     caf/net/tcp_stream_socket.cpp
     caf/net/tcp_stream_socket.test.cpp
     caf/net/this_host.cpp
+    caf/net/typed_actor_shell.test.cpp
     caf/net/udp_datagram_socket.cpp
+    caf/net/udp_datagram_socket.test.cpp
     caf/net/web_socket/client.cpp
     caf/net/web_socket/default_trait.cpp
     caf/net/web_socket/frame.cpp
@@ -121,17 +131,7 @@ caf_add_component(
     ${CMAKE_CURRENT_BINARY_DIR}/tests/legacy/pem.cpp
     tests/legacy/net-test.cpp
   LEGACY_TEST_SUITES
-    net.accept_socket
-    net.datagram_socket
-    net.ip
-    net.multiplexer
-    net.network_socket
-    net.pipe_socket
-    net.socket
-    net.socket_guard
-    net.ssl.transport
-    net.stream_socket
-    net.udp_datagram_socket)
+    net.ssl.transport)
 
 caf_add_test_executable(
   caf-net-autobahn-driver
