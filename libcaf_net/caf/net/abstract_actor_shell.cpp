@@ -192,6 +192,10 @@ void abstract_actor_shell::on_cleanup(const error& reason) {
 
 // -- private member functions -------------------------------------------------
 
+void abstract_actor_shell::do_unstash(mailbox_element_ptr ptr) {
+  mailbox_.push_front(std::move(ptr));
+}
+
 void abstract_actor_shell::close_mailbox(const error& reason) {
   if (!mailbox_.closed()) {
     auto dropped = mailbox_.close(reason);

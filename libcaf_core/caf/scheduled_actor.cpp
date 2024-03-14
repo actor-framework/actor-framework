@@ -1016,6 +1016,10 @@ void scheduled_actor::unstash() {
     mailbox().push_front(mailbox_element_ptr{stashed});
 }
 
+void scheduled_actor::do_unstash(mailbox_element_ptr ptr) {
+  mailbox().push_front(std::move(ptr));
+}
+
 void scheduled_actor::cancel_flows_and_streams() {
   // Note: we always swap out a map before iterating it, because some callbacks
   //       may call erase on the map while we are iterating it.

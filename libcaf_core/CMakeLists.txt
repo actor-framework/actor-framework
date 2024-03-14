@@ -144,6 +144,7 @@ caf_add_component(
     caf/detail/atomic_ref_counted.cpp
     caf/detail/base64.cpp
     caf/detail/base64.test.cpp
+    caf/detail/beacon.cpp
     caf/detail/behavior_impl.cpp
     caf/detail/behavior_stack.cpp
     caf/detail/blocking_behavior.cpp
@@ -284,6 +285,8 @@ caf_add_component(
     caf/log/event.cpp
     caf/log/event.test.cpp
     caf/logger.cpp
+    caf/mail_cache.cpp
+    caf/mail_cache.test.cpp
     caf/mailbox_element.cpp
     caf/mailbox_element.test.cpp
     caf/make_config_option.cpp
@@ -369,7 +372,6 @@ caf_add_component(
     caf/uri_builder.cpp
     caf/uuid.cpp
     caf/uuid.test.cpp
-    caf/detail/beacon.cpp
   LEGACY_TEST_SOURCES
     tests/legacy/core-test.cpp
   LEGACY_TEST_SUITES

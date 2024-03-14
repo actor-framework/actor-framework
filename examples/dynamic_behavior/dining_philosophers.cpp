@@ -5,6 +5,7 @@
 #include "caf/actor_ostream.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/caf_main.hpp"
+#include "caf/mail_cache.hpp"
 #include "caf/scoped_actor.hpp"
 
 #include <chrono>
@@ -30,19 +31,22 @@ using std::endl;
 using namespace caf;
 using namespace std::literals;
 
-// a chopstick: either taken by a philosopher or available
+// Configures how many messages a philosopher can stash away.
+constexpr size_t mail_cache_size = 20;
+
+// A chopstick: either taken by a philosopher or available.
 struct chopstick_trait {
   using signatures
     = type_list<result<taken_atom, bool>(take_atom), result<void>(put_atom)>;
 };
-using chopstick = typed_actor<chopstick_trait>;
+using chopstick_actor = typed_actor<chopstick_trait>;
 
 struct chopstick_state {
-  explicit chopstick_state(chopstick::pointer selfptr) : self(selfptr) {
+  explicit chopstick_state(chopstick_actor::pointer selfptr) : self(selfptr) {
     // nop
   }
 
-  chopstick::behavior_type make_behavior() {
+  chopstick_actor::behavior_type make_behavior() {
     return {
       [this](take_atom) -> result<taken_atom, bool> {
         self->become(keep_behavior, taken(self->current_sender()));
@@ -52,7 +56,7 @@ struct chopstick_state {
     };
   }
 
-  chopstick::behavior_type taken(const strong_actor_ptr& user) {
+  chopstick_actor::behavior_type taken(const strong_actor_ptr& user) {
     return {
       [](take_atom) -> result<taken_atom, bool> {
         return {taken_atom_v, false};
@@ -64,7 +68,7 @@ struct chopstick_state {
     };
   }
 
-  chopstick::pointer self;
+  chopstick_actor::pointer self;
 };
 
 // Based on: http://www.dalnefre.com/wp/2010/08/dining-philosophers-in-humus/
@@ -97,79 +101,94 @@ struct chopstick_state {
 
 class philosopher_state {
 public:
-  philosopher_state(event_based_actor* selfptr, std::string n, chopstick l,
-                    chopstick r)
+  philosopher_state(event_based_actor* selfptr, std::string n,
+                    chopstick_actor l, chopstick_actor r)
     : self(selfptr),
       name(std::move(n)),
+      cache(selfptr, mail_cache_size),
       left(std::move(l)),
       right(std::move(r)) {
-    // we only accept one message per state and skip others in the meantime
-    self->set_default_handler(skip);
-    // a philosopher that receives {eat} stops thinking and becomes hungry
-    thinking.assign([this](eat_atom) {
-      self->become(hungry);
-      self->mail(take_atom_v).send(left);
-      self->mail(take_atom_v).send(right);
-    });
-    // wait for the first answer of a chopstick
-    hungry.assign([this](taken_atom, bool result) {
-      if (result)
-        self->become(granted);
-      else
-        self->become(denied);
-    });
-    // philosopher was able to obtain the first chopstick
-    granted.assign([this](taken_atom, bool result) {
-      if (result) {
-        aout(self).println("{} has picked up chopsticks with "
-                           "IDs {} and {} and starts to eat",
-                           name, left->id(), right->id());
-        // eat some time
-        self->mail(think_atom_v).delay(5s).send(self);
-        self->become(eating);
-      } else {
-        self->mail(put_atom_v)
-          .send(self->current_sender() == left ? right : left);
+    // Default handler for pushing messages to the cache.
+    auto skip_unmatched = [this](message msg) { cache.stash(std::move(msg)); };
+    // A philosopher that receives {eat} stops thinking and becomes hungry.
+    thinking = behavior{
+      [this](eat_atom) {
+        self->become(hungry);
+        cache.unstash();
+        self->mail(take_atom_v).send(left);
+        self->mail(take_atom_v).send(right);
+      },
+      skip_unmatched,
+    };
+    // Wait for the first answer of a chopstick.
+    hungry = behavior{
+      [this](taken_atom, bool result) {
+        if (result)
+          self->become(granted);
+        else
+          self->become(denied);
+        cache.unstash();
+      },
+      skip_unmatched,
+    };
+    // Philosopher was able to obtain the first chopstick.
+    granted = behavior{
+      [this](taken_atom, bool result) {
+        if (result) {
+          aout(self).println("{} has picked up chopsticks with "
+                             "IDs {} and {} and starts to eat",
+                             name, left->id(), right->id());
+          // Eat some time.
+          self->mail(think_atom_v).delay(5s).send(self);
+          self->become(eating);
+        } else {
+          self->mail(put_atom_v)
+            .send(self->current_sender() == left ? right : left);
+          self->mail(eat_atom_v).send(self);
+          self->become(thinking);
+        }
+        cache.unstash();
+      },
+      skip_unmatched,
+    };
+    // Philosopher was *not* able to obtain the first chopstick.
+    denied = behavior{
+      [this](taken_atom, bool result) {
+        if (result)
+          self->mail(put_atom_v)
+            .send(self->current_sender() == left ? left : right);
         self->mail(eat_atom_v).send(self);
         self->become(thinking);
-      }
-    });
-    // philosopher was *not* able to obtain the first chopstick
-    denied.assign([this](taken_atom, bool result) {
-      if (result)
-        self->mail(put_atom_v)
-          .send(self->current_sender() == left ? left : right);
-      self->mail(eat_atom_v).send(self);
-      self->become(thinking);
-    });
-    // philosopher obtained both chopstick and eats (for five seconds)
-    eating.assign([this](think_atom) {
-      self->mail(put_atom_v).send(left);
-      self->mail(put_atom_v).send(right);
-      self->mail(eat_atom_v).delay(5s).send(self);
-      aout(self).println("{} puts down his chopsticks and starts to think",
-                         name);
-      self->become(thinking);
-    });
+        cache.unstash();
+      },
+      skip_unmatched,
+    };
+    // Philosopher obtained both chopstick and eats (for five seconds).
+    eating = behavior{
+      [this](think_atom) {
+        self->mail(put_atom_v).send(left);
+        self->mail(put_atom_v).send(right);
+        self->mail(eat_atom_v).delay(5s).send(self);
+        aout(self).println("{} puts down his chopsticks and starts to think",
+                           name);
+        self->become(thinking);
+        cache.unstash();
+      },
+      skip_unmatched,
+    };
   }
 
   behavior make_behavior() {
-    // start thinking
-    self->mail(think_atom_v).send(self);
-    // philosophers start to think after receiving {think}
-    return {
-      [this](think_atom) {
-        aout(self).println("{} starts to think", name);
-        self->mail(eat_atom_v).delay(5s).send(self);
-        self->become(thinking);
-      },
-    };
+    aout(self).println("{} starts to think", name);
+    self->mail(eat_atom_v).delay(5s).send(self);
+    return thinking;
   }
 
   event_based_actor* self; // handle to the actor itself
   std::string name;        // the name of this philosopher
-  chopstick left;          // left chopstick
-  chopstick right;         // right chopstick
+  mail_cache cache;        // stashes messages to handle them later
+  chopstick_actor left;    // left chopstick
+  chopstick_actor right;   // right chopstick
   behavior thinking;       // initial behavior
   behavior hungry;         // tries to take chopsticks
   behavior granted;        // has one chopstick and waits for the second one
@@ -179,14 +198,14 @@ public:
 
 void caf_main(actor_system& sys) {
   scoped_actor self{sys};
-  // create five chopsticks
+  // Create five chopsticks.
   aout(self).println("chopstick ids are:");
-  auto chopsticks = std::vector<chopstick>{};
+  auto chopsticks = std::vector<chopstick_actor>{};
   for (size_t i = 0; i < 5; ++i) {
     chopsticks.push_back(self->spawn(actor_from_state<chopstick_state>));
     aout(self).println("- {}", chopsticks.back()->id());
   }
-  // spawn five philosophers
+  // Create five philosophers.
   auto names = std::vector{"Plato"s, "Hume"s, "Kant"s, "Nietzsche"s,
                            "Descartes"s};
   for (size_t i = 0; i < 5; ++i)

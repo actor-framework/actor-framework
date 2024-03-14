@@ -349,6 +349,8 @@ public:
   /// @endcond
 
 private:
+  void do_unstash(mailbox_element_ptr ptr) override;
+
   void do_receive(message_id mid, behavior& bhvr, timespan timeout) override;
 
   size_t attach_functor(const actor&);
