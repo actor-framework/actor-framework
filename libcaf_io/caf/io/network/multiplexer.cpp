@@ -26,16 +26,16 @@ multiplexer::supervisor::~supervisor() {
   // nop
 }
 
-resumable::subtype_t multiplexer::runnable::subtype() const {
+resumable::subtype_t multiplexer::runnable::subtype() const noexcept {
   return resumable::function_object;
 }
 
-void multiplexer::runnable::intrusive_ptr_add_ref_impl() {
-  intrusive_ptr_add_ref(this);
+void multiplexer::runnable::ref_resumable() const noexcept {
+  ref();
 }
 
-void multiplexer::runnable::intrusive_ptr_release_impl() {
-  intrusive_ptr_release(this);
+void multiplexer::runnable::deref_resumable() const noexcept {
+  deref();
 }
 
 } // namespace caf::io::network

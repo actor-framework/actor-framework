@@ -47,7 +47,7 @@ public:
     deref();
   }
 
-  void run() override {
+  resume_result resume(execution_unit*, size_t) override {
     CAF_ASSERT(decorated_ != nullptr);
     WorkerPtr tmp;
     {
@@ -64,6 +64,7 @@ public:
       if (tmp)
         do_run(tmp);
     }
+    return resumable::done;
   }
 
   state current_state() const noexcept override {

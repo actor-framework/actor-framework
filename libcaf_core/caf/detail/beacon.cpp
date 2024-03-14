@@ -37,10 +37,11 @@ action::state beacon::current_state() const noexcept {
   }
 }
 
-void beacon::run() {
+resumable::resume_result beacon::resume(execution_unit*, size_t) {
   std::unique_lock guard{mtx_};
   state_ = state::lit;
   cv_.notify_all();
+  return resumable::done;
 }
 
 } // namespace caf::detail

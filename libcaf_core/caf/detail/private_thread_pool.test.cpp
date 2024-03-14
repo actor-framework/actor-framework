@@ -52,18 +52,18 @@ SCENARIO("private threads count towards detached actors") {
 SCENARIO("private threads rerun their resumable when it returns resume_later") {
   struct testee : resumable {
     std::atomic<size_t> runs = 0;
-    std::atomic<size_t> refs_added = 0;
-    std::atomic<size_t> refs_released = 0;
-    subtype_t subtype() const override {
+    mutable std::atomic<size_t> refs_added = 0;
+    mutable std::atomic<size_t> refs_released = 0;
+    subtype_t subtype() const noexcept override {
       return resumable::function_object;
     }
     resume_result resume(execution_unit*, size_t) override {
       return ++runs < 2 ? resumable::resume_later : resumable::done;
     }
-    void intrusive_ptr_add_ref_impl() override {
+    void ref_resumable() const noexcept final {
       ++refs_added;
     }
-    void intrusive_ptr_release_impl() override {
+    void deref_resumable() const noexcept final {
       ++refs_released;
     }
   };

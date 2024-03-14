@@ -22,7 +22,7 @@ struct testee : resumable, ref_counted {
   testee(std::shared_ptr<latch> latch_handle)
     : rendesvous(std::move(latch_handle)) {
   }
-  subtype_t subtype() const override {
+  subtype_t subtype() const noexcept override {
     return resumable::function_object;
   }
   resume_result resume(execution_unit*, size_t max_throughput) override {
@@ -33,10 +33,10 @@ struct testee : resumable, ref_counted {
     }
     return resumable::resume_later;
   }
-  void intrusive_ptr_add_ref_impl() override {
+  void ref_resumable() const noexcept final {
     ref();
   }
-  void intrusive_ptr_release_impl() override {
+  void deref_resumable() const noexcept final {
     deref();
   }
   std::atomic<size_t> runs = 0;
@@ -106,7 +106,7 @@ struct awaiting_testee : resumable, ref_counted {
   awaiting_testee(std::shared_ptr<latch> latch_handle)
     : rendesvous(std::move(latch_handle)) {
   }
-  subtype_t subtype() const override {
+  subtype_t subtype() const noexcept override {
     return resumable::function_object;
   }
   resume_result resume(execution_unit*, size_t) override {
@@ -114,10 +114,10 @@ struct awaiting_testee : resumable, ref_counted {
     rendesvous->count_down();
     return resumable::awaiting_message;
   }
-  void intrusive_ptr_add_ref_impl() override {
+  void ref_resumable() const noexcept final {
     ref();
   }
-  void intrusive_ptr_release_impl() override {
+  void deref_resumable() const noexcept final {
     deref();
   }
   std::atomic<size_t> runs = 0;

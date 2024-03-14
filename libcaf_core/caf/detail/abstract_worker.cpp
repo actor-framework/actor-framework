@@ -18,15 +18,15 @@ abstract_worker::~abstract_worker() {
 
 // -- implementation of resumable ----------------------------------------------
 
-resumable::subtype_t abstract_worker::subtype() const {
+resumable::subtype_t abstract_worker::subtype() const noexcept {
   return resumable::function_object;
 }
 
-void abstract_worker::intrusive_ptr_add_ref_impl() {
+void abstract_worker::ref_resumable() const noexcept {
   ref();
 }
 
-void abstract_worker::intrusive_ptr_release_impl() {
+void abstract_worker::deref_resumable() const noexcept {
   deref();
 }
 

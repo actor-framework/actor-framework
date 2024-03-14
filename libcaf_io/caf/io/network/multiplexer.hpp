@@ -78,9 +78,9 @@ public:
   /// Simple wrapper for runnables
   class CAF_IO_EXPORT runnable : public resumable, public ref_counted {
   public:
-    subtype_t subtype() const override;
-    void intrusive_ptr_add_ref_impl() override;
-    void intrusive_ptr_release_impl() override;
+    subtype_t subtype() const noexcept final;
+    void ref_resumable() const noexcept final;
+    void deref_resumable() const noexcept final;
   };
 
   /// Makes sure the multiplier does not exit its event loop until

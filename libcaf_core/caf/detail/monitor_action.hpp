@@ -46,7 +46,7 @@ public:
     return state_;
   }
 
-  void run() override {
+  resume_result resume(execution_unit*, size_t) override {
     // We can only run a scheduled action.
     std::lock_guard guard{mtx_};
     if (state_ == action::state::scheduled) {
@@ -54,6 +54,7 @@ public:
       f_();
       f_.~function_wrapper();
     }
+    return resumable::done;
   }
 
   bool arg(down_msg err) {

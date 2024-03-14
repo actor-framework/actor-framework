@@ -311,12 +311,13 @@ public:
         cv.notify_all();
         return resumable::shutdown_execution_unit;
       }
-      void intrusive_ptr_add_ref_impl() override {
-        intrusive_ptr_add_ref(this);
+
+      void ref_resumable() const noexcept final {
+        ref();
       }
 
-      void intrusive_ptr_release_impl() override {
-        intrusive_ptr_release(this);
+      void deref_resumable() const noexcept final {
+        deref();
       }
       shutdown_helper() : last_worker(nullptr) {
         // nop
@@ -539,12 +540,11 @@ public:
         cv.notify_all();
         return resumable::shutdown_execution_unit;
       }
-      void intrusive_ptr_add_ref_impl() override {
-        intrusive_ptr_add_ref(this);
+      void ref_resumable() const noexcept final {
+        ref();
       }
-
-      void intrusive_ptr_release_impl() override {
-        intrusive_ptr_release(this);
+      void deref_resumable() const noexcept final {
+        deref();
       }
       shutdown_helper() : last_worker(nullptr) {
         // nop

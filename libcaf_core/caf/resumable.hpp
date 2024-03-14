@@ -46,29 +46,31 @@ public:
   /// Returns a subtype hint for this object. This allows an execution
   /// unit to limit processing to a specific set of resumables and
   /// delegate other subtypes to dedicated workers.
-  virtual subtype_t subtype() const;
+  virtual subtype_t subtype() const noexcept;
 
   /// Resume any pending computation until it is either finished
   /// or needs to be re-scheduled later.
   virtual resume_result resume(execution_unit*, size_t max_throughput) = 0;
 
   /// Add a strong reference count to this object.
-  virtual void intrusive_ptr_add_ref_impl() = 0;
+  virtual void ref_resumable() const noexcept = 0;
 
   /// Remove a strong reference count from this object.
-  virtual void intrusive_ptr_release_impl() = 0;
+  virtual void deref_resumable() const noexcept = 0;
 };
 
 // enables intrusive_ptr<resumable> without introducing ambiguity
 template <class T>
-std::enable_if_t<std::is_same_v<T*, resumable*>> intrusive_ptr_add_ref(T* ptr) {
-  ptr->intrusive_ptr_add_ref_impl();
+std::enable_if_t<std::is_same_v<T*, resumable*>>
+intrusive_ptr_add_ref(const T* ptr) {
+  ptr->ref_resumable();
 }
 
 // enables intrusive_ptr<resumable> without introducing ambiguity
 template <class T>
-std::enable_if_t<std::is_same_v<T*, resumable*>> intrusive_ptr_release(T* ptr) {
-  ptr->intrusive_ptr_release_impl();
+std::enable_if_t<std::is_same_v<T*, resumable*>>
+intrusive_ptr_release(const T* ptr) {
+  ptr->deref_resumable();
 }
 
 } // namespace caf
