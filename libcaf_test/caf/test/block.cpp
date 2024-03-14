@@ -102,6 +102,12 @@ void block::lazy_init() {
   if (!description_.empty() || raw_description_.empty())
     return;
   description_.reserve(raw_description_.size());
+  // Process <arg> syntax if the root block is an outline.
+  if (ctx_->call_stack.empty()
+      || ctx_->call_stack.front()->type() != block_type::outline) {
+    description_ = raw_description_;
+    return;
+  }
   std::string parameter_name;
   auto state = cpy_state::verbatim;
   for (auto c : raw_description_) {

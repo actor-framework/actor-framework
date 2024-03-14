@@ -5,60 +5,47 @@
 #pragma once
 
 #include "caf/test/context.hpp"
+#include "caf/test/runnable_with_examples.hpp"
 #include "caf/test/scenario.hpp"
 
 #include "caf/detail/test_export.hpp"
 
 namespace caf::test {
 
-class CAF_TEST_EXPORT outline : public runnable {
+class CAF_TEST_EXPORT outline : public block {
 public:
-  using super = runnable;
+  using block::block;
 
-  class CAF_TEST_EXPORT examples_setter {
-  public:
-    using examples_t = std::vector<std::map<std::string, std::string>>;
+  block_type type() const noexcept override;
 
-    explicit examples_setter(examples_t* examples) : examples_(examples) {
-      // nop
-    }
+  given* get_given(int id, std::string_view description,
+                   const detail::source_location& loc) override;
 
-    examples_setter(const examples_setter&) = default;
+  and_given* get_and_given(int id, std::string_view description,
+                           const detail::source_location& loc) override;
 
-    examples_setter& operator=(const examples_setter&) = default;
+  when* get_when(int id, std::string_view description,
+                 const detail::source_location& loc) override;
 
-    examples_setter& operator=(std::string_view str);
+  and_when* get_and_when(int id, std::string_view description,
+                         const detail::source_location& loc) override;
 
-  private:
-    examples_t* examples_;
-  };
-
-  using super::super;
-
-  auto make_examples_setter() {
-    if (ctx_->example_parameters.empty())
-      return examples_setter{&ctx_->example_parameters};
-    else
-      return examples_setter{nullptr};
-  }
-
-protected:
-  void run() override;
+  scope commit();
 };
 
 } // namespace caf::test
 
 #define OUTLINE(description)                                                   \
   struct CAF_PP_UNIFYN(outline_)                                               \
-    : caf::test::outline, caf_test_case_auto_fixture {                         \
-    using super = caf::test::outline;                                          \
+    : caf::test::runnable_with_examples, caf_test_case_auto_fixture {          \
+    using super = caf::test::runnable_with_examples;                           \
     using super::super;                                                        \
     void do_run() override;                                                    \
     static ptrdiff_t register_id;                                              \
   };                                                                           \
   ptrdiff_t CAF_PP_UNIFYN(outline_)::register_id                               \
     = caf::test::registry::add<CAF_PP_UNIFYN(outline_)>(                       \
-      caf_test_suite_name, description, caf::test::block_type::scenario);      \
+      caf_test_suite_name, description, caf::test::block_type::outline);       \
   void CAF_PP_UNIFYN(outline_)::do_run()
 
 #define EXAMPLES this->make_examples_setter()

@@ -21,6 +21,7 @@ TEST("is_extension checks whether a block type needs a predecessor") {
   SECTION("is_extension is false for regular types") {
     check(!is_extension(block_type::test));
     check(!is_extension(block_type::section));
+    check(!is_extension(block_type::outline));
     check(!is_extension(block_type::scenario));
     check(!is_extension(block_type::given));
     check(!is_extension(block_type::when));

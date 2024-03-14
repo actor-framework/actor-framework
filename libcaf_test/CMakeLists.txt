@@ -34,6 +34,7 @@ caf_add_component(
     caf/test/reporter.cpp
     caf/test/requirement_failed.cpp
     caf/test/runnable.cpp
+    caf/test/runnable_with_examples.cpp
     caf/test/runner.cpp
     caf/test/scenario.cpp
     caf/test/scenario.test.cpp
