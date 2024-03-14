@@ -9,6 +9,7 @@
 #include "caf/actor_clock.hpp"
 #include "caf/actor_config.hpp"
 #include "caf/actor_registry.hpp"
+#include "caf/detail/actor_local_printer.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/init_fun_factory.hpp"
 #include "caf/detail/private_thread_pool.hpp"
@@ -88,11 +89,12 @@ namespace caf {
 class CAF_CORE_EXPORT actor_system {
 public:
   friend class abstract_actor;
+  friend class actor_ostream;
+  friend class detail::actor_system_access;
   friend class io::middleman;
   friend class local_actor;
   friend class logger;
   friend class net::middleman;
-  friend class scheduler;
 
   template <class>
   friend class actor_from_state_t;
@@ -649,10 +651,12 @@ public:
 
   void release_private_thread(detail::private_thread*);
 
-  /// Returns a handle to the central printing actor.
-  actor printer() const {
-    return actor_cast<actor>(printer_actor_);
-  }
+  virtual detail::actor_local_printer_ptr printer_for(local_actor* self);
+
+  using custom_setup_fn = void (*)(actor_system&, actor_system_config&, void*);
+
+  actor_system(actor_system_config& cfg, custom_setup_fn custom_setup,
+               void* custom_setup_data);
 
   /// @endcond
 
@@ -694,17 +698,23 @@ private:
   /// Identifies this actor system in a distributed setting.
   node_id node_;
 
+  /// Maps well-known actor names to actor handles.
+  actor_registry registry_;
+
   /// Manages log output.
   intrusive_ptr<caf::logger> logger_;
 
-  /// Maps well-known actor names to actor handles.
-  actor_registry registry_;
+  /// Stores the system-wide clock.
+  std::unique_ptr<actor_clock> clock_;
 
   /// Stores the actor system scheduler.
   std::unique_ptr<caf::scheduler> scheduler_;
 
   /// Stores optional actor system components.
   module_array modules_;
+
+  /// Background printer.
+  strong_actor_ptr printer_;
 
   /// Provides pseudo scheduling context to actors.
   scoped_execution_unit dummy_execution_unit_;
@@ -737,12 +747,6 @@ private:
 
   /// Ties the lifetime of the meta objects table to the actor system.
   detail::global_meta_objects_guard_type meta_objects_guard_;
-
-  /// Set a handle to the central printing actor.
-  void printer(caf::actor hdl);
-
-  /// Background printer.
-  actor printer_actor_;
 };
 
 } // namespace caf

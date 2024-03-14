@@ -46,9 +46,6 @@ public:
 
   using thread_hooks = std::vector<std::unique_ptr<thread_hook>>;
 
-  using scheduler_factory_fn
-    = std::function<std::unique_ptr<caf::scheduler>(actor_system&)>;
-
   using module_factory = std::function<actor_system::module*(actor_system&)>;
 
   using module_factory_vector = std::vector<module_factory>;
@@ -208,7 +205,6 @@ public:
 
   actor_factory_map actor_factories;
   module_factory_vector module_factories;
-  scheduler_factory_fn scheduler_factory;
   hook_factory_vector hook_factories;
 
   // -- hooks ------------------------------------------------------------------

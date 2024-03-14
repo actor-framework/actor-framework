@@ -24,7 +24,7 @@ using dummy_behavior = dummy_actor::behavior_type;
 
 struct config : actor_system_config {
   config() {
-    set("caf.scheduler.max-threads", 1u);
+    set("caf.scheduler.max-threads", 2u);
   }
 };
 

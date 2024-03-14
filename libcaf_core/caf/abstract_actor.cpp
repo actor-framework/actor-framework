@@ -172,7 +172,7 @@ bool abstract_actor::cleanup(error&& reason, execution_unit* host) {
     i->actor_exited(fail_state_, host);
   // tell printer to purge its state for us if we ever used aout()
   if ((fs & has_used_aout_flag) != 0) {
-    auto pr = home_system().printer();
+    auto pr = home_system().printer_;
     pr->enqueue(make_mailbox_element(ctrl(), make_message_id(), delete_atom_v,
                                      id()),
                 host);

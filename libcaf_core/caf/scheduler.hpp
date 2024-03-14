@@ -21,68 +21,29 @@ namespace caf {
 class CAF_CORE_EXPORT scheduler {
 public:
   // -- factory functions ------------------------------------------------------
+
   static std::unique_ptr<scheduler> make_work_stealing(actor_system& sys);
 
   static std::unique_ptr<scheduler> make_work_sharing(actor_system& sys);
 
-  // -- scheduler interface ----------------------------------------------------
+  // -- constructors, destructors, and assignment operators --------------------
 
   virtual ~scheduler();
 
-  /// Puts `what` into the queue of a randomly chosen worker.
-  virtual void enqueue(resumable* what) = 0;
+  /// Schedules @p what to run at some point in the future.
+  /// @thread-safe
+  virtual void schedule(resumable* what) = 0;
 
-  virtual actor_clock& clock() noexcept = 0;
+  /// Delay the next execution of @p what. Unlike `schedule`, this function is
+  /// not thread-safe and must be called only from the scheduler thread that is
+  /// currently running.
+  virtual void delay(resumable* what) = 0;
 
-  virtual void start();
+  /// Starts this scheduler and all of its workers.
+  virtual void start() = 0;
 
+  /// Stops this scheduler and all of its workers.
   virtual void stop() = 0;
-
-  // -- utility functions ------------------------------------------------------
-
-  void init(actor_system_config& cfg);
-
-  static void cleanup_and_release(resumable*);
-
-  virtual detail::actor_local_printer_ptr printer_for(local_actor* self);
-
-  // -- properties -------------------------------------------------------------
-
-  static size_t default_thread_count() noexcept;
-
-  actor_system& system() {
-    return system_;
-  }
-
-  const actor_system_config& config() const {
-    return system_.config();
-  }
-
-  size_t max_throughput() const {
-    return max_throughput_;
-  }
-
-  size_t num_workers() const {
-    return num_workers_;
-  }
-
-protected:
-  explicit scheduler(actor_system& sys);
-
-  void start_printer(caf::actor hdl) {
-    system_.printer(std::move(hdl));
-  }
-
-  void stop_actors();
-
-  /// Number of messages each actor is allowed to consume per resume.
-  size_t max_throughput_;
-
-  /// Configured number of workers.
-  size_t num_workers_;
-
-  /// Reference to the host system.
-  actor_system& system_;
 };
 
 } // namespace caf

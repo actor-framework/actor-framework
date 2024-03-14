@@ -14,7 +14,7 @@ scoped_execution_unit::~scoped_execution_unit() {
 }
 
 void scoped_execution_unit::exec_later(resumable* ptr) {
-  system().scheduler().enqueue(ptr);
+  system().scheduler().schedule(ptr);
 }
 
 } // namespace caf

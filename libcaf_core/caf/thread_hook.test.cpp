@@ -7,6 +7,7 @@
 #include "caf/test/test.hpp"
 
 #include "caf/actor_system_config.hpp"
+#include "caf/detail/default_thread_count.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/scheduler.hpp"
 
@@ -76,7 +77,6 @@ template <class Hook>
 struct config : actor_system_config {
   config() {
     add_thread_hook<Hook>();
-    set("caf.logger.verbosity", "quiet");
   }
 };
 
@@ -114,7 +114,7 @@ WITH_FIXTURE(counting_thread_hook_fixture) {
 TEST("counting_system_without_actor") {
   {
     assumed_init_calls = 1;
-    auto fallback = scheduler::default_thread_count();
+    auto fallback = detail::default_thread_count();
     assumed_thread_count = get_or(cfg, "caf.scheduler.max-threads", fallback)
                            + 3; // clock, private thread pool and printer
   }
@@ -123,7 +123,7 @@ TEST("counting_system_without_actor") {
 TEST("counting_system_with_actor") {
   {
     assumed_init_calls = 1;
-    auto fallback = scheduler::default_thread_count();
+    auto fallback = detail::default_thread_count();
     assumed_thread_count
       = get_or(cfg, "caf.scheduler.max-threads", fallback)
         + 4; // clock, private thread pool, printer and  detached actor
