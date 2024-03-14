@@ -36,19 +36,8 @@ public:
     return *system_;
   }
 
-  /// Returns a pointer to the proxy factory currently associated to this unit.
-  proxy_registry* proxy_registry_ptr() {
-    return proxies_;
-  }
-
-  /// Associated a new proxy factory to this unit.
-  void proxy_registry_ptr(proxy_registry* ptr) noexcept {
-    proxies_ = ptr;
-  }
-
 protected:
   actor_system* system_ = nullptr;
-  proxy_registry* proxies_ = nullptr;
 };
 
 } // namespace caf

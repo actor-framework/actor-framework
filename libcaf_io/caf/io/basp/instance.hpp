@@ -18,6 +18,7 @@
 #include "caf/detail/io_export.hpp"
 #include "caf/detail/worker_hub.hpp"
 #include "caf/error.hpp"
+#include "caf/proxy_registry.hpp"
 
 #include <limits>
 

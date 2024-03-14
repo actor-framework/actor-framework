@@ -73,33 +73,33 @@ bool operator==(const abstract_actor* x, const strong_actor_ptr& y) {
   return actor_control_block::from(x) == y.get();
 }
 
-error_code<sec> load_actor(strong_actor_ptr& storage, execution_unit* ctx,
+error_code<sec> load_actor(strong_actor_ptr& storage, execution_unit* context,
                            actor_id aid, const node_id& nid) {
-  if (ctx == nullptr)
+  if (context == nullptr)
     return sec::no_context;
-  auto& sys = ctx->system();
+  auto& sys = context->system();
   if (sys.node() == nid) {
     storage = sys.registry().get(aid);
     log::core::debug("fetch actor handle from local actor registry: {}",
                      (storage ? "found" : "not found"));
     return none;
   }
-  auto prp = ctx->proxy_registry_ptr();
-  if (prp == nullptr)
-    return sec::no_proxy_registry;
-  // deal with (proxies for) remote actors
-  storage = prp->get_or_put(nid, aid);
-  return none;
+  // Get or create a proxy for the remote actor.
+  if (auto* registry = proxy_registry::current()) {
+    storage = registry->get_or_put(nid, aid);
+    return none;
+  }
+  return sec::no_proxy_registry;
 }
 
-error_code<sec> save_actor(strong_actor_ptr& storage, execution_unit* ctx,
-                           actor_id aid, const node_id& nid) {
-  if (ctx == nullptr)
-    return sec::no_context;
-  auto& sys = ctx->system();
-  // register locally running actors to be able to deserialize them later
-  if (nid == sys.node())
-    sys.registry().put(aid, storage);
+error_code<sec> save_actor(strong_actor_ptr& storage, actor_id aid,
+                           const node_id& nid) {
+  // Register locally running actors to be able to deserialize them later.
+  if (storage) {
+    auto* sys = storage->home_system;
+    if (nid == sys->node())
+      sys->registry().put(aid, storage);
+  }
   return none;
 }
 
