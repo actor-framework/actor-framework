@@ -31,7 +31,7 @@ namespace caf::test {
 /// A runnable definition of a test case or scenario.
 class CAF_TEST_EXPORT runnable {
 public:
-  friend class outline_setter;
+  friend class runnable_with_examples;
   friend class runner;
 
   /// Creates a new runnable.

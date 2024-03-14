@@ -5,46 +5,12 @@
 #pragma once
 
 #include "caf/test/context.hpp"
+#include "caf/test/runnable_with_examples.hpp"
 #include "caf/test/scenario.hpp"
 
 #include "caf/detail/test_export.hpp"
 
 namespace caf::test {
-
-class CAF_TEST_EXPORT outline_setter : public runnable {
-public:
-  using super = runnable;
-
-  class CAF_TEST_EXPORT examples_setter {
-  public:
-    using examples_t = std::vector<std::map<std::string, std::string>>;
-
-    explicit examples_setter(examples_t* examples) : examples_(examples) {
-      // nop
-    }
-
-    examples_setter(const examples_setter&) = default;
-
-    examples_setter& operator=(const examples_setter&) = default;
-
-    examples_setter& operator=(std::string_view str);
-
-  private:
-    examples_t* examples_;
-  };
-
-  using super::super;
-
-  auto make_examples_setter() {
-    if (ctx_->example_parameters.empty())
-      return examples_setter{&ctx_->example_parameters};
-    else
-      return examples_setter{nullptr};
-  }
-
-protected:
-  void run() override;
-};
 
 class CAF_TEST_EXPORT outline : public block {
 public:
@@ -71,8 +37,8 @@ public:
 
 #define OUTLINE(description)                                                   \
   struct CAF_PP_UNIFYN(outline_)                                               \
-    : caf::test::outline_setter, caf_test_case_auto_fixture {                  \
-    using super = caf::test::outline_setter;                                   \
+    : caf::test::runnable_with_examples, caf_test_case_auto_fixture {          \
+    using super = caf::test::runnable_with_examples;                           \
     using super::super;                                                        \
     void do_run() override;                                                    \
     static ptrdiff_t register_id;                                              \
