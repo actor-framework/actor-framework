@@ -31,12 +31,13 @@ SCENARIO("scenario with <foo> syntax in description") {
   GIVEN("given a <description>") {
     WHEN("when <parsing> the raw description") {
       THEN("then we copy the <description> verbatim") {
-        auto i = ctx_->call_stack.begin();
-        check_eq((*i++)->description(),
+        auto cs = ctx_->call_stack;
+        require_eq(cs.size(), 4u);
+        check_eq(cs[0]->description(),
                  "scenario with <foo> syntax in description");
-        check_eq((*i++)->description(), "given a <description>");
-        check_eq((*i++)->description(), "when <parsing> the raw description");
-        check_eq((*i++)->description(),
+        check_eq(cs[1]->description(), "given a <description>");
+        check_eq(cs[2]->description(), "when <parsing> the raw description");
+        check_eq(cs[3]->description(),
                  "then we copy the <description> verbatim");
       }
     }

@@ -36,7 +36,7 @@ void runnable::run() {
         return;
       }
       CAF_RAISE_ERROR(std::logic_error,
-                      "failed to select  the root block for the scenario");
+                      "failed to select  the root block for the outline");
       break;
     case block_type::scenario:
       if (auto guard = ctx_->get<scenario>(0, description_, loc_)->commit()) {
