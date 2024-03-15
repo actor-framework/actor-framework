@@ -51,7 +51,7 @@ blocking_actor::~blocking_actor() {
   // avoid weak-vtables warning
 }
 
-bool blocking_actor::enqueue(mailbox_element_ptr ptr, execution_unit*) {
+bool blocking_actor::enqueue(mailbox_element_ptr ptr, scheduler*) {
   CAF_ASSERT(ptr != nullptr);
   CAF_ASSERT(getf(is_blocking_flag));
   auto lg = log::core::trace("ptr = {}", *ptr);
@@ -113,7 +113,7 @@ public:
     return resumable::function_object;
   }
 
-  resumable::resume_result resume(execution_unit* ctx, size_t) override {
+  resumable::resume_result resume(scheduler* ctx, size_t) override {
     CAF_PUSH_AID_FROM_PTR(self_);
     self_->context(ctx);
     self_->initialize();
@@ -132,7 +132,7 @@ public:
 #endif
     self_->cleanup(std::move(rsn), ctx);
     intrusive_ptr_release(self_->ctrl());
-    auto& sys = ctx->system();
+    auto& sys = self_->system();
     sys.release_private_thread(thread_);
     if (!hidden_) {
       [[maybe_unused]] auto count = sys.registry().dec_running();
@@ -158,7 +158,7 @@ private:
 
 } // namespace
 
-void blocking_actor::launch(execution_unit*, bool, bool hide) {
+void blocking_actor::launch(scheduler*, bool, bool hide) {
   CAF_PUSH_AID_FROM_PTR(this);
   auto lg = log::core::trace("hide = {}", hide);
   CAF_ASSERT(getf(is_blocking_flag));

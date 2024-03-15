@@ -14,12 +14,12 @@
 #include "caf/const_typed_message_view.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
-#include "caf/execution_unit.hpp"
 #include "caf/log/io.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/message.hpp"
 #include "caf/message_id.hpp"
 #include "caf/node_id.hpp"
+#include "caf/scheduler.hpp"
 #include "caf/telemetry/histogram.hpp"
 #include "caf/telemetry/timer.hpp"
 
@@ -31,16 +31,15 @@ namespace caf::io::basp {
 template <class Subtype>
 class remote_message_handler {
 public:
-  void handle_remote_message(execution_unit* ctx) {
+  void handle_remote_message(actor_system& sys, scheduler* ctx) {
     auto lg = log::io::trace("");
     // Local variables.
     auto& dref = static_cast<Subtype&>(*this);
-    auto& sys = *dref.system_;
     strong_actor_ptr src;
     strong_actor_ptr dst;
     message msg;
     auto mid = make_message_id(dref.hdr_.operation_data);
-    binary_deserializer source{ctx, dref.payload_};
+    binary_deserializer source{sys, dref.payload_};
     // Make sure to drop the message in case we return abnormally.
     auto guard = detail::scope_guard{
       [&]() noexcept { dref.queue_->drop(ctx, dref.msg_id_); }};
@@ -95,7 +94,7 @@ public:
       return;
     }
     // Get the remainder of the message.
-    auto& mm_metrics = ctx->system().middleman().metric_singletons;
+    auto& mm_metrics = sys.middleman().metric_singletons;
     auto t0 = telemetry::timer::clock_type::now();
     if (!source.apply(msg)) {
       log::io::error("failed to read message content: {}", source.get_error());

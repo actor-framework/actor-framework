@@ -28,7 +28,7 @@ node_id roundtrip(node_id nid) {
   auto& this_test = test::runnable::current();
   byte_buffer buf;
   {
-    binary_serializer sink{nullptr, buf};
+    binary_serializer sink{buf};
     if (!sink.apply(nid))
       this_test.fail("serialization failed: {}", sink.get_error());
   }
@@ -36,7 +36,7 @@ node_id roundtrip(node_id nid) {
     this_test.fail("serializer produced no output");
   node_id result;
   {
-    binary_deserializer source{nullptr, buf};
+    binary_deserializer source{buf};
     if (!source.apply(result))
       this_test.fail("deserialization failed: {}", source.get_error());
     if (source.remaining() > 0)

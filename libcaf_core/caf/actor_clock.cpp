@@ -47,7 +47,7 @@ public:
     deref();
   }
 
-  resume_result resume(execution_unit*, size_t) override {
+  resume_result resume(scheduler*, size_t) override {
     CAF_ASSERT(decorated_ != nullptr);
     WorkerPtr tmp;
     {

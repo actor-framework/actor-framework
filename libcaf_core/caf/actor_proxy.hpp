@@ -6,6 +6,7 @@
 
 #include "caf/abstract_actor.hpp"
 #include "caf/detail/core_export.hpp"
+#include "caf/fwd.hpp"
 
 #include <atomic>
 #include <cstdint>
@@ -21,7 +22,7 @@ public:
   ~actor_proxy() override;
 
   /// Invokes cleanup code.
-  virtual void kill_proxy(execution_unit* ctx, error reason) = 0;
+  virtual void kill_proxy(scheduler* sched, error reason) = 0;
 
   void setup_metrics() {
     // nop

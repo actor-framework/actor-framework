@@ -81,7 +81,7 @@ auto make_metrics(telemetry::metric_registry& reg) {
 template <class T>
 class mm_impl : public middleman {
 public:
-  mm_impl(actor_system& ref) : middleman(ref), backend_(&ref) {
+  mm_impl(actor_system& ref) : middleman(ref), backend_(ref) {
     // nop
   }
 
@@ -95,7 +95,7 @@ private:
 
 class prometheus_scraping : public middleman::background_task {
 public:
-  prometheus_scraping(actor_system& sys) : mpx_(&sys) {
+  prometheus_scraping(actor_system& sys) : mpx_(sys) {
     // nop
   }
 

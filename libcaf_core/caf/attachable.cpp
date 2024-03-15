@@ -26,7 +26,7 @@ attachable::token::token(size_t typenr, const void* vptr)
   // nop
 }
 
-void attachable::actor_exited(const error&, execution_unit*) {
+void attachable::actor_exited(const error&, scheduler*) {
   // nop
 }
 
@@ -58,12 +58,12 @@ public:
     // nop
   }
 
-  void actor_exited(const error& rsn, execution_unit* host) override {
+  void actor_exited(const error& rsn, scheduler* sched) override {
     if (auto observer = actor_cast<strong_actor_ptr>(observer_)) {
       auto observed = actor_cast<strong_actor_ptr>(observed_);
       auto ptr = make_mailbox_element(std::move(observed), make_message_id(),
                                       stream_abort_msg{sink_flow_id_, rsn});
-      observer->enqueue(std::move(ptr), host);
+      observer->enqueue(std::move(ptr), sched);
     }
   }
 

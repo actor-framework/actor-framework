@@ -10,7 +10,6 @@
 #include "caf/blocking_actor.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/none.hpp"
-#include "caf/scoped_execution_unit.hpp"
 
 namespace caf {
 
@@ -64,7 +63,6 @@ private:
   }
 
   actor_id prev_; // used for logging/debugging purposes only
-  scoped_execution_unit context_;
   strong_actor_ptr self_;
 };
 

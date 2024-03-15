@@ -87,8 +87,6 @@ details that we only mention here for the sake of completeness).
 +-------------------------------------+--------------------------------------------------------+
 | ``actor_system& home_system()``     | Returns the system that spawned this actor.            |
 +-------------------------------------+--------------------------------------------------------+
-| ``execution_unit* context()``       | Returns underlying thread or current scheduler worker. |
-+-------------------------------------+--------------------------------------------------------+
 |                                     |                                                        |
 +-------------------------------------+--------------------------------------------------------+
 | **Actor Management**                |                                                        |

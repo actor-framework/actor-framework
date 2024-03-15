@@ -442,8 +442,7 @@ class deterministic::scheduler_impl : public scheduler {
 public:
   using super = caf::scheduler;
 
-  scheduler_impl(actor_system& sys, deterministic* fix)
-    : sys_(&sys), fix_(fix) {
+  explicit scheduler_impl(deterministic* fix) : fix_(fix) {
     // nop
   }
 
@@ -457,7 +456,7 @@ public:
         // them right away if they aren't initialized yet.
         auto dptr = dynamic_cast<scheduled_actor*>(ptr);
         if (!dptr->initialized() && !dptr->inactive())
-          dptr->resume(sys_->dummy_execution_unit(), 0);
+          dptr->resume(this, 0);
         break;
       }
       default:
@@ -481,9 +480,6 @@ public:
   }
 
 private:
-  /// The actor system this scheduler belongs to.
-  actor_system* sys_;
-
   /// The fixture this scheduler belongs to.
   deterministic* fix_;
 };
@@ -525,7 +521,7 @@ void deterministic::system_impl::custom_setup(actor_system& sys,
   auto setter = detail::actor_system_access{sys};
   setter.logger(make_counted<deterministic_logger>(sys), cfg);
   setter.clock(std::make_unique<deterministic_actor_clock>());
-  setter.scheduler(std::make_unique<scheduler_impl>(sys, fix));
+  setter.scheduler(std::make_unique<scheduler_impl>(fix));
 }
 
 // -- abstract_message_predicate -----------------------------------------------
@@ -659,15 +655,15 @@ bool deterministic::dispatch_message() {
     auto ev = std::move(events_.front());
     events_.pop_front();
     auto hdl = ev->target;
-    auto res = hdl->resume(sys.dummy_execution_unit(), 1);
+    auto res = hdl->resume(&sys.scheduler(), 1);
     while (res == resumable::resume_later) {
-      res = hdl->resume(sys.dummy_execution_unit(), 0);
+      res = hdl->resume(&sys.scheduler(), 0);
     }
     return true;
   }
   // Actor: we simply resume the next actor and it will pick up its message.
   auto next = events_.front()->target;
-  next->resume(sys.dummy_execution_unit(), 1);
+  next->resume(&sys.scheduler(), 1);
   return true;
 }
 

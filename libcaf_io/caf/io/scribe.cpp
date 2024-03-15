@@ -20,7 +20,7 @@ message scribe::detach_message() {
   return make_message(connection_closed_msg{hdl()});
 }
 
-bool scribe::consume(execution_unit* ctx, const void*, size_t num_bytes) {
+bool scribe::consume(scheduler* ctx, const void*, size_t num_bytes) {
   CAF_ASSERT(ctx != nullptr);
   auto lg = log::io::trace("num_bytes = {}", num_bytes);
   if (detached())
@@ -45,7 +45,7 @@ bool scribe::consume(execution_unit* ctx, const void*, size_t num_bytes) {
   return result;
 }
 
-void scribe::data_transferred(execution_unit* ctx, size_t written,
+void scribe::data_transferred(scheduler* ctx, size_t written,
                               size_t remaining) {
   auto lg = log::io::trace("written = {}, remaining = {}", written, remaining);
   if (detached())

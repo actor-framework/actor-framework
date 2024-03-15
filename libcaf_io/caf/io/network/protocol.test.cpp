@@ -24,10 +24,10 @@ TEST("inspection") {
   auto roundtrip = [this](auto x) {
     using value_type = decltype(x);
     byte_buffer buf;
-    binary_serializer sink{nullptr, buf};
+    binary_serializer sink{buf};
     if (!sink.apply(x))
       fail("serialization failed: {}", to_string(sink.get_error()));
-    binary_deserializer source{nullptr, buf};
+    binary_deserializer source{buf};
     auto y = value_type{};
     if (!source.apply(y))
       fail("deserialization failed: {}", to_string(source.get_error()));

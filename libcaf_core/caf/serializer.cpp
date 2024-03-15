@@ -8,15 +8,6 @@
 
 namespace caf {
 
-serializer::serializer(actor_system& sys) noexcept
-  : context_(sys.dummy_execution_unit()) {
-  // nop
-}
-
-serializer::serializer(execution_unit* ctx) noexcept : context_(ctx) {
-  // nop
-}
-
 serializer::~serializer() {
   // nop
 }

@@ -57,7 +57,7 @@ public:
 
   proxy_registry* proxy_registry_ptr() override;
 
-  resume_result resume(execution_unit*, size_t) override;
+  resume_result resume(scheduler*, size_t) override;
 
   // -- implementation of proxy_registry::backend ------------------------------
 
@@ -85,7 +85,7 @@ public:
 
   void handle_heartbeat() override;
 
-  execution_unit* current_execution_unit() override;
+  scheduler* current_scheduler() override;
 
   strong_actor_ptr this_actor() override;
 

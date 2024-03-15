@@ -31,7 +31,7 @@ public:
 
   action::state current_state() const noexcept override;
 
-  resume_result resume(execution_unit*, size_t) override;
+  resume_result resume(scheduler*, size_t) override;
 
   [[nodiscard]] state wait() {
     std::unique_lock guard{mtx_};

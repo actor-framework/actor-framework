@@ -219,9 +219,9 @@ SCENARIO("serializing and then deserializing a batch makes a deep copy") {
       THEN("the new batch is empty") {
         async::batch uut;
         caf::byte_buffer buf;
-        caf::binary_serializer sink{nullptr, buf};
+        caf::binary_serializer sink{buf};
         check(inspect(sink, uut));
-        caf::binary_deserializer source{nullptr, buf};
+        caf::binary_deserializer source{buf};
         async::batch result;
         check(inspect(source, result));
         check(result.empty());
@@ -234,9 +234,9 @@ SCENARIO("serializing and then deserializing a batch makes a deep copy") {
         auto xs = std::vector{1, 2, 3};
         auto uut = async::make_batch(xs);
         caf::byte_buffer buf;
-        caf::binary_serializer sink{nullptr, buf};
+        caf::binary_serializer sink{buf};
         check(inspect(sink, uut));
-        caf::binary_deserializer source{nullptr, buf};
+        caf::binary_deserializer source{buf};
         async::batch result;
         check(inspect(source, result));
         check_eq(to_vec(result.items<int>()), xs);
@@ -249,9 +249,9 @@ SCENARIO("serializing and then deserializing a batch makes a deep copy") {
         auto xs = std::vector{"foo"s, "bar"s, "baz"s};
         auto uut = async::make_batch(xs);
         caf::byte_buffer buf;
-        caf::binary_serializer sink{nullptr, buf};
+        caf::binary_serializer sink{buf};
         check(inspect(sink, uut));
-        caf::binary_deserializer source{nullptr, buf};
+        caf::binary_deserializer source{buf};
         async::batch result;
         check(inspect(source, result));
         check_eq(to_vec(result.items<std::string>()), xs);

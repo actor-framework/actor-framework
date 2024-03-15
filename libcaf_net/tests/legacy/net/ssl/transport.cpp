@@ -66,7 +66,7 @@ public:
     down->configure_read(receive_policy::exactly(4));
     down->begin_output();
     auto& buf = down->output_buffer();
-    caf::binary_serializer out{nullptr, buf};
+    caf::binary_serializer out{buf};
     static_cast<void>(out.apply(int32_t{10}));
     down->end_output();
     return none;
@@ -203,7 +203,7 @@ SCENARIO("ssl::transport::make_client performs the client handshake") {
         while (!*done)
           mpx->poll_once(true);
         if (CHECK_EQ(buf->size(), 16u)) { // 4x 32-bit integers
-          caf::binary_deserializer src{nullptr, *buf};
+          caf::binary_deserializer src{*buf};
           for (int i = 0; i < 4; ++i) {
             int32_t value = 0;
             static_cast<void>(src.apply(value));
@@ -247,7 +247,7 @@ SCENARIO("ssl::transport::make_server performs the server handshake") {
         while (!*done)
           mpx->poll_once(true);
         if (CHECK_EQ(buf->size(), 16u)) { // 4x 32-bit integers
-          caf::binary_deserializer src{nullptr, *buf};
+          caf::binary_deserializer src{*buf};
           for (int i = 0; i < 4; ++i) {
             int32_t value = 0;
             static_cast<void>(src.apply(value));

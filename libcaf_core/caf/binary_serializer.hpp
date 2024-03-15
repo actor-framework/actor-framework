@@ -35,10 +35,20 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  binary_serializer(actor_system& sys, byte_buffer& buf) noexcept;
+  explicit binary_serializer(byte_buffer& buf) noexcept
+    : buf_(buf), write_pos_(buf.size()) {
+    // nop
+  }
 
-  binary_serializer(execution_unit* ctx, byte_buffer& buf) noexcept
-    : buf_(buf), write_pos_(buf.size()), context_(ctx) {
+  binary_serializer(actor_system& sys, byte_buffer& buf) noexcept
+    : binary_serializer(buf) {
+    context_ = &sys;
+    // nop
+  }
+
+  [[deprecated("use the single-argument constructor instead")]] //
+  binary_serializer(std::nullptr_t, byte_buffer& buf) noexcept
+    : binary_serializer(buf) {
     // nop
   }
 
@@ -49,7 +59,7 @@ public:
   // -- properties -------------------------------------------------------------
 
   /// Returns the current execution unit.
-  execution_unit* context() const noexcept {
+  actor_system* context() const noexcept {
     return context_;
   }
 
@@ -182,10 +192,10 @@ private:
   byte_buffer& buf_;
 
   /// Stores the current offset for writing.
-  size_t write_pos_;
+  size_t write_pos_ = 0;
 
   /// Provides access to the ::proxy_registry and to the ::actor_system.
-  execution_unit* context_;
+  actor_system* context_ = nullptr;
 };
 
 } // namespace caf

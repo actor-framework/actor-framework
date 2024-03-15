@@ -124,17 +124,12 @@ namespace caf {
 
 // -- constructors, destructors, and assignment operators ----------------------
 
-json_reader::json_reader() : super() {
+json_reader::json_reader() {
   field_.reserve(8);
   has_human_readable_format_ = true;
 }
 
 json_reader::json_reader(actor_system& sys) : super(sys) {
-  field_.reserve(8);
-  has_human_readable_format_ = true;
-}
-
-json_reader::json_reader(execution_unit* ctx) : super(ctx) {
   field_.reserve(8);
   has_human_readable_format_ = true;
 }

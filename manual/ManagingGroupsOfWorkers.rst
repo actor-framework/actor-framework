@@ -36,7 +36,7 @@ A dispatching policy is a functor with the following signature:
                                       uplock& guard,
                                       const actor_vec& workers,
                                       mailbox_element_ptr& ptr,
-                                      execution_unit* host)>;
+                                      scheduler* host)>;
 
 The argument ``guard`` is a shared lock that can be upgraded for unique
 access if the policy includes a critical section. The second argument is a

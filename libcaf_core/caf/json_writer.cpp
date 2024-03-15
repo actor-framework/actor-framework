@@ -52,18 +52,6 @@ bool json_writer::number(T x) {
 
 // -- constructors, destructors, and assignment operators ----------------------
 
-json_writer::json_writer() : json_writer(nullptr) {
-  init();
-}
-
-json_writer::json_writer(actor_system& sys) : super(sys) {
-  init();
-}
-
-json_writer::json_writer(execution_unit* ctx) : super(ctx) {
-  init();
-}
-
 json_writer::~json_writer() {
   // nop
 }

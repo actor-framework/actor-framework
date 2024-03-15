@@ -45,9 +45,9 @@ public:
   /// content of the buffer via the network.
   virtual void flush() = 0;
 
-  bool consume(execution_unit*, const void*, size_t) override;
+  bool consume(scheduler*, const void*, size_t) override;
 
-  void data_transferred(execution_unit*, size_t, size_t) override;
+  void data_transferred(scheduler*, size_t, size_t) override;
 
 protected:
   message detach_message() override;

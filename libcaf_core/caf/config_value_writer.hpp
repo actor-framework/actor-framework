@@ -40,14 +40,9 @@ public:
     has_human_readable_format_ = true;
   }
 
-  config_value_writer(config_value* dst, execution_unit* ctx) : super(ctx) {
+  explicit config_value_writer(config_value* dst) {
     st_.push(dst);
     has_human_readable_format_ = true;
-  }
-
-  explicit config_value_writer(config_value* destination)
-    : config_value_writer(destination, nullptr) {
-    // nop
   }
 
   ~config_value_writer() override;

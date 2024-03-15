@@ -18,11 +18,11 @@ namespace caf::detail {
 
 template <class Self, class SelfHandle, class Handle, class... Ts>
 void profiled_send(Self* self, SelfHandle&& src, const Handle& dst,
-                   message_id msg_id, execution_unit* context, Ts&&... xs) {
+                   message_id msg_id, scheduler* sched, Ts&&... xs) {
   if (dst) {
     auto element = make_mailbox_element(std::forward<SelfHandle>(src), msg_id,
                                         std::forward<Ts>(xs)...);
-    dst->enqueue(std::move(element), context);
+    dst->enqueue(std::move(element), sched);
   } else {
     self->home_system().base_metrics().rejected_messages->inc();
   }

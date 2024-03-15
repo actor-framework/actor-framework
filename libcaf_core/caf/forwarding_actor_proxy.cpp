@@ -41,8 +41,7 @@ bool forwarding_actor_proxy::forward_msg(strong_actor_ptr sender,
   return false;
 }
 
-bool forwarding_actor_proxy::enqueue(mailbox_element_ptr what,
-                                     execution_unit*) {
+bool forwarding_actor_proxy::enqueue(mailbox_element_ptr what, scheduler*) {
   CAF_PUSH_AID(0);
   CAF_ASSERT(what);
   return forward_msg(std::move(what->sender), what->mid,
@@ -67,13 +66,13 @@ bool forwarding_actor_proxy::remove_backlink(abstract_actor* x) {
   return false;
 }
 
-void forwarding_actor_proxy::kill_proxy(execution_unit* ctx, error rsn) {
+void forwarding_actor_proxy::kill_proxy(scheduler* sched, error rsn) {
   actor tmp;
   { // lifetime scope of guard
     std::unique_lock guard{broker_mtx_};
     broker_.swap(tmp); // manually break cycle
   }
-  cleanup(std::move(rsn), ctx);
+  cleanup(std::move(rsn), sched);
 }
 
 void forwarding_actor_proxy::force_close_mailbox() {

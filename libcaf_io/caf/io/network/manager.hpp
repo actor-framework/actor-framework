@@ -38,7 +38,7 @@ public:
 
   /// Detach this manager from its parent and invoke `detach_message()``
   /// if `invoke_detach_message == true`.
-  void detach(execution_unit* ctx, bool invoke_disconnect_message);
+  void detach(scheduler* ctx, bool invoke_disconnect_message);
 
   /// Causes the manager to gracefully close its connection.
   virtual void graceful_shutdown() = 0;
@@ -50,7 +50,7 @@ public:
   virtual void add_to_loop() = 0;
 
   /// Detaches this manager from its parent in case of an error.
-  void io_failure(execution_unit* ctx, operation op);
+  void io_failure(scheduler* ctx, operation op);
 
 protected:
   /// Creates a message signalizing a disconnect to the parent.

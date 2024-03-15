@@ -48,24 +48,19 @@ struct fixture {
   // allows us to check s_dtors after dtor of actor_system
   actor_system_config cfg;
   union {
-    actor_system system;
-  };
-  union {
-    scoped_execution_unit context;
+    actor_system sys;
   };
 
   std::function<actor()> spawn_worker;
 
   fixture() {
-    new (&system) actor_system(cfg);
-    new (&context) scoped_execution_unit(&system);
-    spawn_worker = [&] { return system.spawn<worker>(); };
+    new (&sys) actor_system(cfg);
+    spawn_worker = [&] { return sys.spawn<worker>(); };
   }
 
   ~fixture() {
-    system.await_all_actors_done();
-    context.~scoped_execution_unit();
-    system.~actor_system();
+    sys.await_all_actors_done();
+    sys.~actor_system();
     if (s_dtors.load() != s_ctors.load()) {
       CAF_RAISE_ERROR("ctor / dtor mismatch");
     }
@@ -75,9 +70,8 @@ struct fixture {
 WITH_FIXTURE(fixture) {
 
 TEST("round_robin_actor_pool") {
-  scoped_actor self{system};
-  auto pool = actor_pool::make(&context, 5, spawn_worker,
-                               actor_pool::round_robin());
+  scoped_actor self{sys};
+  auto pool = actor_pool::make(sys, 5, spawn_worker, actor_pool::round_robin());
   self->mail(sys_atom_v, put_atom_v, spawn_worker()).send(pool);
   std::vector<actor> workers;
   for (int32_t i = 0; i < 6; ++i) {
@@ -135,14 +129,14 @@ TEST("round_robin_actor_pool") {
 }
 
 TEST("broadcast_actor_pool") {
-  scoped_actor self{system};
+  scoped_actor self{sys};
   auto spawn5 = [&] {
-    return actor_pool::make(&context, 5, fixture::spawn_worker,
+    return actor_pool::make(sys, 5, fixture::spawn_worker,
                             actor_pool::broadcast());
   };
-  check_eq(system.registry().running(), 1u);
-  auto pool = actor_pool::make(&context, 5, spawn5, actor_pool::broadcast());
-  check_eq(system.registry().running(), 32u);
+  check_eq(sys.registry().running(), 1u);
+  auto pool = actor_pool::make(sys, 5, spawn5, actor_pool::broadcast());
+  check_eq(sys.registry().running(), 32u);
   self->mail(1, 2).send(pool);
   std::vector<int> results;
   int i = 0;
@@ -156,8 +150,8 @@ TEST("broadcast_actor_pool") {
 }
 
 TEST("random_actor_pool") {
-  scoped_actor self{system};
-  auto pool = actor_pool::make(&context, 5, spawn_worker, actor_pool::random());
+  scoped_actor self{sys};
+  auto pool = actor_pool::make(sys, 5, spawn_worker, actor_pool::random());
   for (int i = 0; i < 5; ++i) {
     self->mail(1, 2)
       .request(pool, 250ms)

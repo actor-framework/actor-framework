@@ -56,7 +56,7 @@ local_actor::metrics_t make_instance_metrics(local_actor* self) {
 
 local_actor::local_actor(actor_config& cfg)
   : abstract_actor(cfg),
-    context_(cfg.host),
+    context_(cfg.sched),
     current_element_(nullptr),
     initial_behavior_fac_(std::move(cfg.init_fun)) {
   // nop

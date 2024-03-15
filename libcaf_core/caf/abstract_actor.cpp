@@ -11,7 +11,6 @@
 #include "caf/actor_system.hpp"
 #include "caf/config.hpp"
 #include "caf/default_attachable.hpp"
-#include "caf/execution_unit.hpp"
 #include "caf/log/core.hpp"
 #include "caf/log/system.hpp"
 #include "caf/mailbox_element.hpp"
@@ -147,7 +146,7 @@ void abstract_actor::on_cleanup(const error&) {
   // nop
 }
 
-bool abstract_actor::cleanup(error&& reason, execution_unit* host) {
+bool abstract_actor::cleanup(error&& reason, scheduler* sched) {
   auto lg = log::core::trace("reason = {}", reason);
   attachable_ptr head;
   auto fs = 0;
@@ -169,13 +168,13 @@ bool abstract_actor::cleanup(error&& reason, execution_unit* host) {
                    fail_state_);
   // send exit messages
   for (attachable* i = head.get(); i != nullptr; i = i->next.get())
-    i->actor_exited(fail_state_, host);
+    i->actor_exited(fail_state_, sched);
   // tell printer to purge its state for us if we ever used aout()
   if ((fs & has_used_aout_flag) != 0) {
     auto pr = home_system().printer_;
     pr->enqueue(make_mailbox_element(ctrl(), make_message_id(), delete_atom_v,
                                      id()),
-                host);
+                sched);
   }
   unregister_from_system();
   on_cleanup(fail_state_);

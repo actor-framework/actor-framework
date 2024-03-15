@@ -405,7 +405,7 @@ struct binary_serializer_wrapper {
   }
 
   deserializer_ptr make_deserializer() {
-    return std::make_shared<binary_deserializer>(sink.context(), buffer);
+    return std::make_shared<binary_deserializer>(*sink.context(), buffer);
   }
 };
 
@@ -417,7 +417,7 @@ struct json_writer_wrapper {
   }
 
   deserializer_ptr make_deserializer() {
-    auto reader = std::make_shared<json_reader>(sink.context());
+    auto reader = std::make_shared<json_reader>(*sink.context());
     if (!reader->load(sink.str())) {
       test::runnable::current().fail("failed to load JSON: {}",
                                      reader->get_error());

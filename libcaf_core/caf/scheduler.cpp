@@ -93,17 +93,14 @@ struct worker_data {
 };
 
 /// Implementation of the work stealing worker class.
-class worker : public execution_unit {
+class worker : public scheduler {
 public:
   using job_ptr = resumable*;
 
   template <class SchedulerImpl>
-  worker(size_t worker_id, SchedulerImpl* parent, const worker_data& init,
+  worker(size_t worker_id, SchedulerImpl*, const worker_data& init,
          size_t throughput)
-    : execution_unit(&parent->system()),
-      max_throughput_(throughput),
-      id_(worker_id),
-      data_(init) {
+    : max_throughput_(throughput), id_(worker_id), data_(init) {
     // nop
   }
 
@@ -114,21 +111,24 @@ public:
   template <class Parent>
   void start(Parent* parent) {
     CAF_ASSERT(this_thread_.get_id() == std::thread::id{});
-    this_thread_ = system().launch_thread("caf.worker", thread_owner::scheduler,
-                                          [this, parent] { run(parent); });
+    this_thread_ = parent->system().launch_thread(
+      "caf.worker", thread_owner::scheduler, [this, parent] { run(parent); });
   }
 
-  /// Enqueues a new job to the worker's queue from an external
-  /// source, i.e., from any other thread.
-  void external_enqueue(job_ptr job) {
+  void start() override {
+    // nop
+  }
+
+  void stop() override {
+    // nop
+  }
+
+  void schedule(job_ptr job) override {
     CAF_ASSERT(job != nullptr);
     data_.queue.append(job);
   }
 
-  /// Enqueues a new job to the worker's queue from an internal
-  /// source, i.e., a job that is currently executed by this worker.
-  /// @warning Must not be called from other threads.
-  void exec_later(job_ptr job) override {
+  void delay(job_ptr job) override {
     CAF_ASSERT(job != nullptr);
     data_.queue.prepend(job);
   }
@@ -201,7 +201,7 @@ private:
 
   template <typename Parent>
   void run(Parent* parent) {
-    CAF_SET_LOGGER_SYS(&system());
+    CAF_SET_LOGGER_SYS(&parent->system());
     // scheduling loop
     for (;;) {
       auto job = policy_dequeue(parent);
@@ -279,7 +279,7 @@ public:
 
   void schedule(resumable* ptr) override {
     auto w = this->worker_by_id(next_worker++ % num_workers_);
-    w->external_enqueue(ptr);
+    w->schedule(ptr);
   }
 
   void delay(resumable* what) override {
@@ -304,7 +304,7 @@ public:
     // Shutdown workers.
     class shutdown_helper : public resumable, public ref_counted {
     public:
-      resumable::resume_result resume(execution_unit* ptr, size_t) override {
+      resumable::resume_result resume(scheduler* ptr, size_t) override {
         CAF_ASSERT(ptr != nullptr);
         std::unique_lock<std::mutex> guard(mtx);
         last_worker = ptr;
@@ -324,7 +324,7 @@ public:
       }
       std::mutex mtx;
       std::condition_variable cv;
-      execution_unit* last_worker;
+      scheduler* last_worker;
     };
     // Use a set to keep track of remaining workers.
     shutdown_helper sh;
@@ -334,7 +334,7 @@ public:
       sh.ref(); // Make sure reference count is high enough.
     }
     while (!alive_workers.empty()) {
-      (*alive_workers.begin())->external_enqueue(&sh);
+      (*alive_workers.begin())->schedule(&sh);
       // Since jobs can be stolen, we cannot assume that we have actually shut
       // down the worker we've enqueued sh to.
       {
@@ -384,15 +384,12 @@ namespace work_sharing {
 
 /// Implementation of the work sharing worker class.
 template <class Parent>
-class worker : public execution_unit {
+class worker : public scheduler {
 public:
   using job_ptr = resumable*;
 
   worker(size_t worker_id, Parent* parent, size_t throughput)
-    : execution_unit(&parent->system()),
-      max_throughput_(throughput),
-      parent_{parent},
-      id_(worker_id) {
+    : max_throughput_(throughput), parent_{parent}, id_(worker_id) {
     // nop
   }
 
@@ -400,23 +397,23 @@ public:
 
   worker& operator=(const worker&) = delete;
 
-  void start() {
+  void start() override {
     CAF_ASSERT(this_thread_.get_id() == std::thread::id{});
-    this_thread_ = system().launch_thread("caf.worker", thread_owner::scheduler,
-                                          [this] { run(); });
+    this_thread_ = parent_->system().launch_thread("caf.worker",
+                                                   thread_owner::scheduler,
+                                                   [this] { run(); });
   }
 
-  /// Enqueues a new job to the worker's queue from an external
-  /// source, i.e., from any other thread.
-  void external_enqueue(job_ptr job) {
+  void stop() override {
+    // nop
+  }
+
+  void schedule(job_ptr job) override {
     CAF_ASSERT(job != nullptr);
     parent_->schedule(job);
   }
 
-  /// Enqueues a new job to the worker's queue from an internal
-  /// source, i.e., a job that is currently executed by this worker.
-  /// @warning Must not be called from other threads.
-  void exec_later(job_ptr job) override {
+  void delay(job_ptr job) override {
     CAF_ASSERT(job != nullptr);
     parent_->schedule(job);
   }
@@ -435,7 +432,7 @@ public:
 
 private:
   void run() {
-    CAF_SET_LOGGER_SYS(&system());
+    CAF_SET_LOGGER_SYS(&parent_->system());
     // scheduling loop
     for (;;) {
       auto job = parent_->dequeue();
@@ -533,7 +530,7 @@ public:
     // Shutdown workers.
     class shutdown_helper : public resumable, public ref_counted {
     public:
-      resumable::resume_result resume(execution_unit* ptr, size_t) override {
+      resumable::resume_result resume(scheduler* ptr, size_t) override {
         CAF_ASSERT(ptr != nullptr);
         std::unique_lock<std::mutex> guard(mtx);
         last_worker = ptr;
@@ -551,7 +548,7 @@ public:
       }
       std::mutex mtx;
       std::condition_variable cv;
-      execution_unit* last_worker;
+      scheduler* last_worker;
     };
     // Use a set to keep track of remaining workers.
     shutdown_helper sh;
@@ -561,7 +558,7 @@ public:
       sh.ref(); // Make sure reference count is high enough.
     }
     while (!alive_workers.empty()) {
-      (*alive_workers.begin())->external_enqueue(&sh);
+      (*alive_workers.begin())->schedule(&sh);
       // Since jobs can be stolen, we cannot assume that we have actually shut
       // down the worker we've enqueued sh to.
       { // lifetime scope of guard

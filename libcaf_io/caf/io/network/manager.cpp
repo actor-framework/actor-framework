@@ -26,7 +26,7 @@ abstract_broker* manager::parent() {
   return parent_ ? static_cast<abstract_broker*>(parent_->get()) : nullptr;
 }
 
-void manager::detach(execution_unit*, bool invoke_disconnect_message) {
+void manager::detach(scheduler*, bool invoke_disconnect_message) {
   auto lg = log::io::trace("invoke_disconnect_message = {}",
                            invoke_disconnect_message);
   // This function gets called from the multiplexer when an error occurs or
@@ -59,7 +59,7 @@ void manager::detach(execution_unit*, bool invoke_disconnect_message) {
   }
 }
 
-void manager::io_failure(execution_unit* ctx, operation op) {
+void manager::io_failure(scheduler* ctx, operation op) {
   auto lg = log::io::trace("op = {}", op);
   CAF_IGNORE_UNUSED(op);
   detach(ctx, true);

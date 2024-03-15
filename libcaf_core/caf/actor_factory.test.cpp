@@ -25,8 +25,7 @@ struct fixture {
     log::test::debug("set aut");
     strong_actor_ptr res;
     std::set<std::string> ifs;
-    scoped_execution_unit context{&system};
-    actor_config actor_cfg{&context};
+    actor_config actor_cfg{&system.scheduler()};
     auto aut = system.spawn<actor>("test_actor", std::move(args));
     if (expect_fail) {
       test::runnable::current().require(!aut);

@@ -59,10 +59,10 @@ public:
 
   virtual void remove_endpoint(datagram_handle hdl) = 0;
 
-  bool consume(execution_unit*, datagram_handle hdl,
+  bool consume(scheduler*, datagram_handle hdl,
                network::receive_buffer& buf) override;
 
-  void datagram_sent(execution_unit*, datagram_handle hdl, size_t,
+  void datagram_sent(scheduler*, datagram_handle hdl, size_t,
                      byte_buffer buffer) override;
 
   virtual void detach_handles() = 0;

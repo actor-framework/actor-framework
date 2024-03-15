@@ -11,11 +11,7 @@
 
 namespace caf {
 
-/// A cooperatively executed task managed by one or more
-/// instances of `execution_unit`. Note that this class is
-/// meant as mixin for reference counted object, i.e., the
-/// subclass is required to inherit from `ref_counted`
-/// at some point.
+/// A cooperatively scheduled entity.
 class CAF_CORE_EXPORT resumable {
 public:
   /// Denotes the state in which a `resumable`
@@ -50,7 +46,7 @@ public:
 
   /// Resume any pending computation until it is either finished
   /// or needs to be re-scheduled later.
-  virtual resume_result resume(execution_unit*, size_t max_throughput) = 0;
+  virtual resume_result resume(scheduler*, size_t max_throughput) = 0;
 
   /// Add a strong reference count to this object.
   virtual void ref_resumable() const noexcept = 0;

@@ -164,7 +164,7 @@ public:
 
   // -- overridden functions of abstract_actor ---------------------------------
 
-  bool enqueue(mailbox_element_ptr, execution_unit*) override;
+  bool enqueue(mailbox_element_ptr, scheduler*) override;
 
   mailbox_element* peek_at_next_mailbox_element() override;
 
@@ -172,7 +172,7 @@ public:
 
   const char* name() const override;
 
-  void launch(execution_unit* eu, bool lazy, bool hide) override;
+  void launch(scheduler* sched, bool lazy, bool hide) override;
 
   // -- virtual modifiers ------------------------------------------------------
 

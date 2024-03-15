@@ -51,10 +51,10 @@ TEST("system error codes are inspectable") {
   SECTION("binary representation") {
     byte_buffer buf;
     auto val = sec::no_such_key;
-    binary_serializer sink{nullptr, buf};
+    binary_serializer sink{buf};
     check(inspect(sink, val));
     auto copy = sec::none;
-    binary_deserializer source{nullptr, buf};
+    binary_deserializer source{buf};
     check(inspect(source, copy));
     check_eq(copy, val);
   }

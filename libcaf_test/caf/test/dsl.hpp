@@ -837,15 +837,26 @@ public:
   public:
     using super = scheduler;
 
-    class dummy_worker : public caf::execution_unit {
+    class dummy_worker : public caf::scheduler {
     public:
-      dummy_worker(test_coordinator* parent)
-        : execution_unit(&parent->system()), parent_(parent) {
+      dummy_worker(test_coordinator* parent) : parent_(parent) {
         // nop
       }
 
-      void exec_later(caf::resumable* ptr) override {
+      void schedule(caf::resumable* ptr) override {
         parent_->jobs.push_back(ptr);
+      }
+
+      void delay(caf::resumable* ptr) override {
+        parent_->jobs.push_back(ptr);
+      }
+
+      void start() override {
+        // nop
+      }
+
+      void stop() override {
+        // nop
       }
 
     private:
@@ -860,8 +871,7 @@ public:
         });
       }
 
-      bool enqueue(caf::mailbox_element_ptr what,
-                   caf::execution_unit*) override {
+      bool enqueue(caf::mailbox_element_ptr what, caf::scheduler*) override {
         mh_(what->content());
         return true;
       }

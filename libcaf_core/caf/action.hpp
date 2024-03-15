@@ -211,7 +211,7 @@ public:
     return resumable::awaiting_message;
   }
 
-  resume_result resume(execution_unit*, size_t) override {
+  resume_result resume(scheduler*, size_t) override {
     if constexpr (IsSingleShot) {
       run_single_shot();
       return resumable::done;

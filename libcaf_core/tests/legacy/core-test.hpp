@@ -383,7 +383,7 @@ T deep_copy(const T& val) {
   using namespace std::literals;
   caf::byte_buffer buf;
   {
-    caf::binary_serializer sink{nullptr, buf};
+    caf::binary_serializer sink{buf};
     if (!sink.apply(val)) {
       auto msg = "serialization failed in deep_copy: "s;
       msg += to_string(sink.get_error());
@@ -392,7 +392,7 @@ T deep_copy(const T& val) {
   }
   auto result = T{};
   {
-    caf::binary_deserializer sink{nullptr, buf};
+    caf::binary_deserializer sink{buf};
     if (!sink.apply(result)) {
       auto msg = "deserialization failed in deep_copy: "s;
       msg += to_string(sink.get_error());

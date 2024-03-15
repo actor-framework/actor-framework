@@ -55,11 +55,9 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  config_value_reader(const config_value* input, actor_system& sys);
-
-  config_value_reader(const config_value* input, execution_unit* ctx);
-
   explicit config_value_reader(const config_value* input);
+
+  config_value_reader(const config_value* input, actor_system& sys);
 
   ~config_value_reader() override;
 

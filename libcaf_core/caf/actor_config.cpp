@@ -8,8 +8,8 @@
 
 namespace caf {
 
-actor_config::actor_config(execution_unit* host, local_actor* parent)
-  : host(host), parent(parent) {
+actor_config::actor_config(scheduler* sptr, local_actor* aptr)
+  : sched(sptr), parent(aptr) {
   // nop
 }
 

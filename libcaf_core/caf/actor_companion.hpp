@@ -51,9 +51,9 @@ public:
 
   // -- overridden functions ---------------------------------------------------
 
-  bool enqueue(mailbox_element_ptr ptr, execution_unit* host) override;
+  bool enqueue(mailbox_element_ptr ptr, scheduler* sched) override;
 
-  void launch(execution_unit* eu, bool lazy, bool hide) override;
+  void launch(scheduler* sched, bool lazy, bool hide) override;
 
   void on_exit() override;
 

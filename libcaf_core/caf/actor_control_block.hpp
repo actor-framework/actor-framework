@@ -114,7 +114,7 @@ public:
     return nid;
   }
 
-  bool enqueue(mailbox_element_ptr what, execution_unit* host);
+  bool enqueue(mailbox_element_ptr what, scheduler* sched);
 
   /// @endcond
 };
@@ -167,7 +167,7 @@ inline bool operator!=(const abstract_actor* x, const strong_actor_ptr& y) {
 using weak_actor_ptr = weak_intrusive_ptr<actor_control_block>;
 
 CAF_CORE_EXPORT error_code<sec> load_actor(strong_actor_ptr& storage,
-                                           execution_unit*, actor_id aid,
+                                           actor_system*, actor_id aid,
                                            const node_id& nid);
 
 CAF_CORE_EXPORT error_code<sec> save_actor(strong_actor_ptr& storage,

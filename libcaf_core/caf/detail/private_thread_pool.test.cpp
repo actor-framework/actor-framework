@@ -57,7 +57,7 @@ SCENARIO("private threads rerun their resumable when it returns resume_later") {
     subtype_t subtype() const noexcept override {
       return resumable::function_object;
     }
-    resume_result resume(execution_unit*, size_t) override {
+    resume_result resume(scheduler*, size_t) override {
       return ++runs < 2 ? resumable::resume_later : resumable::done;
     }
     void ref_resumable() const noexcept final {

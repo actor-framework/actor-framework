@@ -644,13 +644,13 @@ public:
   expected<T> serialization_roundtrip(const T& value) {
     byte_buffer buf;
     {
-      binary_serializer sink{sys.dummy_execution_unit(), buf};
+      binary_serializer sink{sys, buf};
       if (!sink.apply(value))
         return sink.get_error();
     }
     T result;
     {
-      binary_deserializer source{sys.dummy_execution_unit(), buf};
+      binary_deserializer source{sys, buf};
       if (!source.apply(result))
         return source.get_error();
     }
