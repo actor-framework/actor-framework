@@ -1,9 +1,8 @@
-// This example shows how to use caf::after for scheduling an idle timeout.
-
-#include "caf/after.hpp"
+// This example shows how to use an idle timeout that triggers only once.
 
 #include "caf/actor_from_state.hpp"
 #include "caf/actor_ostream.hpp"
+#include "caf/after.hpp"
 #include "caf/caf_main.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/stateful_actor.hpp"
@@ -37,6 +36,20 @@ struct collector_state {
   }
 
   behavior make_behavior() {
+    // Trigger after 500ms of inactivity. Keep the actor alive even if no other
+    // actor holds a reference to it and run the callback only once.
+    self->set_idle_handler(500ms, strong_ref, once, [this] {
+      if (!buf.empty()) {
+        aout(self)
+          .println("Timeout reached!")
+          .println("Received message length: {}", buf.size())
+          .println("Message content: {}", str());
+      } else {
+        aout(self).println("Timeout reached with an empty buffer!");
+      }
+      self->quit();
+    });
+    // Return the behavior for the actor.
     return {
       [this](char c) {
         buf.push_back(c);
@@ -47,18 +60,6 @@ struct collector_state {
           buf.clear();
         }
       },
-      caf::after(500ms) >>
-        [this] {
-          if (!buf.empty()) {
-            aout(self)
-              .println("Timeout reached!")
-              .println("Received message length: {}", buf.size())
-              .println("Message content: {}", str());
-          } else {
-            aout(self).println("Timeout reached with an empty buffer!");
-          }
-          self->quit();
-        },
     };
   }
 

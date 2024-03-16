@@ -139,6 +139,13 @@ TEST("node_down_msg is serializable") {
   }
 }
 
+TEST("timeout_msg is serializable") {
+  auto msg1 = timeout_msg{42};
+  auto msg2 = serialization_roundtrip(msg1);
+  if (check(msg2.has_value()))
+    check_eq(msg1.id, msg2->id);
+}
+
 TEST("stream_open_msg is serializable") {
   SECTION("invalid strong_actor_ptr") {
     auto msg1 = stream_open_msg{42, nullptr, 43};

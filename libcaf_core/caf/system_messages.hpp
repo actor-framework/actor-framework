@@ -70,6 +70,17 @@ bool inspect(Inspector& f, down_msg& x) {
                             f.field("reason", x.reason));
 }
 
+/// Signals a timeout to an actor.
+struct timeout_msg {
+  uint64_t id;
+};
+
+/// @relates timeout_msg
+template <class Inspector>
+bool inspect(Inspector& f, timeout_msg& x) {
+  return f.object(x).fields(f.field("id", x.id));
+}
+
 /// Sent to all actors monitoring a node when CAF loses connection to it.
 struct node_down_msg {
   /// The disconnected node.
