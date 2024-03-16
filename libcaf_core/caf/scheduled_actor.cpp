@@ -236,15 +236,15 @@ void scheduled_actor::on_cleanup(const error& reason) {
 
 // -- overridden functions of resumable ----------------------------------------
 
-resumable::subtype_t scheduled_actor::subtype() const {
+resumable::subtype_t scheduled_actor::subtype() const noexcept {
   return resumable::scheduled_actor;
 }
 
-void scheduled_actor::intrusive_ptr_add_ref_impl() {
+void scheduled_actor::ref_resumable() const noexcept {
   intrusive_ptr_add_ref(ctrl());
 }
 
-void scheduled_actor::intrusive_ptr_release_impl() {
+void scheduled_actor::deref_resumable() const noexcept {
   intrusive_ptr_release(ctrl());
 }
 
@@ -541,10 +541,10 @@ scheduled_actor::categorize(mailbox_element& x) {
       return message_category::internal;
     }
     case type_id_v<action>: {
-      auto ptr = content.get_as<action>(0).ptr();
-      CAF_ASSERT(ptr != nullptr);
+      auto what = content.get_as<action>(0);
+      CAF_ASSERT(what.ptr() != nullptr);
       log::core::debug("run action");
-      ptr->run();
+      what.run();
       return message_category::internal;
     }
     case type_id_v<node_down_msg>: {

@@ -171,15 +171,14 @@ CAF_CORE_EXPORT error_code<sec> load_actor(strong_actor_ptr& storage,
                                            const node_id& nid);
 
 CAF_CORE_EXPORT error_code<sec> save_actor(strong_actor_ptr& storage,
-                                           execution_unit*, actor_id aid,
-                                           const node_id& nid);
+                                           actor_id aid, const node_id& nid);
 
 template <class Inspector>
 auto context_of(Inspector* f) -> decltype(f->context()) {
   return f->context();
 }
 
-inline execution_unit* context_of(void*) {
+inline auto context_of(void*) {
   return nullptr;
 }
 
@@ -203,7 +202,7 @@ bool inspect(Inspector& f, strong_actor_ptr& x) {
     }
   }
   auto load_cb = [&] { return load_actor(x, context_of(&f), aid, nid); };
-  auto save_cb = [&] { return save_actor(x, context_of(&f), aid, nid); };
+  auto save_cb = [&] { return save_actor(x, aid, nid); };
   return f.object(x)
     .pretty_name("actor")
     .on_load(load_cb)

@@ -19,7 +19,7 @@ abstract_worker_hub::~abstract_worker_hub() {
   auto head = head_.load();
   while (head != nullptr) {
     auto next = head->next_.load();
-    head->intrusive_ptr_release_impl();
+    head->deref_resumable();
     head = next;
   }
 }

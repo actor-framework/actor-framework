@@ -109,7 +109,7 @@ public:
     intrusive_ptr_add_ref(self->ctrl());
   }
 
-  resumable::subtype_t subtype() const override {
+  resumable::subtype_t subtype() const noexcept final {
     return resumable::function_object;
   }
 
@@ -142,11 +142,11 @@ public:
     return resumable::done;
   }
 
-  void intrusive_ptr_add_ref_impl() override {
+  void ref_resumable() const noexcept final {
     // nop
   }
 
-  void intrusive_ptr_release_impl() override {
+  void deref_resumable() const noexcept final {
     delete this;
   }
 

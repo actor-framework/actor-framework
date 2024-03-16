@@ -36,6 +36,12 @@ public:
     virtual void set_last_hop(node_id* ptr) = 0;
   };
 
+  /// Returns the current proxy registry for the calling thread.
+  static proxy_registry* current() noexcept;
+
+  /// Sets the current proxy registry for the calling thread.
+  static void current(proxy_registry*) noexcept;
+
   proxy_registry(actor_system& sys, backend& be);
 
   proxy_registry(const proxy_registry&) = delete;

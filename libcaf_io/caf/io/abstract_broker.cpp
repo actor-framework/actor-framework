@@ -332,7 +332,7 @@ void abstract_broker::close_all() {
     datagram_servants_.begin()->second->graceful_shutdown();
 }
 
-resumable::subtype_t abstract_broker::subtype() const {
+resumable::subtype_t abstract_broker::subtype() const noexcept {
   return io_actor;
 }
 

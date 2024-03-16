@@ -41,7 +41,10 @@ void worker::launch(const node_id& last_hop, const basp::header& hdr,
 // -- implementation of resumable ----------------------------------------------
 
 resumable::resume_result worker::resume(execution_unit* ctx, size_t) {
-  ctx->proxy_registry_ptr(proxies_);
+  proxy_registry::current(proxies_);
+  auto guard = detail::scope_guard{[]() noexcept { //
+    proxy_registry::current(nullptr);
+  }};
   handle_remote_message(ctx);
   hub_->push(this);
   return resumable::awaiting_message;

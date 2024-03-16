@@ -17,6 +17,20 @@
 
 namespace caf {
 
+namespace {
+
+thread_local proxy_registry* current_proxy_registry;
+
+} // namespace
+
+proxy_registry* proxy_registry::current() noexcept {
+  return current_proxy_registry;
+}
+
+void proxy_registry::current(proxy_registry* ptr) noexcept {
+  current_proxy_registry = ptr;
+}
+
 proxy_registry::backend::~backend() {
   // nop
 }

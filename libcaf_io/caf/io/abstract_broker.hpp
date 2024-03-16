@@ -332,7 +332,7 @@ public:
 
   // -- overridden observers of resumable --------------------------------------
 
-  subtype_t subtype() const override;
+  subtype_t subtype() const noexcept override;
 
   // -- observers --------------------------------------------------------------
 

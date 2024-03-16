@@ -25,11 +25,11 @@ public:
 
   // -- implementation of resumable --------------------------------------------
 
-  subtype_t subtype() const override;
+  subtype_t subtype() const noexcept final;
 
-  void intrusive_ptr_add_ref_impl() override;
+  void ref_resumable() const noexcept final;
 
-  void intrusive_ptr_release_impl() override;
+  void deref_resumable() const noexcept final;
 
 private:
   // -- member variables -------------------------------------------------------

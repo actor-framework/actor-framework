@@ -16,7 +16,6 @@
 #include "caf/fwd.hpp"
 #include "caf/infer_handle.hpp"
 #include "caf/node_id.hpp"
-#include "caf/proxy_registry.hpp"
 #include "caf/send.hpp"
 #include "caf/timespan.hpp"
 

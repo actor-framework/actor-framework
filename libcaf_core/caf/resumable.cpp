@@ -12,7 +12,7 @@ resumable::~resumable() {
   // nop
 }
 
-resumable::subtype_t resumable::subtype() const {
+resumable::subtype_t resumable::subtype() const noexcept {
   return unspecified;
 }
 

@@ -10,6 +10,7 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/disposable.hpp"
 #include "caf/make_counted.hpp"
+#include "caf/resumable.hpp"
 
 #include <atomic>
 #include <cstddef>
@@ -31,11 +32,15 @@ public:
   };
 
   /// Internal interface of `action`.
-  class CAF_CORE_EXPORT impl : public disposable::impl {
+  class CAF_CORE_EXPORT impl : public disposable::impl, public resumable {
   public:
-    virtual void run() = 0;
-
     virtual state current_state() const noexcept = 0;
+
+    subtype_t subtype() const noexcept final;
+
+    void ref_resumable() const noexcept final;
+
+    void deref_resumable() const noexcept final;
   };
 
   using impl_ptr = intrusive_ptr<impl>;
@@ -74,7 +79,7 @@ public:
 
   /// Triggers the action.
   void run() {
-    pimpl_->run();
+    pimpl_->resume(nullptr, 0);
   }
 
   /// Cancel the action if it has not been invoked yet.
@@ -188,27 +193,29 @@ public:
     f_.~F();
   }
 
-  void run_multi_shot() {
+  resume_result run_multi_shot() {
     // We can only run a scheduled action.
     auto expected = action::state::scheduled;
     if (!state_.compare_exchange_strong(expected, action::state::running))
-      return;
+      return resumable::done;
     f_();
     // Once run, we can stay in the running state or switch to deferred dispose.
     expected = action::state::running;
     if (state_.compare_exchange_strong(expected, action::state::scheduled))
-      return;
+      return resumable::done;
     CAF_ASSERT(expected == action::state::deferred_dispose);
     [[maybe_unused]] auto ok
       = state_.compare_exchange_strong(expected, action::state::disposed);
     CAF_ASSERT(ok);
     f_.~F();
+    return resumable::awaiting_message;
   }
 
-  void run() override {
-    if constexpr (IsSingleShot)
-      return run_single_shot();
-    else {
+  resume_result resume(execution_unit*, size_t) override {
+    if constexpr (IsSingleShot) {
+      run_single_shot();
+      return resumable::done;
+    } else {
       return run_multi_shot();
     }
   }
