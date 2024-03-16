@@ -6,6 +6,7 @@
 
 #include "caf/config.hpp"
 #include "caf/resumable.hpp"
+#include "caf/timespan.hpp"
 
 #ifdef CAF_ENABLE_EXCEPTIONS
 #  include <exception>
@@ -30,6 +31,9 @@
 #include "caf/intrusive/stack.hpp"
 #include "caf/invoke_message_result.hpp"
 #include "caf/local_actor.hpp"
+#include "caf/once.hpp"
+#include "caf/ref.hpp"
+#include "caf/repeat.hpp"
 #include "caf/telemetry/timer.hpp"
 #include "caf/unordered_flat_map.hpp"
 
@@ -137,6 +141,9 @@ public:
 
   /// Function object for handling exit messages.
   using exit_handler = std::function<void(pointer, exit_msg&)>;
+
+  /// Function object for handling timeouts.
+  using idle_handler = std::function<void()>;
 
 #ifdef CAF_ENABLE_EXCEPTIONS
   /// Function object for handling exit messages.
@@ -353,6 +360,31 @@ public:
     };
   }
 #endif // CAF_ENABLE_EXCEPTIONS
+
+  /// Sets a custom handler for timeouts that trigger after *not* receiving
+  /// a message for a certain amount of time.
+  template <class RefType, class RepeatType>
+  void set_idle_handler(timespan delay, RefType, RepeatType, idle_handler fun) {
+    if (delay == infinite)
+      return;
+    timeout_state_.delay = delay;
+    if constexpr (std::is_same_v<RefType, strong_ref_t>
+                  && std::is_same_v<RepeatType, once_t>) {
+      timeout_state_.mode = timeout_mode::once_strong;
+    } else if constexpr (std::is_same_v<RefType, weak_ref_t>
+                         && std::is_same_v<RepeatType, once_t>) {
+      timeout_state_.mode = timeout_mode::once_weak;
+    } else if constexpr (std::is_same_v<RefType, strong_ref_t>
+                         && std::is_same_v<RepeatType, repeat_t>) {
+      timeout_state_.mode = timeout_mode::repeat_strong;
+    } else {
+      static_assert(std::is_same_v<RefType, weak_ref_t>, "invalid RefType");
+      static_assert(std::is_same_v<RepeatType, repeat_t>, "invalid RepeatType");
+      timeout_state_.mode = timeout_mode::repeat_weak;
+    }
+    timeout_state_.handler = std::move(fun);
+    set_receive_timeout();
+  }
 
   /// @cond PRIVATE
 
@@ -604,9 +636,6 @@ protected:
   /// Stores user-defined callbacks for message handling.
   detail::behavior_stack bhvr_stack_;
 
-  /// Allows us to cancel our current in-flight timeout.
-  disposable pending_timeout_;
-
   /// Stores callbacks for awaited responses.
   std::forward_list<pending_response> awaited_responses_;
 
@@ -638,6 +667,46 @@ protected:
 #endif // CAF_ENABLE_EXCEPTIONS
 
 private:
+  /// Encodes how an actor is currently handling timeouts.
+  enum class timeout_mode {
+    none,          /// No timeout is set.
+    once_weak,     /// The actor used the tags `once` and `weak`.
+    once_strong,   /// The actor used the tags `once` and `strong`.
+    repeat_weak,   /// The actor used the tags `repeat` and `weak`.
+    repeat_strong, /// The actor used the tags `repeat` and `strong`.
+    legacy,        /// The actor used a behavior with a timeout.
+  };
+
+  struct timeout_state {
+    timeout_mode mode = timeout_mode::none;
+    disposable pending;
+    uint64_t id = 0;
+    timespan delay = infinite;
+    idle_handler handler;
+
+    void reset() {
+      mode = timeout_mode::none;
+      pending = disposable{};
+      id = 0;
+      delay = infinite;
+      handler = idle_handler{};
+    }
+
+    void swap(timeout_state& other) {
+      using std::swap;
+      swap(mode, other.mode);
+      swap(pending, other.pending);
+      swap(id, other.id);
+      swap(delay, other.delay);
+      swap(handler, other.handler);
+    }
+  };
+
+  void handle_timeout();
+
+  /// Stores the current timeout state.
+  timeout_state timeout_state_;
+
   template <class T>
   flow::assert_scheduled_actor_hdr_t<flow::single<T>>
   single_from_response(message_id mid, disposable pending_timeout);

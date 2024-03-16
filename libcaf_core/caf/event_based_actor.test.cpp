@@ -12,6 +12,7 @@
 #include "caf/scoped_actor.hpp"
 
 using namespace caf;
+using namespace std::literals;
 
 namespace {
 
@@ -83,6 +84,118 @@ SCENARIO("request(...).await(...) suspends the regular actor behavior") {
         inject().with(exit_msg{server.address(), exit_reason::kill}).to(aut);
         check(terminated(aut));
         expect<int>().with(42).from(aut).to(server);
+      }
+    }
+  }
+}
+
+SCENARIO("idle timeouts trigger after a period of inactivity") {
+  GIVEN("an actor with an idle timeout scheduled to trigger once") {
+    auto timeout_called = std::make_shared<bool>(false);
+    auto aut = sys.spawn([timeout_called](event_based_actor* self) -> behavior {
+      self->set_idle_handler(500ms, strong_ref, once,
+                             [timeout_called] { *timeout_called = true; });
+      return {
+        [](const std::string&) {},
+      };
+    });
+    WHEN("a message arrives") {
+      THEN("the timeout resets") {
+        advance_time(499ms);
+        inject().with("hello"s).to(aut);
+        check_eq(next_timeout(), sys.clock().now() + 500ms);
+      }
+    }
+    AND_WHEN("no message arrives afterwards") {
+      THEN("the timeout triggers") {
+        advance_time(500ms);
+        expect<timeout_msg>().to(aut);
+        check(*timeout_called);
+      }
+    }
+  }
+  GIVEN("an actor with an idle timeout scheduled to trigger repeatedly") {
+    auto first_handler_calls = std::make_shared<int>(0);
+    auto second_handler_calls = std::make_shared<int>(0);
+    auto aut = sys.spawn([=](event_based_actor* self) -> behavior {
+      self->set_idle_handler(500ms, strong_ref, repeat, [=] {
+        if (++*first_handler_calls == 3) {
+          self->set_idle_handler(300ms, strong_ref, repeat,
+                                 [=] { ++*second_handler_calls; });
+        }
+      });
+      return {
+        [](const std::string&) {},
+      };
+    });
+    WHEN("a message arrives") {
+      THEN("the timeout resets") {
+        advance_time(499ms);
+        inject().with("hello"s).to(aut);
+        check_eq(next_timeout(), sys.clock().now() + 500ms);
+      }
+    }
+    AND_WHEN("no message arrives afterwards") {
+      THEN("the timeout triggers repeatedly") {
+        advance_time(500ms);
+        expect<timeout_msg>().to(aut);
+        check_eq(*first_handler_calls, 1);
+        check_eq(*second_handler_calls, 0);
+        advance_time(500ms);
+        expect<timeout_msg>().to(aut);
+        check_eq(*first_handler_calls, 2);
+        check_eq(*second_handler_calls, 0);
+        advance_time(500ms);
+        expect<timeout_msg>().to(aut);
+        check_eq(*first_handler_calls, 3);
+        check_eq(*second_handler_calls, 0);
+        advance_time(300ms);
+        expect<timeout_msg>().to(aut);
+        check_eq(*first_handler_calls, 3);
+        check_eq(*second_handler_calls, 1);
+        advance_time(300ms);
+        expect<timeout_msg>().to(aut);
+        check_eq(*first_handler_calls, 3);
+        check_eq(*second_handler_calls, 2);
+      }
+    }
+  }
+}
+
+SCENARIO("weak idle timeouts do not prevent actors from becoming unreachable") {
+  GIVEN("an actor with a weak idle timeout scheduled to trigger once") {
+    WHEN("the actor becomes unreachable") {
+      THEN("the timeout does not trigger") {
+        auto aut = sys.spawn([](event_based_actor* self) -> behavior {
+          self->set_idle_handler(500ms, weak_ref, once, [] {});
+          return {
+            [](const std::string&) {},
+          };
+        });
+        auto addr = aut.address();
+        check(has_pending_timeout());
+        check_eq(addr.get()->strong_refs, 1u);
+        aut = nullptr;
+        check_eq(addr.get()->strong_refs, 0u);
+        check(!has_pending_timeout());
+      }
+    }
+  }
+  GIVEN("an actor with a weak idle timeout scheduled to trigger repeatedly") {
+    WHEN("the actor becomes unreachable") {
+      THEN("the timeout does not trigger") {
+        auto aut = sys.spawn([](event_based_actor* self) -> behavior {
+          self->set_idle_handler(500ms, weak_ref, repeat, [] {});
+          return {
+            [](const std::string&) {},
+          };
+        });
+        auto addr = aut.address();
+        check(has_pending_timeout());
+        check_eq(addr.get()->strong_refs, 1u);
+        aut = nullptr;
+        check_eq(addr.get()->strong_refs, 0u);
+        check(!has_pending_timeout());
       }
     }
   }

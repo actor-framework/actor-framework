@@ -221,7 +221,7 @@ void scheduled_actor::launch(execution_unit* ctx, bool lazy, bool hide) {
 
 void scheduled_actor::on_cleanup(const error& reason) {
   auto lg = log::core::trace("reason = {}", reason);
-  pending_timeout_.dispose();
+  timeout_state_.pending.dispose();
   // Shutdown hosting thread when running detached.
   if (private_thread_)
     home_system().release_private_thread(private_thread_);
@@ -342,14 +342,79 @@ void scheduled_actor::quit(error x) {
 
 void scheduled_actor::set_receive_timeout() {
   auto lg = log::core::trace("");
-  pending_timeout_.dispose();
-  if (bhvr_stack_.empty())
+  timeout_state_.pending.dispose();
+  if (timeout_state_.delay == infinite)
     return;
-  if (auto delay = bhvr_stack_.back().timeout(); delay != infinite) {
-    pending_timeout_ = run_delayed(delay, [this] {
-      if (!bhvr_stack_.empty())
-        bhvr_stack_.back().handle_timeout();
-    });
+  switch (timeout_state_.mode) {
+    default:
+      break;
+    case timeout_mode::once_weak:
+    case timeout_mode::repeat_weak:
+      timeout_state_.id = new_u64_id();
+      timeout_state_.pending = clock().schedule_message(
+        nullptr, weak_actor_ptr{ctrl()}, clock().now() + timeout_state_.delay,
+        make_message_id(), make_message(timeout_msg{timeout_state_.id}));
+      break;
+    case timeout_mode::legacy:
+      if (bhvr_stack_.empty()) {
+        timeout_state_.reset();
+        return;
+      }
+      [[fallthrough]];
+    case timeout_mode::once_strong:
+    case timeout_mode::repeat_strong:
+      timeout_state_.id = new_u64_id();
+      timeout_state_.pending = clock().schedule_message(
+        nullptr, strong_actor_ptr{ctrl()}, clock().now() + timeout_state_.delay,
+        make_message_id(), make_message(timeout_msg{timeout_state_.id}));
+      break;
+  }
+}
+
+void scheduled_actor::handle_timeout() {
+  switch (timeout_state_.mode) {
+    default:
+      log::core::error("invalid timeout mode");
+      break;
+    case timeout_mode::once_weak:
+    case timeout_mode::once_strong: {
+      if (!timeout_state_.handler) {
+        log::core::error("received a timeout but no handler was set");
+        break;
+      }
+      auto f = std::move(timeout_state_.handler);
+      timeout_state_.reset();
+      f();
+      break;
+    }
+    case timeout_mode::repeat_weak:
+    case timeout_mode::repeat_strong: {
+      timeout_state_.pending = nullptr; // Discard obsolete timeout.
+      timeout_state st;
+      st.swap(timeout_state_);
+      if (!st.handler) {
+        log::core::error("received a timeout but no handler was set");
+        break;
+      }
+      st.handler();
+      if (timeout_state_.mode != timeout_mode::none) {
+        log::core::debug("timeout handler called set_idle_handler");
+        break;
+      }
+      timeout_state_.swap(st);
+      set_receive_timeout();
+      break;
+    }
+    case timeout_mode::legacy: {
+      timeout_state_.pending = nullptr; // Discard obsolete timeout.
+      if (bhvr_stack_.empty()) {
+        log::core::error("received a (legacy) timeout but no behavior was set");
+        break;
+      }
+      bhvr_stack_.back().handle_timeout();
+      set_receive_timeout();
+      break;
+    }
   }
 }
 
@@ -538,6 +603,12 @@ scheduled_actor::categorize(mailbox_element& x) {
     case type_id_v<down_msg>: {
       auto& dm = content.get_mutable_as<down_msg>(0);
       call_handler(down_handler_, this, dm);
+      return message_category::internal;
+    }
+    case type_id_v<timeout_msg>: {
+      auto id = content.get_as<timeout_msg>(0).id;
+      if (timeout_state_.id == id)
+        handle_timeout();
       return message_category::internal;
     }
     case type_id_v<action>: {
@@ -853,10 +924,21 @@ void scheduled_actor::do_become(behavior bhvr, bool discard_old) {
   }
   if (discard_old && !bhvr_stack_.empty())
     bhvr_stack_.pop_back();
-  // request_timeout simply resets the timeout when it's invalid
-  if (bhvr)
+  auto has_timeout = false;
+  if (bhvr) {
+    has_timeout = bhvr.timeout() != infinite;
     bhvr_stack_.push_back(std::move(bhvr));
-  set_receive_timeout();
+  }
+  if (has_timeout) {
+    timeout_state_.mode = timeout_mode::legacy;
+    timeout_state_.delay = bhvr_stack_.back().timeout();
+    set_receive_timeout();
+    return;
+  }
+  if (timeout_state_.mode == timeout_mode::legacy) {
+    timeout_state_.pending.dispose();
+    timeout_state_.reset();
+  }
 }
 
 bool scheduled_actor::finalize() {

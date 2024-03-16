@@ -165,6 +165,7 @@ struct stream_cancel_msg;
 struct stream_close_msg;
 struct stream_demand_msg;
 struct stream_open_msg;
+struct timeout_msg;
 struct unit_t;
 
 // -- free template functions --------------------------------------------------
