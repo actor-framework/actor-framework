@@ -10,19 +10,22 @@
 
 using namespace caf;
 
+constexpr int32_t num_actors = 50;
+
 behavior printer(event_based_actor* self, int32_t num, int32_t delay) {
-  aout(self).println("Hi there! This is actor nr. {}!", num);
+  self->println("Hi there! This is actor nr. {}!", num);
   auto timeout = std::chrono::milliseconds{delay};
   self->mail(timeout_atom_v).delay(timeout).send(self);
   return {
     [=](timeout_atom) {
-      aout(self).println("Actor nr. {} says goodbye after waiting for {}ms!",
-                         num, delay);
+      self->println("Actor nr. {} says goodbye after waiting for {}ms!", num,
+                    delay);
     },
   };
 }
 
 void caf_main(actor_system& sys) {
+  sys.println("Spawning {} actors...", num_actors);
   std::random_device rd;
   std::minstd_rand re{rd()};
   std::uniform_int_distribution<int32_t> dis{1, 99};

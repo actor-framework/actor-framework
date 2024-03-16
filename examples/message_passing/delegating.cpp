@@ -34,7 +34,7 @@ adder_actor::behavior_type server_impl(adder_actor::pointer self,
 void client_impl(event_based_actor* self, adder_actor adder, int32_t x,
                  int32_t y) {
   self->mail(add_atom_v, x, y).request(adder, 10s).then([=](int32_t result) {
-    aout(self).println("{} + {} = {}", x, y, result);
+    self->println("{} + {} = {}", x, y, result);
   });
 }
 

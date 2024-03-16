@@ -86,10 +86,10 @@ void tester(scoped_actor& self, const Handle& hdl, int32_t x, int32_t y,
     .request(hdl, infinite)
     .receive(
       [&self, x, y](int32_t z) { //
-        aout(self).println("{} + {} = {}", x, y, z);
+        self->println("{} + {} = {}", x, y, z);
       },
       [&self](const error& err) {
-        aout(self).println("AUT (actor under test) failed: {}", err);
+        self->println("AUT (actor under test) failed: {}", err);
       });
   tester(self, std::forward<Ts>(xs)...);
 }

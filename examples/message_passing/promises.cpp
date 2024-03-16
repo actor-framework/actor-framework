@@ -40,7 +40,7 @@ void client_impl(event_based_actor* self, adder_actor adder, int32_t x,
                  int32_t y) {
   using namespace std::literals::chrono_literals;
   self->mail(add_atom_v, x, y).request(adder, 10s).then([=](int32_t result) {
-    aout(self).println("{} + {} = {}", x, y, result);
+    self->println("{} + {} = {}", x, y, result);
   });
 }
 

@@ -238,12 +238,12 @@ void caf_main(caf::actor_system& sys) {
   shapes.emplace_back(nullptr);
   shapes.emplace_back(rectangle::make({10, 10}, {20, 20}));
   shapes.emplace_back(circle::make({15, 15}, 5));
-  aout(self).println("shapes:");
+  self->println("shapes:");
   for (auto& ptr : shapes) {
-    aout(self).println("- value: {}", ptr);
+    self->println("- value: {}", ptr);
     auto copy = serialization_roundtrip(ptr);
     assert(!ptr || ptr.get() != copy.get());
-    aout(self).println("-  copy: {}", copy);
+    self->println("-  copy: {}", copy);
   }
 }
 

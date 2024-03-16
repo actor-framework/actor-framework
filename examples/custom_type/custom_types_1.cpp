@@ -74,12 +74,12 @@ struct testee_state {
       // note: we sent a foo_pair2, but match on foo_pair
       // that works because both are aliases for std::pair<int, int>
       [this](const foo_pair& val) {
-        aout(self).println("foo_pair{}", val);
+        self->println("foo_pair{}", val);
         if (--remaining == 0)
           self->quit();
       },
       [this](const foo& val) {
-        aout(self).println("{}", val);
+        self->println("{}", val);
         if (--remaining == 0)
           self->quit();
       },

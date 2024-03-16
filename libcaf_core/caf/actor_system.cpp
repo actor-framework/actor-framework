@@ -23,6 +23,82 @@
 #include <unordered_map>
 #include <unordered_set>
 
+// -- printer actor ------------------------------------------------------------
+
+namespace caf::detail {
+
+struct printer_actor_state {
+  struct actor_data {
+    std::string current_line;
+    actor_data() {
+      // nop
+    }
+  };
+
+  using data_map = std::unordered_map<actor_id, actor_data>;
+
+  explicit printer_actor_state(event_based_actor* selfptr) : self(selfptr) {
+    // nop
+  }
+
+  event_based_actor* self;
+
+  data_map data;
+
+  actor_data* get_data(actor_id addr, bool insert_missing) {
+    if (addr == invalid_actor_id)
+      return nullptr;
+    auto i = data.find(addr);
+    if (i == data.end() && insert_missing)
+      i = data.emplace(addr, actor_data{}).first;
+    if (i != data.end())
+      return &(i->second);
+    return nullptr;
+  }
+
+  void flush(actor_data* what, bool forced) {
+    if (what == nullptr)
+      return;
+    auto& line = what->current_line;
+    if (line.empty() || (line.back() != '\n' && !forced))
+      return;
+    self->println(line);
+    line.clear();
+  }
+
+  behavior make_behavior() {
+    return {
+      [this](add_atom, actor_id aid, std::string& str) {
+        if (str.empty() || aid == invalid_actor_id)
+          return;
+        auto d = get_data(aid, true);
+        if (d != nullptr) {
+          d->current_line += str;
+          flush(d, false);
+        }
+      },
+      [this](flush_atom, actor_id aid) { flush(get_data(aid, false), true); },
+      [this](delete_atom, actor_id aid) {
+        auto data_ptr = get_data(aid, false);
+        if (data_ptr != nullptr) {
+          flush(data_ptr, true);
+          data.erase(aid);
+        }
+      },
+      [](redirect_atom, const std::string&, int) {
+        // nop
+      },
+      [](redirect_atom, actor_id, const std::string&, int) {
+        // nop
+      },
+    };
+  }
+
+  static constexpr const char* name = "printer_actor";
+};
+
+} // namespace caf::detail
+
 namespace caf {
 
 namespace {
@@ -126,133 +202,6 @@ behavior config_serv_impl(stateful_actor<kvstate>* self) {
     },
   };
 }
-
-// -- printer actor ------------------------------------------------------------
-
-struct printer_actor_state {
-  using string_sink = std::function<void(std::string&&)>;
-
-  using string_sink_ptr = std::shared_ptr<string_sink>;
-
-  using sink_cache = std::map<std::string, string_sink_ptr>;
-
-  struct actor_data {
-    std::string current_line;
-    string_sink_ptr redirect;
-    actor_data() {
-      // nop
-    }
-  };
-
-  using data_map = std::unordered_map<actor_id, actor_data>;
-
-  string_sink make_sink(actor_system&, const std::string& fn, int flags) {
-    if (fn.empty()) {
-      return nullptr;
-    } else if (fn.front() == ':') {
-      // TODO: re-implement "virtual files" or remove
-      return nullptr;
-    } else {
-      auto append = (flags & actor_ostream::append) != 0;
-      auto fs = std::make_shared<std::ofstream>();
-      fs->open(fn, append ? std::ios_base::out | std::ios_base::app
-                          : std::ios_base::out);
-      if (fs->is_open()) {
-        return [fs](std::string&& out) { *fs << out; };
-      } else {
-        fprintf(stderr, "cannot open file: %s\n", fn.c_str());
-        return nullptr;
-      }
-    }
-  }
-
-  string_sink_ptr get_or_add_sink_ptr(actor_system& sys, sink_cache& fc,
-                                      const std::string& fn, int flags) {
-    if (auto i = fc.find(fn); i != fc.end()) {
-      return i->second;
-    } else if (auto fs = make_sink(sys, fn, flags)) {
-      if (fs) {
-        auto ptr = std::make_shared<string_sink>(std::move(fs));
-        fc.emplace(fn, ptr);
-        return ptr;
-      } else {
-        return nullptr;
-      }
-    } else {
-      return nullptr;
-    }
-  }
-
-  explicit printer_actor_state(event_based_actor* selfptr) : self(selfptr) {
-    // nop
-  }
-
-  event_based_actor* self;
-
-  sink_cache fcache;
-
-  string_sink_ptr global_redirect;
-
-  data_map data;
-
-  actor_data* get_data(actor_id addr, bool insert_missing) {
-    if (addr == invalid_actor_id)
-      return nullptr;
-    auto i = data.find(addr);
-    if (i == data.end() && insert_missing)
-      i = data.emplace(addr, actor_data{}).first;
-    if (i != data.end())
-      return &(i->second);
-    return nullptr;
-  }
-
-  void flush(actor_data* what, bool forced) {
-    if (what == nullptr)
-      return;
-    auto& line = what->current_line;
-    if (line.empty() || (line.back() != '\n' && !forced))
-      return;
-    if (what->redirect)
-      (*what->redirect)(std::move(line));
-    else if (global_redirect)
-      (*global_redirect)(std::move(line));
-    else
-      fprintf(stderr, "%s", line.c_str());
-    line.clear();
-  }
-
-  behavior make_behavior() {
-    return {
-      [this](add_atom, actor_id aid, std::string& str) {
-        if (str.empty() || aid == invalid_actor_id)
-          return;
-        auto d = get_data(aid, true);
-        if (d != nullptr) {
-          d->current_line += str;
-          flush(d, false);
-        }
-      },
-      [this](flush_atom, actor_id aid) { flush(get_data(aid, false), true); },
-      [this](delete_atom, actor_id aid) {
-        auto data_ptr = get_data(aid, false);
-        if (data_ptr != nullptr) {
-          flush(data_ptr, true);
-          data.erase(aid);
-        }
-      },
-      [this](redirect_atom, const std::string& fn, int flag) {
-        global_redirect = get_or_add_sink_ptr(self->system(), fcache, fn, flag);
-      },
-      [this](redirect_atom, actor_id aid, const std::string& fn, int flag) {
-        auto d = get_data(aid, true);
-        if (d != nullptr)
-          d->redirect = get_or_add_sink_ptr(self->system(), fcache, fn, flag);
-      },
-    };
-  }
-
-  static constexpr const char* name = "printer_actor";
-};
 
 // -- spawn server -------------------------------------------------------------
 
@@ -403,6 +352,7 @@ actor_system::actor_system(actor_system_config& cfg,
     await_actors_before_shutdown_(true),
     cfg_(cfg),
     private_threads_(this) {
+  print_state_ = std::make_unique<print_state>(cfg);
   meta_objects_guard_ = detail::global_meta_objects_guard();
   if (!meta_objects_guard_)
     CAF_CRITICAL("unable to obtain the global meta objects guard");
@@ -471,7 +421,7 @@ actor_system::actor_system(actor_system_config& cfg,
   scheduler_->start();
   if (!printer_) {
     auto p = spawn<hidden + detached + lazy_init>(
-      actor_from_state<printer_actor_state>);
+      actor_from_state<detail::printer_actor_state>);
     printer_ = actor_cast<strong_actor_ptr>(std::move(p));
   }
   // Initialize the state for each module and give each module the opportunity
@@ -697,6 +647,65 @@ detail::actor_local_printer_ptr actor_system::printer_for(local_actor* self) {
 
 detail::mailbox_factory* actor_system::mailbox_factory() {
   return cfg_.mailbox_factory();
+}
+
+actor_system::print_state::print_state(const actor_system_config& cfg) {
+  auto colored = get_or(cfg, "caf.console.colored", true);
+  auto out = get_or(cfg, "caf.console.stream", "stdout");
+  // Short-circuit if output is disabled.
+  if (out == "none") {
+    do_print_ = [](void*, term, const char*, size_t) {};
+    return;
+  }
+  // Pick the output stream.
+  if (out == "stderr")
+    out_ = stderr;
+  else
+    out_ = stdout;
+  // Set up our print function depending on whether we want colored output.
+  if (colored && detail::is_tty(stdout)) {
+    do_print_ = [](void* out, term color, const char* buf, size_t len) {
+      auto* fhdl = reinterpret_cast<FILE*>(out);
+      if (color <= term::reset_endl) {
+        fwrite(buf, 1, len, fhdl);
+        return;
+      }
+      detail::set_color(fhdl, color);
+      fwrite(buf, 1, len, fhdl);
+      detail::set_color(fhdl, term::reset);
+    };
+  } else {
+    do_print_ = [](void* out, term, const char* buf, size_t len) {
+      fwrite(buf, 1, len, reinterpret_cast<FILE*>(out));
+    };
+  }
+}
+
+actor_system::print_state::~print_state() {
+  if (do_cleanup_)
+    do_cleanup_(out_);
+}
+
+void actor_system::print_state::reset(void* new_out, print_fun do_print,
+                                      cleanup do_cleanup) {
+  std::lock_guard guard{mtx_};
+  if (do_cleanup_)
+    do_cleanup_(out_);
+  out_ = new_out;
+  do_print_ = do_print;
+  do_cleanup_ = do_cleanup;
+}
+
+void actor_system::print_state::print(term color, const char* buf, size_t len) {
+  std::lock_guard guard{mtx_};
+  do_print_(out_, color, buf, len);
+}
+
+void actor_system::redirect_text_output(void* out,
+                                        void (*write)(void*, term, const char*,
+                                                      size_t),
+                                        void (*cleanup)(void*)) {
+  print_state_->reset(out, write, cleanup);
 }
 
 } // namespace caf

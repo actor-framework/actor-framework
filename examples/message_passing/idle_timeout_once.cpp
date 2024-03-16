@@ -40,12 +40,11 @@ struct collector_state {
     // actor holds a reference to it and run the callback only once.
     self->set_idle_handler(500ms, strong_ref, once, [this] {
       if (!buf.empty()) {
-        aout(self)
-          .println("Timeout reached!")
-          .println("Received message length: {}", buf.size())
-          .println("Message content: {}", str());
+        self->println("Timeout reached!");
+        self->println("Received message length: {}", buf.size());
+        self->println("Message content: {}", str());
       } else {
-        aout(self).println("Timeout reached with an empty buffer!");
+        self->println("Timeout reached with an empty buffer!");
       }
       self->quit();
     });
@@ -54,9 +53,8 @@ struct collector_state {
       [this](char c) {
         buf.push_back(c);
         if (buf.size() == flush_threshold) {
-          aout(self)
-            .println("Received message length: {}", buf.size())
-            .println("Message content: {}", str());
+          self->println("Received message length: {}", buf.size());
+          self->println("Message content: {}", str());
           buf.clear();
         }
       },
