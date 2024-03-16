@@ -21,6 +21,7 @@
 #include "caf/flow/observer.hpp"
 #include "caf/flow/op/base.hpp"
 #include "caf/flow/op/buffer.hpp"
+#include "caf/flow/op/combine_latest.hpp"
 #include "caf/flow/op/concat.hpp"
 #include "caf/flow/op/from_resource.hpp"
 #include "caf/flow/op/from_steps.hpp"
@@ -405,6 +406,13 @@ public:
   auto zip_with(F fn, T0 input0, Ts... inputs) {
     return materialize().zip_with(std::move(fn), std::move(input0),
                                   std::move(inputs)...);
+  }
+
+  /// @copydoc observable::combine_latest
+  template <class F, class T0, class... Ts>
+  auto combine_latest(F fn, T0 input0, Ts... inputs) {
+    return materialize().combine_latest(std::move(fn), std::move(input0),
+                                        std::move(inputs)...);
   }
 
   /// @copydoc observable::publish
@@ -888,6 +896,18 @@ auto observable<T>::zip_with(F fn, T0 input0, Ts... inputs) {
   if (pimpl_)
     return op::make_zip_with(pimpl_->parent(), std::move(fn), *this,
                              std::move(input0), std::move(inputs)...);
+  return observable<output_type>{};
+}
+
+template <class T>
+template <class F, class T0, class... Ts>
+auto observable<T>::combine_latest(F fn, T0 input0, Ts... inputs) {
+  using output_type = op::combine_latest_output_t<F, T,                     //
+                                                  typename T0::output_type, //
+                                                  typename Ts::output_type...>;
+  if (pimpl_)
+    return op::make_combine_latest(pimpl_->parent(), std::move(fn), *this,
+                                   std::move(input0), std::move(inputs)...);
   return observable<output_type>{};
 }
 

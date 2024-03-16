@@ -226,6 +226,7 @@ caf_add_component(
     caf/flow/observe_on.test.cpp
     caf/flow/op/buffer.test.cpp
     caf/flow/op/cell.test.cpp
+    caf/flow/op/combine_latest.test.cpp
     caf/flow/op/concat.test.cpp
     caf/flow/op/defer.test.cpp
     caf/flow/op/empty.test.cpp
