@@ -4,19 +4,12 @@
 
 #pragma once
 
-#include "caf/config.hpp"
-#include "caf/resumable.hpp"
-#include "caf/timespan.hpp"
-
-#ifdef CAF_ENABLE_EXCEPTIONS
-#  include <exception>
-#endif // CAF_ENABLE_EXCEPTIONS
-
 #include "caf/abstract_mailbox.hpp"
 #include "caf/abstract_scheduled_actor.hpp"
 #include "caf/action.hpp"
 #include "caf/actor_traits.hpp"
 #include "caf/async/fwd.hpp"
+#include "caf/config.hpp"
 #include "caf/cow_string.hpp"
 #include "caf/detail/behavior_stack.hpp"
 #include "caf/detail/core_export.hpp"
@@ -34,12 +27,19 @@
 #include "caf/once.hpp"
 #include "caf/ref.hpp"
 #include "caf/repeat.hpp"
+#include "caf/resumable.hpp"
 #include "caf/telemetry/timer.hpp"
+#include "caf/timespan.hpp"
 #include "caf/unordered_flat_map.hpp"
 
 #include <forward_list>
 #include <type_traits>
 #include <unordered_map>
+
+#ifdef CAF_ENABLE_EXCEPTIONS
+#  include <exception>
+#  include <stdexcept>
+#endif // CAF_ENABLE_EXCEPTIONS
 
 namespace caf::detail {
 
@@ -365,8 +365,16 @@ public:
   /// a message for a certain amount of time.
   template <class RefType, class RepeatType>
   void set_idle_handler(timespan delay, RefType, RepeatType, idle_handler fun) {
-    if (delay == infinite)
+    if (delay == infinite) {
+#ifdef CAF_ENABLE_EXCEPTIONS
+      throw std::invalid_argument(
+        "cannot set an idle handler with infinite delay");
+#else
+      quit(make_error(sec::invalid_argument,
+                      "cannot set an idle handler with infinite delay"));
       return;
+#endif
+    }
     timeout_state_.delay = delay;
     if constexpr (std::is_same_v<RefType, strong_ref_t>
                   && std::is_same_v<RepeatType, once_t>) {

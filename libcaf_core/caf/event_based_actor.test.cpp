@@ -201,6 +201,30 @@ SCENARIO("weak idle timeouts do not prevent actors from becoming unreachable") {
   }
 }
 
+SCENARIO("setting an infinite idle timeout is an error") {
+  GIVEN("an actor") {
+    WHEN("setting an infinite idle timeout") {
+      THEN("the actor terminates with an error") {
+        auto aut = sys.spawn([](event_based_actor* self) -> behavior {
+          self->set_idle_handler(infinite, strong_ref, once, [] {});
+          return {
+            [](const std::string&) {},
+          };
+        });
+        auto aut_down = std::make_shared<bool>(false);
+        auto observer = sys.spawn([aut, aut_down](event_based_actor* self) {
+          self->monitor(aut, [aut_down](const down_msg&) { *aut_down = true; });
+          return behavior{
+            [=](const std::string&) {},
+          };
+        });
+        dispatch_messages();
+        check(*aut_down);
+      }
+    }
+  }
+}
+
 } // WITH_FIXTURE(test::fixture::deterministic)
 
 } // namespace
