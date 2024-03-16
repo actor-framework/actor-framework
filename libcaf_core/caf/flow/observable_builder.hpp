@@ -15,6 +15,7 @@
 #include "caf/flow/gen/just.hpp"
 #include "caf/flow/gen/repeat.hpp"
 #include "caf/flow/observable.hpp"
+#include "caf/flow/op/combine_latest.hpp"
 #include "caf/flow/op/defer.hpp"
 #include "caf/flow/op/empty.hpp"
 #include "caf/flow/op/fail.hpp"
@@ -233,6 +234,19 @@ public:
   auto zip_with(F fn, T0 input0, T1 input1, Ts... inputs) {
     return op::make_zip_with(parent_, std::move(fn), std::move(input0),
                              std::move(input1), std::move(inputs)...);
+  }
+
+  /// Creates an @ref observable that combines the emitted from all passed
+  /// source observables by applying a function object.
+  /// @param fn The combine function. Takes last emitted element from each
+  ///           input and reduces them into a single result.
+  /// @param input0 The input at index 0.
+  /// @param input1 The input at index 1.
+  /// @param inputs The inputs for index > 1, if any.
+  template <class F, class T0, class T1, class... Ts>
+  auto combine_latest(F fn, T0 input0, T1 input1, Ts... inputs) {
+    return op::make_combine_latest(parent_, std::move(fn), std::move(input0),
+                                   std::move(input1), std::move(inputs)...);
   }
 
 private:
