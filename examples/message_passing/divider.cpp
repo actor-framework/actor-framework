@@ -95,10 +95,9 @@ void caf_main(actor_system& system) {
   scoped_actor self{system};
   self->mail(div_atom_v, x, y)
     .request(div, 10s)
-    .receive([&](double z) { aout(self).println("{} / {} = {}", x, y, z); },
+    .receive([&](double z) { self->println("{} / {} = {}", x, y, z); },
              [&](const error& err) {
-               aout(self).println("*** cannot compute {} / {} => {}", x, y,
-                                  err);
+               self->println("*** cannot compute {} / {} => {}", x, y, err);
              });
   // --(rst-request-end)--
 }

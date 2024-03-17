@@ -27,9 +27,6 @@
 #include <string>
 #include <vector>
 
-using std::cerr;
-using std::cout;
-using std::endl;
 using std::string;
 
 using namespace caf;
@@ -84,7 +81,7 @@ struct client_state {
     // transition to `unconnected` on server failure
     self->set_down_handler([this](const down_msg& dm) {
       if (dm.source == current_server) {
-        aout(self).println("*** lost connection to server");
+        self->println("*** lost connection to server");
         current_server = nullptr;
         self->become(unconnected());
       }
@@ -120,24 +117,23 @@ struct client_state {
         [this, host, port](const node_id&, strong_actor_ptr serv,
                            const std::set<std::string>& ifs) {
           if (!serv) {
-            aout(self).println("*** no server found at {}:{}", host, port);
+            self->println("*** no server found at {}:{}", host, port);
             return;
           }
           if (!ifs.empty()) {
-            aout(self).println(
+            self->println(
               "*** typed actor found at {}:{}, but expected an untyped actor",
               host, port);
             return;
           }
-          aout(self).println("*** successfully connected to server");
+          self->println("*** successfully connected to server");
           current_server = serv;
           auto hdl = actor_cast<actor>(serv);
           self->monitor(hdl);
           self->become(running(hdl));
         },
         [this, host, port](const error& err) {
-          aout(self).println("*** cannot connect to {}:{} => {}", host, port,
-                             err);
+          self->println("*** cannot connect to {}:{} => {}", host, port, err);
           self->become(unconnected());
         });
   }
@@ -153,7 +149,7 @@ struct client_state {
               op_ch = '+';
             else
               op_ch = '-';
-            aout(self).println("{} {} {} = {}", x, op_ch, y, result);
+            self->println("{} {} {} = {}", x, op_ch, y, result);
           },
           [this, op, x, y](const error&) {
             // simply try again by enqueueing the task to the mailbox again
@@ -214,25 +210,24 @@ public:
 };
 // --(rst-config-end)--
 
-void client_repl(actor_system& system, const config& cfg) {
+void client_repl(actor_system& sys, const config& cfg) {
   // keeps track of requests and tries to reconnect on server failures
-  auto usage = [] {
-    cout << "Usage:" << endl
-         << "  quit                  : terminates the program" << endl
-         << "  connect <host> <port> : connects to a remote actor" << endl
-         << "  <x> + <y>             : adds two integers" << endl
-         << "  <x> - <y>             : subtracts two integers" << endl
-         << endl;
+  auto usage = [&sys] {
+    sys.println("Usage:");
+    sys.println("  quit                  : terminates the program");
+    sys.println("  connect <host> <port> : connects to a remote actor");
+    sys.println("  <x> + <y>             : adds two integers");
+    sys.println("  <x> - <y>             : subtracts two integers");
+    sys.println("");
   };
   usage();
   bool done = false;
-  auto client = system.spawn(actor_from_state<client_state>);
+  auto client = sys.spawn(actor_from_state<client_state>);
   if (!cfg.host.empty() && cfg.port > 0)
     anon_mail(connect_atom_v, cfg.host, cfg.port).send(client);
   else
-    cout << "*** no server received via config, "
-         << R"(please use "connect <host> <port>" before using the calculator)"
-         << endl;
+    sys.println("*** no server received via config, please set one via "
+                "'connect <host> <port>' before using the calculator");
   // defining the handler outside the loop is more efficient as it avoids
   // re-creating the same object over and over again
   message_handler eval{
@@ -247,10 +242,9 @@ void client_repl(actor_system& system, const config& cfg) {
         char* end = nullptr;
         auto lport = strtoul(arg2.c_str(), &end, 10);
         if (end != arg2.c_str() + arg2.size())
-          cout << R"(")" << arg2 << R"(" is not an unsigned integer)" << endl;
+          sys.println("'{}' is not an unsigned integer", arg2);
         else if (lport > std::numeric_limits<uint16_t>::max())
-          cout << R"(")" << arg2 << R"(" > )"
-               << std::numeric_limits<uint16_t>::max() << endl;
+          sys.println("{} > {}", arg2, std::numeric_limits<uint16_t>::max());
         else
           anon_mail(connect_atom_v, std::move(arg1),
                     static_cast<uint16_t>(lport))
@@ -281,18 +275,17 @@ void client_repl(actor_system& system, const config& cfg) {
 void run_server(actor_system& sys, const config& cfg) {
   auto calc = sys.spawn(calculator_fun);
   // try to publish math actor at given port
-  cout << "*** try publish at port " << cfg.port << endl;
+  sys.println("*** try publish at port {}", cfg.port);
   auto expected_port = sys.middleman().publish(calc, cfg.port);
   if (!expected_port) {
-    std::cerr << "*** publish failed: " << to_string(expected_port.error())
-              << endl;
+    sys.println("*** to publish the calculator: {}", expected_port.error());
     return;
   }
-  cout << "*** server successfully published at port " << *expected_port << endl
-       << "*** press [enter] to quit" << endl;
+  sys.println("*** server successfully published at port {}", *expected_port);
+  sys.println("*** press [enter] to quit");
   string dummy;
   std::getline(std::cin, dummy);
-  cout << "... cya" << endl;
+  sys.println("*** shutting down");
   anon_send_exit(calc, exit_reason::user_shutdown);
 }
 

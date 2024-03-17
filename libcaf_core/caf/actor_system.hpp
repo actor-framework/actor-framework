@@ -11,6 +11,7 @@
 #include "caf/actor_registry.hpp"
 #include "caf/detail/actor_local_printer.hpp"
 #include "caf/detail/core_export.hpp"
+#include "caf/detail/format.hpp"
 #include "caf/detail/init_fun_factory.hpp"
 #include "caf/detail/private_thread_pool.hpp"
 #include "caf/detail/set_thread_name.hpp"
@@ -25,16 +26,21 @@
 #include "caf/spawn_options.hpp"
 #include "caf/string_algorithms.hpp"
 #include "caf/telemetry/metric_registry.hpp"
+#include "caf/term.hpp"
 #include "caf/type_id.hpp"
 
 #include <array>
 #include <atomic>
 #include <cstddef>
+#include <cstdio>
+#include <iterator>
 #include <memory>
 #include <string>
 #include <thread>
 
 namespace caf::detail {
+
+struct printer_actor_state;
 
 template <class>
 struct typed_mpi_access;
@@ -97,6 +103,8 @@ public:
 
   template <class>
   friend class actor_from_state_t;
+
+  friend struct detail::printer_actor_state;
 
   /// Returns the internal actor for dynamic spawn operations.
   const strong_actor_ptr& spawn_serv() const {
@@ -481,6 +489,34 @@ public:
   /// Returns the number of detached actors.
   size_t detached_actors() const noexcept;
 
+  // -- println ----------------------------------------------------------------
+
+  /// Adds a new line to stdout.
+  template <class... Args>
+  void println(term color, std::string_view fmt, Args&&... args) {
+    auto buf = std::vector<char>{};
+    buf.reserve(fmt.size() + 64);
+    detail::format_to(std::back_inserter(buf), fmt,
+                      std::forward<Args>(args)...);
+    buf.push_back('\n');
+    print_state_->print(color, buf.data(), buf.size());
+  }
+
+  /// Adds a new line to stdout.
+  template <class... Args>
+  void println(std::string_view fmt, Args&&... args) {
+    println(term::reset, fmt, std::forward<Args>(args)...);
+  }
+
+  /// Redirects the output of `println` to a custom function.
+  /// @param out The new output stream to write to.
+  /// @param write The new print function to use. Must not be null.
+  /// @param cleanup Deletes the output stream when the actor system shuts down.
+  ///                May be null if no cleanup is necessary.
+  void redirect_text_output(void* out,
+                            void (*write)(void*, term, const char*, size_t),
+                            void (*cleanup)(void*));
+
   /// @cond PRIVATE
 
   /// Calls all thread started hooks
@@ -739,6 +775,36 @@ private:
 
   /// Ties the lifetime of the meta objects table to the actor system.
   detail::global_meta_objects_guard_type meta_objects_guard_;
+
+  class CAF_CORE_EXPORT print_state {
+  public:
+    using print_fun = void (*)(void*, term, const char*, size_t);
+
+    using cleanup = void (*)(void*);
+
+    explicit print_state(const actor_system_config& cfg);
+
+    ~print_state();
+
+    void reset(void* new_out, print_fun do_print, cleanup do_cleanup);
+
+    void print(term color, const char* buf, size_t);
+
+  private:
+    /// Mutex for printing to the console.
+    std::mutex mtx_;
+
+    /// File descriptor for printing to the console.
+    void* out_ = nullptr;
+
+    /// Function for printing to the console.
+    print_fun do_print_ = nullptr;
+
+    /// Function for cleaning up out_.
+    cleanup do_cleanup_ = nullptr;
+  };
+
+  std::unique_ptr<print_state> print_state_;
 };
 
 } // namespace caf

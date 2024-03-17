@@ -17,8 +17,8 @@ endfunction()
 # -- examples for CAF::core ----------------------------------------------------
 
 # introductory applications
-add_core_example(. aout)
 add_core_example(. hello_world)
+add_core_example(. println)
 
 # configuration API
 add_core_example(config read-json)

@@ -109,6 +109,20 @@ public:
   /// @pre `mid.is_request()`
   disposable request_response_timeout(timespan d, message_id mid);
 
+  // -- printing ---------------------------------------------------------------
+
+  /// Adds a new line to stdout.
+  template <class... Args>
+  void println(std::string_view fmt, Args&&... args) {
+    system().println(fmt, std::forward<Args>(args)...);
+  }
+
+  /// Adds a new line to stdout.
+  template <class... Args>
+  void println(term color, std::string_view fmt, Args&&... args) {
+    system().println(color, fmt, std::forward<Args>(args)...);
+  }
+
   // -- spawn functions --------------------------------------------------------
 
   template <class T, spawn_options Os = no_spawn_options, class... Ts>

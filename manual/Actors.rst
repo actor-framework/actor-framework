@@ -518,7 +518,7 @@ loops.
      [&](int value1) {
        self->receive (
          [&](float value2) {
-           aout(self).println("{} => {}", value1, value2);
+           self->println("{} => {}", value1, value2);
          }
        );
      },

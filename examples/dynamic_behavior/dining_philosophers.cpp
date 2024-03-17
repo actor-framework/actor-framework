@@ -6,7 +6,6 @@
 #include "caf/actor_system.hpp"
 #include "caf/caf_main.hpp"
 #include "caf/mail_cache.hpp"
-#include "caf/scoped_actor.hpp"
 
 #include <chrono>
 #include <iostream>
@@ -135,9 +134,9 @@ public:
     granted = behavior{
       [this](taken_atom, bool result) {
         if (result) {
-          aout(self).println("{} has picked up chopsticks with "
-                             "IDs {} and {} and starts to eat",
-                             name, left->id(), right->id());
+          self->println("{} has picked up chopsticks with "
+                        "IDs {} and {} and starts to eat",
+                        name, left->id(), right->id());
           // Eat some time.
           self->mail(think_atom_v).delay(5s).send(self);
           self->become(eating);
@@ -169,8 +168,7 @@ public:
         self->mail(put_atom_v).send(left);
         self->mail(put_atom_v).send(right);
         self->mail(eat_atom_v).delay(5s).send(self);
-        aout(self).println("{} puts down his chopsticks and starts to think",
-                           name);
+        self->println("{} puts down his chopsticks and starts to think", name);
         self->become(thinking);
         cache.unstash();
       },
@@ -179,7 +177,7 @@ public:
   }
 
   behavior make_behavior() {
-    aout(self).println("{} starts to think", name);
+    self->println("{} starts to think", name);
     self->mail(eat_atom_v).delay(5s).send(self);
     return thinking;
   }
@@ -197,20 +195,19 @@ public:
 };
 
 void caf_main(actor_system& sys) {
-  scoped_actor self{sys};
   // Create five chopsticks.
-  aout(self).println("chopstick ids are:");
+  sys.println("chopstick ids are:");
   auto chopsticks = std::vector<chopstick_actor>{};
   for (size_t i = 0; i < 5; ++i) {
-    chopsticks.push_back(self->spawn(actor_from_state<chopstick_state>));
-    aout(self).println("- {}", chopsticks.back()->id());
+    chopsticks.push_back(sys.spawn(actor_from_state<chopstick_state>));
+    sys.println("- {}", chopsticks.back()->id());
   }
   // Create five philosophers.
   auto names = std::vector{"Plato"s, "Hume"s, "Kant"s, "Nietzsche"s,
                            "Descartes"s};
   for (size_t i = 0; i < 5; ++i)
-    self->spawn(actor_from_state<philosopher_state>, names[i], chopsticks[i],
-                chopsticks[(i + 1) % 5]);
+    sys.spawn(actor_from_state<philosopher_state>, names[i], chopsticks[i],
+              chopsticks[(i + 1) % 5]);
 }
 
 CAF_MAIN(id_block::dining_philosophers)

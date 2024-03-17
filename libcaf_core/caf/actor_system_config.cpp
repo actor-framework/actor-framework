@@ -87,6 +87,9 @@ actor_system_config::actor_system_config()
   opt_group{custom_options_, "caf.metrics-filters.actors"}
     .add<string_list>("includes", "selects actors for run-time metrics")
     .add<string_list>("excludes", "excludes actors from run-time metrics");
+  opt_group{custom_options_, "caf.console"}
+    .add<bool>("colored", "forces colored or uncolored output")
+    .add<string>("stream", "either 'stdout' (default), 'stderr' or 'none'");
 }
 
 // -- properties ---------------------------------------------------------------

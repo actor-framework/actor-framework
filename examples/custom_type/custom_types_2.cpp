@@ -59,7 +59,7 @@ private:
 
 behavior testee(event_based_actor* self) {
   return {
-    [self](const foo& x) { aout(self).println("{}", x); },
+    [self](const foo& x) { self->println("{}", x); },
   };
 }
 

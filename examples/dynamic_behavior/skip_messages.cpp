@@ -48,14 +48,12 @@ void caf_main(actor_system& sys) {
     .request(serv, 10s)
     .receive(
       [&self, worker](pong_atom) {
-        aout(self).println("received response from {}",
-                           self->current_sender() == worker ? "worker"
-                                                            : "server");
+        self->println("received response from {}",
+                      self->current_sender() == worker ? "worker" : "server");
       },
       [&self, worker](error& err) {
-        aout(self).println("received error {} from {}", err,
-                           self->current_sender() == worker ? "worker"
-                                                            : "server");
+        self->println("received error {} from {}", err,
+                      self->current_sender() == worker ? "worker" : "server");
       });
   self->send_exit(serv, exit_reason::user_shutdown);
 }

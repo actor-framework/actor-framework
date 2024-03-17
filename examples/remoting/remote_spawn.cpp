@@ -39,9 +39,6 @@ CAF_BEGIN_TYPE_ID_BLOCK(remote_spawn, first_custom_type_id)
 
 CAF_END_TYPE_ID_BLOCK(remote_spawn)
 
-using std::cerr;
-using std::cout;
-using std::endl;
 using std::string;
 
 using namespace caf;
@@ -49,11 +46,11 @@ using namespace caf;
 calculator::behavior_type calculator_fun(calculator::pointer self) {
   return {
     [self](add_atom, int32_t a, int32_t b) {
-      aout(self).println("received task from a remote node");
+      self->println("received task from a remote node");
       return a + b;
     },
     [self](sub_atom, int32_t a, int32_t b) {
-      aout(self).println("received task from a remote node");
+      self->println("received task from a remote node");
       return a - b;
     },
   };
@@ -71,12 +68,12 @@ string trim(string s) {
 
 // implements our main loop for reading user input
 void client_repl(actor_system& sys, calculator hdl) {
-  auto usage = [] {
-    cout << "Usage:" << endl
-         << "  quit                  : terminate program" << endl
-         << "  <x> + <y>             : adds two int32_tegers" << endl
-         << "  <x> - <y>             : subtracts two int32_tegers" << endl
-         << endl;
+  auto usage = [&sys] {
+    sys.println("Usage:");
+    sys.println("  quit                  : terminate program");
+    sys.println("  <x> + <y>             : adds two integers");
+    sys.println("  <x> - <y>             : subtracts two integers");
+    sys.println("");
   };
   usage();
   scoped_actor self{sys};
@@ -111,7 +108,7 @@ void client_repl(actor_system& sys, calculator hdl) {
     else
       self->mail(sub_atom_v, *x, *y).send(hdl);
     self->receive([&self, x = *x, y = *y, op = words[1][0]](int32_t result) {
-      aout(self).println("{} {} {} = {}", x, op, y, result);
+      self->println("{} {} {} = {}", x, op, y, result);
     });
   }
 }
@@ -142,11 +139,11 @@ void server(actor_system& sys, const config& cfg) {
   const auto port = get_or(cfg, "port", default_port);
   auto res = sys.middleman().open(port);
   if (!res) {
-    cerr << "*** cannot open port: " << to_string(res.error()) << endl;
+    sys.println("*** cannot open port: {}", to_string(res.error()));
     return;
   }
-  cout << "*** running on port: " << *res << endl
-       << "*** press <enter> to shutdown server" << endl;
+  sys.println("*** running on port: {}", *res);
+  sys.println("*** press <enter> to shutdown server");
   getchar();
 }
 
@@ -156,7 +153,7 @@ void client(actor_system& sys, const config& cfg) {
   auto port = get_or(cfg, "port", default_port);
   auto node = sys.middleman().connect(host, port);
   if (!node) {
-    cerr << "*** connect failed: " << to_string(node.error()) << endl;
+    sys.println("*** connect failed: {}", node.error());
     return;
   }
   auto type = "calculator";             // type of the actor we wish to spawn
@@ -165,7 +162,7 @@ void client(actor_system& sys, const config& cfg) {
   auto worker = sys.middleman().remote_spawn<calculator>(*node, type, args,
                                                          tout);
   if (!worker) {
-    cerr << "*** remote spawn failed: " << to_string(worker.error()) << endl;
+    sys.println("*** remote spawn failed: {}", worker.error());
     return;
   }
   // start using worker in main loop

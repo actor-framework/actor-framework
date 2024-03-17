@@ -67,4 +67,40 @@ TEST("spawn_inactive creates an actor without launching it") {
   //       on to a reference as well that may not be dropped yet.
 }
 
+TEST("println renders its arguments to a text stream") {
+  actor_system_config cfg;
+  put(cfg.content, "caf.scheduler.max-threads", 1);
+  actor_system sys{cfg};
+  auto out = new std::string;
+  auto write = [](void* vptr, term color, const char* buf, size_t len) {
+    if (len == 0)
+      return;
+    auto* str = static_cast<std::string*>(vptr);
+    if (color <= term::reset_endl) {
+      str->insert(str->end(), buf, buf + len);
+    } else {
+      auto has_nl = false;
+      *str += detail::format("<{}>", to_string(color));
+      str->insert(str->end(), buf, buf + len);
+      if (str->back() == '\n') {
+        str->pop_back();
+        has_nl = true;
+      }
+      *str += detail::format("</{}>", to_string(color));
+      if (has_nl)
+        *str += '\n';
+    }
+  };
+  auto cleanup = [](void* vptr) { delete static_cast<std::string*>(vptr); };
+  sys.redirect_text_output(out, write, cleanup);
+  sys.println("line1");
+  sys.println(term::red, "line{}", 2);
+  sys.spawn([](event_based_actor* self) {
+    self->println("line{}", 3);
+    self->println(term::green, "line{}", 4);
+  });
+  sys.await_all_actors_done();
+  check_eq(*out, "line1\n<red>line2</red>\nline3\n<green>line4</green>\n");
+}
+
 } // namespace
