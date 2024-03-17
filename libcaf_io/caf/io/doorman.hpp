@@ -31,7 +31,7 @@ public:
 
   using doorman_base::new_connection;
 
-  bool new_connection(execution_unit* ctx, connection_handle x);
+  bool new_connection(scheduler* ctx, connection_handle x);
 
   /// Starts listening on the selected port.
   virtual void launch() = 0;

@@ -19,7 +19,7 @@ void actor_companion::on_exit(on_exit_handler handler) {
   on_exit_ = std::move(handler);
 }
 
-bool actor_companion::enqueue(mailbox_element_ptr ptr, execution_unit*) {
+bool actor_companion::enqueue(mailbox_element_ptr ptr, scheduler*) {
   CAF_ASSERT(ptr);
   std::shared_lock guard{lock_};
   if (on_enqueue_) {
@@ -30,7 +30,7 @@ bool actor_companion::enqueue(mailbox_element_ptr ptr, execution_unit*) {
   }
 }
 
-void actor_companion::launch(execution_unit*, bool, bool hide) {
+void actor_companion::launch(scheduler*, bool, bool hide) {
   if (!hide)
     register_at_system();
 }

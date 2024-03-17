@@ -7,7 +7,6 @@
 #include "caf/actor_addr.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/detail/type_traits.hpp"
-#include "caf/execution_unit.hpp"
 #include "caf/infer_handle.hpp"
 
 #include <set>
@@ -18,7 +17,7 @@ namespace caf {
 using actor_factory_result = std::pair<strong_actor_ptr, std::set<std::string>>;
 
 using actor_factory
-  = std::function<actor_factory_result(actor_config&, message&)>;
+  = std::function<actor_factory_result(actor_system&, actor_config&, message&)>;
 
 using selfptr_mode_token = spawn_mode_token<spawn_mode::function_with_selfptr>;
 
@@ -92,7 +91,8 @@ struct message_verifier<spawn_mode::function_with_selfptr,
 
 template <class F>
 actor_factory make_actor_factory(F fun) {
-  return [fun](actor_config& cfg, message& msg) -> actor_factory_result {
+  return [fun](actor_system& sys, actor_config& cfg,
+               message& msg) -> actor_factory_result {
     using trait = infer_handle_from_fun_trait_t<F>;
     using handle = typename trait::type;
     using impl = typename trait::impl;
@@ -112,31 +112,32 @@ actor_factory make_actor_factory(F fun) {
         return result;
       },
     };
-    handle hdl = cfg.host->system().spawn_class<impl, no_spawn_options>(cfg);
+    handle hdl = sys.spawn_class<impl, no_spawn_options>(cfg);
     return {actor_cast<strong_actor_ptr>(std::move(hdl)),
-            cfg.host->system().message_types<handle>()};
+            sys.message_types<handle>()};
   };
 }
 
 template <class Handle, class T, class... Ts>
 struct dyn_spawn_class_helper {
   Handle& result;
+  actor_system& sys;
   actor_config& cfg;
   void operator()(Ts... xs) {
-    CAF_ASSERT(cfg.host);
-    result = cfg.host->system().spawn_class<T, no_spawn_options>(cfg, xs...);
+    result = sys.spawn_class<T, no_spawn_options>(cfg, xs...);
   }
 };
 
 template <class T, class... Ts>
-actor_factory_result dyn_spawn_class(actor_config& cfg, message& msg) {
-  CAF_ASSERT(cfg.host);
+actor_factory_result
+dyn_spawn_class(actor_system& sys, actor_config& cfg, message& msg) {
   using handle = infer_handle_from_class_t<T>;
   handle hdl;
-  message_handler factory{dyn_spawn_class_helper<handle, T, Ts...>{hdl, cfg}};
+  message_handler factory{
+    dyn_spawn_class_helper<handle, T, Ts...>{hdl, sys, cfg}};
   factory(msg);
   return {actor_cast<strong_actor_ptr>(std::move(hdl)),
-          cfg.host->system().message_types<handle>()};
+          sys.message_types<handle>()};
 }
 
 template <class T, class... Ts>

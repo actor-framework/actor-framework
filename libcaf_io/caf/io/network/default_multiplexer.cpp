@@ -135,7 +135,7 @@ const event_mask_type output_mask = EPOLLOUT;
 // In this implementation, shadow_ is the number of sockets we have
 // registered to epoll.
 
-default_multiplexer::default_multiplexer(actor_system* sys)
+default_multiplexer::default_multiplexer(actor_system& sys)
   : multiplexer(sys),
     epollfd_(invalid_native_socket),
     shadow_(1),
@@ -284,7 +284,7 @@ size_t default_multiplexer::num_socket_handlers() const noexcept {
 // are sorted by the file descriptor. This allows us to quickly,
 // i.e., O(1), access the actual object when handling socket events.
 
-default_multiplexer::default_multiplexer(actor_system* sys)
+default_multiplexer::default_multiplexer(actor_system& sys)
   : multiplexer(sys), epollfd_(-1), pipe_reader_(*this), servant_ids_(0) {
   init();
   // initial setup
@@ -640,7 +640,7 @@ default_multiplexer::~default_multiplexer() {
 #endif
 }
 
-void default_multiplexer::exec_later(resumable* ptr) {
+void default_multiplexer::schedule(resumable* ptr) {
   auto lg = log::io::trace("ptr = {}", ptr);
   CAF_ASSERT(ptr != nullptr);
   switch (ptr->subtype()) {
@@ -654,6 +654,10 @@ void default_multiplexer::exec_later(resumable* ptr) {
     default:
       system().scheduler().schedule(ptr);
   }
+}
+
+void default_multiplexer::delay(resumable* ptr) {
+  schedule(ptr);
 }
 
 scribe_ptr default_multiplexer::new_scribe(native_socket fd) {

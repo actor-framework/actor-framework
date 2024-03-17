@@ -22,13 +22,13 @@ public:
   }
 
   void actor_exited(const error& fail_state,
-                    [[maybe_unused]] execution_unit* host) override {
+                    [[maybe_unused]] scheduler* sched) override {
     if constexpr (num_args == 0)
       fn_();
     else if constexpr (num_args == 1)
       fn_(fail_state);
     else
-      fn_(fail_state, host);
+      fn_(fail_state, sched);
   }
 
   static constexpr size_t token_type = attachable::token::anonymous;

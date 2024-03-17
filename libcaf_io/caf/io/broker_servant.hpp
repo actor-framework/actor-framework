@@ -60,7 +60,7 @@ protected:
     ptr->erase(hdl_);
   }
 
-  void invoke_mailbox_element_impl(execution_unit* ctx, mailbox_element& x) {
+  void invoke_mailbox_element_impl(scheduler* ctx, mailbox_element& x) {
     auto self = this->parent();
     if (auto pfac = self->proxy_registry_ptr()) {
       proxy_registry::current(pfac);
@@ -73,7 +73,7 @@ protected:
     }
   }
 
-  bool invoke_mailbox_element(execution_unit* ctx) {
+  bool invoke_mailbox_element(scheduler* ctx) {
     // hold on to a strong reference while "messing" with the parent actor
     strong_actor_ptr ptr_guard{this->parent()->ctrl()};
     auto prev = activity_tokens_;

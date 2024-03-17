@@ -93,14 +93,14 @@ TEST("meta objects allow serialization of objects") {
   byte_buffer buf;
   auto meta_i32_wrapper = make_meta_object<i32_wrapper>("i32_wrapper");
   alignas(i32_wrapper) std::byte storage[sizeof(i32_wrapper)];
-  binary_serializer sink{nullptr, buf};
+  binary_serializer sink{buf};
   meta_i32_wrapper.default_construct(&storage);
   check_eq(i32_wrapper::instances, 1u);
   check(meta_i32_wrapper.save_binary(sink, &storage));
   i32_wrapper copy;
   check_eq(i32_wrapper::instances, 2u);
   copy.value = 42;
-  binary_deserializer source{nullptr, buf};
+  binary_deserializer source{buf};
   check(meta_i32_wrapper.load_binary(source, &copy));
   check_eq(copy.value, 0);
   meta_i32_wrapper.destroy(&storage);

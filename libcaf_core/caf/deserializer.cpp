@@ -8,15 +8,6 @@
 
 namespace caf {
 
-deserializer::deserializer(actor_system& x) noexcept
-  : context_(x.dummy_execution_unit()) {
-  // nop
-}
-
-deserializer::deserializer(execution_unit* x) noexcept : context_(x) {
-  // nop
-}
-
 deserializer::~deserializer() {
   // nop
 }

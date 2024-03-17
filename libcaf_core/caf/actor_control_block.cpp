@@ -18,9 +18,8 @@ actor_addr actor_control_block::address() {
   return {this, true};
 }
 
-bool actor_control_block::enqueue(mailbox_element_ptr what,
-                                  execution_unit* host) {
-  return get()->enqueue(std::move(what), host);
+bool actor_control_block::enqueue(mailbox_element_ptr what, scheduler* sched) {
+  return get()->enqueue(std::move(what), sched);
 }
 
 bool intrusive_ptr_upgrade_weak(actor_control_block* x) {
@@ -73,13 +72,12 @@ bool operator==(const abstract_actor* x, const strong_actor_ptr& y) {
   return actor_control_block::from(x) == y.get();
 }
 
-error_code<sec> load_actor(strong_actor_ptr& storage, execution_unit* context,
+error_code<sec> load_actor(strong_actor_ptr& storage, actor_system* sys,
                            actor_id aid, const node_id& nid) {
-  if (context == nullptr)
+  if (sys == nullptr)
     return sec::no_context;
-  auto& sys = context->system();
-  if (sys.node() == nid) {
-    storage = sys.registry().get(aid);
+  if (sys->node() == nid) {
+    storage = sys->registry().get(aid);
     log::core::debug("fetch actor handle from local actor registry: {}",
                      (storage ? "found" : "not found"));
     return none;

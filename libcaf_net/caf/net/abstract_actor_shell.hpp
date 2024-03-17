@@ -97,13 +97,13 @@ public:
 
   using abstract_actor::enqueue;
 
-  bool enqueue(mailbox_element_ptr ptr, execution_unit* eu) override;
+  bool enqueue(mailbox_element_ptr ptr, scheduler* eu) override;
 
   mailbox_element* peek_at_next_mailbox_element() override;
 
   // -- overridden functions of local_actor ------------------------------------
 
-  void launch(execution_unit* eu, bool lazy, bool hide) override;
+  void launch(scheduler* eu, bool lazy, bool hide) override;
 
   void on_cleanup(const error& reason) override;
 

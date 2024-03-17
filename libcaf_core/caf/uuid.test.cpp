@@ -134,11 +134,11 @@ SCENARIO("UUIDs are inspectable") {
   auto id = "2ee4ded7-69c0-4dd6-876d-02e446b21784"_uuid;
   GIVEN("a binary serializer") {
     byte_buffer buf;
-    binary_serializer sink{nullptr, buf};
+    binary_serializer sink{buf};
     WHEN("applying an UUID to the serializer") {
       check(sink.apply(id));
       THEN("a binary deserializer reproduces the UUID") {
-        binary_deserializer source{nullptr, buf};
+        binary_deserializer source{buf};
         uuid id_copy;
         check(source.apply(id_copy));
         check_eq(id, id_copy);

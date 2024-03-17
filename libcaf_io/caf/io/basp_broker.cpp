@@ -429,7 +429,7 @@ proxy_registry* basp_broker::proxy_registry_ptr() {
   return &instance.proxies();
 }
 
-resumable::resume_result basp_broker::resume(execution_unit* ctx, size_t mt) {
+resumable::resume_result basp_broker::resume(scheduler* ctx, size_t mt) {
   proxy_registry::current(&instance.proxies());
   auto guard = detail::scope_guard{[]() noexcept { //
     proxy_registry::current(nullptr);
@@ -704,7 +704,7 @@ void basp_broker::handle_heartbeat() {
   // nop
 }
 
-execution_unit* basp_broker::current_execution_unit() {
+scheduler* basp_broker::current_scheduler() {
   return context();
 }
 

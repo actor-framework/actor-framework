@@ -145,7 +145,7 @@ scheduled_actor::~scheduled_actor() {
 
 // -- overridden functions of abstract_actor -----------------------------------
 
-bool scheduled_actor::enqueue(mailbox_element_ptr ptr, execution_unit* eu) {
+bool scheduled_actor::enqueue(mailbox_element_ptr ptr, scheduler* sched) {
   CAF_ASSERT(ptr != nullptr);
   CAF_ASSERT(!getf(is_blocking_flag));
   auto lg = log::core::trace("ptr = {}", *ptr);
@@ -163,8 +163,8 @@ bool scheduled_actor::enqueue(mailbox_element_ptr ptr, execution_unit* eu) {
       intrusive_ptr_add_ref(ctrl());
       if (private_thread_)
         private_thread_->resume(this);
-      else if (eu != nullptr)
-        eu->exec_later(this);
+      else if (sched != nullptr)
+        sched->delay(this);
       else
         home_system().scheduler().schedule(this);
       return true;
@@ -199,8 +199,8 @@ const char* scheduled_actor::name() const {
   return "user.scheduled-actor";
 }
 
-void scheduled_actor::launch(execution_unit* ctx, bool lazy, bool hide) {
-  CAF_ASSERT(ctx != nullptr);
+void scheduled_actor::launch(scheduler* sched, bool lazy, bool hide) {
+  CAF_ASSERT(sched != nullptr);
   CAF_PUSH_AID_FROM_PTR(this);
   auto lg = log::core::trace("lazy = {}, hide = {}", lazy, hide);
   CAF_ASSERT(!getf(is_blocking_flag));
@@ -208,14 +208,14 @@ void scheduled_actor::launch(execution_unit* ctx, bool lazy, bool hide) {
     register_at_system();
   auto delay_first_scheduling = lazy && mailbox().try_block();
   if (getf(is_detached_flag)) {
-    private_thread_ = ctx->system().acquire_private_thread();
+    private_thread_ = system().acquire_private_thread();
     if (!delay_first_scheduling) {
       intrusive_ptr_add_ref(ctrl());
       private_thread_->resume(this);
     }
   } else if (!delay_first_scheduling) {
     intrusive_ptr_add_ref(ctrl());
-    ctx->exec_later(this);
+    sched->delay(this);
   }
 }
 
@@ -248,11 +248,11 @@ void scheduled_actor::deref_resumable() const noexcept {
   intrusive_ptr_release(ctrl());
 }
 
-resumable::resume_result scheduled_actor::resume(execution_unit* ctx,
+resumable::resume_result scheduled_actor::resume(scheduler* sched,
                                                  size_t max_throughput) {
   CAF_PUSH_AID(id());
   auto lg = log::core::trace("max_throughput = {}", max_throughput);
-  if (!activate(ctx))
+  if (!activate(sched))
     return resumable::done;
   size_t consumed = 0;
   auto guard = detail::scope_guard{[this, &consumed]() noexcept {
@@ -831,11 +831,11 @@ void scheduled_actor::consume(mailbox_element_ptr x) {
   }
 }
 
-bool scheduled_actor::activate(execution_unit* ctx) {
+bool scheduled_actor::activate(scheduler* sched) {
   auto lg = log::core::trace("");
-  CAF_ASSERT(ctx != nullptr);
+  CAF_ASSERT(sched != nullptr);
   CAF_ASSERT(!getf(is_blocking_flag));
-  context(ctx);
+  context(sched);
   if (getf(is_initialized_flag) && !alive()) {
     log::system::warning("activate called on a terminated actor "
                          "with id {} and name {}",
@@ -866,10 +866,10 @@ bool scheduled_actor::activate(execution_unit* ctx) {
   return true;
 }
 
-auto scheduled_actor::activate(execution_unit* ctx, mailbox_element& x)
+auto scheduled_actor::activate(scheduler* sched, mailbox_element& x)
   -> activation_result {
   auto lg = log::core::trace("x = {}", x);
-  if (!activate(ctx))
+  if (!activate(sched))
     return activation_result::terminated;
   auto res = reactivate(x);
   if (res == activation_result::success)

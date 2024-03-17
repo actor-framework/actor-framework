@@ -196,7 +196,7 @@ public:
 
   using abstract_actor::enqueue;
 
-  bool enqueue(mailbox_element_ptr ptr, execution_unit* eu) override;
+  bool enqueue(mailbox_element_ptr ptr, scheduler* sched) override;
 
   mailbox_element* peek_at_next_mailbox_element() override;
 
@@ -204,7 +204,7 @@ public:
 
   const char* name() const override;
 
-  void launch(execution_unit* eu, bool lazy, bool hide) override;
+  void launch(scheduler* sched, bool lazy, bool hide) override;
 
   void on_cleanup(const error& reason) override;
 
@@ -216,7 +216,7 @@ public:
 
   void deref_resumable() const noexcept final;
 
-  resume_result resume(execution_unit*, size_t) override;
+  resume_result resume(scheduler*, size_t) override;
 
   // -- scheduler callbacks ----------------------------------------------------
 
@@ -424,10 +424,10 @@ public:
   /// Activates an actor and runs initialization code if necessary.
   /// @returns `true` if the actor is alive and ready for `reactivate`,
   ///          `false` otherwise.
-  bool activate(execution_unit* ctx);
+  bool activate(scheduler* ctx);
 
   /// One-shot interface for activating an actor for a single message.
-  activation_result activate(execution_unit* ctx, mailbox_element& x);
+  activation_result activate(scheduler* ctx, mailbox_element& x);
 
   /// Interface for activating an actor any
   /// number of additional times after `activate`.

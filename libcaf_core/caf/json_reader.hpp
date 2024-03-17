@@ -90,8 +90,6 @@ public:
 
   explicit json_reader(actor_system& sys);
 
-  explicit json_reader(execution_unit* ctx);
-
   json_reader(const json_reader&) = delete;
 
   json_reader& operator=(const json_reader&) = delete;

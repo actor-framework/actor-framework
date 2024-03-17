@@ -21,7 +21,7 @@ message datagram_servant::detach_message() {
   return make_message(datagram_servant_closed_msg{hdls()});
 }
 
-bool datagram_servant::consume(execution_unit* ctx, datagram_handle hdl,
+bool datagram_servant::consume(scheduler* ctx, datagram_handle hdl,
                                network::receive_buffer& buf) {
   CAF_ASSERT(ctx != nullptr);
   auto lg = log::io::trace("buf.size = {}", buf.size());
@@ -45,7 +45,7 @@ bool datagram_servant::consume(execution_unit* ctx, datagram_handle hdl,
   return result;
 }
 
-void datagram_servant::datagram_sent(execution_unit* ctx, datagram_handle hdl,
+void datagram_servant::datagram_sent(scheduler* ctx, datagram_handle hdl,
                                      size_t written, byte_buffer buffer) {
   auto lg = log::io::trace("written = {}", written);
   if (detached())

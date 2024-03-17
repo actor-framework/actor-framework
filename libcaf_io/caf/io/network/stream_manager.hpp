@@ -20,11 +20,11 @@ public:
 
   /// Called by the underlying I/O device whenever it received data.
   /// @returns `true` if the manager accepts further reads, otherwise `false`.
-  virtual bool consume(execution_unit* ctx, const void* buf, size_t bsize) = 0;
+  virtual bool consume(scheduler* ctx, const void* buf, size_t bsize) = 0;
 
   /// Called by the underlying I/O device whenever it sent data.
-  virtual void data_transferred(execution_unit* ctx, size_t num_bytes,
-                                size_t remaining_bytes)
+  virtual void
+  data_transferred(scheduler* ctx, size_t num_bytes, size_t remaining_bytes)
     = 0;
 
   /// Get the port of the underlying I/O device.

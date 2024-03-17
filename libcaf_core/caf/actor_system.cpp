@@ -290,18 +290,6 @@ behavior spawn_serv_impl(stateful_actor<spawn_serv_state>* self) {
 // process. Batch messages and ACKs are treated equally. Open, close, and error
 // messages are evaluated to add and remove state as needed.
 
-class dropping_execution_unit : public execution_unit {
-public:
-  dropping_execution_unit(actor_system* sys) : execution_unit(sys) {
-    // nop
-  }
-
-  void exec_later(resumable*) override {
-    // should not happen in the first place
-    CAF_LOG_ERROR("actor registry actor called exec_later during shutdown");
-  }
-};
-
 } // namespace
 
 actor_system::module::~module() {
@@ -399,7 +387,6 @@ actor_system::actor_system(actor_system_config& cfg,
     metrics_(cfg),
     base_metrics_(make_base_metrics(metrics_)),
     registry_(*this),
-    dummy_execution_unit_(this),
     await_actors_before_shutdown_(true),
     cfg_(cfg),
     private_threads_(this) {
@@ -574,10 +561,6 @@ net::middleman& actor_system::network_manager() {
   return *reinterpret_cast<net::middleman*>(clptr->subtype_ptr());
 }
 
-scoped_execution_unit* actor_system::dummy_execution_unit() {
-  return &dummy_execution_unit_;
-}
-
 actor_id actor_system::next_actor_id() {
   return ++ids_;
 }
@@ -628,7 +611,7 @@ void actor_system::thread_terminates() {
 
 expected<strong_actor_ptr>
 actor_system::dyn_spawn_impl(const std::string& name, message& args,
-                             execution_unit* ctx, bool check_interface,
+                             caf::scheduler* sched, bool check_interface,
                              const mpi* expected_ifs) {
   auto lg = log::core::trace(
     "name = {}, args = {}, check_interface = {}, expected_ifs = {}", name, args,
@@ -639,8 +622,8 @@ actor_system::dyn_spawn_impl(const std::string& name, message& args,
   auto i = fs.find(name);
   if (i == fs.end())
     return sec::unknown_type;
-  actor_config cfg{ctx != nullptr ? ctx : &dummy_execution_unit_};
-  auto res = i->second(cfg, args);
+  actor_config cfg{sched != nullptr ? sched : scheduler_.get()};
+  auto res = i->second(*this, cfg, args);
   if (!res.first)
     return sec::cannot_spawn_actor_from_arguments;
   if (check_interface && !assignable(res.second, *expected_ifs))

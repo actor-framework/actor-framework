@@ -218,13 +218,13 @@ struct inspector_access<shape_ptr> : variant_inspector_access<shape_ptr> {
 
 shape_ptr serialization_roundtrip(const shape_ptr& in) {
   caf::byte_buffer buf;
-  caf::binary_serializer sink{nullptr, buf};
+  caf::binary_serializer sink{buf};
   if (!sink.apply(in)) {
     std::cerr << "failed to serialize shape!\n";
     return nullptr;
   }
   shape_ptr out;
-  caf::binary_deserializer source{nullptr, buf};
+  caf::binary_deserializer source{buf};
   if (!source.apply(out)) {
     std::cerr << "failed to deserialize shape!\n";
     return nullptr;

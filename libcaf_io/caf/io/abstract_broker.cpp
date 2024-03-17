@@ -17,23 +17,23 @@
 
 namespace caf::io {
 
-bool abstract_broker::enqueue(mailbox_element_ptr ptr, execution_unit*) {
+bool abstract_broker::enqueue(mailbox_element_ptr ptr, scheduler*) {
   CAF_PUSH_AID(id());
   return scheduled_actor::enqueue(std::move(ptr), backend_);
 }
 
-void abstract_broker::launch(execution_unit* eu, bool lazy, bool hide) {
+void abstract_broker::launch(scheduler* sched, bool lazy, bool hide) {
   CAF_PUSH_AID_FROM_PTR(this);
-  CAF_ASSERT(eu != nullptr);
-  CAF_ASSERT(dynamic_cast<network::multiplexer*>(eu) != nullptr);
-  backend_ = static_cast<network::multiplexer*>(eu);
+  CAF_ASSERT(sched != nullptr);
+  CAF_ASSERT(dynamic_cast<network::multiplexer*>(sched) != nullptr);
+  backend_ = static_cast<network::multiplexer*>(sched);
   auto lg = log::io::trace("lazy = {}, hide = {}", lazy, hide);
   if (!hide)
     register_at_system();
   if (lazy && mailbox().try_block())
     return;
   intrusive_ptr_add_ref(ctrl());
-  eu->exec_later(this);
+  sched->schedule(this);
 }
 
 void abstract_broker::on_cleanup(const error& reason) {
@@ -336,11 +336,10 @@ resumable::subtype_t abstract_broker::subtype() const noexcept {
   return io_actor;
 }
 
-resumable::resume_result abstract_broker::resume(execution_unit* ctx,
-                                                 size_t mt) {
-  CAF_ASSERT(ctx != nullptr);
-  CAF_ASSERT(ctx == backend_);
-  return scheduled_actor::resume(ctx, mt);
+resumable::resume_result abstract_broker::resume(scheduler* sched, size_t mt) {
+  CAF_ASSERT(sched != nullptr);
+  CAF_ASSERT(sched == backend_);
+  return scheduled_actor::resume(sched, mt);
 }
 
 const char* abstract_broker::name() const {

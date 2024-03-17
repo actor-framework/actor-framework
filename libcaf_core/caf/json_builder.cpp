@@ -57,18 +57,6 @@ bool json_builder::number(T x) {
 
 // -- constructors, destructors, and assignment operators ----------------------
 
-json_builder::json_builder() : json_builder(nullptr) {
-  init();
-}
-
-json_builder::json_builder(actor_system& sys) : super(sys) {
-  init();
-}
-
-json_builder::json_builder(execution_unit* ctx) : super(ctx) {
-  init();
-}
-
 json_builder::~json_builder() {
   // nop
 }

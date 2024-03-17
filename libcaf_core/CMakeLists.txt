@@ -211,7 +211,6 @@ caf_add_component(
     caf/event_based_actor.cpp
     caf/event_based_actor.test.cpp
     caf/event_based_mail.test.cpp
-    caf/execution_unit.cpp
     caf/expected.test.cpp
     caf/flow/concat_map.test.cpp
     caf/flow/coordinated.cpp
@@ -327,7 +326,6 @@ caf_add_component(
     caf/scheduler.cpp
     caf/scheduler.test.cpp
     caf/scoped_actor.cpp
-    caf/scoped_execution_unit.cpp
     caf/sec.test.cpp
     caf/serial_reply.test.cpp
     caf/serialization.test.cpp

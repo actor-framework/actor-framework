@@ -4,20 +4,26 @@
 
 #include "caf/detail/cleanup_and_release.hpp"
 
-#include "caf/execution_unit.hpp"
 #include "caf/resumable.hpp"
 #include "caf/scheduled_actor.hpp"
+#include "caf/scheduler.hpp"
 
 namespace caf::detail {
 
 void cleanup_and_release(resumable* ptr) {
-  class dummy_unit : public execution_unit {
+  class dummy_scheduler : public scheduler {
   public:
-    dummy_unit(local_actor* job) : execution_unit(&job->home_system()) {
+    void delay(resumable* job) override {
+      resumables.push_back(job);
+    }
+    void schedule(resumable* job) override {
+      resumables.push_back(job);
+    }
+    void start() override {
       // nop
     }
-    void exec_later(resumable* job) override {
-      resumables.push_back(job);
+    void stop() override {
+      // nop
     }
     std::vector<resumable*> resumables;
   };
@@ -25,7 +31,7 @@ void cleanup_and_release(resumable* ptr) {
     case resumable::scheduled_actor:
     case resumable::io_actor: {
       auto dptr = static_cast<scheduled_actor*>(ptr);
-      dummy_unit dummy{dptr};
+      dummy_scheduler dummy;
       dptr->cleanup(make_error(exit_reason::user_shutdown), &dummy);
       while (!dummy.resumables.empty()) {
         auto sub = dummy.resumables.back();

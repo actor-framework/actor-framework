@@ -21,7 +21,7 @@ namespace {
 template <class... Ts>
 caf::byte_buffer serialize(const Ts&... xs) {
   caf::byte_buffer buf;
-  caf::binary_serializer sink{nullptr, buf};
+  caf::binary_serializer sink{buf};
   if (!(sink.apply(xs) && ...))
     test::runnable::current().fail("serialization failed: {}",
                                    sink.get_error());
@@ -30,7 +30,7 @@ caf::byte_buffer serialize(const Ts&... xs) {
 
 template <class... Ts>
 void deserialize(const caf::byte_buffer& buf, Ts&... xs) {
-  caf::binary_deserializer source{nullptr, buf};
+  caf::binary_deserializer source{buf};
   if (!(source.apply(xs) && ...))
     test::runnable::current().fail("deserialization failed: {}",
                                    source.get_error());

@@ -24,12 +24,6 @@ auto int_value(binary_serializer& sink, T x) {
 
 } // namespace
 
-binary_serializer::binary_serializer(actor_system& sys,
-                                     byte_buffer& buf) noexcept
-  : binary_serializer(sys.dummy_execution_unit(), buf) {
-  // nop
-}
-
 void binary_serializer::skip(size_t num_bytes) {
   auto remaining = buf_.size() - write_pos_;
   if (remaining < num_bytes)

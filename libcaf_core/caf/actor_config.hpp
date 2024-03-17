@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "caf/behavior.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/unique_function.hpp"
 #include "caf/fwd.hpp"
@@ -22,12 +21,12 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit actor_config(execution_unit* host = nullptr,
+  explicit actor_config(scheduler* sched = nullptr,
                         local_actor* parent = nullptr);
 
   // -- member variables -------------------------------------------------------
 
-  execution_unit* host;
+  scheduler* sched;
   local_actor* parent;
   int flags = 0;
   detail::unique_function<behavior(local_actor*)> init_fun;

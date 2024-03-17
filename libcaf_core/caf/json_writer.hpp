@@ -46,11 +46,13 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  json_writer();
+  json_writer() {
+    init();
+  }
 
-  explicit json_writer(actor_system& sys);
-
-  explicit json_writer(execution_unit* ctx);
+  explicit json_writer(actor_system& sys) : super(sys) {
+    init();
+  }
 
   ~json_writer() override;
 

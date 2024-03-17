@@ -12,8 +12,7 @@ message_queue::message_queue() : next_id(0), next_undelivered(0) {
   // nop
 }
 
-void message_queue::push(execution_unit* ctx, uint64_t id,
-                         strong_actor_ptr receiver,
+void message_queue::push(scheduler* ctx, uint64_t id, strong_actor_ptr receiver,
                          mailbox_element_ptr content) {
   std::unique_lock<std::mutex> guard{lock};
   CAF_ASSERT(id >= next_undelivered);
@@ -47,7 +46,7 @@ void message_queue::push(execution_unit* ctx, uint64_t id,
                   actor_msg{id, std::move(receiver), std::move(content)});
 }
 
-void message_queue::drop(execution_unit* ctx, uint64_t id) {
+void message_queue::drop(scheduler* ctx, uint64_t id) {
   push(ctx, id, nullptr, nullptr);
 }
 

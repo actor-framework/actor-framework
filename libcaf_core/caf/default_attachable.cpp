@@ -21,7 +21,7 @@ message make(abstract_actor* self, const error& reason) {
 
 } // namespace
 
-void default_attachable::actor_exited(const error& rsn, execution_unit* host) {
+void default_attachable::actor_exited(const error& rsn, scheduler* sched) {
   CAF_ASSERT(observed_ != observer_);
   auto factory = type_ == monitor ? &make<down_msg> : &make<exit_msg>;
 
@@ -30,7 +30,7 @@ void default_attachable::actor_exited(const error& rsn, execution_unit* host) {
     auto ptr = make_mailbox_element(
       std::move(observed), make_message_id(priority_),
       factory(actor_cast<abstract_actor*>(observed_), rsn));
-    observer->enqueue(std::move(ptr), host);
+    observer->enqueue(std::move(ptr), sched);
   }
 }
 

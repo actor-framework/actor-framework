@@ -120,7 +120,7 @@ struct fixture {
 
   byte_buffer serialize(uri x) {
     byte_buffer buf;
-    binary_serializer sink{nullptr, buf};
+    binary_serializer sink{buf};
     if (!sink.apply(x))
       test::runnable::current().fail("unable to serialize {}: {}", x.str(),
                                      sink.get_error());
@@ -129,7 +129,7 @@ struct fixture {
 
   uri deserialize(byte_buffer buf) {
     uri result;
-    binary_deserializer source{nullptr, buf};
+    binary_deserializer source{buf};
     if (!source.apply(result))
       test::runnable::current().fail("unable to deserialize from buffer: {}",
                                      source.get_error());

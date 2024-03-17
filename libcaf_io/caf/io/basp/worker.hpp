@@ -49,7 +49,7 @@ public:
 
   // -- implementation of resumable --------------------------------------------
 
-  resume_result resume(execution_unit* ctx, size_t) override;
+  resume_result resume(scheduler* ctx, size_t) override;
 
 private:
   // -- constants and assertions -----------------------------------------------

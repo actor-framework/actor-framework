@@ -22,7 +22,7 @@ message doorman::detach_message() {
   return make_message(acceptor_closed_msg{hdl()});
 }
 
-bool doorman::new_connection(execution_unit* ctx, connection_handle x) {
+bool doorman::new_connection(scheduler* ctx, connection_handle x) {
   msg().handle = x;
   return invoke_mailbox_element(ctx);
 }

@@ -121,7 +121,7 @@ void abstract_actor_shell::run_actions() {
 
 // -- overridden functions of abstract_actor -----------------------------------
 
-bool abstract_actor_shell::enqueue(mailbox_element_ptr ptr, execution_unit*) {
+bool abstract_actor_shell::enqueue(mailbox_element_ptr ptr, scheduler*) {
   CAF_ASSERT(ptr != nullptr);
   CAF_ASSERT(!getf(is_blocking_flag));
   auto lg = log::net::trace("ptr = {}", *ptr);
@@ -169,7 +169,7 @@ mailbox_element* abstract_actor_shell::peek_at_next_mailbox_element() {
 
 // -- overridden functions of local_actor --------------------------------------
 
-void abstract_actor_shell::launch(execution_unit*, bool, bool hide) {
+void abstract_actor_shell::launch(scheduler*, bool, bool hide) {
   CAF_PUSH_AID_FROM_PTR(this);
   auto lg = log::net::trace("hide = {}", hide);
   CAF_ASSERT(!getf(is_blocking_flag));

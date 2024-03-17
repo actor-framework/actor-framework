@@ -27,9 +27,9 @@ public:
     // nop
   }
 
-  void launch(execution_unit* eu, bool lazy, bool hide) override {
+  void launch(scheduler* sched, bool lazy, bool hide) override {
     *flag_ = true;
-    super::launch(eu, lazy, hide);
+    super::launch(sched, lazy, hide);
   }
 
 private:

@@ -96,7 +96,7 @@ public:
 
   // -- pure virtual modifiers -------------------------------------------------
 
-  virtual void launch(execution_unit* eu, bool lazy, bool hide) = 0;
+  virtual void launch(scheduler* sched, bool lazy, bool hide) = 0;
 
   // -- time -------------------------------------------------------------------
 
@@ -190,12 +190,12 @@ public:
   // -- miscellaneous actor operations -----------------------------------------
 
   /// Returns the execution unit currently used by this actor.
-  execution_unit* context() const noexcept {
+  scheduler* context() const noexcept {
     return context_;
   }
 
   /// Sets the execution unit for this actor.
-  void context(execution_unit* x) noexcept {
+  void context(scheduler* x) noexcept {
     context_ = x;
   }
 
@@ -449,7 +449,7 @@ protected:
   // -- member variables -------------------------------------------------------
 
   // identifies the execution unit this actor is currently executed by
-  execution_unit* context_;
+  scheduler* context_;
 
   // pointer to the sender of the currently processed message
   mailbox_element* current_element_;

@@ -645,7 +645,7 @@ private:
   using result_type = decltype(sfinae(std::declval<Inspector&>()));
 
 public:
-  static constexpr bool value = std::is_same_v<result_type, execution_unit*>;
+  static constexpr bool value = std::is_same_v<result_type, scheduler*>;
 };
 
 /// Checks whether `T` provides an `inspect` overload for `Inspector`.

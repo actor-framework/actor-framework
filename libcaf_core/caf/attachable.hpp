@@ -6,7 +6,6 @@
 
 #include "caf/detail/core_export.hpp"
 #include "caf/error.hpp"
-#include "caf/execution_unit.hpp"
 #include "caf/exit_reason.hpp"
 #include "caf/fwd.hpp"
 #include "caf/message_priority.hpp"
@@ -66,7 +65,7 @@ public:
   /// Executed if the actor finished execution with given `reason`.
   /// The default implementation does nothing.
   /// @warning `host` can be `nullptr`
-  virtual void actor_exited(const error& fail_state, execution_unit* host);
+  virtual void actor_exited(const error& fail_state, scheduler* sched);
 
   /// Returns `true` if `what` selects this instance, otherwise `false`.
   virtual bool matches(const token& what);

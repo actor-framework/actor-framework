@@ -25,7 +25,7 @@ struct testee : resumable, ref_counted {
   subtype_t subtype() const noexcept override {
     return resumable::function_object;
   }
-  resume_result resume(execution_unit*, size_t max_throughput) override {
+  resume_result resume(scheduler*, size_t max_throughput) override {
     if (++runs == 10) {
       rendesvous->count_down();
       received_throughput = max_throughput;
@@ -109,7 +109,7 @@ struct awaiting_testee : resumable, ref_counted {
   subtype_t subtype() const noexcept override {
     return resumable::function_object;
   }
-  resume_result resume(execution_unit*, size_t) override {
+  resume_result resume(scheduler*, size_t) override {
     runs++;
     rendesvous->count_down();
     return resumable::awaiting_message;

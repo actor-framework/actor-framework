@@ -103,7 +103,6 @@ class config_value;
 class deserializer;
 class disposable;
 class event_based_actor;
-class execution_unit;
 class forwarding_actor_proxy;
 class hashed_node_id;
 class ipv4_address;

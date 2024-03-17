@@ -72,7 +72,7 @@ public:
     virtual void handle_heartbeat() = 0;
 
     /// Returns the current CAF scheduler context.
-    virtual execution_unit* current_execution_unit() = 0;
+    virtual scheduler* current_scheduler() = 0;
 
     /// Returns the actor namespace associated to this BASP protocol instance.
     proxy_registry& proxies() {
@@ -104,11 +104,11 @@ public:
 
   /// Handles received data and returns a config for receiving the
   /// next data or `none` if an error occurred.
-  connection_state handle(execution_unit* ctx, new_data_msg& dm, header& hdr,
+  connection_state handle(scheduler* ctx, new_data_msg& dm, header& hdr,
                           bool is_payload);
 
   /// Sends heartbeat messages to all valid nodes those are directly connected.
-  void handle_heartbeat(execution_unit* ctx);
+  void handle_heartbeat(scheduler* ctx);
 
   /// Returns a route to `target` or `none` on error.
   std::optional<routing_table::route> lookup(const node_id& target);
@@ -118,7 +118,7 @@ public:
 
   /// Sends a BASP message and implicitly flushes the output buffer of `r`.
   /// This function will update `hdr.payload_len` if a payload was written.
-  void write(execution_unit* ctx, const routing_table::route& r, header& hdr,
+  void write(scheduler* ctx, const routing_table::route& r, header& hdr,
              payload_writer* writer = nullptr);
 
   /// Adds a new actor to the map of published actors.
@@ -135,7 +135,7 @@ public:
                                 removed_published_actor* cb = nullptr);
 
   /// Returns `true` if a path to destination existed, `false` otherwise.
-  bool dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
+  bool dispatch(scheduler* ctx, const strong_actor_ptr& sender,
                 const node_id& dest_node, uint64_t dest_actor, uint8_t flags,
                 message_id mid, const message& msg);
 
@@ -163,30 +163,30 @@ public:
   }
 
   /// Writes a header followed by its payload to `storage`.
-  static void write(execution_unit* ctx, byte_buffer& buf, header& hdr,
-                    payload_writer* pw = nullptr);
+  static void write(actor_system& sys, scheduler* ctx, byte_buffer& buf,
+                    header& hdr, payload_writer* pw = nullptr);
 
   /// Writes the server handshake containing the information of the
   /// actor published at `port` to `buf`. If `port == none` or
   /// if no actor is published at this port then a standard handshake is
   /// written (e.g. used when establishing direct connections on-the-fly).
-  void write_server_handshake(execution_unit* ctx, byte_buffer& out_buf,
+  void write_server_handshake(scheduler* ctx, byte_buffer& out_buf,
                               std::optional<uint16_t> port);
 
   /// Writes the client handshake to `buf`.
-  void write_client_handshake(execution_unit* ctx, byte_buffer& buf);
+  void write_client_handshake(scheduler* ctx, byte_buffer& buf);
 
   /// Writes an `announce_proxy` to `buf`.
-  void write_monitor_message(execution_unit* ctx, byte_buffer& buf,
+  void write_monitor_message(scheduler* ctx, byte_buffer& buf,
                              const node_id& dest_node, actor_id aid);
 
   /// Writes a `kill_proxy` to `buf`.
-  void write_down_message(execution_unit* ctx, byte_buffer& buf,
+  void write_down_message(scheduler* ctx, byte_buffer& buf,
                           const node_id& dest_node, actor_id aid,
                           const error& rsn);
 
   /// Writes a `heartbeat` to `buf`.
-  void write_heartbeat(execution_unit* ctx, byte_buffer& buf);
+  void write_heartbeat(scheduler* ctx, byte_buffer& buf);
 
   const node_id& this_node() const {
     return this_node_;
@@ -208,13 +208,14 @@ public:
     return system().config();
   }
 
-  connection_state handle(execution_unit* ctx, connection_handle hdl,
-                          header& hdr, byte_buffer* payload);
+  connection_state handle(scheduler* ctx, connection_handle hdl, header& hdr,
+                          byte_buffer* payload);
 
 private:
-  void forward(execution_unit* ctx, const node_id& dest_node, const header& hdr,
+  void forward(scheduler* ctx, const node_id& dest_node, const header& hdr,
                byte_buffer& payload);
 
+  actor_system* sys_;
   routing_table tbl_;
   published_actor_map published_actors_;
   node_id this_node_;

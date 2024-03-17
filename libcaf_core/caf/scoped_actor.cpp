@@ -6,7 +6,6 @@
 
 #include "caf/actor_registry.hpp"
 #include "caf/log/system.hpp"
-#include "caf/scoped_execution_unit.hpp"
 #include "caf/spawn_options.hpp"
 
 namespace caf {
@@ -27,7 +26,7 @@ public:
     return "scoped_actor";
   }
 
-  void launch(execution_unit*, bool, bool hide) override {
+  void launch(scheduler*, bool, bool hide) override {
     CAF_PUSH_AID_FROM_PTR(this);
     std::ignore = log::system::trace("hide = {}", hide);
     CAF_ASSERT(getf(is_blocking_flag));
@@ -39,9 +38,9 @@ public:
 
 } // namespace
 
-scoped_actor::scoped_actor(actor_system& sys, bool hide) : context_(&sys) {
+scoped_actor::scoped_actor(actor_system& sys, bool hide) {
   CAF_SET_LOGGER_SYS(&sys);
-  actor_config cfg{&context_};
+  actor_config cfg;
   if (hide)
     cfg.flags |= abstract_actor::is_hidden_flag;
   auto hdl = sys.spawn_impl<impl, no_spawn_options>(cfg);
@@ -54,7 +53,7 @@ scoped_actor::~scoped_actor() {
     return;
   auto x = ptr();
   if (!x->getf(abstract_actor::is_terminated_flag))
-    x->cleanup(exit_reason::normal, &context_);
+    x->cleanup(exit_reason::normal, nullptr);
   CAF_SET_AID(prev_);
 }
 

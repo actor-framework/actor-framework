@@ -22,7 +22,6 @@
 #include "caf/logger.hpp"
 #include "caf/make_actor.hpp"
 #include "caf/prohibit_top_level_spawn_marker.hpp"
-#include "caf/scoped_execution_unit.hpp"
 #include "caf/spawn_options.hpp"
 #include "caf/string_algorithms.hpp"
 #include "caf/telemetry/metric_registry.hpp"
@@ -349,10 +348,6 @@ public:
   /// @throws `std::logic_error` if module is not loaded.
   net::middleman& network_manager();
 
-  /// Returns a dummy execution unit that forwards
-  /// everything to the scheduler.
-  scoped_execution_unit* dummy_execution_unit();
-
   /// Returns a new actor ID.
   actor_id next_actor_id();
 
@@ -439,7 +434,7 @@ public:
   template <spawn_options Options = no_spawn_options, class CustomSpawn,
             class... Args>
   typename CustomSpawn::handle_type spawn(CustomSpawn, Args&&... args) {
-    actor_config cfg{dummy_execution_unit(), nullptr};
+    actor_config cfg{scheduler_.get(), nullptr};
     cfg.mbox_factory = mailbox_factory();
     return CustomSpawn::template do_spawn<Options>(*this, cfg,
                                                    std::forward<Args>(args)...);
@@ -450,7 +445,7 @@ public:
   /// @experimental
   template <class Handle, class E = std::enable_if_t<is_handle_v<Handle>>>
   expected<Handle>
-  spawn(const std::string& name, message args, execution_unit* ctx = nullptr,
+  spawn(const std::string& name, message args, caf::scheduler* ctx = nullptr,
         bool check_interface = true, const mpi* expected_ifs = nullptr) {
     mpi tmp;
     if (check_interface && !expected_ifs) {
@@ -529,13 +524,13 @@ public:
       cfg.flags |= abstract_actor::is_detached_flag;
     if constexpr (has_hide_flag(Os))
       cfg.flags |= abstract_actor::is_hidden_flag;
-    if (cfg.host == nullptr)
-      cfg.host = dummy_execution_unit();
+    if (cfg.sched == nullptr)
+      cfg.sched = scheduler_.get();
     CAF_SET_LOGGER_SYS(this);
     auto res = make_actor<C>(next_actor_id(), node(), this, cfg,
                              std::forward<Ts>(xs)...);
     auto ptr = static_cast<C*>(actor_cast<abstract_actor*>(res));
-    ptr->launch(cfg.host, has_lazy_init_flag(Os), has_hide_flag(Os));
+    ptr->launch(cfg.sched, has_lazy_init_flag(Os), has_hide_flag(Os));
     return res;
   }
 
@@ -615,7 +610,7 @@ public:
     static_assert(std::is_base_of_v<scheduled_actor, Impl>,
                   "only scheduled actors may get spawned inactively");
     CAF_SET_LOGGER_SYS(this);
-    actor_config cfg{dummy_execution_unit(), nullptr};
+    actor_config cfg{scheduler_.get(), nullptr};
     cfg.flags = abstract_actor::is_inactive_flag;
     if constexpr (has_detach_flag(Os))
       cfg.flags |= abstract_actor::is_detached_flag;
@@ -625,12 +620,12 @@ public:
     auto res = make_actor<Impl>(next_actor_id(), node(), this, cfg,
                                 std::forward<Ts>(xs)...);
     auto ptr = static_cast<Impl*>(actor_cast<abstract_actor*>(res));
-    auto launch = [strong_ptr = std::move(res), host{cfg.host}] {
+    auto launch = [strong_ptr = std::move(res), sched = cfg.sched] {
       // Note: we pass `res` to this lambda instead of `ptr` to keep a strong
       //       reference to the actor.
       auto dptr = static_cast<Impl*>(actor_cast<abstract_actor*>(strong_ptr));
       dptr->unsetf(abstract_actor::is_inactive_flag);
-      dptr->launch(host, has_lazy_init_flag(Os), has_hide_flag(Os));
+      dptr->launch(sched, has_lazy_init_flag(Os), has_hide_flag(Os));
     };
     return std::make_tuple(ptr, launcher<decltype(launch)>(std::move(launch)));
   }
@@ -669,7 +664,7 @@ private:
   }
 
   expected<strong_actor_ptr>
-  dyn_spawn_impl(const std::string& name, message& args, execution_unit* ctx,
+  dyn_spawn_impl(const std::string& name, message& args, caf::scheduler* ctx,
                  bool check_interface, const mpi* expected_ifs);
 
   /// Sets the internal actor for dynamic spawn operations.
@@ -715,9 +710,6 @@ private:
 
   /// Background printer.
   strong_actor_ptr printer_;
-
-  /// Provides pseudo scheduling context to actors.
-  scoped_execution_unit dummy_execution_unit_;
 
   /// Stores whether the system should wait for running actors on shutdown.
   bool await_actors_before_shutdown_;

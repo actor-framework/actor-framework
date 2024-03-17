@@ -31,15 +31,17 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit serializer(actor_system& sys) noexcept;
+  serializer() noexcept = default;
 
-  explicit serializer(execution_unit* ctx = nullptr) noexcept;
+  explicit serializer(actor_system& sys) noexcept : context_(&sys) {
+    // nop
+  }
 
   virtual ~serializer();
 
   // -- properties -------------------------------------------------------------
 
-  auto context() const noexcept {
+  actor_system* context() const noexcept {
     return context_;
   }
 
@@ -170,7 +172,7 @@ public:
 
 protected:
   /// Provides access to the ::proxy_registry and to the ::actor_system.
-  execution_unit* context_;
+  actor_system* context_ = nullptr;
 
   /// Configures whether client code should assume human-readable output.
   bool has_human_readable_format_ = false;

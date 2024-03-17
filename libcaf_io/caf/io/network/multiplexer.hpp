@@ -12,11 +12,11 @@
 #include "caf/io/network/protocol.hpp"
 
 #include "caf/detail/io_export.hpp"
-#include "caf/execution_unit.hpp"
 #include "caf/expected.hpp"
 #include "caf/extend.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/resumable.hpp"
+#include "caf/scheduler.hpp"
 
 #include <functional>
 #include <string>
@@ -27,9 +27,9 @@ namespace caf::io::network {
 class multiplexer_backend;
 
 /// Low-level backend for IO multiplexing.
-class CAF_IO_EXPORT multiplexer : public execution_unit {
+class CAF_IO_EXPORT multiplexer : public scheduler {
 public:
-  explicit multiplexer(actor_system* sys);
+  explicit multiplexer(actor_system& sys);
 
   /// Creates a new `scribe` from a native socket handle.
   /// @threadsafe
@@ -129,12 +129,12 @@ public:
       F f;
       impl(F&& mf) : f(std::move(mf)) {
       }
-      resume_result resume(execution_unit*, size_t) override {
+      resume_result resume(scheduler*, size_t) override {
         f();
         return done;
       }
     };
-    exec_later(new impl(std::move(fun)));
+    delay(new impl(std::move(fun)));
   }
 
   /// Retrieves a pointer to the implementation or `nullptr` if CAF was
@@ -149,10 +149,21 @@ public:
     tid_ = std::move(tid);
   }
 
+  actor_system& system() {
+    return *sys_;
+  }
+
+  void start() override;
+
+  void stop() override;
+
 protected:
   /// Identifies the thread this multiplexer
   /// is running in. Must be set by the subclass.
   std::thread::id tid_;
+
+  /// Stores the actor system this multiplexer is part of.
+  actor_system* sys_;
 };
 
 using multiplexer_ptr = std::unique_ptr<multiplexer>;

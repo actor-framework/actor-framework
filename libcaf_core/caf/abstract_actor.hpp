@@ -8,7 +8,6 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/functor_attachable.hpp"
 #include "caf/detail/type_traits.hpp"
-#include "caf/execution_unit.hpp"
 #include "caf/exit_reason.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive_ptr.hpp"
@@ -145,7 +144,7 @@ public:
   ///       discard actor handles early. Messages may still get dropped later
   ///       even if this function returns `true`. In particular when dealing
   ///       with remote actors.
-  virtual bool enqueue(mailbox_element_ptr what, execution_unit* host) = 0;
+  virtual bool enqueue(mailbox_element_ptr what, scheduler* sched) = 0;
 
   /// Called by the testing DSL to peek at the next element in the mailbox. Do
   /// not call this function in production code! The default implementation
@@ -159,7 +158,7 @@ public:
   /// This member function is thread-safe, and if the actor has already exited
   /// upon invocation, nothing is done. The return value of this member
   /// function is ignored by scheduled actors.
-  bool cleanup(error&& reason, execution_unit* host);
+  bool cleanup(error&& reason, scheduler* sched);
 
   // -- here be dragons: end of public interface -------------------------------
 

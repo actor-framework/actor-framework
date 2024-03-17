@@ -31,7 +31,10 @@ instance::callee::~callee() {
 }
 
 instance::instance(abstract_broker* parent, callee& lstnr)
-  : tbl_(parent), this_node_(parent->system().node()), callee_(lstnr) {
+  : sys_(&parent->system()),
+    tbl_(parent),
+    this_node_(parent->system().node()),
+    callee_(lstnr) {
   CAF_ASSERT(this_node_ != none);
   size_t workers;
   if (auto workers_cfg = get_as<size_t>(config(), "caf.middleman.workers"))
@@ -42,8 +45,8 @@ instance::instance(abstract_broker* parent, callee& lstnr)
     hub_.add_new_worker(queue_, proxies());
 }
 
-connection_state instance::handle(execution_unit* ctx, new_data_msg& dm,
-                                  header& hdr, bool is_payload) {
+connection_state instance::handle(scheduler* ctx, new_data_msg& dm, header& hdr,
+                                  bool is_payload) {
   auto lg = log::io::trace("dm = {}, is_payload = {}", dm, is_payload);
   // function object providing cleanup code on errors
   auto err = [&](connection_state code) {
@@ -60,7 +63,7 @@ connection_state instance::handle(execution_unit* ctx, new_data_msg& dm,
       return err(malformed_message);
     }
   } else {
-    binary_deserializer source{ctx, dm.buf};
+    binary_deserializer source{*sys_, dm.buf};
     if (!source.apply(hdr)) {
       log::io::warning("failed to receive header: {}", source.get_error());
       return err(malformed_message);
@@ -78,7 +81,7 @@ connection_state instance::handle(execution_unit* ctx, new_data_msg& dm,
   return handle(ctx, dm.handle, hdr, payload);
 }
 
-void instance::handle_heartbeat(execution_unit* ctx) {
+void instance::handle_heartbeat(scheduler* ctx) {
   auto lg = log::io::trace("");
   for (auto& kvp : tbl_.direct_by_hdl_) {
     auto lg = log::io::trace("kvp.first = {}, kvp.second = {}", kvp.first,
@@ -96,11 +99,11 @@ void instance::flush(const routing_table::route& path) {
   callee_.flush(path.hdl);
 }
 
-void instance::write(execution_unit* ctx, const routing_table::route& r,
-                     header& hdr, payload_writer* writer) {
+void instance::write(scheduler* ctx, const routing_table::route& r, header& hdr,
+                     payload_writer* writer) {
   auto lg = log::io::trace("hdr = {}", hdr);
   CAF_ASSERT(hdr.payload_len == 0 || writer != nullptr);
-  write(ctx, callee_.get_buffer(r.hdl), hdr, writer);
+  write(*sys_, ctx, callee_.get_buffer(r.hdl), hdr, writer);
   flush(r);
 }
 
@@ -156,7 +159,7 @@ size_t instance::remove_published_actor(const actor_addr& whom, uint16_t port,
   return result;
 }
 
-bool instance::dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
+bool instance::dispatch(scheduler* ctx, const strong_actor_ptr& sender,
                         const node_id& dest_node, uint64_t dest_actor,
                         uint8_t flags, message_id mid, const message& msg) {
   auto lg = log::io::trace("sender = {}, dest_node = {}, mid = {}, msg = {}",
@@ -176,7 +179,7 @@ bool instance::dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
     auto writer = make_callback([&](binary_serializer& sink) { //
       return sink.apply(msg);
     });
-    write(ctx, callee_.get_buffer(path->hdl), hdr, &writer);
+    write(*sys_, ctx, callee_.get_buffer(path->hdl), hdr, &writer);
   } else {
     header hdr{message_type::routed_message,
                flags,
@@ -192,22 +195,22 @@ bool instance::dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
              && sink.apply(dest_node) //
              && sink.apply(msg);
     });
-    write(ctx, callee_.get_buffer(path->hdl), hdr, &writer);
+    write(*sys_, ctx, callee_.get_buffer(path->hdl), hdr, &writer);
   }
   flush(*path);
   return true;
 }
 
-void instance::write(execution_unit* ctx, byte_buffer& buf, header& hdr,
-                     payload_writer* pw) {
+void instance::write(actor_system& sys, scheduler* ctx, byte_buffer& buf,
+                     header& hdr, payload_writer* pw) {
   CAF_ASSERT(ctx != nullptr);
   auto lg = log::io::trace("hdr = {}", hdr);
-  binary_serializer sink{ctx, buf};
+  binary_serializer sink{sys, buf};
   if (pw != nullptr) {
     // Write the BASP header after the payload.
     auto header_offset = buf.size();
     sink.skip(header_size);
-    auto& mm_metrics = ctx->system().middleman().metric_singletons;
+    auto& mm_metrics = sys.middleman().metric_singletons;
     auto t0 = telemetry::timer::clock_type::now();
     if (!(*pw)(sink)) {
       log::io::error("{}", sink.get_error());
@@ -224,7 +227,7 @@ void instance::write(execution_unit* ctx, byte_buffer& buf, header& hdr,
     log::io::error("{}", sink.get_error());
 }
 
-void instance::write_server_handshake(execution_unit* ctx, byte_buffer& out_buf,
+void instance::write_server_handshake(scheduler* ctx, byte_buffer& out_buf,
                                       std::optional<uint16_t> port) {
   auto lg = log::io::trace("port = {}", port);
   using namespace detail;
@@ -262,10 +265,10 @@ void instance::write_server_handshake(execution_unit* ctx, byte_buffer& out_buf,
              version,
              invalid_actor_id,
              invalid_actor_id};
-  write(ctx, out_buf, hdr, &writer);
+  write(*sys_, ctx, out_buf, hdr, &writer);
 }
 
-void instance::write_client_handshake(execution_unit* ctx, byte_buffer& buf) {
+void instance::write_client_handshake(scheduler* ctx, byte_buffer& buf) {
   auto writer = make_callback([&](binary_serializer& sink) { //
     return sink.apply(this_node_);
   });
@@ -275,20 +278,20 @@ void instance::write_client_handshake(execution_unit* ctx, byte_buffer& buf) {
              0,
              invalid_actor_id,
              invalid_actor_id};
-  write(ctx, buf, hdr, &writer);
+  write(*sys_, ctx, buf, hdr, &writer);
 }
 
-void instance::write_monitor_message(execution_unit* ctx, byte_buffer& buf,
+void instance::write_monitor_message(scheduler* ctx, byte_buffer& buf,
                                      const node_id& dest_node, actor_id aid) {
   auto lg = log::io::trace("dest_node = {}, aid = {}", dest_node, aid);
   auto writer = make_callback([&](binary_serializer& sink) { //
     return sink.apply(this_node_) && sink.apply(dest_node);
   });
   header hdr{message_type::monitor_message, 0, 0, 0, invalid_actor_id, aid};
-  write(ctx, buf, hdr, &writer);
+  write(*sys_, ctx, buf, hdr, &writer);
 }
 
-void instance::write_down_message(execution_unit* ctx, byte_buffer& buf,
+void instance::write_down_message(scheduler* ctx, byte_buffer& buf,
                                   const node_id& dest_node, actor_id aid,
                                   const error& rsn) {
   auto lg = log::io::trace("dest_node = {}, aid = {}, rsn = {}", dest_node, aid,
@@ -297,17 +300,17 @@ void instance::write_down_message(execution_unit* ctx, byte_buffer& buf,
     return sink.apply(this_node_) && sink.apply(dest_node) && sink.apply(rsn);
   });
   header hdr{message_type::down_message, 0, 0, 0, aid, invalid_actor_id};
-  write(ctx, buf, hdr, &writer);
+  write(*sys_, ctx, buf, hdr, &writer);
 }
 
-void instance::write_heartbeat(execution_unit* ctx, byte_buffer& buf) {
+void instance::write_heartbeat(scheduler* ctx, byte_buffer& buf) {
   auto lg = log::io::trace("");
   header hdr{message_type::heartbeat, 0, 0, 0, invalid_actor_id,
              invalid_actor_id};
-  write(ctx, buf, hdr);
+  write(*sys_, ctx, buf, hdr);
 }
 
-connection_state instance::handle(execution_unit* ctx, connection_handle hdl,
+connection_state instance::handle(scheduler* ctx, connection_handle hdl,
                                   header& hdr, byte_buffer* payload) {
   auto lg = log::io::trace("hdl = {}, hdr = {}", hdl, hdr);
   // Check payload validity.
@@ -325,7 +328,7 @@ connection_state instance::handle(execution_unit* ctx, connection_handle hdl,
     case message_type::server_handshake: {
       using string_list = std::vector<std::string>;
       // Deserialize payload.
-      binary_deserializer source{ctx, *payload};
+      binary_deserializer source{*sys_, *payload};
       node_id source_node;
       string_list app_ids;
       actor_id aid = invalid_actor_id;
@@ -384,7 +387,7 @@ connection_state instance::handle(execution_unit* ctx, connection_handle hdl,
     }
     case message_type::client_handshake: {
       // Deserialize payload.
-      binary_deserializer source{ctx, *payload};
+      binary_deserializer source{*sys_, *payload};
       node_id source_node;
       if (!source.apply(source_node)) {
         log::io::warning(
@@ -407,7 +410,7 @@ connection_state instance::handle(execution_unit* ctx, connection_handle hdl,
     }
     case message_type::routed_message: {
       // Deserialize payload.
-      binary_deserializer source{ctx, *payload};
+      binary_deserializer source{*sys_, *payload};
       node_id source_node;
       node_id dest_node;
       if (!source.apply(source_node) || !source.apply(dest_node)) {
@@ -460,13 +463,13 @@ connection_state instance::handle(execution_unit* ctx, connection_handle hdl,
           uint64_t msg_id_;
         };
         handler f{&queue_, &proxies(), &system(), last_hop, hdr, *payload};
-        f.handle_remote_message(callee_.current_execution_unit());
+        f.handle_remote_message(*sys_, callee_.current_scheduler());
       }
       break;
     }
     case message_type::monitor_message: {
       // Deserialize payload.
-      binary_deserializer source{ctx, *payload};
+      binary_deserializer source{*sys_, *payload};
       node_id source_node;
       node_id dest_node;
       if (!source.apply(source_node) || !source.apply(dest_node)) {
@@ -482,7 +485,7 @@ connection_state instance::handle(execution_unit* ctx, connection_handle hdl,
     }
     case message_type::down_message: {
       // Deserialize payload.
-      binary_deserializer source{ctx, *payload};
+      binary_deserializer source{*sys_, *payload};
       node_id source_node;
       node_id dest_node;
       error fail_state;
@@ -500,8 +503,8 @@ connection_state instance::handle(execution_unit* ctx, connection_handle hdl,
                                         delete_atom_v, source_node,
                                         hdr.source_actor,
                                         std::move(fail_state));
-        queue_.push(callee_.current_execution_unit(), msg_id,
-                    callee_.this_actor(), std::move(ptr));
+        queue_.push(callee_.current_scheduler(), msg_id, callee_.this_actor(),
+                    std::move(ptr));
       } else {
         forward(ctx, dest_node, hdr, *payload);
       }
@@ -520,13 +523,13 @@ connection_state instance::handle(execution_unit* ctx, connection_handle hdl,
   return await_header;
 }
 
-void instance::forward(execution_unit* ctx, const node_id& dest_node,
-                       const header& hdr, byte_buffer& payload) {
+void instance::forward(scheduler*, const node_id& dest_node, const header& hdr,
+                       byte_buffer& payload) {
   auto lg = log::io::trace("dest_node = {}, hdr = {}, payload = {}", dest_node,
                            hdr, payload);
   auto path = lookup(dest_node);
   if (path) {
-    binary_serializer sink{ctx, callee_.get_buffer(path->hdl)};
+    binary_serializer sink{*sys_, callee_.get_buffer(path->hdl)};
     if (!sink.apply(hdr)) {
       log::io::error("unable to serialize BASP header: {}", sink.get_error());
       return;

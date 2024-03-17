@@ -20,7 +20,7 @@ public:
     static constexpr size_t token_type = attachable::token::observer;
   };
 
-  void actor_exited(const error& rsn, execution_unit* host) override;
+  void actor_exited(const error& rsn, scheduler* sched) override;
 
   bool matches(const token& what) override;
 
