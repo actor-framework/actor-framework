@@ -250,7 +250,14 @@ std::string to_string(const uri& x) {
 std::string to_string(const uri::authority_type& x) {
   std::string str;
   if (!x.userinfo.empty()) {
-    uri::encode(str, x.userinfo);
+    // TODO: return uri::encode
+    std::string_view userinfo = x.userinfo;
+    auto pos = userinfo.find(':');
+    uri::encode(str, userinfo.substr(0, pos));
+    if (pos != std::string::npos) {
+      str += ':';
+      uri::encode(str, userinfo.substr(pos + 1));
+    }
     str += '@';
   }
   auto f = caf::detail::make_overload(
