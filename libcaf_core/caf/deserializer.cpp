@@ -41,11 +41,12 @@ bool deserializer::assert_next_object_name(std::string_view type_name) {
       str.insert(str.end(), type_name.begin(), type_name.end());
       str += ", got ";
       str.insert(str.end(), found.begin(), found.end());
-      emplace_error(sec::type_clash, __func__, std::move(str));
+      emplace_error(sec::type_clash, detail::format("{}: {}", __func__, str));
       return false;
     }
   } else {
-    emplace_error(sec::runtime_error, __func__, "no type name available");
+    emplace_error(sec::runtime_error,
+                  detail::format("{}: no type name available", __func__));
     return false;
   }
 }

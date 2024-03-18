@@ -64,11 +64,11 @@ TEST("send request message") {
     });
     SECTION("regular message") {
       self->mail(3).request(dummy, 1s).receive(on_result, on_error);
-      check_eq(*err, make_error(sec::unexpected_response));
+      check_eq(*err, error{sec::unexpected_response});
     }
     SECTION("urgent message") {
       self->mail(3).urgent().request(dummy, 1s).receive(on_result, on_error);
-      check_eq(*err, make_error(sec::unexpected_response));
+      check_eq(*err, error{sec::unexpected_response});
     }
   }
   SECTION("no response") {
@@ -79,7 +79,7 @@ TEST("send request message") {
       };
     });
     self->mail(3).request(dummy, 10ms).receive(on_result, on_error);
-    check_eq(*err, make_error(sec::request_timeout));
+    check_eq(*err, error{sec::request_timeout});
     self->mail(exit_msg{self->address(), exit_reason::user_shutdown})
       .send(dummy);
   }
@@ -118,7 +118,7 @@ TEST("send delayed request message") {
     });
     SECTION("regular message") {
       self->mail(3).delay(5ms).request(dummy, 1s).receive(on_result, on_error);
-      check_eq(*err, make_error(sec::unexpected_response));
+      check_eq(*err, error{sec::unexpected_response});
     }
     SECTION("urgent message") {
       auto [hdl, pending] = self->mail(3)
@@ -129,7 +129,7 @@ TEST("send delayed request message") {
         std::is_same_v<decltype(hdl), blocking_response_handle<message>>);
       static_assert(std::is_same_v<decltype(pending), disposable>);
       std::move(hdl).receive(on_result, on_error);
-      check_eq(*err, make_error(sec::unexpected_response));
+      check_eq(*err, error{sec::unexpected_response});
     }
     SECTION("no response") {
       auto dummy = sys.spawn([](event_based_actor* self) -> behavior {
@@ -142,7 +142,7 @@ TEST("send delayed request message") {
         .delay(5ms)
         .request(dummy, 10ms)
         .receive(on_result, on_error);
-      check_eq(*err, make_error(sec::request_timeout));
+      check_eq(*err, error{sec::request_timeout});
       self->mail(exit_msg{self->address(), exit_reason::user_shutdown})
         .send(dummy);
     }
@@ -158,7 +158,7 @@ TEST("send request message to an invalid receiver") {
   SECTION("regular message") {
     self->mail("hello world").request(actor{}, 1s).receive(on_result, on_error);
     check_eq(*result, 0);
-    check_eq(*err, make_error(sec::invalid_request));
+    check_eq(*err, error{sec::invalid_request});
   }
   SECTION("delayed message") {
     self->mail("hello world")
@@ -166,7 +166,7 @@ TEST("send request message to an invalid receiver") {
       .request(actor{}, 1s)
       .receive(on_result, on_error);
     check_eq(*result, 0);
-    check_eq(*err, make_error(sec::invalid_request));
+    check_eq(*err, error{sec::invalid_request});
   }
 }
 
@@ -228,57 +228,53 @@ TEST("receive response as an expected") {
     SECTION("statically typed response with a server returning errors") {
       auto server = sys.spawn([]() -> server_actor::behavior_type {
         return {
-          [](get_atom) -> result<void> {
-            return make_error(sec::runtime_error);
-          },
+          [](get_atom) -> result<void> { return error{sec::runtime_error}; },
           [](get_atom, int) -> result<int> {
-            return make_error(sec::runtime_error);
+            return error{sec::runtime_error};
           },
           [](get_atom, int, int) -> result<int, int> {
-            return make_error(sec::runtime_error);
+            return error{sec::runtime_error};
           },
         };
       });
       SECTION("empty result") {
         auto res = self->mail(get_atom_v).request(server, 1s).receive();
-        check_eq(res, make_error(sec::runtime_error));
+        check_eq(res, error{sec::runtime_error});
       }
       SECTION("result with one integer") {
         auto res = self->mail(get_atom_v, 1).request(server, 1s).receive();
-        check_eq(res, make_error(sec::runtime_error));
+        check_eq(res, error{sec::runtime_error});
       }
       SECTION("result with two integers") {
         auto res = self->mail(get_atom_v, 1, 2).request(server, 1s).receive();
-        check_eq(res, make_error(sec::runtime_error));
+        check_eq(res, error{sec::runtime_error});
       }
     }
     SECTION("dynamically typed response with well-behaved server") {
       auto server = sys.spawn([]() -> behavior {
         return {
-          [](get_atom) -> result<void> {
-            return make_error(sec::runtime_error);
-          },
+          [](get_atom) -> result<void> { return error{sec::runtime_error}; },
           [](get_atom, int) -> result<int> {
-            return make_error(sec::runtime_error);
+            return error{sec::runtime_error};
           },
           [](get_atom, int, int) -> result<int, int> {
-            return make_error(sec::runtime_error);
+            return error{sec::runtime_error};
           },
         };
       });
       SECTION("empty result") {
         auto res = self->mail(get_atom_v).request(server, 1s).receive<>();
-        check_eq(res, make_error(sec::runtime_error));
+        check_eq(res, error{sec::runtime_error});
       }
       SECTION("result with one integer") {
         auto res = self->mail(get_atom_v, 1).request(server, 1s).receive<int>();
-        check_eq(res, make_error(sec::runtime_error));
+        check_eq(res, error{sec::runtime_error});
       }
       SECTION("result with two integers") {
         auto res = self->mail(get_atom_v, 1, 2)
                      .request(server, 1s)
                      .receive<int, int>();
-        check_eq(res, make_error(sec::runtime_error));
+        check_eq(res, error{sec::runtime_error});
       }
     }
   }
@@ -344,67 +340,63 @@ TEST("receive response as an expected") {
     SECTION("statically typed response with a server returning errors") {
       auto server = sys.spawn([]() -> server_actor::behavior_type {
         return {
-          [](get_atom) -> result<void> {
-            return make_error(sec::runtime_error);
-          },
+          [](get_atom) -> result<void> { return error{sec::runtime_error}; },
           [](get_atom, int) -> result<int> {
-            return make_error(sec::runtime_error);
+            return error{sec::runtime_error};
           },
           [](get_atom, int, int) -> result<int, int> {
-            return make_error(sec::runtime_error);
+            return error{sec::runtime_error};
           },
         };
       });
       SECTION("empty result") {
         auto res
           = self->mail(get_atom_v).delay(10us).request(server, 1s).receive();
-        check_eq(res, make_error(sec::runtime_error));
+        check_eq(res, error{sec::runtime_error});
       }
       SECTION("result with one integer") {
         auto res
           = self->mail(get_atom_v, 1).delay(10us).request(server, 1s).receive();
-        check_eq(res, make_error(sec::runtime_error));
+        check_eq(res, error{sec::runtime_error});
       }
       SECTION("result with two integers") {
         auto res = self->mail(get_atom_v, 1, 2)
                      .delay(10us)
                      .request(server, 1s)
                      .receive();
-        check_eq(res, make_error(sec::runtime_error));
+        check_eq(res, error{sec::runtime_error});
       }
     }
     SECTION("dynamically typed response with well-behaved server") {
       auto server = sys.spawn([]() -> behavior {
         return {
-          [](get_atom) -> result<void> {
-            return make_error(sec::runtime_error);
-          },
+          [](get_atom) -> result<void> { return error{sec::runtime_error}; },
           [](get_atom, int) -> result<int> {
-            return make_error(sec::runtime_error);
+            return error{sec::runtime_error};
           },
           [](get_atom, int, int) -> result<int, int> {
-            return make_error(sec::runtime_error);
+            return error{sec::runtime_error};
           },
         };
       });
       SECTION("empty result") {
         auto res
           = self->mail(get_atom_v).delay(10us).request(server, 1s).receive<>();
-        check_eq(res, make_error(sec::runtime_error));
+        check_eq(res, error{sec::runtime_error});
       }
       SECTION("result with one integer") {
         auto res = self->mail(get_atom_v, 1)
                      .delay(10us)
                      .request(server, 1s)
                      .receive<int>();
-        check_eq(res, make_error(sec::runtime_error));
+        check_eq(res, error{sec::runtime_error});
       }
       SECTION("result with two integers") {
         auto res = self->mail(get_atom_v, 1, 2)
                      .delay(10us)
                      .request(server, 1s)
                      .receive<int, int>();
-        check_eq(res, make_error(sec::runtime_error));
+        check_eq(res, error{sec::runtime_error});
       }
     }
   }

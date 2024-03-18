@@ -363,7 +363,7 @@ error actor_system_config::parse(string_list args, std::istream& config) {
   } else {
     // Not finding an explicitly defined config file is an error.
     if (auto fname = get_if<std::string>(&content, "config-file"))
-      return make_error(sec::cannot_open_file, *fname);
+      return error{sec::cannot_open_file, *fname};
   }
   // Environment variables override the content of the config file.
   for (auto& opt : custom_options_) {
@@ -391,7 +391,7 @@ error actor_system_config::parse(string_list args, std::istream& config) {
   auto res = custom_options_.parse(content, args);
   if (res.second != args.end()) {
     if (res.first != pec::success && starts_with(*res.second, "-")) {
-      return make_error(res.first, *res.second);
+      return error{res.first, *res.second};
     } else {
       args.erase(args.begin(), res.second);
       set_remainder(std::move(args));
@@ -478,7 +478,7 @@ actor_system_config::parse_config_file(const char* filename,
                                        const config_option_set& opts) {
   std::ifstream f{filename};
   if (!f.is_open())
-    return make_error(sec::cannot_open_file, filename);
+    return error{sec::cannot_open_file, filename};
   return parse_config(f, opts);
 }
 
@@ -500,12 +500,14 @@ error actor_system_config::parse_config(std::istream& source,
                                         const config_option_set& opts,
                                         settings& result) {
   if (!source)
-    return make_error(sec::runtime_error, "source stream invalid");
+    return error{sec::runtime_error, "source stream invalid"};
   detail::config_consumer consumer{opts, result};
   parser_state<config_iter, config_sentinel> res{config_iter{&source}};
   detail::parser::read_config(res, consumer);
   if (res.i != res.e)
-    return make_error(res.code, res.line, res.column);
+    return error{res.code,
+                 detail::format("invalid syntax in line {}, column {}",
+                                res.line, res.column)};
   return none;
 }
 
@@ -529,7 +531,7 @@ actor_system_config::extract_config_file_path(string_list& args) {
     return {none, result};
   }
   if (path.empty()) {
-    return {make_error(pec::missing_argument, "no argument to --config-file"),
+    return {error{pec::missing_argument, "no argument to --config-file"},
             std::string{}};
   }
   auto path_str = std::string{path};

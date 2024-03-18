@@ -100,7 +100,7 @@ public:
     if (!source.apply(msg)) {
       log::io::error("failed to read message content: {}", source.get_error());
       auto ptr = make_mailbox_element(nullptr, mid.response_id(),
-                                      make_error(sec::malformed_message));
+                                      error{sec::malformed_message});
       src->enqueue(std::move(ptr), nullptr);
       return;
     }

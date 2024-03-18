@@ -17,6 +17,7 @@
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/flow/observable_builder.hpp"
 #include "caf/flow/op/mcast.hpp"
+#include "caf/format_to_error.hpp"
 #include "caf/log/core.hpp"
 #include "caf/log/system.hpp"
 #include "caf/mailbox_element.hpp"
@@ -45,11 +46,11 @@ skippable_result print_and_drop(scheduled_actor* ptr, message& msg) {
                        ptr->id(), ptr->name(), msg);
   ptr->println("*** unexpected message [id: {}, name: {}]: {}", ptr->id(),
                ptr->name(), msg);
-  return make_error(sec::unexpected_message);
+  return error{sec::unexpected_message};
 }
 
 skippable_result drop(scheduled_actor*, message&) {
-  return make_error(sec::unexpected_message);
+  return error{sec::unexpected_message};
 }
 
 // -- implementation details ---------------------------------------------------
@@ -63,7 +64,7 @@ void silently_ignore(scheduled_actor*, T&) {
 
 skippable_result drop_after_quit(scheduled_actor* self, message&) {
   if (self->current_message_id().is_request())
-    return make_error(sec::request_receiver_down);
+    return error{sec::request_receiver_down};
   return make_message();
 }
 
@@ -102,12 +103,14 @@ error scheduled_actor::default_exception_handler(local_actor* ptr,
     ptr->println(
       "*** unhandled exception: [id: {}, name: {}, exception typeid {}]: {}",
       ptr->id(), ptr->name(), pretty_type, e.what());
-    return make_error(sec::runtime_error, std::move(pretty_type), e.what());
+    return format_to_error(sec::runtime_error,
+                           "unhandled exception of type {}: {}", pretty_type,
+                           e.what());
   } catch (...) {
     ptr->println(
       "*** unhandled exception: [id: {}, name: {}]: unknown exception",
       ptr->id(), ptr->name());
-    return sec::runtime_error;
+    return error{sec::runtime_error, "unhandled exception of unknown type"};
   }
 }
 #endif // CAF_ENABLE_EXCEPTIONS
@@ -583,7 +586,7 @@ scheduled_actor::categorize(mailbox_element& x) {
       log::core::debug("reply to 'info' message");
       rp.deliver(ok_atom_v, what, strong_actor_ptr{ctrl()}, name());
     } else {
-      rp.deliver(make_error(sec::unsupported_sys_key));
+      rp.deliver(error{sec::unsupported_sys_key});
     }
     return message_category::internal;
   }
@@ -669,7 +672,7 @@ scheduled_actor::categorize(mailbox_element& x) {
       }
       // Abort the flow immediately.
       log::core::debug("requested stream does not exist");
-      auto err = make_error(sec::invalid_stream);
+      auto err = error{sec::invalid_stream};
       unsafe_send_as(this, sink_hdl, stream_abort_msg{sink_id, std::move(err)});
       return message_category::internal;
     }
@@ -766,8 +769,8 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
       awaited_responses_.pop_front();
       if (!invoke(this, f, x)) {
         // try again with error if first attempt failed
-        auto msg = make_message(
-          make_error(sec::unexpected_response, std::move(x.payload)));
+        auto msg
+          = make_message(error{sec::unexpected_response, to_string(x.payload)});
         f(msg);
       }
       return invoke_message_result::consumed;
@@ -784,8 +787,8 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
       multiplexed_responses_.erase(mrh);
       if (!invoke(this, bhvr, x)) {
         log::core::debug("got unexpected_response");
-        auto msg = make_message(
-          make_error(sec::unexpected_response, std::move(x.payload)));
+        auto msg
+          = make_message(error{sec::unexpected_response, to_string(x.payload)});
         bhvr(msg);
       }
       return invoke_message_result::consumed;
@@ -1038,7 +1041,7 @@ scheduled_actor::do_observe(stream what, size_t buf_capacity,
                                                    request_threshold);
     return flow::observable<async::batch>{std::move(ptr)};
   }
-  return make_observable().fail<async::batch>(make_error(sec::invalid_stream));
+  return make_observable().fail<async::batch>(error{sec::invalid_stream});
 }
 
 void scheduled_actor::release_later(flow::coordinated_ptr& child) {
@@ -1148,7 +1151,7 @@ void scheduled_actor::close_mailbox(const error& reason) {
 }
 
 void scheduled_actor::force_close_mailbox() {
-  close_mailbox(make_error(exit_reason::unreachable));
+  close_mailbox(error{exit_reason::unreachable});
 }
 
 } // namespace caf

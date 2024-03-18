@@ -121,8 +121,8 @@ public:
 private:
   // -- utility functions ------------------------------------------------------
 
-  void abort(std::string_view message) {
-    up_->abort(make_error(sec::protocol_error, message));
+  void abort(std::string what) {
+    up_->abort(error{sec::protocol_error, std::move(what)});
   }
 
   bool invoke_upper_layer(const_byte_span payload);

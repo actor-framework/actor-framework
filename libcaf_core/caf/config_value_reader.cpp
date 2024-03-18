@@ -11,6 +11,7 @@
 #include "caf/detail/parse.hpp"
 #include "caf/detail/parser/add_ascii.hpp"
 #include "caf/detail/print.hpp"
+#include "caf/format_to_error.hpp"
 #include "caf/settings.hpp"
 
 namespace {
@@ -235,9 +236,9 @@ bool config_value_reader::begin_object(type_id_t type, std::string_view) {
       if (auto i = obj->find("@type"); i != obj->end()) {
         if (auto got = get_if<std::string>(std::addressof(i->second))) {
           if (want != *got) {
-            emplace_error(sec::type_clash,
-                          "expected type: " + std::string{want},
-                          "found type: " + *got);
+            err_ = format_to_error(sec::type_clash,
+                                   "expected type: {}, found type: {}", want,
+                                   *got);
             return false;
           }
         }

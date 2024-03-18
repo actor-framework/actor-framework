@@ -84,7 +84,7 @@ bool abstract_actor_shell::consume_message() {
       if (!res) {
         log::net::debug("got unexpected_response");
         auto err_msg = make_message(
-          make_error(sec::unexpected_response, std::move(msg->payload)));
+          error{sec::unexpected_response, to_string(msg->payload)});
         bhvr(err_msg);
       }
     }
@@ -205,7 +205,7 @@ void abstract_actor_shell::close_mailbox(const error& reason) {
 }
 
 void abstract_actor_shell::force_close_mailbox() {
-  close_mailbox(make_error(exit_reason::unreachable));
+  close_mailbox(error{exit_reason::unreachable});
 }
 
 flow::coordinator* abstract_actor_shell::flow_context() {

@@ -265,7 +265,7 @@ ssl_ctx_chain(net::ssl::context& ctx, std::string_view arg_check_error,
               Args&... args) {
   using net::ssl::context;
   if ((!args && ...)) {
-    auto err = make_error(sec::invalid_argument, std::string{arg_check_error});
+    auto err = error{sec::invalid_argument, std::string{arg_check_error}};
     return expected<context>{std::move(err)};
   } else if ((ctx.*fn)(args.get()...)) {
     return expected<context>{std::move(ctx)};

@@ -12,7 +12,7 @@ namespace caf {
 
 mail_cache::~mail_cache() {
   if (!empty()) {
-    detail::sync_request_bouncer bouncer{make_error(sec::disposed)};
+    detail::sync_request_bouncer bouncer{error{sec::disposed}};
     while (auto raw = elements_.pop()) {
       auto ptr = mailbox_element_ptr{raw};
       bouncer(*ptr);

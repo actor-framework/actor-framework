@@ -140,7 +140,7 @@ actor_addr abstract_actor::address() const noexcept {
 
 void abstract_actor::on_unreachable() {
   CAF_PUSH_AID_FROM_PTR(this);
-  cleanup(make_error(exit_reason::unreachable), nullptr);
+  cleanup(error{exit_reason::unreachable}, nullptr);
 }
 
 void abstract_actor::on_cleanup(const error&) {

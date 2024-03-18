@@ -136,7 +136,7 @@ response_promise::state::~state() {
   if (self && source) {
     log::core::debug("broken promise!");
     auto element = make_mailbox_element(self, id.response_id(),
-                                        make_error(sec::broken_promise));
+                                        error{sec::broken_promise});
     source->enqueue(std::move(element), nullptr);
   }
 }

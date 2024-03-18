@@ -44,7 +44,7 @@ public:
       // are allowed to run, the value is immutable.
       switch (cp->value.index()) {
         default:
-          g(make_error(sec::broken_promise, "future found an invalid value"));
+          g(error{sec::broken_promise, "future found an invalid value"});
           break;
         case 1:
           f(static_cast<const T&>(std::get<T>(cp->value)));
@@ -174,7 +174,7 @@ public:
     std::unique_lock guard{cell_->mtx};
     switch (cell_->value.index()) {
       default:
-        return res_t{make_error(sec::future_timeout)};
+        return res_t{error{sec::future_timeout}};
       case 1:
         if constexpr (std::is_void_v<T>)
           return res_t{};

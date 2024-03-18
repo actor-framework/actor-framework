@@ -51,7 +51,7 @@ public:
       owner_->deregister();
       owner_->schedule_handover();
     } else if (res == 0) {
-      up_->abort(make_error(sec::connection_closed));
+      up_->abort(error{sec::connection_closed});
       owner_->deregister();
     } else {
       auto err = policy_.last_error(res);
@@ -64,8 +64,8 @@ public:
           owner_->register_writing();
           break;
         default: {
-          auto err = make_error(sec::cannot_connect_to_node,
-                                policy_.conn.last_error_string(res));
+          auto err = error{sec::cannot_connect_to_node,
+                           policy_.conn.last_error_string(res)};
           up_->abort(std::move(err));
           owner_->deregister();
         }
@@ -79,7 +79,7 @@ public:
       owner_->schedule_handover();
       return;
     } else if (res == 0) {
-      up_->abort(make_error(sec::connection_closed));
+      up_->abort(error{sec::connection_closed});
       owner_->deregister();
     } else {
       switch (policy_.last_error(res)) {
@@ -91,8 +91,8 @@ public:
           owner_->register_reading();
           break;
         default: {
-          auto err = make_error(sec::cannot_connect_to_node,
-                                policy_.conn.last_error_string(res));
+          auto err = error{sec::cannot_connect_to_node,
+                           policy_.conn.last_error_string(res)};
           up_->abort(std::move(err));
           owner_->deregister();
         }

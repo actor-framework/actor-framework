@@ -65,8 +65,8 @@ public:
     auto [lp_pull, app_push] = async::make_spsc_buffer_resource<output_type>();
     auto event = accept_event{std::move(app_pull), std::move(app_push)};
     if (!producer_->push(event)) {
-      return make_error(sec::runtime_error,
-                        "Length-prefixed connection dropped: client canceled");
+      return error{sec::runtime_error,
+                   "Length-prefixed connection dropped: client canceled"};
     }
     return super::init(&down_ptr->mpx(), std::move(lp_pull),
                        std::move(lp_push));

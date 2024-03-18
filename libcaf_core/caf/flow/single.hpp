@@ -61,8 +61,8 @@ public:
       return;
     }
     sub_.cancel();
-    auto err = make_error(sec::runtime_error,
-                          "caf::flow::single emitted more than one item");
+    auto err = error{sec::runtime_error,
+                     "caf::flow::single emitted more than one item"};
     on_error_(err);
   }
 
@@ -75,8 +75,8 @@ public:
       result_ = std::nullopt;
       return;
     }
-    auto err = make_error(sec::broken_promise,
-                          "caf::flow::single failed to produce an item");
+    auto err = error{sec::broken_promise,
+                     "caf::flow::single failed to produce an item"};
     on_error_(err);
   }
 

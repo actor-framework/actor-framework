@@ -31,7 +31,9 @@ struct string_parser {
     detail::parser::read_string(res, f);
     if (res.code == pec::success)
       return f.x;
-    return make_error(res.code, res.column, std::string{res.i, res.e});
+    auto line = std::string_view{&(*res.i), static_cast<size_t>(res.e - res.i)};
+    return error{res.code, detail::format("invalid syntax in column {}: {}",
+                                          res.column, line)};
   }
 };
 

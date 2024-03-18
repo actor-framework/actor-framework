@@ -174,7 +174,7 @@ public:
       lptr->on_disposed(this, true);
     }
     if (out)
-      out.on_error(make_error(sec::disposed));
+      out.on_error(error{sec::disposed});
   }
 
   void cancel() {
@@ -369,8 +369,8 @@ public:
     }
     if (state_->out) {
       return super::fail_subscription(
-        out, make_error(sec::too_many_observers,
-                        "may only subscribe once to an unicast operator"));
+        out, error{sec::too_many_observers,
+                   "may only subscribe once to an unicast operator"});
     }
     state_->set_observer(out);
     auto ptr = super::parent_->add_child(std::in_place_type<ucast_sub<T>>,

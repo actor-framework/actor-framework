@@ -47,7 +47,7 @@ public:
         { // Critical section.
           std::unique_lock guard{cell_->mtx};
           if (std::holds_alternative<none_t>(cell_->value)) {
-            cell_->value = make_error(sec::broken_promise);
+            cell_->value = error{sec::broken_promise};
             cell_->events.swap(events);
           }
         }

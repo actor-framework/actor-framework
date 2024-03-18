@@ -217,7 +217,7 @@ void blocking_actor::receive_impl(receive_cond& rcc, message_id mid,
         // receiving an unexpected message.
         if (mid.is_response()) {
           auto& x = *current_element_;
-          auto err = make_error(sec::unexpected_response, std::move(x.payload));
+          auto err = error{sec::unexpected_response, to_string(x.payload)};
           mailbox_element tmp{std::move(x.sender), x.mid,
                               make_message(std::move(err))};
           current_element_ = &tmp;
@@ -381,7 +381,7 @@ void blocking_actor::close_mailbox(const error& reason) {
 }
 
 void blocking_actor::force_close_mailbox() {
-  close_mailbox(make_error(exit_reason::unreachable));
+  close_mailbox(error{exit_reason::unreachable});
 }
 
 void blocking_actor::do_unstash(mailbox_element_ptr ptr) {
@@ -392,7 +392,7 @@ void blocking_actor::do_receive(message_id mid, behavior& bhvr,
                                 timespan timeout) {
   accept_one_cond cond;
   auto tmp = after(timeout) >> [&] {
-    auto err = make_message(make_error(sec::request_timeout));
+    auto err = make_message(error{sec::request_timeout});
     bhvr(err);
   };
   auto fun = detail::make_blocking_behavior(&bhvr, std::move(tmp));

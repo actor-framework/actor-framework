@@ -186,7 +186,7 @@ private:
     }
     if (out_) {
       if (from_external)
-        out_.on_error(make_error(sec::disposed));
+        out_.on_error(error{sec::disposed});
       else
         out_.release_later();
     }

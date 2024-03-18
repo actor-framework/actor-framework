@@ -26,10 +26,10 @@ struct dummy_state {
   caf::behavior make_behavior() {
     return {
       [](int32_t x) -> result<int32_t> {
-        if (x % 2 == 0)
+        if (x % 2 == 0) {
           return x + x;
-        else
-          return make_error(sec::invalid_argument);
+        }
+        return error{sec::invalid_argument};
       },
     };
   }
@@ -154,7 +154,7 @@ SCENARIO("response handles are convertible to observables and singles") {
         expect<int32_t>().with(13).from(aut).to(dummy);
         expect<error>().from(dummy).to(aut);
         check(!mail_count());
-        check_eq(result, result_t{make_error(sec::invalid_argument)});
+        check_eq(result, result_t{error{sec::invalid_argument}});
       }
     }
     WHEN("calling as_observable") {
@@ -177,7 +177,7 @@ SCENARIO("response handles are convertible to observables and singles") {
         expect<int32_t>().with(13).from(aut).to(dummy);
         expect<error>().from(dummy).to(aut);
         check(!mail_count());
-        check_eq(result, result_t{make_error(sec::invalid_argument)});
+        check_eq(result, result_t{error{sec::invalid_argument}});
         check_eq(on_next_calls, 0u);
         check(!completed);
       }
@@ -198,7 +198,7 @@ SCENARIO("response handles are convertible to observables and singles") {
         expect<int32_t>().with(13).from(aut).to(typed_dummy);
         expect<error>().from(typed_dummy).to(aut);
         check(!mail_count());
-        check_eq(result, result_t{make_error(sec::invalid_argument)});
+        check_eq(result, result_t{error{sec::invalid_argument}});
       }
     }
     WHEN("calling as_observable") {
@@ -221,7 +221,7 @@ SCENARIO("response handles are convertible to observables and singles") {
         expect<int32_t>().with(13).from(aut).to(typed_dummy);
         expect<error>().from(typed_dummy).to(aut);
         check(!mail_count());
-        check_eq(result, result_t{make_error(sec::invalid_argument)});
+        check_eq(result, result_t{error{sec::invalid_argument}});
         check_eq(on_next_calls, 0u);
         check(!completed);
       }

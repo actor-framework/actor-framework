@@ -7,6 +7,10 @@
 #include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
+#include "caf/config.hpp"
+
+CAF_PUSH_DEPRECATED_WARNING
+
 using namespace caf;
 using namespace std::literals;
 
@@ -70,3 +74,5 @@ SCENARIO("errors provide human-readable to_string output") {
 }
 
 } // namespace
+
+CAF_POP_WARNINGS

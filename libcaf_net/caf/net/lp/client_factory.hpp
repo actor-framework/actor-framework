@@ -117,8 +117,8 @@ private:
                                 dsl::client_config::lazy& data,
                                 OnStart& on_start) {
     if (std::holds_alternative<uri>(data.server)) {
-      auto err = make_error(sec::invalid_argument,
-                            "length-prefix factories do not accept URIs");
+      auto err = error{sec::invalid_argument,
+                       "length-prefix factories do not accept URIs"};
       return do_start(cfg, err, on_start);
     }
     auto& addr = std::get<dsl::server_address>(data.server);

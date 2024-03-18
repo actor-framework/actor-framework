@@ -61,7 +61,7 @@ scheduled_actor::observe_as(stream what, size_t buf_capacity,
     return do_observe(what, buf_capacity, demand_threshold)
       .transform(detail::unbatch<T>{})
       .as_observable();
-  return make_observable().fail<T>(make_error(sec::type_clash));
+  return make_observable().fail<T>(error{sec::type_clash});
 }
 
 template <class T>

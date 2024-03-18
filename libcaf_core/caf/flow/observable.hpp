@@ -578,7 +578,7 @@ disposable observable<T>::subscribe(observer<T> what) {
   auto sub = ptr->add_child(std::in_place_type<subscription::trivial_impl>);
   what.on_subscribe(subscription{sub});
   if (!sub->disposed())
-    what.on_error(make_error(sec::invalid_observable));
+    what.on_error(error{sec::invalid_observable});
   return sub->as_disposable();
 }
 

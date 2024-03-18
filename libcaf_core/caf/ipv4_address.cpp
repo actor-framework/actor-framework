@@ -4,6 +4,7 @@
 
 #include "caf/ipv4_address.hpp"
 
+#include "caf/detail/format.hpp"
 #include "caf/detail/network_order.hpp"
 #include "caf/detail/parser/read_ipv4_address.hpp"
 #include "caf/error.hpp"
@@ -99,8 +100,9 @@ error parse(std::string_view str, ipv4_address& dest) {
   parser::read_ipv4_address(res, f);
   if (res.code == pec::success)
     return none;
-  return make_error(res.code, static_cast<size_t>(res.line),
-                    static_cast<size_t>(res.column));
+  return error{res.code, detail::format("invalid syntax in line {} column {}",
+                                        static_cast<size_t>(res.line),
+                                        static_cast<size_t>(res.column))};
 }
 
 } // namespace caf

@@ -112,7 +112,7 @@ private:
         // nop
       } else if (*p == 1) {
         timeouts.dispose();
-        auto err = make_error(sec::all_requests_failed);
+        auto err = error{sec::all_requests_failed};
         g(err);
       } else {
         --*p;

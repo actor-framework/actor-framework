@@ -222,7 +222,7 @@ SCENARIO("mergers round-robin over their inputs") {
           "after the source pushed five items, it emits an error");
         src.push({1, 2, 3, 4, 5});
         run_flows();
-        src.abort(make_error(sec::runtime_error));
+        src.abort(error{sec::runtime_error});
         run_flows();
         log::test::debug(
           "when requesting, the observer still obtains the items first");
@@ -234,7 +234,7 @@ SCENARIO("mergers round-robin over their inputs") {
         run_flows();
         check_eq(snk->state, flow::observer_state::aborted);
         check_eq(snk->buf, std::vector{1, 2, 3, 4, 5});
-        check_eq(snk->err, make_error(sec::runtime_error));
+        check_eq(snk->err, error{sec::runtime_error});
       }
     }
   }
@@ -322,7 +322,7 @@ SCENARIO("the merge operator emits already buffered data on error") {
         check_eq(uut->buffered(), 3u);
         check_eq(uut->num_inputs(), 1u);
         // Emit an error to the merge operator.
-        src.abort(make_error(sec::runtime_error));
+        src.abort(error{sec::runtime_error});
         run_flows();
         check_eq(uut->buffered(), 3u);
         check_eq(snk->buf, std::vector<int>{});
@@ -355,7 +355,7 @@ SCENARIO("the merge operator emits already buffered data on error") {
         check_eq(snk->buf, std::vector{1, 2, 3});
         check_eq(snk->state, flow::observer_state::subscribed);
         // Emit an error to the merge operator.
-        src.abort(make_error(sec::runtime_error));
+        src.abort(error{sec::runtime_error});
         check_eq(snk->state, flow::observer_state::aborted);
       }
     }
@@ -371,7 +371,7 @@ SCENARIO("the merge operator emits already buffered data on error") {
         src.push({1, 2, 3, 4, 5, 6, 7});
         run_flows();
         check_eq(uut->buffered(), 7u);
-        src.abort(make_error(sec::runtime_error));
+        src.abort(error{sec::runtime_error});
         run_flows();
         check_eq(uut->buffered(), 7u);
         snk->sub.request(5);
@@ -408,7 +408,7 @@ SCENARIO("the merge operator emits already buffered data on error") {
         check_eq(snk->err, sec::none);
         check_eq(snk->buf, std::vector{1, 2, 3, 4, 5, 6, 7});
         // Push an error.
-        src.abort(make_error(sec::runtime_error));
+        src.abort(error{sec::runtime_error});
         check_eq(snk->state, flow::observer_state::aborted);
         check_eq(snk->buf, std::vector{1, 2, 3, 4, 5, 6, 7});
         check_eq(snk->err, sec::runtime_error);
@@ -492,7 +492,7 @@ TEST("merge operators ignore fwd_on_error calls with unknown keys") {
     .just(make_observable().iota(1).take(5).as_observable())
     .subscribe(uut->as_observer());
   check(uut->subscribed());
-  uut->fwd_on_error(42, make_error(sec::runtime_error));
+  uut->fwd_on_error(42, error{sec::runtime_error});
   check(uut->subscribed());
   run_flows();
   check_eq(snk->buf, std::vector{1, 2, 3, 4, 5});

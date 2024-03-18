@@ -47,8 +47,8 @@ public:
     });
     in_ = consumer_type::make(pull.try_open(), mpx, std::move(do_wakeup));
     if (!in_) {
-      auto err = make_error(sec::runtime_error,
-                            "flow bridge failed to open the input resource");
+      auto err = error{sec::runtime_error,
+                       "flow bridge failed to open the input resource"};
       push.abort(err);
       return err;
     }
@@ -62,10 +62,9 @@ public:
     out_ = producer_type::make(push.try_open(), mpx, std::move(do_resume),
                                std::move(do_cancel));
     if (!out_) {
-      auto err = make_error(sec::runtime_error,
-                            "flow bridge failed to open the output resource");
       in_.cancel();
-      return err;
+      return error{sec::runtime_error,
+                   "flow bridge failed to open the output resource"};
     }
     return {};
   }

@@ -193,8 +193,8 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
                    [](ws::acceptor<caf::cow_string>& acc, std::string name) {
                      auto quotes = quotes_by_name(name);
                      if (quotes.empty()) {
-                       auto err = make_error(caf::sec::invalid_argument,
-                                             not_found_str(name));
+                       auto err = caf::error{caf::sec::invalid_argument,
+                                             not_found_str(name)};
                        acc.reject(std::move(err));
                      } else {
                        // Forward the name to the WebSocket worker.

@@ -35,8 +35,8 @@ std::unique_ptr<client> client::make(handshake_ptr hs, upper_layer_ptr up_ptr) {
 error client::start(octet_stream::lower_layer* down) {
   CAF_ASSERT(hs_ != nullptr);
   if (!hs_->has_mandatory_fields())
-    return make_error(sec::runtime_error,
-                      "WebSocket client received an incomplete handshake");
+    return error{sec::runtime_error,
+                 "WebSocket client received an incomplete handshake"};
   if (!hs_->has_valid_key())
     hs_->randomize_key();
   down_ = down;
@@ -60,8 +60,8 @@ ptrdiff_t client::consume(byte_span buffer, byte_span) {
   if (hdr.empty()) {
     if (buffer.size() >= handshake::max_http_size) {
       log::net::error("server response exceeded the maximum header size");
-      up_->abort(make_error(sec::protocol_error, "server response exceeded "
-                                                 "the maximum header size"));
+      up_->abort(error{sec::protocol_error,
+                       "server response exceeded the maximum header size"});
       return -1;
     }
     // Wait for more data.
@@ -96,7 +96,7 @@ bool client::handle_header(std::string_view http) {
   }
   log::net::debug("received an invalid WebSocket handshake");
   up_->abort(
-    make_error(sec::protocol_error, "received an invalid WebSocket handshake"));
+    error{sec::protocol_error, "received an invalid WebSocket handshake"});
   return false;
 }
 

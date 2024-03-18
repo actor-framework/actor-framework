@@ -61,11 +61,10 @@ error read_from_socket(udp_datagram_socket sock, byte_buffer& buf) {
       return {};
     }
     if (!last_socket_error_is_temporary())
-      return make_error(sec::socket_operation_failed,
-                        last_socket_error_as_string());
+      return error{sec::socket_operation_failed, last_socket_error_as_string()};
     ++receive_attempts;
   }
-  return make_error(sec::runtime_error, "too many read attempts");
+  return error{sec::runtime_error, "too many read attempts"};
 }
 
 WITH_FIXTURE(fixture) {

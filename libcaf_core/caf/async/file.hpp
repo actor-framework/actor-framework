@@ -61,7 +61,7 @@ public:
     if (file_ == nullptr) {
       file_ = fopen(path_.c_str(), mode());
       if (!file_) {
-        step.on_error(make_error(sec::cannot_open_file), steps...);
+        step.on_error(error{sec::cannot_open_file}, steps...);
         return;
       }
     }

@@ -151,8 +151,8 @@ public:
   void fwd_on_complete(buffer_emit_t) {
     control_sub_.release_later();
     if (state_ == state::running)
-      err_ = make_error(sec::end_of_stream,
-                        "buffer: unexpected end of the control stream");
+      err_ = error{sec::end_of_stream,
+                   "buffer: unexpected end of the control stream"};
     shutdown();
   }
 
@@ -197,7 +197,7 @@ private:
     value_sub_.cancel();
     control_sub_.cancel();
     if (from_external)
-      out_.on_error(make_error(sec::disposed));
+      out_.on_error(error{sec::disposed});
     else
       out_.release_later();
   }

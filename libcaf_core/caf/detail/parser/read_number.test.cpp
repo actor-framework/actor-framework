@@ -102,10 +102,10 @@ struct range_parser {
     range_consumer f;
     string_parser_state res{str.begin(), str.end()};
     detail::parser::read_number(res, f, std::true_type{}, std::true_type{});
-    if (res.code == pec::success)
+    if (res.code == pec::success) {
       return expected<std::vector<int64_t>>{std::move(f.xs)};
-    else
-      return make_error(res);
+    }
+    return res.error();
   }
 };
 

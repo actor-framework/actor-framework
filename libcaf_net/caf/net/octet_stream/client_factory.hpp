@@ -126,8 +126,8 @@ private:
   template <class MakeInputs>
   auto
   do_start(dsl::client_config::lazy&, const uri&, MakeInputs& make_inputs) {
-    auto err = make_error(sec::invalid_argument,
-                          "connecting via URI is not supported");
+    auto err = error{sec::invalid_argument,
+                     "connecting via URI is not supported"};
     return do_start(err, make_inputs);
   }
 

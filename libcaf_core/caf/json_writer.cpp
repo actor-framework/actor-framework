@@ -7,6 +7,7 @@
 #include "caf/detail/append_hex.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/print.hpp"
+#include "caf/format_to_error.hpp"
 
 namespace caf {
 
@@ -122,7 +123,8 @@ bool json_writer::begin_field(std::string_view name, bool is_present) {
       default: {
         std::string str = "expected object, found ";
         str += as_json_type_name(t);
-        emplace_error(sec::runtime_error, class_name, __func__, std::move(str));
+        err_ = format_to_error(sec::runtime_error, "{}::{}: {}", class_name,
+                               __func__, str);
         return false;
       }
     }
@@ -204,7 +206,9 @@ bool json_writer::begin_key_value_pair() {
     default: {
       std::string str = "expected object, found ";
       str += as_json_type_name(t);
-      emplace_error(sec::runtime_error, class_name, __func__, std::move(str));
+      emplace_error(sec::runtime_error,
+                    detail::format("{}::{}: {}", class_name, __func__,
+                                   std::move(str)));
       return false;
     }
   }
@@ -252,8 +256,11 @@ bool json_writer::end_sequence() {
 bool json_writer::begin_associative_array(size_t) {
   switch (top()) {
     default:
-      emplace_error(sec::runtime_error, class_name, __func__,
-                    "unexpected begin_object or begin_associative_array");
+      emplace_error(
+        sec::runtime_error,
+        detail::format(
+          "{}::{}: unexpected begin_object or begin_associative_array",
+          class_name, __func__));
       return false;
     case type::element:
       unsafe_morph(type::object);

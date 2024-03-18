@@ -40,7 +40,7 @@ struct testee_state {
         if (auto i = kv_store.find(key); i != kv_store.end())
           return {i->second};
         else
-          return {make_error(sec::runtime_error, "key not found")};
+          return {error{sec::runtime_error, "key not found"}};
       },
     };
   }

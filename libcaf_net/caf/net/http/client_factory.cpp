@@ -53,8 +53,8 @@ client_factory::do_start(config_type& cfg, dsl::client_config::lazy& data,
   auto use_ssl = false;
   // Sanity checking.
   if (auth.host_str().empty())
-    return do_start(cfg, make_error(sec::invalid_argument,
-                                    "URI must provide a valid hostname"));
+    return do_start(cfg, error{sec::invalid_argument,
+                               "URI must provide a valid hostname"});
   if (resource.scheme() == "http") {
     if (auth.port == 0)
       auth.port = defaults::net::http_default_port;
@@ -63,8 +63,8 @@ client_factory::do_start(config_type& cfg, dsl::client_config::lazy& data,
       auth.port = defaults::net::https_default_port;
     use_ssl = true;
   } else {
-    auto err = make_error(sec::invalid_argument,
-                          "unsupported URI scheme: expected http or https");
+    auto err = error{sec::invalid_argument,
+                     "unsupported URI scheme: expected http or https"};
     return return_t{std::move(err)};
   }
   return detail::tcp_try_connect(auth, data.connection_timeout,

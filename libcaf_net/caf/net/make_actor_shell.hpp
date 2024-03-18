@@ -10,9 +10,10 @@ namespace caf::net {
 /// Creates a new @ref actor_shell and registers it at the actor system.
 template <class Handle> // Note: default is caf::actor; see fwd.hpp
 actor_shell_ptr_t<Handle> make_actor_shell(socket_manager* mgr) {
-  auto f = [](abstract_actor_shell* self, message& msg) -> result<message> {
-    self->quit(make_error(sec::unexpected_message, std::move(msg)));
-    return make_error(sec::unexpected_message);
+  auto f = [](abstract_actor_shell* self, message&) -> result<message> {
+    auto err = error{sec::unexpected_message};
+    self->quit(err);
+    return err;
   };
   using ptr_type = actor_shell_ptr_t<Handle>;
   using impl_type = typename ptr_type::element_type;

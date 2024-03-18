@@ -30,7 +30,7 @@ void stream_bridge_sub::ack(uint64_t src_flow_id,
   // Sanity checking.
   if (max_items_per_batch == 0) {
     log::system::error("stream ACK announced a batch size of 0");
-    do_abort(make_error(sec::protocol_error));
+    do_abort(error{sec::protocol_error});
     return;
   }
   // Update our state. Streams operate on batches, so we translate the
@@ -77,7 +77,7 @@ void stream_bridge_sub::push(const async::batch& input) {
   // Sanity checking.
   if (in_flight_batches_ == 0) {
     log::system::error("source exceeded its allowed credit!");
-    do_abort(make_error(sec::protocol_error));
+    do_abort(error{sec::protocol_error});
     return;
   }
   // Push batch downstream or buffer it.
@@ -164,7 +164,7 @@ stream_bridge::stream_bridge(scheduled_actor* self, strong_actor_ptr src,
 
 disposable stream_bridge::subscribe(flow::observer<async::batch> out) {
   if (!src_) {
-    return fail_subscription(out, make_error(sec::cannot_resubscribe_stream));
+    return fail_subscription(out, error{sec::cannot_resubscribe_stream});
   }
   auto self = self_ptr();
   auto local_id = self->new_u64_id();

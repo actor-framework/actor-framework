@@ -127,8 +127,8 @@ public:
     auto& cfg = super::config();
     auto ptr = actor_cast<strong_actor_ptr>(hdl);
     if (!ptr) {
-      auto err = make_error(sec::logic_error,
-                            "cannot monitor an invalid actor handle");
+      auto err = error{sec::logic_error,
+                       "cannot monitor an invalid actor handle"};
       cfg.fail(std::move(err));
       return *this;
     }
@@ -198,8 +198,8 @@ private:
   template <class Acceptor>
   expected<disposable> do_start_impl(config_type& cfg, Acceptor acc, unit_t&) {
     if (cfg.routes.empty()) {
-      return make_error(sec::logic_error,
-                        "cannot start an HTTP server without any routes");
+      return error{sec::logic_error,
+                   "cannot start an HTTP server without any routes"};
     }
     using transport_t = typename Acceptor::transport_type;
     using factory_t = detail::http_conn_factory<transport_t>;
@@ -228,7 +228,7 @@ private:
                                                         push.try_open());
     routes.push_back(make_route([producer](responder& res) {
       if (!producer->push(responder{res}.to_request())) {
-        auto err = make_error(sec::runtime_error, "flow disconnected");
+        auto err = error{sec::runtime_error, "flow disconnected"};
         res.router()->shutdown(err);
       }
     }));

@@ -63,7 +63,7 @@ struct kvs_actor_state {
         if (auto i = data.find(key); i != data.end())
           return i->second;
         else
-          return make_error(caf::sec::no_such_key, key + " not found");
+          return caf::error{caf::sec::no_such_key, key + " not found"};
       },
       [this](caf::put_atom, const std::string& key, std::string& value) {
         data.insert_or_assign(key, std::move(value));

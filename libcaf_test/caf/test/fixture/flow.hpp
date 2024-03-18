@@ -268,9 +268,9 @@ public:
   template <class T = int, class... Args>
   [[nodiscard]] auto obs_error(Args&&... args) {
     if constexpr (sizeof...(Args) == 0)
-      return make_observable().fail<T>(make_error(sec::runtime_error));
+      return make_observable().fail<T>(error{sec::runtime_error});
     else
-      return make_observable().fail<T>(make_error(std::forward<Args>(args)...));
+      return make_observable().fail<T>(error{std::forward<Args>(args)...});
   }
 
   /// Shortcut for `make_observable().range(init, num)`.

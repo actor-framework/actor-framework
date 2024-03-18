@@ -497,7 +497,7 @@ TEST("on_error_return() replaces an error with a value") {
   }
   SECTION("on_error_return() forwards errors from the handler") {
     auto return_unexpected = [](const error&) {
-      return expected<int>{make_error(sec::unexpected_message)};
+      return expected<int>{error{sec::unexpected_message}};
     };
     auto return_err = [](const error& err) { return expected<int>{err}; };
     SECTION("blueprint") {

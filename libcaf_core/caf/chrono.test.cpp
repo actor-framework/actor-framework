@@ -164,7 +164,7 @@ SCENARIO("a date and time with fractional seconds can be parsed from strings") {
 
 TEST("the parser refuses invalid date time values") {
   datetime x;
-  auto invalid = make_error(pec::invalid_argument);
+  auto invalid = error{pec::invalid_argument};
   check_eq(parse("2021-02-29T01:00:00", x), invalid); // Not a leap year.
   check_eq(parse("2021-00-10T01:00:00", x), invalid); // Month < 1.
   check_eq(parse("2021-13-10T01:00:00", x), invalid); // Month > 12.

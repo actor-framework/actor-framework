@@ -135,8 +135,8 @@ bool probe(socket x) {
 error child_process_inherit(socket x, bool) {
   // TODO: possible to implement via SetHandleInformation?
   if (x == invalid_socket)
-    return make_error(sec::network_syscall_failed, "ioctlsocket",
-                      "invalid socket");
+    return error{sec::network_syscall_failed,
+                 "child_process_inherit: invalid socket"};
   return none;
 }
 

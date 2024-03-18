@@ -79,9 +79,9 @@ public:
       out_res_ = nullptr;
     }
     if (!in_ && !out_)
-      return make_error(sec::cannot_open_resource,
-                        "a flow bridge needs at least one valid resource");
-    return none;
+      return error{sec::cannot_open_resource,
+                   "a flow bridge needs at least one valid resource"};
+    return {};
   }
 
   bool write(const input_type& item) {

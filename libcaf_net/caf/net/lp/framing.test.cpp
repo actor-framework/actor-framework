@@ -120,7 +120,7 @@ public:
       inputs->append(std::string{str_buf, buf.size()});
       return static_cast<ptrdiff_t>(buf.size());
     } else {
-      inputs->set_error(make_error(sec::invalid_argument, "non-printable"));
+      inputs->set_error(error{sec::invalid_argument, "non-printable"});
       return -1;
     }
   }

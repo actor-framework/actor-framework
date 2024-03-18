@@ -20,6 +20,7 @@
 #include "caf/detail/cleanup_and_release.hpp"
 #include "caf/detail/critical.hpp"
 #include "caf/detail/socket_guard.hpp"
+#include "caf/format_to_error.hpp"
 #include "caf/log/io.hpp"
 #include "caf/log/system.hpp"
 #include "caf/make_counted.hpp"
@@ -763,7 +764,8 @@ new_tcp_connection(const std::string& host, uint16_t port,
   auto res = interfaces::native_address(host, std::move(preferred));
   if (!res) {
     log::io::debug("no such host");
-    return make_error(sec::cannot_connect_to_node, "no such host", host, port);
+    return format_to_error(sec::cannot_connect_to_node,
+                           "cannot connect to host {} on port {}", host, port);
   }
   auto proto = res->second;
   CAF_ASSERT(proto == ipv4 || proto == ipv6);
@@ -787,8 +789,8 @@ new_tcp_connection(const std::string& host, uint16_t port,
   }
   if (!ip_connect<AF_INET>(fd, res->first, port)) {
     log::io::warning("could not connect to: host = {} port = {}", host, port);
-    return make_error(sec::cannot_connect_to_node, "ip_connect failed", host,
-                      port);
+    return format_to_error(sec::cannot_connect_to_node,
+                           "cannot connect to host {} on port {}", host, port);
   }
   log::io::info("successfully connected to (IPv4): host = {} port = {}", host,
                 port);
@@ -863,8 +865,9 @@ expected<native_socket> new_tcp_acceptor_impl(uint16_t port, const char* addr,
   auto addrs = interfaces::server_address(port, addr);
   auto addr_str = std::string{addr == nullptr ? "" : addr};
   if (addrs.empty())
-    return make_error(sec::cannot_open_port, "No local interface available",
-                      addr_str);
+    return format_to_error(sec::cannot_open_port,
+                           "failed to resolve {} to a local interface",
+                           addr_str);
   bool any = addr_str.empty() || addr_str == "::" || addr_str == "0.0.0.0";
   auto fd = invalid_native_socket;
   for (auto& elem : addrs) {
@@ -881,10 +884,9 @@ expected<native_socket> new_tcp_acceptor_impl(uint16_t port, const char* addr,
     break;
   }
   if (fd == invalid_native_socket) {
-    log::io::warning("could not open tcp socket on: port = {} addr_str = {}",
-                     port, addr_str);
-    return make_error(sec::cannot_open_port, "tcp socket creation failed", port,
-                      addr_str);
+    return format_to_error(
+      sec::cannot_open_port,
+      "could not open tcp socket on: port = {}, addr_str = {}", port, addr_str);
   }
   detail::socket_guard sguard{fd};
   CALL_CFUN(tmp2, detail::cc_zero, "listen", listen(fd, SOMAXCONN));
@@ -904,7 +906,8 @@ new_remote_udp_endpoint_impl(const std::string& host, uint16_t port,
   detail::socket_guard sguard{(*lep).first};
   std::pair<native_socket, ip_endpoint> info;
   if (!interfaces::get_endpoint(host, port, std::get<1>(info), (*lep).second))
-    return make_error(sec::cannot_connect_to_node, "no such host", host, port);
+    return format_to_error(sec::cannot_connect_to_node,
+                           "cannot connect to host {} on port {}", host, port);
   get<0>(info) = sguard.release();
   return info;
 }
@@ -917,8 +920,9 @@ new_local_udp_endpoint_impl(uint16_t port, const char* addr, bool reuse,
   auto addrs = interfaces::server_address(port, addr, preferred);
   auto addr_str = std::string{addr == nullptr ? "" : addr};
   if (addrs.empty())
-    return make_error(sec::cannot_open_port, "No local interface available",
-                      addr_str);
+    return format_to_error(sec::cannot_open_port,
+                           "failed to resolve {} to a local interface",
+                           addr_str);
   bool any = addr_str.empty() || addr_str == "::" || addr_str == "0.0.0.0";
   auto fd = invalid_native_socket;
   protocol::network proto{};
@@ -937,10 +941,9 @@ new_local_udp_endpoint_impl(uint16_t port, const char* addr, bool reuse,
     break;
   }
   if (fd == invalid_native_socket) {
-    log::io::warning("could not open udp socket on: port = {} addr_str = {}",
-                     port, addr_str);
-    return make_error(sec::cannot_open_port, "udp socket creation failed", port,
-                      addr_str);
+    return format_to_error(
+      sec::cannot_open_port,
+      "could not open udp socket: port = {}, addr_str = {}", port, addr_str);
   }
   log::io::debug("fd = {}", fd);
   return std::make_pair(fd, proto);

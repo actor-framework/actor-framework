@@ -7,6 +7,7 @@
 #include "caf/detail/append_hex.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/print.hpp"
+#include "caf/format_to_error.hpp"
 #include "caf/json_value.hpp"
 
 #include <type_traits>
@@ -128,9 +129,9 @@ bool json_builder::begin_field(std::string_view name, bool is_present) {
         push(static_cast<detail::json::member*>(nullptr));
         return true;
       default: {
-        std::string str = "expected object, found ";
-        str += as_json_type_name(t);
-        emplace_error(sec::runtime_error, class_name, __func__, std::move(str));
+        err_ = format_to_error(sec::runtime_error,
+                               "{}::{}: expected object, found {}", class_name,
+                               __func__, as_json_type_name(t));
         return false;
       }
     }
@@ -209,9 +210,9 @@ bool json_builder::begin_key_value_pair() {
       return true;
     }
     default: {
-      std::string str = "expected object, found ";
-      str += as_json_type_name(t);
-      emplace_error(sec::runtime_error, class_name, __func__, std::move(str));
+      emplace_error(sec::runtime_error,
+                    detail::format("{}::{}: expected object, found {}",
+                                   class_name, __func__, as_json_type_name(t)));
       return false;
     }
   }
@@ -249,8 +250,10 @@ bool json_builder::end_sequence() {
 bool json_builder::begin_associative_array(size_t) {
   switch (top()) {
     default:
-      emplace_error(sec::runtime_error, class_name, __func__,
-                    "unexpected begin_object or begin_associative_array");
+      emplace_error(
+        sec::runtime_error,
+        detail::format("{}::{}: {}", class_name, __func__,
+                       "unexpected begin_object or begin_associative_array"));
       return false;
     case type::element:
       top_ptr()->assign_object(storage_);

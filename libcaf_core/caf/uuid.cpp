@@ -197,10 +197,9 @@ error parse(std::string_view str, uuid& dest) {
     case valid_uuid:
       return none;
     default:
-      return make_error(ps.code);
+      return error{ps.code};
     case invalid_version:
-      return make_error(pec::invalid_argument,
-                        "invalid version in variant field");
+      return error{pec::invalid_argument, "invalid version in variant field"};
   }
 }
 

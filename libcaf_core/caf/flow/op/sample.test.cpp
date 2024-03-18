@@ -99,8 +99,8 @@ SCENARIO("the sample operator forwards errors") {
         sys.spawn([&pub, outputs, err](caf::event_based_actor* self) {
           pub.as_observable()
             .observe_on(self) //
-            .concat(self->make_observable().fail<int>(
-              make_error(caf::sec::runtime_error)))
+            .concat(
+              self->make_observable().fail<int>(error{caf::sec::runtime_error}))
             .sample(1s)
             .do_on_error([err](const error& what) { *err = what; })
             .for_each([outputs](const int& xs) { outputs->emplace_back(xs); });
@@ -136,7 +136,7 @@ SCENARIO("the sample operator forwards errors") {
         auto err = std::make_shared<error>();
         sys.spawn([outputs, err](caf::event_based_actor* self) {
           self->make_observable()
-            .fail<int>(make_error(caf::sec::runtime_error))
+            .fail<int>(error{caf::sec::runtime_error})
             .sample(1s)
             .do_on_error([err](const error& what) { *err = what; })
             .for_each([outputs](const int& xs) { outputs->emplace_back(xs); });

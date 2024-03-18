@@ -102,8 +102,8 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
             // (Bad Request). The error gets converted to a string and sent to
             // the client to give some indication to the client why the request
             // was rejected.
-            auto err = caf::make_error(caf::sec::invalid_argument,
-                                       "unrecognized path, try '/'");
+            auto err = caf::error{caf::sec::invalid_argument,
+                                  "unrecognized path, try '/'"};
             acc.reject(std::move(err));
           }
           // Note: calling nothing on `acc` also rejects the connection.

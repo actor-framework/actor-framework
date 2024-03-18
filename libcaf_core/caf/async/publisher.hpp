@@ -35,8 +35,8 @@ public:
                                  size_t min_request_size) const {
     if (impl_)
       return impl_->observe_on(parent, buffer_size, min_request_size);
-    auto err = make_error(sec::invalid_observable,
-                          "cannot subscribe to default-constructed observable");
+    auto err = error{sec::invalid_observable,
+                     "cannot subscribe to default-constructed observable"};
     // Note: cannot use parent->make_observable() here because it would create a
     //       circular dependency between observable_builder and publisher.
     return parent->add_child_hdl(std::in_place_type<flow::op::fail<T>>,

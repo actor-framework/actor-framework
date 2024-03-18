@@ -185,7 +185,7 @@ public:
         .receive(function_view_storage_t<value_type>{result.value},
                  [&err](error& x) {
                    if (!x) {
-                     err = caf::make_error(sec::bad_function_call);
+                     err = sec::bad_function_call;
                      return;
                    }
                    err = std::move(x);

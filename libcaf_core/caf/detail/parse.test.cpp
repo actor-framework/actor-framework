@@ -50,7 +50,7 @@ expected<T> read(std::string_view str) {
   detail::parse(ps, result);
   if (ps.code == pec::success)
     return result;
-  return make_error(ps);
+  return error{ps.code};
 }
 
 #define CHECK_NUMBER(type, value) check_eq(read<type>(#value), type(value))

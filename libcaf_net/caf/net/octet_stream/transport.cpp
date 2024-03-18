@@ -206,10 +206,10 @@ void transport::handle_read_event() {
         parent_->deregister_reading();
         return;
       default:
-        return fail(make_error(sec::socket_operation_failed));
+        return fail(error{sec::socket_operation_failed});
     }
   } else if (rd == 0) {
-    return fail(make_error(sec::socket_disconnected));
+    return fail(error{sec::socket_disconnected});
   }
   // Make sure we actually have all data currently available to us and the
   // policy is not holding on to some bytes. This may happen when using
@@ -222,7 +222,7 @@ void transport::handle_read_event() {
       = policy_->read(make_span(read_buf_.data() + buffered_, policy_buffered));
     if (rd2 != static_cast<ptrdiff_t>(policy_buffered)) {
       log::net::error("failed to read buffered data from the policy");
-      return fail(make_error(sec::socket_operation_failed));
+      return fail(error{sec::socket_operation_failed});
     }
     buffered_ += static_cast<size_t>(rd2);
   }
@@ -256,13 +256,13 @@ void transport::handle_buffered_data() {
     if (consumed < 0) {
       // Negative values indicate that the application wants to close the
       // socket. We still make sure to send any pending data before closing.
-      up_->abort(make_error(caf::sec::runtime_error, "consumed < 0"));
+      up_->abort(error{caf::sec::runtime_error, "consumed < 0"});
       parent_->deregister_reading();
       return;
     } else if (static_cast<size_t>(consumed) > n) {
       // Must not happen. An application cannot handle more data then we pass
       // to it.
-      up_->abort(make_error(sec::logic_error, "consumed > buffer.size"));
+      up_->abort(error{sec::logic_error, "consumed > buffer.size"});
       parent_->deregister_reading();
       return;
     } else if (consumed == 0) {
@@ -352,11 +352,11 @@ void transport::handle_write_event() {
         parent_->deregister_writing();
         return;
       default:
-        return fail(make_error(sec::socket_operation_failed));
+        return fail(error{sec::socket_operation_failed});
     }
   } else {
     // write() returns 0 if the connection was closed.
-    return fail(make_error(sec::socket_disconnected));
+    return fail(error{sec::socket_disconnected});
   }
 }
 

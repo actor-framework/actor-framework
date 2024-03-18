@@ -87,26 +87,26 @@ struct matrix_state {
       [this](put_atom put, uint32_t row, uint32_t column,
              int32_t val) -> result<void> {
         if (row >= rows) {
-          return make_error(sec::invalid_argument, "row out of range");
+          return error{sec::invalid_argument, "row out of range"};
         }
         if (column >= columns) {
-          return make_error(sec::invalid_argument, "column out of range");
+          return error{sec::invalid_argument, "column out of range"};
         }
         return self->delegate(data[row][column], put, val);
       },
       [this](get_atom get, uint32_t row, uint32_t column) -> result<int32_t> {
         if (row >= rows) {
-          return make_error(sec::invalid_argument, "row out of range");
+          return error{sec::invalid_argument, "row out of range"};
         }
         if (column >= columns) {
-          return make_error(sec::invalid_argument, "column out of range");
+          return error{sec::invalid_argument, "column out of range"};
         }
         return self->delegate(data[row][column], get);
       },
       [this](get_atom get, average_atom, row_atom,
              uint32_t row) -> result<double> {
         if (row >= rows) {
-          return make_error(sec::invalid_argument, "row out of range");
+          return error{sec::invalid_argument, "row out of range"};
         }
         auto rp = self->make_response_promise<double>();
         self->fan_out_request<policy::select_all>(data[row], infinite, get)
@@ -122,7 +122,7 @@ struct matrix_state {
       [this](get_atom get, average_atom, column_atom,
              uint32_t column) -> result<double> {
         if (column >= columns) {
-          return make_error(sec::invalid_argument, "column out of range");
+          return error{sec::invalid_argument, "column out of range"};
         }
         auto cells = std::vector<cell>{}; // The cells we need to query.
         cells.reserve(rows);

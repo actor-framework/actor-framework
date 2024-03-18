@@ -32,8 +32,8 @@ ptrdiff_t framing::consume(byte_span input, byte_span) {
   auto lg = log::net::trace("got {} bytes\n", input.size());
   if (input.size() < sizeof(uint32_t)) {
     log::net::error("received too few bytes from underlying transport");
-    up_->abort(make_error(sec::logic_error,
-                          "received too few bytes from underlying transport"));
+    up_->abort(error{sec::logic_error,
+                     "received too few bytes from underlying transport"});
     return -1;
   } else if (input.size() == hdr_size) {
     auto u32_size = uint32_t{0};
@@ -42,13 +42,12 @@ ptrdiff_t framing::consume(byte_span input, byte_span) {
     if (msg_size == 0) {
       // Ignore empty messages.
       log::net::error("received empty message");
-      up_->abort(make_error(sec::logic_error,
-                            "received empty buffer from stream layer"));
+      up_->abort(
+        error{sec::logic_error, "received empty buffer from stream layer"});
       return -1;
     } else if (msg_size > max_message_length) {
       log::net::debug("exceeded maximum message size");
-      up_->abort(
-        make_error(sec::protocol_error, "exceeded maximum message size"));
+      up_->abort(error{sec::protocol_error, "exceeded maximum message size"});
       return -1;
     } else {
       log::net::debug("wait for payload of size {}", msg_size);
@@ -68,7 +67,7 @@ ptrdiff_t framing::consume(byte_span input, byte_span) {
       }
     } else {
       log::net::debug("received malformed message");
-      up_->abort(make_error(sec::protocol_error, "received malformed message"));
+      up_->abort(error{sec::protocol_error, "received malformed message"});
       return -1;
     }
   }

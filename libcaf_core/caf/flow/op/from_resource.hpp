@@ -162,7 +162,7 @@ private:
         buf_ = nullptr;
       }
       if (out_)
-        out_.on_error(make_error(sec::disposed));
+        out_.on_error(error{sec::disposed});
       return;
     }
     while (demand_ > 0) {
@@ -249,14 +249,10 @@ public:
       }
       resource_ = nullptr;
       log::core::warning("failed to open an async resource");
-      return super::fail_subscription(
-        out, make_error(sec::cannot_open_resource,
-                        "failed to open an async resource"));
+      return super::fail_subscription(out, error{sec::cannot_open_resource});
     }
     log::core::warning("may only subscribe once to an async resource");
-    return super::fail_subscription(
-      out, make_error(sec::too_many_observers,
-                      "may only subscribe once to an async resource"));
+    return super::fail_subscription(out, error{sec::too_many_observers});
   }
 
 private:

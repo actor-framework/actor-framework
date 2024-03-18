@@ -17,10 +17,10 @@ namespace caf::net {
 template <class Socket>
 expected<Socket> checked_socket(Socket fd) {
   using res_t = expected<Socket>;
-  if (fd.id != invalid_socket_id)
+  if (fd.id != invalid_socket_id) {
     return res_t{fd};
-  else
-    return res_t{make_error(sec::runtime_error, "invalid socket handle")};
+  }
+  return res_t{error{sec::runtime_error, "invalid socket handle"}};
 }
 
 /// A function object that calls `checked_socket`.

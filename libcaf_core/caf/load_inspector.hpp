@@ -36,9 +36,14 @@ public:
     err_ = std::move(stop_reason);
   }
 
-  template <class... Ts>
-  void emplace_error(Ts&&... xs) {
-    err_ = make_error(std::forward<Ts>(xs)...);
+  template <class Enum>
+  void emplace_error(Enum code) {
+    err_ = caf::error{code};
+  }
+
+  template <class Enum>
+  void emplace_error(Enum code, std::string msg) {
+    err_ = caf::error{code, std::move(msg)};
   }
 
   const error& get_error() const noexcept {

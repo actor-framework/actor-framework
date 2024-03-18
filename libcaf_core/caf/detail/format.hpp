@@ -16,6 +16,7 @@
 #include "caf/detail/is_complete.hpp"
 #include "caf/detail/source_location.hpp"
 #include "caf/detail/type_traits.hpp"
+#include "caf/error.hpp"
 #include "caf/inspector_access_type.hpp"
 
 #include <string>

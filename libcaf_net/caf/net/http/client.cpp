@@ -176,7 +176,7 @@ bool client::handle_header(std::string_view http) {
   auto [code, msg] = hdr_.parse(http);
   if (code != status::ok) {
     log::net::debug("received malformed header");
-    abort(msg);
+    abort(std::string{msg});
     return false;
   }
   return true;

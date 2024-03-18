@@ -60,7 +60,7 @@ public:
 
     } else {
       self()->enqueue(make_mailbox_element(self()->ctrl(), mid.response_id(),
-                                           make_error(sec::invalid_request)),
+                                           error{sec::invalid_request}),
                       self()->context());
     }
     using hdl_t = detail::blocking_delayed_response_handle_t<response_type>;
@@ -121,7 +121,7 @@ public:
                    self()->context());
     } else {
       self()->enqueue(make_mailbox_element(self()->ctrl(), mid.response_id(),
-                                           make_error(sec::invalid_request)),
+                                           error{sec::invalid_request}),
                       self()->context());
     }
     using hdl_t = detail::blocking_response_handle_t<response_type>;

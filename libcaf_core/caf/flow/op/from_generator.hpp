@@ -71,7 +71,7 @@ private:
     completed_ = true;
     buf_.clear();
     if (from_external) {
-      err_ = make_error(sec::disposed);
+      err_ = error{sec::disposed};
       fin();
     } else {
       out_.release_later();

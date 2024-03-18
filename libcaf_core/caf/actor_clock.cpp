@@ -206,7 +206,7 @@ disposable actor_clock::schedule_message(strong_actor_ptr sender,
                     nullptr);
     } else if (src && mid.is_request()) {
       src->enqueue(make_mailbox_element(nullptr, mid.response_id(),
-                                        make_error(sec::request_receiver_down)),
+                                        error{sec::request_receiver_down}),
                    nullptr);
     }
   });
@@ -241,10 +241,9 @@ disposable actor_clock::schedule_message(weak_actor_ptr sender,
       sdst->enqueue(make_mailbox_element(std::move(ssrc), mid, std::move(msg)),
                     nullptr);
     } else if (mid.is_request()) {
-      ssrc->enqueue(
-        make_mailbox_element(nullptr, mid.response_id(),
-                             make_error(sec::request_receiver_down)),
-        nullptr);
+      ssrc->enqueue(make_mailbox_element(nullptr, mid.response_id(),
+                                         error{sec::request_receiver_down}),
+                    nullptr);
     }
   });
   return schedule(timeout, std::move(f));

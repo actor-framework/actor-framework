@@ -8,6 +8,7 @@
 #include "caf/detail/network_order.hpp"
 #include "caf/detail/parser/read_ipv6_address.hpp"
 #include "caf/error.hpp"
+#include "caf/format_to_error.hpp"
 #include "caf/ipv4_address.hpp"
 #include "caf/message.hpp"
 #include "caf/parser_state.hpp"
@@ -215,8 +216,8 @@ error parse(std::string_view str, ipv6_address& dest) {
   parser::read_ipv6_address(res, f);
   if (res.code == pec::success)
     return none;
-  return make_error(res.code, static_cast<size_t>(res.line),
-                    static_cast<size_t>(res.column));
+  return format_to_error(res.code, "invalid syntax in line {} column {}",
+                         res.line, res.column);
 }
 
 } // namespace caf

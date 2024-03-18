@@ -121,7 +121,7 @@ expected<context> context::make(tls vmin, tls vmax) {
   if (errstr == nullptr)
     return {std::move(ctx)};
   else
-    return {make_error(sec::logic_error, errstr)};
+    return {error{sec::logic_error, errstr}};
 }
 
 expected<context> context::make_server(tls vmin, tls vmax) {
@@ -130,7 +130,7 @@ expected<context> context::make_server(tls vmin, tls vmax) {
   if (errstr == nullptr)
     return {std::move(ctx)};
   else
-    return {make_error(sec::logic_error, errstr)};
+    return {error{sec::logic_error, errstr}};
 }
 
 expected<context> context::make_client(tls vmin, tls vmax) {
@@ -139,7 +139,7 @@ expected<context> context::make_client(tls vmin, tls vmax) {
   if (errstr == nullptr)
     return {std::move(ctx)};
   else
-    return {make_error(sec::logic_error, errstr)};
+    return {error{sec::logic_error, errstr}};
 }
 
 expected<context> context::make(dtls vmin, dtls vmax) {
@@ -148,7 +148,7 @@ expected<context> context::make(dtls vmin, dtls vmax) {
   if (errstr == nullptr)
     return {std::move(ctx)};
   else
-    return {make_error(sec::logic_error, errstr)};
+    return {error{sec::logic_error, errstr}};
 }
 
 expected<context> context::make_server(dtls vmin, dtls vmax) {
@@ -157,7 +157,7 @@ expected<context> context::make_server(dtls vmin, dtls vmax) {
   if (errstr == nullptr)
     return {std::move(ctx)};
   else
-    return {make_error(sec::logic_error, errstr)};
+    return {error{sec::logic_error, errstr}};
 }
 
 expected<context> context::make_client(dtls vmin, dtls vmax) {
@@ -166,7 +166,7 @@ expected<context> context::make_client(dtls vmin, dtls vmax) {
   if (errstr == nullptr)
     return {std::move(ctx)};
   else
-    return {make_error(sec::logic_error, errstr)};
+    return {error{sec::logic_error, errstr}};
 }
 
 // -- properties ---------------------------------------------------------------
@@ -254,7 +254,7 @@ error context::last_error() {
   }
   // TODO: Mapping the codes to an error enum would be much nicer than using
   //       the generic 'runtime_error'.
-  return make_error(sec::runtime_error, std::move(description));
+  return error{sec::runtime_error, std::move(description)};
 }
 
 error context::last_error_or(error default_error) {
@@ -266,7 +266,7 @@ error context::last_error_or(error default_error) {
 
 error context::last_error_or_unexpected(std::string_view description) {
   if (ERR_peek_error() == 0)
-    return make_error(sec::runtime_error, std::string{description});
+    return error{sec::runtime_error, std::string{description}};
   else
     return last_error();
 }
@@ -281,10 +281,10 @@ expected<connection> context::new_connection(stream_socket fd) {
 
       return {std::move(conn)};
     } else {
-      return {make_error(sec::logic_error, "BIO_new_socket failed")};
+      return {error{sec::logic_error, "BIO_new_socket failed"}};
     }
   } else {
-    return {make_error(sec::logic_error, "SSL_new returned null")};
+    return {error{sec::logic_error, "SSL_new returned null"}};
   }
 }
 
@@ -295,10 +295,10 @@ expected<connection> context::new_connection(stream_socket fd,
     if (SSL_set_fd(ptr, fd.id) == 1)
       return {std::move(conn)};
     else
-      return {make_error(sec::logic_error, "SSL_set_fd failed")};
+      return {error{sec::logic_error, "SSL_set_fd failed"}};
 
   } else {
-    return {make_error(sec::logic_error, "SSL_new returned null")};
+    return {error{sec::logic_error, "SSL_new returned null"}};
   }
 }
 

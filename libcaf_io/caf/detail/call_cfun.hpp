@@ -7,6 +7,7 @@
 #include "caf/io/network/native_socket.hpp"
 
 #include "caf/error.hpp"
+#include "caf/format_to_error.hpp"
 #include "caf/sec.hpp"
 
 #include <cstdio>
@@ -38,8 +39,8 @@ inline bool cc_valid_socket(caf::io::network::native_socket fd) {
 #define CALL_CFUN(var, predicate, fun_name, expr)                              \
   auto var = expr;                                                             \
   if (!predicate(var))                                                         \
-  return make_error(sec::network_syscall_failed, fun_name,                     \
-                    last_socket_error_as_string())
+  return format_to_error(sec::network_syscall_failed, "{}: {}", fun_name,      \
+                         last_socket_error_as_string())
 
 /// Calls a C functions and calls exit() if `predicate(var)` returns false.
 #define CALL_CRITICAL_CFUN(var, predicate, funname, expr)                      \

@@ -56,10 +56,11 @@ public:
     if (receiver) {
       auto& clock = self()->clock();
       if (relative_timeout != infinite) {
-        in_flight_timeout = clock.schedule_message(
-          nullptr, actor_cast(super::self_, weak_ref),
-          super::timeout_ + relative_timeout, mid.response_id(),
-          make_message(make_error(sec::request_timeout)));
+        in_flight_timeout
+          = clock.schedule_message(nullptr, actor_cast(super::self_, weak_ref),
+                                   super::timeout_ + relative_timeout,
+                                   mid.response_id(),
+                                   make_message(error{sec::request_timeout}));
       }
       in_flight_response
         = clock.schedule_message(actor_cast(super::self_, self_ref_tag),
@@ -68,7 +69,7 @@ public:
 
     } else {
       self()->enqueue(make_mailbox_element(self()->ctrl(), mid.response_id(),
-                                           make_error(sec::invalid_request)),
+                                           error{sec::invalid_request}),
                       self()->context());
     }
     using hdl_t = detail::event_based_delayed_response_handle_t<response_type>;
@@ -126,10 +127,11 @@ public:
     if (receiver) {
       if (relative_timeout != infinite) {
         auto& clock = self()->clock();
-        in_flight_timeout = clock.schedule_message(
-          nullptr, actor_cast(super::self_, weak_ref),
-          clock.now() + relative_timeout, mid.response_id(),
-          make_message(make_error(sec::request_timeout)));
+        in_flight_timeout
+          = clock.schedule_message(nullptr, actor_cast(super::self_, weak_ref),
+                                   clock.now() + relative_timeout,
+                                   mid.response_id(),
+                                   make_message(error{sec::request_timeout}));
       }
       auto* ptr = actor_cast<abstract_actor*>(receiver);
       ptr->enqueue(make_mailbox_element(self()->ctrl(), mid,
@@ -137,7 +139,7 @@ public:
                    self()->context());
     } else {
       self()->enqueue(make_mailbox_element(self()->ctrl(), mid.response_id(),
-                                           make_error(sec::invalid_request)),
+                                           error{sec::invalid_request}),
                       self()->context());
     }
     using hdl_t = detail::event_based_response_handle_t<response_type>;

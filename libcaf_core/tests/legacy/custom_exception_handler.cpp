@@ -50,12 +50,8 @@ CAF_TEST(the default exception handler includes the error message) {
     .receive( //
       [] { CAF_FAIL("unexpected response"); },
       [](const error& err) {
-        auto msg = err.context();
-        if (auto view = make_typed_message_view<string, string>(msg)) {
-          CHECK_EQ(get<1>(view), "whatever");
-        } else {
-          CAF_FAIL("unexpected error contest: " << err.context());
-        }
+        CHECK_EQ(err.what(),
+                 "unhandled exception of type std.runtime_error: whatever");
       });
 }
 

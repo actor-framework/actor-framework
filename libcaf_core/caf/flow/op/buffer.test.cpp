@@ -146,7 +146,7 @@ SCENARIO("the buffer operator forwards errors") {
           auto obs = self->make_observable();
           obs.iota(1)
             .take(17)
-            .concat(obs.fail<int>(make_error(caf::sec::runtime_error)))
+            .concat(obs.fail<int>(error{caf::sec::runtime_error}))
             .buffer(7, 1s)
             .do_on_error([err](const error& what) { *err = what; })
             .for_each([outputs](const cow_vector<int>& xs) {
@@ -171,7 +171,7 @@ SCENARIO("the buffer operator forwards errors") {
         auto err = std::make_shared<error>();
         sys.spawn([outputs, err](caf::event_based_actor* self) {
           self->make_observable()
-            .fail<int>(make_error(caf::sec::runtime_error))
+            .fail<int>(error{caf::sec::runtime_error})
             .buffer(3, 1s)
             .do_on_error([err](const error& what) { *err = what; })
             .for_each([outputs](const cow_vector<int>& xs) {

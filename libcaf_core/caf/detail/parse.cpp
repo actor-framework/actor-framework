@@ -319,7 +319,7 @@ error parse_result(const string_parser_state& ps, std::string_view input) {
   print(msg, ps.column);
   msg += " for input ";
   print_escaped(msg, input);
-  return make_error(ps.code, std::move(msg));
+  return error{ps.code, msg};
 }
 
 } // namespace caf::detail

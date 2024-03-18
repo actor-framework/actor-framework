@@ -119,7 +119,7 @@ ptrdiff_t server::consume(byte_span input, byte_span) {
         if (hdr.empty()) {
           if (input.size() >= max_request_size_) {
             up_->abort(
-              make_error(sec::protocol_error, "header exceeds maximum size"));
+              error{sec::protocol_error, "header exceeds maximum size"});
             write_response(status::request_header_fields_too_large,
                            "Header exceeds maximum size.");
             return -1;
@@ -139,8 +139,8 @@ ptrdiff_t server::consume(byte_span input, byte_span) {
           } else if (auto len = hdr_.content_length()) {
             // Protect against payloads that exceed the maximum size.
             if (*len >= max_request_size_) {
-              up_->abort(make_error(sec::protocol_error,
-                                    "payload exceeds maximum size"));
+              up_->abort(
+                error{sec::protocol_error, "payload exceeds maximum size"});
               write_response(status::payload_too_large,
                              "Payload exceeds maximum size.");
               return -1;
@@ -197,7 +197,7 @@ bool server::handle_header(std::string_view http) {
   auto [code, msg] = hdr_.parse(http);
   if (code != status::ok) {
     log::net::debug("received malformed header");
-    up_->abort(make_error(sec::protocol_error, "received malformed header"));
+    up_->abort(error{sec::protocol_error, "received malformed header"});
     write_response(code, msg);
     return false;
   } else {

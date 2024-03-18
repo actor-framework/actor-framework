@@ -173,7 +173,7 @@ public:
 
   template <class Enum, class = std::enable_if_t<is_error_code_enum_v<Enum>>>
   expected& operator=(Enum code) {
-    return *this = make_error(code);
+    return *this = caf::error{code};
   }
 
   // -- observers --------------------------------------------------------------
@@ -576,14 +576,18 @@ bool operator==(const error& x, const expected<T>& y) {
 template <class T, class Enum>
 std::enable_if_t<is_error_code_enum_v<Enum>, bool>
 operator==(const expected<T>& x, Enum y) {
-  return x == make_error(y);
+  if (x)
+    return false;
+  return x.error() == y;
 }
 
 /// @relates expected
 template <class T, class Enum>
 std::enable_if_t<is_error_code_enum_v<Enum>, bool>
 operator==(Enum x, const expected<T>& y) {
-  return y == make_error(x);
+  if (y)
+    return false;
+  return y.error() == x;
 }
 
 /// @relates expected
@@ -677,7 +681,7 @@ public:
 
   template <class Enum, class = std::enable_if_t<is_error_code_enum_v<Enum>>>
   expected& operator=(Enum code) {
-    error_ = make_error(code);
+    error_ = caf::error{code};
     return *this;
   }
 

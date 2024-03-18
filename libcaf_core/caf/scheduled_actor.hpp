@@ -370,8 +370,8 @@ public:
       throw std::invalid_argument(
         "cannot set an idle handler with infinite delay");
 #else
-      quit(make_error(sec::invalid_argument,
-                      "cannot set an idle handler with infinite delay"));
+      quit(error{sec::invalid_argument,
+                 "cannot set an idle handler with infinite delay"});
       return;
 #endif
     }

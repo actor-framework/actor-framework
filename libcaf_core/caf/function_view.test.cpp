@@ -35,7 +35,7 @@ calculator::behavior_type divider() {
   return {
     [](int x, int y) -> result<int> {
       if (y == 0)
-        return make_error(sec::runtime_error, "division by zero");
+        return error{sec::runtime_error, "division by zero"};
       return x / y;
     },
   };

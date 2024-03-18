@@ -112,8 +112,8 @@ private:
     if (cfg.hs.has_mandatory_fields()) {
       return {};
     } else {
-      auto err = make_error(sec::invalid_argument,
-                            "WebSocket handshake lacks mandatory fields");
+      auto err = error{sec::invalid_argument,
+                       "WebSocket handshake lacks mandatory fields"};
       cfg.call_on_error(err);
       return {std::move(err)};
     }
@@ -143,8 +143,8 @@ private:
     auto port = auth.port;
     // Sanity checking.
     if (host.empty()) {
-      auto err = make_error(sec::invalid_argument,
-                            "URI must provide a valid hostname");
+      auto err = error{sec::invalid_argument,
+                       "URI must provide a valid hostname"};
       return do_start(cfg, err, on_start);
     }
     // Spin up the server based on the scheme.
@@ -157,8 +157,8 @@ private:
         port = defaults::net::https_default_port;
       use_ssl = true;
     } else {
-      auto err = make_error(sec::invalid_argument,
-                            "unsupported URI scheme: expected ws or wss");
+      auto err = error{sec::invalid_argument,
+                       "unsupported URI scheme: expected ws or wss"};
       return do_start(cfg, err, on_start);
     }
     // Fill the handshake with fields from the URI and try to connect.

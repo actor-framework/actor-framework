@@ -96,7 +96,7 @@ TEST("send request message") {
         .priority(message_priority::normal)
         .from(dummy)
         .to(self_hdl);
-      check_eq(*result, make_error(sec::unexpected_response));
+      check_eq(*result, error{sec::unexpected_response});
     }
     SECTION("invalid receiver") {
       auto result = std::make_shared<error>();
@@ -107,7 +107,7 @@ TEST("send request message") {
       check_eq(mail_count(), 1u);
       launch();
       expect<error>().to(self_hdl);
-      check_eq(*result, make_error(sec::invalid_request));
+      check_eq(*result, error{sec::invalid_request});
     }
     SECTION("no response") {
       auto result = std::make_shared<error>();
@@ -132,8 +132,8 @@ TEST("send request message") {
       check_eq(mail_count(), 0u);
       check_eq(num_timeouts(), 1u);
       trigger_timeout();
-      expect<error>().with(make_error(sec::request_timeout)).to(self_hdl);
-      check_eq(*result, make_error(sec::request_timeout));
+      expect<error>().with(error{sec::request_timeout}).to(self_hdl);
+      check_eq(*result, error{sec::request_timeout});
       check_eq(mail_count(), 0u);
       check_eq(num_timeouts(), 0u);
       self->mail(exit_msg{nullptr, exit_reason::user_shutdown}).send(dummy);
@@ -205,7 +205,7 @@ TEST("send request message") {
         .priority(message_priority::normal)
         .from(dummy)
         .to(self_hdl);
-      check_eq(*result, make_error(sec::unexpected_response));
+      check_eq(*result, error{sec::unexpected_response});
     }
     SECTION("invalid receiver") {
       auto result = std::make_shared<error>();
@@ -216,7 +216,7 @@ TEST("send request message") {
       check_eq(mail_count(), 1u);
       launch();
       expect<error>().to(self_hdl);
-      check_eq(*result, make_error(sec::invalid_request));
+      check_eq(*result, error{sec::invalid_request});
     }
     SECTION("no response") {
       auto result = std::make_shared<error>();
@@ -239,8 +239,8 @@ TEST("send request message") {
       check_eq(mail_count(), 0u);
       check_eq(num_timeouts(), 1u);
       trigger_timeout();
-      expect<error>().with(make_error(sec::request_timeout)).to(self_hdl);
-      check_eq(*result, make_error(sec::request_timeout));
+      expect<error>().with(error{sec::request_timeout}).to(self_hdl);
+      check_eq(*result, error{sec::request_timeout});
       self->mail(exit_msg{nullptr, exit_reason::user_shutdown}).send(dummy);
       expect<exit_msg>().to(dummy);
     }
@@ -388,7 +388,7 @@ TEST("send delayed request message") {
     check_eq(num_timeouts(), 1u);
     dummy = nullptr;
     trigger_timeout();
-    expect<error>().with(make_error(sec::request_receiver_down)).to(self_hdl);
+    expect<error>().with(error{sec::request_receiver_down}).to(self_hdl);
   }
   SECTION("weak sender reference that expires") {
     self->mail(3)
@@ -435,8 +435,8 @@ TEST("send delayed request message with no response") {
   check_eq(mail_count(), 0u);
   check_eq(num_timeouts(), 1u);
   advance_time(1s);
-  expect<error>().with(make_error(sec::request_timeout)).to(self_hdl);
-  check_eq(*result, make_error(sec::request_timeout));
+  expect<error>().with(error{sec::request_timeout}).to(self_hdl);
+  check_eq(*result, error{sec::request_timeout});
   self->mail(exit_msg{nullptr, exit_reason::user_shutdown}).send(dummy);
   expect<exit_msg>().to(dummy);
 }
@@ -481,9 +481,9 @@ TEST("send request message to an invalid receiver") {
   SECTION("regular message") {
     self->mail("hello world").request(actor{}, 1s).then(on_result, on_error);
     launch();
-    expect<error>().with(make_error(sec::invalid_request)).to(self_hdl);
+    expect<error>().with(error{sec::invalid_request}).to(self_hdl);
     check_eq(*result, 0);
-    check_eq(*err, make_error(sec::invalid_request));
+    check_eq(*err, error{sec::invalid_request});
   }
   SECTION("delayed message") {
     self->mail("hello world")
@@ -493,9 +493,9 @@ TEST("send request message to an invalid receiver") {
     launch();
     check_eq(mail_count(), 1u);
     check_eq(num_timeouts(), 0u);
-    expect<error>().with(make_error(sec::invalid_request)).to(self_hdl);
+    expect<error>().with(error{sec::invalid_request}).to(self_hdl);
     check_eq(*result, 0);
-    check_eq(*err, make_error(sec::invalid_request));
+    check_eq(*err, error{sec::invalid_request});
   }
 }
 

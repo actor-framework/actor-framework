@@ -25,7 +25,7 @@ TEST("catch_all") {
   self->receive([this](float) { fail("received unexpected float"); },
                 [this](message& msg) {
                   check_eq(to_tuple<int32_t>(msg), std::make_tuple(42));
-                  return make_error(sec::unexpected_message);
+                  return error{sec::unexpected_message};
                 });
   self->receive(
     [this](const error& err) { check_eq(err, sec::unexpected_message); });

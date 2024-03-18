@@ -48,6 +48,15 @@ error::error(uint8_t code, type_id_t category, message context)
   // nop
 }
 
+std::string_view error::what() const noexcept {
+  if (data_ == nullptr)
+    return {};
+  auto& ctx = data_->context;
+  if (!ctx.match_elements<std::string>())
+    return {};
+  return ctx.get_as<std::string>(0);
+}
+
 // -- observers ----------------------------------------------------------------
 
 int error::compare(const error& x) const noexcept {
@@ -63,6 +72,7 @@ int error::compare(uint8_t code, type_id_t category) const noexcept {
 
 // -- inspection support -----------------------------------------------------
 
+CAF_PUSH_DEPRECATED_WARNING
 std::string to_string(const error& x) {
   if (!x)
     return "none";
@@ -87,5 +97,6 @@ std::string to_string(const error& x) {
   }
   return result;
 }
+CAF_POP_WARNINGS
 
 } // namespace caf

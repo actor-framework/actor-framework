@@ -288,19 +288,19 @@ TEST("an expected can be compared to its expected type and errors") {
     e_int x{42};
     check_eq(x, 42);
     check_ne(x, 24);
-    check_ne(x, make_error(sec::runtime_error));
+    check_ne(x, error{sec::runtime_error});
     e_int y{sec::runtime_error};
     check_ne(y, 42);
     check_ne(y, 24);
-    check_eq(y, make_error(sec::runtime_error));
-    check_ne(y, make_error(sec::logic_error));
+    check_eq(y, error{sec::runtime_error});
+    check_ne(y, error{sec::logic_error});
   }
   SECTION("void value type") {
     e_void x;
     check(static_cast<bool>(x));
     e_void y{sec::runtime_error};
-    check_eq(y, make_error(sec::runtime_error));
-    check_ne(y, make_error(sec::logic_error));
+    check_eq(y, error{sec::runtime_error});
+    check_ne(y, error{sec::logic_error});
   }
 }
 
@@ -666,14 +666,14 @@ struct next_error_t {
     assert(err.category() == type_id_v<sec>);
     auto code = err.code() + 1;
     if constexpr (WrapIntoExpected)
-      return expected<T>{make_error(static_cast<sec>(code))};
+      return expected<T>{error{static_cast<sec>(code)}};
     else
-      return make_error(static_cast<sec>(code));
+      return error{static_cast<sec>(code)};
   }
   auto operator()(error&& err) const {
     assert(err.category() == type_id_v<sec>);
     auto code = err.code() + 1;
-    err = make_error(static_cast<sec>(code));
+    err = error{static_cast<sec>(code)};
     if constexpr (WrapIntoExpected)
       return expected<T>{std::move(err)};
     else

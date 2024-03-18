@@ -163,9 +163,8 @@ private:
 
   // Signal abort to the upper layer and shutdown to the lower layer,
   // with closing message
-  template <class... Ts>
-  void abort_and_shutdown(sec reason, Ts&&... xs) {
-    abort_and_shutdown(make_error(reason, std::forward<Ts>(xs)...));
+  void abort_and_shutdown(sec reason, std::string what) {
+    abort_and_shutdown(error(reason, std::move(what)));
   }
 
   void abort_and_shutdown(const error& err) {

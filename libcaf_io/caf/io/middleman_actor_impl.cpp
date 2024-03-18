@@ -51,7 +51,7 @@ void middleman_actor_impl::on_exit() {
   cached_tcp_.clear();
   for (auto& kvp : pending_)
     for (auto& promise : kvp.second)
-      promise.deliver(make_error(sec::cannot_connect_to_node));
+      promise.deliver(error{sec::cannot_connect_to_node});
   pending_.clear();
 }
 
@@ -146,11 +146,11 @@ auto middleman_actor_impl::make_behavior() -> behavior_type {
            std::set<std::string>& ifs) -> result<strong_actor_ptr> {
       auto lg = log::io::trace("");
       if (!nid)
-        return make_error(sec::invalid_argument,
-                          "cannot spawn actors on invalid nodes");
+        return error{sec::invalid_argument,
+                     "cannot spawn actors on invalid nodes"};
       if (name.empty())
-        return make_error(sec::invalid_argument,
-                          "cannot spawn actors without a type name");
+        return error{sec::invalid_argument,
+                     "cannot spawn actors without a type name"};
       if (nid == system().node()) {
         if (auto res = system().spawn<actor>(name, std::move(args), nullptr,
                                              true, &ifs))

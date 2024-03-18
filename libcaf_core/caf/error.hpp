@@ -89,6 +89,13 @@ public:
     // nop
   }
 
+  template <class Enum, class = std::enable_if_t<is_error_code_enum_v<Enum>>>
+  error(Enum code, std::string msg)
+    : error(static_cast<uint8_t>(code), type_id_v<Enum>,
+            make_message(std::move(msg))) {
+    // nop
+  }
+
   template <class Enum>
   error(error_code<Enum> code) : error(to_integer(code), type_id_v<Enum>) {
     // nop
@@ -126,6 +133,12 @@ public:
     return data_->context;
   }
 
+  /// Returns a human-readable string representation of this error if available.
+  /// Otherwise, returns an empty string.
+  /// @note The string representation is extracted from the embedded context if
+  ///       it contains a single string element.
+  std::string_view what() const noexcept;
+
   /// Returns `*this != none`.
   explicit operator bool() const noexcept {
     return data_ != nullptr;
@@ -152,7 +165,7 @@ public:
     if (!empty())
       return *this;
     if constexpr (sizeof...(Ts) > 0)
-      return error{code, make_message(std::forward<Ts>(args)...)};
+      return error{code, std::forward<Ts>(args)...};
     else
       return error{code};
   }
@@ -164,7 +177,7 @@ public:
     if (!empty())
       return std::move(*this);
     if constexpr (sizeof...(Ts) > 0)
-      return error{code, make_message(std::forward<Ts>(args)...)};
+      return error{code, std::forward<Ts>(args)...};
     else
       return error{code};
   }

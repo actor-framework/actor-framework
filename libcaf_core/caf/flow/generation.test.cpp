@@ -347,7 +347,7 @@ public:
   void pull(size_t n, Step& step, Steps&... steps) {
     for (size_t i = 0; i < n; ++i) {
       if (value_ > 3) {
-        auto err = make_error(sec::runtime_error, "something went wrong");
+        auto err = error{sec::runtime_error, "something went wrong"};
         step.on_error(err, steps...);
         return;
       }

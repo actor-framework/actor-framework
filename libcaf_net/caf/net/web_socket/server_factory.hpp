@@ -69,8 +69,8 @@ public:
     CAF_ASSERT(down_ptr != nullptr);
     super::down_ = down_ptr;
     if (!producer_->push(app_event)) {
-      return make_error(sec::runtime_error,
-                        "WebSocket connection dropped: client canceled");
+      return error{sec::runtime_error,
+                   "WebSocket connection dropped: client canceled"};
     }
     auto& [pull, push] = ws_resources;
     return super::init(&down_ptr->mpx(), std::move(pull), std::move(push));

@@ -32,7 +32,7 @@ void cleanup_and_release(resumable* ptr) {
     case resumable::io_actor: {
       auto dptr = static_cast<scheduled_actor*>(ptr);
       dummy_scheduler dummy;
-      dptr->cleanup(make_error(exit_reason::user_shutdown), &dummy);
+      dptr->cleanup(error{exit_reason::user_shutdown}, &dummy);
       while (!dummy.resumables.empty()) {
         auto sub = dummy.resumables.back();
         dummy.resumables.pop_back();
@@ -40,7 +40,7 @@ void cleanup_and_release(resumable* ptr) {
           case resumable::scheduled_actor:
           case resumable::io_actor: {
             auto dsub = static_cast<scheduled_actor*>(sub);
-            dsub->cleanup(make_error(exit_reason::user_shutdown), &dummy);
+            dsub->cleanup(error{exit_reason::user_shutdown}, &dummy);
             break;
           }
           default:

@@ -195,7 +195,7 @@ make_blocking_consumer(consumer_resource<T> res) {
     using impl_t = typename blocking_consumer<T>::impl;
     return {blocking_consumer<T>{make_counted<impl_t>(std::move(buf))}};
   } else {
-    return {make_error(sec::cannot_open_resource)};
+    return {error{sec::cannot_open_resource}};
   }
 }
 

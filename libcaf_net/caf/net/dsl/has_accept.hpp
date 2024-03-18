@@ -53,9 +53,9 @@ public:
     if (!ptr) {
       return dref.make(server_config::fail_v, cfg, cfg.cannot_add_ctx());
     } else if (ptr->ctx) {
-      auto err = make_error(sec::logic_error,
-                            "passed an ssl::tcp_acceptor to a factory "
-                            "with a valid SSL context");
+      auto err = error{sec::logic_error,
+                       "passed an ssl::tcp_acceptor to a factory "
+                       "with a valid SSL context"};
       return dref.make(server_config::fail_v, std::move(err));
     } else {
       ptr->ctx = std::make_shared<ssl::context>(std::move(acc.ctx()));

@@ -165,7 +165,7 @@ public:
     if (impl_)
       return impl_->abort_reason();
     else
-      return make_error(sec::disposed);
+      return sec::disposed;
   }
 
   explicit operator bool() const noexcept {

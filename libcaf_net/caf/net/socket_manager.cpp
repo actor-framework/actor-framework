@@ -155,7 +155,7 @@ void socket_manager::handle_error(sec code) {
     disposed_ = true;
   if (handler_) {
     if (!shutting_down_) {
-      handler_->abort(make_error(code));
+      handler_->abort(error{code});
       shutting_down_ = true;
       run_delayed_actions();
     }

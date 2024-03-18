@@ -22,7 +22,7 @@ expected<std::string_view> process_lines(std::string_view input, F&& f) {
     size_t pos = input.find(eol);
     // Stop when not finding the delimiter.
     if (pos == std::string_view::npos)
-      return make_error(sec::logic_error, "EOL delimiter not found");
+      return error{sec::logic_error, "EOL delimiter not found"};
     // Stop at the first empty line and return the remainder.
     if (pos == 0) {
       input.remove_prefix(eol.size());
@@ -30,7 +30,7 @@ expected<std::string_view> process_lines(std::string_view input, F&& f) {
     }
     // Stop if the predicate returns false.
     if (!f(input.substr(0, pos)))
-      return make_error(sec::logic_error, "Predicate function failed");
+      return error{sec::logic_error, "Predicate function failed"};
     // Drop the consumed line from the input for the next iteration.
     input.remove_prefix(pos + eol.size());
   }

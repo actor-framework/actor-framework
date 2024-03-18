@@ -8,6 +8,7 @@
 #include "caf/net/tcp_stream_socket.hpp"
 
 #include "caf/expected.hpp"
+#include "caf/format_to_error.hpp"
 
 namespace caf::net::ssl {
 
@@ -34,15 +35,17 @@ tcp_acceptor::make_with_cert_file(tcp_accept_socket fd,
                                   format file_format) {
   auto ctx = context::make_server(tls::any);
   if (!ctx) {
-    return {make_error(sec::runtime_error, "unable to create SSL context")};
+    return {error{sec::runtime_error, "unable to create SSL context"}};
   }
   if (!ctx->use_certificate_file(cert_file_path, file_format)) {
-    return {make_error(sec::runtime_error, "unable to load certificate file",
-                       ctx->last_error_string())};
+    return {format_to_error(sec::runtime_error,
+                            "unable to load certificate file: {}",
+                            ctx->last_error_string())};
   }
   if (!ctx->use_private_key_file(key_file_path, file_format)) {
-    return {make_error(sec::runtime_error, "unable to load private key file",
-                       ctx->last_error_string())};
+    return {format_to_error(sec::runtime_error,
+                            "unable to load private key file: {}",
+                            ctx->last_error_string())};
   }
   return {tcp_acceptor{fd, std::move(*ctx)}};
 }
@@ -55,7 +58,7 @@ tcp_acceptor::make_with_cert_file(uint16_t port, const char* cert_file_path,
     return tcp_acceptor::make_with_cert_file(*fd, cert_file_path, key_file_path,
                                              file_format);
   } else {
-    return {make_error(sec::cannot_open_port)};
+    return {error{sec::cannot_open_port}};
   }
 }
 

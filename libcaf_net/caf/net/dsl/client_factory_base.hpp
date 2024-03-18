@@ -94,8 +94,8 @@ protected:
       using res_t = decltype(fn(std::forward<fd_t>(fd)));
       auto* sub = cfg_->as_has_make_ctx();
       if (sub == nullptr) {
-        auto err = make_error(sec::logic_error,
-                              "required SSL but no context available");
+        auto err = error{sec::logic_error,
+                         "required SSL but no context available"};
         return res_t{std::move(err)};
       }
       std::shared_ptr<ssl::context> ctx;

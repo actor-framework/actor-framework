@@ -270,8 +270,8 @@ make_route(std::string path, std::optional<http::method> method, F f) {
                 "F must take 'responder&' as first argument");
   // The path must be absolute.
   if (path.empty() || path.front() != '/') {
-    return make_error(sec::invalid_argument,
-                      "expected an absolute path, got: " + path);
+    return error{sec::invalid_argument,
+                 "expected an absolute path, got: " + path};
   }
   // The path must have as many <arg> entries as F takes extra arguments.
   auto num_args = detail::args_in_path(path);
@@ -281,7 +281,7 @@ make_route(std::string path, std::optional<http::method> method, F f) {
     detail::print(msg, num_args);
     msg += " arguments, but F accepts ";
     detail::print(msg, f_trait::num_args - 1);
-    return make_error(sec::invalid_argument, std::move(msg));
+    return error{sec::invalid_argument, std::move(msg)};
   }
   // Create the object.
   return detail::make_http_route_impl(path, method, f, f_args{});

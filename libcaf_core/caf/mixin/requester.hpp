@@ -59,7 +59,7 @@ public:
       pending_msg = self->request_response_timeout(timeout, req_id);
     } else {
       self->enqueue(make_mailbox_element(self->ctrl(), req_id.response_id(),
-                                         make_error(sec::invalid_argument)),
+                                         error{sec::invalid_argument}),
                     self->context());
       self->home_system().base_metrics().rejected_messages->inc();
     }
@@ -122,7 +122,7 @@ public:
     if (ids.empty()) {
       auto req_id = dptr->new_request_id(Prio);
       dptr->enqueue(make_mailbox_element(dptr->ctrl(), req_id.response_id(),
-                                         make_error(sec::invalid_argument)),
+                                         error{sec::invalid_argument}),
                     dptr->context());
       ids.emplace_back(req_id.response_id());
     }

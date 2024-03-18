@@ -32,13 +32,13 @@ error framing::validate_closing_payload(const_byte_span payload) {
   if (payload.empty())
     return {};
   if (payload.size() == 1)
-    return make_error(caf::sec::protocol_error,
-                      "non empty closing payload must have at least two bytes");
+    return error{caf::sec::protocol_error,
+                 "non empty closing payload must have at least two bytes"};
   auto status = (std::to_integer<uint16_t>(payload[0]) << 8)
                 + std::to_integer<uint16_t>(payload[1]);
   if (!detail::rfc3629::valid(payload.subspan(2)))
-    return make_error(sec::protocol_error,
-                      "malformed UTF-8 text message in closing payload");
+    return error{sec::protocol_error,
+                 "malformed UTF-8 text message in closing payload"};
   // statuses between 3000 and 4999 are allowed and application specific
   if (status >= 3000 && status < 5000)
     return {};
@@ -61,8 +61,7 @@ error framing::validate_closing_payload(const_byte_span payload) {
         break;
     }
   }
-  return make_error(sec::protocol_error,
-                    "invalid status code in closing payload");
+  return error{sec::protocol_error, "invalid status code in closing payload"};
 }
 
 // -- octet_stream::upper_layer implementation ---------------------------------
@@ -162,7 +161,7 @@ bool framing::end_text_message() {
 error framing::validate_header(ptrdiff_t hdr_bytes) const noexcept {
   auto make_error_with_log = [](const char* message) {
     log::net::debug(message);
-    return make_error(sec::protocol_error, message);
+    return error{sec::protocol_error, message};
   };
   if (detail::rfc6455::is_control_frame(hdr_.opcode)) {
     // Control frames can have a payload up to 125 bytes and can't be
