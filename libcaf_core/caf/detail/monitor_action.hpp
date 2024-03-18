@@ -5,20 +5,20 @@
 #pragma once
 
 #include "caf/action.hpp"
-#include "caf/system_messages.hpp"
+#include "caf/error.hpp"
 
 #include <mutex>
 
 namespace caf::detail {
 
 /// A thread safe single shot action encapsulating a function and a function
-/// argument @ref down_msg.
+/// argument @ref error.
 template <class F>
 class monitor_action : public detail::atomic_ref_counted, public action::impl {
 public:
   explicit monitor_action(F fn)
     : state_(action::state::scheduled),
-      f_(function_wrapper{std::move(fn), down_msg{}}) {
+      f_(function_wrapper{std::move(fn), error{}}) {
     // nop
   }
 
@@ -57,10 +57,10 @@ public:
     return resumable::done;
   }
 
-  bool arg(down_msg err) {
+  bool arg(error value) {
     std::lock_guard guard{mtx_};
     if (state_ == action::state::scheduled) {
-      f_.arg = std::move(err);
+      f_.arg = std::move(value);
       return true;
     }
     return false;
@@ -85,7 +85,7 @@ public:
 private:
   struct function_wrapper {
     F f;
-    down_msg arg;
+    error arg;
     auto operator()() {
       return std::move(f)(std::move(arg));
     }
