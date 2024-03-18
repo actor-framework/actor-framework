@@ -7,6 +7,7 @@
 #include "caf/test/test.hpp"
 
 #include "caf/expected.hpp"
+#include "caf/format_to_error.hpp"
 #include "caf/parser_state.hpp"
 
 #include <string>
@@ -31,7 +32,7 @@ struct string_parser {
     detail::parser::read_string(res, f);
     if (res.code == pec::success)
       return f.x;
-    return make_error(res.code, res.column, std::string{res.i, res.e});
+    return res.error();
   }
 };
 

@@ -229,8 +229,6 @@ private:
 
   std::string current_field_name();
 
-  std::string mandatory_field_missing_str(std::string_view name);
-
   template <bool PopOrAdvanceOnSuccess, class F>
   bool consume(const char* fun_name, F f);
 

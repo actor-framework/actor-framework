@@ -11,6 +11,7 @@
 #include "caf/detail/socket_sys_includes.hpp"
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
+#include "caf/format_to_error.hpp"
 #include "caf/logger.hpp"
 #include "caf/sec.hpp"
 
@@ -50,8 +51,8 @@ namespace caf::net {
 
 error allow_sigpipe(network_socket x, bool) {
   if (x == invalid_socket)
-    return make_error(sec::network_syscall_failed, "setsockopt",
-                      "invalid socket");
+    return make_error(sec::network_syscall_failed,
+                      "allow_sigpipe: invalid socket");
   return none;
 }
 
@@ -73,8 +74,8 @@ error allow_sigpipe(network_socket x, [[maybe_unused]] bool new_value) {
                              static_cast<unsigned>(sizeof(value))));
 #  else  // CAF_HAS_NO_SIGPIPE_SOCKET_FLAG
   if (x == invalid_socket)
-    return make_error(sec::network_syscall_failed, "setsockopt",
-                      "invalid socket");
+    return make_error(sec::network_syscall_failed,
+                      "allow_sigpipe: invalid socket");
 #  endif // CAF_HAS_NO_SIGPIPE_SOCKET_FLAG
   return none;
 }
@@ -82,8 +83,8 @@ error allow_sigpipe(network_socket x, [[maybe_unused]] bool new_value) {
 error allow_udp_connreset(network_socket x, bool) {
   // SIO_UDP_CONNRESET only exists on Windows
   if (x == invalid_socket)
-    return make_error(sec::network_syscall_failed, "WSAIoctl",
-                      "invalid socket");
+    return make_error(sec::network_syscall_failed,
+                      "allow_udp_connreset: invalid socket");
   return none;
 }
 
@@ -125,7 +126,9 @@ expected<std::string> local_addr(network_socket x) {
     default:
       break;
   }
-  return make_error(sec::invalid_protocol_family, "local_addr", sa->sa_family);
+  return format_to_error(sec::invalid_protocol_family,
+                         "local_addr: invalid protocol family {}",
+                         sa->sa_family);
 }
 
 expected<uint16_t> local_port(network_socket x) {
@@ -153,7 +156,9 @@ expected<std::string> remote_addr(network_socket x) {
     default:
       break;
   }
-  return make_error(sec::invalid_protocol_family, "remote_addr", sa->sa_family);
+  return format_to_error(sec::invalid_protocol_family,
+                         "remote_addr: invalid protocol family {}",
+                         sa->sa_family);
 }
 
 expected<uint16_t> remote_port(network_socket x) {

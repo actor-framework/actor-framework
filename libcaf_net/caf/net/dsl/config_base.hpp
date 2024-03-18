@@ -17,6 +17,7 @@
 #include "caf/defaults.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/error.hpp"
+#include "caf/format_to_error.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/sec.hpp"
@@ -51,10 +52,10 @@ public:
   /// Convenience function for setting a default error if `as_has_make_ctx`
   /// returns `nullptr` while trying to set an SSL context.
   error cannot_add_ctx() {
-    return make_error(
-      sec::logic_error,
-      "cannot add an SSL context or context factory to a config of type "
-        + std::string{name()});
+    return format_to_error(sec::logic_error,
+                           "cannot add an SSL context or context factory "
+                           "to a config of type {}",
+                           name());
   }
 
   /// Inspects the data of this configuration and returns a pointer to it as

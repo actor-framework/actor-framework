@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/error.hpp"
+#include "caf/format_to_error.hpp"
 #include "caf/sec.hpp"
 
 #include <cstdio>
@@ -14,8 +15,9 @@
 #define CAF_NET_SYSCALL(funname, var, op, rhs, expr)                           \
   auto var = expr;                                                             \
   if (var op rhs)                                                              \
-  return make_error(sec::network_syscall_failed, funname,                      \
-                    last_socket_error_as_string())
+  return format_to_error(sec::network_syscall_failed,                          \
+                         "error in function {}: {}", funname,                  \
+                         last_socket_error_as_string())
 
 /// Calls a C functions and calls exit() if `var op rhs` returns `true`.
 #define CAF_NET_CRITICAL_SYSCALL(funname, var, op, rhs, expr)                  \

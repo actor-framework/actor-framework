@@ -277,7 +277,7 @@ error parse(std::string_view str, uri& dest) {
   parse(ps, dest);
   if (ps.code == pec::success)
     return none;
-  return make_error(ps);
+  return ps.error();
 }
 
 expected<uri> make_uri(std::string_view str) {
