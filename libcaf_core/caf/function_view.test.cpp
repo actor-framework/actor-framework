@@ -112,6 +112,15 @@ TEST("cell_function_view") {
   check_eq(f(get_atom_v), 1024);
 }
 
+TEST("calling function_view on an actor that quit") {
+  using namespace std::chrono_literals;
+  auto simple = system.spawn(simple_cell);
+  auto f = make_function_view(simple);
+  anon_send_exit(simple, exit_reason::user_shutdown);
+  system.registry().await_running_count_equal(1);
+  check_eq(f(get_atom_v), sec::bad_function_call);
+}
+
 } // WITH_FIXTURE(fixture)
 
 } // namespace

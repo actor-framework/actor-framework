@@ -17,6 +17,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The `actor_from_state` utility now evaluates spawn options such as `linked`
   (#1771). Previously, passing this option to `actor_from_state` resulted in a
   compiler error.
+- Sending a message to an already terminated actor from a `function_view` now
+  properly reports an error (#1801).
 
 ### Removed
 

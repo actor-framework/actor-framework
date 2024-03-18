@@ -183,7 +183,13 @@ public:
       self_->mail(std::forward<Ts>(xs)...)
         .request(impl_, timeout)
         .receive(function_view_storage_t<value_type>{result.value},
-                 [&err](error& x) { err = std::move(x); });
+                 [&err](error& x) {
+                   if (!x) {
+                     err = caf::make_error(sec::bad_function_call);
+                     return;
+                   }
+                   err = std::move(x);
+                 });
       if (err)
         return result_type{err};
       else
