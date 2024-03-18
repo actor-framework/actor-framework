@@ -283,13 +283,16 @@ public:
     return self_->make_response_promise();
   }
 
-  void add_awaited_response_handler(message_id response_id, behavior bhvr) {
-    return self_->add_awaited_response_handler(response_id, std::move(bhvr));
+  void add_awaited_response_handler(message_id response_id, behavior bhvr,
+                                    disposable pending_timeout = {}) {
+    return self_->add_awaited_response_handler(response_id, std::move(bhvr),
+                                               std::move(pending_timeout));
   }
 
-  void add_multiplexed_response_handler(message_id response_id, behavior bhvr) {
-    return self_->add_multiplexed_response_handler(response_id,
-                                                   std::move(bhvr));
+  void add_multiplexed_response_handler(message_id response_id, behavior bhvr,
+                                        disposable pending_timeout = {}) {
+    return self_->add_multiplexed_response_handler(response_id, std::move(bhvr),
+                                                   std::move(pending_timeout));
   }
 
   template <class Handle, class... Ts>
@@ -311,6 +314,11 @@ public:
   /// @private
   void reset(scheduled_actor* ptr) {
     self_ = ptr;
+  }
+
+  /// @private
+  bool enqueue(mailbox_element_ptr what, scheduler* sched) {
+    return self_->enqueue(std::move(what), sched);
   }
 
   operator scheduled_actor*() const noexcept {
