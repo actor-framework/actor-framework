@@ -5,6 +5,12 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ## [Unreleased]
 
+### Changed
+
+- Stateful actors now provide a getter function `state()` instead of declaring a
+  public `state` member variable. This change enables more flexibility in the
+  implementation for future CAF versions.
+
 ### Fixed
 
 - Fix building CAF with shared libraries (DLLs) enabled on Windows (#1715).

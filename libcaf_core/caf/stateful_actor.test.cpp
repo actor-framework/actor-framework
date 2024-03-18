@@ -29,8 +29,8 @@ struct counter {
 
 behavior adder(stateful_actor<counter>* self) {
   return {
-    [=](add_atom, int x) { self->state.value += x; },
-    [=](get_atom) { return self->state.value; },
+    [=](add_atom, int x) { self->state().value += x; },
+    [=](get_atom) { return self->state().value; },
   };
 }
 
@@ -48,8 +48,8 @@ public:
 typed_adder_actor::behavior_type
 typed_adder(typed_adder_actor::stateful_pointer<counter> self) {
   return {
-    [=](add_atom, int x) { self->state.value += x; },
-    [=](get_atom) { return self->state.value; },
+    [=](add_atom, int x) { self->state().value += x; },
+    [=](get_atom) { return self->state().value; },
   };
 }
 
@@ -173,7 +173,7 @@ TEST("states can accept constructor arguments and provide a behavior") {
   };
   using actor_type = stateful_actor<state_type>;
   auto testee = sys.spawn<actor_type>(10, 20, add_operation);
-  auto& state = deref<actor_type>(testee).state;
+  auto& state = deref<actor_type>(testee).state();
   check_eq(state.x, 10);
   check_eq(state.y, 20);
   inject().with(get_atom_v).from(self).to(testee);
@@ -210,7 +210,7 @@ TEST("states optionally take the self pointer as first argument") {
   };
   using actor_type = stateful_actor<state_type>;
   auto testee = sys.spawn<actor_type>(10);
-  auto& state = deref<actor_type>(testee).state;
+  auto& state = deref<actor_type>(testee).state();
   check(state.self == &deref<actor_type>(testee));
   check_eq(state.x, 10);
   inject().with(get_atom_v).from(self).to(testee);
@@ -237,7 +237,7 @@ TEST("typed actors can use typed_actor_pointer as self pointer") {
   };
   using actor_type = typed_adder_actor::stateful_impl<state_type>;
   auto testee = sys.spawn<actor_type>(10);
-  auto& state = deref<actor_type>(testee).state;
+  auto& state = deref<actor_type>(testee).state();
   check(state.self == &deref<actor_type>(testee));
   check_eq(state.value, 10);
   inject().with(add_atom_v, 1).from(self).to(testee);
