@@ -5,6 +5,7 @@
 #include "caf/net/ssl/tls.hpp"
 
 #include "caf/config.hpp"
+#include "caf/detail/assert.hpp"
 
 CAF_PUSH_WARNINGS
 #include <openssl/ssl.h>

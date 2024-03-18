@@ -9,6 +9,7 @@
 #include "caf/net/socket_manager.hpp"
 
 #include "caf/defaults.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/log/net.hpp"
 
 #include <new>

@@ -9,6 +9,7 @@
 
 #include "caf/action.hpp"
 #include "caf/config.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/log/net.hpp"
 #include "caf/make_counted.hpp"
 

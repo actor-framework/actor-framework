@@ -6,6 +6,7 @@
 
 #include "caf/io/network/default_multiplexer.hpp"
 
+#include "caf/detail/assert.hpp"
 #include "caf/logger.hpp"
 
 #include <algorithm>

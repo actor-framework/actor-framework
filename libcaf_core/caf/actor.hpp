@@ -8,6 +8,7 @@
 #include "caf/actor_control_block.hpp"
 #include "caf/actor_traits.hpp"
 #include "caf/config.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/type_traits.hpp"

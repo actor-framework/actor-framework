@@ -6,6 +6,7 @@
 #include "caf/binary_serializer.hpp"
 #include "caf/byte_buffer.hpp"
 #include "caf/cow_vector.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/fwd.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/result.hpp"

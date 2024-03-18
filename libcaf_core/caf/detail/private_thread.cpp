@@ -6,6 +6,7 @@
 
 #include "caf/actor_system.hpp"
 #include "caf/config.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/detail/set_thread_name.hpp"
 #include "caf/log/core.hpp"
 #include "caf/resumable.hpp"

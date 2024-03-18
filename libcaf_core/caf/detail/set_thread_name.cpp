@@ -21,8 +21,7 @@
 
 namespace caf::detail {
 
-void set_thread_name(const char* name) {
-  CAF_IGNORE_UNUSED(name);
+void set_thread_name([[maybe_unused]] const char* name) {
 #ifdef CAF_WINDOWS
   // nop
 #else // CAF_WINDOWS

@@ -5,6 +5,7 @@
 #include "caf/json_writer.hpp"
 
 #include "caf/detail/append_hex.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/detail/print.hpp"
 
 namespace caf {

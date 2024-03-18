@@ -9,7 +9,7 @@
 #include "caf/io/middleman.hpp"
 
 #include "caf/actor_registry.hpp"
-#include "caf/config.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/extend.hpp"

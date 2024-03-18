@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/config.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/detail/parser/chars.hpp"
 #include "caf/detail/parser/is_char.hpp"
 #include "caf/detail/parser/read_number.hpp"

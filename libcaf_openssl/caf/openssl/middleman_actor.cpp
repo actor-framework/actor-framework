@@ -23,6 +23,7 @@
 #include "caf/actor.hpp"
 #include "caf/actor_proxy.hpp"
 #include "caf/actor_system_config.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/detail/socket_guard.hpp"
 #include "caf/log/openssl.hpp"
 #include "caf/log/system.hpp"

@@ -4,6 +4,7 @@
 
 #include "caf/io/datagram_servant.hpp"
 
+#include "caf/detail/assert.hpp"
 #include "caf/log/io.hpp"
 
 namespace caf::io {

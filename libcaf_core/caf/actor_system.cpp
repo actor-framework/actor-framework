@@ -9,6 +9,8 @@
 #include "caf/actor_ostream.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/defaults.hpp"
+#include "caf/detail/assert.hpp"
+#include "caf/detail/critical.hpp"
 #include "caf/detail/meta_object.hpp"
 #include "caf/detail/thread_safe_actor_clock.hpp"
 #include "caf/event_based_actor.hpp"

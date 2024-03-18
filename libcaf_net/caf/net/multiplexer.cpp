@@ -16,6 +16,7 @@
 #include "caf/async/execution_context.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/atomic_ref_counted.hpp"
+#include "caf/detail/critical.hpp"
 #include "caf/detail/latch.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/error.hpp"

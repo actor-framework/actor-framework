@@ -6,6 +6,7 @@
 
 #include "caf/anon_mail.hpp"
 #include "caf/default_attachable.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/mailbox_element.hpp"
 
@@ -116,9 +117,8 @@ const char* actor_pool::name() const {
   return "caf.actor-pool";
 }
 
-void actor_pool::on_cleanup(const error& reason) {
+void actor_pool::on_cleanup([[maybe_unused]] const error& reason) {
   CAF_PUSH_AID_FROM_PTR(this);
-  CAF_IGNORE_UNUSED(reason);
   CAF_LOG_TERMINATE_EVENT(this, reason);
 }
 

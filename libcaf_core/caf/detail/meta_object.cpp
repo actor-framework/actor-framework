@@ -9,6 +9,7 @@
 #include "caf/binary_serializer.hpp"
 #include "caf/config.hpp"
 #include "caf/deserializer.hpp"
+#include "caf/detail/critical.hpp"
 #include "caf/error.hpp"
 #include "caf/error_code.hpp"
 #include "caf/make_counted.hpp"
@@ -57,15 +58,16 @@ const meta_object& global_meta_object(type_id_t id) {
     if (!meta.type_name.empty())
       return meta;
   }
-  CAF_CRITICAL_FMT(
-    "found no meta object for type ID %d!\n"
+  auto msg = detail::format(
+    "found no meta object for type ID {}!\n"
     "        This usually means that run-time type initialization is missing.\n"
     "        With CAF_MAIN, make sure to pass all custom type ID blocks.\n"
     "        With a custom main, call (before any other CAF function):\n"
     "        - caf::core::init_global_meta_objects()\n"
     "        - <module>::init_global_meta_objects() for all loaded modules\n"
     "        - caf::init_global_meta_objects<T>() for all custom ID blocks",
-    static_cast<int>(id));
+    id);
+  CAF_CRITICAL(msg.c_str());
 }
 
 const meta_object* global_meta_object_or_null(type_id_t id) {
@@ -116,10 +118,11 @@ void set_global_meta_objects(type_id_t first_id, span<const meta_object> xs) {
         // Get null-terminated strings.
         auto name1 = std::string{out->type_name};
         auto name2 = std::string{x.type_name};
-        CAF_CRITICAL_FMT("type ID %d already assigned to %s "
-                         "(tried to override with %s)",
-                         static_cast<int>(std::distance(meta_objects, out)),
-                         name1.c_str(), name2.c_str());
+        auto msg = detail::format("type ID {} already assigned to {} "
+                                  "(tried to override with {})",
+                                  std::distance(meta_objects, out),
+                                  name1.c_str(), name2.c_str());
+        CAF_CRITICAL(msg.c_str());
       }
       ++out;
     }

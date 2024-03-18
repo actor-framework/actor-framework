@@ -11,6 +11,7 @@
 #include "caf/net/web_socket/handshake.hpp"
 
 #include "caf/byte_span.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/detail/base64.hpp"
 #include "caf/detail/message_flow_bridge.hpp"
 #include "caf/error.hpp"

@@ -5,6 +5,7 @@
 #include "caf/scoped_actor.hpp"
 
 #include "caf/actor_registry.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/log/system.hpp"
 #include "caf/spawn_options.hpp"
 

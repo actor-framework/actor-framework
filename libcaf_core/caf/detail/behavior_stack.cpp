@@ -4,6 +4,7 @@
 
 #include "caf/detail/behavior_stack.hpp"
 
+#include "caf/detail/assert.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/none.hpp"
 

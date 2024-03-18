@@ -4,6 +4,7 @@
 
 #include "caf/flow/op/pullable.hpp"
 
+#include "caf/detail/assert.hpp"
 #include "caf/flow/coordinator.hpp"
 
 namespace caf::flow::op {

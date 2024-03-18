@@ -6,6 +6,7 @@
 
 #include "caf/config.hpp"
 #include "caf/detail/core_export.hpp"
+#include "caf/detail/critical.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/node_id.hpp"

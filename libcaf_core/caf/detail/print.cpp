@@ -5,6 +5,7 @@
 #include "caf/detail/print.hpp"
 
 #include "caf/config.hpp"
+#include "caf/detail/assert.hpp"
 
 namespace caf::detail {
 

@@ -6,6 +6,8 @@
 
 #include "caf/io/middleman.hpp"
 
+#include "caf/detail/assert.hpp"
+
 namespace caf::io::basp {
 
 routing_table::routing_table(abstract_broker* parent) : parent_(parent) {
@@ -91,11 +93,9 @@ bool routing_table::erase_indirect(const node_id& dest) {
 void routing_table::add_direct(const connection_handle& hdl,
                                const node_id& nid) {
   std::unique_lock<std::mutex> guard{mtx_};
-  auto hdl_added = direct_by_hdl_.emplace(hdl, nid).second;
-  auto nid_added = direct_by_nid_.emplace(nid, hdl).second;
+  [[maybe_unused]] auto hdl_added = direct_by_hdl_.emplace(hdl, nid).second;
+  [[maybe_unused]] auto nid_added = direct_by_nid_.emplace(nid, hdl).second;
   CAF_ASSERT(hdl_added && nid_added);
-  CAF_IGNORE_UNUSED(hdl_added);
-  CAF_IGNORE_UNUSED(nid_added);
 }
 
 bool routing_table::add_indirect(const node_id& hop, const node_id& dest) {

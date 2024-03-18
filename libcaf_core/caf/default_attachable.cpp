@@ -6,6 +6,7 @@
 
 #include "caf/actor.hpp"
 #include "caf/actor_cast.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/message.hpp"
 #include "caf/system_messages.hpp"

@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/detail/assert.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/plain_ref_counted.hpp"
 #include "caf/disposable.hpp"

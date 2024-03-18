@@ -7,6 +7,7 @@
 
 #include "caf/actor_system.hpp"
 #include "caf/config.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/event_based_actor.hpp"

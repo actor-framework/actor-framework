@@ -6,6 +6,7 @@
 
 #include "caf/config_value.hpp"
 #include "caf/detail/append_hex.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/detail/overload.hpp"
 #include "caf/detail/parse.hpp"
 #include "caf/detail/parser/add_ascii.hpp"

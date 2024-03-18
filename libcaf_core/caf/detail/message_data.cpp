@@ -4,6 +4,7 @@
 
 #include "caf/detail/message_data.hpp"
 
+#include "caf/detail/assert.hpp"
 #include "caf/detail/meta_object.hpp"
 #include "caf/error.hpp"
 #include "caf/error_code.hpp"

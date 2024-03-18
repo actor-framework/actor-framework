@@ -9,6 +9,8 @@
 #include "caf/anon_mail.hpp"
 #include "caf/config.hpp"
 #include "caf/defaults.hpp"
+#include "caf/detail/assert.hpp"
+#include "caf/detail/critical.hpp"
 #include "caf/detail/default_invoke_result_visitor.hpp"
 #include "caf/detail/mailbox_factory.hpp"
 #include "caf/detail/private_thread.hpp"

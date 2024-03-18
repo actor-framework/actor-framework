@@ -7,6 +7,7 @@
 #include "caf/net/socket.hpp"
 #include "caf/net/socket_guard.hpp"
 
+#include "caf/detail/assert.hpp"
 #include "caf/detail/net_syscall.hpp"
 #include "caf/detail/socket_sys_aliases.hpp"
 #include "caf/detail/socket_sys_includes.hpp"

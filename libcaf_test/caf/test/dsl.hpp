@@ -11,6 +11,7 @@
 #include "caf/byte_buffer.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/actor_system_access.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/fwd.hpp"
 #include "caf/init_global_meta_objects.hpp"
 #include "caf/log/test.hpp"

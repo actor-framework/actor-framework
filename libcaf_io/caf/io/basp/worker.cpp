@@ -7,6 +7,7 @@
 #include "caf/io/basp/message_queue.hpp"
 
 #include "caf/actor_system.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/proxy_registry.hpp"
 #include "caf/scheduler.hpp"
 
@@ -16,7 +17,8 @@ namespace caf::io::basp {
 
 worker::worker(hub_type& hub, message_queue& queue, proxy_registry& proxies)
   : hub_(&hub), queue_(&queue), proxies_(&proxies), system_(&proxies.system()) {
-  CAF_IGNORE_UNUSED(pad_);
+  // Silence unused private field warning.
+  static_cast<void>(pad_);
 }
 
 worker::~worker() {

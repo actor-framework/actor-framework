@@ -4,6 +4,8 @@
 
 #include "caf/flow/scoped_coordinator.hpp"
 
+#include "caf/detail/assert.hpp"
+
 namespace caf::flow {
 
 // -- factories ----------------------------------------------------------------

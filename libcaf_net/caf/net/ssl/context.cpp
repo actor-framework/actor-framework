@@ -65,8 +65,9 @@ namespace {
 #endif
 
 template <class Enum>
-std::pair<SSL_CTX*, const char*>
-make_ctx(const SSL_METHOD* method, Enum min_val, Enum max_val) {
+std::pair<SSL_CTX*, const char*> make_ctx(const SSL_METHOD* method,
+                                          [[maybe_unused]] Enum min_val,
+                                          [[maybe_unused]] Enum max_val) {
   if (min_val > max_val && max_val != Enum::any)
     return {nullptr, "invalid version range"};
   auto ctx = SSL_CTX_new(method);
@@ -87,8 +88,6 @@ make_ctx(const SSL_METHOD* method, Enum min_val, Enum max_val) {
   } else {
     static_assert(std::is_same_v<Enum, dtls>);
     // Nothing to do for DTLS in this OpenSSL version.
-    CAF_IGNORE_UNUSED(min_val);
-    CAF_IGNORE_UNUSED(max_val);
   }
 #else
   if constexpr (std::is_same_v<Enum, tls>) {

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "caf/config.hpp"
+#include "caf/detail/assert.hpp"
 
 #include <cstddef>
 #include <string>

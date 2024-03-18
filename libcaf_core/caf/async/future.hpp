@@ -7,6 +7,7 @@
 #include "caf/actor_clock.hpp"
 #include "caf/async/execution_context.hpp"
 #include "caf/async/fwd.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/detail/async_cell.hpp"
 #include "caf/detail/beacon.hpp"
 #include "caf/disposable.hpp"

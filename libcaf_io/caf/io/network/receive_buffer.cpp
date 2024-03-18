@@ -5,6 +5,7 @@
 #include "caf/io/network/receive_buffer.hpp"
 
 #include "caf/config.hpp"
+#include "caf/detail/assert.hpp"
 
 #include <algorithm>
 

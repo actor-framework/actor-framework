@@ -6,6 +6,7 @@
 
 #include "caf/actor_system.hpp"
 #include "caf/attachable.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/exit_reason.hpp"
 #include "caf/log/core.hpp"

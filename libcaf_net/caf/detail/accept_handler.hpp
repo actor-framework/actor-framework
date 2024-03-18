@@ -9,6 +9,7 @@
 #include "caf/net/socket_manager.hpp"
 
 #include "caf/async/execution_context.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/detail/connection_factory.hpp"
 #include "caf/log/net.hpp"
 #include "caf/settings.hpp"

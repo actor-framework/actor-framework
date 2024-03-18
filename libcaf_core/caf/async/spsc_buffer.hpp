@@ -9,6 +9,7 @@
 #include "caf/async/producer.hpp"
 #include "caf/config.hpp"
 #include "caf/defaults.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/error.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/make_counted.hpp"

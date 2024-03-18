@@ -12,6 +12,7 @@
 #include "caf/cow_tuple.hpp"
 #include "caf/cow_vector.hpp"
 #include "caf/defaults.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/disposable.hpp"
 #include "caf/flow/coordinated.hpp"

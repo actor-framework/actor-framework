@@ -9,7 +9,7 @@
 
 #include "caf/action.hpp"
 #include "caf/callback.hpp"
-#include "caf/config.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/detail/default_invoke_result_visitor.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/invoke_message_result.hpp"

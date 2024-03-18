@@ -109,7 +109,6 @@ rw_state session::do_some(int (*f)(SSL*, void*, int), size_t& result, void* buf,
     }
   };
   auto lg = log::openssl::trace("len = {}, debug_name = {}", len, debug_name);
-  CAF_IGNORE_UNUSED(debug_name);
   if (connecting_) {
     log::openssl::debug("{} : connecting", debug_name);
     auto res = SSL_connect(ssl_);

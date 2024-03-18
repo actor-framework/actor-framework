@@ -8,6 +8,7 @@
 #include "caf/config_option.hpp"
 #include "caf/config_option_adder.hpp"
 #include "caf/defaults.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/detail/config_consumer.hpp"
 #include "caf/detail/parser/read_config.hpp"
 #include "caf/detail/parser/read_string.hpp"

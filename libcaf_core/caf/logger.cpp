@@ -305,7 +305,6 @@ public:
   // -- initialization ---------------------------------------------------------
 
   void init(const actor_system_config& cfg) override {
-    CAF_IGNORE_UNUSED(cfg);
     namespace lg = defaults::logger;
     using std::string;
     using string_list = std::vector<std::string>;
@@ -518,8 +517,7 @@ public:
     } else {
       // Note: we don't call system_->launch_thread here since we don't want to
       //       set a logger context in the logger thread.
-      auto f = [this](auto guard) {
-        CAF_IGNORE_UNUSED(guard);
+      auto f = [this](auto) {
         detail::set_thread_name("caf.logger");
         system_.thread_started(thread_owner::system);
         run();

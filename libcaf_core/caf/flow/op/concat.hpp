@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/detail/assert.hpp"
 #include "caf/flow/gen/from_container.hpp"
 #include "caf/flow/observer.hpp"
 #include "caf/flow/op/cold.hpp"

@@ -801,12 +801,13 @@ struct has_init_host_system {
 // GNU g++ 8.5.0 (almalinux-8) has a known bug where [[nodiscard] values are
 // reported as warnings, even in unevaluated context.
 // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=89070
-#if !defined(__clang__) && defined(__GNUC__)
-  CAF_PUSH_UNUSED_RESULT_WARNING
+#ifdef CAF_GCC
+#  pragma GCC diagnostic push
+#  pragma GCC diagnostic ignored "-Wunused-result"
 #endif
   template <class U>
   static auto sfinae(U*) -> decltype(U::init_host_system(), std::true_type());
-#if !defined(__clang__) && defined(__GNUC__)
+#ifdef CAF_GCC
   CAF_POP_WARNINGS
 #endif
 

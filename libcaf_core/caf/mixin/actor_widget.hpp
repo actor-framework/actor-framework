@@ -7,6 +7,7 @@
 #include "caf/actor_companion.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/config.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/make_actor.hpp"
 #include "caf/message_handler.hpp"
 

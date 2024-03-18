@@ -11,6 +11,7 @@
 #endif
 
 #include "caf/detail/core_export.hpp"
+#include "caf/detail/critical.hpp"
 #include "caf/detail/pp.hpp"
 
 #include <type_traits>

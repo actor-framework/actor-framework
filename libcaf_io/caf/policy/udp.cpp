@@ -34,7 +34,6 @@ bool udp::read_datagram(size_t& result, native_socket fd, void* buf,
   if (is_error(sres, true)) {
     // Make sure WSAGetLastError gets called immediately on Windows.
     auto err = last_socket_error();
-    CAF_IGNORE_UNUSED(err);
     log::io::error("recvfrom failed: {}", socket_error_as_string(err));
     return false;
   }
@@ -58,7 +57,6 @@ bool udp::write_datagram(size_t& result, native_socket fd, void* buf,
   if (is_error(sres, true)) {
     // Make sure WSAGetLastError gets called immediately on Windows.
     auto err = last_socket_error();
-    CAF_IGNORE_UNUSED(err);
     log::io::error("sendto failed: {}", socket_error_as_string(err));
     return false;
   }
