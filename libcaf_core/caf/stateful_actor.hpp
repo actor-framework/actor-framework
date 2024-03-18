@@ -47,9 +47,9 @@ public:
   template <class... Ts>
   explicit stateful_actor(actor_config& cfg, Ts&&... xs) : super(cfg) {
     if constexpr (std::is_constructible_v<State, Ts&&...>)
-      new (&state) State(std::forward<Ts>(xs)...);
+      new (&state_) State(std::forward<Ts>(xs)...);
     else
-      new (&state) State(this, std::forward<Ts>(xs)...);
+      new (&state_) State(this, std::forward<Ts>(xs)...);
   }
 
   ~stateful_actor() override {
@@ -60,7 +60,7 @@ public:
   /// @note when overriding this member function, make sure to call
   ///       `super::on_exit()` in order to clean up the state.
   void on_exit() override {
-    state.~State();
+    state_.~State();
   }
 
   const char* name() const override {
@@ -75,11 +75,17 @@ public:
     return Base::name();
   }
 
+  /// Returns a reference to the actor's state.
+  State& state() {
+    return state_;
+  }
+
+private:
   union {
     /// The actor's state. This member lives inside a union since its lifetime
     /// ends when the actor terminates while the actual actor object lives until
     /// its reference count drops to zero.
-    State state;
+    State state_;
   };
 };
 
@@ -97,7 +103,7 @@ typename Base::behavior_type stateful_actor_base<State, Base>::make_behavior() {
     return {unsafe_behavior_init, std::move(res)};
   }
   auto dptr = static_cast<stateful_actor<State, Base>*>(this);
-  return dptr->state.make_behavior();
+  return dptr->state().make_behavior();
 }
 
 } // namespace caf::detail

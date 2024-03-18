@@ -117,13 +117,13 @@ behavior config_serv_impl(stateful_actor<kvstate>* self) {
   auto lg = log::core::trace("");
   std::string wildcard = "*";
   auto unsubscribe_all = [=](actor subscriber) {
-    auto& subscribers = self->state.subscribers;
+    auto& subscribers = self->state().subscribers;
     auto ptr = actor_cast<strong_actor_ptr>(subscriber);
     auto i = subscribers.find(ptr);
     if (i == subscribers.end())
       return;
     for (auto& key : i->second)
-      self->state.data[key].second.erase(ptr);
+      self->state().data[key].second.erase(ptr);
     subscribers.erase(i);
   };
   self->set_down_handler([=](down_msg& dm) {
@@ -138,7 +138,7 @@ behavior config_serv_impl(stateful_actor<kvstate>* self) {
       auto lg = log::core::trace("key = {}, msg = {}", key, msg);
       if (key == "*")
         return;
-      auto& vp = self->state.data[key];
+      auto& vp = self->state().data[key];
       vp.first = std::move(msg);
       for (auto& subscriber_ptr : vp.second) {
         // we never put a nullptr in our map
@@ -147,7 +147,7 @@ behavior config_serv_impl(stateful_actor<kvstate>* self) {
           self->mail(update_atom_v, key, vp.first).send(subscriber);
       }
       // also iterate all subscribers for '*'
-      for (auto& subscriber : self->state.data[wildcard].second)
+      for (auto& subscriber : self->state().data[wildcard].second)
         if (subscriber != self->current_sender())
           self->mail(update_atom_v, key, vp.first)
             .send(actor_cast<actor>(subscriber));
@@ -157,13 +157,13 @@ behavior config_serv_impl(stateful_actor<kvstate>* self) {
       auto lg = log::core::trace("key = {}", key);
       if (key == wildcard) {
         std::vector<std::pair<std::string, message>> msgs;
-        for (auto& kvp : self->state.data)
+        for (auto& kvp : self->state().data)
           if (kvp.first != "*")
             msgs.emplace_back(kvp.first, kvp.second.first);
         return make_message(std::move(msgs));
       }
-      auto i = self->state.data.find(key);
-      return make_message(std::move(key), i != self->state.data.end()
+      auto i = self->state().data.find(key);
+      return make_message(std::move(key), i != self->state().data.end()
                                             ? i->second.first
                                             : make_message());
     },
@@ -173,8 +173,8 @@ behavior config_serv_impl(stateful_actor<kvstate>* self) {
       auto lg = log::core::trace("key = {}, subscriber = {}", key, subscriber);
       if (!subscriber)
         return;
-      self->state.data[key].second.insert(subscriber);
-      auto& subscribers = self->state.subscribers;
+      self->state().data[key].second.insert(subscriber);
+      auto& subscribers = self->state().subscribers;
       auto i = subscribers.find(subscriber);
       if (i != subscribers.end()) {
         i->second.insert(key);
@@ -193,8 +193,8 @@ behavior config_serv_impl(stateful_actor<kvstate>* self) {
         unsubscribe_all(actor_cast<actor>(std::move(subscriber)));
         return;
       }
-      self->state.subscribers[subscriber].erase(key);
-      self->state.data[key].second.erase(subscriber);
+      self->state().subscribers[subscriber].erase(key);
+      self->state().data[key].second.erase(subscriber);
     },
     // get a 'named' actor from the local registry
     [=](registry_lookup_atom, const std::string& name) {

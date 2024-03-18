@@ -59,8 +59,8 @@ struct cell_state {
 
 cell::behavior_type simple_cell(cell::stateful_pointer<cell_state> self) {
   return {
-    [=](put_atom, int val) { self->state.value = val; },
-    [=](get_atom) { return self->state.value; },
+    [=](put_atom, int val) { self->state().value = val; },
+    [=](get_atom) { return self->state().value; },
   };
 }
 
