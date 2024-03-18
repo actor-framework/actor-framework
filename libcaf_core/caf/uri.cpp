@@ -135,6 +135,11 @@ public:
     return *this;
   }
 
+  template <class... Ts>
+  nop_builder& userinfo(Ts&&...) {
+    return *this;
+  }
+
   template <class T>
   nop_builder& host(T&&) {
     return *this;
@@ -249,8 +254,12 @@ std::string to_string(const uri& x) {
 
 std::string to_string(const uri::authority_type& x) {
   std::string str;
-  if (!x.userinfo.empty()) {
-    uri::encode(str, x.userinfo);
+  if (x.userinfo) {
+    uri::encode(str, x.userinfo->name);
+    if (auto& pw = x.userinfo->password) {
+      str += ':';
+      uri::encode(str, *pw);
+    }
     str += '@';
   }
   auto f = caf::detail::make_overload(
