@@ -19,12 +19,14 @@ using detail::latch;
 namespace {
 
 struct testee : resumable, ref_counted {
-  testee(std::shared_ptr<latch> latch_handle)
+  explicit testee(std::shared_ptr<latch> latch_handle)
     : rendesvous(std::move(latch_handle)) {
   }
+
   subtype_t subtype() const noexcept override {
     return resumable::function_object;
   }
+
   resume_result resume(scheduler*, size_t max_throughput) override {
     if (++runs == 10) {
       rendesvous->count_down();
@@ -33,12 +35,15 @@ struct testee : resumable, ref_counted {
     }
     return resumable::resume_later;
   }
+
   void ref_resumable() const noexcept final {
     ref();
   }
+
   void deref_resumable() const noexcept final {
     deref();
   }
+
   std::atomic<size_t> runs = 0;
   std::atomic<size_t> received_throughput = 0;
   std::shared_ptr<latch> rendesvous;
@@ -51,13 +56,12 @@ OUTLINE("scheduling resumables") {
     cfg.set("caf.scheduler.max-throughput", 5);
     cfg.set("caf.scheduler.max-threads", 2);
     cfg.set("caf.scheduler.policy", sched);
-    actor_system sys(cfg);
-    auto& sut = sys.scheduler();
+    auto sys = std::make_unique<actor_system>(cfg);
     WHEN("scheduling a resumable") {
       auto rendesvous = std::make_shared<latch>(2);
       auto worker = make_counted<testee>(rendesvous);
       worker->ref();
-      sut.schedule(worker.get());
+      sys->scheduler().schedule(worker.get());
       THEN("expect the resumable to be executed until done") {
         rendesvous->count_down_and_wait();
         check_eq(worker->runs.load(), 10u);
@@ -77,7 +81,7 @@ OUTLINE("scheduling resumables") {
         workers.emplace_back(make_counted<testee>(rendesvous));
         workers.back()->ref();
         check_eq(workers.back()->get_reference_count(), 2u);
-        sut.schedule(workers.back().get());
+        sys->scheduler().schedule(workers.back().get());
       }
       THEN("expect the resumables to be executed until done") {
         rendesvous->count_down_and_wait();
@@ -90,6 +94,9 @@ OUTLINE("scheduling resumables") {
           check_eq(worker->received_throughput, 5u);
       }
       AND_THEN("the scheduler releases the ref when done") {
+        // Note: destroying the actor system here will cause CAF to shut down.
+        //       Ultimately stopping the scheduler and releasing the references.
+        sys = nullptr;
         for (const auto& worker : workers)
           check_eq(worker->get_reference_count(), 1u);
       }
@@ -103,23 +110,28 @@ OUTLINE("scheduling resumables") {
 }
 
 struct awaiting_testee : resumable, ref_counted {
-  awaiting_testee(std::shared_ptr<latch> latch_handle)
+  explicit awaiting_testee(std::shared_ptr<latch> latch_handle)
     : rendesvous(std::move(latch_handle)) {
   }
+
   subtype_t subtype() const noexcept override {
     return resumable::function_object;
   }
+
   resume_result resume(scheduler*, size_t) override {
     runs++;
     rendesvous->count_down();
     return resumable::awaiting_message;
   }
+
   void ref_resumable() const noexcept final {
     ref();
   }
+
   void deref_resumable() const noexcept final {
     deref();
   }
+
   std::atomic<size_t> runs = 0;
   std::shared_ptr<latch> rendesvous;
 };
@@ -131,15 +143,14 @@ OUTLINE("scheduling units that are awaiting") {
     cfg.set("caf.scheduler.policy", sched);
     cfg.set("caf.scheduler.max-threads", 2);
     cfg.set("caf.scheduler.max-throughput", 5);
-    actor_system sys(cfg);
-    auto& sut = sys.scheduler();
+    auto sys = std::make_unique<actor_system>(cfg);
     WHEN("having resumables that go to an awaiting state") {
       auto workers = std::vector<intrusive_ptr<awaiting_testee>>{};
       auto rendesvous = std::make_shared<latch>(11);
       for (int i = 0; i < 10; i++) {
         workers.push_back(make_counted<awaiting_testee>(rendesvous));
         workers.back()->ref();
-        sut.schedule(workers.back().get());
+        sys->scheduler().schedule(workers.back().get());
       }
       THEN("expect the resumables to be executed once") {
         rendesvous->count_down_and_wait();
@@ -148,6 +159,9 @@ OUTLINE("scheduling units that are awaiting") {
         }
       }
       AND_THEN("the scheduler releases the ref when done") {
+        // Note: destroying the actor system here will cause CAF to shut down.
+        //       Ultimately stopping the scheduler and releasing the references.
+        sys = nullptr;
         for (const auto& worker : workers)
           check_eq(worker->get_reference_count(), 1u);
       }
