@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/detail/assert.hpp"
 #include "caf/detail/type_list.hpp"
 #include "caf/flow/observer.hpp"
 #include "caf/flow/op/hot.hpp"

@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/attachable.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/functor_attachable.hpp"
 #include "caf/detail/type_traits.hpp"

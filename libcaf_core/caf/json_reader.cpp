@@ -4,6 +4,7 @@
 
 #include "caf/json_reader.hpp"
 
+#include "caf/detail/assert.hpp"
 #include "caf/detail/bounds_checker.hpp"
 #include "caf/detail/print.hpp"
 #include "caf/string_algorithms.hpp"

@@ -61,7 +61,6 @@ void manager::detach(scheduler*, bool invoke_disconnect_message) {
 
 void manager::io_failure(scheduler* ctx, operation op) {
   auto lg = log::io::trace("op = {}", op);
-  CAF_IGNORE_UNUSED(op);
   detach(ctx, true);
 }
 

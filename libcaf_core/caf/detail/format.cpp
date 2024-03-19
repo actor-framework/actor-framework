@@ -5,6 +5,7 @@
 #include "caf/detail/format.hpp"
 
 #include "caf/config.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/detail/consumer.hpp"
 #include "caf/detail/parser/chars.hpp"
 #include "caf/detail/parser/is_char.hpp"

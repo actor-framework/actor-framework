@@ -8,6 +8,7 @@
 #include "caf/io/fwd.hpp"
 #include "caf/io/system_messages.hpp"
 
+#include "caf/detail/assert.hpp"
 #include "caf/fwd.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/proxy_registry.hpp"

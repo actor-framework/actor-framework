@@ -9,6 +9,7 @@
 #include "caf/net/web_socket/default_trait.hpp"
 #include "caf/net/web_socket/server_factory.hpp"
 
+#include "caf/detail/assert.hpp"
 #include "caf/type_list.hpp"
 
 #include <memory>

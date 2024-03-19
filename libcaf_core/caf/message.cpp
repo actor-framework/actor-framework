@@ -8,6 +8,7 @@
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/deserializer.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/detail/meta_object.hpp"
 #include "caf/detail/type_id_list_builder.hpp"
 #include "caf/message_builder.hpp"

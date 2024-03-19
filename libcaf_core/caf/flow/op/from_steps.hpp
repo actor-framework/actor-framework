@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/defaults.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/detail/plain_ref_counted.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/detail/type_list.hpp"

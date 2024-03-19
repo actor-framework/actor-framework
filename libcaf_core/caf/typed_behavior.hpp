@@ -179,10 +179,10 @@ public:
     using other_signatures = type_list<Ts...>;
     using m = interface_mismatch_t<other_signatures, signatures>;
     // trigger static assert on mismatch
-    detail::static_error_printer<static_cast<int>(sizeof...(Ts)), m::value,
-                                 typename m::xs, typename m::ys>
-      guard;
-    CAF_IGNORE_UNUSED(guard);
+    using guard_t
+      = detail::static_error_printer<static_cast<int>(sizeof...(Ts)), m::value,
+                                     typename m::xs, typename m::ys>;
+    [[maybe_unused]] guard_t guard;
   }
 
   template <class T, class... Ts>
@@ -256,10 +256,10 @@ private:
     using found_signatures = type_list<deduce_mpi_t<Ts>...>;
     using m = interface_mismatch_t<found_signatures, signatures>;
     // trigger static assert on mismatch
-    detail::static_error_printer<static_cast<int>(sizeof...(Ts)), m::value,
-                                 typename m::xs, typename m::ys>
-      guard;
-    CAF_IGNORE_UNUSED(guard);
+    using guard_t
+      = detail::static_error_printer<static_cast<int>(sizeof...(Ts)), m::value,
+                                     typename m::xs, typename m::ys>;
+    [[maybe_unused]] guard_t guard;
     // final (type-erasure) step
     intrusive_ptr<detail::behavior_impl> ptr = std::move(bp);
     bhvr_.assign(std::move(ptr));

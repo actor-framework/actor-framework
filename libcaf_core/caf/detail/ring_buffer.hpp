@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/config.hpp"
+#include "caf/detail/assert.hpp"
 
 #include <algorithm>
 #include <memory>

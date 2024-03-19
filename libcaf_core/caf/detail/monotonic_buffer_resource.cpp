@@ -6,6 +6,7 @@
 
 #include "caf/raise_error.hpp"
 
+#include <cstdlib>
 #include <limits>
 #include <memory>
 

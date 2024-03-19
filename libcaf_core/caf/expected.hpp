@@ -8,6 +8,7 @@
 
 #include "caf/config.hpp"
 #include "caf/deep_to_string.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/error.hpp"
 #include "caf/is_error_code_enum.hpp"

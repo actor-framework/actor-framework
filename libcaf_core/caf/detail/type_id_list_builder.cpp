@@ -5,6 +5,7 @@
 #include "caf/detail/type_id_list_builder.hpp"
 
 #include "caf/config.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/hash/fnv.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/type_id_list.hpp"

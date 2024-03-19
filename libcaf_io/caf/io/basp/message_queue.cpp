@@ -4,6 +4,8 @@
 
 #include "caf/io/basp/message_queue.hpp"
 
+#include "caf/detail/assert.hpp"
+
 #include <iterator>
 
 namespace caf::io::basp {

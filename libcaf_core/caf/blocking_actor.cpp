@@ -7,6 +7,7 @@
 #include "caf/actor_registry.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/anon_mail.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/detail/default_invoke_result_visitor.hpp"
 #include "caf/detail/invoke_result_visitor.hpp"
 #include "caf/detail/private_thread.hpp"

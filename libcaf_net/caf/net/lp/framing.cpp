@@ -3,6 +3,7 @@
 #include "caf/net/octet_stream/lower_layer.hpp"
 #include "caf/net/receive_policy.hpp"
 
+#include "caf/detail/assert.hpp"
 #include "caf/detail/network_order.hpp"
 #include "caf/error.hpp"
 #include "caf/log/net.hpp"

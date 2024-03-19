@@ -4,6 +4,7 @@
 
 #include "caf/settings.hpp"
 
+#include "caf/detail/assert.hpp"
 #include "caf/string_algorithms.hpp"
 
 namespace caf {

@@ -5,6 +5,7 @@
 #include "caf/net/network_socket.hpp"
 
 #include "caf/config.hpp"
+#include "caf/detail/critical.hpp"
 #include "caf/detail/net_syscall.hpp"
 #include "caf/detail/socket_sys_aliases.hpp"
 #include "caf/detail/socket_sys_includes.hpp"

@@ -8,6 +8,7 @@
 #include "caf/binary_serializer.hpp"
 #include "caf/deserializer.hpp"
 #include "caf/detail/append_hex.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/detail/overload.hpp"
 #include "caf/detail/parse.hpp"
 #include "caf/detail/parser/read_uri.hpp"

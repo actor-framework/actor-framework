@@ -6,6 +6,7 @@
 
 #include "caf/actor_traits.hpp"
 #include "caf/config.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/detail/to_statically_typed_trait.hpp"
 #include "caf/event_based_mail.hpp"
 #include "caf/extend.hpp"

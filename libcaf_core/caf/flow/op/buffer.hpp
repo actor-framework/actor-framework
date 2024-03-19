@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/cow_vector.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/flow/coordinator.hpp"
 #include "caf/flow/observable_decl.hpp"
 #include "caf/flow/observer.hpp"

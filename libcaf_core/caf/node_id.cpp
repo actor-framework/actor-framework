@@ -9,6 +9,7 @@
 #include "caf/config.hpp"
 #include "caf/deserializer.hpp"
 #include "caf/detail/append_hex.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/detail/get_process_id.hpp"
 #include "caf/detail/parse.hpp"
 #include "caf/detail/parser/ascii_to_int.hpp"

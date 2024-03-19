@@ -16,7 +16,7 @@ int get_utc_offset(const tm& time_buf) noexcept {
     _tzset();
     return true;
   }();
-  CAF_IGNORE_UNUSED(unused);
+  static_cast<void>(unused);
 #  endif
   // Get the timezone offset in seconds.
   long offset = 0;
@@ -71,6 +71,7 @@ time_t tm_to_time_t(tm& time_buf) noexcept {
 #endif
 
 #include "caf/chrono.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/detail/parser/read_timestamp.hpp"
 #include "caf/detail/print.hpp"
 #include "caf/error.hpp"

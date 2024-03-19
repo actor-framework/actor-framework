@@ -7,6 +7,7 @@
 #include "caf/async/batch.hpp"
 #include "caf/async/producer.hpp"
 #include "caf/defaults.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/plain_ref_counted.hpp"
 #include "caf/detail/type_traits.hpp"

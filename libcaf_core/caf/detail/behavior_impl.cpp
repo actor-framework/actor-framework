@@ -4,6 +4,7 @@
 
 #include "caf/detail/behavior_impl.hpp"
 
+#include "caf/detail/assert.hpp"
 #include "caf/message_handler.hpp"
 
 #include <utility>

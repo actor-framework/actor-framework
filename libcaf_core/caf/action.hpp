@@ -6,6 +6,7 @@
 
 #include "caf/allowed_unsafe_message_type.hpp"
 #include "caf/config.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/detail/atomic_ref_counted.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/disposable.hpp"

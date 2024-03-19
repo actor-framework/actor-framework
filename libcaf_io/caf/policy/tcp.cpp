@@ -35,7 +35,6 @@ rw_state tcp::read_some(size_t& result, native_socket fd, void* buf,
   if (is_error(sres, true)) {
     // Make sure WSAGetLastError gets called immediately on Windows.
     auto err = last_socket_error();
-    CAF_IGNORE_UNUSED(err);
     log::io::error("recv failed: {}", socket_error_as_string(err));
     return rw_state::failure;
   } else if (sres == 0) {
@@ -56,7 +55,6 @@ rw_state tcp::write_some(size_t& result, native_socket fd, const void* buf,
   if (is_error(sres, true)) {
     // Make sure WSAGetLastError gets called immediately on Windows.
     auto err = last_socket_error();
-    CAF_IGNORE_UNUSED(err);
     log::io::error("send failed: {}", socket_error_as_string(err));
     return rw_state::failure;
   }

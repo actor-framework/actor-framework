@@ -4,6 +4,7 @@
 
 #include "caf/response_promise.hpp"
 
+#include "caf/detail/assert.hpp"
 #include "caf/detail/profiled_send.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/log/core.hpp"

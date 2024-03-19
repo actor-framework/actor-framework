@@ -4,6 +4,7 @@
 
 #include "caf/config_value.hpp"
 
+#include "caf/detail/assert.hpp"
 #include "caf/detail/config_consumer.hpp"
 #include "caf/detail/meta_object.hpp"
 #include "caf/detail/overload.hpp"

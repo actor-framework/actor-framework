@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/detail/assert.hpp"
 #include "caf/detail/test_export.hpp"
 #include "caf/error.hpp"
 #include "caf/expected.hpp"

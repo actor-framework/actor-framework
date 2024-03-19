@@ -529,8 +529,7 @@ public:
 
   template <class F>
   std::thread launch_thread(const char* thread_name, thread_owner tag, F fun) {
-    auto body = [this, thread_name, tag, f{std::move(fun)}](auto guard) {
-      CAF_IGNORE_UNUSED(guard);
+    auto body = [this, thread_name, tag, f = std::move(fun)](auto) {
       CAF_SET_LOGGER_SYS(this);
       detail::set_thread_name(thread_name);
       thread_started(tag);
@@ -624,7 +623,6 @@ public:
   private:
     // @pre `ready == true`
     void reset() {
-      CAF_ASSERT(ready);
       ready = false;
       fn.~F();
     }

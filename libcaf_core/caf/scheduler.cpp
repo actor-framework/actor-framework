@@ -10,6 +10,7 @@
 #include "caf/blocking_actor.hpp"
 #include "caf/config.hpp"
 #include "caf/defaults.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/detail/cleanup_and_release.hpp"
 #include "caf/detail/default_thread_count.hpp"
 #include "caf/detail/double_ended_queue.hpp"

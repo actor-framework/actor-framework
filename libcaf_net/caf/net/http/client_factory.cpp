@@ -4,6 +4,8 @@
 
 #include "caf/net/http/client_factory.hpp"
 
+#include "caf/detail/assert.hpp"
+
 namespace caf::net::http {
 
 expected<std::pair<async::future<response>, disposable>>

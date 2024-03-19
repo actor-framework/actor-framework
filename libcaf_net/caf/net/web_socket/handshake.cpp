@@ -8,6 +8,7 @@
 #include "caf/net/http/status.hpp"
 
 #include "caf/config.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/detail/base64.hpp"
 #include "caf/hash/sha1.hpp"
 #include "caf/string_algorithms.hpp"

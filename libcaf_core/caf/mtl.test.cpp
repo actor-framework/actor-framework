@@ -8,6 +8,7 @@
 #include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
+#include "caf/detail/assert.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/json_reader.hpp"
 #include "caf/json_writer.hpp"

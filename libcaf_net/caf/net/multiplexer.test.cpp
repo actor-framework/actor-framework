@@ -11,6 +11,7 @@
 #include "caf/net/stream_socket.hpp"
 
 #include "caf/byte_buffer.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/detail/latch.hpp"
 #include "caf/log/test.hpp"
 #include "caf/span.hpp"

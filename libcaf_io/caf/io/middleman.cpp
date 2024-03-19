@@ -15,6 +15,7 @@
 #include "caf/anon_mail.hpp"
 #include "caf/config.hpp"
 #include "caf/defaults.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/detail/latch.hpp"
 #include "caf/detail/prometheus_broker.hpp"
 #include "caf/function_view.hpp"

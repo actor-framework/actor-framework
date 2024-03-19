@@ -6,6 +6,7 @@
 
 #include "caf/async/execution_context.hpp"
 #include "caf/async/future.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/detail/async_cell.hpp"
 #include "caf/disposable.hpp"
 #include "caf/raise_error.hpp"

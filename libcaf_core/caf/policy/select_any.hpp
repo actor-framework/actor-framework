@@ -6,6 +6,7 @@
 
 #include "caf/behavior.hpp"
 #include "caf/config.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/detail/typed_actor_util.hpp"
 #include "caf/disposable.hpp"

@@ -10,6 +10,7 @@
 #include "caf/actor_config.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/behavior.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/monitor_action.hpp"
 #include "caf/detail/send_type_check.hpp"

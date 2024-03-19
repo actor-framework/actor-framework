@@ -16,6 +16,7 @@
 #include "caf/async/producer_adapter.hpp"
 #include "caf/async/promise.hpp"
 #include "caf/async/publisher.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/flow/coordinator.hpp"

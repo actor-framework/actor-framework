@@ -12,6 +12,7 @@
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/defaults.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/log/io.hpp"
 #include "caf/settings.hpp"
 #include "caf/telemetry/histogram.hpp"

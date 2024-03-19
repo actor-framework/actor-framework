@@ -4,6 +4,7 @@
 
 #include "caf/detail/parse.hpp"
 
+#include "caf/detail/assert.hpp"
 #include "caf/detail/config_consumer.hpp"
 #include "caf/detail/consumer.hpp"
 #include "caf/detail/parser/chars.hpp"

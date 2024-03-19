@@ -12,6 +12,7 @@
 #include "caf/binary_deserializer.hpp"
 #include "caf/config.hpp"
 #include "caf/const_typed_message_view.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/log/io.hpp"

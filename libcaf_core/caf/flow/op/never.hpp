@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/config.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/flow/observer.hpp"
 #include "caf/flow/op/cold.hpp"
 #include "caf/flow/subscription.hpp"

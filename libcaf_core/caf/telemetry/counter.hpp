@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "caf/config.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/fwd.hpp"
 #include "caf/span.hpp"
 #include "caf/telemetry/gauge.hpp"

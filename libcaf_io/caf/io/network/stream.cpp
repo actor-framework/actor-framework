@@ -9,6 +9,7 @@
 #include "caf/actor_system_config.hpp"
 #include "caf/config_value.hpp"
 #include "caf/defaults.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/log/io.hpp"
 
 #include <algorithm>

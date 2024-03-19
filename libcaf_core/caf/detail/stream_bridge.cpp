@@ -4,6 +4,7 @@
 
 #include "caf/detail/stream_bridge.hpp"
 
+#include "caf/detail/assert.hpp"
 #include "caf/log/system.hpp"
 #include "caf/scheduled_actor.hpp"
 #include "caf/send.hpp"

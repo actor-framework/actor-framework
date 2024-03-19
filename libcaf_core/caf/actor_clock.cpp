@@ -7,6 +7,7 @@
 #include "caf/action.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/actor_control_block.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/disposable.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/sec.hpp"

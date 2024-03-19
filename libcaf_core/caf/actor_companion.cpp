@@ -4,6 +4,8 @@
 
 #include "caf/actor_companion.hpp"
 
+#include "caf/detail/assert.hpp"
+
 namespace caf {
 
 actor_companion::~actor_companion() {

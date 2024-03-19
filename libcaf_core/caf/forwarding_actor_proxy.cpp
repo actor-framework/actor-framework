@@ -5,6 +5,7 @@
 #include "caf/forwarding_actor_proxy.hpp"
 
 #include "caf/anon_mail.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/log/core.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/system_messages.hpp"

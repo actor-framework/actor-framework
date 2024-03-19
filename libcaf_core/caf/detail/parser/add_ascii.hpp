@@ -19,9 +19,7 @@ namespace caf::detail::parser {
 // @pre `isdigit(c) || (Base == 16 && isxdigit(c))`
 // @warning can leave `x` in an intermediate state when retuning `false`
 template <int Base, class T>
-bool add_ascii(T& x, char c,
-               std::enable_if_t<std::is_integral_v<T>, int> u = 0) {
-  CAF_IGNORE_UNUSED(u);
+bool add_ascii(T& x, char c, std::enable_if_t<std::is_integral_v<T>, int> = 0) {
   if (x > (std::numeric_limits<T>::max() / Base))
     return false;
   x *= static_cast<T>(Base);
@@ -35,8 +33,7 @@ bool add_ascii(T& x, char c,
 
 template <int Base, class T>
 bool add_ascii(T& x, char c,
-               std::enable_if_t<std::is_floating_point_v<T>, int> u = 0) {
-  CAF_IGNORE_UNUSED(u);
+               std::enable_if_t<std::is_floating_point_v<T>, int> = 0) {
   ascii_to_int<Base, T> f;
   x = (x * Base) + f(c);
   return true;

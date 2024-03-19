@@ -7,6 +7,7 @@
 #include "caf/io/network/protocol.hpp"
 
 #include "caf/detail/call_cfun.hpp"
+#include "caf/detail/critical.hpp"
 #include "caf/log/io.hpp"
 #include "caf/sec.hpp"
 

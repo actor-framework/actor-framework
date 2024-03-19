@@ -4,6 +4,7 @@
 
 #include "caf/ipv6_address.hpp"
 
+#include "caf/detail/assert.hpp"
 #include "caf/detail/network_order.hpp"
 #include "caf/detail/parser/read_ipv6_address.hpp"
 #include "caf/error.hpp"
