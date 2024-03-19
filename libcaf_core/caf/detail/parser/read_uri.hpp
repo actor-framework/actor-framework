@@ -99,13 +99,14 @@ template <class State, class Consumer>
 void read_uri(State& ps, Consumer&& consumer) {
   // Local variables.
   std::string str;
-  std::string memory;
+  auto colon_position = std::string::npos;
   uint16_t port = 0;
   // Replaces `str` with a default constructed string to make sure we're never
   // operating on a moved-from string object.
   auto take_str = [&] {
+    using std::swap;
     std::string res;
-    std::swap(str, res);
+    swap(str, res);
     return res;
   };
   // Allowed character sets.
@@ -116,20 +117,18 @@ void read_uri(State& ps, Consumer&& consumer) {
   auto set_path = [&] { consumer.path(take_str()); };
   auto set_host = [&] { consumer.host(take_str()); };
   auto set_userinfo = [&] { consumer.userinfo(take_str()); };
-  auto set_memory = [&] { memory = take_str(); };
-  auto set_userinfo_from_memory = [&] {
-    memory += ':';
-    memory += take_str();
-    consumer.userinfo(std::move(memory));
+  auto set_colon_position = [&] {
+    colon_position = str.size();
+    str.push_back(':');
   };
-  auto set_host_and_port_from_memory = [&]() -> bool {
-    consumer.host(std::move(memory));
-    auto port = std::stoi(take_str());
-    if (port <= std::numeric_limits<uint16_t>::max()) {
-      consumer.port(port);
-      return true;
-    }
-    return false;
+  auto set_host_and_port = [&]() -> bool {
+    auto str = take_str();
+    if (parse(std::string_view{str}.substr(colon_position + 1), port))
+      return false;
+    consumer.port(port);
+    str.erase(colon_position, std::string::npos);
+    consumer.host(std::move(str));
+    return true;
   };
   // Consumer for reading IPv6 addresses.
   struct {
@@ -175,7 +174,7 @@ void read_uri(State& ps, Consumer&& consumer) {
     transition(start_host, '@', set_userinfo())
     // A ':' can signalize end of userinfo or end of host,
     // e.g., "user:pass@example.com" or "example.com:80".
-    transition(read_host_or_port, ':', set_memory())
+    transition(read_host_or_port, ':', set_colon_position())
     epsilon(end_of_authority, "/?#", set_host())
   }
   state(start_host) {
@@ -195,11 +194,10 @@ void read_uri(State& ps, Consumer&& consumer) {
                pec::integer_overflow)
     epsilon(end_of_authority, "/?#", consumer.port(port))
   }
-  term_state(read_host_or_port, set_host_and_port_from_memory()) {
+  term_state(read_host_or_port, set_host_and_port(), pec::integer_overflow) {
     read_next_char(read_host_or_port, str)
-    transition(start_host, '@', set_userinfo_from_memory())
-    epsilon(end_of_authority, "/?#", set_host_and_port_from_memory(),
-            pec::integer_overflow)
+    transition(start_host, '@', set_userinfo())
+    epsilon(end_of_authority, "/?#", set_host_and_port(), pec::integer_overflow)
   }
   term_state(end_of_authority) {
     transition(read_path, '/')

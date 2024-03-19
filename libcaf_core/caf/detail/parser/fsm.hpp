@@ -89,6 +89,25 @@
     }                                                                          \
     e_##name:
 
+/// Defines a terminal state in the FSM that runs `exit_action` when leaving
+/// the state. If the action returns false we leave the state with `error_code`,
+/// otherwise, we leave with code `pec::success` or `pec::trailing_character`.
+#define CAF_TERM_STATE_IMPL3(name, exit_action, error_code)                    \
+  }                                                                            \
+  for (;;) {                                                                   \
+    /* jumps back up here if no transition matches */                          \
+    ps.code = caf::pec::trailing_character;                                    \
+    exit_action;                                                               \
+    goto fsm_after_fin;                                                        \
+    s_##name : if (ch == '\0') {                                               \
+      if (!exit_action) {                                                      \
+        ps.code = error_code;                                                  \
+        goto fsm_after_fin;                                                    \
+      }                                                                        \
+      goto fsm_fin;                                                            \
+    }                                                                          \
+    e_##name:
+
 #define CAF_TRANSITION_IMPL1(target)                                           \
   ch = ps.next();                                                              \
   goto s_##target;

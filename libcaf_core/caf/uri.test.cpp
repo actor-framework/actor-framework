@@ -314,10 +314,15 @@ TEST("from string") {
   ROUNDTRIP("http://me@node:80?a=1&b=2");
   ROUNDTRIP("http://me@node:80#42");
   ROUNDTRIP("http://me@node:80?a=1&b=2#42");
+  ROUNDTRIP("http://user:@node");
+  ROUNDTRIP("http://user:p@node");
   ROUNDTRIP("http://user:pass@node");
   ROUNDTRIP("http://user:pass@node?a=1&b=2");
   ROUNDTRIP("http://user:pass@node#42");
   ROUNDTRIP("http://user:pass@node?a=1&b=2#42");
+  ROUNDTRIP("http://user:@node:80");
+  ROUNDTRIP("http://user:p@node:80");
+  ROUNDTRIP("http://user:pass@node:8");
   ROUNDTRIP("http://user:pass@node:80");
   ROUNDTRIP("http://user:pass@node:80?a=1&b=2");
   ROUNDTRIP("http://user:pass@node:80#42");
@@ -338,16 +343,19 @@ TEST("from string") {
   ROUNDTRIP("http://me@node:80/file?a=1&b=2");
   ROUNDTRIP("http://me@node:80/file#42");
   ROUNDTRIP("http://me@node:80/file?a=1&b=2#42");
+  ROUNDTRIP("http://user:@node/file");
+  ROUNDTRIP("http://user:p@node/file");
   ROUNDTRIP("http://user:pass@node/file");
   ROUNDTRIP("http://user:pass@node/file?a=1&b=2");
   ROUNDTRIP("http://user:pass@node/file#42");
   ROUNDTRIP("http://user:pass@node/file?a=1&b=2#42");
+  ROUNDTRIP("http://user:@node:80/file");
+  ROUNDTRIP("http://user:p@node:80/file");
+  ROUNDTRIP("http://user:pass@node:8/file");
   ROUNDTRIP("http://user:pass@node:80/file");
   ROUNDTRIP("http://user:pass@node:80/file?a=1&b=2");
   ROUNDTRIP("http://user:pass@node:80/file#42");
   ROUNDTRIP("http://user:pass@node:80/file?a=1&b=2#42");
-  // username and password
-  check(uri::can_parse("http://access:secret@node:80/file?a=1&b=2#42"));
   // all combinations of components with IPv6 host
   ROUNDTRIP("http://[::1]");
   ROUNDTRIP("http://[::1]?a=1&b=2");
@@ -365,6 +373,8 @@ TEST("from string") {
   ROUNDTRIP("http://me@[::1]:80?a=1&b=2");
   ROUNDTRIP("http://me@[::1]:80#42");
   ROUNDTRIP("http://me@[::1]:80?a=1&b=2#42");
+  ROUNDTRIP("http://user:@[::1]");
+  ROUNDTRIP("http://user:p@[::1]");
   ROUNDTRIP("http://user:pass@[::1]");
   ROUNDTRIP("http://user:pass@[::1]?a=1&b=2");
   ROUNDTRIP("http://user:pass@[::1]#42");
@@ -389,10 +399,15 @@ TEST("from string") {
   ROUNDTRIP("http://me@[::1]:80/file?a=1&b=2");
   ROUNDTRIP("http://me@[::1]:80/file#42");
   ROUNDTRIP("http://me@[::1]:80/file?a=1&b=2#42");
+  ROUNDTRIP("http://user:@[::1]/file");
+  ROUNDTRIP("http://user:p@[::1]/file");
   ROUNDTRIP("http://user:pass@[::1]/file");
   ROUNDTRIP("http://user:pass@[::1]/file?a=1&b=2");
   ROUNDTRIP("http://user:pass@[::1]/file#42");
   ROUNDTRIP("http://user:pass@[::1]/file?a=1&b=2#42");
+  ROUNDTRIP("http://user:@[::1]:80/file");
+  ROUNDTRIP("http://user:p@[::1]:80/file");
+  ROUNDTRIP("http://user:pass@[::1]:8/file");
   ROUNDTRIP("http://user:pass@[::1]:80/file");
   ROUNDTRIP("http://user:pass@[::1]:80/file?a=1&b=2");
   ROUNDTRIP("http://user:pass@[::1]:80/file#42");

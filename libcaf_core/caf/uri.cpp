@@ -250,8 +250,8 @@ std::string to_string(const uri& x) {
 std::string to_string(const uri::authority_type& x) {
   std::string str;
   if (!x.userinfo.empty()) {
-    // TODO: return uri::encode
     std::string_view userinfo = x.userinfo;
+    // TODO: with this approach, username can't contain a ':'.
     auto pos = userinfo.find(':');
     uri::encode(str, userinfo.substr(0, pos));
     if (pos != std::string::npos) {
