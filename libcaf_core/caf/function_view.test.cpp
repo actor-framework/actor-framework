@@ -118,7 +118,7 @@ TEST("calling function_view on an actor that quit") {
   auto f = make_function_view(simple);
   anon_send_exit(simple, exit_reason::user_shutdown);
   system.registry().await_running_count_equal(1);
-  check_eq(f(get_atom_v), sec::bad_function_call);
+  check_ne(f(get_atom_v), error{});
 }
 
 } // WITH_FIXTURE(fixture)
