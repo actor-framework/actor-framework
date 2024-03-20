@@ -4,6 +4,8 @@
 
 #include "caf/net/http/async_client.hpp"
 
+#include "caf/net/http/response_header.hpp"
+
 #include "caf/log/net.hpp"
 
 namespace caf::net::http {

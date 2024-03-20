@@ -4,6 +4,9 @@
 
 #include "caf/net/http/client_factory.hpp"
 
+#include "caf/net/multiplexer.hpp"
+#include "caf/net/socket_manager.hpp"
+
 #include "caf/detail/assert.hpp"
 
 namespace caf::net::http {
