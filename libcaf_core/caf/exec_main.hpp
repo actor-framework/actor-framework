@@ -84,7 +84,7 @@ int exec_main(F fun, int argc, char** argv) {
     return EXIT_FAILURE;
   }
   // Return immediately if a help text was printed.
-  if (cfg.cli_helptext_printed)
+  if (cfg.helptext_printed())
     return EXIT_SUCCESS;
   // Initialize the actor system.
   actor_system system{cfg};
@@ -92,10 +92,9 @@ int exec_main(F fun, int argc, char** argv) {
   using result_type = decltype(f(fun, system, cfg));
   if constexpr (std::is_convertible_v<result_type, int>) {
     return f(fun, system, cfg);
-  } else {
-    f(fun, system, cfg);
-    return EXIT_SUCCESS;
   }
+  f(fun, system, cfg);
+  return EXIT_SUCCESS;
 }
 
 } // namespace caf

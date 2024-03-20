@@ -161,19 +161,6 @@ private:
 public:
   // -- public member types ----------------------------------------------------
 
-  /// The configuration type for this fixture.
-  class config : public actor_system_config {
-  public:
-    explicit config(deterministic* fix);
-
-    ~config() override;
-
-  private:
-    detail::mailbox_factory* mailbox_factory() override;
-
-    std::unique_ptr<detail::mailbox_factory> factory_;
-  };
-
   /// The custom system implementation for this fixture.
   class system_impl : public actor_system {
   public:
@@ -182,6 +169,9 @@ public:
     detail::actor_local_printer_ptr printer_for(local_actor* self) override;
 
   private:
+    static actor_system_config& prepare(actor_system_config& cfg,
+                                        deterministic* fix);
+
     static void custom_setup(actor_system& sys, actor_system_config& cfg,
                              void* custom_setup_data);
 
@@ -675,7 +665,7 @@ private:
 
 public:
   /// Configures the actor system with deterministic scheduling.
-  config cfg;
+  actor_system_config cfg;
 
   /// The actor system instance for the tests.
   system_impl sys;

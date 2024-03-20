@@ -269,6 +269,7 @@ using int_gauge_family = metric_family_impl<int_gauge>;
 namespace detail {
 
 class actor_system_access;
+class actor_system_config_access;
 class mailbox_factory;
 class monotonic_buffer_resource;
 
@@ -302,7 +303,6 @@ using gauge = detail::gauge_oracle_t<ValueType>;
 
 namespace io {
 
-class hook;
 class broker;
 class middleman;
 template <class...>

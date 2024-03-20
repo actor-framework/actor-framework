@@ -47,14 +47,15 @@ CAF_END_TYPE_ID_BLOCK(example_app)
 int caf_main(caf::actor_system& sys) {
   // Get file path from config (positional argument).
   auto& cfg = sys.config();
-  if (cfg.remainder.size() != 1) {
+  auto remainder = cfg.remainder();
+  if (remainder.size() != 1) {
     std::cerr
       << "*** expected one positional argument: path to a JSON file\n"
       << "\n\nNote: expected a JSON list of user objects. For example:\n"
       << example_input << '\n';
     return EXIT_FAILURE;
   }
-  auto& file_path = cfg.remainder[0];
+  auto& file_path = remainder[0];
   // Read JSON-formatted file.
   caf::json_reader reader;
   if (!reader.load_file(file_path)) {

@@ -11,6 +11,7 @@
 #include "caf/actor_system_config.hpp"
 #include "caf/detail/actor_local_printer.hpp"
 #include "caf/detail/actor_system_access.hpp"
+#include "caf/detail/actor_system_config_access.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/mailbox_factory.hpp"
 #include "caf/detail/print.hpp"
@@ -485,25 +486,11 @@ private:
   deterministic* fix_;
 };
 
-// -- config -------------------------------------------------------------------
-
-deterministic::config::config(deterministic* fix) {
-  factory_ = std::make_unique<mailbox_factory_impl>(fix);
-}
-
-deterministic::config::~config() {
-  // nop
-}
-
-detail::mailbox_factory* deterministic::config::mailbox_factory() {
-  return factory_.get();
-}
-
 // -- system -------------------------------------------------------------------
 
 deterministic::system_impl::system_impl(actor_system_config& cfg,
                                         deterministic* fix)
-  : actor_system(cfg, custom_setup, fix) {
+  : actor_system(prepare(cfg, fix), custom_setup, fix) {
   // nop
 }
 
@@ -513,6 +500,14 @@ deterministic::system_impl::printer_for(local_actor* self) {
   if (!ptr)
     ptr = make_counted<actor_local_printer_impl>(self);
   return ptr;
+}
+
+actor_system_config&
+deterministic::system_impl::prepare(actor_system_config& cfg,
+                                    deterministic* fix) {
+  detail::actor_system_config_access access{cfg};
+  access.mailbox_factory(std::make_unique<mailbox_factory_impl>(fix));
+  return cfg;
 }
 
 void deterministic::system_impl::custom_setup(actor_system& sys,
@@ -533,7 +528,7 @@ deterministic::abstract_message_predicate::~abstract_message_predicate() {
 
 // -- constructors, destructors, and assignment operators ----------------------
 
-deterministic::deterministic() : cfg(this), sys(cfg, this) {
+deterministic::deterministic() : sys(cfg, this) {
   // nop
 }
 

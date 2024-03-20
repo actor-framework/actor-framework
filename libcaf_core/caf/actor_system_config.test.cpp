@@ -75,11 +75,6 @@ struct config : actor_system_config {
   config_option_adder options(std::string_view category) {
     return opt_group{custom_options_, category};
   }
-
-  void clear() {
-    content.clear();
-    remainder.clear();
-  }
 };
 
 struct fixture {
@@ -90,7 +85,6 @@ struct fixture {
   }
 
   void parse(const char* file_content, string_list args = {}) {
-    cfg.clear();
     std::istringstream conf{file_content};
     if (auto err = cfg.parse(std::move(args), conf))
       test::runnable::current().fail("parse() failed: {}", err);
@@ -103,46 +97,55 @@ TEST("parsing - without CLI arguments") {
   auto text = "foo{\nbar=\"hello\"}";
   options("?foo").add<std::string>("bar,b", "some string parameter");
   parse(text);
-  check(cfg.remainder.empty());
+  check(cfg.remainder().empty());
   check_eq(get_or(cfg, "foo.bar", ""), "hello");
   auto [argc, argv] = cfg.c_args_remainder();
-  require_eq(argc, 1);
-  check_eq(argv[0], cfg.program_name);
+  if (check_eq(argc, 1)) {
+    check_eq(argv[0], cfg.program_name());
+  }
 }
 
 TEST("parsing - without CLI cfg.remainder") {
   auto text = "foo{\nbar=\"hello\"}";
   options("?foo").add<std::string>("bar,b", "some string parameter");
-  log::test::debug("CLI long name");
-  parse(text, {"--foo.bar=test"});
-  check(cfg.remainder.empty());
-  check_eq(get_or(cfg, "foo.bar", ""), "test");
-  log::test::debug("CLI abbreviated long name");
-  parse(text, {"--bar=test"});
-  check(cfg.remainder.empty());
-  check_eq(get_or(cfg, "foo.bar", ""), "test");
-  log::test::debug("CLI short name");
-  parse(text, {"-b", "test"});
-  check(cfg.remainder.empty());
-  check_eq(get_or(cfg, "foo.bar", ""), "test");
-  log::test::debug("CLI short name without whitespace");
-  parse(text, {"-btest"});
-  check(cfg.remainder.empty());
-  check_eq(get_or(cfg, "foo.bar", ""), "test");
+  SECTION("CLI long name") {
+    parse(text, {"--foo.bar=test"});
+    check(cfg.remainder().empty());
+    check_eq(get_or(cfg, "foo.bar", ""), "test");
+  }
+  SECTION("CLI abbreviated long name") {
+    parse(text, {"--bar=test"});
+    check(cfg.remainder().empty());
+    check_eq(get_or(cfg, "foo.bar", ""), "test");
+  }
+  SECTION("CLI short name") {
+    parse(text, {"-b", "test"});
+    check(cfg.remainder().empty());
+    check_eq(get_or(cfg, "foo.bar", ""), "test");
+  }
+  SECTION("CLI short name without whitespace") {
+    parse(text, {"-btest"});
+    check(cfg.remainder().empty());
+    check_eq(get_or(cfg, "foo.bar", ""), "test");
+  }
 }
 
 TEST("parsing - with CLI cfg.remainder") {
   auto text = "foo{\nbar=\"hello\"}";
   options("?foo").add<std::string>("bar,b", "some string parameter");
   parse(text, {"-b", "test", "hello", "world"});
-  require_eq(cfg.remainder.size(), 2u);
   check_eq(get_or(cfg, "foo.bar", ""), "test");
-  check_eq(cfg.remainder, string_list({"hello", "world"}));
-  auto [argc, argv] = cfg.c_args_remainder();
-  require_eq(argc, 3);
-  check_eq(argv[0], cfg.program_name);
-  check_eq(argv[1], cfg.remainder[0]);
-  check_eq(argv[2], cfg.remainder[1]);
+  auto remainder = cfg.remainder();
+  if (check_eq(remainder.size(), 2u)) {
+    check_eq(remainder[0], "hello");
+    check_eq(remainder[1], "world");
+    auto [argc, argv] = cfg.c_args_remainder();
+    if (check_eq(argc, 3)) {
+      check_eq(argv[0], cfg.program_name());
+      check_eq(argv[1], remainder[0]);
+      check_eq(argv[2], remainder[1]);
+    }
+  }
 }
 
 TEST("file input overrides defaults but CLI args always win") {

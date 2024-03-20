@@ -57,7 +57,7 @@ public:
   //           a custom implementation.
   /// @throws `logic_error` if the middleman is not loaded or is not using the
   ///         default network backend.
-  static actor_system::module* make(actor_system&, type_list<>);
+  static actor_system::module* make(actor_system&);
 
   /// Adds message types of the OpenSSL module to the global meta object table.
   static void init_global_meta_objects();
