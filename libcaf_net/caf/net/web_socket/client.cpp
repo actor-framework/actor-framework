@@ -6,6 +6,7 @@
 
 #include "caf/net/fwd.hpp"
 #include "caf/net/http/v1.hpp"
+#include "caf/net/octet_stream/lower_layer.hpp"
 #include "caf/net/receive_policy.hpp"
 #include "caf/net/web_socket/framing.hpp"
 #include "caf/net/web_socket/handshake.hpp"

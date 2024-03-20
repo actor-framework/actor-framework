@@ -9,6 +9,7 @@
 #include "caf/net/http/request_header.hpp"
 #include "caf/net/http/status.hpp"
 #include "caf/net/http/v1.hpp"
+#include "caf/net/octet_stream/lower_layer.hpp"
 #include "caf/net/receive_policy.hpp"
 #include "caf/net/web_socket/framing.hpp"
 #include "caf/net/web_socket/handshake.hpp"
