@@ -166,6 +166,10 @@ public:
     return std::move(data_);
   }
 
+  // -- comparison -------------------------------------------------------------
+
+  bool equal_to(const chunk& other) const noexcept;
+
 private:
   intrusive_ptr<data> data_;
 };

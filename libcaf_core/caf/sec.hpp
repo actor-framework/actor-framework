@@ -171,6 +171,8 @@ enum class sec : uint8_t {
   invalid_request,
   /// Signals that `future::get` timed out.
   future_timeout,
+  /// Received invalid UTF-8 encoding.
+  invalid_utf8,
 };
 // --(rst-sec-end)--
 

@@ -215,6 +215,7 @@ caf_add_component(
     caf/event_based_actor.test.cpp
     caf/event_based_mail.test.cpp
     caf/expected.test.cpp
+    caf/flow/byte.test.cpp
     caf/flow/concat_map.test.cpp
     caf/flow/coordinated.cpp
     caf/flow/coordinator.cpp
