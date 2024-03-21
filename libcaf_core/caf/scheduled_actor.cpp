@@ -101,7 +101,7 @@ error scheduled_actor::default_exception_handler(local_actor* ptr,
   } catch (std::exception& e) {
     auto pretty_type = detail::pretty_type_name(typeid(e));
     ptr->println(
-      "*** unhandled exception: [id: {}, name: {}, exception typeid {}]: {}",
+      "*** unhandled exception: [id: {}, name: {}, exception: {}]: {}",
       ptr->id(), ptr->name(), pretty_type, e.what());
     return format_to_error(sec::runtime_error,
                            "unhandled exception of type {}: {}", pretty_type,
