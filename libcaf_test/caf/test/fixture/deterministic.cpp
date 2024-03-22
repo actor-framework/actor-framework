@@ -511,11 +511,11 @@ deterministic::system_impl::prepare(actor_system_config& cfg,
 }
 
 void deterministic::system_impl::custom_setup(actor_system& sys,
-                                              actor_system_config& cfg,
+                                              actor_system_config&,
                                               void* custom_setup_data) {
   auto* fix = static_cast<deterministic*>(custom_setup_data);
   auto setter = detail::actor_system_access{sys};
-  setter.logger(make_counted<deterministic_logger>(sys), cfg);
+  setter.logger(make_counted<deterministic_logger>(sys));
   setter.clock(std::make_unique<deterministic_actor_clock>());
   setter.scheduler(std::make_unique<scheduler_impl>(fix));
 }

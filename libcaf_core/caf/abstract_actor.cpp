@@ -172,7 +172,7 @@ bool abstract_actor::cleanup(error&& reason, scheduler* sched) {
     i->actor_exited(fail_state_, sched);
   // tell printer to purge its state for us if we ever used aout()
   if ((fs & has_used_aout_flag) != 0) {
-    auto pr = home_system().printer_;
+    auto pr = home_system().legacy_printer_actor();
     pr->enqueue(make_mailbox_element(ctrl(), make_message_id(), delete_atom_v,
                                      id()),
                 sched);

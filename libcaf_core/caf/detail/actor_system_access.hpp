@@ -16,13 +16,15 @@ public:
     // nop
   }
 
-  void logger(intrusive_ptr<caf::logger> new_logger, actor_system_config& cfg);
+  void logger(intrusive_ptr<caf::logger> ptr);
 
-  void clock(std::unique_ptr<actor_clock> new_clock);
+  void clock(std::unique_ptr<actor_clock> ptr);
 
-  void scheduler(std::unique_ptr<caf::scheduler> new_scheduler);
+  void scheduler(std::unique_ptr<caf::scheduler> ptr);
 
-  void printer(strong_actor_ptr new_printer);
+  void printer(strong_actor_ptr ptr);
+
+  void node(node_id id);
 
 private:
   actor_system* sys_;

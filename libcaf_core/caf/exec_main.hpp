@@ -39,7 +39,7 @@ struct exec_main_helper<type_list<System&, const Config&>> {
 
 template <class T>
 void exec_main_init_meta_objects_single() {
-  if constexpr (std::is_base_of_v<actor_system::module, T>)
+  if constexpr (std::is_base_of_v<actor_system_module, T>)
     T::init_global_meta_objects();
   else
     init_global_meta_objects<T>();
@@ -52,7 +52,7 @@ void exec_main_init_meta_objects() {
 
 template <class T>
 void exec_main_load_module(actor_system_config& cfg) {
-  if constexpr (std::is_base_of_v<actor_system::module, T>)
+  if constexpr (std::is_base_of_v<actor_system_module, T>)
     cfg.template load<T>();
 }
 

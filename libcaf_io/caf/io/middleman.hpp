@@ -249,7 +249,7 @@ public:
   static void add_module_options(actor_system_config& cfg);
 
   /// Returns a middleman using the default network backend.
-  static actor_system::module* make(actor_system&);
+  static actor_system_module* make(actor_system&);
 
   /// @private
   actor get_named_broker(const std::string& name) {

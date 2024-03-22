@@ -112,7 +112,7 @@ public:
   template <class T>
   actor_system_config& load() {
     T::add_module_options(*this);
-    add_module_factory([](actor_system& sys) -> actor_system::module* { //
+    add_module_factory([](actor_system& sys) -> actor_system_module* { //
       return T::make(sys);
     });
     return *this;
@@ -246,7 +246,7 @@ private:
 
   // -- module factories -------------------------------------------------------
 
-  using module_factory_fn = actor_system::module* (*) (actor_system&);
+  using module_factory_fn = actor_system_module* (*) (actor_system&);
 
   void add_module_factory(module_factory_fn new_factory);
 

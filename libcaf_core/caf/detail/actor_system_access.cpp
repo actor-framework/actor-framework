@@ -10,24 +10,24 @@
 
 namespace caf::detail {
 
-void actor_system_access::logger(intrusive_ptr<caf::logger> new_logger,
-                                 actor_system_config& cfg) {
-  sys_->logger_ = std::move(new_logger);
-  sys_->logger_->init(cfg);
-  CAF_SET_LOGGER_SYS(sys_);
+void actor_system_access::logger(intrusive_ptr<caf::logger> ptr) {
+  sys_->set_logger(std::move(ptr));
 }
 
-void actor_system_access::clock(std::unique_ptr<actor_clock> new_clock) {
-  sys_->clock_ = std::move(new_clock);
+void actor_system_access::clock(std::unique_ptr<actor_clock> ptr) {
+  sys_->set_clock(std::move(ptr));
 }
 
-void actor_system_access::scheduler(
-  std::unique_ptr<caf::scheduler> new_scheduler) {
-  sys_->scheduler_ = std::move(new_scheduler);
+void actor_system_access::scheduler(std::unique_ptr<caf::scheduler> ptr) {
+  sys_->set_scheduler(std::move(ptr));
 }
 
-void actor_system_access::printer(strong_actor_ptr new_printer) {
-  sys_->printer_ = std::move(new_printer);
+void actor_system_access::printer(strong_actor_ptr ptr) {
+  sys_->set_legacy_printer_actor(std::move(ptr));
+}
+
+void actor_system_access::node(node_id id) {
+  sys_->set_node(id);
 }
 
 } // namespace caf::detail

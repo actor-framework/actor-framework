@@ -132,15 +132,15 @@ void middleman::init(actor_system_config&) {
   }
 }
 
-middleman::module::id_t middleman::id() const {
-  return module::network_manager;
+middleman::actor_system_module::id_t middleman::id() const {
+  return actor_system_module::network_manager;
 }
 
 void* middleman::subtype_ptr() {
   return this;
 }
 
-actor_system::module* middleman::make(actor_system& sys) {
+actor_system_module* middleman::make(actor_system& sys) {
   return new middleman(sys);
 }
 

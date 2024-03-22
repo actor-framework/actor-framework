@@ -9,6 +9,7 @@
 
 #include "caf/actor_control_block.hpp"
 #include "caf/actor_proxy.hpp"
+#include "caf/actor_registry.hpp"
 #include "caf/binary_deserializer.hpp"
 #include "caf/config.hpp"
 #include "caf/const_typed_message_view.hpp"

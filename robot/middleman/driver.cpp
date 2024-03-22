@@ -19,6 +19,7 @@
 #include <caf/io/middleman.hpp>
 #include <caf/io/publish.hpp>
 
+#include <caf/actor_registry.hpp>
 #include <caf/actor_system.hpp>
 #include <caf/actor_system_config.hpp>
 #include <caf/anon_mail.hpp>
