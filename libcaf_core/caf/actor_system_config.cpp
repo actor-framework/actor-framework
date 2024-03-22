@@ -10,6 +10,7 @@
 #include "caf/defaults.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/config_consumer.hpp"
+#include "caf/detail/mailbox_factory.hpp"
 #include "caf/detail/parser/read_config.hpp"
 #include "caf/detail/parser/read_string.hpp"
 #include "caf/logger.hpp"
@@ -29,36 +30,88 @@ namespace caf {
 
 namespace {
 
-constexpr std::string_view default_program_name = "unknown-caf-app";
+using module_factory_list
+  = std::vector<actor_system::module* (*) (actor_system&)>;
 
-constexpr std::string_view default_config_file = "caf-application.conf";
+using actor_factory_dictionary = dictionary<actor_factory>;
+
+using thread_hook_list = std::vector<std::unique_ptr<thread_hook>>;
+
+struct c_args_wrapper {
+  int argc = 0;
+  char** argv = nullptr;
+
+  static char* copy_str(const std::string& str) {
+    if (str.empty()) {
+      auto result = new char[1];
+      result[0] = '\0';
+      return result;
+    }
+    auto result = new char[str.size() + 1];
+    memcpy(result, str.c_str(), str.size() + 1);
+    return result;
+  }
+
+  void assign(const std::string& program_name) {
+    argc = 1;
+    argv = new char*[1];
+    argv[0] = copy_str(program_name);
+  }
+
+  void assign(const std::string& program_name,
+              const std::vector<std::string>& args) {
+    argc = static_cast<int>(args.size() + 1);
+    argv = new char*[argc + 1];
+    argv[0] = copy_str(program_name);
+    auto index = size_t{1};
+    for (auto& arg : args) {
+      argv[index++] = copy_str(arg);
+    }
+  }
+
+  ~c_args_wrapper() {
+    for (int i = 0; i < argc; ++i) {
+      delete[] argv[i];
+    }
+    delete[] argv;
+  }
+};
+
+constexpr const char* default_config_file = "caf-application.conf";
 
 } // namespace
 
-// -- constructors, destructors, and assignment operators ----------------------
+struct actor_system_config::fields {
+  std::vector<std::string> paths;
+  std::unique_ptr<logger_factory_t> logger_factory;
+  module_factory_list module_factories;
+  actor_factory_dictionary actor_factories;
+  thread_hook_list thread_hooks;
+  std::unique_ptr<detail::mailbox_factory> mailbox_factory;
+  bool helptext_printed = false;
+  std::string program_name;
+  std::vector<std::string> args_remainder;
+  c_args_wrapper c_args_remainder;
+};
 
-actor_system_config::~actor_system_config() {
-  // nop
-}
+// -- constructors, destructors, and assignment operators ----------------------
 
 // in this config class, we have (1) hard-coded defaults that are overridden
 // by (2) config file contents that are in turn overridden by (3) CLI arguments
 
-actor_system_config::actor_system_config()
-  : program_name(default_program_name), config_file_path(default_config_file) {
+actor_system_config::actor_system_config() {
+  fields_ = new fields();
   // Fill our options vector for creating config file and CLI parsers.
-  using std::string;
-  using string_list = std::vector<string>;
-  // Note: set an empty environment variable name for our global flags to have
-  //       them only available via CLI.
+  // Note: we set an empty environment variable name for our global flags to
+  //       have them only available via CLI.
   opt_group{custom_options_, "global"}
     .add<bool>("help,h?,", "print help text to STDERR and exit")
     .add<bool>("long-help,,",
                "same as --help but list options that are omitted by default")
     .add<bool>("dump-config,,", "print configuration and exit")
-    .add<string>("config-file", "sets a path to a configuration file");
+    .add<std::string>("config-file", "sets a path to a configuration file");
   opt_group{custom_options_, "caf.scheduler"}
-    .add<string>("policy", "'stealing' (default) or 'sharing'")
+    .add<std::string>("policy", "'stealing' (default) or 'sharing'")
     .add<size_t>("max-threads", "maximum number of worker threads")
     .add<size_t>("max-throughput",
                  "nr. of messages actors can consume per run");
@@ -76,21 +129,29 @@ actor_system_config::actor_system_config()
     .add<timespan>("relaxed-sleep-duration",
                    "sleep duration between relaxed steal attempts");
   opt_group{custom_options_, "caf.logger.file"}
-    .add<string>("path", "filesystem path for the log file")
-    .add<string>("format", "format for individual log file entries")
-    .add<string>("verbosity", "minimum severity level for file output")
-    .add<string_list>("excluded-components", "excluded components in files");
+    .add<std::string>("path", "filesystem path for the log file")
+    .add<std::string>("format", "format for individual log file entries")
+    .add<std::string>("verbosity", "minimum severity level for file output")
+    .add<std::vector<std::string>>("excluded-components",
+                                   "excluded components in files");
   opt_group{custom_options_, "caf.logger.console"}
     .add<bool>("colored", "forces colored or uncolored output")
-    .add<string>("format", "format for printed console lines")
-    .add<string>("verbosity", "minimum severity level for console output")
-    .add<string_list>("excluded-components", "excluded components on console");
+    .add<std::string>("format", "format for printed console lines")
+    .add<std::string>("verbosity", "minimum severity level for console output")
+    .add<std::vector<std::string>>("excluded-components",
+                                   "excluded components on console");
   opt_group{custom_options_, "caf.metrics-filters.actors"}
-    .add<string_list>("includes", "selects actors for run-time metrics")
-    .add<string_list>("excludes", "excludes actors from run-time metrics");
+    .add<std::vector<std::string>>("includes",
+                                   "selects actors for run-time metrics")
+    .add<std::vector<std::string>>("excludes",
+                                   "excludes actors from run-time metrics");
   opt_group{custom_options_, "caf.console"}
     .add<bool>("colored", "forces colored or uncolored output")
-    .add<string>("stream", "either 'stdout' (default), 'stderr' or 'none'");
+    .add<std::string>("stream", "'stdout' (default), 'stderr' or 'none'");
+}
+
+actor_system_config::~actor_system_config() {
+  delete fields_;
 }
 
 // -- properties ---------------------------------------------------------------
@@ -135,12 +196,24 @@ settings actor_system_config::dump_content() const {
   return result;
 }
 
-// -- modifiers ----------------------------------------------------------------
+// -- config file parsing ------------------------------------------------------
+
+void actor_system_config::config_file_path(std::string path) {
+  config_file_paths(std::vector<std::string>{std::move(path)});
+}
+
+void actor_system_config::config_file_paths(std::vector<std::string> paths) {
+  fields_->paths = std::move(paths);
+}
+
+span<const std::string> actor_system_config::config_file_paths() {
+  return fields_->paths;
+}
 
 error actor_system_config::parse(int argc, char** argv) {
-  string_list args;
+  std::vector<std::string> args;
   if (argc > 0) {
-    program_name = argv[0];
+    fields_->program_name = argv[0];
     if (argc > 1)
       args.assign(argv + 1, argv + argc);
   }
@@ -148,36 +221,13 @@ error actor_system_config::parse(int argc, char** argv) {
 }
 
 error actor_system_config::parse(int argc, char** argv, std::istream& conf) {
-  string_list args;
+  std::vector<std::string> args;
   if (argc > 0) {
-    program_name = argv[0];
+    fields_->program_name = argv[0];
     if (argc > 1)
       args.assign(argv + 1, argv + argc);
   }
   return parse(std::move(args), conf);
-}
-
-std::pair<int, char**> actor_system_config::c_args_remainder() const noexcept {
-  return {static_cast<int>(c_args_remainder_.size()), c_args_remainder_.data()};
-}
-
-void actor_system_config::set_remainder(string_list args) {
-  remainder.swap(args);
-  c_args_remainder_buf_.assign(program_name.begin(), program_name.end());
-  c_args_remainder_buf_.emplace_back('\0');
-  for (const auto& arg : remainder) {
-    c_args_remainder_buf_.insert(c_args_remainder_buf_.end(), //
-                                 arg.begin(), arg.end());
-    c_args_remainder_buf_.emplace_back('\0');
-  }
-  auto ptr = c_args_remainder_buf_.data();
-  auto end = ptr + c_args_remainder_buf_.size();
-  auto advance_ptr = [&ptr] {
-    while (*ptr++ != '\0')
-      ; // nop
-  };
-  for (; ptr != end; advance_ptr())
-    c_args_remainder_.emplace_back(ptr);
 }
 
 namespace {
@@ -355,7 +405,8 @@ private:
 
 } // namespace
 
-error actor_system_config::parse(string_list args, std::istream& config) {
+error actor_system_config::parse(std::vector<std::string> args,
+                                 std::istream& config) {
   // Contents of the config file override hard-coded defaults.
   if (config.good()) {
     if (auto err = parse_config(config, custom_options_, content))
@@ -392,39 +443,36 @@ error actor_system_config::parse(string_list args, std::istream& config) {
   if (res.second != args.end()) {
     if (res.first != pec::success && starts_with(*res.second, "-")) {
       return make_error(res.first, *res.second);
-    } else {
-      args.erase(args.begin(), res.second);
-      set_remainder(std::move(args));
     }
+    args.erase(args.begin(), res.second);
+    set_remainder(std::move(args));
   } else {
-    cli_helptext_printed = get_or(content, "help", false)
-                           || get_or(content, "long-help", false);
-    set_remainder(string_list{});
+    set_remainder({});
+    // No value, just having helptext-printed present is the information.
+    if (get_or(content, "help", false) || get_or(content, "long-help", false))
+      fields_->helptext_printed = true;
   }
   // Generate help text if needed.
-  if (cli_helptext_printed) {
-    bool long_help = get_or(content, "long-help", false);
-    std::cout << custom_options_.help_text(!long_help) << std::endl;
+  if (helptext_printed()) {
+    auto text = custom_options_.help_text(!get_or(content, "long-help", false));
+    puts(text.c_str());
   }
   // Generate config dump if needed.
-  if (!cli_helptext_printed && get_or(content, "dump-config", false)) {
+  if (!helptext_printed() && get_or(content, "dump-config", false)) {
     print_content();
-    cli_helptext_printed = true;
+    fields_->helptext_printed = true;
   }
   return none;
 }
 
-error actor_system_config::parse(string_list args) {
+error actor_system_config::parse(std::vector<std::string> args) {
   if (auto&& [err, path] = extract_config_file_path(args); !err) {
     std::ifstream conf;
-    // No error. An empty path simply means no --config-file=ARG was passed.
     if (!path.empty()) {
       conf.open(path);
     } else {
-      // Try config_file_path and if that fails try the alternative paths.
-      auto try_open = [this, &conf](const auto& what) {
-        if (what.empty())
-          return false;
+      // Try the user-defined config file paths or fall back to the default.
+      auto try_open = [this, &conf](auto&& what) {
         conf.open(what);
         if (conf.is_open()) {
           set("global.config-file", what);
@@ -433,20 +481,18 @@ error actor_system_config::parse(string_list args) {
           return false;
         }
       };
-      try_open(config_file_path)
-        || std::any_of(config_file_path_alternatives.begin(),
-                       config_file_path_alternatives.end(), try_open);
+      auto paths = config_file_paths();
+      if (paths.empty())
+        try_open(default_config_file);
+      else
+        std::ignore = std::any_of(paths.begin(), paths.end(), try_open);
+      // Note: not finding any file is not an error. It simply means that we
+      //       use the hard-coded defaults.
     }
     return parse(std::move(args), conf);
   } else {
     return err;
   }
-}
-
-actor_system_config& actor_system_config::add_actor_factory(std::string name,
-                                                            actor_factory fun) {
-  actor_factories.emplace(std::move(name), std::move(fun));
-  return *this;
 }
 
 actor_system_config& actor_system_config::set_impl(std::string_view name,
@@ -510,7 +556,7 @@ error actor_system_config::parse_config(std::istream& source,
 }
 
 std::pair<error, std::string>
-actor_system_config::extract_config_file_path(string_list& args) {
+actor_system_config::extract_config_file_path(std::vector<std::string>& args) {
   auto ptr = custom_options_.qualified_name_lookup("global.config-file");
   CAF_ASSERT(ptr != nullptr);
   auto result = std::string{};
@@ -542,10 +588,6 @@ actor_system_config::extract_config_file_path(string_list& args) {
   return {none, std::move(path_str)};
 }
 
-detail::mailbox_factory* actor_system_config::mailbox_factory() {
-  return nullptr;
-}
-
 const settings& content(const actor_system_config& cfg) {
   return cfg.content;
 }
@@ -556,13 +598,88 @@ void actor_system_config::print_content() const {
   std::cout << std::endl;
 }
 
-// -- factories ----------------------------------------------------------------
+// -- logger factories ---------------------------------------------------------
 
-intrusive_ptr<logger>
-actor_system_config::make_logger(actor_system& sys) const {
-  if (logger_factory_)
-    return logger_factory_(sys);
+void actor_system_config::set_logger_factory(
+  std::unique_ptr<logger_factory_t> ptr) {
+  fields_->logger_factory = std::move(ptr);
+}
+
+intrusive_ptr<logger> actor_system_config::make_logger(actor_system& sys) {
+  if (auto& fn = fields_->logger_factory)
+    return (*fn)(sys);
   return logger::make(sys);
+}
+
+// -- module factories ---------------------------------------------------------
+
+void actor_system_config::add_module_factory(module_factory_fn ptr) {
+  fields_->module_factories.emplace_back(ptr);
+}
+
+span<actor_system_config::module_factory_fn>
+actor_system_config::module_factories() {
+  return fields_->module_factories;
+}
+
+// -- actor factories ----------------------------------------------------------
+
+actor_system_config& actor_system_config::add_actor_factory(std::string name,
+                                                            actor_factory fun) {
+  fields_->actor_factories.insert_or_assign(std::move(name), std::move(fun));
+  return *this;
+}
+
+actor_factory* actor_system_config::get_actor_factory(std::string_view name) {
+  auto i = fields_->actor_factories.find(name);
+  if (i == fields_->actor_factories.end())
+    return nullptr;
+  return &i->second;
+}
+
+// -- thread hooks -------------------------------------------------------------
+
+void actor_system_config::add_thread_hook(std::unique_ptr<thread_hook> ptr) {
+  fields_->thread_hooks.emplace_back(std::move(ptr));
+}
+
+span<std::unique_ptr<thread_hook>> actor_system_config::thread_hooks() {
+  return fields_->thread_hooks;
+}
+
+// -- mailbox factory ----------------------------------------------------------
+
+void actor_system_config::mailbox_factory(
+  std::unique_ptr<detail::mailbox_factory> factory) {
+  fields_->mailbox_factory = std::move(factory);
+}
+
+detail::mailbox_factory* actor_system_config::mailbox_factory() {
+  return fields_->mailbox_factory.get();
+}
+
+// -- internal bookkeeping -----------------------------------------------------
+
+bool actor_system_config::helptext_printed() const noexcept {
+  return fields_->helptext_printed;
+}
+
+const std::string& actor_system_config::program_name() const noexcept {
+  return fields_->program_name;
+}
+
+void actor_system_config::set_remainder(std::vector<std::string> args) {
+  fields_->c_args_remainder.assign(program_name(), args);
+  fields_->args_remainder = std::move(args);
+}
+
+span<const std::string> actor_system_config::remainder() const noexcept {
+  return fields_->args_remainder;
+}
+
+std::pair<int, char**> actor_system_config::c_args_remainder() const noexcept {
+  return std::make_pair(fields_->c_args_remainder.argc,
+                        fields_->c_args_remainder.argv);
 }
 
 } // namespace caf

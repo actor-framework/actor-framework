@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/actor_factory.hpp"
+#include "caf/callback.hpp"
 #include "caf/config_option.hpp"
 #include "caf/config_option_adder.hpp"
 #include "caf/config_option_set.hpp"
@@ -13,19 +14,13 @@
 #include "caf/detail/type_traits.hpp"
 #include "caf/dictionary.hpp"
 #include "caf/fwd.hpp"
-#include "caf/is_typed_actor.hpp"
-#include "caf/raise_error.hpp"
 #include "caf/settings.hpp"
 #include "caf/thread_hook.hpp"
 
-#include <atomic>
-#include <functional>
 #include <memory>
 #include <string>
 #include <string_view>
 #include <type_traits>
-#include <typeindex>
-#include <unordered_map>
 
 namespace caf {
 
@@ -36,44 +31,27 @@ public:
 
   friend class actor_system;
 
+  friend class detail::actor_system_config_access;
+
   // -- member types -----------------------------------------------------------
-
-  using logger_factory_t = std::function<intrusive_ptr<logger>(actor_system&)>;
-
-  using hook_factory = std::function<io::hook*(actor_system&)>;
-
-  using hook_factory_vector = std::vector<hook_factory>;
-
-  using thread_hooks = std::vector<std::unique_ptr<thread_hook>>;
-
-  using module_factory = std::function<actor_system::module*(actor_system&)>;
-
-  using module_factory_vector = std::vector<module_factory>;
-
-  using actor_factory_map = std::unordered_map<std::string, actor_factory>;
-
-  using portable_name_map = std::unordered_map<std::type_index, std::string>;
-
-  using config_map = dictionary<config_value::dictionary>;
-
-  using string_list = std::vector<std::string>;
 
   using opt_group = config_option_adder;
 
   // -- constructors, destructors, and assignment operators --------------------
-
-  virtual ~actor_system_config();
 
   actor_system_config();
 
   actor_system_config(actor_system_config&&) = default;
 
   actor_system_config(const actor_system_config&) = delete;
+
   actor_system_config& operator=(const actor_system_config&) = delete;
+
+  virtual ~actor_system_config();
 
   // -- properties -------------------------------------------------------------
 
-  /// @private
+  /// Stores user-defined configuration parameters.
   settings content;
 
   /// Extracts all parameters from the config, including entries with default
@@ -90,12 +68,12 @@ public:
 
   /// Parses `args` as tuple of strings containing CLI options and `config` as
   /// configuration file.
-  error parse(string_list args, std::istream& config);
+  error parse(std::vector<std::string> args, std::istream& config);
 
   /// Parses `args` as CLI options and tries to locate a config file via
   /// `config_file_path` and `config_file_path_alternative` unless the user
   /// provides a config file path on the command line.
-  error parse(string_list args);
+  error parse(std::vector<std::string> args);
 
   /// Parses the CLI options `{argc, argv}` and `config` as configuration file.
   error parse(int argc, char** argv, std::istream& config);
@@ -131,67 +109,46 @@ public:
   }
 
   /// Loads module `T` with optional template parameters `Ts...`.
-  template <class T, class... Ts>
+  template <class T>
   actor_system_config& load() {
     T::add_module_options(*this);
-    module_factories.push_back([](actor_system& sys) -> actor_system::module* {
-      return T::make(sys, type_list<Ts...>{});
+    add_module_factory([](actor_system& sys) -> actor_system::module* { //
+      return T::make(sys);
     });
     return *this;
-  }
-
-  /// Adds a factory for a new hook type to the middleman (if loaded).
-  template <class Factory>
-  actor_system_config& add_hook_factory(Factory f) {
-    hook_factories.push_back(f);
-    return *this;
-  }
-
-  /// Adds a hook type to the middleman (if loaded).
-  template <class Hook>
-  actor_system_config& add_hook_type() {
-    return add_hook_factory(
-      [](actor_system& sys) -> Hook* { return new Hook(sys); });
   }
 
   /// Adds a hook type to the scheduler.
   template <class Hook, class... Ts>
   actor_system_config& add_thread_hook(Ts&&... ts) {
-    std::unique_ptr<thread_hook> hook{new Hook(std::forward<Ts>(ts)...)};
-    thread_hooks_.emplace_back(std::move(hook));
+    add_thread_hook(std::make_unique<Hook>(std::forward<Ts>(ts)...));
     return *this;
   }
 
   /// Overrides the default logger factory.
   /// @pre `new_factory != nullptr`
-  actor_system_config& logger_factory(logger_factory_t new_factory) {
-    logger_factory_ = std::move(new_factory);
+  template <class Factory>
+  actor_system_config& logger_factory(Factory new_factory) {
+    static_assert(
+      std::is_invocable_r_v<intrusive_ptr<logger>, Factory&, actor_system&>,
+      "Factory must have signature `intrusive_ptr<logger>(actor_system&)`");
+    using impl_t = callback_impl<Factory, intrusive_ptr<logger>(actor_system&)>;
+    set_logger_factory(std::make_unique<impl_t>(std::move(new_factory)));
     return *this;
   }
 
-  /// Checks whether this config contains a custom logger factory.
-  bool has_logger_factory() const noexcept {
-    return logger_factory_ != nullptr;
-  }
-
-  // -- factories --------------------------------------------------------------
-
-  /// Creates a new logger for `sys`. Either uses the user-defined logger
-  /// factory or the default logger factory.
-  intrusive_ptr<logger> make_logger(actor_system& sys) const;
-
   // -- parser and CLI state ---------------------------------------------------
 
-  /// Stores whether the help text was printed. If set to `true`, the
-  /// application should not use this config to initialize an `actor_system`
-  /// and instead return from `main` immediately.
-  bool cli_helptext_printed = false;
+  /// Returns whether the help text was printed. If this function return `true`,
+  /// the application should not use this config object to initialize an
+  /// `actor_system` and instead return from `main` immediately.
+  bool helptext_printed() const noexcept;
 
   /// Stores the content of `argv[0]` from the arguments passed to `parse`.
-  std::string program_name;
+  const std::string& program_name() const noexcept;
 
   /// Stores CLI arguments that were not consumed by CAF.
-  string_list remainder;
+  span<const std::string> remainder() const noexcept;
 
   /// Returns the remainder including the program name (`argv[0]`) suitable for
   /// passing the returned pair of arguments to C-style functions that usually
@@ -201,26 +158,16 @@ public:
   ///       `actor_system_config` object exists.
   std::pair<int, char**> c_args_remainder() const noexcept;
 
-  // -- factories --------------------------------------------------------------
-
-  actor_factory_map actor_factories;
-  module_factory_vector module_factories;
-  hook_factory_vector hook_factories;
-
-  // -- hooks ------------------------------------------------------------------
-
-  thread_hooks thread_hooks_;
-
-  // -- parsing parameters -----------------------------------------------------
-
-  /// Configures the default path of the configuration file.
-  std::string config_file_path;
-
-  /// Configures alternative paths for locating a config file when unable to
-  /// open the default `config_file_path`.
-  std::vector<std::string> config_file_path_alternatives;
-
   // -- config file parsing ----------------------------------------------------
+
+  /// Sets the default path of the configuration file.
+  void config_file_path(std::string path);
+
+  /// Sets the default paths of the configuration file.
+  void config_file_paths(std::vector<std::string> paths);
+
+  /// Returns the default paths of the configuration file.
+  span<const std::string> config_file_paths();
 
   /// Tries to open `filename` and parses its content as CAF config file.
   /// @param filename Relative or absolute path to the config file.
@@ -289,18 +236,54 @@ protected:
   config_option_set custom_options_;
 
 private:
-  virtual detail::mailbox_factory* mailbox_factory();
+  // -- logger factories -------------------------------------------------------
 
-  void set_remainder(string_list args);
+  using logger_factory_t = callback<intrusive_ptr<logger>(actor_system&)>;
 
-  mutable std::vector<char*> c_args_remainder_;
-  std::vector<char> c_args_remainder_buf_;
+  void set_logger_factory(std::unique_ptr<logger_factory_t> ptr);
+
+  intrusive_ptr<logger> make_logger(actor_system& sys);
+
+  // -- module factories -------------------------------------------------------
+
+  using module_factory_fn = actor_system::module* (*) (actor_system&);
+
+  void add_module_factory(module_factory_fn new_factory);
+
+  span<module_factory_fn> module_factories();
+
+  // -- actor factories --------------------------------------------------------
+
+  actor_factory* get_actor_factory(std::string_view name);
+
+  // -- thread hooks -----------------------------------------------------------
+
+  void add_thread_hook(std::unique_ptr<thread_hook> ptr);
+
+  span<std::unique_ptr<thread_hook>> thread_hooks();
+
+  // -- mailbox factory --------------------------------------------------------
+
+  void mailbox_factory(std::unique_ptr<detail::mailbox_factory> factory);
+
+  detail::mailbox_factory* mailbox_factory();
+
+  // -- internal bookkeeping ---------------------------------------------------
+
+  void set_remainder(std::vector<std::string> args);
+
+  // -- utility functions ------------------------------------------------------
 
   actor_system_config& set_impl(std::string_view name, config_value value);
 
-  std::pair<error, std::string> extract_config_file_path(string_list& args);
+  std::pair<error, std::string>
+  extract_config_file_path(std::vector<std::string>& args);
 
-  logger_factory_t logger_factory_;
+  // -- member variables -------------------------------------------------------
+
+  struct fields;
+
+  fields* fields_;
 };
 
 /// Returns all user-provided configuration parameters.

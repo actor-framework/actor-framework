@@ -249,25 +249,7 @@ public:
   static void add_module_options(actor_system_config& cfg);
 
   /// Returns a middleman using the default network backend.
-  static actor_system::module* make(actor_system&, type_list<>);
-
-  template <class Backend>
-  static actor_system::module* make(actor_system& sys, type_list<Backend>) {
-    class impl : public middleman {
-    public:
-      impl(actor_system& ref) : middleman(ref), backend_(&ref) {
-        // nop
-      }
-
-      network::multiplexer& backend() override {
-        return backend_;
-      }
-
-    private:
-      Backend backend_;
-    };
-    return new impl(sys);
-  }
+  static actor_system::module* make(actor_system&);
 
   /// @private
   actor get_named_broker(const std::string& name) {

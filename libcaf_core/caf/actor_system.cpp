@@ -345,7 +345,7 @@ actor_system::actor_system(actor_system_config& cfg,
   meta_objects_guard_ = detail::global_meta_objects_guard();
   if (!meta_objects_guard_)
     CAF_CRITICAL("unable to obtain the global meta objects guard");
-  for (auto& hook : cfg.thread_hooks_)
+  for (auto& hook : cfg.thread_hooks())
     hook->init(*this);
   // Cache some configuration parameters for faster lookups at runtime.
   using string_list = std::vector<std::string>;
@@ -358,9 +358,10 @@ actor_system::actor_system(actor_system_config& cfg,
   if (!metrics_actors_includes_.empty())
     actor_metric_families_ = make_actor_metric_families(metrics_);
   // Spin up modules.
-  for (auto& f : cfg.module_factories) {
-    auto mod_ptr = f(*this);
-    modules_[mod_ptr->id()].reset(mod_ptr);
+  for (auto fn : cfg.module_factories()) {
+    auto mod_ptr = fn(*this);
+    auto mod_id = mod_ptr->id();
+    modules_[mod_id].reset(mod_ptr);
   }
   // Make sure meta objects are loaded.
   auto gmos = detail::global_meta_objects();
@@ -552,12 +553,12 @@ size_t actor_system::detached_actors() const noexcept {
 }
 
 void actor_system::thread_started(thread_owner owner) {
-  for (auto& hook : cfg_.thread_hooks_)
+  for (auto& hook : cfg_.thread_hooks())
     hook->thread_started(owner);
 }
 
 void actor_system::thread_terminates() {
-  for (auto& hook : cfg_.thread_hooks_)
+  for (auto& hook : cfg_.thread_hooks())
     hook->thread_terminates();
 }
 
@@ -570,12 +571,11 @@ actor_system::dyn_spawn_impl(const std::string& name, message& args,
     check_interface, expected_ifs);
   if (name.empty())
     return sec::invalid_argument;
-  auto& fs = cfg_.actor_factories;
-  auto i = fs.find(name);
-  if (i == fs.end())
+  auto* fs = cfg_.get_actor_factory(name);
+  if (fs == nullptr)
     return sec::unknown_type;
   actor_config cfg{sched != nullptr ? sched : scheduler_.get()};
-  auto res = i->second(*this, cfg, args);
+  auto res = (*fs)(*this, cfg, args);
   if (!res.first)
     return sec::cannot_spawn_actor_from_arguments;
   if (check_interface && !assignable(res.second, *expected_ifs))

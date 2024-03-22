@@ -60,12 +60,13 @@ std::atomic<bool> shutdown_flag;
 int caf_main(caf::actor_system& sys, const config& cfg) {
   signal(SIGTERM, [](int) { shutdown_flag = true; });
   // Get URI from config (positional argument).
-  if (cfg.remainder.size() != 1) {
+  auto remainder = cfg.remainder();
+  if (remainder.size() != 1) {
     std::cerr << "*** expected mandatory positional argument: URL" << std::endl;
     return EXIT_FAILURE;
   }
   uri resource;
-  if (auto err = parse(cfg.remainder[0], resource)) {
+  if (auto err = parse(remainder[0], resource)) {
     std::cerr << "*** failed to parse URI: " << to_string(err) << std::endl;
     return EXIT_FAILURE;
   }

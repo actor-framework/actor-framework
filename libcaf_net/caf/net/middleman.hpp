@@ -62,7 +62,7 @@ public:
 
   // -- factory functions ------------------------------------------------------
 
-  static module* make(actor_system& sys, type_list<>);
+  static module* make(actor_system& sys);
 
   /// Adds module-specific options to the config before loading the module.
   static void add_module_options(actor_system_config& cfg);

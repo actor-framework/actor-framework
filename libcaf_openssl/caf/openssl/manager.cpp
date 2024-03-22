@@ -164,7 +164,7 @@ void manager::add_module_options(actor_system_config& cfg) {
                       "colon-separated list of OpenSSL cipher strings to use");
 }
 
-actor_system::module* manager::make(actor_system& sys, type_list<>) {
+actor_system::module* manager::make(actor_system& sys) {
   if (!sys.has_middleman())
     CAF_RAISE_ERROR("Cannot start OpenSSL module without middleman.");
   auto ptr = &sys.middleman().backend();
