@@ -13,6 +13,7 @@
 #include "caf/detail/mailbox_factory.hpp"
 #include "caf/detail/parser/read_config.hpp"
 #include "caf/detail/parser/read_string.hpp"
+#include "caf/format_to_error.hpp"
 #include "caf/logger.hpp"
 #include "caf/message_builder.hpp"
 #include "caf/pec.hpp"
@@ -414,7 +415,8 @@ error actor_system_config::parse(std::vector<std::string> args,
   } else {
     // Not finding an explicitly defined config file is an error.
     if (auto fname = get_if<std::string>(&content, "config-file"))
-      return make_error(sec::cannot_open_file, *fname);
+      return format_to_error(sec::cannot_open_file,
+                             "cannot open config file: {}", *fname);
   }
   // Environment variables override the content of the config file.
   for (auto& opt : custom_options_) {
@@ -524,7 +526,8 @@ actor_system_config::parse_config_file(const char* filename,
                                        const config_option_set& opts) {
   std::ifstream f{filename};
   if (!f.is_open())
-    return make_error(sec::cannot_open_file, filename);
+    return format_to_error(sec::cannot_open_file, "cannot open config file: {}",
+                           filename);
   return parse_config(f, opts);
 }
 
@@ -551,7 +554,9 @@ error actor_system_config::parse_config(std::istream& source,
   parser_state<config_iter, config_sentinel> res{config_iter{&source}};
   detail::parser::read_config(res, consumer);
   if (res.i != res.e)
-    return make_error(res.code, res.line, res.column);
+    return format_to_error(
+      res.code, "failed to parse config: invalid syntax in line {} column {}",
+      res.line, res.column);
   return none;
 }
 

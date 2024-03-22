@@ -98,10 +98,9 @@ expected<tcp_accept_socket> make_tcp_accept_socket(ip_endpoint node,
     log::net::debug("sock.id = {}", sock.id);
     return sguard.release();
   } else {
-    log::net::warning("could not create tcp socket: node = {}, p.error = {}",
-                      node, p.error());
-    return make_error(sec::cannot_open_port, "tcp socket creation failed",
-                      to_string(node), std::move(p.error()));
+    return format_to_error(
+      sec::cannot_open_port,
+      "could not create tcp socket: node = {}, p.error = {}", node, p.error());
   }
 }
 
@@ -122,8 +121,9 @@ make_tcp_accept_socket(const uri::authority_type& node, bool reuse_addr) {
   }
   auto addrs = ip::local_addresses(host);
   if (addrs.empty())
-    return make_error(sec::cannot_open_port, "no local interface available",
-                      to_string(node));
+    return format_to_error(sec::cannot_open_port,
+                           "no local interface available for {}",
+                           to_string(node));
   // Prefer ipv6 addresses.
   std::stable_partition(std::begin(addrs), std::end(addrs),
                         [](const ip_address& ip) { return !ip.embeds_v4(); });
@@ -132,8 +132,8 @@ make_tcp_accept_socket(const uri::authority_type& node, bool reuse_addr) {
                                            reuse_addr))
       return *sock;
   }
-  return make_error(sec::cannot_open_port, "tcp socket creation failed",
-                    to_string(node));
+  return format_to_error(sec::cannot_open_port, "failed to open port: {}",
+                         node);
 }
 
 expected<tcp_accept_socket>
@@ -153,9 +153,9 @@ expected<tcp_stream_socket> accept(tcp_accept_socket x) {
     auto err = net::last_socket_error();
     if (err != std::errc::operation_would_block
         && err != std::errc::resource_unavailable_try_again) {
-      return caf::make_error(sec::unavailable_or_would_block);
+      return make_error(sec::unavailable_or_would_block);
     }
-    return caf::make_error(sec::socket_operation_failed, "tcp accept failed");
+    return make_error(sec::socket_operation_failed, "tcp accept failed");
   }
   log::net::debug("accepted TCP socket {} on accept socket {}", sock, x.id);
   return tcp_stream_socket{sock};

@@ -311,6 +311,7 @@ caf_add_component(
     caf/node_id.cpp
     caf/node_id.test.cpp
     caf/or_else.test.cpp
+    caf/parser_state.cpp
     caf/policy/select_all.test.cpp
     caf/policy/select_any.test.cpp
     caf/proxy_registry.cpp

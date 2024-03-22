@@ -25,19 +25,10 @@ void prettify_type_name(std::string& class_name) {
   replace_all(class_name, "::", ".");
   replace_all(class_name, "(anonymous namespace)", "ANON");
   replace_all(class_name, ".__1.", "."); // gets rid of weird Clang-lib names
-  // hide CAF magic in logs
-  auto strip_magic = [&](const char* prefix_begin, const char* prefix_end) {
-    auto last = class_name.end();
-    auto i = std::search(class_name.begin(), last, prefix_begin, prefix_end);
-    auto comma_or_angle_bracket = [](char c) { return c == ',' || c == '>'; };
-    auto e = std::find_if(i, last, comma_or_angle_bracket);
-    if (i != e) {
-      std::string substr(i + (prefix_end - prefix_begin), e);
-      class_name.swap(substr);
-    }
-  };
-  char prefix1[] = "caf.detail.embedded<";
-  strip_magic(prefix1, prefix1 + (sizeof(prefix1) - 1));
+  replace_all(class_name, "class ", ".");
+  replace_all(class_name, "struct ", ".");
+  while (class_name[0] == '.' || class_name[0] == ' ')
+    class_name.erase(class_name.begin());
   // Drop template parameters, only leaving the template class name.
   auto i = std::find(class_name.begin(), class_name.end(), '<');
   if (i != class_name.end())

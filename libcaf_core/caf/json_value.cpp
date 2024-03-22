@@ -170,7 +170,7 @@ expected<json_value> json_value::parse(std::string_view str) {
   auto root = detail::json::parse(ps, &storage->buf);
   if (ps.code == pec::success)
     return {json_value{root, std::move(storage)}};
-  return {make_error(ps)};
+  return {ps.error()};
 }
 
 expected<json_value> json_value::parse_shallow(std::string_view str) {
@@ -179,7 +179,7 @@ expected<json_value> json_value::parse_shallow(std::string_view str) {
   auto root = detail::json::parse_shallow(ps, &storage->buf);
   if (ps.code == pec::success)
     return {json_value{root, std::move(storage)}};
-  return {make_error(ps)};
+  return {ps.error()};
 }
 
 expected<json_value> json_value::parse_in_situ(std::string& str) {
@@ -189,7 +189,7 @@ expected<json_value> json_value::parse_in_situ(std::string& str) {
   auto root = detail::json::parse_in_situ(ps, &storage->buf);
   if (ps.code == pec::success)
     return {json_value{root, std::move(storage)}};
-  return {make_error(ps)};
+  return {ps.error()};
 }
 
 expected<json_value> json_value::parse_file(const char* path) {
@@ -202,7 +202,7 @@ expected<json_value> json_value::parse_file(const char* path) {
   auto root = detail::json::parse(ps, &storage->buf);
   if (ps.code == pec::success)
     return {json_value{root, std::move(storage)}};
-  return {make_error(ps)};
+  return {ps.error()};
 }
 
 expected<json_value> json_value::parse_file(const std::string& path) {

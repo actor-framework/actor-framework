@@ -12,6 +12,7 @@
 #include "caf/deep_to_string.hpp"
 #include "caf/defaults.hpp"
 #include "caf/event_based_actor.hpp"
+#include "caf/format_to_error.hpp"
 #include "caf/scheduled_actor/flow.hpp"
 
 #include <algorithm>
@@ -63,7 +64,7 @@ struct kvs_actor_state {
         if (auto i = data.find(key); i != data.end())
           return i->second;
         else
-          return make_error(caf::sec::no_such_key, key + " not found");
+          return format_to_error(caf::sec::no_such_key, "{} not found", key);
       },
       [this](caf::put_atom, const std::string& key, std::string& value) {
         data.insert_or_assign(key, std::move(value));

@@ -6,6 +6,7 @@
 
 #include "caf/detail/assert.hpp"
 #include "caf/detail/config_consumer.hpp"
+#include "caf/detail/format.hpp"
 #include "caf/detail/meta_object.hpp"
 #include "caf/detail/overload.hpp"
 #include "caf/detail/parse.hpp"
@@ -13,6 +14,7 @@
 #include "caf/detail/scope_guard.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/expected.hpp"
+#include "caf/format_to_error.hpp"
 #include "caf/parser_state.hpp"
 #include "caf/pec.hpp"
 #include "caf/settings.hpp"
@@ -33,13 +35,11 @@ const char* type_names[] = {"none",   "integer",  "boolean",
 
 template <class To, class From>
 auto no_conversion() {
-  return [](const From&) {
-    std::string msg = "cannot convert ";
-    msg += type_names[detail::tl_index_of_v<config_value::types, From>];
-    msg += " to ";
-    msg += type_names[detail::tl_index_of_v<config_value::types, To>];
-    auto err = make_error(sec::conversion_failed, std::move(msg));
-    return expected<To>{std::move(err)};
+  return [](const From&) -> expected<To> {
+    return format_to_error(
+      sec::conversion_failed, "cannot convert from type {} to type {}",
+      type_names[detail::tl_index_of_v<config_value::types, From>],
+      type_names[detail::tl_index_of_v<config_value::types, To>]);
   };
 }
 
@@ -90,10 +90,10 @@ expected<config_value> config_value::parse(std::string_view::iterator first,
     case '{':
     case '"':
     case '\'':
-      return make_error(res.code);
+      return error{res.code};
     default:
       if (isdigit(*i))
-        return make_error(res.code);
+        return error{res.code};
       return config_value{std::string{first, last}};
   }
 }
@@ -226,42 +226,32 @@ expected<bool> config_value::to_boolean() const {
     no_conversions<bool, none_t, integer, real, timespan, uri,
                    config_value::list>(),
     [](boolean x) { return result_type{x}; },
-    [](const std::string& x) {
+    [](const std::string& x) -> result_type {
       if (x == "true") {
         return result_type{true};
-      } else if (x == "false") {
-        return result_type{false};
-      } else {
-        std::string msg = "cannot convert ";
-        detail::print_escaped(msg, x);
-        msg += " to a boolean";
-        return result_type{make_error(sec::conversion_failed, std::move(msg))};
       }
+      if (x == "false") {
+        return result_type{false};
+      }
+      return format_to_error(sec::conversion_failed,
+                             "cannot convert '{}' to a boolean", x);
     },
-    [](const dictionary& x) {
+    [](const dictionary& x) -> result_type {
       if (auto i = x.find("@type");
           i != x.end() && holds_alternative<std::string>(i->second)) {
         const auto& tn = get<std::string>(i->second);
         if (tn == type_name_v<bool>) {
           if (auto j = x.find("value"); j != x.end()) {
             return j->second.to_boolean();
-          } else {
-            std::string msg = "missing value for object of type ";
-            msg += tn;
-            return result_type{
-              make_error(sec::conversion_failed, std::move(msg))};
           }
-        } else {
-          std::string msg = "cannot convert ";
-          msg += tn;
-          msg += " to a boolean";
-          return result_type{
-            make_error(sec::conversion_failed, std::move(msg))};
+          return format_to_error(sec::conversion_failed,
+                                 "missing value for object of type {}", tn);
         }
-      } else {
-        std::string msg = "cannot convert a dictionary to a boolean";
-        return result_type{make_error(sec::conversion_failed, std::move(msg))};
+        return format_to_error(sec::conversion_failed,
+                               "cannot convert '{}' to a boolean", tn);
       }
+      return format_to_error(sec::conversion_failed,
+                             "cannot convert a dictionary to a boolean");
     });
   return visit(f, data_);
 }
@@ -271,21 +261,19 @@ expected<config_value::integer> config_value::to_integer() const {
   auto f = detail::make_overload(
     no_conversions<integer, none_t, bool, timespan, uri, config_value::list>(),
     [](integer x) { return result_type{x}; },
-    [](real x) {
+    [](real x) -> result_type {
       using limits = std::numeric_limits<config_value::integer>;
       if (std::isfinite(x)            // never convert NaN & friends
           && std::fmod(x, 1.0) == 0.0 // only convert whole numbers
           && x <= static_cast<config_value::real>(limits::max())
           && x >= static_cast<config_value::real>(limits::min())) {
         return result_type{static_cast<config_value::integer>(x)};
-      } else {
-        auto err = make_error(
-          sec::conversion_failed,
-          "cannot convert decimal or out-of-bounds real number to an integer");
-        return result_type{std::move(err)};
       }
+      return format_to_error(sec::conversion_failed,
+                             "cannot convert decimal or out-of-bounds "
+                             "real number to an integer");
     },
-    [](const std::string& x) {
+    [](const std::string& x) -> result_type {
       auto tmp_int = config_value::integer{0};
       if (detail::parse(x, tmp_int) == none)
         return result_type{tmp_int};
@@ -293,12 +281,10 @@ expected<config_value::integer> config_value::to_integer() const {
       if (detail::parse(x, tmp_real) == none)
         if (auto ival = config_value{tmp_real}.to_integer())
           return result_type{*ival};
-      std::string msg = "cannot convert ";
-      detail::print_escaped(msg, x);
-      msg += " to an integer";
-      return result_type{make_error(sec::conversion_failed, std::move(msg))};
+      return format_to_error(sec::conversion_failed,
+                             "cannot convert '{} to an integer", x);
     },
-    [](const dictionary& x) {
+    [](const dictionary& x) -> result_type {
       if (auto i = x.find("@type");
           i != x.end() && holds_alternative<std::string>(i->second)) {
         const auto& tn = get<std::string>(i->second);
@@ -311,23 +297,15 @@ expected<config_value::integer> config_value::to_integer() const {
         if (std::any_of(std::begin(valid_types), std::end(valid_types), eq)) {
           if (auto j = x.find("value"); j != x.end()) {
             return j->second.to_integer();
-          } else {
-            std::string msg = "missing value for object of type ";
-            msg += tn;
-            return result_type{
-              make_error(sec::conversion_failed, std::move(msg))};
           }
-        } else {
-          std::string msg = "cannot convert ";
-          msg += tn;
-          msg += " to an integer";
-          return result_type{
-            make_error(sec::conversion_failed, std::move(msg))};
+          return format_to_error(sec::conversion_failed,
+                                 "missing value for object of type {}", tn);
         }
-      } else {
-        std::string msg = "cannot convert a dictionary to an integer";
-        return result_type{make_error(sec::conversion_failed, std::move(msg))};
+        return format_to_error(sec::conversion_failed,
+                               "cannot convert {} to an integer", tn);
       }
+      return format_to_error(sec::conversion_failed,
+                             "cannot convert a dictionary to an integer");
     });
   return visit(f, data_);
 }
@@ -343,16 +321,14 @@ expected<config_value::real> config_value::to_real() const {
       return result_type{static_cast<real>(x)};
     },
     [](real x) { return result_type{x}; },
-    [](const std::string& x) {
+    [](const std::string& x) -> result_type {
       auto tmp = 0.0;
       if (detail::parse(x, tmp) == none)
         return result_type{tmp};
-      std::string msg = "cannot convert ";
-      detail::print_escaped(msg, x);
-      msg += " to a floating point number";
-      return result_type{make_error(sec::conversion_failed, std::move(msg))};
+      return format_to_error(sec::conversion_failed,
+                             "cannot convert {} to a floating point number", x);
     },
-    [](const dictionary& x) {
+    [](const dictionary& x) -> result_type {
       if (auto i = x.find("@type");
           i != x.end() && holds_alternative<std::string>(i->second)) {
         const auto& tn = get<std::string>(i->second);
@@ -362,24 +338,17 @@ expected<config_value::real> config_value::to_real() const {
         if (std::any_of(std::begin(valid_types), std::end(valid_types), eq)) {
           if (auto j = x.find("value"); j != x.end()) {
             return j->second.to_real();
-          } else {
-            std::string msg = "missing value for object of type ";
-            msg += tn;
-            return result_type{
-              make_error(sec::conversion_failed, std::move(msg))};
           }
-        } else {
-          std::string msg = "cannot convert ";
-          msg += tn;
-          msg += " to a floating point number";
-          return result_type{
-            make_error(sec::conversion_failed, std::move(msg))};
+          return format_to_error(sec::conversion_failed,
+                                 "missing value for object of type {}", tn);
         }
-      } else {
-        std::string msg
-          = "cannot convert a dictionary to a floating point number";
-        return result_type{make_error(sec::conversion_failed, std::move(msg))};
+        return format_to_error(sec::conversion_failed,
+                               "cannot convert {} to a floating point number",
+                               tn);
       }
+      return format_to_error(sec::conversion_failed,
+                             "cannot convert a dictionary to "
+                             "a floating point number");
     });
   return visit(f, data_);
 }
@@ -390,14 +359,12 @@ expected<timespan> config_value::to_timespan() const {
     no_conversions<timespan, none_t, bool, integer, real, uri,
                    config_value::list, config_value::dictionary>(),
     [](timespan x) { return result_type{x}; },
-    [](const std::string& x) {
+    [](const std::string& x) -> result_type {
       auto tmp = timespan{};
       if (detail::parse(x, tmp) == none)
         return result_type{tmp};
-      std::string msg = "cannot convert ";
-      detail::print_escaped(msg, x);
-      msg += " to a timespan";
-      return result_type{make_error(sec::conversion_failed, std::move(msg))};
+      return format_to_error(sec::conversion_failed,
+                             "cannot convert '{}' to a timespan", x);
     });
   return visit(f, data_);
 }
@@ -425,7 +392,7 @@ expected<config_value::list> config_value::to_list() const {
   };
   auto f = detail::make_overload(
     no_conversions<list, none_t, bool, integer, real, timespan, uri>(),
-    [dict_to_list](const std::string& x) {
+    [dict_to_list](const std::string& x) -> result_type {
       // Check whether we can parse the string as a list. However, we also
       // accept dictionaries that we convert to lists of key-value pairs. We
       // need to try converting to dictionary *first*, because detail::parse for
@@ -437,10 +404,8 @@ expected<config_value::list> config_value::to_list() const {
       }
       if (config_value::list tmp; detail::parse(x, tmp) == none)
         return result_type{std::move(tmp)};
-      std::string msg = "cannot convert ";
-      detail::print_escaped(msg, x);
-      msg += " to a list";
-      return result_type{make_error(sec::conversion_failed, std::move(msg))};
+      return format_to_error(sec::conversion_failed,
+                             "cannot convert '{}' to a list", x);
     },
     [](const list& x) { return result_type{x}; },
     [dict_to_list](const dictionary& x) {
@@ -455,7 +420,7 @@ expected<config_value::dictionary> config_value::to_dictionary() const {
   using result_type = expected<dictionary>;
   auto f = detail::make_overload(
     no_conversions<dictionary, none_t, bool, integer, timespan, real, uri>(),
-    [](const list& x) {
+    [](const list& x) -> result_type {
       dictionary tmp;
       auto lift = [&tmp](const config_value& element) {
         auto ls = element.to_list();
@@ -466,14 +431,12 @@ expected<config_value::dictionary> config_value::to_dictionary() const {
       };
       if (std::all_of(x.begin(), x.end(), lift)) {
         return result_type{std::move(tmp)};
-      } else {
-        auto err = make_error(sec::conversion_failed,
-                              "cannot convert list to dictionary unless each "
-                              "element in the list is a key-value pair");
-        return result_type{std::move(err)};
       }
+      return error{sec::conversion_failed,
+                   "cannot convert list to dictionary unless each "
+                   "element in the list is a key-value pair"};
     },
-    [this](const std::string& x) {
+    [this](const std::string& x) -> result_type {
       if (dictionary tmp; detail::parse(x, tmp) == none)
         return result_type{std::move(tmp)};
       if (auto lst = to_list()) {
@@ -481,10 +444,8 @@ expected<config_value::dictionary> config_value::to_dictionary() const {
         if (auto res = ls.to_dictionary())
           return res;
       }
-      std::string msg = "cannot convert ";
-      detail::print_escaped(msg, x);
-      msg += " to a dictionary";
-      return result_type{make_error(sec::conversion_failed, std::move(msg))};
+      return format_to_error(sec::conversion_failed,
+                             "cannot convert '{}' to a dictionary", x);
     },
     [](const dictionary& x) { return result_type{x}; });
   return visit(f, data_);
@@ -494,10 +455,10 @@ bool config_value::can_convert_to_dictionary() const {
   auto f = detail::make_overload( //
     [](const auto&) { return false; },
     [this](const std::string&) {
-      // TODO: implement some dry-run mode and use it here to avoid creating an
-      //       actual dictionary only to throw it away.
+      // TODO: implement some dry-run mode and use it here to avoid creating
+      // an actual dictionary only to throw it away.
       auto maybe_dict = to_dictionary();
-      return static_cast<bool>(maybe_dict);
+      return maybe_dict.has_value();
     },
     [](const dictionary&) { return true; });
   return visit(f, data_);
@@ -602,7 +563,6 @@ bool operator>=(const config_value& x, const config_value& y) {
 }
 
 namespace {
-
 void to_string_impl(std::string& str, const config_value& x);
 
 struct to_string_visitor {

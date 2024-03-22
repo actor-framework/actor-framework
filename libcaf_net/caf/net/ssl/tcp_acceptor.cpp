@@ -8,6 +8,7 @@
 #include "caf/net/tcp_stream_socket.hpp"
 
 #include "caf/expected.hpp"
+#include "caf/format_to_error.hpp"
 
 namespace caf::net::ssl {
 
@@ -37,12 +38,14 @@ tcp_acceptor::make_with_cert_file(tcp_accept_socket fd,
     return {make_error(sec::runtime_error, "unable to create SSL context")};
   }
   if (!ctx->use_certificate_file(cert_file_path, file_format)) {
-    return {make_error(sec::runtime_error, "unable to load certificate file",
-                       ctx->last_error_string())};
+    return {format_to_error(sec::runtime_error,
+                            "unable to load certificate file: {}",
+                            ctx->last_error_string())};
   }
   if (!ctx->use_private_key_file(key_file_path, file_format)) {
-    return {make_error(sec::runtime_error, "unable to load private key file",
-                       ctx->last_error_string())};
+    return {format_to_error(sec::runtime_error,
+                            "unable to load private key file: {}",
+                            ctx->last_error_string())};
   }
   return {tcp_acceptor{fd, std::move(*ctx)}};
 }

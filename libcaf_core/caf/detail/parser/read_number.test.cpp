@@ -104,8 +104,7 @@ struct range_parser {
     detail::parser::read_number(res, f, std::true_type{}, std::true_type{});
     if (res.code == pec::success)
       return expected<std::vector<int64_t>>{std::move(f.xs)};
-    else
-      return make_error(res);
+    return res.error();
   }
 };
 

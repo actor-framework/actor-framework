@@ -5,6 +5,7 @@
 #include "caf/deserializer.hpp"
 
 #include "caf/actor_system.hpp"
+#include "caf/format_to_error.hpp"
 
 namespace caf {
 
@@ -36,18 +37,14 @@ bool deserializer::assert_next_object_name(std::string_view type_name) {
   if (fetch_next_object_name(found)) {
     if (type_name == found) {
       return true;
-    } else {
-      std::string str = "required type ";
-      str.insert(str.end(), type_name.begin(), type_name.end());
-      str += ", got ";
-      str.insert(str.end(), found.begin(), found.end());
-      emplace_error(sec::type_clash, __func__, std::move(str));
-      return false;
     }
-  } else {
-    emplace_error(sec::runtime_error, __func__, "no type name available");
+    err_ = format_to_error(sec::type_clash, "{}: expected type {}, got {}",
+                           __func__, type_name, found);
     return false;
   }
+  err_ = format_to_error(sec::type_clash, "{}: expected type {}, got none",
+                         __func__, type_name);
+  return false;
 }
 
 bool deserializer::begin_key_value_pair() {

@@ -17,6 +17,7 @@
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/flow/observable_builder.hpp"
 #include "caf/flow/op/mcast.hpp"
+#include "caf/format_to_error.hpp"
 #include "caf/log/core.hpp"
 #include "caf/log/system.hpp"
 #include "caf/mailbox_element.hpp"
@@ -100,14 +101,17 @@ error scheduled_actor::default_exception_handler(local_actor* ptr,
   } catch (std::exception& e) {
     auto pretty_type = detail::pretty_type_name(typeid(e));
     ptr->println(
-      "*** unhandled exception: [id: {}, name: {}, exception typeid {}]: {}",
+      "*** unhandled exception: [id: {}, name: {}, exception: {}]: {}",
       ptr->id(), ptr->name(), pretty_type, e.what());
-    return make_error(sec::runtime_error, std::move(pretty_type), e.what());
+    return format_to_error(sec::runtime_error,
+                           "unhandled exception of type {}: {}", pretty_type,
+                           e.what());
   } catch (...) {
     ptr->println(
       "*** unhandled exception: [id: {}, name: {}]: unknown exception",
       ptr->id(), ptr->name());
-    return sec::runtime_error;
+    return make_error(sec::runtime_error,
+                      "unhandled exception of unknown type");
   }
 }
 #endif // CAF_ENABLE_EXCEPTIONS

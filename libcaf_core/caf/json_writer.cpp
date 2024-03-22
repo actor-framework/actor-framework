@@ -7,6 +7,7 @@
 #include "caf/detail/append_hex.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/print.hpp"
+#include "caf/format_to_error.hpp"
 
 namespace caf {
 
@@ -122,7 +123,8 @@ bool json_writer::begin_field(std::string_view name, bool is_present) {
       default: {
         std::string str = "expected object, found ";
         str += as_json_type_name(t);
-        emplace_error(sec::runtime_error, class_name, __func__, std::move(str));
+        err_ = format_to_error(sec::runtime_error, "{}::{}: {}", class_name,
+                               __func__, str);
         return false;
       }
     }
@@ -146,7 +148,7 @@ bool json_writer::begin_field(std::string_view name, bool is_present) {
 bool json_writer::begin_field(std::string_view name,
                               span<const type_id_t> types, size_t index) {
   if (index >= types.size()) {
-    emplace_error(sec::runtime_error, "index >= types.size()");
+    err_ = make_error(sec::runtime_error, "index >= types.size()");
     return false;
   }
   if (begin_key_value_pair()) {
@@ -163,7 +165,7 @@ bool json_writer::begin_field(std::string_view name,
       add(tname);
       add('"');
     } else {
-      emplace_error(sec::runtime_error, "failed to retrieve type name");
+      err_ = make_error(sec::runtime_error, "failed to retrieve type name");
       return false;
     }
     return end_key_value_pair() && begin_field(name);
@@ -204,7 +206,8 @@ bool json_writer::begin_key_value_pair() {
     default: {
       std::string str = "expected object, found ";
       str += as_json_type_name(t);
-      emplace_error(sec::runtime_error, class_name, __func__, std::move(str));
+      err_ = format_to_error(sec::runtime_error, "{}::{}: {}", class_name,
+                             __func__, std::move(str));
       return false;
     }
   }
@@ -217,7 +220,7 @@ bool json_writer::end_key_value_pair() {
 bool json_writer::begin_sequence(size_t) {
   switch (top()) {
     default:
-      emplace_error(sec::runtime_error, "unexpected begin_sequence");
+      err_ = make_error(sec::runtime_error, "unexpected begin_sequence");
       return false;
     case type::element:
       unsafe_morph(type::array);
@@ -252,8 +255,10 @@ bool json_writer::end_sequence() {
 bool json_writer::begin_associative_array(size_t) {
   switch (top()) {
     default:
-      emplace_error(sec::runtime_error, class_name, __func__,
-                    "unexpected begin_object or begin_associative_array");
+      err_ = format_to_error(sec::runtime_error,
+                             "{}::{}: unexpected begin_object "
+                             "or begin_associative_array",
+                             class_name, __func__);
       return false;
     case type::element:
       unsafe_morph(type::object);
@@ -385,14 +390,14 @@ bool json_writer::value(std::string_view x) {
 }
 
 bool json_writer::value(const std::u16string&) {
-  emplace_error(sec::unsupported_operation,
-                "u16string not supported yet by caf::json_writer");
+  err_ = make_error(sec::unsupported_operation,
+                    "u16string not supported yet by caf::json_writer");
   return false;
 }
 
 bool json_writer::value(const std::u32string&) {
-  emplace_error(sec::unsupported_operation,
-                "u32string not supported yet by caf::json_writer");
+  err_ = make_error(sec::unsupported_operation,
+                    "u32string not supported yet by caf::json_writer");
   return false;
 }
 
@@ -458,29 +463,29 @@ bool json_writer::pop() {
   if (!stack_.empty()) {
     stack_.pop_back();
     return true;
-  } else {
-    std::string str = "pop() called with an empty stack: begin/end mismatch";
-    emplace_error(sec::runtime_error, std::move(str));
-    return false;
   }
+  err_ = make_error(sec::runtime_error,
+                    "pop() called with an empty stack: begin/end mismatch");
+  return false;
 }
 
 bool json_writer::pop_if(type t) {
   if (!stack_.empty() && stack_.back() == t) {
     stack_.pop_back();
     return true;
-  } else {
-    std::string str = "pop_if failed: expected ";
-    str += as_json_type_name(t);
-    if (stack_.empty()) {
-      str += ", found an empty stack";
-    } else {
-      str += ", found ";
-      str += as_json_type_name(stack_.back().t);
-    }
-    emplace_error(sec::runtime_error, std::move(str));
-    return false;
   }
+  if (stack_.empty()) {
+    err_ = format_to_error(sec::runtime_error,
+                           "pop_if failed: expected {} "
+                           "but found an empty stack",
+                           as_json_type_name(t));
+  } else {
+    err_ = format_to_error(sec::runtime_error,
+                           "pop_if failed: expected {} but found {}",
+                           as_json_type_name(t),
+                           as_json_type_name(stack_.back().t));
+  }
+  return false;
 }
 
 bool json_writer::pop_if_next(type t) {
@@ -489,19 +494,19 @@ bool json_writer::pop_if_next(type t) {
           || can_morph(stack_[stack_.size() - 2].t, t))) {
     stack_.pop_back();
     return true;
-  } else {
-    std::string str = "pop_if_next failed: expected ";
-    str += as_json_type_name(t);
-    if (stack_.size() < 2) {
-      str += ", found a stack of size ";
-      detail::print(str, stack_.size());
-    } else {
-      str += ", found ";
-      str += as_json_type_name(stack_[stack_.size() - 2].t);
-    }
-    emplace_error(sec::runtime_error, std::move(str));
-    return false;
   }
+  if (stack_.size() < 2) {
+    err_ = format_to_error(sec::runtime_error,
+                           "pop_if_next failed: expected {} "
+                           "but found a stack of size",
+                           as_json_type_name(t), stack_.size());
+  } else {
+    err_ = format_to_error(sec::runtime_error,
+                           "pop_if_next failed: expected {} but found {}",
+                           as_json_type_name(t),
+                           as_json_type_name(stack_[stack_.size() - 2].t));
+  }
+  return false;
 }
 
 // Tries to morph the current top of the stack to t.
@@ -516,19 +521,17 @@ bool json_writer::morph(type t, type& prev) {
       prev = stack_.back().t;
       stack_.back().t = t;
       return true;
-    } else {
-      std::string str = "cannot convert ";
-      str += as_json_type_name(stack_.back().t);
-      str += " to ";
-      str += as_json_type_name(t);
-      emplace_error(sec::runtime_error, std::move(str));
-      return false;
     }
-  } else {
-    std::string str = "mismatched begin/end calls on the JSON inspector";
-    emplace_error(sec::runtime_error, std::move(str));
+    std::string str = "cannot convert ";
+    str += as_json_type_name(stack_.back().t);
+    str += " to ";
+    str += as_json_type_name(t);
+    err_ = make_error(sec::runtime_error, std::move(str));
     return false;
   }
+  std::string str = "mismatched begin/end calls on the JSON inspector";
+  err_ = make_error(sec::runtime_error, std::move(str));
+  return false;
 }
 
 void json_writer::unsafe_morph(type t) {
@@ -536,10 +539,10 @@ void json_writer::unsafe_morph(type t) {
 }
 
 void json_writer::fail(type t) {
-  std::string str = "failed to write a ";
-  str += as_json_type_name(t);
-  str += ": invalid position (begin/end mismatch?)";
-  emplace_error(sec::runtime_error, std::move(str));
+  err_ = format_to_error(sec::runtime_error,
+                         "failed to write a {}: "
+                         "invalid position (begin/end mismatch?)",
+                         as_json_type_name(t));
 }
 
 bool json_writer::inside_object() const noexcept {

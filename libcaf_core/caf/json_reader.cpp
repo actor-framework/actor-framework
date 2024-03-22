@@ -7,6 +7,7 @@
 #include "caf/detail/assert.hpp"
 #include "caf/detail/bounds_checker.hpp"
 #include "caf/detail/print.hpp"
+#include "caf/format_to_error.hpp"
 #include "caf/string_algorithms.hpp"
 
 #include <fstream>
@@ -34,43 +35,25 @@ std::string_view pretty_name(caf::json_reader::position pos) {
   }
 }
 
-std::string type_clash(std::string_view want, std::string_view got) {
-  std::string result = "type clash: expected ";
-  result.insert(result.end(), want.begin(), want.end());
-  result += ", got ";
-  result.insert(result.end(), got.begin(), got.end());
-  return result;
-}
-
-std::string type_clash(std::string_view want, caf::json_reader::position got) {
-  return type_clash(want, pretty_name(got));
-}
-
-std::string type_clash(caf::json_reader::position want,
-                       caf::json_reader::position got) {
-  return type_clash(pretty_name(want), pretty_name(got));
-}
-
-std::string type_clash(std::string_view want,
-                       const caf::detail::json::value& got) {
+std::string_view type_name_from(const caf::detail::json::value& got) {
   using namespace std::literals;
   using caf::detail::json::value;
   switch (got.data.index()) {
     case value::integer_index:
     case value::unsigned_index:
-      return type_clash(want, "json::integer"sv);
+      return "json::integer"sv;
     case value::double_index:
-      return type_clash(want, "json::real"sv);
+      return "json::real"sv;
     case value::bool_index:
-      return type_clash(want, "json::boolean"sv);
+      return "json::boolean"sv;
     case value::string_index:
-      return type_clash(want, "json::string"sv);
+      return "json::string"sv;
     case value::array_index:
-      return type_clash(want, "json::array"sv);
+      return "json::array"sv;
     case value::object_index:
-      return type_clash(want, "json::object"sv);
+      return "json::object"sv;
     default:
-      return type_clash(want, "json::null"sv);
+      return "json::null"sv;
   }
 }
 
@@ -106,18 +89,23 @@ std::string_view field_type(const caf::detail::json::object* obj,
 
 #define INVALID_AND_PAST_THE_END_CASES                                         \
   case position::invalid:                                                      \
-    emplace_error(sec::runtime_error, class_name, fn, current_field_name(),    \
-                  "found an invalid position");                                \
+    err_ = format_to_error(sec::runtime_error,                                 \
+                           "{}::{}: found an invalid position in field {}",    \
+                           class_name, fn, current_field_name());              \
     return false;                                                              \
   case position::past_the_end:                                                 \
-    emplace_error(sec::runtime_error, class_name, fn, current_field_name(),    \
-                  "tried reading past the end");                               \
+    err_ = format_to_error(sec::runtime_error,                                 \
+                           "{}::{}: unexpected end of input in field {}",      \
+                           class_name, fn, current_field_name());              \
     return false;
 
 #define SCOPE(expected_position)                                               \
   if (auto got = pos(); got != expected_position) {                            \
-    emplace_error(sec::runtime_error, class_name, __func__,                    \
-                  current_field_name(), type_clash(expected_position, got));   \
+    err_ = format_to_error(sec::runtime_error,                                 \
+                           "{}::{}: expected type {}, got {} in field {}",     \
+                           class_name, __func__,                               \
+                           pretty_name(expected_position), pretty_name(got),   \
+                           current_field_name());                              \
     return false;                                                              \
   }
 
@@ -146,7 +134,7 @@ bool json_reader::load(std::string_view json_text) {
   string_parser_state ps{json_text.begin(), json_text.end()};
   root_ = detail::json::parse_shallow(ps, &buf_);
   if (ps.code != pec::success) {
-    set_error(make_error(ps));
+    err_ = ps.error();
     st_ = nullptr;
     return false;
   }
@@ -163,13 +151,13 @@ bool json_reader::load_file(const char* path) {
   reset();
   std::ifstream input{path};
   if (!input.is_open()) {
-    emplace_error(sec::cannot_open_file);
+    err_ = sec::cannot_open_file;
     return false;
   }
   detail::json::file_parser_state ps{iterator_t{input}, iterator_t{}};
   root_ = detail::json::parse(ps, &buf_);
   if (ps.code != pec::success) {
-    set_error(make_error(ps));
+    err_ = ps.error();
     st_ = nullptr;
     return false;
   }
@@ -209,8 +197,10 @@ bool json_reader::fetch_next_object_type(type_id_t& type) {
     } else {
       std::string what = "no type ID available for @type: ";
       what.insert(what.end(), type_name.begin(), type_name.end());
-      emplace_error(sec::runtime_error, class_name, __func__,
-                    current_field_name(), std::move(what));
+      err_ = format_to_error(
+        sec::runtime_error,
+        "{}::{}: no type ID available for @type: {} in field {}", class_name,
+        __func__, type_name, current_field_name());
       return false;
     }
   } else {
@@ -227,22 +217,22 @@ bool json_reader::fetch_next_object_name(std::string_view& type_name) {
         if (mem_ptr->val->data.index() == detail::json::value::string_index) {
           type_name = std::get<std::string_view>(mem_ptr->val->data);
           return true;
-        } else {
-          emplace_error(sec::runtime_error, class_name, fn,
-                        current_field_name(),
-                        "expected a string argument to @type");
-          return false;
         }
-      } else {
-        emplace_error(sec::runtime_error, class_name, fn, current_field_name(),
-                      "found no @type member");
+        err_ = format_to_error(
+          sec::runtime_error,
+          "{}::{}: expected a string argument to @type in field {}", class_name,
+          fn, current_field_name());
         return false;
       }
-    } else {
-      emplace_error(sec::runtime_error, class_name, fn, current_field_name(),
-                    type_clash("json::object", val));
+      err_ = format_to_error(sec::runtime_error, class_name, fn,
+                             current_field_name(), "found no @type member");
       return false;
     }
+    err_ = format_to_error(
+      sec::runtime_error,
+      "{}::{}: expected type json::object, got {} in field {}", class_name, fn,
+      type_name_from(val), current_field_name());
+    return false;
   });
 }
 
@@ -253,8 +243,10 @@ bool json_reader::begin_object(type_id_t, std::string_view) {
       push(&std::get<detail::json::object>(val.data));
       return true;
     } else {
-      emplace_error(sec::runtime_error, class_name, fn, current_field_name(),
-                    type_clash("json::object", val));
+      err_ = format_to_error(
+        sec::runtime_error,
+        "{}::{}: expected type json::object, got {} in field {}", class_name,
+        fn, type_name_from(val), current_field_name());
       return false;
     }
   });
@@ -274,9 +266,10 @@ bool json_reader::end_object() {
       top<position::sequence>().advance();
       return true;
     default:
-      emplace_error(sec::runtime_error, class_name, __func__,
-                    current_field_name(),
-                    type_clash("json::value or json::array", current_pos));
+      err_ = format_to_error(
+        sec::runtime_error,
+        "{}::{}: expected type json::value or json::array, got {} in field {}",
+        class_name, fn, pretty_name(current_pos), current_field_name());
       return false;
   }
 }
@@ -288,8 +281,9 @@ bool json_reader::begin_field(std::string_view name) {
     push(member->val);
     return true;
   } else {
-    emplace_error(sec::runtime_error, class_name, __func__,
-                  mandatory_field_missing_str(name));
+    err_ = format_to_error(sec::runtime_error,
+                           "{}::{}: mandatory key {} missing in field {}",
+                           class_name, __func__, name, current_field_name());
     return false;
   }
 }
@@ -315,8 +309,9 @@ bool json_reader::begin_field(std::string_view name,
     if (is_present) {
       return true;
     } else {
-      emplace_error(sec::runtime_error, class_name, __func__,
-                    mandatory_field_missing_str(name));
+      err_ = format_to_error(sec::runtime_error,
+                             "{}::{}: mandatory key {} missing in field {}",
+                             class_name, __func__, name, current_field_name());
       return false;
     }
   } else {
@@ -361,13 +356,10 @@ bool json_reader::begin_tuple(size_t size) {
     if (list_size == size) {
       return true;
     } else {
-      std::string msg;
-      msg += "expected tuple of size ";
-      detail::print(msg, size);
-      msg += ", got a list of size ";
-      detail::print(msg, list_size);
-      emplace_error(sec::conversion_failed, class_name, __func__,
-                    current_field_name(), std::move(msg));
+      err_ = format_to_error(
+        sec::conversion_failed,
+        "{}::{}: expected tuple of size {} in field {}, got a list of size {}",
+        class_name, __func__, size, current_field_name(), list_size);
       return false;
     }
   } else {
@@ -387,8 +379,10 @@ bool json_reader::begin_key_value_pair() {
     push(current.key);
     return true;
   } else {
-    emplace_error(sec::runtime_error, class_name, __func__,
-                  "tried reading a JSON::object sequentially past its end");
+    err_ = format_to_error(
+      sec::runtime_error,
+      "{}::{}: tried reading a JSON::object sequentially past its end",
+      class_name, __func__);
     return false;
   }
 }
@@ -408,8 +402,10 @@ bool json_reader::begin_sequence(size_t& size) {
       push(sequence{ls.begin(), ls.end()});
       return true;
     } else {
-      emplace_error(sec::runtime_error, class_name, fn, current_field_name(),
-                    type_clash("json::array", val));
+      err_ = format_to_error(
+        sec::runtime_error,
+        "{}::{}: expected type json::array, got {} in field {}", class_name, fn,
+        type_name_from(val), current_field_name());
       return false;
     }
   });
@@ -424,8 +420,10 @@ bool json_reader::end_sequence() {
     return consume<true>(__func__,
                          [](const detail::json::value&) { return true; });
   } else {
-    emplace_error(sec::runtime_error, class_name, __func__,
-                  "failed to consume all elements from json::array");
+    err_ = format_to_error(
+      sec::runtime_error,
+      "{}::{}: failed to consume all elements from json::array", class_name,
+      class_name, __func__);
     return false;
   }
 }
@@ -440,8 +438,10 @@ bool json_reader::begin_associative_array(size_t& size) {
       push(members{obj->begin(), obj->end()});
       return true;
     } else {
-      emplace_error(sec::runtime_error, class_name, fn, current_field_name(),
-                    type_clash("json::object", val));
+      err_ = format_to_error(
+        sec::runtime_error,
+        "{}::{}: expected type json::object, got {} in field {}", class_name,
+        fn, type_name_from(val), current_field_name());
       return false;
     }
   });
@@ -453,8 +453,10 @@ bool json_reader::end_associative_array() {
     pop();
     return true;
   } else {
-    emplace_error(sec::runtime_error, class_name, __func__,
-                  "failed to consume all elements in an associative array");
+    err_ = format_to_error(
+      sec::runtime_error,
+      "{}::{}: failed to consume all elements in an associative array",
+      class_name, __func__);
     return false;
   }
 }
@@ -476,8 +478,10 @@ bool json_reader::value(bool& x) {
       x = std::get<bool>(val.data);
       return true;
     } else {
-      emplace_error(sec::runtime_error, class_name, fn, current_field_name(),
-                    type_clash("json::boolean", val));
+      err_ = format_to_error(
+        sec::runtime_error,
+        "{}::{}: expected type json::boolean, got {} in field {}", class_name,
+        fn, type_name_from(val), current_field_name());
       return false;
     }
   });
@@ -511,13 +515,18 @@ bool json_reader::consume(const char* fn, F f) {
           ls.advance();
         return f(curr);
       } else {
-        emplace_error(sec::runtime_error, class_name, fn,
-                      "tried reading a json::array past the end");
+        err_
+          = format_to_error(sec::runtime_error,
+                            "{}::{}: tried reading a json::array past the end",
+                            class_name, fn);
         return false;
       }
     default:
-      emplace_error(sec::runtime_error, class_name, fn, current_field_name(),
-                    type_clash("json::value", current_pos));
+      err_ = format_to_error(sec::runtime_error,
+                             "{}::{}: expected type json::value, json::key, or "
+                             "json::array, got {} in field {}",
+                             class_name, fn, pretty_name(current_pos),
+                             current_field_name());
       return false;
   }
 }
@@ -532,8 +541,9 @@ bool json_reader::integer(T& x) {
         x = static_cast<T>(i64);
         return true;
       }
-      emplace_error(sec::runtime_error, class_name, fn,
-                    "integer out of bounds");
+      err_ = format_to_error(sec::runtime_error,
+                             "{}::{}: integer out of bounds in field {}",
+                             class_name, fn, current_field_name());
       return false;
     } else if (val.data.index() == detail::json::value::unsigned_index) {
       auto u64 = std::get<uint64_t>(val.data);
@@ -541,12 +551,16 @@ bool json_reader::integer(T& x) {
         x = static_cast<T>(u64);
         return true;
       }
-      emplace_error(sec::runtime_error, class_name, fn,
-                    "integer out of bounds");
+      err_ = format_to_error(sec::runtime_error,
+                             "{}::{}: integer out of bounds in field {}",
+                             class_name, fn, current_field_name());
       return false;
     } else {
-      emplace_error(sec::runtime_error, class_name, fn, current_field_name(),
-                    type_clash("json::integer", val));
+      err_ = format_to_error(sec::runtime_error,
+                             "{}::{}: expected type json::integer, "
+                             "got {} in field {}",
+                             class_name, fn, type_name_from(val),
+                             current_field_name());
       return false;
     }
   });
@@ -608,8 +622,11 @@ bool json_reader::value(double& x) {
         x = static_cast<double>(std::get<uint64_t>(val.data));
         return true;
       default:
-        emplace_error(sec::runtime_error, class_name, fn, current_field_name(),
-                      type_clash("json::real", val));
+        err_ = format_to_error(sec::runtime_error,
+                               "{}::{}: expected type json::real, "
+                               "got {} in field {}",
+                               class_name, fn, type_name_from(val),
+                               current_field_name());
         return false;
     }
   });
@@ -632,28 +649,34 @@ bool json_reader::value(std::string& x) {
       detail::print_unescaped(x, std::get<std::string_view>(val.data));
       return true;
     } else {
-      emplace_error(sec::runtime_error, class_name, fn, current_field_name(),
-                    type_clash("json::string", val));
+      err_ = format_to_error(sec::runtime_error,
+                             "{}::{}: expected type json::string, "
+                             "got {} in field {}",
+                             class_name, fn, type_name_from(val),
+                             current_field_name());
       return false;
     }
   });
 }
 
 bool json_reader::value(std::u16string&) {
-  emplace_error(sec::runtime_error, class_name, __func__,
-                "u16string support not implemented yet");
+  err_ = format_to_error(sec::runtime_error,
+                         "{}::{}: u16string support not implemented yet",
+                         class_name, __func__);
   return false;
 }
 
 bool json_reader::value(std::u32string&) {
-  emplace_error(sec::runtime_error, class_name, __func__,
-                "u32string support not implemented yet");
+  err_ = format_to_error(sec::runtime_error,
+                         "{}::{}: u32string support not implemented yet",
+                         class_name, __func__);
   return false;
 }
 
 bool json_reader::value(span<std::byte>) {
-  emplace_error(sec::runtime_error, class_name, __func__,
-                "byte span support not implemented yet");
+  err_ = format_to_error(sec::runtime_error,
+                         "{}::{}: byte span support not implemented yet",
+                         class_name, __func__);
   return false;
 }
 
@@ -678,15 +701,6 @@ std::string json_reader::current_field_name() {
   std::string result;
   append_current_field_name(result);
   return result;
-}
-
-std::string json_reader::mandatory_field_missing_str(std::string_view name) {
-  std::string msg = "mandatory field '";
-  append_current_field_name(msg);
-  msg += '.';
-  msg.insert(msg.end(), name.begin(), name.end());
-  msg += "' missing";
-  return msg;
 }
 
 } // namespace caf
