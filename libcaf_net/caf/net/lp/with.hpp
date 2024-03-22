@@ -11,6 +11,7 @@
 #include "caf/net/dsl/has_context.hpp"
 #include "caf/net/lp/client_factory.hpp"
 #include "caf/net/lp/config.hpp"
+#include "caf/net/lp/default_trait.hpp"
 #include "caf/net/lp/server_factory.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/ssl/context.hpp"

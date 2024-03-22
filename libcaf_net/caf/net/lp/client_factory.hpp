@@ -7,7 +7,9 @@
 #include "caf/net/checked_socket.hpp"
 #include "caf/net/dsl/client_factory_base.hpp"
 #include "caf/net/lp/config.hpp"
+#include "caf/net/lp/frame.hpp"
 #include "caf/net/lp/framing.hpp"
+#include "caf/net/socket_manager.hpp"
 #include "caf/net/ssl/connection.hpp"
 #include "caf/net/tcp_stream_socket.hpp"
 
