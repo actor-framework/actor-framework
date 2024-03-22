@@ -22,6 +22,10 @@ public:
 
   using upper_layer_ptr = std::unique_ptr<web_socket::upper_layer>;
 
+  // -- constructors, destructors, and assignment operators --------------------
+
+  ~client() override;
+
   // -- factories --------------------------------------------------------------
 
   static std::unique_ptr<client> make(handshake_ptr hs, upper_layer_ptr up);

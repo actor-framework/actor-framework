@@ -121,4 +121,10 @@ std::unique_ptr<client> client::make(handshake_ptr hs, upper_layer_ptr up_ptr) {
   return std::make_unique<client_impl>(std::move(hs), std::move(up_ptr));
 }
 
+// -- constructors, destructors, and assignment operators --------------------
+
+client::~client() {
+  // nop
+}
+
 } // namespace caf::net::web_socket

@@ -21,6 +21,10 @@ public:
 
   using upper_layer_ptr = std::unique_ptr<web_socket::upper_layer>;
 
+  // -- constructors, destructors, and assignment operators --------------------
+
+  ~framing() override;
+
   // -- factories --------------------------------------------------------------
 
   /// Creates a new framing protocol for client mode.

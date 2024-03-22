@@ -474,4 +474,10 @@ std::unique_ptr<framing> framing::make_server(upper_layer_ptr up) {
   return res;
 }
 
+// -- constructors, destructors, and assignment operators --------------------
+
+framing::~framing() {
+  // nop
+}
+
 } // namespace caf::net::web_socket

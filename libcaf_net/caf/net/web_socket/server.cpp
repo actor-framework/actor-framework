@@ -140,4 +140,10 @@ std::unique_ptr<server> server::make(upper_layer_ptr up) {
   return std::make_unique<server_impl>(std::move(up));
 }
 
+// -- constructors, destructors, and assignment operators --------------------
+
+server::~server() {
+  // nop
+}
+
 } // namespace caf::net::web_socket

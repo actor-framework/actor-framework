@@ -4,10 +4,7 @@
 
 #pragma once
 
-#include "caf/net/http/response.hpp"
 #include "caf/net/http/upper_layer.hpp"
-
-#include "caf/async/future.hpp"
 
 namespace caf::net::http {
 
@@ -23,7 +20,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  virtual ~async_client();
+  ~async_client() override;
 
   // -- properties -------------------------------------------------------------
 

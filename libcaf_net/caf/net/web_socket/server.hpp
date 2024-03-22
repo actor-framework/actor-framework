@@ -22,6 +22,10 @@ public:
 
   using upper_layer_ptr = std::unique_ptr<web_socket::upper_layer::server>;
 
+  // -- constructors, destructors, and assignment operators --------------------
+
+  ~server() override;
+
   // -- factories --------------------------------------------------------------
 
   static std::unique_ptr<server> make(upper_layer_ptr up);
