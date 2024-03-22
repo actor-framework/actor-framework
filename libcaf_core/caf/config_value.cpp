@@ -456,10 +456,9 @@ bool config_value::can_convert_to_dictionary() const {
     [](const auto&) { return false; },
     [this](const std::string&) {
       // TODO: implement some dry-run mode and use it here to avoid creating
-      // an
-      //       actual dictionary only to throw it away.
+      // an actual dictionary only to throw it away.
       auto maybe_dict = to_dictionary();
-      return static_cast<bool>(maybe_dict);
+      return maybe_dict.has_value();
     },
     [](const dictionary&) { return true; });
   return visit(f, data_);
