@@ -29,8 +29,8 @@ struct testee : resumable, ref_counted {
 
   resume_result resume(scheduler*, size_t max_throughput) override {
     if (++runs == 10) {
-      rendesvous->count_down();
       received_throughput = max_throughput;
+      rendesvous->count_down();
       return resumable::done;
     }
     return resumable::resume_later;
@@ -56,8 +56,8 @@ OUTLINE("scheduling resumables") {
     cfg.set("caf.scheduler.max-throughput", 5);
     cfg.set("caf.scheduler.max-threads", 2);
     cfg.set("caf.scheduler.policy", sched);
-    auto sys = std::make_unique<actor_system>(cfg);
     WHEN("scheduling a resumable") {
+      auto sys = std::make_unique<actor_system>(cfg);
       auto rendesvous = std::make_shared<latch>(2);
       auto worker = make_counted<testee>(rendesvous);
       worker->ref();
@@ -70,11 +70,15 @@ OUTLINE("scheduling resumables") {
         check_eq(worker->received_throughput, 5u);
       }
       AND_THEN("the scheduler releases the ref when done") {
+        // Note: destroying the actor system here will cause CAF to shut down.
+        //       Ultimately stopping the scheduler and releasing the references.
+        sys = nullptr;
         check_eq(worker->get_reference_count(), 1u);
       }
     }
     // TODO: Change to WHEN block after fixing issue #1776.
     AND_WHEN("scheduling multiple resumables") {
+      auto sys = std::make_unique<actor_system>(cfg);
       auto workers = std::vector<intrusive_ptr<testee>>{};
       auto rendesvous = std::make_shared<latch>(11);
       for (int i = 0; i < 10; i++) {
