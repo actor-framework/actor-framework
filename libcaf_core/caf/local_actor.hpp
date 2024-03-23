@@ -129,6 +129,7 @@ public:
   template <class T, spawn_options Os = no_spawn_options, class... Ts>
   infer_handle_from_class_t<T> spawn(Ts&&... xs) {
     actor_config cfg{context(), this};
+    cfg.mbox_factory = system().mailbox_factory();
     return eval_opts(Os, system().spawn_class<T, make_unbound(Os)>(
                            cfg, std::forward<Ts>(xs)...));
   }
@@ -150,6 +151,7 @@ public:
     static_assert(spawnable,
                   "cannot spawn function-based actor with given arguments");
     actor_config cfg{context(), this};
+    cfg.mbox_factory = system().mailbox_factory();
     static constexpr spawn_options unbound = make_unbound(Os);
     std::bool_constant<spawnable> enabled;
     return eval_opts(Os, system().spawn_functor<unbound>(
