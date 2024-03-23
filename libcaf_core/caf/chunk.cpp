@@ -4,6 +4,7 @@
 
 #include "caf/chunk.hpp"
 
+#include <algorithm>
 #include <cstring>
 #include <new>
 #include <numeric>
@@ -68,6 +69,11 @@ void chunk::data::deref() noexcept {
     this->~data();
     free(this);
   }
+}
+
+bool chunk::equal_to(const chunk& other) const noexcept {
+  return std::equal(bytes().begin(), bytes().end(), other.bytes().begin(),
+                    other.bytes().end());
 }
 
 } // namespace caf
