@@ -241,6 +241,15 @@ public:
   template <class F, class T0, class... Ts>
   auto zip_with(F fn, T0 input0, Ts... inputs);
 
+  /// Creates an @ref observable that combines the emitted from all passed
+  /// source observables by applying a function object.
+  /// @param fn The combine function. Takes last emitted element from each
+  ///           input and reduces them into a single result.
+  /// @param input0 The first additional input.
+  /// @param inputs Additional inputs, if any.
+  template <class F, class T0, class... Ts>
+  auto combine_latest(F fn, T0 input0, Ts... inputs);
+
   // -- splitting --------------------------------------------------------------
 
   /// Takes @p prefix_size elements from this observable and emits it in a tuple
