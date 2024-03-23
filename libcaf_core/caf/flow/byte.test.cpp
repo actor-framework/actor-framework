@@ -28,10 +28,10 @@ auto to_bytes(const T& data) {
 WITH_FIXTURE(test::fixture::flow) {
 
 SCENARIO("to_chunks splits a sequence of bytes into chunks") {
+  auto input = to_bytes("Sample string"s);
   GIVEN("an observable<byte>") {
-    auto input = to_bytes("Sample string"s);
     WHEN("transforming the input with to_chunks") {
-      THEN("all values from container is received") {
+      THEN("bytes are separated into chunks") {
         std::vector<chunk> output{};
         make_observable()
           .from_container(input)
@@ -45,30 +45,26 @@ SCENARIO("to_chunks splits a sequence of bytes into chunks") {
         }
       }
     }
-    WHEN("concatenating container with a fail observable") {
-      THEN("the observer receives all values and error") {
-        auto obs = make_observable();
-        auto input = to_bytes("Sample string"s);
-        caf::error result;
+    WHEN("canceling the input observable before the all items are emitted") {
+      THEN("the observer only receives a subset of the values") {
         std::vector<chunk> output{};
-        obs.from_container(input)
-          .concat(obs.fail<std::byte>(make_error(caf::sec::runtime_error)))
+        make_observable()
+          .from_container(input)
           .transform(caf::flow::byte::to_chunks(5))
-          .do_on_error([&result](const error& what) { result = what; })
+          .take(2)
           .for_each([&output](const chunk& x) { output.push_back(x); });
         run_flows();
-        if (check_eq(output.size(), 3u)) {
+        if (check_eq(output.size(), 2u)) {
           check(output[0].equal_to(chunk{to_bytes("Sampl"s)}));
           check(output[1].equal_to(chunk{to_bytes("e str"s)}));
-          check(output[2].equal_to(chunk{to_bytes("ing"s)}));
         }
-        check_eq(result, sec::runtime_error);
       }
     }
-    WHEN("concatenating fail observable with container") {
-      THEN("the observer receives only error") {
+  }
+  GIVEN("an observable<byte> that emits an error") {
+    WHEN("transforming the input with to_chunks") {
+      THEN("the observer receives an error and no items") {
         auto obs = make_observable();
-        auto input = to_bytes("Sample string"s);
         caf::error result;
         std::vector<chunk> output{};
         obs.fail<std::byte>(make_error(caf::sec::runtime_error))
@@ -81,10 +77,30 @@ SCENARIO("to_chunks splits a sequence of bytes into chunks") {
         check_eq(result, sec::runtime_error);
       }
     }
-    WHEN("on_next returns false before calling on_error") {
+  }
+  GIVEN("an observable<byte> that emits an error after emitting some values") {
+    WHEN("transforming the input with to_chunks") {
+      THEN("bytes are separated into chunks until the error occurs") {
+        auto obs = make_observable();
+        caf::error result;
+        std::vector<chunk> output{};
+        obs.from_container(input)
+          .concat(obs.fail<std::byte>(make_error(caf::sec::runtime_error)))
+          .transform(caf::flow::byte::to_chunks(5))
+          .do_on_error([&result](const error& what) { result = what; })
+          .for_each([&output](const chunk& x) { output.push_back(x); });
+        run_flows();
+        if (check_eq(output.size(), 3u)) {
+          check(output[0].equal_to(chunk{to_bytes("Sampl"s)}));
+          check(output[1].equal_to(chunk{to_bytes("e str"s)}));
+          check(output[2].equal_to(chunk{to_bytes("ing"s)}));
+        }
+        check_eq(result, sec::runtime_error);
+      }
+    }
+    WHEN("canceling the input observable before the error occurs") {
       THEN("the observer only receives values and on_error is not called") {
         auto obs = make_observable();
-        auto input = to_bytes("Sample string"s);
         caf::error result;
         std::vector<chunk> output{};
         obs.from_container(input)
@@ -99,34 +115,17 @@ SCENARIO("to_chunks splits a sequence of bytes into chunks") {
           check(output[1].equal_to(chunk{to_bytes("e str"s)}));
           check(output[2].equal_to(chunk{to_bytes("ing"s)}));
         }
-        check_ne(result, sec::runtime_error);
-      }
-    }
-    WHEN("on_next returns false before calling on_complete") {
-      THEN("the observer receives values and to_chunks does not call "
-           "on_complete") {
-        std::vector<chunk> output{};
-        make_observable()
-          .from_container(input)
-          .transform(caf::flow::byte::to_chunks(5))
-          .take(3)
-          .for_each([&output](const chunk& x) { output.push_back(x); });
-        run_flows();
-        if (check_eq(output.size(), 3u)) {
-          check(output[0].equal_to(chunk{to_bytes("Sampl"s)}));
-          check(output[1].equal_to(chunk{to_bytes("e str"s)}));
-          check(output[2].equal_to(chunk{to_bytes("ing"s)}));
-        }
+        check_eq(result, sec::none);
       }
     }
   }
 }
 
-SCENARIO("split_at splits a sequence of bytes into chunks on separator") {
+SCENARIO("split_at splits a sequence of bytes into chunks") {
+  auto input = to_bytes("Sample string"s);
   GIVEN("an observable<byte>") {
-    auto input = to_bytes("Sample string"s);
     WHEN("transforming the input with split_at") {
-      THEN("all values from container is received") {
+      THEN("bytes are separated into chunks") {
         std::vector<chunk> output{};
         make_observable()
           .from_container(input)
@@ -139,29 +138,25 @@ SCENARIO("split_at splits a sequence of bytes into chunks on separator") {
         }
       }
     }
-    WHEN("concatenating container with a fail observable") {
-      THEN("the observer receives all values and error") {
-        auto obs = make_observable();
-        auto input = to_bytes("Sample string"s);
-        caf::error result;
+    WHEN("canceling the input observable before the all items are emitted") {
+      THEN("the observer only receives a subset of the values") {
         std::vector<chunk> output{};
-        obs.from_container(input)
-          .concat(obs.fail<std::byte>(make_error(caf::sec::runtime_error)))
+        make_observable()
+          .from_container(input)
           .transform(caf::flow::byte::split_at(std::byte{' '}))
-          .do_on_error([&result](const error& what) { result = what; })
+          .take(1)
           .for_each([&output](const chunk& x) { output.push_back(x); });
         run_flows();
-        if (check_eq(output.size(), 2u)) {
+        if (check_eq(output.size(), 1u)) {
           check(output[0].equal_to(chunk{to_bytes("Sample"s)}));
-          check(output[1].equal_to(chunk{to_bytes("string"s)}));
         }
-        check_eq(result, sec::runtime_error);
       }
     }
-    WHEN("concatenating fail observable with container") {
-      THEN("the observer receives only error") {
+  }
+  GIVEN("an observable<byte> that emits an error") {
+    WHEN("transforming the input with to_chunks") {
+      THEN("the observer receives an error and no items") {
         auto obs = make_observable();
-        auto input = to_bytes("Sample string"s);
         caf::error result;
         std::vector<chunk> output{};
         obs.fail<std::byte>(make_error(caf::sec::runtime_error))
@@ -174,10 +169,29 @@ SCENARIO("split_at splits a sequence of bytes into chunks on separator") {
         check_eq(result, sec::runtime_error);
       }
     }
-    WHEN("on_next returns false before calling on_error") {
+  }
+  GIVEN("an observable<byte> that emits an error after emitting some values") {
+    WHEN("transforming the input with to_chunks") {
+      THEN("bytes are separated into chunks until the error occurs") {
+        auto obs = make_observable();
+        caf::error result;
+        std::vector<chunk> output{};
+        obs.from_container(input)
+          .concat(obs.fail<std::byte>(make_error(caf::sec::runtime_error)))
+          .transform(caf::flow::byte::split_at(std::byte{' '}))
+          .do_on_error([&result](const error& what) { result = what; })
+          .for_each([&output](const chunk& x) { output.push_back(x); });
+        run_flows();
+        if (check_eq(output.size(), 2u)) {
+          check(output[0].equal_to(chunk{to_bytes("Sample"s)}));
+          check(output[1].equal_to(chunk{to_bytes("string"s)}));
+        }
+        check_eq(result, sec::runtime_error);
+      }
+    }
+    WHEN("canceling the input observable before the error occurs") {
       THEN("the observer only receives values and on_error is not called") {
         auto obs = make_observable();
-        auto input = to_bytes("Sample string"s);
         caf::error result;
         std::vector<chunk> output{};
         obs.from_container(input)
@@ -191,35 +205,17 @@ SCENARIO("split_at splits a sequence of bytes into chunks on separator") {
           check(output[0].equal_to(chunk{to_bytes("Sample"s)}));
           check(output[1].equal_to(chunk{to_bytes("string"s)}));
         }
-        check_ne(result, sec::runtime_error);
-      }
-    }
-    WHEN("on_next returns false before calling on_complete") {
-      THEN(
-        "the observer receives values and split_at does not call on_complete") {
-        std::vector<chunk> output{};
-        make_observable()
-          .from_container(input)
-          .transform(caf::flow::byte::split_at(std::byte{' '}))
-          .take(2)
-          .for_each([&output](const chunk& x) { output.push_back(x); });
-        run_flows();
-        check_eq(output.size(), 2u);
-        if (check_eq(output.size(), 2u)) {
-          check(output[0].equal_to(chunk{to_bytes("Sample"s)}));
-          check(output[1].equal_to(chunk{to_bytes("string"s)}));
-        }
+        check_eq(result, sec::none);
       }
     }
   }
 }
 
-SCENARIO(
-  "split_as_utf8_at splits a sequence of bytes into cow_string on separator") {
+SCENARIO("split_as_utf8_at splits a sequence of bytes into strings") {
   GIVEN("an observable<byte>") {
-    auto input = to_bytes("Sample string"s);
     WHEN("transforming the input with split_as_utf8_at") {
-      THEN("all values from container is received") {
+      THEN("bytes are converted into strings") {
+        auto input = to_bytes("Sample string"s);
         std::vector<cow_string> output{};
         make_observable()
           .from_container(input)
@@ -227,32 +223,32 @@ SCENARIO(
           .for_each([&output](const cow_string& x) { output.push_back(x); });
         run_flows();
         if (check_eq(output.size(), 2u)) {
-          check_eq(output[0], cow_string{"Sample"s});
-          check_eq(output[1], cow_string{"string"s});
+          check_eq(output[0], "Sample"s);
+          check_eq(output[1], "string"s);
         }
       }
     }
-    WHEN("concatenating container with a fail observable") {
-      THEN("the observer receives all values and error") {
-        auto obs = make_observable();
-        auto input = to_bytes("Sample string"s);
-        caf::error result;
+    WHEN("canceling the input observable before the all items are emitted") {
+      THEN("the observer only receives a subset of the values") {
+        auto input = to_bytes("very long sample string"s);
         std::vector<cow_string> output{};
-        obs.from_container(input)
-          .concat(obs.fail<std::byte>(make_error(caf::sec::runtime_error)))
+        make_observable()
+          .from_container(input)
           .transform(caf::flow::byte::split_as_utf8_at(' '))
-          .do_on_error([&result](const error& what) { result = what; })
+          .take(2)
           .for_each([&output](const cow_string& x) { output.push_back(x); });
         run_flows();
+        check_eq(output.size(), 2u);
         if (check_eq(output.size(), 2u)) {
-          check_eq(output[0], cow_string{"Sample"s});
-          check_eq(output[1], cow_string{"string"s});
+          check_eq(output[0], "very"s);
+          check_eq(output[1], "long"s);
         }
-        check_eq(result, sec::runtime_error);
       }
     }
-    WHEN("concatenating fail observable with container") {
-      THEN("the observer receives only error") {
+  }
+  GIVEN("an observable<byte> that emits an error") {
+    WHEN("transforming the input with split_as_utf8_at") {
+      THEN("the observer receives an error and no items") {
         auto obs = make_observable();
         auto input = to_bytes("Sample string"s);
         caf::error result;
@@ -267,7 +263,28 @@ SCENARIO(
         check_eq(result, sec::runtime_error);
       }
     }
-    WHEN("on_next returns false before calling on_error") {
+  }
+  GIVEN("an observable<byte> that emits an error after emitting some values") {
+    WHEN("transforming the input with split_as_utf8_at") {
+      THEN("bytes are separated into strings until the error occurs") {
+        auto obs = make_observable();
+        auto input = to_bytes("Sample string"s);
+        caf::error result;
+        std::vector<cow_string> output{};
+        obs.from_container(input)
+          .concat(obs.fail<std::byte>(make_error(caf::sec::runtime_error)))
+          .transform(caf::flow::byte::split_as_utf8_at(' '))
+          .do_on_error([&result](const error& what) { result = what; })
+          .for_each([&output](const cow_string& x) { output.push_back(x); });
+        run_flows();
+        if (check_eq(output.size(), 2u)) {
+          check_eq(output[0], "Sample"s);
+          check_eq(output[1], "string"s);
+        }
+        check_eq(result, sec::runtime_error);
+      }
+    }
+    WHEN("canceling the input observable before the error occurs") {
       THEN("the observer only receives values and on_error is not called") {
         auto obs = make_observable();
         auto input = to_bytes("Sample string"s);
@@ -281,34 +298,17 @@ SCENARIO(
           .for_each([&output](const cow_string& x) { output.push_back(x); });
         run_flows();
         if (check_eq(output.size(), 2u)) {
-          check_eq(output[0], cow_string{"Sample"s});
-          check_eq(output[1], cow_string{"string"s});
+          check_eq(output[0], "Sample"s);
+          check_eq(output[1], "string"s);
         }
         check_ne(result, sec::runtime_error);
       }
     }
-    WHEN("on_next returns false before calling on_complete") {
-      THEN("the observer receives values and split_as_utf8_at does not call "
-           "on_complete") {
-        std::vector<cow_string> output{};
-        make_observable()
-          .from_container(input)
-          .transform(caf::flow::byte::split_as_utf8_at(' '))
-          .take(2)
-          .for_each([&output](const cow_string& x) { output.push_back(x); });
-        run_flows();
-        check_eq(output.size(), 2u);
-        if (check_eq(output.size(), 2u)) {
-          check_eq(output[0], cow_string{"Sample"s});
-          check_eq(output[1], cow_string{"string"s});
-        }
-      }
-    }
   }
-  GIVEN("an observable<byte> with only separators") {
+  GIVEN("an observable<byte> that consists only of separators") {
     auto input = to_bytes("   "s);
     WHEN("transforming the input with split_as_utf8_at") {
-      THEN("empty cow_string is received for each separator") {
+      THEN("the observer receives empty strings") {
         std::vector<cow_string> output{};
         make_observable()
           .from_container(input)
@@ -316,20 +316,20 @@ SCENARIO(
           .for_each([&output](const cow_string& x) { output.push_back(x); });
         run_flows();
         if (check_eq(output.size(), 3u)) {
-          check_eq(output[0], cow_string{""s});
-          check_eq(output[1], cow_string{""s});
-          check_eq(output[2], cow_string{""s});
+          check_eq(output[0], ""s);
+          check_eq(output[1], ""s);
+          check_eq(output[2], ""s);
         }
       }
     }
   }
 }
 
-SCENARIO("split_as_utf8_at can discard invalid utf-8 string") {
+SCENARIO("split_as_utf8_at rejects invalid UTF-8 inputs") {
   GIVEN("an observable<byte>") {
     auto input = to_bytes("Sample "s);
     WHEN("transforming the input with split_as_utf8_at") {
-      THEN("only valid values from container is received") {
+      THEN("the operator stops at the first invalid UTF-8 sequence") {
         input.push_back(static_cast<std::byte>(0xc8));
         auto suffix = to_bytes(" string"s);
         caf::error result;
@@ -342,7 +342,7 @@ SCENARIO("split_as_utf8_at can discard invalid utf-8 string") {
           .for_each([&output](const cow_string& x) { output.push_back(x); });
         run_flows();
         if (check_eq(output.size(), 1u)) {
-          check_eq(output[0], cow_string{"Sample"s});
+          check_eq(output[0], "Sample"s);
         }
         check_eq(result, sec::invalid_utf8);
       }
