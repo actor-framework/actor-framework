@@ -8,9 +8,11 @@
 #include "caf/test/suite.hpp"
 
 #include "caf/net/fwd.hpp"
+#include "caf/net/http/request_header.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/octet_stream/transport.hpp"
 #include "caf/net/socket_id.hpp"
+#include "caf/net/socket_manager.hpp"
 #include "caf/net/stream_socket.hpp"
 
 #include "caf/async/promise.hpp"

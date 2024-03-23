@@ -7,9 +7,12 @@
 #include "caf/net/http/route.hpp"
 #include "caf/net/web_socket/acceptor.hpp"
 #include "caf/net/web_socket/default_trait.hpp"
-#include "caf/net/web_socket/server_factory.hpp"
+#include "caf/net/web_socket/framing.hpp"
+#include "caf/net/web_socket/handshake.hpp"
 
+#include "caf/async/blocking_producer.hpp"
 #include "caf/detail/assert.hpp"
+#include "caf/detail/ws_flow_bridge.hpp"
 #include "caf/type_list.hpp"
 
 #include <memory>

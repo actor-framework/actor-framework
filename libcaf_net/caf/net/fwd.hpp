@@ -130,6 +130,7 @@ class lower_layer;
 class request;
 class request_header;
 class responder;
+class response;
 class response_header;
 class route;
 class router;

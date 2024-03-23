@@ -8,6 +8,7 @@
 
 #include "caf/net/fwd.hpp"
 #include "caf/net/lp/with.hpp"
+#include "caf/net/middleman.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/octet_stream/transport.hpp"
 #include "caf/net/socket_id.hpp"
