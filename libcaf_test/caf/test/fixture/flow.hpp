@@ -36,7 +36,7 @@ public:
   };
 
   /// @relates observer_state
-  static std::string to_string(observer_state);
+  static std::string to_string(flow::observer_state);
 
   /// An observer with minimal internal logic.
   template <class T>
@@ -160,7 +160,8 @@ public:
       return parent_;
     }
 
-    void on_next(const T&) override {
+    void on_next(const T& item) override {
+      buf.push_back(item);
       ++on_next_calls;
       sub.cancel();
     }
@@ -190,6 +191,7 @@ public:
     int on_complete_calls = 0;
     bool accept_subscription = false;
     caf::flow::subscription sub;
+    std::vector<T> buf;
 
   private:
     caf::flow::coordinator* parent_;
@@ -235,6 +237,11 @@ public:
     return coordinator_.get();
   }
 
+  /// Returns the number of pending (delayed and scheduled) actions.
+  [[nodiscard]] size_t pending_actions() const noexcept {
+    return coordinator_->pending_actions();
+  }
+
   // -- factory functions ------------------------------------------------------
 
   /// Returns a new builder for creating observables.
@@ -259,7 +266,8 @@ public:
   /// call to `on_next` when setting `accept_first_subscription` to `true`.
   template <class T>
   auto make_canceling_observer(bool accept_first = false) {
-    return make_counted<canceling_observer<T>>(accept_first);
+    return coordinator()->add_child(std::in_place_type<canceling_observer<T>>,
+                                    accept_first);
   }
 
   /// Shortcut for creating an observable error via
@@ -347,5 +355,10 @@ public:
 private:
   caf::flow::scoped_coordinator_ptr coordinator_;
 };
+
+/// @relates observer_state
+inline std::string to_string(flow::observer_state state) {
+  return flow::to_string(state);
+}
 
 } // namespace caf::test::fixture

@@ -52,6 +52,11 @@ public:
     ptr->deref();
   }
 
+  // -- properties -------------------------------------------------------------
+
+  /// Returns the number of pending (delayed and scheduled) actions.
+  [[nodiscard]] size_t pending_actions() const noexcept;
+
   // -- lifetime management ----------------------------------------------------
 
   void release_later(coordinated_ptr& child) override;

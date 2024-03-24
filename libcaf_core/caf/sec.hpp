@@ -173,6 +173,8 @@ enum class sec : uint8_t {
   future_timeout,
   /// Received invalid UTF-8 encoding.
   invalid_utf8,
+  /// A downstream operator failed to process inputs on time.
+  backpressure_overflow,
 };
 // --(rst-sec-end)--
 

@@ -9,6 +9,7 @@
 #include "caf/defaults.hpp"
 #include "caf/detail/is_complete.hpp"
 #include "caf/disposable.hpp"
+#include "caf/flow/backpressure_overflow_strategy.hpp"
 #include "caf/flow/fwd.hpp"
 #include "caf/flow/op/base.hpp"
 #include "caf/flow/step/fwd.hpp"
@@ -121,6 +122,12 @@ public:
   /// result of the function application.
   template <class F>
   transformation<step::map<F>> map(F f);
+
+  /// When producing items faster than the consumer can consume them, the
+  /// observable will buffer up to `buffer_size` items before raising an error.
+  observable<T> on_backpressure_buffer(size_t buffer_size,
+                                       backpressure_overflow_strategy strategy
+                                       = backpressure_overflow_strategy::fail);
 
   /// Recovers from errors by converting `on_error` to `on_complete` events.
   transformation<step::on_error_complete<T>> on_error_complete();
