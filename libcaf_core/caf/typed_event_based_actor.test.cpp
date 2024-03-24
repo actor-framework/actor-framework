@@ -408,7 +408,7 @@ TEST("check signature") {
     };
   };
   auto x = sys.spawn(bar_action);
-  check_eq(dispatch_messages(), 1u);
+  check_eq(dispatch_messages(), 2u);
 }
 
 SCENARIO("state classes may use typed pointers") {
