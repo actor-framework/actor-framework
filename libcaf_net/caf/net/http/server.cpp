@@ -11,6 +11,7 @@
 #include "caf/net/socket_manager.hpp"
 
 #include "caf/byte_span.hpp"
+#include "caf/defaults.hpp"
 #include "caf/detail/format.hpp"
 #include "caf/error.hpp"
 #include "caf/log/net.hpp"
