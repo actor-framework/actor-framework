@@ -17,6 +17,7 @@
 #include "caf/net/ssl/context.hpp"
 #include "caf/net/tcp_accept_socket.hpp"
 
+#include "caf/extend.hpp"
 #include "caf/fwd.hpp"
 
 #include <cstdint>
