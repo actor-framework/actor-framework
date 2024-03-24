@@ -135,6 +135,11 @@ public:
     return *this;
   }
 
+  template <class T, class P>
+  nop_builder& userinfo(T&&, P&&) {
+    return *this;
+  }
+
   template <class T>
   nop_builder& host(T&&) {
     return *this;
@@ -249,14 +254,11 @@ std::string to_string(const uri& x) {
 
 std::string to_string(const uri::authority_type& x) {
   std::string str;
-  if (!x.userinfo.empty()) {
-    std::string_view userinfo = x.userinfo;
-    // TODO: with this approach, username can't contain a ':'.
-    auto pos = userinfo.find(':');
-    uri::encode(str, userinfo.substr(0, pos));
-    if (pos != std::string::npos) {
+  if (x.userinfo) {
+    uri::encode(str, x.userinfo->name);
+    if (x.userinfo->password) {
       str += ':';
-      uri::encode(str, userinfo.substr(pos + 1));
+      uri::encode(str, *x.userinfo->password);
     }
     str += '@';
   }

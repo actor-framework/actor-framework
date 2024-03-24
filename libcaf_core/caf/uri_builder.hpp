@@ -34,6 +34,8 @@ public:
 
   uri_builder& userinfo(std::string str);
 
+  uri_builder& userinfo(std::string str, std::optional<std::string> password);
+
   uri_builder& host(std::string str);
 
   uri_builder& host(ip_address addr);

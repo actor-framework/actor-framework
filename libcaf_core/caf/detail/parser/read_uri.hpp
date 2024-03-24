@@ -116,15 +116,29 @@ void read_uri(State& ps, Consumer&& consumer) {
   // Utility setters for avoiding code duplication.
   auto set_path = [&] { consumer.path(take_str()); };
   auto set_host = [&] { consumer.host(take_str()); };
-  auto set_userinfo = [&] { consumer.userinfo(take_str()); };
-  auto set_colon_position = [&] {
+  auto set_userinfo = [&] {
+    auto str = take_str();
+    if (colon_position == std::string::npos) {
+      consumer.userinfo(std::move(str));
+    } else {
+      auto password_part = std::make_optional(str.substr(colon_position + 1));
+      str.erase(colon_position, std::string::npos);
+      consumer.userinfo(std::move(str), std::move(password_part));
+    }
+  };
+  auto on_colon = [&] {
     colon_position = str.size();
     str.push_back(':');
   };
   auto set_host_and_port = [&]() -> bool {
     auto str = take_str();
-    if (parse(std::string_view{str}.substr(colon_position + 1), port))
+    auto port_str = std::string_view{str}.substr(colon_position + 1);
+    string_parser_state port_ps{port_str.begin(), port_str.end()};
+    parse(port_ps, port);
+    if (port_ps.code != pec::success) {
+      ps.code = port_ps.code;
       return false;
+    }
     consumer.port(port);
     str.erase(colon_position, std::string::npos);
     consumer.host(std::move(str));
@@ -160,6 +174,8 @@ void read_uri(State& ps, Consumer&& consumer) {
     // A third '/' skips the authority, e.g., "file:///".
     transition(read_path, '/', str += '/')
     read_next_char(read_authority, str)
+    transition(read_authority, ':', on_colon())
+    transition(start_host, '@')
     fsm_transition(read_ipv6_address(ps, ip_consumer), await_end_of_ipv6, '[')
   }
   state(await_end_of_ipv6) {
@@ -174,7 +190,7 @@ void read_uri(State& ps, Consumer&& consumer) {
     transition(start_host, '@', set_userinfo())
     // A ':' can signalize end of userinfo or end of host,
     // e.g., "user:pass@example.com" or "example.com:80".
-    transition(read_host_or_port, ':', set_colon_position())
+    transition(read_host_or_port, ':', on_colon())
     epsilon(end_of_authority, "/?#", set_host())
   }
   state(start_host) {
@@ -194,10 +210,10 @@ void read_uri(State& ps, Consumer&& consumer) {
                pec::integer_overflow)
     epsilon(end_of_authority, "/?#", consumer.port(port))
   }
-  term_state(read_host_or_port, set_host_and_port(), pec::integer_overflow) {
+  term_state(read_host_or_port, set_host_and_port()) {
     read_next_char(read_host_or_port, str)
     transition(start_host, '@', set_userinfo())
-    epsilon(end_of_authority, "/?#", set_host_and_port(), pec::integer_overflow)
+    epsilon(end_of_authority, "/?#", set_host_and_port())
   }
   term_state(end_of_authority) {
     transition(read_path, '/')

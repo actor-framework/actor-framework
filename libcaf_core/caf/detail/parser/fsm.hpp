@@ -84,27 +84,11 @@
     exit_statement;                                                            \
     goto fsm_after_fin;                                                        \
     s_##name : if (ch == '\0') {                                               \
+      ps.code = pec::success;                                                  \
       exit_statement;                                                          \
-      goto fsm_fin;                                                            \
-    }                                                                          \
-    e_##name:
-
-/// Defines a terminal state in the FSM that runs `exit_action` when leaving
-/// the state. If the action returns false we leave the state with `error_code`,
-/// otherwise, we leave with code `pec::success` or `pec::trailing_character`.
-#define CAF_TERM_STATE_IMPL3(name, exit_action, error_code)                    \
-  }                                                                            \
-  for (;;) {                                                                   \
-    /* jumps back up here if no transition matches */                          \
-    ps.code = caf::pec::trailing_character;                                    \
-    exit_action;                                                               \
-    goto fsm_after_fin;                                                        \
-    s_##name : if (ch == '\0') {                                               \
-      if (!exit_action) {                                                      \
-        ps.code = error_code;                                                  \
-        goto fsm_after_fin;                                                    \
-      }                                                                        \
-      goto fsm_fin;                                                            \
+      if (ps.code == pec::success)                                             \
+        goto fsm_fin;                                                          \
+      goto fsm_after_fin;                                                      \
     }                                                                          \
     e_##name:
 

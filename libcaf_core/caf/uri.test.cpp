@@ -314,6 +314,9 @@ TEST("from string") {
   ROUNDTRIP("http://me@node:80?a=1&b=2");
   ROUNDTRIP("http://me@node:80#42");
   ROUNDTRIP("http://me@node:80?a=1&b=2#42");
+  check(uri::can_parse("http://@node"));
+  check_eq("http://@node"_u, "http://node");
+  ROUNDTRIP("http://:@node");
   ROUNDTRIP("http://user:@node");
   ROUNDTRIP("http://user:p@node");
   ROUNDTRIP("http://user:pass@node");
@@ -373,6 +376,9 @@ TEST("from string") {
   ROUNDTRIP("http://me@[::1]:80?a=1&b=2");
   ROUNDTRIP("http://me@[::1]:80#42");
   ROUNDTRIP("http://me@[::1]:80?a=1&b=2#42");
+  check(uri::can_parse("http://@[::1]"));
+  check_eq("http://@[::1]"_u, "http://[::1]");
+  ROUNDTRIP("http://:@[::1]");
   ROUNDTRIP("http://user:@[::1]");
   ROUNDTRIP("http://user:p@[::1]");
   ROUNDTRIP("http://user:pass@[::1]");
