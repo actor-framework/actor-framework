@@ -16,6 +16,7 @@
 #include "caf/net/web_socket/default_trait.hpp"
 #include "caf/net/web_socket/has_on_request.hpp"
 
+#include "caf/extend.hpp"
 #include "caf/fwd.hpp"
 
 #include <cstdint>
