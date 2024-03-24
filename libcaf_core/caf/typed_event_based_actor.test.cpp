@@ -8,6 +8,7 @@
 #include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
+#include "caf/actor_registry.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/init_global_meta_objects.hpp"
 #include "caf/log/test.hpp"

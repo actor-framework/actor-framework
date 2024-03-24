@@ -18,6 +18,10 @@
 #include "caf/resumable.hpp"
 #include "caf/scheduler.hpp"
 #include "caf/sec.hpp"
+#include "caf/telemetry/histogram.hpp"
+#include "caf/telemetry/metric.hpp"
+#include "caf/telemetry/metric_family.hpp"
+#include "caf/telemetry/metric_family_impl.hpp"
 
 #include <condition_variable>
 #include <string>

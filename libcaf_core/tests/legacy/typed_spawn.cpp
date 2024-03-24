@@ -4,6 +4,7 @@
 
 #define CAF_SUITE typed_spawn
 
+#include "caf/actor_registry.hpp"
 #include "caf/anon_mail.hpp"
 #include "caf/string_algorithms.hpp"
 

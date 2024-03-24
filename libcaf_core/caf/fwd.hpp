@@ -89,6 +89,7 @@ class actor_proxy;
 class actor_registry;
 class actor_system;
 class actor_system_config;
+class actor_system_module;
 class attachable;
 class behavior;
 class binary_deserializer;

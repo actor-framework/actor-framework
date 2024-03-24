@@ -24,7 +24,7 @@ actor_ostream::actor_ostream(scoped_actor& self)
 void actor_ostream::redirect(abstract_actor* self, std::string fn, int flags) {
   if (self == nullptr)
     return;
-  auto pr = self->home_system().printer_;
+  auto pr = self->home_system().legacy_printer_actor();
   if (!pr)
     return;
   pr->enqueue(make_mailbox_element(nullptr, make_message_id(), redirect_atom_v,
@@ -33,7 +33,7 @@ void actor_ostream::redirect(abstract_actor* self, std::string fn, int flags) {
 }
 
 void actor_ostream::redirect_all(actor_system& sys, std::string fn, int flags) {
-  auto pr = sys.printer_;
+  auto pr = sys.legacy_printer_actor();
   if (!pr)
     return;
   pr->enqueue(make_mailbox_element(nullptr, make_message_id(), redirect_atom_v,

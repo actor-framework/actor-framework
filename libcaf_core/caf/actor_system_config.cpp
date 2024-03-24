@@ -32,7 +32,7 @@ namespace caf {
 namespace {
 
 using module_factory_list
-  = std::vector<actor_system::module* (*) (actor_system&)>;
+  = std::vector<actor_system_module* (*) (actor_system&)>;
 
 using actor_factory_dictionary = dictionary<actor_factory>;
 

@@ -6,34 +6,26 @@
 
 #include "caf/abstract_actor.hpp"
 #include "caf/actor_cast.hpp"
-#include "caf/actor_clock.hpp"
 #include "caf/actor_config.hpp"
-#include "caf/actor_registry.hpp"
+#include "caf/actor_system_module.hpp"
 #include "caf/detail/actor_local_printer.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/format.hpp"
 #include "caf/detail/init_fun_factory.hpp"
-#include "caf/detail/private_thread_pool.hpp"
 #include "caf/detail/set_thread_name.hpp"
 #include "caf/detail/spawn_fwd.hpp"
 #include "caf/detail/spawnable.hpp"
 #include "caf/fwd.hpp"
 #include "caf/infer_handle.hpp"
 #include "caf/is_typed_actor.hpp"
-#include "caf/logger.hpp"
 #include "caf/make_actor.hpp"
 #include "caf/prohibit_top_level_spawn_marker.hpp"
 #include "caf/spawn_options.hpp"
 #include "caf/string_algorithms.hpp"
-#include "caf/telemetry/metric_registry.hpp"
 #include "caf/term.hpp"
 #include "caf/type_id.hpp"
 
-#include <array>
-#include <atomic>
 #include <cstddef>
-#include <cstdio>
-#include <iterator>
 #include <memory>
 #include <string>
 #include <thread>
@@ -96,7 +88,6 @@ public:
   friend class abstract_actor;
   friend class actor_ostream;
   friend class detail::actor_system_access;
-  friend class io::middleman;
   friend class local_actor;
   friend class logger;
   friend class net::middleman;
@@ -105,17 +96,6 @@ public:
   friend class actor_from_state_t;
 
   friend struct detail::printer_actor_state;
-
-  /// Returns the internal actor for dynamic spawn operations.
-  const strong_actor_ptr& spawn_serv() const {
-    return spawn_serv_;
-  }
-
-  /// Returns the internal actor for storing the runtime configuration
-  /// for this actor system.
-  const strong_actor_ptr& config_serv() const {
-    return config_serv_;
-  }
 
   actor_system() = delete;
   actor_system(const actor_system&) = delete;
@@ -154,40 +134,9 @@ public:
     void_fun_t fun_;
   };
 
-  /// An (optional) component of the actor system.
-  class CAF_CORE_EXPORT module {
-  public:
-    enum id_t { middleman, openssl_manager, network_manager, num_ids };
-
-    virtual ~module();
-
-    /// Returns the human-readable name of the module.
-    const char* name() const noexcept;
-
-    /// Starts any background threads needed by the module.
-    virtual void start() = 0;
-
-    /// Stops all background threads of the module.
-    virtual void stop() = 0;
-
-    /// Allows the module to change the
-    /// configuration of the actor system during startup.
-    virtual void init(actor_system_config&) = 0;
-
-    /// Returns the identifier of this module.
-    virtual id_t id() const = 0;
-
-    /// Returns a pointer to the subtype.
-    virtual void* subtype_ptr() = 0;
-  };
-
-  using module_ptr = std::unique_ptr<module>;
-
-  using module_array = std::array<module_ptr, module::num_ids>;
-
   /// An (optional) component of the actor system with networking
   /// capabilities.
-  class CAF_CORE_EXPORT networking_module : public module {
+  class CAF_CORE_EXPORT networking_module : public actor_system_module {
   public:
     ~networking_module() override;
 
@@ -311,20 +260,55 @@ public:
     return assignable(xs, message_types<T>());
   }
 
-  /// Returns the metrics registry for this system.
-  telemetry::metric_registry& metrics() noexcept {
-    return metrics_;
-  }
+  // -- properties -------------------------------------------------------------
+
+  base_metrics_t& base_metrics() noexcept;
+
+  const base_metrics_t& base_metrics() const noexcept;
+
+  const actor_metric_families_t& actor_metric_families() const noexcept;
+
+  /// Returns the global meta objects guard.
+  detail::global_meta_objects_guard_type meta_objects_guard() const noexcept;
+
+  /// Returns the `caf.metrics-filters.actors.includes` parameter.
+  span<const std::string> metrics_actors_includes() const noexcept;
+
+  /// Returns the `caf.metrics-filters.actors.excludes` parameter.
+  span<const std::string> metrics_actors_excludes() const noexcept;
+
+  /// Returns the configuration of this actor system.
+  const actor_system_config& config() const;
+
+  /// Returns the system-wide clock.
+  actor_clock& clock() noexcept;
+
+  /// Returns the number of detached actors.
+  size_t detached_actors() const noexcept;
+
+  /// Returns whether this actor system calls `await_all_actors_done`
+  /// in its destructor before shutting down.
+  bool await_actors_before_shutdown() const;
+
+  /// Configures whether this actor system calls `await_all_actors_done`
+  /// in its destructor before shutting down.
+  void await_actors_before_shutdown(bool new_value);
+
+  /// Returns the internal actor for dynamic spawn operations.
+  const strong_actor_ptr& spawn_serv() const;
+
+  /// Returns the internal actor for storing the runtime configuration
+  /// for this actor system.
+  const strong_actor_ptr& config_serv() const;
 
   /// Returns the metrics registry for this system.
-  const telemetry::metric_registry& metrics() const noexcept {
-    return metrics_;
-  }
+  telemetry::metric_registry& metrics() noexcept;
+
+  /// Returns the metrics registry for this system.
+  const telemetry::metric_registry& metrics() const noexcept;
 
   /// Returns the host-local identifier for this system.
-  const node_id& node() const {
-    return node_;
-  }
+  const node_id& node() const;
 
   /// Returns the scheduler instance.
   caf::scheduler& scheduler();
@@ -442,7 +426,7 @@ public:
   template <spawn_options Options = no_spawn_options, class CustomSpawn,
             class... Args>
   typename CustomSpawn::handle_type spawn(CustomSpawn, Args&&... args) {
-    actor_config cfg{scheduler_.get(), nullptr};
+    actor_config cfg{&scheduler(), nullptr};
     cfg.mbox_factory = mailbox_factory();
     return CustomSpawn::template do_spawn<Options>(*this, cfg,
                                                    std::forward<Args>(args)...);
@@ -466,29 +450,6 @@ public:
     return actor_cast<Handle>(std::move(*res));
   }
 
-  /// Returns whether this actor system calls `await_all_actors_done`
-  /// in its destructor before shutting down.
-  bool await_actors_before_shutdown() const {
-    return await_actors_before_shutdown_;
-  }
-
-  /// Configures whether this actor system calls `await_all_actors_done`
-  /// in its destructor before shutting down.
-  void await_actors_before_shutdown(bool x) {
-    await_actors_before_shutdown_ = x;
-  }
-
-  /// Returns the configuration of this actor system.
-  const actor_system_config& config() const {
-    return cfg_;
-  }
-
-  /// Returns the system-wide clock.
-  actor_clock& clock() noexcept;
-
-  /// Returns the number of detached actors.
-  size_t detached_actors() const noexcept;
-
   // -- println ----------------------------------------------------------------
 
   /// Adds a new line to stdout.
@@ -499,7 +460,7 @@ public:
     detail::format_to(std::back_inserter(buf), fmt,
                       std::forward<Args>(args)...);
     buf.push_back('\n');
-    print_state_->print(color, buf.data(), buf.size());
+    do_print(color, buf.data(), buf.size());
   }
 
   /// Adds a new line to stdout.
@@ -536,19 +497,7 @@ public:
       f();
       thread_terminates();
     };
-    return std::thread{std::move(body), meta_objects_guard_};
-  }
-
-  auto meta_objects_guard() const noexcept {
-    return meta_objects_guard_;
-  }
-
-  const auto& metrics_actors_includes() const noexcept {
-    return metrics_actors_includes_;
-  }
-
-  const auto& metrics_actors_excludes() const noexcept {
-    return metrics_actors_excludes_;
+    return std::thread{std::move(body), meta_objects_guard()};
   }
 
   template <class C, spawn_options Os, class... Ts>
@@ -560,7 +509,7 @@ public:
     if constexpr (has_hide_flag(Os))
       cfg.flags |= abstract_actor::is_hidden_flag;
     if (cfg.sched == nullptr)
-      cfg.sched = scheduler_.get();
+      cfg.sched = &scheduler();
     CAF_SET_LOGGER_SYS(this);
     auto res = make_actor<C>(next_actor_id(), node(), this, cfg,
                              std::forward<Ts>(xs)...);
@@ -644,7 +593,7 @@ public:
     static_assert(std::is_base_of_v<scheduled_actor, Impl>,
                   "only scheduled actors may get spawned inactively");
     CAF_SET_LOGGER_SYS(this);
-    actor_config cfg{scheduler_.get(), nullptr};
+    actor_config cfg{&scheduler(), nullptr};
     cfg.flags = abstract_actor::is_inactive_flag;
     if constexpr (has_detach_flag(Os))
       cfg.flags |= abstract_actor::is_detached_flag;
@@ -662,18 +611,6 @@ public:
       dptr->launch(sched, has_lazy_init_flag(Os), has_hide_flag(Os));
     };
     return std::make_tuple(ptr, launcher<decltype(launch)>(std::move(launch)));
-  }
-
-  base_metrics_t& base_metrics() noexcept {
-    return base_metrics_;
-  }
-
-  const auto& base_metrics() const noexcept {
-    return base_metrics_;
-  }
-
-  const auto& actor_metric_families() const noexcept {
-    return actor_metric_families_;
   }
 
   detail::private_thread* acquire_private_thread();
@@ -701,108 +638,29 @@ private:
   dyn_spawn_impl(const std::string& name, message& args, caf::scheduler* ctx,
                  bool check_interface, const mpi* expected_ifs);
 
-  /// Sets the internal actor for dynamic spawn operations.
-  void spawn_serv(strong_actor_ptr x) {
-    spawn_serv_ = std::move(x);
-  }
-
-  /// Sets the internal actor for storing the runtime configuration.
-  void config_serv(strong_actor_ptr x) {
-    config_serv_ = std::move(x);
-  }
-
   detail::mailbox_factory* mailbox_factory();
+
+  void do_print(term color, const char* buf, size_t num_bytes);
+
+  strong_actor_ptr legacy_printer_actor() const;
+
+  // -- callbacks for actor_system_access --------------------------------------
+
+  void set_logger(intrusive_ptr<caf::logger> ptr);
+
+  void set_clock(std::unique_ptr<actor_clock> ptr);
+
+  void set_scheduler(std::unique_ptr<caf::scheduler> ptr);
+
+  void set_legacy_printer_actor(strong_actor_ptr ptr);
+
+  void set_node(node_id id);
 
   // -- member variables -------------------------------------------------------
 
-  /// Used to generate ascending actor IDs.
-  std::atomic<size_t> ids_;
+  class impl;
 
-  /// Manages all metrics collected by the system.
-  telemetry::metric_registry metrics_;
-
-  /// Stores all metrics that the actor system collects by default.
-  base_metrics_t base_metrics_;
-
-  /// Identifies this actor system in a distributed setting.
-  node_id node_;
-
-  /// Maps well-known actor names to actor handles.
-  actor_registry registry_;
-
-  /// Manages log output.
-  intrusive_ptr<caf::logger> logger_;
-
-  /// Stores the system-wide clock.
-  std::unique_ptr<actor_clock> clock_;
-
-  /// Stores the actor system scheduler.
-  std::unique_ptr<caf::scheduler> scheduler_;
-
-  /// Stores optional actor system components.
-  module_array modules_;
-
-  /// Background printer.
-  strong_actor_ptr printer_;
-
-  /// Stores whether the system should wait for running actors on shutdown.
-  bool await_actors_before_shutdown_;
-
-  /// Stores config parameters.
-  strong_actor_ptr config_serv_;
-
-  /// Allows fully dynamic spawning of actors.
-  strong_actor_ptr spawn_serv_;
-
-  /// The system-wide, user-provided configuration.
-  actor_system_config& cfg_;
-
-  /// Caches the configuration parameter `caf.metrics-filters.actors.includes`
-  /// for faster lookups at runtime.
-  std::vector<std::string> metrics_actors_includes_;
-
-  /// Caches the configuration parameter `caf.metrics-filters.actors.excludes`
-  /// for faster lookups at runtime.
-  std::vector<std::string> metrics_actors_excludes_;
-
-  /// Caches families for optional actor metrics.
-  actor_metric_families_t actor_metric_families_;
-
-  /// Manages threads for detached actors.
-  detail::private_thread_pool private_threads_;
-
-  /// Ties the lifetime of the meta objects table to the actor system.
-  detail::global_meta_objects_guard_type meta_objects_guard_;
-
-  class CAF_CORE_EXPORT print_state {
-  public:
-    using print_fun = void (*)(void*, term, const char*, size_t);
-
-    using cleanup = void (*)(void*);
-
-    explicit print_state(const actor_system_config& cfg);
-
-    ~print_state();
-
-    void reset(void* new_out, print_fun do_print, cleanup do_cleanup);
-
-    void print(term color, const char* buf, size_t);
-
-  private:
-    /// Mutex for printing to the console.
-    std::mutex mtx_;
-
-    /// File descriptor for printing to the console.
-    void* out_ = nullptr;
-
-    /// Function for printing to the console.
-    print_fun do_print_ = nullptr;
-
-    /// Function for cleaning up out_.
-    cleanup do_cleanup_ = nullptr;
-  };
-
-  std::unique_ptr<print_state> print_state_;
+  impl* impl_;
 };
 
 } // namespace caf

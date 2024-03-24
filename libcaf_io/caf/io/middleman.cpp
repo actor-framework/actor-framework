@@ -15,6 +15,7 @@
 #include "caf/anon_mail.hpp"
 #include "caf/config.hpp"
 #include "caf/defaults.hpp"
+#include "caf/detail/actor_system_access.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/latch.hpp"
 #include "caf/detail/prometheus_broker.hpp"
@@ -27,6 +28,7 @@
 #include "caf/scoped_actor.hpp"
 #include "caf/sec.hpp"
 #include "caf/send.hpp"
+#include "caf/telemetry/metric_registry.hpp"
 #include "caf/thread_owner.hpp"
 
 #include <cstring>
@@ -209,7 +211,7 @@ void middleman::add_module_options(actor_system_config& cfg) {
               defaults::middleman::connection_timeout);
 }
 
-actor_system::module* middleman::make(actor_system& sys) {
+actor_system_module* middleman::make(actor_system& sys) {
   return new mm_impl<network::default_multiplexer>(sys);
 }
 
@@ -368,12 +370,12 @@ void middleman::stop() {
 
 void middleman::init(actor_system_config& cfg) {
   // Compute and set ID for this network node.
-  auto this_node = node_id::default_data::local(cfg);
-  system().node_.swap(this_node);
+  detail::actor_system_access access{system()};
+  access.node(node_id::default_data::local(cfg));
 }
 
-actor_system::module::id_t middleman::id() const {
-  return module::middleman;
+actor_system_module::id_t middleman::id() const {
+  return actor_system_module::middleman;
 }
 
 void* middleman::subtype_ptr() {

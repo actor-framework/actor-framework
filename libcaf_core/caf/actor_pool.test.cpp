@@ -6,6 +6,7 @@
 
 #include "caf/test/test.hpp"
 
+#include "caf/actor_registry.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/log/test.hpp"
 #include "caf/scoped_actor.hpp"

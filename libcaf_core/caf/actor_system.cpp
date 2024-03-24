@@ -7,11 +7,13 @@
 #include "caf/actor.hpp"
 #include "caf/actor_from_state.hpp"
 #include "caf/actor_ostream.hpp"
+#include "caf/actor_registry.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/critical.hpp"
 #include "caf/detail/meta_object.hpp"
+#include "caf/detail/private_thread_pool.hpp"
 #include "caf/detail/thread_safe_actor_clock.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/raise_error.hpp"
@@ -19,7 +21,11 @@
 #include "caf/spawn_options.hpp"
 #include "caf/stateful_actor.hpp"
 #include "caf/system_messages.hpp"
+#include "caf/telemetry/metric_registry.hpp"
 
+#include <array>
+#include <atomic>
+#include <cstdio>
 #include <fstream>
 #include <memory>
 #include <unordered_map>
@@ -241,31 +247,6 @@ behavior spawn_serv_impl(stateful_actor<spawn_serv_state>* self) {
 // process. Batch messages and ACKs are treated equally. Open, close, and error
 // messages are evaluated to add and remove state as needed.
 
-} // namespace
-
-actor_system::module::~module() {
-  // nop
-}
-
-const char* actor_system::module::name() const noexcept {
-  switch (id()) {
-    case middleman:
-      return "middleman";
-    case openssl_manager:
-      return "openssl-manager";
-    case network_manager:
-      return "network-manager";
-    default:
-      return "???";
-  }
-}
-
-actor_system::networking_module::~networking_module() {
-  // nop
-}
-
-namespace {
-
 auto make_base_metrics(telemetry::metric_registry& reg) {
   return actor_system::base_metrics_t{
     // Initialize the base metrics.
@@ -324,7 +305,290 @@ auto make_actor_metric_families(telemetry::metric_registry& reg) {
   };
 }
 
+class print_state_impl {
+public:
+  using print_fun = void (*)(void*, term, const char*, size_t);
+
+  using cleanup = void (*)(void*);
+
+  explicit print_state_impl(const actor_system_config& cfg) {
+    auto colored = get_or(cfg, "caf.console.colored", true);
+    auto out = get_or(cfg, "caf.console.stream", "stdout");
+    // Short-circuit if output is disabled.
+    if (out == "none") {
+      do_print_ = [](void*, term, const char*, size_t) {};
+      return;
+    }
+    // Pick the output stream.
+    if (out == "stderr")
+      out_ = stderr;
+    else
+      out_ = stdout;
+    // Set up our print function depending on whether we want colored output.
+    if (colored && detail::is_tty(stdout)) {
+      do_print_ = [](void* out, term color, const char* buf, size_t len) {
+        auto* fhdl = reinterpret_cast<FILE*>(out);
+        if (color <= term::reset_endl) {
+          fwrite(buf, 1, len, fhdl);
+          return;
+        }
+        detail::set_color(fhdl, color);
+        fwrite(buf, 1, len, fhdl);
+        detail::set_color(fhdl, term::reset);
+      };
+    } else {
+      do_print_ = [](void* out, term, const char* buf, size_t len) {
+        fwrite(buf, 1, len, reinterpret_cast<FILE*>(out));
+      };
+    }
+  }
+
+  ~print_state_impl() {
+    if (do_cleanup_)
+      do_cleanup_(out_);
+  }
+
+  void reset(void* new_out, print_fun do_print, cleanup do_cleanup) {
+    std::lock_guard guard{mtx_};
+    if (do_cleanup_)
+      do_cleanup_(out_);
+    out_ = new_out;
+    do_print_ = do_print;
+    do_cleanup_ = do_cleanup;
+  }
+
+  void print(term color, const char* buf, size_t len) {
+    std::lock_guard guard{mtx_};
+    do_print_(out_, color, buf, len);
+  }
+
+private:
+  /// Mutex for printing to the console.
+  std::mutex mtx_;
+
+  /// File descriptor for printing to the console.
+  void* out_ = nullptr;
+
+  /// Function for printing to the console.
+  print_fun do_print_ = nullptr;
+
+  /// Function for cleaning up out_.
+  cleanup do_cleanup_ = nullptr;
+};
+
 } // namespace
+
+class actor_system::impl {
+public:
+  using module_ptr = std::unique_ptr<actor_system_module>;
+
+  using module_array = std::array<module_ptr, actor_system_module::num_ids>;
+
+  impl(actor_system* parent, actor_system_config& cfg,
+       custom_setup_fn custom_setup, void* custom_setup_data)
+    : ids(0),
+      metrics(cfg),
+      base_metrics(make_base_metrics(metrics)),
+      registry(*parent),
+      await_actors_before_shutdown(true),
+      cfg(&cfg),
+      private_threads(parent) {
+    print_state = std::make_unique<print_state_impl>(cfg);
+    meta_objects_guard = detail::global_meta_objects_guard();
+    if (!meta_objects_guard)
+      CAF_CRITICAL("unable to obtain the global meta objects guard");
+    for (auto& hook : cfg.thread_hooks())
+      hook->init(*parent);
+    // Cache some configuration parameters for faster lookups at runtime.
+    using string_list = std::vector<std::string>;
+    if (auto lst = get_as<string_list>(cfg,
+                                       "caf.metrics-filters.actors.includes"))
+      metrics_actors_includes = std::move(*lst);
+    if (auto lst = get_as<string_list>(cfg,
+                                       "caf.metrics-filters.actors.excludes"))
+      metrics_actors_excludes = std::move(*lst);
+    if (!metrics_actors_includes.empty())
+      actor_metric_families = make_actor_metric_families(metrics);
+    // Spin up modules.
+    for (auto fn : cfg.module_factories()) {
+      auto mod_ptr = fn(*parent);
+      auto mod_id = mod_ptr->id();
+      modules[mod_id].reset(mod_ptr);
+    }
+    // Make sure meta objects are loaded.
+    auto gmos = detail::global_meta_objects();
+    if (gmos.size() < id_block::core_module::end
+        || gmos[id_block::core_module::begin].type_name.empty()) {
+      CAF_CRITICAL("actor_system created without calling "
+                   "caf::init_global_meta_objects<>() before");
+    }
+    if (modules[actor_system_module::middleman] != nullptr) {
+      if (gmos.size() < detail::io_module_end
+          || gmos[detail::io_module_begin].type_name.empty()) {
+        CAF_CRITICAL("I/O module loaded without calling "
+                     "caf::io::middleman::init_global_meta_objects() before");
+      }
+    }
+    // Allow the callback to override any configuration parameter and to
+    // initialize member variables before we set the defaults.
+    if (custom_setup != nullptr) {
+      custom_setup(*parent, cfg, custom_setup_data);
+    }
+    // Initialize the logger before any other module.
+    if (!logger) {
+      logger = cfg.make_logger(*parent);
+      logger->init(cfg);
+      CAF_SET_LOGGER_SYS(parent);
+    }
+    // Make sure we have a clock.
+    if (!clock) {
+      clock = std::make_unique<detail::thread_safe_actor_clock>(*parent);
+    }
+    // Make sure we have a scheduler up and running.
+    if (!scheduler) {
+      using defaults::scheduler::policy;
+      auto config_policy = get_or(cfg, "caf.scheduler.policy", policy);
+      if (config_policy == "sharing") {
+        scheduler = scheduler::make_work_sharing(*parent);
+      } else {
+        // Any invalid configuration falls back to work stealing.
+        if (config_policy != "stealing")
+          fprintf(stderr,
+                  "[WARNING] '%s' is an unrecognized scheduler policy, falling "
+                  "back to 'stealing' (i.e. work-stealing)\n",
+                  config_policy.c_str());
+        scheduler = scheduler::make_work_stealing(*parent);
+      }
+    }
+    scheduler->start();
+    if (!printer) {
+      auto p = parent->spawn<hidden + detached + lazy_init>(
+        actor_from_state<detail::printer_actor_state>);
+      printer = actor_cast<strong_actor_ptr>(std::move(p));
+    }
+    // Initialize the state for each module and give each module the opportunity
+    // to adapt the system configuration.
+    for (auto& mod : modules)
+      if (mod)
+        mod->init(cfg);
+    // Spawn config and spawn servers (lazily to not access the scheduler yet).
+    static constexpr auto Flags = hidden + lazy_init;
+    spawn_serv
+      = actor_cast<strong_actor_ptr>(parent->spawn<Flags>(spawn_serv_impl));
+    config_serv
+      = actor_cast<strong_actor_ptr>(parent->spawn<Flags>(config_serv_impl));
+    // Start all modules.
+    registry.start();
+    private_threads.start();
+    registry.put("SpawnServ", parent->spawn_serv());
+    registry.put("ConfigServ", parent->config_serv());
+    for (auto& mod : modules)
+      if (mod)
+        mod->start();
+    logger->start();
+  }
+
+  ~impl() {
+    {
+      auto lg = log::core::trace("");
+      log::core::debug("shutdown actor system");
+      if (await_actors_before_shutdown)
+        registry.await_running_count_equal(0);
+      // shutdown internal actors
+      auto drop = [&](auto& x) {
+        anon_send_exit(x, exit_reason::user_shutdown);
+        x = nullptr;
+      };
+      drop(spawn_serv);
+      drop(config_serv);
+      // stop modules in reverse order
+      for (auto i = modules.rbegin(); i != modules.rend(); ++i) {
+        auto& ptr = *i;
+        if (ptr != nullptr) {
+          log::core::debug("stop module {}", ptr->name());
+          ptr->stop();
+        }
+      }
+      drop(printer);
+      CAF_LOG_DEBUG("stop scheduler");
+      scheduler->stop();
+      private_threads.stop();
+      registry.stop();
+      clock = nullptr;
+    }
+    // reset logger and wait until dtor was called
+    CAF_SET_LOGGER_SYS(nullptr);
+    logger->stop();
+    logger = nullptr;
+  }
+
+  /// Used to generate ascending actor IDs.
+  std::atomic<size_t> ids;
+
+  /// Manages all metrics collected by the system.
+  telemetry::metric_registry metrics;
+
+  /// Stores all metrics that the actor system collects by default.
+  base_metrics_t base_metrics;
+
+  /// Identifies this actor system in a distributed setting.
+  node_id node;
+
+  /// Maps well-known actor names to actor handles.
+  actor_registry registry;
+
+  /// Manages log output.
+  intrusive_ptr<caf::logger> logger;
+
+  /// Stores the system-wide clock.
+  std::unique_ptr<actor_clock> clock;
+
+  /// Stores the actor system scheduler.
+  std::unique_ptr<caf::scheduler> scheduler;
+
+  /// Stores optional actor system components.
+  module_array modules;
+
+  /// Background printer.
+  strong_actor_ptr printer;
+
+  /// Stores whether the system should wait for running actors on shutdown.
+  bool await_actors_before_shutdown;
+
+  /// Stores config parameters.
+  strong_actor_ptr config_serv;
+
+  /// Allows fully dynamic spawning of actors.
+  strong_actor_ptr spawn_serv;
+
+  /// The system-wide, user-provided configuration.
+  actor_system_config* cfg;
+
+  /// Caches the configuration parameter `caf.metrics-filters.actors.includes`
+  /// for faster lookups at runtime.
+  std::vector<std::string> metrics_actors_includes;
+
+  /// Caches the configuration parameter `caf.metrics-filters.actors.excludes`
+  /// for faster lookups at runtime.
+  std::vector<std::string> metrics_actors_excludes;
+
+  /// Caches families for optional actor metrics.
+  actor_metric_families_t actor_metric_families;
+
+  /// Manages threads for detached actors.
+  detail::private_thread_pool private_threads;
+
+  /// Ties the lifetime of the meta objects table to the actor system.
+  detail::global_meta_objects_guard_type meta_objects_guard;
+
+  std::unique_ptr<print_state_impl> print_state;
+};
+
+actor_system::networking_module::~networking_module() {
+  // nop
+}
+
+namespace {} // namespace
 
 actor_system::actor_system(actor_system_config& cfg)
   : actor_system(cfg, nullptr, nullptr) {
@@ -333,232 +597,172 @@ actor_system::actor_system(actor_system_config& cfg)
 
 actor_system::actor_system(actor_system_config& cfg,
                            custom_setup_fn custom_setup,
-                           void* custom_setup_data)
-  : ids_(0),
-    metrics_(cfg),
-    base_metrics_(make_base_metrics(metrics_)),
-    registry_(*this),
-    await_actors_before_shutdown_(true),
-    cfg_(cfg),
-    private_threads_(this) {
-  print_state_ = std::make_unique<print_state>(cfg);
-  meta_objects_guard_ = detail::global_meta_objects_guard();
-  if (!meta_objects_guard_)
-    CAF_CRITICAL("unable to obtain the global meta objects guard");
-  for (auto& hook : cfg.thread_hooks())
-    hook->init(*this);
-  // Cache some configuration parameters for faster lookups at runtime.
-  using string_list = std::vector<std::string>;
-  if (auto lst = get_as<string_list>(cfg,
-                                     "caf.metrics-filters.actors.includes"))
-    metrics_actors_includes_ = std::move(*lst);
-  if (auto lst = get_as<string_list>(cfg,
-                                     "caf.metrics-filters.actors.excludes"))
-    metrics_actors_excludes_ = std::move(*lst);
-  if (!metrics_actors_includes_.empty())
-    actor_metric_families_ = make_actor_metric_families(metrics_);
-  // Spin up modules.
-  for (auto fn : cfg.module_factories()) {
-    auto mod_ptr = fn(*this);
-    auto mod_id = mod_ptr->id();
-    modules_[mod_id].reset(mod_ptr);
-  }
-  // Make sure meta objects are loaded.
-  auto gmos = detail::global_meta_objects();
-  if (gmos.size() < id_block::core_module::end
-      || gmos[id_block::core_module::begin].type_name.empty()) {
-    CAF_CRITICAL("actor_system created without calling "
-                 "caf::init_global_meta_objects<>() before");
-  }
-  if (modules_[module::middleman] != nullptr) {
-    if (gmos.size() < detail::io_module_end
-        || gmos[detail::io_module_begin].type_name.empty()) {
-      CAF_CRITICAL("I/O module loaded without calling "
-                   "caf::io::middleman::init_global_meta_objects() before");
-    }
-  }
-  // Allow the callback to override any configuration parameter and to
-  // initialize member variables before we set the defaults.
-  if (custom_setup != nullptr) {
-    custom_setup(*this, cfg, custom_setup_data);
-  }
-  // Initialize the logger before any other module.
-  if (!logger_) {
-    logger_ = cfg.make_logger(*this);
-    logger_->init(cfg);
-    CAF_SET_LOGGER_SYS(this);
-  }
-  // Make sure we have a clock.
-  if (!clock_) {
-    clock_ = std::make_unique<detail::thread_safe_actor_clock>(*this);
-  }
-  // Make sure we have a scheduler up and running.
-  if (!scheduler_) {
-    using defaults::scheduler::policy;
-    auto config_policy = get_or(cfg, "caf.scheduler.policy", policy);
-    if (config_policy == "sharing") {
-      scheduler_ = scheduler::make_work_sharing(*this);
-    } else {
-      // Any invalid configuration falls back to work stealing.
-      if (config_policy != "stealing")
-        fprintf(stderr,
-                "[WARNING] '%s' is an unrecognized scheduler policy, falling "
-                "back to 'stealing' (i.e. work-stealing)\n",
-                config_policy.c_str());
-      scheduler_ = scheduler::make_work_stealing(*this);
-    }
-  }
-  scheduler_->start();
-  if (!printer_) {
-    auto p = spawn<hidden + detached + lazy_init>(
-      actor_from_state<detail::printer_actor_state>);
-    printer_ = actor_cast<strong_actor_ptr>(std::move(p));
-  }
-  // Initialize the state for each module and give each module the opportunity
-  // to adapt the system configuration.
-  for (auto& mod : modules_)
-    if (mod)
-      mod->init(cfg);
-  // Spawn config and spawn servers (lazily to not access the scheduler yet).
-  static constexpr auto Flags = hidden + lazy_init;
-  spawn_serv(actor_cast<strong_actor_ptr>(spawn<Flags>(spawn_serv_impl)));
-  config_serv(actor_cast<strong_actor_ptr>(spawn<Flags>(config_serv_impl)));
-  // Start all modules.
-  registry_.start();
-  private_threads_.start();
-  registry_.put("SpawnServ", spawn_serv());
-  registry_.put("ConfigServ", config_serv());
-  for (auto& mod : modules_)
-    if (mod)
-      mod->start();
-  logger_->start();
+                           void* custom_setup_data) {
+  // This is a convoluted way to construct the implementation, but we cannot
+  // just use new and delete here. The `custom_setup` function might call member
+  // functions on this actor system when constructing `impl`, which requires us
+  // to have `impl_` already pointing to the new instance. Hence, we first
+  // allocate memory for `impl_` and then construct the implementation object.
+  impl_ = static_cast<impl*>(malloc(sizeof(impl)));
+  new (impl_) impl(this, cfg, custom_setup, custom_setup_data);
 }
 
 actor_system::~actor_system() {
-  {
-    auto lg = log::core::trace("");
-    log::core::debug("shutdown actor system");
-    if (await_actors_before_shutdown_)
-      await_all_actors_done();
-    // shutdown internal actors
-    auto drop = [&](auto& x) {
-      anon_send_exit(x, exit_reason::user_shutdown);
-      x = nullptr;
-    };
-    drop(spawn_serv_);
-    drop(config_serv_);
-    // stop modules in reverse order
-    for (auto i = modules_.rbegin(); i != modules_.rend(); ++i) {
-      auto& ptr = *i;
-      if (ptr != nullptr) {
-        log::core::debug("stop module {}", ptr->name());
-        ptr->stop();
-      }
-    }
-    drop(printer_);
-    CAF_LOG_DEBUG("stop scheduler");
-    scheduler_->stop();
-    private_threads_.stop();
-    registry_.stop();
-    clock_ = nullptr;
-  }
-  // reset logger and wait until dtor was called
-  CAF_SET_LOGGER_SYS(nullptr);
-  logger_->stop();
-  logger_ = nullptr;
+  impl_->~impl();
+  free(impl_);
 }
 
-/// Returns the scheduler instance.
+// -- properties ---------------------------------------------------------------
+
+actor_system::base_metrics_t& actor_system::base_metrics() noexcept {
+  return impl_->base_metrics;
+}
+
+const actor_system::base_metrics_t&
+actor_system::base_metrics() const noexcept {
+  return impl_->base_metrics;
+}
+
+const actor_system::actor_metric_families_t&
+actor_system::actor_metric_families() const noexcept {
+  return impl_->actor_metric_families;
+}
+
+detail::global_meta_objects_guard_type
+actor_system::meta_objects_guard() const noexcept {
+  return impl_->meta_objects_guard;
+}
+
+span<const std::string> actor_system::metrics_actors_includes() const noexcept {
+  return impl_->metrics_actors_includes;
+}
+
+span<const std::string> actor_system::metrics_actors_excludes() const noexcept {
+  return impl_->metrics_actors_excludes;
+}
+
+const actor_system_config& actor_system::config() const {
+  return *impl_->cfg;
+}
+
+actor_clock& actor_system::clock() noexcept {
+  return *impl_->clock;
+}
+
+size_t actor_system::detached_actors() const noexcept {
+  return impl_->private_threads.running();
+}
+
+bool actor_system::await_actors_before_shutdown() const {
+  return impl_->await_actors_before_shutdown;
+}
+
+void actor_system::await_actors_before_shutdown(bool new_value) {
+  impl_->await_actors_before_shutdown = new_value;
+}
+
+const strong_actor_ptr& actor_system::spawn_serv() const {
+  return impl_->spawn_serv;
+}
+
+const strong_actor_ptr& actor_system::config_serv() const {
+  return impl_->config_serv;
+}
+
+telemetry::metric_registry& actor_system::metrics() noexcept {
+  return impl_->metrics;
+}
+
+const telemetry::metric_registry& actor_system::metrics() const noexcept {
+  return impl_->metrics;
+}
+
+const node_id& actor_system::node() const {
+  return impl_->node;
+}
+
 caf::scheduler& actor_system::scheduler() {
-  return *scheduler_;
+  return *impl_->scheduler;
 }
 
 caf::logger& actor_system::logger() {
-  return *logger_;
+  return *impl_->logger;
 }
 
 actor_registry& actor_system::registry() {
-  return registry_;
+  return impl_->registry;
 }
 
 bool actor_system::has_middleman() const {
-  return modules_[module::middleman] != nullptr;
+  return impl_->modules[actor_system_module::middleman] != nullptr;
 }
 
 io::middleman& actor_system::middleman() {
-  auto& clptr = modules_[module::middleman];
-  if (!clptr)
-    CAF_RAISE_ERROR("cannot access middleman: module not loaded");
-  return *reinterpret_cast<io::middleman*>(clptr->subtype_ptr());
+  if (auto& clptr = impl_->modules[actor_system_module::middleman])
+    return *reinterpret_cast<io::middleman*>(clptr->subtype_ptr());
+  CAF_RAISE_ERROR("cannot access middleman: module not loaded");
 }
 
 bool actor_system::has_openssl_manager() const {
-  return modules_[module::openssl_manager] != nullptr;
+  return impl_->modules[actor_system_module::openssl_manager] != nullptr;
 }
 
 openssl::manager& actor_system::openssl_manager() const {
-  auto& clptr = modules_[module::openssl_manager];
-  if (!clptr)
-    CAF_RAISE_ERROR("cannot access openssl manager: module not loaded");
-  return *reinterpret_cast<openssl::manager*>(clptr->subtype_ptr());
+  if (auto& clptr = impl_->modules[actor_system_module::openssl_manager])
+    return *reinterpret_cast<openssl::manager*>(clptr->subtype_ptr());
+  CAF_RAISE_ERROR("cannot access middleman: module not loaded");
 }
 
 bool actor_system::has_network_manager() const noexcept {
-  return modules_[module::network_manager] != nullptr;
+  return impl_->modules[actor_system_module::network_manager] != nullptr;
 }
 
 net::middleman& actor_system::network_manager() {
-  auto& clptr = modules_[module::network_manager];
-  if (!clptr)
-    CAF_RAISE_ERROR("cannot access network manager: module not loaded");
-  return *reinterpret_cast<net::middleman*>(clptr->subtype_ptr());
+  if (auto& clptr = impl_->modules[actor_system_module::network_manager])
+    return *reinterpret_cast<net::middleman*>(clptr->subtype_ptr());
+  CAF_RAISE_ERROR("cannot access network manager: module not loaded");
 }
 
 actor_id actor_system::next_actor_id() {
-  return ++ids_;
+  return ++impl_->ids;
 }
 
 actor_id actor_system::latest_actor_id() const {
-  return ids_.load();
+  return impl_->ids.load();
+}
+
+strong_actor_ptr actor_system::legacy_printer_actor() const {
+  return impl_->printer;
 }
 
 void actor_system::await_all_actors_done() const {
-  registry_.await_running_count_equal(0);
+  impl_->registry.await_running_count_equal(0);
 }
 
 void actor_system::monitor(const node_id& node, const actor_addr& observer) {
   // TODO: Currently does not work with other modules, in particular caf_net.
-  auto mm = modules_[module::middleman].get();
+  auto mm = impl_->modules[actor_system_module::middleman].get();
   if (mm == nullptr)
     return;
-  auto mm_dptr = static_cast<networking_module*>(mm);
-  mm_dptr->monitor(node, observer);
+  static_cast<networking_module*>(mm)->monitor(node, observer);
 }
 
 void actor_system::demonitor(const node_id& node, const actor_addr& observer) {
   // TODO: Currently does not work with other modules, in particular caf_net.
-  auto mm = modules_[module::middleman].get();
+  auto mm = impl_->modules[actor_system_module::middleman].get();
   if (mm == nullptr)
     return;
   auto mm_dptr = static_cast<networking_module*>(mm);
   mm_dptr->demonitor(node, observer);
 }
 
-actor_clock& actor_system::clock() noexcept {
-  return *clock_;
-}
-
-size_t actor_system::detached_actors() const noexcept {
-  return private_threads_.running();
-}
-
 void actor_system::thread_started(thread_owner owner) {
-  for (auto& hook : cfg_.thread_hooks())
+  for (auto& hook : impl_->cfg->thread_hooks())
     hook->thread_started(owner);
 }
 
 void actor_system::thread_terminates() {
-  for (auto& hook : cfg_.thread_hooks())
+  for (auto& hook : impl_->cfg->thread_hooks())
     hook->thread_terminates();
 }
 
@@ -571,10 +775,10 @@ actor_system::dyn_spawn_impl(const std::string& name, message& args,
     check_interface, expected_ifs);
   if (name.empty())
     return sec::invalid_argument;
-  auto* fs = cfg_.get_actor_factory(name);
+  auto* fs = impl_->cfg->get_actor_factory(name);
   if (fs == nullptr)
     return sec::unknown_type;
-  actor_config cfg{sched != nullptr ? sched : scheduler_.get()};
+  actor_config cfg{sched != nullptr ? sched : &scheduler()};
   auto res = (*fs)(*this, cfg, args);
   if (!res.first)
     return sec::cannot_spawn_actor_from_arguments;
@@ -584,11 +788,11 @@ actor_system::dyn_spawn_impl(const std::string& name, message& args,
 }
 
 detail::private_thread* actor_system::acquire_private_thread() {
-  return private_threads_.acquire();
+  return impl_->private_threads.acquire();
 }
 
 void actor_system::release_private_thread(detail::private_thread* ptr) {
-  private_threads_.release(ptr);
+  impl_->private_threads.release(ptr);
 }
 
 namespace {
@@ -626,71 +830,47 @@ private:
 } // namespace
 
 detail::actor_local_printer_ptr actor_system::printer_for(local_actor* self) {
-  return make_counted<actor_local_printer_impl>(self,
-                                                actor_cast<actor>(printer_));
+  using impl_t = actor_local_printer_impl;
+  return make_counted<impl_t>(self, actor_cast<actor>(impl_->printer));
 }
 
 detail::mailbox_factory* actor_system::mailbox_factory() {
-  return cfg_.mailbox_factory();
-}
-
-actor_system::print_state::print_state(const actor_system_config& cfg) {
-  auto colored = get_or(cfg, "caf.console.colored", true);
-  auto out = get_or(cfg, "caf.console.stream", "stdout");
-  // Short-circuit if output is disabled.
-  if (out == "none") {
-    do_print_ = [](void*, term, const char*, size_t) {};
-    return;
-  }
-  // Pick the output stream.
-  if (out == "stderr")
-    out_ = stderr;
-  else
-    out_ = stdout;
-  // Set up our print function depending on whether we want colored output.
-  if (colored && detail::is_tty(stdout)) {
-    do_print_ = [](void* out, term color, const char* buf, size_t len) {
-      auto* fhdl = reinterpret_cast<FILE*>(out);
-      if (color <= term::reset_endl) {
-        fwrite(buf, 1, len, fhdl);
-        return;
-      }
-      detail::set_color(fhdl, color);
-      fwrite(buf, 1, len, fhdl);
-      detail::set_color(fhdl, term::reset);
-    };
-  } else {
-    do_print_ = [](void* out, term, const char* buf, size_t len) {
-      fwrite(buf, 1, len, reinterpret_cast<FILE*>(out));
-    };
-  }
-}
-
-actor_system::print_state::~print_state() {
-  if (do_cleanup_)
-    do_cleanup_(out_);
-}
-
-void actor_system::print_state::reset(void* new_out, print_fun do_print,
-                                      cleanup do_cleanup) {
-  std::lock_guard guard{mtx_};
-  if (do_cleanup_)
-    do_cleanup_(out_);
-  out_ = new_out;
-  do_print_ = do_print;
-  do_cleanup_ = do_cleanup;
-}
-
-void actor_system::print_state::print(term color, const char* buf, size_t len) {
-  std::lock_guard guard{mtx_};
-  do_print_(out_, color, buf, len);
+  return impl_->cfg->mailbox_factory();
 }
 
 void actor_system::redirect_text_output(void* out,
                                         void (*write)(void*, term, const char*,
                                                       size_t),
                                         void (*cleanup)(void*)) {
-  print_state_->reset(out, write, cleanup);
+  impl_->print_state->reset(out, write, cleanup);
+}
+
+void actor_system::do_print(term color, const char* buf, size_t num_bytes) {
+  impl_->print_state->print(color, buf, num_bytes);
+}
+
+// -- callbacks for actor_system_access ----------------------------------------
+
+void actor_system::set_logger(intrusive_ptr<caf::logger> ptr) {
+  impl_->logger = std::move(ptr);
+  impl_->logger->init(config());
+  CAF_SET_LOGGER_SYS(this);
+}
+
+void actor_system::set_clock(std::unique_ptr<actor_clock> ptr) {
+  impl_->clock = std::move(ptr);
+}
+
+void actor_system::set_scheduler(std::unique_ptr<caf::scheduler> ptr) {
+  impl_->scheduler = std::move(ptr);
+}
+
+void actor_system::set_legacy_printer_actor(strong_actor_ptr ptr) {
+  impl_->printer = std::move(ptr);
+}
+
+void actor_system::set_node(node_id id) {
+  impl_->node = id;
 }
 
 } // namespace caf

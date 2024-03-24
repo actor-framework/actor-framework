@@ -18,18 +18,14 @@
 namespace caf::net {
 
 /// Provides a network backend for running protocol stacks.
-class CAF_NET_EXPORT middleman : public actor_system::module {
+class CAF_NET_EXPORT middleman : public actor_system_module {
 public:
   // -- constants --------------------------------------------------------------
 
   /// Identifies the network manager module.
-  actor_system::module::id_t id_v = actor_system::module::network_manager;
+  actor_system_module::id_t id_v = actor_system_module::network_manager;
 
   // -- member types -----------------------------------------------------------
-
-  using module = actor_system::module;
-
-  using module_ptr = actor_system::module_ptr;
 
   using void_fun_t = void (*)();
 
@@ -62,7 +58,7 @@ public:
 
   // -- factory functions ------------------------------------------------------
 
-  static module* make(actor_system& sys);
+  static actor_system_module* make(actor_system& sys);
 
   /// Adds module-specific options to the config before loading the module.
   static void add_module_options(actor_system_config& cfg);

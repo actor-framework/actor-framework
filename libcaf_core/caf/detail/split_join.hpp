@@ -8,6 +8,9 @@
 #include "caf/actor_system.hpp"
 #include "caf/event_based_actor.hpp"
 
+#include <memory>
+#include <mutex>
+#include <shared_mutex>
 #include <vector>
 
 namespace caf::detail {

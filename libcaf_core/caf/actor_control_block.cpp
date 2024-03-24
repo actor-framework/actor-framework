@@ -5,6 +5,7 @@
 #include "caf/actor_control_block.hpp"
 
 #include "caf/abstract_actor.hpp"
+#include "caf/actor_registry.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/log/core.hpp"
