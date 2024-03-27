@@ -36,18 +36,6 @@ public:
 
   // -- properties -------------------------------------------------------------
 
-  virtual byte_buffer& read_buffer() noexcept = 0;
-
-  virtual const byte_buffer& read_buffer() const noexcept = 0;
-
-  virtual byte_buffer& write_buffer() noexcept = 0;
-
-  virtual const byte_buffer& write_buffer() const noexcept = 0;
-
-  virtual class upper_layer& upper_layer() noexcept = 0;
-
-  virtual const class upper_layer& upper_layer() const noexcept = 0;
-
   virtual policy& active_policy() = 0;
 
   virtual size_t max_consecutive_reads() const noexcept = 0;

@@ -163,30 +163,6 @@ public:
 
   // -- properties -------------------------------------------------------------
 
-  byte_buffer& read_buffer() noexcept override {
-    return read_buf_;
-  }
-
-  const byte_buffer& read_buffer() const noexcept override {
-    return read_buf_;
-  }
-
-  byte_buffer& write_buffer() noexcept override {
-    return write_buf_;
-  }
-
-  const byte_buffer& write_buffer() const noexcept override {
-    return write_buf_;
-  }
-
-  class upper_layer& upper_layer() noexcept override {
-    return *up_;
-  }
-
-  const class upper_layer& upper_layer() const noexcept override {
-    return *up_;
-  }
-
   policy& active_policy() override {
     return *policy_;
   }
@@ -465,7 +441,7 @@ protected:
   socket_manager* parent_ = nullptr;
 
   /// Configures how we read and write to the socket.
-  std::unique_ptr<policy> policy_ = nullptr;
+  std::unique_ptr<policy> policy_;
 
   /// Setting this to non-null informs the transport to replace `up_` with
   /// `next_`.
