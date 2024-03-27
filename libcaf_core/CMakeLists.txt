@@ -56,6 +56,7 @@ caf_add_component(
     async.read_result
     async.write_result
     exit_reason
+    flow.backpressure_overflow_strategy
     flow.op.state
     intrusive.inbox_result
     invoke_message_result
@@ -239,6 +240,7 @@ caf_add_component(
     caf/flow/op/mcast.test.cpp
     caf/flow/op/merge.test.cpp
     caf/flow/op/never.test.cpp
+    caf/flow/op/on_backpressure_buffer.test.cpp
     caf/flow/op/prefix_and_tail.test.cpp
     caf/flow/op/publish.test.cpp
     caf/flow/op/pullable.cpp

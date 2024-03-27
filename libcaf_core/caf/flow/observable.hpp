@@ -28,6 +28,7 @@
 #include "caf/flow/op/interval.hpp"
 #include "caf/flow/op/merge.hpp"
 #include "caf/flow/op/never.hpp"
+#include "caf/flow/op/on_backpressure_buffer.hpp"
 #include "caf/flow/op/prefix_and_tail.hpp"
 #include "caf/flow/op/publish.hpp"
 #include "caf/flow/op/sample.hpp"
@@ -338,6 +339,13 @@ public:
   template <class F>
   auto do_finally(F f) && {
     return add_step(step::do_finally<output_type, F>{std::move(f)});
+  }
+
+  /// @copydoc observable::on_backpressure_buffer
+  auto on_backpressure_buffer(size_t buffer_size,
+                              backpressure_overflow_strategy strategy
+                              = backpressure_overflow_strategy::fail) {
+    return materialize().on_backpressure_buffer(buffer_size, strategy);
   }
 
   auto on_error_complete() {
@@ -685,6 +693,15 @@ transformation<step::map<F>> observable<T>::map(F f) {
 template <class T>
 transformation<step::on_error_complete<T>> observable<T>::on_error_complete() {
   return transform(step::on_error_complete<T>{});
+}
+
+template <class T>
+observable<T>
+observable<T>::on_backpressure_buffer(size_t buffer_size,
+                                      backpressure_overflow_strategy strategy) {
+  using impl_t = op::on_backpressure_buffer<T>;
+  return parent()->add_child_hdl(std::in_place_type<impl_t>, *this, buffer_size,
+                                 strategy);
 }
 
 template <class T>

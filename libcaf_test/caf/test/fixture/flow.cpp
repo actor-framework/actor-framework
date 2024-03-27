@@ -6,15 +6,15 @@
 
 namespace caf::test::fixture {
 
-std::string flow::to_string(observer_state x) {
+std::string flow::to_string(flow::observer_state x) {
   switch (x) {
-    case observer_state::idle:
+    case flow::observer_state::idle:
       return "idle";
-    case observer_state::subscribed:
+    case flow::observer_state::subscribed:
       return "subscribed";
-    case observer_state::completed:
+    case flow::observer_state::completed:
       return "completed";
-    case observer_state::aborted:
+    case flow::observer_state::aborted:
       return "aborted";
     default:
       return "<invalid>";

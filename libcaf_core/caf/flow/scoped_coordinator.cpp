@@ -69,6 +69,13 @@ void scoped_coordinator::deref_execution_context() const noexcept {
   deref();
 }
 
+// -- properties ---------------------------------------------------------------
+
+size_t scoped_coordinator::pending_actions() const noexcept {
+  std::unique_lock guard{mtx_};
+  return actions_.size() + delayed_.size();
+}
+
 // -- lifetime management ------------------------------------------------------
 
 void scoped_coordinator::release_later(coordinated_ptr& child) {
