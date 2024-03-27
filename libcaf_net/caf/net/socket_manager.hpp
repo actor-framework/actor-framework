@@ -45,22 +45,13 @@ public:
   virtual socket handle() const = 0;
 
   /// Returns the owning @ref multiplexer instance.
-  multiplexer& mpx() {
-    CAF_ASSERT(mpx_ptr());
-    return *mpx_ptr();
-  }
-
-  /// Returns the owning @ref multiplexer instance.
-  const multiplexer& mpx() const {
+  multiplexer& mpx() const {
     CAF_ASSERT(mpx_ptr());
     return *mpx_ptr();
   }
 
   /// Returns a pointer to the owning @ref multiplexer instance.
-  virtual multiplexer* mpx_ptr() noexcept = 0;
-
-  /// Returns a pointer to the owning @ref multiplexer instance.
-  virtual const multiplexer* mpx_ptr() const noexcept = 0;
+  virtual multiplexer* mpx_ptr() const noexcept = 0;
 
   /// Queries whether the manager is registered for reading.
   virtual bool is_reading() const noexcept = 0;

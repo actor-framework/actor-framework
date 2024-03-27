@@ -70,12 +70,7 @@ public:
   }
 
   /// Returns a pointer to the owning @ref multiplexer instance.
-  multiplexer* mpx_ptr() noexcept override {
-    return mpx_;
-  }
-
-  /// Returns a pointer to the owning @ref multiplexer instance.
-  const multiplexer* mpx_ptr() const noexcept override {
+  multiplexer* mpx_ptr() const noexcept override {
     return mpx_;
   }
 
