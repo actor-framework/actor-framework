@@ -121,7 +121,7 @@ void read_uri(State& ps, Consumer&& consumer) {
     if (colon_position == std::string::npos) {
       consumer.userinfo(std::move(str));
     } else {
-      auto password_part = std::make_optional(str.substr(colon_position + 1));
+      auto password_part = str.substr(colon_position + 1);
       str.erase(colon_position, std::string::npos);
       consumer.userinfo(std::move(str), std::move(password_part));
     }
@@ -130,19 +130,18 @@ void read_uri(State& ps, Consumer&& consumer) {
     colon_position = str.size();
     str.push_back(':');
   };
-  auto set_host_and_port = [&]() -> bool {
+  auto set_host_and_port = [&]() -> pec {
     auto str = take_str();
     auto port_str = std::string_view{str}.substr(colon_position + 1);
     string_parser_state port_ps{port_str.begin(), port_str.end()};
     parse(port_ps, port);
     if (port_ps.code != pec::success) {
-      ps.code = port_ps.code;
-      return false;
+      return port_ps.code;
     }
     consumer.port(port);
     str.erase(colon_position, std::string::npos);
     consumer.host(std::move(str));
-    return true;
+    return pec::success;
   };
   // Consumer for reading IPv6 addresses.
   struct {

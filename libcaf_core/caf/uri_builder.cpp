@@ -18,11 +18,11 @@ uri_builder& uri_builder::scheme(std::string str) {
 }
 
 uri_builder& uri_builder::userinfo(std::string str) {
-  return userinfo(std::move(str), std::nullopt);
+  impl_->authority.userinfo = uri::userinfo_type{std::move(str), std::nullopt};
+  return *this;
 }
 
-uri_builder& uri_builder::userinfo(std::string str,
-                                   std::optional<std::string> password) {
+uri_builder& uri_builder::userinfo(std::string str, std::string password) {
   impl_->authority.userinfo = uri::userinfo_type{std::move(str),
                                                  std::move(password)};
   return *this;
