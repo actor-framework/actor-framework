@@ -84,8 +84,16 @@
     exit_statement;                                                            \
     goto fsm_after_fin;                                                        \
     s_##name : if (ch == '\0') {                                               \
-      exit_statement;                                                          \
-      goto fsm_fin;                                                            \
+      using exit_statement_res = decltype(exit_statement);                     \
+      if constexpr (std::is_same_v<exit_statement_res, pec>) {                 \
+        ps.code = (exit_statement);                                            \
+        if (ps.code <= pec::trailing_character)                                \
+          goto fsm_fin;                                                        \
+        goto fsm_after_fin;                                                    \
+      } else {                                                                 \
+        exit_statement;                                                        \
+        goto fsm_fin;                                                          \
+      }                                                                        \
     }                                                                          \
     e_##name:
 

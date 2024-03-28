@@ -36,10 +36,17 @@ public:
   /// an hostname as string.
   using host_type = std::variant<std::string, ip_address>;
 
+  /// Userinfo subcomponent of the authority component. If present, contains the
+  /// user name and optionally a password.
+  struct userinfo_type {
+    std::string name;
+    std::optional<std::string> password;
+  };
+
   /// Bundles the authority component of the URI, i.e., userinfo, host, and
   /// port.
   struct CAF_CORE_EXPORT authority_type {
-    std::string userinfo;
+    std::optional<userinfo_type> userinfo;
     host_type host;
     uint16_t port;
 
@@ -234,6 +241,12 @@ private:
 };
 
 // -- related free functions ---------------------------------------------------
+
+template <class Inspector>
+bool inspect(Inspector& f, uri::userinfo_type& x) {
+  return f.object(x).fields(f.field("name", x.name),
+                            f.field("password", x.password));
+}
 
 template <class Inspector>
 bool inspect(Inspector& f, uri::authority_type& x) {
