@@ -1,7 +1,7 @@
 #include "caf/net/actor_shell.hpp"
 #include "caf/net/fwd.hpp"
+#include "caf/net/multiplexer.hpp"
 #include "caf/net/socket_manager.hpp"
-#include "caf/net/typed_actor_shell.hpp"
 
 #include "caf/actor_system.hpp"
 
@@ -16,7 +16,7 @@ actor_shell_ptr_t<Handle> make_actor_shell(socket_manager* mgr) {
   };
   using ptr_type = actor_shell_ptr_t<Handle>;
   using impl_type = typename ptr_type::element_type;
-  auto hdl = mgr->system().spawn<impl_type>(mgr);
+  auto hdl = mgr->mpx().system().spawn<impl_type>(mgr);
   auto ptr = ptr_type{actor_cast<strong_actor_ptr>(std::move(hdl))};
   ptr->set_fallback(std::move(f));
   return ptr;

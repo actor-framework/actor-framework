@@ -69,34 +69,8 @@ public:
     return fd_;
   }
 
-  /// @private
-  void handle(socket new_handle) override {
-    fd_ = new_handle;
-  }
-
-  /// Returns a reference to the hosting @ref actor_system instance.
-  actor_system& system() noexcept override {
-    CAF_ASSERT(mpx_ != nullptr);
-    return mpx_->system();
-  }
-
-  /// Returns the owning @ref multiplexer instance.
-  multiplexer& mpx() noexcept override {
-    return *mpx_;
-  }
-
-  /// Returns the owning @ref multiplexer instance.
-  const multiplexer& mpx() const noexcept override {
-    return *mpx_;
-  }
-
   /// Returns a pointer to the owning @ref multiplexer instance.
-  multiplexer* mpx_ptr() noexcept override {
-    return mpx_;
-  }
-
-  /// Returns a pointer to the owning @ref multiplexer instance.
-  const multiplexer* mpx_ptr() const noexcept override {
+  multiplexer* mpx_ptr() const noexcept override {
     return mpx_;
   }
 
@@ -298,8 +272,6 @@ public:
   void deref_disposable() const noexcept override {
     deref();
   }
-
-  // -- disambiguation ---------------------------------------------------------
 
 private:
   // -- utility functions ------------------------------------------------------

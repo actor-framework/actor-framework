@@ -44,23 +44,14 @@ public:
   /// Returns the handle for the managed socket.
   virtual socket handle() const = 0;
 
-  /// @private
-  virtual void handle(socket new_handle) = 0;
-
-  /// Returns a reference to the hosting @ref actor_system instance.
-  virtual actor_system& system() noexcept = 0;
-
   /// Returns the owning @ref multiplexer instance.
-  virtual multiplexer& mpx() noexcept = 0;
-
-  /// Returns the owning @ref multiplexer instance.
-  virtual const multiplexer& mpx() const noexcept = 0;
+  multiplexer& mpx() const {
+    CAF_ASSERT(mpx_ptr());
+    return *mpx_ptr();
+  }
 
   /// Returns a pointer to the owning @ref multiplexer instance.
-  virtual multiplexer* mpx_ptr() noexcept = 0;
-
-  /// Returns a pointer to the owning @ref multiplexer instance.
-  virtual const multiplexer* mpx_ptr() const noexcept = 0;
+  virtual multiplexer* mpx_ptr() const noexcept = 0;
 
   /// Queries whether the manager is registered for reading.
   virtual bool is_reading() const noexcept = 0;
