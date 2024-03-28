@@ -8,8 +8,6 @@
 #include "caf/net/socket_manager.hpp"
 #include "caf/net/ssl/connection.hpp"
 
-#include "caf/settings.hpp"
-
 CAF_PUSH_WARNINGS
 #include <openssl/err.h>
 #include <openssl/ssl.h>
@@ -18,6 +16,61 @@ CAF_POP_WARNINGS
 namespace caf::net::ssl {
 
 namespace {
+
+class policy_impl : public octet_stream::policy {
+public:
+  explicit policy_impl(connection conn) : conn(std::move(conn)) {
+    // nop
+  }
+
+  stream_socket handle() const override {
+    return conn.fd();
+  }
+
+  ptrdiff_t read(byte_span buf) override {
+    return conn.read(buf);
+  }
+
+  ptrdiff_t write(const_byte_span buf) override {
+    return conn.write(buf);
+  }
+
+  octet_stream::errc last_error(ptrdiff_t ret) override {
+    switch (conn.last_error(ret)) {
+      case errc::none:
+      case errc::want_accept:
+      case errc::want_connect:
+        // For all of these, OpenSSL docs say to do the operation again later.
+        return octet_stream::errc::temporary;
+      case errc::syscall_failed:
+        // Need to consult errno, which we just leave to the default policy.
+        return last_socket_error_is_temporary() ? octet_stream::errc::temporary
+                                                : octet_stream::errc::permanent;
+      case errc::want_read:
+        return octet_stream::errc::want_read;
+      case errc::want_write:
+        return octet_stream::errc::want_write;
+      default:
+        // Errors like SSL_ERROR_WANT_X509_LOOKUP are technically temporary, but
+        // we do not configure any callbacks. So seeing this is a red flag.
+        return octet_stream::errc::permanent;
+    }
+  }
+
+  ptrdiff_t connect() override {
+    return conn.connect();
+  }
+
+  ptrdiff_t accept() override {
+    return conn.accept();
+  }
+
+  size_t buffered() const noexcept override {
+    return conn.buffered();
+  }
+
+  connection conn;
+};
 
 /// Calls `connect` or `accept` until it succeeds or fails. On success, the
 /// worker creates a new SSL transport and performs a handover.
@@ -122,70 +175,18 @@ private:
 
   bool is_server_ = false;
   socket_manager* owner_ = nullptr;
-  transport::policy_impl policy_;
+  policy_impl policy_;
   upper_layer_ptr up_;
 };
 
 } // namespace
 
-// -- member types -------------------------------------------------------------
-
-transport::policy_impl::policy_impl(connection conn) : conn(std::move(conn)) {
-  // nop
-}
-
-stream_socket transport::policy_impl::handle() const {
-  return conn.fd();
-}
-
-ptrdiff_t transport::policy_impl::read(byte_span buf) {
-  return conn.read(buf);
-}
-
-ptrdiff_t transport::policy_impl::write(const_byte_span buf) {
-  return conn.write(buf);
-}
-
-octet_stream::errc transport::policy_impl::last_error(ptrdiff_t ret) {
-  switch (conn.last_error(ret)) {
-    case errc::none:
-    case errc::want_accept:
-    case errc::want_connect:
-      // For all of these, OpenSSL docs say to do the operation again later.
-      return octet_stream::errc::temporary;
-    case errc::syscall_failed:
-      // Need to consult errno, which we just leave to the default policy.
-      return super::policy_impl{conn.fd()}.last_error(ret);
-    case errc::want_read:
-      return octet_stream::errc::want_read;
-    case errc::want_write:
-      return octet_stream::errc::want_write;
-    default:
-      // Errors like SSL_ERROR_WANT_X509_LOOKUP are technically temporary, but
-      // we do not configure any callbacks. So seeing this is a red flag.
-      return octet_stream::errc::permanent;
-  }
-}
-
-ptrdiff_t transport::policy_impl::connect() {
-  return conn.connect();
-}
-
-ptrdiff_t transport::policy_impl::accept() {
-  return conn.accept();
-}
-
-size_t transport::policy_impl::buffered() const noexcept {
-  return conn.buffered();
-}
-
 // -- factories ----------------------------------------------------------------
 
-std::unique_ptr<transport> transport::make(connection conn,
-                                           upper_layer_ptr up) {
-  // Note: can't use make_unique because the constructor is private.
-  auto ptr = new transport(std::move(conn), std::move(up));
-  return std::unique_ptr<transport>{ptr};
+std::unique_ptr<octet_stream::transport> transport::make(connection conn,
+                                                         upper_layer_ptr up) {
+  return octet_stream::transport::make(
+    std::make_unique<policy_impl>(std::move(conn)), std::move(up));
 }
 
 transport::worker_ptr transport::make_server(connection conn,
@@ -198,13 +199,6 @@ transport::worker_ptr transport::make_client(connection conn,
                                              upper_layer_ptr up) {
   return std::make_unique<handshake_worker>(std::move(conn), false,
                                             std::move(up));
-}
-
-// -- constructors, destructors, and assignment operators ----------------------
-
-transport::transport(connection conn, upper_layer_ptr up)
-  : super(&policy_impl_, std::move(up)), policy_impl_(std::move(conn)) {
-  // nop
 }
 
 } // namespace caf::net::ssl
