@@ -2,15 +2,22 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE typed_spawn
+#include "caf/test/fixture/deterministic.hpp"
+#include "caf/test/scenario.hpp"
+#include "caf/test/test.hpp"
 
 #include "caf/actor_registry.hpp"
 #include "caf/anon_mail.hpp"
+#include "caf/event_based_actor.hpp"
+#include "caf/init_global_meta_objects.hpp"
+#include "caf/log/test.hpp"
+#include "caf/scoped_actor.hpp"
 #include "caf/string_algorithms.hpp"
+#include "caf/typed_actor.hpp"
+#include "caf/typed_actor_pointer.hpp"
+#include "caf/typed_event_based_actor.hpp"
 
-#include "core-test.hpp"
-
-#define ERROR_HANDLER [&](error& err) { CAF_FAIL(err); }
+#define ERROR_HANDLER [&](error& err) { fail(err); }
 
 using std::string;
 
@@ -18,6 +25,53 @@ using namespace caf;
 using namespace std::string_literals;
 
 namespace {
+
+struct my_request;
+
+using int_actor = caf::typed_actor<caf::result<int32_t>(int32_t)>;
+using float_actor = caf::typed_actor<caf::result<void>(float)>;
+
+} // namespace
+
+CAF_BEGIN_TYPE_ID_BLOCK(typed_spawn_test, caf::first_custom_type_id + 120)
+
+  CAF_ADD_TYPE_ID(typed_spawn_test, (my_request))
+  CAF_ADD_TYPE_ID(typed_spawn_test, (int_actor))
+  CAF_ADD_TYPE_ID(typed_spawn_test, (float_actor))
+  CAF_ADD_ATOM(typed_spawn_test, get_state_atom)
+
+CAF_END_TYPE_ID_BLOCK(typed_spawn_test)
+
+namespace {
+
+struct my_request {
+  int32_t a = 0;
+  int32_t b = 0;
+  my_request() = default;
+  my_request(int a, int b) : a(a), b(b) {
+    // nop
+  }
+};
+
+inline bool operator==(const my_request& x, const my_request& y) {
+  return std::tie(x.a, x.b) == std::tie(y.a, y.b);
+}
+
+template <class Inspector>
+bool inspect(Inspector& f, my_request& x) {
+  return f.object(x).fields(f.field("a", x.a), f.field("b", x.b));
+}
+
+template <class T>
+void check_received(scoped_actor& self, const T& rhs) {
+  auto& this_test = test::runnable::current();
+  auto received_msg = std::make_shared<bool>(false);
+  self->receive([&this_test, &received_msg, &rhs](const T& message) {
+    *received_msg = true;
+    this_test.check_eq(message, rhs);
+  });
+  this_test.check(*received_msg);
+}
 
 // check invariants of type system
 using dummy1 = typed_actor<result<void>(int, int), result<double>(double)>;
@@ -65,13 +119,17 @@ public:
 
 void client(event_based_actor* self, const actor& parent,
             const server_type& serv) {
-  self->mail(my_request{0, 0}).request(serv, infinite).then([=](bool val1) {
-    CHECK_EQ(val1, true);
-    self->mail(my_request{10, 20}).request(serv, infinite).then([=](bool val2) {
-      CHECK_EQ(val2, false);
-      self->mail(ok_atom_v).send(parent);
+  self->mail(my_request{0, 0})
+    .request(serv, infinite)
+    .then([self, parent, serv](bool val1) {
+      test::runnable::current().check_eq(val1, true);
+      self->mail(my_request{10, 20})
+        .request(serv, infinite)
+        .then([self, parent](bool val2) {
+          test::runnable::current().check_eq(val2, false);
+          self->mail(ok_atom_v).send(parent);
+        });
     });
-  });
 }
 
 // -- test skipping of messages intentionally + using become() -----------------
@@ -186,7 +244,7 @@ behavior foo(event_based_actor* self) {
 
 int_actor::behavior_type int_fun2(int_actor::pointer self) {
   self->set_down_handler([=](down_msg& dm) {
-    CHECK_EQ(dm.reason, exit_reason::normal);
+    test::runnable::current().check_eq(dm.reason, exit_reason::normal);
     self->quit();
   });
   return {
@@ -209,7 +267,7 @@ behavior foo2(event_based_actor* self) {
 float_actor::behavior_type float_fun(float_actor::pointer self) {
   return {
     [=](float a) {
-      CHECK_EQ(a, 1.0f);
+      test::runnable::current().check_eq(a, 1.0f);
       self->quit(exit_reason::user_shutdown);
     },
   };
@@ -223,52 +281,55 @@ int_actor::behavior_type foo3(int_actor::pointer self) {
   };
 }
 
-struct fixture : test_coordinator_fixture<> {
+struct fixture : test::fixture::deterministic {
+  scoped_actor self{sys};
   void test_typed_spawn(server_type ts) {
-    MESSAGE("the server returns false for inequal numbers");
-    inject((my_request), from(self).to(ts).with(my_request{1, 2}));
-    expect((bool), from(ts).to(self).with(false));
-    MESSAGE("the server returns true for equal numbers");
-    inject((my_request), from(self).to(ts).with(my_request{42, 42}));
-    expect((bool), from(ts).to(self).with(true));
-    CHECK_EQ(sys.registry().running(), 2u);
+    log::test::debug("the server returns false for inequal numbers");
+    inject().with(my_request{1, 2}).from(self).to(ts);
+    auto& this_test = test::runnable::current();
+    check_received(self, false);
+    log::test::debug("the server returns true for equal numbers");
+    inject().with(my_request{42, 42}).from(self).to(ts);
+    check_received(self, true);
+    this_test.check_eq(sys.registry().running(), 2u);
     auto c1 = self->spawn(client, self, ts);
-    run();
-    expect((ok_atom), from(c1).to(self).with(ok_atom_v));
-    CHECK_EQ(sys.registry().running(), 2u);
+    dispatch_messages();
+    auto received_msg = std::make_shared<bool>(false);
+    self->receive([&received_msg](ok_atom) { *received_msg = true; });
+    this_test.check(*received_msg);
+    this_test.check_eq(sys.registry().running(), 2u);
   }
 };
 
-} // namespace
-
-BEGIN_FIXTURE_SCOPE(fixture)
+WITH_FIXTURE(fixture) {
 
 // -- putting it all together --------------------------------------------------
 
-CAF_TEST(typed_spawns) {
-  MESSAGE("run test series with typed_server1");
+TEST("typed_spawns") {
+  log::test::debug("run test series with typed_server1");
   test_typed_spawn(sys.spawn(typed_server1));
   self->await_all_other_actors_done();
-  MESSAGE("finished test series with `typed_server1`");
-  MESSAGE("run test series with typed_server2");
+  log::test::debug("finished test series with `typed_server1`");
+  log::test::debug("run test series with typed_server2");
   test_typed_spawn(sys.spawn(typed_server2));
   self->await_all_other_actors_done();
-  MESSAGE("finished test series with `typed_server2`");
+  log::test::debug("finished test series with `typed_server2`");
   auto serv3 = self->spawn<typed_server3>("hi there", self);
-  run();
-  expect((string), from(serv3).to(self).with("hi there"s));
+  dispatch_messages();
+  check_received(self, "hi there"s);
   test_typed_spawn(serv3);
 }
 
-CAF_TEST(event_testee_series) {
+TEST("event_testee_series") {
   auto et = self->spawn<event_testee>();
-  MESSAGE("et->message_types() returns an interface description");
+  log::test::debug("et->message_types() returns an interface description");
   typed_actor<result<string>(get_state_atom)> sub_et = et;
   std::set<string> iface{"(get_state_atom) -> (std::string)",
                          "(std::string) -> (void)", "(float) -> (void)",
                          "(int32_t) -> (int32_t)"};
-  CHECK_EQ(join(sub_et->message_types(), ","), join(iface, ","));
-  MESSAGE("the testee skips messages to drive its internal state machine");
+  check_eq(join(sub_et->message_types(), ","), join(iface, ","));
+  log::test::debug(
+    "the testee skips messages to drive its internal state machine");
   self->mail(1).send(et);
   self->mail(2).send(et);
   self->mail(3).send(et);
@@ -278,56 +339,62 @@ CAF_TEST(event_testee_series) {
   self->mail(.3f).send(et);
   self->mail("hello again event testee!"s).send(et);
   self->mail("goodbye event testee!"s).send(et);
-  run();
-  expect((int), from(et).to(self).with(42));
-  expect((int), from(et).to(self).with(42));
-  expect((int), from(et).to(self).with(42));
-  inject((get_state_atom), from(self).to(sub_et).with(get_state_atom_v));
-  expect((string), from(et).to(self).with("wait4int"s));
+  dispatch_messages();
+  check_received(self, 42);
+  check_received(self, 42);
+  check_received(self, 42);
+  inject().with(get_state_atom_v).from(self).to(sub_et);
+  check_received(self, "wait4int"s);
 }
 
-CAF_TEST(string_delegator_chain) {
+TEST("string_delegator_chain") {
   // run test series with string reverter
   auto aut = self->spawn<monitored>(string_delegator,
                                     sys.spawn(string_reverter), true);
   std::set<string> iface{"(std::string) -> (std::string)"};
-  CHECK_EQ(aut->message_types(), iface);
-  inject((string), from(self).to(aut).with("Hello World!"s));
-  run();
-  expect((string), to(self).with("!dlroW olleH"s));
+  check_eq(aut->message_types(), iface);
+  inject().with("Hello World!"s).from(self).to(aut);
+  dispatch_messages();
+  check_received(self, "!dlroW olleH"s);
 }
 
-CAF_TEST(maybe_string_delegator_chain) {
+TEST("maybe_string_delegator_chain") {
   auto lg = log::core::trace("self = {}", self);
   auto aut = sys.spawn(maybe_string_delegator,
                        sys.spawn(maybe_string_reverter));
-  MESSAGE("send empty string, expect error");
-  inject((string), from(self).to(aut).with(""s));
-  run();
-  expect((error), to(self).with(sec::invalid_argument));
-  MESSAGE("send abcd string, expect dcba");
-  inject((string), from(self).to(aut).with("abcd"s));
-  run();
-  expect((ok_atom, string), to(self).with(ok_atom_v, "dcba"s));
+  log::test::debug("send empty string, expect error");
+  inject().with(""s).from(self).to(aut);
+  dispatch_messages();
+  check_received<error>(self, sec::invalid_argument);
+  log::test::debug("send abcd string, expect dcba");
+  inject().with("abcd"s).from(self).to(aut);
+  dispatch_messages();
+  auto& this_test = test::runnable::current();
+  auto received_msg = std::make_shared<bool>(false);
+  self->receive([&this_test, &received_msg](ok_atom, const string& message) {
+    *received_msg = true;
+    this_test.check_eq(message, "dcba"s);
+  });
+  this_test.check(*received_msg);
 }
 
-CAF_TEST(sending_typed_actors) {
+TEST("sending_typed_actors") {
   auto aut = sys.spawn(int_fun);
   self->mail(10, aut).send(self->spawn(foo));
-  run();
-  expect((int), to(self).with(100));
+  dispatch_messages();
+  check_received(self, 100);
   self->spawn(foo3);
-  run();
+  dispatch_messages();
 }
 
-CAF_TEST(sending_typed_actors_and_down_msg) {
+TEST("sending_typed_actors_and_down_msg") {
   auto aut = sys.spawn(int_fun2);
   self->mail(10, aut).send(self->spawn(foo2));
-  run();
-  expect((int), to(self).with(100));
+  dispatch_messages();
+  check_received(self, 100);
 }
 
-CAF_TEST(check_signature) {
+TEST("check_signature") {
   using foo_type = typed_actor<result<ok_atom>(put_atom)>;
   using foo_result_type = result<ok_atom>;
   using bar_type = typed_actor<result<void>(ok_atom)>;
@@ -347,7 +414,7 @@ CAF_TEST(check_signature) {
     };
   };
   auto x = self->spawn(bar_action);
-  run();
+  dispatch_messages();
 }
 
 SCENARIO("state classes may use typed pointers") {
@@ -356,9 +423,10 @@ SCENARIO("state classes may use typed pointers") {
     struct foo_state {
       foo_state(foo_type::pointer_view selfptr) : self(selfptr) {
         foo_type hdl{self};
-        CHECK_EQ(selfptr, actor_cast<abstract_actor*>(hdl));
+        test::runnable::current().check_eq(selfptr,
+                                           actor_cast<abstract_actor*>(hdl));
         foo_type hdl2{selfptr};
-        CHECK_EQ(hdl, hdl2);
+        test::runnable::current().check_eq(hdl, hdl2);
       }
       foo_type::behavior_type make_behavior() {
         return {
@@ -371,11 +439,17 @@ SCENARIO("state classes may use typed pointers") {
     WHEN("spawning a stateful actor using the state class") {
       auto foo = sys.spawn<foo_impl>();
       THEN("the actor calls make_behavior of the state class") {
-        inject((get_atom), from(self).to(foo).with(get_atom_v));
-        expect((int32_t), from(foo).to(self).with(42));
+        inject().with(get_atom_v).from(self).to(foo);
+        check_received(self, 42);
       }
     }
   }
 }
 
-END_FIXTURE_SCOPE()
+} // WITH_FIXTURE(fixture)
+
+TEST_INIT() {
+  caf::init_global_meta_objects<caf::id_block::typed_spawn_test>();
+}
+
+} // namespace
