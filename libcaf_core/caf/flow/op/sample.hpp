@@ -22,7 +22,7 @@ struct sample_input_t {};
 
 struct sample_emit_t {};
 
-/// The subsciption for the `sample` operator.
+/// The subscription for the `sample` operator.
 template <class T>
 class sample_sub : public subscription::impl_base {
 public:
