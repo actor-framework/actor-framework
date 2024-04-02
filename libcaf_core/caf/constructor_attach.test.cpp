@@ -5,6 +5,7 @@
 #include "caf/test/fixture/deterministic.hpp"
 #include "caf/test/test.hpp"
 
+#include "caf/anon_mail.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/log/test.hpp"
 
@@ -69,8 +70,8 @@ private:
 
 WITH_FIXTURE(test::fixture::deterministic) {
 
-TEST("constructor_attach") {
-  anon_send(sys.spawn<spawner>(), delete_atom_v);
+TEST("constructor attach") {
+  anon_mail(delete_atom_v).send(sys.spawn<spawner>());
   dispatch_messages();
 }
 

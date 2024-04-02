@@ -66,7 +66,7 @@ template <class T>
 void check_received(scoped_actor& self, const T& rhs) {
   auto& this_test = test::runnable::current();
   auto received_msg = std::make_shared<bool>(false);
-  self->receive([&this_test, &received_msg, &rhs](const T& message) {
+  self->receive([&this_test, received_msg, &rhs](const T& message) {
     *received_msg = true;
     this_test.check_eq(message, rhs);
   });
@@ -305,7 +305,7 @@ WITH_FIXTURE(fixture) {
 
 // -- putting it all together --------------------------------------------------
 
-TEST("typed_spawns") {
+TEST("typed spawns") {
   log::test::debug("run test series with typed_server1");
   test_typed_spawn(sys.spawn(typed_server1));
   self->await_all_other_actors_done();
@@ -320,7 +320,7 @@ TEST("typed_spawns") {
   test_typed_spawn(serv3);
 }
 
-TEST("event_testee_series") {
+TEST("event testee series") {
   auto et = self->spawn<event_testee>();
   log::test::debug("et->message_types() returns an interface description");
   typed_actor<result<string>(get_state_atom)> sub_et = et;
@@ -347,7 +347,7 @@ TEST("event_testee_series") {
   check_received(self, "wait4int"s);
 }
 
-TEST("string_delegator_chain") {
+TEST("string delegator chain") {
   // run test series with string reverter
   auto aut = self->spawn<monitored>(string_delegator,
                                     sys.spawn(string_reverter), true);
@@ -358,7 +358,7 @@ TEST("string_delegator_chain") {
   check_received(self, "!dlroW olleH"s);
 }
 
-TEST("maybe_string_delegator_chain") {
+TEST("maybe string delegator chain") {
   auto lg = log::core::trace("self = {}", self);
   auto aut = sys.spawn(maybe_string_delegator,
                        sys.spawn(maybe_string_reverter));
@@ -378,7 +378,7 @@ TEST("maybe_string_delegator_chain") {
   this_test.check(*received_msg);
 }
 
-TEST("sending_typed_actors") {
+TEST("sending to typed actors") {
   auto aut = sys.spawn(int_fun);
   self->mail(10, aut).send(self->spawn(foo));
   dispatch_messages();
@@ -387,14 +387,14 @@ TEST("sending_typed_actors") {
   dispatch_messages();
 }
 
-TEST("sending_typed_actors_and_down_msg") {
+TEST("sending to typed actors with monitoring") {
   auto aut = sys.spawn(int_fun2);
   self->mail(10, aut).send(self->spawn(foo2));
   dispatch_messages();
   check_received(self, 100);
 }
 
-TEST("check_signature") {
+TEST("check typed actor signature") {
   using foo_type = typed_actor<result<ok_atom>(put_atom)>;
   using foo_result_type = result<ok_atom>;
   using bar_type = typed_actor<result<void>(ok_atom)>;

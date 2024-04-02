@@ -43,21 +43,20 @@ struct fixture : test::fixture::deterministic {
 
 WITH_FIXTURE(fixture) {
 
-TEST("single_multiplexed_request") {
-  auto f = [&](event_based_actor* self, actor server) {
+TEST("single multiplexed request") {
+  auto f = [this](event_based_actor* self, actor server) {
     self->mail(42).request(server, infinite).then([this](int x) {
       auto lg = log::core::trace("x = {}", x);
       require_eq(x, 42);
     });
   };
   spawn(f, mirror);
-  // run initialization code of testee
   expect<int>().with(42).from(testee).to(mirror);
   expect<int>().with(42).from(mirror).to(testee);
 }
 
-TEST("multiple_multiplexed_requests") {
-  auto f = [&](event_based_actor* self, actor server) {
+TEST("multiple multiplexed requests") {
+  auto f = [this](event_based_actor* self, actor server) {
     for (int i = 0; i < 3; ++i)
       self->mail(42).request(server, infinite).then([this](int x) {
         auto lg = log::core::trace("x = {}", x);
@@ -65,7 +64,6 @@ TEST("multiple_multiplexed_requests") {
       });
   };
   spawn(f, mirror);
-  // run initialization code of testee
   expect<int>().with(42).from(testee).to(mirror);
   expect<int>().with(42).from(testee).to(mirror);
   expect<int>().with(42).from(testee).to(mirror);
@@ -74,20 +72,19 @@ TEST("multiple_multiplexed_requests") {
   expect<int>().with(42).from(mirror).to(testee);
 }
 
-TEST("single_awaited_request") {
-  auto f = [&](event_based_actor* self, actor server) {
+TEST("single awaited request") {
+  auto f = [this](event_based_actor* self, actor server) {
     self->mail(42).request(server, infinite).await([this](int x) {
       require_eq(x, 42);
     });
   };
   spawn(f, mirror);
-  // run initialization code of testee
   expect<int>().with(42).from(testee).to(mirror);
   expect<int>().with(42).from(mirror).to(testee);
 }
 
-TEST("multiple_awaited_requests") {
-  auto f = [&](event_based_actor* self, actor server) {
+TEST("multiple awaited requests") {
+  auto f = [this](event_based_actor* self, actor server) {
     for (int i = 0; i < 3; ++i)
       self->mail(i).request(server, infinite).await([this, i](int x) {
         log::test::debug("received response #{}", (i + 1));
@@ -95,7 +92,6 @@ TEST("multiple_awaited_requests") {
       });
   };
   spawn(f, mirror);
-  // run initialization code of testee
   self->monitor(testee);
   expect<int>().with(0).from(testee).to(mirror);
   expect<int>().with(1).from(testee).to(mirror);
@@ -104,7 +100,7 @@ TEST("multiple_awaited_requests") {
   // which means we cannot check using expect()
   dispatch_messages();
   auto received_down_msg = std::make_shared<bool>(false);
-  self->receive([&received_down_msg](down_msg&) { *received_down_msg = true; });
+  self->receive([received_down_msg](down_msg&) { *received_down_msg = true; });
   check(*received_down_msg);
 }
 

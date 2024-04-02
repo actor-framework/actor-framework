@@ -273,7 +273,7 @@ WITH_FIXTURE(test::fixture::deterministic) {
 TEST("mirror") {
   scoped_actor self{sys};
   auto mirror = self->spawn<simple_mirror>();
-  auto dummy = self->spawn([this, &mirror](event_based_actor* ptr) -> behavior {
+  auto dummy = self->spawn([this, mirror](event_based_actor* ptr) -> behavior {
     ptr->mail("hello mirror").send(mirror);
     return {[this](const std::string& msg) { check_eq(msg, "hello mirror"); }};
   });
@@ -293,11 +293,11 @@ TEST("mirror") {
 
 WITH_FIXTURE(fixture) {
 
-TEST("count_mailbox") {
+TEST("count mailbox") {
   system.spawn<counting_actor>();
 }
 
-TEST("detached_actors_and_schedulued_actors") {
+TEST("detached actors and scheduled actors") {
   scoped_actor self{system};
   // check whether detached actors and scheduled actors interact w/o errors
   auto m = system.spawn<detached>(master);
@@ -306,7 +306,7 @@ TEST("detached_actors_and_schedulued_actors") {
   self->mail(ok_atom_v).send(m);
 }
 
-TEST("self_receive_with_zero_timeout") {
+TEST("receive with zero timeout") {
   scoped_actor self{system};
   self->receive([&] { fail("Unexpected message"); },
                 after(std::chrono::seconds(0)) >>
@@ -315,7 +315,7 @@ TEST("self_receive_with_zero_timeout") {
                   });
 }
 
-TEST("detached_mirror") {
+TEST("detached mirror") {
   scoped_actor self{system};
   auto mirror = self->spawn<simple_mirror, detached>();
   self->mail("hello mirror").send(mirror);
@@ -323,7 +323,7 @@ TEST("detached_mirror") {
     [this](const std::string& msg) { check_eq(msg, "hello mirror"); });
 }
 
-TEST("send_to_self") {
+TEST("send to self") {
   scoped_actor self{system};
   self->mail(1, 2, 3, true).send(self);
   self->receive([this](int a, int b, int c, bool d) {
@@ -336,7 +336,7 @@ TEST("send_to_self") {
   self->receive([] {});
 }
 
-TEST("echo_actor_messaging") {
+TEST("echo actor messaging") {
   scoped_actor self{system};
   auto mecho = system.spawn<echo_actor>();
   self->mail("hello echo").send(mecho);
@@ -344,7 +344,7 @@ TEST("echo_actor_messaging") {
     [this](const std::string& arg) { check_eq(arg, "hello echo"); });
 }
 
-TEST("delayed_send") {
+TEST("delayed send") {
   scoped_actor self{system};
   self->mail(1, 2, 3).delay(std::chrono::milliseconds(1)).send(self);
   self->receive([this](int a, int b, int c) {
@@ -354,13 +354,13 @@ TEST("delayed_send") {
   });
 }
 
-TEST("delayed_spawn") {
+TEST("delayed spawn") {
   scoped_actor self{system};
   self->receive(after(std::chrono::milliseconds(1)) >> [] {});
   system.spawn<testee1>();
 }
 
-TEST("spawn_event_testee2_test") {
+TEST("spawn event testee2 test") {
   scoped_actor self{system};
   spawn_event_testee2(self);
   self->receive([](ok_atom) { log::test::debug("Received 'ok'"); });
@@ -392,14 +392,14 @@ typed_testee::behavior_type testee() {
   }};
 }
 
-TEST("typed_await") {
+TEST("typed await") {
   scoped_actor self{system};
   auto f = make_function_view(system.spawn(testee));
   check_eq(f(abc_atom_v), "abc");
 }
 
 // tests attach_functor() inside of an actor's constructor
-TEST("constructor_attach") {
+TEST("constructor attach") {
   class testee : public event_based_actor {
   public:
     testee(actor_config& cfg, actor buddy)
@@ -463,7 +463,7 @@ TEST("constructor_attach") {
   anon_send_exit(system.spawn<spawner>(), exit_reason::user_shutdown);
 }
 
-TEST("kill_the_immortal") {
+TEST("kill the immortal") {
   auto wannabe_immortal = system.spawn([](event_based_actor* self) -> behavior {
     self->set_exit_handler([](local_actor*, exit_msg&) {
       // nop
@@ -479,7 +479,7 @@ TEST("kill_the_immortal") {
   self->wait_for(wannabe_immortal);
 }
 
-TEST("move_only_argument") {
+TEST("move-only argument in spawn") {
   using unique_int = std::unique_ptr<int>;
   unique_int uptr{new int(42)};
   auto wrapper = [](event_based_actor* self, unique_int ptr) -> behavior {
@@ -497,7 +497,7 @@ TEST("move_only_argument") {
   check_eq(to_tuple<int>(*received), std::make_tuple(42));
 }
 
-TEST("move - only function object") {
+TEST("move-only function object") {
   struct move_only_fun {
     move_only_fun() = default;
     move_only_fun(const move_only_fun&) = delete;

@@ -502,14 +502,6 @@ public:
   /// Dispatches all pending messages.
   size_t dispatch_messages();
 
-  /// Dispatches all pending messages.
-  template <class T = caf::resumable>
-  T& next_message() {
-    if (events_.empty())
-      CAF_RAISE_ERROR("events.empty()");
-    return dynamic_cast<T&>(*(events_.front()->target));
-  }
-
   // -- actor management -------------------------------------------------------
 
   /// Injects an exit message into the mailbox of `hdl` and dispatches it

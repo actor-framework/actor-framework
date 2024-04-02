@@ -224,7 +224,7 @@ behavior ping_multiplexed3(ping_actor* self, bool* had_timeout,
 
 WITH_FIXTURE(test::fixture::deterministic) {
 
-TEST("single_timeout") {
+TEST("single timeout") {
   test_vec fs{{ping_single1, "ping_single1"},
               {ping_single2, "ping_single2"},
               {ping_single3, "ping_single3"}};
@@ -233,7 +233,6 @@ TEST("single_timeout") {
     log::test::debug("test implementation {}", f.second);
     auto testee = sys.spawn(f.first, &had_timeout, sys.spawn<lazy_init>(pong));
     require_eq(mail_count(), 1u);
-    require_eq(next_message<local_actor>().name(), "pong"s);
     trigger_timeout();
     dispatch_message();
     require_eq(mail_count(), 2u);
@@ -244,7 +243,7 @@ TEST("single_timeout") {
   }
 }
 
-TEST("nested_timeout") {
+TEST("nested timeout") {
   test_vec fs{{ping_nested1, "ping_nested1"},
               {ping_nested2, "ping_nested2"},
               {ping_nested3, "ping_nested3"}};
@@ -253,7 +252,6 @@ TEST("nested_timeout") {
     log::test::debug("test implementation {}", f.second);
     auto testee = sys.spawn(f.first, &had_timeout, sys.spawn<lazy_init>(pong));
     require_eq(mail_count(), 1u);
-    require_eq(next_message<local_actor>().name(), "pong"s);
     trigger_timeout();
     require_eq(mail_count(), 2u);
     // now, the timeout message is already dispatched, while pong did
@@ -261,15 +259,15 @@ TEST("nested_timeout") {
     dispatch_messages();
     // dispatch second timeout
     require_eq(trigger_timeout(), true);
-    require_eq(next_message<local_actor>().name(), "ping"s);
     check(!had_timeout);
-    check(next_message<ping_actor>().state().had_first_timeout);
+    auto testee_ptr = actor_cast<abstract_actor*>(testee);
+    require(dynamic_cast<ping_actor&>(*testee_ptr).state().had_first_timeout);
     dispatch_messages();
     check(had_timeout);
   }
 }
 
-TEST("multiplexed_timeout") {
+TEST("multiplexed timeout") {
   test_vec fs{{ping_multiplexed1, "ping_multiplexed1"},
               {ping_multiplexed2, "ping_multiplexed2"},
               {ping_multiplexed3, "ping_multiplexed3"}};
@@ -278,7 +276,6 @@ TEST("multiplexed_timeout") {
     log::test::debug("test implementation {}", f.second);
     auto testee = sys.spawn(f.first, &had_timeout, sys.spawn<lazy_init>(pong));
     require_eq(mail_count(), 2u);
-    require_eq(next_message<local_actor>().name(), "pong"s);
     trigger_all_timeouts();
     require_eq(mail_count(), 4u);
     // now, the timeout message is already dispatched, while pong did
