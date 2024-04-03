@@ -2,5 +2,8 @@
 extend-exclude = ["*.pem", "libcaf_net/test/pem.cpp", "Jenkinsfile"]
 
 [default.extend-words]
+PN = "PN"
+Yout = "Yout"
+aout = "aout"
 caf = "caf"
-CAF = "CAF"
+ws = "ws"
