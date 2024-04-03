@@ -436,7 +436,7 @@ public:
     }
     // Initialize the logger before any other module.
     if (!logger) {
-      logger = cfg.make_logger(*parent);
+      logger = logger::make(*parent);
       logger->init(cfg);
       CAF_SET_LOGGER_SYS(parent);
     }
