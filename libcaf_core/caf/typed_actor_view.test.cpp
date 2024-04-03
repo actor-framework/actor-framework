@@ -2,14 +2,17 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE typed_actor_view
-
 #include "caf/typed_actor_view.hpp"
 
-#include "caf/scheduled_actor/flow.hpp"
-#include "caf/typed_actor.hpp"
+#include "caf/test/caf_test_main.hpp"
+#include "caf/test/fixture/deterministic.hpp"
+#include "caf/test/scenario.hpp"
+#include "caf/test/test.hpp"
 
-#include "core-test.hpp"
+#include "caf/event_based_actor.hpp"
+#include "caf/scheduled_actor/flow.hpp"
+#include "caf/typed_actor_pointer.hpp"
+#include "caf/typed_event_based_actor.hpp"
 
 using namespace caf;
 using namespace std::literals;
@@ -63,15 +66,13 @@ void typed_stream_observer(event_based_actor* self, typed_stream<int> str,
     .for_each([res](int value) { *res += value; });
 }
 
-struct fixture : test_coordinator_fixture<> {
+struct fixture : test::fixture::deterministic {
   int_actor spawn_int_actor(int_actor_state::init_fn init) {
     return sys.spawn<int_actor_impl>(std::move(init));
   }
 };
 
-} // namespace
-
-BEGIN_FIXTURE_SCOPE(fixture)
+WITH_FIXTURE(fixture) {
 
 SCENARIO("typed actors may use the flow API") {
   GIVEN("a typed actor") {
@@ -85,8 +86,8 @@ SCENARIO("typed actors may use the flow API") {
             .take(10)
             .for_each([res](int value) { *res += value; });
         });
-        run();
-        CHECK_EQ(*res, 55);
+        dispatch_messages();
+        check_eq(*res, 55);
       }
     }
     WHEN("the actor creates a stream via to_stream") {
@@ -101,9 +102,9 @@ SCENARIO("typed actors may use the flow API") {
                        .to_stream("foo", 10ms, 10);
           self->spawn(stream_observer, str, res, err);
         });
-        run();
-        CHECK_EQ(*res, 55);
-        CHECK(!*err);
+        dispatch_messages();
+        check_eq(*res, 55);
+        check(!*err);
       }
     }
     WHEN("the actor creates a typed stream via to_typed_stream") {
@@ -118,9 +119,9 @@ SCENARIO("typed actors may use the flow API") {
                        .to_typed_stream("foo", 10ms, 10);
           self->spawn(typed_stream_observer, str, res, err);
         });
-        run();
-        CHECK_EQ(*res, 55);
-        CHECK(!*err);
+        dispatch_messages();
+        check_eq(*res, 55);
+        check(!*err);
       }
     }
   }
@@ -137,11 +138,13 @@ SCENARIO("typed actors may use the flow API") {
         self->spawn(stream_observer, str, res, err);
         self->deregister_stream(str.id());
       });
-      run();
-      CHECK_EQ(*res, 0);
-      CHECK_EQ(*err, sec::invalid_stream);
+      dispatch_messages();
+      check_eq(*res, 0);
+      check_eq(*err, sec::invalid_stream);
     }
   }
 }
 
-END_FIXTURE_SCOPE()
+} // WITH_FIXTURE(fixture)
+
+} // namespace

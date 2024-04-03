@@ -2,11 +2,12 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE constructor_attach
+#include "caf/test/fixture/deterministic.hpp"
+#include "caf/test/test.hpp"
 
-#include "caf/all.hpp"
-
-#include "core-test.hpp"
+#include "caf/anon_mail.hpp"
+#include "caf/event_based_actor.hpp"
+#include "caf/log/test.hpp"
 
 using namespace caf;
 
@@ -23,7 +24,7 @@ public:
   behavior make_behavior() override {
     return {
       [this](delete_atom) {
-        MESSAGE("testee received delete");
+        log::test::debug("testee received delete");
         quit(exit_reason::user_shutdown);
       },
     };
@@ -34,8 +35,9 @@ class spawner : public event_based_actor {
 public:
   spawner(actor_config& cfg) : event_based_actor(cfg), downs_(0) {
     set_down_handler([this](down_msg& msg) {
-      CHECK_EQ(msg.reason, exit_reason::user_shutdown);
-      CHECK_EQ(msg.source, testee_.address());
+      test::runnable::current().check_eq(msg.reason,
+                                         exit_reason::user_shutdown);
+      test::runnable::current().check_eq(msg.source, testee_.address());
       if (++downs_ == 2)
         quit(msg.reason);
     });
@@ -45,13 +47,13 @@ public:
     testee_ = spawn<testee, monitored>(this);
     return {
       [this](ok_atom, const error& reason) {
-        CHECK_EQ(reason, exit_reason::user_shutdown);
+        test::runnable::current().check_eq(reason, exit_reason::user_shutdown);
         if (++downs_ == 2) {
           quit(reason);
         }
       },
       [this](delete_atom x) {
-        MESSAGE("spawner received delete");
+        log::test::debug("spawner received delete");
         return delegate(testee_, x);
       },
     };
@@ -66,13 +68,13 @@ private:
   actor testee_;
 };
 
-} // namespace
+WITH_FIXTURE(test::fixture::deterministic) {
 
-BEGIN_FIXTURE_SCOPE(test_coordinator_fixture<>)
-
-CAF_TEST(constructor_attach) {
+TEST("constructor attach") {
   anon_mail(delete_atom_v).send(sys.spawn<spawner>());
-  run();
+  dispatch_messages();
 }
 
-END_FIXTURE_SCOPE()
+} // WITH_FIXTURE(test::fixture::deterministic)
+
+} // namespace

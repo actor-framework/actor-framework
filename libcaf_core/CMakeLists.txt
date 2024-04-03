@@ -94,6 +94,7 @@ caf_add_component(
     caf/actor_system_config.cpp
     caf/actor_system_config.test.cpp
     caf/actor_system_module.cpp
+    caf/actor_termination.test.cpp
     caf/anon_mail.test.cpp
     caf/async/batch.cpp
     caf/async/batch.test.cpp
@@ -133,6 +134,7 @@ caf_add_component(
     caf/config_value_reader.cpp
     caf/config_value_writer.cpp
     caf/const_typed_message_view.test.cpp
+    caf/constructor_attach.test.cpp
     caf/cow_string.test.cpp
     caf/cow_tuple.test.cpp
     caf/deep_to_string.test.cpp
@@ -211,6 +213,7 @@ caf_add_component(
     caf/detail/unique_function.test.cpp
     caf/dictionary.test.cpp
     caf/disposable.cpp
+    caf/dynamic_spawn.test.cpp
     caf/error.cpp
     caf/error.test.cpp
     caf/event_based_actor.cpp
@@ -321,6 +324,7 @@ caf_add_component(
     caf/proxy_registry.cpp
     caf/raise_error.cpp
     caf/ref_counted.cpp
+    caf/request_timeout.test.cpp
     caf/response_handle.test.cpp
     caf/response_promise.cpp
     caf/response_promise.test.cpp
@@ -370,10 +374,13 @@ caf_add_component(
     caf/type_id_list.cpp
     caf/type_id_list.test.cpp
     caf/typed_actor.test.cpp
+    caf/typed_actor_view.test.cpp
     caf/typed_behavior.test.cpp
     caf/typed_event_based_actor.test.cpp
     caf/typed_message_view.test.cpp
     caf/typed_response_promise.test.cpp
+    caf/typed_spawn.test.cpp
+    caf/typed_stream.test.cpp
     caf/unit.test.cpp
     caf/unordered_flat_map.test.cpp
     caf/uri.cpp
@@ -384,14 +391,7 @@ caf_add_component(
   LEGACY_TEST_SOURCES
     tests/legacy/core-test.cpp
   LEGACY_TEST_SUITES
-    actor_lifetime
-    actor_termination
-    constructor_attach
-    dynamic_spawn
-    request_timeout
-    typed_actor_view
-    typed_spawn
-    typed_stream)
+    actor_lifetime)
 
 # Additional log component for (potentially critical) system-wide events.
 caf_add_log_component(system)

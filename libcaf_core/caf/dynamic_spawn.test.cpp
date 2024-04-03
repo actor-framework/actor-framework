@@ -2,18 +2,30 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE dynamic_spawn
+#include "caf/test/fixture/deterministic.hpp"
+#include "caf/test/test.hpp"
 
 #include "caf/actor_system.hpp"
-#include "caf/all.hpp"
-
-#include "core-test.hpp"
+#include "caf/blocking_actor.hpp"
+#include "caf/event_based_actor.hpp"
+#include "caf/function_view.hpp"
+#include "caf/init_global_meta_objects.hpp"
+#include "caf/log/test.hpp"
+#include "caf/scoped_actor.hpp"
+#include "caf/typed_event_based_actor.hpp"
 
 #include <atomic>
 #include <chrono>
 #include <functional>
 #include <iostream>
 #include <stack>
+
+CAF_BEGIN_TYPE_ID_BLOCK(dynamic_spawn_test, caf::first_custom_type_id + 105)
+
+  CAF_ADD_ATOM(dynamic_spawn_test, abc_atom)
+  CAF_ADD_ATOM(dynamic_spawn_test, name_atom)
+
+CAF_END_TYPE_ID_BLOCK(dynamic_spawn_test)
 
 using namespace caf;
 
@@ -74,7 +86,7 @@ actor spawn_event_testee2(scoped_actor& parent) {
       return {
         after(std::chrono::milliseconds(1)) >>
           [this, remaining] {
-            MESSAGE("remaining: " << std::to_string(remaining));
+            log::test::debug("remaining: {}", std::to_string(remaining));
             if (remaining == 1) {
               mail(ok_atom_v).send(parent);
               quit();
@@ -189,8 +201,8 @@ public:
 
 behavior master(event_based_actor* self) {
   return {
-    [=](ok_atom) {
-      MESSAGE("master: received done");
+    [self](ok_atom) {
+      log::test::debug("master: received done");
       self->quit(exit_reason::user_shutdown);
     },
   };
@@ -198,8 +210,8 @@ behavior master(event_based_actor* self) {
 
 behavior slave(event_based_actor* self, const actor& master) {
   self->link_to(master);
-  self->set_exit_handler([=](exit_msg& msg) {
-    MESSAGE("slave: received exit message");
+  self->set_exit_handler([self](exit_msg& msg) {
+    log::test::debug("slave: received exit message");
     self->quit(msg.reason);
   });
   return {
@@ -223,11 +235,13 @@ public:
     for (int i = 0; i < 100; ++i) {
       mail(ok_atom_v).send(this);
     }
-    CHECK_EQ(mailbox().size(), 100u);
+    if (mailbox().size() != 100u)
+      CAF_RAISE_ERROR("mailbox size is not 100");
     for (int i = 0; i < 100; ++i) {
       mail(ok_atom_v).send(this);
     }
-    CHECK_EQ(mailbox().size(), 200u);
+    if (mailbox().size() != 200u)
+      CAF_RAISE_ERROR("mailbox size is not 200");
     return {};
   }
 };
@@ -247,42 +261,43 @@ struct fixture {
     system.~actor_system();
     // destructor of actor_system must make sure all
     // destructors of all actors have been run
-    CHECK_EQ(s_actor_instances.load(), 0);
-    MESSAGE("max. # of actor instances: " << s_max_actor_instances.load());
+    if (s_actor_instances.load() != 0)
+      CAF_RAISE_ERROR("destructor of all actor instances not run");
+    log::test::debug("max. # of actor instances: {}",
+                     s_max_actor_instances.load());
   }
 };
 
-} // namespace
+WITH_FIXTURE(test::fixture::deterministic) {
 
-BEGIN_FIXTURE_SCOPE(test_coordinator_fixture<>)
-
-CAF_TEST(mirror) {
+TEST("mirror") {
+  scoped_actor self{sys};
   auto mirror = self->spawn<simple_mirror>();
-  auto dummy = self->spawn([=](event_based_actor* ptr) -> behavior {
+  auto dummy = self->spawn([this, mirror](event_based_actor* ptr) -> behavior {
     ptr->mail("hello mirror").send(mirror);
-    return {[](const std::string& msg) { CHECK_EQ(msg, "hello mirror"); }};
+    return {[this](const std::string& msg) { check_eq(msg, "hello mirror"); }};
   });
-  run();
+  dispatch_messages();
   /*
   self->mail("hello mirror").send(mirror);
   run();
   self->receive (
     [](const std::string& msg) {
-      CHECK_EQ(msg, "hello mirror");
+      check_eq(msg, "hello mirror");
     }
   );
   */
 }
 
-END_FIXTURE_SCOPE()
+} // WITH_FIXTURE(test::fixture::deterministic)
 
-BEGIN_FIXTURE_SCOPE(fixture)
+WITH_FIXTURE(fixture) {
 
-CAF_TEST(count_mailbox) {
+TEST("count mailbox") {
   system.spawn<counting_actor>();
 }
 
-CAF_TEST(detached_actors_and_schedulued_actors) {
+TEST("detached actors and scheduled actors") {
   scoped_actor self{system};
   // check whether detached actors and scheduled actors interact w/o errors
   auto m = system.spawn<detached>(master);
@@ -291,65 +306,67 @@ CAF_TEST(detached_actors_and_schedulued_actors) {
   self->mail(ok_atom_v).send(m);
 }
 
-CAF_TEST(self_receive_with_zero_timeout) {
+TEST("receive with zero timeout") {
   scoped_actor self{system};
-  self->receive([&] { CAF_ERROR("Unexpected message"); },
+  self->receive([&] { fail("Unexpected message"); },
                 after(std::chrono::seconds(0)) >>
                   [] {
                     // mailbox empty
                   });
 }
 
-CAF_TEST(detached_mirror) {
+TEST("detached mirror") {
   scoped_actor self{system};
   auto mirror = self->spawn<simple_mirror, detached>();
   self->mail("hello mirror").send(mirror);
-  self->receive([](const std::string& msg) { CHECK_EQ(msg, "hello mirror"); });
+  self->receive(
+    [this](const std::string& msg) { check_eq(msg, "hello mirror"); });
 }
 
-CAF_TEST(send_to_self) {
+TEST("send to self") {
   scoped_actor self{system};
   self->mail(1, 2, 3, true).send(self);
-  self->receive([](int a, int b, int c, bool d) {
-    CHECK_EQ(a, 1);
-    CHECK_EQ(b, 2);
-    CHECK_EQ(c, 3);
-    CHECK_EQ(d, true);
+  self->receive([this](int a, int b, int c, bool d) {
+    check_eq(a, 1);
+    check_eq(b, 2);
+    check_eq(c, 3);
+    check_eq(d, true);
   });
   self->mail(message{}).send(self);
   self->receive([] {});
 }
 
-CAF_TEST(echo_actor_messaging) {
+TEST("echo actor messaging") {
   scoped_actor self{system};
   auto mecho = system.spawn<echo_actor>();
   self->mail("hello echo").send(mecho);
-  self->receive([](const std::string& arg) { CHECK_EQ(arg, "hello echo"); });
+  self->receive(
+    [this](const std::string& arg) { check_eq(arg, "hello echo"); });
 }
 
-CAF_TEST(delayed_send) {
+TEST("delayed send") {
   scoped_actor self{system};
   self->mail(1, 2, 3).delay(std::chrono::milliseconds(1)).send(self);
-  self->receive([](int a, int b, int c) {
-    CHECK_EQ(a, 1);
-    CHECK_EQ(b, 2);
-    CHECK_EQ(c, 3);
+  self->receive([this](int a, int b, int c) {
+    check_eq(a, 1);
+    check_eq(b, 2);
+    check_eq(c, 3);
   });
 }
 
-CAF_TEST(delayed_spawn) {
+TEST("delayed spawn") {
   scoped_actor self{system};
   self->receive(after(std::chrono::milliseconds(1)) >> [] {});
   system.spawn<testee1>();
 }
 
-CAF_TEST(spawn_event_testee2_test) {
+TEST("spawn event testee2 test") {
   scoped_actor self{system};
   spawn_event_testee2(self);
-  self->receive([](ok_atom) { MESSAGE("Received 'ok'"); });
+  self->receive([](ok_atom) { log::test::debug("Received 'ok'"); });
 }
 
-CAF_TEST(function_spawn) {
+TEST("function_spawn") {
   scoped_actor self{system};
   auto f = [](const std::string& name) -> behavior {
     return ([name](get_atom) { return make_result(name_atom_v, name); });
@@ -358,10 +375,10 @@ CAF_TEST(function_spawn) {
   auto a2 = system.spawn(f, "bob");
   self->mail(get_atom_v).send(a1);
   self->receive(
-    [&](name_atom, const std::string& name) { CHECK_EQ(name, "alice"); });
+    [&](name_atom, const std::string& name) { check_eq(name, "alice"); });
   self->mail(get_atom_v).send(a2);
   self->receive(
-    [&](name_atom, const std::string& name) { CHECK_EQ(name, "bob"); });
+    [&](name_atom, const std::string& name) { check_eq(name, "bob"); });
   self->send_exit(a1, exit_reason::user_shutdown);
   self->send_exit(a2, exit_reason::user_shutdown);
 }
@@ -370,19 +387,19 @@ using typed_testee = typed_actor<result<std::string>(abc_atom)>;
 
 typed_testee::behavior_type testee() {
   return {[](abc_atom) {
-    MESSAGE("received 'abc'");
+    log::test::debug("received 'abc'");
     return "abc";
   }};
 }
 
-CAF_TEST(typed_await) {
+TEST("typed await") {
   scoped_actor self{system};
   auto f = make_function_view(system.spawn(testee));
-  CHECK_EQ(f(abc_atom_v), "abc");
+  check_eq(f(abc_atom_v), "abc");
 }
 
 // tests attach_functor() inside of an actor's constructor
-CAF_TEST(constructor_attach) {
+TEST("constructor attach") {
   class testee : public event_based_actor {
   public:
     testee(actor_config& cfg, actor buddy)
@@ -414,7 +431,8 @@ CAF_TEST(constructor_attach) {
         downs_(0),
         testee_(spawn<testee, monitored>(this)) {
       set_down_handler([this](down_msg& msg) {
-        CHECK_EQ(msg.reason, exit_reason::user_shutdown);
+        if (msg.reason != exit_reason::user_shutdown)
+          CAF_RAISE_ERROR("error is not user_shutdown");
         if (++downs_ == 2)
           quit(msg.reason);
       });
@@ -425,7 +443,8 @@ CAF_TEST(constructor_attach) {
     behavior make_behavior() override {
       return {
         [this](ok_atom, const error& reason) {
-          CHECK_EQ(reason, exit_reason::user_shutdown);
+          if (reason != exit_reason::user_shutdown)
+            CAF_RAISE_ERROR("error is not user_shutdown");
           if (++downs_ == 2)
             quit(reason);
         },
@@ -433,7 +452,7 @@ CAF_TEST(constructor_attach) {
     }
 
     void on_exit() override {
-      MESSAGE("spawner::on_exit()");
+      log::test::debug("spawner::on_exit()");
       destroy(testee_);
     }
 
@@ -444,7 +463,7 @@ CAF_TEST(constructor_attach) {
   anon_send_exit(system.spawn<spawner>(), exit_reason::user_shutdown);
 }
 
-CAF_TEST(kill_the_immortal) {
+TEST("kill the immortal") {
   auto wannabe_immortal = system.spawn([](event_based_actor* self) -> behavior {
     self->set_exit_handler([](local_actor*, exit_msg&) {
       // nop
@@ -460,23 +479,25 @@ CAF_TEST(kill_the_immortal) {
   self->wait_for(wannabe_immortal);
 }
 
-CAF_TEST(move_only_argument) {
+TEST("move-only argument in spawn") {
   using unique_int = std::unique_ptr<int>;
   unique_int uptr{new int(42)};
   auto wrapper = [](event_based_actor* self, unique_int ptr) -> behavior {
     auto i = *ptr;
     return {
-      [=](float) {
+      [self, i](float) {
         self->quit();
         return i;
       },
     };
   };
   auto f = make_function_view(system.spawn(wrapper, std::move(uptr)));
-  CHECK_EQ(to_tuple<int>(unbox(f(1.f))), std::make_tuple(42));
+  auto received = f(1.f);
+  require(received.has_value());
+  check_eq(to_tuple<int>(*received), std::make_tuple(42));
 }
 
-CAF_TEST(move - only function object) {
+TEST("move-only function object") {
   struct move_only_fun {
     move_only_fun() = default;
     move_only_fun(const move_only_fun&) = delete;
@@ -492,4 +513,10 @@ CAF_TEST(move - only function object) {
   sys.spawn(std::move(f));
 }
 
-END_FIXTURE_SCOPE()
+} // WITH_FIXTURE(fixture)
+
+TEST_INIT() {
+  caf::init_global_meta_objects<caf::id_block::dynamic_spawn_test>();
+}
+
+} // namespace
