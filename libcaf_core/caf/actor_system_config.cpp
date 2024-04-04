@@ -14,7 +14,6 @@
 #include "caf/detail/parser/read_config.hpp"
 #include "caf/detail/parser/read_string.hpp"
 #include "caf/format_to_error.hpp"
-#include "caf/logger.hpp"
 #include "caf/message_builder.hpp"
 #include "caf/pec.hpp"
 #include "caf/sec.hpp"
@@ -84,7 +83,6 @@ constexpr const char* default_config_file = "caf-application.conf";
 
 struct actor_system_config::fields {
   std::vector<std::string> paths;
-  std::unique_ptr<logger_factory_t> logger_factory;
   module_factory_list module_factories;
   actor_factory_dictionary actor_factories;
   thread_hook_list thread_hooks;
@@ -601,19 +599,6 @@ void actor_system_config::print_content() const {
   config_printer printer;
   printer(dump_content());
   std::cout << std::endl;
-}
-
-// -- logger factories ---------------------------------------------------------
-
-void actor_system_config::set_logger_factory(
-  std::unique_ptr<logger_factory_t> ptr) {
-  fields_->logger_factory = std::move(ptr);
-}
-
-intrusive_ptr<logger> actor_system_config::make_logger(actor_system& sys) {
-  if (auto& fn = fields_->logger_factory)
-    return (*fn)(sys);
-  return logger::make(sys);
 }
 
 // -- module factories ---------------------------------------------------------

@@ -125,18 +125,6 @@ public:
     return *this;
   }
 
-  /// Overrides the default logger factory.
-  /// @pre `new_factory != nullptr`
-  template <class Factory>
-  actor_system_config& logger_factory(Factory new_factory) {
-    static_assert(
-      std::is_invocable_r_v<intrusive_ptr<logger>, Factory&, actor_system&>,
-      "Factory must have signature `intrusive_ptr<logger>(actor_system&)`");
-    using impl_t = callback_impl<Factory, intrusive_ptr<logger>(actor_system&)>;
-    set_logger_factory(std::make_unique<impl_t>(std::move(new_factory)));
-    return *this;
-  }
-
   // -- parser and CLI state ---------------------------------------------------
 
   /// Returns whether the help text was printed. If this function return `true`,
@@ -236,14 +224,6 @@ protected:
   config_option_set custom_options_;
 
 private:
-  // -- logger factories -------------------------------------------------------
-
-  using logger_factory_t = callback<intrusive_ptr<logger>(actor_system&)>;
-
-  void set_logger_factory(std::unique_ptr<logger_factory_t> ptr);
-
-  intrusive_ptr<logger> make_logger(actor_system& sys);
-
   // -- module factories -------------------------------------------------------
 
   using module_factory_fn = actor_system_module* (*) (actor_system&);
