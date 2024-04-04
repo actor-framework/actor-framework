@@ -83,6 +83,7 @@ caf_add_component(
     caf/actor_control_block.cpp
     caf/actor_factory.test.cpp
     caf/actor_from_state.test.cpp
+    caf/actor_lifetime.test.cpp
     caf/actor_ostream.cpp
     caf/actor_pool.cpp
     caf/actor_pool.test.cpp
@@ -391,9 +392,7 @@ caf_add_component(
     caf/version.cpp
     caf/version.test.cpp
   LEGACY_TEST_SOURCES
-    tests/legacy/core-test.cpp
-  LEGACY_TEST_SUITES
-    actor_lifetime)
+    tests/legacy/core-test.cpp)
 
 # Additional log component for (potentially critical) system-wide events.
 caf_add_log_component(system)
