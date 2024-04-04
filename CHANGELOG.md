@@ -19,6 +19,11 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   compiler error.
 - Sending a message to an already terminated actor from a `function_view` now
   properly reports an error (#1801).
+- URIs now support support username and password in the user-info sub-component
+  (#1814). Consequently, the `userinfo` field of the URI class now has two
+  member variables: `name` and (an optional) `password`. Further, the `userinfo`
+  field is now optional in order to differentiate between an empty user-info and
+  no user-info at all.
 
 ### Removed
 
