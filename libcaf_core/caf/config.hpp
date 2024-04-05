@@ -19,20 +19,6 @@
 //   - denotes the amount of logging, ranging from error messages only (0)
 //     to complete traces (4)
 
-/// Denotes version of CAF in the format {MAJOR}{MINOR}{PATCH},
-/// whereas each number is a two-digit decimal number without
-/// leading zeros (e.g. 900 is version 0.9.0).
-#define CAF_VERSION 1905
-
-/// Defined to the major version number of CAF.
-#define CAF_MAJOR_VERSION (CAF_VERSION / 10000)
-
-/// Defined to the minor version number of CAF.
-#define CAF_MINOR_VERSION ((CAF_VERSION / 100) % 100)
-
-/// Defined to the patch version number of CAF.
-#define CAF_PATCH_VERSION (CAF_VERSION % 100)
-
 // This compiler-specific block defines:
 // - CAF_PUSH_WARNINGS/CAF_POP_WARNINGS to surround "noisy" header includes
 // - CAF_COMPILER_VERSION to retrieve the compiler version in CAF_VERSION format

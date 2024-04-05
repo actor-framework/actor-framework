@@ -24,6 +24,7 @@
 #include "caf/string_algorithms.hpp"
 #include "caf/term.hpp"
 #include "caf/type_id.hpp"
+#include "caf/version.hpp"
 
 #include <cstddef>
 #include <memory>
@@ -208,7 +209,8 @@ public:
 
   /// @warning The system stores a reference to `cfg`, which means the
   ///          config object must outlive the actor system.
-  explicit actor_system(actor_system_config& cfg);
+  explicit actor_system(actor_system_config& cfg,
+                        version::abi_token = make_abi_token());
 
   virtual ~actor_system();
 
@@ -622,7 +624,7 @@ public:
   using custom_setup_fn = void (*)(actor_system&, actor_system_config&, void*);
 
   actor_system(actor_system_config& cfg, custom_setup_fn custom_setup,
-               void* custom_setup_data);
+               void* custom_setup_data, version::abi_token = make_abi_token());
 
   /// @endcond
 

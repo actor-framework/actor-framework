@@ -590,14 +590,18 @@ actor_system::networking_module::~networking_module() {
 
 namespace {} // namespace
 
-actor_system::actor_system(actor_system_config& cfg)
-  : actor_system(cfg, nullptr, nullptr) {
+actor_system::actor_system(actor_system_config& cfg, version::abi_token token)
+  : actor_system(cfg, nullptr, nullptr, token) {
   // nop
 }
 
 actor_system::actor_system(actor_system_config& cfg,
                            custom_setup_fn custom_setup,
-                           void* custom_setup_data) {
+                           void* custom_setup_data, version::abi_token token) {
+  // Make sure the ABI token matches the expected version.
+  if (static_cast<int>(token) != CAF_VERSION_MAJOR) {
+    CAF_CRITICAL("CAF ABI token mismatch");
+  }
   // This is a convoluted way to construct the implementation, but we cannot
   // just use new and delete here. The `custom_setup` function might call member
   // functions on this actor system when constructing `impl`, which requires us

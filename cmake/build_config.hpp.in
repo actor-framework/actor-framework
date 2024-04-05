@@ -6,6 +6,23 @@
 
 #define CAF_LOG_LEVEL CAF_LOG_LEVEL_@CAF_LOG_LEVEL@
 
+/// Denotes the version of CAF in the format {MAJOR}{MINOR}{PATCH}, whereas
+/// minor and patch versions use two-digit decimal numbers (but without leading
+/// zeros), e.g. 900 is version 0.9.0 and 10000 is version 1.0.0.
+#define CAF_VERSION @CAF_VERSION_INT@
+
+/// Denotes version of CAF as a string in the format "{MAJOR}.{MINOR}.{PATCH}".
+#define CAF_VERSION_STR "@CAF_VERSION@"
+
+/// Defined to the major version number of CAF.
+#define CAF_VERSION_MAJOR @CAF_VERSION_MAJOR@
+
+/// Defined to the minor version number of CAF.
+#define CAF_VERSION_MINOR @CAF_VERSION_MINOR@
+
+/// Defined to the patch version number of CAF.
+#define CAF_VERSION_PATCH @CAF_VERSION_PATCH@
+
 #cmakedefine CAF_ENABLE_RUNTIME_CHECKS
 
 #cmakedefine CAF_ENABLE_EXCEPTIONS
@@ -13,3 +30,8 @@
 #cmakedefine CAF_ENABLE_ACTOR_PROFILER
 
 #cmakedefine CAF_USE_STD_FORMAT
+
+// Backwards compatibility macros.
+#define CAF_MAJOR_VERSION @CAF_VERSION_MAJOR@
+#define CAF_MINOR_VERSION @CAF_VERSION_MINOR@
+#define CAF_PATCH_VERSION @CAF_VERSION_PATCH@

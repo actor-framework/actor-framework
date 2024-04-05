@@ -388,6 +388,8 @@ caf_add_component(
     caf/uri_builder.cpp
     caf/uuid.cpp
     caf/uuid.test.cpp
+    caf/version.cpp
+    caf/version.test.cpp
   LEGACY_TEST_SOURCES
     tests/legacy/core-test.cpp
   LEGACY_TEST_SUITES
