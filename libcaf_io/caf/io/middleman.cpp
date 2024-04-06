@@ -215,6 +215,12 @@ actor_system_module* middleman::make(actor_system& sys) {
   return new mm_impl<network::default_multiplexer>(sys);
 }
 
+void middleman::check_abi_compatibility(version::abi_token token) {
+  if (static_cast<int>(token) != CAF_VERSION_MAJOR) {
+    CAF_CRITICAL("CAF ABI token mismatch");
+  }
+}
+
 middleman::middleman(actor_system& sys) : system_(sys) {
   metric_singletons = make_metrics(sys.metrics());
 }

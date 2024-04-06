@@ -173,6 +173,12 @@ actor_system_module* manager::make(actor_system& sys) {
   return new manager(sys);
 }
 
+void manager::check_abi_compatibility(version::abi_token token) {
+  if (static_cast<int>(token) != CAF_VERSION_MAJOR) {
+    CAF_CRITICAL("CAF ABI token mismatch");
+  }
+}
+
 void manager::init_global_meta_objects() {
   // nop
 }

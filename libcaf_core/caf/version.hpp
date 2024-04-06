@@ -10,6 +10,8 @@
 
 #include <string_view>
 
+#define CAF_ABI_NAMESPACE CAF_PP_PASTE(abi_, CAF_VERSION_MAJOR)
+
 namespace caf {
 
 /// Provides version information for CAF.
@@ -32,11 +34,15 @@ public:
 
   /// An opaque token that represents the ABI version of CAF.
   enum class abi_token {};
+
+  /// Checks whether the ABI token is compatible with the current version of
+  /// CAF. Otherwise, calls `abort`.
+  static void check_abi_compatibility(abi_token token) noexcept;
 };
 
-inline namespace CAF_PP_PASTE(abi_, CAF_VERSION_MAJOR) {
+inline namespace CAF_ABI_NAMESPACE {
 /// Returns an token that represents the ABI version of CAF.
 CAF_CORE_EXPORT version::abi_token make_abi_token() noexcept;
-} // namespace CAF_PP_PASTE(abi_,CAF_VERSION_MAJOR)
+} // namespace CAF_ABI_NAMESPACE
 
 } // namespace caf

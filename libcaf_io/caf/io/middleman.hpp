@@ -18,6 +18,7 @@
 #include "caf/node_id.hpp"
 #include "caf/send.hpp"
 #include "caf/timespan.hpp"
+#include "caf/version.hpp"
 
 #include <chrono>
 #include <list>
@@ -248,8 +249,12 @@ public:
   /// Adds module-specific options to the config before loading the module.
   static void add_module_options(actor_system_config& cfg);
 
-  /// Returns a middleman using the default network backend.
+  /// Creates a new middleman instance.
   static actor_system_module* make(actor_system&);
+
+  /// Checks whether ghe ABI of the middleman is compatible with the CAF core.
+  /// Otherwise, calls `abort`.
+  static void check_abi_compatibility(version::abi_token token);
 
   /// @private
   actor get_named_broker(const std::string& name) {

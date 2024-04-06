@@ -108,9 +108,10 @@ public:
     return add_actor_factory(std::move(name), make_actor_factory(std::move(f)));
   }
 
-  /// Loads module `T` with optional template parameters `Ts...`.
+  /// Loads module `T`.
   template <class T>
-  actor_system_config& load() {
+  actor_system_config& load(version::abi_token token = make_abi_token()) {
+    T::check_abi_compatibility(token);
     T::add_module_options(*this);
     add_module_factory([](actor_system& sys) -> actor_system_module* { //
       return T::make(sys);

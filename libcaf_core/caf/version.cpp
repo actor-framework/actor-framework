@@ -26,10 +26,10 @@ const char* version::c_str() noexcept {
   return CAF_VERSION_STR;
 }
 
-inline namespace CAF_PP_PASTE(abi_, CAF_VERSION_MAJOR) {
+inline namespace CAF_ABI_NAMESPACE {
 version::abi_token make_abi_token() noexcept {
   return static_cast<version::abi_token>(CAF_VERSION_MAJOR);
 }
-} // namespace CAF_PP_PASTE(abi_,CAF_VERSION_MAJOR)
+} // namespace CAF_ABI_NAMESPACE
 
 } // namespace caf
