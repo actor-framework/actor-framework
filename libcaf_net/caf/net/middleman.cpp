@@ -140,10 +140,6 @@ void* middleman::subtype_ptr() {
   return this;
 }
 
-actor_system_module* middleman::make(actor_system& sys) {
-  return new middleman(sys);
-}
-
 void middleman::add_module_options(actor_system_config& cfg) {
   config_option_adder{cfg.custom_options(), "caf.net.prometheus-http"}
     .add<uint16_t>("port", "listening port for incoming scrapes")
@@ -151,6 +147,16 @@ void middleman::add_module_options(actor_system_config& cfg) {
   config_option_adder{cfg.custom_options(), "caf.net.prometheus-http.tls"}
     .add<std::string>("key-file", "path to the Promehteus private key file")
     .add<std::string>("cert-file", "path to the Promehteus private cert file");
+}
+
+actor_system_module* middleman::make(actor_system& sys) {
+  return new middleman(sys);
+}
+
+void middleman::check_abi_compatibility(version::abi_token token) {
+  if (static_cast<int>(token) != CAF_VERSION_MAJOR) {
+    CAF_CRITICAL("CAF ABI token mismatch");
+  }
 }
 
 } // namespace caf::net

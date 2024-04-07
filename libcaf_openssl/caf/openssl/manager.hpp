@@ -8,6 +8,7 @@
 
 #include "caf/actor_system.hpp"
 #include "caf/detail/openssl_export.hpp"
+#include "caf/version.hpp"
 
 #include <set>
 #include <string>
@@ -58,6 +59,10 @@ public:
   /// @throws `logic_error` if the middleman is not loaded or is not using the
   ///         default network backend.
   static actor_system_module* make(actor_system&);
+
+  /// Checks whether the ABI of the middleman is compatible with the CAF core.
+  /// Otherwise, calls `abort`.
+  static void check_abi_compatibility(version::abi_token token);
 
   /// Adds message types of the OpenSSL module to the global meta object table.
   static void init_global_meta_objects();
