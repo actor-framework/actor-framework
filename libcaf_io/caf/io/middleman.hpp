@@ -252,7 +252,7 @@ public:
   /// Creates a new middleman instance.
   static actor_system_module* make(actor_system&);
 
-  /// Checks whether ghe ABI of the middleman is compatible with the CAF core.
+  /// Checks whether the ABI of the middleman is compatible with the CAF core.
   /// Otherwise, calls `abort`.
   static void check_abi_compatibility(version::abi_token token);
 

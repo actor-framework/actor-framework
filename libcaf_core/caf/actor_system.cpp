@@ -588,8 +588,6 @@ actor_system::networking_module::~networking_module() {
   // nop
 }
 
-namespace {} // namespace
-
 actor_system::actor_system(actor_system_config& cfg, version::abi_token token)
   : actor_system(cfg, nullptr, nullptr, token) {
   // nop
