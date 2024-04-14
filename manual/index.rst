@@ -12,16 +12,15 @@ Contents
 
    Introduction
    Overview
+   MessagePassing
    TypeInspection
    MessageHandlers
    Actors
-   MessagePassing
    Scheduler
    Registry
    ReferenceCounting
    Error
    ConfiguringActorApplications
-   ManagingGroupsOfWorkers
    DataFlows
    Testing
    Metrics

@@ -94,8 +94,8 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'CAF'
-copyright = u'2020, Dominik Charousset'
-author = u'Dominik Charousset'
+copyright = u'2024, Interance GmbH & Co. KG'
+author = u'Interance GmbH & Co. KG'
 
 # Make variables available to .rst.
 rst_epilog = """
@@ -304,7 +304,7 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
     (master_doc, 'CAF.tex', u'CAF Documentation',
-     u'Dominik Charousset', 'manual'),
+     author, 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of

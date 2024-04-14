@@ -23,11 +23,11 @@ decrease performance significantly in mutex-based concurrency models. In the
 extreme, an application written with the standard toolkit can run slower when
 adding more cores.
 
-The actor model has gained momentum over the last decade due to its high level
+The actor model has gained momentum over the last decades due to its high level
 of abstraction and its ability to scale dynamically from one core to many cores
 and from one node to many nodes. However, the actor model has not yet been
 widely adopted in the native programming domain. With CAF, we contribute a
-library for actor programming in C++ as open-source software to ease native
+framework for actor programming in C++ as open-source software to ease native
 development of concurrent as well as distributed systems. In this regard, CAF
 follows the C++ philosophy *building the highest abstraction possible
 without sacrificing performance*.
