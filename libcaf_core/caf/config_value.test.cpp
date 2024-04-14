@@ -33,8 +33,7 @@
 using std::string;
 
 using namespace caf;
-
-using namespace std::string_literals;
+using namespace std::literals;
 
 namespace {
 
@@ -377,7 +376,6 @@ SCENARIO("get_as can convert config values to floating point numbers") {
 }
 
 SCENARIO("get_as can convert config values to timespans") {
-  using namespace std::chrono_literals;
   GIVEN("a config value with value 42s") {
     auto x = config_value{timespan{42s}};
     WHEN("using get_as with timespan or string") {

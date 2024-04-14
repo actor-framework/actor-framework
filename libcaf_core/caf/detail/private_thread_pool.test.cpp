@@ -12,6 +12,7 @@
 #include "caf/resumable.hpp"
 
 using namespace caf;
+using namespace std::literals;
 
 namespace {
 
@@ -33,7 +34,6 @@ SCENARIO("private threads count towards detached actors") {
       }
       AND_THEN("the detached_actors counter eventually decreases again") {
         auto next_value = [this, old_value = baseline + 2]() mutable {
-          using namespace std::literals::chrono_literals;
           size_t result = 0;
           while ((result = sys.detached_actors()) == old_value)
             std::this_thread::sleep_for(1ms);
@@ -74,7 +74,6 @@ SCENARIO("private threads rerun their resumable when it returns resume_later") {
     WHEN("when resuming f with t") {
       t->resume(&f);
       THEN("t calls resume until f returns something other than resume_later") {
-        using namespace std::literals::chrono_literals;
         sys.release_private_thread(t);
         while (f.runs != 2u)
           std::this_thread::sleep_for(1ms);
