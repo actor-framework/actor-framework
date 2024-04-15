@@ -14,6 +14,7 @@ using std::endl;
 using std::pair;
 
 using namespace caf;
+using namespace std::literals;
 
 // ASCII art figures
 constexpr const char* figures[] = {
@@ -55,7 +56,6 @@ void draw_kirby(const animation_step& animation) {
 // --(rst-delayed-send-begin)--
 // uses a message-based loop to iterate over all animation steps
 behavior dancing_kirby(event_based_actor* self) {
-  using namespace std::literals::chrono_literals;
   // let's get it started
   self->mail(update_atom_v, size_t{0}).send(self);
   return {

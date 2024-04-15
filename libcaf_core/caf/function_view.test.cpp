@@ -15,6 +15,7 @@
 #include <vector>
 
 using namespace caf;
+using namespace std::literals;
 
 namespace {
 
@@ -114,7 +115,6 @@ TEST("cell_function_view") {
 }
 
 TEST("calling function_view on an actor that quit") {
-  using namespace std::chrono_literals;
   auto simple = system.spawn(simple_cell);
   auto f = make_function_view(simple);
   anon_send_exit(simple, exit_reason::user_shutdown);

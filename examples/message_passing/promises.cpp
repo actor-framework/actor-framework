@@ -9,6 +9,7 @@
 #include "caf/typed_event_based_actor.hpp"
 
 using namespace caf;
+using namespace std::literals;
 
 // --(rst-promise-begin)--
 struct adder_trait {
@@ -38,7 +39,6 @@ adder_actor::behavior_type server_impl(adder_actor::pointer self,
 
 void client_impl(event_based_actor* self, adder_actor adder, int32_t x,
                  int32_t y) {
-  using namespace std::literals::chrono_literals;
   self->mail(add_atom_v, x, y).request(adder, 10s).then([=](int32_t result) {
     self->println("{} + {} = {}", x, y, result);
   });
