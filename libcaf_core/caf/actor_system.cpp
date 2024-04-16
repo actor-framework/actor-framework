@@ -5,6 +5,7 @@
 #include "caf/actor_system.hpp"
 
 #include "caf/actor.hpp"
+#include "caf/actor_companion.hpp"
 #include "caf/actor_from_state.hpp"
 #include "caf/actor_ostream.hpp"
 #include "caf/actor_registry.hpp"
@@ -756,6 +757,14 @@ void actor_system::demonitor(const node_id& node, const actor_addr& observer) {
     return;
   auto mm_dptr = static_cast<networking_module*>(mm);
   mm_dptr->demonitor(node, observer);
+}
+
+intrusive_ptr<actor_companion> actor_system::make_companion() {
+  actor_config cfg;
+  cfg.mbox_factory = mailbox_factory();
+  auto hdl = spawn_class<actor_companion, no_spawn_options>(cfg);
+  auto* ptr = actor_cast<abstract_actor*>(hdl);
+  return intrusive_ptr<actor_companion>{static_cast<actor_companion*>(ptr)};
 }
 
 void actor_system::thread_started(thread_owner owner) {

@@ -362,6 +362,9 @@ public:
   /// if this system loses connection to `node`.
   void demonitor(const node_id& node, const actor_addr& observer);
 
+  /// Creates a new actor companion and returns a smart pointer to it.
+  intrusive_ptr<actor_companion> make_companion();
+
   /// Called by `spawn` when used to create a class-based actor to
   /// apply automatic conversions to `xs` before spawning the actor.
   /// Should not be called by users of the library directly.
@@ -377,6 +380,7 @@ public:
   /// to opt-out of the cooperative scheduling.
   /// @param xs Constructor arguments for `C`.
   template <class C, spawn_options Os = no_spawn_options, class... Ts>
+  [[deprecated("use state-based actors and actor_from_state instead")]]
   infer_handle_from_class_t<C> spawn(Ts&&... xs) {
     check_invariants<C>();
     actor_config cfg;
@@ -590,8 +594,11 @@ public:
   /// @returns A pointer to the new actor and a function object that the caller
   ///          must invoke to launch the actor. After the actor started running,
   ///          the caller *must not* access the pointer again.
-  template <class Impl, spawn_options Os = no_spawn_options, class... Ts>
+  template <class Impl = event_based_actor, spawn_options Os = no_spawn_options,
+            class... Ts>
   auto spawn_inactive(Ts&&... xs) {
+    spawn_inactive_check(
+      std::bool_constant<std::is_same_v<Impl, event_based_actor>>{});
     static_assert(std::is_base_of_v<scheduled_actor, Impl>,
                   "only scheduled actors may get spawned inactively");
     CAF_SET_LOGGER_SYS(this);
@@ -629,6 +636,15 @@ public:
   /// @endcond
 
 private:
+  [[deprecated("spawn_inactive may only be used with event_based_actor")]]
+  void spawn_inactive_check(std::false_type) {
+    // nop
+  }
+
+  void spawn_inactive_check(std::true_type) {
+    // nop
+  }
+
   template <class T>
   void check_invariants() {
     static_assert(!std::is_base_of_v<prohibit_top_level_spawn_marker, T>,

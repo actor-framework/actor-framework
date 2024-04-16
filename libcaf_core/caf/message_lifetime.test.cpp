@@ -49,56 +49,32 @@ CAF_END_TYPE_ID_BLOCK(message_lifetime_test)
 
 namespace {
 
-class testee : public event_based_actor {
-public:
-  testee(actor_config& cfg) : event_based_actor(cfg) {
+behavior testee(event_based_actor* self) {
+  // reflecting a message increases its reference count by one
+  self->set_default_handler(reflect_and_quit);
+  return {[] {
     // nop
-  }
+  }};
+}
 
-  ~testee() override {
-    // nop
-  }
-
-  behavior make_behavior() override {
-    // reflecting a message increases its reference count by one
-    set_default_handler(reflect_and_quit);
-    return {[] {
-      // nop
-    }};
-  }
-};
-
-class tester : public event_based_actor {
-public:
-  tester(actor_config& cfg, actor aut)
-    : event_based_actor(cfg),
-      aut_(std::move(aut)),
-      msg_(make_message(1, 2, 3)) {
-    set_down_handler([this](down_msg& dm) {
+behavior tester(event_based_actor* self, actor aut) {
+  self->set_down_handler([self, aut](down_msg& dm) {
+    auto& this_test = test::runnable::current();
+    this_test.check_eq(dm.reason, exit_reason::normal);
+    this_test.check_eq(dm.source, aut.address());
+    self->quit();
+  });
+  self->monitor(aut);
+  self->mail(1, 2, 3).send(aut);
+  return {
+    [](int a, int b, int c) {
       auto& this_test = test::runnable::current();
-      this_test.check_eq(dm.reason, exit_reason::normal);
-      this_test.check_eq(dm.source, aut_.address());
-      quit();
-    });
-  }
-
-  behavior make_behavior() override {
-    monitor(aut_);
-    mail(msg_).send(aut_);
-    return {
-      [](int a, int b, int c) {
-        auto& this_test = test::runnable::current();
-        this_test.check_eq(a, 1);
-        this_test.check_eq(b, 2);
-        this_test.check_eq(c, 3);
-      },
-    };
-  }
-
-private:
-  actor aut_;
-  message msg_;
-};
+      this_test.check_eq(a, 1);
+      this_test.check_eq(b, 2);
+      this_test.check_eq(c, 3);
+    },
+  };
+}
 
 struct fixture : test::fixture::deterministic {
   scoped_actor self{sys};
@@ -139,7 +115,7 @@ TEST("message_lifetime_in_scoped_actor") {
 
 TEST("message_lifetime_in_spawned_actor") {
   for (size_t i = 0; i < 100; ++i)
-    sys.spawn<tester>(sys.spawn<testee>());
+    sys.spawn(tester, sys.spawn(testee));
 }
 
 TEST_INIT() {

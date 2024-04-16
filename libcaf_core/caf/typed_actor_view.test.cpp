@@ -9,6 +9,7 @@
 #include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
+#include "caf/actor_from_state.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/scheduled_actor/flow.hpp"
 #include "caf/typed_actor_pointer.hpp"
@@ -46,8 +47,6 @@ struct int_actor_state {
   init_fn init;
 };
 
-using int_actor_impl = int_actor::stateful_impl<int_actor_state>;
-
 void stream_observer(event_based_actor* self, stream str, shared_int res,
                      shared_err err) {
   // Access `self` through the view to check correct forwarding of `observe_as`.
@@ -68,7 +67,7 @@ void typed_stream_observer(event_based_actor* self, typed_stream<int> str,
 
 struct fixture : test::fixture::deterministic {
   int_actor spawn_int_actor(int_actor_state::init_fn init) {
-    return sys.spawn<int_actor_impl>(std::move(init));
+    return sys.spawn(actor_from_state<int_actor_state>, std::move(init));
   }
 };
 

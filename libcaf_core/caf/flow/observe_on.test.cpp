@@ -22,11 +22,10 @@ SCENARIO("observe_on moves data between actors") {
   GIVEN("a generation") {
     WHEN("calling observe_on") {
       THEN("the target actor observes all values") {
-        using actor_t = event_based_actor;
         auto inputs = std::vector<int>{1, 2, 4, 8, 16, 32, 64, 128};
         auto outputs = std::vector<int>{};
-        auto [src, launch_src] = sys.spawn_inactive<actor_t>();
-        auto [snk, launch_snk] = sys.spawn_inactive<actor_t>();
+        auto [src, launch_src] = sys.spawn_inactive();
+        auto [snk, launch_snk] = sys.spawn_inactive();
         src->make_observable()
           .from_container(inputs)
           .filter([](int) { return true; })

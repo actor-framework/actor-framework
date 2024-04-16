@@ -16,9 +16,7 @@ namespace {
 WITH_FIXTURE(test::fixture::deterministic) {
 
 TEST("actor_companion forwards messages to a custom handler") {
-  auto companion = actor_cast<strong_actor_ptr>(sys.spawn<actor_companion>());
-  auto self
-    = static_cast<actor_companion*>(actor_cast<abstract_actor*>(companion));
+  auto self = sys.make_companion();
   check_eq(self->enqueue(make_mailbox_element(nullptr, make_message_id(), "42"),
                          nullptr),
            false);
@@ -31,14 +29,12 @@ TEST("actor_companion forwards messages to a custom handler") {
 }
 
 TEST("actor_companion calls the on_exit handler on shutdown") {
-  auto exited = false;
+  auto exited = std::make_shared<bool>(false);
   {
-    auto companion = actor_cast<strong_actor_ptr>(sys.spawn<actor_companion>());
-    auto self
-      = static_cast<actor_companion*>(actor_cast<abstract_actor*>(companion));
-    self->on_exit([&exited]() { exited = true; });
+    auto self = sys.make_companion();
+    self->on_exit([exited]() { *exited = true; });
   }
-  check(exited);
+  check(*exited);
 }
 
 } // WITH_FIXTURE(test::fixture::deterministic)

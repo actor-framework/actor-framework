@@ -27,10 +27,9 @@ struct config : caf::actor_system_config {
 // --(rst-main-begin)--
 void caf_main(caf::actor_system& sys, const config& cfg) {
   // Create two actors without actually running them yet.
-  using actor_t = caf::event_based_actor;
   auto n = get_or(cfg, "num-values", default_num_values);
-  auto [src, launch_src] = sys.spawn_inactive<actor_t>();
-  auto [snk, launch_snk] = sys.spawn_inactive<actor_t>();
+  auto [src, launch_src] = sys.spawn_inactive();
+  auto [snk, launch_snk] = sys.spawn_inactive();
   // Define our data flow: generate data on `src` and print it on `snk`.
   src
     // Get an observable factory.

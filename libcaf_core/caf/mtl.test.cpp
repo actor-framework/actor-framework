@@ -8,6 +8,7 @@
 #include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
+#include "caf/actor_from_state.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/json_reader.hpp"
@@ -45,8 +46,6 @@ struct testee_state {
     };
   }
 };
-
-using testee_impl = testee_actor::stateful_impl<testee_state>;
 
 template <class T>
 struct kvp_field_name;
@@ -165,8 +164,8 @@ struct fixture : test::fixture::deterministic {
   scoped_actor self{sys};
 
   fixture() {
-    testee = sys.spawn<testee_impl, lazy_init>();
-    driver = sys.spawn<driver_impl, lazy_init>(testee);
+    testee = sys.spawn<lazy_init>(actor_from_state<testee_state>);
+    driver = sys.spawn<lazy_init>(actor_from_state<driver_state>, testee);
   }
 };
 

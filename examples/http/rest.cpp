@@ -6,6 +6,7 @@
 #include "caf/net/http/with.hpp"
 #include "caf/net/middleman.hpp"
 
+#include "caf/actor_from_state.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/caf_main.hpp"
@@ -76,8 +77,6 @@ struct kvs_actor_state {
   std::map<std::string, std::string> data;
 };
 
-using kvs_actor_impl = caf::stateful_actor<kvs_actor_state>;
-
 // -- utility functions --------------------------------------------------------
 
 bool is_ascii(caf::span<const std::byte> buffer) {
@@ -122,7 +121,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
     return EXIT_FAILURE;
   }
   // Spin up our key-value store actor.
-  auto kvs = sys.spawn<kvs_actor_impl>();
+  auto kvs = sys.spawn(caf::actor_from_state<kvs_actor_state>);
   // Open up a TCP port for incoming connections and start the server.
   auto server
     = http::with(sys)

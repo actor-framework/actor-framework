@@ -20,6 +20,8 @@ using namespace std::literals;
                                    to_string(err));                            \
   }
 
+CAF_PUSH_DEPRECATED_WARNING
+
 namespace {
 
 std::atomic<size_t> s_ctors;
@@ -164,3 +166,5 @@ TEST("random_actor_pool") {
 } // WITH_FIXTURE(fixture)
 
 } // namespace
+
+CAF_POP_WARNINGS

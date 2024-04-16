@@ -19,4 +19,4 @@ server to open a port with ``middleman().open(...)`` or
 ``middleman().publish(...)``. Alternatively, we can obtain the node ID from an
 already existing remote actor handle---returned from ``remote_actor`` for
 example---via ``hdl->node()``. After connecting to the server, we can use
-``middleman().remote_spawn<...>(...)`` to create actors remotely.
+``middleman().remote_spawn(...)`` to create actors remotely.

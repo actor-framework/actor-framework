@@ -73,7 +73,7 @@ struct subscriber {
                                     caf::flow::observable<int>& src) const {
     auto prom = std::promise<int_cow_vector>();
     auto res = prom.get_future();
-    auto [self, launch] = sys.spawn_inactive<caf::event_based_actor>();
+    auto [self, launch] = sys.spawn_inactive();
     src //
       .observe_on(self)
       .compose(apply_delay(self, delay))

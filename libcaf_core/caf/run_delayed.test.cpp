@@ -6,6 +6,7 @@
 #include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
+#include "caf/actor_from_state.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/typed_actor.hpp"
 #include "caf/typed_actor_pointer.hpp"
@@ -45,11 +46,9 @@ struct int_actor_state {
   init_fn init;
 };
 
-using int_actor_impl = int_actor::stateful_impl<int_actor_state>;
-
 struct fixture : test::fixture::deterministic {
   int_actor spawn_int_actor(int_actor_state::init_fn init) {
-    return sys.spawn<int_actor_impl>(std::move(init));
+    return sys.spawn(actor_from_state<int_actor_state>, std::move(init));
   }
 };
 

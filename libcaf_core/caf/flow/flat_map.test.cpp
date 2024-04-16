@@ -6,6 +6,7 @@
 #include "caf/test/fixture/flow.hpp"
 #include "caf/test/scenario.hpp"
 
+#include "caf/actor_from_state.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/scheduled_actor/flow.hpp"
 #include "caf/stateful_actor.hpp"
@@ -30,8 +31,6 @@ public:
 
   int32_t x;
 };
-
-using flat_adder_actor = stateful_actor<flat_adder_state>;
 
 struct fixture : test::fixture::flow, test::fixture::deterministic {};
 
@@ -66,8 +65,8 @@ SCENARIO("flat_map merges multiple observables") {
         auto outputs = i32_list{};
         auto inputs = i32_list(10);
         std::iota(inputs.begin(), inputs.end(), 0);
-        auto adder = sys.spawn<flat_adder_actor>(1);
-        auto [self, launch] = sys.spawn_inactive<event_based_actor>();
+        auto adder = sys.spawn(actor_from_state<flat_adder_state>, 1);
+        auto [self, launch] = sys.spawn_inactive();
         self->make_observable()
           .from_container(inputs)
           .flat_map([self = self, adder](int32_t x) {

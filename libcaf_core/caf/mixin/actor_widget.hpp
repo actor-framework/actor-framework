@@ -42,7 +42,7 @@ public:
   void init(actor_system& system) {
     sys_ = &system;
     alive_ = true;
-    companion_ = actor_cast<strong_actor_ptr>(system.spawn<actor_companion>());
+    companion_ = system.make_companion();
     self()->on_enqueue([=](mailbox_element_ptr ptr) {
       qApp->postEvent(this, new event_type(std::move(ptr)));
     });
@@ -91,7 +91,7 @@ public:
 
 private:
   actor_system* sys_ = nullptr;
-  strong_actor_ptr companion_;
+  intrusive_ptr<actor_companion> companion_;
   bool alive_;
 };
 

@@ -30,4 +30,8 @@ void actor_system_access::node(node_id id) {
   sys_->set_node(id);
 }
 
+detail::mailbox_factory* actor_system_access::mailbox_factory() {
+  return sys_->mailbox_factory();
+}
+
 } // namespace caf::detail
