@@ -521,25 +521,27 @@ struct fixture : caf::test::fixture::deterministic {
     if (type == "map") {
       std::map<std::string, int32_t> imap;
       caf::split(parsed_value, value, ",");
-      std::transform(
-        parsed_value.cbegin(), parsed_value.cend(),
-        std::inserter(imap, imap.begin()), [](const std::string& s) {
-          str_list parsed_pair;
-          caf::split(parsed_pair, s, ":");
-          return std::pair{parsed_pair[0], std::stoi(parsed_pair[1])};
-        });
+      std::transform(parsed_value.cbegin(), parsed_value.cend(),
+                     std::inserter(imap, imap.begin()),
+                     [](const std::string& s) {
+                       str_list parsed_pair;
+                       caf::split(parsed_pair, s, ":");
+                       return std::pair{parsed_pair[0],
+                                        std::stoi(parsed_pair[1])};
+                     });
       return imap;
     }
     if (type == "umap") {
       std::unordered_map<std::string, int32_t> iumap;
       caf::split(parsed_value, value, ",");
-      std::transform(
-        parsed_value.cbegin(), parsed_value.cend(),
-        std::inserter(iumap, iumap.begin()), [](const std::string& s) {
-          str_list parsed_pair;
-          caf::split(parsed_pair, s, ":");
-          return std::pair{parsed_pair[0], std::stoi(parsed_pair[1])};
-        });
+      std::transform(parsed_value.cbegin(), parsed_value.cend(),
+                     std::inserter(iumap, iumap.begin()),
+                     [](const std::string& s) {
+                       str_list parsed_pair;
+                       caf::split(parsed_pair, s, ":");
+                       return std::pair{parsed_pair[0],
+                                        std::stoi(parsed_pair[1])};
+                     });
       return iumap;
     }
     if (type == "set") {

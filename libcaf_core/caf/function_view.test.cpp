@@ -47,9 +47,7 @@ using doubler = typed_actor<result<int, int>(int)>;
 
 doubler::behavior_type simple_doubler() {
   return {
-    [](int x) -> result<int, int> {
-      return {x, x};
-    },
+    [](int x) -> result<int, int> { return {x, x}; },
   };
 }
 

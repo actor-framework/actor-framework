@@ -173,38 +173,38 @@ private:
 // -- comparison ---------------------------------------------------------------
 
 template <class T>
-auto operator==(const cow_vector<T>& xs, const cow_vector<T>& ys)
-  -> decltype(xs.std() == ys.std()) {
+auto operator==(const cow_vector<T>& xs,
+                const cow_vector<T>& ys) -> decltype(xs.std() == ys.std()) {
   return xs.std() == ys.std();
 }
 
 template <class T>
-auto operator==(const cow_vector<T>& xs, const std::vector<T>& ys)
-  -> decltype(xs.std() == ys) {
+auto operator==(const cow_vector<T>& xs,
+                const std::vector<T>& ys) -> decltype(xs.std() == ys) {
   return xs.std() == ys;
 }
 
 template <class T>
-auto operator==(const std::vector<T>& xs, const cow_vector<T>& ys)
-  -> decltype(xs == ys.std()) {
+auto operator==(const std::vector<T>& xs,
+                const cow_vector<T>& ys) -> decltype(xs == ys.std()) {
   return xs.std() == ys;
 }
 
 template <class T>
-auto operator!=(const cow_vector<T>& xs, const cow_vector<T>& ys)
-  -> decltype(xs.std() != ys.std()) {
+auto operator!=(const cow_vector<T>& xs,
+                const cow_vector<T>& ys) -> decltype(xs.std() != ys.std()) {
   return xs.std() != ys.std();
 }
 
 template <class T>
-auto operator!=(const cow_vector<T>& xs, const std::vector<T>& ys)
-  -> decltype(xs.std() != ys) {
+auto operator!=(const cow_vector<T>& xs,
+                const std::vector<T>& ys) -> decltype(xs.std() != ys) {
   return xs.std() != ys;
 }
 
 template <class T>
-auto operator!=(const std::vector<T>& xs, const cow_vector<T>& ys)
-  -> decltype(xs != ys.std()) {
+auto operator!=(const std::vector<T>& xs,
+                const cow_vector<T>& ys) -> decltype(xs != ys.std()) {
   return xs.std() != ys;
 }
 

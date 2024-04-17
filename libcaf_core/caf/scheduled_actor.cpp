@@ -872,8 +872,8 @@ bool scheduled_actor::activate(scheduler* sched) {
   return true;
 }
 
-auto scheduled_actor::activate(scheduler* sched, mailbox_element& x)
-  -> activation_result {
+auto scheduled_actor::activate(scheduler* sched,
+                               mailbox_element& x) -> activation_result {
   auto lg = log::core::trace("x = {}", x);
   if (!activate(sched))
     return activation_result::terminated;

@@ -182,9 +182,7 @@ TEST("receive response as an expected") {
         return {
           [](get_atom) {},
           [](get_atom, int x) { return x; },
-          [](get_atom, int x, int y) -> result<int, int> {
-            return {x, y};
-          },
+          [](get_atom, int x, int y) -> result<int, int> { return {x, y}; },
         };
       });
       SECTION("empty result") {
@@ -205,9 +203,7 @@ TEST("receive response as an expected") {
         return {
           [](get_atom) {},
           [](get_atom, int x) { return x; },
-          [](get_atom, int x, int y) -> result<int, int> {
-            return {x, y};
-          },
+          [](get_atom, int x, int y) -> result<int, int> { return {x, y}; },
         };
       });
       SECTION("empty result") {
@@ -288,9 +284,7 @@ TEST("receive response as an expected") {
         return {
           [](get_atom) {},
           [](get_atom, int x) { return x; },
-          [](get_atom, int x, int y) -> result<int, int> {
-            return {x, y};
-          },
+          [](get_atom, int x, int y) -> result<int, int> { return {x, y}; },
         };
       });
       SECTION("empty result") {
@@ -316,9 +310,7 @@ TEST("receive response as an expected") {
         return {
           [](get_atom) {},
           [](get_atom, int x) { return x; },
-          [](get_atom, int x, int y) -> result<int, int> {
-            return {x, y};
-          },
+          [](get_atom, int x, int y) -> result<int, int> { return {x, y}; },
         };
       });
       SECTION("empty result") {

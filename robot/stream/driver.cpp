@@ -60,9 +60,7 @@ behavior producer(event_based_actor* self) {
       return self->make_observable()
         .iota(1)
         .take(9)
-        .map([](int x) {
-          return point{x, x * x};
-        })
+        .map([](int x) { return point{x, x * x}; })
         .to_stream("points", max_batch_delay, max_batch_size);
     },
   };

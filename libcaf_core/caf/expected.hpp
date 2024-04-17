@@ -543,8 +543,8 @@ private:
 
 /// @relates expected
 template <class T>
-auto operator==(const expected<T>& x, const expected<T>& y)
-  -> decltype(*x == *y) {
+auto operator==(const expected<T>& x,
+                const expected<T>& y) -> decltype(*x == *y) {
   return x && y ? *x == *y : (!x && !y ? x.error() == y.error() : false);
 }
 
@@ -588,8 +588,8 @@ operator==(Enum x, const expected<T>& y) {
 
 /// @relates expected
 template <class T>
-auto operator!=(const expected<T>& x, const expected<T>& y)
-  -> decltype(*x == *y) {
+auto operator!=(const expected<T>& x,
+                const expected<T>& y) -> decltype(*x == *y) {
   return !(x == y);
 }
 

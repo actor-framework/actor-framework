@@ -278,10 +278,11 @@ public:
 
   /// Adds nested fields.
   template <class SubFieldsInitializer>
-  auto
-  field(std::string_view key, SubFieldsInitializer&& init) -> std::enable_if_t<
-    std::is_same_v<decltype(init(std::declval<event_fields_builder&>())), void>,
-    event_fields_builder&> {
+  auto field(std::string_view key, SubFieldsInitializer&& init)
+    -> std::enable_if_t<
+      std::is_same_v<decltype(init(std::declval<event_fields_builder&>())),
+                     void>,
+      event_fields_builder&> {
     auto& field = fields_.emplace_back(std::string_view{}, std::nullopt);
     field.key = deep_copy(key);
     event_fields_builder nested_builder{resource()};
@@ -380,10 +381,11 @@ public:
 
   /// Adds nested fields.
   template <class SubFieldsInitializer>
-  auto
-  field(std::string_view key, SubFieldsInitializer&& init) -> std::enable_if_t<
-    std::is_same_v<decltype(init(std::declval<event_fields_builder&>())), void>,
-    event_sender&&> {
+  auto field(std::string_view key, SubFieldsInitializer&& init)
+    -> std::enable_if_t<
+      std::is_same_v<decltype(init(std::declval<event_fields_builder&>())),
+                     void>,
+      event_sender&&> {
     if (logger_)
       fields_.field(key, std::forward<SubFieldsInitializer>(init));
     return std::move(*this);

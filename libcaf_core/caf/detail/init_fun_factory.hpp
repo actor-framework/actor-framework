@@ -132,7 +132,7 @@ public:
     using helper = init_fun_factory_helper<Base, F, tuple_type, rets, selfptr>;
     return ptr_type{new helper{std::move(f), sizeof...(Ts) > 0
                                                ? std::make_shared<tuple_type>(
-                                                 detail::spawn_fwd<Ts>(xs)...)
+                                                   detail::spawn_fwd<Ts>(xs)...)
                                                : nullptr}};
   }
 
