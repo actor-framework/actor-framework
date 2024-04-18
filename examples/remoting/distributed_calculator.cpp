@@ -94,12 +94,8 @@ struct client_state {
 
   behavior unconnected() {
     return {
-      [this](add_atom op, int x, int y) {
-        tasks.emplace_back(task{op, x, y});
-      },
-      [this](sub_atom op, int x, int y) {
-        tasks.emplace_back(task{op, x, y});
-      },
+      [this](add_atom op, int x, int y) { tasks.emplace_back(task{op, x, y}); },
+      [this](sub_atom op, int x, int y) { tasks.emplace_back(task{op, x, y}); },
       [this](connect_atom, const std::string& host, uint16_t port) {
         connecting(host, port);
       },

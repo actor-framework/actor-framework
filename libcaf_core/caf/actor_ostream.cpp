@@ -17,7 +17,7 @@ actor_ostream::actor_ostream(local_actor* self)
 
 actor_ostream::actor_ostream(scoped_actor& self)
   : actor_ostream(
-    static_cast<local_actor*>(actor_cast<abstract_actor*>(self))) {
+      static_cast<local_actor*>(actor_cast<abstract_actor*>(self))) {
   // nop
 }
 

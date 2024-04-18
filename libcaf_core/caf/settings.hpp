@@ -135,8 +135,8 @@ template <class T>
 struct has_init {
 private:
   template <class U>
-  static auto sfinae(U* x, settings* y = nullptr)
-    -> decltype(x->init(*y), std::true_type());
+  static auto sfinae(U* x, settings* y = nullptr) -> decltype(x->init(*y),
+                                                              std::true_type());
 
   template <class U>
   static auto sfinae(...) -> std::false_type;

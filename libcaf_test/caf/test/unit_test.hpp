@@ -105,10 +105,10 @@ struct inequality_operator {
   static constexpr bool default_value = true;
 
   template <class T, class U,
-            std::enable_if_t<
-              (std::is_floating_point_v<T>
-               || std::is_floating_point_v<U>) &&detail::is_comparable_v<T, U>,
-              int>
+            std::enable_if_t<(std::is_floating_point_v<T>
+                              || std::is_floating_point_v<U>)
+                               && detail::is_comparable_v<T, U>,
+                             int>
             = 0>
   bool operator()(const T& x, const U& y) const {
     equality_operator f;

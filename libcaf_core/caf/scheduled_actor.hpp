@@ -510,9 +510,10 @@ public:
   /// Utility function that swaps `f` into a temporary before calling it
   /// and restoring `f` only if it has not been replaced by the user.
   template <class F, class... Ts>
-  auto call_handler(F& f, Ts&&... xs) -> std::enable_if_t<
-    !std::is_same_v<decltype(f(std::forward<Ts>(xs)...)), void>,
-    decltype(f(std::forward<Ts>(xs)...))> {
+  auto call_handler(F& f, Ts&&... xs)
+    -> std::enable_if_t<
+      !std::is_same_v<decltype(f(std::forward<Ts>(xs)...)), void>,
+      decltype(f(std::forward<Ts>(xs)...))> {
     using std::swap;
     F g;
     swap(f, g);
@@ -523,8 +524,9 @@ public:
   }
 
   template <class F, class... Ts>
-  auto call_handler(F& f, Ts&&... xs) -> std::enable_if_t<
-    std::is_same_v<decltype(f(std::forward<Ts>(xs)...)), void>> {
+  auto call_handler(F& f, Ts&&... xs)
+    -> std::enable_if_t<
+      std::is_same_v<decltype(f(std::forward<Ts>(xs)...)), void>> {
     using std::swap;
     F g;
     swap(f, g);
