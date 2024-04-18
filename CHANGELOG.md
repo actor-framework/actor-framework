@@ -5,12 +5,6 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ## [Unreleased]
 
-### Changed
-
-- Stateful actors now provide a getter function `state()` instead of declaring a
-  public `state` member variable. This change enables more flexibility in the
-  implementation for future CAF versions.
-
 ### Fixed
 
 - Fix building CAF with shared libraries (DLLs) enabled on Windows (#1715).
@@ -54,6 +48,23 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Actors will now always send an error message if an incoming message triggered
   an unhandled exception. Previously, CAF would only send an error message if
   the incoming message was a request (#1684).
+- Stateful actors now provide a getter function `state()` instead of declaring a
+  public `state` member variable. This change enables more flexibility in the
+  implementation for future CAF versions.
+- Passing a class to `spawn_inactive` is now optional and defaults to
+  `event_based_actor`. The next major release will remove the class parameter
+  altogether.
+
+### Deprecated
+
+- Spawning an actor sub-type via the `actor_system` now emits a deprecation
+  warning. Sub-typing actors has several pitfalls and limits design space.
+  Instead of sub-typing, users should prefer state classes and the new
+  `actor_from_state` utility.
+- With similar reasoning, `spawn_inactive` now emits a deprecation warning when
+  passing a class other than `event_based_actor`.
+- The experimental `actor_pool` API has been deprecated. The API has not seen
+  much use and is too cumbersome.
 
 ## [0.19.5] - 2024-01-08
 

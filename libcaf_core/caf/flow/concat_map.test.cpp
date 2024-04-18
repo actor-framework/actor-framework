@@ -8,6 +8,7 @@
 #include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
+#include "caf/actor_from_state.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/scheduled_actor/flow.hpp"
 
@@ -15,10 +16,10 @@ using namespace caf;
 
 namespace {
 
-struct concat_map_adder {
+struct concat_map_adder_state {
   static inline const char* name = "adder";
 
-  explicit concat_map_adder(int32_t x) : x(x) {
+  explicit concat_map_adder_state(int32_t x) : x(x) {
     // nop
   }
 
@@ -30,8 +31,6 @@ struct concat_map_adder {
 
   int32_t x;
 };
-
-using concat_map_adder_actor = stateful_actor<concat_map_adder>;
 
 struct fixture : test::fixture::flow, test::fixture::deterministic {};
 
@@ -61,8 +60,8 @@ SCENARIO("concat_map merges multiple observables") {
     WHEN("sending a request for each each integer for concat_map") {
       THEN("concat_map merges the responses one by one") {
         auto outputs = i32_list{};
-        auto adder = sys.spawn<concat_map_adder_actor>(1);
-        auto [self, launch] = sys.spawn_inactive<event_based_actor>();
+        auto adder = sys.spawn(actor_from_state<concat_map_adder_state>, 1);
+        auto [self, launch] = sys.spawn_inactive();
         auto inputs = i32_list(10);
         std::iota(inputs.begin(), inputs.end(), 0);
         self->make_observable()

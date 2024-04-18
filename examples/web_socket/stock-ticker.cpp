@@ -4,6 +4,7 @@
 #include "caf/net/middleman.hpp"
 #include "caf/net/web_socket/with.hpp"
 
+#include "caf/actor_from_state.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/caf_main.hpp"
@@ -132,6 +133,12 @@ struct random_feed_state {
     return val_dist(rng) / 100.0;
   }
 
+  caf::behavior make_behavior() {
+    // Returning a default-constructed behavior will terminate the actor once
+    // the flows are done.
+    return {};
+  }
+
   caf::event_based_actor* self;
   caf::flow::observable<frame> feed;
   caf::json_writer writer;
@@ -140,8 +147,6 @@ struct random_feed_state {
   std::uniform_int_distribution<int> val_dist;
   std::uniform_int_distribution<size_t> index_dist;
 };
-
-using random_feed_impl = caf::stateful_actor<random_feed_state>;
 
 // -- configuration setup ------------------------------------------------------
 
@@ -204,7 +209,8 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
         })
         // When started, run our worker actor to handle incoming connections.
         .start([&sys, interval](trait::acceptor_resource<> events) {
-          sys.spawn<random_feed_impl>(std::move(events), interval);
+          sys.spawn(caf::actor_from_state<random_feed_state>, std::move(events),
+                    interval);
         });
   // Report any error to the user.
   if (!server) {

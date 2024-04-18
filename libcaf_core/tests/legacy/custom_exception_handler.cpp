@@ -20,23 +20,11 @@ behavior testee() {
   };
 }
 
-class exception_testee : public event_based_actor {
-public:
-  exception_testee(actor_config& cfg) : event_based_actor(cfg) {
-    set_exception_handler([](std::exception_ptr&) -> error {
-      return exit_reason::remote_link_unreachable;
-    });
-  }
-
-  ~exception_testee() override;
-
-  behavior make_behavior() override {
-    return testee();
-  }
-};
-
-exception_testee::~exception_testee() {
-  // avoid weak-vtables warning
+behavior exception_testee(event_based_actor* self) {
+  self->set_exception_handler([](std::exception_ptr&) -> error {
+    return exit_reason::remote_link_unreachable;
+  });
+  return testee();
 }
 
 CAF_TEST(the default exception handler includes the error message) {
@@ -77,7 +65,7 @@ CAF_TEST(actors can override the default exception handler) {
     eb_self->set_exception_handler(handler);
     throw std::logic_error("pong");
   });
-  auto testee3 = self->spawn<exception_testee, monitored>();
+  auto testee3 = self->spawn<monitored>(exception_testee);
   self->mail("foo").send(testee3);
   // receive all down messages
   self->wait_for(testee1, testee2, testee3);

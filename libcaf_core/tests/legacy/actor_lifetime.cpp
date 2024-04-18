@@ -12,6 +12,8 @@
 #include <condition_variable>
 #include <mutex>
 
+CAF_PUSH_DEPRECATED_WARNING
+
 using namespace caf;
 
 namespace {
@@ -142,8 +144,6 @@ struct fixture : public test_coordinator_fixture<> {
   }
 };
 
-} // namespace
-
 CAF_TEST(destructor_call) {
   { // lifetime scope of actor system
     actor_system_config cfg;
@@ -173,3 +173,7 @@ CAF_TEST(mixed_spawn_options_and_down_msg) {
 }
 
 END_FIXTURE_SCOPE()
+
+} // namespace
+
+CAF_POP_WARNINGS

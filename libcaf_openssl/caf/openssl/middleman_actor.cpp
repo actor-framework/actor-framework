@@ -275,9 +275,11 @@ private:
 } // namespace
 
 io::middleman_actor make_middleman_actor(actor_system& sys, actor db) {
+  CAF_PUSH_DEPRECATED_WARNING
   return !get_or(sys.config(), "caf.middleman.attach-utility-actors", false)
            ? sys.spawn<middleman_actor_impl, detached + hidden>(std::move(db))
            : sys.spawn<middleman_actor_impl, hidden>(std::move(db));
+  CAF_POP_WARNINGS
 }
 
 } // namespace caf::openssl

@@ -6,6 +6,7 @@
 
 #include "caf/test/test.hpp"
 
+#include "caf/actor_registry.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/scoped_actor.hpp"
@@ -18,49 +19,37 @@ namespace {
 
 using shared_bool_ptr = std::shared_ptr<bool>;
 
-class dummy_actor : public event_based_actor {
-public:
-  using super = event_based_actor;
-
-  dummy_actor(actor_config& cfg, shared_bool_ptr flag)
-    : super(cfg), flag_(flag) {
-    // nop
-  }
-
-  void launch(scheduler* sched, bool lazy, bool hide) override {
-    *flag_ = true;
-    super::launch(sched, lazy, hide);
-  }
-
-private:
-  shared_bool_ptr flag_;
-};
-
 TEST("spawn_inactive creates an actor without launching it") {
-  auto flag = std::make_shared<bool>(false);
   actor_system_config cfg;
   put(cfg.content, "caf.scheduler.max-threads", 1);
   actor_system sys{cfg};
   SECTION("users may launch the actor manually") {
-    auto [self, launch] = sys.spawn_inactive<dummy_actor>(flag);
-    check_eq(self->ctrl()->strong_refs, 1u); // 1 ref by launch
-    check(!*flag);
+    auto baseline = sys.registry().running();
+    auto [self, launch] = sys.spawn_inactive();
+    auto strong_self = actor{self};
+    self->become([](int) {});
+    check_eq(sys.registry().running(), baseline);
     launch();
-    check(*flag);
+    check_eq(sys.registry().running(), baseline + 1);
     SECTION("calling launch() twice is a no-op") {
-      *flag = false;
       launch();
-      check(!*flag);
+      check_eq(sys.registry().running(), baseline + 1);
     }
   }
   SECTION("the actor launches automatically at scope exit") {
+    auto baseline = sys.registry().running();
+    auto strong_self = actor{};
     {
-      auto [self, launch] = sys.spawn_inactive<dummy_actor>(flag);
+      auto [self, launch] = sys.spawn_inactive();
+      check_eq(sys.registry().running(), baseline);
+      self->become([](int) {});
       check_eq(self->ctrl()->strong_refs, 1u); // 1 ref by launch
-      check(!*flag);
+      strong_self = actor{self};
     }
+    check_eq(sys.registry().running(), baseline + 1);
+    strong_self = nullptr;
     sys.await_all_actors_done();
-    check(*flag);
+    check_eq(sys.registry().running(), baseline);
   }
   // Note: checking the ref count at the end to verify that `launch` has dropped
   //       its reference to the actor is unreliable, because the scheduler holds

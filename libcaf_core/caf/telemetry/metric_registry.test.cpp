@@ -8,6 +8,7 @@
 #include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
+#include "caf/actor_from_state.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/event_based_actor.hpp"
@@ -294,6 +295,10 @@ SCENARIO("metric registries can merge families from other registries") {
 
 struct foo_state {
   static constexpr const char* name = "foo";
+
+  behavior make_behavior() {
+    return {};
+  }
 };
 
 TEST("enabling actor metrics per config creates metric instances") {
@@ -301,7 +306,7 @@ TEST("enabling actor metrics per config creates metric instances") {
   put(cfg.content, "caf.scheduuler.max-threads", 1);
   put(cfg.content, "caf.metrics-filters.actors.includes", std::vector{"foo"s});
   actor_system sys{cfg};
-  auto hdl = sys.spawn<stateful_actor<foo_state>>();
+  auto hdl = sys.spawn(actor_from_state<foo_state>);
   scoped_actor self{sys};
   self->wait_for(hdl);
   test_collector collector;

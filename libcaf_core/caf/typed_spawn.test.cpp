@@ -6,6 +6,7 @@
 #include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
+#include "caf/actor_from_state.hpp"
 #include "caf/actor_registry.hpp"
 #include "caf/anon_mail.hpp"
 #include "caf/event_based_actor.hpp"
@@ -105,17 +106,11 @@ server_type::behavior_type typed_server2(server_type::pointer) {
   return typed_server1();
 }
 
-class typed_server3 : public server_type::base {
-public:
-  typed_server3(actor_config& cfg, const string& line, actor buddy)
-    : server_type::base(cfg) {
-    anon_mail(line).send(buddy);
-  }
-
-  behavior_type make_behavior() override {
-    return typed_server2(this);
-  }
-};
+server_type::behavior_type typed_server3(server_type::pointer self,
+                                         const string& line, actor buddy) {
+  anon_mail(line).send(buddy);
+  return typed_server2(self);
+}
 
 void client(event_based_actor* self, const actor& parent,
             const server_type& serv) {
@@ -138,17 +133,20 @@ using event_testee_type
   = typed_actor<result<string>(get_state_atom), result<void>(string),
                 result<void>(float), result<int>(int)>;
 
-class event_testee : public event_testee_type::base {
+class event_testee_state {
 public:
-  event_testee(actor_config& cfg) : event_testee_type::base(cfg) {
-    set_default_handler(skip);
+  using behavior_type = event_testee_type::behavior_type;
+
+  explicit event_testee_state(event_testee_type::pointer selfptr)
+    : self(selfptr) {
+    self->set_default_handler(skip);
   }
 
   behavior_type wait4string() {
     return {
       partial_behavior_init,
       [](get_state_atom) { return "wait4string"; },
-      [this](const string&) { become(wait4int()); },
+      [this](const string&) { self->become(wait4int()); },
     };
   }
 
@@ -157,7 +155,7 @@ public:
       partial_behavior_init,
       [](get_state_atom) { return "wait4int"; },
       [this](int) -> int {
-        become(wait4float());
+        self->become(wait4float());
         return 42;
       },
     };
@@ -167,13 +165,15 @@ public:
     return {
       partial_behavior_init,
       [](get_state_atom) { return "wait4float"; },
-      [this](float) { become(wait4string()); },
+      [this](float) { self->become(wait4string()); },
     };
   }
 
-  behavior_type make_behavior() override {
+  behavior_type make_behavior() {
     return wait4int();
   }
+
+  event_testee_type::pointer self;
 };
 
 // -- simple 'forwarding' chain ------------------------------------------------
@@ -314,14 +314,14 @@ TEST("typed spawns") {
   test_typed_spawn(sys.spawn(typed_server2));
   self->await_all_other_actors_done();
   log::test::debug("finished test series with `typed_server2`");
-  auto serv3 = self->spawn<typed_server3>("hi there", self);
+  auto serv3 = self->spawn(typed_server3, "hi there", self);
   dispatch_messages();
   check_received(self, "hi there"s);
   test_typed_spawn(serv3);
 }
 
 TEST("event testee series") {
-  auto et = self->spawn<event_testee>();
+  auto et = self->spawn(actor_from_state<event_testee_state>);
   log::test::debug("et->message_types() returns an interface description");
   typed_actor<result<string>(get_state_atom)> sub_et = et;
   std::set<string> iface{"(get_state_atom) -> (std::string)",
@@ -435,9 +435,8 @@ SCENARIO("state classes may use typed pointers") {
       }
       foo_type::pointer_view self;
     };
-    using foo_impl = stateful_actor<foo_state, foo_type::impl>;
     WHEN("spawning a stateful actor using the state class") {
-      auto foo = sys.spawn<foo_impl>();
+      auto foo = sys.spawn(actor_from_state<foo_state>);
       THEN("the actor calls make_behavior of the state class") {
         inject().with(get_atom_v).from(self).to(foo);
         check_received(self, 42);

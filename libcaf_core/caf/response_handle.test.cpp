@@ -8,6 +8,7 @@
 #include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
+#include "caf/actor_from_state.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/result.hpp"
 #include "caf/scheduled_actor/flow.hpp"
@@ -35,15 +36,14 @@ struct dummy_state {
   }
 };
 
-using dummy_actor = stateful_actor<dummy_state>;
-
 struct fixture : test::fixture::deterministic {
   actor dummy;
   i32_worker typed_dummy;
 
   fixture() {
-    dummy = sys.spawn<dummy_actor>();
-    typed_dummy = actor_cast<i32_worker>(sys.spawn<dummy_actor>());
+    auto dummy_fn = actor_from_state<dummy_state>;
+    dummy = sys.spawn(dummy_fn);
+    typed_dummy = actor_cast<i32_worker>(sys.spawn(dummy_fn));
     dispatch_messages();
   }
 };
@@ -56,7 +56,7 @@ SCENARIO("response handles are convertible to observables and singles") {
       THEN("observers see the result") {
         using result_t = std::variant<none_t, int32_t, caf::error>;
         result_t result;
-        auto [self, launch] = sys.spawn_inactive<event_based_actor>();
+        auto [self, launch] = sys.spawn_inactive();
         self->request(dummy, infinite, int32_t{42})
           .as_single<int32_t>()
           .subscribe([&result](int32_t val) { result = val; },
@@ -75,7 +75,7 @@ SCENARIO("response handles are convertible to observables and singles") {
         size_t on_next_calls = 0;
         bool completed = false;
         result_t result;
-        auto [self, launch] = sys.spawn_inactive<event_based_actor>();
+        auto [self, launch] = sys.spawn_inactive();
         self->request(dummy, infinite, int32_t{42})
           .as_observable<int32_t>()
           .do_on_error([&](const error& what) { result = what; })
@@ -100,7 +100,7 @@ SCENARIO("response handles are convertible to observables and singles") {
       THEN("observers see the result") {
         using result_t = std::variant<none_t, int32_t, caf::error>;
         result_t result;
-        auto [self, launch] = sys.spawn_inactive<event_based_actor>();
+        auto [self, launch] = sys.spawn_inactive();
         self->request(typed_dummy, infinite, int32_t{42})
           .as_single<int32_t>()
           .subscribe([&result](int32_t val) { result = val; },
@@ -119,7 +119,7 @@ SCENARIO("response handles are convertible to observables and singles") {
         size_t on_next_calls = 0;
         bool completed = false;
         result_t result;
-        auto [self, launch] = sys.spawn_inactive<event_based_actor>();
+        auto [self, launch] = sys.spawn_inactive();
         self->request(typed_dummy, infinite, int32_t{42})
           .as_observable<int32_t>()
           .do_on_error([&](const error& what) { result = what; })
@@ -144,7 +144,7 @@ SCENARIO("response handles are convertible to observables and singles") {
       THEN("observers see an error") {
         using result_t = std::variant<none_t, int32_t, caf::error>;
         result_t result;
-        auto [self, launch] = sys.spawn_inactive<event_based_actor>();
+        auto [self, launch] = sys.spawn_inactive();
         self->request(dummy, infinite, int32_t{13})
           .as_single<int32_t>()
           .subscribe([&result](int32_t val) { result = val; },
@@ -163,7 +163,7 @@ SCENARIO("response handles are convertible to observables and singles") {
         size_t on_next_calls = 0;
         bool completed = false;
         result_t result;
-        auto [self, launch] = sys.spawn_inactive<event_based_actor>();
+        auto [self, launch] = sys.spawn_inactive();
         self->request(dummy, infinite, int32_t{13})
           .as_observable<int32_t>()
           .do_on_error([&](const error& what) { result = what; })
@@ -188,7 +188,7 @@ SCENARIO("response handles are convertible to observables and singles") {
       THEN("observers see an error") {
         using result_t = std::variant<none_t, int32_t, caf::error>;
         result_t result;
-        auto [self, launch] = sys.spawn_inactive<event_based_actor>();
+        auto [self, launch] = sys.spawn_inactive();
         self->request(typed_dummy, infinite, int32_t{13})
           .as_single<int32_t>()
           .subscribe([&result](int32_t val) { result = val; },
@@ -207,7 +207,7 @@ SCENARIO("response handles are convertible to observables and singles") {
         size_t on_next_calls = 0;
         bool completed = false;
         result_t result;
-        auto [self, launch] = sys.spawn_inactive<event_based_actor>();
+        auto [self, launch] = sys.spawn_inactive();
         self->request(typed_dummy, infinite, int32_t{13})
           .as_observable<int32_t>()
           .do_on_error([&](const error& what) { result = what; })

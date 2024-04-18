@@ -127,6 +127,7 @@ public:
   // -- spawn functions --------------------------------------------------------
 
   template <class T, spawn_options Os = no_spawn_options, class... Ts>
+  [[deprecated("use state-based actors and actor_from_state instead")]]
   infer_handle_from_class_t<T> spawn(Ts&&... xs) {
     actor_config cfg{context(), this};
     cfg.mbox_factory = system().mailbox_factory();

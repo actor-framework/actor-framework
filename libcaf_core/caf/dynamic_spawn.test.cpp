@@ -29,6 +29,8 @@ CAF_END_TYPE_ID_BLOCK(dynamic_spawn_test)
 
 using namespace caf;
 
+CAF_PUSH_DEPRECATED_WARNING
+
 namespace {
 
 std::atomic<long> s_max_actor_instances;
@@ -520,3 +522,5 @@ TEST_INIT() {
 }
 
 } // namespace
+
+CAF_POP_WARNINGS

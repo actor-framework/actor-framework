@@ -76,12 +76,14 @@ public:
   ~actor_pool() override;
 
   /// Returns an actor pool without workers using the dispatch policy `pol`.
+  [[deprecated("actor pools will be removed in the next major release")]]
   static actor make(actor_system& sys, policy pol);
 
   /// Returns an actor pool with `n` workers created by the factory
   /// function `fac` using the dispatch policy `pol`.
-  static actor make(actor_system& sys, size_t num_workers, const factory& fac,
-                    policy pol);
+  [[deprecated("actor pools will be removed in the next major release")]]
+  static actor
+  make(actor_system& sys, size_t num_workers, const factory& fac, policy pol);
 
   bool enqueue(mailbox_element_ptr what, scheduler* sched) override;
 

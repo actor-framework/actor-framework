@@ -29,7 +29,7 @@ using dummy_behavior = dummy_actor::behavior_type;
 WITH_FIXTURE(test::fixture::deterministic) {
 
 TEST("send request message") {
-  auto [self, launch] = sys.spawn_inactive<event_based_actor>();
+  auto [self, launch] = sys.spawn_inactive();
   auto self_hdl = actor_cast<actor>(self);
   SECTION("using .then for the response") {
     SECTION("valid response") {
@@ -325,7 +325,7 @@ TEST("send request message") {
 }
 
 TEST("send delayed request message") {
-  auto [self, launch] = sys.spawn_inactive<event_based_actor>();
+  auto [self, launch] = sys.spawn_inactive();
   auto self_hdl = actor_cast<actor>(self);
   auto dummy = sys.spawn([]() -> dummy_behavior {
     return {
@@ -406,7 +406,7 @@ TEST("send delayed request message") {
 }
 
 TEST("send delayed request message with no response") {
-  auto [self, launch] = sys.spawn_inactive<event_based_actor>();
+  auto [self, launch] = sys.spawn_inactive();
   auto self_hdl = actor_cast<actor>(self);
   auto result = std::make_shared<error>();
   auto dummy = sys.spawn([](event_based_actor* self) -> behavior {
@@ -448,21 +448,23 @@ TEST("send request message as a typed actor") {
       [](int value) { return value * value; },
     };
   });
-  auto [self, launch] = sys.spawn_inactive<sender_actor::impl>();
-  auto self_hdl = actor_cast<actor>(self);
   auto result = std::make_shared<int>(0);
-  self->mail(3).request(dummy, infinite).then([result](int x) { *result = x; });
-  launch();
+  auto sender = sys.spawn([dummy, result](sender_actor::pointer self) {
+    self->mail(3).send(dummy);
+    return sender_actor::behavior_type{
+      [result](int x) { *result = x; },
+    };
+  });
   expect<int>()
     .with(3)
     .priority(message_priority::normal)
-    .from(self_hdl)
+    .from(sender)
     .to(dummy);
   expect<int>()
     .with(9)
     .priority(message_priority::normal)
     .from(dummy)
-    .to(self_hdl);
+    .to(sender);
   check_eq(*result, 9);
 }
 
@@ -472,7 +474,7 @@ TEST("send request message to an invalid receiver") {
       [](int value) { return value * value; },
     };
   });
-  auto [self, launch] = sys.spawn_inactive<event_based_actor>();
+  auto [self, launch] = sys.spawn_inactive();
   auto self_hdl = actor_cast<actor>(self);
   auto result = std::make_shared<int>(0);
   auto on_result = [result](int x) { *result = x; };
@@ -501,7 +503,7 @@ TEST("send request message to an invalid receiver") {
 
 TEST("delegate message") {
   SECTION("asynchronous message") {
-    auto [self, launch] = sys.spawn_inactive<event_based_actor>();
+    auto [self, launch] = sys.spawn_inactive();
     auto delegatee = sys.spawn([](event_based_actor*) -> behavior {
       return {
         [=](const std::string&) {},
@@ -579,7 +581,7 @@ TEST("delegate message") {
     }
   }
   SECTION("request message") {
-    auto [self, launch] = sys.spawn_inactive<event_based_actor>();
+    auto [self, launch] = sys.spawn_inactive();
     SECTION("delegate with default priority") {
       auto delegatee = sys.spawn([](event_based_actor*) {
         return behavior{

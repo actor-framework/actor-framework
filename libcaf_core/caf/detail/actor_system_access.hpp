@@ -26,6 +26,8 @@ public:
 
   void node(node_id id);
 
+  detail::mailbox_factory* mailbox_factory();
+
 private:
   actor_system* sys_;
 };

@@ -24,22 +24,10 @@ using dummy_actor = typed_actor<result<int>(int)>;
 
 using dummy_behavior = dummy_actor::behavior_type;
 
-class testee : public event_based_actor {
-public:
-  using super = event_based_actor;
-
-  using super::super;
-
-  template <class... Args>
-  auto mail(Args&&... args) {
-    return async_mail(dynamically_typed{}, this, std::forward<Args>(args)...);
-  }
-};
-
 WITH_FIXTURE(test::fixture::deterministic) {
 
 TEST("send asynchronous message") {
-  auto [self, launch] = sys.spawn_inactive<testee>();
+  auto [self, launch] = sys.spawn_inactive();
   auto dummy = sys.spawn([](event_based_actor*) -> behavior {
     return {
       [=](const std::string&) {},
@@ -64,7 +52,7 @@ TEST("send asynchronous message") {
 }
 
 TEST("send delayed message") {
-  auto [self, launch] = sys.spawn_inactive<testee>();
+  auto [self, launch] = sys.spawn_inactive();
   auto dummy = sys.spawn([](event_based_actor*) -> behavior {
     return {
       [=](const std::string&) {},
@@ -193,7 +181,7 @@ TEST("send delayed message") {
 }
 
 TEST("delay delegate message") {
-  auto [self, launch] = sys.spawn_inactive<testee>();
+  auto [self, launch] = sys.spawn_inactive();
   auto delegatee = sys.spawn([](event_based_actor*) -> behavior {
     return {
       [=](const std::string&) {},
@@ -201,8 +189,8 @@ TEST("delay delegate message") {
   });
   SECTION("regular message") {
     SECTION("strong reference to the sender") {
-      auto delegator = sys.spawn([delegatee](testee* self) -> behavior {
-        return {
+      auto delegator = sys.spawn([delegatee](event_based_actor* self) {
+        return behavior{
           [=](std::string& str) {
             return self->mail(std::move(str))
               .delay(1s)
@@ -228,8 +216,8 @@ TEST("delay delegate message") {
           .to(delegatee);
       }
       SECTION("weak reference to the receiver") {
-        auto delegator = sys.spawn([delegatee](testee* self) -> behavior {
-          return {
+        auto delegator = sys.spawn([delegatee](event_based_actor* self) {
+          return behavior{
             [=](std::string& str) {
               return self->mail(std::move(str))
                 .delay(1s)
@@ -255,8 +243,8 @@ TEST("delay delegate message") {
       }
     }
     SECTION("strong reference to the sender") {
-      auto delegator = sys.spawn([delegatee](testee* self) -> behavior {
-        return {
+      auto delegator = sys.spawn([delegatee](event_based_actor* self) {
+        return behavior{
           [=](std::string& str) {
             return self->mail(std::move(str))
               .delay(1s)
@@ -282,8 +270,8 @@ TEST("delay delegate message") {
           .to(delegatee);
       }
       SECTION("weak reference to the receiver") {
-        auto delegator = sys.spawn([delegatee](testee* self) -> behavior {
-          return {
+        auto delegator = sys.spawn([delegatee](event_based_actor* self) {
+          return behavior{
             [=](std::string& str) {
               return self->mail(std::move(str))
                 .delay(1s)
@@ -311,8 +299,8 @@ TEST("delay delegate message") {
   }
   SECTION("urgent message") {
     SECTION("strong reference to the sender") {
-      auto delegator = sys.spawn([delegatee](testee* self) -> behavior {
-        return {
+      auto delegator = sys.spawn([delegatee](event_based_actor* self) {
+        return behavior{
           [=](std::string& str) {
             return self->mail(std::move(str))
               .urgent()
@@ -339,8 +327,8 @@ TEST("delay delegate message") {
           .to(delegatee);
       }
       SECTION("weak reference to the receiver") {
-        auto delegator = sys.spawn([delegatee](testee* self) -> behavior {
-          return {
+        auto delegator = sys.spawn([delegatee](event_based_actor* self) {
+          return behavior{
             [=](std::string& str) {
               return self->mail(std::move(str))
                 .urgent()
@@ -367,8 +355,8 @@ TEST("delay delegate message") {
       }
     }
     SECTION("strong reference to the sender") {
-      auto delegator = sys.spawn([delegatee](testee* self) -> behavior {
-        return {
+      auto delegator = sys.spawn([delegatee](event_based_actor* self) {
+        return behavior{
           [=](std::string& str) {
             return self->mail(std::move(str))
               .urgent()
@@ -395,8 +383,8 @@ TEST("delay delegate message") {
           .to(delegatee);
       }
       SECTION("weak reference to the receiver") {
-        auto delegator = sys.spawn([delegatee](testee* self) -> behavior {
-          return {
+        auto delegator = sys.spawn([delegatee](event_based_actor* self) {
+          return behavior{
             [=](std::string& str) {
               return self->mail(std::move(str))
                 .urgent()
@@ -426,7 +414,7 @@ TEST("delay delegate message") {
 }
 
 TEST("implicit cancel of a delayed message") {
-  auto [self, launch] = sys.spawn_inactive<testee>();
+  auto [self, launch] = sys.spawn_inactive();
   auto dummy = sys.spawn([](event_based_actor*) -> behavior {
     return {
       [=](const std::string&) {},
@@ -453,7 +441,7 @@ TEST("implicit cancel of a delayed message") {
 }
 
 TEST("explicit cancel of a delayed message") {
-  auto [self, launch] = sys.spawn_inactive<testee>();
+  auto [self, launch] = sys.spawn_inactive();
   auto dummy = sys.spawn([](event_based_actor*) -> behavior {
     return {
       [=](const std::string&) {},
@@ -506,7 +494,7 @@ TEST("explicit cancel of a delayed message") {
 }
 
 TEST("sending to a null handle is a no-op") {
-  auto [self, launch] = sys.spawn_inactive<testee>();
+  auto [self, launch] = sys.spawn_inactive();
   auto hdl = actor{};
   self->mail("hello world").send(hdl);
   check_eq(mail_count(), 0u);
@@ -520,8 +508,8 @@ TEST("sending to a null handle is a no-op") {
 }
 
 TEST("delegating to a null handle is an error") {
-  auto delegator = sys.spawn([](testee* self) -> behavior {
-    return {
+  auto delegator = sys.spawn([](event_based_actor* self) {
+    return behavior{
       [=](std::string& str) {
         return self->mail(std::move(str))
           .delay(1s)
@@ -531,7 +519,7 @@ TEST("delegating to a null handle is an error") {
     };
   });
   SECTION("regular dispatch") {
-    auto [self, launch] = sys.spawn_inactive<testee>();
+    auto [self, launch] = sys.spawn_inactive();
     self->mail("hello world").send(delegator);
     self->become([](int) {});
     auto self_hdl = actor_cast<actor>(self);
@@ -542,7 +530,7 @@ TEST("delegating to a null handle is an error") {
     expect<error>().from(delegator).to(self_hdl);
   }
   SECTION("delayed dispatch") {
-    auto [self, launch] = sys.spawn_inactive<testee>();
+    auto [self, launch] = sys.spawn_inactive();
     self->mail("hello world").send(delegator);
     self->become([](int) {});
     auto self_hdl = actor_cast<actor>(self);
@@ -561,22 +549,23 @@ TEST("send asynchronous message as a typed actor") {
       [](int value) { return value * value; },
     };
   });
-  auto [self, launch] = sys.spawn_inactive<sender_actor::impl>();
-  auto self_hdl = actor_cast<actor>(self);
   auto result = std::make_shared<int>(0);
-  self->become([result](int x) { *result = x; });
-  self->mail(3).send(dummy);
-  launch();
+  auto sender = sys.spawn([dummy, result](sender_actor::pointer self) {
+    self->mail(3).send(dummy);
+    return sender_actor::behavior_type{
+      [result](int x) { *result = x; },
+    };
+  });
   expect<int>()
     .with(3)
     .priority(message_priority::normal)
-    .from(self_hdl)
+    .from(sender)
     .to(dummy);
   expect<int>()
     .with(9)
     .priority(message_priority::normal)
     .from(dummy)
-    .to(self_hdl);
+    .to(sender);
   check_eq(*result, 9);
 }
 

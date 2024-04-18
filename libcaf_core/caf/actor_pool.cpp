@@ -13,6 +13,8 @@
 #include <atomic>
 #include <random>
 
+CAF_PUSH_DEPRECATED_WARNING
+
 namespace caf {
 
 actor_pool::policy actor_pool::round_robin() {
@@ -217,3 +219,5 @@ void actor_pool::force_close_mailbox() {
 }
 
 } // namespace caf
+
+CAF_POP_WARNINGS
