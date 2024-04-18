@@ -215,6 +215,9 @@ public:
   /// Emits the most recent item of the input observable once per interval.
   observable<T> sample(timespan period);
 
+  /// Retries input observable up to `retry_limit` times in case of an error.
+  observable<T> retry(uint32_t retry_limit);
+
   // -- combining --------------------------------------------------------------
 
   /// Combines the output of multiple @ref observable objects into one by

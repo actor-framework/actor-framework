@@ -31,6 +31,7 @@
 #include "caf/flow/op/on_backpressure_buffer.hpp"
 #include "caf/flow/op/prefix_and_tail.hpp"
 #include "caf/flow/op/publish.hpp"
+#include "caf/flow/op/retry.hpp"
 #include "caf/flow/op/sample.hpp"
 #include "caf/flow/op/zip_with.hpp"
 #include "caf/flow/step/all.hpp"
@@ -271,6 +272,11 @@ public:
   /// @copydoc observable::sample
   auto sample(timespan period) {
     return materialize().sample(period);
+  }
+
+  /// @copydoc observable::retry
+  auto retry(uint32_t retry_limit = 1) {
+    return materialize().retry(retry_limit);
   }
 
   template <class Predicate>
@@ -807,6 +813,13 @@ observable<T> observable<T>::sample(timespan period) {
   auto obs = pptr->add_child_hdl(std::in_place_type<op::interval>, period,
                                  period);
   return pptr->add_child_hdl(std::in_place_type<impl_t>, *this, std::move(obs));
+}
+
+template <class T>
+observable<T> observable<T>::retry(uint32_t retry_limit) {
+  using impl_t = op::retry<T>;
+  auto* pptr = parent();
+  return pptr->add_child_hdl(std::in_place_type<impl_t>, *this, retry_limit);
 }
 
 // -- observable: combining ----------------------------------------------------
