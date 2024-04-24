@@ -19,8 +19,6 @@
 
 using namespace caf;
 
-using net::octet_stream::flow_bridge;
-
 using namespace std::literals;
 
 namespace {
@@ -35,17 +33,6 @@ void ping_pong(net::stream_socket fd, int num_items) {
       return;
     }
     buf = std::byte{static_cast<uint8_t>(std::to_integer<int>(buf) + 1)};
-    if (net::write(fd, make_span(&buf, 1)) != 1) {
-      return;
-    }
-  }
-}
-
-// Send `num_items` bytes to the given socket.
-void iota_send(net::stream_socket fd, int num_items) {
-  auto guard = detail::scope_guard{[fd]() noexcept { net::close(fd); }};
-  for (int i = 1; i <= num_items; ++i) {
-    std::byte buf{static_cast<uint8_t>(i % 256)};
     if (net::write(fd, make_span(&buf, 1)) != 1) {
       return;
     }
@@ -73,80 +60,46 @@ struct fixture {
 
 WITH_FIXTURE(fixture) {
 
-TEST("a flow bridge connects flows to a socket") {
-  // Socket and thread setup.
-  auto fd_pair = net::make_stream_socket_pair();
-  require(fd_pair.has_value());
-  auto [fd1, fd2] = *fd_pair;
-  auto ping_pong_thread = std::thread{ping_pong, fd2, 50};
-  // Bridge setup.
-  auto received = std::make_shared<std::vector<int>>();
-  auto rendezvous = detail::latch{2};
-  auto bridge = flow_bridge::make(
-    16, 16,
-    [received, &rendezvous](flow::observable<std::byte> bytes) {
-      bytes.map([](std::byte item) { return std::to_integer<int>(item); })
-        .do_finally([&rendezvous] { rendezvous.count_down(); })
-        .for_each([received](int item) { received->push_back(item); });
-    },
-    [](flow::coordinator* self) {
-      return self->make_observable()
-        .iota(1) //
-        .take(50)
-        .map([](int x) { return std::byte{static_cast<uint8_t>(x)}; });
-    });
-  auto bridge_ptr = bridge.get();
-  auto transport = net::octet_stream::transport::make(fd1, std::move(bridge));
-  transport->active_policy().connect();
-  auto ptr = net::socket_manager::make(mpx.get(), std::move(transport));
-  bridge_ptr->init(ptr.get());
-  mpx->start(ptr);
-  // Check the results.
-  rendezvous.count_down_and_wait();
-  auto want = std::vector<int>();
-  want.resize(50);
-  std::iota(want.begin(), want.end(), 2);
-  check_eq(*received, want);
-  // Cleanup.
-  ping_pong_thread.join();
-}
-
-TEST("a bridge can make received data available through a publisher") {
-  // Socket and thread setup.
-  auto fd_pair = net::make_stream_socket_pair();
-  require(fd_pair.has_value());
-  auto [fd1, fd2] = *fd_pair;
-  auto ping_pong_thread = std::thread{ping_pong, fd2, 50};
-  // Bridge setup.
-  auto bridge = net::octet_stream::flow_bridge::make(
-    16, 16,
-    [](flow::observable<std::byte> bytes) {
-      return bytes
+TEST("a bridge makes received data available through an SPSC buffer") {
+  struct trait {
+    using input_type = int;
+    using output_type = int;
+    flow::observable<int> map_inputs(flow::coordinator*,
+                                     flow::observable<std::byte> bytes) {
+      return bytes //
         .map([](std::byte item) { return std::to_integer<int>(item); })
-        .share(1);
-    },
-    [](flow::coordinator* self) {
-      return self->make_observable()
-        .iota(1) //
-        .take(50)
-        .map([](int x) { return std::byte{static_cast<uint8_t>(x)}; });
-    });
-  auto bridge_ptr = bridge.get();
+        .as_observable();
+    }
+    flow::observable<std::byte> map_outputs(flow::coordinator*,
+                                            flow::observable<int> bytes) {
+      return bytes //
+        .map([](int item) { return static_cast<std::byte>(item); })
+        .as_observable();
+    }
+  };
+  // Socket and thread setup.
+  auto fd_pair = net::make_stream_socket_pair();
+  require(fd_pair.has_value());
+  auto [fd1, fd2] = *fd_pair;
+  auto ping_pong_thread = std::thread{ping_pong, fd2, 50};
+  auto [s2a_pull, s2a_push] = async::make_spsc_buffer_resource<int>();
+  auto [a2s_pull, a2s_push] = async::make_spsc_buffer_resource<int>();
+  // Bridge setup.
+  auto bridge = net::octet_stream::make_flow_bridge(16, 16, trait{},
+                                                    std::move(s2a_pull),
+                                                    std::move(a2s_push));
   auto transport = net::octet_stream::transport::make(fd1, std::move(bridge));
   transport->active_policy().connect();
   auto ptr = net::socket_manager::make(mpx.get(), std::move(transport));
-  bridge_ptr->init(ptr.get());
-  auto res = bridge_ptr->publisher();
   mpx->start(ptr);
-  // Receive the results. We wait a bit here to subscribe after the bridge has
-  // been fully set up in order to trigger more code paths.
-  std::this_thread::sleep_for(10ms);
+  // Run the flow to completion.
   auto received = std::make_shared<std::vector<int>>();
   auto self = flow::scoped_coordinator::make();
-  res.observe_on(self.get()).for_each([received](int item) {
+  self->make_observable().iota(1).take(50).subscribe(std::move(s2a_push));
+  a2s_pull.observe_on(self.get()).for_each([received](int item) {
     received->push_back(item);
   });
-  self->run();
+  self->run_some(std::chrono::seconds(1)); // Run at most for 1 second.
   // Check the results.
   auto want = std::vector<int>();
   want.resize(50);
@@ -157,104 +110,57 @@ TEST("a bridge can make received data available through a publisher") {
 }
 
 TEST("a bridge may use time-based flow operators") {
+  struct trait {
+    using input_type = int;
+    using output_type = int;
+    flow::observable<int> map_inputs(flow::coordinator*,
+                                     flow::observable<std::byte> bytes) {
+      return bytes //
+        .map([](std::byte item) { return std::to_integer<int>(item); })
+        .as_observable();
+    }
+    flow::observable<std::byte> map_outputs(flow::coordinator* self,
+                                            flow::observable<int> bytes) {
+      return bytes //
+        .map([](int item) { return static_cast<std::byte>(item); })
+        .merge(self
+                 ->make_observable() //
+                 .interval(1ms)
+                 .take(5)
+                 .map([val = 1](int64_t) mutable {
+                   return static_cast<std::byte>(val++);
+                 }))
+        .as_observable();
+    }
+  };
   // Socket and thread setup.
   auto fd_pair = net::make_stream_socket_pair();
   require(fd_pair.has_value());
   auto [fd1, fd2] = *fd_pair;
   auto ping_pong_thread = std::thread{ping_pong, fd2, 5};
+  auto [s2a_pull, s2a_push] = async::make_spsc_buffer_resource<int>();
+  auto [a2s_pull, a2s_push] = async::make_spsc_buffer_resource<int>();
   // Bridge setup.
-  auto received = std::make_shared<std::vector<int>>();
-  auto rendezvous = detail::latch{2};
-  auto bridge = net::octet_stream::flow_bridge::make(
-    16, 16,
-    [received, &rendezvous](flow::observable<std::byte> bytes) {
-      bytes.map([](std::byte item) { return std::to_integer<int>(item); })
-        .do_finally([&rendezvous] { rendezvous.count_down(); })
-        .for_each([received](int item) { received->push_back(item); });
-    },
-    [](flow::coordinator* self) {
-      return self->make_observable()
-        .interval(10ms) //
-        .take(5)
-        .map([](int64_t x) { return std::byte{static_cast<uint8_t>(x)}; });
-    });
-  auto bridge_ptr = bridge.get();
+  auto bridge = net::octet_stream::make_flow_bridge(16, 16, trait{},
+                                                    std::move(s2a_pull),
+                                                    std::move(a2s_push));
   auto transport = net::octet_stream::transport::make(fd1, std::move(bridge));
   transport->active_policy().connect();
   auto ptr = net::socket_manager::make(mpx.get(), std::move(transport));
-  bridge_ptr->init(ptr.get());
   mpx->start(ptr);
+  // Run the flow to completion.
+  auto received = std::make_shared<std::vector<int>>();
+  auto self = flow::scoped_coordinator::make();
+  self->make_observable().never<int>().subscribe(std::move(s2a_push));
+  a2s_pull.observe_on(self.get()).take(5).for_each([received](int item) {
+    received->push_back(item);
+  });
+  self->run_some(std::chrono::seconds(1)); // Run at most for 1 second.
   // Check the results.
-  rendezvous.count_down_and_wait();
   auto want = std::vector<int>();
   want.resize(5);
-  std::iota(want.begin(), want.end(), 1);
+  std::iota(want.begin(), want.end(), 2);
   check_eq(*received, want);
-  // Cleanup.
-  ping_pong_thread.join();
-}
-
-TEST("passing never as output flow produces no output to the socket") {
-  // Socket and thread setup.
-  auto fd_pair = net::make_stream_socket_pair();
-  require(fd_pair.has_value());
-  auto [fd1, fd2] = *fd_pair;
-  auto iota_thread = std::thread{iota_send, fd2, 1024};
-  // Bridge setup.
-  auto received_total = std::make_shared<size_t>();
-  auto rendezvous = detail::latch{2};
-  auto bridge = net::octet_stream::flow_bridge::make(
-    16, 16,
-    [received_total, &rendezvous](flow::observable<std::byte> bytes) {
-      bytes.map([](std::byte item) { return std::to_integer<int>(item); })
-        .do_finally([&rendezvous] { rendezvous.count_down(); })
-        .for_each([received_total](int) { *received_total += 1; });
-    },
-    [](flow::coordinator* self) {
-      return self->make_observable().never<std::byte>();
-    });
-  auto bridge_ptr = bridge.get();
-  auto transport = net::octet_stream::transport::make(fd1, std::move(bridge));
-  transport->active_policy().connect();
-  auto ptr = net::socket_manager::make(mpx.get(), std::move(transport));
-  bridge_ptr->init(ptr.get());
-  mpx->start(ptr);
-  // Check the results.
-  rendezvous.count_down_and_wait();
-  check_eq(*received_total, 1024u);
-  // Cleanup.
-  iota_thread.join();
-}
-
-TEST("subscribing std::ignore to the inputs discards received data") {
-  // Socket and thread setup.
-  auto fd_pair = net::make_stream_socket_pair();
-  require(fd_pair.has_value());
-  auto [fd1, fd2] = *fd_pair;
-  auto ping_pong_thread = std::thread{iota_send, fd2, 1024};
-  // Bridge setup.
-  auto received_total = std::make_shared<size_t>();
-  auto rendezvous = detail::latch{2};
-  auto bridge = net::octet_stream::flow_bridge::make(
-    16, 16,
-    [received_total, &rendezvous](flow::observable<std::byte> bytes) {
-      bytes.map([](std::byte item) { return std::to_integer<int>(item); })
-        .do_finally([&rendezvous] { rendezvous.count_down(); })
-        .do_on_next([received_total](int) { *received_total += 1; })
-        .subscribe(std::ignore);
-    },
-    [](flow::coordinator* self) {
-      return self->make_observable().never<std::byte>();
-    });
-  auto bridge_ptr = bridge.get();
-  auto transport = net::octet_stream::transport::make(fd1, std::move(bridge));
-  transport->active_policy().connect();
-  auto ptr = net::socket_manager::make(mpx.get(), std::move(transport));
-  bridge_ptr->init(ptr.get());
-  mpx->start(ptr);
-  // Check the results.
-  rendezvous.count_down_and_wait();
-  check_eq(*received_total, 1024u);
   // Cleanup.
   ping_pong_thread.join();
 }

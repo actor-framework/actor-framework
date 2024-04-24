@@ -31,6 +31,7 @@ caf_add_component(
   SOURCES
     caf/detail/convert_ip_endpoint.cpp
     caf/detail/convert_ip_endpoint.test.cpp
+    caf/detail/flow_bridge_initializer.cpp
     caf/detail/rfc6455.cpp
     caf/detail/rfc6455.test.cpp
     caf/net/abstract_actor_shell.cpp
@@ -80,6 +81,7 @@ caf_add_component(
     caf/net/multiplexer.test.cpp
     caf/net/network_socket.cpp
     caf/net/network_socket.test.cpp
+    caf/net/octet_stream/client_factory.cpp
     caf/net/octet_stream/flow_bridge.cpp
     caf/net/octet_stream/flow_bridge.test.cpp
     caf/net/octet_stream/lower_layer.cpp
