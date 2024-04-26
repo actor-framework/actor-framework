@@ -7,6 +7,7 @@
 #include "caf/test/test.hpp"
 
 #include "caf/cow_string.hpp"
+#include "caf/message_handler.hpp"
 
 using namespace caf;
 using namespace std::literals;
@@ -249,6 +250,35 @@ TEST("message handlers with const arguments never force a detach or copy") {
     f(msg_copy);
     check_eq(msg_copy.cptr(), msg.cptr());
     check(called);
+  }
+}
+
+TEST("behaviors may be assigned after construction") {
+  auto f = behavior{
+    [](int x) { return x + 1; },
+  };
+  SECTION("assigned with another behavior") {
+    auto g = behavior{
+      [](int x) { return x + 2; },
+    };
+    f.assign(g);
+    check_eq(res_of(f, m1), 3);
+    check_eq(res_of(f, m2), std::nullopt);
+    check_eq(res_of(f, m3), std::nullopt);
+    check_eq(res_of(g, m1), 3);
+    check_eq(res_of(g, m2), std::nullopt);
+    check_eq(res_of(g, m3), std::nullopt);
+  }
+  SECTION("assigned with another message_handler") {
+    auto g = [] {
+      return message_handler{
+        [](int x) { return x + 2; },
+      };
+    };
+    f.assign(g());
+    check_eq(res_of(f, m1), 3);
+    check_eq(res_of(f, m2), std::nullopt);
+    check_eq(res_of(f, m3), std::nullopt);
   }
 }
 

@@ -34,6 +34,18 @@ TEST("contains") {
   auto local = ipv6_address{{0xbebe, 0xbebe}, {}} / 32;
   check(local.contains(ipv6_address({0xbebe, 0xbebe, 0xbebe}, {})));
   check(!local.contains(ipv6_address({0xbebe, 0xbebf}, {})));
+  check(local.contains(
+    ipv6_subnet(ipv6_address({0xbebe, 0xbebe, 0xbebe}, {}), 64)));
+  check(local.contains(
+    ipv6_subnet(ipv6_address({0xbebe, 0xbebe, 0xbebe}, {}), 32)));
+  check(!local.contains(ipv6_subnet(ipv6_address({0xbebe, 0xbebe}, {}), 16)));
+  auto local_embed_v4 = ipv6_subnet{make_ipv4_address(127, 0, 0, 1), 8};
+  check(local_embed_v4.contains(make_ipv4_address(127, 127, 127, 1)));
+  check(!local_embed_v4.contains(make_ipv4_address(128, 0, 0, 1)));
+  check(local_embed_v4.contains(
+    ipv4_subnet{make_ipv4_address(127, 127, 0, 1), 16}));
+  check(!local_embed_v4.contains(
+    ipv4_subnet{make_ipv4_address(128, 127, 0, 1), 16}));
 }
 
 TEST("embedding") {
@@ -41,6 +53,14 @@ TEST("embedding") {
   ipv6_subnet local{v4_local};
   check(local.embeds_v4());
   check_eq(local.prefix_length(), 104u);
+}
+
+TEST("serializing") {
+  auto local = ipv6_address{{0xbebe, 0xbebe}, {}} / 32;
+  check_eq(to_string(local), "bebe:bebe::/32");
+  ipv4_subnet v4_local{make_ipv4_address(127, 0, 0, 1), 8};
+  ipv6_subnet local_embed_v4{v4_local};
+  check_eq(to_string(local_embed_v4), "127.0.0.0/8");
 }
 
 } // namespace
