@@ -2,7 +2,7 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#include "caf/net/octet_stream/flow_bridge.hpp"
+#include "caf/detail/octet_stream_flow_bridge.hpp"
 
 #include "caf/net/octet_stream/lower_layer.hpp"
 #include "caf/net/octet_stream/upper_layer.hpp"
@@ -55,11 +55,16 @@ private:
 class flow_bridge : public upper_layer,
                     public ucast_sub_state::abstract_listener {
 public:
+  using pull_t = async::consumer_resource<std::byte>;
+
+  using push_t = async::producer_resource<std::byte>;
+
   flow_bridge(uint32_t read_buffer_size, uint32_t write_buffer_size,
-              detail::flow_bridge_initializer_ptr init)
+              pull_t pull, push_t push)
     : read_buffer_size_(read_buffer_size),
       write_buffer_size_(write_buffer_size),
-      init_(std::move(init)) {
+      pull_(std::move(pull)),
+      push_(std::move(push)) {
     // nop
   }
 
@@ -84,15 +89,19 @@ public:
   }
 
   error start(lower_layer* down) override {
+    if (down_ != nullptr)
+      return make_error(sec::logic_error,
+                        "octet-stream flow bridge already started");
     down_ = down;
     self_ = down->manager();
     in_ = make_counted<flow::op::ucast<std::byte>>(self_);
     in_->state().listener = this;
     auto self = static_cast<flow::coordinator*>(self_);
     auto obs_ptr = make_counted<octet_stream_observer>(self, this);
-    init_->init_outputs(self, flow::observer<std::byte>{std::move(obs_ptr)});
-    init_->init_inputs(self, flow::observable<std::byte>{in_});
-    init_ = nullptr;
+    pull_ //
+      .observe_on(self)
+      .subscribe(flow::observer<std::byte>{std::move(obs_ptr)});
+    flow::observable<std::byte>{in_}.subscribe(push_);
     return none;
   }
 
@@ -106,7 +115,7 @@ public:
 
   void abort(const error& reason) override {
     in_->state().abort(reason);
-    out_.cancel();
+    sub_.cancel();
   }
 
   ptrdiff_t consume(byte_span buf, byte_span) override {
@@ -129,7 +138,7 @@ public:
   }
 
   void written(size_t num_bytes) override {
-    if (!out_)
+    if (!sub_)
       return;
     if (overflow_ > 0) {
       auto delta = std::min(overflow_, num_bytes);
@@ -137,7 +146,7 @@ public:
       num_bytes -= delta;
     }
     if (num_bytes > 0) {
-      out_.request(num_bytes);
+      sub_.request(num_bytes);
       requested_ += num_bytes;
     }
   }
@@ -154,20 +163,20 @@ public:
 
   void on_error(const error& what) {
     abort(what);
-    out_.release_later();
+    sub_.release_later();
   }
 
   void on_complete() {
-    out_.release_later();
+    sub_.release_later();
   }
 
   void on_subscribe(flow::subscription sub) {
-    if (out_) {
+    if (sub_) {
       sub.cancel();
       return;
     }
-    out_ = std::move(sub);
-    out_.request(write_buffer_size_);
+    sub_ = std::move(sub);
+    sub_.request(write_buffer_size_);
     requested_ = write_buffer_size_;
   }
 
@@ -188,7 +197,7 @@ protected:
   flow::op::ucast_ptr<std::byte> in_;
 
   /// The subscription for the flow that generates the bytes to send.
-  flow::subscription out_;
+  flow::subscription sub_;
 
   /// Stores how many bytes we have requested from `out_`.
   size_t requested_ = 0;
@@ -196,7 +205,11 @@ protected:
   /// Stores excess bytes from `out_` that exceeded the assigned capacity.
   size_t overflow_ = 0;
 
-  detail::flow_bridge_initializer_ptr init_;
+  /// Resource for pulling data from the application.
+  pull_t pull_;
+
+  /// Resource for pushing data to the application.
+  push_t push_;
 };
 
 void octet_stream_observer::on_next(const std::byte& item) {
@@ -225,11 +238,18 @@ void octet_stream_observer::on_subscribe(flow::subscription new_sub) {
 
 } // namespace
 
-std::unique_ptr<upper_layer>
-make_flow_bridge(uint32_t read_buffer_size, uint32_t write_buffer_size,
-                 detail::flow_bridge_initializer_ptr init) {
-  return std::make_unique<flow_bridge>(read_buffer_size, write_buffer_size,
-                                       std::move(init));
+} // namespace caf::net::octet_stream
+
+namespace caf::detail {
+
+std::unique_ptr<net::octet_stream::upper_layer>
+make_octet_stream_flow_bridge(uint32_t read_buffer_size,
+                              uint32_t write_buffer_size,
+                              async::consumer_resource<std::byte> pull,
+                              async::producer_resource<std::byte> push) {
+  using bridge_t = net::octet_stream::flow_bridge;
+  return std::make_unique<bridge_t>(read_buffer_size, write_buffer_size,
+                                    std::move(pull), std::move(push));
 }
 
-} // namespace caf::net::octet_stream
+} // namespace caf::detail

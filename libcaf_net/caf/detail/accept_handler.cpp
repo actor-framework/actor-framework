@@ -2,83 +2,42 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#pragma once
-
-#include "caf/net/multiplexer.hpp"
-#include "caf/net/socket_event_layer.hpp"
-#include "caf/net/socket_manager.hpp"
-
-#include "caf/async/execution_context.hpp"
-#include "caf/detail/assert.hpp"
-#include "caf/detail/connection_acceptor.hpp"
-#include "caf/detail/connection_factory.hpp"
-#include "caf/log/net.hpp"
-#include "caf/settings.hpp"
+#include "caf/detail/accept_handler.hpp"
 
 namespace caf::detail {
 
-/// Creates an accept handler for a connection acceptor.
-CAF_NET_EXPORT
-std::unique_ptr<net::socket_event_layer>
-make_accept_handler(connection_acceptor_ptr ptr, size_t max_connections,
-                    std::vector<strong_actor_ptr> monitored_actors = {});
+namespace {
 
-/// Accepts incoming clients with an Acceptor and handles them via a connection
-/// factory.
-template <class Acceptor>
-class accept_handler : public net::socket_event_layer {
+/// Accepts incoming clients with an acceptor and optionally monitors a set of
+/// configurable actors.
+class accept_handler_impl : public net::socket_event_layer {
 public:
-  // -- member types -----------------------------------------------------------
-
-  using socket_type = net::socket;
-
-  using transport_type = typename Acceptor::transport_type;
-
-  using connection_handle = typename transport_type::connection_handle;
-
-  using factory_type = connection_factory<connection_handle>;
-
-  using factory_ptr = detail::connection_factory_ptr<connection_handle>;
-
   // -- constructors, destructors, and assignment operators --------------------
 
-  accept_handler(Acceptor acc, factory_ptr fptr, size_t max_connections,
-                 std::vector<strong_actor_ptr> monitored_actors = {})
-    : acc_(std::move(acc)),
-      factory_(std::move(fptr)),
+  accept_handler_impl(connection_acceptor_ptr acceptor, size_t max_connections,
+                      std::vector<strong_actor_ptr> monitored_actors = {})
+    : acceptor_(std::move(acceptor)),
       max_connections_(max_connections),
       monitored_actors_(std::move(monitored_actors)) {
     CAF_ASSERT(max_connections_ > 0);
   }
 
-  ~accept_handler() override {
+  ~accept_handler_impl() {
     on_conn_close_.dispose();
-    if (valid(acc_))
-      close(acc_);
     if (monitor_callback_)
       monitor_callback_.dispose();
-  }
-
-  // -- factories --------------------------------------------------------------
-
-  static std::unique_ptr<accept_handler>
-  make(Acceptor acc, factory_ptr fptr, size_t max_connections,
-       std::vector<strong_actor_ptr> monitored_actors = {}) {
-    return std::make_unique<accept_handler>(std::move(acc), std::move(fptr),
-                                            max_connections,
-                                            std::move(monitored_actors));
   }
 
   // -- implementation of socket_event_layer -----------------------------------
 
   error start(net::socket_manager* owner) override {
-    // self_ref_ = owner->as_disposable(); ???
     auto lg = log::net::trace("");
     owner_ = owner;
-    if (auto err = factory_->start(owner)) {
-      log::net::debug("factory_->start failed: {}", err);
+    if (auto err = acceptor_->start(owner)) {
+      log::net::debug("failed to start the acceptor: {}", err);
       return err;
     }
+    self_ref_ = owner->as_disposable();
     if (!monitored_actors_.empty()) {
       monitor_callback_ = make_action([this] { owner_->shutdown(); });
       auto ctx = async::execution_context_ptr{owner_->mpx_ptr()};
@@ -96,7 +55,7 @@ public:
   }
 
   net::socket handle() const override {
-    return acc_.fd();
+    return acceptor_->handle();
   }
 
   void handle_read_event() override {
@@ -104,26 +63,23 @@ public:
     CAF_ASSERT(owner_ != nullptr);
     if (open_connections_.size() == max_connections_) {
       owner_->deregister_reading();
-    } else if (auto conn = accept(acc_)) {
-      auto child = factory_->make(owner_->mpx_ptr(), std::move(*conn));
-      if (!child) {
-        log::net::error("factory failed to create a new child");
-        on_conn_close_.dispose();
-        owner_->shutdown();
-        return;
-      }
+      return;
+    }
+    if (auto conn = acceptor_->try_accept()) {
+      auto& child = *conn;
       open_connections_.push_back(child->as_disposable());
       if (open_connections_.size() == max_connections_)
         owner_->deregister_reading();
       child->add_cleanup_listener(on_conn_close_);
-      std::ignore = child->start();
+      if (auto err = child->start()) {
+        on_error(err);
+      }
     } else if (conn.error() == sec::unavailable_or_would_block) {
       // Encountered a "soft" error: simply try again later.
-      log::net::debug("accept failed: {}", conn.error());
     } else {
       // Encountered a "hard" error: stop.
-      abort(conn.error());
-      owner_->deregister_reading();
+      log::net::error("failed to accept a new connection: {}", conn.error());
+      on_error(conn.error());
     }
   }
 
@@ -134,7 +90,7 @@ public:
 
   void abort(const error& reason) override {
     log::net::error("connection_acceptor aborts due to an error: {}", reason);
-    factory_->abort(reason);
+    acceptor_->abort(reason);
     on_conn_close_.dispose();
     self_ref_ = nullptr;
     for (auto& hdl : open_connections_)
@@ -142,11 +98,16 @@ public:
     open_connections_.clear();
   }
 
-  void self_ref(disposable ref) {
-    self_ref_ = std::move(ref);
+private:
+  void on_error(const error&) {
+    on_conn_close_.dispose();
+    self_ref_ = nullptr;
+    for (auto& hdl : open_connections_)
+      hdl.dispose();
+    open_connections_.clear();
+    owner_->shutdown();
   }
 
-private:
   void connection_closed() {
     auto& conns = open_connections_;
     auto new_end = std::remove_if(conns.begin(), conns.end(),
@@ -158,9 +119,7 @@ private:
     conns.erase(new_end, conns.end());
   }
 
-  Acceptor acc_;
-
-  factory_ptr factory_;
+  connection_acceptor_ptr acceptor_;
 
   size_t max_connections_;
 
@@ -181,5 +140,14 @@ private:
   /// List of actors that we add monitors to in `start`.
   std::vector<strong_actor_ptr> monitored_actors_;
 };
+
+} // namespace
+
+std::unique_ptr<net::socket_event_layer>
+make_accept_handler(connection_acceptor_ptr ptr, size_t max_connections,
+                    std::vector<strong_actor_ptr> monitored_actors) {
+  return std::make_unique<accept_handler_impl>(std::move(ptr), max_connections,
+                                               std::move(monitored_actors));
+}
 
 } // namespace caf::detail

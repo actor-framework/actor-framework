@@ -29,9 +29,13 @@ caf_add_component(
   HEADERS
     ${CAF_NET_HEADERS}
   SOURCES
+    caf/detail/accept_handler.cpp
+    caf/detail/connection_acceptor.cpp
     caf/detail/convert_ip_endpoint.cpp
     caf/detail/convert_ip_endpoint.test.cpp
     caf/detail/flow_bridge_initializer.cpp
+    caf/detail/octet_stream_flow_bridge.cpp
+    caf/detail/octet_stream_flow_bridge.test.cpp
     caf/detail/rfc6455.cpp
     caf/detail/rfc6455.test.cpp
     caf/net/abstract_actor_shell.cpp
@@ -82,10 +86,9 @@ caf_add_component(
     caf/net/network_socket.cpp
     caf/net/network_socket.test.cpp
     caf/net/octet_stream/client_factory.cpp
-    caf/net/octet_stream/flow_bridge.cpp
-    caf/net/octet_stream/flow_bridge.test.cpp
     caf/net/octet_stream/lower_layer.cpp
     caf/net/octet_stream/policy.cpp
+    caf/net/octet_stream/server_factory.cpp
     caf/net/octet_stream/transport.cpp
     caf/net/octet_stream/transport.test.cpp
     caf/net/octet_stream/upper_layer.cpp

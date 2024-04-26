@@ -86,6 +86,46 @@ private:
   std::vector<char> buf_;
 };
 
+/// Turns a sequence of strings into a sequence of characters.
+class to_chars_step {
+public:
+  using input_type = cow_string;
+
+  using output_type = char;
+
+  to_chars_step() = default;
+
+  explicit to_chars_step(std::string_view separator) : separator_(separator) {
+    // nop
+  }
+
+  template <class Next, class... Steps>
+  bool on_next(const cow_string& str, Next& next, Steps&... steps) {
+    for (auto ch : str) {
+      if (!next.on_next(ch, steps...))
+        return false;
+    }
+    for (auto ch : separator_) {
+      if (!next.on_next(ch, steps...))
+        return false;
+    }
+    return true;
+  }
+
+  template <class Next, class... Steps>
+  void on_complete(Next& next, Steps&... steps) {
+    next.on_complete(steps...);
+  }
+
+  template <class Next, class... Steps>
+  void on_error(const error& what, Next& next, Steps&... steps) {
+    next.on_error(what, steps...);
+  }
+
+private:
+  std::string_view separator_;
+};
+
 } // namespace caf::detail
 
 namespace caf::flow {
@@ -103,6 +143,18 @@ public:
   /// a sequence of lines.
   static detail::to_lines_step to_lines() {
     return {};
+  }
+
+  /// Returns a transformation step that splits a sequence of strings into a
+  /// sequence of characters.
+  static detail::to_chars_step to_chars() {
+    return {};
+  }
+
+  /// Returns a transformation step that splits a sequence of strings into a
+  /// sequence of characters, inserting `separator` after each string.
+  static detail::to_chars_step to_chars(std::string_view separator) {
+    return detail::to_chars_step{separator};
   }
 };
 
