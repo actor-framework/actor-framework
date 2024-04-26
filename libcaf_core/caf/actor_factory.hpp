@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "caf/actor_addr.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/infer_handle.hpp"
@@ -89,6 +88,7 @@ struct message_verifier<spawn_mode::function_with_selfptr,
   }
 };
 
+// Helper function for creating actor factories for function based actors.
 template <class F>
 actor_factory make_actor_factory(F fun) {
   return [fun](actor_system& sys, actor_config& cfg,
@@ -118,6 +118,8 @@ actor_factory make_actor_factory(F fun) {
   };
 }
 
+namespace detail {
+
 template <class Handle, class T, class... Ts>
 struct dyn_spawn_class_helper {
   Handle& result;
@@ -140,13 +142,45 @@ dyn_spawn_class(actor_system& sys, actor_config& cfg, message& msg) {
           sys.message_types<handle>()};
 }
 
+template <class... Ts>
+struct actor_from_state_helper;
+
+template <class Handle, class T, class... Ts>
+struct actor_from_state_helper<Handle, T, type_list<Ts...>> {
+  Handle& result;
+  actor_system& sys;
+  void operator()(Ts... xs) {
+    result = sys.spawn(T{}, xs...);
+  }
+};
+
+template <class T, class... Ts>
+actor_factory_result
+spawn_actor_from_state(actor_system& sys, actor_config&, message& msg) {
+  using handle = typename T::handle_type;
+  handle hdl;
+  message_handler factory{actor_from_state_helper<handle, T, Ts>{hdl, sys}...};
+  factory(msg);
+  return {actor_cast<strong_actor_ptr>(std::move(hdl)),
+          sys.message_types<handle>()};
+}
+
+} // namespace detail
+
+// Helper function for creating `actor_from_state<T>` factories.
+template <class T, class... Ts>
+actor_factory make_actor_factory(T, Ts...) {
+  static_assert((detail::is_type_list_v<Ts> && ...),
+                "All Ts must be type_list values");
+  return &detail::spawn_actor_from_state<T, Ts...>;
+}
+
+// Helper function for creating factories for class based actor implementations.
 template <class T, class... Ts>
 actor_factory make_actor_factory() {
-  static_assert((std::is_lvalue_reference_v<Ts> && ...),
-                "all Ts must be lvalue references");
   static_assert(std::is_base_of_v<local_actor, T>,
                 "T is not derived from local_actor");
-  return &dyn_spawn_class<T, Ts...>;
+  return &detail::dyn_spawn_class<T, Ts...>;
 }
 
 } // namespace caf

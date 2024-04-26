@@ -14,4 +14,7 @@ struct type_list {
   }
 };
 
+template <class... Ts>
+constexpr auto type_list_v = type_list<Ts...>{};
+
 } // namespace caf

@@ -65,6 +65,7 @@ if(TARGET CAF::io)
 
   # basic remoting
   add_io_example(remoting remote_spawn)
+  add_io_example(remoting stateful_remote_spawn)
   add_io_example(remoting distributed_calculator)
 
   if(CAF_ENABLE_CURL_EXAMPLES)
