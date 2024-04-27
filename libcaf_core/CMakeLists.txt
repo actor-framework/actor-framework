@@ -220,6 +220,7 @@ caf_add_component(
     caf/event_based_actor.cpp
     caf/event_based_actor.test.cpp
     caf/event_based_mail.test.cpp
+    caf/exit_reason.test.cpp
     caf/expected.test.cpp
     caf/flow/byte.test.cpp
     caf/flow/concat_map.test.cpp
@@ -265,6 +266,7 @@ caf_add_component(
     caf/hash/sha1.cpp
     caf/hash/sha1.test.cpp
     caf/init_global_meta_objects.cpp
+    caf/inspector_access_type.test.cpp
     caf/intrusive/lifo_inbox.test.cpp
     caf/intrusive/linked_list.test.cpp
     caf/intrusive/stack.test.cpp
@@ -308,6 +310,7 @@ caf_add_component(
     caf/message_builder.cpp
     caf/message_builder.test.cpp
     caf/message_handler.cpp
+    caf/message_handler.test.cpp
     caf/message_id.test.cpp
     caf/message_lifetime.test.cpp
     caf/messaging.test.cpp
@@ -318,8 +321,10 @@ caf_add_component(
     caf/mtl.test.cpp
     caf/node_id.cpp
     caf/node_id.test.cpp
+    caf/none.test.cpp
     caf/or_else.test.cpp
     caf/parser_state.cpp
+    caf/pec.test.cpp
     caf/policy/select_all.test.cpp
     caf/policy/select_any.test.cpp
     caf/proxy_registry.cpp
@@ -343,6 +348,7 @@ caf_add_component(
     caf/serial_reply.test.cpp
     caf/serialization.test.cpp
     caf/serializer.cpp
+    caf/serializer.test.cpp
     caf/settings.cpp
     caf/settings.test.cpp
     caf/skip.cpp

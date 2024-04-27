@@ -79,6 +79,28 @@ TEST("lookup") {
   check_ne(opts.cli_short_name_lookup('3'), nullptr);
 }
 
+TEST("help text") {
+  std::string expected = R"__(global options:
+  (-1|--opt1) <int32_t>    : test option 1
+  --opt2=<float>           : test option 2
+  (-f|-l|-1|--flag)        : test flag 1
+
+test options:
+  --test.opt3=<float>      : test option 3
+  (-4|--test.opt4) <float> : test option 4
+  (-f|-l|-2|--test.flag)   : test flag 2
+
+)__";
+  opts.add<int>("opt1,1", "test option 1")
+    .add<float>("opt2", "test option 2")
+    .add<bool>("flag,fl1", "test flag 1")
+    .add<float>("test", "opt3", "test option 3")
+    .add<float>("test", "opt4,4", "test option 4")
+    .add<bool>("test", "flag,fl2", "test flag 2");
+  check_eq(opts.size(), 6u);
+  check_eq(expected, opts.help_text());
+}
+
 TEST("parse with ref syncing") {
   using ls = vector<string>;     // list of strings
   using ds = dictionary<string>; // dictionary of strings
@@ -95,28 +117,106 @@ TEST("parse with ref syncing") {
     .add<vector<string>>(bar_l, "bar", "l,l", "")
     .add<dictionary<string>>(bar_d, "bar", "d,d", "");
   settings cfg;
-  vector<string> args{"-i42",
-                      "-f",
-                      "1e2",
-                      "-shello",
-                      "--bar.l=[\"hello\", \"world\"]",
-                      "-d",
-                      "{a=\"a\",b=\"b\"}",
-                      "-b"};
-  log::test::debug("parse arguments");
-  auto res = opts.parse(cfg, args);
-  check_eq(res.first, pec::success);
-  if (res.second != args.end())
-    fail("parser stopped at: {}", *res.second);
-  log::test::debug("verify referenced values");
-  check_eq(foo_i, 42);
-  check_eq(foo_f, 1e2);
-  check_eq(foo_b, true);
-  check_eq(bar_s, "hello");
-  check_eq(bar_l, ls({"hello", "world"}));
-  check_eq(bar_d, ds({{"a", "a"}, {"b", "b"}}));
-  log::test::debug("verify dictionary content");
-  check_eq(get_as<int>(cfg, "foo.i"), 42);
+  SECTION("parse valid arguments with pec::success") {
+    vector<string> args{"-i42",
+                        "-f",
+                        "1e2",
+                        "-shello",
+                        "--bar.l=[\"hello\", \"world\"]",
+                        "-d",
+                        "{a=\"a\",b=\"b\"}",
+                        "-b"};
+    log::test::debug("parse arguments");
+    auto res = opts.parse(cfg, args);
+    check_eq(res.first, pec::success);
+    if (res.second != args.end())
+      fail("parser stopped at: {}", *res.second);
+    log::test::debug("verify referenced values");
+    check_eq(foo_i, 42);
+    check_eq(foo_f, 1e2);
+    check_eq(foo_b, true);
+    check_eq(bar_s, "hello");
+    check_eq(bar_l, ls({"hello", "world"}));
+    check_eq(bar_d, ds({{"a", "a"}, {"b", "b"}}));
+    log::test::debug("verify dictionary content");
+    check_eq(get_as<int>(cfg, "foo.i"), 42);
+  }
+  SECTION("parse invalid arguments with error") {
+    auto check_parse_options
+      = [this](const config_option_set::parse_result& res,
+               const config_option_set::parse_result cmp) {
+          check_eq(res.first, cmp.first);
+          check_eq(res.second, cmp.second);
+        };
+    vector<string> long_option_no_arg{"--"};
+    check_parse_options(
+      opts.parse(cfg, long_option_no_arg),
+      config_option_set::parse_result{pec::success, long_option_no_arg.end()});
+    vector<string> short_option_no_arg{"-"};
+    check_parse_options(opts.parse(cfg, short_option_no_arg),
+                        config_option_set::parse_result{
+                          pec::not_an_option, short_option_no_arg.begin()});
+    vector<string> invalid_option_format{"foo"};
+    check_parse_options(opts.parse(cfg, invalid_option_format),
+                        config_option_set::parse_result{
+                          pec::not_an_option, invalid_option_format.begin()});
+    SECTION("single argument") {
+      vector<string> long_option_with_wrong_type{
+        "--bar.l={\"hello\", \"world\"}"};
+      check_parse_options(
+        opts.parse(cfg, long_option_with_wrong_type),
+        config_option_set::parse_result{pec::invalid_argument,
+                                        long_option_with_wrong_type.begin()});
+      vector<string> short_option_missing_value{"-i"};
+      check_parse_options(
+        opts.parse(cfg, short_option_missing_value),
+        config_option_set::parse_result{pec::missing_argument,
+                                        short_option_missing_value.end()});
+      vector<string> short_option_wrong_value_type{"-ihello"};
+      check_parse_options(
+        opts.parse(cfg, short_option_wrong_value_type),
+        config_option_set::parse_result{pec::invalid_argument,
+                                        short_option_wrong_value_type.begin()});
+      vector<string> short_option_invalid_flag{"-bhello"};
+      check_parse_options(
+        opts.parse(cfg, short_option_invalid_flag),
+        config_option_set::parse_result{pec::invalid_argument,
+                                        short_option_invalid_flag.begin()});
+      vector<string> short_option_missing_flag{"-k"};
+      check_parse_options(
+        opts.parse(cfg, short_option_missing_flag),
+        config_option_set::parse_result{pec::not_an_option,
+                                        short_option_missing_flag.begin()});
+      vector<string> long_option_missing_flag{"--k"};
+      check_parse_options(
+        opts.parse(cfg, long_option_missing_flag),
+        config_option_set::parse_result{pec::not_an_option,
+                                        long_option_missing_flag.begin()});
+      vector<string> long_option_missing_value{"--bar.l"};
+      check_parse_options(
+        opts.parse(cfg, long_option_missing_value),
+        config_option_set::parse_result{pec::missing_argument,
+                                        long_option_missing_value.end()});
+    }
+    SECTION("multiple arguments") {
+      vector<string> long_option_wrong_value_type{"--bar.l",
+                                                  "{\"hello\", \"world\"}"};
+      check_parse_options(
+        opts.parse(cfg, long_option_wrong_value_type),
+        config_option_set::parse_result{pec::invalid_argument,
+                                        long_option_wrong_value_type.begin()});
+      vector<string> short_option_wrong_value_type{"-i", "hello"};
+      check_parse_options(
+        opts.parse(cfg, short_option_wrong_value_type),
+        config_option_set::parse_result{pec::invalid_argument,
+                                        short_option_wrong_value_type.begin()});
+      vector<string> short_option_missing_value{"-i", ""};
+      check_parse_options(
+        opts.parse(cfg, short_option_missing_value),
+        config_option_set::parse_result{pec::missing_argument,
+                                        short_option_missing_value.begin()});
+    }
+  }
 }
 
 TEST("long format for flags") {
