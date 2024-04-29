@@ -493,6 +493,8 @@ CAF_HAS_ALIAS_TRAIT(key_type);
 
 CAF_HAS_ALIAS_TRAIT(mapped_type);
 
+CAF_HAS_ALIAS_TRAIT(handle_type);
+
 // -- constexpr functions for use in enable_if & friends -----------------------
 
 /// Checks whether T behaves like `std::map`.
