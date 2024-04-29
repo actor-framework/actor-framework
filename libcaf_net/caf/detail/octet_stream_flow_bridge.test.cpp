@@ -2,7 +2,7 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#include "caf/net/octet_stream/with.hpp"
+#include "caf/detail/octet_stream_flow_bridge.hpp"
 
 #include "caf/test/test.hpp"
 
@@ -16,9 +16,6 @@
 #include "caf/flow/observable_builder.hpp"
 #include "caf/flow/scoped_coordinator.hpp"
 #include "caf/log/test.hpp"
-
-// Note: the test here are similar to flow_bridge.test.cpp, except that they use
-//       the `with` DSL instead of the `flow_bridge` class directly.
 
 using namespace caf;
 
@@ -63,46 +60,41 @@ struct fixture {
 
 WITH_FIXTURE(fixture) {
 
-TEST("a flow bridge connects flows to a socket") {
+TEST("a bridge makes received data available through an SPSC buffer") {
   // Socket and thread setup.
   auto fd_pair = net::make_stream_socket_pair();
   require(fd_pair.has_value());
   auto [fd1, fd2] = *fd_pair;
   auto ping_pong_thread = std::thread{ping_pong, fd2, 50};
-  auto worker = std::thread{};
+  auto [s2a_pull, s2a_push] = async::make_spsc_buffer_resource<std::byte>();
+  auto [a2s_pull, a2s_push] = async::make_spsc_buffer_resource<std::byte>();
   // Bridge setup.
+  auto bridge = detail::make_octet_stream_flow_bridge(16, 16,
+                                                      std::move(s2a_pull),
+                                                      std::move(a2s_push));
+  auto transport = net::octet_stream::transport::make(fd1, std::move(bridge));
+  transport->active_policy().connect();
+  auto ptr = net::socket_manager::make(mpx.get(), std::move(transport));
+  mpx->start(ptr);
+  // Run the flow to completion.
   auto received = std::make_shared<std::vector<int>>();
-  auto rendezvous = std::make_shared<detail::latch>(2);
-  auto start_res
-    = net::octet_stream::with(mpx.get())
-        .connect(fd1)
-        .read_buffer_size(16)
-        .write_buffer_size(16)
-        .start([received, &rendezvous, &worker](auto pull, auto push) {
-          worker = std::thread{[pull, push, received, rendezvous] {
-            auto self = flow::scoped_coordinator::make();
-            self->make_observable()
-              .iota(1) //
-              .take(50)
-              .map([](int x) { return std::byte{static_cast<uint8_t>(x)}; })
-              .subscribe(push);
-            pull.observe_on(self.get())
-              .map([](std::byte item) { return std::to_integer<int>(item); })
-              .do_finally([rendezvous] { rendezvous->count_down(); })
-              .for_each([received](int item) { received->push_back(item); });
-            self->run();
-          }};
-        });
-  require(start_res.has_value());
+  auto self = flow::scoped_coordinator::make();
+  self->make_observable()
+    .iota(1)
+    .take(50)
+    .map([](int val) { return static_cast<std::byte>(val); })
+    .subscribe(std::move(s2a_push));
+  a2s_pull.observe_on(self.get())
+    .map([](std::byte val) { return static_cast<int>(val); })
+    .for_each([received](int item) { received->push_back(item); });
+  self->run_some(std::chrono::seconds(1)); // Run at most for 1 second.
   // Check the results.
-  rendezvous->count_down_and_wait();
   auto want = std::vector<int>();
   want.resize(50);
   std::iota(want.begin(), want.end(), 2);
   check_eq(*received, want);
   // Cleanup.
   ping_pong_thread.join();
-  worker.join();
 }
 
 } // WITH_FIXTURE(fixture)

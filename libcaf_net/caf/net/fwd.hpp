@@ -85,7 +85,6 @@ actor_shell_ptr_t<Handle> make_actor_shell(socket_manager*);
 
 namespace caf::net::octet_stream {
 
-class flow_bridge;
 class lower_layer;
 class policy;
 class transport;
