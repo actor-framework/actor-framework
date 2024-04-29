@@ -24,11 +24,11 @@ struct aggregator_trait {
                                     caf::result<int32_t>(caf::get_atom)>;
 };
 
-using aggregator = caf::typed_actor<aggregator_trait>;
+using aggregator_actor = caf::typed_actor<aggregator_trait>;
 
 CAF_BEGIN_TYPE_ID_BLOCK(remote_spawn, first_custom_type_id)
 
-  CAF_ADD_TYPE_ID(remote_spawn, (aggregator))
+  CAF_ADD_TYPE_ID(remote_spawn, (aggregator_actor))
 
 CAF_END_TYPE_ID_BLOCK(remote_spawn)
 
@@ -43,7 +43,7 @@ struct aggregator_state {
     // nop
   }
 
-  aggregator::behavior_type make_behavior() {
+  aggregator_actor::behavior_type make_behavior() {
     return {
       [this](add_atom, int32_t a) { value += a; },
       [this](get_atom) -> result<int32_t> { return value; },
@@ -53,7 +53,7 @@ struct aggregator_state {
   int32_t value = 0;
 };
 
-// removes leading and trailing whitespaces
+// Removes leading and trailing white spaces.
 string trim(string s) {
   auto not_space = [](char c) { return isspace(c) == 0; };
   // trim left
@@ -63,8 +63,8 @@ string trim(string s) {
   return s;
 }
 
-// implements our main loop for reading user input
-void client_repl(actor_system& sys, aggregator hdl) {
+// Implements our main loop for reading user input.
+void client_repl(actor_system& sys, aggregator_actor hdl) {
   auto usage = [&sys] {
     sys.println("Usage:");
     sys.println("  quit     : terminate program");
@@ -113,9 +113,9 @@ void client_repl(actor_system& sys, aggregator hdl) {
   }
 }
 
-constexpr uint16_t default_port = 0;
-constexpr std::string_view default_host = "localhost";
-constexpr bool default_server_mode = false;
+constexpr auto default_port = uint16_t{0};
+constexpr auto default_host = "localhost"sv;
+constexpr auto default_server_mode = false;
 
 struct config : actor_system_config {
   config() {
@@ -159,17 +159,17 @@ void client(actor_system& sys, const config& cfg) {
   }
   auto type = "aggregator";               // type of the actor we wish to spawn
   auto args = make_message(int32_t{100}); // arguments to construct the actor
-  auto tout = std::chrono::seconds(30);   // wait no longer than 30s
-  auto worker = sys.middleman().remote_spawn<aggregator>(*node, type, args,
-                                                         tout);
-  if (!worker) {
-    sys.println("*** remote spawn failed: {}", worker.error());
+  auto tout = std::chrono::seconds(5);    // timeout for the remote spawn
+  auto aggregator = sys.middleman().remote_spawn<aggregator_actor>(*node, type,
+                                                                   args, tout);
+  if (!aggregator) {
+    sys.println("*** remote spawn failed: {}", aggregator.error());
     return;
   }
   // start using worker in main loop
-  client_repl(sys, *worker);
+  client_repl(sys, *aggregator);
   // be a good citizen and terminate remotely spawned actor before exiting
-  anon_send_exit(*worker, exit_reason::kill);
+  anon_send_exit(*aggregator, exit_reason::kill);
 }
 
 void caf_main(actor_system& sys, const config& cfg) {
