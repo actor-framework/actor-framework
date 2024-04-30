@@ -20,23 +20,10 @@
 namespace caf::net::dsl {
 
 /// Base type for client factories for use with `has_connect`.
-template <class Config, class Derived>
+template <class Derived>
 class client_factory_base {
 public:
-  using config_type = Config;
-
-  using config_pointer = intrusive_ptr<config_type>;
-
-  client_factory_base(const client_factory_base&) = default;
-
-  client_factory_base& operator=(const client_factory_base&) = default;
-
-  template <class T, class... Ts>
-  explicit client_factory_base(dsl::client_config_tag<T> token, Ts&&... xs) {
-    cfg_ = config_type::make(token, std::forward<Ts>(xs)...);
-  }
-
-  explicit client_factory_base(config_pointer cfg) : cfg_(std::move(cfg)) {
+  virtual ~client_factory_base() {
     // nop
   }
 
@@ -44,7 +31,8 @@ public:
   template <class F>
   Derived& do_on_error(F callback) {
     static_assert(std::is_invocable_v<F, const error&>);
-    cfg_->on_error = make_shared_type_erased_callback(std::move(callback));
+    base_config().on_error
+      = make_shared_type_erased_callback(std::move(callback));
     return dref();
   }
 
@@ -53,7 +41,7 @@ public:
   /// @param value The new retry delay.
   /// @returns a reference to this `client_factory`.
   Derived& retry_delay(timespan value) {
-    if (auto* lazy = get_if<client_config::lazy>(&cfg_->data))
+    if (auto* lazy = std::get_if<client_config::lazy>(&base_config().data))
       lazy->retry_delay = value;
     return dref();
   }
@@ -63,7 +51,7 @@ public:
   /// @param value The new connection timeout.
   /// @returns a reference to this `client_factory`.
   Derived& connection_timeout(timespan value) {
-    if (auto* lazy = get_if<client_config::lazy>(&cfg_->data))
+    if (auto* lazy = std::get_if<client_config::lazy>(&base_config().data))
       lazy->connection_timeout = value;
     return dref();
   }
@@ -73,13 +61,9 @@ public:
   /// @param value The new maximum retry count.
   /// @returns a reference to this `client_factory`.
   Derived& max_retry_count(size_t value) {
-    if (auto* lazy = get_if<client_config::lazy>(&cfg_->data))
+    if (auto* lazy = std::get_if<client_config::lazy>(&base_config().data))
       lazy->max_retry_count = value;
     return dref();
-  }
-
-  config_type& config() {
-    return *cfg_;
   }
 
 protected:
@@ -92,7 +76,7 @@ protected:
     return [this, fn = std::forward<Fn>(fn)](auto&& fd) mutable {
       using fd_t = decltype(fd);
       using res_t = decltype(fn(std::forward<fd_t>(fd)));
-      auto* sub = cfg_->as_has_make_ctx();
+      auto* sub = base_config().as_has_make_ctx();
       if (sub == nullptr) {
         auto err = make_error(sec::logic_error,
                               "required SSL but no context available");
@@ -122,7 +106,7 @@ protected:
     return [this, fn = std::forward<Fn>(fn)](auto&& fd) mutable {
       using fd_t = decltype(fd);
       using res_t = decltype(fn(std::forward<fd_t>(fd)));
-      if (auto* sub = cfg_->as_has_make_ctx(); sub && sub->make_ctx) {
+      if (auto* sub = base_config().as_has_make_ctx(); sub && sub->make_ctx) {
         auto& make_ctx = sub->make_ctx;
         auto maybe_ctx = make_ctx();
         if (!maybe_ctx)
@@ -149,7 +133,7 @@ protected:
     };
   }
 
-  config_pointer cfg_;
+  virtual dsl::client_config_value& base_config() = 0;
 };
 
 } // namespace caf::net::dsl

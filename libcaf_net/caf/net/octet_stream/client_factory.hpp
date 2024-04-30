@@ -15,63 +15,39 @@
 #include "caf/flow/fwd.hpp"
 #include "caf/flow/observable.hpp"
 
-#include <functional>
 #include <type_traits>
 
 namespace caf::net::octet_stream {
 
-/// Configuration for the `with(...).connect(...).start(...)` DSL.
-class client_factory_config : public dsl::client_config_value {
-public:
-  using super = dsl::client_config_value;
-
-  using super::super;
-
-  /// Sets the default buffer size for reading from the network.
-  uint32_t read_buffer_size = defaults::net::octet_stream_buffer_size;
-
-  /// Sets the default buffer size for writing to the network.
-  uint32_t write_buffer_size = defaults::net::octet_stream_buffer_size;
-
-  template <class T, class... Args>
-  static auto make(dsl::client_config_tag<T>,
-                   const dsl::generic_config_value& from, Args&&... args) {
-    return super::make_impl(std::in_place_type<client_factory_config>, from,
-                            std::in_place_type<T>, std::forward<Args>(args)...);
-  }
-};
-
 /// Factory for the `with(...).connect(...).start(...)` DSL.
 class CAF_NET_EXPORT client_factory
-  : public dsl::client_factory_base<client_factory_config, client_factory> {
+  : public dsl::client_factory_base<client_factory> {
 public:
-  using super = dsl::client_factory_base<client_factory_config, client_factory>;
+  // explicit client_factory(const dsl::generic_config_value& from);
 
-  using super::super;
+  template <class Token, class... Args>
+  client_factory(Token token, const dsl::generic_config_value& from,
+                 Args&&... args) {
+    init_config(from.mpx).assign(from, token, std::forward<Args>(args)...);
+  }
+
+  ~client_factory() override;
 
   /// Overrides the default buffer size for reading from the network.
-  client_factory&& read_buffer_size(uint32_t new_value) && {
-    config().read_buffer_size = new_value;
-    return std::move(*this);
-  }
+  client_factory&& read_buffer_size(uint32_t new_value) &&;
 
   /// Overrides the default buffer size for writing to the network.
-  client_factory&& write_buffer_size(uint32_t new_value) && {
-    config().write_buffer_size = new_value;
-    return std::move(*this);
-  }
+  client_factory&& write_buffer_size(uint32_t new_value) &&;
 
   template <class OnStart>
   [[nodiscard]] expected<disposable> start(OnStart on_start) {
-    using app_pull_t = async::consumer_resource<std::byte>;
-    using app_push_t = async::producer_resource<std::byte>;
-    static_assert(std::is_invocable_v<OnStart, app_pull_t, app_push_t>);
+    static_assert(std::is_invocable_v<OnStart, pull_t, push_t>);
     // Create socket-to-application and application-to-socket buffers.
     auto [s2a_pull, s2a_push] = async::make_spsc_buffer_resource<std::byte>();
     auto [a2s_pull, a2s_push] = async::make_spsc_buffer_resource<std::byte>();
     // Wrap the trait and the buffers that belong to the socket.
-    auto res = super::config().visit(
-      [this, pull = a2s_pull, push = s2a_push](auto& data) { //
+    auto res = base_config().visit(
+      [this, pull = a2s_pull, push = s2a_push](auto& data) {
         return this->do_start(data, std::move(pull), std::move(push));
       });
     if (res) {
@@ -80,10 +56,17 @@ public:
     return res;
   }
 
+protected:
+  dsl::client_config_value& base_config() override;
+
 private:
+  class config_impl;
+
   using pull_t = async::consumer_resource<std::byte>;
 
   using push_t = async::producer_resource<std::byte>;
+
+  dsl::client_config_value& init_config(multiplexer* mpx);
 
   expected<disposable> do_start(dsl::client_config::lazy& data,
                                 dsl::server_address& addr, pull_t pull,
@@ -102,6 +85,8 @@ private:
                                 push_t push);
 
   expected<disposable> do_start(error& err, pull_t pull, push_t push);
+
+  config_impl* config_ = nullptr;
 };
 
 } // namespace caf::net::octet_stream

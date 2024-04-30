@@ -17,8 +17,8 @@ namespace caf::net::octet_stream {
 
 namespace {
 
-template <class Conn>
-expected<disposable> do_start_impl(client_factory::config_type& cfg, Conn conn,
+template <class Config, class Conn>
+expected<disposable> do_start_impl(Config& cfg, Conn conn,
                                    async::consumer_resource<std::byte> pull,
                                    async::producer_resource<std::byte> push) {
   auto bridge = detail::make_octet_stream_flow_bridge(cfg.read_buffer_size,
@@ -34,6 +34,42 @@ expected<disposable> do_start_impl(client_factory::config_type& cfg, Conn conn,
 
 } // namespace
 
+class client_factory::config_impl : public dsl::client_config_value {
+public:
+  using super = dsl::client_config_value;
+
+  using super::super;
+
+  /// Sets the default buffer size for reading from the network.
+  uint32_t read_buffer_size = defaults::net::octet_stream_buffer_size;
+
+  /// Sets the default buffer size for writing to the network.
+  uint32_t write_buffer_size = defaults::net::octet_stream_buffer_size;
+};
+
+client_factory::~client_factory() {
+  delete config_;
+}
+
+client_factory&& client_factory::read_buffer_size(uint32_t new_value) && {
+  config_->read_buffer_size = new_value;
+  return std::move(*this);
+}
+
+client_factory&& client_factory::write_buffer_size(uint32_t new_value) && {
+  config_->write_buffer_size = new_value;
+  return std::move(*this);
+}
+
+dsl::client_config_value& client_factory::base_config() {
+  return *config_;
+}
+
+dsl::client_config_value& client_factory::init_config(multiplexer* mpx) {
+  config_ = new config_impl(mpx);
+  return *config_;
+}
+
 expected<disposable> client_factory::do_start(dsl::client_config::lazy& data,
                                               dsl::server_address& addr,
                                               pull_t pull, push_t push) {
@@ -42,7 +78,7 @@ expected<disposable> client_factory::do_start(dsl::client_config::lazy& data,
                                  data.retry_delay)
     .and_then(with_ssl_connection_or_socket([this, &pull, &push](auto&& conn) {
       using conn_t = decltype(conn);
-      return do_start_impl(config(), std::forward<conn_t>(conn),
+      return do_start_impl(*config_, std::forward<conn_t>(conn),
                            std::move(pull), std::move(push));
     }));
 }
@@ -69,19 +105,19 @@ expected<disposable> client_factory::do_start(dsl::client_config::socket& data,
     .and_then(check_socket)
     .and_then(with_ssl_connection_or_socket([this, &pull, &push](auto&& conn) {
       using conn_t = decltype(conn);
-      return do_start_impl(config(), std::forward<conn_t>(conn),
+      return do_start_impl(*config_, std::forward<conn_t>(conn),
                            std::move(pull), std::move(push));
     }));
 }
 
 expected<disposable> client_factory::do_start(dsl::client_config::conn& data,
                                               pull_t pull, push_t push) {
-  return do_start_impl(config(), std::move(data.state), std::move(pull),
+  return do_start_impl(*config_, std::move(data.state), std::move(pull),
                        std::move(push));
 }
 
 expected<disposable> client_factory::do_start(error& err, pull_t, push_t) {
-  config().call_on_error(err);
+  config_->call_on_error(err);
   return expected<disposable>{std::move(err)};
 }
 

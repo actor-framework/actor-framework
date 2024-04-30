@@ -44,6 +44,7 @@ caf_add_component(
     caf/net/actor_shell.test.cpp
     caf/net/datagram_socket.cpp
     caf/net/datagram_socket.test.cpp
+    caf/net/dsl/client_config.hpp
     caf/net/dsl/config_base.cpp
     caf/net/generic_lower_layer.cpp
     caf/net/generic_upper_layer.cpp
@@ -74,6 +75,7 @@ caf_add_component(
     caf/net/http/v1.cpp
     caf/net/ip.cpp
     caf/net/ip.test.cpp
+    caf/net/lp/client_factory.cpp
     caf/net/lp/default_trait.cpp
     caf/net/lp/frame.test.cpp
     caf/net/lp/framing.cpp
@@ -123,6 +125,7 @@ caf_add_component(
     caf/net/udp_datagram_socket.cpp
     caf/net/udp_datagram_socket.test.cpp
     caf/net/web_socket/client.cpp
+    caf/net/web_socket/client_factory.cpp
     caf/net/web_socket/default_trait.cpp
     caf/net/web_socket/frame.cpp
     caf/net/web_socket/frame.test.cpp

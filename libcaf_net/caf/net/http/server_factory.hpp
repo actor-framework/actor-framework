@@ -31,74 +31,27 @@
 
 namespace caf::detail {
 
-class CAF_NET_EXPORT http_request_producer : public atomic_ref_counted,
-                                             public async::producer {
+class CAF_NET_EXPORT http_request_producer : public async::producer {
 public:
-  using buffer_ptr = async::spsc_buffer_ptr<net::http::request>;
+  ~http_request_producer() override;
 
-  http_request_producer(async::execution_context_ptr ecp, buffer_ptr buf)
-    : ecp_(std::move(ecp)), buf_(std::move(buf)) {
-    // nop
-  }
-
-  static auto make(async::execution_context_ptr ecp, buffer_ptr buf) {
-    auto ptr = make_counted<http_request_producer>(std::move(ecp), buf);
-    buf->set_producer(ptr);
-    return ptr;
-  }
-
-  void on_consumer_ready() override;
-
-  void on_consumer_cancel() override;
-
-  void on_consumer_demand(size_t) override;
-
-  void ref_producer() const noexcept override;
-
-  void deref_producer() const noexcept override;
-
-  bool push(const net::http::request& item);
-
-private:
-  async::execution_context_ptr ecp_;
-  buffer_ptr buf_;
+  virtual bool push(const net::http::request& item) = 0;
 };
 
 using http_request_producer_ptr = intrusive_ptr<http_request_producer>;
 
-template <class Transport>
-class http_conn_factory
-  : public connection_factory<typename Transport::connection_handle> {
-public:
-  using connection_handle = typename Transport::connection_handle;
+CAF_NET_EXPORT
+http_request_producer_ptr
+make_http_request_producer(async::execution_context_ptr ecp,
+                           async::spsc_buffer_ptr<net::http::request> buf);
 
-  http_conn_factory(std::vector<net::http::route_ptr> routes,
-                    size_t max_consecutive_reads, size_t max_request_size)
-    : routes_(std::move(routes)),
-      max_consecutive_reads_(max_consecutive_reads),
-      max_request_size_(max_request_size) {
-    // nop
-  }
+CAF_NET_EXPORT connection_acceptor_ptr make_http_conn_acceptor(
+  net::tcp_accept_socket fd, std::vector<net::http::route_ptr> routes,
+  size_t max_consecutive_reads, size_t max_request_size);
 
-  net::socket_manager_ptr make(net::multiplexer* mpx,
-                               connection_handle conn) override {
-    auto app = net::http::router::make(routes_);
-    auto serv = net::http::server::make(std::move(app));
-    serv->max_request_size(max_request_size_);
-    auto transport = Transport::make(std::move(conn), std::move(serv));
-    transport->max_consecutive_reads(max_consecutive_reads_);
-    transport->active_policy().accept();
-    auto res = net::socket_manager::make(mpx, std::move(transport));
-    mpx->watch(res->as_disposable());
-    return res;
-  }
-
-private:
-  std::vector<net::http::route_ptr> routes_;
-  size_t max_consecutive_reads_;
-  size_t max_request_size_;
-  action monitor_;
-};
+CAF_NET_EXPORT connection_acceptor_ptr make_http_conn_acceptor(
+  net::ssl::tcp_acceptor acceptor, std::vector<net::http::route_ptr> routes,
+  size_t max_consecutive_reads, size_t max_request_size);
 
 } // namespace caf::detail
 
@@ -201,17 +154,13 @@ private:
       return make_error(sec::logic_error,
                         "cannot start an HTTP server without any routes");
     }
-    using transport_t = typename Acceptor::transport_type;
-    using factory_t = detail::http_conn_factory<transport_t>;
-    using impl_t = detail::accept_handler<Acceptor>;
-    auto factory = std::make_unique<factory_t>(cfg.routes,
-                                               cfg.max_consecutive_reads,
-                                               cfg.max_request_size);
-    auto impl = impl_t::make(std::move(acc), std::move(factory),
-                             cfg.max_connections, cfg.monitored_actors);
-    auto impl_ptr = impl.get();
+    auto factory = detail::make_http_conn_acceptor(std::move(acc), cfg.routes,
+                                                   cfg.max_consecutive_reads,
+                                                   cfg.max_request_size);
+    auto impl = detail::make_accept_handler(std::move(factory),
+                                            cfg.max_connections,
+                                            cfg.monitored_actors);
     auto ptr = net::socket_manager::make(cfg.mpx, std::move(impl));
-    impl_ptr->self_ref(ptr->as_disposable());
     cfg.mpx->start(ptr);
     return expected<disposable>{disposable{std::move(ptr)}};
   }
@@ -219,26 +168,23 @@ private:
   template <class Acceptor, class OnStart>
   expected<disposable>
   do_start_impl(config_type& cfg, Acceptor acc, OnStart& on_start) {
-    using transport_t = typename Acceptor::transport_type;
-    using factory_t = detail::http_conn_factory<transport_t>;
-    using impl_t = detail::accept_handler<Acceptor>;
     auto routes = cfg.routes;
     auto [pull, push] = async::make_spsc_buffer_resource<request>();
-    auto producer = detail::http_request_producer::make(cfg.mpx,
-                                                        push.try_open());
+    auto producer = detail::make_http_request_producer(cfg.mpx,
+                                                       push.try_open());
     routes.push_back(make_route([producer](responder& res) {
       if (!producer->push(responder{res}.to_request())) {
         auto err = make_error(sec::runtime_error, "flow disconnected");
         res.router()->shutdown(err);
       }
     }));
-    auto factory = std::make_unique<factory_t>(std::move(routes),
-                                               cfg.max_consecutive_reads);
-    auto impl = impl_t::make(std::move(acc), std::move(factory),
-                             cfg.max_connections, cfg.monitored_actors);
-    auto impl_ptr = impl.get();
+    auto factory = detail::make_http_conn_acceptor(std::move(acc),
+                                                   std::move(routes),
+                                                   cfg.max_consecutive_reads);
+    auto impl = detail::make_accept_handler(std::move(factory),
+                                            cfg.max_connections,
+                                            cfg.monitored_actors);
     auto ptr = net::socket_manager::make(cfg.mpx, std::move(impl));
-    impl_ptr->self_ref(ptr->as_disposable());
     cfg.mpx->start(ptr);
     on_start(std::move(pull));
     return expected<disposable>{disposable{std::move(ptr)}};

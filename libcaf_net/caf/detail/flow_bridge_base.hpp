@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/net/http/request_header.hpp"
+#include "caf/net/multiplexer.hpp"
 
 #include "caf/async/consumer_adapter.hpp"
 #include "caf/async/producer_adapter.hpp"
@@ -30,6 +31,12 @@ public:
 
   /// Type for the producer adapter. We produce the input of the application.
   using producer_type = async::producer_adapter<input_type>;
+
+  flow_bridge_base() = default;
+
+  explicit flow_bridge_base(Trait trait) : trait_(std::move(trait)) {
+    // nop
+  }
 
   virtual bool write(const output_type& item) = 0;
 

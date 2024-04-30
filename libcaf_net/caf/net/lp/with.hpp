@@ -58,7 +58,7 @@ public:
   /// @private
   template <class T, class... Ts>
   auto make(dsl::client_config_tag<T> token, Ts&&... xs) {
-    return client_factory<Trait>{token, *config_, std::forward<Ts>(xs)...};
+    return client_factory{token, *config_, std::forward<Ts>(xs)...};
   }
 
 private:

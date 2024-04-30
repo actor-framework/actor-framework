@@ -96,11 +96,7 @@ class config_impl : public config_base {
 public:
   using super = config_base;
 
-  template <class... Args>
-  explicit config_impl(const config_base& from, Args&&... args)
-    : super(from), data(std::forward<Args>(args)...) {
-    // nop
-  }
+  using variant_type = std::variant<error, Data...>;
 
   template <class... Args>
   explicit config_impl(multiplexer* mpx, Args&&... args)
@@ -108,7 +104,13 @@ public:
     // nop
   }
 
-  std::variant<error, Data...> data;
+  template <class... Args>
+  explicit config_impl(const config_base& from, Args&&... args)
+    : super(from), data(std::forward<Args>(args)...) {
+    // nop
+  }
+
+  variant_type data;
 
   template <class F>
   auto visit(F&& f) {
@@ -142,6 +144,26 @@ public:
 
   const has_make_ctx* as_has_make_ctx() const noexcept override {
     return has_make_ctx::from(data);
+  }
+
+  template <class From, class Token, class... Args>
+  void assign(const From& from, Token, Args&&... args) {
+    // Always construct the data in-place first. This makes sure we account
+    // for ownership transfers (e.g. for sockets).
+    data = variant_type{std::in_place_type<typename Token::type>,
+                        std::forward<Args>(args)...};
+    // Discard the data if `from` contained an error. Otherwise, transfer the
+    // SSL context over to the refined configuration.
+    if (!from) {
+      data.template emplace<error>(std::get<error>(from.data));
+    } else if (auto* dst = this->as_has_make_ctx()) {
+      if (const auto* src = from.as_has_make_ctx()) {
+        dst->assign(src);
+      } else {
+        data = make_error(caf::sec::logic_error,
+                          "failed to transfer SSL context");
+      }
+    }
   }
 
 protected:
