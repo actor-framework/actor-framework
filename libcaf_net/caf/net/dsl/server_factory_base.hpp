@@ -18,58 +18,38 @@
 namespace caf::net::dsl {
 
 /// Base type for server factories for use with `can_accept`.
-template <class Config, class Derived>
+template <class Derived>
 class server_factory_base {
 public:
-  using config_type = Config;
-
-  using config_pointer = intrusive_ptr<config_type>;
-
-  server_factory_base(server_factory_base&&) = default;
-
-  server_factory_base(const server_factory_base&) = default;
-
-  server_factory_base& operator=(server_factory_base&&) = default;
-
-  server_factory_base& operator=(const server_factory_base&) = default;
-
-  explicit server_factory_base(config_pointer cfg) : cfg_(std::move(cfg)) {
+  virtual ~server_factory_base() {
     // nop
-  }
-
-  template <class T, class... Ts>
-  explicit server_factory_base(dsl::server_config_tag<T> token, Ts&&... xs) {
-    cfg_ = config_type::make(token, std::forward<Ts>(xs)...);
   }
 
   /// Sets the callback for errors.
   template <class F>
-  Derived& do_on_error(F callback) {
+  Derived&& do_on_error(F callback) && {
     static_assert(std::is_invocable_v<F, const error&>);
-    cfg_->on_error = make_shared_type_erased_callback(std::move(callback));
+    base_config().on_error
+      = make_shared_type_erased_callback(std::move(callback));
     return dref();
   }
 
   /// Configures how many concurrent connections the server accepts.
-  Derived& max_connections(size_t value) {
-    cfg_->max_connections = value;
+  Derived&& max_connections(size_t value) && {
+    base_config().max_connections = value;
     return dref();
   }
 
   /// Configures whether the server creates its socket with `SO_REUSEADDR`.
-  Derived& reuse_address(bool value) {
-    if (auto* lazy = get_if<server_config::lazy>(&cfg_->data))
+  Derived&& reuse_address(bool value) && {
+    if (auto* lazy = get_if<server_config::lazy>(&base_config().data))
       lazy->reuse_addr = value;
     return dref();
   }
 
-  config_type& config() {
-    return *cfg_;
-  }
-
 protected:
-  Derived& dref() {
-    return static_cast<Derived&>(*this);
+  Derived&& dref() {
+    return std::move(static_cast<Derived&>(*this));
   }
 
   template <class Fn>
@@ -77,7 +57,7 @@ protected:
     return [this, fn = std::forward<Fn>(fn)](auto&& fd) mutable {
       using fd_t = decltype(fd);
       using res_t = decltype(fn(std::forward<fd_t>(fd)));
-      if (auto* sub = cfg_->as_has_make_ctx(); sub && sub->make_ctx) {
+      if (auto* sub = base_config().as_has_make_ctx(); sub && sub->make_ctx) {
         auto maybe_ctx = sub->make_ctx();
         if (!maybe_ctx)
           return res_t{maybe_ctx.error()};
@@ -89,7 +69,7 @@ protected:
     };
   }
 
-  config_pointer cfg_;
+  virtual server_config_value& base_config() = 0;
 };
 
 } // namespace caf::net::dsl

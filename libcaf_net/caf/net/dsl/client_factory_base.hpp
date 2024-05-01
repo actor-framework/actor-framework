@@ -133,7 +133,7 @@ protected:
     };
   }
 
-  virtual dsl::client_config_value& base_config() = 0;
+  virtual client_config_value& base_config() = 0;
 };
 
 } // namespace caf::net::dsl

@@ -97,9 +97,9 @@ private:
   async::producer_resource<event_type> events_;
 };
 
-template <class Acceptor>
+template <class Config, class Acceptor>
 expected<disposable>
-do_start_impl(server_factory::config_type& cfg, Acceptor acc,
+do_start_impl(Config& cfg, Acceptor acc,
               async::producer_resource<accept_event<std::byte>> push) {
   using impl_t = connection_acceptor_impl<Acceptor>;
   auto conn_acc = impl_t::make(std::move(acc), cfg.read_buffer_size,
@@ -114,21 +114,70 @@ do_start_impl(server_factory::config_type& cfg, Acceptor acc,
 
 } // namespace
 
+class server_factory::config_impl : public dsl::server_config_value {
+public:
+  using super = dsl::server_config_value;
+
+  using super::super;
+
+  /// Sets the default buffer size for reading from the network.
+  uint32_t read_buffer_size = defaults::net::octet_stream_buffer_size;
+
+  /// Sets the default buffer size for writing to the network.
+  uint32_t write_buffer_size = defaults::net::octet_stream_buffer_size;
+
+  /// Store actors that the server should monitor.
+  std::vector<strong_actor_ptr> monitored_actors;
+};
+
+server_factory::~server_factory() {
+  delete config_;
+}
+
+dsl::server_config_value& server_factory::base_config() {
+  return *config_;
+}
+
+dsl::server_config_value& server_factory::init_config(multiplexer* mpx) {
+  config_ = new config_impl(mpx);
+  return *config_;
+}
+
+server_factory&& server_factory::read_buffer_size(uint32_t new_value) && {
+  config_->read_buffer_size = new_value;
+  return std::move(*this);
+}
+
+server_factory&& server_factory::write_buffer_size(uint32_t new_value) && {
+  config_->write_buffer_size = new_value;
+  return std::move(*this);
+}
+
+void server_factory::do_monitor(strong_actor_ptr ptr) {
+  if (ptr) {
+    config_->monitored_actors.push_back(std::move(ptr));
+    return;
+  }
+  auto err = make_error(sec::logic_error,
+                        "cannot monitor an invalid actor handle");
+  config_->fail(std::move(err));
+}
+
 expected<disposable> server_factory::do_start(dsl::server_config::socket& data,
                                               push_t push) {
   return checked_socket(data.take_fd())
-    .and_then(this->with_ssl_acceptor_or_socket([this, &push](auto&& acc) {
+    .and_then(with_ssl_acceptor_or_socket([this, &push](auto&& acc) {
       using acc_t = decltype(acc);
-      return do_start_impl(config(), std::forward<acc_t>(acc), std::move(push));
+      return do_start_impl(*config_, std::forward<acc_t>(acc), std::move(push));
     }));
 }
 
 expected<disposable> server_factory::do_start(dsl::server_config::lazy& data,
                                               push_t push) {
   return make_tcp_accept_socket(data.port, data.bind_address, data.reuse_addr)
-    .and_then(this->with_ssl_acceptor_or_socket([this, &push](auto&& acc) {
+    .and_then(with_ssl_acceptor_or_socket([this, &push](auto&& acc) {
       using acc_t = decltype(acc);
-      return do_start_impl(config(), std::forward<acc_t>(acc), std::move(push));
+      return do_start_impl(*config_, std::forward<acc_t>(acc), std::move(push));
     }));
 }
 

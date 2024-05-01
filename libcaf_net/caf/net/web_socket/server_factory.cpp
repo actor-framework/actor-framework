@@ -2,12 +2,6 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#include "caf/net/http/config.hpp"
+#include "caf/net/web_socket/server_factory.hpp"
 
-namespace caf::net::http {
-
-server_config::~server_config() {
-  // nop
-}
-
-} // namespace caf::net::http
+namespace caf::net::web_socket {} // namespace caf::net::web_socket

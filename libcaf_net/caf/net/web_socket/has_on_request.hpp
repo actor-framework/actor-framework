@@ -11,6 +11,7 @@
 
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/type_traits.hpp"
+#include "caf/intrusive_ptr.hpp"
 
 #include <type_traits>
 
@@ -18,13 +19,14 @@ namespace caf::net::web_socket {
 
 /// DSL entry point for creating a server.
 template <class Trait>
-class has_on_request : public dsl::server_factory_base<server_config<Trait>,
-                                                       has_on_request<Trait>> {
+class has_on_request : public dsl::server_factory_base<has_on_request<Trait>> {
 public:
-  using super
-    = dsl::server_factory_base<server_config<Trait>, has_on_request<Trait>>;
-
-  using super::super;
+  template <class Token, class... Args>
+  has_on_request(Token token, const dsl::generic_config_value& from,
+                 Args&&... args) {
+    config_ = make_counted<server_config<Trait>>(from.mpx);
+    config_->assign(from, token, std::forward<Args>(args)...);
+  }
 
   /// Adds the handler for accepting or rejecting incoming requests.
   template <class OnRequest>
@@ -43,8 +45,16 @@ public:
     // Wrap the callback and return the factory object.
     using factory_t = typename acceptor_t::template server_factory_type<Trait>;
     auto callback = make_shared_type_erased_callback(std::move(on_request));
-    return factory_t{super::cfg_, std::move(callback)};
+    return factory_t{std::move(config_), std::move(callback)};
   }
+
+protected:
+  dsl::server_config_value& base_config() override {
+    return *config_;
+  }
+
+private:
+  intrusive_ptr<server_config<Trait>> config_;
 };
 
 } // namespace caf::net::web_socket

@@ -180,18 +180,14 @@ namespace caf::net::web_socket {
 
 /// Factory type for the `with(...).accept(...).start(...)` DSL.
 template <class Trait, class... Ts>
-class server_factory : public dsl::server_factory_base<server_config<Trait>,
-                                                       server_factory<Trait>> {
+class server_factory : public dsl::server_factory_base<server_factory<Trait>> {
 public:
-  using super
-    = dsl::server_factory_base<server_config<Trait>, server_factory<Trait>>;
-
-  using config_type = typename super::config_type;
+  using config_type = server_config<Trait>;
 
   using on_request_cb_type = shared_callback_ptr<void(acceptor<Ts...>&)>;
 
   server_factory(intrusive_ptr<config_type> cfg, on_request_cb_type on_request)
-    : super(std::move(cfg)), on_request_(std::move(on_request)) {
+    : config_(std::move(cfg)), on_request_(std::move(on_request)) {
     // nop
   }
 
@@ -218,7 +214,7 @@ public:
   /// Starts a server that accepts incoming connections with the WebSocket
   /// protocol.
   template <class OnStart>
-  expected<disposable> start(OnStart on_start) {
+  expected<disposable> start(OnStart on_start) && {
     using token_t
       = std::conditional_t<std::is_invocable_v<OnStart, acceptor_resource>,
                            flow_impl_token, custom_impl_token>;
@@ -229,11 +225,15 @@ public:
                     "OnStart must have signature 'void(acceptor_resource)' or "
                     "unique_ptr<web_socket::upper_layer::server>()'");
     }
-    auto& cfg = super::config();
-    return cfg.visit([this, &cfg, &on_start](auto& data) {
-      return this->do_start(cfg, data, on_start, token_t{})
-        .or_else([&cfg](const error& err) { cfg.call_on_error(err); });
+    return config_->visit([this, &on_start](auto& data) {
+      return this->do_start(data, on_start, token_t{})
+        .or_else([this](const error& err) { config_->call_on_error(err); });
     });
+  }
+
+protected:
+  dsl::server_config_value& base_config() override {
+    return *config_;
   }
 
 private:
@@ -242,8 +242,8 @@ private:
   struct custom_impl_token {};
 
   template <class Acceptor, class OnStart>
-  expected<disposable> do_start_impl(config_type& cfg, Acceptor acc,
-                                     OnStart& on_start, flow_impl_token) {
+  expected<disposable>
+  do_start_impl(Acceptor acc, OnStart& on_start, flow_impl_token) {
     using transport_t = typename Acceptor::transport_type;
     using factory_t = detail::ws_flow_conn_factory<transport_t, Trait, Ts...>;
     using impl_t = detail::accept_handler<Acceptor>;
@@ -251,64 +251,62 @@ private:
     auto [pull, push] = async::make_spsc_buffer_resource<accept_event>();
     auto producer = std::make_shared<producer_t>(producer_t{push.try_open()});
     auto factory = std::make_unique<factory_t>(on_request_, std::move(producer),
-                                               cfg.max_consecutive_reads);
+                                               config_->max_consecutive_reads);
     auto impl = impl_t::make(std::move(acc), std::move(factory),
-                             cfg.max_connections);
+                             config_->max_connections);
     auto impl_ptr = impl.get();
-    auto ptr = net::socket_manager::make(cfg.mpx, std::move(impl));
+    auto ptr = net::socket_manager::make(config_->mpx, std::move(impl));
     impl_ptr->self_ref(ptr->as_disposable());
-    cfg.mpx->start(ptr);
+    config_->mpx->start(ptr);
     on_start(std::move(pull));
     return expected<disposable>{disposable{std::move(ptr)}};
   }
 
   template <class Acceptor, class MakeApp>
-  expected<disposable> do_start_impl(config_type& cfg, Acceptor acc,
-                                     MakeApp& make_app, custom_impl_token) {
+  expected<disposable>
+  do_start_impl(Acceptor acc, MakeApp& make_app, custom_impl_token) {
     using transport_t = typename Acceptor::transport_type;
     using factory_t = detail::ws_simple_conn_factory<transport_t, MakeApp>;
     using impl_t = detail::accept_handler<Acceptor>;
     auto factory = std::make_unique<factory_t>(std::move(make_app),
-                                               cfg.max_consecutive_reads);
+                                               config_->max_consecutive_reads);
     auto impl = impl_t::make(std::move(acc), std::move(factory),
-                             cfg.max_connections);
+                             config_->max_connections);
     auto impl_ptr = impl.get();
-    auto ptr = net::socket_manager::make(cfg.mpx, std::move(impl));
+    auto ptr = net::socket_manager::make(config_->mpx, std::move(impl));
     impl_ptr->self_ref(ptr->as_disposable());
-    cfg.mpx->start(ptr);
+    config_->mpx->start(ptr);
     return expected<disposable>{disposable{std::move(ptr)}};
   }
 
   template <class OnStart, class Token>
-  expected<disposable> do_start(config_type& cfg,
-                                dsl::server_config::socket& data,
-                                OnStart& on_start, Token) {
+  expected<disposable>
+  do_start(dsl::server_config::socket& data, OnStart& on_start, Token) {
     return checked_socket(data.take_fd())
-      .and_then(
-        this->with_ssl_acceptor_or_socket([this, &cfg, &on_start](auto&& acc) {
-          using acc_t = decltype(acc);
-          return this->do_start_impl(cfg, std::forward<acc_t>(acc), on_start,
-                                     Token{});
-        }));
+      .and_then(this->with_ssl_acceptor_or_socket([this,
+                                                   &on_start](auto&& acc) {
+        using acc_t = decltype(acc);
+        return this->do_start_impl(std::forward<acc_t>(acc), on_start, Token{});
+      }));
   }
 
   template <class OnStart, class Token>
-  expected<disposable> do_start(config_type& cfg,
-                                dsl::server_config::lazy& data,
-                                OnStart& on_start, Token) {
+  expected<disposable>
+  do_start(dsl::server_config::lazy& data, OnStart& on_start, Token) {
     return make_tcp_accept_socket(data.port, data.bind_address, data.reuse_addr)
-      .and_then(
-        this->with_ssl_acceptor_or_socket([this, &cfg, &on_start](auto&& acc) {
-          using acc_t = decltype(acc);
-          return this->do_start_impl(cfg, std::forward<acc_t>(acc), on_start,
-                                     Token{});
-        }));
+      .and_then(this->with_ssl_acceptor_or_socket([this,
+                                                   &on_start](auto&& acc) {
+        using acc_t = decltype(acc);
+        return this->do_start_impl(std::forward<acc_t>(acc), on_start, Token{});
+      }));
   }
 
   template <class OnStart, class Token>
-  expected<disposable> do_start(config_type&, error& err, OnStart&, Token) {
+  expected<disposable> do_start(error& err, OnStart&, Token) {
     return expected<disposable>{std::move(err)};
   }
+
+  intrusive_ptr<server_config<Trait>> config_;
 
   on_request_cb_type on_request_;
 };

@@ -52,7 +52,6 @@ caf_add_component(
     caf/net/http/client.cpp
     caf/net/http/client.test.cpp
     caf/net/http/client_factory.cpp
-    caf/net/http/config.cpp
     caf/net/http/header.cpp
     caf/net/http/header.test.cpp
     caf/net/http/lower_layer.cpp
@@ -81,6 +80,7 @@ caf_add_component(
     caf/net/lp/framing.cpp
     caf/net/lp/framing.test.cpp
     caf/net/lp/lower_layer.cpp
+    caf/net/lp/server_factory.cpp
     caf/net/lp/upper_layer.cpp
     caf/net/middleman.cpp
     caf/net/multiplexer.cpp
@@ -134,6 +134,7 @@ caf_add_component(
     caf/net/web_socket/handshake.test.cpp
     caf/net/web_socket/lower_layer.cpp
     caf/net/web_socket/server.cpp
+    caf/net/web_socket/server_factory.cpp
     caf/net/web_socket/upper_layer.cpp
   LEGACY_TEST_SOURCES
     ${CMAKE_CURRENT_BINARY_DIR}/tests/legacy/pem.cpp

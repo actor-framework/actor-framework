@@ -23,8 +23,6 @@ namespace caf::net::octet_stream {
 class CAF_NET_EXPORT client_factory
   : public dsl::client_factory_base<client_factory> {
 public:
-  // explicit client_factory(const dsl::generic_config_value& from);
-
   template <class Token, class... Args>
   client_factory(Token token, const dsl::generic_config_value& from,
                  Args&&... args) {

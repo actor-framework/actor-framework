@@ -10,6 +10,7 @@
 #include "caf/async/consumer_adapter.hpp"
 #include "caf/async/producer_adapter.hpp"
 #include "caf/async/spsc_buffer.hpp"
+#include "caf/chunk.hpp"
 #include "caf/fwd.hpp"
 #include "caf/log/net.hpp"
 #include "caf/sec.hpp"
