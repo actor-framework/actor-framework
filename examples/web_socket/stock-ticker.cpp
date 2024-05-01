@@ -20,7 +20,6 @@
 #include <cassert>
 #include <chrono>
 #include <cstdint>
-#include <iostream>
 #include <random>
 #include <utility>
 
@@ -87,8 +86,8 @@ struct random_feed_state {
                writer.reset();
                auto& x = update();
                if (!writer.apply(x)) {
-                 std::cerr << "*** failed to generate JSON: "
-                           << to_string(writer.get_error()) << std::endl;
+                 self->println("*** failed to generate JSON: {}",
+                               writer.get_error());
                  return frame{};
                }
                return frame{writer.str()};
@@ -99,20 +98,19 @@ struct random_feed_state {
              })
              .share();
     // Subscribe once to start the feed immediately and to keep it running.
-    feed.for_each([n = 1](const frame&) mutable {
-      std::cout << "*** tick " << n++ << std::endl;
+    feed.for_each([this, n = 1](const frame&) mutable {
+      self->println("*** tick {}", n++);
     });
     // Add each incoming WebSocket listener to the feed.
     auto n = std::make_shared<int>(0);
     events
       .observe_on(self) //
       .for_each([this, n](const auto& ev) {
-        std::cout << "*** added listener (n = " << ++*n << ")" << std::endl;
+        self->println("*** added listener (n = {})", ++*n);
         auto [pull, push] = ev.data();
         pull.observe_on(self)
-          .do_finally([n] { //
-            std::cout << "*** removed listener (n = " << --*n << ")"
-                      << std::endl;
+          .do_finally([this, n] { //
+            self->println("*** removed listener (n = {})", --*n);
           })
           .subscribe(std::ignore);
         feed.subscribe(push);
@@ -186,7 +184,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
   auto max_connections = caf::get_or(cfg, "max-connections",
                                      default_max_connections);
   if (!key_file != !cert_file) {
-    std::cerr << "*** inconsistent TLS config: declare neither file or both\n";
+    sys.println("*** inconsistent TLS config: declare neither file or both");
     return EXIT_FAILURE;
   }
   // Open up a TCP port for incoming connections and start the server.
@@ -213,8 +211,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
         });
   // Report any error to the user.
   if (!server) {
-    std::cerr << "*** unable to run at port " << port << ": "
-              << to_string(server.error()) << '\n';
+    sys.println("*** unable to run at port {}: {}", port, server.error());
     return EXIT_FAILURE;
   }
   // Note: the actor system will keep the application running for as long as the

@@ -20,7 +20,6 @@
 #include <atomic>
 #include <cctype>
 #include <csignal>
-#include <iostream>
 #include <string>
 #include <utility>
 
@@ -117,7 +116,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
   auto max_request_size = caf::get_or(
     cfg, "max-request-size", caf::defaults::net::http_max_request_size);
   if (!key_file != !cert_file) {
-    std::cerr << "*** inconsistent TLS config: declare neither file or both\n";
+    sys.println("*** inconsistent TLS config: declare neither file or both");
     return EXIT_FAILURE;
   }
   // Spin up our key-value store actor.
@@ -199,14 +198,13 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
         .start();
   // Report any error to the user.
   if (!server) {
-    std::cerr << "*** unable to run at port " << port << ": "
-              << to_string(server.error()) << '\n';
+    sys.println("*** unable to run at port {}: {}", port, server.error());
     return EXIT_FAILURE;
   }
   // Wait for CTRL+C or SIGTERM.
   while (!shutdown_flag)
     std::this_thread::sleep_for(250ms);
-  std::cerr << "*** shutting down\n";
+  sys.println("*** shutting down");
   server->dispose();
   return EXIT_SUCCESS;
 }

@@ -10,7 +10,6 @@
 #include "caf/event_based_actor.hpp"
 #include "caf/scheduled_actor/flow.hpp"
 
-#include <iostream>
 #include <string>
 #include <utility>
 
@@ -54,7 +53,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
   auto max_connections = caf::get_or(cfg, "max-connections",
                                      default_max_connections);
   if (!key_file != !cert_file) {
-    std::cerr << "*** inconsistent TLS config: declare neither file or both\n";
+    sys.println("*** inconsistent TLS config: declare neither file or both");
     return EXIT_FAILURE;
   }
   // Open up a TCP port for incoming connections and start the server.
@@ -79,16 +78,14 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
         .start();
   // Report any error to the user.
   if (!server) {
-    std::cerr << "*** unable to run at port " << port << ": "
-              << to_string(server.error()) << '\n';
+    sys.println("*** unable to run at port {}: {}", port, server.error());
     return EXIT_FAILURE;
   }
   // Note: the actor system will only wait for actors on default. Since we don't
   // start actors, we need to block on something else.
-  std::cout << "Server is up and running. Press <enter> to shut down."
-            << std::endl;
+  sys.println("Server is up and running. Press <enter> to shut down.");
   getchar();
-  std::cout << "Terminating.\n";
+  sys.println("Terminating.\n");
   return EXIT_SUCCESS;
 }
 // --(rst-main-end)--

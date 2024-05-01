@@ -5,8 +5,6 @@
 #include "caf/event_based_actor.hpp"
 #include "caf/scheduled_actor/flow.hpp"
 
-#include <iostream>
-
 namespace {
 
 constexpr size_t default_num_values = 10;
@@ -36,7 +34,7 @@ void caf_main(caf::actor_system& sys, const config& cfg) {
       // Only take the requested number of items from the infinite sequence.
       .take(n)
       // Print each integer.
-      .for_each([](int x) { std::cout << x << std::endl; });
+      .for_each([self](int x) { self->println("{}", x); });
   });
 }
 // --(rst-main-end)--

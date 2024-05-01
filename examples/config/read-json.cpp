@@ -7,7 +7,6 @@
 #include "caf/type_id.hpp"
 
 #include <fstream>
-#include <iostream>
 #include <string>
 #include <string_view>
 
@@ -49,34 +48,31 @@ int caf_main(caf::actor_system& sys) {
   auto& cfg = sys.config();
   auto remainder = cfg.remainder();
   if (remainder.size() != 1) {
-    std::cerr
-      << "*** expected one positional argument: path to a JSON file\n"
-      << "\n\nNote: expected a JSON list of user objects. For example:\n"
-      << example_input << '\n';
+    sys.println(
+      "*** expected one positional argument: path to a JSON file\n\n\nNote: "
+      "expected a JSON list of user objects. For example:\n{}",
+      example_input);
     return EXIT_FAILURE;
   }
   auto& file_path = remainder[0];
   // Read JSON-formatted file.
   caf::json_reader reader;
   if (!reader.load_file(file_path)) {
-    std::cerr << "*** failed to parse JSON file: "
-              << to_string(reader.get_error()) << '\n';
+    sys.println("*** failed to parse JSON file: {}\n", reader.get_error());
     return EXIT_FAILURE;
   }
   // Deserialize our user list from the parsed JSON.
   user_list users;
   if (!reader.apply(users)) {
-    std::cerr
-      << "*** failed to deserialize the user list: "
-      << to_string(reader.get_error())
-      << "\n\nNote: expected a JSON list of user objects. For example:\n"
-      << example_input << '\n';
+    sys.println("*** failed to deserialize the user list: {}\n\n Note: "
+                "expected a JSON list of user objects. For example: {}\n",
+                reader.get_error(), example_input);
     return EXIT_FAILURE;
   }
   // Print the list in "CAF format".
-  std::cout << "Entries loaded from file:\n";
+  sys.println("Entries loaded from file:\n");
   for (auto& entry : users)
-    std::cout << "- " << caf::deep_to_string(entry) << '\n';
+    sys.println("- {}", entry);
   return EXIT_SUCCESS;
 }
 
