@@ -38,6 +38,7 @@ caf_add_component(
     caf/detail/octet_stream_flow_bridge.test.cpp
     caf/detail/rfc6455.cpp
     caf/detail/rfc6455.test.cpp
+    caf/detail/ws_conn_acceptor.cpp
     caf/net/abstract_actor_shell.cpp
     caf/net/accept_socket.test.cpp
     caf/net/actor_shell.cpp
@@ -126,12 +127,12 @@ caf_add_component(
     caf/net/udp_datagram_socket.test.cpp
     caf/net/web_socket/client.cpp
     caf/net/web_socket/client_factory.cpp
-    caf/net/web_socket/default_trait.cpp
     caf/net/web_socket/frame.cpp
     caf/net/web_socket/frame.test.cpp
     caf/net/web_socket/framing.cpp
     caf/net/web_socket/handshake.cpp
     caf/net/web_socket/handshake.test.cpp
+    caf/net/web_socket/has_on_request.cpp
     caf/net/web_socket/lower_layer.cpp
     caf/net/web_socket/server.cpp
     caf/net/web_socket/server_factory.cpp

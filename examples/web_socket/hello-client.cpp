@@ -1,6 +1,7 @@
 // Simple WebSocket server that sends everything it receives back to the sender.
 
 #include "caf/net/middleman.hpp"
+#include "caf/net/web_socket/frame.hpp"
 #include "caf/net/web_socket/with.hpp"
 
 #include "caf/actor_system.hpp"

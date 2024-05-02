@@ -100,6 +100,23 @@ public:
 
     /// Configures how many concurrent connections the server allows.
     size_t max_connections = defaults::net::max_connections.fallback;
+
+    template <class Fn>
+    auto with_ssl_acceptor_or_socket(Fn&& fn) {
+      return [this, fn = std::forward<Fn>(fn)](auto&& fd) mutable {
+        using fd_t = decltype(fd);
+        using res_t = decltype(fn(std::forward<fd_t>(fd)));
+        if (auto* sub = this->as_has_make_ctx(); sub && sub->make_ctx) {
+          auto maybe_ctx = sub->make_ctx();
+          if (!maybe_ctx)
+            return res_t{maybe_ctx.error()};
+          auto& ctx = *maybe_ctx;
+          auto acc = ssl::tcp_acceptor{std::forward<fd_t>(fd), std::move(*ctx)};
+          return fn(std::move(acc));
+        }
+        return fn(std::forward<fd_t>(fd));
+      };
+    }
   };
 };
 

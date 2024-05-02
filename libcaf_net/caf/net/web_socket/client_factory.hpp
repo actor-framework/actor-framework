@@ -6,9 +6,9 @@
 
 #include "caf/net/checked_socket.hpp"
 #include "caf/net/dsl/client_factory_base.hpp"
+#include "caf/net/dsl/generic_config.hpp"
 #include "caf/net/ssl/connection.hpp"
 #include "caf/net/tcp_stream_socket.hpp"
-#include "caf/net/web_socket/config.hpp"
 #include "caf/net/web_socket/framing.hpp"
 
 #include "caf/async/spsc_buffer.hpp"

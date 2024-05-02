@@ -13,17 +13,28 @@ namespace caf::net::lp {
 namespace {
 
 /// Specializes the length-prefix flow bridge for the server side.
-template <class Trait>
-class lp_server_flow_bridge : public detail::lp_flow_bridge<Trait> {
+class lp_server_flow_bridge : public detail::lp_flow_bridge {
 public:
-  using super = detail::lp_flow_bridge<Trait>;
+  using super = detail::lp_flow_bridge;
 
-  using input_type = typename Trait::input_type;
+  /// The input type of the application, i.e., what that flows from the socket
+  /// to the application layer.
+  using input_type = frame;
 
-  using output_type = typename Trait::output_type;
+  /// The output type of the application, i.e., what flows from the application
+  /// layer to the socket.
+  using output_type = frame;
 
-  using accept_event = typename Trait::accept_event;
+  /// A resource for consuming input_type elements.
+  using input_resource = async::consumer_resource<input_type>;
 
+  /// A resource for producing output_type elements.
+  using output_resource = async::producer_resource<output_type>;
+
+  /// An accept event from the server to transmit read and write handles.
+  using accept_event = cow_tuple<input_resource, output_resource>;
+
+  /// Pushes accept events to the application layer.
   using producer_type = async::blocking_producer<accept_event>;
 
   // Note: this is shared with the connection factory. In general, this is
@@ -79,7 +90,7 @@ public:
 
   net::socket_manager_ptr make(net::multiplexer* mpx,
                                connection_handle conn) override {
-    using bridge_t = lp_server_flow_bridge<Trait>;
+    using bridge_t = lp_server_flow_bridge;
     auto bridge = bridge_t::make(producer_);
     auto bridge_ptr = bridge.get();
     auto impl = net::lp::framing::make(std::move(bridge));

@@ -45,7 +45,7 @@ public:
     auto [pull, push] = async::make_spsc_buffer_resource<accept_event<frame>>();
     auto res
       = base_config().visit([this, push = std::move(push)](auto& data) mutable {
-          return do_start(data, std::move(push));
+          return this->do_start(data, std::move(push));
         });
     if (res) {
       on_start(std::move(pull));

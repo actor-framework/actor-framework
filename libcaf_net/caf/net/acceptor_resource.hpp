@@ -14,7 +14,8 @@ namespace caf::net {
 /// A consumer resource for events from an acceptor. Each event contains a
 /// producer and a consumer resource for writing to and reading from the
 /// accepted connection.
-template <class Input, class Output = Input>
-using acceptor_resource = async::consumer_resource<accept_event<Input, Output>>;
+template <class ItemType, class... Ts>
+using acceptor_resource
+  = async::consumer_resource<accept_event<ItemType, Ts...>>;
 
 } // namespace caf::net

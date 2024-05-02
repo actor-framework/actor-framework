@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/net/web_socket/frame.hpp"
 #include "caf/net/web_socket/lower_layer.hpp"
 #include "caf/net/web_socket/upper_layer.hpp"
 
@@ -19,33 +20,32 @@
 namespace caf::detail {
 
 /// Convenience alias for referring to the base type of @ref flow_bridge.
-template <class Trait, class Base>
+template <class Base>
 using ws_flow_bridge_base_t
-  = detail::flow_bridge_base<Base, net::web_socket::lower_layer, Trait>;
+  = detail::flow_bridge_base<Base, net::web_socket::lower_layer,
+                             net::web_socket::frame>;
 
 /// Translates between a message-oriented transport and data flows.
-template <class Trait, class Base>
-class ws_flow_bridge : public ws_flow_bridge_base_t<Trait, Base> {
+template <class Base>
+class ws_flow_bridge : public ws_flow_bridge_base_t<Base> {
 public:
-  using super = ws_flow_bridge_base_t<Trait, Base>;
-
-  using input_type = typename Trait::input_type;
-
-  using output_type = typename Trait::output_type;
+  using super = ws_flow_bridge_base_t<Base>;
 
   using super::super;
 
-  bool write(const output_type& item) override {
-    if (super::trait_.converts_to_binary(item)) {
+  bool write(const net::web_socket::frame& item) override {
+    if (item.is_binary()) {
       super::down_->begin_binary_message();
       auto& bytes = super::down_->binary_message_buffer();
-      return super::trait_.convert(item, bytes)
-             && super::down_->end_binary_message();
+      auto src = item.as_binary();
+      bytes.insert(bytes.end(), src.begin(), src.end());
+      return super::down_->end_binary_message();
     } else {
       super::down_->begin_text_message();
       auto& text = super::down_->text_message_buffer();
-      return super::trait_.convert(item, text)
-             && super::down_->end_text_message();
+      auto src = item.as_text();
+      text.insert(text.end(), src.begin(), src.end());
+      return super::down_->end_text_message();
     }
   }
 
@@ -54,10 +54,7 @@ public:
   ptrdiff_t consume_binary(byte_span buf) override {
     if (!super::out_)
       return -1;
-    input_type val;
-    if (!super::trait_.convert(buf, val))
-      return -1;
-    if (super::out_.push(std::move(val)) == 0)
+    if (super::out_.push(net::web_socket::frame{buf}) == 0)
       super::down_->suspend_reading();
     return static_cast<ptrdiff_t>(buf.size());
   }
@@ -65,10 +62,7 @@ public:
   ptrdiff_t consume_text(std::string_view buf) override {
     if (!super::out_)
       return -1;
-    input_type val;
-    if (!super::trait_.convert(buf, val))
-      return -1;
-    if (super::out_.push(std::move(val)) == 0)
+    if (super::out_.push(net::web_socket::frame{buf}) == 0)
       super::down_->suspend_reading();
     return static_cast<ptrdiff_t>(buf.size());
   }

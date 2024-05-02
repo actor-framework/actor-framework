@@ -14,7 +14,7 @@ namespace caf::net::lp {
 namespace {
 
 /// Specializes the WebSocket flow bridge for the server side.
-class lp_client_flow_bridge : public detail::lp_flow_bridge<default_trait> {
+class lp_client_flow_bridge : public detail::lp_flow_bridge {
 public:
   // We consume the output type of the application.
   using pull_t = async::consumer_resource<frame>;

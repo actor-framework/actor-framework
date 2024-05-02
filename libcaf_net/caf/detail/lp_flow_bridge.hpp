@@ -19,26 +19,23 @@
 namespace caf::detail {
 
 /// Convenience alias for referring to the base type of @ref flow_bridge.
-template <class Trait>
 using lp_flow_bridge_base
-  = flow_bridge_base<net::lp::upper_layer, net::lp::lower_layer, Trait>;
+  = flow_bridge_base<net::lp::upper_layer, net::lp::lower_layer,
+                     net::lp::frame>;
 
 /// Translates between a message-oriented transport and data flows.
-template <class Trait>
-class lp_flow_bridge : public lp_flow_bridge_base<Trait> {
+class lp_flow_bridge : public lp_flow_bridge_base {
 public:
-  using super = lp_flow_bridge_base<Trait>;
-
-  using input_type = typename Trait::input_type;
-
-  using output_type = typename Trait::output_type;
+  using super = lp_flow_bridge_base;
 
   using super::super;
 
-  bool write(const output_type& item) override {
+  bool write(const net::lp::frame& item) override {
     super::down_->begin_message();
     auto& bytes = super::down_->message_buffer();
-    return super::trait_.convert(item, bytes) && super::down_->end_message();
+    auto src = item.bytes();
+    bytes.insert(bytes.end(), src.begin(), src.end());
+    return super::down_->end_message();
   }
 
   // -- implementation of lp::lower_layer --------------------------------------
@@ -46,10 +43,7 @@ public:
   ptrdiff_t consume(byte_span buf) override {
     if (!super::out_)
       return -1;
-    input_type val;
-    if (!super::trait_.convert(buf, val))
-      return -1;
-    if (super::out_.push(std::move(val)) == 0)
+    if (super::out_.push(net::lp::frame{buf}) == 0)
       super::down_->suspend_reading();
     return static_cast<ptrdiff_t>(buf.size());
   }

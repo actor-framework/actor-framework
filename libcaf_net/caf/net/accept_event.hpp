@@ -11,8 +11,9 @@ namespace caf::net {
 
 /// A single event from an acceptor. Contains a producer and a consumer resource
 /// for writing to and reading from the accepted connection.
-template <class Input, class Output = Input>
-using accept_event = caf::cow_tuple<caf::async::consumer_resource<Input>,
-                                    caf::async::producer_resource<Output>>;
+template <class ItemType, class... Ts>
+using accept_event
+  = caf::cow_tuple<caf::async::consumer_resource<ItemType>,
+                   caf::async::producer_resource<ItemType>, Ts...>;
 
 } // namespace caf::net

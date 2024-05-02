@@ -111,12 +111,10 @@ namespace caf::net::web_socket {
 class client;
 class frame;
 class framing;
+class has_on_request;
 class lower_layer;
 class server;
 class upper_layer;
-
-template <class Trait, class... Ts>
-class server_factory;
 
 enum class status : uint16_t;
 

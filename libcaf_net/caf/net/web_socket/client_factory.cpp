@@ -7,7 +7,6 @@
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/socket_manager.hpp"
 #include "caf/net/web_socket/client.hpp"
-#include "caf/net/web_socket/default_trait.hpp"
 
 #include "caf/detail/make_transport.hpp"
 #include "caf/detail/ws_flow_bridge.hpp"
@@ -18,10 +17,9 @@ namespace {
 
 /// Specializes the WebSocket flow bridge for the server side.
 class ws_client_flow_bridge
-  : public detail::ws_flow_bridge<default_trait, net::web_socket::upper_layer> {
+  : public detail::ws_flow_bridge<net::web_socket::upper_layer> {
 public:
-  using super
-    = detail::ws_flow_bridge<default_trait, net::web_socket::upper_layer>;
+  using super = detail::ws_flow_bridge<net::web_socket::upper_layer>;
 
   // We consume the output type of the application.
   using pull_t = async::consumer_resource<frame>;
