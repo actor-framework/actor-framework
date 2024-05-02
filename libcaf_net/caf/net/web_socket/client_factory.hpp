@@ -12,6 +12,7 @@
 #include "caf/net/web_socket/framing.hpp"
 
 #include "caf/async/spsc_buffer.hpp"
+#include "caf/detail/net_export.hpp"
 #include "caf/disposable.hpp"
 #include "caf/timespan.hpp"
 
@@ -24,7 +25,8 @@
 namespace caf::net::web_socket {
 
 /// Factory for the `with(...).connect(...).start(...)` DSL.
-class client_factory : public dsl::client_factory_base<client_factory> {
+class CAF_NET_EXPORT client_factory
+  : public dsl::client_factory_base<client_factory> {
 public:
   template <class Token, class... Args>
   client_factory(Token token, const dsl::generic_config_value& from,

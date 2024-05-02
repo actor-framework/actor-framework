@@ -21,13 +21,15 @@
 #include "caf/detail/assert.hpp"
 #include "caf/detail/connection_factory.hpp"
 #include "caf/detail/lp_flow_bridge.hpp"
+#include "caf/detail/net_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/none.hpp"
 
 namespace caf::net::lp {
 
 /// Factory type for the `with(...).accept(...).start(...)` DSL.
-class server_factory : public dsl::server_factory_base<server_factory> {
+class CAF_NET_EXPORT server_factory
+  : public dsl::server_factory_base<server_factory> {
 public:
   template <class Token, class... Args>
   server_factory(Token token, const dsl::generic_config_value& from,

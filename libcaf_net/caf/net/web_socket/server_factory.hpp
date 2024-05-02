@@ -12,13 +12,14 @@
 #include "caf/async/spsc_buffer.hpp"
 #include "caf/detail/accept_handler.hpp"
 #include "caf/detail/connection_factory.hpp"
+#include "caf/detail/net_export.hpp"
 #include "caf/detail/ws_conn_acceptor.hpp"
 #include "caf/fwd.hpp"
 
 namespace caf::net::web_socket {
 
 /// Factory type for the `with(...).accept(...).start(...)` DSL.
-class server_factory_base {
+class CAF_NET_EXPORT server_factory_base {
 public:
   friend class has_on_request;
 
@@ -48,18 +49,18 @@ protected:
 
 /// Factory type for the `with(...).accept(...).start(...)` DSL.
 template <class... Ts>
-class server_factory : public server_factory_base,
+class server_factory : public web_socket::server_factory_base,
                        public dsl::server_factory_base<server_factory<Ts...>> {
 public:
-  using super = server_factory_base;
+  using super = web_socket::server_factory_base;
 
   using accept_event = cow_tuple<async::consumer_resource<frame>,
                                  async::producer_resource<frame>, Ts...>;
 
   using pull_t = async::consumer_resource<accept_event>;
 
-  server_factory(server_factory_base::config_impl* config,
-                 detail::ws_conn_acceptor_ptr wca, pull_t pull)
+  server_factory(super::config_impl* config, detail::ws_conn_acceptor_ptr wca,
+                 pull_t pull)
     : super(config, std::move(wca)), pull_(std::move(pull)) {
     // nop
   }

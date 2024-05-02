@@ -31,7 +31,8 @@
 namespace caf::net::http {
 
 /// Factory type for the `with(...).accept(...).start(...)` DSL.
-class server_factory : public dsl::server_factory_base<server_factory> {
+class CAF_NET_EXPORT server_factory
+  : public dsl::server_factory_base<server_factory> {
 public:
   template <class Token, class... Args>
   server_factory(Token token, const dsl::generic_config_value& from,

@@ -4,18 +4,6 @@
 
 #include "caf/net/web_socket/has_on_request.hpp"
 
-namespace caf::detail {
-
-ws_conn_starter::~ws_conn_starter() {
-  // nop
-}
-
-ws_conn_acceptor::~ws_conn_acceptor() {
-  // nop
-}
-
-} // namespace caf::detail
-
 namespace caf::net::web_socket {
 
 has_on_request::~has_on_request() {

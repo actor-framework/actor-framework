@@ -150,8 +150,7 @@ public:
   void assign(const From& from, Token, Args&&... args) {
     // Always construct the data in-place first. This makes sure we account
     // for ownership transfers (e.g. for sockets).
-    data = variant_type{std::in_place_type<typename Token::type>,
-                        std::forward<Args>(args)...};
+    data.template emplace<typename Token::type>(std::forward<Args>(args)...);
     // Discard the data if `from` contained an error. Otherwise, transfer the
     // SSL context over to the refined configuration.
     if (!from) {

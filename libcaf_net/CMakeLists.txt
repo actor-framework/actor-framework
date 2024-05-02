@@ -47,7 +47,7 @@ caf_add_component(
     caf/net/actor_shell.test.cpp
     caf/net/datagram_socket.cpp
     caf/net/datagram_socket.test.cpp
-    caf/net/dsl/client_config.hpp
+    caf/net/dsl/client_config.cpp
     caf/net/dsl/config_base.cpp
     caf/net/generic_lower_layer.cpp
     caf/net/generic_upper_layer.cpp
