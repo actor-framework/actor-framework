@@ -12,59 +12,13 @@
 
 #include "caf/async/blocking_producer.hpp"
 #include "caf/detail/assert.hpp"
+#include "caf/detail/ws_conn_acceptor.hpp"
 #include "caf/detail/ws_flow_bridge.hpp"
 #include "caf/type_list.hpp"
 
 #include <memory>
 
 namespace caf::detail {
-
-/// Specializes the WebSocket flow bridge for the switch-protocol use case.
-template <class... Ts>
-class ws_switch_protocol_flow_bridge
-  : public ws_flow_bridge<net::web_socket::upper_layer> {
-public:
-  using super = ws_flow_bridge<net::web_socket::upper_layer>;
-
-  using accept_event_t = net::accept_event<net::web_socket::frame, Ts...>;
-
-  using producer_type = async::blocking_producer<accept_event_t>;
-
-  using pull_type = async::consumer_resource<net::web_socket::frame>;
-
-  using push_type = async::producer_resource<net::web_socket::frame>;
-
-  // Note: in general, this is *unsafe*. However, we exploit the fact that there
-  //       is currently only one thread running in the multiplexer (which makes
-  //       this safe).
-  using shared_producer_type = std::shared_ptr<producer_type>;
-
-  ws_switch_protocol_flow_bridge(shared_producer_type producer, pull_type pull,
-                                 push_type push)
-    : producer_(std::move(producer)),
-      pull_(std::move(pull)),
-      push_(std::move(push)) {
-    // nop
-  }
-
-  static auto make(shared_producer_type producer, pull_type pull,
-                   push_type push) {
-    using impl_t = ws_switch_protocol_flow_bridge;
-    return std::make_unique<impl_t>(std::move(producer), std::move(pull),
-                                    std::move(push));
-  }
-
-  error start(net::web_socket::lower_layer* down_ptr) override {
-    CAF_ASSERT(down_ptr != nullptr);
-    super::down_ = down_ptr;
-    return super::init(&down_ptr->mpx(), std::move(pull_), std::move(push_));
-  }
-
-private:
-  shared_producer_type producer_;
-  pull_type pull_;
-  push_type push_;
-};
 
 template <class OnRequest, class OnStart>
 struct ws_switch_protocol_state : public ref_counted {
@@ -148,8 +102,7 @@ public:
     // Switch to the WebSocket framing protocol.
     auto& [pull, push] = acc.ws_resources;
     using net::web_socket::framing;
-    using bridge_t = ws_switch_protocol_flow_bridge<Out...>;
-    auto bridge = bridge_t::make(producer_, std::move(pull), std::move(push));
+    auto bridge = make_ws_flow_bridge(std::move(pull), std::move(push));
     res.down()->switch_protocol(framing::make_server(std::move(bridge)));
   }
 

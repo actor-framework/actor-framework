@@ -5,6 +5,7 @@
 #include "caf/net/lp/client_factory.hpp"
 
 #include "caf/net/lp/default_trait.hpp"
+#include "caf/net/multiplexer.hpp"
 
 #include "caf/detail/lp_flow_bridge.hpp"
 #include "caf/detail/make_transport.hpp"
@@ -13,52 +14,15 @@ namespace caf::net::lp {
 
 namespace {
 
-/// Specializes the WebSocket flow bridge for the server side.
-class lp_client_flow_bridge : public detail::lp_flow_bridge {
-public:
-  // We consume the output type of the application.
-  using pull_t = async::consumer_resource<frame>;
-
-  // We produce the input type of the application.
-  using push_t = async::producer_resource<frame>;
-
-  lp_client_flow_bridge(pull_t pull, push_t push)
-    : pull_(std::move(pull)), push_(std::move(push)) {
-    // nop
-  }
-
-  static std::unique_ptr<lp_client_flow_bridge> make(pull_t pull, push_t push) {
-    return std::make_unique<lp_client_flow_bridge>(std::move(pull),
-                                                   std::move(push));
-  }
-
-  void abort(const error& err) override {
-    super::abort(err);
-    if (push_)
-      push_.abort(err);
-  }
-
-  error start(net::lp::lower_layer* down_ptr) override {
-    super::down_ = down_ptr;
-    return super::init(&down_ptr->mpx(), std::move(pull_), std::move(push_));
-  }
-
-private:
-  pull_t pull_;
-  push_t push_;
-};
-
 template <class Config, class Conn>
 expected<disposable> do_start_impl(Config& cfg, Conn conn,
                                    async::consumer_resource<frame> pull,
                                    async::producer_resource<frame> push) {
-  auto bridge = lp_client_flow_bridge::make(std::move(pull), std::move(push));
-  auto bridge_ptr = bridge.get();
+  auto bridge = detail::make_lp_flow_bridge(std::move(pull), std::move(push));
   auto impl = framing::make(std::move(bridge));
   auto transport = detail::make_transport(std::move(conn), std::move(impl));
   transport->active_policy().connect();
   auto ptr = socket_manager::make(cfg.mpx, std::move(transport));
-  bridge_ptr->self_ref(ptr->as_disposable());
   cfg.mpx->start(ptr);
   return expected<disposable>{disposable{std::move(ptr)}};
 }

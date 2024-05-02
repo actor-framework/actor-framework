@@ -34,11 +34,13 @@ caf_add_component(
     caf/detail/convert_ip_endpoint.cpp
     caf/detail/convert_ip_endpoint.test.cpp
     caf/detail/flow_bridge_initializer.cpp
+    caf/detail/lp_flow_bridge.cpp
     caf/detail/octet_stream_flow_bridge.cpp
     caf/detail/octet_stream_flow_bridge.test.cpp
     caf/detail/rfc6455.cpp
     caf/detail/rfc6455.test.cpp
     caf/detail/ws_conn_acceptor.cpp
+    caf/detail/ws_flow_bridge.cpp
     caf/net/abstract_actor_shell.cpp
     caf/net/accept_socket.test.cpp
     caf/net/actor_shell.cpp

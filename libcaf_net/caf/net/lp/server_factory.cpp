@@ -12,63 +12,6 @@ namespace caf::net::lp {
 
 namespace {
 
-/// Specializes the length-prefix flow bridge for the server side.
-class lp_server_flow_bridge : public detail::lp_flow_bridge {
-public:
-  using super = detail::lp_flow_bridge;
-
-  /// The input type of the application, i.e., what that flows from the socket
-  /// to the application layer.
-  using input_type = frame;
-
-  /// The output type of the application, i.e., what flows from the application
-  /// layer to the socket.
-  using output_type = frame;
-
-  /// A resource for consuming input_type elements.
-  using input_resource = async::consumer_resource<input_type>;
-
-  /// A resource for producing output_type elements.
-  using output_resource = async::producer_resource<output_type>;
-
-  /// An accept event from the server to transmit read and write handles.
-  using accept_event = cow_tuple<input_resource, output_resource>;
-
-  /// Pushes accept events to the application layer.
-  using producer_type = async::blocking_producer<accept_event>;
-
-  // Note: this is shared with the connection factory. In general, this is
-  //       *unsafe*. However, we exploit the fact that there is currently only
-  //       one thread running in the multiplexer (which makes this safe).
-  using shared_producer_type = std::shared_ptr<producer_type>;
-
-  lp_server_flow_bridge(shared_producer_type producer)
-    : producer_(std::move(producer)) {
-    // nop
-  }
-
-  static auto make(shared_producer_type producer) {
-    return std::make_unique<lp_server_flow_bridge>(std::move(producer));
-  }
-
-  error start(net::lp::lower_layer* down_ptr) override {
-    CAF_ASSERT(down_ptr != nullptr);
-    super::down_ = down_ptr;
-    auto [app_pull, lp_push] = async::make_spsc_buffer_resource<input_type>();
-    auto [lp_pull, app_push] = async::make_spsc_buffer_resource<output_type>();
-    auto event = accept_event{std::move(app_pull), std::move(app_push)};
-    if (!producer_->push(event)) {
-      return make_error(sec::runtime_error,
-                        "Length-prefixed connection dropped: client canceled");
-    }
-    return super::init(&down_ptr->mpx(), std::move(lp_pull),
-                       std::move(lp_push));
-  }
-
-private:
-  shared_producer_type producer_;
-};
-
 /// Specializes @ref connection_factory for the length-prefixing protocol.
 template <class Transport, class Trait>
 class lp_connection_factory
@@ -90,15 +33,12 @@ public:
 
   net::socket_manager_ptr make(net::multiplexer* mpx,
                                connection_handle conn) override {
-    using bridge_t = lp_server_flow_bridge;
-    auto bridge = bridge_t::make(producer_);
-    auto bridge_ptr = bridge.get();
+    auto bridge = make_lp_flow_bridge(producer_);
     auto impl = net::lp::framing::make(std::move(bridge));
     auto transport = Transport::make(std::move(conn), std::move(impl));
     transport->max_consecutive_reads(max_consecutive_reads_);
     transport->active_policy().accept();
     auto mgr = net::socket_manager::make(mpx, std::move(transport));
-    bridge_ptr->self_ref(mgr->as_disposable());
     return mgr;
   }
 

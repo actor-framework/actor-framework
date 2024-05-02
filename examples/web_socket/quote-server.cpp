@@ -6,6 +6,7 @@
 #include "caf/net/http/with.hpp"
 #include "caf/net/middleman.hpp"
 #include "caf/net/ssl/context.hpp"
+#include "caf/net/web_socket/frame.hpp"
 #include "caf/net/web_socket/switch_protocol.hpp"
 
 #include "caf/actor_system.hpp"

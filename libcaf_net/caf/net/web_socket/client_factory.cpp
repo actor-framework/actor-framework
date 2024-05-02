@@ -15,51 +15,16 @@ namespace caf::net::web_socket {
 
 namespace {
 
-/// Specializes the WebSocket flow bridge for the server side.
-class ws_client_flow_bridge
-  : public detail::ws_flow_bridge<net::web_socket::upper_layer> {
-public:
-  using super = detail::ws_flow_bridge<net::web_socket::upper_layer>;
-
-  // We consume the output type of the application.
-  using pull_t = async::consumer_resource<frame>;
-
-  // We produce the input type of the application.
-  using push_t = async::producer_resource<frame>;
-
-  ws_client_flow_bridge(pull_t pull, push_t push)
-    : pull_(std::move(pull)), push_(std::move(push)) {
-    // nop
-  }
-
-  static std::unique_ptr<ws_client_flow_bridge> make(pull_t pull, push_t push) {
-    return std::make_unique<ws_client_flow_bridge>(std::move(pull),
-                                                   std::move(push));
-  }
-
-  error start(net::web_socket::lower_layer* down_ptr) override {
-    super::down_ = down_ptr;
-    return super::init(&down_ptr->mpx(), std::move(pull_), std::move(push_));
-  }
-
-private:
-  pull_t pull_;
-  push_t push_;
-};
-
 template <class Config, class Conn>
 expected<disposable> do_start_impl(Config& cfg, Conn conn,
                                    async::consumer_resource<frame> pull,
                                    async::producer_resource<frame> push) {
   // s2a: socket-to-application (and a2s is the inverse).
-  using bridge_t = ws_client_flow_bridge;
-  auto bridge = bridge_t::make(std::move(pull), std::move(push));
-  auto bridge_ptr = bridge.get();
+  auto bridge = detail::make_ws_flow_bridge(std::move(pull), std::move(push));
   auto impl = client::make(std::move(cfg.hs), std::move(bridge));
   auto transport = detail::make_transport(std::move(conn), std::move(impl));
   transport->active_policy().connect();
   auto ptr = socket_manager::make(cfg.mpx, std::move(transport));
-  bridge_ptr->self_ref(ptr->as_disposable());
   cfg.mpx->start(ptr);
   return expected<disposable>{disposable{std::move(ptr)}};
 }

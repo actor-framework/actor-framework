@@ -20,50 +20,6 @@ namespace caf::net::web_socket {
 
 namespace {
 
-/// Specializes the WebSocket flow bridge for the server side.
-class ws_server_flow_bridge
-  : public detail::ws_flow_bridge<net::web_socket::upper_layer::server> {
-public:
-  using super = detail::ws_flow_bridge<net::web_socket::upper_layer::server>;
-
-  explicit ws_server_flow_bridge(detail::ws_conn_acceptor_ptr wca)
-    : wca_(std::move(wca)) {
-    // nop
-  }
-
-  static auto make(detail::ws_conn_acceptor_ptr wca) {
-    return std::make_unique<ws_server_flow_bridge>(std::move(wca));
-  }
-
-  error start(net::web_socket::lower_layer* down_ptr) override {
-    if (wcs_ == nullptr) {
-      return make_error(sec::runtime_error,
-                        "WebSocket: called start without prior accept");
-    }
-    super::down_ = down_ptr;
-    auto res = wcs_->start();
-    wcs_ = nullptr;
-    if (!res) {
-      return std::move(res.error());
-    }
-    auto [pull, push] = *res;
-    return super::init(&down_ptr->mpx(), std::move(pull), std::move(push));
-  }
-
-  error accept(const net::http::request_header& hdr) override {
-    auto wcs = wca_->accept(hdr);
-    if (!wcs) {
-      return std::move(wcs.error());
-    }
-    wcs_ = *wcs;
-    return {};
-  }
-
-private:
-  detail::ws_conn_acceptor_ptr wca_;
-  detail::ws_conn_starter_ptr wcs_;
-};
-
 /// Specializes @ref connection_factory for flows over the WebSocket protocol.
 template <class Transport>
 class ws_flow_conn_factory
@@ -83,15 +39,12 @@ public:
       // TODO: stop the caller?
       return nullptr;
     }
-    using bridge_t = ws_server_flow_bridge;
-    auto app = bridge_t::make(wca_);
-    auto app_ptr = app.get();
+    auto app = detail::make_ws_flow_bridge(wca_);
     auto ws = net::web_socket::server::make(std::move(app));
     auto transport = Transport::make(std::move(conn), std::move(ws));
     transport->max_consecutive_reads(max_consecutive_reads_);
     transport->active_policy().accept();
     auto mgr = net::socket_manager::make(mpx, std::move(transport));
-    app_ptr->self_ref(mgr->as_disposable());
     return mgr;
   }
 

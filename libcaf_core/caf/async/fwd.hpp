@@ -35,6 +35,9 @@ class publisher;
 template <class T>
 class spsc_buffer;
 
+template <class T>
+class blocking_producer;
+
 // -- smart pointer aliases ----------------------------------------------------
 
 using execution_context_ptr = intrusive_ptr<execution_context>;
