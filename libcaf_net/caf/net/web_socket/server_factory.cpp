@@ -87,13 +87,19 @@ server_factory_base::server_factory_base(config_impl* config,
   config_->wca = std::move(wca);
 }
 
-server_factory_base::server_factory_base(const server_factory_base& other)
-  : config_(other.config_) {
-  config_->ref();
+server_factory_base::server_factory_base(server_factory_base&& other) noexcept {
+  std::swap(config_, other.config_);
+}
+
+server_factory_base&
+server_factory_base::operator=(server_factory_base&& other) noexcept {
+  std::swap(config_, other.config_);
+  return *this;
 }
 
 server_factory_base::~server_factory_base() {
-  config_->deref();
+  if (config_ != nullptr)
+    config_->deref();
 }
 
 server_factory_base::config_impl*

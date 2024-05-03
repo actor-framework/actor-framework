@@ -10,6 +10,8 @@
 
 #include "caf/detail/assert.hpp"
 
+#include <utility>
+
 namespace caf::net::http {
 
 class client_factory::config_impl : public dsl::client_config_value {
@@ -23,8 +25,18 @@ public:
   caf::unordered_flat_map<std::string, std::string> fields;
 };
 
+client_factory::client_factory(client_factory&& other) noexcept {
+  std::swap(config_, other.config_);
+}
+
+client_factory& client_factory::operator=(client_factory&& other) noexcept {
+  std::swap(config_, other.config_);
+  return *this;
+}
+
 client_factory::~client_factory() {
-  delete config_;
+  if (config_ != nullptr)
+    config_->deref();
 }
 
 dsl::client_config_value& client_factory::base_config() {

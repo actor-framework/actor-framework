@@ -25,8 +25,7 @@
 #include "caf/fwd.hpp"
 #include "caf/none.hpp"
 
-#include <cstdint>
-#include <memory>
+#include <cstddef>
 
 namespace caf::net::http {
 
@@ -39,6 +38,10 @@ public:
                  Args&&... args) {
     init_config(from.mpx).assign(from, token, std::forward<Args>(args)...);
   }
+
+  server_factory(server_factory&& other) noexcept;
+
+  server_factory& operator=(server_factory&& other) noexcept;
 
   ~server_factory() override;
 

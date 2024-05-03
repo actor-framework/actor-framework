@@ -30,6 +30,10 @@ public:
     init_config(from.mpx).assign(from, token, std::forward<Args>(args)...);
   }
 
+  server_factory(server_factory&& other) noexcept;
+
+  server_factory& operator=(server_factory&& other) noexcept;
+
   ~server_factory() override;
 
   /// Monitors the actor handle @p hdl and stops the server if the monitored

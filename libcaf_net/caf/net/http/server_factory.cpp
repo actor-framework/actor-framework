@@ -3,6 +3,8 @@
 #include "caf/net/fwd.hpp"
 #include "caf/net/ssl/tcp_acceptor.hpp"
 
+#include <utility>
+
 namespace caf::net::http {
 
 namespace {
@@ -193,8 +195,18 @@ public:
   size_t max_request_size = 0;
 };
 
+server_factory::server_factory(server_factory&& other) noexcept {
+  std::swap(config_, other.config_);
+}
+
+server_factory& server_factory::operator=(server_factory&& other) noexcept {
+  std::swap(config_, other.config_);
+  return *this;
+}
+
 server_factory::~server_factory() {
-  delete config_;
+  if (config_ != nullptr)
+    config_->deref();
 }
 
 dsl::server_config_value& server_factory::base_config() {

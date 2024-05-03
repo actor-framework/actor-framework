@@ -27,7 +27,9 @@ public:
 
   server_factory_base(config_impl* config, detail::ws_conn_acceptor_ptr wca);
 
-  server_factory_base(const server_factory_base& other);
+  server_factory_base(server_factory_base&& other) noexcept;
+
+  server_factory_base& operator=(server_factory_base&& other) noexcept;
 
   virtual ~server_factory_base();
 
@@ -64,6 +66,14 @@ public:
     : super(config, std::move(wca)), pull_(std::move(pull)) {
     // nop
   }
+
+  server_factory(server_factory&&) noexcept = default;
+
+  server_factory& operator=(server_factory&&) noexcept = default;
+
+  server_factory(const server_factory&) = delete;
+
+  server_factory& operator=(const server_factory&) = delete;
 
   /// Starts a server that accepts incoming connections with the WebSocket
   /// protocol.

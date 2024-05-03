@@ -37,6 +37,10 @@ public:
     init_config(from.mpx).assign(from, token, std::forward<Args>(args)...);
   }
 
+  server_factory(server_factory&& other) noexcept;
+
+  server_factory& operator=(server_factory&& other) noexcept;
+
   ~server_factory() override;
 
   /// Starts a server that accepts incoming connections with the

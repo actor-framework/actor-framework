@@ -29,6 +29,10 @@ public:
     init_config(from.mpx).assign(from, token, std::forward<Args>(args)...);
   }
 
+  client_factory(client_factory&& other) noexcept;
+
+  client_factory& operator=(client_factory&& other) noexcept;
+
   ~client_factory() override;
 
   /// Overrides the default buffer size for reading from the network.

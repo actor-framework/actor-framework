@@ -36,8 +36,18 @@ public:
   using super::super;
 };
 
+client_factory::client_factory(client_factory&& other) noexcept {
+  std::swap(config_, other.config_);
+}
+
+client_factory& client_factory::operator=(client_factory&& other) noexcept {
+  std::swap(config_, other.config_);
+  return *this;
+}
+
 client_factory::~client_factory() {
-  delete config_;
+  if (config_ != nullptr)
+    config_->deref();
 }
 
 dsl::client_config_value& client_factory::base_config() {

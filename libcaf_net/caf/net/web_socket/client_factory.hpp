@@ -34,6 +34,10 @@ public:
     init_config(from.mpx).assign(from, token, std::forward<Args>(args)...);
   }
 
+  client_factory(client_factory&& other) noexcept;
+
+  client_factory& operator=(client_factory&& other) noexcept;
+
   ~client_factory() override;
 
   /// Starts a connection with the length-prefixing protocol.

@@ -41,6 +41,10 @@ public:
     init_config(from.mpx).assign(from, token, std::forward<Args>(args)...);
   }
 
+  client_factory(client_factory&& other) noexcept;
+
+  client_factory& operator=(client_factory&& other) noexcept;
+
   ~client_factory() override;
 
   /// Add an additional HTTP header field to the request.

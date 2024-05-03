@@ -47,8 +47,18 @@ public:
   uint32_t write_buffer_size = defaults::net::octet_stream_buffer_size;
 };
 
+client_factory::client_factory(client_factory&& other) noexcept {
+  std::swap(config_, other.config_);
+}
+
+client_factory& client_factory::operator=(client_factory&& other) noexcept {
+  std::swap(config_, other.config_);
+  return *this;
+}
+
 client_factory::~client_factory() {
-  delete config_;
+  if (config_ != nullptr)
+    config_->deref();
 }
 
 client_factory&& client_factory::read_buffer_size(uint32_t new_value) && {
