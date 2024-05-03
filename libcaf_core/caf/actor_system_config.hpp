@@ -85,14 +85,12 @@ public:
 
   /// Allows other nodes to spawn actors created by `fun`
   /// dynamically by using `name` as identifier.
-  /// @experimental
   actor_system_config& add_actor_factory(std::string name, actor_factory fun);
 
   /// Allows other nodes to spawn actors of type `T`
   /// dynamically by using `name` as identifier.
-  /// @experimental
   template <class T, class... Ts>
-  actor_system_config& add_actor_type(std::string name) {
+  [[deprecated]] actor_system_config& add_actor_type(std::string name) {
     using handle = infer_handle_from_class_t<T>;
     static_assert(detail::is_complete<type_id<handle>>);
     return add_actor_factory(std::move(name), make_actor_factory<T, Ts...>());
@@ -102,7 +100,6 @@ public:
   /// dynamically by using `name` as identifier.
   /// @param t conveys the state constructor signature as a type list.
   /// @param ts type lists conveying alternative constructor signatures.
-  /// @experimental
   template <class F, class T, class... Ts>
   actor_system_config& add_actor_type(std::string name, F f, T t, Ts... ts) {
     return add_actor_factory(std::move(name), make_actor_factory(f, t, ts...));
@@ -110,7 +107,6 @@ public:
 
   /// Allows other nodes to spawn actors implemented by function `f`
   /// dynamically by using `name` as identifier.
-  /// @experimental
   template <class F>
   actor_system_config& add_actor_type(std::string name, F f) {
     if constexpr (detail::has_handle_type_alias_v<F>) {
@@ -118,7 +114,7 @@ public:
       return add_actor_factory(std::move(name),
                                make_actor_factory(f, type_list<>{}));
     } else {
-      // F represents a function based actor callable
+      // F represents a function based actor callable.
       using handle = infer_handle_from_fun_t<F>;
       static_assert(detail::is_complete<type_id<handle>>);
       return add_actor_factory(std::move(name),
