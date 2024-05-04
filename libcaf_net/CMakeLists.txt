@@ -78,7 +78,6 @@ caf_add_component(
     caf/net/ip.cpp
     caf/net/ip.test.cpp
     caf/net/lp/client_factory.cpp
-    caf/net/lp/default_trait.cpp
     caf/net/lp/frame.test.cpp
     caf/net/lp/framing.cpp
     caf/net/lp/framing.test.cpp

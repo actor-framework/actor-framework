@@ -11,7 +11,6 @@
 #include "caf/net/dsl/has_context.hpp"
 #include "caf/net/lp/client_factory.hpp"
 #include "caf/net/lp/config.hpp"
-#include "caf/net/lp/default_trait.hpp"
 #include "caf/net/lp/server_factory.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/ssl/context.hpp"
@@ -25,11 +24,10 @@
 namespace caf::net::lp {
 
 /// Entry point for the `with(...)` DSL.
-template <class Trait>
-class with_t : public extend<dsl::base, with_t<Trait>>::template //
+class with_t : public extend<dsl::base, with_t>:: //
                with<dsl::has_accept, dsl::has_connect, dsl::has_context> {
 public:
-  using config_type = base_config<Trait>;
+  using config_type = dsl::generic_config_value;
 
   template <class... Ts>
   explicit with_t(multiplexer* mpx) : config_(make_counted<config_type>(mpx)) {
@@ -65,14 +63,12 @@ private:
   intrusive_ptr<config_type> config_;
 };
 
-template <class Trait = lp::default_trait>
-with_t<Trait> with(actor_system& sys) {
-  return with_t<Trait>{multiplexer::from(sys)};
+with_t with(actor_system& sys) {
+  return with_t{multiplexer::from(sys)};
 }
 
-template <class Trait = lp::default_trait>
-with_t<Trait> with(multiplexer* mpx) {
-  return with_t<Trait>{mpx};
+with_t with(multiplexer* mpx) {
+  return with_t{mpx};
 }
 
 } // namespace caf::net::lp

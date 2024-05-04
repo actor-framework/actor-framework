@@ -4,8 +4,6 @@
 
 #include "caf/net/lp/server_factory.hpp"
 
-#include "caf/net/lp/default_trait.hpp"
-
 #include "caf/cow_tuple.hpp"
 
 namespace caf::net::lp {
@@ -13,13 +11,13 @@ namespace caf::net::lp {
 namespace {
 
 /// Specializes @ref connection_factory for the length-prefixing protocol.
-template <class Transport, class Trait>
+template <class Transport>
 class lp_connection_factory
   : public detail::connection_factory<typename Transport::connection_handle> {
 public:
-  using accept_event = typename Trait::accept_event;
+  using accept_event_t = accept_event<frame>;
 
-  using producer_type = async::blocking_producer<accept_event>;
+  using producer_type = async::blocking_producer<accept_event_t>;
 
   using shared_producer_type = std::shared_ptr<producer_type>;
 
@@ -52,7 +50,7 @@ expected<disposable>
 do_start_impl(Config& cfg, Acceptor acc,
               async::producer_resource<accept_event<frame>> push) {
   using transport_t = typename Acceptor::transport_type;
-  using factory_t = lp_connection_factory<transport_t, default_trait>;
+  using factory_t = lp_connection_factory<transport_t>;
   using impl_t = detail::accept_handler<Acceptor>;
   auto producer = async::make_blocking_producer(push.try_open());
   auto factory = std::make_unique<factory_t>(std::move(producer),

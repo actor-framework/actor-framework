@@ -4,7 +4,6 @@
 
 #include "caf/net/lp/client_factory.hpp"
 
-#include "caf/net/lp/default_trait.hpp"
 #include "caf/net/multiplexer.hpp"
 
 #include "caf/detail/lp_flow_bridge.hpp"

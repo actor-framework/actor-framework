@@ -68,12 +68,11 @@ dsl::client_config_value& client_factory::init_config(multiplexer* mpx) {
 expected<void> client_factory::sanity_check() {
   if (config_->hs.has_mandatory_fields()) {
     return {};
-  } else {
-    auto err = make_error(sec::invalid_argument,
-                          "WebSocket handshake lacks mandatory fields");
-    config_->call_on_error(err);
-    return {std::move(err)};
   }
+  auto err = make_error(sec::invalid_argument,
+                        "WebSocket handshake lacks mandatory fields");
+  config_->call_on_error(err);
+  return {std::move(err)};
 }
 
 expected<disposable> client_factory::do_start(dsl::client_config::lazy& data,

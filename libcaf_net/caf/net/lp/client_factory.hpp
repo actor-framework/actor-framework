@@ -45,13 +45,6 @@ public:
   /// Starts a connection with the length-prefixing protocol.
   template <class OnStart>
   [[nodiscard]] expected<disposable> start(OnStart on_start) {
-    // using input_res_t = typename Trait::input_resource;
-    // using output_res_t = typename Trait::output_resource;
-    // static_assert(std::is_invocable_v<OnStart, input_res_t, output_res_t>);
-    // return base_config().visit(
-    //   [this, &on_start](auto& data) { return this->do_start(data, on_start);
-    //   });
-
     // Create socket-to-application and application-to-socket buffers.
     auto [s2a_pull, s2a_push] = async::make_spsc_buffer_resource<frame>();
     auto [a2s_pull, a2s_push] = async::make_spsc_buffer_resource<frame>();
