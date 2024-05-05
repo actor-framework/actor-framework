@@ -55,27 +55,4 @@ public:
   Trait trait;
 };
 
-/// The configuration for a length-prefix framing client.
-template <class Trait>
-class client_config : public dsl::client_config_value {
-public:
-  using trait_type = Trait;
-
-  using super = dsl::client_config_value;
-
-  using super::super;
-
-  template <class T, class... Args>
-  static auto make(dsl::client_config_tag<T>, const base_config<Trait>& from,
-                   Args&&... args) {
-    auto ptr = super::make_impl(std::in_place_type<client_config>, from,
-                                std::in_place_type<T>,
-                                std::forward<Args>(args)...);
-    ptr->trait = from.trait;
-    return ptr;
-  }
-
-  Trait trait;
-};
-
 } // namespace caf::net::lp

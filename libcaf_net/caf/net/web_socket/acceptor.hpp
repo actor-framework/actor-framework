@@ -20,9 +20,6 @@ namespace caf::net::web_socket {
 template <class... Ts>
 class acceptor {
 public:
-  template <class Trait>
-  using server_factory_type = server_factory<Trait, Ts...>;
-
   explicit acceptor(const http::request_header& hdr) : hdr_(hdr) {
     // nop
   }
@@ -59,40 +56,6 @@ protected:
   error reject_reason_;
 };
 
-template <class Trait, class... Ts>
-class acceptor_impl : public acceptor<Ts...> {
-public:
-  using super = acceptor<Ts...>;
-
-  using super::super;
-
-  using input_type = typename Trait::input_type;
-
-  using output_type = typename Trait::output_type;
-
-  /// The event type for informing the application of an accepted connection.
-  using app_event_type
-    = cow_tuple<async::consumer_resource<input_type>,
-                async::producer_resource<output_type>, Ts...>;
-
-  /// The pair of resources for the WebSocket worker.
-  using ws_res_type = async::resource_pair<output_type, input_type>;
-
-  void accept(Ts... xs) override {
-    if (super::accepted_)
-      return;
-    auto [app_pull, ws_push] = async::make_spsc_buffer_resource<input_type>();
-    auto [ws_pull, app_push] = async::make_spsc_buffer_resource<output_type>();
-    ws_resources = ws_res_type{ws_pull, ws_push};
-    app_event = make_cow_tuple(app_pull, app_push, std::move(xs)...);
-    super::accepted_ = true;
-  }
-
-  ws_res_type ws_resources;
-
-  app_event_type app_event;
-};
-
 /// Type trait that determines if a type is an `acceptor`.
 template <class T>
 struct is_acceptor : std::false_type {};
@@ -107,3 +70,38 @@ template <class T>
 inline constexpr bool is_acceptor_v = is_acceptor<T>::value;
 
 } // namespace caf::net::web_socket
+
+namespace caf::detail {
+
+template <class... Ts>
+class ws_acceptor_impl : public net::web_socket::acceptor<Ts...> {
+public:
+  using super = net::web_socket::acceptor<Ts...>;
+
+  using super::super;
+
+  using frame = net::web_socket::frame;
+
+  /// The event type for informing the application of an accepted connection.
+  using app_event_type = cow_tuple<async::consumer_resource<frame>,
+                                   async::producer_resource<frame>, Ts...>;
+
+  /// The pair of resources for the WebSocket worker.
+  using ws_res_type = async::resource_pair<frame, frame>;
+
+  void accept(Ts... xs) override {
+    if (super::accepted_)
+      return;
+    auto [app_pull, ws_push] = async::make_spsc_buffer_resource<frame>();
+    auto [ws_pull, app_push] = async::make_spsc_buffer_resource<frame>();
+    ws_resources = ws_res_type{ws_pull, ws_push};
+    app_event = make_cow_tuple(app_pull, app_push, std::move(xs)...);
+    super::accepted_ = true;
+  }
+
+  ws_res_type ws_resources;
+
+  app_event_type app_event;
+};
+
+} // namespace caf::detail

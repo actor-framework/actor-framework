@@ -4,67 +4,21 @@
 
 #pragma once
 
+#include "caf/net/accept_event.hpp"
 #include "caf/net/http/route.hpp"
 #include "caf/net/web_socket/acceptor.hpp"
-#include "caf/net/web_socket/default_trait.hpp"
 #include "caf/net/web_socket/framing.hpp"
 #include "caf/net/web_socket/handshake.hpp"
 
 #include "caf/async/blocking_producer.hpp"
 #include "caf/detail/assert.hpp"
+#include "caf/detail/ws_conn_acceptor.hpp"
 #include "caf/detail/ws_flow_bridge.hpp"
 #include "caf/type_list.hpp"
 
 #include <memory>
 
 namespace caf::detail {
-
-/// Specializes the WebSocket flow bridge for the switch-protocol use case.
-template <class Trait, class... Ts>
-class ws_switch_protocol_flow_bridge
-  : public ws_flow_bridge<Trait, net::web_socket::upper_layer> {
-public:
-  using super = ws_flow_bridge<Trait, net::web_socket::upper_layer>;
-
-  using accept_event = typename Trait::template accept_event<Ts...>;
-
-  using producer_type = async::blocking_producer<accept_event>;
-
-  using pull_type = async::consumer_resource<typename Trait::output_type>;
-
-  using push_type = async::producer_resource<typename Trait::input_type>;
-
-  // Note: in general, this is *unsafe*. However, we exploit the fact that there
-  //       is currently only one thread running in the multiplexer (which makes
-  //       this safe).
-  using shared_producer_type = std::shared_ptr<producer_type>;
-
-  ws_switch_protocol_flow_bridge(shared_producer_type producer, pull_type pull,
-                                 push_type push)
-    : producer_(std::move(producer)),
-      pull_(std::move(pull)),
-      push_(std::move(push)) {
-    // nop
-  }
-
-  static auto make(shared_producer_type producer, pull_type pull,
-                   push_type push) {
-    using impl_t = ws_switch_protocol_flow_bridge;
-    return std::make_unique<impl_t>(std::move(producer), std::move(pull),
-                                    std::move(push));
-  }
-
-  error start(net::web_socket::lower_layer* down_ptr) override {
-    CAF_ASSERT(down_ptr != nullptr);
-    super::down_ = down_ptr;
-    return super::init(&down_ptr->mpx(), std::move(pull_), std::move(push_));
-  }
-
-private:
-  shared_producer_type producer_;
-  pull_type pull_;
-  push_type push_;
-};
 
 template <class OnRequest, class OnStart>
 struct ws_switch_protocol_state : public ref_counted {
@@ -83,15 +37,15 @@ struct ws_switch_protocol_state : public ref_counted {
   std::optional<OnStart> on_start;
 };
 
-template <class Trait, class State, class Out, class... Ts>
+template <class State, class Out, class... Ts>
 class ws_switch_protocol;
 
-template <class Trait, class State, class... Out, class... Ts>
-class ws_switch_protocol<Trait, State, type_list<Out...>, Ts...> {
+template <class State, class... Out, class... Ts>
+class ws_switch_protocol<State, type_list<Out...>, Ts...> {
 public:
-  using accept_event = typename Trait::template accept_event<Out...>;
+  using accept_event_t = net::accept_event<net::web_socket::frame, Out...>;
 
-  using producer_type = async::blocking_producer<accept_event>;
+  using producer_type = async::blocking_producer<accept_event_t>;
 
   using shared_producer_type = std::shared_ptr<producer_type>;
 
@@ -125,7 +79,7 @@ public:
       return;
     }
     // Call user-defined on_request callback.
-    net::web_socket::acceptor_impl<Trait, Out...> acc{hdr};
+    ws_acceptor_impl<Out...> acc{hdr};
     (state_->on_request)(acc, args...);
     if (!acc.accepted()) {
       if (auto& err = acc.reject_reason()) {
@@ -148,8 +102,7 @@ public:
     // Switch to the WebSocket framing protocol.
     auto& [pull, push] = acc.ws_resources;
     using net::web_socket::framing;
-    using bridge_t = ws_switch_protocol_flow_bridge<Trait, Out...>;
-    auto bridge = bridge_t::make(producer_, std::move(pull), std::move(push));
+    auto bridge = make_ws_flow_bridge(std::move(pull), std::move(push));
     res.down()->switch_protocol(framing::make_server(std::move(bridge)));
   }
 
@@ -160,8 +113,8 @@ public:
     // instance from the others and it becomes a "live" object.
     auto& st = state_.unshared();
     if (auto& on_start = st.on_start; on_start) {
-      auto [pull, push] = async::make_spsc_buffer_resource<accept_event>();
-      using producer_t = async::blocking_producer<accept_event>;
+      auto [pull, push] = async::make_spsc_buffer_resource<accept_event_t>();
+      using producer_t = async::blocking_producer<accept_event_t>;
       producer_ = std::make_shared<producer_t>(producer_t{push.try_open()});
       (*on_start)(std::move(pull));
       on_start = std::nullopt;
@@ -177,9 +130,8 @@ private:
 
 namespace caf::net::web_socket {
 
-/// Binds a `switch_protocol` invocation to a trait class and a function object
-/// for on_request.
-template <class Trait, class OnRequest>
+/// Binds a `switch_protocol` invocation to a function object for on_request.
+template <class OnRequest>
 struct switch_protocol_bind_2 {
 public:
   switch_protocol_bind_2(OnRequest on_request)
@@ -200,7 +152,7 @@ private:
             type_list<net::web_socket::acceptor<Out...>&, Ts...>) {
     using namespace detail;
     using state_t = ws_switch_protocol_state<OnRequest, OnStart>;
-    using impl_t = ws_switch_protocol<Trait, state_t, type_list<Out...>, Ts...>;
+    using impl_t = ws_switch_protocol<state_t, type_list<Out...>, Ts...>;
     auto state = make_counted<state_t>(std::move(on_request_),
                                        std::move(on_start));
     static_assert(http_route_has_init_v<impl_t>);
@@ -210,18 +162,16 @@ private:
   OnRequest on_request_;
 };
 
-/// Binds a `switch_protocol` invocation to a trait class.
-template <class Trait>
+/// DSL entry point for creating a server.
 struct switch_protocol_bind_1 {
   template <class OnRequest>
   auto on_request(OnRequest on_request) {
-    return switch_protocol_bind_2<Trait, OnRequest>(std::move(on_request));
+    return switch_protocol_bind_2<OnRequest>(std::move(on_request));
   }
 };
 
-template <class Trait = default_trait>
 auto switch_protocol() {
-  return switch_protocol_bind_1<Trait>{};
+  return switch_protocol_bind_1{};
 }
 
 } // namespace caf::net::web_socket

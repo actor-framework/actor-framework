@@ -298,7 +298,7 @@ template <class F>
 expected<route_ptr> make_route(F f) {
   // F must have signature void (responder&).
   using f_trait = detail::get_callable_trait_t<F>;
-  static_assert(std::is_same_v<typename f_trait::f_sig, void(responder&)>);
+  static_assert(std::is_same_v<typename f_trait::fun_sig, void(responder&)>);
   using impl_t = detail::http_catch_all_route_impl<F>;
   return make_counted<impl_t>(std::move(f));
 }

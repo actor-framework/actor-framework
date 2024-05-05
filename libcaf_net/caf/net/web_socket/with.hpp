@@ -12,8 +12,6 @@
 #include "caf/net/ssl/context.hpp"
 #include "caf/net/tcp_accept_socket.hpp"
 #include "caf/net/web_socket/client_factory.hpp"
-#include "caf/net/web_socket/config.hpp"
-#include "caf/net/web_socket/default_trait.hpp"
 #include "caf/net/web_socket/has_on_request.hpp"
 
 #include "caf/extend.hpp"
@@ -24,12 +22,11 @@
 namespace caf::net::web_socket {
 
 /// Entry point for the `with(...)` DSL.
-template <class Trait>
-class with_t : public extend<dsl::base, with_t<Trait>>::template //
+class with_t : public extend<dsl::base, with_t>:: //
                with<dsl::has_accept, dsl::has_connect, dsl::has_uri_connect,
                     dsl::has_context> {
 public:
-  using config_type = base_config<Trait>;
+  using config_type = dsl::generic_config_value;
 
   template <class... Ts>
   explicit with_t(multiplexer* mpx) : config_(make_counted<config_type>(mpx)) {
@@ -48,27 +45,25 @@ public:
   /// @private
   template <class T, class... Ts>
   auto make(dsl::server_config_tag<T> token, Ts&&... xs) {
-    return has_on_request<Trait>{token, *config_, std::forward<Ts>(xs)...};
+    return has_on_request{token, *config_, std::forward<Ts>(xs)...};
   }
 
   /// @private
   template <class T, class... Ts>
   auto make(dsl::client_config_tag<T> token, Ts&&... xs) {
-    return client_factory<Trait>{token, *config_, std::forward<Ts>(xs)...};
+    return client_factory{token, *config_, std::forward<Ts>(xs)...};
   }
 
 private:
   intrusive_ptr<config_type> config_;
 };
 
-template <class Trait = default_trait>
-with_t<Trait> with(actor_system& sys) {
-  return with_t<Trait>{multiplexer::from(sys)};
+with_t with(actor_system& sys) {
+  return with_t{multiplexer::from(sys)};
 }
 
-template <class Trait = default_trait>
-with_t<Trait> with(multiplexer* mpx) {
-  return with_t<Trait>{mpx};
+with_t with(multiplexer* mpx) {
+  return with_t{mpx};
 }
 
 } // namespace caf::net::web_socket

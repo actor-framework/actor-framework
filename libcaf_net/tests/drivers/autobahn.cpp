@@ -1,12 +1,20 @@
 // Simple WebSocket server that sends everything it receives back to the sender.
 
+#include "caf/net/fwd.hpp"
 #include "caf/net/middleman.hpp"
+#include "caf/net/ssl/tcp_acceptor.hpp"
+#include "caf/net/tcp_accept_socket.hpp"
+#include "caf/net/web_socket/lower_layer.hpp"
+#include "caf/net/web_socket/server.hpp"
 #include "caf/net/web_socket/upper_layer.hpp"
-#include "caf/net/web_socket/with.hpp"
 
+#include "caf/action.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/caf_main.hpp"
+#include "caf/detail/accept_handler.hpp"
+#include "caf/detail/connection_factory.hpp"
+#include "caf/detail/make_transport.hpp"
 #include "caf/log/net.hpp"
 
 #include <iostream>
@@ -85,6 +93,28 @@ public:
   caf::net::web_socket::lower_layer* down = nullptr;
 };
 
+template <class Transport>
+class conn_factory : public caf::detail::connection_factory<
+                       typename Transport::connection_handle> {
+public:
+  using connection_handle = typename Transport::connection_handle;
+
+  caf::net::socket_manager_ptr make(caf::net::multiplexer* mpx,
+                                    connection_handle conn) override {
+    auto app = web_socket_app::make();
+    auto server = caf::net::web_socket::server::make(std::move(app));
+    auto transport = caf::detail::make_transport(std::move(conn),
+                                                 std::move(server));
+    return caf::net::socket_manager::make(mpx, std::move(transport));
+  }
+};
+
+namespace {
+
+std::atomic<bool> shutdown_flag;
+
+} // namespace
+
 int caf_main(caf::actor_system& sys, const config& cfg) {
   // Read the configuration.
   auto port = caf::get_or(cfg, "port", default_port);
@@ -98,32 +128,40 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
     return EXIT_FAILURE;
   }
   // Open up a TCP port for incoming connections and start the server.
-  auto server
-    = ws::with(sys)
-        // Optionally enable TLS.
-        .context(ssl::context::enable(key_file && cert_file)
-                   .and_then(ssl::emplace_server(ssl::tls::v1_2))
-                   .and_then(ssl::use_private_key_file(key_file, pem))
-                   .and_then(ssl::use_certificate_file(cert_file, pem)))
-        // Bind to the user-defined port.
-        .accept(port)
-        // Limit how many clients may be connected at any given time.
-        .max_connections(max_connections)
-        // Add handler for incoming connections.
-        .on_request([](ws::acceptor<>& acc) {
-          // Ignore all header fields and accept the connection.
-          acc.accept();
-        })
-        // Create instances of our app to handle incoming connections.
-        .start([] { return web_socket_app::make(); });
-  // Report any error to the user.
-  if (!server) {
-    std::cerr << "*** unable to run at port " << port << ": "
-              << to_string(server.error()) << '\n';
+  auto fd = caf::net::make_tcp_accept_socket(port);
+  if (!fd) {
+    std::cerr << "*** failed to open port: " << to_string(fd.error()) << '\n';
     return EXIT_FAILURE;
   }
+  auto ctx = ssl::context::enable(key_file && cert_file)
+               .and_then(ssl::emplace_server(ssl::tls::v1_2))
+               .and_then(ssl::use_private_key_file(key_file, pem))
+               .and_then(ssl::use_certificate_file(cert_file, pem));
+  auto impl = std::unique_ptr<caf::net::socket_event_layer>{};
+  if (ctx) {
+    using factory_t = conn_factory<ssl::transport>;
+    using impl_t = caf::detail::accept_handler<ssl::tcp_acceptor>;
+    auto acceptor = ssl::tcp_acceptor{std::move(*fd), std::move(*ctx)};
+    impl = impl_t::make(std::move(acceptor), std::make_unique<factory_t>(),
+                        max_connections);
+  } else if (!ctx.error()) { // SSL disabled.
+    using factory_t = conn_factory<caf::net::octet_stream::transport>;
+    using impl_t = caf::detail::accept_handler<caf::net::tcp_accept_socket>;
+    impl = impl_t::make(std::move(*fd), std::make_unique<factory_t>(),
+                        max_connections);
+  } else {
+    std::cerr << "*** failed to initialize SSL: " << to_string(ctx.error())
+              << '\n';
+    return EXIT_FAILURE;
+  }
+  auto* mpx = sys.network_manager().mpx_ptr();
+  auto mgr = caf::net::socket_manager::make(mpx, std::move(impl));
+  mgr->add_cleanup_listener(caf::make_single_shot_action([] { //
+    shutdown_flag = true;
+  }));
+  mpx->start(mgr);
   // Wait until the server shuts down.
-  while (server->valid()) {
+  while (!shutdown_flag.load()) {
     std::this_thread::sleep_for(1s);
   }
   return EXIT_SUCCESS;

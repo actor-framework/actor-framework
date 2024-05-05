@@ -6,9 +6,9 @@
 
 #include "caf/net/checked_socket.hpp"
 #include "caf/net/dsl/client_factory_base.hpp"
+#include "caf/net/dsl/generic_config.hpp"
 #include "caf/net/http/async_client.hpp"
 #include "caf/net/http/client.hpp"
-#include "caf/net/http/config.hpp"
 #include "caf/net/http/response.hpp"
 #include "caf/net/octet_stream/transport.hpp"
 #include "caf/net/ssl/connection.hpp"
@@ -33,63 +33,50 @@ namespace caf::net::http {
 
 /// Factory for the `with(...).connect(...).request(...)` DSL.
 class CAF_NET_EXPORT client_factory
-  : public dsl::client_factory_base<client_config, client_factory> {
+  : public dsl::client_factory_base<client_factory> {
 public:
-  using super = dsl::client_factory_base<client_config, client_factory>;
+  template <class Token, class... Args>
+  client_factory(Token token, const dsl::generic_config_value& from,
+                 Args&&... args) {
+    init_config(from.mpx).assign(from, token, std::forward<Args>(args)...);
+  }
 
-  using config_type = client_config;
+  client_factory(client_factory&& other) noexcept;
 
-  using super::super;
+  client_factory& operator=(client_factory&& other) noexcept;
+
+  ~client_factory() override;
 
   /// Add an additional HTTP header field to the request.
-  client_factory& add_header_field(std::string key, std::string value) {
-    config().fields.insert(std::pair{std::move(key), std::move(value)});
-    return *this;
-  }
+  client_factory& add_header_field(std::string key, std::string value);
 
   /// Sends an HTTP GET message.
-  expected<std::pair<async::future<response>, disposable>> get() {
-    return request(http::method::get);
-  }
+  expected<std::pair<async::future<response>, disposable>> get();
 
   /// Sends an HTTP HEAD message.
-  expected<std::pair<async::future<response>, disposable>> head() {
-    return request(http::method::head);
-  }
+  expected<std::pair<async::future<response>, disposable>> head();
 
   /// Sends an HTTP POST message.
   expected<std::pair<async::future<response>, disposable>>
-  post(std::string_view payload) {
-    return request(http::method::post, payload);
-  }
+  post(std::string_view payload);
 
   /// Sends an HTTP PUT message.
   expected<std::pair<async::future<response>, disposable>>
-  put(std::string_view payload) {
-    return request(http::method::put, payload);
-  }
+  put(std::string_view payload);
 
   /// Sends an HTTP DELETE message.
-  expected<std::pair<async::future<response>, disposable>> del() {
-    return request(http::method::del);
-  }
+  expected<std::pair<async::future<response>, disposable>> del();
 
   /// Sends an HTTP CONNECT message.
-  expected<std::pair<async::future<response>, disposable>> connect() {
-    return request(http::method::connect);
-  }
+  expected<std::pair<async::future<response>, disposable>> connect();
 
   /// Sends an HTTP OPTIONS message.
   expected<std::pair<async::future<response>, disposable>>
-  options(std::string_view payload) {
-    return request(http::method::options, payload);
-  }
+  options(std::string_view payload);
 
   /// Sends an HTTP TRACE message.
   expected<std::pair<async::future<response>, disposable>>
-  trace(std::string_view payload) {
-    return request(http::method::trace, payload);
-  }
+  trace(std::string_view payload);
 
   /// Utility function to make a request with given parameters.
   expected<std::pair<async::future<response>, disposable>>
@@ -99,20 +86,26 @@ public:
   expected<std::pair<async::future<response>, disposable>>
   request(http::method method, const_byte_span payload);
 
+protected:
+  dsl::client_config_value& base_config() override;
+
 private:
+  class config_impl;
+
   using return_t = expected<std::pair<async::future<response>, disposable>>;
 
+  dsl::client_config_value& init_config(multiplexer* mpx);
+
   template <typename Conn>
-  return_t do_start_impl(config_type& cfg, Conn conn, http::method method,
-                         const_byte_span payload);
+  return_t
+  do_start_impl(Conn conn, http::method method, const_byte_span payload);
 
-  return_t do_start(config_type& cfg, dsl::client_config::lazy& data,
-                    http::method method, const_byte_span payload);
+  return_t do_start(dsl::client_config::lazy& data, http::method method,
+                    const_byte_span payload);
 
-  return_t do_start(config_type& cfg, error err) {
-    cfg.call_on_error(err);
-    return return_t{std::move(err)};
-  }
+  return_t do_start(error err);
+
+  config_impl* config_ = nullptr;
 };
 
 } // namespace caf::net::http

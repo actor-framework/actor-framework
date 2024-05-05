@@ -12,7 +12,6 @@
 #include "caf/net/dsl/has_lazy_context.hpp"
 #include "caf/net/dsl/has_uri_connect.hpp"
 #include "caf/net/http/client_factory.hpp"
-#include "caf/net/http/config.hpp"
 #include "caf/net/http/request.hpp"
 #include "caf/net/http/router.hpp"
 #include "caf/net/http/server_factory.hpp"
@@ -32,10 +31,10 @@ class with_t : public extend<dsl::base, with_t>:: //
                with<dsl::has_accept, dsl::has_lazy_context, dsl::has_context,
                     dsl::has_uri_connect> {
 public:
-  using config_type = base_config;
+  using config_type = dsl::generic_config_value;
 
   template <class... Ts>
-  explicit with_t(multiplexer* mpx) : config_(make_counted<base_config>(mpx)) {
+  explicit with_t(multiplexer* mpx) : config_(make_counted<config_type>(mpx)) {
     // nop
   }
 
@@ -48,7 +47,7 @@ public:
   with_t& operator=(const with_t&) noexcept = default;
 
   /// @private
-  base_config& config() {
+  config_type& config() {
     return *config_;
   }
 
@@ -65,7 +64,7 @@ public:
   }
 
 private:
-  intrusive_ptr<base_config> config_;
+  intrusive_ptr<config_type> config_;
 };
 
 inline with_t with(actor_system& sys) {

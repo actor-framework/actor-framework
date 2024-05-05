@@ -1,7 +1,9 @@
 // Pseudo "Stock Ticker" that publishes random updates once per second via
 // WebSocket feed.
 
+#include "caf/net/acceptor_resource.hpp"
 #include "caf/net/middleman.hpp"
+#include "caf/net/web_socket/frame.hpp"
 #include "caf/net/web_socket/with.hpp"
 
 #include "caf/actor_from_state.hpp"
@@ -58,12 +60,10 @@ bool inspect(Inspector& f, info& x) {
 // -- actor for generating a random feed ---------------------------------------
 
 struct random_feed_state {
-  using trait = caf::net::web_socket::default_trait;
   using frame = caf::net::web_socket::frame;
-  using accept_event = trait::accept_event<>;
 
   random_feed_state(caf::event_based_actor* selfptr,
-                    trait::acceptor_resource<> events,
+                    caf::net::acceptor_resource<frame> events,
                     caf::timespan update_interval)
     : self(selfptr), val_dist(0, 100000), index_dist(0, 19) {
     // Init random number generator.
@@ -106,7 +106,7 @@ struct random_feed_state {
     auto n = std::make_shared<int>(0);
     events
       .observe_on(self) //
-      .for_each([this, n](const accept_event& ev) {
+      .for_each([this, n](const auto& ev) {
         std::cout << "*** added listener (n = " << ++*n << ")" << std::endl;
         auto [pull, push] = ev.data();
         pull.observe_on(self)
@@ -190,7 +190,6 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
     return EXIT_FAILURE;
   }
   // Open up a TCP port for incoming connections and start the server.
-  using trait = ws::default_trait;
   auto server
     = ws::with(sys)
         // Optionally enable TLS.
@@ -208,7 +207,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
           acc.accept();
         })
         // When started, run our worker actor to handle incoming connections.
-        .start([&sys, interval](trait::acceptor_resource<> events) {
+        .start([&sys, interval](auto events) {
           sys.spawn(caf::actor_from_state<random_feed_state>, std::move(events),
                     interval);
         });

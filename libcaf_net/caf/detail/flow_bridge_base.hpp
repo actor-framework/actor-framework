@@ -5,10 +5,12 @@
 #pragma once
 
 #include "caf/net/http/request_header.hpp"
+#include "caf/net/multiplexer.hpp"
 
 #include "caf/async/consumer_adapter.hpp"
 #include "caf/async/producer_adapter.hpp"
 #include "caf/async/spsc_buffer.hpp"
+#include "caf/chunk.hpp"
 #include "caf/fwd.hpp"
 #include "caf/log/net.hpp"
 #include "caf/sec.hpp"
@@ -18,18 +20,20 @@
 namespace caf::detail {
 
 /// Translates between a message-oriented transport and data flows.
-template <class UpperLayer, class LowerLayer, class Trait>
+template <class UpperLayer, class LowerLayer, class ItemType>
 class flow_bridge_base : public UpperLayer {
 public:
-  using input_type = typename Trait::input_type;
+  using input_type = ItemType;
 
-  using output_type = typename Trait::output_type;
+  using output_type = ItemType;
 
   /// Type for the consumer adapter. We consume the output of the application.
   using consumer_type = async::consumer_adapter<output_type>;
 
   /// Type for the producer adapter. We produce the input of the application.
   using producer_type = async::producer_adapter<input_type>;
+
+  flow_bridge_base() = default;
 
   virtual bool write(const output_type& item) = 0;
 
@@ -82,8 +86,10 @@ public:
       switch (in_.pull(async::delay_errors, tmp)) {
         case async::read_result::ok:
           if (!write(tmp)) {
-            abort(trait_.last_error());
-            down_->shutdown(trait_.last_error());
+            auto err = make_error(sec::runtime_error,
+                                  "flow bridge failed to write to socket");
+            abort(err);
+            down_->shutdown(err);
             return;
           }
           break;
@@ -132,9 +138,6 @@ protected:
 
   /// The input to the application. Deserialized from the socket.
   producer_type out_;
-
-  /// Converts between raw bytes and native C++ objects.
-  Trait trait_;
 
   /// Type-erased handle to the @ref socket_manager. This reference is important
   /// to keep the bridge alive while the manager is not registered for writing

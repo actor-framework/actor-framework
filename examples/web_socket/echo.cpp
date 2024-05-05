@@ -1,6 +1,7 @@
 // Simple WebSocket server that sends everything it receives back to the sender.
 
 #include "caf/net/middleman.hpp"
+#include "caf/net/web_socket/frame.hpp"
 #include "caf/net/web_socket/with.hpp"
 
 #include "caf/actor_system.hpp"
@@ -74,7 +75,6 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
     return EXIT_FAILURE;
   }
   // Open up a TCP port for incoming connections and start the server.
-  using trait = ws::default_trait;
   auto server
     = ws::with(sys)
         // Optionally enable TLS.
@@ -109,12 +109,12 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
           // Note: calling nothing on `acc` also rejects the connection.
         })
         // When started, run our worker actor to handle incoming connections.
-        .start([&sys](trait::acceptor_resource<> events) {
+        .start([&sys](auto events) {
           sys.spawn([events](caf::event_based_actor* self) {
             // For each buffer pair, we create a new flow ...
             self->make_observable()
               .from_resource(events) //
-              .for_each([self](const trait::accept_event<>& ev) {
+              .for_each([self](const auto& ev) {
                 // ... that simply pushes data back to the sender.
                 auto [pull, push] = ev.data();
                 pull.observe_on(self)

@@ -13,6 +13,7 @@
 
 #include "caf/callback.hpp"
 #include "caf/defaults.hpp"
+#include "caf/detail/net_export.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/uri.hpp"
 
@@ -39,8 +40,10 @@ struct server_address {
 };
 
 /// Wraps configuration parameters for starting clients.
-class client_config {
+class CAF_NET_EXPORT client_config {
 public:
+  virtual ~client_config();
+
   /// Configuration for a client that creates the socket on demand.
   class CAF_NET_EXPORT lazy : public has_make_ctx {
   public:

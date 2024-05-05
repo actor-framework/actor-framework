@@ -1,5 +1,6 @@
 // Simple chat server with a binary protocol.
 
+#include "caf/net/acceptor_resource.hpp"
 #include "caf/net/lp/with.hpp"
 #include "caf/net/middleman.hpp"
 
@@ -45,7 +46,7 @@ struct config : caf::actor_system_config {
 // -- multiplexing logic -------------------------------------------------------
 
 void worker_impl(caf::event_based_actor* self,
-                 lp::default_trait::acceptor_resource events) {
+                 caf::net::acceptor_resource<lp::frame> events) {
   // Each client gets a UUID for identifying it. While processing messages, we
   // add this ID to the input to tag it.
   using message_t = std::pair<caf::uuid, lp::frame>;
@@ -129,7 +130,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
         // Limit how many clients may be connected at any given time.
         .max_connections(max_connections)
         // When started, run our worker actor to handle incoming connections.
-        .start([&sys](lp::default_trait::acceptor_resource accept_events) {
+        .start([&sys](auto accept_events) {
           sys.spawn(worker_impl, std::move(accept_events));
         });
   std::cout << "*** server started" << std::endl;

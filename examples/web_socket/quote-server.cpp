@@ -6,6 +6,7 @@
 #include "caf/net/http/with.hpp"
 #include "caf/net/middleman.hpp"
 #include "caf/net/ssl/context.hpp"
+#include "caf/net/web_socket/frame.hpp"
 #include "caf/net/web_socket/switch_protocol.hpp"
 
 #include "caf/actor_system.hpp"
@@ -160,7 +161,6 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
     return EXIT_FAILURE;
   }
   // Open up a TCP port for incoming connections and start the server.
-  using trait = ws::default_trait;
   auto server
     = http::with(sys)
         // Optionally enable TLS.
@@ -202,35 +202,32 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
                      }
                    })
                  // Spawn a worker for the WebSocket clients.
-                 .on_start(
-                   [&sys](trait::acceptor_resource<caf::cow_string> events) {
-                     // Spawn a worker that reads from `events`.
-                     using event_t = trait::accept_event<caf::cow_string>;
-                     sys.spawn([events](caf::event_based_actor* self) {
-                       // Each WS connection has a pull/push buffer pair.
-                       self->make_observable()
-                         .from_resource(events) //
-                         .for_each([self](const event_t& ev) mutable {
-                           // Forward the quotes to the client.
-                           auto [pull, push, name] = ev.data();
-                           auto quotes = quotes_by_name(name);
-                           assert(!quotes.empty()); // Checked in on_request.
-                           self->make_observable()
-                             .from_container(quotes)
-                             .map([](std::string_view quote) {
-                               return ws::frame{quote};
-                             })
-                             .subscribe(push);
-                           // We ignore whatever the client may send to us.
-                           pull.observe_on(self).subscribe(std::ignore);
-                         });
-                     });
-                   }))
+                 .on_start([&sys](auto events) {
+                   // Spawn a worker that reads from `events`.
+                   sys.spawn([events](caf::event_based_actor* self) {
+                     // Each WS connection has a pull/push buffer pair.
+                     self->make_observable()
+                       .from_resource(events) //
+                       .for_each([self](const auto& ev) mutable {
+                         // Forward the quotes to the client.
+                         auto [pull, push, name] = ev.data();
+                         auto quotes = quotes_by_name(name);
+                         self->make_observable()
+                           .from_container(quotes)
+                           .map([](std::string_view quote) {
+                             return ws::frame{quote};
+                           })
+                           .subscribe(push);
+                         // We ignore whatever the client may send to us.
+                         pull.observe_on(self).subscribe(std::ignore);
+                       });
+                   });
+                 }))
+        // --(rst-switch_protocol-end)--
         .route("/status", http::method::get,
                [](http::responder& res) {
                  res.respond(http::status::no_content);
                })
-        // --(rst-switch_protocol-end)--
         // Run with the configured routes.
         .start();
   // Report any error to the user.

@@ -34,16 +34,20 @@ caf_add_component(
     caf/detail/convert_ip_endpoint.cpp
     caf/detail/convert_ip_endpoint.test.cpp
     caf/detail/flow_bridge_initializer.cpp
+    caf/detail/lp_flow_bridge.cpp
     caf/detail/octet_stream_flow_bridge.cpp
     caf/detail/octet_stream_flow_bridge.test.cpp
     caf/detail/rfc6455.cpp
     caf/detail/rfc6455.test.cpp
+    caf/detail/ws_conn_acceptor.cpp
+    caf/detail/ws_flow_bridge.cpp
     caf/net/abstract_actor_shell.cpp
     caf/net/accept_socket.test.cpp
     caf/net/actor_shell.cpp
     caf/net/actor_shell.test.cpp
     caf/net/datagram_socket.cpp
     caf/net/datagram_socket.test.cpp
+    caf/net/dsl/client_config.cpp
     caf/net/dsl/config_base.cpp
     caf/net/generic_lower_layer.cpp
     caf/net/generic_upper_layer.cpp
@@ -51,7 +55,6 @@ caf_add_component(
     caf/net/http/client.cpp
     caf/net/http/client.test.cpp
     caf/net/http/client_factory.cpp
-    caf/net/http/config.cpp
     caf/net/http/header.cpp
     caf/net/http/header.test.cpp
     caf/net/http/lower_layer.cpp
@@ -74,11 +77,12 @@ caf_add_component(
     caf/net/http/v1.cpp
     caf/net/ip.cpp
     caf/net/ip.test.cpp
-    caf/net/lp/default_trait.cpp
+    caf/net/lp/client_factory.cpp
     caf/net/lp/frame.test.cpp
     caf/net/lp/framing.cpp
     caf/net/lp/framing.test.cpp
     caf/net/lp/lower_layer.cpp
+    caf/net/lp/server_factory.cpp
     caf/net/lp/upper_layer.cpp
     caf/net/middleman.cpp
     caf/net/multiplexer.cpp
@@ -123,14 +127,16 @@ caf_add_component(
     caf/net/udp_datagram_socket.cpp
     caf/net/udp_datagram_socket.test.cpp
     caf/net/web_socket/client.cpp
-    caf/net/web_socket/default_trait.cpp
+    caf/net/web_socket/client_factory.cpp
     caf/net/web_socket/frame.cpp
     caf/net/web_socket/frame.test.cpp
     caf/net/web_socket/framing.cpp
     caf/net/web_socket/handshake.cpp
     caf/net/web_socket/handshake.test.cpp
+    caf/net/web_socket/has_on_request.cpp
     caf/net/web_socket/lower_layer.cpp
     caf/net/web_socket/server.cpp
+    caf/net/web_socket/server_factory.cpp
     caf/net/web_socket/upper_layer.cpp
   LEGACY_TEST_SOURCES
     ${CMAKE_CURRENT_BINARY_DIR}/tests/legacy/pem.cpp

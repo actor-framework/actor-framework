@@ -2,12 +2,12 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#include "caf/net/http/config.hpp"
+#include "caf/net/dsl/client_config.hpp"
 
-namespace caf::net::http {
+namespace caf::net::dsl {
 
-server_config::~server_config() {
+client_config::~client_config() {
   // nop
 }
 
-} // namespace caf::net::http
+} // namespace caf::net::dsl
