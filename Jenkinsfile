@@ -69,7 +69,7 @@ config = [
             tags: ['docker'],
             builds: ['release'],
             extraBuildFlags: [
-                'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized',
+                'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wno-deprecated-declarations',
             ],
         ]],
         ['fedora-38', [ // EOL June 2024
