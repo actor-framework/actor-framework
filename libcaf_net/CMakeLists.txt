@@ -29,18 +29,15 @@ caf_add_component(
   HEADERS
     ${CAF_NET_HEADERS}
   SOURCES
-    caf/detail/accept_handler.cpp
     caf/detail/connection_acceptor.cpp
-    caf/detail/convert_ip_endpoint.cpp
-    caf/detail/convert_ip_endpoint.test.cpp
     caf/detail/flow_bridge_initializer.cpp
-    caf/detail/lp_flow_bridge.cpp
-    caf/detail/octet_stream_flow_bridge.cpp
-    caf/detail/octet_stream_flow_bridge.test.cpp
     caf/detail/rfc6455.cpp
     caf/detail/rfc6455.test.cpp
     caf/detail/ws_conn_acceptor.cpp
-    caf/detail/ws_flow_bridge.cpp
+    caf/internal/accept_handler.cpp
+    caf/internal/lp_flow_bridge.cpp
+    caf/internal/octet_stream_flow_bridge.cpp
+    caf/internal/ws_flow_bridge.cpp
     caf/net/abstract_actor_shell.cpp
     caf/net/accept_socket.test.cpp
     caf/net/actor_shell.cpp
@@ -137,6 +134,7 @@ caf_add_component(
     caf/net/web_socket/lower_layer.cpp
     caf/net/web_socket/server.cpp
     caf/net/web_socket/server_factory.cpp
+    caf/net/web_socket/switch_protocol.cpp
     caf/net/web_socket/upper_layer.cpp
   LEGACY_TEST_SOURCES
     ${CMAKE_CURRENT_BINARY_DIR}/tests/legacy/pem.cpp

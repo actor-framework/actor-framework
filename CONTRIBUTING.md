@@ -292,3 +292,16 @@ Comments
 - Use `//` to define basic comments that should not be processed by Doxygen.
 
 - Never use `/* ... */` C-style comments.
+
+Implementation Details
+----------------------
+
+We use two namespaces for implementation details: `detail` and `internal`. Both
+are considered private and should not be used by users of CAF. The difference
+between the two is that `internal` contains code that is shared only between
+multiple `.cpp` files in the same module. An `internal` component is never
+exported (and thus does not become part of the CAF ABI) and we do not install
+headers for it. We prefer `internal` whenever possible to keep the ABI minimal.
+
+However, there cases where `internal` is not suitable, e.g., when a type must be
+included in a public CAF header. In such cases, use `detail` instead.

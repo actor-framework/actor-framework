@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "caf/detail/socket_sys_includes.hpp"
+#include "caf/internal/socket_sys_includes.hpp"
 
-namespace caf::detail {
+namespace caf::internal {
 
 inline auto addr_of(sockaddr_in& what) -> decltype(what.sin_addr)& {
   return what.sin_addr;
@@ -32,4 +32,4 @@ inline auto port_of(sockaddr_in6& what) -> decltype(what.sin6_port)& {
   return what.sin6_port;
 }
 
-} // namespace caf::detail
+} // namespace caf::internal

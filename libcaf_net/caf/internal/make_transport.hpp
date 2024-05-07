@@ -12,7 +12,7 @@
 
 #include <memory>
 
-namespace caf::detail {
+namespace caf::internal {
 
 inline auto
 make_transport(net::stream_socket fd,
@@ -27,4 +27,4 @@ make_transport(net::ssl::connection conn,
   return net::ssl::transport::make(std::move(conn), std::move(upper_layer));
 }
 
-} // namespace caf::detail
+} // namespace caf::internal

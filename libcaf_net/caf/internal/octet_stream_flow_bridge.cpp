@@ -2,7 +2,7 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#include "caf/detail/octet_stream_flow_bridge.hpp"
+#include "caf/internal/octet_stream_flow_bridge.hpp"
 
 #include "caf/net/octet_stream/lower_layer.hpp"
 #include "caf/net/octet_stream/upper_layer.hpp"
@@ -240,7 +240,7 @@ void octet_stream_observer::on_subscribe(flow::subscription new_sub) {
 
 } // namespace caf::net::octet_stream
 
-namespace caf::detail {
+namespace caf::internal {
 
 std::unique_ptr<net::octet_stream::upper_layer>
 make_octet_stream_flow_bridge(uint32_t read_buffer_size,
@@ -252,4 +252,4 @@ make_octet_stream_flow_bridge(uint32_t read_buffer_size,
                                     std::move(pull), std::move(push));
 }
 
-} // namespace caf::detail
+} // namespace caf::internal

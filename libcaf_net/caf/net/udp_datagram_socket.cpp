@@ -7,11 +7,10 @@
 #include "caf/net/socket_guard.hpp"
 
 #include "caf/byte_buffer.hpp"
-#include "caf/detail/convert_ip_endpoint.hpp"
-#include "caf/detail/net_syscall.hpp"
 #include "caf/detail/socket_sys_aliases.hpp"
-#include "caf/detail/socket_sys_includes.hpp"
 #include "caf/expected.hpp"
+#include "caf/internal/net_syscall.hpp"
+#include "caf/internal/socket_sys_includes.hpp"
 #include "caf/ip_endpoint.hpp"
 #include "caf/log/net.hpp"
 #include "caf/span.hpp"
@@ -29,11 +28,49 @@ constexpr int no_sigpipe_io_flag = MSG_NOSIGNAL;
 
 namespace caf::net {
 
+namespace {
+
+void convert(const ip_endpoint& src, sockaddr_storage& dst) {
+  memset(&dst, 0, sizeof(sockaddr_storage));
+  if (src.address().embeds_v4()) {
+    auto sockaddr4 = reinterpret_cast<sockaddr_in*>(&dst);
+    sockaddr4->sin_family = AF_INET;
+    sockaddr4->sin_port = ntohs(src.port());
+    sockaddr4->sin_addr.s_addr = src.address().embedded_v4().bits();
+  } else {
+    auto sockaddr6 = reinterpret_cast<sockaddr_in6*>(&dst);
+    sockaddr6->sin6_family = AF_INET6;
+    sockaddr6->sin6_port = ntohs(src.port());
+    memcpy(&sockaddr6->sin6_addr, src.address().bytes().data(),
+           src.address().bytes().size());
+  }
+}
+
+error convert(const sockaddr_storage& src, ip_endpoint& dst) {
+  if (src.ss_family == AF_INET) {
+    auto sockaddr4 = reinterpret_cast<const sockaddr_in&>(src);
+    ipv4_address ipv4_addr;
+    memcpy(ipv4_addr.data().data(), &sockaddr4.sin_addr, ipv4_addr.size());
+    dst = ip_endpoint{ipv4_addr, htons(sockaddr4.sin_port)};
+  } else if (src.ss_family == AF_INET6) {
+    auto sockaddr6 = reinterpret_cast<const sockaddr_in6&>(src);
+    ipv6_address ipv6_addr;
+    memcpy(ipv6_addr.bytes().data(), &sockaddr6.sin6_addr,
+           ipv6_addr.bytes().size());
+    dst = ip_endpoint{ipv6_addr, htons(sockaddr6.sin6_port)};
+  } else {
+    return sec::invalid_argument;
+  }
+  return none;
+}
+
+} // namespace
+
 expected<udp_datagram_socket> make_udp_datagram_socket(ip_endpoint ep,
                                                        bool reuse_addr) {
   auto lg = log::net::trace("ep = {}", ep);
   sockaddr_storage addr = {};
-  detail::convert(ep, addr);
+  convert(ep, addr);
   CAF_NET_SYSCALL("socket", fd, ==, invalid_socket_id,
                   ::socket(addr.ss_family, SOCK_DGRAM, 0));
   udp_datagram_socket sock{fd};
@@ -60,13 +97,13 @@ ptrdiff_t read(udp_datagram_socket x, byte_span buf, ip_endpoint* src) {
                         buf.size(), no_sigpipe_io_flag,
                         reinterpret_cast<sockaddr*>(&addr), &len);
   if (src)
-    std::ignore = detail::convert(addr, *src);
+    std::ignore = convert(addr, *src);
   return res;
 }
 
 ptrdiff_t write(udp_datagram_socket x, const_byte_span buf, ip_endpoint ep) {
   sockaddr_storage addr = {};
-  detail::convert(ep, addr);
+  convert(ep, addr);
   auto len = ep.address().embeds_v4() ? sizeof(sockaddr_in)
                                       : sizeof(sockaddr_in6);
   return ::sendto(x.id, reinterpret_cast<socket_send_ptr>(buf.data()),

@@ -6,12 +6,12 @@
 
 #include "caf/config.hpp"
 #include "caf/detail/critical.hpp"
-#include "caf/detail/net_syscall.hpp"
 #include "caf/detail/socket_sys_aliases.hpp"
-#include "caf/detail/socket_sys_includes.hpp"
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
 #include "caf/format_to_error.hpp"
+#include "caf/internal/net_syscall.hpp"
+#include "caf/internal/socket_sys_includes.hpp"
 #include "caf/logger.hpp"
 #include "caf/sec.hpp"
 

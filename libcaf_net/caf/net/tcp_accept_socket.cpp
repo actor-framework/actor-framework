@@ -8,11 +8,11 @@
 #include "caf/net/socket_guard.hpp"
 #include "caf/net/tcp_stream_socket.hpp"
 
-#include "caf/detail/net_syscall.hpp"
-#include "caf/detail/sockaddr_members.hpp"
 #include "caf/detail/socket_sys_aliases.hpp"
-#include "caf/detail/socket_sys_includes.hpp"
 #include "caf/expected.hpp"
+#include "caf/internal/net_syscall.hpp"
+#include "caf/internal/sockaddr_members.hpp"
+#include "caf/internal/socket_sys_includes.hpp"
 #include "caf/ip_address.hpp"
 #include "caf/ipv4_address.hpp"
 #include "caf/log/net.hpp"
@@ -66,13 +66,13 @@ expected<tcp_accept_socket> new_tcp_acceptor_impl(uint16_t port,
     = std::conditional_t<Family == AF_INET, sockaddr_in, sockaddr_in6>;
   sockaddr_type sa;
   memset(&sa, 0, sizeof(sockaddr_type));
-  detail::family_of(sa) = Family;
+  internal::family_of(sa) = Family;
   if (any)
     if (auto err = set_inaddr_any(sock, sa))
       return err;
   CAF_NET_SYSCALL("inet_pton", tmp, !=, 1,
-                  inet_pton(Family, addr, &detail::addr_of(sa)));
-  detail::port_of(sa) = htons(port);
+                  inet_pton(Family, addr, &internal::addr_of(sa)));
+  internal::port_of(sa) = htons(port);
   CAF_NET_SYSCALL("bind", res, !=, 0,
                   bind(fd, reinterpret_cast<sockaddr*>(&sa),
                        static_cast<socket_size_type>(sizeof(sa))));

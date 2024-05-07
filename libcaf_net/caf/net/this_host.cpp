@@ -7,9 +7,9 @@
 #include "caf/net/socket.hpp"
 
 #include "caf/config.hpp"
-#include "caf/detail/net_syscall.hpp"
-#include "caf/detail/socket_sys_includes.hpp"
 #include "caf/error.hpp"
+#include "caf/internal/net_syscall.hpp"
+#include "caf/internal/socket_sys_includes.hpp"
 #include "caf/message.hpp"
 #include "caf/none.hpp"
 

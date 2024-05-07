@@ -7,10 +7,10 @@
 #include "caf/net/ip.hpp"
 #include "caf/net/socket_guard.hpp"
 
-#include "caf/detail/net_syscall.hpp"
-#include "caf/detail/sockaddr_members.hpp"
-#include "caf/detail/socket_sys_includes.hpp"
 #include "caf/expected.hpp"
+#include "caf/internal/net_syscall.hpp"
+#include "caf/internal/sockaddr_members.hpp"
+#include "caf/internal/socket_sys_includes.hpp"
 #include "caf/ipv4_address.hpp"
 #include "caf/log/net.hpp"
 #include "caf/sec.hpp"
@@ -98,9 +98,9 @@ bool ip_connect(stream_socket fd, std::string host, uint16_t port,
     = std::conditional_t<Family == AF_INET, sockaddr_in, sockaddr_in6>;
   sockaddr_type sa;
   memset(&sa, 0, sizeof(sockaddr_type));
-  if (inet_pton(Family, host.c_str(), &detail::addr_of(sa)) == 1) {
-    detail::family_of(sa) = Family;
-    detail::port_of(sa) = htons(port);
+  if (inet_pton(Family, host.c_str(), &internal::addr_of(sa)) == 1) {
+    internal::family_of(sa) = Family;
+    internal::port_of(sa) = htons(port);
     using sa_ptr = const sockaddr*;
     if (timeout == infinite) {
       return ::connect(fd.id, reinterpret_cast<sa_ptr>(&sa), sizeof(sa)) == 0;

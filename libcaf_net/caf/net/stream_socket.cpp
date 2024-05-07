@@ -8,10 +8,10 @@
 #include "caf/net/socket_guard.hpp"
 
 #include "caf/detail/assert.hpp"
-#include "caf/detail/net_syscall.hpp"
 #include "caf/detail/socket_sys_aliases.hpp"
-#include "caf/detail/socket_sys_includes.hpp"
 #include "caf/expected.hpp"
+#include "caf/internal/net_syscall.hpp"
+#include "caf/internal/socket_sys_includes.hpp"
 #include "caf/log/net.hpp"
 #include "caf/span.hpp"
 

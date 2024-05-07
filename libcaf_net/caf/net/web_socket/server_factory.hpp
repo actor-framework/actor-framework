@@ -10,10 +10,11 @@
 #include "caf/net/web_socket/acceptor.hpp"
 
 #include "caf/async/spsc_buffer.hpp"
-#include "caf/detail/accept_handler.hpp"
 #include "caf/detail/connection_factory.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/detail/ws_conn_acceptor.hpp"
+#include "caf/disposable.hpp"
+#include "caf/expected.hpp"
 #include "caf/fwd.hpp"
 
 namespace caf::net::web_socket {

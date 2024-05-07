@@ -238,7 +238,8 @@ function(caf_export_and_install_lib component)
   install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/caf"
           DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
           COMPONENT ${component}
-          FILES_MATCHING PATTERN "*.hpp")
+          FILES_MATCHING PATTERN "*.hpp"
+          PATTERN "*/internal/*" EXCLUDE)
   install(FILES "${CMAKE_CURRENT_BINARY_DIR}/caf/detail/${component}_export.hpp"
           DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/caf/detail/")
 endfunction()

@@ -7,11 +7,11 @@
 #include "caf/net/receive_policy.hpp"
 #include "caf/net/tcp_stream_socket.hpp"
 
-#include "caf/detail/accept_handler.hpp"
-#include "caf/detail/get_fd.hpp"
-#include "caf/detail/make_transport.hpp"
-#include "caf/detail/octet_stream_flow_bridge.hpp"
 #include "caf/flow/observable_builder.hpp"
+#include "caf/internal/accept_handler.hpp"
+#include "caf/internal/get_fd.hpp"
+#include "caf/internal/make_transport.hpp"
+#include "caf/internal/octet_stream_flow_bridge.hpp"
 
 namespace caf::net::octet_stream {
 
@@ -55,7 +55,7 @@ public:
   }
 
   net::socket handle() const override {
-    return detail::get_fd(acceptor_);
+    return internal::get_fd(acceptor_);
   }
 
   expected<net::socket_manager_ptr> try_accept() override {
@@ -65,20 +65,19 @@ public:
     auto conn = accept(acceptor_);
     if (!conn)
       return conn.error();
-    puts("accepted connection");
     // Create socket-to-application and application-to-socket buffers.
     auto [s2a_pull, s2a_push] = async::make_spsc_buffer_resource<std::byte>();
     auto [a2s_pull, a2s_push] = async::make_spsc_buffer_resource<std::byte>();
     // Push buffers to the client.
     mcast_->push_all(event_type{std::move(s2a_pull), std::move(a2s_push)});
     // Create the flow bridge.
-    auto bridge = detail::make_octet_stream_flow_bridge(read_buffer_size_,
-                                                        write_buffer_size_,
-                                                        std::move(a2s_pull),
-                                                        std::move(s2a_push));
+    auto bridge = internal::make_octet_stream_flow_bridge(read_buffer_size_,
+                                                          write_buffer_size_,
+                                                          std::move(a2s_pull),
+                                                          std::move(s2a_push));
     // Create the socket manager.
-    auto transport = detail::make_transport(std::move(*conn),
-                                            std::move(bridge));
+    auto transport = internal::make_transport(std::move(*conn),
+                                              std::move(bridge));
     transport->active_policy().accept();
     return net::socket_manager::make(parent_->mpx_ptr(), std::move(transport));
   }
@@ -104,9 +103,9 @@ do_start_impl(Config& cfg, Acceptor acc,
   using impl_t = connection_acceptor_impl<Acceptor>;
   auto conn_acc = impl_t::make(std::move(acc), cfg.read_buffer_size,
                                cfg.write_buffer_size, std::move(push));
-  auto handler = detail::make_accept_handler(std::move(conn_acc),
-                                             cfg.max_connections,
-                                             cfg.monitored_actors);
+  auto handler = internal::make_accept_handler(std::move(conn_acc),
+                                               cfg.max_connections,
+                                               cfg.monitored_actors);
   auto ptr = net::socket_manager::make(cfg.mpx, std::move(handler));
   cfg.mpx->start(ptr);
   return expected<disposable>{disposable{std::move(ptr)}};

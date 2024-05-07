@@ -9,7 +9,7 @@
 #include "caf/net/dsl/server_config.hpp"
 #include "caf/net/dsl/server_factory_base.hpp"
 
-#include "caf/detail/accept_handler.hpp"
+#include "caf/actor_cast.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/disposable.hpp"
 #include "caf/flow/coordinator.hpp"

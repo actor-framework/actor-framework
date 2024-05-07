@@ -17,7 +17,7 @@
 
 #include <utility>
 
-namespace caf::detail {
+namespace caf::internal {
 
 /// Translates between a message-oriented transport and data flows.
 template <class UpperLayer, class LowerLayer, class ItemType>
@@ -145,4 +145,4 @@ protected:
   disposable self_ref_;
 };
 
-} // namespace caf::detail
+} // namespace caf::internal

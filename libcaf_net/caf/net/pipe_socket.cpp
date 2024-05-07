@@ -8,9 +8,9 @@
 
 #include "caf/detail/scope_guard.hpp"
 #include "caf/detail/socket_sys_aliases.hpp"
-#include "caf/detail/socket_sys_includes.hpp"
 #include "caf/expected.hpp"
 #include "caf/format_to_error.hpp"
+#include "caf/internal/socket_sys_includes.hpp"
 #include "caf/log/net.hpp"
 #include "caf/message.hpp"
 #include "caf/sec.hpp"

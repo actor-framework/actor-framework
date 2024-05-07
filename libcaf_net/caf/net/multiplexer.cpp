@@ -44,7 +44,7 @@
 #  include <poll.h>
 #  include <signal.h>
 #else
-#  include "caf/detail/socket_sys_includes.hpp"
+#  include "caf/internal/socket_sys_includes.hpp"
 #endif // CAF_WINDOWS
 
 namespace caf::net {
