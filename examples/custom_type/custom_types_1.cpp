@@ -8,7 +8,6 @@
 #include "caf/type_id.hpp"
 
 #include <cassert>
-#include <iostream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -26,7 +25,6 @@ CAF_BEGIN_TYPE_ID_BLOCK(custom_types_1, first_custom_type_id)
 CAF_END_TYPE_ID_BLOCK(custom_types_1)
 // --(rst-type-id-block-end)--
 
-using std::cerr;
 using std::endl;
 
 using namespace caf;
@@ -103,15 +101,13 @@ void caf_main(actor_system& sys) {
   // write f1 to buffer
   binary_serializer sink{sys, buf};
   if (!sink.apply(f1)) {
-    std::cerr << "*** failed to serialize foo2: " << to_string(sink.get_error())
-              << '\n';
+    sys.println("*** failed to serialize foo2: {}", sink.get_error());
     return;
   }
   // read f2 back from buffer
   binary_deserializer source{sys, buf};
   if (!source.apply(f2)) {
-    std::cerr << "*** failed to deserialize foo2: "
-              << to_string(source.get_error()) << '\n';
+    sys.println("*** failed to deserialize foo2: {}", source.get_error());
     return;
   }
   // must be equal

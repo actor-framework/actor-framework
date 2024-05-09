@@ -8,8 +8,6 @@
 #include "caf/event_based_actor.hpp"
 #include "caf/scheduled_actor/flow.hpp"
 
-#include <iostream>
-
 namespace {
 
 constexpr size_t default_num_values = 100;
@@ -39,7 +37,7 @@ void sink(caf::event_based_actor* self, caf::async::consumer_resource<int> in) {
     // Lift the input to an observable flow.
     .from_resource(std::move(in))
     // Print each integer.
-    .for_each([](int x) { std::cout << x << std::endl; });
+    .for_each([self](int x) { self->println("{}", x); });
 }
 // --(rst-sink-end)--
 
