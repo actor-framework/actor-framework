@@ -126,8 +126,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
                   .do_on_next([self](const ws::frame& x) {
                     if (x.is_binary()) {
                       self->println(
-                        "*** received a binary WebSocket frame of size "
-                        "{}",
+                        "*** received a binary WebSocket frame of size {}",
                         x.size());
                     } else {
                       self->println(

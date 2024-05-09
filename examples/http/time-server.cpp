@@ -85,7 +85,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
   // start actors, we need to block on something else.
   sys.println("Server is up and running. Press <enter> to shut down.");
   getchar();
-  sys.println("Terminating.\n");
+  sys.println("Terminating.");
   return EXIT_SUCCESS;
 }
 // --(rst-main-end)--

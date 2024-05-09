@@ -30,7 +30,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
   // Sanity checking.
   auto server = caf::get_as<caf::uri>(cfg, "server");
   if (!server) {
-    sys.println("*** mandatory argument server missing or invalid");
+    sys.println("*** mandatory argument 'server' missing or invalid");
     return EXIT_FAILURE;
   }
   // Ask the user for the hello message.
