@@ -82,19 +82,6 @@ expected<disposable> do_start_impl(Config& cfg, Acceptor acc) {
   auto ptr = net::socket_manager::make(cfg.mpx, std::move(handler));
   cfg.mpx->start(ptr);
   return expected<disposable>{disposable{std::move(ptr)}};
-
-  // using transport_t = typename Acceptor::transport_type;
-  // using factory_t = ws_flow_conn_factory<transport_t>;
-  // using impl_t = detail::accept_handler<Acceptor>;
-  // auto factory = std::make_unique<factory_t>(cfg.wca,
-  //                                            cfg.max_consecutive_reads);
-  // auto impl = impl_t::make(std::move(acc), std::move(factory),
-  //                          cfg.max_connections);
-  // auto impl_ptr = impl.get();
-  // auto ptr = net::socket_manager::make(cfg.mpx, std::move(impl));
-  // impl_ptr->self_ref(ptr->as_disposable());
-  // cfg.mpx->start(ptr);
-  // return expected<disposable>{disposable{std::move(ptr)}};
 }
 
 } // namespace
