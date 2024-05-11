@@ -38,6 +38,8 @@ public:
   accept(const net::http::request_header& hdr) = 0;
 
   virtual bool canceled() const noexcept = 0;
+
+  virtual void abort(const error& reason) = 0;
 };
 
 using ws_conn_acceptor_ptr = intrusive_ptr<ws_conn_acceptor>;
@@ -102,6 +104,10 @@ public:
 
   expected<ws_conn_starter_ptr>
   accept(const net::http::request_header& hdr) override {
+    if (!producer_) {
+      return make_error(sec::runtime_error,
+                        "WebSocket connection dropped: client canceled");
+    }
     ws_acceptor_impl<Ts...> acc{hdr};
     on_request_(acc);
     if (acc.accepted()) {
@@ -117,6 +123,13 @@ public:
 
   bool canceled() const noexcept override {
     return !producer_ || producer_->canceled();
+  }
+
+  void abort(const error& reason) override {
+    if (producer_) {
+      producer_->abort(reason);
+      producer_ = nullptr;
+    }
   }
 
 private:

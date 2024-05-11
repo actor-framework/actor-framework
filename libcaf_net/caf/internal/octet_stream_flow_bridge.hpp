@@ -12,13 +12,12 @@
 #include <cstddef>
 #include <memory>
 
-namespace caf::detail {
+namespace caf::internal {
 
-CAF_NET_EXPORT
 std::unique_ptr<net::octet_stream::upper_layer>
 make_octet_stream_flow_bridge(uint32_t read_buffer_size,
                               uint32_t write_buffer_size,
                               async::consumer_resource<std::byte> pull,
                               async::producer_resource<std::byte> push);
 
-} // namespace caf::detail
+} // namespace caf::internal

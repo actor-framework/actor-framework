@@ -10,8 +10,8 @@
 #include "caf/net/ssl/transport.hpp"
 #include "caf/net/tcp_stream_socket.hpp"
 
-#include "caf/detail/make_transport.hpp"
-#include "caf/detail/octet_stream_flow_bridge.hpp"
+#include "caf/internal/make_transport.hpp"
+#include "caf/internal/octet_stream_flow_bridge.hpp"
 
 namespace caf::net::octet_stream {
 
@@ -21,11 +21,11 @@ template <class Config, class Conn>
 expected<disposable> do_start_impl(Config& cfg, Conn conn,
                                    async::consumer_resource<std::byte> pull,
                                    async::producer_resource<std::byte> push) {
-  auto bridge = detail::make_octet_stream_flow_bridge(cfg.read_buffer_size,
-                                                      cfg.write_buffer_size,
-                                                      std::move(pull),
-                                                      std::move(push));
-  auto transport = detail::make_transport(std::move(conn), std::move(bridge));
+  auto bridge = internal::make_octet_stream_flow_bridge(cfg.read_buffer_size,
+                                                        cfg.write_buffer_size,
+                                                        std::move(pull),
+                                                        std::move(push));
+  auto transport = internal::make_transport(std::move(conn), std::move(bridge));
   transport->active_policy().connect();
   auto ptr = net::socket_manager::make(cfg.mpx, std::move(transport));
   cfg.mpx->start(ptr);

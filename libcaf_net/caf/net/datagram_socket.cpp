@@ -4,8 +4,8 @@
 
 #include "caf/net/datagram_socket.hpp"
 
-#include "caf/detail/net_syscall.hpp"
-#include "caf/detail/socket_sys_includes.hpp"
+#include "caf/internal/net_syscall.hpp"
+#include "caf/internal/socket_sys_includes.hpp"
 #include "caf/log/net.hpp"
 
 #include <variant>

@@ -2,7 +2,7 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#include "caf/detail/lp_flow_bridge.hpp"
+#include "caf/internal/lp_flow_bridge.hpp"
 
 #include "caf/net/lp/lower_layer.hpp"
 #include "caf/net/lp/upper_layer.hpp"
@@ -10,23 +10,23 @@
 
 #include "caf/async/blocking_producer.hpp"
 #include "caf/cow_tuple.hpp"
-#include "caf/detail/flow_bridge_base.hpp"
+#include "caf/internal/flow_bridge_base.hpp"
 
 #include <cstddef>
 
-namespace caf::detail {
+namespace caf::net::lp {
 
 namespace {
 
 /// Convenience alias for referring to the base type of @ref flow_bridge.
-using lp_flow_bridge_base
-  = flow_bridge_base<net::lp::upper_layer, net::lp::lower_layer,
-                     net::lp::frame>;
+using flow_bridge_base
+  = internal::flow_bridge_base<net::lp::upper_layer, net::lp::lower_layer,
+                               net::lp::frame>;
 
 /// Translates between a message-oriented transport and data flows.
-class lp_flow_bridge : public lp_flow_bridge_base {
+class flow_bridge : public flow_bridge_base {
 public:
-  using super = lp_flow_bridge_base;
+  using super = flow_bridge_base;
 
   using super::super;
 
@@ -49,7 +49,7 @@ public:
   }
 };
 
-class lp_client_flow_bridge : public detail::lp_flow_bridge {
+class client_flow_bridge : public flow_bridge {
 public:
   // We consume the output type of the application.
   using pull_t = async::consumer_resource<net::lp::frame>;
@@ -57,7 +57,7 @@ public:
   // We produce the input type of the application.
   using push_t = async::producer_resource<net::lp::frame>;
 
-  lp_client_flow_bridge(pull_t pull, push_t push)
+  client_flow_bridge(pull_t pull, push_t push)
     : pull_(std::move(pull)), push_(std::move(push)) {
     // nop
   }
@@ -79,13 +79,13 @@ private:
   push_t push_;
 };
 
-class lp_server_flow_bridge : public detail::lp_flow_bridge {
+class server_flow_bridge : public flow_bridge {
 public:
-  using super = detail::lp_flow_bridge;
+  using super = flow_bridge;
 
   using accept_event_t = net::accept_event<net::lp::frame>;
 
-  lp_server_flow_bridge(lp_prodcuer_ptr producer)
+  server_flow_bridge(internal::lp_prodcuer_ptr producer)
     : producer_(std::move(producer)) {
     // nop
   }
@@ -95,33 +95,37 @@ public:
     CAF_ASSERT(down != nullptr);
     super::down_ = down;
     super::self_ref_ = down->manager()->as_disposable();
-    auto [app_pull, lp_push] = async::make_spsc_buffer_resource<frame>();
-    auto [lp_pull, app_push] = async::make_spsc_buffer_resource<frame>();
+    auto [app_pull, push] = async::make_spsc_buffer_resource<frame>();
+    auto [pull, app_push] = async::make_spsc_buffer_resource<frame>();
     auto event = accept_event_t{std::move(app_pull), std::move(app_push)};
     if (!producer_->push(event)) {
       return make_error(sec::runtime_error,
                         "Length-prefixed connection dropped: client canceled");
     }
-    return super::init(&down->mpx(), std::move(lp_pull), std::move(lp_push));
+    return super::init(&down->mpx(), std::move(pull), std::move(push));
   }
 
 private:
-  lp_prodcuer_ptr producer_;
+  internal::lp_prodcuer_ptr producer_;
 };
 
 } // namespace
 
+} // namespace caf::net::lp
+
+namespace caf::internal {
+
 std::unique_ptr<net::lp::upper_layer>
 make_lp_flow_bridge(async::consumer_resource<net::lp::frame> pull,
                     async::producer_resource<net::lp::frame> push) {
-  using impl_t = lp_client_flow_bridge;
+  using impl_t = net::lp::client_flow_bridge;
   return std::make_unique<impl_t>(std::move(pull), std::move(push));
 }
 
 std::unique_ptr<net::lp::upper_layer>
 make_lp_flow_bridge(lp_prodcuer_ptr producer) {
-  using impl_t = lp_server_flow_bridge;
+  using impl_t = net::lp::server_flow_bridge;
   return std::make_unique<impl_t>(std::move(producer));
 }
 
-} // namespace caf::detail
+} // namespace caf::internal

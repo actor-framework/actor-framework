@@ -10,7 +10,7 @@
 
 #include <memory>
 
-namespace caf::detail {
+namespace caf::internal {
 
 inline auto get_fd(net::socket fd) {
   return fd;
@@ -24,4 +24,4 @@ inline auto get_fd(const net::ssl::connection& conn) {
   return conn.fd();
 }
 
-} // namespace caf::detail
+} // namespace caf::internal

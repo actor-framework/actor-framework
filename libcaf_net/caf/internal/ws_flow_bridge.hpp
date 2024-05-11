@@ -13,15 +13,13 @@
 
 #include <memory>
 
-namespace caf::detail {
+namespace caf::internal {
 
-CAF_NET_EXPORT
 std::unique_ptr<net::web_socket::upper_layer>
 make_ws_flow_bridge(async::consumer_resource<net::web_socket::frame> pull,
                     async::producer_resource<net::web_socket::frame> push);
 
-CAF_NET_EXPORT
 std::unique_ptr<net::web_socket::upper_layer::server>
 make_ws_flow_bridge(detail::ws_conn_acceptor_ptr wca);
 
-} // namespace caf::detail
+} // namespace caf::internal

@@ -5,8 +5,8 @@
 #include "caf/net/ip.hpp"
 
 #include "caf/config.hpp"
-#include "caf/detail/socket_sys_includes.hpp"
 #include "caf/error.hpp"
+#include "caf/internal/socket_sys_includes.hpp"
 #include "caf/ip_address.hpp"
 #include "caf/ip_subnet.hpp"
 #include "caf/ipv4_address.hpp"

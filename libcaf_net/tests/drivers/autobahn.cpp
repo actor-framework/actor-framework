@@ -12,9 +12,9 @@
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/caf_main.hpp"
-#include "caf/detail/accept_handler.hpp"
 #include "caf/detail/connection_factory.hpp"
-#include "caf/detail/make_transport.hpp"
+#include "caf/internal/accept_handler.hpp"
+#include "caf/internal/make_transport.hpp"
 #include "caf/log/net.hpp"
 
 #include <iostream>
@@ -93,6 +93,18 @@ public:
   caf::net::web_socket::lower_layer* down = nullptr;
 };
 
+template <class UpperLayerPtr>
+auto make_transport(caf::net::stream_socket fd, UpperLayerPtr upper_layer) {
+  return caf::net::octet_stream::transport::make(std::move(fd),
+                                                 std::move(upper_layer));
+}
+
+template <class UpperLayerPtr>
+auto make_transport(caf::net::ssl::connection conn, UpperLayerPtr upper_layer) {
+  return caf::net::ssl::transport::make(std::move(conn),
+                                        std::move(upper_layer));
+}
+
 template <class Transport>
 class conn_factory : public caf::detail::connection_factory<
                        typename Transport::connection_handle> {
@@ -103,10 +115,146 @@ public:
                                     connection_handle conn) override {
     auto app = web_socket_app::make();
     auto server = caf::net::web_socket::server::make(std::move(app));
-    auto transport = caf::detail::make_transport(std::move(conn),
-                                                 std::move(server));
+    auto transport = make_transport(std::move(conn), std::move(server));
     return caf::net::socket_manager::make(mpx, std::move(transport));
   }
+};
+
+/// Accepts incoming clients with an Acceptor and handles them via a connection
+/// factory.
+template <class Acceptor>
+class accept_handler : public caf::net::socket_event_layer {
+public:
+  // -- member types -----------------------------------------------------------
+
+  using socket_type = caf::net::socket;
+
+  using transport_type = typename Acceptor::transport_type;
+
+  using connection_handle = typename transport_type::connection_handle;
+
+  using factory_type = caf::detail::connection_factory<connection_handle>;
+
+  using factory_ptr = caf::detail::connection_factory_ptr<connection_handle>;
+
+  // -- constructors, destructors, and assignment operators --------------------
+
+  accept_handler(Acceptor acc, factory_ptr fptr, size_t max_connections)
+    : acc_(std::move(acc)),
+      factory_(std::move(fptr)),
+      max_connections_(max_connections) {
+    CAF_ASSERT(max_connections_ > 0);
+  }
+
+  ~accept_handler() override {
+    on_conn_close_.dispose();
+    if (valid(acc_))
+      close(acc_);
+    if (monitor_callback_)
+      monitor_callback_.dispose();
+  }
+
+  // -- factories --------------------------------------------------------------
+
+  static std::unique_ptr<accept_handler> make(Acceptor acc, factory_ptr fptr,
+                                              size_t max_connections) {
+    return std::make_unique<accept_handler>(std::move(acc), std::move(fptr),
+                                            max_connections);
+  }
+
+  // -- implementation of socket_event_layer -----------------------------------
+
+  caf::error start(caf::net::socket_manager* owner) override {
+    self_ref_ = owner->as_disposable();
+    owner_ = owner;
+    if (auto err = factory_->start(owner)) {
+      return err;
+    }
+    on_conn_close_ = caf::make_action([this] { connection_closed(); });
+    owner->register_reading();
+    return {};
+  }
+
+  caf::net::socket handle() const override {
+    return acc_.fd();
+  }
+
+  void handle_read_event() override {
+    CAF_ASSERT(owner_ != nullptr);
+    if (open_connections_.size() == max_connections_) {
+      owner_->deregister_reading();
+    } else if (auto conn = accept(acc_)) {
+      auto child = factory_->make(owner_->mpx_ptr(), std::move(*conn));
+      if (!child) {
+        on_conn_close_.dispose();
+        owner_->shutdown();
+        return;
+      }
+      open_connections_.push_back(child->as_disposable());
+      if (open_connections_.size() == max_connections_)
+        owner_->deregister_reading();
+      child->add_cleanup_listener(on_conn_close_);
+      std::ignore = child->start();
+    } else if (conn.error() == caf::sec::unavailable_or_would_block) {
+      // Encountered a "soft" error: simply try again later.
+    } else {
+      // Encountered a "hard" error: stop.
+      abort(conn.error());
+      owner_->deregister_reading();
+    }
+  }
+
+  void handle_write_event() override {
+    owner_->deregister_writing();
+  }
+
+  void abort(const caf::error& reason) override {
+    factory_->abort(reason);
+    on_conn_close_.dispose();
+    self_ref_ = nullptr;
+    for (auto& hdl : open_connections_)
+      hdl.dispose();
+    open_connections_.clear();
+  }
+
+  void self_ref(caf::disposable ref) {
+    self_ref_ = std::move(ref);
+  }
+
+private:
+  void connection_closed() {
+    auto& conns = open_connections_;
+    auto new_end = std::remove_if(conns.begin(), conns.end(),
+                                  [](auto& ptr) { return ptr.disposed(); });
+    if (new_end == conns.end())
+      return;
+    if (open_connections_.size() == max_connections_)
+      owner_->register_reading();
+    conns.erase(new_end, conns.end());
+  }
+
+  Acceptor acc_;
+
+  factory_ptr factory_;
+
+  size_t max_connections_;
+
+  std::vector<caf::disposable> open_connections_;
+
+  caf::net::socket_manager* owner_ = nullptr;
+
+  caf::action on_conn_close_;
+
+  /// Type-erased handle to the @ref socket_manager. This reference is important
+  /// to keep the acceptor alive while the manager is not registered for writing
+  /// or reading.
+  caf::disposable self_ref_;
+
+  /// An action for stopping this handler if an observed actor terminates.
+  caf::action monitor_callback_;
+
+  /// List of actors that we add monitors to in `start`.
+  std::vector<caf::strong_actor_ptr> monitored_actors_;
 };
 
 namespace {
@@ -140,13 +288,13 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
   auto impl = std::unique_ptr<caf::net::socket_event_layer>{};
   if (ctx) {
     using factory_t = conn_factory<ssl::transport>;
-    using impl_t = caf::detail::accept_handler<ssl::tcp_acceptor>;
+    using impl_t = accept_handler<ssl::tcp_acceptor>;
     auto acceptor = ssl::tcp_acceptor{std::move(*fd), std::move(*ctx)};
     impl = impl_t::make(std::move(acceptor), std::make_unique<factory_t>(),
                         max_connections);
   } else if (!ctx.error()) { // SSL disabled.
     using factory_t = conn_factory<caf::net::octet_stream::transport>;
-    using impl_t = caf::detail::accept_handler<caf::net::tcp_accept_socket>;
+    using impl_t = accept_handler<caf::net::tcp_accept_socket>;
     impl = impl_t::make(std::move(*fd), std::make_unique<factory_t>(),
                         max_connections);
   } else {

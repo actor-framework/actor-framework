@@ -6,8 +6,8 @@
 
 #include "caf/net/multiplexer.hpp"
 
-#include "caf/detail/lp_flow_bridge.hpp"
-#include "caf/detail/make_transport.hpp"
+#include "caf/internal/lp_flow_bridge.hpp"
+#include "caf/internal/make_transport.hpp"
 
 namespace caf::net::lp {
 
@@ -17,9 +17,9 @@ template <class Config, class Conn>
 expected<disposable> do_start_impl(Config& cfg, Conn conn,
                                    async::consumer_resource<frame> pull,
                                    async::producer_resource<frame> push) {
-  auto bridge = detail::make_lp_flow_bridge(std::move(pull), std::move(push));
+  auto bridge = internal::make_lp_flow_bridge(std::move(pull), std::move(push));
   auto impl = framing::make(std::move(bridge));
-  auto transport = detail::make_transport(std::move(conn), std::move(impl));
+  auto transport = internal::make_transport(std::move(conn), std::move(impl));
   transport->active_policy().connect();
   auto ptr = socket_manager::make(cfg.mpx, std::move(transport));
   cfg.mpx->start(ptr);

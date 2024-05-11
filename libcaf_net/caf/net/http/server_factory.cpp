@@ -3,6 +3,8 @@
 #include "caf/net/fwd.hpp"
 #include "caf/net/ssl/tcp_acceptor.hpp"
 
+#include "caf/internal/accept_handler.hpp"
+
 #include <utility>
 
 namespace caf::net::http {
@@ -169,9 +171,9 @@ expected<disposable> do_start_impl(Config& cfg, Acceptor acc,
   auto factory = make_http_conn_acceptor(std::move(acc), cfg.routes,
                                          cfg.max_consecutive_reads,
                                          cfg.max_request_size);
-  auto impl = detail::make_accept_handler(std::move(factory),
-                                          cfg.max_connections,
-                                          cfg.monitored_actors);
+  auto impl = internal::make_accept_handler(std::move(factory),
+                                            cfg.max_connections,
+                                            cfg.monitored_actors);
   auto ptr = net::socket_manager::make(cfg.mpx, std::move(impl));
   cfg.mpx->start(ptr);
   return expected<disposable>{disposable{std::move(ptr)}};

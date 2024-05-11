@@ -8,8 +8,8 @@
 #include "caf/net/socket_manager.hpp"
 #include "caf/net/web_socket/client.hpp"
 
-#include "caf/detail/make_transport.hpp"
-#include "caf/detail/ws_flow_bridge.hpp"
+#include "caf/internal/make_transport.hpp"
+#include "caf/internal/ws_flow_bridge.hpp"
 
 namespace caf::net::web_socket {
 
@@ -20,9 +20,9 @@ expected<disposable> do_start_impl(Config& cfg, Conn conn,
                                    async::consumer_resource<frame> pull,
                                    async::producer_resource<frame> push) {
   // s2a: socket-to-application (and a2s is the inverse).
-  auto bridge = detail::make_ws_flow_bridge(std::move(pull), std::move(push));
+  auto bridge = internal::make_ws_flow_bridge(std::move(pull), std::move(push));
   auto impl = client::make(std::move(cfg.hs), std::move(bridge));
-  auto transport = detail::make_transport(std::move(conn), std::move(impl));
+  auto transport = internal::make_transport(std::move(conn), std::move(impl));
   transport->active_policy().connect();
   auto ptr = socket_manager::make(cfg.mpx, std::move(transport));
   cfg.mpx->start(ptr);

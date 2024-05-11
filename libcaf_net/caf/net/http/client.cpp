@@ -15,7 +15,6 @@
 #include "caf/byte_span.hpp"
 #include "caf/detail/append_hex.hpp"
 #include "caf/detail/format.hpp"
-#include "caf/detail/message_flow_bridge.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/error.hpp"
 #include "caf/log/net.hpp"

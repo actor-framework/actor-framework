@@ -12,8 +12,8 @@
 
 #include "caf/async/blocking_producer.hpp"
 #include "caf/detail/assert.hpp"
+#include "caf/detail/net_export.hpp"
 #include "caf/detail/ws_conn_acceptor.hpp"
-#include "caf/detail/ws_flow_bridge.hpp"
 #include "caf/type_list.hpp"
 
 #include <memory>
@@ -37,17 +37,46 @@ struct ws_switch_protocol_state : public ref_counted {
   std::optional<OnStart> on_start;
 };
 
+class CAF_NET_EXPORT ws_switch_protocol_base {
+public:
+  using pull_t = async::consumer_resource<net::web_socket::frame>;
+
+  using push_t = async::producer_resource<net::web_socket::frame>;
+
+  virtual ~ws_switch_protocol_base();
+
+protected:
+  template <class TryAccept>
+  void do_respond(net::http::responder& res, TryAccept& try_accept) {
+    do_respond_impl(
+      res, [](void* fn) { return (*static_cast<TryAccept*>(fn))(); },
+      &try_accept);
+  }
+
+private:
+  void do_respond_impl(net::http::responder& res,
+                       std::tuple<bool, pull_t, push_t> (*try_accept)(void*),
+                       void* try_accept_arg);
+};
+
 template <class State, class Out, class... Ts>
 class ws_switch_protocol;
 
 template <class State, class... Out, class... Ts>
-class ws_switch_protocol<State, type_list<Out...>, Ts...> {
+class ws_switch_protocol<State, type_list<Out...>, Ts...>
+  : public ws_switch_protocol_base {
 public:
+  using super = ws_switch_protocol_base;
+
   using accept_event_t = net::accept_event<net::web_socket::frame, Out...>;
 
   using producer_type = async::blocking_producer<accept_event_t>;
 
   using shared_producer_type = std::shared_ptr<producer_type>;
+
+  using pull_t = super::pull_t;
+
+  using push_t = super::push_t;
 
   explicit ws_switch_protocol(intrusive_ptr<State> state)
     : state_(std::move(state)) {
@@ -64,46 +93,28 @@ public:
 
   void operator()(net::http::responder& res, Ts... args) {
     namespace http = net::http;
-    auto& hdr = res.header();
-    // Sanity checking.
-    if (!hdr.field_equals(ignore_case, "Connection", "upgrade")
-        || !hdr.field_equals(ignore_case, "Upgrade", "websocket")) {
-      res.respond(net::http::status::bad_request, "text/plain",
-                  "Expected a WebSocket client handshake request.");
-      return;
-    }
-    auto sec_key = hdr.field("Sec-WebSocket-Key");
-    if (sec_key.empty()) {
-      res.respond(net::http::status::bad_request, "text/plain",
-                  "Mandatory field Sec-WebSocket-Key missing or invalid.");
-      return;
-    }
-    // Call user-defined on_request callback.
-    ws_acceptor_impl<Out...> acc{hdr};
-    (state_->on_request)(acc, args...);
-    if (!acc.accepted()) {
-      if (auto& err = acc.reject_reason()) {
-        auto descr = to_string(err);
-        res.respond(http::status::bad_request, "text/plain", descr);
-      } else {
-        res.respond(http::status::bad_request, "text/plain", "Bad request.");
+    auto try_accept = [&, this]() -> std::tuple<bool, pull_t, push_t> {
+      // Call user-defined on_request callback.
+      ws_acceptor_impl<Out...> acc{res.header()};
+      (state_->on_request)(acc, args...);
+      if (!acc.accepted()) {
+        if (auto& err = acc.reject_reason()) {
+          auto descr = to_string(err);
+          res.respond(http::status::bad_request, "text/plain", descr);
+        } else {
+          res.respond(http::status::bad_request, "text/plain", "Bad request.");
+        }
+        return {false, {}, {}};
       }
-      return;
-    }
-    if (!producer_->push(acc.app_event)) {
-      res.respond(http::status::internal_server_error, "text/plain",
-                  "Upstream channel closed.");
-      return;
-    }
-    // Finalize the WebSocket handshake.
-    net::web_socket::handshake hs;
-    hs.assign_key(sec_key);
-    hs.write_response(res.down());
-    // Switch to the WebSocket framing protocol.
-    auto& [pull, push] = acc.ws_resources;
-    using net::web_socket::framing;
-    auto bridge = make_ws_flow_bridge(std::move(pull), std::move(push));
-    res.down()->switch_protocol(framing::make_server(std::move(bridge)));
+      if (!producer_->push(acc.app_event)) {
+        res.respond(http::status::internal_server_error, "text/plain",
+                    "Upstream channel closed.");
+        return {false, {}, {}};
+      }
+      auto& [pull, push] = acc.ws_resources;
+      return {true, std::move(pull), std::move(push)};
+    };
+    this->do_respond(res, try_accept);
   }
 
   void init() {
@@ -170,7 +181,7 @@ struct switch_protocol_bind_1 {
   }
 };
 
-auto switch_protocol() {
+inline auto switch_protocol() {
   return switch_protocol_bind_1{};
 }
 
