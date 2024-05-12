@@ -317,25 +317,34 @@ fixture::fixture() {
   add_test_case(
     R"_({"top-left":{"x":100,"y":200},"bottom-right":{"x":10,"y":20}})_",
     rectangle{{100, 200}, {10, 20}});
-  add_test_case(R"({"@type": "phone_book",)"
-                R"( "city": "Model City",)"
-                R"( "entries": )"
-                R"({"Bob": 5556837,)"
-                R"( "Jon": 5559347}})",
+  add_test_case(R"({
+                     "@type": "phone_book",
+                      "city": "Model City",
+                      "entries": {
+                        "Bob": 5556837,
+                        "Jon": 5559347
+                      }
+                   })",
                 phone_book{"Model City", {{"Bob", 5556837}, {"Jon", 5559347}}});
-  add_test_case(R"({"@type": "widget", )"
-                R"("color": "red", )"
-                R"("@shape-type": "circle", )"
-                R"("shape": )"
-                R"({"center": {"x": 15, "y": 15}, )"
-                R"("radius": 5}})",
+  add_test_case(R"({
+                     "@type": "widget",
+                     "color": "red",
+                     "@shape-type": "circle",
+                     "shape": {
+                       "center": {"x": 15, "y": 15},
+                       "radius": 5
+                     }
+                   })",
                 widget{"red", circle{{15, 15}, 5}});
-  add_test_case(R"({"@type": "widget", )"
-                R"("color": "blue", )"
-                R"("@shape-type": "rectangle", )"
-                R"("shape": )"
-                R"({"top-left": {"x": 10, "y": 10}, )"
-                R"("bottom-right": {"x": 20, "y": 20}}})",
+  add_test_case(R"({
+                     "@type": "widget",
+                     "color": "blue",
+                     "@shape-type": "rectangle",
+                     "shape": {
+                       "top-left": {"x": 10, "y": 10},
+                       "bottom-right": {"x": 20, "y": 20}
+                     }
+                   })",
                 widget{"blue", rectangle{{10, 10}, {20, 20}}});
   // Test cases for integers that are in bound.
   add_test_case(R"_(-128)_", int8_t{INT8_MIN});
@@ -373,6 +382,9 @@ fixture::fixture() {
   add_neg_test_case<uint32_t>(R"_(4294967296)_");
   add_neg_test_case<uint64_t>(R"_(-1)_");
   add_neg_test_case<uint64_t>(R"_(18446744073709551616)_");
+  // Test cases for proper handling of whitespace.
+  add_test_case("[1, \r\n2,\f\t\v3]", ls<int32_t>(1, 2, 3));
+  add_test_case("\r\n{\r\n\"a\":\r\n1, \"b\"\r\n:\r\n2}\r\n", my_request(1, 2));
 }
 
 WITH_FIXTURE(fixture) {

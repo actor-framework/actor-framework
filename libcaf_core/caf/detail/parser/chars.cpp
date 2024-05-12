@@ -6,6 +6,8 @@
 
 namespace caf::detail::parser {
 
+const char whitespace_chars[7] = " \f\n\r\t\v";
+
 const char alphanumeric_chars[63] = "0123456789"
                                     "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                                     "abcdefghijklmnopqrstuvwxyz";
