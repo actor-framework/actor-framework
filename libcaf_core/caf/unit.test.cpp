@@ -54,4 +54,11 @@ TEST("unit_results") {
   }
 }
 
+TEST("actor_address") {
+  actor_system_config cfg;
+  actor_system sys{cfg};
+  scoped_actor self{sys};
+  check_ne(self.address().id(), 0u);
+}
+
 } // namespace

@@ -4,7 +4,13 @@
 
 #include "caf/ipv6_subnet.hpp"
 
+#include "caf/test/fixture/deterministic.hpp"
 #include "caf/test/test.hpp"
+
+#include "caf/actor_system.hpp"
+#include "caf/actor_system_config.hpp"
+#include "caf/binary_deserializer.hpp"
+#include "caf/binary_serializer.hpp"
 
 using namespace caf;
 
@@ -62,5 +68,22 @@ TEST("serializing") {
   ipv6_subnet local_embed_v4{v4_local};
   check_eq(to_string(local_embed_v4), "127.0.0.0/8");
 }
+
+WITH_FIXTURE(test::fixture::deterministic) {
+
+#define CHECK_SERIALIZATION(subn) check_eq(subn, serialization_roundtrip(subn))
+
+TEST("serialization") {
+  CHECK_SERIALIZATION((ipv6_address{{0xbebe}, {}} / 128));
+  CHECK_SERIALIZATION((ipv6_address{{0xbebe}, {}} / 32));
+  CHECK_SERIALIZATION((ipv6_address{{0xbebe}, {0xbebe}} / 32));
+  CHECK_SERIALIZATION((ipv6_address{{0xbebe}, {0xbebe}} / 64));
+  CHECK_SERIALIZATION((ipv6_address{{}, {0xbebe}} / 16));
+  CHECK_SERIALIZATION((ipv6_address{{}, {0xbebe}} / 32));
+  CHECK_SERIALIZATION((ipv6_address{{}, {0xbebe, 0xbebe}} / 32));
+  CHECK_SERIALIZATION((ipv6_address{{}, {0xbebe, 0xbebe}} / 64));
+}
+
+} // WITH_FIXTURE(test::fixture::deterministic)
 
 } // namespace

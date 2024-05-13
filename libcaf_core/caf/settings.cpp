@@ -40,44 +40,6 @@ const config_value* get_if(const settings* xs, std::string_view name) {
   }
 }
 
-expected<std::string> get_or(const settings& xs, std::string_view name,
-                             const char* fallback) {
-  if (auto ptr = get_if(&xs, name))
-    return get_as<std::string>(*ptr);
-  else
-    return {std::string{fallback}};
-}
-
-config_value& put_impl(settings& dict,
-                       const std::vector<std::string_view>& path,
-                       config_value& value) {
-  // Sanity check.
-  CAF_ASSERT(!path.empty());
-  // Like in get_if: we always drop a 'global.' suffix.
-  if (path.front() == "global") {
-    std::vector<std::string_view> new_path{path.begin() + 1, path.end()};
-    return put_impl(dict, new_path, value);
-  }
-  // Navigate path.
-  auto last = path.end();
-  auto back = last - 1;
-  auto current = &dict;
-  // Resolve path by navigating the map-of-maps of create the necessary layout
-  // when needed.
-  for (auto i = path.begin(); i != back; ++i) {
-    auto iter = current->emplace(*i, settings{}).first;
-    if (auto val = get_if<settings>(&iter->second)) {
-      current = val;
-    } else {
-      iter->second = settings{};
-      current = &get<settings>(iter->second);
-    }
-  }
-  // Set key-value pair on the leaf.
-  auto iter = current->insert_or_assign(*back, std::move(value)).first;
-  return iter->second;
-}
-
 config_value& put_impl(settings& dict, std::string_view name,
                        config_value& value) {
   // Like in get_if: we always drop a 'global.' suffix.

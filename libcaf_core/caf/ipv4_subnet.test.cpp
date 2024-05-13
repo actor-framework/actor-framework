@@ -4,7 +4,13 @@
 
 #include "caf/ipv4_subnet.hpp"
 
+#include "caf/test/fixture/deterministic.hpp"
 #include "caf/test/test.hpp"
+
+#include "caf/actor_system.hpp"
+#include "caf/actor_system_config.hpp"
+#include "caf/binary_deserializer.hpp"
+#include "caf/binary_serializer.hpp"
 
 using namespace caf;
 
@@ -50,5 +56,19 @@ TEST("ordering") {
   check_lt(addr(192, 168, 167, 0) / 24, addr(192, 168, 168, 0) / 24);
   check_lt(addr(192, 168, 168, 0) / 24, addr(192, 168, 168, 0) / 25);
 }
+
+WITH_FIXTURE(test::fixture::deterministic) {
+
+#define CHECK_SERIALIZATION(subn) check_eq(subn, serialization_roundtrip(subn))
+
+TEST("serialization") {
+  CHECK_SERIALIZATION(addr(192, 168, 168, 1) / 16);
+  CHECK_SERIALIZATION(addr(192, 168, 168, 1) / 24);
+  CHECK_SERIALIZATION(addr(192, 168, 168, 1) / 31);
+  CHECK_SERIALIZATION(addr(255, 255, 255, 1) / 8);
+  CHECK_SERIALIZATION(addr(127, 0, 0, 1) / 24);
+}
+
+} // WITH_FIXTURE(test::fixture::deterministic)
 
 } // namespace
