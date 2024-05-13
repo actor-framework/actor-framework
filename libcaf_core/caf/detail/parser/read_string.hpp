@@ -54,9 +54,11 @@ void read_string(State& ps, Consumer&& consumer) {
     transition(read_chars, any_char, res += ch)
   }
   state(escape) {
+    transition(read_chars, 'f', res += '\f')
     transition(read_chars, 'n', res += '\n')
     transition(read_chars, 'r', res += '\r')
     transition(read_chars, 't', res += '\t')
+    transition(read_chars, 'v', res += '\v')
     transition(read_chars, '\\', res += '\\')
     transition_if(quote_mark == double_quote, read_chars, double_quote,
                   res += double_quote)

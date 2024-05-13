@@ -18,6 +18,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   member variables: `name` and (an optional) `password`. Further, the `userinfo`
   field is now optional in order to differentiate between an empty user-info and
   no user-info at all.
+- The parser for reading JSON and configuration files now properly handles
+  Windows-style line endings (#1850).
 
 ### Removed
 

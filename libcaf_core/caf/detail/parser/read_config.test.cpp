@@ -4,6 +4,7 @@
 
 #include "caf/detail/parser/read_config.hpp"
 
+#include "caf/test/fixture/deterministic.hpp"
 #include "caf/test/test.hpp"
 
 #include "caf/config_value.hpp"
@@ -14,6 +15,7 @@
 #include <string_view>
 
 using namespace caf;
+using namespace std::literals;
 
 namespace {
 
@@ -64,7 +66,7 @@ struct test_consumer {
   }
 };
 
-struct fixture {
+struct fixture : test::fixture::deterministic {
   expected<log_type> parse(std::string_view str, bool expect_success = true) {
     test_consumer f;
     string_parser_state res{str.begin(), str.end()};
@@ -211,11 +213,25 @@ const auto conf1_log = make_log(
 );
 // clang-format on
 
+std::string with_windows_newlines(std::string_view str) {
+  std::string result;
+  for (auto c : str) {
+    if (c == '\n') {
+      result += "\r\n";
+    } else {
+      result += c;
+    }
+  }
+  return result;
+}
+
 WITH_FIXTURE(fixture) {
 
 TEST("read_config feeds into a consumer") {
   check_eq(parse(conf0), conf0_log);
   check_eq(parse(conf1), conf1_log);
+  check_eq(parse(with_windows_newlines(conf0)), conf0_log);
+  check_eq(parse(with_windows_newlines(conf1)), conf1_log);
 }
 
 } // WITH_FIXTURE(fixture)

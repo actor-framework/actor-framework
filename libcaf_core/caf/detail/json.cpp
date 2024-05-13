@@ -218,7 +218,7 @@ void read_json_null_or_nan(ParserState& ps, Consumer consumer) {
   // clang-format off
   start();
   state(init) {
-    transition(init, " \t\n")
+    transition(init, whitespace_chars)
     transition(has_n, 'n')
   }
   state(has_n) {
@@ -235,7 +235,7 @@ void read_json_null_or_nan(ParserState& ps, Consumer consumer) {
     transition(done, 'n', res_type = is_nan)
   }
   term_state(done) {
-    transition(done, " \t\n")
+    transition(done, whitespace_chars)
   }
   fin();
   // clang-format on
@@ -261,7 +261,7 @@ void read_json_string(ParserState& ps, unit_t, Unescaper escaper,
   // clang-format off
   start();
   state(init) {
-    transition(init, " \t\n")
+    transition(init, whitespace_chars)
     transition(read_chars, '"', first = ps.i + 1)
   }
   state(read_chars) {
@@ -279,7 +279,7 @@ void read_json_string(ParserState& ps, unit_t, Unescaper escaper,
     transition(read_chars_after_escape, "\"\\/bfnrtv")
   }
   term_state(done) {
-    transition(done, " \t\n")
+    transition(done, whitespace_chars)
   }
   fin();
   // clang-format on
@@ -292,7 +292,7 @@ void read_json_string(ParserState& ps, std::vector<char>& scratch_space,
   // clang-format off
   start();
   state(init) {
-    transition(init, " \t\n")
+    transition(init, whitespace_chars)
     transition(read_chars, '"')
   }
   state(read_chars) {
@@ -314,7 +314,7 @@ void read_json_string(ParserState& ps, std::vector<char>& scratch_space,
     transition(read_chars, 'v', scratch_space.push_back('\v'))
   }
   term_state(done) {
-    transition(done, " \t\n")
+    transition(done, whitespace_chars)
   }
   fin();
   // clang-format on
@@ -327,19 +327,19 @@ void read_member(ParserState& ps, ScratchSpace& scratch_space,
   // clang-format off
   start();
   state(init) {
-    transition(init, " \t\n")
+    transition(init, whitespace_chars)
     fsm_epsilon(read_json_string(ps, scratch_space, unescaper,
                                  consumer.begin_key()),
                 after_key, '"')
   }
   state(after_key) {
-    transition(after_key, " \t\n")
+    transition(after_key, whitespace_chars)
     fsm_transition(read_value(ps, scratch_space, unescaper, nesting_level,
                               consumer.begin_val()),
                    done, ':')
   }
   term_state(done) {
-    transition(done, " \t\n")
+    transition(done, whitespace_chars)
   }
   fin();
   // clang-format on
@@ -356,29 +356,29 @@ void read_json_object(ParserState& ps, ScratchSpace& scratch_space,
   // clang-format off
   start();
   state(init) {
-    transition(init, " \t\n")
+    transition(init, whitespace_chars)
     transition(has_open_brace, '{')
   }
   state(has_open_brace) {
-    transition(has_open_brace, " \t\n")
+    transition(has_open_brace, whitespace_chars)
     fsm_epsilon(read_member(ps, scratch_space, unescaper, nesting_level + 1,
                             consumer.begin_member()),
                 after_member, '"')
     transition(done, '}')
   }
   state(after_member) {
-    transition(after_member, " \t\n")
+    transition(after_member, whitespace_chars)
     transition(after_comma, ',')
     transition(done, '}')
   }
   state(after_comma) {
-    transition(after_comma, " \t\n")
+    transition(after_comma, whitespace_chars)
     fsm_epsilon(read_member(ps, scratch_space, unescaper, nesting_level + 1,
                             consumer.begin_member()),
                 after_member, '"')
   }
   term_state(done) {
-    transition(done, " \t\n")
+    transition(done, whitespace_chars)
   }
   fin();
   // clang-format on
@@ -395,29 +395,29 @@ void read_json_array(ParserState& ps, ScratchSpace& scratch_space,
   // clang-format off
   start();
   state(init) {
-    transition(init, " \t\n")
+    transition(init, whitespace_chars)
     transition(has_open_brace, '[')
   }
   state(has_open_brace) {
-    transition(has_open_brace, " \t\n")
+    transition(has_open_brace, whitespace_chars)
     transition(done, ']')
     fsm_epsilon(read_value(ps, scratch_space, unescaper, nesting_level + 1,
                            consumer.begin_value()),
                 after_value)
   }
   state(after_value) {
-    transition(after_value, " \t\n")
+    transition(after_value, whitespace_chars)
     transition(after_comma, ',')
     transition(done, ']')
   }
   state(after_comma) {
-    transition(after_comma, " \t\n")
+    transition(after_comma, whitespace_chars)
     fsm_epsilon(read_value(ps, scratch_space, unescaper, nesting_level + 1,
                            consumer.begin_value()),
                 after_value)
   }
   term_state(done) {
-    transition(done, " \t\n")
+    transition(done, whitespace_chars)
   }
   fin();
   // clang-format on
@@ -430,7 +430,7 @@ void read_value(ParserState& ps, ScratchSpace& scratch_space,
   // clang-format off
   start();
   state(init) {
-    transition(init, " \t\n")
+    transition(init, whitespace_chars)
     fsm_epsilon(read_json_string(ps, scratch_space, unescaper, consumer),
                 done, '"')
     fsm_epsilon(read_bool(ps, consumer), done, "ft")
@@ -444,7 +444,7 @@ void read_value(ParserState& ps, ScratchSpace& scratch_space,
                 done, '[')
   }
   term_state(done) {
-    transition(done, " \t\n")
+    transition(done, whitespace_chars)
   }
   fin();
   // clang-format on

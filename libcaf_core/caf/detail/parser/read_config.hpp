@@ -49,7 +49,11 @@ void read_config_comment(State& ps, Consumer&&) {
   start();
   term_state(init) {
     transition(done, '\n')
+    transition(had_carriage_return, '\r')
     transition(init)
+  }
+  state(had_carriage_return) {
+    transition(done, '\n')
   }
   term_state(done) {
     // nop
@@ -70,13 +74,13 @@ void read_config_list(State& ps, Consumer&& consumer) {
     epsilon(before_value)
   }
   state(before_value) {
-    transition(before_value, " \t\n")
+    transition(before_value, whitespace_chars)
     transition(done, ']', consumer.end_list())
     fsm_epsilon(read_config_comment(ps, consumer), before_value, '#')
     fsm_epsilon(read_config_value(ps, consumer, std::true_type{}), after_value)
   }
   state(after_value) {
-    transition(after_value, " \t\n")
+    transition(after_value, whitespace_chars)
     transition(before_value, ',')
     transition(done, ']', consumer.end_list())
     fsm_epsilon(read_config_comment(ps, consumer), after_value, '#')
@@ -97,12 +101,12 @@ void lift_config_list(State& ps, Consumer&& consumer) {
     epsilon(before_value)
   }
   term_state(before_value) {
-    transition(before_value, " \t\n")
+    transition(before_value, whitespace_chars)
     fsm_epsilon(read_config_comment(ps, consumer), before_value, '#')
     fsm_epsilon(read_config_value(ps, consumer, std::true_type{}), after_value)
   }
   term_state(after_value) {
-    transition(after_value, " \t\n")
+    transition(after_value, whitespace_chars)
     transition(before_value, ',')
     fsm_epsilon(read_config_comment(ps, consumer), after_value, '#')
   }
@@ -141,7 +145,7 @@ void read_config_map(State& ps, Consumer&& consumer, bool after_dot = false) {
     epsilon(await_key_name)
   }
   state(await_key_name) {
-    transition(await_key_name, " \t\n")
+    transition(await_key_name, whitespace_chars)
     fsm_epsilon(read_config_comment(ps, consumer), await_key_name, '#')
     fsm_epsilon(read_string(ps, key), await_assignment, quote_marks)
     transition(read_key_name, alnum_or_dash, key = ch)
@@ -174,6 +178,7 @@ void read_config_map(State& ps, Consumer&& consumer, bool after_dot = false) {
   unstable_state(after_value) {
     epsilon_if(after_dot, done, any_char, consumer.end_map())
     transition(after_value, " \t")
+    transition(had_carriage_return, "\r")
     transition(had_newline, "\n")
     transition_if(!Nested, after_comma, ',')
     transition(await_key_name, ',')
@@ -182,9 +187,15 @@ void read_config_map(State& ps, Consumer&& consumer, bool after_dot = false) {
     epsilon_if(!Nested, done)
     epsilon(unexpected_end_of_input)
   }
+  // Handle Windows-style line endings. A carriage return must be followed by
+  // a newline (line feed) character.
+  state(had_carriage_return) {
+    transition(had_newline, "\n")
+  }
   // Allows users to skip the ',' for separating key/value pairs
   unstable_state(had_newline) {
     transition(had_newline, " \t\n")
+    transition(had_carriage_return, "\r")
     transition(await_key_name, ',')
     transition_if(Nested, done, '}', consumer.end_map())
     fsm_epsilon(read_config_comment(ps, consumer), had_newline, '#')
@@ -212,15 +223,15 @@ void read_config_uri(State& ps, Consumer&& consumer) {
   // clang-format off
   start();
   state(init) {
-    transition(init, " \t\n")
+    transition(init, whitespace_chars)
     transition(before_uri, '<')
   }
   state(before_uri) {
-    transition(before_uri, " \t\n")
+    transition(before_uri, whitespace_chars)
     fsm_epsilon(read_uri(ps, builder), after_uri)
   }
   state(after_uri) {
-    transition(after_uri, " \t\n")
+    transition(after_uri, whitespace_chars)
     transition(done, '>')
   }
   term_state(done) {
@@ -262,19 +273,19 @@ void read_config(State& ps, Consumer&& consumer) {
   start();
   // Checks whether there's a top-level '{'.
   term_state(init) {
-    transition(init, " \t\n")
+    transition(init, whitespace_chars)
     fsm_epsilon(read_config_comment(ps, consumer), init, '#')
     fsm_transition(read_config_map<false>(ps, consumer),
                    await_closing_brace, '{')
     fsm_epsilon(read_config_map<false>(ps, consumer), init, key_char)
   }
   state(await_closing_brace) {
-    transition(await_closing_brace, " \t\n")
+    transition(await_closing_brace, whitespace_chars)
     fsm_epsilon(read_config_comment(ps, consumer), await_closing_brace, '#')
     transition(done, '}')
   }
   term_state(done) {
-    transition(done, " \t\n")
+    transition(done, whitespace_chars)
     fsm_epsilon(read_config_comment(ps, consumer), done, '#')
   }
   fin();
