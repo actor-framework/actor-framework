@@ -141,22 +141,10 @@ elseif(MSVC)
   target_compile_options(caf_internal INTERFACE /EHsc)
 endif()
 
-# -- unit testing setup / caf_add_legacy_test_suites function  ------------------------
+# -- unit testing setup --------------------------------------------------------
 
 if(CAF_ENABLE_TESTING)
   enable_testing()
-  function(caf_add_legacy_test_suites target)
-    foreach(suiteName ${ARGN})
-      if(NOT ${suiteName} IN_LIST CAF_EXCLUDE_TESTS)
-        string(REPLACE "." "/" suitePath ${suiteName})
-        target_sources(${target} PRIVATE
-          "${CMAKE_CURRENT_SOURCE_DIR}/tests/legacy/${suitePath}.cpp")
-        add_test(NAME ${suiteName}
-                 COMMAND ${target} -n -v5 -s "^${suiteName}$")
-        set_tests_properties(${suiteName} PROPERTIES TIMEOUT 300)
-      endif()
-    endforeach()
-  endfunction()
 endif()
 
 # -- check whether we can use std::format --------------------------------------
@@ -269,14 +257,9 @@ endfunction()
 #     ...
 #   SOURCES
 #     ...
-#   LEGACY_TEST_SOURCES
-#     ...
-#   LEGACY_TEST_SUITES
-#     ...
 # )
 function(caf_add_component name)
-  set(varargs DEPENDENCIES HEADERS SOURCES ENUM_TYPES LEGACY_TEST_SOURCES
-              LEGACY_TEST_SUITES)
+  set(varargs DEPENDENCIES HEADERS SOURCES ENUM_TYPES)
   cmake_parse_arguments(CAF_ADD_COMPONENT "" "" "${varargs}" ${ARGN})
   if(NOT CAF_ADD_COMPONENT_HEADERS)
     message(FATAL_ERROR "Cannot add CAF component without at least one header.")
@@ -329,19 +312,6 @@ function(caf_add_component name)
       set_tests_properties(${test_name} PROPERTIES TIMEOUT 300)
     endif()
   endforeach()
-  if(CAF_ENABLE_TESTING AND CAF_ADD_COMPONENT_LEGACY_TEST_SOURCES)
-    set(tst_bin_target "caf-${name}-legacy-test")
-    list(APPEND targets ${tst_bin_target})
-    add_executable(${tst_bin_target}
-                   ${CAF_ADD_COMPONENT_LEGACY_TEST_SOURCES})
-    target_link_libraries(${tst_bin_target} PRIVATE libcaf_test
-                          ${CAF_ADD_COMPONENT_DEPENDENCIES} ${lib_target})
-    target_include_directories(${tst_bin_target} PRIVATE
-                               "${CMAKE_CURRENT_SOURCE_DIR}/tests/legacy")
-    if(CAF_ADD_COMPONENT_LEGACY_TEST_SUITES)
-      caf_add_legacy_test_suites(${tst_bin_target} ${CAF_ADD_COMPONENT_LEGACY_TEST_SUITES})
-    endif()
-  endif()
   target_link_libraries(${lib_target} ${CAF_ADD_COMPONENT_DEPENDENCIES})
   if(CAF_ADD_COMPONENT_ENUM_TYPES)
     # OBJECT lib: workaround for https://gitlab.kitware.com/cmake/cmake/-/issues/18399

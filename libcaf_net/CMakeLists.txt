@@ -4,8 +4,6 @@ file(GLOB_RECURSE CAF_NET_HEADERS "caf/*.hpp")
 
 # -- add targets ---------------------------------------------------------------
 
-configure_file(tests/legacy/pem.cpp.in tests/legacy/pem.cpp @ONLY)
-
 caf_add_component(
   net
   DEPENDENCIES
@@ -135,12 +133,7 @@ caf_add_component(
     caf/net/web_socket/server.cpp
     caf/net/web_socket/server_factory.cpp
     caf/net/web_socket/switch_protocol.cpp
-    caf/net/web_socket/upper_layer.cpp
-  LEGACY_TEST_SOURCES
-    ${CMAKE_CURRENT_BINARY_DIR}/tests/legacy/pem.cpp
-    tests/legacy/net-test.cpp
-  LEGACY_TEST_SUITES
-    net.ssl.transport)
+    caf/net/web_socket/upper_layer.cpp)
 
 caf_add_test_executable(
   caf-net-autobahn-driver
