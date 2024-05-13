@@ -35,6 +35,11 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   OpenSSL module. The module now uses the regular configuration system.
 - The `caf-run` tool no longer ships with CAF. The tool has not been maintained
   for a long time, has never been thoroughly tested, and has no documentation.
+- The `actor_system_config` no longer contains the `logger_factory` setter. We
+  might reintroduce this feature in the future, but we think the new `logger`
+  interface class is not yet stable enough to expose it to users and to allow
+  custom logger implementations.
+
 
 ### Changed
 
