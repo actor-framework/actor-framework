@@ -153,6 +153,7 @@ caf_add_component(
     caf/detail/base64.cpp
     caf/detail/base64.test.cpp
     caf/detail/beacon.cpp
+    caf/detail/beacon.test.cpp
     caf/detail/behavior_impl.cpp
     caf/detail/behavior_stack.cpp
     caf/detail/blocking_behavior.cpp
