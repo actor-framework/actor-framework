@@ -149,17 +149,4 @@ TEST("config options with storage sync their value with the storage") {
   }
 }
 
-TEST("negated config options") {
-  auto negated_value = false;
-  auto true_option = config_value{true};
-  const auto negated_option = make_negated_config_option(negated_value, "foo",
-                                                         "bar", "baz");
-  check(negated_option.is_flag());
-  check_eq(negated_option.type_name(), "bool");
-  check_eq(negated_option.category(), "foo");
-  check_eq(negated_option.long_name(), "bar");
-  check_eq(negated_option.short_names(), "");
-  check_eq(negated_option.sync(true_option), error{});
-}
-
 } // namespace

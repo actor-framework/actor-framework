@@ -15,13 +15,6 @@ config_option_adder::config_option_adder(config_option_set& target,
   // nop
 }
 
-config_option_adder&
-config_option_adder::add_neg(bool& ref, std::string_view name,
-                             std::string_view description) {
-  return add_impl(
-    make_negated_config_option(ref, category_, name, description));
-}
-
 config_option_adder& config_option_adder::add_impl(config_option&& opt) {
   xs_.add(std::move(opt));
   return *this;

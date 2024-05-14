@@ -304,7 +304,6 @@ caf_add_component(
     caf/mail_cache.test.cpp
     caf/mailbox_element.cpp
     caf/mailbox_element.test.cpp
-    caf/make_config_option.cpp
     caf/message.cpp
     caf/message.test.cpp
     caf/message_builder.cpp

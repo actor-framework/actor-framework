@@ -35,11 +35,6 @@ public:
     return add_impl(make_config_option<T>(category_, name, description));
   }
 
-  /// For backward compatibility only. Do not use for new code!
-  /// @private
-  config_option_adder& add_neg(bool& ref, std::string_view name,
-                               std::string_view description);
-
 private:
   // -- properties -------------------------------------------------------------
 
