@@ -4,6 +4,7 @@
 
 #include "caf/chrono.hpp"
 
+#include "caf/test/outline.hpp"
 #include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
@@ -375,69 +376,63 @@ TEST("chrono::to_string and chrono::print generate the same string") {
   check_eq(str1, str2);
 }
 
-TEST("two timestamps with the same time point are equal") {
-  auto from_string = [](std::string_view str) {
-    return datetime::from_string(str);
-  };
-  check_eq(from_string("2021-02-03T14:25:36Z"),
-           from_string("2021-02-03T14:25:36+00:00"));
-  check_eq(from_string("2021-02-03T14:25:36Z"),
-           from_string("2021-02-03T15:25:36+01:00"));
-  check_eq(from_string("2021-02-03T14:25:36Z"),
-           from_string("2021-02-03T13:25:36-01:00"));
-  check_eq(from_string("2021-02-03T15:25:36+01:00"),
-           from_string("2021-02-03T13:25:36-01:00"));
+OUTLINE("two timestamps with the same time point are equal") {
+  GIVEN("the timestamp <lhs>") {
+    auto lhs = datetime::from_string(block_parameters<std::string>());
+    require(lhs.has_value());
+    WHEN("comparing it to <rhs>") {
+      auto rhs = datetime::from_string(block_parameters<std::string>());
+      require(rhs.has_value());
+      THEN("they should compare equal") {
+        check_eq(*lhs, *rhs);
+      }
+    }
+  }
+  EXAMPLES = R"__(
+    | lhs                       | rhs                       |
+    | 2024-05-16T21:00:00+09:00 | 2024-05-16T12:00:00Z      |
+    | 2024-05-16T08:00:00+09:00 | 2024-05-15T23:00:00Z      |
+    | 2024-05-16T07:00:00-05:00 | 2024-05-16T12:00:00Z      |
+    | 2024-05-16T20:00:00-05:00 | 2024-05-17T01:00:00Z      |
+    | 2024-05-16T12:00:00Z      | 2024-05-16T21:00:00+09:00 |
+    | 2024-05-15T23:00:00Z      | 2024-05-16T08:00:00+09:00 |
+    | 2024-05-16T12:00:00Z      | 2024-05-16T07:00:00-05:00 |
+    | 2024-05-17T01:00:00Z      | 2024-05-16T20:00:00-05:00 |
+    | 2024-05-16T12:00:00+00:30 | 2024-05-16T11:30:00Z      |
+    | 2024-05-16T00:15:00+00:30 | 2024-05-15T23:45:00Z      |
+    | 2024-05-16T12:45:00-00:30 | 2024-05-16T13:15:00Z      |
+    | 2024-05-16T23:45:00-00:30 | 2024-05-17T00:15:00Z      |
+    | 2024-05-16T11:30:00Z      | 2024-05-16T12:00:00+00:30 |
+    | 2024-05-15T23:45:00Z      | 2024-05-16T00:15:00+00:30 |
+    | 2024-05-16T13:15:00Z      | 2024-05-16T12:45:00-00:30 |
+    | 2024-05-17T00:15:00Z      | 2024-05-16T23:45:00-00:30 |
+  )__";
 }
 
-TEST("force_utc coverts a dateime object to UTC") {
-  auto to_utc = [](std::string_view str) {
-    return datetime::from_string(str).and_then([](auto&& dt) {
-      auto cpy = dt;
-      cpy.force_utc();
-      return expected<std::string>{to_string(cpy)};
-    });
-  };
-  SECTION("no rollover") {
-    check_eq(to_utc("2021-02-03T14:30:00"), "2021-02-03T14:30:00Z");
-    check_eq(to_utc("2021-02-03T14:30:00Z"), "2021-02-03T14:30:00Z");
-    check_eq(to_utc("2021-02-03T14:30:00+01:00"), "2021-02-03T15:30:00Z");
-    check_eq(to_utc("2021-02-03T14:30:00-01:00"), "2021-02-03T13:30:00Z");
-  }
-  SECTION("minute rollover") {
-    if (auto dt = datetime::from_string("2021-02-03T14:30:30Z");
-        check(dt.has_value())) {
-      dt->utc_offset = 30;
-      dt->force_utc();
-      check_eq(to_string(*dt), "2021-02-03T14:31:00Z");
-    }
-    if (auto dt = datetime::from_string("2021-02-03T14:30:30Z");
-        check(dt.has_value())) {
-      dt->utc_offset = -31;
-      dt->force_utc();
-      check_eq(to_string(*dt), "2021-02-03T14:29:59Z");
+OUTLINE("force_utc coverts a dateime object to UTC") {
+  GIVEN("the timestamp <timestamp>") {
+    auto maybe_ts = datetime::from_string(block_parameters<std::string>());
+    require(maybe_ts.has_value());
+    auto ts = *maybe_ts;
+    WHEN("calling force_utc() on it") {
+      ts.force_utc();
+      THEN("the result is <expected>") {
+        check_eq(ts.to_string(), block_parameters<std::string>());
+      }
     }
   }
-  SECTION("hour rollover") {
-    check_eq(to_utc("2021-02-03T14:59:00+00:01"), "2021-02-03T15:00:00Z");
-    check_eq(to_utc("2021-02-03T14:00:00-00:01"), "2021-02-03T13:59:00Z");
-  }
-  SECTION("day rollover") {
-    check_eq(to_utc("2021-02-03T23:59:00+00:01"), "2021-02-04T00:00:00Z");
-    check_eq(to_utc("2021-02-03T00:00:00-00:01"), "2021-02-02T23:59:00Z");
-  }
-  SECTION("month rollover - regular year") {
-    check_eq(to_utc("2021-02-28T23:59:00+00:01"), "2021-03-01T00:00:00Z");
-    check_eq(to_utc("2021-03-01T00:00:00-00:01"), "2021-02-28T23:59:00Z");
-  }
-  SECTION("month rollover - leap year") {
-    check_eq(to_utc("2000-02-28T23:59:00+00:01"), "2000-02-29T00:00:00Z");
-    check_eq(to_utc("2000-02-29T23:59:00+00:01"), "2000-03-01T00:00:00Z");
-    check_eq(to_utc("2000-03-01T00:00:00-00:01"), "2000-02-29T23:59:00Z");
-  }
-  SECTION("year rollover") {
-    check_eq(to_utc("2021-12-31T23:59:00+00:01"), "2022-01-01T00:00:00Z");
-    check_eq(to_utc("2021-01-01T00:00:00-00:01"), "2020-12-31T23:59:00Z");
-  }
+  EXAMPLES = R"__(
+    | timestamp                 | expected             |
+    | 2024-05-16T12:00:00       | 2024-05-16T12:00:00Z |
+    | 2024-05-16T21:00:00+09:00 | 2024-05-16T12:00:00Z |
+    | 2024-05-16T08:00:00+09:00 | 2024-05-15T23:00:00Z |
+    | 2024-05-16T07:00:00-05:00 | 2024-05-16T12:00:00Z |
+    | 2024-05-16T20:00:00-05:00 | 2024-05-17T01:00:00Z |
+    | 2024-05-16T12:00:00+00:30 | 2024-05-16T11:30:00Z |
+    | 2024-05-16T00:15:00+00:30 | 2024-05-15T23:45:00Z |
+    | 2024-05-16T12:45:00-00:30 | 2024-05-16T13:15:00Z |
+    | 2024-05-16T23:45:00-00:30 | 2024-05-17T00:15:00Z |
+  )__";
 }
 
 TEST("to_string prints fractional digits according to the precision") {
