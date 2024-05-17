@@ -259,7 +259,7 @@ void datetime::force_utc() {
   auto offset = *utc_offset;
   utc_offset = 0;
   auto ts = to_time_t();
-  assign_utc_secs(ts + offset);
+  assign_utc_secs(ts - offset);
 }
 
 void datetime::read_local_time(time_t secs, int nsecs) {
