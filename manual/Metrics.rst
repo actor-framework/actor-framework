@@ -180,6 +180,45 @@ requests. CAF itself does not care about the flag, but it can give extra
 information to collectors or exporters. For example, the Prometheus exporter
 will add a ``_total`` suffix to the exported metric name.
 
+Timers
+------
+
+When instrumenting code, timers offer a convenient way for measuring the
+duration of individual operations.
+
+The metrics API in CAF includes histograms for sampling observations over time.
+For example, how long it takes to handle incoming requests or to perform some
+expensive operations.
+
+Sampling time manually is quite tedious, though, as illustrated by this snippet:
+
+.. code-block:: C++
+
+  caf::telemetry::dbl_histogram* my_histogram = nullptr;
+  // ... some place later ...
+  auto t0 = std::chrono::steady_clock::now();
+  // ... expensive operation ...
+  auto delta = std::chrono::steady_clock::now() - t0;
+  // ... convert delta to fractional seconds and pass to my_histogram ...
+
+To automate this process, CAF includes *timers*. They simply store the current
+time when created and pass the elapsed time since construction to a histogram
+when destroyed. Hence, we can replace the verbose version from before simply by
+putting a timer into the scope of the expensive option and take advantage of
+RAII_:
+
+.. code-block:: C++
+
+  caf::telemetry::dbl_histogram* my_histogram = nullptr;
+  // ... some place later ...
+  {
+    auto t = caf::telemetry::timer{my_histogram};
+    // ... expensive operation ...
+  }
+
+The constructor of ``timer`` also accepts a ``nullptr``. This accounts for the
+fact that some metrics may be disabled by default.
+
 The Metric Registry
 -------------------
 
@@ -593,3 +632,5 @@ below.
       }
     }
   }
+
+.. _RAII: https://en.cppreference.com/w/cpp/language/raii

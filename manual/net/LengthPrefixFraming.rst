@@ -25,7 +25,7 @@ The simplest way to start a length-prefix framing server is by using the
 high-level factory DSL. The entry point for this API is calling the
 ``caf::net::lp::with`` function:
 
-.. code-block:: cpp
+.. code-block:: C++
 
     caf::net::lp::with(sys)
 
