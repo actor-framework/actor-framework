@@ -14,7 +14,6 @@
 #include "caf/detail/net_export.hpp"
 
 #include <cstdint>
-#include <memory>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -25,39 +24,32 @@ namespace caf::net::http {
 /// promise for the HTTP response.
 class CAF_NET_EXPORT request {
 public:
-  struct impl {
-    request_header hdr;
-    std::vector<std::byte> body;
-    async::promise<response> prom;
-  };
+  friend class router;
 
-  request() = default;
-  request(request&&) = default;
-  request(const request&) = default;
-  request& operator=(request&&) = default;
-  request& operator=(const request&) = default;
+  class impl;
 
-  /// @private
-  explicit request(std::shared_ptr<impl> pimpl) : pimpl_(std::move(pimpl)) {
-    // nop
-  }
+  request() noexcept = default;
+
+  request(request&& other) noexcept;
+
+  request(const request& other) noexcept;
+
+  request& operator=(request&& other) noexcept;
+
+  request& operator=(const request& other) noexcept;
+
+  ~request();
 
   /// Returns the HTTP header for the request.
   /// @pre `valid()`
-  const request_header& header() const {
-    return pimpl_->hdr;
-  }
+  const request_header& header() const;
 
   /// Returns the HTTP body (payload) for the request.
   /// @pre `valid()`
-  const_byte_span body() const {
-    return make_span(pimpl_->body);
-  }
+  const_byte_span body() const;
 
   /// @copydoc body
-  const_byte_span payload() const {
-    return make_span(pimpl_->body);
-  }
+  const_byte_span payload() const;
 
   /// Sends an HTTP response message to the client. Automatically sets the
   /// `Content-Type` and `Content-Length` header fields.
@@ -74,7 +66,10 @@ public:
   }
 
 private:
-  std::shared_ptr<impl> pimpl_;
+  request(request_header hdr, std::vector<std::byte> body,
+          async::promise<response> prom);
+
+  impl* impl_ = nullptr;
 };
 
 } // namespace caf::net::http

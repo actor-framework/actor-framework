@@ -38,8 +38,7 @@ request router::lift(responder&& res) {
   auto prom = async::promise<response>();
   auto fut = prom.get_future();
   auto buf = std::vector<std::byte>{res.payload().begin(), res.payload().end()};
-  auto impl = request::impl{res.header(), std::move(buf), std::move(prom)};
-  auto lifted = request{std::make_shared<request::impl>(std::move(impl))};
+  auto lifted = request{res.header(), std::move(buf), std::move(prom)};
   auto request_id = request_id_++;
   auto hdl = fut.bind_to(down_->mpx())
                .then(
