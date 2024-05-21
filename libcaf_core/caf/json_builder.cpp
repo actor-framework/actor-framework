@@ -40,6 +40,7 @@ bool json_builder::number(T x) {
       std::string str;
       detail::print(str, x);
       *top_ptr<key_type>() = detail::json::realloc(str, &storage_->buf);
+      pop();
       return true;
     }
     case type::array: {
@@ -282,6 +283,7 @@ bool json_builder::value(bool x) {
       return true;
     case type::key:
       *top_ptr<key_type>() = x ? "true"sv : "false"sv;
+      pop();
       return true;
     case type::array: {
       auto* arr = top_ptr<detail::json::array>();
