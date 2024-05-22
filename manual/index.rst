@@ -14,6 +14,7 @@ Contents
    Overview
    MessagePassing
    TypeInspection
+   Hashing
    MessageHandlers
    Actors
    Scheduler
@@ -21,6 +22,8 @@ Contents
    ReferenceCounting
    Error
    ConfiguringActorApplications
+   CopyOnWriteTypes
+   TypedMessageView
    DataFlows
    Testing
    Metrics

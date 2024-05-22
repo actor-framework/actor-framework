@@ -20,9 +20,10 @@ when using the message passing API.
 Copy on Write
 -------------
 
-A ``message`` is a copy-on-write (COW) type. This means that copying a message
-is cheap because it only copies the reference to the message content. The actual
-copying of the content only happens when one of the copies is modified.
+A ``message`` in CAF is a copy-on-write (COW) type (see
+:ref:`copy-on-write-types`). This means that copying a message is cheap because
+it only copies the reference to the message content. The actual copying of the
+content only happens when one of the copies is modified.
 
 This allows sending the same message to multiple receivers without copying
 overhead, as long as all receivers only read the content of the message.
@@ -331,4 +332,3 @@ signature ``void (error&)`` or ``void (scheduled_actor*, error&)``.
 Additionally, ``request`` accepts an error handler as second argument to handle
 errors for a particular request (see :ref:`error-response`). The default handler
 is used as fallback if ``request`` is used without error handler.
-
