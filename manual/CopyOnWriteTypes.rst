@@ -10,7 +10,7 @@ making sure that the data is only copied when necessary.
 
 CAF uses copy-on-write for its ``message`` type, which basically is a
 type-erased tuple.  CAF also includes ``cow_tuple`` which wraps a ``std::tuple``
-and allows users to pass e expensive data (like strings and lists) as a single
+and allows users to pass expensive data (like strings and lists) as a single
 unit that can be passed around cheaply. This is particularly useful when
 emitting tuples in a flow, where the tuples are frequently buffered and passed
 around.
