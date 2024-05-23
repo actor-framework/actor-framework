@@ -380,7 +380,6 @@ public:
   /// to opt-out of the cooperative scheduling.
   /// @param xs Constructor arguments for `C`.
   template <class C, spawn_options Os = no_spawn_options, class... Ts>
-  [[deprecated("use state-based actors and actor_from_state instead")]]
   infer_handle_from_class_t<C> spawn(Ts&&... xs) {
     check_invariants<C>();
     actor_config cfg;

@@ -117,7 +117,8 @@ Spawning
 Monitor
 ~~~~~~~
 
-A monitored actor sends a down message (see :ref:`down-message`) to all actors
+A monitor is a unidirectional connection where one actor observes the lifetime
+of another actor. A monitored actor sends sends it exit reason to all actors
 monitoring it as part of its termination. This allows actors to supervise other
 actors and to take actions when one of the supervised actors fails, i.e.,
 terminates with a non-normal exit reason.

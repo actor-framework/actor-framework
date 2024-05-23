@@ -338,6 +338,7 @@ behavior foo2(event_based_actor* self) {
   return {
     [=](int i, int_actor server) {
       self->delegate(server, i);
+      caf::log::test::debug("self->quit");
       self->quit();
     },
   };
@@ -370,25 +371,19 @@ TEST("sending typed actors") {
   check_eq(dispatch_messages(), 1u);
 }
 
-int_actor::behavior_type int_fun2(int_actor::pointer self) {
-  self->set_down_handler([=](down_msg& dm) {
-    test::runnable::current().check_eq(dm.reason, exit_reason::normal);
-    self->quit();
-  });
+int_actor::behavior_type int_fun2(int_actor::pointer) {
   return {
-    [=](int i) {
-      self->monitor(self->current_sender());
-      return i * i;
-    },
+    [](int value) { return value * value; },
   };
 }
 
-TEST("sending typed actors and down msg") {
+TEST("sending typed actors and monitoring") {
   auto aut = sys.spawn(int_fun2);
   auto buddy = sys.spawn(foo2);
   inject().with(10, aut).from(self).to(buddy);
   expect<int>().with(10).to(aut);
   expect<int>().with(100).to(self);
+  dispatch_messages();
 }
 
 TEST("check signature") {

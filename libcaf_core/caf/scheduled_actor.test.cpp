@@ -8,6 +8,7 @@
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
+#include "caf/config.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/scoped_actor.hpp"
 
@@ -61,6 +62,8 @@ ASSERT_COMPILES(set_error_handler(const_error_fn{}),
 
 // -- compile-time checks for set_down_handler ---------------------------------
 
+CAF_PUSH_DEPRECATED_WARNING
+
 struct mutable_down_fn {
   void operator()(down_msg&) {
     // nop
@@ -78,6 +81,8 @@ struct const_down_fn {
 
 ASSERT_COMPILES(set_down_handler(const_down_fn{}),
                 "set_down_handler must accept const function objects");
+
+CAF_POP_WARNINGS
 
 // -- compile-time checks for set_node_down_handler ----------------------------
 
@@ -184,15 +189,15 @@ TEST("actors can override the default exception handler") {
     return sec::runtime_error;
   };
   scoped_actor self{system};
-  auto testee1 = self->spawn<monitored>([=](event_based_actor* eb_self) {
+  auto testee1 = self->spawn([=](event_based_actor* eb_self) {
     eb_self->set_exception_handler(handler);
     throw std::runtime_error("ping");
   });
-  auto testee2 = self->spawn<monitored>([=](event_based_actor* eb_self) {
+  auto testee2 = self->spawn([=](event_based_actor* eb_self) {
     eb_self->set_exception_handler(handler);
     throw std::logic_error("pong");
   });
-  auto testee3 = self->spawn<monitored>(exception_testee);
+  auto testee3 = self->spawn(exception_testee);
   self->mail("foo").send(testee3);
   // receive all down messages
   self->wait_for(testee1, testee2, testee3);

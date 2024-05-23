@@ -29,16 +29,6 @@ namespace caf::io {
 middleman_actor_impl::middleman_actor_impl(actor_config& cfg,
                                            actor default_broker)
   : middleman_actor::base(cfg), broker_(std::move(default_broker)) {
-  set_down_handler([this](down_msg& dm) {
-    auto i = cached_tcp_.begin();
-    auto e = cached_tcp_.end();
-    while (i != e) {
-      if (get<1>(i->second) == dm.source)
-        i = cached_tcp_.erase(i);
-      else
-        ++i;
-    }
-  });
   set_exit_handler([=](exit_msg&) {
     // ignored, the MM links group nameservers
     // to this actor for proper shutdown ordering
@@ -113,7 +103,16 @@ auto middleman_actor_impl::make_behavior() -> behavior_type {
             if (i == pending_.end())
               return;
             if (nid && addr) {
-              monitor(addr);
+              monitor(addr, [this, addr](const error&) {
+                auto i = cached_tcp_.begin();
+                auto e = cached_tcp_.end();
+                while (i != e) {
+                  if (get<1>(i->second) == addr)
+                    i = cached_tcp_.erase(i);
+                  else
+                    ++i;
+                }
+              });
               cached_tcp_.emplace(key, std::make_tuple(nid, addr, sigs));
             }
             auto res = make_message(std::move(nid), std::move(addr),

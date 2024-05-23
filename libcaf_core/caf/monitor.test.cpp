@@ -5,6 +5,7 @@
 #include "caf/test/fixture/deterministic.hpp"
 #include "caf/test/test.hpp"
 
+#include "caf/config.hpp"
 #include "caf/event_based_actor.hpp"
 
 using namespace caf;
@@ -12,6 +13,8 @@ using namespace caf;
 namespace {
 
 WITH_FIXTURE(test::fixture::deterministic) {
+
+CAF_PUSH_DEPRECATED_WARNING
 
 TEST("monitoring another actor") {
   auto client_spawn = [](event_based_actor*) {
@@ -124,6 +127,8 @@ TEST("monitoring another actor") {
     check_eq(*call_count2, 1);
   }
 }
+
+CAF_POP_WARNINGS
 
 } // WITH_FIXTURE(test::fixture::deterministic)
 

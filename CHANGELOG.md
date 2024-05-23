@@ -5,6 +5,21 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ## [Unreleased]
 
+### Added
+
+- The actor system now offers a `println` convenience function for printing to
+  the console. When building CAF with C++20 enabled, the function uses
+  `std::format` internally. Otherwise, it falls back to the compatibility layer
+  with the same syntax. The function also recognizes `inspect` overloads for
+  custom types. Any printing done by this function is thread-safe. The function
+  is available on actors in order to allow `self->println("...")`.
+- Actors have a new `monitor` member function that takes an actor handle and a
+  callback. The callback will run when the monitored actor terminates (in the
+  context of the monitoring actor). The function returns a `monitorable` object
+  that can be used to cancel the monitoring. This mechanism replaces the old
+  approach that relied on `down_msg` handlers in event-based actors (nothing
+  changes for blocking actors).
+
 ### Fixed
 
 - Fix building CAF with shared libraries (DLLs) enabled on Windows (#1715).
@@ -69,14 +84,21 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ### Deprecated
 
-- Spawning an actor sub-type via the `actor_system` now emits a deprecation
-  warning. Sub-typing actors has several pitfalls and limits design space.
-  Instead of sub-typing, users should prefer state classes and the new
-  `actor_from_state` utility.
-- With similar reasoning, `spawn_inactive` now emits a deprecation warning when
-  passing a class other than `event_based_actor`.
+- Using `spawn_inactive` now emits a deprecation warning when passing a class
+  other than `event_based_actor`.
 - The experimental `actor_pool` API has been deprecated. The API has not seen
   much use and is too cumbersome.
+- The printing interface via `aout` has been replaced by the new `println`
+  function. The old interface is now deprecated and will be removed in the next
+  major release.
+- Calling `monitor` with a single argument is now deprecated for event-based
+  actors. Users should always provide a callback as the second argument. Note
+  that nothing changes for blocking actors. They still call `monitor` and then
+  receive a `down_msg` in their mailbox.
+- The function `set_down_handler` is deprecated for the same reasons as
+  `monitor`: please use the new `monitor` API with a callback instead.
+- The spawn flag `monitored` is deprecated as well and users should call
+  `monitor` directly instead.
 
 ## [0.19.5] - 2024-01-08
 

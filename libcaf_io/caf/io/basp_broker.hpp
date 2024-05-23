@@ -107,9 +107,6 @@ public:
   /// Sends a basp::down_message message to a remote node.
   void send_basp_down_message(const node_id& nid, actor_id aid, error err);
 
-  // Sends basp::down_message to all nodes monitoring the terminated actor.
-  void handle_down_msg(down_msg&);
-
   // -- disambiguation for functions found in multiple base classes ------------
 
   actor_system& system() {

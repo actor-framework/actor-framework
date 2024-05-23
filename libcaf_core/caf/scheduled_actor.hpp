@@ -61,8 +61,8 @@ CAF_CORE_EXPORT skippable_result reflect(scheduled_actor*, message&);
 CAF_CORE_EXPORT skippable_result reflect_and_quit(scheduled_actor*, message&);
 
 /// @relates scheduled_actor
-/// Default handler function that prints messages
-/// message via `aout` and drops them afterwards.
+/// Default handler function that prints a warning for the message to console
+/// and drops it afterwards.
 CAF_CORE_EXPORT skippable_result print_and_drop(scheduled_actor*, message&);
 
 /// @relates scheduled_actor
@@ -292,6 +292,7 @@ public:
   }
 
   /// Sets a custom handler for down messages.
+  [[deprecated("use monitor with callback instead")]]
   void set_down_handler(down_handler fun) {
     if (fun)
       down_handler_ = std::move(fun);
@@ -301,6 +302,7 @@ public:
 
   /// Sets a custom handler for down messages.
   template <class F>
+  [[deprecated("use monitor with callback instead")]]
   std::enable_if_t<std::is_invocable_v<F, down_msg&>> set_down_handler(F fun) {
     down_handler_ = [fn{std::move(fun)}](scheduled_actor*,
                                          down_msg& x) mutable { fn(x); };
@@ -617,6 +619,36 @@ public:
     return run_delayed_weak(duration_cast<timespan>(delay), make_action(what));
   }
 
+  // -- monitoring -------------------------------------------------------------
+
+  using super::monitor;
+
+  using super::demonitor;
+
+  template <message_priority P = message_priority::normal, class Handle>
+  [[deprecated("use the monitor() overload with a callback instead")]]
+  void monitor(const Handle& whom) {
+    do_monitor(actor_cast<abstract_actor*>(whom), P);
+  }
+
+  template <class Handle>
+  [[deprecated("use the monitor() overload with a callback instead")]]
+  void demonitor(const Handle& whom) {
+    do_demonitor(actor_cast<strong_actor_ptr>(whom));
+  }
+
+  /// Adds a unidirectional `monitor` to `whom` with custom callback.
+  /// @returns a disposable object for canceling the monitoring of `whom`.
+  /// @note This overload does not work with the @ref demonitor member function.
+  template <class Handle, class Fn>
+  disposable monitor(Handle whom, Fn func) {
+    static_assert(!Handle::has_weak_ptr_semantics);
+    static_assert(std::is_invocable_v<Fn, error>);
+    using impl_t = detail::monitor_action<Fn>;
+    return do_monitor(actor_cast<abstract_actor*>(whom),
+                      make_counted<impl_t>(std::move(func)));
+  }
+
   // -- properties -------------------------------------------------------------
 
   /// Returns `true` if the actor has a behavior, awaits responses, or
@@ -677,6 +709,11 @@ protected:
 #endif // CAF_ENABLE_EXCEPTIONS
 
 private:
+  using super::do_monitor;
+
+  disposable do_monitor(abstract_actor* ptr,
+                        detail::abstract_monitor_action_ptr on_down);
+
   /// Encodes how an actor is currently handling timeouts.
   enum class timeout_mode {
     none,          /// No timeout is set.

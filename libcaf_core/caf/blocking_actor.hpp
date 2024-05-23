@@ -283,6 +283,26 @@ public:
                          std::forward<Args>(args)...);
   }
 
+  // -- monitoring -------------------------------------------------------------
+
+  using super::monitor;
+
+  using super::demonitor;
+
+  /// Adds a unidirectional monitor to `whom` to receive a `down_msg` when
+  /// `whom` terminates.
+  /// @note Each call to `monitor` creates a new, independent monitor.
+  template <message_priority P = message_priority::normal, class Handle>
+  void monitor(const Handle& whom) {
+    do_monitor(actor_cast<abstract_actor*>(whom), P);
+  }
+
+  /// Removes a monitor from `whom`.
+  template <class Handle>
+  void demonitor(const Handle& whom) {
+    do_demonitor(actor_cast<strong_actor_ptr>(whom));
+  }
+
   // -- customization points ---------------------------------------------------
 
   /// Blocks until at least one message is in the mailbox.

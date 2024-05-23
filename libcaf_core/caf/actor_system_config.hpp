@@ -90,7 +90,7 @@ public:
   /// Allows other nodes to spawn actors of type `T`
   /// dynamically by using `name` as identifier.
   template <class T, class... Ts>
-  [[deprecated]] actor_system_config& add_actor_type(std::string name) {
+  actor_system_config& add_actor_type(std::string name) {
     using handle = infer_handle_from_class_t<T>;
     static_assert(detail::is_complete<type_id<handle>>);
     return add_actor_factory(std::move(name), make_actor_factory<T, Ts...>());
