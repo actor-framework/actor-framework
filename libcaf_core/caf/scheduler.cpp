@@ -155,7 +155,7 @@ private:
   template <typename Parent>
   resumable* try_steal(Parent* p) {
     if (p->num_workers() < 2) {
-      // You can't steal from yourthis, can you?
+      // You can't steal from yourself, can you?
       return nullptr;
     }
     // Roll the dice to pick a victim other than ourselves.
@@ -169,35 +169,33 @@ private:
   template <typename Parent>
   resumable* policy_dequeue(Parent* parent) {
     // We wait for new jobs by polling our external queue: first, we assume an
-    // active work load on the machine and perform aggressive polling, then we
-    // relax our polling a bit and wait 50us between dequeue attempts.
-    auto& strategies = data_.strategies;
-    auto* job = data_.queue.try_take_head();
-    if (job)
-      return job;
-    for (size_t k = 0; k < 2; ++k) { // Iterate over the first two strategies.
-      for (size_t i = 0; i < strategies[k].attempts;
-           i += strategies[k].step_size) {
-        // try to steal every X poll attempts
-        if ((i % strategies[k].steal_interval) == 0) {
-          job = try_steal(parent);
-          if (job)
+    // active work load on the machine and perform aggressive/moderate polling
+    // by using the parameters for the first two strategies. When not finding
+    // any jobs, we enter the relaxed polling strategy that has no upper limit
+    // on the number of polling attempts.
+    for (size_t index = 0; index < 2; ++index) {
+      auto& strategy = data_.strategies[index];
+      for (size_t attempt = 1; attempt <= strategy.attempts;
+           attempt += strategy.step_size) {
+        // Wait for some work to appear.
+        if (auto* job = data_.queue.try_take_head(strategy.sleep_duration))
+          return job;
+        // Try to steal every X poll attempts.
+        if ((attempt % strategy.steal_interval) == 0) {
+          if (auto* job = try_steal(parent))
             return job;
         }
-        // Wait for some work to appear.
-        job = data_.queue.try_take_head(strategies[k].sleep_duration);
-        if (job)
-          return job;
       }
     }
-    // We assume pretty much nothing is going on so we can relax polling
-    // and falling to sleep on a condition variable whose timeout is the one
-    // of the relaxed polling strategy
-    auto& relaxed = strategies[2];
-    do {
-      job = data_.queue.try_take_head(relaxed.sleep_duration);
-    } while (job == nullptr);
-    return job;
+    // We assume pretty much nothing is going on, so we can fall back to the
+    // relaxed polling strategy.
+    auto& relaxed = data_.strategies[2];
+    for (;;) {
+      if (auto* job = data_.queue.try_take_head(relaxed.sleep_duration))
+        return job;
+      if (auto* job = try_steal(parent))
+        return job;
+    }
   }
 
   template <typename Parent>
