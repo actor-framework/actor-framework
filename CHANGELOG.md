@@ -23,6 +23,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Calling `force_utc` on a `caf::chrono::dateime` object now properly applies
   the UTC offset. Previously, the function would shift the time into the wrong
   direction (#1860).
+- Fix a regression in the work-stealing scheduler that prevented workers from
+  stealing work from other workers in the relaxed polling state (#1866).
 
 ### Removed
 
