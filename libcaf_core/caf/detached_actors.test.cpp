@@ -6,9 +6,12 @@
 #include "caf/test/test.hpp"
 
 #include "caf/all.hpp"
+#include "caf/config.hpp"
 
 using namespace caf;
 using namespace std::literals;
+
+CAF_PUSH_DEPRECATED_WARNING
 
 namespace {
 
@@ -98,7 +101,28 @@ SCENARIO("an actor system shuts down after the last actor terminates") {
       check(*ran);
       check(*timeout_handled);
     }
+    WHEN("the actor uses an idle timeout to wait some time") {
+      auto ran = std::make_shared<bool>(false);
+      auto timeout_handled = std::make_shared<bool>(false);
+      THEN("the system waits for the actor to handle the timeout") {
+        actor_system_config cfg;
+        actor_system sys{cfg};
+        sys.spawn<detached>([ran, timeout_handled](event_based_actor* self) {
+          *ran = true;
+          self->set_idle_handler(1ns, strong_ref, once,
+                                 [self, timeout_handled] {
+                                   *timeout_handled = true;
+                                   self->quit();
+                                 });
+          return behavior{[] {}};
+        });
+      }
+      check(*ran);
+      check(*timeout_handled);
+    }
   }
 }
 
 } // namespace
+
+CAF_POP_WARNINGS

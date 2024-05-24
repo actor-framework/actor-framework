@@ -55,6 +55,9 @@ struct is_timeout_definition : std::false_type {};
 template <class T>
 struct is_timeout_definition<timeout_definition<T>> : std::true_type {};
 
+template <class T>
+constexpr bool is_timeout_definition_v = is_timeout_definition<T>::value;
+
 using generic_timeout_definition = timeout_definition<std::function<void()>>;
 
 } // namespace caf
