@@ -114,33 +114,24 @@ public:
     plain_text_field,
   };
 
-  /// Combines various logging-related flags and parameters into a bitfield.
+  /// Combines various logging-related flags and parameters.
   struct config {
     /// Stores `max(file_verbosity, console_verbosity)`.
-    unsigned verbosity : 4;
+    unsigned verbosity = CAF_LOG_LEVEL;
 
     /// Configures the verbosity for file output.
-    unsigned file_verbosity : 4;
+    unsigned file_verbosity = CAF_LOG_LEVEL;
 
     /// Configures the verbosity for console output.
-    unsigned console_verbosity : 4;
+    unsigned console_verbosity = CAF_LOG_LEVEL;
 
     /// Configures whether the logger immediately writes its output in the
     /// calling thread, bypassing its queue. Use this option only in
     /// single-threaded test environments.
-    bool inline_output : 1;
+    bool inline_output = false;
 
     /// Configures whether the logger generates colored output.
-    bool console_coloring : 1;
-
-    config()
-      : verbosity(CAF_LOG_LEVEL),
-        file_verbosity(CAF_LOG_LEVEL),
-        console_verbosity(CAF_LOG_LEVEL),
-        inline_output(false),
-        console_coloring(false) {
-      // nop
-    }
+    bool console_coloring = false;
   };
 
   /// Represents a single format string field.
