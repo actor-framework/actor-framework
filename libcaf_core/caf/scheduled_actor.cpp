@@ -336,7 +336,7 @@ void scheduled_actor::quit(error x) {
   multiplexed_responses_.clear();
   // Ignore future exit, down and error messages.
   set_exit_handler(silently_ignore<exit_msg>);
-  set_down_handler(silently_ignore<down_msg>);
+  down_handler_ = silently_ignore<down_msg>;
   set_error_handler(silently_ignore<error>);
   // Drop future messages and produce sec::request_receiver_down for requests.
   set_default_handler(drop_after_quit);
@@ -1153,6 +1153,25 @@ void scheduled_actor::close_mailbox(const error& reason) {
 
 void scheduled_actor::force_close_mailbox() {
   close_mailbox(make_error(exit_reason::unreachable));
+}
+
+// -- monitoring ---------------------------------------------------------------
+
+disposable
+scheduled_actor::do_monitor(abstract_actor* ptr,
+                            detail::abstract_monitor_action_ptr on_down) {
+  if (ptr == nullptr)
+    return {};
+  ptr->attach_functor([self = address(), on_down](error reason) {
+    // Failing to set the arg means the action was disposed.
+    if (on_down->set_reason(std::move(reason))) {
+      if (auto shdl = actor_cast<actor>(self))
+        shdl->enqueue(make_mailbox_element(nullptr, make_message_id(),
+                                           action{on_down}),
+                      nullptr);
+    }
+  });
+  return on_down->as_disposable();
 }
 
 } // namespace caf

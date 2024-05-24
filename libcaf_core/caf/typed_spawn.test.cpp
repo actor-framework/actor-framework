@@ -243,14 +243,13 @@ behavior foo(event_based_actor* self) {
 }
 
 int_actor::behavior_type int_fun2(int_actor::pointer self) {
-  self->set_down_handler([=](down_msg& dm) {
-    test::runnable::current().check_eq(dm.reason, exit_reason::normal);
-    self->quit();
-  });
   return {
-    [=](int i) {
-      self->monitor(self->current_sender());
-      return i * i;
+    [=](int value) {
+      self->monitor(self->current_sender(), [self](const error& reason) {
+        test::runnable::current().check_eq(reason, exit_reason::normal);
+        self->quit();
+      });
+      return value * value;
     },
   };
 }
@@ -349,8 +348,7 @@ TEST("event testee series") {
 
 TEST("string delegator chain") {
   // run test series with string reverter
-  auto aut = self->spawn<monitored>(string_delegator,
-                                    sys.spawn(string_reverter), true);
+  auto aut = self->spawn(string_delegator, sys.spawn(string_reverter), true);
   std::set<string> iface{"(std::string) -> (std::string)"};
   check_eq(aut->message_types(), iface);
   inject().with("Hello World!"s).from(self).to(aut);

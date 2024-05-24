@@ -102,14 +102,14 @@ private:
   detail::actor_local_printer_ptr printer_;
 };
 
-/// Convenience factory function for creating an actor output stream.
+[[deprecated("use println instead")]]
 CAF_CORE_EXPORT actor_ostream aout(local_actor* self);
 
-// Convenience factory function for creating an actor output stream.
+[[deprecated("use println instead")]]
 CAF_CORE_EXPORT actor_ostream aout(scoped_actor& self);
 
-/// Convenience factory function for creating an actor output stream.
 template <class... Sigs>
+[[deprecated("use println instead")]]
 actor_ostream aout(const typed_actor_pointer<Sigs...>& ptr) {
   return actor_ostream{ptr};
 }

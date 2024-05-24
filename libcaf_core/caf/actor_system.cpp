@@ -125,7 +125,7 @@ struct kvstate {
 behavior config_serv_impl(stateful_actor<kvstate>* self) {
   auto lg = log::core::trace("");
   std::string wildcard = "*";
-  auto unsubscribe_all = [=](actor subscriber) {
+  auto unsubscribe_all = [self](actor subscriber) {
     auto& subscribers = self->state().subscribers;
     auto ptr = actor_cast<strong_actor_ptr>(subscriber);
     auto i = subscribers.find(ptr);
@@ -135,12 +135,6 @@ behavior config_serv_impl(stateful_actor<kvstate>* self) {
       self->state().data[key].second.erase(ptr);
     subscribers.erase(i);
   };
-  self->set_down_handler([=](down_msg& dm) {
-    auto lg = log::core::trace("dm = {}", dm);
-    auto ptr = actor_cast<strong_actor_ptr>(dm.source);
-    if (ptr)
-      unsubscribe_all(actor_cast<actor>(std::move(ptr)));
-  });
   return {
     // set a key/value pair
     [=](put_atom, const std::string& key, message& msg) {
@@ -188,7 +182,11 @@ behavior config_serv_impl(stateful_actor<kvstate>* self) {
       if (i != subscribers.end()) {
         i->second.insert(key);
       } else {
-        self->monitor(subscriber);
+        auto addr = self->address();
+        self->monitor(subscriber, [unsubscribe_all, addr](const error&) {
+          if (auto hdl = actor_cast<actor>(addr))
+            unsubscribe_all(actor_cast<actor>(hdl));
+        });
         subscribers.emplace(subscriber, kvstate::topic_set{key});
       }
     },

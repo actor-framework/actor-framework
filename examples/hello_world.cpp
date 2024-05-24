@@ -17,7 +17,7 @@ behavior mirror(event_based_actor* self) {
     // a handler for messages containing a single string
     // that replies with a string
     [self](const std::string& what) -> std::string {
-      // prints "Hello World!" via aout (thread-safe cout wrapper)
+      // prints "Hello World!" (thread-safe)
       self->println("{}", what);
       // reply "!dlroW olleH"
       return std::string{what.rbegin(), what.rend()};

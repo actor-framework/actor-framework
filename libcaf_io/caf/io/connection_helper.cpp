@@ -29,10 +29,9 @@ auto autoconnect_timeout = std::chrono::minutes(10);
 behavior connection_helper(stateful_actor<connection_helper_state>* self,
                            actor b) {
   auto lg = log::io::trace("b = {}", b);
-  self->monitor(b);
-  self->set_down_handler([=](down_msg& dm) {
-    auto lg = log::io::trace("dm = {}", dm);
-    self->quit(std::move(dm.reason));
+  self->monitor(b, [self](error reason) {
+    auto lg = log::io::trace("reason = {}", reason);
+    self->quit(std::move(reason));
   });
   return {
     // this config is send from the remote `ConfigServ`

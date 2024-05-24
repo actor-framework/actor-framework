@@ -127,7 +127,6 @@ public:
   // -- spawn functions --------------------------------------------------------
 
   template <class T, spawn_options Os = no_spawn_options, class... Ts>
-  [[deprecated("use state-based actors and actor_from_state instead")]]
   infer_handle_from_class_t<T> spawn(Ts&&... xs) {
     actor_config cfg{context(), this};
     cfg.mbox_factory = system().mailbox_factory();
@@ -232,12 +231,6 @@ public:
     return home_system().clock();
   }
 
-  /// @cond PRIVATE
-
-  void monitor(abstract_actor* ptr, message_priority prio);
-
-  /// @endcond
-
   /// Returns a pointer to the sender of the current message.
   /// @pre `current_mailbox_element() != nullptr`
   strong_actor_ptr& current_sender() noexcept {
@@ -281,49 +274,8 @@ public:
   /// @note Each call to `monitor` creates a new, independent monitor.
   void monitor(const node_id& node);
 
-  /// Adds a unidirectional `monitor` to `whom`.
-  /// @note Each call to `monitor` creates a new, independent monitor.
-  template <message_priority P = message_priority::normal, class Handle>
-  void monitor(const Handle& whom) {
-    monitor(actor_cast<abstract_actor*>(whom), P);
-  }
-
-  /// Adds a unidirectional `monitor` to `whom` with custom callback.
-  /// @returns a disposable object for canceling the monitoring of `whom`.
-  /// @note This overload does not work with the @ref demonitor member function.
-  template <typename Handle, typename Fn>
-  disposable monitor(Handle whom, Fn func) {
-    static_assert(!Handle::has_weak_ptr_semantics);
-    static_assert(std::is_invocable_v<Fn, error>);
-    auto* ptr = actor_cast<abstract_actor*>(whom);
-    using impl_t = detail::monitor_action<Fn>;
-    auto on_down = make_counted<impl_t>(std::move(func));
-    ptr->attach_functor([self = address(), on_down](error reason) {
-      // Failing to set the arg means the action was disposed.
-      if (on_down->arg(std::move(reason))) {
-        if (auto shdl = actor_cast<actor>(self))
-          shdl->enqueue(make_mailbox_element(nullptr, make_message_id(),
-                                             action{on_down}),
-                        nullptr);
-      }
-    });
-    return on_down->as_disposable();
-  }
-
-  /// Removes a monitor from `whom`.
-  void demonitor(const actor_addr& whom);
-
-  /// Removes a monitor from `whom`.
-  void demonitor(const strong_actor_ptr& whom);
-
   /// Removes a monitor from `node`.
   void demonitor(const node_id& node);
-
-  /// Removes a monitor from `whom`.
-  template <class Handle>
-  void demonitor(const Handle& whom) {
-    demonitor(whom.address());
-  }
 
   /// Can be overridden to perform cleanup code after an actor
   /// finished execution.
@@ -384,7 +336,7 @@ public:
   template <class ActorHandle>
   ActorHandle eval_opts(spawn_options opts, ActorHandle res) {
     if (has_monitor_flag(opts))
-      monitor(res->address());
+      do_monitor(actor_cast<abstract_actor*>(res), message_priority::normal);
     if (has_link_flag(opts))
       link_to(res->address());
     return res;
@@ -469,6 +421,12 @@ protected:
   disposable
   do_scheduled_anon_send(strong_actor_ptr receiver, message_priority priority,
                          actor_clock::time_point timeout, message&& msg);
+
+  // -- functions for sub-types ------------------------------------------------
+
+  void do_monitor(abstract_actor* ptr, message_priority prio);
+
+  void do_demonitor(const strong_actor_ptr& whom);
 
   // -- member variables -------------------------------------------------------
 

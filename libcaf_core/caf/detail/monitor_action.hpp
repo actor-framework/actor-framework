@@ -5,16 +5,38 @@
 #pragma once
 
 #include "caf/action.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/error.hpp"
 
 #include <mutex>
 
 namespace caf::detail {
 
+class CAF_CORE_EXPORT abstract_monitor_action
+  : public detail::atomic_ref_counted,
+    public action::impl {
+public:
+  virtual bool set_reason(error value) = 0;
+
+  void ref_disposable() const noexcept override;
+
+  void deref_disposable() const noexcept override;
+};
+
+using abstract_monitor_action_ptr = intrusive_ptr<abstract_monitor_action>;
+
+inline void intrusive_ptr_add_ref(const abstract_monitor_action* ptr) noexcept {
+  ptr->ref();
+}
+
+inline void intrusive_ptr_release(const abstract_monitor_action* ptr) noexcept {
+  ptr->deref();
+}
+
 /// A thread safe single shot action encapsulating a function and a function
 /// argument @ref error.
 template <class F>
-class monitor_action : public detail::atomic_ref_counted, public action::impl {
+class monitor_action : public abstract_monitor_action {
 public:
   explicit monitor_action(F fn)
     : state_(action::state::scheduled),
@@ -57,29 +79,13 @@ public:
     return resumable::done;
   }
 
-  bool arg(error value) {
+  bool set_reason(error value) override {
     std::lock_guard guard{mtx_};
     if (state_ == action::state::scheduled) {
       f_.arg = std::move(value);
       return true;
     }
     return false;
-  }
-
-  void ref_disposable() const noexcept override {
-    ref();
-  }
-
-  void deref_disposable() const noexcept override {
-    deref();
-  }
-
-  friend void intrusive_ptr_add_ref(const monitor_action* ptr) noexcept {
-    ptr->ref();
-  }
-
-  friend void intrusive_ptr_release(const monitor_action* ptr) noexcept {
-    ptr->deref();
   }
 
 private:

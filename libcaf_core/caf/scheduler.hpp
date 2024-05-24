@@ -14,10 +14,7 @@
 
 namespace caf {
 
-/// A coordinator creates the workers, manages delayed sends and
-/// the central printer instance for {@link aout}. It also forwards
-/// sends from detached workers or non-actor threads to randomly
-/// chosen workers.
+/// A scheduler is responsible for managing the execution of resumables.
 class CAF_CORE_EXPORT scheduler {
 public:
   // -- factory functions ------------------------------------------------------

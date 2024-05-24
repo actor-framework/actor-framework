@@ -58,13 +58,11 @@ behavior testee(event_based_actor* self) {
 }
 
 behavior tester(event_based_actor* self, actor aut) {
-  self->set_down_handler([self, aut](down_msg& dm) {
+  self->monitor(aut, [self](const error& reason) {
     auto& this_test = test::runnable::current();
-    this_test.check_eq(dm.reason, exit_reason::normal);
-    this_test.check_eq(dm.source, aut.address());
+    this_test.check_eq(reason, exit_reason::normal);
     self->quit();
   });
-  self->monitor(aut);
   self->mail(1, 2, 3).send(aut);
   return {
     [](int a, int b, int c) {

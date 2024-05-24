@@ -90,32 +90,27 @@ disposable local_actor::request_response_timeout(timespan timeout,
                          make_error(sec::request_timeout)));
 }
 
-void local_actor::monitor(abstract_actor* ptr, message_priority priority) {
+void local_actor::monitor(const node_id& node) {
+  system().monitor(node, address());
+}
+
+void local_actor::demonitor(const node_id& node) {
+  system().demonitor(node, address());
+}
+
+void local_actor::do_monitor(abstract_actor* ptr, message_priority priority) {
   if (ptr != nullptr)
     ptr->attach(
       default_attachable::make_monitor(ptr->address(), address(), priority));
 }
 
-void local_actor::monitor(const node_id& node) {
-  system().monitor(node, address());
-}
-
-void local_actor::demonitor(const actor_addr& whom) {
-  auto lg = log::core::trace("whom = {}", whom);
-  demonitor(actor_cast<strong_actor_ptr>(whom));
-}
-
-void local_actor::demonitor(const strong_actor_ptr& whom) {
+void local_actor::do_demonitor(const strong_actor_ptr& whom) {
   auto lg = log::core::trace("whom = {}", whom);
   if (whom) {
     default_attachable::observe_token tk{address(),
                                          default_attachable::monitor};
     whom->get()->detach(tk);
   }
-}
-
-void local_actor::demonitor(const node_id& node) {
-  system().demonitor(node, address());
 }
 
 void local_actor::on_exit() {
