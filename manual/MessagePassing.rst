@@ -107,8 +107,6 @@ Requirement 2 is a consequence of requirement 1, because CAF needs to be able to
 create an object for ``T`` when deserializing incoming messages. Requirement 3
 allows CAF to implement Copy on Write (see :ref:`copy-on-write`).
 
-.. _special-handler:
-
 .. _request:
 
 Requests
@@ -332,3 +330,27 @@ signature ``void (error&)`` or ``void (scheduled_actor*, error&)``.
 Additionally, ``request`` accepts an error handler as second argument to handle
 errors for a particular request (see :ref:`error-response`). The default handler
 is used as fallback if ``request`` is used without error handler.
+
+.. _idle-timeouts:
+
+Idle Timeouts
+-------------
+
+Actors can set an idle timeout to wake up after a certain period of not
+receiving any messages. This is useful for actors that observe external events
+and need to perform some cleanup or error handling if no events arrive for a
+while.
+
+To set a timeout, actors call
+``self->set_idle_timeout(duration, ref_type, repeat_policy, callback)``,
+whereas:
+
+- ``duration`` is the amount of time to wait before the timeout triggers.
+  Whenever the actor handles a message, the timeout resets.
+- ``ref_type`` specifies whether CAF should hold a strong or weak reference to
+  the actor while it is idle. This parameter must be either ``strong_ref`` or
+  ``weak_ref``. When in doubt, use ``strong_ref``.
+- ``repeat_policy`` specifies whether the timeout should trigger only once or
+  repeatedly. This parameter must be either ``once`` or ``repeat``.
+- ``callback`` is a function object taking no arguments. CAF calls this function
+  whenever the timeout triggers.
