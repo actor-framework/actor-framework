@@ -4,11 +4,13 @@
 
 #include "caf/json_builder.hpp"
 
+#include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
 #include "caf/init_global_meta_objects.hpp"
 #include "caf/json_value.hpp"
 #include "caf/log/test.hpp"
+#include "caf/span.hpp"
 
 #include <string_view>
 
@@ -68,6 +70,14 @@ bool inspect(Inspector& f, rectangle& x) {
                             f.field("bottom-right", x.bottom_right));
 }
 
+struct span_less {
+  template <class T>
+  bool operator()(const span<T>& lhs, const span<T>& rhs) const {
+    return std::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(),
+                                        rhs.end());
+  }
+};
+
 struct fixture {
   fixture() {
     builder.skip_object_type_annotation(true);
@@ -94,31 +104,143 @@ TEST("empty JSON value") {
 }
 
 TEST("integer") {
-  check(builder.value(int32_t{42}));
+  SECTION("int8") {
+    check(builder.value(int8_t{42}));
+  }
+  SECTION("uint8") {
+    check(builder.value(uint8_t{42}));
+  }
+  SECTION("int16") {
+    check(builder.value(int16_t{42}));
+  }
+  SECTION("uint16") {
+    check(builder.value(uint16_t{42}));
+  }
+  SECTION("int32") {
+    check(builder.value(int32_t{42}));
+  }
+  SECTION("uint32") {
+    check(builder.value(uint32_t{42}));
+  }
+  SECTION("int64") {
+    check(builder.value(int64_t{42}));
+  }
+  SECTION("uint64") {
+    check(builder.value(uint64_t{42}));
+  }
   auto val = builder.seal();
   check(val.is_integer());
   check_eq(val.to_integer(), 42);
 }
 
-TEST("floating point") {
+TEST("float") {
+  SECTION("value") {
+    check(builder.value(4.2f));
+    auto val = builder.seal();
+    check(val.is_double());
+    check_eq(val.to_double(), 4.2f);
+  }
+  SECTION("array") {
+    auto xs = std::vector{4.2f, 4.2f, 4.2f};
+    check(builder.apply(xs));
+    auto val = builder.seal();
+    check(val.is_array());
+    check_eq(printed(val), "[4.2, 4.2, 4.2]"sv);
+  }
+}
+
+TEST("double") {
   check(builder.value(4.2));
   auto val = builder.seal();
   check(val.is_double());
   check_eq(val.to_double(), 4.2);
 }
 
-TEST("boolean") {
-  check(builder.value(true));
+TEST("long double") {
+  check(builder.value(4.2l));
   auto val = builder.seal();
-  check(val.is_bool());
-  check_eq(val.to_bool(), true);
+  check(val.is_double());
+  check_eq(val.to_double(), 4.2);
+}
+
+TEST("byte") {
+  check(builder.value(std::byte{42}));
+  auto val = builder.seal();
+  check(val.is_integer());
+  check_eq(val.to_integer(), 42);
+}
+
+TEST("boolean") {
+  SECTION("value") {
+    check(builder.value(true));
+    auto val = builder.seal();
+    check(val.is_bool());
+    check_eq(val.to_bool(), true);
+  }
+  SECTION("array") {
+    auto xs = std::vector{true, false, true};
+    check(builder.apply(xs));
+    auto val = builder.seal();
+    check(val.is_array());
+    check_eq(printed(val), "[true, false, true]"sv);
+  }
+  SECTION("error") {
+    check(builder.apply(int64_t{42}));
+    auto val = builder.seal();
+    check(!builder.value(true));
+  }
 }
 
 TEST("string") {
-  check(builder.value("Hello, world!"sv));
-  auto val = builder.seal();
-  check(val.is_string());
-  check_eq(val.to_string(), "Hello, world!"sv);
+  SECTION("value") {
+    check(builder.value("Hello, world!"sv));
+    auto val = builder.seal();
+    check(val.is_string());
+    check_eq(val.to_string(), "Hello, world!"sv);
+  }
+  SECTION("array") {
+    auto xs = std::vector{"Hello"sv, "world!"sv};
+    check(builder.apply(xs));
+    auto val = builder.seal();
+    check(val.is_array());
+    check_eq(printed(val), R"_(["Hello", "world!"])_"sv);
+  }
+  SECTION("error") {
+    check(builder.apply(int64_t{42}));
+    auto val = builder.seal();
+    check(!builder.value("Hello, world!"sv));
+  }
+}
+
+TEST("byte span") {
+  auto bytes = std::vector<std::byte>{std::byte{'A'}, std::byte{'B'},
+                                      std::byte{'C'}};
+  SECTION("value") {
+    check(builder.value(make_span(bytes)));
+    auto val = builder.seal();
+    check(val.is_string());
+    check_eq(val.to_string(), "414243"sv);
+  }
+  SECTION("array") {
+    auto xs = std::vector{make_span(bytes), make_span(bytes)};
+    check(builder.apply(xs));
+    auto val = builder.seal();
+    check(val.is_array());
+    check_eq(printed(val), R"_(["414243", "414243"])_"sv);
+  }
+  SECTION("error") {
+    check(builder.apply(int64_t{42}));
+    auto val = builder.seal();
+    check(!builder.value(make_span(bytes)));
+  }
+}
+
+TEST("u16string") {
+  check(!builder.value(u"Hello, world!"s));
+}
+
+TEST("u32string") {
+  check(!builder.value(U"Hello, world!"s));
 }
 
 TEST("array") {
@@ -127,6 +249,24 @@ TEST("array") {
   auto val = builder.seal();
   check(val.is_array());
   check_eq(printed(val), "[1, 2, 3]"sv);
+}
+
+TEST("reset") {
+  SECTION("sealed value") {
+    check(builder.value(42));
+    builder.seal();
+    builder.reset();
+  }
+  SECTION("unsealed value") {
+    check(builder.value(42));
+    builder.reset();
+  }
+}
+
+TEST("fail") {
+  check(builder.apply(int64_t{42}));
+  auto val = builder.seal();
+  check(!builder.value(int32_t{64}));
 }
 
 TEST("flat object") {
@@ -148,6 +288,145 @@ TEST("flat object with type annotation") {
   auto val = builder.seal();
   check(val.is_object());
   check_eq(printed(val), R"_({"@type": "my_request", "a": 10, "b": 20})_");
+}
+
+TEST("begin field") {
+  check(builder.begin_object(1, "circle"));
+  SECTION("is present") {
+    SECTION("missing index") {
+      auto circle_type = std::vector<uint16_t>{295};
+      check(!builder.begin_field("foo", true, make_span(circle_type), 1));
+    }
+    SECTION("missing query type") {
+      auto circle_type = std::vector<uint16_t>{1000};
+      check(!builder.begin_field("foo", true, make_span(circle_type), 0));
+    }
+    SECTION("present query type") {
+      auto circle_type = std::vector<uint16_t>{295};
+      check(builder.begin_field("foo", true, make_span(circle_type), 0));
+      check(builder.value(42));
+      check(builder.end_field());
+      check(builder.end_object());
+      auto val = builder.seal();
+      check(val.is_object());
+      check_eq(printed(val), R"_({"foo": 42, "@foo-type": "circle"})_");
+    }
+  }
+  SECTION("is not present") {
+    auto circle_type = std::vector<uint16_t>{295};
+    SECTION("don't skip empty fields") {
+      builder.skip_empty_fields(false);
+      check(builder.begin_field("foo", false, make_span(circle_type), 0));
+      check(!builder.value(42));
+      check(builder.end_field());
+      check(builder.end_object());
+      auto val = builder.seal();
+      check(val.is_object());
+      check_eq(printed(val), R"_({"foo": null})_");
+    }
+    SECTION("skip empty fields") {
+      check(builder.begin_field("foo", false, make_span(circle_type), 0));
+      check(!builder.value(42));
+      check(builder.end_field());
+      check(builder.end_object());
+      auto val = builder.seal();
+      check(val.is_object());
+      check_eq(printed(val), R"_({})_");
+    }
+  }
+}
+
+TEST("begin associative array") {
+  SECTION("valid associative array") {
+    auto circle_type = std::vector<uint16_t>{295};
+    check(builder.begin_tuple(1));
+    check(builder.begin_associative_array(1));
+    builder.skip_empty_fields(false);
+    check(builder.begin_field("foo", false, make_span(circle_type), 0));
+    auto val = builder.seal();
+    check(val.is_array());
+    check_eq(printed(val), R"_([{"foo": null}])_");
+  }
+  SECTION("invalid associative array") {
+    check(builder.value(42));
+    check(!builder.begin_associative_array(0));
+    check(!builder.end_tuple());
+  }
+}
+
+TEST("begin sequence") {
+  SECTION("valid array") {
+    builder.skip_empty_fields(false);
+    auto circle_type = std::vector<uint16_t>{295};
+    check(builder.begin_sequence(1));
+    check(builder.begin_sequence(1));
+    check(!builder.begin_field("foo", false, make_span(circle_type), 0));
+    check(builder.end_sequence());
+    check(builder.end_sequence());
+    auto val = builder.seal();
+    check(val.is_array());
+    check_eq(printed(val), R"_([[]])_");
+  }
+  SECTION("invalid array") {
+    check(builder.value(42));
+    check(!builder.begin_sequence(1));
+    check(!builder.end_tuple());
+  }
+}
+
+TEST("unexpected object") {
+  auto circle_type = std::vector<uint16_t>{295};
+  check(!builder.begin_field("foo", false, make_span(circle_type), 0));
+}
+
+SCENARIO("json_builder can build json for maps with keys") {
+  GIVEN("a map with string as keys") {
+    std::map<std::string, int> map{{"one", 1}};
+    WHEN("building the map") {
+      THEN("the map is built correctly") {
+        check(builder.apply(map));
+        auto val = builder.seal();
+        check(val.is_object());
+        check_eq(printed(val), R"_({"one": 1})_");
+      }
+    }
+  }
+  GIVEN("a map with number as keys") {
+    std::map<int, int> map{{1, 1}};
+    WHEN("building the map") {
+      THEN("the map is built correctly") {
+        check(builder.apply(map));
+        auto val = builder.seal();
+        check(val.is_object());
+        check_eq(printed(val), R"_({"1": 1})_");
+      }
+    }
+  }
+  GIVEN("a map with boolean as keys") {
+    std::map<bool, int> boolean_map{{true, 1}};
+    WHEN("building the map") {
+      THEN("the map is built correctly") {
+        check(builder.apply(boolean_map));
+        auto val = builder.seal();
+        check(val.is_object());
+        check_eq(printed(val), R"_({"true": 1})_");
+      }
+    }
+  }
+  GIVEN("a map with byte span as keys") {
+    auto bytes = std::vector<std::byte>{std::byte{'A'}, std::byte{'B'}};
+    std::map<span<const std::byte>, int, span_less> span_map{
+      {make_span(bytes), 1},
+    };
+    WHEN("building the map") {
+      THEN("the map is built correctly") {
+        check(builder.apply(span_map));
+        auto val = builder.seal();
+        check(val.is_object());
+        check_eq(printed(val), R"_({"4142": 1})_");
+      }
+    }
+  }
 }
 
 namespace {

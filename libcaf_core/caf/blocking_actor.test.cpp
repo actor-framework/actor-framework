@@ -14,6 +14,10 @@ using namespace caf;
 
 namespace {
 
+void testee(blocking_actor* self) {
+  self->receive([](int i) { return i; });
+}
+
 struct fixture : test::fixture::deterministic {
   scoped_actor self{sys};
 };
@@ -42,6 +46,18 @@ TEST("timeout_in_scoped_actor") {
   self->receive(after(std::chrono::milliseconds(20)) >>
                 [&] { timeout_called = true; });
   check(timeout_called);
+}
+
+TEST("spawn blocking actor") {
+  auto aut = sys.spawn(testee);
+  self->mail(42).send(aut);
+  dispatch_messages();
+  auto received = std::make_shared<bool>(false);
+  self->receive([this, received](int i) {
+    *received = true;
+    check_eq(i, 42);
+  });
+  check(*received);
 }
 
 } // WITH_FIXTURE(fixture)

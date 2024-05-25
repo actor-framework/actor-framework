@@ -465,8 +465,9 @@ struct fixture : caf::test::fixture::deterministic {
   }
 
   std::variant<int8_t, int16_t, int32_t, int64_t, uint8_t, uint16_t, uint32_t,
-               uint64_t, double, std::string, std::vector<int32_t>,
-               std::list<int32_t>, std::map<std::string, int32_t>,
+               uint64_t, double, long double, std::string, std::u16string,
+               std::u32string, std::vector<int32_t>, std::list<int32_t>,
+               std::map<std::string, int32_t>,
                std::unordered_map<std::string, int32_t>, std::set<int32_t>,
                std::unordered_set<int32_t>, std::array<int32_t, 5>,
                std::tuple<int32_t, std::string, int32_t>, c_array>
@@ -496,11 +497,20 @@ struct fixture : caf::test::fixture::deterministic {
     if (type == "u64") {
       return static_cast<uint64_t>(std::stoull(value));
     }
+    if (type == "ld") {
+      return static_cast<long double>(std::stold(value));
+    }
     if (type == "real") {
       return std::stod(value);
     }
     if (type == "string") {
       return value;
+    }
+    if (type == "u16str") {
+      return std::u16string{value.begin(), value.end()};
+    }
+    if (type == "u32str") {
+      return std::u32string{value.begin(), value.end()};
     }
     if (type == "vector") {
       std::vector<int32_t> ivec;
@@ -595,8 +605,9 @@ struct fixture : caf::test::fixture::deterministic {
   }
 
   std::variant<int8_t, int16_t, int32_t, int64_t, uint8_t, uint16_t, uint32_t,
-               uint64_t, double, std::string, std::vector<int32_t>,
-               std::list<int32_t>, std::map<std::string, int32_t>,
+               uint64_t, double, long double, std::string, std::u16string,
+               std::u32string, std::vector<int32_t>, std::list<int32_t>,
+               std::map<std::string, int32_t>,
                std::unordered_map<std::string, int32_t>, std::set<int32_t>,
                std::unordered_set<int32_t>, std::array<int32_t, 5>,
                std::tuple<int32_t, std::string, int32_t>, c_array>
@@ -625,11 +636,20 @@ struct fixture : caf::test::fixture::deterministic {
     if (type == "u64") {
       return static_cast<uint64_t>(0);
     }
+    if (type == "ld") {
+      return static_cast<long double>(0);
+    }
     if (type == "real") {
       return 0.0;
     }
     if (type == "string") {
       return "";
+    }
+    if (type == "u16str") {
+      return u"";
+    }
+    if (type == "u32str") {
+      return U"";
     }
     if (type == "vector") {
       return std::vector<int32_t>{};
@@ -701,8 +721,11 @@ OUTLINE("serializing and then deserializing primitive values") {
     | binary_serializer   | u16    | 1024          |
     | binary_serializer   | u32    | 123456        |
     | binary_serializer   | u64    | 123456789     |
+    | binary_serializer   | ld     | 123.5         |
     | binary_serializer   | real   | 12.5          |
     | binary_serializer   | string | Hello, world! |
+    | binary_serializer   | u16str | Hello, world! |
+    | binary_serializer   | u32str | Hello, world! |
     | binary_serializer   | vector | 1, 42, -31    |
     | binary_serializer   | list   | 1, 42, -31    |
     | binary_serializer   | map    | a:-1, b:42    |
@@ -720,6 +743,7 @@ OUTLINE("serializing and then deserializing primitive values") {
     | json_writer         | u16    | 1024          |
     | json_writer         | u32    | 123456        |
     | json_writer         | u64    | 123456789     |
+    | json_writer         | ld     | 123.5         |
     | json_writer         | real   | 12.5          |
     | json_writer         | string | Hello, world! |
     | json_writer         | vector | 1, 42, -31    |
@@ -739,6 +763,7 @@ OUTLINE("serializing and then deserializing primitive values") {
     | config_value_writer | u16    | 1024          |
     | config_value_writer | u32    | 123456        |
     | config_value_writer | u64    | 123456789     |
+    | config_value_writer | ld     | 123.5         |
     | config_value_writer | real   | 12.5          |
     | config_value_writer | string | Hello, world! |
     | config_value_writer | vector | 1, 42, -31    |
