@@ -690,12 +690,8 @@ OUTLINE("serializing and then deserializing primitive values") {
     WHEN("serializing '<value>' of type <type>") {
       auto [val_str, val_type] = block_parameters<std::string, std::string>();
       auto value = read_val(val_type, val_str);
-      std::visit(
-        [this](auto& ptr, auto& val) {
-          //
-          check(ptr->sink.apply(val));
-        },
-        sink, value);
+      std::visit([this](auto& ptr, auto& val) { check(ptr->sink.apply(val)); },
+                 sink, value);
       THEN("deserializing the result produces the value again") {
         auto source = make_deserializer(sink);
         auto copy = default_val(val_type);

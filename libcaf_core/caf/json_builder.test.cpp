@@ -17,16 +17,6 @@
 using namespace caf;
 using namespace std::literals;
 
-namespace caf {
-
-template <class T>
-bool operator<(const span<T>& lhs, const span<T>& rhs) {
-  return std::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(),
-                                      rhs.end());
-}
-
-} // namespace caf
-
 namespace {
 
 struct my_request;
@@ -79,6 +69,14 @@ bool inspect(Inspector& f, rectangle& x) {
   return f.object(x).fields(f.field("top-left", x.top_left),
                             f.field("bottom-right", x.bottom_right));
 }
+
+struct span_less {
+  template <class T>
+  bool operator()(const span<T>& lhs, const span<T>& rhs) const {
+    return std::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(),
+                                        rhs.end());
+  }
+};
 
 struct fixture {
   fixture() {
@@ -417,7 +415,9 @@ SCENARIO("json_builder can build json for maps with keys") {
   }
   GIVEN("a map with byte span as keys") {
     auto bytes = std::vector<std::byte>{std::byte{'A'}, std::byte{'B'}};
-    std::map<span<const std::byte>, int> span_map{{make_span(bytes), 1}};
+    std::map<span<const std::byte>, int, span_less> span_map{
+      {make_span(bytes), 1},
+    };
     WHEN("building the map") {
       THEN("the map is built correctly") {
         check(builder.apply(span_map));
