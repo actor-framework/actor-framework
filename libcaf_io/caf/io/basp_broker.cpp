@@ -568,9 +568,14 @@ void basp_broker::learned_new_node(const node_id& nid) {
     return;
   }
   auto tmp = system().spawn<hidden>([=](event_based_actor* tself) -> behavior {
+    using namespace std::literals;
     auto lg = log::io::trace("");
     // skip messages until we receive the initial ok_atom
     tself->set_default_handler(skip);
+    tself->set_idle_handler(5min, strong_ref, once, [=] {
+      log::io::info("no spawn server found: nid = {}", nid);
+      tself->quit();
+    });
     return {
       [=](ok_atom, const std::string& /* key == "info" */,
           const strong_actor_ptr& config_serv, const std::string& /* name */) {
@@ -591,11 +596,7 @@ void basp_broker::learned_new_node(const node_id& nid) {
           return {};
         });
       },
-      after(std::chrono::minutes(5)) >>
-        [=] {
-          log::io::info("no spawn server found: nid = {}", nid);
-          tself->quit();
-        }};
+    };
   });
   spawn_servers.emplace(nid, tmp);
   using namespace detail;

@@ -33,6 +33,12 @@ behavior connection_helper(stateful_actor<connection_helper_state>* self,
     auto lg = log::io::trace("reason = {}", reason);
     self->quit(std::move(reason));
   });
+  self->set_idle_handler(autoconnect_timeout, strong_ref, once, [=] {
+    auto lg = log::io::trace("");
+    // nothing heard in about 10 minutes... just a call it a day, then
+    log::io::info("aborted direct connection attempt after 10min");
+    self->quit(exit_reason::user_shutdown);
+  });
   return {
     // this config is send from the remote `ConfigServ`
     [=](const std::string& item, message& msg) {
@@ -66,13 +72,6 @@ behavior connection_helper(stateful_actor<connection_helper_state>* self,
       };
       f(msg);
     },
-    after(autoconnect_timeout) >>
-      [=] {
-        auto lg = log::io::trace("");
-        // nothing heard in about 10 minutes... just a call it a day, then
-        log::io::info("aborted direct connection attempt after 10min");
-        self->quit(exit_reason::user_shutdown);
-      },
   };
 }
 

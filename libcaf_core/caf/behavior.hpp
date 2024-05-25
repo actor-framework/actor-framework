@@ -42,21 +42,41 @@ public:
   /// The list of arguments can contain match expressions, message handlers,
   /// and up to one timeout (if set, the timeout has to be the last argument).
   template <class T, class... Ts>
-  behavior(T x, Ts&&... xs) {
-    assign(std::move(x), std::forward<Ts>(xs)...);
+  behavior(T arg, Ts&&... args) {
+    if constexpr (is_timeout_definition_v<T>
+                  || (is_timeout_definition_v<Ts> || ...)) {
+      legacy_assign(std::move(arg), std::forward<Ts>(args)...);
+    } else {
+      impl_ = detail::make_behavior(std::move(arg), std::forward<Ts>(args)...);
+    }
   }
 
   /// Creates a behavior from `tdef` without message handler.
   template <class F>
-  behavior(timeout_definition<F> tdef) : impl_(detail::make_behavior(tdef)) {
+  [[deprecated("use idle timeouts instead of 'after >> ...'")]]
+  behavior(timeout_definition<F> tdef)
+    : impl_(detail::make_behavior(tdef)) {
     // nop
   }
 
   /// Assigns new handlers.
   template <class... Ts>
-  void assign(Ts&&... xs) {
+  [[deprecated("use idle timeouts instead of 'after >> ...'")]]
+  void legacy_assign(Ts&&... xs) {
     static_assert(sizeof...(Ts) > 0, "assign() called without arguments");
     impl_ = detail::make_behavior(std::forward<Ts>(xs)...);
+  }
+
+  /// Assigns new handlers.
+  template <class T, class... Ts>
+  void assign(T&& arg, Ts&&... args) {
+    if constexpr (is_timeout_definition_v<T>
+                  || (is_timeout_definition_v<Ts> || ...)) {
+      legacy_assign(std::forward<T>(arg), std::forward<Ts>(args)...);
+    } else {
+      impl_ = detail::make_behavior(std::forward<T>(arg),
+                                    std::forward<Ts>(args)...);
+    }
   }
 
   void swap(behavior& other) {

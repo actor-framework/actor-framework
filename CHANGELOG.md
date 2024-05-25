@@ -19,6 +19,13 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   that can be used to cancel the monitoring. This mechanism replaces the old
   approach that relied on `down_msg` handlers in event-based actors (nothing
   changes for blocking actors).
+- Event-based actors can now set an idle timeout via `set_idle_handler`. The
+  timeout fires when the actor receives no messages for a specified duration.
+  This new feature replaces the `after(...) >> ...` syntax and allows actors to
+  specify what kind of reference CAF will hold to that actor while it is waiting
+  for the timeout (strong or weak) and whether to trigger the timeout once or
+  repeatedly.
+
 
 ### Fixed
 
@@ -101,6 +108,10 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   `monitor`: please use the new `monitor` API with a callback instead.
 - The spawn flag `monitored` is deprecated as well and users should call
   `monitor` directly instead.
+- Constructing a behavior with `after(...) >> ...` has been deprecated in favor
+  of the new `set_idle_handler` function. Note that blocking actors may still
+  pass a timeout via `after(...)` to `receive` functions. The deprecation only
+  targets event-based actors.
 
 ## [0.19.5] - 2024-01-08
 
