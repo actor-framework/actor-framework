@@ -1295,7 +1295,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Setting the log level to `quiet` now properly suppresses any log output.
 - Configuring colored terminal output should now print colored output.
 
-[Unreleased]: https://github.com/actor-framework/actor-framework/compare/0.19.5...master
+[Unreleased]: https://github.com/actor-framework/actor-framework/compare/0.19.5...main
 [0.19.5]: https://github.com/actor-framework/actor-framework/releases/0.19.5
 [0.19.4]: https://github.com/actor-framework/actor-framework/releases/0.19.4
 [0.19.3]: https://github.com/actor-framework/actor-framework/releases/0.19.3

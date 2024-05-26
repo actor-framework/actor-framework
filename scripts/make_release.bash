@@ -106,7 +106,7 @@ echo "\
                         \____/_/   \_|_|
 
 This script expects to run at the root directory of a Git clone of CAF. The
-current branch must be master. There must be no untracked file and the working
+current branch must be main. There must be no untracked file and the working
 tree status must be equal to the current HEAD commit. Further, the script
 expects a checkout of the actor-framework.github.io repository at ../website:
 
@@ -122,8 +122,8 @@ expects a checkout of the actor-framework.github.io repository at ../website:
 
 "
 
-if [ $(git rev-parse --abbrev-ref HEAD) != "master" ]; then
-  ask_permission "not in master branch, continue on branch [y] or abort [n]?"
+if [ $(git rev-parse --abbrev-ref HEAD) != "main" ]; then
+  ask_permission "not in main branch, continue on branch [y] or abort [n]?"
 fi
 
 # assumed files
