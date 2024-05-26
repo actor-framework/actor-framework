@@ -4,6 +4,7 @@
 
 #include "caf/json_value.hpp"
 
+#include "caf/test/approx.hpp"
 #include "caf/test/test.hpp"
 
 #include "caf/binary_deserializer.hpp"
@@ -67,7 +68,7 @@ TEST("default-constructed") {
   check(!val.is_object());
   check_eq(val.to_integer(), 0);
   check_eq(val.to_unsigned(), 0u);
-  check_eq(val.to_double(), 0.0);
+  check_eq(val.to_double(), test::approx{0.0});
   check_eq(val.to_bool(), false);
   check_eq(val.to_string(), ""sv);
   check_eq(val.to_object().size(), 0u);
@@ -90,7 +91,7 @@ TEST("from undefined") {
   check(!val.is_object());
   check_eq(val.to_integer(), 0);
   check_eq(val.to_unsigned(), 0u);
-  check_eq(val.to_double(), 0.0);
+  check_eq(val.to_double(), test::approx{0.0});
   check_eq(val.to_bool(), false);
   check_eq(val.to_string(), ""sv);
   check_eq(val.to_object().size(), 0u);
@@ -113,7 +114,7 @@ TEST("from negative integer") {
   check(!val.is_object());
   check_eq(val.to_integer(), -1);
   check_eq(val.to_unsigned(), 0u);
-  check_eq(val.to_double(), -1.0);
+  check_eq(val.to_double(), test::approx{-1.0});
   check_eq(val.to_bool(), false);
   check_eq(val.to_string(), ""sv);
   check_eq(val.to_object().size(), 0u);
@@ -137,7 +138,7 @@ TEST("from small integer") {
   check(!val.is_object());
   check_eq(val.to_integer(), 42);
   check_eq(val.to_unsigned(), 42u);
-  check_eq(val.to_double(), 42.0);
+  check_eq(val.to_double(), test::approx{42.0});
   check_eq(val.to_bool(), false);
   check_eq(val.to_string(), ""sv);
   check_eq(val.to_object().size(), 0u);
@@ -160,7 +161,7 @@ TEST("from UINT64_MAX") {
   check(!val.is_object());
   check_eq(val.to_integer(), 0);
   check_eq(val.to_unsigned(), UINT64_MAX);
-  check_eq(val.to_double(), static_cast<double>(UINT64_MAX));
+  check_eq(val.to_double(), test::approx{static_cast<double>(UINT64_MAX)});
   check_eq(val.to_bool(), false);
   check_eq(val.to_string(), ""sv);
   check_eq(val.to_object().size(), 0u);
@@ -182,7 +183,7 @@ TEST("from double") {
   check(!val.is_object());
   check_eq(val.to_integer(), 42);
   check_eq(val.to_unsigned(), 42u);
-  check_eq(val.to_double(), 42.0);
+  check_eq(val.to_double(), test::approx{42.0});
   check_eq(val.to_bool(), false);
   check_eq(val.to_string(), ""sv);
   check_eq(val.to_object().size(), 0u);
@@ -204,7 +205,7 @@ TEST("from bool") {
   check(!val.is_object());
   check_eq(val.to_integer(), 0);
   check_eq(val.to_unsigned(), 0u);
-  check_eq(val.to_double(), 0.0);
+  check_eq(val.to_double(), test::approx{0.0});
   check_eq(val.to_bool(), true);
   check_eq(val.to_string(), ""sv);
   check_eq(val.to_object().size(), 0u);
@@ -226,7 +227,7 @@ TEST("from string") {
   check(!val.is_object());
   check_eq(val.to_integer(), 0);
   check_eq(val.to_unsigned(), 0u);
-  check_eq(val.to_double(), 0.0);
+  check_eq(val.to_double(), test::approx{0.0});
   check_eq(val.to_bool(), false);
   check_eq(val.to_string(), "Hello, world!"sv);
   check_eq(val.to_object().size(), 0u);
@@ -248,7 +249,7 @@ TEST("from empty array") {
   check(!val.is_object());
   check_eq(val.to_integer(), 0);
   check_eq(val.to_unsigned(), 0u);
-  check_eq(val.to_double(), 0.0);
+  check_eq(val.to_double(), test::approx{0.0});
   check_eq(val.to_bool(), false);
   check_eq(val.to_string(), ""sv);
   check_eq(val.to_array().size(), 0u);
@@ -271,7 +272,7 @@ TEST("from array of size 1") {
   check(!val.is_object());
   check_eq(val.to_integer(), 0);
   check_eq(val.to_unsigned(), 0u);
-  check_eq(val.to_double(), 0.0);
+  check_eq(val.to_double(), test::approx{0.0});
   check_eq(val.to_bool(), false);
   check_eq(val.to_string(), ""sv);
   check_eq(val.to_array().size(), 1u);
@@ -294,7 +295,7 @@ TEST("from array of size 3") {
   check(!val.is_object());
   check_eq(val.to_integer(), 0);
   check_eq(val.to_unsigned(), 0u);
-  check_eq(val.to_double(), 0.0);
+  check_eq(val.to_double(), test::approx{0.0});
   check_eq(val.to_bool(), false);
   check_eq(val.to_string(), ""sv);
   check_eq(val.to_array().size(), 3u);
@@ -317,7 +318,7 @@ TEST("from empty object") {
   check(val.is_object());
   check_eq(val.to_integer(), 0);
   check_eq(val.to_unsigned(), 0u);
-  check_eq(val.to_double(), 0.0);
+  check_eq(val.to_double(), test::approx{0.0});
   check_eq(val.to_bool(), false);
   check_eq(val.to_string(), ""sv);
   check_eq(val.to_object().size(), 0u);
@@ -339,7 +340,7 @@ TEST("from non-empty object") {
   check(val.is_object());
   check_eq(val.to_integer(), 0);
   check_eq(val.to_unsigned(), 0u);
-  check_eq(val.to_double(), 0.0);
+  check_eq(val.to_double(), test::approx{0.0});
   check_eq(val.to_bool(), false);
   check_eq(val.to_string(), ""sv);
   check_eq(val.to_object().size(), 1u);

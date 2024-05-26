@@ -4,6 +4,7 @@
 
 #include "caf/json_builder.hpp"
 
+#include "caf/test/approx.hpp"
 #include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
@@ -138,7 +139,7 @@ TEST("float") {
     check(builder.value(4.2f));
     auto val = builder.seal();
     check(val.is_double());
-    check_eq(val.to_double(), 4.2f);
+    check_eq(val.to_double(), test::approx{4.2f});
   }
   SECTION("array") {
     auto xs = std::vector{4.2f, 4.2f, 4.2f};
@@ -153,14 +154,14 @@ TEST("double") {
   check(builder.value(4.2));
   auto val = builder.seal();
   check(val.is_double());
-  check_eq(val.to_double(), 4.2);
+  check_eq(val.to_double(), test::approx{4.2});
 }
 
 TEST("long double") {
   check(builder.value(4.2l));
   auto val = builder.seal();
   check(val.is_double());
-  check_eq(val.to_double(), 4.2);
+  check_eq(val.to_double(), test::approx{4.2});
 }
 
 TEST("byte") {

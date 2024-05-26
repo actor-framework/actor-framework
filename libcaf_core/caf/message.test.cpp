@@ -4,6 +4,7 @@
 
 #include "caf/message.hpp"
 
+#include "caf/test/approx.hpp"
 #include "caf/test/test.hpp"
 
 #include "caf/init_global_meta_objects.hpp"
@@ -87,7 +88,7 @@ TEST("messages allow index-based access") {
   check_eq(msg.types(), (make_type_id_list<std::string, uint32_t, double>()));
   check_eq(msg.get_as<std::string>(0), "abc");
   check_eq(msg.get_as<uint32_t>(1), 10u);
-  check_eq(msg.get_as<double>(2), 20.0);
+  check_eq(msg.get_as<double>(2), test::approx{20.0});
   check_eq(msg.cdata().get_reference_count(), 1u);
 }
 

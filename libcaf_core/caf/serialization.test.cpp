@@ -2,6 +2,7 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/main/LICENSE.
 
+#include "caf/test/approx.hpp"
 #include "caf/test/fixture/deterministic.hpp"
 #include "caf/test/outline.hpp"
 #include "caf/test/runnable.hpp"
@@ -702,7 +703,11 @@ OUTLINE("serializing and then deserializing primitive values") {
             using lhs_t = std::decay_t<decltype(lhs)>;
             using rhs_t = std::decay_t<decltype(rhs)>;
             if constexpr (std::is_same_v<lhs_t, rhs_t>) {
-              check_eq(lhs, rhs);
+              if constexpr (std::is_arithmetic_v<lhs_t>
+                            || std::is_arithmetic_v<rhs_t>)
+                check_eq(lhs, test::approx{rhs});
+              else
+                check_eq(lhs, rhs);
             } else {
               fail("type mismatch");
             }

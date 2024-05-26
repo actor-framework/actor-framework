@@ -4,6 +4,7 @@
 
 #include "caf/config_option_set.hpp"
 
+#include "caf/test/approx.hpp"
 #include "caf/test/test.hpp"
 
 #include "caf/log/test.hpp"
@@ -133,7 +134,7 @@ TEST("parse with ref syncing") {
       fail("parser stopped at: {}", *res.second);
     log::test::debug("verify referenced values");
     check_eq(foo_i, 42);
-    check_eq(foo_f, 1e2);
+    check_eq(foo_f, caf::test::approx{1e2});
     check_eq(foo_b, true);
     check_eq(bar_s, "hello");
     check_eq(bar_l, ls({"hello", "world"}));

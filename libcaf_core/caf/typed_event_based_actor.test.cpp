@@ -4,6 +4,7 @@
 
 #include "caf/typed_event_based_actor.hpp"
 
+#include "caf/test/approx.hpp"
 #include "caf/test/fixture/deterministic.hpp"
 #include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
@@ -347,7 +348,7 @@ behavior foo2(event_based_actor* self) {
 float_actor::behavior_type float_fun(float_actor::pointer self) {
   return {
     [=](float a) {
-      test::runnable::current().check_eq(a, 1.0f);
+      test::runnable::current().check_eq(a, test::approx{1.0f});
       self->quit(exit_reason::user_shutdown);
     },
   };

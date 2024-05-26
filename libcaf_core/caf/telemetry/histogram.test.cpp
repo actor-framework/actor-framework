@@ -4,6 +4,7 @@
 
 #include "caf/telemetry/histogram.hpp"
 
+#include "caf/test/approx.hpp"
 #include "caf/test/test.hpp"
 
 #include "caf/telemetry/gauge.hpp"
@@ -19,9 +20,9 @@ namespace {
 TEST("double histograms use infinity for the last bucket") {
   dbl_histogram h1{.1, .2, .4, .8};
   check_eq(h1.buckets().size(), 5u);
-  check_eq(h1.buckets().front().upper_bound, .1);
+  check_eq(h1.buckets().front().upper_bound, test::approx{.1});
   check(std::isinf(h1.buckets().back().upper_bound));
-  check_eq(h1.sum(), 0.0);
+  check_eq(h1.sum(), test::approx{0.0});
 }
 
 TEST("integer histograms use int_max for the last bucket") {

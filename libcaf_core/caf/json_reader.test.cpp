@@ -4,6 +4,7 @@
 
 #include "caf/json_reader.hpp"
 
+#include "caf/test/approx.hpp"
 #include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
@@ -222,6 +223,8 @@ struct fixture {
       if (res) {
         if constexpr (std::is_same_v<T, message>)
           res = this_test.check_eq(to_string(tmp), to_string(obj));
+        else if constexpr (std::is_arithmetic_v<T>)
+          res = this_test.check_eq(tmp, test::approx{obj});
         else
           res = this_test.check_eq(tmp, obj);
       }
