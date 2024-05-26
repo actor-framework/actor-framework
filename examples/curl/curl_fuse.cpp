@@ -282,7 +282,7 @@ struct coordinator_state : base_state {
     self->println(color, "{}[{}]: spawned {} worker(s)", self->name(),
                   self->id(), idle.size());
     return {
-      [this](read_atom rd, std::string& str, uint64_t x, uint64_t y) {
+      [this](read_atom rd, std::string str, uint64_t x, uint64_t y) {
         self->println(color, "{}[{}]: received {{'read'}}", self->name(),
                       self->id());
         // forward job to an idle worker

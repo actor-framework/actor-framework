@@ -39,7 +39,7 @@ of an actor system.
 Sending Messages: The Mail API
 ------------------------------
 
-Sending messages in CAF is starts by calling the member function ``mail`` or the
+Sending messages in CAF starts by calling the member function ``mail`` or the
 free function ``anon_mail``. The arguments of these functions are the contents
 of the message. Then, CAF returns a builder object that allows users to specify
 additional information about the message, such as the priority or whether the
@@ -64,7 +64,7 @@ multiple calls. The final call to the builder object is one of:
 - ``request(Handle receiver, timespan timeout)``
   to send the message to a specific actor as a request message. CAF will raise
   an error if the receiver does not respond within the specified timeout
-  (passing ``infinite`` as timeout disables the timeout).
+  (passing ``infinite`` disables the timeout).
 
 When sending a delayed or scheduled message, these member functions have two
 additional, optional parameters: a ``RefTag`` and a ``SelfRefTag``. These tags
@@ -106,6 +106,44 @@ A type ``T`` is inspectable if it provides a free function
 Requirement 2 is a consequence of requirement 1, because CAF needs to be able to
 create an object for ``T`` when deserializing incoming messages. Requirement 3
 allows CAF to implement Copy on Write (see :ref:`copy-on-write`).
+
+Matching Messages
+-----------------
+
+The receiver of a message processes incoming messages by applying a matching
+callback from their behavior (see :ref:`message-handler`). CAF will
+automatically move the message content into the message handler if possible.
+This allows users to write message handlers that take arguments by value. If
+there are multiple references to the message content, CAF will copy the values
+instead.
+
+When taking arguments by const reference, CAF will never cause a copy of the
+message content.
+
+For example, the following example actor will process ``get`` and ``put``
+messages for key-value pairs:
+
+.. code-block:: C++
+
+   behavior kvp_actor_impl() {
+     return {
+       [](caf::put_atom, std::string key, std::string val) {
+         // ...
+       },
+       [](caf::get_atom, const std::string& key) {
+         // ...
+       },
+     };
+   }
+
+When receiving a ``put`` message, CAF checks whether the message has a reference
+count of exactly one. If this is the case, CAF will move the content of the
+message into the lambda, i.e., ``key`` and ``val`` will be moved. Otherwise,
+both strings will be copied.
+
+When receiving a ``get`` message, CAF will simply pass a reference for ``key``
+from the message content. Since ``key`` asks for read-only access, CAF can
+safely pass a reference to the message content.
 
 .. _request:
 
