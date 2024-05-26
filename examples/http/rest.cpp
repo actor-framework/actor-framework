@@ -66,8 +66,8 @@ struct kvs_actor_state {
         else
           return format_to_error(caf::sec::no_such_key, "{} not found", key);
       },
-      [this](caf::put_atom, const std::string& key, std::string& value) {
-        data.insert_or_assign(key, std::move(value));
+      [this](caf::put_atom, std::string key, std::string value) {
+        data.insert_or_assign(std::move(key), std::move(value));
       },
       [this](caf::delete_atom, const std::string& key) { data.erase(key); },
     };
