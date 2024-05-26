@@ -1,6 +1,6 @@
 // This file is part of CAF, the C++ Actor Framework. See the file LICENSE in
 // the main distribution directory for license terms and copyright or visit
-// https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
+// https://github.com/actor-framework/actor-framework/blob/main/LICENSE.
 
 // Based on work of others. Retrieved on 2020-07-01 from
 // https://github.com/Genivia/ugrep/blob/d2fb133/src/glob.cpp.

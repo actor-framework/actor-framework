@@ -8,8 +8,8 @@ contributions a lot easier for all sides.
 Branches
 --------
 
-- Our main branch is `master`. It reflects the latest development changes for
-  the next release and should always compile. Nightly versions use the `master`
+- Our main branch is `main`. It reflects the latest development changes for the
+  next release and should always compile. Nightly versions use the `main`
   branch. Users looking for a production-ready state are encouraged to use the
   latest release version.
 
@@ -86,7 +86,7 @@ Example for the Impatient
 
 // This file is part of CAF, the C++ Actor Framework. See the file LICENSE in
 // the main distribution directory for license terms and copyright or visit
-// https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
+// https://github.com/actor-framework/actor-framework/blob/main/LICENSE.
 
 #pragma once
 
@@ -133,7 +133,7 @@ private:
 
 // This file is part of CAF, the C++ Actor Framework. See the file LICENSE in
 // the main distribution directory for license terms and copyright or visit
-// https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
+// https://github.com/actor-framework/actor-framework/blob/main/LICENSE.
 
 #include "caf/foo/my_class.hpp"
 
@@ -168,7 +168,7 @@ void my_class::print_name() const {
 
 // This file is part of CAF, the C++ Actor Framework. See the file LICENSE in
 // the main distribution directory for license terms and copyright or visit
-// https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
+// https://github.com/actor-framework/actor-framework/blob/main/LICENSE.
 
 #include "caf/example/my_class.hpp" // the header-under-test
 

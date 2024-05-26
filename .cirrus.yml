@@ -4,11 +4,11 @@ resources_template: &RESOURCES_TEMPLATE
   cpu: 4
   memory: 16GB
 
-# Run only when pushing to master or in PRs.
+# Run only when pushing to main or in PRs.
 branch_filter: &BRANCH_FILTER
   only_if: >
     $CIRRUS_PR != '' ||
-    $CIRRUS_BRANCH == 'master'
+    $CIRRUS_BRANCH == 'main'
 
 # FreeBSD 13.3 EOL: January 2026
 freebsd13_task:

@@ -106,7 +106,7 @@ our CI is "fair game".
 
 Our CI covers Windows (latest MSVC release), macOS (latest Xcode release),
 FreeBSD (latest) and several Linux distributions (via the Docker images found
-[here](https://github.com/actor-framework/actor-framework/tree/master/.ci)). For
+[here](https://github.com/actor-framework/actor-framework/tree/main/.ci)). For
 Linux, we aim to support the current releases (that still receive active
 support) for the major distributions. Note that we do not build on Linux
 distributions with rolling releases, because they generally provide more recent

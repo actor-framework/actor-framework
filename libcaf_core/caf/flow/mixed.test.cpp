@@ -1,6 +1,6 @@
 // This file is part of CAF, the C++ Actor Framework. See the file LICENSE in
 // the main distribution directory for license terms and copyright or visit
-// https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
+// https://github.com/actor-framework/actor-framework/blob/main/LICENSE.
 
 // Unlike the other test suites, this one does not focus on a single operator.
 // Instead, this test suite uses the API to solve some higher level problems to

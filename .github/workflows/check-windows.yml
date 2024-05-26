@@ -3,7 +3,7 @@ on:
   pull_request:
   push:
     branches:
-      - master
+      - main
 jobs:
   Windows:
     runs-on: windows-2022
