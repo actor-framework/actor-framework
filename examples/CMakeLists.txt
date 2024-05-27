@@ -33,6 +33,7 @@ add_core_example(message_passing idle_timeout_once)
 add_core_example(message_passing idle_timeout_repeat)
 add_core_example(message_passing promises)
 add_core_example(message_passing request)
+add_core_example(message_passing stress)
 
 # flow API
 add_core_example(flow iota)

@@ -53,16 +53,16 @@ public:
 
   /// Creates a behavior from `tdef` without message handler.
   template <class F>
-  [[deprecated("use idle timeouts instead of 'after >> ...'")]]
-  behavior(timeout_definition<F> tdef)
+  [[deprecated("use idle timeouts instead of 'after >> ...'")]] behavior(
+    timeout_definition<F> tdef)
     : impl_(detail::make_behavior(tdef)) {
     // nop
   }
 
   /// Assigns new handlers.
   template <class... Ts>
-  [[deprecated("use idle timeouts instead of 'after >> ...'")]]
-  void legacy_assign(Ts&&... xs) {
+  [[deprecated("use idle timeouts instead of 'after >> ...'")]] void
+  legacy_assign(Ts&&... xs) {
     static_assert(sizeof...(Ts) > 0, "assign() called without arguments");
     impl_ = detail::make_behavior(std::forward<Ts>(xs)...);
   }
@@ -101,6 +101,7 @@ public:
   /// Returns the timespan after which receive operations
   /// using this behavior should time out.
   timespan timeout() const noexcept {
+    CAF_ASSERT(impl_);
     return impl_->timeout();
   }
 
