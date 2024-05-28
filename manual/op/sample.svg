@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xl="http://www.w3.org/1999/xlink" xmlns:dc="http://purl.org/dc/elements/1.1/" viewBox="-1 -29 802 249" width="802" height="249">
+  <defs>
+    <marker orient="auto" overflow="visible" markerUnits="strokeWidth" id="FilledArrow_Marker" stroke-linejoin="miter" stroke-miterlimit="10" viewBox="-1 -3 7 6" markerWidth="7" markerHeight="6" color="black">
+      <g>
+        <path d="M 4.8 0 L 0 -1.8 L 0 1.8 Z" fill="currentColor" stroke="currentColor" stroke-width="1"/>
+      </g>
+    </marker>
+    <marker orient="auto" overflow="visible" markerUnits="strokeWidth" id="NegativeControls_Marker" stroke-linejoin="miter" stroke-miterlimit="10" viewBox="-1 -6 2 12" markerWidth="2" markerHeight="12" color="black">
+      <g>
+        <line x1="0" y1="-4.8" x2="0" y2="4.8" fill="none" stroke="currentColor" stroke-width="1"/>
+      </g>
+    </marker>
+    <marker orient="auto" overflow="visible" markerUnits="strokeWidth" id="NegativeControls_Marker_2" stroke-linejoin="miter" stroke-miterlimit="10" viewBox="-1 -6 2 12" markerWidth="2" markerHeight="12" color="black">
+      <g>
+        <line x1="0" y1="4.8" x2="0" y2="-4.8" fill="none" stroke="currentColor" stroke-width="1"/>
+      </g>
+    </marker>
+  </defs>
+  <g id="sample" stroke-dasharray="none" stroke="none" stroke-opacity="1" fill="none" fill-opacity="1">
+    <title>sample</title>
+    <g id="sample_Layer_1">
+      <title>Layer 1</title>
+      <g id="Graphic_63"/>
+      <g id="Graphic_64">
+        <path d="M 10 80 L 790 80 C 795.52285 80 800 84.47715 800 90 L 800 130 C 800 135.52285 795.52285 140 790 140 L 10 140 C 4.4771525 140 67635375e-23 135.52285 0 130 L 17763568e-22 90 C 24527106e-22 84.47715 4.4771525 80 10 80 Z" fill="white"/>
+        <path d="M 10 80 L 790 80 C 795.52285 80 800 84.47715 800 90 L 800 130 C 800 135.52285 795.52285 140 790 140 L 10 140 C 4.4771525 140 67635375e-23 135.52285 0 130 L 17763568e-22 90 C 24527106e-22 84.47715 4.4771525 80 10 80 Z" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(5 101)" fill="black">
+          <tspan font-family="Andale Mono" font-size="16" fill="black" x="346.9922" y="15" xml:space="preserve">sample(1s)</tspan>
+        </text>
+      </g>
+      <g id="Line_62">
+        <line x1="19.75" y1="180" x2="766.85" y2="180" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Line_61">
+        <line x1="720" y1="165" x2="720" y2="195" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Graphic_58"/>
+      <g id="Line_57">
+        <line x1="19.5" y1="40" x2="766.6" y2="40" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Line_56">
+        <line x1="720" y1="25" x2="720" y2="55" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Graphic_55">
+        <circle cx="62.5" cy="40" r="20.0000319580379" fill="#80ff80"/>
+        <circle cx="62.5" cy="40" r="20.0000319580379" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(58.606934 31.770996)" fill="black">
+          <tspan font-family="Arial" font-weight="bold" font-size="14" fill="black" x="0" y="13" xml:space="preserve">1</tspan>
+        </text>
+      </g>
+      <g id="Graphic_54">
+        <circle cx="121.448" cy="40" r="20.0000319580379" fill="#80ff80"/>
+        <circle cx="121.448" cy="40" r="20.0000319580379" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(117.55493 31.770996)" fill="black">
+          <tspan font-family="Arial" font-weight="bold" font-size="14" fill="black" x="0" y="13" xml:space="preserve">3</tspan>
+        </text>
+      </g>
+      <g id="Graphic_52">
+        <circle cx="194.5" cy="40" r="20.0000319580379" fill="#80ff80"/>
+        <circle cx="194.5" cy="40" r="20.0000319580379" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(190.60693 31.770996)" fill="black">
+          <tspan font-family="Arial" font-weight="bold" font-size="14" fill="black" x="0" y="13" xml:space="preserve">7</tspan>
+        </text>
+      </g>
+      <g id="Graphic_51">
+        <circle cx="480" cy="40" r="20.0000319580379" fill="#80ff80"/>
+        <circle cx="480" cy="40" r="20.0000319580379" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(476.10693 31.770996)" fill="black">
+          <tspan font-family="Arial" font-weight="bold" font-size="14" fill="black" x="0" y="13" xml:space="preserve">4</tspan>
+        </text>
+      </g>
+      <g id="Graphic_50">
+        <circle cx="580" cy="40" r="20.0000319580379" fill="#80ff80"/>
+        <circle cx="580" cy="40" r="20.0000319580379" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(576.1069 31.770996)" fill="black">
+          <tspan font-family="Arial" font-weight="bold" font-size="14" fill="black" x="0" y="13" xml:space="preserve">1</tspan>
+        </text>
+      </g>
+      <g id="Graphic_47">
+        <circle cx="232.5" cy="180" r="20.0000319580379" fill="#80ff80"/>
+        <circle cx="232.5" cy="180" r="20.0000319580379" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(228.60693 171.771)" fill="black">
+          <tspan font-family="Arial" font-weight="bold" font-size="14" fill="black" x="0" y="13" xml:space="preserve">7</tspan>
+        </text>
+      </g>
+      <g id="Line_69">
+        <line x1="23.9" y1="0" x2="232.1" y2="0" marker-end="url(#NegativeControls_Marker)" marker-start="url(#NegativeControls_Marker_2)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Line_71">
+        <line x1="232.9" y1="0" x2="441.1" y2="0" marker-end="url(#NegativeControls_Marker)" marker-start="url(#NegativeControls_Marker_2)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Line_72">
+        <line x1="441.9" y1="0" x2="650.1" y2="0" marker-end="url(#NegativeControls_Marker)" marker-start="url(#NegativeControls_Marker_2)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Graphic_73">
+        <text transform="translate(119.552 -23.447998)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" fill="black" x="31974423e-20" y="15" xml:space="preserve">1s</tspan>
+        </text>
+      </g>
+      <g id="Graphic_74">
+        <text transform="translate(328.552 -22.447998)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" fill="black" x="31974423e-20" y="15" xml:space="preserve">1s</tspan>
+        </text>
+      </g>
+      <g id="Graphic_75">
+        <text transform="translate(537.552 -22.447998)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" fill="black" x="31974423e-20" y="15" xml:space="preserve">1s</tspan>
+        </text>
+      </g>
+      <g id="Graphic_76">
+        <circle cx="651" cy="180" r="20.0000319580379" fill="#80ff80"/>
+        <circle cx="651" cy="180" r="20.0000319580379" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(647.1069 171.771)" fill="black">
+          <tspan font-family="Arial" font-weight="bold" font-size="14" fill="black" x="0" y="13" xml:space="preserve">1</tspan>
+        </text>
+      </g>
+    </g>
+  </g>
+</svg>

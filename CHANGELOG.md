@@ -25,7 +25,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   specify what kind of reference CAF will hold to that actor while it is waiting
   for the timeout (strong or weak) and whether to trigger the timeout once or
   repeatedly.
-
+- New flow operators: `buffer`, `sample`, `start_with`,
+  `on_backpressure_buffer`, `on_error_return`, `on_error_return_item`, and
+  `on_error_complete`.
 
 ### Fixed
 
