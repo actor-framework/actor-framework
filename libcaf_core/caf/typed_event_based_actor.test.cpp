@@ -409,6 +409,29 @@ TEST("check signature") {
   check_eq(dispatch_messages(), 2u);
 }
 
+TEST("special-purpose types are automatically part of the interface") {
+  auto impl = []() -> int_actor::behavior_type {
+    return {
+      [](const down_msg&) {
+        // nop
+      },
+      [](const exit_msg&) {
+        // nop
+      },
+      [](const error&) {
+        // nop
+      },
+      [](const node_down_msg&) {
+        // nop
+      },
+      [](int x) { return x * x; },
+    };
+  };
+  auto aut = sys.spawn(impl);
+  anon_mail(3).send(aut);
+  expect<int>().with(3).to(aut);
+}
+
 SCENARIO("state classes may use typed pointers") {
   GIVEN("a state class for a statically typed actor type") {
     using foo_type = typed_actor<result<int32_t>(get_atom)>;

@@ -228,6 +228,35 @@ struct tl_at<type_list<E...>, N> {
 template <class List, size_t N>
 using tl_at_t = typename tl_at<List, N>::type;
 
+// list remove(list, value)
+
+template <class Input, class Value, class Output>
+struct tl_remove_impl;
+
+template <class Value, class... Out>
+struct tl_remove_impl<empty_type_list, Value, type_list<Out...>> {
+  using type = type_list<Out...>;
+};
+
+template <class T, class... Ts, class Value, class... Out>
+struct tl_remove_impl<type_list<T, Ts...>, Value, type_list<Out...>> {
+  using type = std::conditional_t<
+    std::is_same_v<T, Value>,
+    typename tl_remove_impl<type_list<Ts...>, Value, type_list<Out...>>::type,
+    typename tl_remove_impl<type_list<Ts...>, Value,
+                            type_list<Out..., T>>::type>;
+};
+
+template <class List, class T>
+struct tl_remove;
+
+template <class... Ts, class T>
+struct tl_remove<type_list<Ts...>, T>
+  : tl_remove_impl<type_list<Ts...>, T, type_list<>> {};
+
+template <class List, class T>
+using tl_remove_t = typename tl_remove<List, T>::type;
+
 // list filter(list, predicate)
 
 template <class Input, class Selection, class Output>
