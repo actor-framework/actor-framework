@@ -117,6 +117,11 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The use case for `function_view` is covered by the new feature on blocking
   actors that allows calling `receive` with no arguments. Hence, `function_view`
   becomes obsolete and is deprecated.
+- The `set_default_handler` member function on event-based actors is now
+  deprecated. Instead, users should use a handler for `message` in their
+  behavior as a catch-all. For skipping messages, CAF now includes a new
+  `mail_cache` class that allows explicitly stashing messages for later
+  processing.
 
 ## [0.19.5] - 2024-01-08
 

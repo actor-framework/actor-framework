@@ -258,6 +258,7 @@ public:
   // -- event handlers ---------------------------------------------------------
 
   /// Sets a custom handler for unexpected messages.
+  [[deprecated("use a handler for 'message' instead")]]
   void set_default_handler(default_handler fun) {
     if (fun)
       default_handler_ = std::move(fun);
@@ -267,6 +268,7 @@ public:
 
   /// Sets a custom handler for unexpected messages.
   template <class F>
+  [[deprecated("use a handler for 'message' instead")]]
   std::enable_if_t<std::is_invocable_r_v<skippable_result, F, message&>>
   set_default_handler(F fun) {
     default_handler_ = [fn{std::move(fun)}](scheduled_actor*,
