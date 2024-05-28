@@ -210,15 +210,25 @@ behavior master(event_based_actor* self) {
   };
 }
 
-behavior slave(event_based_actor* self, const actor& master) {
+behavior observer_impl_1(event_based_actor* self, const actor& master) {
   self->link_to(master);
   self->set_exit_handler([self](exit_msg& msg) {
-    log::test::debug("slave: received exit message");
+    log::test::debug("observer received the exit message");
     self->quit(msg.reason);
   });
   return {
     [] {
       // nop
+    },
+  };
+}
+
+behavior observer_impl_2(event_based_actor* self, const actor& master) {
+  self->link_to(master);
+  return {
+    [self](exit_msg& msg) {
+      log::test::debug("observer received the exit message");
+      self->quit(msg.reason);
     },
   };
 }
@@ -303,8 +313,8 @@ TEST("detached actors and scheduled actors") {
   scoped_actor self{system};
   // check whether detached actors and scheduled actors interact w/o errors
   auto m = system.spawn<detached>(master);
-  system.spawn(slave, m);
-  system.spawn(slave, m);
+  system.spawn(observer_impl_1, m);
+  system.spawn(observer_impl_2, m);
   self->mail(ok_atom_v).send(m);
 }
 

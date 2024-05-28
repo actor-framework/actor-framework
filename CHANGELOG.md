@@ -92,6 +92,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Passing a class to `spawn_inactive` is now optional and defaults to
   `event_based_actor`. The next major release will remove the class parameter
   altogether.
+- Event-based actors can now handle types like `exit_msg` and `error` in their
+  regular behavior.
 
 ### Deprecated
 
@@ -122,6 +124,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   behavior as a catch-all. For skipping messages, CAF now includes a new
   `mail_cache` class that allows explicitly stashing messages for later
   processing.
+- Special-purpose handlers for messages like `exit_msg` and `error` are now
+  deprecated. Instead, users should handle these messages in their regular
+  behavior.
 
 ## [0.19.5] - 2024-01-08
 

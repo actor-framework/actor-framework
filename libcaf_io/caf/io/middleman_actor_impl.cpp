@@ -29,10 +29,7 @@ namespace caf::io {
 middleman_actor_impl::middleman_actor_impl(actor_config& cfg,
                                            actor default_broker)
   : middleman_actor::base(cfg), broker_(std::move(default_broker)) {
-  set_exit_handler([=](exit_msg&) {
-    // ignored, the MM links group nameservers
-    // to this actor for proper shutdown ordering
-  });
+  // nop
 }
 
 void middleman_actor_impl::on_exit() {
@@ -170,6 +167,10 @@ auto middleman_actor_impl::make_behavior() -> behavior_type {
       auto lg = log::io::trace("");
       delegate(broker_, get_atom_v, std::move(nid));
       return {};
+    },
+    [](const exit_msg&) {
+      // Ignore exit messages. The middleman only links group nameservers to
+      // this actor for proper shutdown ordering.
     },
   };
   // Note: needed to sneak the extra `delete_atom` handler into the behavior.

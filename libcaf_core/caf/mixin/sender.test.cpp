@@ -89,9 +89,12 @@ TEST("exceptions while processing a message will send error to the sender") {
     };
   });
   dispatch_messages();
-  auto client = sys.spawn([worker](event_based_actor*) -> behavior {
-    return [](message) { //
-      test::runnable::current().fail("unexpected handler called");
+  auto client = sys.spawn([](event_based_actor* self) -> behavior {
+    return {
+      [self](error what) { self->quit(std::move(what)); },
+      [](message) {
+        test::runnable::current().fail("unexpected handler called");
+      },
     };
   });
   inject().with(42).from(client).to(worker);

@@ -335,9 +335,9 @@ void scheduled_actor::quit(error x) {
   awaited_responses_.clear();
   multiplexed_responses_.clear();
   // Ignore future exit, down and error messages.
-  set_exit_handler(silently_ignore<exit_msg>);
+  exit_handler_ = silently_ignore<exit_msg>;
   down_handler_ = silently_ignore<down_msg>;
-  set_error_handler(silently_ignore<error>);
+  error_handler_ = silently_ignore<error>;
   // Drop future messages and produce sec::request_receiver_down for requests.
   default_handler_ = drop_after_quit;
   // Make sure we're not waiting for flows or stream anymore.
@@ -595,21 +595,17 @@ scheduled_actor::categorize(mailbox_element& x) {
     return message_category::ordinary;
   switch (content.type_at(0)) {
     case type_id_v<exit_msg>: {
-      auto& em = content.get_mutable_as<exit_msg>(0);
-      // make sure to get rid of attachables if they're no longer needed
+      auto& em = x.payload.get_mutable_as<exit_msg>(0);
+      // Make sure to get rid of attachables if they're no longer needed.
       unlink_from(em.source);
-      // exit_reason::kill is always fatal
+      // Receiving exit_reason::kill is always fatal
       if (em.reason == exit_reason::kill) {
         quit(std::move(em.reason));
-      } else {
-        call_handler(exit_handler_, this, em);
+        return message_category::internal;
       }
-      return message_category::internal;
-    }
-    case type_id_v<down_msg>: {
-      auto& dm = content.get_mutable_as<down_msg>(0);
-      call_handler(down_handler_, this, dm);
-      return message_category::internal;
+      // Handle non-kill exit messages in the behavior. If the behavior doesn't
+      // handle the message, we will call the exit handler later.
+      return message_category::ordinary;
     }
     case type_id_v<timeout_msg>: {
       auto id = content.get_as<timeout_msg>(0).id;
@@ -622,16 +618,6 @@ scheduled_actor::categorize(mailbox_element& x) {
       CAF_ASSERT(what.ptr() != nullptr);
       log::core::debug("run action");
       what.run();
-      return message_category::internal;
-    }
-    case type_id_v<node_down_msg>: {
-      auto& dm = content.get_mutable_as<node_down_msg>(0);
-      call_handler(node_down_handler_, this, dm);
-      return message_category::internal;
-    }
-    case type_id_v<error>: {
-      auto& err = content.get_mutable_as<error>(0);
-      call_handler(error_handler_, this, err);
       return message_category::internal;
     }
     case type_id_v<stream_open_msg>: {
@@ -805,8 +791,34 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
         detail::default_invoke_result_visitor<scheduled_actor> visitor{this};
         if (!bhvr_stack_.empty()) {
           auto& bhvr = bhvr_stack_.back();
-          if (bhvr(visitor, x.content()))
+          if (bhvr(visitor, x.payload))
             return invoke_message_result::consumed;
+        }
+        if (x.payload.size() == 1) {
+          switch (x.payload.type_at(0)) {
+            default:
+              break;
+            case type_id_v<exit_msg>: {
+              auto& em = x.payload.get_mutable_as<exit_msg>(0);
+              call_handler(exit_handler_, this, em);
+              return invoke_message_result::consumed;
+            }
+            case type_id_v<down_msg>: {
+              auto& dm = x.payload.get_mutable_as<down_msg>(0);
+              call_handler(down_handler_, this, dm);
+              return invoke_message_result::consumed;
+            }
+            case type_id_v<node_down_msg>: {
+              auto& dm = x.payload.get_mutable_as<node_down_msg>(0);
+              call_handler(node_down_handler_, this, dm);
+              return invoke_message_result::consumed;
+            }
+            case type_id_v<error>: {
+              auto& err = x.payload.get_mutable_as<error>(0);
+              call_handler(error_handler_, this, err);
+              return invoke_message_result::consumed;
+            }
+          }
         }
         auto sres = call_handler(default_handler_, this, x.payload);
         auto f = detail::make_overload(
