@@ -229,26 +229,35 @@ expected<strong_actor_ptr>
 middleman::remote_spawn_impl(const node_id& nid, std::string& name,
                              message& args, std::set<std::string> s,
                              timespan timeout) {
-  auto f = make_function_view(actor_handle(), timeout);
-  return f(spawn_atom_v, nid, std::move(name), std::move(args), std::move(s));
+  auto self = scoped_actor{system()};
+  return self
+    ->mail(spawn_atom_v, nid, std::move(name), std::move(args), std::move(s))
+    .request(actor_handle(), timeout)
+    .receive();
 }
 
 expected<uint16_t> middleman::open(uint16_t port, const char* in, bool reuse) {
   std::string str;
   if (in != nullptr)
     str = in;
-  auto f = make_function_view(actor_handle());
-  return f(open_atom_v, port, std::move(str), reuse);
+  auto self = scoped_actor{system()};
+  return self->mail(open_atom_v, port, std::move(str), reuse)
+    .request(actor_handle(), infinite)
+    .receive();
 }
 
 expected<void> middleman::close(uint16_t port) {
-  auto f = make_function_view(actor_handle());
-  return f(close_atom_v, port);
+  auto self = scoped_actor{system()};
+  return self->mail(close_atom_v, port)
+    .request(actor_handle(), infinite)
+    .receive();
 }
 
 expected<node_id> middleman::connect(std::string host, uint16_t port) {
-  auto f = make_function_view(actor_handle());
-  auto res = f(connect_atom_v, std::move(host), port);
+  auto self = scoped_actor{system()};
+  auto res = self->mail(connect_atom_v, std::move(host), port)
+               .request(actor_handle(), infinite)
+               .receive();
   if (!res)
     return std::move(res.error());
   return std::get<0>(*res);
@@ -263,22 +272,29 @@ expected<uint16_t> middleman::publish(const strong_actor_ptr& whom,
   std::string in;
   if (cstr != nullptr)
     in = cstr;
-  auto f = make_function_view(actor_handle());
-  return f(publish_atom_v, port, std::move(whom), std::move(sigs), in, ru);
+  auto self = scoped_actor{system()};
+  return self
+    ->mail(publish_atom_v, port, whom, std::move(sigs), std::move(in), ru)
+    .request(actor_handle(), infinite)
+    .receive();
 }
 
 expected<void> middleman::unpublish(const actor_addr& whom, uint16_t port) {
   auto lg = log::io::trace("whom = {}, port = {}", whom, port);
-  auto f = make_function_view(actor_handle());
-  return f(unpublish_atom_v, whom, port);
+  auto self = scoped_actor{system()};
+  return self->mail(unpublish_atom_v, whom, port)
+    .request(actor_handle(), infinite)
+    .receive();
 }
 
 expected<strong_actor_ptr> middleman::remote_actor(std::set<std::string> ifs,
                                                    std::string host,
                                                    uint16_t port) {
   auto lg = log::io::trace("ifs = {}, host = {}, port = {}", ifs, host, port);
-  auto f = make_function_view(actor_handle());
-  auto res = f(connect_atom_v, std::move(host), port);
+  auto self = scoped_actor{system()};
+  auto res = self->mail(connect_atom_v, std::move(host), port)
+               .request(actor_handle(), infinite)
+               .receive();
   if (!res)
     return std::move(res.error());
   strong_actor_ptr ptr = std::move(std::get<1>(*res));

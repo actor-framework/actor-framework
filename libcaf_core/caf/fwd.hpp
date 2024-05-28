@@ -28,6 +28,7 @@ template <class> class callback;
 template <class> class cow_vector;
 template <class> class dictionary;
 template <class> class expected;
+template <class> class function_view;
 template <class> class intrusive_cow_ptr;
 template <class> class intrusive_ptr;
 template <class> class span;

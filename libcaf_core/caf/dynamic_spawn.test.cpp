@@ -7,6 +7,7 @@
 
 #include "caf/actor_system.hpp"
 #include "caf/blocking_actor.hpp"
+#include "caf/config.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/function_view.hpp"
 #include "caf/init_global_meta_objects.hpp"
@@ -28,8 +29,7 @@ CAF_BEGIN_TYPE_ID_BLOCK(dynamic_spawn_test, caf::first_custom_type_id + 105)
 CAF_END_TYPE_ID_BLOCK(dynamic_spawn_test)
 
 using namespace caf;
-
-CAF_PUSH_DEPRECATED_WARNING
+using namespace std::literals;
 
 namespace {
 
@@ -387,17 +387,16 @@ TEST("function_spawn") {
 
 using typed_testee = typed_actor<result<std::string>(abc_atom)>;
 
-typed_testee::behavior_type testee() {
-  return {[](abc_atom) {
-    log::test::debug("received 'abc'");
-    return "abc";
-  }};
-}
-
 TEST("typed await") {
+  auto testee = []() -> typed_testee::behavior_type {
+    return {[](abc_atom) {
+      log::test::debug("received 'abc'");
+      return "abc";
+    }};
+  };
   scoped_actor self{system};
-  auto f = make_function_view(system.spawn(testee));
-  check_eq(f(abc_atom_v), "abc");
+  auto str = self->mail(abc_atom_v).request(system.spawn(testee), 1s).receive();
+  check_eq(str, "abc");
 }
 
 // tests attach_functor() inside of an actor's constructor
@@ -493,10 +492,11 @@ TEST("move-only argument in spawn") {
       },
     };
   };
-  auto f = make_function_view(system.spawn(wrapper, std::move(uptr)));
-  auto received = f(1.f);
-  require(received.has_value());
-  check_eq(to_tuple<int>(*received), std::make_tuple(42));
+  auto aut = system.spawn(wrapper, std::move(uptr));
+  auto self = scoped_actor{system};
+  auto received = self->mail(1.f).request(aut, 1s).receive<int>();
+  if (check(received.has_value()))
+    check_eq(*received, 42);
 }
 
 TEST("move-only function object") {
@@ -522,5 +522,3 @@ TEST_INIT() {
 }
 
 } // namespace
-
-CAF_POP_WARNINGS

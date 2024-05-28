@@ -310,6 +310,13 @@ function(caf_add_component name)
                    CAF_TEST_SUITE_NAME=${test_name})
       add_test(NAME ${test_name} COMMAND "caf-${name}-test" -s "^${test_name}$" -n -v5)
       set_tests_properties(${test_name} PROPERTIES TIMEOUT 300)
+      if (MSVC)
+        set_source_files_properties(${source_file} PROPERTIES
+                                    COMPILE_FLAGS /wd4996)
+      else()
+        set_source_files_properties(${source_file} PROPERTIES
+                                    COMPILE_FLAGS -Wno-deprecated-declarations)
+      endif()
     endif()
   endforeach()
   target_link_libraries(${lib_target} ${CAF_ADD_COMPONENT_DEPENDENCIES})

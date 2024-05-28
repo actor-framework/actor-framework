@@ -10,8 +10,8 @@
 #include "caf/actor_system.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/expected.hpp"
-#include "caf/function_view.hpp"
 #include "caf/log/openssl.hpp"
+#include "caf/scoped_actor.hpp"
 
 #include <set>
 
@@ -26,9 +26,12 @@ expected<uint16_t> publish(actor_system& sys, const strong_actor_ptr& whom,
   std::string in;
   if (cstr != nullptr)
     in = cstr;
-  auto f = make_function_view(sys.openssl_manager().actor_handle());
-  return f(publish_atom_v, port, std::move(whom), std::move(sigs),
-           std::move(in), ru);
+  auto self = scoped_actor{sys};
+  return self
+    ->mail(publish_atom_v, port, std::move(whom), std::move(sigs),
+           std::move(in), ru)
+    .request(sys.openssl_manager().actor_handle(), infinite)
+    .receive();
 }
 
 } // namespace caf::openssl

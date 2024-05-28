@@ -62,8 +62,6 @@ ASSERT_COMPILES(set_error_handler(const_error_fn{}),
 
 // -- compile-time checks for set_down_handler ---------------------------------
 
-CAF_PUSH_DEPRECATED_WARNING
-
 struct mutable_down_fn {
   void operator()(down_msg&) {
     // nop
@@ -81,8 +79,6 @@ struct const_down_fn {
 
 ASSERT_COMPILES(set_down_handler(const_down_fn{}),
                 "set_down_handler must accept const function objects");
-
-CAF_POP_WARNINGS
 
 // -- compile-time checks for set_node_down_handler ----------------------------
 

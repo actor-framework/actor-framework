@@ -12,8 +12,6 @@
 #include <condition_variable>
 #include <mutex>
 
-CAF_PUSH_DEPRECATED_WARNING
-
 using namespace caf;
 using namespace std::literals;
 
@@ -212,5 +210,3 @@ TEST("detached spawn options and down_msg") {
 } // WITH_FIXTURE(fixture)
 
 } // namespace
-
-CAF_POP_WARNINGS
