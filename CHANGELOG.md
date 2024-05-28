@@ -112,6 +112,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   of the new `set_idle_handler` function. Note that blocking actors may still
   pass a timeout via `after(...)` to `receive` functions. The deprecation only
   targets event-based actors.
+- The use case for `function_view` is covered by the new feature on blocking
+  actors that allows calling `receive` with no arguments. Hence, `function_view`
+  becomes obsolete and is deprecated.
 
 ## [0.19.5] - 2024-01-08
 

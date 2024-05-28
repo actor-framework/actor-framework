@@ -26,8 +26,9 @@ CAF_BEGIN_TYPE_ID_BLOCK(fan_out_request, first_custom_type_id)
 CAF_END_TYPE_ID_BLOCK(fan_out_request)
 
 using std::endl;
-using std::chrono::seconds;
+
 using namespace caf;
+using namespace std::literals;
 
 /// A simple actor for storing an integer value.
 struct cell_trait {
@@ -150,42 +151,63 @@ struct matrix_state {
   static constexpr const char* name = "matrix";
 };
 
+std::string left_padded(int32_t value, size_t width) {
+  auto result = std::to_string(value);
+  result.insert(result.begin(), width - result.size(), ' ');
+  return result;
+}
+
 std::ostream& operator<<(std::ostream& out, const expected<int>& x) {
   if (x)
     return out << *x;
   return out << to_string(x.error());
 }
 
-void caf_main(actor_system& sys) {
+int caf_main(actor_system& sys) {
   using std::cout;
   // Spawn our matrix.
   static constexpr size_t rows = 3;
   static constexpr size_t columns = 6;
   auto mx = sys.spawn(actor_from_state<matrix_state>, rows, columns);
-  auto f = make_function_view(mx);
+  scoped_actor self{sys};
   // Set cells in our matrix to these values:
   //      2     4     8    16    32    64
   //      3     9    27    81   243   729
   //      4    16    64   256  1024  4096
   for (uint32_t row = 0; row < rows; ++row)
     for (uint32_t column = 0; column < columns; ++column)
-      f(put_atom_v, row, column,
-        static_cast<int32_t>(pow(row + 2, column + 1)));
-  // Print out matrix.
+      self
+        ->mail(put_atom_v, row, column,
+               static_cast<int32_t>(pow(row + 2, column + 1)))
+        .send(mx);
+  // Print the matrix.
   for (uint32_t row = 0; row < rows; ++row) {
-    for (uint32_t column = 0; column < columns; ++column)
-      cout << std::setw(4) << f(get_atom_v, row, column) << ' ';
-    cout << std::endl;
+    std::string line;
+    for (uint32_t column = 0; column < columns; ++column) {
+      auto value
+        = self->mail(get_atom_v, row, column).request(mx, 1s).receive();
+      if (!value) {
+        sys.println("Error: {}", value.error());
+        return EXIT_FAILURE;
+      }
+      line += left_padded(*value, 5);
+    }
+    sys.println("{}", line);
   }
-  // Print out AVG for each row and column.
-  for (uint32_t row = 0; row < rows; ++row)
-    cout << "AVG(row " << row << ") = "
-         << caf::to_string(f(get_atom_v, average_atom_v, row_atom_v, row))
-         << std::endl;
-  for (uint32_t column = 0; column < columns; ++column)
-    cout << "AVG(column " << column << ") = "
-         << caf::to_string(f(get_atom_v, average_atom_v, column_atom_v, column))
-         << std::endl;
+  // Print the average for each row and each column.
+  for (uint32_t row = 0; row < rows; ++row) {
+    auto avg = self->mail(get_atom_v, average_atom_v, row_atom_v, row)
+                 .request(mx, 1s)
+                 .receive();
+    sys.println("AVG(row {}) = {}", row, avg);
+  }
+  for (uint32_t column = 0; column < columns; ++column) {
+    auto avg = self->mail(get_atom_v, average_atom_v, column_atom_v, column)
+                 .request(mx, 1s)
+                 .receive();
+    sys.println("AVG(column {}) = {}", column, avg);
+  }
+  return EXIT_SUCCESS;
 }
 
 CAF_MAIN(id_block::fan_out_request)

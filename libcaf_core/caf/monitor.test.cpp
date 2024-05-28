@@ -14,8 +14,6 @@ namespace {
 
 WITH_FIXTURE(test::fixture::deterministic) {
 
-CAF_PUSH_DEPRECATED_WARNING
-
 TEST("monitoring another actor") {
   auto client_spawn = [](event_based_actor*) {
     return behavior{
@@ -127,8 +125,6 @@ TEST("monitoring another actor") {
     check_eq(*call_count2, 1);
   }
 }
-
-CAF_POP_WARNINGS
 
 } // WITH_FIXTURE(test::fixture::deterministic)
 

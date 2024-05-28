@@ -78,8 +78,6 @@ TEST("fun_one_arg_selfptr") {
   test_spawn(make_message(42));
 }
 
-CAF_PUSH_DEPRECATED_WARNING
-
 TEST("class_no_arg_invalid") {
   cfg.add_actor_type<test_actor_no_args>("test_actor");
   test_spawn(make_message(42), true);
@@ -99,8 +97,6 @@ TEST("class_one_arg_valid") {
   cfg.add_actor_type<test_actor_one_arg, const int&>("test_actor");
   test_spawn(make_message(42));
 }
-
-CAF_POP_WARNINGS
 
 } // WITH_FIXTURE(fixture)
 

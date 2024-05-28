@@ -7,8 +7,8 @@
 #include "caf/openssl/manager.hpp"
 
 #include "caf/expected.hpp"
-#include "caf/function_view.hpp"
 #include "caf/log/openssl.hpp"
+#include "caf/scoped_actor.hpp"
 #include "caf/sec.hpp"
 
 namespace caf::openssl {
@@ -24,8 +24,10 @@ expected<strong_actor_ptr> remote_actor(actor_system& sys,
   auto lg = log::openssl::trace("mpi = {}, host = {}, port = {}", mpi, host,
                                 port);
   expected<strong_actor_ptr> res{strong_actor_ptr{nullptr}};
-  auto f = make_function_view(sys.openssl_manager().actor_handle());
-  auto x = f(connect_atom_v, std::move(host), port);
+  auto self = scoped_actor{sys};
+  auto x = self->mail(connect_atom_v, std::move(host), port)
+             .request(sys.openssl_manager().actor_handle(), infinite)
+             .receive();
   if (!x)
     return std::move(x.error());
   auto& tup = *x;

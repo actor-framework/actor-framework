@@ -11,8 +11,6 @@
 using namespace caf;
 using namespace std::literals;
 
-CAF_PUSH_DEPRECATED_WARNING
-
 namespace {
 
 SCENARIO("an actor system shuts down after the last actor terminates") {
@@ -124,5 +122,3 @@ SCENARIO("an actor system shuts down after the last actor terminates") {
 }
 
 } // namespace
-
-CAF_POP_WARNINGS

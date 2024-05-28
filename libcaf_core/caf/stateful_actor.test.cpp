@@ -18,8 +18,6 @@ using namespace caf;
 
 using namespace std::string_literals;
 
-CAF_PUSH_DEPRECATED_WARNING
-
 namespace {
 
 using typed_adder_actor
@@ -278,5 +276,3 @@ TEST("returned behaviors take precedence over make_behavior in the state") {
 } // WITH_FIXTURE(fixture)
 
 } // namespace
-
-CAF_POP_WARNINGS
