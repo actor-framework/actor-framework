@@ -49,6 +49,25 @@ writing checks that depend on other checks. For example:
     check_eq(xs.back(), 42);
   }
 
+Approximate Comparisons
+-----------------------
+
+When working with floating point numbers, comparing for equality is generally
+unsafe due to rounding errors and limited precision. To account for this, the
+testing framework includes the template class ``caf::test::approx`` for
+approximate comparisons. The class provides a constructor that takes a value and
+when passing ``approx`` to ``check_eq`` or ``require_eq``, the comparison will
+accept the value if it is within a certain range of the expected value.
+
+By default, the allowed deviation is ``std::numeric_limits<T>::epsilon()``.
+Users can change the deviation by using the ``epsilon`` member function. For
+example:
+
+.. code-block:: C++
+
+  check_eq(my_fn(), approx{3.117}); // uses the default epsilon
+  check_eq(my_fn(), approx{3.117}.epsilon(0.001)); // allows 3.116 <= x <= 3.118
+
 Requirements
 ------------
 

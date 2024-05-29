@@ -28,6 +28,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - New flow operators: `buffer`, `sample`, `start_with`,
   `on_backpressure_buffer`, `on_error_return`, `on_error_return_item`, and
   `on_error_complete`.
+- The unit test framework now offers the new utility (template) class
+  `caf::test::approx` for approximate comparisons.
 
 ### Fixed
 
@@ -94,6 +96,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   altogether.
 - Event-based actors can now handle types like `exit_msg` and `error` in their
   regular behavior.
+- The `check_eq` and `require_eq` functions in the unit test framework now
+  prohibit comparing floating-point numbers with `==`. Instead, users should use
+  new `approx` utility class.
 
 ### Deprecated
 
@@ -127,6 +132,10 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Special-purpose handlers for messages like `exit_msg` and `error` are now
   deprecated. Instead, users should handle these messages in their regular
   behavior.
+- The legacy testing framework in `caf/test/unit_test.hpp` is now deprecated and
+  the header (as well as headers that build on top it such as
+  `caf/test/dsl.hpp`) will be removed in the next major release. Users should
+  migrate to the new testing framework.
 
 ## [0.19.5] - 2024-01-08
 
