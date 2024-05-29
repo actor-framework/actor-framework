@@ -4,6 +4,8 @@
 
 #include "caf/test/outline.hpp"
 
+#include "caf/test/approx.hpp"
+
 #include "caf/log/test.hpp"
 
 #include <numeric>
@@ -39,7 +41,7 @@ OUTLINE("adding two numbers") {
       auto result = x + y;
       THEN("the result should be <sum>") {
         auto sum = block_parameters<double>();
-        check_eq(result, sum);
+        check_eq(result, caf::test::approx{sum});
       }
     }
   }

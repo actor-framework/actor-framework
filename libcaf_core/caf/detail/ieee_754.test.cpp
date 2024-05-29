@@ -4,6 +4,7 @@
 
 #include "caf/detail/ieee_754.hpp"
 
+#include "caf/test/approx.hpp"
 #include "caf/test/test.hpp"
 
 #include <limits>
@@ -22,7 +23,7 @@ using flimits = std::numeric_limits<float>;
 
 using dlimits = std::numeric_limits<double>;
 
-#define CHECK_RT(value) check_eq(roundtrip(value), value)
+#define CHECK_RT(value) check_eq(roundtrip(value), caf::test::approx{value})
 
 #define CHECK_PRED_RT(pred, value) check(pred(roundtrip(value)))
 

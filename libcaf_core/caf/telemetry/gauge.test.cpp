@@ -4,6 +4,7 @@
 
 #include "caf/telemetry/gauge.hpp"
 
+#include "caf/test/approx.hpp"
 #include "caf/test/test.hpp"
 
 using namespace caf;
@@ -14,24 +15,24 @@ TEST("gauges can increment and decrement") {
   SECTION("double gauges") {
     telemetry::dbl_gauge g;
     SECTION("gauges start at 0") {
-      check_eq(g.value(), 0.0);
+      check_eq(g.value(), test::approx{0.0});
     }
     SECTION("gauges are incrementable") {
       g.inc();
       g.inc(2.0);
-      check_eq(g.value(), 3.0);
+      check_eq(g.value(), test::approx{3.0});
     }
     SECTION("gauges are decrementable") {
       g.dec();
       g.dec(5.0);
-      check_eq(g.value(), -6.0);
+      check_eq(g.value(), test::approx{-6.0});
     }
     SECTION("gauges allow setting values") {
       g.value(42.0);
-      check_eq(g.value(), 42.0);
+      check_eq(g.value(), test::approx{42.0});
     }
     SECTION("users can create gauges with custom start values") {
-      check_eq(telemetry::dbl_gauge{42.0}.value(), 42.0);
+      check_eq(telemetry::dbl_gauge{42.0}.value(), test::approx{42.0});
     }
   }
   SECTION("integer gauges") {

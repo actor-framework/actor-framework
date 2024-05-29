@@ -4,6 +4,7 @@
 
 #include "caf/actor_system_config.hpp"
 
+#include "caf/test/approx.hpp"
 #include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
@@ -28,9 +29,15 @@ using namespace std::literals;
   do {                                                                         \
     using ref_value_type = std::decay_t<decltype(var)>;                        \
     ref_value_type value{__VA_ARGS__};                                         \
-    check_eq(var, value);                                                      \
+    if constexpr (std::is_arithmetic_v<decltype(var)>)                         \
+      check_eq(var, test::approx{value});                                      \
+    else                                                                       \
+      check_eq(var, value);                                                    \
     if (auto maybe_val = get_as<decltype(var)>(cfg, #var)) {                   \
-      check_eq(*maybe_val, value);                                             \
+      if constexpr (std::is_arithmetic_v<decltype(var)>)                       \
+        check_eq(*maybe_val, test::approx{value});                             \
+      else                                                                     \
+        check_eq(*maybe_val, value);                                           \
     } else {                                                                   \
       auto cv = get_if(std::addressof(cfg.content), #var);                     \
       fail("expected type {}, got {}",                                         \

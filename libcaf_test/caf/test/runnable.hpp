@@ -65,6 +65,9 @@ public:
                 const detail::source_location& location
                 = detail::source_location::current()) {
     assert_save_comparison<T0, T1>();
+    static_assert(
+      !(std::is_floating_point_v<T0> && std::is_floating_point_v<T1>),
+      "comparing floating points using operator== is unsafe, use approx");
     if (lhs == rhs) {
       reporter::instance().pass(location);
       return true;

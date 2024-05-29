@@ -4,6 +4,7 @@
 
 #include "caf/json_array.hpp"
 
+#include "caf/test/approx.hpp"
 #include "caf/test/test.hpp"
 
 #include "caf/binary_deserializer.hpp"
@@ -81,7 +82,7 @@ TEST("from non-empty array") {
   require_eq(vals.size(), 3u);
   check_eq(vals[0].to_integer(), 1);
   check_eq(vals[1].to_string(), "two");
-  check_eq(vals[2].to_double(), 3.0);
+  check_eq(vals[2].to_double(), test::approx{3.0});
   check_eq(to_string(arr), R"_([1, "two", 3])_");
   check_eq(printed(arr), "[\n  1,\n  \"two\",\n  3\n]");
   check_eq(deep_copy(arr), arr);
