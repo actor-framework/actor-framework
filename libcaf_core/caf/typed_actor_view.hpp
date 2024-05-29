@@ -261,6 +261,20 @@ public:
     return self_->run_delayed_weak(delay, std::move(what));
   }
 
+  // -- printing ---------------------------------------------------------------
+
+  /// Adds a new line to stdout.
+  template <class... Args>
+  void println(std::string_view fmt, Args&&... args) {
+    system().println(fmt, std::forward<Args>(args)...);
+  }
+
+  /// Adds a new line to stdout.
+  template <class... Args>
+  void println(term color, std::string_view fmt, Args&&... args) {
+    system().println(color, fmt, std::forward<Args>(args)...);
+  }
+
   // -- miscellaneous actor operations -----------------------------------------
 
   void quit(exit_reason reason = exit_reason::normal) {
