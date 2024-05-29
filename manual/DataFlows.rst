@@ -193,7 +193,7 @@ The operator also takes an optional second argument that specifies the maximum
 time period between two items before the buffer is emitted regardless of its
 size.
 
-.. image:: op/concat.svg
+.. image:: op/buffer.svg
 
 Concat
 ++++++
