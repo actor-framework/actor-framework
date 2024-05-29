@@ -258,6 +258,7 @@ public:
   // -- event handlers ---------------------------------------------------------
 
   /// Sets a custom handler for unexpected messages.
+  [[deprecated("use a handler for 'message' instead")]]
   void set_default_handler(default_handler fun) {
     if (fun)
       default_handler_ = std::move(fun);
@@ -267,6 +268,7 @@ public:
 
   /// Sets a custom handler for unexpected messages.
   template <class F>
+  [[deprecated("use a handler for 'message' instead")]]
   std::enable_if_t<std::is_invocable_r_v<skippable_result, F, message&>>
   set_default_handler(F fun) {
     default_handler_ = [fn{std::move(fun)}](scheduled_actor*,
@@ -276,6 +278,7 @@ public:
   }
 
   /// Sets a custom handler for error messages.
+  [[deprecated("use a handler for 'error' instead")]]
   void set_error_handler(error_handler fun) {
     if (fun)
       error_handler_ = std::move(fun);
@@ -285,6 +288,7 @@ public:
 
   /// Sets a custom handler for error messages.
   template <class F>
+  [[deprecated("use a handler for 'error' instead")]]
   std::enable_if_t<std::is_invocable_v<F, error&>> set_error_handler(F fun) {
     error_handler_ = [fn{std::move(fun)}](scheduled_actor*, error& x) mutable {
       fn(x);
@@ -309,6 +313,7 @@ public:
   }
 
   /// Sets a custom handler for node down messages.
+  [[deprecated("use a handler for 'node_down_msg' instead")]]
   void set_node_down_handler(node_down_handler fun) {
     if (fun)
       node_down_handler_ = std::move(fun);
@@ -318,6 +323,7 @@ public:
 
   /// Sets a custom handler for down messages.
   template <class F>
+  [[deprecated("use a handler for 'node_down_msg' instead")]]
   std::enable_if_t<std::is_invocable_v<F, node_down_msg&>>
   set_node_down_handler(F fun) {
     node_down_handler_ = [fn{std::move(fun)}](scheduled_actor*,
@@ -327,6 +333,7 @@ public:
   }
 
   /// Sets a custom handler for error messages.
+  [[deprecated("use a handler for 'exit_msg' instead")]]
   void set_exit_handler(exit_handler fun) {
     if (fun)
       exit_handler_ = std::move(fun);
@@ -336,6 +343,7 @@ public:
 
   /// Sets a custom handler for exit messages.
   template <class F>
+  [[deprecated("use a handler for 'exit_msg' instead")]]
   std::enable_if_t<std::is_invocable_v<F, exit_msg&>> set_exit_handler(F fun) {
     exit_handler_ = [fn{std::move(fun)}](scheduled_actor*,
                                          exit_msg& x) mutable { fn(x); };

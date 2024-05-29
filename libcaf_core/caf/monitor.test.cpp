@@ -15,8 +15,9 @@ namespace {
 WITH_FIXTURE(test::fixture::deterministic) {
 
 TEST("monitoring another actor") {
-  auto client_spawn = [](event_based_actor*) {
+  auto client_spawn = [](event_based_actor* self) {
     return behavior{
+      [self](const exit_msg& msg) { self->quit(msg.reason); },
       [](message) {},
     };
   };

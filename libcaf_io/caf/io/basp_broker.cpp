@@ -9,6 +9,7 @@
 #include "caf/io/middleman.hpp"
 #include "caf/io/network/interfaces.hpp"
 
+#include "caf/actor_from_state.hpp"
 #include "caf/actor_registry.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/after.hpp"
@@ -18,7 +19,9 @@
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/forwarding_actor_proxy.hpp"
+#include "caf/fwd.hpp"
 #include "caf/log/io.hpp"
+#include "caf/mail_cache.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/sec.hpp"
 #include "caf/send.hpp"
@@ -40,6 +43,8 @@ THREAD_LOCAL caf::node_id* t_last_hop = nullptr;
 #undef THREAD_LOCAL
 
 } // namespace
+
+using namespace std::literals;
 
 namespace caf::io {
 
@@ -561,43 +566,57 @@ void basp_broker::emit_node_down_msg(const node_id& node, const error& reason) {
   node_observers.erase(i);
 }
 
+namespace {
+
+struct learned_new_node_helper_state {
+  learned_new_node_helper_state(event_based_actor* selfptr, node_id other_node)
+    : self(selfptr), cache(self, 10), nid(other_node) {
+    // nop
+  }
+
+  behavior make_behavior() {
+    auto lg = log::io::trace("");
+    self->set_idle_handler(5min, strong_ref, once, [this] {
+      log::io::info("no spawn server found: nid = {}", nid);
+      self->quit();
+    });
+    return {
+      [this](ok_atom, const std::string& /* key == "info" */,
+             const strong_actor_ptr& config_serv,
+             const std::string& /* name */) {
+        auto lg = log::io::trace("config_serv = {}", config_serv);
+        if (!config_serv)
+          return;
+        self->monitor(config_serv, [this](error reason) {
+          auto lg = log::io::trace("reason = {}", reason);
+          self->quit(std::move(reason));
+        });
+        self->become(
+          [this, config_serv](spawn_atom, std::string& type, message& args) {
+            auto lg = log::io::trace("type = {}, args = {}", type, args);
+            return self->mail(get_atom_v, std::move(type), std::move(args))
+              .delegate(actor_cast<actor>(std::move(config_serv)));
+          });
+      },
+      [this](message msg) { cache.stash(std::move(msg)); },
+    };
+  }
+
+  event_based_actor* self;
+  mail_cache cache; // to skip messages until we receive the initial ok_atom
+  node_id nid;
+};
+
+} // namespace
+
 void basp_broker::learned_new_node(const node_id& nid) {
   auto lg = log::io::trace("nid = {}", nid);
   if (spawn_servers.count(nid) > 0) {
     log::io::error("learned_new_node called for known node nid = {}", nid);
     return;
   }
-  auto tmp = system().spawn<hidden>([=](event_based_actor* tself) -> behavior {
-    using namespace std::literals;
-    auto lg = log::io::trace("");
-    // skip messages until we receive the initial ok_atom
-    tself->set_default_handler(skip);
-    tself->set_idle_handler(5min, strong_ref, once, [=] {
-      log::io::info("no spawn server found: nid = {}", nid);
-      tself->quit();
-    });
-    return {
-      [=](ok_atom, const std::string& /* key == "info" */,
-          const strong_actor_ptr& config_serv, const std::string& /* name */) {
-        auto lg = log::io::trace("config_serv = {}", config_serv);
-        // drop unexpected messages from this point on
-        tself->set_default_handler(print_and_drop);
-        if (!config_serv)
-          return;
-        tself->monitor(config_serv, [tself](error reason) {
-          auto lg = log::io::trace("reason = {}", reason);
-          tself->quit(std::move(reason));
-        });
-        tself->become([=](spawn_atom, std::string& type, message& args)
-                        -> delegated<strong_actor_ptr, std::set<std::string>> {
-          auto lg = log::io::trace("type = {}, args = {}", type, args);
-          tself->delegate(actor_cast<actor>(std::move(config_serv)), get_atom_v,
-                          std::move(type), std::move(args));
-          return {};
-        });
-      },
-    };
-  });
+  auto impl = actor_from_state<learned_new_node_helper_state>;
+  auto tmp = system().spawn<hidden>(impl, nid);
   spawn_servers.emplace(nid, tmp);
   using namespace detail;
   auto tmp_ptr = actor_cast<strong_actor_ptr>(tmp);
