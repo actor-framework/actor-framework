@@ -25,8 +25,8 @@ adder_actor::behavior_type worker_impl() {
 adder_actor::behavior_type server_impl(adder_actor::pointer self,
                                        adder_actor worker) {
   return {
-    [=](add_atom add, int32_t x, int32_t y) {
-      return self->delegate(worker, add, x, y);
+    [self, worker](add_atom add, int32_t x, int32_t y) {
+      return self->mail(add, x, y).delegate(worker);
     },
   };
 }

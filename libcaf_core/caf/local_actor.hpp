@@ -365,6 +365,7 @@ public:
 
   template <message_priority P = message_priority::normal, class Handle = actor,
             class... Ts>
+  [[deprecated("use the mail API instead")]]
   typename response_type<
     typename Handle::signatures,
     detail::implicit_conversions_t<std::decay_t<Ts>>...>::delegated_type

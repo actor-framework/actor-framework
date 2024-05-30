@@ -130,12 +130,12 @@ auto middleman_actor_impl::make_behavior() -> behavior_type {
     },
     [this](unpublish_atom atm, actor_addr addr, uint16_t p) -> del_res {
       auto lg = log::io::trace("");
-      delegate(broker_, atm, std::move(addr), p);
+      std::ignore = mail(atm, std::move(addr), p).delegate(broker_);
       return {};
     },
     [this](close_atom atm, uint16_t p) -> del_res {
       auto lg = log::io::trace("");
-      delegate(broker_, atm, p);
+      std::ignore = mail(atm, p).delegate(broker_);
       return {};
     },
     [this](spawn_atom, node_id& nid, std::string& name, message& args,
@@ -157,15 +157,16 @@ auto middleman_actor_impl::make_behavior() -> behavior_type {
       // This local variable prevents linker errors (delegate forms an lvalue
       // reference but spawn_server_id is constexpr).
       auto id = basp::header::spawn_server_id;
-      delegate(broker_, forward_atom_v, nid, id,
-               make_message(spawn_atom_v, std::move(name), std::move(args),
-                            std::move(ifs)));
+      std::ignore = mail(forward_atom_v, nid, id,
+                         make_message(spawn_atom_v, std::move(name),
+                                      std::move(args), std::move(ifs)))
+                      .delegate(broker_);
       return delegated<strong_actor_ptr>{};
     },
     [this](get_atom,
            node_id& nid) -> delegated<node_id, std::string, uint16_t> {
       auto lg = log::io::trace("");
-      delegate(broker_, get_atom_v, std::move(nid));
+      std::ignore = mail(get_atom_v, std::move(nid)).delegate(broker_);
       return {};
     },
     [](const exit_msg&) {

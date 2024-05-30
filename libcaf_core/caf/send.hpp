@@ -62,6 +62,7 @@ namespace caf {
 /// Sends an asynchronous, anonymous message to `receiver`.
 template <message_priority Priority = message_priority::normal, class Handle,
           class T, class... Ts>
+[[deprecated("use anon_mail instead")]]
 void anon_send(const Handle& receiver, T&& arg, Ts&&... args) {
   detail::send_type_check<none_t, Handle, T, Ts...>();
   if (receiver)
@@ -74,6 +75,7 @@ void anon_send(const Handle& receiver, T&& arg, Ts&&... args) {
 /// Sends an asynchronous, anonymous message to `receiver` after the timeout.
 template <message_priority Priority = message_priority::normal, class Handle,
           class T, class... Ts>
+[[deprecated("use anon_mail instead")]]
 disposable delayed_anon_send(const Handle& receiver,
                              actor_clock::duration_type timeout, T&& arg,
                              Ts&&... args) {
@@ -91,6 +93,7 @@ disposable delayed_anon_send(const Handle& receiver,
 /// Sends an asynchronous, anonymous message to `receiver` after the timeout.
 template <message_priority Priority = message_priority::normal, class Handle,
           class T, class... Ts>
+[[deprecated("use anon_mail instead")]]
 disposable scheduled_anon_send(const Handle& receiver,
                                actor_clock::time_point timeout, T&& arg,
                                Ts&&... args) {
