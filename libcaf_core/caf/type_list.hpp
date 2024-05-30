@@ -12,6 +12,9 @@ struct type_list {
   constexpr type_list() {
     // nop
   }
+
+  template <class... Us>
+  using append = type_list<Ts..., Us...>;
 };
 
 template <class... Ts>
