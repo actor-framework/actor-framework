@@ -142,7 +142,7 @@ public:
   /// Sends the message to `receiver`.
   template <class Handle>
   [[nodiscard]] auto delegate(const Handle& receiver) && {
-    detail::send_type_check<typename Trait::signatures, Handle, Args...>();
+    detail::send_type_check<none_t, Handle, Args...>();
     using result_t = delegated_response_type_t<Handle, Args...>;
     if (!receiver) {
       self_->do_delegate_error();

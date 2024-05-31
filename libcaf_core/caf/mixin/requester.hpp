@@ -43,6 +43,7 @@ public:
   ///          sent message cannot be received by another actor.
   template <message_priority P = message_priority::normal, class Rep = int,
             class Period = std::ratio<1>, class Handle = actor, class... Ts>
+  [[deprecated("use the mail API instead")]]
   auto request(const Handle& dest, std::chrono::duration<Rep, Period> timeout,
                Ts&&... xs) {
     using namespace detail;

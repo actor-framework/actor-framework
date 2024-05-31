@@ -93,7 +93,7 @@ struct matrix_state {
         if (column >= columns) {
           return make_error(sec::invalid_argument, "column out of range");
         }
-        return self->delegate(data[row][column], put, val);
+        return self->mail(put, val).delegate(data[row][column]);
       },
       [this](get_atom get, uint32_t row, uint32_t column) -> result<int32_t> {
         if (row >= rows) {
@@ -102,7 +102,7 @@ struct matrix_state {
         if (column >= columns) {
           return make_error(sec::invalid_argument, "column out of range");
         }
-        return self->delegate(data[row][column], get);
+        return self->mail(get).delegate(data[row][column]);
       },
       [this](get_atom get, average_atom, row_atom,
              uint32_t row) -> result<double> {

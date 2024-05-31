@@ -99,6 +99,10 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The `check_eq` and `require_eq` functions in the unit test framework now
   prohibit comparing floating-point numbers with `==`. Instead, users should use
   new `approx` utility class.
+- The member functions `send`, `scheduled_send`, `delayed_send`, `request` and
+  `delegate` are deprecated in favor of the new `mail` API.
+- The free functions `anon_send`, `delayed_anon_send`, `scheduled_anon_send` are
+  deprecated in favor of the new `anon_mail` API.
 
 ### Deprecated
 
