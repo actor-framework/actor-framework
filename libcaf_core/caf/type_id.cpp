@@ -22,6 +22,17 @@ type_id_t query_type_id(std::string_view name) {
   return invalid_type_id;
 }
 
+bool is_system_message(type_id_t type) noexcept {
+  switch (type) {
+    case type_id_v<exit_msg>:
+    case type_id_v<down_msg>:
+    case type_id_v<error>:
+      return true;
+    default:
+      return false;
+  }
+}
+
 type_id_mapper::~type_id_mapper() {
   // nop
 }
