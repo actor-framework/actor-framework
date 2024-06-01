@@ -8,6 +8,7 @@
 
 #include "caf/cow_string.hpp"
 #include "caf/message_handler.hpp"
+#include "caf/system_messages.hpp"
 
 using namespace caf;
 using namespace std::literals;
@@ -152,6 +153,13 @@ TEST("a handler that takes a message argument is a catch-all handler") {
     check_eq(call_with(m1), 1);
     check_eq(call_with(m2), 1);
     check_eq(call_with(m3), 1);
+  }
+  SECTION("a catch-all handler does not consume system messages") {
+    auto f = behavior{
+      [](message) { return 1; },
+    };
+    auto msg = make_message(exit_msg{actor_addr{}, exit_reason::user_shutdown});
+    check_eq(res_of(f, msg), std::nullopt);
   }
 }
 

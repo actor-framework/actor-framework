@@ -19,6 +19,7 @@
 #include "caf/skip.hpp"
 #include "caf/timeout_definition.hpp"
 #include "caf/timespan.hpp"
+#include "caf/type_id.hpp"
 #include "caf/typed_message_view.hpp"
 #include "caf/typed_response_promise.hpp"
 
@@ -118,6 +119,13 @@ public:
       using decayed_args = typename trait::decayed_arg_types;
       if constexpr (std::is_same_v<decayed_args, type_list<message>>) {
         using fun_result = decltype(fun(msg));
+        if (auto types = msg.types();
+            types.size() == 1 && is_system_message(types[0])) {
+          // The fallback handler must not consume system messages such as
+          // exit_msg. They must be handled explicitly by the actor or else use
+          // the hard-coded default.
+          return false;
+        }
         if constexpr (std::is_same_v<void, fun_result>) {
           fun(msg);
           f(unit);

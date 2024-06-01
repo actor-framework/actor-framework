@@ -104,6 +104,9 @@ CAF_CORE_EXPORT std::string_view query_type_name(type_id_t type);
 /// Returns the type for @p name or `invalid_type_id` if @p name is unknown.
 CAF_CORE_EXPORT type_id_t query_type_id(std::string_view name);
 
+/// Checks whether a type ID belongs to a system message.
+CAF_CORE_EXPORT bool is_system_message(type_id_t type) noexcept;
+
 /// Translates between human-readable type names and type IDs.
 class CAF_CORE_EXPORT type_id_mapper {
 public:
