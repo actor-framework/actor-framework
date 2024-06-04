@@ -58,16 +58,4 @@ expected<uint16_t> CAF_NET_EXPORT remote_port(network_socket x);
 /// @relates network_socket
 expected<std::string> CAF_NET_EXPORT remote_addr(network_socket x);
 
-/// Closes the read channel for a socket.
-/// @relates network_socket
-void CAF_NET_EXPORT shutdown_read(network_socket x);
-
-/// Closes the write channel for a socket.
-/// @relates network_socket
-void CAF_NET_EXPORT shutdown_write(network_socket x);
-
-/// Closes the both read and write channel for a socket.
-/// @relates network_socket
-void CAF_NET_EXPORT shutdown(network_socket x);
-
 } // namespace caf::net

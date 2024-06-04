@@ -169,16 +169,4 @@ expected<uint16_t> remote_port(network_socket x) {
   return ntohs(port_of(reinterpret_cast<sockaddr&>(st)));
 }
 
-void shutdown_read(network_socket x) {
-  ::shutdown(x.id, 0);
-}
-
-void shutdown_write(network_socket x) {
-  ::shutdown(x.id, 1);
-}
-
-void shutdown(network_socket x) {
-  ::shutdown(x.id, 2);
-}
-
 } // namespace caf::net
