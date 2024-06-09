@@ -79,6 +79,17 @@ struct span_less {
   }
 };
 
+struct multi_dimension_point {
+  int dimension;
+  std::vector<int> point;
+};
+
+template <class Inspector>
+bool inspect(Inspector& f, struct multi_dimension_point& x) {
+  return f.object(x).fields(f.field("dimension", x.dimension),
+                            f.field("point", x.point));
+}
+
 struct fixture {
   fixture() {
     builder.skip_object_type_annotation(true);
@@ -480,6 +491,30 @@ TEST("nested object with type annotation") {
   auto val = builder.seal();
   check(val.is_object());
   check_eq(printed(val, 2), annotated_rect_str);
+}
+
+// Regression test for GH-#1889
+TEST("nested sequence in struct") {
+  SECTION("value") {
+    multi_dimension_point point{3, {42, 0, -1}};
+    if (builder.apply(point)) {
+      auto val = builder.seal();
+      check_eq(printed(val), R"_({"dimension": 3, "point": [42, 0, -1]})_");
+    } else {
+      fail("{}", builder.get_error());
+    }
+  }
+  SECTION("array") {
+    std::vector<multi_dimension_point> points{{3, {42, 0, -1}}, {2, {0, 0}}};
+    if (builder.apply(points)) {
+      auto val = builder.seal();
+      check_eq(
+        printed(val),
+        R"_([{"dimension": 3, "point": [42, 0, -1]}, {"dimension": 2, "point": [0, 0]}])_");
+    } else {
+      fail("{}", builder.get_error());
+    }
+  }
 }
 
 } // WITH_FIXTURE(fixture)
