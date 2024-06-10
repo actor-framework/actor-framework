@@ -229,9 +229,8 @@ bool json_builder::begin_sequence(size_t) {
       err_ = make_error(sec::runtime_error, "unexpected begin_sequence");
       return false;
     case type::element: {
-      auto* val = top_ptr();
-      val->assign_array(storage_);
-      push(val, type::array);
+      top_ptr()->assign_array(storage_);
+      stack_.back().t = type::array;
       return true;
     }
     case type::array: {

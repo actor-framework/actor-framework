@@ -51,8 +51,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   direction (#1860).
 - Fix a regression in the work-stealing scheduler that prevented workers from
   stealing work from other workers in the relaxed polling state (#1866).
-- Fix a bug in the `json_builder` when using integers or boolean values as keys
-  in a JSON object.
+- Fix handling of integer or boolean values as keys as well as lists as values
+  in dictionaries when using the `json_builder`.
 
 ### Removed
 
