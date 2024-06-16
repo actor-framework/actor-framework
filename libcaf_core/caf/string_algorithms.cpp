@@ -54,9 +54,9 @@ void split(std::vector<std::string_view>& result, std::string_view str,
 std::string_view trim(std::string_view str) {
   auto non_whitespace = [](char c) { return !isspace(c); };
   if (std::any_of(str.begin(), str.end(), non_whitespace)) {
-    while (str.front() == ' ')
+    while (std::isspace(static_cast<unsigned char>(str.front())))
       str.remove_prefix(1);
-    while (str.back() == ' ')
+    while (std::isspace(static_cast<unsigned char>(str.back())))
       str.remove_suffix(1);
   } else {
     str = std::string_view{};
