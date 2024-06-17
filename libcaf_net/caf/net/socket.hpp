@@ -116,4 +116,9 @@ error CAF_NET_EXPORT shutdown_read(socket x);
 /// @relates socket
 error CAF_NET_EXPORT shutdown_write(socket x);
 
+/// Returns the socket ID of `fd`.
+inline socket_id get_socket_id(socket fd) noexcept {
+  return fd.id;
+}
+
 } // namespace caf::net
