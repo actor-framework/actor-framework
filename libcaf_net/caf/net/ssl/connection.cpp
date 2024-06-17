@@ -106,10 +106,12 @@ size_t connection::buffered() const noexcept {
 }
 
 stream_socket connection::fd() const noexcept {
-  if (auto id = SSL_get_fd(native(pimpl_)); id != -1)
-    return stream_socket{static_cast<socket_id>(id)};
-  else
-    return stream_socket{invalid_socket_id};
+  if (pimpl_ != nullptr) {
+    if (auto id = SSL_get_fd(native(pimpl_)); id != -1) {
+      return stream_socket{static_cast<socket_id>(id)};
+    }
+  }
+  return stream_socket{invalid_socket_id};
 }
 
 } // namespace caf::net::ssl
