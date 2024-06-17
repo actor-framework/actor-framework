@@ -34,8 +34,8 @@ public:
   public:
     static constexpr std::string_view name = "lazy";
 
-    lazy(uint16_t port, std::string bind_address)
-      : port(port), bind_address(std::move(bind_address)) {
+    lazy(uint16_t port, std::string bind_address, bool reuse = true)
+      : port(port), bind_address(std::move(bind_address)), reuse_addr(reuse) {
       // nop
     }
 

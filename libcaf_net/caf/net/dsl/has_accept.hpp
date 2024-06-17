@@ -27,9 +27,11 @@ public:
   /// @param port Port number to bind to.
   /// @param bind_address IP address to bind to. Default is an empty string.
   /// @returns an `accept_factory` object initialized with the given parameters.
-  auto accept(uint16_t port, std::string bind_address = "") {
+  auto accept(uint16_t port, std::string bind_address = "",
+              bool reuse_addr = true) {
     auto& dref = static_cast<Subtype&>(*this);
-    return dref.make(server_config::lazy_v, port, std::move(bind_address));
+    return dref.make(server_config::lazy_v, port, std::move(bind_address),
+                     reuse_addr);
   }
 
   /// Creates an `accept_factory` object for the given accept socket.
