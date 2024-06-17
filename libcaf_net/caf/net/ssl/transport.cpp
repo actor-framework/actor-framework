@@ -8,6 +8,8 @@
 #include "caf/net/socket_manager.hpp"
 #include "caf/net/ssl/connection.hpp"
 
+#include "caf/error.hpp"
+
 CAF_PUSH_WARNINGS
 #include <openssl/err.h>
 #include <openssl/ssl.h>
