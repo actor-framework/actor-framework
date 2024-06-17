@@ -295,7 +295,11 @@ time_t datetime::to_time_t() const noexcept {
   time_buf.tm_min = minute;
   time_buf.tm_sec = second;
   time_buf.tm_isdst = -1;
-  return tm_to_time_t(time_buf) - utc_offset.value_or(0);
+  if (utc_offset) {
+    return tm_to_time_t(time_buf) - *utc_offset;
+  }
+  // Assume local time if no UTC offset is set.
+  return std::mktime(&time_buf);
 }
 
 expected<datetime> datetime::from_string(std::string_view str) {
