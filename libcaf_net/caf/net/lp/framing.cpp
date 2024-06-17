@@ -1,13 +1,18 @@
 #include "caf/net/lp/framing.hpp"
 
 #include "caf/net/lp/upper_layer.hpp"
+#include "caf/net/multiplexer.hpp"
 #include "caf/net/octet_stream/lower_layer.hpp"
 #include "caf/net/receive_policy.hpp"
+#include "caf/net/socket_manager.hpp"
 
+#include "caf/async/spsc_buffer.hpp"
 #include "caf/byte_span.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/network_order.hpp"
 #include "caf/error.hpp"
+#include "caf/internal/lp_flow_bridge.hpp"
+#include "caf/internal/make_transport.hpp"
 #include "caf/log/net.hpp"
 #include "caf/sec.hpp"
 
@@ -189,6 +194,34 @@ private:
 
 std::unique_ptr<framing> framing::make(upper_layer_ptr up) {
   return std::make_unique<framing_impl>(std::move(up));
+}
+
+namespace {
+
+template <class Conn>
+disposable run_impl(multiplexer& mpx, Conn& conn,
+                    async::consumer_resource<chunk>& pull,
+                    async::producer_resource<chunk>& push) {
+  auto bridge = internal::make_lp_flow_bridge(std::move(pull), std::move(push));
+  auto transport = internal::make_transport(std::move(conn),
+                                            framing::make(std::move(bridge)));
+  auto manager = net::socket_manager::make(&mpx, std::move(transport));
+  mpx.start(manager);
+  return manager->as_disposable();
+}
+
+} // namespace
+
+disposable framing::run(multiplexer& mpx, stream_socket fd,
+                        async::consumer_resource<chunk> pull,
+                        async::producer_resource<chunk> push) {
+  return run_impl(mpx, fd, pull, push);
+}
+
+disposable framing::run(multiplexer& mpx, ssl::connection conn,
+                        async::consumer_resource<chunk> pull,
+                        async::producer_resource<chunk> push) {
+  return run_impl(mpx, conn, pull, push);
 }
 
 } // namespace caf::net::lp
