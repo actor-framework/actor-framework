@@ -4,7 +4,8 @@
 
 #pragma once
 
-#include "caf/net/fwd.hpp"
+#include "caf/net/socket.hpp"
+#include "caf/net/socket_manager.hpp"
 
 #include "caf/async/spsc_buffer.hpp"
 #include "caf/callback.hpp"
@@ -20,40 +21,53 @@ namespace caf::net::web_socket {
 template <class... Ts>
 class acceptor {
 public:
-  explicit acceptor(const http::request_header& hdr) : hdr_(hdr) {
+  acceptor(const http::request_header& hdr, socket_manager* parent)
+    : hdr_(hdr), parent_(parent) {
     // nop
   }
 
   virtual ~acceptor() = default;
 
+  /// Accepts the WebSocket handshake request.
   virtual void accept(Ts... xs) = 0;
 
+  /// Sets a reason for rejecting the WebSocket handshake request.
   void reject(error reason) {
     reject_reason_ = reason;
     if (accepted_)
       accepted_ = false;
   }
 
+  /// Returns whether the WebSocket handshake request was accepted.
   bool accepted() const noexcept {
     return accepted_;
   }
 
+  /// Returns the reason for rejecting the WebSocket handshake request.
   error&& reject_reason() && noexcept {
     return std::move(reject_reason_);
   }
 
+  /// Returns the reason for rejecting the WebSocket handshake request.
   const error& reject_reason() const& noexcept {
     return reject_reason_;
   }
 
+  /// Returns the HTTP header of the WebSocket handshake request.
   const http::request_header& header() const noexcept {
     return hdr_;
+  }
+
+  /// Returns the socket that accepted the WebSocket connection.
+  net::socket socket() const {
+    return parent_->handle();
   }
 
 protected:
   const http::request_header& hdr_;
   bool accepted_ = false;
   error reject_reason_;
+  socket_manager* parent_;
 };
 
 /// Type trait that determines if a type is an `acceptor`.

@@ -37,6 +37,7 @@ public:
   error start(octet_stream::lower_layer* down) override {
     down_ = down;
     down_->configure_read(receive_policy::up_to(handshake::max_http_size));
+    up_->set_manager(down->manager());
     return none;
   }
 

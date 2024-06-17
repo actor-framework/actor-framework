@@ -95,7 +95,7 @@ public:
     namespace http = net::http;
     auto try_accept = [&, this]() -> std::tuple<bool, pull_t, push_t> {
       // Call user-defined on_request callback.
-      ws_acceptor_impl<Out...> acc{res.header()};
+      ws_acceptor_impl<Out...> acc{res.header(), res.down()->manager()};
       (state_->on_request)(acc, args...);
       if (!acc.accepted()) {
         if (auto& err = acc.reject_reason()) {

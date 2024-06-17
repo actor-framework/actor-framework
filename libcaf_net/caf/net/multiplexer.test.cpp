@@ -7,6 +7,7 @@
 #include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
+#include "caf/net/socket_event_layer.hpp"
 #include "caf/net/socket_manager.hpp"
 #include "caf/net/stream_socket.hpp"
 

@@ -131,7 +131,7 @@ public:
   }
 
 protected:
-  LowerLayer* down_;
+  LowerLayer* down_ = nullptr;
 
   /// The output of the application. Serialized to the socket.
   consumer_type in_;

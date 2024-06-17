@@ -14,4 +14,8 @@ upper_layer::server::~server() {
   // nop
 }
 
+void upper_layer::server::set_manager(socket_manager*) {
+  // nop
+}
+
 } // namespace caf::net::web_socket

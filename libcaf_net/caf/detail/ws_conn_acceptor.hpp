@@ -35,7 +35,7 @@ public:
   virtual ~ws_conn_acceptor();
 
   virtual expected<ws_conn_starter_ptr>
-  accept(const net::http::request_header& hdr) = 0;
+  accept(const net::http::request_header& hdr, net::socket_manager* mgr) = 0;
 
   virtual bool canceled() const noexcept = 0;
 
@@ -102,13 +102,13 @@ public:
     producer_ = std::make_shared<producer_type>(push.try_open());
   }
 
-  expected<ws_conn_starter_ptr>
-  accept(const net::http::request_header& hdr) override {
+  expected<ws_conn_starter_ptr> accept(const net::http::request_header& hdr,
+                                       net::socket_manager* mgr) override {
     if (!producer_) {
       return make_error(sec::runtime_error,
                         "WebSocket connection dropped: client canceled");
     }
-    ws_acceptor_impl<Ts...> acc{hdr};
+    ws_acceptor_impl<Ts...> acc{hdr, mgr};
     on_request_(acc);
     if (acc.accepted()) {
       using starter_t = ws_conn_starter_impl<Ts...>;
