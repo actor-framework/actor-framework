@@ -10,12 +10,15 @@
 #include "caf/net/tcp_accept_socket.hpp"
 #include "caf/net/tcp_stream_socket.hpp"
 
+#include "caf/actor_control_block.hpp"
 #include "caf/async/execution_context.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/connection_acceptor.hpp"
 #include "caf/detail/connection_factory.hpp"
 #include "caf/log/net.hpp"
 #include "caf/settings.hpp"
+
+#include <vector>
 
 namespace caf::internal {
 

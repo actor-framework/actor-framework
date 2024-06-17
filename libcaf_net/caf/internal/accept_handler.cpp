@@ -4,6 +4,9 @@
 
 #include "caf/internal/accept_handler.hpp"
 
+#include "caf/abstract_actor.hpp"
+#include "caf/actor_control_block.hpp"
+
 namespace caf::internal {
 
 namespace {
