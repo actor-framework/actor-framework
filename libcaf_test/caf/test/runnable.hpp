@@ -265,6 +265,12 @@ public:
       return unbox_all(vals, std::index_sequence_for<Ts...>{});
   }
 
+  /// Returns the index of the current block in the list of block parameters.
+  /// When running an outline, the index corresponds to the current example.
+  size_t block_parameters_index() const {
+    return ctx_->example_id;
+  }
+
 #ifdef CAF_ENABLE_EXCEPTIONS
 
   /// Checks whether `expr()` throws an exception of type `Exception`.
