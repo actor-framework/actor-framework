@@ -48,22 +48,6 @@ config = [
                 'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wno-array-bounds -Wno-free-nonheap-object',
             ],
         ]],
-        ['centos-7', [ // EOL July 2024
-            numCores: 4,
-            tags: ['docker'],
-            builds: ['release'],
-            extraBuildFlags: [
-                'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized',
-            ],
-        ]],
-        ['debian-10', [ // EOL June 2024
-            numCores: 4,
-            tags: ['docker'],
-            builds: ['release'],
-            extraBuildFlags: [
-                'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized',
-            ],
-        ]],
         ['debian-11', [ // EOL June 2026
             numCores: 4,
             tags: ['docker'],
@@ -72,13 +56,12 @@ config = [
                 'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wno-deprecated-declarations',
             ],
         ]],
-        ['fedora-38', [ // EOL June 2024
+        ['debian-12', [ // EOL June 2028
             numCores: 4,
             tags: ['docker'],
             builds: ['release'],
             extraBuildFlags: [
-                'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wno-array-bounds',
-                'CAF_CXX_VERSION:STRING=23',
+                'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wno-array-bounds -Wno-free-nonheap-object',
             ],
         ]],
         ['fedora-39', [ // EOL November 2024
@@ -87,6 +70,15 @@ config = [
             builds: ['release'],
             extraBuildFlags: [
                 'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wno-array-bounds',
+            ],
+        ]],
+        ['fedora-40', [ // EOL May 2025
+            numCores: 4,
+            tags: ['docker'],
+            builds: ['release'],
+            extraBuildFlags: [
+                'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wno-uninitialized -Wno-array-bounds -Wno-free-nonheap-object',
+                'CAF_CXX_VERSION:STRING=23',
             ],
         ]],
         ['ubuntu-20.04', [ // April 2025
@@ -105,8 +97,16 @@ config = [
                 'CMAKE_CXX_FLAGS:STRING=-Werror',
             ],
         ]],
+        ['ubuntu-24.04', [ // April 2029
+            numCores: 4,
+            tags: ['docker'],
+            builds: ['release'],
+            extraBuildFlags: [
+                'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wno-array-bounds',
+            ],
+        ]],
         // Debug build with exceptions disabled.
-        ['fedora-39:no-exceptions', [
+        ['fedora-40:no-exceptions', [
             numCores: 4,
             tags: ['docker'],
             builds: ['debug'],
@@ -117,7 +117,7 @@ config = [
             ],
         ]],
         // Debug build for LeakSanitizer.
-        ['fedora-39:leak-checks', [
+        ['fedora-40:leak-checks', [
             numCores: 4,
             tags: ['docker', 'LeakSanitizer'],
             builds: ['debug'],
@@ -131,7 +131,7 @@ config = [
             ],
         ]],
         // Debug build with static libs, UBSan and hardening flags.
-        ['fedora-39:ub-checks', [
+        ['fedora-40:ub-checks', [
             numCores: 4,
             tags: ['docker', 'UBSanitizer'],
             builds: ['debug'],
