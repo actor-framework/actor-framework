@@ -10,6 +10,7 @@
 
 #include "caf/defaults.hpp"
 #include "caf/detail/assert.hpp"
+#include "caf/expected.hpp"
 #include "caf/log/net.hpp"
 
 namespace caf::net::octet_stream {

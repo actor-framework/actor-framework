@@ -36,10 +36,6 @@ public:
 
   ~connection();
 
-  // -- factories --------------------------------------------------------------
-
-  expected<connection> make(stream_socket fd);
-
   // -- native handles ---------------------------------------------------------
 
   /// Reinterprets `native_handle` as the native implementation type and takes
@@ -106,8 +102,30 @@ private:
   impl* pimpl_;
 };
 
-inline bool valid(const connection& conn) {
+} // namespace caf::net::ssl
+
+// -- free functions -----------------------------------------------------------
+
+namespace caf::net {
+
+/// Checks whether `conn` contains a valid socket.
+inline bool valid(const ssl::connection& conn) {
   return conn.valid();
 }
 
-} // namespace caf::net::ssl
+/// Tries to fill `buf` with data from the managed socket of `conn`.
+inline ptrdiff_t read(ssl::connection& conn, byte_span buf) {
+  return conn.read(buf);
+}
+
+/// Tries to write bytes from `buf` to the managed socket of `conn`.
+inline ptrdiff_t write(ssl::connection& conn, const_byte_span buf) {
+  return conn.write(buf);
+}
+
+/// Returns the socket ID of `conn`.
+inline socket_id get_socket_id(const ssl::connection& conn) noexcept {
+  return conn.fd().id;
+}
+
+} // namespace caf::net

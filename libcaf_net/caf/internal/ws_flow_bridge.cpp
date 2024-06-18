@@ -118,7 +118,12 @@ public:
   }
 
   error accept(const net::http::request_header& hdr) override {
-    auto wcs = wca_->accept(hdr);
+    CAF_ASSERT(wca_ != nullptr);
+    if (parent_ == nullptr) {
+      return make_error(sec::runtime_error,
+                        "WebSocket: called accept without setting a manager");
+    }
+    auto wcs = wca_->accept(hdr, parent_);
     if (!wcs) {
       return std::move(wcs.error());
     }
@@ -126,9 +131,14 @@ public:
     return {};
   }
 
+  void set_manager(socket_manager* parent) override {
+    parent_ = parent;
+  }
+
 private:
   detail::ws_conn_acceptor_ptr wca_;
   detail::ws_conn_starter_ptr wcs_;
+  socket_manager* parent_ = nullptr;
 };
 
 } // namespace

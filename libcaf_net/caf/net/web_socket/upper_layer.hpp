@@ -37,6 +37,9 @@ public:
   /// Asks the layer to accept a new client.
   /// @warning the server calls this function *before* calling `start`.
   virtual error accept(const http::request_header& hdr) = 0;
+
+  /// Initializes the server with a socket manager before calling `accept`.
+  virtual void set_manager(socket_manager* parent);
 };
 
 } // namespace caf::net::web_socket

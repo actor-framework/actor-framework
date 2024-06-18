@@ -43,6 +43,10 @@ public:
 
   context() = delete;
 
+  explicit context(std::nullptr_t) : pimpl_(nullptr) {
+    // nop
+  }
+
   context(context&& other);
 
   context& operator=(context&& other);
@@ -404,6 +408,26 @@ inline auto load_verify_file_if(dsl::arg::cstring path) {
   return [arg = std::move(path)](context ctx) {
     bool (context::*fn)(const char*) = &context::load_verify_file;
     return detail::ssl_ctx_chain_if(ctx, "load_verify_file failed", fn, arg);
+  };
+}
+
+/// @param password the stream socket for adding encryption.
+/// @returns a function object for chaining `expected<T>::and_then()`.
+inline auto use_password(dsl::arg::cstring password) {
+  return [password](auto ctx) -> expected<decltype(ctx)> {
+    if (password.has_value())
+      ctx.password(password.get());
+    return ctx;
+  };
+}
+
+/// @param password the stream socket for adding encryption.
+/// @returns a function object for chaining `expected<T>::and_then()`.
+inline auto use_password_if(dsl::arg::cstring password) {
+  return [password](auto ctx) -> expected<decltype(ctx)> {
+    if (password.has_value())
+      ctx.password(password.get());
+    return ctx;
   };
 }
 

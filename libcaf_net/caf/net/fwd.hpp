@@ -32,6 +32,7 @@ class actor_shell;
 class actor_shell_ptr;
 class middleman;
 class multiplexer;
+class socket_event_layer;
 class socket_manager;
 class this_host;
 

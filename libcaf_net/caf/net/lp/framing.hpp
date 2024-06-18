@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/net/fwd.hpp"
 #include "caf/net/lp/lower_layer.hpp"
 #include "caf/net/lp/upper_layer.hpp"
 #include "caf/net/octet_stream/upper_layer.hpp"
@@ -29,6 +30,14 @@ public:
   // -- factories --------------------------------------------------------------
 
   static std::unique_ptr<framing> make(upper_layer_ptr up);
+
+  static disposable run(multiplexer& mpx, stream_socket fd,
+                        async::consumer_resource<chunk> pull,
+                        async::producer_resource<chunk> push);
+
+  static disposable run(multiplexer& mpx, ssl::connection conn,
+                        async::consumer_resource<chunk> pull,
+                        async::producer_resource<chunk> push);
 };
 
 } // namespace caf::net::lp

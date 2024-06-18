@@ -5,19 +5,15 @@
 #pragma once
 
 #include "caf/net/fwd.hpp"
-#include "caf/net/socket.hpp"
-#include "caf/net/socket_event_layer.hpp"
 
-#include "caf/action.hpp"
-#include "caf/actor_system.hpp"
 #include "caf/detail/atomic_ref_counted.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/disposable.hpp"
-#include "caf/error.hpp"
 #include "caf/flow/coordinator.hpp"
 #include "caf/fwd.hpp"
 #include "caf/sec.hpp"
 
+#include <memory>
 #include <type_traits>
 
 namespace caf::net {

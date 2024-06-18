@@ -53,6 +53,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   stealing work from other workers in the relaxed polling state (#1866).
 - Fix handling of integer or boolean values as keys as well as lists as values
   in dictionaries when using the `json_builder`.
+- Calling `caf::chrono::datetime::to_local_time` will now properly interpret the
+  stored time as local time if no UTC offset is present.
 
 ### Removed
 
