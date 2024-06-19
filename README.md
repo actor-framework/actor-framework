@@ -1,22 +1,32 @@
-# CAF: the C++ Actor Framework
-
-CAF is an open source implementation of the actor model for C++ featuring
-lightweight & fast actor implementations, pattern matching for messages, network
-transparent messaging, and more.
-
 [![Gitter][gitter-badge]](https://gitter.im/actor-framework/chat)
 [![Documentation Status][docs-badge]](http://actor-framework.readthedocs.io/en/latest/?badge=latest)
 [![Coverage][coverage-badge]](https://codecov.io/gh/actor-framework/actor-framework)
 
+# What is CAF?
+
+CAF is an open source framework that offers a programming environment based on
+the [Actor Model](https://en.wikipedia.org/wiki/Actor_model) of computation
+combined with a [scalable](https://dl.acm.org/doi/10.1145/2541329.2541336),
+[native](https://www.sciencedirect.com/science/article/abs/pii/S1477842416000038)
+runtime environment that lets you build applications at a high level of
+abstraction without sacrificing performance. Whether you are targeting a single
+machine, a data center, or the cloud, CAF provides the necessary tools to
+implement robust, scalable, and maintainable software.
+
+CAF features lightweight & fast actor implementations, data flows, HTTP and
+WebSocket support, pattern matching for messages, metrics, distributed actors,
+and more. Professional support, training, and consulting are available from
+[Interance](https://www.interance.io), the company behind CAF.
+
 ## Online Resources
 
 * __Homepage__: https://www.actor-framework.org
-* __Developer Blog__: https://www.actor-framework.org/blog
-* __Guides and Tutorials__: https://www.cafcademy.com/articles
+* __Guides and Tutorials__: https://www.interance.io/learning
 * __Manual__: https://actor-framework.readthedocs.io
-* __Doxygen__: https://www.actor-framework.org/doxygen/
+* __Doxygen__: https://www.actor-framework.org/doxygen
+* __Developer Blog__: https://www.actor-framework.org/blog
 
-## Report Bugs / Get Help
+## Report Bugs and Get Help
 
 * __Open Issues on GitHub__: https://github.com/actor-framework/actor-framework/issues/new
 * __Ask Questions on StackOverflow__: https://stackoverflow.com/questions/ask?tags=c%2b%2b-actor-framework
@@ -26,7 +36,7 @@ transparent messaging, and more.
 * __Chat__: https://gitter.im/actor-framework/chat
 * __Mastodon__: https://fosstodon.org/@caf
 * __Twitter__: https://twitter.com/actor_framework
-* __User Mailing List__: https://groups.google.com/d/forum/actor-framework
+* __Mailing List__: https://groups.google.com/d/forum/actor-framework
 
 ## Get CAF
 
@@ -71,25 +81,23 @@ make install [as root, optional]
 ### Using CMake
 
 To generate a Makefile for building CAF with default settings, either use a
-CMake GUI or perform these steps on the command line:
+CMake GUI or perform this step on the command line:
 
 ```sh
-mkdir build
-cd build
-cmake ..
+cmake -S <path-to-caf-sources> -B build
 ```
 
 After this step, `cmake -LH` prints the most useful configuration options for
 CAF, their default value, and a helptext.
 
 Other CMake projects can add CAF as a dependency by using `find_package` and
-listing the required modules (e.g., `core` or `io`) . When installing CAF to a
+listing the required modules (e.g., `core` or `net`) . When installing CAF to a
 non-standard location, set `CAF_ROOT` prior to calling `find_package`.
 
 ## Dependencies
 
 * CMake (for building CAF)
-* OpenSSL (only when building the OpenSSL module)
+* OpenSSL (when building the `openssl` or `net` module)
 
 ## Supported Platforms
 
