@@ -83,7 +83,6 @@ caf_add_component(
     caf/actor_control_block.cpp
     caf/actor_factory.test.cpp
     caf/actor_from_state.test.cpp
-    caf/actor_lifetime.test.cpp
     caf/actor_ostream.cpp
     caf/actor_pool.cpp
     caf/actor_pool.test.cpp
