@@ -1,4 +1,4 @@
-FROM debian:10
+FROM ubuntu:24.04
 
 COPY ./robot/dependencies.txt .
 
@@ -12,6 +12,7 @@ RUN apt update -y \
          make \
          python3 \
          python3-pip \
+         python3-venv \
     && apt autoclean
 
-RUN python3 -m pip install -r dependencies.txt
+RUN python3 -m pip install -r dependencies.txt --break-system-packages
