@@ -132,13 +132,13 @@ public:
     rsn = self_->fail_state();
 #endif
     self_->cleanup(std::move(rsn), ctx);
-    intrusive_ptr_release(self_->ctrl());
+    [[maybe_unused]] auto id = self_->id();
     auto& sys = self_->system();
+    intrusive_ptr_release(self_->ctrl());
     sys.release_private_thread(thread_);
     if (!hidden_) {
       [[maybe_unused]] auto count = sys.registry().dec_running();
-      log::system::debug("actor {} decreased running count to {}", self_->id(),
-                         count);
+      log::system::debug("actor {} decreased running count to {}", id, count);
     }
     return resumable::done;
   }
