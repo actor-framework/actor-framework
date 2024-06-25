@@ -8,6 +8,7 @@
 #include "caf/caf_main.hpp"
 #include "caf/chunk.hpp"
 #include "caf/event_based_actor.hpp"
+#include "caf/flow/string.hpp"
 #include "caf/scheduled_actor/flow.hpp"
 #include "caf/span.hpp"
 #include "caf/uuid.hpp"
@@ -55,16 +56,18 @@ struct config : caf::actor_system_config {
 
 int caf_main(caf::actor_system& sys, const config& cfg) {
   // Read the configuration.
-  auto use_ssl = caf::get_or(cfg, "tls.enable", false);
   auto port = caf::get_or(cfg, "port", default_port);
   auto host = caf::get_or(cfg, "host", default_host);
   auto name = caf::get_or(cfg, "name", default_name);
+  auto use_ssl = caf::get_or(cfg, "tls.enable", false);
   auto ca_file = caf::get_as<std::string>(cfg, "tls.ca-file");
   if (name.empty()) {
     sys.println("*** mandatory parameter 'name' missing or empty");
     return EXIT_FAILURE;
   }
   // Connect to the server.
+  auto [line_producer, line_pull]
+    = caf::async::make_blocking_producer<caf::chunk>();
   auto conn
     = caf::net::lp::with(sys)
         // Optionally enable TLS.
@@ -77,8 +80,9 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
         .retry_delay(1s)
         .max_retry_count(9)
         // After connecting, spin up a worker that prints received inputs.
-        .start([&sys, name](auto pull, auto push) {
-          sys.spawn([pull](caf::event_based_actor* self) {
+        .start([&sys, lpull = line_pull](auto pull, auto push) {
+          sys.spawn([lpull, pull, push](caf::event_based_actor* self) {
+            // Read from the server and print each line.
             pull
               .observe_on(self) //
               .do_on_error([self](const caf::error& err) {
@@ -100,29 +104,27 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
                   self->println("<non-ascii-data of size {}>", bytes.size());
                 }
               });
-          });
-          // Spin up a second worker that reads from std::cin and sends each
-          // line to the server. Put that to its own thread since it's doing
-          // blocking I/O calls.
-          sys.spawn<caf::detached>([push, name] {
-            auto lines = caf::async::make_blocking_producer(push);
-            assert(lines);
-            auto line = std::string{};
-            auto prefix = name + ": ";
-            while (std::getline(std::cin, line)) {
-              line.insert(line.begin(), prefix.begin(), prefix.end());
-              lines->push(lp::frame{caf::as_bytes(caf::make_span(line))});
-              line.clear();
-            }
+            // Read what the users types and send it to the server.
+            lpull.observe_on(self)
+              .do_finally([self] { self->quit(); })
+              .subscribe(push);
           });
         });
+  // Report any error to the user.
   if (!conn) {
     sys.println("*** unable to connect to {} on port {}: {}", host, port,
                 conn.error());
     return EXIT_FAILURE;
   }
-  // Note: the actor system will keep the application running for as long as the
-  // workers are still alive.
+  // Send each line to the server and stop if stdin closes or on an empty line.
+  auto line = std::string{};
+  auto prefix = name + ": ";
+  while (std::getline(std::cin, line)) {
+    line.insert(line.begin(), prefix.begin(), prefix.end());
+    line_producer.push(caf::chunk{caf::as_bytes(caf::make_span(line))});
+    line.clear();
+  }
+  sys.println("*** shutting down");
   return EXIT_SUCCESS;
 }
 
