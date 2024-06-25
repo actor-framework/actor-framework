@@ -1,5 +1,5 @@
 *** Settings ***
-Documentation       A test suite for examples/octet_stream/key-value-store 
+Documentation       A test suite for examples/octet_stream/key-value-store
 
 Library             Process
 Library             String
@@ -15,20 +15,22 @@ ${SERVER_PORT}      55520
 ${SERVER_PATH}      /path/to/the/server
 ${CLIENT_PATH}      /path/to/the/client
 
-${FIRST_CLIENT_INPUT}         { "type": "put", "key": "A", "value": "26" }\n{ "type": "get", "key": "A" }\n{ "type": "del", "key": "A" }\n{ "type": "get", "key": "A" }     
+${FIRST_CLIENT_INPUT}         { "type": "put", "key": "A", "value": "26" }\n{ "type": "get", "key": "A" }\n{ "type": "del", "key": "A" }\n{ "type": "get", "key": "A" }\n
 ${FIRST_CLIENT_BASELINE}      reply: \nreply: 26\nreply: 26\nreply: {"error":"no_such_key"}
-${SECOND_CLIENT_INPUT}        { "type": "get", "key": "A" }\n{ "type": "put", "key": "B", "value": "27" }\n{ "type": "get", "key": "B" }\n{ "type": "del", "key": "B" }\n{ "type": "get", "key": "B" }      
-${SECOND_CLIENT_BASELINE}     reply: {"error":"no_such_key"}\nreply: \nreply: 27\nreply: 27\nreply: {"error":"no_such_key"}    
+${SECOND_CLIENT_INPUT}        { "type": "get", "key": "A" }\n{ "type": "put", "key": "B", "value": "27" }\n{ "type": "get", "key": "B" }\n{ "type": "del", "key": "B" }\n{ "type": "get", "key": "B" }\n
+${SECOND_CLIENT_BASELINE}     reply: {"error":"no_such_key"}\nreply: \nreply: 27\nreply: 27\nreply: {"error":"no_such_key"}
 
 
 *** Test Cases ***
-Server stores key values for client independently
+The server can handle multiple clients
     Start Text Client  ${FIRST_CLIENT_INPUT}
-    Wait For Client    ${1}
+    ${c1}=  Wait For Client    ${1}
     Wait Until Contains Baseline  ${FIRST_CLIENT_BASELINE}  text-store.out
-    Start Text Client  ${SECOND_CLIENT_INPUT}
+    Terminate Process  ${c1}
+    ${c2}=  Start Text Client  ${SECOND_CLIENT_INPUT}
     Wait For Client    ${2}
     Wait Until Contains Baseline  ${SECOND_CLIENT_BASELINE}  text-store.out
+    Terminate Process  ${c2}
 
 
 *** Keywords ***
@@ -43,13 +45,20 @@ Start Key Value Store Server
 
 Start Text Client
     [Arguments]   ${stdin}
-    Start Process
+    ${hdl}=  Start Process
     ...  ${CLIENT_PATH}
     ...  -p    ${SERVER_PORT}
     ...  --caf.logger.file.path  text-store.log
-    ...  stdin=${stdin}
+    ...  stdin=PIPE
     ...  stdout=text-store.out
     ...  stderr=text-store.err
+    # Note: we can't pass ${stdin} directly as stdin=${stdin} because this would
+    # close stdin immediately after the process has read the input. This would
+    # in turn cause the process to exit immediately without waiting for the
+    # server to respond.
+    Evaluate  $hdl.stdin.write($stdin.encode())
+    Evaluate  $hdl.stdin.flush()
+    [Return]  ${hdl}
 
 Has Baseline
     [Arguments]     ${baseline}   ${file_path}
