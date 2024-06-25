@@ -3,11 +3,11 @@
 #include "caf/actor_ostream.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/caf_main.hpp"
+#include "caf/raise_error.hpp"
 #include "caf/scoped_actor.hpp"
 #include "caf/type_id.hpp"
 
 #include <cassert>
-#include <iostream>
 #include <memory>
 #include <utility>
 
@@ -220,13 +220,13 @@ shape_ptr serialization_roundtrip(const shape_ptr& in) {
   caf::byte_buffer buf;
   caf::binary_serializer sink{buf};
   if (!sink.apply(in)) {
-    std::cerr << "failed to serialize shape!\n";
+    CAF_RAISE_ERROR("failed to serialize shape!");
     return nullptr;
   }
   shape_ptr out;
   caf::binary_deserializer source{buf};
   if (!source.apply(out)) {
-    std::cerr << "failed to deserialize shape!\n";
+    CAF_RAISE_ERROR("failed to deserialize shape!");
     return nullptr;
   }
   return out;

@@ -5,8 +5,6 @@
 #include "caf/event_based_actor.hpp"
 #include "caf/scheduled_actor/flow.hpp"
 
-#include <iostream>
-
 namespace {
 
 constexpr size_t default_num_values = 10;
@@ -41,7 +39,7 @@ void caf_main(caf::actor_system& sys, const config& cfg) {
     // Switch to `snk` for further processing.
     .observe_on(snk)
     // Print each integer.
-    .for_each([](int x) { std::cout << x << std::endl; });
+    .for_each([snk = snk](int x) { snk->println("{}", x); });
   // Allow the actors to run. After this point, we may no longer dereference
   // the `src` and `snk` pointers! Calling these manually is optional. When
   // removing these two lines, CAF automatically launches the actors at scope

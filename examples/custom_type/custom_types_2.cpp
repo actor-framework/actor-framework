@@ -4,7 +4,6 @@
 #include "caf/all.hpp"
 #include "caf/anon_mail.hpp"
 
-#include <iostream>
 #include <utility>
 
 class foo;
@@ -14,10 +13,6 @@ CAF_BEGIN_TYPE_ID_BLOCK(custom_types_2, first_custom_type_id)
   CAF_ADD_TYPE_ID(custom_types_2, (foo))
 
 CAF_END_TYPE_ID_BLOCK(custom_types_2)
-
-using std::cout;
-using std::endl;
-using std::make_pair;
 
 using namespace caf;
 

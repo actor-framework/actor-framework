@@ -13,7 +13,6 @@
 #include <cassert>
 #include <chrono>
 #include <iomanip>
-#include <iostream>
 #include <numeric>
 #include <vector>
 
@@ -164,7 +163,6 @@ std::ostream& operator<<(std::ostream& out, const expected<int>& x) {
 }
 
 int caf_main(actor_system& sys) {
-  using std::cout;
   // Spawn our matrix.
   static constexpr size_t rows = 3;
   static constexpr size_t columns = 6;

@@ -7,6 +7,7 @@
 #include "caf/config.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/type_traits.hpp"
+#include "caf/fwd.hpp"
 
 #include <algorithm>
 #include <limits>
@@ -92,5 +93,8 @@ CAF_CORE_EXPORT bool starts_with(std::string_view str, std::string_view prefix);
 
 /// Returns whether `str` ends with `suffix`.
 CAF_CORE_EXPORT bool ends_with(std::string_view str, std::string_view suffix);
+
+/// Returns a string representation of `bytes` in hexadecimal notation.
+CAF_CORE_EXPORT std::string to_hex_str(const_byte_span bytes);
 
 } // namespace caf

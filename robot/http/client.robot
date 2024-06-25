@@ -25,8 +25,7 @@ ${RES2}=            SEPARATOR=\n
 ...                 - Server: HttpCtrl.Server/
 ...                 - Date:
 ...                 - Content-Length: 25
-...                 Payload:
-...                 { "status": "accepted" }
+...                 Payload: { "status": "accepted" }
 ...                 ${EMPTY}
 
 ${RES3}=            SEPARATOR=\n
@@ -36,7 +35,7 @@ ${RES3}=            SEPARATOR=\n
 ...                 - Date:
 ...                 - Content-Length: 8
 ...                 Payload:
-...                 ff00ff00ff00ff00
+...                 FF00FF00FF00FF00
 
 
 *** Test Cases ***

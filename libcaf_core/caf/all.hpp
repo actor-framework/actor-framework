@@ -213,8 +213,8 @@
 ///
 /// ~~
 /// {
-///   [](hello_atom, const std::string& msg) {
-///     cout << "received hello message: " << msg << endl;
+///   [&self](hello_atom, const std::string& msg) {
+///     self->println("received hello message: {}", msg);
 ///   },
 ///   [](compute_atom, int i0, int i1, int i2) {
 ///     // send our result back to the sender of this messages
@@ -228,8 +228,8 @@
 ///
 /// ~~
 /// self->receive(
-///  [](result_atom, int i) {
-///    cout << "result is: " << i << endl;
+///  [&self](result_atom, int i) {
+///    self->println("result is: {}", i);
 ///  }
 /// );
 /// ~~

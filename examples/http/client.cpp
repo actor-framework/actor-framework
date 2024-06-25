@@ -20,7 +20,6 @@
 
 #include <cassert>
 #include <csignal>
-#include <iostream>
 #include <memory>
 #include <utility>
 
@@ -62,12 +61,12 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
   // Get URI from config (positional argument).
   auto remainder = cfg.remainder();
   if (remainder.size() != 1) {
-    std::cerr << "*** expected mandatory positional argument: URL" << std::endl;
+    sys.println("*** expected mandatory positional argument: URL");
     return EXIT_FAILURE;
   }
   uri resource;
   if (auto err = parse(remainder[0], resource)) {
-    std::cerr << "*** failed to parse URI: " << to_string(err) << std::endl;
+    sys.println("*** failed to parse URI: {} ", err);
     return EXIT_FAILURE;
   }
   auto ca_file = caf::get_as<std::string>(cfg, "tls.ca-file");
@@ -91,24 +90,21 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
         .add_header_field("User-Agent", "CAF-Client")
         .request(method, payload);
   if (!result) {
-    std::cerr << "*** Failed to initiate connection: "
-              << to_string(result.error()) << std::endl;
+    sys.println("*** Failed to initiate connection: {}", result.error());
     return EXIT_FAILURE;
   }
   sys.spawn([res = result->first](event_based_actor* self) {
     res.bind_to(self).then(
-      [](const http::response& r) {
-        std::cout << "Server responded with HTTP "
-                  << detail::to_underlying(r.code()) << ": " << phrase(r.code())
-                  << std::endl;
-        std::cout << "Header fields:" << std::endl;
+      [self](const http::response& r) {
+        self->println("Server responded with HTTP {}: {}",
+                      static_cast<uint16_t>(r.code()), phrase(r.code()));
+        self->println("Header fields:");
         for (const auto& [key, value] : r.header_fields())
-          std::cout << "- " << key << ": " << value << std::endl;
+          self->println("- {}: {}", key, value);
         if (r.body().empty())
           return;
-        std::cout << "Payload:" << std::endl;
         if (is_valid_utf8(r.body())) {
-          std::cout << to_string_view(r.body()) << std::endl;
+          self->println("Payload: {}", to_string_view(r.body()));
         } else {
           auto split_at = [](const_byte_span bytes, size_t at) {
             if (bytes.size() > at)
@@ -116,18 +112,17 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
             return std::pair{bytes, const_byte_span{}};
           };
           // Print 8 bytes per row in hex.
+          self->println("Payload:");
           auto bytes = r.body();
           const_byte_span row;
           while (!bytes.empty()) {
             std::tie(row, bytes) = split_at(bytes, 8);
-            for (auto byte : row)
-              printf("%02x", std::to_integer<int>(byte));
-            std::cout << std::endl;
+            self->println("{}", to_hex_str(row));
           }
         }
       },
-      [](const error& err) {
-        std::cerr << "*** HTTP request failed: " << to_string(err) << std::endl;
+      [self](const error& err) {
+        self->println("*** HTTP request failed: {}", err);
       });
   });
   return EXIT_SUCCESS;

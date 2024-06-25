@@ -97,9 +97,14 @@ bool inspect(Inspector& f, command& x) {
 
 // -- constants ----------------------------------------------------------------
 
+// Configures the port for the server to listen on.
 static constexpr uint16_t default_port = 7788;
 
+// Configures the maximum number of concurrent connections.
 static constexpr size_t default_max_connections = 128;
+
+// Configures the maximum number of buffered messages per connection.
+static constexpr size_t max_outstanding_messages = 10;
 
 // -- configuration setup ------------------------------------------------------
 
@@ -260,7 +265,9 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
                     })
                     .as_observable();
                 })
-                // ... and then pushes the results back to the client.
+                // ... disconnects if the client is too slow ...
+                .on_backpressure_buffer(max_outstanding_messages)
+                // ... and pushes the results back to the client as bytes.
                 .transform(caf::flow::string::to_chars("\n"))
                 .map([](char ch) { return static_cast<std::byte>(ch); })
                 .subscribe(push);

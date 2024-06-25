@@ -3,7 +3,6 @@
 
 #include "caf/all.hpp"
 
-#include <iostream>
 #include <utility>
 
 class foo;
@@ -13,10 +12,6 @@ CAF_BEGIN_TYPE_ID_BLOCK(custom_types_3, first_custom_type_id)
   CAF_ADD_TYPE_ID(custom_types_3, (foo))
 
 CAF_END_TYPE_ID_BLOCK(custom_types_3)
-
-using std::cout;
-using std::endl;
-using std::make_pair;
 
 using namespace caf;
 

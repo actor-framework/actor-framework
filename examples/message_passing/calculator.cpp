@@ -12,9 +12,6 @@
 #include "caf/scoped_actor.hpp"
 #include "caf/typed_actor.hpp"
 
-#include <iostream>
-
-using std::endl;
 using namespace caf;
 
 // --(rst-calculator-actor-begin)--
