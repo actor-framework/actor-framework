@@ -27,10 +27,16 @@ using namespace std::literals;
 
 // -- constants ----------------------------------------------------------------
 
+// Configures the port for the server to listen on.
 static constexpr uint16_t default_port = 8080;
 
+// Configures the maximum number of concurrent connections.
 static constexpr size_t default_max_connections = 128;
 
+// Configures the maximum number of buffered messages per connection.
+static constexpr size_t max_outstanding_messages = 10;
+
+// Configures the update interval for the stock ticker.
 static constexpr caf::timespan default_interval = 1s;
 
 // -- custom types -------------------------------------------------------------
@@ -113,7 +119,9 @@ struct random_feed_state {
             self->println("*** removed listener (n = {})", --*n);
           })
           .subscribe(std::ignore);
-        feed.subscribe(push);
+        // Forward the quotes to the client and disconnect if the client is too
+        // slow to keep up with the feed.
+        feed.on_backpressure_buffer(max_outstanding_messages).subscribe(push);
       });
   }
 

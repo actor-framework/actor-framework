@@ -19,9 +19,14 @@ namespace lp = caf::net::lp;
 
 // -- constants ----------------------------------------------------------------
 
+// Configures the port for the server to listen on.
 static constexpr uint16_t default_port = 7788;
 
+// Configures the maximum number of concurrent connections.
 static constexpr size_t default_max_connections = 128;
+
+// Configures the maximum number of buffered messages per connection.
+static constexpr size_t max_outstanding_messages = 10;
 
 // -- configuration setup ------------------------------------------------------
 
@@ -81,6 +86,8 @@ void worker_impl(caf::event_based_actor* self,
             // Remove the server-internal UUID.
             return msg.second;
           })
+          // Disconnect if the client is too slow.
+          .on_backpressure_buffer(max_outstanding_messages)
           .subscribe(push);
         // Feed messages from the `pull` end into the central merge point.
         auto inputs //
