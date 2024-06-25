@@ -8,7 +8,6 @@
 #include "caf/mail_cache.hpp"
 
 #include <chrono>
-#include <iostream>
 #include <map>
 #include <sstream>
 #include <thread>
@@ -23,9 +22,6 @@ CAF_BEGIN_TYPE_ID_BLOCK(dining_philosophers, first_custom_type_id)
   CAF_ADD_ATOM(dining_philosophers, think_atom)
 
 CAF_END_TYPE_ID_BLOCK(dining_philosophers)
-
-using std::cerr;
-using std::endl;
 
 using namespace caf;
 using namespace std::literals;
@@ -51,7 +47,9 @@ struct chopstick_state {
         self->become(keep_behavior, taken(self->current_sender()));
         return {taken_atom_v, true};
       },
-      [](put_atom) { cerr << "chopstick received unexpected 'put'" << endl; },
+      [this](put_atom) {
+        self->println("chopstick received unexpected 'put'");
+      },
     };
   }
 

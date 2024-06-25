@@ -5,7 +5,6 @@
 #include "caf/caf_main.hpp"
 #include "caf/event_based_actor.hpp"
 
-#include <iostream>
 #include <string>
 
 using namespace caf;

@@ -10,7 +10,6 @@
 
 #include <chrono>
 #include <cstdint>
-#include <iostream>
 #include <vector>
 
 using std::endl;

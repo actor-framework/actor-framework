@@ -12,7 +12,6 @@
 #include "caf/scheduled_actor/flow.hpp"
 #include "caf/uuid.hpp"
 
-#include <iostream>
 #include <utility>
 
 namespace lp = caf::net::lp;
@@ -61,10 +60,9 @@ void worker_impl(caf::event_based_actor* self,
   auto messages = pub.as_observable().merge().share();
   // Have one subscription for debug output. This also makes sure that the
   // shared observable stays subscribed to the merger.
-  messages.for_each([](const message_t& msg) {
+  messages.for_each([self](const message_t& msg) {
     const auto& [conn, frame] = msg;
-    std::cout << "*** got message of size " << frame.size() << " from "
-              << to_string(conn) << std::endl;
+    self->println("*** got message of size {} from {}", frame.size(), conn);
   });
   // Connect the flows for each incoming connection.
   events
@@ -73,8 +71,7 @@ void worker_impl(caf::event_based_actor* self,
       [self, messages, pub = std::move(pub)](const auto& event) mutable {
         // Each connection gets a unique ID.
         auto conn = caf::uuid::random();
-        std::cout << "*** accepted new connection " << to_string(conn)
-                  << std::endl;
+        self->println("*** accepted new connection {}", conn);
         auto& [pull, push] = event.data();
         // Subscribe the `push` end to the central merge point.
         messages
@@ -92,14 +89,13 @@ void worker_impl(caf::event_based_actor* self,
         // Feed messages from the `pull` end into the central merge point.
         auto inputs //
           = pull.observe_on(self)
-              .do_on_error([](const caf::error& err) {
-                std::cout << "*** connection error: " << to_string(err)
-                          << std::endl;
+              .do_on_error([self](const caf::error& err) {
+                self->println("*** connection error: {}", err);
               })
               .on_error_complete() // Cary on if a connection breaks.
-              .do_on_complete([conn] {
-                std::cout << "*** lost connection " << to_string(conn)
-                          << std::endl;
+              .do_on_complete([self, conn] {
+                // But still log when a connection is lost.
+                self->println("*** lost connection {}", conn);
               })
               .map([conn](const lp::frame& frame) {
                 return message_t{conn, frame};
@@ -121,7 +117,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
   auto max_connections = caf::get_or(cfg, "max-connections",
                                      default_max_connections);
   if (!key_file != !cert_file) {
-    std::cerr << "*** inconsistent TLS config: declare neither file or both\n";
+    sys.println("*** inconsistent TLS config: declare neither file or both");
     return EXIT_FAILURE;
   }
   // Open up a TCP port for incoming connections and start the server.
@@ -140,11 +136,10 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
         .start([&sys](auto accept_events) {
           sys.spawn(worker_impl, std::move(accept_events));
         });
-  std::cout << "*** server started" << std::endl;
+  sys.println("*** server started");
   // Report any error to the user.
   if (!server) {
-    std::cerr << "*** unable to run at port " << port << ": "
-              << to_string(server.error()) << '\n';
+    sys.println("*** unable to run at port {}: {}", port, server.error());
     return EXIT_FAILURE;
   }
   // Note: the actor system will keep the application running for as long as the

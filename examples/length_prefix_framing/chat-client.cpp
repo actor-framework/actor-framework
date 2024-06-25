@@ -61,7 +61,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
   auto name = caf::get_or(cfg, "name", default_name);
   auto ca_file = caf::get_as<std::string>(cfg, "tls.ca-file");
   if (name.empty()) {
-    std::cerr << "*** mandatory parameter 'name' missing or empty\n";
+    sys.println("*** mandatory parameter 'name' missing or empty");
     return EXIT_FAILURE;
   }
   // Connect to the server.
@@ -81,26 +81,23 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
           sys.spawn([pull](caf::event_based_actor* self) {
             pull
               .observe_on(self) //
-              .do_on_error([](const caf::error& err) {
-                std::cout << "*** connection error: " << to_string(err)
-                          << std::endl;
+              .do_on_error([self](const caf::error& err) {
+                self->println("*** connection error: {}", err);
               })
               .do_finally([self] {
-                std::cout << "*** lost connection to server -> quit\n"
-                             "*** use CTRL+D or CTRL+C to terminate"
-                          << std::endl;
+                self->println("*** lost connection to server -> quit");
+                self->println("*** use CTRL+D or CTRL+C to terminate");
                 self->quit();
               })
-              .for_each([](const lp::frame& frame) {
+              .for_each([self](const lp::frame& frame) {
                 // Interpret the bytes as ASCII characters.
                 auto bytes = frame.bytes();
                 auto str = std::string_view{
                   reinterpret_cast<const char*>(bytes.data()), bytes.size()};
                 if (std::all_of(str.begin(), str.end(), ::isprint)) {
-                  std::cout << str << std::endl;
+                  self->println("{}", str);
                 } else {
-                  std::cout << "<non-ascii-data of size " << bytes.size() << ">"
-                            << std::endl;
+                  self->println("<non-ascii-data of size {}>", bytes.size());
                 }
               });
           });
@@ -120,8 +117,8 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
           });
         });
   if (!conn) {
-    std::cerr << "*** unable to connect to " << host << ":" << port << ": "
-              << to_string(conn.error()) << '\n';
+    sys.println("*** unable to connect to {} on port {}: {}", host, port,
+                conn.error());
     return EXIT_FAILURE;
   }
   // Note: the actor system will keep the application running for as long as the

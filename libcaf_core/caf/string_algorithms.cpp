@@ -4,6 +4,9 @@
 
 #include "caf/string_algorithms.hpp"
 
+#include "caf/detail/append_hex.hpp"
+#include "caf/span.hpp"
+
 namespace caf {
 
 namespace {
@@ -111,6 +114,12 @@ bool ends_with(std::string_view str, std::string_view suffix) {
   auto n = str.size();
   auto m = suffix.size();
   return n >= m ? str.compare(n - m, m, suffix) == 0 : false;
+}
+
+std::string to_hex_str(const_byte_span bytes) {
+  std::string result;
+  detail::append_hex(result, bytes.data(), bytes.size());
+  return result;
 }
 
 } // namespace caf
