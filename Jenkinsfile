@@ -21,7 +21,7 @@ config = [
         'CAF_ENABLE_RUNTIME_CHECKS:BOOL=ON',
     ],
     // Our build matrix. Keys are the operating system labels and values are build configurations.
-    // Note on no-maybe-uninitialized: old GCC versions have a weird bug that causes false positives.
+    // Note on no-maybe-uninitialized: some GCC versions have weird bugs that causes false positives.
     buildMatrix: [
         // Release builds.
         ['almalinux-8', [ // EOL: June 2029
@@ -37,7 +37,7 @@ config = [
             tags: ['docker'],
             builds: ['release'],
             extraBuildFlags: [
-                'CMAKE_CXX_FLAGS:STRING=-Werror',
+                'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized',
             ],
         ]],
         ['alpinelinux-3.18', [ // EOL: May 2025
@@ -94,7 +94,7 @@ config = [
             tags: ['docker'],
             builds: ['release'],
             extraBuildFlags: [
-                'CMAKE_CXX_FLAGS:STRING=-Werror',
+                'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized',
             ],
         ]],
         ['ubuntu-24.04', [ // April 2029
