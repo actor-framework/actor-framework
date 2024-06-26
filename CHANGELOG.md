@@ -5,6 +5,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ## [Unreleased]
 
+
+## [1.0.0] - 2024-06-26
+
 ### Added
 
 - The actor system now offers a `println` convenience function for printing to
@@ -1325,7 +1328,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Setting the log level to `quiet` now properly suppresses any log output.
 - Configuring colored terminal output should now print colored output.
 
-[Unreleased]: https://github.com/actor-framework/actor-framework/compare/0.19.5...main
+[Unreleased]: https://github.com/actor-framework/actor-framework/compare/1.1.0...main
+[1.0.0]: https://github.com/actor-framework/actor-framework/releases/1.0.0
 [0.19.5]: https://github.com/actor-framework/actor-framework/releases/0.19.5
 [0.19.4]: https://github.com/actor-framework/actor-framework/releases/0.19.4
 [0.19.3]: https://github.com/actor-framework/actor-framework/releases/0.19.3
