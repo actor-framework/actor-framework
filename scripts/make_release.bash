@@ -129,10 +129,10 @@ fi
 # assumed files
 token_path="$HOME/.github-oauth-token"
 github_msg="github_release_note.md"
-config_hpp_path="libcaf_core/caf/config.hpp"
+main_cmake_path="CMakeLists.txt"
 
 # check whether all expected files and directories exist
-assert_exists "$token_path" "$config_hpp_path"
+assert_exists "$token_path" "$main_cmake_path"
 
 # check for a clean state
 assert_exists_not .make-release-steps.bash
@@ -170,17 +170,17 @@ echo "\
 set -e
 " > .make-release-steps.bash
 
-echo ">>> patching config.hpp"
-sed "s/#define CAF_VERSION [0-9]*/#define CAF_VERSION ${version_str}/g" < "$config_hpp_path" > .tmp_conf_hpp
+echo ">>> patching $main_cmake_path"
+sed "s/CAF VERSION [0-9.]*/CAF VERSION $1/g" < "$main_cmake_path" > .tmp_cmake_lists
 
 # check whether the version actually changed
-if cmp --silent .tmp_conf_hpp "$config_hpp_path" ; then
-  rm .tmp_conf_hpp
-  ask_permission "version already matches in config.hpp, continue pushing tag [y] or abort [n]?"
+if cmp --silent .tmp_cmake_lists "$main_cmake_path" ; then
+  rm .tmp_cmake_lists
+  ask_permission "version already matches in $main_cmake_path, continue pushing tag [y] or abort [n]?"
 else
-  mv .tmp_conf_hpp "$config_hpp_path"
+  mv .tmp_cmake_lists "$main_cmake_path"
   echo ; echo
-  echo ">>> please review the diff reported by Git for patching config.hpp:"
+  echo ">>> please review the diff reported by Git for patching $main_cmake_path:"
   git diff
   echo ; echo
   ask_permission "type [n] to abort or [y] to proceed"
