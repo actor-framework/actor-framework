@@ -1,26 +1,24 @@
-// Simple chat server with a binary protocol.
+// A client for a line-based text protocol over TCP.
 
-#include "caf/net/lp/with.hpp"
 #include "caf/net/middleman.hpp"
+#include "caf/net/octet_stream/with.hpp"
 
-#include "caf/actor_system.hpp"
-#include "caf/actor_system_config.hpp"
+#include "caf/actor_from_state.hpp"
+#include "caf/anon_mail.hpp"
+#include "caf/async/blocking_producer.hpp"
+#include "caf/async/spsc_buffer.hpp"
 #include "caf/caf_main.hpp"
-#include "caf/chunk.hpp"
-#include "caf/event_based_actor.hpp"
+#include "caf/flow/byte.hpp"
 #include "caf/flow/string.hpp"
+#include "caf/json_reader.hpp"
 #include "caf/scheduled_actor/flow.hpp"
-#include "caf/span.hpp"
-#include "caf/uuid.hpp"
 
-#include <cassert>
+#include <csignal>
+#include <cstdint>
 #include <iostream>
-#include <utility>
+#include <string>
 
 using namespace std::literals;
-
-namespace lp = caf::net::lp;
-namespace ssl = caf::net::ssl;
 
 // -- constants ----------------------------------------------------------------
 
@@ -28,26 +26,22 @@ static constexpr uint16_t default_port = 7788;
 
 static constexpr std::string_view default_host = "localhost";
 
-static constexpr std::string_view default_name = "";
-
 // -- configuration setup ------------------------------------------------------
 
 struct config : caf::actor_system_config {
   config() {
     opt_group{custom_options_, "global"} //
-      .add<uint16_t>("port,p", "port of the server")
-      .add<std::string>("host,H", "host of the server")
-      .add<std::string>("name,n", "set name");
+      .add<std::string>("host,h", "server host")
+      .add<uint16_t>("port,p", "port to listen for incoming connections");
     opt_group{custom_options_, "tls"} //
-      .add<bool>("enable", "enables encryption via TLS")
+      .add<bool>("enable,t", "enables encryption via TLS")
       .add<std::string>("ca-file", "CA file for trusted servers");
   }
 
   caf::settings dump_content() const override {
     auto result = actor_system_config::dump_content();
-    caf::put_missing(result, "port", default_port);
     caf::put_missing(result, "host", default_host);
-    caf::put_missing(result, "name", default_name);
+    caf::put_missing(result, "port", default_port);
     return result;
   }
 };
@@ -55,23 +49,19 @@ struct config : caf::actor_system_config {
 // -- main ---------------------------------------------------------------------
 
 int caf_main(caf::actor_system& sys, const config& cfg) {
+  namespace ssl = caf::net::ssl;
   // Read the configuration.
   auto port = caf::get_or(cfg, "port", default_port);
   auto host = caf::get_or(cfg, "host", default_host);
-  auto name = caf::get_or(cfg, "name", default_name);
-  auto use_ssl = caf::get_or(cfg, "tls.enable", false);
+  auto use_tls = caf::get_or(cfg, "tls.enable", false);
   auto ca_file = caf::get_as<std::string>(cfg, "tls.ca-file");
-  if (name.empty()) {
-    sys.println("*** mandatory parameter 'name' missing or empty");
-    return EXIT_FAILURE;
-  }
   // Connect to the server.
   auto [line_producer, line_pull]
-    = caf::async::make_blocking_producer<caf::chunk>();
+    = caf::async::make_blocking_producer<caf::cow_string>();
   auto conn
-    = caf::net::lp::with(sys)
+    = caf::net::octet_stream::with(sys)
         // Optionally enable TLS.
-        .context(ssl::context::enable(use_ssl)
+        .context(ssl::context::enable(use_tls)
                    .and_then(ssl::emplace_client(ssl::tls::v1_2))
                    .and_then(ssl::load_verify_file_if(ca_file)))
         // Connect to "$host:$port".
@@ -82,46 +72,39 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
         // After connecting, spin up a worker that prints received inputs.
         .start([&sys, lpull = line_pull](auto pull, auto push) {
           sys.spawn([lpull, pull, push](caf::event_based_actor* self) {
-            // Read from the server and print each line.
-            pull
-              .observe_on(self) //
+            // Print each line received from the server.
+            pull.observe_on(self)
               .do_on_error([self](const caf::error& err) {
                 self->println("*** connection error: {}", err);
-              })
-              .do_finally([self] {
-                self->println("*** lost connection to server -> quit");
-                self->println("*** use CTRL+D or CTRL+C to terminate");
                 self->quit();
               })
-              .for_each([self](const lp::frame& frame) {
-                // Interpret the bytes as ASCII characters.
-                auto bytes = frame.bytes();
-                auto str = std::string_view{
-                  reinterpret_cast<const char*>(bytes.data()), bytes.size()};
-                if (std::all_of(str.begin(), str.end(), ::isprint)) {
-                  self->println("{}", str);
-                } else {
-                  self->println("<non-ascii-data of size {}>", bytes.size());
-                }
+              .do_finally([self] {
+                self->println("*** lost connection to server");
+                self->quit();
+              })
+              .transform(caf::flow::byte::split_as_utf8_at('\n'))
+              .for_each([self](const caf::cow_string& line) {
+                self->println("reply: {}", line.str());
               });
             // Read what the users types and send it to the server.
             lpull.observe_on(self)
               .do_finally([self] { self->quit(); })
+              .transform(caf::flow::string::to_chars("\n"))
+              .map([](char ch) { return static_cast<std::byte>(ch); })
               .subscribe(push);
           });
         });
   // Report any error to the user.
   if (!conn) {
-    sys.println("*** unable to connect to {} on port {}: {}", host, port,
-                conn.error());
+    sys.println("*** unable to run at port {}: {}", port, conn.error());
     return EXIT_FAILURE;
   }
   // Send each line to the server and stop if stdin closes or on an empty line.
+  sys.println("*** server is running, enter an empty line (or CTRL+D) to stop");
   auto line = std::string{};
-  auto prefix = name + ": ";
   while (std::getline(std::cin, line)) {
-    line.insert(line.begin(), prefix.begin(), prefix.end());
-    line_producer.push(caf::chunk{caf::as_bytes(caf::make_span(line))});
+    sys.println("line: {}", line);
+    line_producer.push(caf::cow_string{line});
     line.clear();
   }
   sys.println("*** shutting down");

@@ -338,7 +338,9 @@ public:
       };
     } else {
       do_print_ = [](void* out, term, const char* buf, size_t len) {
-        fwrite(buf, 1, len, reinterpret_cast<FILE*>(out));
+        auto* fhdl = reinterpret_cast<FILE*>(out);
+        fwrite(buf, 1, len, fhdl);
+        fflush(fhdl);
       };
     }
   }

@@ -97,6 +97,7 @@ add_net_example(length_prefix_framing chat-client)
 add_net_example(length_prefix_framing chat-server)
 
 add_net_example(octet_stream key-value-store)
+add_net_example(octet_stream text-client)
 
 add_net_example(web_socket echo)
 add_net_example(web_socket hello-client)

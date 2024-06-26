@@ -195,4 +195,11 @@ make_blocking_producer(producer_resource<T> res) {
   }
 }
 
+/// @relates blocking_producer
+template <class T>
+std::pair<blocking_producer<T>, consumer_resource<T>> make_blocking_producer() {
+  auto [pull, push] = caf::async::make_spsc_buffer_resource<T>();
+  return {make_blocking_producer(push.try_open()), std::move(pull)};
+}
+
 } // namespace caf::async

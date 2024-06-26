@@ -226,12 +226,14 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
           sys.spawn([events, kvs](caf::event_based_actor* self) {
             // For each buffer pair, we create a new flow ...
             events.observe_on(self).for_each([self, kvs](auto ev) {
+              self->println("*** accepted new connection ");
               auto [pull, push] = ev.data();
               pull //
                 .observe_on(self)
                 // ... that converts the lines to commands ...
                 .transform(caf::flow::byte::split_as_utf8_at('\n'))
-                .map([](const caf::cow_string& line) {
+                .map([self](const caf::cow_string& line) {
+                  self->println("received: {}", line.str());
                   caf::json_reader reader;
                   if (!reader.load(line.str()))
                     return std::shared_ptr<command>{}; // Invalid JSON.
@@ -269,6 +271,8 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
                 .on_backpressure_buffer(max_outstanding_messages)
                 // ... and pushes the results back to the client as bytes.
                 .transform(caf::flow::string::to_chars("\n"))
+                .do_finally(
+                  [self]() { self->println("*** lost connection to client"); })
                 .map([](char ch) { return static_cast<std::byte>(ch); })
                 .subscribe(push);
             });
