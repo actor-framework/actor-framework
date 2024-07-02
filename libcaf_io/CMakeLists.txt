@@ -36,6 +36,7 @@ caf_add_component(
     caf/io/datagram_servant.cpp
     caf/io/doorman.cpp
     caf/io/middleman.cpp
+    caf/io/middleman.test.cpp
     caf/io/middleman_actor.cpp
     caf/io/middleman_actor_impl.cpp
     caf/io/system_messages.test.cpp

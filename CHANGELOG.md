@@ -5,6 +5,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ## [Unreleased]
 
+### Fixed
+
+- Fix a compiler error when using `spawn_client` on the I/O middleman (#1900).
 
 ## [1.0.0] - 2024-06-26
 
