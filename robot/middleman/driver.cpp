@@ -12,7 +12,7 @@
 //   node_down message to the client
 // - prometheus: configure the server to export Prometheus metrics via HTTP; no
 //   client setup, because the test will simply use HTTP GET on the server
-// - rendesvous/ping/pong: publish an actor handle cell at the server, then have
+// - rendezvous/ping/pong: publish an actor handle cell at the server, then have
 //   the pong client "register" a pong actor at the cell and the ping client
 //   retrieves the pong actor handle from the cell and sends a message to it
 
@@ -164,7 +164,7 @@ int server(actor_system& sys, std::string_view mode, uint16_t port) {
   if (mode == "prometheus") {
     return wait_for_shutdown();
   }
-  if (mode == "rendesvous") {
+  if (mode == "rendezvous") {
     auto cell = sys.spawn(actor_hdl_cell_impl);
     auto actual_port = io::publish(cell, port);
     if (!actual_port) {
