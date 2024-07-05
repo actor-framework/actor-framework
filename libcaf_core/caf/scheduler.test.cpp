@@ -20,7 +20,7 @@ namespace {
 
 struct testee : resumable, ref_counted {
   explicit testee(std::shared_ptr<latch> latch_handle)
-    : rendesvous(std::move(latch_handle)) {
+    : rendezvous(std::move(latch_handle)) {
   }
 
   subtype_t subtype() const noexcept override {
@@ -30,7 +30,7 @@ struct testee : resumable, ref_counted {
   resume_result resume(scheduler*, size_t max_throughput) override {
     if (++runs == 10) {
       received_throughput = max_throughput;
-      rendesvous->count_down();
+      rendezvous->count_down();
       return resumable::done;
     }
     return resumable::resume_later;
@@ -46,7 +46,7 @@ struct testee : resumable, ref_counted {
 
   std::atomic<size_t> runs = 0;
   std::atomic<size_t> received_throughput = 0;
-  std::shared_ptr<latch> rendesvous;
+  std::shared_ptr<latch> rendezvous;
 };
 
 OUTLINE("scheduling resumables") {
@@ -58,12 +58,12 @@ OUTLINE("scheduling resumables") {
     cfg.set("caf.scheduler.policy", sched);
     WHEN("scheduling a resumable") {
       auto sys = std::make_unique<actor_system>(cfg);
-      auto rendesvous = std::make_shared<latch>(2);
-      auto worker = make_counted<testee>(rendesvous);
+      auto rendezvous = std::make_shared<latch>(2);
+      auto worker = make_counted<testee>(rendezvous);
       worker->ref();
       sys->scheduler().schedule(worker.get());
       THEN("expect the resumable to be executed until done") {
-        rendesvous->count_down_and_wait();
+        rendezvous->count_down_and_wait();
         check_eq(worker->runs.load(), 10u);
       }
       AND_THEN("expect the correct max throughput") {
@@ -80,15 +80,15 @@ OUTLINE("scheduling resumables") {
     AND_WHEN("scheduling multiple resumables") {
       auto sys = std::make_unique<actor_system>(cfg);
       auto workers = std::vector<intrusive_ptr<testee>>{};
-      auto rendesvous = std::make_shared<latch>(11);
+      auto rendezvous = std::make_shared<latch>(11);
       for (int i = 0; i < 10; i++) {
-        workers.emplace_back(make_counted<testee>(rendesvous));
+        workers.emplace_back(make_counted<testee>(rendezvous));
         workers.back()->ref();
         check_eq(workers.back()->get_reference_count(), 2u);
         sys->scheduler().schedule(workers.back().get());
       }
       THEN("expect the resumables to be executed until done") {
-        rendesvous->count_down_and_wait();
+        rendezvous->count_down_and_wait();
         for (const auto& worker : workers) {
           check_eq(worker->runs, 10u);
         }
@@ -115,7 +115,7 @@ OUTLINE("scheduling resumables") {
 
 struct awaiting_testee : resumable, ref_counted {
   explicit awaiting_testee(std::shared_ptr<latch> latch_handle)
-    : rendesvous(std::move(latch_handle)) {
+    : rendezvous(std::move(latch_handle)) {
   }
 
   subtype_t subtype() const noexcept override {
@@ -124,7 +124,7 @@ struct awaiting_testee : resumable, ref_counted {
 
   resume_result resume(scheduler*, size_t) override {
     runs++;
-    rendesvous->count_down();
+    rendezvous->count_down();
     return resumable::awaiting_message;
   }
 
@@ -137,7 +137,7 @@ struct awaiting_testee : resumable, ref_counted {
   }
 
   std::atomic<size_t> runs = 0;
-  std::shared_ptr<latch> rendesvous;
+  std::shared_ptr<latch> rendezvous;
 };
 
 OUTLINE("scheduling units that are awaiting") {
@@ -150,14 +150,14 @@ OUTLINE("scheduling units that are awaiting") {
     auto sys = std::make_unique<actor_system>(cfg);
     WHEN("having resumables that go to an awaiting state") {
       auto workers = std::vector<intrusive_ptr<awaiting_testee>>{};
-      auto rendesvous = std::make_shared<latch>(11);
+      auto rendezvous = std::make_shared<latch>(11);
       for (int i = 0; i < 10; i++) {
-        workers.push_back(make_counted<awaiting_testee>(rendesvous));
+        workers.push_back(make_counted<awaiting_testee>(rendezvous));
         workers.back()->ref();
         sys->scheduler().schedule(workers.back().get());
       }
       THEN("expect the resumables to be executed once") {
-        rendesvous->count_down_and_wait();
+        rendezvous->count_down_and_wait();
         for (const auto& worker : workers) {
           check_eq(worker->runs, 1u);
         }

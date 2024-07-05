@@ -119,7 +119,7 @@ Prometheus
 Indirect Connection Ping Pong
     [Tags]    Middleman
     [Teardown]    Terminate All Processes
-    Start Process    ${BINARY_PATH}  -s  -m  rendesvous  -p  ${PP_SERVER_PORT}
+    Start Process    ${BINARY_PATH}  -s  -m  rendezvous  -p  ${PP_SERVER_PORT}
     Start Process    ${BINARY_PATH}  -m  pong  -p  ${PP_SERVER_PORT}
     Run Process    ${BINARY_PATH}  -m  ping  -p  ${PP_SERVER_PORT}  stdout=app.out
     ${found}=    Get File    app.out
