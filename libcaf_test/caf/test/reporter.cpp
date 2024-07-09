@@ -37,7 +37,7 @@ namespace {
 /// - $C(cyan text)
 /// - $0 turns off coloring completely (enter verbatim mode)
 struct colorizing_iterator {
-  using difference_type = void;
+  using difference_type = int;
   using value_type = void;
   using pointer = void;
   using reference = void;

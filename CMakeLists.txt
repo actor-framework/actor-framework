@@ -59,6 +59,7 @@ option(CAF_ENABLE_PROTOBUF_EXAMPLES "Build examples with Google Protobuf" OFF)
 option(CAF_ENABLE_QT6_EXAMPLES "Build examples with the Qt6 framework" OFF)
 option(CAF_ENABLE_ROBOT_TESTS "Add the Robot tests to CTest " OFF)
 option(CAF_ENABLE_RUNTIME_CHECKS "Build CAF with extra runtime assertions" OFF)
+option(CAF_USE_STD_FORMAT "Enable std::format support" OFF)
 
 # -- CAF options that are on by default ----------------------------------------
 
@@ -145,24 +146,6 @@ endif()
 
 if(CAF_ENABLE_TESTING)
   enable_testing()
-endif()
-
-# -- check whether we can use std::format --------------------------------------
-
-if(NOT DEFINED CAF_USE_STD_FORMAT)
-  set(CAF_USE_STD_FORMAT OFF CACHE BOOL "Enable std::format support" FORCE)
-  if(NOT CMAKE_CROSSCOMPILING)
-    set(snippet "#include <format>
-                 #include <iostream>
-                 int main() { std::cout << std::format(\"{}\", \"ok\"); }")
-    check_cxx_source_runs("${snippet}" snippet_output)
-    if("${snippet_output}" STREQUAL "ok")
-      message(STATUS "Enable std::format support")
-      set(CAF_USE_STD_FORMAT ON CACHE BOOL "Enable std::format support" FORCE)
-    else()
-      message(STATUS "Disable std::format support: NOT available")
-    endif()
-  endif()
 endif()
 
 # -- export internal target (may be useful for re-using compiler flags) --------
