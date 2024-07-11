@@ -12,7 +12,7 @@ namespace caf {
 /// An (optional) component of the actor system.
 class CAF_CORE_EXPORT actor_system_module {
 public:
-  enum id_t { middleman, openssl_manager, network_manager, num_ids };
+  enum id_t { middleman, openssl_manager, network_manager, daemons, num_ids };
 
   virtual ~actor_system_module();
 

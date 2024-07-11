@@ -9,6 +9,8 @@
 
 namespace caf::detail {
 
+class daemons;
+
 /// Utility to override internal components of an actor system.
 class CAF_CORE_EXPORT actor_system_access {
 public:
@@ -27,6 +29,8 @@ public:
   void node(node_id id);
 
   detail::mailbox_factory* mailbox_factory();
+
+  detail::daemons* daemons();
 
 private:
   actor_system* sys_;
