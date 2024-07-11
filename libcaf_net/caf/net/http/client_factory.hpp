@@ -50,6 +50,15 @@ public:
   /// Add an additional HTTP header field to the request.
   client_factory& add_header_field(std::string key, std::string value);
 
+  /// Add an additional HTTP header fields to the request.
+  template <class KeyValueMap>
+  client_factory& add_header_fields(KeyValueMap&& kv_map) {
+    for (auto& [key, value] : kv_map) {
+      add_header_field(std::move(key), std::move(value));
+    }
+    return *this;
+  }
+
   /// Sends an HTTP GET message.
   expected<std::pair<async::future<response>, disposable>> get();
 
