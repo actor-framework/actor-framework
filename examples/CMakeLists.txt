@@ -36,6 +36,7 @@ add_core_example(message_passing request)
 
 # flow API
 add_core_example(flow iota)
+add_core_example(flow multicaster)
 add_core_example(flow observe-on)
 add_core_example(flow spsc-buffer-resource)
 
