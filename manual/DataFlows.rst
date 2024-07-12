@@ -442,6 +442,18 @@ containing all observed items after the source ``observable`` has completed.
 
 .. image:: op/to_vector.svg
 
+Bridging between Flows and Other Input Sources
+----------------------------------------------
+
+For pushing data into flows from other sources, CAF provides the
+``caf::flow::multicaster`` class. As the name suggests, this class multi-casts
+data to multiple observers. If no observer is connected, the ``multicaster``
+will discard the data.
+
+A common use case for the ``multicaster`` is have an actor receive asynchronous
+messages and then push them into a flow. Please look at
+``examples/flow/multicaster.cpp`` in the CAF repository for a demonstration.
+
 Notes on Performance
 --------------------
 
@@ -462,7 +474,6 @@ not need to change after creating and is de-facto immutable. However, the
 COW-optimization still gives you a mutable reference if you really need it and
 you make a deep copy only if you must, i.e., if there are multiple references to
 the data.
-
 
 Key Differences to ReactiveX
 ----------------------------
