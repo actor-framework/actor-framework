@@ -6,6 +6,8 @@
 
 #include "caf/test/test.hpp"
 
+#include <vector>
+
 #if !defined(CAF_USE_STD_FORMAT) && !defined(CAF_USE_SYSTEM_LIBFMT)
 #  define CAF_MINIMAL_FORMATTING
 #endif
@@ -14,6 +16,23 @@ using namespace caf;
 using namespace std::literals;
 
 namespace {
+
+#ifdef CAF_USE_STD_FORMAT
+
+using caf::detail::fmt_fwd;
+// Types that have a formatter overload are forwarded as is.
+static_assert(std::is_same_v<decltype(fmt_fwd(std::declval<char>())), char&&>);
+static_assert(std::is_same_v<decltype(fmt_fwd(std::declval<int>())), int&&>);
+static_assert(
+  std::is_same_v<decltype(fmt_fwd(std::declval<const char&>())), const char&>);
+static_assert(
+  std::is_same_v<decltype(fmt_fwd(std::declval<const int&>())), const int&>);
+// Types without a formatter overload are forwarded as std::string.
+static_assert(
+  std::is_same_v<decltype(fmt_fwd(std::declval<std::vector<int>>())),
+                 std::string>);
+
+#endif
 
 TEST("format strings without placeholders copies verbatim") {
   check_eq(detail::format("hello world"), "hello world");

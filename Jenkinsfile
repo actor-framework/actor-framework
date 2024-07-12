@@ -79,6 +79,7 @@ config = [
             extraBuildFlags: [
                 'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wno-uninitialized -Wno-array-bounds -Wno-free-nonheap-object',
                 'CAF_CXX_VERSION:STRING=23',
+                'CAF_USE_STD_FORMAT:BOOL=ON',
             ],
         ]],
         ['ubuntu-20.04', [ // April 2025

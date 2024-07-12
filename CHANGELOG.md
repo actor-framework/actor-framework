@@ -8,6 +8,13 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 ### Fixed
 
 - Fix a compiler error when using `spawn_client` on the I/O middleman (#1900).
+- An unfortunate bug prevented the auto-detection of `std::format` when building
+  CAF with C++20 or later. This bug has been fixed, alongside issues with the
+  actual `std::format`-based implementation. However, since selecting a
+  different backend for `println` and the log output generation breaks the ABI,
+  we have decided to ship the `std::format`-based implementation only as opt-in
+  at this point. Users can enable it by setting the CMake option
+  `CAF_USE_STD_FORMAT`.
 
 ## [1.0.0] - 2024-06-26
 

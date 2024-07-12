@@ -158,7 +158,7 @@ private:
 namespace std {
 
 template <>
-struct std::formatter<caf::chunked_string, char> {
+struct formatter<caf::chunked_string, char> {
   bool quoted = false;
 
   template <class ParseContext>

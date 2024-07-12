@@ -27,53 +27,40 @@
 namespace caf::detail {
 
 template <class T>
-inline constexpr bool is_formattable = is_complete<std::formatter<T, char>>;
-
-template <class T>
-inline constexpr bool fmt_needs_to_string
-  = !is_formattable<T>
-    && !std::is_same_v<
-      decltype(inspect_access_type<stringification_inspector, T>()),
-      inspector_access_type::none>;
-
-template <class T>
-constexpr T&&
-fmt_fwd(std::remove_reference_t<T>& arg,
-        std::enable_if_t<is_formattable<std::decay_t<T>>>* = nullptr) noexcept {
-  return static_cast<T&&>(arg);
-}
-
-template <class T>
-constexpr T&&
-fmt_fwd(std::remove_reference_t<T>&& arg,
-        std::enable_if_t<is_formattable<std::decay_t<T>>>* = nullptr) noexcept {
-  static_assert(!std::is_lvalue_reference_v<T>);
-  return static_cast<T&&>(arg);
-}
-
-template <class T>
-std::string
-fmt_fwd(std::remove_reference_t<T>& arg,
-        std::enable_if_t<fmt_needs_to_string<std::decay_t<T>>>* = nullptr) {
-  return deep_to_string(arg);
-}
-
-template <class T>
-std::string
-fmt_fwd(std::remove_reference_t<T>&& t,
-        std::enable_if_t<fmt_needs_to_string<std::decay_t<T>>>* = nullptr) {
-  static_assert(!std::is_lvalue_reference_v<T>);
-  return deep_to_string(arg);
+decltype(auto) fmt_fwd(T&& arg) {
+  using arg_t = std::decay_t<T>;
+  if constexpr (std::is_default_constructible_v<std::formatter<arg_t, char>>) {
+    return std::forward<T>(arg);
+  } else {
+    static_assert(
+      !std::is_same_v<
+        decltype(inspect_access_type<stringification_inspector, arg_t>()),
+        inspector_access_type::none>,
+      "stringification using std::formatter or caf::inspect not available");
+    return deep_to_string(arg);
+  }
 }
 
 template <class OutputIt, class... Args>
-auto format_to(OutputIt out, std::format_string<Args...> fstr, Args&&... args) {
-  return std::format_to(out, fstr, fmt_fwd<Args>(args)...);
+auto format_to(OutputIt out, std::string_view fstr, Args&&... args) {
+  // Note: make_format_args expects all args to be references, and since
+  // fmt_fwd returns by value in case of inspector stringification, we need this
+  // helper function to wrap the call.
+  auto format_to_helper = [&out, &fstr](const auto&... ts) {
+    return std::vformat_to(out, fstr, std::make_format_args(ts...));
+  };
+  return format_to_helper(fmt_fwd(args)...);
 }
 
 template <class... Args>
-std::string format(std::format_string<Args...> fstr, Args&&... args) {
-  return std::format(fstr, fmt_fwd<Args>(args)...);
+std::string format(std::string_view fstr, Args&&... args) {
+  // Note: make_format_args expects all args to be references, and since
+  // fmt_fwd returns by value in case of inspector stringification, we need this
+  // helper function to wrap the call.
+  auto format_helper = [&fstr](const auto&... ts) {
+    return std::vformat(fstr, std::make_format_args(ts...));
+  };
+  return format_helper(fmt_fwd(args)...);
 }
 
 } // namespace caf::detail
