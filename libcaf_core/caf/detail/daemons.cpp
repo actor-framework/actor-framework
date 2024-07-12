@@ -4,6 +4,10 @@
 
 #include "caf/detail/daemons.hpp"
 
+#include "caf/anon_mail.hpp"
+#include "caf/event_based_actor.hpp"
+#include "caf/send.hpp"
+
 #include <cstdint>
 #include <map>
 #include <mutex>
@@ -12,29 +16,61 @@
 namespace caf::detail {
 
 struct daemons::impl {
-  int64_t next_id() {
-    std::lock_guard guard{mtx};
-    if (id == 0)
-      return 0;
-    return id++;
+  explicit impl(actor_system& sys) : sys(&sys) {
+    // nop
+  }
+
+  void on_start() {
+    cleaner = sys->spawn<hidden>([this](caf::event_based_actor* self) {
+      return behavior{
+        [this, self](actor hdl, int64_t id) {
+          self->monitor(hdl, [this, id](const error&) { cleanup(id); });
+        },
+      };
+    });
+  }
+
+  void on_stop() {
+    anon_send_exit(cleaner, exit_reason::user_shutdown);
+    std::map<int64_t, impl::state> workers;
+    {
+      std::lock_guard guard{mtx};
+      id = 0;
+      workers.swap(workers);
+    }
+    for (auto& [id, st] : workers) {
+      st.do_stop(std::move(st.hdl));
+    }
   }
 
   struct state {
-    std::thread t;
-    std::function<void()> on_stop;
+    actor hdl;
+    std::function<void(actor)> do_stop;
   };
 
+  void cleanup(int64_t id) {
+    std::lock_guard guard{mtx};
+    if (auto i = workers.find(id); i != workers.end()) {
+      workers.erase(i);
+    }
+  }
+
+  actor_system* sys;
+
+  /// Monitors background threads and cleans up their state.
+  actor cleaner;
+
   /// Protects other member variables.
-  mutable std::mutex mtx;
+  std::mutex mtx;
 
   /// Next ID to assign to a background thread or 0 if the module is stopped.
   int64_t id = 1;
 
   /// Maps daemon IDs to their state.
-  std::map<int64_t, state> threads;
+  std::map<int64_t, state> workers;
 };
 
-daemons::daemons() : impl_(new impl) {
+daemons::daemons(actor_system& sys) : impl_(new impl(sys)) {
   // nop
 }
 
@@ -42,43 +78,26 @@ daemons::~daemons() {
   delete impl_;
 }
 
-void daemons::cleanup(int id) {
+actor daemons::do_launch(std::function<actor(actor_system&)> do_spawn,
+                         std::function<void(actor)> do_stop) {
   std::lock_guard guard{impl_->mtx};
-  auto i = impl_->threads.find(id);
-  auto& [t, on_stop] = i->second;
-  on_stop();
-  t.join();
-  impl_->threads.erase(i);
-}
-
-bool daemons::launch(std::function<void()> fn, std::function<void()> stop) {
-  auto id = impl_->next_id();
-  if (id == 0) {
-    return false;
+  if (impl_->id == 0) {
+    return {};
   }
-  auto t = std::thread{[fn = std::move(fn)] { fn(); }};
-  std::lock_guard guard{impl_->mtx};
-  auto& st = impl_->threads[id];
-  st.t = std::move(t);
-  st.on_stop = std::move(stop);
-  return true;
+  auto id = impl_->id++;
+  auto& st = impl_->workers[id];
+  st.hdl = do_spawn(*impl_->sys);
+  st.do_stop = std::move(do_stop);
+  anon_mail(st.hdl, id).send(impl_->cleaner);
+  return st.hdl;
 }
 
 void daemons::start() {
-  // nop
+  impl_->on_start();
 }
 
 void daemons::stop() {
-  std::map<int64_t, impl::state> threads;
-  {
-    std::lock_guard guard{impl_->mtx};
-    impl_->id = 0;
-    impl_->threads.swap(threads);
-  }
-  for (auto& [id, st] : threads) {
-    st.on_stop();
-    st.t.join();
-  }
+  impl_->on_stop();
 }
 
 void daemons::init(caf::actor_system_config&) {
@@ -90,7 +109,7 @@ caf::actor_system_module::id_t daemons::id() const {
 }
 
 void* daemons::subtype_ptr() {
-  return static_cast<caf::actor_system_module*>(this);
+  return this;
 }
 
 } // namespace caf::detail

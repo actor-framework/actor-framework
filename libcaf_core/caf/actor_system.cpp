@@ -420,7 +420,7 @@ public:
       modules[mod_id].reset(mod_ptr);
     }
     // Let there be daemons.
-    modules[actor_system_module::daemons].reset(new detail::daemons);
+    modules[actor_system_module::daemons].reset(new detail::daemons(*parent));
     // Make sure meta objects are loaded.
     auto gmos = detail::global_meta_objects();
     if (gmos.size() < id_block::core_module::end
