@@ -250,7 +250,7 @@ a ``std::tuple``:
         auto result = x + y;
         THEN("the result should be <sum>") {
           auto sum = block_parameters<double>();
-          check_eq(result, sum);
+          check_eq(result, caf::test::approx{sum});
         }
       }
     }
