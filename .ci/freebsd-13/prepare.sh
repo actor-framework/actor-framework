@@ -6,7 +6,7 @@ set -e
 set -x
 
 env ASSUME_ALWAYS_YES=YES pkg bootstrap
-pkg install -y bash git cmake python py39-pip
+pkg install -y bash git cmake python311 py311-pip
 pip install -r robot/dependencies.txt
 
 # Make sure network tests fail early.
