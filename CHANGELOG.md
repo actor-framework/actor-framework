@@ -15,6 +15,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   we have decided to ship the `std::format`-based implementation only as opt-in
   at this point. Users can enable it by setting the CMake option
   `CAF_USE_STD_FORMAT`.
+- Fix cleanup in the consumer adapter. This component connects actors to SPSC
+  buffers. If the SPSC buffer was closed by the producer, the consumer adapter
+  failed to properly dispose pending actions.
 
 ## [1.0.0] - 2024-06-26
 

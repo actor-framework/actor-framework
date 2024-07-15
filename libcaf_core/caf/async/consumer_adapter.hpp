@@ -57,6 +57,8 @@ public:
         auto [again, n] = buf_->pull(policy, 1u, *this);
         if (!again) {
           buf_ = nullptr;
+          do_wakeup_.dispose();
+          do_wakeup_ = nullptr;
         }
         if (n == 1) {
           return read_result::ok;
