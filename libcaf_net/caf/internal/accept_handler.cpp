@@ -93,7 +93,11 @@ public:
   }
 
   void abort(const error& reason) override {
-    log::net::error("connection_acceptor aborts due to an error: {}", reason);
+    if (reason != sec::disposed) {
+      log::net::error("connection_acceptor aborts due to an error: {}", reason);
+    } else {
+      log::net::debug("connection_acceptor aborts due to disposal");
+    }
     acceptor_->abort(reason);
     on_conn_close_.dispose();
     self_ref_ = nullptr;

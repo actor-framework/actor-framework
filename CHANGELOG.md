@@ -19,6 +19,11 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   buffers. If the SPSC buffer was closed by the producer, the consumer adapter
   failed to properly dispose pending actions.
 
+### Changed
+
+- When disposing a connection acceptor, CAF no longer generates a log event with
+  severity `error`. Instead, it will log the event with severity `debug`.
+
 ## [1.0.0] - 2024-06-26
 
 ### Added
