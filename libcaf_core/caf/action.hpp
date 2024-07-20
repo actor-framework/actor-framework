@@ -88,6 +88,10 @@ public:
     pimpl_->dispose();
   }
 
+  void swap(action& other) noexcept {
+    pimpl_.swap(other.pimpl_);
+  }
+
   // -- conversion -------------------------------------------------------------
 
   /// Returns a smart pointer to the implementation.

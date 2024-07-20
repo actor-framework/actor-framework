@@ -18,6 +18,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Fix cleanup in the consumer adapter. This component connects actors to SPSC
   buffers. If the SPSC buffer was closed by the producer, the consumer adapter
   failed to properly dispose pending actions.
+- Fix a `nullptr`-dereference in `scheduled_actor::run_actions` if a delayed
+  action calls `self->quit()` (#1920).
 
 ### Changed
 
