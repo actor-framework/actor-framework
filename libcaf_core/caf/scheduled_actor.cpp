@@ -1076,9 +1076,15 @@ void scheduled_actor::run_actions() {
   auto lg = log::core::trace("");
   delayed_actions_this_run_ = 0;
   if (!actions_.empty()) {
+    // Note: if the first actions is null, it means that we are already running
+    // actions right now. This can happen if an action calls `quit`, which will
+    // call `run_actions` again.
+    if (!actions_.front())
+      return;
     // Note: can't use iterators here since actions may add to the vector.
     for (auto index = size_t{0}; index < actions_.size(); ++index) {
-      auto f = std::move(actions_[index]);
+      action f;
+      f.swap(actions_[index]);
       f.run();
     }
     actions_.clear();

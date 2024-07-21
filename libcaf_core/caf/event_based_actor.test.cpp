@@ -18,6 +18,17 @@ namespace {
 
 WITH_FIXTURE(test::fixture::deterministic) {
 
+TEST("GH-1920 regression") {
+  auto aut = sys.spawn([](event_based_actor* self) -> behavior {
+    return {
+      [self](int) { self->delay_fn([self] { self->quit(); }); },
+    };
+  });
+  // The actor should not crash when receiving this message.
+  inject().with(42).to(aut);
+  check(terminated(aut));
+}
+
 TEST("unexpected messages result in an error by default") {
   auto receiver = sys.spawn([](event_based_actor*) -> behavior {
     return {
