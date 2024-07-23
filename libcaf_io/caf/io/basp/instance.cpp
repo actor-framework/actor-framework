@@ -202,9 +202,8 @@ bool instance::dispatch(scheduler* ctx, const strong_actor_ptr& sender,
   return true;
 }
 
-void instance::write(actor_system& sys, scheduler* ctx, byte_buffer& buf,
+void instance::write(actor_system& sys, scheduler*, byte_buffer& buf,
                      header& hdr, payload_writer* pw) {
-  CAF_ASSERT(ctx != nullptr);
   auto lg = log::io::trace("hdr = {}", hdr);
   binary_serializer sink{sys, buf};
   if (pw != nullptr) {
