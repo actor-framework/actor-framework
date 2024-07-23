@@ -11,8 +11,10 @@
 #include "caf/actor_registry.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/defaults.hpp"
+#include "caf/detail/actor_system_access.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/critical.hpp"
+#include "caf/detail/daemons.hpp"
 #include "caf/detail/meta_object.hpp"
 #include "caf/detail/private_thread_pool.hpp"
 #include "caf/detail/test_coordinator.hpp"
@@ -417,6 +419,8 @@ public:
       auto mod_id = mod_ptr->id();
       modules[mod_id].reset(mod_ptr);
     }
+    // Let there be daemons.
+    modules[actor_system_module::daemons].reset(new detail::daemons(*parent));
     // Make sure meta objects are loaded.
     auto gmos = detail::global_meta_objects();
     if (gmos.size() < id_block::core_module::end
@@ -889,3 +893,12 @@ void actor_system::set_node(node_id id) {
 }
 
 } // namespace caf
+
+namespace caf::detail {
+
+detail::daemons* actor_system_access::daemons() {
+  auto ptr = sys_->impl_->modules[actor_system_module::daemons].get();
+  return static_cast<detail::daemons*>(ptr);
+}
+
+} // namespace caf::detail

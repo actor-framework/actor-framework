@@ -6,21 +6,27 @@
 
 namespace caf {
 
+namespace {
+
+const char* module_names[] = {
+  "middleman",
+  "openssl-manager",
+  "network-manager",
+  "daemons",
+};
+
+} // namespace
+
 actor_system_module::~actor_system_module() {
   // nop
 }
 
 const char* actor_system_module::name() const noexcept {
-  switch (id()) {
-    case middleman:
-      return "middleman";
-    case openssl_manager:
-      return "openssl-manager";
-    case network_manager:
-      return "network-manager";
-    default:
-      return "???";
+  auto index = static_cast<int>(id());
+  if (index < num_ids) {
+    return module_names[index];
   }
+  return "???";
 }
 
 } // namespace caf
