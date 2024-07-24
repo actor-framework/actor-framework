@@ -19,11 +19,62 @@
 
 #include "caf/raise_error.hpp"
 
+#include <iostream>
+
+#ifdef CAF_WINDOWS
+#  include <winsock2.h>
+#else
+#  include <poll.h>
+#endif
+
 using namespace caf;
 using namespace caf::net;
 using namespace std::literals;
 
 namespace {
+
+// Returns true if a socket gets closed within the given timespan.
+bool closed_within(stream_socket fd, std::chrono::milliseconds timeout) {
+  namespace sc = std::chrono;
+#ifdef CAF_WINDOWS
+  constexpr auto pollfn = ::WSAPoll;
+#else
+  constexpr auto pollfn = ::poll;
+#endif
+  // Set to nonblocking or fail.
+  if (auto err = nonblocking(fd, true))
+    return false;
+  // Recalculate time left.
+  auto deadline = sc::steady_clock::now() + timeout;
+  auto ms_until_deadline = [deadline] {
+    auto now = sc::steady_clock::now();
+    auto ms_count = sc::duration_cast<sc::milliseconds>(deadline - now).count();
+    return std::max(static_cast<int>(ms_count), 0);
+  };
+  pollfd pollset[1];
+  pollset[0].fd = fd.id;
+  pollset[0].events = POLLIN;
+  byte_buffer buf;
+  buf.resize(100);
+  // Read using poll.
+  auto ms = ms_until_deadline();
+  do {
+    auto pres = pollfn(pollset, 1, ms);
+    if (pres > 0 && (pollset[0].events & POLLIN)) {
+      ptrdiff_t rd;
+      do {
+        rd = read(fd, buf);
+      } while (rd > 0);
+      if (rd == 0)
+        return true;
+    } else if (pres < 0) {
+      return false;
+    }
+    ms = ms_until_deadline();
+  } while (ms > 0);
+  // No need to restore the socket to blocking since we are going to close it.
+  return false;
+}
 
 auto to_str(caf::const_byte_span buffer) {
   return std::string_view{reinterpret_cast<const char*>(buffer.data()),
@@ -166,7 +217,7 @@ SCENARIO("the client parses HTTP response into header fields") {
         check(res.body().empty());
       }
       AND_THEN("the connection is closed") {
-        check(ret.second.disposed());
+        check(closed_within(fd1, 1s));
       }
     }
   }
@@ -187,7 +238,7 @@ SCENARIO("the client parses HTTP response into header fields") {
         check(res.body().empty());
       }
       AND_THEN("the connection is closed") {
-        check(ret.second.disposed());
+        check(closed_within(fd1, 1s));
       }
     }
   }
@@ -210,7 +261,7 @@ SCENARIO("the client parses HTTP response into header fields") {
         check_eq(to_str(res.body()), "Hello, world!"sv);
       }
       AND_THEN("the connection is closed") {
-        check(ret.second.disposed());
+        check(closed_within(fd1, 1s));
       }
     }
   }
@@ -229,7 +280,7 @@ SCENARIO("the client receives invalid HTTP responses") {
         check(!maybe_res);
       }
       AND_THEN("the connection is closed") {
-        check(ret.second.disposed());
+        check(closed_within(fd1, 1s));
       }
     }
   }
@@ -242,7 +293,7 @@ SCENARIO("unexpected aborts in the HTTP layer are reported as errors") {
       ret.second.dispose();
       auto maybe_res = ret.first.get(1s);
       THEN("the future is invalidated and connection closed") {
-        check(ret.second.disposed());
+        check(closed_within(fd1, 1s));
         check(!maybe_res);
       }
     }
@@ -252,8 +303,7 @@ SCENARIO("unexpected aborts in the HTTP layer are reported as errors") {
       auto ret = run_client();
       net::close(fd1);
       auto maybe_res = ret.first.get(1s);
-      THEN("the future is invalidated and connection closed") {
-        check(ret.second.disposed());
+      THEN("the future is invalidated") {
         check(!maybe_res);
       }
     }

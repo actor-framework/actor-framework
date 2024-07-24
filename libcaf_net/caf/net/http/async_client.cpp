@@ -43,7 +43,8 @@ public:
   void abort(const caf::error& reason) override {
     if (response_.valid()) {
       log::net::error("Response abortet with: {}", to_string(reason));
-      down->shutdown();
+      if (down)
+        down->shutdown();
       response_.set_error(reason);
     }
   }
