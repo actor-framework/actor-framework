@@ -404,5 +404,10 @@ caf_add_component(
 caf_add_log_component(system)
 
 if(NOT CAF_USE_STD_FORMAT)
-  target_sources(libcaf_core PRIVATE caf/detail/format.cpp)
+  if (NOT CAF_BUILD_OBJ_BUNDLE)
+    set(library_target libcaf_core)
+  else()
+    set(library_target caf_obj_bundle)
+  endif()
+  target_sources(${library_target} PRIVATE caf/detail/format.cpp)
 endif()

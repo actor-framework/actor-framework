@@ -60,6 +60,7 @@ option(CAF_ENABLE_QT6_EXAMPLES "Build examples with the Qt6 framework" OFF)
 option(CAF_ENABLE_ROBOT_TESTS "Add the Robot tests to CTest " OFF)
 option(CAF_ENABLE_RUNTIME_CHECKS "Build CAF with extra runtime assertions" OFF)
 option(CAF_USE_STD_FORMAT "Enable std::format support" OFF)
+option(CAF_BUILD_OBJ_BUNDLE "Build CAF as a single CMake object library" OFF)
 
 # -- CAF options that are on by default ----------------------------------------
 
@@ -154,11 +155,35 @@ set_target_properties(caf_internal PROPERTIES EXPORT_NAME internal)
 
 add_library(CAF::internal ALIAS caf_internal)
 
-install(TARGETS caf_internal EXPORT CAFTargets)
+if(NOT CAF_BUILD_OBJ_BUNDLE)
+  install(TARGETS caf_internal EXPORT CAFTargets)
+endif()
 
-# -- create the libcaf_test target ahead of time for caf_core ------------------
+# -- bundle setup --------------------------------------------------------------
 
-add_library(libcaf_test)
+if(CAF_BUILD_OBJ_BUNDLE)
+  message(STATUS "Build CAF as a single object library")
+  add_library(caf_obj_bundle OBJECT)
+  target_link_directories(caf_obj_bundle PUBLIC caf_internal)
+  add_library(CAF::bundle ALIAS caf_obj_bundle)
+  add_library(libcaf_test OBJECT)
+  add_library(CAF::test ALIAS libcaf_test)
+  foreach(component IN ITEMS core io net)
+    add_library(libcaf_${component}_dummy INTERFACE)
+    target_include_directories(libcaf_${component}_dummy INTERFACE
+                               $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/libcaf_${component}>
+                               $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/libcaf_${component}>
+                               $<INSTALL_INTERFACE:include>)
+    add_library(CAF::${component} ALIAS libcaf_${component}_dummy)
+  endforeach()
+else()
+  # Always create the libcaf_test target ahead of time for libcaf_core.
+  add_library(libcaf_test)
+  target_include_directories(libcaf_test PUBLIC
+                              $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/libcaf_test>
+                              $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/libcaf_test>
+                              $<INSTALL_INTERFACE:include>)
+endif()
 
 # -- add uninstall target if it does not exist yet -----------------------------
 
@@ -190,22 +215,32 @@ function(caf_add_enum_type target enum_name)
 endfunction()
 
 function(caf_export_and_install_lib component)
-  add_library(CAF::${component} ALIAS libcaf_${component})
+  if(NOT CAF_BUILD_OBJ_BUNDLE)
+    add_library(CAF::${component} ALIAS libcaf_${component})
+    set(lib_target "libcaf_${component}")
+    set_target_properties(libcaf_${component} PROPERTIES
+                          EXPORT_NAME ${component}
+                          SOVERSION ${CAF_VERSION}
+                          VERSION ${CAF_VERSION_MAJOR}
+                          OUTPUT_NAME caf_${component})
+  elseif(component STREQUAL test)
+    # Skip exporting and installing the test library for the object bundle.
+    return()
+  else()
+    set(lib_target "caf_obj_bundle")
+  endif()
   string(TOUPPER "CAF_${component}_EXPORT" export_macro_name)
   generate_export_header(
-    libcaf_${component}
+    ${lib_target}
     EXPORT_MACRO_NAME ${export_macro_name}
     EXPORT_FILE_NAME "caf/detail/${component}_export.hpp")
-  set_target_properties(libcaf_${component} PROPERTIES
-                        EXPORT_NAME ${component}
-                        SOVERSION ${CAF_VERSION}
-                        VERSION ${CAF_VERSION_MAJOR}
-                        OUTPUT_NAME caf_${component})
-  install(TARGETS libcaf_${component}
-          EXPORT CAFTargets
-          ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT ${component}
-          RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT ${component}
-          LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT ${component})
+  if(NOT CAF_BUILD_OBJ_BUNDLE)
+    install(TARGETS libcaf_${component}
+            EXPORT CAFTargets
+            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT ${component}
+            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT ${component}
+            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT ${component})
+  endif()
   install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/caf"
           DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
           COMPONENT ${component}
@@ -255,23 +290,30 @@ function(caf_add_component name)
       message(FATAL_ERROR "caf_add_component(): missing parameter ${param}")
     endif()
   endforeach()
-  set(lib_target "libcaf_${name}")
-  if(NOT TARGET ${lib_target})
-    add_library(${lib_target} "${PROJECT_SOURCE_DIR}/cmake/dummy.cpp")
+  if(NOT CAF_BUILD_OBJ_BUNDLE)
+    set(lib_target "libcaf_${name}")
+    if(NOT TARGET ${lib_target})
+      add_library(${lib_target} "${PROJECT_SOURCE_DIR}/cmake/dummy.cpp")
+    endif()
+    set_property(TARGET ${lib_target} PROPERTY POSITION_INDEPENDENT_CODE ON)
+    target_link_libraries(${lib_target} ${CAF_ADD_COMPONENT_DEPENDENCIES})
+    if(BUILD_SHARED_LIBS)
+      set_target_properties(${lib_target} PROPERTIES
+                            CXX_VISIBILITY_PRESET hidden
+                            VISIBILITY_INLINES_HIDDEN ON)
+    endif()
+  elseif(name STREQUAL test)
+    # Always build CAF::test separately.
+    set(lib_target "libcaf_test")
+  else()
+    set(lib_target "caf_obj_bundle")
   endif()
-  set_property(TARGET ${lib_target} PROPERTY POSITION_INDEPENDENT_CODE ON)
-  target_link_libraries(${lib_target} ${CAF_ADD_COMPONENT_DEPENDENCIES})
   target_compile_definitions(${lib_target} PRIVATE "libcaf_${name}_EXPORTS")
   target_include_directories(${lib_target} PUBLIC
                              $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
                              $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
                              $<INSTALL_INTERFACE:include>)
   caf_add_log_component(${name})
-  if(BUILD_SHARED_LIBS)
-    set_target_properties(${lib_target} PROPERTIES
-                          CXX_VISIBILITY_PRESET hidden
-                          VISIBILITY_INLINES_HIDDEN ON)
-  endif()
   if(CAF_ENABLE_TESTING)
     add_executable("caf-${name}-test" ${CMAKE_CURRENT_SOURCE_DIR}/main.test.cpp)
     target_compile_definitions(
@@ -304,22 +346,29 @@ function(caf_add_component name)
   endforeach()
   target_link_libraries(${lib_target} ${CAF_ADD_COMPONENT_DEPENDENCIES})
   if(CAF_ADD_COMPONENT_ENUM_TYPES)
-    # OBJECT lib: workaround for https://gitlab.kitware.com/cmake/cmake/-/issues/18399
-    add_library(${name}_enums OBJECT)
-    set_property(TARGET ${name}_enums PROPERTY POSITION_INDEPENDENT_CODE ON)
-    target_link_libraries(${name}_enums CAF::internal)
-    if(NOT name STREQUAL core)
-      # Implementations need access to headers such as config.hpp.
-      target_link_libraries(${name}_enums CAF::core)
+    if(NOT CAF_BUILD_OBJ_BUNDLE OR name STREQUAL test)
+      # OBJECT lib: workaround for https://gitlab.kitware.com/cmake/cmake/-/issues/18399
+      add_library(${name}_enums OBJECT)
+      set_property(TARGET ${name}_enums PROPERTY POSITION_INDEPENDENT_CODE ON)
+      target_link_libraries(${name}_enums CAF::internal)
+      if(NOT name STREQUAL core)
+        # Implementations need access to headers such as config.hpp.
+        target_link_libraries(${name}_enums CAF::core)
+      endif()
+      target_include_directories(${name}_enums PRIVATE
+                                ${CMAKE_CURRENT_SOURCE_DIR}
+                                ${CMAKE_CURRENT_BINARY_DIR})
+      foreach(enum_name ${CAF_ADD_COMPONENT_ENUM_TYPES})
+        caf_add_enum_type(${name}_enums ${enum_name})
+      endforeach()
+      target_sources(${lib_target} PRIVATE $<TARGET_OBJECTS:${name}_enums>)
+      message(STATUS "target_sources(${lib_target} PRIVATE $<TARGET_OBJECTS:${name}_enums>)")
+      target_compile_definitions(${name}_enums PRIVATE libcaf_${name}_EXPORTS)
+    else()
+      foreach(enum_name ${CAF_ADD_COMPONENT_ENUM_TYPES})
+        caf_add_enum_type(caf_obj_bundle ${enum_name})
+      endforeach()
     endif()
-    target_include_directories(${name}_enums PRIVATE
-                               ${CMAKE_CURRENT_SOURCE_DIR}
-                               ${CMAKE_CURRENT_BINARY_DIR})
-    foreach(enum_name ${CAF_ADD_COMPONENT_ENUM_TYPES})
-      caf_add_enum_type(${name}_enums ${enum_name})
-    endforeach()
-    target_sources(${lib_target} PRIVATE $<TARGET_OBJECTS:${name}_enums>)
-    target_compile_definitions(${name}_enums PRIVATE libcaf_${name}_EXPORTS)
   endif()
   caf_export_and_install_lib(${name})
 endfunction()
@@ -379,7 +428,7 @@ endif()
 
 # Disable warnings regarding C++ classes at ABI boundaries on MSVC.
 if(BUILD_SHARED_LIBS AND MSVC)
-  target_compile_options(libcaf_core INTERFACE /wd4275 /wd4251)
+  target_compile_options(libcaf_internal INTERFACE /wd4275 /wd4251)
 endif()
 
 # Propgatate sanitizer flags to downstream targets.
@@ -403,11 +452,12 @@ endif()
 
 # -- generate and install .cmake files -----------------------------------------
 
-export(EXPORT CAFTargets FILE CAFTargets.cmake NAMESPACE CAF::)
-
-install(EXPORT CAFTargets
-        DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/CAF"
-        NAMESPACE CAF::)
+if(NOT CAF_BUILD_OBJ_BUNDLE)
+  export(EXPORT CAFTargets FILE CAFTargets.cmake NAMESPACE CAF::)
+  install(EXPORT CAFTargets
+          DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/CAF"
+          NAMESPACE CAF::)
+endif()
 
 write_basic_package_version_file(
   "${CMAKE_CURRENT_BINARY_DIR}/CAFConfigVersion.cmake"
