@@ -85,7 +85,6 @@
 #include "caf/unit.hpp"
 #include "caf/uuid.hpp"
 
-///
 /// @mainpage CAF
 ///
 /// @section Intro Introduction
