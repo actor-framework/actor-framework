@@ -162,14 +162,14 @@ public:
     ptrdiff_t consumed = 0;
     if (mode_ == mode::read_header) {
       if (input.size() >= max_response_size_) {
-        abort("Header exceeds maximum size.");
+        abort_and_shutdown("Header exceeds maximum size.");
         return -1;
       }
       auto [hdr, remainder] = v1::split_header(input);
       // Wait for more data.
       if (hdr.empty())
         return 0;
-      // Note: handle_header already calls up_->abort().
+      // Note: handle_header already calls abort_and_shutdown.
       if (!handle_header(hdr))
         return -1;
       // Prepare for next call to consume.
@@ -181,7 +181,7 @@ public:
       } else if (auto len = hdr_.content_length()) {
         // Protect against payloads that exceed the maximum size.
         if (*len >= max_response_size_) {
-          abort("Payload exceeds maximum size.");
+          abort_and_shutdown("Payload exceeds maximum size.");
           return -1;
         }
         // Transition to read_payload mode and continue.
@@ -209,15 +209,19 @@ public:
     }
     // else  if (mode_ == mode::read_chunks) {
     // TODO: implement me
-    abort("Chunked transfer not implemented yet.");
+    abort_and_shutdown("Chunked transfer not implemented yet.");
     return -1;
   }
 
 private:
   // -- utility functions ------------------------------------------------------
 
-  void abort(std::string_view message) {
-    up_->abort(make_error(sec::protocol_error, message));
+  // Signal abort to the upper layer and shutdown to the lower layer,
+  // with closing message
+  void abort_and_shutdown(std::string_view message) {
+    auto err = make_error(sec::protocol_error, message);
+    up_->abort(err);
+    down_->shutdown(err);
   }
 
   bool invoke_upper_layer(const_byte_span payload) {
@@ -229,7 +233,7 @@ private:
     auto [code, msg] = hdr_.parse(http);
     if (code != status::ok) {
       log::net::debug("received malformed header");
-      abort(msg);
+      abort_and_shutdown(msg);
       return false;
     }
     return true;
