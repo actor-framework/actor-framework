@@ -668,6 +668,15 @@ public:
            || !stream_sources_.empty() || !stream_bridges_.empty();
   }
 
+  /// Checks whether the actor is currently waiting for an external event, i.e.,
+  /// a response message or external flow activity.
+  /// @private
+  [[nodiscard]] bool awaits_external_event() const noexcept {
+    return !awaited_responses_.empty() || !multiplexed_responses_.empty()
+           || !watched_disposables_.empty() || !stream_sources_.empty()
+           || !stream_bridges_.empty();
+  }
+
   /// Runs all pending actions.
   void run_actions() override;
 

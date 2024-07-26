@@ -4,6 +4,7 @@
 
 #include "caf/intrusive/linked_list.hpp"
 
+#include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
 #include "caf/intrusive/singly_linked.hpp"
@@ -155,6 +156,77 @@ TEST("pop_front removes the oldest element of a list and returns it") {
   if (check_eq(uut.size(), 1u))
     check_eq(uut.pop_front()->value, 3);
   check(uut.empty());
+}
+
+SCENARIO("splice transfers all elements from one list to another") {
+  GIVEN("and empty source list and an empty target list") {
+    list_type src;
+    list_type dst;
+    WHEN("splicing the source into the target") {
+      THEN("both lists remain empty") {
+        dst.splice(src);
+        check(src.empty());
+        check(dst.empty());
+      }
+    }
+  }
+  GIVEN("a source list with one element and an empty target list") {
+    list_type src;
+    fill(src, 1);
+    list_type dst;
+    WHEN("splicing the source into the target") {
+      THEN("the target list contains the element") {
+        dst.splice(src);
+        check(src.empty());
+        check_eq(dst.size(), 1u);
+        check_eq(dst.front()->value, 1);
+      }
+    }
+  }
+  GIVEN("a source list with three elements and an empty target list") {
+    list_type src;
+    fill(src, 1, 2, 3);
+    list_type dst;
+    WHEN("splicing the source into the target") {
+      THEN("the target list contains the elements") {
+        dst.splice(src);
+        check(src.empty());
+        check_eq(dst.size(), 3u);
+        check_eq(dst.front()->value, 1);
+        check_eq(dst.back()->value, 3);
+      }
+    }
+  }
+  GIVEN("a source list with one element and a non-empty target list") {
+    list_type src;
+    fill(src, 4);
+    list_type dst;
+    fill(dst, 1, 2, 3);
+    WHEN("splicing the source into the target") {
+      THEN("the target list contains the original elements and the new one") {
+        dst.splice(src);
+        check(src.empty());
+        check_eq(dst.size(), 4u);
+        check_eq(dst.front()->value, 1);
+        check_eq(dst.back()->value, 4);
+      }
+    }
+  }
+  GIVEN("a source list with three elements and a non-empty target list") {
+    list_type src;
+    fill(src, 4, 5, 6);
+    list_type dst;
+    fill(dst, 1, 2, 3);
+    WHEN("splicing the source into the target") {
+      THEN("the target list contains the original elements and the new ones") {
+        dst.splice(src);
+        check(src.empty());
+        check_eq(dst.size(), 6u);
+        check_eq(dst.front()->value, 1);
+        check_eq(dst.back()->value, 6);
+      }
+    }
+  }
 }
 
 } // namespace
