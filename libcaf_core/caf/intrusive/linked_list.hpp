@@ -115,6 +115,18 @@ public:
     return result;
   }
 
+  /// Transfers all elements from `other` into this list.
+  void splice(linked_list& other) noexcept {
+    if (other.empty()) {
+      return;
+    }
+    tail_.next->next = other.head_.next;
+    other.tail_.next->next = &tail_;
+    tail_.next = other.tail_.next;
+    size_ += other.size_;
+    other.init();
+  }
+
   // -- iterator access --------------------------------------------------------
 
   /// Returns an iterator to the dummy before the first element.
