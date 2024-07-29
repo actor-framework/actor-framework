@@ -65,6 +65,11 @@ void router::shutdown(const error& err) {
   down_->shutdown(err);
 }
 
+void router::abort_and_shutdown(const error& err) {
+  abort(err);
+  down_->shutdown(err);
+}
+
 // -- http::upper_layer implementation -----------------------------------------
 
 void router::prepare_send() {

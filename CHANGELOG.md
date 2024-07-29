@@ -32,6 +32,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 - When disposing a connection acceptor, CAF no longer generates a log event with
   severity `error`. Instead, it will log the event with severity `debug`.
+- The `http::router` member function `shutdown` has been deprecated and renamed to
+  `abort_and_shutdown` to better reflect its functionality.
 
 ## [1.0.0] - 2024-06-26
 

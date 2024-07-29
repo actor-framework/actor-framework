@@ -154,7 +154,7 @@ expected<disposable> do_start_impl(Config& cfg, Acceptor acc,
     auto new_route = make_route([producer](responder& res) {
       if (!producer->push(responder{res}.to_request())) {
         auto err = make_error(sec::runtime_error, "flow disconnected");
-        res.router()->shutdown(err);
+        res.router()->abort_and_shutdown(err);
       }
     });
     if (!new_route) {
