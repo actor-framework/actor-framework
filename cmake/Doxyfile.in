@@ -32,13 +32,13 @@ DOXYFILE_ENCODING      = UTF-8
 # title of most generated pages and in a few other places.
 # The default value is: My Project.
 
-PROJECT_NAME           = "C++ Actor Framework"
+PROJECT_NAME           = "CAF"
 
 # The PROJECT_NUMBER tag can be used to enter a project or revision number. This
 # could be handy for archiving the generated documentation or if some version
 # control system is used.
 
-PROJECT_NUMBER         = 1.0.1
+PROJECT_NUMBER         = @CAF_VERSION@
 
 # Using the PROJECT_BRIEF tag one can provide an optional one line description
 # for a project that appears at the top of each page and should give viewer a
@@ -58,7 +58,7 @@ PROJECT_LOGO           =
 # entered, it will be relative to the location where doxygen was started. If
 # left blank the current directory will be used.
 
-OUTPUT_DIRECTORY       =
+OUTPUT_DIRECTORY       = @CMAKE_CURRENT_BINARY_DIR@
 
 # If the CREATE_SUBDIRS tag is set to YES then doxygen will create 4096 sub-
 # directories (in 2 levels) under the output directory of each output format and
@@ -160,7 +160,7 @@ FULL_PATH_NAMES        = YES
 # will be relative from the directory where doxygen is started.
 # This tag requires that the tag FULL_PATH_NAMES is set to YES.
 
-STRIP_FROM_PATH        =
+STRIP_FROM_PATH        = @PROJECT_SOURCE_DIR@
 
 # The STRIP_FROM_INC_PATH tag can be used to strip a user-defined part of the
 # path mentioned in the documentation of a class, which tells the reader which
@@ -813,9 +813,9 @@ WARN_LOGFILE           =
 # spaces. See also FILE_PATTERNS and EXTENSION_MAPPING
 # Note: If this tag is empty the current directory is searched.
 
-INPUT                  = "libcaf_core/caf" \
-                         "libcaf_io/caf" \
-                         "libcaf_net/caf"
+INPUT                  = "@PROJECT_SOURCE_DIR@/libcaf_core/caf" \
+                         "@PROJECT_SOURCE_DIR@/libcaf_io/caf" \
+                         "@PROJECT_SOURCE_DIR@/libcaf_net/caf"
 
 # This tag can be used to specify the character encoding of the source files
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding. Doxygen uses
@@ -888,7 +888,7 @@ EXCLUDE_SYMBOLS        =
 # that contain example code fragments that are included (see the \include
 # command).
 
-EXAMPLE_PATH           = "examples"
+EXAMPLE_PATH           = "@PROJECT_SOURCE_DIR@/examples"
 
 # If the value of the EXAMPLE_PATH tag contains directories, you can use the
 # EXAMPLE_PATTERNS tag to specify one or more wildcard pattern (like *.cpp and
@@ -908,7 +908,7 @@ EXAMPLE_RECURSIVE      = YES
 # that contain images that are to be included in the documentation (see the
 # \image command).
 
-IMAGE_PATH             = "doc/png/"
+IMAGE_PATH             = "@PROJECT_SOURCE_DIR@/doc/png/"
 
 # The INPUT_FILTER tag can be used to specify a program that doxygen should
 # invoke to filter for each input file. Doxygen will invoke the filter program
@@ -2104,7 +2104,7 @@ INCLUDE_FILE_PATTERNS  =
 
 PREDEFINED             = CAF_DOCUMENTATION, \
                          CAF_CORE_EXPORT=,  \
-                         CAF_IO_EXPORT=     \
+                         CAF_IO_EXPORT=,    \
                          CAF_NET_EXPORT=,
 
 # If the MACRO_EXPANSION and EXPAND_ONLY_PREDEF tags are set to YES then this

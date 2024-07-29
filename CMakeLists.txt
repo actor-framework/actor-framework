@@ -109,6 +109,12 @@ if(MSVC AND CAF_SANITIZERS)
   message(FATAL_ERROR "Sanitizer builds are currently not supported on MSVC")
 endif()
 
+# -- doxygen setup -------------------------------------------------------------
+
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Doxyfile.in"
+               "${CMAKE_CURRENT_BINARY_DIR}/Doxyfile"
+               IMMEDIATE @ONLY)
+
 # -- get dependencies that are used in more than one module --------------------
 
 if(CAF_ENABLE_OPENSSL_MODULE OR CAF_ENABLE_NET_MODULE)
