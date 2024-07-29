@@ -47,6 +47,7 @@ caf_add_component(
     caf/net/generic_lower_layer.cpp
     caf/net/generic_upper_layer.cpp
     caf/net/http/async_client.cpp
+    caf/net/http/async_client.test.cpp
     caf/net/http/client.cpp
     caf/net/http/client.test.cpp
     caf/net/http/client_factory.cpp

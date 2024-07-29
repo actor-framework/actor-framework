@@ -41,8 +41,10 @@ public:
   }
 
   void abort(const caf::error& reason) override {
-    log::net::error("Response abortet with: {}", to_string(reason));
-    response_.set_error(reason);
+    if (response_.valid()) {
+      log::net::error("Response abortet with: {}", to_string(reason));
+      response_.set_error(reason);
+    }
   }
 
   // -- http::client lower layer implementation --------------------------------
@@ -62,6 +64,7 @@ public:
     http::response resp{static_cast<http::status>(hdr.status()),
                         std::move(fields),
                         byte_buffer{payload.begin(), payload.end()}};
+    down->shutdown();
     response_.set_value(std::move(resp));
     return static_cast<ptrdiff_t>(payload.size());
   }
@@ -79,7 +82,7 @@ private:
     down->begin_header(method_, path_);
     for (const auto& [key, value] : fields_)
       down->add_header_field(key, value);
-    if (!payload_.empty())
+    if (!payload_.empty() && !fields_.count("Content-Length"))
       down->add_header_field("Content-Length", std::to_string(payload_.size()));
     down->end_header();
     if (!payload_.empty())

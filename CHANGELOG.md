@@ -5,6 +5,11 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ## Unreleased
 
+### Fixed
+
+- When using the HTTP client API, the client now properly closes the connection
+  after receiving a response even if the server would keep the connection open.
+
 ## [1.0.1] - 2024-07-23
 
 ### Fixed
