@@ -32,7 +32,7 @@ constexpr spawn_options no_spawn_options = spawn_options::no_flags;
 constexpr spawn_options monitored
   = spawn_options::monitor_flag;
 
-/// Causes `spawn` to call `self->link_to(...) immediately
+/// Causes `spawn` to call `self->link_to(...)` immediately
 /// after the new actor was spawned.
 constexpr spawn_options linked = spawn_options::link_flag;
 

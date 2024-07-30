@@ -113,9 +113,6 @@
 /// @namespace caf::mixin
 /// Contains mixin classes implementing several actor traits.
 ///
-/// @namespace caf::exit_reason
-/// Contains all predefined exit reasons.
-///
 /// @namespace caf::policy
 /// Contains policies encapsulating characteristics or algorithms.
 ///
@@ -178,7 +175,7 @@
 /// The first argument is the receiver of the message followed by any number
 /// of values:
 ///
-/// ~~
+/// @code
 /// // spawn some actors
 /// actor_system_config cfg;
 /// actor_system system{cfg};
@@ -202,7 +199,7 @@
 /// self->mail(msg).send(a1);
 /// self->mail(msg).send(a2);
 /// self->mail(msg).send(a3);
-/// ~~
+/// @endcode
 ///
 /// @section Receive Receive messages
 ///
@@ -210,7 +207,7 @@
 /// is a list of { callback } rules where the callback argument types
 /// define a pattern for matching messages.
 ///
-/// ~~
+/// @code
 /// {
 ///   [&self](hello_atom, const std::string& msg) {
 ///     self->println("received hello message: {}", msg);
@@ -220,18 +217,18 @@
 ///     return make_message(result_atom::value, i0 + i1 + i2);
 ///   }
 /// }
-/// ~~
+/// @endcode
 ///
 /// Blocking actors such as the scoped actor can call their receive member
 /// to handle incoming messages.
 ///
-/// ~~
+/// @code
 /// self->receive(
 ///  [&self](result_atom, int i) {
 ///    self->println("result is: {}", i);
 ///  }
 /// );
-/// ~~
+/// @endcode
 ///
 /// Please read the manual for further details about pattern matching.
 ///
@@ -244,7 +241,7 @@
 /// message wanted by receiving just two integers.
 ///
 /// Example actor:
-/// ~~
+/// @code
 /// using plus_atom = atom_constant<atom("plus")>;
 /// using minus_atom = atom_constant<atom("minus")>;
 /// behavior math_actor() {
@@ -257,7 +254,7 @@
 ///     }
 ///   };
 /// }
-/// ~~
+/// @endcode
 ///
 /// @section ReceiveLoops Receive Loops
 ///
@@ -274,7 +271,7 @@
 /// `receive_while` creates a functor evaluating a lambda expression.
 /// The loop continues until the given lambda returns `false`. A simple example:
 ///
-/// ~~
+/// @code
 /// size_t received = 0;
 /// receive_while([&] { return received < 10; }) (
 ///   [&](int) {
@@ -282,11 +279,11 @@
 ///   }
 /// );
 /// // ...
-/// ~~
+/// @endcode
 ///
 /// `receive_for` is a simple ranged-based loop:
 ///
-/// ~~
+/// @code
 /// std::vector<int> results;
 /// size_t i = 0;
 /// receive_for(i, 10) (
@@ -294,13 +291,13 @@
 ///     results.push_back(value);
 ///   }
 /// );
-/// ~~
+/// @endcode
 ///
 /// `do_receive` returns a functor providing the function `until` that
 /// takes a lambda expression. The loop continues until the given lambda
 /// returns true. Example:
 ///
-/// ~~
+/// @code
 /// size_t received = 0;
 /// do_receive (
 ///   [&](int) {
@@ -308,7 +305,7 @@
 ///   }
 /// ).until([&] { return received >= 10; });
 /// // ...
-/// ~~
+/// @endcode
 ///
 /// @section FutureSend Sending Delayed Messages
 ///
@@ -316,7 +313,7 @@
 /// This is particularly useful for recurring events, e.g., periodical polling.
 /// Usage example:
 ///
-/// ~~
+/// @code
 /// scoped_actor self{...};
 ///
 /// self->mail(poll_atom::value).delay(std::chrono::seconds(1)).send(self);
@@ -329,7 +326,7 @@
 ///     self->mail(poll_atom::value).delay(std::chrono::seconds(1)).send(self);
 ///   }
 /// );
-/// ~~
+/// @endcode
 ///
 /// See also the {@link dancing_kirby.cpp dancing kirby example}.
 ///
@@ -343,7 +340,7 @@
 /// It also converts unicode literals to the corresponding STL container.
 ///
 /// A few examples:
-/// ~~
+/// @code
 /// // sends an std::string containing "hello actor!" to itself
 /// send(self, "hello actor!");
 ///
@@ -356,17 +353,17 @@
 ///
 /// // x has the type caf::tuple<std::string, std::string>
 /// auto x = make_message("hello", "tuple");
-/// ~~
+/// @endcode
 ///
 /// @defgroup ActorCreation Creating Actors
 
 // examples
 
-/// A trivial example program.
 /// @example hello_world.cpp
+/// ### A trivial example program.
 
-/// A simple example for a delayed_send based application.
 /// @example dancing_kirby.cpp
+/// ### A simple example for a delayed_send based application.
 
-/// An event-based "Dining Philosophers" implementation.
 /// @example dining_philosophers.cpp
+/// ### An event-based "Dining Philosophers" implementation.
