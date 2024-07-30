@@ -61,8 +61,7 @@ request router::lift(responder&& res) {
 }
 
 void router::shutdown(const error& err) {
-  abort(err);
-  down_->shutdown(err);
+  abort_and_shutdown(err);
 }
 
 void router::abort_and_shutdown(const error& err) {
