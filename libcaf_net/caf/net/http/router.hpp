@@ -59,7 +59,10 @@ public:
   /// processing of the HTTP request.
   request lift(responder&& res);
 
+  [[deprecated("use abort_and_shutdown instead")]]
   void shutdown(const error& err);
+
+  void abort_and_shutdown(const error& err);
 
   // -- http::upper_layer implementation ---------------------------------------
 
