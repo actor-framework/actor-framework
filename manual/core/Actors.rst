@@ -154,12 +154,6 @@ statically and dynamically typed event-based actors as well as brokers
 +-------------------------------+--------------------------------------------------------------------------+
 | ``set_exception_handler(F f)``| Installs ``f`` for converting exceptions to errors (see :ref:`error`).   |
 +-------------------------------+--------------------------------------------------------------------------+
-| ``set_exit_handler(F f)``     | Installs ``f`` to handle exit messages (see :ref:`exit-message`).        |
-+-------------------------------+--------------------------------------------------------------------------+
-| ``set_error_handler(F f)``    | Installs ``f`` to handle error messages (see :ref:`error-message`).      |
-+-------------------------------+--------------------------------------------------------------------------+
-| ``set_default_handler(F f)``  | Installs ``f`` as fallback message handler (see :ref:`default-handler`). |
-+-------------------------------+--------------------------------------------------------------------------+
 
 Class ``blocking_actor``
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -390,11 +384,10 @@ Blocking Actors
 Blocking actors always run in a separate thread and are not scheduled by CAF.
 Unlike event-based actors, blocking actors have explicit, blocking *receive*
 functions. Further, blocking actors do not handle system messages automatically
-via special-purpose callbacks (see :ref:`special-handler`). This gives users
-full control over the behavior of blocking actors. However, blocking actors
-still should follow conventions of the actor system. For example, actors should
-unconditionally terminate after receiving an ``exit_msg`` with reason
-``exit_reason::kill``.
+via special-purpose callbacks. This gives users full control over the behavior
+of blocking actors. However, blocking actors still should follow conventions of
+the actor system. For example, actors should unconditionally terminate after
+receiving an ``exit_msg`` with reason ``exit_reason::kill``.
 
 Receiving Messages
 ~~~~~~~~~~~~~~~~~~
@@ -417,9 +410,10 @@ matched by the behavior are automatically skipped and remain in the mailbox.
 Catch-all Receive Statements
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Blocking actors can use inline catch-all callbacks instead of setting a default
-handler (see :ref:`default-handler`). A catch-all case must be the last callback
-before the optional timeout, as shown in the example below.
+Blocking actors can use catch-all callbacks in the same way event-based actors
+can. A catch-all case simply matches on ``caf::message`` and always should be
+the last callback in the list (because it will render any callback after it
+unreachable), as shown in the example below.
 
 .. code-block:: C++
 
@@ -433,9 +427,9 @@ before the optional timeout, as shown in the example below.
      [&](const exit_msg& x) {
        // ...
      },
-     others >> [](message& x) -> skippable_result {
+     [](message x) {
        // report unexpected message back to client
-       return sec::unexpected_message;
+       return caf::make_error(caf::sec::unexpected_message);
      }
    );
 

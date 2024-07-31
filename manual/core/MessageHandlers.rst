@@ -18,40 +18,55 @@ messages it receives.
    message_handler x1{
      [](int32_t i) { /*...*/ },
      [](double db) { /*...*/ },
-     [](int32_t a, int32_t b, int32_t c) { /*...*/ }
+     [](int32_t a, int32_t b, int32_t c) { /*...*/ },
    };
 
 In our first example, ``x1`` models a behavior accepting messages that consist
 of either exactly one ``int``, or one ``double``, or three ``int`` values. Any
-other message is not matched and gets forwarded to the default handler (see
-:ref:`default-handler`).
+other message  remains unhandled. When using this behavior in an actor, the
+actor will raise an error if it receives a message that does not match any of
+the callbacks. To add a default handler, we simply match on ``caf::message``:
 
 .. code-block:: C++
 
    message_handler x2{
+     [](int32_t i) { /*...*/ },
      [](double db) { /*...*/ },
-     [](double db) { /* - unreachable - */ }
+     [](int32_t a, int32_t b, int32_t c) { /*...*/ },
+     [](caf::message msg) { /*...*/ },
    };
 
-Our second example illustrates an important characteristic of the matching
-mechanism. Each message is matched against the callbacks in the order they are
-defined. The algorithm stops at the first match. Hence, the second callback in
-``x2`` is unreachable.
+Using ``caf::message`` as the last callback will consume any message that did
+not match any of the previous callbacks. Note that the order is important.
+Placing anything after ``caf::message`` will render the latter unreachable. This
+is not limited to ``caf::message``, but applies to any callback. For example:
 
 .. code-block:: C++
 
-   message_handler x3 = x1.or_else(x2);
-   message_handler x4 = x2.or_else(x1);
+   message_handler x3{
+     [](double db) { /*...*/ },
+     [](double db) { /* - unreachable - */ },
+   };
+
+This example illustrates an important characteristic of the matching mechanism.
+Each message is matched against the callbacks in the order they are defined. The
+algorithm stops at the first match. Hence, the second callback in ``x3`` is
+unreachable.
+
+.. code-block:: C++
+
+   message_handler x4 = x1.or_else(x3);
+   message_handler x5 = x2.or_else(x1);
 
 Message handlers can be combined using ``or_else``. This composition is
-not commutative, as our third examples illustrates. The resulting message
+not commutative, since the order of callbacks matters. The resulting message
 handler will first try to handle a message using the left-hand operand and will
 fall back to the right-hand operand if the former did not match. Thus,
-``x3`` behaves exactly like ``x1``. This is because the second
+``x4`` behaves exactly like ``x1``. This is because the second
 callback in ``x1`` will consume any message with a single
-``double`` and both callbacks in ``x2`` are thus unreachable.
-The handler ``x4`` will consume messages with a single
-``double`` using the first callback in ``x2``, essentially
+``double`` and both callbacks in ``x3`` are thus unreachable.
+The handler ``x5`` will consume messages with a single
+``double`` using the first callback in ``x3``, essentially
 overriding the second callback in ``x1``.
 
 .. _atom:

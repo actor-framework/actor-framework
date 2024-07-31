@@ -1,5 +1,5 @@
-Introduction
-============
+Concepts
+========
 
 Before diving into the API of CAF, we discuss the concepts behind it and
 explain the terminology used in this manual.

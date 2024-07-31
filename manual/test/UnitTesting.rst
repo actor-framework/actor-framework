@@ -1,7 +1,7 @@
 .. _testing:
 
-CAF Unit Testing
-================
+Unit Testing
+============
 
 CAF includes a unit testing framework that we use to test CAF itself. It is also
 available for users to test their own code.
@@ -374,7 +374,7 @@ the verbosity, etc. Please run the binary with ``--help`` to see all available
 options.
 
 Migrating from the Legacy Test Framework
-========================================
+----------------------------------------
 
 The new testing framework has been added with CAF 0.19.3. Prior to that, CAF
 shipped a legacy testing framework that is still available. However, we

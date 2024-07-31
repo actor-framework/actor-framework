@@ -43,6 +43,7 @@ The mutable version is simply called ``typed_message_view``, but otherwise has a
 similar interface:
 
 .. code-block:: C++
+
   auto msg1 = caf::make_message("hello", "world");
   auto msg2 = msg1;
   if (auto v = caf::typed_message_view<std::string, std::string>{msg1}) {
