@@ -60,6 +60,12 @@ Contents
 
 .. toctree::
    :maxdepth: 2
+   :caption: Commercial Extensions
+
+   interance/WorkerSet
+
+.. toctree::
+   :maxdepth: 2
    :caption: Appendix
 
    FAQ
