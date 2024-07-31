@@ -8,33 +8,37 @@ Contents
 
 .. toctree::
    :maxdepth: 2
+   :caption: Introduction
+
+   intro/Concepts
+   intro/Overview
+
+.. toctree::
+   :maxdepth: 2
    :caption: Core Library
 
-   Introduction
-   Overview
-   MessagePassing
-   TypeInspection
-   Hashing
-   MessageHandlers
-   Actors
-   Scheduler
-   Registry
-   ReferenceCounting
-   Error
-   ConfiguringActorApplications
-   CopyOnWriteTypes
-   TypedMessageView
-   DataFlows
-   Testing
-   Metrics
+   core/MessagePassing
+   core/TypeInspection
+   core/Hashing
+   core/MessageHandlers
+   core/Actors
+   core/Scheduler
+   core/Registry
+   core/ReferenceCounting
+   core/Error
+   core/ConfiguringActorApplications
+   core/CopyOnWriteTypes
+   core/TypedMessageView
+   core/DataFlows
+   core/Metrics
 
 .. toctree::
    :maxdepth: 2
    :caption: I/O Library
 
-   NetworkTransparency
-   Brokers
-   RemoteSpawn
+   io/NetworkTransparency
+   io/Brokers
+   io/RemoteSpawn
 
 .. toctree::
    :maxdepth: 2
@@ -47,6 +51,12 @@ Contents
    net/LengthPrefixFraming
    net/Prometheus
    net/WebSocket
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Test Library
+
+   test/UnitTesting
 
 .. toctree::
    :maxdepth: 2

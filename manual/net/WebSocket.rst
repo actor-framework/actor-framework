@@ -41,10 +41,8 @@ Starting a WebSocket server has three distinct steps.
 In the first step, we bind the server to an actor system and optionally
 configure SSL. The entry point is always calling the free function
 ``caf::net::web_socket::with`` that takes an ``actor_system`` as argument.
-Optionally, users may set the ``Trait`` template parameter (see `Traits`_) of
-the function. When not setting this parameter, it defaults to
-``caf::net::web_socket::default_trait``. With this policy, the WebSocket sends
-and receives ``caf::net::web_socket::frame`` objects (see `Frames`_).
+The WebSocket API in CAF produces flows that operator on and receives
+``caf::net::web_socket::frame`` objects (see `Frames`_).
 
 On the result factory object, we can optionally call ``context`` to set an SSL
 context. Once we call ``accept``, we enter the second phase of the setup.
@@ -173,21 +171,3 @@ The most commonly used member functions are as follows:
   text message.
 
 For the full class interface, please refer to the Doxygen documentation.
-
-Traits
-------
-
-A trait translates between text or binary frames on the network and the
-application by defining C++ types for reading and writing from/to the WebSocket
-connection. The trait class also binds these types to the asynchronous resources
-that connect the WebSocket in the background to the application logic.
-
-The interface of the default looks as follows:
-
-.. literalinclude:: /libcaf_net/caf/net/web_socket/default_trait.hpp
-   :language: C++
-   :start-after: --(rst-class-begin)--
-   :end-before: --(rst-class-end)--
-
-Users may implement custom trait types by providing the same member functions
-and type aliases.

@@ -330,20 +330,18 @@ thereby sends the result to the client:
                   |                  X
                   X
 
-Special Message Handlers
-------------------------
+Special Message Types
+---------------------
 
-CAF has a few system-level message types (``exit_msg``, and ``error``) that all
-actors should handle regardless of their current state. Consequently,
-event-based actors handle such messages in special-purpose message handlers.
-Note that blocking actors have neither of those special-purpose handlers (see
-:ref:`blocking-actor`) and should instead provide callbacks for these messages
-when calling ``receive``.
+CAF has a few system-level message types such as ``exit_msg`` and ``error``
+that have a special meaning in the actor system and have default handlers in
+all actors. These messages are not part of the user-level API and are not
+visible to users unless they explicitly handle them.
 
 .. _exit-message:
 
-Exit Handler
-~~~~~~~~~~~~
+Exit Messages
+~~~~~~~~~~~~~
 
 Bidirectional monitoring with a strong lifetime coupling is established by
 calling ``self->link_to(other)``. This will cause the runtime to send an
@@ -351,33 +349,29 @@ calling ``self->link_to(other)``. This will cause the runtime to send an
 after receiving an ``exit_msg`` unless the exit reason is
 ``exit_reason::normal``. This mechanism propagates failure states in an actor
 system. Linked actors form a sub system in which an error causes all actors to
-fail collectively. Actors can override the default handler via
-``set_exit_handler(f)``, where ``f`` is a function object with signature
-``void (exit_message&)`` or ``void (scheduled_actor*, exit_message&)``.
+fail collectively. Actors can override the default by providing a handler for
+``exit_msg``.
 
 .. _error-message:
 
-Error Handler
-~~~~~~~~~~~~~
+Error Messages
+~~~~~~~~~~~~~~
 
 Actors send error messages to others by returning an ``error`` (see
 :ref:`error`) from a message handler. Similar to exit messages, error messages
-usually cause the receiving actor to terminate, unless a custom handler was
-installed via ``set_error_handler(f)``, where ``f`` is a function object with
-signature ``void (error&)`` or ``void (scheduled_actor*, error&)``.
-Additionally, ``request`` accepts an error handler as second argument to handle
-errors for a particular request (see :ref:`error-response`). The default handler
-is used as fallback if ``request`` is used without error handler.
+usually cause the receiving actor to terminate, unless the behavior includes a
+handler for ``error``. The default handler for errors in actors will terminate
+the actor.
 
 .. _idle-timeouts:
 
 Idle Timeouts
 -------------
 
-Actors can set an idle timeout to wake up after a certain period of not
-receiving any messages. This is useful for actors that observe external events
-and need to perform some cleanup or error handling if no events arrive for a
-while.
+Event-based actors can set an idle timeout to wake up after a certain period of
+not receiving any messages. This is useful for actors that observe external
+events and need to perform some cleanup or error handling if no events arrive
+for a while.
 
 To set a timeout, actors call
 ``self->set_idle_timeout(duration, ref_type, repeat_policy, callback)``,
@@ -392,3 +386,6 @@ whereas:
   repeatedly. This parameter must be either ``once`` or ``repeat``.
 - ``callback`` is a function object taking no arguments. CAF calls this function
   whenever the timeout triggers.
+
+The messages that trigger the timeout are handled transparently by CAF and do
+use the same message handler as regular messages.
