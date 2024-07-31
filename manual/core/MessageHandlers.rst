@@ -56,7 +56,7 @@ unreachable.
 .. code-block:: C++
 
    message_handler x4 = x1.or_else(x3);
-   message_handler x5 = x2.or_else(x1);
+   message_handler x5 = x3.or_else(x1);
 
 Message handlers can be combined using ``or_else``. This composition is
 not commutative, since the order of callbacks matters. The resulting message
