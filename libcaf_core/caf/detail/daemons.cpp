@@ -32,13 +32,13 @@ struct daemons::impl {
 
   void on_stop() {
     anon_send_exit(cleaner, exit_reason::user_shutdown);
-    std::map<int64_t, impl::state> workers;
+    std::map<int64_t, impl::state> stopped_workers;
     {
       std::lock_guard guard{mtx};
       id = 0;
-      workers.swap(workers);
+      stopped_workers.swap(workers);
     }
-    for (auto& [id, st] : workers) {
+    for (auto& [id, st] : stopped_workers) {
       st.do_stop(std::move(st.hdl));
     }
   }
