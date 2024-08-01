@@ -9,6 +9,10 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 - When using the HTTP client API, the client now properly closes the connection
   after receiving a response even if the server would keep the connection open.
+- When using the WebSocket client API, the socket could close prematurely when
+  leaving `main` right after setting up the connection, even when starting an
+  actor in `start`. This was due to CAF not holding onto a strong reference to
+  the connection object (and thus the actor) at all times (#1918).
 
 ## [1.0.1] - 2024-07-23
 
