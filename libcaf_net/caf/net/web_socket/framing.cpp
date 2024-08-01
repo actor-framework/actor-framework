@@ -111,6 +111,7 @@ public:
     std::random_device rd;
     rng_.seed(rd());
     down_ = down;
+    down_->configure_read(default_receive_policy);
     return up_->start(this);
   }
 
