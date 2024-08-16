@@ -47,6 +47,7 @@ members made packages available for these package managers:
 - [FreeBSD Ports](https://svnweb.freebsd.org/ports/head/devel/caf)
 - [Homebrew](https://formulae.brew.sh/formula/caf).
 - [VCPKG](https://github.com/microsoft/vcpkg/tree/master/ports/caf)
+- [Fedora](https://src.fedoraproject.org/rpms/actor-framework)
 
 ## Get the Sources
 
