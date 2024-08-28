@@ -42,7 +42,7 @@ public:
   }
 
   bool running() const noexcept {
-    return state_ == state::running;
+    return out_.valid();
   }
 
   const error& err() const noexcept {
@@ -65,7 +65,7 @@ public:
   // -- callbacks for the forwarders -------------------------------------------
 
   void fwd_on_subscribe(debounce_input_t, subscription sub) {
-    if (!running() || value_sub_ || !out_) {
+    if (value_sub_ || !out_) {
       sub.cancel();
       return;
     }
@@ -117,8 +117,7 @@ private:
     if (demand_ == 0)
       return;
     --demand_;
-    auto debounced = buf_.has_value();
-    if (debounced) {
+    if (buf_) {
       out_.on_next(*buf_);
       buf_.reset();
       pending_.dispose();
@@ -128,7 +127,6 @@ private:
   void do_dispose(bool from_external) override {
     if (!out_)
       return;
-    state_ = state::disposed;
     value_sub_.cancel();
     if (from_external)
       out_.on_error(make_error(sec::disposed));
@@ -142,7 +140,6 @@ private:
       out_.on_complete();
     else
       out_.on_error(err_);
-    state_ = err_ ? state::aborted : state::disposed;
   }
 
   /// Stores the context (coordinator) that runs this flow.
@@ -161,13 +158,6 @@ private:
 
   /// Demand signaled by the observer.
   size_t demand_ = 0;
-
-  /// Our current state.
-  /// - running: alive and ready to emit batches.
-  /// - completed: on_complete was called but some data is still debounced.
-  /// - aborted: on_error was called but some data is still debounced.
-  /// - disposed: inactive.
-  state state_ = state::running;
 
   /// Caches the abort reason.
   error err_;
