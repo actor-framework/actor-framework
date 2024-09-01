@@ -215,6 +215,10 @@ public:
   /// Emits the most recent item of the input observable once per interval.
   observable<T> sample(timespan period);
 
+  /// Retries input observable on error when predicate returns true.
+  template <class Predicate>
+  observable<T> retry(Predicate predicate);
+
   // -- combining --------------------------------------------------------------
 
   /// Combines the output of multiple @ref observable objects into one by

@@ -1,0 +1,165 @@
+// This file is part of CAF, the C++ Actor Framework. See the file LICENSE in
+// the main distribution directory for license terms and copyright or visit
+// https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
+
+#include "caf/test/fixture/deterministic.hpp"
+#include "caf/test/fixture/flow.hpp"
+#include "caf/test/scenario.hpp"
+#include "caf/test/test.hpp"
+
+#include "caf/log/test.hpp"
+
+using namespace caf;
+
+namespace {
+
+struct fixture : test::fixture::deterministic, test::fixture::flow {
+  // Similar to retry::subscribe, but returns a retry_sub pointer instead of
+  // type-erasing it into a disposable.
+  template <class T = int, class Predicate>
+  auto raw_sub(caf::flow::observable<int> in, caf::flow::observer<int> out,
+               Predicate predicate) {
+    using sub_t = caf::flow::op::retry_sub<T, Predicate>;
+    auto ptr = make_counted<sub_t>(coordinator(), out, std::move(predicate),
+                                   in);
+    out.on_subscribe(caf::flow::subscription{ptr});
+    return ptr;
+  }
+};
+
+WITH_FIXTURE(fixture) {
+
+SCENARIO("the retry operator retries observable multiple times") {
+  int retry_count = 3;
+  auto retry_hdl = [&retry_count](const caf::error& what) {
+    if (what == sec::invalid_request && retry_count > 0) {
+      --retry_count;
+      return true;
+    } else
+      return false;
+  };
+  GIVEN("an observable that always fails") {
+    WHEN("calling retry") {
+      THEN("the observer receives error after retrying 3 times") {
+        auto outputs = std::make_shared<std::vector<int>>();
+        auto err = std::make_shared<error>();
+        auto input = std::vector{1, 2, 3, 4};
+        make_observable()
+          .from_container(input)
+          .concat(make_observable().fail<int32_t>(sec::invalid_request))
+          .retry(retry_hdl)
+          .do_on_error([err](const error& what) { *err = what; })
+          .for_each([outputs](const int& xs) { outputs->emplace_back(xs); });
+        run_flows();
+        check_eq(outputs->size(), 16u);
+        check_eq(*err, error{sec::invalid_request});
+      }
+    }
+  }
+  GIVEN("an observable that always completes") {
+    WHEN("calling retry") {
+      THEN("the observer completes without retrying") {
+        auto outputs = std::make_shared<std::vector<int>>();
+        auto err = std::make_shared<error>();
+        auto completed = std::make_shared<bool>(false);
+        auto input = std::vector{1, 2, 3, 4};
+        make_observable()
+          .from_container(input)
+          .retry(retry_hdl)
+          .do_on_error([err](const error& what) { *err = what; })
+          .do_on_complete([completed]() { *completed = true; })
+          .for_each([outputs](const int& xs) { outputs->emplace_back(xs); });
+        run_flows();
+        check_eq(outputs->size(), 4u);
+        check_eq(*err, error{}); // no error
+        check(*completed);
+      }
+    }
+  }
+}
+
+SCENARIO("retry can complete flow despite multiple errors") {
+  auto retry_hdl = [](const caf::error& what) {
+    if (what == sec::runtime_error)
+      return true;
+    else
+      return false;
+  };
+  GIVEN("an initialized retry operator") {
+    auto snk = flow::make_passive_observer<int>();
+    auto uut = raw_sub(make_observable().never<int>(), snk->as_observer(),
+                       retry_hdl);
+    snk->request(42);
+    run_flows();
+    WHEN("calling on_error with runtime_error once") {
+      THEN("flow is completed without forwarding error") {
+        uut->on_next(1);
+        uut->on_next(2);
+        run_flows();
+        uut->on_error(sec::runtime_error);
+        run_flows();
+        uut->on_next(1);
+        uut->on_complete();
+        run_flows();
+        check_eq(snk->buf, std::vector<int>{1, 2, 1});
+        check(snk->completed());
+      }
+    }
+    WHEN("calling on_error with runtime_error twice") {
+      THEN("flow is completed without forwarding error") {
+        uut->on_next(1);
+        uut->on_next(2);
+        run_flows();
+        uut->on_error(sec::runtime_error);
+        run_flows();
+        uut->on_next(1);
+        uut->on_error(sec::runtime_error);
+        run_flows();
+        uut->on_next(1);
+        uut->on_next(2);
+        uut->on_complete();
+        run_flows();
+        check_eq(snk->buf, std::vector<int>{1, 2, 1, 1, 2});
+        check(snk->completed());
+      }
+    }
+    WHEN("calling on_error on operator with unexpected_message") {
+      THEN("flow is completed after forwarding error") {
+        uut->on_next(1);
+        uut->on_next(2);
+        run_flows();
+        uut->on_error(sec::unexpected_message);
+        run_flows();
+        check_eq(snk->buf, std::vector<int>{1, 2});
+        check(snk->aborted());
+      }
+    }
+  }
+}
+
+SCENARIO("disposing a retry operator completes the flow") {
+  auto retry_hdl = [](const caf::error& what) {
+    if (what == sec::runtime_error)
+      return true;
+    else
+      return false;
+  };
+  GIVEN("a retry operator") {
+    WHEN("disposing the subscription of the operator") {
+      THEN("the observer receives an on_error event") {
+        auto snk = flow::make_passive_observer<int>();
+        auto uut = raw_sub(make_observable().never<int>(), snk->as_observer(),
+                           retry_hdl);
+        snk->request(42);
+        run_flows();
+        uut->dispose();
+        run_flows();
+        check(snk->aborted());
+      }
+    }
+  }
+}
+
+} // WITH_FIXTURE(fixture)
+
+} // namespace
