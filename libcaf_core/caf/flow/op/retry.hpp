@@ -62,7 +62,7 @@ public:
       sub_.release_later();
     }
     sub_ = std::move(sub);
-    sub_.request(256);
+    sub_.request(demand_);
   }
 
   void on_next(const T& item) override {
@@ -75,7 +75,6 @@ public:
         sub_.request(1);
       return;
     }
-    sub_.request(1);
   }
 
   void on_complete() override {
