@@ -15,6 +15,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   the connection object (and thus the actor) at all times (#1918).
 - When using log statements in unit tests, e.g. `log::test::debug`, the output
   will now be rendered by default even when not using the deterministic fixture.
+- Registering a custom option of type `size_t` will no longer print
+  `<dictionary>` as type hint in the `--help` output. Instead, CAF will print
+  either `uint32_t` or `uint64_t`, depending on the platform.
 
 ## [1.0.1] - 2024-07-23
 

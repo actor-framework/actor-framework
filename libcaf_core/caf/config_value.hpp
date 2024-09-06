@@ -9,6 +9,7 @@
 #include "caf/detail/bounds_checker.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/parse.hpp"
+#include "caf/detail/squashed_int.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/dictionary.hpp"
 #include "caf/expected.hpp"
@@ -251,9 +252,10 @@ public:
 
   template <class T>
   static constexpr std::string_view mapped_type_name() {
-    if constexpr (detail::is_complete<caf::type_name<T>>) {
-      return caf::type_name_v<T>;
-    } else if constexpr (detail::is_list_like_v<T>) {
+    using type = detail::squash_if_int_t<T>;
+    if constexpr (detail::is_complete<caf::type_name<type>>) {
+      return caf::type_name_v<type>;
+    } else if constexpr (detail::is_list_like_v<type>) {
       return "list";
     } else {
       return "dictionary";
