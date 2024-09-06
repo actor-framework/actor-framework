@@ -409,7 +409,7 @@ OUTLINE("two timestamps with the same time point are equal") {
   )__";
 }
 
-OUTLINE("force_utc coverts a dateime object to UTC") {
+OUTLINE("force_utc coverts a datetime object to UTC") {
   GIVEN("the timestamp <timestamp>") {
     auto maybe_ts = datetime::from_string(block_parameters<std::string>());
     require(maybe_ts.has_value());
