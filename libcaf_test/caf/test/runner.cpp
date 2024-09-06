@@ -144,6 +144,7 @@ runner::runner() : suites_(caf::test::registry::suites()) {
 int runner::run(int argc, char** argv) {
   auto default_reporter = reporter::make_default();
   reporter::instance(default_reporter.get());
+  auto default_logger = reporter::make_logger();
   if (auto [ok, help_printed] = parse_cli(argc, argv); !ok) {
     return EXIT_FAILURE;
   } else if (help_printed) {
@@ -178,6 +179,7 @@ int runner::run(int argc, char** argv) {
       std::unique_ptr<runnable> def;
       try {
         do {
+          logger::current_logger(default_logger.get());
           default_reporter->begin_test(state, test_name);
           def = factory_instance->make(state);
           def->run();

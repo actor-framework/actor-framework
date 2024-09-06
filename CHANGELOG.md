@@ -13,6 +13,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   leaving `main` right after setting up the connection, even when starting an
   actor in `start`. This was due to CAF not holding onto a strong reference to
   the connection object (and thus the actor) at all times (#1918).
+- When using log statements in unit tests, e.g. `log::test::debug`, the output
+  will now be rendered by default even when not using the deterministic fixture.
 
 ## [1.0.1] - 2024-07-23
 
