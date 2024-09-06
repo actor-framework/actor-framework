@@ -34,82 +34,6 @@ using namespace std::literals;
 
 namespace caf::test::fixture {
 
-namespace {
-
-/// A logger implementation that delegates to the test reporter.
-class deterministic_logger : public logger, public detail::atomic_ref_counted {
-public:
-  /// Increases the reference count of the coordinated.
-  void ref_logger() const noexcept final {
-    this->ref();
-  }
-
-  /// Decreases the reference count of the coordinated and destroys the object
-  /// if necessary.
-  void deref_logger() const noexcept final {
-    this->deref();
-  }
-
-  // -- constructors, destructors, and assignment operators --------------------
-
-  deterministic_logger(actor_system&) {
-    // nop
-  }
-
-  // -- logging ----------------------------------------------------------------
-
-  /// Writes an entry to the event-queue of the logger.
-  /// @thread-safe
-  void do_log(log::event_ptr&& event) override {
-    // We omit fields such as component and actor ID. When not filtering
-    // non-test log messages, we add these fields to the message in order to be
-    // able to distinguish between different actors and components.
-    if (event->component() != "caf.test") {
-      auto enriched = detail::format("[{}, aid: {}] {}", event->component(),
-                                     logger::thread_local_aid(),
-                                     event->message());
-      auto enriched_event = event->with_message(enriched, log::keep_timestamp);
-      reporter::instance().print(enriched_event);
-      return;
-    }
-    reporter::instance().print(event);
-  }
-
-  /// Returns whether the logger is configured to accept input for given
-  /// component and log level.
-  bool accepts(unsigned level, std::string_view component) override {
-    return level <= reporter::instance().verbosity()
-           && !std::any_of(filter_.begin(), filter_.end(),
-                           [component](const std::string& excluded) {
-                             return component == excluded;
-                           });
-  }
-
-  // -- initialization ---------------------------------------------------------
-
-  /// Allows the logger to read its configuration from the actor system config.
-  void init(const actor_system_config&) override {
-    filter_ = reporter::instance().log_component_filter();
-  }
-
-  // -- event handling ---------------------------------------------------------
-
-  /// Starts any background threads needed by the logger.
-  void start() override {
-    // nop
-  }
-
-  /// Stops all background threads of the logger.
-  void stop() override {
-    // nop
-  }
-
-private:
-  std::vector<std::string> filter_;
-};
-
-} // namespace
-
 // -- mailbox ------------------------------------------------------------------
 
 class deterministic::mailbox_impl : public ref_counted,
@@ -515,7 +439,7 @@ void deterministic::system_impl::custom_setup(actor_system& sys,
                                               void* custom_setup_data) {
   auto* fix = static_cast<deterministic*>(custom_setup_data);
   auto setter = detail::actor_system_access{sys};
-  setter.logger(make_counted<deterministic_logger>(sys));
+  setter.logger(reporter::make_logger());
   setter.clock(std::make_unique<deterministic_actor_clock>());
   setter.scheduler(std::make_unique<scheduler_impl>(fix));
 }

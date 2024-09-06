@@ -557,4 +557,84 @@ std::unique_ptr<reporter> reporter::make_default() {
   return std::make_unique<default_reporter>();
 }
 
+namespace {
+
+/// A logger implementation that delegates to the test reporter.
+class reporter_logger : public logger, public detail::atomic_ref_counted {
+public:
+  /// Increases the reference count of the coordinated.
+  void ref_logger() const noexcept final {
+    this->ref();
+  }
+
+  /// Decreases the reference count of the coordinated and destroys the object
+  /// if necessary.
+  void deref_logger() const noexcept final {
+    this->deref();
+  }
+
+  // -- constructors, destructors, and assignment operators --------------------
+
+  reporter_logger() {
+    filter_ = reporter::instance().log_component_filter();
+  }
+
+  // -- logging ----------------------------------------------------------------
+
+  /// Writes an entry to the event-queue of the logger.
+  /// @thread-safe
+  void do_log(log::event_ptr&& event) override {
+    // We omit fields such as component and actor ID. When not filtering
+    // non-test log messages, we add these fields to the message in order to be
+    // able to distinguish between different actors and components.
+    if (event->component() != "caf.test") {
+      auto enriched = detail::format("[{}, aid: {}] {}", event->component(),
+                                     logger::thread_local_aid(),
+                                     event->message());
+      auto enriched_event = event->with_message(enriched, log::keep_timestamp);
+      reporter::instance().print(enriched_event);
+      return;
+    }
+    reporter::instance().print(event);
+  }
+
+  /// Returns whether the logger is configured to accept input for given
+  /// component and log level.
+  bool accepts(unsigned level, std::string_view component) override {
+    return level <= reporter::instance().verbosity()
+           && !std::any_of(filter_.begin(), filter_.end(),
+                           [component](const std::string& excluded) {
+                             return component == excluded;
+                           });
+  }
+
+  // -- initialization ---------------------------------------------------------
+
+  /// Allows the logger to read its configuration from the actor system config.
+  void init(const actor_system_config&) override {
+    // nop
+  }
+
+  // -- event handling ---------------------------------------------------------
+
+  /// Starts any background threads needed by the logger.
+  void start() override {
+    // nop
+  }
+
+  /// Stops all background threads of the logger.
+  void stop() override {
+    // nop
+  }
+
+private:
+  std::vector<std::string> filter_;
+};
+
+} // namespace
+
+intrusive_ptr<logger> reporter::make_logger() {
+  return make_counted<reporter_logger>();
+}
+
 } // namespace caf::test

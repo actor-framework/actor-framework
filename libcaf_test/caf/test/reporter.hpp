@@ -122,6 +122,9 @@ public:
 
   /// Creates a default reporter that writes to the standard output.
   static std::unique_ptr<reporter> make_default();
+
+  /// Creates a logger that forwards events to the current reporter.
+  static intrusive_ptr<logger> make_logger();
 };
 
 } // namespace caf::test

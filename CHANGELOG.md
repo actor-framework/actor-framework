@@ -13,6 +13,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   leaving `main` right after setting up the connection, even when starting an
   actor in `start`. This was due to CAF not holding onto a strong reference to
   the connection object (and thus the actor) at all times (#1918).
+- When using log statements in unit tests, e.g. `log::test::debug`, the output
+  will now be rendered by default even when not using the deterministic fixture.
 
 ## [1.0.1] - 2024-07-23
 
@@ -82,7 +84,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   no user-info at all.
 - The parser for reading JSON and configuration files now properly handles
   Windows-style line endings (#1850).
-- Calling `force_utc` on a `caf::chrono::dateime` object now properly applies
+- Calling `force_utc` on a `caf::chrono::datetime` object now properly applies
   the UTC offset. Previously, the function would shift the time into the wrong
   direction (#1860).
 - Fix a regression in the work-stealing scheduler that prevented workers from
