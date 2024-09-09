@@ -106,7 +106,8 @@ SCENARIO("retry can complete flow despite multiple errors") {
       }
     }
     WHEN("calling on_error with runtime_error twice") {
-      THEN("flow is completed without forwarding error") {
+      THEN(
+        "flow is completed without forwarding error and emitting item stops") {
         uut->on_next(1);
         uut->on_next(2);
         run_flows();
@@ -121,13 +122,24 @@ SCENARIO("retry can complete flow despite multiple errors") {
         run_flows();
         check_eq(snk->buf, std::vector<int>{1, 2, 1, 1, 2});
         check(snk->completed());
+        uut->on_next(3);
+        uut->on_next(4);
+        uut->on_complete();
+        run_flows();
+        check_eq(snk->buf, std::vector<int>{1, 2, 1, 1, 2});
+        check(snk->completed());
       }
     }
     WHEN("calling on_error on operator with unexpected_message") {
-      THEN("flow is completed after forwarding error") {
+      THEN("flow is completed after forwarding error and emitting item stops") {
         uut->on_next(1);
         uut->on_next(2);
         run_flows();
+        uut->on_error(sec::unexpected_message);
+        run_flows();
+        check_eq(snk->buf, std::vector<int>{1, 2});
+        check(snk->aborted());
+        uut->on_next(3);
         uut->on_error(sec::unexpected_message);
         run_flows();
         check_eq(snk->buf, std::vector<int>{1, 2});
@@ -155,6 +167,26 @@ SCENARIO("disposing a retry operator completes the flow") {
         uut->dispose();
         run_flows();
         check(snk->aborted());
+      }
+    }
+  }
+}
+
+SCENARIO("retry operator stops emitting item when there is no demand") {
+  GIVEN("a retry operator") {
+    WHEN("the demand is met") {
+      THEN("the observer stops receiving new items") {
+        auto snk = flow::make_passive_observer<int>();
+        auto uut = raw_sub(make_observable().never<int>(), snk->as_observer(),
+                           [](const caf::error&) { return true; });
+        snk->request(2);
+        uut->on_next(1);
+        uut->on_next(2);
+        uut->on_next(3);
+        uut->on_complete();
+        run_flows();
+        check_eq(snk->buf, std::vector<int>{1, 2});
+        check(snk->completed());
       }
     }
   }

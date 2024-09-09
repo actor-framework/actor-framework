@@ -102,7 +102,7 @@ private:
       out_.on_error(make_error(sec::disposed));
   }
 
-  size_t demand_;
+  size_t demand_ = 0u;
 
   /// Stores the context (coordinator) that runs this flow.
   coordinator* parent_;
