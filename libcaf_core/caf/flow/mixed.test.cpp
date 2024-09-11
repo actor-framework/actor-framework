@@ -21,8 +21,6 @@ using std::vector;
 using namespace caf;
 using namespace caf::flow;
 
-namespace {
-
 WITH_FIXTURE(test::fixture::flow) {
 
 TEST("sum up all the multiples of 3 or 5 below 1000") {
@@ -90,5 +88,3 @@ TEST("GH-1399 regression") {
 }
 
 } // WITH_FIXTURE(test::fixture::deterministic)
-
-} // namespace

@@ -35,6 +35,8 @@ void fill(list_type& xs, Ts... args) {
   (xs.emplace_back(args), ...);
 }
 
+} // namespace
+
 TEST("a default default-constructed list is empty") {
   list_type uut;
   check_eq(uut.empty(), true);
@@ -228,5 +230,3 @@ SCENARIO("splice transfers all elements from one list to another") {
     }
   }
 }
-
-} // namespace

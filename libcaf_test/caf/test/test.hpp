@@ -41,15 +41,15 @@ public:
 
 #define TEST(description)                                                      \
   namespace {                                                                  \
-  struct CAF_PP_UNIFYN(test_)                                                  \
+  struct CAF_PP_UNIFYN(caf_test_)                                              \
     : caf::test::runnable, caf_test_case_auto_fixture {                        \
     using super = caf::test::runnable;                                         \
     using super::super;                                                        \
     void do_run() override;                                                    \
     static ptrdiff_t register_id;                                              \
   };                                                                           \
-  ptrdiff_t CAF_PP_UNIFYN(test_)::register_id                                  \
-    = caf::test::registry::add<CAF_PP_UNIFYN(test_)>(                          \
+  ptrdiff_t CAF_PP_UNIFYN(caf_test_)::register_id                              \
+    = caf::test::registry::add<CAF_PP_UNIFYN(caf_test_)>(                      \
       caf_test_suite_name, description, caf::test::block_type::test);          \
   }                                                                            \
-  void CAF_PP_UNIFYN(test_)::do_run()
+  void CAF_PP_UNIFYN(caf_test_)::do_run()

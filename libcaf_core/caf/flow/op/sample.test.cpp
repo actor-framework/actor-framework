@@ -43,6 +43,8 @@ struct fixture : test::fixture::deterministic, test::fixture::flow {
   }
 };
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 SCENARIO("the sample operator emits items at regular intervals") {
@@ -360,5 +362,3 @@ SCENARIO("disposing a sample operator completes the flow") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

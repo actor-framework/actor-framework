@@ -18,8 +18,6 @@
 using namespace caf;
 using namespace std::literals;
 
-namespace {
-
 using dummy_actor = typed_actor<result<int>(int)>;
 
 using dummy_behavior = dummy_actor::behavior_type;
@@ -570,5 +568,3 @@ TEST("send asynchronous message as a typed actor") {
 }
 
 } // WITH_FIXTURE(test::fixture::deterministic)
-
-} // namespace

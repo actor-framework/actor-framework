@@ -34,6 +34,8 @@ public:
 
 struct fixture : test::fixture::flow, test::fixture::deterministic {};
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 SCENARIO("flat_map merges multiple observables") {
@@ -86,5 +88,3 @@ SCENARIO("flat_map merges multiple observables") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

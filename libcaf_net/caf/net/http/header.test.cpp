@@ -9,8 +9,6 @@
 using namespace caf;
 using namespace std::literals;
 
-namespace {
-
 TEST("parsing a http request") {
   net::http::header hdr;
   hdr.parse_fields("Host: localhost:8090\r\n"
@@ -73,5 +71,3 @@ TEST("parsing a http request") {
     check_eq(remainder, "Remainder");
   }
 }
-
-} // namespace

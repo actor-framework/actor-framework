@@ -9,8 +9,6 @@
 using namespace caf;
 using namespace caf::net;
 
-namespace {
-
 TEST("invalid socket") {
   network_socket x;
   check_eq(allow_udp_connreset(x, true), sec::network_syscall_failed);
@@ -20,5 +18,3 @@ TEST("invalid socket") {
   check_eq(remote_port(x), sec::network_syscall_failed);
   check_eq(remote_addr(x), sec::network_syscall_failed);
 }
-
-} // namespace

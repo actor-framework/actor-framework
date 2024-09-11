@@ -14,8 +14,6 @@ using namespace std::literals::string_literals;
 
 using caf::detail::base64;
 
-namespace {
-
 TEST("encoding") {
   check_eq(base64::encode("A"sv), "QQ=="sv);
   check_eq(base64::encode("AB"sv), "QUI="sv);
@@ -31,5 +29,3 @@ TEST("decoding") {
   check_eq(base64::decode("aHR0cHM6Ly9hY3Rvci1mcmFtZXdvcmsub3Jn"sv),
            "https://actor-framework.org"s);
 }
-
-} // namespace

@@ -82,6 +82,8 @@ std::string msg_as_string(Ts&&... xs) {
   return to_string(make_message(std::forward<Ts>(xs)...));
 }
 
+} // namespace
+
 TEST("messages allow index-based access") {
   auto msg = make_message("abc"s, uint32_t{10}, 20.0);
   check_eq(msg.size(), 3u);
@@ -194,5 +196,3 @@ TEST("messages implicitly convert string-like things to strings") {
 TEST_INIT() {
   init_global_meta_objects<id_block::message_test>();
 }
-
-} // namespace

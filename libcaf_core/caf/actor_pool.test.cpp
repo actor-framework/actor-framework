@@ -68,6 +68,8 @@ struct fixture {
   }
 };
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 TEST("round_robin_actor_pool") {
@@ -162,5 +164,3 @@ TEST("random_actor_pool") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

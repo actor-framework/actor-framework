@@ -31,6 +31,8 @@ struct fixture {
   i16_list rshorts{64, 32, 16, 8, 4, 2, 1};
 };
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 TEST("default construction") {
@@ -103,5 +105,3 @@ TEST("spans are convertible from compatible containers") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

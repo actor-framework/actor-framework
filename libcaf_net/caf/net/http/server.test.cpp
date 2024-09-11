@@ -146,6 +146,8 @@ struct fixture {
   std::thread mpx_thread;
 };
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 SCENARIO("the server parses HTTP GET requests into header fields") {
@@ -233,5 +235,3 @@ SCENARIO("the client receives a chunked HTTP response") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

@@ -11,14 +11,6 @@
 
 using namespace caf;
 
-namespace {
-
-template <class T>
-void test_unit_void() {
-  auto x = result<T>{};
-  test::runnable::current().check(holds_alternative<message>(x));
-}
-
 TEST("value") {
   auto x = result<int>{42};
   require(holds_alternative<message>(x));
@@ -38,11 +30,11 @@ TEST("expected") {
 }
 
 TEST("void_specialization") {
-  test_unit_void<void>();
+  auto x = result<void>{};
+  check(holds_alternative<message>(x));
 }
 
 TEST("unit_specialization") {
-  test_unit_void<unit_t>();
+  auto x = result<unit_t>{};
+  check(holds_alternative<message>(x));
 }
-
-} // namespace

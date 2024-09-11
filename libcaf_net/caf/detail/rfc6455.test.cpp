@@ -32,6 +32,8 @@ auto take(const T& xs, size_t num_bytes) {
   return std::vector<typename T::value_type>{xs.begin(), xs.begin() + n};
 }
 
+} // namespace
+
 TEST("masking the full payload") {
   auto key = uint32_t{0xDEADC0DE};
   auto data = bytes({0x12, 0x34, 0x45, 0x67, 0x89, 0x9A});
@@ -312,5 +314,3 @@ TEST("decode a header with valid mask key plus large data") {
   check_eq(hdr.opcode, impl::binary_frame);
   check_eq(hdr.payload_len, data.size());
 }
-
-} // namespace

@@ -10,8 +10,6 @@
 
 using namespace caf::io::basp;
 
-namespace {
-
 TEST("headers require a valid operation type") {
   header bad{static_cast<message_type>(0xFF), 0, 0, 0, 0, 0};
   check(!valid(bad));
@@ -89,5 +87,3 @@ TEST("heartbeat messages must be all-zero except for the message type") {
   header bad4{message_type::heartbeat, 0, 0, 0, 0, 1};
   check(!valid(bad4));
 }
-
-} // namespace

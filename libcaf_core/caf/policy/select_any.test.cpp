@@ -50,6 +50,8 @@ struct fixture : test::fixture::deterministic {
   }
 };
 
+} // namespace
+
 #define SUBTEST(message)                                                       \
   dispatch_messages();                                                         \
   log::test::debug("subtest: {}", message);                                    \
@@ -168,5 +170,3 @@ TEST("select_any calls the error handler at most once") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

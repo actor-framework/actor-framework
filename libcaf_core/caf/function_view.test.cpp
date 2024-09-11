@@ -74,6 +74,8 @@ struct fixture {
   actor_system system;
 };
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 TEST("empty_function_view") {
@@ -122,5 +124,3 @@ TEST("calling function_view on an actor that quit") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

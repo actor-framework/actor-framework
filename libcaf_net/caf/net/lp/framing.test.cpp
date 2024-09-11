@@ -177,6 +177,8 @@ auto encode(std::string_view msg) {
   return bytes;
 }
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 SCENARIO("length-prefix framing reads data with 32-bit size headers") {
@@ -203,25 +205,24 @@ SCENARIO("length-prefix framing reads data with 32-bit size headers") {
 
 } // WITH_FIXTURE(fixture)
 
-void run_writer(net::stream_socket fd) {
-  net::multiplexer::block_sigpipe();
-  std::ignore = allow_sigpipe(fd, false);
-  auto guard = net::make_socket_guard(fd);
-  std::vector<std::string_view> inputs{"first", "second", "pause", "third",
-                                       "fourth"};
-  byte_buffer rd_buf;
-  rd_buf.resize(512);
-  for (auto input : inputs) {
-    write(fd, encode(input));
-    read(fd, rd_buf);
-  }
-}
-
 SCENARIO("lp::with(...).connect(...) translates between flows and socket I/O") {
   GIVEN("a connected socket with a writer at the other end") {
     auto maybe_sockets = net::make_stream_socket_pair();
     require(maybe_sockets.has_value());
     auto [fd1, fd2] = *maybe_sockets;
+    auto run_writer = [](net::stream_socket fd) {
+      net::multiplexer::block_sigpipe();
+      std::ignore = allow_sigpipe(fd, false);
+      auto guard = net::make_socket_guard(fd);
+      std::vector<std::string_view> inputs{"first", "second", "pause", "third",
+                                           "fourth"};
+      byte_buffer rd_buf;
+      rd_buf.resize(512);
+      for (auto input : inputs) {
+        write(fd, encode(input));
+        read(fd, rd_buf);
+      }
+    };
     auto writer = std::thread{run_writer, fd1};
     WHEN("calling length_prefix_framing::run") {
       THEN("actors can consume the resulting flow") {
@@ -270,5 +271,3 @@ SCENARIO("lp::with(...).connect(...) translates between flows and socket I/O") {
     writer.join();
   }
 }
-
-} // namespace

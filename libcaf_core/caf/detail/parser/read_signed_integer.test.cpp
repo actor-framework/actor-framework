@@ -61,6 +61,8 @@ T max_val() {
   return std::numeric_limits<T>::max();
 }
 
+} // namespace
+
 #define ZERO_VALUE(type, literal) check_eq(read<type>(#literal), type(0));
 
 #define MAX_VALUE(type, literal)                                               \
@@ -171,5 +173,3 @@ TEST("maximal value") {
   OVERFLOW(int64_t, 9223372036854775808);
   OVERFLOW(int64_t, 0x8000000000000000);
 }
-
-} // namespace

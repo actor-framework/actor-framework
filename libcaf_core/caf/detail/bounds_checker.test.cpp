@@ -15,6 +15,8 @@ bool bounds_check(U x) {
   return caf::detail::bounds_checker<T>::check(x);
 }
 
+} // namespace
+
 TEST("small integers") {
   check_eq(bounds_check<int8_t>(128), false);
   check_eq(bounds_check<int8_t>(127), true);
@@ -41,5 +43,3 @@ TEST("large unsigned integers") {
   check_eq(bounds_check<uint64_t>(std::numeric_limits<int64_t>::max()), true);
   check_eq(bounds_check<uint64_t>(std::numeric_limits<uint64_t>::max()), true);
 }
-
-} // namespace

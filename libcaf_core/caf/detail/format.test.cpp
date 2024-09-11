@@ -15,8 +15,6 @@
 using namespace caf;
 using namespace std::literals;
 
-namespace {
-
 #ifdef CAF_USE_STD_FORMAT
 
 using caf::detail::fmt_fwd;
@@ -125,5 +123,3 @@ TEST("ill-formatted formatting strings throw") {
 }
 
 #endif
-
-} // namespace

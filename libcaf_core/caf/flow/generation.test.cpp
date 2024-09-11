@@ -30,6 +30,8 @@ auto iota_vec(size_t n, int init = 1) {
   return result;
 }
 
+} // namespace
+
 WITH_FIXTURE(test::fixture::flow) {
 
 SCENARIO("repeater sources repeat one value indefinitely") {
@@ -406,5 +408,3 @@ SCENARIO("users can provide custom generators") {
 }
 
 } // WITH_FIXTURE(test::fixture::flow)
-
-} // namespace

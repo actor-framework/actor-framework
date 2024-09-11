@@ -17,6 +17,8 @@ auto make_int_msg(int value) {
   return make_mailbox_element(nullptr, make_message_id(P), make_message(value));
 }
 
+} // namespace
+
 TEST("a default-constructed mailbox is empty") {
   detail::default_mailbox uut;
   check(!uut.closed());
@@ -75,5 +77,3 @@ TEST("calling push_front inserts messages at the beginning") {
     check_eq(results[3].get_as<int>(0), 2);
   }
 }
-
-} // namespace

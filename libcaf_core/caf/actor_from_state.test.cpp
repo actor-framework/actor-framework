@@ -21,8 +21,6 @@ behavior dummy_impl() {
   };
 }
 
-WITH_FIXTURE(test::fixture::deterministic) {
-
 struct cell_state {
   cell_state() = default;
 
@@ -59,6 +57,10 @@ struct typed_cell_state {
 
   int value = 0;
 };
+
+} // namespace
+
+WITH_FIXTURE(test::fixture::deterministic) {
 
 TEST("a default-constructed cell has value 0") {
   auto dummy = sys.spawn(dummy_impl);
@@ -124,6 +126,8 @@ TEST("actors can spawn stateful actors as children") {
   }
 }
 
+namespace {
+
 struct id_cell_state {
   explicit id_cell_state(event_based_actor* selfptr, uint64_t offset_init = 0)
     : self(selfptr), offset(offset_init) {
@@ -158,6 +162,8 @@ struct typed_id_cell_state {
   typed_id_cell_actor::pointer self;
   uint64_t offset;
 };
+
+} // namespace
 
 TEST("the state may take the self pointer as constructor argument") {
   auto dummy = sys.spawn(dummy_impl);
@@ -229,5 +235,3 @@ TEST("the state destructor may send messages") {
 }
 
 } // WITH_FIXTURE(test::fixture::deterministic)
-
-} // namespace

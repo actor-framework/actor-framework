@@ -9,8 +9,6 @@
 using namespace caf;
 using namespace std::literals;
 
-namespace {
-
 TEST("parsing a valid http response") {
   net::http::response_header hdr;
   SECTION("parsing a one line header") {
@@ -152,5 +150,3 @@ TEST("copying and moving invalid response header results in invalid requests") {
     check(!uut.valid());
   }
 }
-
-} // namespace

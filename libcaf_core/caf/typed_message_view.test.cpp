@@ -10,8 +10,6 @@
 
 using namespace caf;
 
-namespace {
-
 TEST("message views detach their content") {
   auto msg1 = make_message(1, 2, 3, "four");
   auto msg2 = msg1;
@@ -40,5 +38,3 @@ TEST("message views allow mutating elements") {
   check_eq(msg1.get_as<int>(0), 10);
   check_eq(msg2.get_as<int>(0), 1);
 }
-
-} // namespace

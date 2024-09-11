@@ -22,6 +22,8 @@ struct fixture : test::fixture::deterministic {
   scoped_actor self{sys};
 };
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 TEST("catch_all") {
@@ -61,5 +63,3 @@ TEST("spawn blocking actor") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

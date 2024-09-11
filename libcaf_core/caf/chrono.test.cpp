@@ -12,8 +12,6 @@
 
 using namespace caf;
 
-namespace {
-
 using datetime = chrono::datetime;
 
 TEST("a default constructed date and time is invalid") {
@@ -490,5 +488,3 @@ TEST("to_string prints fractional digits according to the precision") {
     check_eq(to_string(dt), dt.to_string());
   }
 }
-
-} // namespace

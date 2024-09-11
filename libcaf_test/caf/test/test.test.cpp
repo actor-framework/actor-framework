@@ -9,8 +9,6 @@
 
 using caf::test::block_type;
 
-namespace {
-
 TEST("tests can contain different types of checks") {
   auto& rep = caf::test::reporter::instance();
   SECTION("check_ne checks for inequality") {
@@ -111,9 +109,13 @@ TEST("each run starts with fresh local variables") {
   }
 }
 
+namespace {
+
 struct int_fixture {
   int my_int = 0;
 };
+
+} // namespace
 
 WITH_FIXTURE(int_fixture) {
 
@@ -129,5 +131,3 @@ TEST("each run starts with a fresh fixture") {
 }
 
 } // WITH_FIXTURE(int_fixture)
-
-} // namespace

@@ -33,6 +33,8 @@ auto pop(int_stack& xs) {
   return ptr->value;
 }
 
+} // namespace
+
 TEST("a default-constructed stack is empty") {
   int_stack uut;
   check(uut.empty());
@@ -62,5 +64,3 @@ TEST("popping values from a stack returns the last pushed value") {
   check_eq(pop(uut), 1);
   check(uut.empty());
 }
-
-} // namespace

@@ -10,8 +10,6 @@
 
 using namespace caf;
 
-namespace {
-
 WITH_FIXTURE(test::fixture::deterministic) {
 
 TEST("monitoring another actor") {
@@ -128,5 +126,3 @@ TEST("monitoring another actor") {
 }
 
 } // WITH_FIXTURE(test::fixture::deterministic)
-
-} // namespace

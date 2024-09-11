@@ -63,8 +63,6 @@ CAF_BEGIN_TYPE_ID_BLOCK(message_builder_test, caf::first_custom_type_id)
 
 CAF_END_TYPE_ID_BLOCK(message_builder_test)
 
-namespace {
-
 TEST("message_builder can build messages incrementally") {
   message_builder builder;
   SECTION("a default-constructed builder is empty") {
@@ -209,5 +207,3 @@ TEST("message_builder can build messages from iterator pairs") {
 TEST_INIT() {
   init_global_meta_objects<id_block::message_builder_test>();
 }
-
-} // namespace

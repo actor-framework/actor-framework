@@ -25,7 +25,10 @@ auto seq(const std::vector<T>& xs, Args&&... args) {
   return res;
 }
 
+} // namespace
+
 WITH_FIXTURE(test::fixture::flow) {
+
 TEST("concat operators with empty inputs emit no values") {
   auto nil = [this] { return make_observable().empty<int>().as_observable(); };
   SECTION("blueprint") {
@@ -71,5 +74,3 @@ TEST("concat operators with non-empty inputs emit all values") {
 }
 
 } // WITH_FIXTURE(test::fixture::flow)
-
-} // namespace

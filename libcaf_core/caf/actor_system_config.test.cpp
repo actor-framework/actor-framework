@@ -98,6 +98,8 @@ struct fixture {
   }
 };
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 TEST("parsing - without CLI arguments") {
@@ -348,5 +350,3 @@ SCENARIO("config files allow both nested and dot-separated values") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

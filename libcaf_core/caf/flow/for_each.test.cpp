@@ -10,8 +10,6 @@
 
 using namespace caf;
 
-namespace {
-
 WITH_FIXTURE(test::fixture::flow) {
 
 SCENARIO("for_each iterates all values in a stream") {
@@ -109,5 +107,3 @@ SCENARIO("for_each iterates all values in a stream") {
 }
 
 } // WITH_FIXTURE(test::fixture::flow)
-
-} // namespace

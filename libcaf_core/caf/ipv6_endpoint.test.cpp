@@ -49,6 +49,8 @@ struct fixture {
   }
 };
 
+} // namespace
+
 #define CHECK_TO_STRING(addr) check_eq(addr, to_string(addr##_ep))
 
 #define CHECK_COMPARISON(addr1, addr2)                                         \
@@ -136,5 +138,3 @@ TEST("serialization") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

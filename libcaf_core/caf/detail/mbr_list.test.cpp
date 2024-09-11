@@ -19,6 +19,8 @@ void fill(list_type& xs, Ts... args) {
   (xs.emplace_back(args), ...);
 }
 
+} // namespace
+
 TEST("a default default-constructed list is empty") {
   list_type uut;
   check_eq(uut.empty(), true);
@@ -87,5 +89,3 @@ TEST("lists allow iterator-based access") {
                            [](int acc, const int& x) { return acc + x; }),
            12);
 }
-
-} // namespace

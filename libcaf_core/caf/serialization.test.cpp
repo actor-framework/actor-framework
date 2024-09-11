@@ -683,6 +683,8 @@ struct fixture : caf::test::fixture::deterministic {
   }
 };
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 OUTLINE("serializing and then deserializing primitive values") {
@@ -820,8 +822,6 @@ OUTLINE("serializing and then deserializing the 'nasty' type") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace
 
 TEST_INIT() {
   init_global_meta_objects<id_block::serialization_test>();

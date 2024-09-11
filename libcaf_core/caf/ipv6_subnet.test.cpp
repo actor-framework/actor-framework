@@ -20,6 +20,8 @@ ipv6_subnet operator/(ipv6_address addr, uint8_t prefix) {
   return {addr, prefix};
 }
 
+} // namespace
+
 TEST("constructing") {
   auto zero = ipv6_address() / 128;
   check_eq(zero.network_address(), ipv6_address());
@@ -85,5 +87,3 @@ TEST("serialization") {
 }
 
 } // WITH_FIXTURE(test::fixture::deterministic)
-
-} // namespace

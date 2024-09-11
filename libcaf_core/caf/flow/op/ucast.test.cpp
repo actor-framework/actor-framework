@@ -23,6 +23,8 @@ struct fixture : test::fixture::flow {
   }
 };
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 SCENARIO("closed ucast operators appear empty") {
@@ -147,5 +149,3 @@ SCENARIO("requesting from disposed ucast operators is a no-op") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

@@ -14,8 +14,6 @@
 
 using namespace caf;
 
-namespace {
-
 WITH_FIXTURE(test::fixture::flow) {
 
 TEST("calling take_last(5) on range(1, 100) produces[96, 97, 98, 99, 100]") {
@@ -72,5 +70,3 @@ TEST("take_last operator forwards errors") {
 }
 
 } // WITH_FIXTURE(test::fixture::flow)
-
-} // namespace

@@ -32,6 +32,8 @@ struct fixture {
   std::vector<ip_address> addrs;
 };
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 TEST("resolve localhost") {
@@ -61,5 +63,3 @@ TEST("local addresses any") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

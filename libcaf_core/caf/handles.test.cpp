@@ -24,12 +24,16 @@ using testee_actor = typed_actor<result<int32_t>(int32_t)>;
 
 // Dynamically typed testee.
 behavior dt_testee() {
-  return {[](int32_t x) { return x * x; }};
+  return {
+    [](int32_t x) { return x * x; },
+  };
 }
 
 // Statically typed testee.
 testee_actor::behavior_type st_testee() {
-  return {[](int32_t x) { return x * x; }};
+  return {
+    [](int32_t x) { return x * x; },
+  };
 }
 
 // A simple wrapper for storing a handle in all representations.
@@ -58,6 +62,8 @@ struct fixture : test::fixture::deterministic {
   handle_set a1{sys.spawn(dt_testee)};
   handle_set a2{sys.spawn(st_testee)};
 };
+
+} // namespace
 
 WITH_FIXTURE(fixture) {
 
@@ -258,5 +264,3 @@ TEST("mpi_string_representation") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

@@ -16,6 +16,8 @@ namespace {
 
 const auto addr = make_ipv4_address;
 
+} // namespace
+
 TEST("constructing") {
   auto localhost = addr(127, 0, 0, 1);
   check_eq(localhost.bits(), to_network_order(0x7F000001u));
@@ -120,5 +122,3 @@ TEST("operators") {
   check_eq(addr(16, 0, 0, 8) | addr(255, 2, 4, 6), addr(255, 2, 4, 14));
   check_eq(addr(16, 0, 0, 8) ^ addr(255, 2, 4, 6), addr(239, 2, 4, 14));
 }
-
-} // namespace

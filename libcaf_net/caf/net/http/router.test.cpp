@@ -35,6 +35,8 @@ struct fixture {
   }
 };
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 SCENARIO("routes must have one 'arg' entry per argument") {
@@ -157,5 +159,3 @@ SCENARIO("routes must have one 'arg' entry per argument") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

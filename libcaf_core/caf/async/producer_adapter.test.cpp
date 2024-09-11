@@ -151,6 +151,8 @@ void receiver_impl(event_based_actor* self, pull_resource_t inputs,
     });
 }
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 SCENARIO("producers adapters allow integrating producers into event loops") {
@@ -183,5 +185,3 @@ SCENARIO("producers adapters allow integrating producers into event loops") {
 TEST_INIT() {
   init_global_meta_objects<id_block::producer_adapter_test>();
 }
-
-} // namespace

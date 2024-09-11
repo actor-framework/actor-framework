@@ -14,8 +14,6 @@
 using namespace caf;
 using namespace std::literals;
 
-namespace {
-
 WITH_FIXTURE(test::fixture::deterministic) {
 
 TEST("GH-1920 regression") {
@@ -237,5 +235,3 @@ SCENARIO("setting an infinite idle timeout is an error") {
 }
 
 } // WITH_FIXTURE(test::fixture::deterministic)
-
-} // namespace

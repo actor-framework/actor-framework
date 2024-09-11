@@ -14,8 +14,6 @@
 
 using namespace caf;
 
-namespace {
-
 WITH_FIXTURE(test::fixture::flow) {
 
 TEST("calling ignore_elements on range(1, 10) produces []") {
@@ -40,5 +38,3 @@ TEST("ignore_elements operator forwards errors") {
 }
 
 } // WITH_FIXTURE(test::fixture::flow)
-
-} // namespace

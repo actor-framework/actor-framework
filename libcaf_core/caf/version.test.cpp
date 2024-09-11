@@ -10,8 +10,6 @@
 
 using namespace caf;
 
-namespace {
-
 TEST("version functions must return the values from the build configuration") {
   check_eq(version::get_major(), CAF_VERSION_MAJOR);
   check_eq(version::get_minor(), CAF_VERSION_MINOR);
@@ -22,5 +20,3 @@ TEST("version functions must return the values from the build configuration") {
   check_eq(version::c_str(), vstr);
   check_eq(static_cast<int>(make_abi_token()), CAF_VERSION_MAJOR);
 }
-
-} // namespace

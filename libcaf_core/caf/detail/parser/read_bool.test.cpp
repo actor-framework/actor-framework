@@ -41,6 +41,8 @@ struct fixture {
   bool_parser p;
 };
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 TEST("valid booleans") {
@@ -64,5 +66,3 @@ TEST("invalid booleans") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

@@ -14,8 +14,6 @@
 using namespace caf;
 using namespace std::literals;
 
-namespace {
-
 WITH_FIXTURE(test::fixture::deterministic) {
 
 SCENARIO("private threads count towards detached actors") {
@@ -87,5 +85,3 @@ SCENARIO("private threads rerun their resumable when it returns resume_later") {
 }
 
 } // WITH_FIXTURE(test::fixture::deterministic)
-
-} // namespace

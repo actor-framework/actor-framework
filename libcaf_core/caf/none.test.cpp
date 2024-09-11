@@ -13,8 +13,6 @@
 
 using namespace caf;
 
-namespace {
-
 TEST("none is serializable") {
   check_eq(to_string(none), "none");
 }
@@ -23,5 +21,3 @@ TEST("none is comparable") {
   check(!none);
   check_eq(none.compare(none), 0);
 }
-
-} // namespace

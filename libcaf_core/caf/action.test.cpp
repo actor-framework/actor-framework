@@ -11,8 +11,6 @@
 
 using namespace caf;
 
-namespace {
-
 SCENARIO("actions wrap function calls") {
   GIVEN("an action wrapping a lambda") {
     WHEN("running the action") {
@@ -150,5 +148,3 @@ SCENARIO("actors run actions that they receive") {
 }
 
 } // WITH_FIXTURE(test::fixture::deterministic)
-
-} // namespace

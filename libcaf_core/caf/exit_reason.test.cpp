@@ -35,6 +35,8 @@ struct fixture {
   }
 };
 
+} // namespace
+
 #define CHECK_SERIALIZATION(error_code)                                        \
   check_eq(error_code, roundtrip(error_code))
 
@@ -51,5 +53,3 @@ TEST("exit_reason values are serializable") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

@@ -219,6 +219,8 @@ behavior ping_multiplexed3(ping_actor* self, std::shared_ptr<bool> had_timeout,
   return {};
 }
 
+} // namespace
+
 WITH_FIXTURE(test::fixture::deterministic) {
 
 TEST("single timeout") {
@@ -302,5 +304,3 @@ TEST("multiplexed timeout") {
 }
 
 } // WITH_FIXTURE(test::fixture::deterministic)
-
-} // namespace

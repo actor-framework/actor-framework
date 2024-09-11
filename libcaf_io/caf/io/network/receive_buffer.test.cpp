@@ -13,8 +13,6 @@ using namespace std::literals;
 
 using caf::io::network::receive_buffer;
 
-namespace {
-
 TEST("construction") {
   SECTION("default-constructed buffers are empty") {
     receive_buffer uut;
@@ -175,5 +173,3 @@ TEST("swap exchanges the content of two buffers") {
   check(buf1.data() == buf2_data);
   check(buf2.data() == buf1_data);
 }
-
-} // namespace

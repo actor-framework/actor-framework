@@ -18,6 +18,8 @@ auto make_bytes(Ts... xs) {
   return sha1::result_type{{static_cast<std::byte>(xs)...}};
 }
 
+} // namespace
+
 TEST("strings are hashed by their content only") {
   auto str = "dGhlIHNhbXBsZSBub25jZQ==258EAFA5-E914-47DA-95CA-C5AB0DC85B11"sv;
   check_eq(sha1::compute(str),
@@ -27,5 +29,3 @@ TEST("strings are hashed by their content only") {
                       0xcf, 0x38, 0x59, 0x45,   //       13 - 16
                       0xb2, 0xbe, 0xc4, 0xea)); //       17 - 20
 }
-
-} // namespace

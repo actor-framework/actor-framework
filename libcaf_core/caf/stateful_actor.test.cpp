@@ -113,6 +113,8 @@ struct fixture : test::fixture::deterministic {
   }
 };
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 TEST("stateful actors can be dynamically typed") {
@@ -274,5 +276,3 @@ TEST("returned behaviors take precedence over make_behavior in the state") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

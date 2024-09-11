@@ -9,13 +9,9 @@
 using namespace caf;
 using namespace caf::net;
 
-namespace {
-
 TEST("invalid socket") {
   auto x = invalid_socket;
   check_eq(x.id, invalid_socket_id);
   check_eq(child_process_inherit(x, true), sec::network_syscall_failed);
   check_eq(nonblocking(x, true), sec::network_syscall_failed);
 }
-
-} // namespace

@@ -182,6 +182,8 @@ T unbox(caf::expected<T> x) {
   return std::move(*x);
 }
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 SCENARIO("the multiplexer has no socket managers after default construction") {
@@ -293,5 +295,3 @@ SCENARIO("a multiplexer terminates its thread after shutting down") {
 // }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

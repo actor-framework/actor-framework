@@ -16,8 +16,12 @@
 #include <tuple>
 #include <type_traits>
 
+namespace {
+
 struct i32_wrapper;
 struct i64_wrapper;
+
+} // namespace
 
 // +5 to avoid clash with caf.message_builder test
 CAF_BEGIN_TYPE_ID_BLOCK(meta_object_test, caf::first_custom_type_id + 5)
@@ -29,6 +33,8 @@ using namespace std::string_literals;
 
 using namespace caf;
 using namespace caf::detail;
+
+namespace {
 
 struct i32_wrapper {
   // Initialized in meta_object.cpp.
@@ -78,7 +84,7 @@ size_t i32_wrapper::instances = 0;
 
 size_t i64_wrapper::instances = 0;
 
-namespace {
+} // namespace
 
 TEST("meta objects allow construction and destruction of objects") {
   auto meta_i32_wrapper = make_meta_object<i32_wrapper>("i32_wrapper");
@@ -126,5 +132,3 @@ TEST("init_global_meta_objects takes care of creating a meta object table") {
 TEST_INIT() {
   init_global_meta_objects<id_block::meta_object_test>();
 }
-
-} // namespace

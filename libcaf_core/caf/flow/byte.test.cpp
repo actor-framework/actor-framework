@@ -25,6 +25,8 @@ auto to_bytes(const T& data) {
   return byte_arr;
 }
 
+} // namespace
+
 WITH_FIXTURE(test::fixture::flow) {
 
 SCENARIO("to_chunks splits a sequence of bytes into chunks") {
@@ -351,5 +353,3 @@ SCENARIO("split_as_utf8_at rejects invalid UTF-8 inputs") {
 }
 
 } // WITH_FIXTURE(test::fixture::flow)
-
-} // namespace

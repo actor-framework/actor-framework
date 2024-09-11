@@ -11,8 +11,6 @@
 using namespace caf;
 using namespace std::literals;
 
-namespace {
-
 SCENARIO("an actor system shuts down after the last actor terminates") {
   GIVEN("an actor system and a detached actor") {
     WHEN("the actor sets no behavior") {
@@ -120,5 +118,3 @@ SCENARIO("an actor system shuts down after the last actor terminates") {
     }
   }
 }
-
-} // namespace

@@ -15,8 +15,6 @@ using namespace std::literals;
 
 using caf::log::level;
 
-namespace {
-
 TEST("log level maps render the default log levels") {
   detail::log_level_map uut;
   check_eq(uut[level::quiet], "OFF");
@@ -109,5 +107,3 @@ TEST("log level maps allow case-insensitive lookup by name") {
   check_eq(uut.by_name("TRACE"), level::trace);
   check_eq(uut.by_name("trace"), level::trace);
 }
-
-} // namespace

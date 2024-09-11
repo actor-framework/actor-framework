@@ -89,6 +89,8 @@ struct fixture {
   }
 };
 
+} // namespace
+
 TEST("counting_no_system") {
   {
     assumed_init_calls = 0;
@@ -97,19 +99,15 @@ TEST("counting_no_system") {
   }
 }
 
-using dummy_thread_hook_fixture = fixture<dummy_thread_hook>;
-
-WITH_FIXTURE(dummy_thread_hook_fixture) {
+WITH_FIXTURE(fixture<dummy_thread_hook>) {
 
 TEST("counting_no_args") {
   // nop
 }
 
-} // WITH_FIXTURE(dummy_thread_hook_fixture)
+} // WITH_FIXTURE(fixture<dummy_thread_hook>)
 
-using counting_thread_hook_fixture = fixture<counting_thread_hook>;
-
-WITH_FIXTURE(counting_thread_hook_fixture) {
+WITH_FIXTURE(fixture<counting_thread_hook>) {
 
 TEST("counting_system_without_actor") {
   {
@@ -132,6 +130,4 @@ TEST("counting_system_with_actor") {
   }
 }
 
-} // WITH_FIXTURE(counting_thread_hook_fixture)
-
-} // namespace
+} // WITH_FIXTURE(fixture<counting_thread_hook>)

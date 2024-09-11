@@ -40,6 +40,8 @@ using e_str = expected<std::string>;
 using e_void = expected<void>;
 using e_iptr = expected<counted_int_ptr>;
 
+} // namespace
+
 // NOLINTBEGIN(bugprone-use-after-move)
 
 TEST("expected reports its status via has_value() or operator bool()") {
@@ -935,5 +937,3 @@ TEST("transform_or does nothing when called with a value") {
 }
 
 // NOLINTEND(bugprone-use-after-move)
-
-} // namespace

@@ -37,6 +37,8 @@ behavior int_sink(event_based_actor* self, std::shared_ptr<ivec> results) {
   };
 }
 
+} // namespace
+
 WITH_FIXTURE(test::fixture::deterministic) {
 
 TEST("default-constructed streams are invalid") {
@@ -147,5 +149,3 @@ TEST("streams allow actors to transmit flow items to other actors") {
 }
 
 } // WITH_FIXTURE(test::fixture::deterministic)
-
-} // namespace

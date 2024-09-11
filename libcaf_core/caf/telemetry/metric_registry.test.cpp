@@ -91,6 +91,8 @@ struct fixture {
   test_collector collector;
 };
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 TEST("registries lazily create metrics") {
@@ -293,6 +295,8 @@ SCENARIO("metric registries can merge families from other registries") {
 
 } // WITH_FIXTURE(fixture)
 
+namespace {
+
 struct foo_state {
   static constexpr const char* name = "foo";
 
@@ -300,6 +304,8 @@ struct foo_state {
     return {};
   }
 };
+
+} // namespace
 
 TEST("enabling actor metrics per config creates metric instances") {
   actor_system_config cfg;
@@ -314,5 +320,3 @@ TEST("enabling actor metrics per config creates metric instances") {
   check_ne(collector.result.find(R"(caf.actor.mailbox-size{name="foo"})"),
            std::string::npos);
 }
-
-} // namespace

@@ -61,6 +61,8 @@ struct fixture {
   std::string key = "value";
 };
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 TEST("lookup") {
@@ -296,14 +298,10 @@ TEST("square brackets are optional on the command line") {
   check_eq(read<int_list>({"-v", "1, 2 , 3 , "}), int_list({1, 2, 3}));
 }
 
-#define SUBTEST(msg)                                                           \
-  opts.clear();                                                                \
-  if (true)
-
 TEST("CLI arguments override defaults") {
   using int_list = std::vector<int>;
   using string_list = std::vector<std::string>;
-  SUBTEST("with ref syncing") {
+  SECTION("with ref syncing") {
     settings cfg;
     int_list ints;
     string_list strings;
@@ -326,7 +324,7 @@ TEST("CLI arguments override defaults") {
     check_eq(strings, string_list({"hello", "world"}));
     check_eq(get_as<string_list>(cfg, "foo"), string_list({"hello", "world"}));
   }
-  SUBTEST("without ref syncing") {
+  SECTION("without ref syncing") {
     settings cfg;
     log::test::debug("add --foo and --bar options");
     opts.add<string_list>("global", "foo,f", "some list");
@@ -356,5 +354,3 @@ TEST("CLI arguments may use custom types") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

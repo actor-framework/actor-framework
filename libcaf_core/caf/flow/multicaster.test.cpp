@@ -16,8 +16,6 @@ using std::vector;
 using namespace caf;
 using namespace caf::flow;
 
-namespace {
-
 WITH_FIXTURE(test::fixture::flow) {
 
 SCENARIO("a multicaster pushes items to all subscribers") {
@@ -118,5 +116,3 @@ SCENARIO("a multicaster discards items that arrive before a subscriber") {
 }
 
 } // WITH_FIXTURE(test::fixture::flow)
-
-} // namespace

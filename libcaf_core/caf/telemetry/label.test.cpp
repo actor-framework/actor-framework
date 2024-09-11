@@ -19,6 +19,8 @@ size_t hash_of(const T& x) {
   return f(x);
 }
 
+} // namespace
+
 TEST("labels wrap name and value") {
   check_eq(to_string(label{"foo", "bar"}), "foo=bar");
   label foobar{"foo", "bar"};
@@ -41,5 +43,3 @@ TEST("labels are convertible from views") {
   check_eq(hash_of(foobar), hash_of(foobar_view));
   check_eq(hash_of(foobar), hash_of(label{foobar_view}));
 }
-
-} // namespace

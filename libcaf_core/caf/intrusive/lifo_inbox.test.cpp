@@ -38,6 +38,8 @@ std::string drain(inbox_type& xs) {
   return caf::deep_to_string(tmp);
 }
 
+} // namespace
+
 TEST("a default default-constructed inbox is empty") {
   inbox_type uut;
   check(!uut.closed());
@@ -69,5 +71,3 @@ TEST("push_front unblocks a blocked reader") {
   check_eq(uut.emplace_front(2), inbox_result::success);
   check_eq(drain(uut), "[2, 1]");
 }
-
-} // namespace

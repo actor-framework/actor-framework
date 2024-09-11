@@ -30,6 +30,8 @@ struct fixture : test::fixture::flow {
   }
 };
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 SCENARIO("closed mcast operators appear empty") {
@@ -121,5 +123,3 @@ SCENARIO("mcast operators buffer items that they cannot ship immediately") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

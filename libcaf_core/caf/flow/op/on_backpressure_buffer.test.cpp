@@ -12,8 +12,6 @@
 
 using namespace caf;
 
-namespace {
-
 WITH_FIXTURE(test::fixture::flow) {
 
 SCENARIO("the backpressure operator is transparent with sufficient demand") {
@@ -171,5 +169,3 @@ TEST("external dispose") {
 }
 
 } // WITH_FIXTURE(test::fixture::flow)
-
-} // namespace

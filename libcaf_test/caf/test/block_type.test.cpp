@@ -8,8 +8,6 @@
 
 using caf::test::block_type;
 
-namespace {
-
 TEST("is_extension checks whether a block type needs a predecessor") {
   using caf::test::is_extension;
   SECTION("is_extension is true for all AND_* types and BUT") {
@@ -28,5 +26,3 @@ TEST("is_extension checks whether a block type needs a predecessor") {
     check(!is_extension(block_type::then));
   }
 }
-
-} // namespace

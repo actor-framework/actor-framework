@@ -96,8 +96,6 @@ CAF_BEGIN_TYPE_ID_BLOCK(settings_test, caf::first_custom_type_id + 40)
 
 CAF_END_TYPE_ID_BLOCK(settings_test)
 
-namespace {
-
 WITH_FIXTURE(fixture) {
 
 TEST("put") {
@@ -228,5 +226,3 @@ TEST("put and put_missing decomposes user-defined types") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

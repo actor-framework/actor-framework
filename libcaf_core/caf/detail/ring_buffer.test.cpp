@@ -20,6 +20,8 @@ int pop(ring_buffer<int>& buf) {
   return result;
 }
 
+} // namespace
+
 TEST("push_back adds element") {
   ring_buffer<int> buf{3};
   log::test::debug("full capacity of ring buffer");
@@ -182,5 +184,3 @@ TEST("ring-buffers are copiable") {
   check_eq(pop(buf), 3);
   check_eq(buf.empty(), true);
 }
-
-} // namespace

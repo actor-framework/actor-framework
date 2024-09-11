@@ -11,8 +11,6 @@
 using namespace caf;
 using namespace caf::net;
 
-namespace {
-
 TEST("send and receive") {
   byte_buffer send_buf{std::byte(1), std::byte(2), std::byte(3), std::byte(4),
                        std::byte(5), std::byte(6), std::byte(7), std::byte(8)};
@@ -27,5 +25,3 @@ TEST("send and receive") {
   check_eq(static_cast<size_t>(read(rd_sock, receive_buf)), send_buf.size());
   check(std::equal(send_buf.begin(), send_buf.end(), receive_buf.begin()));
 }
-
-} // namespace

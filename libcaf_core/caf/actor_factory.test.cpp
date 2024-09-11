@@ -48,6 +48,8 @@ struct test_actor_one_arg : event_based_actor {
   }
 };
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 TEST("fun_no_args") {
@@ -99,5 +101,3 @@ TEST("class_one_arg_valid") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

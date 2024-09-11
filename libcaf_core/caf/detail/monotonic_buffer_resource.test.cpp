@@ -14,8 +14,6 @@
 
 using namespace caf;
 
-namespace {
-
 SCENARIO("monotonic buffers group allocations") {
   GIVEN("a monotonic buffer resource") {
     detail::monotonic_buffer_resource mbr;
@@ -117,5 +115,3 @@ SCENARIO("monotonic buffers provide storage for STL containers") {
     }
   }
 }
-
-} // namespace

@@ -14,8 +14,6 @@ using std::tuple;
 using namespace caf;
 using namespace std::literals;
 
-namespace {
-
 SCENARIO("default constructed COW strings are empty") {
   WHEN("default-constructing a COW tuple") {
     cow_string str;
@@ -91,5 +89,3 @@ SCENARIO("COW strings detach their content when becoming unshared") {
     }
   }
 }
-
-} // namespace

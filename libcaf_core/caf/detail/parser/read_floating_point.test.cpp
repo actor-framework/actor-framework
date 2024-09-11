@@ -35,6 +35,8 @@ std::optional<double> read(std::string_view str) {
   return consumer.x;
 }
 
+} // namespace
+
 TEST("predecimal only") {
   check_eq(read("0"), 0.);
   check_eq(read("+0"), 0.);
@@ -84,5 +86,3 @@ TEST("scientific noation") {
   check_eq(read("+12e-3"), 12e-3);
   check_eq(read("-12e-3"), -12e-3);
 }
-
-} // namespace

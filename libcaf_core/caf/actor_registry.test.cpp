@@ -21,6 +21,8 @@ behavior dummy() {
   return {[](int i) { return i; }};
 }
 
+} // namespace
+
 WITH_FIXTURE(test::fixture::deterministic) {
 
 TEST("erase") {
@@ -59,5 +61,3 @@ TEST("serialization roundtrips go through the registry") {
 }
 
 } // WITH_FIXTURE(test::fixture::deterministic)
-
-} // namespace

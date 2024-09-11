@@ -8,8 +8,6 @@
 
 using namespace caf::io::basp;
 
-namespace {
-
 OUTLINE("critical connection states require a connection shutdown") {
   GIVEN("connection state <state>") {
     auto state = block_parameters<connection_state>();
@@ -57,5 +55,3 @@ OUTLINE("connection states are convertible to system error codes") {
     | no_route_to_receiving_node      | no_route_to_receiving_node        |
   )_";
 }
-
-} // namespace

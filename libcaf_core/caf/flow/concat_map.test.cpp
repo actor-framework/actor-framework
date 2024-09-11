@@ -34,6 +34,8 @@ struct concat_map_adder_state {
 
 struct fixture : test::fixture::flow, test::fixture::deterministic {};
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 SCENARIO("concat_map merges multiple observables") {
@@ -82,5 +84,3 @@ SCENARIO("concat_map merges multiple observables") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

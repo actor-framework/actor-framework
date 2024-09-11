@@ -67,6 +67,8 @@ de_chunk(const std::pair<std::string_view, chunked_string>& x) {
   return {x.first, to_string(x.second)};
 }
 
+} // namespace
+
 TEST("fields builder") {
   auto init_sub_fields = [](auto& builder) {
     auto init_sub_sub_fields = [](auto& builder) {
@@ -191,5 +193,3 @@ TEST("with_message") {
   auto event_3 = event_2->with_message("message 2");
   check_ne(event_2->timestamp(), event_3->timestamp());
 }
-
-} // namespace

@@ -10,8 +10,6 @@
 
 using namespace caf;
 
-namespace {
-
 WITH_FIXTURE(test::fixture::flow) {
 
 SCENARIO("an empty observable terminates normally") {
@@ -33,5 +31,3 @@ SCENARIO("an empty observable terminates normally") {
 }
 
 } // WITH_FIXTURE(test::fixture::flow)
-
-} // namespace

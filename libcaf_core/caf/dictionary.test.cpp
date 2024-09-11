@@ -8,8 +8,6 @@
 
 using namespace caf;
 
-namespace {
-
 using int_dict = dictionary<int>;
 
 TEST("construction and comparison") {
@@ -123,5 +121,3 @@ TEST("element access") {
   check_eq(xs["b"], 2);
   check_eq(xs["e"], 0);
 }
-
-} // namespace

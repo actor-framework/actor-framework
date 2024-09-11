@@ -24,8 +24,6 @@ CAF_BEGIN_TYPE_ID_BLOCK(serial_reply_test, caf::first_custom_type_id + 30)
 
 CAF_END_TYPE_ID_BLOCK(serial_reply_test)
 
-namespace {
-
 TEST("test_serial_reply") {
   actor_system_config cfg;
   actor_system system{cfg};
@@ -90,5 +88,3 @@ TEST("test_serial_reply") {
 TEST_INIT() {
   init_global_meta_objects<id_block::serial_reply_test>();
 }
-
-} // namespace

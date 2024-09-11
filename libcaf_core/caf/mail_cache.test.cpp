@@ -55,6 +55,8 @@ struct fixture {
   }
 };
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 TEST("a mail cache can buffer messages until the actor is ready") {
@@ -83,5 +85,3 @@ TEST("a mail cache throws when exceeding its capacity") {
 #endif // CAF_ENABLE_EXCEPTIONS
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

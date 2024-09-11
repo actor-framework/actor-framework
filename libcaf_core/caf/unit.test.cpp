@@ -14,23 +14,20 @@
 
 using namespace caf;
 
-namespace {
-
-behavior testee(event_based_actor* self) {
-  return {
-    [](add_atom) -> result<unit_t> { return unit; },
-    [](get_atom) -> result<void> { return {}; },
-    [](put_atom) -> unit_t { return unit; },
-    [](resolve_atom) -> void {},
-    [=](update_atom) -> result<unit_t> {
-      auto rp = self->make_response_promise<unit_t>();
-      rp.deliver(unit);
-      return rp;
-    },
-  };
-}
-
 TEST("unit_results") {
+  auto testee = [](event_based_actor* self) -> behavior {
+    return {
+      [](add_atom) -> result<unit_t> { return unit; },
+      [](get_atom) -> result<void> { return {}; },
+      [](put_atom) -> unit_t { return unit; },
+      [](resolve_atom) -> void {},
+      [=](update_atom) -> result<unit_t> {
+        auto rp = self->make_response_promise<unit_t>();
+        rp.deliver(unit);
+        return rp;
+      },
+    };
+  };
   actor_system_config cfg;
   actor_system sys{cfg};
   scoped_actor self{sys};
@@ -60,5 +57,3 @@ TEST("actor_address") {
   scoped_actor self{sys};
   check_ne(self.address().id(), 0u);
 }
-
-} // namespace

@@ -13,8 +13,6 @@
 
 using namespace caf;
 
-namespace {
-
 WITH_FIXTURE(test::fixture::deterministic) {
 
 TEST("const message views never detach their content") {
@@ -52,5 +50,3 @@ TEST("to_tuple can convert messages to tuples") {
 }
 
 } // WITH_FIXTURE(test::fixture::deterministic)
-
-} // namespace

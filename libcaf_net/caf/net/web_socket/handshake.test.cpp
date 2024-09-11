@@ -55,6 +55,8 @@ struct fixture {
   byte_buffer bytes;
 };
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 SCENARIO("handshake generates HTTP GET requests according to RFC 6455") {
@@ -89,5 +91,3 @@ SCENARIO("handshake objects validate HTTP response headers") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace
