@@ -5,6 +5,14 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ## Unreleased
 
+### Changed
+
+- Tests, scenarios and outlines are now automatically put into the anonymous
+  namespace to avoid name clashes with other tests. This removes the need for
+  users to manually put their tests into an anonymous namespace.
+- The `SUITE` macro of the unit test framework can now be used multiple times in
+  a single compilation unit.
+
 ### Fixed
 
 - When using the HTTP client API, the client now properly closes the connection
