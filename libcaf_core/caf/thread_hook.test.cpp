@@ -99,15 +99,19 @@ TEST("counting_no_system") {
   }
 }
 
-WITH_FIXTURE(fixture<dummy_thread_hook>) {
+using dummy_thread_hook_fixture = fixture<dummy_thread_hook>;
+
+WITH_FIXTURE(dummy_thread_hook_fixture) {
 
 TEST("counting_no_args") {
   // nop
 }
 
-} // WITH_FIXTURE(fixture<dummy_thread_hook>)
+} // WITH_FIXTURE(dummy_thread_hook_fixture)
 
-WITH_FIXTURE(fixture<counting_thread_hook>) {
+using counting_thread_hook_fixture = fixture<counting_thread_hook>;
+
+WITH_FIXTURE(counting_thread_hook_fixture) {
 
 TEST("counting_system_without_actor") {
   {
@@ -130,4 +134,4 @@ TEST("counting_system_with_actor") {
   }
 }
 
-} // WITH_FIXTURE(fixture<counting_thread_hook>)
+} // WITH_FIXTURE(counting_thread_hook_fixture)

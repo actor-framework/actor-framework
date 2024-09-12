@@ -367,4 +367,3 @@ TEST("non-empty object with nested values") {
   check_eq(obj.value("min-uint64").to_unsigned(), 0u);
   check_eq(obj.value("max-uint64").to_unsigned(), UINT64_MAX);
 }
-
