@@ -21,6 +21,8 @@ auto str(const node_type& head) {
   return chunked_string{&head};
 }
 
+} // namespace
+
 TEST("to_string") {
   auto world = node_type{"World!", nullptr};
   check_eq(to_string(str(world)), "World!");
@@ -87,5 +89,3 @@ TEST("builder") {
     check_eq(sizes, std::vector<size_t>{128, 128, 128, 128, 1});
   }
 }
-
-} // namespace

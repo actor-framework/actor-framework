@@ -54,6 +54,8 @@ std::string printed(const json_value& val) {
   return result;
 }
 
+} // namespace
+
 TEST("default-constructed") {
   auto val = json_value{};
   check(val.is_null());
@@ -365,5 +367,3 @@ TEST("non-empty object with nested values") {
   check_eq(obj.value("min-uint64").to_unsigned(), 0u);
   check_eq(obj.value("max-uint64").to_unsigned(), UINT64_MAX);
 }
-
-} // namespace

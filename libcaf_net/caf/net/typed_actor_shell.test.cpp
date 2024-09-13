@@ -150,6 +150,8 @@ struct fixture {
   net::stream_socket fd2;
 };
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 TEST("actor shells can receive messages") {
@@ -256,5 +258,3 @@ TEST("actor shells can use flows") {
 TEST_INIT() {
   init_global_meta_objects<caf::id_block::typed_actor_shell_test>();
 }
-
-} // namespace

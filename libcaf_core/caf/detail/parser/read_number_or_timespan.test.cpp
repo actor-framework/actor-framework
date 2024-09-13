@@ -78,6 +78,8 @@ res_t res(std::chrono::duration<Rep, Period> x) {
   return res_t{std::chrono::duration_cast<timespan>(x)};
 }
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 TEST("valid numbers and timespans") {
@@ -108,5 +110,3 @@ TEST("invalid timespans") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

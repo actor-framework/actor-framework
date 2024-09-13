@@ -15,8 +15,6 @@
 
 using namespace caf;
 
-namespace {
-
 using shared_bool_ptr = std::shared_ptr<bool>;
 
 TEST("spawn_inactive creates an actor without launching it") {
@@ -91,5 +89,3 @@ TEST("println renders its arguments to a text stream") {
   sys.await_all_actors_done();
   check_eq(*out, "line1\n<red>line2</red>\nline3\n<green>line4</green>\n");
 }
-
-} // namespace

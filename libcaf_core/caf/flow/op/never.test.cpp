@@ -10,8 +10,6 @@
 
 using namespace caf;
 
-namespace {
-
 WITH_FIXTURE(test::fixture::flow) {
 
 SCENARIO("the never operator never invokes callbacks except when disposed") {
@@ -41,5 +39,3 @@ SCENARIO("the never operator never invokes callbacks except when disposed") {
 }
 
 } // WITH_FIXTURE(test::fixture::flow)
-
-} // namespace

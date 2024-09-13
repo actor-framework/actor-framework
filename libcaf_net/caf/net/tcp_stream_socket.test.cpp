@@ -16,8 +16,6 @@ using namespace caf;
 using namespace caf::net;
 using namespace std::literals;
 
-namespace {
-
 TEST("opening and connecting via tcp socket") {
   auto unbox = [this](auto expected) {
     if (expected)
@@ -141,5 +139,3 @@ TEST("tcp connect to invalid destination") {
     check(!conn.has_value());
   }
 }
-
-} // namespace

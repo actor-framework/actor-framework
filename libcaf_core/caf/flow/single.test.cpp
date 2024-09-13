@@ -18,8 +18,6 @@ using std::vector;
 using namespace caf;
 using namespace caf::flow;
 
-namespace {
-
 WITH_FIXTURE(test::fixture::flow) {
 
 SCENARIO("singles emit at most one value") {
@@ -50,5 +48,3 @@ SCENARIO("singles emit at most one value") {
 }
 
 } // WITH_FIXTURE(test::fixture::flow)
-
-} // namespace

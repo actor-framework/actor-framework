@@ -14,8 +14,6 @@
 
 using namespace caf;
 
-namespace {
-
 WITH_FIXTURE(test::fixture::flow) {
 
 TEST("calling skip_last(5) on range(1, 10) produces [1, 2, 3, 4, 5]") {
@@ -70,5 +68,3 @@ TEST("skip_last operator forwards errors") {
 }
 
 } // WITH_FIXTURE(test::fixture::flow)
-
-} // namespace

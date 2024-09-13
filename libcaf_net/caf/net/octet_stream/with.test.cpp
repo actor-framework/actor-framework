@@ -61,6 +61,8 @@ struct fixture {
   std::thread mpx_thread;
 };
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 TEST("a flow bridge connects flows to a socket") {
@@ -106,5 +108,3 @@ TEST("a flow bridge connects flows to a socket") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

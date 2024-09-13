@@ -32,6 +32,8 @@ void producer(string_queue* queue, int first, int last) {
     queue->push(std::to_string(i));
 }
 
+} // namespace
+
 TEST("a default-constructed ring buffer is empty") {
   string_queue queue;
   auto now = std::chrono::steady_clock::now();
@@ -65,5 +67,3 @@ TEST("sync_ring_buffer can be used with multiple producers") {
   for (auto& t : producers)
     t.join();
 }
-
-} // namespace

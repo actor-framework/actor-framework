@@ -49,6 +49,8 @@ struct fixture {
   message m3 = make_message(1, 2, 3);
 };
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 TEST("a default-constructed behavior accepts no messages") {
@@ -291,5 +293,3 @@ TEST("behaviors may be assigned after construction") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

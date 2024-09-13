@@ -9,11 +9,7 @@
 using namespace caf;
 using namespace caf::net;
 
-namespace {
-
 TEST("invalid_socket") {
   datagram_socket x;
   check_ne(allow_connreset(x, true), none);
 }
-
-} // namespace

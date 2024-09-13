@@ -19,6 +19,8 @@ behavior dummy_behavior() {
   };
 }
 
+} // namespace
+
 WITH_FIXTURE(test::fixture::deterministic) {
 
 SCENARIO("run_scheduled triggers an action after a relative timeout") {
@@ -106,5 +108,3 @@ SCENARIO("run_scheduled_weak triggers an action after a relative timeout") {
 }
 
 } // WITH_FIXTURE(test::fixture::deterministic)
-
-} // namespace

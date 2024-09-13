@@ -82,6 +82,8 @@ private:
   std::vector<int> values_;
 };
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 SCENARIO("consumer adapters allow integrating consumers into event loops") {
@@ -107,5 +109,3 @@ SCENARIO("consumer adapters allow integrating consumers into event loops") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

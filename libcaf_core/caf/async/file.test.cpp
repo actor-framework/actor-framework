@@ -39,6 +39,8 @@ constexpr std::string_view quotes_numbered_lines = R"_(1:
 7:
 )_";
 
+} // namespace
+
 TEST("async text file I/O") {
   actor_system_config cfg;
   actor_system sys{cfg};
@@ -165,5 +167,3 @@ TEST("async binary file I/O") {
     check_eq(res.get(), expected<byte_buffer>{bytes});
   }
 }
-
-} // namespace

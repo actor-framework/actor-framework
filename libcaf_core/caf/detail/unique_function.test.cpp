@@ -33,6 +33,8 @@ private:
   size_t* instance_counter_;
 };
 
+} // namespace
+
 #define CHECK_VALID(f)                                                         \
   check(!f.is_nullptr());                                                      \
   check(static_cast<bool>(f));                                                 \
@@ -162,5 +164,3 @@ TEST("move assign") {
 }
 
 // NOLINTEND(bugprone-use-after-move)
-
-} // namespace

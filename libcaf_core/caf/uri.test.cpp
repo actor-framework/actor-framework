@@ -212,6 +212,8 @@ bool operator"" _i(const char* cstr, size_t cstr_len) {
   return err != none;
 }
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 TEST("default URIs are empty") {
@@ -526,5 +528,3 @@ TEST("serialization") {
 #undef SERIALIZATION_ROUNDTRIP
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

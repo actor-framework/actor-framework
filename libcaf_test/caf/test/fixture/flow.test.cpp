@@ -10,8 +10,6 @@
 
 using namespace caf;
 
-namespace {
-
 WITH_FIXTURE(test::fixture::flow) {
 
 TEST("range() creates a blueprint for a range of numbers") {
@@ -31,5 +29,3 @@ TEST("collect() eagerly evaluates an observable and returns a vector") {
 }
 
 } // WITH_FIXTURE(test::fixture::flow)
-
-} // namespace

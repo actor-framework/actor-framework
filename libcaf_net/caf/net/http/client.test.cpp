@@ -150,6 +150,8 @@ struct fixture {
   std::thread mpx_thread;
 };
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 SCENARIO("the client sends HTTP requests") {
@@ -473,5 +475,3 @@ SCENARIO("apps can return errors to abort the HTTP layer") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

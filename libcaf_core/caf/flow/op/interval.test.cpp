@@ -22,6 +22,8 @@ using i64_list = std::vector<int64_t>;
 
 struct fixture : test::fixture::deterministic, test::fixture::flow {};
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 SCENARIO("scoped coordinators wait on observable intervals") {
@@ -93,5 +95,3 @@ SCENARIO("a timer is an observable interval with a single value") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

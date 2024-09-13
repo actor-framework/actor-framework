@@ -31,6 +31,8 @@ std::string join(str_list vec) {
   return caf::join(vec, ",");
 }
 
+} // namespace
+
 TEST("splitting") {
   check_eq(split(""), str_list{""});
   check_eq(split(","), str_list{"", ""});
@@ -78,5 +80,3 @@ TEST("ends with") {
   check(!ends_with("foobar", "car"));
   check(!ends_with("foobar", "afoobar"));
 }
-
-} // namespace

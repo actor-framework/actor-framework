@@ -12,8 +12,6 @@
 using namespace caf;
 using namespace caf::io;
 
-namespace {
-
 WITH_FIXTURE(test::fixture::deterministic) {
 
 TEST("new_connection_msg is serializable") {
@@ -165,5 +163,3 @@ TEST("dataram_servant_closed_msg is serializable") {
 }
 
 } // WITH_FIXTURE(test::fixture::deterministic)
-
-} // namespace

@@ -147,6 +147,8 @@ private:
   bool state_ = false;
 };
 
+} // namespace
+
 TEST("base serializer") {
   auto cfg = actor_system_config{};
   auto sys = actor_system{cfg};
@@ -168,5 +170,3 @@ TEST("base serializer") {
     check(serializer.list(std::vector<bool>{true, false}));
   }
 }
-
-} // namespace

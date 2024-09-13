@@ -10,8 +10,6 @@
 
 #include <numeric>
 
-namespace {
-
 OUTLINE("eating cucumbers") {
   GIVEN("there are <start> cucumbers") {
     auto start = block_parameters<int>();
@@ -72,5 +70,3 @@ OUTLINE("counting numbers") {
     | [1, 2, 3] |   6 |   okay |
   )";
 }
-
-} // namespace

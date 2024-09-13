@@ -10,8 +10,6 @@
 
 using namespace caf;
 
-namespace {
-
 WITH_FIXTURE(test::fixture::deterministic) {
 
 TEST("delegation moves responsibility for a request to another actor") {
@@ -74,5 +72,3 @@ TEST("delegation moves responsibility for a request to another actor") {
 }
 
 } // WITH_FIXTURE(test::fixture::deterministic)
-
-} // namespace

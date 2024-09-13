@@ -20,8 +20,6 @@
 using namespace caf;
 using namespace std::literals;
 
-namespace {
-
 using dummy_actor = typed_actor<result<int>(int)>;
 
 using dummy_behavior = dummy_actor::behavior_type;
@@ -687,5 +685,3 @@ TEST("delegate message") {
 }
 
 } // WITH_FIXTURE(test::fixture::deterministic)
-
-} // namespace

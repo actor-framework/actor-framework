@@ -52,6 +52,8 @@ struct fixture : test::fixture::deterministic {
   }
 };
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 SCENARIO("run_delayed triggers an action after a relative timeout") {
@@ -200,5 +202,3 @@ SCENARIO("run_delayed_weak triggers an action after a relative timeout") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

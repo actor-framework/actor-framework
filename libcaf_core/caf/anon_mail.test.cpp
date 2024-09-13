@@ -15,8 +15,6 @@
 using namespace caf;
 using namespace std::literals;
 
-namespace {
-
 WITH_FIXTURE(test::fixture::deterministic) {
 
 TEST("send asynchronous message") {
@@ -151,5 +149,3 @@ TEST("explicit cancel of a delayed message") {
 }
 
 } // WITH_FIXTURE(test::fixture::deterministic)
-
-} // namespace

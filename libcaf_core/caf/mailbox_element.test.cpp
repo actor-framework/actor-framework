@@ -33,6 +33,8 @@ std::optional<tuple<Ts...>> fetch(const mailbox_element& x) {
   return fetch<Ts...>(x.content());
 }
 
+} // namespace
+
 TEST("empty_message") {
   auto m1 = make_mailbox_element(nullptr, make_message_id(), make_message());
   check(m1->mid.is_async());
@@ -64,5 +66,3 @@ TEST("high_priority") {
                                  make_message_id(message_priority::high), 42);
   check(m1->mid.category() == message_id::urgent_message_category);
 }
-
-} // namespace

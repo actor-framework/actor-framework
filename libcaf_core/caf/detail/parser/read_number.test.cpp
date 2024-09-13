@@ -123,6 +123,8 @@ struct fixture {
   range_parser r;
 };
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 TEST("add ascii - unsigned") {
@@ -347,5 +349,3 @@ TEST("the parser rejects invalid step values") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

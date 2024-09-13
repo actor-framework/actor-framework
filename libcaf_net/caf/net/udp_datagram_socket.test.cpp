@@ -68,6 +68,8 @@ error read_from_socket(udp_datagram_socket sock, byte_buffer& buf) {
   return make_error(sec::runtime_error, "too many read attempts");
 }
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 TEST("socket creation") {
@@ -93,5 +95,3 @@ TEST("read and write") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

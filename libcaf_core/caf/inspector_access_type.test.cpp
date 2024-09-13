@@ -15,8 +15,6 @@
 using namespace caf;
 using namespace std::literals;
 
-namespace {
-
 TEST("inspect_access_type") {
   check(
     std::is_same_v<decltype(inspect_access_type<caf::binary_serializer, int>()),
@@ -57,5 +55,3 @@ TEST("inspect_access_type") {
         decltype(inspect_access_type<caf::binary_serializer, action>()),
         inspector_access_type::unsafe>);
 }
-
-} // namespace

@@ -41,6 +41,8 @@ struct fixture : test::fixture::deterministic {
   }
 };
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 TEST("single multiplexed request") {
@@ -105,5 +107,3 @@ TEST("multiple awaited requests") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

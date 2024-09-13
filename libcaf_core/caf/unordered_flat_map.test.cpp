@@ -13,8 +13,6 @@
 
 using namespace caf;
 
-namespace {
-
 using int_map = unordered_flat_map<int, int>;
 
 using string_map = unordered_flat_map<std::string, std::string>;
@@ -186,5 +184,3 @@ TEST("calling at() with an invalid key throws std::out_of_range") {
   check_throws<std::out_of_range>([&] { xs.at(10); });
 }
 #endif // CAF_ENABLE_EXCEPTIONS
-
-} // namespace

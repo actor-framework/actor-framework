@@ -22,6 +22,8 @@ struct fixture {
   metric_registry registry;
 };
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 TEST("the Prometheus collector generates text output") {
@@ -73,5 +75,3 @@ some_request_duration_seconds_count{x="get"} 3 42000
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

@@ -36,6 +36,8 @@ uuid operator"" _uuid(const char* cstr, size_t cstr_len) {
   return result;
 }
 
+} // namespace
+
 TEST("default generated UUIDs have all 128 bits set to zero") {
   uuid nil;
   check(!nil);
@@ -177,5 +179,3 @@ SCENARIO("UUIDs are hashable") {
     }
   }
 }
-
-} // namespace

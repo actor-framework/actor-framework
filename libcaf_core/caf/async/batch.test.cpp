@@ -30,6 +30,8 @@ auto to_list(span<const T> xs) {
   return std::list<T>{xs.begin(), xs.end()};
 }
 
+} // namespace
+
 SCENARIO("batches are constructible from a list of values") {
   GIVEN("an empty vector") {
     WHEN("passing it to make_batch") {
@@ -259,5 +261,3 @@ SCENARIO("serializing and then deserializing a batch makes a deep copy") {
     }
   }
 }
-
-} // namespace

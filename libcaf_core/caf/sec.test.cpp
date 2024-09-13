@@ -16,8 +16,6 @@
 using namespace caf;
 using namespace std::literals;
 
-namespace {
-
 TEST("system error codes are convertible to strings") {
   check_eq(to_string(sec::none), "none");
   check_eq(to_string(sec::invalid_argument), "invalid_argument");
@@ -59,5 +57,3 @@ TEST("system error codes are inspectable") {
     check_eq(copy, val);
   }
 }
-
-} // namespace

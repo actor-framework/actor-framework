@@ -21,7 +21,7 @@ using caf::anon_mail;
 
 using namespace std::literals;
 
-namespace fixture = caf::test::fixture;
+namespace {
 
 struct my_int {
   int value;
@@ -40,13 +40,7 @@ bool operator==(my_int lhs, int rhs) noexcept {
   return lhs.value == rhs;
 }
 
-bool operator==(int lhs, my_int rhs) noexcept {
-  return lhs == rhs.value;
-}
-
-bool operator!=(my_int lhs, my_int rhs) noexcept {
-  return lhs.value != rhs.value;
-}
+} // namespace
 
 CAF_BEGIN_TYPE_ID_BLOCK(deterministic_fixture_test, caf::first_custom_type_id)
 
@@ -54,9 +48,7 @@ CAF_BEGIN_TYPE_ID_BLOCK(deterministic_fixture_test, caf::first_custom_type_id)
 
 CAF_END_TYPE_ID_BLOCK(deterministic_fixture_test)
 
-namespace {
-
-WITH_FIXTURE(fixture::deterministic) {
+WITH_FIXTURE(caf::test::fixture::deterministic) {
 
 TEST("the deterministic fixture provides a deterministic scheduler") {
   auto initialized = std::make_shared<bool>(false);
@@ -505,10 +497,8 @@ TEST("calling next_timeout or last_timeout with no pending timeout throws") {
 }
 #endif // CAF_ENABLE_EXCEPTIONS
 
-} // WITH_FIXTURE(fixture::deterministic)
+} // WITH_FIXTURE(caf::test::fixture::deterministic)
 
 TEST_INIT() {
   caf::init_global_meta_objects<caf::id_block::deterministic_fixture_test>();
 }
-
-} // namespace

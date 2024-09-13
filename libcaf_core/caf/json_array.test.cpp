@@ -46,6 +46,8 @@ std::string printed(const json_array& arr) {
   return result;
 }
 
+} // namespace
+
 TEST("default-constructed") {
   auto arr = json_array{};
   check(arr.empty());
@@ -87,5 +89,3 @@ TEST("from non-empty array") {
   check_eq(printed(arr), "[\n  1,\n  \"two\",\n  3\n]");
   check_eq(deep_copy(arr), arr);
 }
-
-} // namespace

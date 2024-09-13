@@ -56,6 +56,8 @@ struct fixture {
   }
 };
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 TEST("config_consumer") {
@@ -92,5 +94,3 @@ TEST("simplified syntax") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

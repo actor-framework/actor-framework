@@ -46,6 +46,8 @@ struct fixture : test::fixture::deterministic {
   }
 };
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 TEST("default construction") {
@@ -140,5 +142,3 @@ TEST("dropping") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

@@ -40,6 +40,8 @@ struct fixture {
   string_parser p;
 };
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 TEST("empty string") {
@@ -96,5 +98,3 @@ TEST("invalid strings") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

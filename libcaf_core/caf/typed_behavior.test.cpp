@@ -13,8 +13,6 @@
 
 using namespace caf;
 
-namespace {
-
 TEST("make_typed_behavior automatically deduces its types") {
   using handle = typed_actor<result<void>(std::string),
                              result<int32_t>(int32_t), result<double>(double)>;
@@ -23,5 +21,3 @@ TEST("make_typed_behavior automatically deduces its types") {
                                   [](double x) { return x; });
   static_assert(std::is_same_v<handle::behavior_type, decltype(bhvr)>);
 }
-
-} // namespace

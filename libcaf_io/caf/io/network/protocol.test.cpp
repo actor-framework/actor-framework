@@ -18,8 +18,6 @@ using namespace std::literals;
 
 using caf::io::network::protocol;
 
-namespace {
-
 TEST("inspection") {
   auto roundtrip = [this](auto x) {
     using value_type = decltype(x);
@@ -56,5 +54,3 @@ TEST("string conversion") {
   check_eq(to_string(ipv6_tcp), "TCP/IPv6");
   check_eq(to_string(ipv6_udp), "UDP/IPv6");
 }
-
-} // namespace

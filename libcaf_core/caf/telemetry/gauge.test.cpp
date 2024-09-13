@@ -9,8 +9,6 @@
 
 using namespace caf;
 
-namespace {
-
 TEST("gauges can increment and decrement") {
   SECTION("double gauges") {
     telemetry::dbl_gauge g;
@@ -64,5 +62,3 @@ TEST("gauges can increment and decrement") {
     }
   }
 }
-
-} // namespace

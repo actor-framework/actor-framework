@@ -8,8 +8,6 @@
 
 using namespace caf;
 
-namespace {
-
 TEST("default construction") {
   message_id x;
   check_eq(x.is_async(), true);
@@ -79,5 +77,3 @@ TEST("with_category") {
     check_eq(x.is_answered(), false);
   }
 }
-
-} // namespace

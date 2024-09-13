@@ -59,6 +59,8 @@ T unbox(std::optional<T> x) {
   return std::move(*x);
 }
 
+} // namespace
+
 TEST("node IDs are convertible from string") {
   node_id::default_data::host_id_type hash{{
     1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
@@ -95,5 +97,3 @@ TEST("node IDs are serializable") {
     check_eq(uri_based_id, roundtrip(uri_based_id));
   }
 }
-
-} // namespace

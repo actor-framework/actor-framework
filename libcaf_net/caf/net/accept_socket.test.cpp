@@ -33,6 +33,8 @@ struct fixture {
   uri::authority_type auth;
 };
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 TEST("tcp connect") {
@@ -49,5 +51,3 @@ TEST("tcp connect") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

@@ -109,6 +109,8 @@ struct fixture {
   }
 };
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 SCENARIO("default-constructed config values represent null") {
@@ -1012,5 +1014,3 @@ TEST("dictionary baseline testing") {
 TEST_INIT() {
   caf::init_global_meta_objects<caf::id_block::config_value_test>();
 }
-
-} // namespace

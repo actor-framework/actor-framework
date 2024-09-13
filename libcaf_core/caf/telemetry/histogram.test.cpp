@@ -15,8 +15,6 @@
 using namespace caf;
 using namespace caf::telemetry;
 
-namespace {
-
 TEST("double histograms use infinity for the last bucket") {
   dbl_histogram h1{.1, .2, .4, .8};
   check_eq(h1.buckets().size(), 5u);
@@ -46,5 +44,3 @@ TEST("histograms aggregate to buckets and keep a sum") {
   check_eq(buckets[3].count.value(), 2); // 9, 10
   check_eq(h1.sum(), 55);
 }
-
-} // namespace

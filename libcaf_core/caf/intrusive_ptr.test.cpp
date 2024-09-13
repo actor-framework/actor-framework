@@ -83,6 +83,8 @@ void check_class_instances() {
   this_test.check_eq(class1_instances, 0);
 }
 
+} // namespace
+
 TEST("make_counted") {
   {
     auto p = make_counted<class0>();
@@ -146,5 +148,3 @@ TEST("full_test") {
   }
   check_class_instances();
 }
-
-} // namespace

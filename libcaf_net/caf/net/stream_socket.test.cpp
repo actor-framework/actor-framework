@@ -19,10 +19,6 @@ std::byte operator"" _b(unsigned long long x) {
   return static_cast<std::byte>(x);
 }
 
-} // namespace
-
-namespace {
-
 struct fixture {
   fixture() : rd_buf(124) {
     auto maybe_sockets = make_stream_socket_pair();
@@ -50,6 +46,8 @@ struct fixture {
   stream_socket second;
   byte_buffer rd_buf;
 };
+
+} // namespace
 
 WITH_FIXTURE(fixture) {
 
@@ -103,5 +101,3 @@ TEST("transfer data using multiple buffers") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

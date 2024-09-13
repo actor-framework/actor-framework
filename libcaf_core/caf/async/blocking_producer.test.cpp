@@ -118,6 +118,8 @@ void receiver_impl(event_based_actor* self, pull_resource_t inputs,
     });
 }
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 SCENARIO("blocking producers allow threads to generate data") {
@@ -148,5 +150,3 @@ SCENARIO("blocking producers allow threads to generate data") {
 TEST_INIT() {
   init_global_meta_objects<id_block::blocking_producer_test>();
 }
-
-} // namespace

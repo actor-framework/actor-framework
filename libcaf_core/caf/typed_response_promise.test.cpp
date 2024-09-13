@@ -101,6 +101,8 @@ testee_actor::behavior_type requester_v2(testee_actor::pointer self,
   };
 }
 
+} // namespace
+
 WITH_FIXTURE(test::fixture::deterministic) {
 
 SCENARIO("response promises allow delaying of response messages") {
@@ -195,5 +197,3 @@ SCENARIO("response promises allow delegation") {
 }
 
 } // WITH_FIXTURE(test::fixture::deterministic)
-
-} // namespace

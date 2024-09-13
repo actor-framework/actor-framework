@@ -35,6 +35,8 @@ void produce(async::producer_resource<int> push) {
     out.push(i);
 }
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 SCENARIO("blocking consumers allow threads to receive data") {
@@ -75,5 +77,3 @@ SCENARIO("blocking consumers allow threads to receive data") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

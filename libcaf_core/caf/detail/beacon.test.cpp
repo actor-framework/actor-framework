@@ -14,8 +14,6 @@
 using namespace caf;
 using namespace std::literals;
 
-namespace {
-
 SCENARIO("beacons can be disposed") {
   auto disposable_beacon = detail::beacon{};
   GIVEN("a beacon") {
@@ -34,5 +32,3 @@ SCENARIO("beacons can be disposed") {
     }
   }
 }
-
-} // namespace

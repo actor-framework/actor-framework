@@ -206,6 +206,8 @@ struct fixture {
   }
 };
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 SCENARIO("the JSON writer converts builtin types to strings") {
@@ -516,5 +518,3 @@ SCENARIO("the JSON compresses empty lists and objects") {
 TEST_INIT() {
   caf::init_global_meta_objects<caf::id_block::json_write_test>();
 }
-
-} // namespace

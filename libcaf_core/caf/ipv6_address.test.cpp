@@ -21,6 +21,8 @@ ipv6_address addr(std::initializer_list<uint16_t> prefix,
   return ipv6_address{prefix, suffix};
 }
 
+} // namespace
+
 TEST("constructing") {
   ipv6_address::array_type localhost_bytes{
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}};
@@ -73,5 +75,3 @@ TEST("to string") {
   check_eq(to_string(addr({0x01})), "1::");
   check_eq(to_string(addr({}, {0xFFFF, 0x01, 0x01})), "0.1.0.1");
 }
-
-} // namespace

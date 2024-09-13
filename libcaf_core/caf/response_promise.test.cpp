@@ -96,6 +96,8 @@ behavior requester_v2(event_based_actor* self, actor worker) {
   };
 }
 
+} // namespace
+
 WITH_FIXTURE(test::fixture::deterministic) {
 
 SCENARIO("response promises allow delaying of response messages") {
@@ -212,5 +214,3 @@ TEST("GH - 1306 regression") {
   // access the self pointer this triggers a heap-use-after-free since the AUT
   // has been destroyed at this point.
 }
-
-} // namespace

@@ -10,8 +10,6 @@
 using namespace caf;
 using namespace caf::io;
 
-namespace {
-
 TEST("GH-1900 regression") {
   // Note: we don't need to actually run `spawn_client`, we only check for a
   // compiler error. We shouldn't actually run this code, since it will assume
@@ -25,5 +23,3 @@ TEST("GH-1900 regression") {
   };
   check(std::is_same_v<decltype(fn), decltype(fn)>);
 }
-
-} // namespace

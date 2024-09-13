@@ -42,6 +42,8 @@ struct fixture : test::fixture::deterministic {
   }
 };
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 TEST("delayed actor messages receive responses") {
@@ -104,5 +106,3 @@ TEST("exceptions while processing a message will send error to the sender") {
 #endif // CAF_ENABLE_EXCEPTIONS
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

@@ -21,6 +21,8 @@ auto make_shared_val_ptr() {
   return std::make_shared<std::variant<none_t, T, error>>();
 }
 
+} // namespace
+
 SCENARIO("futures can actively wait on a promise") {
   auto uut = async::promise<int32_t>{};
   auto fut = uut.get_future();
@@ -234,5 +236,3 @@ SCENARIO("never setting a value or an error breaks the promises") {
 }
 
 } // WITH_FIXTURE(test::fixture::deterministic)
-
-} // namespace

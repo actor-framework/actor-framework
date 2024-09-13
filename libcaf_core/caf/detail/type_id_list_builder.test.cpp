@@ -11,8 +11,6 @@
 
 using namespace caf;
 
-namespace {
-
 using builder_t = detail::type_id_list_builder;
 
 SCENARIO("a default-constructed type_id_list_builder is empty") {
@@ -139,5 +137,3 @@ OUTLINE("passing an size hint to the builder pre-allocates memory") {
     |   24 |       32 |
   )";
 }
-
-} // namespace

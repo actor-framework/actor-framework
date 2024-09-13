@@ -48,6 +48,8 @@ struct fixture : test::fixture::deterministic {
   }
 };
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 SCENARIO("response handles are convertible to observables and singles") {
@@ -230,5 +232,3 @@ SCENARIO("response handles are convertible to observables and singles") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

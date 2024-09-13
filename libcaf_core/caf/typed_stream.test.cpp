@@ -56,6 +56,8 @@ behavior int_sink(event_based_actor* self, std::shared_ptr<ivec> results) {
   };
 }
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 TEST("default-constructed") {
@@ -115,5 +117,3 @@ TEST("streams allow actors to transmit flow items to others") {
 TEST_INIT() {
   init_global_meta_objects<id_block::typed_stream_test>();
 }
-
-} // namespace

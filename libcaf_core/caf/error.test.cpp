@@ -10,8 +10,6 @@
 using namespace caf;
 using namespace std::literals;
 
-namespace {
-
 TEST("default-constructed errors evaluate to false") {
   error err;
   check(!err);
@@ -68,5 +66,3 @@ SCENARIO("errors provide human-readable to_string output") {
     }
   }
 }
-
-} // namespace

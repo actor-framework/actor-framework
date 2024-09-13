@@ -10,8 +10,6 @@
 using namespace caf;
 using namespace std::literals;
 
-namespace {
-
 TEST("parsing a http request") {
   net::http::request_header hdr;
   hdr.parse("GET /foo/bar?user=foo&pw=bar#baz HTTP/1.1\r\n"
@@ -185,5 +183,3 @@ TEST("invalid request headers are copyable and movable") {
     check_invalid(other);
   }
 }
-
-} // namespace

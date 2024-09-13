@@ -13,8 +13,6 @@ using std::vector;
 
 using namespace caf;
 
-namespace {
-
 WITH_FIXTURE(test::fixture::flow) {
 
 // Note: we always double the checks for the operator-under-test by calling it
@@ -600,5 +598,3 @@ TEST("start_with(value) builds observable that emits value first") {
 }
 
 } // WITH_FIXTURE(test::fixture::flow)
-
-} // namespace

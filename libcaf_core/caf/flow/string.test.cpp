@@ -21,6 +21,8 @@ auto tostr(const std::vector<char>& chars) {
   return std::string{chars.begin(), chars.end()};
 }
 
+} // namespace
+
 WITH_FIXTURE(test::fixture::flow) {
 
 SCENARIO("normalize_newlines converts all newline styles to UNIX style") {
@@ -124,5 +126,3 @@ SCENARIO("to_lines splits a character sequence into lines") {
 }
 
 } // WITH_FIXTURE(test::fixture::flow)
-
-} // namespace

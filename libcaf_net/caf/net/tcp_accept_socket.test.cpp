@@ -16,8 +16,6 @@ using namespace caf;
 using namespace caf::net;
 using namespace std::literals;
 
-namespace {
-
 TEST("opening and accepting tcp on a socket") {
   uri::authority_type auth;
   auth.port = 0;
@@ -86,5 +84,3 @@ TEST("calling accepting") {
              sec::socket_operation_failed);
   }
 }
-
-} // namespace

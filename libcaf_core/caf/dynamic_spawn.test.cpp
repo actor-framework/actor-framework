@@ -280,6 +280,8 @@ struct fixture {
   }
 };
 
+} // namespace
+
 WITH_FIXTURE(test::fixture::deterministic) {
 
 TEST("mirror") {
@@ -530,5 +532,3 @@ TEST("move-only function object") {
 TEST_INIT() {
   caf::init_global_meta_objects<caf::id_block::dynamic_spawn_test>();
 }
-
-} // namespace

@@ -83,6 +83,7 @@ public:
        and_then_scope; and_then_scope.leave())
 
 #define SCENARIO(description)                                                  \
+  namespace {                                                                  \
   struct CAF_PP_UNIFYN(scenario_)                                              \
     : caf::test::runnable, caf_test_case_auto_fixture {                        \
     using super = caf::test::runnable;                                         \
@@ -93,4 +94,5 @@ public:
   ptrdiff_t CAF_PP_UNIFYN(scenario_)::register_id                              \
     = caf::test::registry::add<CAF_PP_UNIFYN(scenario_)>(                      \
       caf_test_suite_name, description, caf::test::block_type::scenario);      \
+  }                                                                            \
   void CAF_PP_UNIFYN(scenario_)::do_run()

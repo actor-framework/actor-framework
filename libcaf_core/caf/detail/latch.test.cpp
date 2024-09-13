@@ -10,8 +10,6 @@
 
 using namespace caf;
 
-namespace {
-
 SCENARIO("latches synchronize threads") {
   GIVEN("a latch and three threads") {
     detail::latch sync{2};
@@ -29,5 +27,3 @@ SCENARIO("latches synchronize threads") {
       t.join();
   }
 }
-
-} // namespace

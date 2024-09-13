@@ -50,6 +50,8 @@ public:
   actor testee;
 };
 
+} // namespace
+
 WITH_FIXTURE(test::fixture::deterministic) {
 
 TEST("constructor attach") {
@@ -58,5 +60,3 @@ TEST("constructor attach") {
 }
 
 } // WITH_FIXTURE(test::fixture::deterministic)
-
-} // namespace

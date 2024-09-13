@@ -64,6 +64,8 @@ struct fixture : test::fixture::deterministic, test::fixture::flow {
   }
 };
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 SCENARIO("the buffer operator groups items together") {
@@ -486,5 +488,3 @@ SCENARIO("on_request actions can turn into no-ops") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

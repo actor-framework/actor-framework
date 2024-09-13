@@ -71,6 +71,8 @@ struct fixture : test::fixture::deterministic {
   }
 };
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 SCENARIO("typed actors may use the flow API") {
@@ -145,5 +147,3 @@ SCENARIO("typed actors may use the flow API") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

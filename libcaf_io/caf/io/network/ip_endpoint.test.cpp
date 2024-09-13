@@ -19,8 +19,6 @@ using namespace std::literals;
 
 using io::network::interfaces;
 
-namespace {
-
 TEST("IP endpoints are empty by default, copyable and movable") {
   auto addr_int = [](const void* ptr) {
     return reinterpret_cast<intptr_t>(ptr);
@@ -114,5 +112,3 @@ TEST("IP endpoints are convertible from string plus port") {
   }
 }
 #endif
-
-} // namespace

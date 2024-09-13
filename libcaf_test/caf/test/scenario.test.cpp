@@ -9,8 +9,6 @@
 
 #include "caf/config.hpp"
 
-namespace {
-
 #ifdef CAF_ENABLE_EXCEPTIONS
 SCENARIO("a scenario may not contain a section") {
   auto entered_section = false;
@@ -63,9 +61,13 @@ SCENARIO("each run starts with fresh local variables") {
   }
 }
 
+namespace {
+
 struct int_fixture {
   int my_int = 0;
 };
+
+} // namespace
 
 WITH_FIXTURE(int_fixture) {
 
@@ -156,5 +158,3 @@ SCENARIO("scenario-1") {
     }
   }
 }
-
-} // namespace

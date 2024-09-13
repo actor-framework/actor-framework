@@ -105,6 +105,8 @@ struct dummy_observer {
   error err;
 };
 
+} // namespace
+
 WITH_FIXTURE(test::fixture::deterministic) {
 
 TEST("resources may be copied") {
@@ -552,5 +554,3 @@ SCENARIO("SPSC buffers reject multiple consumers") {
 #endif // CAF_ENABLE_EXCEPTIONS
 
 } // WITH_FIXTURE(test::fixture::deterministic)
-
-} // namespace

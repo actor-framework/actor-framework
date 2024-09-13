@@ -13,8 +13,6 @@
 
 using namespace caf;
 
-namespace {
-
 /*
 WITH_FIXTURE(test::fixture::flow) {
 
@@ -128,5 +126,3 @@ SCENARIO("publishers from terminated actors produce errors") {
 }
 
 } // WITH_FIXTURE(test::fixture::deterministic)
-
-} // namespace

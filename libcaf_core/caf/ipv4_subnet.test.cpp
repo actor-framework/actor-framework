@@ -22,6 +22,8 @@ ipv4_subnet operator/(ipv4_address addr, uint8_t prefix) {
   return {addr, prefix};
 }
 
+} // namespace
+
 TEST("constructing") {
   ipv4_subnet zero{addr(0, 0, 0, 0), 32};
   check_eq(zero.network_address(), addr(0, 0, 0, 0));
@@ -70,5 +72,3 @@ TEST("serialization") {
 }
 
 } // WITH_FIXTURE(test::fixture::deterministic)
-
-} // namespace

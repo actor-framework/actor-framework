@@ -10,8 +10,6 @@
 
 using namespace caf;
 
-namespace {
-
 WITH_FIXTURE(test::fixture::flow) {
 
 SCENARIO("the defer operator produces a fresh observable for each observer") {
@@ -49,5 +47,3 @@ SCENARIO("the defer operator produces a fresh observable for each observer") {
 }
 
 } // WITH_FIXTURE(test::fixture::flow)
-
-} // namespace

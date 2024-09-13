@@ -225,6 +225,8 @@ std::string with_windows_newlines(std::string_view str) {
   return result;
 }
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 TEST("read_config feeds into a consumer") {
@@ -235,5 +237,3 @@ TEST("read_config feeds into a consumer") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

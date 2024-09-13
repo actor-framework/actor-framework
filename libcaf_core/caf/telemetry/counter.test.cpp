@@ -9,8 +9,6 @@
 
 using namespace caf;
 
-namespace {
-
 TEST("counters can only increment") {
   SECTION("double counters") {
     telemetry::dbl_counter c;
@@ -44,5 +42,3 @@ TEST("counters can only increment") {
     }
   }
 }
-
-} // namespace

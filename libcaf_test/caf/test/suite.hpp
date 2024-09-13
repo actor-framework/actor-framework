@@ -19,13 +19,12 @@
 struct caf_test_case_auto_fixture {};
 
 #define SUITE(name)                                                            \
+  namespace CAF_PP_UNIFYN(caf_suite_) {                                        \
   namespace {                                                                  \
-  static_assert(                                                               \
-    std::is_same_v<std::decay_t<decltype(caf_test_suite_name)>, caf::unit_t>,  \
-    "only one SUITE per translation unit is supported");                       \
   constexpr std::string_view caf_test_suite_name = name;                       \
   }                                                                            \
-  namespace
+  }                                                                            \
+  namespace CAF_PP_UNIFYN(caf_suite_)
 
 #define WITH_FIXTURE(name)                                                     \
   namespace CAF_PP_UNIFYN(caf_fixture_) {                                      \

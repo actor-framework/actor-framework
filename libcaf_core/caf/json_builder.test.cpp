@@ -106,8 +106,6 @@ struct fixture {
 
 } // namespace
 
-namespace {
-
 WITH_FIXTURE(fixture) {
 
 TEST("empty JSON value") {
@@ -522,5 +520,3 @@ TEST("nested sequence in struct") {
 TEST_INIT() {
   caf::init_global_meta_objects<caf::id_block::json_builder_test>();
 }
-
-} // namespace

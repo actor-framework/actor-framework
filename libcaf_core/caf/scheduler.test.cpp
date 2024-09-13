@@ -49,6 +49,8 @@ struct testee : resumable, ref_counted {
   std::shared_ptr<latch> rendezvous;
 };
 
+} // namespace
+
 OUTLINE("scheduling resumables") {
   GIVEN("an actor system using the work <sched> scheduler") {
     auto sched = block_parameters<std::string>();
@@ -177,5 +179,3 @@ OUTLINE("scheduling units that are awaiting") {
     | stealing    |
   )";
 }
-
-} // namespace

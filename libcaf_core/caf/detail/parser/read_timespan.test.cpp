@@ -56,6 +56,8 @@ std::optional<timespan> read(std::string_view str) {
   return consumer.x;
 }
 
+} // namespace
+
 TEST("todo") {
   check_eq(read("12ns"), 12_ns);
   check_eq(read("34us"), 34_us);
@@ -64,5 +66,3 @@ TEST("todo") {
   check_eq(read("60min"), 1_h);
   check_eq(read("90h"), 90_h);
 }
-
-} // namespace

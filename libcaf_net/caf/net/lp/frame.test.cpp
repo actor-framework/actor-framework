@@ -20,6 +20,8 @@ std::vector<std::byte> to_vec(span<const T> values) {
   return std::vector<std::byte>{values.begin(), values.end()};
 }
 
+} // namespace
+
 TEST("default construction") {
   net::lp::frame uut;
   check(!uut);
@@ -70,5 +72,3 @@ TEST("copying, moving and swapping") {
   check_eq(uut6.bytes().data(), uut3.bytes().data());
   check_eq(uut5.bytes().data(), uut4.bytes().data());
 }
-
-} // namespace

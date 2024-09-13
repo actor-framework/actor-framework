@@ -29,6 +29,8 @@ dummy_meta_state(std::string_view type_name = "dummy") {
   };
 }
 
+} // namespace
+
 OUTLINE("config options parse their parameters for long, short and env names") {
   using std::string;
   auto dummy = dummy_meta_state();
@@ -148,5 +150,3 @@ TEST("config options with storage sync their value with the storage") {
     check_eq(val, 0);
   }
 }
-
-} // namespace

@@ -37,6 +37,8 @@ auto make_hot_generator() {
   return std::make_pair(n, fn);
 }
 
+} // namespace
+
 WITH_FIXTURE(test::fixture::flow) {
 
 SCENARIO("publish creates a connectable observable") {
@@ -238,5 +240,3 @@ SCENARIO("publishers dispose unexpected subscriptions") {
 }
 
 } // WITH_FIXTURE(test::fixture::flow)
-
-} // namespace

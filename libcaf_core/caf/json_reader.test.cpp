@@ -390,6 +390,8 @@ fixture::fixture() {
   add_test_case("\r\n{\r\n\"a\":\r\n1, \"b\"\r\n:\r\n2}\r\n", my_request(1, 2));
 }
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 TEST("json baselines") {
@@ -461,5 +463,3 @@ SCENARIO("mappers enable custom type names in JSON input") {
 TEST_INIT() {
   caf::init_global_meta_objects<caf::id_block::json_reader_test>();
 }
-
-} // namespace

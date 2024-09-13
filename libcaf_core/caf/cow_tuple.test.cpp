@@ -43,6 +43,8 @@ T roundtrip(const T& x) {
   return result;
 }
 
+} // namespace
+
 TEST("default_construction") {
   cow_tuple<string, string> x;
   check_eq(x.unique(), true);
@@ -128,5 +130,3 @@ TEST("serialization") {
   check_eq(y.unique(), true);
   check_ne(x.ptr(), y.ptr());
 }
-
-} // namespace

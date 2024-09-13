@@ -301,6 +301,8 @@ struct fixture : test::fixture::deterministic {
   }
 };
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 // -- putting it all together --------------------------------------------------
@@ -449,5 +451,3 @@ SCENARIO("state classes may use typed pointers") {
 TEST_INIT() {
   caf::init_global_meta_objects<caf::id_block::typed_spawn_test>();
 }
-
-} // namespace

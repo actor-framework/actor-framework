@@ -46,6 +46,8 @@ struct fixture {
   dummy_socket sock;
 };
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 TEST("cleanup") {
@@ -79,5 +81,3 @@ TEST("release") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

@@ -11,8 +11,6 @@
 
 using namespace caf;
 
-namespace {
-
 WITH_FIXTURE(test::fixture::deterministic) {
 
 TEST("actor_companion forwards messages to a custom handler") {
@@ -38,5 +36,3 @@ TEST("actor_companion calls the on_exit handler on shutdown") {
 }
 
 } // WITH_FIXTURE(test::fixture::deterministic)
-
-} // namespace

@@ -33,6 +33,8 @@ struct fixture {
   actor_system sys{cfg};
 };
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 TEST("send request message") {
@@ -403,5 +405,3 @@ TEST("receive response as an expected") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

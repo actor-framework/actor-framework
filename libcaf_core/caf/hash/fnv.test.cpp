@@ -10,8 +10,6 @@
 
 using namespace std::literals;
 
-namespace {
-
 TEST("hash::fnv can build hash values incrementally") {
   caf::hash::fnv<uint32_t> f;
   check_eq(f.result, 0x811C9DC5u);
@@ -40,6 +38,8 @@ TEST("fnv::compute generates a hash value in one step") {
   }
 }
 
+namespace {
+
 struct foo {
   std::string bar;
 };
@@ -49,10 +49,10 @@ bool inspect(Inspector& f, foo& x) {
   return f.object(x).fields(f.field("bar", x.bar));
 }
 
+} // namespace
+
 TEST("fnv::compute can create hash values for types with inspect overloads") {
   using hash_type = caf::hash::fnv<uint32_t>;
   check_eq(hash_type::compute(foo{"abcd"}), 0xCE3479BDu);
   check_eq(hash_type::compute(foo{"C++ Actor Framework"}), 0x2FF91FE5u);
 }
-
-} // namespace

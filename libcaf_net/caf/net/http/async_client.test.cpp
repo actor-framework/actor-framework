@@ -126,6 +126,8 @@ struct fixture {
   std::thread mpx_thread;
 };
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 SCENARIO("the client sends HTTP requests") {
@@ -311,5 +313,3 @@ SCENARIO("unexpected aborts in the HTTP layer are reported as errors") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

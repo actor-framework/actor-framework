@@ -123,6 +123,8 @@ constexpr std::string_view ascii_2 = R"__(
  *                      \____/_/   \_|_|                                      *
 )__";
 
+} // namespace
+
 TEST("rfc3629::valid checks whether an input is valid UTF-8") {
   SECTION("valid ASCII input") {
     check(valid_utf8(ascii_1));
@@ -220,5 +222,3 @@ TEST("rfc3629::validate stops at the first invalid byte") {
     check_eq(rfc3629::validate(data), res_t{10, false});
   }
 }
-
-} // namespace

@@ -14,8 +14,6 @@
 
 using namespace caf;
 
-namespace {
-
 WITH_FIXTURE(test::fixture::deterministic) {
 
 SCENARIO("observe_on moves data between actors") {
@@ -41,5 +39,3 @@ SCENARIO("observe_on moves data between actors") {
 }
 
 } // WITH_FIXTURE(test::fixture::deterministic)
-
-} // namespace

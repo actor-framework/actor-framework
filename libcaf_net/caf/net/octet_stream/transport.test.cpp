@@ -115,6 +115,8 @@ private:
   consume_impl_t consume_impl_;
 };
 
+} // namespace
+
 WITH_FIXTURE(fixture) {
 
 TEST("receive") {
@@ -219,5 +221,3 @@ TEST("switching the protocol resets the delta") {
 }
 
 } // WITH_FIXTURE(fixture)
-
-} // namespace

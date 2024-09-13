@@ -9,8 +9,6 @@
 using namespace caf;
 using namespace caf::telemetry;
 
-namespace {
-
 TEST("timers observe how much time passes in a scope") {
   SECTION("timers call observe() with the measured time") {
     dbl_histogram h1{1, 2, 4, 8};
@@ -27,5 +25,3 @@ TEST("timers observe how much time passes in a scope") {
     check_eq(t.histogram_ptr(), nullptr);
   }
 }
-
-} // namespace

@@ -53,6 +53,8 @@ expected<T> read(std::string_view str) {
   return ps.error();
 }
 
+} // namespace
+
 #define CHECK_NUMBER(type, value) check_eq(read<type>(#value), type(value))
 
 #define CHECK_NUMBER_3(type, value, cpp_value)                                 \
@@ -204,5 +206,3 @@ TEST("IPv6 endpoint") {
   check_eq(read<ipv6_endpoint>("127.0.0.1:65536"), pec::integer_overflow);
   check_eq(read<ipv6_endpoint>("[1::2]:8080"), ipv6_endpoint({{1}, {2}}, 8080));
 }
-
-} // namespace

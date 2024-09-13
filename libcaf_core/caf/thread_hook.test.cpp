@@ -89,6 +89,8 @@ struct fixture {
   }
 };
 
+} // namespace
+
 TEST("counting_no_system") {
   {
     assumed_init_calls = 0;
@@ -133,5 +135,3 @@ TEST("counting_system_with_actor") {
 }
 
 } // WITH_FIXTURE(counting_thread_hook_fixture)
-
-} // namespace

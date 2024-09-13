@@ -28,6 +28,8 @@ message_handler handle_b() {
   };
 }
 
+} // namespace
+
 WITH_FIXTURE(test::fixture::deterministic) {
 
 TEST("message handler may be assigned") {
@@ -48,5 +50,3 @@ TEST("message handler may be assigned") {
 }
 
 } // WITH_FIXTURE(test::fixture::deterministic)
-
-} // namespace

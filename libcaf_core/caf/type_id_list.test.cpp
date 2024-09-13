@@ -48,8 +48,6 @@ CAF_END_TYPE_ID_BLOCK(type_id_test)
 
 using namespace caf;
 
-namespace {
-
 TEST("lists store the size at index 0") {
   type_id_t data[] = {3, 1, 2, 4};
   type_id_list xs{data};
@@ -116,5 +114,3 @@ TEST("type ID lists are concatenable") {
            type_id_list::concat(make_type_id_list<int8_t, int16_t>(),
                                 make_type_id_list<int32_t, int64_t>()));
 }
-
-} // namespace
