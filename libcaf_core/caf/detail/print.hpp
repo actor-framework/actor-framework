@@ -63,9 +63,14 @@ auto print_escaped_to(Output&& out, char c) {
     else
       ((*out++ = chars), ...);
   };
+  auto to_char = [](int d) { return '0' + d; };
   switch (c) {
     default:
-      append(c);
+      // Non-printable ASCII chars must be encoded as \u00xx.
+      if (c >= 0x00 && c <= 0x1f)
+        append('\\', 'u', '0', '0', to_char(c / 10), to_char(c % 10));
+      else
+        append(c);
       break;
     case '\\':
       append('\\', '\\');
