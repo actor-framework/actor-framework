@@ -646,7 +646,7 @@ bool json_reader::value(std::string& x) {
   FN_DECL;
   return consume<true>(fn, [this, &x](const detail::json::value& val) {
     if (val.data.index() == detail::json::value::string_index) {
-      detail::print_unescaped(x, std::get<std::string_view>(val.data));
+      x = std::get<std::string_view>(val.data);
       return true;
     } else {
       err_ = format_to_error(sec::runtime_error,

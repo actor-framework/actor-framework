@@ -229,6 +229,16 @@ SCENARIO("the JSON writer converts builtin types to strings") {
         check_eq(to_json_string(x, 2), out);
       }
     }
+    WHEN("it contains non-printable ASCII characters") {
+      THEN("the characters are escaped in the JSON output") {
+        x = detail::format("{}{}{}{}{}", static_cast<char>(0),
+                           static_cast<char>(1), static_cast<char>(30),
+                           static_cast<char>(31), static_cast<char>(32));
+        // NOTE: empty space at the end corresponds to ASCII 32.
+        auto out = R"_("\u0000\u0001\u001e\u001f ")_"s;
+        check_eq(to_json_string(x, 0), out);
+      }
+    }
   }
   GIVEN("a list") {
     auto x = std::vector<int>{1, 2, 3};

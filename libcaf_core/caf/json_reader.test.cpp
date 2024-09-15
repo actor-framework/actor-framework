@@ -254,6 +254,39 @@ struct fixture {
     test_cases.emplace_back(std::move(f));
   }
 
+  // Specialization for `std::string` so we can test all `read_json_string`
+  // overloads.
+  void add_test_case(std::string_view input, std::string val) {
+    auto f = [this, input, obj{std::move(val)}]() -> bool {
+      auto& this_test = test::runnable::current();
+      auto tmp = std::string{};
+      // Test overload for reading from memory.
+      auto res = this_test.check(reader.load(input))    // parse JSON
+                 && this_test.check(reader.apply(tmp)); // deserialize object
+      if (res)
+        res = this_test.check_eq(tmp, obj);
+      else
+        log::test::debug("rejected input: {}", input);
+      // Test overload for reading from files.
+      using iterator_t = std::istreambuf_iterator<char>;
+      std::string input_value{input};
+      std::istringstream input_stream{input_value};
+      detail::json::file_parser_state ps{iterator_t{input_stream},
+                                         iterator_t{}};
+      detail::monotonic_buffer_resource buf_;
+      auto root_ = detail::json::parse(ps, &buf_);
+      res = this_test.check_eq(ps.code, pec::success);
+      if (!res)
+        return false;
+      if (this_test.check(root_->is_string()))
+        res = this_test.check_eq(std::get<std::string_view>(root_->data), obj);
+      else
+        log::test::debug("Parsed value is not a string: {}", input);
+      return res;
+    };
+    test_cases.emplace_back(std::move(f));
+  }
+
   // Adds a test case that should fail.
   template <class T>
   void add_neg_test_case(std::string_view input) {
@@ -261,8 +294,20 @@ struct fixture {
       auto tmp = T{};
       auto res = reader.load(input)    // parse JSON
                  && reader.apply(tmp); // deserialize object
+      test::runnable::current().check(!res);
       if (res)
         log::test::debug("got unexpected output: {}", tmp);
+      if constexpr (std::is_same_v<T, std::string>) {
+        // Test read_string overload for files.
+        using iterator_t = std::istreambuf_iterator<char>;
+        std::string input_value{input};
+        std::istringstream input_stream{input_value};
+        detail::json::file_parser_state ps{iterator_t{input_stream},
+                                           iterator_t{}};
+        detail::monotonic_buffer_resource buf_;
+        [[maybe_unused]] auto root_ = detail::json::parse(ps, &buf_);
+        test::runnable::current().check_ne(ps.code, pec::success);
+      }
       return !res;
     };
     test_cases.emplace_back(std::move(f));
@@ -388,6 +433,24 @@ fixture::fixture() {
   // Test cases for proper handling of whitespace.
   add_test_case("[1, \r\n2,\f\t\v3]", ls<int32_t>(1, 2, 3));
   add_test_case("\r\n{\r\n\"a\":\r\n1, \"b\"\r\n:\r\n2}\r\n", my_request(1, 2));
+  // Test cases for proper handling of code point escape sequences.
+  // Single byte utf-8 sequences.
+  add_test_case(
+    R"_("\u0048\u0065\u006c\u006c\u006f\u002c\u0020\u0022\u0057\u006f\u0072\u006c\u0064\u0022\u0021")_",
+    std::string{R"_(Hello, "World"!)_"});
+  // Escape sequence test.
+  add_test_case(R"_("\u0008")_", std::string{"\b"});
+  add_test_case(R"_("\u005c")_", std::string{R"_(\)_"});
+  add_test_case(R"_("\u005c\u005c")_", std::string{R"_(\\)_"});
+  // Two byte utf-8 sequences.
+  add_test_case(R"_("\u0107\u010d\u017e\u0161\u0111")_", std::string{"ćčžšđ"});
+  // Three byte utf-8 sequences.
+  add_test_case(R"_("\u20AC\u2192\u221E")_", std::string{"€→∞"});
+  // Four byte utf-8 sequences.
+  add_test_case(R"_("\ud834\udd1e")_", std::string{"𝄞"});
+  // Failing tests
+  add_neg_test_case<std::string>(R"_("\ud900")_");
+  add_neg_test_case<std::string>(R"_("\u06c")_");
 }
 
 } // namespace
