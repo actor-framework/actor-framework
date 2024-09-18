@@ -235,7 +235,7 @@ SCENARIO("the JSON writer converts builtin types to strings") {
                            static_cast<char>(1), static_cast<char>(30),
                            static_cast<char>(31), static_cast<char>(32));
         // NOTE: empty space at the end corresponds to ASCII 32.
-        auto out = R"_("\u0000\u0001\u0030\u0031 ")_"s;
+        auto out = R"_("\u0000\u0001\u001e\u001f ")_"s;
         check_eq(to_json_string(x, 0), out);
       }
     }
