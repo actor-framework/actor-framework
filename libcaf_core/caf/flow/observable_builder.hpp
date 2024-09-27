@@ -78,15 +78,15 @@ public:
 
   observable_builder& operator=(const observable_builder&) noexcept = default;
 
-  /// Creates a @ref generation that emits values by repeatedly calling
-  /// `generator.pull(...)`.
+  /// Creates a {@link caf::flow::generation} that emits values by
+  /// repeatedly calling `generator.pull(...)`.
   template <class Generator>
   generation<Generator> from_generator(Generator generator) const {
     using materializer_t = generation_materializer<Generator>;
     return generation<Generator>{materializer_t{parent_, std::move(generator)}};
   }
 
-  /// Creates a @ref generation that emits `value` once.
+  /// Creates a {@link caf::flow::generation} that emits `value` once.
   template <class T>
   auto just(T value) const {
     if constexpr (is_observable_v<T>) {
@@ -97,13 +97,15 @@ public:
     }
   }
 
-  /// Creates a @ref generation that emits `value` repeatedly.
+  /// Creates a {@link caf::flow::generation} that emits `value`
+  /// repeatedly.
   template <class T>
   generation<gen::repeat<T>> repeat(T value) const {
     return from_generator(gen::repeat<T>{std::move(value)});
   }
 
-  /// Creates a @ref generation that emits ascending values.
+  /// Creates a {@link caf::flow::generation} that emits ascending
+  /// values.
   template <class T>
   generation<gen::iota<T>> iota(T value) const {
     return from_generator(gen::iota<T>{std::move(value)});
@@ -116,21 +118,23 @@ public:
     return from_generator(gen::empty<T>{});
   }
 
-  /// Creates a @ref generation that emits ascending values.
+  /// Creates a {@link caf::flow::generation} that emits ascending
+  /// values.
   template <class Container>
   generation<gen::from_container<Container>>
   from_container(Container values) const {
     return from_generator(gen::from_container<Container>{std::move(values)});
   }
 
-  /// Creates a @ref generation that emits ascending values.
+  /// Creates a {@link caf::flow::generation} that emits ascending
+  /// values.
   template <class F>
   generation<gen::from_callable<F>> from_callable(F fn) const {
     return from_generator(gen::from_callable<F>{std::move(fn)});
   }
 
-  /// Creates a @ref generation that emits `num` ascending values, starting with
-  /// `init`.
+  /// Creates a {@link caf::flow::generation} that emits `num` ascending
+  /// values, starting with `init`.
   template <class T>
   auto range(T init, size_t num) const {
     return iota(init).take(num);

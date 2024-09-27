@@ -98,6 +98,8 @@ public:
 
   /// Allows other nodes to spawn actors implemented as an `actor_from_state<T>`
   /// dynamically by using `name` as identifier.
+  /// @param name the name of the actor.
+  /// @param f the actor constructor function.
   /// @param t conveys the state constructor signature as a type list.
   /// @param ts type lists conveying alternative constructor signatures.
   template <class F, class T, class... Ts>

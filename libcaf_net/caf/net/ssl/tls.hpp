@@ -9,7 +9,7 @@
 
 namespace caf::net::ssl {
 
-/// Configures the allowed TLS versions on a @ref context.
+/// Configures the allowed TLS versions on a @ref caf::net::ssl::context.
 enum class tls {
   any,
   v1_0,
