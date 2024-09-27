@@ -13,8 +13,8 @@
 
 namespace caf::net::octet_stream {
 
-/// Configures a @ref transport object. The default implementation simply
-/// forwards to the free functions of @ref stream_socket.
+/// Configures a @ref transport object. The default implementation
+/// simply forwards to the free functions of @ref stream_socket.
 class CAF_NET_EXPORT policy {
 public:
   virtual ~policy();

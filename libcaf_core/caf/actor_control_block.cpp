@@ -16,6 +16,8 @@
 
 namespace caf {
 
+/// @cond PRIVATE
+
 actor_addr actor_control_block::address() {
   return {this, true};
 }
@@ -23,6 +25,8 @@ actor_addr actor_control_block::address() {
 bool actor_control_block::enqueue(mailbox_element_ptr what, scheduler* sched) {
   return get()->enqueue(std::move(what), sched);
 }
+
+/// @endcond
 
 bool intrusive_ptr_upgrade_weak(actor_control_block* x) {
   auto count = x->strong_refs.load();

@@ -56,7 +56,8 @@ constexpr bool has_detach_flag(spawn_options opts) {
   return has_spawn_option(opts, detached);
 }
 
-/// Checks whether the {@link priority_aware} flag is set in `opts`.
+/// Always returns true and skips checking in `opts` for deprecated
+/// priority_aware flag.
 constexpr bool has_priority_aware_flag(spawn_options) {
   return true;
 }

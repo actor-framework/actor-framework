@@ -94,6 +94,7 @@ struct il_indices<List<T0, Ts...>, Pos, int_list<Is...>> {
 template <class T>
 using il_indices_t = typename il_indices<T>::type;
 
+/// @cond
 template <class T>
 il_indices_t<T> get_indices(const T&) {
   return {};
@@ -111,6 +112,7 @@ template <long Last, long... Is>
 struct il_range<Last, Last, Is...> {
   using type = int_list<Is...>;
 };
+/// @endcond
 
 /// Convenience alias for `il_range<long First, long Last, long... Is>::type`.
 template <long First, long Last, long... Is>

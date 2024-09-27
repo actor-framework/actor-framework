@@ -67,6 +67,7 @@
 ///     from the payload.
 ///
 /// # Node IDs
+/// @anchor node_ids
 ///
 /// The ID of a node consists of a 120 bit hash and the process ID. Note that
 /// we use "node" as a synonym for "CAF instance". The hash is generated from
@@ -95,11 +96,11 @@
 ///
 /// - **Source Node ID**: 18 bytes.
 ///
-///   The address of the source node. See [Node IDs](# Node IDs).
+///   The address of the source node. See [Node IDs](#node_ids).
 ///
 /// - **Destination Node ID**: 18 bytes.
 ///
-///   The address of the destination node. See [Node IDs](# Node IDs).
+///   The address of the destination node. See [Node IDs](#node_ids).
 ///   Upon receiving this datagram, a BASP Broker compares this node ID
 ///   to its own ID. On a mismatch, it selects the next hop and forwards
 ///   this datagram unchanged.

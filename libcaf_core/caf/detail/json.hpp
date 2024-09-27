@@ -470,9 +470,6 @@ value* parse(string_parser_state& ps, monotonic_buffer_resource* storage);
 // Parses the input string and makes a deep copy of all strings.
 value* parse(file_parser_state& ps, monotonic_buffer_resource* storage);
 
-// Parses the input file and makes a deep copy of all strings.
-value* parse(string_parser_state& ps, monotonic_buffer_resource* storage);
-
 // Parses the input and makes a shallow copy of strings whenever possible.
 // Strings that do not have escaped characters are not copied, other strings
 // will be copied.

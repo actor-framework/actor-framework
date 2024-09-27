@@ -602,6 +602,8 @@ actor_system::actor_system(actor_system_config& cfg, version::abi_token token)
   // nop
 }
 
+/// @cond PRIVATE
+
 actor_system::actor_system(actor_system_config& cfg,
                            custom_setup_fn custom_setup,
                            void* custom_setup_data, version::abi_token token) {
@@ -617,6 +619,8 @@ actor_system::actor_system(actor_system_config& cfg,
   impl_ = static_cast<impl*>(malloc(sizeof(impl)));
   new (impl_) impl(this, cfg, custom_setup, custom_setup_data);
 }
+
+/// @endcond
 
 actor_system::~actor_system() {
   impl_->~impl();
@@ -775,6 +779,8 @@ intrusive_ptr<actor_companion> actor_system::make_companion() {
   return intrusive_ptr<actor_companion>{static_cast<actor_companion*>(ptr)};
 }
 
+/// @cond PRIVATE
+
 void actor_system::thread_started(thread_owner owner) {
   for (auto& hook : impl_->cfg->thread_hooks())
     hook->thread_started(owner);
@@ -784,6 +790,16 @@ void actor_system::thread_terminates() {
   for (auto& hook : impl_->cfg->thread_hooks())
     hook->thread_terminates();
 }
+
+detail::private_thread* actor_system::acquire_private_thread() {
+  return impl_->private_threads.acquire();
+}
+
+void actor_system::release_private_thread(detail::private_thread* ptr) {
+  impl_->private_threads.release(ptr);
+}
+
+/// @endcond
 
 expected<strong_actor_ptr>
 actor_system::dyn_spawn_impl(const std::string& name, message& args,
@@ -804,14 +820,6 @@ actor_system::dyn_spawn_impl(const std::string& name, message& args,
   if (check_interface && !assignable(res.second, *expected_ifs))
     return sec::unexpected_actor_messaging_interface;
   return std::move(res.first);
-}
-
-detail::private_thread* actor_system::acquire_private_thread() {
-  return impl_->private_threads.acquire();
-}
-
-void actor_system::release_private_thread(detail::private_thread* ptr) {
-  impl_->private_threads.release(ptr);
 }
 
 namespace {
@@ -848,10 +856,14 @@ private:
 
 } // namespace
 
+/// @cond PRIVATE
+
 detail::actor_local_printer_ptr actor_system::printer_for(local_actor* self) {
   using impl_t = actor_local_printer_impl;
   return make_counted<impl_t>(self, actor_cast<actor>(impl_->printer));
 }
+
+/// @endcond
 
 detail::mailbox_factory* actor_system::mailbox_factory() {
   return impl_->cfg->mailbox_factory();

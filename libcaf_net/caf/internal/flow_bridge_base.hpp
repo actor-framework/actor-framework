@@ -139,9 +139,9 @@ protected:
   /// The input to the application. Deserialized from the socket.
   producer_type out_;
 
-  /// Type-erased handle to the @ref socket_manager. This reference is important
-  /// to keep the bridge alive while the manager is not registered for writing
-  /// or reading.
+  /// Type-erased handle to the @ref caf::net::socket_manager. This reference is
+  /// important to keep the bridge alive while the manager is not registered for
+  /// writing or reading.
   disposable self_ref_;
 };
 

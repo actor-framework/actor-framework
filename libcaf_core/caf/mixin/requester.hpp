@@ -23,7 +23,9 @@
 namespace caf::mixin {
 
 /// A `requester` is an actor that supports
+/// @code
 /// `self->request(...).{then|await|receive}`.
+/// @endcode
 template <class Base, class Subtype>
 class requester : public Base {
 public:
@@ -84,10 +86,12 @@ public:
   /// @tparam Container A container type for holding actor handles. Must provide
   ///                   the type alias `value_type` as well as the member
   ///                   functions `begin()`, `end()`, and `size()`.
+  /// @tparam Ts The types of the message to send.
   /// @param destinations A container holding handles to all destination actors.
   /// @param timeout Maximum duration before dropping the request. The runtime
   ///                system will send an error message to the actor in case the
   ///                receiver does not respond in time.
+  /// @param xs The message to send.
   /// @returns A helper object that takes response handlers via `.await()`,
   ///          `.then()`, or `.receive()`.
   /// @note The returned handle is actor-specific. Only the actor that called

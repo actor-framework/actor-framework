@@ -30,18 +30,10 @@ actor::actor(actor_control_block* ptr) : ptr_(ptr) {
   // nop
 }
 
+/// @cond PRIVATE
+
 actor::actor(actor_control_block* ptr, bool add_ref) : ptr_(ptr, add_ref) {
   // nop
-}
-
-actor& actor::operator=(std::nullptr_t) {
-  ptr_.reset();
-  return *this;
-}
-
-actor& actor::operator=(const scoped_actor& x) {
-  ptr_ = actor_cast<strong_actor_ptr>(x);
-  return *this;
 }
 
 intptr_t actor::compare(const actor& x) const noexcept {
@@ -54,6 +46,18 @@ intptr_t actor::compare(const actor_addr& x) const noexcept {
 
 intptr_t actor::compare(const strong_actor_ptr& x) const noexcept {
   return actor_addr::compare(ptr_.get(), x.get());
+}
+
+/// @endcond
+
+actor& actor::operator=(std::nullptr_t) {
+  ptr_.reset();
+  return *this;
+}
+
+actor& actor::operator=(const scoped_actor& x) {
+  ptr_ = actor_cast<strong_actor_ptr>(x);
+  return *this;
 }
 
 void actor::swap(actor& other) noexcept {

@@ -36,7 +36,7 @@ public:
     return !parent_;
   }
 
-  /// Detach this manager from its parent and invoke `detach_message()``
+  /// Detach this manager from its parent and invoke `detach_message()`
   /// if `invoke_detach_message == true`.
   void detach(scheduler* ctx, bool invoke_disconnect_message);
 

@@ -201,6 +201,8 @@ void blocking_actor::fail_state(error err) {
   fail_state_ = std::move(err);
 }
 
+/// @cond PRIVATE
+
 void blocking_actor::receive_impl(receive_cond& rcc, message_id mid,
                                   detail::blocking_behavior& bhvr) {
   auto lg = log::core::trace("mid = {}", mid);
@@ -300,6 +302,28 @@ void blocking_actor::receive_impl(receive_cond& rcc, message_id mid,
   }
 }
 
+void blocking_actor::varargs_tup_receive(receive_cond& rcc, message_id mid,
+                                         std::tuple<behavior&>& tup) {
+  using namespace detail;
+  auto& bhvr = std::get<0>(tup);
+  if (bhvr.timeout() == infinite) {
+    auto fun = make_blocking_behavior(&bhvr);
+    receive_impl(rcc, mid, fun);
+  } else {
+    auto tmp = after(bhvr.timeout()) >> [&] { bhvr.handle_timeout(); };
+    auto fun = make_blocking_behavior(&bhvr, std::move(tmp));
+    receive_impl(rcc, mid, fun);
+  }
+}
+
+void blocking_actor::on_cleanup(const error& reason) {
+  close_mailbox(reason);
+  on_exit();
+  return super::on_cleanup(reason);
+}
+
+/// @endcond
+
 void blocking_actor::await_data() {
   if (mailbox().try_block()) {
     std::unique_lock guard{mtx_};
@@ -329,20 +353,6 @@ mailbox_element_ptr blocking_actor::dequeue() {
   return mailbox().pop_front();
 }
 
-void blocking_actor::varargs_tup_receive(receive_cond& rcc, message_id mid,
-                                         std::tuple<behavior&>& tup) {
-  using namespace detail;
-  auto& bhvr = std::get<0>(tup);
-  if (bhvr.timeout() == infinite) {
-    auto fun = make_blocking_behavior(&bhvr);
-    receive_impl(rcc, mid, fun);
-  } else {
-    auto tmp = after(bhvr.timeout()) >> [&] { bhvr.handle_timeout(); };
-    auto fun = make_blocking_behavior(&bhvr, std::move(tmp));
-    receive_impl(rcc, mid, fun);
-  }
-}
-
 size_t blocking_actor::attach_functor(const actor& x) {
   return attach_functor(actor_cast<strong_actor_ptr>(x));
 }
@@ -358,12 +368,6 @@ size_t blocking_actor::attach_functor(const strong_actor_ptr& ptr) {
   auto f = [self](const error&) { caf::anon_mail(wait_for_atom_v).send(self); };
   ptr->get()->attach_functor(std::move(f));
   return 1;
-}
-
-void blocking_actor::on_cleanup(const error& reason) {
-  close_mailbox(reason);
-  on_exit();
-  return super::on_cleanup(reason);
 }
 
 void blocking_actor::unstash() {

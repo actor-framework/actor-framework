@@ -117,6 +117,8 @@ void local_actor::on_exit() {
   // nop
 }
 
+/// @cond PRIVATE
+
 message_id local_actor::new_request_id(message_priority mp) noexcept {
   auto result = ++last_request_id_;
   return mp == message_priority::normal ? result : result.with_high_priority();
@@ -126,6 +128,8 @@ uint64_t local_actor::new_u64_id() noexcept {
   auto result = ++last_request_id_;
   return result.integer_value();
 }
+
+/// @endcond
 
 void local_actor::send_exit(const actor_addr& whom, error reason) {
   send_exit(actor_cast<strong_actor_ptr>(whom), std::move(reason));
@@ -151,6 +155,8 @@ error local_actor::load_state(deserializer&, const unsigned int) {
   CAF_RAISE_ERROR("local_actor::deserialize called");
 }
 
+/// @cond PRIVATE
+
 void local_actor::do_delegate_error() {
   auto& sender = current_element_->sender;
   auto& mid = current_element_->mid;
@@ -165,6 +171,8 @@ void local_actor::do_delegate_error() {
 void local_actor::initialize() {
   auto lg = log::core::trace("id = {}, name = {}", id(), name());
 }
+
+/// @endcond
 
 void local_actor::on_cleanup([[maybe_unused]] const error& reason) {
   auto lg = log::core::trace("reason = {}", reason);

@@ -186,6 +186,8 @@ mailbox_element* abstract_actor::peek_at_next_mailbox_element() {
   return nullptr;
 }
 
+/// @cond PRIVATE
+
 void abstract_actor::register_at_system() {
   if (getf(is_registered_flag))
     return;
@@ -201,6 +203,8 @@ void abstract_actor::unregister_from_system() {
   [[maybe_unused]] auto count = home_system().registry().dec_running();
   log::system::debug("actor {} decreased running count to {}", id(), count);
 }
+
+/// @endcond
 
 void abstract_actor::add_link(abstract_actor* x) {
   // Add backlink on `x` first and add the local attachable only on success.

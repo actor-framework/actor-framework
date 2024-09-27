@@ -15,7 +15,7 @@
 
 namespace caf::net::octet_stream {
 
-/// Holds error codes for the @ref octet_stream::transport.
+/// Holds error codes for the @ref caf::net::octet_stream::transport.
 enum class errc {
   /// Indicates that the transport should try again later.
   temporary,

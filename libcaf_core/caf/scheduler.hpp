@@ -28,7 +28,7 @@ public:
   virtual ~scheduler();
 
   /// Schedules @p what to run at some point in the future.
-  /// @thread-safe
+  /// @threadsafe
   virtual void schedule(resumable* what) = 0;
 
   /// Delay the next execution of @p what. Unlike `schedule`, this function is

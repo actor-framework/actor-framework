@@ -43,30 +43,40 @@ struct literal {
   std::string_view str;
 };
 
+/// @memberof caf::detail
 CAF_CORE_EXPORT void parse(string_parser_state& ps, literal x);
 
 // -- boolean type -------------------------------------------------------------
 
+/// @memberof caf::detail
 CAF_CORE_EXPORT void parse(string_parser_state& ps, bool& x);
 
 // -- signed integer types -----------------------------------------------------
 
+/// @memberof caf::detail
 CAF_CORE_EXPORT void parse(string_parser_state& ps, int8_t& x);
 
+/// @memberof caf::detail
 CAF_CORE_EXPORT void parse(string_parser_state& ps, int16_t& x);
 
+/// @memberof caf::detail
 CAF_CORE_EXPORT void parse(string_parser_state& ps, int32_t& x);
 
+/// @memberof caf::detail
 CAF_CORE_EXPORT void parse(string_parser_state& ps, int64_t& x);
 
 // -- unsigned integer types ---------------------------------------------------
 
+/// @memberof caf::detail
 CAF_CORE_EXPORT void parse(string_parser_state& ps, uint8_t& x);
 
+/// @memberof caf::detail
 CAF_CORE_EXPORT void parse(string_parser_state& ps, uint16_t& x);
 
+/// @memberof caf::detail
 CAF_CORE_EXPORT void parse(string_parser_state& ps, uint32_t& x);
 
+/// @memberof caf::detail
 CAF_CORE_EXPORT void parse(string_parser_state& ps, uint64_t& x);
 
 // -- non-fixed size integer types ---------------------------------------------
@@ -106,32 +116,45 @@ void parse(string_parser_state& ps, zero_padded_integer<Integer>& x) {
 
 // -- floating point types -----------------------------------------------------
 
+/// @memberof caf::detail
 CAF_CORE_EXPORT void parse(string_parser_state& ps, float& x);
 
+/// @memberof caf::detail
 CAF_CORE_EXPORT void parse(string_parser_state& ps, double& x);
 
+/// @memberof caf::detail
 CAF_CORE_EXPORT void parse(string_parser_state& ps, long double& x);
 
 // -- CAF types ----------------------------------------------------------------
 
+/// @memberof caf::detail
 CAF_CORE_EXPORT void parse(string_parser_state&, ipv4_address&);
 
+/// @memberof caf::detail
 CAF_CORE_EXPORT void parse(string_parser_state&, ipv4_subnet&);
 
+/// @memberof caf::detail
 CAF_CORE_EXPORT void parse(string_parser_state&, ipv4_endpoint&);
 
+/// @memberof caf::detail
 CAF_CORE_EXPORT void parse(string_parser_state&, ipv6_address&);
 
+/// @memberof caf::detail
 CAF_CORE_EXPORT void parse(string_parser_state&, ipv6_subnet&);
 
+/// @memberof caf::detail
 CAF_CORE_EXPORT void parse(string_parser_state&, ipv6_endpoint&);
 
+/// @memberof caf::detail
 CAF_CORE_EXPORT void parse(string_parser_state&, uri&);
 
+/// @memberof caf::detail
 CAF_CORE_EXPORT void parse(string_parser_state&, config_value&);
 
+/// @memberof caf::detail
 CAF_CORE_EXPORT void parse(string_parser_state&, std::vector<config_value>&);
 
+/// @memberof caf::detail
 CAF_CORE_EXPORT void parse(string_parser_state&, dictionary<config_value>&);
 
 // -- variadic utility ---------------------------------------------------------
@@ -147,6 +170,7 @@ bool parse_sequence(string_parser_state& ps, Ts&&... xs) {
 
 // -- STL types ----------------------------------------------------------------
 
+/// @memberof caf::detail
 CAF_CORE_EXPORT void parse(string_parser_state& ps, std::string& x);
 
 template <class Rep, class Period>
@@ -195,6 +219,7 @@ void parse(string_parser_state& ps,
 
 // -- convenience functions ----------------------------------------------------
 
+/// @memberof caf::detail
 CAF_CORE_EXPORT
 error parse_result(const string_parser_state& ps, std::string_view input);
 

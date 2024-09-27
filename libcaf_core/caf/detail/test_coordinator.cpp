@@ -182,7 +182,7 @@ void test_coordinator::inline_all_enqueues() {
   after_next_enqueue([this] { inline_all_enqueues_helper(); });
 }
 
-test_actor_clock& test_coordinator::test_coordinator::clock() {
+test_actor_clock& test_coordinator::clock() {
   return dynamic_cast<test_actor_clock&>(system().clock());
 }
 
