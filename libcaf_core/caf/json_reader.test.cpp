@@ -388,6 +388,14 @@ fixture::fixture() {
   // Test cases for proper handling of whitespace.
   add_test_case("[1, \r\n2,\f\t\v3]", ls<int32_t>(1, 2, 3));
   add_test_case("\r\n{\r\n\"a\":\r\n1, \"b\"\r\n:\r\n2}\r\n", my_request(1, 2));
+  // Test cases for proper handling code-point escape sequences.
+  add_test_case(
+    R"_("\u0048\u0065\u006c\u006c\u006f\u002c\u0020\u0022\u0057\u006f\u0072\u006c\u0064\u0022\u0021")_",
+    std::string{R"_(Hello, "World"!)_"});
+  // add_test_case(R"_("samir\u005c\u005c")_", std::string{R"_(samir\)_"});
+  add_test_case(R"_("\u0107\u0061\u006f")_", std::string{"ćao"});
+  add_test_case(R"_("\u20ac\u2192\u221e")_", std::string{"€→∞"});
+  add_test_case(R"_("\ud834\udd1e")_", std::string{"𝄞"});
 }
 
 } // namespace
