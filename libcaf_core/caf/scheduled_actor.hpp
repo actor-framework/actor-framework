@@ -404,8 +404,6 @@ public:
     set_receive_timeout();
   }
 
-  /// @cond PRIVATE
-
   // -- timeout management -----------------------------------------------------
 
   /// Requests a new timeout for the current behavior.
@@ -484,7 +482,7 @@ public:
 
   void watch(disposable what) override;
 
-  /// Lifts a statically typed stream into an @ref observable.
+  /// Lifts a statically typed stream into an @ref caf::flow::observable.
   /// @param what The input stream.
   /// @param buf_capacity Upper bound for caching inputs from the stream.
   /// @param demand_threshold Minimal free buffer capacity before signaling
@@ -496,7 +494,7 @@ public:
   flow::assert_scheduled_actor_hdr_t<flow::observable<T>>
   observe(typed_stream<T> what, size_t buf_capacity, size_t demand_threshold);
 
-  /// Lifts a stream into an @ref observable.
+  /// Lifts a stream into an @ref caf::flow::observable.
   /// @param what The input stream.
   /// @param buf_capacity Upper bound for caching inputs from the stream.
   /// @param demand_threshold Minimal free buffer capacity before signaling

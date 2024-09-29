@@ -26,6 +26,8 @@ actor_addr::actor_addr(actor_control_block* ptr) : ptr_(ptr) {
   // nop
 }
 
+/// @cond PRIVATE
+
 actor_addr::actor_addr(actor_control_block* ptr, bool add_ref)
   : ptr_(ptr, add_ref) {
   // nop
@@ -60,6 +62,8 @@ intptr_t actor_addr::compare(const abstract_actor* other) const noexcept {
 intptr_t actor_addr::compare(const actor_control_block* other) const noexcept {
   return compare(ptr_.get(), other);
 }
+
+/// @endcond
 
 void actor_addr::swap(actor_addr& other) noexcept {
   ptr_.swap(other.ptr_);

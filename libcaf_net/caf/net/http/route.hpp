@@ -256,7 +256,7 @@ namespace caf::net::http {
 /// @param path Description of the path, optionally with `<arg>` placeholders.
 /// @param method The HTTP method for the path or `std::nullopt` for "any".
 /// @param f The callback for the path.
-/// @returns a @ref path on success, an error when failing to parse the path or
+/// @returns a path on success, an error when failing to parse the path or
 ///          to match it to the signature of `f`.
 template <class F>
 expected<route_ptr>

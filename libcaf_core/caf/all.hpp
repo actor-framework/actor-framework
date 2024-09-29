@@ -102,8 +102,6 @@
 ///
 /// @section IntroMoreExamples More Examples
 ///
-/// The {@link math_actor.cpp Math Actor Example} shows the usage
-/// of {@link receive_loop} and {@link caf::arg_match arg_match}.
 /// The {@link dining_philosophers.cpp Dining Philosophers Example}
 /// introduces event-based actors covers various features of CAF.
 ///

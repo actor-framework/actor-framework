@@ -9,7 +9,7 @@
 
 namespace caf::net::ssl {
 
-/// SSL error code for I/O operations on a @ref connection.
+/// SSL error code for I/O operations on a @ref caf::net::ssl::connection.
 enum class errc : uint8_t {
   /// Not-an-error.
   none = 0,

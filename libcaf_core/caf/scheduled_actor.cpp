@@ -981,10 +981,6 @@ void scheduled_actor::push_to_cache(mailbox_element_ptr ptr) {
   stash_.push(ptr.release());
 }
 
-void scheduled_actor::call_error_handler(error& err) {
-  call_handler(error_handler_, this, err);
-}
-
 disposable scheduled_actor::run_scheduled(timestamp when, action what) {
   CAF_ASSERT(what.ptr() != nullptr);
   auto lg = log::core::trace("when = {}", when);
@@ -1072,6 +1068,12 @@ void scheduled_actor::deregister_stream(uint64_t stream_id) {
   stream_sources_.erase(stream_id);
 }
 
+/// @cond PRIVATE
+
+void scheduled_actor::call_error_handler(error& err) {
+  call_handler(error_handler_, this, err);
+}
+
 void scheduled_actor::run_actions() {
   auto lg = log::core::trace("");
   delayed_actions_this_run_ = 0;
@@ -1092,6 +1094,8 @@ void scheduled_actor::run_actions() {
   released_.clear();
   update_watched_disposables();
 }
+
+/// @endcond
 
 void scheduled_actor::update_watched_disposables() {
   auto lg = log::core::trace("");

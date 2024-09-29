@@ -33,7 +33,7 @@ public:
 
   /// Schedules @p what to run on the event loop of the execution context. This
   /// member function may get called from external sources or threads.
-  /// @thread-safe
+  /// @threadsafe
   virtual void schedule(action what) = 0;
 
   ///@copydoc schedule
