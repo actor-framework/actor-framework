@@ -31,6 +31,7 @@
 #include "caf/flow/op/on_backpressure_buffer.hpp"
 #include "caf/flow/op/prefix_and_tail.hpp"
 #include "caf/flow/op/publish.hpp"
+#include "caf/flow/op/retry.hpp"
 #include "caf/flow/op/sample.hpp"
 #include "caf/flow/op/zip_with.hpp"
 #include "caf/flow/step/all.hpp"
@@ -295,6 +296,12 @@ public:
     using val_t = output_type;
     static_assert(std::is_invocable_r_v<Init, Scanner, Init&&, const val_t&>);
     return add_step(step::scan<Scanner>{std::move(init), std::move(scanner)});
+  }
+
+  /// @copydoc observable::retry
+  template <class Predicate>
+  auto retry(Predicate predicate) {
+    return materialize().retry(predicate);
   }
 
   auto sum() && {
@@ -807,6 +814,13 @@ observable<T> observable<T>::sample(timespan period) {
   auto obs = pptr->add_child_hdl(std::in_place_type<op::interval>, period,
                                  period);
   return pptr->add_child_hdl(std::in_place_type<impl_t>, *this, std::move(obs));
+}
+
+template <class T>
+template <class Predicate>
+observable<T> observable<T>::retry(Predicate predicate) {
+  using impl_t = op::retry<T, Predicate>;
+  return parent()->add_child_hdl(std::in_place_type<impl_t>, *this, predicate);
 }
 
 // -- observable: combining ----------------------------------------------------
