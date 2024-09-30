@@ -820,8 +820,7 @@ template <class T>
 template <class Predicate>
 observable<T> observable<T>::retry(Predicate predicate) {
   using impl_t = op::retry<T, Predicate>;
-  auto* pptr = parent();
-  return pptr->add_child_hdl(std::in_place_type<impl_t>, *this, predicate);
+  return parent()->add_child_hdl(std::in_place_type<impl_t>, *this, predicate);
 }
 
 // -- observable: combining ----------------------------------------------------

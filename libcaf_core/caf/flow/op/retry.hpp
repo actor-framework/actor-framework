@@ -44,6 +44,8 @@ public:
     if (new_demand == 0)
       return;
     demand_ += new_demand;
+    if (sub_)
+      sub_.request(new_demand);
   }
 
   // -- implementation of observer_impl ----------------------------------------
@@ -71,8 +73,6 @@ public:
     if (demand_ > 0) {
       --demand_;
       out_.on_next(item);
-      if (sub_)
-        sub_.request(1);
       return;
     }
   }
