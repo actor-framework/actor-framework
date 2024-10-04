@@ -465,24 +465,23 @@ using mutable_string_parser_state = parser_state<char*>;
 using file_parser_state = parser_state<std::istreambuf_iterator<char>>;
 
 // Parses the input string and makes a deep copy of all strings.
-value* parse(string_parser_state& ps, monotonic_buffer_resource* storage);
-
-// Parses the input string and makes a deep copy of all strings.
-value* parse(file_parser_state& ps, monotonic_buffer_resource* storage);
+CAF_CORE_EXPORT value* parse(string_parser_state& ps,
+                             monotonic_buffer_resource* storage);
 
 // Parses the input file and makes a deep copy of all strings.
-value* parse(string_parser_state& ps, monotonic_buffer_resource* storage);
+CAF_CORE_EXPORT value* parse(file_parser_state& ps,
+                             monotonic_buffer_resource* storage);
 
 // Parses the input and makes a shallow copy of strings whenever possible.
 // Strings that do not have escaped characters are not copied, other strings
 // will be copied.
-value* parse_shallow(string_parser_state& ps,
-                     monotonic_buffer_resource* storage);
+CAF_CORE_EXPORT value* parse_shallow(string_parser_state& ps,
+                                     monotonic_buffer_resource* storage);
 
 // Parses the input and makes a shallow copy of all strings. Strings with
 // escaped characters are decoded in place.
-value* parse_in_situ(mutable_string_parser_state& ps,
-                     monotonic_buffer_resource* storage);
+CAF_CORE_EXPORT value* parse_in_situ(mutable_string_parser_state& ps,
+                                     monotonic_buffer_resource* storage);
 
 // -- printing -----------------------------------------------------------------
 
