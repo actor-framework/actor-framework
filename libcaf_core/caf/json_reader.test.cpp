@@ -254,6 +254,45 @@ struct fixture {
     test_cases.emplace_back(std::move(f));
   }
 
+  // Specialization for `std::string` so we can test unescaping in scratch
+  // space.
+  void add_test_case(std::string_view input, std::string val) {
+    auto f = [this, input, obj{std::move(val)}]() -> bool {
+      auto& this_test = test::runnable::current();
+      auto tmp = std::string{};
+      // Test inplace.
+      auto res = this_test.check(reader.load(input))    // parse JSON
+                 && this_test.check(reader.apply(tmp)); // deserialize object
+      if (res) {
+        res = this_test.check_eq(tmp, obj);
+      }
+      if (!res)
+        log::test::debug("rejected input: {}", input);
+      // Test second scratch space variant.
+      using iterator_t = std::istreambuf_iterator<char>;
+      std::string in{input};
+      std::istringstream input1{in};
+      detail::json::file_parser_state ps{iterator_t{input1}, iterator_t{}};
+      detail::monotonic_buffer_resource buf_;
+      detail::json::value* root_ = nullptr;
+      root_ = detail::json::parse(ps, &buf_);
+      if (ps.code != pec::success) {
+        this_test.fail("Parsing failed!");
+        return false;
+      }
+      res = this_test.check(root_->is_string());
+      if (res) {
+        std::string msg;
+        detail::print_unescaped(msg, std::get<std::string_view>(root_->data));
+        res = this_test.check_eq(msg, obj);
+      } else {
+        log::test::debug("rejected input: {}", input);
+      }
+      return res;
+    };
+    test_cases.emplace_back(std::move(f));
+  }
+
   // Adds a test case that should fail.
   template <class T>
   void add_neg_test_case(std::string_view input) {
@@ -261,6 +300,7 @@ struct fixture {
       auto tmp = T{};
       auto res = reader.load(input)    // parse JSON
                  && reader.apply(tmp); // deserialize object
+      test::runnable::current().check(!res);
       if (res)
         log::test::debug("got unexpected output: {}", tmp);
       return !res;
@@ -388,14 +428,23 @@ fixture::fixture() {
   // Test cases for proper handling of whitespace.
   add_test_case("[1, \r\n2,\f\t\v3]", ls<int32_t>(1, 2, 3));
   add_test_case("\r\n{\r\n\"a\":\r\n1, \"b\"\r\n:\r\n2}\r\n", my_request(1, 2));
-  // Test cases for proper handling code-point escape sequences.
+  // Test cases for proper handling of code point escape sequences.
+  // Single byte utf-8 sequences.
   add_test_case(
     R"_("\u0048\u0065\u006c\u006c\u006f\u002c\u0020\u0022\u0057\u006f\u0072\u006c\u0064\u0022\u0021")_",
     std::string{R"_(Hello, "World"!)_"});
-  // add_test_case(R"_("samir\u005c\u005c")_", std::string{R"_(samir\)_"});
-  add_test_case(R"_("\u0107\u0061\u006f")_", std::string{"ćao"});
-  add_test_case(R"_("\u20ac\u2192\u221e")_", std::string{"€→∞"});
+  // TODO why do we need two backslashes when the first one is already escaped?
+  add_test_case(R"_("\u005c\u005c")_", std::string{R"_(\)_"});
+  // Two byte utf-8 sequences.
+  add_test_case(R"_("\u0107\u010d\u017e\u0161\u0111")_", std::string{"ćčžšđ"});
+  // Three byte utf-8 sequences.
+  add_test_case(R"_("\u20AC\u2192\u221E")_", std::string{"€→∞"});
   add_test_case(R"_("\ud834\udd1e")_", std::string{"𝄞"});
+  // Failing tests
+  // High surrogate without a low surrogate.
+  add_test_case(R"_("\ud900")_", std::string{"?"});
+  // Tree escaped digits
+  add_neg_test_case<std::string>(R"_("\u06c")_");
 }
 
 } // namespace
