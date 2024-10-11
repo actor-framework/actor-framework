@@ -254,39 +254,35 @@ struct fixture {
     test_cases.emplace_back(std::move(f));
   }
 
-  // Specialization for `std::string` so we can test unescaping in scratch
-  // space.
+  // Specialization for `std::string` so we can test all `read_json_string`
+  // overloads.
   void add_test_case(std::string_view input, std::string val) {
     auto f = [this, input, obj{std::move(val)}]() -> bool {
       auto& this_test = test::runnable::current();
       auto tmp = std::string{};
-      // Test inplace.
+      // Test overload for reading from memory.
       auto res = this_test.check(reader.load(input))    // parse JSON
                  && this_test.check(reader.apply(tmp)); // deserialize object
-      if (res) {
+      if (res)
         res = this_test.check_eq(tmp, obj);
-      }
-      if (!res)
+      else
         log::test::debug("rejected input: {}", input);
-      // Test second scratch space variant.
+      // Test overload for reading from files.
       using iterator_t = std::istreambuf_iterator<char>;
-      std::string in{input};
-      std::istringstream input1{in};
-      detail::json::file_parser_state ps{iterator_t{input1}, iterator_t{}};
+      std::string input_value{input};
+      std::istringstream input_stream{input_value};
+      detail::json::file_parser_state ps{iterator_t{input_stream},
+                                         iterator_t{}};
       detail::monotonic_buffer_resource buf_;
-      detail::json::value* root_ = nullptr;
-      root_ = detail::json::parse(ps, &buf_);
-      if (ps.code != pec::success) {
-        this_test.fail("Parsing failed!");
+      detail::json::value* root_ = detail::json::parse(ps, &buf_);
+      if (!this_test.check_eq(ps.code, pec::success))
         return false;
-      }
-      res = this_test.check(root_->is_string());
-      if (res) {
-        std::string msg;
-        detail::print_unescaped(msg, std::get<std::string_view>(root_->data));
-        res = this_test.check_eq(msg, obj);
+      if (this_test.check(root_->is_string())) {
+        tmp.clear();
+        detail::print_unescaped(tmp, std::get<std::string_view>(root_->data));
+        res = this_test.check_eq(tmp, obj);
       } else {
-        log::test::debug("rejected input: {}", input);
+        log::test::debug("Parsed value is not a string: {}", input);
       }
       return res;
     };
@@ -437,13 +433,12 @@ fixture::fixture() {
   add_test_case(R"_("\u005c\u005c")_", std::string{R"_(\)_"});
   // Two byte utf-8 sequences.
   add_test_case(R"_("\u0107\u010d\u017e\u0161\u0111")_", std::string{"ćčžšđ"});
-  // Three byte utf-8 sequences.
+  // Three byte utf - 8 sequences.
   add_test_case(R"_("\u20AC\u2192\u221E")_", std::string{"€→∞"});
+  // Four byte utf - 8 sequences.
   add_test_case(R"_("\ud834\udd1e")_", std::string{"𝄞"});
   // Failing tests
-  // High surrogate without a low surrogate.
   add_test_case(R"_("\ud900")_", std::string{"?"});
-  // Tree escaped digits
   add_neg_test_case<std::string>(R"_("\u06c")_");
 }
 

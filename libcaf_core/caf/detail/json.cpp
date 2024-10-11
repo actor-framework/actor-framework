@@ -66,7 +66,7 @@ ptrdiff_t encode_utf8(uint32_t code_point, Out out) {
 
 size_t do_unescape(const char* i, const char* e, char* out) {
   // Reads 4 ASCII hex digits, without validity and overflow checks.
-  auto read_ascii = [](auto& x, const char* c) {
+  auto read_ascii = [](auto& x, auto& c) {
     ascii_to_int<16, std::decay_t<decltype(x)>> f;
     for (auto i = 0; i < 4; i++)
       x = x * 16 + f(*++c);
@@ -206,90 +206,28 @@ void assign_value(Escaper escaper, Consumer& consumer, Iterator first,
   consumer.value(str);
 }
 
-// Read 4 hex digits found in the escape sequence.
-template <class ParserState>
-void read_4_hex(ParserState& ps) {
+// Check 4 hex digits follow the '\u' escape sequence.
+template <class ParserState, class Action>
+void read_4_hex(ParserState& ps, Action action) {
   // clang-format off
   start();
   state(init) {
-    transition(read_unicode_escape_1, hexadecimal_chars)
+    transition(read_unicode_escape_1, hexadecimal_chars, action(ch))
   }
   state(read_unicode_escape_1) {
-    transition(read_unicode_escape_2, hexadecimal_chars)
+    transition(read_unicode_escape_2, hexadecimal_chars, action(ch))
   }
   state(read_unicode_escape_2) {
-    transition(read_unicode_escape_3, hexadecimal_chars)
+    transition(read_unicode_escape_3, hexadecimal_chars, action(ch))
   }
   state(read_unicode_escape_3) {
-    transition(read_unicode_escape_4, hexadecimal_chars)
+    transition(read_unicode_escape_4, hexadecimal_chars, action(ch))
   }
   term_state(read_unicode_escape_4) {
     // nop
   }
   fin();
   // clang-format on
-}
-
-// Read and parse 4 hex digits found in the escape sequence.
-template <class ParserState>
-void read_4_hex(ParserState& ps, uint16_t& result) {
-  result = 0;
-  // clang-format off
-  start();
-  state(init) {
-    transition(read_unicode_escape_1, hexadecimal_chars, add_ascii<16>(result, ch), pec::integer_overflow)
-  }
-  state(read_unicode_escape_1) {
-    transition(read_unicode_escape_2, hexadecimal_chars, add_ascii<16>(result, ch), pec::integer_overflow)
-  }
-  state(read_unicode_escape_2) {
-    transition(read_unicode_escape_3, hexadecimal_chars, add_ascii<16>(result, ch), pec::integer_overflow)
-  }
-  state(read_unicode_escape_3) {
-    transition(read_unicode_escape_4, hexadecimal_chars, add_ascii<16>(result, ch), pec::integer_overflow)
-  }
-  term_state(read_unicode_escape_4) {
-    // nop
-  }
-  fin();
-  // clang-format on
-}
-
-// Read code point from a '\u' escape sequence. If it detects a high surrogate,
-// tries to read the low surrogate and combines them. Assumes the beginning '\u'
-// is already processed.
-template <class ParserState, class Consumer>
-void read_code_point(ParserState& ps, Consumer consumer) {
-  auto result0 = uint16_t{0};
-  auto result1 = uint16_t{0};
-  auto is_high_surrogate = [](auto result) {
-    return result >= 0xD800 && result < 0xDC00;
-  };
-  // clang-format off
-  start();
-  state(init) {
-    fsm_epsilon(read_4_hex(ps, result0), after_escape)
-  }
-  term_state(after_escape) {
-    transition_if(is_high_surrogate(result0), read_low_surrogate, "\\")
-  }
-  state(read_low_surrogate) {
-    fsm_transition(read_4_hex(ps, result1), done, "u")
-  }
-  term_state(done) {
-    // nop
-  }
-  fin();
-  // clang-format on
-  if (ps.code <= pec::trailing_character) {
-    if (result1 != 0)
-      consumer(from_utf16(result0, result1));
-    else
-      consumer(result0);
-  } else {
-    consumer('?');
-    ps.code = pec::trailing_character;
-  }
 }
 
 } // namespace
@@ -411,6 +349,7 @@ template <class ParserState, class Unescaper, class Consumer>
 void read_json_string(ParserState& ps, unit_t, Unescaper escaper,
                       Consumer consumer) {
   using iterator_t = typename ParserState::iterator_type;
+  auto empty_action = [](char) {};
   iterator_t first;
   // clang-format off
   start();
@@ -430,7 +369,7 @@ void read_json_string(ParserState& ps, unit_t, Unescaper escaper,
   }
   state(escape) {
     transition(read_chars_after_escape, "\"\\/bfnrtv")
-    fsm_transition(read_4_hex(ps), read_chars_after_escape, "u")
+    fsm_transition(read_4_hex(ps, empty_action), read_chars_after_escape, "u")
   }
   term_state(done) {
     transition(done, whitespace_chars)
@@ -443,8 +382,12 @@ template <class ParserState, class Unescaper, class Consumer>
 void read_json_string(ParserState& ps, std::vector<char>& scratch_space,
                       Unescaper escaper, Consumer consumer) {
   scratch_space.clear();
-  auto insert_consumer = [&scratch_space](uint32_t code_point) {
-    encode_utf8(code_point, back_inserter(scratch_space));
+  bool escape_reached = false;
+  auto append_char = [&scratch_space](char ch) { scratch_space.push_back(ch); };
+  auto has_escaped = [&escape_reached, append_char]() {
+    append_char('\\');
+    append_char('u');
+    escape_reached = true;
   };
   // clang-format off
   start();
@@ -456,7 +399,7 @@ void read_json_string(ParserState& ps, std::vector<char>& scratch_space,
     transition(escape, '\\')
     transition(done, '"',
                assign_value(escaper, consumer, scratch_space.begin(),
-                            scratch_space.end(), false))
+                            scratch_space.end(), escape_reached))
     transition(read_chars, any_char, scratch_space.push_back(ch))
   }
   state(escape) {
@@ -468,10 +411,7 @@ void read_json_string(ParserState& ps, std::vector<char>& scratch_space,
     transition(read_chars, 'r', scratch_space.push_back('\r'))
     transition(read_chars, 't', scratch_space.push_back('\t'))
     transition(read_chars, 'v', scratch_space.push_back('\v'))
-    fsm_transition(read_code_point(ps, insert_consumer), after_escape, 'u')
-  }
-  unstable_state(after_escape) {
-    epsilon(read_chars)
+    fsm_transition(read_4_hex(ps, append_char), read_chars, 'u', ( has_escaped()))
   }
   // finalize
   term_state(done) {
