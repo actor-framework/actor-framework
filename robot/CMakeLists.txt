@@ -137,11 +137,10 @@ if(TARGET CAF::net AND CAF_ENABLE_EXAMPLES)
     client
     --variable BINARY_PATH:$<TARGET_FILE:client>)
 
-  # Temporary disabled: https://github.com/actor-framework/actor-framework/issues/1864
-  # add_robot_test(
-  #   lp
-  #   communication
-  #   --variable SERVER_PATH:$<TARGET_FILE:chat-server>
-  #   --variable CLIENT_PATH:$<TARGET_FILE:chat-client>)
+  add_robot_test(
+    lp
+    communication
+    --variable SERVER_PATH:$<TARGET_FILE:chat-server>
+    --variable CLIENT_PATH:$<TARGET_FILE:chat-client>)
 
 endif()
