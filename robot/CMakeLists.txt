@@ -125,23 +125,21 @@ if(TARGET CAF::net AND CAF_ENABLE_EXAMPLES)
     --variable BINARY_PATH:$<TARGET_FILE:rest>
     --variable SSL_PATH:${CMAKE_CURRENT_SOURCE_DIR})
 
-  # Temporary disabled: https://github.com/actor-framework/actor-framework/issues/1904
-  # add_robot_test(
-  #   stream
-  #   octet
-  #   --variable SERVER_PATH:$<TARGET_FILE:key-value-store>
-  #   --variable CLIENT_PATH:$<TARGET_FILE:text-client>)
+  add_robot_test(
+    stream
+    octet
+    --variable SERVER_PATH:$<TARGET_FILE:key-value-store>
+    --variable CLIENT_PATH:$<TARGET_FILE:text-client>)
 
   add_robot_test(
     http
     client
     --variable BINARY_PATH:$<TARGET_FILE:client>)
 
-  # Temporary disabled: https://github.com/actor-framework/actor-framework/issues/1864
-  # add_robot_test(
-  #   lp
-  #   communication
-  #   --variable SERVER_PATH:$<TARGET_FILE:chat-server>
-  #   --variable CLIENT_PATH:$<TARGET_FILE:chat-client>)
+  add_robot_test(
+    lp
+    communication
+    --variable SERVER_PATH:$<TARGET_FILE:chat-server>
+    --variable CLIENT_PATH:$<TARGET_FILE:chat-client>)
 
 endif()

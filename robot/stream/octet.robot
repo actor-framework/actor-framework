@@ -4,6 +4,7 @@ Documentation       A test suite for examples/octet_stream/key-value-store
 Library             Process
 Library             String
 Library             OperatingSystem
+Library             ../utils/process_helpers.py
 
 Test Setup          Start Key Value Store Server
 Test Teardown       Stop Server And Clients
@@ -15,20 +16,22 @@ ${SERVER_PORT}      55520
 ${SERVER_PATH}      /path/to/the/server
 ${CLIENT_PATH}      /path/to/the/client
 
-${FIRST_CLIENT_INPUT}         { "type": "put", "key": "A", "value": "26" }\n{ "type": "get", "key": "A" }\n{ "type": "del", "key": "A" }\n{ "type": "get", "key": "A" }\n
-${FIRST_CLIENT_BASELINE}      reply: \nreply: 26\nreply: 26\nreply: {"error":"no_such_key"}
+${FIRST_CLIENT_INPUT}         { "type": "put", "key": "A", "value": "26" }\n{ "type": "get", "key": "A" }\n{ "type": "get", "key": "B" }\n
+${FIRST_CLIENT_BASELINE}      reply: \nreply: 26\nreply: {"error":"no_such_key"}
 ${SECOND_CLIENT_INPUT}        { "type": "get", "key": "A" }\n{ "type": "put", "key": "B", "value": "27" }\n{ "type": "get", "key": "B" }\n{ "type": "del", "key": "B" }\n{ "type": "get", "key": "B" }\n
-${SECOND_CLIENT_BASELINE}     reply: {"error":"no_such_key"}\nreply: \nreply: 27\nreply: 27\nreply: {"error":"no_such_key"}
+${SECOND_CLIENT_BASELINE}     reply: 26\nreply: \nreply: 27\nreply: 27\nreply: {"error":"no_such_key"}
 
 
 *** Test Cases ***
 The server can handle multiple clients
-    Start Text Client  ${FIRST_CLIENT_INPUT}
-    ${c1}=  Wait For Client    ${1}
+    ${c1}=  Start Text Client
+    Wait For Client    ${1}
+    Send Message  ${c1}  ${FIRST_CLIENT_INPUT}
     Wait Until Contains Baseline  ${FIRST_CLIENT_BASELINE}  text-store.out
     Terminate Process  ${c1}
-    ${c2}=  Start Text Client  ${SECOND_CLIENT_INPUT}
+    ${c2}=  Start Text Client
     Wait For Client    ${2}
+    Send Message  ${c1}  ${SECOND_CLIENT_INPUT}
     Wait Until Contains Baseline  ${SECOND_CLIENT_BASELINE}  text-store.out
     Terminate Process  ${c2}
 
@@ -44,7 +47,6 @@ Start Key Value Store Server
     Wait For Server Startup
 
 Start Text Client
-    [Arguments]   ${stdin}
     ${hdl}=  Start Process
     ...  ${CLIENT_PATH}
     ...  -p    ${SERVER_PORT}
@@ -52,13 +54,10 @@ Start Text Client
     ...  stdin=PIPE
     ...  stdout=text-store.out
     ...  stderr=text-store.err
-    # Note: we can't pass ${stdin} directly as stdin=${stdin} because this would
-    # close stdin immediately after the process has read the input. This would
-    # in turn cause the process to exit immediately without waiting for the
-    # server to respond.
-    Evaluate  $hdl.stdin.write($stdin.encode())
-    Evaluate  $hdl.stdin.flush()
-    [Return]  ${hdl}
+
+Send Message
+    [Arguments]    ${process}   ${message}
+    Write To Process Stdin    ${process}    ${message}
 
 Has Baseline
     [Arguments]     ${baseline}   ${file_path}
