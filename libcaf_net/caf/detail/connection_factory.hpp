@@ -13,7 +13,7 @@
 
 namespace caf::detail {
 
-/// Creates new socket managers for an @ref accept_handler.
+/// Creates new socket managers for an accept_handler.
 template <class ConnectionHandle>
 class connection_factory {
 public:

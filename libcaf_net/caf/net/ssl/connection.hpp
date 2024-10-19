@@ -48,12 +48,11 @@ public:
   // -- error handling ---------------------------------------------------------
 
   /// Returns the error code for a preceding call to `connect`, `accept`,
-  /// `read`, `write` or `close.
-  /// @param ret The (negative) result from the preceding call.
+  /// `read`, `write` or `close`.
   errc last_error(ptrdiff_t ret) const;
 
   /// Returns a human-readable representation of the error for a preceding call
-  /// to `connect`, `accept`, `read`, `write` or `close.
+  /// to `connect`, `accept`, `read`, `write` or `close`.
   /// @param ret The (negative) result from the preceding call.
   std::string last_error_string(ptrdiff_t ret) const;
 

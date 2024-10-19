@@ -251,6 +251,7 @@ TAB_SIZE               = 2
 # @} or use a double escape (\\{ and \\})
 
 ALIASES                = "experimental=@attention This feature is **experimental**."
+ALIASES                += "threadsafe=@attention This function is thread-safe."
 
 # Set the OPTIMIZE_OUTPUT_FOR_C tag to YES if your project consists of C sources
 # only. Doxygen will then generate output that is more tailored for C. For
@@ -918,7 +919,7 @@ INPUT_FILE_ENCODING    =
 # be provided as doxygen C comment), *.py, *.pyw, *.f90, *.f95, *.f03, *.f08,
 # *.f18, *.f, *.for, *.vhd, *.vhdl, *.ucf, *.qsf and *.ice.
 
-FILE_PATTERNS          = "*.[hc]pp"
+FILE_PATTERNS          = "*.[h]pp"
 
 # The RECURSIVE tag can be used to specify whether or not subdirectories should
 # be searched for input files as well.

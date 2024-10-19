@@ -125,8 +125,8 @@ public:
     return {&ctx, cell_};
   }
 
-  /// Binds this future to a @ref coordinator and converts it to an
-  /// @ref observable.
+  /// Binds this future to a @ref flow::coordinator and converts it to an
+  /// @ref flow::observable.
   /// @pre `valid()`
   flow::observable<T> observe_on(flow::coordinator* ctx) const {
     using flow_cell_t = flow::op::cell<T>;

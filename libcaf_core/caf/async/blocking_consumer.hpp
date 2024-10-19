@@ -140,8 +140,7 @@ public:
 
   /// Fetches the next item. If there is no item available, this functions
   /// blocks unconditionally.
-  /// @param policy Either @ref instant_error, @ref delay_error or
-  ///               @ref ignore_errors.
+  /// @param policy Either @ref delay_errors_t or @ref prioritize_errors_t.
   /// @param item Output parameter for storing the received item.
   /// @returns the status of the read operation. The function writes to `item`
   ///          only when also returning `read_result::ok`.
@@ -152,8 +151,7 @@ public:
 
   /// Fetches the next item. If there is no item available, this functions
   /// blocks until the absolute timeout was reached.
-  /// @param policy Either @ref instant_error, @ref delay_error or
-  ///               @ref ignore_errors.
+  /// @param policy Either @ref delay_errors_t or @ref prioritize_errors_t.
   /// @param item Output parameter for storing the received item.
   /// @param timeout Absolute timeout for the receive operation.
   /// @returns the status of the read operation. The function writes to `item`
@@ -167,8 +165,7 @@ public:
 
   /// Fetches the next item. If there is no item available, this functions
   /// blocks until the relative timeout was reached.
-  /// @param policy Either @ref instant_error, @ref delay_error or
-  ///               @ref ignore_errors.
+  /// @param policy Either @ref delay_errors_t or @ref prioritize_errors_t.
   /// @param item Output parameter for storing the received item.
   /// @param timeout Maximum duration before returning from the function.
   /// @returns the status of the read operation. The function writes to `item`

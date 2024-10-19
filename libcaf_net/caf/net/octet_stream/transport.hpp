@@ -17,6 +17,7 @@
 
 namespace caf::net::octet_stream {
 
+/// A transport layer for sending and receiving octet streams.
 class CAF_NET_EXPORT transport : public socket_event_layer,
                                  public octet_stream::lower_layer {
 public:

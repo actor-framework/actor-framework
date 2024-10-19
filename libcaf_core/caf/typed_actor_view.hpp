@@ -34,6 +34,7 @@ class typed_actor_view;
 
 /// Decorates a pointer to a @ref scheduled_actor with a statically typed actor
 /// interface.
+/// @tparam TraitOrSignature The actor trait or signature to apply to the view.
 template <class TraitOrSignature>
 class typed_actor_view<TraitOrSignature>
   : public extend<typed_actor_view_base, typed_actor_view<TraitOrSignature>>::
@@ -377,10 +378,10 @@ private:
   scheduled_actor* self_;
 };
 
-/// Decorates a pointer to a @ref scheduled_actor with a statically typed actor
-/// interface.
-/// @note This is a specialization for backwards compatibility with pre v1.0
-///       releases. Please use the trait based implementation.
+/// Decorates a pointer to a @ref caf::scheduled_actor "scheduled_actor"
+/// with a statically typed actor interface.
+/// @note This specialization is for backwards compatibility with pre v1.0
+///       releases. Please use the trait-based implementation.
 template <class T1, class T2, class... Ts>
 class typed_actor_view<T1, T2, Ts...>
   : public typed_actor_view<statically_typed<T1, T2, Ts...>> {

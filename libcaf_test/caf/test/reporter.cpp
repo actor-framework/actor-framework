@@ -582,7 +582,7 @@ public:
   // -- logging ----------------------------------------------------------------
 
   /// Writes an entry to the event-queue of the logger.
-  /// @thread-safe
+  /// @threadsafe
   void do_log(log::event_ptr&& event) override {
     // We omit fields such as component and actor ID. When not filtering
     // non-test log messages, we add these fields to the message in order to be

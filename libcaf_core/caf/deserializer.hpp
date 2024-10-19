@@ -19,7 +19,6 @@
 
 namespace caf {
 
-/// @ingroup TypeSystem
 /// Technology-independent deserialization interface.
 class CAF_CORE_EXPORT deserializer : public load_inspector_base<deserializer> {
 public:
@@ -135,28 +134,28 @@ public:
   virtual bool value(bool& x) = 0;
 
   /// @copydoc value
-  virtual bool value(int8_t&) = 0;
+  virtual bool value(int8_t& x) = 0;
 
   /// @copydoc value
-  virtual bool value(uint8_t&) = 0;
+  virtual bool value(uint8_t& x) = 0;
 
   /// @copydoc value
-  virtual bool value(int16_t&) = 0;
+  virtual bool value(int16_t& x) = 0;
 
   /// @copydoc value
-  virtual bool value(uint16_t&) = 0;
+  virtual bool value(uint16_t& x) = 0;
 
   /// @copydoc value
-  virtual bool value(int32_t&) = 0;
+  virtual bool value(int32_t& x) = 0;
 
   /// @copydoc value
-  virtual bool value(uint32_t&) = 0;
+  virtual bool value(uint32_t& x) = 0;
 
   /// @copydoc value
-  virtual bool value(int64_t&) = 0;
+  virtual bool value(int64_t& x) = 0;
 
   /// @copydoc value
-  virtual bool value(uint64_t&) = 0;
+  virtual bool value(uint64_t& x) = 0;
 
   /// @copydoc value
   template <class T>
@@ -170,22 +169,22 @@ public:
     }
   }
   /// @copydoc value
-  virtual bool value(float&) = 0;
+  virtual bool value(float& x) = 0;
 
   /// @copydoc value
-  virtual bool value(double&) = 0;
+  virtual bool value(double& x) = 0;
 
   /// @copydoc value
-  virtual bool value(long double&) = 0;
+  virtual bool value(long double& x) = 0;
 
   /// @copydoc value
-  virtual bool value(std::string&) = 0;
+  virtual bool value(std::string& x) = 0;
 
   /// @copydoc value
-  virtual bool value(std::u16string&) = 0;
+  virtual bool value(std::u16string& x) = 0;
 
   /// @copydoc value
-  virtual bool value(std::u32string&) = 0;
+  virtual bool value(std::u32string& x) = 0;
 
   /// Reads a byte sequence from the input.
   /// @param x The byte sequence.

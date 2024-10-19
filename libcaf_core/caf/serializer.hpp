@@ -21,7 +21,6 @@
 
 namespace caf {
 
-/// @ingroup TypeSystem
 /// Technology-independent serialization interface.
 class CAF_CORE_EXPORT serializer : public save_inspector_base<serializer> {
 public:

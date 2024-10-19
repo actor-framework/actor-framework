@@ -8,6 +8,7 @@ namespace caf::async {
 
 /// Policy type for having `consume` call `on_error` immediately after the
 /// producer has aborted even if the buffer still contains items.
+/// @struct prioritize_errors_t
 struct prioritize_errors_t {
   static constexpr bool calls_on_error = true;
 };
@@ -17,6 +18,7 @@ constexpr auto prioritize_errors = prioritize_errors_t{};
 
 /// Policy type for having `consume` call `on_error` only after processing all
 /// items from the buffer.
+/// @struct delay_errors_t
 struct delay_errors_t {
   static constexpr bool calls_on_error = true;
 };

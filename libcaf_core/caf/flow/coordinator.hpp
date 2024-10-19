@@ -45,7 +45,7 @@ public:
   /// Returns a factory object for new observable objects on this coordinator.
   [[nodiscard]] observable_builder make_observable();
 
-  /// Creates a new @ref coordinated object on this coordinator.
+  /// Creates a new @ref caf::flow::coordinated object on this coordinator.
   template <class Impl, class... Args>
   [[nodiscard]] std::enable_if_t<std::is_base_of_v<coordinated, Impl>,
                                  intrusive_ptr<Impl>>
@@ -54,7 +54,7 @@ public:
   }
 
   /// Like @ref add_child, but wraps the result in a handle type. The handle
-  /// type depends on the @ref coordinated object and usually one of
+  /// type depends on the @ref caf::flow::coordinated object and usually one of
   /// `observer<T>`, `observable<T>`, or `subscription`.
   template <class Impl, class... Args>
   [[nodiscard]] std::enable_if_t<std::is_base_of_v<coordinated, Impl>,
@@ -66,13 +66,13 @@ public:
 
   // -- lifetime management ----------------------------------------------------
 
-  /// Resets `child` and releases the reference count of the @ref coordinated
-  /// object at the end of the current cycle.
+  /// Resets `child` and releases the reference count of the @ref
+  /// caf::flow::coordinated object at the end of the current cycle.
   /// @post `child == nullptr`
   virtual void release_later(coordinated_ptr& child) = 0;
 
-  /// Resets `child` and releases the reference count of the @ref coordinated
-  /// object at the end of the current cycle.
+  /// Resets `child` and releases the reference count of the @ref
+  /// caf::flow::coordinated object at the end of the current cycle.
   /// @post `child == nullptr`
   template <class T>
   std::enable_if_t<std::is_base_of_v<coordinated, T>>
@@ -114,7 +114,10 @@ public:
   /// @returns a @ref disposable to cancel the pending timeout.
   virtual disposable delay_until(steady_time_point abs_time, action what) = 0;
 
-  ///@copydoc delay
+  /// Delays execution of an action with an absolute timeout.
+  /// @param abs_time The absolute time when this action should take place.
+  /// @param what The action for delayed execution.
+  /// @returns a @ref disposable to cancel the pending timeout.
   template <class F>
   disposable delay_until_fn(steady_time_point abs_time, F&& what) {
     return delay_until(abs_time,
