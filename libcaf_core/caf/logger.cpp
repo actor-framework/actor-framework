@@ -152,7 +152,7 @@ public:
   // -- logging ----------------------------------------------------------------
 
   /// Writes an entry to the event-queue of the logger.
-  /// @thread-safe
+  /// @threadsafe
   void do_log(log::event_ptr&& event) override {
     if (cfg_.inline_output)
       handle_event(*event);

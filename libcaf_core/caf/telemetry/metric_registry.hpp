@@ -361,7 +361,26 @@ public:
     return result;
   }
 
-  /// @copydoc gauge_family
+  /// Returns a histogram metric family. Creates the family lazily if
+  /// necessary, but fails if the full name already belongs to a different
+  /// family.
+  /// @param prefix The prefix (namespace) this family belongs to. Usually the
+  ///               application or protocol name, e.g., `http`. The prefix `caf`
+  ///               as well as prefixes starting with an underscore are
+  ///               reserved.
+  /// @param name The human-readable name of the metric, e.g., `requests`.
+  /// @param label_names Names for all label dimensions of the metric.
+  /// @param upper_bounds Upper bounds for the metric buckets.
+  /// @param helptext Short explanation of the metric.
+  /// @param unit Unit of measurement. Please use base units such as `bytes` or
+  ///             `seconds` (prefer lowercase). The pseudo-unit `1` identifies
+  ///             dimensionless counts.
+  /// @param is_sum Setting this to `true` indicates that this metric adds
+  ///               something up to a total, where only the total value is of
+  ///               interest. For example, the total number of HTTP requests.
+  /// @note The first call wins when calling this function multiple times with
+  ///       different bucket settings. Later calls skip checking the bucket
+  ///       settings, mainly because this check would be rather expensive.
   template <class ValueType = int64_t>
   metric_family_impl<histogram<ValueType>>*
   histogram_family(std::string_view prefix, std::string_view name,
@@ -408,7 +427,7 @@ public:
     return fptr->get_or_add(labels);
   }
 
-  /// @copdoc histogram_instance
+  /// @copydoc histogram_instance
   template <class ValueType = int64_t>
   histogram<ValueType>*
   histogram_instance(std::string_view prefix, std::string_view name,
@@ -428,6 +447,7 @@ public:
   ///               as well as prefixes starting with an underscore are
   ///               reserved.
   /// @param name The human-readable name of the metric, e.g., `requests`.
+  /// @param upper_bounds Upper bounds for the metric buckets.
   /// @param helptext Short explanation of the metric.
   /// @param unit Unit of measurement. Please use base units such as `bytes` or
   ///             `seconds` (prefer lowercase). The pseudo-unit `1` identifies
