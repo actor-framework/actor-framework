@@ -64,7 +64,7 @@ public:
   /// Schedules @p what to run after reaching @p when on the event loop of the
   /// execution context. This member function may get called from external
   /// sources or threads.
-  /// @thread-safe
+  /// @threadsafe
   virtual void schedule(steady_time_point when, action what) = 0;
 
   // -- properties -------------------------------------------------------------
@@ -81,11 +81,11 @@ public:
   // -- thread-safe signaling --------------------------------------------------
 
   /// Registers `mgr` for initialization in the multiplexer's thread.
-  /// @thread-safe
+  /// @threadsafe
   virtual void start(socket_manager_ptr mgr) = 0;
 
   /// Signals the multiplexer to initiate shutdown.
-  /// @thread-safe
+  /// @threadsafe
   virtual void shutdown() = 0;
 
   // -- callbacks for socket managers ------------------------------------------

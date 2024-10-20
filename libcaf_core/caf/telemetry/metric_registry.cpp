@@ -78,7 +78,7 @@ metric_registry::get_label_names(span_t<label_view> xs) {
 }
 
 std::vector<std::string>
-metric_registry::to_sorted_vec(span<const std::string_view> xs) {
+metric_registry::to_sorted_vec(span_t<const std::string_view> xs) {
   std::vector<std::string> result;
   if (!xs.empty()) {
     result.reserve(xs.size());
@@ -90,7 +90,7 @@ metric_registry::to_sorted_vec(span<const std::string_view> xs) {
 }
 
 std::vector<std::string>
-metric_registry::to_sorted_vec(span<const label_view> xs) {
+metric_registry::to_sorted_vec(span_t<const label_view> xs) {
   std::vector<std::string> result;
   if (!xs.empty()) {
     result.reserve(xs.size());
@@ -103,7 +103,7 @@ metric_registry::to_sorted_vec(span<const label_view> xs) {
 
 void metric_registry::assert_properties(
   const metric_family* ptr, metric_type type,
-  span<const std::string_view> label_names, std::string_view unit,
+  span_t<const std::string_view> label_names, std::string_view unit,
   bool is_sum) {
   auto labels_match = [&] {
     const auto& xs = ptr->label_names();
@@ -146,7 +146,7 @@ struct label_name_eq {
 
 void metric_registry::assert_properties(const metric_family* ptr,
                                         metric_type type,
-                                        span<const label_view> labels,
+                                        span_t<const label_view> labels,
                                         std::string_view unit, bool is_sum) {
   auto labels_match = [&] {
     const auto& xs = ptr->label_names();

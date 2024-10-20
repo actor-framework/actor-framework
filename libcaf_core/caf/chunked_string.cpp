@@ -44,7 +44,7 @@ chunked_string_builder::chunked_string_builder(
   new (&chunks_) list_type(resource);
 }
 
-void chunked_string_builder::chunked_string_builder::append(char ch) {
+void chunked_string_builder::append(char ch) {
   if (current_block_ == nullptr) { // Lazy initialization.
     current_block_ = allocator_t<char>{resource()}.allocate(chunk_size);
     write_pos_ = 0;

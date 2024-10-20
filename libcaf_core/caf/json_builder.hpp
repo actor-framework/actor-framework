@@ -50,12 +50,12 @@ public:
     skip_empty_fields_ = value;
   }
 
-  /// Returns whether the writer omits '@type' annotations for JSON objects.
+  /// Returns whether the writer omits `@type` annotations for JSON objects.
   [[nodiscard]] bool skip_object_type_annotation() const noexcept {
     return skip_object_type_annotation_;
   }
 
-  /// Configures whether the writer omits '@type' annotations for JSON objects.
+  /// Configures whether the writer omits `@type` annotations for JSON objects.
   void skip_object_type_annotation(bool value) noexcept {
     skip_object_type_annotation_ = value;
   }
@@ -237,7 +237,7 @@ private:
   // fields as `$field: null` (false).
   bool skip_empty_fields_ = json_writer::skip_empty_fields_default;
 
-  // Configures whether we omit the top-level '@type' annotation.
+  // Configures whether we omit the top-level `@type` annotation.
   bool skip_object_type_annotation_ = false;
 
   std::string_view field_type_suffix_ = json_writer::field_type_suffix_default;
