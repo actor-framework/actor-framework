@@ -178,7 +178,7 @@ public:
 
   // -- observers --------------------------------------------------------------
 
-  /// @copydoc engaged
+  /// @copydoc has_value
   explicit operator bool() const noexcept {
     return has_value_;
   }
@@ -254,57 +254,58 @@ public:
       return T{std::forward<U>(fallback)};
   }
 
-  /// @copydoc cvalue
+  /// @copydoc value
   T& operator*() & noexcept {
     return value_;
   }
 
-  /// @copydoc cvalue
+  /// @copydoc value
   const T& operator*() const& noexcept {
     return value_;
   }
 
-  /// @copydoc cvalue
+  /// @copydoc value
   T&& operator*() && noexcept {
     return std::move(value_);
   }
 
-  /// @copydoc cvalue
+  /// @copydoc value
   const T&& operator*() const&& noexcept {
     return std::move(value_);
   }
 
-  /// @copydoc cvalue
+  /// @copydoc value
   T* operator->() noexcept {
     return &value_;
   }
 
-  /// @copydoc cvalue
+  /// @copydoc value
   const T* operator->() const noexcept {
     return &value_;
   }
 
   // -- error access -----------------------------------------------------------
 
-  /// @copydoc cerror
+  /// Returns the contained error.
+  /// @pre `has_value() == false`.
   caf::error& error() & noexcept {
     CAF_ASSERT(!has_value_);
     return error_;
   }
 
-  /// @copydoc cerror
+  /// @copydoc error
   const caf::error& error() const& noexcept {
     CAF_ASSERT(!has_value_);
     return error_;
   }
 
-  /// @copydoc cerror
+  /// @copydoc error
   caf::error&& error() && noexcept {
     CAF_ASSERT(!has_value_);
     return std::move(error_);
   }
 
-  /// @copydoc cerror
+  /// @copydoc error
   const caf::error&& error() const&& noexcept {
     CAF_ASSERT(!has_value_);
     return std::move(error_);

@@ -174,6 +174,7 @@ public:
   /// hook.
   void inline_all_enqueues();
 
+  /// Returns the test actor clock.
   test_actor_clock& clock();
 
 protected:

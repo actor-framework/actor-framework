@@ -80,7 +80,7 @@ public:
 
   // -- behavior management ----------------------------------------------------
 
-  /// @copydoc event_based_actor::become
+  /// @copydoc caf::event_based_actor::become
   template <class T, class... Ts>
   void become(T&& arg, Ts&&... args) {
     if constexpr (std::is_same_v<keep_behavior_t, std::decay_t<T>>) {
@@ -92,7 +92,7 @@ public:
     }
   }
 
-  /// @copydoc event_based_actor::unbecome
+  /// @copydoc caf::event_based_actor::unbecome
   void unbecome() {
     bhvr_stack_.pop_back();
   }

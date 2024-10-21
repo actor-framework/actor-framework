@@ -6,7 +6,7 @@
 
 namespace caf {
 
-/// Tag type for @ref typed_actor_view.
+/// Tag type for {@link caf::typed_actor_view}.
 struct typed_actor_view_base {};
 
 } // namespace caf

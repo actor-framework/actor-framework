@@ -15,6 +15,7 @@
 namespace caf::io {
 
 /// Establish a new connection to the actor at `host` on given `port`.
+/// @param sys The actor system for the remote actor.
 /// @param host Valid hostname or IP address.
 /// @param port TCP port.
 /// @returns An `actor` to the proxy instance representing
