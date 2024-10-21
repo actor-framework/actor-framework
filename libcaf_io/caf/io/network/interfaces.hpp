@@ -20,6 +20,7 @@
 namespace caf::io::network {
 
 // {protocol => address}
+/// @memberof std::map
 using address_listing = std::map<protocol::network, std::vector<std::string>>;
 
 // {interface_name => {protocol => address}}
