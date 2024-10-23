@@ -12,7 +12,7 @@ struct keep_behavior_t {
   }
 };
 
-/// Policy tag that causes {@link event_based_actor::become} to
+/// Policy tag that causes @ref event_based_actor::become to
 /// keep the current behavior available.
 /// @relates local_actor
 constexpr keep_behavior_t keep_behavior = keep_behavior_t{};

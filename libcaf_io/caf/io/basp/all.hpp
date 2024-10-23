@@ -124,6 +124,6 @@
 /// in the three grey boxes, while the resulting BASP messaging
 /// is shown in UML sequence diagram notation. More details about
 /// individual BASP message types can be found in the documentation
-/// of {@link message_type} below.
+/// of @ref message_type below.
 ///
 /// ![](basp_sequence.png)

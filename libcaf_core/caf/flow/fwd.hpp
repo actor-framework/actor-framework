@@ -55,7 +55,6 @@ class multicaster;
 
 /// A blueprint for an @ref caf::flow::observer that generates items and applies
 /// any number of processing steps immediately before emitting them.
-/// @typedef generation
 template <class Generator, class... Steps>
 using generation = observable_def<generation_materializer<Generator>, Steps...>;
 

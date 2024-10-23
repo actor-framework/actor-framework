@@ -237,7 +237,7 @@ struct is_mutable_ref<T&> : std::true_type {};
 ///    (c) a function pointer, (d) an std::function.
 ///
 /// `result_type` is the result type found in the signature.
-/// `arg_types` are the argument types as {@link type_list}.
+/// `arg_types` are the argument types as @ref type_list.
 /// `fun_type` is an std::function with an equivalent signature.
 template <class Functor>
 struct callable_trait;
