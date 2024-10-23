@@ -322,7 +322,7 @@ public:
 
   // -- here be dragons: end of public interface -------------------------------
 
-  /// @cond PRIVATE
+  /// @cond
 
   auto& builtin_metrics() noexcept {
     return metrics_;

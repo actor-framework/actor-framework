@@ -511,7 +511,7 @@ public:
   /// flows remain unaffected.
   void deregister_stream(uint64_t stream_id);
 
-  /// @cond PRIVATE
+  /// @cond
 
   // -- utility functions for invoking default handler -------------------------
 

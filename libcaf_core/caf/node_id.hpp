@@ -173,7 +173,7 @@ public:
 
   // -- private API ------------------------------------------------------------
 
-  /// @cond PRIVATE
+  /// @cond
 
   auto* operator->() noexcept {
     return data_.get();

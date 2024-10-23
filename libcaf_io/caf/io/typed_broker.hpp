@@ -64,7 +64,7 @@ public:
     typename extend<abstract_broker, typed_broker<Sigs...>>::template with<
       mixin::sender, mixin::requester>;
 
-  /// @cond PRIVATE
+  /// @cond
 
   std::set<std::string> message_types() const override {
     type_list<typed_actor<Sigs...>> hdl;

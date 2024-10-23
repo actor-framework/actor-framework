@@ -233,7 +233,7 @@ public:
     return bhvr_.timeout();
   }
 
-  /// @cond PRIVATE
+  /// @cond
 
   behavior& unbox() & {
     return bhvr_;

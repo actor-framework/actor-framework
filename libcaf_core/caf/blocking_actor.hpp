@@ -319,7 +319,7 @@ public:
   abstract_mailbox& mailbox() {
     return mailbox_;
   }
-  /// @cond PRIVATE
+  /// @cond
 
   /// Receives messages until either a pre- or postcheck of `rcc` fails.
   template <class... Ts>
