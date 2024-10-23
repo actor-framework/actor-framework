@@ -64,7 +64,7 @@ public:
     typename extend<abstract_broker, typed_broker<Sigs...>>::template with<
       mixin::sender, mixin::requester>;
 
-  /// @cond PRIVATE
+  /// @cond
 
   std::set<std::string> message_types() const override {
     type_list<typed_actor<Sigs...>> hdl;
@@ -144,7 +144,7 @@ public:
     // nop
   }
 
-  /// @copydoc event_based_actor::become
+  /// @copydoc caf::event_based_actor::become
   template <class T, class... Ts>
   void become(T&& arg, Ts&&... args) {
     if constexpr (std::is_same_v<keep_behavior_t, std::decay_t<T>>) {
@@ -156,7 +156,7 @@ public:
     }
   }
 
-  /// @copydoc event_based_actor::unbecome
+  /// @copydoc caf::event_based_actor::unbecome
   void unbecome() {
     this->bhvr_stack_.pop_back();
   }

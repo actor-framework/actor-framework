@@ -103,7 +103,7 @@ public:
       reinterpret_cast<intptr_t>(ptr) - CAF_CACHE_LINE_SIZE);
   }
 
-  /// @cond PRIVATE
+  /// @cond
 
   actor_addr address();
 

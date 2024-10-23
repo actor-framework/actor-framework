@@ -19,7 +19,7 @@
 
 namespace caf::io {
 
-/// Signalizes a newly accepted connection from a {@link broker}.
+/// Signalizes a newly accepted connection from a @ref broker.
 struct new_connection_msg {
   /// The handle that accepted the new connection.
   accept_handle source;
@@ -33,7 +33,7 @@ bool inspect(Inspector& f, new_connection_msg& x) {
                             f.field("handle", x.handle));
 }
 
-/// Signalizes newly arrived data for a {@link broker}.
+/// Signalizes newly arrived data for a @ref broker.
 struct new_data_msg {
   /// Handle to the related connection.
   connection_handle handle;
@@ -65,7 +65,7 @@ bool inspect(Inspector& f, data_transferred_msg& x) {
                             f.field("remaining", x.remaining));
 }
 
-/// Signalizes that a {@link broker} connection has been closed.
+/// Signalizes that a @ref broker connection has been closed.
 struct connection_closed_msg {
   /// Handle to the closed connection.
   connection_handle handle;
@@ -77,7 +77,7 @@ bool inspect(Inspector& f, connection_closed_msg& x) {
   return f.object(x).fields(f.field("handle", x.handle));
 }
 
-/// Signalizes that a {@link broker} acceptor has been closed.
+/// Signalizes that a @ref broker acceptor has been closed.
 struct acceptor_closed_msg {
   /// Handle to the closed connection.
   accept_handle handle;

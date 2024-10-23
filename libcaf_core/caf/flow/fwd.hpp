@@ -53,16 +53,16 @@ class generation_materializer;
 template <class T>
 class multicaster;
 
-/// A blueprint for an @ref observer that generates items and applies any number
-/// of processing steps immediately before emitting them.
+/// A blueprint for an @ref caf::flow::observer that generates items and applies
+/// any number of processing steps immediately before emitting them.
 template <class Generator, class... Steps>
 using generation = observable_def<generation_materializer<Generator>, Steps...>;
 
 template <class Input>
 class transformation_materializer;
 
-/// A blueprint for an @ref observer that applies a series of transformation
-/// steps to its inputs and emits the results.
+/// A blueprint for an @ref caf::flow::observer that applies a series of
+/// transformation steps to its inputs and emits the results.
 template <class Step, class... Steps>
 using transformation
   = observable_def<transformation_materializer<typename Step::input_type>, Step,

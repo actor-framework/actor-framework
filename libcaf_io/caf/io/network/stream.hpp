@@ -20,7 +20,7 @@
 namespace caf::io::network {
 
 /// A stream capable of both reading and writing. The stream's input
-/// data is forwarded to its {@link stream_manager manager}.
+/// data is forwarded to its @ref stream_manager.
 class CAF_IO_EXPORT stream : public event_handler {
 public:
   /// A smart pointer to a stream manager.

@@ -208,6 +208,7 @@ public:
 
   /// Loads the first certificate found in given file.
   /// @param path Null-terminated string with a path to a single file.
+  /// @param file_format Denotes the format of the certificate file.
   [[nodiscard]] bool use_certificate_file(const char* path, format file_format);
 
   /// @copydoc use_certificate_file

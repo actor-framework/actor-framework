@@ -96,7 +96,7 @@ public:
     return tmp.as_behavior_impl();
   }
 
-  /// @cond PRIVATE
+  /// @cond
 
   message_handler& unbox() {
     return *this;

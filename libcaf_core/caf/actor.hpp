@@ -110,7 +110,7 @@ public:
   /// Exchange content of `*this` and `other`.
   void swap(actor& other) noexcept;
 
-  /// @cond PRIVATE
+  /// @cond
 
   abstract_actor* operator->() const noexcept {
     CAF_ASSERT(ptr_);

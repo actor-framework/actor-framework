@@ -483,7 +483,7 @@ public:
                             void (*write)(void*, term, const char*, size_t),
                             void (*cleanup)(void*));
 
-  /// @cond PRIVATE
+  /// @cond
 
   /// Calls all thread started hooks
   /// @warning must be called by thread which is about to start

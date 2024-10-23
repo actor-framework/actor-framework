@@ -29,6 +29,7 @@ struct CAF_NET_EXPORT tcp_accept_socket : network_socket {
 /// @param node The endpoint to listen on and the filter for incoming addresses.
 ///             Passing the address `0.0.0.0` will accept incoming connection
 ///             from any host. Passing port 0 lets the OS choose the port.
+/// @param reuse_addr Optionally sets the SO_REUSEADDR option on the socket.
 /// @relates tcp_accept_socket
 expected<tcp_accept_socket>
   CAF_NET_EXPORT make_tcp_accept_socket(ip_endpoint node,

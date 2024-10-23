@@ -163,7 +163,7 @@ public:
 
   // -- here be dragons: end of public interface -------------------------------
 
-  /// @cond PRIVATE
+  /// @cond
 
   /// Indicates that the actor system shall not wait for this actor to
   /// finish execution on shutdown.

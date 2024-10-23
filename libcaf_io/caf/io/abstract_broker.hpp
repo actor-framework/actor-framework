@@ -294,7 +294,7 @@ public:
     return get_map(hdl).count(hdl) > 0;
   }
 
-  /// @cond PRIVATE
+  /// @cond
   template <class Handle>
   void erase(Handle hdl) {
     auto& elements = get_map(hdl);
@@ -368,7 +368,7 @@ protected:
 
   using datagram_servant_map
     = std::unordered_map<datagram_handle, intrusive_ptr<datagram_servant>>;
-  /// @cond PRIVATE
+  /// @cond
 
   // meta programming utility
   doorman_map& get_map(accept_handle) {

@@ -166,7 +166,9 @@ public:
   }
 
   /// Starts a new log event.
+  /// @param level Severity of the message.
   /// @param component Name of the component logging the message.
+  /// @param loc Source location of the logging call.
   template <class... Ts>
   static entrypoint
   log(unsigned level, std::string_view component,

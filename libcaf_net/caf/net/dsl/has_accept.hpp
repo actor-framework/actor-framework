@@ -26,6 +26,7 @@ public:
   ///
   /// @param port Port number to bind to.
   /// @param bind_address IP address to bind to. Default is an empty string.
+  /// @param reuse_addr Whether to set the SO_REUSEADDR option on the socket.
   /// @returns an `accept_factory` object initialized with the given parameters.
   auto accept(uint16_t port, std::string bind_address = "",
               bool reuse_addr = true) {

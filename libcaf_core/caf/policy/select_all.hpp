@@ -126,7 +126,6 @@ namespace caf::policy {
 
 /// Enables a `response_handle` to fan-in all responses messages into a single
 /// result (a `vector` that stores all received results).
-/// @relates mixin::requester
 /// @relates response_handle
 template <class ResponseType>
 class select_all {

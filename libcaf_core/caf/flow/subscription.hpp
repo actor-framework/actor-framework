@@ -108,6 +108,7 @@ public:
 
     bool disposed() const noexcept override;
 
+    /// Signals demand for `n` more items.
     void request(size_t n) override;
 
     coordinator* parent() const noexcept override {
@@ -207,7 +208,7 @@ public:
     }
   }
 
-  /// @copydoc impl::request
+  /// @copydoc fwd_impl::request
   /// @pre `valid()`
   void request(size_t n) {
     pimpl_->request(n);

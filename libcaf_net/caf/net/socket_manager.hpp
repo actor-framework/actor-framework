@@ -97,7 +97,7 @@ public:
   virtual void handle_write_event() = 0;
 
   /// Called when the remote side becomes unreachable due to an error or after
-  /// calling @ref dispose.
+  /// calling @ref caf::disposable::dispose.
   /// @param code The error code as reported by the operating system or
   ///             @ref sec::disposed.
   virtual void handle_error(sec code) = 0;

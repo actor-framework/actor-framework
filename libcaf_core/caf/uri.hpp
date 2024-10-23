@@ -210,8 +210,8 @@ public:
   size_t hash_code() const noexcept;
 
   /// Returns a new URI with the `authority` component only.
-  /// @returns A new URI in the form `scheme://authority` if the authority
-  ///          exists, otherwise `none`.`
+  /// @returns A new URI in the form \c scheme://authority if the authority
+  ///          exists, otherwise \c none.
   std::optional<uri> authority_only() const;
 
   // -- comparison -------------------------------------------------------------

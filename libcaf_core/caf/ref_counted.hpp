@@ -13,7 +13,7 @@
 namespace caf {
 
 /// Base class for reference counted objects with an atomic reference count.
-/// Serves the requirements of {@link intrusive_ptr}.
+/// Serves the requirements of @ref intrusive_ptr.
 /// @note *All* instances of `ref_counted` start with a reference count of 1.
 /// @relates intrusive_ptr
 class CAF_CORE_EXPORT ref_counted : public detail::atomic_ref_counted {

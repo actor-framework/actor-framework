@@ -119,7 +119,7 @@ public:
     return static_cast<bool>(impl_);
   }
 
-  /// @cond PRIVATE
+  /// @cond
 
   using impl_ptr = intrusive_ptr<detail::behavior_impl>;
 

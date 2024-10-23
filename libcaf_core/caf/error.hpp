@@ -191,7 +191,7 @@ public:
 
   // -- static convenience functions -------------------------------------------
 
-  /// @cond PRIVATE
+  /// @cond
 
   static error eval() {
     return error{};

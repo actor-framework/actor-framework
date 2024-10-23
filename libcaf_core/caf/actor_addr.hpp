@@ -68,7 +68,7 @@ public:
     return static_cast<bool>(ptr_);
   }
 
-  /// @cond PRIVATE
+  /// @cond
 
   static intptr_t compare(const actor_control_block* lhs,
                           const actor_control_block* rhs);

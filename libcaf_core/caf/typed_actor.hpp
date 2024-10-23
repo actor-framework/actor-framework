@@ -192,7 +192,7 @@ public:
     ptr_.swap(other.ptr_);
   }
 
-  /// @cond PRIVATE
+  /// @cond
 
   abstract_actor* operator->() const noexcept {
     return ptr_->get();

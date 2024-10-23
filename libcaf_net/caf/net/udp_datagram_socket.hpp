@@ -27,6 +27,7 @@ struct CAF_NET_EXPORT udp_datagram_socket : datagram_socket {
 /// @param ep ip_endpoint that contains the port to bind to. Pass port '0' to
 ///           bind to any unused port - The endpoint will be updated with the
 ///           specific port that was bound.
+/// @param reuse_addr Optionally sets the SO_REUSEADDR option on the socket.
 /// @returns The connected socket or an error.
 /// @relates udp_datagram_socket
 expected<udp_datagram_socket>
