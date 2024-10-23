@@ -22,10 +22,7 @@
 
 namespace caf::mixin {
 
-/// A `requester` is an actor that supports
-/// @code
-/// `self->request(...).{then|await|receive}`.
-/// @endcode
+/// A `requester` is an actor that supports `self->request(...)`.
 template <class Base, class Subtype>
 class requester : public Base {
 public:
