@@ -1,5 +1,5 @@
 *** Settings ***
-Documentation       A test suite for the length previx framing communication
+Documentation       A test suite for the length prefix framing communication
 
 Library             Process
 Library             String
@@ -21,10 +21,11 @@ ${BASELINE}         bob: Hello\nbob: Today is a wonderful day!
 
 *** Test Cases ***
 Send Some message
-    Start Chat Client  alice  PIPE
+    Start Chat Client    alice
     Wait For Client    ${1}
-    Start Chat Client  bob    ${INPUT}
+    ${client_process}    Start Chat Client    bob
     Wait For Client    ${2}
+    Send Message    ${client_process}    ${INPUT}
     Wait Until Contains Baseline  alice.out
 
 
@@ -40,16 +41,22 @@ Start Chat Server
     Wait For Server Startup
 
 Start Chat Client
-    [Arguments]    ${name}   ${stdin}
-    Start Process
+    [Arguments]    ${name}
+    ${process}    Start Process
     ...  ${CLIENT_PATH}
     ...  -p    ${SERVER_PORT}
     ...  -n    ${name}
     ...  --caf.logger.file.verbosity  trace
     ...  --caf.logger.file.path  ${name}.log
-    ...  stdin=${stdin}
+    ...  stdin=PIPE
     ...  stdout=${name}.out
     ...  stderr=${name}.err
+    RETURN    ${process}
+    
+Send Message
+    [Arguments]    ${process}   ${message}
+    Evaluate    $process.stdin.write($message.encode())
+    Evaluate    $process.stdin.flush()
 
 Has Baseline
     [Arguments]     ${file_path}
