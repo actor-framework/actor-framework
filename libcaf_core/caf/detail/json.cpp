@@ -192,6 +192,7 @@ struct in_situ_unescaper {
   }
 };
 
+// Note: Iterator `last` must not point to the end iterator.
 template <class Escaper, class Consumer, class Iterator>
 void assign_value(Escaper escaper, Consumer& consumer, Iterator first,
                   Iterator last, bool is_escaped) {
@@ -398,8 +399,9 @@ void read_json_string(ParserState& ps, std::vector<char>& scratch_space,
   state(read_chars) {
     transition(escape, '\\')
     transition(done, '"',
-               assign_value(escaper, consumer, scratch_space.begin(),
-                            scratch_space.end(), escape_reached))
+               assign_value(escaper, consumer, scratch_space.data(),
+                            scratch_space.data() + scratch_space.size(),
+                            escape_reached));
     transition(read_chars, any_char, scratch_space.push_back(ch))
   }
   state(escape) {
