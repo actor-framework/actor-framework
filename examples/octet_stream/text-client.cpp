@@ -103,7 +103,6 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
   sys.println("*** server is running, enter an empty line (or CTRL+D) to stop");
   auto line = std::string{};
   while (std::getline(std::cin, line)) {
-    sys.println("line: {}", line);
     line_producer.push(caf::cow_string{line});
     line.clear();
   }

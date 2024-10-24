@@ -23,12 +23,14 @@ ${SECOND_CLIENT_BASELINE}     reply: {"error":"no_such_key"}\nreply: \nreply: 27
 
 *** Test Cases ***
 The server can handle multiple clients
-    Start Text Client  ${FIRST_CLIENT_INPUT}
-    ${c1}=  Wait For Client    ${1}
+    ${c1}=  Start Text Client
+    Wait For Client    ${1}
+    Send Message  ${c1}  ${FIRST_CLIENT_INPUT}
     Wait Until Contains Baseline  ${FIRST_CLIENT_BASELINE}  text-store.out
     Terminate Process  ${c1}
-    ${c2}=  Start Text Client  ${SECOND_CLIENT_INPUT}
+    ${c2}=  Start Text Client
     Wait For Client    ${2}
+    Send Message  ${c2}  ${SECOND_CLIENT_INPUT}
     Wait Until Contains Baseline  ${SECOND_CLIENT_BASELINE}  text-store.out
     Terminate Process  ${c2}
 
@@ -44,7 +46,6 @@ Start Key Value Store Server
     Wait For Server Startup
 
 Start Text Client
-    [Arguments]   ${stdin}
     ${hdl}=  Start Process
     ...  ${CLIENT_PATH}
     ...  -p    ${SERVER_PORT}
@@ -52,13 +53,12 @@ Start Text Client
     ...  stdin=PIPE
     ...  stdout=text-store.out
     ...  stderr=text-store.err
-    # Note: we can't pass ${stdin} directly as stdin=${stdin} because this would
-    # close stdin immediately after the process has read the input. This would
-    # in turn cause the process to exit immediately without waiting for the
-    # server to respond.
-    Evaluate  $hdl.stdin.write($stdin.encode())
-    Evaluate  $hdl.stdin.flush()
-    [Return]  ${hdl}
+    RETURN    ${hdl}
+
+Send Message
+    [Arguments]    ${process}   ${message}
+    Evaluate    $process.stdin.write($message.encode())
+    Evaluate    $process.stdin.flush()
 
 Has Baseline
     [Arguments]     ${baseline}   ${file_path}
