@@ -74,8 +74,7 @@ public:
   ~abstract_broker() override;
 
   // even brokers need friends
-  template <class T>
-  friend class caf::actor_storage;
+  friend struct detail::make_actor_util;
   friend class scribe;
   friend class doorman;
   friend class datagram_servant;

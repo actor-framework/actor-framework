@@ -49,9 +49,6 @@ class CAF_CORE_EXPORT abstract_actor {
 public:
   // -- friends ----------------------------------------------------------------
 
-  template <class T>
-  friend class actor_storage;
-
   template <class>
   friend class caf::io::basp::remote_message_handler;
 

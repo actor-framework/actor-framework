@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "caf/actor_storage.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/blocking_actor.hpp"
 #include "caf/detail/core_export.hpp"
