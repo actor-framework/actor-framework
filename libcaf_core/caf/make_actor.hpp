@@ -8,11 +8,20 @@
 #include "caf/fwd.hpp"
 #include "caf/infer_handle.hpp"
 #include "caf/logger.hpp"
+#include "caf/meta/handler.hpp"
 
 namespace caf {
 
 template <class T, class R = infer_handle_from_class_t<T>, class... Ts>
 R make_actor(actor_id aid, node_id nid, actor_system* sys, Ts&&... xs) {
+  const meta::handler* iface;
+  if constexpr (std::is_same_v<R, strong_actor_ptr>) {
+    iface = nullptr;
+  } else {
+    using handlers_t
+      = meta::handlers_from_signature_list<typename R::signatures>;
+    iface = handlers_t::handlers;
+  }
 #if CAF_LOG_LEVEL >= CAF_LOG_LEVEL_DEBUG
   if (logger::current_logger()->accepts(CAF_LOG_LEVEL_DEBUG,
                                         CAF_LOG_FLOW_COMPONENT)) {
@@ -21,7 +30,7 @@ R make_actor(actor_id aid, node_id nid, actor_system* sys, Ts&&... xs) {
     actor_storage<T>* ptr;
     {
       CAF_PUSH_AID(aid);
-      ptr = new actor_storage<T>(aid, std::move(nid), sys,
+      ptr = new actor_storage<T>(aid, std::move(nid), sys, iface,
                                  std::forward<Ts>(xs)...);
     }
     CAF_LOG_SPAWN_EVENT(ptr->data, args);
@@ -30,7 +39,7 @@ R make_actor(actor_id aid, node_id nid, actor_system* sys, Ts&&... xs) {
   }
 #endif
   CAF_PUSH_AID(aid);
-  auto ptr = new actor_storage<T>(aid, std::move(nid), sys,
+  auto ptr = new actor_storage<T>(aid, std::move(nid), sys, iface,
                                   std::forward<Ts>(xs)...);
   ptr->data.setup_metrics();
   return {&(ptr->ctrl), false};

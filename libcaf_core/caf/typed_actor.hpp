@@ -34,6 +34,8 @@ class typed_actor<TraitOrSignature>
     detail::comparable<typed_actor<TraitOrSignature>, actor_addr>,
     detail::comparable<typed_actor<TraitOrSignature>, strong_actor_ptr> {
 public:
+  // -- member types -----------------------------------------------------------
+
   /// Stores the template parameter pack.
   using trait = detail::to_statically_typed_trait_t<TraitOrSignature>;
 

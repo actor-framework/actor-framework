@@ -24,16 +24,18 @@ template <class T>
 class actor_storage {
 public:
   template <class... Us>
-  actor_storage(actor_id x, node_id y, actor_system* sys, Us&&... zs)
-    : ctrl(x, y, sys, data_dtor, block_dtor) {
+  actor_storage(actor_id x, node_id y, actor_system* sys,
+                const meta::handler* iface, Us&&... zs)
+    : ctrl(x, y, sys, data_dtor, block_dtor, iface) {
     // construct data member
     new (&data) T(std::forward<Us>(zs)...);
   }
 
+  // 1) make sure control block fits into a single cache line
+  static_assert(sizeof(actor_control_block) == CAF_CACHE_LINE_SIZE,
+                "actor_control_block has an unexpected size");
+
   ~actor_storage() {
-    // 1) make sure control block fits into a single cache line
-    static_assert(sizeof(actor_control_block) < CAF_CACHE_LINE_SIZE,
-                  "actor_control_block exceeds a single cache line");
 // Clang in combination with libc++ on Linux complains about offsetof:
 //     error: 'actor_storage' does not refer to a value
 // Until we have found a reliable solution, we disable this safety check.
@@ -58,11 +60,7 @@ public:
   actor_storage(const actor_storage&) = delete;
   actor_storage& operator=(const actor_storage&) = delete;
 
-  static_assert(sizeof(actor_control_block) < CAF_CACHE_LINE_SIZE,
-                "actor_control_block exceeds 64 bytes");
-
   actor_control_block ctrl;
-  char pad[CAF_CACHE_LINE_SIZE - sizeof(actor_control_block)];
   union {
     T data;
   };

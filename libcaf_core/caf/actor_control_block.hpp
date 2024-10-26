@@ -9,6 +9,7 @@
 #include "caf/detail/critical.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive_ptr.hpp"
+#include "caf/meta/handler.hpp"
 #include "caf/node_id.hpp"
 #include "caf/weak_intrusive_ptr.hpp"
 
@@ -54,27 +55,46 @@ public:
   using block_destructor = void (*)(actor_control_block*);
 
   actor_control_block(actor_id x, node_id& y, actor_system* sys,
-                      data_destructor ddtor, block_destructor bdtor)
+                      data_destructor ddtor, block_destructor bdtor,
+                      const meta::handler* iface)
     : strong_refs(1),
       weak_refs(1),
       aid(x),
       nid(std::move(y)),
       home_system(sys),
       data_dtor(ddtor),
-      block_dtor(bdtor) {
+      block_dtor(bdtor),
+      iface(iface) {
     // nop
   }
 
   actor_control_block(const actor_control_block&) = delete;
   actor_control_block& operator=(const actor_control_block&) = delete;
 
+  /// Stores the number of strong references to this actor.
   std::atomic<size_t> strong_refs;
+
+  /// Stores the number of weak references to this actor.
   std::atomic<size_t> weak_refs;
+
+  /// Stores the actor ID.
   const actor_id aid;
+
+  /// Stores the node ID, i.e., the identifier of the actor's host.
   const node_id nid;
+
+  /// Stores a pointer to the actor system this actor belongs to.
   actor_system* const home_system;
+
+  /// Stores a pointer to the function that destructs the actor object.
   const data_destructor data_dtor;
+
+  /// Stores a pointer to the function that destructs the control block.
   const block_destructor block_dtor;
+
+  /// Stores a pointer to the interface of the actor or `nullptr` if the actor
+  /// is dynamically typed.
+  const meta::handler* iface;
 
   static_assert(sizeof(std::atomic<size_t>) == sizeof(void*),
                 "std::atomic not lockfree on this platform");
