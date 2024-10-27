@@ -4,6 +4,7 @@
 
 #include "caf/detail/stringification_inspector.hpp"
 
+#include "caf/actor_control_block.hpp"
 #include "caf/detail/print.hpp"
 
 #include <algorithm>
@@ -169,6 +170,23 @@ bool stringification_inspector::value(span<const std::byte> x) {
   sep();
   detail::append_hex(result_, x.data(), x.size());
   return true;
+}
+
+bool stringification_inspector::value(const strong_actor_ptr& ptr) {
+  if (!ptr) {
+    sep();
+    result_ += "null";
+  } else {
+    sep();
+    detail::print(result_, ptr->id());
+    result_ += '@';
+    result_ += to_string(ptr->node());
+  }
+  return true;
+}
+
+bool stringification_inspector::value(const weak_actor_ptr& ptr) {
+  return value(ptr.lock());
 }
 
 bool stringification_inspector::list(const std::vector<bool>& xs) {

@@ -115,6 +115,10 @@ public:
 
   bool value(span<const std::byte> x);
 
+  bool value(const strong_actor_ptr& ptr);
+
+  bool value(const weak_actor_ptr& ptr);
+
   using super::list;
 
   bool list(const std::vector<bool>& xs);

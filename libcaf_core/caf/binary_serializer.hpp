@@ -187,6 +187,10 @@ public:
 
   bool value(const std::vector<bool>& x);
 
+  virtual bool value(const strong_actor_ptr& ptr);
+
+  virtual bool value(const weak_actor_ptr& ptr);
+
 private:
   /// Stores the serialized output.
   byte_buffer& buf_;

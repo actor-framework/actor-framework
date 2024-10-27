@@ -44,9 +44,7 @@ public:
     return context_;
   }
 
-  bool has_human_readable_format() const noexcept {
-    return has_human_readable_format_;
-  }
+  virtual bool has_human_readable_format() const noexcept = 0;
 
   // -- interface functions ----------------------------------------------------
 
@@ -162,6 +160,10 @@ public:
   /// @returns A non-zero error code on failure, `sec::success` otherwise.
   virtual bool value(span<const std::byte> x) = 0;
 
+  virtual bool value(const strong_actor_ptr& ptr);
+
+  virtual bool value(const weak_actor_ptr& ptr);
+
   using super::list;
 
   /// Adds each boolean in `xs` to the output. Derived classes can override this
@@ -170,11 +172,8 @@ public:
   virtual bool list(const std::vector<bool>& xs);
 
 protected:
-  /// Provides access to the ::proxy_registry and to the ::actor_system.
+  /// Provides access to the ::actor_system.
   actor_system* context_ = nullptr;
-
-  /// Configures whether client code should assume human-readable output.
-  bool has_human_readable_format_ = false;
 };
 
 } // namespace caf

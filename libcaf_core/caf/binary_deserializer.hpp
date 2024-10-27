@@ -206,6 +206,10 @@ public:
 
   bool value(std::vector<bool>& x);
 
+  virtual bool value(strong_actor_ptr& ptr);
+
+  virtual bool value(weak_actor_ptr& ptr);
+
 private:
   explicit binary_deserializer(actor_system& sys) noexcept;
 
