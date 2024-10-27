@@ -232,7 +232,7 @@ public:
 
   template <class Inspector>
   friend bool inspect(Inspector& f, typed_actor& x) {
-    return inspect(f, x.ptr_);
+    return f.value(x.ptr_);
   }
 
   /// Releases the reference held by handle `x`. Using the

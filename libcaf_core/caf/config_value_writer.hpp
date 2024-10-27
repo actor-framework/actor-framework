@@ -37,17 +37,17 @@ public:
 
   config_value_writer(config_value* dst, actor_system& sys) : super(sys) {
     st_.push(dst);
-    has_human_readable_format_ = true;
   }
 
   explicit config_value_writer(config_value* dst) {
     st_.push(dst);
-    has_human_readable_format_ = true;
   }
 
   ~config_value_writer() override;
 
   // -- interface functions ----------------------------------------------------
+
+  bool has_human_readable_format() const noexcept override;
 
   bool begin_object(type_id_t type, std::string_view name) override;
 

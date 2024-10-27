@@ -278,4 +278,31 @@ bool binary_serializer::value(const std::vector<bool>& x) {
   return end_sequence();
 }
 
+bool binary_serializer::value(const strong_actor_ptr& ptr) {
+  actor_id aid = 0;
+  node_id nid;
+  if (ptr != nullptr) {
+    aid = ptr->id();
+    nid = ptr->node();
+  }
+  if (!value(aid)) {
+    return false;
+  }
+  if (!inspect(*this, nid)) {
+    return false;
+  }
+  if (ptr != nullptr) {
+    if (auto err = save_actor(ptr, aid, nid)) {
+      set_error(err);
+      return false;
+    }
+  }
+  return true;
+}
+
+bool binary_serializer::value(const weak_actor_ptr& ptr) {
+  auto tmp = ptr.lock();
+  return value(tmp);
+}
+
 } // namespace caf

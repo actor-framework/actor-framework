@@ -83,6 +83,10 @@ json_value json_builder::seal() {
 
 // -- overrides ----------------------------------------------------------------
 
+bool json_builder::has_human_readable_format() const noexcept {
+  return true;
+}
+
 bool json_builder::begin_object(type_id_t id, std::string_view name) {
   auto add_type_annotation = [this, id, name] {
     CAF_ASSERT(top() == type::key);
@@ -400,7 +404,6 @@ bool json_builder::value(span<const std::byte> x) {
 // -- state management ---------------------------------------------------------
 
 void json_builder::init() {
-  has_human_readable_format_ = true;
   storage_ = make_counted<detail::json::storage>();
   val_ = detail::json::make_value(storage_);
   stack_.reserve(32);

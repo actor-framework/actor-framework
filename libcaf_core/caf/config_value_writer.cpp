@@ -43,6 +43,10 @@ config_value_writer::~config_value_writer() {
 
 // -- interface functions ------------------------------------------------------
 
+bool config_value_writer::has_human_readable_format() const noexcept {
+  return true;
+}
+
 bool config_value_writer::begin_object(type_id_t, std::string_view) {
   CHECK_NOT_EMPTY();
   auto f = detail::make_overload(

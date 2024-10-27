@@ -171,7 +171,7 @@ CAF_CORE_EXPORT error_code<sec> load_actor(strong_actor_ptr& storage,
                                            actor_system*, actor_id aid,
                                            const node_id& nid);
 
-CAF_CORE_EXPORT error_code<sec> save_actor(strong_actor_ptr& storage,
+CAF_CORE_EXPORT error_code<sec> save_actor(const strong_actor_ptr& ptr,
                                            actor_id aid, const node_id& nid);
 
 template <class Inspector>
@@ -191,41 +191,6 @@ CAF_CORE_EXPORT void append_to_string(std::string& x,
 CAF_CORE_EXPORT std::string to_string(const weak_actor_ptr& x);
 
 CAF_CORE_EXPORT void append_to_string(std::string& x, const weak_actor_ptr& y);
-
-template <class Inspector>
-bool inspect(Inspector& f, strong_actor_ptr& x) {
-  actor_id aid = 0;
-  node_id nid;
-  if constexpr (!Inspector::is_loading) {
-    if (x) {
-      aid = x->aid;
-      nid = x->nid;
-    }
-  }
-  auto load_cb = [&] { return load_actor(x, context_of(&f), aid, nid); };
-  auto save_cb = [&] { return save_actor(x, aid, nid); };
-  return f.object(x)
-    .pretty_name("actor")
-    .on_load(load_cb)
-    .on_save(save_cb)
-    .fields(f.field("id", aid), f.field("node", nid));
-}
-
-template <class Inspector>
-bool inspect(Inspector& f, weak_actor_ptr& x) {
-  // Inspect as strong pointer, then write back to weak pointer on save.
-  if constexpr (Inspector::is_loading) {
-    strong_actor_ptr tmp;
-    if (inspect(f, tmp)) {
-      x.reset(tmp.get());
-      return true;
-    }
-    return false;
-  } else {
-    auto tmp = x.lock();
-    return inspect(f, tmp);
-  }
-}
 
 } // namespace caf
 

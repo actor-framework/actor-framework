@@ -27,10 +27,6 @@ public:
     init();
   }
 
-  explicit json_builder(actor_system& sys) : super(sys) {
-    init();
-  }
-
   json_builder(const json_builder&) = delete;
 
   json_builder& operator=(const json_builder&) = delete;
@@ -84,6 +80,8 @@ public:
   json_value seal();
 
   // -- overrides --------------------------------------------------------------
+
+  bool has_human_readable_format() const noexcept override;
 
   bool begin_object(type_id_t type, std::string_view name) override;
 

@@ -30,6 +30,10 @@ public:
 
   // -- interface functions ----------------------------------------------------
 
+  bool has_human_readable_format() const noexcept override {
+    return false;
+  }
+
   bool begin_object(type_id_t, std::string_view) override {
     return state_;
   };

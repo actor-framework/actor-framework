@@ -63,6 +63,32 @@ bool deserializer::end_associative_array() {
   return end_sequence();
 }
 
+bool deserializer::value(strong_actor_ptr& ptr) {
+  auto aid = actor_id{0};
+  auto nid = node_id{};
+  auto ok = object(ptr).pretty_name("actor").fields(field("id", aid),
+                                                    field("node", nid));
+  if (!ok) {
+    return false;
+  }
+  if (aid == 0 || !nid) {
+    ptr = nullptr;
+  } else if (auto err = load_actor(ptr, context_, aid, nid)) {
+    set_error(err);
+    return false;
+  }
+  return true;
+}
+
+bool deserializer::value(weak_actor_ptr& ptr) {
+  strong_actor_ptr tmp;
+  if (!value(tmp)) {
+    return false;
+  }
+  ptr.reset(tmp.get());
+  return true;
+}
+
 bool deserializer::list(std::vector<bool>& x) {
   x.clear();
   size_t size = 0;

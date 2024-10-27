@@ -136,6 +136,8 @@ public:
 
   // -- overrides --------------------------------------------------------------
 
+  bool has_human_readable_format() const noexcept override;
+
   bool begin_object(type_id_t type, std::string_view name) override;
 
   bool end_object() override;
