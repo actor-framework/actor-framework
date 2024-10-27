@@ -92,7 +92,7 @@ error_code<sec> load_actor(strong_actor_ptr& storage, actor_system* sys,
   return sec::no_proxy_registry;
 }
 
-error_code<sec> save_actor(strong_actor_ptr& storage, actor_id aid,
+error_code<sec> save_actor(const strong_actor_ptr& storage, actor_id aid,
                            const node_id& nid) {
   // Register locally running actors to be able to deserialize them later.
   if (storage) {

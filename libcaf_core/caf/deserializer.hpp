@@ -191,6 +191,12 @@ public:
   /// @returns A non-zero error code on failure, `sec::success` otherwise.
   virtual bool value(span<std::byte> x) = 0;
 
+  /// @copydoc value
+  virtual bool value(strong_actor_ptr& ptr);
+
+  /// @copydoc value
+  virtual bool value(weak_actor_ptr& ptr);
+
   using super::list;
 
   /// Adds each boolean in `xs` to the output. Derived classes can override this
