@@ -352,4 +352,31 @@ bool binary_deserializer::value(std::vector<bool>& x) {
   return end_sequence();
 }
 
+bool binary_deserializer::value(strong_actor_ptr& ptr) {
+  auto aid = actor_id{0};
+  auto nid = node_id{};
+  if (!value(aid)) {
+    return false;
+  }
+  if (!inspect(*this, nid)) {
+    return false;
+  }
+  if (aid == 0) {
+    ptr = nullptr;
+  } else if (auto err = load_actor(ptr, context_, aid, nid)) {
+    set_error(err);
+    return false;
+  }
+  return true;
+}
+
+bool binary_deserializer::value(weak_actor_ptr& ptr) {
+  strong_actor_ptr tmp;
+  if (!value(tmp)) {
+    return false;
+  }
+  ptr.reset(tmp.get());
+  return true;
+}
+
 } // namespace caf

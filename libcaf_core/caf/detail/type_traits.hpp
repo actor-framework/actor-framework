@@ -748,6 +748,16 @@ struct is_builtin_inspector_type<std::u32string, IsLoading> {
   static constexpr bool value = true;
 };
 
+template <bool IsLoading>
+struct is_builtin_inspector_type<strong_actor_ptr, IsLoading> {
+  static constexpr bool value = true;
+};
+
+template <bool IsLoading>
+struct is_builtin_inspector_type<weak_actor_ptr, IsLoading> {
+  static constexpr bool value = true;
+};
+
 template <>
 struct is_builtin_inspector_type<std::string_view, false> {
   static constexpr bool value = true;

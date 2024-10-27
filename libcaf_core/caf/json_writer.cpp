@@ -68,6 +68,10 @@ void json_writer::reset() {
 
 // -- overrides ----------------------------------------------------------------
 
+bool json_writer::has_human_readable_format() const noexcept {
+  return true;
+}
+
 bool json_writer::begin_object(type_id_t id, std::string_view name) {
   auto add_type_annotation = [this, id, name] {
     CAF_ASSERT(top() == type::key);
@@ -434,7 +438,6 @@ bool json_writer::value(span<const std::byte> x) {
 // -- state management ---------------------------------------------------------
 
 void json_writer::init() {
-  has_human_readable_format_ = true;
   // Reserve some reasonable storage for the character buffer. JSON grows
   // quickly, so we can start at 1kb to avoid a couple of small allocations in
   // the beginning.
