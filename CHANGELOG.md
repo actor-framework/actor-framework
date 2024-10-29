@@ -26,6 +26,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Registering a custom option of type `size_t` will no longer print
   `<dictionary>` as type hint in the `--help` output. Instead, CAF will print
   either `uint32_t` or `uint64_t`, depending on the platform.
+- Fix handling of unicode escaping (e.g. `\u00E4`) in the JSON parser (#1937).
 
 ## [1.0.1] - 2024-07-23
 
