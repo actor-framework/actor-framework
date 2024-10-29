@@ -16,6 +16,8 @@ using namespace caf;
 
 using namespace std::literals;
 
+namespace tstlog = caf::log::test;
+
 namespace {
 
 struct circle;
@@ -229,7 +231,7 @@ struct fixture {
           res = this_test.check_eq(tmp, obj);
       }
       if (!res)
-        log::test::debug("rejected input: {}", input);
+        tstlog::debug("rejected input: {}", input);
       return res;
     };
     test_cases.emplace_back(std::move(f));
@@ -248,7 +250,7 @@ struct fixture {
         res = this_test.check_eq(tmp, obj);
       }
       if (!res)
-        log::test::debug("rejected input: {}", input);
+        tstlog::debug("rejected input: {}", input);
       return res;
     };
     test_cases.emplace_back(std::move(f));
@@ -266,7 +268,7 @@ struct fixture {
       if (res) {
         res = this_test.check_eq(tmp, obj);
       } else {
-        log::test::error("failed to parse JSON: {}", input);
+        tstlog::error("failed to parse JSON: {}", input);
       }
       if (!res) {
         return false;
@@ -279,7 +281,7 @@ struct fixture {
       if (res) {
         res = this_test.check_eq(tmp2, obj);
       } else {
-        log::test::error("failed to parse JSON: {}", input);
+        tstlog::error("failed to parse JSON: {}", input);
       }
       return res;
     };
@@ -295,7 +297,7 @@ struct fixture {
                  && reader.apply(tmp); // deserialize object
       test::runnable::current().check(!res);
       if (res) {
-        log::test::error("got unexpected output: {}", tmp);
+        tstlog::error("got unexpected output: {}", tmp);
         return false;
       }
       if constexpr (std::is_same_v<T, std::string>) {
@@ -305,7 +307,7 @@ struct fixture {
               && reader.apply(tmp); // deserialize object
         test::runnable::current().check(!res);
         if (res) {
-          log::test::error("got unexpected output: {}", tmp);
+          tstlog::error("got unexpected output: {}", tmp);
           return false;
         }
       }
@@ -462,10 +464,10 @@ TEST("json baselines") {
   size_t baseline_index = 0;
   detail::monotonic_buffer_resource resource;
   for (auto& f : test_cases) {
-    log::test::debug("test case at index {}", baseline_index++);
+    tstlog::debug("test case at index {}", baseline_index++);
     if (!f())
       if (auto reason = reader.get_error())
-        log::test::debug("JSON reader stopped due to: {}", reason);
+        tstlog::debug("JSON reader stopped due to: {}", reason);
   }
 }
 
@@ -501,21 +503,21 @@ SCENARIO("mappers enable custom type names in JSON input") {
         auto input1 = R"_({"@value-type": "String", "value": "hello world"})_"s;
         if (check(reader.load(input1))) {
           if (!check(reader.apply(value)))
-            log::test::debug("reader reported error: {}", reader.get_error());
+            tstlog::debug("reader reported error: {}", reader.get_error());
           if (check(std::holds_alternative<std::string>(value)))
             check_eq(std::get<std::string>(value), "hello world"s);
         } else {
-          log::test::debug("reader reported error: {}", reader.get_error());
+          tstlog::debug("reader reported error: {}", reader.get_error());
         }
         reader.reset();
         auto input2 = R"_({"@value-type": "Int", "value": 42})_"sv;
         if (check(reader.load(input2))) {
           if (!check(reader.apply(value)))
-            log::test::debug("reader reported error: {}", reader.get_error());
+            tstlog::debug("reader reported error: {}", reader.get_error());
           if (check(std::holds_alternative<int32_t>(value)))
             check_eq(std::get<int32_t>(value), 42);
         } else {
-          log::test::debug("reader reported error: {}", reader.get_error());
+          tstlog::debug("reader reported error: {}", reader.get_error());
         }
       }
     }
