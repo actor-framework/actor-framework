@@ -146,14 +146,9 @@ bool json_reader::load(std::string_view json_text) {
   return true;
 }
 
-bool json_reader::load_file(const char* path) {
-  using iterator_t = std::istreambuf_iterator<char>;
+bool json_reader::load_from(std::istream& input) {
   reset();
-  std::ifstream input{path};
-  if (!input.is_open()) {
-    err_ = sec::cannot_open_file;
-    return false;
-  }
+  using iterator_t = std::istreambuf_iterator<char>;
   detail::json::file_parser_state ps{iterator_t{input}, iterator_t{}};
   root_ = detail::json::parse(ps, &buf_);
   if (ps.code != pec::success) {
@@ -167,6 +162,15 @@ bool json_reader::load_file(const char* path) {
   st_->reserve(16);
   st_->emplace_back(root_);
   return true;
+}
+
+bool json_reader::load_file(const char* path) {
+  std::ifstream input{path};
+  if (!input.is_open()) {
+    err_ = sec::cannot_open_file;
+    return false;
+  }
+  return load_from(input);
 }
 
 void json_reader::revert() {
@@ -646,7 +650,7 @@ bool json_reader::value(std::string& x) {
   FN_DECL;
   return consume<true>(fn, [this, &x](const detail::json::value& val) {
     if (val.data.index() == detail::json::value::string_index) {
-      detail::print_unescaped(x, std::get<std::string_view>(val.data));
+      x = std::get<std::string_view>(val.data);
       return true;
     } else {
       err_ = format_to_error(sec::runtime_error,

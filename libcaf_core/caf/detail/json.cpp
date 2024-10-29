@@ -23,11 +23,59 @@ CAF_PUSH_UNUSED_LABEL_WARNING
 
 #include "caf/detail/parser/fsm.hpp"
 
+namespace caf::detail::parser {
+
 namespace {
 
 constexpr size_t max_nesting_level = 128;
 
+// Combine UTF-16 high and low surrogates into a code point.
+uint32_t surrogates_to_utf32(uint16_t high_surrogate, uint16_t low_surrogate) {
+  return (static_cast<uint32_t>(high_surrogate - 0xD800) << 10
+          | static_cast<uint32_t>(low_surrogate - 0xDC00))
+         + 0x10000;
+}
+
+// Checks if the code point is a leading surrogate.
+uint32_t is_leading_surrogate(uint16_t code_point) {
+  return code_point >= 0xD800 && code_point < 0xDC00;
+}
+
+// Write `code_point` to `out` following UTF-8 encoding.
+template <class Out>
+ptrdiff_t utf32_to_utf8(uint32_t code_point, Out out) {
+  if (code_point <= 0x7f) {
+    *out++ = static_cast<char>(code_point);
+    return 1;
+  }
+  if (code_point <= 0x7ff) {
+    *out++ = 0xc0 | ((code_point & 0x07c0) >> 6);
+    *out++ = 0x80 | (code_point & 0x003f);
+    return 2;
+  }
+  if (code_point <= 0xffff) {
+    *out++ = 0xe0 | ((code_point & 0xf000) >> 12);
+    *out++ = 0x80 | ((code_point & 0x0fc0) >> 6);
+    *out++ = 0x80 | (code_point & 0x003f);
+    return 3;
+  }
+  if (code_point <= 0x10ffff) {
+    *out++ = 0xf0 | ((code_point & 0x1c0000) >> 18);
+    *out++ = 0x80 | ((code_point & 0x03f000) >> 12);
+    *out++ = 0x80 | ((code_point & 0x000fc0) >> 6);
+    *out++ = 0x80 | (code_point & 0x00003f);
+    return 4;
+  }
+  return 0;
+}
+
 size_t do_unescape(const char* i, const char* e, char* out) {
+  // Reads 4 ASCII hex digits, without validity and overflow checks.
+  auto read_4len_hex = [](auto& x, auto& c) {
+    ascii_to_int<16, std::decay_t<decltype(x)>> f;
+    for (auto i = 0; i < 4; i++)
+      x = x * 16 + f(*c++);
+  };
   size_t new_size = 0;
   while (i != e) {
     switch (*i) {
@@ -67,8 +115,25 @@ size_t do_unescape(const char* i, const char* e, char* out) {
             case 'v':
               *out++ = '\v';
               break;
+            case 'u': {
+              // The parser will enforce 4 hex chars after an '\u' escape.
+              auto code_point = uint32_t{0};
+              read_4len_hex(code_point, ++i);
+              if (is_leading_surrogate(static_cast<uint16_t>(code_point))) {
+                // A trailing surrogate must follow.
+                i += 2;
+                auto low_surrogate = uint16_t{0};
+                read_4len_hex(low_surrogate, i);
+                code_point = surrogates_to_utf32(code_point, low_surrogate);
+              }
+              auto written = utf32_to_utf8(code_point, out);
+              out += written;
+              // We increment new_size and i automatically below.
+              new_size += written - 1;
+              --i;
+              break;
+            }
             default:
-              // TODO: support control characters in \uXXXX notation.
               *out++ = '?';
           }
           ++i;
@@ -122,6 +187,7 @@ struct in_situ_unescaper {
   }
 };
 
+// Note: Iterator `last` must not point to the end iterator.
 template <class Escaper, class Consumer, class Iterator>
 void assign_value(Escaper escaper, Consumer& consumer, Iterator first,
                   Iterator last, bool is_escaped) {
@@ -136,9 +202,41 @@ void assign_value(Escaper escaper, Consumer& consumer, Iterator first,
   consumer.value(str);
 }
 
-} // namespace
+// Check 4 hex digits follow the '\u' escape sequence.
+template <class ParserState, class Consumer>
+void read_code_point(ParserState& ps, Consumer consumer) {
+  uint16_t result = 0;
+  ascii_to_int<16, uint16_t> f;
+  auto read_hex_digit = [&result, &f](char ch) {
+    result = 16 * result + f(ch);
+  };
+  // clang-format off
+  start();
+  state(init) {
+    transition(read_unicode_escape_0, "u")
+  }
+  state(read_unicode_escape_0) {
+    transition(read_unicode_escape_1, hexadecimal_chars, read_hex_digit(ch))
+  }
+  state(read_unicode_escape_1) {
+    transition(read_unicode_escape_2, hexadecimal_chars, read_hex_digit(ch))
+  }
+  state(read_unicode_escape_2) {
+    transition(read_unicode_escape_3, hexadecimal_chars, read_hex_digit(ch))
+  }
+  state(read_unicode_escape_3) {
+    transition(read_unicode_escape_4, hexadecimal_chars, read_hex_digit(ch))
+  }
+  term_state(read_unicode_escape_4) {
+    // nop
+  }
+  fin();
+  // clang-format on
+  if (ps.code <= pec::trailing_character)
+    consumer(result);
+}
 
-namespace caf::detail::parser {
+} // namespace
 
 struct obj_consumer;
 
@@ -257,6 +355,9 @@ template <class ParserState, class Unescaper, class Consumer>
 void read_json_string(ParserState& ps, unit_t, Unescaper escaper,
                       Consumer consumer) {
   using iterator_t = typename ParserState::iterator_type;
+  auto code_point = uint16_t{0};
+  auto assign_code_point = [&code_point](uint16_t x) { code_point = x; };
+  auto empty_consumer = [](uint16_t) {};
   iterator_t first;
   // clang-format off
   start();
@@ -275,8 +376,15 @@ void read_json_string(ParserState& ps, unit_t, Unescaper escaper,
     transition(read_chars_after_escape, any_char)
   }
   state(escape) {
-    // TODO: Add support for JSON's \uXXXX escaping.
     transition(read_chars_after_escape, "\"\\/bfnrtv")
+    fsm_epsilon(read_code_point(ps, assign_code_point), after_code_point, "u")
+  }
+  unstable_state(after_code_point) {
+      epsilon_if(is_leading_surrogate(code_point), read_second_code_point)
+      epsilon(read_chars_after_escape)
+  }
+  state(read_second_code_point) {
+      fsm_transition(read_code_point(ps, empty_consumer), read_chars_after_escape, "\\")
   }
   term_state(done) {
     transition(done, whitespace_chars)
@@ -289,6 +397,14 @@ template <class ParserState, class Unescaper, class Consumer>
 void read_json_string(ParserState& ps, std::vector<char>& scratch_space,
                       Unescaper escaper, Consumer consumer) {
   scratch_space.clear();
+  auto leading_cp = uint16_t{0};
+  auto trailing_cp = uint16_t{0};
+  auto read_cp = [](uint16_t& storage) {
+    return [&storage](uint16_t value) { storage = value; };
+  };
+  auto add_cp = [&](auto code_point) {
+    utf32_to_utf8(code_point, std::back_inserter(scratch_space));
+  };
   // clang-format off
   start();
   state(init) {
@@ -298,12 +414,12 @@ void read_json_string(ParserState& ps, std::vector<char>& scratch_space,
   state(read_chars) {
     transition(escape, '\\')
     transition(done, '"',
-               assign_value(escaper, consumer, scratch_space.begin(),
-                            scratch_space.end(), false))
+               assign_value(escaper, consumer, scratch_space.data(),
+                            scratch_space.data() + scratch_space.size(),
+                            false));
     transition(read_chars, any_char, scratch_space.push_back(ch))
   }
   state(escape) {
-    // TODO: Add support for JSON's \uXXXX escaping.
     transition(read_chars, '"', scratch_space.push_back('"'))
     transition(read_chars, '\\', scratch_space.push_back('\\'))
     transition(read_chars, 'b', scratch_space.push_back('\b'))
@@ -312,6 +428,17 @@ void read_json_string(ParserState& ps, std::vector<char>& scratch_space,
     transition(read_chars, 'r', scratch_space.push_back('\r'))
     transition(read_chars, 't', scratch_space.push_back('\t'))
     transition(read_chars, 'v', scratch_space.push_back('\v'))
+    fsm_epsilon(read_code_point(ps, read_cp(leading_cp)), after_code_point, 'u')
+  }
+  unstable_state(after_code_point) {
+    epsilon_if(is_leading_surrogate(leading_cp), read_second_code_point)
+    epsilon(read_chars, any_char, add_cp(leading_cp))
+  }
+  state(read_second_code_point) {
+    fsm_transition(read_code_point(ps, read_cp(trailing_cp)), after_second_code_point, "\\")
+  }
+  unstable_state(after_second_code_point) {
+    epsilon(read_chars, any_char, add_cp(surrogates_to_utf32(leading_cp, trailing_cp)))
   }
   term_state(done) {
     transition(done, whitespace_chars)
@@ -515,7 +642,7 @@ object* make_object(monotonic_buffer_resource* storage) {
 
 value* parse(string_parser_state& ps, monotonic_buffer_resource* storage) {
   unit_t scratch_space;
-  regular_unescaper unescaper;
+  parser::regular_unescaper unescaper;
   monotonic_buffer_resource::allocator<value> alloc{storage};
   auto result = new (alloc.allocate(1)) value();
   parser::read_value(ps, scratch_space, unescaper, 0, {storage, result});
@@ -525,7 +652,7 @@ value* parse(string_parser_state& ps, monotonic_buffer_resource* storage) {
 value* parse(file_parser_state& ps, monotonic_buffer_resource* storage) {
   std::vector<char> scratch_space;
   scratch_space.reserve(64);
-  regular_unescaper unescaper;
+  parser::regular_unescaper unescaper;
   monotonic_buffer_resource::allocator<value> alloc{storage};
   auto result = new (alloc.allocate(1)) value();
   parser::read_value(ps, scratch_space, unescaper, 0, {storage, result});
@@ -535,7 +662,7 @@ value* parse(file_parser_state& ps, monotonic_buffer_resource* storage) {
 value* parse_shallow(string_parser_state& ps,
                      monotonic_buffer_resource* storage) {
   unit_t scratch_space;
-  shallow_unescaper unescaper;
+  parser::shallow_unescaper unescaper;
   monotonic_buffer_resource::allocator<value> alloc{storage};
   auto result = new (alloc.allocate(1)) value();
   parser::read_value(ps, scratch_space, unescaper, 0, {storage, result});
@@ -545,7 +672,7 @@ value* parse_shallow(string_parser_state& ps,
 value* parse_in_situ(mutable_string_parser_state& ps,
                      monotonic_buffer_resource* storage) {
   unit_t scratch_space;
-  in_situ_unescaper unescaper;
+  parser::in_situ_unescaper unescaper;
   monotonic_buffer_resource::allocator<value> alloc{storage};
   auto result = new (alloc.allocate(1)) value();
   parser::read_value(ps, scratch_space, unescaper, 0, {storage, result});
