@@ -468,7 +468,6 @@ using file_parser_state = parser_state<std::istreambuf_iterator<char>>;
 value* parse(string_parser_state& ps, monotonic_buffer_resource* storage);
 
 // Parses the input string and makes a deep copy of all strings.
-CAF_CORE_EXPORT
 value* parse(file_parser_state& ps, monotonic_buffer_resource* storage);
 
 // Parses the input and makes a shallow copy of strings whenever possible.

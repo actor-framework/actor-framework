@@ -263,25 +263,24 @@ struct fixture {
       // Test overload for reading from memory.
       auto res = this_test.check(reader.load(input))    // parse JSON
                  && this_test.check(reader.apply(tmp)); // deserialize object
-      if (res)
+      if (res) {
         res = this_test.check_eq(tmp, obj);
-      else
-        log::test::debug("rejected input: {}", input);
-      // Test overload for reading from files.
-      using iterator_t = std::istreambuf_iterator<char>;
-      std::string input_value{input};
-      std::istringstream input_stream{input_value};
-      detail::json::file_parser_state ps{iterator_t{input_stream},
-                                         iterator_t{}};
-      detail::monotonic_buffer_resource buf_;
-      auto root_ = detail::json::parse(ps, &buf_);
-      res = this_test.check_eq(ps.code, pec::success);
-      if (!res)
+      } else {
+        log::test::error("failed to parse JSON: {}", input);
+      }
+      if (!res) {
         return false;
-      if (this_test.check(root_->is_string()))
-        res = this_test.check_eq(std::get<std::string_view>(root_->data), obj);
-      else
-        log::test::debug("Parsed value is not a string: {}", input);
+      }
+      // Test overload for reading from an STL stream.
+      auto tmp2 = std::string{};
+      std::istringstream istream{std::string{input}};
+      res = this_test.check(reader.load_from(istream)) // parse JSON
+            && this_test.check(reader.apply(tmp2));    // deserialize object
+      if (res) {
+        res = this_test.check_eq(tmp2, obj);
+      } else {
+        log::test::error("failed to parse JSON: {}", input);
+      }
       return res;
     };
     test_cases.emplace_back(std::move(f));
@@ -295,20 +294,22 @@ struct fixture {
       auto res = reader.load(input)    // parse JSON
                  && reader.apply(tmp); // deserialize object
       test::runnable::current().check(!res);
-      if (res)
-        log::test::debug("got unexpected output: {}", tmp);
-      if constexpr (std::is_same_v<T, std::string>) {
-        // Test read_string overload for files.
-        using iterator_t = std::istreambuf_iterator<char>;
-        std::string input_value{input};
-        std::istringstream input_stream{input_value};
-        detail::json::file_parser_state ps{iterator_t{input_stream},
-                                           iterator_t{}};
-        detail::monotonic_buffer_resource buf_;
-        [[maybe_unused]] auto root_ = detail::json::parse(ps, &buf_);
-        test::runnable::current().check_ne(ps.code, pec::success);
+      if (res) {
+        log::test::error("got unexpected output: {}", tmp);
+        return false;
       }
-      return !res;
+      if constexpr (std::is_same_v<T, std::string>) {
+        // Also test parsing from STL stream.
+        std::istringstream istream{std::string{input}};
+        res = reader.load(input)    // parse JSON
+              && reader.apply(tmp); // deserialize object
+        test::runnable::current().check(!res);
+        if (res) {
+          log::test::error("got unexpected output: {}", tmp);
+          return false;
+        }
+      }
+      return true;
     };
     test_cases.emplace_back(std::move(f));
   }
