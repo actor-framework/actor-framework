@@ -36,7 +36,7 @@ uint32_t surrogates_to_utf32(uint16_t high_surrogate, uint16_t low_surrogate) {
          + 0x10000;
 }
 
-// Chechs if the code point is a leading surrogate.
+// Checks if the code point is a leading surrogate.
 uint32_t is_leading_surrogate(uint16_t code_point) {
   return code_point >= 0xD800 && code_point < 0xDC00;
 }
