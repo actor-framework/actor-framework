@@ -5,6 +5,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ## Unreleased
 
+## [1.0.2] - 2024-10-30
+
 ### Changed
 
 - Tests, scenarios and outlines are now automatically put into the anonymous
@@ -1375,6 +1377,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Setting the log level to `quiet` now properly suppresses any log output.
 - Configuring colored terminal output should now print colored output.
 
+[1.0.2]: https://github.com/actor-framework/actor-framework/releases/1.0.2
 [1.0.1]: https://github.com/actor-framework/actor-framework/releases/1.0.1
 [1.0.0]: https://github.com/actor-framework/actor-framework/releases/1.0.0
 [0.19.5]: https://github.com/actor-framework/actor-framework/releases/0.19.5

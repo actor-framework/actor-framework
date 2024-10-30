@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.13..3.27 FATAL_ERROR)
-project(CAF VERSION 1.0.1 LANGUAGES CXX)
+project(CAF VERSION 1.0.2 LANGUAGES CXX)
 
 # -- version boilerplate -------------------------------------------------------
 
