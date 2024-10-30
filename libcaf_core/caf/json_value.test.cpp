@@ -367,3 +367,75 @@ TEST("non-empty object with nested values") {
   check_eq(obj.value("min-uint64").to_unsigned(), 0u);
   check_eq(obj.value("max-uint64").to_unsigned(), UINT64_MAX);
 }
+
+TEST("non-empty object with null or nan values") {
+  std::string_view json_with_nan_or_null_values = R"_({
+    "null-value": null,
+    "nan-value": nan
+  })_";
+  auto val = unbox(json_value::parse(json_with_nan_or_null_values));
+  check(val.is_object());
+  auto obj = val.to_object();
+  check(obj.value("null-value").is_null());
+  check(std::isnan(obj.value("nan-value").to_double()));
+}
+
+TEST("non-empty object with escaped strings") {
+  std::string_view json_with_escaped_string = R"_({
+    "escaped-quote": "\"",
+    "escaped-backslash": "\\",
+    "escaped-backspace": "\b",
+    "escaped-formfeed": "\f",
+    "escaped-newline": "\n",
+    "escaped-carriage-return": "\r",
+    "escaped-tab": "\t",
+    "escaped-vertical-tab": "\v"
+  })_";
+  auto val = unbox(json_value::parse(json_with_escaped_string));
+  check(val.is_object());
+  auto obj = val.to_object();
+  check_eq(obj.value("escaped-quote").to_string(), "\"");
+  check_eq(obj.value("escaped-backslash").to_string(), "\\");
+  check_eq(obj.value("escaped-backspace").to_string(), "\b");
+  check_eq(obj.value("escaped-formfeed").to_string(), "\f");
+  check_eq(obj.value("escaped-newline").to_string(), "\n");
+  check_eq(obj.value("escaped-carriage-return").to_string(), "\r");
+  check_eq(obj.value("escaped-tab").to_string(), "\t");
+  check_eq(obj.value("escaped-vertical-tab").to_string(), "\v");
+}
+
+TEST("in-situ parsing for a non-empty object") {
+  std::string json_with_array_and_object = R"_({
+    "null-value": null,
+    "nan-value": nan,
+    "object": {"foo": "bar"},
+    "nested": {
+	  "null-value": null,
+	  "nan-value": nan
+    },
+    "integer-value": 42,
+    "double-value": 42.0,
+    "string-value": "Hello, world!",
+    "bool-value": true,
+    "array-value": [1, 2, 3]
+  })_";
+  auto val = unbox(json_value::parse_in_situ(json_with_array_and_object));
+  check(val.is_object());
+  auto obj = val.to_object();
+  check(obj.value("null-value").is_null());
+  check(std::isnan(obj.value("nan-value").to_double()));
+  check_eq(obj.value("integer-value").to_integer(), 42);
+  check_eq(obj.value("double-value").to_double(), test::approx{42.0});
+  check_eq(obj.value("string-value").to_string(), "Hello, world!");
+  check_eq(obj.value("bool-value").to_bool(), true);
+  check(obj.value("array-value").is_array());
+  std::string arr;
+  obj.value("array-value").print_to(arr, 0);
+  check_eq(arr, "[1, 2, 3]");
+  check(obj.value("object").is_object());
+  check_eq(obj.value("object").to_object().value("foo").to_string(), "bar");
+  check(obj.value("nested").is_object());
+  check(obj.value("nested").to_object().value("null-value").is_null());
+  check(
+    std::isnan(obj.value("nested").to_object().value("nan-value").to_double()));
+}
