@@ -30,9 +30,7 @@ public:
 
   static std::unique_ptr<client> make(handshake_ptr hs, upper_layer_ptr up);
 
-  static std::unique_ptr<client> make(handshake&& hs, upper_layer_ptr up) {
-    return make(std::make_unique<handshake>(std::move(hs)), std::move(up));
-  }
+  static std::unique_ptr<client> make(handshake&& hs, upper_layer_ptr up);
 };
 
 } // namespace caf::net::web_socket
