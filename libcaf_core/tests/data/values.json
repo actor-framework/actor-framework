@@ -1,0 +1,14 @@
+{
+    "string": "Hello, world!",
+    "escaped-string": "\"Hello, World!\"",
+    "empty-array": [],
+    "array-with-values": [1, 2, 3],
+    "object-with-properties": {
+        "foo": "bar",
+        "baz": 42
+    },
+    "null-value": null,
+    "boolean-value": true,
+    "integer-value": 42,
+    "double-value": 3.14
+}
