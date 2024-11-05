@@ -56,6 +56,30 @@ std::string printed(const json_value& val) {
 
 } // namespace
 
+constexpr const char* test_json_file_path = CAF_TEST_DATA_DIR "/values.json";
+
+TEST("from file") {
+  auto val = unbox(json_value::parse_file(test_json_file_path));
+  check(val.is_object());
+  auto obj = val.to_object();
+  check_eq(obj.value("integer-value").to_integer(), 42);
+  check_eq(obj.value("double-value").to_double(), test::approx{3.14});
+  check_eq(obj.value("string").to_string(), "Hello, world!"sv);
+  check_eq(obj.value("escaped-string").to_string(), "\"Hello, World!\""sv);
+  check_eq(obj.value("boolean-value").to_bool(), true);
+  check(obj.value("null-value").is_null());
+  check(obj.value("empty-array").is_array());
+  check_eq(obj.value("empty-array").to_array().size(), 0u);
+  check(obj.value("array-with-values").is_array());
+  std::string arr;
+  obj.value("array-with-values").print_to(arr, 0);
+  check_eq(arr, "[1, 2, 3]");
+  check(obj.value("object-with-properties").is_object());
+  auto nested = obj.value("object-with-properties").to_object();
+  check_eq(nested.value("foo").to_string(), "bar"sv);
+  check_eq(nested.value("baz").to_integer(), 42);
+}
+
 TEST("default-constructed") {
   auto val = json_value{};
   check(val.is_null());
