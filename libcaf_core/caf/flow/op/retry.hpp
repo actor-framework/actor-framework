@@ -6,12 +6,11 @@
 
 #include "caf/config.hpp"
 #include "caf/detail/assert.hpp"
-#include "caf/flow/backpressure_overflow_strategy.hpp"
 #include "caf/flow/observer.hpp"
 #include "caf/flow/op/hot.hpp"
 #include "caf/flow/subscription.hpp"
 
-#include <deque>
+#include <type_traits>
 #include <utility>
 
 namespace caf::flow::op {
@@ -21,8 +20,8 @@ class retry_sub : public subscription::impl_base, public observer_impl<T> {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
-  retry_sub(coordinator* parent, observer<T> out, Predicate predicate,
-            observable<T> in)
+  retry_sub(coordinator* parent, observer<T> out, observable<T> in,
+            Predicate predicate)
     : parent_(parent),
       out_(std::move(out)),
       in_(std::move(in)),
@@ -60,8 +59,8 @@ public:
 
   void on_subscribe(subscription sub) override {
     if (sub_) {
-      sub_.cancel();
-      sub_.release_later();
+      sub.cancel();
+      return;
     }
     sub_ = std::move(sub);
     if (demand_ > 0)
@@ -69,12 +68,10 @@ public:
   }
 
   void on_next(const T& item) override {
-    if (!out_)
+    if (!out_ || demand_ == 0)
       return;
-    if (demand_ > 0) {
-      --demand_;
-      out_.on_next(item);
-    }
+    --demand_;
+    out_.on_next(item);
   }
 
   void on_complete() override {
@@ -88,10 +85,11 @@ public:
     if (!out_)
       return;
     sub_.release_later();
-    if (predicate_(what))
-      parent()->delay_fn([this]() { in_.subscribe(this->as_observer()); });
-    else
+    if (predicate_(what)) {
+      parent_->delay_fn([sptr = intrusive_ptr{this}] { sptr->do_retry(); });
+    } else {
       out_.on_error(what);
+    }
   }
 
 private:
@@ -99,10 +97,21 @@ private:
     if (!out_)
       return;
     sub_.cancel();
-    if (from_external)
+    if (from_external) {
       out_.on_error(make_error(sec::disposed));
+    } else {
+      out_.release_later();
+    }
   }
 
+  void do_retry() {
+    if (!out_)
+      return;
+    in_.subscribe(this->as_observer());
+  }
+
+  // Stores the pending demand. When re-subscribing, we transfer the demand to
+  // the new subscription.
   size_t demand_ = 0u;
 
   /// Stores the context (coordinator) that runs this flow.
@@ -126,19 +135,10 @@ private:
 template <class T, class Predicate>
 class retry : public hot<T> {
 public:
-  using trait = detail::get_callable_trait_t<Predicate>;
+  // -- static assertions ------------------------------------------------------
 
-  using arg_type
-    = std::decay_t<caf::detail::tl_head_t<typename trait::arg_types>>;
-
-  static_assert(std::is_convertible_v<typename trait::result_type, bool>,
-                "predicates must return a boolean value");
-
-  static_assert(trait::num_args == 1,
-                "predicates must take exactly one argument");
-
-  static_assert(std::is_same_v<arg_type, caf::error>,
-                "predicates must take only error as argument");
+  static_assert(std::is_invocable_r_v<bool, Predicate, const caf::error&>,
+                "Predicate must have the signature bool(const caf::error&)");
 
   // -- member types -----------------------------------------------------------
 
@@ -156,16 +156,18 @@ public:
   disposable subscribe(observer<T> out) override {
     CAF_ASSERT(out.valid());
     using sub_t = retry_sub<T, Predicate>;
-    auto ptr = super::parent_->add_child(std::in_place_type<sub_t>, out,
-                                         predicate_, in_);
+    auto ptr = super::parent_->add_child(std::in_place_type<sub_t>, out, in_,
+                                         predicate_);
     out.on_subscribe(subscription{ptr});
     in_.subscribe(ptr->as_observer());
     return disposable{ptr->as_disposable()};
   }
 
 private:
+  /// Stores the decorated observable.
   observable<T> in_;
 
+  /// Stores the predicate that determines whether to retry or not.
   Predicate predicate_;
 };
 

@@ -13,6 +13,8 @@ using namespace caf;
 
 namespace {
 
+constexpr int max_retry_count = 3;
+
 struct fixture : test::fixture::deterministic, test::fixture::flow {
   // Similar to retry::subscribe, but returns a retry_sub pointer instead of
   // type-erasing it into a disposable.
@@ -20,8 +22,8 @@ struct fixture : test::fixture::deterministic, test::fixture::flow {
   auto raw_sub(caf::flow::observable<int> in, caf::flow::observer<int> out,
                Predicate predicate) {
     using sub_t = caf::flow::op::retry_sub<T, Predicate>;
-    auto ptr = make_counted<sub_t>(coordinator(), out, std::move(predicate),
-                                   in);
+    auto ptr = make_counted<sub_t>(coordinator(), out, in,
+                                   std::move(predicate));
     out.on_subscribe(caf::flow::subscription{ptr});
     return ptr;
   }
@@ -30,15 +32,13 @@ struct fixture : test::fixture::deterministic, test::fixture::flow {
 WITH_FIXTURE(fixture) {
 
 SCENARIO("the retry operator re-subscribes observables on error") {
-  const int max_retry_count = 3;
   int retry_count = 0;
-  auto retry_predicate = [&retry_count,
-                          &max_retry_count](const caf::error& what) {
+  auto retry_predicate = [&retry_count](const caf::error& what) {
     if (what == sec::invalid_request && retry_count < max_retry_count) {
       ++retry_count;
       return true;
-    } else
-      return false;
+    }
+    return false;
   };
   GIVEN("an observable that always fails") {
     WHEN("calling retry") {
