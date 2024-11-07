@@ -821,6 +821,46 @@ OUTLINE("serializing and then deserializing the 'nasty' type") {
   )_";
 }
 
+struct user {
+  uint32_t id = 42;
+  std::string name = "John Doe";
+};
+
+bool operator==(const user& lhs, const user& rhs) {
+  return lhs.id == rhs.id && lhs.name == rhs.name;
+}
+
+template <class Inspector>
+bool inspect(Inspector& f, user& x) {
+  return f.object(x).fields(f.field("id", x.id), f.field("name", x.name));
+}
+
+OUTLINE("serializing a type that initializes members to a non-empty state") {
+  GIVEN("a <serializer> and a user object") {
+    auto sink = serializer_by_name(block_parameters<std::string>());
+    auto val = user{};
+    val.id = 123;
+    val.name = "Alice";
+    WHEN("serializing the user object") {
+      std::visit([this, &val](auto& ptr) { check(ptr->sink.apply(val)); },
+                 sink);
+      THEN("deserializing the result produces the value again") {
+        auto source = make_deserializer(sink);
+        auto copy = user{};
+        std::visit([this, &copy](auto& ptr) { check(ptr->apply(copy)); },
+                   source);
+        check_eq(copy, val);
+      }
+    }
+  }
+  EXAMPLES = R"_(
+    | serializer          |
+    | binary_serializer   |
+    | json_writer         |
+    | config_value_writer |
+  )_";
+}
+
 } // WITH_FIXTURE(fixture)
 
 TEST_INIT() {
