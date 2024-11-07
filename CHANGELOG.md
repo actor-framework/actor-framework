@@ -5,6 +5,10 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ## Unreleased
 
+### Added
+
+- New flow operator: `retry`.
+
 ### Fixed
 
 - Fix build error in `caf-net` when building with C++23 (#1919).
