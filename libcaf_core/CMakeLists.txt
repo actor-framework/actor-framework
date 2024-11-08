@@ -119,7 +119,9 @@ caf_add_component(
     caf/blocking_actor.cpp
     caf/blocking_actor.test.cpp
     caf/blocking_mail.test.cpp
+    caf/byte_reader.cpp
     caf/byte_span.cpp
+    caf/byte_writer.cpp
     caf/chrono.cpp
     caf/chrono.test.cpp
     caf/chunk.cpp
