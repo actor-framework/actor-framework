@@ -58,6 +58,12 @@ json_writer::~json_writer() {
   // nop
 }
 
+// -- properties ---------------------------------------------------------------
+
+span<const std::byte> json_writer::bytes() const {
+  return {reinterpret_cast<const std::byte*>(buf_.data()), buf_.size()};
+}
+
 // -- modifiers ----------------------------------------------------------------
 
 void json_writer::reset() {

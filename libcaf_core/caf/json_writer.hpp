@@ -4,19 +4,19 @@
 
 #pragma once
 
+#include "caf/byte_writer.hpp"
 #include "caf/detail/core_export.hpp"
-#include "caf/serializer.hpp"
 
 #include <vector>
 
 namespace caf {
 
 /// Serializes an inspectable object to a JSON-formatted string.
-class CAF_CORE_EXPORT json_writer : public serializer {
+class CAF_CORE_EXPORT json_writer : public byte_writer {
 public:
   // -- member types -----------------------------------------------------------
 
-  using super = serializer;
+  using super = byte_writer;
 
   /// Reflects the structure of JSON objects according to ECMA-404. This enum
   /// skips types such as `members` or `value` since they are not needed to
@@ -57,6 +57,8 @@ public:
   ~json_writer() override;
 
   // -- properties -------------------------------------------------------------
+
+  span<const std::byte> bytes() const override;
 
   /// Returns a string view into the internal buffer.
   /// @warning This view becomes invalid when calling any non-const member

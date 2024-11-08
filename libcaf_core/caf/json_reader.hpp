@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "caf/deserializer.hpp"
+#include "caf/byte_reader.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/json.hpp"
 
@@ -15,11 +15,11 @@
 namespace caf {
 
 /// Deserializes an inspectable object from a JSON-formatted string.
-class CAF_CORE_EXPORT json_reader : public deserializer {
+class CAF_CORE_EXPORT json_reader : public byte_reader {
 public:
   // -- member types -----------------------------------------------------------
 
-  using super = deserializer;
+  using super = byte_reader;
 
   struct sequence {
     detail::json::array::const_iterator pos;
@@ -131,6 +131,8 @@ public:
   ///          until either destroying this reader or calling `reset`.
   /// @note Implicitly calls `reset`.
   bool load(std::string_view json_text);
+
+  bool load_bytes(span<const std::byte> bytes) override;
 
   /// Reads the input stream @p input and parses the content into an internal
   /// representation. After loading the JSON input, the reader is ready for

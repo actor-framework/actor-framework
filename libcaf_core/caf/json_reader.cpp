@@ -146,6 +146,12 @@ bool json_reader::load(std::string_view json_text) {
   return true;
 }
 
+bool json_reader::load_bytes(span<const std::byte> bytes) {
+  auto utf8 = std::string_view{reinterpret_cast<const char*>(bytes.data()),
+                               bytes.size()};
+  return load(utf8);
+}
+
 bool json_reader::load_from(std::istream& input) {
   reset();
   using iterator_t = std::istreambuf_iterator<char>;
