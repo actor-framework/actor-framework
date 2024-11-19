@@ -116,6 +116,11 @@ public:
   }
 
   void abort(const error& reason) override {
+    // Note: When closing the connection the server can send an close frame
+    // without a status code. The status will be interpreted as 1005 by the
+    // other side. It's illegal to set the code to 1005 or 1006 manually.
+    // See RFC 6455, Section 7.1.1 and Section 7.4.
+    ship_closing_message();
     up_->abort(reason);
   }
 
@@ -239,7 +244,7 @@ private:
   }
 
   // Consume the header for the currently parsing frame. Returns the number of
-  // sonsumed bytes.
+  // consumed bytes.
   ptrdiff_t consume_header(byte_span buffer, byte_span) {
     // Parse header.
     auto hdr_bytes = detail::rfc6455::decode_header(buffer, hdr_);
@@ -395,6 +400,19 @@ private:
     detail::rfc6455::assemble_frame(mask_key, buf, down_->output_buffer());
     down_->end_output();
     buf.clear();
+  }
+
+  // Sends closing message without a status code.
+  void ship_closing_message() {
+    byte_buffer payload;
+    uint32_t mask_key = 0;
+    // Note: Mask bit and mask key should be set even if the payload is empty.
+    if (mask_outgoing_frames)
+      mask_key = static_cast<uint32_t>(rng_());
+    down_->begin_output();
+    detail::rfc6455::assemble_frame(detail::rfc6455::connection_close_frame,
+                                    mask_key, payload, down_->output_buffer());
+    down_->end_output();
   }
 
   // Sends closing message, can be error status, or closing handshake
