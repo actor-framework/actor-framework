@@ -102,10 +102,12 @@ public:
   /// Returns the raw pointer without modifying reference
   /// count and sets this to `nullptr`.
   pointer detach() noexcept {
-    auto result = ptr_;
-    if (result)
+    if (ptr_ != nullptr) {
+      auto result = ptr_;
       ptr_ = nullptr;
-    return result;
+      return result;
+    }
+    return nullptr;
   }
 
   /// Returns the raw pointer without modifying reference
@@ -115,10 +117,8 @@ public:
   }
 
   void reset(pointer new_value = nullptr, bool add_ref = true) noexcept {
-    auto old = ptr_;
-    set_ptr(new_value, add_ref);
-    if (old)
-      intrusive_ptr_access<T>::release(old);
+    intrusive_ptr tmp{new_value, add_ref};
+    swap(tmp);
   }
 
   template <class... Ts>
