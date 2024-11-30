@@ -27,8 +27,7 @@ static_assert(
   std::is_same_v<decltype(fmt_fwd(std::declval<const int&>())), const int&>);
 // Types without a formatter overload are forwarded as std::string.
 static_assert(
-  std::is_same_v<decltype(fmt_fwd(std::declval<std::vector<int>>())),
-                 std::string>);
+  std::is_same_v<decltype(fmt_fwd(std::declval<caf::uri>())), std::string>);
 
 #endif
 
