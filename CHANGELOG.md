@@ -18,6 +18,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   would falsely report a use-after-free bug.
 - Closing a WebSocket connection now properly sends a close frame to the client
   before closing the TCP connection (#1938).
+- Fix a build error in the unit tests when building with C++20 and setting
+  `CAF_USE_STD_FORMAT` to `ON` (#1963).
 
 ## [1.0.2] - 2024-10-30
 
