@@ -253,6 +253,7 @@ public:
   // -- implementation of disposable_impl --------------------------------------
 
   void dispose() override {
+    auto lg = log::net::trace("");
     bool expected = false;
     if (disposed_.compare_exchange_strong(expected, true)) {
       mpx_->schedule_fn([ptr = strong_this()] { //

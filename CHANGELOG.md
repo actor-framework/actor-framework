@@ -16,6 +16,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   changes) to make it easier for `clang-tidy` to analyze the code. This fixes a
   false positive reported by `clang-tidy` in some use cases where `clang-tidy`
   would falsely report a use-after-free bug.
+- Closing a WebSocket connection now properly sends a close frame to the client
+  before closing the TCP connection (#1938).
 
 ## [1.0.2] - 2024-10-30
 

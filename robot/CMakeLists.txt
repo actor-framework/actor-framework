@@ -120,6 +120,12 @@ if(TARGET CAF::net AND CAF_ENABLE_EXAMPLES)
     --variable SSL_PATH:${CMAKE_CURRENT_SOURCE_DIR})
 
   add_robot_test(
+    web-socket
+    control-frames
+    --variable BINARY_PATH:$<TARGET_FILE:echo>
+    --variable SSL_PATH:${CMAKE_CURRENT_SOURCE_DIR})
+
+  add_robot_test(
     http
     rest
     --variable BINARY_PATH:$<TARGET_FILE:rest>
