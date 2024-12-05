@@ -556,19 +556,22 @@ public:
   /// @returns A @ref disposable that allows the actor to cancel the action.
   template <class Duration, class F>
   disposable run_scheduled(
-    std::chrono::time_point<std::chrono::system_clock, Duration> when, F what) {
+    std::chrono::time_point<std::chrono::system_clock, Duration> when,
+    F&& what) {
     using std::chrono::time_point_cast;
-    return run_scheduled(time_point_cast<timespan>(when), make_action(what));
+    return run_scheduled(time_point_cast<timespan>(when),
+                         make_action(std::forward<F>(what)));
   }
 
   /// @copydoc run_scheduled
   template <class Duration, class F>
   disposable
   run_scheduled(std::chrono::time_point<actor_clock::clock_type, Duration> when,
-                F what) {
+                F&& what) {
     using std::chrono::time_point_cast;
     using duration_t = actor_clock::duration_type;
-    return run_scheduled(time_point_cast<duration_t>(when), make_action(what));
+    return run_scheduled(time_point_cast<duration_t>(when),
+                         make_action(std::forward<F>(what)));
   }
 
   /// Runs `what` asynchronously at some point after `when` if the actor still
@@ -582,20 +585,21 @@ public:
   /// @returns A @ref disposable that allows the actor to cancel the action.
   template <class Duration, class F>
   disposable run_scheduled_weak(
-    std::chrono::time_point<std::chrono::system_clock, Duration> when, F what) {
+    std::chrono::time_point<std::chrono::system_clock, Duration> when,
+    F&& what) {
     using std::chrono::time_point_cast;
     return run_scheduled_weak(time_point_cast<timespan>(when),
-                              make_action(what));
+                              make_action(std::forward<F>(what)));
   }
 
   /// @copydoc run_scheduled_weak
   template <class Duration, class F>
   disposable run_scheduled_weak(
-    std::chrono::time_point<actor_clock::clock_type, Duration> when, F what) {
+    std::chrono::time_point<actor_clock::clock_type, Duration> when, F&& what) {
     using std::chrono::time_point_cast;
     using duration_t = actor_clock::duration_type;
     return run_scheduled_weak(time_point_cast<duration_t>(when),
-                              make_action(what));
+                              make_action(std::forward<F>(what)));
   }
 
   /// Runs `what` asynchronously after the `delay`.
@@ -605,9 +609,10 @@ public:
   /// @param what The action to invoke after the delay.
   /// @returns A @ref disposable that allows the actor to cancel the action.
   template <class Rep, class Period, class F>
-  disposable run_delayed(std::chrono::duration<Rep, Period> delay, F what) {
+  disposable run_delayed(std::chrono::duration<Rep, Period> delay, F&& what) {
     using std::chrono::duration_cast;
-    return run_delayed(duration_cast<timespan>(delay), make_action(what));
+    return run_delayed(duration_cast<timespan>(delay),
+                       make_action(std::forward<F>(what)));
   }
 
   /// Runs `what` asynchronously after the `delay` if the actor still exists.
@@ -620,9 +625,10 @@ public:
   /// @returns A @ref disposable that allows the actor to cancel the action.
   template <class Rep, class Period, class F>
   disposable
-  run_delayed_weak(std::chrono::duration<Rep, Period> delay, F what) {
+  run_delayed_weak(std::chrono::duration<Rep, Period> delay, F&& what) {
     using std::chrono::duration_cast;
-    return run_delayed_weak(duration_cast<timespan>(delay), make_action(what));
+    return run_delayed_weak(duration_cast<timespan>(delay),
+                            make_action(std::forward<F>(what)));
   }
 
   // -- monitoring -------------------------------------------------------------
