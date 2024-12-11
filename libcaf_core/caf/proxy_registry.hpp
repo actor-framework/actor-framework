@@ -5,7 +5,6 @@
 #pragma once
 
 #include "caf/actor_addr.hpp"
-#include "caf/actor_cast.hpp"
 #include "caf/actor_proxy.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/exit_reason.hpp"

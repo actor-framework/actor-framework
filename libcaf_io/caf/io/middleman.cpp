@@ -149,7 +149,7 @@ public:
   ~prometheus_scraping() {
     if (mpx_supervisor_) {
       mpx_.dispatch([this] {
-        auto ptr = static_cast<broker*>(actor_cast<abstract_actor*>(broker_));
+        auto ptr = actor_cast<broker*>(broker_);
         if (!ptr->getf(abstract_actor::is_terminated_flag)) {
           ptr->context(&mpx_);
           ptr->quit();
@@ -370,7 +370,7 @@ void middleman::stop() {
     // because each manager will call remove(...)
     for (auto& kvp : named_brokers_) {
       auto& hdl = kvp.second;
-      auto ptr = static_cast<broker*>(actor_cast<abstract_actor*>(hdl));
+      auto ptr = actor_cast<broker*>(hdl);
       if (!ptr->getf(abstract_actor::is_terminated_flag)) {
         ptr->context(&backend());
         ptr->quit();

@@ -6,7 +6,6 @@
 
 #include "caf/openssl/manager.hpp"
 
-#include "caf/actor_cast.hpp"
 #include "caf/actor_control_block.hpp"
 #include "caf/error.hpp"
 #include "caf/expected.hpp"

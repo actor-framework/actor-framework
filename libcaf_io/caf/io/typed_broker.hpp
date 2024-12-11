@@ -108,8 +108,7 @@ public:
     auto res = this->system().spawn_functor(std::bool_constant<spawnable>{},
                                             cfg, fun, hdl,
                                             std::forward<Ts>(xs)...);
-    auto forked = static_cast<impl*>(actor_cast<abstract_actor*>(res));
-    forked->move_scribe(std::move(sptr));
+    actor_cast<impl*>(res)->move_scribe(std::move(sptr));
     return res;
   }
 

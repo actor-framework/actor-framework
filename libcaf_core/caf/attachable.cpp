@@ -4,7 +4,6 @@
 
 #include "caf/attachable.hpp"
 
-#include "caf/actor_cast.hpp"
 #include "caf/default_attachable.hpp"
 #include "caf/system_messages.hpp"
 
