@@ -40,12 +40,7 @@ void actor_shell_ptr::detach(error reason) {
 }
 
 actor_shell_ptr::element_type* actor_shell_ptr::get() const noexcept {
-  if (ptr_) {
-    auto ptr = actor_cast<abstract_actor*>(ptr_);
-    return static_cast<actor_shell*>(ptr);
-  } else {
-    return nullptr;
-  }
+  return actor_cast<actor_shell*>(ptr_);
 }
 
 } // namespace caf::net

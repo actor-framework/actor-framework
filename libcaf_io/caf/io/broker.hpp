@@ -51,8 +51,7 @@ public:
     detail::init_fun_factory<impl, F> fac;
     cfg.init_fun = fac(std::move(fun), hdl, std::forward<Ts>(xs)...);
     auto res = this->system().spawn_class<impl, no_spawn_options>(cfg);
-    auto forked = static_cast<impl*>(actor_cast<abstract_actor*>(res));
-    forked->move_scribe(std::move(sptr));
+    actor_cast<impl*>(res)->move_scribe(std::move(sptr));
     return res;
   }
 

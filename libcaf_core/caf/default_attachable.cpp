@@ -25,14 +25,15 @@ message make(abstract_actor* self, const error& reason) {
 void default_attachable::actor_exited(const error& rsn, scheduler* sched) {
   CAF_ASSERT(observed_ != observer_);
   auto factory = type_ == monitor ? &make<down_msg> : &make<exit_msg>;
-
-  if (auto observer = actor_cast<strong_actor_ptr>(observer_)) {
-    auto observed = actor_cast<strong_actor_ptr>(observed_);
-    auto ptr = make_mailbox_element(
-      std::move(observed), make_message_id(priority_),
-      factory(actor_cast<abstract_actor*>(observed_), rsn));
-    observer->enqueue(std::move(ptr), sched);
+  auto observer = actor_cast<strong_actor_ptr>(observer_);
+  if (!observer) {
+    return;
   }
+  auto observed = actor_cast<strong_actor_ptr>(observed_);
+  auto msg = factory(actor_cast<abstract_actor*>(observed_), rsn);
+  auto ptr = make_mailbox_element(std::move(observed),
+                                  make_message_id(priority_), std::move(msg));
+  observer->enqueue(std::move(ptr), sched);
 }
 
 bool default_attachable::matches(const token& what) {

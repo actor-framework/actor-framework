@@ -185,12 +185,7 @@ public:
   }
 
   element_type* get() const noexcept {
-    if (ptr_) {
-      auto ptr = actor_cast<abstract_actor*>(ptr_);
-      return static_cast<element_type*>(ptr);
-    } else {
-      return nullptr;
-    }
+    return actor_cast<element_type*>(ptr_);
   }
 
   element_type* operator->() const noexcept {
@@ -276,12 +271,7 @@ public:
   }
 
   element_type* get() const noexcept {
-    if (ptr_) {
-      auto ptr = actor_cast<abstract_actor*>(ptr_);
-      return static_cast<element_type*>(ptr);
-    } else {
-      return nullptr;
-    }
+    return actor_cast<element_type*>(ptr_);
   }
 
   element_type* operator->() const noexcept {

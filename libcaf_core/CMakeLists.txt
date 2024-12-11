@@ -76,6 +76,7 @@ caf_add_component(
     caf/action.test.cpp
     caf/actor.cpp
     caf/actor_addr.cpp
+    caf/actor_cast.test.cpp
     caf/actor_clock.cpp
     caf/actor_companion.cpp
     caf/actor_companion.test.cpp
