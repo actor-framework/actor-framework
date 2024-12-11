@@ -771,8 +771,7 @@ intrusive_ptr<actor_companion> actor_system::make_companion() {
   actor_config cfg;
   cfg.mbox_factory = mailbox_factory();
   auto hdl = spawn_class<actor_companion, no_spawn_options>(cfg);
-  auto* ptr = actor_cast<abstract_actor*>(hdl);
-  return intrusive_ptr<actor_companion>{static_cast<actor_companion*>(ptr)};
+  return intrusive_ptr<actor_companion>{actor_cast<actor_companion*>(hdl)};
 }
 
 void actor_system::thread_started(thread_owner owner) {

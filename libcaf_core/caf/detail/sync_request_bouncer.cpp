@@ -5,7 +5,6 @@
 #include "caf/detail/sync_request_bouncer.hpp"
 
 #include "caf/actor.hpp"
-#include "caf/actor_cast.hpp"
 #include "caf/config.hpp"
 #include "caf/exit_reason.hpp"
 #include "caf/mailbox_element.hpp"
