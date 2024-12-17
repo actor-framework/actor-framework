@@ -64,10 +64,11 @@ auto print_escaped_to(Output&& out, char c) {
       ((*out++ = chars), ...);
   };
   auto to_hex_char = [](int d) { return "0123456789abcdef"[d]; };
+  auto is_non_printable = [](int val) { return val >= 0x00 && val <= 0x1f; };
   switch (c) {
     default:
       // Non-printable ASCII chars must be encoded as \u00xx.
-      if (c >= 0x00 && c <= 0x1f)
+      if (is_non_printable(c))
         append('\\', 'u', '0', '0', to_hex_char(c >> 4), to_hex_char(c & 0x0f));
       else
         append(c);
