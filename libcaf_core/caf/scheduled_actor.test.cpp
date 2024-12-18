@@ -4,6 +4,7 @@
 
 #include "caf/scheduled_actor.hpp"
 
+#include "caf/test/fixture/deterministic.hpp"
 #include "caf/test/test.hpp"
 
 #include "caf/actor_system.hpp"
@@ -13,6 +14,10 @@
 #include "caf/scoped_actor.hpp"
 
 using namespace caf;
+
+using namespace std::literals;
+
+using std::chrono::system_clock;
 
 #define ASSERT_COMPILES(expr, msg)                                             \
   static_assert(                                                               \
@@ -202,3 +207,159 @@ TEST("actors can override the default exception handler") {
 #endif // CAF_ENABLE_EXCEPTIONS
 
 } // namespace
+
+WITH_FIXTURE(caf::test::fixture::deterministic) {
+
+template <class F>
+class non_copyable_callback {
+public:
+  explicit non_copyable_callback(F fn) : fn_(std::move(fn)) {
+    // nop
+  }
+
+  non_copyable_callback(const non_copyable_callback&) = delete;
+
+  non_copyable_callback& operator=(const non_copyable_callback&) = delete;
+
+  non_copyable_callback(non_copyable_callback&&) = default;
+
+  non_copyable_callback& operator=(non_copyable_callback&&) = default;
+
+  void operator()() {
+    fn_();
+  }
+
+private:
+  F fn_;
+};
+
+TEST("actors can delay actions") {
+  auto aut = actor{};
+  auto invoked = std::make_shared<bool>(false);
+  auto fn = [invoked] { *invoked = true; };
+  SECTION("absolute timeout") {
+    SECTION("strong ref") {
+      SECTION("std::chrono::system_clock") {
+        aut = sys.spawn([fn](event_based_actor* self) {
+          self->run_scheduled(system_clock::now() + 1s,
+                              non_copyable_callback{fn});
+          return behavior{[](int) {}};
+        });
+      }
+      SECTION("actor_clock::clock_type") {
+        aut = sys.spawn([fn](event_based_actor* self) {
+          self->run_scheduled(self->clock().now() + 1s,
+                              non_copyable_callback{fn});
+          return behavior{[](int) {}};
+        });
+      }
+      check_eq(actor_cast<actor_control_block*>(aut)->strong_refs.load(), 2u);
+    }
+    SECTION("weak ref") {
+      SECTION("std::chrono::system_clock") {
+        aut = sys.spawn([fn](event_based_actor* self) {
+          self->run_scheduled_weak(system_clock::now() + 1s,
+                                   non_copyable_callback{fn});
+          return behavior{[](int) {}};
+        });
+      }
+      SECTION("actor_clock::clock_type") {
+        aut = sys.spawn([fn](event_based_actor* self) {
+          self->run_scheduled_weak(self->clock().now() + 1s,
+                                   non_copyable_callback{fn});
+          return behavior{[](int) {}};
+        });
+      }
+      check_eq(actor_cast<actor_control_block*>(aut)->strong_refs.load(), 1u);
+    }
+  }
+  SECTION("relative timeout") {
+    SECTION("strong ref") {
+      aut = sys.spawn([fn](event_based_actor* self) {
+        self->run_delayed(1s, non_copyable_callback{fn});
+        return behavior{[](int) {}};
+      });
+      check_eq(actor_cast<actor_control_block*>(aut)->strong_refs.load(), 2u);
+    }
+    SECTION("weak ref") {
+      aut = sys.spawn([fn](event_based_actor* self) {
+        self->run_delayed_weak(1s, non_copyable_callback{fn});
+        return behavior{[](int) {}};
+      });
+      check_eq(actor_cast<actor_control_block*>(aut)->strong_refs.load(), 1u);
+    }
+  }
+  check_eq(mail_count(), 0u);
+  check_eq(num_timeouts(), 1u);
+  trigger_timeout();
+  check_eq(num_timeouts(), 0u);
+  check_eq(mail_count(), 1u);
+  expect<action>().to(aut);
+  check(*invoked);
+}
+
+TEST("actors can cancel pending delayed actions") {
+  auto aut = actor{};
+  auto invoked = std::make_shared<bool>(false);
+  auto fn = [invoked] { *invoked = true; };
+  auto pending = std::make_shared<disposable>();
+  SECTION("absolute timeout") {
+    SECTION("strong ref") {
+      SECTION("std::chrono::system_clock") {
+        aut = sys.spawn([fn, pending](event_based_actor* self) {
+          *pending = self->run_scheduled(system_clock::now() + 1s,
+                                         non_copyable_callback{fn});
+          return behavior{[](int) {}};
+        });
+      }
+      SECTION("actor_clock::clock_type") {
+        aut = sys.spawn([fn, pending](event_based_actor* self) {
+          *pending = self->run_scheduled(self->clock().now() + 1s,
+                                         non_copyable_callback{fn});
+          return behavior{[](int) {}};
+        });
+      }
+      check_eq(actor_cast<actor_control_block*>(aut)->strong_refs.load(), 2u);
+    }
+    SECTION("weak ref") {
+      SECTION("std::chrono::system_clock") {
+        aut = sys.spawn([fn, pending](event_based_actor* self) {
+          *pending = self->run_scheduled_weak(system_clock::now() + 1s,
+                                              non_copyable_callback{fn});
+          return behavior{[](int) {}};
+        });
+      }
+      SECTION("actor_clock::clock_type") {
+        aut = sys.spawn([fn, pending](event_based_actor* self) {
+          *pending = self->run_scheduled_weak(self->clock().now() + 1s,
+                                              non_copyable_callback{fn});
+          return behavior{[](int) {}};
+        });
+      }
+      check_eq(actor_cast<actor_control_block*>(aut)->strong_refs.load(), 1u);
+    }
+  }
+  SECTION("relative timeout") {
+    SECTION("strong ref") {
+      aut = sys.spawn([fn, pending](event_based_actor* self) {
+        *pending = self->run_delayed(1s, non_copyable_callback{fn});
+        return behavior{[](int) {}};
+      });
+      check_eq(actor_cast<actor_control_block*>(aut)->strong_refs.load(), 2u);
+    }
+    SECTION("weak ref") {
+      aut = sys.spawn([fn, pending](event_based_actor* self) {
+        *pending = self->run_delayed_weak(1s, non_copyable_callback{fn});
+        return behavior{[](int) {}};
+      });
+      check_eq(actor_cast<actor_control_block*>(aut)->strong_refs.load(), 1u);
+    }
+  }
+  check_eq(mail_count(), 0u);
+  check_eq(num_timeouts(), 1u);
+  pending->dispose();
+  check_eq(num_timeouts(), 0u);
+  check(!*invoked);
+}
+
+} // WITH_FIXTURE(caf::test::fixture::deterministic)

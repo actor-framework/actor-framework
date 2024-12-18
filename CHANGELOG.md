@@ -20,6 +20,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   before closing the TCP connection (#1938).
 - Fix a build error in the unit tests when building with C++20 and setting
   `CAF_USE_STD_FORMAT` to `ON` (#1963).
+- The functions `run_scheduled`, `run_scheduled_weak`, `run_delayed` and
+  `run_delayed_weak` now properly accept move-only callback types.
 
 ## [1.0.2] - 2024-10-30
 

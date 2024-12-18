@@ -558,7 +558,8 @@ public:
   disposable run_scheduled(
     std::chrono::time_point<std::chrono::system_clock, Duration> when, F what) {
     using std::chrono::time_point_cast;
-    return run_scheduled(time_point_cast<timespan>(when), make_action(what));
+    return run_scheduled(time_point_cast<timespan>(when),
+                         make_single_shot_action(std::move(what)));
   }
 
   /// @copydoc run_scheduled
@@ -568,7 +569,8 @@ public:
                 F what) {
     using std::chrono::time_point_cast;
     using duration_t = actor_clock::duration_type;
-    return run_scheduled(time_point_cast<duration_t>(when), make_action(what));
+    return run_scheduled(time_point_cast<duration_t>(when),
+                         make_single_shot_action(std::move(what)));
   }
 
   /// Runs `what` asynchronously at some point after `when` if the actor still
@@ -585,7 +587,7 @@ public:
     std::chrono::time_point<std::chrono::system_clock, Duration> when, F what) {
     using std::chrono::time_point_cast;
     return run_scheduled_weak(time_point_cast<timespan>(when),
-                              make_action(what));
+                              make_single_shot_action(std::move(what)));
   }
 
   /// @copydoc run_scheduled_weak
@@ -595,7 +597,7 @@ public:
     using std::chrono::time_point_cast;
     using duration_t = actor_clock::duration_type;
     return run_scheduled_weak(time_point_cast<duration_t>(when),
-                              make_action(what));
+                              make_single_shot_action(std::move(what)));
   }
 
   /// Runs `what` asynchronously after the `delay`.
@@ -607,7 +609,8 @@ public:
   template <class Rep, class Period, class F>
   disposable run_delayed(std::chrono::duration<Rep, Period> delay, F what) {
     using std::chrono::duration_cast;
-    return run_delayed(duration_cast<timespan>(delay), make_action(what));
+    return run_delayed(duration_cast<timespan>(delay),
+                       make_single_shot_action(std::move(what)));
   }
 
   /// Runs `what` asynchronously after the `delay` if the actor still exists.
@@ -622,7 +625,8 @@ public:
   disposable
   run_delayed_weak(std::chrono::duration<Rep, Period> delay, F what) {
     using std::chrono::duration_cast;
-    return run_delayed_weak(duration_cast<timespan>(delay), make_action(what));
+    return run_delayed_weak(duration_cast<timespan>(delay),
+                            make_single_shot_action(std::move(what)));
   }
 
   // -- monitoring -------------------------------------------------------------
