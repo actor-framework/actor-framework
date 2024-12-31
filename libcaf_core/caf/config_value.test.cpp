@@ -4,6 +4,7 @@
 
 #include "caf/config_value.hpp"
 
+#include "caf/test/approx.hpp"
 #include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
@@ -88,6 +89,20 @@ T unbox(caf::expected<T> x) {
   if (!x)
     test::runnable::current().fail("{}", to_string(x.error()));
   return std::move(*x);
+}
+
+// helper function for serialization and deserializaiton roundtrip test
+template <class T>
+T roundtrip(T x) {
+  config_value val;
+  config_value_writer sink{&val};
+  if (!sink.apply(x))
+    test::runnable::current().fail("save failed");
+  T y;
+  config_value_reader source{&val};
+  if (!source.apply(y))
+    test::runnable::current().fail("load failed");
+  return y;
 }
 
 struct fixture {
@@ -1009,6 +1024,60 @@ TEST("dictionary baseline testing") {
   DICT_TEST(R"_(["a", 1], ["b", 2])_", kvp("a", 1), kvp("b", 2));
   DICT_TEST(R"_([["my", [ "app", [ "foo", "bar" ]]]])_",
             kvp("my", ls("app", ls("foo", "bar"))));
+}
+
+TEST("serialization and deserialization roundtrip for config_value") {
+  check_eq(roundtrip(int8_t{42}), int8_t{42});
+  check_eq(roundtrip(int8_t{-42}), int8_t{-42});
+  check_eq(roundtrip(int16_t{42}), int16_t{42});
+  check_eq(roundtrip(int16_t{-42}), int16_t{-42});
+  check_eq(roundtrip(int32_t{42}), int32_t{42});
+  check_eq(roundtrip(int32_t{-42}), int32_t{-42});
+  check_eq(roundtrip(int64_t{42}), int64_t{42});
+  check_eq(roundtrip(int64_t{-42}), int64_t{-42});
+  check_eq(roundtrip(uint8_t{42}), uint8_t{42});
+  check_eq(roundtrip(uint16_t{42}), uint16_t{42});
+  check_eq(roundtrip(uint32_t{42}), uint32_t{42});
+  check_eq(roundtrip(uint64_t{42}), uint64_t{42});
+  check_eq(roundtrip(42), 42);
+  check_eq(roundtrip(42.0), test::approx{42.0});
+  check_eq(roundtrip(42.0f), test::approx{42.0f});
+  check_eq(roundtrip(42s), 42s);
+  check_eq(roundtrip("hello world"s), "hello world"s);
+  check_eq(roundtrip(std::vector<int>{1, 2, 3}), std::vector<int>{1, 2, 3});
+  check_eq(roundtrip(std::vector<bool>{true, false, true}),
+           std::vector<bool>{true, false, true});
+  check_eq(roundtrip(std::map<string, int>{{"one", 1}, {"two", 2}}),
+           std::map<string, int>{{"one", 1}, {"two", 2}});
+  check_eq(roundtrip(std::unordered_map<string, int>{{"one", 1}, {"two", 2}}),
+           std::unordered_map<string, int>{{"one", 1}, {"two", 2}});
+  check_eq(roundtrip(my_request{1, 2}), my_request{1, 2});
+}
+
+TEST("config_value handles equality operators") {
+  config_value x{42.0};
+  config_value y{42.0};
+  config_value z{43.0};
+  check_eq(x, y);
+  check_ne(x, z);
+  check_ge(z, y);
+  check_gt(z, y);
+  check_le(y, z);
+  check_lt(y, z);
+}
+
+TEST("config_value can get type_id") {
+  check_eq(config_value{42}.type_id(), type_id_v<int64_t>);
+  check_eq(config_value{42.0}.type_id(), type_id_v<double>);
+  check_eq(config_value{"hello world"}.type_id(), type_id_v<std::string>);
+  check_eq(config_value{timespan{42s}}.type_id(), type_id_v<timespan>);
+  check_eq(config_value{uri{}}.type_id(), type_id_v<uri>);
+  check_eq(config_value{true}.type_id(), type_id_v<bool>);
+  check_eq(config_value{false}.type_id(), type_id_v<bool>);
+  check_eq(config_value{config_value::list{}}.type_id(),
+           type_id_v<config_value::list>);
+  check_eq(config_value{config_value::dictionary{}}.type_id(),
+           type_id_v<config_value::dictionary>);
 }
 
 TEST_INIT() {
