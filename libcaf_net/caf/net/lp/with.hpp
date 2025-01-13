@@ -9,8 +9,8 @@
 #include "caf/net/dsl/has_accept.hpp"
 #include "caf/net/dsl/has_connect.hpp"
 #include "caf/net/dsl/has_context.hpp"
+#include "caf/net/dsl/has_lp_connect.hpp"
 #include "caf/net/lp/client_factory.hpp"
-#include "caf/net/lp/config.hpp"
 #include "caf/net/lp/server_factory.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/ssl/context.hpp"
@@ -25,7 +25,8 @@ namespace caf::net::lp {
 
 /// Entry point for the `with(...)` DSL.
 class with_t : public extend<dsl::base, with_t>:: //
-               with<dsl::has_accept, dsl::has_connect, dsl::has_context> {
+               with<dsl::has_accept, dsl::has_connect, dsl::has_lp_connect,
+                    dsl::has_context> {
 public:
   using config_type = dsl::generic_config_value;
 

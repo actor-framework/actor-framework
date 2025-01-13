@@ -39,6 +39,18 @@ struct server_address {
   uint16_t port;
 };
 
+/// Configures the integer type used as the length prefix.
+enum class size_field_t {
+  /// Configures a length prefix with a single byte.
+  u1,
+  // Configures a length prefix with two bytes.
+  u2,
+  // Configures a length prefix with four bytes.
+  u4,
+  // Configures a length prefix with eight bytes.
+  u8,
+};
+
 /// Wraps configuration parameters for starting clients.
 class CAF_NET_EXPORT client_config {
 public:
@@ -52,8 +64,9 @@ public:
 
     static constexpr std::string_view name = "lazy";
 
-    lazy(std::string host, uint16_t port)
-      : server(server_address{std::move(host), port}) {
+    lazy(std::string host, uint16_t port,
+         size_field_t lp_size = size_field_t::u4)
+      : server(server_address{std::move(host), port}), lp_size(lp_size) {
       // nop
     }
 
@@ -72,6 +85,9 @@ public:
 
     /// The maximum amount of retries.
     size_t max_retry_count = 0;
+
+    /// The size of the length prefix.
+    size_field_t lp_size;
   };
 
   using lazy_t = client_config_tag<lazy>;
@@ -83,7 +99,8 @@ public:
   public:
     static constexpr std::string_view name = "socket";
 
-    explicit socket(stream_socket fd) : fd(fd) {
+    explicit socket(stream_socket fd, size_field_t lp_size = size_field_t::u4)
+      : fd(fd), lp_size(lp_size) {
       // nop
     }
 
@@ -111,6 +128,9 @@ public:
     /// The socket file descriptor to use.
     stream_socket fd;
 
+    /// The size of the length prefix.
+    size_field_t lp_size;
+
     /// Returns the file descriptor and setting the `fd` member variable to the
     /// invalid socket.
     stream_socket take_fd() noexcept {
@@ -130,7 +150,8 @@ public:
   public:
     static constexpr std::string_view name = "conn";
 
-    explicit conn(ssl::connection st) : state(std::move(st)) {
+    explicit conn(ssl::connection st, size_field_t lp_size = size_field_t::u4)
+      : state(std::move(st)), lp_size(lp_size) {
       // nop
     }
 
@@ -153,6 +174,9 @@ public:
 
     /// SSL state for the connection.
     ssl::connection state;
+
+    /// The size of the length prefix.
+    size_field_t lp_size;
   };
 
   using conn_t = client_config_tag<conn>;
