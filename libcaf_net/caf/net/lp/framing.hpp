@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/net/dsl/client_config.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/lp/lower_layer.hpp"
 #include "caf/net/lp/upper_layer.hpp"
@@ -29,7 +30,9 @@ public:
 
   // -- factories --------------------------------------------------------------
 
-  static std::unique_ptr<framing> make(upper_layer_ptr up);
+  static std::unique_ptr<framing>
+  make(upper_layer_ptr up,
+       dsl::size_field_type lp_size = dsl::size_field_type::u4);
 
   static disposable run(multiplexer& mpx, stream_socket fd,
                         async::consumer_resource<chunk> pull,
