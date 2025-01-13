@@ -24,12 +24,17 @@ namespace caf::net::lp {
 
 namespace {
 
+template <class T>
 std::pair<size_t, byte_span> split(byte_span buffer) noexcept {
-  CAF_ASSERT(buffer.size() >= sizeof(uint32_t));
-  auto u32_size = uint32_t{0};
-  memcpy(&u32_size, buffer.data(), sizeof(uint32_t));
-  auto msg_size = static_cast<size_t>(detail::from_network_order(u32_size));
-  return std::make_pair(msg_size, buffer.subspan(sizeof(uint32_t)));
+  CAF_ASSERT(buffer.size() >= sizeof(T));
+  auto t_size = T{0};
+  memcpy(&t_size, buffer.data(), sizeof(T));
+  auto msg_size = size_t{0};
+  if constexpr (std::is_same_v<T, uint8_t>)
+    msg_size = static_cast<size_t>(t_size);
+  else
+    msg_size = static_cast<size_t>(detail::from_network_order(t_size));
+  return std::make_pair(msg_size, buffer.subspan(sizeof(T)));
 }
 
 class framing_impl : public framing {
@@ -40,14 +45,26 @@ public:
 
   // -- constants --------------------------------------------------------------
 
-  static constexpr size_t hdr_size = sizeof(uint32_t);
-
-  static constexpr size_t max_message_length = INT32_MAX - sizeof(uint32_t);
+  static constexpr size_t max_message_length = INT64_MAX - sizeof(uint64_t);
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit framing_impl(upper_layer_ptr up) : up_(std::move(up)) {
-    // nop
+  framing_impl(upper_layer_ptr up, dsl::size_field_type lp_size)
+    : up_(std::move(up)), lp_size_(lp_size) {
+    switch (lp_size_) {
+      case dsl::size_field_type::u1:
+        hdr_size_ = sizeof(uint8_t);
+        break;
+      case dsl::size_field_type::u2:
+        hdr_size_ = sizeof(uint16_t);
+        break;
+      case dsl::size_field_type::u4:
+        hdr_size_ = sizeof(uint32_t);
+        break;
+      case dsl::size_field_type::u8:
+        hdr_size_ = sizeof(uint64_t);
+        break;
+    }
   }
 
   // -- implementation of octet_stream::upper_layer ----------------------------
@@ -62,50 +79,19 @@ public:
   }
 
   ptrdiff_t consume(byte_span input, byte_span) override {
-    auto lg = log::net::trace("got {} bytes\n", input.size());
-    if (input.size() < sizeof(uint32_t)) {
-      log::net::error("received too few bytes from underlying transport");
-      up_->abort(make_error(
-        sec::logic_error, "received too few bytes from underlying transport"));
-      return -1;
-    } else if (input.size() == hdr_size) {
-      auto u32_size = uint32_t{0};
-      memcpy(&u32_size, input.data(), sizeof(uint32_t));
-      auto msg_size = static_cast<size_t>(detail::from_network_order(u32_size));
-      if (msg_size == 0) {
-        // Ignore empty messages.
-        log::net::error("received empty message");
-        up_->abort(make_error(sec::logic_error,
-                              "received empty buffer from stream layer"));
-        return -1;
-      } else if (msg_size > max_message_length) {
-        log::net::debug("exceeded maximum message size");
-        up_->abort(
-          make_error(sec::protocol_error, "exceeded maximum message size"));
-        return -1;
-      } else {
-        log::net::debug("wait for payload of size {}", msg_size);
-        down_->configure_read(receive_policy::exactly(hdr_size + msg_size));
-        return 0;
-      }
-    } else {
-      auto [msg_size, msg] = split(input);
-      if (msg_size == msg.size() && msg_size + hdr_size == input.size()) {
-        log::net::debug("got message of size {}", msg_size);
-        if (up_->consume(msg) >= 0) {
-          if (down_->is_reading())
-            down_->configure_read(receive_policy::exactly(hdr_size));
-          return static_cast<ptrdiff_t>(input.size());
-        } else {
-          return -1;
-        }
-      } else {
-        log::net::debug("received malformed message");
-        up_->abort(
-          make_error(sec::protocol_error, "received malformed message"));
-        return -1;
-      }
+    switch (lp_size_) {
+      case dsl::size_field_type::u1:
+        return consume_impl<uint8_t>(input, {});
+      case dsl::size_field_type::u2:
+        return consume_impl<uint16_t>(input, {});
+      case dsl::size_field_type::u4:
+        return consume_impl<uint32_t>(input, {});
+      case dsl::size_field_type::u8:
+        return consume_impl<uint64_t>(input, {});
     }
+    log::net::error("invalid size field type");
+    up_->abort(make_error(sec::logic_error, "invalid size field type"));
+    return -1;
   }
 
   void prepare_send() override {
@@ -140,29 +126,107 @@ public:
 
   void request_messages() override {
     if (!down_->is_reading())
-      down_->configure_read(receive_policy::exactly(hdr_size));
+      down_->configure_read(receive_policy::exactly(hdr_size_));
   }
 
   void begin_message() override {
     down_->begin_output();
     auto& buf = down_->output_buffer();
     message_offset_ = buf.size();
-    buf.insert(buf.end(), 4, std::byte{0});
+    buf.insert(buf.end(), hdr_size_, std::byte{0});
   }
 
   byte_buffer& message_buffer() override {
     return down_->output_buffer();
   }
 
-  bool end_message() override {
+  bool end_message() {
+    switch (lp_size_) {
+      case dsl::size_field_type::u1:
+        return end_message_impl<uint8_t>();
+      case dsl::size_field_type::u2:
+        return end_message_impl<uint16_t>();
+      case dsl::size_field_type::u4:
+        return end_message_impl<uint32_t>();
+      case dsl::size_field_type::u8:
+        return end_message_impl<uint64_t>();
+    }
+    log::net::error("invalid size field type");
+    up_->abort(make_error(sec::logic_error, "invalid size field type"));
+    return false;
+  }
+
+  void shutdown() override {
+    down_->shutdown();
+  }
+
+private:
+  template <class T>
+  ptrdiff_t consume_impl(byte_span input, byte_span) {
+    auto lg = log::net::trace("got {} bytes\n", input.size());
+    if (input.size() < sizeof(T)) {
+      log::net::error("received too few bytes from underlying transport");
+      up_->abort(make_error(
+        sec::logic_error, "received too few bytes from underlying transport"));
+      return -1;
+    } else if (input.size() == hdr_size_) {
+      auto t_size = T{0};
+      memcpy(&t_size, input.data(), sizeof(T));
+      auto msg_size = size_t{0};
+      if constexpr (std::is_same_v<T, uint8_t>)
+        msg_size = static_cast<size_t>(t_size);
+      else
+        msg_size = static_cast<size_t>(detail::from_network_order(t_size));
+      if (msg_size == 0) {
+        // Ignore empty messages.
+        log::net::error("received empty message");
+        up_->abort(make_error(sec::logic_error,
+                              "received empty buffer from stream layer"));
+        return -1;
+      } else if (msg_size > max_message_length) {
+        log::net::debug("exceeded maximum message size");
+        up_->abort(
+          make_error(sec::protocol_error, "exceeded maximum message size"));
+        return -1;
+      } else {
+        log::net::debug("wait for payload of size {}", msg_size);
+        down_->configure_read(receive_policy::exactly(hdr_size_ + msg_size));
+        return 0;
+      }
+    } else {
+      auto [msg_size, msg] = split<T>(input);
+      if (msg_size == msg.size() && msg_size + hdr_size_ == input.size()) {
+        log::net::debug("got message of size {}", msg_size);
+        if (up_->consume(msg) >= 0) {
+          if (down_->is_reading())
+            down_->configure_read(receive_policy::exactly(hdr_size_));
+          return static_cast<ptrdiff_t>(input.size());
+        } else {
+          return -1;
+        }
+      } else {
+        log::net::debug("received malformed message");
+        up_->abort(
+          make_error(sec::protocol_error, "received malformed message"));
+        return -1;
+      }
+    }
+  }
+
+  template <class T>
+  bool end_message_impl() {
     using detail::to_network_order;
     auto& buf = down_->output_buffer();
     CAF_ASSERT(message_offset_ < buf.size());
     auto msg_begin = buf.begin() + static_cast<ptrdiff_t>(message_offset_);
-    auto msg_size = std::distance(msg_begin + 4, buf.end());
+    auto msg_size = std::distance(msg_begin + hdr_size_, buf.end());
     if (msg_size > 0 && static_cast<size_t>(msg_size) < max_message_length) {
-      auto u32_size = to_network_order(static_cast<uint32_t>(msg_size));
-      memcpy(std::addressof(*msg_begin), &u32_size, 4);
+      auto t_size = T{0};
+      if constexpr (std::is_same_v<T, uint8_t>)
+        t_size = static_cast<uint8_t>(msg_size);
+      else
+        t_size = to_network_order(static_cast<T>(msg_size));
+      memcpy(std::addressof(*msg_begin), &t_size, hdr_size_);
       down_->end_output();
       return true;
     } else {
@@ -174,26 +238,26 @@ public:
     }
   }
 
-  void shutdown() override {
-    down_->shutdown();
-  }
-
-private:
   // -- member variables -------------------------------------------------------
 
   octet_stream::lower_layer* down_;
 
   upper_layer_ptr up_;
 
+  dsl::size_field_type lp_size_;
+
   size_t message_offset_ = 0;
+
+  size_t hdr_size_ = 0;
 };
 
 } // namespace
 
 // -- factories ----------------------------------------------------------------
 
-std::unique_ptr<framing> framing::make(upper_layer_ptr up) {
-  return std::make_unique<framing_impl>(std::move(up));
+std::unique_ptr<framing> framing::make(upper_layer_ptr up,
+                                       dsl::size_field_type lp_size) {
+  return std::make_unique<framing_impl>(std::move(up), lp_size);
 }
 
 namespace {
@@ -203,8 +267,9 @@ disposable run_impl(multiplexer& mpx, Conn& conn,
                     async::consumer_resource<chunk>& pull,
                     async::producer_resource<chunk>& push) {
   auto bridge = internal::make_lp_flow_bridge(std::move(pull), std::move(push));
-  auto transport = internal::make_transport(std::move(conn),
-                                            framing::make(std::move(bridge)));
+  auto transport = internal::make_transport(
+    std::move(conn),
+    framing::make(std::move(bridge), dsl::size_field_type::u2));
   auto manager = net::socket_manager::make(&mpx, std::move(transport));
   if (mpx.start(manager))
     return manager->as_disposable();
