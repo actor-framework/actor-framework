@@ -82,11 +82,11 @@ CAF_IO_EXPORT expected<void> keepalive(native_socket fd, bool new_value);
 
 /// Sets fd to nonblocking if `set_nonblocking == true`
 /// or to blocking if `set_nonblocking == false`
-/// throws `network_error` on error
+/// @throws `network_error` on error
 CAF_IO_EXPORT expected<void> nonblocking(native_socket fd, bool new_value);
 
 /// Enables or disables Nagle's algorithm on `fd`.
-/// @throws network_error
+/// @throws network_error on error
 CAF_IO_EXPORT expected<void> tcp_nodelay(native_socket fd, bool new_value);
 
 /// Enables or disables `SIGPIPE` events from `fd`.

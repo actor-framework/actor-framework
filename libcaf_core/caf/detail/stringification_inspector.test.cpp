@@ -16,9 +16,9 @@ using namespace std::literals;
 namespace {
 
 struct dummy_user {
-  std::string first_name;
-  std::optional<std::string> last_name;
-  std::optional<std::string> nickname;
+  std::string first_name = {};
+  std::optional<std::string> last_name = {};
+  std::optional<std::string> nickname = {};
 };
 
 template <class Inspector>
