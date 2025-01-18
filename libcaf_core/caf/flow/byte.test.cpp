@@ -41,9 +41,9 @@ SCENARIO("to_chunks splits a sequence of bytes into chunks") {
           .for_each([&output](const chunk& x) { output.push_back(x); });
         run_flows();
         if (check_eq(output.size(), 3u)) {
-          check(output[0].equal_to(chunk{to_bytes("Sampl"s)}));
-          check(output[1].equal_to(chunk{to_bytes("e str"s)}));
-          check(output[2].equal_to(chunk{to_bytes("ing"s)}));
+          check(output[0].equal_to(chunk{byte_span{input}.subspan(0, 5)}));
+          check(output[1].equal_to(chunk{byte_span{input}.subspan(5, 5)}));
+          check(output[2].equal_to(chunk{byte_span{input}.subspan(10)}));
         }
       }
     }
@@ -57,8 +57,8 @@ SCENARIO("to_chunks splits a sequence of bytes into chunks") {
           .for_each([&output](const chunk& x) { output.push_back(x); });
         run_flows();
         if (check_eq(output.size(), 2u)) {
-          check(output[0].equal_to(chunk{to_bytes("Sampl"s)}));
-          check(output[1].equal_to(chunk{to_bytes("e str"s)}));
+          check(output[0].equal_to(chunk{byte_span{input}.subspan(0, 5)}));
+          check(output[1].equal_to(chunk{byte_span{input}.subspan(5, 5)}));
         }
       }
     }
@@ -93,9 +93,9 @@ SCENARIO("to_chunks splits a sequence of bytes into chunks") {
           .for_each([&output](const chunk& x) { output.push_back(x); });
         run_flows();
         if (check_eq(output.size(), 3u)) {
-          check(output[0].equal_to(chunk{to_bytes("Sampl"s)}));
-          check(output[1].equal_to(chunk{to_bytes("e str"s)}));
-          check(output[2].equal_to(chunk{to_bytes("ing"s)}));
+          check(output[0].equal_to(chunk{byte_span{input}.subspan(0, 5)}));
+          check(output[1].equal_to(chunk{byte_span{input}.subspan(5, 5)}));
+          check(output[2].equal_to(chunk{byte_span{input}.subspan(10)}));
         }
         check_eq(result, sec::runtime_error);
       }
@@ -113,9 +113,9 @@ SCENARIO("to_chunks splits a sequence of bytes into chunks") {
           .for_each([&output](const chunk& x) { output.push_back(x); });
         run_flows();
         if (check_eq(output.size(), 3u)) {
-          check(output[0].equal_to(chunk{to_bytes("Sampl"s)}));
-          check(output[1].equal_to(chunk{to_bytes("e str"s)}));
-          check(output[2].equal_to(chunk{to_bytes("ing"s)}));
+          check(output[0].equal_to(chunk{byte_span{input}.subspan(0, 5)}));
+          check(output[1].equal_to(chunk{byte_span{input}.subspan(5, 5)}));
+          check(output[2].equal_to(chunk{byte_span{input}.subspan(10)}));
         }
         check_eq(result, sec::none);
       }
