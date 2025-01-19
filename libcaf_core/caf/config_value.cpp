@@ -502,46 +502,6 @@ config_value::parse_msg_impl(std::string_view str,
 
 // -- related free functions ---------------------------------------------------
 
-bool operator<(double x, const config_value& y) {
-  return config_value{x} < y;
-}
-
-bool operator<=(double x, const config_value& y) {
-  return config_value{x} <= y;
-}
-
-bool operator==(double x, const config_value& y) {
-  return config_value{x} == y;
-}
-
-bool operator>(double x, const config_value& y) {
-  return config_value{x} > y;
-}
-
-bool operator>=(double x, const config_value& y) {
-  return config_value{x} >= y;
-}
-
-bool operator<(const config_value& x, double y) {
-  return x < config_value{y};
-}
-
-bool operator<=(const config_value& x, double y) {
-  return x <= config_value{y};
-}
-
-bool operator==(const config_value& x, double y) {
-  return x == config_value{y};
-}
-
-bool operator>(const config_value& x, double y) {
-  return x > config_value{y};
-}
-
-bool operator>=(const config_value& x, double y) {
-  return x >= config_value{y};
-}
-
 bool operator<(const config_value& x, const config_value& y) {
   return x.get_data() < y.get_data();
 }
