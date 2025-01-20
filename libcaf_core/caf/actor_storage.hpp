@@ -13,7 +13,7 @@
 #include <new>
 #include <type_traits>
 
-CAF_PUSH_INVALID_OFFSETOF_WARNING                                    
+CAF_PUSH_INVALID_OFFSETOF_WARNING
 
 namespace caf {
 
