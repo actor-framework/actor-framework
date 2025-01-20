@@ -6,25 +6,33 @@
 
 namespace caf {
 
-template <class... Ts>
+template <class...>
 struct type_list;
 
-template <class... Ts>
-struct tl_concat_helper;
+} // namespace caf
+
+namespace caf::detail {
+
+template <class...>
+struct tl_concat;
 
 template <class... Ts>
-struct tl_concat_helper<type_list<Ts...>> {
+struct tl_concat<type_list<Ts...>> {
   using type = type_list<Ts...>;
 };
 
 template <class... Ts, class... Us, class... Lists>
-struct tl_concat_helper<type_list<Ts...>, type_list<Us...>, Lists...>
-  : tl_concat_helper<type_list<Ts..., Us...>, Lists...> {
+struct tl_concat<type_list<Ts...>, type_list<Us...>, Lists...>
+  : tl_concat<type_list<Ts..., Us...>, Lists...> {
   // nop
 };
 
 template <class... Ts>
-using tl_concat_t = typename tl_concat_helper<Ts...>::type;
+using tl_concat_t = typename tl_concat<Ts...>::type;
+
+} // namespace caf::detail
+
+namespace caf {
 
 /// A list of types.
 template <class... Ts>
@@ -37,7 +45,7 @@ struct type_list {
   using append = type_list<Ts..., Us...>;
 
   template <class... Lists>
-  using append_from = tl_concat_t<type_list<Ts...>, Lists...>;
+  using append_from = detail::tl_concat_t<type_list<Ts...>, Lists...>;
 };
 
 template <class... Ts>
