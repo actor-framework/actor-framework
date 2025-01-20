@@ -161,4 +161,8 @@ static_assert(std::is_convertible_v<dummy5, dummy3>,
 static_assert(std::is_convertible_v<dummy5, dummy4>,
               "handle not assignable to narrower definition");
 
+static_assert(
+  std::is_same_v<type_list<bool>::append_from<type_list<int>, type_list<float>>,
+                 type_list<bool, int, float>>);
+
 } // namespace
