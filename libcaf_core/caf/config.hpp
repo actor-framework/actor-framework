@@ -107,6 +107,8 @@
     __pragma(warning(disable: 4102))
 #  define CAF_PUSH_DEPRECATED_WARNING                                          \
     __pragma(warning(push))
+#  define CAF_PUSH_INVALID_OFFSETOF_WARNING                                    \
+    __pragma(warning(push))
 #  define CAF_POP_WARNINGS __pragma(warning(pop))
 #  define CAF_COMPILER_VERSION _MSC_FULL_VER
 #  pragma warning( disable : 4624 )
