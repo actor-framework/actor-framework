@@ -13,10 +13,7 @@
 #include <new>
 #include <type_traits>
 
-#ifdef CAF_GCC
-#  pragma GCC diagnostic push
-#  pragma GCC diagnostic ignored "-Winvalid-offsetof"
-#endif
+CAF_PUSH_INVALID_OFFSETOF_WARNING
 
 namespace caf {
 
@@ -81,6 +78,4 @@ private:
 
 } // namespace caf
 
-#ifdef CAF_GCC
-#  pragma GCC diagnostic pop
-#endif
+CAF_POP_WARNINGS
