@@ -63,14 +63,14 @@ auto print_escaped_to(Output&& out, char c) {
     else
       ((*out++ = chars), ...);
   };
-  auto to_hex_char = [](int d) { return "0123456789abcdef"[d]; };
+  auto to_hex = [](int d) { return "0123456789abcdef"[d]; };
   switch (c) {
     default:
       // Non-printable ASCII chars must be encoded as \u00xx.
-      if (c >= 0x00 && c <= 0x1f)
-        append('\\', 'u', '0', '0', to_hex_char(c >> 4), to_hex_char(c & 0x0f));
-      else
+      if (auto u8 = static_cast<unsigned char>(c); u8 > 0x1f)
         append(c);
+      else
+        append('\\', 'u', '0', '0', to_hex(u8 >> 4), to_hex(u8 & 0x0f));
       break;
     case '\\':
       append('\\', '\\');
