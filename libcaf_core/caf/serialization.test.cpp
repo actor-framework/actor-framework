@@ -465,13 +465,13 @@ struct fixture : caf::test::fixture::deterministic {
                       from);
   }
 
-  std::variant<int8_t, int16_t, int32_t, int64_t, uint8_t, uint16_t, uint32_t,
-               uint64_t, double, long double, std::string, std::u16string,
-               std::u32string, std::vector<int32_t>, std::list<int32_t>,
-               std::map<std::string, int32_t>,
-               std::unordered_map<std::string, int32_t>, std::set<int32_t>,
-               std::unordered_set<int32_t>, std::array<int32_t, 5>,
-               std::tuple<int32_t, std::string, int32_t>, c_array>
+  std::variant<
+    int8_t, int16_t, int32_t, int64_t, uint8_t, uint16_t, uint32_t, uint64_t,
+    double, long double, float, std::string, std::u16string, std::u32string,
+    std::vector<int32_t>, std::vector<bool>, std::list<int32_t>,
+    std::map<std::string, int32_t>, std::unordered_map<std::string, int32_t>,
+    std::set<int32_t>, std::unordered_set<int32_t>, std::array<int32_t, 5>,
+    std::tuple<int32_t, std::string, int32_t>, c_array>
   read_val(const std::string& type, const std::string& value) {
     str_list parsed_value;
     if (type == "i8") {
@@ -501,6 +501,9 @@ struct fixture : caf::test::fixture::deterministic {
     if (type == "ld") {
       return static_cast<long double>(std::stold(value));
     }
+    if (type == "f") {
+      return static_cast<float>(std::stof(value));
+    }
     if (type == "real") {
       return std::stod(value);
     }
@@ -519,6 +522,14 @@ struct fixture : caf::test::fixture::deterministic {
       std::transform(parsed_value.cbegin(), parsed_value.cend(),
                      std::back_inserter(ivec),
                      [](const std::string& s) { return std::stoi(s); });
+      return ivec;
+    }
+    if (type == "v_bool") {
+      std::vector<bool> ivec;
+      caf::split(parsed_value, value, ",");
+      std::transform(parsed_value.cbegin(), parsed_value.cend(),
+                     std::back_inserter(ivec),
+                     [](const std::string& s) { return s == "true"; });
       return ivec;
     }
     if (type == "list") {
@@ -605,13 +616,13 @@ struct fixture : caf::test::fixture::deterministic {
     CAF_RAISE_ERROR(std::logic_error, "invalid type");
   }
 
-  std::variant<int8_t, int16_t, int32_t, int64_t, uint8_t, uint16_t, uint32_t,
-               uint64_t, double, long double, std::string, std::u16string,
-               std::u32string, std::vector<int32_t>, std::list<int32_t>,
-               std::map<std::string, int32_t>,
-               std::unordered_map<std::string, int32_t>, std::set<int32_t>,
-               std::unordered_set<int32_t>, std::array<int32_t, 5>,
-               std::tuple<int32_t, std::string, int32_t>, c_array>
+  std::variant<
+    int8_t, int16_t, int32_t, int64_t, uint8_t, uint16_t, uint32_t, uint64_t,
+    double, long double, float, std::string, std::u16string, std::u32string,
+    std::vector<int32_t>, std::vector<bool>, std::list<int32_t>,
+    std::map<std::string, int32_t>, std::unordered_map<std::string, int32_t>,
+    std::set<int32_t>, std::unordered_set<int32_t>, std::array<int32_t, 5>,
+    std::tuple<int32_t, std::string, int32_t>, c_array>
   default_val(const std::string& type) {
     if (type == "i8") {
       return static_cast<int8_t>(0);
@@ -640,6 +651,9 @@ struct fixture : caf::test::fixture::deterministic {
     if (type == "ld") {
       return static_cast<long double>(0);
     }
+    if (type == "f") {
+      return static_cast<float>(0);
+    }
     if (type == "real") {
       return 0.0;
     }
@@ -654,6 +668,9 @@ struct fixture : caf::test::fixture::deterministic {
     }
     if (type == "vector") {
       return std::vector<int32_t>{};
+    }
+    if (type == "v_bool") {
+      return std::vector<bool>{};
     }
     if (type == "list") {
       return std::list<int32_t>{};
@@ -729,11 +746,13 @@ OUTLINE("serializing and then deserializing primitive values") {
     | binary_serializer   | u32    | 123456        |
     | binary_serializer   | u64    | 123456789     |
     | binary_serializer   | ld     | 123.5         |
+    | binary_serializer   | f      | 3.14          |
     | binary_serializer   | real   | 12.5          |
     | binary_serializer   | string | Hello, world! |
     | binary_serializer   | u16str | Hello, world! |
     | binary_serializer   | u32str | Hello, world! |
     | binary_serializer   | vector | 1, 42, -31    |
+    | binary_serializer   | v_bool | true, false   |
     | binary_serializer   | list   | 1, 42, -31    |
     | binary_serializer   | map    | a:-1, b:42    |
     | binary_serializer   | umap   | a:-1, b:42    |
@@ -751,9 +770,11 @@ OUTLINE("serializing and then deserializing primitive values") {
     | json_writer         | u32    | 123456        |
     | json_writer         | u64    | 123456789     |
     | json_writer         | ld     | 123.5         |
+    | json_writer         | f      | 3.14          |
     | json_writer         | real   | 12.5          |
     | json_writer         | string | Hello, world! |
     | json_writer         | vector | 1, 42, -31    |
+    | json_writer         | v_bool | true, false   |
     | json_writer         | list   | 1, 42, -31    |
     | json_writer         | map    | a:-1, b:42    |
     | json_writer         | umap   | a:-1, b:42    |
@@ -771,9 +792,11 @@ OUTLINE("serializing and then deserializing primitive values") {
     | config_value_writer | u32    | 123456        |
     | config_value_writer | u64    | 123456789     |
     | config_value_writer | ld     | 123.5         |
+    | config_value_writer | f      | 3.14          |
     | config_value_writer | real   | 12.5          |
     | config_value_writer | string | Hello, world! |
     | config_value_writer | vector | 1, 42, -31    |
+    | config_value_writer | v_bool | true, false   |
     | config_value_writer | list   | 1, 42, -31    |
     | config_value_writer | map    | a:-1, b:42    |
     | config_value_writer | umap   | a:-1, b:42    |
@@ -859,6 +882,55 @@ OUTLINE("serializing a type that initializes members to a non-empty state") {
     | json_writer         |
     | config_value_writer |
   )_";
+}
+
+// TODO: update tests to use apply instead of value overload
+SCENARIO("binary serializer and deserializer handle vectors of booleans") {
+  GIVEN("a binary serializer") {
+    auto sink = binary_serializer_wrapper{sys};
+    WHEN("serializing a vector of booleans with 8 values") {
+      auto val = std::vector<bool>{true,  false, true, true,
+                                   false, false, true, false};
+      check(sink.sink.value(val));
+      THEN("deserializing the result produces the value again") {
+        auto source = binary_deserializer{sys, sink.buffer};
+        auto copy = std::vector<bool>{};
+        check(source.value(copy));
+        check_eq(copy, val);
+      }
+    }
+    WHEN("serializing a vector of boolean with 9 values") {
+      auto val = std::vector<bool>{true,  false, true,  true, false,
+                                   false, true,  false, true};
+      check(sink.sink.value(val));
+      THEN("deserializing the result produces the value again") {
+        auto source = binary_deserializer{sys, sink.buffer};
+        auto copy = std::vector<bool>{};
+        check(source.value(copy));
+        check_eq(copy, val);
+      }
+    }
+    WHEN("serializing a vector of boolean with 1 value") {
+      auto val = std::vector<bool>{true};
+      check(sink.sink.value(val));
+      THEN("deserializing the result produces the value again") {
+        auto source = binary_deserializer{sys, sink.buffer};
+        auto copy = std::vector<bool>{};
+        check(source.value(copy));
+        check_eq(copy, val);
+      }
+    }
+    WHEN("serializing an empty vector of boolean") {
+      auto val = std::vector<bool>{};
+      check(sink.sink.value(val));
+      THEN("deserializing the result produces the value again") {
+        auto source = binary_deserializer{sys, sink.buffer};
+        auto copy = std::vector<bool>{};
+        check(source.value(copy));
+        check_eq(copy, val);
+      }
+    }
+  }
 }
 
 } // WITH_FIXTURE(fixture)
