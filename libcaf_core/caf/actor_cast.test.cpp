@@ -62,7 +62,7 @@ using access_t = actor_cast_access<access_tag, access_tag, -1>;
 
 WITH_FIXTURE(test::fixture::deterministic) {
 
-TEST("actor_cast converts a strong pointer to a weak  pointer") {
+TEST("actor_cast converts a strong pointer to a weak pointer") {
   SECTION("valid handle") {
     SECTION("actor") {
       auto hdl = sys.spawn(dummy_impl);
