@@ -4,6 +4,7 @@
 
 #include "caf/scoped_actor.hpp"
 
+#include "caf/actor_cast.hpp"
 #include "caf/actor_registry.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/log/system.hpp"
@@ -59,7 +60,7 @@ scoped_actor::~scoped_actor() {
 }
 
 blocking_actor* scoped_actor::ptr() const {
-  return static_cast<blocking_actor*>(actor_cast<abstract_actor*>(self_));
+  return actor_cast<blocking_actor*>(self_);
 }
 
 std::string to_string(const scoped_actor& x) {

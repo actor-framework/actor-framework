@@ -22,6 +22,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   `CAF_USE_STD_FORMAT` to `ON` (#1963).
 - The functions `run_scheduled`, `run_scheduled_weak`, `run_delayed` and
   `run_delayed_weak` now properly accept move-only callback types.
+- Fix the conversion from invalid actor handles to raw pointers when using
+  `actor_cast`. This resolves an issue with `send` that could lead to undefined
+  behavior (#1972).
 
 ## [1.0.2] - 2024-10-30
 

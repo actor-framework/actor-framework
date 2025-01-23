@@ -83,7 +83,7 @@ actor actor_pool::make(actor_system& sys, policy pol) {
   actor_config cfg{&sys.scheduler()};
   auto res = make_actor<actor_pool, actor>(sys.next_actor_id(), sys.node(),
                                            &sys, cfg);
-  auto ptr = static_cast<actor_pool*>(actor_cast<abstract_actor*>(res));
+  auto ptr = actor_cast<actor_pool*>(res);
   ptr->policy_ = std::move(pol);
   return res;
 }
@@ -91,7 +91,7 @@ actor actor_pool::make(actor_system& sys, policy pol) {
 actor actor_pool::make(actor_system& sys, size_t num_workers,
                        const factory& fac, policy pol) {
   auto res = make(sys, std::move(pol));
-  auto ptr = static_cast<actor_pool*>(actor_cast<abstract_actor*>(res));
+  auto ptr = actor_cast<actor_pool*>(res);
   auto res_addr = ptr->address();
   for (size_t i = 0; i < num_workers; ++i) {
     auto worker = fac();

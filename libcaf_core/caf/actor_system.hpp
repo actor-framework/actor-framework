@@ -518,7 +518,7 @@ public:
     CAF_SET_LOGGER_SYS(this);
     auto res = make_actor<C>(next_actor_id(), node(), this, cfg,
                              std::forward<Ts>(xs)...);
-    auto ptr = static_cast<C*>(actor_cast<abstract_actor*>(res));
+    auto ptr = actor_cast<C*>(res);
     ptr->launch(cfg.sched, has_lazy_init_flag(Os), has_hide_flag(Os));
     return res;
   }
@@ -610,15 +610,15 @@ public:
     cfg.mbox_factory = mailbox_factory();
     auto res = make_actor<Impl>(next_actor_id(), node(), this, cfg,
                                 std::forward<Ts>(xs)...);
-    auto ptr = static_cast<Impl*>(actor_cast<abstract_actor*>(res));
+    auto* rptr = actor_cast<Impl*>(res);
     auto launch = [strong_ptr = std::move(res), sched = cfg.sched] {
-      // Note: we pass `res` to this lambda instead of `ptr` to keep a strong
-      //       reference to the actor.
-      auto dptr = static_cast<Impl*>(actor_cast<abstract_actor*>(strong_ptr));
-      dptr->unsetf(abstract_actor::is_inactive_flag);
-      dptr->launch(sched, has_lazy_init_flag(Os), has_hide_flag(Os));
+      // Note: this lambda needs to hold onto a strong reference to the actor.
+      if (auto* ptr = actor_cast<Impl*>(strong_ptr)) {
+        ptr->unsetf(abstract_actor::is_inactive_flag);
+        ptr->launch(sched, has_lazy_init_flag(Os), has_hide_flag(Os));
+      }
     };
-    return std::make_tuple(ptr, launcher<decltype(launch)>(std::move(launch)));
+    return std::make_tuple(rptr, launcher<decltype(launch)>(std::move(launch)));
   }
 
   detail::private_thread* acquire_private_thread();

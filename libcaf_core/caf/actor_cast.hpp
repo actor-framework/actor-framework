@@ -71,7 +71,10 @@ public:
   }
 
   To operator()(abstract_actor* x) const {
-    return To{x->ctrl()};
+    if (x != nullptr) {
+      return To{x->ctrl()};
+    }
+    return To{};
   }
 
   template <class T, class = std::enable_if_t<!std::is_pointer_v<T>>>
@@ -84,7 +87,10 @@ template <class To, class From>
 class actor_cast_access<To*, From, raw_ptr_cast> {
 public:
   To* operator()(actor_control_block* x) const {
-    return static_cast<To*>(x->get());
+    if (x != nullptr) {
+      return static_cast<To*>(x->get());
+    }
+    return nullptr;
   }
 
   To* operator()(abstract_actor* x) const {

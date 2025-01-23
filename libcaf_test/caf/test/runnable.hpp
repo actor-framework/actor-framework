@@ -378,7 +378,9 @@ private:
 
   template <class T>
   static auto stringify(const T& value) {
-    if constexpr (std::is_convertible_v<T, std::string>) {
+    if constexpr (std::is_same_v<T, std::nullptr_t>) {
+      return std::string{"null"};
+    } else if constexpr (std::is_convertible_v<T, std::string>) {
       return std::string{value};
     } else {
       return caf::deep_to_string(value);
