@@ -3,6 +3,15 @@
 All notable changes to this project will be documented in this file. The format
 is based on [Keep a Changelog](https://keepachangelog.com).
 
+## 2.0.0
+
+### Changed
+
+- Serializer interfaces have received an overhaul to allow custom serialization
+  of actor handles. There are also two new base types for serialization:
+  `byte_reader` and `byte_writer`. These new types allow users to write generic
+  code for serializers that operate on byte sequences.
+
 ## Unreleased
 
 ### Added
