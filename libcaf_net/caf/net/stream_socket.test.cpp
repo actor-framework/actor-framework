@@ -6,9 +6,13 @@
 
 #include "caf/test/test.hpp"
 
+#include "caf/net/socket_guard.hpp"
+
 #include "caf/byte_buffer.hpp"
 #include "caf/log/test.hpp"
 #include "caf/span.hpp"
+
+using namespace std::literals;
 
 using namespace caf;
 using namespace caf::net;
@@ -98,6 +102,20 @@ TEST("transfer data using multiple buffers") {
            full_buf.size());
   check_eq(static_cast<size_t>(read(first, rd_buf)), full_buf.size());
   check(std::equal(full_buf.begin(), full_buf.end(), rd_buf.begin()));
+}
+
+TEST("receive with a timeout on a blocking socket") {
+  auto maybe_sockets = make_stream_socket_pair();
+  require(maybe_sockets.has_value());
+  auto [fd1, fd2] = *maybe_sockets;
+  socket_guard guard1{fd1};
+  socket_guard guard2{fd2};
+  auto err = receive_timeout(fd1, 5ms);
+  require_eq(err, error{});
+  std::byte buf[10];
+  auto res = read(fd1, make_span(buf));
+  check_eq(res, -1);
+  check(last_socket_error_is_temporary());
 }
 
 } // WITH_FIXTURE(fixture)

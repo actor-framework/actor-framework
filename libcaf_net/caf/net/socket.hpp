@@ -10,6 +10,7 @@
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/fwd.hpp"
+#include "caf/timespan.hpp"
 
 #include <string>
 #include <system_error>
@@ -115,6 +116,11 @@ error CAF_NET_EXPORT shutdown_read(socket x);
 /// Disallows further writes to the socket.
 /// @relates socket
 error CAF_NET_EXPORT shutdown_write(socket x);
+
+/// Sets the receive timeout for `x` to `timeout`.
+/// @note On Windows, this timeout is ignored unless the socket has been
+///       created using the WSA_FLAG_OVERLAPPED flag.
+error CAF_NET_EXPORT receive_timeout(socket x, timespan timeout);
 
 /// Returns the socket ID of `fd`.
 inline socket_id get_socket_id(socket fd) noexcept {
