@@ -29,6 +29,7 @@
 #include "caf/flow/op/merge.hpp"
 #include "caf/flow/op/never.hpp"
 #include "caf/flow/op/on_backpressure_buffer.hpp"
+#include "caf/flow/op/on_error_resume_next.hpp"
 #include "caf/flow/op/prefix_and_tail.hpp"
 #include "caf/flow/op/publish.hpp"
 #include "caf/flow/op/retry.hpp"
@@ -267,6 +268,12 @@ public:
 
   auto buffer(size_t count, timespan period) {
     return materialize().buffer(count, period);
+  }
+
+  /// @copydoc observable::on_error_resume_next
+  template <class Predicate, class Fallback>
+  auto on_error_resume_next(Predicate predicate, Fallback fallback) {
+    return materialize().on_error_resume_next(predicate, std::move(fallback));
   }
 
   /// @copydoc observable::sample
@@ -827,6 +834,15 @@ template <class Predicate>
 observable<T> observable<T>::retry(Predicate predicate) {
   using impl_t = op::retry<T, Predicate>;
   return parent()->add_child_hdl(std::in_place_type<impl_t>, *this, predicate);
+}
+
+template <class T>
+template <class Predicate>
+observable<T> observable<T>::on_error_resume_next(Predicate predicate,
+                                                  observable<T> fallback) {
+  using impl_t = op::on_error_resume_next<T, Predicate>;
+  return parent()->add_child_hdl(std::in_place_type<impl_t>, *this, predicate,
+                                 std::move(fallback));
 }
 
 // -- observable: combining ----------------------------------------------------

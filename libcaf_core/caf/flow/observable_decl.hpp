@@ -220,6 +220,12 @@ public:
   template <class Predicate>
   observable<T> retry(Predicate predicate);
 
+  /// Subscribes to the fallback observable on error for as long as the
+  /// predicate returns true.
+  template <class Predicate>
+  observable<T>
+  on_error_resume_next(Predicate predicate, observable<T> fallback);
+
   // -- combining --------------------------------------------------------------
 
   /// Combines the output of multiple @ref observable objects into one by
