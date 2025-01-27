@@ -14,7 +14,7 @@ namespace caf {
 /// Provides a fluent interface for sending asynchronous messages to actors at a
 /// specific point in time.
 template <message_priority Priority, class Trait, class... Args>
-class event_based_scheduled_mail_t
+class [[nodiscard]] event_based_scheduled_mail_t
   : public async_scheduled_mail_t<Priority, Trait, Args...> {
 public:
   using super = async_scheduled_mail_t<Priority, Trait, Args...>;
@@ -84,7 +84,8 @@ private:
 
 /// Provides a fluent interface for sending asynchronous messages to actors.
 template <message_priority Priority, class Trait, class... Args>
-class event_based_mail_t : public async_mail_base_t<Priority, Trait, Args...> {
+class [[nodiscard]] event_based_mail_t
+  : public async_mail_base_t<Priority, Trait, Args...> {
 public:
   using super = async_mail_base_t<Priority, Trait, Args...>;
 

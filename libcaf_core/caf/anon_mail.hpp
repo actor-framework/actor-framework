@@ -22,7 +22,7 @@ namespace caf {
 /// Provides a fluent interface for sending anonymous messages to actors at a
 /// specific point in time.
 template <message_priority Priority, class... Args>
-class anon_scheduled_mail_t {
+class [[nodiscard]] anon_scheduled_mail_t {
 public:
   anon_scheduled_mail_t(message&& content, actor_clock::time_point timeout)
     : content_(std::move(content)), timeout_(timeout) {
@@ -61,7 +61,7 @@ private:
 
 /// Provides a fluent interface for sending anonymous messages to actors.
 template <message_priority Priority, class... Args>
-class anon_mail_t {
+class [[nodiscard]] anon_mail_t {
 public:
   explicit anon_mail_t(message&& content) : content_(std::move(content)) {
     // nop
