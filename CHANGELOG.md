@@ -5,6 +5,11 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ## Unreleased
 
+### Changed
+
+- Add intermediary types for the `mail` API as `[[nodiscard]]` to make it easier
+  to spot mistakes when chaining calls.
+
 ### Added
 
 - New flow operator: `retry`.
