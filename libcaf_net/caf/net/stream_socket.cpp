@@ -59,8 +59,9 @@ constexpr int no_sigpipe_io_flag = 0;
 expected<std::pair<stream_socket, stream_socket>> make_stream_socket_pair() {
   auto addrlen = static_cast<int>(sizeof(sockaddr_in));
   socket_id socks[2] = {invalid_socket_id, invalid_socket_id};
-  CAF_NET_SYSCALL("socket", listener, ==, invalid_socket_id,
-                  ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP));
+  CAF_NET_SYSCALL("WSASocket", listener, ==, invalid_socket_id,
+                  WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, nullptr, 0,
+                            WSA_FLAG_OVERLAPPED));
   union {
     sockaddr_in inaddr;
     sockaddr addr;
@@ -95,7 +96,7 @@ expected<std::pair<stream_socket, stream_socket>> make_stream_socket_pair() {
   // set listener to listen mode
   CAF_NET_SYSCALL("listen", tmp5, !=, 0, listen(listener, 1));
   // create read-only end of the pipe
-  DWORD flags = 0;
+  DWORD flags = WSA_FLAG_OVERLAPPED;
   CAF_NET_SYSCALL("WSASocketW", read_fd, ==, invalid_socket_id,
                   WSASocketW(AF_INET, SOCK_STREAM, 0, nullptr, 0, flags));
   CAF_NET_SYSCALL("connect", tmp6, !=, 0,

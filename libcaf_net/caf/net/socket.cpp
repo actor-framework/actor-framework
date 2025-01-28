@@ -94,6 +94,7 @@ bool last_socket_error_is_temporary() {
     case WSATRY_AGAIN:
     case WSAEINPROGRESS:
     case WSAEWOULDBLOCK:
+    case WSAETIMEDOUT:
       return true;
     default:
       return false;
@@ -143,6 +144,14 @@ error child_process_inherit(socket x, bool) {
 error nonblocking(socket x, bool new_value) {
   u_long mode = new_value ? 1 : 0;
   CAF_NET_SYSCALL("ioctlsocket", res, !=, 0, ioctlsocket(x.id, FIONBIO, &mode));
+  return none;
+}
+
+error receive_timeout(socket x, timespan timeout) {
+  auto msec = static_cast<DWORD>(timeout.count() / 1'000'000);
+  CAF_NET_SYSCALL("setsockopt", res, !=, 0,
+                  setsockopt(x.id, SOL_SOCKET, SO_RCVTIMEO, (const char*) &msec,
+                             sizeof(msec)));
   return none;
 }
 
@@ -208,6 +217,17 @@ error nonblocking(socket x, bool new_value) {
   // calculate and set new flags
   auto wf = new_value ? (rf | O_NONBLOCK) : (rf & (~(O_NONBLOCK)));
   CAF_NET_SYSCALL("fcntl", set_res, ==, -1, fcntl(x.id, F_SETFL, wf));
+  return none;
+}
+
+error receive_timeout(socket x, timespan timeout) {
+  auto usec = timeout.count() / 1'000;
+  timeval tv;
+  tv.tv_sec = static_cast<int>(usec / 1'000'000);
+  tv.tv_usec = static_cast<int>(usec % 1'000'000);
+  CAF_NET_SYSCALL("setsockopt", res, !=, 0,
+                  setsockopt(x.id, SOL_SOCKET, SO_RCVTIMEO, (const char*) &tv,
+                             sizeof(tv)));
   return none;
 }
 
