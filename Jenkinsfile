@@ -15,7 +15,6 @@ config = [
     ],
     // Default CMake flags for the builds.
     buildFlags: [
-        'CAF_ENABLE_ACTOR_PROFILER:BOOL=ON',
         'CAF_ENABLE_EXAMPLES:BOOL=ON',
         'CAF_ENABLE_ROBOT_TESTS:BOOL=ON',
         'CAF_ENABLE_RUNTIME_CHECKS:BOOL=ON',
