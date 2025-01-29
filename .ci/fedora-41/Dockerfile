@@ -1,4 +1,4 @@
-FROM fedora:38
+FROM fedora:41
 
 COPY ./robot/dependencies.txt .
 

@@ -420,8 +420,11 @@ private:
     auto code_val = static_cast<uint16_t>(code);
     uint32_t mask_key = 0;
     byte_buffer payload;
+    // GCC version 14.1.1 raising -Wfree-nonheap-object error
+    CAF_PUSH_WARNINGS
     payload.reserve(msg.size() + 2);
-    payload.push_back(static_cast<std::byte>((code_val & 0xFF00) >> 8));
+    payload.push_back(static_cast<std::byte>((code_val >> 8) & 0x00FF));
+    CAF_POP_WARNINGS
     payload.push_back(static_cast<std::byte>(code_val & 0x00FF));
     auto* first = reinterpret_cast<const std::byte*>(msg.data());
     payload.insert(payload.end(), first, first + msg.size());
