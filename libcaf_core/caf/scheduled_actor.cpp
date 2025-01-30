@@ -193,12 +193,6 @@ bool scheduled_actor::enqueue(mailbox_element_ptr ptr, scheduler* sched) {
   }
 }
 
-mailbox_element* scheduled_actor::peek_at_next_mailbox_element() {
-  return mailbox().peek(awaited_responses_.empty()
-                          ? make_message_id()
-                          : std::get<0>(*awaited_responses_.begin()));
-}
-
 // -- overridden functions of local_actor --------------------------------------
 
 const char* scheduled_actor::name() const {
