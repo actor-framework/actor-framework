@@ -82,6 +82,7 @@
     _Pragma("GCC diagnostic ignored \"-Wcast-qual\"")                          \
     _Pragma("GCC diagnostic ignored \"-Wconversion\"")                         \
     _Pragma("GCC diagnostic ignored \"-Wfloat-equal\"")                        \
+    _Pragma("GCC diagnostic ignored \"-Wfree-nonheap-object\"")                \
     _Pragma("GCC diagnostic ignored \"-Wc++14-extensions\"")
 #  define CAF_PUSH_UNUSED_LABEL_WARNING                                        \
     _Pragma("GCC diagnostic push")                                             \

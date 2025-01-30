@@ -63,20 +63,20 @@ config = [
                 'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wno-array-bounds -Wno-free-nonheap-object',
             ],
         ]],
-        ['fedora-39', [ // EOL November 2024
-            numCores: 4,
-            tags: ['docker'],
-            builds: ['release'],
-            extraBuildFlags: [
-                'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wno-array-bounds',
-            ],
-        ]],
         ['fedora-40', [ // EOL May 2025
             numCores: 4,
             tags: ['docker'],
             builds: ['release'],
             extraBuildFlags: [
-                'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wno-uninitialized -Wno-array-bounds -Wno-free-nonheap-object',
+                'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wno-uninitialized -Wno-array-bounds',
+            ],
+        ]],
+        ['fedora-41', [ // EOL November 2025
+            numCores: 4,
+            tags: ['docker'],
+            builds: ['release'],
+            extraBuildFlags: [
+                'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wno-uninitialized -Wno-array-bounds',
                 'CAF_CXX_VERSION:STRING=23',
                 'CAF_USE_STD_FORMAT:BOOL=ON',
             ],
@@ -106,7 +106,7 @@ config = [
             ],
         ]],
         // Debug build with exceptions disabled.
-        ['fedora-40:no-exceptions', [
+        ['fedora-41:no-exceptions', [
             numCores: 4,
             tags: ['docker'],
             builds: ['debug'],
@@ -117,7 +117,7 @@ config = [
             ],
         ]],
         // Debug build for LeakSanitizer.
-        ['fedora-40:leak-checks', [
+        ['fedora-41:leak-checks', [
             numCores: 4,
             tags: ['docker', 'LeakSanitizer'],
             builds: ['debug'],
@@ -131,7 +131,7 @@ config = [
             ],
         ]],
         // Debug build with static libs, UBSan and hardening flags.
-        ['fedora-40:ub-checks', [
+        ['fedora-41:ub-checks', [
             numCores: 4,
             tags: ['docker', 'UBSanitizer'],
             builds: ['debug'],
