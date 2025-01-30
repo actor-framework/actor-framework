@@ -17,7 +17,6 @@
 #include "caf/detail/daemons.hpp"
 #include "caf/detail/meta_object.hpp"
 #include "caf/detail/private_thread_pool.hpp"
-#include "caf/detail/test_coordinator.hpp"
 #include "caf/detail/thread_safe_actor_clock.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/raise_error.hpp"
@@ -454,10 +453,7 @@ public:
     if (!scheduler) {
       using defaults::scheduler::policy;
       auto config_policy = get_or(cfg, "caf.scheduler.policy", policy);
-      if (config_policy == "testing") {
-        clock.reset(new detail::test_actor_clock());
-        scheduler.reset(new detail::test_coordinator(*parent));
-      } else if (config_policy == "sharing") {
+      if (config_policy == "sharing") {
         scheduler = scheduler::make_work_sharing(*parent);
       } else {
         // Any invalid configuration falls back to work stealing.

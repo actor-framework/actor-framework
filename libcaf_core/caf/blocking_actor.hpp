@@ -166,8 +166,6 @@ public:
 
   bool enqueue(mailbox_element_ptr, scheduler*) override;
 
-  mailbox_element* peek_at_next_mailbox_element() override;
-
   // -- overridden functions of local_actor ------------------------------------
 
   const char* name() const override;
