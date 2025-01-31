@@ -99,8 +99,6 @@ public:
 
   bool enqueue(mailbox_element_ptr ptr, scheduler* eu) override;
 
-  mailbox_element* peek_at_next_mailbox_element() override;
-
   // -- overridden functions of local_actor ------------------------------------
 
   void launch(scheduler* eu, bool lazy, bool hide) override;

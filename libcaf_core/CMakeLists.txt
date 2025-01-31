@@ -214,7 +214,6 @@ caf_add_component(
     caf/detail/stringification_inspector.test.cpp
     caf/detail/sync_request_bouncer.cpp
     caf/detail/sync_ring_buffer.test.cpp
-    caf/detail/test_coordinator.cpp
     caf/detail/thread_safe_actor_clock.cpp
     caf/detail/type_id_list_builder.cpp
     caf/detail/type_id_list_builder.test.cpp

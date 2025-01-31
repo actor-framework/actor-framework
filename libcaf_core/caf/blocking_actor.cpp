@@ -89,10 +89,6 @@ bool blocking_actor::enqueue(mailbox_element_ptr ptr, scheduler*) {
   }
 }
 
-mailbox_element* blocking_actor::peek_at_next_mailbox_element() {
-  return mailbox_.peek(make_message_id());
-}
-
 const char* blocking_actor::name() const {
   return "user.blocking-actor";
 }
