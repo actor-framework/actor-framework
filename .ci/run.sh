@@ -98,7 +98,8 @@ runBuild() {
 
 runTest() {
   if [ -z "$Excludes" ]; then
-    $CTestCommand --test-dir "$BuildDir" --output-on-failure
+    # Workaround for debian 11  and ubuntu 20.04 where --test-dir is not supported
+    (cd "$BuildDir" && exec $CTestCommand --output-on-failure)
   else
     $CTestCommand --test-dir "$BuildDir" --output-on-failure -E "$Excludes"
   fi
