@@ -32,6 +32,14 @@ void binary_serializer::skip(size_t num_bytes) {
   write_pos_ += num_bytes;
 }
 
+void binary_serializer::set_error(error stop_reason) {
+  err_ = std::move(stop_reason);
+}
+
+error& binary_serializer::get_error() noexcept {
+  return err_;
+}
+
 bool binary_serializer::begin_sequence(size_t list_size) {
   // Use varbyte encoding to compress sequence size on the wire.
   // For 64-bit values, the encoded representation cannot get larger than 10

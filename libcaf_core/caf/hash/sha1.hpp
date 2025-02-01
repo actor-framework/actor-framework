@@ -31,7 +31,15 @@ public:
 
   sha1() noexcept;
 
-  static constexpr bool has_human_readable_format() noexcept {
+  void set_error(error stop_reason) override {
+    err_ = std::move(stop_reason);
+  }
+
+  error& get_error() noexcept override {
+    return err_;
+  }
+
+  constexpr bool has_human_readable_format() noexcept {
     return false;
   }
 
@@ -167,6 +175,9 @@ private:
 
   /// Stores 512-bit message blocks.
   std::array<uint8_t, 64> message_block_;
+
+  /// Stores the error state.
+  error err_;
 };
 
 } // namespace caf::hash

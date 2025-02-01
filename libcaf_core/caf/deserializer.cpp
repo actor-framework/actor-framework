@@ -38,12 +38,12 @@ bool deserializer::assert_next_object_name(std::string_view type_name) {
     if (type_name == found) {
       return true;
     }
-    err_ = format_to_error(sec::type_clash, "{}: expected type {}, got {}",
-                           __func__, type_name, found);
+    set_error(format_to_error(sec::type_clash, "{}: expected type {}, got {}",
+                              __func__, type_name, found));
     return false;
   }
-  err_ = format_to_error(sec::type_clash, "{}: expected type {}, got none",
-                         __func__, type_name);
+  set_error(format_to_error(sec::type_clash, "{}: expected type {}, got none",
+                            __func__, type_name));
   return false;
 }
 
@@ -73,7 +73,7 @@ bool deserializer::value(strong_actor_ptr& ptr) {
   }
   if (aid == 0 || !nid) {
     ptr = nullptr;
-  } else if (auto err = load_actor(ptr, context_, aid, nid)) {
+  } else if (auto err = load_actor(ptr, sys(), aid, nid)) {
     set_error(err);
     return false;
   }

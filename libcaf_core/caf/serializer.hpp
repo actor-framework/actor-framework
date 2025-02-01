@@ -30,20 +30,14 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  serializer() noexcept = default;
-
-  explicit serializer(actor_system& sys) noexcept : context_(&sys) {
-    // nop
-  }
-
   virtual ~serializer();
 
   // -- properties -------------------------------------------------------------
 
-  actor_system* context() const noexcept {
-    return context_;
-  }
+  /// Returns the actor system associated with this serializer if available.
+  virtual caf::actor_system* sys() const noexcept = 0;
 
+  /// Returns whether the serialization format is human-readable.
   virtual bool has_human_readable_format() const noexcept = 0;
 
   // -- interface functions ----------------------------------------------------
@@ -170,10 +164,6 @@ public:
   /// member function to pack the booleans, for example to avoid using one
   /// byte for each value in a binary output format.
   virtual bool list(const std::vector<bool>& xs);
-
-protected:
-  /// Provides access to the ::actor_system.
-  actor_system* context_ = nullptr;
 };
 
 } // namespace caf

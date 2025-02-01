@@ -123,6 +123,10 @@ public:
 
   // -- modifiers --------------------------------------------------------------
 
+  void set_error(error stop_reason) override;
+
+  error& get_error() noexcept override;
+
   /// Parses @p json_text into an internal representation. After loading the
   /// JSON input, the reader is ready for attempting to deserialize inspectable
   /// objects.
@@ -160,6 +164,10 @@ public:
   void reset();
 
   // -- overrides --------------------------------------------------------------
+
+  caf::actor_system* sys() const noexcept override;
+
+  bool has_human_readable_format() const noexcept override;
 
   bool fetch_next_object_type(type_id_t& type) override;
 
@@ -263,6 +271,8 @@ private:
     st_->emplace_back(std::forward<T>(x));
   }
 
+  actor_system* sys_ = nullptr;
+
   detail::monotonic_buffer_resource buf_;
 
   stack_type* st_ = nullptr;
@@ -279,6 +289,8 @@ private:
 
   /// Configures which ID mapper we use to translate between type IDs and names.
   const type_id_mapper* mapper_ = &default_mapper_;
+
+  error err_;
 };
 
 } // namespace caf

@@ -77,6 +77,14 @@ public:
 
   // -- interface functions ----------------------------------------------------
 
+  void set_error(error stop_reason) override;
+
+  error& get_error() noexcept override;
+
+  caf::actor_system* sys() const noexcept override;
+
+  bool has_human_readable_format() const noexcept override;
+
   bool fetch_next_object_type(type_id_t& type) override;
 
   bool begin_object(type_id_t type, std::string_view name) override;
@@ -150,10 +158,14 @@ private:
   // `settings` as fallback if no such field exists.
   bool fetch_object_type(const settings* obj, type_id_t& type);
 
+  actor_system* sys_ = nullptr;
+
   stack_type st_;
 
   // Stores on-the-fly converted values.
   std::vector<std::unique_ptr<config_value>> scratch_space_;
+
+  error err_;
 };
 
 } // namespace caf

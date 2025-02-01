@@ -50,7 +50,7 @@ public:
     init();
   }
 
-  explicit json_writer(actor_system& sys) : super(sys) {
+  explicit json_writer(actor_system& sys) : sys_(&sys) {
     init();
   }
 
@@ -137,6 +137,12 @@ public:
   void reset() override;
 
   // -- overrides --------------------------------------------------------------
+
+  void set_error(error stop_reason) override;
+
+  error& get_error() noexcept override;
+
+  caf::actor_system* sys() const noexcept override;
 
   bool has_human_readable_format() const noexcept override;
 
@@ -269,6 +275,9 @@ private:
 
   // -- member variables -------------------------------------------------------
 
+  // The actor system this writer belongs to.
+  actor_system* sys_ = nullptr;
+
   // The current level of indentation.
   size_t indentation_level_ = 0;
 
@@ -304,6 +313,9 @@ private:
 
   // Configures which ID mapper we use to translate between type IDs and names.
   const type_id_mapper* mapper_ = &default_mapper_;
+
+  /// The last error that occurred.
+  error err_;
 };
 
 /// @relates json_writer::type

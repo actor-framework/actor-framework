@@ -115,12 +115,10 @@ namespace caf {
 
 json_reader::json_reader() {
   field_.reserve(8);
-  has_human_readable_format_ = true;
 }
 
-json_reader::json_reader(actor_system& sys) : super(sys) {
+json_reader::json_reader(actor_system& sys) : sys_(&sys) {
   field_.reserve(8);
-  has_human_readable_format_ = true;
 }
 
 json_reader::~json_reader() {
@@ -128,6 +126,14 @@ json_reader::~json_reader() {
 }
 
 // -- modifiers --------------------------------------------------------------
+
+void json_reader::set_error(error stop_reason) {
+  err_ = std::move(stop_reason);
+}
+
+error& json_reader::get_error() noexcept {
+  return err_;
+}
 
 bool json_reader::load(std::string_view json_text) {
   reset();
@@ -197,6 +203,14 @@ void json_reader::reset() {
 }
 
 // -- interface functions ------------------------------------------------------
+
+caf::actor_system* json_reader::sys() const noexcept {
+  return sys_;
+}
+
+bool json_reader::has_human_readable_format() const noexcept {
+  return true;
+}
 
 bool json_reader::fetch_next_object_type(type_id_t& type) {
   std::string_view type_name;

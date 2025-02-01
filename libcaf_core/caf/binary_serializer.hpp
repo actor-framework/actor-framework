@@ -93,6 +93,10 @@ public:
 
   // -- interface functions ----------------------------------------------------
 
+  void set_error(error stop_reason) override;
+
+  error& get_error() noexcept override;
+
   constexpr bool begin_object(type_id_t, std::string_view) noexcept {
     return true;
   }
@@ -200,6 +204,8 @@ private:
 
   /// Provides access to the ::proxy_registry and to the ::actor_system.
   actor_system* context_ = nullptr;
+
+  error err_;
 };
 
 } // namespace caf

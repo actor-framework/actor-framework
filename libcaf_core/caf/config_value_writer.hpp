@@ -18,8 +18,6 @@ class CAF_CORE_EXPORT config_value_writer final : public serializer {
 public:
   // -- member types------------------------------------------------------------
 
-  using super = serializer;
-
   struct present_field {
     settings* parent;
     std::string_view name;
@@ -35,17 +33,19 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  config_value_writer(config_value* dst, actor_system& sys) : super(sys) {
-    st_.push(dst);
-  }
+  config_value_writer(config_value* dst, actor_system& sys);
 
-  explicit config_value_writer(config_value* dst) {
-    st_.push(dst);
-  }
+  explicit config_value_writer(config_value* dst);
 
   ~config_value_writer() override;
 
   // -- interface functions ----------------------------------------------------
+
+  void set_error(error stop_reason) override;
+
+  error& get_error() noexcept override;
+
+  caf::actor_system* sys() const noexcept override;
 
   bool has_human_readable_format() const noexcept override;
 
@@ -118,7 +118,11 @@ public:
 private:
   bool push(config_value&& x);
 
+  caf::actor_system* sys_ = nullptr;
+
   stack_type st_;
+
+  error err_;
 };
 
 } // namespace caf
