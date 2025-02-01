@@ -43,6 +43,10 @@ public:
 
   // -- serializer interface ---------------------------------------------------
 
+  void set_error(error stop_reason) override;
+
+  error& get_error() noexcept override;
+
   bool begin_object(type_id_t, std::string_view name);
 
   bool end_object();
@@ -264,6 +268,8 @@ private:
   std::string& result_;
 
   bool in_string_object_ = false;
+
+  error err_;
 };
 
 } // namespace caf::detail

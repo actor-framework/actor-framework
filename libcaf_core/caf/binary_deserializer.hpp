@@ -26,10 +26,6 @@ namespace caf {
 class CAF_CORE_EXPORT binary_deserializer
   : public load_inspector_base<binary_deserializer> {
 public:
-  // -- member types -----------------------------------------------------------
-
-  using super = load_inspector_base<binary_deserializer>;
-
   // -- constructors, destructors, and assignment operators --------------------
 
   template <class Container>
@@ -102,6 +98,10 @@ public:
   }
 
   // -- overridden member functions --------------------------------------------
+
+  void set_error(error stop_reason) override;
+
+  error& get_error() noexcept override;
 
   bool fetch_next_object_type(type_id_t& type) noexcept;
 
@@ -226,6 +226,9 @@ private:
 
   /// Provides access to the ::proxy_registry and to the ::actor_system.
   actor_system* context_;
+
+  /// The last occurred error.
+  error err_;
 };
 
 } // namespace caf

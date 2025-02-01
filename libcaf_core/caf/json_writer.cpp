@@ -74,6 +74,18 @@ void json_writer::reset() {
 
 // -- overrides ----------------------------------------------------------------
 
+void json_writer::set_error(error stop_reason) {
+  err_ = std::move(stop_reason);
+}
+
+error& json_writer::get_error() noexcept {
+  return err_;
+}
+
+caf::actor_system* json_writer::sys() const noexcept {
+  return sys_;
+}
+
 bool json_writer::has_human_readable_format() const noexcept {
   return true;
 }

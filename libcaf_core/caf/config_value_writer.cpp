@@ -37,11 +37,32 @@ namespace caf {
 
 // -- constructors, destructors, and assignment operators ----------------------
 
+config_value_writer::config_value_writer(config_value* dst, actor_system& sys)
+  : sys_(&sys) {
+  st_.push(dst);
+}
+
+config_value_writer::config_value_writer(config_value* dst) {
+  st_.push(dst);
+}
+
 config_value_writer::~config_value_writer() {
   // nop
 }
 
 // -- interface functions ------------------------------------------------------
+
+void config_value_writer::set_error(error stop_reason) {
+  err_ = std::move(stop_reason);
+}
+
+error& config_value_writer::get_error() noexcept {
+  return err_;
+}
+
+caf::actor_system* config_value_writer::sys() const noexcept {
+  return sys_;
+}
 
 bool config_value_writer::has_human_readable_format() const noexcept {
   return true;

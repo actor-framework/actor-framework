@@ -51,6 +51,14 @@ void unsafe_int_value(binary_deserializer& source, T& x) {
 
 } // namespace
 
+void binary_deserializer::set_error(error stop_reason) {
+  err_ = std::move(stop_reason);
+}
+
+error& binary_deserializer::get_error() noexcept {
+  return err_;
+}
+
 bool binary_deserializer::fetch_next_object_type(type_id_t& type) noexcept {
   type = invalid_type_id;
   emplace_error(sec::unsupported_operation,

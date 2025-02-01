@@ -20,7 +20,7 @@ class test_serializer : public serializer {
 public:
   using super = serializer;
 
-  test_serializer(actor_system& sys, bool state) : super(sys), state_(state) {
+  test_serializer(actor_system& sys, bool state) : sys_(&sys), state_(state) {
     // nop
   }
 
@@ -29,6 +29,18 @@ public:
   }
 
   // -- interface functions ----------------------------------------------------
+
+  void set_error(error stop_reason) override {
+    err_ = std::move(stop_reason);
+  }
+
+  error& get_error() noexcept override {
+    return err_;
+  }
+
+  caf::actor_system* sys() const noexcept override {
+    return sys_;
+  }
 
   bool has_human_readable_format() const noexcept override {
     return false;
@@ -148,7 +160,9 @@ public:
   };
 
 private:
+  actor_system* sys_ = nullptr;
   bool state_ = false;
+  error err_;
 };
 
 } // namespace
