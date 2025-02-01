@@ -12,6 +12,14 @@
 
 namespace caf::detail {
 
+void stringification_inspector::set_error(error stop_reason) {
+  err_ = std::move(stop_reason);
+}
+
+error& stringification_inspector::get_error() noexcept {
+  return err_;
+}
+
 bool stringification_inspector::begin_object(type_id_t, std::string_view name) {
   sep();
   if (name != "std::string") {

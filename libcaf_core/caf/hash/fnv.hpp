@@ -36,7 +36,15 @@ public:
     // nop
   }
 
-  static constexpr bool has_human_readable_format() noexcept {
+  void set_error(error stop_reason) override {
+    err_ = std::move(stop_reason);
+  }
+
+  error& get_error() noexcept override {
+    return err_;
+  }
+
+  constexpr bool has_human_readable_format() noexcept {
     return false;
   }
 
@@ -170,6 +178,8 @@ private:
       while (begin != end)
         result = (*begin++ ^ result) * 1099511628211ull;
   }
+
+  error err_;
 };
 
 } // namespace caf::hash

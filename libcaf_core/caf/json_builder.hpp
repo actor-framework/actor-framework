@@ -81,6 +81,12 @@ public:
 
   // -- overrides --------------------------------------------------------------
 
+  void set_error(error stop_reason) override;
+
+  error& get_error() noexcept override;
+
+  caf::actor_system* sys() const noexcept override;
+
   bool has_human_readable_format() const noexcept override;
 
   bool begin_object(type_id_t type, std::string_view name) override;
@@ -194,6 +200,9 @@ private:
 
   // -- member variables -------------------------------------------------------
 
+  /// The actor system associated with this builder.
+  actor_system* sys_ = nullptr;
+
   // Our output.
   detail::json::value* val_;
 
@@ -239,6 +248,8 @@ private:
   bool skip_object_type_annotation_ = false;
 
   std::string_view field_type_suffix_ = json_writer::field_type_suffix_default;
+
+  error err_;
 };
 
 } // namespace caf

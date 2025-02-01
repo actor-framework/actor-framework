@@ -93,14 +93,12 @@ config_value_reader::associative_array::current() {
 
 config_value_reader::config_value_reader(const config_value* input) {
   st_.push(input);
-  has_human_readable_format_ = true;
 }
 
 config_value_reader::config_value_reader(const config_value* input,
                                          actor_system& sys)
-  : super(sys) {
+  : sys_(&sys) {
   st_.push(input);
-  has_human_readable_format_ = true;
 }
 
 config_value_reader::~config_value_reader() {
@@ -108,6 +106,22 @@ config_value_reader::~config_value_reader() {
 }
 
 // -- interface functions ------------------------------------------------------
+
+void config_value_reader::set_error(error stop_reason) {
+  err_ = std::move(stop_reason);
+}
+
+error& config_value_reader::get_error() noexcept {
+  return err_;
+}
+
+caf::actor_system* config_value_reader::sys() const noexcept {
+  return sys_;
+}
+
+bool config_value_reader::has_human_readable_format() const noexcept {
+  return true;
+}
 
 bool config_value_reader::fetch_next_object_type(type_id_t& type) {
   if (st_.empty()) {

@@ -224,7 +224,7 @@ public:
     if (detail::load(reader, tmp, token))
       return {std::move(tmp)};
     else
-      return {reader.move_error()};
+      return {std::move(reader.get_error())};
   }
 
   template <class T>
@@ -246,7 +246,7 @@ public:
       config_value_writer writer{this};
       if (writer.apply(x))
         return {};
-      return {writer.move_error()};
+      return {std::move(writer.get_error())};
     }
   }
 

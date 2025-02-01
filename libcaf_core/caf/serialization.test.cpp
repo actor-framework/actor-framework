@@ -418,7 +418,7 @@ struct json_writer_wrapper {
   }
 
   deserializer_ptr make_deserializer() {
-    auto reader = std::make_shared<json_reader>(*sink.context());
+    auto reader = std::make_shared<json_reader>(*sink.sys());
     if (!reader->load(sink.str())) {
       test::runnable::current().fail("failed to load JSON: {}",
                                      reader->get_error());

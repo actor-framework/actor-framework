@@ -83,6 +83,18 @@ json_value json_builder::seal() {
 
 // -- overrides ----------------------------------------------------------------
 
+void json_builder::set_error(error stop_reason) {
+  err_ = std::move(stop_reason);
+}
+
+error& json_builder::get_error() noexcept {
+  return err_;
+}
+
+caf::actor_system* json_builder::sys() const noexcept {
+  return sys_;
+}
+
 bool json_builder::has_human_readable_format() const noexcept {
   return true;
 }
