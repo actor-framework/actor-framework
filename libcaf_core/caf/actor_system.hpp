@@ -166,6 +166,10 @@ public:
     /// Tracks the current number of running actors in the system.
     telemetry::int_gauge* running_actors;
 
+    /// Tracks the current number of running actors in the system keyed by the
+    /// actor name.
+    telemetry::int_gauge_family* running_actors_by_name;
+
     /// Counts the total number of messages that wait in a mailbox.
     telemetry::int_gauge* queued_messages;
   };

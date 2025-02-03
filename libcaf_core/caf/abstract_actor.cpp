@@ -190,7 +190,7 @@ void abstract_actor::register_at_system() {
   if (getf(is_registered_flag))
     return;
   setf(is_registered_flag);
-  [[maybe_unused]] auto count = home_system().registry().inc_running();
+  [[maybe_unused]] auto count = home_system().registry().inc_running(name());
   log::system::debug("actor {} increased running count to {}", id(), count);
 }
 
@@ -198,7 +198,7 @@ void abstract_actor::unregister_from_system() {
   if (!getf(is_registered_flag))
     return;
   unsetf(is_registered_flag);
-  [[maybe_unused]] auto count = home_system().registry().dec_running();
+  [[maybe_unused]] auto count = home_system().registry().dec_running(name());
   log::system::debug("actor {} decreased running count to {}", id(), count);
 }
 

@@ -257,7 +257,9 @@ auto make_base_metrics(telemetry::metric_registry& reg) {
     reg.counter_singleton("caf.system", "processed-messages",
                           "Number of processed messages.", "1", true),
     reg.gauge_singleton("caf.system", "running-actors",
-                        "Number of currently running actors."),
+                     "Number of currently running actors."),
+    reg.gauge_family("caf.system", "running-actors-by-name", {{"name"}},
+                     "Number of currently running actors by name."),
     reg.gauge_singleton("caf.system", "queued-messages",
                         "Number of messages in all mailboxes.", "1", true),
   };

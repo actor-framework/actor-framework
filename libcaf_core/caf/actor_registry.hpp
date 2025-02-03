@@ -10,7 +10,6 @@
 #include "caf/actor_control_block.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
-#include "caf/telemetry/int_gauge.hpp"
 
 #include <atomic>
 #include <condition_variable>
@@ -20,6 +19,7 @@
 #include <string>
 #include <thread>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace caf {
 
@@ -53,11 +53,11 @@ public:
 
   /// Increases running-actors-count by one.
   /// @returns the increased count.
-  size_t inc_running();
+  size_t inc_running(std::string_view name);
 
   /// Decreases running-actors-count by one.
   /// @returns the decreased count.
-  size_t dec_running();
+  size_t dec_running(std::string_view name);
 
   /// Returns the number of currently running actors.
   size_t running() const;

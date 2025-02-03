@@ -137,7 +137,7 @@ public:
     intrusive_ptr_release(self_->ctrl());
     sys.release_private_thread(thread_);
     if (!hidden_) {
-      [[maybe_unused]] auto count = sys.registry().dec_running();
+      [[maybe_unused]] auto count = sys.registry().dec_running(self_->name());
       log::system::debug("actor {} decreased running count to {}", id, count);
     }
     return resumable::done;
@@ -170,7 +170,7 @@ void blocking_actor::launch(scheduler*, bool, bool hide) {
   // Note: must *not* call register_at_system() to stop actor cleanup from
   // decrementing the count before releasing the thread.
   if (!hide) {
-    [[maybe_unused]] auto count = sys.registry().inc_running();
+    [[maybe_unused]] auto count = sys.registry().inc_running(name());
     log::system::debug("actor {} increased running count to {}", id(), count);
   }
   thread->resume(new blocking_actor_runner(this, thread, hide));

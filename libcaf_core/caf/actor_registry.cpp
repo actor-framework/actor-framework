@@ -13,6 +13,7 @@
 #include "caf/scoped_actor.hpp"
 #include "caf/sec.hpp"
 #include "caf/stateful_actor.hpp"
+#include "caf/telemetry/metric_family_impl.hpp"
 
 #include <limits>
 #include <mutex>
@@ -77,7 +78,8 @@ void actor_registry::erase(actor_id key) {
   }
 }
 
-size_t actor_registry::inc_running() {
+size_t actor_registry::inc_running(std::string_view name) {
+  ++*system_.base_metrics().running_actors_by_name->get_or_add({{"name", name}});
   return ++*system_.base_metrics().running_actors;
 }
 
@@ -85,7 +87,8 @@ size_t actor_registry::running() const {
   return static_cast<size_t>(system_.base_metrics().running_actors->value());
 }
 
-size_t actor_registry::dec_running() {
+size_t actor_registry::dec_running(std::string_view name) {
+  --*system_.base_metrics().running_actors_by_name->get_or_add({{"name", name}});
   size_t new_val = --*system_.base_metrics().running_actors;
   if (new_val <= 1) {
     std::unique_lock<std::mutex> guard(running_mtx_);

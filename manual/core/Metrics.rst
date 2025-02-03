@@ -480,6 +480,11 @@ caf.system.running-actors
   - **Type**: ``int_gauge``
   - **Label dimensions**: none.
 
+caf.system.running-actors-by-name
+  - Tracks the current number of running actors itemized by their actor name.
+  - **Type**: ``int_gauge``
+  - **Label dimensions**: ``name``.
+
 caf.system.processed-messages
   - Counts the total number of processed messages.
   - **Type**: ``int_counter``
