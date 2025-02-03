@@ -64,7 +64,8 @@ public:
 
   /// Blocks the caller until running-actors-count becomes `expected`
   /// (must be either 0 or 1).
-  void await_running_count_equal(size_t expected) const;
+  bool await_running_count_equal(size_t expected,
+                                 timespan timeout = infinite) const;
 
   /// Returns the actor associated with `key` or `invalid_actor`.
   template <class T = strong_actor_ptr>

@@ -97,14 +97,22 @@ size_t actor_registry::dec_running(std::string_view name) {
   return new_val;
 }
 
-void actor_registry::await_running_count_equal(size_t expected) const {
+bool actor_registry::await_running_count_equal(size_t expected,
+                                               timespan timeout) const {
   CAF_ASSERT(expected == 0 || expected == 1);
   auto lg = log::core::trace("expected = {}", expected);
   std::unique_lock<std::mutex> guard{running_mtx_};
-  while (running() != expected) {
+  if (timeout == infinite) {
     log::core::debug("running = {}", running());
-    running_cv_.wait(guard);
+    running_cv_.wait(guard, [&] {
+      return running() == expected;
+    });
+    return true;
   }
+  return running_cv_.wait_for(guard, timeout, [&] {
+    log::core::debug("running = {}", running());
+    return running() == expected;
+  });
 }
 
 strong_actor_ptr actor_registry::get_impl(const std::string& key) const {
