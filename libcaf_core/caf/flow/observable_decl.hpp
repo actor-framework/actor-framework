@@ -123,6 +123,11 @@ public:
   template <class F>
   transformation<step::map<F>> map(F f);
 
+  /// Returns a transformation that applies `f` to each input and emits the
+  /// result of the function application for each item that is not `nullopt`.
+  template <class F>
+  transformation<step::filter_map<F>> filter_map(F f);
+
   /// When producing items faster than the consumer can consume them, the
   /// observable will buffer up to `buffer_size` items before raising an error.
   observable<T> on_backpressure_buffer(size_t buffer_size,

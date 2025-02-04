@@ -5,6 +5,7 @@
 #include "caf/flow/step/do_on_next.hpp"
 #include "caf/flow/step/element_at.hpp"
 #include "caf/flow/step/filter.hpp"
+#include "caf/flow/step/filter_map.hpp"
 #include "caf/flow/step/ignore_elements.hpp"
 #include "caf/flow/step/map.hpp"
 #include "caf/flow/step/on_error_complete.hpp"

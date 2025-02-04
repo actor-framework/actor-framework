@@ -280,6 +280,11 @@ public:
   }
 
   template <class Predicate>
+  auto filter_map(Predicate predicate) && {
+    return add_step(step::filter_map<Predicate>{std::move(predicate)});
+  }
+
+  template <class Predicate>
   auto take_while(Predicate predicate) && {
     return add_step(step::take_while<Predicate>{std::move(predicate)});
   }
@@ -695,6 +700,13 @@ template <class T>
 template <class F>
 transformation<step::map<F>> observable<T>::map(F f) {
   return transform(step::map(std::move(f)));
+}
+
+template <class T>
+template <class Predicate>
+transformation<step::filter_map<Predicate>>
+observable<T>::filter_map(Predicate predicate) {
+  return transform(step::map{std::move(predicate)});
 }
 
 template <class T>

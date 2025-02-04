@@ -260,6 +260,7 @@ caf_add_component(
     caf/flow/op/zip_with.test.cpp
     caf/flow/scoped_coordinator.cpp
     caf/flow/single.test.cpp
+    caf/flow/step/filter_map.test.cpp
     caf/flow/step/ignore_elements.test.cpp
     caf/flow/step/skip_last.test.cpp
     caf/flow/step/take_last.test.cpp
