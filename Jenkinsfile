@@ -23,15 +23,7 @@ config = [
     // Note on no-maybe-uninitialized: some GCC versions have weird bugs that causes false positives.
     buildMatrix: [
         // Release builds.
-        ['almalinux-8', [ // EOL: June 2029
-            numCores: 4,
-            tags: ['docker'],
-            builds: ['release'],
-            extraBuildFlags: [
-                'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized',
-            ],
-        ]],
-        ['almalinux-9', [ // EOL: May 2032
+        ['almalinux-9', [ // EOL: May 2027
             numCores: 4,
             tags: ['docker'],
             builds: ['release'],
