@@ -96,7 +96,7 @@ void client(event_based_actor* self, const actor& parent,
     test::runnable::current().check_eq(val1, true);
     self->request(serv, infinite, my_request{10, 20}).then([=](bool val2) {
       test::runnable::current().check_eq(val2, false);
-      self->send(parent, ok_atom_v);
+      self->mail(ok_atom_v).send(parent);
     });
   });
 }
@@ -269,21 +269,21 @@ TEST("chainging the behavior at runtime and skipping messages") {
                   [this](message) { fail("Unexpected message"); },
                   caf::after(10ms) >> [this]() { fail("Timeout"); });
     };
-    sf->send(et, 1);
-    sf->send(et, 2);
-    sf->send(et, 3);
-    sf->send(et, .1f);
+    sf->mail(1).send(et);
+    sf->mail(2).send(et);
+    sf->mail(3).send(et);
+    sf->mail(.1f).send(et);
     dispatch_messages();
     receive_or_fail();
-    sf->send(et, "hello event testee!"s);
-    sf->send(et, .2f);
+    sf->mail("hello event testee!"s).send(et);
+    sf->mail(.2f).send(et);
     dispatch_messages();
     receive_or_fail();
-    sf->send(et, .3f);
-    sf->send(et, "hello again event testee!"s);
+    sf->mail(.3f).send(et);
+    sf->mail("hello again event testee!"s).send(et);
     dispatch_messages();
     receive_or_fail();
-    sf->send(et, "goodbye event testee!"s);
+    sf->mail("goodbye event testee!"s).send(et);
     dispatch_message();
     inject().with(get_state_atom_v).from(self).to(sub_et);
     expect<std::string>().with("wait4int"s).from(et).to(self);
@@ -356,7 +356,7 @@ float_actor::behavior_type float_fun(float_actor::pointer self) {
 
 int_actor::behavior_type foo3(int_actor::pointer self) {
   auto b = self->spawn<linked>(float_fun);
-  self->send(b, 1.0f);
+  self->mail(1.0f).send(b);
   return {
     [=](int) { return 0; },
   };
@@ -401,7 +401,7 @@ TEST("check signature") {
   };
   auto bar_action = [=](bar_type::pointer ptr) -> bar_type::behavior_type {
     auto foo = ptr->spawn<linked>(foo_action);
-    ptr->send(foo, put_atom_v);
+    ptr->mail(put_atom_v).send(foo);
     return {
       [=](ok_atom) { ptr->quit(); },
     };

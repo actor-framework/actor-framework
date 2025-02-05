@@ -25,7 +25,6 @@
 #include "caf/local_actor.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/mixin/requester.hpp"
-#include "caf/mixin/sender.hpp"
 #include "caf/none.hpp"
 #include "caf/policy/arg.hpp"
 #include "caf/typed_actor.hpp"
@@ -41,7 +40,7 @@ namespace caf {
 /// @extends local_actor
 class CAF_CORE_EXPORT blocking_actor
   : public extend<abstract_blocking_actor,
-                  blocking_actor>::with<mixin::sender, mixin::requester>,
+                  blocking_actor>::with<mixin::requester>,
     public dynamically_typed_actor_base,
     public blocking_actor_base {
 public:
