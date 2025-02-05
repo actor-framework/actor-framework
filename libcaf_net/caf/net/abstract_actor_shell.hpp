@@ -17,7 +17,6 @@
 #include "caf/fwd.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/mixin/requester.hpp"
-#include "caf/mixin/sender.hpp"
 #include "caf/none.hpp"
 #include "caf/unordered_flat_map.hpp"
 

@@ -11,7 +11,6 @@
 #include "caf/fwd.hpp"
 #include "caf/keep_behavior.hpp"
 #include "caf/mailbox_element.hpp"
-#include "caf/mixin/sender.hpp"
 #include "caf/scheduled_actor.hpp"
 
 #include <functional>
@@ -24,12 +23,11 @@ namespace caf {
 /// callback to another object, thus serving as gateway to
 /// allow any object to interact with other actors.
 /// @extends local_actor
-class CAF_CORE_EXPORT actor_companion
-  : public extend<scheduled_actor, actor_companion>::with<mixin::sender> {
+class CAF_CORE_EXPORT actor_companion : public scheduled_actor {
 public:
   // -- member types -----------------------------------------------------------
 
-  using super = extended_base;
+  using super = scheduled_actor;
 
   /// Required by `spawn` for type deduction.
   using signatures = none_t;

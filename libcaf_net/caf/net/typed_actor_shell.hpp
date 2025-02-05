@@ -13,7 +13,6 @@
 #include "caf/extend.hpp"
 #include "caf/fwd.hpp"
 #include "caf/mixin/requester.hpp"
-#include "caf/mixin/sender.hpp"
 #include "caf/none.hpp"
 #include "caf/type_list.hpp"
 #include "caf/typed_actor.hpp"
@@ -29,7 +28,7 @@ template <class TraitOrSignature>
 class typed_actor_shell<TraitOrSignature>
   // clang-format off
   : public extend<abstract_actor_shell, typed_actor_shell<TraitOrSignature>>::template
-           with<mixin::sender, mixin::requester>,
+           with<mixin::requester>,
     public statically_typed_actor_base {
   // clang-format on
 public:
@@ -43,7 +42,7 @@ public:
   // clang-format off
   using super =
     typename extend<abstract_actor_shell, typed_actor_shell<TraitOrSignature>>::template
-             with<mixin::sender, mixin::requester>;
+             with<mixin::requester>;
   // clang-format on
 
   using trait = detail::to_statically_typed_trait_t<TraitOrSignature>;
@@ -86,7 +85,7 @@ template <class T1, class T2, class... Ts>
 class typed_actor_shell<T1, T2, Ts...>
   // clang-format off
   : public extend<abstract_actor_shell, typed_actor_shell<T1, T2, Ts...>>::template
-           with<mixin::sender, mixin::requester>,
+           with<mixin::requester>,
     public statically_typed_actor_base {
   // clang-format on
 public:
@@ -100,7 +99,7 @@ public:
   // clang-format off
   using super =
     typename extend<abstract_actor_shell, typed_actor_shell<T1, T2, Ts...>>::template
-             with<mixin::sender, mixin::requester>;
+             with<mixin::requester>;
   // clang-format on
 
   using signatures = type_list<T1, T2, Ts...>;

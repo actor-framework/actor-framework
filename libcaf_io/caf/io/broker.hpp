@@ -18,7 +18,6 @@
 #include "caf/keep_behavior.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/mixin/requester.hpp"
-#include "caf/mixin/sender.hpp"
 #include "caf/stateful_actor.hpp"
 
 #include <map>
@@ -30,8 +29,7 @@ namespace caf::io {
 /// @extends abstract_broker
 /// @ingroup Broker
 class CAF_IO_EXPORT broker
-  : public extend<abstract_broker, broker>::with<mixin::sender,
-                                                 mixin::requester>,
+  : public extend<abstract_broker, broker>::with<mixin::requester>,
     public dynamically_typed_actor_base {
 public:
   using super = extended_base;

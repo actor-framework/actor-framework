@@ -9,7 +9,6 @@
 #include "caf/extend.hpp"
 #include "caf/keep_behavior.hpp"
 #include "caf/mixin/requester.hpp"
-#include "caf/mixin/sender.hpp"
 #include "caf/scheduled_actor.hpp"
 #include "caf/typed_actor.hpp"
 #include "caf/typed_behavior.hpp"
@@ -25,14 +24,14 @@ class typed_event_based_actor;
 template <class TraitOrSignature>
 class typed_event_based_actor<TraitOrSignature>
   : public extend<scheduled_actor, typed_event_based_actor<TraitOrSignature>>::
-      template with<mixin::sender, mixin::requester>,
+      template with<mixin::requester>,
     public statically_typed_actor_base {
 public:
   // -- member types -----------------------------------------------------------
 
-  using super = typename extend<scheduled_actor,
-                                typed_event_based_actor<TraitOrSignature>>::
-    template with<mixin::sender, mixin::requester>;
+  using super = typename extend<
+    scheduled_actor,
+    typed_event_based_actor<TraitOrSignature>>::template with<mixin::requester>;
 
   using trait = detail::to_statically_typed_trait_t<TraitOrSignature>;
 
@@ -116,14 +115,14 @@ protected:
 template <class T1, class T2, class... Ts>
 class typed_event_based_actor<T1, T2, Ts...>
   : public extend<scheduled_actor, typed_event_based_actor<T1, T2, Ts...>>::
-      template with<mixin::sender, mixin::requester>,
+      template with<mixin::requester>,
     public statically_typed_actor_base {
 public:
   // -- member types -----------------------------------------------------------
 
   using super =
     typename extend<scheduled_actor, typed_event_based_actor<T1, T2, Ts...>>::
-      template with<mixin::sender, mixin::requester>;
+      template with<mixin::requester>;
 
   using trait = statically_typed<T1, T2, Ts...>;
 
