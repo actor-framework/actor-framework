@@ -119,6 +119,43 @@ std::optional<uri> uri::authority_only() const {
   return uri{std::move(result)};
 }
 
+namespace {
+
+template <class Password>
+uri::impl_ptr with_userinfo_impl(const uri::impl_ptr& src, std::string&& name,
+                                 Password&& password) {
+  uri::userinfo_type userinfo{std::move(name),
+                              std::forward<Password>(password)};
+  auto result = make_counted<uri::impl_type>();
+  result->scheme = src->scheme;
+  result->authority = src->authority;
+  result->authority.userinfo.emplace(std::move(userinfo));
+  result->path = src->path;
+  result->query = src->query;
+  result->fragment = src->fragment;
+  result->assemble_str();
+  return result;
+}
+
+} // namespace
+
+std::optional<uri> uri::with_userinfo(std::string name) const {
+  if (empty() || authority().empty()) {
+    return std::nullopt;
+  }
+  auto result = with_userinfo_impl(impl_, std::move(name), std::nullopt);
+  return uri{std::move(result)};
+}
+
+std::optional<uri> uri::with_userinfo(std::string name,
+                                      std::string password) const {
+  if (empty() || authority().empty()) {
+    return std::nullopt;
+  }
+  auto result = with_userinfo_impl(impl_, std::move(name), std::move(password));
+  return uri{std::move(result)};
+}
+
 // -- parsing ------------------------------------------------------------------
 
 namespace {

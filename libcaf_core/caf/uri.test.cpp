@@ -527,4 +527,74 @@ TEST("serialization") {
 
 #undef SERIALIZATION_ROUNDTRIP
 
+TEST("with_userinfo creates a copy with new userinfo") {
+  SECTION("conversion fails for URIs without authority") {
+    check_eq("http:file"_u.with_userinfo("me"), std::nullopt);
+  }
+  SECTION("setting the username only") {
+    check_eq("http://node"_u.with_userinfo("me"), "http://me@node"_u);
+    check_eq("http://node?a=1&b=2"_u.with_userinfo("me"),
+             "http://me@node?a=1&b=2"_u);
+    check_eq("http://node#42"_u.with_userinfo("me"), "http://me@node#42"_u);
+    check_eq("http://node?a=1&b=2#42"_u.with_userinfo("me"),
+             "http://me@node?a=1&b=2#42"_u);
+    check_eq("http://node:80"_u.with_userinfo("me"), "http://me@node:80"_u);
+    check_eq("http://node:80?a=1&b=2"_u.with_userinfo("me"),
+             "http://me@node:80?a=1&b=2"_u);
+    check_eq("http://node:80#42"_u.with_userinfo("me"),
+             "http://me@node:80#42"_u);
+    check_eq("http://node:80?a=1&b=2#42"_u.with_userinfo("me"),
+             "http://me@node:80?a=1&b=2#42"_u);
+    check_eq("http://node/file"_u.with_userinfo("me"), "http://me@node/file"_u);
+    check_eq("http://node/file?a=1&b=2"_u.with_userinfo("me"),
+             "http://me@node/file?a=1&b=2"_u);
+    check_eq("http://node/file#42"_u.with_userinfo("me"),
+             "http://me@node/file#42"_u);
+    check_eq("http://node/file?a=1&b=2#42"_u.with_userinfo("me"),
+             "http://me@node/file?a=1&b=2#42"_u);
+    check_eq("http://node:80/file"_u.with_userinfo("me"),
+             "http://me@node:80/file"_u);
+    check_eq("http://node:80/file?a=1&b=2"_u.with_userinfo("me"),
+             "http://me@node:80/file?a=1&b=2"_u);
+    check_eq("http://node:80/file#42"_u.with_userinfo("me"),
+             "http://me@node:80/file#42"_u);
+    check_eq("http://node:80/file?a=1&b=2#42"_u.with_userinfo("me"),
+             "http://me@node:80/file?a=1&b=2#42"_u);
+  }
+  SECTION("setting username and password") {
+    check_eq("http://node"_u.with_userinfo("me", "foo"),
+             "http://me:foo@node"_u);
+    check_eq("http://node?a=1&b=2"_u.with_userinfo("me", "foo"),
+             "http://me:foo@node?a=1&b=2"_u);
+    check_eq("http://node#42"_u.with_userinfo("me", "foo"),
+             "http://me:foo@node#42"_u);
+    check_eq("http://node?a=1&b=2#42"_u.with_userinfo("me", "foo"),
+             "http://me:foo@node?a=1&b=2#42"_u);
+    check_eq("http://node:80"_u.with_userinfo("me", "foo"),
+             "http://me:foo@node:80"_u);
+    check_eq("http://node:80?a=1&b=2"_u.with_userinfo("me", "foo"),
+             "http://me:foo@node:80?a=1&b=2"_u);
+    check_eq("http://node:80#42"_u.with_userinfo("me", "foo"),
+             "http://me:foo@node:80#42"_u);
+    check_eq("http://node:80?a=1&b=2#42"_u.with_userinfo("me", "foo"),
+             "http://me:foo@node:80?a=1&b=2#42"_u);
+    check_eq("http://node/file"_u.with_userinfo("me", "foo"),
+             "http://me:foo@node/file"_u);
+    check_eq("http://node/file?a=1&b=2"_u.with_userinfo("me", "foo"),
+             "http://me:foo@node/file?a=1&b=2"_u);
+    check_eq("http://node/file#42"_u.with_userinfo("me", "foo"),
+             "http://me:foo@node/file#42"_u);
+    check_eq("http://node/file?a=1&b=2#42"_u.with_userinfo("me", "foo"),
+             "http://me:foo@node/file?a=1&b=2#42"_u);
+    check_eq("http://node:80/file"_u.with_userinfo("me", "foo"),
+             "http://me:foo@node:80/file"_u);
+    check_eq("http://node:80/file?a=1&b=2"_u.with_userinfo("me", "foo"),
+             "http://me:foo@node:80/file?a=1&b=2"_u);
+    check_eq("http://node:80/file#42"_u.with_userinfo("me", "foo"),
+             "http://me:foo@node:80/file#42"_u);
+    check_eq("http://node:80/file?a=1&b=2#42"_u.with_userinfo("me", "foo"),
+             "http://me:foo@node:80/file?a=1&b=2#42"_u);
+  }
+}
+
 } // WITH_FIXTURE(fixture)
