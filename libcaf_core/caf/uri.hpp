@@ -123,6 +123,10 @@ public:
     /// Assembles the human-readable string representation for this URI.
     void assemble_str();
 
+    /// Copies the members from `other` into this instance.
+    /// @warning This function does not update the string representation.
+    void copy_members_from(const impl_type& other);
+
     // -- friend functions -----------------------------------------------------
 
     friend void intrusive_ptr_add_ref(const impl_type* p) {

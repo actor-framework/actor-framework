@@ -75,6 +75,14 @@ void uri::impl_type::assemble_str() {
   }
 }
 
+void uri::impl_type::copy_members_from(const impl_type& other) {
+  scheme = other.scheme;
+  authority = other.authority;
+  path = other.path;
+  query = other.query;
+  fragment = other.fragment;
+}
+
 uri::uri() : impl_(&default_instance) {
   // nop
 }
@@ -127,12 +135,8 @@ uri::impl_ptr with_userinfo_impl(const uri::impl_ptr& src, std::string&& name,
   uri::userinfo_type userinfo{std::move(name),
                               std::forward<Password>(password)};
   auto result = make_counted<uri::impl_type>();
-  result->scheme = src->scheme;
-  result->authority = src->authority;
+  result->copy_members_from(*src);
   result->authority.userinfo.emplace(std::move(userinfo));
-  result->path = src->path;
-  result->query = src->query;
-  result->fragment = src->fragment;
   result->assemble_str();
   return result;
 }
