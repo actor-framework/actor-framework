@@ -18,7 +18,6 @@
 #include "caf/logger.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/mixin/requester.hpp"
-#include "caf/mixin/sender.hpp"
 #include "caf/none.hpp"
 #include "caf/typed_actor.hpp"
 
@@ -49,8 +48,7 @@ template <class... Sigs>
 class typed_broker
   // clang-format off
   : public extend<abstract_broker, typed_broker<Sigs...>>::template
-           with<mixin::sender,
-                mixin::requester>,
+           with<mixin::requester>,
     public statically_typed_actor_base {
   // clang-format on
 public:
@@ -61,8 +59,8 @@ public:
   using behavior_type = typed_behavior<Sigs...>;
 
   using super =
-    typename extend<abstract_broker, typed_broker<Sigs...>>::template with<
-      mixin::sender, mixin::requester>;
+    typename extend<abstract_broker,
+                    typed_broker<Sigs...>>::template with<mixin::requester>;
 
   /// @cond
 

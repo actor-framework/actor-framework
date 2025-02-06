@@ -15,7 +15,6 @@
 #include "caf/flow/coordinator.hpp"
 #include "caf/fwd.hpp"
 #include "caf/mixin/requester.hpp"
-#include "caf/mixin/sender.hpp"
 #include "caf/none.hpp"
 
 namespace caf::net {
@@ -23,8 +22,7 @@ namespace caf::net {
 /// Enables socket managers to communicate with actors using dynamically typed
 /// messaging.
 class CAF_NET_EXPORT actor_shell
-  : public extend<abstract_actor_shell, actor_shell>::with<mixin::sender,
-                                                           mixin::requester>,
+  : public extend<abstract_actor_shell, actor_shell>::with<mixin::requester>,
     public dynamically_typed_actor_base {
 public:
   // -- friends ----------------------------------------------------------------
