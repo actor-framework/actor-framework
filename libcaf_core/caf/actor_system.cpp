@@ -30,7 +30,9 @@
 #include <atomic>
 #include <cstdio>
 #include <fstream>
+#include <limits>
 #include <memory>
+#include <mutex>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -379,6 +381,158 @@ private:
   cleanup do_cleanup_ = nullptr;
 };
 
+class actor_registry_impl : public actor_registry {
+public:
+  using exclusive_guard = std::unique_lock<std::shared_mutex>;
+  using shared_guard = std::shared_lock<std::shared_mutex>;
+
+  actor_registry_impl(actor_system& sys) : system_(sys) {
+    // nop
+  }
+
+  void erase(actor_id key) override {
+    // Stores a reference to the actor we're going to remove. This guarantees
+    // that we aren't releasing the last reference to an actor while erasing it.
+    // Releasing the final ref can trigger the actor to call its cleanup
+    // function that in turn calls this function and we can end up in a
+    // deadlock.
+    strong_actor_ptr ref;
+    { // Lifetime scope of guard.
+      exclusive_guard guard{instances_mtx_};
+      auto i = entries_.find(key);
+      if (i != entries_.end()) {
+        ref.swap(i->second);
+        entries_.erase(i);
+      }
+    }
+  }
+
+  size_t inc_running() override {
+    return ++*system_.base_metrics().running_actors;
+  }
+
+  size_t dec_running() override {
+    size_t new_val = --*system_.base_metrics().running_actors;
+    if (new_val <= 1) {
+      std::unique_lock<std::mutex> guard(running_mtx_);
+      running_cv_.notify_all();
+    }
+    return new_val;
+  }
+
+  /// Returns the number of currently running actors.
+  size_t running() const override {
+    return static_cast<size_t>(system_.base_metrics().running_actors->value());
+  }
+
+  /// Blocks the caller until running-actors-count becomes `expected`
+  /// (must be either 0 or 1).
+  void await_running_count_equal(size_t expected) const override {
+    CAF_ASSERT(expected == 0 || expected == 1);
+    auto lg = log::core::trace("expected = {}", expected);
+    std::unique_lock<std::mutex> guard{running_mtx_};
+    while (running() != expected) {
+      log::core::debug("running = {}", running());
+      running_cv_.wait(guard);
+    }
+  }
+
+  /// Removes a name mapping.
+  void erase(const std::string& key) override {
+    // Stores a reference to the actor we're going to remove for the same
+    // reasoning as in erase(actor_id).
+    strong_actor_ptr ref;
+    { // Lifetime scope of guard.
+      exclusive_guard guard{named_entries_mtx_};
+      auto i = named_entries_.find(key);
+      if (i != named_entries_.end()) {
+        ref.swap(i->second);
+        named_entries_.erase(i);
+      }
+    }
+  }
+
+  using name_map = std::unordered_map<std::string, strong_actor_ptr>;
+
+  name_map named_actors() const override {
+    shared_guard guard{named_entries_mtx_};
+    return named_entries_;
+  }
+
+  // Starts this component.
+  void start() {
+    // nop
+  }
+
+  // Stops this component.
+  void stop() {
+    {
+      exclusive_guard guard{instances_mtx_};
+      entries_.clear();
+    }
+    {
+      exclusive_guard guard{named_entries_mtx_};
+      named_entries_.clear();
+    }
+  }
+
+private:
+  strong_actor_ptr get_impl(actor_id key) const override {
+    shared_guard guard(instances_mtx_);
+    auto i = entries_.find(key);
+    if (i != entries_.end())
+      return i->second;
+    log::core::debug("key invalid, assume actor no longer exists: key = {}",
+                     key);
+    return nullptr;
+  }
+
+  void put_impl(actor_id key, strong_actor_ptr val) override {
+    auto lg = log::core::trace("key = {}", key);
+    if (!val)
+      return;
+    { // lifetime scope of guard
+      exclusive_guard guard(instances_mtx_);
+      if (!entries_.emplace(key, val).second)
+        return;
+    }
+    // attach functor without lock
+    log::core::debug("added actor: key = {}", key);
+    actor_registry* reg = this;
+    val->get()->attach_functor([key, reg]() { reg->erase(key); });
+  }
+
+  strong_actor_ptr get_impl(const std::string& key) const override {
+    shared_guard guard{named_entries_mtx_};
+    auto i = named_entries_.find(key);
+    if (i == named_entries_.end())
+      return nullptr;
+    return i->second;
+  }
+
+  void put_impl(const std::string& key, strong_actor_ptr val) override {
+    if (val == nullptr) {
+      erase(key);
+      return;
+    }
+    exclusive_guard guard{named_entries_mtx_};
+    named_entries_.emplace(std::move(key), std::move(val));
+  }
+
+  using entries = std::unordered_map<actor_id, strong_actor_ptr>;
+
+  mutable std::mutex running_mtx_;
+  mutable std::condition_variable running_cv_;
+
+  mutable std::shared_mutex instances_mtx_;
+  entries entries_;
+
+  name_map named_entries_;
+  mutable std::shared_mutex named_entries_mtx_;
+
+  actor_system& system_;
+};
+
 } // namespace
 
 class actor_system::impl {
@@ -540,7 +694,7 @@ public:
   node_id node;
 
   /// Maps well-known actor names to actor handles.
-  actor_registry registry;
+  actor_registry_impl registry;
 
   /// Manages log output.
   intrusive_ptr<caf::logger> logger;
