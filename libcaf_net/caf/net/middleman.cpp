@@ -143,7 +143,8 @@ void* middleman::subtype_ptr() {
 void middleman::add_module_options(actor_system_config& cfg) {
   config_option_adder{cfg.custom_options(), "caf.net.prometheus-http"}
     .add<uint16_t>("port", "listening port for incoming scrapes")
-    .add<std::string>("address", "bind address for the HTTP server socket");
+    .add<std::string>("address", "bind address for the HTTP server socket")
+    .add<bool>("reuse-address", "configure socket with SO_REUSEADDR");
   config_option_adder{cfg.custom_options(), "caf.net.prometheus-http.tls"}
     .add<std::string>("key-file", "path to the Promehteus private key file")
     .add<std::string>("cert-file", "path to the Promehteus private cert file");
