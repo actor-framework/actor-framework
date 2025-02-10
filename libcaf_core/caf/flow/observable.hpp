@@ -13,6 +13,7 @@
 #include "caf/cow_vector.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/assert.hpp"
+#include "caf/detail/combine_latest.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/disposable.hpp"
 #include "caf/flow/coordinated.hpp"
@@ -396,6 +397,13 @@ public:
   template <class... Inputs>
   auto concat(Inputs&&... xs) && {
     return materialize().concat(std::forward<Inputs>(xs)...);
+  }
+
+  /// @copydoc observable::combine_latest
+  template <class F, class... Inputs>
+  auto combine_latest(F&& fn, Inputs&&... xs) && {
+    static_assert(sizeof...(Inputs) > 1, "at least two inputs required");
+    return combine_latest(std::forward<F>(fn), std::forward<Inputs>(xs)...);
   }
 
   /// @copydoc observable::start_with
@@ -852,6 +860,29 @@ auto observable<T>::merge_with_concurrency(size_t max_concurrent,
   }
 }
 
+template <class T>
+template <class F, size_t... Indexes, class... Ts>
+auto observable<T>::combine_latest_impl(
+  F&& fn, std::integer_sequence<size_t, Indexes...>, Ts&&... inputs) {
+  static_assert(sizeof...(Ts) > 1, "at least two inputs required");
+  using state_t
+    = detail::combine_latest_state<std::decay_t<F>,
+                                   output_type_t<std::decay_t<Ts>>...>;
+  using intermediate_type = typename state_t::intermediate_type;
+  using mapped_type = std::optional<typename state_t::output_type>;
+  auto state = std::make_shared<state_t>(std::in_place, std::forward<F>(fn));
+  return parent()
+    ->add_child_hdl(std::in_place_type<op::merge<intermediate_type>>,
+                    sizeof...(Ts),
+                    state_t::map(std::integral_constant<size_t, Indexes>{},
+                                 std::forward<Ts>(inputs))
+                      .as_observable()...)
+    .map(
+      [state](const intermediate_type& value) { return state->on_next(value); })
+    .filter([](const mapped_type& mapped) { return mapped.has_value(); })
+    .map([](const mapped_type& mapped) { return *mapped; });
+}
+
 } // namespace caf::flow
 
 namespace caf::detail {
@@ -885,6 +916,14 @@ auto observable<T>::merge(Inputs&&... xs) {
                                     std::forward<Inputs>(xs)...);
     }
   }
+}
+
+template <class T>
+template <class F, class... Inputs>
+auto observable<T>::combine_latest(F&& fn, Inputs&&... xs) {
+  constexpr std::make_index_sequence<sizeof...(Inputs) + 1> indexes;
+  return combine_latest_impl(std::forward<F>(fn), indexes, std::move(*this),
+                             std::forward<Inputs>(xs)...);
 }
 
 template <class T>

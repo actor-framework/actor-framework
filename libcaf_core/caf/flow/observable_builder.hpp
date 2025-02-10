@@ -6,8 +6,10 @@
 
 #include "caf/async/spsc_buffer.hpp"
 #include "caf/defaults.hpp"
+#include "caf/detail/combine_latest.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/flow/coordinator.hpp"
+#include "caf/flow/fwd.hpp"
 #include "caf/flow/gen/empty.hpp"
 #include "caf/flow/gen/from_callable.hpp"
 #include "caf/flow/gen/from_container.hpp"
@@ -26,6 +28,9 @@
 
 #include <cstdint>
 #include <functional>
+#include <optional>
+#include <type_traits>
+#include <utility>
 
 namespace caf::flow {
 
@@ -235,6 +240,16 @@ public:
                              std::move(input1), std::move(inputs)...);
   }
 
+  /// Creates an @ref observable that combines the last emitted value from all
+  /// input observables by applying a function object.
+  template <class F, class... Ts>
+  auto combine_latest(F&& fn, Ts&&... inputs) {
+    static_assert(sizeof...(Ts) > 1, "at least two inputs required");
+    constexpr std::make_index_sequence<sizeof...(Ts)> indexes;
+    return combine_latest_impl(std::forward<F>(fn), indexes,
+                               std::forward<Ts>(inputs)...);
+  }
+
 private:
   explicit observable_builder(coordinator* parent) : parent_(parent) {
     // nop
@@ -252,6 +267,25 @@ private:
     return parent_->add_child_hdl(std::in_place_type<impl_t>, max_concurrent,
                                   std::move(x).as_observable(),
                                   std::move(xs).as_observable()...);
+  }
+
+  template <class F, size_t... Indexes, class... Ts>
+  auto combine_latest_impl(F&& fn, std::integer_sequence<size_t, Indexes...>,
+                           Ts&&... inputs) {
+    static_assert(sizeof...(Ts) > 1, "at least two inputs required");
+    using state_t
+      = detail::combine_latest_state<std::decay_t<F>,
+                                     output_type_t<std::decay_t<Ts>>...>;
+    using intermediate_type = typename state_t::intermediate_type;
+    using mapped_type = std::optional<typename state_t::output_type>;
+    auto state = std::make_shared<state_t>(std::in_place, std::forward<F>(fn));
+    return merge(state_t::map(std::integral_constant<size_t, Indexes>{},
+                              std::forward<Ts>(inputs))...)
+      .map([state](const intermediate_type& value) {
+        return state->on_next(value);
+      })
+      .filter([](const mapped_type& mapped) { return mapped.has_value(); })
+      .map([](const mapped_type& mapped) { return *mapped; });
   }
 
   coordinator* parent_;
