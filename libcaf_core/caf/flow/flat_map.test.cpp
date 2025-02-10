@@ -5,8 +5,10 @@
 #include "caf/test/fixture/deterministic.hpp"
 #include "caf/test/fixture/flow.hpp"
 #include "caf/test/scenario.hpp"
+#include "caf/test/test.hpp"
 
 #include "caf/actor_from_state.hpp"
+#include "caf/defaults.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/scheduled_actor/flow.hpp"
 #include "caf/stateful_actor.hpp"
@@ -85,6 +87,28 @@ SCENARIO("flat_map merges multiple observables") {
       }
     }
   }
+}
+
+TEST("the merge operator allows setting a maximum concurrency") {
+  using snk_t = flow::auto_observer<int>;
+  auto to_iota = [this](int start) { return make_observable().iota(start); };
+  auto in = make_observable().iota(1);
+  auto snk = coordinator()->add_child(std::in_place_type<snk_t>);
+  SECTION("merging multiple observables") {
+    auto uut = std::move(in).flat_map(to_iota);
+    auto sub = uut.subscribe(snk->as_observer());
+    auto* ptr = dynamic_cast<caf::flow::op::merge_sub<int>*>(sub.ptr());
+    check_eq(ptr->max_concurrent(), defaults::flow::max_concurrent);
+    sub.dispose();
+  }
+  SECTION("merging multiple observables") {
+    auto uut = std::move(in).flat_map(to_iota, 17u);
+    auto sub = uut.subscribe(snk->as_observer());
+    auto* ptr = dynamic_cast<caf::flow::op::merge_sub<int>*>(sub.ptr());
+    check_eq(ptr->max_concurrent(), 17u);
+    sub.dispose();
+  }
+  run_flows();
 }
 
 } // WITH_FIXTURE(fixture)

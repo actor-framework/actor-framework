@@ -406,6 +406,12 @@ public:
 
   /// @copydoc observable::flat_map
   template <class F>
+  auto flat_map(F f, size_t max_concurrent) && {
+    return materialize().flat_map(std::move(f), max_concurrent);
+  }
+
+  /// @copydoc observable::flat_map
+  template <class F>
   auto flat_map(F f) && {
     return materialize().flat_map(std::move(f));
   }
@@ -827,20 +833,57 @@ observable<T> observable<T>::retry(Predicate predicate) {
 
 template <class T>
 template <class Out, class... Inputs>
-auto observable<T>::merge(Inputs&&... xs) {
+auto observable<T>::merge_with_concurrency(size_t max_concurrent,
+                                           Inputs&&... xs) {
   if constexpr (is_observable_v<Out>) {
     static_assert(sizeof...(Inputs) == 0,
                   "merge on an observable<observable<T>> allows no arguments");
     using value_t = output_type_t<Out>;
     return parent()->add_child_hdl(std::in_place_type<op::merge<value_t>>,
-                                   *this);
+                                   max_concurrent, *this);
   } else {
     static_assert(sizeof...(Inputs) > 0, "no observable to merge with");
     static_assert((std::is_same_v<Out, output_type_t<std::decay_t<Inputs>>>
                    && ...),
                   "can only merge observables with the same observed type");
-    return parent()->add_child_hdl(std::in_place_type<op::merge<Out>>, *this,
+    return parent()->add_child_hdl(std::in_place_type<op::merge<Out>>,
+                                   max_concurrent, *this,
                                    std::forward<Inputs>(xs).as_observable()...);
+  }
+}
+
+} // namespace caf::flow
+
+namespace caf::detail {
+
+template <class...>
+struct has_max_concurrent_arg : std::false_type {};
+
+template <class T, class... Ts>
+struct has_max_concurrent_arg<T, Ts...> {
+  static constexpr bool value = std::is_unsigned_v<std::decay_t<T>>;
+};
+
+template <class... Ts>
+constexpr bool has_max_concurrent_arg_v = has_max_concurrent_arg<Ts...>::value;
+
+} // namespace caf::detail
+
+namespace caf::flow {
+
+template <class T>
+template <class Out, class... Inputs>
+auto observable<T>::merge(Inputs&&... xs) {
+  if constexpr (detail::has_max_concurrent_arg_v<Inputs...>) {
+    return merge_with_concurrency(std::forward<Inputs>(xs)...);
+  } else {
+    if constexpr (sizeof...(Inputs) == 0) {
+      return merge_with_concurrency(defaults::flow::max_concurrent,
+                                    std::forward<Inputs>(xs)...);
+    } else {
+      return merge_with_concurrency(sizeof...(Inputs) + 1,
+                                    std::forward<Inputs>(xs)...);
+    }
   }
 }
 
@@ -865,13 +908,13 @@ auto observable<T>::concat(Inputs&&... xs) {
 
 template <class T>
 template <class Out, class F>
-auto observable<T>::flat_map(F f) {
+auto observable<T>::flat_map(F f, size_t max_concurrent) {
   using res_t = decltype(f(std::declval<const Out&>()));
   if constexpr (is_observable_v<res_t>) {
     return map([fn = std::move(f)](const Out& x) mutable {
              return fn(x).as_observable();
            })
-      .merge();
+      .merge(max_concurrent);
   } else if constexpr (detail::is_optional_v<res_t>) {
     return map([fn = std::move(f)](const Out& x) mutable { return fn(x); })
       .filter([](const res_t& x) { return x.has_value(); })
@@ -887,6 +930,12 @@ auto observable<T>::flat_map(F f) {
            })
       .concat();
   }
+}
+
+template <class T>
+template <class Out, class F>
+auto observable<T>::flat_map(F f) {
+  return flat_map(std::move(f), defaults::flow::max_concurrent);
 }
 
 template <class T>

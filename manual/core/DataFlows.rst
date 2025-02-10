@@ -248,6 +248,10 @@ Flat Map
 The ``flat_map`` operator takes a function object converts a given input to an
 ``observable`` and then applies ``merge`` to all of them.
 
+By default, the ``flat_map`` operator subscribes to up to eight observables at a
+time. For passing a different number of maximum concurrent observables, the
+operator optionally takes an unsigned integer argument as second parameter.
+
 .. image:: op/flat_map.svg
 
 Head and Tail
@@ -288,6 +292,15 @@ Merge
 
 The ``merge`` operator takes multiple input observables and re-emits the
 observed items as a single sequence of items as soon as they appear.
+
+Alternatively, ``merge`` can be called on an observable of observables to merge
+all inner observables. The operator can be called without any arguments or with
+a single unsigned integer argument to specify the maximum number of concurrent
+observables to merge. When not passing a maximum, the merge operator will
+subscribe to up to eight observables at a time. Limiting the number of
+concurrent subscriptions is a safety measure to prevent the operator from
+overloading the system with opening too many resources at once. For example,
+subscribing to an input observable might open a file or network connection.
 
 .. image:: op/merge.svg
 

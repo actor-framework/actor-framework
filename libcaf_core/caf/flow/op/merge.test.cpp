@@ -538,4 +538,38 @@ TEST("the merge operator ignores request() calls with no subscriber") {
   check_eq(snk->buf, std::vector{1, 2, 3, 4, 5});
 }
 
+TEST("the merge operator allows setting a maximum concurrency") {
+  using snk_t = flow::auto_observer<int>;
+  auto in1 = make_observable().iota(1).take(5).as_observable();
+  auto in2 = make_observable().iota(6).take(5).as_observable();
+  auto snk = coordinator()->add_child(std::in_place_type<snk_t>);
+  SECTION("observable_builder") {
+    SECTION("merging multiple observables") {
+      auto uut = make_observable().merge(17u, in1, in2);
+      auto sub = uut.subscribe(snk->as_observer());
+      auto* ptr = dynamic_cast<caf::flow::op::merge_sub<int>*>(sub.ptr());
+      check_eq(ptr->max_concurrent(), 17u);
+      sub.dispose();
+    }
+  }
+  SECTION("operator") {
+    SECTION("merging multiple observables") {
+      auto uut = in1.merge(17u, in2);
+      auto sub = uut.subscribe(snk->as_observer());
+      auto* ptr = dynamic_cast<caf::flow::op::merge_sub<int>*>(sub.ptr());
+      check_eq(ptr->max_concurrent(), 17u);
+      sub.dispose();
+    }
+    SECTION("calling merge on an observable<observable<T>>") {
+      auto in = make_observable().from_container(std::vector{in1, in2});
+      auto uut = std::move(in).merge(17u);
+      auto sub = uut.subscribe(snk->as_observer());
+      auto* ptr = dynamic_cast<caf::flow::op::merge_sub<int>*>(sub.ptr());
+      check_eq(ptr->max_concurrent(), 17u);
+      sub.dispose();
+    }
+  }
+  run_flows();
+}
+
 } // WITH_FIXTURE(fixture)

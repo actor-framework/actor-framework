@@ -194,17 +194,17 @@ public:
 
   /// Creates an @ref observable that combines the items emitted from all passed
   /// source observables.
+  /// @param x The first observable *or* the maximum number of concurrent
+  ///          observables to merge (as unsigned integer).
+  /// @param xs The remaining observables to merge.
   template <class Input, class... Inputs>
   auto merge(Input x, Inputs... xs) {
-    static_assert(is_observable_v<Input> && (is_observable_v<Inputs> && ...),
-                  "all parameters must be observables");
-    using out_t = output_type_t<Input>;
-    static_assert((std::is_same_v<out_t, output_type_t<Inputs>> && ...),
-                  "all observables must have the same output type");
-    using impl_t = op::merge<out_t>;
-    return parent_->add_child_hdl(std::in_place_type<impl_t>,
-                                  std::move(x).as_observable(),
-                                  std::move(xs).as_observable()...);
+    if constexpr (std::is_unsigned_v<Input>) {
+      return merge_with_concurrency(x, std::move(xs)...);
+    } else {
+      return merge_with_concurrency(sizeof...(Inputs) + 1, std::move(x),
+                                    std::move(xs)...);
+    }
   }
 
   /// Creates an @ref observable that concatenates the items emitted from all
@@ -238,6 +238,20 @@ public:
 private:
   explicit observable_builder(coordinator* parent) : parent_(parent) {
     // nop
+  }
+
+  template <class Input, class... Inputs>
+  observable<output_type_t<Input>>
+  merge_with_concurrency(size_t max_concurrent, Input x, Inputs... xs) {
+    static_assert(is_observable_v<Input> && (is_observable_v<Inputs> && ...),
+                  "all parameters must be observables");
+    using out_t = output_type_t<Input>;
+    static_assert((std::is_same_v<out_t, output_type_t<Inputs>> && ...),
+                  "all observables must have the same output type");
+    using impl_t = op::merge<out_t>;
+    return parent_->add_child_hdl(std::in_place_type<impl_t>, max_concurrent,
+                                  std::move(x).as_observable(),
+                                  std::move(xs).as_observable()...);
   }
 
   coordinator* parent_;
