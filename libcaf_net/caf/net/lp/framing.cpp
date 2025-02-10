@@ -42,12 +42,27 @@ public:
 
   static constexpr size_t hdr_size = sizeof(uint32_t);
 
-  static constexpr size_t max_message_length = INT32_MAX - sizeof(uint32_t);
-
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit framing_impl(upper_layer_ptr up) : up_(std::move(up)) {
-    // nop
+  explicit framing_impl(upper_layer_ptr up, dsl::size_field_t lp_size)
+    : up_(std::move(up)) {
+    switch (lp_size) {
+      case caf::net::dsl::size_field_t::u1:
+        max_message_length_ = std::numeric_limits<uint8_t>::max() - hdr_size;
+        break;
+      case caf::net::dsl::size_field_t::u2:
+        max_message_length_ = std::numeric_limits<uint16_t>::max() - hdr_size;
+        break;
+      case caf::net::dsl::size_field_t::u4:
+        max_message_length_ = std::numeric_limits<uint32_t>::max() - hdr_size;
+        break;
+      case caf::net::dsl::size_field_t::u8:
+        max_message_length_ = std::numeric_limits<uint64_t>::max() - hdr_size;
+        break;
+      default:
+        CAF_RAISE_ERROR("invalid size field type");
+        break;
+    }
   }
 
   // -- implementation of octet_stream::upper_layer ----------------------------
@@ -78,7 +93,7 @@ public:
         up_->abort(make_error(sec::logic_error,
                               "received empty buffer from stream layer"));
         return -1;
-      } else if (msg_size > max_message_length) {
+      } else if (msg_size > max_message_length_) {
         log::net::debug("exceeded maximum message size");
         up_->abort(
           make_error(sec::protocol_error, "exceeded maximum message size"));
@@ -160,7 +175,7 @@ public:
     CAF_ASSERT(message_offset_ < buf.size());
     auto msg_begin = buf.begin() + static_cast<ptrdiff_t>(message_offset_);
     auto msg_size = std::distance(msg_begin + 4, buf.end());
-    if (msg_size > 0 && static_cast<size_t>(msg_size) < max_message_length) {
+    if (msg_size > 0 && static_cast<size_t>(msg_size) < max_message_length_) {
       auto u32_size = to_network_order(static_cast<uint32_t>(msg_size));
       memcpy(std::addressof(*msg_begin), &u32_size, 4);
       down_->end_output();
@@ -186,14 +201,17 @@ private:
   upper_layer_ptr up_;
 
   size_t message_offset_ = 0;
+
+  size_t max_message_length_ = 0;
 };
 
 } // namespace
 
 // -- factories ----------------------------------------------------------------
 
-std::unique_ptr<framing> framing::make(upper_layer_ptr up) {
-  return std::make_unique<framing_impl>(std::move(up));
+std::unique_ptr<framing> framing::make(upper_layer_ptr up,
+                                       dsl::size_field_t lp_size) {
+  return std::make_unique<framing_impl>(std::move(up), lp_size);
 }
 
 namespace {
@@ -203,8 +221,8 @@ disposable run_impl(multiplexer& mpx, Conn& conn,
                     async::consumer_resource<chunk>& pull,
                     async::producer_resource<chunk>& push) {
   auto bridge = internal::make_lp_flow_bridge(std::move(pull), std::move(push));
-  auto transport = internal::make_transport(std::move(conn),
-                                            framing::make(std::move(bridge)));
+  auto transport = internal::make_transport(
+    std::move(conn), framing::make(std::move(bridge), dsl::size_field_t::u4));
   auto manager = net::socket_manager::make(&mpx, std::move(transport));
   mpx.start(manager);
   return manager->as_disposable();

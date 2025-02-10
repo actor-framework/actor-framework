@@ -15,10 +15,11 @@ namespace {
 
 template <class Config, class Conn>
 expected<disposable> do_start_impl(Config& cfg, Conn conn,
+                                   dsl::size_field_t lp_size,
                                    async::consumer_resource<frame> pull,
                                    async::producer_resource<frame> push) {
   auto bridge = internal::make_lp_flow_bridge(std::move(pull), std::move(push));
-  auto impl = framing::make(std::move(bridge));
+  auto impl = framing::make(std::move(bridge), lp_size);
   auto transport = internal::make_transport(std::move(conn), std::move(impl));
   transport->active_policy().connect();
   auto ptr = socket_manager::make(cfg.mpx, std::move(transport));
@@ -69,27 +70,29 @@ expected<disposable> client_factory::do_start(dsl::client_config::lazy& data,
   return detail::tcp_try_connect(std::move(addr.host), addr.port,
                                  data.connection_timeout, data.max_retry_count,
                                  data.retry_delay)
-    .and_then(with_ssl_connection_or_socket([this, &pull, &push](auto&& conn) {
-      using conn_t = decltype(conn);
-      return do_start_impl(*config_, std::forward<conn_t>(conn),
-                           std::move(pull), std::move(push));
-    }));
+    .and_then(
+      with_ssl_connection_or_socket([this, &pull, &push, &data](auto&& conn) {
+        using conn_t = decltype(conn);
+        return do_start_impl(*config_, std::forward<conn_t>(conn), data.lp_size,
+                             std::move(pull), std::move(push));
+      }));
 }
 
 expected<disposable> client_factory::do_start(dsl::client_config::socket& data,
                                               pull_t pull, push_t push) {
   return checked_socket(data.take_fd())
-    .and_then(with_ssl_connection_or_socket([this, &pull, &push](auto&& conn) {
-      using conn_t = decltype(conn);
-      return do_start_impl(*config_, std::forward<conn_t>(conn),
-                           std::move(pull), std::move(push));
-    }));
+    .and_then(
+      with_ssl_connection_or_socket([this, &pull, &push, &data](auto&& conn) {
+        using conn_t = decltype(conn);
+        return do_start_impl(*config_, std::forward<conn_t>(conn), data.lp_size,
+                             std::move(pull), std::move(push));
+      }));
 }
 
 expected<disposable> client_factory::do_start(dsl::client_config::conn& data,
                                               pull_t pull, push_t push) {
-  return do_start_impl(*config_, std::move(data.state), std::move(pull),
-                       std::move(push));
+  return do_start_impl(*config_, std::move(data.state), data.lp_size,
+                       std::move(pull), std::move(push));
 }
 
 expected<disposable> client_factory::do_start(error& err, pull_t, push_t) {

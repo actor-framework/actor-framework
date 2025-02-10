@@ -206,23 +206,34 @@ SCENARIO("length-prefix framing reads data with 32-bit size headers") {
 } // WITH_FIXTURE(fixture)
 
 SCENARIO("lp::with(...).connect(...) translates between flows and socket I/O") {
+  const auto paragraph
+    = "Lorem Ipsum is simply dummy text of the printing and typesetting "
+      "industry. Lorem Ipsum has been the industry's standard dummy text "
+      "ever "
+      "since the 1500s, when an unknown printer took a galley of type and "
+      "scrambled it to make a type specimen book. It has survived not only "
+      "five centuries, but also the leap into electronic typesetting, "
+      "remaining essentially unchanged. It was popularised in the 1960s with "
+      "the release of Letraset sheets containing Lorem Ipsum passages, and "
+      "more recently with desktop publishing software like Aldus PageMaker "
+      "including versions of Lorem Ipsum.";
+  auto run_writer = [&paragraph](net::stream_socket fd) {
+    net::multiplexer::block_sigpipe();
+    std::ignore = allow_sigpipe(fd, false);
+    auto guard = net::make_socket_guard(fd);
+    std::vector<std::string_view> inputs{"first", "second", "pause", "third",
+                                         paragraph};
+    byte_buffer rd_buf;
+    rd_buf.resize(512);
+    for (auto input : inputs) {
+      write(fd, encode(input));
+      read(fd, rd_buf);
+    }
+  };
   GIVEN("a connected socket with a writer at the other end") {
     auto maybe_sockets = net::make_stream_socket_pair();
     require(maybe_sockets.has_value());
     auto [fd1, fd2] = *maybe_sockets;
-    auto run_writer = [](net::stream_socket fd) {
-      net::multiplexer::block_sigpipe();
-      std::ignore = allow_sigpipe(fd, false);
-      auto guard = net::make_socket_guard(fd);
-      std::vector<std::string_view> inputs{"first", "second", "pause", "third",
-                                           "fourth"};
-      byte_buffer rd_buf;
-      rd_buf.resize(512);
-      for (auto input : inputs) {
-        write(fd, encode(input));
-        read(fd, rd_buf);
-      }
-    };
     auto writer = std::thread{run_writer, fd1};
     WHEN("calling length_prefix_framing::run") {
       THEN("actors can consume the resulting flow") {
@@ -264,8 +275,63 @@ SCENARIO("lp::with(...).connect(...) translates between flows and socket I/O") {
           check_eq(buf->at(1), "second");
           check_eq(buf->at(2), "pause");
           check_eq(buf->at(3), "third");
-          check_eq(buf->at(4), "fourth");
+          check_eq(buf->at(4), paragraph);
         }
+      }
+    }
+    writer.join();
+  }
+  GIVEN("a connected socket with a writer sending a message longer than the "
+        "allowed length") {
+    auto maybe_sockets = net::make_stream_socket_pair();
+    require(maybe_sockets.has_value());
+    auto [fd1, fd2] = *maybe_sockets;
+    auto writer = std::thread{run_writer, fd1};
+    WHEN(
+      "calling length_prefix_framing::run with length smaller than message") {
+      THEN("connection fails with protocol error") {
+        caf::actor_system_config cfg;
+        cfg.set("caf.scheduler.max-threads", 2);
+        cfg.set("caf.scheduler.policy", "sharing");
+        cfg.load<net::middleman>();
+        caf::actor_system sys{cfg};
+        caf::actor hdl;
+        auto failed = std::make_shared<bool>(false);
+        auto err_code = std::make_shared<caf::error>();
+        auto buf = std::make_shared<std::vector<std::string>>();
+        auto conn = net::lp::with(sys) //
+                      .connect(fd2, net::dsl::size_field_t::u1)
+                      .start([&](auto pull, auto push) {
+                        hdl = sys.spawn([buf, pull, push, failed,
+                                         err_code](event_based_actor* self) {
+                          pull.observe_on(self)
+                            .do_on_error(
+                              [self, failed, err_code](const caf::error& err) {
+                                *failed = true;
+                                *err_code = err;
+                              })
+                            .do_on_next([buf](const net::lp::frame& x) {
+                              std::string str;
+                              for (auto val : x.bytes())
+                                str.push_back(static_cast<char>(val));
+                              buf->push_back(std::move(str));
+                            })
+                            .subscribe(push);
+                        });
+                      });
+        conn.or_else([this](const error& err) { //
+          fail("connect failed: {}", err);
+        });
+        scoped_actor self{sys};
+        self->wait_for(hdl);
+        if (check_eq(buf->size(), 4u)) {
+          check_eq(buf->at(0), "first");
+          check_eq(buf->at(1), "second");
+          check_eq(buf->at(2), "pause");
+          check_eq(buf->at(3), "third");
+        }
+        require(*failed);
+        require_eq(*err_code, sec::protocol_error);
       }
     }
     writer.join();
