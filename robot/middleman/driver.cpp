@@ -118,7 +118,7 @@ int server(actor_system& sys, std::string_view mode, uint16_t port) {
   auto& mm = sys.middleman();
   if (mode == "remote_actor") {
     auto cell = sys.spawn(cell_impl, 42);
-    auto actual_port = io::publish(cell, port);
+    auto actual_port = io::publish(cell, port, nullptr, true);
     if (!actual_port) {
       std::cout << "failed to open port " << port << ": "
                 << to_string(actual_port.error()) << '\n';
@@ -127,7 +127,7 @@ int server(actor_system& sys, std::string_view mode, uint16_t port) {
     return EXIT_SUCCESS;
   }
   if (mode == "remote_spawn") {
-    auto actual_port = mm.open(port);
+    auto actual_port = mm.open(port, nullptr, true);
     if (!actual_port) {
       std::cout << "failed to open port " << port << ": "
                 << to_string(actual_port.error()) << '\n';
@@ -138,7 +138,7 @@ int server(actor_system& sys, std::string_view mode, uint16_t port) {
   if (mode == "remote_lookup") {
     auto cell = sys.spawn(cell_impl, 23);
     sys.registry().put("cell", cell);
-    auto actual_port = mm.open(port);
+    auto actual_port = mm.open(port, nullptr, true);
     if (!actual_port) {
       std::cout << "failed to open port " << port << ": "
                 << to_string(actual_port.error()) << '\n';
@@ -151,7 +151,7 @@ int server(actor_system& sys, std::string_view mode, uint16_t port) {
   if (mode == "unpublish" || mode == "monitor_node"
       || mode == "deserialization_error") {
     auto ctrl = sys.spawn(controller_impl);
-    auto actual_port = io::publish(ctrl, port);
+    auto actual_port = io::publish(ctrl, port, nullptr, true);
     if (!actual_port) {
       std::cout << "failed to open port " << port << ": "
                 << to_string(actual_port.error()) << '\n';
@@ -166,7 +166,7 @@ int server(actor_system& sys, std::string_view mode, uint16_t port) {
   }
   if (mode == "rendezvous") {
     auto cell = sys.spawn(actor_hdl_cell_impl);
-    auto actual_port = io::publish(cell, port);
+    auto actual_port = io::publish(cell, port, nullptr, true);
     if (!actual_port) {
       std::cout << "failed to open port " << port << ": "
                 << to_string(actual_port.error()) << '\n';

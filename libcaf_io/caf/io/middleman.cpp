@@ -115,7 +115,7 @@ public:
     if (const std::string* cfg_addr = get_if<std::string>(&cfg, "address"))
       if (*cfg_addr != "" && *cfg_addr != "0.0.0.0")
         addr = cfg_addr->c_str();
-    return start(port, addr, get_or(cfg, "reuse", false));
+    return start(port, addr, get_or(cfg, "reuse-address", false));
   }
 
   expected<uint16_t> start(uint16_t port, const char* in, bool reuse) {
@@ -196,7 +196,8 @@ void middleman::add_module_options(actor_system_config& cfg) {
     .add<size_t>("workers", "number of deserialization workers");
   config_option_adder{cfg.custom_options(), "caf.middleman.prometheus-http"}
     .add<uint16_t>("port", "listening port for incoming scrapes")
-    .add<std::string>("address", "bind address for the HTTP server socket");
+    .add<std::string>("address", "bind address for the HTTP server socket")
+    .add<bool>("reuse-address", "configure socket with SO_REUSEADDR");
   // Add the defaults to the config so they show up in --dump-config.
   auto& grp = put_dictionary(cfg.content, "caf.middleman");
   auto default_id = std::string{defaults::middleman::app_identifier};

@@ -109,7 +109,7 @@ Deserialization Error
 Prometheus
     [Tags]    Middleman
     [Teardown]    Terminate All Processes
-    Start Process    ${BINARY_PATH}  -s  -m  prometheus  --caf.middleman.prometheus-http.port  ${PR_SERVER_PORT}
+    Start Process    ${BINARY_PATH}  -s  -m  prometheus  --caf.middleman.prometheus-http.port  ${PR_SERVER_PORT}  --caf.middleman.prometheus-http.reuse-address
     Wait Until Keyword Succeeds    5s    25ms    Check If Reachable  ${PR_HTTP_URL}
     ${resp}=     GET    ${PR_HTTP_URL}
     ${content}=  Decode Bytes To String  ${resp.content}  utf-8
