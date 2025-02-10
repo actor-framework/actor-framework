@@ -178,6 +178,10 @@ enum class sec : uint8_t {
   /// Signals that a supervisor failed to start a new worker because too many
   /// workers failed in a short period of time.
   too_many_worker_failures = 80,
+  /// Signals that a flow operator failed to combine inputs from multiple
+  /// input observables because at least one of them completed before emitting
+  /// a single value.
+  cannot_combine_empty_observables,
 };
 // --(rst-sec-end)--
 
