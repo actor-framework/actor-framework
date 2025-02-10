@@ -9,6 +9,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 - Add intermediary types for the `mail` API as `[[nodiscard]]` to make it easier
   to spot mistakes when chaining calls.
+- The `merge` and `flat_map` operators now accept an optional unsigned integer
+  parameter to configure the maximum number of concurrent subscriptions.
 
 ### Added
 

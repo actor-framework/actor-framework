@@ -382,9 +382,9 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   template <class... Inputs>
-  merge(coordinator* parent, observable<T> input0, observable<T> input1,
-        Inputs... inputs)
-    : super(parent) {
+  merge(coordinator* parent, size_t max_concurrent, observable<T> input0,
+        observable<T> input1, Inputs... inputs)
+    : super(parent), max_concurrent_(max_concurrent) {
     static_assert((std::is_same_v<observable<T>, Inputs> && ...));
     using vector_t = std::vector<observable<T>>;
     using gen_t = gen::from_container<vector_t>;
@@ -398,8 +398,23 @@ public:
                                         gen_t{std::move(xs)}, std::tuple{});
   }
 
+  template <class... Inputs>
+  merge(coordinator* parent, observable<T> input0, observable<T> input1,
+        Inputs... inputs)
+    : merge(parent, defaults::flow::max_concurrent, std::move(input0),
+            std::move(input1), std::move(inputs)...) {
+  }
+
+  merge(coordinator* parent, size_t max_concurrent,
+        observable<observable<T>> inputs)
+    : super(parent),
+      inputs_(std::move(inputs)),
+      max_concurrent_(max_concurrent) {
+    // nop
+  }
+
   merge(coordinator* parent, observable<observable<T>> inputs)
-    : super(parent), inputs_(std::move(inputs)) {
+    : merge(parent, defaults::flow::max_concurrent, std::move(inputs)) {
     // nop
   }
 
@@ -416,7 +431,7 @@ public:
 private:
   observable<observable<T>> inputs_;
 
-  size_t max_concurrent_ = defaults::flow::max_concurrent;
+  size_t max_concurrent_;
 };
 
 } // namespace caf::flow::op
