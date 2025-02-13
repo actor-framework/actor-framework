@@ -545,7 +545,7 @@ TEST("the merge operator allows setting a maximum concurrency") {
   auto snk = coordinator()->add_child(std::in_place_type<snk_t>);
   SECTION("observable_builder") {
     SECTION("merging multiple observables") {
-      auto uut = make_observable().merge(17u, in1, in2);
+      auto uut = make_observable().merge(size_t{17}, in1, in2);
       auto sub = uut.subscribe(snk->as_observer());
       auto* ptr = dynamic_cast<caf::flow::op::merge_sub<int>*>(sub.ptr());
       check_eq(ptr->max_concurrent(), 17u);
@@ -554,7 +554,7 @@ TEST("the merge operator allows setting a maximum concurrency") {
   }
   SECTION("operator") {
     SECTION("merging multiple observables") {
-      auto uut = in1.merge(17u, in2);
+      auto uut = in1.merge(size_t{17}, in2);
       auto sub = uut.subscribe(snk->as_observer());
       auto* ptr = dynamic_cast<caf::flow::op::merge_sub<int>*>(sub.ptr());
       check_eq(ptr->max_concurrent(), 17u);
@@ -562,7 +562,7 @@ TEST("the merge operator allows setting a maximum concurrency") {
     }
     SECTION("calling merge on an observable<observable<T>>") {
       auto in = make_observable().from_container(std::vector{in1, in2});
-      auto uut = std::move(in).merge(17u);
+      auto uut = std::move(in).merge(size_t{17});
       auto sub = uut.subscribe(snk->as_observer());
       auto* ptr = dynamic_cast<caf::flow::op::merge_sub<int>*>(sub.ptr());
       check_eq(ptr->max_concurrent(), 17u);

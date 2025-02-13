@@ -199,7 +199,7 @@ public:
   /// @param xs The remaining observables to merge.
   template <class Input, class... Inputs>
   auto merge(Input x, Inputs... xs) {
-    if constexpr (std::is_unsigned_v<Input>) {
+    if constexpr (std::is_same_v<Input, size_t>) {
       return merge_with_concurrency(x, std::move(xs)...);
     } else {
       return merge_with_concurrency(sizeof...(Inputs) + 1, std::move(x),
