@@ -221,12 +221,14 @@ public:
 
   // -- thread-safe signaling --------------------------------------------------
 
-  void start(socket_manager_ptr mgr) override {
+  bool start(socket_manager_ptr mgr) override {
     auto lg = log::net::trace("socket = {}", mgr->handle().id);
     if (std::this_thread::get_id() == tid_) {
       do_start(mgr);
+      return !shutting_down_;
     } else {
-      write_to_pipe(pollset_updater::code::start_manager, mgr.release());
+      return //
+        write_to_pipe(pollset_updater::code::start_manager, mgr.release()) > 0;
     }
   }
 
@@ -538,7 +540,7 @@ public:
   /// later via the pollset updater.
   /// @warning assumes ownership of @p ptr.
   template <class T>
-  void write_to_pipe(uint8_t opcode, T* ptr) {
+  ptrdiff_t write_to_pipe(uint8_t opcode, T* ptr) {
     pollset_updater::msg_buf buf;
     // Note: no intrusive_ptr_add_ref(ptr) since we take ownership of `ptr`.
     buf[0] = static_cast<std::byte>(opcode);
@@ -557,12 +559,14 @@ public:
       if (res <= 0 && ptr)
         delete ptr;
     }
+    return res;
   }
 
   /// @copydoc write_to_pipe
   template <class Enum, class T>
-  std::enable_if_t<std::is_enum_v<Enum>> write_to_pipe(Enum opcode, T* ptr) {
-    write_to_pipe(static_cast<uint8_t>(opcode), ptr);
+  std::enable_if_t<std::is_enum_v<Enum>, ptrdiff_t>
+  write_to_pipe(Enum opcode, T* ptr) {
+    return write_to_pipe(static_cast<uint8_t>(opcode), ptr);
   }
 
   /// Queries the currently active event bitmask for `mgr`.
