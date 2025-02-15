@@ -160,7 +160,7 @@ public:
 
   bool begin_field(std::string_view name) override {
     if (begin_key_value_pair()) {
-      CAF_ASSERT(top() == type::key);
+      CAF_ASSERT(top() == json_writer::type::key);
       add('"');
       add(name);
       add("\": ");
@@ -740,7 +740,7 @@ json_writer::json_writer(actor_system& sys) {
 }
 
 json_writer::~json_writer() {
-  // nop
+  impl::destruct(impl_);
 }
 
 // -- properties ---------------------------------------------------------------

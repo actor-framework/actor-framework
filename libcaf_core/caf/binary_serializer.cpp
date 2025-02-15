@@ -50,9 +50,7 @@ public:
     // nop
   }
 
-  [[deprecated("use the single-argument constructor instead")]] //
-  impl(std::nullptr_t, byte_buffer& buf) noexcept
-    : impl(buf) {
+  impl(std::nullptr_t, byte_buffer& buf) noexcept : impl(buf) {
     // nop
   }
 
@@ -212,7 +210,10 @@ public:
       auto mid = first + remaining;
       auto last = x.end();
       memcpy(buf_.data() + write_pos_, first, remaining);
+      // Ignore false positive for stringop-overread
+      CAF_PUSH_STRINGOP_OVERREAD_WARNING
       buf_.insert(buf_.end(), mid, last);
+      CAF_POP_WARNINGS
     }
     write_pos_ += x.size();
     CAF_ASSERT(write_pos_ <= buf_.size());

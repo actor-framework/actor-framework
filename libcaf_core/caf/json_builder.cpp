@@ -241,7 +241,7 @@ public:
     return pop_if(type::member);
   }
 
-  bool begin_sequence(size_t size) override {
+  bool begin_sequence(size_t) override {
     switch (top()) {
       default:
         err_ = make_error(sec::runtime_error, "unexpected begin_sequence");
@@ -265,7 +265,7 @@ public:
     return pop_if(type::array);
   }
 
-  bool begin_associative_array(size_t size) override {
+  bool begin_associative_array(size_t) override {
     switch (top()) {
       default:
         err_ = make_error(sec::runtime_error, "{}::{}: {}", class_name,
@@ -379,13 +379,13 @@ public:
     }
   }
 
-  bool value(const std::u16string& x) override {
+  bool value(const std::u16string&) override {
     err_ = make_error(sec::unsupported_operation,
                       "u16string not supported yet by caf::json_builder");
     return false;
   }
 
-  bool value(const std::u32string& x) override {
+  bool value(const std::u32string&) override {
     err_ = make_error(sec::unsupported_operation,
                       "u32string not supported yet by caf::json_builder");
     return false;
@@ -617,7 +617,7 @@ json_builder::json_builder() {
 }
 
 json_builder::~json_builder() {
-  // nop
+  impl::destruct(impl_);
 }
 
 // -- modifiers ----------------------------------------------------------------
