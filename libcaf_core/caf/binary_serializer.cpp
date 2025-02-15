@@ -50,7 +50,6 @@ public:
     // nop
   }
 
-  [[deprecated("use the single-argument constructor instead")]] //
   impl(std::nullptr_t, byte_buffer& buf) noexcept
     : impl(buf) {
     // nop

@@ -11,7 +11,7 @@
 
 namespace caf::internal {
 
-/// Base class for implementating implementations with a fast pimpl idiom.
+/// Base class for implementing implementations with a fast pimpl idiom.
 template <class T>
 struct fast_pimpl {
   /// Casts a pointer to the storage to a reference to the implementation.

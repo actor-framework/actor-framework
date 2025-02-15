@@ -15,9 +15,9 @@
 #include "caf/internal/fast_pimpl.hpp"
 #include "caf/settings.hpp"
 
+#include <memory>
 #include <stack>
 #include <vector>
-#include <memory>
 
 namespace caf {
 
@@ -609,63 +609,6 @@ bool impl::value(std::byte& x) {
   } else {
     return false;
   }
-}
-
-template <class T>
-bool pull(impl& reader, T& x) {
-  using internal_type
-    = std::conditional_t<std::is_floating_point_v<T>, config_value::real, T>;
-  auto assign = [&x](auto& result) {
-    if constexpr (std::is_floating_point_v<T>) {
-      x = static_cast<T>(result);
-    } else {
-      x = result;
-    }
-  };
-  auto& top = reader.top();
-  if (holds_alternative<const config_value*>(top)) {
-    auto ptr = get<const config_value*>(top);
-    if (auto val = get_as<internal_type>(*ptr)) {
-      assign(*val);
-      reader.pop();
-      return true;
-    } else {
-      reader.set_error(std::move(val.error()));
-      return false;
-    }
-  } else if (holds_alternative<sequence>(top)) {
-    auto& seq = get<sequence>(top);
-    if (seq.at_end()) {
-      reader.emplace_error(sec::runtime_error, "value: sequence out of bounds");
-      return false;
-    }
-    auto ptr = std::addressof(seq.current());
-    if (auto val = get_as<internal_type>(*ptr)) {
-      assign(*val);
-      seq.advance();
-      return true;
-    } else {
-      reader.set_error(std::move(val.error()));
-      return false;
-    }
-  } else if (holds_alternative<key_ptr>(top)) {
-    auto ptr = get<key_ptr>(top);
-    if constexpr (std::is_same_v<std::string, T>) {
-      x = *ptr;
-      reader.pop();
-      return true;
-    } else {
-      if (auto err = detail::parse(*ptr, x)) {
-        reader.set_error(std::move(err));
-        return false;
-      } else {
-        return true;
-      }
-    }
-  }
-  reader.emplace_error(sec::conversion_failed,
-                       "expected a value, sequence, or key");
-  return false;
 }
 
 bool impl::value(bool& x) {
