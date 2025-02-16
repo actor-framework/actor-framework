@@ -22,16 +22,3 @@ freebsd14_task:
     robot_artifacts:
       path: "build/robot-output/**"
   << : *BRANCH_FILTER
-
-# FreeBSD 15.0-snap EOL: November 2030
-freebsd15_task:
-  freebsd_instance:
-    image_family: freebsd-15-0-snap
-    << : *RESOURCES_TEMPLATE
-  prepare_script: .ci/freebsd-15/prepare.sh
-  build_script: .ci/run.sh build .ci/debug-flags.cmake . build
-  test_script: .ci/run.sh test build net.udp_datagram_socket
-  always:
-    robot_artifacts:
-      path: "build/robot-output/**"
-  << : *BRANCH_FILTER
