@@ -19,8 +19,6 @@
 
 #include "caf/raise_error.hpp"
 
-#include <iostream>
-
 #ifdef CAF_WINDOWS
 #  include <winsock2.h>
 #else
@@ -115,7 +113,7 @@ struct fixture {
     auto client = net::http::client::make(std::move(app));
     auto transport = net::octet_stream::transport::make(fd2, std::move(client));
     auto mgr = net::socket_manager::make(mpx.get(), std::move(transport));
-    mpx->start(mgr);
+    std::ignore = mpx->start(mgr);
     fd2.id = net::invalid_socket_id;
     return {res, disposable{mgr}};
   }

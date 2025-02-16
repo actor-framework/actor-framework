@@ -224,11 +224,9 @@ public:
   bool start(socket_manager_ptr mgr) override {
     auto lg = log::net::trace("socket = {}", mgr->handle().id);
     if (std::this_thread::get_id() == tid_) {
-      do_start(mgr);
-      return !shutting_down_;
+      return do_start(mgr);
     } else {
-      return //
-        write_to_pipe(pollset_updater::code::start_manager, mgr.release()) > 0;
+      return write_to_pipe(pollset_updater::code::start_manager, mgr.release());
     }
   }
 
@@ -443,7 +441,7 @@ public:
     apply_updates();
   }
 
-  void do_start(const socket_manager_ptr& mgr) {
+  bool do_start(const socket_manager_ptr& mgr) {
     auto lg = log::net::trace("socket = {}", mgr->handle().id);
     if (!shutting_down_) {
       error err;
@@ -453,8 +451,11 @@ public:
         // The socket manager should not register itself for any events if
         // initialization fails. Purge any state just in case.
         update_for(mgr.get()).events = 0;
+        return false;
       }
+      return true;
     }
+    return false;
   }
 
   // -- utility functions ------------------------------------------------------
@@ -540,7 +541,7 @@ public:
   /// later via the pollset updater.
   /// @warning assumes ownership of @p ptr.
   template <class T>
-  ptrdiff_t write_to_pipe(uint8_t opcode, T* ptr) {
+  bool write_to_pipe(uint8_t opcode, T* ptr) {
     pollset_updater::msg_buf buf;
     // Note: no intrusive_ptr_add_ref(ptr) since we take ownership of `ptr`.
     buf[0] = static_cast<std::byte>(opcode);
@@ -559,12 +560,12 @@ public:
       if (res <= 0 && ptr)
         delete ptr;
     }
-    return res;
+    return res > 0;
   }
 
   /// @copydoc write_to_pipe
   template <class Enum, class T>
-  std::enable_if_t<std::is_enum_v<Enum>, ptrdiff_t>
+  std::enable_if_t<std::is_enum_v<Enum>, bool>
   write_to_pipe(Enum opcode, T* ptr) {
     return write_to_pipe(static_cast<uint8_t>(opcode), ptr);
   }
