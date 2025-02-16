@@ -861,7 +861,7 @@ struct has_max_concurrent_arg : std::false_type {};
 
 template <class T, class... Ts>
 struct has_max_concurrent_arg<T, Ts...> {
-  static constexpr bool value = std::is_unsigned_v<std::decay_t<T>>;
+  static constexpr bool value = std::is_same_v<std::decay_t<T>, size_t>;
 };
 
 template <class... Ts>
