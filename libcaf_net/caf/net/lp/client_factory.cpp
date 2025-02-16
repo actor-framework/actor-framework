@@ -22,8 +22,10 @@ expected<disposable> do_start_impl(Config& cfg, Conn conn,
   auto transport = internal::make_transport(std::move(conn), std::move(impl));
   transport->active_policy().connect();
   auto ptr = socket_manager::make(cfg.mpx, std::move(transport));
-  cfg.mpx->start(ptr);
-  return expected<disposable>{disposable{std::move(ptr)}};
+  if (cfg.mpx->start(ptr))
+    return expected<disposable>{disposable{std::move(ptr)}};
+  return make_error(sec::logic_error,
+                    "failed to register socket manager to net::multiplexer");
 }
 
 } // namespace
