@@ -82,7 +82,7 @@ public:
 
   /// Registers `mgr` for initialization in the multiplexer's thread.
   /// @threadsafe
-  virtual bool start(socket_manager_ptr mgr) = 0;
+  [[nodiscard]] virtual bool start(socket_manager_ptr mgr) = 0;
 
   /// Signals the multiplexer to initiate shutdown.
   /// @threadsafe

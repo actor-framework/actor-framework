@@ -206,8 +206,9 @@ disposable run_impl(multiplexer& mpx, Conn& conn,
   auto transport = internal::make_transport(std::move(conn),
                                             framing::make(std::move(bridge)));
   auto manager = net::socket_manager::make(&mpx, std::move(transport));
-  mpx.start(manager);
-  return manager->as_disposable();
+  if (mpx.start(manager))
+    return manager->as_disposable();
+  return disposable{};
 }
 
 } // namespace
