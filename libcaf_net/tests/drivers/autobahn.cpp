@@ -307,7 +307,8 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
   mgr->add_cleanup_listener(caf::make_single_shot_action([] { //
     shutdown_flag = true;
   }));
-  mpx->start(mgr);
+  if (!mpx->start(mgr))
+    return EXIT_FAILURE;
   // Wait until the server shuts down.
   while (!shutdown_flag.load()) {
     std::this_thread::sleep_for(1s);
