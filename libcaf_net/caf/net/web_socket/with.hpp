@@ -30,8 +30,6 @@ class CAF_NET_EXPORT with_t {
 public:
   // -- friends ----------------------------------------------------------------
 
-  friend with_t with(multiplexer*);
-
   template <class...>
   friend class server_launcher;
 
@@ -193,11 +191,13 @@ public:
     config_ptr config_;
   };
 
-  ~with_t();
+  explicit with_t(multiplexer* mpx);
 
   with_t(with_t&&) noexcept = default;
 
   with_t& operator=(with_t&&) noexcept = default;
+
+  ~with_t();
 
   /// Sets the optional SSL context.
   /// @param ctx The SSL context for encryption.
@@ -266,8 +266,6 @@ public:
   [[nodiscard]] client connect(expected<uri> endpoint) &&;
 
 private:
-  explicit with_t(multiplexer* mpx);
-
   using on_error_callback = unique_callback_ptr<void(const error&)>;
 
   void set_on_error(on_error_callback ptr);
