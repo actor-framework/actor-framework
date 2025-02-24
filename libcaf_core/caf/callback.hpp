@@ -5,9 +5,7 @@
 #pragma once
 
 #include "caf/allowed_unsafe_message_type.hpp"
-#include "caf/config.hpp"
 #include "caf/detail/type_traits.hpp"
-#include "caf/error.hpp"
 
 #include <memory>
 
@@ -92,10 +90,4 @@ auto make_shared_type_erased_callback(F fun) {
   return shared_callback_ptr<signature>{std::move(res)};
 }
 
-/// Convenience type alias for an action with shared ownership.
-/// @relates callback
-using shared_action_ptr = shared_callback_ptr<void()>;
-
 } // namespace caf
-
-CAF_ALLOW_UNSAFE_MESSAGE_TYPE(caf::shared_action_ptr)
