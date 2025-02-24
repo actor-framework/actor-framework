@@ -10,10 +10,8 @@
 
 #include "caf/detail/net_export.hpp"
 #include "caf/expected.hpp"
-#include "caf/logger.hpp"
 
 #include <memory>
-#include <variant>
 
 namespace caf::net::ssl {
 
@@ -86,6 +84,10 @@ public:
 
   const context& ctx() const noexcept {
     return *ctx_;
+  }
+
+  const std::shared_ptr<context>& ctx_ptr() const noexcept {
+    return ctx_;
   }
 
 private:
