@@ -21,7 +21,7 @@ public:
 
   using output_type = detail::unboxed_t<callable_res_t>;
 
-  explicit from_callable(F fn) : fn_(std::move(fn)) {
+  explicit from_callable(F fn) : fn_(std::make_shared<F>(std::move(fn))) {
     // nop
   }
 
@@ -34,7 +34,7 @@ public:
   void pull(size_t n, Step& step, Steps&... steps) {
     for (size_t i = 0; i < n; ++i) {
       if constexpr (boxed_output) {
-        auto val = fn_();
+        auto val = (*fn_)();
         if (!val) {
           if constexpr (detail::is_expected_v<callable_res_t>) {
             if (const auto& err = val.error())
@@ -49,14 +49,14 @@ public:
         if (!step.on_next(*val, steps...))
           return;
       } else {
-        if (!step.on_next(fn_(), steps...))
+        if (!step.on_next((*fn_)(), steps...))
           return;
       }
     }
   }
 
 private:
-  F fn_;
+  std::shared_ptr<F> fn_;
 };
 
 } // namespace caf::flow::gen
