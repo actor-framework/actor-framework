@@ -45,7 +45,7 @@ public:
 
   using config_ptr = std::unique_ptr<config_impl>;
 
-  /// Implemenation detail for `server_launcher`.
+  /// Implementation detail for `server_launcher`.
   class CAF_NET_EXPORT server_launcher_base {
   public:
     virtual ~server_launcher_base();
