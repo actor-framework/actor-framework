@@ -56,7 +56,7 @@ public:
   }
 
   /// Tries to assign a key from base64 input.
-  bool assign_key(std::string_view base64_key);
+  [[nodiscard]] bool assign_key(std::string_view base64_key);
 
   /// Returns the key for the response message, i.e., what the server puts into
   /// the HTTP field `Sec-WebSocket-Accept`.
@@ -66,6 +66,9 @@ public:
   [[nodiscard]] const auto& fields() const noexcept {
     return fields_;
   }
+
+  /// Sets the HTTP header field `key` to `value`. Overwrites existing values.
+  void set_field(std::string_view key, std::string value);
 
   /// Checks whether at least one bit in the key is one. A default constructed
   /// header object fills the key with zeros.
@@ -85,48 +88,34 @@ public:
   /// Sets a value for the mandatory WebSocket endpoint, i.e., the Request-URI
   /// component of the GET method according to RFC 2616.
   /// @param value Identifies the endpoint that should handle the request.
-  void endpoint(std::string value) {
-    fields_["_endpoint"] = std::move(value);
-  }
+  void endpoint(std::string value);
 
   /// Checks whether the handshake has an `endpoint` defined.
-  bool has_endpoint() const noexcept {
-    return fields_.contains("_endpoint");
-  }
+  [[nodiscard]] bool has_endpoint() const noexcept;
 
   /// Sets a value for the mandatory `Host` field.
   /// @param value The Internet host and port number of the resource being
   ///              requested, as obtained from the original URI given by the
   ///              user or referring resource.
-  void host(std::string value) {
-    fields_["_host"] = std::move(value);
-  }
+  void host(std::string value);
 
   /// Checks whether the handshake has an `host` defined.
-  bool has_host() const noexcept {
-    return fields_.contains("_host");
-  }
+  [[nodiscard]] bool has_host() const noexcept;
 
   /// Sets a value for the optional `Origin` field.
   /// @param value Indicates where the GET request originates from. Usually only
   ///              sent by browser clients.
-  void origin(std::string value) {
-    fields_["Origin"] = std::move(value);
-  }
+  void origin(std::string value);
 
   /// Sets a value for the optional `Sec-WebSocket-Protocol` field.
   /// @param value A comma-separated list of values indicating which protocols
   ///              the client would like to speak, ordered by preference.
-  void protocols(std::string value) {
-    fields_["Sec-WebSocket-Protocol"] = std::move(value);
-  }
+  void protocols(std::string value);
 
   /// Sets a value for the optional `Sec-WebSocket-Extensions` field.
   /// @param value A comma-separated list of values indicating which extensions
   ///              the client would like to speak, ordered by preference.
-  void extensions(std::string value) {
-    fields_["Sec-WebSocket-Extensions"] = std::move(value);
-  }
+  void extensions(std::string value);
 
   // -- HTTP generation and validation -----------------------------------------
 
