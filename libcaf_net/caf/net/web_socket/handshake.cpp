@@ -77,7 +77,7 @@ std::string handshake::response_key() const {
   return str;
 }
 
-void handshake::set_field(std::string_view key, std::string value) {
+void handshake::field(std::string_view key, std::string value) {
   fields_.insert_or_assign(key, std::move(value));
 }
 

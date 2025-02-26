@@ -226,6 +226,22 @@ with_t::client&& with_t::client::max_retry_count(size_t value) && {
   return std::move(*this);
 }
 
+with_t::client&& with_t::client::protocols(std::string value) && {
+  config_->hs.protocols(std::move(value));
+  return std::move(*this);
+}
+
+with_t::client&& with_t::client::extensions(std::string value) && {
+  config_->hs.extensions(std::move(value));
+  return std::move(*this);
+}
+
+with_t::client&& with_t::client::header_field(std::string_view key,
+                                              std::string value) && {
+  config_->hs.field(key, std::move(value));
+  return std::move(*this);
+}
+
 expected<disposable> with_t::client::do_start(pull_t& pull, push_t& push) {
   config_->pull = std::move(pull);
   config_->push = std::move(push);

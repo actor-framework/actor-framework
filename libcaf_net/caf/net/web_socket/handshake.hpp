@@ -68,7 +68,7 @@ public:
   }
 
   /// Sets the HTTP header field `key` to `value`. Overwrites existing values.
-  void set_field(std::string_view key, std::string value);
+  void field(std::string_view key, std::string value);
 
   /// Checks whether at least one bit in the key is one. A default constructed
   /// header object fills the key with zeros.
