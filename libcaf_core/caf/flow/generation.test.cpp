@@ -186,6 +186,119 @@ SCENARIO("callable sources stream values generated from a function object") {
   }
 }
 
+SCENARIO("callable sources must not be copyable") {
+  GIVEN("a non-copyable callable source") {
+    WHEN("subscribing to its output") {
+      THEN("the observer receives all its items") {
+        using snk_t = flow::passive_observer<int>;
+        auto snk = coordinator()->add_child(std::in_place_type<snk_t>);
+        auto f = [n = 1, noncopyable = std::make_unique<int>(42)]() mutable {
+          static_cast<void>(noncopyable);
+          return n++;
+        };
+        make_observable()
+          .from_callable(std::move(f))
+          .subscribe(snk->as_observer());
+        check_eq(snk->state, flow::observer_state::subscribed);
+        check(snk->buf.empty());
+        if (check(snk->subscribed())) {
+          snk->sub.request(3);
+          run_flows();
+          check_eq(snk->buf, ivec({1, 2, 3}));
+          snk->sub.request(4);
+          run_flows();
+          check_eq(snk->buf, ivec({1, 2, 3, 4, 5, 6, 7}));
+          snk->sub.cancel();
+          run_flows();
+          check_eq(snk->buf, ivec({1, 2, 3, 4, 5, 6, 7}));
+        }
+      }
+    }
+  }
+}
+
+// This generator resembles a std::generator-like API that comes with a few
+// difficulties:
+// - The generator is not copyable.
+// - The generator's iterator and sentinel types differ.
+// - Getting an iterator requires a mutable generator.
+// - The iterator has no post-increment operator.
+// - The iterator is not default-constructible and not copyable.
+struct iota_generator {
+  using value_type = int;
+  struct sentinel {};
+  struct iterator {
+    iterator(int current, int end) : current_(current), end_(end) {
+    }
+
+    iterator(const iterator&) = delete;
+    iterator& operator=(const iterator&) = delete;
+
+    bool operator==(sentinel) const {
+      return current_ == end_;
+    }
+
+    bool operator!=(sentinel) const {
+      return current_ != end_;
+    }
+
+    int operator*() const {
+      return current_;
+    }
+
+    iterator& operator++() {
+      ++current_;
+      return *this;
+    }
+
+  private:
+    int current_;
+    const int end_;
+  };
+
+  explicit iota_generator(int end) : end_(end) {
+  }
+
+  iterator begin() {
+    return {0, end_};
+  }
+
+  sentinel end() const {
+    return {};
+  }
+
+private:
+  const int end_ = 0;
+};
+
+SCENARIO("container sources must support generator-like APIs") {
+  GIVEN("a generator-like container source") {
+    WHEN("subscribing to its output") {
+      THEN("the observer receives all its items") {
+        using snk_t = flow::passive_observer<int>;
+        auto snk = coordinator()->add_child(std::in_place_type<snk_t>);
+        auto f = iota_generator(100);
+        make_observable()
+          .from_container(std::move(f))
+          .subscribe(snk->as_observer());
+        check_eq(snk->state, flow::observer_state::subscribed);
+        check(snk->buf.empty());
+        if (check(snk->subscribed())) {
+          snk->sub.request(3);
+          run_flows();
+          check_eq(snk->buf, ivec({0, 1, 2}));
+          snk->sub.request(4);
+          run_flows();
+          check_eq(snk->buf, ivec({0, 1, 2, 3, 4, 5, 6}));
+          snk->sub.cancel();
+          run_flows();
+          check_eq(snk->buf, ivec({0, 1, 2, 3, 4, 5, 6}));
+        }
+      }
+    }
+  }
+}
+
 SCENARIO("asynchronous buffers can generate flow items") {
   GIVEN("a background thread writing into an async buffer") {
     auto cancelled = std::atomic<bool>{false};
