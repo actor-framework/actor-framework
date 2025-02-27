@@ -163,6 +163,16 @@ public:
     /// @returns a reference to this `client_factory`.
     [[nodiscard]] client&& max_retry_count(size_t value) &&;
 
+    /// @copydoc handshake::protocols
+    [[nodiscard]] client&& protocols(std::string value) &&;
+
+    /// @copydoc handshake::extensions
+    [[nodiscard]] client&& extensions(std::string value) &&;
+
+    /// @copydoc handshake::field
+    [[nodiscard]] client&& header_field(std::string_view key,
+                                        std::string value) &&;
+
     /// Starts a connection with the WebSocket protocol.
     /// @param on_start The callback to invoke after the connection has started.
     /// @returns On success, a handle to stop the connection. On failure, an
