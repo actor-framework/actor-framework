@@ -94,7 +94,7 @@ void handshake::randomize_key(unsigned seed) {
 }
 
 void handshake::endpoint(std::string value) {
-  fields_[endpoint_key] = std::move(value);
+  fields_.insert_or_assign(endpoint_key, std::move(value));
 }
 
 bool handshake::has_endpoint() const noexcept {
@@ -102,7 +102,7 @@ bool handshake::has_endpoint() const noexcept {
 }
 
 void handshake::host(std::string value) {
-  fields_[host_key] = std::move(value);
+  fields_.insert_or_assign(host_key, std::move(value));
 }
 
 bool handshake::has_host() const noexcept {
@@ -114,7 +114,7 @@ bool handshake::has_mandatory_fields() const noexcept {
 }
 
 void handshake::origin(std::string value) {
-  fields_[origin_key] = std::move(value);
+  fields_.insert_or_assign(origin_key, std::move(value));
 }
 
 void handshake::protocols(std::string value) {
