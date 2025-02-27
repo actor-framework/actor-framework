@@ -2,9 +2,10 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/main/LICENSE.
 
+#pragma once
+
 #include "caf/default_enum_inspect.hpp"
 #include "caf/detail/net_export.hpp"
-#include "caf/fwd.hpp"
 
 #include <string>
 

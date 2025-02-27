@@ -2,18 +2,12 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/main/LICENSE.
 
-#pragma once
+#include "caf/internal/net_config.hpp"
 
-#include <cstdint>
+namespace caf::internal {
 
-namespace caf::io::basp {
+net_config::~net_config() {
+  // nop
+}
 
-/// @addtogroup BASP
-/// @{
-
-/// The current BASP version. Note: BASP is not backwards compatible.
-constexpr uint64_t version = 9;
-
-/// @}
-
-} // namespace caf::io::basp
+} // namespace caf::internal

@@ -116,6 +116,7 @@ class has_on_request;
 class lower_layer;
 class server;
 class upper_layer;
+class with_t;
 
 enum class status : uint16_t;
 
@@ -147,6 +148,7 @@ namespace caf::net::ssl {
 class acceptor;
 class connection;
 class context;
+class tcp_acceptor;
 class transport;
 
 enum class dtls;
