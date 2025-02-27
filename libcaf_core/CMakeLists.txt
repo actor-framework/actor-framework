@@ -113,7 +113,6 @@ caf_add_component(
     caf/async_mail.test.cpp
     caf/attachable.cpp
     caf/behavior.cpp
-    caf/behavior.test.cpp
     caf/binary_deserializer.cpp
     caf/binary_serializer.cpp
     caf/blocking_actor.cpp
@@ -405,6 +404,12 @@ caf_add_component(
 
 # Additional log component for (potentially critical) system-wide events.
 caf_add_log_component(system)
+
+# Bandaid: currently produces an internal compiler error on MSVC. Disable until
+# further investigation.
+if(NOT MSVC)
+  target_sources(caf-core-test PRIVATE caf/behavior.test.cpp)
+endif()
 
 if(NOT CAF_USE_STD_FORMAT)
   target_sources(libcaf_core PRIVATE caf/detail/format.cpp)
