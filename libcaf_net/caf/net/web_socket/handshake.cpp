@@ -121,9 +121,6 @@ void handshake::protocols(std::string value) {
   fields_.insert_or_assign(protocol_key, std::move(value));
 }
 
-/// Sets a value for the optional `Sec-WebSocket-Extensions` field.
-/// @param value A comma-separated list of values indicating which extensions
-///              the client would like to speak, ordered by preference.
 void handshake::extensions(std::string value) {
   fields_.insert_or_assign(protocol_key, std::move(value));
 }
