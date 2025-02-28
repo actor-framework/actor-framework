@@ -155,7 +155,7 @@ public:
     return state_;
   };
 
-  bool value(span<const std::byte>) override {
+  bool value(const_byte_span) override {
     return state_;
   };
 

@@ -20,7 +20,7 @@ public:
   ~byte_reader() override;
 
   /// Resets the reader and loads a sequence of bytes to deserialize from.
-  virtual bool load_bytes(span<const std::byte> bytes) = 0;
+  virtual bool load_bytes(const_byte_span bytes) = 0;
 };
 
 } // namespace caf

@@ -195,12 +195,12 @@ auto cend(const span<T>& xs) -> decltype(xs.cend()) {
 }
 
 template <class T>
-span<const std::byte> as_bytes(span<T> xs) {
+const_byte_span as_bytes(span<T> xs) {
   return {reinterpret_cast<const std::byte*>(xs.data()), xs.size_bytes()};
 }
 
 template <class T>
-span<std::byte> as_writable_bytes(span<T> xs) {
+byte_span as_writable_bytes(span<T> xs) {
   return {reinterpret_cast<std::byte*>(xs.data()), xs.size_bytes()};
 }
 
