@@ -602,7 +602,7 @@ public:
     return false;
   }
 
-  bool value(span<std::byte> bytes) {
+  bool value(byte_span bytes) {
     CHECK_NOT_EMPTY();
     std::string x;
     if (!pull(*this, x))
@@ -822,7 +822,7 @@ bool config_value_reader::value(std::u32string& x) {
   return impl::cast(impl_).value(x);
 }
 
-bool config_value_reader::value(span<std::byte> bytes) {
+bool config_value_reader::value(byte_span bytes) {
   return impl::cast(impl_).value(bytes);
 }
 

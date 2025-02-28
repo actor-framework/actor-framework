@@ -117,7 +117,7 @@ public:
 
   bool value(const std::u32string& x);
 
-  bool value(span<const std::byte> x);
+  bool value(const_byte_span x);
 
   bool value(const strong_actor_ptr& ptr);
 

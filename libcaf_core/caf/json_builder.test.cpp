@@ -425,7 +425,7 @@ SCENARIO("json_builder can build json for maps with keys") {
   }
   GIVEN("a map with byte span as keys") {
     auto bytes = std::vector<std::byte>{std::byte{'A'}, std::byte{'B'}};
-    std::map<span<const std::byte>, int, span_less> span_map{
+    std::map<const_byte_span, int, span_less> span_map{
       {make_span(bytes), 1},
     };
     WHEN("building the map") {

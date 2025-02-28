@@ -58,7 +58,7 @@ public:
   /// @note Implicitly calls `reset`.
   bool load(std::string_view json_text);
 
-  bool load_bytes(span<const std::byte> bytes) override;
+  bool load_bytes(const_byte_span bytes) override;
 
   /// Reads the input stream @p input and parses the content into an internal
   /// representation. After loading the JSON input, the reader is ready for
@@ -157,7 +157,7 @@ public:
 
   bool value(std::u32string& x) override;
 
-  bool value(span<std::byte> x) override;
+  bool value(byte_span x) override;
 
 private:
   /// Storage for the implementation object.
