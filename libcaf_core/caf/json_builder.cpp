@@ -9,8 +9,8 @@
 #include "caf/detail/print.hpp"
 #include "caf/format_to_error.hpp"
 #include "caf/internal/fast_pimpl.hpp"
+#include "caf/internal/json_node.hpp"
 #include "caf/json_value.hpp"
-#include "caf/json_writer.hpp"
 
 #include <type_traits>
 
@@ -36,8 +36,6 @@ public:
   // -- member types -----------------------------------------------------------
 
   using super = serializer;
-
-  using type = json_writer::type;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -85,7 +83,7 @@ public:
       storage_->buf.reclaim();
     }
     val_ = detail::json::make_value(storage_);
-    push(val_, type::element);
+    push(val_, internal::json_node::element);
   }
 
   json_value seal() {
@@ -112,10 +110,10 @@ public:
 
   bool begin_object(type_id_t id, std::string_view name) override {
     auto add_type_annotation = [this, id, name] {
-      CAF_ASSERT(top() == type::key);
+      CAF_ASSERT(top() == internal::json_node::key);
       *top_ptr<key_type>() = "@type"sv;
       pop();
-      CAF_ASSERT(top() == type::element);
+      CAF_ASSERT(top() == internal::json_node::element);
       if (auto tname = query_type_name(id); !tname.empty()) {
         top_ptr()->data = tname;
       } else {
@@ -139,10 +137,10 @@ public:
 
   bool begin_field(std::string_view name) override {
     if (begin_key_value_pair()) {
-      CAF_ASSERT(top() == type::key);
+      CAF_ASSERT(top() == internal::json_node::key);
       *top_ptr<key_type>() = name;
       pop();
-      CAF_ASSERT(top() == type::element);
+      CAF_ASSERT(top() == internal::json_node::element);
       return true;
     } else {
       return false;
@@ -153,7 +151,7 @@ public:
     if (skip_empty_fields_ && !is_present) {
       auto t = top();
       switch (t) {
-        case type::object:
+        case internal::json_node::object:
           push(static_cast<detail::json::member*>(nullptr));
           return true;
         default: {
@@ -164,10 +162,10 @@ public:
         }
       }
     } else if (begin_key_value_pair()) {
-      CAF_ASSERT(top() == type::key);
+      CAF_ASSERT(top() == internal::json_node::key);
       *top_ptr<key_type>() = name;
       pop();
-      CAF_ASSERT(top() == type::element);
+      CAF_ASSERT(top() == internal::json_node::element);
       if (!is_present) {
         // We don't need to assign nullptr explicitly since it's the default.
         pop();
@@ -195,10 +193,10 @@ public:
         err_ = make_error(sec::runtime_error, "query_type_name failed");
         return false;
       }
-      CAF_ASSERT(top() == type::key);
+      CAF_ASSERT(top() == internal::json_node::key);
       *top_ptr<key_type>() = name;
       pop();
-      CAF_ASSERT(top() == type::element);
+      CAF_ASSERT(top() == internal::json_node::element);
       return true;
     } else {
       return false;
@@ -228,12 +226,12 @@ public:
   bool begin_key_value_pair() override {
     auto t = top();
     switch (t) {
-      case type::object: {
+      case internal::json_node::object: {
         auto* obj = top_ptr<detail::json::object>();
         auto& new_member = obj->emplace_back();
         new_member.val = detail::json::make_value(storage_);
         push(&new_member);
-        push(new_member.val, type::element);
+        push(new_member.val, internal::json_node::element);
         push(&new_member.key);
         return true;
       }
@@ -247,7 +245,7 @@ public:
   }
 
   bool end_key_value_pair() override {
-    return pop_if(type::member);
+    return pop_if(internal::json_node::member);
   }
 
   bool begin_sequence(size_t) override {
@@ -255,23 +253,23 @@ public:
       default:
         err_ = make_error(sec::runtime_error, "unexpected begin_sequence");
         return false;
-      case type::element: {
+      case internal::json_node::element: {
         top_ptr()->assign_array(storage_);
-        stack_.back().t = type::array;
+        stack_.back().t = internal::json_node::array;
         return true;
       }
-      case type::array: {
+      case internal::json_node::array: {
         auto* arr = top_ptr<detail::json::array>();
         auto& new_val = arr->emplace_back();
         new_val.assign_array(storage_);
-        push(&new_val, type::array);
+        push(&new_val, internal::json_node::array);
         return true;
       }
     }
   }
 
   bool end_sequence() override {
-    return pop_if(type::array);
+    return pop_if(internal::json_node::array);
   }
 
   bool begin_associative_array(size_t) override {
@@ -281,21 +279,21 @@ public:
                           __func__,
                           "unexpected begin_object or begin_associative_array");
         return false;
-      case type::element:
+      case internal::json_node::element:
         top_ptr()->assign_object(storage_);
-        stack_.back().t = type::object;
+        stack_.back().t = internal::json_node::object;
         return true;
-      case type::array: {
+      case internal::json_node::array: {
         auto& new_val = top_ptr<detail::json::array>()->emplace_back();
         new_val.assign_object(storage_);
-        push(&new_val, type::object);
+        push(&new_val, internal::json_node::object);
         return true;
       }
     }
   }
 
   bool end_associative_array() override {
-    return pop_if(type::object);
+    return pop_if(internal::json_node::object);
   }
 
   bool value(std::byte x) override {
@@ -304,21 +302,21 @@ public:
 
   bool value(bool x) override {
     switch (top()) {
-      case type::element:
+      case internal::json_node::element:
         top_ptr()->data = x;
         pop();
         return true;
-      case type::key:
+      case internal::json_node::key:
         *top_ptr<key_type>() = x ? "true"sv : "false"sv;
         pop();
         return true;
-      case type::array: {
+      case internal::json_node::array: {
         auto* arr = top_ptr<detail::json::array>();
         arr->emplace_back().data = x;
         return true;
       }
       default:
-        fail(type::boolean);
+        fail(internal::json_node::boolean);
         return false;
     }
   }
@@ -369,21 +367,21 @@ public:
 
   bool value(std::string_view x) override {
     switch (top()) {
-      case type::element:
+      case internal::json_node::element:
         top_ptr()->assign_string(x, storage_);
         pop();
         return true;
-      case type::key:
+      case internal::json_node::key:
         *top_ptr<key_type>() = detail::json::realloc(x, storage_);
         pop();
         return true;
-      case type::array: {
+      case internal::json_node::array: {
         auto& new_val = top_ptr<detail::json::array>()->emplace_back();
         new_val.assign_string(x, storage_);
         return true;
       }
       default:
-        fail(type::string);
+        fail(internal::json_node::string);
         return false;
     }
   }
@@ -406,21 +404,21 @@ public:
     detail::append_hex(buf, reinterpret_cast<const void*>(x.data()), x.size());
     auto hex_str = std::string_view{buf.data(), buf.size()};
     switch (top()) {
-      case type::element:
+      case internal::json_node::element:
         top_ptr()->assign_string(hex_str, storage_);
         pop();
         return true;
-      case type::key:
+      case internal::json_node::key:
         *top_ptr<key_type>() = detail::json::realloc(hex_str, storage_);
         pop();
         return true;
-      case type::array: {
+      case internal::json_node::array: {
         auto& new_val = top_ptr<detail::json::array>()->emplace_back();
         new_val.assign_string(hex_str, storage_);
         return true;
       }
       default:
-        fail(type::string);
+        fail(internal::json_node::string);
         return false;
     }
   }
@@ -429,7 +427,7 @@ private:
   template <class T>
   bool number(T x) {
     switch (top()) {
-      case type::element: {
+      case internal::json_node::element: {
         if constexpr (std::is_floating_point_v<T>) {
           top_ptr()->data = static_cast<double>(x);
         } else {
@@ -438,14 +436,14 @@ private:
         pop();
         return true;
       }
-      case type::key: {
+      case internal::json_node::key: {
         std::string str;
         detail::print(str, x);
         *top_ptr<key_type>() = detail::json::realloc(str, &storage_->buf);
         pop();
         return true;
       }
-      case type::array: {
+      case internal::json_node::array: {
         auto& new_entry = top_ptr<detail::json::array>()->emplace_back();
         if constexpr (std::is_floating_point_v<T>) {
           new_entry.data = static_cast<double>(x);
@@ -455,7 +453,7 @@ private:
         return true;
       }
       default:
-        fail(type::number);
+        fail(internal::json_node::number);
         return false;
     }
   }
@@ -468,15 +466,15 @@ private:
     storage_ = make_counted<detail::json::storage>();
     val_ = detail::json::make_value(storage_);
     stack_.reserve(32);
-    push(val_, type::element);
+    push(val_, internal::json_node::element);
   }
 
   // Returns the current top of the stack or `null` if empty.
-  type top() {
+  internal::json_node top() {
     if (!stack_.empty())
       return stack_.back().t;
     else
-      return type::null;
+      return internal::json_node::null;
   }
 
   // Returns the current top of the stack or `null` if empty.
@@ -498,7 +496,9 @@ private:
 
   // Returns the current top-level object.
   detail::json::object* top_obj() {
-    auto is_obj = [](const entry& x) { return x.t == type::object; };
+    auto is_obj = [](const entry& x) {
+      return x.t == internal::json_node::object;
+    };
     auto i = std::find_if(stack_.rbegin(), stack_.rend(), is_obj);
     if (i != stack_.rend())
       return &std::get<detail::json::object>(i->val_ptr->data);
@@ -506,7 +506,7 @@ private:
   }
 
   // Enters a new level of nesting.
-  void push(detail::json::value* ptr, type t) {
+  void push(detail::json::value* ptr, internal::json_node t) {
     stack_.emplace_back(ptr, t);
   }
 
@@ -533,7 +533,7 @@ private:
   }
 
   // Backs up one level of nesting but checks that current top is `t` before.
-  bool pop_if(type t) {
+  bool pop_if(internal::json_node t) {
     if (!stack_.empty() && stack_.back().t == t) {
       stack_.pop_back();
       return true;
@@ -552,7 +552,7 @@ private:
   }
 
   // Sets an error reason that the inspector failed to write a t.
-  void fail(type t) {
+  void fail(internal::json_node t) {
     err_ = format_to_error(sec::runtime_error,
                            "failed to write a value of type {}: "
                            "invalid position (begin/end mismatch?)",
@@ -561,7 +561,9 @@ private:
 
   // Checks whether any element in the stack has the type `object`.
   bool inside_object() const noexcept {
-    auto is_object = [](const entry& x) { return x.t == type::object; };
+    auto is_object = [](const entry& x) {
+      return x.t == internal::json_node::object;
+    };
     return std::any_of(stack_.begin(), stack_.end(), is_object);
   }
 
@@ -582,21 +584,21 @@ private:
       detail::json::member* mem_ptr;
       key_type* key_ptr;
     };
-    type t;
+    internal::json_node t;
 
-    entry(detail::json::value* ptr, type ptr_type) noexcept {
+    entry(detail::json::value* ptr, internal::json_node ptr_type) noexcept {
       val_ptr = ptr;
       t = ptr_type;
     }
 
     explicit entry(detail::json::member* ptr) noexcept {
       mem_ptr = ptr;
-      t = type::member;
+      t = internal::json_node::member;
     }
 
     explicit entry(key_type* ptr) noexcept {
       key_ptr = ptr;
-      t = type::key;
+      t = internal::json_node::key;
     }
 
     entry(const entry&) noexcept = default;

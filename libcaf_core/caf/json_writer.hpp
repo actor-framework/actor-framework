@@ -15,23 +15,6 @@ namespace caf {
 /// Serializes an inspectable object to a JSON-formatted string.
 class CAF_CORE_EXPORT json_writer final : public byte_writer {
 public:
-  // -- member types -----------------------------------------------------------
-
-  /// Reflects the structure of JSON objects according to ECMA-404. This enum
-  /// skips types such as `members` or `value` since they are not needed to
-  /// generate JSON.
-  enum class type : uint8_t {
-    element, /// Can morph into any other type except `member`.
-    object,  /// Contains any number of members.
-    member,  /// A single key-value pair.
-    key,     /// The key of a field.
-    array,   /// Contains any number of elements.
-    string,  /// A character sequence (terminal type).
-    number,  /// An integer or floating point (terminal type).
-    boolean, /// Either "true" or "false" (terminal type).
-    null,    /// The literal "null" (terminal type).
-  };
-
   // -- constructors, destructors, and assignment operators --------------------
 
   json_writer();
@@ -176,13 +159,5 @@ private:
   /// Storage for the implementation object.
   alignas(std::max_align_t) std::byte impl_[208];
 };
-
-/// @relates json_writer::type
-CAF_CORE_EXPORT std::string_view as_json_type_name(json_writer::type t);
-
-/// @relates json_writer::type
-constexpr bool can_morph(json_writer::type from, json_writer::type to) {
-  return from == json_writer::type::element && to != json_writer::type::member;
-}
 
 } // namespace caf

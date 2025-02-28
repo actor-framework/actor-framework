@@ -9,6 +9,7 @@
 #include "caf/detail/print.hpp"
 #include "caf/format_to_error.hpp"
 #include "caf/internal/fast_pimpl.hpp"
+#include "caf/internal/json_node.hpp"
 
 namespace caf {
 
@@ -24,10 +25,6 @@ constexpr bool skip_object_type_annotation_default = false;
 constexpr std::string_view field_type_suffix_default = "-type";
 
 static constexpr const char class_name[] = "caf::json_writer";
-
-constexpr std::string_view json_type_names[] = {"element", "object", "member",
-                                                "array",   "string", "number",
-                                                "bool",    "null"};
 
 char last_non_ws_char(const std::vector<char>& buf) {
   auto not_ws = [](char c) { return !std::isspace(c); };
@@ -138,10 +135,10 @@ public:
 
   bool begin_object(type_id_t id, std::string_view name) override {
     auto add_type_annotation = [this, id, name] {
-      CAF_ASSERT(top() == json_writer::type::key);
+      CAF_ASSERT(top() == internal::json_node::key);
       add(R"_("@type": )_");
       pop();
-      CAF_ASSERT(top() == json_writer::type::element);
+      CAF_ASSERT(top() == internal::json_node::element);
       if (auto tname = (*mapper_)(id); !tname.empty()) {
         add('"');
         add(tname);
@@ -169,12 +166,12 @@ public:
 
   bool begin_field(std::string_view name) override {
     if (begin_key_value_pair()) {
-      CAF_ASSERT(top() == json_writer::type::key);
+      CAF_ASSERT(top() == internal::json_node::key);
       add('"');
       add(name);
       add("\": ");
       pop();
-      CAF_ASSERT(top() == json_writer::type::element);
+      CAF_ASSERT(top() == internal::json_node::element);
       return true;
     } else {
       return false;
@@ -185,8 +182,8 @@ public:
     if (skip_empty_fields_ && !is_present) {
       auto t = top();
       switch (t) {
-        case json_writer::type::object:
-          push(json_writer::type::member);
+        case internal::json_node::object:
+          push(internal::json_node::member);
           return true;
         default: {
           std::string str = "expected object, found ";
@@ -197,12 +194,12 @@ public:
         }
       }
     } else if (begin_key_value_pair()) {
-      CAF_ASSERT(top() == json_writer::type::key);
+      CAF_ASSERT(top() == internal::json_node::key);
       add('"');
       add(name);
       add("\": ");
       pop();
-      CAF_ASSERT(top() == json_writer::type::element);
+      CAF_ASSERT(top() == internal::json_node::element);
       if (!is_present) {
         add("null");
         pop();
@@ -220,13 +217,13 @@ public:
       return false;
     }
     if (begin_key_value_pair()) {
-      CAF_ASSERT(top() == json_writer::type::key);
+      CAF_ASSERT(top() == internal::json_node::key);
       add("\"@");
       add(name);
       add(field_type_suffix_);
       add("\": ");
       pop();
-      CAF_ASSERT(top() == json_writer::type::element);
+      CAF_ASSERT(top() == internal::json_node::element);
       pop();
       if (auto tname = (*mapper_)(types[index]); !tname.empty()) {
         add('"');
@@ -266,10 +263,10 @@ public:
     sep();
     auto t = top();
     switch (t) {
-      case json_writer::type::object:
-        push(json_writer::type::member);
-        push(json_writer::type::element);
-        push(json_writer::type::key);
+      case internal::json_node::object:
+        push(internal::json_node::member);
+        push(internal::json_node::element);
+        push(internal::json_node::key);
         return true;
       default: {
         std::string str = "expected object, found ";
@@ -282,7 +279,7 @@ public:
   }
 
   bool end_key_value_pair() override {
-    return pop_if(json_writer::type::member);
+    return pop_if(internal::json_node::member);
   }
 
   bool begin_sequence(size_t) override {
@@ -290,11 +287,11 @@ public:
       default:
         err_ = make_error(sec::runtime_error, "unexpected begin_sequence");
         return false;
-      case json_writer::type::element:
-        unsafe_morph(json_writer::type::array);
+      case internal::json_node::element:
+        unsafe_morph(internal::json_node::array);
         break;
-      case json_writer::type::array:
-        push(json_writer::type::array);
+      case internal::json_node::array:
+        push(internal::json_node::array);
         break;
     }
     add('[');
@@ -304,7 +301,7 @@ public:
   }
 
   bool end_sequence() override {
-    if (pop_if(json_writer::type::array)) {
+    if (pop_if(internal::json_node::array)) {
       --indentation_level_;
       // Check whether the array was empty and compress the output in that case.
       if (last_non_ws_char(buf_) == '[') {
@@ -328,12 +325,12 @@ public:
                                "or begin_associative_array",
                                class_name, __func__);
         return false;
-      case json_writer::type::element:
-        unsafe_morph(json_writer::type::object);
+      case internal::json_node::element:
+        unsafe_morph(internal::json_node::object);
         break;
-      case json_writer::type::array:
+      case internal::json_node::array:
         sep();
-        push(json_writer::type::object);
+        push(internal::json_node::object);
         break;
     }
     add('{');
@@ -343,7 +340,7 @@ public:
   }
 
   bool end_associative_array() override {
-    if (pop_if(json_writer::type::object)) {
+    if (pop_if(internal::json_node::object)) {
       --indentation_level_;
       // Check whether the array was empty and compress the output in that case.
       if (last_non_ws_char(buf_) == '{') {
@@ -373,21 +370,21 @@ public:
         add("false");
     };
     switch (top()) {
-      case json_writer::type::element:
+      case internal::json_node::element:
         add_str();
         pop();
         return true;
-      case json_writer::type::key:
+      case internal::json_node::key:
         add('"');
         add_str();
         add("\": ");
         return true;
-      case json_writer::type::array:
+      case internal::json_node::array:
         sep();
         add_str();
         return true;
       default:
-        fail(json_writer::type::boolean);
+        fail(internal::json_node::boolean);
         return false;
     }
   }
@@ -438,21 +435,21 @@ public:
 
   bool value(std::string_view x) override {
     switch (top()) {
-      case json_writer::type::element:
+      case internal::json_node::element:
         detail::print_escaped(buf_, x);
         pop();
         return true;
-      case json_writer::type::key:
+      case internal::json_node::key:
         detail::print_escaped(buf_, x);
         add(": ");
         pop();
         return true;
-      case json_writer::type::array:
+      case internal::json_node::array:
         sep();
         detail::print_escaped(buf_, x);
         return true;
       default:
-        fail(json_writer::type::string);
+        fail(internal::json_node::string);
         return false;
     }
   }
@@ -471,22 +468,22 @@ public:
 
   bool value(span<const std::byte> x) override {
     switch (top()) {
-      case json_writer::type::element:
+      case internal::json_node::element:
         add('"');
         detail::append_hex(buf_, reinterpret_cast<const void*>(x.data()),
                            x.size());
         add('"');
         pop();
         return true;
-      case json_writer::type::key:
-        unsafe_morph(json_writer::type::element);
+      case internal::json_node::key:
+        unsafe_morph(internal::json_node::element);
         add('"');
         detail::append_hex(buf_, reinterpret_cast<const void*>(x.data()),
                            x.size());
         add("\": ");
         pop();
         return true;
-      case json_writer::type::array:
+      case internal::json_node::array:
         sep();
         add('"');
         detail::append_hex(buf_, reinterpret_cast<const void*>(x.data()),
@@ -494,7 +491,7 @@ public:
         add('"');
         return true;
       default:
-        fail(json_writer::type::string);
+        fail(internal::json_node::string);
         return false;
     }
   }
@@ -505,21 +502,21 @@ private:
   template <class T>
   bool number(T x) {
     switch (top()) {
-      case json_writer::type::element:
+      case internal::json_node::element:
         detail::print(buf_, x);
         pop();
         return true;
-      case json_writer::type::key:
+      case internal::json_node::key:
         add('"');
         detail::print(buf_, x);
         add("\": ");
         return true;
-      case json_writer::type::array:
+      case internal::json_node::array:
         sep();
         detail::print(buf_, x);
         return true;
       default:
-        fail(json_writer::type::number);
+        fail(internal::json_node::number);
         return false;
     }
   }
@@ -538,15 +535,15 @@ private:
   }
 
   // Returns the current top of the stack or `null` if empty.
-  json_writer::type top() {
+  internal::json_node top() {
     if (!stack_.empty())
       return stack_.back().t;
     else
-      return json_writer::type::null;
+      return internal::json_node::null;
   }
 
   // Enters a new level of nesting.
-  void push(json_writer::type t = json_writer::type::element) {
+  void push(internal::json_node t = internal::json_node::element) {
     auto tmp = entry{t, false};
     stack_.push_back(tmp);
   }
@@ -563,7 +560,7 @@ private:
   }
 
   // Backs up one level of nesting but checks that current top is `t` before.
-  bool pop_if(json_writer::type t) {
+  bool pop_if(internal::json_node t) {
     if (!stack_.empty() && stack_.back() == t) {
       stack_.pop_back();
       return true;
@@ -583,7 +580,7 @@ private:
   }
 
   // Backs up one level of nesting but checks that the top is `t` afterwards.
-  bool pop_if_next(json_writer::type t) {
+  bool pop_if_next(internal::json_node t) {
     if (stack_.size() > 1
         && (stack_[stack_.size() - 2] == t
             || can_morph(stack_[stack_.size() - 2].t, t))) {
@@ -605,14 +602,14 @@ private:
   }
 
   // Tries to morph the current top of the stack to t.
-  bool morph(json_writer::type t) {
-    json_writer::type unused;
+  bool morph(internal::json_node t) {
+    internal::json_node unused;
     return morph(t, unused);
   }
 
   // Tries to morph the current top of the stack to t. Stores the previous value
   // to `prev`.
-  bool morph(json_writer::type t, json_writer::type& prev) {
+  bool morph(internal::json_node t, internal::json_node& prev) {
     if (!stack_.empty()) {
       if (can_morph(stack_.back().t, t)) {
         prev = stack_.back().t;
@@ -632,12 +629,12 @@ private:
   }
 
   // Morphs the current top of the stack to t without performing *any* checks.
-  void unsafe_morph(json_writer::type t) {
+  void unsafe_morph(internal::json_node t) {
     stack_.back().t = t;
   }
 
   // Sets an error reason that the inspector failed to write a t.
-  void fail(json_writer::type t) {
+  void fail(internal::json_node t) {
     err_ = format_to_error(sec::runtime_error,
                            "failed to write a {}: "
                            "invalid position (begin/end mismatch?)",
@@ -647,7 +644,7 @@ private:
   // Checks whether any element in the stack has the type `object`.
   bool inside_object() const noexcept {
     auto is_object = [](const entry& x) {
-      return x.t == json_writer::type::object;
+      return x.t == internal::json_node::object;
     };
     return std::any_of(stack_.begin(), stack_.end(), is_object);
   }
@@ -676,9 +673,9 @@ private:
   // The separator is just a comma when in compact mode and otherwise a comma
   // followed by a newline.
   void sep() {
-    CAF_ASSERT(top() == json_writer::type::element
-               || top() == json_writer::type::object
-               || top() == json_writer::type::array);
+    CAF_ASSERT(top() == internal::json_node::element
+               || top() == internal::json_node::object
+               || top() == internal::json_node::array);
     if (stack_.back().filled) {
       if (indentation_factor_ > 0) {
         add(",\n");
@@ -706,9 +703,9 @@ private:
   std::vector<char> buf_;
 
   struct entry {
-    json_writer::type t;
+    internal::json_node t;
     bool filled;
-    friend bool operator==(entry x, json_writer::type y) noexcept {
+    friend bool operator==(entry x, internal::json_node y) noexcept {
       return x.t == y;
     };
   };
@@ -958,12 +955,6 @@ bool json_writer::value(const std::u32string& x) {
 
 bool json_writer::value(span<const std::byte> x) {
   return impl::cast(impl_).value(x);
-}
-
-// -- free functions -----------------------------------------------------------
-
-std::string_view as_json_type_name(json_writer::type t) {
-  return json_type_names[static_cast<uint8_t>(t)];
 }
 
 } // namespace caf
