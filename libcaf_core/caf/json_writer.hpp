@@ -25,7 +25,7 @@ public:
 
   // -- properties -------------------------------------------------------------
 
-  span<const std::byte> bytes() const override;
+  const_byte_span bytes() const override;
 
   /// Returns a string view into the internal buffer.
   /// @warning This view becomes invalid when calling any non-const member
@@ -153,7 +153,7 @@ public:
 
   bool value(const std::u32string& x) override;
 
-  bool value(span<const std::byte> x) override;
+  bool value(const_byte_span x) override;
 
 private:
   /// Storage for the implementation object.

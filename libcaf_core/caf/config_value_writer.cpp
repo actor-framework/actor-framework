@@ -383,7 +383,7 @@ public:
     return false;
   }
 
-  bool value(span<const std::byte> x) {
+  bool value(const_byte_span x) {
     std::string str;
     detail::append_hex(str, x.data(), x.size());
     return push(config_value{std::move(str)});
@@ -603,7 +603,7 @@ bool config_value_writer::value(const std::u32string& x) {
   return impl::cast(impl_).value(x);
 }
 
-bool config_value_writer::value(span<const std::byte> x) {
+bool config_value_writer::value(const_byte_span x) {
   return impl::cast(impl_).value(x);
 }
 

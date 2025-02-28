@@ -729,7 +729,7 @@ struct is_builtin_inspector_type<std::byte, IsLoading> {
 };
 
 template <bool IsLoading>
-struct is_builtin_inspector_type<span<std::byte>, IsLoading> {
+struct is_builtin_inspector_type<byte_span, IsLoading> {
   static constexpr bool value = true;
 };
 
@@ -764,7 +764,7 @@ struct is_builtin_inspector_type<std::string_view, false> {
 };
 
 template <>
-struct is_builtin_inspector_type<span<const std::byte>, false> {
+struct is_builtin_inspector_type<const_byte_span, false> {
   static constexpr bool value = true;
 };
 

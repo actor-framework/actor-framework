@@ -145,7 +145,7 @@ public:
 
   bool value(std::u32string& x);
 
-  bool value(span<std::byte> x) noexcept;
+  bool value(byte_span x) noexcept;
 
   bool value(std::vector<bool>& x);
 
