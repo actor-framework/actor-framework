@@ -6,10 +6,19 @@
 
 #include "caf/detail/rfc3629.hpp"
 
+#include <algorithm>
+
 namespace caf {
 
 bool is_valid_utf8(const_byte_span bytes) noexcept {
   return detail::rfc3629::valid(bytes);
+}
+
+bool is_valid_ascii(const_byte_span buffer) noexcept {
+  auto pred = [](std::byte bval) {
+    return static_cast<unsigned char>(bval) <= 0x7F;
+  };
+  return std::all_of(buffer.begin(), buffer.end(), pred);
 }
 
 std::string_view to_string_view(const_byte_span bytes) noexcept {
