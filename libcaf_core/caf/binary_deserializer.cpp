@@ -287,7 +287,7 @@ public:
     return false;
   }
 
-  bool value(span<std::byte> x) noexcept {
+  bool value(byte_span x) noexcept {
     if (!range_check(x.size())) {
       emplace_error(sec::end_of_stream);
       return false;
@@ -669,7 +669,7 @@ bool binary_deserializer::value(long double& x) {
   return impl::cast(impl_).value(x);
 }
 
-bool binary_deserializer::value(span<std::byte> x) noexcept {
+bool binary_deserializer::value(byte_span x) noexcept {
   return impl::cast(impl_).value(x);
 }
 
