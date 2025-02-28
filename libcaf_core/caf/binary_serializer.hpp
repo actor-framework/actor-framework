@@ -4,17 +4,11 @@
 
 #pragma once
 
-#include "caf/byte_buffer.hpp"
 #include "caf/detail/core_export.hpp"
-#include "caf/detail/squashed_int.hpp"
 #include "caf/fwd.hpp"
 #include "caf/save_inspector_base.hpp"
-#include "caf/span.hpp"
 
 #include <cstddef>
-#include <string>
-#include <type_traits>
-#include <vector>
 
 namespace caf {
 
@@ -22,35 +16,16 @@ namespace caf {
 /// @note The binary data format may change between CAF versions and does not
 ///       perform any type checking at run-time. Thus the output of this
 ///       serializer is unsuitable for persistence layers.
-class CAF_CORE_EXPORT binary_serializer
+class CAF_CORE_EXPORT binary_serializer final
   : public save_inspector_base<binary_serializer> {
 public:
-  // -- member types -----------------------------------------------------------
-
-  using super = save_inspector_base<binary_serializer>;
-
-  using container_type = byte_buffer;
-
-  using value_type = std::byte;
-
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit binary_serializer(byte_buffer& buf) noexcept
-    : buf_(buf), write_pos_(buf.size()) {
-    // nop
-  }
+  explicit binary_serializer(byte_buffer& buf) noexcept;
 
-  binary_serializer(actor_system& sys, byte_buffer& buf) noexcept
-    : binary_serializer(buf) {
-    context_ = &sys;
-    // nop
-  }
+  binary_serializer(actor_system& sys, byte_buffer& buf) noexcept;
 
-  [[deprecated("use the single-argument constructor instead")]] //
-  binary_serializer(std::nullptr_t, byte_buffer& buf) noexcept
-    : binary_serializer(buf) {
-    // nop
-  }
+  ~binary_serializer() override;
 
   binary_serializer(const binary_serializer&) = delete;
 
@@ -59,21 +34,13 @@ public:
   // -- properties -------------------------------------------------------------
 
   /// Returns the current execution unit.
-  actor_system* context() const noexcept {
-    return context_;
-  }
+  actor_system* context() const noexcept;
 
-  byte_buffer& buf() noexcept {
-    return buf_;
-  }
+  byte_buffer& buf() noexcept;
 
-  const byte_buffer& buf() const noexcept {
-    return buf_;
-  }
+  const byte_buffer& buf() const noexcept;
 
-  size_t write_pos() const noexcept {
-    return write_pos_;
-  }
+  size_t write_pos() const noexcept;
 
   static constexpr bool has_human_readable_format() noexcept {
     return false;
@@ -83,9 +50,7 @@ public:
 
   /// Sets the write position to `offset`.
   /// @pre `offset <= buf.size()`
-  void seek(size_t offset) noexcept {
-    write_pos_ = offset;
-  }
+  void seek(size_t offset) noexcept;
 
   /// Jumps `num_bytes` forward. Resizes the buffer (filling it with zeros)
   /// when skipping past the end.
@@ -97,17 +62,11 @@ public:
 
   error& get_error() noexcept override;
 
-  constexpr bool begin_object(type_id_t, std::string_view) noexcept {
-    return true;
-  }
+  bool begin_object(type_id_t, std::string_view) noexcept;
 
-  constexpr bool end_object() {
-    return true;
-  }
+  bool end_object();
 
-  constexpr bool begin_field(std::string_view) noexcept {
-    return true;
-  }
+  bool begin_field(std::string_view) noexcept;
 
   bool begin_field(std::string_view, bool is_present);
 
@@ -116,39 +75,23 @@ public:
   bool begin_field(std::string_view, bool is_present,
                    span<const type_id_t> types, size_t index);
 
-  constexpr bool end_field() {
-    return true;
-  }
+  bool end_field();
 
-  constexpr bool begin_tuple(size_t) {
-    return true;
-  }
+  bool begin_tuple(size_t);
 
-  constexpr bool end_tuple() {
-    return true;
-  }
+  bool end_tuple();
 
-  constexpr bool begin_key_value_pair() {
-    return true;
-  }
+  bool begin_key_value_pair();
 
-  constexpr bool end_key_value_pair() {
-    return true;
-  }
+  bool end_key_value_pair();
 
   bool begin_sequence(size_t list_size);
 
-  constexpr bool end_sequence() {
-    return true;
-  }
+  bool end_sequence();
 
-  bool begin_associative_array(size_t size) {
-    return begin_sequence(size);
-  }
+  bool begin_associative_array(size_t size);
 
-  bool end_associative_array() {
-    return end_sequence();
-  }
+  bool end_associative_array();
 
   bool value(std::byte x);
 
@@ -196,16 +139,8 @@ public:
   virtual bool value(const weak_actor_ptr& ptr);
 
 private:
-  /// Stores the serialized output.
-  byte_buffer& buf_;
-
-  /// Stores the current offset for writing.
-  size_t write_pos_ = 0;
-
-  /// Provides access to the ::proxy_registry and to the ::actor_system.
-  actor_system* context_ = nullptr;
-
-  error err_;
+  /// Storage for the implementation object.
+  alignas(std::max_align_t) std::byte impl_[40];
 };
 
 } // namespace caf

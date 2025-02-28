@@ -68,6 +68,9 @@
 #  define CAF_PUSH_INVALID_OFFSETOF_WARNING                                    \
     _Pragma("clang diagnostic push")                                           \
     _Pragma("clang diagnostic ignored \"-Winvalid-offsetof\"")
+#  define CAF_PUSH_STRINGOP_OVERREAD_WARNING                                   \
+    _Pragma("clang diagnostic push")                                           \
+    _Pragma("clang diagnostic ignored \"-Wstringop-overread\"")
 #  define CAF_POP_WARNINGS                                                     \
     _Pragma("clang diagnostic pop")
 #  define CAF_COMPILER_VERSION                                                 \
@@ -93,6 +96,14 @@
 #  define CAF_PUSH_INVALID_OFFSETOF_WARNING                                    \
     _Pragma("GCC diagnostic push")                                             \
     _Pragma("GCC diagnostic ignored \"-Winvalid-offsetof\"")
+#if __GNUC__ < 11
+#  define CAF_PUSH_STRINGOP_OVERREAD_WARNING                                   \
+    _Pragma("GCC diagnostic push")
+#else
+#  define CAF_PUSH_STRINGOP_OVERREAD_WARNING                                   \
+    _Pragma("GCC diagnostic push")                                             \
+    _Pragma("GCC diagnostic ignored \"-Wstringop-overread\"")
+#endif
 #  define CAF_POP_WARNINGS                                                     \
     _Pragma("GCC diagnostic pop")
 #  define CAF_COMPILER_VERSION                                                 \
@@ -109,6 +120,8 @@
 #  define CAF_PUSH_DEPRECATED_WARNING                                          \
     __pragma(warning(push))
 #  define CAF_PUSH_INVALID_OFFSETOF_WARNING                                    \
+    __pragma(warning(push))
+#  define CAF_PUSH_STRINGOP_OVERREAD_WARNING                                   \
     __pragma(warning(push))
 #  define CAF_POP_WARNINGS __pragma(warning(pop))
 #  define CAF_COMPILER_VERSION _MSC_FULL_VER

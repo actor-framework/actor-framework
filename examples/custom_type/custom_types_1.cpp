@@ -3,6 +3,7 @@
 #include "caf/actor_from_state.hpp"
 #include "caf/actor_ostream.hpp"
 #include "caf/actor_system.hpp"
+#include "caf/byte_buffer.hpp"
 #include "caf/caf_main.hpp"
 #include "caf/scoped_actor.hpp"
 #include "caf/type_id.hpp"
@@ -97,7 +98,7 @@ void caf_main(actor_system& sys) {
   f1.b.resize(1);
   f1.b.back().push_back(42);
   // byte buffer
-  binary_serializer::container_type buf;
+  byte_buffer buf;
   // write f1 to buffer
   binary_serializer sink{sys, buf};
   if (!sink.apply(f1)) {

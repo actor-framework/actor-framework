@@ -8,34 +8,18 @@
 #include "caf/fwd.hpp"
 #include "caf/serializer.hpp"
 
-#include <stack>
-#include <vector>
+#include <cstddef>
 
 namespace caf {
 
 /// Serializes an objects into a @ref config_value.
 class CAF_CORE_EXPORT config_value_writer final : public serializer {
 public:
-  // -- member types------------------------------------------------------------
-
-  struct present_field {
-    settings* parent;
-    std::string_view name;
-    std::string_view type;
-  };
-
-  struct absent_field {};
-
-  using value_type = std::variant<config_value*, settings*, absent_field,
-                                  present_field, std::vector<config_value>*>;
-
-  using stack_type = std::stack<value_type, std::vector<value_type>>;
-
   // -- constructors, destructors, and assignment operators --------------------
 
-  config_value_writer(config_value* dst, actor_system& sys);
-
   explicit config_value_writer(config_value* dst);
+
+  config_value_writer(config_value* dst, actor_system& sys);
 
   ~config_value_writer() override;
 
@@ -116,13 +100,8 @@ public:
   bool value(span<const std::byte> x) override;
 
 private:
-  bool push(config_value&& x);
-
-  caf::actor_system* sys_ = nullptr;
-
-  stack_type st_;
-
-  error err_;
+  /// Storage for the implementation object.
+  alignas(std::max_align_t) std::byte impl_[64];
 };
 
 } // namespace caf
