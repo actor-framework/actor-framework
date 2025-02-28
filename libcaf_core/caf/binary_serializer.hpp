@@ -25,8 +25,7 @@ public:
 
   binary_serializer(actor_system& sys, byte_buffer& buf) noexcept;
 
-  [[deprecated("use the single-argument constructor instead")]] //
-  binary_serializer(std::nullptr_t, byte_buffer& buf) noexcept;
+  ~binary_serializer() override;
 
   binary_serializer(const binary_serializer&) = delete;
 

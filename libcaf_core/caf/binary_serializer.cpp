@@ -19,13 +19,12 @@ namespace caf {
 namespace {
 
 template <class T>
-constexpr size_t max_value = static_cast<size_t>(std::numeric_limits<T>::max());
+inline constexpr auto max_value
+  = static_cast<size_t>(std::numeric_limits<T>::max());
 
 template <class T>
 T compress_index(bool is_present, size_t value) {
-  // return is_present ? static_cast<T>(value) : T{-1};
-  auto val = is_present ? static_cast<T>(value) : T{-1};
-  return val;
+  return is_present ? static_cast<T>(value) : T{-1};
 }
 
 class impl : public save_inspector_base<impl>,
@@ -41,16 +40,8 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit impl(byte_buffer& buf) noexcept : buf_(buf), write_pos_(buf.size()) {
-    // nop
-  }
-
-  impl(actor_system& sys, byte_buffer& buf) noexcept : impl(buf) {
-    context_ = &sys;
-    // nop
-  }
-
-  impl(std::nullptr_t, byte_buffer& buf) noexcept : impl(buf) {
+  impl(byte_buffer& buf, actor_system* sys) noexcept
+    : buf_(buf), write_pos_(buf.size()), context_(sys) {
     // nop
   }
 
@@ -77,7 +68,7 @@ public:
     return write_pos_;
   }
 
-  constexpr bool has_human_readable_format() noexcept {
+  static constexpr bool has_human_readable_format() noexcept {
     return false;
   }
 
@@ -432,17 +423,16 @@ private:
 // -- constructors, destructors, and assignment operators --------------------
 
 binary_serializer::binary_serializer(byte_buffer& buf) noexcept {
-  impl::construct(impl_, buf);
+  impl::construct(impl_, buf, nullptr);
 }
 
 binary_serializer::binary_serializer(actor_system& sys,
                                      byte_buffer& buf) noexcept {
-  impl::construct(impl_, sys, buf);
+  impl::construct(impl_, buf, &sys);
 }
 
-binary_serializer::binary_serializer(std::nullptr_t,
-                                     byte_buffer& buf) noexcept {
-  impl::construct(impl_, nullptr, buf);
+binary_serializer::~binary_serializer() {
+  impl::destruct(impl_);
 }
 
 // -- properties -------------------------------------------------------------

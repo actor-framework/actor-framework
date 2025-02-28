@@ -5,7 +5,6 @@
 #include "caf/json_writer.hpp"
 
 #include "caf/test/scenario.hpp"
-#include "caf/test/test.hpp"
 
 #include "caf/init_global_meta_objects.hpp"
 #include "caf/log/test.hpp"
@@ -187,11 +186,8 @@ bool inspect(Inspector& f, widget& x) {
 struct fixture {
   template <class T>
   expected<std::string>
-  to_json_string(T&& x, size_t indentation,
-                 bool skip_empty_fields
-                 = json_writer::skip_empty_fields_default,
-                 bool skip_object_type_annotation
-                 = json_writer::skip_object_type_annotation_default) {
+  to_json_string(T&& x, size_t indentation, bool skip_empty_fields = true,
+                 bool skip_object_type_annotation = false) {
     json_writer writer;
     writer.indentation(indentation);
     writer.skip_empty_fields(skip_empty_fields);

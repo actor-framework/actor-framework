@@ -11,7 +11,6 @@
 #include "caf/internal/fast_pimpl.hpp"
 #include "caf/sec.hpp"
 
-#include <iomanip>
 #include <sstream>
 #include <type_traits>
 
@@ -26,26 +25,10 @@ class impl : public load_inspector_base<impl>,
              public internal::fast_pimpl<impl> {
 public:
   // -- constructors, destructors, and assignment operators --------------------
-  impl() noexcept {
+
+  impl(const std::byte* buf, size_t size, actor_system* sys = nullptr) noexcept
+    : current_(buf), end_(buf + size), context_(sys) {
     // nop
-  }
-
-  impl(actor_system& sys) noexcept : context_(&sys) {
-    // nop
-  }
-
-  impl(const void* buf, size_t size) noexcept {
-    reset(make_span(static_cast<const std::byte*>(buf), size));
-  }
-
-  [[deprecated("use the two-argument constructor instead")]] //
-  impl(std::nullptr_t, const void* buf, size_t size) noexcept {
-    reset(make_span(static_cast<const std::byte*>(buf), size));
-  }
-
-  impl(actor_system& sys, const void* buf, size_t size) noexcept
-    : context_(&sys) {
-    reset(make_span(static_cast<const std::byte*>(buf), size));
   }
 
   // -- properties -------------------------------------------------------------
@@ -54,7 +37,7 @@ public:
     return static_cast<size_t>(end_ - current_);
   }
 
-  span<const std::byte> remainder() const noexcept {
+  const_byte_span remainder() const noexcept {
     return make_span(current_, end_);
   }
 
@@ -68,7 +51,7 @@ public:
     current_ += num_bytes;
   }
 
-  void reset(span<const std::byte> bytes) noexcept {
+  void reset(const_byte_span bytes) noexcept {
     current_ = bytes.data();
     end_ = current_ + bytes.size();
   }
@@ -500,19 +483,27 @@ private:
 
 // -- constructors, destructors, and assignment operators --------------------
 
-binary_deserializer::binary_deserializer(const void* buf,
-                                         size_t size) noexcept {
-  impl::construct(impl_, buf, size);
+binary_deserializer::binary_deserializer(const_byte_span input) noexcept {
+  impl::construct(impl_, input.data(), input.size());
 }
 
-binary_deserializer::binary_deserializer(std::nullptr_t, const void* buf,
+binary_deserializer::binary_deserializer(actor_system& sys,
+                                         const_byte_span input) noexcept {
+  impl::construct(impl_, input.data(), input.size(), &sys);
+}
+
+binary_deserializer::binary_deserializer(const void* buf,
                                          size_t size) noexcept {
-  impl::construct(impl_, buf, size);
+  impl::construct(impl_, reinterpret_cast<const std::byte*>(buf), size);
 }
 
 binary_deserializer::binary_deserializer(actor_system& sys, const void* buf,
                                          size_t size) noexcept {
-  impl::construct(impl_, sys, buf, size);
+  impl::construct(impl_, reinterpret_cast<const std::byte*>(buf), size, &sys);
+}
+
+binary_deserializer::~binary_deserializer() {
+  impl::destruct(impl_);
 }
 
 // -- properties -------------------------------------------------------------
@@ -521,7 +512,7 @@ size_t binary_deserializer::remaining() const noexcept {
   return impl::cast(impl_).remaining();
 }
 
-span<const std::byte> binary_deserializer::remainder() const noexcept {
+const_byte_span binary_deserializer::remainder() const noexcept {
   return impl::cast(impl_).remainder();
 }
 
@@ -533,7 +524,7 @@ void binary_deserializer::skip(size_t num_bytes) {
   impl::cast(impl_).skip(num_bytes);
 }
 
-void binary_deserializer::reset(span<const std::byte> bytes) noexcept {
+void binary_deserializer::reset(const_byte_span bytes) noexcept {
   impl::cast(impl_).reset(bytes);
 }
 
@@ -704,16 +695,6 @@ bool binary_deserializer::value(strong_actor_ptr& ptr) {
 
 bool binary_deserializer::value(weak_actor_ptr& ptr) {
   return impl::cast(impl_).value(ptr);
-}
-
-// -- private ----------------------------------------------------------------
-
-void binary_deserializer::construct_impl() {
-  impl::construct(impl_);
-}
-
-void binary_deserializer::construct_impl(actor_system& sys) {
-  impl::construct(impl_, sys);
 }
 
 } // namespace caf

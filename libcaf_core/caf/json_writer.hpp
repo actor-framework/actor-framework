@@ -32,17 +32,6 @@ public:
     null,    /// The literal "null" (terminal type).
   };
 
-  // -- constants --------------------------------------------------------------
-
-  /// The default value for `skip_empty_fields()`.
-  static constexpr bool skip_empty_fields_default = true;
-
-  /// The default value for `skip_object_type_annotation()`.
-  static constexpr bool skip_object_type_annotation_default = false;
-
-  /// The value value for `field_type_suffix()`.
-  static constexpr std::string_view field_type_suffix_default = "-type";
-
   // -- constructors, destructors, and assignment operators --------------------
 
   json_writer();

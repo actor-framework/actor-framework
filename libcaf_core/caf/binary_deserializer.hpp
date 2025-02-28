@@ -7,6 +7,7 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/load_inspector_base.hpp"
+#include "caf/span.hpp"
 
 #include <cstddef>
 
@@ -19,31 +20,19 @@ class CAF_CORE_EXPORT binary_deserializer final
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
-  template <class Container>
-  explicit binary_deserializer(const Container& input) noexcept {
-    construct_impl();
-    reset(as_bytes(make_span(input)));
-  }
+  explicit binary_deserializer(const_byte_span input) noexcept;
 
-  template <class Container>
-  binary_deserializer(actor_system& sys, const Container& input) noexcept {
-    construct_impl(sys);
-    reset(as_bytes(make_span(input)));
-  }
-
-  template <class Container>
-  [[deprecated("use the single-argument constructor instead")]] //
-  binary_deserializer(std::nullptr_t, const Container& input) noexcept {
-    construct_impl();
-    reset(as_bytes(make_span(input)));
-  }
+  binary_deserializer(actor_system& sys, const_byte_span input) noexcept;
 
   binary_deserializer(const void* buf, size_t size) noexcept;
 
-  [[deprecated("use the two-argument constructor instead")]] //
-  binary_deserializer(std::nullptr_t, const void* buf, size_t size) noexcept;
-
   binary_deserializer(actor_system& sys, const void* buf, size_t size) noexcept;
+
+  ~binary_deserializer() override;
+
+  binary_deserializer(const binary_deserializer&) = delete;
+
+  binary_deserializer& operator=(const binary_deserializer&) = delete;
 
   // -- properties -------------------------------------------------------------
 
@@ -51,7 +40,7 @@ public:
   size_t remaining() const noexcept;
 
   /// Returns the remaining bytes.
-  span<const std::byte> remainder() const noexcept;
+  const_byte_span remainder() const noexcept;
 
   /// Returns the current execution unit.
   actor_system* context() const noexcept;
@@ -61,7 +50,7 @@ public:
   void skip(size_t num_bytes);
 
   /// Assigns a new input.
-  void reset(span<const std::byte> bytes) noexcept;
+  void reset(const_byte_span bytes) noexcept;
 
   /// Returns the current read position.
   const std::byte* current() const noexcept;
@@ -165,10 +154,6 @@ public:
   virtual bool value(weak_actor_ptr& ptr);
 
 private:
-  void construct_impl();
-
-  void construct_impl(actor_system& sys);
-
   /// Storage for the implementation object.
   alignas(std::max_align_t) std::byte impl_[48];
 };

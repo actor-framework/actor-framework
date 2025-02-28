@@ -14,6 +14,15 @@ namespace caf {
 
 namespace {
 
+/// The default value for `skip_empty_fields()`.
+constexpr bool skip_empty_fields_default = true;
+
+/// The default value for `skip_object_type_annotation()`.
+constexpr bool skip_object_type_annotation_default = false;
+
+/// The value value for `field_type_suffix()`.
+constexpr std::string_view field_type_suffix_default = "-type";
+
 static constexpr const char class_name[] = "caf::json_writer";
 
 constexpr std::string_view json_type_names[] = {"element", "object", "member",
@@ -709,13 +718,13 @@ private:
 
   // Configures whether we omit empty fields entirely (true) or render empty
   // fields as `$field: null` (false).
-  bool skip_empty_fields_ = json_writer::skip_empty_fields_default;
+  bool skip_empty_fields_ = skip_empty_fields_default;
 
   // Configures whether we omit the top-level `@type` annotation.
-  bool skip_object_type_annotation_ = false;
+  bool skip_object_type_annotation_ = skip_object_type_annotation_default;
 
   // Configures how we generate type annotations for fields.
-  std::string_view field_type_suffix_ = json_writer::field_type_suffix_default;
+  std::string_view field_type_suffix_ = field_type_suffix_default;
 
   // The mapper implementation we use by default.
   default_type_id_mapper default_mapper_;
