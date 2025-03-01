@@ -22,11 +22,9 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   on_error_resume_next_sub(coordinator* parent, observer<T> out,
-                           observable<T> in, Predicate predicate,
-                           observable<T> fallback)
+                           Predicate predicate, observable<T> fallback)
     : parent_(parent),
       out_(std::move(out)),
-      in_(std::move(in)),
       fallback_(std::move(fallback)),
       predicate_(std::move(predicate)) {
     // nop
@@ -82,17 +80,21 @@ public:
       return;
     sub_.release_later();
     out_.on_complete();
+    fallback_ = nullptr;
   }
 
   void on_error(const error& what) override {
     if (!out_)
       return;
     sub_.release_later();
-    if (predicate_(what)) {
+    if (fallback_ && predicate_(what)) {
       parent_->delay_fn(
-        [sptr = intrusive_ptr{this}] { sptr->do_on_error_resume_next(); });
+        [sptr = intrusive_ptr{this}, fallback = std::move(fallback_)] {
+          sptr->do_resume_next(fallback);
+        });
     } else {
       out_.on_error(what);
+      fallback_ = nullptr;
     }
   }
 
@@ -100,20 +102,19 @@ private:
   void do_dispose(bool from_external) override {
     if (!out_)
       return;
-    sub_.cancel();
     if (from_external) {
       out_.on_error(make_error(sec::disposed));
     } else {
       out_.release_later();
     }
+    sub_.cancel();
+    fallback_ = nullptr;
   }
 
-  void do_on_error_resume_next() {
-    if (!out_)
+  void do_resume_next(observable<T> fallback) {
+    if (!out_ || !fallback)
       return;
-    if (in_ && fallback_)
-      in_ = fallback_;
-    in_.subscribe(this->as_observer());
+    fallback.subscribe(this->as_observer());
   }
 
   // Stores the pending demand. When re-subscribing, we transfer the demand to
@@ -126,9 +127,6 @@ private:
   /// Stores a handle to the subscribed observer.
   observer<T> out_;
 
-  /// Stores a handle to the subscribed observable.
-  observable<T> in_;
-
   /// Stores a handle to the fallback observable.
   observable<T> fallback_;
 
@@ -139,8 +137,8 @@ private:
   Predicate predicate_;
 };
 
-/// An observable that on_error_resume_next calls any callbacks on its
-/// subscribers.
+/// Operator for switching to a secondary input source if the primary input
+/// fails.
 template <class T, class Predicate>
 class on_error_resume_next : public hot<T> {
 public:
@@ -169,7 +167,7 @@ public:
   disposable subscribe(observer<T> out) override {
     CAF_ASSERT(out.valid());
     using sub_t = on_error_resume_next_sub<T, Predicate>;
-    auto ptr = super::parent_->add_child(std::in_place_type<sub_t>, out, in_,
+    auto ptr = super::parent_->add_child(std::in_place_type<sub_t>, out,
                                          predicate_, fallback_);
     out.on_subscribe(subscription{ptr});
     in_.subscribe(ptr->as_observer());
