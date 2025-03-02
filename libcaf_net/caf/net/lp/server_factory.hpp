@@ -6,9 +6,9 @@
 
 #include "caf/net/accept_event.hpp"
 #include "caf/net/checked_socket.hpp"
+#include "caf/net/dsl/generic_config.hpp"
 #include "caf/net/dsl/server_factory_base.hpp"
 #include "caf/net/http/server.hpp"
-#include "caf/net/lp/config.hpp"
 #include "caf/net/lp/framing.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/octet_stream/transport.hpp"
