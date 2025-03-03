@@ -89,8 +89,10 @@ public:
     auto handler = internal::make_accept_handler(std::move(conn_acc),
                                                  max_connections);
     auto ptr = net::socket_manager::make(mpx, std::move(handler));
-    mpx->start(ptr);
-    return expected<disposable>{disposable{std::move(ptr)}};
+    if (mpx->start(ptr))
+      return expected<disposable>{disposable{std::move(ptr)}};
+    return make_error(sec::logic_error,
+                      "failed to register socket manager to net::multiplexer");
   }
 
   expected<disposable> start_server_impl(net::ssl::tcp_acceptor& acc) override {
@@ -117,8 +119,11 @@ public:
     auto transport = internal::make_transport(std::move(conn), std::move(impl));
     transport->active_policy().connect();
     auto ptr = socket_manager::make(mpx, std::move(transport));
-    mpx->start(ptr);
-    return expected<disposable>{disposable{std::move(ptr)}};
+    if (mpx->start(ptr)) {
+      return expected<disposable>{disposable{std::move(ptr)}};
+    }
+    return make_error(sec::logic_error,
+                      "failed to register socket manager to net::multiplexer");
   }
 
   expected<disposable> start_client_impl(net::ssl::connection& conn) override {

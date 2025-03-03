@@ -123,8 +123,10 @@ client_factory::do_start_impl(Conn conn, http::method method,
   auto transport = transport_t::make(std::move(conn), std::move(http_client));
   transport->active_policy().connect();
   auto ptr = net::socket_manager::make(config_->mpx, std::move(transport));
-  config_->mpx->start(ptr);
-  return std::pair{std::move(ret), disposable{std::move(ptr)}};
+  if (config_->mpx->start(ptr))
+    return std::pair{std::move(ret), disposable{std::move(ptr)}};
+  return make_error(sec::logic_error,
+                    "failed to register socket manager to net::multiplexer");
 }
 
 expected<std::pair<async::future<response>, disposable>>

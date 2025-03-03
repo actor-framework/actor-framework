@@ -93,8 +93,10 @@ do_start_impl(Config& cfg, Acceptor acc,
   auto handler = internal::make_accept_handler(std::move(conn_acc),
                                                cfg.max_connections);
   auto ptr = net::socket_manager::make(cfg.mpx, std::move(handler));
-  cfg.mpx->start(ptr);
-  return expected<disposable>{disposable{std::move(ptr)}};
+  if (cfg.mpx->start(ptr))
+    return expected<disposable>{disposable{std::move(ptr)}};
+  return make_error(sec::logic_error,
+                    "failed to register socket manager to net::multiplexer");
 }
 
 } // namespace

@@ -144,7 +144,7 @@ TEST("actor shells can receive messages") {
   auto app = app_t::make(actor{self});
   auto transport = net::octet_stream::transport::make(fd1, std::move(app));
   auto mgr = net::socket_manager::make(&mpx, std::move(transport));
-  mpx.start(mgr);
+  require(mpx.start(mgr));
   fd1.id = net::invalid_socket_id;
   actor hdl;
   self->receive([&hdl](actor& x) { hdl = x; },
@@ -164,7 +164,7 @@ TEST("actor shells can send asynchronous messages") {
   auto app = app_t::make(actor{self});
   auto transport = net::octet_stream::transport::make(fd1, std::move(app));
   auto mgr = net::socket_manager::make(&mpx, std::move(transport));
-  mpx.start(mgr);
+  require(mpx.start(mgr));
   fd1.id = net::invalid_socket_id;
   auto msg = "hello actor shell\n"s;
   auto n = net::write(fd2, as_bytes(make_span(msg)));
@@ -193,7 +193,7 @@ TEST("actor shells can send request messages") {
   auto app = app_t::make(actor{self}, cb);
   auto transport = net::octet_stream::transport::make(fd1, std::move(app));
   auto mgr = net::socket_manager::make(&mpx, std::move(transport));
-  mpx.start(mgr);
+  require(mpx.start(mgr));
   fd1.id = net::invalid_socket_id;
   auto msg = "request"s;
   self->receive([msg](get_atom) { return msg; },
@@ -225,7 +225,7 @@ TEST("actor shells can use flows") {
   auto app = app_t::make(actor{self}, cb);
   auto transport = net::octet_stream::transport::make(fd1, std::move(app));
   auto mgr = net::socket_manager::make(&mpx, std::move(transport));
-  mpx.start(mgr);
+  require(mpx.start(mgr));
   fd1.id = net::invalid_socket_id;
   auto msg = "request"s;
   self->receive([msg](get_atom) { return msg; },
