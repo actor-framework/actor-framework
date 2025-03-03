@@ -82,7 +82,7 @@ void abstract_broker::write(connection_handle hdl, size_t bs, const void* buf) {
   out.insert(out.end(), first, last);
 }
 
-void abstract_broker::write(connection_handle hdl, span<const std::byte> buf) {
+void abstract_broker::write(connection_handle hdl, const_byte_span buf) {
   write(hdl, buf.size(), buf.data());
 }
 

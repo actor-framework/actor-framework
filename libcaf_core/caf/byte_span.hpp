@@ -19,6 +19,11 @@ using const_byte_span = span<const std::byte>;
 /// Checks whether the byte span is a valid UTF-8 string.
 CAF_CORE_EXPORT bool is_valid_utf8(const_byte_span) noexcept;
 
+/// Checks whether the byte span is a valid ASCII string, i.e., all bytes are in
+/// the range 0x01 to 0x7F, i.e., does not consider the null terminator as
+/// valid ASCII.
+CAF_CORE_EXPORT bool is_valid_ascii(const_byte_span) noexcept;
+
 /// Reinterprets the underlying data as a string view.
 CAF_CORE_EXPORT std::string_view to_string_view(const_byte_span) noexcept;
 
