@@ -227,6 +227,7 @@ caf_add_component(
     caf/exit_reason.test.cpp
     caf/expected.test.cpp
     caf/flow/byte.test.cpp
+    caf/flow/combine_latest.test.cpp
     caf/flow/concat_map.test.cpp
     caf/flow/coordinated.cpp
     caf/flow/coordinator.cpp
