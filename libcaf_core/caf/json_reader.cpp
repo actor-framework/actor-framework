@@ -252,7 +252,7 @@ public:
     return true;
   }
 
-  bool load_bytes(span<const std::byte> bytes) override {
+  bool load_bytes(const_byte_span bytes) override {
     auto utf8 = std::string_view{reinterpret_cast<const char*>(bytes.data()),
                                  bytes.size()};
     return load(utf8);
@@ -739,7 +739,7 @@ public:
     return false;
   }
 
-  bool value(span<std::byte>) override {
+  bool value(byte_span) override {
     err_ = format_to_error(sec::runtime_error,
                            "{}::{}: byte span support not implemented yet",
                            class_name, __func__);
@@ -948,7 +948,7 @@ bool json_reader::load(std::string_view json_text) {
   return impl::cast(impl_).load(json_text);
 }
 
-bool json_reader::load_bytes(span<const std::byte> bytes) {
+bool json_reader::load_bytes(const_byte_span bytes) {
   return impl::cast(impl_).load_bytes(bytes);
 }
 
@@ -1116,7 +1116,7 @@ bool json_reader::value(std::u32string& x) {
   return impl::cast(impl_).value(x);
 }
 
-bool json_reader::value(span<std::byte> x) {
+bool json_reader::value(byte_span x) {
   return impl::cast(impl_).value(x);
 }
 

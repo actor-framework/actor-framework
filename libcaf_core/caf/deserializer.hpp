@@ -181,7 +181,7 @@ public:
   /// Reads a byte sequence from the input.
   /// @param x The byte sequence.
   /// @returns A non-zero error code on failure, `sec::success` otherwise.
-  virtual bool value(span<std::byte> x) = 0;
+  virtual bool value(byte_span x) = 0;
 
   /// @copydoc value
   virtual bool value(strong_actor_ptr& ptr);
