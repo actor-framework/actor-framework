@@ -27,10 +27,12 @@ public:
   using event_type = net::accept_event<frame>;
 
   connection_acceptor_impl(Acceptor acceptor, size_t max_consecutive_reads,
-                           async::producer_resource<event_type> events)
+                           async::producer_resource<event_type> events,
+                           size_field_type lp_size)
     : acceptor_(std::move(acceptor)),
       max_consecutive_reads_(max_consecutive_reads),
-      events_(std::move(events)) {
+      events_(std::move(events)),
+      lp_size_(lp_size) {
     // nop
   }
 
@@ -68,8 +70,8 @@ public:
     auto bridge = internal::make_lp_flow_bridge(std::move(a2s_pull),
                                                 std::move(s2a_push));
     // Create the socket manager.
-    auto transport = internal::make_transport(std::move(*conn),
-                                              framing::make(std::move(bridge)));
+    auto transport = internal::make_transport(
+      std::move(*conn), framing::make(std::move(bridge), lp_size_));
     transport->max_consecutive_reads(max_consecutive_reads_);
     transport->active_policy().accept();
     return net::socket_manager::make(parent_->mpx_ptr(), std::move(transport));
@@ -85,6 +87,8 @@ private:
   intrusive_ptr<flow::op::mcast<event_type>> mcast_;
 
   async::producer_resource<event_type> events_;
+
+  size_field_type lp_size_;
 };
 
 } // namespace
@@ -100,7 +104,7 @@ public:
     using impl_t = connection_acceptor_impl<Acceptor>;
     auto conn_acc = std::make_unique<impl_t>(std::move(acc),
                                              max_consecutive_reads,
-                                             std::move(server_push));
+                                             std::move(server_push), lp_size);
     auto handler = internal::make_accept_handler(std::move(conn_acc),
                                                  max_connections,
                                                  std::move(monitored_actors));
@@ -123,7 +127,7 @@ public:
   expected<disposable> do_start_client(Connection& conn) {
     auto bridge = internal::make_lp_flow_bridge(std::move(client_pull),
                                                 std::move(client_push));
-    auto impl = framing::make(std::move(bridge));
+    auto impl = framing::make(std::move(bridge), lp_size);
     auto transport = internal::make_transport(std::move(conn), std::move(impl));
     transport->active_policy().connect();
     auto ptr = socket_manager::make(mpx, std::move(transport));
@@ -271,34 +275,38 @@ with_t&& with_t::context(expected<ssl::context> ctx) && {
 }
 
 with_t::server with_t::accept(uint16_t port, std::string bind_address,
-                              bool reuse_addr) && {
-  config_->server.assign(port, std::move(bind_address), reuse_addr);
+                              bool reuse_addr, size_field_type lp_size) && {
+  config_->server.assign(port, std::move(bind_address), reuse_addr, lp_size);
   return server{std::move(config_)};
 }
 
-with_t::server with_t::accept(tcp_accept_socket fd) && {
-  config_->server.assign(std::move(fd));
+with_t::server with_t::accept(tcp_accept_socket fd,
+                              size_field_type lp_size) && {
+  config_->server.assign(std::move(fd), lp_size);
   return server{std::move(config_)};
 }
 
-with_t::server with_t::accept(ssl::tcp_acceptor acc) && {
+with_t::server with_t::accept(ssl::tcp_acceptor acc,
+                              size_field_type lp_size) && {
   config_->ctx = acc.ctx_ptr();
-  config_->server.assign(acc.fd());
+  config_->server.assign(acc.fd(), lp_size);
   return server{std::move(config_)};
 }
 
-with_t::client with_t::connect(std::string host, uint16_t port) && {
-  config_->client.assign(std::move(host), port);
+with_t::client with_t::connect(std::string host, uint16_t port,
+                               size_field_type lp_size) && {
+  config_->client.assign(std::move(host), port, lp_size);
   return client{std::move(config_)};
 }
 
-with_t::client with_t::connect(stream_socket fd) && {
-  config_->client.assign(fd);
+with_t::client with_t::connect(stream_socket fd, size_field_type lp_size) && {
+  config_->client.assign(fd, lp_size);
   return client{std::move(config_)};
 }
 
-with_t::client with_t::connect(ssl::connection conn) && {
-  config_->client.assign(std::move(conn));
+with_t::client with_t::connect(ssl::connection conn,
+                               size_field_type lp_size) && {
+  config_->client.assign(std::move(conn), lp_size);
   return client{std::move(config_)};
 }
 

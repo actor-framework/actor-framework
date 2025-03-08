@@ -49,19 +49,19 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  framing_impl(upper_layer_ptr up, dsl::size_field_type lp_size)
+  framing_impl(upper_layer_ptr up, lp::size_field_type lp_size)
     : up_(std::move(up)), lp_size_(lp_size) {
     switch (lp_size_) {
-      case dsl::size_field_type::u1:
+      case lp::size_field_type::u1:
         hdr_size_ = sizeof(uint8_t);
         break;
-      case dsl::size_field_type::u2:
+      case lp::size_field_type::u2:
         hdr_size_ = sizeof(uint16_t);
         break;
-      case dsl::size_field_type::u4:
+      case lp::size_field_type::u4:
         hdr_size_ = sizeof(uint32_t);
         break;
-      case dsl::size_field_type::u8:
+      case lp::size_field_type::u8:
         hdr_size_ = sizeof(uint64_t);
         break;
     }
@@ -80,13 +80,13 @@ public:
 
   ptrdiff_t consume(byte_span input, byte_span) override {
     switch (lp_size_) {
-      case dsl::size_field_type::u1:
+      case lp::size_field_type::u1:
         return consume_impl<uint8_t>(input, {});
-      case dsl::size_field_type::u2:
+      case lp::size_field_type::u2:
         return consume_impl<uint16_t>(input, {});
-      case dsl::size_field_type::u4:
+      case lp::size_field_type::u4:
         return consume_impl<uint32_t>(input, {});
-      case dsl::size_field_type::u8:
+      case lp::size_field_type::u8:
         return consume_impl<uint64_t>(input, {});
     }
     log::net::error("invalid size field type");
@@ -142,13 +142,13 @@ public:
 
   bool end_message() {
     switch (lp_size_) {
-      case dsl::size_field_type::u1:
+      case lp::size_field_type::u1:
         return end_message_impl<uint8_t>();
-      case dsl::size_field_type::u2:
+      case lp::size_field_type::u2:
         return end_message_impl<uint16_t>();
-      case dsl::size_field_type::u4:
+      case lp::size_field_type::u4:
         return end_message_impl<uint32_t>();
-      case dsl::size_field_type::u8:
+      case lp::size_field_type::u8:
         return end_message_impl<uint64_t>();
     }
     log::net::error("invalid size field type");
@@ -244,7 +244,7 @@ private:
 
   upper_layer_ptr up_;
 
-  dsl::size_field_type lp_size_;
+  lp::size_field_type lp_size_;
 
   size_t message_offset_ = 0;
 
@@ -256,7 +256,7 @@ private:
 // -- factories ----------------------------------------------------------------
 
 std::unique_ptr<framing> framing::make(upper_layer_ptr up,
-                                       dsl::size_field_type lp_size) {
+                                       lp::size_field_type lp_size) {
   return std::make_unique<framing_impl>(std::move(up), lp_size);
 }
 
@@ -267,9 +267,8 @@ disposable run_impl(multiplexer& mpx, Conn& conn,
                     async::consumer_resource<chunk>& pull,
                     async::producer_resource<chunk>& push) {
   auto bridge = internal::make_lp_flow_bridge(std::move(pull), std::move(push));
-  auto transport = internal::make_transport(
-    std::move(conn),
-    framing::make(std::move(bridge), dsl::size_field_type::u2));
+  auto transport = internal::make_transport(std::move(conn),
+                                            framing::make(std::move(bridge)));
   auto manager = net::socket_manager::make(&mpx, std::move(transport));
   if (mpx.start(manager))
     return manager->as_disposable();
