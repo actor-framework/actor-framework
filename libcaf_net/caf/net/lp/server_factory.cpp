@@ -23,10 +23,13 @@ public:
   using event_type = net::accept_event<frame>;
 
   connection_acceptor_impl(Acceptor acceptor, size_t max_consecutive_reads,
-                           async::producer_resource<event_type> events)
+                           async::producer_resource<event_type> events,
+                           dsl::size_field_type lp_size
+                           = dsl::size_field_type::u4)
     : acceptor_(std::move(acceptor)),
       max_consecutive_reads_(max_consecutive_reads),
-      events_(std::move(events)) {
+      events_(std::move(events)),
+      lp_size_(lp_size) {
     // nop
   }
 
@@ -64,8 +67,8 @@ public:
     auto bridge = internal::make_lp_flow_bridge(std::move(a2s_pull),
                                                 std::move(s2a_push));
     // Create the socket manager.
-    auto transport = internal::make_transport(std::move(*conn),
-                                              framing::make(std::move(bridge)));
+    auto transport = internal::make_transport(
+      std::move(*conn), framing::make(std::move(bridge), lp_size_));
     transport->active_policy().accept();
     return net::socket_manager::make(parent_->mpx_ptr(), std::move(transport));
   }
@@ -80,16 +83,19 @@ private:
   intrusive_ptr<flow::op::mcast<event_type>> mcast_;
 
   async::producer_resource<event_type> events_;
+
+  dsl::size_field_type lp_size_;
 };
 
 template <class Config, class Acceptor>
 expected<disposable>
 do_start_impl(Config& cfg, Acceptor acc,
-              async::producer_resource<accept_event<frame>> push) {
+              async::producer_resource<accept_event<frame>> push,
+              dsl::size_field_type lp_size) {
   using impl_t = connection_acceptor_impl<Acceptor>;
   auto conn_acc = std::make_unique<impl_t>(std::move(acc),
                                            cfg.max_consecutive_reads,
-                                           std::move(push));
+                                           std::move(push), lp_size);
   auto handler = internal::make_accept_handler(std::move(conn_acc),
                                                cfg.max_connections);
   auto ptr = net::socket_manager::make(cfg.mpx, std::move(handler));
@@ -135,18 +141,20 @@ dsl::server_config_value& server_factory::init_config(multiplexer* mpx) {
 expected<disposable> server_factory::do_start(dsl::server_config::socket& data,
                                               push_t push) {
   return checked_socket(data.take_fd())
-    .and_then(with_ssl_acceptor_or_socket([this, &push](auto&& acc) {
+    .and_then(with_ssl_acceptor_or_socket([this, &push, &data](auto&& acc) {
       using acc_t = decltype(acc);
-      return do_start_impl(*config_, std::forward<acc_t>(acc), std::move(push));
+      return do_start_impl(*config_, std::forward<acc_t>(acc), std::move(push),
+                           data.lp_size);
     }));
 }
 
 expected<disposable> server_factory::do_start(dsl::server_config::lazy& data,
                                               push_t push) {
   return make_tcp_accept_socket(data.port, data.bind_address, data.reuse_addr)
-    .and_then(with_ssl_acceptor_or_socket([this, &push](auto&& acc) {
+    .and_then(with_ssl_acceptor_or_socket([this, &push, &data](auto&& acc) {
       using acc_t = decltype(acc);
-      return do_start_impl(*config_, std::forward<acc_t>(acc), std::move(push));
+      return do_start_impl(*config_, std::forward<acc_t>(acc), std::move(push),
+                           data.lp_size);
     }));
 }
 
