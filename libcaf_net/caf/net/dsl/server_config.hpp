@@ -7,6 +7,7 @@
 #include "caf/net/dsl/base.hpp"
 #include "caf/net/dsl/config_base.hpp"
 #include "caf/net/fwd.hpp"
+#include "caf/net/lp/size_field_type.hpp"
 #include "caf/net/ssl/context.hpp"
 #include "caf/net/tcp_accept_socket.hpp"
 
@@ -35,7 +36,7 @@ public:
     static constexpr std::string_view name = "lazy";
 
     lazy(uint16_t port, std::string bind_address, bool reuse = true,
-         dsl::size_field_type lp_size = dsl::size_field_type::u4)
+         lp::size_field_type lp_size = lp::size_field_type::u4)
       : port(port),
         bind_address(std::move(bind_address)),
         reuse_addr(reuse),
@@ -53,7 +54,7 @@ public:
     bool reuse_addr = true;
 
     /// The size of the length prefix field.
-    dsl::size_field_type lp_size = dsl::size_field_type::u4;
+    lp::size_field_type lp_size = lp::size_field_type::u4;
   };
 
   using lazy_t = server_config_tag<lazy>;
@@ -66,7 +67,7 @@ public:
     static constexpr std::string_view name = "socket";
 
     explicit socket(tcp_accept_socket fd,
-                    dsl::size_field_type lp_size = dsl::size_field_type::u4)
+                    lp::size_field_type lp_size = lp::size_field_type::u4)
       : fd(fd), lp_size(lp_size) {
       // nop
     }
@@ -88,7 +89,7 @@ public:
     }
 
     /// Size of the length prefix field.
-    dsl::size_field_type lp_size = dsl::size_field_type::u4;
+    lp::size_field_type lp_size = lp::size_field_type::u4;
   };
 
   using socket_t = server_config_tag<error>;

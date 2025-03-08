@@ -15,7 +15,7 @@ namespace {
 
 template <class Config, class Conn>
 expected<disposable> do_start_impl(Config& cfg, Conn conn,
-                                   dsl::size_field_type lp_size,
+                                   lp::size_field_type lp_size,
                                    async::consumer_resource<frame> pull,
                                    async::producer_resource<frame> push) {
   auto bridge = internal::make_lp_flow_bridge(std::move(pull), std::move(push));

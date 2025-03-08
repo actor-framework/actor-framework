@@ -24,8 +24,8 @@ public:
 
   connection_acceptor_impl(Acceptor acceptor, size_t max_consecutive_reads,
                            async::producer_resource<event_type> events,
-                           dsl::size_field_type lp_size
-                           = dsl::size_field_type::u4)
+                           lp::size_field_type lp_size
+                           = lp::size_field_type::u4)
     : acceptor_(std::move(acceptor)),
       max_consecutive_reads_(max_consecutive_reads),
       events_(std::move(events)),
@@ -84,14 +84,14 @@ private:
 
   async::producer_resource<event_type> events_;
 
-  dsl::size_field_type lp_size_;
+  lp::size_field_type lp_size_;
 };
 
 template <class Config, class Acceptor>
 expected<disposable>
 do_start_impl(Config& cfg, Acceptor acc,
               async::producer_resource<accept_event<frame>> push,
-              dsl::size_field_type lp_size) {
+              lp::size_field_type lp_size) {
   using impl_t = connection_acceptor_impl<Acceptor>;
   auto conn_acc = std::make_unique<impl_t>(std::move(acc),
                                            cfg.max_consecutive_reads,

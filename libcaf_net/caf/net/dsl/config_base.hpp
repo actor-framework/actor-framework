@@ -30,18 +30,6 @@
 
 namespace caf::net::dsl {
 
-/// Configures the integer type used as the length prefix.
-enum class size_field_type {
-  /// Configures a length prefix with a single byte.
-  u1,
-  /// Configures a length prefix with two bytes.
-  u2,
-  /// Configures a length prefix with four bytes.
-  u4,
-  /// Configures a length prefix with eight bytes.
-  u8,
-};
-
 /// Base class for configuration objects.
 class CAF_NET_EXPORT config_base : public ref_counted {
 public:

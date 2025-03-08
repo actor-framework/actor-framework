@@ -31,7 +31,7 @@ public:
   /// @returns an `accept_factory` object initialized with the given parameters.
   auto accept(uint16_t port, std::string bind_address = "",
               bool reuse_addr = true,
-              dsl::size_field_type lp_size = dsl::size_field_type::u4) {
+              lp::size_field_type lp_size = lp::size_field_type::u4) {
     auto& dref = static_cast<Subtype&>(*this);
     return dref.make(server_config::lazy_v, port, std::move(bind_address),
                      reuse_addr, lp_size);
@@ -43,7 +43,7 @@ public:
   /// @param lp_size The size field type for the length-prefixing protocol.
   /// @returns an `accept_factory` object that will start a server on `fd`.
   auto accept(tcp_accept_socket fd,
-              dsl::size_field_type lp_size = dsl::size_field_type::u4) {
+              lp::size_field_type lp_size = lp::size_field_type::u4) {
     auto& dref = static_cast<Subtype&>(*this);
     return dref.make(server_config::socket_v, fd, lp_size);
   }
