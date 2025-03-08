@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/net/fwd.hpp"
+#include "caf/net/lp/size_field_type.hpp"
 #include "caf/net/socket.hpp"
 #include "caf/net/ssl/connection.hpp"
 #include "caf/net/ssl/context.hpp"
@@ -35,8 +36,12 @@ public:
   public:
     class lazy {
     public:
-      lazy(uint16_t port, std::string bind_address, bool reuse)
-        : port(port), bind_address(std::move(bind_address)), reuse_addr(reuse) {
+      lazy(uint16_t port, std::string bind_address, bool reuse,
+           net::lp::size_field_type lp_size = net::lp::size_field_type::u4)
+        : port(port),
+          bind_address(std::move(bind_address)),
+          reuse_addr(reuse),
+          lp_size(lp_size) {
         // nop
       }
 
@@ -48,12 +53,18 @@ public:
 
       /// Whether to set `SO_REUSEADDR` on the socket.
       bool reuse_addr = true;
+
+      /// The size field type for the length prefix protocol.
+      net::lp::size_field_type lp_size = net::lp::size_field_type::u4;
     };
 
     /// Configuration for a server that uses a user-provided socket.
     class socket {
     public:
-      explicit socket(net::tcp_accept_socket fd) : fd(fd) {
+      explicit socket(net::tcp_accept_socket fd,
+                      net::lp::size_field_type lp_size
+                      = net::lp::size_field_type::u4)
+        : fd(fd), lp_size(lp_size) {
         // nop
       }
 
@@ -66,6 +77,9 @@ public:
       /// The socket file descriptor to use.
       net::tcp_accept_socket fd;
 
+      /// The size field type for the length prefix protocol.
+      net::lp::size_field_type lp_size = net::lp::size_field_type::u4;
+
       /// Returns the file descriptor and setting the `fd` member variable to
       /// the invalid socket.
       net::tcp_accept_socket take_fd() noexcept {
@@ -75,12 +89,15 @@ public:
       }
     };
 
-    void assign(uint16_t port, std::string&& bind_address, bool reuse_addr) {
-      value.emplace<lazy>(port, std::move(bind_address), reuse_addr);
+    void
+    assign(uint16_t port, std::string&& bind_address, bool reuse_addr,
+           net::lp::size_field_type lp_size = net::lp::size_field_type::u4) {
+      value.emplace<lazy>(port, std::move(bind_address), reuse_addr, lp_size);
     }
 
-    void assign(net::tcp_accept_socket fd) {
-      value.emplace<socket>(fd);
+    void assign(net::tcp_accept_socket fd, net::lp::size_field_type lp_size
+                                           = net::lp::size_field_type::u4) {
+      value.emplace<socket>(fd, lp_size);
     }
 
     using value_t = std::variant<none_t, lazy, socket>;
@@ -104,22 +121,30 @@ public:
       /// Type for holding a client address.
       using server_t = std::variant<server_address, uri>;
 
-      lazy(std::string host, uint16_t port)
-        : server(server_address{std::move(host), port}) {
+      lazy(std::string host, uint16_t port,
+           net::lp::size_field_type lp_size = net::lp::size_field_type::u4)
+        : server(server_address{std::move(host), port}), lp_size(lp_size) {
         // nop
       }
 
-      explicit lazy(uri addr) : server(std::move(addr)) {
+      explicit lazy(uri addr, net::lp::size_field_type lp_size
+                              = net::lp::size_field_type::u4)
+        : server(std::move(addr)), lp_size(lp_size) {
         // nop
       }
 
       /// The address for reaching the server or an error.
       server_t server;
+
+      /// The size field type for the length prefix protocol.
+      net::lp::size_field_type lp_size = net::lp::size_field_type::u4;
     };
 
     class socket {
     public:
-      explicit socket(net::stream_socket fd) : fd(fd) {
+      explicit socket(net::stream_socket fd, net::lp::size_field_type lp_size
+                                             = net::lp::size_field_type::u4)
+        : fd(fd), lp_size(lp_size) {
         // nop
       }
 
@@ -148,6 +173,9 @@ public:
       /// The socket file descriptor to use.
       net::stream_socket fd;
 
+      /// The size field type for the length prefix protocol.
+      net::lp::size_field_type lp_size = net::lp::size_field_type::u4;
+
       /// Returns the file descriptor and setting the `fd` member variable to
       /// the invalid socket.
       net::stream_socket take_fd() noexcept {
@@ -159,7 +187,8 @@ public:
 
     class conn {
     public:
-      explicit conn(net::ssl::connection st) : state(std::move(st)) {
+      explicit conn(net::ssl::connection st, net::lp::size_field_type lp_size)
+        : state(std::move(st)), lp_size(lp_size) {
         // nop
       }
 
@@ -182,22 +211,30 @@ public:
 
       /// SSL state for the connection.
       net::ssl::connection state;
+
+      /// The size field type for the length prefix protocol.
+      net::lp::size_field_type lp_size = net::lp::size_field_type::u4;
     };
 
-    void assign(std::string&& host, uint16_t port) {
-      value.emplace<lazy>(std::move(host), port);
+    void
+    assign(std::string&& host, uint16_t port,
+           net::lp::size_field_type lp_size = net::lp::size_field_type::u4) {
+      value.emplace<lazy>(std::move(host), port, lp_size);
     }
 
-    void assign(uri&& endpoint) {
-      value.emplace<lazy>(std::move(endpoint));
+    void assign(uri&& endpoint, net::lp::size_field_type lp_size
+                                = net::lp::size_field_type::u4) {
+      value.emplace<lazy>(std::move(endpoint), lp_size);
     }
 
-    void assign(net::stream_socket fd) {
-      value.emplace<socket>(fd);
+    void assign(net::stream_socket fd, net::lp::size_field_type lp_size
+                                       = net::lp::size_field_type::u4) {
+      value.emplace<socket>(fd, lp_size);
     }
 
-    void assign(net::ssl::connection&& hdl) {
-      value.emplace<conn>(std::move(hdl));
+    void assign(net::ssl::connection&& hdl, net::lp::size_field_type lp_size
+                                            = net::lp::size_field_type::u4) {
+      value.emplace<conn>(std::move(hdl), lp_size);
     }
 
     using value_t = std::variant<none_t, lazy, socket, conn>;
@@ -278,6 +315,12 @@ public:
 
   expected<disposable> start_server() {
     auto fn = [this](auto& val) -> expected<disposable> {
+      using val_t = std::decay_t<decltype(val)>;
+      if constexpr (std::disjunction_v<
+                      std::is_same<val_t, server_config::lazy>,
+                      std::is_same<val_t, server_config::socket>>) {
+        lp_size = val.lp_size;
+      }
       return start_server(val);
     };
     return std::visit(fn, server.value);
@@ -301,6 +344,9 @@ public:
   /// Hostname, saved during the `start_client` call and used for
   /// SSL hostname validation.
   std::string hostname;
+
+  /// The size field type for the length prefix protocol.
+  net::lp::size_field_type lp_size = net::lp::size_field_type::u4;
 
   client_config client;
 
@@ -343,7 +389,7 @@ public:
     if (!maybe_fd) {
       return maybe_fd.error();
     }
-    client_config::socket sub_cfg{*maybe_fd};
+    client_config::socket sub_cfg{*maybe_fd, lp_size};
     hostname = std::move(host);
     return start_client(sub_cfg);
   }
@@ -364,6 +410,13 @@ public:
 
   expected<disposable> start_client() {
     auto fn = [this](auto& val) -> expected<disposable> {
+      using val_t = std::decay_t<decltype(val)>;
+      if constexpr (std::disjunction_v<
+                      std::is_same<val_t, client_config::lazy>,
+                      std::is_same<val_t, client_config::socket>,
+                      std::is_same<val_t, client_config::conn>>) {
+        lp_size = val.lp_size;
+      }
       return start_client(val);
     };
     return std::visit(fn, client.value);

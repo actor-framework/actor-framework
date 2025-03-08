@@ -7,6 +7,7 @@
 #include "caf/net/accept_event.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/lp/frame.hpp"
+#include "caf/net/lp/size_field_type.hpp"
 #include "caf/net/ssl/context.hpp"
 
 #include "caf/actor_cast.hpp"
@@ -194,33 +195,40 @@ public:
   /// @returns an `server` object initialized with the given parameters.
   [[nodiscard]] server accept(uint16_t port,
                               std::string bind_address = std::string{},
-                              bool reuse_addr = true) &&;
+                              bool reuse_addr = true,
+                              size_field_type lp_size = size_field_type::u4) &&;
 
   /// Creates a new server factory object for the given accept socket.
   /// @param fd File descriptor for the accept socket.
   /// @returns an `server` object that will start a server on `fd`.
-  [[nodiscard]] server accept(tcp_accept_socket fd) &&;
+  [[nodiscard]] server accept(tcp_accept_socket fd,
+                              size_field_type lp_size = size_field_type::u4) &&;
 
   /// Creates a new  server factory object for the given acceptor.
   /// @param acc The SSL acceptor for incoming TCP connections.
   /// @returns an `server` object that will start a server on `acc`.
-  [[nodiscard]] server accept(ssl::tcp_acceptor acc) &&;
+  [[nodiscard]] server accept(ssl::tcp_acceptor acc,
+                              size_field_type lp_size = size_field_type::u4) &&;
 
   /// Creates a new client factory object for the given TCP `host` and `port`.
   /// @param host The hostname or IP address to connect to.
   /// @param port The port number to connect to.
   /// @returns a `client` object initialized with the given parameters.
-  [[nodiscard]] client connect(std::string host, uint16_t port) &&;
+  [[nodiscard]] client
+  connect(std::string host, uint16_t port,
+          size_field_type lp_size = size_field_type::u4) &&;
 
   /// Creates a new client factory object for the given stream `fd`.
   /// @param fd The stream socket to use for the connection.
   /// @returns a `client` object that will use the given socket.
-  [[nodiscard]] client connect(stream_socket fd) &&;
+  [[nodiscard]] client
+  connect(stream_socket fd, size_field_type lp_size = size_field_type::u4) &&;
 
   /// Creates a new client factory object for the given SSL `connection`.
   /// @param conn The SSL connection to use.
   /// @returns a `client` object that will use the given connection.
-  [[nodiscard]] client connect(ssl::connection conn) &&;
+  [[nodiscard]] client connect(ssl::connection conn, size_field_type lp_size
+                                                     = size_field_type::u4) &&;
 
 private:
   using on_error_callback = unique_callback_ptr<void(const error&)>;
