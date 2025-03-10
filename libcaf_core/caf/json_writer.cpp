@@ -55,7 +55,7 @@ public:
 
   // -- properties -------------------------------------------------------------
 
-  span<const std::byte> bytes() const override {
+  const_byte_span bytes() const override {
     return {reinterpret_cast<const std::byte*>(buf_.data()), buf_.size()};
   }
 
@@ -466,7 +466,7 @@ public:
     return false;
   }
 
-  bool value(span<const std::byte> x) override {
+  bool value(const_byte_span x) override {
     switch (top()) {
       case internal::json_node::element:
         add('"');
@@ -751,7 +751,7 @@ json_writer::~json_writer() {
 
 // -- properties ---------------------------------------------------------------
 
-span<const std::byte> json_writer::bytes() const {
+const_byte_span json_writer::bytes() const {
   return impl::cast(impl_).bytes();
 }
 
@@ -953,7 +953,7 @@ bool json_writer::value(const std::u32string& x) {
   return impl::cast(impl_).value(x);
 }
 
-bool json_writer::value(span<const std::byte> x) {
+bool json_writer::value(const_byte_span x) {
   return impl::cast(impl_).value(x);
 }
 

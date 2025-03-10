@@ -20,7 +20,7 @@ public:
   ~byte_writer() override;
 
   /// Retrieves the serialized bytes.
-  virtual span<const std::byte> bytes() const = 0;
+  virtual const_byte_span bytes() const = 0;
 
   /// Clears any buffered data and resets the writer to its initial state.
   virtual void reset() = 0;
