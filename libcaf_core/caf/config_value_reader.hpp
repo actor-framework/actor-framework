@@ -103,7 +103,7 @@ public:
 
   bool value(std::u32string& x) override;
 
-  bool value(span<std::byte> x) override;
+  bool value(byte_span x) override;
 
 private:
   /// Storage for the implementation object.

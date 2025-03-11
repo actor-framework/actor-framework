@@ -152,7 +152,7 @@ public:
   /// Adds `x` as raw byte block to the output.
   /// @param x The byte sequence.
   /// @returns A non-zero error code on failure, `sec::success` otherwise.
-  virtual bool value(span<const std::byte> x) = 0;
+  virtual bool value(const_byte_span x) = 0;
 
   virtual bool value(const strong_actor_ptr& ptr);
 

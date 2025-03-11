@@ -187,7 +187,7 @@ public:
     return end_sequence();
   }
 
-  bool value(span<const std::byte> x) {
+  bool value(const_byte_span x) {
     CAF_ASSERT(write_pos_ <= buf_.size());
     auto buf_size = buf_.size();
     if (write_pos_ == buf_size) {
@@ -537,7 +537,7 @@ bool binary_serializer::end_associative_array() {
   return impl::cast(impl_).end_associative_array();
 }
 
-bool binary_serializer::value(span<const std::byte> x) {
+bool binary_serializer::value(const_byte_span x) {
   return impl::cast(impl_).value(x);
 }
 

@@ -83,7 +83,7 @@ bool stringification_inspector::end_sequence() {
 }
 
 bool stringification_inspector::value(std::byte x) {
-  return value(span<const std::byte>(&x, 1));
+  return value(const_byte_span(&x, 1));
 }
 
 bool stringification_inspector::value(bool x) {
@@ -174,7 +174,7 @@ bool stringification_inspector::int_value(uint64_t x) {
   return true;
 }
 
-bool stringification_inspector::value(span<const std::byte> x) {
+bool stringification_inspector::value(const_byte_span x) {
   sep();
   detail::append_hex(result_, x.data(), x.size());
   return true;

@@ -398,7 +398,7 @@ public:
     return false;
   }
 
-  bool value(span<const std::byte> x) override {
+  bool value(const_byte_span x) override {
     std::vector<char> buf;
     buf.reserve(x.size() * 2);
     detail::append_hex(buf, reinterpret_cast<const void*>(x.data()), x.size());
@@ -812,7 +812,7 @@ bool json_builder::value(const std::u32string& x) {
   return impl::cast(impl_).value(x);
 }
 
-bool json_builder::value(span<const std::byte> x) {
+bool json_builder::value(const_byte_span x) {
   return impl::cast(impl_).value(x);
 }
 

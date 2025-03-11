@@ -76,18 +76,6 @@ struct kvs_actor_state {
   std::map<std::string, std::string> data;
 };
 
-// -- utility functions --------------------------------------------------------
-
-bool is_ascii(caf::span<const std::byte> buffer) {
-  auto pred = [](auto x) { return isascii(static_cast<unsigned char>(x)); };
-  return std::all_of(buffer.begin(), buffer.end(), pred);
-}
-
-std::string to_ascii(caf::span<const std::byte> buffer) {
-  return std::string{reinterpret_cast<const char*>(buffer.data()),
-                     buffer.size()};
-}
-
 // -- main ---------------------------------------------------------------------
 
 namespace {
@@ -160,14 +148,16 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
         .route("/api/<arg>", http::method::post,
                [kvs](http::responder& res, std::string key) {
                  auto value = res.payload();
-                 if (!is_ascii(value)) {
+                 if (!caf::is_valid_ascii(value)) {
                    res.respond(http::status::bad_request, "text/plain",
                                "Expected an ASCII payload.");
                    return;
                  }
                  auto* self = res.self();
                  auto prom = std::move(res).to_promise();
-                 self->mail(caf::put_atom_v, std::move(key), to_ascii(value))
+                 self
+                   ->mail(caf::put_atom_v, std::move(key),
+                          caf::to_string_view(value))
                    .request(kvs, 2s)
                    .then(
                      [prom]() mutable {
