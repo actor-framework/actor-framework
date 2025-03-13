@@ -425,6 +425,9 @@ with_t::with_t(multiplexer* mpx) : config_(new config_impl(mpx)) {
   // nop
 }
 
+with_t::with_t(with_t&&) noexcept = default;
+with_t& with_t::operator=(with_t&&) noexcept = default;
+
 with_t::~with_t() {
   // nop
 }
