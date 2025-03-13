@@ -224,7 +224,7 @@ public:
 
   explicit with_t(multiplexer* mpx);
 
-  with_t(with_t&&) noexcept = default;
+  with_t(with_t&&) noexcept;
 
   with_t& operator=(with_t&&) noexcept = default;
 
