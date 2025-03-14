@@ -345,6 +345,74 @@ TEST("evaluator expressions can check or extract individual values") {
   }
 }
 
+SCENARIO("the deterministic fixture allows iterating over messages at will") {
+  GIVEN("two actors with messages in mailbox") {
+    auto worker1 = sys.spawn([]() {
+      return caf::behavior{
+        [](int32_t) {},
+      };
+    });
+    auto worker2 = sys.spawn([]() {
+      return caf::behavior{
+        [](int32_t) {},
+      };
+    });
+    auto worker1_guard = make_actor_scope_guard(worker1);
+    auto worker2_guard = make_actor_scope_guard(worker2);
+    auto messages = std::vector<int32_t>{};
+    const auto fn = [&](const caf::message& x) {
+      messages.push_back(x.get_as<int32_t>(0));
+    };
+    anon_mail(1).send(worker1);
+    anon_mail(2).send(worker2);
+    anon_mail(3).send(worker1);
+    anon_mail(4).send(worker2);
+    WHEN("retrieving messages from mailbox") {
+      for_each_message(fn);
+      THEN("messages are retrieved in order") {
+        check_eq(messages, std::vector<int32_t>{1, 2, 3, 4});
+      }
+    }
+    WHEN("retrieving messages from mailbox of worker1") {
+      for_each_message(caf::actor_cast<caf::strong_actor_ptr>(worker1), fn);
+      THEN("messages are retrieved in order") {
+        check_eq(messages, std::vector<int32_t>{1, 3});
+      }
+    }
+    WHEN("retrieving messages from mailbox of worker2") {
+      for_each_message(caf::actor_cast<caf::strong_actor_ptr>(worker2), fn);
+      THEN("messages are retrieved in order") {
+        check_eq(messages, std::vector<int32_t>{2, 4});
+      }
+    }
+    WHEN("retrieving messages after processing some messages") {
+      dispatch_message();
+      dispatch_message();
+      THEN("remaining messages are retrieved in order") {
+        for_each_message(fn);
+        check_eq(messages, std::vector<int32_t>{3, 4});
+      }
+      AND_THEN("remaining messages are retrieved in order for worker1") {
+        messages.clear();
+        for_each_message(caf::actor_cast<caf::strong_actor_ptr>(worker1), fn);
+        check_eq(messages, std::vector<int32_t>{3});
+      }
+      AND_THEN("remaining messages are retrieved in order for worker2") {
+        messages.clear();
+        for_each_message(caf::actor_cast<caf::strong_actor_ptr>(worker2), fn);
+        check_eq(messages, std::vector<int32_t>{4});
+      }
+    }
+    WHEN("retrieving messages after processing all messages") {
+      dispatch_messages();
+      for_each_message(fn);
+      THEN("no messages are retrieved") {
+        check_eq(messages, std::vector<int32_t>{});
+      }
+    }
+  }
+}
+
 SCENARIO("the deterministic fixture allows setting the actor clock at will") {
   caf::chrono::datetime caf_epoch_dt; // Date and time of the first CAF commit.
   if (auto err = caf::chrono::parse("2011-03-04T16:03:40+0100", caf_epoch_dt)) {
