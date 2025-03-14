@@ -47,18 +47,22 @@ function would resemble the following (pseudo) code:
 .. code-block:: C++
 
   int main(int argc, char** argv) {
-    // Initialize the global type information before anything else.
-    init_global_meta_objects<...>();
+    // Initialize user defined types and messages if needed.
+    init_global_meta_objects<custom_types_1>();
+    // Initialize the global type information before creating the config.
     core::init_global_meta_objects();
     // Create the config.
     actor_system_config cfg;
     // Read CLI options.
-    cfg.parse(argc, argv);
+    auto err = cfg.parse(argc, argv);
+    if (err)
+      return EXIT_FAILURE;
     // Return immediately if a help text was printed.
-    if (cfg.cli_helptext_printed)
+    if (cfg.helptext_printed())
       return 0;
-    // Load modules.
-    cfg.load<...>();
+    // Load modules (the provided example will load `net::middleman`).
+    net::middleman::init_global_meta_objects();
+    cfg.load<net::middleman>();
     // Create the actor system.
     actor_system sys{cfg};
     // Run user-defined code.
