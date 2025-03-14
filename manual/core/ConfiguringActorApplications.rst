@@ -93,6 +93,43 @@ module loaded looks as follows:
 
 .. _system-config-module:
 
+Available Modules
+-----------------
+
+The core functionalities of CAF can be extended by loading different modules at
+runtime. This modular design enables users to fine-tune which features of CAF
+to include in their applications, ensuring they don't introduce overhead for
+unused functionality. Here is a comprehensive list of available modules:
+
+.. list-table:: CAF Modules
+   :widths: 25 75
+   :header-rows: 1
+
+   * - Module
+     - Description
+   * - ``openssl::manager``
+     - Adds SSL/TLS encryption support to network communications. Enables
+       secure communication between actors over untrusted networks. Requires
+       OpenSSL libraries.
+   * - ``io::middleman``
+     - Provides I/O and socket support, and enables communication between actor
+       applications by managing proxy actor instances representing remote
+       actors.
+   * - ``net::middleman``
+     - Provides modern network interfaces with improved type safety and
+       configuration options. Designed as the successor to the traditional I/O
+       middleman.
+
+The exact modules available may vary depending on the way CAF was configured
+and compiled. Every module can be disabled at build time.
+
+.. note::
+
+  Note that the ``io::middleman`` module is in maintenance mode and will be
+  deprecated in favor of the ``net::middleman`` module in a future instance
+  of CAF.
+
+
 Loading Modules
 ---------------
 
@@ -119,7 +156,7 @@ Alternatively, users can load modules in user-defined config classes.
      }
    };
 
-The third option is to simply call ``x.load<mod1>()`` on a config
+The third option is to simply call ``cfg.load<mod1>()`` on a config
 object *before* initializing an actor system with it.
 
 .. _system-config-options:
