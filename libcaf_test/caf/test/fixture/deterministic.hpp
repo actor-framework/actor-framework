@@ -667,12 +667,18 @@ public:
   /// Iterates over all pending messages in the mailbox of `hdl`.
   template <class Fn>
   void for_each_message(const strong_actor_ptr& hdl, Fn&& fn) {
-    if (!hdl)
+    if (!hdl) {
       return;
-    std::for_each(events_.begin(), events_.end(), [&](const auto& event) {
-      if (event->target
-          == dynamic_cast<scheduled_actor*>(actor_cast<abstract_actor*>(hdl)))
+    }
+    auto* base_ptr = actor_cast<abstract_actor*>(hdl);
+    auto* ptr = dynamic_cast<scheduled_actor*>(base_ptr);
+    if (ptr == nullptr) {
+      return;
+    }
+    std::for_each(events_.begin(), events_.end(), [ptr, &fn](auto& event) {
+      if (event->target == ptr) {
         fn(event->item->payload);
+      }
     });
   }
 
