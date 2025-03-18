@@ -133,7 +133,8 @@ private:
   /// Stores the subscription to the input observable.
   subscription sub_;
 
-  /// Stores the number of retries remaining.
+  /// Stores predicate that determines whether to run the fallback observable
+  /// when the primary observable fails.
   Predicate predicate_;
 };
 

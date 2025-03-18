@@ -222,9 +222,9 @@ public:
 
   /// Subscribes to the fallback observable on error for as long as the
   /// predicate returns true.
-  template <class Predicate>
+  template <class Predicate, class Fallback>
   observable<T>
-  on_error_resume_next(Predicate predicate, observable<T> fallback);
+  on_error_resume_next(Predicate&& predicate, Fallback&& fallback);
 
   // -- combining --------------------------------------------------------------
 

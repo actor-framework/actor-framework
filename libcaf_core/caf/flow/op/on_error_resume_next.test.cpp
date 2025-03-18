@@ -15,99 +15,83 @@ namespace {
 
 WITH_FIXTURE(test::fixture::flow) {
 
-SCENARIO(
-  "on_error_resume_next operator switches to fallback observable on error") {
-  auto on_error_resume_next_predicate = [](const caf::error& what) {
+SCENARIO("on_error_resume_next switches to a fallback observable on error") {
+  auto predicate = [](const caf::error& what) {
     return what == sec::invalid_request;
   };
-  GIVEN("an observable that always fails") {
-    WHEN(
-      "calling on_error_resume_next with an observable that always completes") {
-      THEN("the observer switches to fallback observable") {
+  GIVEN("an observable that fails with sec::invalid_request") {
+    WHEN("calling on_error_resume_next with a fallback that completes") {
+      THEN("the observer completes with the fallback") {
         auto outputs = std::make_shared<std::vector<int>>();
         auto err = std::make_shared<error>();
         auto input = std::vector{1, 2, 3, 4};
         auto completed = std::make_shared<bool>(false);
         make_observable()
           .from_container(input)
-          .concat(make_observable().fail<int32_t>(sec::invalid_request))
-          .on_error_resume_next(
-            on_error_resume_next_predicate,
-            make_observable().iota(9).take(2).as_observable())
+          .concat(make_observable().fail<int>(sec::invalid_request))
+          .on_error_resume_next(predicate, make_observable().iota(9).take(2))
           .do_on_complete([completed]() { *completed = true; })
           .do_on_error([err](const error& what) { *err = what; })
           .for_each([outputs](const int& xs) { outputs->emplace_back(xs); });
         run_flows();
-        check_eq(outputs->size(), 6u);
         check_eq(*err, error{}); // no error
         check_eq(*outputs, std::vector<int>{1, 2, 3, 4, 9, 10});
         check(*completed);
       }
     }
-  }
-  GIVEN("an observable that always fails") {
-    WHEN("calling on_error_resume_next with an observable that always fails") {
-      THEN("the observer completes with fallback") {
+    WHEN("calling on_error_resume_next with a fallback that fails") {
+      THEN("the observer completes with the error") {
         auto outputs = std::make_shared<std::vector<int>>();
         auto err = std::make_shared<error>();
         auto input = std::vector{1, 2, 3, 4};
         auto completed = std::make_shared<bool>(false);
         make_observable()
           .from_container(input)
-          .concat(make_observable().fail<int32_t>(sec::invalid_request))
+          .concat(make_observable().fail<int>(sec::invalid_request))
           .on_error_resume_next(
-            on_error_resume_next_predicate,
-            make_observable()
-              .iota(9)
-              .take(2)
-              .concat(make_observable().fail<int32_t>(sec::invalid_request))
-              .as_observable())
+            predicate, make_observable().iota(9).take(2).concat(
+                         make_observable().fail<int>(sec::invalid_request)))
           .do_on_complete([completed]() { *completed = true; })
           .do_on_error([err](const error& what) { *err = what; })
           .for_each([outputs](const int& xs) { outputs->emplace_back(xs); });
         run_flows();
-        check_eq(outputs->size(), 6u);
         check_eq(*err, error{sec::invalid_request});
         check_eq(*outputs, std::vector<int>{1, 2, 3, 4, 9, 10});
         check(!*completed);
       }
     }
   }
-  GIVEN("an observable that always fails") {
-    WHEN("calling on_error_resume_next with an predicate that always fails") {
-      THEN("the observer completes with error") {
+  GIVEN("an observable that fails with sec::runtime_error") {
+    WHEN("calling on_error_resume_next with a predicate that does not match") {
+      THEN("the observer completes with error without using the fallback") {
         auto outputs = std::make_shared<std::vector<int>>();
         auto err = std::make_shared<error>();
         auto input = std::vector{1, 2, 3, 4};
         auto completed = std::make_shared<bool>(false);
         make_observable()
           .from_container(input)
-          .concat(make_observable().fail<int32_t>(sec::invalid_request))
-          .on_error_resume_next(
-            [](const caf::error&) { return false; },
-            make_observable().iota(9).take(2).as_observable())
+          .concat(make_observable().fail<int32_t>(sec::runtime_error))
+          .on_error_resume_next(predicate, make_observable().iota(9).take(2))
           .do_on_complete([completed]() { *completed = true; })
           .do_on_error([err](const error& what) { *err = what; })
           .for_each([outputs](const int& xs) { outputs->emplace_back(xs); });
         run_flows();
         check_eq(outputs->size(), 4u);
-        check_eq(*err, error{sec::invalid_request});
+        check_eq(*err, error{sec::runtime_error});
         check(!*completed);
       }
     }
   }
-  GIVEN("an observable that always completes") {
+  GIVEN("an observable that completes") {
     WHEN("calling on_error_resume_next") {
-      THEN("the observer completes without retrying") {
+      THEN("the observer completes with the original observable") {
         auto outputs = std::make_shared<std::vector<int>>();
         auto err = std::make_shared<error>();
         auto completed = std::make_shared<bool>(false);
         auto input = std::vector{1, 2, 3, 4};
         make_observable()
           .from_container(input)
-          .on_error_resume_next(
-            on_error_resume_next_predicate,
-            make_observable().iota(9).take(2).as_observable())
+          .on_error_resume_next(predicate, make_observable().iota(9).take(2))
           .do_on_error([err](const error& what) { *err = what; })
           .do_on_complete([completed]() { *completed = true; })
           .for_each([outputs](const int& xs) { outputs->emplace_back(xs); });
@@ -120,70 +104,7 @@ SCENARIO(
   }
 }
 
-SCENARIO("on_error_resume_next operator can complete flows despite errors") {
-  auto src1 = caf::flow::multicaster<int>(coordinator());
-  auto src2 = caf::flow::multicaster<int>(coordinator());
-  auto snk = make_auto_observer<int>();
-  auto uut = disposable{};
-  auto on_error_resume_next_predicate = [](const caf::error& what) {
-    return what == sec::runtime_error;
-  };
-  GIVEN("an observable that is resumed on `runtime_error`") {
-    uut = src1.as_observable()
-            .on_error_resume_next(on_error_resume_next_predicate,
-                                  src2.as_observable())
-            .subscribe(snk->as_observer());
-    snk->request(42);
-    run_flows();
-    WHEN("calling abort with `runtime_error`") {
-      THEN("the flow switches to fallback") {
-        src1.push(1);
-        src1.push(2);
-        run_flows();
-        src1.abort(sec::runtime_error);
-        run_flows();
-        check_eq(snk->buf, std::vector<int>{1, 2});
-        check(!snk->completed());
-        check(!snk->aborted());
-        src2.push(1);
-        src2.close();
-        run_flows();
-        check_eq(snk->buf, std::vector<int>{1, 2, 1});
-        check(snk->completed());
-        check(!snk->aborted());
-      }
-    }
-    WHEN("calling abort with `unexpected_message`") {
-      THEN("the flow propagates error") {
-        src1.push(1);
-        src1.push(2);
-        run_flows();
-        src1.abort(sec::unexpected_message);
-        run_flows();
-        check_eq(snk->buf, std::vector<int>{1, 2});
-        check(snk->aborted());
-      }
-    }
-    WHEN("calling abort on fallback observer") {
-      THEN("the flow aborts with an error") {
-        src1.push(1);
-        run_flows();
-        src1.abort(sec::runtime_error);
-        run_flows();
-        check_eq(snk->buf, std::vector<int>{1});
-        check(!snk->aborted());
-        src2.push(3);
-        src2.abort(sec::runtime_error);
-        run_flows();
-        check_eq(snk->buf, std::vector<int>{1, 3});
-        check(snk->aborted());
-      }
-    }
-  }
-}
-
-SCENARIO(
-  "on_error_resume_next operators discard items when there is no demand") {
+SCENARIO("on_error_resume_next discards items when there is no demand") {
   GIVEN("an observable that is retried on `runtime_error`") {
     WHEN("the demand is met") {
       THEN("the observer stops receiving new items") {
@@ -228,12 +149,15 @@ SCENARIO("on_error_resume_next operators forwards existing demand on retry") {
                                            src2.as_observable())
                      .subscribe(snk->as_observer());
         snk->request(4);
+        check_eq(src1.demand(), 4u);
         src1.push(1);
         src1.push(2);
         run_flows();
+        check_eq(src1.demand(), 2u);
         src1.abort(sec::runtime_error);
         run_flows();
         check(!snk->completed());
+        check_eq(src2.demand(), 2u);
         src2.push(3);
         src2.push(4);
         src2.push(5);
@@ -260,9 +184,8 @@ SCENARIO("disposing a on_error_resume_next operator aborts the flow") {
         };
         auto uut = make_observable()
                      .never<int>()
-                     .on_error_resume_next(
-                       on_error_resume_next_predicate,
-                       make_observable().never<int>().as_observable())
+                     .on_error_resume_next(on_error_resume_next_predicate,
+                                           make_observable().never<int>())
                      .subscribe(snk->as_observer());
         snk->request(42);
         run_flows();
