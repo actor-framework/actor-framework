@@ -16,6 +16,7 @@
 #include "caf/detail/type_traits.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/resumable.hpp"
+#include "caf/scheduled_actor.hpp"
 
 #include <list>
 #include <memory>
@@ -653,6 +654,32 @@ public:
   template <class Handle>
   [[nodiscard]] actor_scope_guard make_actor_scope_guard(const Handle& hdl) {
     return {this, hdl};
+  }
+
+  /// Iterates over all pending messages.
+  template <class Fn>
+  void for_each_message(Fn&& fn) {
+    for (auto& event : events_) {
+      fn(event->item->payload);
+    }
+  }
+
+  /// Iterates over all pending messages in the mailbox of `hdl`.
+  template <class Fn>
+  void for_each_message(const strong_actor_ptr& hdl, Fn&& fn) {
+    if (!hdl) {
+      return;
+    }
+    auto* base_ptr = actor_cast<abstract_actor*>(hdl);
+    auto* ptr = dynamic_cast<scheduled_actor*>(base_ptr);
+    if (ptr == nullptr) {
+      return;
+    }
+    std::for_each(events_.begin(), events_.end(), [ptr, &fn](auto& event) {
+      if (event->target == ptr) {
+        fn(event->item->payload);
+      }
+    });
   }
 
 private:
