@@ -90,6 +90,7 @@ class lower_layer;
 class policy;
 class transport;
 class upper_layer;
+class with_t;
 
 enum class errc;
 
