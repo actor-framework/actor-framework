@@ -318,7 +318,7 @@ with_t::server&& with_t::server::reuse_address(bool value) && {
 }
 
 void with_t::server::do_monitor(strong_actor_ptr ptr) {
-  config_->do_monitor(ptr);
+  config_->do_monitor(std::move(ptr));
 }
 
 void with_t::server::add_route(expected<route_ptr>& new_route) {
