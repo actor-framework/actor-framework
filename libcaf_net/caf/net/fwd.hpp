@@ -135,6 +135,7 @@ class route;
 class router;
 class server;
 class upper_layer;
+class with_t;
 
 enum class method : uint8_t;
 enum class status : uint16_t;

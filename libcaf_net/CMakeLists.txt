@@ -51,7 +51,6 @@ caf_add_component(
     caf/net/http/async_client.test.cpp
     caf/net/http/client.cpp
     caf/net/http/client.test.cpp
-    caf/net/http/client_factory.cpp
     caf/net/http/header.cpp
     caf/net/http/header.test.cpp
     caf/net/http/lower_layer.cpp
@@ -68,10 +67,10 @@ caf_add_component(
     caf/net/http/router.test.cpp
     caf/net/http/server.cpp
     caf/net/http/server.test.cpp
-    caf/net/http/server_factory.cpp
     caf/net/http/status.cpp
     caf/net/http/upper_layer.cpp
     caf/net/http/v1.cpp
+    caf/net/http/with.cpp
     caf/net/ip.cpp
     caf/net/ip.test.cpp
     caf/net/lp/client_factory.cpp

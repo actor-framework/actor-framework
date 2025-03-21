@@ -13,6 +13,7 @@
 #include "caf/net/tcp_accept_socket.hpp"
 #include "caf/net/tcp_stream_socket.hpp"
 
+#include "caf/actor_control_block.hpp"
 #include "caf/callback.hpp"
 #include "caf/defaults.hpp"
 #include "caf/disposable.hpp"
@@ -233,6 +234,18 @@ public:
 
   size_t max_consecutive_reads = defaults::net::max_consecutive_reads.fallback;
 
+  /// Store actors that the server should monitor.
+  std::vector<strong_actor_ptr> monitored_actors;
+
+  void do_monitor(strong_actor_ptr ptr) {
+    if (ptr) {
+      monitored_actors.push_back(std::move(ptr));
+      return;
+    }
+    err = make_error(sec::logic_error,
+                     "cannot monitor an invalid actor handle");
+  }
+
   virtual expected<disposable> start_server_impl(net::ssl::tcp_acceptor&) = 0;
 
   virtual expected<disposable> start_server_impl(net::tcp_accept_socket) = 0;
@@ -270,6 +283,10 @@ public:
   }
 
   // state for clients
+
+  /// SSL context factory for lazy loading SSL on demand.
+  unique_callback_ptr<expected<net::ssl::context>()> context_factory
+    = make_type_erased_callback(default_ctx_factory);
 
   /// The delay between connection attempts.
   timespan retry_delay = timespan{1'000'000}; // 1s
@@ -337,6 +354,11 @@ public:
       return start_client(val);
     };
     return std::visit(fn, client.value);
+  }
+
+private:
+  static expected<net::ssl::context> default_ctx_factory() {
+    return net::ssl::context::make_client(net::ssl::tls::v1_2);
   }
 };
 
