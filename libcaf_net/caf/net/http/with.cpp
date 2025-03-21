@@ -153,10 +153,6 @@ make_http_conn_acceptor(net::ssl::tcp_acceptor acceptor,
                                   max_consecutive_reads, max_request_size);
 }
 
-expected<ssl::context> default_ctx_factory() {
-  return ssl::context::make_client(ssl::tls::v1_2);
-}
-
 } // namespace
 
 class with_t::config_impl : public internal::net_config {
@@ -254,7 +250,7 @@ public:
     }
     if (use_ssl) {
       if (!ctx) {
-        if (auto maybe_ctx = context_factory())
+        if (auto maybe_ctx = (*context_factory)())
           ctx = std::make_shared<ssl::context>(std::move(*maybe_ctx));
         else
           return maybe_ctx.error();
@@ -269,9 +265,6 @@ public:
 
   /// Stores the available routes on the HTTP server.
   std::vector<route_ptr> routes;
-
-  /// Store actors that the server should monitor.
-  std::vector<strong_actor_ptr> monitored_actors;
 
   /// Store the maximum request size with 0 meaning "default".
   size_t max_request_size = 0;
@@ -295,9 +288,6 @@ public:
 
   /// Stores the response from `do_start_client`.
   async::future<response> resp;
-
-  /// SSL context factory for lazy loading SSL on demand.
-  std::function<expected<ssl::context>()> context_factory = default_ctx_factory;
 };
 
 // -- server API ---------------------------------------------------------------
@@ -328,12 +318,7 @@ with_t::server&& with_t::server::reuse_address(bool value) && {
 }
 
 void with_t::server::do_monitor(strong_actor_ptr ptr) {
-  if (ptr) {
-    config_->monitored_actors.push_back(std::move(ptr));
-    return;
-  }
-  config_->err = make_error(sec::logic_error,
-                            "cannot monitor an invalid actor handle");
+  config_->do_monitor(std::move(ptr));
 }
 
 void with_t::server::add_route(expected<route_ptr>& new_route) {
@@ -481,7 +466,8 @@ void with_t::set_on_error(on_error_callback ptr) {
   config_->on_error = std::move(ptr);
 }
 
-void with_t::set_context_factory(std::function<expected<ssl::context>()> fn) {
+void with_t::set_context_factory(
+  unique_callback_ptr<expected<ssl::context>()> fn) {
   config_->context_factory = std::move(fn);
 }
 

@@ -248,9 +248,10 @@ public:
   /// @param factory The factory that creates the SSL context  for encryption.
   /// @returns a reference to `*this`.
   template <typename F>
-  [[nodiscard]] with_t&& context_factory(F&& factory) && {
+  [[nodiscard]] with_t&& context_factory(F factory) && {
     static_assert(std::is_same_v<decltype(factory()), expected<ssl::context>>);
-    set_context_factory(std::forward<F>(factory));
+    using impl_t = callback_impl<F, expected<ssl::context>()>;
+    set_context_factory(std::make_unique<impl_t>(std::move(factory)));
     return std::move(*this);
   }
 
@@ -297,7 +298,7 @@ private:
 
   void set_on_error(on_error_callback ptr);
 
-  void set_context_factory(std::function<expected<ssl::context>()> fn);
+  void set_context_factory(unique_callback_ptr<expected<ssl::context>()> fn);
 
   config_ptr config_;
 };
