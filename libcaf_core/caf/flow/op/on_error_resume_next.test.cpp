@@ -108,24 +108,32 @@ SCENARIO("on_error_resume_next discards items when there is no demand") {
   GIVEN("an observable that is retried on `runtime_error`") {
     WHEN("the demand is met") {
       THEN("the observer stops receiving new items") {
-        auto src1 = caf::flow::multicaster<int>(coordinator());
         auto snk = make_passive_observer<int>();
         auto on_error_resume_next_predicate = [](const caf::error& what) {
           return what == sec::runtime_error;
         };
-        auto uut = src1.as_observable()
+        using impl_t = caf::flow::op::on_error_resume_next_sub<
+          int, decltype(on_error_resume_next_predicate)>;
+        auto src = caf::flow::multicaster<int>(coordinator());
+        auto sub = src.as_observable()
                      .on_error_resume_next(
                        on_error_resume_next_predicate,
                        make_observable().iota(1).take(2).as_observable())
                      .subscribe(snk->as_observer());
+        auto* uut = dynamic_cast<impl_t*>(sub.ptr());
+        require(uut != nullptr);
         snk->request(2);
-        check(src1.push(1));
-        check(src1.push(2));
-        check(!src1.push(3));
-        src1.close();
+        uut->on_next(1);
+        uut->on_next(2);
+        uut->on_next(3);
         run_flows();
         check_eq(snk->buf, std::vector<int>{1, 2});
         snk->request(3);
+        run_flows();
+        check_eq(snk->buf, std::vector<int>{1, 2});
+        check(!snk->completed());
+        uut->on_next(3);
+        uut->on_complete();
         run_flows();
         check_eq(snk->buf, std::vector<int>{1, 2, 3});
         check(snk->completed());
