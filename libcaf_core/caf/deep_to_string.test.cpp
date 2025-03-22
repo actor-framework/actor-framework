@@ -43,6 +43,10 @@ TEST("pointers and optionals use dereference syntax") {
   check_eq(deep_to_string(static_cast<int*>(nullptr)), "null");
   check_eq(deep_to_string(std::optional<int>{}), "null");
   check_eq(deep_to_string(std::optional<int>{23}), "*23");
+  check_eq(deep_to_string(std::vector<std::optional<int>>{{23}, {24}, {}}),
+           "[*23, *24, null]");
+  check_eq(deep_to_string(std::vector<int*>{&i, &i, nullptr}),
+           "[*42, *42, null]");
 }
 
 TEST("buffers") {
