@@ -7,6 +7,7 @@
 #include "caf/net/dsl/base.hpp"
 #include "caf/net/dsl/config_base.hpp"
 #include "caf/net/fwd.hpp"
+#include "caf/net/lp/size_field_type.hpp"
 #include "caf/net/ssl/connection.hpp"
 #include "caf/net/ssl/context.hpp"
 #include "caf/net/stream_socket.hpp"
@@ -52,8 +53,9 @@ public:
 
     static constexpr std::string_view name = "lazy";
 
-    lazy(std::string host, uint16_t port)
-      : server(server_address{std::move(host), port}) {
+    lazy(std::string host, uint16_t port,
+         lp::size_field_type lp_size = lp::size_field_type::u4)
+      : server(server_address{std::move(host), port}), lp_size(lp_size) {
       // nop
     }
 
@@ -72,6 +74,9 @@ public:
 
     /// The maximum amount of retries.
     size_t max_retry_count = 0;
+
+    /// The size of the length prefix.
+    lp::size_field_type lp_size;
   };
 
   using lazy_t = client_config_tag<lazy>;
@@ -83,7 +88,9 @@ public:
   public:
     static constexpr std::string_view name = "socket";
 
-    explicit socket(stream_socket fd) : fd(fd) {
+    explicit socket(stream_socket fd,
+                    lp::size_field_type lp_size = lp::size_field_type::u4)
+      : fd(fd), lp_size(lp_size) {
       // nop
     }
 
@@ -111,6 +118,9 @@ public:
     /// The socket file descriptor to use.
     stream_socket fd;
 
+    /// The size of the length prefix.
+    lp::size_field_type lp_size;
+
     /// Returns the file descriptor and setting the `fd` member variable to the
     /// invalid socket.
     stream_socket take_fd() noexcept {
@@ -130,7 +140,9 @@ public:
   public:
     static constexpr std::string_view name = "conn";
 
-    explicit conn(ssl::connection st) : state(std::move(st)) {
+    explicit conn(ssl::connection st,
+                  lp::size_field_type lp_size = lp::size_field_type::u4)
+      : state(std::move(st)), lp_size(lp_size) {
       // nop
     }
 
@@ -153,6 +165,9 @@ public:
 
     /// SSL state for the connection.
     ssl::connection state;
+
+    /// The size of the length prefix.
+    lp::size_field_type lp_size;
   };
 
   using conn_t = client_config_tag<conn>;
