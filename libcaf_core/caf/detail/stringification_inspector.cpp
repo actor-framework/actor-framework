@@ -134,17 +134,7 @@ bool stringification_inspector::value(std::string_view str) {
     result_.insert(result_.end(), str.begin(), str.end());
     return true;
   }
-  // Escape the string if it contains whitespaces or characters that need
-  // escaping.
-  auto needs_escaping = [](char c) {
-    return isspace(c) || c == '\\' || c == '"';
-  };
-  if (always_quote_strings
-      || std::any_of(str.begin(), str.end(), needs_escaping)) {
-    detail::print_escaped(result_, str);
-  } else {
-    result_.insert(result_.end(), str.begin(), str.end());
-  }
+  detail::print_escaped(result_, str);
   return true;
 }
 

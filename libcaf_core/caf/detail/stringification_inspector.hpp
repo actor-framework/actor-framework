@@ -39,8 +39,6 @@ public:
     return true;
   }
 
-  bool always_quote_strings = true;
-
   // -- serializer interface ---------------------------------------------------
 
   void set_error(error stop_reason) override;
