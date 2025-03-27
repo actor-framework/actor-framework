@@ -6,17 +6,9 @@
 
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
-#include "caf/inspector_access.hpp"
 #include "caf/save_inspector_base.hpp"
-#include "caf/timespan.hpp"
-#include "caf/timestamp.hpp"
 
-#include <chrono>
-#include <cstring>
-#include <string>
-#include <string_view>
-#include <type_traits>
-#include <vector>
+#include <cstddef>
 
 namespace caf::detail {
 
@@ -29,15 +21,11 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  stringification_inspector(std::string& result) : result_(result) {
-    // nop
-  }
+  stringification_inspector(std::string& result);
 
   // -- properties -------------------------------------------------------------
 
-  constexpr bool has_human_readable_format() const noexcept {
-    return true;
-  }
+  bool has_human_readable_format() const noexcept;
 
   // -- serializer interface ---------------------------------------------------
 
@@ -59,33 +47,21 @@ public:
 
   bool end_field();
 
-  bool begin_tuple(size_t size) {
-    return begin_sequence(size);
-  }
+  bool begin_tuple(size_t size);
 
-  bool end_tuple() {
-    return end_sequence();
-  }
+  bool end_tuple();
 
-  bool begin_key_value_pair() {
-    return begin_tuple(2);
-  }
+  bool begin_key_value_pair();
 
-  bool end_key_value_pair() {
-    return end_tuple();
-  }
+  bool end_key_value_pair();
 
   bool begin_sequence(size_t size);
 
   bool end_sequence();
 
-  bool begin_associative_array(size_t size) {
-    return begin_sequence(size);
-  }
+  bool begin_associative_array(size_t size);
 
-  bool end_associative_array() {
-    return end_sequence();
-  }
+  bool end_associative_array();
 
   bool value(std::byte x);
 
@@ -136,6 +112,7 @@ public:
   std::enable_if_t<detail::is_map_like_v<T>, bool>
   builtin_inspect(const T& xs) {
     sep();
+    auto& result_ = result();
     auto i = xs.begin();
     auto last = xs.end();
     if (i == last) {
@@ -161,6 +138,7 @@ public:
     has_to_string_v<T> && !std::is_convertible_v<T, std::string_view>, bool>
   builtin_inspect(const T& x) {
     auto str = to_string(x);
+    auto& result_ = result();
     if constexpr (std::is_convertible<decltype(str), const char*>::value) {
       const char* cstr = str;
       sep();
@@ -173,6 +151,7 @@ public:
 
   template <class T>
   bool builtin_inspect(const T* x) {
+    auto& result_ = result();
     if (x == nullptr) {
       sep();
       result_ += "null";
@@ -198,6 +177,7 @@ public:
   template <class T>
   bool builtin_inspect(const std::optional<T>& x) {
     sep();
+    auto& result_ = result();
     if (!x) {
       result_ += "null";
     } else {
@@ -215,6 +195,7 @@ public:
       print_list(val.begin(), val.end());
     } else {
       sep();
+      auto& result_ = result();
       result_ += "<unprintable>";
     }
     return true;
@@ -242,32 +223,33 @@ public:
   }
 
 private:
+  /// Storage for the implementation object.
+  alignas(std::max_align_t) std::byte impl_[32];
+
   template <class T>
   void append(T&& str) {
     sep();
+    auto& result_ = result();
     result_.insert(result_.end(), str.begin(), str.end());
   }
 
   template <class Iterator, class Sentinel>
   void print_list(Iterator first, Sentinel sentinel) {
     sep();
+    auto& result_ = result();
     result_ += '[';
     while (first != sentinel)
       save(*this, *first++);
     result_ += ']';
   }
 
+  void sep();
+
   bool int_value(int64_t x);
 
   bool int_value(uint64_t x);
 
-  void sep();
-
-  std::string& result_;
-
-  bool in_string_object_ = false;
-
-  error err_;
+  std::string& result();
 };
 
 } // namespace caf::detail
