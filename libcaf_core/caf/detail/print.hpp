@@ -20,11 +20,22 @@ size_t print_timestamp(char* buf, size_t buf_size, time_t ts, size_t ms);
 
 template <class Buffer>
 void print_escaped(Buffer& buf, string_view str) {
+  auto to_hex_char = [](int d) { return "0123456789abcdef"[d]; };
   buf.push_back('"');
   for (auto c : str) {
     switch (c) {
       default:
-        buf.push_back(c);
+        // Non-printable ASCII chars must be encoded as \u00xx.
+        if (c >= 0x00 && c <= 0x1f) {
+          buf.push_back('\\');
+          buf.push_back('u');
+          buf.push_back('0');
+          buf.push_back('0');
+          buf.push_back(to_hex_char(c >> 4));
+          buf.push_back(to_hex_char(c & 0x0f));
+        } else {
+          buf.push_back(c);
+        }
         break;
       case '\\':
         buf.push_back('\\');
