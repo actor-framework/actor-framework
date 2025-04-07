@@ -3,6 +3,7 @@
 // is not aware of HTTP and the HTTP server is sending regular request messages
 // to actor.
 
+#include "caf/net/actor_shell.hpp"
 #include "caf/net/http/with.hpp"
 #include "caf/net/middleman.hpp"
 
