@@ -7,6 +7,7 @@
 #include "caf/net/dsl/base.hpp"
 #include "caf/net/dsl/config_base.hpp"
 #include "caf/net/fwd.hpp"
+#include "caf/net/lp/size_field_type.hpp"
 #include "caf/net/ssl/context.hpp"
 #include "caf/net/tcp_accept_socket.hpp"
 
@@ -34,8 +35,12 @@ public:
   public:
     static constexpr std::string_view name = "lazy";
 
-    lazy(uint16_t port, std::string bind_address, bool reuse = true)
-      : port(port), bind_address(std::move(bind_address)), reuse_addr(reuse) {
+    lazy(uint16_t port, std::string bind_address, bool reuse = true,
+         lp::size_field_type lp_size = lp::size_field_type::u4)
+      : port(port),
+        bind_address(std::move(bind_address)),
+        reuse_addr(reuse),
+        lp_size(lp_size) {
       // nop
     }
 
@@ -47,6 +52,9 @@ public:
 
     /// Whether to set `SO_REUSEADDR` on the socket.
     bool reuse_addr = true;
+
+    /// The size of the length prefix field.
+    lp::size_field_type lp_size = lp::size_field_type::u4;
   };
 
   using lazy_t = server_config_tag<lazy>;
@@ -58,7 +66,9 @@ public:
   public:
     static constexpr std::string_view name = "socket";
 
-    explicit socket(tcp_accept_socket fd) : fd(fd) {
+    explicit socket(tcp_accept_socket fd,
+                    lp::size_field_type lp_size = lp::size_field_type::u4)
+      : fd(fd), lp_size(lp_size) {
       // nop
     }
 
@@ -77,6 +87,9 @@ public:
       fd.id = invalid_socket_id;
       return result;
     }
+
+    /// Size of the length prefix field.
+    lp::size_field_type lp_size = lp::size_field_type::u4;
   };
 
   using socket_t = server_config_tag<error>;
