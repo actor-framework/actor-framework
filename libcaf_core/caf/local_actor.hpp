@@ -447,6 +447,9 @@ protected:
 
   metrics_t metrics_;
 
+  /// Tracks the current number of running actors of this type.
+  telemetry::int_gauge* running_count_ = nullptr;
+
 private:
   virtual void do_unstash(mailbox_element_ptr ptr) = 0;
 };

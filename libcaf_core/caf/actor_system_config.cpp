@@ -139,7 +139,10 @@ actor_system_config::actor_system_config() {
     .add<std::string>("verbosity", "minimum severity level for console output")
     .add<std::vector<std::string>>("excluded-components",
                                    "excluded components on console");
-  opt_group{custom_options_, "caf.metrics-filters.actors"}
+  opt_group{custom_options_, "caf.metrics"} //
+    .add<bool>("disable-running-actors",
+               "sets whether to collect metrics for running actors per type");
+  opt_group{custom_options_, "caf.metrics.filters.actors"}
     .add<std::vector<std::string>>("includes",
                                    "selects actors for run-time metrics")
     .add<std::vector<std::string>>("excludes",

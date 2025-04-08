@@ -11,6 +11,14 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   of actor handles. There are also two new base types for serialization:
   `byte_reader` and `byte_writer`. These new types allow users to write generic
   code for serializers that operate on byte sequences.
+- The metric `caf.system.running-actors` now has a label dimension `name` that
+  allows users to identify which kinds of actors are currently active. Since
+  tracking this metric has become slightly more expensive due to the new label,
+  collecting it can now be disabled via the configuration option
+  `caf.metrics.disable-running-actors`.
+- The configuration options under `caf.metrics-filters` have been moved to
+  `caf.metrics.filters`. This change was made to make the configuration options
+  more consistent.
 
 ## Unreleased
 
