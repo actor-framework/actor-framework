@@ -171,8 +171,6 @@ public:
 
   // Server state
 
-  std::vector<strong_actor_ptr> monitored_actors;
-
   server::push_t server_push;
 
   // Client state
@@ -208,17 +206,8 @@ with_t::server&& with_t::server::max_connections(size_t value) && {
 }
 
 void with_t::server::do_monitor(strong_actor_ptr ptr) {
-  if (ptr) {
-    config_->monitored_actors.push_back(std::move(ptr));
-    return;
-  }
-  config_->err = make_error(sec::logic_error,
-                            "cannot monitor an invalid actor handle");
+  config_->do_monitor(std::move(ptr));
 }
-
-// void with_t::server::set_acceptor(detail::ws_conn_acceptor_ptr acc) {
-//   config_->acceptor = std::move(acc);
-// }
 
 expected<disposable> with_t::server::do_start(push_t push) {
   config_->server_push = std::move(push);
