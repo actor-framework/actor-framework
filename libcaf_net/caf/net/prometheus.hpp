@@ -20,7 +20,7 @@ namespace caf::net::prometheus {
 
 /// State for scraping Metrics data. May be shared among scrapers as long as
 /// they don't access the state concurrently.
-class scrape_state {
+class CAF_NET_EXPORT scrape_state {
 public:
   using clock_type = std::chrono::steady_clock;
   using time_point = clock_type::time_point;

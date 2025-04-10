@@ -34,6 +34,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Fix the conversion from invalid actor handles to raw pointers when using
   `actor_cast`. This resolves an issue with `send` that could lead to undefined
   behavior (#1972).
+- Add missing export declaration for the `caf::net::prometheus` symbol (#2042).
 
 ## [1.0.2] - 2024-10-30
 
