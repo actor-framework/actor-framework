@@ -163,9 +163,6 @@ public:
     /// Counts the total number of processed messages.
     telemetry::int_counter* processed_messages;
 
-    /// Tracks the current number of running actors in the system.
-    telemetry::int_gauge* running_actors;
-
     /// Counts the total number of messages that wait in a mailbox.
     telemetry::int_gauge* queued_messages;
   };
@@ -273,11 +270,18 @@ public:
   /// Returns the global meta objects guard.
   detail::global_meta_objects_guard_type meta_objects_guard() const noexcept;
 
-  /// Returns the `caf.metrics-filters.actors.includes` parameter.
+  /// Returns the `caf.metrics.filters.actors.includes` parameter.
   span<const std::string> metrics_actors_includes() const noexcept;
 
-  /// Returns the `caf.metrics-filters.actors.excludes` parameter.
+  /// Returns the `caf.metrics.filters.actors.excludes` parameter.
   span<const std::string> metrics_actors_excludes() const noexcept;
+
+  /// Returns whether the system collects metrics about how many actors are
+  /// running per actor type.
+  bool collect_running_actors_metrics() const noexcept;
+
+  /// Returns the metric family for the `caf.running-actors` metric.
+  telemetry::int_gauge_family* running_actors_metric_family() const noexcept;
 
   /// Returns the configuration of this actor system.
   const actor_system_config& config() const;
