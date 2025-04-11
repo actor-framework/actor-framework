@@ -73,13 +73,12 @@ caf_add_component(
     caf/net/http/with.cpp
     caf/net/ip.cpp
     caf/net/ip.test.cpp
-    caf/net/lp/client_factory.cpp
     caf/net/lp/frame.test.cpp
     caf/net/lp/framing.cpp
     caf/net/lp/framing.test.cpp
     caf/net/lp/lower_layer.cpp
-    caf/net/lp/server_factory.cpp
     caf/net/lp/upper_layer.cpp
+    caf/net/lp/with.cpp
     caf/net/middleman.cpp
     caf/net/multiplexer.cpp
     caf/net/multiplexer.test.cpp
