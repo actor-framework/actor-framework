@@ -157,6 +157,13 @@ public:
   template <class Rep, class Period>
   observable<int64_t> interval(std::chrono::duration<Rep, Period> initial_delay,
                                std::chrono::duration<Rep, Period> period) {
+    using duration_t = std::chrono::duration<Rep, Period>;
+    if (period <= duration_t::zero()) {
+      auto what = make_error(sec::invalid_argument,
+                             "interval operators require a positive period");
+      return parent_->add_child_hdl(std::in_place_type<op::fail<int64_t>>,
+                                    std::move(what));
+    }
     return parent_->add_child_hdl(std::in_place_type<op::interval>,
                                   initial_delay, period);
   }

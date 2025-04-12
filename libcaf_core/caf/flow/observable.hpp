@@ -5,8 +5,6 @@
 #pragma once
 
 #include "caf/async/batch.hpp"
-#include "caf/async/consumer.hpp"
-#include "caf/async/producer.hpp"
 #include "caf/async/publisher.hpp"
 #include "caf/async/spsc_buffer.hpp"
 #include "caf/cow_tuple.hpp"
@@ -14,9 +12,7 @@
 #include "caf/defaults.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/combine_latest.hpp"
-#include "caf/detail/core_export.hpp"
 #include "caf/disposable.hpp"
-#include "caf/flow/coordinated.hpp"
 #include "caf/flow/coordinator.hpp"
 #include "caf/flow/fwd.hpp"
 #include "caf/flow/observable_decl.hpp"
@@ -24,6 +20,7 @@
 #include "caf/flow/op/base.hpp"
 #include "caf/flow/op/buffer.hpp"
 #include "caf/flow/op/concat.hpp"
+#include "caf/flow/op/fail.hpp"
 #include "caf/flow/op/from_resource.hpp"
 #include "caf/flow/op/from_steps.hpp"
 #include "caf/flow/op/interval.hpp"
@@ -40,17 +37,15 @@
 #include "caf/intrusive_ptr.hpp"
 #include "caf/log/core.hpp"
 #include "caf/make_counted.hpp"
-#include "caf/ref_counted.hpp"
 #include "caf/sec.hpp"
 #include "caf/stream.hpp"
+#include "caf/timespan.hpp"
 #include "caf/typed_stream.hpp"
-#include "caf/unordered_flat_map.hpp"
 
 #include <cstddef>
 #include <functional>
 #include <numeric>
 #include <type_traits>
-#include <vector>
 
 namespace caf::flow {
 
@@ -812,9 +807,15 @@ observable<cow_vector<T>> observable<T>::buffer(size_t count) {
 
 template <class T>
 observable<cow_vector<T>> observable<T>::buffer(size_t count, timespan period) {
+  auto* pptr = parent();
+  if (period <= timespan::zero()) {
+    auto what = make_error(sec::invalid_argument,
+                           "buffer operators require a positive period");
+    return pptr->add_child_hdl(std::in_place_type<op::fail<cow_vector<T>>>,
+                               std::move(what));
+  }
   using trait_t = op::buffer_interval_trait<T>;
   using impl_t = op::buffer<trait_t>;
-  auto* pptr = parent();
   auto obs = pptr->add_child_hdl(std::in_place_type<op::interval>, period,
                                  period);
   return pptr->add_child_hdl(std::in_place_type<impl_t>, count, *this,
@@ -1083,6 +1084,14 @@ stream observable<T>::to_stream(cow_string name, timespan max_delay,
   using trait_t = detail::batching_trait<U>;
   using impl_t = flow::op::buffer<trait_t>;
   auto* pptr = parent();
+  if (max_delay <= timespan::zero()) {
+    auto what = make_error(sec::invalid_argument,
+                           "stream operators require a positive delay");
+    auto op = pptr->add_child(std::in_place_type<op::fail<async::batch>>,
+                              std::move(what));
+    return pptr->to_stream_impl(cow_string{std::move(name)}, std::move(op),
+                                type_id_v<U>, max_items_per_batch);
+  }
   auto obs = pptr->add_child_hdl(std::in_place_type<flow::op::interval>,
                                  max_delay, max_delay);
   auto batch_op = pptr->add_child(std::in_place_type<impl_t>,

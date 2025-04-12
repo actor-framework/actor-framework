@@ -5,9 +5,7 @@
 #pragma once
 
 #include "caf/detail/atomic_ref_counted.hpp"
-#include "caf/flow/observer.hpp"
 #include "caf/flow/op/base.hpp"
-#include "caf/flow/subscription.hpp"
 
 namespace caf::flow::op {
 

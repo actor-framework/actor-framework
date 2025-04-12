@@ -35,6 +35,11 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   `actor_cast`. This resolves an issue with `send` that could lead to undefined
   behavior (#1972).
 - Add missing export declaration for the `caf::net::prometheus` symbol (#2042).
+- The `buffer` and `interval` operators now properly check the time period
+  parameter and produce an error if the period is zero or negative (#2030).
+  Passing an invalid delay parameter to `to_stream` or `to_typed_stream`
+  likewise produces a stream that immediately calls `on_error` on any client
+  that tries to subscribe to it.
 
 ## [1.0.2] - 2024-10-30
 

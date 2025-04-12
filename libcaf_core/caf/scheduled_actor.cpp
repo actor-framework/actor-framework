@@ -441,6 +441,10 @@ public:
     // nop
   }
 
+  bool had_error() const noexcept {
+    return had_error_;
+  }
+
   flow::coordinator* parent() const noexcept override {
     return self_;
   }
@@ -482,6 +486,7 @@ public:
     sink_hdl_ = nullptr;
     sub_.release_later();
     self_->stream_subs_.erase(source_flow_id_);
+    had_error_ = true;
   }
 
   void on_complete() override {
@@ -512,6 +517,7 @@ private:
   uint64_t sink_flow_id_;
   uint64_t source_flow_id_;
   flow::subscription sub_;
+  bool had_error_ = false;
 };
 
 } // namespace detail
@@ -652,6 +658,13 @@ scheduled_actor::categorize(mailbox_element& x) {
                   .send(actor_cast<actor>(sptr));
             });
           }
+          return message_category::internal;
+        }
+        if (fwd->had_error()) {
+          // The observable failed immediately upon subscription. The forwader
+          // has already sent a stream_abort_msg to the sink, so there is
+          // nothing left to do.
+          log::core::debug("requested stream failed immediately");
           return message_category::internal;
         }
         log::system::error("failed to subscribe a batch forwarder");

@@ -46,11 +46,13 @@ using ivec = std::vector<int32_t>;
 
 using istream = typed_stream<int32_t>;
 
-behavior int_sink(event_based_actor* self, std::shared_ptr<ivec> results) {
+behavior int_sink(event_based_actor* self, std::shared_ptr<ivec> results,
+                  std::shared_ptr<error> err) {
   return {
-    [self, results](istream input) {
+    [self, results, err](istream input) {
       self //
         ->observe(input, 30, 10)
+        .do_on_error([err](const error& what) { *err = what; })
         .for_each([results](int x) { results->push_back(x); });
     },
   };
@@ -88,9 +90,11 @@ TEST("streams allow actors to transmit flow items to others") {
   res.resize(256);
   std::iota(res.begin(), res.end(), 1);
   auto r1 = std::make_shared<ivec>();
-  auto s1 = sys.spawn(int_sink, r1);
+  auto e1 = std::make_shared<error>();
+  auto s1 = sys.spawn(int_sink, r1, e1);
   auto r2 = std::make_shared<ivec>();
-  auto s2 = sys.spawn(int_sink, r2);
+  auto e2 = std::make_shared<error>();
+  auto s2 = sys.spawn(int_sink, r2, e2);
   dispatch_messages();
   auto src = sys.spawn([s1, s2](event_based_actor* self) {
     auto vals = self //
@@ -109,7 +113,27 @@ TEST("streams allow actors to transmit flow items to others") {
   expect<stream_ack_msg>().from(src).to(s2);
   dispatch_messages();
   check_eq(*r1, res);
+  check_eq(*e1, sec::none);
   check_eq(*r2, res);
+  check_eq(*e2, sec::none);
+}
+
+TEST("streams must have a positive delay") {
+  auto r1 = std::make_shared<ivec>();
+  auto e1 = std::make_shared<error>();
+  auto s1 = sys.spawn(int_sink, r1, e1);
+  dispatch_messages();
+  auto src = sys.spawn([s1](event_based_actor* self) {
+    auto vals = self //
+                  ->make_observable()
+                  .iota(int32_t{1})
+                  .take(256)
+                  .to_typed_stream("foo", 0ms, 10);
+    self->mail(vals).send(s1);
+  });
+  dispatch_messages();
+  check_eq(*r1, ivec{});
+  check_eq(*e1, sec::invalid_argument);
 }
 
 } // WITH_FIXTURE(fixture)

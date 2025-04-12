@@ -4,11 +4,10 @@
 
 #pragma once
 
+#include "caf/disposable.hpp"
 #include "caf/error.hpp"
-#include "caf/flow/observable.hpp"
 #include "caf/flow/observer.hpp"
 #include "caf/flow/op/cold.hpp"
-#include "caf/flow/subscription.hpp"
 
 namespace caf::flow::op {
 

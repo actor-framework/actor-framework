@@ -114,7 +114,7 @@ interval::interval(coordinator* parent, timespan initial_delay, timespan period)
 interval::interval(coordinator* parent, timespan initial_delay, timespan period,
                    int64_t max_val)
   : super(parent),
-    initial_delay_(initial_delay),
+    initial_delay_(std::max(initial_delay, timespan::zero())),
     period_(period),
     max_(max_val) {
   // nop
