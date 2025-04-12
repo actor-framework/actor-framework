@@ -6,11 +6,13 @@
 
 #include "caf/net/socket_id.hpp"
 
+#include "caf/detail/net_export.hpp"
+
 namespace caf::net {
 
 /// Closes the guarded socket when destroyed.
 template <class Socket>
-class socket_guard {
+class CAF_NET_EXPORT socket_guard {
 public:
   socket_guard() noexcept : fd_(invalid_socket_id) {
     // nop

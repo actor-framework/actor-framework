@@ -26,7 +26,7 @@ struct server_config_tag {
   using type = T;
 };
 
-/// Wraps configuration parameters for starting clients.
+/// Wraps configuration parameters for starting servers.
 class server_config {
 public:
   /// Configuration for a server that creates the socket on demand.

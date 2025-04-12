@@ -15,7 +15,7 @@ namespace caf::detail {
 
 /// Creates new socket managers for an accept_handler.
 template <class ConnectionHandle>
-class connection_factory {
+class CAF_NET_EXPORT connection_factory {
 public:
   using connection_handle_type = ConnectionHandle;
 
