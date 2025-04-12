@@ -530,8 +530,8 @@ template <class T>
 struct has_size {
 private:
   template <class List>
-  static auto
-  sfinae(List* l) -> decltype(static_cast<void>(l->size()), std::true_type());
+  static auto sfinae(List* l)
+    -> decltype(static_cast<void>(l->size()), std::true_type());
 
   template <class U>
   static auto sfinae(...) -> std::false_type;
@@ -655,8 +655,8 @@ template <class Inspector, class T>
 class has_inspect_overload {
 private:
   template <class U>
-  static auto
-  sfinae(Inspector& x, U& y) -> decltype(inspect(x, y), std::true_type{});
+  static auto sfinae(Inspector& x, U& y)
+    -> decltype(inspect(x, y), std::true_type{});
 
   static std::false_type sfinae(Inspector&, ...);
 
@@ -677,8 +677,8 @@ template <class Inspector, class T>
 class has_builtin_inspect {
 private:
   template <class I, class U>
-  static auto
-  sfinae(I& f, U& x) -> decltype(f.builtin_inspect(x), std::true_type{});
+  static auto sfinae(I& f, U& x)
+    -> decltype(f.builtin_inspect(x), std::true_type{});
 
   template <class I>
   static std::false_type sfinae(I&, ...);
@@ -700,8 +700,8 @@ template <class Inspector, class T>
 class accepts_opaque_value {
 private:
   template <class F, class U>
-  static auto
-  sfinae(F* f, U* x) -> decltype(f->opaque_value(*x), std::true_type{});
+  static auto sfinae(F* f, U* x)
+    -> decltype(f->opaque_value(*x), std::true_type{});
 
   static std::false_type sfinae(...);
 
