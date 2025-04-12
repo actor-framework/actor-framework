@@ -49,7 +49,8 @@
   if (true)
 
 #define AND(description)                                                       \
-  {}                                                                           \
+  {                                                                            \
+  }                                                                            \
   CAF_MESSAGE("AND " description);                                             \
   if (true)
 

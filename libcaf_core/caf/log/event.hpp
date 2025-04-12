@@ -278,7 +278,7 @@ public:
 
   /// Adds nested fields.
   template <class SubFieldsInitializer>
-  auto field(std::string_view key, SubFieldsInitializer&& init)
+  auto field(std::string_view key, SubFieldsInitializer&& init) //
     -> std::enable_if_t<
       std::is_same_v<decltype(init(std::declval<event_fields_builder&>())),
                      void>,
@@ -381,7 +381,7 @@ public:
 
   /// Adds nested fields.
   template <class SubFieldsInitializer>
-  auto field(std::string_view key, SubFieldsInitializer&& init)
+  auto field(std::string_view key, SubFieldsInitializer&& init) //
     -> std::enable_if_t<
       std::is_same_v<decltype(init(std::declval<event_fields_builder&>())),
                      void>,
