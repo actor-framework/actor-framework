@@ -231,8 +231,8 @@ public:
   /// identical, independently from the order of `p1` and `p2`.
   template <class F>
   static auto joined_exclusive_critical_section(abstract_actor* p1,
-                                                abstract_actor* p2,
-                                                F fun) -> decltype(fun()) {
+                                                abstract_actor* p2, F fun)
+    -> decltype(fun()) {
     // Make sure to allocate locks always in the same order by starting on the
     // actor with the lowest address.
     CAF_ASSERT(p1 != p2 && p1 != nullptr && p2 != nullptr);
