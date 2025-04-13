@@ -239,7 +239,7 @@ public:
 
   /// Combines the output of multiple @ref observable objects into one by
   /// concatenating their outputs.
-  /// @param f The function that combines the outputs of all observables.
+  /// @param fn The function that combines the outputs of all observables.
   /// @param xs The observables to combine with this observable.
   template <class F, class... Inputs>
   auto combine_latest(F&& fn, Inputs&&... xs);
