@@ -14,7 +14,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ### Added
 
-- New flow operator: `retry`.
+- New flow operators: `retry` and `on_error_resume_next`.
 - New `with_userinfo` member function for URIs that allows setting the user-info
   sub-component without going through an URI builder.
 
