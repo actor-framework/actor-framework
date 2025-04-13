@@ -8,7 +8,6 @@
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/socket_manager.hpp"
 
-#include "caf/cow_tuple.hpp"
 #include "caf/detail/connection_acceptor.hpp"
 #include "caf/flow/observable.hpp"
 #include "caf/flow/op/mcast.hpp"
@@ -235,8 +234,7 @@ expected<disposable> with_t::client::do_start(pull_t pull, push_t push) {
   return config_->start_client();
 }
 
-// -- with API
-// -----------------------------------------------------------------
+// -- with API -----------------------------------------------------------------
 
 with_t with(multiplexer* mpx) {
   return with_t{mpx};

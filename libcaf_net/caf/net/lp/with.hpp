@@ -5,18 +5,21 @@
 #pragma once
 
 #include "caf/net/accept_event.hpp"
+#include "caf/net/fwd.hpp"
 #include "caf/net/lp/frame.hpp"
 #include "caf/net/ssl/context.hpp"
-#include "caf/net/tcp_accept_socket.hpp"
 
 #include "caf/actor_cast.hpp"
 #include "caf/actor_control_block.hpp"
 #include "caf/async/spsc_buffer.hpp"
 #include "caf/callback.hpp"
 #include "caf/disposable.hpp"
+#include "caf/expected.hpp"
 #include "caf/fwd.hpp"
 
-#include <cstdint>
+#include <memory>
+#include <type_traits>
+#include <utility>
 
 namespace caf::net::lp {
 
@@ -57,7 +60,7 @@ public:
 
     /// Starts a server that accepts incoming connections and invokes `handler`
     /// with the pull resource.
-    /// @param handler The callback to invoke after the server has started.
+    /// @param on_start The callback to invoke after the server has started.
     /// @returns On success, a handle to stop the server. On failure, an error.
     /// @note The `handler` is only invoked if the server started successfully.
     template <class OnStart>
