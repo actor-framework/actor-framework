@@ -16,6 +16,7 @@ caf_add_component(
     CAF::internal
     CAF::core
   ENUM_TYPES
+    net.lp.size_field_type
     net.http.method
     net.http.status
     net.octet_stream.errc
