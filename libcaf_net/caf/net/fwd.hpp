@@ -103,6 +103,7 @@ class framing;
 class lower_layer;
 class server;
 class upper_layer;
+class with_t;
 
 using frame = caf::chunk;
 
