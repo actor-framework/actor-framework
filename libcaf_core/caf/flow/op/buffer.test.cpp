@@ -487,4 +487,24 @@ SCENARIO("on_request actions can turn into no-ops") {
   }
 }
 
+SCENARIO("a buffer must have a positive period") {
+  GIVEN("a buffer operator") {
+    WHEN("calling .buffer(3, 0s)") {
+      THEN("the operator raises an error") {
+        auto err = std::make_shared<error>();
+        auto num_items = std::make_shared<int>(0);
+        make_observable()
+          .iota(1)
+          .take(100)
+          .buffer(3, 0s)
+          .do_on_error([err](const error& what) { *err = what; })
+          .for_each([num_items](const cow_vector<int>&) { *num_items += 1; });
+        dispatch_messages();
+        check_eq(*num_items, 0);
+        check_eq(*err, caf::sec::invalid_argument);
+      }
+    }
+  }
+}
+
 } // WITH_FIXTURE(fixture)

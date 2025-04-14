@@ -13,6 +13,7 @@
 #include "caf/event_based_actor.hpp"
 #include "caf/log/test.hpp"
 #include "caf/scheduled_actor/flow.hpp"
+#include "caf/system_messages.hpp"
 
 using namespace caf;
 using namespace std::literals;
@@ -21,12 +22,18 @@ namespace {
 
 using ivec = std::vector<int>;
 
-behavior int_sink(event_based_actor* self, std::shared_ptr<ivec> results) {
+behavior int_sink(event_based_actor* self, std::shared_ptr<ivec> results,
+                  std::shared_ptr<error> err) {
   log::test::debug("stream.test", "started sink with ID {}", self->id());
   return {
-    [self, results](const stream& input) {
+    [self, results, err](const stream& input) {
       self //
         ->observe_as<int>(input, 30, 10)
+        .do_on_error([self, err](const error& what) {
+          log::test::debug("stream.test", "sink with ID {} got error: {}",
+                           self->id(), what);
+          *err = what;
+        })
         .do_finally([self] {
           log::test::debug("stream.test", "sink with ID {} shuts down",
                            self->id());
@@ -85,9 +92,11 @@ TEST("streams allow actors to transmit flow items to other actors") {
   res.resize(256);
   std::iota(res.begin(), res.end(), 1);
   auto r1 = std::make_shared<ivec>();
-  auto s1 = sys.spawn(int_sink, r1);
+  auto e1 = std::make_shared<error>();
+  auto s1 = sys.spawn(int_sink, r1, e1);
   auto r2 = std::make_shared<ivec>();
-  auto s2 = sys.spawn(int_sink, r2);
+  auto e2 = std::make_shared<error>();
+  auto s2 = sys.spawn(int_sink, r2, e2);
   SECTION("streams may be subscribed to multiple times") {
     auto src = sys.spawn([s1, s2](event_based_actor* self) {
       auto vals = self //
@@ -106,7 +115,9 @@ TEST("streams allow actors to transmit flow items to other actors") {
     expect<stream_ack_msg>().from(src).to(s2);
     dispatch_messages();
     check_eq(*r1, res);
+    check(!*e1);
     check_eq(*r2, res);
+    check(!*e2);
     check(terminated(s1));
     check(terminated(s2));
   }
@@ -145,6 +156,23 @@ TEST("streams allow actors to transmit flow items to other actors") {
     check(terminated(s1));
     prepone_and_expect<stream_cancel_msg>().to(src);
     check(!terminated(src)); // Must clean up state but not terminate.
+  }
+  SECTION("streams must have a positive delay") {
+    auto src = sys.spawn([s1](event_based_actor* self) {
+      auto vals = self //
+                    ->make_observable()
+                    .iota(1)
+                    .take(256)
+                    .to_stream("foo", 0ms, 10);
+      self->mail(vals).send(s1);
+    });
+    expect<stream>().from(src).to(s1);
+    expect<stream_open_msg>().from(s1).to(src);
+    expect<stream_abort_msg>().from(src).to(s1);
+    dispatch_messages();
+    check(terminated(s1));
+    check_eq(*r1, ivec{});
+    check_eq(*e1, sec::invalid_argument);
   }
 }
 
