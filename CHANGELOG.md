@@ -35,6 +35,10 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   `actor_cast`. This resolves an issue with `send` that could lead to undefined
   behavior (#1972).
 - Add missing export declaration for the `caf::net::prometheus` symbol (#2042).
+- Boolean flags now accept arguments on the command line (#2048). For example,
+  `--foo=true` is now equivalent to `--foo` and `--foo=false` will set the flag
+  to `false`. Short options like `-f` only accept the argument when passing it
+  without a space, e.g., `-ffalse`.
 
 ## [1.0.2] - 2024-10-30
 
