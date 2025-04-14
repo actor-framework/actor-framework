@@ -8,13 +8,13 @@
 #include "caf/config_option.hpp"
 #include "caf/config_option_adder.hpp"
 #include "caf/defaults.hpp"
+#include "caf/detail/actor_system_config_access.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/config_consumer.hpp"
 #include "caf/detail/mailbox_factory.hpp"
 #include "caf/detail/parser/read_config.hpp"
-#include "caf/detail/parser/read_string.hpp"
 #include "caf/format_to_error.hpp"
-#include "caf/message_builder.hpp"
+#include "caf/internal/core_config.hpp"
 #include "caf/pec.hpp"
 #include "caf/sec.hpp"
 #include "caf/type_id.hpp"
@@ -22,9 +22,6 @@
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
-#include <limits>
-#include <sstream>
-#include <thread>
 
 namespace caf {
 
@@ -91,7 +88,68 @@ struct actor_system_config::fields {
   std::string program_name;
   std::vector<std::string> args_remainder;
   c_args_wrapper c_args_remainder;
+  internal::core_config core;
 };
+
+using core_t = actor_system_config::core_t;
+
+core_t::logger_t::file_t core_t::logger_t::file_t::path(std::string val) {
+  ptr_->path = std::move(val);
+  return *this;
+};
+
+core_t::logger_t::file_t core_t::logger_t::file_t::format(std::string val) {
+  ptr_->format = std::move(val);
+  return *this;
+}
+
+core_t::logger_t::file_t core_t::logger_t::file_t::verbosity(std::string val) {
+  ptr_->verbosity = std::move(val);
+  return *this;
+}
+
+core_t::logger_t::file_t
+core_t::logger_t::file_t::add_excluded_component(std::string val) {
+  ptr_->excluded_components.push_back(std::move(val));
+  return *this;
+}
+
+core_t::logger_t::console_t core_t::logger_t::console_t::colored(bool val) {
+  ptr_->colored = val;
+  return *this;
+}
+
+core_t::logger_t::console_t
+core_t::logger_t::console_t::format(std::string val) {
+  ptr_->format = std::move(val);
+  return *this;
+}
+
+core_t::logger_t::console_t
+core_t::logger_t::console_t::verbosity(std::string val) {
+  ptr_->verbosity = std::move(val);
+  return *this;
+}
+
+core_t::logger_t::console_t
+core_t::logger_t::console_t::add_excluded_component(std::string val) {
+  ptr_->excluded_components.push_back(std::move(val));
+  return *this;
+}
+
+core_t::logger_t::file_t core_t::logger_t::file() {
+  return file_t{&ptr_->file};
+}
+
+core_t::logger_t core_t::logger_t::add_log_level(std::string name,
+                                                 unsigned level) {
+  ptr_->log_levels.set(std::move(name), level);
+  return *this;
+}
+
+core_t::logger_t core_t::logger() {
+  return logger_t{&ptr_->logger};
+}
 
 // -- constructors, destructors, and assignment operators ----------------------
 
@@ -127,18 +185,7 @@ actor_system_config::actor_system_config() {
                  "frequency of relaxed steal attempts")
     .add<timespan>("relaxed-sleep-duration",
                    "sleep duration between relaxed steal attempts");
-  opt_group{custom_options_, "caf.logger.file"}
-    .add<std::string>("path", "filesystem path for the log file")
-    .add<std::string>("format", "format for individual log file entries")
-    .add<std::string>("verbosity", "minimum severity level for file output")
-    .add<std::vector<std::string>>("excluded-components",
-                                   "excluded components in files");
-  opt_group{custom_options_, "caf.logger.console"}
-    .add<bool>("colored", "forces colored or uncolored output")
-    .add<std::string>("format", "format for printed console lines")
-    .add<std::string>("verbosity", "minimum severity level for console output")
-    .add<std::vector<std::string>>("excluded-components",
-                                   "excluded components on console");
+  fields_->core.init(custom_options_);
   opt_group{custom_options_, "caf.metrics"} //
     .add<bool>("disable-running-actors",
                "sets whether to collect metrics for running actors per type");
@@ -158,18 +205,23 @@ actor_system_config::~actor_system_config() {
 
 // -- properties ---------------------------------------------------------------
 
+core_t actor_system_config::core() {
+  return core_t{&fields_->core};
+}
+
 settings actor_system_config::dump_content() const {
   settings result = content;
   // Hide options that make no sense in a config file.
   result.erase("dump-config");
   result.erase("config-file");
   auto& caf_group = result["caf"].as_dictionary();
-  // -- scheduler parameters
+  fields_->core.dump(caf_group);
+  // -- scheduler config
   auto& scheduler_group = caf_group["scheduler"].as_dictionary();
   put_missing(scheduler_group, "policy", defaults::scheduler::policy);
   put_missing(scheduler_group, "max-throughput",
               defaults::scheduler::max_throughput);
-  // -- work-stealing parameters
+  // -- work-stealing config
   auto& work_stealing_group = caf_group["work-stealing"].as_dictionary();
   put_missing(work_stealing_group, "aggressive-poll-attempts",
               defaults::work_stealing::aggressive_poll_attempts);
@@ -185,16 +237,6 @@ settings actor_system_config::dump_content() const {
               defaults::work_stealing::relaxed_steal_interval);
   put_missing(work_stealing_group, "relaxed-sleep-duration",
               defaults::work_stealing::relaxed_sleep_duration);
-  // -- logger parameters
-  auto& logger_group = caf_group["logger"].as_dictionary();
-  auto& file_group = logger_group["file"].as_dictionary();
-  put_missing(file_group, "path", defaults::logger::file::path);
-  put_missing(file_group, "format", defaults::logger::file::format);
-  put_missing(file_group, "excluded-components", std::vector<std::string>{});
-  auto& console_group = logger_group["console"].as_dictionary();
-  put_missing(console_group, "colored", defaults::logger::console::colored);
-  put_missing(console_group, "format", defaults::logger::console::format);
-  put_missing(console_group, "excluded-components", std::vector<std::string>{});
   return result;
 }
 
@@ -460,12 +502,16 @@ error actor_system_config::parse(std::vector<std::string> args,
     auto text = custom_options_.help_text(!get_or(content, "long-help", false));
     puts(text.c_str());
   }
+  // Check for invalid options.
+  if (auto err = fields_->core.validate()) {
+    return err;
+  }
   // Generate config dump if needed.
   if (!helptext_printed() && get_or(content, "dump-config", false)) {
     print_content();
     fields_->helptext_printed = true;
   }
-  return none;
+  return {};
 }
 
 error actor_system_config::parse(std::vector<std::string> args) {
@@ -676,3 +722,17 @@ std::pair<int, char**> actor_system_config::c_args_remainder() const noexcept {
 }
 
 } // namespace caf
+
+// -- member functions from actor_system_config_access -------------------------
+
+namespace caf::detail {
+
+internal::core_config& actor_system_config_access::core() {
+  return cfg_->fields_->core;
+}
+
+const internal::core_config& const_actor_system_config_access::core() const {
+  return cfg_->fields_->core;
+}
+
+} // namespace caf::detail

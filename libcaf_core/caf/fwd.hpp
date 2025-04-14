@@ -143,7 +143,7 @@ class uri;
 class uri_builder;
 class uuid;
 
-// -- templates with default parameters ----------------------------------------
+// -- templates with default config ----------------------------------------
 
 template <class, class = event_based_actor>
 class stateful_actor;
@@ -272,6 +272,7 @@ namespace detail {
 
 class actor_system_access;
 class actor_system_config_access;
+class const_actor_system_config_access;
 class mailbox_factory;
 class monotonic_buffer_resource;
 
@@ -388,3 +389,15 @@ using strong_actor_ptr = intrusive_ptr<actor_control_block>;
 using mailbox_element_ptr = std::unique_ptr<mailbox_element>;
 
 } // namespace caf
+
+namespace caf::internal {
+
+class core_logger_file_config;
+
+class core_logger_console_config;
+
+class core_logger_config;
+
+class core_config;
+
+} // namespace caf::internal

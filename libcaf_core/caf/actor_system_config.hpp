@@ -5,22 +5,21 @@
 #pragma once
 
 #include "caf/actor_factory.hpp"
-#include "caf/callback.hpp"
-#include "caf/config_option.hpp"
 #include "caf/config_option_adder.hpp"
 #include "caf/config_option_set.hpp"
 #include "caf/config_value.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/type_traits.hpp"
-#include "caf/dictionary.hpp"
 #include "caf/fwd.hpp"
 #include "caf/settings.hpp"
 #include "caf/thread_hook.hpp"
 
+#include <iosfwd>
 #include <memory>
 #include <string>
 #include <string_view>
-#include <type_traits>
+#include <utility>
+#include <vector>
 
 namespace caf {
 
@@ -33,9 +32,114 @@ public:
 
   friend class detail::actor_system_config_access;
 
+  friend class detail::const_actor_system_config_access;
+
   // -- member types -----------------------------------------------------------
 
   using opt_group = config_option_adder;
+
+  /// Provides a type-safe, fluent interface for configuring the core module.
+  class CAF_CORE_EXPORT core_t {
+  public:
+    explicit core_t(internal::core_config* ptr) : ptr_(ptr) {
+      // nop
+    }
+
+    /// Provides a type-safe, fluent interface for configuring the CAF logger.
+    class CAF_CORE_EXPORT logger_t {
+    public:
+      class CAF_CORE_EXPORT file_t {
+      public:
+        explicit file_t(internal::core_logger_file_config* ptr) : ptr_(ptr) {
+          // nop
+        }
+
+        /// Sets the path for the output file. May use the placeholders `[PID]`
+        /// (for the process ID), `[TIMESTAMP]` (for the current time as seconds
+        /// since epoch), and `[NODE]` (for the UUID that identifies the CAF
+        /// node).
+        file_t path(std::string val);
+
+        /// Sets the format string for generated output. The format string
+        /// supports the following syntax:
+        /// - `%c` for the component name
+        /// - `%d` for the current date
+        /// - `%F` for the file name
+        /// - `%L` for the line number
+        /// - `%m` for the log message
+        /// - `%M` for the function name
+        /// - `%n` for a newline
+        /// - `%p` for the log level
+        /// - `%r` for the time since the first log event in milliseconds
+        /// - `%t` for the thread ID
+        /// - `%a` for the actor ID
+        /// - `%%` for a literal percent sign
+        file_t format(std::string val);
+
+        /// The verbosity level for this log. This value must be a valid log
+        /// level name. By default, these log levels are available:
+        /// - `quiet`
+        /// - `error`
+        /// - `warning`
+        /// - `info`
+        /// - `debug`
+        /// - `trace`
+        /// Additional log levels can be registered via
+        /// `logger_t::add_log_level()`.
+        file_t verbosity(std::string val);
+
+        /// Adds an excluded component to the list of components that will be
+        /// omitted from the generated output. This function can be called
+        /// multiple times to add multiple components.
+        file_t add_excluded_component(std::string val);
+
+      private:
+        internal::core_logger_file_config* ptr_;
+      };
+
+      class CAF_CORE_EXPORT console_t {
+      public:
+        explicit console_t(internal::core_logger_console_config* ptr)
+          : ptr_(ptr) {
+          // nop
+        }
+
+        /// Configures whether the terminal output may use colors.
+        console_t colored(bool val);
+
+        /// @copydoc file_t::format
+        console_t format(std::string val);
+
+        /// @copydoc file_t::verbosity
+        console_t verbosity(std::string val);
+
+        /// @copydoc file_t::add_excluded_component
+        console_t add_excluded_component(std::string val);
+
+      private:
+        internal::core_logger_console_config* ptr_;
+      };
+
+      explicit logger_t(internal::core_logger_config* ptr) : ptr_(ptr) {
+        // nop
+      }
+
+      /// Returns a fluent interface for configuring the file logger.
+      file_t file();
+
+      /// Registers a new log level with the given name and level. Overrides the
+      /// name if it already exists.
+      logger_t add_log_level(std::string name, unsigned level);
+
+    private:
+      internal::core_logger_config* ptr_;
+    };
+
+    logger_t logger();
+
+  private:
+    internal::core_config* ptr_;
+  };
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -51,10 +155,13 @@ public:
 
   // -- properties -------------------------------------------------------------
 
-  /// Stores user-defined configuration parameters.
+  /// Stores user-defined configuration config.
   settings content;
 
-  /// Extracts all parameters from the config, including entries with default
+  /// Returns a configurator for changing the configuration of the core module.
+  core_t core();
+
+  /// Extracts all config from the config, including entries with default
   /// values.
   virtual settings dump_content() const;
 
@@ -181,7 +288,7 @@ public:
   static expected<settings> parse_config_file(const char* filename);
 
   /// Tries to open `filename` and parses its content as CAF config file. Also
-  /// type-checks user-defined parameters in `opts`.
+  /// type-checks user-defined config in `opts`.
   /// @param filename Relative or absolute path to the config file.
   /// @param opts User-defined config options for type checking.
   /// @returns A ::settings dictionary with the parsed content of `filename` on
@@ -191,7 +298,7 @@ public:
 
   /// Tries to open `filename`, parses its content as CAF config file and
   /// stores all entries in `result` (overrides conflicting entries). Also
-  /// type-checks user-defined parameters in `opts`.
+  /// type-checks user-defined config in `opts`.
   /// @param filename Relative or absolute path to the config file.
   /// @param opts User-defined config options for type checking.
   /// @param result Storage for parsed entries. Note that `result` will contain
@@ -209,7 +316,7 @@ public:
   static expected<settings> parse_config(std::istream& source);
 
   /// Parses the content of `source` using CAF's config format. Also
-  /// type-checks user-defined parameters in `opts`.
+  /// type-checks user-defined config in `opts`.
   /// @param source Character sequence in CAF's config format.
   /// @param opts User-defined config options for type checking.
   /// @returns A ::settings dictionary with the parsed content of `source` on
@@ -219,7 +326,7 @@ public:
 
   /// Parses the content of `source` using CAF's config format and stores all
   /// entries in `result` (overrides conflicting entries). Also type-checks
-  /// user-defined parameters in `opts`.
+  /// user-defined config in `opts`.
   /// @param source Character sequence in CAF's config format.
   /// @param opts User-defined config options for type checking.
   /// @param result Storage for parsed entries. Note that `result` will contain
@@ -283,7 +390,7 @@ private:
   fields* fields_;
 };
 
-/// Returns all user-provided configuration parameters.
+/// Returns all user-provided configuration config.
 CAF_CORE_EXPORT const settings& content(const actor_system_config& cfg);
 
 /// Returns whether `xs` associates a value of type `T` to `name`.

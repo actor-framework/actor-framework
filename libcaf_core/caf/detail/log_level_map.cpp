@@ -34,13 +34,14 @@ log_level_map::log_level_map() {
   mapping_.emplace_back(log::level::info, "INFO");
   mapping_.emplace_back(log::level::warning, "WARNING");
   mapping_.emplace_back(log::level::error, "ERROR");
+  mapping_.emplace_back(log::level::quiet, "QUIET");
 }
 
 std::string_view log_level_map::operator[](unsigned level) const noexcept {
   for (auto i = mapping_.begin(); i != mapping_.end(); ++i)
     if (level >= i->first)
       return i->second;
-  return "OFF";
+  return "QUIET";
 }
 
 unsigned log_level_map::by_name(std::string_view val) const noexcept {
@@ -51,6 +52,11 @@ unsigned log_level_map::by_name(std::string_view val) const noexcept {
   if (i != xs.end())
     return i->first;
   return 0;
+}
+
+bool log_level_map::contains(std::string_view val) const noexcept {
+  return std::any_of(mapping_.begin(), mapping_.end(),
+                     [val](auto& kvp) { return icase_equal(kvp.second, val); });
 }
 
 void log_level_map::set(std::string name, unsigned level) {

@@ -252,6 +252,7 @@ caf_add_component(
     caf/flow/op/merge.test.cpp
     caf/flow/op/never.test.cpp
     caf/flow/op/on_backpressure_buffer.test.cpp
+    caf/flow/op/on_error_resume_next.test.cpp
     caf/flow/op/prefix_and_tail.test.cpp
     caf/flow/op/publish.test.cpp
     caf/flow/op/pullable.cpp
@@ -274,6 +275,7 @@ caf_add_component(
     caf/hash/sha1.test.cpp
     caf/init_global_meta_objects.cpp
     caf/inspector_access_type.test.cpp
+    caf/internal/core_config.cpp
     caf/intrusive/lifo_inbox.test.cpp
     caf/intrusive/linked_list.test.cpp
     caf/intrusive/stack.test.cpp

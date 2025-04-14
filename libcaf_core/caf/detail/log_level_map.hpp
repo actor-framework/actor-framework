@@ -32,6 +32,10 @@ public:
   /// @returns the key associated to `val` or 0.
   [[nodiscard]] unsigned by_name(std::string_view val) const noexcept;
 
+  /// Checks whether `val` is a valid log level name (case insensitive).
+  /// @returns `true` if `val` is a valid log level name, `false` otherwise.
+  [[nodiscard]] bool contains(std::string_view val) const noexcept;
+
   /// Inserts or overwrites a custom log level name.
   void set(std::string name, unsigned level);
 

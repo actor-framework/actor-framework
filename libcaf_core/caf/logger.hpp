@@ -8,7 +8,6 @@
 #include "caf/deep_to_string.hpp"
 #include "caf/detail/arg_wrapper.hpp"
 #include "caf/detail/core_export.hpp"
-#include "caf/detail/format.hpp"
 #include "caf/detail/log_level.hpp"
 #include "caf/detail/pp.hpp"
 #include "caf/detail/pretty_type_name.hpp"
@@ -19,7 +18,6 @@
 #include "caf/log/level.hpp"
 
 #include <cstring>
-#include <sstream>
 #include <string>
 #include <string_view>
 #include <type_traits>

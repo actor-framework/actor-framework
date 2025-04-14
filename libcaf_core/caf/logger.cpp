@@ -4,18 +4,18 @@
 
 #include "caf/logger.hpp"
 
-#include "caf/actor_proxy.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/config.hpp"
 #include "caf/defaults.hpp"
+#include "caf/detail/actor_system_config_access.hpp"
 #include "caf/detail/atomic_ref_counted.hpp"
 #include "caf/detail/get_process_id.hpp"
 #include "caf/detail/log_level_map.hpp"
 #include "caf/detail/meta_object.hpp"
-#include "caf/detail/pretty_type_name.hpp"
 #include "caf/detail/set_thread_name.hpp"
 #include "caf/detail/sync_ring_buffer.hpp"
+#include "caf/internal/core_config.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/log/core.hpp"
 #include "caf/log/level.hpp"
@@ -27,7 +27,6 @@
 #include "caf/timestamp.hpp"
 
 #include <algorithm>
-#include <condition_variable>
 #include <cstring>
 #include <ctime>
 #include <fstream>
@@ -114,7 +113,7 @@ public:
     plain_text_field,
   };
 
-  /// Combines various logging-related flags and parameters.
+  /// Combines various logging-related flags and config.
   struct config {
     /// Stores `max(file_verbosity, console_verbosity)`.
     unsigned verbosity = CAF_LOG_LEVEL;
@@ -297,50 +296,30 @@ public:
 
   void init(const actor_system_config& cfg) override {
     namespace lg = defaults::logger;
-    using std::string;
-    using string_list = std::vector<std::string>;
-    auto get_verbosity = [&cfg](std::string_view key) -> unsigned {
-      // Note: for historic reasons, we override the name of
-      //       log::level::warning for the output to 'WARN' but keep
-      //       the name 'WARNING' (default) for the config option.
-      detail::log_level_map tmp;
-      if (auto str = get_if<string>(&cfg, key))
-        return tmp.by_name(*str);
-      return log::level::quiet;
-    };
-    auto read_filter = [&cfg](string_list& var, std::string_view key) {
-      if (auto lst = get_as<string_list>(cfg, key))
-        var = std::move(*lst);
-    };
+    using access_t = detail::const_actor_system_config_access;
+    auto& logger_params = access_t{cfg}.core().logger;
+    auto& log_levels = logger_params.log_levels;
+    auto& file_params = logger_params.file;
+    auto& console_params = logger_params.console;
     cfg_.inline_output = get_or(cfg, "caf.scheduler.policy", "") == "testing";
-    cfg_.file_verbosity = get_verbosity("caf.logger.file.verbosity");
-    cfg_.console_verbosity = get_verbosity("caf.logger.console.verbosity");
+    cfg_.file_verbosity = log_levels.by_name(file_params.verbosity);
+    cfg_.console_verbosity = log_levels.by_name(console_params.verbosity);
     cfg_.verbosity = std::max(cfg_.file_verbosity, cfg_.console_verbosity);
-    if (cfg_.verbosity == log::level::quiet)
+    if (cfg_.verbosity == log::level::quiet) {
       return;
-    if (cfg_.file_verbosity > log::level::quiet
-        && cfg_.console_verbosity > log::level::quiet) {
-      read_filter(file_filter_, "caf.logger.file.excluded-components");
-      read_filter(console_filter_, "caf.logger.console.excluded-components");
-      std::sort(file_filter_.begin(), file_filter_.end());
-      std::sort(console_filter_.begin(), console_filter_.end());
-      std::set_intersection(file_filter_.begin(), file_filter_.end(),
-                            console_filter_.begin(), console_filter_.end(),
-                            std::back_inserter(global_filter_));
-    } else if (cfg_.file_verbosity > log::level::quiet) {
-      read_filter(file_filter_, "caf.logger.file.excluded-components");
-      global_filter_ = file_filter_;
-    } else {
-      read_filter(console_filter_, "caf.logger.console.excluded-components");
-      global_filter_ = console_filter_;
     }
-    // Parse the format string.
-    file_format_
-      = parse_format(get_or(cfg, "caf.logger.file.format", lg::file::format));
-    console_format_ = parse_format(
-      get_or(cfg, "caf.logger.console.format", lg::console::format));
+    file_filter_ = file_params.excluded_components;
+    console_filter_ = console_params.excluded_components;
+    std::sort(file_filter_.begin(), file_filter_.end());
+    std::sort(console_filter_.begin(), console_filter_.end());
+    std::set_intersection(file_filter_.begin(), file_filter_.end(),
+                          console_filter_.begin(), console_filter_.end(),
+                          std::back_inserter(global_filter_));
+    // Parse the format strings.
+    file_format_ = parse_format(file_params.format);
+    console_format_ = parse_format(console_params.format);
     // If not set to `false`, CAF enables colored output when writing to TTYs.
-    cfg_.console_coloring = get_or(cfg, "caf.logger.console.colored", true);
+    cfg_.console_coloring = console_params.colored;
   }
 
   bool open_file() {

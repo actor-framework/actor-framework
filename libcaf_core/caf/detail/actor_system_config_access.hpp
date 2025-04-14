@@ -8,6 +8,7 @@
 #include "caf/fwd.hpp"
 
 #include <memory>
+#include <type_traits>
 
 namespace caf::detail {
 
@@ -19,8 +20,23 @@ public:
 
   void mailbox_factory(std::unique_ptr<detail::mailbox_factory> factory);
 
+  internal::core_config& core();
+
 private:
   actor_system_config* cfg_;
+};
+
+class CAF_CORE_EXPORT const_actor_system_config_access {
+public:
+  explicit const_actor_system_config_access(const actor_system_config& cfg)
+    : cfg_(&cfg) {
+    // nop
+  }
+
+  const internal::core_config& core() const;
+
+private:
+  const actor_system_config* cfg_;
 };
 
 } // namespace caf::detail

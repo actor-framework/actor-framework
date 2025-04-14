@@ -7,8 +7,7 @@
 #include "caf/config_option.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
-
-#include <vector>
+#include "caf/make_config_option.hpp"
 
 namespace caf {
 
