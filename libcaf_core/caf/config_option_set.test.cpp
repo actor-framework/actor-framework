@@ -242,6 +242,16 @@ TEST("string parameters") {
   check_eq(read<std::string>({"-vfoobar"}), "foobar");
 }
 
+TEST("boolean parameters") {
+  opts.add<bool>("value,v", "some value");
+  check_eq(read<bool>({"-v"}), true);
+  check_eq(read<bool>({"-vtrue"}), true);
+  check_eq(read<bool>({"-vfalse"}), false);
+  check_eq(read<bool>({"--value"}), true);
+  check_eq(read<bool>({"--value=true"}), true);
+  check_eq(read<bool>({"--value=false"}), false);
+}
+
 TEST("flat CLI options") {
   key = "foo.bar";
   opts.add<std::string>("?foo", "bar,b", "some value");

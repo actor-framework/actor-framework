@@ -12,7 +12,7 @@
 #include <map>
 #include <set>
 
-using std::string;
+using namespace std::literals;
 
 namespace {
 
@@ -125,7 +125,7 @@ auto config_option_set::parse(settings& config, argument_iterator first,
   if (first == last)
     return {pec::success, last};
   // Parses an argument.
-  using iter = string::const_iterator;
+  using iter = std::string::const_iterator;
   auto consume = [&](const config_option& opt, iter arg_begin, iter arg_end) {
     auto to_pec_code = [](const error& err) {
       if (err.category() == type_id_v<pec>)
@@ -139,32 +139,17 @@ auto config_option_set::parse(settings& config, argument_iterator first,
     // Try inserting a new submap into the config or fill existing one.
     auto& entry = opt_ctg == "global" ? config : select_entry(config, opt_ctg);
     // Flags only consume the current element.
-    if (opt.is_flag()) {
-      if (arg_begin == arg_end) {
-        config_value cfg_true{true};
-        if (auto err = opt.sync(cfg_true); !err) {
-          entry[opt_name] = cfg_true;
-          return pec::success;
-        } else {
-          return to_pec_code(err);
-        }
+    if (arg_begin != arg_end) {
+      auto arg_size = static_cast<size_t>(std::distance(arg_begin, arg_end));
+      config_value val{std::string_view{std::addressof(*arg_begin), arg_size}};
+      if (auto err = opt.sync(val); !err) {
+        entry[opt_name] = std::move(val);
+        return pec::success;
       } else {
-        return pec::invalid_argument;
+        return to_pec_code(err);
       }
     } else {
-      if (arg_begin != arg_end) {
-        auto arg_size = static_cast<size_t>(std::distance(arg_begin, arg_end));
-        config_value val{
-          std::string_view{std::addressof(*arg_begin), arg_size}};
-        if (auto err = opt.sync(val); !err) {
-          entry[opt_name] = std::move(val);
-          return pec::success;
-        } else {
-          return to_pec_code(err);
-        }
-      } else {
-        return pec::missing_argument;
-      }
+      return pec::missing_argument;
     }
   };
   for (auto i = first; i != last;) {
@@ -184,13 +169,17 @@ auto config_option_set::parse(settings& config, argument_iterator first,
       auto opt = cli_long_name_lookup(name);
       if (opt == nullptr)
         return {pec::not_an_option, i};
-      if (opt->is_flag() || assign_op != npos) {
-        auto code
-          = consume(*opt,
-                    assign_op == npos
-                      ? i->end()
-                      : i->begin() + static_cast<ptrdiff_t>(assign_op + 1),
-                    i->end());
+      if (assign_op != npos) {
+        auto code = consume(*opt,
+                            i->begin() + static_cast<ptrdiff_t>(assign_op + 1),
+                            i->end());
+        if (code != pec::success)
+          return {code, i};
+        ++i;
+      } else if (opt->is_flag()) {
+        // Flags may omit the value to be set to true.
+        auto dummy = "true"s;
+        auto code = consume(*opt, dummy.begin(), dummy.end());
         if (code != pec::success)
           return {code, i};
         ++i;
@@ -209,15 +198,15 @@ auto config_option_set::parse(settings& config, argument_iterator first,
       auto opt = cli_short_name_lookup((*i)[1]);
       if (opt == nullptr)
         return {pec::not_an_option, i};
-      if (opt->is_flag()) {
-        // 1) "-f" for flags, consumes one argument
-        auto code = consume(*opt, i->begin() + 2, i->end());
-        if (code != pec::success)
-          return {code, i};
-        ++i;
-      } else {
-        if (i->size() == 2) {
-          // 2) "-k <value>", consumes both arguments
+      if (i->size() == 2) {
+        // 2) "-k <value>", consumes both arguments except for flags
+        if (opt->is_flag()) {
+          auto dummy = "true"s;
+          auto code = consume(*opt, dummy.begin(), dummy.end());
+          if (code != pec::success)
+            return {code, i};
+          ++i;
+        } else {
           auto j = std::next(i);
           if (j == last) {
             return {pec::missing_argument, j};
@@ -226,13 +215,13 @@ auto config_option_set::parse(settings& config, argument_iterator first,
           if (code != pec::success)
             return {code, i};
           std::advance(i, 2);
-        } else {
-          // 3) "-k<value>" (no space), consumes one argument
-          auto code = consume(*opt, i->begin() + 2, i->end());
-          if (code != pec::success)
-            return {code, i};
-          ++i;
         }
+      } else {
+        // 3) "-k<value>" (no space), consumes one argument
+        auto code = consume(*opt, i->begin() + 2, i->end());
+        if (code != pec::success)
+          return {code, i};
+        ++i;
       }
     } else {
       // No leading '-' found on current position.
@@ -244,7 +233,7 @@ auto config_option_set::parse(settings& config, argument_iterator first,
 
 config_option_set::parse_result
 config_option_set::parse(settings& config,
-                         const std::vector<string>& args) const {
+                         const std::vector<std::string>& args) const {
   return parse(config, args.begin(), args.end());
 }
 
@@ -254,7 +243,7 @@ config_option_set::cli_long_name_lookup(std::string_view name) const {
   std::string_view category;
   std::string_view long_name;
   auto sep = name.find_last_of('.');
-  if (sep == string::npos) {
+  if (sep == std::string::npos) {
     long_name = name;
   } else {
     category = name.substr(0, sep);
@@ -262,8 +251,8 @@ config_option_set::cli_long_name_lookup(std::string_view name) const {
   }
   // Scan all options for a match.
   auto category_match = [&](const config_option& opt) {
-    return sep == string::npos ? opt.has_flat_cli_name()
-                               : opt.category() == category;
+    return sep == std::string::npos ? opt.has_flat_cli_name()
+                                    : opt.category() == category;
   };
   return detail::ptr_find_if(opts_, [&](const config_option& opt) {
     return category_match(opt) && opt.long_name() == long_name;
@@ -273,7 +262,7 @@ config_option_set::cli_long_name_lookup(std::string_view name) const {
 config_option_set::option_pointer
 config_option_set::cli_short_name_lookup(char short_name) const {
   return detail::ptr_find_if(opts_, [&](const config_option& opt) {
-    return opt.short_names().find(short_name) != string::npos;
+    return opt.short_names().find(short_name) != std::string::npos;
   });
 }
 
@@ -288,7 +277,7 @@ config_option_set::qualified_name_lookup(std::string_view category,
 config_option_set::option_pointer
 config_option_set::qualified_name_lookup(std::string_view name) const {
   auto sep = name.rfind('.');
-  if (sep == string::npos)
+  if (sep == std::string::npos)
     return nullptr;
   return qualified_name_lookup(name.substr(0, sep), name.substr(sep + 1));
 }
