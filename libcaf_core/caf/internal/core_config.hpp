@@ -62,6 +62,81 @@ public:
   detail::log_level_map log_levels;
 };
 
+class core_scheduler_config {
+public:
+  static constexpr std::string_view group_name = "caf.scheduler";
+
+  void init(config_option_set& options);
+
+  [[nodiscard]] caf::error validate() const;
+
+  void dump(settings& out) const;
+
+  std::string policy;
+  size_t max_threads;
+  size_t max_throughput;
+};
+
+class core_work_stealing_config {
+public:
+  static constexpr std::string_view group_name = "caf.work-stealing";
+
+  void init(config_option_set& options);
+
+  [[nodiscard]] caf::error validate() const;
+
+  void dump(settings& out) const;
+
+  size_t aggressive_poll_attempts;
+  size_t aggressive_steal_interval;
+  size_t moderate_poll_attempts;
+  size_t moderate_steal_interval;
+  timespan moderate_sleep_duration;
+  size_t relaxed_steal_interval;
+  timespan relaxed_sleep_duration;
+};
+
+class core_metrics_config {
+public:
+  static constexpr std::string_view group_name = "caf.metrics";
+
+  void init(config_option_set& options);
+
+  [[nodiscard]] caf::error validate() const;
+
+  void dump(settings& out) const;
+
+  bool disable_running_actors;
+};
+
+class core_metrics_filter_config {
+public:
+  static constexpr std::string_view group_name = "caf.metrics.filters.actors";
+
+  void init(config_option_set& options);
+
+  [[nodiscard]] caf::error validate() const;
+
+  void dump(settings& out) const;
+
+  std::vector<std::string> includes;
+  std::vector<std::string> excludes;
+};
+
+class core_console_config {
+public:
+  static constexpr std::string_view group_name = "caf.console";
+
+  void init(config_option_set& options);
+
+  [[nodiscard]] caf::error validate() const;
+
+  void dump(settings& out) const;
+
+  bool colored;
+  std::string stream;
+};
+
 class core_config {
 public:
   static constexpr std::string_view group_name = "caf";
@@ -73,6 +148,11 @@ public:
   void dump(settings& out) const;
 
   core_logger_config logger;
+  core_scheduler_config scheduler;
+  core_work_stealing_config work_stealing;
+  core_metrics_config metrics;
+  core_metrics_filter_config metrics_filter;
+  core_console_config console;
 };
 
 } // namespace caf::internal
