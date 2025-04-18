@@ -420,15 +420,20 @@ public:
   }
 
   /// Blocks the caller until running-actors-count becomes `expected`
-  /// (must be either 0 or 1).
-  void await_running_count_equal(size_t expected) const override {
+  /// (must be either 0 or 1) or timeout is reached.
+  void await_running_count_equal(size_t expected,
+                                 timespan timeout = infinite) const override {
     CAF_ASSERT(expected == 0 || expected == 1);
     auto lg = log::core::trace("expected = {}", expected);
     std::unique_lock guard{running_mtx_};
-    while (running() != expected) {
+    const auto pred = [&] {
       log::core::debug("running = {}", running());
-      running_cv_.wait(guard);
-    }
+      return running() == expected;
+    };
+    if (timeout == infinite)
+      running_cv_.wait(guard, pred);
+    else
+      running_cv_.wait_for(guard, timeout, pred);
   }
 
   /// Removes a name mapping.
