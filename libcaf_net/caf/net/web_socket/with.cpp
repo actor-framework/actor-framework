@@ -1,3 +1,7 @@
+// This file is part of CAF, the C++ Actor Framework. See the file LICENSE in
+// the main distribution directory for license terms and copyright or visit
+// https://github.com/actor-framework/actor-framework/blob/main/LICENSE.
+
 #include "caf/net/web_socket/with.hpp"
 
 #include "caf/net/ssl/context.hpp"
@@ -87,7 +91,8 @@ public:
     auto conn_acc = std::make_unique<impl_t>(std::move(acc), acceptor,
                                              max_consecutive_reads);
     auto handler = internal::make_accept_handler(std::move(conn_acc),
-                                                 max_connections);
+                                                 max_connections,
+                                                 monitored_actors);
     auto ptr = net::socket_manager::make(mpx, std::move(handler));
     if (mpx->start(ptr))
       return expected<disposable>{disposable{std::move(ptr)}};
@@ -204,6 +209,10 @@ with_t::server&& with_t::server::max_connections(size_t value) && {
 
 void with_t::server::set_acceptor(detail::ws_conn_acceptor_ptr acc) {
   config_->acceptor = std::move(acc);
+}
+
+void with_t::server::do_monitor(strong_actor_ptr ptr) {
+  config_->do_monitor(std::move(ptr));
 }
 
 // -- client API ---------------------------------------------------------------
