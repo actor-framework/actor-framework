@@ -23,6 +23,14 @@ using string_view_pair = std::pair<std::string_view, std::string_view>;
 CAF_NET_EXPORT std::pair<std::string_view, byte_span>
 split_header(byte_span bytes);
 
+/// Tries parsing the given byte span into a chunk size (`first`) and the
+/// remainder (`second`).
+/// @returns On success, the chunk size and remainder. Otherwise, an error on
+///          malformed data.
+/// @note Returns an empty error on incomplete data.
+CAF_NET_EXPORT expected<std::pair<size_t, byte_span>>
+parse_chunk(byte_span input);
+
 /// Writes an HTTP header to @p buf.
 CAF_NET_EXPORT void write_response_header(status code,
                                           span<const string_view_pair> fields,

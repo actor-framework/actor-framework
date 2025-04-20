@@ -124,9 +124,11 @@ struct fixture {
   }
 
   template <class Callback>
-  void run_client(Callback cb, async::promise<response_t> res = {}) {
+  void run_client(Callback cb, async::promise<response_t> res = {},
+                  size_t max_response_size = 10 * 1024) {
     auto app = app_t::make(std::move(cb), std::move(res));
     auto client = net::http::client::make(std::move(app));
+    client->max_response_size(max_response_size);
     auto transport = net::octet_stream::transport::make(fd2, std::move(client));
     auto mgr = net::socket_manager::make(mpx.get(), std::move(transport));
     mpx->start(mgr);
@@ -394,6 +396,67 @@ SCENARIO("the client parses HTTP response into header fields") {
       }
     }
   }
+  GIVEN("a response using chunked encoding with a single zero chunk") {
+    std::string_view response = "HTTP/1.1 200 OK\r\n"
+                                "Content-Type: text/plain\r\n"
+                                "Transfer-Encoding: chunked\r\n"
+                                "\r\n"
+                                "0\r\n\r\n";
+    WHEN("receiving from an HTTP server") {
+      auto res_promise = async::promise<response_t>{};
+      run_client([](auto*) {}, res_promise);
+      net::write(fd1, as_bytes(make_span(response)));
+      THEN("the HTTP layer parses the data and calls abort") {
+        auto maybe_res = res_promise.get_future().get(1s);
+        require(maybe_res.has_value());
+        check_eq(maybe_res->payload_as_str(), "");
+      }
+    }
+  }
+  GIVEN("a response using chunked encoding with multiple chunks") {
+    std::string_view response = "HTTP/1.1 200 OK\r\n"
+                                "Content-Type: text/plain\r\n"
+                                "Transfer-Encoding: chunked\r\n"
+                                "\r\n"
+                                "D\r\nHello, world!\r\n"
+                                "11\r\nDeveloper Network\r\n"
+                                "0\r\n\r\n";
+    WHEN("receiving from an HTTP server") {
+      auto res_promise = async::promise<response_t>{};
+      run_client([](auto*) {}, res_promise);
+      net::write(fd1, as_bytes(make_span(response)));
+      THEN("the HTTP layer parses the data and calls abort") {
+        auto maybe_res = res_promise.get_future().get(1s);
+        require(maybe_res.has_value());
+        check_eq(maybe_res->payload_as_str(), "Hello, world!Developer Network");
+      }
+    }
+  }
+  GIVEN("a response using chunked encoding being sent byte by byte") {
+    std::string_view response
+      = "HTTP/1.1 200 OK\r\n"
+        "Content-Type: text/plain\r\n"
+        "Transfer-Encoding: chunked\r\n"
+        "\r\n"
+        "3A\r\n"
+        "The truth is still the truth, even if no one believes it. \r\n"
+        "33\r\n"
+        "A lie is still a lie, even if everyone believes it.\r\n"
+        "0\r\n\r\n";
+    WHEN("receiving from an HTTP server") {
+      auto res_promise = async::promise<response_t>{};
+      run_client([](auto*) {}, res_promise);
+      for (auto i = 0u; i < response.size(); i++)
+        net::write(fd1, as_bytes(make_span(response).subspan(i, 1)));
+      THEN("the HTTP layer parses the data and calls abort") {
+        auto maybe_res = res_promise.get_future().get(5s);
+        require(maybe_res.has_value());
+        check_eq(maybe_res->payload_as_str(),
+                 "The truth is still the truth, even if no one believes it. "
+                 "A lie is still a lie, even if everyone believes it.");
+      }
+    }
+  }
 }
 
 SCENARIO("the client receives invalid HTTP responses") {
@@ -439,8 +502,7 @@ SCENARIO("the client receives invalid HTTP responses") {
       }
     }
   }
-  // TODO: implement chunked transfer encoding
-  GIVEN("a response using chunked encoding") {
+  GIVEN("a response using chunked encoding without any chunks") {
     std::string_view response = "HTTP/1.1 200 OK\r\n"
                                 "Content-Type: text/plain\r\n"
                                 "Transfer-Encoding: chunked\r\n"
@@ -450,8 +512,111 @@ SCENARIO("the client receives invalid HTTP responses") {
       run_client([](auto*) {}, res_promise);
       net::write(fd1, as_bytes(make_span(response)));
       THEN("the HTTP layer parses the data and calls abort") {
-        auto maybe_res = res_promise.get_future().get(1s);
-        check(!maybe_res);
+        check(!res_promise.get_future().get(50ms));
+      }
+    }
+  }
+  GIVEN("a response using chunked encoding without the final chunk") {
+    std::string_view response = "HTTP/1.1 200 OK\r\n"
+                                "Content-Type: text/plain\r\n"
+                                "Transfer-Encoding: chunked\r\n"
+                                "\r\n"
+                                "5\r\nHello\r\n"
+                                "5\r\nWorld\r\n";
+    WHEN("receiving from an HTTP server") {
+      auto res_promise = async::promise<response_t>{};
+      run_client([](auto*) {}, res_promise);
+      net::write(fd1, as_bytes(make_span(response)));
+      THEN("the HTTP layer parses the data and calls abort") {
+        check(!res_promise.get_future().get(50ms));
+      }
+    }
+  }
+  GIVEN("a response using chunked encoding without the final crlf") {
+    std::string_view response = "HTTP/1.1 200 OK\r\n"
+                                "Content-Type: text/plain\r\n"
+                                "Transfer-Encoding: chunked\r\n"
+                                "\r\n"
+                                "5\r\n"
+                                "Hello\r\n"
+                                "0\r\n";
+    WHEN("receiving from an HTTP server") {
+      auto res_promise = async::promise<response_t>{};
+      run_client([](auto*) {}, res_promise);
+      net::write(fd1, as_bytes(make_span(response)));
+      THEN("the HTTP layer parses the data and calls abort") {
+        check(!res_promise.get_future().get(50ms));
+      }
+    }
+  }
+  GIVEN("a response using chunked encoding with bad chunk size format") {
+    std::string_view response = "HTTP/1.1 200 OK\r\n"
+                                "Content-Type: text/plain\r\n"
+                                "Transfer-Encoding: chunked\r\n"
+                                "\r\n"
+                                "5xyz\r\n"
+                                "Hello\r\n"
+                                "0\r\n\r\n";
+    WHEN("receiving from an HTTP server") {
+      auto res_promise = async::promise<response_t>{};
+      run_client([](auto*) {}, res_promise);
+      net::write(fd1, as_bytes(make_span(response)));
+      THEN("the HTTP layer parses the data and calls abort") {
+        check(!res_promise.get_future().get(50ms));
+      }
+    }
+  }
+  GIVEN("a response using chunked encoding with chunk data missing") {
+    std::string_view response = "HTTP/1.1 200 OK\r\n"
+                                "Content-Type: text/plain\r\n"
+                                "Transfer-Encoding: chunked\r\n"
+                                "\r\n"
+                                "50\r\n" // read 255 bytes
+                                "Hello\r\n"
+                                "0\r\n\r\n";
+    WHEN("receiving from an HTTP server") {
+      auto res_promise = async::promise<response_t>{};
+      run_client([](auto*) {}, res_promise);
+      net::write(fd1, as_bytes(make_span(response)));
+      THEN("the HTTP layer parses the data and calls abort") {
+        check(!res_promise.get_future().get(50ms));
+      }
+    }
+  }
+  GIVEN("a response using chunked encoding with an extension") {
+    std::string_view response = "HTTP/1.1 200 OK\r\n"
+                                "Content-Type: text/plain\r\n"
+                                "Transfer-Encoding: chunked\r\n"
+                                "\r\n"
+                                "5;extension_name=extension_value\r\n"
+                                "Hello\r\n"
+                                "0\r\n\r\n";
+    WHEN("receiving from an HTTP server") {
+      auto res_promise = async::promise<response_t>{};
+      run_client([](auto*) {}, res_promise);
+      net::write(fd1, as_bytes(make_span(response)));
+      THEN("the HTTP layer parses the data and calls abort") {
+        check(!res_promise.get_future().get(50ms));
+      }
+    }
+  }
+  GIVEN("a response using chunked encoding that exceeds max response size") {
+    std::string_view response
+      = "HTTP/1.1 200 OK\r\n"
+        "Content-Type: text/plain\r\n"
+        "Transfer-Encoding: chunked\r\n"
+        "\r\n"
+        "3A\r\n"
+        "The truth is still the truth, even if no one believes it. \r\n"
+        "33\r\n"
+        "A lie is still a lie, even if everyone believes it.\r\n"
+        "0\r\n\r\n";
+    WHEN("receiving from an HTTP server") {
+      auto res_promise = async::promise<response_t>{};
+      run_client([](auto*) {}, res_promise, 0x70);
+      net::write(fd1, as_bytes(make_span(response)));
+      THEN("the HTTP layer parses the data and calls abort") {
+        check(!res_promise.get_future().get(50ms));
       }
     }
   }
