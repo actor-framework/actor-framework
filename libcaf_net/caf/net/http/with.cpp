@@ -335,8 +335,11 @@ void with_t::server::add_route(expected<route_ptr>& new_route) {
 expected<disposable> with_t::server::do_start(push_t push) {
   config_->push = std::move(push);
   // Handle an error that could've been created by the DSL during server setup.
-  if (config_->err)
+  if (config_->err) {
+    if (config_->on_error)
+      (*config_->on_error)(config_->err);
     return config_->err;
+  }
   return config_->start_server();
 }
 
@@ -373,9 +376,12 @@ with_t::client&& with_t::client::add_header_field(std::string name,
 
 expected<std::pair<async::future<response>, disposable>>
 with_t::client::request(http::method method, const_byte_span payload) {
-  // Handle an error that could've been created by the DSL during server setup.
-  if (config_->err)
+  // Handle an error that could've been created by the DSL during client setup.
+  if (config_->err) {
+    if (config_->on_error)
+      (*config_->on_error)(config_->err);
     return config_->err;
+  }
   // Only connecting to an URI is enabled in the 'with' DSL.
   using lazy_t = internal::net_config::client_config::lazy;
   CAF_ASSERT(std::holds_alternative<lazy_t>(config_->client.value));

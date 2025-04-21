@@ -191,6 +191,12 @@ with_t::server_launcher_base::~server_launcher_base() {
 }
 
 expected<disposable> with_t::server_launcher_base::do_start() {
+  // Handle an error that could've been created by the DSL during server setup.
+  if (config_->err) {
+    if (config_->on_error)
+      (*config_->on_error)(config_->err);
+    return config_->err;
+  }
   return config_->start_server();
 }
 
@@ -257,6 +263,12 @@ with_t::client&& with_t::client::header_field(std::string_view key,
 }
 
 expected<disposable> with_t::client::do_start(pull_t& pull, push_t& push) {
+  // Handle an error that could've been created by the DSL during client setup.
+  if (config_->err) {
+    if (config_->on_error)
+      (*config_->on_error)(config_->err);
+    return config_->err;
+  }
   config_->pull = std::move(pull);
   config_->push = std::move(push);
   return config_->start_client();
