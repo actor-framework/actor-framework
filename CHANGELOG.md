@@ -20,6 +20,19 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   `caf.metrics.filters`. This change was made to make the configuration options
   more consistent.
 
+### Added
+
+- Added `monitor` API to WebSocket and HTTP servers in the `with` DSL (#2026).
+
+### Fixed
+
+- Errors that arise during the `with` DSL setup of servers and clients now
+  properly call `on_error` (#2026).
+
+### Removed
+
+- Removed the with DSL building base classes form `caf/net/dsl/` (#2026).
+
 ## Unreleased
 
 ### Changed
