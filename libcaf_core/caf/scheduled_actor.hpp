@@ -890,6 +890,9 @@ private:
   /// Stashes skipped messages until the actor processes the next message.
   intrusive::stack<mailbox_element> stash_;
 
+  /// Metrics to count processed messages for the actor.
+  telemetry::int_counter* processed_messages_ = nullptr;
+
   union {
     /// The default mailbox instance that we use if the user does not configure
     /// a mailbox via the ::actor_config.
