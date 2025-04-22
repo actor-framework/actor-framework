@@ -231,6 +231,12 @@ public:
       // Reset the policy from the previous call to consume.
       down_->configure_read(receive_policy::up_to(max_response_size_));
       consumed += input.size() - remainder.size() + chunk_size + 2;
+      // Check crlf at the end of chunk.
+      if (remainder[chunk_size] != std::byte{'\r'}
+          || remainder[chunk_size + 1] != std::byte{'\n'}) {
+        abort_and_shutdown("Missing CRLF sequence at the end of the chunk.");
+        return -1;
+      };
       // End of chunk encoded request comes with a zero length chunk.
       if (chunk_size == 0) {
         if (!invoke_upper_layer(buffer_))
@@ -239,14 +245,8 @@ public:
         buffer_.clear();
         return consumed;
       }
-      buffer_.reserve(buffer_.size() + chunk_size);
       buffer_.insert(buffer_.end(), remainder.begin(),
                      remainder.begin() + chunk_size);
-      if (remainder[chunk_size] != std::byte{'\r'}
-          || remainder[chunk_size + 1] != std::byte{'\n'}) {
-        abort_and_shutdown("Missing CRLF sequence at the end of the chunk.");
-        return -1;
-      };
       return consumed;
     }
     return -1;

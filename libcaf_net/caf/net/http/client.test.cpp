@@ -17,6 +17,7 @@
 #include "caf/net/stream_socket.hpp"
 
 #include "caf/async/promise.hpp"
+#include "caf/log/test.hpp"
 #include "caf/raise_error.hpp"
 
 using namespace caf;
@@ -81,15 +82,15 @@ public:
 
   ptrdiff_t consume(const net::http::response_header& response_hdr,
                     const_byte_span body) override {
+    if (should_fail) {
+      should_fail = false;
+      return -1;
+    }
     if (response) {
       response_t res;
       res.hdr = response_hdr;
       res.payload.assign(body.begin(), body.end());
       response.set_value(res);
-    }
-    if (should_fail) {
-      should_fail = false;
-      return -1;
     }
     return static_cast<ptrdiff_t>(body.size());
   }
@@ -512,7 +513,7 @@ SCENARIO("the client receives invalid HTTP responses") {
       run_client([](auto*) {}, res_promise);
       net::write(fd1, as_bytes(make_span(response)));
       THEN("the HTTP layer parses the data and calls abort") {
-        check(!res_promise.get_future().get(50ms));
+        check(!res_promise.get_future().get(100ms));
       }
     }
   }
@@ -522,13 +523,14 @@ SCENARIO("the client receives invalid HTTP responses") {
                                 "Transfer-Encoding: chunked\r\n"
                                 "\r\n"
                                 "5\r\nHello\r\n"
-                                "5\r\nWorld\r\n";
+                                "5\r\nWorld\r\n"
+                                "HTTP/1.1 200 OK\r\n";
     WHEN("receiving from an HTTP server") {
       auto res_promise = async::promise<response_t>{};
       run_client([](auto*) {}, res_promise);
       net::write(fd1, as_bytes(make_span(response)));
       THEN("the HTTP layer parses the data and calls abort") {
-        check(!res_promise.get_future().get(50ms));
+        check(!res_promise.get_future().get(100ms));
       }
     }
   }
@@ -539,13 +541,14 @@ SCENARIO("the client receives invalid HTTP responses") {
                                 "\r\n"
                                 "5\r\n"
                                 "Hello\r\n"
-                                "0\r\n";
+                                "0\r\n"
+                                "HTTP/1.1 200 OK\r\n";
     WHEN("receiving from an HTTP server") {
       auto res_promise = async::promise<response_t>{};
       run_client([](auto*) {}, res_promise);
       net::write(fd1, as_bytes(make_span(response)));
       THEN("the HTTP layer parses the data and calls abort") {
-        check(!res_promise.get_future().get(50ms));
+        check(!res_promise.get_future().get(100ms));
       }
     }
   }
@@ -562,7 +565,33 @@ SCENARIO("the client receives invalid HTTP responses") {
       run_client([](auto*) {}, res_promise);
       net::write(fd1, as_bytes(make_span(response)));
       THEN("the HTTP layer parses the data and calls abort") {
-        check(!res_promise.get_future().get(50ms));
+        check(!res_promise.get_future().get(100ms));
+      }
+    }
+  }
+  GIVEN("a response using chunked encoding with chunk size overflow") {
+    std::string_view response = "HTTP/1.1 200 OK\r\n"
+                                "Content-Type: text/plain\r\n"
+                                "Transfer-Encoding: chunked\r\n"
+                                "\r\n"
+                                "100000000\r\n"
+                                "Hello\r\n"
+                                "0\r\n\r\n";
+    WHEN("receiving from an HTTP server") {
+      auto res_promise = async::promise<response_t>{};
+      run_client([](auto*) {}, res_promise);
+      net::write(fd1, as_bytes(make_span(response)));
+      THEN("the HTTP layer parses the data and calls abort") {
+        check(!res_promise.get_future().get(100ms));
+      }
+    }
+    WHEN("receiving byte by byte from an HTTP server") {
+      auto res_promise = async::promise<response_t>{};
+      run_client([](auto*) {}, res_promise);
+      for (auto i = 0u; i < response.size() - 12; i += 2)
+        net::write(fd1, as_bytes(make_span(response)).subspan(i, 2));
+      THEN("the HTTP layer parses the data and calls abort early") {
+        check(!res_promise.get_future().get(100ms));
       }
     }
   }
@@ -579,7 +608,7 @@ SCENARIO("the client receives invalid HTTP responses") {
       run_client([](auto*) {}, res_promise);
       net::write(fd1, as_bytes(make_span(response)));
       THEN("the HTTP layer parses the data and calls abort") {
-        check(!res_promise.get_future().get(50ms));
+        check(!res_promise.get_future().get(100ms));
       }
     }
   }
@@ -596,7 +625,7 @@ SCENARIO("the client receives invalid HTTP responses") {
       run_client([](auto*) {}, res_promise);
       net::write(fd1, as_bytes(make_span(response)));
       THEN("the HTTP layer parses the data and calls abort") {
-        check(!res_promise.get_future().get(50ms));
+        check(!res_promise.get_future().get(100ms));
       }
     }
   }
@@ -613,10 +642,11 @@ SCENARIO("the client receives invalid HTTP responses") {
         "0\r\n\r\n";
     WHEN("receiving from an HTTP server") {
       auto res_promise = async::promise<response_t>{};
-      run_client([](auto*) {}, res_promise, 0x70);
-      net::write(fd1, as_bytes(make_span(response)));
+      run_client([](auto*) {}, res_promise, 0x6C);
+      for (auto i = 0u; i < response.size(); i++)
+        net::write(fd1, as_bytes(make_span(response).subspan(i, 1)));
       THEN("the HTTP layer parses the data and calls abort") {
-        check(!res_promise.get_future().get(50ms));
+        check(!res_promise.get_future().get(100ms));
       }
     }
   }
@@ -625,9 +655,26 @@ SCENARIO("the client receives invalid HTTP responses") {
 SCENARIO("apps can return errors to abort the HTTP layer") {
   GIVEN("an app that fails consuming the HTTP response") {
     std::string_view response = "HTTP/1.1 200 OK\r\n"
-                                "FooBar\r\n"
+                                "Foo: Bar\r\n"
                                 "\r\n";
-    WHEN("the app returns -1 for the response in receives") {
+    WHEN("the app returns -1 for the response it receives") {
+      auto res_promise = async::promise<response_t>{};
+      run_failing_client([](auto*) {}, res_promise);
+      net::write(fd1, as_bytes(make_span(response)));
+      THEN("the client calls abort") {
+        auto maybe_res = res_promise.get_future().get(1s);
+        check(!maybe_res);
+      }
+    }
+  }
+  GIVEN("an app that fails consuming the chunked HTTP response") {
+    std::string_view response = "HTTP/1.1 200 OK\r\n"
+                                "Content-Type: text/plain\r\n"
+                                "Transfer-Encoding: chunked\r\n\r\n"
+                                "D\r\nHello, world!\r\n"
+                                "11\r\nDeveloper Network\r\n"
+                                "0\r\n\r\n";
+    WHEN("the app returns -1 for the chunked response it receives") {
       auto res_promise = async::promise<response_t>{};
       run_failing_client([](auto*) {}, res_promise);
       net::write(fd1, as_bytes(make_span(response)));
