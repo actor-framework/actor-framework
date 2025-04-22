@@ -264,7 +264,8 @@ public:
     return std::move(*this);
   }
 
-  /// Creates a `server` object for the given TCP `port` and `bind_address`.
+  /// Creates a new server factory object for the given TCP `port` and
+  /// `bind_address`.
   /// @param port Port number to bind to.
   /// @param bind_address IP address to bind to. Default is an empty string.
   /// @param reuse_addr Whether to set the SO_REUSEADDR option on the socket.
@@ -273,22 +274,22 @@ public:
                               std::string bind_address = std::string{},
                               bool reuse_addr = true) &&;
 
-  /// Creates an `server` object for the given accept socket.
+  /// Creates a new server factory object for the given accept socket.
   /// @param fd File descriptor for the accept socket.
   /// @returns an `server` object that will start a server on `fd`.
   [[nodiscard]] server accept(tcp_accept_socket fd) &&;
 
-  /// Creates an `server` object for the given acceptor.
+  /// Creates a new server factory object for the given acceptor.
   /// @param acc The SSL acceptor for incoming TCP connections.
   /// @returns an `server` object that will start a server on `acc`.
   [[nodiscard]] server accept(ssl::tcp_acceptor acc) &&;
 
-  /// Creates a `client` object for the given TCP `endpoint`.
+  /// Creates a new client factory object for the given TCP `endpoint`.
   /// @param endpoint The endpoint of the TCP server to connect to.
   /// @returns a `client` object initialized with the given parameters.
   [[nodiscard]] client connect(uri endpoint) &&;
 
-  /// Creates a `client` object for the given TCP `endpoint`.
+  /// Creates a new client factory object for the given TCP `endpoint`.
   /// @param endpoint The endpoint of the TCP server to connect to.
   /// @returns a `client` object initialized with the given parameters.
   [[nodiscard]] client connect(expected<uri> endpoint) &&;
