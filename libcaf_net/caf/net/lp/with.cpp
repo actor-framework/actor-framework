@@ -223,7 +223,7 @@ with_t::client&& with_t::client::max_retry_count(size_t value) && {
 }
 
 expected<disposable> with_t::client::do_start(pull_t pull, push_t push) {
-  // Handle an error that could've been created by the DSL during server setup.
+  // Handle an error that could've been created by the DSL during client setup.
   if (config_->err) {
     if (config_->on_error)
       (*config_->on_error)(config_->err);

@@ -1,3 +1,7 @@
+// This file is part of CAF, the C++ Actor Framework. See the file LICENSE in
+// the main distribution directory for license terms and copyright or visit
+// https://github.com/actor-framework/actor-framework/blob/main/LICENSE.
+
 #include "caf/net/web_socket/with.hpp"
 
 #include "caf/net/ssl/context.hpp"
@@ -87,7 +91,8 @@ public:
     auto conn_acc = std::make_unique<impl_t>(std::move(acc), acceptor,
                                              max_consecutive_reads);
     auto handler = internal::make_accept_handler(std::move(conn_acc),
-                                                 max_connections);
+                                                 max_connections,
+                                                 monitored_actors);
     auto ptr = net::socket_manager::make(mpx, std::move(handler));
     if (mpx->start(ptr))
       return expected<disposable>{disposable{std::move(ptr)}};
@@ -186,6 +191,12 @@ with_t::server_launcher_base::~server_launcher_base() {
 }
 
 expected<disposable> with_t::server_launcher_base::do_start() {
+  // Handle an error that could've been created by the DSL during server setup.
+  if (config_->err) {
+    if (config_->on_error)
+      (*config_->on_error)(config_->err);
+    return config_->err;
+  }
   return config_->start_server();
 }
 
@@ -204,6 +215,10 @@ with_t::server&& with_t::server::max_connections(size_t value) && {
 
 void with_t::server::set_acceptor(detail::ws_conn_acceptor_ptr acc) {
   config_->acceptor = std::move(acc);
+}
+
+void with_t::server::do_monitor(strong_actor_ptr ptr) {
+  config_->do_monitor(std::move(ptr));
 }
 
 // -- client API ---------------------------------------------------------------
@@ -248,6 +263,12 @@ with_t::client&& with_t::client::header_field(std::string_view key,
 }
 
 expected<disposable> with_t::client::do_start(pull_t& pull, push_t& push) {
+  // Handle an error that could've been created by the DSL during client setup.
+  if (config_->err) {
+    if (config_->on_error)
+      (*config_->on_error)(config_->err);
+    return config_->err;
+  }
   config_->pull = std::move(pull);
   config_->push = std::move(push);
   return config_->start_client();

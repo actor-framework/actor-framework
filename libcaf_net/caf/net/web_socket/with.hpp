@@ -6,6 +6,7 @@
 
 #include "caf/net/fwd.hpp"
 
+#include "caf/actor_cast.hpp"
 #include "caf/async/spsc_buffer.hpp"
 #include "caf/callback.hpp"
 #include "caf/detail/net_export.hpp"
@@ -130,8 +131,18 @@ public:
     /// Sets the maximum number of connections the server permits.
     [[nodiscard]] server&& max_connections(size_t value) &&;
 
+    /// Monitors the actor handle @p hdl and stops the server if the monitored
+    /// actor terminates.
+    template <class ActorHandle>
+    [[nodiscard]] server&& monitor(const ActorHandle& hdl) && {
+      do_monitor(actor_cast<strong_actor_ptr>(hdl));
+      return std::move(*this);
+    }
+
   private:
     explicit server(config_ptr&& cfg) noexcept;
+
+    void do_monitor(strong_actor_ptr ptr);
 
     void set_acceptor(detail::ws_conn_acceptor_ptr acc);
 
@@ -229,50 +240,50 @@ public:
     return std::move(*this);
   }
 
-  /// Creates an `accept_factory` object for the given TCP `port` and
+  /// Creates a new server factory object for the given TCP `port` and
   /// `bind_address`.
   /// @param port Port number to bind to.
   /// @param bind_address IP address to bind to. Default is an empty string.
   /// @param reuse_addr Whether to set the SO_REUSEADDR option on the socket.
-  /// @returns an `accept_factory` object initialized with the given parameters.
+  /// @returns an `server` object initialized with the given parameters.
   [[nodiscard]] server accept(uint16_t port,
                               std::string bind_address = std::string{},
                               bool reuse_addr = true) &&;
 
-  /// Creates an `accept_factory` object for the given accept socket.
+  /// Creates a new server factory object for the given accept socket.
   /// @param fd File descriptor for the accept socket.
-  /// @returns an `accept_factory` object that will start a server on `fd`.
+  /// @returns an `server` object that will start a server on `fd`.
   [[nodiscard]] server accept(tcp_accept_socket fd) &&;
 
-  /// Creates an `accept_factory` object for the given acceptor.
+  /// Creates a new server factory object for the given acceptor.
   /// @param acc The SSL acceptor for incoming TCP connections.
-  /// @returns an `accept_factory` object that will start a server on `acc`.
+  /// @returns an `server` object that will start a server on `acc`.
   [[nodiscard]] server accept(ssl::tcp_acceptor acc) &&;
 
-  /// Creates a `connect_factory` object for the given TCP `host` and `port`.
+  /// Creates a new client factory object for the given TCP `host` and `port`.
   /// @param host The hostname or IP address to connect to.
   /// @param port The port number to connect to.
-  /// @returns a `connect_factory` object initialized with the given parameters.
+  /// @returns a `client` object initialized with the given parameters.
   [[nodiscard]] client connect(std::string host, uint16_t port) &&;
 
-  /// Creates a `connect_factory` object for the given stream `fd`.
+  /// Creates a new client factory object for the given stream `fd`.
   /// @param fd The stream socket to use for the connection.
-  /// @returns a `connect_factory` object that will use the given socket.
+  /// @returns a `client` object that will use the given socket.
   [[nodiscard]] client connect(stream_socket fd) &&;
 
-  /// Creates a `connect_factory` object for the given SSL `connection`.
+  /// Creates a new client factory object for the given SSL `connection`.
   /// @param conn The SSL connection to use.
-  /// @returns a `connect_factory` object that will use the given connection.
+  /// @returns a `client` object that will use the given connection.
   [[nodiscard]] client connect(ssl::connection conn) &&;
 
-  /// Creates a `connect_factory` object for the given TCP `endpoint`.
+  /// Creates a new client factory object for the given TCP `endpoint`.
   /// @param endpoint The endpoint of the TCP server to connect to.
-  /// @returns a `connect_factory` object initialized with the given parameters.
+  /// @returns a `client` object initialized with the given parameters.
   [[nodiscard]] client connect(uri endpoint) &&;
 
-  /// Creates a `connect_factory` object for the given TCP `endpoint`.
+  /// Creates a new client factory object for the given TCP `endpoint`.
   /// @param endpoint The endpoint of the TCP server to connect to.
-  /// @returns a `connect_factory` object initialized with the given parameters.
+  /// @returns a `client` object initialized with the given parameters.
   [[nodiscard]] client connect(expected<uri> endpoint) &&;
 
 private:
