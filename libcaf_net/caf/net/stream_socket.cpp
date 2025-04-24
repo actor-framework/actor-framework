@@ -162,8 +162,7 @@ ptrdiff_t read(stream_socket x, byte_span buf) {
 }
 
 ptrdiff_t write(stream_socket x, const_byte_span buf) {
-  auto lg = log::net::trace("socket = {}, bytes = {}", "socket", x.id,
-                            buf.size());
+  auto lg = log::net::trace("socket = {}, bytes = {}", x.id, buf.size());
   return ::send(x.id, reinterpret_cast<socket_send_ptr>(buf.data()), buf.size(),
                 no_sigpipe_io_flag);
 }
