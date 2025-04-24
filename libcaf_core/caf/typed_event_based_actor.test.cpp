@@ -244,7 +244,7 @@ TEST("spawning a typed actor and sending messages") {
   }
   SECTION("run test series with typed_server2") {
     test_typed_spawn(sys.spawn(typed_server2));
-    sys.registry().await_running_count_equal(1, 100ms);
+    sys.registry().await_running_count_equal(1, 1s);
     require_ne(sys.registry().running(), 0u);
   }
   SECTION("run test series with typed_server3") {

@@ -426,7 +426,7 @@ public:
     CAF_ASSERT(expected == 0 || expected == 1);
     auto lg = log::core::trace("expected = {}", expected);
     std::unique_lock guard{running_mtx_};
-    const auto pred = [&] {
+    auto pred = [this, &guard, &expected] {
       log::core::debug("running = {}", running());
       return running() == expected;
     };
