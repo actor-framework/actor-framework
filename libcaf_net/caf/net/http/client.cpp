@@ -161,7 +161,7 @@ public:
     auto lg = log::net::trace("bytes = {}", input.size());
     ptrdiff_t consumed = 0;
     if (mode_ == mode::read_header) {
-      if (input.size() >= max_response_size_) {
+      if (input.size() > max_response_size_) {
         abort_and_shutdown("Header exceeds maximum size.");
         return -1;
       }
@@ -180,7 +180,7 @@ public:
         mode_ = mode::read_chunks;
       } else if (auto len = hdr_.content_length()) {
         // Protect against payloads that exceed the maximum size.
-        if (*len >= max_response_size_) {
+        if (*len > max_response_size_) {
           abort_and_shutdown("Payload exceeds maximum size.");
           return -1;
         }
@@ -217,7 +217,7 @@ public:
       }
       auto [chunk_size, remainder] = *res;
       // Protect early against payloads that exceed the maximum size.
-      if (chunk_size + buffer_.size() >= max_response_size_) {
+      if (chunk_size + buffer_.size() > max_response_size_) {
         abort_and_shutdown("Payload exceeds maximum size.");
         return -1;
       }
