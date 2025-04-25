@@ -17,7 +17,6 @@
 #include "caf/net/stream_socket.hpp"
 
 #include "caf/async/promise.hpp"
-#include "caf/log/test.hpp"
 #include "caf/raise_error.hpp"
 
 using namespace caf;
@@ -637,16 +636,17 @@ SCENARIO("the client receives invalid HTTP responses") {
         "\r\n"
         "3A\r\n"
         "The truth is still the truth, even if no one believes it. \r\n"
-        "33\r\n"
-        "A lie is still a lie, even if everyone believes it.\r\n"
-        "0\r\n\r\n";
+        "33\r\n";
     WHEN("receiving from an HTTP server") {
       auto res_promise = async::promise<response_t>{};
       run_client([](auto*) {}, res_promise, 0x6C);
       for (auto i = 0u; i < response.size(); i++)
         net::write(fd1, as_bytes(make_span(response).subspan(i, 1)));
       THEN("the HTTP layer parses the data and calls abort") {
-        check(!res_promise.get_future().get(100ms));
+        auto maybe_res = res_promise.get_future().get(100ms);
+        if (check(!maybe_res))
+          check_eq(maybe_res.error().code(),
+                   static_cast<uint8_t>(sec::protocol_error));
       }
     }
   }
