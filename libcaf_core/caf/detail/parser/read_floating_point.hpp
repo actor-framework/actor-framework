@@ -156,11 +156,11 @@ void read_floating_point(State& ps, Consumer&& consumer,
   if (exp < 0) {
     for (auto n = -exp; n != 0; n >>= 1, ++i)
       if (n & 0x01)
-        result /= powerTable[i];
+        result /= static_cast<ValueType>(powerTable[i]);
   } else {
     for (auto n = exp; n != 0; n >>= 1, ++i)
       if (n & 0x01)
-        result *= powerTable[i];
+        result *= static_cast<ValueType>(powerTable[i]);
   }
   // 4) Fix sign and call consumer.
   consumer.value(sign == plus ? result : -result);

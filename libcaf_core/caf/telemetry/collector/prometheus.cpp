@@ -308,7 +308,7 @@ void prometheus::append_histogram_impl(const metric_family* family,
   auto acc = ValueType{0};
   auto index = size_t{0};
   for (; index < buckets.size(); ++index) {
-    acc += buckets[index].count.value();
+    acc += static_cast<ValueType>(buckets[index].count.value());
     append(buf_, vm[index], acc, ' ', ms_timestamp{last_scrape_}, '\n');
   }
   append(buf_, vm[index++], sum, ' ', ms_timestamp{last_scrape_}, '\n');
