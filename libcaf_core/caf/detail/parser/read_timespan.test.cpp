@@ -17,23 +17,23 @@ namespace {
 
 using std::chrono::duration_cast;
 
-timespan operator"" _ns(unsigned long long x) {
+timespan operator""_ns(unsigned long long x) {
   return duration_cast<timespan>(std::chrono::nanoseconds(x));
 }
 
-timespan operator"" _us(unsigned long long x) {
+timespan operator""_us(unsigned long long x) {
   return duration_cast<timespan>(std::chrono::microseconds(x));
 }
 
-timespan operator"" _ms(unsigned long long x) {
+timespan operator""_ms(unsigned long long x) {
   return duration_cast<timespan>(std::chrono::milliseconds(x));
 }
 
-timespan operator"" _s(unsigned long long x) {
+timespan operator""_s(unsigned long long x) {
   return duration_cast<timespan>(std::chrono::seconds(x));
 }
 
-timespan operator"" _h(unsigned long long x) {
+timespan operator""_h(unsigned long long x) {
   return duration_cast<timespan>(std::chrono::hours(x));
 }
 

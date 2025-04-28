@@ -68,11 +68,11 @@ T unbox(caf::expected<T> x) {
   return std::move(*x);
 }
 
-timespan operator"" _ms(unsigned long long x) {
+timespan operator""_ms(unsigned long long x) {
   return std::chrono::duration_cast<timespan>(std::chrono::milliseconds(x));
 }
 
-uri operator"" _u(const char* str, size_t size) {
+uri operator""_u(const char* str, size_t size) {
   return unbox(make_uri(std::string_view{str, size}));
 }
 

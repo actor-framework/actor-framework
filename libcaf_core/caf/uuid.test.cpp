@@ -16,7 +16,7 @@ using namespace caf;
 
 namespace {
 
-uuid operator"" _uuid(const char* cstr, size_t cstr_len) {
+uuid operator""_uuid(const char* cstr, size_t cstr_len) {
   auto& this_test = test::runnable::current();
   if (cstr_len != 36)
     this_test.fail("malformed test input");
