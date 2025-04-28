@@ -23,7 +23,7 @@ using namespace caf;
 
 namespace {
 
-ipv4_endpoint operator"" _ep(const char* str, size_t size) {
+ipv4_endpoint operator""_ep(const char* str, size_t size) {
   ipv4_endpoint result;
   if (auto err = detail::parse(std::string_view{str, size}, result))
     test::runnable::current().fail("unable to parse input: {}", err);

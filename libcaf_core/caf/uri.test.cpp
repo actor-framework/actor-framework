@@ -193,7 +193,7 @@ uri operator*(uri_builder& builder) {
   return result;
 }
 
-uri operator"" _u(const char* cstr, size_t cstr_len) {
+uri operator""_u(const char* cstr, size_t cstr_len) {
   uri result;
   std::string_view str{cstr, cstr_len};
   auto err = parse(str, result);
@@ -203,7 +203,7 @@ uri operator"" _u(const char* cstr, size_t cstr_len) {
   return result;
 }
 
-bool operator"" _i(const char* cstr, size_t cstr_len) {
+bool operator""_i(const char* cstr, size_t cstr_len) {
   uri result;
   std::string_view str{cstr, cstr_len};
   if (uri::can_parse(str))

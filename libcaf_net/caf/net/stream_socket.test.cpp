@@ -19,7 +19,7 @@ using namespace caf::net;
 
 namespace {
 
-std::byte operator"" _b(unsigned long long x) {
+std::byte operator""_b(unsigned long long x) {
   return static_cast<std::byte>(x);
 }
 
