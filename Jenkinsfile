@@ -31,12 +31,12 @@ config = [
                 'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized',
             ],
         ]],
-        ['alpinelinux-3.18', [ // EOL: May 2025
+        ['alpinelinux-3.21', [ // EOL: November 2026
             numCores: 4,
             tags: ['docker'],
             builds: ['release'],
             extraBuildFlags: [
-                'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wno-array-bounds -Wno-free-nonheap-object',
+                'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-uninitialized -Wno-maybe-uninitialized -Wno-array-bounds -Wno-free-nonheap-object',
             ],
         ]],
         ['debian-11', [ // EOL June 2026
@@ -55,7 +55,7 @@ config = [
                 'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wno-array-bounds -Wno-free-nonheap-object',
             ],
         ]],
-        ['fedora-40', [ // EOL May 2025
+        ['fedora-41', [ // EOL November 2025
             numCores: 4,
             tags: ['docker'],
             builds: ['release'],
@@ -63,7 +63,7 @@ config = [
                 'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wno-uninitialized -Wno-array-bounds',
             ],
         ]],
-        ['fedora-41', [ // EOL November 2025
+        ['fedora-42', [ // EOL May 2026
             numCores: 4,
             tags: ['docker'],
             builds: ['release'],
@@ -71,14 +71,6 @@ config = [
                 'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wno-uninitialized -Wno-array-bounds',
                 'CAF_CXX_VERSION:STRING=23',
                 'CAF_USE_STD_FORMAT:BOOL=ON',
-            ],
-        ]],
-        ['ubuntu-20.04', [ // April 2025
-            numCores: 4,
-            tags: ['docker'],
-            builds: ['release'],
-            extraBuildFlags: [
-                'CMAKE_CXX_FLAGS:STRING=-Werror',
             ],
         ]],
         ['ubuntu-22.04', [ // April 2027
@@ -98,7 +90,7 @@ config = [
             ],
         ]],
         // Debug build with exceptions disabled.
-        ['fedora-41:no-exceptions', [
+        ['fedora-42:no-exceptions', [
             numCores: 4,
             tags: ['docker'],
             builds: ['debug'],
@@ -109,7 +101,7 @@ config = [
             ],
         ]],
         // Debug build for LeakSanitizer.
-        ['fedora-41:leak-checks', [
+        ['fedora-42:leak-checks', [
             numCores: 4,
             tags: ['docker', 'LeakSanitizer'],
             builds: ['debug'],
@@ -123,7 +115,7 @@ config = [
             ],
         ]],
         // Debug build with static libs, UBSan and hardening flags.
-        ['fedora-41:ub-checks', [
+        ['fedora-42:ub-checks', [
             numCores: 4,
             tags: ['docker', 'UBSanitizer'],
             builds: ['debug'],

@@ -1,4 +1,4 @@
-FROM alpine:3.18
+FROM alpine:3.21
 
 COPY ./robot/dependencies.txt .
 
@@ -14,4 +14,4 @@ RUN apk add --no-cache \
          python3 \
          py3-pip
 
-RUN python3 -m pip install -r dependencies.txt
+RUN python3 -m pip install -r dependencies.txt --break-system-packages
