@@ -19,6 +19,8 @@
 #include "caf/async/promise.hpp"
 #include "caf/raise_error.hpp"
 
+#include <iostream>
+
 using namespace caf;
 using namespace std::literals;
 
@@ -573,21 +575,19 @@ SCENARIO("the client receives invalid HTTP responses") {
                                 "Content-Type: text/plain\r\n"
                                 "Transfer-Encoding: chunked\r\n"
                                 "\r\n"
-                                "100000000\r\n"
+                                "1000000000\r\n"
                                 "Hello\r\n"
                                 "0\r\n\r\n";
+    auto res_promise = async::promise<response_t>{};
+    run_client([](auto*) {}, res_promise);
     WHEN("receiving from an HTTP server") {
-      auto res_promise = async::promise<response_t>{};
-      run_client([](auto*) {}, res_promise);
       net::write(fd1, as_bytes(make_span(response)));
       THEN("the HTTP layer parses the data and calls abort") {
         check(!res_promise.get_future().get(100ms));
       }
     }
     WHEN("receiving byte by byte from an HTTP server") {
-      auto res_promise = async::promise<response_t>{};
-      run_client([](auto*) {}, res_promise);
-      for (auto i = 0u; i < response.size() - 12; i += 2)
+      for (auto i = 0u; i < response.size() - 14; i += 2)
         net::write(fd1, as_bytes(make_span(response)).subspan(i, 2));
       THEN("the HTTP layer parses the data and calls abort early") {
         check(!res_promise.get_future().get(100ms));
