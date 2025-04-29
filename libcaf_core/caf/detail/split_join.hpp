@@ -35,8 +35,9 @@ public:
     auto f = [this](scheduled_actor*, message& msg) -> result<message> {
       auto rp = this->make_response_promise();
       split_(workset_, msg);
-      for (auto& x : workset_)
-        this->send(x.first, std::move(x.second));
+      for (auto& x : workset_) {
+        this->mail(std::move(x.second)).send(x.first);
+      }
       auto g = [this, rp](scheduled_actor*,
                           message& res) mutable -> result<message> {
         join_(value_, res);
