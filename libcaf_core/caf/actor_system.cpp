@@ -255,8 +255,8 @@ auto make_base_metrics(telemetry::metric_registry& reg) {
     // Initialize the base metrics.
     reg.counter_singleton("caf.system", "rejected-messages",
                           "Number of rejected messages.", "1", true),
-    reg.counter_singleton("caf.system", "processed-messages",
-                          "Number of processed messages.", "1", true),
+    reg.counter_family("caf.system", "processed-messages", {"name"},
+                       "Number of processed messages.", "1", true),
     reg.gauge_singleton("caf.system", "queued-messages",
                         "Number of messages in all mailboxes.", "1", true),
   };

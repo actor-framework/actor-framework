@@ -161,7 +161,7 @@ public:
     telemetry::int_counter* rejected_messages;
 
     /// Counts the total number of processed messages.
-    telemetry::int_counter* processed_messages;
+    telemetry::int_counter_family* processed_messages;
 
     /// Counts the total number of messages that wait in a mailbox.
     telemetry::int_gauge* queued_messages;
