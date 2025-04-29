@@ -17,6 +17,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - New flow operators: `retry`, `combine_latest` and `on_error_resume_next`.
 - New `with_userinfo` member function for URIs that allows setting the user-info
   sub-component without going through an URI builder.
+- The utility class `mail_cache` received a `stash` overload that takes no
+  arguments for stashing the current message.
 
 ### Fixed
 
