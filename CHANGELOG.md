@@ -44,6 +44,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   Passing an invalid delay parameter to `to_stream` or `to_typed_stream`
   likewise produces a stream that immediately calls `on_error` on any client
   that tries to subscribe to it.
+- Use `localtime_s` on all Windows platforms to fix a build error with
+  MSYS/UCRT64 (#2059).
 
 ## [1.0.2] - 2024-10-30
 
