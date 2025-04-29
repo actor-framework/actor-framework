@@ -69,8 +69,7 @@
     _Pragma("clang diagnostic push")                                           \
     _Pragma("clang diagnostic ignored \"-Winvalid-offsetof\"")
 #  define CAF_PUSH_STRINGOP_OVERREAD_WARNING                                   \
-    _Pragma("clang diagnostic push")                                           \
-    _Pragma("clang diagnostic ignored \"-Wstringop-overread\"")
+    _Pragma("clang diagnostic push")
 #  define CAF_POP_WARNINGS                                                     \
     _Pragma("clang diagnostic pop")
 #  define CAF_COMPILER_VERSION                                                 \
