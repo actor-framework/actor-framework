@@ -161,7 +161,7 @@ public:
     auto lg = log::net::trace("bytes = {}", input.size());
     ptrdiff_t consumed = 0;
     if (mode_ == mode::read_header) {
-      if (input.size() >= max_response_size_) {
+      if (input.size() > max_response_size_) {
         abort_and_shutdown("Header exceeds maximum size.");
         return -1;
       }
@@ -180,7 +180,7 @@ public:
         mode_ = mode::read_chunks;
       } else if (auto len = hdr_.content_length()) {
         // Protect against payloads that exceed the maximum size.
-        if (*len >= max_response_size_) {
+        if (*len > max_response_size_) {
           abort_and_shutdown("Payload exceeds maximum size.");
           return -1;
         }
@@ -207,10 +207,51 @@ public:
       mode_ = mode::read_header;
       return consumed;
     }
-    // else  if (mode_ == mode::read_chunks) {
-    // TODO: implement me
-    abort_and_shutdown("Chunked transfer not implemented yet.");
-    return -1;
+    if (mode_ != mode::read_chunks) {
+      abort_and_shutdown("Internal error: invalid mode.");
+      return -1;
+    }
+    auto res = v1::parse_chunk(input);
+    if (!res) {
+      // No error code signals we didn't receive enough data.
+      if (!res.error())
+        return consumed;
+      abort_and_shutdown(res.error());
+      return -1;
+    }
+    auto [chunk_size, remainder] = *res;
+    // Protect early against payloads that exceed the maximum size.
+    if (chunk_size + buffer_.size() > max_response_size_) {
+      abort_and_shutdown("Payload exceeds maximum size.");
+      return -1;
+    }
+    if (remainder.size() < chunk_size + 2) {
+      // Configure the policy for the next call to consume.
+      // Await exactly chunk line length + chunk_size bytes + crlf.
+      const auto awaited = input.size() - remainder.size() + chunk_size + 2;
+      down_->configure_read(receive_policy::exactly(awaited));
+      return consumed;
+    }
+    // Reset the policy from the previous call to consume.
+    down_->configure_read(receive_policy::up_to(max_response_size_));
+    consumed += input.size() - remainder.size() + chunk_size + 2;
+    // Check crlf at the end of chunk.
+    if (remainder[chunk_size] != std::byte{'\r'}
+        || remainder[chunk_size + 1] != std::byte{'\n'}) {
+      abort_and_shutdown("Missing CRLF sequence at the end of the chunk.");
+      return -1;
+    };
+    // End of chunk encoded request comes with a zero length chunk.
+    if (chunk_size == 0) {
+      if (!invoke_upper_layer(buffer_))
+        return -1;
+      mode_ = mode::read_header;
+      buffer_.clear();
+      return consumed;
+    }
+    buffer_.insert(buffer_.end(), remainder.begin(),
+                   remainder.begin() + chunk_size);
+    return consumed;
   }
 
 private:
@@ -219,7 +260,12 @@ private:
   // Signal abort to the upper layer and shutdown to the lower layer,
   // with closing message
   void abort_and_shutdown(std::string_view message) {
-    auto err = make_error(sec::protocol_error, message);
+    abort_and_shutdown(make_error(sec::protocol_error, message));
+  }
+
+  // Signal abort to the upper layer and shutdown to the lower layer,
+  // with closing message
+  void abort_and_shutdown(const caf::error& err) {
     up_->abort(err);
     down_->shutdown(err);
   }
@@ -245,10 +291,13 @@ private:
   /// Next layer in the processing chain.
   upper_layer_ptr up_;
 
-  /// Buffer for re-using memory.
+  /// Stored HTTP header of the current request.
   response_header hdr_;
 
-  /// Stores whether we are currently waiting for the payload.
+  /// Buffer for storing chunked data when in read_chunks mode.
+  byte_buffer buffer_;
+
+  /// Stores whether we are currently waiting for the payload/chunks.
   mode mode_ = mode::read_header;
 
   /// Stores the expected payload size when in read_payload mode.
