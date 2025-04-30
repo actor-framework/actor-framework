@@ -4,10 +4,11 @@
 
 #include "caf/json_reader.hpp"
 
+#include "caf/actor_control_block.hpp"
+#include "caf/deserializer.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/bounds_checker.hpp"
 #include "caf/detail/json.hpp"
-#include "caf/detail/print.hpp"
 #include "caf/format_to_error.hpp"
 #include "caf/internal/fast_pimpl.hpp"
 #include "caf/string_algorithms.hpp"
@@ -178,11 +179,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  impl() {
-    field_.reserve(8);
-  }
-
-  explicit impl(actor_system& sys) : sys_(&sys) {
+  impl(actor_system* sys, deserializer* parent) : sys_(sys), parent_(parent) {
     field_.reserve(8);
   }
 
@@ -746,6 +743,18 @@ public:
     return false;
   }
 
+  bool value(strong_actor_ptr& ptr) override {
+    // These are customization points for the deserializer. Client code may
+    // inherit from json_reader and override these member functions. Hence, we
+    // need to dispatch to the parent class.
+    return parent_->value(ptr);
+  }
+
+  bool value(weak_actor_ptr& ptr) override {
+    // Same as above.
+    return parent_->value(ptr);
+  }
+
 private:
   [[nodiscard]] position pos() const noexcept {
     if (st_ == nullptr)
@@ -897,6 +906,8 @@ private:
   const type_id_mapper* mapper_ = &default_mapper_;
 
   error err_;
+
+  deserializer* parent_;
 };
 
 } // namespace
@@ -904,11 +915,11 @@ private:
 // -- constructors, destructors, and assignment operators ----------------------
 
 json_reader::json_reader() {
-  impl::construct(impl_);
+  impl::construct(impl_, nullptr, this);
 }
 
 json_reader::json_reader(actor_system& sys) {
-  impl::construct(impl_, sys);
+  impl::construct(impl_, &sys, this);
 }
 
 json_reader::~json_reader() {
