@@ -409,7 +409,7 @@ caf_add_log_component(system)
 
 # Bandaid: currently produces an internal compiler error on MSVC. Disable until
 # further investigation.
-if(NOT MSVC)
+if(NOT MSVC AND CAF_ENABLE_TESTING)
   target_sources(caf-core-test PRIVATE caf/behavior.test.cpp)
 endif()
 
