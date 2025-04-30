@@ -4,10 +4,11 @@
 
 #pragma once
 
-#include "caf/delegated.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/intrusive/stack.hpp"
+#include "caf/intrusive_ptr.hpp"
 #include "caf/mailbox_element.hpp"
+#include "caf/ref_counted.hpp"
 
 #include <cstddef>
 
@@ -50,29 +51,10 @@ public:
   /// Adds `msg` to the cache.
   void stash(message msg);
 
-  /// Adds the current message to the cache. Returns a `delegated<Ts...>` if
-  /// `Ts...` is not empty, otherwise returns a `delegated<message>`.
-  /// This is a convenience function for `stash(self->current_message())` that
-  /// also returns a `delegated` for returning from the current message handler
-  /// (can be safely ignored if not needed).
-  template <class... Ts>
-  auto stash() {
-    do_stash_current();
-    if constexpr (sizeof...(Ts) == 0) {
-      return delegated<message>{};
-    } else {
-      return delegated<Ts...>{};
-    }
-  }
-
   /// Removes all elements from the cache and returns them to the mailbox.
   void unstash();
 
 private:
-  void do_stash(mailbox_element* src, message&& msg);
-
-  void do_stash_current();
-
   local_actor* self_;
   size_t max_size_ = 0;
   size_t size_ = 0;

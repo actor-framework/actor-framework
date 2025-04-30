@@ -4,24 +4,11 @@
 
 #include "caf/mail_cache.hpp"
 
-#include "caf/detail/critical.hpp"
+#include "caf/config.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/local_actor.hpp"
-#include "caf/mailbox_element.hpp"
 
 namespace caf {
-
-mailbox_element* safe_current_mailbox_element(local_actor* self) {
-  auto* ptr = self->current_mailbox_element();
-  if (!ptr) {
-#ifdef CAF_ENABLE_EXCEPTIONS
-    throw std::runtime_error("mail cache: current element is null");
-#else
-    CAF_CRITICAL("mail cache: current element is null");
-#endif
-  }
-  return ptr;
-}
 
 mail_cache::~mail_cache() {
   if (!empty()) {
@@ -34,24 +21,13 @@ mail_cache::~mail_cache() {
 }
 
 void mail_cache::stash(message msg) {
-  return do_stash(safe_current_mailbox_element(self_), std::move(msg));
-}
-
-void mail_cache::do_stash_current() {
-  auto* ptr = safe_current_mailbox_element(self_);
-  return do_stash(ptr, std::move(ptr->payload));
-}
-
-void mail_cache::do_stash(mailbox_element* src, message&& msg) {
-  if (size_ == max_size_) {
 #ifdef CAF_ENABLE_EXCEPTIONS
+  if (size_ == max_size_)
     throw std::runtime_error("mail cache exceeded its maximum size");
-#else
-    CAF_CRITICAL("mail cache exceeded its maximum size");
 #endif
-  }
-  auto element = make_mailbox_element(src->sender, src->mid, std::move(msg));
-  src->mid.mark_as_answered();
+  auto element = make_mailbox_element(self_->current_sender(),
+                                      self_->take_current_message_id(),
+                                      std::move(msg));
   ++size_;
   elements_.push(element.release());
 }
