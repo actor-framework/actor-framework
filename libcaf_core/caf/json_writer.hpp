@@ -13,7 +13,7 @@
 namespace caf {
 
 /// Serializes an inspectable object to a JSON-formatted string.
-class CAF_CORE_EXPORT json_writer final : public byte_writer {
+class CAF_CORE_EXPORT json_writer : public byte_writer {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -25,7 +25,7 @@ public:
 
   // -- properties -------------------------------------------------------------
 
-  const_byte_span bytes() const override;
+  const_byte_span bytes() const final;
 
   /// Returns a string view into the internal buffer.
   /// @warning This view becomes invalid when calling any non-const member
@@ -77,87 +77,87 @@ public:
   /// Removes all characters from the buffer and restores the writer to its
   /// initial state.
   /// @warning Invalidates all string views into the buffer.
-  void reset() override;
+  void reset() final;
 
   // -- overrides --------------------------------------------------------------
 
-  void set_error(error stop_reason) override;
+  void set_error(error stop_reason) final;
 
-  error& get_error() noexcept override;
+  error& get_error() noexcept final;
 
-  caf::actor_system* sys() const noexcept override;
+  caf::actor_system* sys() const noexcept final;
 
-  bool has_human_readable_format() const noexcept override;
+  bool has_human_readable_format() const noexcept final;
 
-  bool begin_object(type_id_t type, std::string_view name) override;
+  bool begin_object(type_id_t type, std::string_view name) final;
 
-  bool end_object() override;
+  bool end_object() final;
 
-  bool begin_field(std::string_view) override;
+  bool begin_field(std::string_view) final;
 
-  bool begin_field(std::string_view name, bool is_present) override;
+  bool begin_field(std::string_view name, bool is_present) final;
 
   bool begin_field(std::string_view name, span<const type_id_t> types,
-                   size_t index) override;
+                   size_t index) final;
 
   bool begin_field(std::string_view name, bool is_present,
-                   span<const type_id_t> types, size_t index) override;
+                   span<const type_id_t> types, size_t index) final;
 
-  bool end_field() override;
+  bool end_field() final;
 
-  bool begin_tuple(size_t size) override;
+  bool begin_tuple(size_t size) final;
 
-  bool end_tuple() override;
+  bool end_tuple() final;
 
-  bool begin_key_value_pair() override;
+  bool begin_key_value_pair() final;
 
-  bool end_key_value_pair() override;
+  bool end_key_value_pair() final;
 
-  bool begin_sequence(size_t size) override;
+  bool begin_sequence(size_t size) final;
 
-  bool end_sequence() override;
+  bool end_sequence() final;
 
-  bool begin_associative_array(size_t size) override;
+  bool begin_associative_array(size_t size) final;
 
-  bool end_associative_array() override;
+  bool end_associative_array() final;
 
-  bool value(std::byte x) override;
+  bool value(std::byte x) final;
 
-  bool value(bool x) override;
+  bool value(bool x) final;
 
-  bool value(int8_t x) override;
+  bool value(int8_t x) final;
 
-  bool value(uint8_t x) override;
+  bool value(uint8_t x) final;
 
-  bool value(int16_t x) override;
+  bool value(int16_t x) final;
 
-  bool value(uint16_t x) override;
+  bool value(uint16_t x) final;
 
-  bool value(int32_t x) override;
+  bool value(int32_t x) final;
 
-  bool value(uint32_t x) override;
+  bool value(uint32_t x) final;
 
-  bool value(int64_t x) override;
+  bool value(int64_t x) final;
 
-  bool value(uint64_t x) override;
+  bool value(uint64_t x) final;
 
-  bool value(float x) override;
+  bool value(float x) final;
 
-  bool value(double x) override;
+  bool value(double x) final;
 
-  bool value(long double x) override;
+  bool value(long double x) final;
 
-  bool value(std::string_view x) override;
+  bool value(std::string_view x) final;
 
-  bool value(const std::u16string& x) override;
+  bool value(const std::u16string& x) final;
 
-  bool value(const std::u32string& x) override;
+  bool value(const std::u32string& x) final;
 
-  bool value(const_byte_span x) override;
+  bool value(const_byte_span x) final;
 
 private:
   /// Storage for the implementation object.
-  alignas(std::max_align_t) std::byte impl_[208];
+  alignas(std::max_align_t) std::byte impl_[256];
 };
 
 } // namespace caf
