@@ -523,6 +523,32 @@ SCENARIO("the JSON compresses empty lists and objects") {
   }
 }
 
+SCENARIO("the JSON writer can render nested lists") {
+  GIVEN("a list of lists") {
+    std::vector<std::vector<int>> x{{1, 2}, {3, 4}};
+    WHEN("converting it to JSON with indentation factor 0") {
+      THEN("the JSON output is a single line") {
+        check_eq(to_json_string(x, 0), "[[1, 2], [3, 4]]"s);
+      }
+    }
+    WHEN("converting it to JSON with indentation factor 2") {
+      THEN("the JSON output uses multiple lines") {
+        std::string out = R"_([
+  [
+    1,
+    2
+  ],
+  [
+    3,
+    4
+  ]
+])_";
+        check_eq(to_json_string(x, 2), out);
+      }
+    }
+  }
+}
+
 } // WITH_FIXTURE(fixture)
 
 TEST_INIT() {
