@@ -226,6 +226,7 @@ bool json_writer::begin_sequence(size_t) {
       unsafe_morph(type::array);
       break;
     case type::array:
+      sep();
       push(type::array);
       break;
   }
