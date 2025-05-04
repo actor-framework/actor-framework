@@ -54,8 +54,10 @@ public:
   virtual size_t running() const = 0;
 
   /// Blocks the caller until running-actors-count becomes `expected`
-  /// (must be either 0 or 1).
-  virtual void await_running_count_equal(size_t expected) const = 0;
+  /// (must be either 0 or 1) or timeout is reached.
+  virtual void
+  await_running_count_equal(size_t expected, timespan timeout = infinite) const
+    = 0;
 
   /// Returns the actor associated with `key` or `invalid_actor`.
   template <class T = strong_actor_ptr>
