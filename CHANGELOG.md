@@ -47,6 +47,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   that tries to subscribe to it.
 - Use `localtime_s` on all Windows platforms to fix a build error with
   MSYS/UCRT64 (#2059).
+- Fix rendering of nested JSON lists (#2068).
 
 ## [1.0.2] - 2024-10-30
 
