@@ -320,6 +320,8 @@ caf_add_component(
     caf/message_id.test.cpp
     caf/message_lifetime.test.cpp
     caf/messaging.test.cpp
+    caf/meta/handler.cpp
+    caf/meta/handler.test.cpp
     caf/metaprogramming.test.cpp
     caf/mixin/requester.test.cpp
     caf/monitor.test.cpp
