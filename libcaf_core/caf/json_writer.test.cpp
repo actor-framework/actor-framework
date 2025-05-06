@@ -6,6 +6,7 @@
 
 #include "caf/test/scenario.hpp"
 
+#include "caf/actor_control_block.hpp"
 #include "caf/init_global_meta_objects.hpp"
 #include "caf/log/test.hpp"
 
@@ -514,6 +515,49 @@ SCENARIO("the JSON compresses empty lists and objects") {
     WHEN("converting it to JSON with indentation factor 2") {
       THEN("the JSON contains a compressed representation of the empty map") {
         check_eq(to_json_string(obj, 2, true, true), "{}"s);
+      }
+    }
+  }
+}
+
+class custom_writer : public json_writer {
+public:
+  using super = json_writer;
+
+  using super::super;
+
+  using super::value;
+
+  bool value(const strong_actor_ptr& ptr) override {
+    strong_actor_ptr_serialized = true;
+    return super::value(ptr);
+  }
+
+  bool value(const weak_actor_ptr& ptr) override {
+    weak_actor_ptr_serialized = true;
+    return super::value(ptr);
+  }
+
+  bool strong_actor_ptr_serialized = false;
+
+  bool weak_actor_ptr_serialized = false;
+};
+
+SCENARIO("users can override member functions for actor serialization") {
+  GIVEN("a custom writer") {
+    custom_writer writer;
+    WHEN("serializing a strong actor pointer") {
+      strong_actor_ptr ptr;
+      writer.value(ptr);
+      THEN("the overridden function is called") {
+        check(writer.strong_actor_ptr_serialized);
+      }
+    }
+    WHEN("serializing a weak actor pointer") {
+      weak_actor_ptr ptr;
+      writer.value(ptr);
+      THEN("the overridden function is called") {
+        check(writer.weak_actor_ptr_serialized);
       }
     }
   }

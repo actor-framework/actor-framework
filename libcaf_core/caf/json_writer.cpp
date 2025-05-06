@@ -4,12 +4,14 @@
 
 #include "caf/json_writer.hpp"
 
+#include "caf/actor_control_block.hpp"
 #include "caf/detail/append_hex.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/print.hpp"
 #include "caf/format_to_error.hpp"
 #include "caf/internal/fast_pimpl.hpp"
 #include "caf/internal/json_node.hpp"
+#include "caf/serializer.hpp"
 
 namespace caf {
 
@@ -41,16 +43,15 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  impl() {
-    init();
-  }
-
-  explicit impl(actor_system& sys) : sys_(&sys) {
-    init();
-  }
-
-  ~impl() override {
-    // nop
+  impl(actor_system* sys, serializer* parent) : sys_(sys), parent_(parent) {
+    // Reserve some reasonable storage for the character buffer. JSON grows
+    // quickly, so we can start at 1kb to avoid a couple of small allocations in
+    // the beginning.
+    buf_.reserve(1024);
+    // Even heavily nested objects should fit into 32 levels of nesting.
+    stack_.reserve(32);
+    // Placeholder for what is to come.
+    push();
   }
 
   // -- properties -------------------------------------------------------------
@@ -496,6 +497,18 @@ public:
     }
   }
 
+  bool value(const strong_actor_ptr& ptr) override {
+    // These are customization points for the deserializer. Client code may
+    // inherit from json_writer and override these member functions. Hence, we
+    // need to dispatch to the parent class.
+    return parent_->value(ptr);
+  }
+
+  bool value(const weak_actor_ptr& ptr) override {
+    // Same as above.
+    return parent_->value(ptr);
+  }
+
 private:
   // -- implementation details -------------------------------------------------
 
@@ -522,17 +535,6 @@ private:
   }
 
   // -- state management -------------------------------------------------------
-
-  void init() {
-    // Reserve some reasonable storage for the character buffer. JSON grows
-    // quickly, so we can start at 1kb to avoid a couple of small allocations in
-    // the beginning.
-    buf_.reserve(1024);
-    // Even heavily nested objects should fit into 32 levels of nesting.
-    stack_.reserve(32);
-    // Placeholder for what is to come.
-    push();
-  }
 
   // Returns the current top of the stack or `null` if empty.
   internal::json_node top() {
@@ -731,6 +733,8 @@ private:
 
   /// The last error that occurred.
   error err_;
+
+  serializer* parent_;
 };
 
 } // namespace
@@ -738,11 +742,11 @@ private:
 // -- constructors, destructors, and assignment operators ----------------------
 
 json_writer::json_writer() {
-  impl::construct(impl_);
+  impl::construct(impl_, nullptr, this);
 }
 
 json_writer::json_writer(actor_system& sys) {
-  impl::construct(impl_, sys);
+  impl::construct(impl_, &sys, this);
 }
 
 json_writer::~json_writer() {
