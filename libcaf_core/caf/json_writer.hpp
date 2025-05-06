@@ -121,6 +121,8 @@ public:
 
   bool end_associative_array() final;
 
+  using byte_writer::value;
+
   bool value(std::byte x) final;
 
   bool value(bool x) final;
