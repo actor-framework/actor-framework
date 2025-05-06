@@ -33,6 +33,14 @@ TEST("handlers are convertible to strings") {
            "(int32_t, int16_t, int8_t) -> (int8_t, int16_t, int32_t)");
 }
 
+TEST("handler lists are convertible to strings") {
+  using sigs = type_list<result<int32_t, int32_t>(), result<void>(int32_t),
+                         result<int32_t>(int32_t, int32_t)>;
+  auto ls = meta::handlers_from_signature_list<sigs>::handlers;
+  check_eq(to_string(ls), "[() -> (int32_t, int32_t), (int32_t) -> (), "
+                          "(int32_t, int32_t) -> (int32_t)]");
+}
+
 TEST("handlers are comparable") {
   check_eq(
     meta::handler{

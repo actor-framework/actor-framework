@@ -41,8 +41,8 @@ namespace caf {
 /// Actors will also start with a weak reference count of 1. This count
 /// is decremenated once the strong reference count drops to 0.
 ///
-/// The actor object is when the last strong reference expires. The full memory
-/// block is destroyed when the last weak reference expires.
+/// The actor object is destructed when the last strong reference expires. The
+/// full memory block is destroyed when the last weak reference expires.
 class CAF_CORE_EXPORT actor_control_block {
 public:
   actor_control_block(actor_id x, node_id& y, actor_system* sys,

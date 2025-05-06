@@ -13,7 +13,7 @@
 
 namespace caf::meta {
 
-/// Descriptor for a message handler handler.
+/// Descriptor for a message handler.
 struct handler {
   type_id_list inputs;
   type_id_list outputs;
