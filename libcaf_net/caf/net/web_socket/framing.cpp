@@ -59,7 +59,7 @@ error validate_closing_payload(const_byte_span payload) {
   // statuses between 1000 and 2999 need to be protocol defined, and status
   // codes lower then 1000 and greater or equal then 5000 are invalid.
   auto status_code = web_socket::status{0};
-  if (from_integer(status, status_code)) {
+  if (from_integer(static_cast<uint16_t>(status), status_code)) {
     switch (status_code) {
       case status::normal_close:
       case status::going_away:
@@ -267,9 +267,11 @@ private:
     if (hdr_.opcode == detail::rfc6455::text_frame
         || (hdr_.opcode == detail::rfc6455::continuation_frame
             && opcode_ == detail::rfc6455::text_frame))
-      down_->configure_read(receive_policy::up_to(hdr_.payload_len));
+      down_->configure_read(
+        receive_policy::up_to(static_cast<uint32_t>(hdr_.payload_len)));
     else
-      down_->configure_read(receive_policy::exactly(hdr_.payload_len));
+      down_->configure_read(
+        receive_policy::exactly(static_cast<uint32_t>(hdr_.payload_len)));
     return hdr_bytes;
   }
 

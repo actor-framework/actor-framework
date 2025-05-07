@@ -74,7 +74,7 @@ size_t do_unescape(const char* i, const char* e, char* out) {
   auto read_4len_hex = [](auto& x, auto& c) {
     ascii_to_int<16, std::decay_t<decltype(x)>> f;
     for (auto i = 0; i < 4; i++)
-      x = x * 16 + f(*c++);
+      x = static_cast<uint16_t>(x * 16) + f(*c++);
   };
   size_t new_size = 0;
   while (i != e) {
@@ -124,7 +124,8 @@ size_t do_unescape(const char* i, const char* e, char* out) {
                 i += 2;
                 auto low_surrogate = uint16_t{0};
                 read_4len_hex(low_surrogate, i);
-                code_point = surrogates_to_utf32(code_point, low_surrogate);
+                code_point = surrogates_to_utf32(
+                  static_cast<uint16_t>(code_point), low_surrogate);
               }
               auto written = utf32_to_utf8(code_point, out);
               out += written;
@@ -208,7 +209,7 @@ void read_code_point(ParserState& ps, Consumer consumer) {
   uint16_t result = 0;
   ascii_to_int<16, uint16_t> f;
   auto read_hex_digit = [&result, &f](char ch) {
-    result = 16 * result + f(ch);
+    result = static_cast<uint16_t>(16 * result) + static_cast<uint16_t>(f(ch));
   };
   // clang-format off
   start();

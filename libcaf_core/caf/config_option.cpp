@@ -24,7 +24,7 @@ template <class OutputIterator>
 auto copy_uppercase(std::string_view str, OutputIterator dst) {
   for (auto c : str) {
     if (isalnum(c))
-      *dst++ = toupper(c);
+      *dst++ = static_cast<char>(toupper(c));
     else
       *dst++ = '_';
   }
