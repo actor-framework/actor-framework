@@ -8,11 +8,16 @@
 #include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
+#include "caf/actor_from_state.hpp"
+#include "caf/anon_mail.hpp"
+#include "caf/error.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/log/test.hpp"
+#include "caf/mail_cache.hpp"
 #include "caf/policy/select_all.hpp"
 #include "caf/result.hpp"
 #include "caf/scoped_actor.hpp"
+#include "caf/type_id.hpp"
 #include "caf/typed_event_based_actor.hpp"
 
 #include <numeric>
@@ -377,6 +382,123 @@ TEST("GH-698 regression") {
   check(!has_pending_timeout());
   // The scheduler may no longer hold a reference to the client.
   check_eq(client->strong_refs, 1u);
+}
+
+TEST("GH-2070 regression") {
+  SECTION("dropping pending requests after regular shutdown") {
+    auto server = sys.spawn([](event_based_actor* self) {
+      return behavior{
+        [self](int32_t value) {
+          self->quit();
+          return value;
+        },
+      };
+    });
+    anon_mail(int32_t{42}).send(server);
+    auto client = sys.spawn([this, server](event_based_actor* self) {
+      self->request(server, infinite, int32_t{0})
+        .then([this](int32_t) { fail("unexpected handler called"); },
+              [this](const error& what) {
+                check_eq(what, sec::request_receiver_down);
+              });
+    });
+    // After receiving the `exit_msg`, the `server` drops the pending request
+    // from its mailbox and the client receives an error message.
+    expect<int32_t>().with(42).to(server);
+    expect<error>().to(client);
+  }
+  SECTION("dropping pending requests after forced shutdown") {
+    auto server = sys.spawn([] {
+      return behavior{
+        [](int32_t value) { return value; },
+      };
+    });
+    anon_send_exit(server, exit_reason::user_shutdown);
+    auto client = sys.spawn([this, server](event_based_actor* self) {
+      self->request(server, infinite, int32_t{0})
+        .then([this](int32_t) { fail("unexpected handler called"); },
+              [this](const error& what) {
+                check_eq(what, sec::request_receiver_down);
+              });
+    });
+    // After receiving the `exit_msg`, the `server` drops the pending request
+    // from its mailbox and the client receives an error message.
+    expect<exit_msg>().to(server);
+    expect<error>().to(client);
+  }
+  SECTION("sending a request to a terminated actor") {
+    auto server = sys.spawn([] {}); // terminates immediately
+    auto client = sys.spawn([this, server](event_based_actor* self) {
+      self->request(server, infinite, int32_t{0})
+        .then([this](int32_t) { fail("unexpected handler called"); },
+              [this](const error& what) {
+                check_eq(what, sec::request_receiver_down);
+              });
+    });
+    // The `server` terminates immediately, so at the time we send the request,
+    // the mailbox is already closed and the `client` immediately receives the
+    // error message.
+    expect<error>().to(client);
+  }
+  SECTION("dropping pending requests from a mail cache while shutting down") {
+    struct server_state {
+      server_state(event_based_actor* self) : cache(self, 10) {
+        // nop
+      }
+      behavior make_behavior() {
+        return {
+          [this](int32_t value) { cache.stash(make_message(value)); },
+        };
+      }
+      mail_cache cache;
+    };
+    auto server = sys.spawn(actor_from_state<server_state>);
+    auto client = sys.spawn([this, server](event_based_actor* self) {
+      self->request(server, infinite, int32_t{0})
+        .then([this](int32_t) { fail("unexpected handler called"); },
+              [this](const error& what) {
+                check_eq(what, sec::request_receiver_down);
+              });
+    });
+    expect<int32_t>().with(0).to(server);
+    check_eq(mail_count(), 0u);
+    inject().with(exit_msg{{}, exit_reason::user_shutdown}).to(server);
+    expect<error>().to(client);
+  }
+  // Note: this is the only test here that will not send request_receiver_down.
+  //       The purpose of this test is to check that the `mail_cache` will only
+  //       use that error code when the actor is actually shutting down while
+  //       the mail cache gets destroyed.
+  SECTION("dropping pending requests from a mail cache without shutting down") {
+    struct server_state {
+      server_state(event_based_actor* self) : self(self) {
+        // nop
+      }
+      behavior make_behavior() {
+        return {
+          [this](int32_t value) {
+            if (!cache) {
+              cache = std::make_unique<mail_cache>(self, 10);
+            }
+            cache->stash(make_message(value));
+          },
+          [this](delete_atom) { cache.reset(); },
+        };
+      }
+      event_based_actor* self;
+      std::unique_ptr<mail_cache> cache;
+    };
+    auto server = sys.spawn(actor_from_state<server_state>);
+    auto client = sys.spawn([this, server](event_based_actor* self) {
+      self->request(server, infinite, int32_t{0})
+        .then([this](int32_t) { fail("unexpected handler called"); },
+              [this](const error& what) { check_eq(what, sec::disposed); });
+    });
+    expect<int32_t>().with(0).to(server);
+    check_eq(mail_count(), 0u);
+    inject().with(delete_atom_v).to(server);
+    expect<error>().to(client);
+  }
 }
 
 } // WITH_FIXTURE(fixture)

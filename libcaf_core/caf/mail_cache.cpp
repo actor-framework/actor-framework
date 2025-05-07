@@ -4,6 +4,7 @@
 
 #include "caf/mail_cache.hpp"
 
+#include "caf/abstract_actor.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/local_actor.hpp"
@@ -12,7 +13,14 @@ namespace caf {
 
 mail_cache::~mail_cache() {
   if (!empty()) {
-    detail::sync_request_bouncer bouncer{make_error(sec::disposed)};
+    error reason;
+    if (self_->getf(abstract_actor::is_terminated_flag
+                    | abstract_actor::is_shutting_down_flag)) {
+      reason = make_error(sec::request_receiver_down);
+    } else {
+      reason = make_error(sec::disposed);
+    }
+    detail::sync_request_bouncer bouncer{std::move(reason)};
     while (auto raw = elements_.pop()) {
       auto ptr = mailbox_element_ptr{raw};
       bouncer(*ptr);

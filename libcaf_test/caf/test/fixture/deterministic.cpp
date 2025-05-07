@@ -45,7 +45,7 @@ public:
 
   intrusive::inbox_result push_back(mailbox_element_ptr ptr) override {
     if (closed_) {
-      detail::sync_request_bouncer bouncer{close_reason_};
+      detail::sync_request_bouncer bouncer;
       bouncer(*ptr);
       return intrusive::inbox_result::queue_closed;
     }
@@ -91,7 +91,7 @@ public:
     closed_ = true;
     close_reason_ = reason;
     auto result = size_t{0};
-    auto bounce = detail::sync_request_bouncer{reason};
+    auto bounce = detail::sync_request_bouncer{};
     auto envelope = fix_->pop_msg_impl(owner_);
     while (envelope != nullptr) {
       ++result;

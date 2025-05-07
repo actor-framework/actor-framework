@@ -54,6 +54,8 @@ public:
   /// Closes the mailbox and discards all pending messages.
   /// @returns The number of dropped messages.
   /// @note Only the owning actor is allowed to call this function.
+  /// @note @p reason is ignored since CAF 1.10.0. A closed mailbox will always
+  ///       report @c sec::request_receiver_down.
   virtual size_t close(const error& reason) = 0;
 
   /// Returns the number of pending messages.

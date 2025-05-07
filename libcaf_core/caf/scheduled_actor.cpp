@@ -185,7 +185,7 @@ bool scheduled_actor::enqueue(mailbox_element_ptr ptr, scheduler* sched) {
       if (collects_metrics)
         metrics_.mailbox_size->dec();
       if (mid.is_request()) {
-        detail::sync_request_bouncer f{exit_reason()};
+        detail::sync_request_bouncer f;
         f(sender, mid);
       }
       return false;
@@ -1168,7 +1168,7 @@ void scheduled_actor::close_mailbox(const error& reason) {
   // Discard stashed messages.
   auto dropped = size_t{0};
   if (!stash_.empty()) {
-    detail::sync_request_bouncer bounce{reason};
+    detail::sync_request_bouncer bounce;
     while (auto stashed = stash_.pop()) {
       bounce(*stashed);
       delete stashed;

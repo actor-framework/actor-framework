@@ -155,7 +155,7 @@ bool abstract_actor_shell::enqueue(mailbox_element_ptr ptr, scheduler*) {
       if (collects_metrics)
         metrics_.mailbox_size->dec();
       if (mid.is_request()) {
-        detail::sync_request_bouncer f{exit_reason()};
+        detail::sync_request_bouncer f;
         f(sender, mid);
       }
       return false;
