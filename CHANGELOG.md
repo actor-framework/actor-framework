@@ -11,6 +11,12 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   to spot mistakes when chaining calls.
 - The `merge` and `flat_map` operators now accept an optional unsigned integer
   parameter to configure the maximum number of concurrent subscriptions.
+- If an actor terminates, it will now consistently send error messages with code
+  `caf::sec::request_receiver_down` to all outstanding requests. Any request
+  that arrives after an actor has closed its mailbox will receive the same error
+  code. This change makes it easier to handle errors in a consistent way and to
+  distinguish between requests that have been dropped and those that resulted in
+  an error while processing the request (#2070).
 
 ### Added
 

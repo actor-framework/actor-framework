@@ -7,6 +7,7 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/error.hpp"
 #include "caf/fwd.hpp"
+#include "caf/sec.hpp"
 
 namespace caf::detail {
 
@@ -15,6 +16,10 @@ struct CAF_CORE_EXPORT sync_request_bouncer {
   // -- constructors, destructors, and assignment operators --------------------
 
   explicit sync_request_bouncer(error r) : rsn(std::move(r)) {
+    // nop
+  }
+
+  sync_request_bouncer() : rsn(sec::request_receiver_down) {
     // nop
   }
 

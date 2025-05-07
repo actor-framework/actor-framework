@@ -171,11 +171,17 @@ response message. Event-based actors can use either ``request(...).then`` or
 regular actor behavior and handles requests as they arrive. The latter suspends
 the regular actor behavior until all awaited responses arrive and handles
 requests in LIFO order. Blocking actors always use ``request(...).receive``,
-which blocks until the one-shot handler was called. Actors receive a
-``sec::request_timeout`` (see :ref:`sec`) error message (see
+which blocks until the one-shot handler was called.
+
+Actors receive a ``sec::request_timeout`` (see :ref:`sec`) error message (see
 :ref:`error-message`) if a timeout occurs. Users can set the timeout to
 ``infinite`` for unbound operations. This is only recommended if the receiver is
 known to run locally.
+
+When shutting down, actors will automatically cancel all pending requests by
+sending a ``sec::request_receiver_down`` error message to the sender. This error
+code is also used if the receiver of a request message is no longer alive and
+the response has been discarded as a result.
 
 In our following example, we use the simple cell actor shown below as
 communication endpoint.

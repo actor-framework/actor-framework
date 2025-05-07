@@ -80,7 +80,7 @@ TEST("a mail cache throws when exceeding its capacity") {
   self->mail(add_atom_v, 5).send(aut);
   self->mail(add_atom_v, 6).send(aut);
   auto res = self->mail(get_atom_v).request(aut, 1s).receive<int>();
-  check_eq(res, make_error(sec::runtime_error));
+  check_eq(res, make_error(sec::request_receiver_down));
 }
 #endif // CAF_ENABLE_EXCEPTIONS
 

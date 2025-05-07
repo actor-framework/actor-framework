@@ -29,7 +29,11 @@ enum class sec : uint8_t {
   unexpected_message = 1,
   /// Indicates that a response message did not match the provided handler.
   unexpected_response,
-  /// Indicates that the receiver of a request is no longer alive.
+  /// Indicates that the receiver of a request is no longer alive. If an actor
+  /// terminates, all pending requests to this actor are dropped from the
+  /// mailbox and the sender receives an error message with this code. The error
+  /// code is also used when a request is sent to an actor that has already
+  /// terminated and does no longer accept messages.
   request_receiver_down,
   /// Indicates that a request message timed out.
   request_timeout,

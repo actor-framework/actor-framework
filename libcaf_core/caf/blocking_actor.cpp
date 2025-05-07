@@ -72,7 +72,7 @@ bool blocking_actor::enqueue(mailbox_element_ptr ptr, scheduler*) {
       if (collects_metrics)
         metrics_.mailbox_size->dec();
       if (mid.is_request()) {
-        detail::sync_request_bouncer srb{exit_reason()};
+        detail::sync_request_bouncer srb;
         srb(src, mid);
       }
       return false;
