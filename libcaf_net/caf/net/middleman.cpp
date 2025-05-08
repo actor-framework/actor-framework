@@ -78,6 +78,7 @@ void launch_prom_server(actor_system& sys, const prom_config& cfg) {
 }
 
 void launch_background_tasks(actor_system& sys) {
+  auto lg = log::net::trace("");
   auto& cfg = sys.config();
   if (auto pcfg = get_as<prom_config>(cfg, "caf.net.prometheus-http")) {
     launch_prom_server(sys, *pcfg);
@@ -111,10 +112,10 @@ middleman::~middleman() {
 void middleman::start() {
   auto fn = [this] {
     mpx_->set_thread_id();
-    launch_background_tasks(sys_);
     mpx_->run();
   };
   mpx_thread_ = sys_.launch_thread("caf.net.mpx", thread_owner::system, fn);
+  launch_background_tasks(sys_);
 }
 
 void middleman::stop() {
