@@ -103,6 +103,7 @@ caf_add_component(
     caf/net/socket_manager.cpp
     caf/net/ssl/connection.cpp
     caf/net/ssl/context.cpp
+    caf/net/ssl/context.test.cpp
     caf/net/ssl/dtls.cpp
     caf/net/ssl/errc.cpp
     caf/net/ssl/format.cpp
