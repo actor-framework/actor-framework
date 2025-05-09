@@ -156,6 +156,21 @@ public:
   bool check(bool value, const detail::source_location& location
                          = detail::source_location::current());
 
+  /// Checks whether `what` holds a value.
+  template <class T>
+  bool check_has_value(const expected<T>& what,
+                       const detail::source_location& location
+                       = detail::source_location::current()) {
+    if (what.has_value()) {
+      reporter::instance().pass(location);
+      return true;
+    }
+    auto msg = detail::format("expected<T> contains an error: {}",
+                              what.error());
+    reporter::instance().fail(msg, location);
+    return false;
+  }
+
   /// Evaluates whether `lhs` and `rhs` are equal and fails otherwise.
   template <class T0, class T1>
   void require_eq(const T0& lhs, const T1& rhs,

@@ -287,7 +287,7 @@ expected<net::ssl::context>
 ssl_ctx_chain_if(net::ssl::context& ctx, std::string_view fn_error,
                  bool (net::ssl::context::*fn)(Ts...), Args&... args) {
   using net::ssl::context;
-  if ((!args && ...) || (ctx.*fn)(args.get()...))
+  if (!(args && ...) || (ctx.*fn)(args.get()...))
     return expected<context>{std::move(ctx)};
   else
     return expected<context>{context::last_error_or_unexpected(fn_error)};

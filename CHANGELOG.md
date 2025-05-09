@@ -54,6 +54,11 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Use `localtime_s` on all Windows platforms to fix a build error with
   MSYS/UCRT64 (#2059).
 - Fix rendering of nested JSON lists (#2068).
+- Add missing `pragma once` guards to multiple headers under `caf/net/ssl/`.
+- Fix the behavior of `use_certificate_file_if` and `use_private_key_file_if`.
+  Both functions did not leave the `caf::net::ssl::context` unchanged if one of
+  the arguments was invalid but instead applied the invalid arguments to the
+  context regardless, resulting in an OpenSSL error.
 
 ## [1.0.2] - 2024-10-30
 
