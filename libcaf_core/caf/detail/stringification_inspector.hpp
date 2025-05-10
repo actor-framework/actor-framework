@@ -23,6 +23,8 @@ public:
 
   stringification_inspector(std::string& result);
 
+  ~stringification_inspector() override;
+
   // -- properties -------------------------------------------------------------
 
   bool has_human_readable_format() const noexcept;
@@ -109,40 +111,14 @@ public:
   }
 
   template <class T>
-  std::enable_if_t<detail::is_map_like_v<T>, bool>
-  builtin_inspect(const T& xs) {
-    sep();
-    auto& result_ = result();
-    auto i = xs.begin();
-    auto last = xs.end();
-    if (i == last) {
-      result_ += "{}";
-      return true;
-    }
-    result_ += '{';
-    save(*this, i->first);
-    result_ += " = ";
-    save(*this, i->second);
-    while (++i != last) {
-      sep();
-      save(*this, i->first);
-      result_ += " = ";
-      save(*this, i->second);
-    }
-    result_ += '}';
-    return true;
-  }
-
-  template <class T>
   std::enable_if_t<
     has_to_string_v<T> && !std::is_convertible_v<T, std::string_view>, bool>
   builtin_inspect(const T& x) {
     auto str = to_string(x);
-    auto& result_ = result();
     if constexpr (std::is_convertible<decltype(str), const char*>::value) {
       const char* cstr = str;
       sep();
-      result_ += cstr;
+      append(cstr, false);
     } else {
       append(str);
     }
@@ -151,24 +127,23 @@ public:
 
   template <class T>
   bool builtin_inspect(const T* x) {
-    auto& result_ = result();
     if (x == nullptr) {
       sep();
-      result_ += "null";
+      append("null", false);
       return true;
     }
     if constexpr (std::is_same_v<T, char>) {
       return value(std::string_view{x, strlen(x)});
     } else if constexpr (std::is_same_v<T, void>) {
       sep();
-      result_ += "*<";
+      append("*<", false);
       auto addr = reinterpret_cast<intptr_t>(x);
-      result_ += std::to_string(addr);
-      result_ += '>';
+      append(std::to_string(addr), false);
+      append(">", false);
       return true;
     } else {
       sep();
-      result_ += '*';
+      append("*", false);
       save(*this, detail::as_mutable_ref(*x));
       return true;
     }
@@ -177,11 +152,10 @@ public:
   template <class T>
   bool builtin_inspect(const std::optional<T>& x) {
     sep();
-    auto& result_ = result();
     if (!x) {
-      result_ += "null";
+      append("null", false);
     } else {
-      result_ += '*';
+      append("*", false);
       save(*this, detail::as_mutable_ref(*x));
     }
     return true;
@@ -192,11 +166,14 @@ public:
   template <class T>
   bool opaque_value(T& val) {
     if constexpr (detail::is_iterable<T>::value) {
-      print_list(val.begin(), val.end());
+      begin_sequence(val.size());
+      for (const auto& elem : val) {
+        save(*this, elem);
+      }
+      end_sequence();
     } else {
       sep();
-      auto& result_ = result();
-      result_ += "<unprintable>";
+      append("<unprintable>", false);
     }
     return true;
   }
@@ -224,32 +201,15 @@ public:
 
 private:
   /// Storage for the implementation object.
-  alignas(std::max_align_t) std::byte impl_[32];
+  alignas(std::max_align_t) std::byte impl_[64];
 
-  template <class T>
-  void append(T&& str) {
-    sep();
-    auto& result_ = result();
-    result_.insert(result_.end(), str.begin(), str.end());
-  }
-
-  template <class Iterator, class Sentinel>
-  void print_list(Iterator first, Sentinel sentinel) {
-    sep();
-    auto& result_ = result();
-    result_ += '[';
-    while (first != sentinel)
-      save(*this, *first++);
-    result_ += ']';
-  }
+  void append(std::string_view str, bool enable_sep = true);
 
   void sep();
 
   bool int_value(int64_t x);
 
   bool int_value(uint64_t x);
-
-  std::string& result();
 };
 
 } // namespace caf::detail

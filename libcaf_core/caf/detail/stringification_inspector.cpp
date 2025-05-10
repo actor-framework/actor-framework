@@ -7,6 +7,7 @@
 #include "caf/actor_control_block.hpp"
 #include "caf/detail/print.hpp"
 #include "caf/internal/fast_pimpl.hpp"
+#include "caf/internal/stringification_inspector_node.hpp"
 
 #include <algorithm>
 #include <ctime>
@@ -25,7 +26,7 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   impl(std::string& result) : result_(result) {
-    // nop
+    stack_.reserve(32);
   }
 
   // -- properties -------------------------------------------------------------
@@ -52,6 +53,7 @@ public:
     } else {
       in_string_object_ = true;
     }
+    push(internal::stringification_inspector_node::object);
     return true;
   }
 
@@ -60,7 +62,7 @@ public:
       result_ += ')';
     else
       in_string_object_ = false;
-    return true;
+    return pop_if(internal::stringification_inspector_node::object);
   }
 
   bool begin_field(std::string_view) {
@@ -103,30 +105,53 @@ public:
   }
 
   bool begin_key_value_pair() {
-    return begin_tuple(2);
+    switch (top()) {
+      case internal::stringification_inspector_node::sequence:
+        return begin_tuple(2);
+      case internal::stringification_inspector_node::map:
+        push(internal::stringification_inspector_node::member);
+        return true;
+      default:
+        return false;
+    }
   }
 
   bool end_key_value_pair() {
-    return end_tuple();
+    switch (top()) {
+      case internal::stringification_inspector_node::sequence:
+        return end_tuple();
+      case internal::stringification_inspector_node::member:
+        return pop_if(internal::stringification_inspector_node::member);
+      default:
+        return false;
+    }
   }
 
   bool begin_sequence(size_t) {
     sep();
     result_ += '[';
+    push(internal::stringification_inspector_node::sequence);
     return true;
   }
 
   bool end_sequence() {
-    result_ += ']';
+    if (pop_if(internal::stringification_inspector_node::sequence)) {
+      result_ += ']';
+      return true;
+    }
     return true;
   }
 
-  bool begin_associative_array(size_t size) {
-    return begin_sequence(size);
+  bool begin_associative_array(size_t) {
+    sep();
+    result_ += '{';
+    push(internal::stringification_inspector_node::map);
+    return true;
   }
 
   bool end_associative_array() {
-    return end_sequence();
+    result_ += '}';
+    return pop_if(internal::stringification_inspector_node::map);
   }
 
   bool value(std::byte x) {
@@ -231,10 +256,6 @@ public:
     return end_sequence();
   }
 
-  std::string& result() {
-    return result_;
-  }
-
   bool int_value(int64_t x) {
     sep();
     detail::print(result_, x);
@@ -248,20 +269,94 @@ public:
   }
 
   void sep() {
-    if (!result_.empty())
-      switch (result_.back()) {
-        case '(':
-        case '[':
-        case '{':
-        case '*':
-        case ' ': // only at back if we've printed ", " before
-          break;
-        default:
-          result_ += ", ";
-      }
+    if (result_.empty())
+      return;
+    switch (result_.back()) {
+      case '(':
+      case '[':
+      case '*':
+      case ' ': // only at back if we've printed ", " before
+        return;
+      case '{':
+        CAF_ASSERT(!stack_.empty());
+        stack_.back().fill = false;
+        return;
+    }
+    const auto t = top();
+    if (t == internal::stringification_inspector_node::member
+        && stack_.back().fill) {
+      result_ += ", ";
+      stack_.back().fill = false;
+    } else if (t == internal::stringification_inspector_node::member
+               && !stack_.back().fill) {
+      result_ += " = ";
+    } else
+      result_ += ", ";
+  }
+
+  void append(std::string_view str, bool enable_sep = true) {
+    if (enable_sep)
+      sep();
+    result_.insert(result_.end(), str.begin(), str.end());
+  }
+
+  // Returns the current top of the stack or `null` if empty.
+  internal::stringification_inspector_node top() {
+    if (!stack_.empty())
+      return stack_.back().t;
+    else
+      return internal::stringification_inspector_node::null;
+  }
+
+  // Enters a new level of nesting.
+  void push(internal::stringification_inspector_node t) {
+    auto tmp = entry{t, true};
+    stack_.push_back(tmp);
+  }
+
+  // Backs up one level of nesting.
+  bool pop() {
+    if (!stack_.empty()) {
+      stack_.pop_back();
+      return true;
+    }
+    err_ = make_error(sec::runtime_error,
+                      "pop() called with an empty stack: begin/end mismatch");
+    return false;
+  }
+
+  // Backs up one level of nesting but checks that current top is `t` before.
+  bool pop_if(internal::stringification_inspector_node t) {
+    if (!stack_.empty() && stack_.back() == t) {
+      stack_.pop_back();
+      return true;
+    }
+    if (stack_.empty()) {
+      err_ = make_error(sec::runtime_error,
+                        "pop_if failed: expected {} but found an empty stack",
+                        as_stringification_type_name(t));
+    } else {
+      err_ = make_error(sec::runtime_error,
+                        "pop_if failed: expected {} but found {}",
+                        as_stringification_type_name(t),
+                        as_stringification_type_name(stack_.back().t));
+    }
+    return false;
   }
 
 private:
+  struct entry {
+    internal::stringification_inspector_node t;
+    bool fill;
+    friend bool
+    operator==(entry x, internal::stringification_inspector_node y) noexcept {
+      return x.t == y;
+    };
+  };
+
+  // Bookkeeping for where we are in the current object.
+  std::vector<entry> stack_;
+
   std::string& result_;
 
   bool in_string_object_ = false;
@@ -275,6 +370,10 @@ private:
 
 stringification_inspector::stringification_inspector(std::string& result) {
   impl::construct(impl_, result);
+}
+
+stringification_inspector::~stringification_inspector() {
+  impl::destruct(impl_);
 }
 
 // -- properties -------------------------------------------------------------
@@ -420,16 +519,16 @@ void stringification_inspector::sep() {
   return impl::cast(impl_).sep();
 }
 
+void stringification_inspector::append(std::string_view str, bool enable_sep) {
+  impl::cast(impl_).append(str, enable_sep);
+}
+
 bool stringification_inspector::int_value(int64_t x) {
   return impl::cast(impl_).int_value(x);
 }
 
 bool stringification_inspector::int_value(uint64_t x) {
   return impl::cast(impl_).int_value(x);
-}
-
-std::string& stringification_inspector::result() {
-  return impl::cast(impl_).result();
 }
 
 } // namespace caf::detail
