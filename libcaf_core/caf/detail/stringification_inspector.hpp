@@ -6,17 +6,9 @@
 
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
-#include "caf/inspector_access.hpp"
 #include "caf/save_inspector_base.hpp"
-#include "caf/timespan.hpp"
-#include "caf/timestamp.hpp"
 
-#include <chrono>
-#include <cstring>
-#include <string>
-#include <string_view>
-#include <type_traits>
-#include <vector>
+#include <cstddef>
 
 namespace caf::detail {
 
@@ -29,17 +21,11 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  stringification_inspector(std::string& result) : result_(result) {
-    // nop
-  }
+  stringification_inspector(std::string& result);
 
   // -- properties -------------------------------------------------------------
 
-  constexpr bool has_human_readable_format() const noexcept {
-    return true;
-  }
-
-  bool always_quote_strings = true;
+  bool has_human_readable_format() const noexcept;
 
   // -- serializer interface ---------------------------------------------------
 
@@ -61,33 +47,21 @@ public:
 
   bool end_field();
 
-  bool begin_tuple(size_t size) {
-    return begin_sequence(size);
-  }
+  bool begin_tuple(size_t size);
 
-  bool end_tuple() {
-    return end_sequence();
-  }
+  bool end_tuple();
 
-  bool begin_key_value_pair() {
-    return begin_tuple(2);
-  }
+  bool begin_key_value_pair();
 
-  bool end_key_value_pair() {
-    return end_tuple();
-  }
+  bool end_key_value_pair();
 
   bool begin_sequence(size_t size);
 
   bool end_sequence();
 
-  bool begin_associative_array(size_t size) {
-    return begin_sequence(size);
-  }
+  bool begin_associative_array(size_t size);
 
-  bool end_associative_array() {
-    return end_sequence();
-  }
+  bool end_associative_array();
 
   bool value(std::byte x);
 
@@ -141,20 +115,20 @@ public:
     auto i = xs.begin();
     auto last = xs.end();
     if (i == last) {
-      result_ += "{}";
+      append("{}", false);
       return true;
     }
-    result_ += '{';
+    append("{", false);
     save(*this, i->first);
-    result_ += " = ";
+    append(" = ", false);
     save(*this, i->second);
     while (++i != last) {
       sep();
       save(*this, i->first);
-      result_ += " = ";
+      append(" = ", false);
       save(*this, i->second);
     }
-    result_ += '}';
+    append("}", false);
     return true;
   }
 
@@ -166,7 +140,7 @@ public:
     if constexpr (std::is_convertible<decltype(str), const char*>::value) {
       const char* cstr = str;
       sep();
-      result_ += cstr;
+      append(cstr, false);
     } else {
       append(str);
     }
@@ -177,21 +151,21 @@ public:
   bool builtin_inspect(const T* x) {
     if (x == nullptr) {
       sep();
-      result_ += "null";
+      append("null", false);
       return true;
     }
     if constexpr (std::is_same_v<T, char>) {
       return value(std::string_view{x, strlen(x)});
     } else if constexpr (std::is_same_v<T, void>) {
       sep();
-      result_ += "*<";
+      append("*<", false);
       auto addr = reinterpret_cast<intptr_t>(x);
-      result_ += std::to_string(addr);
-      result_ += '>';
+      append(std::to_string(addr), false);
+      append(">", false);
       return true;
     } else {
       sep();
-      result_ += '*';
+      append("*", false);
       save(*this, detail::as_mutable_ref(*x));
       return true;
     }
@@ -201,9 +175,9 @@ public:
   bool builtin_inspect(const std::optional<T>& x) {
     sep();
     if (!x) {
-      result_ += "null";
+      append("null", false);
     } else {
-      result_ += '*';
+      append("*", false);
       save(*this, detail::as_mutable_ref(*x));
     }
     return true;
@@ -214,10 +188,14 @@ public:
   template <class T>
   bool opaque_value(T& val) {
     if constexpr (detail::is_iterable<T>::value) {
-      print_list(val.begin(), val.end());
+      begin_sequence(val.size());
+      for (const auto& elem : val) {
+        save(*this, elem);
+      }
+      end_sequence();
     } else {
       sep();
-      result_ += "<unprintable>";
+      append("<unprintable>", false);
     }
     return true;
   }
@@ -244,32 +222,16 @@ public:
   }
 
 private:
-  template <class T>
-  void append(T&& str) {
-    sep();
-    result_.insert(result_.end(), str.begin(), str.end());
-  }
+  /// Storage for the implementation object.
+  alignas(std::max_align_t) std::byte impl_[32];
 
-  template <class Iterator, class Sentinel>
-  void print_list(Iterator first, Sentinel sentinel) {
-    sep();
-    result_ += '[';
-    while (first != sentinel)
-      save(*this, *first++);
-    result_ += ']';
-  }
+  void append(std::string_view str, bool enable_sep = true);
+
+  void sep();
 
   bool int_value(int64_t x);
 
   bool int_value(uint64_t x);
-
-  void sep();
-
-  std::string& result_;
-
-  bool in_string_object_ = false;
-
-  error err_;
 };
 
 } // namespace caf::detail
