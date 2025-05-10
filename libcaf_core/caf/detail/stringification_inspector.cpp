@@ -231,10 +231,6 @@ public:
     return end_sequence();
   }
 
-  std::string& result() {
-    return result_;
-  }
-
   bool int_value(int64_t x) {
     sep();
     detail::print(result_, x);
@@ -259,6 +255,12 @@ public:
         default:
           result_ += ", ";
       }
+  }
+
+  void append(std::string_view str, bool enable_sep = true) {
+    if (enable_sep)
+      sep();
+    result_.insert(result_.end(), str.begin(), str.end());
   }
 
 private:
@@ -420,16 +422,16 @@ void stringification_inspector::sep() {
   return impl::cast(impl_).sep();
 }
 
+void stringification_inspector::append(std::string_view str, bool enable_sep) {
+  impl::cast(impl_).append(str, enable_sep);
+}
+
 bool stringification_inspector::int_value(int64_t x) {
   return impl::cast(impl_).int_value(x);
 }
 
 bool stringification_inspector::int_value(uint64_t x) {
   return impl::cast(impl_).int_value(x);
-}
-
-std::string& stringification_inspector::result() {
-  return impl::cast(impl_).result();
 }
 
 } // namespace caf::detail
