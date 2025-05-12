@@ -59,6 +59,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   Both functions did not leave the `caf::net::ssl::context` unchanged if one of
   the arguments was invalid but instead applied the invalid arguments to the
   context regardless, resulting in an OpenSSL error.
+- Fix a bug in the HTTP parser that could cause the parser to try parsing the
+  payload as a new request.
 
 ## [1.0.2] - 2024-10-30
 

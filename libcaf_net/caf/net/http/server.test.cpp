@@ -6,6 +6,7 @@
 
 #include "caf/test/scenario.hpp"
 #include "caf/test/suite.hpp"
+#include "caf/test/test.hpp"
 
 #include "caf/net/fwd.hpp"
 #include "caf/net/http/request_header.hpp"
@@ -16,6 +17,7 @@
 #include "caf/net/stream_socket.hpp"
 
 #include "caf/async/promise.hpp"
+#include "caf/log/test.hpp"
 #include "caf/raise_error.hpp"
 
 using namespace caf;
@@ -232,6 +234,81 @@ SCENARIO("the client receives a chunked HTTP response") {
       }
     }
   }
+}
+
+// TODO: Come up with a better API for treating multipart requests.
+SCENARIO("the client sends a multipart HTTP request") {
+  GIVEN("valid HTTP multipart POST request") {
+    auto req_headers
+      = "POST /hello HTTP/1.1\r\n"
+        "Host: localhost:8000\r\n"
+        "User-Agent: curl/8.13.0\r\n"
+        "Accept: */*\r\n"
+        "Content-Length: 252\r\n"
+        "Content-Type: multipart/form-data; "
+        "boundary=------------------------n7qcGgyvEaAXIT5sDsIVRV\r\n"
+        "\r\n"sv;
+    auto req_body = "--------------------------n7qcGgyvEaAXIT5sDsIVRV\r\n"
+                    "Content-Disposition: form-data; name=\"key\"\r\n"
+                    "\r\n"
+                    "val\r\n"
+                    "--------------------------n7qcGgyvEaAXIT5sDsIVRV\r\n"
+                    "Content-Disposition: form-data; name=\"k2\"\r\n"
+                    "\r\n"
+                    "v2\r\n"
+                    "--------------------------n7qcGgyvEaAXIT5sDsIVRV--\r\n"sv;
+    async::promise<response_t> res_promise;
+    run_server([res_promise](auto*,
+                             const net::http::request_header& request_hdr,
+                             const_byte_span body) mutable {
+      response_t res;
+      res.hdr = request_hdr;
+      res.payload.assign(body.begin(), body.end());
+      res_promise.set_value(std::move(res));
+    });
+    WHEN("sending it to an HTTP server") {
+      net::write(fd1, as_bytes(make_span(req_headers)));
+      net::write(fd1, as_bytes(make_span(req_body)));
+      THEN("the HTTP layer parses the data and calls the application layer") {
+        auto maybe_res = res_promise.get_future().get(1s);
+        require(check(maybe_res.has_value()));
+        auto& res = *maybe_res;
+        check_eq(res.hdr.method(), net::http::method::post);
+        check_eq(res.hdr.version(), "HTTP/1.1");
+        check_eq(res.hdr.path(), "/hello");
+        check_eq(res.hdr.field("Host"), "localhost:8000");
+        check_eq(res.payload_as_str(), req_body);
+      }
+    }
+  }
+}
+
+TEST("GH-2073 Regression - incoming data must be parsed only once") {
+  auto request = "GET /foo HTTP/1.1\r\n"
+                 "Content-Length: 21\r\n\r\n"
+                 "GET /foo HTTP/1.1\r\n\r\n"sv;
+  async::promise<response_t> res_promise;
+  int call_count = 0;
+  run_server([res_promise,
+              &call_count](auto*, const net::http::request_header& request_hdr,
+                           const_byte_span body) mutable {
+    response_t res;
+    res.hdr = request_hdr;
+    res.payload.assign(body.begin(), body.end());
+    res_promise.set_value(std::move(res));
+    call_count++;
+  });
+  net::write(fd1, as_bytes(make_span(request)));
+  auto maybe_res = res_promise.get_future().get(1s);
+  require(maybe_res.has_value());
+  // Regression: the body can't be forwarded as a separate request.
+  check_eq(call_count, 1);
+  auto& res = *maybe_res;
+  check_eq(res.hdr.method(), net::http::method::get);
+  check_eq(res.hdr.version(), "HTTP/1.1");
+  check_eq(res.hdr.path(), "/foo");
+  check_eq(res.hdr.content_length(), 21);
+  check_eq(res.payload_as_str(), "GET /foo HTTP/1.1\r\n\r\n");
 }
 
 } // WITH_FIXTURE(fixture)
