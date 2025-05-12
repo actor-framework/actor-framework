@@ -201,6 +201,7 @@ public:
             if (!invoke_upper_layer(input.subspan(0, payload_len_)))
               return -1;
             consumed += static_cast<ptrdiff_t>(payload_len_);
+            input = input.subspan(payload_len_);
             mode_ = mode::read_header;
           } else {
             // Wait for more data.
