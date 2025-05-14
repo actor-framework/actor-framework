@@ -47,6 +47,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   that tries to subscribe to it.
 - Use `localtime_s` on all Windows platforms to fix a build error with
   MSYS/UCRT64 (#2059).
+- Fix a startup issue when configuring Prometheus export on `caf.net` (#2060).
+  This bug caused the Prometheus server to never start up unless starting at
+  least one other asynchronous server or client using the `caf.net` API.
 
 ## [1.0.2] - 2024-10-30
 
