@@ -3,6 +3,15 @@
 All notable changes to this project will be documented in this file. The format
 is based on [Keep a Changelog](https://keepachangelog.com).
 
+## Unreleased
+
+### Added
+
+- Users can now provide a maximum for how long an actor will run actions
+  (usually generated from flows) before reading from its mailbox again using the
+  new configuration option `caf.scheduler.run-actions-timeout`. Per default,
+  this option is set to 100ms.
+
 ## [1.1.0] - 2025-07-25
 
 ### Changed
