@@ -27,8 +27,11 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   from_generator_sub(coordinator* parent, observer<output_type> out,
-                     const Generator& gen, const std::tuple<Steps...>& steps)
-    : parent_(parent), out_(std::move(out)), gen_(gen), steps_(steps) {
+                     Generator gen, const std::tuple<Steps...>& steps)
+    : parent_(parent),
+      out_(std::move(out)),
+      gen_(std::make_shared<Generator>(std::move(gen))),
+      steps_(steps) {
     // nop
   }
 
@@ -116,7 +119,7 @@ private:
   }
 
   void pull(size_t n) {
-    auto fn = [this, n](auto&... steps) { gen_.pull(n, steps..., *this); };
+    auto fn = [this, n](auto&... steps) { gen_->pull(n, steps..., *this); };
     std::apply(fn, steps_);
   }
 
@@ -127,7 +130,7 @@ private:
   error err_;
   size_t demand_ = 0;
   observer<output_type> out_;
-  Generator gen_;
+  std::shared_ptr<Generator> gen_;
   std::tuple<Steps...> steps_;
 };
 
