@@ -7,6 +7,7 @@
 #include "caf/test/fixture/deterministic.hpp"
 #include "caf/test/test.hpp"
 
+#include "caf/action.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/config.hpp"
@@ -296,6 +297,77 @@ TEST("actors can delay actions") {
   check_eq(mail_count(), 1u);
   expect<action>().to(aut);
   check(*invoked);
+}
+
+TEST("actors push delayed actions to the mailbox after timeout") {
+  auto flag1 = std::make_shared<bool>(false);
+  auto flag2 = std::make_shared<bool>(false);
+  auto flag3 = std::make_shared<bool>(false);
+  SECTION("fast actions are processed in one run") {
+    auto aut = sys.spawn([flag1, flag2, flag3](event_based_actor* self) {
+      return behavior{
+        [self, flag1, flag2, flag3](ok_atom) {
+          self->delay_fn([flag1] { *flag1 = true; });
+          self->delay_fn([flag2] { *flag2 = true; });
+          self->delay_fn([flag3] { *flag3 = true; });
+        },
+      };
+    });
+    inject().with(ok_atom_v).to(aut);
+    check(*flag1);
+    check(*flag2);
+    check(*flag3);
+    check_eq(mail_count(), 0u);
+  }
+  SECTION("actions that take too long push remaining actions to the mailbox") {
+    auto aut = sys.spawn([flag1, flag2, flag3](event_based_actor* self) {
+      return behavior{
+        [self, flag1, flag2, flag3](ok_atom) {
+          self->delay_fn([flag1] {
+            *flag1 = true;
+            // Block the thread long enough to make sure that remaining actions
+            // are pushed to the mailbox.
+            auto delay = defaults::scheduler::run_actions_timeout + 10ms;
+            std::this_thread::sleep_for(delay);
+          });
+          self->delay_fn([flag2] { *flag2 = true; });
+          self->delay_fn([flag3] { *flag3 = true; });
+        },
+      };
+    });
+    inject().with(ok_atom_v).to(aut);
+    check(*flag1);
+    check(!*flag2);
+    check(!*flag3);
+    expect<ok_atom>().to(aut);
+    check(*flag1);
+    check(*flag2);
+    check(*flag3);
+    check_eq(mail_count(), 0u);
+  }
+  SECTION("actors run all actions regardless of the timeout during shutdown") {
+    auto aut = sys.spawn([flag1, flag2, flag3](event_based_actor* self) {
+      return behavior{
+        [self, flag1, flag2, flag3](ok_atom) {
+          self->delay_fn([flag1] {
+            *flag1 = true;
+            // Block the thread long enough to make sure that remaining actions
+            // are pushed to the mailbox.
+            auto delay = defaults::scheduler::run_actions_timeout + 10ms;
+            std::this_thread::sleep_for(delay);
+          });
+          self->delay_fn([flag2] { *flag2 = true; });
+          self->delay_fn([flag3] { *flag3 = true; });
+          self->quit();
+        },
+      };
+    });
+    inject().with(ok_atom_v).to(aut);
+    check(*flag1);
+    check(*flag2);
+    check(*flag3);
+    check_eq(mail_count(), 0u);
+  }
 }
 
 TEST("actors can cancel pending delayed actions") {

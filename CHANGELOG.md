@@ -11,6 +11,13 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   order may have changed for types that previously had an unsafe `compare`
   implementation (#2478).
 
+### Added
+
+- Users can now provide a maximum for how long an actor will run actions
+  (usually generated from flows) before reading from its mailbox again using the
+  new configuration option `caf.scheduler.run-actions-timeout`. Per default,
+  this option is set to 100ms.
+
 ## [1.2.0] - 2026-09-25
 
 ### Changed
