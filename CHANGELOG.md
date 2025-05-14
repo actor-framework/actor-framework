@@ -61,6 +61,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   context regardless, resulting in an OpenSSL error.
 - Fix a bug in the HTTP parser that could cause the parser to try parsing the
   payload as a new request.
+- Fix a startup issue when configuring Prometheus export on `caf.net` (#2060).
+  This bug caused the Prometheus server to never start up unless starting at
+  least one other asynchronous server or client using the `caf.net` API.
 
 ## [1.0.2] - 2024-10-30
 
