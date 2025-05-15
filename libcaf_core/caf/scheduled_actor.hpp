@@ -862,9 +862,7 @@ private:
   /// Stores children that were marked for release while running an action.
   std::vector<flow::coordinated_ptr> released_;
 
-  /// Counter for scheduled_actor::delay to make sure
-  /// scheduled_actor::run_actions does not end up in a busy loop that might
-  /// starve other activities.
+  // TODO: unused since CAF 1.1.0. Remove with 2.0.0.
   size_t delayed_actions_this_run_ = 0;
 
   /// Stores ongoing activities such as flows that block the actor from
