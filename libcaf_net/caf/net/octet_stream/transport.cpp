@@ -101,6 +101,8 @@ public:
   }
 
   void configure_read(receive_policy rd) override {
+    if constexpr (sizeof(size_t) < sizeof(uint64_t))
+      CAF_ASSERT(rd.max_size <= std::numeric_limits<size_t>::max());
     auto restarting = rd.max_size > 0 && max_read_size_ == 0;
     min_read_size_ = rd.min_size;
     max_read_size_ = rd.max_size;

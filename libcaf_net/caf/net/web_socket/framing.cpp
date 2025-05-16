@@ -268,10 +268,10 @@ private:
         || (hdr_.opcode == detail::rfc6455::continuation_frame
             && opcode_ == detail::rfc6455::text_frame))
       down_->configure_read(
-        receive_policy::up_to(static_cast<uint32_t>(hdr_.payload_len)));
+        receive_policy::up_to(static_cast<size_t>(hdr_.payload_len)));
     else
       down_->configure_read(
-        receive_policy::exactly(static_cast<uint32_t>(hdr_.payload_len)));
+        receive_policy::exactly(static_cast<size_t>(hdr_.payload_len)));
     return hdr_bytes;
   }
 

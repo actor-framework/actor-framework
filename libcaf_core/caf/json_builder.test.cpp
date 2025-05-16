@@ -145,10 +145,10 @@ TEST("integer") {
 
 TEST("float") {
   SECTION("value") {
-    check(builder.value(4.2));
+    check(builder.value(4.2f));
     auto val = builder.seal();
     check(val.is_double());
-    check_eq(val.to_double(), test::approx{4.2});
+    check_eq(static_cast<float>(val.to_double()), test::approx{4.2f});
   }
   SECTION("array") {
     auto xs = std::vector{4.2f, 4.2f, 4.2f};
