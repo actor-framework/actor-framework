@@ -261,17 +261,24 @@ private:
       abort_and_shutdown(err);
       return -1;
     }
+    if constexpr (sizeof(size_t) < sizeof(uint64_t)) {
+      // If size_t is smaller than uint64_t, we can only handle payloads up to
+      // 2^32-1 bytes.
+      if (hdr_.payload_len > INT32_MAX) {
+        abort_and_shutdown(sec::protocol_error,
+                           "WebSocket frame payload exceeds maximum size");
+        return -1;
+      }
+    }
     // Configure the buffer for the next call to consume_payload. In case of
     // text messages, we validate the UTF-8 encoding on the go, hence the use of
     // up_to.
     if (hdr_.opcode == detail::rfc6455::text_frame
         || (hdr_.opcode == detail::rfc6455::continuation_frame
             && opcode_ == detail::rfc6455::text_frame))
-      down_->configure_read(
-        receive_policy::up_to(static_cast<uint32_t>(hdr_.payload_len)));
+      down_->configure_read(receive_policy::up_to(hdr_.payload_len));
     else
-      down_->configure_read(
-        receive_policy::exactly(static_cast<uint32_t>(hdr_.payload_len)));
+      down_->configure_read(receive_policy::exactly(hdr_.payload_len));
     return hdr_bytes;
   }
 
