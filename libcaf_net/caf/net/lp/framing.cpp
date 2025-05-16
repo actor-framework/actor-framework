@@ -85,8 +85,7 @@ public:
         return -1;
       } else {
         log::net::debug("wait for payload of size {}", msg_size);
-        down_->configure_read(
-          receive_policy::exactly(static_cast<uint32_t>(hdr_size + msg_size)));
+        down_->configure_read(receive_policy::exactly(hdr_size + msg_size));
         return 0;
       }
     } else {
@@ -95,8 +94,7 @@ public:
         log::net::debug("got message of size {}", msg_size);
         if (up_->consume(msg) >= 0) {
           if (down_->is_reading())
-            down_->configure_read(
-              receive_policy::exactly(static_cast<uint32_t>(hdr_size)));
+            down_->configure_read(receive_policy::exactly(hdr_size));
           return static_cast<ptrdiff_t>(input.size());
         } else {
           return -1;
