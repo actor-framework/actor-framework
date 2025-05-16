@@ -101,6 +101,8 @@ public:
   }
 
   void configure_read(receive_policy rd) override {
+    if constexpr (sizeof(size_t) < sizeof(uint64_t))
+      CAF_ASSERT(rd.max_size <= std::numeric_limits<size_t>::max());
     auto restarting = rd.max_size > 0 && max_read_size_ == 0;
     min_read_size_ = rd.min_size;
     max_read_size_ = rd.max_size;
@@ -413,13 +415,13 @@ protected:
   size_t max_consecutive_reads_ = defaults::middleman::max_consecutive_reads;
 
   /// Caches the write buffer size of the socket.
-  uint32_t max_write_buf_size_ = 0;
+  size_t max_write_buf_size_ = 0;
 
   /// Stores what the user has configured as read threshold.
-  uint32_t min_read_size_ = 0;
+  size_t min_read_size_ = 0;
 
   /// Stores what the user has configured as max. number of bytes to receive.
-  uint32_t max_read_size_ = 0;
+  size_t max_read_size_ = 0;
 
   /// Stores how many bytes are currently buffered, i.e., how many bytes from
   /// `read_buf_` are filled with actual data.

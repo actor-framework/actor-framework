@@ -74,7 +74,8 @@ public:
 
   void request_messages() override {
     if (!down_->is_reading())
-      down_->configure_read(receive_policy::up_to(max_request_size_));
+      down_->configure_read(
+        receive_policy::up_to(static_cast<uint32_t>(max_request_size_)));
   }
 
   void suspend_reading() override {
