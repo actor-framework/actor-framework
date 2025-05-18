@@ -94,32 +94,59 @@ static_assert(std::is_assignable_v<dual_hdl1, dual_hdl2>);
 static_assert(std::is_assignable_v<triple_hdl2, triple_hdl1>);
 static_assert(std::is_assignable_v<triple_hdl1, triple_hdl2>);
 
-// Check type conversions from handles with a narrower definition.
-static_assert(std::is_constructible_v<dual_hdl1, single_hdl1>);
-static_assert(std::is_constructible_v<dual_hdl1, single_hdl2>);
-static_assert(std::is_constructible_v<dual_hdl2, single_hdl1>);
-static_assert(std::is_constructible_v<dual_hdl2, single_hdl2>);
-static_assert(std::is_constructible_v<triple_hdl1, single_hdl1>);
-static_assert(std::is_constructible_v<triple_hdl1, single_hdl2>);
-static_assert(std::is_constructible_v<triple_hdl1, dual_hdl1>);
-static_assert(std::is_constructible_v<triple_hdl1, dual_hdl2>);
-static_assert(std::is_constructible_v<triple_hdl2, single_hdl1>);
-static_assert(std::is_constructible_v<triple_hdl2, single_hdl2>);
-static_assert(std::is_constructible_v<triple_hdl2, dual_hdl1>);
-static_assert(std::is_constructible_v<triple_hdl2, dual_hdl2>);
+// Check type conversions to handles with a narrower definition.
 
-static_assert(std::is_assignable_v<dual_hdl1, single_hdl1>);
-static_assert(std::is_assignable_v<dual_hdl1, single_hdl2>);
-static_assert(std::is_assignable_v<dual_hdl2, single_hdl1>);
-static_assert(std::is_assignable_v<dual_hdl2, single_hdl2>);
-static_assert(std::is_assignable_v<triple_hdl1, single_hdl1>);
-static_assert(std::is_assignable_v<triple_hdl1, single_hdl2>);
-static_assert(std::is_assignable_v<triple_hdl1, dual_hdl1>);
-static_assert(std::is_assignable_v<triple_hdl1, dual_hdl2>);
-static_assert(std::is_assignable_v<triple_hdl2, single_hdl1>);
-static_assert(std::is_assignable_v<triple_hdl2, single_hdl2>);
-static_assert(std::is_assignable_v<triple_hdl2, dual_hdl1>);
-static_assert(std::is_assignable_v<triple_hdl2, dual_hdl2>);
+static_assert(std::is_constructible_v<single_hdl1, dual_hdl1>);
+static_assert(std::is_constructible_v<single_hdl2, dual_hdl1>);
+static_assert(std::is_constructible_v<single_hdl1, dual_hdl2>);
+static_assert(std::is_constructible_v<single_hdl2, dual_hdl2>);
+static_assert(std::is_constructible_v<single_hdl1, triple_hdl1>);
+static_assert(std::is_constructible_v<single_hdl2, triple_hdl1>);
+static_assert(std::is_constructible_v<single_hdl1, triple_hdl2>);
+static_assert(std::is_constructible_v<single_hdl2, triple_hdl2>);
+static_assert(std::is_constructible_v<dual_hdl1, triple_hdl1>);
+static_assert(std::is_constructible_v<dual_hdl2, triple_hdl1>);
+static_assert(std::is_constructible_v<dual_hdl1, triple_hdl2>);
+static_assert(std::is_constructible_v<dual_hdl2, triple_hdl2>);
+
+static_assert(!std::is_constructible_v<dual_hdl1, single_hdl1>);
+static_assert(!std::is_constructible_v<dual_hdl1, single_hdl2>);
+static_assert(!std::is_constructible_v<dual_hdl2, single_hdl1>);
+static_assert(!std::is_constructible_v<dual_hdl2, single_hdl2>);
+static_assert(!std::is_constructible_v<triple_hdl1, single_hdl1>);
+static_assert(!std::is_constructible_v<triple_hdl1, single_hdl2>);
+static_assert(!std::is_constructible_v<triple_hdl1, dual_hdl1>);
+static_assert(!std::is_constructible_v<triple_hdl1, dual_hdl2>);
+static_assert(!std::is_constructible_v<triple_hdl2, single_hdl1>);
+static_assert(!std::is_constructible_v<triple_hdl2, single_hdl2>);
+static_assert(!std::is_constructible_v<triple_hdl2, dual_hdl1>);
+static_assert(!std::is_constructible_v<triple_hdl2, dual_hdl2>);
+
+static_assert(std::is_assignable_v<single_hdl1, dual_hdl1>);
+static_assert(std::is_assignable_v<single_hdl2, dual_hdl1>);
+static_assert(std::is_assignable_v<single_hdl1, dual_hdl2>);
+static_assert(std::is_assignable_v<single_hdl2, dual_hdl2>);
+static_assert(std::is_assignable_v<single_hdl1, triple_hdl1>);
+static_assert(std::is_assignable_v<single_hdl2, triple_hdl1>);
+static_assert(std::is_assignable_v<single_hdl1, triple_hdl2>);
+static_assert(std::is_assignable_v<single_hdl2, triple_hdl2>);
+static_assert(std::is_assignable_v<dual_hdl1, triple_hdl1>);
+static_assert(std::is_assignable_v<dual_hdl2, triple_hdl1>);
+static_assert(std::is_assignable_v<dual_hdl1, triple_hdl2>);
+static_assert(std::is_assignable_v<dual_hdl2, triple_hdl2>);
+
+static_assert(!std::is_assignable_v<dual_hdl1, single_hdl1>);
+static_assert(!std::is_assignable_v<dual_hdl1, single_hdl2>);
+static_assert(!std::is_assignable_v<dual_hdl2, single_hdl1>);
+static_assert(!std::is_assignable_v<dual_hdl2, single_hdl2>);
+static_assert(!std::is_assignable_v<triple_hdl1, single_hdl1>);
+static_assert(!std::is_assignable_v<triple_hdl1, single_hdl2>);
+static_assert(!std::is_assignable_v<triple_hdl1, dual_hdl1>);
+static_assert(!std::is_assignable_v<triple_hdl1, dual_hdl2>);
+static_assert(!std::is_assignable_v<triple_hdl2, single_hdl1>);
+static_assert(!std::is_assignable_v<triple_hdl2, single_hdl2>);
+static_assert(!std::is_assignable_v<triple_hdl2, dual_hdl1>);
+static_assert(!std::is_assignable_v<triple_hdl2, dual_hdl2>);
 
 // --- check extension API of type system --------------------------------------
 

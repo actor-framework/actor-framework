@@ -120,36 +120,36 @@ public:
   typed_actor& operator=(typed_actor&&) = default;
   typed_actor& operator=(const typed_actor&) = default;
 
-  template <class... Ts>
+  template <class... Ts,
+            class = std::enable_if_t<detail::tl_subset_of_v<
+              signatures, typename typed_actor<Ts...>::signatures>>>
   typed_actor(const typed_actor<Ts...>& other) : ptr_(other.ptr_) {
-    static_assert(detail::tl_subset_of<
-                    signatures, typename typed_actor<Ts...>::signatures>::value,
-                  "Cannot assign incompatible handle");
+    // nop
   }
 
   // allow `handle_type{this}` for typed actors
   template <class T,
-            class = std::enable_if_t<actor_traits<T>::is_statically_typed>>
+            class = std::enable_if_t<actor_traits<T>::is_statically_typed>,
+            class = std::enable_if_t<
+              detail::tl_subset_of_v<signatures, typename T::signatures>>>
   typed_actor(T* ptr) : ptr_(ptr->ctrl()) {
-    static_assert(
-      detail::tl_subset_of<signatures, typename T::signatures>::value,
-      "Cannot assign T* to incompatible handle type");
     CAF_ASSERT(ptr != nullptr);
   }
 
   // Enable `handle_type{self}` for typed actor views.
-  template <class T, class = std::enable_if_t<
-                       std::is_base_of_v<typed_actor_view_base, T>>>
+  template <
+    class T,
+    class = std::enable_if_t<std::is_base_of_v<typed_actor_view_base, T>>,
+    class = std::enable_if_t<
+      detail::tl_subset_of_v<signatures, typename T::signatures>>>
   explicit typed_actor(T ptr) : ptr_(ptr.ctrl()) {
-    static_assert(
-      detail::tl_subset_of<signatures, typename T::signatures>::value,
-      "Cannot assign T to incompatible handle type");
+    // nop
   }
 
-  template <class... Ts>
+  template <class... Ts,
+            class = std::enable_if_t<detail::tl_subset_of_v<
+              signatures, typename typed_actor<Ts...>::signatures>>>
   typed_actor& operator=(const typed_actor<Ts...>& other) {
-    static_assert(detail::tl_subset_of<signatures, type_list<Ts...>>::value,
-                  "Cannot assign incompatible handle");
     ptr_ = other.ptr_;
     return *this;
   }
