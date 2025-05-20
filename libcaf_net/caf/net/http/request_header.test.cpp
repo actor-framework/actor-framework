@@ -35,16 +35,31 @@ TEST("parsing a http request") {
 OUTLINE("parsing requests") {
   GIVEN("a http request with <method> method") {
     auto method_name = block_parameters<std::string>();
-    auto request = detail::format("{} /foo/bar HTTP/1.1\r\n\r\n", method_name);
-    WHEN("parsing the request") {
+    WHEN("parsing the request with origin form target") {
+      auto request = detail::format("{} /foo/bar HTTP/1.1\r\n\r\n",
+                                    method_name);
       net::http::request_header hdr;
       hdr.parse(request);
-      THEN("the parsed request method is equal to <enum value>") {
+      THEN("the parsed <enum value> request data is valid") {
         auto expected = block_parameters<uint8_t>();
         require(hdr.valid());
         check_eq(static_cast<uint8_t>(hdr.method()), expected);
         check_eq(hdr.version(), "HTTP/1.1");
         check_eq(hdr.path(), "/foo/bar");
+      }
+    }
+    // TODO change to WHEN block after fixing GH-1776
+    AND_WHEN("parsing the request with absolute form target") {
+      auto request = detail::format(
+        "{} http://example.com/foo/bar HTTP/1.1\r\n\r\n", method_name);
+      net::http::request_header hdr;
+      hdr.parse(request);
+      THEN("the parsed <enum value> request data is valid") {
+        auto expected = block_parameters<uint8_t>();
+        require(hdr.valid());
+        check_eq(static_cast<uint8_t>(hdr.method()), expected);
+        check_eq(hdr.version(), "HTTP/1.1");
+        check_eq(hdr.path(), "foo/bar");
       }
     }
   }
@@ -55,10 +70,33 @@ OUTLINE("parsing requests") {
     | POST     |     2      |
     | PUT      |     3      |
     | DELETE   |     4      |
-    | CONNECT  |     5      |
     | OPTIONS  |     6      |
     | TRACE    |     7      |
   )";
+}
+
+TEST("parsing HTTP request with CONNECT method") {
+  auto request = "CONNECT node:20 HTTP/1.1\r\n\r\n"s;
+  net::http::request_header hdr;
+  hdr.parse(request);
+  require(hdr.valid());
+  check_eq(hdr.method(), net::http::method::connect);
+  check_eq(hdr.version(), "HTTP/1.1");
+  check_eq(hdr.path(), "");
+  check_eq(hdr.authority().host, uri::host_type{"node"s});
+  check_eq(hdr.authority().port, 20u);
+  check(!hdr.authority().userinfo);
+}
+
+TEST("parsing a server-wide HTTP OPTIONS request") {
+  auto request = "OPTIONS * HTTP/1.1\r\n\r\n"s;
+  net::http::request_header hdr;
+  hdr.parse(request);
+  require(hdr.valid());
+  check_eq(hdr.method(), net::http::method::options);
+  check_eq(hdr.version(), "HTTP/1.1");
+  check_eq(hdr.path(), "/");
+  check(!hdr.authority().userinfo);
 }
 
 TEST("parsing an invalid http request") {
