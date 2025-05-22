@@ -525,6 +525,10 @@ TEST("serialization") {
   SERIALIZATION_ROUNDTRIP("hi%20there://it%27s@me%21/file%201#%5B42%5D");
 }
 
+TEST("GH-2080 regression") {
+  SERIALIZATION_ROUNDTRIP("https://example.com?q=%2A");
+}
+
 #undef SERIALIZATION_ROUNDTRIP
 
 TEST("with_userinfo creates a copy with new userinfo") {
