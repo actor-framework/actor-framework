@@ -74,19 +74,27 @@ void read_uri_query(State& ps, Consumer&& consumer) {
     swap(str, res);
     return res;
   };
+  // Helper function for the allowed character set. This is a relaxed version of
+  // the URI spec that allows some reserved characters in the query string.
+  auto is_valid_query_char = [](char c) noexcept {
+    return isprint(c) && !in_whitelist("=&%#<>[]", c);
+  };
   auto push = [&] { result.emplace(take_str(key), take_str(value)); };
   // clang-format off
   start();
   // Query may be empty.
   term_state(init) {
-    read_next_char(read_key, key)
+    transition(read_key, is_valid_query_char, key += ch)
+    fsm_transition(read_uri_percent_encoded(ps, key), read_key, '%')
   }
   state(read_key) {
-    read_next_char(read_key, key)
+    transition(read_key, is_valid_query_char, key += ch)
+    fsm_transition(read_uri_percent_encoded(ps, key), read_key, '%')
     transition(read_value, '=')
   }
   term_state(read_value, push()) {
-    read_next_char(read_value, value)
+    transition(read_value, is_valid_query_char, value += ch)
+    fsm_transition(read_uri_percent_encoded(ps, value), read_value, '%')
     transition(init, '&', push())
   }
   fin();

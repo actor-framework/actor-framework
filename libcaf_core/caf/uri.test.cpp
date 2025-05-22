@@ -12,6 +12,8 @@
 #include "caf/ipv4_address.hpp"
 #include "caf/uri_builder.hpp"
 
+#include <optional>
+
 using namespace caf;
 
 namespace {
@@ -595,6 +597,23 @@ TEST("with_userinfo creates a copy with new userinfo") {
     check_eq("http://node:80/file?a=1&b=2#42"_u.with_userinfo("me", "foo"),
              "http://me:foo@node:80/file?a=1&b=2#42"_u);
   }
+}
+
+TEST("queries may have reserved characters") {
+  auto parseRoundtrip = [](std::string_view str) -> std::optional<std::string> {
+    if (auto res = make_uri(str)) {
+      return std::string{res->str()};
+    }
+    return std::nullopt;
+  };
+  check_eq(parseRoundtrip("http://example.com?q=*"),
+           "http://example.com?q=%2A");
+  check_eq(parseRoundtrip("http://example.com?p1=/foo&p2=:bar"),
+           "http://example.com?p1=%2Ffoo&p2=%3Abar");
+  check_eq(parseRoundtrip("http://example.com?s1=yay!&s2=(o)&s3=@foo"),
+           "http://example.com?s1=yay%21&s2=%28o%29&s3=%40foo");
+  check_eq(parseRoundtrip("http://example.com?s=:/?@!$'*+,;"),
+           "http://example.com?s=%3A%2F%3F%40%21%24%27%2A%2B%2C%3B");
 }
 
 } // WITH_FIXTURE(fixture)
