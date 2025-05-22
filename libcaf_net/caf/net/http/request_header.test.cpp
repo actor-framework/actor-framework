@@ -76,16 +76,36 @@ OUTLINE("parsing requests") {
 }
 
 TEST("parsing HTTP request with CONNECT method") {
-  auto request = "CONNECT node:20 HTTP/1.1\r\n\r\n"s;
-  net::http::request_header hdr;
-  hdr.parse(request);
-  require(hdr.valid());
-  check_eq(hdr.method(), net::http::method::connect);
-  check_eq(hdr.version(), "HTTP/1.1");
-  check_eq(hdr.path(), "");
-  check_eq(hdr.authority().host, uri::host_type{"node"s});
-  check_eq(hdr.authority().port, 20u);
-  check(!hdr.authority().userinfo);
+  SECTION("request with valid authority") {
+    auto request = "CONNECT node:20 HTTP/1.1\r\n\r\n"s;
+    net::http::request_header hdr;
+    hdr.parse(request);
+    require(hdr.valid());
+    check_eq(hdr.method(), net::http::method::connect);
+    check_eq(hdr.version(), "HTTP/1.1");
+    check_eq(hdr.path(), "");
+    check_eq(hdr.authority().host, uri::host_type{"node"s});
+    check_eq(hdr.authority().port, 20u);
+    check(!hdr.authority().userinfo);
+  }
+  SECTION("request with valid authority and without port") {
+    auto request = "CONNECT node HTTP/1.1\r\n\r\n"s;
+    net::http::request_header hdr;
+    hdr.parse(request);
+    require(hdr.valid());
+    check_eq(hdr.method(), net::http::method::connect);
+    check_eq(hdr.version(), "HTTP/1.1");
+    check_eq(hdr.path(), "");
+    check_eq(hdr.authority().host, uri::host_type{"node"s});
+    check_eq(hdr.authority().port, 0u);
+    check(!hdr.authority().userinfo);
+  }
+  SECTION("request with invalid authority") {
+    auto request = "CONNECT /node HTTP/1.1\r\n\r\n"s;
+    net::http::request_header hdr;
+    hdr.parse(request);
+    require(!hdr.valid());
+  }
 }
 
 TEST("parsing a server-wide HTTP OPTIONS request") {

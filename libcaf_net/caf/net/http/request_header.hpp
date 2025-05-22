@@ -62,7 +62,7 @@ public:
   }
 
   /// Returns the authority part of the request.
-  /// @note: Only applicable for CONNECT requests.
+  /// @note: Only present for CONNECT requests.
   const uri::authority_type& authority() const noexcept {
     return uri_.authority();
   }
