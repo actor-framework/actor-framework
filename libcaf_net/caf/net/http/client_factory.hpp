@@ -18,6 +18,7 @@
 #include "caf/async/future.hpp"
 #include "caf/async/promise.hpp"
 #include "caf/async/spsc_buffer.hpp"
+#include "caf/detail/forward_like.hpp"
 #include "caf/detail/latch.hpp"
 #include "caf/disposable.hpp"
 #include "caf/timespan.hpp"
@@ -54,7 +55,8 @@ public:
   template <class KeyValueMap>
   client_factory& add_header_fields(KeyValueMap&& kv_map) {
     for (auto& [key, value] : kv_map) {
-      add_header_field(std::move(key), std::move(value));
+      add_header_field(detail::forward_like<KeyValueMap>(key),
+                       detail::forward_like<KeyValueMap>(value));
     }
     return *this;
   }
