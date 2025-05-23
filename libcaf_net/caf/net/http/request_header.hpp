@@ -61,6 +61,12 @@ public:
     return uri_.fragment();
   }
 
+  /// Returns the authority part of the request.
+  /// @note: Only present for CONNECT requests.
+  const uri::authority_type& authority() const noexcept {
+    return uri_.authority();
+  }
+
   /// Returns the HTTP version of the request.
   std::string_view version() const noexcept {
     return version_;

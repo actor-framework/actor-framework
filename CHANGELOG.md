@@ -71,6 +71,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   least one other asynchronous server or client using the `caf.net` API.
 - Fix a bug in the URI parser that could crash the application when parsing an
   URI with a percent-encoded character at the end of the string (#2080).
+- Fix parsing of HTTP request headers that do not use the absolute path syntax
+  in the first line (#2074).
 
 ## [1.0.2] - 2024-10-30
 

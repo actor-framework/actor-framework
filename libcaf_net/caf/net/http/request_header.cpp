@@ -13,6 +13,49 @@ namespace {
 
 constexpr std::string_view eol = "\r\n";
 
+/// Validate the request target part according to RFC9112.
+caf::expected<uri> parse_request_target(http::method method,
+                                        std::string_view request_target) {
+  using namespace std::literals;
+  if (request_target.empty()) {
+    return make_error(sec::invalid_argument,
+                      "Malformed Request-URI: request target empty.");
+  }
+  expected<uri> res{none};
+  if (method == http::method::connect) {
+    if (res = make_uri("nil://"s.append(request_target)); !res) {
+      log::net::debug("Failed to parse CONNECT URI {}: {}.", request_target,
+                      res.error());
+      return error{sec::invalid_argument, "Malformed CONNECT Request-URI."};
+    }
+    if (res->authority().empty()) {
+      log::net::debug("Failed to parse CONNECT URI {}: Authority missing.",
+                      request_target);
+      return error{sec::invalid_argument, "Malformed CONNECT Request-URI."};
+    }
+    return res;
+  }
+  if (request_target.front() == '/') {
+    // The path must form a valid URI when prefixing a scheme. We don't
+    // actually care about the scheme, so just use "nil" here for the
+    // validation step.
+    res = make_uri("nil:"s.append(request_target));
+  } else if (starts_with(request_target, "http")) {
+    res = make_uri(request_target);
+  } else if (method == http::method::options
+             && request_target == std::string_view{"*"}) {
+    log::net::debug("Server-wide options request received. Converting to '/'.");
+    res = make_uri("nil:/");
+  }
+  if (res) {
+    return res;
+  }
+  auto msg = detail::format("Failed to parse URI {}: {}", request_target,
+                            res.error());
+  log::net::debug("{}", msg);
+  return error{sec::invalid_argument, msg};
+}
+
 } // namespace
 
 void request_header::clear() noexcept {
@@ -50,24 +93,6 @@ request_header::parse(std::string_view raw) {
   auto [first_line, remainder]
     = split_by(std::string_view{raw_.data(), raw_.size()}, eol);
   auto [method_str, first_line_remainder] = split_by(first_line, " ");
-  auto [request_uri_str, version] = split_by(first_line_remainder, " ");
-  // The path must be absolute.
-  if (request_uri_str.empty() || request_uri_str.front() != '/') {
-    log::net::debug("Malformed Request-URI: expected an absolute path.");
-    raw_.clear();
-    return {status::bad_request,
-            "Malformed Request-URI: expected an absolute path."};
-  }
-  // The path must form a valid URI when prefixing a scheme. We don't actually
-  // care about the scheme, so just use "foo" here for the validation step.
-  if (auto res = make_uri("nil:" + std::string{request_uri_str})) {
-    uri_ = std::move(*res);
-  } else {
-    log::net::debug("Failed to parse URI {} -> {}", request_uri_str,
-                    res.error());
-    raw_.clear();
-    return {status::bad_request, "Malformed Request-URI."};
-  }
   // Verify and store the method.
   if (icase_equal(method_str, "get")) {
     method_ = method::get;
@@ -89,6 +114,14 @@ request_header::parse(std::string_view raw) {
     log::net::debug("Invalid HTTP method.");
     raw_.clear();
     return {status::bad_request, "Invalid HTTP method."};
+  }
+  auto [uri_str, version] = split_by(first_line_remainder, " ");
+  if (auto maybe_uri = parse_request_target(method_, uri_str)) {
+    uri_ = std::move(*maybe_uri);
+  } else {
+    log::net::debug("Failed to parse URI {}: {}.", uri_str, maybe_uri.error());
+    raw_.clear();
+    return {status::bad_request, "Malformed Request-URI."};
   }
   // Store the remaining header fields.
   version_ = version;
