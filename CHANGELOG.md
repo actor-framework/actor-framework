@@ -64,6 +64,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Fix a startup issue when configuring Prometheus export on `caf.net` (#2060).
   This bug caused the Prometheus server to never start up unless starting at
   least one other asynchronous server or client using the `caf.net` API.
+- Fix parsing of HTTP request headers that do not use the absolute path syntax
+  in the first line (#2074).
 
 ## [1.0.2] - 2024-10-30
 
