@@ -81,7 +81,7 @@ SCENARIO("routes must have one 'arg' entry per argument") {
     }
   }
   GIVEN("a make_route call with the matching number of arguments") {
-    WHEN("evaluating the factory call") {
+    WHEN("evaluating the factory and invoking it with origin-form targets") {
       THEN("the factory produces a valid callback") {
         if (auto res = make_route("/", [](responder&) {});
             check(res.has_value())) {
@@ -150,6 +150,82 @@ SCENARIO("routes must have one 'arg' entry per argument") {
           set_get_request("/foo/bar");
           check(!(*res)->exec(hdr, {}, &rt));
           set_get_request("/1/true/3?foo=bar");
+          if (check((*res)->exec(hdr, {}, &rt)))
+            check_eq(args, make_args(1, true, 3));
+        }
+      }
+    }
+    WHEN("evaluating the factory and invoking it with absolute-form targets") {
+      THEN("the factory produces a valid callback with absolute-form") {
+        if (auto res = make_route("/", [](responder&) {});
+            check(res.has_value())) {
+          set_get_request("http://example.com");
+          check((*res)->exec(hdr, {}, &rt));
+          set_get_request("http://example.com/");
+          check((*res)->exec(hdr, {}, &rt));
+          set_get_request("http://example.com/foo/bar");
+          check(!(*res)->exec(hdr, {}, &rt));
+        }
+        if (auto res = make_route("/foo/bar", http::method::get,
+                                  [](responder&) {});
+            check(res.has_value())) {
+          set_get_request("http://example.com/");
+          check(!(*res)->exec(hdr, {}, &rt));
+          set_get_request("http://example.com/foo");
+          check(!(*res)->exec(hdr, {}, &rt));
+          set_get_request("http://example.com/foo/bar/baz");
+          check(!(*res)->exec(hdr, {}, &rt));
+          set_post_request("http://example.com/foo/bar");
+          check(!(*res)->exec(hdr, {}, &rt));
+          set_get_request("http://example.com/foo/bar");
+          check((*res)->exec(hdr, {}, &rt));
+        }
+        if (auto res = make_route(
+              "/<arg>", [this](responder&, int x) { args = make_args(x); });
+            check(res.has_value())) {
+          set_get_request("http://example.com/");
+          check(!(*res)->exec(hdr, {}, &rt));
+          set_get_request("http://example.com/foo/bar");
+          check(!(*res)->exec(hdr, {}, &rt));
+          set_get_request("http://example.com/42");
+          if (check((*res)->exec(hdr, {}, &rt)))
+            check_eq(args, make_args(42));
+        }
+        if (auto res
+            = make_route("/foo/<arg>/bar",
+                         [this](responder&, int x) { args = make_args(x); });
+            check(res.has_value())) {
+          set_get_request("http://example.com/");
+          check(!(*res)->exec(hdr, {}, &rt));
+          set_get_request("http://example.com/foo/bar");
+          check(!(*res)->exec(hdr, {}, &rt));
+          set_get_request("http://example.com/foo/123/bar");
+          if (check((*res)->exec(hdr, {}, &rt)))
+            check_eq(args, make_args(123));
+        }
+        if (auto res = make_route("/foo/<arg>/bar",
+                                  [this](responder&, std::string x) {
+                                    args = make_args(x);
+                                  });
+            check(res.has_value())) {
+          set_get_request("http://example.com/");
+          check(!(*res)->exec(hdr, {}, &rt));
+          set_get_request("http://example.com/foo/bar");
+          check(!(*res)->exec(hdr, {}, &rt));
+          set_get_request("http://example.com/foo/my-arg/bar");
+          if (check((*res)->exec(hdr, {}, &rt)))
+            check_eq(args, make_args("my-arg"s));
+        }
+        if (auto res = make_route("/<arg>/<arg>/<arg>",
+                                  [this](responder&, int x, bool y, int z) {
+                                    args = make_args(x, y, z);
+                                  });
+            check(res.has_value())) {
+          set_get_request("http://example.com/");
+          check(!(*res)->exec(hdr, {}, &rt));
+          set_get_request("http://example.com/foo/bar");
+          check(!(*res)->exec(hdr, {}, &rt));
+          set_get_request("http://example.com/1/true/3?foo=bar");
           if (check((*res)->exec(hdr, {}, &rt)))
             check_eq(args, make_args(1, true, 3));
         }

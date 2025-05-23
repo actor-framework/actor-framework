@@ -5,6 +5,7 @@
 #include "caf/net/multiplexer.hpp"
 
 #include "caf/async/future.hpp"
+#include "caf/detail/assert.hpp"
 #include "caf/disposable.hpp"
 
 namespace caf::net::http {
@@ -38,10 +39,10 @@ size_t args_in_path(std::string_view str) {
 
 std::pair<std::string_view, std::string_view>
 next_path_component(const std::string_view str) {
-  if (str.empty() || str.front() != '/') {
+  if (str.empty()) {
     return {std::string_view{}, std::string_view{}};
   }
-  size_t start = 1;
+  size_t start = str.front() == '/' ? 1 : 0;
   size_t end = str.find('/', start);
   auto component
     = str.substr(start, end == std::string_view::npos ? end : end - start);
@@ -55,7 +56,16 @@ bool http_simple_route_base::exec(const net::http::request_header& hdr,
                                   net::http::router* parent) {
   if (method_ && *method_ != hdr.method())
     return false;
-  if (hdr.path() == path_) {
+  // Header might return a relative path when the HTTP request came with a
+  // request-target in absolute form. See discussion in PR #2079.
+  // Note: `net::http::make_route` enforces an absolute path.
+  auto path_compare = [](std::string_view path, std::string_view hdr_path) {
+    if (hdr_path.empty() || hdr_path.front() != '/')
+      return path.substr(1) == hdr_path;
+    else
+      return path == hdr_path;
+  };
+  if (path_compare(path_, hdr.path())) {
     net::http::responder rp{&hdr, body, parent};
     do_apply(rp);
     return true;
