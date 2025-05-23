@@ -263,26 +263,34 @@ void uri::encode(std::string& str, std::string_view x, bool is_path) {
 }
 
 void uri::decode(std::string& str) {
-  // Buffer for holding temporary strings and variable for parsing into.
-  char str_buf[2] = {' ', '\0'};
-  char hex_buf[5] = {'0', 'x', '0', '0', '\0'};
-  uint8_t val = 0;
-  // Any percent-encoded string must have at least 3 characters.
-  if (str.size() < 3)
-    return;
-  // Iterate over the string to find '%XX' entries and replace them.
-  for (size_t index = 0; index < str.size() - 2; ++index) {
-    if (str[index] == '%') {
-      hex_buf[2] = str[index + 1];
-      hex_buf[3] = str[index + 2];
+  // Local variables for the decoding process.
+  auto read_index = size_t{0};
+  auto write_index = size_t{0};
+  auto len = str.size();
+  auto val = uint8_t{0};
+  // Decode percent-encoded characters in place.
+  while (read_index < len) {
+    if (str[read_index] == '%' && read_index + 2 < len) {
+      // Try to parse the next two hex digits.
+      char hex_buf[] = {'0', 'x', str[read_index + 1], str[read_index + 2], 0};
       if (auto err = detail::parse(std::string_view{hex_buf}, val); !err) {
-        str_buf[0] = static_cast<char>(val);
-        str.replace(index, 3, str_buf, 1);
-      } else {
-        str.replace(index, 3, "?", 1);
+        str[write_index++] = static_cast<char>(val);
+        read_index += 3; // Skip past the percent-encoding
+        continue;
       }
+      // Failed to parse, write a '?' instead.
+      str[write_index++] = '?';
+      read_index += 3;
+    } else if (write_index != read_index) {
+      // Just copy the character
+      str[write_index++] = str[read_index++];
+    } else {
+      ++write_index;
+      ++read_index;
     }
   }
+  // Remove trailing characters.
+  str.resize(write_index);
 }
 
 // -- related free functions ---------------------------------------------------

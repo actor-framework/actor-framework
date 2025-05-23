@@ -64,6 +64,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Fix a startup issue when configuring Prometheus export on `caf.net` (#2060).
   This bug caused the Prometheus server to never start up unless starting at
   least one other asynchronous server or client using the `caf.net` API.
+- Fix a bug in the URI parser that could crash the application when parsing an
+  URI with a percent-encoded character at the end of the string (#2080).
 
 ## [1.0.2] - 2024-10-30
 
