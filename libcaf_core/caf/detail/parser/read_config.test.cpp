@@ -8,6 +8,7 @@
 #include "caf/test/test.hpp"
 
 #include "caf/config_value.hpp"
+#include "caf/detail/source_location.hpp"
 #include "caf/log/test.hpp"
 #include "caf/parser_state.hpp"
 #include "caf/pec.hpp"
@@ -67,13 +68,15 @@ struct test_consumer {
 };
 
 struct fixture : test::fixture::deterministic {
-  expected<log_type> parse(std::string_view str, bool expect_success = true) {
+  expected<log_type> parse(std::string_view str, bool expect_success = true,
+                           caf::detail::source_location loc
+                           = caf::detail::source_location::current()) {
     test_consumer f;
     string_parser_state res{str.begin(), str.end()};
     detail::parser::read_config(res, f);
     if ((res.code == pec::success) != expect_success) {
-      log::test::error("unexpected parser result state: {}", res.code);
-      log::test::error("input remainder: {}", std::string{res.i, res.e});
+      log::test::error({"unexpected parser result state: {}", loc}, res.code);
+      log::test::error({"input remainder: {}", loc}, std::string{res.i, res.e});
     }
     return std::move(f.log);
   }

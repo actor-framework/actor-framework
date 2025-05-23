@@ -17,6 +17,11 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   code. This change makes it easier to handle errors in a consistent way and to
   distinguish between requests that have been dropped and those that resulted in
   an error while processing the request (#2070).
+- The URI parser in CAF now accepts URIs that use reserved characters such as
+  `*`, `/` or `?` in the query string. This change follows the recommendation in
+  the RFC 3986, which states that "query components are often used to carry
+  identifying information in the form of key=value pairs and one frequently used
+  value is a reference to another URI".
 
 ### Added
 
