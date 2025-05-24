@@ -113,7 +113,8 @@ struct matrix_state {
           .then(
             [this, rp](std::vector<int> xs) mutable {
               assert(xs.size() == columns);
-              rp.deliver(std::accumulate(xs.begin(), xs.end(), 0.0) / columns);
+              rp.deliver(std::accumulate(xs.begin(), xs.end(), 0.0)
+                         / static_cast<double>(columns));
             },
             [rp](error& err) mutable { rp.deliver(std::move(err)); });
         return rp;
@@ -133,7 +134,8 @@ struct matrix_state {
           .then(
             [this, rp](std::vector<int> xs) mutable {
               assert(xs.size() == rows);
-              rp.deliver(std::accumulate(xs.begin(), xs.end(), 0.0) / rows);
+              rp.deliver(std::accumulate(xs.begin(), xs.end(), 0.0)
+                         / static_cast<double>(rows));
             },
             [rp](error& err) mutable { rp.deliver(std::move(err)); });
         return rp;

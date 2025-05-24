@@ -305,7 +305,7 @@ void prometheus::append_histogram_impl(const metric_family* family,
   }
   set_current_family(family, "histogram");
   auto& vm = i->second;
-  auto acc = ValueType{0};
+  auto acc = size_t{0};
   auto index = size_t{0};
   for (; index < buckets.size(); ++index) {
     acc += buckets[index].count.value();
