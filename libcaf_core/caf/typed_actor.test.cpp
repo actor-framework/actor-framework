@@ -4,8 +4,11 @@
 
 #include "caf/typed_actor.hpp"
 
+#include "caf/test/test.hpp"
+
+#include "caf/init_global_meta_objects.hpp"
+#include "caf/type_id.hpp"
 #include "caf/typed_actor_pointer.hpp"
-#include "caf/typed_actor_view.hpp"
 #include "caf/typed_behavior.hpp"
 #include "caf/typed_event_based_actor.hpp"
 
@@ -165,4 +168,79 @@ static_assert(
   std::is_same_v<type_list<bool>::append_from<type_list<int>, type_list<float>>,
                  type_list<bool, int, float>>);
 
+struct s01 {};
+struct s02 {};
+struct s03 {};
+struct s04 {};
+struct s05 {};
+struct s06 {};
+struct s07 {};
+struct s08 {};
+struct s09 {};
+struct s10 {};
+struct s11 {};
+struct s12 {};
+struct s13 {};
+struct s14 {};
+struct s15 {};
+struct s16 {};
+struct s17 {};
+struct s18 {};
+struct s19 {};
+struct s20 {};
+
+struct t1970 {
+  using signatures = type_list<
+    result<void>(s01), result<void>(s15), result<void>(s07), result<void>(s12),
+    result<void>(s19), result<void>(s03), result<void>(s10), result<void>(s20),
+    result<void>(s05), result<void>(s14), result<void>(s08), result<void>(s17),
+    result<void>(s02), result<void>(s18), result<void>(s11), result<void>(s04),
+    result<void>(s13), result<void>(s09), result<void>(s16), result<void>(s06)>;
+};
+
+using a1970 = typed_actor<t1970>;
+
 } // namespace
+
+CAF_BEGIN_TYPE_ID_BLOCK(typed_actor_test, caf::first_custom_type_id + 130)
+
+  CAF_ADD_TYPE_ID(typed_actor_test, (s01))
+  CAF_ADD_TYPE_ID(typed_actor_test, (s02))
+  CAF_ADD_TYPE_ID(typed_actor_test, (s03))
+  CAF_ADD_TYPE_ID(typed_actor_test, (s04))
+  CAF_ADD_TYPE_ID(typed_actor_test, (s05))
+  CAF_ADD_TYPE_ID(typed_actor_test, (s06))
+  CAF_ADD_TYPE_ID(typed_actor_test, (s07))
+  CAF_ADD_TYPE_ID(typed_actor_test, (s08))
+  CAF_ADD_TYPE_ID(typed_actor_test, (s09))
+  CAF_ADD_TYPE_ID(typed_actor_test, (s10))
+  CAF_ADD_TYPE_ID(typed_actor_test, (s11))
+  CAF_ADD_TYPE_ID(typed_actor_test, (s12))
+  CAF_ADD_TYPE_ID(typed_actor_test, (s13))
+  CAF_ADD_TYPE_ID(typed_actor_test, (s14))
+  CAF_ADD_TYPE_ID(typed_actor_test, (s15))
+  CAF_ADD_TYPE_ID(typed_actor_test, (s16))
+  CAF_ADD_TYPE_ID(typed_actor_test, (s17))
+  CAF_ADD_TYPE_ID(typed_actor_test, (s18))
+  CAF_ADD_TYPE_ID(typed_actor_test, (s19))
+  CAF_ADD_TYPE_ID(typed_actor_test, (s20))
+
+CAF_END_TYPE_ID_BLOCK(typed_actor_test)
+
+TEST("GH-1970 regression") {
+  // The reported issue was that typed actors would blow up to several dozens of
+  // GB of memory usage during compile time when instantiating a typed actor
+  // with a large number of message handlers, e.g., 20. So the regression test
+  // simply checks that the following code actually compiles, as opposed to
+  // OOMing the compiler.
+  auto bhvr = typed_behavior<t1970>{
+    [](s01) {}, [](s02) {}, [](s03) {}, [](s04) {}, [](s05) {},
+    [](s06) {}, [](s07) {}, [](s08) {}, [](s09) {}, [](s10) {},
+    [](s11) {}, [](s12) {}, [](s13) {}, [](s14) {}, [](s15) {},
+    [](s16) {}, [](s17) {}, [](s18) {}, [](s19) {}, [](s20) {},
+  };
+}
+
+TEST_INIT() {
+  caf::init_global_meta_objects<caf::id_block::typed_actor_test>();
+}
