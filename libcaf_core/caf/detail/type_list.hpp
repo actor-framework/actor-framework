@@ -230,32 +230,82 @@ using tl_at_t = typename tl_at<List, N>::type;
 
 // list remove(list, value)
 
-template <class Input, class Value, class Output>
+// Note: the performance of this template is crucial for interface_mismatch_t,
+//       which is used in typed_actor and typed_behavior. Hence, we unroll
+//       several levels of recursion to avoid deep instantiation chains that
+//       would blow up in RAM usage and compilation time.
+template <class InputList, class R, class OutputList>
 struct tl_remove_impl;
 
-template <class Value, class... Out>
-struct tl_remove_impl<empty_type_list, Value, type_list<Out...>> {
+template <class R, class OutputList>
+struct tl_remove_impl<empty_type_list, R, OutputList> {
+  using type = OutputList;
+};
+
+template <class T1, class R, class... Out>
+struct tl_remove_impl<type_list<T1>, R, type_list<Out...>> {
+  using type = type_list<Out..., T1>;
+};
+
+template <class T1, class T2, class R, class... Out>
+struct tl_remove_impl<type_list<T1, T2>, R, type_list<Out...>> {
+  using type = type_list<Out..., T1, T2>;
+};
+
+template <class T1, class T2, class T3, class... Ts, class R, class... Out>
+struct tl_remove_impl<type_list<T1, T2, T3, Ts...>, R, type_list<Out...>>
+  : tl_remove_impl<type_list<Ts...>, R, type_list<Out..., T1, T2, T3>> {};
+
+template <class R, class... Out>
+struct tl_remove_impl<type_list<R>, R, type_list<Out...>> {
   using type = type_list<Out...>;
 };
 
-template <class T, class... Ts, class Value, class... Out>
-struct tl_remove_impl<type_list<T, Ts...>, Value, type_list<Out...>> {
-  using type = std::conditional_t<
-    std::is_same_v<T, Value>,
-    typename tl_remove_impl<type_list<Ts...>, Value, type_list<Out...>>::type,
-    typename tl_remove_impl<type_list<Ts...>, Value,
-                            type_list<Out..., T>>::type>;
+template <class T1, class R, class... Out>
+struct tl_remove_impl<type_list<T1, R>, R, type_list<Out...>> {
+  using type = type_list<Out..., T1>;
 };
 
-template <class List, class T>
-struct tl_remove;
+template <class T2, class R, class... Out>
+struct tl_remove_impl<type_list<R, T2>, R, type_list<Out...>> {
+  using type = type_list<Out..., T2>;
+};
 
-template <class... Ts, class T>
-struct tl_remove<type_list<Ts...>, T>
-  : tl_remove_impl<type_list<Ts...>, T, type_list<>> {};
+template <class R, class... Out>
+struct tl_remove_impl<type_list<R, R>, R, type_list<Out...>> {
+  using type = type_list<Out...>;
+};
+
+template <class T2, class T3, class... Ts, class R, class... Out>
+struct tl_remove_impl<type_list<R, T2, T3, Ts...>, R, type_list<Out...>>
+  : tl_remove_impl<type_list<Ts...>, R, type_list<Out..., T2, T3>> {};
+
+template <class T1, class T3, class... Ts, class R, class... Out>
+struct tl_remove_impl<type_list<T1, R, T3, Ts...>, R, type_list<Out...>>
+  : tl_remove_impl<type_list<Ts...>, R, type_list<Out..., T1, T3>> {};
+
+template <class T1, class T2, class... Ts, class R, class... Out>
+struct tl_remove_impl<type_list<T1, T2, R, Ts...>, R, type_list<Out...>>
+  : tl_remove_impl<type_list<Ts...>, R, type_list<Out..., T1, T2>> {};
+
+template <class T1, class... Ts, class R, class... Out>
+struct tl_remove_impl<type_list<T1, R, R, Ts...>, R, type_list<Out...>>
+  : tl_remove_impl<type_list<Ts...>, R, type_list<Out..., T1>> {};
+
+template <class T2, class... Ts, class R, class... Out>
+struct tl_remove_impl<type_list<R, T2, R, Ts...>, R, type_list<Out...>>
+  : tl_remove_impl<type_list<Ts...>, R, type_list<Out..., T2>> {};
+
+template <class T3, class... Ts, class R, class... Out>
+struct tl_remove_impl<type_list<R, R, T3, Ts...>, R, type_list<Out...>>
+  : tl_remove_impl<type_list<Ts...>, R, type_list<Out..., T3>> {};
+
+template <class... Ts, class R, class... Out>
+struct tl_remove_impl<type_list<R, R, R, Ts...>, R, type_list<Out...>>
+  : tl_remove_impl<type_list<Ts...>, R, type_list<Out...>> {};
 
 template <class List, class T>
-using tl_remove_t = typename tl_remove<List, T>::type;
+using tl_remove_t = typename tl_remove_impl<List, T, type_list<>>::type;
 
 // list filter(list, predicate)
 

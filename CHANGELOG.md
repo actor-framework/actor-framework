@@ -73,6 +73,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   URI with a percent-encoded character at the end of the string (#2080).
 - Fix parsing of HTTP request headers that do not use the absolute path syntax
   in the first line (#2074).
+- Optimize templates for compile-time checks used by typed behaviors. This
+  drastically reduces memory usage during compilation and avoids OOM errors when
+  spawning typed actors with a large number of message handlers (#1970).
 
 ## [1.0.2] - 2024-10-30
 
