@@ -151,7 +151,7 @@ char* print_fractional_component(char* pos, int ns, int precision,
   return pos;
 }
 
-char* print_utf_offset(char* pos, int offset) {
+char* print_utf_offset(char* pos, long offset) {
   if (offset == 0) {
     *pos++ = 'Z';
     return pos;
@@ -162,7 +162,7 @@ char* print_utf_offset(char* pos, int offset) {
     *pos++ = '-';
     offset = -offset;
   }
-  auto add_two_digits = [&](int x) {
+  auto add_two_digits = [&pos](auto x) {
     *pos++ = static_cast<char>((x / 10) + '0');
     *pos++ = static_cast<char>((x % 10) + '0');
   };

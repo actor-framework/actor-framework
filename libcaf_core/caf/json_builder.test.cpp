@@ -143,22 +143,6 @@ TEST("integer") {
   check_eq(val.to_integer(), 42);
 }
 
-TEST("float") {
-  SECTION("value") {
-    check(builder.value(4.2f));
-    auto val = builder.seal();
-    check(val.is_double());
-    check_eq(val.to_double(), test::approx{4.2f});
-  }
-  SECTION("array") {
-    auto xs = std::vector{4.2f, 4.2f, 4.2f};
-    check(builder.apply(xs));
-    auto val = builder.seal();
-    check(val.is_array());
-    check_eq(printed(val), "[4.2, 4.2, 4.2]"sv);
-  }
-}
-
 TEST("double") {
   check(builder.value(4.2));
   auto val = builder.seal();

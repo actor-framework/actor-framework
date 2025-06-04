@@ -59,7 +59,7 @@ error validate_closing_payload(const_byte_span payload) {
   // statuses between 1000 and 2999 need to be protocol defined, and status
   // codes lower then 1000 and greater or equal then 5000 are invalid.
   auto status_code = web_socket::status{0};
-  if (from_integer(status, status_code)) {
+  if (from_integer(static_cast<uint16_t>(status), status_code)) {
     switch (status_code) {
       case status::normal_close:
       case status::going_away:
@@ -260,6 +260,13 @@ private:
     if (auto err = validate_header(hdr_bytes); err) {
       abort_and_shutdown(err);
       return -1;
+    }
+    if constexpr (sizeof(size_t) < sizeof(uint64_t)) {
+      if (hdr_.payload_len > std::numeric_limits<size_t>::max()) {
+        abort_and_shutdown(sec::protocol_error,
+                           "WebSocket frame payload exceeds maximum size");
+        return -1;
+      }
     }
     // Configure the buffer for the next call to consume_payload. In case of
     // text messages, we validate the UTF-8 encoding on the go, hence the use of
