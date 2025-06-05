@@ -211,6 +211,7 @@ public:
     auto app_t = async_client::make(method, path, fields, payload);
     resp = app_t->get_future();
     auto http_client = http::client::make(std::move(app_t));
+    http_client->max_response_size(max_response_size);
     auto transport = internal::make_transport(std::move(conn),
                                               std::move(http_client));
     transport->active_policy().connect();
@@ -266,8 +267,8 @@ public:
   /// Stores the available routes on the HTTP server.
   std::vector<route_ptr> routes;
 
-  /// Store the maximum request size with 0 meaning "default".
-  size_t max_request_size = 0;
+  /// Store the maximum size for incoming HTTP requests.
+  size_t max_request_size = defaults::net::http_max_request_size;
 
   /// Stores the producer resource for `do_start_server`.
   push_t push;
@@ -288,6 +289,9 @@ public:
 
   /// Stores the response from `do_start_client`.
   async::future<response> resp;
+
+  /// Stores the maximum size for an incoming HTTP response.
+  size_t max_response_size = defaults::net::http_max_response_size;
 };
 
 // -- server API ---------------------------------------------------------------
@@ -360,6 +364,11 @@ with_t::client&& with_t::client::retry_delay(timespan value) && {
 
 with_t::client&& with_t::client::connection_timeout(timespan value) && {
   config_->connection_timeout = value;
+  return std::move(*this);
+}
+
+with_t::client&& with_t::client::max_response_size(size_t value) && {
+  config_->max_response_size = value;
   return std::move(*this);
 }
 

@@ -43,7 +43,7 @@ public:
 
     ~server();
 
-    /// Sets the maximum request size to @p value.
+    /// Sets the maximum request size to @p value. Defaults to 64KiB.
     [[nodiscard]] server&& max_request_size(size_t value) &&;
 
     /// Sets the maximum number of connections the server permits.
@@ -130,6 +130,9 @@ public:
     /// @param value The new connection timeout.
     /// @returns a reference to this `client`.
     [[nodiscard]] client&& connection_timeout(timespan value) &&;
+
+    /// Sets the maximum response size to @p value. Defaults to 512KiB.
+    [[nodiscard]] client&& max_response_size(size_t value) &&;
 
     /// Sets the maximum number of connection retry attempts.
     /// @param value The new maximum retry count.
