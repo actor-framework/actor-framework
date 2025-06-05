@@ -39,11 +39,6 @@ public:
     read_chunks,
   };
 
-  // -- constants --------------------------------------------------------------
-
-  /// Default maximum size for incoming HTTP responses: 512KiB.
-  static constexpr uint32_t default_max_response_size = 512 * 1024;
-
   // -- constructors, destructors, and assignment operators --------------------
 
   explicit client_impl(upper_layer_ptr up) : up_(std::move(up)) {
@@ -255,7 +250,7 @@ private:
   size_t payload_len_ = 0;
 
   /// Maximum size for incoming HTTP requests.
-  size_t max_response_size_ = default_max_response_size;
+  size_t max_response_size_ = defaults::net::http_max_response_size;
 };
 
 } // namespace
