@@ -163,7 +163,10 @@ namespace caf::defaults::net {
 constexpr auto max_connections = make_parameter("max-connections", size_t{64});
 
 /// Default maximum size for incoming HTTP requests: 64KiB.
-constexpr auto http_max_request_size = uint32_t{65'536};
+constexpr auto http_max_request_size = uint32_t{64 * 1024};
+
+/// Default maximum size for incoming HTTP response: 512KiB.
+constexpr auto http_max_response_size = uint32_t{512 * 1024};
 
 /// The default port for HTTP servers.
 constexpr auto http_default_port = uint16_t{80};
