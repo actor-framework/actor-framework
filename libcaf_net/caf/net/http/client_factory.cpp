@@ -8,6 +8,7 @@
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/socket_manager.hpp"
 
+#include "caf/defaults.hpp"
 #include "caf/detail/assert.hpp"
 
 #include <utility>
@@ -21,6 +22,8 @@ public:
   using super::super;
 
   std::string path;
+
+  size_t max_response_size = defaults::net::http_max_response_size;
 
   caf::unordered_flat_map<std::string, std::string> fields;
 };
@@ -51,6 +54,11 @@ dsl::client_config_value& client_factory::init_config(multiplexer* mpx) {
 client_factory& client_factory::add_header_field(std::string key,
                                                  std::string value) {
   config_->fields.insert(std::pair{std::move(key), std::move(value)});
+  return *this;
+}
+
+client_factory& client_factory::max_response_size(size_t value) {
+  config_->max_response_size = value;
   return *this;
 }
 
@@ -120,6 +128,7 @@ client_factory::do_start_impl(Conn conn, http::method method,
                                   payload);
   auto ret = app_t->get_future();
   auto http_client = http::client::make(std::move(app_t));
+  http_client->max_response_size(config_->max_response_size);
   auto transport = transport_t::make(std::move(conn), std::move(http_client));
   transport->active_policy().connect();
   auto ptr = net::socket_manager::make(config_->mpx, std::move(transport));

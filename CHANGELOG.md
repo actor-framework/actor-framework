@@ -29,6 +29,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - New `with_userinfo` member function for URIs that allows setting the user-info
   sub-component without going through an URI builder.
 - CAF now supports chunked encoding for HTTP clients (#2038).
+- Added a missing configuration option to the HTTP client API that allows
+  users to set the maximum size of the response.
 
 ### Fixed
 
