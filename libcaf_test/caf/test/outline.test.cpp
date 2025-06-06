@@ -70,3 +70,28 @@ OUTLINE("counting numbers") {
     | [1, 2, 3] |   6 |   okay |
   )";
 }
+
+OUTLINE("an outline with multiple when blocks") {
+  GIVEN("the numbers <x> and <y>") {
+    auto [x, y] = block_parameters<double, double>();
+    WHEN("adding both numbers") {
+      auto result = x + y;
+      THEN("the result should be <sum>") {
+        auto sum = block_parameters<double>();
+        check_eq(result, caf::test::approx{sum});
+      }
+    }
+    WHEN("subtracting both numbers") {
+      auto result = x - y;
+      THEN("the result should be <diff>") {
+        auto diff = block_parameters<double>();
+        check_eq(result, caf::test::approx{diff});
+      }
+    }
+  }
+  EXAMPLES = R"(
+    |   x |   y | sum | diff |
+    |   1 |   2 |   3 |  -1 |
+    | 2.5 | 3.5 |   6 |  -1 |
+  )";
+}

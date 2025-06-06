@@ -9,6 +9,7 @@
 #include "caf/detail/source_location.hpp"
 #include "caf/detail/test_export.hpp"
 
+#include <algorithm>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -69,6 +70,9 @@ public:
     auto& result = get_nested_or_construct(id);
     if (!result) {
       result = std::make_unique<T>(ctx_, id, description, loc);
+      nested_.push_back(result.get());
+    } else if (std::find(nested_.begin(), nested_.end(), result.get())
+               == nested_.end()) {
       nested_.push_back(result.get());
     }
     return static_cast<T*>(result.get());
