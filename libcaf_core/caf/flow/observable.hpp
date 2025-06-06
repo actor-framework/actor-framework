@@ -20,6 +20,7 @@
 #include "caf/flow/op/base.hpp"
 #include "caf/flow/op/buffer.hpp"
 #include "caf/flow/op/concat.hpp"
+#include "caf/flow/op/debounce.hpp"
 #include "caf/flow/op/fail.hpp"
 #include "caf/flow/op/from_resource.hpp"
 #include "caf/flow/op/from_steps.hpp"
@@ -272,6 +273,11 @@ public:
   auto on_error_resume_next(Predicate&& predicate, Fallback&& fallback) {
     return materialize().on_error_resume_next(
       std::forward<Predicate>(predicate), std::forward<Fallback>(fallback));
+  }
+
+  /// @copydoc observable::debounce
+  auto debounce(timespan period) {
+    return materialize().debounce(period);
   }
 
   /// @copydoc observable::sample
@@ -829,6 +835,14 @@ observable<cow_vector<T>> observable<T>::buffer(size_t count, timespan period) {
                                  period);
   return pptr->add_child_hdl(std::in_place_type<impl_t>, count, *this,
                              std::move(obs));
+}
+
+template <class T>
+observable<T> observable<T>::debounce(timespan period) {
+  using impl_t = op::debounce<T>;
+  auto* pptr = parent();
+  return pptr->add_child_hdl(std::in_place_type<impl_t>, *this,
+                             std::move(period));
 }
 
 template <class T>
