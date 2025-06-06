@@ -578,17 +578,17 @@ TEST("send fan_out_request messages using await") {
     launch();
     check_eq(mail_count(), 3u);
     log::test::info("1 count: {}", mail_count());
-    expect<int, int>().with(1, 2).from(self_hdl).to(workers[0]);
+    expect<int, int>().with(1, 2).from(self_hdl).to(workers[2]);
     log::test::info("2 count: {}", mail_count());
-    expect<int>().with(3).from(workers[0]).to(self_hdl);
+    expect<int>().with(3).from(workers[2]).to(self_hdl);
     log::test::info("3 count: {}", mail_count());
     expect<int, int>().with(1, 2).from(self_hdl).to(workers[1]);
     log::test::info("4 count: {}", mail_count());
     expect<int>().with(3).from(workers[1]).to(self_hdl);
     log::test::info("5 count: {}", mail_count());
-    expect<int, int>().with(1, 2).from(self_hdl).to(workers[2]);
+    expect<int, int>().with(1, 2).from(self_hdl).to(workers[0]);
     log::test::info("6 count: {}", mail_count());
-    expect<int>().with(3).from(workers[2]).to(self_hdl);
+    expect<int>().with(3).from(workers[0]).to(self_hdl);
     log::test::info("7 count: {}", mail_count());
     for_each_message([](auto sender, const auto& msg) {
       log::test::info("in tranzit: {}", msg);
