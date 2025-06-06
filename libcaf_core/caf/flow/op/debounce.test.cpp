@@ -54,7 +54,7 @@ SCENARIO("the debounce operator emits items at regular intervals") {
             .observe_on(self) //
             .debounce(100ms)
             .do_on_complete([closed] { *closed = true; })
-            .for_each([outputs](const int& xs) { outputs->emplace_back(xs); });
+            .for_each([outputs](int val) { outputs->emplace_back(val); });
         });
         dispatch_messages();
         log::test::debug("pushing 1, 2, 4 at once with delay of 300ms");
@@ -64,6 +64,7 @@ SCENARIO("the debounce operator emits items at regular intervals") {
         advance_time(300ms);
         run_flows();
         dispatch_messages();
+        check_eq(*outputs, std::vector<int>{4});
         log::test::debug("pushing 8, 16 at once with delay of 50ms");
         pub.push({8, 16});
         run_flows();

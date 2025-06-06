@@ -7,12 +7,8 @@
 #include "caf/flow/observable_decl.hpp"
 #include "caf/flow/observer.hpp"
 #include "caf/flow/op/cold.hpp"
-#include "caf/flow/op/state.hpp"
 #include "caf/flow/step/all.hpp"
 #include "caf/flow/subscription.hpp"
-#include "caf/unit.hpp"
-
-#include <vector>
 
 namespace caf::flow::op {
 
@@ -32,7 +28,11 @@ public:
 
   debounce_sub(coordinator* parent, observer<output_type> out, timespan period)
     : parent_(parent), out_(std::move(out)), period_(period) {
-    // nop
+    fire_action_ = make_action([this] { fire(); });
+  }
+
+  ~debounce_sub() {
+    fire_action_.dispose();
   }
 
   // -- properties -------------------------------------------------------------
@@ -65,40 +65,48 @@ public:
   // -- callbacks for the forwarders -------------------------------------------
 
   void fwd_on_subscribe(debounce_input_t, subscription sub) {
-    if (value_sub_ || !out_) {
+    if (sub_ || !out_) {
       sub.cancel();
       return;
     }
-    value_sub_ = std::move(sub);
-    value_sub_.request(defaults::flow::buffer_size);
+    sub_ = std::move(sub);
+    sub_.request(1);
   }
 
   void fwd_on_complete(debounce_input_t) {
-    if (pending()) {
-      fire();
+    // If we don't have a value to emit, we can just complete immediately.
+    if (!buf_) {
+      shutdown();
+      return;
     }
-    shutdown();
+    // Deliver the last value immediately if we have the demand necessary.
+    if (demand_ > 0) {
+      --demand_;
+      out_.on_next(*buf_);
+      buf_.reset();
+      shutdown();
+      return;
+    }
+    // Otherwise, we will have to wait for the observer to request more items.
+    completed_ = true;
   }
 
   void fwd_on_error(debounce_input_t, const error& what) {
-    if (pending()) {
-      fire();
-    }
+    // We will call `shutdown()` in `fwd_on_complete()`, which will respect
+    // `err_`. Hence, we can dispatch to `fwd_on_complete()` here.
     err_ = what;
-    shutdown();
+    fwd_on_complete(debounce_input_t{});
   }
 
   void fwd_on_next(debounce_input_t, const input_type& item) {
     if (!running())
       return;
     buf_ = item;
-    value_sub_.request(1);
-    if (pending())
-      pending_.dispose();
-    pending_ = parent_->delay_for_fn(
-      period_, [sptr = intrusive_ptr<debounce_sub>{this}] { //
-        sptr->fire();
-      });
+    sub_.request(1);
+    due_ = parent_->steady_time() + period_;
+    if (!pending_ && demand_ > 0) {
+      pending_ = parent_->delay_until(due_, fire_action_);
+    }
   }
 
   // -- implementation of subscription -----------------------------------------
@@ -110,24 +118,36 @@ public:
   void request(size_t n) override {
     CAF_ASSERT(out_.valid());
     demand_ += n;
+    if (demand_ == n && !pending_) {
+      fire();
+    }
   }
 
 private:
   void fire() {
-    if (demand_ == 0)
+    pending_ = disposable{};
+    if (demand_ == 0 || !out_)
       return;
-    --demand_;
     if (buf_) {
-      out_.on_next(*buf_);
-      buf_.reset();
-      pending_.dispose();
+      if (due_ <= parent_->steady_time()) {
+        --demand_;
+        out_.on_next(*buf_);
+        buf_.reset();
+        if (completed_) {
+          shutdown();
+        }
+      } else {
+        pending_ = parent_->delay_until(due_, fire_action_);
+      }
     }
   }
 
   void do_dispose(bool from_external) override {
     if (!out_)
       return;
-    value_sub_.cancel();
+    pending_.dispose();
+    fire_action_.dispose();
+    sub_.cancel();
     if (from_external)
       out_.on_error(make_error(sec::disposed));
     else
@@ -135,7 +155,9 @@ private:
   }
 
   void shutdown() {
-    value_sub_.cancel();
+    pending_.dispose();
+    fire_action_.dispose();
+    sub_.cancel();
     if (!err_)
       out_.on_complete();
     else
@@ -145,7 +167,7 @@ private:
   /// Stores the context (coordinator) that runs this flow.
   coordinator* parent_;
 
-  /// Stores the elements until we can emit them.
+  /// Stores the element until we can emit it.
   std::optional<input_type> buf_;
 
   /// Stores a handle to the subscribed observer.
@@ -154,7 +176,7 @@ private:
   /// Our subscription for the values. We request `max_buf_size_` items and
   /// whenever we emit a batch, we request whatever amount we have shipped. That
   /// way, we should always have enough demand at the source to fill up a batch.
-  subscription value_sub_;
+  subscription sub_;
 
   /// Demand signaled by the observer.
   size_t demand_ = 0;
@@ -167,6 +189,18 @@ private:
 
   /// Handle to the pending timeout.
   disposable pending_;
+
+  /// Stores whether `on_complete()` has been called. We need to keep track of
+  /// this because the `on_complete()` callback may be called before we can
+  /// deliver the last value.
+  bool completed_ = false;
+
+  /// Stores the time point when the next element should be emitted.
+  coordinator::steady_time_point due_;
+
+  /// Action to fire the current element. Repeatedly called whenever the
+  /// current element is updated.
+  action fire_action_;
 };
 
 template <class T>
