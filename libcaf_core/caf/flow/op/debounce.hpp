@@ -12,11 +12,9 @@
 
 namespace caf::flow::op {
 
-struct debounce_input_t {};
-
 /// The subscription for the `debounce` operator.
 template <class T>
-class debounce_sub : public subscription::impl_base {
+class debounce_sub : public subscription::impl_base, public observer_impl<T> {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -56,15 +54,12 @@ public:
   // -- callbacks for the parent -----------------------------------------------
 
   void init(observable<input_type> vals) {
-    using val_fwd_t = forwarder<input_type, debounce_sub, debounce_input_t>;
-    auto fwd = parent_->add_child(std::in_place_type<val_fwd_t>, this,
-                                  debounce_input_t{});
-    vals.subscribe(fwd->as_observer());
+    vals.subscribe(this->as_observer());
   }
 
-  // -- callbacks for the forwarders -------------------------------------------
+  // -- implementation of observer_impl<T> -------------------------------------
 
-  void fwd_on_subscribe(debounce_input_t, subscription sub) {
+  void on_subscribe(subscription sub) override {
     if (sub_ || !out_) {
       sub.cancel();
       return;
@@ -73,7 +68,7 @@ public:
     sub_.request(1);
   }
 
-  void fwd_on_complete(debounce_input_t) {
+  void on_complete() override {
     // If we don't have a value to emit, we can just complete immediately.
     if (!buf_) {
       shutdown();
@@ -91,14 +86,14 @@ public:
     completed_ = true;
   }
 
-  void fwd_on_error(debounce_input_t, const error& what) {
-    // We will call `shutdown()` in `fwd_on_complete()`, which will respect
-    // `err_`. Hence, we can dispatch to `fwd_on_complete()` here.
+  void on_error(const error& what) override {
+    // We will call `shutdown()` in `on_complete()`, which will respect `err_`.
+    // Hence, we can dispatch to `on_complete()` here.
     err_ = what;
-    fwd_on_complete(debounce_input_t{});
+    on_complete();
   }
 
-  void fwd_on_next(debounce_input_t, const input_type& item) {
+  void on_next(const input_type& item) override {
     if (!running())
       return;
     buf_ = item;
@@ -107,6 +102,14 @@ public:
     if (!pending_ && demand_ > 0) {
       pending_ = parent_->delay_until(due_, fire_action_);
     }
+  }
+
+  void ref_coordinated() const noexcept override {
+    this->ref();
+  }
+
+  void deref_coordinated() const noexcept override {
+    this->deref();
   }
 
   // -- implementation of subscription -----------------------------------------

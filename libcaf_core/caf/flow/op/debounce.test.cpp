@@ -19,8 +19,6 @@ using namespace std::literals;
 
 namespace {
 
-constexpr auto fwd_data = caf::flow::op::debounce_input_t{};
-
 struct fixture : test::fixture::deterministic, test::fixture::flow {
   // Similar to debounce::subscribe, but returns a debounce_sub pointer instead
   // of type-erasing it into a disposable.
@@ -176,7 +174,7 @@ SCENARIO("debounces dispose unexpected subscriptions") {
         auto snk = flow::make_passive_observer<int>();
         auto uut = raw_sub(make_observable().never<int>(), snk->as_observer());
         auto data_sub = make_never_sub<int>(snk->as_observer());
-        uut->fwd_on_subscribe(fwd_data, caf::flow::subscription{data_sub});
+        uut->on_subscribe(caf::flow::subscription{data_sub});
         check(snk->subscribed());
         check(!uut->disposed());
         run_flows();
@@ -196,7 +194,7 @@ SCENARIO("debounces cancels unexpected subscriptions") {
         auto snk = flow::make_passive_observer<int>();
         auto uut = raw_sub(make_observable().never<int>(), snk->as_observer());
         auto data_sub = make_never_sub<int>(snk->as_observer());
-        uut->fwd_on_subscribe(fwd_data, caf::flow::subscription{data_sub});
+        uut->on_subscribe(caf::flow::subscription{data_sub});
         check(snk->subscribed());
         check(!uut->disposed());
         run_flows();
@@ -218,7 +216,7 @@ SCENARIO("debounces emit final items after an on_error event") {
         snk->request(42);
         run_flows();
         check_eq(uut->pending(), false);
-        uut->fwd_on_error(fwd_data, sec::runtime_error);
+        uut->on_error(sec::runtime_error);
         check(snk->aborted());
       }
     }
@@ -227,11 +225,11 @@ SCENARIO("debounces emit final items after an on_error event") {
         auto snk = flow::make_passive_observer<int>();
         auto uut = raw_sub(make_observable().never<int>(), snk->as_observer());
         snk->request(42);
-        uut->fwd_on_next(fwd_data, 1);
-        uut->fwd_on_next(fwd_data, 2);
+        uut->on_next(1);
+        uut->on_next(2);
         check_eq(uut->pending(), true);
         check(snk->buf.empty());
-        uut->fwd_on_error(fwd_data, sec::runtime_error);
+        uut->on_error(sec::runtime_error);
         check(snk->aborted());
         uut->dispose();
         check_eq(snk->buf, std::vector<int>{2});
@@ -248,14 +246,14 @@ SCENARIO("debounces emit final items after an on_complete event") {
         auto snk = flow::make_passive_observer<int>();
         auto uut = raw_sub(make_observable().never<int>(), snk->as_observer());
         snk->request(42);
-        uut->fwd_on_next(fwd_data, 1);
-        uut->fwd_on_next(fwd_data, 2);
-        uut->fwd_on_next(fwd_data, 3);
+        uut->on_next(1);
+        uut->on_next(2);
+        uut->on_next(3);
         advance_time(100ms);
         dispatch_messages();
         run_flows();
         check_eq(uut->pending(), false);
-        uut->fwd_on_complete(fwd_data);
+        uut->on_complete();
         check_eq(snk->buf, std::vector<int>{3});
         check(snk->completed());
       }
@@ -265,12 +263,12 @@ SCENARIO("debounces emit final items after an on_complete event") {
         auto snk = flow::make_passive_observer<int>();
         auto uut = raw_sub(make_observable().never<int>(), snk->as_observer());
         snk->request(42);
-        uut->fwd_on_next(fwd_data, 1);
-        uut->fwd_on_next(fwd_data, 2);
+        uut->on_next(1);
+        uut->on_next(2);
         check_eq(uut->pending(), true);
         check(snk->buf.empty());
         check(!snk->completed());
-        uut->fwd_on_complete(fwd_data);
+        uut->on_complete();
         run_flows();
         check_eq(snk->buf, std::vector<int>{2});
         check(snk->completed());
