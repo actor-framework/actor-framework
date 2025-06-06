@@ -170,27 +170,6 @@ public:
     return true;
   }
 
-  // -- convenience API --------------------------------------------------------
-
-  template <class T>
-  static std::string render(const T& x) {
-    if constexpr (std::is_same_v<std::nullptr_t, T>) {
-      return "null";
-    } else if constexpr (std::is_constructible_v<std::string_view, T>) {
-      if constexpr (std::is_pointer_v<T>) {
-        if (x == nullptr)
-          return "null";
-      }
-      auto str = std::string_view{x};
-      return std::string{str.begin(), str.end()};
-    } else {
-      std::string result;
-      stringification_inspector f{result};
-      save(f, detail::as_mutable_ref(x));
-      return result;
-    }
-  }
-
 private:
   /// Storage for the implementation object.
   alignas(std::max_align_t) std::byte impl_[64];

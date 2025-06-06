@@ -25,7 +25,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  impl(std::string& result) : result_(result) {
+  explicit impl(std::string& result) : result_(result) {
     stack_.reserve(32);
   }
 
