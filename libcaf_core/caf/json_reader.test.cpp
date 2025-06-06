@@ -217,7 +217,7 @@ struct fixture {
   // Adds a test case for a given input and expected output.
   template <class T>
   void add_test_case(std::string_view input, T val) {
-    auto f = [this, input, obj{std::move(val)}]() -> bool {
+    auto f = [input, obj{std::move(val)}](json_reader& reader) -> bool {
       auto& this_test = test::runnable::current();
       auto tmp = T{};
       auto res = this_test.check(reader.load(input))    // parse JSON
@@ -239,7 +239,7 @@ struct fixture {
 
   // Specialization for `widget` to add a test case for a given input.
   void add_test_case(std::string_view input, widget val) {
-    auto f = [this, input, obj{std::move(val)}]() -> bool {
+    auto f = [input, obj{std::move(val)}](json_reader& reader) -> bool {
       widget_mapper mapper_instance;
       reader.mapper(&mapper_instance);
       auto& this_test = test::runnable::current();
@@ -259,10 +259,11 @@ struct fixture {
   // Specialization for `std::string` so we can test all `read_json_string`
   // overloads.
   void add_test_case(std::string_view input, std::string val) {
-    auto f = [this, input, obj{std::move(val)}]() -> bool {
+    auto f = [input, obj{std::move(val)}](json_reader& reader) -> bool {
       auto& this_test = test::runnable::current();
       auto tmp = std::string{};
       // Test overload for reading from memory.
+      caf::log::test::debug("input: {}", input);
       auto res = this_test.check(reader.load(input))    // parse JSON
                  && this_test.check(reader.apply(tmp)); // deserialize object
       if (res) {
@@ -291,7 +292,7 @@ struct fixture {
   // Adds a test case that should fail.
   template <class T>
   void add_neg_test_case(std::string_view input) {
-    auto f = [this, input]() -> bool {
+    auto f = [input](json_reader& reader) -> bool {
       auto tmp = T{};
       auto res = reader.load(input)    // parse JSON
                  && reader.apply(tmp); // deserialize object
@@ -335,9 +336,7 @@ struct fixture {
 
   fixture();
 
-  json_reader reader;
-
-  std::vector<std::function<bool()>> test_cases;
+  std::vector<std::function<bool(json_reader&)>> test_cases;
 };
 
 fixture::fixture() {
@@ -462,10 +461,10 @@ WITH_FIXTURE(fixture) {
 
 TEST("json baselines") {
   size_t baseline_index = 0;
-  detail::monotonic_buffer_resource resource;
   for (auto& f : test_cases) {
     tstlog::debug("test case at index {}", baseline_index++);
-    if (!f())
+    json_reader reader;
+    if (!f(reader))
       if (auto reason = reader.get_error())
         tstlog::debug("JSON reader stopped due to: {}", reason);
   }
