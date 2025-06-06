@@ -211,6 +211,14 @@ The ``concat_map`` operator takes a function object converts a given input to an
 
 .. image:: op/concat_map.svg
 
+Debounce
+++++++++
+
+The ``debounce`` operator re-emits items from its input observable only if a
+given time period has passed since the last item was emitted.
+
+.. image:: op/debounce.svg
+
 Distinct
 ++++++++
 
