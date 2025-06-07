@@ -79,6 +79,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Optimize templates for compile-time checks used by typed behaviors. This
   drastically reduces memory usage during compilation and avoids OOM errors when
   spawning typed actors with a large number of message handlers (#1970).
+- BDD outlines now properly handle multiple `WHEN` blocks in a single
+  scenario (#1776).
 
 ## [1.0.2] - 2024-10-30
 
