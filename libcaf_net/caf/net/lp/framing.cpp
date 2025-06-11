@@ -43,10 +43,6 @@ public:
 
   using upper_layer_ptr = std::unique_ptr<lp::upper_layer>;
 
-  // -- constants --------------------------------------------------------------
-
-  static constexpr size_t max_message_length = INT64_MAX - sizeof(uint64_t);
-
   // -- constructors, destructors, and assignment operators --------------------
 
   framing_impl(upper_layer_ptr up, lp::size_field_type lp_size)
@@ -160,6 +156,15 @@ public:
     down_->shutdown();
   }
 
+  size_t max_message_length() const noexcept override {
+    return max_message_length_;
+  }
+
+  void max_message_length(size_t value) noexcept override {
+    if (value > 0)
+      max_message_length_ = value;
+  }
+
 private:
   template <class T>
   ptrdiff_t consume_impl(byte_span input, byte_span) {
@@ -183,7 +188,7 @@ private:
         up_->abort(make_error(sec::logic_error,
                               "received empty buffer from stream layer"));
         return -1;
-      } else if (msg_size > max_message_length) {
+      } else if (msg_size > max_message_length_) {
         log::net::debug("exceeded maximum message size");
         up_->abort(
           make_error(sec::protocol_error, "exceeded maximum message size"));
@@ -220,7 +225,7 @@ private:
     CAF_ASSERT(message_offset_ < buf.size());
     auto msg_begin = buf.begin() + static_cast<ptrdiff_t>(message_offset_);
     auto msg_size = std::distance(msg_begin + hdr_size_, buf.end());
-    if (msg_size > 0 && static_cast<size_t>(msg_size) < max_message_length) {
+    if (msg_size > 0 && static_cast<size_t>(msg_size) < max_message_length_) {
       auto t_size = T{0};
       if constexpr (std::is_same_v<T, uint8_t>)
         t_size = static_cast<uint8_t>(msg_size);
@@ -249,6 +254,8 @@ private:
   size_t message_offset_ = 0;
 
   size_t hdr_size_ = 0;
+
+  size_t max_message_length_ = caf::defaults::net::lp_max_message_length;
 };
 
 } // namespace

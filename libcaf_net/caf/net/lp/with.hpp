@@ -48,6 +48,9 @@ public:
     /// Sets the maximum number of connections the server permits.
     [[nodiscard]] server&& max_connections(size_t value) &&;
 
+    /// Sets the maximum message length.
+    [[nodiscard]] server&& max_message_length(size_t value) &&;
+
     /// Configures whether the server creates its socket with `SO_REUSEADDR`.
     [[nodiscard]] server&& reuse_address(bool value) &&;
 
