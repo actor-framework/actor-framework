@@ -73,11 +73,17 @@ errc connection::last_error(ptrdiff_t ret) const {
 
 // -- SNI support --------------------------------------------------------------
 
-bool connection::set_sni_hostname(const char* hostname) noexcept {
+bool connection::sni_hostname(const char* hostname) noexcept {
   if (!pimpl_ || !hostname)
     return false;
   log::net::debug("Setting SNI hostname to {}", hostname);
   return SSL_set_tlsext_host_name(native(pimpl_), hostname);
+}
+
+const char* connection::sni_hostname() noexcept {
+  if (!pimpl_)
+    return nullptr;
+  return SSL_get_servername(native(pimpl_), TLSEXT_NAMETYPE_host_name);
 }
 
 // -- connecting and teardown --------------------------------------------------

@@ -240,7 +240,7 @@ public:
   /// created from this context.
   void sni_hostname(std::string hostname) noexcept;
 
-  /// Returns the optional SNI hostname. Empty if SNI is not configured.
+  /// Returns the optional SNI hostname or `nullptr` if is not configured.
   const char* sni_hostname() const noexcept;
 
 private:
@@ -516,6 +516,9 @@ inline auto use_private_key_file_if(dsl::arg::cstring path,
   };
 }
 
+/// Sets the SNI (Server Name Indication) to `sni_hostname` for all client
+/// connections created from this context.
+/// @returns a function object for chaining `expected<T>::and_then()`.
 inline auto use_sni_hostname(std::string sni_hostname) noexcept {
   return [arg1 = std::move(sni_hostname)](context ctx) mutable {
     ctx.sni_hostname(std::move(arg1));
@@ -523,6 +526,10 @@ inline auto use_sni_hostname(std::string sni_hostname) noexcept {
   };
 }
 
+/// Sets the SNI (Server Name Indication) hostname for all client connections.
+/// The hostname is copied from the `uri`. Error if `uri` contains an IP
+/// address.
+/// @returns a function object for chaining `expected<T>::and_then()`.
 inline auto use_sni_hostname(caf::uri uri) noexcept {
   return [arg1 = std::move(uri)](context ctx) mutable -> expected<context> {
     auto& host = arg1.authority().host;
@@ -530,9 +537,8 @@ inline auto use_sni_hostname(caf::uri uri) noexcept {
       ctx.sni_hostname(std::get<std::string>(host));
       return expected{std::move(ctx)};
     }
-    return make_error(
-      sec::runtime_error,
-      "Failed to set SNI hostname: URI doesn't contain a valid hostname");
+    return make_error(sec::runtime_error,
+                      "Failed to set SNI hostname from URI {}", arg1);
   };
 }
 

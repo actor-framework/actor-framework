@@ -60,7 +60,10 @@ public:
 
   /// Sets the SNI hostname for this connection before handshake.
   /// Must be called before connect().
-  bool set_sni_hostname(const char* hostname) noexcept;
+  [[nodiscard]] bool sni_hostname(const char* hostname) noexcept;
+
+  /// Reads the SNI hostname from the connection.
+  [[nodiscard]] const char* sni_hostname() noexcept;
 
   // -- connecting and teardown ------------------------------------------------
 

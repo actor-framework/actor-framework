@@ -74,8 +74,8 @@ std::pair<SSL_CTX*, const char*> make_ctx(const SSL_METHOD* method,
   auto ctx = SSL_CTX_new(method);
   if (!ctx)
     return {nullptr, "SSL_CTX_new returned null"};
-  // Avoid fallback to SSLv3.
-  // Select the protocol versions in the configured range.
+    // Avoid fallback to SSLv3.
+    // Select the protocol versions in the configured range.
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
   if constexpr (std::is_same_v<Enum, tls>) {
     auto opts = SSL_OP_NO_SSLv3;
@@ -278,7 +278,7 @@ expected<connection> context::new_connection(stream_socket fd) {
   if (auto ptr = SSL_new(native(pimpl_))) {
     auto conn = connection::from_native(ptr);
     if (auto host = sni_hostname()) {
-      if (!conn.set_sni_hostname(host))
+      if (!conn.sni_hostname(host))
         return make_error(sec::cannot_connect_to_node,
                           "Failed to set SNI hostname");
     }
@@ -299,7 +299,7 @@ expected<connection> context::new_connection(stream_socket fd,
   if (auto ptr = SSL_new(native(pimpl_))) {
     auto conn = connection::from_native(ptr);
     if (auto host = sni_hostname()) {
-      if (!conn.set_sni_hostname(host))
+      if (!conn.sni_hostname(host))
         return make_error(sec::cannot_connect_to_node,
                           "Failed to set SNI hostname");
     }
