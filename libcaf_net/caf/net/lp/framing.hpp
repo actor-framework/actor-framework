@@ -41,6 +41,12 @@ public:
   static disposable run(multiplexer& mpx, ssl::connection conn,
                         async::consumer_resource<chunk> pull,
                         async::producer_resource<chunk> push);
+
+  // -- properties -------------------------------------------------------------
+
+  virtual size_t max_message_length() const noexcept = 0;
+
+  virtual void max_message_length(size_t value) noexcept = 0;
 };
 
 } // namespace caf::net::lp
