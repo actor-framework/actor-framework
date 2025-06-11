@@ -5,15 +5,19 @@
 #include "caf/detail/default_thread_count.hpp"
 
 #include "caf/config.hpp"
+#include "caf/detail/parse.hpp"
 
 #include <algorithm>
+#include <cstddef>
 #include <thread>
 
 #ifdef CAF_LINUX
 #  include <cmath>
+#  include <cstdint>
 #  include <fstream>
 #  include <optional>
 #  include <sstream>
+#  include <string>
 #endif
 
 namespace caf::detail {
@@ -45,27 +49,38 @@ size_t default_thread_count() {
     if (!std::getline(cpu_max, buffer))
       return fallback;
     std::istringstream iss_cpu{buffer};
-    if (!(iss_cpu >> quota >> period))
+    std::string quota_str;
+    if (!(iss_cpu >> quota_str >> period))
       return fallback;
+    if (quota_str == "max") {
+      // No CPU limit imposed
+      return fallback;
+    }
+    if (auto err = detail::parse(quota_str, quota); err) {
+      return fallback;
+    }
   } else { // cgroup v1
     std::ifstream cfs_quota{"/sys/fs/cgroup/cpu/cpu.cfs_quota_us"};
     std::ifstream cfs_period{"/sys/fs/cgroup/cpu/cpu.cfs_period_us"};
     if (cfs_quota.is_open() && cfs_period.is_open()) {
-      auto get_cgroup_value = [](std::ifstream& file) -> std::optional<size_t> {
+      auto get_cgroup_value = [](std::ifstream& fs) -> std::optional<int64_t> {
         std::string line;
-        if (!std::getline(file, line))
+        if (!std::getline(fs, line))
           return std::nullopt;
         std::istringstream iss{line};
-        auto value = size_t{0};
+        auto value = int64_t{0};
         if (!(iss >> value))
           return std::nullopt;
         return value;
       };
       auto maybe_quota = get_cgroup_value(cfs_quota);
       auto maybe_period = get_cgroup_value(cfs_period);
-      if (maybe_quota && maybe_period) {
-        quota = *maybe_quota;
-        period = *maybe_period;
+      if (maybe_quota && maybe_period && *maybe_quota > 0
+          && *maybe_period > 0) {
+        quota = static_cast<size_t>(*maybe_quota);
+        period = static_cast<size_t>(*maybe_period);
+      } else {
+        return fallback;
       }
     }
   }
