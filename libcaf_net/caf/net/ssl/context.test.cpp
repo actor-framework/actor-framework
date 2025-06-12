@@ -31,6 +31,7 @@ TEST("constructing and setting values in the context object") {
       auto fd_pair = caf::net::make_stream_socket_pair();
       require(fd_pair.has_value());
       auto conn = ctx.new_connection(fd_pair->first);
+      auto g = caf::net::socket_guard{fd_pair->second};
       if (check_has_value(conn)) {
         check_eq(conn->sni_hostname(), host);
       }
