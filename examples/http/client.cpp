@@ -75,9 +75,10 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
   auto result
     = http::with(sys)
         // Lazy load TLS when connecting to HTTPS endpoints.
-        .context_factory([ca_file]() {
-          return ssl::emplace_client(ssl::tls::v1_2)().and_then(
-            ssl::load_verify_file_if(ca_file));
+        .context_factory([ca_file, resource]() {
+          return ssl::emplace_client(ssl::tls::v1_2)()
+            .and_then(ssl::load_verify_file_if(ca_file))
+            .and_then(ssl::use_sni_hostname(resource));
         })
         // Connect to the address of the resource.
         .connect(resource)

@@ -28,6 +28,7 @@ auto native(context::impl* ptr) {
 
 struct context::user_data {
   password::callback_ptr pw_callback;
+  std::string sni_hostname;
 };
 
 // -- constructors, destructors, and assignment operators ----------------------
@@ -276,6 +277,11 @@ error context::last_error_or_unexpected(std::string_view description) {
 expected<connection> context::new_connection(stream_socket fd) {
   if (auto ptr = SSL_new(native(pimpl_))) {
     auto conn = connection::from_native(ptr);
+    if (auto host = sni_hostname()) {
+      if (!conn.sni_hostname(host))
+        return make_error(sec::cannot_connect_to_node,
+                          "Failed to set SNI hostname");
+    }
     if (auto bio_ptr = BIO_new_socket(fd.id, BIO_NOCLOSE)) {
       SSL_set_bio(ptr, bio_ptr, bio_ptr);
 
@@ -292,6 +298,11 @@ expected<connection> context::new_connection(stream_socket fd,
                                              close_on_shutdown_t) {
   if (auto ptr = SSL_new(native(pimpl_))) {
     auto conn = connection::from_native(ptr);
+    if (auto host = sni_hostname()) {
+      if (!conn.sni_hostname(host))
+        return make_error(sec::cannot_connect_to_node,
+                          "Failed to set SNI hostname");
+    }
     if (SSL_set_fd(ptr, fd.id) == 1)
       return {std::move(conn)};
     else
@@ -334,6 +345,18 @@ bool context::use_private_key_file(const char* path, format file_format) {
   ERR_clear_error();
   auto nff = native(file_format);
   return SSL_CTX_use_PrivateKey_file(native(pimpl_), path, nff) == 1;
+}
+
+void context::sni_hostname(std::string hostname) noexcept {
+  if (data_ == nullptr)
+    data_ = new user_data;
+  data_->sni_hostname = std::move(hostname);
+}
+
+const char* context::sni_hostname() const noexcept {
+  if (!data_ || data_->sni_hostname.empty())
+    return nullptr;
+  return data_->sni_hostname.c_str();
 }
 
 } // namespace caf::net::ssl

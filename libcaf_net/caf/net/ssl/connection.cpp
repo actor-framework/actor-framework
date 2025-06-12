@@ -7,6 +7,7 @@
 #include "caf/net/ssl/context.hpp"
 
 #include "caf/config.hpp"
+#include "caf/log/net.hpp"
 
 CAF_PUSH_WARNINGS
 #include <openssl/err.h>
@@ -68,6 +69,21 @@ std::string connection::last_error_string(ptrdiff_t ret) const {
 errc connection::last_error(ptrdiff_t ret) const {
   auto code = SSL_get_error(native(pimpl_), static_cast<int>(ret));
   return detail::ssl_errc_from_native(code);
+}
+
+// -- SNI support --------------------------------------------------------------
+
+bool connection::sni_hostname(const char* hostname) noexcept {
+  if (!pimpl_ || !hostname)
+    return false;
+  log::net::debug("Setting SNI hostname to {}", hostname);
+  return SSL_set_tlsext_host_name(native(pimpl_), hostname);
+}
+
+const char* connection::sni_hostname() noexcept {
+  if (!pimpl_)
+    return nullptr;
+  return SSL_get_servername(native(pimpl_), TLSEXT_NAMETYPE_host_name);
 }
 
 // -- connecting and teardown --------------------------------------------------

@@ -17,6 +17,7 @@
 
 #include "caf/detail/net_export.hpp"
 #include "caf/expected.hpp"
+#include "caf/uri.hpp"
 
 #include <cstring>
 #include <string>
@@ -234,6 +235,13 @@ public:
                                           format file_format) {
     return use_private_key_file(path.c_str(), file_format);
   }
+
+  /// Sets the SNI (Server Name Indication) hostname for client connections
+  /// created from this context.
+  void sni_hostname(std::string hostname) noexcept;
+
+  /// Returns the optional SNI hostname or `nullptr` if is not configured.
+  const char* sni_hostname() const noexcept;
 
 private:
   constexpr explicit context(impl* ptr) : pimpl_(ptr) {
@@ -505,6 +513,32 @@ inline auto use_private_key_file_if(dsl::arg::cstring path,
     bool (context::*fn)(const char*, format) = &context::use_private_key_file;
     return detail::ssl_ctx_chain_if(ctx, "use_private_key_file failed", fn,
                                     arg1, arg2);
+  };
+}
+
+/// Sets the SNI (Server Name Indication) to `sni_hostname` for all client
+/// connections created from this context.
+/// @returns a function object for chaining `expected<T>::and_then()`.
+inline auto use_sni_hostname(std::string sni_hostname) noexcept {
+  return [arg1 = std::move(sni_hostname)](context ctx) mutable {
+    ctx.sni_hostname(std::move(arg1));
+    return expected{std::move(ctx)};
+  };
+}
+
+/// Sets the SNI (Server Name Indication) hostname for all client connections.
+/// The hostname is copied from the `uri`. Error if `uri` contains an IP
+/// address.
+/// @returns a function object for chaining `expected<T>::and_then()`.
+inline auto use_sni_hostname(caf::uri uri) noexcept {
+  return [arg1 = std::move(uri)](context ctx) mutable -> expected<context> {
+    auto& host = arg1.authority().host;
+    if (std::holds_alternative<std::string>(host)) {
+      ctx.sni_hostname(std::get<std::string>(host));
+      return expected{std::move(ctx)};
+    }
+    return make_error(sec::runtime_error,
+                      "Failed to set SNI hostname from URI {}", arg1);
   };
 }
 

@@ -56,6 +56,15 @@ public:
   /// @param ret The (negative) result from the preceding call.
   std::string last_error_string(ptrdiff_t ret) const;
 
+  // -- SNI support -----------------------------------------------------------
+
+  /// Sets the SNI hostname for this connection before handshake.
+  /// Must be called before connect().
+  [[nodiscard]] bool sni_hostname(const char* hostname) noexcept;
+
+  /// Reads the SNI hostname from the connection.
+  [[nodiscard]] const char* sni_hostname() noexcept;
+
   // -- connecting and teardown ------------------------------------------------
 
   /// Performs the client-side TLS/SSL handshake after connection to the server.
