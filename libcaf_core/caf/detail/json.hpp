@@ -183,24 +183,23 @@ public:
   void assign_array(const storage_ptr& ptr) {
     assign_array(&ptr->buf);
   }
+
+  static bool equals(const value::member& lhs, const value::member& rhs);
 };
+
+inline bool operator==(const value::member& lhs, const value::member& rhs) {
+  return value::equals(lhs, rhs);
+}
+
+inline bool operator!=(const value::member& lhs, const value::member& rhs) {
+  return !(lhs == rhs);
+}
 
 inline bool operator==(const value& lhs, const value& rhs) {
   return lhs.data == rhs.data;
 }
 
 inline bool operator!=(const value& lhs, const value& rhs) {
-  return !(lhs == rhs);
-}
-
-inline bool operator==(const value::member& lhs, const value::member& rhs) {
-  if (lhs.key == rhs.key && lhs.val != nullptr && rhs.val != nullptr) {
-    return *lhs.val == *rhs.val;
-  }
-  return false;
-}
-
-inline bool operator!=(const value::member& lhs, const value::member& rhs) {
   return !(lhs == rhs);
 }
 
