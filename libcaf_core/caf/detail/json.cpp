@@ -605,6 +605,13 @@ T* make_impl(monotonic_buffer_resource* storage) {
 
 } // namespace
 
+bool value::equals(const value::member& lhs, const value::member& rhs) {
+  if (lhs.key == rhs.key && lhs.val != nullptr && rhs.val != nullptr) {
+    return *lhs.val == *rhs.val;
+  }
+  return false;
+}
+
 std::string_view realloc(std::string_view str, monotonic_buffer_resource* res) {
   using alloc_t = detail::monotonic_buffer_resource::allocator<char>;
   auto buf = alloc_t{res}.allocate(str.size());

@@ -82,6 +82,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   spawning typed actors with a large number of message handlers (#1970).
 - BDD outlines now properly handle multiple `WHEN` blocks in a single
   scenario (#1776).
+- Fix build issues on Clang 20 when building in C++20 mode (#2092).
 
 ## [1.0.2] - 2024-10-30
 
