@@ -22,6 +22,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   the RFC 3986, which states that "query components are often used to carry
   identifying information in the form of key=value pairs and one frequently used
   value is a reference to another URI".
+- CAF now respects CPU limits when running in a container to determine the
+  thread pool size for the scheduler (#2061).
 
 ### Added
 
