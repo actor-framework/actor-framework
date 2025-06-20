@@ -219,6 +219,9 @@ public:
   /// Emits the most recent item of the input observable once per interval.
   observable<T> sample(timespan period);
 
+  /// Emits the first item of the input observable once per interval.
+  observable<T> throttle_first(timespan period);
+
   /// Emits the most recent item of the input observable once per interval.
   observable<T> throttle_last(timespan period);
 

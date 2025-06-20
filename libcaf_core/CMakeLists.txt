@@ -259,6 +259,7 @@ caf_add_component(
     caf/flow/op/pullable.cpp
     caf/flow/op/retry.test.cpp
     caf/flow/op/sample.test.cpp
+    caf/flow/op/throttle_first.test.cpp
     caf/flow/op/ucast.test.cpp
     caf/flow/op/zip_with.test.cpp
     caf/flow/scoped_coordinator.cpp
