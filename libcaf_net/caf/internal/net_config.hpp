@@ -17,6 +17,7 @@
 #include "caf/callback.hpp"
 #include "caf/defaults.hpp"
 #include "caf/disposable.hpp"
+#include "caf/log/net.hpp"
 #include "caf/none.hpp"
 #include "caf/uri.hpp"
 
@@ -297,6 +298,10 @@ public:
   /// The maximum amount of retries.
   size_t max_retry_count = 0;
 
+  /// Hostname, saved during the `start_client` call and used for
+  /// SSL hostname validation.
+  std::string hostname;
+
   client_config client;
 
   virtual expected<disposable> start_client_impl(net::ssl::connection&) = 0;
@@ -318,6 +323,14 @@ public:
       if (!conn) {
         return conn.error();
       }
+      if (ctx->hostname_validation()) {
+        if (!conn->hostname(hostname.c_str())) {
+          return make_error(sec::protocol_error,
+                            "unable to set {} for SSL hostname validation",
+                            hostname);
+        }
+        log::net::debug("set {} as hostname for SSL validation", hostname);
+      }
       return start_client_impl(*conn);
     }
     auto fd = cfg.take_fd();
@@ -325,13 +338,13 @@ public:
   }
 
   expected<disposable> start_client(std::string& host, uint16_t port) {
-    auto maybe_fd = detail::tcp_try_connect(std::move(host), port,
-                                            connection_timeout, max_retry_count,
-                                            retry_delay);
+    auto maybe_fd = detail::tcp_try_connect(host, port, connection_timeout,
+                                            max_retry_count, retry_delay);
     if (!maybe_fd) {
       return maybe_fd.error();
     }
     client_config::socket sub_cfg{*maybe_fd};
+    hostname = std::move(host);
     return start_client(sub_cfg);
   }
 

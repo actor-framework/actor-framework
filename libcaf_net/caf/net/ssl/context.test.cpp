@@ -16,6 +16,9 @@ TEST("constructing and setting values in the context object") {
   auto maybe_ctx = ssl::context::make_client(ssl::tls::v1_0);
   require(maybe_ctx.has_value());
   auto ctx = std::move(*maybe_ctx);
+  SECTION("default constructed context enables hostname validation") {
+    check(ctx.hostname_validation());
+  }
   SECTION("default constructed context discards SNI") {
     check_eq(ctx.sni_hostname(), nullptr);
   }
@@ -111,5 +114,15 @@ TEST("invalid arguments to ..._if DSL functions leave the context unchanged") {
                    .and_then(ssl::use_sni_hostname(*uri));
       check(!res.has_value());
     }
+  }
+  SECTION("use_hostname_validation") {
+    auto res = ssl::context::make_client(ssl::tls::v1_0)
+                 .and_then(ssl::use_hostname_validation(true));
+    if (check_has_value(res))
+      check(res->hostname_validation());
+    res = ssl::context::make_client(ssl::tls::v1_0)
+            .and_then(ssl::use_hostname_validation(false));
+    if (check_has_value(res))
+      check(!res->hostname_validation());
   }
 }
