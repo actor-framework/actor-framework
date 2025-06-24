@@ -33,6 +33,7 @@
 #include "caf/flow/op/publish.hpp"
 #include "caf/flow/op/retry.hpp"
 #include "caf/flow/op/sample.hpp"
+#include "caf/flow/op/throttle_first.hpp"
 #include "caf/flow/op/zip_with.hpp"
 #include "caf/flow/step/all.hpp"
 #include "caf/flow/subscription.hpp"
@@ -283,6 +284,11 @@ public:
   /// @copydoc observable::sample
   auto sample(timespan period) {
     return materialize().sample(period);
+  }
+
+  /// @copydoc observable::throttle_first
+  auto throttle_first(timespan period) && {
+    return materialize().throttle_first(period);
   }
 
   /// @copydoc observable::throttle_last
@@ -853,6 +859,15 @@ observable<T> observable<T>::debounce(timespan period) {
 template <class T>
 observable<T> observable<T>::sample(timespan period) {
   using impl_t = op::sample<T>;
+  auto* pptr = parent();
+  auto obs = pptr->add_child_hdl(std::in_place_type<op::interval>, period,
+                                 period);
+  return pptr->add_child_hdl(std::in_place_type<impl_t>, *this, std::move(obs));
+}
+
+template <class T>
+observable<T> observable<T>::throttle_first(timespan period) {
+  using impl_t = op::throttle_first<T>;
   auto* pptr = parent();
   auto obs = pptr->add_child_hdl(std::in_place_type<op::interval>, period,
                                  period);
