@@ -27,8 +27,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ### Added
 
-- New flow operators: `retry`, `combine_latest`, `debounce` and
-  `on_error_resume_next`.
+- New flow operators: `retry`, `combine_latest`, `debounce`, `throttle_first`
+  and `on_error_resume_next`.
 - New `with_userinfo` member function for URIs that allows setting the user-info
   sub-component without going through an URI builder.
 - CAF now supports chunked encoding for HTTP clients (#2038).
