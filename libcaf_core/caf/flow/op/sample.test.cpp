@@ -47,109 +47,132 @@ struct fixture : test::fixture::deterministic, test::fixture::flow {
 
 WITH_FIXTURE(fixture) {
 
-SCENARIO("the sample operator emits items at regular intervals") {
-  GIVEN("an observable") {
-    WHEN("calling .sample(1s)") {
-      THEN("the observer receives most recent values after 1s") {
-        auto outputs = std::make_shared<std::vector<int>>();
-        auto expected = std::vector<int>{32, 64, 512};
-        auto closed = std::make_shared<bool>(false);
-        auto pub = caf::flow::multicaster<int>{coordinator()};
-        sys.spawn([&pub, outputs, closed](caf::event_based_actor* self) {
-          pub.as_observable()
-            .observe_on(self) //
-            .sample(1s)
-            .do_on_complete([closed] { *closed = true; })
-            .for_each([outputs](const int& xs) { outputs->emplace_back(xs); });
-        });
-        dispatch_messages();
-        log::test::debug("emit the first six items");
-        pub.push({1, 2, 4, 8, 16, 32});
-        run_flows();
-        dispatch_messages();
-        log::test::debug("force a sample that emits single element");
-        advance_time(1s);
-        dispatch_messages();
-        pub.push(64);
-        run_flows();
-        dispatch_messages();
-        advance_time(1s);
-        dispatch_messages();
-        log::test::debug("force a sample that does not emit element");
-        pub.push({128, 256, 512});
-        run_flows();
-        advance_time(1s);
-        dispatch_messages();
-        pub.close();
-        run_flows();
-        advance_time(1s);
-        dispatch_messages();
-        check_eq(*outputs, expected);
-        check(*closed);
-      }
+TEST("the sample operator emits items at regular intervals") {
+  auto outputs = std::make_shared<std::vector<int>>();
+  auto expected = std::vector<int>{32, 64, 512};
+  auto closed = std::make_shared<bool>(false);
+  auto pub = caf::flow::multicaster<int>{coordinator()};
+  SECTION("an observable that emits items") {
+    SECTION("calling .sample(1s)") {
+      sys.spawn([&pub, outputs, closed](caf::event_based_actor* self) {
+        pub.as_observable()
+          .observe_on(self) //
+          .sample(1s)
+          .do_on_complete([closed] { *closed = true; })
+          .for_each([outputs](const int& xs) { outputs->emplace_back(xs); });
+      });
     }
+    SECTION("calling .throttle_last(1s)") {
+      sys.spawn([&pub, outputs, closed](caf::event_based_actor* self) {
+        pub.as_observable()
+          .observe_on(self) //
+          .throttle_last(1s)
+          .do_on_complete([closed] { *closed = true; })
+          .for_each([outputs](const int& xs) { outputs->emplace_back(xs); });
+      });
+    }
+    dispatch_messages();
+    log::test::debug("emit the first six items");
+    pub.push({1, 2, 4, 8, 16, 32});
+    run_flows();
+    dispatch_messages();
+    log::test::debug("force a sample that emits single element");
+    advance_time(1s);
+    dispatch_messages();
+    pub.push(64);
+    run_flows();
+    dispatch_messages();
+    advance_time(1s);
+    dispatch_messages();
+    log::test::debug("force a sample that does not emit element");
+    pub.push({128, 256, 512});
+    run_flows();
+    advance_time(1s);
+    dispatch_messages();
+    pub.close();
+    run_flows();
+    advance_time(1s);
+    dispatch_messages();
+    check_eq(*outputs, expected);
+    check(*closed);
   }
 }
 
-SCENARIO("the sample operator forwards errors") {
-  GIVEN("an observable that produces some values followed by an error") {
-    WHEN("calling .sample() on it") {
-      THEN("the observer receives the values and then the error") {
-        auto outputs = std::make_shared<std::vector<int>>();
-        auto err = std::make_shared<error>();
-        auto pub = caf::flow::multicaster<int>{coordinator()};
-        sys.spawn([&pub, outputs, err](caf::event_based_actor* self) {
-          pub.as_observable()
-            .observe_on(self) //
-            .concat(self->make_observable().fail<int>(
-              make_error(caf::sec::runtime_error)))
-            .sample(1s)
-            .do_on_error([err](const error& what) { *err = what; })
-            .for_each([outputs](const int& xs) { outputs->emplace_back(xs); });
-        });
-        dispatch_messages();
-        pub.push({1});
-        run_flows();
-        dispatch_messages();
-        advance_time(1s);
-        dispatch_messages();
-        pub.push({2});
-        advance_time(1s);
-        run_flows();
-        dispatch_messages();
-        pub.push({3});
-        advance_time(1s);
-        run_flows();
-        dispatch_messages();
-        pub.close();
-        run_flows();
-        advance_time(1s);
-        dispatch_messages();
-        auto expected = std::vector<int>{1, 2, 3};
-        check_eq(*outputs, expected);
-        check_eq(*err, caf::sec::runtime_error);
-      }
+TEST("the sample operator forwards errors") {
+  SECTION("an observable that produces some values followed by an error") {
+    auto outputs = std::make_shared<std::vector<int>>();
+    auto err = std::make_shared<error>();
+    auto pub = caf::flow::multicaster<int>{coordinator()};
+    SECTION("calling .sample() on it") {
+      sys.spawn([&pub, outputs, err](caf::event_based_actor* self) {
+        pub.as_observable()
+          .observe_on(self) //
+          .concat(self->make_observable().fail<int>(
+            make_error(caf::sec::runtime_error)))
+          .sample(1s)
+          .do_on_error([err](const error& what) { *err = what; })
+          .for_each([outputs](const int& xs) { outputs->emplace_back(xs); });
+      });
     }
+    SECTION("calling .throttle_last() on it") {
+      sys.spawn([&pub, outputs, err](caf::event_based_actor* self) {
+        pub.as_observable()
+          .observe_on(self) //
+          .concat(self->make_observable().fail<int>(
+            make_error(caf::sec::runtime_error)))
+          .throttle_last(1s)
+          .do_on_error([err](const error& what) { *err = what; })
+          .for_each([outputs](const int& xs) { outputs->emplace_back(xs); });
+      });
+    }
+    dispatch_messages();
+    pub.push({1});
+    run_flows();
+    dispatch_messages();
+    advance_time(1s);
+    dispatch_messages();
+    pub.push({2});
+    advance_time(1s);
+    run_flows();
+    dispatch_messages();
+    pub.push({3});
+    advance_time(1s);
+    run_flows();
+    dispatch_messages();
+    pub.close();
+    run_flows();
+    advance_time(1s);
+    dispatch_messages();
+    auto expected = std::vector<int>{1, 2, 3};
+    check_eq(*outputs, expected);
+    check_eq(*err, caf::sec::runtime_error);
   }
-  GIVEN("an observable that produces only an error") {
-    WHEN("calling .sample() on it") {
-      THEN("the observer receives the error") {
-        auto outputs = std::make_shared<std::vector<int>>();
-        auto err = std::make_shared<error>();
-        sys.spawn([outputs, err](caf::event_based_actor* self) {
-          self->make_observable()
-            .fail<int>(make_error(caf::sec::runtime_error))
-            .sample(1s)
-            .do_on_error([err](const error& what) { *err = what; })
-            .for_each([outputs](const int& xs) { outputs->emplace_back(xs); });
-        });
-        run_flows();
-        advance_time(1s);
-        dispatch_messages();
-        check(outputs->empty());
-        check_eq(*err, caf::sec::runtime_error);
-      }
+  SECTION("an observable that produces only an error") {
+    auto outputs = std::make_shared<std::vector<int>>();
+    auto err = std::make_shared<error>();
+    SECTION("calling .sample() on it") {
+      sys.spawn([outputs, err](caf::event_based_actor* self) {
+        self->make_observable()
+          .fail<int>(make_error(caf::sec::runtime_error))
+          .sample(1s)
+          .do_on_error([err](const error& what) { *err = what; })
+          .for_each([outputs](const int& xs) { outputs->emplace_back(xs); });
+      });
     }
+    SECTION("calling .throttle_last() on it") {
+      sys.spawn([outputs, err](caf::event_based_actor* self) {
+        self->make_observable()
+          .fail<int>(make_error(caf::sec::runtime_error))
+          .throttle_last(1s)
+          .do_on_error([err](const error& what) { *err = what; })
+          .for_each([outputs](const int& xs) { outputs->emplace_back(xs); });
+      });
+    }
+    run_flows();
+    advance_time(1s);
+    dispatch_messages();
+    check(outputs->empty());
+    check_eq(*err, caf::sec::runtime_error);
   }
 }
 

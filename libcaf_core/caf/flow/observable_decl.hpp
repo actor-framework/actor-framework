@@ -219,6 +219,9 @@ public:
   /// Emits the most recent item of the input observable once per interval.
   observable<T> sample(timespan period);
 
+  /// Emits the most recent item of the input observable once per interval.
+  observable<T> throttle_last(timespan period);
+
   /// Re-subscribes to the input observable on error for as long as the
   /// predicate returns true.
   template <class Predicate>

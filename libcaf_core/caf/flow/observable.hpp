@@ -285,6 +285,11 @@ public:
     return materialize().sample(period);
   }
 
+  /// @copydoc observable::throttle_last
+  auto throttle_last(timespan period) && {
+    return materialize().throttle_last(period);
+  }
+
   template <class Predicate>
   auto filter(Predicate predicate) && {
     return add_step(step::filter<Predicate>{std::move(predicate)});
@@ -852,6 +857,11 @@ observable<T> observable<T>::sample(timespan period) {
   auto obs = pptr->add_child_hdl(std::in_place_type<op::interval>, period,
                                  period);
   return pptr->add_child_hdl(std::in_place_type<impl_t>, *this, std::move(obs));
+}
+
+template <class T>
+observable<T> observable<T>::throttle_last(timespan period) {
+  return sample(period);
 }
 
 template <class T>
