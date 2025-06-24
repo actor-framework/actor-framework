@@ -35,6 +35,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Added a missing configuration option to the HTTP client API that allows
   users to set the maximum size of the response.
 - Add functions to the SSL API to enable Server Name Indication (SNI, #2084).
+- Add `throttle_last` to observables: an alias for `sample`.
 
 ### Fixed
 
