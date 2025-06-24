@@ -286,8 +286,8 @@ public:
   }
 
   /// @copydoc observable::throttle_last
-  auto throttle_last(timespan period) {
-    return materialize().sample(period);
+  auto throttle_last(timespan period) && {
+    return materialize().throttle_last(period);
   }
 
   template <class Predicate>
