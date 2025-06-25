@@ -32,21 +32,13 @@ public:
 
   // -- properties -------------------------------------------------------------
 
-  void set_error(error stop_reason) {
-    err_ = std::move(stop_reason);
-  }
+  virtual void set_error(error stop_reason) = 0;
+
+  virtual error& get_error() noexcept = 0;
 
   template <class... Ts>
   void emplace_error(Ts&&... xs) {
-    err_ = make_error(std::forward<Ts>(xs)...);
-  }
-
-  const error& get_error() const noexcept {
-    return err_;
-  }
-
-  error&& move_error() noexcept {
-    return std::move(err_);
+    set_error(make_error(std::forward<Ts>(xs)...));
   }
 
   template <class... Ts>
@@ -259,9 +251,6 @@ public:
       get,
     };
   }
-
-protected:
-  error err_;
 };
 
 } // namespace caf

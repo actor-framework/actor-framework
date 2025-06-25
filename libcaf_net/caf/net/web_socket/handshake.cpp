@@ -7,20 +7,39 @@
 #include "caf/net/http/lower_layer.hpp"
 #include "caf/net/http/status.hpp"
 
-#include "caf/config.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/base64.hpp"
 #include "caf/hash/sha1.hpp"
 #include "caf/string_algorithms.hpp"
 
 #include <algorithm>
-#include <cctype>
 #include <cstddef>
-#include <cstring>
 #include <random>
 #include <tuple>
 
+using namespace std::literals;
+
 namespace caf::net::web_socket {
+
+namespace {
+
+/// Prefix for internal fields in the dictionary. Not a valid character in HTTP
+/// headers.
+constexpr auto internal_key_prefix = '$';
+
+/// Internal key for storing the endpoint in the fields dictionary.
+constexpr auto endpoint_key = "$endpoint"sv;
+
+/// Internal key for storing the host in the fields dictionary.
+constexpr auto host_key = "$host"sv;
+
+/// Key for the WebSocket protocol field.
+constexpr auto protocol_key = "Sec-WebSocket-Protocol"sv;
+
+/// Key for the WebSocket origin field.
+constexpr auto origin_key = "Origin"sv;
+
+} // namespace
 
 handshake::handshake() noexcept {
   key_.fill(std::byte{0});
@@ -58,6 +77,10 @@ std::string handshake::response_key() const {
   return str;
 }
 
+void handshake::field(std::string_view key, std::string value) {
+  fields_.insert_or_assign(key, std::move(value));
+}
+
 void handshake::randomize_key() {
   std::random_device rd;
   randomize_key(rd());
@@ -70,8 +93,36 @@ void handshake::randomize_key(unsigned seed) {
     x = static_cast<std::byte>(f(rng));
 }
 
+void handshake::endpoint(std::string value) {
+  fields_.insert_or_assign(endpoint_key, std::move(value));
+}
+
+bool handshake::has_endpoint() const noexcept {
+  return fields_.contains(endpoint_key);
+}
+
+void handshake::host(std::string value) {
+  fields_.insert_or_assign(host_key, std::move(value));
+}
+
+bool handshake::has_host() const noexcept {
+  return fields_.contains(host_key);
+}
+
 bool handshake::has_mandatory_fields() const noexcept {
   return has_endpoint() && has_host();
+}
+
+void handshake::origin(std::string value) {
+  fields_.insert_or_assign(origin_key, std::move(value));
+}
+
+void handshake::protocols(std::string value) {
+  fields_.insert_or_assign(protocol_key, std::move(value));
+}
+
+void handshake::extensions(std::string value) {
+  fields_.insert_or_assign(protocol_key, std::move(value));
 }
 
 // -- HTTP generation and validation -------------------------------------------
@@ -101,15 +152,17 @@ void handshake::write_http_1_request(byte_buffer& buf) const {
     return out;
   };
   writer out{&buf};
-  out << "GET " << lookup("_endpoint") << " HTTP/1.1\r\n"
-      << "Host: " << lookup("_host") << "\r\n"
+  out << "GET " << lookup(endpoint_key) << " HTTP/1.1\r\n"
+      << "Host: " << lookup(host_key) << "\r\n"
       << "Upgrade: websocket\r\n"
       << "Connection: Upgrade\r\n"
       << "Sec-WebSocket-Version: 13\r\n"
       << "Sec-WebSocket-Key: " << encoded_key << "\r\n";
-  for (auto& [key, val] : fields_)
-    if (key[0] != '_')
+  for (auto& [key, val] : fields_) {
+    if (key[0] != internal_key_prefix) {
       out << key << ": " << val << "\r\n";
+    }
+  }
   out << "\r\n";
 }
 

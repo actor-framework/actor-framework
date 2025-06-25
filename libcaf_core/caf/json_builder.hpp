@@ -5,31 +5,19 @@
 #pragma once
 
 #include "caf/detail/core_export.hpp"
-#include "caf/detail/json.hpp"
-#include "caf/json_value.hpp"
-#include "caf/json_writer.hpp"
+#include "caf/fwd.hpp"
 #include "caf/serializer.hpp"
+
+#include <cstddef>
 
 namespace caf {
 
 /// Serializes an inspectable object to a @ref json_value.
-class CAF_CORE_EXPORT json_builder : public serializer {
+class CAF_CORE_EXPORT json_builder final : public serializer {
 public:
-  // -- member types -----------------------------------------------------------
-
-  using super = serializer;
-
-  using type = json_writer::type;
-
   // -- constructors, destructors, and assignment operators --------------------
 
-  json_builder() {
-    init();
-  }
-
-  explicit json_builder(actor_system& sys) : super(sys) {
-    init();
-  }
+  json_builder();
 
   json_builder(const json_builder&) = delete;
 
@@ -41,36 +29,24 @@ public:
 
   /// Returns whether the writer omits empty fields entirely (true) or renders
   /// empty fields as `$field: null` (false).
-  [[nodiscard]] bool skip_empty_fields() const noexcept {
-    return skip_empty_fields_;
-  }
+  [[nodiscard]] bool skip_empty_fields() const noexcept;
 
   /// Configures whether the writer omits empty fields.
-  void skip_empty_fields(bool value) noexcept {
-    skip_empty_fields_ = value;
-  }
+  void skip_empty_fields(bool value) noexcept;
 
   /// Returns whether the writer omits `@type` annotations for JSON objects.
-  [[nodiscard]] bool skip_object_type_annotation() const noexcept {
-    return skip_object_type_annotation_;
-  }
+  [[nodiscard]] bool skip_object_type_annotation() const noexcept;
 
   /// Configures whether the writer omits `@type` annotations for JSON objects.
-  void skip_object_type_annotation(bool value) noexcept {
-    skip_object_type_annotation_ = value;
-  }
+  void skip_object_type_annotation(bool value) noexcept;
 
   /// Returns the suffix for generating type annotation fields for variant
   /// fields. For example, CAF inserts field called "@foo${field_type_suffix}"
   /// for a variant field called "foo".
-  [[nodiscard]] std::string_view field_type_suffix() const noexcept {
-    return field_type_suffix_;
-  }
+  [[nodiscard]] std::string_view field_type_suffix() const noexcept;
 
   /// Configures whether the writer omits empty fields.
-  void field_type_suffix(std::string_view suffix) noexcept {
-    field_type_suffix_ = suffix;
-  }
+  void field_type_suffix(std::string_view suffix) noexcept;
 
   // -- modifiers --------------------------------------------------------------
 
@@ -84,6 +60,14 @@ public:
   json_value seal();
 
   // -- overrides --------------------------------------------------------------
+
+  void set_error(error stop_reason) override;
+
+  error& get_error() noexcept override;
+
+  caf::actor_system* sys() const noexcept override;
+
+  bool has_human_readable_format() const noexcept override;
 
   bool begin_object(type_id_t type, std::string_view name) override;
 
@@ -149,98 +133,11 @@ public:
 
   bool value(const std::u32string& x) override;
 
-  bool value(span<const std::byte> x) override;
+  bool value(const_byte_span x) override;
 
 private:
-  // -- implementation details -------------------------------------------------
-
-  template <class T>
-  bool number(T);
-
-  using key_type = std::string_view;
-
-  // -- state management -------------------------------------------------------
-
-  void init();
-
-  // Returns the current top of the stack or `null` if empty.
-  type top();
-
-  // Returns the current top of the stack or `null` if empty.
-  template <class T = detail::json::value>
-  T* top_ptr();
-
-  // Returns the current top-level object.
-  detail::json::object* top_obj();
-
-  // Enters a new level of nesting.
-  void push(detail::json::value*, type);
-
-  // Enters a new level of nesting with type member.
-  void push(detail::json::value::member*);
-
-  // Enters a new level of nesting with type key.
-  void push(key_type*);
-
-  // Backs up one level of nesting.
-  bool pop();
-
-  // Backs up one level of nesting but checks that current top is `t` before.
-  bool pop_if(type t);
-
-  // Sets an error reason that the inspector failed to write a t.
-  void fail(type t);
-
-  // Checks whether any element in the stack has the type `object`.
-  bool inside_object() const noexcept;
-
-  // -- member variables -------------------------------------------------------
-
-  // Our output.
-  detail::json::value* val_;
-
-  // Storage for the assembled output.
-  detail::json::storage_ptr storage_;
-
-  struct entry {
-    union {
-      detail::json::value* val_ptr;
-      detail::json::member* mem_ptr;
-      key_type* key_ptr;
-    };
-    type t;
-
-    entry(detail::json::value* ptr, type ptr_type) noexcept {
-      val_ptr = ptr;
-      t = ptr_type;
-    }
-
-    explicit entry(detail::json::member* ptr) noexcept {
-      mem_ptr = ptr;
-      t = type::member;
-    }
-
-    explicit entry(key_type* ptr) noexcept {
-      key_ptr = ptr;
-      t = type::key;
-    }
-
-    entry(const entry&) noexcept = default;
-
-    entry& operator=(const entry&) noexcept = default;
-  };
-
-  // Bookkeeping for where we are in the current object.
-  std::vector<entry> stack_;
-
-  // Configures whether we omit empty fields entirely (true) or render empty
-  // fields as `$field: null` (false).
-  bool skip_empty_fields_ = json_writer::skip_empty_fields_default;
-
-  // Configures whether we omit the top-level `@type` annotation.
-  bool skip_object_type_annotation_ = false;
-
-  std::string_view field_type_suffix_ = json_writer::field_type_suffix_default;
+  /// Storage for the implementation object.
+  alignas(std::max_align_t) std::byte impl_[96];
 };
 
 } // namespace caf

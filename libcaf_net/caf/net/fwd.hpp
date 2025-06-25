@@ -90,6 +90,7 @@ class lower_layer;
 class policy;
 class transport;
 class upper_layer;
+class with_t;
 
 enum class errc;
 
@@ -102,6 +103,7 @@ class framing;
 class lower_layer;
 class server;
 class upper_layer;
+class with_t;
 
 using frame = caf::chunk;
 
@@ -116,6 +118,7 @@ class has_on_request;
 class lower_layer;
 class server;
 class upper_layer;
+class with_t;
 
 enum class status : uint16_t;
 
@@ -134,6 +137,7 @@ class route;
 class router;
 class server;
 class upper_layer;
+class with_t;
 
 enum class method : uint8_t;
 enum class status : uint16_t;
@@ -147,6 +151,7 @@ namespace caf::net::ssl {
 class acceptor;
 class connection;
 class context;
+class tcp_acceptor;
 class transport;
 
 enum class dtls;

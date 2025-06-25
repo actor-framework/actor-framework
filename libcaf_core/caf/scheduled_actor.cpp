@@ -24,6 +24,7 @@
 #include "caf/scheduler.hpp"
 #include "caf/send.hpp"
 #include "caf/stream.hpp"
+#include "caf/telemetry/metric_family_impl.hpp"
 
 using namespace std::string_literals;
 
@@ -193,12 +194,6 @@ bool scheduled_actor::enqueue(mailbox_element_ptr ptr, scheduler* sched) {
   }
 }
 
-mailbox_element* scheduled_actor::peek_at_next_mailbox_element() {
-  return mailbox().peek(awaited_responses_.empty()
-                          ? make_message_id()
-                          : std::get<0>(*awaited_responses_.begin()));
-}
-
 // -- overridden functions of local_actor --------------------------------------
 
 const char* scheduled_actor::name() const {
@@ -223,6 +218,9 @@ void scheduled_actor::launch(scheduler* sched, bool lazy, bool hide) {
     intrusive_ptr_add_ref(ctrl());
     sched->delay(this);
   }
+  processed_messages_
+    = home_system().base_metrics().processed_messages->get_or_add(
+      {{"name", name()}});
 }
 
 void scheduled_actor::on_cleanup(const error& reason) {
@@ -264,7 +262,8 @@ resumable::resume_result scheduled_actor::resume(scheduler* sched,
   auto guard = detail::scope_guard{[this, &consumed]() noexcept {
     if (consumed > 0) {
       auto val = static_cast<int64_t>(consumed);
-      home_system().base_metrics().processed_messages->inc(val);
+      if (processed_messages_)
+        processed_messages_->inc(val);
     }
   }};
   auto reset_timeouts_if_needed = [&] {

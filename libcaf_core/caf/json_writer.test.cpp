@@ -5,8 +5,8 @@
 #include "caf/json_writer.hpp"
 
 #include "caf/test/scenario.hpp"
-#include "caf/test/test.hpp"
 
+#include "caf/actor_control_block.hpp"
 #include "caf/init_global_meta_objects.hpp"
 #include "caf/log/test.hpp"
 
@@ -187,11 +187,8 @@ bool inspect(Inspector& f, widget& x) {
 struct fixture {
   template <class T>
   expected<std::string>
-  to_json_string(T&& x, size_t indentation,
-                 bool skip_empty_fields
-                 = json_writer::skip_empty_fields_default,
-                 bool skip_object_type_annotation
-                 = json_writer::skip_object_type_annotation_default) {
+  to_json_string(T&& x, size_t indentation, bool skip_empty_fields = true,
+                 bool skip_object_type_annotation = false) {
     json_writer writer;
     writer.indentation(indentation);
     writer.skip_empty_fields(skip_empty_fields);
@@ -544,6 +541,49 @@ SCENARIO("the JSON writer can render nested lists") {
   ]
 ])_";
         check_eq(to_json_string(x, 2), out);
+      }
+    }
+  }
+}
+
+class custom_writer : public json_writer {
+public:
+  using super = json_writer;
+
+  using super::super;
+
+  using super::value;
+
+  bool value(const strong_actor_ptr& ptr) override {
+    strong_actor_ptr_serialized = true;
+    return super::value(ptr);
+  }
+
+  bool value(const weak_actor_ptr& ptr) override {
+    weak_actor_ptr_serialized = true;
+    return super::value(ptr);
+  }
+
+  bool strong_actor_ptr_serialized = false;
+
+  bool weak_actor_ptr_serialized = false;
+};
+
+SCENARIO("users can override member functions for actor serialization") {
+  GIVEN("a custom writer") {
+    custom_writer writer;
+    WHEN("serializing a strong actor pointer") {
+      strong_actor_ptr ptr;
+      writer.value(ptr);
+      THEN("the overridden function is called") {
+        check(writer.strong_actor_ptr_serialized);
+      }
+    }
+    WHEN("serializing a weak actor pointer") {
+      weak_actor_ptr ptr;
+      writer.value(ptr);
+      THEN("the overridden function is called") {
+        check(writer.weak_actor_ptr_serialized);
       }
     }
   }

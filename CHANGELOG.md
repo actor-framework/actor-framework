@@ -3,6 +3,36 @@
 All notable changes to this project will be documented in this file. The format
 is based on [Keep a Changelog](https://keepachangelog.com).
 
+## Unreleased
+
+### Changed
+
+- Serializer interfaces have received an overhaul to allow custom serialization
+  of actor handles. There are also two new base types for serialization:
+  `byte_reader` and `byte_writer`. These new types allow users to write generic
+  code for serializers that operate on byte sequences.
+- The metric `caf.system.running-actors` now has a label dimension `name` that
+  allows users to identify which kinds of actors are currently active. Since
+  tracking this metric has become slightly more expensive due to the new label,
+  collecting it can now be disabled via the configuration option
+  `caf.metrics.disable-running-actors`.
+- The configuration options under `caf.metrics-filters` have been moved to
+  `caf.metrics.filters`. This change was made to make the configuration options
+  more consistent.
+
+### Added
+
+- Added `monitor` API to WebSocket and HTTP servers in the `with` DSL (#2026).
+
+### Fixed
+
+- Errors that arise during the `with` DSL setup of servers and clients now
+  properly call `on_error` (#2026).
+
+### Removed
+
+- Removed the with DSL building base classes form `caf/net/dsl/` (#2026).
+
 ## [1.1.0] - 2025-07-25
 
 ### Changed
@@ -1459,6 +1489,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Setting the log level to `quiet` now properly suppresses any log output.
 - Configuring colored terminal output should now print colored output.
 
+[1.1.0]: https://github.com/actor-framework/actor-framework/releases/1.1.0
 [1.0.2]: https://github.com/actor-framework/actor-framework/releases/1.0.2
 [1.0.1]: https://github.com/actor-framework/actor-framework/releases/1.0.1
 [1.0.0]: https://github.com/actor-framework/actor-framework/releases/1.0.0

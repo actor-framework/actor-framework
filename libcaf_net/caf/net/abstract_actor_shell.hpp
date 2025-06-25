@@ -17,7 +17,6 @@
 #include "caf/fwd.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/mixin/requester.hpp"
-#include "caf/mixin/sender.hpp"
 #include "caf/none.hpp"
 #include "caf/unordered_flat_map.hpp"
 
@@ -98,8 +97,6 @@ public:
   using abstract_actor::enqueue;
 
   bool enqueue(mailbox_element_ptr ptr, scheduler* eu) override;
-
-  mailbox_element* peek_at_next_mailbox_element() override;
 
   // -- overridden functions of local_actor ------------------------------------
 

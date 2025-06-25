@@ -443,13 +443,13 @@ private:
 
 #if CAF_LOG_LEVEL >= CAF_LOG_LEVEL_DEBUG
 
-#  define CAF_LOG_SPAWN_EVENT(ref, ctor_data)                                  \
+#  define CAF_LOG_SPAWN_EVENT(ptr, ctor_data)                                  \
     CAF_LOG_IMPL(CAF_LOG_FLOW_COMPONENT, CAF_LOG_LEVEL_DEBUG,                  \
                  "SPAWN ; ID ="                                                \
-                   << ref.id() << "; NAME =" << ref.name() << "; TYPE ="       \
-                   << ::caf::detail::pretty_type_name(typeid(ref))             \
+                   << ptr->id() << "; NAME =" << ptr->name() << "; TYPE ="     \
+                   << ::caf::detail::pretty_type_name(typeid(*ptr))            \
                    << "; ARGS =" << ctor_data.c_str()                          \
-                   << "; NODE =" << ref.node())
+                   << "; NODE =" << ptr->node())
 
 #  define CAF_LOG_SEND_EVENT(ptr)                                              \
     CAF_LOG_IMPL(CAF_LOG_FLOW_COMPONENT, CAF_LOG_LEVEL_DEBUG,                  \

@@ -118,7 +118,9 @@ caf_add_component(
     caf/blocking_actor.cpp
     caf/blocking_actor.test.cpp
     caf/blocking_mail.test.cpp
+    caf/byte_reader.cpp
     caf/byte_span.cpp
+    caf/byte_writer.cpp
     caf/chrono.cpp
     caf/chrono.test.cpp
     caf/chunk.cpp
@@ -211,7 +213,6 @@ caf_add_component(
     caf/detail/stringification_inspector.test.cpp
     caf/detail/sync_request_bouncer.cpp
     caf/detail/sync_ring_buffer.test.cpp
-    caf/detail/test_coordinator.cpp
     caf/detail/thread_safe_actor_clock.cpp
     caf/detail/type_id_list_builder.cpp
     caf/detail/type_id_list_builder.test.cpp
@@ -323,9 +324,10 @@ caf_add_component(
     caf/message_id.test.cpp
     caf/message_lifetime.test.cpp
     caf/messaging.test.cpp
+    caf/meta/handler.cpp
+    caf/meta/handler.test.cpp
     caf/metaprogramming.test.cpp
     caf/mixin/requester.test.cpp
-    caf/mixin/sender.test.cpp
     caf/monitor.test.cpp
     caf/mtl.test.cpp
     caf/node_id.cpp

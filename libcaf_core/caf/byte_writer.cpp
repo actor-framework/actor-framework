@@ -2,11 +2,12 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/main/LICENSE.
 
-#pragma once
+#include "caf/byte_writer.hpp"
 
-namespace caf::net::dsl {
+namespace caf {
 
-/// Base type for our DSL classes to configure a factory object.
-struct base {};
+byte_writer::~byte_writer() {
+  // nop
+}
 
-} // namespace caf::net::dsl
+} // namespace caf

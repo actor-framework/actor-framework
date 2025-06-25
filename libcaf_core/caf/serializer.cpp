@@ -28,6 +28,32 @@ bool serializer::end_associative_array() {
   return end_sequence();
 }
 
+bool serializer::value(const strong_actor_ptr& ptr) {
+  auto aid = actor_id{0};
+  auto nid = node_id{};
+  if (ptr != nullptr) {
+    aid = ptr->id();
+    nid = ptr->node();
+  }
+  auto ok = object(ptr).pretty_name("actor").fields(field("id", aid),
+                                                    field("node", nid));
+  if (!ok) {
+    return false;
+  }
+  if (ptr != nullptr) {
+    if (auto err = save_actor(ptr, aid, nid)) {
+      set_error(err);
+      return false;
+    }
+  }
+  return true;
+}
+
+bool serializer::value(const weak_actor_ptr& ptr) {
+  auto tmp = ptr.lock();
+  return value(tmp);
+}
+
 bool serializer::list(const std::vector<bool>& xs) {
   if (!begin_sequence(xs.size()))
     return false;

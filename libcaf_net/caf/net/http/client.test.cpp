@@ -133,7 +133,9 @@ struct fixture {
     client->max_response_size(max_response_size);
     auto transport = net::octet_stream::transport::make(fd2, std::move(client));
     auto mgr = net::socket_manager::make(mpx.get(), std::move(transport));
-    mpx->start(mgr);
+    if (!mpx->start(mgr)) {
+      CAF_RAISE_ERROR(std::logic_error, "failed to start socket manager");
+    }
     fd2.id = net::invalid_socket_id;
   }
 
@@ -144,7 +146,9 @@ struct fixture {
     auto client = net::http::client::make(std::move(app));
     auto transport = net::octet_stream::transport::make(fd2, std::move(client));
     auto mgr = net::socket_manager::make(mpx.get(), std::move(transport));
-    mpx->start(mgr);
+    if (!mpx->start(mgr)) {
+      CAF_RAISE_ERROR(std::logic_error, "failed to start socket manager");
+    }
     fd2.id = net::invalid_socket_id;
   }
 

@@ -13,26 +13,25 @@ namespace caf::net {
 struct receive_policy {
   /// Configures how many bytes the transport  must read before it may call
   /// `consume` on its upper layer.
-  uint32_t min_size;
+  size_t min_size;
 
   /// Configures how many bytes the transport may read at most before it calls
   /// `consume` on its upper layer.
-  uint32_t max_size;
+  size_t max_size;
 
   /// @pre `min_size > 0`
   /// @pre `min_size <= max_size`
-  static constexpr receive_policy between(uint32_t min_size,
-                                          uint32_t max_size) {
+  static constexpr receive_policy between(size_t min_size, size_t max_size) {
     return {min_size, max_size};
   }
 
   /// @pre `size > 0`
-  static constexpr receive_policy exactly(uint32_t size) {
+  static constexpr receive_policy exactly(size_t size) {
     return {size, size};
   }
 
   /// @pre `max_size >= 1`
-  static constexpr receive_policy up_to(uint32_t max_size) {
+  static constexpr receive_policy up_to(size_t max_size) {
     return {1, max_size};
   }
 
