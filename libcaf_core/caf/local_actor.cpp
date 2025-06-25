@@ -30,13 +30,14 @@ namespace caf {
 
 namespace {
 
-local_actor::metrics_t make_instance_metrics(local_actor* self) {
-  const auto& sys = self->home_system();
+local_actor::metrics_t make_instance_metrics(actor_system& sys,
+                                             local_actor* self,
+                                             std::string_view name) {
   const auto& includes = sys.metrics_actors_includes();
   const auto& excludes = sys.metrics_actors_excludes();
-  const auto* name = self->name();
   auto matches = [name](const std::string& glob) {
-    return detail::glob_match(name, glob.c_str());
+    // Note: name.data() is guaranteed to be null-terminated in this case.
+    return detail::glob_match(name.data(), glob.c_str());
   };
   if (includes.empty()
       || std::none_of(includes.begin(), includes.end(), matches)
@@ -48,11 +49,10 @@ local_actor::metrics_t make_instance_metrics(local_actor* self) {
     };
   self->setf(abstract_actor::collects_metrics_flag);
   const auto& families = sys.actor_metric_families();
-  std::string_view sv{name, strlen(name)};
   return {
-    families.processing_time->get_or_add({{"name", sv}}),
-    families.mailbox_time->get_or_add({{"name", sv}}),
-    families.mailbox_size->get_or_add({{"name", sv}}),
+    families.processing_time->get_or_add({{"name", name}}),
+    families.mailbox_time->get_or_add({{"name", name}}),
+    families.mailbox_size->get_or_add({{"name", name}}),
   };
 }
 
@@ -71,7 +71,14 @@ local_actor::~local_actor() {
 }
 
 void local_actor::setup_metrics() {
-  metrics_ = make_instance_metrics(this);
+  auto& sys = home_system();
+  auto nstr = std::string_view{name()};
+  if (sys.collect_running_actors_metrics()) {
+    running_count_
+      = sys.running_actors_metric_family()->get_or_add({{"name", nstr}});
+    running_count_->inc();
+  }
+  metrics_ = make_instance_metrics(sys, this, nstr);
 }
 
 auto local_actor::now() const noexcept -> clock_type::time_point {
@@ -168,6 +175,9 @@ void local_actor::initialize() {
 
 void local_actor::on_cleanup([[maybe_unused]] const error& reason) {
   auto lg = log::core::trace("reason = {}", reason);
+  if (running_count_) {
+    running_count_->dec();
+  }
   on_exit();
   CAF_LOG_TERMINATE_EVENT(this, reason);
 }

@@ -30,13 +30,19 @@ void ws_switch_protocol_base::do_respond_impl(
                 "Mandatory field Sec-WebSocket-Key missing or invalid.");
     return;
   }
+  // Prepare the WebSocket handshake.
+  net::web_socket::handshake hs;
+  if (!hs.assign_key(sec_key)) {
+    res.respond(net::http::status::internal_server_error, "text/plain",
+                "Invalid WebSocket key.");
+    return;
+  }
   // Call user-defined on_request callback.
   auto [ok, pull, push] = try_accept(try_accept_arg);
-  if (!ok)
+  if (!ok) {
     return;
+  }
   // Finalize the WebSocket handshake.
-  net::web_socket::handshake hs;
-  hs.assign_key(sec_key);
   hs.write_response(res.down());
   // Switch to the WebSocket framing protocol.
   using net::web_socket::framing;

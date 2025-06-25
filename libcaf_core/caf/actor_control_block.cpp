@@ -10,13 +10,14 @@
 #include "caf/detail/assert.hpp"
 #include "caf/log/core.hpp"
 #include "caf/mailbox_element.hpp"
-#include "caf/message.hpp"
 #include "caf/proxy_registry.hpp"
 #include "caf/sec.hpp"
 
+#include <cstdlib>
+
 namespace caf {
 
-actor_addr actor_control_block::address() {
+actor_addr actor_control_block::address() noexcept {
   return {this, true};
 }
 
@@ -34,10 +35,12 @@ bool intrusive_ptr_upgrade_weak(actor_control_block* x) {
 }
 
 void intrusive_ptr_release_weak(actor_control_block* x) {
-  // destroy object if last weak pointer expires
+  // Destroy object if last weak pointer expires.
   if (x->weak_refs == 1
-      || x->weak_refs.fetch_sub(1, std::memory_order_acq_rel) == 1)
-    x->block_dtor(x);
+      || x->weak_refs.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+    x->~actor_control_block();
+    free(x);
+  }
 }
 
 void intrusive_ptr_release(actor_control_block* x) {
@@ -59,18 +62,19 @@ void intrusive_ptr_release(actor_control_block* x) {
         return;
       }
     }
-    x->data_dtor(x->get());
-    // We release the implicit weak pointer if the last strong ref expires and
-    // destroy the data block.
+    // Destroy the managed actor.
+    x->get()->~abstract_actor();
+    // Release the implicit weak reference to the control block. May delete the
+    // control block if this was the last reference to it.
     intrusive_ptr_release_weak(x);
   }
 }
 
-bool operator==(const strong_actor_ptr& x, const abstract_actor* y) {
+bool operator==(const strong_actor_ptr& x, const abstract_actor* y) noexcept {
   return x.get() == actor_control_block::from(y);
 }
 
-bool operator==(const abstract_actor* x, const strong_actor_ptr& y) {
+bool operator==(const abstract_actor* x, const strong_actor_ptr& y) noexcept {
   return actor_control_block::from(x) == y.get();
 }
 
@@ -92,7 +96,7 @@ error_code<sec> load_actor(strong_actor_ptr& storage, actor_system* sys,
   return sec::no_proxy_registry;
 }
 
-error_code<sec> save_actor(strong_actor_ptr& storage, actor_id aid,
+error_code<sec> save_actor(const strong_actor_ptr& storage, actor_id aid,
                            const node_id& nid) {
   // Register locally running actors to be able to deserialize them later.
   if (storage) {

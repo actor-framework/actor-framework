@@ -49,23 +49,19 @@ public:
 
   typed_actor_pointer& operator=(const typed_actor_pointer&) = default;
 
-  template <class Supertype>
+  template <
+    class Supertype,
+    class = std::enable_if_t< //
+      detail::tl_subset_of_v<signatures, typename Supertype::signatures>>>
   typed_actor_pointer& operator=(Supertype* ptr) {
-    using namespace detail;
-    static_assert(
-      tl_subset_of<signatures, typename Supertype::signatures>::value,
-      "cannot assign pointer of unrelated actor type");
     view_.reset(ptr);
     return *this;
   }
 
   template <class... OtherSigs,
             class = std::enable_if_t< //
-              detail::tl_subset_of<signatures, type_list<OtherSigs...>>::value>>
+              detail::tl_subset_of_v<signatures, type_list<OtherSigs...>>>>
   typed_actor_pointer& operator=(typed_actor_pointer<OtherSigs...> other) {
-    using namespace detail;
-    static_assert(tl_subset_of<signatures, type_list<OtherSigs...>>::value,
-                  "cannot assign pointer of unrelated actor type");
     view_.reset(other.internal_ptr());
     return *this;
   }

@@ -34,6 +34,7 @@ caf_add_component(
     caf/detail/ws_conn_acceptor.cpp
     caf/internal/accept_handler.cpp
     caf/internal/lp_flow_bridge.cpp
+    caf/internal/net_config.cpp
     caf/internal/octet_stream_flow_bridge.cpp
     caf/internal/ws_flow_bridge.cpp
     caf/net/abstract_actor_shell.cpp
@@ -42,15 +43,12 @@ caf_add_component(
     caf/net/actor_shell.test.cpp
     caf/net/datagram_socket.cpp
     caf/net/datagram_socket.test.cpp
-    caf/net/dsl/client_config.cpp
-    caf/net/dsl/config_base.cpp
     caf/net/generic_lower_layer.cpp
     caf/net/generic_upper_layer.cpp
     caf/net/http/async_client.cpp
     caf/net/http/async_client.test.cpp
     caf/net/http/client.cpp
     caf/net/http/client.test.cpp
-    caf/net/http/client_factory.cpp
     caf/net/http/header.cpp
     caf/net/http/header.test.cpp
     caf/net/http/lower_layer.cpp
@@ -67,31 +65,29 @@ caf_add_component(
     caf/net/http/router.test.cpp
     caf/net/http/server.cpp
     caf/net/http/server.test.cpp
-    caf/net/http/server_factory.cpp
     caf/net/http/status.cpp
     caf/net/http/upper_layer.cpp
     caf/net/http/v1.cpp
+    caf/net/http/with.cpp
     caf/net/ip.cpp
     caf/net/ip.test.cpp
-    caf/net/lp/client_factory.cpp
     caf/net/lp/frame.test.cpp
     caf/net/lp/framing.cpp
     caf/net/lp/framing.test.cpp
     caf/net/lp/lower_layer.cpp
-    caf/net/lp/server_factory.cpp
     caf/net/lp/upper_layer.cpp
+    caf/net/lp/with.cpp
     caf/net/middleman.cpp
     caf/net/multiplexer.cpp
     caf/net/multiplexer.test.cpp
     caf/net/network_socket.cpp
     caf/net/network_socket.test.cpp
-    caf/net/octet_stream/client_factory.cpp
     caf/net/octet_stream/lower_layer.cpp
     caf/net/octet_stream/policy.cpp
-    caf/net/octet_stream/server_factory.cpp
     caf/net/octet_stream/transport.cpp
     caf/net/octet_stream/transport.test.cpp
     caf/net/octet_stream/upper_layer.cpp
+    caf/net/octet_stream/with.cpp
     caf/net/octet_stream/with.test.cpp
     caf/net/pipe_socket.cpp
     caf/net/pipe_socket.test.cpp
@@ -124,18 +120,16 @@ caf_add_component(
     caf/net/udp_datagram_socket.cpp
     caf/net/udp_datagram_socket.test.cpp
     caf/net/web_socket/client.cpp
-    caf/net/web_socket/client_factory.cpp
     caf/net/web_socket/frame.cpp
     caf/net/web_socket/frame.test.cpp
     caf/net/web_socket/framing.cpp
     caf/net/web_socket/handshake.cpp
     caf/net/web_socket/handshake.test.cpp
-    caf/net/web_socket/has_on_request.cpp
     caf/net/web_socket/lower_layer.cpp
     caf/net/web_socket/server.cpp
-    caf/net/web_socket/server_factory.cpp
     caf/net/web_socket/switch_protocol.cpp
-    caf/net/web_socket/upper_layer.cpp)
+    caf/net/web_socket/upper_layer.cpp
+    caf/net/web_socket/with.cpp)
 
 caf_add_test_executable(
   caf-net-autobahn-driver

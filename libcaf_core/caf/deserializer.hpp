@@ -28,23 +28,15 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  deserializer() noexcept = default;
-
-  explicit deserializer(actor_system& sys) noexcept : context_(&sys) {
-    // nop
-  }
-
   virtual ~deserializer();
 
   // -- properties -------------------------------------------------------------
 
-  actor_system* context() const noexcept {
-    return context_;
-  }
+  /// Returns the actor system associated with this deserializer if available.
+  virtual caf::actor_system* sys() const noexcept = 0;
 
-  bool has_human_readable_format() const noexcept {
-    return has_human_readable_format_;
-  }
+  /// Returns whether the serialization format is human-readable.
+  virtual bool has_human_readable_format() const noexcept = 0;
 
   // -- interface functions ----------------------------------------------------
 
@@ -189,7 +181,13 @@ public:
   /// Reads a byte sequence from the input.
   /// @param x The byte sequence.
   /// @returns A non-zero error code on failure, `sec::success` otherwise.
-  virtual bool value(span<std::byte> x) = 0;
+  virtual bool value(byte_span x) = 0;
+
+  /// @copydoc value
+  virtual bool value(strong_actor_ptr& ptr);
+
+  /// @copydoc value
+  virtual bool value(weak_actor_ptr& ptr);
 
   using super::list;
 
@@ -197,13 +195,6 @@ public:
   /// member function to pack the booleans, for example to avoid using one
   /// byte for each value in a binary output format.
   virtual bool list(std::vector<bool>& xs);
-
-protected:
-  /// Provides access to the ::proxy_registry and to the ::actor_system.
-  actor_system* context_ = nullptr;
-
-  /// Configures whether client code should assume human-readable output.
-  bool has_human_readable_format_ = false;
 };
 
 } // namespace caf

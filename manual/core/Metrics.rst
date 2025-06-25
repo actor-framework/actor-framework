@@ -478,7 +478,7 @@ The actor system collects this set of metrics always by default (note that all
 caf.system.running-actors
   - Tracks the current number of running actors in the system.
   - **Type**: ``int_gauge``
-  - **Label dimensions**: none.
+  - **Label dimensions**: name.
 
 caf.system.processed-messages
   - Counts the total number of processed messages.
@@ -525,8 +525,8 @@ and also produce a lot of irrelevant noise.
 
 To make sure CAF only collects actor metrics that are relevant to the user, the
 actor system configuration provides two lists:
-``caf.metrics-filters.actors.includes`` and
-``caf.metrics-filters.actors.excludes``. CAF collects metrics for all actors
+``caf.metrics.filters.actors.includes`` and
+``caf.metrics.filters.actors.excludes``. CAF collects metrics for all actors
 that have names that are selected by the ``includes`` list and are not selected
 by the ``excludes`` list. Entries in the list can use glob-style syntax, in
 particular ``*``-wildcards. For example:
@@ -534,10 +534,12 @@ particular ``*``-wildcards. For example:
 .. code-block:: none
 
   caf {
-    metrics-filters {
-      actors {
-        includes = [ "foo.*" ]
-        excludes = [ "foo.bar" ]
+    metrics{
+      filters {
+        actors {
+          includes = [ "foo.*" ]
+          excludes = [ "foo.bar" ]
+        }
       }
     }
   }

@@ -270,6 +270,8 @@ using int_gauge_family = metric_family_impl<int_gauge>;
 
 namespace detail {
 
+struct make_actor_util;
+
 class actor_system_access;
 class actor_system_config_access;
 class mailbox_factory;
@@ -387,8 +389,11 @@ using strong_actor_ptr = intrusive_ptr<actor_control_block>;
 
 using mailbox_element_ptr = std::unique_ptr<mailbox_element>;
 
-// -- shared pointer aliases ---------------------------------------------------
-
-using shared_action_ptr = std::shared_ptr<callback<void()>>;
-
 } // namespace caf
+
+namespace caf::meta {
+
+struct handler;
+struct handler_list;
+
+} // namespace caf::meta

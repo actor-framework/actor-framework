@@ -36,7 +36,15 @@ public:
     // nop
   }
 
-  static constexpr bool has_human_readable_format() noexcept {
+  void set_error(error stop_reason) override {
+    err_ = std::move(stop_reason);
+  }
+
+  error& get_error() noexcept override {
+    return err_;
+  }
+
+  constexpr bool has_human_readable_format() noexcept {
     return false;
   }
 
@@ -135,7 +143,7 @@ public:
     return true;
   }
 
-  bool value(span<const std::byte> x) noexcept {
+  bool value(const_byte_span x) noexcept {
     auto begin = reinterpret_cast<const uint8_t*>(x.data());
     append(begin, begin + x.size());
     return true;
@@ -170,6 +178,8 @@ private:
       while (begin != end)
         result = (*begin++ ^ result) * 1099511628211ull;
   }
+
+  error err_;
 };
 
 } // namespace caf::hash

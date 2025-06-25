@@ -4,87 +4,17 @@
 
 #pragma once
 
-#include "caf/deserializer.hpp"
+#include "caf/byte_reader.hpp"
 #include "caf/detail/core_export.hpp"
-#include "caf/detail/json.hpp"
+#include "caf/fwd.hpp"
 
-#include <iosfwd>
-#include <string_view>
-#include <variant>
+#include <cstddef>
 
 namespace caf {
 
 /// Deserializes an inspectable object from a JSON-formatted string.
-class CAF_CORE_EXPORT json_reader : public deserializer {
+class CAF_CORE_EXPORT json_reader : public byte_reader {
 public:
-  // -- member types -----------------------------------------------------------
-
-  using super = deserializer;
-
-  struct sequence {
-    detail::json::array::const_iterator pos;
-
-    detail::json::array::const_iterator end;
-
-    bool at_end() const noexcept {
-      return pos == end;
-    }
-
-    auto& current() {
-      return *pos;
-    }
-
-    void advance() {
-      ++pos;
-    }
-  };
-
-  struct members {
-    detail::json::object::const_iterator pos;
-
-    detail::json::object::const_iterator end;
-
-    bool at_end() const noexcept {
-      return pos == end;
-    }
-
-    auto& current() {
-      return *pos;
-    }
-
-    void advance() {
-      ++pos;
-    }
-  };
-
-  using json_key = std::string_view;
-
-  using value_type
-    = std::variant<const detail::json::value*, const detail::json::object*,
-                   detail::json::null_t, json_key, sequence, members>;
-
-  using stack_allocator
-    = detail::monotonic_buffer_resource::allocator<value_type>;
-
-  using stack_type = std::vector<value_type, stack_allocator>;
-
-  /// Denotes the type at the current position.
-  enum class position {
-    value,
-    object,
-    null,
-    key,
-    sequence,
-    members,
-    past_the_end,
-    invalid,
-  };
-
-  // -- constants --------------------------------------------------------------
-
-  /// The value value for `field_type_suffix()`.
-  static constexpr std::string_view field_type_suffix_default = "-type";
-
   // -- constructors, destructors, and assignment operators --------------------
 
   json_reader();
@@ -102,26 +32,22 @@ public:
   /// Returns the suffix for generating type annotation fields for variant
   /// fields. For example, CAF inserts field called "@foo${field_type_suffix}"
   /// for a variant field called "foo".
-  [[nodiscard]] std::string_view field_type_suffix() const noexcept {
-    return field_type_suffix_;
-  }
+  [[nodiscard]] std::string_view field_type_suffix() const noexcept;
 
   /// Configures whether the writer omits empty fields.
-  void field_type_suffix(std::string_view suffix) noexcept {
-    field_type_suffix_ = suffix;
-  }
+  void field_type_suffix(std::string_view suffix) noexcept;
 
   /// Returns the type ID mapper used by the writer.
-  [[nodiscard]] const type_id_mapper* mapper() const noexcept {
-    return mapper_;
-  }
+  [[nodiscard]] const type_id_mapper* mapper() const noexcept;
 
   /// Changes the type ID mapper for the writer.
-  void mapper(const type_id_mapper* ptr) noexcept {
-    mapper_ = ptr;
-  }
+  void mapper(const type_id_mapper* ptr) noexcept;
 
   // -- modifiers --------------------------------------------------------------
+
+  void set_error(error stop_reason) final;
+
+  error& get_error() noexcept final;
 
   /// Parses @p json_text into an internal representation. After loading the
   /// JSON input, the reader is ready for attempting to deserialize inspectable
@@ -131,6 +57,8 @@ public:
   ///          until either destroying this reader or calling `reset`.
   /// @note Implicitly calls `reset`.
   bool load(std::string_view json_text);
+
+  bool load_bytes(const_byte_span bytes) final;
 
   /// Reads the input stream @p input and parses the content into an internal
   /// representation. After loading the JSON input, the reader is ready for
@@ -145,9 +73,7 @@ public:
   bool load_file(const char* path);
 
   /// @copydoc load_file
-  bool load_file(const std::string& path) {
-    return load_file(path.c_str());
-  }
+  bool load_file(const std::string& path);
 
   /// Reverts the state of the reader back to where it was after calling `load`.
   /// @post The reader is ready for attempting to deserialize another
@@ -159,124 +85,88 @@ public:
 
   // -- overrides --------------------------------------------------------------
 
-  bool fetch_next_object_type(type_id_t& type) override;
+  caf::actor_system* sys() const noexcept final;
 
-  bool fetch_next_object_name(std::string_view& type_name) override;
+  bool has_human_readable_format() const noexcept final;
 
-  bool begin_object(type_id_t type, std::string_view name) override;
+  bool fetch_next_object_type(type_id_t& type) final;
 
-  bool end_object() override;
+  bool fetch_next_object_name(std::string_view& type_name) final;
 
-  bool begin_field(std::string_view) override;
+  bool begin_object(type_id_t type, std::string_view name) final;
 
-  bool begin_field(std::string_view name, bool& is_present) override;
+  bool end_object() final;
+
+  bool begin_field(std::string_view) final;
+
+  bool begin_field(std::string_view name, bool& is_present) final;
 
   bool begin_field(std::string_view name, span<const type_id_t> types,
-                   size_t& index) override;
+                   size_t& index) final;
 
   bool begin_field(std::string_view name, bool& is_present,
-                   span<const type_id_t> types, size_t& index) override;
+                   span<const type_id_t> types, size_t& index) final;
 
-  bool end_field() override;
+  bool end_field() final;
 
-  bool begin_tuple(size_t size) override;
+  bool begin_tuple(size_t size) final;
 
-  bool end_tuple() override;
+  bool end_tuple() final;
 
-  bool begin_key_value_pair() override;
+  bool begin_key_value_pair() final;
 
-  bool end_key_value_pair() override;
+  bool end_key_value_pair() final;
 
-  bool begin_sequence(size_t& size) override;
+  bool begin_sequence(size_t& size) final;
 
-  bool end_sequence() override;
+  bool end_sequence() final;
 
-  bool begin_associative_array(size_t& size) override;
+  bool begin_associative_array(size_t& size) final;
 
-  bool end_associative_array() override;
+  bool end_associative_array() final;
 
-  bool value(std::byte& x) override;
+  using byte_reader::value;
 
-  bool value(bool& x) override;
+  bool value(std::byte& x) final;
 
-  bool value(int8_t& x) override;
+  bool value(bool& x) final;
 
-  bool value(uint8_t& x) override;
+  bool value(int8_t& x) final;
 
-  bool value(int16_t& x) override;
+  bool value(uint8_t& x) final;
 
-  bool value(uint16_t& x) override;
+  bool value(int16_t& x) final;
 
-  bool value(int32_t& x) override;
+  bool value(uint16_t& x) final;
 
-  bool value(uint32_t& x) override;
+  bool value(int32_t& x) final;
 
-  bool value(int64_t& x) override;
+  bool value(uint32_t& x) final;
 
-  bool value(uint64_t& x) override;
+  bool value(int64_t& x) final;
 
-  bool value(float& x) override;
+  bool value(uint64_t& x) final;
 
-  bool value(double& x) override;
+  bool value(float& x) final;
 
-  bool value(long double& x) override;
+  bool value(double& x) final;
 
-  bool value(std::string& x) override;
+  bool value(long double& x) final;
 
-  bool value(std::u16string& x) override;
+  bool value(std::string& x) final;
 
-  bool value(std::u32string& x) override;
+  bool value(std::u16string& x) final;
 
-  bool value(span<std::byte> x) override;
+  bool value(std::u32string& x) final;
+
+  bool value(byte_span x) final;
+
+  // Note: `value(strong_actor_ptr&)` and `value(weak_actor_ptr&)` are not
+  //       overridden as `final`. They are an important customization point.
 
 private:
-  [[nodiscard]] position pos() const noexcept;
-
-  void append_current_field_name(std::string& str);
-
-  std::string current_field_name();
-
-  template <bool PopOrAdvanceOnSuccess, class F>
-  bool consume(const char* fun_name, F f);
-
-  template <class T>
-  bool integer(T& x);
-
-  template <position P>
-  auto& top() noexcept {
-    return std::get<static_cast<size_t>(P)>(st_->back());
-  }
-
-  template <position P>
-  const auto& top() const noexcept {
-    return std::get<static_cast<size_t>(P)>(st_->back());
-  }
-
-  void pop() {
-    st_->pop_back();
-  }
-
-  template <class T>
-  void push(T&& x) {
-    st_->emplace_back(std::forward<T>(x));
-  }
-
-  detail::monotonic_buffer_resource buf_;
-
-  stack_type* st_ = nullptr;
-
-  detail::json::value* root_ = nullptr;
-
-  std::string_view field_type_suffix_ = field_type_suffix_default;
-
-  /// Keeps track of the current field for better debugging output.
-  std::vector<std::string_view> field_;
-
-  /// The mapper implementation we use by default.
-  default_type_id_mapper default_mapper_;
-
-  /// Configures which ID mapper we use to translate between type IDs and names.
-  const type_id_mapper* mapper_ = &default_mapper_;
+  /// Storage for the implementation object.
+  alignas(std::max_align_t) std::byte impl_[256];
 };
 
 } // namespace caf

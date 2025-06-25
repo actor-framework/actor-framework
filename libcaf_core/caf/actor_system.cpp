@@ -17,7 +17,6 @@
 #include "caf/detail/daemons.hpp"
 #include "caf/detail/meta_object.hpp"
 #include "caf/detail/private_thread_pool.hpp"
-#include "caf/detail/test_coordinator.hpp"
 #include "caf/detail/thread_safe_actor_clock.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/raise_error.hpp"
@@ -31,7 +30,9 @@
 #include <atomic>
 #include <cstdio>
 #include <fstream>
+#include <limits>
 #include <memory>
+#include <mutex>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -254,10 +255,8 @@ auto make_base_metrics(telemetry::metric_registry& reg) {
     // Initialize the base metrics.
     reg.counter_singleton("caf.system", "rejected-messages",
                           "Number of rejected messages.", "1", true),
-    reg.counter_singleton("caf.system", "processed-messages",
-                          "Number of processed messages.", "1", true),
-    reg.gauge_singleton("caf.system", "running-actors",
-                        "Number of currently running actors."),
+    reg.counter_family("caf.system", "processed-messages", {"name"},
+                       "Number of processed messages.", "1", true),
     reg.gauge_singleton("caf.system", "queued-messages",
                         "Number of messages in all mailboxes.", "1", true),
   };
@@ -380,6 +379,158 @@ private:
   cleanup do_cleanup_ = nullptr;
 };
 
+class actor_registry_impl : public actor_registry {
+public:
+  using exclusive_guard = std::unique_lock<std::shared_mutex>;
+  using shared_guard = std::shared_lock<std::shared_mutex>;
+
+  void erase(actor_id key) override {
+    // Stores a reference to the actor we're going to remove. This guarantees
+    // that we aren't releasing the last reference to an actor while erasing it.
+    // Releasing the final ref can trigger the actor to call its cleanup
+    // function that in turn calls this function and we can end up in a
+    // deadlock.
+    strong_actor_ptr ref;
+    { // Lifetime scope of guard.
+      exclusive_guard guard{instances_mtx_};
+      auto i = entries_.find(key);
+      if (i != entries_.end()) {
+        ref.swap(i->second);
+        entries_.erase(i);
+      }
+    }
+  }
+
+  size_t inc_running() override {
+    return ++running_;
+  }
+
+  size_t dec_running() override {
+    auto new_val = --running_;
+    if (new_val <= 1) {
+      std::unique_lock guard{running_mtx_};
+      running_cv_.notify_all();
+    }
+    return new_val;
+  }
+
+  /// Returns the number of currently running actors.
+  size_t running() const override {
+    return running_.load();
+  }
+
+  /// Blocks the caller until running-actors-count becomes `expected`
+  /// (must be either 0 or 1) or timeout is reached.
+  void await_running_count_equal(size_t expected,
+                                 timespan timeout = infinite) const override {
+    CAF_ASSERT(expected == 0 || expected == 1);
+    auto lg = log::core::trace("expected = {}", expected);
+    std::unique_lock guard{running_mtx_};
+    auto pred = [this, &expected] {
+      log::core::debug("running = {}", running());
+      return running() == expected;
+    };
+    if (timeout == infinite)
+      running_cv_.wait(guard, pred);
+    else
+      running_cv_.wait_for(guard, timeout, pred);
+  }
+
+  /// Removes a name mapping.
+  void erase(const std::string& key) override {
+    // Stores a reference to the actor we're going to remove for the same
+    // reasoning as in erase(actor_id).
+    strong_actor_ptr ref;
+    { // Lifetime scope of guard.
+      exclusive_guard guard{named_entries_mtx_};
+      auto i = named_entries_.find(key);
+      if (i != named_entries_.end()) {
+        ref.swap(i->second);
+        named_entries_.erase(i);
+      }
+    }
+  }
+
+  using name_map = std::unordered_map<std::string, strong_actor_ptr>;
+
+  name_map named_actors() const override {
+    shared_guard guard{named_entries_mtx_};
+    return named_entries_;
+  }
+
+  // Starts this component.
+  void start() {
+    // nop
+  }
+
+  // Stops this component.
+  void stop() {
+    {
+      exclusive_guard guard{instances_mtx_};
+      entries_.clear();
+    }
+    {
+      exclusive_guard guard{named_entries_mtx_};
+      named_entries_.clear();
+    }
+  }
+
+private:
+  strong_actor_ptr get_impl(actor_id key) const override {
+    shared_guard guard(instances_mtx_);
+    auto i = entries_.find(key);
+    if (i != entries_.end())
+      return i->second;
+    log::core::debug("key invalid, assume actor no longer exists: key = {}",
+                     key);
+    return nullptr;
+  }
+
+  void put_impl(actor_id key, strong_actor_ptr val) override {
+    auto lg = log::core::trace("key = {}", key);
+    if (!val)
+      return;
+    { // lifetime scope of guard
+      exclusive_guard guard(instances_mtx_);
+      if (!entries_.emplace(key, val).second)
+        return;
+    }
+    // attach functor without lock
+    log::core::debug("added actor: key = {}", key);
+    actor_registry* reg = this;
+    val->get()->attach_functor([key, reg]() { reg->erase(key); });
+  }
+
+  strong_actor_ptr get_impl(const std::string& key) const override {
+    shared_guard guard{named_entries_mtx_};
+    auto i = named_entries_.find(key);
+    if (i == named_entries_.end())
+      return nullptr;
+    return i->second;
+  }
+
+  void put_impl(const std::string& key, strong_actor_ptr val) override {
+    if (val == nullptr) {
+      erase(key);
+      return;
+    }
+    exclusive_guard guard{named_entries_mtx_};
+    named_entries_.emplace(std::move(key), std::move(val));
+  }
+
+  using entries = std::unordered_map<actor_id, strong_actor_ptr>;
+
+  std::atomic<size_t> running_ = 0;
+  mutable std::mutex running_mtx_;
+  mutable std::condition_variable running_cv_;
+
+  mutable std::shared_mutex instances_mtx_;
+  entries entries_;
+
+  name_map named_entries_;
+  mutable std::shared_mutex named_entries_mtx_;
+};
+
 } // namespace
 
 class actor_system::impl {
@@ -393,10 +544,12 @@ public:
     : ids(0),
       metrics(cfg),
       base_metrics(make_base_metrics(metrics)),
-      registry(*parent),
-      await_actors_before_shutdown(true),
       cfg(&cfg),
       private_threads(parent) {
+    memset(&flags, 0xFF, sizeof(flags)); // All flags are ON by default.
+    running_actors_metric_family
+      = metrics.gauge_family("caf.system", "running-actors", {"name"},
+                             "Number of currently running actors.");
     print_state = std::make_unique<print_state_impl>(cfg);
     meta_objects_guard = detail::global_meta_objects_guard();
     if (!meta_objects_guard)
@@ -405,14 +558,20 @@ public:
       hook->init(*parent);
     // Cache some configuration parameters for faster lookups at runtime.
     using string_list = std::vector<std::string>;
+    if (get_or(cfg, "caf.metrics.disable-running-actors", false)) {
+      flags.collect_running_actors_metrics = false;
+    }
     if (auto lst = get_as<string_list>(cfg,
-                                       "caf.metrics-filters.actors.includes"))
+                                       "caf.metrics.filters.actors.includes")) {
       metrics_actors_includes = std::move(*lst);
+    }
     if (auto lst = get_as<string_list>(cfg,
-                                       "caf.metrics-filters.actors.excludes"))
+                                       "caf.metrics.filters.actors.excludes")) {
       metrics_actors_excludes = std::move(*lst);
-    if (!metrics_actors_includes.empty())
+    }
+    if (!metrics_actors_includes.empty()) {
       actor_metric_families = make_actor_metric_families(metrics);
+    }
     // Spin up modules.
     for (auto fn : cfg.module_factories()) {
       auto mod_ptr = fn(*parent);
@@ -454,10 +613,7 @@ public:
     if (!scheduler) {
       using defaults::scheduler::policy;
       auto config_policy = get_or(cfg, "caf.scheduler.policy", policy);
-      if (config_policy == "testing") {
-        clock.reset(new detail::test_actor_clock());
-        scheduler.reset(new detail::test_coordinator(*parent));
-      } else if (config_policy == "sharing") {
+      if (config_policy == "sharing") {
         scheduler = scheduler::make_work_sharing(*parent);
       } else {
         // Any invalid configuration falls back to work stealing.
@@ -501,8 +657,9 @@ public:
     {
       auto lg = log::core::trace("");
       log::core::debug("shutdown actor system");
-      if (await_actors_before_shutdown)
+      if (flags.await_actors_before_shutdown) {
         registry.await_running_count_equal(0);
+      }
       // shutdown internal actors
       auto drop = [&](auto& x) {
         anon_send_exit(x, exit_reason::user_shutdown);
@@ -544,7 +701,7 @@ public:
   node_id node;
 
   /// Maps well-known actor names to actor handles.
-  actor_registry registry;
+  actor_registry_impl registry;
 
   /// Manages log output.
   intrusive_ptr<caf::logger> logger;
@@ -561,8 +718,19 @@ public:
   /// Background printer.
   strong_actor_ptr printer;
 
-  /// Stores whether the system should wait for running actors on shutdown.
-  bool await_actors_before_shutdown;
+  // Bundles various flags for the actor system into a single, memory-efficient
+  // structure.
+  struct flags_t {
+    /// Stores whether the system should wait for running actors on shutdown.
+    bool await_actors_before_shutdown : 1;
+
+    /// Stores whether the system should keep track of how many actors are
+    /// currently running per actor type.
+    bool collect_running_actors_metrics : 1;
+  };
+
+  /// Stores flags that affect the entire actor system.
+  flags_t flags;
 
   /// Stores config parameters.
   strong_actor_ptr config_serv;
@@ -573,16 +741,19 @@ public:
   /// The system-wide, user-provided configuration.
   actor_system_config* cfg;
 
-  /// Caches the configuration parameter `caf.metrics-filters.actors.includes`
+  /// Caches the configuration parameter `caf.metrics.filters.actors.includes`
   /// for faster lookups at runtime.
   std::vector<std::string> metrics_actors_includes;
 
-  /// Caches the configuration parameter `caf.metrics-filters.actors.excludes`
+  /// Caches the configuration parameter `caf.metrics.filters.actors.excludes`
   /// for faster lookups at runtime.
   std::vector<std::string> metrics_actors_excludes;
 
   /// Caches families for optional actor metrics.
   actor_metric_families_t actor_metric_families;
+
+  /// Caches the metric family for the `caf.running-actors` metric.
+  telemetry::int_gauge_family* running_actors_metric_family;
 
   /// Manages threads for detached actors.
   detail::private_thread_pool private_threads;
@@ -652,6 +823,15 @@ span<const std::string> actor_system::metrics_actors_excludes() const noexcept {
   return impl_->metrics_actors_excludes;
 }
 
+bool actor_system::collect_running_actors_metrics() const noexcept {
+  return impl_->flags.collect_running_actors_metrics;
+}
+
+telemetry::int_gauge_family*
+actor_system::running_actors_metric_family() const noexcept {
+  return impl_->running_actors_metric_family;
+}
+
 const actor_system_config& actor_system::config() const {
   return *impl_->cfg;
 }
@@ -665,11 +845,11 @@ size_t actor_system::detached_actors() const noexcept {
 }
 
 bool actor_system::await_actors_before_shutdown() const {
-  return impl_->await_actors_before_shutdown;
+  return impl_->flags.await_actors_before_shutdown;
 }
 
 void actor_system::await_actors_before_shutdown(bool new_value) {
-  impl_->await_actors_before_shutdown = new_value;
+  impl_->flags.await_actors_before_shutdown = new_value;
 }
 
 const strong_actor_ptr& actor_system::spawn_serv() const {

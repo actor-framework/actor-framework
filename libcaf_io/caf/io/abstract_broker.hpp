@@ -74,8 +74,7 @@ public:
   ~abstract_broker() override;
 
   // even brokers need friends
-  template <class T>
-  friend class caf::actor_storage;
+  friend struct detail::make_actor_util;
   friend class scribe;
   friend class doorman;
   friend class datagram_servant;
@@ -146,7 +145,7 @@ public:
   void write(connection_handle hdl, size_t bs, const void* buf);
 
   /// Writes `buf` into the buffer for a given connection.
-  void write(connection_handle hdl, span<const std::byte> buf);
+  void write(connection_handle hdl, const_byte_span buf);
 
   /// Sends the content of the buffer for a given connection.
   void flush(connection_handle hdl);

@@ -116,7 +116,9 @@ private:
     }
     // Finalize the WebSocket handshake.
     handshake hs;
-    hs.assign_key(sec_key);
+    if (!hs.assign_key(sec_key)) {
+      return false;
+    }
     down_->begin_output();
     hs.write_http_1_response(down_->output_buffer());
     down_->end_output();

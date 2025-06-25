@@ -6,53 +6,15 @@
 
 #include "caf/deserializer.hpp"
 #include "caf/detail/core_export.hpp"
-#include "caf/dictionary.hpp"
 #include "caf/fwd.hpp"
 
-#include <memory>
-#include <stack>
-#include <variant>
-#include <vector>
+#include <cstddef>
 
 namespace caf {
 
 /// Extracts objects from a @ref config_value.
 class CAF_CORE_EXPORT config_value_reader final : public deserializer {
 public:
-  // -- member types------------------------------------------------------------
-
-  using super = deserializer;
-
-  using key_ptr = const std::string*;
-
-  struct absent_field {};
-
-  struct sequence {
-    using list_pointer = const std::vector<config_value>*;
-    size_t index;
-    list_pointer ls;
-    explicit sequence(list_pointer ls) : index(0), ls(ls) {
-      // nop
-    }
-    bool at_end() const noexcept;
-    const config_value& current();
-    void advance() {
-      ++index;
-    }
-  };
-
-  struct associative_array {
-    settings::const_iterator pos;
-    settings::const_iterator end;
-    bool at_end() const noexcept;
-    const std::pair<const std::string, config_value>& current();
-  };
-
-  using value_type = std::variant<const settings*, const config_value*, key_ptr,
-                                  absent_field, sequence, associative_array>;
-
-  using stack_type = std::stack<value_type, std::vector<value_type>>;
-
   // -- constructors, destructors, and assignment operators --------------------
 
   explicit config_value_reader(const config_value* input);
@@ -65,17 +27,15 @@ public:
 
   config_value_reader& operator=(const config_value_reader&) = delete;
 
-  // -- stack access -----------------------------------------------------------
-
-  value_type& top() {
-    return st_.top();
-  }
-
-  void pop() {
-    return st_.pop();
-  }
-
   // -- interface functions ----------------------------------------------------
+
+  void set_error(error stop_reason) override;
+
+  error& get_error() noexcept override;
+
+  caf::actor_system* sys() const noexcept override;
+
+  bool has_human_readable_format() const noexcept override;
 
   bool fetch_next_object_type(type_id_t& type) override;
 
@@ -143,17 +103,11 @@ public:
 
   bool value(std::u32string& x) override;
 
-  bool value(span<std::byte> x) override;
+  bool value(byte_span x) override;
 
 private:
-  // Sets `type` according to the `@type` field in `obj` or to the type ID of
-  // `settings` as fallback if no such field exists.
-  bool fetch_object_type(const settings* obj, type_id_t& type);
-
-  stack_type st_;
-
-  // Stores on-the-fly converted values.
-  std::vector<std::unique_ptr<config_value>> scratch_space_;
+  /// Storage for the implementation object.
+  alignas(std::max_align_t) std::byte impl_[88];
 };
 
 } // namespace caf

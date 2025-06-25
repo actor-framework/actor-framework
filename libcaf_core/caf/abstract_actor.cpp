@@ -182,10 +182,6 @@ bool abstract_actor::cleanup(error&& reason, scheduler* sched) {
   return true;
 }
 
-mailbox_element* abstract_actor::peek_at_next_mailbox_element() {
-  return nullptr;
-}
-
 void abstract_actor::register_at_system() {
   if (getf(is_registered_flag))
     return;

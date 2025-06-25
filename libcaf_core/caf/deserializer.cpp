@@ -38,12 +38,12 @@ bool deserializer::assert_next_object_name(std::string_view type_name) {
     if (type_name == found) {
       return true;
     }
-    err_ = format_to_error(sec::type_clash, "{}: expected type {}, got {}",
-                           __func__, type_name, found);
+    set_error(format_to_error(sec::type_clash, "{}: expected type {}, got {}",
+                              __func__, type_name, found));
     return false;
   }
-  err_ = format_to_error(sec::type_clash, "{}: expected type {}, got none",
-                         __func__, type_name);
+  set_error(format_to_error(sec::type_clash, "{}: expected type {}, got none",
+                            __func__, type_name));
   return false;
 }
 
@@ -61,6 +61,32 @@ bool deserializer::begin_associative_array(size_t& size) {
 
 bool deserializer::end_associative_array() {
   return end_sequence();
+}
+
+bool deserializer::value(strong_actor_ptr& ptr) {
+  auto aid = actor_id{0};
+  auto nid = node_id{};
+  auto ok = object(ptr).pretty_name("actor").fields(field("id", aid),
+                                                    field("node", nid));
+  if (!ok) {
+    return false;
+  }
+  if (aid == 0 || !nid) {
+    ptr = nullptr;
+  } else if (auto err = load_actor(ptr, sys(), aid, nid)) {
+    set_error(err);
+    return false;
+  }
+  return true;
+}
+
+bool deserializer::value(weak_actor_ptr& ptr) {
+  strong_actor_ptr tmp;
+  if (!value(tmp)) {
+    return false;
+  }
+  ptr.reset(tmp.get());
+  return true;
 }
 
 bool deserializer::list(std::vector<bool>& x) {

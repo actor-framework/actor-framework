@@ -10,12 +10,11 @@
 #include "caf/async/blocking_producer.hpp"
 #include "caf/async/spsc_buffer.hpp"
 #include "caf/detail/net_export.hpp"
-#include "caf/detail/type_list.hpp"
-#include "caf/detail/type_traits.hpp"
 #include "caf/expected.hpp"
 #include "caf/intrusive_ptr.hpp"
 
-#include <type_traits>
+#include <memory>
+#include <utility>
 
 namespace caf::detail {
 

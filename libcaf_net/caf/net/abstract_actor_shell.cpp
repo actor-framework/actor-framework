@@ -163,10 +163,6 @@ bool abstract_actor_shell::enqueue(mailbox_element_ptr ptr, scheduler*) {
   }
 }
 
-mailbox_element* abstract_actor_shell::peek_at_next_mailbox_element() {
-  return mailbox_.peek(make_message_id());
-}
-
 // -- overridden functions of local_actor --------------------------------------
 
 void abstract_actor_shell::launch(scheduler*, bool, bool hide) {

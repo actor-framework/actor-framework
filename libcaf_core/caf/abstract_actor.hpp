@@ -49,9 +49,6 @@ class CAF_CORE_EXPORT abstract_actor {
 public:
   // -- friends ----------------------------------------------------------------
 
-  template <class T>
-  friend class actor_storage;
-
   template <class>
   friend class caf::io::basp::remote_message_handler;
 
@@ -146,13 +143,6 @@ public:
   ///       even if this function returns `true`. In particular when dealing
   ///       with remote actors.
   virtual bool enqueue(mailbox_element_ptr what, scheduler* sched) = 0;
-
-  /// Called by the testing DSL to peek at the next element in the mailbox. Do
-  /// not call this function in production code! The default implementation
-  /// always returns `nullptr`.
-  /// @returns A pointer to the next mailbox element or `nullptr` if the
-  ///          mailbox is empty or the actor does not have a mailbox.
-  virtual mailbox_element* peek_at_next_mailbox_element();
 
   /// Called by the runtime system to perform cleanup actions for this actor.
   /// Subtypes should always call this member function when overriding it.

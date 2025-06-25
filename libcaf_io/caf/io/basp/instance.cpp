@@ -534,7 +534,7 @@ void instance::forward(scheduler*, const node_id& dest_node, const header& hdr,
       log::io::error("unable to serialize BASP header: {}", sink.get_error());
       return;
     }
-    sink.value(span<const std::byte>{payload.data(), payload.size()});
+    sink.value(const_byte_span{payload.data(), payload.size()});
     flush(*path);
   } else {
     log::io::warning("cannot forward message, no route to destination");

@@ -4,21 +4,12 @@
 
 #pragma once
 
-#include "caf/abstract_actor.hpp"
-#include "caf/actor.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/actor_control_block.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
-#include "caf/telemetry/int_gauge.hpp"
 
-#include <atomic>
-#include <condition_variable>
-#include <cstdint>
-#include <mutex>
-#include <shared_mutex>
 #include <string>
-#include <thread>
 #include <unordered_map>
 
 namespace caf {
@@ -33,7 +24,7 @@ class CAF_CORE_EXPORT actor_registry {
 public:
   friend class actor_system;
 
-  ~actor_registry();
+  virtual ~actor_registry();
 
   /// Returns the local actor associated to `key`.
   template <class T = strong_actor_ptr>
@@ -49,22 +40,24 @@ public:
 
   /// Removes an actor from this registry,
   /// leaving `reason` for future reference.
-  void erase(actor_id key);
+  virtual void erase(actor_id key) = 0;
 
   /// Increases running-actors-count by one.
   /// @returns the increased count.
-  size_t inc_running();
+  virtual size_t inc_running() = 0;
 
   /// Decreases running-actors-count by one.
   /// @returns the decreased count.
-  size_t dec_running();
+  virtual size_t dec_running() = 0;
 
   /// Returns the number of currently running actors.
-  size_t running() const;
+  virtual size_t running() const = 0;
 
   /// Blocks the caller until running-actors-count becomes `expected`
-  /// (must be either 0 or 1).
-  void await_running_count_equal(size_t expected) const;
+  /// (must be either 0 or 1) or timeout is reached.
+  virtual void
+  await_running_count_equal(size_t expected, timespan timeout = infinite) const
+    = 0;
 
   /// Returns the actor associated with `key` or `invalid_actor`.
   template <class T = strong_actor_ptr>
@@ -81,45 +74,24 @@ public:
   }
 
   /// Removes a name mapping.
-  void erase(const std::string& key);
+  virtual void erase(const std::string& key) = 0;
 
   using name_map = std::unordered_map<std::string, strong_actor_ptr>;
 
-  name_map named_actors() const;
+  virtual name_map named_actors() const = 0;
 
 private:
-  // Starts this component.
-  void start();
-
-  // Stops this component.
-  void stop();
-
   /// Returns the local actor associated to `key`.
-  strong_actor_ptr get_impl(actor_id key) const;
+  virtual strong_actor_ptr get_impl(actor_id key) const = 0;
 
   /// Associates a local actor with its ID.
-  void put_impl(actor_id key, strong_actor_ptr val);
+  virtual void put_impl(actor_id key, strong_actor_ptr val) = 0;
 
   /// Returns the actor associated with `key` or `invalid_actor`.
-  strong_actor_ptr get_impl(const std::string& key) const;
+  virtual strong_actor_ptr get_impl(const std::string& key) const = 0;
 
   /// Associates given actor to `key`.
-  void put_impl(const std::string& key, strong_actor_ptr value);
-
-  using entries = std::unordered_map<actor_id, strong_actor_ptr>;
-
-  actor_registry(actor_system& sys);
-
-  mutable std::mutex running_mtx_;
-  mutable std::condition_variable running_cv_;
-
-  mutable std::shared_mutex instances_mtx_;
-  entries entries_;
-
-  name_map named_entries_;
-  mutable std::shared_mutex named_entries_mtx_;
-
-  actor_system& system_;
+  virtual void put_impl(const std::string& key, strong_actor_ptr value) = 0;
 };
 
 } // namespace caf

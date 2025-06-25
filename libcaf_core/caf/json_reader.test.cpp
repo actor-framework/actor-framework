@@ -8,6 +8,7 @@
 #include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
+#include "caf/actor_control_block.hpp"
 #include "caf/dictionary.hpp"
 #include "caf/init_global_meta_objects.hpp"
 #include "caf/log/test.hpp"
@@ -518,6 +519,49 @@ SCENARIO("mappers enable custom type names in JSON input") {
         } else {
           tstlog::debug("reader reported error: {}", reader.get_error());
         }
+      }
+    }
+  }
+}
+
+class custom_reader : public json_reader {
+public:
+  using super = json_reader;
+
+  using super::super;
+
+  using super::value;
+
+  bool value(strong_actor_ptr& ptr) override {
+    strong_actor_ptr_serialized = true;
+    return super::value(ptr);
+  }
+
+  bool value(weak_actor_ptr& ptr) override {
+    weak_actor_ptr_serialized = true;
+    return super::value(ptr);
+  }
+
+  bool strong_actor_ptr_serialized = false;
+
+  bool weak_actor_ptr_serialized = false;
+};
+
+SCENARIO("users can override member functions for actor serialization") {
+  GIVEN("a custom reader") {
+    custom_reader reader;
+    WHEN("serializing a strong actor pointer") {
+      strong_actor_ptr ptr;
+      reader.value(ptr);
+      THEN("the overridden function is called") {
+        check(reader.strong_actor_ptr_serialized);
+      }
+    }
+    WHEN("serializing a weak actor pointer") {
+      weak_actor_ptr ptr;
+      reader.value(ptr);
+      THEN("the overridden function is called") {
+        check(reader.weak_actor_ptr_serialized);
       }
     }
   }

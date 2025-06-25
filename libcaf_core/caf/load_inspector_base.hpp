@@ -140,7 +140,7 @@ public:
         if (auto err = set(std::move(tmp)); !err) {
           return true;
         } else {
-          super::set_error(std::move(err));
+          dref().set_error(std::move(err));
           return false;
         }
       } else {
