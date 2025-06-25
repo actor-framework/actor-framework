@@ -667,6 +667,9 @@ public:
       };
       drop(spawn_serv);
       drop(config_serv);
+      for (auto& ptr : hidden_actors) {
+        drop(ptr);
+      }
       // stop modules in reverse order
       for (auto i = modules.rbegin(); i != modules.rend(); ++i) {
         auto& ptr = *i;
@@ -737,6 +740,10 @@ public:
 
   /// Allows fully dynamic spawning of actors.
   strong_actor_ptr spawn_serv;
+
+  /// Stores actors that are hidden from the user, i.e., actors that perform
+  /// internal tasks and that are spawned during startup.
+  std::vector<strong_actor_ptr> hidden_actors;
 
   /// The system-wide, user-provided configuration.
   actor_system_config* cfg;
@@ -1078,6 +1085,12 @@ namespace caf::detail {
 detail::daemons* actor_system_access::daemons() {
   auto ptr = sys_->impl_->modules[actor_system_module::daemons].get();
   return static_cast<detail::daemons*>(ptr);
+}
+
+void actor_system_access::add_hidden_actor(strong_actor_ptr ptr) {
+  if (ptr == nullptr)
+    return;
+  sys_->impl_->hidden_actors.push_back(std::move(ptr));
 }
 
 } // namespace caf::detail

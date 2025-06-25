@@ -28,6 +28,8 @@ public:
 
   void node(node_id id);
 
+  void add_hidden_actor(strong_actor_ptr ptr);
+
   detail::mailbox_factory* mailbox_factory();
 
   detail::daemons* daemons();
