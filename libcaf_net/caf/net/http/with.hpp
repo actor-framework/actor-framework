@@ -12,6 +12,7 @@
 
 #include "caf/actor_cast.hpp"
 #include "caf/callback.hpp"
+#include "caf/detail/forward_like.hpp"
 #include "caf/fwd.hpp"
 
 #include <cstdint>
@@ -144,7 +145,10 @@ public:
     /// @param value The value of the new field.
     /// @returns a reference to this `client`.
     [[nodiscard]] client&& add_header_field(std::string name,
-                                            std::string value) &&;
+                                            std::string value) && {
+      do_add_header_field(std::move(name), std::move(value));
+      return std::move(*this);
+    }
 
     /// Add an additional HTTP header fields to the request.
     /// @param kv_map A container of key-value pairs to inserta as fields.
@@ -152,8 +156,8 @@ public:
     template <class KeyValueMap>
     [[nodiscard]] client&& add_header_fields(KeyValueMap&& kv_map) && {
       for (auto&& [key, value] : std::forward<KeyValueMap>(kv_map)) {
-        add_header_field(std::forward<decltype(key)>(key),
-                         std::forward<decltype(value)>(value));
+        do_add_header_field(detail::forward_like<KeyValueMap>(key),
+                            detail::forward_like<KeyValueMap>(value));
       }
       return std::move(*this);
     }
@@ -218,6 +222,8 @@ public:
     request(http::method method, const_byte_span payload);
 
   private:
+    void do_add_header_field(std::string name, std::string value);
+
     explicit client(config_ptr&& cfg) noexcept;
 
     config_ptr config_;

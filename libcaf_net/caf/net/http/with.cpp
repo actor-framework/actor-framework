@@ -377,10 +377,8 @@ with_t::client&& with_t::client::max_retry_count(size_t value) && {
   return std::move(*this);
 }
 
-with_t::client&& with_t::client::add_header_field(std::string name,
-                                                  std::string value) && {
+void with_t::client::do_add_header_field(std::string name, std::string value) {
   config_->fields.insert(std::pair{std::move(name), std::move(value)});
-  return std::move(*this);
 }
 
 expected<std::pair<async::future<response>, disposable>>
