@@ -84,7 +84,6 @@ caf_add_component(
     caf/actor_control_block.cpp
     caf/actor_factory.test.cpp
     caf/actor_from_state.test.cpp
-    caf/actor_ostream.cpp
     caf/actor_pool.cpp
     caf/actor_pool.test.cpp
     caf/actor_proxy.cpp
@@ -146,7 +145,6 @@ caf_add_component(
     caf/detached_actors.test.cpp
     caf/detail/abstract_worker.cpp
     caf/detail/abstract_worker_hub.cpp
-    caf/detail/actor_local_printer.cpp
     caf/detail/actor_system_access.cpp
     caf/detail/actor_system_config_access.cpp
     caf/detail/assert.cpp

@@ -32,6 +32,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 ### Removed
 
 - Removed the with DSL building base classes form `caf/net/dsl/` (#2026).
+- Removed the deprecated `actor_ostream` class and the `aout` utility. They have
+  been deprecated since CAF 1.0.0. Users should now use `println` instead, which
+  is available on actors as well as on the `actor_system`.
 
 ## [1.1.0] - 2025-07-25
 

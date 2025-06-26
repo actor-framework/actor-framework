@@ -9,7 +9,6 @@
 #include "caf/actor_control_block.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
-#include "caf/detail/actor_local_printer.hpp"
 #include "caf/detail/actor_system_access.hpp"
 #include "caf/detail/actor_system_config_access.hpp"
 #include "caf/detail/assert.hpp"
@@ -149,41 +148,6 @@ private:
 // -- scheduler ----------------------------------------------------------------
 
 namespace {
-
-class actor_local_printer_impl : public detail::actor_local_printer {
-public:
-  explicit actor_local_printer_impl(local_actor* self) : self_(self) {
-    // nop
-  }
-
-  void write(std::string&& arg) override {
-    append(arg);
-  }
-
-  void write(const char* arg) override {
-    append(std::string_view{arg});
-  }
-
-  void flush() override {
-    auto str = std::string{line_.begin(), line_.end()};
-    reporter::instance().print_actor_output(self_, str);
-    line_.clear();
-  }
-
-private:
-  void append(std::string_view str) {
-    for (auto c : str) {
-      if (c == '\n') {
-        flush();
-      } else {
-        line_.push_back(c);
-      }
-    }
-  }
-
-  local_actor* self_;
-  std::vector<char> line_;
-};
 
 class deterministic_actor_clock : public actor_clock {
 public:
@@ -416,14 +380,6 @@ deterministic::system_impl::system_impl(actor_system_config& cfg,
                                         deterministic* fix)
   : actor_system(prepare(cfg, fix), custom_setup, fix) {
   // nop
-}
-
-detail::actor_local_printer_ptr
-deterministic::system_impl::printer_for(local_actor* self) {
-  auto& ptr = printers_[self->id()];
-  if (!ptr)
-    ptr = make_counted<actor_local_printer_impl>(self);
-  return ptr;
 }
 
 actor_system_config&

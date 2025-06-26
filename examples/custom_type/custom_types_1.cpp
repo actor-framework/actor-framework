@@ -1,7 +1,6 @@
 // Showcases how to add custom POD message types.
 
 #include "caf/actor_from_state.hpp"
-#include "caf/actor_ostream.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/byte_buffer.hpp"
 #include "caf/caf_main.hpp"

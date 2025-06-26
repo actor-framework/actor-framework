@@ -1,7 +1,6 @@
 // A very basic, interactive divider that showcases how to return an error with
 // custom error code from a message handler.
 
-#include "caf/actor_ostream.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/caf_main.hpp"
 #include "caf/default_enum_inspect.hpp"
