@@ -1,18 +1,15 @@
 // This example shows how to use an idle timeout that triggers multiple times.
 
 #include "caf/actor_from_state.hpp"
-#include "caf/actor_ostream.hpp"
-#include "caf/after.hpp"
+#include "caf/actor_system.hpp"
 #include "caf/anon_mail.hpp"
 #include "caf/caf_main.hpp"
 #include "caf/chrono.hpp"
 #include "caf/event_based_actor.hpp"
-#include "caf/stateful_actor.hpp"
 
 #include <chrono>
-#include <random>
+#include <string>
 #include <string_view>
-#include <vector>
 
 using namespace caf;
 using namespace std::literals;

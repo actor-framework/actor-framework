@@ -1,10 +1,9 @@
 // This example illustrates how to use the `delegate` function to forward
 // messages to another actor.
 
-#include "caf/actor_from_state.hpp"
-#include "caf/actor_ostream.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/caf_main.hpp"
+#include "caf/event_based_actor.hpp"
 #include "caf/typed_actor.hpp"
 #include "caf/typed_event_based_actor.hpp"
 

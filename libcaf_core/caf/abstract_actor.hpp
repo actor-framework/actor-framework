@@ -174,10 +174,6 @@ public:
   /// Indicates that the actor collects metrics.
   static constexpr int collects_metrics_flag = 0b0000'0010'0000;
 
-  /// Indicates that the actor has used aout at least once and thus needs to
-  /// call `flush` when shutting down.
-  static constexpr int has_used_aout_flag = 0b0000'0100'0000;
-
   /// Indicates that the actor has terminated and waits for its destructor to
   /// run.
   static constexpr int is_terminated_flag = 0b0000'1000'0000;

@@ -6,7 +6,6 @@
 // - state-based, statically typed
 
 #include "caf/actor_from_state.hpp"
-#include "caf/actor_ostream.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/caf_main.hpp"
 #include "caf/scoped_actor.hpp"

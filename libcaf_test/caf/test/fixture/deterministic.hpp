@@ -167,17 +167,12 @@ public:
   public:
     system_impl(actor_system_config& cfg, deterministic* fix);
 
-    detail::actor_local_printer_ptr printer_for(local_actor* self) override;
-
   private:
     static actor_system_config& prepare(actor_system_config& cfg,
                                         deterministic* fix);
 
     static void custom_setup(actor_system& sys, actor_system_config& cfg,
                              void* custom_setup_data);
-
-    /// Maps actors to their designated printer.
-    std::map<actor_id, detail::actor_local_printer_ptr> printers_;
   };
 
   /// Configures the algorithm to evaluate for an `evaluator` instances.

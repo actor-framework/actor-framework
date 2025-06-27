@@ -1,6 +1,5 @@
 // Showcases custom message types with a sealed class hierarchy.
 
-#include "caf/actor_ostream.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/caf_main.hpp"
 #include "caf/raise_error.hpp"

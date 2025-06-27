@@ -7,7 +7,6 @@
 #include "caf/actor.hpp"
 #include "caf/actor_companion.hpp"
 #include "caf/actor_from_state.hpp"
-#include "caf/actor_ostream.hpp"
 #include "caf/actor_registry.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/defaults.hpp"
@@ -19,6 +18,7 @@
 #include "caf/detail/private_thread_pool.hpp"
 #include "caf/detail/thread_safe_actor_clock.hpp"
 #include "caf/event_based_actor.hpp"
+#include "caf/log/core.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/scheduler.hpp"
 #include "caf/spawn_options.hpp"
@@ -35,82 +35,6 @@
 #include <mutex>
 #include <unordered_map>
 #include <unordered_set>
-
-// -- printer actor ------------------------------------------------------------
-
-namespace caf::detail {
-
-struct printer_actor_state {
-  struct actor_data {
-    std::string current_line;
-    actor_data() {
-      // nop
-    }
-  };
-
-  using data_map = std::unordered_map<actor_id, actor_data>;
-
-  explicit printer_actor_state(event_based_actor* selfptr) : self(selfptr) {
-    // nop
-  }
-
-  event_based_actor* self;
-
-  data_map data;
-
-  actor_data* get_data(actor_id addr, bool insert_missing) {
-    if (addr == invalid_actor_id)
-      return nullptr;
-    auto i = data.find(addr);
-    if (i == data.end() && insert_missing)
-      i = data.emplace(addr, actor_data{}).first;
-    if (i != data.end())
-      return &(i->second);
-    return nullptr;
-  }
-
-  void flush(actor_data* what, bool forced) {
-    if (what == nullptr)
-      return;
-    auto& line = what->current_line;
-    if (line.empty() || (line.back() != '\n' && !forced))
-      return;
-    self->println(line);
-    line.clear();
-  }
-
-  behavior make_behavior() {
-    return {
-      [this](add_atom, actor_id aid, std::string& str) {
-        if (str.empty() || aid == invalid_actor_id)
-          return;
-        auto d = get_data(aid, true);
-        if (d != nullptr) {
-          d->current_line += str;
-          flush(d, false);
-        }
-      },
-      [this](flush_atom, actor_id aid) { flush(get_data(aid, false), true); },
-      [this](delete_atom, actor_id aid) {
-        auto data_ptr = get_data(aid, false);
-        if (data_ptr != nullptr) {
-          flush(data_ptr, true);
-          data.erase(aid);
-        }
-      },
-      [](redirect_atom, const std::string&, int) {
-        // nop
-      },
-      [](redirect_atom, actor_id, const std::string&, int) {
-        // nop
-      },
-    };
-  }
-
-  static constexpr const char* name = "printer_actor";
-};
-
-} // namespace caf::detail
 
 namespace caf {
 
@@ -626,11 +550,6 @@ public:
       }
     }
     scheduler->start();
-    if (!printer) {
-      auto p = parent->spawn<hidden + detached + lazy_init>(
-        actor_from_state<detail::printer_actor_state>);
-      printer = actor_cast<strong_actor_ptr>(std::move(p));
-    }
     // Initialize the state for each module and give each module the opportunity
     // to adapt the system configuration.
     for (auto& mod : modules)
@@ -675,7 +594,6 @@ public:
           ptr->stop();
         }
       }
-      drop(printer);
       CAF_LOG_DEBUG("stop scheduler");
       scheduler->stop();
       private_threads.stop();
@@ -714,9 +632,6 @@ public:
 
   /// Stores optional actor system components.
   module_array modules;
-
-  /// Background printer.
-  strong_actor_ptr printer;
 
   // Bundles various flags for the actor system into a single, memory-efficient
   // structure.
@@ -922,10 +837,6 @@ actor_id actor_system::latest_actor_id() const {
   return impl_->ids.load();
 }
 
-strong_actor_ptr actor_system::legacy_printer_actor() const {
-  return impl_->printer;
-}
-
 void actor_system::await_all_actors_done() const {
   impl_->registry.await_running_count_equal(0);
 }
@@ -993,45 +904,6 @@ void actor_system::release_private_thread(detail::private_thread* ptr) {
   impl_->private_threads.release(ptr);
 }
 
-namespace {
-
-class actor_local_printer_impl : public detail::actor_local_printer {
-public:
-  actor_local_printer_impl(abstract_actor* self, actor printer)
-    : self_(self->id()), printer_(std::move(printer)) {
-    CAF_ASSERT(printer_ != nullptr);
-    if (!self->getf(abstract_actor::has_used_aout_flag))
-      self->setf(abstract_actor::has_used_aout_flag);
-  }
-
-  void write(std::string&& arg) override {
-    printer_->enqueue(make_mailbox_element(nullptr, make_message_id(),
-                                           add_atom_v, self_, std::move(arg)),
-                      nullptr);
-  }
-
-  void write(const char* arg) override {
-    write(std::string{arg});
-  }
-
-  void flush() override {
-    printer_->enqueue(make_mailbox_element(nullptr, make_message_id(),
-                                           flush_atom_v, self_),
-                      nullptr);
-  }
-
-private:
-  actor_id self_;
-  actor printer_;
-};
-
-} // namespace
-
-detail::actor_local_printer_ptr actor_system::printer_for(local_actor* self) {
-  using impl_t = actor_local_printer_impl;
-  return make_counted<impl_t>(self, actor_cast<actor>(impl_->printer));
-}
-
 detail::mailbox_factory* actor_system::mailbox_factory() {
   return impl_->cfg->mailbox_factory();
 }
@@ -1061,10 +933,6 @@ void actor_system::set_clock(std::unique_ptr<actor_clock> ptr) {
 
 void actor_system::set_scheduler(std::unique_ptr<caf::scheduler> ptr) {
   impl_->scheduler = std::move(ptr);
-}
-
-void actor_system::set_legacy_printer_actor(strong_actor_ptr ptr) {
-  impl_->printer = std::move(ptr);
 }
 
 void actor_system::set_node(node_id id) {

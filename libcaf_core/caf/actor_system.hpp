@@ -8,7 +8,6 @@
 #include "caf/actor_cast.hpp"
 #include "caf/actor_config.hpp"
 #include "caf/actor_system_module.hpp"
-#include "caf/detail/actor_local_printer.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/format.hpp"
 #include "caf/detail/init_fun_factory.hpp"
@@ -87,7 +86,6 @@ namespace caf {
 class CAF_CORE_EXPORT actor_system {
 public:
   friend class abstract_actor;
-  friend class actor_ostream;
   friend class detail::actor_system_access;
   friend class local_actor;
   friend class logger;
@@ -629,8 +627,6 @@ public:
 
   void release_private_thread(detail::private_thread*);
 
-  virtual detail::actor_local_printer_ptr printer_for(local_actor* self);
-
   using custom_setup_fn = void (*)(actor_system&, actor_system_config&, void*);
 
   actor_system(actor_system_config& cfg, custom_setup_fn custom_setup,
@@ -663,8 +659,6 @@ private:
 
   void do_print(term color, const char* buf, size_t num_bytes);
 
-  strong_actor_ptr legacy_printer_actor() const;
-
   // -- callbacks for actor_system_access --------------------------------------
 
   void set_logger(intrusive_ptr<caf::logger> ptr);
@@ -672,8 +666,6 @@ private:
   void set_clock(std::unique_ptr<actor_clock> ptr);
 
   void set_scheduler(std::unique_ptr<caf::scheduler> ptr);
-
-  void set_legacy_printer_actor(strong_actor_ptr ptr);
 
   void set_node(node_id id);
 

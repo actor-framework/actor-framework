@@ -5,7 +5,7 @@
 #include "caf/scheduled_actor.hpp"
 
 #include "caf/action.hpp"
-#include "caf/actor_ostream.hpp"
+#include "caf/actor_registry.hpp"
 #include "caf/anon_mail.hpp"
 #include "caf/config.hpp"
 #include "caf/defaults.hpp"

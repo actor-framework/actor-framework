@@ -9,7 +9,6 @@
 #include "caf/actor_addr.hpp"
 #include "caf/actor_clock.hpp"
 #include "caf/actor_from_state.hpp"
-#include "caf/actor_ostream.hpp"
 #include "caf/actor_pool.hpp"
 #include "caf/actor_proxy.hpp"
 #include "caf/actor_system.hpp"
