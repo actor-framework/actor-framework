@@ -28,7 +28,7 @@ config = [
             tags: ['docker'],
             builds: ['release'],
             extraBuildFlags: [
-                'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized',
+                'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wconversion',
             ],
         ]],
         ['alpinelinux-3.18', [ // EOL: May 2025
@@ -36,7 +36,7 @@ config = [
             tags: ['docker'],
             builds: ['release'],
             extraBuildFlags: [
-                'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wno-array-bounds -Wno-free-nonheap-object',
+                'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wno-array-bounds -Wno-free-nonheap-object -Wconversion',
             ],
         ]],
         ['debian-11', [ // EOL June 2026
@@ -44,7 +44,7 @@ config = [
             tags: ['docker'],
             builds: ['release'],
             extraBuildFlags: [
-                'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wno-deprecated-declarations',
+                'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wno-deprecated-declarations -Wconversion',
             ],
         ]],
         ['debian-12', [ // EOL June 2028
@@ -52,7 +52,7 @@ config = [
             tags: ['docker'],
             builds: ['release'],
             extraBuildFlags: [
-                'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wno-array-bounds -Wno-free-nonheap-object',
+                'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wno-array-bounds -Wno-free-nonheap-object -Wconversion',
             ],
         ]],
         ['fedora-40', [ // EOL May 2025
@@ -60,7 +60,7 @@ config = [
             tags: ['docker'],
             builds: ['release'],
             extraBuildFlags: [
-                'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wno-uninitialized -Wno-array-bounds',
+                'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wno-uninitialized -Wno-array-bounds -Wconversion',
             ],
         ]],
         ['fedora-41', [ // EOL November 2025
@@ -68,7 +68,7 @@ config = [
             tags: ['docker'],
             builds: ['release'],
             extraBuildFlags: [
-                'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wno-uninitialized -Wno-array-bounds',
+                'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wno-uninitialized -Wno-array-bounds -Wconversion',
                 'CAF_CXX_VERSION:STRING=23',
                 'CAF_USE_STD_FORMAT:BOOL=ON',
             ],
@@ -86,7 +86,7 @@ config = [
             tags: ['docker'],
             builds: ['release'],
             extraBuildFlags: [
-                'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized',
+                'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wconversion',
             ],
         ]],
         ['ubuntu-24.04', [ // April 2029
@@ -94,7 +94,7 @@ config = [
             tags: ['docker'],
             builds: ['release'],
             extraBuildFlags: [
-                'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wno-array-bounds',
+                'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wno-array-bounds -Wconversion',
             ],
         ]],
         // Debug build with exceptions disabled.
@@ -105,7 +105,7 @@ config = [
             extraBuildFlags: [
                 'CAF_LOG_LEVEL:STRING=TRACE',
                 'CAF_ENABLE_EXCEPTIONS:BOOL=OFF',
-                'CMAKE_CXX_FLAGS:STRING=-Werror -fno-exceptions',
+                'CMAKE_CXX_FLAGS:STRING=-Werror -fno-exceptions -Wconversion',
             ],
         ]],
         // Debug build for LeakSanitizer.
@@ -131,7 +131,7 @@ config = [
                 'BUILD_SHARED_LIBS:BOOL=OFF',
                 'CAF_LOG_LEVEL:STRING=TRACE',
                 'CAF_SANITIZERS:STRING=address,undefined',
-                'CMAKE_CXX_FLAGS:STRING=-Werror',
+                'CMAKE_CXX_FLAGS:STRING=-Werror -Wconversion',
             ],
             extraBuildEnv: [
                 'CXXFLAGS=-fno-sanitize-recover=undefined -D_GLIBCXX_DEBUG',

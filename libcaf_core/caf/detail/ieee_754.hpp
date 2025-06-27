@@ -138,7 +138,7 @@ typename ieee_754_trait<T>::float_type unpack754(T i) {
     ++shift;
   }
   // sign it
-  result *= ((i >> (trait::bits - 1)) & 1) ? -1 : 1;
+  result *= static_cast<result_type>(((i >> (trait::bits - 1)) & 1) ? -1 : 1);
   return result;
 }
 
