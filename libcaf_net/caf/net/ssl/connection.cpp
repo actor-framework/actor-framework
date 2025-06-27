@@ -71,7 +71,7 @@ errc connection::last_error(ptrdiff_t ret) const {
   return detail::ssl_errc_from_native(code);
 }
 
-// -- SNI support --------------------------------------------------------------
+// -- SSL hostname validation and SNI support ----------------------------------
 
 bool connection::sni_hostname(const char* hostname) noexcept {
   if (!pimpl_ || !hostname)
@@ -84,6 +84,10 @@ const char* connection::sni_hostname() noexcept {
   if (!pimpl_)
     return nullptr;
   return SSL_get_servername(native(pimpl_), TLSEXT_NAMETYPE_host_name);
+}
+
+bool connection::hostname(const char* hostname) noexcept {
+  return SSL_set1_host(native(pimpl_), hostname);
 }
 
 // -- connecting and teardown --------------------------------------------------
