@@ -1,7 +1,6 @@
 // This example illustrates how to use a response promise to delay responding to
 // an incoming message until a later point in time.
 
-#include "caf/actor_ostream.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/caf_main.hpp"
 #include "caf/event_based_actor.hpp"

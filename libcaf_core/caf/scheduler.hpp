@@ -4,13 +4,11 @@
 
 #pragma once
 
-#include "caf/actor_clock.hpp"
-#include "caf/actor_system.hpp"
-#include "caf/detail/actor_local_printer.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 
 #include <cstddef>
+#include <memory>
 
 namespace caf {
 

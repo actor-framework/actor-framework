@@ -4,7 +4,6 @@
 
 #include "caf/scheduler.hpp"
 
-#include "caf/actor_ostream.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/blocking_actor.hpp"

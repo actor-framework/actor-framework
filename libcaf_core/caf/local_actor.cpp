@@ -5,7 +5,6 @@
 #include "caf/local_actor.hpp"
 
 #include "caf/actor_cast.hpp"
-#include "caf/actor_ostream.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
@@ -13,6 +12,7 @@
 #include "caf/detail/glob_match.hpp"
 #include "caf/disposable.hpp"
 #include "caf/exit_reason.hpp"
+#include "caf/log/core.hpp"
 #include "caf/logger.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/resumable.hpp"
