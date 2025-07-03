@@ -29,6 +29,7 @@ auto native(context::impl* ptr) {
 struct context::user_data {
   password::callback_ptr pw_callback;
   std::string sni_hostname;
+  bool hostname_validation = true;
 };
 
 // -- constructors, destructors, and assignment operators ----------------------
@@ -357,6 +358,18 @@ const char* context::sni_hostname() const noexcept {
   if (!data_ || data_->sni_hostname.empty())
     return nullptr;
   return data_->sni_hostname.c_str();
+}
+
+void context::hostname_validation(bool enabled) noexcept {
+  if (data_ == nullptr)
+    data_ = new user_data;
+  data_->hostname_validation = enabled;
+}
+
+bool context::hostname_validation() const noexcept {
+  if (!data_)
+    return true;
+  return data_->hostname_validation;
 }
 
 } // namespace caf::net::ssl

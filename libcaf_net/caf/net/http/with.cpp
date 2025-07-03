@@ -398,6 +398,7 @@ with_t::client::request(http::method method, const_byte_span payload) {
   config_->path = endpoint.path_query_fragment();
   config_->method = method;
   config_->payload = payload;
+  do_add_header_field("Host", endpoint.authority().host_str());
   auto lift = [this](disposable&& disp) {
     return std::pair(std::move(config_->resp), std::move(disp));
   };

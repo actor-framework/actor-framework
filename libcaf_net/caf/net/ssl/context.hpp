@@ -243,6 +243,12 @@ public:
   /// Returns the optional SNI hostname or `nullptr` if is not configured.
   const char* sni_hostname() const noexcept;
 
+  /// Configures the hostname validation for SSL. Enabled by default.
+  void hostname_validation(bool) noexcept;
+
+  /// Checks if SSL hostname validation is turned on. Enabled by default.
+  bool hostname_validation() const noexcept;
+
 private:
   constexpr explicit context(impl* ptr) : pimpl_(ptr) {
     // nop
@@ -539,6 +545,18 @@ inline auto use_sni_hostname(caf::uri uri) noexcept {
     }
     return make_error(sec::runtime_error,
                       "Failed to set SNI hostname from URI {}", arg1);
+  };
+}
+
+/// Sets whether the hostname validation is turned on for all client
+/// connections.
+/// Note: The client connection will query this parameter and
+/// inject the hostname automatically from the destination.
+/// @returns a function object for chaining `expected<T>::and_then()`.
+inline auto use_hostname_validation(bool enabled) noexcept {
+  return [arg1 = std::move(enabled)](context ctx) mutable -> expected<context> {
+    ctx.hostname_validation(arg1);
+    return expected{std::move(ctx)};
   };
 }
 

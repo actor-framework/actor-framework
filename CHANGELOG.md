@@ -7,6 +7,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ### Changed
 
+- When using the HTTP client API, SSL hostname validation is now enabled by
+  default. Users can disable it by setting `hostname_validation` to `false` if
+  necessary. This change was made to improve security by default.
 - Serializer interfaces have received an overhaul to allow custom serialization
   of actor handles. There are also two new base types for serialization:
   `byte_reader` and `byte_writer`. These new types allow users to write generic

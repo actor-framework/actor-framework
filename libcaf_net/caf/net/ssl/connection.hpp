@@ -56,7 +56,7 @@ public:
   /// @param ret The (negative) result from the preceding call.
   std::string last_error_string(ptrdiff_t ret) const;
 
-  // -- SNI support -----------------------------------------------------------
+  // -- SSL hostname validation and SNI support -------------------------------
 
   /// Sets the SNI hostname for this connection before handshake.
   /// Must be called before connect().
@@ -64,6 +64,10 @@ public:
 
   /// Reads the SNI hostname from the connection.
   [[nodiscard]] const char* sni_hostname() noexcept;
+
+  /// Sets the SSL hostname used for certificate validation of this connection.
+  /// Must be called before connect().
+  [[nodiscard]] bool hostname(const char* hostname) noexcept;
 
   // -- connecting and teardown ------------------------------------------------
 
