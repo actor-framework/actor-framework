@@ -104,4 +104,8 @@ std::optional<size_t> header::content_length() const noexcept {
   return field_as<size_t>("Content-Length");
 }
 
+bool header::is_multipart() const noexcept {
+  return starts_with(field("Content-Type"), "multipart");
+}
+
 } // namespace caf::net::http

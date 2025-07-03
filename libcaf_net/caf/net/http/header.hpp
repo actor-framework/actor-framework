@@ -20,6 +20,8 @@ namespace caf::net::http {
 /// additional message specific methods.
 class CAF_NET_EXPORT header {
 public:
+  friend class net::http::multipart_view;
+
   /// Virtual destructor.
   virtual ~header();
 
@@ -107,6 +109,9 @@ public:
 
   /// Convenience function for `field_as<size_t>("Content-Length")`.
   std::optional<size_t> content_length() const noexcept;
+
+  /// Convenience function for checking if the request contains multipart data.
+  bool is_multipart() const noexcept;
 
   /// Checks if the request header is valid (non-empty).
   bool valid() const noexcept {

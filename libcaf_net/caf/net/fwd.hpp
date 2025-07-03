@@ -128,6 +128,8 @@ namespace caf::net::http {
 
 class header;
 class lower_layer;
+class multipart_reader;
+class multipart_view;
 class request;
 class request_header;
 class responder;
