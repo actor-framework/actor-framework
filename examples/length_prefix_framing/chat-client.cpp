@@ -43,8 +43,7 @@ struct config : caf::actor_system_config {
       .add<caf::net::lp::size_field_type>("size,s",
                                           "length prefix size of the server")
       .add<std::string>("host,H", "host of the server")
-      .add<std::string>("name,n", "set name")
-      .add<std::string>("size,s", "set size of lp framing");
+      .add<std::string>("name,n", "set name");
     opt_group{custom_options_, "tls"} //
       .add<bool>("enable", "enables encryption via TLS")
       .add<std::string>("ca-file", "CA file for trusted servers");
@@ -83,8 +82,10 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
         .context(ssl::context::enable(use_ssl)
                    .and_then(ssl::emplace_client(ssl::tls::v1_2))
                    .and_then(ssl::load_verify_file_if(ca_file)))
+        // Set the size field type.
+        .size_field(size)
         // Connect to "$host:$port".
-        .connect(host, port, size)
+        .connect(host, port)
         // If we don't succeed at first, try up to 10 times with 1s delay.
         .retry_delay(1s)
         .max_retry_count(9)

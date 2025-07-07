@@ -31,22 +31,17 @@ public:
   // -- factories --------------------------------------------------------------
 
   static std::unique_ptr<framing>
-  make(upper_layer_ptr up,
-       lp::size_field_type lp_size = lp::size_field_type::u4);
+  make(upper_layer_ptr up, size_field_type size_field, size_t max_message_size);
 
   static disposable run(multiplexer& mpx, stream_socket fd,
                         async::consumer_resource<chunk> pull,
-                        async::producer_resource<chunk> push);
+                        async::producer_resource<chunk> push,
+                        size_field_type size_field, size_t max_message_size);
 
   static disposable run(multiplexer& mpx, ssl::connection conn,
                         async::consumer_resource<chunk> pull,
-                        async::producer_resource<chunk> push);
-
-  // -- properties -------------------------------------------------------------
-
-  virtual size_t max_message_length() const noexcept = 0;
-
-  virtual void max_message_length(size_t value) noexcept = 0;
+                        async::producer_resource<chunk> push,
+                        size_field_type size_field, size_t max_message_size);
 };
 
 } // namespace caf::net::lp

@@ -78,3 +78,26 @@ After calling connect, we can configure various parameters:
 Finally, we call ``start`` to launch the client. The function expects an
 ``OnStart`` callback takes two arguments: the input resource and the output
 resource for reading from and writing to the new connection.
+
+Configuration
+-------------
+
+The length-prefix framing can be configured to use different size field types.
+The default size field type is ``u4`` (4 bytes).
+
+- ``u1``: 1-byte prefix (0-255 bytes)
+- ``u2``: 2-byte prefix (0-64KB)
+- ``u4``: 4-byte prefix (0-4GB)
+- ``u8``: 8-byte prefix (0-16EB)
+
+The size field type can be configured using the ``size_field`` option.
+
+In addition, you can configure the maximum message length. The default maximum
+message length is 64MB to prevent memory exhaustion attacks. Messages larger
+than the size field type limit are automatically rejected. The maximum message
+length can be configured using the ``max_message_size`` option.
+
+.. note::
+
+  Both client and server must use the same size field type for successful
+  communication. Mismatched size field types will result in protocol errors.

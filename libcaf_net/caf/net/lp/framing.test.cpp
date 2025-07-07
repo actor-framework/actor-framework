@@ -151,9 +151,10 @@ struct fixture {
   }
 
   template <class Callback>
-  void run_app(Callback cb, buffer_ptr buf) {
+  void run_app(Callback cb, buffer_ptr buf, net::lp::size_field_type size_type = net::lp::size_field_type::u4,
+               size_t max_message_size = 1024) {
     auto app = app_t::make(mpx, std::move(cb), std::move(buf));
-    auto client = net::lp::framing::make(std::move(app));
+    auto client = net::lp::framing::make(std::move(app), size_type, max_message_size);
     auto transport = net::octet_stream::transport::make(fd2, std::move(client));
     auto mgr = net::socket_manager::make(mpx.get(), std::move(transport));
     if (!mpx->start(mgr)) {
@@ -168,15 +169,26 @@ struct fixture {
   std::thread mpx_thread;
 };
 
-auto encode(std::string_view msg) {
+template <class T>
+auto encode(std::string_view msg, net::lp::size_field_type) {
   byte_buffer bytes;
   using detail::to_network_order;
-  auto prefix = to_network_order(static_cast<uint32_t>(msg.size()));
+  auto msg_size = static_cast<T>(msg.size());
+  T prefix = 0;
+  if constexpr (std::is_same_v<T, uint8_t>) {
+    prefix = msg_size;
+  } else {
+    prefix = to_network_order(msg_size);
+  }
   auto prefix_bytes = as_bytes(make_span(&prefix, 1));
   bytes.insert(bytes.end(), prefix_bytes.begin(), prefix_bytes.end());
   auto msg_bytes = as_bytes(make_span(msg));
   bytes.insert(bytes.end(), msg_bytes.begin(), msg_bytes.end());
   return bytes;
+}
+
+auto encode(std::string_view msg) {
+  return encode<uint32_t>(msg, net::lp::size_field_type::u4);
 }
 
 } // namespace
@@ -204,8 +216,6 @@ SCENARIO("length-prefix framing reads data with 32-bit size headers") {
     }
   }
 }
-
-} // WITH_FIXTURE(fixture)
 
 SCENARIO("lp::with(...).connect(...) translates between flows and socket I/O") {
   GIVEN("a connected socket with a writer at the other end") {
@@ -273,3 +283,44 @@ SCENARIO("lp::with(...).connect(...) translates between flows and socket I/O") {
     writer.join();
   }
 }
+
+SCENARIO("max_message_size rejects oversized messages") {
+  GIVEN("a framing object with limited message size") {
+    WHEN("sending a message larger than the limit") {
+      auto buf = std::make_shared<buffer>();
+      run_app([](net::lp::lower_layer*) {}, buf, net::lp::size_field_type::u4,
+              100);
+      std::string large_msg(150, 'x');
+      net::write(fd1,
+                 encode<uint32_t>(large_msg, net::lp::size_field_type::u4));
+      THEN("the message should be rejected") {
+        std::this_thread::sleep_for(100ms);
+        auto [entries, err] = buf->get();
+        // Should not receive the message due to size limit
+        check_eq(entries.size(), 0u);
+      }
+    }
+  }
+  GIVEN("a framing object with sufficient message size") {
+    WHEN("sending a message within the limit") {
+      auto buf = std::make_shared<buffer>();
+      run_app([](net::lp::lower_layer*) {}, buf, net::lp::size_field_type::u4,
+              200);
+      std::string small_msg(50, 'x');
+      net::write(fd1,
+                 encode<uint32_t>(small_msg, net::lp::size_field_type::u4));
+      THEN("the message should be accepted") {
+        require(buf->wait_for_entries(1, 1s));
+        auto [entries, err] = buf->get();
+        if (err) {
+          fail("unexpected error: {}", err);
+        }
+        if (check_eq(entries.size(), 1u)) {
+          check_eq(entries[0], small_msg);
+        }
+      }
+    }
+  }
+}
+
+} // WITH_FIXTURE(fixture)

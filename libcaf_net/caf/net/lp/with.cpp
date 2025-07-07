@@ -28,12 +28,12 @@ public:
 
   connection_acceptor_impl(Acceptor acceptor, size_t max_consecutive_reads,
                            async::producer_resource<event_type> events,
-                           size_t max_message_length, size_field_type lp_size)
+                           size_t max_message_size, size_field_type size_type)
     : acceptor_(std::move(acceptor)),
       max_consecutive_reads_(max_consecutive_reads),
       events_(std::move(events)),
-      max_message_length_(max_message_length),
-      lp_size_(lp_size) {
+      max_message_size_(max_message_size),
+      size_type_(size_type) {
     // nop
   }
 
@@ -71,8 +71,7 @@ public:
     auto bridge = internal::make_lp_flow_bridge(std::move(a2s_pull),
                                                 std::move(s2a_push));
     // Create the socket manager.
-    auto impl = framing::make(std::move(bridge), lp_size_);
-    impl->max_message_length(max_message_length_);
+    auto impl = framing::make(std::move(bridge), size_type_, max_message_size_);
     auto transport = internal::make_transport(std::move(*conn),
                                               std::move(impl));
     transport->max_consecutive_reads(max_consecutive_reads_);
@@ -91,9 +90,9 @@ private:
 
   async::producer_resource<event_type> events_;
 
-  size_t max_message_length_;
+  size_t max_message_size_;
 
-  size_field_type lp_size_;
+  size_field_type size_type_;
 };
 
 } // namespace
@@ -110,7 +109,7 @@ public:
     auto conn_acc = std::make_unique<impl_t>(std::move(acc),
                                              max_consecutive_reads,
                                              std::move(server_push),
-                                             max_message_length, lp_size);
+                                             max_message_size, size_field);
     auto handler = internal::make_accept_handler(std::move(conn_acc),
                                                  max_connections,
                                                  std::move(monitored_actors));
@@ -133,8 +132,7 @@ public:
   expected<disposable> do_start_client(Connection& conn) {
     auto bridge = internal::make_lp_flow_bridge(std::move(client_pull),
                                                 std::move(client_push));
-    auto impl = framing::make(std::move(bridge), lp_size);
-    impl->max_message_length(max_message_length);
+    auto impl = framing::make(std::move(bridge), size_field, max_message_size);
     auto transport = internal::make_transport(std::move(conn), std::move(impl));
     transport->active_policy().connect();
     auto ptr = socket_manager::make(mpx, std::move(transport));
@@ -171,7 +169,10 @@ public:
   client::pull_t client_pull;
 
   /// Stores the maximum message length
-  size_t max_message_length = caf::defaults::net::lp_max_message_length;
+  size_t max_message_size = caf::defaults::net::lp_max_message_size;
+
+  /// Stores the size field type
+  size_field_type size_field = lp::size_field_type::u4;
 };
 
 // -- server API ---------------------------------------------------------------
@@ -186,11 +187,6 @@ with_t::server::~server() {
 
 with_t::server&& with_t::server::max_connections(size_t value) && {
   config_->max_connections = value;
-  return std::move(*this);
-}
-
-with_t::server&& with_t::server::max_message_length(size_t value) && {
-  config_->max_message_length = value;
   return std::move(*this);
 }
 
@@ -289,39 +285,45 @@ with_t&& with_t::context(expected<ssl::context> ctx) && {
   return std::move(*this);
 }
 
+with_t&& with_t::size_field(size_field_type value) && {
+  config_->size_field = value;
+  return std::move(*this);
+}
+
+with_t&& with_t::max_message_size(size_t value) && {
+  config_->max_message_size = value;
+  return std::move(*this);
+}
+
 with_t::server with_t::accept(uint16_t port, std::string bind_address,
-                              bool reuse_addr, size_field_type lp_size) && {
-  config_->server.assign(port, std::move(bind_address), reuse_addr, lp_size);
+                              bool reuse_addr) && {
+  config_->server.assign(port, std::move(bind_address), reuse_addr);
   return server{std::move(config_)};
 }
 
-with_t::server with_t::accept(tcp_accept_socket fd,
-                              size_field_type lp_size) && {
-  config_->server.assign(std::move(fd), lp_size);
+with_t::server with_t::accept(tcp_accept_socket fd) && {
+  config_->server.assign(std::move(fd));
   return server{std::move(config_)};
 }
 
-with_t::server with_t::accept(ssl::tcp_acceptor acc,
-                              size_field_type lp_size) && {
+with_t::server with_t::accept(ssl::tcp_acceptor acc) && {
   config_->ctx = acc.ctx_ptr();
-  config_->server.assign(acc.fd(), lp_size);
+  config_->server.assign(acc.fd());
   return server{std::move(config_)};
 }
 
-with_t::client with_t::connect(std::string host, uint16_t port,
-                               size_field_type lp_size) && {
-  config_->client.assign(std::move(host), port, lp_size);
+with_t::client with_t::connect(std::string host, uint16_t port) && {
+  config_->client.assign(std::move(host), port);
   return client{std::move(config_)};
 }
 
-with_t::client with_t::connect(stream_socket fd, size_field_type lp_size) && {
-  config_->client.assign(fd, lp_size);
+with_t::client with_t::connect(stream_socket fd) && {
+  config_->client.assign(fd);
   return client{std::move(config_)};
 }
 
-with_t::client with_t::connect(ssl::connection conn,
-                               size_field_type lp_size) && {
-  config_->client.assign(std::move(conn), lp_size);
+with_t::client with_t::connect(ssl::connection conn) && {
+  config_->client.assign(std::move(conn));
   return client{std::move(config_)};
 }
 

@@ -136,8 +136,10 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
                    .and_then(ssl::emplace_server(ssl::tls::v1_2))
                    .and_then(ssl::use_private_key_file(key_file, pem))
                    .and_then(ssl::use_certificate_file(cert_file, pem)))
+        // Set the size field type.
+        .size_field(size)
         // Bind to the user-defined port.
-        .accept(port, "", true, size)
+        .accept(port, "", true)
         // Limit how many clients may be connected at any given time.
         .max_connections(max_connections)
         // When started, run our worker actor to handle incoming connections.
