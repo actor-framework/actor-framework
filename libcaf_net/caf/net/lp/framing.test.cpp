@@ -151,10 +151,13 @@ struct fixture {
   }
 
   template <class Callback>
-  void run_app(Callback cb, buffer_ptr buf, net::lp::size_field_type size_type = net::lp::size_field_type::u4,
-               size_t max_message_size = 1024) {
+  void
+  run_app(Callback cb, buffer_ptr buf,
+          net::lp::size_field_type size_type = net::lp::size_field_type::u4,
+          size_t max_message_size = 1024) {
     auto app = app_t::make(mpx, std::move(cb), std::move(buf));
-    auto client = net::lp::framing::make(std::move(app), size_type, max_message_size);
+    auto client = net::lp::framing::make(std::move(app), size_type,
+                                         max_message_size);
     auto transport = net::octet_stream::transport::make(fd2, std::move(client));
     auto mgr = net::socket_manager::make(mpx.get(), std::move(transport));
     if (!mpx->start(mgr)) {

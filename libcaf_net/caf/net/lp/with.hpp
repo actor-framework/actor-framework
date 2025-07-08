@@ -221,14 +221,12 @@ public:
   /// @param host The hostname or IP address to connect to.
   /// @param port The port number to connect to.
   /// @returns a `client` object initialized with the given parameters.
-  [[nodiscard]] client
-  connect(std::string host, uint16_t port) &&;
+  [[nodiscard]] client connect(std::string host, uint16_t port) &&;
 
   /// Creates a new client factory object for the given stream `fd`.
   /// @param fd The stream socket to use for the connection.
   /// @returns a `client` object that will use the given socket.
-  [[nodiscard]] client
-  connect(stream_socket fd) &&;
+  [[nodiscard]] client connect(stream_socket fd) &&;
 
   /// Creates a new client factory object for the given SSL `connection`.
   /// @param conn The SSL connection to use.
