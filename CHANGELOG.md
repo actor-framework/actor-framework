@@ -23,7 +23,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   `caf.metrics.filters`. This change was made to make the configuration options
   more consistent.
 - The default maximum message size for the length-prefix framing has been
-  reduced to 60 MB. This change was made to improve security by default.
+  reduced to 64 MB. This change was made to improve security by default.
 
 ### Added
 
