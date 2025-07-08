@@ -139,7 +139,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
         // Set the size field type.
         .size_field(size)
         // Bind to the user-defined port.
-        .accept(port, "", true)
+        .accept(port)
         // Limit how many clients may be connected at any given time.
         .max_connections(max_connections)
         // When started, run our worker actor to handle incoming connections.
