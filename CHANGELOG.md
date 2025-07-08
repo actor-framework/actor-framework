@@ -22,10 +22,15 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The configuration options under `caf.metrics-filters` have been moved to
   `caf.metrics.filters`. This change was made to make the configuration options
   more consistent.
+- The default maximum message size for the length-prefix framing has been
+  reduced to 64 MB. This change was made to improve security by default.
 
 ### Added
 
 - Added `monitor` API to WebSocket and HTTP servers in the `with` DSL (#2026).
+- When starting a server or client using length-prefix framing, users can now
+  specify the maximum message size via `max_message_size` and the number of
+  bytes for the length prefix via `size_field`.
 
 ### Fixed
 

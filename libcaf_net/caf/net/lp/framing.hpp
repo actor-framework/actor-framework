@@ -6,6 +6,7 @@
 
 #include "caf/net/fwd.hpp"
 #include "caf/net/lp/lower_layer.hpp"
+#include "caf/net/lp/size_field_type.hpp"
 #include "caf/net/lp/upper_layer.hpp"
 #include "caf/net/octet_stream/upper_layer.hpp"
 
@@ -29,15 +30,18 @@ public:
 
   // -- factories --------------------------------------------------------------
 
-  static std::unique_ptr<framing> make(upper_layer_ptr up);
+  static std::unique_ptr<framing>
+  make(upper_layer_ptr up, size_field_type size_field, size_t max_message_size);
 
   static disposable run(multiplexer& mpx, stream_socket fd,
                         async::consumer_resource<chunk> pull,
-                        async::producer_resource<chunk> push);
+                        async::producer_resource<chunk> push,
+                        size_field_type size_field, size_t max_message_size);
 
   static disposable run(multiplexer& mpx, ssl::connection conn,
                         async::consumer_resource<chunk> pull,
-                        async::producer_resource<chunk> push);
+                        async::producer_resource<chunk> push,
+                        size_field_type size_field, size_t max_message_size);
 };
 
 } // namespace caf::net::lp

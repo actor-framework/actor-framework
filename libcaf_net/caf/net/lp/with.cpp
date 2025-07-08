@@ -27,10 +27,13 @@ public:
   using event_type = net::accept_event<frame>;
 
   connection_acceptor_impl(Acceptor acceptor, size_t max_consecutive_reads,
-                           async::producer_resource<event_type> events)
+                           async::producer_resource<event_type> events,
+                           size_t max_message_size, size_field_type size_type)
     : acceptor_(std::move(acceptor)),
       max_consecutive_reads_(max_consecutive_reads),
-      events_(std::move(events)) {
+      events_(std::move(events)),
+      max_message_size_(max_message_size),
+      size_type_(size_type) {
     // nop
   }
 
@@ -68,8 +71,9 @@ public:
     auto bridge = internal::make_lp_flow_bridge(std::move(a2s_pull),
                                                 std::move(s2a_push));
     // Create the socket manager.
+    auto impl = framing::make(std::move(bridge), size_type_, max_message_size_);
     auto transport = internal::make_transport(std::move(*conn),
-                                              framing::make(std::move(bridge)));
+                                              std::move(impl));
     transport->max_consecutive_reads(max_consecutive_reads_);
     transport->active_policy().accept();
     return net::socket_manager::make(parent_->mpx_ptr(), std::move(transport));
@@ -85,6 +89,10 @@ private:
   intrusive_ptr<flow::op::mcast<event_type>> mcast_;
 
   async::producer_resource<event_type> events_;
+
+  size_t max_message_size_;
+
+  size_field_type size_type_;
 };
 
 } // namespace
@@ -100,7 +108,8 @@ public:
     using impl_t = connection_acceptor_impl<Acceptor>;
     auto conn_acc = std::make_unique<impl_t>(std::move(acc),
                                              max_consecutive_reads,
-                                             std::move(server_push));
+                                             std::move(server_push),
+                                             max_message_size, size_field);
     auto handler = internal::make_accept_handler(std::move(conn_acc),
                                                  max_connections,
                                                  std::move(monitored_actors));
@@ -123,7 +132,7 @@ public:
   expected<disposable> do_start_client(Connection& conn) {
     auto bridge = internal::make_lp_flow_bridge(std::move(client_pull),
                                                 std::move(client_push));
-    auto impl = framing::make(std::move(bridge));
+    auto impl = framing::make(std::move(bridge), size_field, max_message_size);
     auto transport = internal::make_transport(std::move(conn), std::move(impl));
     transport->active_policy().connect();
     auto ptr = socket_manager::make(mpx, std::move(transport));
@@ -158,6 +167,12 @@ public:
 
   /// Stores the consumer resource for `do_start_client`.
   client::pull_t client_pull;
+
+  /// Stores the maximum message length
+  size_t max_message_size = caf::defaults::net::lp_max_message_size;
+
+  /// Stores the size field type
+  size_field_type size_field = lp::size_field_type::u4;
 };
 
 // -- server API ---------------------------------------------------------------
@@ -267,6 +282,16 @@ with_t&& with_t::context(expected<ssl::context> ctx) && {
   } else if (ctx.error()) {
     config_->err = std::move(ctx.error());
   }
+  return std::move(*this);
+}
+
+with_t&& with_t::size_field(size_field_type value) && {
+  config_->size_field = value;
+  return std::move(*this);
+}
+
+with_t&& with_t::max_message_size(size_t value) && {
+  config_->max_message_size = value;
   return std::move(*this);
 }
 

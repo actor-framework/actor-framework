@@ -21,6 +21,10 @@ namespace lp = caf::net::lp;
 // Configures the port for the server to listen on.
 static constexpr uint16_t default_port = 7788;
 
+// Configures the length prefix size for the server.
+static constexpr caf::net::lp::size_field_type default_size
+  = caf::net::lp::size_field_type::u4;
+
 // Configures the maximum number of concurrent connections.
 static constexpr size_t default_max_connections = 128;
 
@@ -33,6 +37,8 @@ struct config : caf::actor_system_config {
   config() {
     opt_group{custom_options_, "global"} //
       .add<uint16_t>("port,p", "port to listen for incoming connections")
+      .add<caf::net::lp::size_field_type>("size,s",
+                                          "length prefix size of the server")
       .add<size_t>("max-connections,m", "limit for concurrent clients");
     opt_group{custom_options_, "tls"} //
       .add<std::string>("key-file,k", "path to the private key file")
@@ -42,6 +48,7 @@ struct config : caf::actor_system_config {
   caf::settings dump_content() const override {
     auto result = actor_system_config::dump_content();
     caf::put_missing(result, "port", default_port);
+    caf::put_missing(result, "size", default_size);
     caf::put_missing(result, "max-connections", default_max_connections);
     return result;
   }
@@ -111,6 +118,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
   namespace ssl = caf::net::ssl;
   // Read the configuration.
   auto port = caf::get_or(cfg, "port", default_port);
+  auto size = caf::get_or(cfg, "size", default_size);
   auto pem = ssl::format::pem;
   auto key_file = caf::get_as<std::string>(cfg, "tls.key-file");
   auto cert_file = caf::get_as<std::string>(cfg, "tls.cert-file");
@@ -128,6 +136,8 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
                    .and_then(ssl::emplace_server(ssl::tls::v1_2))
                    .and_then(ssl::use_private_key_file(key_file, pem))
                    .and_then(ssl::use_certificate_file(cert_file, pem)))
+        // Set the size field type.
+        .size_field(size)
         // Bind to the user-defined port.
         .accept(port)
         // Limit how many clients may be connected at any given time.

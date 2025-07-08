@@ -7,6 +7,7 @@
 #include "caf/net/accept_event.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/lp/frame.hpp"
+#include "caf/net/lp/size_field_type.hpp"
 #include "caf/net/ssl/context.hpp"
 
 #include "caf/actor_cast.hpp"
@@ -164,6 +165,16 @@ public:
   ///            default-constructed `error` results in a no-op.
   /// @returns a reference to `*this`.
   [[nodiscard]] with_t&& context(expected<ssl::context> ctx) &&;
+
+  /// Sets the size field type.
+  /// @param value The size field type.
+  /// @returns a reference to `*this`.
+  [[nodiscard]] with_t&& size_field(size_field_type value) &&;
+
+  /// Sets the maximum message size.
+  /// @param value The maximum message size.
+  /// @returns a reference to `*this`.
+  [[nodiscard]] with_t&& max_message_size(size_t value) &&;
 
   /// Sets the optional SSL context factory used to lazily create the SSL
   /// context when needed by the client. Isn't used when creating servers.

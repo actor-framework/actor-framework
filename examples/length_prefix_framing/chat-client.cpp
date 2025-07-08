@@ -27,6 +27,9 @@ namespace ssl = caf::net::ssl;
 
 static constexpr uint16_t default_port = 7788;
 
+static constexpr caf::net::lp::size_field_type default_size
+  = caf::net::lp::size_field_type::u4;
+
 static constexpr std::string_view default_host = "localhost";
 
 static constexpr std::string_view default_name = "";
@@ -37,6 +40,8 @@ struct config : caf::actor_system_config {
   config() {
     opt_group{custom_options_, "global"} //
       .add<uint16_t>("port,p", "port of the server")
+      .add<caf::net::lp::size_field_type>("size,s",
+                                          "length prefix size of the server")
       .add<std::string>("host,H", "host of the server")
       .add<std::string>("name,n", "set name");
     opt_group{custom_options_, "tls"} //
@@ -49,6 +54,7 @@ struct config : caf::actor_system_config {
     caf::put_missing(result, "port", default_port);
     caf::put_missing(result, "host", default_host);
     caf::put_missing(result, "name", default_name);
+    caf::put_missing(result, "size", default_size);
     return result;
   }
 };
@@ -58,6 +64,7 @@ struct config : caf::actor_system_config {
 int caf_main(caf::actor_system& sys, const config& cfg) {
   // Read the configuration.
   auto port = caf::get_or(cfg, "port", default_port);
+  auto size = caf::get_or(cfg, "size", default_size);
   auto host = caf::get_or(cfg, "host", default_host);
   auto name = caf::get_or(cfg, "name", default_name);
   auto use_ssl = caf::get_or(cfg, "tls.enable", false);
@@ -75,6 +82,8 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
         .context(ssl::context::enable(use_ssl)
                    .and_then(ssl::emplace_client(ssl::tls::v1_2))
                    .and_then(ssl::load_verify_file_if(ca_file)))
+        // Set the size field type.
+        .size_field(size)
         // Connect to "$host:$port".
         .connect(host, port)
         // If we don't succeed at first, try up to 10 times with 1s delay.
