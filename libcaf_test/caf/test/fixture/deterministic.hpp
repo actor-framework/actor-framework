@@ -7,7 +7,7 @@
 #include "caf/test/runnable.hpp"
 
 #include "caf/actor_clock.hpp"
-#include "caf/actor_system.hpp"
+#include "caf/fwd.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"

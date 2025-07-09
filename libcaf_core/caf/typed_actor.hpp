@@ -5,9 +5,7 @@
 #pragma once
 
 #include "caf/abstract_actor.hpp"
-#include "caf/actor.hpp"
 #include "caf/actor_cast.hpp"
-#include "caf/actor_system.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/to_statically_typed_trait.hpp"
 #include "caf/detail/type_list.hpp"

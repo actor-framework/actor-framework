@@ -4,9 +4,11 @@
 
 #pragma once
 
-#include "caf/actor_system.hpp"
+#include "caf/fwd.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/infer_handle.hpp"
+#include "caf/actor_system.hpp"
+#include "caf/actor_config.hpp"
 
 #include <set>
 #include <string>

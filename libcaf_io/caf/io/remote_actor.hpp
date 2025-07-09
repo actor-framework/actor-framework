@@ -6,7 +6,7 @@
 
 #include "caf/io/middleman.hpp"
 
-#include "caf/actor_system.hpp"
+#include "caf/fwd.hpp"
 
 #include <cstdint>
 #include <set>

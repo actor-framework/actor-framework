@@ -5,9 +5,9 @@
 #pragma once
 
 #include "caf/actor_control_block.hpp"
+#include "caf/fwd.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/detail/openssl_export.hpp"
-#include "caf/fwd.hpp"
 
 #include <cstdint>
 #include <set>

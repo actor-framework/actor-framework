@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "caf/actor.hpp"
 #include "caf/fwd.hpp"
 #include "caf/type_list.hpp"
 

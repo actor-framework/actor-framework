@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include "caf/behavior.hpp"
 #include "caf/detail/behavior_impl.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
+#include "caf/behavior.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/may_have_timeout.hpp"
 #include "caf/message.hpp"

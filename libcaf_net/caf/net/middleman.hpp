@@ -8,9 +8,9 @@
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/socket_manager.hpp"
 
+#include "caf/fwd.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/detail/net_export.hpp"
-#include "caf/fwd.hpp"
 #include "caf/type_list.hpp"
 #include "caf/version.hpp"
 

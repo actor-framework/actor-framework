@@ -4,8 +4,7 @@
 
 #pragma once
 
-#include "caf/actor.hpp"
-#include "caf/actor_system.hpp"
+#include "caf/fwd.hpp"
 #include "caf/event_based_actor.hpp"
 
 #include <memory>

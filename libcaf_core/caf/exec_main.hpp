@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "caf/actor_system.hpp"
+#include "caf/fwd.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/type_traits.hpp"

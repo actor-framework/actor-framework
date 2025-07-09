@@ -3,9 +3,8 @@
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/socket_manager.hpp"
 
-#include "caf/actor_system.hpp"
-#include "caf/detail/actor_system_access.hpp"
 #include "caf/fwd.hpp"
+#include "caf/detail/actor_system_access.hpp"
 #include "caf/spawn_options.hpp"
 
 namespace caf::net {

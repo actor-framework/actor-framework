@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "caf/actor_system.hpp"
 #include "caf/behavior.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/fwd.hpp"
@@ -12,6 +11,8 @@
 #include "caf/spawn_options.hpp"
 #include "caf/stateful_actor.hpp"
 #include "caf/typed_event_based_actor.hpp"
+#include "caf/actor_system.hpp"
+#include "caf/actor_config.hpp"
 
 namespace caf::detail {
 

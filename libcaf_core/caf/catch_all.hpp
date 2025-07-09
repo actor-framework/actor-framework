@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "caf/message.hpp"
+#include "caf/fwd.hpp"
 #include "caf/result.hpp"
 
 #include <functional>

@@ -7,6 +7,7 @@
 #include "caf/detail/message_data.hpp"
 #include "caf/detail/offset_at.hpp"
 #include "caf/detail/type_list.hpp"
+#include "caf/fwd.hpp"
 #include "caf/message.hpp"
 
 namespace caf {

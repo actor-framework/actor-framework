@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "caf/behavior.hpp"
+#include "caf/fwd.hpp"
 #include "caf/deduce_mpi.hpp"
 #include "caf/detail/tbind.hpp"
 #include "caf/detail/to_statically_typed_trait.hpp"

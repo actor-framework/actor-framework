@@ -15,7 +15,7 @@ CAF_POP_WARNINGS
 #include "caf/io/network/default_multiplexer.hpp"
 #include "caf/io/network/native_socket.hpp"
 
-#include "caf/actor_system.hpp"
+#include "caf/fwd.hpp"
 #include "caf/detail/openssl_export.hpp"
 
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L

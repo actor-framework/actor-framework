@@ -13,7 +13,6 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/fwd.hpp"
-#include "caf/message.hpp"
 
 #include <cstddef>
 #include <cstdint>

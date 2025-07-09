@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "caf/actor.hpp"
+#include "caf/fwd.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/split_join.hpp"
 #include "caf/mailbox_element.hpp"

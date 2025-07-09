@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "caf/actor.hpp"
 #include "caf/detail/profiled_send.hpp"
 #include "caf/disposable.hpp"
 #include "caf/fwd.hpp"
