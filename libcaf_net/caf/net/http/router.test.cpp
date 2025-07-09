@@ -6,7 +6,10 @@
 
 #include "caf/test/scenario.hpp"
 
+#include "caf/net/http/server.hpp"
 #include "caf/net/multiplexer.hpp"
+#include "caf/net/octet_stream/transport.hpp"
+#include "caf/net/socket_manager.hpp"
 
 #include "caf/detail/source_location.hpp"
 
@@ -21,11 +24,113 @@ using http::router;
 
 namespace {
 
+struct response_t {
+  net::http::request_header hdr;
+  byte_buffer payload;
+
+  std::string_view payload_as_str() const noexcept {
+    return {reinterpret_cast<const char*>(payload.data()), payload.size()};
+  }
+
+  std::string_view param(std::string_view key) {
+    auto& qm = hdr.query();
+    if (auto i = qm.find(key); i != qm.end())
+      return i->second;
+    else
+      return {};
+  }
+};
+
+class app_t : public net::http::upper_layer::server {
+public:
+  // -- member variables -------------------------------------------------------
+
+  net::http::lower_layer::server* down = nullptr;
+
+  async::promise<response_t> response;
+
+  std::function<void(net::http::lower_layer::server*,
+                     const net::http::request_header&, const_byte_span)>
+    cb;
+
+  // -- factories --------------------------------------------------------------
+
+  template <class Callback>
+  static auto make(Callback cb, async::promise<response_t> res = {}) {
+    auto ptr = std::make_unique<app_t>();
+    ptr->cb = std::move(cb);
+    ptr->response = std::move(res);
+    return ptr;
+  }
+
+  // -- implementation of http::upper_layer ------------------------------------
+
+  error start(net::http::lower_layer::server* down_ptr) override {
+    down = down_ptr;
+    down->request_messages();
+    return none;
+  }
+
+  void abort(const error& what) override {
+    if (response) {
+      response.set_error(what);
+    }
+  }
+
+  void prepare_send() override {
+    // nop
+  }
+
+  bool done_sending() override {
+    return true;
+  }
+
+  ptrdiff_t consume(const net::http::request_header& request_hdr,
+                    const_byte_span body) override {
+    cb(down, request_hdr, body);
+    return static_cast<ptrdiff_t>(body.size());
+  }
+};
+
+auto to_str(byte_span buffer) {
+  return std::string_view{reinterpret_cast<const char*>(buffer.data()),
+                          buffer.size()};
+}
+
 struct fixture {
-  std::string req;
-  http::request_header hdr;
-  http::router rt;
-  std::vector<config_value> args;
+  fixture() {
+    mpx = net::multiplexer::make(nullptr);
+    if (auto err = mpx->init()) {
+      CAF_RAISE_ERROR("mpx->init failed");
+    }
+    mpx_thread = mpx->launch();
+    auto fd_pair = net::make_stream_socket_pair();
+    if (!fd_pair) {
+      CAF_RAISE_ERROR("make_stream_socket_pair failed");
+    }
+    std::tie(fd1, fd2) = *fd_pair;
+  }
+
+  ~fixture() {
+    mpx->shutdown();
+    mpx_thread.join();
+    if (fd1 != net::invalid_socket)
+      net::close(fd1);
+    if (fd2 != net::invalid_socket)
+      net::close(fd2);
+  }
+
+  template <class Callback>
+  void run_server(Callback cb, async::promise<response_t> res = {}) {
+    auto app = app_t::make(std::move(cb), std::move(res));
+    auto server = net::http::server::make(std::move(app));
+    auto transport = net::octet_stream::transport::make(fd2, std::move(server));
+    auto mgr = net::socket_manager::make(mpx.get(), std::move(transport));
+    if (!mpx->start(mgr)) {
+      CAF_RAISE_ERROR(std::logic_error, "failed to start socket manager");
+    }
+    fd2.id = net::invalid_socket_id;
+  }
 
   template <class... Ts>
   auto make_args(Ts... xs) {
@@ -33,6 +138,15 @@ struct fixture {
     (result.emplace_back(xs), ...);
     return result;
   }
+
+  net::multiplexer_ptr mpx;
+  net::stream_socket fd1;
+  net::stream_socket fd2;
+  std::thread mpx_thread;
+  std::string req;
+  http::request_header hdr;
+  http::router rt;
+  std::vector<config_value> args;
 };
 
 } // namespace
@@ -229,6 +343,165 @@ SCENARIO("routes must have one 'arg' entry per argument") {
           if (check((*res)->exec(hdr, {}, &rt)))
             check_eq(args, make_args(1, true, 3));
         }
+      }
+    }
+  }
+}
+
+SCENARIO("routes can catch all routes") {
+  auto set_get_request
+    = [this](std::string path,
+             detail::source_location loc = detail::source_location::current()) {
+        req = "GET " + path + " HTTP/1.1\r\n"
+              + "Host: localhost:8090\r\n"
+                "User-Agent: AwesomeLib/1.0\r\n"
+                "Accept-Encoding: gzip\r\n\r\n";
+        auto [status, err_msg] = hdr.parse(req);
+        require_eq(status, http::status::ok, loc);
+      };
+  auto set_post_request
+    = [this](std::string path,
+             detail::source_location loc = detail::source_location::current()) {
+        req = "POST " + path + " HTTP/1.1\r\n"
+              + "Host: localhost:8090\r\n"
+                "User-Agent: AwesomeLib/1.0\r\n"
+                "Accept-Encoding: gzip\r\n\r\n";
+        auto [status, err_msg] = hdr.parse(req);
+        require_eq(status, http::status::ok, loc);
+      };
+  GIVEN("a make_route call without path") {
+    WHEN("evaluating the factory call") {
+      THEN("the factory produces a valid callback") {
+        if (auto res = make_route([](responder&) {}); check(res.has_value())) {
+          set_get_request("/foo");
+          check((*res)->exec(hdr, {}, &rt));
+          set_post_request("/foo/bar");
+          check((*res)->exec(hdr, {}, &rt));
+        }
+      }
+    }
+  }
+}
+
+SCENARIO("router converts responders to async request objects") {
+  GIVEN("a http router") {
+    auto http_route = make_route("/foo", http::method::get, [](responder& rp) {
+      rp.respond(http::status::ok, "text/plain", "Hello, World!");
+    });
+    auto default_router
+      = router::make(std::vector<http::route_ptr>{http_route.value()});
+    WHEN("a server is run that responds with HTTP 200 ok response") {
+      run_server(
+        [this, &default_router](net::http::lower_layer::server* down,
+                                const net::http::request_header& request_hdr,
+                                const_byte_span body) mutable {
+          auto default_responder = responder{&request_hdr, body,
+                                             default_router.get()};
+          auto error = default_router->start(down);
+          auto req = default_router->lift(std::move(default_responder));
+          req.respond(net::http::status::ok, "text/plain", "Hello, World");
+          mpx->apply_updates();
+        });
+      THEN("the response is received in background") {
+        std::string_view request = "GET /foo HTTP/1.1\r\n"
+                                   "Host: localhost:8090\r\n"
+                                   "User-Agent: AwesomeLib/1.0\r\n"
+                                   "Accept-Encoding: gzip\r\n\r\n";
+        net::write(fd1, as_bytes(make_span(request)));
+        std::string_view response = "HTTP/1.1 200 OK\r\n"
+                                    "Content-Type: text/plain\r\n"
+                                    "Content-Length: 12\r\n\r\n"
+                                    "Hello, World";
+        std::thread background_thread{[this, &response] {
+          byte_buffer buf;
+          buf.resize(response.size());
+          net::read(fd1, buf);
+          check_eq(to_str(buf), response);
+        }};
+        background_thread.join();
+      }
+    }
+    WHEN("a server is run that throws error before responding") {
+      run_server(
+        [this, &default_router](net::http::lower_layer::server* down,
+                                const net::http::request_header& request_hdr,
+                                const_byte_span body) mutable {
+          auto default_responder = responder{&request_hdr, body,
+                                             default_router.get()};
+          auto error = default_router->start(down);
+          {
+            auto req = default_router->lift(std::move(default_responder));
+          }
+          mpx->apply_updates();
+        });
+      THEN("the response is received in background") {
+        std::string_view request = "GET /foo HTTP/1.1\r\n"
+                                   "Host: localhost:8090\r\n"
+                                   "User-Agent: AwesomeLib/1.0\r\n"
+                                   "Accept-Encoding: gzip\r\n\r\n";
+        net::write(fd1, as_bytes(make_span(request)));
+        std::string_view response = "HTTP/1.1 500 Internal Server Error\r\n"
+                                    "Content-Type: text/plain\r\n"
+                                    "Content-Length: 14\r\n\r\n"
+                                    "broken_promise";
+        std::thread background_thread{[this, &response] {
+          byte_buffer buf;
+          buf.resize(response.size());
+          net::read(fd1, buf);
+          check_eq(to_str(buf), response);
+        }};
+        background_thread.join();
+      }
+    }
+    WHEN("a server is run that shuts down before responding") {
+      run_server(
+        [this, &default_router](net::http::lower_layer::server* down,
+                                const net::http::request_header& request_hdr,
+                                const_byte_span body) mutable {
+          auto default_responder = responder{&request_hdr, body,
+                                             default_router.get()};
+          auto error = default_router->start(down);
+          auto req = default_router->lift(std::move(default_responder));
+          default_router->abort_and_shutdown(make_error(sec::broken_promise));
+        });
+      THEN("the response is not received in background") {
+        std::string_view request = "GET /foo HTTP/1.1\r\n"
+                                   "Host: localhost:8090\r\n"
+                                   "User-Agent: AwesomeLib/1.0\r\n"
+                                   "Accept-Encoding: gzip\r\n\r\n";
+        net::write(fd1, as_bytes(make_span(request)));
+        std::thread background_thread{[this] {
+          byte_buffer buf;
+          buf.resize(10);
+          byte_buffer empty_buf;
+          empty_buf.resize(10);
+          net::read(fd1, buf);
+          check_eq(buf, empty_buf);
+        }};
+        background_thread.join();
+      }
+    }
+    WHEN("router is shut down with pending items") {
+      run_server([this](net::http::lower_layer::server* down,
+                        const net::http::request_header& request_hdr,
+                        const_byte_span body) mutable {
+        auto http_route = make_route([](responder& rp) {
+          rp.respond(http::status::ok, "text/plain", "Hello, World!");
+        });
+        auto default_router
+          = router::make(std::vector<http::route_ptr>{http_route.value()});
+        auto default_responder = responder{&request_hdr, body,
+                                           default_router.get()};
+        auto error = default_router->start(down);
+        auto req = default_router->lift(std::move(default_responder));
+      });
+      THEN("the pending items are disposed") {
+        std::string_view request = "GET /foo HTTP/1.1\r\n"
+                                   "Host: localhost:8090\r\n"
+                                   "User-Agent: AwesomeLib/1.0\r\n"
+                                   "Accept-Encoding: gzip\r\n\r\n";
+        net::write(fd1, as_bytes(make_span(request)));
+        net::close(fd1);
       }
     }
   }
