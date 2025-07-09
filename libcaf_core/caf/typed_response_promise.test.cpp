@@ -39,6 +39,23 @@ testee_actor::behavior_type delegator(testee_actor::pointer self,
   };
 }
 
+testee_actor::behavior_type mail_delegator(testee_actor::pointer self,
+                                           testee_actor worker) {
+  return {
+    [=](int x, int y) {
+      auto promise = self->make_response_promise<int>();
+      // For typed response promises, we pass the result value, not input args
+      promise.mail(x + y).delegate(worker);
+      return promise;
+    },
+    [=](ok_atom) {
+      auto promise = self->make_response_promise<void>();
+      promise.mail().delegate(worker);
+      return promise;
+    },
+  };
+}
+
 testee_actor::behavior_type requester_v1(testee_actor::pointer self,
                                          testee_actor worker) {
   return {

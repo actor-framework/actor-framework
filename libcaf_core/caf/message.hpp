@@ -234,6 +234,11 @@ message make_message(Ts&&... xs) {
   return message{std::move(ptr)};
 }
 
+/// @relates message
+inline message make_message_nowrap() {
+  return {};
+}
+
 /// Same as `make_message` except when called with a single `message` argument.
 /// In the latter case, simply returns the `message` instead of wrapping it into
 /// another message.

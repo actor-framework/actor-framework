@@ -101,7 +101,7 @@ public:
   /// Starts a new message for delegation through this response promise.
   template <class... Args>
   auto mail(Args&&... args) {
-    return promise_.mail(std::forward<Args>(args)...);
+    return response_promise_mail(promise_, type_list<Ts...>{}, std::forward<Args>(args)...);
   }
 
 private:

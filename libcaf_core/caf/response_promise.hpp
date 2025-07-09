@@ -32,7 +32,7 @@ public:
   template <class...>
   friend class typed_response_promise;
 
-  template <message_priority, class...>
+  template <message_priority, class, class...>
   friend class response_promise_mail_t;
 
   // -- constructors, destructors, and assignment operators --------------------
