@@ -6,6 +6,7 @@
 
 #include "caf/message.hpp"
 #include "caf/response_promise.hpp"
+#include "caf/response_promise_mail.hpp"
 #include "caf/type_list.hpp"
 
 #include <type_traits>
@@ -90,8 +91,17 @@ public:
   /// Satisfies the promise by delegating to another actor.
   template <message_priority P = message_priority::normal, class Handle = actor,
             class... Us>
+  [[deprecated("Use mail(...).delegate(...) instead")]]
   auto delegate(const Handle& dest, Us&&... xs) {
     return promise_.template delegate<P>(dest, std::forward<Us>(xs)...);
+  }
+
+  // -- mail API --------------------------------------------------------------
+
+  /// Starts a new message for delegation through this response promise.
+  template <class... Args>
+  auto mail(Args&&... args) {
+    return promise_.mail(std::forward<Args>(args)...);
   }
 
 private:

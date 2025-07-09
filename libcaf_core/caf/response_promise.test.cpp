@@ -191,6 +191,54 @@ SCENARIO("response promises allow delegation") {
   }
 }
 
+SCENARIO("response promises allow delegation via mail API") {
+  GIVEN("a dispatcher that calls mail(...).delegate on its promise") {
+    scoped_actor self{sys};
+    auto adder_hdl = sys.spawn(adder);
+    auto hdl = sys.spawn([adder_hdl](event_based_actor* self) {
+      return behavior{
+        [=](int x, int y) {
+          auto promise = self->make_response_promise();
+          return promise.mail(x, y).delegate(adder_hdl);
+        },
+        [=](ok_atom) {
+          auto promise = self->make_response_promise();
+          return promise.mail(ok_atom_v).delegate(adder_hdl);
+        },
+      };
+    });
+    WHEN("sending a request to the dispatcher") {
+      inject().with(3, 4).from(self).to(hdl);
+      THEN("clients receive the expected result") {
+        expect<int, int>().with(3, 4).from(self).to(adder_hdl);
+        auto received = std::make_shared<bool>(false);
+        self->receive([this, received](int received_int) {
+          *received = true;
+          check_eq(received_int, 7);
+        });
+        check(*received);
+      }
+    }
+    WHEN("sending ok_atom to the dispatcher synchronously") {
+      auto res = self->request(hdl, infinite, ok_atom_v);
+      auto fetch_result = [&res] {
+        message result;
+        res.receive([] {}, // void result
+                    [&result](const error& reason) {
+                      result = make_message(reason);
+                    });
+        return result;
+      };
+      THEN("clients receive an empty response") {
+        expect<ok_atom>().from(self).to(hdl);
+        expect<ok_atom>().from(self).to(adder_hdl);
+        dispatch_message();
+        check(fetch_result().empty());
+      }
+    }
+  }
+}
+
 } // WITH_FIXTURE(test::fixture::deterministic)
 
 TEST("GH - 1306 regression") {

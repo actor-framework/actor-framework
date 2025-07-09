@@ -32,6 +32,9 @@ public:
   template <class...>
   friend class typed_response_promise;
 
+  template <message_priority, class...>
+  friend class response_promise_mail_t;
+
   // -- constructors, destructors, and assignment operators --------------------
 
   response_promise() = default;
@@ -123,6 +126,7 @@ public:
   /// @post `pending() == false`
   template <message_priority P = message_priority::normal, class Handle,
             class... Ts>
+  [[deprecated("Use mail(...).delegate(...) instead")]]
   delegated_response_type_t<Handle,
                             detail::implicit_conversions_t<std::decay_t<Ts>>...>
   delegate(const Handle& receiver, Ts&&... args) {
@@ -141,6 +145,14 @@ public:
       state_.reset();
     }
     return {};
+  }
+
+  // -- mail API --------------------------------------------------------------
+
+  /// Starts a new message for delegation through this response promise.
+  template <class... Args>
+  auto mail(Args&&... args) {
+    return response_promise_mail(*this, std::forward<Args>(args)...);
   }
 
 private:
