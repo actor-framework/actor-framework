@@ -7,12 +7,13 @@
 #include "caf/actor_cast.hpp"
 #include "caf/delegated.hpp"
 #include "caf/detail/send_type_check.hpp"
+#include "caf/detail/type_list.hpp"
 #include "caf/message.hpp"
 #include "caf/message_priority.hpp"
 #include "caf/response_promise.hpp"
 #include "caf/response_type.hpp"
+
 #include <type_traits>
-#include "caf/detail/type_list.hpp"
 
 namespace caf {
 
@@ -33,55 +34,41 @@ public:
   template <message_priority P = Priority,
             class E = std::enable_if_t<P == message_priority::normal>>
   [[nodiscard]] auto urgent() && {
-    using result_t = response_promise_mail_t<message_priority::high, Outputs, Inputs...>;
+    using result_t
+      = response_promise_mail_t<message_priority::high, Outputs, Inputs...>;
     return result_t{rp_, std::move(content_)};
   }
 
   /// Satisfies the promise by delegating to another actor.
   template <class Handle>
-  [[nodiscard]] auto delegate(const Handle& receiver) && {
-    if constexpr (std::is_same_v<Outputs, none_t>) {
-      detail::send_type_check<none_t, Handle, Inputs...>();
-    } else if constexpr (detail::is_type_list_v<Outputs>) {
-      // For typed response promises, check that number of args matches response types
-      if constexpr (detail::tl_size_v<Outputs> == 1 &&
-                    std::is_same_v<typename detail::tl_head<Outputs>::type, void>) {
-        // For void response types, allow 0 arguments
-        static_assert(sizeof...(Inputs) == 0, "Void response types should have no arguments");
-      } else {
-        static_assert(sizeof...(Inputs) == detail::tl_size_v<Outputs>,
-                      "Number of arguments must match number of response types");
-      }
-    } else {
-      detail::send_type_check<Outputs, Handle, Inputs...>();
+  void delegate(const Handle& receiver) && {
+    static_assert((detail::sendable<Inputs> && ...),
+                  "at least one type has no ID, "
+                  "did you forgot to announce it via CAF_ADD_TYPE_ID?");
+    using inputs = type_list<detail::strip_and_convert_t<Inputs>...>;
+    using response_opt
+      = response_type_unbox<detail::signatures_of_t<Handle>, inputs>;
+    using receiver_interface = detail::signatures_of_t<Handle>;
+    static_assert(response_opt::valid,
+                  "receiver does not accept given message");
+    if constexpr (!std::is_same_v<receiver_interface, none_t>
+                  && !std::is_same_v<Outputs, none_t>) {
+      using response = typename response_opt::type;
+      static_assert(std::is_same_v<Outputs, response>,
+                    "response type mismatch");
     }
     if (!receiver) {
       rp_.deliver(make_error(sec::invalid_delegate));
-      if constexpr (detail::is_type_list_v<Outputs>) {
-        // For typed response promises, return delegated with response types
-        return delegated<typename detail::tl_apply<Outputs, std::tuple>::type>{};
-      } else {
-        return delegated_response_type_t<Handle, Inputs...>{};
-      }
+      return;
     }
     if (rp_.pending()) {
-      if constexpr (sizeof...(Inputs) == 0) {
-        // Forward an empty message to the target actor.
-        rp_.state_->delegate_impl(actor_cast<abstract_actor*>(receiver), make_message());
-        rp_.state_.reset();
-      } else {
-        // Forward the message directly using the underlying delegate_impl
-        if constexpr (Priority == message_priority::high)
-          rp_.state_->id = rp_.state_->id.with_high_priority();
-        rp_.state_->delegate_impl(actor_cast<abstract_actor*>(receiver), content_);
-        rp_.state_.reset();
+      // Forward the message directly using the underlying delegate_impl
+      if constexpr (Priority == message_priority::high) {
+        rp_.state_->id = rp_.state_->id.with_high_priority();
       }
-    }
-    if constexpr (detail::is_type_list_v<Outputs>) {
-      // For typed response promises, return delegated with response types
-      return delegated<typename detail::tl_apply<Outputs, std::tuple>::type>{};
-    } else {
-      return delegated_response_type_t<Handle, Inputs...>{};
+      rp_.state_->delegate_impl(actor_cast<abstract_actor*>(receiver),
+                                content_);
+      rp_.state_.reset();
     }
   }
 
@@ -91,19 +78,21 @@ private:
 };
 
 namespace detail {
-  // Helper to forward all but the first argument from a parameter pack
-  template <class Outputs, class... Args>
-  struct response_promise_mail_typed_helper;
+// Helper to forward all but the first argument from a parameter pack
+template <class Outputs, class... Args>
+struct response_promise_mail_typed_helper;
 
-  template <class Outputs, class First, class... Rest>
-  struct response_promise_mail_typed_helper<Outputs, First, Rest...> {
-    static auto make(response_promise& rp, First&&, Rest&&... rest) {
-      static_assert(detail::is_type_list_v<Outputs>, "Outputs must be a type_list of response types");
-      using result_t = response_promise_mail_t<message_priority::normal, Outputs, Rest...>;
-      return result_t{rp, make_message_nowrap(std::forward<Rest>(rest)...)};
-    }
-  };
-}
+template <class Outputs, class First, class... Rest>
+struct response_promise_mail_typed_helper<Outputs, First, Rest...> {
+  static auto make(response_promise& rp, First&&, Rest&&... rest) {
+    static_assert(detail::is_type_list_v<Outputs>,
+                  "Outputs must be a type_list of response types");
+    using result_t
+      = response_promise_mail_t<message_priority::normal, Outputs, Rest...>;
+    return result_t{rp, make_message_nowrap(std::forward<Rest>(rest)...)};
+  }
+};
+} // namespace detail
 
 // Unified entry point for sending a message through a response promise.
 template <class... Args>
@@ -111,11 +100,16 @@ template <class... Args>
   if constexpr (sizeof...(Args) == 0) {
     using result_t = response_promise_mail_t<message_priority::normal, none_t>;
     return result_t{rp, make_message()};
-  } else if constexpr (detail::is_type_list_v<typename std::decay<typename std::tuple_element<0, std::tuple<Args...>>::type>::type>) {
-    using outputs_t = typename std::decay<typename std::tuple_element<0, std::tuple<Args...>>::type>::type;
-    return detail::response_promise_mail_typed_helper<outputs_t, Args...>::make(rp, std::forward<Args>(args)...);
+  } else if constexpr (detail::is_type_list_v<
+                         typename std::decay<typename std::tuple_element<
+                           0, std::tuple<Args...>>::type>::type>) {
+    using outputs_t = typename std::decay<
+      typename std::tuple_element<0, std::tuple<Args...>>::type>::type;
+    return detail::response_promise_mail_typed_helper<outputs_t, Args...>::make(
+      rp, std::forward<Args>(args)...);
   } else {
-    using result_t = response_promise_mail_t<message_priority::normal, none_t, Args...>;
+    using result_t
+      = response_promise_mail_t<message_priority::normal, none_t, Args...>;
     return result_t{rp, make_message_nowrap(std::forward<Args>(args)...)};
   }
 }
