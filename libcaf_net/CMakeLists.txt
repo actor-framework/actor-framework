@@ -54,6 +54,8 @@ caf_add_component(
     caf/net/http/header.test.cpp
     caf/net/http/lower_layer.cpp
     caf/net/http/method.cpp
+    caf/net/http/multipart_reader.cpp
+    caf/net/http/multipart_reader.test.cpp
     caf/net/http/request.cpp
     caf/net/http/request_header.cpp
     caf/net/http/request_header.test.cpp
