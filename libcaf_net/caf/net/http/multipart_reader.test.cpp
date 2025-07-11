@@ -26,10 +26,6 @@ TEST("multipart reader") {
     body = body_content;
     res = std::make_unique<responder>(&hdr, as_bytes(make_span(body)), nullptr);
   };
-  auto as_ascii = [](const_byte_span bytes) {
-    return std::string_view{reinterpret_cast<const char*>(bytes.data()),
-                            bytes.size()};
-  };
   SECTION("empty multipart") {
     setup("POST / HTTP/1.1\r\n"
           "Content-Type: multipart/form-data; boundary=test\r\n\r\n",
@@ -53,7 +49,7 @@ TEST("multipart reader") {
       auto& part = parts.front();
       check_eq(part.header.field("Content-Disposition"),
                "form-data; name=\"field1\"");
-      auto val = as_ascii(part.content);
+      auto val = to_string_view(part.content);
       check_eq(val, "value1");
     }
   }
@@ -74,14 +70,14 @@ TEST("multipart reader") {
       auto& part1 = parts.front();
       check_eq(part1.header.field("Content-Disposition"),
                "form-data; name=\"field1\"");
-      auto val1 = as_ascii(part1.content);
+      auto val1 = to_string_view(part1.content);
       check_eq(val1, "value1");
     }
     if (check_eq(parts.size(), 2u)) {
       auto& part2 = parts.back();
       check_eq(part2.header.field("Content-Disposition"),
                "form-data; name=\"field2\"");
-      auto val2 = as_ascii(part2.content);
+      auto val2 = to_string_view(part2.content);
       check_eq(val2, "value2");
     }
   }
@@ -99,7 +95,7 @@ TEST("multipart reader") {
       auto& part = parts.front();
       check_eq(part.header.field("Content-Disposition"),
                "form-data; name=\"field1\"");
-      auto val = as_ascii(part.content);
+      auto val = to_string_view(part.content);
       check_eq(val, "value1");
     }
   }
@@ -117,7 +113,7 @@ TEST("multipart reader") {
       auto& part = parts.front();
       check_eq(part.header.field("Content-Disposition"),
                "form-data; name=\"field1\"");
-      auto val = as_ascii(part.content);
+      auto val = to_string_view(part.content);
       check_eq(val, "value1");
     }
   }
@@ -183,7 +179,7 @@ TEST("multipart reader") {
       check_eq(part.header.field("Content-Disposition"),
                "form-data; name=\"file\"; filename=\"test.txt\"");
       check_eq(part.header.field("Content-Type"), "text/plain");
-      auto val = as_ascii(part.content);
+      auto val = to_string_view(part.content);
       check_eq(val, "Hello, World!");
     }
   }
@@ -218,13 +214,13 @@ TEST("multipart reader") {
     check_eq(parts.size(), 2u);
     if (check_eq(parts.size(), 2u)) {
       auto& part1 = parts.front();
-      auto val1 = as_ascii(part1.content);
+      auto val1 = to_string_view(part1.content);
       check_eq(val1, "This is implicitly typed plain ASCII text.\r\n"
                      "It does NOT end with a linebreak.");
       auto& part2 = parts.back();
       check_eq(part2.header.field("Content-Type"),
                "text/plain; charset=us-ascii");
-      auto val2 = as_ascii(part2.content);
+      auto val2 = to_string_view(part2.content);
       check_eq(val2, "This is explicitly typed plain ASCII text.\r\n"
                      "It DOES end with a linebreak.\r\n");
     }

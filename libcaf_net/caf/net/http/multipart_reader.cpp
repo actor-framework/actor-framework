@@ -4,6 +4,8 @@
 
 #include "caf/net/http/multipart_reader.hpp"
 
+#include "caf/net/http/responder.hpp"
+
 #include "caf/span.hpp"
 #include "caf/string_algorithms.hpp"
 
@@ -19,8 +21,14 @@ constexpr std::string_view boundary_delimiter = "--";
 
 } // namespace
 
+multipart_reader::multipart_reader(const http::header& hdr,
+                                   const_byte_span body)
+  : body_(body), mime_type_(hdr.field("Content-Type")) {
+  // nop
+}
+
 multipart_reader::multipart_reader(const responder& res)
-  : res_(&res), mime_type_(res.header().field("Content-Type")) {
+  : multipart_reader(res.header(), res.body()) {
   // nop
 }
 
@@ -65,8 +73,7 @@ bool multipart_reader::do_parse(consume_fn fn, void* obj) {
     return std::string_view::npos;
   };
   // Parse the payload into parts.
-  std::string_view payload(reinterpret_cast<const char*>(res_->body().data()),
-                           res_->body().size());
+  auto payload = to_string_view(body_);
   // Find the first boundary
   auto pos = find_boundary(payload);
   if (pos == std::string_view::npos) {

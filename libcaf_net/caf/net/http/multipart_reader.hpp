@@ -4,8 +4,8 @@
 
 #pragma once
 
+#include "caf/net/fwd.hpp"
 #include "caf/net/http/header.hpp"
-#include "caf/net/http/responder.hpp"
 
 #include "caf/byte_span.hpp"
 
@@ -23,6 +23,9 @@ public:
     http::header header;
     const_byte_span content;
   };
+
+  /// Constructs a multipart_reader from a header and body.
+  multipart_reader(const http::header& hdr, const_byte_span body);
 
   /// Constructs a multipart_reader from a responder.
   explicit multipart_reader(const responder& res);
@@ -62,8 +65,8 @@ private:
   /// @returns true if parsing succeeded, false on any error
   bool do_parse(consume_fn fn, void* obj);
 
-  /// Provides access to the HTTP header and body.
-  const responder* res_;
+  /// Provides access to the HTTP body.
+  const_byte_span body_;
 
   /// The MIME type of the HTTP request.
   std::string_view mime_type_;
