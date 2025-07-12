@@ -31,6 +31,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - When starting a server or client using length-prefix framing, users can now
   specify the maximum message size via `max_message_size` and the number of
   bytes for the length prefix via `size_field`.
+- The namespace `caf::net::http` now contains two new classes for dealing with
+  HTTP multipart requests and responses: `multipart_reader` and
+  `multipart_writer`.
 
 ### Fixed
 
