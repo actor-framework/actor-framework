@@ -28,7 +28,7 @@ SCENARIO("a multipart writer accepts payloads with no headers") {
       }
     }
   }
-  GIVEN("a multipart_writer and multiple payload") {
+  GIVEN("a multipart_writer and multiple payloads") {
     multipart_writer writer;
     auto payload1 = "Hello, World!"sv;
     auto payload2 = "Hello, World, again!"sv;
