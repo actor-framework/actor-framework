@@ -52,18 +52,13 @@ void multipart_writer::reset(std::string boundary) {
 }
 
 void multipart_writer::append(const_byte_span payload) {
-  do_append(payload, [](void*, header_builder&) {}, nullptr);
+  append(payload, [](header_builder&) {});
 }
 
 void multipart_writer::append(const_byte_span payload, std::string_view key,
                               std::string_view value) {
-  using kvp_t = std::pair<std::string_view, std::string_view>;
-  auto fn = [](void* kvp_ptr, header_builder& builder) {
-    auto& kvp = *static_cast<kvp_t*>(kvp_ptr);
-    builder.add(kvp.first, kvp.second);
-  };
-  auto kvp = kvp_t{key, value};
-  do_append(payload, fn, &kvp);
+  auto fn = [key, value](header_builder& builder) { builder.add(key, value); };
+  append(payload, fn);
 }
 
 const_byte_span multipart_writer::finalize() {
@@ -77,13 +72,12 @@ std::string_view multipart_writer::boundary() const noexcept {
   return boundary_;
 }
 
-void multipart_writer::do_append(const_byte_span payload, add_headers_fn fn,
-                                 void* obj) {
+void multipart_writer::do_append(const_byte_span payload, add_headers_fn& fn) {
   header_builder builder{this};
   write_string(buf_, "--");
   write_string(buf_, boundary_);
   write_string(buf_, "\r\n");
-  fn(obj, builder);
+  fn(builder);
   write_string(buf_, "\r\n");
   buf_.insert(buf_.end(), payload.begin(), payload.end());
   write_string(buf_, "\r\n");

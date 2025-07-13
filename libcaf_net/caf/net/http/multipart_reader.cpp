@@ -32,7 +32,7 @@ multipart_reader::multipart_reader(const responder& res)
   // nop
 }
 
-bool multipart_reader::do_parse(consume_fn fn, void* obj) {
+bool multipart_reader::do_parse(consume_fn& fn) {
   // Ensure the MIME type indicates multipart content.
   if (mime_type_.find("multipart/") != 0) {
     return false;
@@ -108,7 +108,7 @@ bool multipart_reader::do_parse(consume_fn fn, void* obj) {
       content_view = content_view.substr(0, content_view.size() - 2);
     }
     auto content = as_bytes(make_span(content_view));
-    fn(obj, std::move(hdr), content);
+    fn(std::move(hdr), content);
     payload.remove_prefix(next_boundary + boundary_size);
   }
   return true;

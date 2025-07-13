@@ -6,6 +6,7 @@
 
 #include "caf/byte_buffer.hpp"
 #include "caf/byte_span.hpp"
+#include "caf/callback.hpp"
 #include "caf/detail/net_export.hpp"
 
 #include <string_view>
@@ -66,11 +67,10 @@ public:
   ///                    `header_builder&` argument.
   template <class AddHeadersFn>
   void append(const_byte_span payload, AddHeadersFn&& add_headers) {
-    using add_headers_t = std::decay_t<AddHeadersFn>;
-    auto fn = [](void* ctx, header_builder& builder) {
-      (*static_cast<add_headers_t*>(ctx))(builder);
-    };
-    do_append(payload, fn, &add_headers);
+    using fn_t = std::decay_t<AddHeadersFn>;
+    using fn_ref_t = callback_ref_impl<fn_t, void(header_builder&)>;
+    fn_ref_t fn_ref{add_headers};
+    do_append(payload, fn_ref);
   }
 
   /// Appends a payload with custom header configuration from a string_view.
@@ -88,13 +88,12 @@ public:
   std::string_view boundary() const noexcept;
 
 private:
-  using add_headers_fn = void (*)(void*, header_builder&);
+  using add_headers_fn = callback<void(header_builder&)>;
 
   /// Appends a payload with custom header configuration.
   /// @param payload The payload to append.
   /// @param fn A function object for writing the headers to this part.
-  /// @param obj Additional context for the function object.
-  void do_append(const_byte_span payload, add_headers_fn fn, void* obj);
+  void do_append(const_byte_span payload, add_headers_fn& fn);
 
   /// The buffer containing the multipart content.
   byte_buffer buf_;
