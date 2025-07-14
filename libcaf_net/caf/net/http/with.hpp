@@ -180,9 +180,21 @@ public:
       return request(http::method::post, payload);
     }
 
+    /// Sends an HTTP POST message with a const_byte_span payload.
+    [[nodiscard]] expected<std::pair<async::future<response>, disposable>>
+    post(const_byte_span payload) {
+      return request(http::method::post, payload);
+    }
+
     /// Sends an HTTP PUT message.
     [[nodiscard]] expected<std::pair<async::future<response>, disposable>>
     put(std::string_view payload) {
+      return request(http::method::put, payload);
+    }
+
+    /// Sends an HTTP PUT message with a const_byte_span payload.
+    [[nodiscard]] expected<std::pair<async::future<response>, disposable>>
+    put(const_byte_span payload) {
       return request(http::method::put, payload);
     }
 
@@ -204,9 +216,21 @@ public:
       return request(http::method::options, payload);
     }
 
+    /// Sends an HTTP OPTIONS message with a const_byte_span payload.
+    [[nodiscard]] expected<std::pair<async::future<response>, disposable>>
+    options(const_byte_span payload) {
+      return request(http::method::options, payload);
+    }
+
     /// Sends an HTTP TRACE message.
     [[nodiscard]] expected<std::pair<async::future<response>, disposable>>
     trace(std::string_view payload) {
+      return request(http::method::trace, payload);
+    }
+
+    /// Sends an HTTP TRACE message with a const_byte_span payload.
+    [[nodiscard]] expected<std::pair<async::future<response>, disposable>>
+    trace(const_byte_span payload) {
       return request(http::method::trace, payload);
     }
 
