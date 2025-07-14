@@ -608,10 +608,8 @@ scheduled_actor::categorize(mailbox_element& x) {
       return message_category::internal;
     }
     case type_id_v<action>: {
-      auto what = content.get_as<action>(0);
-      CAF_ASSERT(what.ptr() != nullptr);
-      log::core::debug("run action");
-      what.run();
+      log::core::debug("received action to run");
+      actions_.push_back(content.get_as<action>(0));
       return message_category::internal;
     }
     case type_id_v<stream_open_msg>: {
