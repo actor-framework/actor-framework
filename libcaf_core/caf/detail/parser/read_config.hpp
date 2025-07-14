@@ -10,13 +10,12 @@
 #include "caf/detail/parser/read_number_or_timespan.hpp"
 #include "caf/detail/parser/read_string.hpp"
 #include "caf/detail/parser/read_uri.hpp"
-#include "caf/detail/scope_guard.hpp"
 #include "caf/pec.hpp"
 #include "caf/uri_builder.hpp"
 
 #include <ctype.h>
 
-#include <stack>
+#include <string>
 
 CAF_PUSH_UNUSED_LABEL_WARNING
 

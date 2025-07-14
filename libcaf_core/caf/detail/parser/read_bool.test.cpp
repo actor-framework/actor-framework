@@ -8,7 +8,6 @@
 
 #include "caf/parser_state.hpp"
 
-#include <string>
 #include <string_view>
 #include <variant>
 

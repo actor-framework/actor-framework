@@ -8,11 +8,8 @@
 #include "caf/detail/consumer.hpp"
 #include "caf/detail/parser/add_ascii.hpp"
 #include "caf/detail/parser/chars.hpp"
-#include "caf/detail/parser/is_char.hpp"
-#include "caf/detail/parser/is_digit.hpp"
 #include "caf/detail/parser/read_floating_point.hpp"
 #include "caf/detail/parser/sub_ascii.hpp"
-#include "caf/detail/scope_guard.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/pec.hpp"
 

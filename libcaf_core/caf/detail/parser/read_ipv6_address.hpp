@@ -9,16 +9,13 @@
 #include "caf/detail/network_order.hpp"
 #include "caf/detail/parser/add_ascii.hpp"
 #include "caf/detail/parser/chars.hpp"
-#include "caf/detail/parser/is_char.hpp"
-#include "caf/detail/parser/is_digit.hpp"
-#include "caf/detail/parser/sub_ascii.hpp"
-#include "caf/detail/scope_guard.hpp"
 #include "caf/ipv4_address.hpp"
 #include "caf/ipv6_address.hpp"
 #include "caf/pec.hpp"
 
 #include <algorithm>
 #include <cstdint>
+#include <cstring>
 
 CAF_PUSH_UNUSED_LABEL_WARNING
 

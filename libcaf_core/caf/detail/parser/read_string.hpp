@@ -6,7 +6,6 @@
 
 #include "caf/config.hpp"
 #include "caf/detail/parser/chars.hpp"
-#include "caf/detail/scope_guard.hpp"
 #include "caf/pec.hpp"
 
 #include <cstdint>
