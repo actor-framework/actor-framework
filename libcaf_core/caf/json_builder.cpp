@@ -80,7 +80,7 @@ public:
     if (!storage_) {
       storage_ = make_counted<detail::json::storage>();
     } else {
-      storage_->buf.reclaim();
+      storage_->buf.release();
     }
     val_ = detail::json::make_value(storage_);
     push(val_, internal::json_node::element);

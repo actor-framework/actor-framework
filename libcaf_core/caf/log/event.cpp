@@ -7,6 +7,7 @@
 #include "caf/logger.hpp"
 #include "caf/make_counted.hpp"
 
+#include <memory_resource>
 #include <new>
 
 namespace caf::log {
@@ -14,9 +15,9 @@ namespace caf::log {
 namespace {
 
 template <class T>
-using allocator_t = detail::monotonic_buffer_resource::allocator<T>;
+using allocator_t = std::pmr::polymorphic_allocator<T>;
 
-std::string_view deep_copy_impl(detail::monotonic_buffer_resource* resource,
+std::string_view deep_copy_impl(std::pmr::memory_resource* resource,
                                 std::string_view str) {
   auto* buf = allocator_t<char>{resource}.allocate(str.size());
   memcpy(buf, str.data(), str.size());
@@ -24,14 +25,13 @@ std::string_view deep_copy_impl(detail::monotonic_buffer_resource* resource,
 }
 
 chunked_string::node_type*
-deep_copy_to_node(detail::monotonic_buffer_resource* resource,
-                  std::string_view str) {
+deep_copy_to_node(std::pmr::memory_resource* resource, std::string_view str) {
   using node_type = chunked_string::node_type;
   auto* buf = allocator_t<node_type>{resource}.allocate(1);
   return new (buf) node_type{deep_copy_impl(resource, str), nullptr};
 }
 
-chunked_string deep_copy_impl(detail::monotonic_buffer_resource* resource,
+chunked_string deep_copy_impl(std::pmr::memory_resource* resource,
                               chunked_string str) {
   using node_type = chunked_string::node_type;
   node_type* head = nullptr;
@@ -98,7 +98,8 @@ event_ptr event::make(unsigned level, std::string_view component,
   return make_counted<event>(level, component, loc, aid);
 }
 
-event_fields_builder::event_fields_builder(resource_type* resource) noexcept {
+event_fields_builder::event_fields_builder(
+  std::pmr::memory_resource* resource) noexcept {
   if (resource)
     new (&fields_) list_type(resource);
 }

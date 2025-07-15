@@ -29,7 +29,7 @@ TEST("a default default-constructed list is empty") {
 }
 
 TEST("lists are convertible to strings") {
-  detail::monotonic_buffer_resource resource;
+  std::pmr::monotonic_buffer_resource resource;
   list_type uut{&resource};
   check_eq(deep_to_string(uut), "[]");
   fill(uut, 1, 2, 3, 4);
@@ -38,7 +38,7 @@ TEST("lists are convertible to strings") {
 }
 
 TEST("push_back adds elements to the back of the list") {
-  detail::monotonic_buffer_resource resource;
+  std::pmr::monotonic_buffer_resource resource;
   list_type uut{&resource};
   uut.push_back(1);
   uut.push_back(2);
@@ -47,7 +47,7 @@ TEST("push_back adds elements to the back of the list") {
 }
 
 TEST("lists are movable") {
-  detail::monotonic_buffer_resource resource;
+  std::pmr::monotonic_buffer_resource resource;
   list_type uut{&resource};
   SECTION("move constructor") {
     fill(uut, 1, 2, 3);
@@ -67,7 +67,7 @@ TEST("lists are movable") {
 }
 
 TEST("the size of the list is the number of elements") {
-  detail::monotonic_buffer_resource resource;
+  std::pmr::monotonic_buffer_resource resource;
   list_type uut{&resource};
   fill(uut, 1, 2, 3);
   check_eq(uut.size(), 3u);
@@ -76,7 +76,7 @@ TEST("the size of the list is the number of elements") {
 }
 
 TEST("lists allow iterator-based access") {
-  detail::monotonic_buffer_resource resource;
+  std::pmr::monotonic_buffer_resource resource;
   list_type uut{&resource};
   fill(uut, 1, 2, 3);
   // Mutable access via begin/end.

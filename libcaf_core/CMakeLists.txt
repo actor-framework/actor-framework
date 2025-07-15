@@ -182,8 +182,6 @@ caf_add_component(
     caf/detail/meta_object.cpp
     caf/detail/meta_object.test.cpp
     caf/detail/monitor_action.cpp
-    caf/detail/monotonic_buffer_resource.cpp
-    caf/detail/monotonic_buffer_resource.test.cpp
     caf/detail/parse.cpp
     caf/detail/parse.test.cpp
     caf/detail/parser/chars.cpp
