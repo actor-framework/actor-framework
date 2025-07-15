@@ -4,10 +4,9 @@
 
 #pragma once
 
-#include <caf/detail/monotonic_buffer_resource.hpp>
-
 #include <cstddef>
 #include <iterator>
+#include <memory_resource>
 #include <new>
 #include <utility>
 
@@ -98,7 +97,7 @@ public:
 
   using node_type = mbr_list_node<value_type>;
 
-  using allocator_type = monotonic_buffer_resource::allocator<node_type>;
+  using allocator_type = std::pmr::polymorphic_allocator<node_type>;
 
   using reference = value_type&;
 
@@ -121,21 +120,21 @@ public:
   }
 
   ~mbr_list() {
+    if (resource_ == nullptr) {
+      return;
+    }
+    allocator_type allocator{resource_};
     auto* ptr = head_;
     while (ptr != nullptr) {
       auto* next = ptr->next;
       ptr->~node_type();
-      allocator_.deallocate(ptr, 1);
+      allocator.deallocate(ptr, 1);
       ptr = next;
     }
   }
 
-  explicit mbr_list(allocator_type allocator) noexcept : allocator_(allocator) {
-    // nop
-  }
-
-  explicit mbr_list(monotonic_buffer_resource* resource) noexcept
-    : allocator_(resource) {
+  explicit mbr_list(std::pmr::memory_resource* resource) noexcept
+    : resource_(resource) {
     // nop
   }
 
@@ -145,7 +144,7 @@ public:
     : size_(other.size_),
       head_(other.head_),
       tail_(other.tail_),
-      allocator_(other.allocator_) {
+      resource_(other.resource_) {
     other.size_ = 0;
     other.head_ = nullptr;
     other.tail_ = nullptr;
@@ -158,7 +157,7 @@ public:
     swap(size_, other.size_);
     swap(head_, other.head_);
     swap(tail_, other.tail_);
-    swap(allocator_, other.allocator_);
+    swap(resource_, other.resource_);
     return *this;
   }
 
@@ -210,13 +209,13 @@ public:
     return tail_->value;
   }
 
-  [[nodiscard]] allocator_type get_allocator() const noexcept {
-    return allocator_;
+  [[nodiscard]] std::pmr::memory_resource* resource() const noexcept {
+    return resource_;
   }
 
   void push_back(T value) {
     ++size_;
-    auto new_node = allocator_.allocate(1);
+    auto new_node = allocator_type{resource_}.allocate(1);
     new (new_node) node_type{std::move(value), nullptr};
     if (head_ == nullptr) {
       head_ = tail_ = new_node;
@@ -229,7 +228,7 @@ public:
   template <class... Ts>
   reference emplace_back(Ts&&... args) {
     ++size_;
-    auto new_node = allocator_.allocate(1);
+    auto new_node = allocator_type{resource_}.allocate(1);
     new (new_node) node_type{T{std::forward<Ts>(args)...}, nullptr};
     if (head_ == nullptr) {
       head_ = tail_ = new_node;
@@ -252,7 +251,7 @@ private:
   size_t size_ = 0;
   node_pointer head_ = nullptr;
   node_pointer tail_ = nullptr;
-  allocator_type allocator_;
+  std::pmr::memory_resource* resource_ = nullptr;
 };
 
 template <class T>

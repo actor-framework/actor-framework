@@ -5,7 +5,6 @@
 #pragma once
 
 #include "caf/detail/mbr_list.hpp"
-#include "caf/detail/monotonic_buffer_resource.hpp"
 #include "caf/detail/print.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/parser_state.hpp"
@@ -16,6 +15,7 @@
 #include <cstdint>
 #include <cstring>
 #include <iterator>
+#include <memory_resource>
 #include <string_view>
 #include <variant>
 
@@ -32,7 +32,7 @@ namespace caf::detail::json {
 // Wraps a buffer resource with a reference count.
 struct CAF_CORE_EXPORT storage : public ref_counted {
   /// Provides the memory for all of our parsed JSON entities.
-  detail::monotonic_buffer_resource buf;
+  std::pmr::monotonic_buffer_resource buf;
 };
 
 // -- helper for modeling the JSON type system ---------------------------------
@@ -70,7 +70,7 @@ using linked_list = caf::detail::mbr_list<T>;
 
 /// Re-allocates the given string at the buffer resource.
 CAF_CORE_EXPORT std::string_view realloc(std::string_view str,
-                                         monotonic_buffer_resource* res);
+                                         std::pmr::memory_resource* res);
 
 inline std::string_view realloc(std::string_view str, const storage_ptr& ptr) {
   return realloc(str, &ptr->buf);
@@ -79,7 +79,7 @@ inline std::string_view realloc(std::string_view str, const storage_ptr& ptr) {
 /// Concatenates all strings and allocates a single new string for the result.
 CAF_CORE_EXPORT std::string_view
 concat(std::initializer_list<std::string_view> xs,
-       monotonic_buffer_resource* res);
+       std::pmr::memory_resource* res);
 
 inline std::string_view concat(std::initializer_list<std::string_view> xs,
                                const storage_ptr& ptr) {
@@ -160,7 +160,7 @@ public:
     return data.index() == undefined_index;
   }
 
-  void assign_string(std::string_view str, monotonic_buffer_resource* res) {
+  void assign_string(std::string_view str, std::pmr::memory_resource* res) {
     data = realloc(str, res);
   }
 
@@ -168,16 +168,16 @@ public:
     data = realloc(str, &ptr->buf);
   }
 
-  void assign_object(monotonic_buffer_resource* res) {
-    data = object{object_allocator{res}};
+  void assign_object(std::pmr::memory_resource* res) {
+    data = object{res};
   }
 
   void assign_object(const storage_ptr& ptr) {
     assign_object(&ptr->buf);
   }
 
-  void assign_array(monotonic_buffer_resource* res) {
-    data = array{array_allocator{res}};
+  void assign_array(std::pmr::memory_resource* res) {
+    data = array{res};
   }
 
   void assign_array(const storage_ptr& ptr) {
@@ -211,19 +211,19 @@ using object = value::object;
 
 // -- factory functions --------------------------------------------------------
 
-CAF_CORE_EXPORT value* make_value(monotonic_buffer_resource* storage);
+CAF_CORE_EXPORT value* make_value(std::pmr::memory_resource* storage);
 
 inline value* make_value(const storage_ptr& ptr) {
   return make_value(&ptr->buf);
 }
 
-CAF_CORE_EXPORT array* make_array(monotonic_buffer_resource* storage);
+CAF_CORE_EXPORT array* make_array(std::pmr::memory_resource* storage);
 
 inline array* make_array(const storage_ptr& ptr) {
   return make_array(&ptr->buf);
 }
 
-CAF_CORE_EXPORT object* make_object(monotonic_buffer_resource* storage);
+CAF_CORE_EXPORT object* make_object(std::pmr::memory_resource* storage);
 
 inline object* make_object(const storage_ptr& ptr) {
   return make_object(&ptr->buf);
@@ -318,13 +318,13 @@ bool save(Serializer& sink, const array& arr) {
 // -- loading ------------------------------------------------------------------
 
 template <class Deserializer>
-bool load(Deserializer& source, object& obj, monotonic_buffer_resource* res);
+bool load(Deserializer& source, object& obj, std::pmr::memory_resource* res);
 
 template <class Deserializer>
-bool load(Deserializer& source, array& arr, monotonic_buffer_resource* res);
+bool load(Deserializer& source, array& arr, std::pmr::memory_resource* res);
 
 template <class Deserializer>
-bool load(Deserializer& source, value& val, monotonic_buffer_resource* res) {
+bool load(Deserializer& source, value& val, std::pmr::memory_resource* res) {
   // On the "wire", we only use the public types.
   if (!source.begin_object(type_id_v<json_value>, type_name_v<json_value>))
     return false;
@@ -382,12 +382,12 @@ bool load(Deserializer& source, value& val, monotonic_buffer_resource* res) {
       break;
     }
     case value::array_index:
-      val.data = array{array::allocator_type{res}};
+      val.data = array{res};
       if (!load(source, std::get<array>(val.data), res))
         return false;
       break;
     case value::object_index:
-      val.data = object{object::allocator_type{res}};
+      val.data = object{res};
       if (!load(source, std::get<object>(val.data), res))
         return false;
       break;
@@ -400,7 +400,7 @@ bool load(Deserializer& source, value& val, monotonic_buffer_resource* res) {
 }
 
 template <class Deserializer>
-bool load(Deserializer& source, object& obj, monotonic_buffer_resource* res) {
+bool load(Deserializer& source, object& obj, std::pmr::memory_resource* res) {
   auto size = size_t{0};
   if (!source.begin_associative_array(size))
     return false;
@@ -428,7 +428,7 @@ bool load(Deserializer& source, object& obj, monotonic_buffer_resource* res) {
 }
 
 template <class Deserializer>
-bool load(Deserializer& source, array& arr, monotonic_buffer_resource* res) {
+bool load(Deserializer& source, array& arr, std::pmr::memory_resource* res) {
   auto size = size_t{0};
   if (!source.begin_sequence(size))
     return false;
@@ -464,21 +464,21 @@ using mutable_string_parser_state = parser_state<char*>;
 using file_parser_state = parser_state<std::istreambuf_iterator<char>>;
 
 // Parses the input string and makes a deep copy of all strings.
-value* parse(string_parser_state& ps, monotonic_buffer_resource* storage);
+value* parse(string_parser_state& ps, std::pmr::memory_resource* storage);
 
 // Parses the input string and makes a deep copy of all strings.
-value* parse(file_parser_state& ps, monotonic_buffer_resource* storage);
+value* parse(file_parser_state& ps, std::pmr::memory_resource* storage);
 
 // Parses the input and makes a shallow copy of strings whenever possible.
 // Strings that do not have escaped characters are not copied, other strings
 // will be copied.
 value* parse_shallow(string_parser_state& ps,
-                     monotonic_buffer_resource* storage);
+                     std::pmr::memory_resource* storage);
 
 // Parses the input and makes a shallow copy of all strings. Strings with
 // escaped characters are decoded in place.
 value* parse_in_situ(mutable_string_parser_state& ps,
-                     monotonic_buffer_resource* storage);
+                     std::pmr::memory_resource* storage);
 
 // -- printing -----------------------------------------------------------------
 

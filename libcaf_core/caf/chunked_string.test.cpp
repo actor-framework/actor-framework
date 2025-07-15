@@ -6,7 +6,7 @@
 
 #include "caf/test/test.hpp"
 
-#include "caf/detail/monotonic_buffer_resource.hpp"
+#include <memory_resource>
 
 using namespace caf;
 using namespace std::literals;
@@ -46,7 +46,7 @@ TEST("format") {
 }
 
 TEST("builder") {
-  auto resource = detail::monotonic_buffer_resource{};
+  auto resource = std::pmr::monotonic_buffer_resource{};
   auto builder = chunked_string_builder{&resource};
   auto out = chunked_string_builder_output_iterator{&builder};
   SECTION("empty") {

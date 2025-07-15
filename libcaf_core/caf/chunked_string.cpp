@@ -4,19 +4,11 @@
 
 #include "caf/chunked_string.hpp"
 
-#include "caf/detail/monotonic_buffer_resource.hpp"
-
+#include <memory_resource>
 #include <numeric>
 #include <ostream>
 
 namespace caf {
-
-namespace {
-
-template <class T>
-using allocator_t = detail::monotonic_buffer_resource::allocator<T>;
-
-} // namespace
 
 size_t chunked_string::size() const noexcept {
   auto fn = [](size_t acc, std::string_view chunk) {
@@ -40,18 +32,19 @@ std::ostream& operator<<(std::ostream& out, const chunked_string& str) {
 }
 
 chunked_string_builder::chunked_string_builder(
-  resource_type* resource) noexcept {
+  std::pmr::memory_resource* resource) noexcept {
   new (&chunks_) list_type(resource);
 }
 
 void chunked_string_builder::append(char ch) {
+  std::pmr::polymorphic_allocator<char> allocator{chunks_.resource()};
   if (current_block_ == nullptr) { // Lazy initialization.
-    current_block_ = allocator_t<char>{resource()}.allocate(chunk_size);
+    current_block_ = allocator.allocate(chunk_size);
     write_pos_ = 0;
   } else if (write_pos_ == chunk_size) { // Flush current block if necessary.
     auto& back = chunks_.emplace_back();
     back = std::string_view{current_block_, chunk_size};
-    current_block_ = allocator_t<char>{resource()}.allocate(chunk_size);
+    current_block_ = allocator.allocate(chunk_size);
     write_pos_ = 0;
   }
   current_block_[write_pos_++] = ch;

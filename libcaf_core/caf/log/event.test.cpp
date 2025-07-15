@@ -79,7 +79,7 @@ TEST("fields builder") {
     builder.field("foo-7-2", 2);
     builder.field("foo-7-3", init_sub_sub_fields);
   };
-  auto resource = detail::monotonic_buffer_resource{};
+  auto resource = std::pmr::monotonic_buffer_resource{};
   auto fields = log::event_fields_builder{&resource}
                   .field("foo-1", true)
                   .field("foo-2", 23)

@@ -14,6 +14,7 @@
 #include "caf/string_algorithms.hpp"
 
 #include <fstream>
+#include <memory_resource>
 
 namespace {
 
@@ -145,8 +146,7 @@ public:
     = std::variant<const detail::json::value*, const detail::json::object*,
                    detail::json::null_t, json_key, sequence, members>;
 
-  using stack_allocator
-    = detail::monotonic_buffer_resource::allocator<value_type>;
+  using stack_allocator = std::pmr::polymorphic_allocator<value_type>;
 
   using stack_type = std::vector<value_type, stack_allocator>;
 
@@ -242,8 +242,8 @@ public:
       return false;
     }
     err_.reset();
-    detail::monotonic_buffer_resource::allocator<stack_type> alloc{&buf_};
-    st_ = new (alloc.allocate(1)) stack_type(stack_allocator{&buf_});
+    std::pmr::polymorphic_allocator<stack_type> alloc{&buf_};
+    st_ = new (alloc.allocate(1)) stack_type(alloc);
     st_->reserve(16);
     st_->emplace_back(root_);
     return true;
@@ -270,8 +270,8 @@ public:
       return false;
     }
     err_.reset();
-    detail::monotonic_buffer_resource::allocator<stack_type> alloc{&buf_};
-    st_ = new (alloc.allocate(1)) stack_type(stack_allocator{&buf_});
+    std::pmr::polymorphic_allocator<stack_type> alloc{&buf_};
+    st_ = new (alloc.allocate(1)) stack_type(alloc);
     st_->reserve(16);
     st_->emplace_back(root_);
     return true;
@@ -310,7 +310,7 @@ public:
 
   /// Removes any loaded JSON data and reclaims memory resources.
   void reset() {
-    buf_.reclaim();
+    buf_.release();
     st_ = nullptr;
     err_.reset();
     field_.clear();
@@ -888,7 +888,7 @@ private:
 
   actor_system* sys_ = nullptr;
 
-  detail::monotonic_buffer_resource buf_;
+  std::pmr::monotonic_buffer_resource buf_;
 
   stack_type* st_ = nullptr;
 

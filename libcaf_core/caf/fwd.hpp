@@ -275,7 +275,6 @@ struct make_actor_util;
 class actor_system_access;
 class actor_system_config_access;
 class mailbox_factory;
-class monotonic_buffer_resource;
 
 template <class>
 struct gauge_oracle;

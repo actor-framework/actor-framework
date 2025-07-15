@@ -14,6 +14,7 @@
 #include <cstddef>
 #include <iosfwd>
 #include <iterator>
+#include <memory_resource>
 #include <string>
 #include <string_view>
 
@@ -76,17 +77,15 @@ CAF_CORE_EXPORT std::string to_string(const chunked_string& str);
 CAF_CORE_EXPORT std::ostream& operator<<(std::ostream& out,
                                          const chunked_string& str);
 
-/// Builds a chunked string by allocating each chunk on a monotonic buffer.
+/// Builds a chunked string by allocating each chunk on a memory resource.
 class CAF_CORE_EXPORT chunked_string_builder {
 public:
   using list_type = detail::mbr_list<std::string_view>;
 
-  using resource_type = detail::monotonic_buffer_resource;
-
   /// The size of a single chunk.
   static constexpr size_t chunk_size = 128;
 
-  explicit chunked_string_builder(resource_type* resource) noexcept;
+  explicit chunked_string_builder(std::pmr::memory_resource* resource) noexcept;
 
   ~chunked_string_builder() noexcept {
     // nop
@@ -100,8 +99,8 @@ public:
   chunked_string build();
 
 private:
-  [[nodiscard]] resource_type* resource() noexcept {
-    return chunks_.get_allocator().resource();
+  [[nodiscard]] std::pmr::memory_resource* resource() noexcept {
+    return chunks_.resource();
   }
 
   char* current_block_ = nullptr;
