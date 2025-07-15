@@ -8,6 +8,7 @@
 #include "caf/net/http/header.hpp"
 
 #include "caf/byte_span.hpp"
+#include "caf/callback.hpp"
 
 #include <string_view>
 #include <vector>
@@ -49,21 +50,20 @@ public:
   /// @returns `true` if parsing succeeded, `false` otherwise.
   template <class ConsumeFn>
   [[nodiscard]] bool for_each(ConsumeFn&& fn) {
+    using sig_t = void(http::header&&, const_byte_span);
     using fn_t = std::decay_t<ConsumeFn>;
-    auto cb = [](void* fnptr, http::header&& header, const_byte_span content) {
-      (*reinterpret_cast<fn_t*>(fnptr))(std::move(header), content);
-    };
-    return do_parse(cb, &fn);
+    using fn_ref_t = callback_ref_impl<fn_t, sig_t>;
+    fn_ref_t fn_ref{fn};
+    return do_parse(fn_ref);
   }
 
 private:
-  using consume_fn = void (*)(void*, http::header&&, const_byte_span);
+  using consume_fn = callback<void(http::header&&, const_byte_span)>;
 
   /// Parses multipart content and calls the given function for each part.
   /// @param fn Function to call for each part
-  /// @param obj User data passed to the function
   /// @returns true if parsing succeeded, false on any error
-  bool do_parse(consume_fn fn, void* obj);
+  bool do_parse(consume_fn& fn);
 
   /// Provides access to the HTTP body.
   const_byte_span body_;
