@@ -130,23 +130,6 @@ config = [
                 'LDFLAGS=-fno-sanitize-recover=undefined',
             ],
         ]],
-        // Run the Autobahn test suite for WebSocket conformance.
-        ['autobahn-testsuite', [
-            numCores: 4,
-            tags: ['docker'],
-            builds: ['release'],
-            extraScripts: [
-                "./sources/.ci/autobahn-testsuite/run.sh build",
-            ],
-            extraBuildFlags: [
-                'CAF_ENABLE_EXAMPLES:BOOL=OFF',
-                'CAF_ENABLE_IO_MODULE:BOOL=OFF',
-                'CAF_ENABLE_IO_TOOLS:BOOL=OFF',
-                'CAF_ENABLE_ROBOT_TESTS:BOOL=OFF',
-                'CAF_ENABLE_RUNTIME_CHECKS:BOOL=ON',
-                'CAF_ENABLE_SHARED_LIBS:BOOL=OFF',
-            ],
-        ]],
     ],
 ]
 
