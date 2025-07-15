@@ -7,17 +7,13 @@
 #include "caf/config.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/parser/chars.hpp"
-#include "caf/detail/parser/is_char.hpp"
 #include "caf/detail/parser/read_number.hpp"
 #include "caf/detail/parser/read_timespan.hpp"
-#include "caf/detail/scope_guard.hpp"
 #include "caf/none.hpp"
 #include "caf/pec.hpp"
-#include "caf/timestamp.hpp"
 
-#include <chrono>
 #include <cstdint>
-#include <string>
+#include <variant>
 
 CAF_PUSH_UNUSED_LABEL_WARNING
 
@@ -30,7 +26,6 @@ namespace caf::detail::parser {
 template <class State, class Consumer, class EnableRange = std::false_type>
 void read_number_or_timespan(State& ps, Consumer& consumer,
                              EnableRange enable_range = {}) {
-  using namespace std::chrono;
   struct interim_consumer {
     size_t invocations = 0;
     Consumer* outer = nullptr;

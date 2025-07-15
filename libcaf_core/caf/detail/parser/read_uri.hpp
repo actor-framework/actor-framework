@@ -8,7 +8,6 @@
 #include "caf/detail/parser/add_ascii.hpp"
 #include "caf/detail/parser/chars.hpp"
 #include "caf/detail/parser/read_ipv6_address.hpp"
-#include "caf/detail/scope_guard.hpp"
 #include "caf/pec.hpp"
 #include "caf/uri.hpp"
 

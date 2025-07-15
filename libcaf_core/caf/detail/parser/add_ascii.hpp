@@ -1,13 +1,10 @@
-
 // This file is part of CAF, the C++ Actor Framework. See the file LICENSE in
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/main/LICENSE.
 
 #pragma once
 
-#include "caf/config.hpp"
 #include "caf/detail/parser/ascii_to_int.hpp"
-#include "caf/detail/type_traits.hpp"
 
 #include <limits>
 #include <type_traits>

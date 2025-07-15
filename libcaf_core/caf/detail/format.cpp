@@ -8,7 +8,6 @@
 #include "caf/detail/assert.hpp"
 #include "caf/detail/consumer.hpp"
 #include "caf/detail/parser/chars.hpp"
-#include "caf/detail/parser/is_char.hpp"
 #include "caf/detail/parser/read_unsigned_integer.hpp"
 #include "caf/detail/print.hpp"
 #include "caf/parser_state.hpp"

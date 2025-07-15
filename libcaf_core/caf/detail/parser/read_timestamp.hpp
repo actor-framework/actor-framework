@@ -10,7 +10,6 @@
 #include "caf/detail/parser/add_ascii.hpp"
 #include "caf/detail/parser/chars.hpp"
 #include "caf/detail/parser/read_signed_integer.hpp"
-#include "caf/detail/scope_guard.hpp"
 
 CAF_PUSH_UNUSED_LABEL_WARNING
 

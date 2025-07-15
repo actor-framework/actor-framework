@@ -6,14 +6,12 @@
 
 #include "caf/config.hpp"
 #include "caf/detail/parser/read_signed_integer.hpp"
-#include "caf/detail/scope_guard.hpp"
 #include "caf/pec.hpp"
-#include "caf/timestamp.hpp"
+#include "caf/timespan.hpp"
 
 #include <chrono>
 #include <cstdint>
 #include <optional>
-#include <string>
 
 CAF_PUSH_UNUSED_LABEL_WARNING
 

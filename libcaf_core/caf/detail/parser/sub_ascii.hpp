@@ -6,7 +6,6 @@
 #pragma once
 
 #include "caf/detail/parser/ascii_to_int.hpp"
-#include "caf/detail/type_traits.hpp"
 
 #include <limits>
 #include <type_traits>
