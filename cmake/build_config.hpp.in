@@ -27,8 +27,6 @@
 
 #cmakedefine CAF_ENABLE_EXCEPTIONS
 
-#cmakedefine CAF_USE_STD_FORMAT
-
 // Backwards compatibility macros.
 #define CAF_MAJOR_VERSION @CAF_VERSION_MAJOR@
 #define CAF_MINOR_VERSION @CAF_VERSION_MINOR@

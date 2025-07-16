@@ -6,16 +6,8 @@
 
 #include "caf/test/test.hpp"
 
-#include <vector>
-
-#if !defined(CAF_USE_STD_FORMAT) && !defined(CAF_USE_SYSTEM_LIBFMT)
-#  define CAF_MINIMAL_FORMATTING
-#endif
-
 using namespace caf;
 using namespace std::literals;
-
-#ifdef CAF_USE_STD_FORMAT
 
 using caf::detail::fmt_fwd;
 // Types that have a formatter overload are forwarded as is.
@@ -28,8 +20,6 @@ static_assert(
 // Types without a formatter overload are forwarded as std::string.
 static_assert(
   std::is_same_v<decltype(fmt_fwd(std::declval<caf::uri>())), std::string>);
-
-#endif
 
 TEST("format strings without placeholders copies verbatim") {
   check_eq(detail::format("hello world"), "hello world");
@@ -109,16 +99,3 @@ TEST("format_to can incrementally build a string") {
   detail::format_to(std::back_inserter(str), "baz");
   check_eq(str, "foobarbaz");
 }
-
-#if defined(CAF_ENABLE_EXCEPTIONS) && defined(CAF_MINIMAL_FORMATTING)
-
-// Note: the standard version as well as libfmt (should) raise a compile-time
-//       error for these test cases. Only our minimal implementation throws.
-
-TEST("ill-formatted formatting strings throw") {
-  check_throws<std::logic_error>([] { detail::format("foo {"); });
-  check_throws<std::logic_error>([] { detail::format("foo } bar"); });
-  check_throws<std::logic_error>([] { detail::format("{1}", 1); });
-}
-
-#endif

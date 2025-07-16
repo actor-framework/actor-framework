@@ -70,7 +70,6 @@ config = [
             extraBuildFlags: [
                 'CMAKE_CXX_FLAGS:STRING=-Werror -Wno-maybe-uninitialized -Wno-uninitialized -Wno-array-bounds',
                 'CAF_CXX_VERSION:STRING=23',
-                'CAF_USE_STD_FORMAT:BOOL=ON',
             ],
         ]],
         ['ubuntu-22.04', [ // April 2027

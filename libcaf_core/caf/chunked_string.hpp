@@ -4,14 +4,15 @@
 
 #pragma once
 
-#include "caf/detail/build_config.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/mbr_list.hpp"
 #include "caf/detail/print.hpp"
 #include "caf/fwd.hpp"
+#include "caf/raise_error.hpp"
 
 #include <algorithm>
 #include <cstddef>
+#include <format>
 #include <iosfwd>
 #include <iterator>
 #include <memory_resource>
@@ -148,12 +149,6 @@ private:
 
 } // namespace caf
 
-#ifdef CAF_USE_STD_FORMAT
-
-#  include "caf/raise_error.hpp"
-
-#  include <format>
-
 namespace std {
 
 template <>
@@ -183,5 +178,3 @@ struct formatter<caf::chunked_string, char> {
 };
 
 } // namespace std
-
-#endif

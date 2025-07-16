@@ -414,7 +414,3 @@ caf_add_log_component(system)
 if(NOT MSVC AND CAF_ENABLE_TESTING)
   target_sources(caf-core-test PRIVATE caf/behavior.test.cpp)
 endif()
-
-if(NOT CAF_USE_STD_FORMAT)
-  target_sources(libcaf_core PRIVATE caf/detail/format.cpp)
-endif()
