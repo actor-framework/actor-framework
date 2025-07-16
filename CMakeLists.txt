@@ -76,7 +76,7 @@ cmake_dependent_option(CAF_ENABLE_OPENSSL_MODULE "Build OpenSSL module" ON
 
 # -- CAF options with non-boolean values ---------------------------------------
 
-set(CAF_CXX_VERSION 17 CACHE STRING "Set the C++ version to use for CAF")
+set(CAF_CXX_VERSION 20 CACHE STRING "Set the C++ version to use for CAF")
 set(CAF_LOG_LEVEL "QUIET" CACHE STRING "Set log verbosity of CAF components")
 set(CAF_EXCLUDE_TESTS "" CACHE STRING "List of excluded test suites")
 set(CAF_SANITIZERS "" CACHE STRING
