@@ -511,7 +511,7 @@ caf::actor make_server(caf::actor_system& sys, Fn fn) {
     return {[&](int x, int y) { return fn(x, y); }};
   };
   return sys.spawn(sf);
-};
+}
 
 TEST("send fan_out_request messages that return a result") {
   auto [self, launch] = sys.spawn_inactive();
@@ -558,7 +558,7 @@ TEST("send fan_out_request messages that return a result") {
   SECTION("await with policy select_all") {
     self->mail(1, 2)
       .fan_out_request(workers, infinite, policy::select_all_v)
-      .await([=](std::vector<int> results) {
+      .await([this, sum](std::vector<int> results) {
         for (auto result : results)
           check_eq(result, 3);
         *sum = std::accumulate(results.begin(), results.end(), 0);
@@ -579,7 +579,7 @@ TEST("send fan_out_request messages that return a result") {
   SECTION("await with policy select_any") {
     self->mail(1, 2)
       .fan_out_request(workers, infinite, policy::select_any_v)
-      .await([=](int result) { *sum = result; });
+      .await([sum](int result) { *sum = result; });
     launch();
     check_eq(mail_count(), 3u);
     expect<int, int>().with(1, 2).from(self_hdl).to(workers[2]);
@@ -609,7 +609,7 @@ TEST("send fan_out_request messages with void result") {
   SECTION("then with policy select_all") {
     self->mail(1, 2)
       .fan_out_request(workers, infinite, policy::select_all_v)
-      .then([=]() { *ran = true; });
+      .then([ran]() { *ran = true; });
     launch();
     expect<int, int>().with(1, 2).from(self_hdl).to(workers[0]);
     expect<int, int>().with(1, 2).from(self_hdl).to(workers[1]);
@@ -620,7 +620,7 @@ TEST("send fan_out_request messages with void result") {
   SECTION("then with policy select_any") {
     self->mail(1, 2)
       .fan_out_request(workers, infinite, policy::select_any_v)
-      .then([=]() { *ran = true; });
+      .then([ran]() { *ran = true; });
     launch();
     expect<int, int>().with(1, 2).from(self_hdl).to(workers[0]);
     expect<int, int>().with(1, 2).from(self_hdl).to(workers[1]);
@@ -631,7 +631,7 @@ TEST("send fan_out_request messages with void result") {
   SECTION("await with policy select_all") {
     self->mail(1, 2)
       .fan_out_request(workers, infinite, policy::select_all_v)
-      .await([=]() { *ran = true; });
+      .await([ran]() { *ran = true; });
     launch();
     expect<int, int>().with(1, 2).from(self_hdl).to(workers[2]);
     expect<int, int>().with(1, 2).from(self_hdl).to(workers[1]);
@@ -642,7 +642,7 @@ TEST("send fan_out_request messages with void result") {
   SECTION("await with policy select_any") {
     self->mail(1, 2)
       .fan_out_request(workers, infinite, policy::select_any_v)
-      .await([=]() { *ran = true; });
+      .await([ran]() { *ran = true; });
     launch();
     expect<int, int>().with(1, 2).from(self_hdl).to(workers[2]);
     expect<int, int>().with(1, 2).from(self_hdl).to(workers[1]);
