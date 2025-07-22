@@ -523,6 +523,7 @@ TEST("send fan_out_request messages that return a result") {
   };
   dispatch_messages();
   auto sum = std::make_shared<int>(0);
+  auto err = std::make_shared<error>();
   SECTION("then with policy select_all") {
     self->mail(1, 2)
       .fan_out_request(workers, infinite, policy::select_all_v)
@@ -593,6 +594,41 @@ TEST("send fan_out_request messages that return a result") {
     expect<int>().with(3).from(workers[0]).to(self_hdl);
     check_eq(mail_count(), 0u);
     check_eq(*sum, 3);
+  }
+  SECTION(".to_observable with policy select_all") {
+    self->mail(1, 2)
+      .fan_out_request(workers, infinite, policy::select_all_v)
+      .as_observable<int>()
+      .do_on_error([err](const error& x) { *err = x; })
+      .for_each([sum](std::vector<int> results) {
+        *sum = std::accumulate(results.begin(), results.end(), 0);
+      });
+    launch();
+    dispatch_messages();
+    check_eq(*err, error{});
+    check_eq(*sum, 9);
+  }
+  SECTION(".to_observable with policy select_any") {
+    self->mail(3, 5)
+      .fan_out_request(workers, infinite, policy::select_any_v)
+      .as_observable<int>()
+      .do_on_error([err](const error& x) { *err = x; })
+      .for_each([sum](int x) { *sum = x; });
+    launch();
+    dispatch_messages();
+    check_eq(*err, error{});
+    check_eq(*sum, 8);
+  }
+  SECTION("error response") {
+    self->mail("Hello")
+      .fan_out_request(workers, infinite, policy::select_any_v)
+      .as_observable<int>()
+      .do_on_error([err](const error& x) { *err = x; })
+      .for_each([sum](int x) { *sum = x; });
+    launch();
+    dispatch_messages();
+    check_eq(*err, error{sec::all_requests_failed});
+    check_eq(*sum, 0);
   }
 }
 

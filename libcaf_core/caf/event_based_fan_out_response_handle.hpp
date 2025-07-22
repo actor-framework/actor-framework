@@ -278,14 +278,50 @@ public:
                                  });
   }
 
-  // TODO as observable / as single
-  // auto as_observable() && {
-  //   auto cell = state_.self->template response_to_flow_cell<Results...>(
-  //     state_.mid, std::move(state_.pending_timeout));
-  //   using cell_t = typename decltype(cell)::value_type;
-  //   using val_t = typename cell_t::output_type;
-  //   return flow::single<val_t>{std::move(cell)}.as_observable();
-  // }
+  template <class T>
+  auto as_single() && {
+    auto lg = log::core::trace("ids_ = {}", state_.mids);
+    if constexpr (std::is_same_v<Policy, policy::select_all_tag_t>) {
+      auto cell = make_counted<flow::op::cell<std::vector<T>>>(
+        state_.self->flow_context());
+      auto bhvr = make_select_all_behavior(
+        [cell, self = state_.self](std::vector<T> value) {
+          cell->set_value(std::move(value));
+          self->run_actions();
+        },
+        [cell, self = state_.self](error err) {
+          cell->set_error(std::move(err));
+          self->run_actions();
+        });
+      for (const auto& mid : state_.mids)
+        state_.self->add_multiplexed_response_handler(mid, bhvr,
+                                                      state_.pending_timeout);
+      using val_t = typename decltype(cell)::value_type::output_type;
+      return flow::single<val_t>{std::move(cell)}.as_observable();
+    } else {
+      auto cell = make_counted<flow::op::cell<T>>(state_.self->flow_context());
+      auto bhvr = make_select_any_behavior(
+        [cell, self = state_.self](T value) {
+          cell->set_value(std::move(value));
+          self->run_actions();
+        },
+        [cell, self = state_.self](error err) {
+          cell->set_error(std::move(err));
+          self->run_actions();
+        });
+      for (const auto& mid : state_.mids)
+        state_.self->add_multiplexed_response_handler(mid, bhvr,
+                                                      state_.pending_timeout);
+      using val_t = typename decltype(cell)::value_type::output_type;
+      return flow::single<val_t>{std::move(cell)};
+    }
+  }
+
+  template <class T>
+  auto as_observable() && {
+    auto lg = log::core::trace("ids_ = {}", state_.mids);
+    return std::move(*this).template as_single<T>().as_observable();
+  }
 
 private:
   /// Holds the state for the handle.
