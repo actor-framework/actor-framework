@@ -9,7 +9,7 @@
 using namespace caf;
 using namespace std::literals;
 
-TEST("parsing a http request") {
+TEST("parsing an HTTP request") {
   net::http::header hdr;
   hdr.parse_fields("Host: localhost:8090\r\n"
                    "User-Agent: AwesomeLib/1.0\r\n"

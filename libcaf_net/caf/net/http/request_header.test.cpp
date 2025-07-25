@@ -10,7 +10,7 @@
 using namespace caf;
 using namespace std::literals;
 
-TEST("parsing a http request") {
+TEST("parsing an HTTP request") {
   net::http::request_header hdr;
   hdr.parse("GET /foo/bar?user=foo&pw=bar#baz HTTP/1.1\r\n"
             "Host: localhost:8090\r\n"
@@ -33,7 +33,7 @@ TEST("parsing a http request") {
 }
 
 OUTLINE("parsing requests") {
-  GIVEN("a http request with <method> method") {
+  GIVEN("an HTTP request with <method> method") {
     auto method_name = block_parameters<std::string>();
     WHEN("parsing the request with origin form target") {
       auto request = detail::format("{} /foo/bar HTTP/1.1\r\n\r\n",
@@ -119,9 +119,9 @@ TEST("parsing a server-wide HTTP OPTIONS request") {
   check(!hdr.authority().userinfo);
 }
 
-TEST("parsing an invalid http request") {
+TEST("parsing an invalid HTTP request") {
   net::http::request_header hdr;
-  SECTION("header must have a valid http method") {
+  SECTION("header must have a valid HTTP method") {
     hdr.parse("EXTERMINATE /foo/bar HTTP/1.1\r\n\r\n");
     check(!hdr.valid());
   }

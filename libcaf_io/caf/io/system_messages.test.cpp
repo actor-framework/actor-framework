@@ -150,7 +150,7 @@ TEST("datagram_servant_passivated_msg is serializable") {
     check_eq(msg1.handle, msg2->handle);
 }
 
-TEST("dataram_servant_closed_msg is serializable") {
+TEST("datagram_servant_closed_msg is serializable") {
   auto dummy_datagram = datagram_handle::from_int(42);
   auto msg1 = datagram_servant_closed_msg{std::vector{dummy_datagram}};
   auto msg2 = serialization_roundtrip(msg1);

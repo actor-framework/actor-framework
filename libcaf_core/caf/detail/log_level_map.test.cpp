@@ -36,7 +36,7 @@ TEST("log level maps render the default log levels") {
   check_eq(uut[level::trace + 1], "TRACE");
 }
 
-TEST("log level maps allows custom log levels") {
+TEST("log level maps allow custom log levels") {
   std::map<std::string, unsigned> custom{{"NOTICE"s, CAF_LOG_LEVEL_WARNING + 1},
                                          {"VERBOSE"s, CAF_LOG_LEVEL_INFO + 1}};
   detail::log_level_map uut;

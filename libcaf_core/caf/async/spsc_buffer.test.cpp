@@ -148,7 +148,7 @@ TEST("resources may be moved") {
 }
 
 SCENARIO("SPSC buffers may go past their capacity") {
-  GIVEN("an SPSC buffer with consumer and produer") {
+  GIVEN("an SPSC buffer with consumer and producer") {
     auto prod = make_counted<dummy_producer>();
     auto cons = make_counted<dummy_consumer>();
     auto buf = make_counted<async::spsc_buffer<int>>(10, 2);
@@ -191,7 +191,7 @@ SCENARIO("SPSC buffers may go past their capacity") {
 }
 
 SCENARIO("the prioritize_errors policy skips processing of pending items") {
-  GIVEN("an SPSC buffer with consumer and produer") {
+  GIVEN("an SPSC buffer with consumer and producer") {
     auto prod = make_counted<dummy_producer>();
     auto cons = make_counted<dummy_consumer>();
     auto buf = make_counted<async::spsc_buffer<int>>(10, 2);

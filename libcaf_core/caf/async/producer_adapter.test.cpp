@@ -155,7 +155,7 @@ void receiver_impl(event_based_actor* self, pull_resource_t inputs,
 
 WITH_FIXTURE(fixture) {
 
-SCENARIO("producers adapters allow integrating producers into event loops") {
+SCENARIO("producer adapters allow integrating producers into event loops") {
   GIVEN("a dynamic set of blocking producers") {
     WHEN("consuming the generated values from an actor via flat_map") {
       THEN("the actor merges all values from all buffers into one") {
