@@ -216,6 +216,7 @@ function(caf_export_and_install_lib component)
           DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
           COMPONENT ${component}
           FILES_MATCHING PATTERN "*.hpp"
+          PATTERN "*.test.hpp" EXCLUDE
           PATTERN "*/internal/*" EXCLUDE)
   install(FILES "${CMAKE_CURRENT_BINARY_DIR}/caf/detail/${component}_export.hpp"
           DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/caf/detail/")
@@ -295,10 +296,12 @@ function(caf_add_component name)
       get_filename_component(test_path ${source_file} DIRECTORY)
       string(REPLACE "/" "." test_name "${test_path}/${test_name}")
       target_sources("caf-${name}-test" PRIVATE ${source_file})
-      set_property(SOURCE ${source_file} PROPERTY COMPILE_DEFINITIONS
-                   CAF_TEST_SUITE_NAME=${test_name})
-      add_test(NAME ${test_name} COMMAND "caf-${name}-test" -s "^${test_name}$" -n -v5)
-      set_tests_properties(${test_name} PROPERTIES TIMEOUT 300)
+      if(NOT source_file MATCHES "^mock_")
+        set_property(SOURCE ${source_file} PROPERTY COMPILE_DEFINITIONS
+                     CAF_TEST_SUITE_NAME=${test_name})
+        add_test(NAME ${test_name} COMMAND "caf-${name}-test" -s "^${test_name}$" -n -v5)
+        set_tests_properties(${test_name} PROPERTIES TIMEOUT 300)
+      endif()
       if (MSVC)
         set_source_files_properties(${source_file} PROPERTIES
                                     COMPILE_FLAGS /wd4996)
