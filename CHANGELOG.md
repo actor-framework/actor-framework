@@ -34,6 +34,11 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The namespace `caf::net::http` now contains two new classes for dealing with
   HTTP multipart requests and responses: `multipart_reader` and
   `multipart_writer`.
+- The class `caf::async::consumer_resource<T>` now has a new member
+  function `consume_on` that allows actors to consume data from the resource
+  without having to use a flow. While flows are usually the preferred way to
+  process data from asynchronous sources, there are cases where direct control
+  over the data consumption is necessary.
 
 ### Fixed
 

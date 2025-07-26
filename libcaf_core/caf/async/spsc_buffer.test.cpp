@@ -8,10 +8,14 @@
 #include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
+#include "caf/async/mock_producer.test.hpp"
+
+#include "caf/detail/scope_guard.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/flow/coordinator.hpp"
 #include "caf/flow/observable_builder.hpp"
 #include "caf/flow/observer.hpp"
+#include "caf/log/test.hpp"
 #include "caf/scheduled_actor/flow.hpp"
 
 #include <memory>
@@ -475,6 +479,132 @@ SCENARIO("consumer resources may be converted to flows only once") {
         dispatch_messages();
         check(terminated(snk1));
         check(terminated(snk2));
+      }
+    }
+  }
+}
+
+struct mock_observer {
+  mock_observer(std::vector<int>& items) : items(&items) {
+  }
+
+  void on_next(const int& item) {
+    items->emplace_back(item);
+  }
+
+  void on_complete() {
+    completed = true;
+  }
+
+  void on_error(const error&) {
+    failed = true;
+  }
+
+  std::vector<int>* items;
+
+  bool completed = false;
+
+  bool failed = false;
+};
+
+SCENARIO("actors can consume items from SPSC buffers directly") {
+  GIVEN("a consumer resource") {
+    auto [rd, wr] = async::make_spsc_buffer_resource<int>(6, 2);
+    WHEN("binding it to an actor") {
+      auto wakeups = std::make_shared<int>(0);
+      auto items = std::make_shared<std::vector<int>>();
+      auto snk = sys.spawn(
+        [this, rd{rd}, wakeups, items](event_based_actor* self) mutable {
+          auto ptr = rd.consume_on(self, [wakeups, items](auto& src) {
+            ++*wakeups;
+            mock_observer obs{*items};
+            auto [again, pulled] = src.pull(100, obs);
+            caf::log::test::debug("again: {}, pulled: {}", again, pulled);
+            caf::log::test::debug("completed: {}, failed: {}", obs.completed,
+                                  obs.failed);
+          });
+          check_ne(ptr, nullptr);
+        });
+      THEN("the actor receives the items from the buffer") {
+        auto buf = wr.try_open();
+        auto prod = make_counted<async::mock_producer>();
+        buf->set_producer(prod);
+        auto buf_guard = detail::scope_guard([buf]() noexcept {
+          try {
+            buf->close();
+          } catch (...) {
+            fprintf(stderr, "failed to close buffer! %s:%d\n", __FILE__,
+                    __LINE__);
+          }
+        });
+        check_eq(*wakeups, 0);
+        require_ne(buf, nullptr);
+        check_gt(buf->push(1), 0u);
+        check_gt(buf->push(2), 0u);
+        expect<action>().to(snk);
+        if (check_eq(items->size(), 2u)) {
+          check_eq(items->at(0), 1);
+          check_eq(items->at(1), 2);
+        }
+        check_eq(*wakeups, 1);
+        check_eq(mail_count(snk), 0u);
+        buf->close();
+        expect<action>().to(snk);
+        check_eq(*wakeups, 2);
+        check_eq(snk->ctrl()->strong_refs.load(), 1u);
+      }
+    }
+  }
+}
+
+SCENARIO("actors can dispose buffer consumers") {
+  GIVEN("a consumer resource") {
+    auto [rd, wr] = async::make_spsc_buffer_resource<int>(6, 2);
+    WHEN("binding it to an actor") {
+      auto wakeups = std::make_shared<int>(0);
+      auto items = std::make_shared<std::vector<int>>();
+      auto snk
+        = sys.spawn([rd{rd}, wakeups, items](event_based_actor* snk) mutable {
+            std::ignore = rd.consume_on(snk, [wakeups, items](auto& src) {
+              ++*wakeups;
+              mock_observer obs{*items};
+              auto [again, pulled] = src.pull(1, obs);
+              caf::log::test::debug("again: {}, pulled: {}", again, pulled);
+              caf::log::test::debug("completed: {}, failed: {}", obs.completed,
+                                    obs.failed);
+              while (again && pulled > 0 && items->size() < 2) {
+                std::tie(again, pulled) = src.pull(1, obs);
+              }
+              if (items->size() == 2) {
+                src.dispose();
+              }
+            });
+          });
+      THEN("the actor receives the items from the buffer") {
+        check_eq(*wakeups, 0);
+        auto buf = wr.try_open();
+        auto prod = make_counted<async::mock_producer>();
+        buf->set_producer(prod);
+        auto buf_guard = detail::scope_guard([buf]() noexcept {
+          try {
+            buf->close();
+          } catch (...) {
+            fprintf(stderr, "failed to close buffer! %s:%d\n", __FILE__,
+                    __LINE__);
+          }
+        });
+        require_ne(buf, nullptr);
+        check_gt(buf->push(1), 0u);
+        check_gt(buf->push(2), 0u);
+        check_gt(buf->push(3), 0u);
+        expect<action>().to(snk);
+        check(prod->canceled.load());
+        if (check_eq(items->size(), 2u)) {
+          check_eq(items->at(0), 1);
+          check_eq(items->at(1), 2);
+        }
+        check_eq(mail_count(snk), 0u);
+        check_eq(snk->ctrl()->strong_refs.load(), 1u);
       }
     }
   }
