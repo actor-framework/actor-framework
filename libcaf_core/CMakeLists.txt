@@ -105,6 +105,8 @@ caf_add_component(
     caf/async/consumer_adapter.test.cpp
     caf/async/execution_context.cpp
     caf/async/file.test.cpp
+    caf/async/mock_consumer.test.cpp
+    caf/async/mock_producer.test.cpp
     caf/async/producer.cpp
     caf/async/producer_adapter.test.cpp
     caf/async/promise.test.cpp
