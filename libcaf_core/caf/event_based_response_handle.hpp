@@ -60,25 +60,6 @@ template <class Result>
 using event_based_delayed_response_handle_t =
   typename event_based_delayed_response_handle_oracle<Result>::type;
 
-template <class...>
-struct event_based_response_handle_res {
-  using type = void;
-};
-
-template <class T>
-struct event_based_response_handle_res<T> {
-  using type = T;
-};
-
-template <>
-struct event_based_response_handle_res<message> {
-  using type = void;
-};
-
-template <class... Ts>
-using event_based_response_handle_res_t =
-  typename event_based_response_handle_res<Ts...>::type;
-
 } // namespace caf::detail
 
 namespace caf {
