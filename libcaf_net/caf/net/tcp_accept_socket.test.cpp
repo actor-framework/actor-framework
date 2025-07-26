@@ -62,7 +62,7 @@ TEST("opening and accepting tcp on a socket") {
   }
 }
 
-TEST("calling accepting") {
+TEST("calling accept") {
   SECTION("on an invalid socket") {
     tcp_accept_socket x;
     auto err = accept(x);

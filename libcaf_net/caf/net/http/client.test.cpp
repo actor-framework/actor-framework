@@ -260,7 +260,7 @@ SCENARIO("the client sends HTTP requests") {
 }
 
 OUTLINE("sending all available HTTP methods") {
-  GIVEN("a http request with <method> method") {
+  GIVEN("an HTTP request with <method> method") {
     auto method_name = block_parameters<std::string>();
     WHEN("the client sends the <enum value> message") {
       auto method = block_parameters<net::http::method>();

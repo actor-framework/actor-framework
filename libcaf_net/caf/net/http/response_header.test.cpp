@@ -9,7 +9,7 @@
 using namespace caf;
 using namespace std::literals;
 
-TEST("parsing a valid http response") {
+TEST("parsing a valid HTTP response") {
   net::http::response_header hdr;
   SECTION("parsing a one line header") {
     hdr.parse("HTTP/1 200 OK\r\n\r\n");
@@ -39,9 +39,9 @@ TEST("parsing a valid http response") {
   }
 }
 
-TEST("parsing an invalid http response") {
+TEST("parsing an invalid HTTP response") {
   net::http::response_header hdr;
-  SECTION("header must have the http version") {
+  SECTION("header must have the HTTP version") {
     hdr.parse("HTTP/Foo.Bar 200 OK\r\n\r\n");
     check(!hdr.valid());
   }
