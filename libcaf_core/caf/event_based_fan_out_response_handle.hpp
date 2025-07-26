@@ -282,7 +282,8 @@ public:
   auto as_single() && {
     auto lg = log::core::trace("ids_ = {}", state_.mids);
     if constexpr (std::is_same_v<Policy, policy::select_all_tag_t>) {
-      auto cell = make_counted<flow::op::cell<std::vector<T>>>(state_.self->flow_context());
+      auto cell = make_counted<flow::op::cell<std::vector<T>>>(
+        state_.self->flow_context());
       auto bhvr = make_select_all_behavior(
         [this, cell](std::vector<T> value) {
           cell->set_value(std::move(value));
