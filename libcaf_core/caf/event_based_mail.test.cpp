@@ -625,7 +625,9 @@ TEST("send fan_out_request messages that return a result") {
       .as_observable<int>()
       .do_on_error([err](const error& x) { *err = x; })
       .for_each([sum](int x) { *sum = x; });
-    check_eq(*err, error{sec::unexpected_message});
+    launch();
+    dispatch_messages();
+    check_eq(*err, error{sec::all_requests_failed});
     check_eq(*sum, 0);
   }
 }
