@@ -537,12 +537,16 @@ SCENARIO("actors can consume items from SPSC buffers directly") {
         auto prod = make_counted<async::mock_producer>();
         buf->set_producer(prod);
         auto buf_guard = detail::scope_guard([buf]() noexcept {
+#ifdef CAF_ENABLE_EXCEPTIONS
           try {
             buf->close();
           } catch (...) {
             fprintf(stderr, "failed to close buffer! %s:%d\n", __FILE__,
                     __LINE__);
           }
+#else
+          buf->close();
+#endif
         });
         check_eq(*wakeups, 0);
         require_ne(buf, nullptr);
@@ -594,12 +598,16 @@ SCENARIO("actors can dispose buffer consumers") {
         auto prod = make_counted<async::mock_producer>();
         buf->set_producer(prod);
         auto buf_guard = detail::scope_guard([buf]() noexcept {
+#ifdef CAF_ENABLE_EXCEPTIONS
           try {
             buf->close();
           } catch (...) {
             fprintf(stderr, "failed to close buffer! %s:%d\n", __FILE__,
                     __LINE__);
           }
+#else
+          buf->close();
+#endif
         });
         require_ne(buf, nullptr);
         check_gt(buf->push(1), 0u);
@@ -628,7 +636,7 @@ SCENARIO("actors can produce items to SPSC buffers directly") {
         [this, wr = wr, demand, canceled](event_based_actor* self) mutable {
           auto ptr = wr.produce_on(
             self,
-            [demand, first = false](auto& out, size_t new_demand) mutable {
+            [demand, first = true](auto& out, size_t new_demand) mutable {
               *demand += new_demand;
               if (first) {
                 out.push(1);
@@ -643,12 +651,16 @@ SCENARIO("actors can produce items to SPSC buffers directly") {
         require_ne(buf, nullptr);
         auto con = make_counted<async::mock_consumer>();
         auto buf_guard = detail::scope_guard([buf]() noexcept {
+#ifdef CAF_ENABLE_EXCEPTIONS
           try {
             buf->cancel();
           } catch (...) {
             fprintf(stderr, "failed to cancel buffer subscription! %s:%d\n",
                     __FILE__, __LINE__);
           }
+#else
+          buf->cancel();
+#endif
         });
         check_eq(mail_count(), 0u);
         buf->set_consumer(con);
