@@ -285,13 +285,13 @@ public:
       auto cell = make_counted<flow::op::cell<std::vector<T>>>(
         state_.self->flow_context());
       auto bhvr = make_select_all_behavior(
-        [this, cell](std::vector<T> value) {
+        [cell, self = state_.self](std::vector<T> value) {
           cell->set_value(std::move(value));
-          state_.self->run_actions();
+          self->run_actions();
         },
-        [this, cell](error err) {
+        [cell, self = state_.self](error err) {
           cell->set_error(std::move(err));
-          state_.self->run_actions();
+          self->run_actions();
         });
       for (const auto& mid : state_.mids)
         state_.self->add_multiplexed_response_handler(mid, bhvr,
@@ -301,13 +301,13 @@ public:
     } else {
       auto cell = make_counted<flow::op::cell<T>>(state_.self->flow_context());
       auto bhvr = make_select_any_behavior(
-        [this, cell](T value) {
+        [cell, self = state_.self](T value) {
           cell->set_value(std::move(value));
-          state_.self->run_actions();
+          self->run_actions();
         },
-        [this, cell](error err) {
+        [cell, self = state_.self](error err) {
           cell->set_error(std::move(err));
-          state_.self->run_actions();
+          self->run_actions();
         });
       for (const auto& mid : state_.mids)
         state_.self->add_multiplexed_response_handler(mid, bhvr,
