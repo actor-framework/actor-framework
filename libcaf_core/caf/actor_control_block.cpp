@@ -7,6 +7,7 @@
 #include "caf/abstract_actor.hpp"
 #include "caf/actor_registry.hpp"
 #include "caf/actor_system.hpp"
+#include "caf/detail/aligned_alloc.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/log/core.hpp"
 #include "caf/mailbox_element.hpp"
@@ -39,7 +40,7 @@ void intrusive_ptr_release_weak(actor_control_block* x) {
   if (x->weak_refs == 1
       || x->weak_refs.fetch_sub(1, std::memory_order_acq_rel) == 1) {
     x->~actor_control_block();
-    free(x);
+    detail::aligned_free(x);
   }
 }
 
