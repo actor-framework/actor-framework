@@ -488,9 +488,8 @@ public:
   /// @note Both @p buf_capacity and @p demand_threshold are considered hints.
   ///       The actor may increase (or decrease) the effective settings
   ///       depending on the amount of messages per batch or other factors.
-  template <class T>
-    requires flow::has_impl_include_v<scheduled_actor>
-  flow::observable<T>
+  template <class T, bool = flow::assert_has_impl_include<T>>
+  auto
   observe(typed_stream<T> what, size_t buf_capacity, size_t demand_threshold);
 
   /// Lifts a stream into an @ref caf::flow::observable.
@@ -501,10 +500,8 @@ public:
   /// @note Both @p buf_capacity and @p demand_threshold are considered hints.
   ///       The actor may increase (or decrease) the effective settings
   ///       depending on the amount of messages per batch or other factors.
-  template <class T>
-    requires flow::has_impl_include_v<scheduled_actor>
-  flow::observable<T>
-  observe_as(stream what, size_t buf_capacity, size_t demand_threshold);
+  template <class T, bool = flow::assert_has_impl_include<T>>
+  auto observe_as(stream what, size_t buf_capacity, size_t demand_threshold);
 
   /// Deregisters a local stream. After calling this function, other actors can
   /// no longer access the flow that has been attached to the stream. Current
@@ -764,10 +761,8 @@ private:
   /// Stores the current timeout state.
   timeout_state timeout_state_;
 
-  template <class T>
-    requires flow::has_impl_include_v<scheduled_actor>
-  flow::single<T>
-  single_from_response(message_id mid, disposable pending_timeout);
+  template <class T, bool = flow::assert_has_impl_include<T>>
+  auto single_from_response(message_id mid, disposable pending_timeout);
 
   void do_unstash(mailbox_element_ptr ptr) override;
 

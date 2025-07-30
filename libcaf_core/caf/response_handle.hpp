@@ -98,17 +98,15 @@ public:
     then(std::move(f), [self](error& err) { self->call_error_handler(err); });
   }
 
-  template <class T>
-    requires flow::has_impl_include_v<scheduled_actor>
-  flow::single<T> as_single() && {
+  template <class T, bool = flow::assert_has_impl_include<T>>
+  auto as_single() && {
     static_assert(std::is_same_v<response_type, type_list<T>>
                   || std::is_same_v<response_type, message>);
     return self_->template single_from_response<T>(policy_);
   }
 
-  template <class T>
-    requires flow::has_impl_include_v<scheduled_actor>
-  flow::observable<T> as_observable() && {
+  template <class T, bool = flow::assert_has_impl_include<T>>
+  auto as_observable() && {
     static_assert(std::is_same_v<response_type, type_list<T>>
                   || std::is_same_v<response_type, message>);
     return self_->template single_from_response<T>(policy_).as_observable();

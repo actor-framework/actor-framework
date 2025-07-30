@@ -44,21 +44,17 @@ flow::single<T> scheduled_actor::single_from_response_impl(Policy& policy) {
   return flow::single<T>{std::move(cell)};
 }
 
-template <class T>
-  requires flow::has_impl_include_v<scheduled_actor>
-flow::observable<T> scheduled_actor::observe(typed_stream<T> what,
-                                             size_t buf_capacity,
-                                             size_t demand_threshold) {
+template <class T, bool>
+auto scheduled_actor::observe(typed_stream<T> what, size_t buf_capacity,
+                              size_t demand_threshold) {
   return do_observe(what.dynamically_typed(), buf_capacity, demand_threshold)
     .transform(detail::unbatch<T>{})
     .as_observable();
 }
 
-template <class T>
-  requires flow::has_impl_include_v<scheduled_actor>
-flow::observable<T> scheduled_actor::observe_as(stream what,
-                                                size_t buf_capacity,
-                                                size_t demand_threshold) {
+template <class T, bool>
+auto scheduled_actor::observe_as(stream what, size_t buf_capacity,
+                                 size_t demand_threshold) {
   if (what.template has_element_type<T>())
     return do_observe(what, buf_capacity, demand_threshold)
       .transform(detail::unbatch<T>{})
@@ -66,11 +62,9 @@ flow::observable<T> scheduled_actor::observe_as(stream what,
   return make_observable().fail<T>(make_error(sec::type_clash));
 }
 
-template <class T>
-  requires flow::has_impl_include_v<scheduled_actor>
-flow::single<T>
-scheduled_actor::single_from_response(message_id mid,
-                                      disposable pending_timeout) {
+template <class T, bool>
+auto scheduled_actor::single_from_response(message_id mid,
+                                           disposable pending_timeout) {
   auto cell = make_counted<flow::op::cell<T>>(this);
   auto bhvr = behavior{
     [this, cell](T& val) {

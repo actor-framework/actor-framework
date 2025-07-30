@@ -23,8 +23,7 @@ namespace caf {
 /// Utility function to force the type of `self` to depend on `T` and to raise a
 /// compiler error if the user did not include 'caf/scheduled_actor/flow.hpp'.
 /// The function itself does nothing and simply returns `self`.
-template <class, class T>
-  requires flow::has_impl_include_v<T>
+template <class, class T, bool = flow::assert_has_impl_include<T>>
 auto typed_actor_view_flow_access(T* self) {
   return self;
 }

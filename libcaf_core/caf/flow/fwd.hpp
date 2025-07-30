@@ -106,8 +106,16 @@ struct has_impl_include {
   static constexpr bool value = false;
 };
 
+template <class, class T>
+struct assert_has_impl_include_oracle {
+  static constexpr bool value = has_impl_include<T>::value;
+  static_assert(value,
+                "include 'caf/scheduled_actor/flow.hpp' for this method");
+};
+
 template <class T>
-constexpr bool has_impl_include_v = has_impl_include<T>::value;
+constexpr bool assert_has_impl_include
+  = assert_has_impl_include_oracle<T, scheduled_actor>::value;
 
 } // namespace caf::flow
 
