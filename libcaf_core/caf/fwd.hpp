@@ -62,6 +62,7 @@ template <class...> class cow_tuple;
 template <class...> class delegated;
 template <class...> class event_based_delayed_response_handle;
 template <class...> class event_based_response_handle;
+template <class, class...> class event_based_fan_out_response_handle;
 template <class...> class result;
 template <class...> class typed_actor;
 template <class...> class typed_actor_pointer;
