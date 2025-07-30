@@ -23,8 +23,8 @@ CAF_CORE_EXPORT void log_cstring_error(const char* cstring);
 #ifdef CAF_ENABLE_EXCEPTIONS
 
 template <class T>
-[[noreturn]] std::enable_if_t<std::is_constructible<T, const char*>::value>
-throw_impl(const char* msg) {
+  requires std::is_constructible<T, const char*>::value
+[[noreturn]] void throw_impl(const char* msg) {
   throw T{msg};
 }
 

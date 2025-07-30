@@ -24,8 +24,8 @@ struct catch_all {
 
   catch_all(catch_all&& x) = default;
 
-  template <class T, class = std::enable_if_t<
-                       !std::is_same_v<std::decay_t<T>, catch_all>>>
+  template <class T>
+    requires(!std::is_same_v<std::decay_t<T>, catch_all>)
   explicit catch_all(T&& x) : handler(std::forward<T>(x)) {
     // nop
   }

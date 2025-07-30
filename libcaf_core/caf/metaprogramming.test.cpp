@@ -92,7 +92,8 @@ struct typed_beh {
   }
 
   template <class... Ts>
-  typename std::enable_if<sizeof...(Ifs) == sizeof...(Ts)>::type assign(Ts...) {
+    requires(sizeof...(Ifs) == sizeof...(Ts))
+  void assign(Ts...) {
     using expected = type_list<Ifs...>;
     using found = type_list<deduce_mpi_t<Ts>...>;
     pos = interface_mismatch_t<found, expected>::value;
@@ -100,7 +101,8 @@ struct typed_beh {
   }
 
   template <class... Ts>
-  typename std::enable_if<sizeof...(Ifs) != sizeof...(Ts)>::type assign(Ts...) {
+    requires(sizeof...(Ifs) != sizeof...(Ts))
+  void assign(Ts...) {
     // too many or too few handlers present
     pos = -1;
     valid = false;

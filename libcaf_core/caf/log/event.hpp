@@ -237,8 +237,8 @@ public:
 
   /// Adds a boolean or integer field.
   template <class T>
-  std::enable_if_t<std::is_integral_v<T>, event_fields_builder&>
-  field(std::string_view key, T value) {
+    requires std::is_integral_v<T>
+  event_fields_builder& field(std::string_view key, T value) {
     auto& field = fields_.emplace_back(std::string_view{},
                                        lift_integral(value));
     field.key = deep_copy(key);
@@ -276,11 +276,10 @@ public:
 
   /// Adds nested fields.
   template <class SubFieldsInitializer>
-  auto field(std::string_view key, SubFieldsInitializer&& init) //
-    -> std::enable_if_t<
-      std::is_same_v<decltype(init(std::declval<event_fields_builder&>())),
-                     void>,
-      event_fields_builder&> {
+  event_fields_builder& field(std::string_view key, SubFieldsInitializer&& init)
+    requires(std::is_same_v<
+             decltype(init(std::declval<event_fields_builder&>())), void>)
+  {
     auto& field = fields_.emplace_back(std::string_view{}, std::nullopt);
     field.key = deep_copy(key);
     event_fields_builder nested_builder{resource()};
@@ -342,8 +341,8 @@ public:
 
   /// Adds a boolean or integer field.
   template <class T>
-  std::enable_if_t<std::is_integral_v<T>, event_sender&&>
-  field(std::string_view key, T value) && {
+    requires std::is_integral_v<T>
+  event_sender&& field(std::string_view key, T value) && {
     if (logger_)
       fields_.field(key, value);
     return std::move(*this);
@@ -375,11 +374,10 @@ public:
 
   /// Adds nested fields.
   template <class SubFieldsInitializer>
-  auto field(std::string_view key, SubFieldsInitializer&& init) //
-    -> std::enable_if_t<
-      std::is_same_v<decltype(init(std::declval<event_fields_builder&>())),
-                     void>,
-      event_sender&&> {
+  event_sender&& field(std::string_view key, SubFieldsInitializer&& init)
+    requires(std::is_same_v<
+             decltype(init(std::declval<event_fields_builder&>())), void>)
+  {
     if (logger_)
       fields_.field(key, std::forward<SubFieldsInitializer>(init));
     return std::move(*this);

@@ -170,8 +170,8 @@ public:
   using super::super;
 
   /// Tags the message as urgent, i.e., sends it with high priority.
-  template <message_priority P = Priority,
-            class E = std::enable_if_t<P == message_priority::normal>>
+  template <message_priority P = Priority>
+    requires(P == message_priority::normal)
   [[nodiscard]] auto urgent() && {
     using result_t = async_mail_t<message_priority::high, Trait, Args...>;
     return result_t{super::self_, std::move(super::content_)};

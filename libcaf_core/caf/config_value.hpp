@@ -98,8 +98,8 @@ public:
 
   config_value(const config_value& other) = default;
 
-  template <class T, class = std::enable_if_t<
-                       !std::is_same_v<std::decay_t<T>, config_value>>>
+  template <class T>
+    requires(!std::is_same_v<std::decay_t<T>, config_value>)
   explicit config_value(T&& x) : data_(lift(std::forward<T>(x))) {
     // nop
   }
@@ -108,8 +108,8 @@ public:
 
   config_value& operator=(const config_value& other) = default;
 
-  template <class T, class = std::enable_if_t<
-                       !std::is_same_v<std::decay_t<T>, config_value>>>
+  template <class T>
+    requires(!std::is_same_v<std::decay_t<T>, config_value>)
   config_value& operator=(T&& x) {
     data_ = lift(std::forward<T>(x));
     return *this;

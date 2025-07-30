@@ -27,15 +27,15 @@ public:
     // nop
   }
 
-  template <class Supertype,
-            class = std::enable_if_t<detail::tl_subset_of<
-              signatures, typename Supertype::signatures>::value>>
+  template <class Supertype>
+    requires detail::tl_subset_of<signatures,
+                                  typename Supertype::signatures>::value
   typed_actor_pointer(Supertype* selfptr) : view_(selfptr) {
     // nop
   }
 
-  template <class... OtherSigs, class = std::enable_if_t<detail::tl_subset_of<
-                                  signatures, type_list<OtherSigs...>>::value>>
+  template <class... OtherSigs>
+    requires detail::tl_subset_of<signatures, type_list<OtherSigs...>>::value
   typed_actor_pointer(typed_actor_pointer<OtherSigs...> other)
     : view_(other.internal_ptr()) {
     // nop
@@ -49,18 +49,15 @@ public:
 
   typed_actor_pointer& operator=(const typed_actor_pointer&) = default;
 
-  template <
-    class Supertype,
-    class = std::enable_if_t< //
-      detail::tl_subset_of_v<signatures, typename Supertype::signatures>>>
+  template <class Supertype>
+    requires detail::tl_subset_of_v<signatures, typename Supertype::signatures>
   typed_actor_pointer& operator=(Supertype* ptr) {
     view_.reset(ptr);
     return *this;
   }
 
-  template <class... OtherSigs,
-            class = std::enable_if_t< //
-              detail::tl_subset_of_v<signatures, type_list<OtherSigs...>>>>
+  template <class... OtherSigs>
+    requires detail::tl_subset_of_v<signatures, type_list<OtherSigs...>>
   typed_actor_pointer& operator=(typed_actor_pointer<OtherSigs...> other) {
     view_.reset(other.internal_ptr());
     return *this;

@@ -72,8 +72,8 @@ public:
   anon_mail_t& operator=(const anon_mail_t&) = delete;
 
   /// Tags the message as urgent, i.e., sends it with high priority.
-  template <message_priority P = Priority,
-            class E = std::enable_if_t<P == message_priority::normal>>
+  template <message_priority P = Priority>
+    requires(P == message_priority::normal)
   [[nodiscard]] auto urgent() && {
     using result_t = anon_mail_t<message_priority::high, Args...>;
     return result_t{std::move(content_)};

@@ -64,12 +64,14 @@ struct fixture {
 };
 
 template <class T>
-std::enable_if_t<std::is_integral_v<T>, res_t> res(T x) {
+  requires std::is_integral_v<T>
+res_t res(T x) {
   return res_t{static_cast<int64_t>(x)};
 }
 
 template <class T>
-std::enable_if_t<std::is_floating_point_v<T>, res_t> res(T x) {
+  requires std::is_floating_point_v<T>
+res_t res(T x) {
   return res_t{static_cast<double>(x)};
 }
 

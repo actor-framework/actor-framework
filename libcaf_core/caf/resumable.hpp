@@ -57,15 +57,15 @@ public:
 
 // enables intrusive_ptr<resumable> without introducing ambiguity
 template <class T>
-std::enable_if_t<std::is_same_v<T*, resumable*>>
-intrusive_ptr_add_ref(const T* ptr) {
+  requires std::is_same_v<T*, resumable*>
+void intrusive_ptr_add_ref(const T* ptr) {
   ptr->ref_resumable();
 }
 
 // enables intrusive_ptr<resumable> without introducing ambiguity
 template <class T>
-std::enable_if_t<std::is_same_v<T*, resumable*>>
-intrusive_ptr_release(const T* ptr) {
+  requires std::is_same_v<T*, resumable*>
+void intrusive_ptr_release(const T* ptr) {
   ptr->deref_resumable();
 }
 

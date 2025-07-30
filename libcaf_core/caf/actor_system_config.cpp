@@ -316,7 +316,8 @@ public:
   }
 
   template <class T>
-  std::enable_if_t<std::is_arithmetic_v<T>> operator()(T val) {
+    requires std::is_arithmetic_v<T>
+  void operator()(T val) {
     detail::print(out_, val);
   }
 

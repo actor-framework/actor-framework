@@ -51,8 +51,8 @@ public:
   }
 
   template <class Operator>
-  std::enable_if_t<std::is_base_of_v<op::base<T>, Operator>, observable&>
-  operator=(intrusive_ptr<Operator> ptr) noexcept {
+    requires std::is_base_of_v<op::base<T>, Operator>
+  observable& operator=(intrusive_ptr<Operator> ptr) noexcept {
     pimpl_ = ptr;
     return *this;
   }

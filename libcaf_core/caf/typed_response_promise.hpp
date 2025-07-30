@@ -61,13 +61,15 @@ public:
 
   /// Satisfies the promise by sending a non-error response message.
   template <class... Us>
-  std::enable_if_t<(std::is_constructible_v<Ts, Us> && ...)> deliver(Us... xs) {
+    requires(std::is_constructible_v<Ts, Us> && ...)
+  void deliver(Us... xs) {
     promise_.deliver(Ts{std::forward<Us>(xs)}...);
   }
 
   /// Satisfies the promise by sending an empty response message.
   template <class L = type_list<Ts...>>
-  std::enable_if_t<std::is_same_v<L, type_list<void>>> deliver() {
+    requires std::is_same_v<L, type_list<void>>
+  void deliver() {
     promise_.deliver();
   }
 
@@ -80,8 +82,8 @@ public:
   /// Satisfies the promise by sending either an error or a non-error response
   /// message.
   template <class T>
-  std::enable_if_t<std::is_same_v<type_list<T>, type_list<Ts...>>>
-  deliver(expected<T> x) {
+    requires std::is_same_v<type_list<T>, type_list<Ts...>>
+  void deliver(expected<T> x) {
     promise_.deliver(std::move(x));
   }
 

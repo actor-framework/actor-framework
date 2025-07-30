@@ -6,23 +6,6 @@
 
 #include "caf/fwd.hpp"
 
-#include <type_traits>
-
-namespace caf::detail {
-
-/// Always evaluates to `Left`.
-template <class Left, class Right>
-struct left_oracle {
-  using type = Left;
-};
-
-/// Useful to force dependent evaluation of Left. For example in template
-/// functions where only Right is actually a template parameter.
-template <class Left, class Right>
-using left_t = typename left_oracle<Left, Right>::type;
-
-} // namespace caf::detail
-
 namespace caf::flow {
 
 class coordinator;
@@ -125,18 +108,6 @@ struct has_impl_include {
 
 template <class T>
 constexpr bool has_impl_include_v = has_impl_include<T>::value;
-
-template <class T>
-struct assert_scheduled_actor_hdr {
-  static constexpr bool value
-    = has_impl_include_v<detail::left_t<scheduled_actor, T>>;
-  static_assert(value,
-                "include 'caf/scheduled_actor/flow.hpp' for this method");
-};
-
-template <class T, class V = T>
-using assert_scheduled_actor_hdr_t
-  = std::enable_if_t<assert_scheduled_actor_hdr<T>::value, V>;
 
 } // namespace caf::flow
 
