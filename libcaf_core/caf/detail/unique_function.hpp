@@ -83,10 +83,10 @@ public:
   }
 
   template <class T>
+  explicit unique_function(T f)
     requires(!std::is_convertible_v<T, raw_pointer>
-             && std::is_same_v<
-               decltype((std::declval<T&>())(std::declval<Ts>()...)), R>)
-  explicit unique_function(T f) : unique_function(make_wrapper(std::move(f))) {
+             && std::is_same_v<decltype(f(std::declval<Ts>()...)), R>)
+    : unique_function(make_wrapper(std::move(f))) {
     // nop
   }
 
