@@ -15,6 +15,7 @@
 #include "caf/raise_error.hpp"
 #include "caf/unit.hpp"
 
+#include <concepts>
 #include <memory>
 #include <new>
 #include <ostream>
@@ -69,9 +70,9 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   template <class U>
-    requires(std::is_convertible_v<U, T> || is_error_code_enum_v<U>)
+    requires(std::convertible_to<U, T> || is_error_code_enum_v<U>)
   expected(U x) {
-    if constexpr (std::is_convertible_v<U, T>) {
+    if constexpr (std::convertible_to<U, T>) {
       has_value_ = true;
       new (std::addressof(value_)) T(std::move(x));
     } else {
@@ -155,8 +156,7 @@ public:
     return *this;
   }
 
-  template <class U>
-    requires std::is_convertible_v<U, T>
+  template <std::convertible_to<T> U>
   expected& operator=(U x) {
     return *this = T{std::move(x)};
   }

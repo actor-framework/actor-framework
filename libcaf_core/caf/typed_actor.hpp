@@ -18,6 +18,7 @@
 #include "caf/typed_actor_view_base.hpp"
 #include "caf/typed_behavior.hpp"
 
+#include <concepts>
 #include <cstddef>
 #include <functional>
 
@@ -136,9 +137,8 @@ public:
   }
 
   // Enable `handle_type{self}` for typed actor views.
-  template <class T>
-    requires(std::is_base_of_v<typed_actor_view_base, T>
-             && detail::tl_subset_of_v<signatures, typename T::signatures>)
+  template <std::derived_from<typed_actor_view_base> T>
+    requires detail::tl_subset_of_v<signatures, typename T::signatures>
   explicit typed_actor(T ptr) : ptr_(ptr.ctrl()) {
     // nop
   }

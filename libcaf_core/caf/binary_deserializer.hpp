@@ -9,6 +9,7 @@
 #include "caf/load_inspector_base.hpp"
 #include "caf/span.hpp"
 
+#include <concepts>
 #include <cstddef>
 
 namespace caf {
@@ -122,8 +123,7 @@ public:
 
   bool value(uint64_t& x) noexcept;
 
-  template <class T>
-    requires std::is_integral_v<T>
+  template <std::integral T>
   bool value(T& x) noexcept {
     auto tmp = detail::squashed_int_t<T>{0};
     if (value(tmp)) {

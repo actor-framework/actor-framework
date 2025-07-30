@@ -9,6 +9,7 @@
 #include "caf/none.hpp"
 
 #include <chrono>
+#include <concepts>
 #include <cstdint>
 #include <ctime>
 #include <limits>
@@ -170,8 +171,7 @@ void print(Buffer& buf, bool x) {
   buf.insert(buf.end(), str.begin(), str.end());
 }
 
-template <class Buffer, class T>
-  requires std::is_integral_v<T>
+template <class Buffer, std::integral T>
 void print(Buffer& buf, T x) {
   // An integer can at most have 20 digits (UINT64_MAX).
   char stack_buffer[24];
@@ -215,8 +215,7 @@ void print(Buffer& buf, T x) {
   } while (p != stack_buffer);
 }
 
-template <class Buffer, class T>
-  requires std::is_floating_point_v<T>
+template <class Buffer, std::floating_point T>
 void print(Buffer& buf, T x) {
   // TODO: Check whether to_chars is available on supported compilers and
   //       re-implement using the new API as soon as possible.

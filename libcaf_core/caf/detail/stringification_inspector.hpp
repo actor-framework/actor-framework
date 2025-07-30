@@ -8,6 +8,7 @@
 #include "caf/fwd.hpp"
 #include "caf/save_inspector_base.hpp"
 
+#include <concepts>
 #include <cstddef>
 
 namespace caf::detail {
@@ -69,8 +70,7 @@ public:
 
   bool value(bool x);
 
-  template <class Integral>
-    requires std::is_integral_v<Integral>
+  template <std::integral Integral>
   bool value(Integral x) {
     if constexpr (std::is_signed_v<Integral>)
       return int_value(static_cast<int64_t>(x));
@@ -114,7 +114,7 @@ public:
   }
 
   template <class T>
-    requires(has_to_string_v<T> && !std::is_convertible_v<T, std::string_view>)
+    requires(has_to_string_v<T> && !std::convertible_to<T, std::string_view>)
   bool builtin_inspect(const T& x) {
     auto str = to_string(x);
     if constexpr (std::is_convertible<decltype(str), const char*>::value) {

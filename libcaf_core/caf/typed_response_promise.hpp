@@ -8,6 +8,7 @@
 #include "caf/response_promise.hpp"
 #include "caf/type_list.hpp"
 
+#include <concepts>
 #include <type_traits>
 
 namespace caf {
@@ -61,15 +62,15 @@ public:
 
   /// Satisfies the promise by sending a non-error response message.
   template <class... Us>
-    requires(std::is_constructible_v<Ts, Us> && ...)
+    requires(std::constructible_from<Ts, Us> && ...)
   void deliver(Us... xs) {
     promise_.deliver(Ts{std::forward<Us>(xs)}...);
   }
 
   /// Satisfies the promise by sending an empty response message.
-  template <class L = type_list<Ts...>>
-    requires std::is_same_v<L, type_list<void>>
-  void deliver() {
+  void deliver()
+    requires std::same_as<type_list<Ts...>, type_list<void>>
+  {
     promise_.deliver();
   }
 
@@ -82,7 +83,7 @@ public:
   /// Satisfies the promise by sending either an error or a non-error response
   /// message.
   template <class T>
-    requires std::is_same_v<type_list<T>, type_list<Ts...>>
+    requires std::same_as<type_list<T>, type_list<Ts...>>
   void deliver(expected<T> x) {
     promise_.deliver(std::move(x));
   }

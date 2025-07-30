@@ -15,6 +15,7 @@
 #include "caf/parser_state.hpp"
 #include "caf/unit.hpp"
 
+#include <concepts>
 #include <cstdint>
 #include <cstring>
 #include <iterator>
@@ -71,8 +72,7 @@ CAF_CORE_EXPORT void parse(string_parser_state& ps, uint64_t& x);
 
 // -- non-fixed size integer types ---------------------------------------------
 
-template <class T>
-  requires std::is_integral_v<T>
+template <std::integral T>
 void parse(string_parser_state& ps, T& x) {
   using squashed_type = squashed_int_t<T>;
   return parse(ps, reinterpret_cast<squashed_type&>(x));

@@ -11,6 +11,7 @@
 #include "caf/sec.hpp"
 #include "caf/span.hpp"
 
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -126,8 +127,7 @@ public:
   virtual bool value(uint64_t x) = 0;
 
   /// @copydoc value
-  template <class T>
-    requires std::is_integral_v<T>
+  template <std::integral T>
   bool value(T x) {
     return value(static_cast<detail::squashed_int_t<T>>(x));
   }

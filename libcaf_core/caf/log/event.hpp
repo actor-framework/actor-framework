@@ -13,6 +13,7 @@
 #include "caf/intrusive_ptr.hpp"
 #include "caf/ref_counted.hpp"
 
+#include <concepts>
 #include <cstdint>
 #include <memory_resource>
 #include <optional>
@@ -236,8 +237,7 @@ public:
   // -- add fields -------------------------------------------------------------
 
   /// Adds a boolean or integer field.
-  template <class T>
-    requires std::is_integral_v<T>
+  template <std::integral T>
   event_fields_builder& field(std::string_view key, T value) {
     auto& field = fields_.emplace_back(std::string_view{},
                                        lift_integral(value));
@@ -275,11 +275,9 @@ public:
   }
 
   /// Adds nested fields.
-  template <class SubFieldsInitializer>
-  event_fields_builder& field(std::string_view key, SubFieldsInitializer&& init)
-    requires(std::is_same_v<
-             decltype(init(std::declval<event_fields_builder&>())), void>)
-  {
+  template <std::invocable<event_fields_builder&> SubFieldsInitializer>
+  event_fields_builder&
+  field(std::string_view key, SubFieldsInitializer&& init) {
     auto& field = fields_.emplace_back(std::string_view{}, std::nullopt);
     field.key = deep_copy(key);
     event_fields_builder nested_builder{resource()};
@@ -340,8 +338,7 @@ public:
   // -- add fields -------------------------------------------------------------
 
   /// Adds a boolean or integer field.
-  template <class T>
-    requires std::is_integral_v<T>
+  template <std::integral T>
   event_sender&& field(std::string_view key, T value) && {
     if (logger_)
       fields_.field(key, value);
@@ -375,8 +372,8 @@ public:
   /// Adds nested fields.
   template <class SubFieldsInitializer>
   event_sender&& field(std::string_view key, SubFieldsInitializer&& init)
-    requires(std::is_same_v<
-             decltype(init(std::declval<event_fields_builder&>())), void>)
+    requires(
+      std::same_as<decltype(init(std::declval<event_fields_builder&>())), void>)
   {
     if (logger_)
       fields_.field(key, std::forward<SubFieldsInitializer>(init));

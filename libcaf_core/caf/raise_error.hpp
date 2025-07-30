@@ -14,6 +14,7 @@
 #include "caf/detail/critical.hpp"
 #include "caf/detail/pp.hpp"
 
+#include <concepts>
 #include <type_traits>
 
 namespace caf::detail {
@@ -23,14 +24,12 @@ CAF_CORE_EXPORT void log_cstring_error(const char* cstring);
 #ifdef CAF_ENABLE_EXCEPTIONS
 
 template <class T>
-  requires std::is_constructible<T, const char*>::value
 [[noreturn]] void throw_impl(const char* msg) {
-  throw T{msg};
-}
-
-template <class T>
-[[noreturn]] void throw_impl(...) {
-  throw T{};
+  if constexpr (std::constructible_from<T, const char*>) {
+    throw T{msg};
+  } else {
+    throw T{};
+  }
 }
 
 #endif // CAF_ENABLE_EXCEPTIONS

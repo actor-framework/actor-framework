@@ -32,6 +32,7 @@
 #include "caf/timespan.hpp"
 #include "caf/unordered_flat_map.hpp"
 
+#include <concepts>
 #include <forward_list>
 #include <type_traits>
 #include <unordered_map>
@@ -265,8 +266,8 @@ public:
   }
 
   /// Sets a custom handler for unexpected messages.
-  template <class F>
-    requires std::is_invocable_r_v<skippable_result, F, message&>
+  template <std::invocable<message&> F>
+    requires std::same_as<std::invoke_result_t<F, message&>, skippable_result>
   [[deprecated("use a handler for 'message' instead")]]
   void set_default_handler(F fun) {
     default_handler_ = [fn{std::move(fun)}](scheduled_actor*,
@@ -285,8 +286,7 @@ public:
   }
 
   /// Sets a custom handler for error messages.
-  template <class F>
-    requires std::is_invocable_v<F, error&>
+  template <std::invocable<error&> F>
   [[deprecated("use a handler for 'error' instead")]]
   void set_error_handler(F fun) {
     error_handler_ = [fn{std::move(fun)}](scheduled_actor*, error& x) mutable {
@@ -304,8 +304,7 @@ public:
   }
 
   /// Sets a custom handler for down messages.
-  template <class F>
-    requires std::is_invocable_v<F, down_msg&>
+  template <std::invocable<down_msg&> F>
   [[deprecated("use monitor with callback instead")]]
   void set_down_handler(F fun) {
     down_handler_ = [fn{std::move(fun)}](scheduled_actor*,
@@ -322,8 +321,7 @@ public:
   }
 
   /// Sets a custom handler for down messages.
-  template <class F>
-    requires std::is_invocable_v<F, node_down_msg&>
+  template <std::invocable<node_down_msg&> F>
   [[deprecated("use a handler for 'node_down_msg' instead")]]
   void set_node_down_handler(F fun) {
     node_down_handler_ = [fn{std::move(fun)}](scheduled_actor*,
@@ -342,8 +340,7 @@ public:
   }
 
   /// Sets a custom handler for exit messages.
-  template <class F>
-    requires std::is_invocable_v<F, exit_msg&>
+  template <std::invocable<exit_msg&> F>
   [[deprecated("use a handler for 'exit_msg' instead")]]
   void set_exit_handler(F fun) {
     exit_handler_ = [fn{std::move(fun)}](scheduled_actor*,
@@ -362,8 +359,8 @@ public:
 
   /// Sets a custom exception handler for this actor. If multiple handlers are
   /// defined, only the functor that was added *last* is being executed.
-  template <class F>
-    requires std::is_invocable_r_v<error, F, std::exception_ptr&>
+  template <std::invocable<std::exception_ptr&> F>
+    requires std::same_as<std::invoke_result_t<F, std::exception_ptr&>, error>
   void set_exception_handler(F fun) {
     exception_handler_ = [fn{std::move(fun)}](local_actor*,
                                               std::exception_ptr& x) mutable {

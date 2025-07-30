@@ -15,6 +15,7 @@
 #include "caf/type_list.hpp"
 #include "caf/variant_wrapper.hpp"
 
+#include <concepts>
 #include <type_traits>
 #include <variant>
 
@@ -190,8 +191,8 @@ public:
   using super::super;
 
   template <class U>
-    requires(std::is_constructible_v<T, U>
-             && !std::is_constructible_v<super, U>)
+    requires(std::constructible_from<T, U>
+             && !std::constructible_from<super, U>)
   result(U&& x)
     : super(detail::result_base_message_init{}, T{std::forward<U>(x)}) {
     // nop
