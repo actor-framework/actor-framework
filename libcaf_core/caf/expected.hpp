@@ -957,13 +957,17 @@ template <class T>
 std::string to_string(const expected<T>& x) {
   if (x)
     return deep_to_string(*x);
-  return "!" + to_string(x.error());
+  std::string str = "!";
+  str += to_string(x.error());
+  return str;
 }
 
 inline std::string to_string(const expected<void>& x) {
   if (x)
     return "unit";
-  return "!" + to_string(x.error());
+  std::string str = "!";
+  str += to_string(x.error());
+  return str;
 }
 
 } // namespace caf
