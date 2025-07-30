@@ -362,7 +362,7 @@ public:
   template <std::invocable<std::exception_ptr&> F>
     requires std::same_as<std::invoke_result_t<F, std::exception_ptr&>, error>
   void set_exception_handler(F fun) {
-    exception_handler_ = [fn{std::move(fun)}](local_actor*,
+    exception_handler_ = [fn{std::move(fun)}](scheduled_actor*,
                                               std::exception_ptr& x) mutable {
       return fn(x);
     };
