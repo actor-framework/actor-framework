@@ -39,6 +39,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 - Errors that arise during the `with` DSL setup of servers and clients now
   properly call `on_error` (#2026).
+- Fix UBSan finding regarding non-aligned memory allocation when spawning
+  actors.
 
 ### Removed
 

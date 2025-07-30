@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/config.hpp"
+#include "caf/detail/aligned_alloc.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/fwd.hpp"
 #include "caf/infer_handle.hpp"
@@ -51,7 +52,7 @@ R make_actor(actor_id aid, node_id nid, actor_system* sys, Ts&&... xs) {
   // of the actor object is always the same. This allows us to calculate the
   // address of the actor object from the address of the control block.
   static constexpr size_t alloc_size = CAF_CACHE_LINE_SIZE + sizeof(T);
-  auto* mem = malloc(alloc_size);
+  auto* mem = detail::aligned_alloc(CAF_CACHE_LINE_SIZE, alloc_size);
   auto* ctrl = new (mem) actor_control_block(aid, nid, sys, iface);
   auto* obj_mem = reinterpret_cast<std::byte*>(mem) + CAF_CACHE_LINE_SIZE;
 #if CAF_LOG_LEVEL >= CAF_LOG_LEVEL_DEBUG
