@@ -8,7 +8,9 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <span>
 #include <memory>
+#include <span>
 #include <string_view>
 #include <utility>
 #include <variant>
@@ -30,8 +32,6 @@ template <class> class dictionary;
 template <class> class expected;
 template <class> class function_view;
 template <class> class intrusive_cow_ptr;
-template <class> class intrusive_ptr;
-template <class> class span;
 template <class> class typed_stream;
 template <class> class weak_intrusive_ptr;
 
@@ -193,8 +193,8 @@ enum class thread_owner;
 
 using actor_id = uint64_t;
 using byte_buffer = std::vector<std::byte>;
-using byte_span = span<std::byte>;
-using const_byte_span = span<const std::byte>;
+using byte_span = std::span<std::byte>;
+using const_byte_span = std::span<const std::byte>;
 using cow_string = basic_cow_string<char>;
 using cow_u16string = basic_cow_string<char16_t>;
 using cow_u32string = basic_cow_string<char32_t>;

@@ -7,14 +7,11 @@
 #include "caf/span.hpp"
 
 #include <cstddef>
+#include <string_view>
 
 namespace caf {
 
-/// Convenience alias for referring to a writable sequence of bytes.
-using byte_span = span<std::byte>;
-
-/// Convenience alias for referring to a read-only sequence of bytes.
-using const_byte_span = span<const std::byte>;
+// Note: byte_span and const_byte_span are now defined in span.hpp
 
 /// Checks whether the byte span is a valid UTF-8 string.
 CAF_CORE_EXPORT bool is_valid_utf8(const_byte_span) noexcept;
