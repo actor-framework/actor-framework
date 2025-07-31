@@ -272,8 +272,43 @@ SCENARIO("routes must have one 'arg' entry per argument") {
   }
 }
 
+SCENARIO("routes can catch all routes") {
+  auto set_get_request
+    = [this](std::string path,
+             detail::source_location loc = detail::source_location::current()) {
+        req = "GET " + path + " HTTP/1.1\r\n"
+              + "Host: localhost:8090\r\n"
+                "User-Agent: AwesomeLib/1.0\r\n"
+                "Accept-Encoding: gzip\r\n\r\n";
+        auto [status, err_msg] = hdr.parse(req);
+        require_eq(status, http::status::ok, loc);
+      };
+  auto set_post_request
+    = [this](std::string path,
+             detail::source_location loc = detail::source_location::current()) {
+        req = "POST " + path + " HTTP/1.1\r\n"
+              + "Host: localhost:8090\r\n"
+                "User-Agent: AwesomeLib/1.0\r\n"
+                "Accept-Encoding: gzip\r\n\r\n";
+        auto [status, err_msg] = hdr.parse(req);
+        require_eq(status, http::status::ok, loc);
+      };
+  GIVEN("a make_route call without path") {
+    WHEN("evaluating the factory call") {
+      THEN("the factory produces a valid callback") {
+        if (auto res = make_route([](responder&) {}); check(res.has_value())) {
+          set_get_request("/foo");
+          check((*res)->exec(hdr, {}, &rt));
+          set_post_request("/foo/bar");
+          check((*res)->exec(hdr, {}, &rt));
+        }
+      }
+    }
+  }
+}
+
 SCENARIO("router converts responders to async request objects") {
-  GIVEN("a http router and router") {
+  GIVEN("a http router") {
     auto http_route = make_route("/foo", http::method::get, [](responder& rp) {
       rp.respond(http::status::ok, "text/plain", "Hello, World!");
     });
@@ -368,6 +403,29 @@ SCENARIO("router converts responders to async request objects") {
           check_eq(buf, empty_buf);
         }};
         background_thread.join();
+      }
+    }
+    WHEN("router is shut down with pending items") {
+      run_server([this](net::http::lower_layer::server* down,
+                        const net::http::request_header& request_hdr,
+                        const_byte_span body) mutable {
+        auto http_route = make_route([](responder& rp) {
+          rp.respond(http::status::ok, "text/plain", "Hello, World!");
+        });
+        auto default_router
+          = router::make(std::vector<http::route_ptr>{http_route.value()});
+        auto default_responder = responder{&request_hdr, body,
+                                           default_router.get()};
+        auto error = default_router->start(down);
+        auto req = default_router->lift(std::move(default_responder));
+      });
+      THEN("the pending items are disposed") {
+        std::string_view request = "GET /foo HTTP/1.1\r\n"
+                                   "Host: localhost:8090\r\n"
+                                   "User-Agent: AwesomeLib/1.0\r\n"
+                                   "Accept-Encoding: gzip\r\n\r\n";
+        net::write(fd1, as_bytes(make_span(request)));
+        net::close(fd1);
       }
     }
   }
