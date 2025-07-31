@@ -262,7 +262,7 @@ template <class F>
 expected<route_ptr>
 make_route(std::string path, std::optional<http::method> method, F f) {
   // F must have signature void (responder&, ...).
-  using f_trait = detail::get_callable_trait_t<F>;
+  using f_trait = detail::get_callable_trait<F>;
   using f_args = typename f_trait::arg_types;
   static_assert(f_trait::num_args > 0, "F must take at least one argument");
   using arg_0 = detail::tl_at_t<f_args, 0>;
@@ -297,7 +297,7 @@ expected<route_ptr> make_route(std::string path, F f) {
 template <class F>
 expected<route_ptr> make_route(F f) {
   // F must have signature void (responder&).
-  using f_trait = detail::get_callable_trait_t<F>;
+  using f_trait = detail::get_callable_trait<F>;
   static_assert(std::is_same_v<typename f_trait::fun_sig, void(responder&)>);
   using impl_t = detail::http_catch_all_route_impl<F>;
   return make_counted<impl_t>(std::move(f));

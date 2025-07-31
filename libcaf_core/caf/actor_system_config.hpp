@@ -10,8 +10,8 @@
 #include "caf/config_option_adder.hpp"
 #include "caf/config_option_set.hpp"
 #include "caf/config_value.hpp"
+#include "caf/detail/concepts.hpp"
 #include "caf/detail/core_export.hpp"
-#include "caf/detail/type_traits.hpp"
 #include "caf/dictionary.hpp"
 #include "caf/fwd.hpp"
 #include "caf/settings.hpp"
@@ -111,7 +111,7 @@ public:
   /// dynamically by using `name` as identifier.
   template <class F>
   actor_system_config& add_actor_type(std::string name, F f) {
-    if constexpr (detail::has_handle_type_alias_v<F>) {
+    if constexpr (detail::has_handle_type_alias<F>) {
       // F represents an actor_from_state spawnable wrapper.
       return add_actor_factory(std::move(name),
                                make_actor_factory(f, type_list<>{}));

@@ -6,10 +6,11 @@
 
 #include "caf/const_typed_message_view.hpp"
 #include "caf/detail/apply_args.hpp"
+#include "caf/detail/callable_trait.hpp"
+#include "caf/detail/concepts.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/int_list.hpp"
 #include "caf/detail/invoke_result_visitor.hpp"
-#include "caf/detail/type_traits.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/message.hpp"
@@ -114,7 +115,7 @@ public:
                    std::index_sequence<Is...>) {
     [[maybe_unused]] auto dispatch = [&](auto& fun) {
       using fun_type = std::decay_t<decltype(fun)>;
-      using trait = get_callable_trait_t<fun_type>;
+      using trait = get_callable_trait<fun_type>;
       using fn_args = typename trait::arg_types;
       using decayed_args = typename trait::decayed_arg_types;
       if constexpr (std::is_same_v<decayed_args, type_list<message>>) {

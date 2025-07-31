@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "caf/detail/type_traits.hpp"
+#include "caf/detail/concepts.hpp"
 #include "caf/fwd.hpp"
 
 #include <utility>
@@ -14,7 +14,7 @@ namespace caf::flow::step {
 template <class F>
 class do_on_next {
 public:
-  using trait = detail::get_callable_trait_t<F>;
+  using trait = detail::get_callable_trait<F>;
 
   static_assert(trait::num_args == 1,
                 "do_on_next functions must take exactly one argument");

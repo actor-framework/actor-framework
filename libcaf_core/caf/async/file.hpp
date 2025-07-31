@@ -3,7 +3,7 @@
 // https://github.com/actor-framework/actor-framework/blob/main/LICENSE.
 
 #include "caf/actor_system.hpp"
-#include "caf/detail/type_traits.hpp"
+#include "caf/detail/concepts.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/flow/byte.hpp"
 #include "caf/flow/string.hpp"
@@ -17,7 +17,7 @@ namespace caf::detail {
 template <class T>
 class file_reader {
 public:
-  static_assert(detail::is_one_of_v<T, std::byte, char>,
+  static_assert(detail::one_of<T, std::byte, char>,
                 "T must be either std::byte or char");
 
   using output_type = T;
@@ -117,7 +117,7 @@ public:
     auto [self, launch] = sys_->spawn_inactive<event_based_actor, detached>();
     auto res = std::forward<F>(init)(gen_(self));
     using res_t = decltype(res);
-    static_assert(detail::is_publisher_v<res_t> || detail::is_stream_v<res_t>,
+    static_assert(detail::is_publisher<res_t> || detail::is_stream<res_t>,
                   "init() must return a publisher or a stream");
     return res;
   }

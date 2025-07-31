@@ -9,6 +9,7 @@
 #include "caf/test/fwd.hpp"
 
 #include "caf/detail/test_export.hpp"
+#include "caf/unit.hpp"
 #include "caf/unordered_flat_map.hpp"
 
 #include <cstddef>

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "caf/detail/type_traits.hpp"
+#include "caf/detail/concepts.hpp"
 #include "caf/fwd.hpp"
 #include "caf/sec.hpp"
 #include "caf/unsafe_behavior_init.hpp"
@@ -28,7 +28,7 @@ public:
 /// on whether `State::make_behavior()` exists.
 template <class State, class Base>
 using stateful_actor_base_t
-  = std::conditional_t<has_make_behavior_member_v<State>,
+  = std::conditional_t<has_make_behavior<State>,
                        stateful_actor_base<State, Base>, Base>;
 
 } // namespace caf::detail
@@ -64,7 +64,7 @@ public:
   }
 
   const char* name() const override {
-    if constexpr (detail::has_name<State>::value) {
+    if constexpr (detail::has_name<State>) {
       if constexpr (!std::is_member_pointer<decltype(&State::name)>::value) {
         if constexpr (std::is_convertible<decltype(State::name),
                                           const char*>::value) {

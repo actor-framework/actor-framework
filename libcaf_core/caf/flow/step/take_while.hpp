@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "caf/detail/type_traits.hpp"
+#include "caf/detail/concepts.hpp"
 #include "caf/fwd.hpp"
 
 #include <utility>
@@ -14,7 +14,7 @@ namespace caf::flow::step {
 template <class Predicate>
 class take_while {
 public:
-  using trait = detail::get_callable_trait_t<Predicate>;
+  using trait = detail::get_callable_trait<Predicate>;
 
   static_assert(std::is_convertible_v<typename trait::result_type, bool>,
                 "predicates must return a boolean value");

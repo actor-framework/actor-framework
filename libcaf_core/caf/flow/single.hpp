@@ -19,7 +19,7 @@ namespace caf::flow {
 
 template <class OnSuccess>
 struct on_success_orcacle {
-  using trait = detail::get_callable_trait_t<OnSuccess>;
+  using trait = detail::get_callable_trait<OnSuccess>;
 
   static_assert(trait::num_args == 1,
                 "OnSuccess functions must take exactly one argument");
