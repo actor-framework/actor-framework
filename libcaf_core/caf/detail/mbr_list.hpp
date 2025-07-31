@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <cstddef>
 #include <iterator>
 #include <memory_resource>
