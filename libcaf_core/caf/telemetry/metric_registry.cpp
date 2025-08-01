@@ -8,8 +8,6 @@
 #include "caf/actor_system_config.hpp"
 #include "caf/config.hpp"
 #include "caf/raise_error.hpp"
-#include "caf/telemetry/dbl_gauge.hpp"
-#include "caf/telemetry/int_gauge.hpp"
 #include "caf/telemetry/metric_family_impl.hpp"
 #include "caf/telemetry/metric_impl.hpp"
 #include "caf/telemetry/metric_type.hpp"

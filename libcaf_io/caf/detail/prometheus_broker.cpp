@@ -7,8 +7,6 @@
 #include "caf/byte_span.hpp"
 #include "caf/log/io.hpp"
 #include "caf/string_algorithms.hpp"
-#include "caf/telemetry/dbl_gauge.hpp"
-#include "caf/telemetry/int_gauge.hpp"
 
 #include <span>
 #include <string_view>
