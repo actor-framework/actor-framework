@@ -66,7 +66,7 @@ public:
     self->set_behavior([down](const std::string& line) {
       down->begin_output();
       auto& buf = down->output_buffer();
-      auto bytes = as_bytes(make_span(line));
+      auto bytes = as_bytes(std::span{line});
       buf.insert(buf.end(), bytes.begin(), bytes.end());
       down->end_output();
     });
@@ -183,7 +183,7 @@ TEST("actor shells can send asynchronous messages") {
   require(mpx.start(mgr));
   fd1.id = net::invalid_socket_id;
   auto msg = "hello actor shell\n"s;
-  auto n = net::write(fd2, as_bytes(make_span(msg)));
+  auto n = net::write(fd2, as_bytes(std::span{msg}));
   check_eq(n, static_cast<ptrdiff_t>(msg.size()));
   self->receive(
     [this](const std::string& str) { check_eq(str, "hello actor shell"); },
@@ -200,7 +200,7 @@ TEST("actor shells can send request messages") {
         auto* down = app->down;
         down->begin_output();
         auto& buf = down->output_buffer();
-        auto bytes = as_bytes(make_span(line));
+        auto bytes = as_bytes(std::span{line});
         buf.insert(buf.end(), bytes.begin(), bytes.end());
         down->end_output();
       });
@@ -232,7 +232,7 @@ TEST("actor shells can use flows") {
         auto* down = app->down;
         down->begin_output();
         auto& buf = down->output_buffer();
-        auto bytes = as_bytes(make_span(line));
+        auto bytes = as_bytes(std::span{line});
         buf.insert(buf.end(), bytes.begin(), bytes.end());
         down->end_output();
       });

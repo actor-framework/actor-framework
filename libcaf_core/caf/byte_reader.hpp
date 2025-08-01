@@ -6,9 +6,6 @@
 
 #include "caf/deserializer.hpp"
 #include "caf/detail/core_export.hpp"
-#include "caf/span.hpp"
-
-#include <cstdio>
 
 namespace caf {
 

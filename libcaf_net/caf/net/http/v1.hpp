@@ -7,8 +7,10 @@
 #include "caf/net/http/method.hpp"
 #include "caf/net/http/status.hpp"
 
+#include "caf/byte_buffer.hpp"
 #include "caf/byte_span.hpp"
 #include "caf/detail/net_export.hpp"
+#include "caf/expected.hpp"
 
 #include <string_view>
 #include <utility>
@@ -32,9 +34,9 @@ CAF_NET_EXPORT expected<std::pair<size_t, byte_span>>
 parse_chunk(byte_span input);
 
 /// Writes an HTTP header to @p buf.
-CAF_NET_EXPORT void write_response_header(status code,
-                                          span<const string_view_pair> fields,
-                                          byte_buffer& buf);
+CAF_NET_EXPORT void
+write_response_header(status code, std::span<const string_view_pair> fields,
+                      byte_buffer& buf);
 
 /// Write the status code for an HTTP header to @p buf.
 CAF_NET_EXPORT void begin_response_header(status code, byte_buffer& buf);
@@ -59,7 +61,7 @@ CAF_NET_EXPORT void write_response(status code, std::string_view content_type,
 /// and Content-Length header fields followed by the user-defined @p fields.
 CAF_NET_EXPORT void write_response(status code, std::string_view content_type,
                                    std::string_view content,
-                                   span<const string_view_pair> fields,
+                                   std::span<const string_view_pair> fields,
                                    byte_buffer& buf);
 
 } // namespace caf::net::http::v1

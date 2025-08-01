@@ -21,12 +21,12 @@ using namespace std::literals;
 namespace {
 
 template <class T>
-auto to_vec(span<const T> xs) {
+auto to_vec(std::span<const T> xs) {
   return std::vector<T>{xs.begin(), xs.end()};
 }
 
 template <class T>
-auto to_list(span<const T> xs) {
+auto to_list(std::span<const T> xs) {
   return std::list<T>{xs.begin(), xs.end()};
 }
 

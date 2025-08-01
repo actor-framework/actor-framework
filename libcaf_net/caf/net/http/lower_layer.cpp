@@ -40,7 +40,7 @@ bool lower_layer::server::send_response(status code,
 bool lower_layer::server::send_response(status code,
                                         std::string_view content_type,
                                         std::string_view content) {
-  return send_response(code, content_type, as_bytes(make_span(content)));
+  return send_response(code, content_type, as_bytes(std::span{content}));
 }
 
 bool lower_layer::server::send_response(status code, const error& err) {

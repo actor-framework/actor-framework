@@ -16,12 +16,12 @@
 #include "caf/cow_tuple.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/scheduled_actor/flow.hpp"
-#include "caf/span.hpp"
 
 #include <atomic>
 #include <cassert>
 #include <csignal>
 #include <random>
+#include <span>
 #include <utility>
 
 using namespace std::literals;
@@ -94,13 +94,13 @@ struct config : caf::actor_system_config {
 // -- helper functions ---------------------------------------------------------
 
 // Returns a list of philosopher quotes by path.
-caf::span<const std::string_view> quotes_by_name(std::string_view path) {
+std::span<const std::string_view> quotes_by_name(std::string_view path) {
   if (path == "epictetus")
-    return caf::make_span(epictetus);
+    return std::span{epictetus};
   else if (path == "seneca")
-    return caf::make_span(seneca);
+    return std::span{seneca};
   else if (path == "plato")
-    return caf::make_span(plato);
+    return std::span{plato};
   else
     return {};
 }
@@ -112,7 +112,7 @@ public:
     // nop
   }
 
-  std::string_view operator()(caf::span<const std::string_view> quotes) {
+  std::string_view operator()(std::span<const std::string_view> quotes) {
     assert(!quotes.empty());
     auto dis = std::uniform_int_distribution<size_t>{0, quotes.size() - 1};
     return quotes[dis(engine_)];

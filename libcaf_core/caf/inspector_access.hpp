@@ -15,12 +15,12 @@
 #include "caf/intrusive_cow_ptr.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/sec.hpp"
-#include "caf/span.hpp"
 #include "caf/type_list.hpp"
 
 #include <chrono>
 #include <cstddef>
 #include <memory>
+#include <span>
 #include <string_view>
 #include <tuple>
 #include <utility>
@@ -467,7 +467,7 @@ struct variant_inspector_access {
   static bool
   save_field(Inspector& f, std::string_view field_name, value_type& x) {
     auto g = [&f](auto& y) { return detail::save(f, y); };
-    return f.begin_field(field_name, make_span(traits::allowed_types),
+    return f.begin_field(field_name, std::span{traits::allowed_types},
                          traits::type_index(x)) //
            && traits::visit(g, x)               //
            && f.end_field();
@@ -476,7 +476,7 @@ struct variant_inspector_access {
   template <class Inspector, class IsPresent, class Get>
   static bool save_field(Inspector& f, std::string_view field_name,
                          IsPresent& is_present, Get& get) {
-    auto allowed_types = make_span(traits::allowed_types);
+    auto allowed_types = std::span{traits::allowed_types};
     if (is_present()) {
       auto&& x = get();
       auto g = [&f](auto& y) { return detail::save(f, y); };
@@ -510,7 +510,7 @@ struct variant_inspector_access {
                          value_type& x, IsValid& is_valid,
                          SyncValue& sync_value) {
     size_t type_index = std::numeric_limits<size_t>::max();
-    auto allowed_types = make_span(traits::allowed_types);
+    auto allowed_types = std::span{traits::allowed_types};
     if (!f.begin_field(field_name, allowed_types, type_index))
       return false;
     if (type_index >= allowed_types.size()) {
@@ -539,7 +539,7 @@ struct variant_inspector_access {
                          value_type& x, IsValid& is_valid,
                          SyncValue& sync_value, SetFallback& set_fallback) {
     bool is_present = false;
-    auto allowed_types = make_span(traits::allowed_types);
+    auto allowed_types = std::span{traits::allowed_types};
     size_t type_index = std::numeric_limits<size_t>::max();
     if (!f.begin_field(field_name, is_present, allowed_types, type_index))
       return false;

@@ -183,9 +183,9 @@ auto encode(std::string_view msg, net::lp::size_field_type) {
   } else {
     prefix = to_network_order(msg_size);
   }
-  auto prefix_bytes = as_bytes(make_span(&prefix, 1));
+  auto prefix_bytes = as_bytes(std::span{&prefix, 1});
   bytes.insert(bytes.end(), prefix_bytes.begin(), prefix_bytes.end());
-  auto msg_bytes = as_bytes(make_span(msg));
+  auto msg_bytes = as_bytes(std::span{msg});
   bytes.insert(bytes.end(), msg_bytes.begin(), msg_bytes.end());
   return bytes;
 }
@@ -264,7 +264,7 @@ SCENARIO("lp::with(...).connect(...) translates between flows and socket I/O") {
                       std::string response = "ok ";
                       for (auto val : x.bytes())
                         response.push_back(static_cast<char>(val));
-                      return net::lp::frame{as_bytes(make_span(response))};
+                      return net::lp::frame{as_bytes(std::span{response})};
                     })
                     .subscribe(push);
                 });

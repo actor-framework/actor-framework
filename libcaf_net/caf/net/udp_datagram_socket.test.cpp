@@ -86,7 +86,7 @@ TEST("read and write") {
   check(read_res < 0);
   check(last_socket_error_is_temporary());
   log::test::debug("sending data to {}", to_string(ep));
-  auto write_res = write(send_socket, as_bytes(make_span(hello_test)), ep);
+  auto write_res = write(send_socket, as_bytes(std::span{hello_test}), ep);
   check_eq(write_res, static_cast<ptrdiff_t>(hello_test.size()));
   check_eq(read_from_socket(receive_socket, buf), none);
   std::string_view received{reinterpret_cast<const char*>(buf.data()),

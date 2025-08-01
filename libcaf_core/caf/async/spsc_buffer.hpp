@@ -16,12 +16,12 @@
 #include "caf/raise_error.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/sec.hpp"
-#include "caf/span.hpp"
 #include "caf/unit.hpp"
 
 #include <condition_variable>
 #include <cstdlib>
 #include <mutex>
+#include <span>
 
 namespace caf::async {
 
@@ -65,7 +65,7 @@ public:
   /// Appends to the buffer and calls `on_producer_wakeup` on the consumer if
   /// the buffer becomes non-empty.
   /// @returns the remaining capacity after inserting the items.
-  size_t push(span<const T> items) {
+  size_t push(std::span<const T> items) {
     lock_type guard{mtx_};
     CAF_ASSERT(producer_ != nullptr);
     CAF_ASSERT(!flags_.closed);
@@ -79,7 +79,7 @@ public:
   }
 
   size_t push(const T& item) {
-    return push(make_span(&item, 1));
+    return push(std::span{&item, 1});
   }
 
   /// Consumes up to `demand` items from the buffer.
@@ -248,7 +248,7 @@ public:
         signal_demand(n - overflow);
       }
       guard.unlock();
-      auto items = span<const T>{consumer_buf_.data(), n};
+      auto items = std::span<const T>{consumer_buf_.data(), n};
       for (auto& item : items)
         dst.on_next(item);
       demand -= n;

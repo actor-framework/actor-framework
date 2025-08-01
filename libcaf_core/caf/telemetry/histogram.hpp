@@ -7,13 +7,13 @@
 #include "caf/detail/assert.hpp"
 #include "caf/fwd.hpp"
 #include "caf/settings.hpp"
-#include "caf/span.hpp"
 #include "caf/telemetry/counter.hpp"
 #include "caf/telemetry/gauge.hpp"
 #include "caf/telemetry/label.hpp"
 #include "caf/telemetry/metric_type.hpp"
 
 #include <algorithm>
+#include <span>
 #include <type_traits>
 
 namespace caf::telemetry {
@@ -43,15 +43,15 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  histogram(span<const label> labels, const settings* cfg,
-            span<const value_type> upper_bounds) {
+  histogram(std::span<const label> labels, const settings* cfg,
+            std::span<const value_type> upper_bounds) {
     if (!init_buckets_from_config(labels, cfg))
       init_buckets(upper_bounds);
   }
 
   explicit histogram(std::initializer_list<value_type> upper_bounds)
     : histogram({}, nullptr,
-                make_span(upper_bounds.begin(), upper_bounds.size())) {
+                std::span{upper_bounds.begin(), upper_bounds.size()}) {
     // nop
   }
 
@@ -83,7 +83,7 @@ public:
   // -- observers --------------------------------------------------------------
 
   /// Returns the ``counter`` objects with the configured upper bounds.
-  span<const bucket_type> buckets() const noexcept {
+  std::span<const bucket_type> buckets() const noexcept {
     return {buckets_, num_buckets_};
   }
 
@@ -93,7 +93,7 @@ public:
   }
 
 private:
-  void init_buckets(span<const value_type> upper_bounds) {
+  void init_buckets(std::span<const value_type> upper_bounds) {
     CAF_ASSERT(std::is_sorted(upper_bounds.begin(), upper_bounds.end()));
     using limits = std::numeric_limits<value_type>;
     num_buckets_ = upper_bounds.size() + 1;
@@ -107,7 +107,8 @@ private:
       buckets_[index].upper_bound = limits::max();
   }
 
-  bool init_buckets_from_config(span<const label> labels, const settings* cfg) {
+  bool init_buckets_from_config(std::span<const label> labels,
+                                const settings* cfg) {
     if (cfg == nullptr || labels.empty())
       return false;
     for (const auto& lbl : labels) {

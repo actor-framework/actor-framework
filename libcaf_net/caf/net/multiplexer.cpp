@@ -26,7 +26,6 @@
 #include "caf/make_counted.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/sec.hpp"
-#include "caf/span.hpp"
 #include "caf/unordered_flat_map.hpp"
 
 #include <algorithm>
@@ -38,6 +37,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <span>
 #include <thread>
 
 #ifndef CAF_WINDOWS
@@ -649,7 +649,7 @@ void pollset_updater::handle_read_event() {
   for (;;) {
     CAF_ASSERT((buf_.size() - buf_size_) > 0);
     auto num_bytes
-      = read(fd_, make_span(buf_.data() + buf_size_, buf_.size() - buf_size_));
+      = read(fd_, std::span{buf_.data() + buf_size_, buf_.size() - buf_size_});
     if (num_bytes > 0) {
       buf_size_ += static_cast<size_t>(num_bytes);
       if (buf_.size() == buf_size_) {

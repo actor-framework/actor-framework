@@ -13,8 +13,8 @@
 #include "caf/parser_state.hpp"
 #include "caf/pec.hpp"
 #include "caf/raise_error.hpp"
-#include "caf/span.hpp"
 
+#include <span>
 #include <type_traits>
 
 CAF_PUSH_UNUSED_LABEL_WARNING
@@ -27,20 +27,20 @@ struct copy_state {
   using fn_t = void (*)(string_parser_state&, copy_state&);
   using maybe_uint = std::optional<size_t>;
 
-  explicit copy_state(span<format_arg> arg_list);
+  explicit copy_state(std::span<format_arg> arg_list);
 
-  size_t next_arg_index = 0; // The next argument index for "auto"-mode.
-  maybe_uint arg_index;      // The current argument index.
-  maybe_uint width;          // The current width for formatting.
-  bool is_number = false;    // Whether we are currently parsing a number.
-  bool is_quoted = false;    // Whether to generate quoted output.
-  char fill = ' ';           // The fill character when setting an alignment.
-  char align = 0;            // Alignment; '<': left, '>': right, '^': center.
-  char type = 0;             // Selects an integer/float representation.
-  span<format_arg> args;     // The list of arguments to use for formatting.
-  fn_t fn;                   // The current state function.
-  std::vector<char> buf;     // Stores the formatted string.
-  std::vector<char> fstr;    // Assembles the format string for snprintf.
+  size_t next_arg_index = 0;  // The next argument index for "auto"-mode.
+  maybe_uint arg_index;       // The current argument index.
+  maybe_uint width;           // The current width for formatting.
+  bool is_number = false;     // Whether we are currently parsing a number.
+  bool is_quoted = false;     // Whether to generate quoted output.
+  char fill = ' ';            // The fill character when setting an alignment.
+  char align = 0;             // Alignment; '<': left, '>': right, '^': center.
+  char type = 0;              // Selects an integer/float representation.
+  std::span<format_arg> args; // The list of arguments to use for formatting.
+  fn_t fn;                    // The current state function.
+  std::vector<char> buf;      // Stores the formatted string.
+  std::vector<char> fstr;     // Assembles the format string for snprintf.
 
   // Restores the default values.
   void reset() {
@@ -445,7 +445,7 @@ void copy_verbatim(ParserState& ps, copy_state& cs) {
   // clang-format on
 }
 
-copy_state::copy_state(span<format_arg> arg_list) : args(arg_list) {
+copy_state::copy_state(std::span<format_arg> arg_list) : args(arg_list) {
   fn = copy_verbatim<string_parser_state>;
   buf.reserve(64);
 }
@@ -461,7 +461,7 @@ namespace caf::detail {
 class compiled_format_string_impl : public compiled_format_string {
 public:
   explicit compiled_format_string_impl(std::string_view fstr,
-                                       span<format_arg> args)
+                                       std::span<format_arg> args)
     : begin_(fstr.begin()), state_(begin_, fstr.end()), copy_(args) {
     // nop
   }
@@ -495,7 +495,7 @@ compiled_format_string::~compiled_format_string() {
 }
 
 std::unique_ptr<compiled_format_string>
-compile_format_string(std::string_view fstr, span<format_arg> args) {
+compile_format_string(std::string_view fstr, std::span<format_arg> args) {
   return std::make_unique<compiled_format_string_impl>(fstr, args);
 }
 

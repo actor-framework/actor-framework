@@ -11,7 +11,6 @@
 #include "caf/message.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/sec.hpp"
-#include "caf/span.hpp"
 
 #include <cstring>
 #include <numeric>

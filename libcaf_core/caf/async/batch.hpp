@@ -10,7 +10,6 @@
 #include "caf/fwd.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/raise_error.hpp"
-#include "caf/span.hpp"
 #include "caf/type_id.hpp"
 
 #include <atomic>
@@ -18,6 +17,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <memory>
+#include <span>
 
 #ifdef CAF_CLANG
 #  pragma clang diagnostic push
@@ -57,10 +57,10 @@ public:
   }
 
   template <class T>
-  span<const T> items() const {
+  std::span<const T> items() const {
     if (item_type() == type_id_v<T>)
       return data_->items<T>();
-    return span<const T>{};
+    return std::span<const T>{};
   }
 
   bool save(serializer& f) const;
@@ -178,7 +178,7 @@ private:
     }
 
     template <class T>
-    span<const T> items() const noexcept {
+    std::span<const T> items() const noexcept {
       return {reinterpret_cast<const T*>(storage_), size_};
     }
 
@@ -267,7 +267,7 @@ struct batching_trait {
   using select_token_type = int64_t;
 
   output_type operator()(const std::vector<input_type>& xs) {
-    return async::make_batch(make_span(xs));
+    return async::make_batch(std::span{xs});
   }
 };
 

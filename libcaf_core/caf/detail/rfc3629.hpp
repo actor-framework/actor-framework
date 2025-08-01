@@ -8,6 +8,7 @@
 #include "caf/detail/core_export.hpp"
 
 #include <cstddef>
+#include <span>
 
 namespace caf::detail {
 
@@ -20,7 +21,7 @@ public:
 
   /// Checks whether `str` is a valid UTF-8 string.
   static bool valid(std::string_view str) noexcept {
-    return valid(as_bytes(make_span(str)));
+    return valid(as_bytes(std::span{str}));
   }
 
   /// Checks whether `bytes` is a valid UTF-8 string.
@@ -28,7 +29,7 @@ public:
 
   /// Checks whether `str` is a valid UTF-8 string.
   static std::pair<size_t, bool> validate(std::string_view str) noexcept {
-    return validate(as_bytes(make_span(str)));
+    return validate(as_bytes(std::span{str}));
   }
 };
 

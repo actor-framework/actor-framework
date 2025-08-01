@@ -12,6 +12,7 @@
 #include "caf/make_counted.hpp"
 
 #include <optional>
+#include <span>
 
 namespace caf::async {
 
@@ -34,7 +35,7 @@ public:
       buf_->set_producer(this);
     }
 
-    size_t push(span<const T> items) {
+    size_t push(std::span<const T> items) {
       return buf_->push(items);
     }
 
@@ -127,7 +128,7 @@ public:
 
   /// Makes `items` available to the consumer.
   /// @returns the remaining demand.
-  size_t push(span<const T> items) {
+  size_t push(std::span<const T> items) {
     if (!impl_)
       CAF_RAISE_ERROR("cannot push to a closed producer adapter");
     return impl_->push(items);

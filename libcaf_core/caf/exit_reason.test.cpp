@@ -26,7 +26,7 @@ struct fixture {
     if (!sink.apply(x))
       test::runnable::current().fail("serialization failed: {}",
                                      sink.get_error());
-    binary_deserializer source(sys, make_span(buf));
+    binary_deserializer source(sys, std::span{buf});
     T y;
     if (!source.apply(y))
       test::runnable::current().fail("deserialization failed: {}",

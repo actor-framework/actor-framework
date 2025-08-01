@@ -6,16 +6,17 @@
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/async/blocking_producer.hpp"
+#include "caf/byte_span.hpp"
 #include "caf/caf_main.hpp"
 #include "caf/chunk.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/flow/string.hpp"
 #include "caf/scheduled_actor/flow.hpp"
-#include "caf/span.hpp"
 #include "caf/uuid.hpp"
 
 #include <cassert>
 #include <iostream>
+#include <span>
 #include <utility>
 
 using namespace std::literals;
@@ -131,7 +132,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
   auto prefix = name + ": ";
   while (std::getline(std::cin, line)) {
     line.insert(line.begin(), prefix.begin(), prefix.end());
-    line_producer.push(caf::chunk{caf::as_bytes(caf::make_span(line))});
+    line_producer.push(caf::chunk{std::as_bytes(std::span{line})});
     line.clear();
   }
   sys.println("*** shutting down");

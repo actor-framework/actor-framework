@@ -2,6 +2,7 @@
 #include "caf/detail/scope_guard.hpp"
 #include "caf/scheduled_actor/flow.hpp"
 
+#include <span>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -59,7 +60,7 @@ void ChatWidget::init(actor_system& system, const std::string& name,
     .map([](const QString& str) {
       auto encoded = str.toUtf8();
       auto bytes = caf::as_bytes(
-        caf::make_span(encoded.data(), static_cast<size_t>(encoded.size())));
+        std::span{encoded.data(), static_cast<size_t>(encoded.size())});
       return lp::frame{bytes};
     })
     .subscribe(push);

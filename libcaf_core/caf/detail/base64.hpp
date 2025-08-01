@@ -7,7 +7,6 @@
 #include "caf/byte_buffer.hpp"
 #include "caf/byte_span.hpp"
 #include "caf/detail/core_export.hpp"
-#include "caf/span.hpp"
 
 #include <optional>
 #include <string>

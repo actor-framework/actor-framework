@@ -8,12 +8,12 @@
 #include "caf/detail/make_meta_object.hpp"
 #include "caf/detail/meta_object.hpp"
 #include "caf/fwd.hpp"
-#include "caf/span.hpp"
 #include "caf/type_id.hpp"
 
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <span>
 #include <utility>
 
 namespace caf::detail {
@@ -57,7 +57,7 @@ void init_global_meta_objects_impl(std::integer_sequence<uint16_t, Is...>) {
   detail::meta_object src[] = {
     detail::make_meta_object<type_by_id_t<Is>>(type_name_by_id_v<Is>)...,
   };
-  detail::set_global_meta_objects(ProjectIds::begin, make_span(src));
+  detail::set_global_meta_objects(ProjectIds::begin, std::span{src});
 }
 
 /// Initializes the global meta object table with all types in `ProjectIds`.

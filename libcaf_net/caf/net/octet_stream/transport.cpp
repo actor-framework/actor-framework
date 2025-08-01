@@ -221,7 +221,7 @@ public:
       read_buf_.resize(max_read_size_);
     // Fill up our buffer.
     auto rd = policy_->read(
-      make_span(read_buf_.data() + buffered_, read_buf_.size() - buffered_));
+      std::span{read_buf_.data() + buffered_, read_buf_.size() - buffered_});
     // Stop if we failed to get more data.
     if (rd < 0) {
       switch (policy_->last_error(rd)) {
@@ -249,7 +249,7 @@ public:
       if (auto n = buffered_ + policy_buffered; n > read_buf_.size())
         read_buf_.resize(n);
       auto rd2 = policy_->read(
-        make_span(read_buf_.data() + buffered_, policy_buffered));
+        std::span{read_buf_.data() + buffered_, policy_buffered});
       if (rd2 != static_cast<ptrdiff_t>(policy_buffered)) {
         log::net::error("failed to read buffered data from the policy");
         return fail(make_error(sec::socket_operation_failed));
@@ -351,7 +351,7 @@ protected:
     while (parent_->is_reading() && max_read_size_ > 0
            && buffered_ >= min_read_size_) {
       auto n = std::min(buffered_, size_t{max_read_size_});
-      auto bytes = make_span(read_buf_.data(), n);
+      auto bytes = std::span{read_buf_.data(), n};
       auto delta = bytes.subspan(delta_offset_);
       auto consumed = up_->consume(bytes, delta);
       if (consumed < 0) {

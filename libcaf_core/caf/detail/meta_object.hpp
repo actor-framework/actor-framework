@@ -6,10 +6,10 @@
 
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
-#include "caf/span.hpp"
 
 #include <cstddef>
-#include <cstdint>
+#include <span>
+#include <string>
 #include <string_view>
 
 namespace caf::detail {
@@ -69,7 +69,7 @@ CAF_CORE_EXPORT global_meta_objects_guard_type global_meta_objects_guard();
 
 /// Returns the global storage for all meta objects. The ::type_id of an object
 /// is the index for accessing the corresponding meta object.
-CAF_CORE_EXPORT span<const meta_object> global_meta_objects();
+CAF_CORE_EXPORT std::span<const meta_object> global_meta_objects();
 
 /// Returns the global meta object for given type ID. Aborts the program if no
 /// meta object exists for `id`.
@@ -88,7 +88,7 @@ CAF_CORE_EXPORT void clear_global_meta_objects();
 /// array.
 /// @warning calling this after constructing any ::actor_system is unsafe and
 ///          causes undefined behavior.
-CAF_CORE_EXPORT span<meta_object> resize_global_meta_objects(size_t size);
+CAF_CORE_EXPORT std::span<meta_object> resize_global_meta_objects(size_t size);
 
 /// Sets the meta objects in range `[first_id, first_id + xs.size)` to `xs`.
 /// Resizes the global meta object if needed. Aborts the program if the range
@@ -96,6 +96,6 @@ CAF_CORE_EXPORT span<meta_object> resize_global_meta_objects(size_t size);
 /// @warning calling this after constructing any ::actor_system is unsafe and
 ///          causes undefined behavior.
 CAF_CORE_EXPORT void set_global_meta_objects(type_id_t first_id,
-                                             span<const meta_object> xs);
+                                             std::span<const meta_object> xs);
 
 } // namespace caf::detail
