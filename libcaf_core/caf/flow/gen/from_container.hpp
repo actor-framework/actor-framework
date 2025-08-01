@@ -39,7 +39,7 @@ public:
 
 private:
   std::shared_ptr<Container> values_;
-  typename Container::const_iterator pos_;
+  decltype(std::declval<Container>().begin()) pos_;
 };
 
 } // namespace caf::flow::gen

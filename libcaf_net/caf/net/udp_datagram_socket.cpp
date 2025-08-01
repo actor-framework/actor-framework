@@ -13,7 +13,8 @@
 #include "caf/internal/socket_sys_includes.hpp"
 #include "caf/ip_endpoint.hpp"
 #include "caf/log/net.hpp"
-#include "caf/span.hpp"
+
+#include <span>
 
 namespace {
 

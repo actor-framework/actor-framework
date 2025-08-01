@@ -8,7 +8,6 @@
 #include "caf/detail/concepts.hpp"
 #include "caf/detail/is_complete.hpp"
 #include "caf/fwd.hpp"
-#include "caf/span.hpp"
 
 #include <string>
 #include <type_traits>

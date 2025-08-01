@@ -4,8 +4,8 @@
 
 #include "caf/string_algorithms.hpp"
 
+#include "caf/byte_span.hpp"
 #include "caf/detail/append_hex.hpp"
-#include "caf/span.hpp"
 
 namespace caf {
 

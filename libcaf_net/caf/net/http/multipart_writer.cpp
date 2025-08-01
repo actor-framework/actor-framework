@@ -4,7 +4,7 @@
 
 #include "caf/net/http/multipart_writer.hpp"
 
-#include "caf/span.hpp"
+#include <span>
 
 namespace caf::net::http {
 
@@ -16,7 +16,7 @@ constexpr std::string_view default_boundary = "gc0p4Jq0M2Yt08j34c0p";
 
 // Helper function to write a string to a byte buffer
 void write_string(byte_buffer& buf, std::string_view str) {
-  auto bytes = as_bytes(make_span(str));
+  auto bytes = as_bytes(std::span{str});
   buf.insert(buf.end(), bytes.begin(), bytes.end());
 }
 
@@ -65,7 +65,7 @@ const_byte_span multipart_writer::finalize() {
   write_string(buf_, "--");
   write_string(buf_, boundary_);
   write_string(buf_, "--\r\n");
-  return make_span(buf_);
+  return std::span{buf_};
 }
 
 std::string_view multipart_writer::boundary() const noexcept {

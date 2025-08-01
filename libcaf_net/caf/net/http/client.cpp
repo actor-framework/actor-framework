@@ -121,7 +121,7 @@ public:
 
   bool send_end_of_chunks() override {
     std::string_view str = "0\r\n\r\n";
-    auto bytes = as_bytes(make_span(str));
+    auto bytes = as_bytes(std::span{str});
     down_->begin_output();
     auto& buf = down_->output_buffer();
     buf.insert(buf.end(), bytes.begin(), bytes.end());
@@ -198,7 +198,6 @@ public:
       if (!invoke_upper_layer(input.subspan(0, payload_len_)))
         return -1;
       consumed += static_cast<ptrdiff_t>(payload_len_);
-      input.subspan(payload_len_);
       mode_ = mode::read_header;
       return consumed;
     }

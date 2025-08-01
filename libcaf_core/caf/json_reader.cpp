@@ -442,7 +442,7 @@ public:
     return true;
   }
 
-  bool begin_field(std::string_view name, span<const type_id_t> types,
+  bool begin_field(std::string_view name, std::span<const type_id_t> types,
                    size_t& index) override {
     bool is_present = false;
     if (begin_field(name, is_present, types, index)) {
@@ -461,7 +461,7 @@ public:
   }
 
   bool begin_field(std::string_view name, bool& is_present,
-                   span<const type_id_t> types, size_t& index) override {
+                   std::span<const type_id_t> types, size_t& index) override {
     SCOPE(position::object);
     field_.push_back(name);
     if (auto member = find_member(top<position::object>(), name);
@@ -1018,12 +1018,12 @@ bool json_reader::begin_field(std::string_view name, bool& is_present) {
 }
 
 bool json_reader::begin_field(std::string_view name,
-                              span<const type_id_t> types, size_t& index) {
+                              std::span<const type_id_t> types, size_t& index) {
   return impl::cast(impl_).begin_field(name, types, index);
 }
 
 bool json_reader::begin_field(std::string_view name, bool& is_present,
-                              span<const type_id_t> types, size_t& index) {
+                              std::span<const type_id_t> types, size_t& index) {
   return impl::cast(impl_).begin_field(name, is_present, types, index);
 }
 

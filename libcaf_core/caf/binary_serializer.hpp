@@ -71,10 +71,11 @@ public:
 
   bool begin_field(std::string_view, bool is_present);
 
-  bool begin_field(std::string_view, span<const type_id_t> types, size_t index);
+  bool begin_field(std::string_view, std::span<const type_id_t> types,
+                   size_t index);
 
   bool begin_field(std::string_view, bool is_present,
-                   span<const type_id_t> types, size_t index);
+                   std::span<const type_id_t> types, size_t index);
 
   bool end_field();
 

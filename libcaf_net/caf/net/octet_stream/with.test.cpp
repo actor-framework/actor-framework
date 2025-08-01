@@ -32,11 +32,11 @@ void ping_pong(net::stream_socket fd, int num_items) {
   auto guard = detail::scope_guard{[fd]() noexcept { net::close(fd); }};
   for (int i = 0; i < num_items; ++i) {
     std::byte buf;
-    if (net::read(fd, make_span(&buf, 1)) != 1) {
+    if (net::read(fd, std::span{&buf, 1}) != 1) {
       return;
     }
     buf = std::byte{static_cast<uint8_t>(std::to_integer<int>(buf) + 1)};
-    if (net::write(fd, make_span(&buf, 1)) != 1) {
+    if (net::write(fd, std::span{&buf, 1}) != 1) {
       return;
     }
   }

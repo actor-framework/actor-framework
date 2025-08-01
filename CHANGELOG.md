@@ -26,6 +26,13 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The default maximum message size for the length-prefix framing has been
   reduced to 64 MB. This change was made to improve security by default.
 
+### Deprecated
+
+- The type `caf::span` and the utility function `make_span` are now deprecated
+  and will be removed in the next major release. Now that CAF updated its
+  minimum required C++ standard to C++20, we have switched to using `std::span`
+  throughout the code base and users should do the same.
+
 ### Added
 
 - Added `monitor` API to WebSocket and HTTP servers in the `with` DSL (#2026).

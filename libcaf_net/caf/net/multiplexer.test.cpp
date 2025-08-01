@@ -15,9 +15,9 @@
 #include "caf/detail/assert.hpp"
 #include "caf/detail/latch.hpp"
 #include "caf/log/test.hpp"
-#include "caf/span.hpp"
 
 #include <new>
+#include <span>
 #include <string_view>
 #include <tuple>
 
@@ -54,7 +54,7 @@ public:
   // -- testing DSL ------------------------------------------------------------
 
   void send(std::string_view x) {
-    auto x_bytes = as_bytes(make_span(x));
+    auto x_bytes = as_bytes(std::span{x});
     wr_buf_.insert(wr_buf_.end(), x_bytes.begin(), x_bytes.end());
   }
 
@@ -78,7 +78,7 @@ public:
   void handle_read_event() override {
     if (read_capacity() < 1024)
       rd_buf_.resize(rd_buf_.size() + 2048);
-    auto res = read(fd_, make_span(read_position_begin(), read_capacity()));
+    auto res = read(fd_, std::span{read_position_begin(), read_capacity()});
     if (res > 0) {
       CAF_ASSERT(res > 0);
       rd_buf_pos_ += res;

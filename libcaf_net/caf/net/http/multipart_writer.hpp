@@ -9,6 +9,7 @@
 #include "caf/callback.hpp"
 #include "caf/detail/net_export.hpp"
 
+#include <span>
 #include <string_view>
 
 namespace caf::net::http {
@@ -47,7 +48,7 @@ public:
 
   /// Appends a payload with no headers from a string_view.
   void append(std::string_view payload) {
-    append(as_bytes(make_span(payload)));
+    append(as_bytes(std::span{payload}));
   }
 
   /// Appends a payload with a single header field.
@@ -57,7 +58,7 @@ public:
   /// Appends a payload with a single header field from a string_view.
   void append(std::string_view payload, std::string_view key,
               std::string_view value) {
-    append(as_bytes(make_span(payload)), key, value);
+    append(as_bytes(std::span{payload}), key, value);
   }
 
   /// Appends a payload with custom header configuration.
@@ -76,7 +77,7 @@ public:
   /// Appends a payload with custom header configuration from a string_view.
   template <class AddHeadersFn>
   void append(std::string_view payload, AddHeadersFn&& add_headers) {
-    append(as_bytes(make_span(payload)),
+    append(as_bytes(std::span{payload}),
            std::forward<AddHeadersFn>(add_headers));
   }
 

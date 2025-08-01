@@ -94,19 +94,6 @@ concept iterable = !primitive<T> && requires(T& t) {
   { t.begin() != t.end() } -> std::convertible_to<bool>;
 };
 
-/// Checks whether `T` is a non-const reference.
-template <class T>
-struct mutable_ref_oracle : std::false_type {};
-
-template <class T>
-struct mutable_ref_oracle<const T&> : std::false_type {};
-
-template <class T>
-struct mutable_ref_oracle<T&> : std::true_type {};
-
-template <class T>
-concept mutable_ref = mutable_ref_oracle<T>::value;
-
 // Checks whether T has a member variable named `name`.
 template <class T>
 concept has_name = !std::is_scalar_v<T> && requires {

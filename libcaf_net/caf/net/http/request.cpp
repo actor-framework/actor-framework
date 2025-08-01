@@ -65,11 +65,11 @@ const request_header& request::header() const {
 }
 
 const_byte_span request::body() const {
-  return make_span(impl_->body);
+  return std::span{impl_->body};
 }
 
 const_byte_span request::payload() const {
-  return make_span(impl_->body);
+  return std::span{impl_->body};
 }
 
 void request::respond(status code, std::string_view content_type,

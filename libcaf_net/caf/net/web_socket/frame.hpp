@@ -37,7 +37,7 @@ public:
     // nop
   }
 
-  explicit frame(caf::span<const const_byte_span> buffers)
+  explicit frame(std::span<const const_byte_span> buffers)
     : data_(chunk::data::make(buffers), false) {
     // nop
   }
@@ -47,7 +47,7 @@ public:
     // nop
   }
 
-  explicit frame(caf::span<const std::string_view> texts)
+  explicit frame(std::span<const std::string_view> texts)
     : data_(chunk::data::make(texts), false) {
     // nop
   }
@@ -63,8 +63,8 @@ public:
   template <class... Buffers>
   [[nodiscard]] static frame from_buffers(const Buffers&... buffers) {
     static_assert(sizeof...(Buffers) > 0);
-    const_byte_span bufs[sizeof...(Buffers)] = {make_span(buffers)...};
-    return frame(make_span(bufs));
+    const_byte_span bufs[sizeof...(Buffers)] = {std::span{buffers}...};
+    return frame(std::span{bufs});
   }
 
   /// Creates a frame from one or more strings.
@@ -72,7 +72,7 @@ public:
   [[nodiscard]] static frame from_strings(const Texts&... texts) {
     static_assert(sizeof...(Texts) > 0);
     std::string_view bufs[sizeof...(Texts)] = {std::string_view(texts)...};
-    return frame(make_span(bufs));
+    return frame(std::span{bufs});
   }
 
   // -- properties -------------------------------------------------------------

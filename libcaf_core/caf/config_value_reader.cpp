@@ -324,7 +324,7 @@ public:
     return true;
   }
 
-  bool begin_field(std::string_view name, span<const type_id_t> types,
+  bool begin_field(std::string_view name, std::span<const type_id_t> types,
                    size_t& index) {
     SCOPE(const settings*);
     std::string key;
@@ -351,7 +351,7 @@ public:
   }
 
   bool begin_field(std::string_view name, bool& is_present,
-                   span<const type_id_t> types, size_t& index) {
+                   std::span<const type_id_t> types, size_t& index) {
     SCOPE(const settings*);
     if (top->contains(name)) {
       is_present = true;
@@ -711,13 +711,13 @@ bool config_value_reader::begin_field(std::string_view name, bool& is_present) {
 }
 
 bool config_value_reader::begin_field(std::string_view name,
-                                      span<const type_id_t> types,
+                                      std::span<const type_id_t> types,
                                       size_t& index) {
   return impl::cast(impl_).begin_field(name, types, index);
 }
 
 bool config_value_reader::begin_field(std::string_view name, bool& is_present,
-                                      span<const type_id_t> types,
+                                      std::span<const type_id_t> types,
                                       size_t& index) {
   return impl::cast(impl_).begin_field(name, is_present, types, index);
 }

@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "caf/span.hpp"
 #include "caf/telemetry/label.hpp"
 #include "caf/telemetry/label_view.hpp"
 #include "caf/telemetry/metric.hpp"
@@ -15,6 +14,7 @@
 #include <initializer_list>
 #include <memory>
 #include <mutex>
+#include <span>
 
 namespace caf::telemetry {
 
@@ -52,7 +52,7 @@ public:
     // nop
   }
 
-  Type* get_or_add(span<const label_view> labels) {
+  Type* get_or_add(std::span<const label_view> labels) {
     auto has_label_values = [labels](const auto& metric_ptr) {
       const auto& metric_labels = metric_ptr->labels();
       return std::is_permutation(metric_labels.begin(), metric_labels.end(),
@@ -74,7 +74,8 @@ public:
   }
 
   Type* get_or_add(std::initializer_list<label_view> labels) {
-    return get_or_add(span<const label_view>{labels.begin(), labels.size()});
+    return get_or_add(
+      std::span<const label_view>{labels.begin(), labels.size()});
   }
 
   // -- properties --

@@ -107,7 +107,7 @@ TEST("stringification of std::chrono::duration") {
 TEST("stringification of byte span") {
   check_eq(do_render(std::byte{42}), "2A"s);
   auto hello = "hello"sv;
-  check_eq(do_render(as_bytes(make_span(hello))), "68656C6C6F"s);
+  check_eq(do_render(as_bytes(std::span{hello})), "68656C6C6F"s);
 }
 
 TEST("stringification of custom types") {

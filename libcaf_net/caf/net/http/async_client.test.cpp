@@ -169,7 +169,7 @@ SCENARIO("the client sends HTTP requests") {
       auto ret = run_client(net::http::method::post, "/foo/bar/index.html"s,
                             field_map{{"Content-Length", "13"},
                                       {"Content-Type", "plain/text"}},
-                            as_bytes(make_span(body)));
+                            as_bytes(std::span{body}));
       THEN("the output contains the formatted request") {
         std::string_view want = "POST /foo/bar/index.html HTTP/1.1\r\n"
                                 "Content-Length: 13\r\n"
@@ -187,7 +187,7 @@ SCENARIO("the client sends HTTP requests") {
       auto body = "Hello, world!"sv;
       auto ret = run_client(net::http::method::post, "/foo/bar/index.html"s,
                             field_map{{"Content-Type", "plain/text"}},
-                            as_bytes(make_span(body)));
+                            as_bytes(std::span{body}));
       THEN("the output contains the formatted request") {
         std::string_view want = "POST /foo/bar/index.html HTTP/1.1\r\n"
                                 "Content-Type: plain/text\r\n"
@@ -209,7 +209,7 @@ SCENARIO("the client parses HTTP response into header fields") {
     std::string_view response = "HTTP/1.1 200 OK\r\n\r\n";
     WHEN("receiving from an HTTP server") {
       auto ret = run_client();
-      net::write(fd1, as_bytes(make_span(response)));
+      net::write(fd1, as_bytes(std::span{response}));
       THEN("the HTTP layer parses the data and calls the application layer") {
         auto maybe_res = ret.first.get(1s);
         require(maybe_res.has_value());
@@ -228,7 +228,7 @@ SCENARIO("the client parses HTTP response into header fields") {
                                 "Content-Type: text/plain\r\n\r\n";
     WHEN("receiving from an HTTP server") {
       auto ret = run_client();
-      net::write(fd1, as_bytes(make_span(response)));
+      net::write(fd1, as_bytes(std::span{response}));
       THEN("the HTTP layer parses the data and calls the application layer") {
         auto maybe_res = ret.first.get(1s);
         require(maybe_res.has_value());
@@ -251,7 +251,7 @@ SCENARIO("the client parses HTTP response into header fields") {
                                 "Hello, world!";
     WHEN("receiving from an HTTP server") {
       auto ret = run_client();
-      net::write(fd1, as_bytes(make_span(response)));
+      net::write(fd1, as_bytes(std::span{response}));
       THEN("the HTTP layer parses the data and calls the application layer") {
         auto maybe_res = ret.first.get(1s);
         require(maybe_res.has_value());
@@ -276,7 +276,7 @@ SCENARIO("the client receives invalid HTTP responses") {
                                 "\r\n";
     WHEN("receiving from an HTTP server") {
       auto ret = run_client();
-      net::write(fd1, as_bytes(make_span(response)));
+      net::write(fd1, as_bytes(std::span{response}));
       THEN("the HTTP layer parses the data and calls abort") {
         auto maybe_res = ret.first.get(1s);
         check(!maybe_res);

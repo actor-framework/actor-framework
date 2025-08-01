@@ -719,7 +719,7 @@ SCENARIO("get_or converts or returns a fallback value") {
     }
     WHEN("using get_or with type of int span") {
       int fallback_arr[] = {10, 20, 30};
-      auto fallback = make_span(fallback_arr);
+      auto fallback = std::span{fallback_arr, std::size(fallback_arr)};
       THEN("CAF returns the default value after converting it to int vector") {
         auto result = get_or(x, fallback);
         static_assert(std::is_same_v<decltype(result), std::vector<int>>);
