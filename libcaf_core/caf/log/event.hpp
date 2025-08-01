@@ -370,11 +370,8 @@ public:
   }
 
   /// Adds nested fields.
-  template <class SubFieldsInitializer>
-  event_sender&& field(std::string_view key, SubFieldsInitializer&& init)
-    requires(
-      std::same_as<decltype(init(std::declval<event_fields_builder&>())), void>)
-  {
+  template <std::invocable<event_fields_builder&> SubFieldsInitializer>
+  event_sender&& field(std::string_view key, SubFieldsInitializer&& init) {
     if (logger_)
       fields_.field(key, std::forward<SubFieldsInitializer>(init));
     return std::move(*this);

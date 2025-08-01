@@ -10,7 +10,6 @@
 #include "caf/telemetry/gauge.hpp"
 #include "caf/telemetry/label.hpp"
 
-#include <concepts>
 #include <type_traits>
 
 namespace caf::telemetry {

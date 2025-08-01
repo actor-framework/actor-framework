@@ -515,7 +515,9 @@ public:
   /// Utility function that swaps `f` into a temporary before calling it
   /// and restoring `f` only if it has not been replaced by the user.
   template <class F, class... Ts>
-  auto call_handler(F& f, Ts&&... xs) {
+  auto call_handler(F& f, Ts&&... xs)
+    requires std::invocable<F, Ts...>
+  {
     using std::swap;
     F g;
     swap(f, g);
