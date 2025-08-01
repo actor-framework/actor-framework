@@ -16,7 +16,7 @@ std::vector<std::byte> to_byte_buf(Ts... values) {
 }
 
 template <class T>
-std::vector<std::byte> to_vec(span<const T> values) {
+std::vector<std::byte> to_vec(std::span<const T> values) {
   return std::vector<std::byte>{values.begin(), values.end()};
 }
 
@@ -32,7 +32,7 @@ TEST("default construction") {
 
 TEST("construction from a single buffer") {
   auto buf = to_byte_buf(1, 2, 3);
-  auto uut = net::lp::frame{make_span(buf)};
+  auto uut = net::lp::frame{std::span{buf}};
   check(static_cast<bool>(uut));
   check(!uut.empty());
   check(!uut.bytes().empty());
@@ -57,7 +57,7 @@ TEST("construction from multiple buffers") {
 TEST("copying, moving and swapping") {
   auto buf = to_byte_buf(1, 2, 3);
   auto uut1 = net::lp::frame{};
-  auto uut2 = net::lp::frame{make_span(buf)};
+  auto uut2 = net::lp::frame{std::span{buf}};
   auto uut3 = uut1;
   auto uut4 = uut2;
   check_eq(uut1.bytes().data(), uut3.bytes().data());

@@ -5,11 +5,11 @@
 #include "caf/detail/prometheus_broker.hpp"
 
 #include "caf/log/io.hpp"
-#include "caf/span.hpp"
 #include "caf/string_algorithms.hpp"
 #include "caf/telemetry/dbl_gauge.hpp"
 #include "caf/telemetry/int_gauge.hpp"
 
+#include <span>
 #include <string_view>
 
 namespace caf::detail {
@@ -66,7 +66,7 @@ behavior prometheus_broker::make_behavior() {
       };
       auto& req = requests_[msg.handle];
       if (req.size() + msg.buf.size() > max_request_size) {
-        write(msg.handle, as_bytes(make_span(request_too_large)));
+        write(msg.handle, as_bytes(std::span{request_too_large}));
         flush_and_close();
         return;
       }
@@ -79,15 +79,15 @@ behavior prometheus_broker::make_behavior() {
       // We only check whether it's a GET request for /metrics for HTTP 1.x.
       // Everything else, we ignore for now.
       if (!starts_with(req_str, "GET /metrics HTTP/1.")) {
-        write(msg.handle, as_bytes(make_span(request_not_supported)));
+        write(msg.handle, as_bytes(std::span{request_not_supported}));
         flush_and_close();
         return;
       }
       // Collect metrics, ship response, and close.
       scrape();
-      auto hdr = as_bytes(make_span(request_ok));
+      auto hdr = as_bytes(std::span{request_ok});
       auto text = collector_.collect_from(system().metrics());
-      auto payload = as_bytes(make_span(text));
+      auto payload = as_bytes(std::span{text});
       auto& dst = wr_buf(msg.handle);
       dst.insert(dst.end(), hdr.begin(), hdr.end());
       dst.insert(dst.end(), payload.begin(), payload.end());

@@ -13,9 +13,9 @@
 #include "caf/internal/net_syscall.hpp"
 #include "caf/internal/socket_sys_includes.hpp"
 #include "caf/log/net.hpp"
-#include "caf/span.hpp"
 
 #include <cstddef>
+#include <span>
 
 #ifdef CAF_POSIX
 #  include <sys/uio.h>

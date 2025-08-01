@@ -298,12 +298,12 @@ prototypes for the registry member functions look as follows:
 
   template <class ValueType = int64_t>
   auto* gauge_family(string_view prefix, string_view name,
-                     span<const string_view> labels, string_view helptext,
+                     std::span<const string_view> labels, string_view helptext,
                      string_view unit = "1", bool is_sum = false);
 
   template <class ValueType = int64_t>
   auto* gauge_instance(string_view prefix, string_view name,
-                       span<const label_view> labels, string_view helptext,
+                       std::span<const label_view> labels, string_view helptext,
                        string_view unit = "1", bool is_sum = false);
 
   template <class ValueType = int64_t>
@@ -350,21 +350,21 @@ same pattern as the member functions for counters and gauges.
 
   template <class ValueType = int64_t>
   auto* histogram_family(string_view prefix, string_view name,
-                         span<const string_view> label_names,
-                         span<const ValueType> default_upper_bounds,
+                         std::span<const string_view> label_names,
+                         std::span<const ValueType> default_upper_bounds,
                          string_view helptext, string_view unit = "1",
                          bool is_sum = false);
 
   template <class ValueType = int64_t>
   auto* histogram_instance(string_view prefix, string_view name,
-                           span<const label_view> label_names,
-                           span<const ValueType> default_upper_bounds,
+                           std::span<const label_view> label_names,
+                           std::span<const ValueType> default_upper_bounds,
                            string_view helptext, string_view unit = "1",
                            bool is_sum = false);
 
   template <class ValueType = int64_t>
   auto* histogram_singleton(string_view prefix, string_view name,
-                            span<const ValueType> default_upper_bounds,
+                            std::span<const ValueType> default_upper_bounds,
                             string_view helptext, string_view unit = "1",
                             bool is_sum = false);
 

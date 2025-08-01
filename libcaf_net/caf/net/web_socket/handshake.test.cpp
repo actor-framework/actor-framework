@@ -47,7 +47,7 @@ struct fixture {
 
   auto key_to_bytes() {
     web_socket::handshake::key_type bytes;
-    auto in = as_bytes(make_span(key));
+    auto in = as_bytes(std::span{key});
     std::copy(in.begin(), in.end(), bytes.begin());
     return bytes;
   }

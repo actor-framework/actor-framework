@@ -466,7 +466,7 @@ bool config_value::can_convert_to_dictionary() const {
 
 std::optional<message>
 config_value::parse_msg_impl(std::string_view str,
-                             span<const type_id_list> allowed_types) {
+                             std::span<const type_id_list> allowed_types) {
   if (auto val = parse(str)) {
     auto ls_size = val->as_list().size();
     message result;

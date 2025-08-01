@@ -10,7 +10,7 @@
 #include "caf/net/http/request_header.hpp"
 #include "caf/net/http/responder.hpp"
 
-#include "caf/span.hpp"
+#include <span>
 
 using namespace caf;
 using namespace caf::net::http;
@@ -24,7 +24,7 @@ TEST("multipart reader") {
                                    std::string_view body_content) {
     hdr.parse(header);
     body = body_content;
-    res = std::make_unique<responder>(&hdr, as_bytes(make_span(body)), nullptr);
+    res = std::make_unique<responder>(&hdr, as_bytes(std::span{body}), nullptr);
   };
   SECTION("empty multipart") {
     setup("POST / HTTP/1.1\r\n"

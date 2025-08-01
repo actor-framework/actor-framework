@@ -7,10 +7,10 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/load_inspector_base.hpp"
-#include "caf/span.hpp"
 
 #include <concepts>
 #include <cstddef>
+#include <span>
 
 namespace caf {
 
@@ -79,11 +79,11 @@ public:
 
   bool begin_field(std::string_view name, bool& is_present) noexcept;
 
-  bool begin_field(std::string_view name, span<const type_id_t> types,
+  bool begin_field(std::string_view name, std::span<const type_id_t> types,
                    size_t& index) noexcept;
 
   bool begin_field(std::string_view name, bool& is_present,
-                   span<const type_id_t> types, size_t& index) noexcept;
+                   std::span<const type_id_t> types, size_t& index) noexcept;
 
   bool end_field();
 

@@ -8,13 +8,14 @@
 #include <cstring>
 #include <new>
 #include <numeric>
+#include <span>
 
 namespace caf {
 
 namespace {
 
 template <class Buffer>
-size_t calc_total_size(span<const Buffer> buffers) {
+size_t calc_total_size(std::span<const Buffer> buffers) {
   auto fn = [](size_t n, const Buffer& buf) { return n + buf.size(); };
   return std::accumulate(buffers.begin(), buffers.end(), size_t{0}, fn);
 }
@@ -40,7 +41,7 @@ chunk::data* chunk::data::make(std::string_view text) {
   return result;
 }
 
-chunk::data* chunk::data::make(span<const const_byte_span> buffers) {
+chunk::data* chunk::data::make(std::span<const const_byte_span> buffers) {
   auto* result = make(true, calc_total_size(buffers));
   auto pos = result->storage();
   for (const auto& buffer : buffers) {
@@ -52,7 +53,7 @@ chunk::data* chunk::data::make(span<const const_byte_span> buffers) {
   return result;
 }
 
-chunk::data* chunk::data::make(span<const std::string_view> texts) {
+chunk::data* chunk::data::make(std::span<const std::string_view> texts) {
   auto* result = make(false, calc_total_size(texts));
   auto pos = result->storage();
   for (const auto& text : texts) {

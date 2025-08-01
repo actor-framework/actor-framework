@@ -10,11 +10,11 @@
 #include "caf/byte_buffer.hpp"
 #include "caf/default_enum_inspect.hpp"
 #include "caf/detail/net_export.hpp"
-#include "caf/span.hpp"
 #include "caf/unordered_flat_map.hpp"
 
 #include <cstdint>
 #include <memory>
+#include <span>
 #include <string>
 #include <type_traits>
 
@@ -39,13 +39,13 @@ public:
   }
 
   /// Returns the HTTP header fields.
-  span<const std::pair<std::string, std::string>> header_fields() const {
+  std::span<const std::pair<std::string, std::string>> header_fields() const {
     return pimpl_->fields.container();
   }
 
   /// Returns the HTTP body (payload).
   const_byte_span body() const {
-    return make_span(pimpl_->body);
+    return std::span{pimpl_->body};
   }
 
 private:

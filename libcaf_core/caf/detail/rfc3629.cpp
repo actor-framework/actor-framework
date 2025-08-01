@@ -116,12 +116,14 @@ std::pair<const std::byte*, bool> validate_rfc3629(const std::byte* first,
 namespace caf::detail {
 
 bool rfc3629::valid(const_byte_span bytes) noexcept {
-  return validate_rfc3629(bytes.begin(), bytes.end()).first == bytes.end();
+  return validate_rfc3629(bytes.data(), bytes.data() + bytes.size()).first
+         == bytes.data() + bytes.size();
 }
 
 std::pair<size_t, bool> rfc3629::validate(const_byte_span bytes) noexcept {
-  auto [last, incomplete] = validate_rfc3629(bytes.begin(), bytes.end());
-  return {static_cast<size_t>(last - bytes.begin()), incomplete};
+  auto [last, incomplete] = validate_rfc3629(bytes.data(),
+                                             bytes.data() + bytes.size());
+  return {static_cast<size_t>(last - bytes.data()), incomplete};
 }
 
 } // namespace caf::detail

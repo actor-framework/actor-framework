@@ -6,7 +6,7 @@
 
 #include "caf/test/scenario.hpp"
 
-#include "caf/span.hpp"
+#include <span>
 
 using namespace caf;
 using namespace caf::net::http;

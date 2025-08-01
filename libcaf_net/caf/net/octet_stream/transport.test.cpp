@@ -18,9 +18,9 @@
 #include "caf/detail/scope_guard.hpp"
 #include "caf/log/test.hpp"
 #include "caf/make_actor.hpp"
-#include "caf/span.hpp"
 
 #include <algorithm>
+#include <span>
 
 using namespace caf;
 
@@ -98,7 +98,7 @@ public:
   void prepare_send() override {
     log::test::debug("prepare_send called");
     auto& buf = down->output_buffer();
-    auto data = as_bytes(make_span(hello_manager));
+    auto data = as_bytes(std::span{hello_manager});
     buf.insert(buf.end(), data.begin(), data.end());
   }
 
@@ -133,7 +133,7 @@ TEST("receive") {
   mpx->apply_updates();
   check_eq(mpx->num_socket_managers(), 2u);
   check_eq(static_cast<size_t>(write(send_socket_guard.socket(),
-                                     as_bytes(make_span(hello_manager)))),
+                                     as_bytes(std::span{hello_manager}))),
            hello_manager.size());
   log::test::debug("wrote {} bytes.", hello_manager.size());
   handle_io_event();
@@ -155,7 +155,7 @@ TEST("send") {
   while (handle_io_event())
     ;
   send_buf.resize(hello_manager.size());
-  auto res = read(send_socket_guard.socket(), make_span(send_buf));
+  auto res = read(send_socket_guard.socket(), std::span{send_buf});
   log::test::debug("received  bytes", res);
   send_buf.resize(res);
   check_eq(std::string_view(reinterpret_cast<char*>(send_buf.data()),
@@ -176,7 +176,7 @@ TEST("consuming a non-negative byte count resets the delta") {
   auto mgr = net::socket_manager::make(mpx.get(), std::move(transport));
   check_eq(mgr->start(), none);
   mpx->apply_updates();
-  write(send_socket_guard.socket(), as_bytes(make_span(hello_manager)));
+  write(send_socket_guard.socket(), as_bytes(std::span{hello_manager}));
   handle_io_event();
   if (check_eq(byte_span_sizes.size(), 2u)) {
     check_eq(byte_span_sizes[0].first, 14u);
@@ -208,7 +208,7 @@ TEST("switching the protocol resets the delta") {
   auto mgr = net::socket_manager::make(mpx.get(), std::move(transport));
   check_eq(mgr->start(), none);
   mpx->apply_updates();
-  write(send_socket_guard.socket(), as_bytes(make_span(hello_manager)));
+  write(send_socket_guard.socket(), as_bytes(std::span{hello_manager}));
   handle_io_event();
   if (check_eq(byte_span_sizes_1.size(), 1u)) {
     check_eq(byte_span_sizes_1[0].first, 7u);

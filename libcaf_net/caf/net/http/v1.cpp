@@ -28,7 +28,7 @@ writer& operator<<(writer& out, char x) {
 }
 
 writer& operator<<(writer& out, std::string_view str) {
-  auto bytes = as_bytes(make_span(str));
+  auto bytes = as_bytes(std::span{str});
   out.buf->insert(out.buf->end(), bytes.begin(), bytes.end());
   return out;
 }
@@ -53,7 +53,7 @@ std::pair<std::string_view, byte_span> split_header(byte_span bytes) {
   } else {
     auto offset = static_cast<size_t>(std::distance(bytes.begin(), i));
     offset += end_of_header.size();
-    return {std::string_view{reinterpret_cast<const char*>(bytes.begin()),
+    return {std::string_view{reinterpret_cast<const char*>(bytes.data()),
                              offset},
             bytes.subspan(offset)};
   }
@@ -86,7 +86,8 @@ expected<std::pair<size_t, byte_span>> parse_chunk(byte_span input) {
   return std::make_pair(chunk_size, input.subspan(parsed_len));
 }
 
-void write_response_header(status code, span<const string_view_pair> fields,
+void write_response_header(status code,
+                           std::span<const string_view_pair> fields,
                            byte_buffer& buf) {
   writer out{&buf};
   out << "HTTP/1.1 "sv << std::to_string(static_cast<int>(code)) << ' '
@@ -129,7 +130,8 @@ void write_response(status code, std::string_view content_type,
 
 void write_response(status code, std::string_view content_type,
                     std::string_view content,
-                    span<const string_view_pair> fields, byte_buffer& buf) {
+                    std::span<const string_view_pair> fields,
+                    byte_buffer& buf) {
   writer out{&buf};
   out << "HTTP/1.1 "sv << std::to_string(static_cast<int>(code)) << ' '
       << phrase(code) << "\r\n"sv;

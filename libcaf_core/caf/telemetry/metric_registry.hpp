@@ -28,11 +28,11 @@ class CAF_CORE_EXPORT metric_registry {
 public:
   // -- member types -----------------------------------------------------------
 
-  /// Forces the compiler to use the type `span<const T>` instead of trying to
-  /// match parameters to a `span`.
+  /// Forces the compiler to use the type `std::span<const T>` instead of trying
+  /// to match parameters to a `span`.
   template <class T>
   struct span_type {
-    using type = span<const T>;
+    using type = std::span<const T>;
   };
 
   /// Convenience alias to safe some typing.
@@ -91,7 +91,7 @@ public:
                std::initializer_list<std::string_view> labels,
                std::string_view helptext, std::string_view unit = "1",
                bool is_sum = false) {
-    auto lbl_span = make_span(labels.begin(), labels.size());
+    auto lbl_span = std::span{labels.begin(), labels.size()};
     return gauge_family<ValueType>(prefix, name, lbl_span, helptext, unit,
                                    is_sum);
   }
@@ -225,7 +225,7 @@ public:
                  std::initializer_list<std::string_view> labels,
                  std::string_view helptext, std::string_view unit = "1",
                  bool is_sum = false) {
-    auto lbl_span = make_span(labels.begin(), labels.size());
+    auto lbl_span = std::span{labels.begin(), labels.size()};
     return counter_family<ValueType>(prefix, name, lbl_span, helptext, unit,
                                      is_sum);
   }
@@ -387,7 +387,7 @@ public:
                    std::initializer_list<std::string_view> label_names,
                    span_t<ValueType> upper_bounds, std::string_view helptext,
                    std::string_view unit = "1", bool is_sum = false) {
-    auto lbl_span = make_span(label_names.begin(), label_names.size());
+    auto lbl_span = std::span{label_names.begin(), label_names.size()};
     return histogram_family<ValueType>(prefix, name, lbl_span, upper_bounds,
                                        helptext, unit, is_sum);
   }

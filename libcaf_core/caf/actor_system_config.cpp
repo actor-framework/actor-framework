@@ -23,6 +23,7 @@
 #include <fstream>
 #include <iostream>
 #include <limits>
+#include <span>
 #include <sstream>
 #include <thread>
 
@@ -208,7 +209,7 @@ void actor_system_config::config_file_paths(std::vector<std::string> paths) {
   fields_->paths = std::move(paths);
 }
 
-span<const std::string> actor_system_config::config_file_paths() {
+std::span<const std::string> actor_system_config::config_file_paths() {
   return fields_->paths;
 }
 
@@ -611,7 +612,7 @@ void actor_system_config::add_module_factory(module_factory_fn ptr) {
   fields_->module_factories.emplace_back(ptr);
 }
 
-span<actor_system_config::module_factory_fn>
+std::span<actor_system_config::module_factory_fn>
 actor_system_config::module_factories() {
   return fields_->module_factories;
 }
@@ -637,7 +638,7 @@ void actor_system_config::add_thread_hook(std::unique_ptr<thread_hook> ptr) {
   fields_->thread_hooks.emplace_back(std::move(ptr));
 }
 
-span<std::unique_ptr<thread_hook>> actor_system_config::thread_hooks() {
+std::span<std::unique_ptr<thread_hook>> actor_system_config::thread_hooks() {
   return fields_->thread_hooks;
 }
 
@@ -667,7 +668,7 @@ void actor_system_config::set_remainder(std::vector<std::string> args) {
   fields_->args_remainder = std::move(args);
 }
 
-span<const std::string> actor_system_config::remainder() const noexcept {
+std::span<const std::string> actor_system_config::remainder() const noexcept {
   return fields_->args_remainder;
 }
 

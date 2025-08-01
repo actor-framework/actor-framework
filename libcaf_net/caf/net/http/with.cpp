@@ -407,7 +407,7 @@ with_t::client::request(http::method method, const_byte_span payload) {
 
 expected<std::pair<async::future<response>, disposable>>
 with_t::client::request(http::method method, std::string_view payload) {
-  return request(method, as_bytes(make_span(payload)));
+  return request(method, as_bytes(std::span{payload}));
 }
 
 // -- with API -----------------------------------------------------------------

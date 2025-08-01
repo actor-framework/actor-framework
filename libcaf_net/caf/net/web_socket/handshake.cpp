@@ -134,7 +134,7 @@ struct writer {
 };
 
 writer& operator<<(writer& out, std::string_view str) {
-  auto bytes = as_bytes(make_span(str));
+  auto bytes = as_bytes(std::span{str});
   out.buf->insert(out.buf->end(), bytes.begin(), bytes.end());
   return out;
 }

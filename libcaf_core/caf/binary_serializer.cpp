@@ -13,6 +13,7 @@
 #include "caf/internal/fast_pimpl.hpp"
 
 #include <iomanip>
+#include <span>
 
 namespace caf {
 
@@ -112,7 +113,7 @@ public:
     return value(val);
   }
 
-  bool begin_field(std::string_view, span<const type_id_t> types,
+  bool begin_field(std::string_view, std::span<const type_id_t> types,
                    size_t index) {
     CAF_ASSERT(index < types.size());
     if (types.size() < max_value<int8_t>) {
@@ -127,7 +128,7 @@ public:
   }
 
   bool begin_field(std::string_view, bool is_present,
-                   span<const type_id_t> types, size_t index) {
+                   std::span<const type_id_t> types, size_t index) {
     CAF_ASSERT(!is_present || index < types.size());
     if (types.size() < max_value<int8_t>) {
       return value(compress_index<int8_t>(is_present, index));
@@ -172,7 +173,7 @@ public:
       x >>= 7;
     }
     *i++ = static_cast<uint8_t>(x) & 0x7f;
-    return value(as_bytes(make_span(buf, static_cast<size_t>(i - buf))));
+    return value(as_bytes(std::span{buf, static_cast<size_t>(i - buf)}));
   }
 
   constexpr bool end_sequence() {
@@ -197,9 +198,9 @@ public:
     } else {
       auto remaining = buf_size - write_pos_;
       CAF_ASSERT(remaining < x.size());
-      auto first = x.begin();
+      auto first = x.data();
       auto mid = first + remaining;
-      auto last = x.end();
+      auto last = first + x.size();
       memcpy(buf_.data() + write_pos_, first, remaining);
       // Ignore false positive for stringop-overread
       CAF_PUSH_STRINGOP_OVERREAD_WARNING
@@ -279,7 +280,7 @@ public:
   bool value(std::string_view x) {
     if (!begin_sequence(x.size()))
       return false;
-    value(as_bytes(make_span(x)));
+    value(as_bytes(std::span{x}));
     return end_sequence();
   }
 
@@ -403,7 +404,7 @@ private:
   bool int_value(T x) {
     using unsigned_type = detail::squashed_int_t<std::make_unsigned_t<T>>;
     auto y = detail::to_network_order(static_cast<unsigned_type>(x));
-    return value(as_bytes(make_span(&y, 1)));
+    return value(as_bytes(std::span{&y, 1}));
   }
 
   /// Stores the serialized output.
@@ -492,12 +493,14 @@ bool binary_serializer::begin_field(std::string_view type_name,
 }
 
 bool binary_serializer::begin_field(std::string_view type_name,
-                                    span<const type_id_t> types, size_t index) {
+                                    std::span<const type_id_t> types,
+                                    size_t index) {
   return impl::cast(impl_).begin_field(type_name, types, index);
 }
 
 bool binary_serializer::begin_field(std::string_view type_name, bool is_present,
-                                    span<const type_id_t> types, size_t index) {
+                                    std::span<const type_id_t> types,
+                                    size_t index) {
   return impl::cast(impl_).begin_field(type_name, is_present, types, index);
 }
 

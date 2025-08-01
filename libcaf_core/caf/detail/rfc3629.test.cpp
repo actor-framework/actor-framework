@@ -207,9 +207,9 @@ TEST("rfc3629::validate stops at the first invalid byte") {
     check_eq(rfc3629::validate(invalid_four_byte_10), res_t{0, false});
   }
   SECTION("invalid UTF-8 input fails on the invalid byte") {
-    check_eq(rfc3629::validate(make_span(invalid_four_byte_9, 2)),
+    check_eq(rfc3629::validate(std::span{invalid_four_byte_9, 2}),
              res_t{0, false});
-    check_eq(rfc3629::validate(make_span(invalid_four_byte_10, 1)),
+    check_eq(rfc3629::validate(std::span{invalid_four_byte_10, 1}),
              res_t{0, false});
   }
   SECTION("invalid UTF-8 input with valid prefix") {

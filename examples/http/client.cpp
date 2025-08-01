@@ -10,12 +10,12 @@
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
+#include "caf/byte_span.hpp"
 #include "caf/caf_main.hpp"
 #include "caf/detail/latch.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/ipv4_address.hpp"
 #include "caf/scheduled_actor/flow.hpp"
-#include "caf/span.hpp"
 #include "caf/uuid.hpp"
 
 #include <cassert>

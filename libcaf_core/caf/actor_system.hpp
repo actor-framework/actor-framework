@@ -27,6 +27,7 @@
 
 #include <cstddef>
 #include <memory>
+#include <span>
 #include <string>
 #include <thread>
 
@@ -271,10 +272,10 @@ public:
   detail::global_meta_objects_guard_type meta_objects_guard() const noexcept;
 
   /// Returns the `caf.metrics.filters.actors.includes` parameter.
-  span<const std::string> metrics_actors_includes() const noexcept;
+  std::span<const std::string> metrics_actors_includes() const noexcept;
 
   /// Returns the `caf.metrics.filters.actors.excludes` parameter.
-  span<const std::string> metrics_actors_excludes() const noexcept;
+  std::span<const std::string> metrics_actors_excludes() const noexcept;
 
   /// Returns whether the system collects metrics about how many actors are
   /// running per actor type.

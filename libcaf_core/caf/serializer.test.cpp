@@ -62,11 +62,12 @@ public:
     return state_;
   };
 
-  bool begin_field(std::string_view, span<const type_id_t>, size_t) override {
+  bool begin_field(std::string_view, std::span<const type_id_t>,
+                   size_t) override {
     return state_;
   };
 
-  bool begin_field(std::string_view, bool, span<const type_id_t>,
+  bool begin_field(std::string_view, bool, std::span<const type_id_t>,
                    size_t) override {
     return state_;
   };

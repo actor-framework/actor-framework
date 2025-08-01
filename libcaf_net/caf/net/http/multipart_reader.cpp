@@ -6,8 +6,9 @@
 
 #include "caf/net/http/responder.hpp"
 
-#include "caf/span.hpp"
 #include "caf/string_algorithms.hpp"
+
+#include <span>
 
 using namespace std::literals;
 
@@ -107,7 +108,7 @@ bool multipart_reader::do_parse(consume_fn& fn) {
         && content_view.substr(content_view.size() - 2) == "\r\n") {
       content_view = content_view.substr(0, content_view.size() - 2);
     }
-    auto content = as_bytes(make_span(content_view));
+    auto content = as_bytes(std::span{content_view});
     fn(std::move(hdr), content);
     payload.remove_prefix(next_boundary + boundary_size);
   }
