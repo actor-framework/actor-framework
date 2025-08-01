@@ -5,8 +5,6 @@
 #include "caf/telemetry/collector/prometheus.hpp"
 
 #include "caf/detail/assert.hpp"
-#include "caf/telemetry/dbl_gauge.hpp"
-#include "caf/telemetry/int_gauge.hpp"
 #include "caf/telemetry/metric.hpp"
 #include "caf/telemetry/metric_family.hpp"
 #include "caf/telemetry/metric_registry.hpp"
