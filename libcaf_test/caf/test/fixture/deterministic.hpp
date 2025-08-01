@@ -11,9 +11,9 @@
 #include "caf/actor_system_config.hpp"
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
+#include "caf/detail/concepts.hpp"
 #include "caf/detail/source_location.hpp"
 #include "caf/detail/test_export.hpp"
-#include "caf/detail/type_traits.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/resumable.hpp"
 #include "caf/scheduled_actor.hpp"
@@ -66,7 +66,7 @@ private:
     }
 
     template <class U>
-      requires detail::is_comparable_v<T, U>
+      requires detail::is_comparable<T, U>
     explicit value_predicate(U value) {
       predicate_ = [value](const T& found) { return found == value; };
     }

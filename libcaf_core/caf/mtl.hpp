@@ -105,7 +105,7 @@ auto make_mtl(Self* self, Adapter adapter, Reader* reader) {
   if constexpr (std::is_base_of_v<non_blocking_actor_base, Self>) {
     return event_based_mtl{self, adapter, reader};
   } else {
-    static_assert(detail::always_false_v<Self>,
+    static_assert(detail::always_false<Self>,
                   "sorry, support for blocking actors not implemented yet");
   }
 }

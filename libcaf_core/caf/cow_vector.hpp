@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "caf/detail/comparable.hpp"
 #include "caf/intrusive_cow_ptr.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/ref_counted.hpp"

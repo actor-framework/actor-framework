@@ -108,7 +108,7 @@ public:
     [[nodiscard]] auto on_request(Handler&& handler) {
       // Type checking.
       using fn_t = std::decay_t<Handler>;
-      using fn_trait = detail::get_callable_trait_t<fn_t>;
+      using fn_trait = detail::get_callable_trait<fn_t>;
       static_assert(fn_trait::num_args == 1,
                     "on_request must take exactly one argument");
       using arg_types = typename fn_trait::arg_types;

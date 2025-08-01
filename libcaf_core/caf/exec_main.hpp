@@ -6,8 +6,8 @@
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
+#include "caf/detail/concepts.hpp"
 #include "caf/detail/type_list.hpp"
-#include "caf/detail/type_traits.hpp"
 #include "caf/init_global_meta_objects.hpp"
 
 #include <cstdio>
@@ -58,7 +58,7 @@ void exec_main_load_module(actor_system_config& cfg) {
 
 template <class... Ts, class F = void (*)(actor_system&)>
 int exec_main(F fun, int argc, char** argv) {
-  using trait = detail::get_callable_trait_t<F>;
+  using trait = detail::get_callable_trait<F>;
   using arg_types = typename trait::arg_types;
   static_assert(detail::tl_size<arg_types>::value == 1
                   || detail::tl_size<arg_types>::value == 2,
@@ -108,7 +108,7 @@ auto do_init_host_system(type_list<Module...>, type_list<>) {
 
 template <class... Module, class T, class... Ts>
 auto do_init_host_system(type_list<Module...>, type_list<T, Ts...>) {
-  if constexpr (detail::has_init_host_system_v<T>) {
+  if constexpr (detail::has_init_host_system<T>) {
     return do_init_host_system(type_list<Module..., T>{}, type_list<Ts...>{});
   } else {
     return do_init_host_system(type_list<Module...>{}, type_list<Ts...>{});

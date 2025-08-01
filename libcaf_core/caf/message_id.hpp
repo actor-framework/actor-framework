@@ -6,7 +6,7 @@
 
 #include "caf/config.hpp"
 #include "caf/detail/comparable.hpp"
-#include "caf/detail/type_traits.hpp"
+#include "caf/detail/concepts.hpp"
 #include "caf/error.hpp"
 #include "caf/inspector_access.hpp"
 #include "caf/message_priority.hpp"

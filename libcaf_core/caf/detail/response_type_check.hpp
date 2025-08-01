@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "caf/detail/type_traits.hpp"
+#include "caf/detail/concepts.hpp"
 #include "caf/fwd.hpp"
 #include "caf/type_list.hpp"
 
@@ -16,7 +16,7 @@ template <class OnValue, class OnError, class... Results>
 constexpr void response_type_check() {
   using res_t = type_list<Results...>;
   // Type-check OnValue.
-  using on_value_trait_helper = typename detail::get_callable_trait<OnValue>;
+  using on_value_trait_helper = detail::get_callable_trait_helper<OnValue>;
   static_assert(on_value_trait_helper::valid,
                 "OnValue must provide a single, non-template operator()");
   using on_value_trait = typename on_value_trait_helper::type;
@@ -28,7 +28,7 @@ constexpr void response_type_check() {
                   "OnValue does not match the expected response types");
   }
   // Type-check OnError.
-  using on_error_trait_helper = typename detail::get_callable_trait<OnError>;
+  using on_error_trait_helper = detail::get_callable_trait_helper<OnError>;
   static_assert(on_error_trait_helper::valid,
                 "OnError must provide a single, non-template operator()");
   using on_error_trait = typename on_error_trait_helper::type;

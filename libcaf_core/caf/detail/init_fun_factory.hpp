@@ -122,7 +122,7 @@ public:
 
   template <class... Ts>
   ptr_type make(F f, Ts&&... xs) {
-    using trait = detail::get_callable_trait_t<F>;
+    using trait = detail::get_callable_trait<F>;
     using arg_types = typename trait::arg_types;
     using res_type = typename trait::result_type;
     using first_arg = detail::tl_head_t<arg_types>;

@@ -5,6 +5,7 @@
 #include "caf/config_value.hpp"
 
 #include "caf/detail/assert.hpp"
+#include "caf/detail/concepts.hpp"
 #include "caf/detail/config_consumer.hpp"
 #include "caf/detail/format.hpp"
 #include "caf/detail/meta_object.hpp"
@@ -12,7 +13,6 @@
 #include "caf/detail/parse.hpp"
 #include "caf/detail/parser/read_config.hpp"
 #include "caf/detail/scope_guard.hpp"
-#include "caf/detail/type_traits.hpp"
 #include "caf/expected.hpp"
 #include "caf/format_to_error.hpp"
 #include "caf/parser_state.hpp"

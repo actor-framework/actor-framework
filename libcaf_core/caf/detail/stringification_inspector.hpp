@@ -114,7 +114,7 @@ public:
   }
 
   template <class T>
-    requires(has_to_string_v<T> && !std::convertible_to<T, std::string_view>)
+    requires(has_to_string<T> && !std::convertible_to<T, std::string_view>)
   bool builtin_inspect(const T& x) {
     auto str = to_string(x);
     if constexpr (std::is_convertible<decltype(str), const char*>::value) {
@@ -158,7 +158,7 @@ public:
 
   template <class T>
   bool opaque_value(T& val) {
-    if constexpr (detail::is_iterable<T>::value) {
+    if constexpr (detail::iterable<T>) {
       begin_sequence(val.size());
       for (const auto& elem : val) {
         save(*this, elem);

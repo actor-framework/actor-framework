@@ -13,9 +13,9 @@
 
 #include "caf/deep_to_string.hpp"
 #include "caf/detail/build_config.hpp"
+#include "caf/detail/concepts.hpp"
 #include "caf/detail/is_complete.hpp"
 #include "caf/detail/source_location.hpp"
-#include "caf/detail/type_traits.hpp"
 #include "caf/inspector_access_type.hpp"
 
 #include <string>
@@ -88,7 +88,7 @@ using format_arg
 
 template <class T>
 format_arg make_format_arg(const T& arg) {
-  if constexpr (is_one_of_v<T, bool, char, const char*, std::string_view>) {
+  if constexpr (one_of<T, bool, char, const char*, std::string_view>) {
     return format_arg{arg};
   } else if constexpr (std::is_integral_v<T>) {
     if constexpr (std::is_signed_v<T>) {

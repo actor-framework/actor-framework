@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "caf/detail/type_traits.hpp"
+#include "caf/detail/concepts.hpp"
 #include "caf/fwd.hpp"
 
 #include <utility>
@@ -17,7 +17,7 @@ public:
   using handler_res
     = decltype(std::declval<ErrorHandler&>()(std::declval<const error&>()));
 
-  static_assert(detail::is_expected_v<handler_res>,
+  static_assert(detail::is_expected<handler_res>,
                 "error_handler must return a caf::expected type");
 
   using input_type = typename handler_res::value_type;

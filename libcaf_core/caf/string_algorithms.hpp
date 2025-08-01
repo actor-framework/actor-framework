@@ -5,8 +5,8 @@
 #pragma once
 
 #include "caf/config.hpp"
+#include "caf/detail/concepts.hpp"
 #include "caf/detail/core_export.hpp"
-#include "caf/detail/type_traits.hpp"
 #include "caf/fwd.hpp"
 
 #include <algorithm>

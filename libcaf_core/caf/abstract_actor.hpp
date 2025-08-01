@@ -6,9 +6,9 @@
 
 #include "caf/attachable.hpp"
 #include "caf/detail/assert.hpp"
+#include "caf/detail/concepts.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/functor_attachable.hpp"
-#include "caf/detail/type_traits.hpp"
 #include "caf/exit_reason.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive_ptr.hpp"

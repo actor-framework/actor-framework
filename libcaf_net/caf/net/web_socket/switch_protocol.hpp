@@ -152,7 +152,7 @@ public:
 
   template <class OnStart>
   auto on_start(OnStart on_start) && {
-    using on_request_trait = detail::get_callable_trait_t<OnRequest>;
+    using on_request_trait = detail::get_callable_trait<OnRequest>;
     using on_request_args = typename on_request_trait::arg_types;
     return make(on_start, on_request_args{});
   }

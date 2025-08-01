@@ -7,6 +7,7 @@
 #include "caf/detail/network_order.hpp"
 
 #include <cstring>
+#include <limits>
 
 namespace caf::detail {
 

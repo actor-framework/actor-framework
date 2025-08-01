@@ -5,7 +5,7 @@
 #pragma once
 
 #include "caf/actor_system.hpp"
-#include "caf/detail/type_traits.hpp"
+#include "caf/detail/concepts.hpp"
 #include "caf/infer_handle.hpp"
 
 #include <set>
@@ -102,7 +102,7 @@ actor_factory make_actor_factory(F fun) {
       return {};
     cfg.init_fun = actor_config::init_fun_type{
       [=](local_actor* x) mutable -> behavior {
-        using ctrait = detail::get_callable_trait_t<F>;
+        using ctrait = detail::get_callable_trait<F>;
         using fd = fun_decorator<F, impl, behavior_t, trait::mode,
                                  typename ctrait::result_type,
                                  typename ctrait::arg_types>;

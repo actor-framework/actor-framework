@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "caf/detail/type_traits.hpp"
+#include "caf/detail/concepts.hpp"
 #include "caf/disposable.hpp"
 
 namespace caf::detail {
@@ -27,7 +27,7 @@ struct dispose_on_call_t<R(Ts...)> {
 /// `resource.dispose()` before invoking `f`.
 template <class F>
 auto dispose_on_call(disposable resource, F f) {
-  using sig = typename get_callable_trait_t<F>::fun_sig;
+  using sig = typename get_callable_trait<F>::fun_sig;
   dispose_on_call_t<sig> factory;
   return factory(std::move(resource), std::move(f));
 }

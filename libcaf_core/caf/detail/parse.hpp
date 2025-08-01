@@ -5,9 +5,9 @@
 #pragma once
 
 #include "caf/chrono.hpp"
+#include "caf/detail/concepts.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/squashed_int.hpp"
-#include "caf/detail/type_traits.hpp"
 #include "caf/error.hpp"
 #include "caf/fwd.hpp"
 #include "caf/message.hpp"

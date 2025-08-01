@@ -89,9 +89,9 @@ public:
   template <class... Ts>
   void deliver(Ts... xs) {
     using arg_types = type_list<Ts...>;
-    static_assert(!detail::tl_exists_v<arg_types, detail::is_result>,
+    static_assert(!detail::tl_exists_v<arg_types, detail::is_result_oracle>,
                   "delivering a result<T> is not supported");
-    static_assert(!detail::tl_exists_v<arg_types, detail::is_expected>,
+    static_assert(!detail::tl_exists_v<arg_types, detail::is_expected_oracle>,
                   "mixing expected<T> with regular values is not supported");
     if (pending()) {
       state_->deliver_impl(make_message(std::move(xs)...));

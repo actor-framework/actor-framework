@@ -5,7 +5,7 @@
 #pragma once
 
 #include "caf/delegated.hpp"
-#include "caf/detail/type_traits.hpp"
+#include "caf/detail/concepts.hpp"
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
 #include "caf/fwd.hpp"

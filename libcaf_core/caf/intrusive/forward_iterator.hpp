@@ -22,45 +22,37 @@ public:
 
   using pointer = value_type*;
 
-  using const_pointer = const value_type*;
-
   using reference = value_type&;
 
-  using const_reference = const value_type&;
-
-  using node_type =
-    typename std::conditional_t<std::is_const_v<T>, const typename T::node_type,
-                                typename T::node_type>;
+  using node_type
+    = std::conditional_t<std::is_const_v<T>,
+                         const typename std::remove_const_t<T>::node_type,
+                         typename T::node_type>;
 
   using node_pointer = node_type*;
 
   using iterator_category = std::forward_iterator_tag;
 
-  // -- static utility functions -----------------------------------------------
-
-  /// Casts a node type to its value type.
-  static pointer promote(node_pointer ptr) noexcept {
-    return static_cast<pointer>(ptr);
-  }
-
   // -- member variables -------------------------------------------------------
 
-  node_pointer ptr;
+  node_pointer ptr = nullptr;
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  constexpr forward_iterator(node_pointer init = nullptr) : ptr(init) {
+  constexpr forward_iterator() noexcept = default;
+
+  constexpr explicit forward_iterator(node_pointer init) noexcept : ptr(init) {
     // nop
   }
 
-  forward_iterator(const forward_iterator&) = default;
+  forward_iterator(const forward_iterator&) noexcept = default;
 
-  forward_iterator& operator=(const forward_iterator&) = default;
+  forward_iterator& operator=(const forward_iterator&) noexcept = default;
 
   // -- convenience functions --------------------------------------------------
 
-  forward_iterator next() {
-    return ptr->next;
+  forward_iterator next() const {
+    return forward_iterator{ptr->next};
   }
 
   // -- operators --------------------------------------------------------------
@@ -76,32 +68,32 @@ public:
     return res;
   }
 
-  reference operator*() {
+  reference operator*() const {
     return *promote(ptr);
   }
 
-  const_reference operator*() const {
-    return *promote(ptr);
-  }
-
-  pointer operator->() {
+  pointer operator->() const {
     return promote(ptr);
   }
 
-  const_pointer operator->() const {
-    return promote(ptr);
+private:
+  // -- static utility functions -----------------------------------------------
+
+  /// Casts a node type to its value type.
+  static pointer promote(node_pointer ptr) noexcept {
+    return static_cast<pointer>(ptr);
   }
 };
 
 /// @relates forward_iterator
 template <class T>
-bool operator==(const forward_iterator<T>& x, const forward_iterator<T>& y) {
+bool operator==(forward_iterator<T> x, forward_iterator<T> y) noexcept {
   return x.ptr == y.ptr;
 }
 
 /// @relates forward_iterator
 template <class T>
-bool operator!=(const forward_iterator<T>& x, const forward_iterator<T>& y) {
+bool operator!=(forward_iterator<T> x, forward_iterator<T> y) noexcept {
   return x.ptr != y.ptr;
 }
 

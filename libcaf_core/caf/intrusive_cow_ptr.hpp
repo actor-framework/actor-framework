@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/detail/comparable.hpp"
 #include "caf/intrusive_ptr.hpp"
 
 #include <cstddef>

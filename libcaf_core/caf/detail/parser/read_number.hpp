@@ -5,12 +5,13 @@
 #pragma once
 
 #include "caf/config.hpp"
+#include "caf/detail/concepts.hpp"
 #include "caf/detail/consumer.hpp"
 #include "caf/detail/parser/add_ascii.hpp"
 #include "caf/detail/parser/chars.hpp"
 #include "caf/detail/parser/read_floating_point.hpp"
 #include "caf/detail/parser/sub_ascii.hpp"
-#include "caf/detail/type_traits.hpp"
+#include "caf/none.hpp"
 #include "caf/pec.hpp"
 
 #include <cstdint>
@@ -284,8 +285,8 @@ void generate_range_impl(pec& code, Consumer& consumer, T min_val, T max_val,
 template <class Consumer, class MinValueT, class MaxValueT>
 void generate_range(pec& code, Consumer& consumer, MinValueT min_val,
                     MaxValueT max_val, std::optional<int64_t> step) {
-  static_assert(is_64bit_integer_v<MinValueT>);
-  static_assert(is_64bit_integer_v<MaxValueT>);
+  static_assert(is_64bit_integer<MinValueT>);
+  static_assert(is_64bit_integer<MaxValueT>);
   // Check whether any of the two types is signed. If so, we'll use signed
   // integers for the range.
   if constexpr (std::is_signed_v<MinValueT> == std::is_signed_v<MaxValueT>) {

@@ -5,7 +5,6 @@
 #pragma once
 
 #include "caf/detail/assert.hpp"
-#include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/implicit_conversions.hpp"
 #include "caf/detail/message_data.hpp"

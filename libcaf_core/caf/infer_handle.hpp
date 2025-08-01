@@ -107,7 +107,7 @@ struct infer_handle_from_fun_trait {
 /// @relates infer_handle_from_fun
 template <class F>
 using infer_handle_from_fun_trait_t
-  = infer_handle_from_fun_trait<detail::get_callable_trait_t<F>>;
+  = infer_handle_from_fun_trait<detail::get_callable_trait<F>>;
 
 /// @relates infer_handle_from_fun
 template <class F>

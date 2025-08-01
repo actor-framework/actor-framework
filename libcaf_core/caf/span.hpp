@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "caf/detail/type_traits.hpp"
+#include "caf/detail/concepts.hpp"
 
 #include <array>
 #include <cstddef>
@@ -65,13 +65,13 @@ public:
   }
 
   template <class C>
-    requires detail::has_convertible_data_member_v<C, value_type>
+    requires detail::has_convertible_data_member<C, value_type>
   span(C& xs) noexcept : begin_(xs.data()), size_(xs.size()) {
     // nop
   }
 
   template <class C>
-    requires detail::has_convertible_data_member_v<C, value_type>
+    requires detail::has_convertible_data_member<C, value_type>
   span(const C& xs) noexcept : begin_(xs.data()), size_(xs.size()) {
     // nop
   }

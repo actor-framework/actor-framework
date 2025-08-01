@@ -4,8 +4,8 @@
 
 #pragma once
 
+#include "caf/detail/concepts.hpp"
 #include "caf/detail/core_export.hpp"
-#include "caf/detail/type_traits.hpp"
 #include "caf/fwd.hpp"
 #include "caf/parser_state.hpp"
 
@@ -113,7 +113,7 @@ auto print(BufferOrIterator&& out, sys_time<Duration> ts) {
   auto end = detail::print_localtime(buf, sizeof(buf), secs, nsecs,
                                      detail::to_precision<Resolution>(),
                                      std::is_same_v<Policy, fixed>);
-  if constexpr (detail::has_insert_v<std::decay_t<BufferOrIterator>>) {
+  if constexpr (detail::has_insert<std::decay_t<BufferOrIterator>>) {
     out.insert(out.end(), buf, end);
   } else {
     return std::copy(buf, end, out);
