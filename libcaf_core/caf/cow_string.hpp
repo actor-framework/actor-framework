@@ -10,6 +10,7 @@
 #include "caf/ref_counted.hpp"
 #include "caf/string_algorithms.hpp"
 
+#include <concepts>
 #include <string>
 #include <string_view>
 
@@ -236,10 +237,9 @@ public:
   }
 
   template <class T>
-  std::enable_if_t<std::is_convertible_v<const T&, view_type> //
-                     && !std::is_convertible_v<const T&, const CharT*>,
-                   size_type>
-  find(const T& x, size_type pos = 0) const noexcept {
+    requires(std::convertible_to<const T&, view_type>
+             && !std::convertible_to<const T&, const CharT*>)
+  size_type find(const T& x, size_type pos = 0) const noexcept {
     return impl_->str.find(x, pos);
   }
 

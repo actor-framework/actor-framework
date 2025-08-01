@@ -89,11 +89,9 @@ make_mailbox_element(strong_actor_ptr sender, message_id id, message content);
 
 /// @relates mailbox_element
 template <class T, class... Ts>
-std::enable_if_t<!std::is_same_v<std::decay_t<T>, message>
-                   || (sizeof...(Ts) > 0),
-                 mailbox_element_ptr>
-make_mailbox_element(strong_actor_ptr sender, message_id id, T&& x,
-                     Ts&&... xs) {
+  requires(!std::is_same_v<std::decay_t<T>, message> || (sizeof...(Ts) > 0))
+mailbox_element_ptr make_mailbox_element(strong_actor_ptr sender, message_id id,
+                                         T&& x, Ts&&... xs) {
   return make_mailbox_element(std::move(sender), id,
                               make_message(std::forward<T>(x),
                                            std::forward<Ts>(xs)...));

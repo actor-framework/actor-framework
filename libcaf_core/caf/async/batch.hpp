@@ -205,14 +205,14 @@ private:
 };
 
 template <class Inspector>
-auto inspect(Inspector& f, batch& x)
-  -> std::enable_if_t<!Inspector::is_loading, decltype(x.save(f))> {
+  requires(!Inspector::is_loading)
+auto inspect(Inspector& f, batch& x) -> decltype(x.save(f)) {
   return x.save(f);
 }
 
 template <class Inspector>
-auto inspect(Inspector& f, batch& x)
-  -> std::enable_if_t<Inspector::is_loading, decltype(x.load(f))> {
+  requires Inspector::is_loading
+auto inspect(Inspector& f, batch& x) -> decltype(x.load(f)) {
   return x.load(f);
 }
 

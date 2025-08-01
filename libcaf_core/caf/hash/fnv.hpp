@@ -10,6 +10,7 @@
 #include "caf/span.hpp"
 #include "caf/type_id.hpp"
 
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <string_view>
@@ -112,9 +113,8 @@ public:
     return true;
   }
 
-  template <class Integral>
-  std::enable_if_t<std::is_integral_v<Integral>, bool>
-  value(Integral x) noexcept {
+  template <std::integral Integral>
+  bool value(Integral x) noexcept {
     auto begin = reinterpret_cast<const uint8_t*>(&x);
     append(begin, begin + sizeof(Integral));
     return true;

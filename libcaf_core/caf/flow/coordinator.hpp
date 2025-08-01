@@ -47,8 +47,8 @@ public:
 
   /// Creates a new @ref caf::flow::coordinated object on this coordinator.
   template <class Impl, class... Args>
-  [[nodiscard]] std::enable_if_t<std::is_base_of_v<coordinated, Impl>,
-                                 intrusive_ptr<Impl>>
+    requires std::is_base_of_v<coordinated, Impl>
+  [[nodiscard]] intrusive_ptr<Impl>
   add_child(std::in_place_type_t<Impl>, Args&&... args) {
     return make_counted<Impl>(this, std::forward<Args>(args)...);
   }
@@ -57,8 +57,8 @@ public:
   /// type depends on the @ref caf::flow::coordinated object and usually one of
   /// `observer<T>`, `observable<T>`, or `subscription`.
   template <class Impl, class... Args>
-  [[nodiscard]] std::enable_if_t<std::is_base_of_v<coordinated, Impl>,
-                                 typename Impl::handle_type>
+    requires std::is_base_of_v<coordinated, Impl>
+  [[nodiscard]] typename Impl::handle_type
   add_child_hdl(std::in_place_type_t<Impl> token, Args&&... args) {
     using handle_type = typename Impl::handle_type;
     return handle_type{add_child(token, std::forward<Args>(args)...)};
@@ -75,8 +75,8 @@ public:
   /// caf::flow::coordinated object at the end of the current cycle.
   /// @post `child == nullptr`
   template <class T>
-  std::enable_if_t<std::is_base_of_v<coordinated, T>>
-  release_later(intrusive_ptr<T>& child) {
+    requires std::is_base_of_v<coordinated, T>
+  void release_later(intrusive_ptr<T>& child) {
     auto ptr = coordinated_ptr{child.release(), false};
     release_later(ptr);
   }
@@ -85,7 +85,8 @@ public:
   /// object at the end of the current cycle.
   /// @post `child == nullptr`
   template <class Handle>
-  std::enable_if<Handle::holds_coordinated> release_later(Handle& hdl) {
+    requires Handle::holds_coordinated
+  void release_later(Handle& hdl) {
     auto ptr = coordinated_ptr{hdl.as_intrusive_ptr().release(), false};
     release_later(ptr);
   }

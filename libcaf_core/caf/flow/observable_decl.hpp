@@ -16,6 +16,7 @@
 #include "caf/fwd.hpp"
 #include "caf/intrusive_ptr.hpp"
 
+#include <concepts>
 #include <cstddef>
 #include <tuple>
 #include <type_traits>
@@ -50,9 +51,8 @@ public:
     return *this;
   }
 
-  template <class Operator>
-  std::enable_if_t<std::is_base_of_v<op::base<T>, Operator>, observable&>
-  operator=(intrusive_ptr<Operator> ptr) noexcept {
+  template <std::derived_from<op::base<T>> Operator>
+  observable& operator=(intrusive_ptr<Operator> ptr) noexcept {
     pimpl_ = ptr;
     return *this;
   }

@@ -565,8 +565,8 @@ public:
 
   /// @copydoc write_to_pipe
   template <class Enum, class T>
-  std::enable_if_t<std::is_enum_v<Enum>, bool>
-  write_to_pipe(Enum opcode, T* ptr) {
+    requires std::is_enum_v<Enum>
+  bool write_to_pipe(Enum opcode, T* ptr) {
     return write_to_pipe(static_cast<uint8_t>(opcode), ptr);
   }
 

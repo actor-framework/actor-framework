@@ -231,29 +231,29 @@ bool operator!=(std::nullptr_t, const intrusive_ptr<T>& x) {
 
 /// @relates intrusive_ptr
 template <class T, class U>
-std::enable_if_t<detail::is_comparable<T*, U*>::value, bool>
-operator==(const intrusive_ptr<T>& lhs, const U* rhs) {
+  requires detail::is_comparable<T*, U*>::value
+bool operator==(const intrusive_ptr<T>& lhs, const U* rhs) {
   return lhs.get() == rhs;
 }
 
 /// @relates intrusive_ptr
 template <class T, class U>
-std::enable_if_t<detail::is_comparable<T*, U*>::value, bool>
-operator==(const T* lhs, const intrusive_ptr<U>& rhs) {
+  requires detail::is_comparable<T*, U*>::value
+bool operator==(const T* lhs, const intrusive_ptr<U>& rhs) {
   return lhs == rhs.get();
 }
 
 /// @relates intrusive_ptr
 template <class T, class U>
-std::enable_if_t<detail::is_comparable<T*, U*>::value, bool>
-operator!=(const intrusive_ptr<T>& lhs, const U* rhs) {
+  requires detail::is_comparable<T*, U*>::value
+bool operator!=(const intrusive_ptr<T>& lhs, const U* rhs) {
   return lhs.get() != rhs;
 }
 
 /// @relates intrusive_ptr
 template <class T, class U>
-std::enable_if_t<detail::is_comparable<T*, U*>::value, bool>
-operator!=(const T* lhs, const intrusive_ptr<U>& rhs) {
+  requires detail::is_comparable<T*, U*>::value
+bool operator!=(const T* lhs, const intrusive_ptr<U>& rhs) {
   return lhs != rhs.get();
 }
 
@@ -261,15 +261,15 @@ operator!=(const T* lhs, const intrusive_ptr<U>& rhs) {
 
 /// @relates intrusive_ptr
 template <class T, class U>
-std::enable_if_t<detail::is_comparable_v<T*, U*>, bool>
-operator==(const intrusive_ptr<T>& x, const intrusive_ptr<U>& y) {
+  requires detail::is_comparable_v<T*, U*>
+bool operator==(const intrusive_ptr<T>& x, const intrusive_ptr<U>& y) {
   return x.get() == y.get();
 }
 
 /// @relates intrusive_ptr
 template <class T, class U>
-std::enable_if_t<detail::is_comparable_v<T*, U*>, bool>
-operator!=(const intrusive_ptr<T>& x, const intrusive_ptr<U>& y) {
+  requires detail::is_comparable_v<T*, U*>
+bool operator!=(const intrusive_ptr<T>& x, const intrusive_ptr<U>& y) {
   return x.get() != y.get();
 }
 

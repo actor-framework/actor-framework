@@ -342,7 +342,8 @@ public:
   }
 
   template <class T>
-  std::enable_if_t<std::is_integral_v<T>, bool> value(T x) {
+    requires std::is_integral_v<T>
+  bool value(T x) {
     if constexpr (std::is_same_v<T, bool>) {
       return push(config_value{x});
     } else if constexpr (std::is_same_v<T, uint64_t>) {

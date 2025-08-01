@@ -117,8 +117,8 @@ public:
     line_builder();
 
     template <class T>
-    std::enable_if_t<!std::is_pointer_v<T>, line_builder&&>
-    operator<<(const T& x) && {
+      requires(!std::is_pointer_v<T>)
+    line_builder&& operator<<(const T& x) && {
       if (!str_.empty())
         str_ += " ";
       str_ += deep_to_string(x);

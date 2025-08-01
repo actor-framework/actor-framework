@@ -32,6 +32,7 @@
 #include "caf/timespan.hpp"
 #include "caf/unordered_flat_map.hpp"
 
+#include <concepts>
 #include <forward_list>
 #include <type_traits>
 #include <unordered_map>
@@ -265,10 +266,10 @@ public:
   }
 
   /// Sets a custom handler for unexpected messages.
-  template <class F>
+  template <std::invocable<message&> F>
+    requires std::same_as<std::invoke_result_t<F, message&>, skippable_result>
   [[deprecated("use a handler for 'message' instead")]]
-  std::enable_if_t<std::is_invocable_r_v<skippable_result, F, message&>>
-  set_default_handler(F fun) {
+  void set_default_handler(F fun) {
     default_handler_ = [fn{std::move(fun)}](scheduled_actor*,
                                             message& xs) mutable {
       return fn(xs);
@@ -285,9 +286,9 @@ public:
   }
 
   /// Sets a custom handler for error messages.
-  template <class F>
+  template <std::invocable<error&> F>
   [[deprecated("use a handler for 'error' instead")]]
-  std::enable_if_t<std::is_invocable_v<F, error&>> set_error_handler(F fun) {
+  void set_error_handler(F fun) {
     error_handler_ = [fn{std::move(fun)}](scheduled_actor*, error& x) mutable {
       fn(x);
     };
@@ -303,9 +304,9 @@ public:
   }
 
   /// Sets a custom handler for down messages.
-  template <class F>
+  template <std::invocable<down_msg&> F>
   [[deprecated("use monitor with callback instead")]]
-  std::enable_if_t<std::is_invocable_v<F, down_msg&>> set_down_handler(F fun) {
+  void set_down_handler(F fun) {
     down_handler_ = [fn{std::move(fun)}](scheduled_actor*,
                                          down_msg& x) mutable { fn(x); };
   }
@@ -320,10 +321,9 @@ public:
   }
 
   /// Sets a custom handler for down messages.
-  template <class F>
+  template <std::invocable<node_down_msg&> F>
   [[deprecated("use a handler for 'node_down_msg' instead")]]
-  std::enable_if_t<std::is_invocable_v<F, node_down_msg&>>
-  set_node_down_handler(F fun) {
+  void set_node_down_handler(F fun) {
     node_down_handler_ = [fn{std::move(fun)}](scheduled_actor*,
                                               node_down_msg& x) mutable {
       fn(x);
@@ -340,9 +340,9 @@ public:
   }
 
   /// Sets a custom handler for exit messages.
-  template <class F>
+  template <std::invocable<exit_msg&> F>
   [[deprecated("use a handler for 'exit_msg' instead")]]
-  std::enable_if_t<std::is_invocable_v<F, exit_msg&>> set_exit_handler(F fun) {
+  void set_exit_handler(F fun) {
     exit_handler_ = [fn{std::move(fun)}](scheduled_actor*,
                                          exit_msg& x) mutable { fn(x); };
   }
@@ -359,9 +359,9 @@ public:
 
   /// Sets a custom exception handler for this actor. If multiple handlers are
   /// defined, only the functor that was added *last* is being executed.
-  template <class F>
-  std::enable_if_t<std::is_invocable_r_v<error, F, std::exception_ptr&>>
-  set_exception_handler(F fun) {
+  template <std::invocable<std::exception_ptr&> F>
+    requires std::same_as<std::invoke_result_t<F, std::exception_ptr&>, error>
+  void set_exception_handler(F fun) {
     exception_handler_ = [fn{std::move(fun)}](scheduled_actor*,
                                               std::exception_ptr& x) mutable {
       return fn(x);
@@ -488,8 +488,8 @@ public:
   /// @note Both @p buf_capacity and @p demand_threshold are considered hints.
   ///       The actor may increase (or decrease) the effective settings
   ///       depending on the amount of messages per batch or other factors.
-  template <class T>
-  flow::assert_scheduled_actor_hdr_t<flow::observable<T>>
+  template <class T, bool = flow::assert_has_impl_include<T>>
+  auto
   observe(typed_stream<T> what, size_t buf_capacity, size_t demand_threshold);
 
   /// Lifts a stream into an @ref caf::flow::observable.
@@ -500,9 +500,8 @@ public:
   /// @note Both @p buf_capacity and @p demand_threshold are considered hints.
   ///       The actor may increase (or decrease) the effective settings
   ///       depending on the amount of messages per batch or other factors.
-  template <class T>
-  flow::assert_scheduled_actor_hdr_t<flow::observable<T>>
-  observe_as(stream what, size_t buf_capacity, size_t demand_threshold);
+  template <class T, bool = flow::assert_has_impl_include<T>>
+  auto observe_as(stream what, size_t buf_capacity, size_t demand_threshold);
 
   /// Deregisters a local stream. After calling this function, other actors can
   /// no longer access the flow that has been attached to the stream. Current
@@ -516,27 +515,22 @@ public:
   /// Utility function that swaps `f` into a temporary before calling it
   /// and restoring `f` only if it has not been replaced by the user.
   template <class F, class... Ts>
-  auto call_handler(F& f, Ts&&... xs) -> std::enable_if_t<
-    !std::is_same_v<decltype(f(std::forward<Ts>(xs)...)), void>,
-    decltype(f(std::forward<Ts>(xs)...))> {
+  auto call_handler(F& f, Ts&&... xs)
+    requires std::invocable<F, Ts...>
+  {
     using std::swap;
     F g;
     swap(f, g);
-    auto res = g(std::forward<Ts>(xs)...);
-    if (!f)
-      swap(g, f);
-    return res;
-  }
-
-  template <class F, class... Ts>
-  auto call_handler(F& f, Ts&&... xs) -> std::enable_if_t<
-    std::is_same_v<decltype(f(std::forward<Ts>(xs)...)), void>> {
-    using std::swap;
-    F g;
-    swap(f, g);
-    g(std::forward<Ts>(xs)...);
-    if (!f)
-      swap(g, f);
+    if constexpr (std::is_same_v<decltype(g(std::forward<Ts>(xs)...)), void>) {
+      g(std::forward<Ts>(xs)...);
+      if (!f)
+        swap(g, f);
+    } else {
+      auto res = g(std::forward<Ts>(xs)...);
+      if (!f)
+        swap(g, f);
+      return res;
+    }
   }
 
   void call_error_handler(error& err) override;
@@ -769,9 +763,8 @@ private:
   /// Stores the current timeout state.
   timeout_state timeout_state_;
 
-  template <class T>
-  flow::assert_scheduled_actor_hdr_t<flow::single<T>>
-  single_from_response(message_id mid, disposable pending_timeout);
+  template <class T, bool = flow::assert_has_impl_include<T>>
+  auto single_from_response(message_id mid, disposable pending_timeout);
 
   void do_unstash(mailbox_element_ptr ptr) override;
 

@@ -8,6 +8,7 @@
 #include "caf/fwd.hpp"
 #include "caf/save_inspector_base.hpp"
 
+#include <concepts>
 #include <cstddef>
 
 namespace caf {
@@ -113,8 +114,8 @@ public:
 
   bool value(uint64_t x);
 
-  template <class T>
-  std::enable_if_t<std::is_integral_v<T>, bool> value(T x) {
+  template <std::integral T>
+  bool value(T x) {
     return value(static_cast<detail::squashed_int_t<T>>(x));
   }
 

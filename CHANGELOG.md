@@ -7,6 +7,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ### Changed
 
+- CAF now requires C++20 to build.
 - When using the HTTP client API, SSL hostname validation is now enabled by
   default. Users can disable it by setting `hostname_validation` to `false` if
   necessary. This change was made to improve security by default.

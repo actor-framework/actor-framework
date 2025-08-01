@@ -15,6 +15,7 @@
 #include "caf/type_list.hpp"
 #include "caf/variant_wrapper.hpp"
 
+#include <concepts>
 #include <type_traits>
 #include <variant>
 
@@ -47,7 +48,8 @@ public:
 
   result_base& operator=(const result_base&) = default;
 
-  template <class Enum, class = std::enable_if_t<is_error_code_enum_v<Enum>>>
+  template <class Enum>
+    requires is_error_code_enum_v<Enum>
   result_base(Enum x) : content_(make_error(x)) {
     // nop
   }
@@ -188,9 +190,9 @@ public:
 
   using super::super;
 
-  template <class U,
-            class = std::enable_if_t<std::is_constructible_v<T, U>
-                                     && !std::is_constructible_v<super, U>>>
+  template <class U>
+    requires(std::constructible_from<T, U>
+             && !std::constructible_from<super, U>)
   result(U&& x)
     : super(detail::result_base_message_init{}, T{std::forward<U>(x)}) {
     // nop

@@ -78,18 +78,21 @@ public:
 
   error& operator=(const error&);
 
-  template <class Enum, class = std::enable_if_t<is_error_code_enum_v<Enum>>>
+  template <class Enum>
+    requires is_error_code_enum_v<Enum>
   error(Enum code) : error(static_cast<uint8_t>(code), type_id_v<Enum>) {
     // nop
   }
 
-  template <class Enum, class = std::enable_if_t<is_error_code_enum_v<Enum>>>
+  template <class Enum>
+    requires is_error_code_enum_v<Enum>
   error(Enum code, message context)
     : error(static_cast<uint8_t>(code), type_id_v<Enum>, std::move(context)) {
     // nop
   }
 
-  template <class Enum, class = std::enable_if_t<is_error_code_enum_v<Enum>>>
+  template <class Enum>
+    requires is_error_code_enum_v<Enum>
   error(Enum code, std::string msg)
     : error(static_cast<uint8_t>(code), type_id_v<Enum>,
             make_message(std::move(msg))) {
@@ -229,14 +232,15 @@ CAF_CORE_EXPORT std::string to_string(const error& x);
 
 /// @relates error
 template <class Enum>
-std::enable_if_t<is_error_code_enum_v<Enum>, error> make_error(Enum code) {
+  requires is_error_code_enum_v<Enum>
+error make_error(Enum code) {
   return error{code};
 }
 
 /// @relates error
 template <class Enum, class T, class... Ts>
-std::enable_if_t<is_error_code_enum_v<Enum>, error>
-make_error(Enum code, T&& x, Ts&&... xs) {
+  requires is_error_code_enum_v<Enum>
+error make_error(Enum code, T&& x, Ts&&... xs) {
   return error{code, make_message(std::forward<T>(x), std::forward<Ts>(xs)...)};
 }
 
@@ -252,8 +256,8 @@ inline bool operator==(none_t, const error& x) {
 
 /// @relates error
 template <class Enum>
-std::enable_if_t<is_error_code_enum_v<Enum>, bool>
-operator==(const error& x, Enum y) {
+  requires is_error_code_enum_v<Enum>
+bool operator==(const error& x, Enum y) {
   auto code = static_cast<uint8_t>(y);
   return code == 0 ? !x
                    : x && x.code() == code && x.category() == type_id_v<Enum>;
@@ -261,8 +265,8 @@ operator==(const error& x, Enum y) {
 
 /// @relates error
 template <class Enum>
-std::enable_if_t<is_error_code_enum_v<Enum>, bool>
-operator==(Enum x, const error& y) {
+  requires is_error_code_enum_v<Enum>
+bool operator==(Enum x, const error& y) {
   return y == x;
 }
 
@@ -278,15 +282,15 @@ inline bool operator!=(none_t, const error& x) {
 
 /// @relates error
 template <class Enum>
-std::enable_if_t<is_error_code_enum_v<Enum>, bool>
-operator!=(const error& x, Enum y) {
+  requires is_error_code_enum_v<Enum>
+bool operator!=(const error& x, Enum y) {
   return !(x == y);
 }
 
 /// @relates error
 template <class Enum>
-std::enable_if_t<is_error_code_enum_v<Enum>, bool>
-operator!=(Enum x, const error& y) {
+  requires is_error_code_enum_v<Enum>
+bool operator!=(Enum x, const error& y) {
   return !(x == y);
 }
 

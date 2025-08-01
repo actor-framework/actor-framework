@@ -58,15 +58,17 @@ public:
 
   /// Increments the counter by 1.
   /// @returns The new value of the counter.
-  template <class T = ValueType>
-  std::enable_if_t<std::is_same_v<T, int64_t>, T> operator++() noexcept {
+  value_type operator++() noexcept
+    requires std::is_same_v<value_type, int64_t>
+  {
     return ++gauge_;
   }
 
   /// Increments the counter by 1.
   /// @returns The old value of the counter.
-  template <class T = ValueType>
-  std::enable_if_t<std::is_same_v<T, int64_t>, T> operator++(int) noexcept {
+  value_type operator++(int) noexcept
+    requires std::is_same_v<value_type, int64_t>
+  {
     return gauge_++;
   }
 

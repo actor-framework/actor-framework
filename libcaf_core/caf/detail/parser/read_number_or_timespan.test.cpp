@@ -9,6 +9,7 @@
 #include "caf/detail/nearly_equal.hpp"
 #include "caf/parser_state.hpp"
 
+#include <concepts>
 #include <string>
 #include <string_view>
 #include <variant>
@@ -63,13 +64,13 @@ struct fixture {
   number_or_timespan_parser p;
 };
 
-template <class T>
-std::enable_if_t<std::is_integral_v<T>, res_t> res(T x) {
+template <std::integral T>
+res_t res(T x) {
   return res_t{static_cast<int64_t>(x)};
 }
 
-template <class T>
-std::enable_if_t<std::is_floating_point_v<T>, res_t> res(T x) {
+template <std::floating_point T>
+res_t res(T x) {
   return res_t{static_cast<double>(x)};
 }
 

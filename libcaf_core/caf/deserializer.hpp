@@ -11,6 +11,7 @@
 #include "caf/span.hpp"
 #include "caf/type_id.hpp"
 
+#include <concepts>
 #include <cstddef>
 #include <string>
 #include <tuple>
@@ -150,8 +151,8 @@ public:
   virtual bool value(uint64_t& x) = 0;
 
   /// @copydoc value
-  template <class T>
-  std::enable_if_t<std::is_integral_v<T>, bool> value(T& x) noexcept {
+  template <std::integral T>
+  bool value(T& x) noexcept {
     auto tmp = detail::squashed_int_t<T>{0};
     if (value(tmp)) {
       x = static_cast<T>(tmp);

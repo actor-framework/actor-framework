@@ -18,6 +18,7 @@
 #include "caf/typed_actor_view_base.hpp"
 #include "caf/typed_behavior.hpp"
 
+#include <concepts>
 #include <cstddef>
 #include <functional>
 
@@ -120,35 +121,31 @@ public:
   typed_actor& operator=(typed_actor&&) = default;
   typed_actor& operator=(const typed_actor&) = default;
 
-  template <class... Ts,
-            class = std::enable_if_t<detail::tl_subset_of_v<
-              signatures, typename typed_actor<Ts...>::signatures>>>
+  template <class... Ts>
+    requires detail::tl_subset_of_v<signatures,
+                                    typename typed_actor<Ts...>::signatures>
   typed_actor(const typed_actor<Ts...>& other) : ptr_(other.ptr_) {
     // nop
   }
 
   // allow `handle_type{this}` for typed actors
-  template <class T,
-            class = std::enable_if_t<actor_traits<T>::is_statically_typed>,
-            class = std::enable_if_t<
-              detail::tl_subset_of_v<signatures, typename T::signatures>>>
+  template <class T>
+    requires(actor_traits<T>::is_statically_typed
+             && detail::tl_subset_of_v<signatures, typename T::signatures>)
   typed_actor(T* ptr) : ptr_(ptr->ctrl()) {
     CAF_ASSERT(ptr != nullptr);
   }
 
   // Enable `handle_type{self}` for typed actor views.
-  template <
-    class T,
-    class = std::enable_if_t<std::is_base_of_v<typed_actor_view_base, T>>,
-    class = std::enable_if_t<
-      detail::tl_subset_of_v<signatures, typename T::signatures>>>
+  template <std::derived_from<typed_actor_view_base> T>
+    requires detail::tl_subset_of_v<signatures, typename T::signatures>
   explicit typed_actor(T ptr) : ptr_(ptr.ctrl()) {
     // nop
   }
 
-  template <class... Ts,
-            class = std::enable_if_t<detail::tl_subset_of_v<
-              signatures, typename typed_actor<Ts...>::signatures>>>
+  template <class... Ts>
+    requires detail::tl_subset_of_v<signatures,
+                                    typename typed_actor<Ts...>::signatures>
   typed_actor& operator=(const typed_actor<Ts...>& other) {
     ptr_ = other.ptr_;
     return *this;

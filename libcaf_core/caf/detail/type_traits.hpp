@@ -199,12 +199,11 @@ template <class T>
 class is_iterable {
   // this horrible code would just disappear if we had concepts
   template <class C>
-  static bool sfinae(
-    C* cc,
-    // check if 'C::begin()' returns a forward iterator
-    std::enable_if_t<is_forward_iterator_v<decltype(cc->begin())>>* = nullptr,
+    requires is_forward_iterator_v<decltype(std::declval<C*>()->begin())>
+  static bool sfinae(C* cc) {
     // check if begin() and end() both exist and are comparable
-    decltype(cc->begin() != cc->end())* = nullptr);
+    return cc->begin() != cc->end();
+  }
 
   // SFNINAE default
   static void sfinae(void*);
@@ -432,9 +431,6 @@ struct value_type_of<T*> {
 template <class T>
 using value_type_of_t = typename value_type_of<T>::type;
 
-template <class F, class T>
-using is_handler_for_ef = typename std::enable_if<is_handler_for_v<F, T>>::type;
-
 // Checks whether T has a member function named `push_back` that takes an
 // element of type `T::value_type`.
 template <class T>
@@ -495,7 +491,7 @@ CAF_HAS_ALIAS_TRAIT(mapped_type);
 
 CAF_HAS_ALIAS_TRAIT(handle_type);
 
-// -- constexpr functions for use in enable_if & friends -----------------------
+// -- constexpr functions for use in require clauses ---------------------------
 
 /// Checks whether T behaves like `std::map`.
 template <class T>

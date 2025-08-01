@@ -66,8 +66,8 @@ private:
     }
 
     template <class U>
-    explicit value_predicate(
-      U value, std::enable_if_t<detail::is_comparable_v<T, U>>* = nullptr) {
+      requires detail::is_comparable_v<T, U>
+    explicit value_predicate(U value) {
       predicate_ = [value](const T& found) { return found == value; };
     }
 
@@ -78,11 +78,11 @@ private:
       };
     }
 
-    template <
-      class Predicate,
-      class = std::enable_if_t<std::is_same_v<
-        bool, decltype(std::declval<Predicate>()(std::declval<const T&>()))>>>
-    explicit value_predicate(Predicate predicate) {
+    template <class Predicate>
+    explicit value_predicate(Predicate predicate)
+      requires std::is_same_v<bool,
+                              decltype(predicate(std::declval<const T&>()))>
+    {
       predicate_ = std::move(predicate);
     }
 

@@ -197,8 +197,8 @@ public:
   observable_def(observable_def&&) = default;
   observable_def& operator=(observable_def&&) = default;
 
-  template <size_t N = sizeof...(Steps), class = std::enable_if_t<N == 0>>
   explicit observable_def(Materializer&& materializer)
+    requires(sizeof...(Steps) == 0)
     : materializer_(std::move(materializer)) {
     // nop
   }

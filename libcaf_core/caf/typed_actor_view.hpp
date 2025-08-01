@@ -23,10 +23,9 @@ namespace caf {
 /// Utility function to force the type of `self` to depend on `T` and to raise a
 /// compiler error if the user did not include 'caf/scheduled_actor/flow.hpp'.
 /// The function itself does nothing and simply returns `self`.
-template <class T>
-auto typed_actor_view_flow_access(caf::scheduled_actor* self) {
-  using Self = flow::assert_scheduled_actor_hdr_t<T, caf::scheduled_actor*>;
-  return static_cast<Self>(self);
+template <class, class T, bool = flow::assert_has_impl_include<T>>
+auto typed_actor_view_flow_access(T* self) {
+  return self;
 }
 
 template <class...>
@@ -346,9 +345,6 @@ public:
   /// @copydoc flow::coordinator::make_observable
   template <class T = none_t>
   auto make_observable() {
-    // Note: the template parameter T serves no purpose other than forcing the
-    //       compiler to delay evaluation of this function body by having
-    //       *something* to pass to `typed_actor_view_flow_access`.
     auto self = typed_actor_view_flow_access<T>(self_);
     return self->make_observable();
   }
