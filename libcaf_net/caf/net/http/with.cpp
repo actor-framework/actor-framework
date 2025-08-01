@@ -257,8 +257,8 @@ public:
           return maybe_ctx.error();
       }
     }
-    auto host = endpoint.authority().host_str();
-    auto port = endpoint.authority().port;
+    auto host = auth.host_str();
+    auto port = auth.port;
     return start_client(host, port);
   }
 
