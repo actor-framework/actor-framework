@@ -9,6 +9,7 @@
 #include "caf/net/http/server.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/octet_stream/transport.hpp"
+#include "caf/net/socket.hpp"
 #include "caf/net/socket_manager.hpp"
 
 #include "caf/detail/source_location.hpp"
@@ -27,10 +28,6 @@ namespace {
 struct response_t {
   net::http::request_header hdr;
   byte_buffer payload;
-
-  std::string_view payload_as_str() const noexcept {
-    return {reinterpret_cast<const char*>(payload.data()), payload.size()};
-  }
 
   std::string_view param(std::string_view key) {
     auto& qm = hdr.query();
@@ -109,6 +106,10 @@ struct fixture {
       CAF_RAISE_ERROR("make_stream_socket_pair failed");
     }
     std::tie(fd1, fd2) = *fd_pair;
+    auto err = net::receive_timeout(fd1, 3s);
+    if (err) {
+      CAF_RAISE_ERROR("receive_timeout failed");
+    }
   }
 
   ~fixture() {
@@ -348,7 +349,7 @@ SCENARIO("routes must have one 'arg' entry per argument") {
   }
 }
 
-SCENARIO("routes can catch all routes") {
+SCENARIO("catch-all routes match any path") {
   auto set_get_request
     = [this](std::string path,
              detail::source_location loc = detail::source_location::current()) {
@@ -383,14 +384,14 @@ SCENARIO("routes can catch all routes") {
   }
 }
 
-SCENARIO("router converts responders to async request objects") {
-  GIVEN("a http router") {
+SCENARIO("router converts responders to asynchronous request objects") {
+  GIVEN("an HTTP router") {
     auto http_route = make_route("/foo", http::method::get, [](responder& rp) {
       rp.respond(http::status::ok, "text/plain", "Hello, World!");
     });
     auto default_router
       = router::make(std::vector<http::route_ptr>{http_route.value()});
-    WHEN("a server is run that responds with HTTP 200 ok response") {
+    WHEN("responding to a request with an HTTP 200 OK response") {
       run_server(
         [this, &default_router](net::http::lower_layer::server* down,
                                 const net::http::request_header& request_hdr,
@@ -402,7 +403,7 @@ SCENARIO("router converts responders to async request objects") {
           req.respond(net::http::status::ok, "text/plain", "Hello, World");
           mpx->apply_updates();
         });
-      THEN("the response is received in background") {
+      THEN("the client receives the response") {
         std::string_view request = "GET /foo HTTP/1.1\r\n"
                                    "Host: localhost:8090\r\n"
                                    "User-Agent: AwesomeLib/1.0\r\n"
@@ -412,16 +413,14 @@ SCENARIO("router converts responders to async request objects") {
                                     "Content-Type: text/plain\r\n"
                                     "Content-Length: 12\r\n\r\n"
                                     "Hello, World";
-        std::thread background_thread{[this, &response] {
-          byte_buffer buf;
-          buf.resize(response.size());
-          net::read(fd1, buf);
-          check_eq(to_str(buf), response);
-        }};
-        background_thread.join();
+        byte_buffer buf;
+        buf.resize(response.size());
+        auto n = net::read(fd1, buf);
+        check_eq(n, static_cast<ptrdiff_t>(response.size()));
+        check_eq(to_str(buf), response);
       }
     }
-    WHEN("a server is run that throws error before responding") {
+    WHEN("a server discards the response promise") {
       run_server(
         [this, &default_router](net::http::lower_layer::server* down,
                                 const net::http::request_header& request_hdr,
@@ -434,7 +433,7 @@ SCENARIO("router converts responders to async request objects") {
           }
           mpx->apply_updates();
         });
-      THEN("the response is received in background") {
+      THEN("an HTTP 500 error response is received in background") {
         std::string_view request = "GET /foo HTTP/1.1\r\n"
                                    "Host: localhost:8090\r\n"
                                    "User-Agent: AwesomeLib/1.0\r\n"
@@ -444,47 +443,39 @@ SCENARIO("router converts responders to async request objects") {
                                     "Content-Type: text/plain\r\n"
                                     "Content-Length: 14\r\n\r\n"
                                     "broken_promise";
-        std::thread background_thread{[this, &response] {
-          byte_buffer buf;
-          buf.resize(response.size());
-          net::read(fd1, buf);
-          check_eq(to_str(buf), response);
-        }};
-        background_thread.join();
+        byte_buffer buf;
+        buf.resize(response.size());
+        auto n = net::read(fd1, buf);
+        check_eq(n, static_cast<ptrdiff_t>(response.size()));
+        check_eq(to_str(buf), response);
       }
     }
-    WHEN("a server is run that shuts down before responding") {
-      run_server(
-        [this, &default_router](net::http::lower_layer::server* down,
-                                const net::http::request_header& request_hdr,
-                                const_byte_span body) mutable {
-          auto default_responder = responder{&request_hdr, body,
-                                             default_router.get()};
-          auto error = default_router->start(down);
-          auto req = default_router->lift(std::move(default_responder));
-          default_router->abort_and_shutdown(make_error(sec::broken_promise));
-        });
-      THEN("the response is not received in background") {
+    WHEN("a server shuts down before responding") {
+      run_server([&default_router](net::http::lower_layer::server* down,
+                                   const net::http::request_header& request_hdr,
+                                   const_byte_span body) mutable {
+        auto default_responder = responder{&request_hdr, body,
+                                           default_router.get()};
+        auto error = default_router->start(down);
+        auto req = default_router->lift(std::move(default_responder));
+        default_router->abort_and_shutdown(make_error(sec::broken_promise));
+      });
+      THEN("the client becomes disconnected") {
         std::string_view request = "GET /foo HTTP/1.1\r\n"
                                    "Host: localhost:8090\r\n"
                                    "User-Agent: AwesomeLib/1.0\r\n"
                                    "Accept-Encoding: gzip\r\n\r\n";
         net::write(fd1, as_bytes(make_span(request)));
-        std::thread background_thread{[this] {
-          byte_buffer buf;
-          buf.resize(10);
-          byte_buffer empty_buf;
-          empty_buf.resize(10);
-          net::read(fd1, buf);
-          check_eq(buf, empty_buf);
-        }};
-        background_thread.join();
+        byte_buffer buf;
+        buf.resize(10);
+        auto n = net::read(fd1, buf);
+        check_eq(n, 0);
       }
     }
-    WHEN("router is shut down with pending items") {
-      run_server([this](net::http::lower_layer::server* down,
-                        const net::http::request_header& request_hdr,
-                        const_byte_span body) mutable {
+    WHEN("the router shuts down with pending requests") {
+      run_server([](net::http::lower_layer::server* down,
+                    const net::http::request_header& request_hdr,
+                    const_byte_span body) mutable {
         auto http_route = make_route([](responder& rp) {
           rp.respond(http::status::ok, "text/plain", "Hello, World!");
         });
@@ -501,7 +492,6 @@ SCENARIO("router converts responders to async request objects") {
                                    "User-Agent: AwesomeLib/1.0\r\n"
                                    "Accept-Encoding: gzip\r\n\r\n";
         net::write(fd1, as_bytes(make_span(request)));
-        net::close(fd1);
       }
     }
   }
