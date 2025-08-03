@@ -245,8 +245,8 @@ concept accepts_opaque_value = requires(Inspector& f, T& x) {
   { f.opaque_value(x) } -> std::same_as<bool>;
 };
 
-/// Checks whether `T` is primitive, i.e., either an arithmetic type or
-/// convertible to one of STL's string types.
+/// Type trait that checks whether `T` is a built-in type for the inspector,
+/// i.e., an arithmetic type or a type that explicitly specializes the trait.
 template <class T, bool IsLoading>
 struct is_builtin_inspector_type_oracle {
   static constexpr bool value = std::is_arithmetic_v<T>;
