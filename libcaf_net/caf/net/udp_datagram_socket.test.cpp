@@ -89,8 +89,7 @@ TEST("read and write") {
   auto write_res = write(send_socket, as_bytes(std::span{hello_test}), ep);
   check_eq(write_res, static_cast<ptrdiff_t>(hello_test.size()));
   check_eq(read_from_socket(receive_socket, buf), none);
-  std::string_view received{reinterpret_cast<const char*>(buf.data()),
-                            buf.size()};
+  auto received = to_string_view(buf);
   check_eq(received, hello_test);
 }
 

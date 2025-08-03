@@ -107,11 +107,6 @@ actor_system_config& init(actor_system_config& cfg) {
   return cfg;
 }
 
-auto to_str(caf::byte_span buffer) {
-  return std::string_view{reinterpret_cast<const char*>(buffer.data()),
-                          buffer.size()};
-}
-
 struct fixture {
   fixture() : sys(init(cfg)) {
     auto fd_pair = net::make_stream_socket_pair();
@@ -155,7 +150,7 @@ TEST("actor shells can receive messages") {
   buf.resize(msg.size());
   auto n = net::read(fd2, buf);
   check_eq(n, static_cast<ptrdiff_t>(msg.size()));
-  check_eq(to_str(buf), msg);
+  check_eq(to_string_view(buf), msg);
 }
 
 TEST("actor shells can send asynchronous messages") {
@@ -202,7 +197,7 @@ TEST("actor shells can send request messages") {
   buf.resize(msg.size());
   auto n = net::read(fd2, buf);
   check_eq(n, static_cast<ptrdiff_t>(msg.size()));
-  check_eq(to_str(buf), msg);
+  check_eq(to_string_view(buf), msg);
 }
 
 TEST("actor shells can use flows") {
@@ -234,7 +229,7 @@ TEST("actor shells can use flows") {
   buf.resize(msg.size());
   auto n = net::read(fd2, buf);
   check_eq(n, static_cast<ptrdiff_t>(msg.size()));
-  check_eq(to_str(buf), msg);
+  check_eq(to_string_view(buf), msg);
 }
 
 } // WITH_FIXTURE(fixture)

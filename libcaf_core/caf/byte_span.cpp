@@ -26,4 +26,8 @@ std::string_view to_string_view(const_byte_span bytes) noexcept {
                           bytes.size()};
 }
 
+const_byte_span to_const_byte_span(std::string_view str) noexcept {
+  return {reinterpret_cast<const std::byte*>(str.data()), str.size()};
+}
+
 } // namespace caf

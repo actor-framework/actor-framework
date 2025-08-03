@@ -5,6 +5,7 @@
 #include "caf/json_reader.hpp"
 
 #include "caf/actor_control_block.hpp"
+#include "caf/byte_span.hpp"
 #include "caf/deserializer.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/bounds_checker.hpp"
@@ -250,8 +251,7 @@ public:
   }
 
   bool load_bytes(const_byte_span bytes) override {
-    auto utf8 = std::string_view{reinterpret_cast<const char*>(bytes.data()),
-                                 bytes.size()};
+    auto utf8 = to_string_view(bytes);
     return load(utf8);
   }
 
