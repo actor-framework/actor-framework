@@ -5,10 +5,10 @@
 #pragma once
 
 #include "caf/detail/apply_args.hpp"
+#include "caf/detail/concepts.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/int_list.hpp"
 #include "caf/detail/overload.hpp"
-#include "caf/detail/type_traits.hpp"
 #include "caf/fwd.hpp"
 #include "caf/message.hpp"
 #include "caf/result.hpp"

@@ -4,7 +4,8 @@
 
 #pragma once
 
-#include "caf/detail/type_traits.hpp"
+#include "caf/detail/callable_trait.hpp"
+#include "caf/detail/concepts.hpp"
 
 #include <vector>
 

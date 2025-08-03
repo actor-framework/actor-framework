@@ -130,44 +130,44 @@ public:
   // -- iterator access --------------------------------------------------------
 
   /// Returns an iterator to the dummy before the first element.
-  iterator begin() noexcept {
-    return head_.next;
+  auto begin() noexcept {
+    return iterator{head_.next};
   }
 
   /// Returns an iterator to the dummy before the first element.
-  const_iterator begin() const noexcept {
-    return head_.next;
+  auto begin() const noexcept {
+    return const_iterator{head_.next};
   }
 
   /// Returns an iterator to the dummy before the first element.
-  const_iterator cbegin() const noexcept {
+  auto cbegin() const noexcept {
     return begin();
   }
 
   /// Returns a pointer to the dummy past the last element.
-  iterator end() noexcept {
-    return &tail_;
+  auto end() noexcept {
+    return iterator{&tail_};
   }
 
   /// Returns a pointer to the dummy past the last element.
-  const_iterator end() const noexcept {
-    return &tail_;
+  auto end() const noexcept {
+    return const_iterator{&tail_};
   }
 
   /// Returns a pointer to the dummy past the last element.
-  const_iterator cend() const noexcept {
+  auto cend() const noexcept {
     return end();
   }
 
   /// Returns an iterator to the dummy before the first element.
-  iterator before_begin() noexcept {
-    return &head_;
+  auto before_begin() noexcept {
+    return iterator{&head_};
   }
 
   /// Returns an iterator to the last element or to the dummy before the first
   /// element if the list is empty.
-  iterator before_end() noexcept {
-    return tail_.next;
+  auto before_end() noexcept {
+    return iterator{tail_.next};
   }
 
   // -- element access ---------------------------------------------------------

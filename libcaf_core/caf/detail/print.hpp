@@ -57,7 +57,7 @@ size_t print_timestamp(char* buf, size_t buf_size, time_t ts, size_t ms);
 template <class Output>
 auto print_escaped_to(Output&& out, char c) {
   static constexpr bool is_container
-    = detail::has_push_back_v<std::decay_t<Output>>;
+    = detail::has_push_back<std::decay_t<Output>>;
   auto append = [&out](auto... chars) {
     if constexpr (is_container)
       (out.push_back(chars), ...);

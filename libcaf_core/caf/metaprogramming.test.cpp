@@ -219,14 +219,14 @@ private:
 };
 
 TEST("is_comparable") {
-  check((is_comparable_v<double, std::string>) == false);
-  check((is_comparable_v<foo, foo>) == false);
-  check((is_comparable_v<bar, bar>) == true);
-  check((is_comparable_v<double, bar>) == false);
-  check((is_comparable_v<bar, double>) == false);
-  check((is_comparable_v<baz, baz>) == true);
-  check((is_comparable_v<double, baz>) == false);
-  check((is_comparable_v<baz, double>) == false);
-  check((is_comparable_v<std::string, baz>) == false);
-  check((is_comparable_v<baz, std::string>) == false);
+  check((is_comparable<double, std::string>) == false);
+  check((is_comparable<foo, foo>) == false);
+  check((is_comparable<bar, bar>) == true);
+  check((is_comparable<double, bar>) == false);
+  check((is_comparable<bar, double>) == false);
+  check((is_comparable<baz, baz>) == true);
+  check((is_comparable<double, baz>) == false);
+  check((is_comparable<baz, double>) == false);
+  check((is_comparable<std::string, baz>) == false);
+  check((is_comparable<baz, std::string>) == false);
 }

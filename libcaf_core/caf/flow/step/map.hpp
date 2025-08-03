@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "caf/detail/type_traits.hpp"
+#include "caf/detail/concepts.hpp"
 #include "caf/fwd.hpp"
 
 #include <utility>
@@ -14,7 +14,7 @@ namespace caf::flow::step {
 template <class F>
 class map {
 public:
-  using trait = detail::get_callable_trait_t<F>;
+  using trait = detail::get_callable_trait<F>;
 
   static_assert(!std::is_same_v<typename trait::result_type, void>,
                 "map functions may not return void");

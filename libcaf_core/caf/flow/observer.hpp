@@ -8,9 +8,10 @@
 #include "caf/async/producer.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/assert.hpp"
+#include "caf/detail/callable_trait.hpp"
 #include "caf/detail/comparable.hpp"
+#include "caf/detail/concepts.hpp"
 #include "caf/detail/plain_ref_counted.hpp"
-#include "caf/detail/type_traits.hpp"
 #include "caf/disposable.hpp"
 #include "caf/error.hpp"
 #include "caf/flow/coordinated.hpp"
@@ -188,8 +189,7 @@ struct on_next_trait<void(const T&)> {
 };
 
 template <class F>
-using on_next_trait_t
-  = on_next_trait<typename get_callable_trait_t<F>::fun_sig>;
+using on_next_trait_t = on_next_trait<typename get_callable_trait<F>::fun_sig>;
 
 template <class F>
 using on_next_value_type = typename on_next_trait_t<F>::value_type;

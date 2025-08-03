@@ -6,8 +6,8 @@
 
 #include "caf/behavior.hpp"
 #include "caf/config.hpp"
+#include "caf/detail/concepts.hpp"
 #include "caf/detail/dispose_on_call.hpp"
-#include "caf/detail/type_traits.hpp"
 #include "caf/detail/typed_actor_util.hpp"
 #include "caf/disposable.hpp"
 #include "caf/error.hpp"

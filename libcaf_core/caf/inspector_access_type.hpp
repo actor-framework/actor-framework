@@ -5,8 +5,8 @@
 #pragma once
 
 #include "caf/allowed_unsafe_message_type.hpp"
+#include "caf/detail/concepts.hpp"
 #include "caf/detail/is_complete.hpp"
-#include "caf/detail/type_traits.hpp"
 #include "caf/fwd.hpp"
 #include "caf/span.hpp"
 
@@ -59,22 +59,21 @@ constexpr auto inspect_access_type() {
     return inspector_access_type::unsafe{};
   else if constexpr (std::is_array<T>::value)
     return inspector_access_type::tuple{};
-  else if constexpr (detail::is_builtin_inspector_type<
-                       T, Inspector::is_loading>::value)
+  else if constexpr (detail::is_builtin_inspector_type<Inspector, T>)
     return inspector_access_type::builtin{};
-  else if constexpr (has_builtin_inspect_v<Inspector, T>)
+  else if constexpr (has_builtin_inspect<Inspector, T>)
     return inspector_access_type::builtin_inspect{};
   else if constexpr (detail::is_complete<inspector_access<T>>)
     return inspector_access_type::specialization{};
-  else if constexpr (has_inspect_overload_v<Inspector, T>)
+  else if constexpr (has_inspect_overload<Inspector, T>)
     return inspector_access_type::inspect{};
   else if constexpr (std::is_empty<T>::value)
     return inspector_access_type::empty{};
-  else if constexpr (is_stl_tuple_type_v<T>)
+  else if constexpr (specializes_tuple_size<T>)
     return inspector_access_type::tuple{};
-  else if constexpr (is_map_like_v<T>)
+  else if constexpr (map_like<T>)
     return inspector_access_type::map{};
-  else if constexpr (is_list_like_v<T>)
+  else if constexpr (list_like<T>)
     return inspector_access_type::list{};
   else
     return inspector_access_type::none{};

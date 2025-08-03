@@ -9,7 +9,7 @@
 #include "caf/config.hpp"
 #include "caf/deep_to_string.hpp"
 #include "caf/detail/assert.hpp"
-#include "caf/detail/type_traits.hpp"
+#include "caf/detail/concepts.hpp"
 #include "caf/error.hpp"
 #include "caf/is_error_code_enum.hpp"
 #include "caf/raise_error.hpp"
@@ -318,7 +318,7 @@ public:
   template <class F>
   auto and_then(F&& f) & {
     using res_t = decltype(f(value_));
-    static_assert(detail::is_expected_v<res_t>, "F must return an expected");
+    static_assert(detail::is_expected<res_t>, "F must return an expected");
     if (has_value())
       return f(value_);
     else
@@ -328,7 +328,7 @@ public:
   template <class F>
   auto and_then(F&& f) && {
     using res_t = decltype(f(std::move(value_)));
-    static_assert(detail::is_expected_v<res_t>, "F must return an expected");
+    static_assert(detail::is_expected<res_t>, "F must return an expected");
     if (has_value())
       return f(std::move(value_));
     else
@@ -338,7 +338,7 @@ public:
   template <class F>
   auto and_then(F&& f) const& {
     using res_t = decltype(f(value_));
-    static_assert(detail::is_expected_v<res_t>, "F must return an expected");
+    static_assert(detail::is_expected<res_t>, "F must return an expected");
     if (has_value())
       return f(value_);
     else
@@ -348,7 +348,7 @@ public:
   template <class F>
   auto and_then(F&& f) const&& {
     using res_t = decltype(f(std::move(value_)));
-    static_assert(detail::is_expected_v<res_t>, "F must return an expected");
+    static_assert(detail::is_expected<res_t>, "F must return an expected");
     if (has_value())
       return f(std::move(value_));
     else
@@ -426,8 +426,7 @@ public:
   template <class F>
   auto transform(F&& f) & {
     using res_t = decltype(f(value_));
-    static_assert(!detail::is_expected_v<res_t>,
-                  "F must not return an expected");
+    static_assert(!detail::is_expected<res_t>, "F must not return an expected");
     if (has_value())
       return detail::expected_from_fn(std::forward<F>(f), value_);
     else
@@ -437,8 +436,7 @@ public:
   template <class F>
   auto transform(F&& f) && {
     using res_t = decltype(f(std::move(value_)));
-    static_assert(!detail::is_expected_v<res_t>,
-                  "F must not return an expected");
+    static_assert(!detail::is_expected<res_t>, "F must not return an expected");
     if (has_value())
       return detail::expected_from_fn(std::forward<F>(f), std::move(value_));
     else
@@ -448,8 +446,7 @@ public:
   template <class F>
   auto transform(F&& f) const& {
     using res_t = decltype(f(value_));
-    static_assert(!detail::is_expected_v<res_t>,
-                  "F must not return an expected");
+    static_assert(!detail::is_expected<res_t>, "F must not return an expected");
     if (has_value())
       return detail::expected_from_fn(std::forward<F>(f), value_);
     else
@@ -459,8 +456,7 @@ public:
   template <class F>
   auto transform(F&& f) const&& {
     using res_t = decltype(f(std::move(value_)));
-    static_assert(!detail::is_expected_v<res_t>,
-                  "F must not return an expected");
+    static_assert(!detail::is_expected<res_t>, "F must not return an expected");
     if (has_value())
       return detail::expected_from_fn(std::forward<F>(f), std::move(value_));
     else
@@ -750,7 +746,7 @@ public:
   template <class F>
   auto and_then(F&& f) & {
     using res_t = decltype(f());
-    static_assert(detail::is_expected_v<res_t>, "F must return an expected");
+    static_assert(detail::is_expected<res_t>, "F must return an expected");
     if (has_value())
       return f();
     else
@@ -760,7 +756,7 @@ public:
   template <class F>
   auto and_then(F&& f) && {
     using res_t = decltype(f());
-    static_assert(detail::is_expected_v<res_t>, "F must return an expected");
+    static_assert(detail::is_expected<res_t>, "F must return an expected");
     if (has_value())
       return f();
     else
@@ -770,7 +766,7 @@ public:
   template <class F>
   auto and_then(F&& f) const& {
     using res_t = decltype(f());
-    static_assert(detail::is_expected_v<res_t>, "F must return an expected");
+    static_assert(detail::is_expected<res_t>, "F must return an expected");
     if (has_value())
       return f();
     else
@@ -780,7 +776,7 @@ public:
   template <class F>
   auto and_then(F&& f) const&& {
     using res_t = decltype(f());
-    static_assert(detail::is_expected_v<res_t>, "F must return an expected");
+    static_assert(detail::is_expected<res_t>, "F must return an expected");
     if (has_value())
       return f();
     else
@@ -858,8 +854,7 @@ public:
   template <class F>
   auto transform(F&& f) & {
     using res_t = decltype(f());
-    static_assert(!detail::is_expected_v<res_t>,
-                  "F must not return an expected");
+    static_assert(!detail::is_expected<res_t>, "F must not return an expected");
     if (has_value())
       return detail::expected_from_fn(std::forward<F>(f));
     else
@@ -869,8 +864,7 @@ public:
   template <class F>
   auto transform(F&& f) && {
     using res_t = decltype(f());
-    static_assert(!detail::is_expected_v<res_t>,
-                  "F must not return an expected");
+    static_assert(!detail::is_expected<res_t>, "F must not return an expected");
     if (has_value())
       return detail::expected_from_fn(std::forward<F>(f));
     else
@@ -880,8 +874,7 @@ public:
   template <class F>
   auto transform(F&& f) const& {
     using res_t = decltype(f());
-    static_assert(!detail::is_expected_v<res_t>,
-                  "F must not return an expected");
+    static_assert(!detail::is_expected<res_t>, "F must not return an expected");
     if (has_value())
       return detail::expected_from_fn(std::forward<F>(f));
     else
@@ -891,8 +884,7 @@ public:
   template <class F>
   auto transform(F&& f) const&& {
     using res_t = decltype(f());
-    static_assert(!detail::is_expected_v<res_t>,
-                  "F must not return an expected");
+    static_assert(!detail::is_expected<res_t>, "F must not return an expected");
     if (has_value())
       return detail::expected_from_fn(std::forward<F>(f));
     else

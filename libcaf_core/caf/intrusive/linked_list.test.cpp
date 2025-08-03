@@ -30,6 +30,8 @@ std::string to_string(const inode& x) {
 
 using list_type = intrusive::linked_list<inode>;
 
+static_assert(detail::iterable<list_type>);
+
 template <class... Ts>
 void fill(list_type& xs, Ts... args) {
   (xs.emplace_back(args), ...);

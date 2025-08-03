@@ -1017,7 +1017,7 @@ auto observable<T>::flat_map(F f, size_t max_concurrent) {
              return fn(x).as_observable();
            })
       .merge(max_concurrent);
-  } else if constexpr (detail::is_optional_v<res_t>) {
+  } else if constexpr (detail::is_optional<res_t>) {
     return map([fn = std::move(f)](const Out& x) mutable { return fn(x); })
       .filter([](const res_t& x) { return x.has_value(); })
       .map([](const res_t& x) { return *x; });
@@ -1026,7 +1026,7 @@ auto observable<T>::flat_map(F f, size_t max_concurrent) {
     // output is probably not what anyone would expect and since the values are
     // all available immediately, there is no good reason to mess up the emitted
     // order of values.
-    static_assert(detail::is_iterable_v<res_t>);
+    static_assert(detail::iterable<res_t>);
     return map([cptr = parent(), fn = std::move(f)](const Out& x) mutable {
              return cptr->make_observable().from_container(fn(x));
            })
@@ -1049,12 +1049,12 @@ auto observable<T>::concat_map(F f) {
              return fn(x).as_observable();
            })
       .concat();
-  } else if constexpr (detail::is_optional_v<res_t>) {
+  } else if constexpr (detail::is_optional<res_t>) {
     return map([fn = std::move(f)](const Out& x) mutable { return fn(x); })
       .filter([](const res_t& x) { return x.has_value(); })
       .map([](const res_t& x) { return *x; });
   } else {
-    static_assert(detail::is_iterable_v<res_t>);
+    static_assert(detail::iterable<res_t>);
     return map([cptr = parent(), fn = std::move(f)](const Out& x) mutable {
              return cptr->make_observable().from_container(fn(x));
            })

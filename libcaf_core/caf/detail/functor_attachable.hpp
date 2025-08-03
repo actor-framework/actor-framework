@@ -5,7 +5,8 @@
 #pragma once
 
 #include "caf/attachable.hpp"
-#include "caf/detail/type_traits.hpp"
+#include "caf/detail/callable_trait.hpp"
+#include "caf/detail/concepts.hpp"
 
 namespace caf::detail {
 

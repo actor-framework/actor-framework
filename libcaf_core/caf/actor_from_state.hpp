@@ -47,7 +47,7 @@ public:
   using behavior_type = decltype(std::declval<State*>()->make_behavior());
 
   /// Make sure the state provides a valid behavior type.
-  static_assert(detail::is_behavior_v<behavior_type>,
+  static_assert(detail::is_behavior<behavior_type>,
                 "State::make_behavior() must return a behavior");
 
   /// The base class for the actor implementation. Either `event_based_actor`

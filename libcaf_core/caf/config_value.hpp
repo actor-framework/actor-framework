@@ -7,10 +7,10 @@
 #include "caf/config_value_reader.hpp"
 #include "caf/config_value_writer.hpp"
 #include "caf/detail/bounds_checker.hpp"
+#include "caf/detail/concepts.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/parse.hpp"
 #include "caf/detail/squashed_int.hpp"
-#include "caf/detail/type_traits.hpp"
 #include "caf/dictionary.hpp"
 #include "caf/expected.hpp"
 #include "caf/fwd.hpp"
@@ -255,7 +255,7 @@ public:
     using type = detail::squash_if_int_t<T>;
     if constexpr (detail::is_complete<caf::type_name<type>>) {
       return caf::type_name_v<type>;
-    } else if constexpr (detail::is_list_like_v<type>) {
+    } else if constexpr (detail::list_like<type>) {
       return "list";
     } else {
       return "dictionary";
@@ -284,9 +284,9 @@ private:
                          || std::is_same_v<T, std::string_view>) {
       return std::string{x};
     } else {
-      static_assert(detail::is_iterable_v<T>);
+      static_assert(detail::iterable<T>);
       using value_type = typename T::value_type;
-      if constexpr (detail::is_pair<value_type>::value) {
+      if constexpr (detail::is_pair<value_type>) {
         dictionary result;
         for (auto& [key, val] : x)
           result.emplace(std::move(key), std::move(val));
@@ -318,13 +318,13 @@ struct is_variant_wrapper<config_value> : std::true_type {};
 
 template <class T>
 expected<T> get_as(const config_value&, inspector_access_type::none) {
-  static_assert(detail::always_false_v<T>,
+  static_assert(detail::always_false<T>,
                 "cannot convert to T: found no a suitable inspect overload");
 }
 
 template <class T>
 expected<T> get_as(const config_value&, inspector_access_type::unsafe) {
-  static_assert(detail::always_false_v<T>,
+  static_assert(detail::always_false<T>,
                 "cannot convert types that are tagged as unsafe");
 }
 
@@ -377,7 +377,7 @@ expected<T> get_as(const config_value& x, inspector_access_type::builtin) {
       return std::move(result.error());
     }
   } else {
-    static_assert(detail::always_false_v<T>,
+    static_assert(detail::always_false<T>,
                   "sorry, this conversion is not implemented yet");
   }
 }
@@ -452,11 +452,11 @@ expected<T> get_as(const config_value& x, inspector_access_type::list) {
   if (auto wrapped_values = x.to_list()) {
     using value_type = typename T::value_type;
     T result;
-    if constexpr (detail::has_reserve_v<T>)
+    if constexpr (detail::has_reserve<T>)
       result.reserve(wrapped_values->size());
     for (const auto& wrapped_value : *wrapped_values)
       if (auto maybe_value = get_as<value_type>(wrapped_value)) {
-        if constexpr (detail::has_emplace_back_v<T>)
+        if constexpr (detail::has_emplace_back<T>)
           result.emplace_back(std::move(*maybe_value));
         else
           result.insert(result.end(), std::move(*maybe_value));
