@@ -4,6 +4,7 @@
 
 #include "caf/detail/prometheus_broker.hpp"
 
+#include "caf/byte_span.hpp"
 #include "caf/log/io.hpp"
 #include "caf/string_algorithms.hpp"
 #include "caf/telemetry/dbl_gauge.hpp"
@@ -71,8 +72,7 @@ behavior prometheus_broker::make_behavior() {
         return;
       }
       req.insert(req.end(), msg.buf.begin(), msg.buf.end());
-      auto req_str = std::string_view{reinterpret_cast<char*>(req.data()),
-                                      req.size()};
+      auto req_str = to_string_view(const_byte_span{req});
       // Stop here if the header isn't complete yet.
       if (!ends_with(req_str, "\r\n\r\n"))
         return;

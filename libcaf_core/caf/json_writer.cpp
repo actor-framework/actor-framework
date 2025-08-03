@@ -5,6 +5,7 @@
 #include "caf/json_writer.hpp"
 
 #include "caf/actor_control_block.hpp"
+#include "caf/byte_span.hpp"
 #include "caf/detail/append_hex.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/print.hpp"
@@ -57,7 +58,7 @@ public:
   // -- properties -------------------------------------------------------------
 
   const_byte_span bytes() const override {
-    return {reinterpret_cast<const std::byte*>(buf_.data()), buf_.size()};
+    return to_const_byte_span(str());
   }
 
   [[nodiscard]] std::string_view str() const noexcept {

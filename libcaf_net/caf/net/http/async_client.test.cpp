@@ -74,11 +74,6 @@ bool closed_within(stream_socket fd, std::chrono::milliseconds timeout) {
   return false;
 }
 
-auto to_str(caf::const_byte_span buffer) {
-  return std::string_view{reinterpret_cast<const char*>(buffer.data()),
-                          buffer.size()};
-}
-
 using field_map = unordered_flat_map<std::string, std::string>;
 
 struct fixture {
@@ -140,7 +135,7 @@ SCENARIO("the client sends HTTP requests") {
         buf.resize(want.size());
         auto res = net::read(fd1, buf);
         check_eq(res, static_cast<ptrdiff_t>(want.size()));
-        check_eq(to_str(buf), want);
+        check_eq(to_string_view(buf), want);
       }
     }
   }
@@ -159,7 +154,7 @@ SCENARIO("the client sends HTTP requests") {
         buf.resize(want.size());
         auto res = net::read(fd1, buf);
         check_eq(res, static_cast<ptrdiff_t>(want.size()));
-        check_eq(to_str(buf), want);
+        check_eq(to_string_view(buf), want);
       }
     }
   }
@@ -180,7 +175,7 @@ SCENARIO("the client sends HTTP requests") {
         buf.resize(want.size());
         auto res = net::read(fd1, buf);
         check_eq(res, static_cast<ptrdiff_t>(want.size()));
-        check_eq(to_str(buf), want);
+        check_eq(to_string_view(buf), want);
       }
     }
     WHEN("the client sends the message without a Content-Length") {
@@ -198,7 +193,7 @@ SCENARIO("the client sends HTTP requests") {
         buf.resize(want.size());
         auto res = net::read(fd1, buf);
         check_eq(res, static_cast<ptrdiff_t>(want.size()));
-        check_eq(to_str(buf), want);
+        check_eq(to_string_view(buf), want);
       }
     }
   }
@@ -260,7 +255,7 @@ SCENARIO("the client parses HTTP response into header fields") {
         auto header_fields = res.header_fields();
         check_eq(header_fields[0], std::pair{"Content-Length"s, "13"s});
         check_eq(header_fields[1], std::pair{"Content-Type"s, "text/plain"s});
-        check_eq(to_str(res.body()), "Hello, world!"sv);
+        check_eq(to_string_view(res.body()), "Hello, world!"sv);
       }
       AND_THEN("the connection is closed") {
         check(closed_within(fd1, 1s));

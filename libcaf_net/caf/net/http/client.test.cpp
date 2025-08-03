@@ -97,11 +97,6 @@ public:
   }
 };
 
-auto to_str(caf::byte_span buffer) {
-  return std::string_view{reinterpret_cast<const char*>(buffer.data()),
-                          buffer.size()};
-}
-
 struct fixture {
   fixture() {
     mpx = net::multiplexer::make(nullptr);
@@ -175,7 +170,7 @@ SCENARIO("the client sends HTTP requests") {
         buf.resize(want.size());
         auto res = net::read(fd1, buf);
         check_eq(res, static_cast<ptrdiff_t>(want.size()));
-        check_eq(to_str(buf), want);
+        check_eq(to_string_view(buf), want);
       }
     }
   }
@@ -197,7 +192,7 @@ SCENARIO("the client sends HTTP requests") {
         buf.resize(want.size());
         auto res = net::read(fd1, buf);
         check_eq(res, static_cast<ptrdiff_t>(want.size()));
-        check_eq(to_str(buf), want);
+        check_eq(to_string_view(buf), want);
       }
     }
   }
@@ -221,7 +216,7 @@ SCENARIO("the client sends HTTP requests") {
         buf.resize(want.size());
         auto res = net::read(fd1, buf);
         check_eq(res, static_cast<ptrdiff_t>(want.size()));
-        check_eq(to_str(buf), want);
+        check_eq(to_string_view(buf), want);
       }
     }
   }
@@ -253,7 +248,7 @@ SCENARIO("the client sends HTTP requests") {
         buf.resize(want.size());
         auto res = net::read(fd1, buf);
         check_eq(res, static_cast<ptrdiff_t>(want.size()));
-        check_eq(to_str(buf), want);
+        check_eq(to_string_view(buf), want);
       }
     }
   }
@@ -274,7 +269,7 @@ OUTLINE("sending all available HTTP methods") {
         buf.resize(want.size());
         auto res = net::read(fd1, buf);
         check_eq(res, static_cast<ptrdiff_t>(want.size()));
-        check_eq(to_str(buf), want);
+        check_eq(to_string_view(buf), want);
       }
     }
   }

@@ -107,8 +107,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
               .for_each([self](const lp::frame& frame) {
                 // Interpret the bytes as ASCII characters.
                 auto bytes = frame.bytes();
-                auto str = std::string_view{
-                  reinterpret_cast<const char*>(bytes.data()), bytes.size()};
+                auto str = caf::to_string_view(bytes);
                 if (std::all_of(str.begin(), str.end(), ::isprint)) {
                   self->println("{}", str);
                 } else {

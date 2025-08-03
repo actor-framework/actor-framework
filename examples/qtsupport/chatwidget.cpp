@@ -41,16 +41,14 @@ void ChatWidget::init(actor_system& system, const std::string& name,
       print("*** chatroom offline: lost connection to the server");
     })
     .for_each([this](const lp::frame& frame) {
-      auto bytes = frame.bytes();
-      auto str = std::string_view{reinterpret_cast<const char*>(bytes.data()),
-                                  bytes.size()};
+      auto str = to_string_view(frame.bytes());
       if (std::all_of(str.begin(), str.end(), ::isprint)) {
         auto qstr = QString::fromUtf8(str.data(),
                                       static_cast<qsizetype>(str.size()));
         print(qstr);
       } else {
         QString msg = "<non-ascii-data of size ";
-        msg += QString::number(bytes.size());
+        msg += QString::number(str.size());
         msg += '>';
         print(msg);
       }
@@ -59,9 +57,7 @@ void ChatWidget::init(actor_system& system, const std::string& name,
   publisher_->as_observable()
     .map([](const QString& str) {
       auto encoded = str.toUtf8();
-      auto bytes = caf::as_bytes(
-        std::span{encoded.data(), static_cast<size_t>(encoded.size())});
-      return lp::frame{bytes};
+      return lp::frame{caf::to_const_byte_span(encoded)};
     })
     .subscribe(push);
   set_message_handler([=](actor_companion*) -> message_handler {

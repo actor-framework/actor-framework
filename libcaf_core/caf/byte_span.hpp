@@ -28,4 +28,7 @@ CAF_CORE_EXPORT bool is_valid_ascii(const_byte_span) noexcept;
 /// Reinterprets the underlying data as a string view.
 CAF_CORE_EXPORT std::string_view to_string_view(const_byte_span) noexcept;
 
+/// Reinterprets the underlying data as a const byte span.
+CAF_CORE_EXPORT const_byte_span to_const_byte_span(std::string_view) noexcept;
+
 } // namespace caf

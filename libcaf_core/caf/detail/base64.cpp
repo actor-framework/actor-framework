@@ -89,10 +89,6 @@ bool decode_impl(std::string_view in, Storage& out) {
   return true;
 }
 
-std::string_view as_string_view(const_byte_span bytes) {
-  return {reinterpret_cast<const char*>(bytes.data()), bytes.size()};
-}
-
 } // namespace
 
 void base64::encode(std::string_view str, std::string& out) {
@@ -104,11 +100,11 @@ void base64::encode(std::string_view str, byte_buffer& out) {
 }
 
 void base64::encode(const_byte_span bytes, std::string& out) {
-  encode_impl(as_string_view(bytes), out);
+  encode_impl(to_string_view(bytes), out);
 }
 
 void base64::encode(const_byte_span bytes, byte_buffer& out) {
-  encode_impl(as_string_view(bytes), out);
+  encode_impl(to_string_view(bytes), out);
 }
 
 bool base64::decode(std::string_view in, std::string& out) {
@@ -120,11 +116,11 @@ bool base64::decode(std::string_view in, byte_buffer& out) {
 }
 
 bool base64::decode(const_byte_span bytes, std::string& out) {
-  return decode_impl(as_string_view(bytes), out);
+  return decode_impl(to_string_view(bytes), out);
 }
 
 bool base64::decode(const_byte_span bytes, byte_buffer& out) {
-  return decode_impl(as_string_view(bytes), out);
+  return decode_impl(to_string_view(bytes), out);
 }
 
 } // namespace caf::detail

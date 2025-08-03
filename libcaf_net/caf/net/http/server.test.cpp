@@ -93,11 +93,6 @@ public:
   }
 };
 
-auto to_str(caf::byte_span buffer) {
-  return std::string_view{reinterpret_cast<const char*>(buffer.data()),
-                          buffer.size()};
-}
-
 struct fixture {
   fixture() {
     mpx = net::multiplexer::make(nullptr);
@@ -196,7 +191,7 @@ SCENARIO("the server parses HTTP GET requests into header fields") {
         byte_buffer buf;
         buf.resize(response.size());
         net::read(fd1, buf);
-        check_eq(to_str(buf), response);
+        check_eq(to_string_view(buf), response);
       }
     }
   }
@@ -234,7 +229,7 @@ SCENARIO("the client receives a chunked HTTP response") {
         byte_buffer buf;
         buf.resize(response.size());
         net::read(fd1, buf);
-        check_eq(to_str(buf), response);
+        check_eq(to_string_view(buf), response);
       }
     }
   }
