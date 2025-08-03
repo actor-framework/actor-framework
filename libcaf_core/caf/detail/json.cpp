@@ -49,21 +49,21 @@ ptrdiff_t utf32_to_utf8(uint32_t code_point, Out out) {
     return 1;
   }
   if (code_point <= 0x7ff) {
-    *out++ = 0xc0 | ((code_point & 0x07c0) >> 6);
-    *out++ = 0x80 | (code_point & 0x003f);
+    *out++ = static_cast<char>(0xc0 | ((code_point & 0x07c0) >> 6));
+    *out++ = static_cast<char>(0x80 | (code_point & 0x003f));
     return 2;
   }
   if (code_point <= 0xffff) {
-    *out++ = 0xe0 | ((code_point & 0xf000) >> 12);
-    *out++ = 0x80 | ((code_point & 0x0fc0) >> 6);
-    *out++ = 0x80 | (code_point & 0x003f);
+    *out++ = static_cast<char>(0xe0 | ((code_point & 0xf000) >> 12));
+    *out++ = static_cast<char>(0x80 | ((code_point & 0x0fc0) >> 6));
+    *out++ = static_cast<char>(0x80 | (code_point & 0x003f));
     return 3;
   }
   if (code_point <= 0x10ffff) {
-    *out++ = 0xf0 | ((code_point & 0x1c0000) >> 18);
-    *out++ = 0x80 | ((code_point & 0x03f000) >> 12);
-    *out++ = 0x80 | ((code_point & 0x000fc0) >> 6);
-    *out++ = 0x80 | (code_point & 0x00003f);
+    *out++ = static_cast<char>(0xf0 | ((code_point & 0x1c0000) >> 18));
+    *out++ = static_cast<char>(0x80 | ((code_point & 0x03f000) >> 12));
+    *out++ = static_cast<char>(0x80 | ((code_point & 0x000fc0) >> 6));
+    *out++ = static_cast<char>(0x80 | (code_point & 0x00003f));
     return 4;
   }
   return 0;
