@@ -9,11 +9,11 @@
 #include "caf/fwd.hpp"
 #include "caf/save_inspector_base.hpp"
 #include "caf/sec.hpp"
-#include "caf/span.hpp"
 
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
+#include <span>
 #include <string>
 #include <string_view>
 #include <tuple>
@@ -55,12 +55,12 @@ public:
 
   virtual bool begin_field(std::string_view name, bool is_present) = 0;
 
-  virtual bool
-  begin_field(std::string_view name, span<const type_id_t> types, size_t index)
+  virtual bool begin_field(std::string_view name,
+                           std::span<const type_id_t> types, size_t index)
     = 0;
 
   virtual bool begin_field(std::string_view name, bool is_present,
-                           span<const type_id_t> types, size_t index)
+                           std::span<const type_id_t> types, size_t index)
     = 0;
 
   virtual bool end_field() = 0;

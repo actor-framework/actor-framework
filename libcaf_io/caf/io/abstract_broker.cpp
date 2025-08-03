@@ -6,6 +6,7 @@
 #include "caf/io/network/multiplexer.hpp"
 
 #include "caf/actor_system.hpp"
+#include "caf/byte_span.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/scope_guard.hpp"
@@ -14,7 +15,6 @@
 #include "caf/log/io.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/none.hpp"
-#include "caf/span.hpp"
 
 namespace caf::io {
 

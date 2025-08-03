@@ -360,7 +360,6 @@ caf_add_component(
     caf/settings.cpp
     caf/settings.test.cpp
     caf/skip.cpp
-    caf/span.test.cpp
     caf/stateful_actor.test.cpp
     caf/stream.cpp
     caf/stream.test.cpp

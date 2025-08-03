@@ -85,11 +85,11 @@ public:
   }
 
   void append_histogram(const metric_family* family, const metric* instance,
-                        span<const int_histogram::bucket_type> buckets,
+                        std::span<const int_histogram::bucket_type> buckets,
                         int64_t sum);
 
   void append_histogram(const metric_family* family, const metric* instance,
-                        span<const dbl_histogram::bucket_type> buckets,
+                        std::span<const dbl_histogram::bucket_type> buckets,
                         double sum);
 
   // -- collect API ------------------------------------------------------------
@@ -152,9 +152,9 @@ private:
                    double value);
 
   template <class BucketType, class ValueType>
-  void append_histogram_impl(const metric_family* family,
-                             const metric* instance,
-                             span<const BucketType> buckets, ValueType sum);
+  void
+  append_histogram_impl(const metric_family* family, const metric* instance,
+                        std::span<const BucketType> buckets, ValueType sum);
 
   // -- member variables -------------------------------------------------------
 

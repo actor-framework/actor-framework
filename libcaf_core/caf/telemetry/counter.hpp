@@ -6,10 +6,11 @@
 
 #include "caf/detail/assert.hpp"
 #include "caf/fwd.hpp"
-#include "caf/span.hpp"
 #include "caf/telemetry/gauge.hpp"
 #include "caf/telemetry/label.hpp"
+#include "caf/telemetry/metric_type.hpp"
 
+#include <span>
 #include <type_traits>
 
 namespace caf::telemetry {
@@ -38,7 +39,7 @@ public:
     // nop
   }
 
-  explicit counter(span<const label>) noexcept {
+  explicit counter(std::span<const label>) noexcept {
     // nop
   }
 

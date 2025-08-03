@@ -9,13 +9,13 @@
 #include "caf/intrusive_ptr.hpp"
 #include "caf/parser_state.hpp"
 #include "caf/ref_counted.hpp"
-#include "caf/span.hpp"
 #include "caf/type_id.hpp"
 
 #include <cstdint>
 #include <cstring>
 #include <iterator>
 #include <memory_resource>
+#include <span>
 #include <string_view>
 #include <variant>
 
@@ -249,7 +249,7 @@ bool save(Serializer& sink, const value& val) {
        type_id_v<json_array>, type_id_v<json_object>, type_id_v<none_t>};
   // Act as-if this type is a variant of the mapped types.
   auto type_index = val.data.index();
-  if (!sink.begin_field("value", make_span(mapping), type_index))
+  if (!sink.begin_field("value", std::span{mapping}, type_index))
     return false;
   // Dispatch on the run-time type of this value.
   switch (type_index) {
@@ -335,7 +335,7 @@ bool load(Deserializer& source, value& val, std::pmr::memory_resource* res) {
        type_id_v<json_array>, type_id_v<json_object>, type_id_v<none_t>};
   // Act as-if this type is a variant of the mapped types.
   auto type_index = size_t{0};
-  if (!source.begin_field("value", make_span(mapping), type_index))
+  if (!source.begin_field("value", std::span{mapping}, type_index))
     return false;
   // Dispatch on the run-time type of this value.
   switch (type_index) {

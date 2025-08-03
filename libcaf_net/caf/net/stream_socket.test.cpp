@@ -10,7 +10,8 @@
 
 #include "caf/byte_buffer.hpp"
 #include "caf/log/test.hpp"
-#include "caf/span.hpp"
+
+#include <span>
 
 using namespace std::literals;
 
@@ -98,7 +99,7 @@ TEST("transfer data using multiple buffers") {
   full_buf.insert(full_buf.end(), wr_buf_1.begin(), wr_buf_1.end());
   full_buf.insert(full_buf.end(), wr_buf_2.begin(), wr_buf_2.end());
   check_eq(static_cast<size_t>(
-             write(second, {make_span(wr_buf_1), make_span(wr_buf_2)})),
+             write(second, {std::span{wr_buf_1}, std::span{wr_buf_2}})),
            full_buf.size());
   check_eq(static_cast<size_t>(read(first, rd_buf)), full_buf.size());
   check(std::equal(full_buf.begin(), full_buf.end(), rd_buf.begin()));
@@ -113,7 +114,7 @@ TEST("receive with a timeout on a blocking socket") {
   auto err = receive_timeout(fd1, 5ms);
   require_eq(err, error{});
   std::byte buf[10];
-  auto res = read(fd1, make_span(buf));
+  auto res = read(fd1, std::span{buf});
   check_eq(res, -1);
   check(last_socket_error_is_temporary());
 }

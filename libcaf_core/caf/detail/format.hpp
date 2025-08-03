@@ -70,12 +70,12 @@ std::string format(std::string_view fstr, Args&&... args) {
 #  include "caf/chunked_string.hpp"
 #  include "caf/deep_to_string.hpp"
 #  include "caf/detail/core_export.hpp"
-#  include "caf/span.hpp"
 
 #  include <array>
 #  include <cstdint>
 #  include <iterator>
 #  include <memory>
+#  include <span>
 #  include <string_view>
 #  include <type_traits>
 #  include <variant>
@@ -132,12 +132,12 @@ public:
 
 CAF_CORE_EXPORT
 std::unique_ptr<compiled_format_string>
-compile_format_string(std::string_view fstr, span<format_arg> args);
+compile_format_string(std::string_view fstr, std::span<format_arg> args);
 
 template <class OutputIt, class... Args>
 auto format_to(OutputIt out, std::string_view fstr, Args&&... raw_args) {
   std::array<format_arg, sizeof...(Args)> args{make_format_arg(raw_args)...};
-  auto compiled = compile_format_string(fstr, make_span(args));
+  auto compiled = compile_format_string(fstr, std::span{args});
   while (!compiled->at_end()) {
     auto chunk = compiled->next();
     out = std::copy(chunk.begin(), chunk.end(), out);

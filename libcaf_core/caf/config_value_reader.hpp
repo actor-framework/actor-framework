@@ -47,11 +47,11 @@ public:
 
   bool begin_field(std::string_view name, bool& is_present) override;
 
-  bool begin_field(std::string_view name, span<const type_id_t> types,
+  bool begin_field(std::string_view name, std::span<const type_id_t> types,
                    size_t& index) override;
 
   bool begin_field(std::string_view name, bool& is_present,
-                   span<const type_id_t> types, size_t& index) override;
+                   std::span<const type_id_t> types, size_t& index) override;
 
   bool end_field() override;
 

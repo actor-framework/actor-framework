@@ -78,12 +78,12 @@ public:
     return true;
   }
 
-  bool begin_field(std::string_view, span<const type_id_t>, size_t) {
+  bool begin_field(std::string_view, std::span<const type_id_t>, size_t) {
     return true;
   }
 
-  bool begin_field(std::string_view, bool is_present, span<const type_id_t>,
-                   size_t) {
+  bool begin_field(std::string_view, bool is_present,
+                   std::span<const type_id_t>, size_t) {
     sep();
     if (!is_present)
       result_ += "null";
@@ -423,14 +423,14 @@ bool stringification_inspector::begin_field(std::string_view name,
 }
 
 bool stringification_inspector::begin_field(std::string_view name,
-                                            span<const type_id_t> types,
+                                            std::span<const type_id_t> types,
                                             size_t size) {
   return impl::cast(impl_).begin_field(name, types, size);
 }
 
 bool stringification_inspector::begin_field(std::string_view name,
                                             bool is_present,
-                                            span<const type_id_t> types,
+                                            std::span<const type_id_t> types,
                                             size_t size) {
   return impl::cast(impl_).begin_field(name, is_present, types, size);
 }

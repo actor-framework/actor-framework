@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "caf/async/fwd.hpp"
 #include "caf/detail/type_list.hpp"
 #include "caf/fwd.hpp"
 
@@ -12,6 +11,19 @@
 #include <type_traits>
 
 namespace caf::detail {
+
+/// Checks whether `T` is a non-const reference.
+template <class T>
+struct is_mutable_ref_oracle : std::false_type {};
+
+template <class T>
+struct is_mutable_ref_oracle<const T&> : std::false_type {};
+
+template <class T>
+struct is_mutable_ref_oracle<T&> : std::true_type {};
+
+template <class T>
+static constexpr bool is_mutable_ref = is_mutable_ref_oracle<T>::value;
 
 /// Defines `result_type,` `arg_types,` and `fun_type`. Functor is
 ///    (a) a member function pointer, (b) a function,
@@ -42,7 +54,7 @@ struct callable_trait<R(Ts...)> {
   using fun_type = std::function<R(Ts...)>;
 
   /// Tells whether the function takes mutable references as argument.
-  static constexpr bool mutates_args = (mutable_ref<Ts> || ...);
+  static constexpr bool mutates_args = (is_mutable_ref<Ts> || ...);
 
   /// A view type for passing a ::message to this function with mutable access.
   using mutable_message_view_type = typed_message_view<std::decay_t<Ts>...>;

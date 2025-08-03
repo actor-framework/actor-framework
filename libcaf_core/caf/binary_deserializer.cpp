@@ -38,7 +38,7 @@ public:
   }
 
   const_byte_span remainder() const noexcept {
-    return make_span(current_, end_);
+    return std::span{current_, end_};
   }
 
   actor_system* context() const noexcept {
@@ -105,7 +105,7 @@ public:
     return true;
   }
 
-  bool begin_field(std::string_view, span<const type_id_t> types,
+  bool begin_field(std::string_view, std::span<const type_id_t> types,
                    size_t& index) noexcept {
     auto f = [&](auto tmp) {
       if (!value(tmp))
@@ -130,7 +130,7 @@ public:
   }
 
   bool begin_field(std::string_view, bool& is_present,
-                   span<const type_id_t> types, size_t& index) noexcept {
+                   std::span<const type_id_t> types, size_t& index) noexcept {
     auto f = [&](auto tmp) {
       if (!value(tmp))
         return false;
@@ -438,7 +438,7 @@ private:
   template <class T>
   bool int_value(T& x) {
     auto tmp = std::make_unsigned_t<T>{};
-    if (value(as_writable_bytes(make_span(&tmp, 1)))) {
+    if (value(as_writable_bytes(std::span{&tmp, 1}))) {
       x = static_cast<T>(detail::from_network_order(tmp));
       return true;
     } else {
@@ -569,14 +569,14 @@ bool binary_deserializer::begin_field(std::string_view type_name,
 }
 
 bool binary_deserializer::begin_field(std::string_view type_name,
-                                      span<const type_id_t> types,
+                                      std::span<const type_id_t> types,
                                       size_t& index) noexcept {
   return impl::cast(impl_).begin_field(type_name, types, index);
 }
 
 bool binary_deserializer::begin_field(std::string_view type_name,
                                       bool& is_present,
-                                      span<const type_id_t> types,
+                                      std::span<const type_id_t> types,
                                       size_t& index) noexcept {
   return impl::cast(impl_).begin_field(type_name, is_present, types, index);
 }

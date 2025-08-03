@@ -13,9 +13,9 @@
 #include "caf/ipv4_address.hpp"
 #include "caf/ipv4_endpoint.hpp"
 #include "caf/ipv6_address.hpp"
-#include "caf/span.hpp"
 
 #include <cassert>
+#include <span>
 #include <vector>
 
 using namespace caf;
@@ -40,7 +40,7 @@ struct fixture {
     if (!sink.apply(x))
       test::runnable::current().fail("serialization failed: {}",
                                      sink.get_error());
-    binary_deserializer source(sys, make_span(buf));
+    binary_deserializer source(sys, std::span{buf});
     T y;
     if (!source.apply(y))
       test::runnable::current().fail("serialization failed: {}",

@@ -7,12 +7,12 @@
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/implicit_conversions.hpp"
-#include "caf/span.hpp"
 #include "caf/type_id.hpp"
 
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <span>
 #include <string>
 
 namespace caf {
@@ -82,7 +82,7 @@ public:
   size_t data_size() const noexcept;
 
   /// Concatenates all `lists` into a single type ID list.
-  static type_id_list concat(span<type_id_list> lists);
+  static type_id_list concat(std::span<type_id_list> lists);
 
   /// Concatenates all `lists` into a single type ID list.
   template <class... Ts>

@@ -15,12 +15,12 @@
 #include "caf/make_counted.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/serializer.hpp"
-#include "caf/span.hpp"
 
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <span>
 
 namespace caf::detail {
 
@@ -48,7 +48,7 @@ global_meta_objects_guard_type global_meta_objects_guard() {
   return cleanup_helper;
 }
 
-span<const meta_object> global_meta_objects() {
+std::span<const meta_object> global_meta_objects() {
   return {meta_objects, meta_objects_size};
 }
 
@@ -87,7 +87,7 @@ void clear_global_meta_objects() {
   }
 }
 
-span<meta_object> resize_global_meta_objects(size_t size) {
+std::span<meta_object> resize_global_meta_objects(size_t size) {
   if (size <= meta_objects_size)
     CAF_CRITICAL("resize_global_meta_objects called with a new size that does "
                  "not grow the array");
@@ -99,7 +99,8 @@ span<meta_object> resize_global_meta_objects(size_t size) {
   return {new_storage, size};
 }
 
-void set_global_meta_objects(type_id_t first_id, span<const meta_object> xs) {
+void set_global_meta_objects(type_id_t first_id,
+                             std::span<const meta_object> xs) {
   auto new_size = first_id + xs.size();
   if (first_id < meta_objects_size) {
     if (new_size > meta_objects_size)

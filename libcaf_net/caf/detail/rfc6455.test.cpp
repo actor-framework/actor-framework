@@ -7,10 +7,10 @@
 #include "caf/test/test.hpp"
 
 #include "caf/byte_buffer.hpp"
-#include "caf/span.hpp"
 
 #include <cstdint>
 #include <initializer_list>
+#include <span>
 #include <vector>
 
 using namespace caf;
@@ -62,10 +62,10 @@ TEST("partial masking with offset") {
   auto key = uint32_t{0xDEADC0DE};
   auto original_data = "Hello, world!"s;
   auto masked_data = original_data;
-  impl::mask_data(key, make_span(masked_data));
+  impl::mask_data(key, std::span{masked_data});
   for (auto i = 0ul; i < original_data.size(); i++) {
     auto uut = original_data;
-    impl::mask_data(key, make_span(uut), i);
+    impl::mask_data(key, std::span{uut}, i);
     check_eq(uut.substr(0, i), original_data.substr(0, i));
     check_eq(uut.substr(i), masked_data.substr(i));
   }
@@ -84,7 +84,7 @@ TEST("decoding a frame with RSV bits fails") {
 TEST("decode a header with no mask key and no data") {
   std::vector<uint8_t> data;
   byte_buffer out;
-  impl::assemble_frame(impl::binary_frame, 0, as_bytes(make_span(data)), out);
+  impl::assemble_frame(impl::binary_frame, 0, as_bytes(std::span{data}), out);
   check_eq(out, bytes({
                   0x82, // FIN + binary frame opcode
                   0x00, // data size = 0
@@ -101,7 +101,7 @@ TEST("decode a header with valid mask key but no data") {
   std::vector<uint8_t> data;
   byte_buffer out;
   impl::assemble_frame(impl::binary_frame, 0xDEADC0DE,
-                       as_bytes(make_span(data)), out);
+                       as_bytes(std::span{data}), out);
   check_eq(out, bytes({
                   0x82,                   // FIN + binary frame opcode
                   0x80,                   // MASKED + data size = 0
@@ -118,7 +118,7 @@ TEST("decode a header with valid mask key but no data") {
 TEST("decode a header with no mask key plus small data") {
   std::vector<uint8_t> data{0x12, 0x34, 0x45, 0x67};
   byte_buffer out;
-  impl::assemble_frame(impl::binary_frame, 0, as_bytes(make_span(data)), out);
+  impl::assemble_frame(impl::binary_frame, 0, as_bytes(std::span{data}), out);
   check_eq(out, bytes({
                   0x82,                   // FIN + binary frame opcode
                   0x04,                   // data size = 4
@@ -136,7 +136,7 @@ TEST("decode a header with valid mask key plus small data") {
   std::vector<uint8_t> data{0x12, 0x34, 0x45, 0x67};
   byte_buffer out;
   impl::assemble_frame(impl::binary_frame, 0xDEADC0DE,
-                       as_bytes(make_span(data)), out);
+                       as_bytes(std::span{data}), out);
   check_eq(out, bytes({
                   0x82,                   // FIN + binary frame opcode
                   0x84,                   // MASKED + data size = 4
@@ -155,7 +155,7 @@ TEST("decode a header with no mask key plus upper bound on small data") {
   std::vector<uint8_t> data;
   data.resize(125, 0xFF);
   byte_buffer out;
-  impl::assemble_frame(impl::binary_frame, 0, as_bytes(make_span(data)), out);
+  impl::assemble_frame(impl::binary_frame, 0, as_bytes(std::span{data}), out);
   check_eq(take(out, 6), bytes({
                            0x82,                   // FIN + binary frame opcode
                            0x7D,                   // data size = 125
@@ -174,7 +174,7 @@ TEST("decode a header with valid mask key plus upper bound on small data") {
   data.resize(125, 0xFF);
   byte_buffer out;
   impl::assemble_frame(impl::binary_frame, 0xDEADC0DE,
-                       as_bytes(make_span(data)), out);
+                       as_bytes(std::span{data}), out);
   check_eq(take(out, 10), bytes({
                             0x82,                   // FIN + binary frame opcode
                             0xFD,                   // MASKED + data size = 125
@@ -193,7 +193,7 @@ TEST("decode a header with no mask key plus medium data") {
   std::vector<uint8_t> data;
   data.resize(126, 0xFF);
   byte_buffer out;
-  impl::assemble_frame(impl::binary_frame, 0, as_bytes(make_span(data)), out);
+  impl::assemble_frame(impl::binary_frame, 0, as_bytes(std::span{data}), out);
   check_eq(take(out, 8),
            bytes({
              0x82,                   // FIN + binary frame opcode
@@ -214,7 +214,7 @@ TEST("decode a header with valid mask key plus medium data") {
   data.resize(126, 0xFF);
   byte_buffer out;
   impl::assemble_frame(impl::binary_frame, 0xDEADC0DE,
-                       as_bytes(make_span(data)), out);
+                       as_bytes(std::span{data}), out);
   check_eq(take(out, 12),
            bytes({
              0x82,                   // FIN + binary frame opcode
@@ -235,7 +235,7 @@ TEST("decode a header with no mask key plus upper bound on medium data") {
   std::vector<uint8_t> data;
   data.resize(65535, 0xFF);
   byte_buffer out;
-  impl::assemble_frame(impl::binary_frame, 0, as_bytes(make_span(data)), out);
+  impl::assemble_frame(impl::binary_frame, 0, as_bytes(std::span{data}), out);
   check_eq(take(out, 8),
            bytes({
              0x82,                   // FIN + binary frame opcode
@@ -256,7 +256,7 @@ TEST("decode a header with valid mask key plus upper bound on medium data") {
   data.resize(65535, 0xFF);
   byte_buffer out;
   impl::assemble_frame(impl::binary_frame, 0xDEADC0DE,
-                       as_bytes(make_span(data)), out);
+                       as_bytes(std::span{data}), out);
   check_eq(take(out, 12),
            bytes({
              0x82,                   // FIN + binary frame opcode
@@ -277,7 +277,7 @@ TEST("decode a header with no mask key plus large data") {
   std::vector<uint8_t> data;
   data.resize(65536, 0xFF);
   byte_buffer out;
-  impl::assemble_frame(impl::binary_frame, 0, as_bytes(make_span(data)), out);
+  impl::assemble_frame(impl::binary_frame, 0, as_bytes(std::span{data}), out);
   check_eq(take(out, 14),
            bytes({
              0x82, // FIN + binary frame opcode
@@ -298,7 +298,7 @@ TEST("decode a header with valid mask key plus large data") {
   data.resize(65536, 0xFF);
   byte_buffer out;
   impl::assemble_frame(impl::binary_frame, 0xDEADC0DE,
-                       as_bytes(make_span(data)), out);
+                       as_bytes(std::span{data}), out);
   check_eq(take(out, 18),
            bytes({
              0x82, // FIN + binary frame opcode

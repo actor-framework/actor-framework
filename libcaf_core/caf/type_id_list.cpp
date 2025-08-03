@@ -35,7 +35,7 @@ std::string to_string(type_id_list xs) {
   return result;
 }
 
-type_id_list type_id_list::concat(span<type_id_list> lists) {
+type_id_list type_id_list::concat(std::span<type_id_list> lists) {
   auto total_size = size_t{0};
   for (auto ls : lists)
     total_size += ls.size();

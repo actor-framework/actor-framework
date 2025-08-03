@@ -11,7 +11,7 @@
 
 namespace caf::detail {
 
-void rfc6455::mask_data(uint32_t key, span<char> data, size_t offset) {
+void rfc6455::mask_data(uint32_t key, std::span<char> data, size_t offset) {
   mask_data(key, as_writable_bytes(data), offset);
 }
 
@@ -26,7 +26,7 @@ void rfc6455::mask_data(uint32_t key, byte_span data, size_t offset) {
   }
 }
 
-void rfc6455::assemble_frame(uint32_t mask_key, span<const char> data,
+void rfc6455::assemble_frame(uint32_t mask_key, std::span<const char> data,
                              byte_buffer& out) {
   assemble_frame(text_frame, mask_key, as_bytes(data), out);
 }

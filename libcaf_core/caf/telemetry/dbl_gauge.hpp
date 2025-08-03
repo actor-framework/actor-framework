@@ -37,7 +37,7 @@ public:
     // nop
   }
 
-  explicit dbl_gauge(span<const label>) noexcept : value_(0) {
+  explicit dbl_gauge(std::span<const label>) noexcept : value_(0) {
     // nop
   }
 

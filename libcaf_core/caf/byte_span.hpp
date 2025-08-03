@@ -4,17 +4,19 @@
 
 #pragma once
 
-#include "caf/span.hpp"
+#include "caf/detail/core_export.hpp"
 
 #include <cstddef>
+#include <span>
+#include <string_view>
 
 namespace caf {
 
 /// Convenience alias for referring to a writable sequence of bytes.
-using byte_span = span<std::byte>;
+using byte_span = std::span<std::byte>;
 
 /// Convenience alias for referring to a read-only sequence of bytes.
-using const_byte_span = span<const std::byte>;
+using const_byte_span = std::span<const std::byte>;
 
 /// Checks whether the byte span is a valid UTF-8 string.
 CAF_CORE_EXPORT bool is_valid_utf8(const_byte_span) noexcept;

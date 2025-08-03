@@ -10,7 +10,6 @@
 #include "caf/detail/parser/read_bool.hpp"
 #include "caf/detail/parser/read_number.hpp"
 #include "caf/pec.hpp"
-#include "caf/span.hpp"
 
 #include <cstring>
 #include <iterator>

@@ -16,10 +16,10 @@
 #include "caf/detail/rfc6455.hpp"
 #include "caf/log/net.hpp"
 #include "caf/sec.hpp"
-#include "caf/span.hpp"
 
 #include <memory>
 #include <random>
+#include <span>
 #include <string_view>
 #include <vector>
 

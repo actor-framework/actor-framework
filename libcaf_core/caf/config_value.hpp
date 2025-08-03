@@ -31,6 +31,7 @@
 #include <iterator>
 #include <map>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <tuple>
@@ -268,7 +269,8 @@ private:
   static const char* type_name_at_index(size_t index) noexcept;
 
   static std::optional<message>
-  parse_msg_impl(std::string_view str, span<const type_id_list> allowed_types);
+  parse_msg_impl(std::string_view str,
+                 std::span<const type_id_list> allowed_types);
 
   // -- auto conversion of related types ---------------------------------------
 
@@ -521,9 +523,9 @@ struct get_or_deduction_guide<const char*> {
 };
 
 template <class T>
-struct get_or_deduction_guide<span<T>> {
+struct get_or_deduction_guide<std::span<T>> {
   using value_type = std::vector<T>;
-  static value_type convert(span<T> buf) {
+  static value_type convert(std::span<T> buf) {
     return {buf.begin(), buf.end()};
   }
 };

@@ -44,9 +44,10 @@ public:
 
   bool begin_field(std::string_view name, bool is_present);
 
-  bool begin_field(std::string_view name, span<const type_id_t>, size_t);
+  bool begin_field(std::string_view name, std::span<const type_id_t>, size_t);
 
-  bool begin_field(std::string_view name, bool, span<const type_id_t>, size_t);
+  bool begin_field(std::string_view name, bool, std::span<const type_id_t>,
+                   size_t);
 
   bool end_field();
 

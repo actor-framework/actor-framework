@@ -14,9 +14,9 @@
 #include "caf/log/net.hpp"
 #include "caf/message.hpp"
 #include "caf/sec.hpp"
-#include "caf/span.hpp"
 
 #include <cstdio>
+#include <span>
 #include <utility>
 
 namespace caf::net {

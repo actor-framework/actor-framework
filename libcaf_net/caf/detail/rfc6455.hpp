@@ -8,9 +8,9 @@
 #include "caf/byte_span.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/fwd.hpp"
-#include "caf/span.hpp"
 
 #include <cstdint>
+#include <span>
 
 namespace caf::detail {
 
@@ -49,11 +49,11 @@ struct CAF_NET_EXPORT rfc6455 {
 
   // -- utility functions ------------------------------------------------------
 
-  static void mask_data(uint32_t key, span<char> data, size_t offset = 0);
+  static void mask_data(uint32_t key, std::span<char> data, size_t offset = 0);
 
   static void mask_data(uint32_t key, byte_span data, size_t offset = 0);
 
-  static void assemble_frame(uint32_t mask_key, span<const char> data,
+  static void assemble_frame(uint32_t mask_key, std::span<const char> data,
                              byte_buffer& out);
 
   static void assemble_frame(uint32_t mask_key, const_byte_span data,

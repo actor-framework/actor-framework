@@ -116,7 +116,7 @@ public:
 
   bool send_end_of_chunks() override {
     std::string_view str = "0\r\n\r\n";
-    auto bytes = as_bytes(make_span(str));
+    auto bytes = as_bytes(std::span{str});
     down_->begin_output();
     auto& buf = down_->output_buffer();
     buf.insert(buf.end(), bytes.begin(), bytes.end());

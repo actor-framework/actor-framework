@@ -107,7 +107,7 @@ size_t ep_hash::hash(const sockaddr_in* sa) const noexcept {
 }
 
 size_t ep_hash::hash(const sockaddr_in6* sa) const noexcept {
-  auto bytes = as_bytes(make_span(sa->sin6_addr.s6_addr));
+  auto bytes = as_bytes(std::span{sa->sin6_addr.s6_addr, 16});
   return hash::fnv<size_t>::compute(bytes, sa->sin6_port);
 }
 

@@ -14,6 +14,7 @@
 #include "caf/type_id.hpp"
 
 #include <atomic>
+#include <span>
 
 #ifdef CAF_CLANG
 #  pragma clang diagnostic push
@@ -48,9 +49,9 @@ public:
 
     static data* make(std::string_view text);
 
-    static data* make(span<const const_byte_span> buffers);
+    static data* make(std::span<const const_byte_span> buffers);
 
-    static data* make(span<const std::string_view> texts);
+    static data* make(std::span<const std::string_view> texts);
 
     // -- reference counting ---------------------------------------------------
 
@@ -110,7 +111,7 @@ public:
     // nop
   }
 
-  explicit chunk(caf::span<const const_byte_span> buffers)
+  explicit chunk(std::span<const const_byte_span> buffers)
     : data_(data::make(buffers), false) {
     // nop
   }
@@ -124,8 +125,8 @@ public:
   template <class... ByteBuffers>
   static chunk from_buffers(const ByteBuffers&... buffers) {
     static_assert(sizeof...(ByteBuffers) > 0);
-    const_byte_span bufs[sizeof...(ByteBuffers)] = {make_span(buffers)...};
-    return chunk(make_span(bufs));
+    const_byte_span bufs[sizeof...(ByteBuffers)] = {std::span{buffers}...};
+    return chunk(std::span{bufs});
   }
 
   // -- properties -------------------------------------------------------------

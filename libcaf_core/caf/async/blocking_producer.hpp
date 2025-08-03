@@ -12,6 +12,7 @@
 
 #include <condition_variable>
 #include <optional>
+#include <span>
 #include <type_traits>
 
 namespace caf::async {
@@ -30,7 +31,7 @@ public:
       buf_->set_producer(this);
     }
 
-    bool push(span<const T> items) {
+    bool push(std::span<const T> items) {
       std::unique_lock guard{mtx_};
       while (items.size() > 0) {
         while (demand_ == 0)
@@ -50,7 +51,7 @@ public:
     }
 
     bool push(const T& item) {
-      return push(make_span(&item, 1));
+      return push(std::span{&item, 1});
     }
 
     void close() {
@@ -145,7 +146,7 @@ public:
   /// all items have been delivered.
   /// @returns `true` if all items were delivered to the consumer or `false` if
   ///          the consumer no longer receives any additional item.
-  bool push(span<const T> items) {
+  bool push(std::span<const T> items) {
     return impl_->push(items);
   }
 

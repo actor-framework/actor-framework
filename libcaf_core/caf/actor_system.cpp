@@ -33,6 +33,7 @@
 #include <limits>
 #include <memory>
 #include <mutex>
+#include <span>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -730,11 +731,13 @@ actor_system::meta_objects_guard() const noexcept {
   return impl_->meta_objects_guard;
 }
 
-span<const std::string> actor_system::metrics_actors_includes() const noexcept {
+std::span<const std::string>
+actor_system::metrics_actors_includes() const noexcept {
   return impl_->metrics_actors_includes;
 }
 
-span<const std::string> actor_system::metrics_actors_excludes() const noexcept {
+std::span<const std::string>
+actor_system::metrics_actors_excludes() const noexcept {
   return impl_->metrics_actors_excludes;
 }
 

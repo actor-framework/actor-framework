@@ -62,7 +62,7 @@ public:
   /// @pre `valid()`
   void respond(status code, std::string_view content_type,
                std::string_view content) const {
-    return respond(code, content_type, as_bytes(make_span(content)));
+    return respond(code, content_type, as_bytes(std::span{content}));
   }
 
 private:
