@@ -6,7 +6,6 @@
 
 #include "caf/actor.hpp"
 #include "caf/actor_companion.hpp"
-#include "caf/actor_from_state.hpp"
 #include "caf/actor_registry.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/defaults.hpp"
@@ -25,6 +24,7 @@
 #include "caf/stateful_actor.hpp"
 #include "caf/system_messages.hpp"
 #include "caf/telemetry/metric_registry.hpp"
+#include "caf/thread_owner.hpp"
 
 #include <array>
 #include <atomic>
@@ -456,6 +456,95 @@ private:
   mutable std::shared_mutex named_entries_mtx_;
 };
 
+class actor_clock_impl : public caf::actor_clock {
+public:
+  explicit actor_clock_impl(caf::actor_system& sys) {
+    worker_ = sys.launch_thread("caf.clock", caf::thread_owner::system,
+                                [this] { run(); });
+  }
+
+  ~actor_clock_impl() override {
+    {
+      std::unique_lock guard{mutex_};
+      push({time_point::min(), caf::action{}});
+    }
+    cv_.notify_one();
+    worker_.join();
+  }
+
+  caf::disposable schedule(time_point timeout, caf::action callback) override {
+    if (!callback) {
+      return {};
+    }
+    // Only wake up the dispatcher if the new timeout is smaller than the
+    // current timeout.
+    auto do_wakeup = false;
+    {
+      std::unique_lock guard{mutex_};
+      do_wakeup = queue_.empty() || timeout < queue_.front().timeout;
+      push({timeout, callback});
+    }
+    if (do_wakeup) {
+      cv_.notify_one();
+    }
+    return std::move(callback).as_disposable();
+  }
+
+private:
+  struct entry {
+    time_point timeout;
+    caf::action callback;
+  };
+
+  static constexpr auto entry_cmp = [](const entry& lhs, const entry& rhs) {
+    // We want the smallest entry to be at the front of the queue. Since
+    // std::push_heap will put the largest element at the front, we need to
+    // invert the comparison.
+    return lhs.timeout > rhs.timeout;
+  };
+
+  void push(entry e) {
+    queue_.push_back(std::move(e));
+    std::push_heap(queue_.begin(), queue_.end(), entry_cmp);
+  }
+
+  void pop() {
+    std::pop_heap(queue_.begin(), queue_.end(), entry_cmp);
+    queue_.pop_back();
+  }
+
+  void run() {
+    std::unique_lock guard{mutex_};
+    while (queue_.empty()) {
+      cv_.wait(guard);
+    }
+    for (;;) {
+      auto& job = queue_.front();
+      if (!job.callback) {
+        return;
+      }
+      auto timeout = job.timeout;
+      if (now() >= timeout) {
+        auto fn = std::move(job.callback);
+        pop();
+        guard.unlock();
+        fn.run();
+        guard.lock();
+        while (queue_.empty()) {
+          cv_.wait(guard);
+        }
+      } else {
+        cv_.wait_until(guard, timeout);
+      }
+    }
+  }
+
+  std::thread worker_;
+  std::mutex mutex_;
+  std::condition_variable cv_;
+  std::vector<entry> queue_;
+};
+
 } // namespace
 
 class actor_system::impl {
@@ -532,7 +621,7 @@ public:
     }
     // Make sure we have a clock.
     if (!clock) {
-      clock = std::make_unique<detail::thread_safe_actor_clock>(*parent);
+      clock = std::make_unique<actor_clock_impl>(*parent);
     }
     // Make sure we have a scheduler up and running.
     if (!scheduler) {
