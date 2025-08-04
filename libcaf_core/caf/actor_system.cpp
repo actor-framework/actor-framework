@@ -6,7 +6,6 @@
 
 #include "caf/actor.hpp"
 #include "caf/actor_companion.hpp"
-#include "caf/actor_from_state.hpp"
 #include "caf/actor_registry.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/defaults.hpp"
@@ -25,6 +24,7 @@
 #include "caf/stateful_actor.hpp"
 #include "caf/system_messages.hpp"
 #include "caf/telemetry/metric_registry.hpp"
+#include "caf/thread_owner.hpp"
 
 #include <array>
 #include <atomic>
@@ -455,6 +455,124 @@ private:
   mutable std::shared_mutex named_entries_mtx_;
 };
 
+class actor_clock_impl : public actor_clock {
+public:
+  using super = actor_clock;
+
+  /// Stores actions along with their scheduling period.
+  struct schedule_entry {
+    schedule_entry* next = nullptr;
+    time_point t;
+    action f;
+
+    schedule_entry() = default;
+
+    schedule_entry(time_point when, action callback) : t(when), f(callback) {
+      // nop
+    }
+  };
+
+  explicit actor_clock_impl(caf::actor_system& sys) {
+    start_dispatch_loop(sys);
+  }
+
+  using super::schedule;
+
+  disposable schedule(time_point abs_time, action f) override {
+    auto wakeup = false;
+    auto entry = std::make_unique<schedule_entry>(abs_time, f);
+    {
+      std::unique_lock guard{mtx_};
+      if (head_ == &fin_token_) {
+        guard.unlock();
+        f.dispose();
+        return {};
+      }
+      if (head_ == nullptr || abs_time < head_->t) {
+        wakeup = true;
+        entry->next = head_;
+        head_ = entry.release();
+      } else {
+        auto p = head_;
+        while (p->next != nullptr && abs_time > p->next->t) {
+          p = p->next;
+        }
+        entry->next = p->next;
+        p->next = entry.release();
+      }
+    }
+    if (wakeup) {
+      cv_.notify_one();
+    }
+    return std::move(f).as_disposable();
+  }
+
+  ~actor_clock_impl() {
+    stop_dispatch_loop();
+  }
+
+private:
+  void start_dispatch_loop(caf::actor_system& sys) {
+    dispatcher_ = sys.launch_thread("caf.clock", thread_owner::system,
+                                    [this] { run(); });
+  }
+
+  void stop_dispatch_loop() noexcept {
+    schedule_entry* entry = nullptr;
+    if (dispatcher_.joinable()) {
+      {
+        std::lock_guard guard{mtx_};
+        entry = head_;
+        head_ = &fin_token_;
+      }
+      cv_.notify_one();
+      while (entry != nullptr) {
+        auto* ptr = entry;
+        entry = entry->next;
+        ptr->f.dispose();
+        delete ptr;
+      }
+      dispatcher_.join();
+      dispatcher_ = std::thread{};
+    }
+  }
+
+  void run() {
+    std::vector<std::unique_ptr<schedule_entry>> readyset;
+    readyset.reserve(128);
+    std::unique_lock guard{mtx_};
+    cv_.wait(guard, [this] { return head_ != nullptr; });
+    for (;;) {
+      if (head_ == &fin_token_) {
+        return;
+      }
+      auto now = clock_type::now();
+      auto next_timeout = head_->t;
+      if (next_timeout <= now) {
+        do {
+          readyset.emplace_back(head_);
+          head_ = head_->next;
+        } while (head_ != nullptr && head_->t <= now);
+        guard.unlock();
+        for (auto& entry : readyset) {
+          entry->f.run();
+        }
+        readyset.clear();
+        guard.lock();
+        cv_.wait(guard, [this] { return head_ != nullptr; });
+      } else {
+        cv_.wait_until(guard, next_timeout);
+      }
+    }
+  }
+
+  std::mutex mtx_;
+  std::condition_variable cv_;
+  schedule_entry* head_ = nullptr;
+  std::thread dispatcher_;
+  schedule_entry fin_token_;
+};
+
 } // namespace
 
 class actor_system::impl {
@@ -531,7 +649,7 @@ public:
     }
     // Make sure we have a clock.
     if (!clock) {
-      clock = std::make_unique<detail::thread_safe_actor_clock>(*parent);
+      clock = std::make_unique<actor_clock_impl>(*parent);
     }
     // Make sure we have a scheduler up and running.
     if (!scheduler) {
