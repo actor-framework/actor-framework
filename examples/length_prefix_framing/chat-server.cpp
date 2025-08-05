@@ -57,10 +57,10 @@ struct config : caf::actor_system_config {
 // -- multiplexing logic -------------------------------------------------------
 
 void worker_impl(caf::event_based_actor* self,
-                 caf::net::acceptor_resource<lp::frame> events) {
+                 caf::net::acceptor_resource<caf::chunk> events) {
   // Each client gets a UUID for identifying it. While processing messages, we
   // add this ID to the input to tag it.
-  using message_t = std::pair<caf::uuid, lp::frame>;
+  using message_t = std::pair<caf::uuid, caf::chunk>;
   // Allows us to push new flows into the central merge point.
   caf::flow::multicaster<caf::flow::observable<message_t>> pub{self};
   // Our central merge point combines all inputs into a single, shared flow.
@@ -104,7 +104,7 @@ void worker_impl(caf::event_based_actor* self,
                 // But still log when a connection is lost.
                 self->println("*** lost connection {}", conn);
               })
-              .map([conn](const lp::frame& frame) {
+              .map([conn](const caf::chunk& frame) {
                 return message_t{conn, frame};
               })
               .as_observable();

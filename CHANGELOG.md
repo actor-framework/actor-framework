@@ -32,6 +32,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   and will be removed in the next major release. Now that CAF updated its
   minimum required C++ standard to C++20, we have switched to using `std::span`
   throughout the code base and users should do the same.
+- The alias `caf::net::lp::frame` is now deprecated and will be removed in the
+  next major release. Users should use `caf::chunk` directly instead.
 
 ### Added
 

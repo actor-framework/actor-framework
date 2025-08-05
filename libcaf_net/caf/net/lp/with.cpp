@@ -8,6 +8,7 @@
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/socket_manager.hpp"
 
+#include "caf/chunk.hpp"
 #include "caf/detail/connection_acceptor.hpp"
 #include "caf/flow/observable.hpp"
 #include "caf/flow/op/mcast.hpp"
@@ -24,7 +25,7 @@ namespace {
 template <class Acceptor>
 class connection_acceptor_impl : public detail::connection_acceptor {
 public:
-  using event_type = net::accept_event<frame>;
+  using event_type = net::accept_event<chunk>;
 
   connection_acceptor_impl(Acceptor acceptor, size_t max_consecutive_reads,
                            async::producer_resource<event_type> events,
@@ -63,8 +64,8 @@ public:
     if (!conn)
       return conn.error();
     // Create socket-to-application and application-to-socket buffers.
-    auto [s2a_pull, s2a_push] = async::make_spsc_buffer_resource<frame>();
-    auto [a2s_pull, a2s_push] = async::make_spsc_buffer_resource<frame>();
+    auto [s2a_pull, s2a_push] = async::make_spsc_buffer_resource<chunk>();
+    auto [a2s_pull, a2s_push] = async::make_spsc_buffer_resource<chunk>();
     // Push buffers to the client.
     mcast_->push_all(event_type{std::move(s2a_pull), std::move(a2s_push)});
     // Create the flow bridge.

@@ -1,9 +1,8 @@
 #pragma once
 
-#include "caf/net/lp/frame.hpp"
-
 #include "caf/all.hpp"
 #include "caf/async/spsc_buffer.hpp"
+#include "caf/chunk.hpp"
 #include "caf/mixin/actor_widget.hpp"
 
 #include <exception>
@@ -31,8 +30,6 @@ public:
 
   using super = caf::mixin::actor_widget<QWidget>;
 
-  using frame = caf::net::lp::frame;
-
   using publisher_type = caf::flow::multicaster<QString>;
 
   ChatWidget(QWidget* parent = nullptr);
@@ -40,8 +37,8 @@ public:
   ~ChatWidget();
 
   void init(caf::actor_system& system, const std::string& name,
-            caf::async::consumer_resource<frame> pull,
-            caf::async::producer_resource<frame> push);
+            caf::async::consumer_resource<caf::chunk> pull,
+            caf::async::producer_resource<caf::chunk> push);
 
 public slots:
 

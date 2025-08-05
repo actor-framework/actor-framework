@@ -123,6 +123,7 @@ caf_add_component(
     caf/chrono.cpp
     caf/chrono.test.cpp
     caf/chunk.cpp
+    caf/chunk.test.cpp
     caf/chunked_string.cpp
     caf/chunked_string.test.cpp
     caf/config_option.cpp

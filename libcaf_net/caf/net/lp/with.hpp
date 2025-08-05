@@ -6,7 +6,6 @@
 
 #include "caf/net/accept_event.hpp"
 #include "caf/net/fwd.hpp"
-#include "caf/net/lp/frame.hpp"
 #include "caf/net/lp/size_field_type.hpp"
 #include "caf/net/ssl/context.hpp"
 
@@ -68,7 +67,7 @@ public:
     [[nodiscard]] expected<disposable> start(OnStart on_start) && {
       static_assert(std::is_invocable_v<OnStart, pull_t>);
       auto [pull, push]
-        = async::make_spsc_buffer_resource<accept_event<frame>>();
+        = async::make_spsc_buffer_resource<accept_event<chunk>>();
       auto res = do_start(std::move(push));
       if (res) {
         on_start(std::move(pull));
@@ -79,9 +78,9 @@ public:
   private:
     explicit server(config_ptr&& cfg) noexcept;
 
-    using push_t = async::producer_resource<accept_event<frame>>;
+    using push_t = async::producer_resource<accept_event<chunk>>;
 
-    using pull_t = async::consumer_resource<accept_event<frame>>;
+    using pull_t = async::consumer_resource<accept_event<chunk>>;
 
     void do_monitor(strong_actor_ptr ptr);
 
@@ -121,8 +120,8 @@ public:
     template <class OnStart>
     [[nodiscard]] expected<disposable> start(OnStart on_start) {
       // Create socket-to-application and application-to-socket buffers.
-      auto [s2a_pull, s2a_push] = async::make_spsc_buffer_resource<frame>();
-      auto [a2s_pull, a2s_push] = async::make_spsc_buffer_resource<frame>();
+      auto [s2a_pull, s2a_push] = async::make_spsc_buffer_resource<chunk>();
+      auto [a2s_pull, a2s_push] = async::make_spsc_buffer_resource<chunk>();
       // Wrap the trait and the buffers that belong to the socket.
       auto res = do_start(std::move(a2s_pull), std::move(s2a_push));
       if (res) {
@@ -134,9 +133,9 @@ public:
   private:
     explicit client(config_ptr&& cfg) noexcept;
 
-    using pull_t = async::consumer_resource<frame>;
+    using pull_t = async::consumer_resource<chunk>;
 
-    using push_t = async::producer_resource<frame>;
+    using push_t = async::producer_resource<chunk>;
 
     expected<disposable> do_start(pull_t, push_t);
 

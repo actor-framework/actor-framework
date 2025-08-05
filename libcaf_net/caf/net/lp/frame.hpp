@@ -9,7 +9,6 @@
 namespace caf::net::lp {
 
 /// An implicitly shared type for binary data frames.
-// TODO: deprecate with 1.0
-using frame = caf::chunk;
+using frame [[deprecated("use caf::chunk instead")]] = caf::chunk;
 
 } // namespace caf::net::lp

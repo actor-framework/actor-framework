@@ -17,11 +17,11 @@
 namespace caf::internal {
 
 std::unique_ptr<net::lp::upper_layer>
-make_lp_flow_bridge(async::consumer_resource<net::lp::frame> pull,
-                    async::producer_resource<net::lp::frame> push);
+make_lp_flow_bridge(async::consumer_resource<chunk> pull,
+                    async::producer_resource<chunk> push);
 
-using lp_prodcuer_ptr = std::shared_ptr<
-  async::blocking_producer<net::accept_event<net::lp::frame>>>;
+using lp_prodcuer_ptr
+  = std::shared_ptr<async::blocking_producer<net::accept_event<chunk>>>;
 
 std::unique_ptr<net::lp::upper_layer>
 make_lp_flow_bridge(lp_prodcuer_ptr producer);
