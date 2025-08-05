@@ -3,6 +3,15 @@
 All notable changes to this project will be documented in this file. The format
 is based on [Keep a Changelog](https://keepachangelog.com).
 
+## Unreleased
+
+### Changed
+
+- We have replaced the actor clock implementation that the actor system uses to
+  delay and schedule messages. The new implementation is much more efficient,
+  outperforming the previous version by an order of magnitude. It is worth
+  noting that this is a purely internal change and does not affect the API.
+
 ## [1.1.0] - 2025-07-25
 
 ### Changed
