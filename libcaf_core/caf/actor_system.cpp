@@ -15,7 +15,6 @@
 #include "caf/detail/daemons.hpp"
 #include "caf/detail/meta_object.hpp"
 #include "caf/detail/private_thread_pool.hpp"
-#include "caf/detail/thread_safe_actor_clock.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/log/core.hpp"
 #include "caf/raise_error.hpp"
