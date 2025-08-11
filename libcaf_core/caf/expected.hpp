@@ -11,7 +11,7 @@
 #include "caf/detail/assert.hpp"
 #include "caf/detail/concepts.hpp"
 #include "caf/error.hpp"
-#include "caf/is_error_code_enum.hpp"
+#include "caf/error_code_enum.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/unit.hpp"
 
@@ -70,7 +70,7 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   template <class U>
-    requires(std::convertible_to<U, T> || is_error_code_enum_v<U>)
+    requires(std::convertible_to<U, T> || error_code_enum<U>)
   expected(U x) {
     if constexpr (std::convertible_to<U, T>) {
       has_value_ = true;
@@ -172,8 +172,7 @@ public:
     return *this;
   }
 
-  template <class Enum>
-    requires is_error_code_enum_v<Enum>
+  template <error_code_enum Enum>
   expected& operator=(Enum code) {
     return *this = make_error(code);
   }
@@ -572,15 +571,13 @@ bool operator==(const error& x, const expected<T>& y) {
 }
 
 /// @relates expected
-template <class T, class Enum>
-  requires is_error_code_enum_v<Enum>
+template <class T, error_code_enum Enum>
 bool operator==(const expected<T>& x, Enum y) {
   return x == make_error(y);
 }
 
 /// @relates expected
-template <class T, class Enum>
-  requires is_error_code_enum_v<Enum>
+template <error_code_enum Enum, class T>
 bool operator==(Enum x, const expected<T>& y) {
   return y == make_error(x);
 }
@@ -617,15 +614,13 @@ bool operator!=(const error& x, const expected<T>& y) {
 }
 
 /// @relates expected
-template <class T, class Enum>
-  requires is_error_code_enum_v<Enum>
+template <class T, error_code_enum Enum>
 bool operator!=(const expected<T>& x, Enum y) {
   return !(x == y);
 }
 
 /// @relates expected
-template <class T, class Enum>
-  requires is_error_code_enum_v<Enum>
+template <error_code_enum Enum, class T>
 bool operator!=(Enum x, const expected<T>& y) {
   return !(x == y);
 }
@@ -646,8 +641,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  template <class Enum>
-    requires is_error_code_enum_v<Enum>
+  template <error_code_enum Enum>
   expected(Enum x) : error_(std::in_place, x) {
     // nop
   }
@@ -675,8 +669,7 @@ public:
     return *this;
   }
 
-  template <class Enum>
-    requires is_error_code_enum_v<Enum>
+  template <error_code_enum Enum>
   expected& operator=(Enum code) {
     error_ = make_error(code);
     return *this;

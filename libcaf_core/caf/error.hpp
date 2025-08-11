@@ -7,8 +7,8 @@
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/error_code.hpp"
+#include "caf/error_code_enum.hpp"
 #include "caf/fwd.hpp"
-#include "caf/is_error_code_enum.hpp"
 #include "caf/message.hpp"
 #include "caf/none.hpp"
 #include "caf/type_id.hpp"
@@ -78,40 +78,37 @@ public:
 
   error& operator=(const error&);
 
-  template <class Enum>
-    requires is_error_code_enum_v<Enum>
+  template <error_code_enum Enum>
   error(Enum code) : error(static_cast<uint8_t>(code), type_id_v<Enum>) {
     // nop
   }
 
-  template <class Enum>
-    requires is_error_code_enum_v<Enum>
+  template <error_code_enum Enum>
   error(Enum code, message context)
     : error(static_cast<uint8_t>(code), type_id_v<Enum>, std::move(context)) {
     // nop
   }
 
-  template <class Enum>
-    requires is_error_code_enum_v<Enum>
+  template <error_code_enum Enum>
   error(Enum code, std::string msg)
     : error(static_cast<uint8_t>(code), type_id_v<Enum>,
             make_message(std::move(msg))) {
     // nop
   }
 
-  template <class Enum>
+  template <error_code_enum Enum>
   error(error_code<Enum> code) : error(to_integer(code), type_id_v<Enum>) {
     // nop
   }
 
-  template <class E>
+  template <error_code_enum E>
   error& operator=(E error_value) {
     error tmp{error_value};
     std::swap(data_, tmp.data_);
     return *this;
   }
 
-  template <class E>
+  template <error_code_enum E>
   error& operator=(error_code<E> code) {
     return *this = code.value();
   }
@@ -231,15 +228,13 @@ private:
 CAF_CORE_EXPORT std::string to_string(const error& x);
 
 /// @relates error
-template <class Enum>
-  requires is_error_code_enum_v<Enum>
+template <error_code_enum Enum>
 error make_error(Enum code) {
   return error{code};
 }
 
 /// @relates error
-template <class Enum, class T, class... Ts>
-  requires is_error_code_enum_v<Enum>
+template <error_code_enum Enum, class T, class... Ts>
 error make_error(Enum code, T&& x, Ts&&... xs) {
   return error{code, make_message(std::forward<T>(x), std::forward<Ts>(xs)...)};
 }
@@ -255,8 +250,7 @@ inline bool operator==(none_t, const error& x) {
 }
 
 /// @relates error
-template <class Enum>
-  requires is_error_code_enum_v<Enum>
+template <error_code_enum Enum>
 bool operator==(const error& x, Enum y) {
   auto code = static_cast<uint8_t>(y);
   return code == 0 ? !x
@@ -264,8 +258,7 @@ bool operator==(const error& x, Enum y) {
 }
 
 /// @relates error
-template <class Enum>
-  requires is_error_code_enum_v<Enum>
+template <error_code_enum Enum>
 bool operator==(Enum x, const error& y) {
   return y == x;
 }
@@ -281,15 +274,13 @@ inline bool operator!=(none_t, const error& x) {
 }
 
 /// @relates error
-template <class Enum>
-  requires is_error_code_enum_v<Enum>
+template <error_code_enum Enum>
 bool operator!=(const error& x, Enum y) {
   return !(x == y);
 }
 
 /// @relates error
-template <class Enum>
-  requires is_error_code_enum_v<Enum>
+template <error_code_enum Enum>
 bool operator!=(Enum x, const error& y) {
   return !(x == y);
 }

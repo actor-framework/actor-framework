@@ -6,8 +6,8 @@
 
 #include "caf/default_enum_inspect.hpp"
 #include "caf/detail/core_export.hpp"
+#include "caf/error_code_enum.hpp"
 #include "caf/fwd.hpp"
-#include "caf/is_error_code_enum.hpp"
 
 #include <cstdint>
 #include <string>

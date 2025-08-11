@@ -4,27 +4,9 @@
 
 #pragma once
 
-#include "caf/detail/pp.hpp"
+// TODO: remove this file in CAF 3.0.0.
 
-namespace caf {
+#pragma message("The header 'caf/is_error_code_enum.hpp' is deprecated. "      \
+                "Please include 'caf/error_code_enum.hpp' instead.")
 
-/// Customization point for enabling conversion from an enum type to an
-/// @ref error or @ref error_code.
-template <class T>
-struct is_error_code_enum {
-  static constexpr bool value = false;
-};
-
-/// @relates is_error_code_enum
-template <class T>
-constexpr bool is_error_code_enum_v = is_error_code_enum<T>::value;
-
-} // namespace caf
-
-#define CAF_ERROR_CODE_ENUM(type_name)                                         \
-  namespace caf {                                                              \
-  template <>                                                                  \
-  struct is_error_code_enum<type_name> {                                       \
-    static constexpr bool value = true;                                        \
-  };                                                                           \
-  }
+#include "caf/error_code_enum.hpp"

@@ -48,8 +48,7 @@ public:
 
   result_base& operator=(const result_base&) = default;
 
-  template <class Enum>
-    requires is_error_code_enum_v<Enum>
+  template <error_code_enum Enum>
   result_base(Enum x) : content_(make_error(x)) {
     // nop
   }
