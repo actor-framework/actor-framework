@@ -408,7 +408,7 @@ SCENARIO("router converts responders to asynchronous request objects") {
                                    "Host: localhost:8090\r\n"
                                    "User-Agent: AwesomeLib/1.0\r\n"
                                    "Accept-Encoding: gzip\r\n\r\n";
-        net::write(fd1, as_bytes(make_span(request)));
+        net::write(fd1, as_bytes(std::span{request}));
         std::string_view response = "HTTP/1.1 200 OK\r\n"
                                     "Content-Type: text/plain\r\n"
                                     "Content-Length: 12\r\n\r\n"
@@ -438,7 +438,7 @@ SCENARIO("router converts responders to asynchronous request objects") {
                                    "Host: localhost:8090\r\n"
                                    "User-Agent: AwesomeLib/1.0\r\n"
                                    "Accept-Encoding: gzip\r\n\r\n";
-        net::write(fd1, as_bytes(make_span(request)));
+        net::write(fd1, as_bytes(std::span{request}));
         std::string_view response = "HTTP/1.1 500 Internal Server Error\r\n"
                                     "Content-Type: text/plain\r\n"
                                     "Content-Length: 14\r\n\r\n"
@@ -465,7 +465,7 @@ SCENARIO("router converts responders to asynchronous request objects") {
                                    "Host: localhost:8090\r\n"
                                    "User-Agent: AwesomeLib/1.0\r\n"
                                    "Accept-Encoding: gzip\r\n\r\n";
-        net::write(fd1, as_bytes(make_span(request)));
+        net::write(fd1, as_bytes(std::span{request}));
         byte_buffer buf;
         buf.resize(10);
         auto n = net::read(fd1, buf);
