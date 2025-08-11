@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include "caf/detail/pp.hpp"
-
 namespace caf {
 
 /// Customization point for enabling conversion from an enum type to an
@@ -17,7 +15,7 @@ struct is_error_code_enum {
 
 /// @relates is_error_code_enum
 template <class T>
-constexpr bool is_error_code_enum_v = is_error_code_enum<T>::value;
+concept error_code_enum = is_error_code_enum<T>::value;
 
 } // namespace caf
 

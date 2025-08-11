@@ -21,7 +21,7 @@ public:
 
   using underlying_type = std::underlying_type_t<Enum>;
 
-  static_assert(is_error_code_enum_v<Enum>);
+  static_assert(error_code_enum<Enum>);
 
   static_assert(std::is_same_v<underlying_type, uint8_t>);
 
