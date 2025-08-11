@@ -11,7 +11,7 @@
 #include "caf/detail/assert.hpp"
 #include "caf/detail/concepts.hpp"
 #include "caf/error.hpp"
-#include "caf/is_error_code_enum.hpp"
+#include "caf/error_code_enum.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/unit.hpp"
 

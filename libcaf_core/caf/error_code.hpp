@@ -4,8 +4,8 @@
 
 #pragma once
 
+#include "caf/error_code_enum.hpp"
 #include "caf/fwd.hpp"
-#include "caf/is_error_code_enum.hpp"
 #include "caf/none.hpp"
 
 #include <string>

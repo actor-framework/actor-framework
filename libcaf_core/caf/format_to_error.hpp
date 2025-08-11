@@ -6,7 +6,7 @@
 
 #include "caf/detail/format.hpp"
 #include "caf/error.hpp"
-#include "caf/is_error_code_enum.hpp"
+#include "caf/error_code_enum.hpp"
 
 namespace caf {
 
