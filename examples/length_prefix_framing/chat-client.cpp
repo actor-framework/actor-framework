@@ -104,7 +104,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
                 self->println("*** use CTRL+D or CTRL+C to terminate");
                 self->quit();
               })
-              .for_each([self](const lp::frame& frame) {
+              .for_each([self](const caf::chunk& frame) {
                 // Interpret the bytes as ASCII characters.
                 auto bytes = frame.bytes();
                 auto str = caf::to_string_view(bytes);

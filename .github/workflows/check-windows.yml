@@ -15,7 +15,7 @@ jobs:
         python-version: '3.11'
         cache: 'pip'
     - run: python -m pip install -r robot/dependencies.txt
-    - run: choco install openssl --no-progress
+    - run: choco install openssl.light --no-progress
     - name: Build
       run: .ci/windows/build.cmd
     - name: Test

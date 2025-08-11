@@ -17,6 +17,7 @@
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/async/promise.hpp"
+#include "caf/chunk.hpp"
 #include "caf/detail/network_order.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/raise_error.hpp"

@@ -2,7 +2,7 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/main/LICENSE.
 
-#include "caf/net/lp/frame.hpp"
+#include "caf/chunk.hpp"
 
 #include "caf/test/test.hpp"
 
@@ -23,7 +23,7 @@ std::vector<std::byte> to_vec(std::span<const T> values) {
 } // namespace
 
 TEST("default construction") {
-  net::lp::frame uut;
+  chunk uut;
   check(!uut);
   check(uut.empty());
   check(uut.bytes().empty());
@@ -32,7 +32,7 @@ TEST("default construction") {
 
 TEST("construction from a single buffer") {
   auto buf = to_byte_buf(1, 2, 3);
-  auto uut = net::lp::frame{std::span{buf}};
+  auto uut = chunk{std::span{buf}};
   check(static_cast<bool>(uut));
   check(!uut.empty());
   check(!uut.bytes().empty());
@@ -45,7 +45,7 @@ TEST("construction from multiple buffers") {
   auto buf1 = to_byte_buf(1, 2);
   auto buf2 = to_byte_buf();
   auto buf3 = to_byte_buf(3, 4, 5);
-  auto uut = net::lp::frame::from_buffers(buf1, buf2, buf3);
+  auto uut = chunk::from_buffers(buf1, buf2, buf3);
   check(static_cast<bool>(uut));
   check(!uut.empty());
   check(!uut.bytes().empty());
@@ -56,8 +56,8 @@ TEST("construction from multiple buffers") {
 
 TEST("copying, moving and swapping") {
   auto buf = to_byte_buf(1, 2, 3);
-  auto uut1 = net::lp::frame{};
-  auto uut2 = net::lp::frame{std::span{buf}};
+  auto uut1 = chunk{};
+  auto uut2 = chunk{std::span{buf}};
   auto uut3 = uut1;
   auto uut4 = uut2;
   check_eq(uut1.bytes().data(), uut3.bytes().data());
