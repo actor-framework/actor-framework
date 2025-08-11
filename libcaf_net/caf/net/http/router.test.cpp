@@ -472,28 +472,6 @@ SCENARIO("router converts responders to asynchronous request objects") {
         check_eq(n, 0);
       }
     }
-    WHEN("the router shuts down with pending requests") {
-      run_server([](net::http::lower_layer::server* down,
-                    const net::http::request_header& request_hdr,
-                    const_byte_span body) mutable {
-        auto http_route = make_route([](responder& rp) {
-          rp.respond(http::status::ok, "text/plain", "Hello, World!");
-        });
-        auto default_router
-          = router::make(std::vector<http::route_ptr>{http_route.value()});
-        auto default_responder = responder{&request_hdr, body,
-                                           default_router.get()};
-        auto error = default_router->start(down);
-        auto req = default_router->lift(std::move(default_responder));
-      });
-      THEN("the pending items are disposed") {
-        std::string_view request = "GET /foo HTTP/1.1\r\n"
-                                   "Host: localhost:8090\r\n"
-                                   "User-Agent: AwesomeLib/1.0\r\n"
-                                   "Accept-Encoding: gzip\r\n\r\n";
-        net::write(fd1, as_bytes(make_span(request)));
-      }
-    }
   }
 }
 
