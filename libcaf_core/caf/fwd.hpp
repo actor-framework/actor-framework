@@ -231,8 +231,6 @@ struct subscriber_base;
 namespace telemetry {
 
 class component;
-class dbl_gauge;
-class int_gauge;
 class label;
 class label_view;
 class metric;
@@ -246,6 +244,9 @@ template <class ValueType>
 class counter;
 
 template <class ValueType>
+class gauge;
+
+template <class ValueType>
 class histogram;
 
 template <class Type>
@@ -255,8 +256,10 @@ template <class Type>
 class metric_impl;
 
 using dbl_counter = counter<double>;
+using dbl_gauge = gauge<double>;
 using dbl_histogram = histogram<double>;
 using int_counter = counter<int64_t>;
+using int_gauge = gauge<int64_t>;
 using int_histogram = histogram<int64_t>;
 
 using dbl_counter_family = metric_family_impl<dbl_counter>;
@@ -276,31 +279,7 @@ class actor_system_access;
 class actor_system_config_access;
 class mailbox_factory;
 
-template <class>
-struct gauge_oracle;
-
-template <>
-struct gauge_oracle<double> {
-  using type = telemetry::dbl_gauge;
-};
-
-template <>
-struct gauge_oracle<int64_t> {
-  using type = telemetry::int_gauge;
-};
-
-/// Convenience alias for `detail::gauge_oracle<ValueType>::type`.
-template <class ValueType>
-using gauge_oracle_t = typename gauge_oracle<ValueType>::type;
-
 } // namespace detail
-
-namespace telemetry {
-
-template <class ValueType>
-using gauge = detail::gauge_oracle_t<ValueType>;
-
-} // namespace telemetry
 
 // -- I/O classes --------------------------------------------------------------
 
