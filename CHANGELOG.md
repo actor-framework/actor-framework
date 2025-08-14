@@ -44,6 +44,10 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The namespace `caf::net::http` now contains two new classes for dealing with
   HTTP multipart requests and responses: `multipart_reader` and
   `multipart_writer`.
+- Users can now provide a maximum for how long an actor will run actions
+  (usually generated from flows) before reading from its mailbox again using the
+  new configuration option `caf.scheduler.run-actions-timeout`. Per default,
+  this option is set to 100ms.
 
 ### Fixed
 

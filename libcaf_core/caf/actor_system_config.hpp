@@ -32,6 +32,8 @@ public:
 
   friend class actor_system;
 
+  friend class scheduled_actor;
+
   friend class detail::actor_system_config_access;
 
   // -- member types -----------------------------------------------------------
@@ -276,6 +278,10 @@ private:
 
   std::pair<error, std::string>
   extract_config_file_path(std::vector<std::string>& args);
+
+  // -- miscellaneous fields that are accessed frequently ----------------------
+
+  timespan run_actions_timeout() const;
 
   // -- member variables -------------------------------------------------------
 

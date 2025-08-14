@@ -4,6 +4,7 @@
 
 #include "caf/actor_system_config.hpp"
 
+#include "caf/actor_system_module.hpp"
 #include "caf/config.hpp"
 #include "caf/config_option.hpp"
 #include "caf/config_option_adder.hpp"
@@ -83,6 +84,7 @@ constexpr const char* default_config_file = "caf-application.conf";
 } // namespace
 
 struct actor_system_config::fields {
+  timespan run_actions_timeout = defaults::scheduler::run_actions_timeout;
   std::vector<std::string> paths;
   module_factory_list module_factories;
   actor_factory_dictionary actor_factories;
@@ -113,8 +115,9 @@ actor_system_config::actor_system_config() {
   opt_group{custom_options_, "caf.scheduler"}
     .add<std::string>("policy", "'stealing' (default) or 'sharing'")
     .add<size_t>("max-threads", "maximum number of worker threads")
-    .add<size_t>("max-throughput",
-                 "nr. of messages actors can consume per run");
+    .add<size_t>("max-throughput", "nr. of messages actors can consume per run")
+    .add(fields_->run_actions_timeout, "run-actions-timeout",
+         "max. time a thread runs actions before reading from its mailbox");
   opt_group(custom_options_, "caf.work-stealing")
     .add<size_t>("aggressive-poll-attempts", "nr. of aggressive steal attempts")
     .add<size_t>("aggressive-steal-interval",
@@ -170,6 +173,8 @@ settings actor_system_config::dump_content() const {
   put_missing(scheduler_group, "policy", defaults::scheduler::policy);
   put_missing(scheduler_group, "max-throughput",
               defaults::scheduler::max_throughput);
+  put_missing(scheduler_group, "run-actions-timeout",
+              defaults::scheduler::run_actions_timeout);
   // -- work-stealing parameters
   auto& work_stealing_group = caf_group["work-stealing"].as_dictionary();
   put_missing(work_stealing_group, "aggressive-poll-attempts",
@@ -594,6 +599,10 @@ actor_system_config::extract_config_file_path(std::vector<std::string>& args) {
   }
   put(content, "config-file", std::move(val));
   return {none, std::move(path_str)};
+}
+
+timespan actor_system_config::run_actions_timeout() const {
+  return fields_->run_actions_timeout;
 }
 
 const settings& content(const actor_system_config& cfg) {
