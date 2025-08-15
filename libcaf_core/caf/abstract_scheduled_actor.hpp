@@ -33,8 +33,13 @@ public:
   template <class...>
   friend class event_based_response_handle;
 
+  template <class, class...>
+  friend class event_based_fan_out_response_handle;
+
   template <class...>
   friend struct detail::response_to_flow_cell_helper;
+
+
 
   // -- member types -----------------------------------------------------------
 
