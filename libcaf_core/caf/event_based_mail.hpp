@@ -168,8 +168,8 @@ public:
   template <class Container, class Policy>
   [[nodiscard]] auto
   fan_out_request(const Container& destinations, timespan timeout, Policy) {
-    static_assert(detail::is_one_of_v<Policy, policy::select_all_tag_t,
-                                      policy::select_any_tag_t>,
+    static_assert(detail::one_of<Policy, policy::select_all_tag_t,
+                                 policy::select_any_tag_t>,
                   "Allowed policies are select_all and select_any.");
     using handle_type = typename Container::value_type;
     detail::send_type_check<none_t, handle_type, Args...>();

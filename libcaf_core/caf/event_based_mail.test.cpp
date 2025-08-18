@@ -526,7 +526,7 @@ TEST("send fan_out_request messages that return a result") {
   auto err = std::make_shared<error>();
   SECTION("then with policy select_all") {
     self->mail(1, 2)
-      .fan_out_request(workers, infinite, policy::select_all_v)
+      .fan_out_request(workers, infinite, policy::select_all_tag)
       .then([=](std::vector<int> results) {
         for (auto result : results)
           test::runnable::current().check_eq(result, 3);
@@ -544,7 +544,7 @@ TEST("send fan_out_request messages that return a result") {
   }
   SECTION("then with policy select_any") {
     self->mail(1, 2)
-      .fan_out_request(workers, infinite, policy::select_any_v)
+      .fan_out_request(workers, infinite, policy::select_any_tag)
       .then([=](int result) { *sum = result; });
     launch();
     check_eq(mail_count(), 3u);
@@ -558,7 +558,7 @@ TEST("send fan_out_request messages that return a result") {
   }
   SECTION("await with policy select_all") {
     self->mail(1, 2)
-      .fan_out_request(workers, infinite, policy::select_all_v)
+      .fan_out_request(workers, infinite, policy::select_all_tag)
       .await([this, sum](std::vector<int> results) {
         for (auto result : results)
           check_eq(result, 3);
@@ -579,7 +579,7 @@ TEST("send fan_out_request messages that return a result") {
   }
   SECTION("await with policy select_any") {
     self->mail(1, 2)
-      .fan_out_request(workers, infinite, policy::select_any_v)
+      .fan_out_request(workers, infinite, policy::select_any_tag)
       .await([sum](int result) { *sum = result; });
     launch();
     check_eq(mail_count(), 3u);
@@ -597,7 +597,7 @@ TEST("send fan_out_request messages that return a result") {
   }
   SECTION(".to_observable with policy select_all") {
     self->mail(1, 2)
-      .fan_out_request(workers, infinite, policy::select_all_v)
+      .fan_out_request(workers, infinite, policy::select_all_tag)
       .as_observable<int>()
       .do_on_error([err](const error& x) { *err = x; })
       .for_each([sum](std::vector<int> results) {
@@ -610,7 +610,7 @@ TEST("send fan_out_request messages that return a result") {
   }
   SECTION(".to_observable with policy select_any") {
     self->mail(3, 5)
-      .fan_out_request(workers, infinite, policy::select_any_v)
+      .fan_out_request(workers, infinite, policy::select_any_tag)
       .as_observable<int>()
       .do_on_error([err](const error& x) { *err = x; })
       .for_each([sum](int x) { *sum = x; });
@@ -621,7 +621,7 @@ TEST("send fan_out_request messages that return a result") {
   }
   SECTION("error response") {
     self->mail("Hello")
-      .fan_out_request(workers, infinite, policy::select_any_v)
+      .fan_out_request(workers, infinite, policy::select_any_tag)
       .as_observable<int>()
       .do_on_error([err](const error& x) { *err = x; })
       .for_each([sum](int x) { *sum = x; });
@@ -644,7 +644,7 @@ TEST("send fan_out_request messages with void result") {
   auto ran = std::make_shared<bool>(false);
   SECTION("then with policy select_all") {
     self->mail(1, 2)
-      .fan_out_request(workers, infinite, policy::select_all_v)
+      .fan_out_request(workers, infinite, policy::select_all_tag)
       .then([ran]() { *ran = true; });
     launch();
     expect<int, int>().with(1, 2).from(self_hdl).to(workers[0]);
@@ -655,7 +655,7 @@ TEST("send fan_out_request messages with void result") {
   }
   SECTION("then with policy select_any") {
     self->mail(1, 2)
-      .fan_out_request(workers, infinite, policy::select_any_v)
+      .fan_out_request(workers, infinite, policy::select_any_tag)
       .then([ran]() { *ran = true; });
     launch();
     expect<int, int>().with(1, 2).from(self_hdl).to(workers[0]);
@@ -666,7 +666,7 @@ TEST("send fan_out_request messages with void result") {
   }
   SECTION("await with policy select_all") {
     self->mail(1, 2)
-      .fan_out_request(workers, infinite, policy::select_all_v)
+      .fan_out_request(workers, infinite, policy::select_all_tag)
       .await([ran]() { *ran = true; });
     launch();
     expect<int, int>().with(1, 2).from(self_hdl).to(workers[2]);
@@ -677,7 +677,7 @@ TEST("send fan_out_request messages with void result") {
   }
   SECTION("await with policy select_any") {
     self->mail(1, 2)
-      .fan_out_request(workers, infinite, policy::select_any_v)
+      .fan_out_request(workers, infinite, policy::select_any_tag)
       .await([ran]() { *ran = true; });
     launch();
     expect<int, int>().with(1, 2).from(self_hdl).to(workers[2]);
@@ -797,7 +797,7 @@ TEST("send fan_out_request messages with invalid setups") {
   auto result = std::make_shared<error>();
   SECTION("then with policy select_all") {
     self->mail(1, 2)
-      .fan_out_request(workers, infinite, policy::select_all_v)
+      .fan_out_request(workers, infinite, policy::select_all_tag)
       .then(
         [=](std::vector<int> results) {
           test::runnable::current().fail("expected an error, got: {}", results);
@@ -815,7 +815,7 @@ TEST("send fan_out_request messages with invalid setups") {
   }
   SECTION("then with policy select_any") {
     self->mail(1, 2)
-      .fan_out_request(workers, infinite, policy::select_any_v)
+      .fan_out_request(workers, infinite, policy::select_any_tag)
       .then(
         [=](int results) {
           test::runnable::current().fail("expected an error, got: {}", results);
@@ -833,7 +833,7 @@ TEST("send fan_out_request messages with invalid setups") {
   }
   SECTION("await with policy select_all") {
     self->mail(1, 2)
-      .fan_out_request(workers, infinite, policy::select_all_v)
+      .fan_out_request(workers, infinite, policy::select_all_tag)
       .await(
         [=](std::vector<int> results) {
           test::runnable::current().fail("expected an error, got: {}", results);
@@ -851,7 +851,7 @@ TEST("send fan_out_request messages with invalid setups") {
   }
   SECTION("await with policy select_any") {
     self->mail(1, 2)
-      .fan_out_request(workers, infinite, policy::select_any_v)
+      .fan_out_request(workers, infinite, policy::select_any_tag)
       .then(
         [=](int results) {
           test::runnable::current().fail("expected an error, got: {}", results);

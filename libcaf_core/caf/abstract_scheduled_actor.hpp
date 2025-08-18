@@ -39,8 +39,6 @@ public:
   template <class...>
   friend struct detail::response_to_flow_cell_helper;
 
-
-
   // -- member types -----------------------------------------------------------
 
   using super = local_actor;
