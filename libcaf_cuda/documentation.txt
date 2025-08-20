@@ -1,0 +1,215 @@
+
+== GPU Actors 
+GPU Actors is a way of bringing the Actor Model of scientific Computation to the GPU.
+GPU Actors aims to extend CAF's resource utilization,fault tolerance and high performance nature to the GPU.
+The current version of CAF that is supported is CAF 1.1.0 and all the code related to cuda actors
+can be found in actor-framework/libcaf_cuda.
+Currently we only support cuda kernels and nvidia GPU's. There is no support for amd GPU’s or any other vendor of GPU's
+
+
+== A note about nvidia's driver api
+Currently the GPU Actors is using the nvidia driver api. This means that kernels are compiled separately and loaded into the program at runtime. There are 4 different ways of doing this, however the recommended way to do this is compiling your program into either a cubin (cuda binary) or a fatbin (fat binary) and calling the corresponding method calls. The other two methods of compiling kernels as a string and compiling from a PTX file are not guaranteed to work.
+
+
+== Tagging arguments
+GPU kernels do not have a return value, instead what they do is rely on transferring data to and from the GPU as a way of getting the CPU and the GPU to communicate with each other. A consequence of this is that GPU Actors needs some additional information about the kernels you want to launch. It needs to know if the buffer is a readonly, writeonly or read and write buffer, as well as the data types of the buffer. To signal this there are 3 type tags that the user must use in order to ensure that GPU Actors have the correct information they are: in<T> a readonly buffer, in_out<T> read and write buffer, and out<T> a writeonly buffer. Unless specified otherwise GPU Actors will automatically garbage collect any in<T> GPU buffers once they are done being used and only return data that corresponds to in_out<T> or out<T> data types. 
+{{{
+ // String comparison kernel
+  extern "C" __global__
+  void compare_strings(const char* a, const char* b, int* result, int length) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < length) {
+      result[idx] = (a[idx] == b[idx]) ? 1 : 0;
+    }
+  }
+}}}
+
+Lastly it is also expected that arguments that you give to GPU Actors appear in the order they appear in the kernel. In the kernel above, the correct sequence of argument tags would be: in<char>, in<char>, out<int>, in<int>. Since the types match the order in which they appear in the kernel and we only want to read back the result buffer.
+
+ 
+
+== The Actor Facade
+All GPU programming boils down to the following: write a kernel, configure its dimensions, transfer the memory to the GPU, launch the kernel and finally transfer the memory from the GPU back to the device. GPU Actors have two primary ways of configuring how you want to navigate this workflow. 
+The first way is using the custom GPU Actor called actor facade. 
+
+{{{
+// mmul.cu
+extern "C" __global__
+void matrixMul(const int* a, const int* b, int* c, int N) {
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
+    int col = blockIdx.x * blockDim.x + threadIdx.x;
+    if (row < N && col < N) {
+        int temp = 0;
+        for (int k = 0; k < N; ++k) {
+            temp += a[row * N + k] * b[k * N + col];
+        }
+        c[row * N + col] = temp;
+    }
+}
+
+}}}
+
+{{{
+ // Spawn actor from precompiled cubin file
+  caf::actor gpuActor = mgr.spawnFromCUBIN(
+                  "../mmul.cubin", //kernel file location
+                  "matrixMul", //kernel name 
+                  dim, //kernel dimensions             
+                  in<int>{}, in<int>{}, out<int>{}, in<int>{} //kernel arg tags 
+                                                              //in order they appear in kernel
+                  );
+
+
+}}}
+All you need to do is tell it where to find the kernel, the dimensions for that kernel and specify the argument tags in order it appears in the kernel. From here you can send the gpuActor a message in the form of tagged kernel args and it will automatically launch the kernel for you and return an output_buffer which you can call extract_vector<T> on to retrieve the std::vector you are looking for. Results in the output buffer appear in the order they appear in the kernel arguments, minus the in<T>/readonly buffers since they are automatically garabage collected.
+{{{
+  //tag the buffers so that the actor facade knows what to do with it 
+  in<T>  arg1 = caf::cuda::create_in_arg(h_a); //matrix A readonly buffer
+  in<T> arg2 = caf::cuda::create_in_arg(h_b); //matrix B readonly buffer
+  out<T> arg3 = caf::cuda::create_out_arg_with_size<int>(N*N); //matrix size writeonly buffer
+  in<T> arg4 = caf::cuda::create_in_arg(N); // int size, readonly scalar
+
+  self_actor->mail(arg1, arg2, arg3, arg4)
+      .request(gpuActor, std::chrono::seconds(10))
+      .then([=](const std::vector<output_buffer>& outputs) {
+        std::vector<int> result = caf::cuda::extract_vector<int>(outputs); //collect the result buffer from output
+         //do something with it 
+
+}}}
+
+
+
+== Command Runner
+The second way of expressing this workflow is using the command runner as an entry point to the GPU to create your own custom GPU actors by mixing up the original caf actors along with the cuda api that GPU Actors has. The Command Runner class functionally does everything that the actor facade can do (minus receiving and replying to messages that's the custom actors job) as well as some additional advanced features such as controlling which GPU and stream your kernel launches on, shared memory support and GPU memory management for more complicated pipelines. These features will be discussed further down below as right now we will just show the same operation that the actor facade did above using command runner.
+
+
+{{{
+
+//define the kernel types as well as create a class that will launch the kernel for you 
+using mmulCommand = caf::cuda::command_runner<
+      in<int>, //matrixA a readonly integer buffer
+      in<int>, //matrixB a readonly integer buffer
+      out<int>, //matrixC a writeonly integer buffer, you can just pass in integer for size and it will automatically allocate a buffer for you on the gpu 
+      in<int> //int N, the size of the matrices, you can just pass in a single integer and it will recognize this 
+      >;
+mmulCommand mmul;
+}}}
+
+{{{
+
+    //create program    
+    caf::cuda::program_ptr program = mgr.create_program_from_cubin(
+                  "../mmul.cubin", //kernel file path 
+                  "matrixMul" //kernel name
+                  );
+
+    //tag args
+    in<int> arg1 = caf::cuda::create_in_arg(matrixA); //matrix A
+    in<int> arg2 = caf::cuda::create_in_arg(matrixB); //matrix B
+    out<int> arg3 = caf::cuda::create_out_arg_with_size<int>(N*N); //matrix C (specify with size)
+    in<int> arg4 = caf::cuda::create_in_arg(N); //size of the matrices
+
+    //launch kernel and collect the output 
+    auto tempC = mmul..run(
+                          program,//kernel to launch
+                          dim, //kernel dimensions
+                          id, //actor id 
+                          arg1,arg2,arg3,arg4 //kernel args in order that they appear in the kernel  
+                          );
+    std::vector<int> matrixC = caf::cuda::extract_vector<int>(tempC);
+
+}}}
+
+For a more in depth look on how this is done go to https://github.com/Dalton166/Cuda-Actors/blob/main/examples/custom-actor-examples/mmul.example.cpp 
+
+
+== Actor id's
+Actors use ids as a way to request resources on the GPU, mainly streams (command queues on the GPU). The actor facade will automatically get its own id and separate GPU resources from other actors. However if you are creating your own custom GPU actor, then you can decide if 2 or more actors or kernel launches share the same GPU resources, such as streams by using the same id per request. It is worth mentioning that at a certain limit (after 500 actor ids) GPU resources will be shared amongst actors to prevent extreme overhead costs of managing all the GPU resources or even crashing for having too much resources allocated
+
+
+
+== Multiple GPU Support and Device Numbers
+GPU Actors will attempt to use all GPUs (devices) it detects when launching kernels. The only time it will not use a GPU it detects is if it detects that the GPUs are different from one another since there is no way of knowing what program belongs on which device without querying the user, in which case it will revert to using the first device it detects. When using the actor facade or the command runner and do not specify a device number, it will use a simple lottery scheduler as a way of determining which GPU to launch your kernel on. If you are using command runner you can decide what device your kernel launches on by specifying a device number. The agreement is as follows, any set of commands that have the same device numbers will launch on the same device, while any 2 sets of commands with different device numbers may or may not launch on the same device, depending on how many devices are found on the computer. It will module arithmetic the device number with the number of devices to determine which device to put the command on. For example given device numbers 0,1,2,3,4 if the number of devices on a computer is 4. Then commands with device numbers 0,4 would appear on device 0 (since 0%4 and 4%4 = 0), commands with device numbers of 1 would appear on device 1, and device numbers 2 and 3 would appear on the corresponding device. If there are only 2 devices then commands with device even device numbers (0,2,4) would appear on device 0, while commands with odd device numbers (1,3) would appear on device 1. 
+
+{{{
+          int device_number = 42;
+          //launch kernels
+          auto tempA = mmul.run(
+                          program, //kernel to launch
+                          dim, //kernel dimensions
+                          id, //actor id 
+                          0, //shared memory size in bytes
+                          device_number, //device number 
+                          arg1,arg2,arg3,arg4 //kernel arguments
+                          );
+}}}
+
+== Memory Management 
+Memory transfers are often the main bottleneck in GPU programming, which is why GPU Actors do have both automatic and manual GPU memory management options. Both automatic and manual options both use mem_ptr<T>, which represents memory on the GPU. mem_ptr's are smart pointers, meaning once their reference count hits zero, they will delete themselves and automatically free the memory they contain on the GPU. By default using the actor facade and if you use command_runner run() method, memory will automatically be garbage collected for you. However If you use command runners run_async() method, automatic garbage collection will not be performed instead it will return an std::tuple of mem_ptr<T> in the order they appear in the kernel args.
+{{{
+#include <curand_kernel.h>
+//generate_random_matrix
+extern "C" __global__
+void generate_random_matrix(int* matrix, int total_elements, int seed, int max_val) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx >= total_elements) return;
+
+    curandState state;
+    curand_init((unsigned long long)seed, idx, 0, &state);
+
+    unsigned int r = curand(&state);
+    matrix[idx] = r % max_val;
+}
+
+}}}
+
+
+
+{{{
+ //launch kernels and collect their outputs
+          std::tuple tempA = randomMatrix.run_async(
+                          program, //kernel to launch, contains generate_random_matrix
+                          dim, //kernel dimensions
+                          id, //actor id 
+                          0, //shared memory size in bytes
+                          device_number, //device number 
+                          arg1,arg2,arg3,arg4 //kernel arguments
+                          );
+           caf::cuda::mem_ptr<int> matrixA =  std::get<0>(tempA); //fetch the memory of the first argument of the kernel
+}}}
+
+In the example listed above we can see that getting the zeroth element of the tuple, grabs the memory associated with the matrix parameter/buffer in the generate_random_matrix kernel.
+It is worth mentioning that if the user wishes to use the manual memory management via run_async(), they are responsible for handling the synchronization of the memory and kernels associated with it as well as ensuring that the memory does not end up on a different device than it is allocated on. mem_ptrs do have methods to help out with this. 
+
+For starters recall that GPU Actors use multiple streams and using memory between streams will cause race conditions,there are two ways of handling this. By far the simplest way to handle this is to ensure each actor or command that interacts with the mem_ptr uses the same actor id. In doing so it will guarantee that the same stream is used on the memory and will preserve in order operations. Alternatively you can call mem_ptr synchronize() method, which will synchronize all GPU operations on that memory with the CPU.
+
+For ensuring memory does not end up on a different device than it is currently allocated on. The user needs to ensure the device number is the same for all mem_ptrs being used in run_async. mem_ptrs do track what device number they use (although it may differ from the user's device number if it is higher than the number of GPUs, it will end up being on the same device) with the deviceNumber() method.
+
+Lastly, to transfer memory from the GPU to the CPU use the copy_to_host() method. It is a blocking operation (since it is synchronizing with the GPU) that will always return an std::vector<T>.
+
+
+
+
+== Shared memory Support 
+The command runner does support kernels with shared memory (actor facade does not). All you need to do is specify the size of the shared memory per block in bytes.
+
+{{{
+  auto tempA = mmul.run(
+                          program, //kernel to launch
+                          dim, //kernel dimensions
+                          id, //actor id 
+                          8192, //shared memory size in bytes, allocates 8KB of shared memory
+                          arg1,arg2,arg3,arg4 //kernel arguments
+                          );
+}}}
+
+
+For more details, see the example code found at https://github.com/Dalton166/Cuda-Actors/tree/main/examples 
+
+
+
+
+
+
+
+
