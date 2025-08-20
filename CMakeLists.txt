@@ -60,6 +60,7 @@ option(CAF_ENABLE_QT6_EXAMPLES "Build examples with the Qt6 framework" OFF)
 option(CAF_ENABLE_ROBOT_TESTS "Add the Robot tests to CTest " OFF)
 option(CAF_ENABLE_RUNTIME_CHECKS "Build CAF with extra runtime assertions" OFF)
 option(CAF_USE_STD_FORMAT "Enable std::format support" OFF)
+option(CAF_ENABLE_CUDA "Build caf with cuda support" OFF)
 
 # -- CAF options that are on by default ----------------------------------------
 
@@ -122,6 +123,13 @@ if(CAF_ENABLE_OPENSSL_MODULE OR CAF_ENABLE_NET_MODULE)
     find_package(OpenSSL REQUIRED)
   endif()
 endif()
+
+# -- fetch the cuda + actors library ---------
+if (CAF_ENABLE_CUDA)
+	find_package(CUDA REQUIRED)
+endif()
+
+
 
 # -- base target setup ---------------------------------------------------------
 
@@ -374,6 +382,13 @@ endif()
 if(CAF_ENABLE_EXAMPLES)
   add_subdirectory(examples)
 endif()
+
+
+if(CAF_ENABLE_CUDA)
+	add_subdirectory(libcaf_cuda)
+endif()
+
+
 
 # -- optionally add the Robot tests to CTest -----------------------------------
 
