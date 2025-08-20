@@ -688,102 +688,171 @@ TEST("send fan_out_request messages with void result") {
   }
 }
 
-// TEST("send fan_out_request messages that return a composite result") {
-// auto [self, launch] = sys.spawn_inactive();
-// auto self_hdl = actor_cast<actor>(self);
-// std::vector<actor> workers{
-//   make_server(sys, [](int x, int y) { return make_message(y, x); }),
-//   make_server(sys, [](int x, int y) { return make_message(y, x); }),
-//   make_server(sys, [](int x, int y) { return make_message(y, x); }),
-// };
-// dispatch_messages();
-// auto sum = std::make_shared<int>(0);
-// SECTION("then with policy select_all") {
-//   self->mail(1, 2)
-//     .fan_out_request(workers, infinite, policy::select_all_v)
-//     .then([=](std::vector<std::pair<int, int>> results) {
-//       for (auto result : results) {
-//         test::runnable::current().check_eq(result, std::pair(2, 1));
-//         *sum += result.first;
-//         *sum += result.second;
-//       }
-//     });
-//   launch();
-//   check_eq(mail_count(), 3u);
-//   expect<int, int>().with(1, 2).from(self_hdl).to(workers[0]);
-//   expect<int, int>().with(2, 1).from(workers[0]).to(self_hdl);
-//   expect<int, int>().with(1, 2).from(self_hdl).to(workers[1]);
-//   expect<int, int>().with(1, 2).from(self_hdl).to(workers[2]);
-//   expect<int, int>().with(2, 1).from(workers[1]).to(self_hdl);
-//   expect<int, int>().with(2, 1).from(workers[2]).to(self_hdl);
-//   check_eq(*sum, 9);
-// }
-// SECTION("then with policy select_any") {
-//   self->mail(1, 2)
-//     .fan_out_request(workers, infinite, policy::select_any_v)
-//     .then([=](int result) { *sum = result; });
-//   launch();
-//   check_eq(mail_count(), 3u);
-//   expect<int, int>().with(1, 2).from(self_hdl).to(workers[0]);
-//   expect<int>().with(3).from(workers[0]).to(self_hdl);
-//   expect<int, int>().with(1, 2).from(self_hdl).to(workers[1]);
-//   expect<int, int>().with(1, 2).from(self_hdl).to(workers[2]);
-//   expect<int>().with(3).from(workers[1]).to(self_hdl);
-//   expect<int>().with(3).from(workers[2]).to(self_hdl);
-//   check_eq(*sum, 3);
-// }
-// SECTION("await with policy select_all") {
-//   self->mail(1, 2)
-//     .fan_out_request(workers, infinite, policy::select_all_v)
-//     .await([=](std::vector<int> results) {
-//       for (auto result : results)
-//         check_eq(result, 3);
-//       *sum = std::accumulate(results.begin(), results.end(), 0);
-//     });
-//   launch();
-//   check_eq(mail_count(), 3u);
-//   expect<int, int>().with(1, 2).from(self_hdl).to(workers[2]);
-//   expect<int>().with(3).from(workers[2]).to(self_hdl);
-//   check_eq(mail_count(), 2u);
-//   expect<int, int>().with(1, 2).from(self_hdl).to(workers[1]);
-//   expect<int>().with(3).from(workers[1]).to(self_hdl);
-//   check_eq(mail_count(), 1u);
-//   expect<int, int>().with(1, 2).from(self_hdl).to(workers[0]);
-//   expect<int>().with(3).from(workers[0]).to(self_hdl);
-//   check_eq(mail_count(), 0u);
-//   check_eq(*sum, 9);
-// }
-// SECTION("await with policy select_any") {
-//   self->mail(1, 2)
-//     .fan_out_request(workers, infinite, policy::select_any_v)
-//     .await([=](int result) { *sum = result; });
-//   launch();
-//   check_eq(mail_count(), 3u);
-//   expect<int, int>().with(1, 2).from(self_hdl).to(workers[2]);
-//   expect<int>().with(3).from(workers[2]).to(self_hdl);
-//   check_eq(*sum, 3);
-//   check_eq(mail_count(), 2u);
-//   expect<int, int>().with(1, 2).from(self_hdl).to(workers[1]);
-//   expect<int>().with(3).from(workers[1]).to(self_hdl);
-//   check_eq(mail_count(), 1u);
-//   expect<int, int>().with(1, 2).from(self_hdl).to(workers[0]);
-//   expect<int>().with(3).from(workers[0]).to(self_hdl);
-//   check_eq(mail_count(), 0u);
-//   check_eq(*sum, 3);
-// }
-// }
+TEST("send fan_out_request messages that return two swapped values") {
+  auto [self, launch] = sys.spawn_inactive();
+  auto self_hdl = actor_cast<actor>(self);
+  std::vector<actor> workers{
+    make_server(sys, [](int x, int y) { return make_message(y, x); }),
+    make_server(sys, [](int x, int y) { return make_message(y, x); }),
+    make_server(sys, [](int x, int y) { return make_message(y, x); }),
+  };
+  dispatch_messages();
+  auto swapped_values = std::make_shared<std::vector<std::pair<int, int>>>();
+  auto single_result = std::make_shared<std::pair<int, int>>();
+  auto err = std::make_shared<error>();
+  SECTION("then with policy select_all") {
+    self->mail(1, 2)
+      .fan_out_request(workers, infinite, policy::select_all_tag)
+      .then([=](std::vector<std::tuple<int, int>> results) {
+        for (auto result : results) {
+          swapped_values->emplace_back(std::get<0>(result),
+                                       std::get<1>(result));
+        }
+      });
+    launch();
+    check_eq(mail_count(), 3u);
+    expect<int, int>().with(1, 2).from(self_hdl).to(workers[0]);
+    expect<int, int>().with(2, 1).from(workers[0]).to(self_hdl);
+    expect<int, int>().with(1, 2).from(self_hdl).to(workers[1]);
+    expect<int, int>().with(1, 2).from(self_hdl).to(workers[2]);
+    expect<int, int>().with(2, 1).from(workers[1]).to(self_hdl);
+    expect<int, int>().with(2, 1).from(workers[2]).to(self_hdl);
+    check_eq(swapped_values->size(), 3u);
+    for (const auto& pair : *swapped_values) {
+      check_eq(pair.first, 2);
+      check_eq(pair.second, 1);
+    }
+  }
+  SECTION("then with policy select_any") {
+    self->mail(3, 5)
+      .fan_out_request(workers, infinite, policy::select_any_tag)
+      .then([=](int first, int second) {
+        *single_result = std::make_pair(first, second);
+      });
+    launch();
+    check_eq(mail_count(), 3u);
+    expect<int, int>().with(3, 5).from(self_hdl).to(workers[0]);
+    expect<int, int>().with(5, 3).from(workers[0]).to(self_hdl);
+    check_eq(single_result->first, 5);
+    check_eq(single_result->second, 3);
+    expect<int, int>().with(3, 5).from(self_hdl).to(workers[1]);
+    expect<int, int>().with(3, 5).from(self_hdl).to(workers[2]);
+    expect<int, int>().with(5, 3).from(workers[1]).to(self_hdl);
+    expect<int, int>().with(5, 3).from(workers[2]).to(self_hdl);
+  }
+  SECTION("await with policy select_all") {
+    self->mail(7, 11)
+      .fan_out_request(workers, infinite, policy::select_all_tag)
+      .await([this, swapped_values](std::vector<std::tuple<int, int>> results) {
+        for (auto result : results) {
+          check_eq(std::get<0>(result), 11);
+          check_eq(std::get<1>(result), 7);
+          swapped_values->emplace_back(std::get<0>(result),
+                                       std::get<1>(result));
+        }
+      });
+    launch();
+    check_eq(mail_count(), 3u);
+    expect<int, int>().with(7, 11).from(self_hdl).to(workers[2]);
+    expect<int, int>().with(11, 7).from(workers[2]).to(self_hdl);
+    check_eq(mail_count(), 2u);
+    expect<int, int>().with(7, 11).from(self_hdl).to(workers[1]);
+    expect<int, int>().with(11, 7).from(workers[1]).to(self_hdl);
+    check_eq(mail_count(), 1u);
+    expect<int, int>().with(7, 11).from(self_hdl).to(workers[0]);
+    expect<int, int>().with(11, 7).from(workers[0]).to(self_hdl);
+    check_eq(mail_count(), 0u);
+    check_eq(swapped_values->size(), 3u);
+    for (const auto& pair : *swapped_values) {
+      check_eq(pair.first, 11);
+      check_eq(pair.second, 7);
+    }
+  }
+  SECTION("await with policy select_any") {
+    self->mail(13, 17)
+      .fan_out_request(workers, infinite, policy::select_any_tag)
+      .await([single_result](int first, int second) {
+        *single_result = std::make_pair(first, second);
+      });
+    launch();
+    check_eq(mail_count(), 3u);
+    expect<int, int>().with(13, 17).from(self_hdl).to(workers[2]);
+    expect<int, int>().with(17, 13).from(workers[2]).to(self_hdl);
+    check_eq(single_result->first, 17);
+    check_eq(single_result->second, 13);
+    check_eq(mail_count(), 2u);
+    expect<int, int>().with(13, 17).from(self_hdl).to(workers[1]);
+    expect<int, int>().with(17, 13).from(workers[1]).to(self_hdl);
+    check_eq(mail_count(), 1u);
+    expect<int, int>().with(13, 17).from(self_hdl).to(workers[0]);
+    expect<int, int>().with(17, 13).from(workers[0]).to(self_hdl);
+    check_eq(mail_count(), 0u);
+    check_eq(single_result->first, 17);
+    check_eq(single_result->second, 13);
+  }
+  SECTION("as_observable with policy select_all") {
+    self->mail(19, 23)
+      .fan_out_request(workers, infinite, policy::select_all_tag)
+      .as_observable<int, int>()
+      .do_on_error([err](const error& x) { *err = x; })
+      .for_each(
+        [swapped_values](std::vector<caf::cow_tuple<int, int>> results) {
+          swapped_values->clear();
+          for (auto result : results) {
+            swapped_values->emplace_back(get<0>(result), get<1>(result));
+          }
+        });
+    launch();
+    dispatch_messages();
+    check_eq(*err, error{});
+    check_eq(swapped_values->size(), 3u);
+    for (const auto& pair : *swapped_values) {
+      check_eq(pair.first, 23);
+      check_eq(pair.second, 19);
+    }
+  }
+  SECTION("as_observable with policy select_any") {
+    self->mail(29, 31)
+      .fan_out_request(workers, infinite, policy::select_any_tag)
+      .as_observable<int, int>()
+      .do_on_error([err](const error& x) { *err = x; })
+      .for_each([single_result](caf::cow_tuple<int, int> result) {
+        *single_result = std::make_pair(get<0>(result), get<1>(result));
+      });
+    launch();
+    dispatch_messages();
+    check_eq(*err, error{});
+    check_eq(single_result->first, 31);
+    check_eq(single_result->second, 29);
+  }
+  SECTION("error response with swapped values") {
+    auto error_workers = std::vector<actor>{
+      make_server(sys, [](int, int) { return "error"s; }),
+      make_server(sys, [](int, int) { return "error"s; }),
+      make_server(sys, [](int, int) { return "error"s; }),
+    };
+    dispatch_messages();
+    self->mail(37, 41)
+      .fan_out_request(error_workers, infinite, policy::select_any_tag)
+      .as_observable<int, int>()
+      .do_on_error([err](const error& x) { *err = x; })
+      .for_each([single_result](cow_tuple<int, int> result) {
+        *single_result = std::make_pair(get<0>(result), get<0>(result));
+      });
+    launch();
+    dispatch_messages();
+    check_eq(*err, error{sec::all_requests_failed});
+    check_eq(single_result->first, 0);
+    check_eq(single_result->second, 0);
+  }
+}
 
-// + return unhandled type
-
+// Test scenarios to implement:
 // + urgent
 // + scheduled/delayed
-// + send unhandled type
 // + no receivers
 // + a few receivers
-// + only an invalid receiver
 // + have an await that returns an expected!
-// + never return using an response promise
-// Repeat all of this just now type safe
 
 TEST("send fan_out_request messages with invalid setups") {
   auto [self, launch] = sys.spawn_inactive();

@@ -5,8 +5,6 @@
 #pragma once
 
 #include "caf/abstract_scheduled_actor.hpp"
-#include "caf/detail/concepts.hpp"
-#include "caf/detail/response_type_check.hpp"
 #include "caf/disposable.hpp"
 #include "caf/flow/fwd.hpp"
 #include "caf/fwd.hpp"
@@ -51,6 +49,70 @@ struct event_based_fan_out_response_handle_oracle<Policy,
 template <class Policy, class Result>
 using event_based_fan_out_response_handle_t =
   typename event_based_fan_out_response_handle_oracle<Policy, Result>::type;
+
+template <class, class...>
+struct fan_out_response_to_flow_cell_helper;
+
+template <class Policy>
+struct fan_out_response_to_flow_cell_helper<Policy> {
+  static auto make_behavior(abstract_scheduled_actor* self,
+                            flow::coordinator* coord) {
+    auto cell = make_counted<flow::op::cell<unit_t>>(coord);
+    return std::tuple(
+      std::move(cell),
+      [self, cell] {
+        cell->set_value(unit);
+        self->run_actions();
+      },
+      [self, cell](error err) {
+        cell->set_error(std::move(err));
+        self->run_actions();
+      });
+  }
+};
+
+template <class Policy, class T>
+struct fan_out_response_to_flow_cell_helper<Policy, T> {
+  static auto make_behavior(abstract_scheduled_actor* self,
+                            flow::coordinator* coord) {
+    using value_type
+      = std::conditional_t<std::is_same_v<Policy, policy::select_all_tag_t>,
+                           std::vector<T>, T>;
+    auto cell = make_counted<flow::op::cell<value_type>>(coord);
+    return std::tuple(
+      std::move(cell),
+      [self, cell](value_type value) {
+        cell->set_value(std::move(value));
+        self->run_actions();
+      },
+      [self, cell](error err) {
+        cell->set_error(std::move(err));
+        self->run_actions();
+      });
+  }
+};
+
+template <class Policy, class T1, class T2, class... Ts>
+struct fan_out_response_to_flow_cell_helper<Policy, T1, T2, Ts...> {
+  static auto make_behavior(abstract_scheduled_actor* self,
+                            flow::coordinator* coord) {
+    using tuple_t = cow_tuple<T1, T2, Ts...>;
+    using value_type
+      = std::conditional_t<std::is_same_v<Policy, policy::select_all_tag_t>,
+                           std::vector<tuple_t>, tuple_t>;
+    auto cell = make_counted<flow::op::cell<value_type>>(coord);
+    return std::tuple(
+      std::move(cell),
+      [self, cell](value_type vals) {
+        cell->set_value(std::move(vals));
+        self->run_actions();
+      },
+      [self, cell](error err) {
+        cell->set_error(std::move(err));
+        self->run_actions();
+      });
+  }
+};
 
 } // namespace caf::detail
 
@@ -139,48 +201,37 @@ public:
   template <class... Ts>
   auto as_single() && {
     auto lg = log::core::trace("ids_ = {}", state_.mids);
-    using value_type = detail::select_all_helper_value_t<Ts...>;
+    using behavior_helper
+      = detail::fan_out_response_to_flow_cell_helper<Policy, Ts...>;
+    auto [cell, on_value, on_error] = behavior_helper::make_behavior(
+      state_.self, state_.self->flow_context());
+    behavior bhvr;
     if constexpr (std::same_as<Policy, policy::select_all_tag_t>) {
-      auto cell = make_counted<flow::op::cell<std::vector<value_type>>>(
-        state_.self->flow_context());
-      auto bhvr = make_select_all_behavior(
-        [cell, self = state_.self](std::vector<value_type> value) {
-          cell->set_value(std::move(value));
-          self->run_actions();
-        },
-        [cell, self = state_.self](error err) {
-          cell->set_error(std::move(err));
-          self->run_actions();
-        });
-      for (const auto& mid : state_.mids)
-        state_.self->add_multiplexed_response_handler(mid, bhvr,
-                                                      state_.pending_timeout);
-      using val_t = typename decltype(cell)::value_type::output_type;
-      return flow::single<val_t>{std::move(cell)}.as_observable();
+      bhvr = make_select_all_behavior(std::move(on_value), std::move(on_error));
     } else {
-      auto cell
-        = make_counted<flow::op::cell<value_type>>(state_.self->flow_context());
-      auto bhvr = make_select_any_behavior(
-        [cell, self = state_.self](value_type value) {
-          cell->set_value(std::move(value));
-          self->run_actions();
-        },
-        [cell, self = state_.self](error err) {
-          cell->set_error(std::move(err));
-          self->run_actions();
-        });
-      for (const auto& mid : state_.mids)
-        state_.self->add_multiplexed_response_handler(mid, bhvr,
-                                                      state_.pending_timeout);
-      using val_t = typename decltype(cell)::value_type::output_type;
-      return flow::single<val_t>{std::move(cell)};
+      // For select_any with multiple parameters, create a cow_tuple wrapper.
+      if constexpr (sizeof...(Ts) > 1) {
+        auto wrapper = [on_value = std::move(on_value)](Ts... args) mutable {
+          on_value(cow_tuple<Ts...>{std::move(args)...});
+        };
+        bhvr = make_select_any_behavior(std::move(wrapper),
+                                        std::move(on_error));
+      } else {
+        bhvr = make_select_any_behavior(std::move(on_value),
+                                        std::move(on_error));
+      }
     }
+    for (const auto& mid : state_.mids)
+      state_.self->add_multiplexed_response_handler(mid, bhvr,
+                                                    state_.pending_timeout);
+    using val_t = typename decltype(cell)::value_type::output_type;
+    return flow::single<val_t>{std::move(cell)};
   }
 
-  template <class T>
+  template <class... Ts>
   auto as_observable() && {
-    auto lg = log::core::trace("ids_ = {}", state_.mids);
-    return std::move(*this).template as_single<T>().as_observable();
+    auto lg = log::core::trace();
+    return std::move(*this).template as_single<Ts...>().as_observable();
   }
 
 private:
