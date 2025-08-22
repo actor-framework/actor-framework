@@ -198,40 +198,32 @@ public:
                                  });
   }
 
-  template <class... Ts>
-  auto as_single() && {
-    auto lg = log::core::trace("ids_ = {}", state_.mids);
-    using behavior_helper
-      = detail::fan_out_response_to_flow_cell_helper<Policy, Ts...>;
-    auto [cell, on_value, on_error] = behavior_helper::make_behavior(
-      state_.self, state_.self->flow_context());
-    behavior bhvr;
-    if constexpr (std::same_as<Policy, policy::select_all_tag_t>) {
-      bhvr = make_select_all_behavior(std::move(on_value), std::move(on_error));
-    } else {
-      // For select_any with multiple parameters, create a cow_tuple wrapper.
-      if constexpr (sizeof...(Ts) > 1) {
-        auto wrapper = [on_value = std::move(on_value)](Ts... args) mutable {
-          on_value(cow_tuple<Ts...>{std::move(args)...});
-        };
-        bhvr = make_select_any_behavior(std::move(wrapper),
-                                        std::move(on_error));
-      } else {
-        bhvr = make_select_any_behavior(std::move(on_value),
-                                        std::move(on_error));
-      }
-    }
-    for (const auto& mid : state_.mids)
-      state_.self->add_multiplexed_response_handler(mid, bhvr,
-                                                    state_.pending_timeout);
-    using val_t = typename decltype(cell)::value_type::output_type;
-    return flow::single<val_t>{std::move(cell)};
+  auto as_single() &&
+    requires (not std::same_as<type_list<Results...>, type_list<message>>)
+  {
+    return std::move(*this).template as_single_helper<Results...>();
   }
 
+  // Overload for dynamically typed response.
   template <class... Ts>
-  auto as_observable() && {
-    auto lg = log::core::trace();
-    return std::move(*this).template as_single<Ts...>().as_observable();
+  auto as_single() &&
+    requires std::same_as<type_list<Results...>, type_list<message>>
+  {
+    return std::move(*this).template as_single_helper<Ts...>();
+  }
+
+  auto as_observable() &&
+    requires (not std::same_as<type_list<Results...>, type_list<message>>)
+  {
+    return std::move(*this).template as_single_helper<Results...>().as_observable();
+  }
+
+  // Overload for dynamically typed response.
+  template <class... Ts>
+  auto as_observable() &&
+    requires std::same_as<type_list<Results...>, type_list<message>>
+  {
+    return std::move(*this).template as_single_helper<Ts...>().as_observable();
   }
 
 private:
@@ -278,6 +270,36 @@ private:
     };
     return {std::move(result_handler), std::move(error_handler)};
   }
-};
+
+  template <class... Ts>
+  auto as_single_helper() && {
+    auto lg = log::core::trace("ids_ = {}", state_.mids);
+    using behavior_helper
+      = detail::fan_out_response_to_flow_cell_helper<Policy, Ts...>;
+    auto [cell, on_value, on_error] = behavior_helper::make_behavior(
+      state_.self, state_.self->flow_context());
+    behavior bhvr;
+    if constexpr (std::same_as<Policy, policy::select_all_tag_t>) {
+      bhvr = make_select_all_behavior(std::move(on_value), std::move(on_error));
+    } else {
+      // For select_any with multiple parameters, create a cow_tuple wrapper.
+      if constexpr (sizeof...(Ts) > 1) {
+        auto wrapper = [on_value = std::move(on_value)](Ts... args) mutable {
+          on_value(cow_tuple<Ts...>{std::move(args)...});
+        };
+        bhvr = make_select_any_behavior(std::move(wrapper),
+                                        std::move(on_error));
+      } else {
+        bhvr = make_select_any_behavior(std::move(on_value),
+                                        std::move(on_error));
+      }
+    }
+    for (const auto& mid : state_.mids)
+      state_.self->add_multiplexed_response_handler(mid, bhvr,
+                                                    state_.pending_timeout);
+    using val_t = typename decltype(cell)::value_type::output_type;
+    return flow::single<val_t>{std::move(cell)};
+  }
+}; // namespace caf
 
 } // namespace caf
