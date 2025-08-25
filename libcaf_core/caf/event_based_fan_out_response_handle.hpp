@@ -5,25 +5,18 @@
 #pragma once
 
 #include "caf/abstract_scheduled_actor.hpp"
+#include "caf/detail/response_type_check.hpp"
 #include "caf/disposable.hpp"
 #include "caf/flow/fwd.hpp"
 #include "caf/fwd.hpp"
 #include "caf/message_id.hpp"
 #include "caf/policy/select_all.hpp"
+#include "caf/policy/select_all_tag.hpp"
 #include "caf/policy/select_any.hpp"
+#include "caf/policy/select_any_tag.hpp"
 #include "caf/type_list.hpp"
 
 #include <type_traits>
-
-namespace caf::policy {
-
-struct select_all_tag_t {};
-constexpr auto select_all_tag = select_all_tag_t{};
-
-struct select_any_tag_t {};
-constexpr auto select_any_tag = select_any_tag_t{};
-
-} // namespace caf::policy
 
 namespace caf::detail {
 
@@ -153,8 +146,7 @@ public:
   template <class OnValue, class OnError>
   void await(OnValue on_value, OnError on_error) && {
     auto lg = log::core::trace("ids_ = {}", state_.mids);
-    // TODO type checks
-    // detail::response_type_check<OnValue, OnError, Results...>();
+    detail::fan_out_response_type_check<Policy, OnValue, OnError, Results...>();
     behavior bhvr;
     if constexpr (std::same_as<Policy, policy::select_all_tag_t>) {
       bhvr = make_select_all_behavior(std::move(on_value), std::move(on_error));
@@ -177,8 +169,7 @@ public:
   template <class OnValue, class OnError>
   void then(OnValue on_value, OnError on_error) && {
     auto lg = log::core::trace("ids_ = {}", state_.mids);
-    // detail::response_type_check<OnValue, OnError, Results...>();
-    // - no pending timeout in select_all, but there is in regular then.
+    detail::fan_out_response_type_check<Policy, OnValue, OnError, Results...>();
     behavior bhvr;
     if constexpr (std::same_as<Policy, policy::select_all_tag_t>) {
       bhvr = make_select_all_behavior(std::move(on_value), std::move(on_error));

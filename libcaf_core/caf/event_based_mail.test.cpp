@@ -1247,13 +1247,6 @@ TEST("send fan_out_request messages with void result using typed actors") {
   }
 }
 
-// Test scenarios to implement:
-// + urgent
-// + scheduled/delayed
-// + no receivers
-// + a few receivers
-// + have an await that returns an expected!
-
 TEST("send fan_out_request messages with invalid setups") {
   auto [self, launch] = sys.spawn_inactive();
   auto self_hdl = actor_cast<actor>(self);
