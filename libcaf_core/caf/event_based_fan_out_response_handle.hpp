@@ -290,6 +290,174 @@ private:
     using val_t = typename decltype(cell)::value_type::output_type;
     return flow::single<val_t>{std::move(cell)};
   }
-}; // namespace caf
+};
+
+/// Similar to `event_based_fan_out_response_handle`, but also holds the
+/// `disposable` for the delayed request message.
+template <class Policy, class... Results>
+class event_based_fan_out_delayed_response_handle {
+public:
+  using decorated_type
+    = event_based_fan_out_response_handle<Policy, Results...>;
+
+  // -- constructors, destructors, and assignment operators --------------------
+
+  event_based_fan_out_delayed_response_handle(abstract_scheduled_actor* self,
+                                              std::vector<message_id> mids,
+                                              disposable pending_timeout,
+                                              disposable pending_request)
+    : decorated(self, std::move(mids), std::move(pending_timeout)),
+      pending_request(std::move(pending_request)) {
+    // nop
+  }
+
+  // -- then and await ---------------------------------------------------------
+
+  /// @copydoc event_based_response_handle::await
+  template <class OnValue, class OnError>
+  disposable await(OnValue on_value, OnError on_error) && {
+    std::move(decorated).await(std::move(on_value), std::move(on_error));
+    return std::move(pending_request);
+  }
+
+  /// @copydoc event_based_response_handle::await
+  template <class OnValue>
+  disposable await(OnValue on_value) && {
+    std::move(decorated).await(std::move(on_value));
+    return std::move(pending_request);
+  }
+
+  /// @copydoc event_based_response_handle::then
+  template <class OnValue, class OnError>
+  disposable then(OnValue on_value, OnError on_error) && {
+    std::move(decorated).then(std::move(on_value), std::move(on_error));
+    return std::move(pending_request);
+  }
+
+  /// @copydoc event_based_response_handle::then
+  template <class OnValue>
+  disposable then(OnValue on_value) && {
+    std::move(decorated).then(std::move(on_value));
+    return std::move(pending_request);
+  }
+
+  auto as_single() &&                                                     //
+    requires(not std::same_as<type_list<Results...>, type_list<message>>) //
+  { return std::move(decorated).as_single(); }
+
+    // Overload for dynamically typed response.
+    template <class... Ts>
+    auto as_single() && //
+      requires std::same_as<type_list<Results...>, type_list<message>>
+  {
+    return std::move(decorated).template as_single<Ts...>();
+  }
+
+  auto as_observable()
+    && requires(
+      not std::same_as<
+        type_list<Results...>,
+        type_list<message>>) { return std::move(decorated).as_observable(); }
+
+    // Overload for dynamically typed response.
+    template <class... Ts>
+    auto as_observable() &&
+      requires std::same_as<type_list<Results...>, type_list<message>>
+  {
+    return std::move(decorated).template as_observable<Ts...>();
+  }
+
+  // -- properties -------------------------------------------------------------
+
+  /// The wrapped handle type.
+  decorated_type decorated;
+
+  /// Stores a handle to the in-flight request if the request messages was
+  /// delayed/scheduled.
+  disposable pending_request;
+};
+
+// Type aliases for event_based_fan_out_delayed_response_handle
+template <class Policy, class Result>
+struct event_based_fan_out_delayed_response_handle_oracle;
+
+template <class Policy>
+struct event_based_fan_out_delayed_response_handle_oracle<Policy, message> {
+  using type = event_based_fan_out_delayed_response_handle<Policy, message>;
+};
+
+template <class Policy>
+struct event_based_fan_out_delayed_response_handle_oracle<Policy, type_list<void>> {
+  using type = event_based_fan_out_delayed_response_handle<Policy>;
+};
+
+template <class Policy, class... Results>
+struct event_based_fan_out_delayed_response_handle_oracle<Policy,
+                                                          type_list<Results...>> {
+  using type = event_based_fan_out_delayed_response_handle<Policy, Results...>;
+};
+
+template <class Policy, class Result>
+using event_based_fan_out_delayed_response_handle_t =
+  typename event_based_fan_out_delayed_response_handle_oracle<Policy, Result>::type;
+
+// tuple-like access for event_based_fan_out_delayed_response_handle
+
+template <size_t I, class... Results>
+decltype(auto)
+get(caf::event_based_fan_out_delayed_response_handle<Results...>& x) {
+  if constexpr (I == 0) {
+    return x.decorated;
+  } else {
+    static_assert(I == 1);
+    return x.pending_request;
+  }
+}
+
+template <size_t I, class... Results>
+decltype(auto)
+get(const caf::event_based_fan_out_delayed_response_handle<Results...>& x) {
+  if constexpr (I == 0) {
+    return x.decorated;
+  } else {
+    static_assert(I == 1);
+    return x.pending_request;
+  }
+}
+
+template <size_t I, class... Results>
+decltype(auto)
+get(caf::event_based_fan_out_delayed_response_handle<Results...>&& x) {
+  if constexpr (I == 0) {
+    return std::move(x.decorated);
+  } else {
+    static_assert(I == 1);
+    return std::move(x.pending_request);
+  }
+}
 
 } // namespace caf
+
+// enable structured bindings for event_based_fan_out_delayed_response_handle
+
+namespace std {
+
+template <class... Results>
+struct tuple_size<
+  caf::event_based_fan_out_delayed_response_handle<Results...>> {
+  static constexpr size_t value = 2;
+};
+
+template <class... Results>
+struct tuple_element<
+  0, caf::event_based_fan_out_delayed_response_handle<Results...>> {
+  using type = caf::event_based_response_handle<Results...>;
+};
+
+template <class... Results>
+struct tuple_element<
+  1, caf::event_based_fan_out_delayed_response_handle<Results...>> {
+  using type = caf::disposable;
+};
+
+} // namespace std

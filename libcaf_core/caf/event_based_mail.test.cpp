@@ -1556,4 +1556,57 @@ TEST("delegate message") {
   }
 }
 
+TEST("send delayed fan_out_request messages that return a result") {
+  auto [self, launch] = sys.spawn_inactive();
+  auto self_hdl = actor_cast<actor>(self);
+  std::vector<actor> workers{
+    make_server(sys, [](int x, int y) { return x + y; }),
+    make_server(sys, [](int x, int y) { return x + y; }),
+    make_server(sys, [](int x, int y) { return x + y; }),
+  };
+  dispatch_messages();
+  auto sum = std::make_shared<int>(0);
+  auto err = std::make_shared<error>();
+  SECTION("then with policy select_all") {
+    self->mail(1, 2)
+      .delay(1s)
+      .fan_out_request(workers, infinite, policy::select_all_tag)
+      .then([=](std::vector<int> results) {
+        for (auto result : results)
+          test::runnable::current().check_eq(result, 3);
+        *sum = std::accumulate(results.begin(), results.end(), 0);
+      });
+    launch();
+    check_eq(mail_count(), 0u);
+    check_eq(num_timeouts(), 3u);
+    trigger_all_timeouts();
+    check_eq(mail_count(), 3u);
+    expect<int, int>().with(1, 2).from(self_hdl).to(workers[0]);
+    expect<int>().with(3).from(workers[0]).to(self_hdl);
+    expect<int, int>().with(1, 2).from(self_hdl).to(workers[1]);
+    expect<int, int>().with(1, 2).from(self_hdl).to(workers[2]);
+    expect<int>().with(3).from(workers[1]).to(self_hdl);
+    expect<int>().with(3).from(workers[2]).to(self_hdl);
+    check_eq(*sum, 9);
+  }
+  SECTION("then with policy select_any") {
+    self->mail(1, 2)
+      .delay(1s)
+      .fan_out_request(workers, infinite, policy::select_any_tag)
+      .then([=](int result) { *sum = result; });
+    launch();
+    check_eq(mail_count(), 0u);
+    check_eq(num_timeouts(), 3u);
+    trigger_all_timeouts();
+    check_eq(mail_count(), 3u);
+    expect<int, int>().with(1, 2).from(self_hdl).to(workers[0]);
+    expect<int>().with(3).from(workers[0]).to(self_hdl);
+    expect<int, int>().with(1, 2).from(self_hdl).to(workers[1]);
+    expect<int, int>().with(1, 2).from(self_hdl).to(workers[2]);
+    expect<int>().with(3).from(workers[1]).to(self_hdl);
+    expect<int>().with(3).from(workers[2]).to(self_hdl);
+    check_eq(*sum, 3);
+  }
+}
+
 } // WITH_FIXTURE(test::fixture::deterministic)
