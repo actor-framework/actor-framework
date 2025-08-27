@@ -387,19 +387,21 @@ struct event_based_fan_out_delayed_response_handle_oracle<Policy, message> {
 };
 
 template <class Policy>
-struct event_based_fan_out_delayed_response_handle_oracle<Policy, type_list<void>> {
+struct event_based_fan_out_delayed_response_handle_oracle<Policy,
+                                                          type_list<void>> {
   using type = event_based_fan_out_delayed_response_handle<Policy>;
 };
 
 template <class Policy, class... Results>
-struct event_based_fan_out_delayed_response_handle_oracle<Policy,
-                                                          type_list<Results...>> {
+struct event_based_fan_out_delayed_response_handle_oracle<
+  Policy, type_list<Results...>> {
   using type = event_based_fan_out_delayed_response_handle<Policy, Results...>;
 };
 
 template <class Policy, class Result>
 using event_based_fan_out_delayed_response_handle_t =
-  typename event_based_fan_out_delayed_response_handle_oracle<Policy, Result>::type;
+  typename event_based_fan_out_delayed_response_handle_oracle<Policy,
+                                                              Result>::type;
 
 // tuple-like access for event_based_fan_out_delayed_response_handle
 
@@ -442,16 +444,16 @@ get(caf::event_based_fan_out_delayed_response_handle<Results...>&& x) {
 
 namespace std {
 
-template <class... Results>
+template <class Policy, class... Results>
 struct tuple_size<
-  caf::event_based_fan_out_delayed_response_handle<Results...>> {
+  caf::event_based_fan_out_delayed_response_handle<Policy, Results...>> {
   static constexpr size_t value = 2;
 };
 
-template <class... Results>
+template <class Policy, class... Results>
 struct tuple_element<
-  0, caf::event_based_fan_out_delayed_response_handle<Results...>> {
-  using type = caf::event_based_response_handle<Results...>;
+  0, caf::event_based_fan_out_delayed_response_handle<Policy, Results...>> {
+  using type = caf::event_based_fan_out_response_handle<Results...>;
 };
 
 template <class... Results>

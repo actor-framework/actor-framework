@@ -507,9 +507,9 @@ TEST("send request message to an invalid receiver") {
 
 template <typename Fn>
 caf::actor make_server(caf::actor_system& sys, Fn fn) {
-  auto sf = [&]() -> behavior {
+  auto sf = [fn]() -> behavior {
     return {
-      [&](int x, int y) { return fn(x, y); },
+      [fn](int x, int y) { return fn(x, y); },
     };
   };
   return sys.spawn(sf);
@@ -1680,6 +1680,108 @@ TEST("timeout a fan_out_request") {
     expect<error>().with(timeout_error).to(self_hdl);
     expect<error>().with(timeout_error).to(self_hdl);
     check_eq(*err, make_error(sec::request_timeout));
+  }
+}
+
+TEST("send urgent fan_out_request messages that return a result") {
+  auto [self, launch] = sys.spawn_inactive();
+  auto self_hdl = actor_cast<actor>(self);
+  std::vector<actor> workers{
+    make_server(sys, [](int x, int y) { return x + y; }),
+    make_server(sys, [](int x, int y) { return x + y; }),
+    make_server(sys, [](int x, int y) { return x + y; }),
+  };
+  dispatch_messages();
+  auto sum = std::make_shared<int>(0);
+  SECTION("urgent fan_out_request with policy select_all") {
+    self->mail(1, 2)
+      .urgent()
+      .fan_out_request(workers, infinite, policy::select_all_tag)
+      .then([=](std::vector<int> results) {
+        for (auto result : results)
+          test::runnable::current().check_eq(result, 3);
+        *sum = std::accumulate(results.begin(), results.end(), 0);
+      });
+    launch();
+    check_eq(mail_count(), 3u);
+    expect<int, int>()
+      .with(1, 2)
+      .priority(message_priority::high)
+      .from(self_hdl)
+      .to(workers[0]);
+    expect<int>()
+      .with(3)
+      .priority(message_priority::high)
+      .from(workers[0])
+      .to(self_hdl);
+    expect<int, int>()
+      .with(1, 2)
+      .priority(message_priority::high)
+      .from(self_hdl)
+      .to(workers[1]);
+    expect<int, int>()
+      .with(1, 2)
+      .priority(message_priority::high)
+      .from(self_hdl)
+      .to(workers[2]);
+    expect<int>()
+      .with(3)
+      .priority(message_priority::high)
+      .from(workers[1])
+      .to(self_hdl);
+    expect<int>()
+      .with(3)
+      .priority(message_priority::high)
+      .from(workers[2])
+      .to(self_hdl);
+    check_eq(*sum, 9);
+  }
+  SECTION("urgent delayed fan_out_request with policy select_all") {
+    self->mail(1, 2)
+      .urgent()
+      .delay(1s)
+      .fan_out_request(workers, infinite, policy::select_all_tag)
+      .then([=](std::vector<int> results) {
+        for (auto result : results)
+          test::runnable::current().check_eq(result, 3);
+        *sum = std::accumulate(results.begin(), results.end(), 0);
+      });
+    launch();
+    check_eq(mail_count(), 0u);
+    check_eq(num_timeouts(), 3u);
+    trigger_all_timeouts();
+    check_eq(mail_count(), 3u);
+    expect<int, int>()
+      .with(1, 2)
+      .priority(message_priority::high)
+      .from(self_hdl)
+      .to(workers[0]);
+    expect<int>()
+      .with(3)
+      .priority(message_priority::high)
+      .from(workers[0])
+      .to(self_hdl);
+    expect<int, int>()
+      .with(1, 2)
+      .priority(message_priority::high)
+      .from(self_hdl)
+      .to(workers[1]);
+    expect<int, int>()
+      .with(1, 2)
+      .priority(message_priority::high)
+      .from(self_hdl)
+      .to(workers[2]);
+    expect<int>()
+      .with(3)
+      .priority(message_priority::high)
+      .from(workers[1])
+      .to(self_hdl);
+    expect<int>()
+      .with(3)
+      .priority(message_priority::high)
+      .from(workers[2])
+      .to(self_hdl);
+    check_eq(*sum, 9);
   }
 }
 
