@@ -1609,4 +1609,78 @@ TEST("send delayed fan_out_request messages that return a result") {
   }
 }
 
+TEST("timeout a fan_out_request") {
+  auto [self, launch] = sys.spawn_inactive();
+  auto self_hdl = actor_cast<actor>(self);
+  auto empty_promises = std::make_shared<std::vector<response_promise>>();
+  auto dummy = [self, empty_promises](int, int) {
+    empty_promises->push_back(self->make_response_promise());
+    return empty_promises->back();
+  };
+  std::vector<actor> workers{
+    make_server(sys, dummy),
+    make_server(sys, dummy),
+    make_server(sys, dummy),
+  };
+  dispatch_messages();
+  auto sum = std::make_shared<int>(0);
+  auto err = std::make_shared<error>();
+  SECTION("an immediate request") {
+    self->mail(1, 2)
+      .fan_out_request(workers, 1s, policy::select_all_tag)
+      .then(
+        [=](std::vector<int> results) {
+          for (auto result : results)
+            test::runnable::current().check_eq(result, 3);
+          *sum = std::accumulate(results.begin(), results.end(), 0);
+        },
+        [err](error& e) { *err = std::move(e); });
+    launch();
+    check_eq(mail_count(), 3u);
+    check_eq(num_timeouts(), 3u);
+    expect<int, int>().with(1, 2).from(self_hdl).to(workers[0]);
+    expect<int, int>().with(1, 2).from(self_hdl).to(workers[1]);
+    expect<int, int>().with(1, 2).from(self_hdl).to(workers[2]);
+    check_eq(mail_count(), 0u);
+    check_eq(num_timeouts(), 3u);
+    advance_time(1s);
+    check_eq(num_timeouts(), 0u);
+    auto timeout_error = error(sec::request_timeout);
+    expect<error>().with(timeout_error).to(self_hdl);
+    expect<error>().with(timeout_error).to(self_hdl);
+    expect<error>().with(timeout_error).to(self_hdl);
+    check_eq(*err, make_error(sec::request_timeout));
+  }
+  SECTION("a delayed request") {
+    self->mail(1, 2)
+      .delay(1s)
+      .fan_out_request(workers, 1s, policy::select_all_tag)
+      .then(
+        [=](std::vector<int> results) {
+          for (auto result : results)
+            test::runnable::current().check_eq(result, 3);
+          *sum = std::accumulate(results.begin(), results.end(), 0);
+        },
+        [err](error& e) { *err = std::move(e); });
+    launch();
+    check_eq(mail_count(), 0u);
+    check_eq(num_timeouts(), 6u);
+    advance_time(1s);
+    check_eq(mail_count(), 3u);
+    check_eq(num_timeouts(), 3u);
+    expect<int, int>().with(1, 2).from(self_hdl).to(workers[0]);
+    expect<int, int>().with(1, 2).from(self_hdl).to(workers[1]);
+    expect<int, int>().with(1, 2).from(self_hdl).to(workers[2]);
+    check_eq(mail_count(), 0u);
+    check_eq(num_timeouts(), 3u);
+    advance_time(1s);
+    check_eq(num_timeouts(), 0u);
+    auto timeout_error = error(sec::request_timeout);
+    expect<error>().with(timeout_error).to(self_hdl);
+    expect<error>().with(timeout_error).to(self_hdl);
+    expect<error>().with(timeout_error).to(self_hdl);
+    check_eq(*err, make_error(sec::request_timeout));
+  }
+}
+
 } // WITH_FIXTURE(test::fixture::deterministic)
