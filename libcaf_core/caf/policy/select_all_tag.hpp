@@ -6,7 +6,12 @@
 
 namespace caf::policy {
 
+/// Tag type to indicate that the fan_out_request should combine all responses
+/// into a container and return them to the actor.
 struct select_all_tag_t {};
+
+/// Tag to indicate that the fan_out_request should combine all responses into a
+/// container and return them to the actor.
 constexpr auto select_all_tag = select_all_tag_t{};
 
 } // namespace caf::policy

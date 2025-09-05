@@ -145,26 +145,25 @@ public:
     return hdl_t{self(), mid.response_id(), std::move(in_flight_timeout)};
   }
 
-  /// // TODO update
   /// Sends `{xs...}` to each actor in the range `destinations` as a synchronous
   /// message. Response messages get combined into a single result according to
   /// the `Policy`.
-  /// @tparam Policy Configures how individual response messages get
-  ///                     combined by the actor. The policy makes sure that the
-  ///                     response handler gets invoked at most once. In case of
-  ///                     one or more errors, the policy calls the error handler
-  ///                     exactly once, with the first error occurred.
   /// @tparam Container A container type for holding actor handles. Must provide
   ///                   the type alias `value_type` as well as the member
   ///                   functions `begin()`, `end()`, and `size()`.
+  /// @tparam Policy Configures how individual response messages get combined by
+  ///                the actor. The policy makes sure that the response handler
+  ///                gets invoked at most once. In case of one or more errors,
+  ///                the policy calls the error handler exactly once, with the
+  ///                first error occurred.
   /// @param destinations A container holding handles to all destination actors.
   /// @param timeout Maximum duration before dropping the request. The runtime
   ///                system will send an error message to the actor in case the
   ///                receiver does not respond in time.
   /// @returns A helper object that takes response handlers via `.await()`,
-  ///          `.then()`, or `.receive()`.
+  ///          `.then()`, `.to_single()`, or `.to_observable()`.
   /// @note The returned handle is actor-specific. Only the actor that called
-  ///       `request` can use it for setting response handlers.
+  ///       `fan_out_request` can use it for setting response handlers.
   template <class Container, class Policy>
   [[nodiscard]] auto
   fan_out_request(const Container& destinations, timespan timeout, Policy) {

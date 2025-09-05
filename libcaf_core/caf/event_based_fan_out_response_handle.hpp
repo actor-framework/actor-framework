@@ -51,16 +51,15 @@ struct fan_out_response_to_flow_cell_helper<Policy> {
   static auto make_behavior(abstract_scheduled_actor* self,
                             flow::coordinator* coord) {
     auto cell = make_counted<flow::op::cell<unit_t>>(coord);
-    return std::tuple(
-      std::move(cell),
-      [self, cell] {
-        cell->set_value(unit);
-        self->run_actions();
-      },
-      [self, cell](error err) {
-        cell->set_error(std::move(err));
-        self->run_actions();
-      });
+    return std::tuple{std::move(cell),
+                      [self, cell] {
+                        cell->set_value(unit);
+                        self->run_actions();
+                      },
+                      [self, cell](error err) {
+                        cell->set_error(std::move(err));
+                        self->run_actions();
+                      }};
   }
 };
 
@@ -190,7 +189,7 @@ public:
   }
 
   auto as_single() &&
-    requires (not std::same_as<type_list<Results...>, type_list<message>>)
+    requires (!std::same_as<type_list<Results...>, type_list<message>>)
   {
     return std::move(*this).template as_single_helper<Results...>();
   }
@@ -204,7 +203,7 @@ public:
   }
 
   auto as_observable() &&
-    requires (not std::same_as<type_list<Results...>, type_list<message>>)
+    requires (!std::same_as<type_list<Results...>, type_list<message>>)
   {
     return std::move(*this).template as_single_helper<Results...>().as_observable();
   }
