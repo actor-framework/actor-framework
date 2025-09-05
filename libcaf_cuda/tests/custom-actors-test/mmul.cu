@@ -1,0 +1,16 @@
+// mmul.cu
+extern "C" __global__
+void matrixMul(const int* a, const int* b, int* c, int N) {
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
+    int col = blockIdx.x * blockDim.x + threadIdx.x;
+    //printf("%d\n",N);
+    if (row < N && col < N) {
+        int temp = 0;
+        for (int k = 0; k < N; ++k) {
+            temp += a[row * N + k] * b[k * N + col];
+        }
+        c[row * N + col] = temp;
+    }
+}
+
+
