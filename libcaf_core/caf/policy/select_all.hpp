@@ -6,6 +6,7 @@
 
 #include "caf/behavior.hpp"
 #include "caf/config.hpp"
+#include "caf/cow_tuple.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/concepts.hpp"
 #include "caf/detail/typed_actor_util.hpp"
@@ -99,12 +100,52 @@ struct select_all_helper<F> {
   }
 };
 
+template <class F, class... Ts>
+struct select_all_helper_cow_tuple;
+
+template <class F, class T, class... Ts>
+struct select_all_helper_cow_tuple<F, T, Ts...> {
+  using value_type = cow_tuple<T, Ts...>;
+  std::vector<value_type> results;
+  std::shared_ptr<size_t> pending;
+  disposable timeouts;
+  F f;
+
+  template <class Fun>
+  select_all_helper_cow_tuple(size_t pending, disposable timeouts, Fun&& f)
+    : pending(std::make_shared<size_t>(pending)),
+      timeouts(std::move(timeouts)),
+      f(std::forward<Fun>(f)) {
+    results.reserve(pending);
+  }
+
+  void operator()(T& x, Ts&... xs) {
+    auto lg = log::core::trace("pending = {}", *pending);
+    if (*pending > 0) {
+      results.emplace_back(make_cow_tuple(std::move(x), std::move(xs)...));
+      if (--*pending == 0) {
+        timeouts.dispose();
+        f(std::move(results));
+      }
+    }
+  }
+
+  auto wrap() {
+    return [this](T& x, Ts&... xs) { (*this)(x, xs...); };
+  }
+};
+
 template <class F, class = typename detail::get_callable_trait<F>::arg_types>
 struct select_select_all_helper;
 
 template <class F, class... Ts>
 struct select_select_all_helper<F, type_list<std::vector<std::tuple<Ts...>>>> {
   using type = select_all_helper<F, Ts...>;
+};
+
+template <class F, class... Ts>
+struct select_select_all_helper<F, type_list<std::vector<cow_tuple<Ts...>>>> {
+  using type = select_all_helper_cow_tuple<F, Ts...>;
 };
 
 template <class F, class T>

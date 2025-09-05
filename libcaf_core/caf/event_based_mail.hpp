@@ -6,6 +6,7 @@
 
 #include "caf/abstract_scheduled_actor.hpp"
 #include "caf/async_mail.hpp"
+#include "caf/event_based_fan_out_response_handle.hpp"
 #include "caf/event_based_response_handle.hpp"
 #include "caf/message.hpp"
 
@@ -142,6 +143,64 @@ public:
     }
     using hdl_t = detail::event_based_response_handle_t<response_type>;
     return hdl_t{self(), mid.response_id(), std::move(in_flight_timeout)};
+  }
+
+  /// Sends `{xs...}` to each actor in the range `destinations` as a synchronous
+  /// message. Response messages get combined into a single result according to
+  /// the `Policy`.
+  /// @tparam Container A container type for holding actor handles. Must provide
+  ///                   the type alias `value_type` as well as the member
+  ///                   functions `begin()`, `end()`, and `size()`.
+  /// @tparam Policy Configures how individual response messages get combined by
+  ///                the actor. The policy makes sure that the response handler
+  ///                gets invoked at most once. In case of one or more errors,
+  ///                the policy calls the error handler exactly once, with the
+  ///                first error occurred.
+  /// @param destinations A container holding handles to all destination actors.
+  /// @param timeout Maximum duration before dropping the request. The runtime
+  ///                system will send an error message to the actor in case the
+  ///                receiver does not respond in time.
+  /// @returns A helper object that takes response handlers via `.await()`,
+  ///          `.then()`, `.to_single()`, or `.to_observable()`.
+  /// @note The returned handle is actor-specific. Only the actor that called
+  ///       `fan_out_request` can use it for setting response handlers.
+  template <class Container, class Policy>
+  [[nodiscard]] auto
+  fan_out_request(const Container& destinations, timespan timeout, Policy) {
+    static_assert(detail::one_of<Policy, policy::select_all_tag_t,
+                                 policy::select_any_tag_t>,
+                  "Allowed policies are select_all and select_any.");
+    using handle_type = typename Container::value_type;
+    detail::send_type_check<none_t, handle_type, Args...>();
+    std::vector<message_id> ids;
+    ids.reserve(destinations.size());
+    std::vector<disposable> pending_msgs;
+    pending_msgs.reserve(destinations.size());
+    for (const auto& dest : destinations) {
+      if (!dest)
+        continue;
+      auto req_id = self()->new_request_id(Priority);
+      dest->enqueue(make_mailbox_element(self()->ctrl(), req_id,
+                                         super::content_),
+                    self()->context());
+      pending_msgs.emplace_back(
+        self()->request_response_timeout(timeout, req_id));
+      ids.emplace_back(req_id.response_id());
+    }
+    if (ids.empty()) {
+      auto req_id = self()->new_request_id(Priority);
+      self()->enqueue(make_mailbox_element(self()->ctrl(), req_id.response_id(),
+                                           make_error(sec::invalid_argument)),
+                      self()->context());
+      ids.emplace_back(req_id.response_id());
+    }
+    using response_type
+      = response_type_t<typename handle_type::signatures,
+                        detail::implicit_conversions_t<std::decay_t<Args>>...>;
+    using result_type
+      = detail::event_based_fan_out_response_handle_t<Policy, response_type>;
+    return result_type{self(), std::move(ids),
+                       disposable::make_composite(std::move(pending_msgs))};
   }
 
 private:
