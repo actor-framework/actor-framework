@@ -6,8 +6,8 @@
 
 #include "caf/abstract_blocking_actor.hpp"
 #include "caf/actor_traits.hpp"
-#include "caf/blocking_actor.hpp"
 #include "caf/catch_all.hpp"
+#include "caf/detail/expected_builder.hpp"
 #include "caf/detail/response_type_check.hpp"
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/typed_actor_util.hpp"
@@ -65,48 +65,6 @@ struct blocking_delayed_response_handle_oracle<type_list<Results...>> {
 template <class Result>
 using blocking_delayed_response_handle_t =
   typename blocking_delayed_response_handle_oracle<Result>::type;
-
-template <class... Ts>
-struct expected_builder;
-
-template <>
-struct expected_builder<> {
-  expected<void> result;
-  void set_value() {
-    // nop
-  }
-  void set_error(error x) {
-    result = std::move(x);
-  }
-};
-
-template <class T>
-struct expected_builder<T> {
-  expected<T> result;
-  expected_builder() : result(T{}) {
-    // nop
-  }
-  void set_value(T value) {
-    result.emplace(std::move(value));
-  }
-  void set_error(error x) {
-    result = std::move(x);
-  }
-};
-
-template <class T1, class T2, class... Ts>
-struct expected_builder<T1, T2, Ts...> {
-  expected<std::tuple<T1, T2, Ts...>> result;
-  expected_builder() : result(std::tuple{T1{}, T2{}, Ts{}...}) {
-    // nop
-  }
-  void set_value(T1 arg1, T2 arg2, Ts... args) {
-    result = std::tuple{std::move(arg1), std::move(arg2), std::move(args)...};
-  }
-  void set_error(error x) {
-    result = std::move(x);
-  }
-};
 
 } // namespace caf::detail
 
