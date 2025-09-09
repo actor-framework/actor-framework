@@ -528,7 +528,7 @@ TEST("send fan_out_request messages that return a result") {
     auto sender = sys.spawn([workers, sum](event_based_actor* self) {
       self->mail(1, 2)
         .fan_out_request(workers, infinite, policy::select_all_tag)
-        .then([=](std::vector<int> results) {
+        .then([sum](std::vector<int> results) {
           for (auto result : results)
             test::runnable::current().check_eq(result, 3);
           *sum = std::accumulate(results.begin(), results.end(), 0);
@@ -547,7 +547,7 @@ TEST("send fan_out_request messages that return a result") {
     auto sender = sys.spawn([workers, sum](event_based_actor* self) {
       self->mail(1, 2)
         .fan_out_request(workers, infinite, policy::select_any_tag)
-        .then([=](int result) { *sum = result; });
+        .then([sum](int result) { *sum = result; });
     });
     check_eq(mail_count(), 3u);
     expect<int, int>().with(1, 2).from(sender).to(workers[0]);
@@ -711,7 +711,7 @@ TEST("send fan_out_request messages that return two swapped values") {
     auto sender = sys.spawn([workers, swapped_values](event_based_actor* self) {
       self->mail(1, 2)
         .fan_out_request(workers, infinite, policy::select_all_tag)
-        .then([=](std::vector<std::tuple<int, int>> results) {
+        .then([swapped_values](std::vector<std::tuple<int, int>> results) {
           for (auto result : results) {
             swapped_values->emplace_back(std::get<0>(result),
                                          std::get<1>(result));
@@ -735,7 +735,7 @@ TEST("send fan_out_request messages that return two swapped values") {
     auto sender = sys.spawn([workers, single_result](event_based_actor* self) {
       self->mail(3, 5)
         .fan_out_request(workers, infinite, policy::select_any_tag)
-        .then([=](int first, int second) {
+        .then([single_result](int first, int second) {
           *single_result = std::make_pair(first, second);
         });
     });
@@ -916,7 +916,7 @@ TEST("send fan_out_request messages that return a result using typed actors") {
     auto sender = sys.spawn([workers, sum, err](event_based_actor* self) {
       self->mail(1, 2)
         .fan_out_request(workers, infinite, policy::select_all_tag)
-        .then([=](std::vector<int> results) {
+        .then([sum](std::vector<int> results) {
           for (auto result : results)
             test::runnable::current().check_eq(result, 3);
           *sum = std::accumulate(results.begin(), results.end(), 0);
@@ -935,7 +935,7 @@ TEST("send fan_out_request messages that return a result using typed actors") {
     auto sender = sys.spawn([workers, sum, err](event_based_actor* self) {
       self->mail(1, 2)
         .fan_out_request(workers, infinite, policy::select_any_tag)
-        .then([=](int result) { *sum = result; });
+        .then([sum](int result) { *sum = result; });
     });
     check_eq(mail_count(), 3u);
     expect<int, int>().with(1, 2).from(sender).to(workers[0]);
@@ -1059,7 +1059,7 @@ TEST("send fan_out_request messages that return two swapped values using typed "
       [workers, swapped_values, single_result, err](event_based_actor* self) {
         self->mail(1, 2)
           .fan_out_request(workers, infinite, policy::select_all_tag)
-          .then([=](std::vector<std::tuple<int, int>> results) {
+          .then([swapped_values](std::vector<std::tuple<int, int>> results) {
             for (auto result : results) {
               swapped_values->emplace_back(std::get<0>(result),
                                            std::get<1>(result));
@@ -1084,7 +1084,7 @@ TEST("send fan_out_request messages that return two swapped values using typed "
       [workers, swapped_values, single_result, err](event_based_actor* self) {
         self->mail(3, 5)
           .fan_out_request(workers, infinite, policy::select_any_tag)
-          .then([=](int first, int second) {
+          .then([single_result](int first, int second) {
             *single_result = std::make_pair(first, second);
           });
       });
@@ -1294,11 +1294,11 @@ TEST("send fan_out_request messages with invalid setups") {
       self->mail(1, 2)
         .fan_out_request(workers, infinite, policy::select_all_tag)
         .then(
-          [=](std::vector<int> results) {
+          [](std::vector<int> results) {
             test::runnable::current().fail("expected an error, got: {}",
                                            results);
           },
-          [=](const error& e) { *err = std::move(e); });
+          [err](const error& e) { *err = std::move(e); });
     });
     check_eq(mail_count(), 3u);
     expect<int, int>().with(1, 2).from(sender).to(workers[0]);
@@ -1314,11 +1314,11 @@ TEST("send fan_out_request messages with invalid setups") {
       self->mail(1, 2)
         .fan_out_request(workers, infinite, policy::select_any_tag)
         .then(
-          [=](int results) {
+          [](int results) {
             test::runnable::current().fail("expected an error, got: {}",
                                            results);
           },
-          [=](const error& e) { *err = std::move(e); });
+          [err](const error& e) { *err = std::move(e); });
     });
     check_eq(mail_count(), 3u);
     expect<int, int>().with(1, 2).from(sender).to(workers[0]);
@@ -1334,11 +1334,11 @@ TEST("send fan_out_request messages with invalid setups") {
       self->mail(1, 2)
         .fan_out_request(workers, infinite, policy::select_all_tag)
         .await(
-          [=](std::vector<int> results) {
+          [](std::vector<int> results) {
             test::runnable::current().fail("expected an error, got: {}",
                                            results);
           },
-          [=](const error& e) { *err = std::move(e); });
+          [err](const error& e) { *err = std::move(e); });
     });
     check_eq(mail_count(), 3u);
     expect<int, int>().with(1, 2).from(sender).to(workers[2]);
@@ -1354,11 +1354,11 @@ TEST("send fan_out_request messages with invalid setups") {
       self->mail(1, 2)
         .fan_out_request(workers, infinite, policy::select_any_tag)
         .then(
-          [=](int results) {
+          [](int results) {
             test::runnable::current().fail("expected an error, got: {}",
                                            results);
           },
-          [=](const error& e) { *err = std::move(e); });
+          [err](const error& e) { *err = std::move(e); });
     });
     check_eq(mail_count(), 3u);
     expect<int, int>().with(1, 2).from(sender).to(workers[2]);
@@ -1571,7 +1571,7 @@ TEST("send delayed fan_out_request messages that return a result") {
     self->mail(1, 2)
       .delay(1s)
       .fan_out_request(workers, infinite, policy::select_all_tag)
-      .then([=](std::vector<int> results) {
+      .then([sum](std::vector<int> results) {
         for (auto result : results)
           test::runnable::current().check_eq(result, 3);
         *sum = std::accumulate(results.begin(), results.end(), 0);
@@ -1593,7 +1593,7 @@ TEST("send delayed fan_out_request messages that return a result") {
     self->mail(1, 2)
       .delay(1s)
       .fan_out_request(workers, infinite, policy::select_any_tag)
-      .then([=](int result) { *sum = result; });
+      .then([sum](int result) { *sum = result; });
     launch();
     check_eq(mail_count(), 0u);
     check_eq(num_timeouts(), 3u);
@@ -1629,7 +1629,7 @@ TEST("timeout a fan_out_request") {
     self->mail(1, 2)
       .fan_out_request(workers, 1s, policy::select_all_tag)
       .then(
-        [=](std::vector<int> results) {
+        [sum](std::vector<int> results) {
           for (auto result : results)
             test::runnable::current().check_eq(result, 3);
           *sum = std::accumulate(results.begin(), results.end(), 0);
@@ -1656,7 +1656,7 @@ TEST("timeout a fan_out_request") {
       .delay(1s)
       .fan_out_request(workers, 1s, policy::select_all_tag)
       .then(
-        [=](std::vector<int> results) {
+        [sum](std::vector<int> results) {
           for (auto result : results)
             test::runnable::current().check_eq(result, 3);
           *sum = std::accumulate(results.begin(), results.end(), 0);
@@ -1697,7 +1697,7 @@ TEST("send urgent fan_out_request messages that return a result") {
     self->mail(1, 2)
       .urgent()
       .fan_out_request(workers, infinite, policy::select_all_tag)
-      .then([=](std::vector<int> results) {
+      .then([sum](std::vector<int> results) {
         for (auto result : results)
           test::runnable::current().check_eq(result, 3);
         *sum = std::accumulate(results.begin(), results.end(), 0);
@@ -1741,7 +1741,7 @@ TEST("send urgent fan_out_request messages that return a result") {
       .urgent()
       .delay(1s)
       .fan_out_request(workers, infinite, policy::select_all_tag)
-      .then([=](std::vector<int> results) {
+      .then([sum](std::vector<int> results) {
         for (auto result : results)
           test::runnable::current().check_eq(result, 3);
         *sum = std::accumulate(results.begin(), results.end(), 0);

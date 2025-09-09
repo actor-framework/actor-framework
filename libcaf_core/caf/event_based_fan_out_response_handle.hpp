@@ -341,23 +341,21 @@ public:
     return std::move(pending_request);
   }
 
-  auto as_single() &&                                                     //
-    requires(not std::same_as<type_list<Results...>, type_list<message>>) //
+  auto as_single() &&                                                  //
+    requires(!std::same_as<type_list<Results...>, type_list<message>>) //
   { return std::move(decorated).as_single(); }
 
     // Overload for dynamically typed response.
     template <class... Ts>
-    auto as_single() && //
+    auto as_single() &&
       requires std::same_as<type_list<Results...>, type_list<message>>
   {
     return std::move(decorated).template as_single<Ts...>();
   }
 
-  auto as_observable()
-    && requires(
-      not std::same_as<
-        type_list<Results...>,
-        type_list<message>>) { return std::move(decorated).as_observable(); }
+  auto as_observable()                                                    //
+    && requires(!std::same_as<type_list<Results...>, type_list<message>>) //
+  { return std::move(decorated).as_observable(); }
 
     // Overload for dynamically typed response.
     template <class... Ts>
@@ -367,6 +365,7 @@ public:
     return std::move(decorated).template as_observable<Ts...>();
   }
 
+private:
   // -- properties -------------------------------------------------------------
 
   /// The wrapped handle type.
