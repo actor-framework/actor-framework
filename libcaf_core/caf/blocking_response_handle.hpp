@@ -6,6 +6,7 @@
 
 #include "caf/abstract_blocking_actor.hpp"
 #include "caf/actor_traits.hpp"
+#include "caf/blocking_actor.hpp"
 #include "caf/catch_all.hpp"
 #include "caf/detail/metaprogramming.hpp"
 #include "caf/detail/response_type_check.hpp"

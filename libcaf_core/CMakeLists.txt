@@ -119,6 +119,7 @@ caf_add_component(
     caf/binary_serializer.cpp
     caf/blocking_actor.cpp
     caf/blocking_actor.test.cpp
+    caf/blocking_fan_out_request.test.cpp
     caf/blocking_mail.test.cpp
     caf/byte_reader.cpp
     caf/byte_span.cpp

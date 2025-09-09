@@ -57,6 +57,8 @@ class unordered_flat_map;
 // -- variadic templates -------------------------------------------------------
 
 template <class...> class blocking_delayed_response_handle;
+template <class, class...> class blocking_fan_out_response_handle;
+template <class, class...> class blocking_fan_out_delayed_response_handle;
 template <class...> class blocking_response_handle;
 template <class...> class const_typed_message_view;
 template <class...> class cow_tuple;
