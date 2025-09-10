@@ -365,7 +365,6 @@ public:
     return std::move(decorated).template as_observable<Ts...>();
   }
 
-private:
   // -- properties -------------------------------------------------------------
 
   /// The wrapped handle type.
