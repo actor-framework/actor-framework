@@ -451,12 +451,12 @@ struct tuple_size<
 template <class Policy, class... Results>
 struct tuple_element<
   0, caf::event_based_fan_out_delayed_response_handle<Policy, Results...>> {
-  using type = caf::event_based_fan_out_response_handle<Results...>;
+  using type = caf::event_based_fan_out_response_handle<Policy, Results...>;
 };
 
-template <class... Results>
+template <class Policy, class... Results>
 struct tuple_element<
-  1, caf::event_based_fan_out_delayed_response_handle<Results...>> {
+  1, caf::event_based_fan_out_delayed_response_handle<Policy, Results...>> {
   using type = caf::disposable;
 };
 
