@@ -635,6 +635,37 @@ TEST(
   }
 }
 
+TEST("fan_out_request with mixed results - one worker returns error") {
+  scoped_actor self{sys};
+  std::vector<actor> workers{
+    make_server(sys, [](int x, int y) { return x + y; }),
+    make_server(sys, [](int, int) -> result<int> { 
+      return caf::error(sec::logic_error); 
+    }),
+    make_server(sys, [](int x, int y) { return x + y; }),
+  };
+  auto sum = std::make_shared<int>(0);
+  auto err = std::make_shared<error>();
+  SECTION("receive with policy select_all") {
+    self->mail(1, 2)
+      .fan_out_request(workers, 1s, policy::select_all_tag)
+      .receive(
+        [this](std::vector<int> results) {
+          fail("expected an error, got: {}", results);
+        },
+        [err](error& e) { *err = std::move(e); });
+    check_eq(*err, make_error(sec::logic_error));
+  }
+  SECTION("receive with policy select_any") {
+    self->mail(1, 2)
+      .fan_out_request(workers, 1s, policy::select_any_tag)
+      .receive([sum](int result) { *sum = result; },
+               [err](error& e) { *err = std::move(e); });
+    check_eq(*sum, 3);
+    check_eq(*err, error{});
+  }
+}
+
 TEST("timeout a delayed fan_out_request") {
   scoped_actor self{sys};
   auto dummy = [](event_based_actor* self) -> behavior {
