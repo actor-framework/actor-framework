@@ -32,10 +32,7 @@ constexpr parameter<T> make_parameter(std::string_view name, T fallback) {
   return {name, fallback};
 }
 
-/// Configures how many actions scheduled_actor::delay may add to the internal
-/// queue for scheduled_actor::run_actions before being forced to push them to
-/// the mailbox instead.
-constexpr auto max_inline_actions_per_run = size_t{10};
+[[deprecated]] constexpr auto max_inline_actions_per_run = size_t{10};
 
 } // namespace caf::defaults
 
@@ -95,6 +92,10 @@ namespace caf::defaults::scheduler {
 
 constexpr auto policy = std::string_view{"stealing"};
 constexpr auto max_throughput = std::numeric_limits<size_t>::max();
+
+/// Configures how long an actor runs actions before reading from its mailbox
+/// again.
+constexpr auto run_actions_timeout = timespan{100'000'000}; // 100 ms
 
 } // namespace caf::defaults::scheduler
 

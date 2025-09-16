@@ -6,9 +6,8 @@
 
 #include "caf/action.hpp"
 #include "caf/actor_registry.hpp"
+#include "caf/actor_system_config.hpp"
 #include "caf/anon_mail.hpp"
-#include "caf/config.hpp"
-#include "caf/defaults.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/critical.hpp"
 #include "caf/detail/default_invoke_result_visitor.hpp"
@@ -17,6 +16,7 @@
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/flow/observable_builder.hpp"
 #include "caf/flow/op/mcast.hpp"
+#include "caf/flow/single.hpp"
 #include "caf/format_to_error.hpp"
 #include "caf/log/core.hpp"
 #include "caf/log/system.hpp"
@@ -25,6 +25,10 @@
 #include "caf/send.hpp"
 #include "caf/stream.hpp"
 #include "caf/telemetry/metric_family_impl.hpp"
+
+#include <chrono>
+#include <iterator>
+#include <limits>
 
 using namespace std::string_literals;
 
@@ -539,22 +543,7 @@ void scheduled_actor::schedule(action what) {
 }
 
 void scheduled_actor::delay(action what) {
-  // Happy path: push it to `actions_`, where we run it from `run_actions`.
-  if (delayed_actions_this_run_++ < defaults::max_inline_actions_per_run) {
-    actions_.emplace_back(std::move(what));
-    return;
-  }
-  // Slow path: we send a "request" with the action to ourselves. The pending
-  // request makes sure that the action keeps the actor alive until processed.
-  if (!delay_bhvr_) {
-    delay_bhvr_ = behavior{[](action& f) {
-      log::core::debug("run delayed action");
-      f.run();
-    }};
-  }
-  auto res_id = new_request_id(message_priority::normal).response_id();
-  enqueue(make_mailbox_element(nullptr, res_id, std::move(what)), context_);
-  add_multiplexed_response_handler(res_id, delay_bhvr_);
+  actions_.emplace_back(std::move(what));
 }
 
 disposable scheduled_actor::delay_until(steady_time_point abs_time,
@@ -619,10 +608,8 @@ scheduled_actor::categorize(mailbox_element& x) {
       return message_category::internal;
     }
     case type_id_v<action>: {
-      auto what = content.get_as<action>(0);
-      CAF_ASSERT(what.ptr() != nullptr);
-      log::core::debug("run action");
-      what.run();
+      log::core::debug("received action to run");
+      actions_.push_back(content.get_as<action>(0));
       return message_category::internal;
     }
     case type_id_v<stream_open_msg>: {
@@ -1086,18 +1073,54 @@ void scheduled_actor::deregister_stream(uint64_t stream_id) {
 
 void scheduled_actor::run_actions() {
   auto lg = log::core::trace("");
-  delayed_actions_this_run_ = 0;
   if (!actions_.empty()) {
     // Note: if the first actions is null, it means that we are already running
     // actions right now. This can happen if an action calls `quit`, which will
     // call `run_actions` again.
-    if (!actions_.front())
+    if (!actions_.front()) {
       return;
+    }
+    // Store the current time and set a timeout for the actions.
+    using std::chrono::steady_clock;
+    auto started = steady_clock::now();
+    auto timeout = started + config().run_actions_timeout();
     // Note: can't use iterators here since actions may add to the vector.
     for (auto index = size_t{0}; index < actions_.size(); ++index) {
       action f;
       f.swap(actions_[index]);
       f.run();
+      if (index + 1 < actions_.size() && steady_clock::now() > timeout) {
+        // If the actor is shutting down, we *must* run all actions, even if
+        // they take longer than the timeout because there will be no more
+        // opportunity to run them. Note: this check must be done here, because
+        // an action may call `quit` and set the shutdown flag.
+        if (getf(is_shutting_down_flag)) {
+          using rep_t = steady_clock::duration::rep;
+          auto max_time = std::numeric_limits<rep_t>::max();
+          timeout = steady_clock::time_point{steady_clock::duration{max_time}};
+          continue;
+        }
+        log::core::debug("run_actions() timed out, "
+                         "leave {} actions in the queue for the next run",
+                         actions_.size() - index - 1);
+        // Drop the actions we already ran.
+        actions_.erase(actions_.begin(), actions_.begin() + index + 1);
+        // Schedule a message to resume where we left off. Any message will
+        // trigger run_actions() again, but we use a "response" message here to
+        // make sure that the actors stays alive until the message is processed
+        // (except if the actor explicitly quits). Using a response handler also
+        // makes sure that the message cannot end up in the regular behavior.
+        if (!delay_bhvr_) {
+          delay_bhvr_ = behavior{[](ok_atom) {}};
+        }
+        auto res_id = new_request_id(message_priority::normal).response_id();
+        enqueue(make_mailbox_element(nullptr, res_id, ok_atom_v), context_);
+        add_multiplexed_response_handler(res_id, delay_bhvr_);
+        // Stop early and leave the rest of the actions for later.
+        released_.clear();
+        update_watched_disposables();
+        return;
+      }
     }
     actions_.clear();
   }
@@ -1139,7 +1162,8 @@ void scheduled_actor::do_unstash(mailbox_element_ptr ptr) {
 }
 
 void scheduled_actor::cancel_flows_and_streams() {
-  // Note: we always swap out a map before iterating it, because some callbacks
+  // Note: we always swap out a map before iterating it, because some
+  // callbacks
   //       may call erase on the map while we are iterating it.
   stream_sources_.clear();
   if (!stream_subs_.empty()) {
@@ -1185,7 +1209,8 @@ void scheduled_actor::force_close_mailbox() {
   close_mailbox(make_error(exit_reason::unreachable));
 }
 
-// -- monitoring ---------------------------------------------------------------
+// -- monitoring
+// ---------------------------------------------------------------
 
 disposable
 scheduled_actor::do_monitor(abstract_actor* ptr,
