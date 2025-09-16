@@ -38,6 +38,12 @@ public:
 
   using opt_group = config_option_adder;
 
+#ifdef CAF_ENABLE_EXCEPTIONS
+  /// Function object for handling exit messages.
+  using exception_handler_type
+    = std::function<error(scheduled_actor*, std::exception_ptr&)>;
+#endif // CAF_ENABLE_EXCEPTIONS
+
   // -- constructors, destructors, and assignment operators --------------------
 
   actor_system_config();
@@ -142,6 +148,16 @@ public:
     add_thread_hook(std::make_unique<Hook>(std::forward<Ts>(ts)...));
     return *this;
   }
+
+#ifdef CAF_ENABLE_EXCEPTIONS
+  /// Sets the default exception handler for scheduled actors. This handler gets
+  /// passed down to all scheduled actors as the default exception handler but
+  /// can still be overridden by the actor.
+  void exception_handler(exception_handler_type fun);
+
+  /// Returns the default exception handler for scheduled actors.
+  const exception_handler_type& exception_handler() const noexcept;
+#endif // CAF_ENABLE_EXCEPTIONS
 
   // -- parser and CLI state ---------------------------------------------------
 
