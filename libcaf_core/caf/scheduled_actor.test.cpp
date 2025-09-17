@@ -176,6 +176,30 @@ TEST("the default exception handler includes the error message") {
       });
 }
 
+TEST("users can override the global default exception handler") {
+  using std::string;
+  auto calls = std::make_shared<std::atomic<size_t>>(0);
+  actor_system_config cfg;
+  cfg.exception_handler(
+    [calls](scheduled_actor* self, std::exception_ptr& eptr) {
+      ++*calls;
+      return scheduled_actor::default_exception_handler(self, eptr);
+    });
+  actor_system system{cfg};
+  scoped_actor self{system};
+  check_eq(calls->load(), 0u);
+  auto aut = self->spawn(testee);
+  self->mail("hello world")
+    .request(aut, infinite)
+    .receive( //
+      [this] { fail("unexpected response"); },
+      [this](const error& err) {
+        check_eq(err.what(),
+                 "unhandled exception of type std.runtime_error: whatever");
+      });
+  check_eq(calls->load(), 1u);
+}
+
 TEST("actors can override the default exception handler") {
   actor_system_config cfg;
   actor_system system{cfg};

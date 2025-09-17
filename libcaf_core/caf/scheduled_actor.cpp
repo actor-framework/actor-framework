@@ -6,6 +6,7 @@
 
 #include "caf/action.hpp"
 #include "caf/actor_registry.hpp"
+#include "caf/actor_system_config.hpp"
 #include "caf/anon_mail.hpp"
 #include "caf/config.hpp"
 #include "caf/defaults.hpp"
@@ -133,7 +134,7 @@ scheduled_actor::scheduled_actor(actor_config& cfg)
     private_thread_(nullptr)
 #ifdef CAF_ENABLE_EXCEPTIONS
     ,
-    exception_handler_(default_exception_handler)
+    exception_handler_(home_system().config().exception_handler())
 #endif // CAF_ENABLE_EXCEPTIONS
 {
   if (cfg.mbox_factory == nullptr)

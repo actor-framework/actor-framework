@@ -44,6 +44,10 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The namespace `caf::net::http` now contains two new classes for dealing with
   HTTP multipart requests and responses: `multipart_reader` and
   `multipart_writer`.
+- Users can now set a global default handler for exceptions on the
+  `actor_system_config` by calling `exception_handler(my_handler)`. This handler
+  then gets passed down to all scheduled actors as the default exception handler
+  but can still be overridden by actors.
 
 ### Fixed
 

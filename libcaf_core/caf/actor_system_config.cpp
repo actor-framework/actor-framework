@@ -16,6 +16,7 @@
 #include "caf/format_to_error.hpp"
 #include "caf/message_builder.hpp"
 #include "caf/pec.hpp"
+#include "caf/scheduled_actor.hpp"
 #include "caf/sec.hpp"
 #include "caf/type_id.hpp"
 
@@ -92,6 +93,11 @@ struct actor_system_config::fields {
   std::string program_name;
   std::vector<std::string> args_remainder;
   c_args_wrapper c_args_remainder;
+
+#ifdef CAF_ENABLE_EXCEPTIONS
+  exception_handler_type exception_handler
+    = scheduled_actor::default_exception_handler;
+#endif // CAF_ENABLE_EXCEPTIONS
 };
 
 // -- constructors, destructors, and assignment operators ----------------------
@@ -617,7 +623,7 @@ actor_system_config::module_factories() {
   return fields_->module_factories;
 }
 
-// -- actor factories ----------------------------------------------------------
+// -- modifiers ----------------------------------------------------------------
 
 actor_system_config& actor_system_config::add_actor_factory(std::string name,
                                                             actor_factory fun) {
@@ -631,6 +637,17 @@ actor_factory* actor_system_config::get_actor_factory(std::string_view name) {
     return nullptr;
   return &i->second;
 }
+
+#ifdef CAF_ENABLE_EXCEPTIONS
+void actor_system_config::exception_handler(exception_handler_type fun) {
+  fields_->exception_handler = std::move(fun);
+}
+
+const actor_system_config::exception_handler_type&
+actor_system_config::exception_handler() const noexcept {
+  return fields_->exception_handler;
+}
+#endif // CAF_ENABLE_EXCEPTIONS
 
 // -- thread hooks -------------------------------------------------------------
 
