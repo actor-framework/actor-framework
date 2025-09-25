@@ -19,7 +19,7 @@
 namespace {
 
 #if defined(CAF_WINDOWS) || defined(CAF_MACOS) || defined(CAF_IOS)             \
-  || defined(CAF_BSD)
+  || (defined(CAF_BSD) && defined(SO_NOSIGPIPE))
 constexpr int no_sigpipe_io_flag = 0;
 #else
 constexpr int no_sigpipe_io_flag = MSG_NOSIGNAL;
