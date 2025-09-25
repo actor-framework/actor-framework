@@ -55,6 +55,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   properly call `on_error` (#2026).
 - Fix UBSan finding regarding non-aligned memory allocation when spawning
   actors.
+- Fix build issues on some BSD derivatives (#2135).
 
 ### Removed
 
