@@ -12,6 +12,11 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   outperforming the previous version by an order of magnitude. It is worth
   noting that this is a purely internal change and does not affect the API.
 
+### Added
+
+- Requests that use the new `mail` API now support `as_single` for turning the
+  response handle into a `flow::single` object.
+
 ## [1.1.0] - 2025-07-25
 
 ### Changed

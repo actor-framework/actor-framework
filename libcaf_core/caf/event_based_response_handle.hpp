@@ -79,6 +79,28 @@ template <class... Ts>
 using event_based_response_handle_res_t =
   typename event_based_response_handle_res<Ts...>::type;
 
+template <class...>
+struct event_based_response_handle_single_oracle;
+
+template <class Dummy>
+struct event_based_response_handle_single_oracle<Dummy> {
+  using type = flow::single<unit_t>;
+};
+
+template <class Dummy, class T>
+struct event_based_response_handle_single_oracle<Dummy, T> {
+  using type = flow::single<T>;
+};
+
+template <class Dummy, class T0, class T1, class... Ts>
+struct event_based_response_handle_single_oracle<Dummy, T0, T1, Ts...> {
+  using type = flow::single<cow_tuple<T0, T1, Ts...>>;
+};
+
+template <class... Ts>
+using event_based_response_handle_single_t =
+  typename event_based_response_handle_single_oracle<Ts...>::type;
+
 } // namespace caf::detail
 
 namespace caf {
@@ -146,6 +168,17 @@ public:
                                  });
   }
 
+  template <class Dummy = void>
+  flow::assert_scheduled_actor_hdr_t<
+    detail::event_based_response_handle_single_t<Dummy, Results...>>
+  as_single() && {
+    auto cell = state_.self->template response_to_flow_cell<Results...>(
+      state_.mid, std::move(state_.pending_timeout));
+    using cell_t = typename decltype(cell)::value_type;
+    using val_t = typename cell_t::output_type;
+    return flow::single<val_t>{std::move(cell)};
+  }
+
   auto as_observable() && {
     auto cell = state_.self->template response_to_flow_cell<Results...>(
       state_.mid, std::move(state_.pending_timeout));
@@ -208,6 +241,17 @@ public:
                                  [self = state_.self](error& err) {
                                    self->call_error_handler(err);
                                  });
+  }
+
+  template <class... Ts>
+  flow::assert_scheduled_actor_hdr_t<
+    detail::event_based_response_handle_single_t<void, Ts...>>
+  as_single() && {
+    auto cell = state_.self->template response_to_flow_cell<Ts...>(
+      state_.mid, std::move(state_.pending_timeout));
+    using cell_t = typename decltype(cell)::value_type;
+    using val_t = typename cell_t::output_type;
+    return flow::single<val_t>{std::move(cell)};
   }
 
   template <class... Ts>

@@ -20,28 +20,50 @@ using namespace caf::flow;
 
 WITH_FIXTURE(test::fixture::flow) {
 
-SCENARIO("singles emit at most one value") {
+SCENARIO("singles emit a value or an error") {
   GIVEN("a single int32") {
     WHEN("an observer subscribes before the values has been set") {
       THEN("the observer receives the value when calling set_value") {
-        auto outputs = vector<int32_t>{};
+        auto result = std::make_shared<vector<int32_t>>();
+        auto err = std::make_shared<error>();
         auto cell = make_counted<op::cell<int32_t>>(coordinator());
-        auto single_int = single<int32_t>{cell};
-        single_int //
-          .as_observable()
-          .for_each([&outputs](int32_t x) { outputs.emplace_back(x); });
+        auto uut = single<int32_t>{cell};
+        uut.subscribe([result](int32_t x) { result->push_back(x); },
+                      [err](const error& x) { *err = x; });
         run_flows();
-        check_eq(outputs, nil);
+        check_eq(*result, nil);
+        check(!*err);
         cell->set_value(42);
-        check_eq(outputs, vector{42});
+        check_eq(*result, vector{42});
+        check(!*err);
       }
     }
     WHEN("an observer subscribes after the values has been set") {
       THEN("the observer receives the value immediately") {
+        auto result = std::make_shared<vector<int32_t>>();
+        auto err = std::make_shared<error>();
         auto cell = make_counted<op::cell<int32_t>>(coordinator());
-        auto single_int = single<int32_t>{cell};
         cell->set_value(42);
-        check_eq(collect(single_int.as_observable()), vector{42});
+        auto uut = single<int32_t>{cell};
+        uut.subscribe([result](int32_t x) { result->push_back(x); },
+                      [err](const error& x) { *err = x; });
+        run_flows();
+        check_eq(*result, vector{42});
+        check(!*err);
+      }
+    }
+    WHEN("the cell emits an error") {
+      THEN("the observer receives the error") {
+        auto result = std::make_shared<vector<int32_t>>();
+        auto err = std::make_shared<error>();
+        auto cell = make_counted<op::cell<int32_t>>(coordinator());
+        auto uut = single<int32_t>{cell};
+        uut.subscribe([result](int32_t x) { result->push_back(x); },
+                      [err](const error& x) { *err = x; });
+        cell->set_error(sec::runtime_error);
+        run_flows();
+        check_eq(*result, nil);
+        check_eq(*err, sec::runtime_error);
       }
     }
   }

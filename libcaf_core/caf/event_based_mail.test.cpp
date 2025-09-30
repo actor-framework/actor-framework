@@ -243,7 +243,7 @@ TEST("send request message") {
       expect<exit_msg>().to(dummy);
     }
   }
-  SECTION("using .to_observable for the response") {
+  SECTION("using .as_observable for the response") {
     SECTION("response from dynamically typed receiver") {
       auto dummy = sys.spawn([]() -> behavior {
         return {
@@ -305,6 +305,83 @@ TEST("send request message") {
         .as_observable()
         .do_on_error([err](const error& x) { *err = x; })
         .for_each([result](int x) { *result = x; });
+      launch();
+      expect<int>()
+        .with(3)
+        .priority(message_priority::normal)
+        .from(self_hdl)
+        .to(dummy);
+      expect<int>()
+        .with(9)
+        .priority(message_priority::normal)
+        .from(dummy)
+        .to(self_hdl);
+      check_eq(*err, error{});
+      check_eq(*result, 9);
+    }
+  }
+  SECTION("using .as_single for the response") {
+    SECTION("response from dynamically typed receiver") {
+      auto dummy = sys.spawn([]() -> behavior {
+        return {
+          [](int value) { return value * value; },
+        };
+      });
+      auto err = std::make_shared<error>();
+      auto result = std::make_shared<int>(0);
+      SECTION("valid response") {
+        self->mail(3)
+          .request(dummy, infinite)
+          .as_single<int>()
+          .subscribe([result](int x) { *result = x; },
+                     [err](const error& x) { *err = x; });
+        launch();
+        expect<int>()
+          .with(3)
+          .priority(message_priority::normal)
+          .from(self_hdl)
+          .to(dummy);
+        expect<int>()
+          .with(9)
+          .priority(message_priority::normal)
+          .from(dummy)
+          .to(self_hdl);
+        check_eq(*err, error{});
+        check_eq(*result, 9);
+      }
+      SECTION("error response") {
+        self->mail("hello")
+          .request(dummy, infinite)
+          .as_single<int>()
+          .subscribe([result](int x) { *result = x; },
+                     [err](const error& x) { *err = x; });
+        launch();
+        expect<std::string>()
+          .with("hello")
+          .priority(message_priority::normal)
+          .from(self_hdl)
+          .to(dummy);
+        expect<error>()
+          .priority(message_priority::normal)
+          .from(dummy)
+          .to(self_hdl);
+        check_eq(*err, error{sec::unexpected_message});
+        check_eq(*result, 0);
+      }
+    }
+    SECTION("valid response with typed receiver") {
+      auto dummy = sys.spawn([]() -> dummy_behavior {
+        return {
+          [](int value) { return value * value; },
+        };
+      });
+      auto err = std::make_shared<error>();
+      auto result = std::make_shared<int>(0);
+      self->mail(3)
+        .request(dummy, infinite)
+        .as_single()
+        .subscribe([result](int x) { *result = x; },
+                   [err](const error& x) { *err = x; });
       launch();
       expect<int>()
         .with(3)
