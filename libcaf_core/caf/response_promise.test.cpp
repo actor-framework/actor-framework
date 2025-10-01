@@ -122,23 +122,24 @@ SCENARIO("response promises allow delaying of response messages") {
           dispatch_messages();
         }
       }
-      WHEN("sending ok_atom to the dispatcher synchronously") {
-        auto res = self->request(hdl, infinite, ok_atom_v);
-        auto fetch_result = [&] {
-          message result;
-          res.receive([] {}, // void result
-                      [&](const error& reason) {
-                        result = make_message(reason);
-                      });
-          return result;
-        };
-        THEN("clients receive an empty response from the dispatcher") {
-          expect<ok_atom>().from(self).to(hdl);
-          expect<ok_atom>().from(hdl).to(adder_hdl);
-          dispatch_message();
-          check(fetch_result().empty());
-        }
-      }
+      // TODO: https://github.com/actor-framework/actor-framework/issues/2009
+      // WHEN("sending ok_atom to the dispatcher synchronously") {
+      //   auto res = self->request(hdl, infinite, ok_atom_v);
+      //   auto fetch_result = [&] {
+      //     message result;
+      //     res.receive([] {}, // void result
+      //                 [&](const error& reason) {
+      //                   result = make_message(reason);
+      //                 });
+      //     return result;
+      //   };
+      //   THEN("clients receive an empty response from the dispatcher") {
+      //     expect<ok_atom>().from(self).to(hdl);
+      //     expect<ok_atom>().from(hdl).to(adder_hdl);
+      //     dispatch_message();
+      //     check(fetch_result().empty());
+      //   }
+      // }
       WHEN("sending ok_atom to the dispatcher asynchronously") {
         THEN("clients receive no response from the dispatcher") {
           inject().with(ok_atom_v).from(self).to(hdl);

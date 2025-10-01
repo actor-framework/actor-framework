@@ -43,7 +43,7 @@ public:
   /// Pushes an item to all subscribed observers. The publisher drops the item
   /// if no subscriber exists.
   bool push(const T& item) {
-    return pimpl_->push_all(item);
+    return pimpl_->push(item);
   }
 
   /// Pushes the items in range `[first, last)` to all subscribed observers. The

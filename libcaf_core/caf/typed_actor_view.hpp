@@ -35,9 +35,7 @@ class typed_actor_view;
 /// interface.
 /// @tparam TraitOrSignature The actor trait or signature to apply to the view.
 template <class TraitOrSignature>
-class typed_actor_view<TraitOrSignature>
-  : public extend<typed_actor_view_base, typed_actor_view<TraitOrSignature>>::
-      template with<mixin::requester> {
+class typed_actor_view<TraitOrSignature> : public typed_actor_view_base {
 public:
   using trait = detail::to_statically_typed_trait_t<TraitOrSignature>;
 
@@ -223,6 +221,8 @@ public:
   auto mail(Args&&... args) {
     return event_based_mail(trait{}, self_, std::forward<Args>(args)...);
   }
+
+  CAF_ADD_DEPRECATED_REQUEST_API
 
   // -- sending asynchronous messages ------------------------------------------
 

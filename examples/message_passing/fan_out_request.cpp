@@ -109,7 +109,8 @@ struct matrix_state {
           return make_error(sec::invalid_argument, "row out of range");
         }
         auto rp = self->make_response_promise<double>();
-        self->fan_out_request<policy::select_all>(data[row], infinite, get)
+        self->mail(get)
+          .fan_out_request(data[row], infinite, policy::select_all_tag)
           .then(
             [this, rp](std::vector<int> xs) mutable {
               assert(xs.size() == columns);
@@ -130,7 +131,8 @@ struct matrix_state {
         for (auto& row : data)
           cells.emplace_back(row[column]);
         auto rp = self->make_response_promise<double>();
-        self->fan_out_request<policy::select_all>(cells, infinite, get)
+        self->mail(get)
+          .fan_out_request(cells, infinite, policy::select_all_tag)
           .then(
             [this, rp](std::vector<int> xs) mutable {
               assert(xs.size() == rows);

@@ -314,6 +314,11 @@ public:
 
   using observer_type = observer<T>;
 
+  // -- constants --------------------------------------------------------------
+
+  /// Whether the multicast operator can only hold a single value.
+  static constexpr bool single_value = false;
+
   // -- constructors, destructors, and assignment operators --------------------
 
   explicit ucast(coordinator* parent) : super(parent) {
