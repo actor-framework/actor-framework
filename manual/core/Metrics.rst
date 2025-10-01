@@ -368,7 +368,7 @@ same pattern as the member functions for counters and gauges.
                             string_view helptext, string_view unit = "1",
                             bool is_sum = false);
 
-Compared to the member functions for counters and guages, histograms require one
+Compared to the member functions for counters and gauges, histograms require one
 addition argument for the default bucket upper bounds.
 
 .. warning::
@@ -378,8 +378,8 @@ addition argument for the default bucket upper bounds.
 CAF automatically adds one additional bucket for observing all values between
 the last upper bound and *infinity* (``double``) or *INT_MAX* (``int64_t``). For
 example, passing ``[10, 100, 1000]`` as upper bounds creates four buckets in
-total. The first bucket captues all values with ``x ≤ 10``. The second bucket
-captues all values with ``10 < x ≤ 100``. The third bucket captures all values
+total. The first bucket captures all values with ``x ≤ 10``. The second bucket
+captures all values with ``10 < x ≤ 100``. The third bucket captures all values
 with ``100 < x ≤ 1000``. Finally, the fourth bucket (added automatically)
 captures all values with ``1000 < x ≤ INT_MAX``.
 

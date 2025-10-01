@@ -1,5 +1,11 @@
 [files]
-extend-exclude = ["*.pem", "libcaf_net/test/pem.cpp", "Jenkinsfile"]
+extend-exclude = [
+    "*.pem",
+    "Jenkinsfile",
+    "libcaf_core/caf/detail/parser/read_bool.hpp",
+    "libcaf_core/caf/detail/parser/read_bool.test.cpp",
+    "libcaf_net/test/pem.cpp",
+]
 
 [default.extend-words]
 PN = "PN"
@@ -7,5 +13,4 @@ Yout = "Yout"
 aout = "aout"
 caf = "caf"
 ws = "ws"
-fals = "fals"
 parametrized = "parametrized"

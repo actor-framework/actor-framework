@@ -109,7 +109,7 @@
 ///
 ///   This field contains the ID of the sending actor or 0 for anonymously
 ///   sent messages. The *full address* of an actor is the combination of
-///   the node ID and the actor ID. Thus, every actor can be unambigiously
+///   the node ID and the actor ID. Thus, every actor can be unambiguously
 ///   identified by combining these two IDs.
 ///
 /// - **Destination Actor ID**: 4 bytes.

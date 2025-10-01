@@ -121,12 +121,12 @@ public:
 
   explicit chunked_string_builder_output_iterator(
     chunked_string_builder* builder) noexcept
-    : buiilder_(builder) {
+    : builder_(builder) {
     // nop
   }
 
   chunked_string_builder_output_iterator& operator=(char ch) {
-    buiilder_->append(ch);
+    builder_->append(ch);
     return *this;
   }
 
@@ -143,7 +143,7 @@ public:
   }
 
 private:
-  chunked_string_builder* buiilder_;
+  chunked_string_builder* builder_;
 };
 
 } // namespace caf
