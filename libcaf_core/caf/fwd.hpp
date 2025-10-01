@@ -79,6 +79,7 @@ template <class...> class typed_response_promise;
 class [[nodiscard]] error;
 class abstract_actor;
 class abstract_mailbox;
+class abstract_scheduled_actor;
 class action;
 class actor;
 class actor_addr;
@@ -86,6 +87,7 @@ class actor_clock;
 class actor_companion;
 class actor_config;
 class actor_control_block;
+class actor_flow_context;
 class actor_pool;
 class actor_proxy;
 class actor_registry;
@@ -338,17 +340,32 @@ namespace detail {
 class abstract_worker;
 class abstract_worker_hub;
 class disposer;
-class dynamic_message_data;
-class message_data;
 class private_thread;
 class stream_bridge;
-class stream_bridge_sub;
+class message_data;
+class stream_bridge;
 
 struct meta_object;
 
-// enable intrusive_cow_ptr<dynamic_message_data> with forward declaration only
-CAF_CORE_EXPORT void intrusive_ptr_add_ref(const dynamic_message_data*);
-CAF_CORE_EXPORT void intrusive_ptr_release(const dynamic_message_data*);
+// -- stream_bridge_sub
+
+class stream_bridge_sub;
+
+CAF_CORE_EXPORT void intrusive_ptr_add_ref(const stream_bridge_sub*) noexcept;
+
+CAF_CORE_EXPORT void intrusive_ptr_release(const stream_bridge_sub*) noexcept;
+
+using stream_bridge_sub_ptr = intrusive_ptr<stream_bridge_sub>;
+
+// -- dynamic_message_data
+
+class dynamic_message_data;
+
+CAF_CORE_EXPORT void
+intrusive_ptr_add_ref(const dynamic_message_data*) noexcept;
+CAF_CORE_EXPORT void
+intrusive_ptr_release(const dynamic_message_data*) noexcept;
+
 CAF_CORE_EXPORT dynamic_message_data*
 intrusive_cow_ptr_unshare(dynamic_message_data*&);
 

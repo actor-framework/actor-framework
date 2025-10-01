@@ -605,9 +605,7 @@ TEST("send fan_out_request messages that return a result") {
         .fan_out_request(workers, infinite, policy::select_all_tag)
         .as_observable<int>()
         .do_on_error([err](const error& x) { *err = x; })
-        .for_each([sum](std::vector<int> results) {
-          *sum = std::accumulate(results.begin(), results.end(), 0);
-        });
+        .for_each([sum](int value) { *sum += value; });
     });
     dispatch_messages();
     check_eq(*err, error{});
@@ -634,7 +632,7 @@ TEST("send fan_out_request messages that return a result") {
         .for_each([sum](int x) { *sum = x; });
     });
     dispatch_messages();
-    check_eq(*err, error{sec::all_requests_failed});
+    check_eq(*err, error{sec::unexpected_message});
     check_eq(*sum, 0);
   }
 }
@@ -810,13 +808,9 @@ TEST("send fan_out_request messages that return two swapped values") {
             .fan_out_request(workers, infinite, policy::select_all_tag)
             .as_observable<int, int>()
             .do_on_error([err](const error& x) { *err = x; })
-            .for_each(
-              [swapped_values](std::vector<caf::cow_tuple<int, int>> results) {
-                swapped_values->clear();
-                for (auto result : results) {
-                  swapped_values->emplace_back(get<0>(result), get<1>(result));
-                }
-              });
+            .for_each([swapped_values](const caf::cow_tuple<int, int>& result) {
+              swapped_values->emplace_back(get<0>(result), get<1>(result));
+            });
         });
     dispatch_messages();
     check_eq(*err, error{});
@@ -860,7 +854,7 @@ TEST("send fan_out_request messages that return two swapped values") {
             });
         });
     dispatch_messages();
-    check_eq(*err, error{sec::all_requests_failed});
+    check_eq(*err, error{sec::unexpected_response});
     check_eq(single_result->first, 0);
     check_eq(single_result->second, 0);
   }
@@ -993,9 +987,7 @@ TEST("send fan_out_request messages that return a result using typed actors") {
         .fan_out_request(workers, infinite, policy::select_all_tag)
         .as_observable()
         .do_on_error([err](const error& x) { *err = x; })
-        .for_each([sum](std::vector<int> results) {
-          *sum = std::accumulate(results.begin(), results.end(), 0);
-        });
+        .for_each([sum](int value) { *sum += value; });
     });
     dispatch_messages();
     check_eq(*err, error{});
@@ -1159,13 +1151,9 @@ TEST("send fan_out_request messages that return two swapped values using typed "
             .fan_out_request(workers, infinite, policy::select_all_tag)
             .as_observable()
             .do_on_error([err](const error& x) { *err = x; })
-            .for_each(
-              [swapped_values](std::vector<caf::cow_tuple<int, int>> results) {
-                swapped_values->clear();
-                for (auto result : results) {
-                  swapped_values->emplace_back(get<0>(result), get<1>(result));
-                }
-              });
+            .for_each([swapped_values](const caf::cow_tuple<int, int>& result) {
+              swapped_values->emplace_back(get<0>(result), get<1>(result));
+            });
         });
     dispatch_messages();
     check_eq(*err, error{});
@@ -1217,7 +1205,7 @@ TEST("send fan_out_request messages that return two swapped values using typed "
             });
         });
     dispatch_messages();
-    check_eq(*err, error{sec::all_requests_failed});
+    check_eq(*err, error{sec::logic_error});
     check_eq(single_result->first, 0);
     check_eq(single_result->second, 0);
   }

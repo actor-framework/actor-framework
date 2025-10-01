@@ -6,20 +6,10 @@
 
 #include "caf/actor_traits.hpp"
 #include "caf/behavior.hpp"
-#include "caf/cow_tuple.hpp"
 #include "caf/detail/core_export.hpp"
-#include "caf/flow/op/cell.hpp"
+#include "caf/flow/fwd.hpp"
 #include "caf/fwd.hpp"
 #include "caf/local_actor.hpp"
-#include "caf/make_counted.hpp"
-#include "caf/unit.hpp"
-
-namespace caf::detail {
-
-template <class...>
-struct response_to_flow_cell_helper;
-
-} // namespace caf::detail
 
 namespace caf {
 
@@ -35,9 +25,6 @@ public:
 
   template <class, class...>
   friend class event_based_fan_out_response_handle;
-
-  template <class...>
-  friend struct detail::response_to_flow_cell_helper;
 
   // -- member types -----------------------------------------------------------
 
@@ -69,86 +56,18 @@ public:
   /// Runs all pending actions.
   virtual void run_actions() = 0;
 
-  /// Lifts a response message into a flow cell in order to allow the actor to
-  /// turn a response into an `observable` or `single`.
-  template <class... Ts>
-  auto response_to_flow_cell(message_id response_id,
-                             disposable pending_timeout = {}) {
-    detail::response_to_flow_cell_helper<Ts...> fn;
-    return fn(this, response_id, std::move(pending_timeout));
-  }
+  // -- flow API ---------------------------------------------------------------
+
+  template <class TypeToken, class State>
+    requires flow::assert_has_impl_include<State>
+  auto response_to_single(TypeToken, const State& state);
+
+  template <class TypeToken, class State, class Tag>
+    requires flow::assert_has_impl_include<State>
+  auto response_to_observable(TypeToken, const State& state, Tag);
 
 private:
   virtual flow::coordinator* flow_context() = 0;
 };
 
 } // namespace caf
-
-namespace caf::detail {
-
-template <>
-struct response_to_flow_cell_helper<> {
-  auto operator()(abstract_scheduled_actor* self, message_id response_id,
-                  disposable pending_timeout) const {
-    auto cell = make_counted<flow::op::cell<unit_t>>(self->flow_context());
-    auto bhvr = behavior{
-      [self, cell] {
-        cell->set_value(unit);
-        self->run_actions();
-      },
-      [self, cell](error& err) {
-        cell->set_error(std::move(err));
-        self->run_actions();
-      },
-    };
-    self->add_multiplexed_response_handler(response_id, std::move(bhvr),
-                                           std::move(pending_timeout));
-    return cell;
-  }
-};
-
-template <class T>
-struct response_to_flow_cell_helper<T> {
-  auto operator()(abstract_scheduled_actor* self, message_id response_id,
-                  disposable pending_timeout) const {
-    auto cell = make_counted<flow::op::cell<T>>(self->flow_context());
-    auto bhvr = behavior{
-      [self, cell](T& value) {
-        cell->set_value(std::move(value));
-        self->run_actions();
-      },
-      [self, cell](error& err) {
-        cell->set_error(std::move(err));
-        self->run_actions();
-      },
-    };
-    self->add_multiplexed_response_handler(response_id, std::move(bhvr),
-                                           std::move(pending_timeout));
-    return cell;
-  }
-};
-
-template <class T1, class T2, class... Ts>
-struct response_to_flow_cell_helper<T1, T2, Ts...> {
-  auto operator()(abstract_scheduled_actor* self, message_id response_id,
-                  disposable pending_timeout) const {
-    using tuple_t = cow_tuple<T1, T2, Ts...>;
-    auto cell = make_counted<flow::op::cell<tuple_t>>(self->flow_context());
-    auto bhvr = behavior{
-      [self, cell](T1& val1, T2& val2, Ts&... vals) {
-        cell->set_value(
-          make_cow_tuple(std::move(val1), std::move(val2), std::move(vals)...));
-        self->run_actions();
-      },
-      [self, cell](error& err) {
-        cell->set_error(std::move(err));
-        self->run_actions();
-      },
-    };
-    self->add_multiplexed_response_handler(response_id, std::move(bhvr),
-                                           std::move(pending_timeout));
-    return cell;
-  }
-};
-
-} // namespace caf::detail

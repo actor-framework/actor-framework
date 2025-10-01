@@ -389,6 +389,7 @@ public:
 
   /// @copydoc observable::for_each
   template <class OnNext>
+    requires(std::is_invocable_v<OnNext, const output_type&>)
   auto for_each(OnNext on_next) && {
     return materialize().for_each(std::move(on_next));
   }

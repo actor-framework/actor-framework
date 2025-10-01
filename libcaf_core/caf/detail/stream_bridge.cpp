@@ -151,6 +151,14 @@ void stream_bridge_sub::do_check_credit() {
   }
 }
 
+void intrusive_ptr_add_ref(const stream_bridge_sub* ptr) noexcept {
+  ptr->ref();
+}
+
+void intrusive_ptr_release(const stream_bridge_sub* ptr) noexcept {
+  ptr->deref();
+}
+
 stream_bridge::stream_bridge(scheduled_actor* self, strong_actor_ptr src,
                              uint64_t stream_id, size_t buf_capacity,
                              size_t request_threshold)

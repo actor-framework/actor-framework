@@ -14,6 +14,7 @@
 #include "caf/error.hpp"
 #include "caf/log/core.hpp"
 #include "caf/message_id.hpp"
+#include "caf/policy/select_all_tag.hpp"
 #include "caf/type_list.hpp"
 
 #include <cstddef>
@@ -172,6 +173,8 @@ template <class ResponseType>
 class select_all {
 public:
   static constexpr bool is_trivial = false;
+
+  using tag_type = select_all_tag_t;
 
   using response_type = ResponseType;
 

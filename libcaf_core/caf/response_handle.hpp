@@ -7,11 +7,75 @@
 #include "caf/actor_traits.hpp"
 #include "caf/catch_all.hpp"
 #include "caf/detail/callable_trait.hpp"
+#include "caf/disposable.hpp"
 #include "caf/flow/fwd.hpp"
+#include "caf/fwd.hpp"
 #include "caf/message_id.hpp"
 #include "caf/type_list.hpp"
 
 #include <type_traits>
+
+namespace caf::detail {
+
+/// Holds state for a event-based response handles.
+template <class ActorType>
+struct simple_response_handle_state {
+  static constexpr bool is_fan_out = false;
+
+  /// Points to the parent actor.
+  ActorType* self;
+
+  /// Stores the IDs of the messages we are waiting for.
+  message_id mid;
+
+  /// Stores a handle to the in-flight timeout.
+  disposable pending_timeout;
+
+  template <class Policy>
+  simple_response_handle_state(ActorType* selfptr, const Policy& policy)
+    : self(selfptr),
+      mid(policy.id()),
+      pending_timeout(policy.pending_timeouts()) {
+    // nop
+  }
+};
+
+template <class ActorType>
+struct fan_out_response_handle_state {
+  static constexpr bool is_fan_out = true;
+
+  /// Points to the parent actor.
+  ActorType* self;
+
+  /// Stores the IDs of the messages we are waiting for.
+  std::vector<message_id> mids;
+
+  /// Stores a handle to the in-flight timeout.
+  disposable pending_timeout;
+
+  template <class Policy>
+  fan_out_response_handle_state(ActorType* selfptr, const Policy& policy)
+    : self(selfptr),
+      mids(policy.ids()),
+      pending_timeout(policy.pending_timeouts()) {
+    // nop
+  }
+};
+
+template <bool IsFanOut, class ActorType>
+struct select_response_handle_state;
+
+template <class ActorType>
+struct select_response_handle_state<true, ActorType> {
+  using type = fan_out_response_handle_state<ActorType>;
+};
+
+template <class ActorType>
+struct select_response_handle_state<false, ActorType> {
+  using type = simple_response_handle_state<ActorType>;
+};
+
+} // namespace caf::detail
 
 namespace caf {
 
@@ -29,6 +93,10 @@ public:
   using policy_type = Policy;
 
   using response_type = typename policy_type::response_type;
+
+  using state_type =
+    typename detail::select_response_handle_state<!policy_type::is_trivial,
+                                                  actor_type>::type;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -86,18 +154,17 @@ public:
     then(std::move(f), [self](error& err) { self->call_error_handler(err); });
   }
 
-  template <class T, bool = flow::assert_has_impl_include<T>>
+  template <class T>
   auto as_single() && {
-    static_assert(std::is_same_v<response_type, type_list<T>>
-                  || std::is_same_v<response_type, message>);
-    return self_->template single_from_response<T>(policy_);
+    state_type state{self_, policy_};
+    return self_->response_to_single(type_list_v<T>, state);
   }
 
-  template <class T, bool = flow::assert_has_impl_include<T>>
+  template <class T>
   auto as_observable() && {
-    static_assert(std::is_same_v<response_type, type_list<T>>
-                  || std::is_same_v<response_type, message>);
-    return self_->template single_from_response<T>(policy_).as_observable();
+    state_type state{self_, policy_};
+    return self_->response_to_observable(type_list_v<T>, state,
+                                         typename Policy::tag_type{});
   }
 
   // -- blocking API -----------------------------------------------------------
