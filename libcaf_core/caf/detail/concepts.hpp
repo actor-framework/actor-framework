@@ -134,11 +134,11 @@ template <class T>
 concept is_expected = is_expected_oracle<T>::value;
 
 /// Utility for fallbacks calling `static_assert`.
-template <class>
+template <class...>
 struct always_false_oracle : std::false_type {};
 
-template <class T>
-concept always_false = always_false_oracle<T>::value;
+template <class... Ts>
+concept always_false = always_false_oracle<Ts...>::value;
 
 /// Utility trait for checking whether T is a `std::pair`.
 template <class T>

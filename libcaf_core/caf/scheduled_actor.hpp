@@ -763,9 +763,6 @@ private:
   /// Stores the current timeout state.
   timeout_state timeout_state_;
 
-  template <class T, bool = flow::assert_has_impl_include<T>>
-  auto single_from_response(message_id mid, disposable pending_timeout);
-
   void do_unstash(mailbox_element_ptr ptr) override;
 
   // -- utilities for instrumenting actors -------------------------------------
@@ -808,14 +805,6 @@ private:
   // -- caf::flow bindings -----------------------------------------------------
 
   flow::coordinator* flow_context() override;
-
-  template <class T, class Policy>
-  flow::single<T> single_from_response(Policy& policy) {
-    return single_from_response_impl<T>(policy);
-  }
-
-  template <class T, class Policy>
-  flow::single<T> single_from_response_impl(Policy& policy);
 
   /// Removes any watched object that became disposed since the last update.
   void update_watched_disposables();

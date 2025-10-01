@@ -67,7 +67,7 @@ public:
     auto [s2a_pull, s2a_push] = async::make_spsc_buffer_resource<chunk>();
     auto [a2s_pull, a2s_push] = async::make_spsc_buffer_resource<chunk>();
     // Push buffers to the client.
-    mcast_->push_all(event_type{std::move(s2a_pull), std::move(a2s_push)});
+    mcast_->push(event_type{std::move(s2a_pull), std::move(a2s_push)});
     // Create the flow bridge.
     auto bridge = internal::make_lp_flow_bridge(std::move(a2s_pull),
                                                 std::move(s2a_push));

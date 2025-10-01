@@ -9,18 +9,22 @@
 #include "caf/flow/coordinator.hpp"
 #include "caf/flow/observable.hpp"
 #include "caf/flow/observable_builder.hpp"
-#include "caf/flow/observer.hpp"
-#include "caf/flow/op/buffer.hpp"
+#include "caf/flow/op/auto_connect.hpp"
+#include "caf/flow/op/cache.hpp"
 #include "caf/flow/op/cell.hpp"
+#include "caf/flow/op/publish.hpp"
+#include "caf/flow/op/ucast.hpp"
 #include "caf/flow/single.hpp"
+#include "caf/policy/select_all_tag.hpp"
+#include "caf/policy/select_any_tag.hpp"
 #include "caf/scheduled_actor.hpp"
 #include "caf/stream.hpp"
 #include "caf/typed_stream.hpp"
 
 namespace caf::flow {
 
-template <>
-struct has_impl_include<scheduled_actor> {
+template <class... Ts>
+struct has_impl_include_oracle<scheduled_actor, Ts...> {
   static constexpr bool value = true;
 };
 
@@ -28,20 +32,128 @@ struct has_impl_include<scheduled_actor> {
 
 namespace caf {
 
-template <class T, class Policy>
-flow::single<T> scheduled_actor::single_from_response_impl(Policy& policy) {
-  auto cell = make_counted<flow::op::cell<T>>(this);
-  policy.then(
-    this,
-    [this, cell](T& val) {
-      cell->set_value(std::move(val));
-      run_actions();
-    },
-    [this, cell](error& err) {
-      cell->set_error(std::move(err));
-      run_actions();
-    });
+template <class T, class TypeToken, class State>
+flow::single<T>
+abstract_scheduled_actor::response_to_single_impl(TypeToken,
+                                                  const State& state) {
+  using helper_type = detail::response_to_flow_helper<TypeToken>;
+  auto cell = make_counted<flow::op::cell<T>>(flow_context());
+  if constexpr (State::is_fan_out) {
+    // For fan-out responses, we need to add the handler for each message ID.
+    // This assumes that the fan-out request uses the select any policy. The
+    // first value wins. Further, any error will be ignored unless all other
+    // requests already have failed to produce a value.
+    auto remaining = std::make_shared<size_t>(state.mids.size());
+    auto emit_value = [remaining, cell] {
+      --*remaining;
+      return cell->pending();
+    };
+    auto bhvr = behavior{
+      helper_type::make_callback(cell, emit_value, std::true_type{}),
+      [this, cell, remaining](error& err) {
+        if (--*remaining == 0 && cell->pending()) {
+          cell->set_error(std::move(err));
+        }
+      },
+    };
+    for (auto mid : state.mids) {
+      add_multiplexed_response_handler(mid, bhvr, state.pending_timeout);
+    }
+  } else {
+    // There is only a single response. Hence, we can simply call the setter on
+    // the cell without any additional logic.
+    auto bhvr = behavior{
+      helper_type::make_callback(cell, std::true_type{}, std::true_type{}),
+      [cell](error& err) { cell->set_error(std::move(err)); },
+    };
+    add_multiplexed_response_handler(state.mid, bhvr, state.pending_timeout);
+  }
   return flow::single<T>{std::move(cell)};
+}
+
+template <class T, class TypeToken, class State, class Tag>
+flow::observable<T>
+abstract_scheduled_actor::response_to_observable_impl(TypeToken,
+                                                      const State& state, Tag) {
+  using helper_type = detail::response_to_flow_helper<TypeToken>;
+  if constexpr (State::is_fan_out) {
+    auto sink = make_counted<flow::op::ucast<T>>(flow_context());
+    behavior bhvr;
+    if constexpr (std::same_as<Tag, policy::select_all_tag_t>) {
+      struct callback_state_t {
+        size_t remaining;
+        bool failed;
+      };
+      auto callback_state = std::make_shared<callback_state_t>(callback_state_t{
+        .remaining = state.mids.size(),
+        .failed = false,
+      });
+      auto can_emit = [callback_state] {
+        auto& [remaining, failed] = *callback_state;
+        --remaining;
+        return !failed;
+      };
+      auto can_close = [callback_state] {
+        return callback_state->remaining == 0;
+      };
+      bhvr = behavior{
+        helper_type::make_callback(sink, can_emit, can_close),
+        [sink, callback_state](error& err) {
+          if (auto& failed = callback_state->failed; !failed) {
+            failed = true;
+            sink->abort(err);
+          }
+        },
+      };
+    } else {
+      static_assert(std::same_as<Tag, policy::select_any_tag_t>);
+      struct callback_state_t {
+        size_t remaining;
+        bool pending;
+      };
+      auto callback_state = std::make_shared<callback_state_t>(callback_state_t{
+        .remaining = state.mids.size(),
+        .pending = true,
+      });
+      auto can_emit = [callback_state] {
+        auto& [remaining, pending] = *callback_state;
+        --remaining;
+        if (pending) {
+          pending = false;
+          return true;
+        }
+        return false;
+      };
+      bhvr = behavior{
+        helper_type::make_callback(sink, can_emit, std::true_type{}),
+        [sink, callback_state](error& err) {
+          auto& [remaining, pending] = *callback_state;
+          if (--remaining == 0 && pending) {
+            sink->abort(err);
+          }
+        },
+      };
+    }
+    for (auto mid : state.mids) {
+      add_multiplexed_response_handler(mid, bhvr, state.pending_timeout);
+    }
+    // Subscribe a cache to the sink, turning into a cold observable that can be
+    // observed at any time without losing any data.
+    auto cache = make_counted<flow::op::cache<T>>(flow_context(),
+                                                  std::move(sink));
+    cache->subscribe_to_source();
+    return flow::observable<T>{std::move(cache)};
+  } else {
+    // There is only a single response. Hence, we can simply use a cell, like we
+    // do for in response_to_single_impl.
+    auto cell = make_counted<flow::op::cell<T>>(flow_context());
+    auto bhvr = behavior{
+      helper_type::make_callback(cell, std::true_type{}, std::true_type{}),
+      [cell](error& err) { cell->set_error(std::move(err)); },
+    };
+    add_multiplexed_response_handler(state.mid, bhvr, state.pending_timeout);
+    return flow::observable<T>{std::move(cell)};
+  }
 }
 
 template <class T, bool>
@@ -60,25 +172,6 @@ auto scheduled_actor::observe_as(stream what, size_t buf_capacity,
       .transform(detail::unbatch<T>{})
       .as_observable();
   return make_observable().fail<T>(make_error(sec::type_clash));
-}
-
-template <class T, bool>
-auto scheduled_actor::single_from_response(message_id mid,
-                                           disposable pending_timeout) {
-  auto cell = make_counted<flow::op::cell<T>>(this);
-  auto bhvr = behavior{
-    [this, cell](T& val) {
-      cell->set_value(std::move(val));
-      run_actions();
-    },
-    [this, cell](error& err) {
-      cell->set_error(std::move(err));
-      run_actions();
-    },
-  };
-  add_multiplexed_response_handler(mid, std::move(bhvr),
-                                   std::move(pending_timeout));
-  return flow::single<T>{std::move(cell)};
 }
 
 } // namespace caf
