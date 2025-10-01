@@ -239,7 +239,6 @@ caf_add_component(
     caf/flow/observable_builder.cpp
     caf/flow/observe_on.test.cpp
     caf/flow/op/buffer.test.cpp
-    caf/flow/op/on_error_resume_next.test.cpp
     caf/flow/op/cell.test.cpp
     caf/flow/op/concat.test.cpp
     caf/flow/op/debounce.test.cpp
@@ -252,9 +251,11 @@ caf_add_component(
     caf/flow/op/merge.test.cpp
     caf/flow/op/never.test.cpp
     caf/flow/op/on_backpressure_buffer.test.cpp
+    caf/flow/op/on_error_resume_next.test.cpp
     caf/flow/op/prefix_and_tail.test.cpp
     caf/flow/op/publish.test.cpp
     caf/flow/op/pullable.cpp
+    caf/flow/op/replay.test.cpp
     caf/flow/op/retry.test.cpp
     caf/flow/op/sample.test.cpp
     caf/flow/op/throttle_first.test.cpp
