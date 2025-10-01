@@ -51,10 +51,14 @@ public:
   }
 
 private:
-  void do_dispose(bool) override {
+  void do_dispose(bool from_external) override {
     if (state_) {
       auto state = std::move(state_);
-      state->dispose();
+      if (from_external) {
+        state->dispose();
+      } else {
+        state->cancel();
+      }
     }
   }
 

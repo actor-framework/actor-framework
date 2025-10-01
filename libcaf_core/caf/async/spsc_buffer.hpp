@@ -337,9 +337,7 @@ struct resource_ctrl : ref_counted {
   ~resource_ctrl() {
     if (buf) {
       if constexpr (IsProducer) {
-        auto err = make_error(sec::disposed,
-                              "destroyed producer_resource without opening it");
-        buf->abort(err);
+        buf->abort(make_error(sec::resource_destroyed));
       } else {
         buf->cancel();
       }

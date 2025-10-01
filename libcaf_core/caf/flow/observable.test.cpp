@@ -6,7 +6,10 @@
 
 #include "caf/test/fixture/flow.hpp"
 #include "caf/test/nil.hpp"
+#include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
+
+#include "caf/flow/multicaster.hpp"
 
 using caf::test::nil;
 using std::vector;
@@ -593,6 +596,108 @@ TEST("start_with(value) builds observable that emits value first") {
                sec::runtime_error);
       check_eq(collect(build(range(1, 2).start_with(obs_error()))),
                sec::runtime_error);
+    }
+  }
+}
+
+SCENARIO("auto_connect operators stay connected even without subscribers") {
+  GIVEN("a connectable with an input observable") {
+    auto src = caf::flow::multicaster<int>{coordinator()};
+    auto pub = src.as_observable().publish();
+    auto uut = pub.auto_connect(2);
+    check(!pub.pimpl()->connected());
+    WHEN("two subscribers subscribe and then cancel their subscriptions") {
+      auto snk1 = make_auto_observer<int>();
+      auto snk2 = make_auto_observer<int>();
+      uut.subscribe(snk1->as_observer());
+      uut.subscribe(snk2->as_observer());
+      check(pub.pimpl()->connected());
+      src.push(0);
+      run_flows();
+      snk1->sub.cancel();
+      snk2->sub.cancel();
+      THEN("the operator stays connected and new subscribers see new items") {
+        check(pub.pimpl()->connected());
+        src.push(1); // lost, because no subscribers exist anymore
+        auto snk3 = make_auto_observer<int>();
+        uut.subscribe(snk3->as_observer());
+        run_flows();
+        src.push(2); // arrives at snk3
+        run_flows();
+        check_eq(snk1->buf, std::vector{0});
+        check_eq(snk2->buf, std::vector{0});
+        check_eq(snk3->buf, std::vector{2});
+      }
+    }
+  }
+}
+
+TEST("calling auto_connect(0) connects immediately") {
+  auto src = caf::flow::multicaster<int>{coordinator()};
+  auto pub = src.as_observable().publish();
+  auto uut = pub.auto_connect(0);
+  check(pub.pimpl()->connected());
+}
+
+TEST("calling ref_count(0) is an error") {
+  auto src = caf::flow::multicaster<int>{coordinator()};
+  auto pub = src.as_observable().publish();
+  auto uut = pub.ref_count(0);
+  auto snk = make_auto_observer<int>();
+  uut.subscribe(snk->as_observer());
+  run_flows();
+  check(snk->aborted());
+}
+
+SCENARIO("a ref_count operator disconnects when no subscribers exist") {
+  GIVEN("a connectable with an input observable") {
+    auto src = caf::flow::multicaster<int>{coordinator()};
+    auto pub = src.as_observable().publish();
+    auto uut = pub.ref_count(2);
+    check(!pub.pimpl()->connected());
+    WHEN("two subscribers subscribe and then cancel their subscriptions") {
+      auto snk1 = make_auto_observer<int>();
+      auto snk2 = make_auto_observer<int>();
+      uut.subscribe(snk1->as_observer());
+      uut.subscribe(snk2->as_observer());
+      check(pub.pimpl()->connected());
+      src.push(0);
+      run_flows();
+      snk1->sub.cancel();
+      snk2->sub.cancel();
+      THEN("the operator disconnects and re-connects when subscribed again") {
+        check(!pub.pimpl()->connected());
+        src.push(1); // lost, because no subscribers exist anymore
+        auto snk3 = make_auto_observer<int>();
+        check_ne(uut.pimpl(), nullptr);
+        uut.subscribe(snk3->as_observer());
+        run_flows();
+        check(pub.pimpl()->connected());
+        src.push(2); // arrives at snk3
+        run_flows();
+        check_eq(snk1->buf, std::vector{0});
+        check_eq(snk2->buf, std::vector{0});
+        check_eq(snk3->buf, std::vector{2});
+      }
+    }
+    WHEN("disposing a connection and re-connecting before the on_error event") {
+      auto snk1 = make_auto_observer<int>();
+      auto snk2 = make_auto_observer<int>();
+      uut.subscribe(snk1->as_observer());
+      uut.subscribe(snk2->as_observer());
+      run_flows();
+      check(pub.pimpl()->connected());
+      snk1->sub.cancel();
+      snk2->sub.cancel();
+      check_ne(pending_actions(), 0u);  // pending on_error(ec::disposed) event
+      check(!pub.pimpl()->connected()); // conn_ is already disposed
+      auto snk3 = make_auto_observer<int>();
+      uut.subscribe(snk3->as_observer());
+      THEN("the stale on_error event is ignored") {
+        check(pub.pimpl()->connected()); // the operator created a fresh conn_
+        run_flows(); // calls on_error(ec::disposed) now: must be ignored
+        check(pub.pimpl()->connected()); // conn_ must remain valid
+      }
     }
   }
 }

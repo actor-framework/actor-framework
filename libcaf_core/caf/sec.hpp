@@ -161,7 +161,10 @@ enum class sec : uint8_t {
   /// Attaching to an observable failed because the target already reached its
   /// maximum observer count.
   too_many_observers = 70,
-  /// Signals that an operation failed because the target has been disposed.
+  /// Signals that a resource-under-use has been disposed. This resource might
+  /// be flow subscription, in which case the error only signals a cancelation.
+  /// The source observable most likely still exists and can be subscribed to
+  /// again.
   disposed,
   /// Failed to open a resource.
   cannot_open_resource,
@@ -186,6 +189,11 @@ enum class sec : uint8_t {
   /// input observables because at least one of them completed before emitting
   /// a single value.
   cannot_combine_empty_observables,
+  /// Signals that a mail has been discarded because the mail cache that was
+  /// storing it was closed.
+  mail_cache_closed,
+  /// Signals that a resource has been destroyed without opening it.
+  resource_destroyed,
 };
 // --(rst-sec-end)--
 

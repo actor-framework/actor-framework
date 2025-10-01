@@ -18,7 +18,7 @@ mail_cache::~mail_cache() {
                     | abstract_actor::is_shutting_down_flag)) {
       reason = make_error(sec::request_receiver_down);
     } else {
-      reason = make_error(sec::disposed);
+      reason = make_error(sec::mail_cache_closed);
     }
     detail::sync_request_bouncer bouncer{std::move(reason)};
     while (auto raw = elements_.pop()) {

@@ -18,7 +18,7 @@ TEST("exit_msg is comparable") {
   SECTION("invalid actor address") {
     auto msg1 = exit_msg{nullptr, sec::runtime_error};
     auto msg2 = exit_msg{nullptr, sec::runtime_error};
-    auto msg3 = exit_msg{nullptr, sec::disposed};
+    auto msg3 = exit_msg{nullptr, sec::logic_error};
     check_eq(msg1, msg2);
     check_eq(msg2, msg1);
     check_ne(msg1, msg3);
@@ -28,7 +28,7 @@ TEST("exit_msg is comparable") {
     auto dummy = sys.spawn([] { return behavior{[](int) {}}; });
     auto msg1 = exit_msg{dummy.address(), sec::runtime_error};
     auto msg2 = exit_msg{dummy.address(), sec::runtime_error};
-    auto msg3 = exit_msg{dummy.address(), sec::disposed};
+    auto msg3 = exit_msg{dummy.address(), sec::logic_error};
     check_eq(msg1, msg2);
     check_eq(msg2, msg1);
     check_ne(msg1, msg3);
@@ -58,7 +58,7 @@ TEST("down_msg is comparable") {
   SECTION("invalid actor address") {
     auto msg1 = down_msg{nullptr, sec::runtime_error};
     auto msg2 = down_msg{nullptr, sec::runtime_error};
-    auto msg3 = down_msg{nullptr, sec::disposed};
+    auto msg3 = down_msg{nullptr, sec::logic_error};
     check_eq(msg1, msg2);
     check_eq(msg2, msg1);
     check_ne(msg1, msg3);
@@ -68,7 +68,7 @@ TEST("down_msg is comparable") {
     auto dummy = sys.spawn([] { return behavior{[](int) {}}; });
     auto msg1 = down_msg{dummy.address(), sec::runtime_error};
     auto msg2 = down_msg{dummy.address(), sec::runtime_error};
-    auto msg3 = down_msg{dummy.address(), sec::disposed};
+    auto msg3 = down_msg{dummy.address(), sec::logic_error};
     check_eq(msg1, msg2);
     check_eq(msg2, msg1);
     check_ne(msg1, msg3);
@@ -98,7 +98,7 @@ TEST("node_down_msg is comparable") {
   SECTION("empty node") {
     auto msg1 = node_down_msg{node_id{}, sec::runtime_error};
     auto msg2 = node_down_msg{node_id{}, sec::runtime_error};
-    auto msg3 = node_down_msg{node_id{}, sec::disposed};
+    auto msg3 = node_down_msg{node_id{}, sec::logic_error};
     check_eq(msg1, msg2);
     check_eq(msg2, msg1);
     check_ne(msg1, msg3);
@@ -106,7 +106,7 @@ TEST("node_down_msg is comparable") {
   SECTION("node from hashed_node_id") {
     auto msg1 = node_down_msg{node_id{hashed_node_id{}}, sec::runtime_error};
     auto msg2 = node_down_msg{node_id{hashed_node_id{}}, sec::runtime_error};
-    auto msg3 = node_down_msg{node_id{hashed_node_id{}}, sec::disposed};
+    auto msg3 = node_down_msg{node_id{hashed_node_id{}}, sec::logic_error};
     check_eq(msg1, msg2);
     check_eq(msg2, msg1);
     check_ne(msg1, msg3);
@@ -114,7 +114,7 @@ TEST("node_down_msg is comparable") {
   SECTION("node from uri") {
     auto msg1 = node_down_msg{node_id{uri{}}, sec::runtime_error};
     auto msg2 = node_down_msg{node_id{uri{}}, sec::runtime_error};
-    auto msg3 = node_down_msg{node_id{uri{}}, sec::disposed};
+    auto msg3 = node_down_msg{node_id{uri{}}, sec::logic_error};
     check_eq(msg1, msg2);
     check_eq(msg2, msg1);
     check_ne(msg1, msg3);
