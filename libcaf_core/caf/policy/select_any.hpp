@@ -11,6 +11,7 @@
 #include "caf/detail/typed_actor_util.hpp"
 #include "caf/disposable.hpp"
 #include "caf/log/core.hpp"
+#include "caf/policy/select_any_tag.hpp"
 #include "caf/sec.hpp"
 #include "caf/type_list.hpp"
 
@@ -50,6 +51,8 @@ template <class ResponseType>
 class select_any {
 public:
   static constexpr bool is_trivial = false;
+
+  using tag_type = select_any_tag_t;
 
   using response_type = ResponseType;
 

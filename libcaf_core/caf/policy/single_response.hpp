@@ -12,6 +12,7 @@
 #include "caf/disposable.hpp"
 #include "caf/error.hpp"
 #include "caf/message_id.hpp"
+#include "caf/none.hpp"
 
 namespace caf::policy {
 
@@ -21,6 +22,8 @@ template <class ResponseType>
 class single_response {
 public:
   static constexpr bool is_trivial = true;
+
+  using tag_type = none_t;
 
   using response_type = ResponseType;
 
@@ -67,7 +70,7 @@ public:
     return mid_;
   }
 
-  disposable pending_timeouts() {
+  disposable pending_timeouts() const {
     return pending_timeout_;
   }
 

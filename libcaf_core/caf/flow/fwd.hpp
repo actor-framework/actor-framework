@@ -101,14 +101,18 @@ struct output_type_oracle<T0, T1, Ts...> : output_type_oracle<T1, Ts...> {};
 template <class... Ts>
 using output_type_t = typename output_type_oracle<Ts...>::type;
 
-template <class>
-struct has_impl_include {
+template <class, class...>
+struct has_impl_include_oracle {
   static constexpr bool value = false;
 };
 
+template <class T, class... Ts>
+constexpr inline bool has_impl_include
+  = has_impl_include_oracle<T, Ts...>::value;
+
 template <class, class T>
 struct assert_has_impl_include_oracle {
-  static constexpr bool value = has_impl_include<T>::value;
+  static constexpr bool value = has_impl_include<T>;
   static_assert(value,
                 "include 'caf/scheduled_actor/flow.hpp' for this method");
 };

@@ -10,6 +10,7 @@
 #include "caf/flow/fwd.hpp"
 #include "caf/fwd.hpp"
 #include "caf/message_id.hpp"
+#include "caf/none.hpp"
 #include "caf/type_list.hpp"
 
 #include <type_traits>
@@ -66,6 +67,8 @@ namespace caf {
 
 /// Holds state for a event-based response handles.
 struct event_based_response_handle_state {
+  static constexpr bool is_fan_out = false;
+
   /// Points to the parent actor.
   abstract_scheduled_actor* self;
 
@@ -127,12 +130,19 @@ public:
                                  });
   }
 
+  template <class T = scheduled_actor>
+  auto as_single() && {
+    static_assert(flow::has_impl_include<T>,
+                  "include 'caf/scheduled_actor/flow.hpp' for this method");
+    return state_.self->response_to_single(type_list_v<Results...>, state_);
+  }
+
+  template <class T = scheduled_actor>
   auto as_observable() && {
-    auto cell = state_.self->template response_to_flow_cell<Results...>(
-      state_.mid, std::move(state_.pending_timeout));
-    using cell_t = typename decltype(cell)::value_type;
-    using val_t = typename cell_t::output_type;
-    return flow::single<val_t>{std::move(cell)}.as_observable();
+    static_assert(flow::has_impl_include<T>,
+                  "include 'caf/scheduled_actor/flow.hpp' for this method");
+    return state_.self->response_to_observable(type_list_v<Results...>, state_,
+                                               none);
   }
 
 private:
@@ -192,12 +202,18 @@ public:
   }
 
   template <class... Ts>
+  auto as_single() && {
+    static_assert(flow::has_impl_include<scheduled_actor, Ts...>,
+                  "include 'caf/scheduled_actor/flow.hpp' for this method");
+    return state_.self->response_to_single(type_list_v<Ts...>, state_);
+  }
+
+  template <class... Ts>
   auto as_observable() && {
-    auto cell = state_.self->template response_to_flow_cell<Ts...>(
-      state_.mid, std::move(state_.pending_timeout));
-    using cell_t = typename decltype(cell)::value_type;
-    using val_t = typename cell_t::output_type;
-    return flow::single<val_t>{std::move(cell)}.as_observable();
+    static_assert(flow::has_impl_include<scheduled_actor, Ts...>,
+                  "include 'caf/scheduled_actor/flow.hpp' for this method");
+    return state_.self->response_to_observable(type_list_v<Ts...>, state_,
+                                               none);
   }
 
 private:

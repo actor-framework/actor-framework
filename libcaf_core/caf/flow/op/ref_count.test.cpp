@@ -27,7 +27,7 @@ SCENARIO("a ref_count operator disconnects when no subscribers exist") {
       uut->subscribe(snk2->as_observer());
       check(uut->connected());
       check(pub->connected());
-      src->push_all(0);
+      src->push(0);
       run_flows();
       snk1->sub.cancel();
       snk2->sub.cancel();
@@ -35,13 +35,13 @@ SCENARIO("a ref_count operator disconnects when no subscribers exist") {
       THEN("the operator disconnects and re-connects when subscribed again") {
         check(!uut->connected());
         check(!pub->connected());
-        src->push_all(1); // lost, because no subscribers exist anymore
+        src->push(1); // lost, because no subscribers exist anymore
         auto snk3 = make_auto_observer<int>();
         uut->subscribe(snk3->as_observer());
         run_flows();
         check(uut->connected());
         check(pub->connected());
-        src->push_all(2); // arrives at snk3
+        src->push(2); // arrives at snk3
         run_flows();
         check_eq(snk1->buf, std::vector{0});
         check_eq(snk2->buf, std::vector{0});

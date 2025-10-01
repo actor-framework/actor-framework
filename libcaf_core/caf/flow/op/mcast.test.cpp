@@ -102,7 +102,7 @@ SCENARIO("mcast operators buffer items that they cannot ship immediately") {
         check_eq(uut->min_buffered(), 0u);
         log::test::debug("push more items than we have demand for");
         for (auto i = 0; i < 8; ++i)
-          uut->push_all(i);
+          uut->push(i);
         check_eq(uut->max_demand(), 0u);
         check_eq(uut->min_demand(), 0u);
         check_eq(uut->max_buffered(), 5u);

@@ -63,7 +63,7 @@ WITH_FIXTURE(test::fixture::deterministic) {
 
 TEST("GH-1399 regression") {
   // Original issue: flat_map does not limit the demand it signals upstream.
-  // When running flat_map on an unbound sequence like iota-observable, it
+  // When running flat_map on an unbound sequence like an iota-observable, it
   // produces an infinite amount of observables without ever giving downstream
   // operators the opportunity to cut off the flow items.
   auto worker_fn = []() -> behavior {

@@ -46,9 +46,13 @@ using cell_listener_ptr = intrusive_ptr<cell_listener<T>>;
 
 /// State shared between one multicast operator and one subscribed observer.
 template <class T>
-struct cell_sub_state {
-  std::variant<none_t, std::nullptr_t, T, error> content;
-  std::vector<cell_listener_ptr<T>> listeners;
+class cell_sub_state {
+public:
+  /// Checks whether the cell is pending, i.e., none of the setters have been
+  /// called.
+  bool pending() {
+    return std::holds_alternative<none_t>(content);
+  }
 
   void set_null() {
     CAF_ASSERT(std::holds_alternative<none_t>(content));
@@ -104,6 +108,9 @@ struct cell_sub_state {
         i != listeners.end())
       listeners.erase(i);
   }
+
+  std::variant<none_t, std::nullptr_t, T, error> content;
+  std::vector<cell_listener_ptr<T>> listeners;
 };
 
 /// Convenience alias for the state of a cell.
@@ -211,6 +218,10 @@ public:
   using state_ptr_type = cell_sub_state_ptr<T>;
 
   using observer_type = observer<T>;
+
+  // -- constants --------------------------------------------------------------
+
+  static constexpr bool single_value = true;
 
   // -- constructors, destructors, and assignment operators --------------------
 
