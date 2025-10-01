@@ -108,7 +108,7 @@ TEST("select_any picks the first arriving integer") {
     // expect<int>().with(5). from(server2).to(client);
     dispatch_messages();
     log::test::debug(
-      "request.await froces responses into reverse request order");
+      "request.await forces responses into reverse request order");
     check_eq(result, 5);
   }
 }

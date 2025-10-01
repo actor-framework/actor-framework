@@ -254,7 +254,7 @@ TEST("spawning a typed actor and sending messages") {
   }
 }
 
-TEST("chainging the behavior at runtime and skipping messages") {
+TEST("changing the behavior at runtime and skipping messages") {
   auto et = sys.spawn(actor_from_state<event_testee_state>);
   typed_actor<result<std::string>(get_state_atom)> sub_et = et;
   SECTION("et->message_types() returns an interface description") {

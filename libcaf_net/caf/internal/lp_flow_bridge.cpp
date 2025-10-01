@@ -85,7 +85,7 @@ public:
 
   using accept_event_t = net::accept_event<net::lp::frame>;
 
-  server_flow_bridge(internal::lp_prodcuer_ptr producer)
+  server_flow_bridge(internal::lp_producer_ptr producer)
     : producer_(std::move(producer)) {
     // nop
   }
@@ -106,7 +106,7 @@ public:
   }
 
 private:
-  internal::lp_prodcuer_ptr producer_;
+  internal::lp_producer_ptr producer_;
 };
 
 } // namespace
@@ -123,7 +123,7 @@ make_lp_flow_bridge(async::consumer_resource<net::lp::frame> pull,
 }
 
 std::unique_ptr<net::lp::upper_layer>
-make_lp_flow_bridge(lp_prodcuer_ptr producer) {
+make_lp_flow_bridge(lp_producer_ptr producer) {
   using impl_t = net::lp::server_flow_bridge;
   return std::make_unique<impl_t>(std::move(producer));
 }
