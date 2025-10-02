@@ -629,6 +629,7 @@ SCENARIO("auto_connect operators stay connected even without subscribers") {
         check_eq(snk3->buf, std::vector{2});
       }
     }
+    src.close();
   }
 }
 
@@ -637,6 +638,7 @@ TEST("calling auto_connect(0) connects immediately") {
   auto pub = src.as_observable().publish();
   auto uut = pub.auto_connect(0);
   check(pub.pimpl()->connected());
+  src.close();
 }
 
 TEST("calling ref_count(0) is an error") {
@@ -699,6 +701,7 @@ SCENARIO("a ref_count operator disconnects when no subscribers exist") {
         check(pub.pimpl()->connected()); // conn_ must remain valid
       }
     }
+    src.close();
   }
 }
 

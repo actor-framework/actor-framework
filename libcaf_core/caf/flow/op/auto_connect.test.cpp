@@ -54,6 +54,7 @@ SCENARIO("auto_connect operators call connect when reaching the threshold") {
         check_eq(snk3->buf, std::vector{5});
       }
     }
+    src->close();
   }
 }
 
@@ -87,6 +88,7 @@ SCENARIO("auto_connect operators stay connected even without subscribers") {
         check_eq(snk3->buf, std::vector{2});
       }
     }
+    src->close();
   }
 }
 

@@ -48,6 +48,7 @@ SCENARIO("a ref_count operator disconnects when no subscribers exist") {
         check_eq(snk3->buf, std::vector{2});
       }
     }
+    src->close();
   }
 }
 
