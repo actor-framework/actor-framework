@@ -32,7 +32,6 @@ public:
   template <class OnConnect>
   bool connect(OnConnect&& on_connect) {
     auto src = std::get<connectable_ptr>(maybe_source);
-    on_connect(src);
     conn = src->connect();
     if (!conn) {
       if (can_connect()) {
@@ -42,6 +41,11 @@ public:
       }
       return false;
     }
+    if (!can_connect()) {
+      conn.dispose();
+      return false;
+    }
+    on_connect(src);
     threshold = 1; // threshold only applies to the first connect
     return true;
   }
