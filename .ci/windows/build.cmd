@@ -2,7 +2,7 @@ cmake.exe ^
   -S . ^
   -B build ^
   -G "Visual Studio 17 2022" ^
-  -C ".ci\debug-flags.cmake" ^
+  -C ".ci\windows\debug.cmake" ^
   -DCMAKE_C_COMPILER=cl.exe ^
   -DCMAKE_CXX_COMPILER=cl.exe ^
   -DCMAKE_CXX_FLAGS="/WX" ^

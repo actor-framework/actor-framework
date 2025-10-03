@@ -1,0 +1,67 @@
+name: release-builds
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+env:
+  CTEST_NO_TESTS_ACTION: error
+  CTEST_OUTPUT_ON_FAILURE: ON
+
+jobs:
+  debian-12: # EOL June 2028
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/${{ github.repository_owner }}/ci-debian-12:latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: configure
+        run: |
+          cmake \
+            -S . \
+            -B build \
+            -G Ninja \
+            -C .ci/linux/release.cmake
+      - name: build
+        run: cmake --build build
+      - name: test
+        run: ctest --test-dir build
+
+  fedora-42: # EOL May 2026
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/${{ github.repository_owner }}/ci-fedora-42:latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: configure
+        run: |
+          cmake \
+            -S . \
+            -B build \
+            -G Ninja \
+            -C .ci/linux/release.cmake
+      - name: build
+        run: cmake --build build
+      - name: test
+        run: ctest --test-dir build
+
+  no-exceptions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: install-robot
+        run:  pip install -r robot/dependencies.txt
+      - name: configure
+        run: |
+          cmake \
+            -S . \
+            -B build \
+            -G Ninja \
+            -C .ci/linux/no-exceptions.cmake
+      - name: build
+        run: cmake --build build
+      - name: test
+        run: ctest --test-dir build
+
