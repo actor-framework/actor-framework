@@ -8,6 +8,8 @@
 #include "caf/disposable.hpp"
 #include "caf/ref_counted.hpp"
 
+#include <atomic>
+
 namespace caf::detail {
 
 /// Decorates another disposable and creates "nested" disposables. When the last
@@ -48,7 +50,7 @@ private:
   void release();
 
   disposable decorated_;
-  size_t count_ = 0;
+  std::atomic<size_t> count_ = 0;
 };
 
 } // namespace caf::detail
