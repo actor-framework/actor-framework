@@ -150,9 +150,9 @@ public:
 
   bool value(std::vector<bool>& x);
 
-  virtual bool value(strong_actor_ptr& ptr);
+  bool value(strong_actor_ptr& ptr);
 
-  virtual bool value(weak_actor_ptr& ptr);
+  bool value(weak_actor_ptr& ptr);
 
 private:
   /// Storage for the implementation object.
