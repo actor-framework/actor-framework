@@ -144,9 +144,11 @@ public:
           };
       bhvr = behavior{std::move(result_handler), std::move(error_handler)};
     }
+    state_.self->println("HI");
     for (const auto& mid : state_.mids) {
       state_.self->do_receive(mid, bhvr, state_.timeout);
     }
+    state_.self->println("HO");
   }
 
   auto receive() && {

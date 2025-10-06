@@ -13,6 +13,7 @@
 #include "caf/typed_actor.hpp"
 #include "caf/typed_event_based_actor.hpp"
 
+#include <iostream>
 #include <numeric>
 
 using namespace caf;
@@ -639,9 +640,10 @@ TEST("fan_out_request with mixed results - one worker returns error") {
   scoped_actor self{sys};
   std::vector<actor> workers{
     make_server(sys, [](int x, int y) { return x + y; }),
-    make_server(sys, [](int, int) -> result<int> { 
-      return caf::error(sec::logic_error); 
-    }),
+    make_server(sys,
+                [](int, int) -> result<int> {
+                  return caf::error(sec::logic_error);
+                }),
     make_server(sys, [](int x, int y) { return x + y; }),
   };
   auto sum = std::make_shared<int>(0);
@@ -682,9 +684,11 @@ TEST("timeout a delayed fan_out_request") {
   auto sum = std::make_shared<int>(0);
   auto err = std::make_shared<error>();
   SECTION("timeout with policy select_all") {
+    std::cout << "START select all" << std::endl;
+    auto start = std::chrono::steady_clock::now();
     self->mail(1, 2)
-      .delay(50ms)
-      .fan_out_request(workers, 10ms, policy::select_all_tag)
+      .delay(1s)
+      .fan_out_request(workers, 1s, policy::select_all_tag)
       .receive(
         [sum, this](std::vector<int> results) {
           for (auto result : results)
@@ -693,14 +697,22 @@ TEST("timeout a delayed fan_out_request") {
         },
         [err](error& e) { *err = std::move(e); });
     check_eq(*err, make_error(sec::request_timeout));
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+      std::chrono::steady_clock::now() - start);
+    std::cout << "Select all elapsed: " << duration << std::endl;
   }
   SECTION("timeout with policy select_any") {
+    std::cout << "START select any" << std::endl;
+    auto start = std::chrono::steady_clock::now();
     self->mail(1, 2)
-      .delay(50ms)
-      .fan_out_request(workers, 10ms, policy::select_any_tag)
+      .delay(1s)
+      .fan_out_request(workers, 1s, policy::select_any_tag)
       .receive([sum](int result) { *sum = result; },
                [err](error& e) { *err = std::move(e); });
     check_eq(*err, make_error(sec::all_requests_failed));
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+      std::chrono::steady_clock::now() - start);
+    std::cout << "Select Any Elapsed: " << duration << std::endl;
   }
   for (const auto& worker : workers) {
     self->send_exit(worker, exit_reason::user_shutdown);
