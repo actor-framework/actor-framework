@@ -119,7 +119,7 @@ SCENARIO("publishers from terminated actors produce errors") {
             .for_each([this](int) { fail("unexpected value"); });
         });
         dispatch_messages();
-        check_eq(*err, sec::disposed);
+        check_eq(*err, sec::resource_destroyed);
       }
     }
   }

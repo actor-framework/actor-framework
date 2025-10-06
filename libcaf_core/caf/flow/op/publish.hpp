@@ -4,17 +4,18 @@
 
 #pragma once
 
-#include "caf/detail/assert.hpp"
+#include "caf/detail/counted_disposable.hpp"
 #include "caf/flow/observer.hpp"
+#include "caf/flow/op/connectable.hpp"
 #include "caf/flow/op/mcast.hpp"
-
-#include <limits>
 
 namespace caf::flow::op {
 
 /// Publishes the items from a single operator to multiple subscribers.
 template <class T>
-class publish : public mcast<T>, public observer_impl<T> {
+class publish : public mcast<T>,
+                public observer_impl<T>,
+                public connectable<T> {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -53,44 +54,41 @@ public:
   }
 
   friend void intrusive_ptr_add_ref(const publish* ptr) noexcept {
-    ptr->ref_coordinated();
+    ptr->ref();
   }
 
   friend void intrusive_ptr_release(const publish* ptr) noexcept {
-    ptr->deref_coordinated();
+    ptr->deref();
   }
 
-  // -- implementation of conn<T> ----------------------------------------------
+  // -- implementation of base<T> ----------------------------------------------
 
   disposable subscribe(observer<T> out) override {
-    auto result = super::subscribe(std::move(out));
-    if (!connected_ && super::observer_count() == auto_connect_threshold_) {
-      // Note: reset to 1 since the threshold only applies to the first connect.
-      auto_connect_threshold_ = 1;
-      connect();
+    if (!source_) {
+      out.on_error(make_error(sec::disposed));
+      return {};
     }
-    return result;
+    return super::subscribe(std::move(out));
   }
 
-  disposable connect() {
-    CAF_ASSERT(source_);
-    CAF_ASSERT(!connected_);
-    connected_ = true;
-    return source_->subscribe(observer<T>{this});
+  // -- implementation of connectable<T> ---------------------------------------
+
+  [[nodiscard]] disposable connect() override {
+    if (!source_) {
+      // We have removed the source since it called on_complete or on_error.
+      // Hence, we can no longer connect to it.
+      return {};
+    }
+    if (!conn_ || conn_->disposed()) {
+      in_.cancel(); // Make sure stale state is cleaned up.
+      auto sub = source_->subscribe(observer<T>{this});
+      conn_ = make_counted<detail::counted_disposable>(std::move(sub));
+    }
+    return conn_->acquire();
   }
 
-  // -- properties -------------------------------------------------------------
-
-  void auto_connect_threshold(size_t new_value) {
-    auto_connect_threshold_ = new_value;
-  }
-
-  void auto_disconnect(bool new_value) {
-    auto_disconnect_ = new_value;
-  }
-
-  bool connected() const noexcept {
-    return connected_;
+  bool connected() const noexcept override {
+    return conn_ && !conn_->disposed();
   }
 
   // -- implementation of observer_impl<T> -------------------------------------
@@ -110,10 +108,22 @@ public:
   }
 
   void on_complete() override {
+    source_ = nullptr;
     this->close();
   }
 
   void on_error(const error& what) override {
+    if (what == sec::disposed) {
+      // The subscription got disposed, which means this wasn't an actual error
+      // from the source and we can probably connect to it again. If we have
+      // already established a new connection, we can simply ignore this event.
+      if (conn_ && conn_->disposed()) {
+        conn_ = nullptr;
+        in_.cancel();
+      }
+      return;
+    }
+    source_ = nullptr;
     this->abort(what);
   }
 
@@ -152,10 +162,6 @@ protected:
 private:
   void do_dispose(const state_ptr_type&, bool) override {
     try_request_more();
-    if (auto_disconnect_ && connected_ && super::observer_count() == 0) {
-      connected_ = false;
-      in_.cancel();
-    }
   }
 
   /// Keeps track of the number of items that have been requested but that have
@@ -171,16 +177,8 @@ private:
   /// The source operator we subscribe to lazily.
   src_ptr source_;
 
-  /// Keeps track of whether we are connected to the source operator.
-  bool connected_ = false;
-
-  /// The number of observers that need to connect before we connect to the
-  /// source operator.
-  size_t auto_connect_threshold_ = std::numeric_limits<size_t>::max();
-
-  /// Whether to disconnect from the source operator when the last observer
-  /// unsubscribes.
-  bool auto_disconnect_ = false;
+  /// The connection to the source operator (once connected).
+  intrusive_ptr<detail::counted_disposable> conn_;
 
   /// Scheduled when on_consumed_some() is called. Having this as a member
   /// variable avoids allocating a new action object for each call.

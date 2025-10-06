@@ -74,7 +74,7 @@ public:
       }
     }
 
-    const error& abort_reason() const noexcept {
+    const error& abort_reason() const {
       return abort_reason_;
     }
 
@@ -163,7 +163,7 @@ public:
     }
   }
 
-  error abort_reason() const noexcept {
+  error abort_reason() const {
     if (impl_)
       return impl_->abort_reason();
     else

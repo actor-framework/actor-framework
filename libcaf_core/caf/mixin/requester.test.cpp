@@ -492,7 +492,9 @@ TEST("GH-2070 regression") {
     auto client = sys.spawn([this, server](event_based_actor* self) {
       self->request(server, infinite, int32_t{0})
         .then([this](int32_t) { fail("unexpected handler called"); },
-              [this](const error& what) { check_eq(what, sec::disposed); });
+              [this](const error& what) {
+                check_eq(what, sec::mail_cache_closed);
+              });
     });
     expect<int32_t>().with(0).to(server);
     check_eq(mail_count(), 0u);

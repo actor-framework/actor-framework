@@ -137,9 +137,9 @@ SCENARIO("connectable observables forward errors") {
         check(snk1->aborted());
         // After this point, new subscribers should be aborted right away.
         auto snk2 = coordinator()->add_child(std::in_place_type<snk_t>);
-        auto sub = conn.subscribe(snk2->as_observer());
-        check(snk2->aborted());
+        conn.subscribe(snk2->as_observer());
         run_flows();
+        check(snk2->aborted());
       }
     }
   }
@@ -158,7 +158,7 @@ SCENARIO("observers that dispose their subscription do not affect others") {
         auto uut = make_counted<impl_t>(coordinator(), iota.pimpl(), 5);
         auto sub1 = uut->subscribe(snk1->as_observer());
         auto sub2 = uut->subscribe(snk2->as_observer());
-        uut->connect();
+        auto conn = uut->connect();
         run_flows();
         snk1->request(7);
         snk2->request(3);
@@ -180,42 +180,6 @@ SCENARIO("observers that dispose their subscription do not affect others") {
   }
 }
 
-SCENARIO("publishers with auto_disconnect auto-dispose their subscription") {
-  using snk_t = flow::passive_observer<int>;
-  GIVEN("a connectable with two subscribers") {
-    WHEN("both subscribers drop out and auto_disconnect is enabled") {
-      THEN("the publisher becomes disconnected") {
-        using impl_t = op::publish<int>;
-        auto snk1 = coordinator()->add_child(std::in_place_type<snk_t>);
-        auto snk2 = coordinator()->add_child(std::in_place_type<snk_t>);
-        // auto grd = make_unsubscribe_guard(snk1, snk2);
-        auto iota = make_observable().iota(1).take(12).as_observable();
-        auto uut = make_counted<impl_t>(coordinator(), iota.pimpl(), 5);
-        auto sub1 = uut->subscribe(snk1->as_observer());
-        auto sub2 = uut->subscribe(snk2->as_observer());
-        uut->auto_disconnect(true);
-        uut->connect();
-        check(uut->connected());
-        run_flows();
-        snk1->request(7);
-        snk2->request(3);
-        run_flows();
-        check_eq(snk1->buf, vector{1, 2, 3, 4, 5, 6, 7});
-        check_eq(snk2->buf, vector{1, 2, 3});
-        snk1->sub.cancel();
-        snk2->sub.cancel();
-        run_flows();
-        check(!uut->connected());
-        sub1.dispose();
-        sub2.dispose();
-        run_flows();
-        check(sub1.disposed());
-        check(sub2.disposed());
-      }
-    }
-  }
-}
-
 SCENARIO("publishers dispose unexpected subscriptions") {
   using snk_t = flow::passive_observer<int>;
   GIVEN("an initialized publish operator") {
@@ -226,7 +190,7 @@ SCENARIO("publishers dispose unexpected subscriptions") {
         auto iota = make_observable().iota(1).take(12).as_observable();
         auto uut = make_counted<impl_t>(coordinator(), iota.pimpl());
         uut->subscribe(snk->as_observer());
-        uut->connect();
+        auto conn = uut->connect();
         auto sub = coordinator()->add_child(
           std::in_place_type<op::never_sub<int>>, snk->as_observer());
         uut->on_subscribe(caf::flow::subscription{sub});
