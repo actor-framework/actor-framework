@@ -184,7 +184,7 @@ private:
   mutable std::atomic<size_t> rc_;
   type_id_list types_;
   size_t constructed_elements_;
-  std::byte storage_[];
+  alignas(max_align_t) std::byte storage_[];
 };
 
 // -- related non-members ------------------------------------------------------

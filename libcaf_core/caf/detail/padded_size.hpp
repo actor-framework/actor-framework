@@ -10,9 +10,8 @@ namespace caf::detail {
 
 /// Calculates the size for `T` including padding for aligning to `max_align_t`.
 template <class T>
-constexpr size_t padded_size_v
-  = ((sizeof(T) / alignof(max_align_t))
-     + static_cast<size_t>(sizeof(T) % alignof(max_align_t) != 0))
-    * alignof(max_align_t);
+constexpr size_t padded_size_v = (sizeof(T) + alignof(std::max_align_t) - 1)
+                                 / alignof(std::max_align_t)
+                                 * alignof(max_align_t);
 
 } // namespace caf::detail

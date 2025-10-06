@@ -56,6 +56,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Fix UBSan finding regarding non-aligned memory allocation when spawning
   actors.
 - Fix build issues on some BSD derivatives (#2135).
+- Fix alignment of `caf::async::batch` on 32bit ARM architecture (#2142).
 
 ### Removed
 
