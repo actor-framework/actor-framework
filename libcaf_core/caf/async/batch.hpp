@@ -194,7 +194,7 @@ private:
     type_id_t item_type_;
     size_t item_size_;
     size_t size_;
-    std::byte storage_[];
+    alignas(max_align_t) std::byte storage_[];
   };
 
   explicit batch(intrusive_ptr<data> ptr) : data_(std::move(ptr)) {
