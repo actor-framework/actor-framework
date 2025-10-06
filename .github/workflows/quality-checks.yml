@@ -1,0 +1,27 @@
+name: quality-checks
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  code-formatting:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: clang-format
+        uses: jidicula/clang-format-action@v4.11.0
+        with:
+          clang-format-version: '19'
+
+
+  spell-checking:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: spell-checking
+        uses: crate-ci/typos@master
+        with:
+          config: .typos-config.toml
