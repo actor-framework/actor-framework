@@ -51,6 +51,17 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON
 option(BUILD_SHARED_LIBS "Build shared library targets" ON)
 option(THREADS_PREFER_PTHREAD_FLAG "Prefer -pthread flag if available " ON)
 
+# -- compile timing options ----------------------------------------------------
+
+option(CAF_ENABLE_COMPILE_TIMING "Enable compile time measurement for each .cpp file" OFF)
+
+if(CAF_ENABLE_COMPILE_TIMING)
+  # Set up compile timing wrapper
+  set(CMAKE_CXX_COMPILE_LAUNCHER "${CMAKE_SOURCE_DIR}/scripts/time_compile.sh" CACHE FILEPATH "C++ compiler launcher for timing")
+  set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CMAKE_SOURCE_DIR}/scripts/time_compile.sh")
+  message(STATUS "Compile timing enabled - timing data will be logged to /tmp/caf_compile_times.log")
+endif()
+
 # -- CAF options that are off by default ---------------------------------------
 
 option(CAF_ENABLE_CPACK "Enable packaging via CPack" OFF)
