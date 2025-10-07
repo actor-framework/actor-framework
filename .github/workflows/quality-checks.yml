@@ -2,6 +2,12 @@ name: quality-checks
 
 on:
   pull_request:
+    paths:
+      - '**/*.cpp'
+      - '**/*.hpp'
+      - '**/CMakeLists.txt'
+      - 'cmake/**'
+      - '.github/workflows/**'
   push:
     branches:
       - main

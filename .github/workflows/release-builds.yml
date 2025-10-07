@@ -2,6 +2,12 @@ name: release-builds
 
 on:
   pull_request:
+    paths:
+      - '**/*.cpp'
+      - '**/*.hpp'
+      - '**/CMakeLists.txt'
+      - 'cmake/**'
+      - '.github/workflows/**'
   push:
     branches:
       - main
