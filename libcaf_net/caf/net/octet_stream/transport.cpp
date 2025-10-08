@@ -318,6 +318,10 @@ public:
     }
   }
 
+  void handle_custom_event(uint8_t opcode, uint64_t payload) override {
+    up_->handle_custom_event(opcode, payload);
+  }
+
   void abort(const error& reason) override {
     up_->abort(reason);
     flags_.shutting_down = true;

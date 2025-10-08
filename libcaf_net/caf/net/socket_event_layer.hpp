@@ -29,6 +29,9 @@ public:
   /// Handles a write event on the managed socket.
   virtual void handle_write_event() = 0;
 
+  /// Handles a custom event.
+  virtual void handle_custom_event(uint8_t opcode, uint64_t payload) = 0;
+
   /// Called after returning `handover` from a read or write handler.
   virtual bool do_handover(std::unique_ptr<socket_event_layer>& next);
 

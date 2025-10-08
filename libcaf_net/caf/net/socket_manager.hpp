@@ -14,7 +14,6 @@
 #include "caf/sec.hpp"
 
 #include <memory>
-#include <type_traits>
 
 namespace caf::net {
 
@@ -95,6 +94,9 @@ public:
 
   /// Called whenever the socket is allowed to send data.
   virtual void handle_write_event() = 0;
+
+  /// Called whenever a custom event is received.
+  virtual void handle_custom_event(uint8_t opcode, uint64_t payload) = 0;
 
   /// Called when the remote side becomes unreachable due to an error or after
   /// calling @ref caf::disposable::dispose.

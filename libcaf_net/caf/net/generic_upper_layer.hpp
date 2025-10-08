@@ -23,6 +23,9 @@ public:
   /// function to decide whether it has to wait for write events on the socket.
   [[nodiscard]] virtual bool done_sending() = 0;
 
+  /// Handles a custom event. The default implementation does nothing.
+  virtual void handle_custom_event(uint8_t opcode, uint64_t payload);
+
   /// Called by the lower layer for cleaning up any state in case of an error or
   /// when disposed.
   virtual void abort(const error& reason) = 0;

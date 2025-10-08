@@ -73,21 +73,35 @@ const short error_mask = POLLRDHUP | POLLERR | POLLHUP | POLLNVAL;
 
 const short output_mask = POLLOUT;
 
+struct custom_event {
+  uint8_t opcode;
+  socket_manager_ptr mgr;
+  uint64_t payload;
+};
+
 class pollset_updater : public socket_event_layer {
 public:
   // -- member types -----------------------------------------------------------
 
   using super = socket_manager;
 
-  using msg_buf = std::array<std::byte, sizeof(intptr_t) + 1>;
+  /// The size of a message.
+  static inline constexpr size_t msg_size
+    = sizeof(uint8_t)     // the opcode
+      + sizeof(intptr_t)  // the operand
+      + sizeof(uint64_t); // (optional) event payload
 
+  using msg_buf = std::array<std::byte, msg_size>;
+
+  // The opcode for determining the action to take when the pollset updater
+  // receives a message. Codes 0b0000'0000 to 0b0111'1111 can be used by socket
+  // managers for custom events. The remaining codes are reserved for standard
+  // operations.
   enum class code : uint8_t {
-    start_manager,
-    shutdown_reading,
-    shutdown_writing,
-    run_action,
-    delay_action,
-    shutdown,
+    start_manager = 0b1000'0000,
+    run_action = 0b1000'0001,
+    delay_action = 0b1000'0010,
+    shutdown = 0b1000'0011,
   };
 
   // -- constructors, destructors, and assignment operators --------------------
@@ -114,6 +128,11 @@ public:
 
   void handle_write_event() override {
     owner_->deregister_writing();
+  }
+
+  void handle_custom_event(uint8_t opcode, uint64_t payload) override {
+    caf::log::net::error("pollset_updater received custom event: {}, {}",
+                         opcode, payload);
   }
 
   void abort(const error&) override {
@@ -396,6 +415,11 @@ public:
         pending_actions.pop_front();
         next.run();
       }
+      while (!pending_events.empty()) {
+        auto next = std::move(pending_events.front());
+        pending_events.pop_front();
+        next.mgr->handle_custom_event(next.opcode, next.payload);
+      }
       if (updates_.empty())
         return;
     }
@@ -542,23 +566,25 @@ public:
   /// @warning assumes ownership of @p ptr.
   template <class T>
   bool write_to_pipe(uint8_t opcode, T* ptr) {
-    pollset_updater::msg_buf buf;
     // Note: no intrusive_ptr_add_ref(ptr) since we take ownership of `ptr`.
+    auto operand = reinterpret_cast<uintptr_t>(ptr);
+    auto payload = uint64_t{0};
+    pollset_updater::msg_buf buf;
     buf[0] = static_cast<std::byte>(opcode);
-    auto value = reinterpret_cast<intptr_t>(ptr);
-    memcpy(buf.data() + 1, &value, sizeof(intptr_t));
+    memcpy(buf.data() + 1, &operand, sizeof(uintptr_t));
+    memcpy(buf.data() + 1 + sizeof(uintptr_t), &payload, sizeof(uint64_t));
     ptrdiff_t res = -1;
     { // Lifetime scope of guard.
       std::lock_guard<std::mutex> guard{write_lock_};
       if (write_handle_ != invalid_socket)
         res = write(write_handle_, buf);
     }
-    if constexpr (std::is_base_of_v<detail::atomic_ref_counted, T>) {
-      if (res <= 0 && ptr)
+    if (res <= 0 && ptr) {
+      if constexpr (std::is_base_of_v<detail::atomic_ref_counted, T>) {
         intrusive_ptr_release(ptr);
-    } else {
-      if (res <= 0 && ptr)
+      } else {
         delete ptr;
+      }
     }
     return res > 0;
   }
@@ -584,6 +610,9 @@ public:
 
   /// Pending actions to run immediately.
   std::deque<action> pending_actions;
+
+  /// Custom events from socket managers.
+  std::deque<custom_event> pending_events;
 
   /// The container type for delayed actions.
   using scheduled_actions_map = std::multimap<steady_time_point, action>;
@@ -634,14 +663,14 @@ error pollset_updater::start(socket_manager* owner) {
 
 void pollset_updater::handle_read_event() {
   auto lg = log::net::trace("");
-  auto as_mgr = [](intptr_t ptr) {
+  auto as_mgr = [](uintptr_t ptr) {
     return intrusive_ptr{reinterpret_cast<socket_manager*>(ptr), false};
   };
-  auto add_action = [this](intptr_t ptr) {
+  auto add_action = [this](uintptr_t ptr) {
     auto f = action{intrusive_ptr{reinterpret_cast<action::impl*>(ptr), false}};
     mpx_->pending_actions.push_back(std::move(f));
   };
-  auto delay_action = [this](intptr_t ptr) {
+  auto delay_action = [this](uintptr_t ptr) {
     using value_type = default_multiplexer::scheduled_actions_map::value_type;
     auto val = std::unique_ptr<value_type>{reinterpret_cast<value_type*>(ptr)};
     mpx_->scheduled_actions.emplace(val->first, std::move(val->second));
@@ -655,8 +684,10 @@ void pollset_updater::handle_read_event() {
       if (buf_.size() == buf_size_) {
         buf_size_ = 0;
         auto opcode = static_cast<uint8_t>(buf_[0]);
-        intptr_t ptr;
-        memcpy(&ptr, buf_.data() + 1, sizeof(intptr_t));
+        auto ptr = uintptr_t{0};
+        memcpy(&ptr, buf_.data() + 1, sizeof(uintptr_t));
+        auto payload = uint64_t{0};
+        memcpy(&payload, buf_.data() + 1 + sizeof(uintptr_t), sizeof(uint64_t));
         switch (static_cast<code>(opcode)) {
           case code::start_manager:
             mpx_->do_start(as_mgr(ptr));
@@ -668,11 +699,22 @@ void pollset_updater::handle_read_event() {
             delay_action(ptr);
             break;
           case code::shutdown:
-            CAF_ASSERT(ptr == 0);
+            CAF_ASSERT(payload == 0);
             mpx_->do_shutdown();
             break;
-          default:
-            log::system::error("invalid opcode in pollset updater: {}", opcode);
+          default: // custom opcodes
+            if ((opcode & 0b1000'0000) != 0) {
+              log::system::error("invalid opcode in pollset updater: {}",
+                                 opcode);
+              break;
+            }
+            auto ev = custom_event{opcode, as_mgr(ptr), payload};
+            if (!ev.mgr) {
+              log::system::error("received invalid custom event with opcode {}",
+                                 opcode);
+              break;
+            }
+            mpx_->pending_events.push_back(std::move(ev));
             break;
         }
       }

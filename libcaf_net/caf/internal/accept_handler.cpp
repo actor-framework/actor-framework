@@ -92,6 +92,11 @@ public:
     owner_->deregister_writing();
   }
 
+  void handle_custom_event(uint8_t opcode, uint64_t payload) override {
+    log::net::error("connection_acceptor received custom event: {}, {}", opcode,
+                    payload);
+  }
+
   void abort(const error& reason) override {
     if (reason != sec::disposed) {
       log::net::error("connection_acceptor aborts due to an error: {}", reason);

@@ -208,6 +208,11 @@ public:
     owner_->deregister_writing();
   }
 
+  void handle_custom_event(uint8_t opcode, uint64_t payload) override {
+    caf::log::net::error("accept_handler received custom event: {}, {}", opcode,
+                         payload);
+  }
+
   void abort(const caf::error& reason) override {
     factory_->abort(reason);
     on_conn_close_.dispose();

@@ -155,6 +155,10 @@ public:
     }
   }
 
+  void handle_custom_event(uint8_t opcode, uint64_t payload) override {
+    up_->handle_custom_event(opcode, payload);
+  }
+
   bool do_handover(std::unique_ptr<socket_event_layer>& next) override {
     next = transport::make(std::move(policy_.conn), std::move(up_));
     if (auto err = next->start(owner_))

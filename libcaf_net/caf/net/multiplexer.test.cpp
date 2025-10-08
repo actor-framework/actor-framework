@@ -99,6 +99,11 @@ public:
     }
   }
 
+  void handle_custom_event(uint8_t opcode, uint64_t payload) override {
+    log::test::error("mock_event_layer received custom event: {}, {}", opcode,
+                     payload);
+  }
+
   void abort(const error& reason) override {
     abort_reason = reason;
   }

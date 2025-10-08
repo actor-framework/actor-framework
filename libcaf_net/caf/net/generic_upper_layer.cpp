@@ -4,10 +4,17 @@
 
 #include "caf/net/generic_upper_layer.hpp"
 
+#include "caf/log/net.hpp"
+
 namespace caf::net {
 
 generic_upper_layer::~generic_upper_layer() {
   // nop
+}
+
+void generic_upper_layer::handle_custom_event(uint8_t opcode,
+                                              uint64_t payload) {
+  caf::log::net::error("unhandled custom event: {}, {}", opcode, payload);
 }
 
 } // namespace caf::net

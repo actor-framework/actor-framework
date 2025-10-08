@@ -186,6 +186,16 @@ public:
     deregister();
   }
 
+  /// Called whenever a custom event is received.
+  void handle_custom_event(uint8_t opcode, uint64_t payload) override {
+    if (handler_) {
+      handler_->handle_custom_event(opcode, payload);
+      run_delayed_actions();
+      return;
+    }
+    deregister();
+  }
+
   /// Called when the remote side becomes unreachable due to an error or after
   /// calling @ref dispose.
   /// @param code The error code as reported by the operating system or
