@@ -16,6 +16,7 @@
 #include "caf/detail/concepts.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/default_mailbox.hpp"
+#include "caf/detail/expected_builder.hpp"
 #include "caf/detail/type_list.hpp"
 #include "caf/dynamically_typed.hpp"
 #include "caf/extend.hpp"
