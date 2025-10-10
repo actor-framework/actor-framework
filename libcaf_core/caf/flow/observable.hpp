@@ -20,6 +20,7 @@
 #include "caf/flow/op/auto_connect.hpp"
 #include "caf/flow/op/base.hpp"
 #include "caf/flow/op/buffer.hpp"
+#include "caf/flow/op/cache.hpp"
 #include "caf/flow/op/concat.hpp"
 #include "caf/flow/op/connectable.hpp"
 #include "caf/flow/op/debounce.hpp"
@@ -252,6 +253,11 @@ public:
 
   auto buffer(size_t count, timespan period) && {
     return materialize().buffer(count, period);
+  }
+
+  /// @copydoc observable::cache
+  auto cache() && {
+    return materialize().cache();
   }
 
   /// @copydoc observable::on_error_resume_next
@@ -831,6 +837,12 @@ observable<cow_vector<T>> observable<T>::buffer(size_t count, timespan period) {
                                  period);
   return pptr->add_child_hdl(std::in_place_type<impl_t>, count, *this,
                              std::move(obs));
+}
+
+template <class T>
+observable<T> observable<T>::cache() {
+  using impl_t = op::cache<T>;
+  return parent()->add_child_hdl(std::in_place_type<impl_t>, pimpl());
 }
 
 template <class T>

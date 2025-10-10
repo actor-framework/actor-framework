@@ -212,6 +212,12 @@ public:
   /// regular intervals .
   observable<cow_vector<T>> buffer(size_t count, timespan period);
 
+  /// Caches the items emitted by the input observable and re-emits them to
+  /// subscribers, essentially turning a hot input observable into a cold one.
+  /// @note This operator uses an unbound buffer to cache items and should not
+  ///       be used for observables that emit a large number of items.
+  observable<T> cache();
+
   /// Emit an item if timespan @p period has passed without it emitting another
   /// item.
   observable<T> debounce(timespan period);
