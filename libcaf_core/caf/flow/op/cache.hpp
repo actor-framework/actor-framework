@@ -110,6 +110,9 @@ public:
 
   using cache_ptr = std::shared_ptr<cache_type>;
 
+  /// The default initial capacity of the cache. The default value is reasonably
+  /// small to avoid unnecessary memory allocation but still enough to avoid
+  /// frequent reallocations.
   static constexpr size_t default_initial_capacity = 64;
 
   cache(coordinator* parent, intrusive_ptr<base<T>> source,
@@ -151,7 +154,8 @@ public:
       return;
     }
     sub_ = std::move(new_sub);
-    sub_.request(cache_->capacity());
+    auto demand = cache_->capacity();
+    sub_.request(demand > 0 ? demand : default_initial_capacity);
   }
 
   void subscribe_to_source() {
