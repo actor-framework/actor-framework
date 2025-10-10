@@ -150,7 +150,7 @@ public:
 
   void on_subscribe(subscription new_sub) override {
     if (sub_) {
-      sub_.cancel();
+      new_sub.cancel();
       return;
     }
     sub_ = std::move(new_sub);
