@@ -16,7 +16,7 @@ freebsd14_task:
     image_family: freebsd-14-2
     << : *RESOURCES_TEMPLATE
   prepare_script: .ci/freebsd-14/prepare.sh
-  build_script: .ci/run.sh build .ci/debug-flags.cmake . build
+  build_script: .ci/run.sh build .ci/freebsd-14/debug.cmake . build
   test_script: .ci/run.sh test build net.udp_datagram_socket
   always:
     robot_artifacts:
