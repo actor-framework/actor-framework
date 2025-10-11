@@ -8,17 +8,50 @@
 #include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
+#include "caf/async/mock_consumer.test.hpp"
+#include "caf/async/mock_producer.test.hpp"
+
+#include "caf/actor_from_state.hpp"
+#include "caf/detail/scope_guard.hpp"
 #include "caf/event_based_actor.hpp"
+#include "caf/exit_reason.hpp"
 #include "caf/flow/coordinator.hpp"
 #include "caf/flow/observable_builder.hpp"
 #include "caf/flow/observer.hpp"
+#include "caf/log/test.hpp"
 #include "caf/scheduled_actor/flow.hpp"
+#include "caf/scoped_actor.hpp"
 
 #include <memory>
 
 using namespace caf;
+using namespace std::literals;
 
 namespace {
+
+struct mock_observer {
+  mock_observer(std::vector<int>& items) : items(&items) {
+    // nop
+  }
+
+  void on_next(const int& item) {
+    items->emplace_back(item);
+  }
+
+  void on_complete() {
+    completed = true;
+  }
+
+  void on_error(const error&) {
+    failed = true;
+  }
+
+  std::vector<int>* items;
+
+  bool completed = false;
+
+  bool failed = false;
+};
 
 class dummy_producer : public async::producer {
 public:
@@ -480,6 +513,170 @@ SCENARIO("consumer resources may be converted to flows only once") {
   }
 }
 
+SCENARIO("actors can consume items from SPSC buffers directly") {
+  GIVEN("a consumer resource") {
+    auto [rd, wr] = async::make_spsc_buffer_resource<int>(6, 2);
+    WHEN("binding it to an actor") {
+      auto wakeups = std::make_shared<int>(0);
+      auto items = std::make_shared<std::vector<int>>();
+      auto snk = sys.spawn(
+        [this, rd = rd, wakeups, items](event_based_actor* self) mutable {
+          auto ptr = rd.consume_on(self, [wakeups, items](auto& src) {
+            ++*wakeups;
+            mock_observer obs{*items};
+            auto [again, pulled] = src.pull(100, obs);
+            caf::log::test::debug("again: {}, pulled: {}", again, pulled);
+            caf::log::test::debug("completed: {}, failed: {}", obs.completed,
+                                  obs.failed);
+          });
+          check_ne(ptr, nullptr);
+        });
+      THEN("the actor receives the items from the buffer") {
+        auto buf = wr.try_open();
+        require_ne(buf, nullptr);
+        auto prod = make_counted<async::mock_producer>();
+        buf->set_producer(prod);
+        auto buf_guard = detail::scope_guard([buf]() noexcept {
+#ifdef CAF_ENABLE_EXCEPTIONS
+          try {
+            buf->close();
+          } catch (...) {
+            fprintf(stderr, "failed to close buffer! %s:%d\n", __FILE__,
+                    __LINE__);
+          }
+#else
+          buf->close();
+#endif
+        });
+        check_eq(*wakeups, 0);
+        require_ne(buf, nullptr);
+        check_gt(buf->push(1), 0u);
+        check_gt(buf->push(2), 0u);
+        expect<action>().to(snk);
+        if (check_eq(items->size(), 2u)) {
+          check_eq(items->at(0), 1);
+          check_eq(items->at(1), 2);
+        }
+        check_eq(*wakeups, 1);
+        check_eq(mail_count(snk), 0u);
+        buf->close();
+        expect<action>().to(snk);
+        check_eq(*wakeups, 2);
+        check_eq(snk->ctrl()->strong_refs.load(), 1u);
+      }
+    }
+  }
+}
+
+SCENARIO("actors can dispose buffer consumers") {
+  GIVEN("a consumer resource") {
+    auto [rd, wr] = async::make_spsc_buffer_resource<int>(6, 2);
+    WHEN("binding it to an actor") {
+      auto wakeups = std::make_shared<int>(0);
+      auto items = std::make_shared<std::vector<int>>();
+      auto snk
+        = sys.spawn([rd{rd}, wakeups, items](event_based_actor* snk) mutable {
+            std::ignore = rd.consume_on(snk, [wakeups, items](auto& src) {
+              ++*wakeups;
+              mock_observer obs{*items};
+              auto [again, pulled] = src.pull(1, obs);
+              caf::log::test::debug("again: {}, pulled: {}", again, pulled);
+              caf::log::test::debug("completed: {}, failed: {}", obs.completed,
+                                    obs.failed);
+              while (again && pulled > 0 && items->size() < 2) {
+                std::tie(again, pulled) = src.pull(1, obs);
+              }
+              if (items->size() == 2) {
+                src.dispose();
+              }
+            });
+          });
+      THEN("the actor receives the items from the buffer") {
+        check_eq(*wakeups, 0);
+        auto buf = wr.try_open();
+        require_ne(buf, nullptr);
+        auto prod = make_counted<async::mock_producer>();
+        buf->set_producer(prod);
+        auto buf_guard = detail::scope_guard([buf]() noexcept {
+#ifdef CAF_ENABLE_EXCEPTIONS
+          try {
+            buf->close();
+          } catch (...) {
+            fprintf(stderr, "failed to close buffer! %s:%d\n", __FILE__,
+                    __LINE__);
+          }
+#else
+          buf->close();
+#endif
+        });
+        require_ne(buf, nullptr);
+        check_gt(buf->push(1), 0u);
+        check_gt(buf->push(2), 0u);
+        check_gt(buf->push(3), 0u);
+        expect<action>().to(snk);
+        check(prod->canceled.load());
+        if (check_eq(items->size(), 2u)) {
+          check_eq(items->at(0), 1);
+          check_eq(items->at(1), 2);
+        }
+        check_eq(mail_count(snk), 0u);
+        check_eq(snk->ctrl()->strong_refs.load(), 1u);
+      }
+    }
+  }
+}
+
+SCENARIO("actors can produce items to SPSC buffers directly") {
+  GIVEN("a producer resource") {
+    auto [rd, wr] = async::make_spsc_buffer_resource<int>(6, 2);
+    WHEN("binding it to an actor") {
+      auto demand = std::make_shared<size_t>(0);
+      auto canceled = std::make_shared<bool>(false);
+      auto src = sys.spawn(
+        [this, wr = wr, demand, canceled](event_based_actor* self) mutable {
+          auto ptr = wr.produce_on(
+            self,
+            [demand, first = true](auto& out, size_t new_demand) mutable {
+              *demand += new_demand;
+              if (first) {
+                out.push(1);
+                first = false;
+              }
+            },
+            [canceled](auto&) { *canceled = true; });
+          check_ne(ptr, nullptr);
+        });
+      THEN("the actor receives the items from the buffer") {
+        auto buf = rd.try_open();
+        require_ne(buf, nullptr);
+        auto con = make_counted<async::mock_consumer>();
+        auto buf_guard = detail::scope_guard([buf]() noexcept {
+#ifdef CAF_ENABLE_EXCEPTIONS
+          try {
+            buf->cancel();
+          } catch (...) {
+            fprintf(stderr, "failed to cancel buffer subscription! %s:%d\n",
+                    __FILE__, __LINE__);
+          }
+#else
+          buf->cancel();
+#endif
+        });
+        check_eq(mail_count(), 0u);
+        buf->set_consumer(con);
+        expect<action>().to(src);
+        check_eq(*demand, 6u); // Initial demand = capacity.
+        check_eq(mail_count(), 0u);
+        check_eq(con->wakeups.load(), 1u);
+        buf->cancel();
+        expect<action>().to(src);
+        check(*canceled);
+        check_eq(src->ctrl()->strong_refs.load(), 1u);
+      }
+    }
+  }
+}
+
 #ifdef CAF_ENABLE_EXCEPTIONS
 
 // Note: this basically checks that buffer protects against misuse and is not
@@ -554,3 +751,155 @@ SCENARIO("SPSC buffers reject multiple consumers") {
 #endif // CAF_ENABLE_EXCEPTIONS
 
 } // WITH_FIXTURE(test::fixture::deterministic)
+
+namespace {
+
+class buffer_multiplexer_state {
+public:
+  using consumer_resource = async::consumer_resource<int>;
+
+  using consumer_ptr = async::spsc_buffer_consumer_ptr<int>;
+
+  using producer_resource = async::producer_resource<int>;
+
+  using producer_ptr = async::spsc_buffer_producer_ptr<int>;
+
+  static constexpr const char* name = "buffer_multiplexer";
+
+  buffer_multiplexer_state(caf::event_based_actor* self, consumer_resource rd1,
+                           consumer_resource rd2, consumer_resource rd3,
+                           producer_resource wr4)
+    : self(self) {
+    add_source(1, rd1);
+    add_source(2, rd2);
+    add_source(3, rd3);
+    dst = wr4.produce_on(
+      self,
+      [this](auto&, size_t new_demand) { // on demand
+        demand += new_demand;
+        run();
+      },
+      [this, self](auto&) {
+        for (auto& [id, src] : sources) { // on cancel
+          src->dispose();
+        }
+        sources.clear();
+        ready_sources.clear();
+        self->quit();
+      });
+  }
+
+  behavior make_behavior() {
+    return {};
+  }
+
+  void add_source(int id, consumer_resource rd) {
+    auto src = rd.consume_on(self, [this, id](auto&) {
+      ready_sources.push_back(id);
+      run();
+    });
+    if (!src) {
+      fprintf(stderr, "failed to consume on source %d\n", id);
+      abort();
+    }
+    sources.emplace(id, src);
+  }
+
+  void run() {
+    while (demand > 0 && !ready_sources.empty()) {
+      auto id = ready_sources.front();
+      ready_sources.pop_front();
+      if (auto i = sources.find(id); i != sources.end()) {
+        mock_observer obs{buffer};
+        auto [again, pulled] = i->second->pull(demand, obs);
+        demand -= pulled;
+        if (pulled != 0) {
+          dst->push(buffer);
+          buffer.clear();
+        }
+        if (!again) {
+          sources.erase(i);
+          if (sources.empty()) {
+            dst->dispose();
+            self->quit();
+            return;
+          }
+        } else if (pulled != 0) {
+          ready_sources.push_back(id);
+        }
+      }
+    }
+  }
+
+  caf::event_based_actor* self;
+
+  size_t demand = 0;
+
+  std::map<int, consumer_ptr> sources;
+
+  std::deque<int> ready_sources;
+
+  producer_ptr dst;
+
+  std::vector<int> buffer;
+};
+
+} // namespace
+
+TEST("actors can multiplex SPSC buffers") {
+  // Non-deterministic test that has one actor reading from multiple SPSC
+  // buffers and producing to a single buffer.
+  auto [rd1, wr1] = async::make_spsc_buffer_resource<int>(50, 10);
+  auto [rd2, wr2] = async::make_spsc_buffer_resource<int>(50, 10);
+  auto [rd3, wr3] = async::make_spsc_buffer_resource<int>(50, 10);
+  auto [rd4, wr4] = async::make_spsc_buffer_resource<int>(50, 10);
+  caf::actor_system_config cfg;
+  caf::actor_system sys{cfg};
+  // Spin up three actors, producing 1000 items each.
+  auto src1 = sys.spawn([wr = wr1](event_based_actor* self) {
+    self->make_observable().iota(1).take(1000).subscribe(wr);
+  });
+  auto src2 = sys.spawn([wr = wr2](event_based_actor* self) {
+    self->make_observable().iota(1001).take(1000).subscribe(wr);
+  });
+  auto src3 = sys.spawn([wr = wr3](event_based_actor* self) {
+    self->make_observable().iota(2001).take(1000).subscribe(wr);
+  });
+  // Spin up the consumer that collects all items into a vector.
+  auto items = std::make_shared<std::vector<int>>();
+  items->reserve(3000);
+  auto snk = sys.spawn([rd = rd4, items](event_based_actor* self) mutable {
+    std::ignore = rd.consume_on(self, [self, items](auto& src) {
+      mock_observer obs{*items};
+      auto [again, pulled] = src.pull(100, obs);
+      while (again && pulled > 0) {
+        std::tie(again, pulled) = src.pull(100, obs);
+      }
+      if (!again) {
+        self->quit();
+      }
+    });
+  });
+  // Spin up the multiplexer that reads rd1, rd2, and rd3 and pushes to wr4.
+  auto buffer_multiplexer = actor_from_state<buffer_multiplexer_state>;
+  auto mpx = sys.spawn(buffer_multiplexer, rd1, rd2, rd3, wr4);
+  // Wait up to 3s for the test to finish.
+  caf::scoped_actor self{sys};
+  auto ok = false;
+  self->monitor(snk);
+  self->receive([&ok](const caf::down_msg&) { ok = true; }, after(3s) >> [] {});
+  if (check(ok)) {
+    std::sort(items->begin(), items->end());
+    items->erase(std::unique(items->begin(), items->end()), items->end());
+    if (check_eq(items->size(), 3000u)) {
+      check_eq(items->front(), 1);
+      check_eq(items->back(), 3000);
+    }
+  } else {
+    anon_send_exit(src1, exit_reason::kill);
+    anon_send_exit(src2, exit_reason::kill);
+    anon_send_exit(src3, exit_reason::kill);
+    anon_send_exit(snk, exit_reason::kill);
+    anon_send_exit(mpx, exit_reason::kill);
+  }
+}

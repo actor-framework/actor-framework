@@ -31,18 +31,20 @@ IncludeBlocks: Regroup
 IncludeCategories:
   - Regex: 'caf/test/[[:alnum:]/_.-]+'
     Priority: 1
-  - Regex: 'caf/io/[[:alnum:]/_.-]+'
+  - Regex: 'caf/[[:alnum:]/_.-]+\.test\.hpp'
     Priority: 2
-  - Regex: 'caf/openssl/[[:alnum:]/_.-]+'
+  - Regex: 'caf/io/[[:alnum:]/_.-]+'
     Priority: 3
-  - Regex: 'caf/net/[[:alnum:]/_.-]+'
+  - Regex: 'caf/openssl/[[:alnum:]/_.-]+'
     Priority: 4
-  - Regex: 'caf/[[:alnum:]/_.-]+'
+  - Regex: 'caf/net/[[:alnum:]/_.-]+'
     Priority: 5
-  - Regex: '^<[a-z0-9_]+>$'
-    Priority: 7
-  - Regex: '.*'
+  - Regex: 'caf/[[:alnum:]/_.-]+'
     Priority: 6
+  - Regex: '^<[a-z0-9_]+>$'
+    Priority: 8
+  - Regex: '.*'
+    Priority: 7
 IncludeIsMainRegex: "(test)?$"
 IndentCaseLabels: true
 IndentPPDirectives: AfterHash
