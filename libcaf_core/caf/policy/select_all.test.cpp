@@ -132,7 +132,7 @@ TEST("select_all combines two integer results into one vector") {
     // expect<int>().with(5). from(server2).to(client);
     dispatch_messages();
     log::test::debug(
-      "request.await froces responses into reverse request order");
+      "request.await forces responses into reverse request order");
     check_eq(results, int_list({5, 3}));
   }
 }
