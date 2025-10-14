@@ -483,7 +483,7 @@ private:
 
   using on_wakeup_t = shared_callback_ptr<on_wakeup_signature>;
 
-  /// Stores the current state of the consumer.
+  /// Guards access to the state of the consumer.
   mutable std::mutex mtx_;
 
   /// The actor that owns this consumer.
@@ -776,7 +776,7 @@ private:
 
   using on_cancel_t = shared_callback_ptr<on_cancel_signature>;
 
-  /// Stores the current state of the consumer.
+  /// Guards access to the state of the consumer.
   mutable std::mutex mtx_;
 
   /// The actor that owns this consumer.
