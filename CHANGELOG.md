@@ -16,6 +16,13 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 - Requests that use the new `mail` API now support `as_single` for turning the
   response handle into a `flow::single` object.
+- The class `caf::async::consumer_resource<T>` now has a new member
+  function `consume_on` that allows actors to consume data from the resource
+  without having to use a flow.
+- The class `caf::async::producer_resource<T>` now has a new member function
+  `produce_on` that allows actors to produce data without having to use a flow.
+  This is the symmetric counterpart to `consume_on` on `consumer_resource<T>`
+  and should only be used when flows are not suitable for the use case at hand.
 
 ## [1.1.0] - 2025-07-25
 

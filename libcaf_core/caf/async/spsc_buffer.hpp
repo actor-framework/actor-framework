@@ -4,23 +4,28 @@
 
 #pragma once
 
+#include "caf/action.hpp"
 #include "caf/async/consumer.hpp"
 #include "caf/async/policy.hpp"
 #include "caf/async/producer.hpp"
+#include "caf/callback.hpp"
 #include "caf/config.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/assert.hpp"
+#include "caf/disposable.hpp"
 #include "caf/error.hpp"
 #include "caf/intrusive_ptr.hpp"
+#include "caf/mailbox_element.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/ref_counted.hpp"
+#include "caf/resumable.hpp"
 #include "caf/sec.hpp"
 #include "caf/span.hpp"
-#include "caf/unit.hpp"
 
 #include <condition_variable>
 #include <cstdlib>
+#include <memory>
 #include <mutex>
 
 namespace caf::async {
@@ -78,6 +83,9 @@ public:
       return 0;
   }
 
+  /// Appends to the buffer and calls `on_producer_wakeup` on the consumer if
+  /// the buffer becomes non-empty.
+  /// @returns the remaining capacity after inserting the items.
   size_t push(const T& item) {
     return push(make_span(&item, 1));
   }
@@ -359,6 +367,139 @@ struct resource_ctrl : ref_counted {
   buffer_ptr buf;
 };
 
+/// Consumes data from an `spsc_buffer`.
+template <class T>
+class spsc_buffer_consumer : public ref_counted,
+                             public action::impl,
+                             public consumer {
+public:
+  using on_wakeup_signature = void(spsc_buffer_consumer<T>&);
+
+  template <class OnWakeup>
+  spsc_buffer_consumer(caf::strong_actor_ptr owner, spsc_buffer_ptr<T> buf,
+                       OnWakeup on_wakeup)
+    : owner_(std::move(owner)), buf_(std::move(buf)) {
+    using impl_t = callback_impl<OnWakeup, on_wakeup_signature>;
+    on_wakeup_ = std::make_shared<impl_t>(std::move(on_wakeup));
+  }
+
+  ~spsc_buffer_consumer() {
+    if (buf_) {
+      buf_->cancel();
+    }
+  }
+
+  template <class Observer>
+  std::pair<bool, size_t> pull(size_t demand, Observer& dst) {
+    spsc_buffer_ptr<T> buf;
+    {
+      std::unique_lock guard{mtx_};
+      buf = buf_;
+    }
+    if (!buf) {
+      return {false, 0};
+    }
+    auto [again, pulled] = buf->pull(delay_errors_t{}, demand, dst);
+    if (!again) {
+      dispose();
+    }
+    return {again, pulled};
+  }
+
+  bool disposed() const noexcept override {
+    std::unique_lock guard{mtx_};
+    return !owner_;
+  }
+
+  void dispose() override {
+    buffer_ptr_t buf;
+    {
+      std::unique_lock guard{mtx_};
+      owner_ = nullptr;
+      buf_.swap(buf);
+      on_wakeup_ = nullptr;
+    }
+    if (buf) {
+      buf->cancel();
+    }
+  }
+
+  void on_producer_ready() override {
+    // nop
+  }
+
+  void on_producer_wakeup() override {
+    std::unique_lock guard{mtx_};
+    if (owner_) {
+      owner_->enqueue(make_mailbox_element(nullptr, make_message_id(),
+                                           action{this}),
+                      nullptr);
+    }
+  }
+
+  void ref_consumer() const noexcept override {
+    ref();
+  }
+
+  void deref_consumer() const noexcept override {
+    deref();
+  }
+
+  action::state current_state() const noexcept override {
+    std::unique_lock guard{mtx_};
+    return owner_ ? action::state::scheduled : action::state::disposed;
+  }
+
+  resume_result resume(scheduler*, size_t) override {
+    on_wakeup_t on_wakeup;
+    {
+      std::unique_lock guard{mtx_};
+      on_wakeup = on_wakeup_;
+    }
+    if (on_wakeup) {
+      (*on_wakeup)(*this);
+    }
+    return resumable::done;
+  }
+
+  void ref_disposable() const noexcept override {
+    ref();
+  }
+
+  void deref_disposable() const noexcept override {
+    deref();
+  }
+
+  friend void intrusive_ptr_add_ref(const spsc_buffer_consumer* ptr) noexcept {
+    ptr->ref();
+  }
+
+  friend void intrusive_ptr_release(const spsc_buffer_consumer* ptr) noexcept {
+    ptr->deref();
+  }
+
+private:
+  using buffer_ptr_t = spsc_buffer_ptr<T>;
+
+  using on_wakeup_t = shared_callback_ptr<on_wakeup_signature>;
+
+  /// Guards access to the state of the consumer.
+  mutable std::mutex mtx_;
+
+  /// The actor that owns this consumer.
+  caf::strong_actor_ptr owner_;
+
+  /// The decorated buffer.
+  buffer_ptr_t buf_;
+
+  /// Callback handle to the consumer.
+  on_wakeup_t on_wakeup_;
+};
+
+/// @relates spsc_buffer_consumer
+template <class T>
+using spsc_buffer_consumer_ptr = intrusive_ptr<spsc_buffer_consumer<T>>;
+
 /// Grants read access to the first consumer that calls `open` on the resource.
 /// Cancels consumption of items on the buffer if the resources gets destroyed
 /// before opening it.
@@ -411,6 +552,29 @@ public:
     return ctx->make_observable().from_resource(*this);
   }
 
+  /// Creates a buffer consumer for `self` and calls `on_wakeup` whenever the
+  /// producer emits a wakeup signal. The actor will automatically watch the
+  /// consumer, i.e., the actor will not terminate (unless forced to) until the
+  /// consumer is disposed.
+  /// @param self The actor that owns the consumer.
+  /// @param on_wakeup A callback with signature
+  ///                  `void(spsc_buffer_consumer<T>&)` that will be called
+  ///                  whenever the producer emits a wakeup signal.
+  /// @returns A reference-counted pointer to the consumer or `nullptr` if the
+  ///          resource is not valid.
+  template <class Actor, class OnWakeup>
+  [[nodiscard]] spsc_buffer_consumer_ptr<T>
+  consume_on(Actor* self, OnWakeup on_wakeup) {
+    if (auto buf = try_open()) {
+      auto res = make_counted<spsc_buffer_consumer<T>>(self->ctrl(), buf,
+                                                       std::move(on_wakeup));
+      buf->set_consumer(res);
+      self->watch(res->as_disposable());
+      return res;
+    }
+    return nullptr;
+  }
+
   /// Calls `try_open` and on success immediately calls `cancel` on the buffer.
   void cancel() {
     if (auto buf = try_open())
@@ -442,6 +606,199 @@ public:
 private:
   intrusive_ptr<resource_ctrl<T, false>> ctrl_;
 };
+
+/// Produces data to an `spsc_buffer`.
+template <class T>
+class spsc_buffer_producer : public ref_counted,
+                             public action::impl,
+                             public producer {
+public:
+  using on_demand_signature = void(spsc_buffer_producer<T>&, size_t);
+
+  using on_cancel_signature = void(spsc_buffer_producer<T>&);
+
+  template <class OnDemand, class OnCancel>
+  spsc_buffer_producer(caf::strong_actor_ptr owner, spsc_buffer_ptr<T> buf,
+                       OnDemand on_demand, OnCancel on_cancel)
+    : owner_(std::move(owner)), buf_(std::move(buf)) {
+    using on_demand_impl_t = callback_impl<OnDemand, on_demand_signature>;
+    on_demand_ = std::make_shared<on_demand_impl_t>(std::move(on_demand));
+    using on_cancel_impl_t = callback_impl<OnCancel, on_cancel_signature>;
+    on_cancel_ = std::make_shared<on_cancel_impl_t>(std::move(on_cancel));
+  }
+
+  ~spsc_buffer_producer() {
+    if (buf_) {
+      buf_->close();
+    }
+  }
+
+  /// Appends to the asynchronous buffer.
+  /// @returns the remaining capacity after inserting the items.
+  size_t push(span<const T> items) {
+    buffer_ptr_t buf;
+    {
+      std::unique_lock guard{mtx_};
+      buf = buf_;
+    }
+    if (buf) {
+      return buf->push(items);
+    }
+    return 0;
+  }
+
+  /// Appends to the asynchronous buffer.
+  /// @returns the remaining capacity after inserting the items.
+  size_t push(const T& item) {
+    return push(make_span(&item, 1));
+  }
+
+  bool disposed() const noexcept override {
+    std::unique_lock guard{mtx_};
+    return !owner_;
+  }
+
+  void dispose() override {
+    buffer_ptr_t buf;
+    {
+      std::unique_lock guard{mtx_};
+      owner_ = nullptr;
+      buf.swap(buf_);
+      on_demand_ = nullptr;
+      on_cancel_ = nullptr;
+    }
+    if (buf) {
+      buf->close();
+    }
+  }
+
+  void abort(error reason) {
+    buffer_ptr_t buf;
+    {
+      std::unique_lock guard{mtx_};
+      if (!buf_) {
+        return;
+      }
+      owner_ = nullptr;
+      buf.swap(buf_);
+      on_demand_ = nullptr;
+      on_cancel_ = nullptr;
+    }
+    buf->abort(std::move(reason));
+  }
+
+  void on_consumer_ready() override {
+    // nop
+  }
+
+  void on_consumer_cancel() override {
+    std::unique_lock guard{mtx_};
+    if (owner_ && pending_demand_ >= 0) {
+      pending_demand_ = -1;
+      owner_->enqueue(make_mailbox_element(nullptr, make_message_id(),
+                                           action{this}),
+                      nullptr);
+    }
+  }
+
+  void on_consumer_demand(size_t demand) override {
+    std::unique_lock guard{mtx_};
+    if (owner_ && pending_demand_ >= 0) {
+      pending_demand_ += static_cast<ptrdiff_t>(demand);
+      owner_->enqueue(make_mailbox_element(nullptr, make_message_id(),
+                                           action{this}),
+                      nullptr);
+    }
+  }
+
+  void ref_producer() const noexcept override {
+    ref();
+  }
+
+  void deref_producer() const noexcept override {
+    deref();
+  }
+
+  action::state current_state() const noexcept override {
+    std::unique_lock guard{mtx_};
+    return owner_ ? action::state::scheduled : action::state::disposed;
+  }
+
+  resume_result resume(scheduler*, size_t) override {
+    on_demand_t on_demand;
+    size_t demand = 0;
+    buffer_ptr_t buf;
+    on_cancel_t on_cancel;
+    {
+      std::unique_lock guard{mtx_};
+      if (pending_demand_ > 0) {
+        on_demand = on_demand_;
+        demand = pending_demand_;
+        pending_demand_ = 0;
+      } else if (pending_demand_ < 0) {
+        owner_ = nullptr;
+        buf.swap(buf_);
+        on_demand_ = nullptr;
+        on_cancel.swap(on_cancel_);
+      }
+    }
+    if (on_demand) {
+      (*on_demand)(*this, demand);
+    } else if (on_cancel) {
+      (*on_cancel)(*this);
+      if (buf) {
+        buf->close();
+      }
+    }
+    return resumable::done;
+  }
+
+  void ref_disposable() const noexcept override {
+    ref();
+  }
+
+  void deref_disposable() const noexcept override {
+    deref();
+  }
+
+  friend void intrusive_ptr_add_ref(const spsc_buffer_producer* ptr) noexcept {
+    ptr->ref();
+  }
+
+  friend void intrusive_ptr_release(const spsc_buffer_producer* ptr) noexcept {
+    ptr->deref();
+  }
+
+private:
+  using buffer_ptr_t = spsc_buffer_ptr<T>;
+
+  using on_demand_t = shared_callback_ptr<on_demand_signature>;
+
+  using on_cancel_t = shared_callback_ptr<on_cancel_signature>;
+
+  /// Guards access to the state of the consumer.
+  mutable std::mutex mtx_;
+
+  /// The actor that owns this consumer.
+  caf::strong_actor_ptr owner_;
+
+  /// The decorated buffer.
+  buffer_ptr_t buf_;
+
+  /// Callback for handling demand from the consumer.
+  on_demand_t on_demand_;
+
+  /// Callback for handling cancellation from the consumer.
+  on_cancel_t on_cancel_;
+
+  /// Stores the demand from the consumer. Set to `-1` if the consumer has
+  /// canceled.
+  ptrdiff_t pending_demand_ = 0;
+};
+
+/// @relates spsc_buffer_producer
+template <class T>
+using spsc_buffer_producer_ptr = intrusive_ptr<spsc_buffer_producer<T>>;
 
 /// Grants access to a buffer to the first producer that calls `open`. Aborts
 /// writes on the buffer if the resources gets destroyed before opening it.
@@ -485,6 +842,20 @@ public:
     } else {
       return nullptr;
     }
+  }
+
+  template <class Actor, class OnDemand, class OnCancel>
+  [[nodiscard]] spsc_buffer_producer_ptr<T>
+  produce_on(Actor* self, OnDemand on_demand, OnCancel on_cancel) {
+    if (auto buf = try_open()) {
+      auto res = make_counted<spsc_buffer_producer<T>>(self->ctrl(), buf,
+                                                       std::move(on_demand),
+                                                       std::move(on_cancel));
+      buf->set_producer(res);
+      self->watch(res->as_disposable());
+      return res;
+    }
+    return nullptr;
   }
 
   /// Calls `try_open` and on success immediately calls `close` on the buffer.
