@@ -6,6 +6,7 @@
 
 #include "caf/test/context.hpp"
 #include "caf/test/nesting_error.hpp"
+#include "caf/test/registry.hpp"
 #include "caf/test/reporter.hpp"
 #include "caf/test/runnable.hpp"
 
@@ -15,6 +16,7 @@
 #include "caf/detail/log_level.hpp"
 #include "caf/detail/set_thread_name.hpp"
 #include "caf/log/level.hpp"
+#include "caf/settings.hpp"
 
 #include <condition_variable>
 #include <iostream>
@@ -27,6 +29,15 @@
 namespace caf::test {
 
 namespace {
+
+template <class... Args>
+void println_to(FILE* out, std::string_view fmt, Args&&... args) {
+  std::vector<char> buf;
+  buf.reserve(fmt.size() + 64);
+  detail::format_to(std::back_inserter(buf), fmt, std::forward<Args>(args)...);
+  buf.push_back('\n');
+  fwrite(buf.data(), 1, buf.size(), out);
+}
 
 class watchdog {
 public:
@@ -56,9 +67,7 @@ private:
              && cv_.wait_until(guard, tp) != std::cv_status::timeout) {
       }
       if (!canceled_) {
-        auto err_out = [] { return std::ostream_iterator<char>{std::cerr}; };
-        detail::format_to(err_out(),
-                          "WATCHDOG: unit test exceeded {} seconds\n", secs);
+        println_to(stderr, "WATCHDOG: unit test exceeded {} seconds", secs);
         abort();
       }
     }};
@@ -105,17 +114,15 @@ std::optional<unsigned> parse_log_level(std::string_view x) {
 
 std::optional<std::regex> to_regex(std::string_view regex_string) {
 #ifdef CAF_ENABLE_EXCEPTIONS
-  auto err_out = [] { return std::ostream_iterator<char>{std::cerr}; };
   try {
     return std::regex{regex_string.begin(), regex_string.end()};
   } catch (const std::exception& err) {
-    detail::format_to(err_out(), "error while parsing argument '{}': {}\n",
-                      regex_string, err.what());
+    println_to(stderr, "error while parsing argument '{}': {}", regex_string,
+               err.what());
     return std::nullopt;
   } catch (...) {
-    detail::format_to(err_out(),
-                      "error while parsing argument '{}': unknown error\n",
-                      regex_string);
+    println_to(stderr, "error while parsing argument '{}': unknown error",
+               regex_string);
     return std::nullopt;
   }
 #else
@@ -135,138 +142,164 @@ auto default_log_component_filter() {
   };
 }
 
-} // namespace
-
-runner::runner() : suites_(caf::test::registry::suites()) {
-  // nop
-}
-
-int runner::run(int argc, char** argv) {
-  auto default_reporter = reporter::make_default();
-  reporter::instance(default_reporter.get());
-  auto default_logger = reporter::make_logger();
-  if (auto [ok, help_printed] = parse_cli(argc, argv); !ok) {
-    return EXIT_FAILURE;
-  } else if (help_printed) {
-    return EXIT_SUCCESS;
-  }
-  auto suite_regex = to_regex(get_or(cfg_, "suites", ".*"));
-  auto test_regex = to_regex(get_or(cfg_, "tests", ".*"));
-  if (!suite_regex || !test_regex) {
-    return EXIT_FAILURE;
-  }
-  default_reporter->no_colors(get_or(cfg_, "no-colors", false));
-  default_reporter->log_component_filter(
-    get_or(cfg_, "log-component-filter", default_log_component_filter()));
-  default_reporter->start();
-  auto enabled = [](const std::regex& selected,
-                    std::string_view search_string) {
-    return std::regex_search(search_string.begin(), search_string.end(),
-                             selected);
+class runner_impl : public runner {
+public:
+  /// Bundles the result of a command line parsing operation.
+  struct parse_cli_result {
+    /// Stores whether parsing the command line arguments was successful.
+    bool ok;
+    /// Stores whether a help text was printed.
+    bool help_printed;
   };
-  watchdog runtime_guard{get_or(cfg_, "max-runtime", 0)};
-  for (auto& [suite_name, suite] : suites_) {
-    if (!enabled(*suite_regex, suite_name))
-      continue;
-    default_reporter->begin_suite(suite_name);
-    for (auto [test_name, factory_instance] : suite) {
-      if (!enabled(*test_regex, test_name))
-        continue;
-      auto state = std::make_shared<context>();
+
+  int run(int argc, char** argv) {
+    auto default_reporter = reporter::make_default();
+    reporter::instance(default_reporter.get());
+    auto default_logger = reporter::make_logger();
+    if (auto [ok, help_printed] = parse_cli(argc, argv); !ok) {
+      return EXIT_FAILURE;
+    } else if (help_printed) {
+      return EXIT_SUCCESS;
+    }
+    auto suite_regex = to_regex(get_or(cfg_, "suites", ".*"));
+    auto test_regex = to_regex(get_or(cfg_, "tests", ".*"));
+    if (!suite_regex || !test_regex) {
+      return EXIT_FAILURE;
+    }
+    auto suites = caf::test::registry::suites(
+      [&rx = *suite_regex](std::string_view suite_name) {
+        return std::regex_search(suite_name.begin(), suite_name.end(), rx);
+      },
+      [&rx = *test_regex](std::string_view test_name) {
+        return std::regex_search(test_name.begin(), test_name.end(), rx);
+      });
+    if (suites.empty()) {
+      println_to(stderr, "no suites found that match the given filters");
+      return EXIT_FAILURE;
+    }
+    default_reporter->no_colors(get_or(cfg_, "no-colors", false));
+    default_reporter->log_component_filter(
+      get_or(cfg_, "log-component-filter", default_log_component_filter()));
+    default_reporter->start();
+    watchdog runtime_guard{get_or(cfg_, "max-runtime", 0)};
+    for (auto& [suite_name, suite] : suites) {
+      default_reporter->begin_suite(suite_name);
+      for (auto [test_name, factory_instance] : suite) {
+        auto state = std::make_shared<context>();
 #ifdef CAF_ENABLE_EXCEPTIONS
-      // Must be outside of the try block to make sure the object still exists
-      // in the catch block.
-      std::unique_ptr<runnable> def;
-      try {
+        // Must be outside of the try block to make sure the object still exists
+        // in the catch block.
+        std::unique_ptr<runnable> def;
+        try {
+          do {
+            logger::current_logger(default_logger.get());
+            default_reporter->begin_test(state, test_name);
+            def = factory_instance->make(state);
+            do_run(*def);
+            default_reporter->end_test();
+            state->clear_stacks();
+          } while (state->can_run());
+        } catch (const nesting_error& ex) {
+          default_reporter->unhandled_exception(ex.message(), ex.location());
+          default_reporter->end_test();
+        } catch (const requirement_failed& ex) {
+          auto event = log::event::make(log::level::error, "caf.test",
+                                        ex.location(), 0,
+                                        "requirement failed: {}", ex.message());
+          default_reporter->print(event);
+          default_reporter->end_test();
+        } catch (const std::exception& ex) {
+          default_reporter->unhandled_exception(ex.what());
+          default_reporter->end_test();
+        } catch (...) {
+          default_reporter->unhandled_exception("unknown exception type");
+          default_reporter->end_test();
+        }
+#else
         do {
-          logger::current_logger(default_logger.get());
           default_reporter->begin_test(state, test_name);
-          def = factory_instance->make(state);
-          def->run();
+          auto def = factory_instance->make(state);
+          do_run(*def);
           default_reporter->end_test();
           state->clear_stacks();
         } while (state->can_run());
-      } catch (const nesting_error& ex) {
-        default_reporter->unhandled_exception(ex.message(), ex.location());
-        default_reporter->end_test();
-      } catch (const requirement_failed& ex) {
-        auto event = log::event::make(log::level::error, "caf.test",
-                                      ex.location(), 0,
-                                      "requirement failed: {}", ex.message());
-        default_reporter->print(event);
-        default_reporter->end_test();
-      } catch (const std::exception& ex) {
-        default_reporter->unhandled_exception(ex.what());
-        default_reporter->end_test();
-      } catch (...) {
-        default_reporter->unhandled_exception("unknown exception type");
-        default_reporter->end_test();
-      }
-#else
-      do {
-        default_reporter->begin_test(state, test_name);
-        auto def = factory_instance->make(state);
-        def->run();
-        default_reporter->end_test();
-        state->clear_stacks();
-      } while (state->can_run());
 #endif
+      }
+      default_reporter->end_suite(suite_name);
     }
-    default_reporter->end_suite(suite_name);
+    default_reporter->stop();
+    return default_reporter->success() ? EXIT_SUCCESS : EXIT_FAILURE;
   }
-  default_reporter->stop();
-  return default_reporter->success() ? EXIT_SUCCESS : EXIT_FAILURE;
+
+  parse_cli_result parse_cli(int argc, char** argv) {
+    std::vector<std::string> args_cpy{argv + 1, argv + argc};
+    auto options = make_option_set();
+    auto res = options.parse(cfg_, args_cpy);
+    if (res.first != caf::pec::success) {
+      println_to(stderr, "error while parsing argument '{}': {}\n\n{}",
+                 *res.second, to_string(res.first), options.help_text());
+      return {false, true};
+    }
+    if (get_or(cfg_, "help", false)) {
+      println_to(stderr, "{}", options.help_text());
+      return {true, true};
+    }
+    if (get_or(cfg_, "available-suites", false)) {
+      println_to(stderr, "available suites:");
+      for (auto& [suite_name, suite] : registry::suites())
+        println_to(stderr, "- {}", suite_name);
+      return {true, true};
+    }
+    if (auto suite_name = get_as<std::string>(cfg_, "available-tests")) {
+      auto suites = registry::suites();
+      auto i = suites.find(*suite_name);
+      if (i == suites.end()) {
+        println_to(stderr, "no such suite: {}", *suite_name);
+        return {false, true};
+      }
+      println_to(stderr, "available tests in suite {}:", i->first);
+      for (const auto& [test_name, factory_instance] : i->second)
+        println_to(stderr, "- {}", test_name);
+      return {true, true};
+    }
+    if (auto verbosity = get_as<std::string>(cfg_, "verbosity")) {
+      auto level = parse_log_level(*verbosity);
+      if (!level) {
+        println_to(stderr,
+                   "unrecognized verbosity level: '{}'\n"
+                   "expected one of:\n"
+                   "- quiet\n"
+                   "- error\n"
+                   "- warning\n"
+                   "- info\n"
+                   "- debug\n"
+                   "- trace",
+                   *verbosity);
+        return {false, true};
+      }
+      reporter::instance().verbosity(*level);
+    }
+    return {true, false};
+  }
+
+  caf::settings cfg_;
+};
+
+} // namespace
+
+runner::~runner() {
+  // nop
 }
 
-runner::parse_cli_result runner::parse_cli(int argc, char** argv) {
-  std::vector<std::string> args_cpy{argv + 1, argv + argc};
-  auto options = make_option_set();
-  auto res = options.parse(cfg_, args_cpy);
-  auto err = std::ostream_iterator<char>{std::cerr};
-  if (res.first != caf::pec::success) {
-    detail::format_to(err, "error while parsing argument '{}': {}\n\n{}\n",
-                      *res.second, to_string(res.first), options.help_text());
-    return {false, true};
-  }
-  if (get_or(cfg_, "help", false)) {
-    detail::format_to(err, "{}\n", options.help_text());
-    return {true, true};
-  }
-  if (get_or(cfg_, "available-suites", false)) {
-    detail::format_to(err, "available suites:\n");
-    for (auto& [suite_name, suite] : suites_)
-      detail::format_to(err, "- {}\n", suite_name);
-    return {true, true};
-  }
-  if (auto suite_name = get_as<std::string>(cfg_, "available-tests")) {
-    auto i = suites_.find(*suite_name);
-    if (i == suites_.end()) {
-      detail::format_to(err, "no such suite: {}\n", *suite_name);
-      return {false, true};
-    }
-    detail::format_to(err, "available tests in suite {}:\n", i->first);
-    for (const auto& [test_name, factory_instance] : i->second)
-      detail::format_to(err, "- {}\n", test_name);
-    return {true, true};
-  }
-  if (auto verbosity = get_as<std::string>(cfg_, "verbosity")) {
-    auto level = parse_log_level(*verbosity);
-    if (!level) {
-      detail::format_to(err,
-                        "unrecognized verbosity level: '{}'\n"
-                        "expected one of:\n"
-                        "- quiet\n"
-                        "- error\n"
-                        "- warning\n"
-                        "- info\n"
-                        "- debug\n"
-                        "- trace\n",
-                        *verbosity);
-      return {false, true};
-    }
-    reporter::instance().verbosity(*level);
-  }
-  return {true, false};
+std::unique_ptr<runner> runner::make() {
+  return std::make_unique<runner_impl>();
+}
+
+void runner::do_run(runnable& what) {
+  // The method `runnable::run` is private to ensure users won't call it by
+  // mistake. Since `runner` is a friend class, we can call it here and allow
+  // sub-classes to call it via this simple wrapper.
+  what.run();
 }
 
 } // namespace caf::test
