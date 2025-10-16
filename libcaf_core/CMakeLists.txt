@@ -244,6 +244,7 @@ caf_add_component(
     caf/flow/observe_on.test.cpp
     caf/flow/op/auto_connect.test.cpp
     caf/flow/op/buffer.test.cpp
+    caf/flow/op/cache.test.cpp
     caf/flow/op/cell.test.cpp
     caf/flow/op/concat.test.cpp
     caf/flow/op/debounce.test.cpp

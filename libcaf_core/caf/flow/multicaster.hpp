@@ -104,6 +104,11 @@ public:
     return *pimpl_;
   }
 
+  /// @private
+  const impl_ptr& pimpl() const {
+    return pimpl_;
+  }
+
 private:
   impl_ptr pimpl_;
 };
