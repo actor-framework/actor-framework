@@ -47,7 +47,7 @@ response_promise::response_promise(local_actor* self, strong_actor_ptr source,
 }
 
 response_promise::response_promise(local_actor* self, mailbox_element& src)
-  : response_promise(self, std::move(src.sender), src.mid) {
+  : response_promise(self, src.sender, src.mid) {
   // nop
 }
 
