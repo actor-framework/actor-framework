@@ -49,15 +49,17 @@ public:
     auto [s2a_pull, s2a_push] = async::make_spsc_buffer_resource<frame>();
     auto [a2s_pull, a2s_push] = async::make_spsc_buffer_resource<frame>();
     // Wrap the trait and the buffers that belong to the socket.
-    auto res = base_config().visit(
-      [this, pull = a2s_pull, push = s2a_push](auto& data) mutable {
-        return this->do_start(data, std::move(pull), std::move(push));
-      });
+    auto res = start_with(std::move(a2s_pull), std::move(s2a_push));
     if (res) {
       on_start(std::move(s2a_pull), std::move(a2s_push));
     }
     return res;
   }
+
+  /// Starts a connection with the length-prefixing protocol and custom buffers.
+  [[nodiscard]] expected<disposable>
+  start_with(async::consumer_resource<frame> pull,
+             async::producer_resource<frame> push);
 
 protected:
   dsl::client_config_value& base_config() override;

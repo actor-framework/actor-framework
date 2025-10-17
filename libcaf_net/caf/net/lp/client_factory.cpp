@@ -97,4 +97,12 @@ expected<disposable> client_factory::do_start(error& err, pull_t, push_t) {
   return expected<disposable>{std::move(err)};
 }
 
+expected<disposable>
+client_factory::start_with(async::consumer_resource<frame> pull,
+                           async::producer_resource<frame> push) {
+  return config_->visit([this, &pull, &push](auto& data) {
+    return this->do_start(data, std::move(pull), std::move(push));
+  });
+}
+
 } // namespace caf::net::lp

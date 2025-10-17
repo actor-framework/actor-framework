@@ -23,6 +23,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   `produce_on` that allows actors to produce data without having to use a flow.
   This is the symmetric counterpart to `consume_on` on `consumer_resource<T>`
   and should only be used when flows are not suitable for the use case at hand.
+- The DSL for starting a client using WebSocket or Length-Prefix Framing now
+  supports `starts_with` for passing pre-allocated buffer resources to the
+  protocol layer.
 
 ## [1.1.0] - 2025-07-25
 
