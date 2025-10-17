@@ -25,6 +25,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   more consistent.
 - The default maximum message size for the length-prefix framing has been
   reduced to 64 MB. This change was made to improve security by default.
+- Creating a response promise no longer invalidates `self->current_sender()`.
 
 ### Deprecated
 
