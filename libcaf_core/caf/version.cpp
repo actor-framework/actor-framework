@@ -4,6 +4,8 @@
 
 #include "caf/version.hpp"
 
+#include <cstdio>
+
 namespace caf {
 
 int version::get_major() noexcept {
@@ -24,6 +26,14 @@ std::string_view version::str() noexcept {
 
 const char* version::c_str() noexcept {
   return CAF_VERSION_STR;
+}
+
+void version::check_abi_compatibility(abi_token token) noexcept {
+  if (static_cast<int>(token) != CAF_VERSION_MAJOR) {
+    fprintf(stderr, "CAF ABI mismatch: expected version %d, got %d\n",
+            CAF_VERSION_MAJOR, static_cast<int>(token));
+    abort();
+  }
 }
 
 inline namespace CAF_ABI_NAMESPACE {
