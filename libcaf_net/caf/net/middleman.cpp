@@ -15,6 +15,7 @@
 #include "caf/log/system.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/thread_owner.hpp"
+#include "caf/version.hpp"
 
 namespace caf::net {
 
@@ -156,9 +157,7 @@ actor_system_module* middleman::make(actor_system& sys) {
 }
 
 void middleman::check_abi_compatibility(version::abi_token token) {
-  if (static_cast<int>(token) != CAF_VERSION_MAJOR) {
-    CAF_CRITICAL("CAF ABI token mismatch");
-  }
+  version::check_abi_compatibility(token);
 }
 
 } // namespace caf::net
