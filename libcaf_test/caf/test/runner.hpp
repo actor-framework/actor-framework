@@ -4,33 +4,27 @@
 
 #pragma once
 
-#include "caf/test/registry.hpp"
+#include "caf/test/fwd.hpp"
 
 #include "caf/detail/test_export.hpp"
-#include "caf/settings.hpp"
+
+#include <memory>
 
 namespace caf::test {
 
 /// Implements the main loop for running tests.
 class CAF_TEST_EXPORT runner {
 public:
-  /// Bundles the result of a command line parsing operation.
-  struct parse_cli_result {
-    /// Stores whether parsing the command line arguments was successful.
-    bool ok;
-    /// Stores whether a help text was printed.
-    bool help_printed;
-  };
+  virtual ~runner();
 
-  runner();
+  /// Parses the command line arguments and runs the tests.
+  virtual int run(int argc, char** argv) = 0;
 
-  int run(int argc, char** argv);
+  /// Creates a new runner.
+  static std::unique_ptr<runner> make();
 
-private:
-  parse_cli_result parse_cli(int argc, char** argv);
-
-  registry::suites_map suites_;
-  caf::settings cfg_;
+protected:
+  void do_run(runnable& what);
 };
 
 } // namespace caf::test
