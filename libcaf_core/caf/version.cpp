@@ -5,6 +5,7 @@
 #include "caf/version.hpp"
 
 #include <cstdio>
+#include <cstdlib>
 
 namespace caf {
 
