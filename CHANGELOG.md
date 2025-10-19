@@ -24,6 +24,10 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   This is the symmetric counterpart to `consume_on` on `consumer_resource<T>`
   and should only be used when flows are not suitable for the use case at hand.
 
+### Fixed
+
+- Add a missing implementation for `caf::version::check_abi_compatibility`.
+
 ## [1.1.0] - 2025-07-25
 
 ### Changed
