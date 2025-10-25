@@ -7,9 +7,7 @@
 #include "caf/abstract_mailbox.hpp"
 #include "caf/abstract_scheduled_actor.hpp"
 #include "caf/action.hpp"
-#include "caf/actor_traits.hpp"
 #include "caf/async/fwd.hpp"
-#include "caf/config.hpp"
 #include "caf/cow_string.hpp"
 #include "caf/detail/behavior_stack.hpp"
 #include "caf/detail/core_export.hpp"
@@ -72,8 +70,8 @@ CAF_CORE_EXPORT skippable_result drop(scheduled_actor*, message&);
 
 /// A cooperatively scheduled, event-based actor implementation.
 class CAF_CORE_EXPORT scheduled_actor : public abstract_scheduled_actor,
-                                        public resumable,
-                                        public flow::coordinator {
+                                        public flow::coordinator,
+                                        public resumable {
 public:
   // -- friends ----------------------------------------------------------------
 
@@ -488,7 +486,8 @@ public:
   /// @note Both @p buf_capacity and @p demand_threshold are considered hints.
   ///       The actor may increase (or decrease) the effective settings
   ///       depending on the amount of messages per batch or other factors.
-  template <class T, bool = flow::assert_has_impl_include<T>>
+  template <class T>
+    requires flow::assert_has_impl_include<T>
   auto
   observe(typed_stream<T> what, size_t buf_capacity, size_t demand_threshold);
 
@@ -500,7 +499,8 @@ public:
   /// @note Both @p buf_capacity and @p demand_threshold are considered hints.
   ///       The actor may increase (or decrease) the effective settings
   ///       depending on the amount of messages per batch or other factors.
-  template <class T, bool = flow::assert_has_impl_include<T>>
+  template <class T>
+    requires flow::assert_has_impl_include<T>
   auto observe_as(stream what, size_t buf_capacity, size_t demand_threshold);
 
   /// Deregisters a local stream. After calling this function, other actors can
@@ -763,8 +763,8 @@ private:
   /// Stores the current timeout state.
   timeout_state timeout_state_;
 
-  template <class T, bool = flow::assert_has_impl_include<T>>
-  auto single_from_response(message_id mid, disposable pending_timeout);
+  flow::observable<async::batch> do_observe(stream what, size_t buf_capacity,
+                                            size_t request_threshold);
 
   void do_unstash(mailbox_element_ptr ptr) override;
 
@@ -809,20 +809,8 @@ private:
 
   flow::coordinator* flow_context() override;
 
-  template <class T, class Policy>
-  flow::single<T> single_from_response(Policy& policy) {
-    return single_from_response_impl<T>(policy);
-  }
-
-  template <class T, class Policy>
-  flow::single<T> single_from_response_impl(Policy& policy);
-
   /// Removes any watched object that became disposed since the last update.
   void update_watched_disposables();
-
-  /// Implementation detail for observe_as.
-  flow::observable<async::batch> do_observe(stream what, size_t buf_capacity,
-                                            size_t request_threshold);
 
   /// Implementation detail for to_stream.
   stream to_stream_impl(cow_string name, batch_op_ptr batch_op,

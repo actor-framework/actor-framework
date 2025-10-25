@@ -71,7 +71,7 @@ public:
     auto [s2a_pull, s2a_push] = async::make_spsc_buffer_resource<std::byte>();
     auto [a2s_pull, a2s_push] = async::make_spsc_buffer_resource<std::byte>();
     // Push buffers to the client.
-    mcast_->push_all(event_type{std::move(s2a_pull), std::move(a2s_push)});
+    mcast_->push(event_type{std::move(s2a_pull), std::move(a2s_push)});
     // Create the flow bridge.
     auto bridge = internal::make_octet_stream_flow_bridge(read_buffer_size_,
                                                           write_buffer_size_,

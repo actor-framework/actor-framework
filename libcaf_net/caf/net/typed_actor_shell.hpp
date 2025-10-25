@@ -25,12 +25,8 @@ class typed_actor_shell;
 /// Enables socket managers to communicate with actors using statically typed
 /// messaging.
 template <class TraitOrSignature>
-class typed_actor_shell<TraitOrSignature>
-  // clang-format off
-  : public extend<abstract_actor_shell, typed_actor_shell<TraitOrSignature>>::template
-           with<mixin::requester>,
-    public statically_typed_actor_base {
-  // clang-format on
+class typed_actor_shell<TraitOrSignature> : public abstract_actor_shell,
+                                            public statically_typed_actor_base {
 public:
   // -- friends ----------------------------------------------------------------
 
@@ -39,11 +35,7 @@ public:
 
   // -- member types -----------------------------------------------------------
 
-  // clang-format off
-  using super =
-    typename extend<abstract_actor_shell, typed_actor_shell<TraitOrSignature>>::template
-             with<mixin::requester>;
-  // clang-format on
+  using super = abstract_actor_shell;
 
   using trait = detail::to_statically_typed_trait_t<TraitOrSignature>;
 
@@ -72,6 +64,8 @@ public:
     return event_based_mail(trait{}, this, std::forward<Args>(args)...);
   }
 
+  CAF_ADD_DEPRECATED_REQUEST_API
+
   // -- overridden functions of local_actor ------------------------------------
 
   const char* name() const override {
@@ -82,12 +76,8 @@ public:
 /// Enables socket managers to communicate with actors using statically typed
 /// messaging.
 template <class T1, class T2, class... Ts>
-class typed_actor_shell<T1, T2, Ts...>
-  // clang-format off
-  : public extend<abstract_actor_shell, typed_actor_shell<T1, T2, Ts...>>::template
-           with<mixin::requester>,
-    public statically_typed_actor_base {
-  // clang-format on
+class typed_actor_shell<T1, T2, Ts...> : public abstract_actor_shell,
+                                         public statically_typed_actor_base {
 public:
   // -- friends ----------------------------------------------------------------
 
@@ -96,15 +86,15 @@ public:
 
   // -- member types -----------------------------------------------------------
 
-  // clang-format off
-  using super =
-    typename extend<abstract_actor_shell, typed_actor_shell<T1, T2, Ts...>>::template
-             with<mixin::requester>;
-  // clang-format on
+  using super = abstract_actor_shell;
 
   using signatures = type_list<T1, T2, Ts...>;
 
   using behavior_type = typed_behavior<T1, T2, Ts...>;
+
+  struct trait {
+    using signatures = type_list<T1, T2, Ts...>;
+  };
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -118,6 +108,16 @@ public:
     auto new_bhvr = behavior_type{std::move(fs)...};
     this->set_behavior_impl(std::move(new_bhvr.unbox()));
   }
+
+  // -- messaging --------------------------------------------------------------
+
+  /// Starts a new message.
+  template <class... Args>
+  auto mail(Args&&... args) {
+    return event_based_mail(trait{}, this, std::forward<Args>(args)...);
+  }
+
+  CAF_ADD_DEPRECATED_REQUEST_API
 
   // -- overridden functions of local_actor ------------------------------------
 

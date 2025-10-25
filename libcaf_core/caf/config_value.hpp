@@ -9,6 +9,7 @@
 #include "caf/detail/bounds_checker.hpp"
 #include "caf/detail/concepts.hpp"
 #include "caf/detail/core_export.hpp"
+#include "caf/detail/metaprogramming.hpp"
 #include "caf/detail/parse.hpp"
 #include "caf/detail/squashed_int.hpp"
 #include "caf/dictionary.hpp"

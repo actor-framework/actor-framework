@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/detail/concepts.hpp"
+#include "caf/detail/metaprogramming.hpp"
 
 #include <type_traits>
 

@@ -331,7 +331,6 @@ caf_add_component(
     caf/meta/handler.cpp
     caf/meta/handler.test.cpp
     caf/metaprogramming.test.cpp
-    caf/mixin/requester.test.cpp
     caf/monitor.test.cpp
     caf/mtl.test.cpp
     caf/node_id.cpp
@@ -340,13 +339,10 @@ caf_add_component(
     caf/or_else.test.cpp
     caf/parser_state.cpp
     caf/pec.test.cpp
-    caf/policy/select_all.test.cpp
-    caf/policy/select_any.test.cpp
     caf/proxy_registry.cpp
     caf/raise_error.cpp
     caf/ref_counted.cpp
     caf/request_timeout.test.cpp
-    caf/response_handle.test.cpp
     caf/response_promise.cpp
     caf/response_promise.test.cpp
     caf/result.test.cpp

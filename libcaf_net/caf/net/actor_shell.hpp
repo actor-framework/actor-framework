@@ -21,9 +21,8 @@ namespace caf::net {
 
 /// Enables socket managers to communicate with actors using dynamically typed
 /// messaging.
-class CAF_NET_EXPORT actor_shell
-  : public extend<abstract_actor_shell, actor_shell>::with<mixin::requester>,
-    public dynamically_typed_actor_base {
+class CAF_NET_EXPORT actor_shell : public abstract_actor_shell,
+                                   public dynamically_typed_actor_base {
 public:
   // -- friends ----------------------------------------------------------------
 
@@ -31,7 +30,7 @@ public:
 
   // -- member types -----------------------------------------------------------
 
-  using super = extended_base;
+  using super = abstract_actor_shell;
 
   using signatures = none_t;
 
@@ -59,6 +58,8 @@ public:
     return event_based_mail(dynamically_typed{}, this,
                             std::forward<Args>(args)...);
   }
+
+  CAF_ADD_DEPRECATED_REQUEST_API
 
   // -- overridden functions of local_actor ------------------------------------
 

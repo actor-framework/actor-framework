@@ -5,6 +5,7 @@
 #include "caf/caf_main.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/scheduled_actor/flow.hpp"
+#include "caf/stream.hpp"
 
 #include <atomic>
 #include <csignal>

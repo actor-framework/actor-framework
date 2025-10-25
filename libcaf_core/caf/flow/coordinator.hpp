@@ -15,7 +15,6 @@
 #include "caf/timespan.hpp"
 
 #include <chrono>
-#include <tuple>
 #include <type_traits>
 #include <utility>
 

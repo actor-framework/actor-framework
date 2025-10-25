@@ -28,11 +28,10 @@ namespace caf::io {
 /// Describes a dynamically typed broker.
 /// @extends abstract_broker
 /// @ingroup Broker
-class CAF_IO_EXPORT broker
-  : public extend<abstract_broker, broker>::with<mixin::requester>,
-    public dynamically_typed_actor_base {
+class CAF_IO_EXPORT broker : public abstract_broker,
+                             public dynamically_typed_actor_base {
 public:
-  using super = extended_base;
+  using super = abstract_broker;
 
   using signatures = none_t;
 
@@ -65,6 +64,8 @@ public:
     return event_based_mail(dynamically_typed{}, this,
                             std::forward<Args>(args)...);
   }
+
+  CAF_ADD_DEPRECATED_REQUEST_API
 
   // -- behavior management ----------------------------------------------------
 

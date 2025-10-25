@@ -38,16 +38,14 @@ namespace caf {
 /// A thread-mapped or context-switching actor using a blocking
 /// receive rather than a behavior-stack based message processing.
 /// @extends local_actor
-class CAF_CORE_EXPORT blocking_actor
-  : public extend<abstract_blocking_actor,
-                  blocking_actor>::with<mixin::requester>,
-    public dynamically_typed_actor_base,
-    public blocking_actor_base {
+class CAF_CORE_EXPORT blocking_actor : public abstract_blocking_actor,
+                                       public dynamically_typed_actor_base,
+                                       public blocking_actor_base {
 public:
   // -- nested and member types ------------------------------------------------
 
   /// Base type.
-  using super = extended_base;
+  using super = abstract_blocking_actor;
 
   /// Absolute timeout type.
   using timeout_type = std::chrono::high_resolution_clock::time_point;
@@ -279,6 +277,8 @@ public:
     return blocking_mail(dynamically_typed{}, this,
                          std::forward<Args>(args)...);
   }
+
+  CAF_ADD_DEPRECATED_REQUEST_API
 
   // -- monitoring -------------------------------------------------------------
 

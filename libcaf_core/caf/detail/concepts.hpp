@@ -8,7 +8,6 @@
 #include "caf/fwd.hpp"
 
 #include <array>
-#include <functional>
 #include <iterator>
 #include <optional>
 #include <string>
@@ -17,9 +16,6 @@
 #include <utility>
 
 namespace caf::detail {
-
-template <class T>
-constexpr T* null_v = nullptr;
 
 template <class T, class... Ts>
 concept one_of = (std::is_same_v<T, Ts> || ...);
@@ -132,13 +128,6 @@ struct is_expected_oracle<expected<T>> : std::true_type {};
 
 template <class T>
 concept is_expected = is_expected_oracle<T>::value;
-
-/// Utility for fallbacks calling `static_assert`.
-template <class>
-struct always_false_oracle : std::false_type {};
-
-template <class T>
-concept always_false = always_false_oracle<T>::value;
 
 /// Utility trait for checking whether T is a `std::pair`.
 template <class T>
@@ -297,24 +286,6 @@ struct is_optional_oracle<std::optional<T>> : std::true_type {};
 
 template <class T>
 concept is_optional = is_optional_oracle<T>::value;
-
-template <class T>
-struct unboxed_trait {
-  using type = T;
-};
-
-template <class T>
-struct unboxed_trait<std::optional<T>> {
-  using type = T;
-};
-
-template <class T>
-struct unboxed_trait<expected<T>> {
-  using type = T;
-};
-
-template <class T>
-using unboxed = typename unboxed_trait<T>::type;
 
 template <class T>
 concept is_64bit_integer = std::is_same_v<T, int64_t>

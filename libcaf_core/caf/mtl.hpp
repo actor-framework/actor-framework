@@ -6,6 +6,7 @@
 
 #include "caf/actor.hpp"
 #include "caf/actor_cast.hpp"
+#include "caf/detail/metaprogramming.hpp"
 #include "caf/detail/mtl_util.hpp"
 #include "caf/typed_actor.hpp"
 

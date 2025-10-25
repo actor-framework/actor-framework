@@ -5,10 +5,11 @@
 #pragma once
 
 #include "caf/abstract_scheduled_actor.hpp"
+#include "caf/detail/metaprogramming.hpp"
 #include "caf/detail/response_type_check.hpp"
 #include "caf/disposable.hpp"
-#include "caf/flow/fwd.hpp"
 #include "caf/fwd.hpp"
+#include "caf/log/core.hpp"
 #include "caf/message_id.hpp"
 #include "caf/policy/select_all.hpp"
 #include "caf/policy/select_all_tag.hpp"
@@ -43,75 +44,10 @@ template <class Policy, class Result>
 using event_based_fan_out_response_handle_t =
   typename event_based_fan_out_response_handle_oracle<Policy, Result>::type;
 
-template <class, class...>
-struct fan_out_response_to_flow_cell_helper;
-
-template <class Policy>
-struct fan_out_response_to_flow_cell_helper<Policy> {
-  static auto make_behavior(abstract_scheduled_actor* self,
-                            flow::coordinator* coord) {
-    auto cell = make_counted<flow::op::cell<unit_t>>(coord);
-    return std::tuple{std::move(cell),
-                      [self, cell] {
-                        cell->set_value(unit);
-                        self->run_actions();
-                      },
-                      [self, cell](error err) {
-                        cell->set_error(std::move(err));
-                        self->run_actions();
-                      }};
-  }
-};
-
-template <class Policy, class T>
-struct fan_out_response_to_flow_cell_helper<Policy, T> {
-  static auto make_behavior(abstract_scheduled_actor* self,
-                            flow::coordinator* coord) {
-    using value_type
-      = std::conditional_t<std::is_same_v<Policy, policy::select_all_tag_t>,
-                           std::vector<T>, T>;
-    auto cell = make_counted<flow::op::cell<value_type>>(coord);
-    return std::tuple(
-      std::move(cell),
-      [self, cell](value_type value) {
-        cell->set_value(std::move(value));
-        self->run_actions();
-      },
-      [self, cell](error err) {
-        cell->set_error(std::move(err));
-        self->run_actions();
-      });
-  }
-};
-
-template <class Policy, class T1, class T2, class... Ts>
-struct fan_out_response_to_flow_cell_helper<Policy, T1, T2, Ts...> {
-  static auto make_behavior(abstract_scheduled_actor* self,
-                            flow::coordinator* coord) {
-    using tuple_t = cow_tuple<T1, T2, Ts...>;
-    using value_type
-      = std::conditional_t<std::is_same_v<Policy, policy::select_all_tag_t>,
-                           std::vector<tuple_t>, tuple_t>;
-    auto cell = make_counted<flow::op::cell<value_type>>(coord);
-    return std::tuple(
-      std::move(cell),
-      [self, cell](value_type vals) {
-        cell->set_value(std::move(vals));
-        self->run_actions();
-      },
-      [self, cell](error err) {
-        cell->set_error(std::move(err));
-        self->run_actions();
-      });
-  }
-};
-
-} // namespace caf::detail
-
-namespace caf {
-
 /// Holds state for a event-based response handles.
 struct event_based_fan_out_response_handle_state {
+  static constexpr bool is_fan_out = true;
+
   /// Points to the parent actor.
   abstract_scheduled_actor* self;
 
@@ -122,6 +58,10 @@ struct event_based_fan_out_response_handle_state {
   disposable pending_timeout;
 };
 
+} // namespace caf::detail
+
+namespace caf {
+
 /// This helper class identifies an expected response message and enables
 /// `request(...).then(...)`.
 template <class Policy, class... Results>
@@ -130,6 +70,13 @@ public:
   // -- friends ----------------------------------------------------------------
 
   friend class scheduled_actor;
+
+  // -- constants --------------------------------------------------------------
+
+  static constexpr bool is_dynamically_typed
+    = std::is_same_v<type_list<Results...>, type_list<message>>;
+
+  static constexpr bool is_statically_typed = !is_dynamically_typed;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -167,12 +114,13 @@ public:
 
   template <class OnValue, class OnError>
   void then(OnValue on_value, OnError on_error) && {
-    auto lg = log::core::trace("ids_ = {}", state_.mids);
+    auto lg = log::core::trace("ids = {}", state_.mids);
     detail::fan_out_response_type_check<Policy, OnValue, OnError, Results...>();
     behavior bhvr;
     if constexpr (std::same_as<Policy, policy::select_all_tag_t>) {
       bhvr = make_select_all_behavior(std::move(on_value), std::move(on_error));
     } else {
+      static_assert(std::same_as<Policy, policy::select_any_tag_t>);
       bhvr = make_select_any_behavior(std::move(on_value), std::move(on_error));
     }
     for (const auto& mid : state_.mids)
@@ -188,37 +136,47 @@ public:
                                  });
   }
 
-  auto as_single() &&
-    requires (!std::same_as<type_list<Results...>, type_list<message>>)
-  {
-    return std::move(*this).template as_single_helper<Results...>();
+  template <class T = abstract_scheduled_actor>
+    requires is_statically_typed && flow::assert_has_impl_include<T>
+  auto as_single() && {
+    // Note: templatized so we need the definition of response_to_single only
+    //       when instantiating this function
+    return detail::implicit_cast<T*>(state_.self)
+      ->response_to_single(type_list_v<Results...>, state_);
   }
 
-  // Overload for dynamically typed response.
-  template <class... Ts>
-  auto as_single() &&
-    requires std::same_as<type_list<Results...>, type_list<message>>
-  {
-    return std::move(*this).template as_single_helper<Ts...>();
+  template <class T, class... Ts>
+    requires is_dynamically_typed && flow::assert_has_impl_include<T>
+  auto as_single() && {
+    // Note: templatized so we need the definition of response_to_single only
+    //       when instantiating this function
+    using self_type = detail::left<abstract_scheduled_actor, T>;
+    return detail::implicit_cast<self_type*>(state_.self)
+      ->response_to_single(type_list_v<T, Ts...>, state_);
   }
 
-  auto as_observable() &&
-    requires (!std::same_as<type_list<Results...>, type_list<message>>)
-  {
-    return std::move(*this).template as_single_helper<Results...>().as_observable();
+  template <class T = abstract_scheduled_actor>
+    requires is_statically_typed && flow::assert_has_impl_include<T>
+  auto as_observable() && {
+    // Note: templatized so we need the definition of response_to_observable
+    //       only when instantiating this function
+    return detail::implicit_cast<T*>(state_.self)
+      ->response_to_observable(type_list_v<Results...>, state_, Policy{});
   }
 
-  // Overload for dynamically typed response.
-  template <class... Ts>
-  auto as_observable() &&
-    requires std::same_as<type_list<Results...>, type_list<message>>
-  {
-    return std::move(*this).template as_single_helper<Ts...>().as_observable();
+  template <class T, class... Ts>
+    requires is_dynamically_typed && flow::assert_has_impl_include<T>
+  auto as_observable() && {
+    // Note: templatized so we need the definition of response_to_observable
+    //       only when instantiating this function
+    using self_type = detail::left<abstract_scheduled_actor, T>;
+    return detail::implicit_cast<self_type*>(state_.self)
+      ->response_to_observable(type_list_v<T, Ts...>, state_, Policy{});
   }
 
 private:
   /// Holds the state for the handle.
-  event_based_fan_out_response_handle_state state_;
+  detail::event_based_fan_out_response_handle_state state_;
 
   template <class F, class OnError>
   behavior make_select_all_behavior(F&& f, OnError&& g) {
@@ -260,36 +218,6 @@ private:
     };
     return {std::move(result_handler), std::move(error_handler)};
   }
-
-  template <class... Ts>
-  auto as_single_helper() && {
-    auto lg = log::core::trace("ids_ = {}", state_.mids);
-    using behavior_helper
-      = detail::fan_out_response_to_flow_cell_helper<Policy, Ts...>;
-    auto [cell, on_value, on_error] = behavior_helper::make_behavior(
-      state_.self, state_.self->flow_context());
-    behavior bhvr;
-    if constexpr (std::same_as<Policy, policy::select_all_tag_t>) {
-      bhvr = make_select_all_behavior(std::move(on_value), std::move(on_error));
-    } else {
-      // For select_any with multiple parameters, create a cow_tuple wrapper.
-      if constexpr (sizeof...(Ts) > 1) {
-        auto wrapper = [on_value = std::move(on_value)](Ts... args) mutable {
-          on_value(cow_tuple<Ts...>{std::move(args)...});
-        };
-        bhvr = make_select_any_behavior(std::move(wrapper),
-                                        std::move(on_error));
-      } else {
-        bhvr = make_select_any_behavior(std::move(on_value),
-                                        std::move(on_error));
-      }
-    }
-    for (const auto& mid : state_.mids)
-      state_.self->add_multiplexed_response_handler(mid, bhvr,
-                                                    state_.pending_timeout);
-    using val_t = typename decltype(cell)::value_type::output_type;
-    return flow::single<val_t>{std::move(cell)};
-  }
 };
 
 /// Similar to `event_based_fan_out_response_handle`, but also holds the
@@ -297,8 +225,17 @@ private:
 template <class Policy, class... Results>
 class event_based_fan_out_delayed_response_handle {
 public:
+  // -- nested types -----------------------------------------------------------
+
   using decorated_type
     = event_based_fan_out_response_handle<Policy, Results...>;
+
+  // -- constants --------------------------------------------------------------
+
+  static constexpr bool is_dynamically_typed
+    = std::is_same_v<type_list<Results...>, type_list<message>>;
+
+  static constexpr bool is_statically_typed = !is_dynamically_typed;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -341,26 +278,30 @@ public:
     return std::move(pending_request);
   }
 
-  auto as_single() &&                                                  //
-    requires(!std::same_as<type_list<Results...>, type_list<message>>) //
-  { return std::move(decorated).as_single(); }
+  auto as_single() &&
+    requires is_statically_typed
+  {
+    return std::move(decorated).as_single();
+  }
 
-    // Overload for dynamically typed response.
-    template <class... Ts>
-    auto as_single() &&
-      requires std::same_as<type_list<Results...>, type_list<message>>
+  // Overload for dynamically typed response.
+  template <class... Ts>
+  auto as_single() &&
+    requires is_dynamically_typed
   {
     return std::move(decorated).template as_single<Ts...>();
   }
 
-  auto as_observable()                                                    //
-    && requires(!std::same_as<type_list<Results...>, type_list<message>>) //
-  { return std::move(decorated).as_observable(); }
+  auto as_observable() &&
+    requires is_statically_typed
+  {
+    return std::move(decorated).as_observable();
+  }
 
-    // Overload for dynamically typed response.
-    template <class... Ts>
-    auto as_observable() &&
-      requires std::same_as<type_list<Results...>, type_list<message>>
+  // Overload for dynamically typed response.
+  template <class... Ts>
+  auto as_observable() &&
+    requires is_dynamically_typed
   {
     return std::move(decorated).template as_observable<Ts...>();
   }

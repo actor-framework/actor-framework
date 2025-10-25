@@ -10,7 +10,7 @@
 
 namespace caf {
 
-event_based_actor::event_based_actor(actor_config& cfg) : extended_base(cfg) {
+event_based_actor::event_based_actor(actor_config& cfg) : super(cfg) {
   // nop
 }
 
@@ -21,7 +21,7 @@ event_based_actor::~event_based_actor() {
 void event_based_actor::initialize() {
   auto lg = log::core::trace("subtype = {}",
                              detail::pretty_type_name(typeid(*this)).c_str());
-  extended_base::initialize();
+  super::initialize();
   setf(is_initialized_flag);
   auto bhvr = make_behavior();
   if (!bhvr) {

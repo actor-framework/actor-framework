@@ -108,9 +108,9 @@ struct has_impl_include {
 
 template <class, class T>
 struct assert_has_impl_include_oracle {
-  static constexpr bool value = has_impl_include<T>::value;
-  static_assert(value,
+  static_assert(has_impl_include<T>::value,
                 "include 'caf/scheduled_actor/flow.hpp' for this method");
+  static constexpr bool value = true; // always true or the assertion fails
 };
 
 template <class T>
@@ -123,5 +123,8 @@ namespace caf::flow::op {
 
 template <class T>
 class base;
+
+template <class T>
+class from_resource;
 
 } // namespace caf::flow::op

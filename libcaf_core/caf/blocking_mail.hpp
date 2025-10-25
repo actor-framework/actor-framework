@@ -88,7 +88,8 @@ public:
 
   /// Tags the message as urgent, i.e., sends it with high priority.
   [[nodiscard]] auto urgent() &&
-    requires(Priority == message_priority::normal) {
+    requires(Priority == message_priority::normal)
+  {
     using result_t = blocking_mail_t<message_priority::high, Trait, Args...>;
     return result_t{self(), std::move(super::content_)};
   }
