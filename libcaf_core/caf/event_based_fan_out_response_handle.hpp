@@ -9,13 +9,13 @@
 #include "caf/detail/response_type_check.hpp"
 #include "caf/disposable.hpp"
 #include "caf/fwd.hpp"
+#include "caf/log/core.hpp"
 #include "caf/message_id.hpp"
 #include "caf/policy/select_all.hpp"
 #include "caf/policy/select_all_tag.hpp"
 #include "caf/policy/select_any.hpp"
 #include "caf/policy/select_any_tag.hpp"
 #include "caf/type_list.hpp"
-#include "caf/log/core.hpp"
 
 #include <type_traits>
 

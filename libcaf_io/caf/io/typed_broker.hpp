@@ -119,7 +119,7 @@ public:
   connection_handle add_tcp_scribe(network::native_socket fd) {
     static_assert(std::is_convertible_v<actor_hdl, connection_handler>,
                   "Cannot add scribe: broker misses required handlers");
-    return super::add_tcp_scribe(fd);
+    return super::add_scribe(fd);
   }
 
   expected<std::pair<accept_handle, uint16_t>>
@@ -130,10 +130,10 @@ public:
     return super::add_tcp_doorman(port, in, reuse_addr);
   }
 
-  expected<accept_handle> add_tcp_doorman(network::native_socket fd) {
+  accept_handle add_tcp_doorman(network::native_socket fd) {
     static_assert(std::is_convertible_v<actor_hdl, accept_handler>,
                   "Cannot add doorman: broker misses required handlers");
-    return super::add_tcp_doorman(fd);
+    return super::add_doorman(fd);
   }
 
   explicit typed_broker(actor_config& cfg) : super(cfg) {

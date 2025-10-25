@@ -56,7 +56,7 @@ struct response_to_flow_helper<type_list<>> {
         }
       }
     };
-  };
+  }
 };
 
 template <class T>
@@ -80,7 +80,7 @@ struct response_to_flow_helper<type_list<T>> {
         }
       }
     };
-  };
+  }
 };
 
 template <class T1, class T2, class... Ts>
@@ -106,7 +106,7 @@ struct response_to_flow_helper<type_list<T1, T2, Ts...>> {
         }
       }
     };
-  };
+  }
 };
 
 template <class... Ts>
