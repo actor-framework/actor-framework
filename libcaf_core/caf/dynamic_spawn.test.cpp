@@ -9,7 +9,6 @@
 #include "caf/blocking_actor.hpp"
 #include "caf/config.hpp"
 #include "caf/event_based_actor.hpp"
-#include "caf/function_view.hpp"
 #include "caf/init_global_meta_objects.hpp"
 #include "caf/log/test.hpp"
 #include "caf/scoped_actor.hpp"

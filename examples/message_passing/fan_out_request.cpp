@@ -3,7 +3,6 @@
 #include "caf/actor_system_config.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/exec_main.hpp"
-#include "caf/function_view.hpp"
 #include "caf/init_global_meta_objects.hpp"
 #include "caf/policy/select_all.hpp"
 #include "caf/scoped_actor.hpp"

@@ -275,7 +275,6 @@ caf_add_component(
     caf/flow/string.test.cpp
     caf/flow/subscription.cpp
     caf/forwarding_actor_proxy.cpp
-    caf/function_view.test.cpp
     caf/handles.test.cpp
     caf/hash/fnv.test.cpp
     caf/hash/sha1.cpp
