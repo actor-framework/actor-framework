@@ -440,14 +440,12 @@ TEST("constructor attach") {
   class spawner : public event_based_actor {
   public:
     spawner(actor_config& cfg)
-      : event_based_actor(cfg),
-        downs_(0),
-        testee_(spawn<testee, monitored>(this)) {
-      set_down_handler([this](down_msg& msg) {
-        if (msg.reason != exit_reason::user_shutdown)
+      : event_based_actor(cfg), downs_(0), testee_(spawn<testee>(this)) {
+      monitor(testee_, [this](const error& reason) {
+        if (reason != exit_reason::user_shutdown)
           CAF_RAISE_ERROR("error is not user_shutdown");
         if (++downs_ == 2)
-          quit(msg.reason);
+          quit(reason);
       });
       set_exit_handler(
         [this](exit_msg& msg) { send_exit(testee_, std::move(msg.reason)); });
