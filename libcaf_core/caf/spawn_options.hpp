@@ -13,7 +13,6 @@ namespace caf {
 enum class spawn_options : int {
   no_flags = 0x00,
   link_flag = 0x01,
-  monitor_flag = 0x02,
   detach_flag = 0x04,
   hide_flag = 0x08,
   priority_aware_flag = 0x20,
@@ -27,12 +26,6 @@ constexpr spawn_options operator+(spawn_options x, spawn_options y) {
 
 /// Denotes default settings.
 constexpr spawn_options no_spawn_options = spawn_options::no_flags;
-
-/// Causes `spawn` to call `self->monitor(...)` immediately after the new actor
-/// was spawned.
-[[deprecated("call monitor directly instead")]]
-constexpr spawn_options monitored
-  = spawn_options::monitor_flag;
 
 /// Causes `spawn` to call `self->link_to(...)` immediately
 /// after the new actor was spawned.
@@ -85,13 +78,6 @@ constexpr bool has_link_flag(spawn_options opts) {
   return has_spawn_option(opts, linked);
 }
 
-/// Checks whether the @ref monitored flag is set in `opts`.
-/// @param opts Bitmask to search in.
-/// @returns `true` if the @ref monitored flag is set in `opts`, otherwise
-constexpr bool has_monitor_flag(spawn_options opts) {
-  return has_spawn_option(opts, spawn_options::monitor_flag);
-}
-
 /// Checks whether the @ref lazy_init flag is set in `opts`.
 /// @param opts Bitmask to search in.
 /// @returns `true` if the @ref lazy_init flag is set in `opts`, otherwise
@@ -104,14 +90,12 @@ constexpr bool has_lazy_init_flag(spawn_options opts) {
 /// @cond
 
 constexpr bool is_unbound(spawn_options opts) {
-  return !has_monitor_flag(opts) && !has_link_flag(opts);
+  return !has_link_flag(opts);
 }
 
 constexpr spawn_options make_unbound(spawn_options opts) {
   return static_cast<spawn_options>(
-    (static_cast<int>(opts)
-     & ~(static_cast<int>(linked)
-         | static_cast<int>(spawn_options::monitor_flag))));
+    (static_cast<int>(opts) & ~static_cast<int>(linked)));
 }
 
 /// @endcond

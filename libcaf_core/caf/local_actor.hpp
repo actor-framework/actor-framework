@@ -335,10 +335,9 @@ public:
 
   template <class ActorHandle>
   ActorHandle eval_opts(spawn_options opts, ActorHandle res) {
-    if (has_monitor_flag(opts))
-      do_monitor(actor_cast<abstract_actor*>(res), message_priority::normal);
-    if (has_link_flag(opts))
+    if (has_link_flag(opts)) {
       link_to(res->address());
+    }
     return res;
   }
 
