@@ -7,6 +7,7 @@
 #include "caf/abstract_actor.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/actor_config.hpp"
+#include "caf/actor_launcher.hpp"
 #include "caf/actor_system_module.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/format.hpp"
@@ -376,6 +377,7 @@ public:
   /// @param cfg To-be-filled config for the actor.
   /// @param xs Constructor arguments for `C`.
   template <class C, spawn_options Os, class... Ts>
+    requires(is_unbound(Os))
   infer_handle_from_class_t<C> spawn_class(actor_config& cfg, Ts&&... xs) {
     return spawn_impl<C, Os>(cfg, detail::spawn_fwd<Ts>(xs)...);
   }
@@ -385,6 +387,7 @@ public:
   /// to opt-out of the cooperative scheduling.
   /// @param xs Constructor arguments for `C`.
   template <class C, spawn_options Os = no_spawn_options, class... Ts>
+    requires(is_unbound(Os))
   infer_handle_from_class_t<C> spawn(Ts&&... xs) {
     check_invariants<C>();
     actor_config cfg;
@@ -399,6 +402,7 @@ public:
   /// @param xs Arguments for `fun`.
   /// @private
   template <spawn_options Os = no_spawn_options, class F, class... Ts>
+    requires(is_unbound(Os))
   infer_handle_from_fun_t<F>
   spawn_functor(std::true_type, actor_config& cfg, F& fun, Ts&&... xs) {
     using impl = infer_impl_from_fun_t<F>;
@@ -410,6 +414,7 @@ public:
   /// Fallback no-op overload.
   /// @private
   template <spawn_options Os = no_spawn_options, class F, class... Ts>
+    requires(is_unbound(Os))
   infer_handle_from_fun_t<F>
   spawn_functor(std::false_type, actor_config&, F&, Ts&&...) {
     return {};
@@ -420,6 +425,7 @@ public:
   /// The behavior of `spawn` can be modified by setting `Os`, e.g.,
   /// to opt-out of the cooperative scheduling.
   template <spawn_options Os = no_spawn_options, class F, class... Ts>
+    requires(is_unbound(Os))
   infer_handle_from_fun_t<F> spawn(F fun, Ts&&... xs) {
     using impl = infer_impl_from_fun_t<F>;
     check_invariants<impl>();
@@ -435,6 +441,7 @@ public:
   /// Returns a new stateful actor.
   template <spawn_options Options = no_spawn_options, class CustomSpawn,
             class... Args>
+    requires(is_unbound(Options))
   typename CustomSpawn::handle_type spawn(CustomSpawn, Args&&... args) {
     actor_config cfg{&scheduler(), nullptr};
     cfg.mbox_factory = mailbox_factory();
@@ -512,9 +519,8 @@ public:
   }
 
   template <class C, spawn_options Os, class... Ts>
+    requires(is_unbound(Os))
   infer_handle_from_class_t<C> spawn_impl(actor_config& cfg, Ts&&... xs) {
-    static_assert(is_unbound(Os),
-                  "top-level spawns cannot have monitor or link flag");
     if constexpr (has_detach_flag(Os) || std::is_base_of_v<blocking_actor, C>)
       cfg.flags |= abstract_actor::is_detached_flag;
     if constexpr (has_hide_flag(Os))
@@ -529,102 +535,23 @@ public:
     return res;
   }
 
-  /// Utility function object that allows users to explicitly launch an action
-  /// by calling `operator()` but calls it implicitly at scope exit.
-  template <class F>
-  class launcher {
-  public:
-    launcher() : ready(false) {
-      // nop
-    }
-
-    explicit launcher(F&& f) : ready(true) {
-      new (&fn) F(std::move(f));
-    }
-
-    launcher(launcher&& other) : ready(other.ready) {
-      if (ready) {
-        new (&fn) F(std::move(other.fn));
-        other.reset();
-      }
-    }
-
-    launcher& operator=(launcher&& other) {
-      if (this != &other) {
-        if (ready)
-          reset();
-        if (other.ready) {
-          ready = true;
-          new (&fn) F(std::move(other.fn));
-          other.reset();
-        }
-      }
-      return *this;
-    }
-
-    launcher(const launcher&) = delete;
-
-    launcher& operator=(const launcher&) = delete;
-
-    ~launcher() {
-      if (ready) {
-        fn();
-        fn.~F();
-      }
-    }
-
-    void operator()() {
-      if (ready) {
-        fn();
-        reset();
-      }
-    }
-
-  private:
-    // @pre `ready == true`
-    void reset() {
-      ready = false;
-      fn.~F();
-    }
-
-    bool ready;
-    union {
-      F fn;
-    };
-  };
-
   /// Creates a new, cooperatively scheduled actor. The returned actor is
   /// constructed but has not been added to the scheduler yet to allow the
   /// caller to set up any additional logic on the actor before it starts.
   /// @returns A pointer to the new actor and a function object that the caller
   ///          must invoke to launch the actor. After the actor started running,
   ///          the caller *must not* access the pointer again.
-  template <class Impl = event_based_actor, spawn_options Os = no_spawn_options,
-            class... Ts>
-  auto spawn_inactive(Ts&&... xs) {
-    spawn_inactive_check(
-      std::bool_constant<std::is_same_v<Impl, event_based_actor>>{});
-    static_assert(std::is_base_of_v<scheduled_actor, Impl>,
-                  "only scheduled actors may get spawned inactively");
-    CAF_SET_LOGGER_SYS(this);
-    actor_config cfg{&scheduler(), nullptr};
-    cfg.flags = abstract_actor::is_inactive_flag;
-    if constexpr (has_detach_flag(Os))
-      cfg.flags |= abstract_actor::is_detached_flag;
-    if constexpr (has_hide_flag(Os))
-      cfg.flags |= abstract_actor::is_hidden_flag;
-    cfg.mbox_factory = mailbox_factory();
-    auto res = make_actor<Impl>(next_actor_id(), node(), this, cfg,
-                                std::forward<Ts>(xs)...);
-    auto* rptr = actor_cast<Impl*>(res);
-    auto launch = [strong_ptr = std::move(res), sched = cfg.sched] {
-      // Note: this lambda needs to hold onto a strong reference to the actor.
-      if (auto* ptr = actor_cast<Impl*>(strong_ptr)) {
-        ptr->unsetf(abstract_actor::is_inactive_flag);
-        ptr->launch(sched, has_lazy_init_flag(Os), has_hide_flag(Os));
-      }
-    };
-    return std::make_tuple(rptr, launcher<decltype(launch)>(std::move(launch)));
+  template <spawn_options Options = no_spawn_options>
+    requires(is_unbound(Options))
+  auto spawn_inactive() {
+    return spawn_inactive_impl(Options);
+  }
+
+  template <class, spawn_options Options = no_spawn_options>
+    requires(is_unbound(Options))
+  [[deprecated("call spawn_inactive without a class parameter instead")]]
+  auto spawn_inactive() {
+    return spawn_inactive_impl(Options);
   }
 
   detail::private_thread* acquire_private_thread();
@@ -639,14 +566,8 @@ public:
   /// @endcond
 
 private:
-  [[deprecated("spawn_inactive may only be used with event_based_actor")]]
-  void spawn_inactive_check(std::false_type) {
-    // nop
-  }
-
-  void spawn_inactive_check(std::true_type) {
-    // nop
-  }
+  std::pair<event_based_actor*, actor_launcher>
+    spawn_inactive_impl(spawn_options);
 
   template <class T>
   void check_invariants() {
