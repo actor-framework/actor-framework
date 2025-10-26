@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <caf/fwd.hpp>
 #include <caf/type_list.hpp>
 
 namespace caf {
@@ -11,9 +12,9 @@ namespace caf {
 /// A statically typed trait type wrapping the given parameter pack of
 /// signatures as a type list.
 /// @note used for backwards compatibility when declaring typed interfaces.
-template <class... Sigs>
+template <message_handler_signature... Signatures>
 struct statically_typed {
-  using signatures = type_list<Sigs...>;
+  using signatures = type_list<Signatures...>;
 };
 
 } // namespace caf

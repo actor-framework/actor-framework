@@ -24,6 +24,7 @@
 #include <string_view>
 #include <tuple>
 #include <utility>
+#include <variant>
 
 namespace caf::detail {
 

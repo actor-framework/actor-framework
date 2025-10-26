@@ -10,15 +10,13 @@
 
 namespace caf {
 
-template <class...>
-class typed_actor_pointer;
-
 /// Provides a view to an actor that implements this messaging interface without
 /// knowledge of the actual type.
-template <class TraitOrSignature>
-class typed_actor_pointer<TraitOrSignature> : public typed_actor_view_base {
+template <class... Ts>
+  requires typed_actor_pack<Ts...>
+class typed_actor_pointer : public typed_actor_view_base {
 public:
-  using trait = detail::to_statically_typed_trait_t<TraitOrSignature>;
+  using trait = detail::to_statically_typed_trait_t<Ts...>;
 
   /// Stores the template parameter pack.
   using signatures = typename trait::signatures;
@@ -63,11 +61,11 @@ public:
     return *this;
   }
 
-  typed_actor_view<trait>* operator->() {
+  typed_actor_view<Ts...>* operator->() {
     return &view_;
   }
 
-  const typed_actor_view<trait>* operator->() const {
+  const typed_actor_view<Ts...>* operator->() const {
     return &view_;
   }
 
@@ -99,19 +97,7 @@ public:
   }
 
 private:
-  typed_actor_view<trait> view_;
-};
-
-/// Provides a view to an actor that implements this messaging interface without
-/// knowledge of the actual type.
-/// @note This is a specialization for backwards compatibility with pre v1.0
-///       releases. Please use the trait based implementation.
-template <class T1, class T2, class... Ts>
-class typed_actor_pointer<T1, T2, Ts...>
-  : public typed_actor_pointer<statically_typed<T1, T2, Ts...>> {
-  using super = typed_actor_pointer<statically_typed<T1, T2, Ts...>>;
-
-  using super::super;
+  typed_actor_view<Ts...> view_;
 };
 
 } // namespace caf

@@ -146,26 +146,13 @@ struct partial_behavior_init_t {};
 constexpr partial_behavior_init_t partial_behavior_init
   = partial_behavior_init_t{};
 
-template <class...>
-class typed_behavior;
-
-template <class TraitOrSignature>
-class typed_behavior<TraitOrSignature> {
+template <class... Ts>
+  requires typed_actor_pack<Ts...>
+class typed_behavior {
 public:
-  // -- friends ----------------------------------------------------------------
-
-  template <class... OtherSigs>
-  friend class typed_actor;
-
-  template <class... OtherSigs>
-  friend class typed_behavior;
-
-  template <class, class, class>
-  friend class mixin::behavior_stack_based_impl;
-
   // -- member types -----------------------------------------------------------
 
-  using trait = detail::to_statically_typed_trait_t<TraitOrSignature>;
+  using trait = detail::to_statically_typed_trait_t<Ts...>;
 
   /// Stores the template parameter pack in a type list.
   using signatures = typename trait::signatures;
@@ -177,25 +164,25 @@ public:
   typed_behavior& operator=(typed_behavior&&) = default;
   typed_behavior& operator=(const typed_behavior&) = default;
 
-  template <class... Ts>
-  typed_behavior(const typed_behavior<Ts...>& other) : bhvr_(other.bhvr_) {
-    using other_signatures = type_list<Ts...>;
+  template <class... Us>
+  typed_behavior(const typed_behavior<Us...>& other) : bhvr_(other.unbox()) {
+    using other_signatures = typename typed_behavior<Us...>::signatures;
     using m = interface_mismatch_t<other_signatures, signatures>;
     // trigger static assert on mismatch
     using guard_t
-      = detail::static_error_printer<static_cast<int>(sizeof...(Ts)), m::value,
+      = detail::static_error_printer<static_cast<int>(sizeof...(Us)), m::value,
                                      typename m::xs, typename m::ys>;
     [[maybe_unused]] guard_t guard;
   }
 
-  template <class T, class... Ts>
-  typed_behavior(T x, Ts... xs) {
-    set(detail::make_behavior(std::move(x), std::move(xs)...));
+  template <class Arg, class... Args>
+  typed_behavior(Arg arg, Args... args) {
+    set(detail::make_behavior(std::move(arg), std::move(args)...));
   }
 
-  template <class... Ts>
-  typed_behavior(partial_behavior_init_t, Ts... xs)
-    : typed_behavior(unsafe_behavior_init, behavior{std::move(xs)...}) {
+  template <class... Args>
+  typed_behavior(partial_behavior_init_t, Args... args)
+    : typed_behavior(unsafe_behavior_init, behavior{std::move(args)...}) {
     // TODO: implement type checking.
   }
 
@@ -239,6 +226,10 @@ public:
     return bhvr_;
   }
 
+  const behavior& unbox() const& {
+    return bhvr_;
+  }
+
   behavior&& unbox() && {
     return std::move(bhvr_);
   }
@@ -252,16 +243,17 @@ public:
 private:
   typed_behavior() = default;
 
-  template <class... Ts, class TimeoutDefinition>
-  void set(intrusive_ptr<
-           detail::default_behavior_impl<std::tuple<Ts...>, TimeoutDefinition>>
-             bp) {
-    using found_signatures = type_list<deduce_mpi_t<Ts>...>;
+  template <class... Args, class TimeoutDefinition>
+  void
+  set(intrusive_ptr<
+      detail::default_behavior_impl<std::tuple<Args...>, TimeoutDefinition>>
+        bp) {
+    using found_signatures = type_list<deduce_mpi_t<Args>...>;
     using m = interface_mismatch_t<found_signatures, signatures>;
     // trigger static assert on mismatch
     using guard_t
-      = detail::static_error_printer<static_cast<int>(sizeof...(Ts)), m::value,
-                                     typename m::xs, typename m::ys>;
+      = detail::static_error_printer<static_cast<int>(sizeof...(Args)),
+                                     m::value, typename m::xs, typename m::ys>;
     [[maybe_unused]] guard_t guard;
     // final (type-erasure) step
     intrusive_ptr<detail::behavior_impl> ptr = std::move(bp);
@@ -271,36 +263,16 @@ private:
   behavior bhvr_;
 };
 
-template <class T1, class T2, class... Ts>
-class typed_behavior<T1, T2, Ts...>
-  : public typed_behavior<statically_typed<T1, T2, Ts...>> {
-public:
-  using super = typed_behavior<statically_typed<T1, T2, Ts...>>;
-
-  using super::super;
-
-  typed_behavior(const super& other) : super(other) {
-    // nop
-  }
-
-  typed_behavior(super&& other) : super(other) {
-    // nop
-  }
-};
-
 template <class T>
 struct is_typed_behavior : std::false_type {};
 
-template <class... Sigs>
-struct is_typed_behavior<typed_behavior<Sigs...>> : std::true_type {};
-
-template <class T>
-struct is_typed_behavior<typed_behavior<T>> : std::true_type {};
+template <class... Args>
+struct is_typed_behavior<typed_behavior<Args...>> : std::true_type {};
 
 /// Creates a typed behavior from given function objects.
-template <class... Fs>
-typed_behavior<deduce_mpi_t<Fs>...> make_typed_behavior(Fs... fs) {
-  return {std::move(fs)...};
+template <class... Args>
+typed_behavior<deduce_mpi_t<Args>...> make_typed_behavior(Args... args) {
+  return {std::move(args)...};
 }
 
 } // namespace caf

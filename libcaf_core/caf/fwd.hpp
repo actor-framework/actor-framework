@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/detail/core_export.hpp"
+#include "caf/typed_actor_pack.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -12,7 +13,6 @@
 #include <span>
 #include <string_view>
 #include <utility>
-#include <variant>
 #include <vector>
 
 namespace caf {
@@ -62,15 +62,17 @@ template <class...> class cow_tuple;
 template <class...> class delegated;
 template <class...> class event_based_delayed_response_handle;
 template <class...> class event_based_response_handle;
-template <class, class...> class event_based_fan_out_response_handle;
 template <class...> class result;
-template <class...> class typed_actor;
-template <class...> class typed_actor_pointer;
-template <class...> class typed_actor_view;
-template <class...> class typed_behavior;
-template <class...> class typed_event_based_actor;
 template <class...> class typed_message_view;
 template <class...> class typed_response_promise;
+
+template <class... Ts> requires typed_actor_pack<Ts...> class typed_actor;
+template <class... Ts> requires typed_actor_pack<Ts...> class typed_actor_pointer;
+template <class... Ts> requires typed_actor_pack<Ts...> class typed_actor_view;
+template <class... Ts> requires typed_actor_pack<Ts...> class typed_behavior;
+template <class... Ts> requires typed_actor_pack<Ts...> class typed_event_based_actor;
+
+template <class, class...> class event_based_fan_out_response_handle;
 
 // clang-format on
 

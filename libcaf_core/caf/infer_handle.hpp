@@ -6,12 +6,10 @@
 
 #include "caf/actor.hpp"
 #include "caf/actor_addr.hpp"
+#include "caf/fwd.hpp"
 #include "caf/typed_behavior.hpp"
 
 namespace caf {
-
-template <class... Sigs>
-class typed_event_based_actor;
 
 namespace io {
 
