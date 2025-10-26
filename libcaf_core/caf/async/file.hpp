@@ -113,8 +113,9 @@ public:
   /// @param init A function object that takes the source as argument and
   ///             turns it into a publisher or stream.
   template <class F>
+
   auto run(F&& init) && {
-    auto [self, launch] = sys_->spawn_inactive<event_based_actor, detached>();
+    auto [self, launch] = sys_->spawn_inactive<detached>();
     auto res = std::forward<F>(init)(gen_(self));
     using res_t = decltype(res);
     static_assert(detail::is_publisher<res_t> || detail::is_stream<res_t>,
