@@ -40,7 +40,6 @@
 #include "caf/exit_reason.hpp"
 #include "caf/expected.hpp"
 #include "caf/extend.hpp"
-#include "caf/function_view.hpp"
 #include "caf/hash/fnv.hpp"
 #include "caf/init_global_meta_objects.hpp"
 #include "caf/keep_behavior.hpp"

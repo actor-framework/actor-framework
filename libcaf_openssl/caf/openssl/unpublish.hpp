@@ -9,7 +9,6 @@
 #include "caf/actor_control_block.hpp"
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
-#include "caf/function_view.hpp"
 #include "caf/sec.hpp"
 #include "caf/typed_actor.hpp"
 
