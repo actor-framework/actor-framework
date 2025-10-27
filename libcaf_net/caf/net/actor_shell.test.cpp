@@ -20,6 +20,7 @@
 #include "caf/callback.hpp"
 #include "caf/flow/observable.hpp"
 #include "caf/flow/single.hpp"
+#include "caf/scheduled_actor/flow.hpp"
 #include "caf/scoped_actor.hpp"
 #include "caf/type_id.hpp"
 

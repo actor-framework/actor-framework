@@ -58,7 +58,6 @@
 #include "caf/proxy_registry.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/ref_counted.hpp"
-#include "caf/response_handle.hpp"
 #include "caf/result.hpp"
 #include "caf/resumable.hpp"
 #include "caf/scheduler.hpp"

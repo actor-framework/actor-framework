@@ -95,9 +95,9 @@ public:
 
   void on_next(const T& item) override {
     --in_flight_;
-    if (this->push_all(item)) {
+    if (this->push(item)) {
       if (in_ && this->has_observers()) {
-        // If push_all returns `true`, it means that all observers have consumed
+        // If push returns `true`, it means that all observers have consumed
         // the item without buffering it. Hence, we know that
         // this->max_buffered() is 0 and we can request more items from the
         // source right away.

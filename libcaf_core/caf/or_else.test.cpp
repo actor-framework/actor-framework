@@ -7,7 +7,6 @@
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/event_based_actor.hpp"
-#include "caf/response_handle.hpp"
 #include "caf/scoped_actor.hpp"
 
 using namespace caf;

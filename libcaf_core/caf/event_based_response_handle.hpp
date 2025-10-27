@@ -5,14 +5,15 @@
 #pragma once
 
 #include "caf/abstract_scheduled_actor.hpp"
+#include "caf/detail/metaprogramming.hpp"
 #include "caf/detail/response_type_check.hpp"
 #include "caf/disposable.hpp"
-#include "caf/flow/fwd.hpp"
 #include "caf/fwd.hpp"
 #include "caf/message_id.hpp"
+#include "caf/none.hpp"
 #include "caf/type_list.hpp"
 
-#include <type_traits>
+#include <utility>
 
 namespace caf::detail {
 
@@ -66,6 +67,8 @@ namespace caf {
 
 /// Holds state for a event-based response handles.
 struct event_based_response_handle_state {
+  static constexpr bool is_fan_out = false;
+
   /// Points to the parent actor.
   abstract_scheduled_actor* self;
 
@@ -85,6 +88,13 @@ public:
 
   friend class scheduled_actor;
 
+  // -- constants --------------------------------------------------------------
+
+  static constexpr bool is_dynamically_typed
+    = std::is_same_v<type_list<Results...>, type_list<message>>;
+
+  static constexpr bool is_statically_typed = !is_dynamically_typed;
+
   // -- constructors, destructors, and assignment operators --------------------
 
   event_based_response_handle(abstract_scheduled_actor* self, message_id mid,
@@ -127,77 +137,44 @@ public:
                                  });
   }
 
+  template <class T = abstract_scheduled_actor>
+    requires is_statically_typed
+  auto as_single() && {
+    // Note: templatized so we need the definition of actor_flow_context only
+    //       when instantiating this function
+    return detail::implicit_cast<T*>(state_.self)
+      ->flow_context()
+      .response_to_single(type_list_v<Results...>, state_);
+  }
+
+  template <class T, class... Ts>
+    requires is_dynamically_typed
+  auto as_single() && {
+    // Note: templatized so we need the definition of actor_flow_context only
+    //       when instantiating this function
+    using self_type = detail::left<abstract_scheduled_actor, T>;
+    return detail::implicit_cast<self_type*>(state_.self)
+      ->flow_context()
+      .response_to_single(type_list_v<T, Ts...>, state_);
+  }
+
+  template <class T = abstract_scheduled_actor>
+    requires is_statically_typed
   auto as_observable() && {
-    auto cell = state_.self->template response_to_flow_cell<Results...>(
-      state_.mid, std::move(state_.pending_timeout));
-    using cell_t = typename decltype(cell)::value_type;
-    using val_t = typename cell_t::output_type;
-    return flow::single<val_t>{std::move(cell)}.as_observable();
+    // Note: templatized so we need the definition of response_to_observable
+    //       only when instantiating this function
+    return detail::implicit_cast<T*>(state_.self)
+      ->response_to_observable(type_list_v<Results...>, state_, none);
   }
 
-private:
-  /// Holds the state for the handle.
-  event_based_response_handle_state state_;
-};
-
-/// This helper class identifies an expected response message and enables
-/// `request(...).then(...)`.
-template <>
-class event_based_response_handle<message> {
-public:
-  // -- friends ----------------------------------------------------------------
-
-  friend class scheduled_actor;
-
-  // -- constructors, destructors, and assignment operators --------------------
-
-  event_based_response_handle(abstract_scheduled_actor* self, message_id mid,
-                              disposable pending_timeout)
-    : state_{self, mid, std::move(pending_timeout)} {
-    // nop
-  }
-
-  // -- then and await ---------------------------------------------------------
-
-  template <class OnValue, class OnError>
-  void await(OnValue on_value, OnError on_error) && {
-    detail::response_type_check<OnValue, OnError, message>();
-    auto bhvr = behavior{std::move(on_value), std::move(on_error)};
-    state_.self->add_awaited_response_handler(
-      state_.mid, std::move(bhvr), std::move(state_.pending_timeout));
-  }
-
-  template <class OnValue>
-  void await(OnValue on_value) && {
-    return std::move(*this).await(std::move(on_value),
-                                  [self = state_.self](error& err) {
-                                    self->call_error_handler(err);
-                                  });
-  }
-
-  template <class OnValue, class OnError>
-  void then(OnValue on_value, OnError on_error) && {
-    detail::response_type_check<OnValue, OnError, message>();
-    auto bhvr = behavior{std::move(on_value), std::move(on_error)};
-    state_.self->add_multiplexed_response_handler(
-      state_.mid, std::move(bhvr), std::move(state_.pending_timeout));
-  }
-
-  template <class OnValue>
-  void then(OnValue on_value) && {
-    return std::move(*this).then(std::move(on_value),
-                                 [self = state_.self](error& err) {
-                                   self->call_error_handler(err);
-                                 });
-  }
-
-  template <class... Ts>
+  template <class T, class... Ts>
+    requires is_dynamically_typed
   auto as_observable() && {
-    auto cell = state_.self->template response_to_flow_cell<Ts...>(
-      state_.mid, std::move(state_.pending_timeout));
-    using cell_t = typename decltype(cell)::value_type;
-    using val_t = typename cell_t::output_type;
-    return flow::single<val_t>{std::move(cell)}.as_observable();
+    // Note: templatized so we need the definition of response_to_observable
+    //       only when instantiating this function
+    using self_type = detail::left<abstract_scheduled_actor, T>;
+    return detail::implicit_cast<self_type*>(state_.self)
+      ->response_to_observable(type_list_v<T, Ts...>, state_, none);
   }
 
 private:
@@ -210,7 +187,16 @@ private:
 template <class... Results>
 class event_based_delayed_response_handle {
 public:
+  // -- member types -----------------------------------------------------------
+
   using decorated_type = event_based_response_handle<Results...>;
+
+  // -- constants --------------------------------------------------------------
+
+  static constexpr bool is_dynamically_typed
+    = std::is_same_v<type_list<Results...>, type_list<message>>;
+
+  static constexpr bool is_statically_typed = !is_dynamically_typed;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -257,66 +243,28 @@ public:
     return std::move(decorated).as_observable();
   }
 
-  // -- properties -------------------------------------------------------------
-
-  /// The wrapped handle type.
-  decorated_type decorated;
-
-  /// Stores a handle to the in-flight request if the request messages was
-  /// delayed/scheduled.
-  disposable pending_request;
-};
-
-// Specialization for dynamically typed messages.
-template <>
-class event_based_delayed_response_handle<message> {
-public:
-  using decorated_type = event_based_response_handle<message>;
-
-  // -- constructors, destructors, and assignment operators --------------------
-
-  event_based_delayed_response_handle(abstract_scheduled_actor* self,
-                                      message_id mid,
-                                      disposable pending_timeout,
-                                      disposable pending_request)
-    : decorated(self, mid, std::move(pending_timeout)),
-      pending_request(std::move(pending_request)) {
-    // nop
+  template <class T = abstract_scheduled_actor>
+    requires is_statically_typed
+  auto as_single() && {
+    return std::move(decorated).template as_single<T>();
   }
 
-  // -- then and await ---------------------------------------------------------
-
-  /// @copydoc event_based_response_handle::await
-  template <class OnValue, class OnError>
-  disposable await(OnValue on_value, OnError on_error) && {
-    std::move(decorated).await(std::move(on_value), std::move(on_error));
-    return std::move(pending_request);
+  template <class T, class... Ts>
+    requires is_dynamically_typed
+  auto as_single() && {
+    return std::move(decorated).template as_single<T, Ts...>();
   }
 
-  /// @copydoc event_based_response_handle::await
-  template <class OnValue>
-  disposable await(OnValue on_value) && {
-    std::move(decorated).await(std::move(on_value));
-    return std::move(pending_request);
-  }
-
-  /// @copydoc event_based_response_handle::then
-  template <class OnValue, class OnError>
-  disposable then(OnValue on_value, OnError on_error) && {
-    std::move(decorated).then(std::move(on_value), std::move(on_error));
-    return std::move(pending_request);
-  }
-
-  /// @copydoc event_based_response_handle::then
-  template <class OnValue>
-  disposable then(OnValue on_value) && {
-    std::move(decorated).then(std::move(on_value));
-    return std::move(pending_request);
-  }
-
-  template <class... Ts>
+  template <class T = abstract_scheduled_actor>
+    requires is_statically_typed
   auto as_observable() && {
-    return std::move(decorated).template as_observable<Ts...>();
+    return std::move(decorated).template as_observable<T>();
+  }
+
+  template <class T, class... Ts>
+    requires is_dynamically_typed
+  auto as_observable() && {
+    return std::move(decorated).template as_observable<T, Ts...>();
   }
 
   // -- properties -------------------------------------------------------------

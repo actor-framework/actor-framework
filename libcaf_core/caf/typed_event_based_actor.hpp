@@ -23,15 +23,11 @@ class typed_event_based_actor;
 /// @extends scheduled actor
 template <class TraitOrSignature>
 class typed_event_based_actor<TraitOrSignature>
-  : public extend<scheduled_actor, typed_event_based_actor<TraitOrSignature>>::
-      template with<mixin::requester>,
-    public statically_typed_actor_base {
+  : public scheduled_actor, public statically_typed_actor_base {
 public:
   // -- member types -----------------------------------------------------------
 
-  using super = typename extend<
-    scheduled_actor,
-    typed_event_based_actor<TraitOrSignature>>::template with<mixin::requester>;
+  using super = scheduled_actor;
 
   using trait = detail::to_statically_typed_trait_t<TraitOrSignature>;
 
@@ -76,6 +72,8 @@ public:
     return event_based_mail(trait{}, this, std::forward<Args>(args)...);
   }
 
+  CAF_ADD_DEPRECATED_REQUEST_API
+
   // -- behavior management ----------------------------------------------------
 
   /// @copydoc caf::event_based_actor::become
@@ -114,15 +112,11 @@ protected:
 ///       releases. Please use the trait based implementation.
 template <class T1, class T2, class... Ts>
 class typed_event_based_actor<T1, T2, Ts...>
-  : public extend<scheduled_actor, typed_event_based_actor<T1, T2, Ts...>>::
-      template with<mixin::requester>,
-    public statically_typed_actor_base {
+  : public scheduled_actor, public statically_typed_actor_base {
 public:
   // -- member types -----------------------------------------------------------
 
-  using super =
-    typename extend<scheduled_actor, typed_event_based_actor<T1, T2, Ts...>>::
-      template with<mixin::requester>;
+  using super = scheduled_actor;
 
   using trait = statically_typed<T1, T2, Ts...>;
 
@@ -163,6 +157,8 @@ public:
   auto mail(Args&&... args) {
     return event_based_mail(trait{}, this, std::forward<Args>(args)...);
   }
+
+  CAF_ADD_DEPRECATED_REQUEST_API
 
   // -- behavior management ----------------------------------------------------
 

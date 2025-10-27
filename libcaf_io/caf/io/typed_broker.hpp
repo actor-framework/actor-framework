@@ -12,6 +12,7 @@
 #include "caf/detail/assert.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
+#include "caf/event_based_mail.hpp"
 #include "caf/extend.hpp"
 #include "caf/keep_behavior.hpp"
 #include "caf/local_actor.hpp"
@@ -45,12 +46,8 @@ using accept_handler = typed_actor<result<void>(new_connection_msg),
 /// components in the network.
 /// @extends local_actor
 template <class... Sigs>
-class typed_broker
-  // clang-format off
-  : public extend<abstract_broker, typed_broker<Sigs...>>::template
-           with<mixin::requester>,
-    public statically_typed_actor_base {
-  // clang-format on
+class typed_broker : public abstract_broker,
+                     public statically_typed_actor_base {
 public:
   using signatures = type_list<Sigs...>;
 
@@ -58,9 +55,11 @@ public:
 
   using behavior_type = typed_behavior<Sigs...>;
 
-  using super =
-    typename extend<abstract_broker,
-                    typed_broker<Sigs...>>::template with<mixin::requester>;
+  using super = abstract_broker;
+
+  struct trait {
+    using signatures = type_list<Sigs...>;
+  };
 
   /// @cond
 
@@ -120,7 +119,7 @@ public:
   connection_handle add_tcp_scribe(network::native_socket fd) {
     static_assert(std::is_convertible_v<actor_hdl, connection_handler>,
                   "Cannot add scribe: broker misses required handlers");
-    return super::add_tcp_scribe(fd);
+    return super::add_scribe(fd);
   }
 
   expected<std::pair<accept_handle, uint16_t>>
@@ -131,10 +130,10 @@ public:
     return super::add_tcp_doorman(port, in, reuse_addr);
   }
 
-  expected<accept_handle> add_tcp_doorman(network::native_socket fd) {
+  accept_handle add_tcp_doorman(network::native_socket fd) {
     static_assert(std::is_convertible_v<actor_hdl, accept_handler>,
                   "Cannot add doorman: broker misses required handlers");
-    return super::add_tcp_doorman(fd);
+    return super::add_doorman(fd);
   }
 
   explicit typed_broker(actor_config& cfg) : super(cfg) {
@@ -157,6 +156,14 @@ public:
   void unbecome() {
     this->bhvr_stack_.pop_back();
   }
+
+  /// Starts a new message.
+  template <class... Args>
+  auto mail(Args&&... args) {
+    return event_based_mail(trait{}, this, std::forward<Args>(args)...);
+  }
+
+  CAF_ADD_DEPRECATED_REQUEST_API
 
 protected:
   virtual behavior_type make_behavior() {

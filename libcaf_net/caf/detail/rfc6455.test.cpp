@@ -103,9 +103,12 @@ TEST("decode a header with valid mask key but no data") {
   impl::assemble_frame(impl::binary_frame, 0xDEADC0DE,
                        as_bytes(std::span{data}), out);
   check_eq(out, bytes({
-                  0x82,                   // FIN + binary frame opcode
-                  0x80,                   // MASKED + data size = 0
-                  0xDE, 0xAD, 0xC0, 0xDE, // mask key,
+                  0x82, // FIN + binary frame opcode
+                  0x80, // MASKED + data size = 0
+                  0xDE, //
+                  0xAD, //
+                  0xC0, //
+                  0xDE, // mask key,
                 }));
   impl::header hdr;
   check_eq(impl::decode_header(out, hdr), 6);
@@ -120,9 +123,12 @@ TEST("decode a header with no mask key plus small data") {
   byte_buffer out;
   impl::assemble_frame(impl::binary_frame, 0, as_bytes(std::span{data}), out);
   check_eq(out, bytes({
-                  0x82,                   // FIN + binary frame opcode
-                  0x04,                   // data size = 4
-                  0x12, 0x34, 0x45, 0x67, // masked data
+                  0x82, // FIN + binary frame opcode
+                  0x04, // data size = 4
+                  0x12, //
+                  0x34, //
+                  0x45, //
+                  0x67, // masked data
                 }));
   impl::header hdr;
   check_eq(impl::decode_header(out, hdr), 2);
@@ -138,10 +144,16 @@ TEST("decode a header with valid mask key plus small data") {
   impl::assemble_frame(impl::binary_frame, 0xDEADC0DE,
                        as_bytes(std::span{data}), out);
   check_eq(out, bytes({
-                  0x82,                   // FIN + binary frame opcode
-                  0x84,                   // MASKED + data size = 4
-                  0xDE, 0xAD, 0xC0, 0xDE, // mask key,
-                  0x12, 0x34, 0x45, 0x67, // masked data
+                  0x82, // FIN + binary frame opcode
+                  0x84, // MASKED + data size = 4
+                  0xDE, //
+                  0xAD, //
+                  0xC0, //
+                  0xDE, // mask key,
+                  0x12, //
+                  0x34, //
+                  0x45, //
+                  0x67, // masked data
                 }));
   impl::header hdr;
   check_eq(impl::decode_header(out, hdr), 6);
@@ -157,9 +169,12 @@ TEST("decode a header with no mask key plus upper bound on small data") {
   byte_buffer out;
   impl::assemble_frame(impl::binary_frame, 0, as_bytes(std::span{data}), out);
   check_eq(take(out, 6), bytes({
-                           0x82,                   // FIN + binary frame opcode
-                           0x7D,                   // data size = 125
-                           0xFF, 0xFF, 0xFF, 0xFF, // masked data
+                           0x82, // FIN + binary frame opcode
+                           0x7D, // data size = 125
+                           0xFF, //
+                           0xFF, //
+                           0xFF, //
+                           0xFF, // masked data
                          }));
   impl::header hdr;
   check_eq(impl::decode_header(out, hdr), 2);
@@ -176,10 +191,16 @@ TEST("decode a header with valid mask key plus upper bound on small data") {
   impl::assemble_frame(impl::binary_frame, 0xDEADC0DE,
                        as_bytes(std::span{data}), out);
   check_eq(take(out, 10), bytes({
-                            0x82,                   // FIN + binary frame opcode
-                            0xFD,                   // MASKED + data size = 125
-                            0xDE, 0xAD, 0xC0, 0xDE, // mask key,
-                            0xFF, 0xFF, 0xFF, 0xFF, // masked data
+                            0x82, // FIN + binary frame opcode
+                            0xFD, // MASKED + data size = 125
+                            0xDE, //
+                            0xAD, //
+                            0xC0, //
+                            0xDE, // mask key,
+                            0xFF, //
+                            0xFF, //
+                            0xFF, //
+                            0xFF, // masked data
                           }));
   impl::header hdr;
   check_eq(impl::decode_header(out, hdr), 6);
@@ -196,10 +217,14 @@ TEST("decode a header with no mask key plus medium data") {
   impl::assemble_frame(impl::binary_frame, 0, as_bytes(std::span{data}), out);
   check_eq(take(out, 8),
            bytes({
-             0x82,                   // FIN + binary frame opcode
-             0x7E,                   // 126 -> uint16 size
-             0x00, 0x7E,             // data size = 126
-             0xFF, 0xFF, 0xFF, 0xFF, // first 4 masked bytes
+             0x82, // FIN + binary frame opcode
+             0x7E, // 126 -> uint16 size
+             0x00, //
+             0x7E, // data size = 126
+             0xFF, //
+             0xFF, //
+             0xFF, //
+             0xFF, // first 4 masked bytes
            }));
   impl::header hdr;
   check_eq(impl::decode_header(out, hdr), 4);
@@ -217,11 +242,18 @@ TEST("decode a header with valid mask key plus medium data") {
                        as_bytes(std::span{data}), out);
   check_eq(take(out, 12),
            bytes({
-             0x82,                   // FIN + binary frame opcode
-             0xFE,                   // MASKED + 126 -> uint16 size
-             0x00, 0x7E,             // data size = 126
-             0xDE, 0xAD, 0xC0, 0xDE, // mask key,
-             0xFF, 0xFF, 0xFF, 0xFF, // first 4 masked bytes
+             0x82, // FIN + binary frame opcode
+             0xFE, // MASKED + 126 -> uint16 size
+             0x00, //
+             0x7E, // data size = 126
+             0xDE, //
+             0xAD, //
+             0xC0, //
+             0xDE, // mask key,
+             0xFF, //
+             0xFF, //
+             0xFF, //
+             0xFF, // first 4 masked bytes
            }));
   impl::header hdr;
   check_eq(impl::decode_header(out, hdr), 8);
@@ -238,10 +270,14 @@ TEST("decode a header with no mask key plus upper bound on medium data") {
   impl::assemble_frame(impl::binary_frame, 0, as_bytes(std::span{data}), out);
   check_eq(take(out, 8),
            bytes({
-             0x82,                   // FIN + binary frame opcode
-             0x7E,                   // 126 -> uint16 size
-             0xFF, 0xFF,             // data size = 65535
-             0xFF, 0xFF, 0xFF, 0xFF, // first 4 masked bytes
+             0x82, // FIN + binary frame opcode
+             0x7E, // 126 -> uint16 size
+             0xFF, //
+             0xFF, // data size = 65535
+             0xFF, //
+             0xFF, //
+             0xFF, //
+             0xFF, // first 4 masked bytes
            }));
   impl::header hdr;
   check_eq(impl::decode_header(out, hdr), 4);
@@ -259,11 +295,18 @@ TEST("decode a header with valid mask key plus upper bound on medium data") {
                        as_bytes(std::span{data}), out);
   check_eq(take(out, 12),
            bytes({
-             0x82,                   // FIN + binary frame opcode
-             0xFE,                   // 126 -> uint16 size
-             0xFF, 0xFF,             // data size = 65535
-             0xDE, 0xAD, 0xC0, 0xDE, // mask key,
-             0xFF, 0xFF, 0xFF, 0xFF, // first 4 masked bytes
+             0x82, // FIN + binary frame opcode
+             0xFE, // 126 -> uint16 size
+             0xFF, //
+             0xFF, // data size = 65535
+             0xDE, //
+             0xAD, //
+             0xC0, //
+             0xDE, // mask key,
+             0xFF, //
+             0xFF, //
+             0xFF, //
+             0xFF, // first 4 masked bytes
            }));
   impl::header hdr;
   check_eq(impl::decode_header(out, hdr), 8);
@@ -282,8 +325,18 @@ TEST("decode a header with no mask key plus large data") {
            bytes({
              0x82, // FIN + binary frame opcode
              0x7F, // 127 -> uint64 size
-             0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, // 65536
-             0xFF, 0xFF, 0xFF, 0xFF, // first 4 masked bytes
+             0x00, //
+             0x00, //
+             0x00, //
+             0x00, //
+             0x00, //
+             0x01, //
+             0x00, //
+             0x00, // 65536
+             0xFF, //
+             0xFF, //
+             0xFF, //
+             0xFF, // first 4 masked bytes
            }));
   impl::header hdr;
   check_eq(impl::decode_header(out, hdr), 10);
@@ -303,9 +356,22 @@ TEST("decode a header with valid mask key plus large data") {
            bytes({
              0x82, // FIN + binary frame opcode
              0xFF, // MASKED + 127 -> uint64 size
-             0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, // 65536
-             0xDE, 0xAD, 0xC0, 0xDE,                         // mask key,
-             0xFF, 0xFF, 0xFF, 0xFF, // first 4 masked bytes
+             0x00, //
+             0x00, //
+             0x00, //
+             0x00, //
+             0x00, //
+             0x01, //
+             0x00, //
+             0x00, // 65536
+             0xDE, //
+             0xAD, //
+             0xC0, //
+             0xDE, // mask key,
+             0xFF, //
+             0xFF, //
+             0xFF, //
+             0xFF, // first 4 masked bytes
            }));
   impl::header hdr;
   check_eq(impl::decode_header(out, hdr), 14);

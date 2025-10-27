@@ -4,7 +4,8 @@
 #include "caf/caf_main.hpp"
 #include "caf/cow_vector.hpp"
 #include "caf/event_based_actor.hpp"
-#include "caf/scheduled_actor/flow.hpp"
+#include "caf/flow/observable_builder.hpp"
+#include "caf/flow/step/all.hpp"
 
 #include <cstdint>
 #include <future>
