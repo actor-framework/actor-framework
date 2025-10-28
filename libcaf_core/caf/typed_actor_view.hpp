@@ -28,16 +28,13 @@ auto typed_actor_view_flow_access(T* self) {
   return self;
 }
 
-template <class...>
-class typed_actor_view;
-
 /// Decorates a pointer to a @ref scheduled_actor with a statically typed actor
 /// interface.
-/// @tparam TraitOrSignature The actor trait or signature to apply to the view.
-template <class TraitOrSignature>
-class typed_actor_view<TraitOrSignature> : public typed_actor_view_base {
+template <class... Ts>
+  requires typed_actor_pack<Ts...>
+class typed_actor_view : public typed_actor_view_base {
 public:
-  using trait = detail::to_statically_typed_trait_t<TraitOrSignature>;
+  using trait = detail::to_statically_typed_trait_t<Ts...>;
 
   /// Stores the template parameter pack.
   using signatures = typename trait::signatures;
@@ -51,15 +48,15 @@ public:
   // -- spawn functions --------------------------------------------------------
 
   /// @copydoc local_actor::spawn
-  template <class T, spawn_options Os = no_spawn_options, class... Ts>
-  infer_handle_from_class_t<T> spawn(Ts&&... xs) {
-    return self_->spawn<T, Os>(std::forward<Ts>(xs)...);
+  template <class T, spawn_options Os = no_spawn_options, class... Args>
+  infer_handle_from_class_t<T> spawn(Args&&... args) {
+    return self_->spawn<T, Os>(std::forward<Args>(args)...);
   }
 
   /// @copydoc local_actor::spawn
-  template <spawn_options Os = no_spawn_options, class F, class... Ts>
-  infer_handle_from_fun_t<F> spawn(F fun, Ts&&... xs) {
-    return self_->spawn<Os>(std::move(fun), std::forward<Ts>(xs)...);
+  template <spawn_options Os = no_spawn_options, class F, class... Args>
+  infer_handle_from_fun_t<F> spawn(F fun, Args&&... args) {
+    return self_->spawn<Os>(std::move(fun), std::forward<Args>(args)...);
   }
 
   // -- state modifiers --------------------------------------------------------
@@ -281,9 +278,9 @@ public:
     self_->quit(reason);
   }
 
-  template <class... Ts>
-  detail::make_response_promise_helper_t<Ts...> make_response_promise() {
-    return self_->make_response_promise<Ts...>();
+  template <class... Rs>
+  detail::make_response_promise_helper_t<Rs...> make_response_promise() {
+    return self_->make_response_promise<Rs...>();
   }
 
   message_id new_request_id(message_priority mp) {
@@ -310,9 +307,9 @@ public:
                                                    std::move(pending_timeout));
   }
 
-  template <class Handle, class... Ts>
-  auto delegate(const Handle& dest, Ts&&... xs) {
-    return self_->delegate(dest, std::forward<Ts>(xs)...);
+  template <class Handle, class... Args>
+  auto delegate(const Handle& dest, Args&&... args) {
+    return self_->delegate(dest, std::forward<Args>(args)...);
   }
 
   /// @private
@@ -372,17 +369,6 @@ public:
 
 private:
   scheduled_actor* self_;
-};
-
-/// Decorates a pointer to a @ref caf::scheduled_actor "scheduled_actor"
-/// with a statically typed actor interface.
-/// @note This specialization is for backwards compatibility with pre v1.0
-///       releases. Please use the trait-based implementation.
-template <class T1, class T2, class... Ts>
-class typed_actor_view<T1, T2, Ts...>
-  : public typed_actor_view<statically_typed<T1, T2, Ts...>> {
-  using super = typed_actor_view<statically_typed<T1, T2, Ts...>>;
-  using super::super;
 };
 
 template <class... Sigs>

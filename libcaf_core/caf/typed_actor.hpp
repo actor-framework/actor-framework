@@ -24,28 +24,21 @@
 
 namespace caf {
 
-template <class...>
-class typed_actor;
-
 /// Identifies a statically typed actor.
-template <class TraitOrSignature>
-class typed_actor<TraitOrSignature>
-  : detail::comparable<typed_actor<TraitOrSignature>>,
-    detail::comparable<typed_actor<TraitOrSignature>, actor>,
-    detail::comparable<typed_actor<TraitOrSignature>, actor_addr>,
-    detail::comparable<typed_actor<TraitOrSignature>, strong_actor_ptr> {
+template <class... Ts>
+  requires typed_actor_pack<Ts...>
+class typed_actor : detail::comparable<typed_actor<Ts...>>,
+                    detail::comparable<typed_actor<Ts...>, actor>,
+                    detail::comparable<typed_actor<Ts...>, actor_addr>,
+                    detail::comparable<typed_actor<Ts...>, strong_actor_ptr> {
 public:
   // -- member types -----------------------------------------------------------
 
   /// Stores the template parameter pack.
-  using trait = detail::to_statically_typed_trait_t<TraitOrSignature>;
+  using trait = detail::to_statically_typed_trait_t<Ts...>;
 
   /// Stores the template parameter pack.
   using signatures = typename trait::signatures;
-
-  static_assert(detail::are_signatures_normalized_v<signatures>,
-                "Function signatures must be normalized to the format "
-                "'result<Out...>(In...)', no qualifiers or references allowed");
 
   // -- friends ----------------------------------------------------------------
 
@@ -54,9 +47,6 @@ public:
 
   template <class>
   friend class data_processor;
-
-  template <class...>
-  friend class typed_actor;
 
   // allow conversion via actor_cast
   template <class, class, int>
@@ -77,17 +67,17 @@ public:
 
   /// Identifies the behavior type actors of this kind use
   /// for their behavior stack.
-  using behavior_type = typed_behavior<TraitOrSignature>;
+  using behavior_type = typed_behavior<Ts...>;
 
   /// The default, event-based type for implementing this messaging interface.
-  using impl = typed_event_based_actor<TraitOrSignature>;
+  using impl = typed_event_based_actor<Ts...>;
 
   /// Identifies pointers to instances of this kind of actor.
   using pointer = impl*;
 
   /// A view to an actor that implements this messaging interface without
   /// knowledge of the actual type.
-  using pointer_view = typed_actor_pointer<TraitOrSignature>;
+  using pointer_view = typed_actor_pointer<Ts...>;
 
   /// A class type suitable as base type class-based implementations.
   using base = impl;
@@ -121,10 +111,10 @@ public:
   typed_actor& operator=(typed_actor&&) = default;
   typed_actor& operator=(const typed_actor&) = default;
 
-  template <class... Ts>
+  template <class... Us>
     requires detail::tl_subset_of_v<signatures,
-                                    typename typed_actor<Ts...>::signatures>
-  typed_actor(const typed_actor<Ts...>& other) : ptr_(other.ptr_) {
+                                    typename typed_actor<Us...>::signatures>
+  typed_actor(const typed_actor<Us...>& other) : ptr_(other.ptr()) {
     // nop
   }
 
@@ -143,10 +133,10 @@ public:
     // nop
   }
 
-  template <class... Ts>
+  template <class... Us>
     requires detail::tl_subset_of_v<signatures,
-                                    typename typed_actor<Ts...>::signatures>
-  typed_actor& operator=(const typed_actor<Ts...>& other) {
+                                    typename typed_actor<Us...>::signatures>
+  typed_actor& operator=(const typed_actor<Us...>& other) {
     ptr_ = other.ptr_;
     return *this;
   }
@@ -199,6 +189,10 @@ public:
 
   abstract_actor& operator*() const noexcept {
     return *ptr_->get();
+  }
+
+  const strong_actor_ptr& ptr() const noexcept {
+    return ptr_;
   }
 
   intptr_t compare(const typed_actor& x) const noexcept {
@@ -260,51 +254,6 @@ private:
   }
 
   strong_actor_ptr ptr_;
-};
-
-/// Identifies a statically typed actor.
-/// @tparam Ts Signatures of all accepted messages.
-/// @note This is a specialization for backwards compatibility with pre v1.0
-/// releases. Please use the trait based implementation.
-template <class T1, class T2, class... Ts>
-class typed_actor<T1, T2, Ts...>
-  : public typed_actor<statically_typed<T1, T2, Ts...>> {
-public:
-  template <class...>
-  friend class typed_actor;
-
-  using super = typed_actor<statically_typed<T1, T2, Ts...>>;
-
-  using behavior_type = typed_behavior<T1, T2, Ts...>;
-
-  /// The default, event-based type for implementing this messaging interface.
-  using impl = typed_event_based_actor<T1, T2, Ts...>;
-
-  /// Identifies pointers to instances of this kind of actor.
-  using pointer = impl*;
-
-  /// A class type suitable as base type class-based implementations.
-  using base = impl;
-
-  /// The default, event-based type for implementing this messaging interface as
-  /// a stateful actor.
-  template <class State>
-  using stateful_impl = stateful_actor<State, impl>;
-
-  /// Convenience alias for `stateful_impl<State>*`.
-  template <class State>
-  using stateful_pointer = stateful_impl<State>*;
-
-  /// A view to an actor that implements this messaging interface without
-  /// knowledge of the actual type.
-  using pointer_view = typed_actor_pointer<T1, T2, Ts...>;
-
-  using super::super;
-
-  typed_actor& operator=(std::nullptr_t) {
-    super::operator=(nullptr);
-    return *this;
-  }
 };
 
 /// @relates typed_actor

@@ -9,6 +9,7 @@
 #include <optional>
 #include <type_traits>
 #include <utility>
+#include <variant>
 
 namespace caf::detail {
 
