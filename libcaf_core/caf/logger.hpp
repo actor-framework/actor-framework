@@ -505,7 +505,7 @@ private:
                                           CAF_LOG_FLOW_COMPONENT)) {           \
         caf_logger_instance->log(                                              \
           ::caf::log::level::debug, CAF_LOG_FLOW_COMPONENT,                    \
-          "TERMINATE ; ID = {}; ; REASON = {}; NODE = {}", thisptr->id(), rsn, \
+          "TERMINATE ; ID = {}; REASON = {}; NODE = {}", thisptr->id(), rsn,   \
           thisptr->node());                                                    \
       }                                                                        \
     } while (false)
