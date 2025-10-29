@@ -55,18 +55,19 @@ R make_actor(actor_id aid, node_id nid, actor_system* sys, Ts&&... xs) {
   auto* mem = detail::aligned_alloc(CAF_CACHE_LINE_SIZE, alloc_size);
   auto* ctrl = new (mem) actor_control_block(aid, nid, sys, iface);
   auto* obj_mem = reinterpret_cast<std::byte*>(mem) + CAF_CACHE_LINE_SIZE;
-#if CAF_LOG_LEVEL >= CAF_LOG_LEVEL_DEBUG
-  if (logger::current_logger()->accepts(CAF_LOG_LEVEL_DEBUG,
-                                        CAF_LOG_FLOW_COMPONENT)) {
-    std::string args;
-    args = deep_to_string(std::forward_as_tuple(xs...));
+#ifdef CAF_ENABLE_TRACE_LOGGING
+  if (auto* lptr = logger::current_logger();
+      lptr && lptr->accepts(log::level::debug, CAF_LOG_FLOW_COMPONENT)) {
+    auto args = deep_to_string(std::forward_as_tuple(xs...));
     T* obj;
     {
       CAF_PUSH_AID(aid);
       obj = detail::make_actor_util::create_actor<T>(obj_mem,
                                                      std::forward<Ts>(xs)...);
     }
-    CAF_LOG_SPAWN_EVENT(obj, args);
+    lptr->log(log::level::debug, CAF_LOG_FLOW_COMPONENT,
+              "SPAWN ; ID = {}; NAME = {}; TYPE = {}; ARGS = {}; NODE = {}",
+              aid, obj->name(), detail::pretty_type_name(typeid(T)), args, nid);
     return {ctrl, false};
   }
 #endif

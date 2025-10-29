@@ -28,6 +28,13 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Creating a response promise no longer invalidates `self->current_sender()`.
 - Improved compile-time error messages when passing ill-formed message handler
   signatures to typed actors.
+- The CMake variable `CAF_LOG_LEVEL` has been removed. At run-time, users can
+  enable logging up to the `debug` log level by default. Setting a higher log
+  level than that will have no effect since trace logging remains disabled by
+  default and must be enabled manually by setting the CMake option
+  `CAF_ENABLE_TRACE_LOGGING` to `ON`. When using the `configure` script, this
+  can be achieved by passing the new `--enable-trace-logging` option to the
+  script.
 
 ### Deprecated
 
@@ -37,6 +44,10 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   throughout the code base and users should do the same.
 - The alias `caf::net::lp::frame` is now deprecated and will be removed in the
   next major release. Users should use `caf::chunk` directly instead.
+- All legacy macros for logging have been deprecated: `CAF_LOG_DEBUG`,
+  `CAF_LOG_DEBUG_IF`, `CAF_LOG_INFO`, `CAF_LOG_INFO_IF`, `CAF_LOG_WARNING`,
+  `CAF_LOG_WARNING_IF`, `CAF_LOG_ERROR`, and `CAF_LOG_ERROR_IF`. Users should
+  use the new logging API instead.
 
 ### Added
 

@@ -2,10 +2,6 @@
 
 #pragma once
 
-#include "caf/detail/log_level.hpp"
-
-#define CAF_LOG_LEVEL CAF_LOG_LEVEL_@CAF_LOG_LEVEL@
-
 /// Denotes the version of CAF in the format {MAJOR}{MINOR}{PATCH}, whereas
 /// minor and patch versions use two-digit decimal numbers (but without leading
 /// zeros), e.g. 900 is version 0.9.0 and 10000 is version 1.0.0.
@@ -22,6 +18,8 @@
 
 /// Defined to the patch version number of CAF.
 #define CAF_VERSION_PATCH @CAF_VERSION_PATCH@
+
+#cmakedefine CAF_ENABLE_TRACE_LOGGING
 
 #cmakedefine CAF_ENABLE_RUNTIME_CHECKS
 

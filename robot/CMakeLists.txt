@@ -61,8 +61,8 @@ add_robot_test(
   merge
   --variable BINARY_PATH:$<TARGET_FILE:caf-robot-flow-merge-driver>)
 
-# The logging test assumes that the CAF_LOG_LEVEL is set to TRACE.
-if (CAF_LOG_LEVEL STREQUAL "TRACE")
+# The logging test requires that the trace logging is enabled.
+if (CAF_ENABLE_TRACE_LOGGING)
   caf_add_test_executable(
     caf-robot-logging-driver
     SOURCES

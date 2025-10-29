@@ -147,7 +147,9 @@ bool actor_pool::filter(guard_type& guard, const strong_actor_ptr& sender,
     const auto& dm = get<0>(view);
     auto last = workers_.end();
     auto i = std::find(workers_.begin(), workers_.end(), dm.source);
-    CAF_LOG_DEBUG_IF(i == last, "received down message for an unknown worker");
+    if (i == last) {
+      log::core::debug("received down message for an unknown worker");
+    }
     if (i != last)
       workers_.erase(i);
     if (workers_.empty()) {
