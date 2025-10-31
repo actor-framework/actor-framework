@@ -6,18 +6,12 @@
 
 #include "caf/abstract_blocking_actor.hpp"
 #include "caf/actor_clock.hpp"
-#include "caf/actor_traits.hpp"
-#include "caf/blocking_actor.hpp"
 #include "caf/detail/expected_builder.hpp"
 #include "caf/detail/response_type_check.hpp"
-#include "caf/detail/type_list.hpp"
 #include "caf/message_id.hpp"
-#include "caf/none.hpp"
 #include "caf/policy/select_all.hpp"
 #include "caf/policy/select_any.hpp"
 #include "caf/sec.hpp"
-#include "caf/system_messages.hpp"
-#include "caf/typed_behavior.hpp"
 
 #include <type_traits>
 
@@ -90,12 +84,10 @@ struct blocking_fan_out_response_handle_state {
 };
 
 /// This helper class identifies an expected response message and enables
-/// `request(...).then(...)`.
+/// `request(...).receive(...)`.
 template <class Policy, class... Results>
 class blocking_fan_out_response_handle {
 public:
-  // -- constructors, destructors, and assignment operators --------------------
-
   blocking_fan_out_response_handle(abstract_blocking_actor* self,
                                    std::vector<message_id> mids,
                                    disposable in_flight,
@@ -108,9 +100,6 @@ public:
   void receive(OnValue on_value, OnError on_error) && {
     detail::fan_out_response_type_check<Policy, OnValue, OnError, Results...>();
     auto bhvr = behavior{};
-    // Track completion to allow early exit and enforce a single overall
-    // timeout.
-    auto deadline = state_.deadline;
     if constexpr (std::is_same_v<Policy, policy::select_all_tag_t>) {
       using helper_type = detail::select_all_helper_t<std::decay_t<OnValue>>;
       helper_type helper{state_.mids.size(), state_.in_flight,
@@ -129,8 +118,8 @@ public:
       bhvr = behavior{std::move(helper), std::move(error_handler)};
       for (const auto& mid : state_.mids) {
         auto now = std::chrono::steady_clock::now();
-        auto remaining = deadline > now
-                           ? (deadline - now)
+        auto remaining = state_.deadline > now
+                           ? (state_.deadline - now)
                            : std::chrono::steady_clock::duration::zero();
         state_.self->do_receive(mid, bhvr, remaining);
       }
@@ -155,8 +144,8 @@ public:
       bhvr = behavior{std::move(result_handler), std::move(error_handler)};
       for (const auto& mid : state_.mids) {
         auto now = std::chrono::steady_clock::now();
-        auto remaining = deadline > now
-                           ? (deadline - now)
+        auto remaining = state_.deadline > now
+                           ? (state_.deadline - now)
                            : std::chrono::steady_clock::duration::zero();
         state_.self->do_receive(mid, bhvr, remaining);
       }
@@ -165,7 +154,8 @@ public:
 
   auto receive() && {
     if constexpr (std::is_same_v<Policy, policy::select_all_tag_t>) {
-      detail::expected_builder<std::vector<std::tuple<Results...>>> bld;
+      using value_type = detail::select_all_helper_value_t<Results...>;
+      detail::expected_builder<std::vector<value_type>> bld;
       std::move(*this).receive(
         [&bld](std::vector<std::tuple<Results...>> args) {
           bld.set_value(std::move(args));

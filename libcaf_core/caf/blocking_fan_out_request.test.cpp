@@ -354,6 +354,12 @@ TEST("send fan_out_request messages with void result using typed actors") {
     check(*ran);
     check_eq(*err, error{});
   }
+  SECTION("receive with policy select_any") {
+    auto res = self->mail(1, 2)
+                 .fan_out_request(workers, 1s, policy::select_any_tag)
+                 .receive();
+    check_has_value(res);
+  }
 }
 
 TEST("send fan_out_request messages with invalid setups using typed actors") {
