@@ -9,8 +9,6 @@
 #include "caf/blocking_fan_out_response_handle.hpp"
 #include "caf/blocking_response_handle.hpp"
 #include "caf/message.hpp"
-#include "caf/policy/select_all.hpp"
-#include "caf/policy/select_any.hpp"
 
 namespace caf {
 
@@ -144,7 +142,8 @@ public:
                                                            response_type>;
     auto composite_requests
       = disposable::make_composite(std::move(pending_requests));
-    return result_type{self(), std::move(ids), disposable{}, relative_timeout,
+    return result_type{self(), std::move(ids), disposable{},
+                       super::timeout_ + relative_timeout,
                        std::move(composite_requests)};
   }
 
@@ -263,7 +262,7 @@ public:
       = detail::blocking_fan_out_response_handle_t<Policy, response_type>;
     return result_type{self(), std::move(ids),
                        disposable::make_composite(std::move(pending_msgs)),
-                       timeout};
+                       self()->clock().now() + timeout};
   }
 
 private:
