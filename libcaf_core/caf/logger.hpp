@@ -27,9 +27,7 @@
 
 namespace caf {
 
-/// Centrally logs events from all actors in an actor system. To enable
-/// logging in your application, you need to define `CAF_LOG_LEVEL`. Per
-/// default, the logger generates log4j compatible output.
+/// Centrally logs events from all actors in an actor system.
 class CAF_CORE_EXPORT logger {
 public:
   // -- friends ----------------------------------------------------------------
@@ -204,16 +202,18 @@ public:
   // -- legacy API (for the logging macros) ------------------------------------
 
   /// @private
+  [[deprecated("use the new logging functions instead")]]
   void legacy_api_log(unsigned level, std::string_view component,
                       std::string msg,
                       detail::source_location loc
                       = detail::source_location::current());
 
   /// @private
-  [[nodiscard]] trace_exit_guard
-  legacy_api_log_trace(std::string_view component, std::string msg,
-                       detail::source_location loc
-                       = detail::source_location::current()) {
+  [[deprecated("use the new logging functions instead")]]
+  trace_exit_guard legacy_api_log_trace(std::string_view component,
+                                        std::string msg,
+                                        detail::source_location loc
+                                        = detail::source_location::current()) {
     auto event = log::event::make(log::level::trace, component, loc,
                                   thread_local_aid(), msg);
     auto event_cpy = event;
@@ -355,11 +355,11 @@ private:
 
 #define CAF_SET_LOGGER_SYS(ptr) caf::logger::current_logger(ptr)
 
-#if CAF_LOG_LEVEL < CAF_LOG_LEVEL_TRACE
+#ifdef CAF_ENABLE_TRACE_LOGGING
 
 #  define CAF_LOG_TRACE(unused) CAF_VOID_STMT
 
-#else // CAF_LOG_LEVEL < CAF_LOG_LEVEL_TRACE
+#else // CAF_ENABLE_TRACE_LOGGING
 
 #  define CAF_LOG_TRACE(entry_message)                                         \
     caf::logger::trace_exit_guard caf_trace_log_auto_guard;                    \
@@ -373,67 +373,39 @@ private:
     }                                                                          \
     static_cast<void>(0)
 
-#endif // CAF_LOG_LEVEL < CAF_LOG_LEVEL_TRACE
+#endif // CAF_ENABLE_TRACE_LOGGING
 
-#if CAF_LOG_LEVEL >= CAF_LOG_LEVEL_DEBUG
-#  define CAF_LOG_DEBUG(output)                                                \
-    CAF_LOG_IMPL(CAF_LOG_COMPONENT, CAF_LOG_LEVEL_DEBUG, output)
-#endif
+#define CAF_LOG_DEBUG(output)                                                  \
+  CAF_LOG_IMPL(CAF_LOG_COMPONENT, CAF_LOG_LEVEL_DEBUG, output)
 
-#if CAF_LOG_LEVEL >= CAF_LOG_LEVEL_INFO
-#  define CAF_LOG_INFO(output)                                                 \
-    CAF_LOG_IMPL(CAF_LOG_COMPONENT, CAF_LOG_LEVEL_INFO, output)
-#endif
+#define CAF_LOG_DEBUG_IF(cond, output)                                         \
+  if (cond)                                                                    \
+    CAF_LOG_IMPL(CAF_LOG_COMPONENT, CAF_LOG_LEVEL_DEBUG, output);              \
+  CAF_VOID_STMT
 
-#if CAF_LOG_LEVEL >= CAF_LOG_LEVEL_WARNING
-#  define CAF_LOG_WARNING(output)                                              \
-    CAF_LOG_IMPL(CAF_LOG_COMPONENT, CAF_LOG_LEVEL_WARNING, output)
-#endif
+#define CAF_LOG_INFO(output)                                                   \
+  CAF_LOG_IMPL(CAF_LOG_COMPONENT, CAF_LOG_LEVEL_INFO, output)
 
-#if CAF_LOG_LEVEL >= CAF_LOG_LEVEL_ERROR
-#  define CAF_LOG_ERROR(output)                                                \
-    CAF_LOG_IMPL(CAF_LOG_COMPONENT, CAF_LOG_LEVEL_ERROR, output)
-#endif
+#define CAF_LOG_INFO_IF(cond, output)                                          \
+  if (cond)                                                                    \
+    CAF_LOG_IMPL(CAF_LOG_COMPONENT, CAF_LOG_LEVEL_INFO, output);               \
+  CAF_VOID_STMT
 
-#ifndef CAF_LOG_INFO
-#  define CAF_LOG_INFO(output) CAF_VOID_STMT
-#  define CAF_LOG_INFO_IF(cond, output) CAF_VOID_STMT
-#else // CAF_LOG_INFO
-#  define CAF_LOG_INFO_IF(cond, output)                                        \
-    if (cond)                                                                  \
-      CAF_LOG_IMPL(CAF_LOG_COMPONENT, CAF_LOG_LEVEL_INFO, output);             \
-    CAF_VOID_STMT
-#endif // CAF_LOG_INFO
+#define CAF_LOG_WARNING(output)                                                \
+  CAF_LOG_IMPL(CAF_LOG_COMPONENT, CAF_LOG_LEVEL_WARNING, output)
 
-#ifndef CAF_LOG_DEBUG
-#  define CAF_LOG_DEBUG(output) CAF_VOID_STMT
-#  define CAF_LOG_DEBUG_IF(cond, output) CAF_VOID_STMT
-#else // CAF_LOG_DEBUG
-#  define CAF_LOG_DEBUG_IF(cond, output)                                       \
-    if (cond)                                                                  \
-      CAF_LOG_IMPL(CAF_LOG_COMPONENT, CAF_LOG_LEVEL_DEBUG, output);            \
-    CAF_VOID_STMT
-#endif // CAF_LOG_DEBUG
+#define CAF_LOG_WARNING_IF(cond, output)                                       \
+  if (cond)                                                                    \
+    CAF_LOG_IMPL(CAF_LOG_COMPONENT, CAF_LOG_LEVEL_WARNING, output);            \
+  CAF_VOID_STMT
 
-#ifndef CAF_LOG_WARNING
-#  define CAF_LOG_WARNING(output) CAF_VOID_STMT
-#  define CAF_LOG_WARNING_IF(cond, output) CAF_VOID_STMT
-#else // CAF_LOG_WARNING
-#  define CAF_LOG_WARNING_IF(cond, output)                                     \
-    if (cond)                                                                  \
-      CAF_LOG_IMPL(CAF_LOG_COMPONENT, CAF_LOG_LEVEL_WARNING, output);          \
-    CAF_VOID_STMT
-#endif // CAF_LOG_WARNING
+#define CAF_LOG_ERROR(output)                                                  \
+  CAF_LOG_IMPL(CAF_LOG_COMPONENT, CAF_LOG_LEVEL_ERROR, output)
 
-#ifndef CAF_LOG_ERROR
-#  define CAF_LOG_ERROR(output) CAF_VOID_STMT
-#  define CAF_LOG_ERROR_IF(cond, output) CAF_VOID_STMT
-#else // CAF_LOG_ERROR
-#  define CAF_LOG_ERROR_IF(cond, output)                                       \
-    if (cond)                                                                  \
-      CAF_LOG_IMPL(CAF_LOG_COMPONENT, CAF_LOG_LEVEL_ERROR, output);            \
-    CAF_VOID_STMT
-#endif // CAF_LOG_ERROR
+#define CAF_LOG_ERROR_IF(cond, output)                                         \
+  if (cond)                                                                    \
+    CAF_LOG_IMPL(CAF_LOG_COMPONENT, CAF_LOG_LEVEL_ERROR, output);              \
+  CAF_VOID_STMT
 
 // -- macros for logging CE-0001 events ----------------------------------------
 
@@ -441,48 +413,81 @@ private:
 /// crucial for understanding happens-before relations. See RFC SE-0001.
 #define CAF_LOG_FLOW_COMPONENT "caf_flow"
 
-#if CAF_LOG_LEVEL >= CAF_LOG_LEVEL_DEBUG
-
-#  define CAF_LOG_SPAWN_EVENT(ptr, ctor_data)                                  \
-    CAF_LOG_IMPL(CAF_LOG_FLOW_COMPONENT, CAF_LOG_LEVEL_DEBUG,                  \
-                 "SPAWN ; ID ="                                                \
-                   << ptr->id() << "; NAME =" << ptr->name() << "; TYPE ="     \
-                   << ::caf::detail::pretty_type_name(typeid(*ptr))            \
-                   << "; ARGS =" << ctor_data.c_str()                          \
-                   << "; NODE =" << ptr->node())
+#ifdef CAF_ENABLE_TRACE_LOGGING
 
 #  define CAF_LOG_SEND_EVENT(ptr)                                              \
-    CAF_LOG_IMPL(CAF_LOG_FLOW_COMPONENT, CAF_LOG_LEVEL_DEBUG,                  \
-                 "SEND ; TO ="                                                 \
-                   << ::caf::deep_to_string(                                   \
-                        ::caf::strong_actor_ptr{this->ctrl()})                 \
-                        .c_str()                                               \
-                   << "; FROM =" << ::caf::deep_to_string(ptr->sender).c_str() \
-                   << "; CONTENT ="                                            \
-                   << ::caf::deep_to_string(ptr->content()).c_str())
+    do {                                                                       \
+      if (auto* caf_logger_instance = caf::logger::current_logger();           \
+          caf_logger_instance                                                  \
+          && caf_logger_instance->accepts(::caf::log::level::debug,            \
+                                          CAF_LOG_FLOW_COMPONENT)) {           \
+        caf_logger_instance->log(::caf::log::level::debug,                     \
+                                 CAF_LOG_FLOW_COMPONENT,                       \
+                                 "SEND ; TO = {}; FROM = {}; CONTENT = {}",    \
+                                 ::caf::strong_actor_ptr{this->ctrl()},        \
+                                 ptr->sender,                                  \
+                                 ::caf::deep_to_string(ptr->content()));       \
+      }                                                                        \
+    } while (false)
 
 #  define CAF_LOG_RECEIVE_EVENT(ptr)                                           \
-    CAF_LOG_IMPL(CAF_LOG_FLOW_COMPONENT, CAF_LOG_LEVEL_DEBUG,                  \
-                 "RECEIVE ; FROM ="                                            \
-                   << ::caf::deep_to_string(ptr->sender).c_str()               \
-                   << "; CONTENT ="                                            \
-                   << ::caf::deep_to_string(ptr->content()).c_str())
+    do {                                                                       \
+      if (auto* caf_logger_instance = caf::logger::current_logger();           \
+          caf_logger_instance                                                  \
+          && caf_logger_instance->accepts(::caf::log::level::debug,            \
+                                          CAF_LOG_FLOW_COMPONENT)) {           \
+        caf_logger_instance->log(::caf::log::level::debug,                     \
+                                 CAF_LOG_FLOW_COMPONENT,                       \
+                                 "RECEIVE ; FROM = {}; CONTENT = {}",          \
+                                 ::caf::deep_to_string(ptr->sender),           \
+                                 ::caf::deep_to_string(ptr->content()));       \
+      }                                                                        \
+    } while (false)
 
 #  define CAF_LOG_REJECT_EVENT()                                               \
-    CAF_LOG_IMPL(CAF_LOG_FLOW_COMPONENT, CAF_LOG_LEVEL_DEBUG, "REJECT")
+    do {                                                                       \
+      if (auto* caf_logger_instance = caf::logger::current_logger();           \
+          caf_logger_instance                                                  \
+          && caf_logger_instance->accepts(::caf::log::level::debug,            \
+                                          CAF_LOG_FLOW_COMPONENT)) {           \
+        caf_logger_instance->log(::caf::log::level::debug,                     \
+                                 CAF_LOG_FLOW_COMPONENT, "REJECT");            \
+      }                                                                        \
+    } while (false)
 
 #  define CAF_LOG_ACCEPT_EVENT(unblocked)                                      \
-    CAF_LOG_IMPL(CAF_LOG_FLOW_COMPONENT, CAF_LOG_LEVEL_DEBUG,                  \
-                 "ACCEPT ; UNBLOCKED =" << unblocked)
-
-#  define CAF_LOG_DROP_EVENT()                                                 \
-    CAF_LOG_IMPL(CAF_LOG_FLOW_COMPONENT, CAF_LOG_LEVEL_DEBUG, "DROP")
+    do {                                                                       \
+      if (auto* caf_logger_instance = caf::logger::current_logger();           \
+          caf_logger_instance                                                  \
+          && caf_logger_instance->accepts(::caf::log::level::debug,            \
+                                          CAF_LOG_FLOW_COMPONENT)) {           \
+        caf_logger_instance->log(::caf::log::level::debug,                     \
+                                 CAF_LOG_FLOW_COMPONENT,                       \
+                                 "ACCEPT ; UNBLOCKED = {}", unblocked);        \
+      }                                                                        \
+    } while (false)
 
 #  define CAF_LOG_SKIP_EVENT()                                                 \
-    CAF_LOG_IMPL(CAF_LOG_FLOW_COMPONENT, CAF_LOG_LEVEL_DEBUG, "SKIP")
+    do {                                                                       \
+      if (auto* caf_logger_instance = caf::logger::current_logger();           \
+          caf_logger_instance                                                  \
+          && caf_logger_instance->accepts(::caf::log::level::debug,            \
+                                          CAF_LOG_FLOW_COMPONENT)) {           \
+        caf_logger_instance->log(::caf::log::level::debug,                     \
+                                 CAF_LOG_FLOW_COMPONENT, "SKIP");              \
+      }                                                                        \
+    } while (false)
 
 #  define CAF_LOG_FINALIZE_EVENT()                                             \
-    CAF_LOG_IMPL(CAF_LOG_FLOW_COMPONENT, CAF_LOG_LEVEL_DEBUG, "FINALIZE")
+    do {                                                                       \
+      if (auto* caf_logger_instance = caf::logger::current_logger();           \
+          caf_logger_instance                                                  \
+          && caf_logger_instance->accepts(::caf::log::level::debug,            \
+                                          CAF_LOG_FLOW_COMPONENT)) {           \
+        caf_logger_instance->log(::caf::log::level::debug,                     \
+                                 CAF_LOG_FLOW_COMPONENT, "FINALIZE");          \
+      }                                                                        \
+    } while (false)
 
 #  define CAF_LOG_SKIP_OR_FINALIZE_EVENT(invoke_result)                        \
     do {                                                                       \
@@ -493,12 +498,19 @@ private:
     } while (false)
 
 #  define CAF_LOG_TERMINATE_EVENT(thisptr, rsn)                                \
-    CAF_LOG_IMPL(CAF_LOG_FLOW_COMPONENT, CAF_LOG_LEVEL_DEBUG,                  \
-                 "TERMINATE ; ID =" << thisptr->id() << "; REASON ="           \
-                                    << deep_to_string(rsn).c_str()             \
-                                    << "; NODE =" << thisptr->node())
+    do {                                                                       \
+      if (auto* caf_logger_instance = caf::logger::current_logger();           \
+          caf_logger_instance                                                  \
+          && caf_logger_instance->accepts(::caf::log::level::debug,            \
+                                          CAF_LOG_FLOW_COMPONENT)) {           \
+        caf_logger_instance->log(                                              \
+          ::caf::log::level::debug, CAF_LOG_FLOW_COMPONENT,                    \
+          "TERMINATE ; ID = {}; REASON = {}; NODE = {}", thisptr->id(), rsn,   \
+          thisptr->node());                                                    \
+      }                                                                        \
+    } while (false)
 
-#else // CAF_LOG_LEVEL >= CAF_LOG_LEVEL_DEBUG
+#else // CAF_ENABLE_TRACE_LOGGING
 
 #  define CAF_LOG_SPAWN_EVENT(ref, ctor_data) CAF_VOID_STMT
 
@@ -510,8 +522,6 @@ private:
 
 #  define CAF_LOG_ACCEPT_EVENT(unblocked) CAF_VOID_STMT
 
-#  define CAF_LOG_DROP_EVENT() CAF_VOID_STMT
-
 #  define CAF_LOG_SKIP_EVENT() CAF_VOID_STMT
 
 #  define CAF_LOG_SKIP_OR_FINALIZE_EVENT(unused) CAF_VOID_STMT
@@ -520,4 +530,4 @@ private:
 
 #  define CAF_LOG_TERMINATE_EVENT(thisptr, rsn) CAF_VOID_STMT
 
-#endif // CAF_LOG_LEVEL >= CAF_LOG_LEVEL_DEBUG
+#endif // CAF_ENABLE_TRACE_LOGGING

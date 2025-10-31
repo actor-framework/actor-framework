@@ -60,6 +60,7 @@ option(CAF_ENABLE_QT6_EXAMPLES "Build examples with the Qt6 framework" OFF)
 option(CAF_ENABLE_ROBOT_TESTS "Add the Robot tests to CTest " OFF)
 option(CAF_ENABLE_RUNTIME_CHECKS "Build CAF with extra runtime assertions" OFF)
 option(CAF_USE_STD_FORMAT "Enable std::format support" OFF)
+option(CAF_ENABLE_TRACE_LOGGING "Enable additional logging for debugging" OFF)
 
 # -- CAF options that are on by default ----------------------------------------
 
@@ -77,7 +78,6 @@ cmake_dependent_option(CAF_ENABLE_OPENSSL_MODULE "Build OpenSSL module" ON
 # -- CAF options with non-boolean values ---------------------------------------
 
 set(CAF_CXX_VERSION 20 CACHE STRING "Set the C++ version to use for CAF")
-set(CAF_LOG_LEVEL "QUIET" CACHE STRING "Set log verbosity of CAF components")
 set(CAF_EXCLUDE_TESTS "" CACHE STRING "List of excluded test suites")
 set(CAF_SANITIZERS "" CACHE STRING
     "Comma separated sanitizers, e.g., 'address,undefined'")
@@ -98,11 +98,6 @@ set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 if(CAF_ENABLE_OPENSSL_MODULE AND NOT CAF_ENABLE_IO_MODULE)
   message(FATAL_ERROR "Invalid options: cannot build OpenSSL without I/O")
-endif()
-
-set(CAF_VALID_LOG_LEVELS QUIET ERROR WARNING INFO DEBUG TRACE)
-if(NOT CAF_LOG_LEVEL IN_LIST CAF_VALID_LOG_LEVELS)
-  message(FATAL_ERROR "Invalid log level: \"${CAF_LOG_LEVEL}\"")
 endif()
 
 if(MSVC AND CAF_SANITIZERS)

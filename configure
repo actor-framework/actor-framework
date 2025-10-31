@@ -29,19 +29,14 @@ Locating packages in non-standard locations:
 
 Debugging options:
 
-  --log-level=STRING      build with debugging output, possible values:
-                            - ERROR
-                            - WARNING
-                            - INFO
-                            - DEBUG
-                            - TRACE
-  --sanitizers=STRING     build with this list of sanitizers enabled
+  --enable-trace-logging    build with trace logging enabled
+  --sanitizers=STRING       build with this list of sanitizers enabled
 
 Convenience options:
 
   --dev-mode                shortcut for passing:
                               --build-type=Debug
-                              --log-level=TRACE
+                              --enable-trace-logging
                               --sanitizers=address,undefined
                               --disable-examples
                               --disable-tools
@@ -156,14 +151,14 @@ while [ $# -ne 0 ]; do
     --prefix=*)
       append_cache_entry CMAKE_INSTALL_PREFIX PATH "$optarg"
       ;;
-    --log-level=*)
-      append_cache_entry CAF_LOG_LEVEL STRING "$optarg"
+    --enable-trace-logging)
+      append_cache_entry CAF_ENABLE_TRACE_LOGGING BOOL ON
       ;;
     --sanitizers=*)
       append_cache_entry CAF_SANITIZERS STRING "$optarg"
       ;;
     --dev-mode)
-      append_cache_entry CAF_LOG_LEVEL STRING 'TRACE'
+      append_cache_entry CAF_ENABLE_TRACE_LOGGING BOOL ON
       append_cache_entry CAF_SANITIZERS STRING 'address,undefined'
       append_cache_entry CMAKE_BUILD_TYPE STRING 'Debug'
       set_build_flag examples OFF

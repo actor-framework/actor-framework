@@ -11,6 +11,7 @@
 #include "caf/defaults.hpp"
 #include "caf/detail/atomic_ref_counted.hpp"
 #include "caf/detail/get_process_id.hpp"
+#include "caf/detail/log_level.hpp"
 #include "caf/detail/log_level_map.hpp"
 #include "caf/detail/meta_object.hpp"
 #include "caf/detail/pretty_type_name.hpp"
@@ -117,13 +118,13 @@ public:
   /// Combines various logging-related flags and parameters.
   struct config {
     /// Stores `max(file_verbosity, console_verbosity)`.
-    unsigned verbosity = CAF_LOG_LEVEL;
+    unsigned verbosity = log::level::quiet;
 
     /// Configures the verbosity for file output.
-    unsigned file_verbosity = CAF_LOG_LEVEL;
+    unsigned file_verbosity = log::level::quiet;
 
     /// Configures the verbosity for console output.
-    unsigned console_verbosity = CAF_LOG_LEVEL;
+    unsigned console_verbosity = log::level::quiet;
 
     /// Configures whether the logger immediately writes its output in the
     /// calling thread, bypassing its queue. Use this option only in

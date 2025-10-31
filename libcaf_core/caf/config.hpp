@@ -14,10 +14,6 @@
 //
 // CAF_ENABLE_RUNTIME_CHECKS:
 //   - check requirements at runtime
-//
-// CAF_LOG_LEVEL:
-//   - denotes the amount of logging, ranging from error messages only (0)
-//     to complete traces (4)
 
 // This compiler-specific block defines:
 // - CAF_PUSH_WARNINGS/CAF_POP_WARNINGS to surround "noisy" header includes

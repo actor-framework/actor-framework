@@ -13,6 +13,7 @@
 #include "caf/flow/observable_builder.hpp"
 #include "caf/flow/op/ucast.hpp"
 #include "caf/flow/subscription.hpp"
+#include "caf/log/net.hpp"
 
 namespace caf::net::octet_stream {
 
@@ -120,12 +121,12 @@ public:
 
   ptrdiff_t consume(byte_span buf, byte_span) override {
     if (!in_) {
-      CAF_LOG_DEBUG("flow_bridge::consume: !in_");
+      log::net::debug("flow_bridge::consume: !in_");
       return -1;
     }
     auto& st = in_->state();
     if (st.disposed) {
-      CAF_LOG_DEBUG("flow_bridge::consume: st.disposed");
+      log::net::debug("flow_bridge::consume: st.disposed");
       return -1;
     }
     for (auto val : buf) {

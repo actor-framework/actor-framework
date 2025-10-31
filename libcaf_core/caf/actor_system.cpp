@@ -683,7 +683,7 @@ public:
           ptr->stop();
         }
       }
-      CAF_LOG_DEBUG("stop scheduler");
+      log::core::debug("stop scheduler");
       scheduler->stop();
       private_threads.stop();
       registry.stop();

@@ -1,3 +1,4 @@
+#include "caf/config.hpp"
 #define CAF_LOG_COMPONENT "app"
 
 #include "caf/caf_main.hpp"
@@ -73,6 +74,7 @@ bool inspect(Inspector& f, foobar& x) {
 
 void foo([[maybe_unused]] int value, bool use_legacy_api) {
   if (use_legacy_api) {
+    CAF_PUSH_DEPRECATED_WARNING
     CAF_LOG_TRACE(CAF_ARG(value));
     CAF_LOG_DEBUG("this is a debug message");
     CAF_LOG_DEBUG("this is another debug message with foobar(\"one\", \"two\") "
@@ -83,6 +85,7 @@ void foo([[maybe_unused]] int value, bool use_legacy_api) {
     CAF_LOG_WARNING("this is another warning message ; foo = bar");
     CAF_LOG_ERROR("this is an error message");
     CAF_LOG_ERROR("this is another error message ; foo = bar");
+    CAF_POP_WARNINGS
   } else {
     using caf::logger;
     auto trace_guard = logger::trace(app::component, "value = {}", value);

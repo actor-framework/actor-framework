@@ -372,12 +372,10 @@ with ``std::string``.
 Log Output
 ----------
 
-Logging is disabled in CAF per default. It can be enabled by setting the
-``--with-log-level=`` option of the ``configure`` script to one
-of ``error``, ``warning``, ``info``, ``debug``,
-or ``trace`` (from least output to most). Alternatively, setting the
-CMake variable ``CAF_LOG_LEVEL`` to one of these values has the same
-effect.
+CAF enables logging up to the ``debug`` level by default. To enable trace logs,
+CAF must be configured using the ``CAF_ENABLE_TRACE_LOGGING`` CMake variable.
+When using the ``configure`` script, this can be achieved by passing the
+``--enable-trace-logging`` option to the script.
 
 All logger-related configuration options listed here and in
 system-config-options_ are silently ignored if logging is disabled.

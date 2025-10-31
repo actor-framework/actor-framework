@@ -94,8 +94,8 @@ struct ssl_policy {
     if (result == io::network::invalid_native_socket) {
       auto err = io::network::last_socket_error();
       if (!io::network::would_block_or_temporarily_unavailable(err))
-        CAF_LOG_ERROR(
-          "accept failed:" << io::network::socket_error_as_string(err));
+        log::openssl::error("accept failed: {}",
+                            io::network::socket_error_as_string(err));
       return false;
     }
     io::network::child_process_inherit(result, false);
