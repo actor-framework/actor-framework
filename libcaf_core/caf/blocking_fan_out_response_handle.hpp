@@ -5,14 +5,12 @@
 #pragma once
 
 #include "caf/abstract_blocking_actor.hpp"
+#include "caf/actor_clock.hpp"
 #include "caf/actor_traits.hpp"
 #include "caf/blocking_actor.hpp"
-#include "caf/catch_all.hpp"
 #include "caf/detail/expected_builder.hpp"
 #include "caf/detail/response_type_check.hpp"
 #include "caf/detail/type_list.hpp"
-#include "caf/detail/typed_actor_util.hpp"
-#include "caf/flow/fwd.hpp"
 #include "caf/message_id.hpp"
 #include "caf/none.hpp"
 #include "caf/policy/select_all.hpp"
@@ -87,8 +85,8 @@ struct blocking_fan_out_response_handle_state {
   /// Timeout for the response.
   disposable in_flight;
 
-  /// Timeout for the response.
-  caf::timespan timeout;
+  /// Deadline for the response.
+  actor_clock::time_point deadline;
 };
 
 /// This helper class identifies an expected response message and enables
@@ -100,8 +98,9 @@ public:
 
   blocking_fan_out_response_handle(abstract_blocking_actor* self,
                                    std::vector<message_id> mids,
-                                   disposable in_flight, caf::timespan timeout)
-    : state_{self, std::move(mids), in_flight, timeout} {
+                                   disposable in_flight,
+                                   actor_clock::time_point deadline)
+    : state_{self, std::move(mids), in_flight, deadline} {
     // nop
   }
 
@@ -109,10 +108,14 @@ public:
   void receive(OnValue on_value, OnError on_error) && {
     detail::fan_out_response_type_check<Policy, OnValue, OnError, Results...>();
     auto bhvr = behavior{};
+    // Track completion to allow early exit and enforce a single overall
+    // timeout.
+    auto deadline = state_.deadline;
     if constexpr (std::is_same_v<Policy, policy::select_all_tag_t>) {
       using helper_type = detail::select_all_helper_t<std::decay_t<OnValue>>;
       helper_type helper{state_.mids.size(), state_.in_flight,
                          std::forward<OnValue>(on_value)};
+      auto pending = helper.pending;
       auto error_handler
         = [pending{helper.pending}, timeout{state_.in_flight},
            g{std::forward<OnError>(on_error)}](error& err) mutable {
@@ -124,6 +127,13 @@ public:
             }
           };
       bhvr = behavior{std::move(helper), std::move(error_handler)};
+      for (const auto& mid : state_.mids) {
+        auto now = std::chrono::steady_clock::now();
+        auto remaining = deadline > now
+                           ? (deadline - now)
+                           : std::chrono::steady_clock::duration::zero();
+        state_.self->do_receive(mid, bhvr, remaining);
+      }
     } else {
       using helper = caf::detail::select_any_factory<std::decay_t<OnValue>>;
       auto pending = std::make_shared<size_t>(state_.mids.size());
@@ -143,9 +153,13 @@ public:
             }
           };
       bhvr = behavior{std::move(result_handler), std::move(error_handler)};
-    }
-    for (const auto& mid : state_.mids) {
-      state_.self->do_receive(mid, bhvr, state_.timeout);
+      for (const auto& mid : state_.mids) {
+        auto now = std::chrono::steady_clock::now();
+        auto remaining = deadline > now
+                           ? (deadline - now)
+                           : std::chrono::steady_clock::duration::zero();
+        state_.self->do_receive(mid, bhvr, remaining);
+      }
     }
   }
 
@@ -184,9 +198,9 @@ public:
   blocking_fan_out_delayed_response_handle(abstract_blocking_actor* self,
                                            std::vector<message_id> mids,
                                            disposable in_flight,
-                                           timespan timeout,
+                                           actor_clock::time_point deadline,
                                            disposable pending_request)
-    : decorated(self, std::move(mids), in_flight, timeout),
+    : decorated(self, std::move(mids), in_flight, deadline),
       pending_request(std::move(pending_request)) {
     // nop
   }
