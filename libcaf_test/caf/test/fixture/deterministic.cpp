@@ -112,13 +112,6 @@ public:
     deref();
   }
 
-  mailbox_element* peek(message_id) override {
-    // Note: this function only exists for backwards compatibility with the old
-    // unit testing framework. It is not used by the new test runner and thus
-    // not implemented.
-    CAF_RAISE_ERROR(std::logic_error, "peek not supported by this mailbox");
-  }
-
 private:
   bool blocked_ = false;
   bool closed_ = false;

@@ -36,13 +36,6 @@ public:
   worker_type* pop() {
     return static_cast<worker_type*>(super::pop_impl());
   }
-
-  /// Checks which worker would `pop` currently return.
-  /// @returns the next available worker (in LIFO order) or `nullptr` if the
-  ///          hub is currently empty.
-  worker_type* peek() {
-    return static_cast<worker_type*>(super::peek_impl());
-  }
 };
 
 } // namespace caf::detail

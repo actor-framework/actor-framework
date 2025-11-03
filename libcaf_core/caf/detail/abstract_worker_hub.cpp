@@ -71,8 +71,4 @@ abstract_worker* abstract_worker_hub::pop_impl() {
   }
 }
 
-abstract_worker* abstract_worker_hub::peek_impl() {
-  return head_.load();
-}
-
 } // namespace caf::detail

@@ -45,11 +45,6 @@ protected:
   ///          hub is currently empty.
   abstract_worker* pop_impl();
 
-  /// Checks which worker would `pop` currently return.
-  /// @returns the next available worker (in LIFO order) or `nullptr` if the
-  ///          hub is currently empty.
-  abstract_worker* peek_impl();
-
   // -- member variables -------------------------------------------------------
 
   std::atomic<abstract_worker*> head_;

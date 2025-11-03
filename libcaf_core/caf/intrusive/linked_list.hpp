@@ -183,11 +183,6 @@ public:
     return promote(tail_.next);
   }
 
-  /// Like `front`, but returns `nullptr` if the list is empty.
-  pointer peek() noexcept {
-    return size_ > 0 ? front() : nullptr;
-  }
-
   // -- insertion --------------------------------------------------------------
 
   /// Appends `ptr` to the list.

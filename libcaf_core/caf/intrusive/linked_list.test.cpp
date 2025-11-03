@@ -43,7 +43,6 @@ TEST("a default default-constructed list is empty") {
   list_type uut;
   check_eq(uut.empty(), true);
   check_eq(uut.size(), 0u);
-  check_eq(uut.peek(), nullptr);
   check_eq(uut.begin(), uut.end());
 }
 
@@ -96,13 +95,6 @@ TEST("lists are movable") {
     check_eq(uut.empty(), false);
     check_eq(deep_to_string(uut), "[1, 2, 3]");
   }
-}
-
-TEST("peek returns a pointer to the first element without removing it") {
-  list_type uut;
-  check_eq(uut.peek(), nullptr);
-  fill(uut, 1, 2, 3);
-  check_eq(uut.peek()->value, 1);
 }
 
 TEST("the size of the list is the number of elements") {

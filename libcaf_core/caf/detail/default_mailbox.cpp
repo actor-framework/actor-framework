@@ -21,24 +21,6 @@ void default_mailbox::push_front(mailbox_element_ptr ptr) {
     normal_queue_.push_front(ptr.release());
 }
 
-mailbox_element* default_mailbox::peek(message_id id) {
-  if (inbox_.closed() || inbox_.blocked()) {
-    return nullptr;
-  }
-  fetch_more();
-  if (id.is_async()) {
-    if (!urgent_queue_.empty())
-      return urgent_queue_.front();
-    if (!normal_queue_.empty())
-      return normal_queue_.front();
-    return nullptr;
-  }
-  auto pred = [id](mailbox_element& x) { return x.mid == id; };
-  if (auto result = urgent_queue_.find_if(pred))
-    return result;
-  return normal_queue_.find_if(pred);
-}
-
 mailbox_element_ptr default_mailbox::pop_front() {
   for (;;) {
     if (auto result = urgent_queue_.pop_front())
