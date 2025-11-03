@@ -48,6 +48,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   `CAF_LOG_DEBUG_IF`, `CAF_LOG_INFO`, `CAF_LOG_INFO_IF`, `CAF_LOG_WARNING`,
   `CAF_LOG_WARNING_IF`, `CAF_LOG_ERROR`, and `CAF_LOG_ERROR_IF`. Users should
   use the new logging API instead.
+- The member functions `anon_send`, `scheduled_anon_send`, and
+  `delayed_anon_send` of the class `local_actor` are now deprecated in favor of
+  using the free `anon_mail` function instead.
 
 ### Added
 
