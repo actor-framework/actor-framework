@@ -178,6 +178,7 @@ public:
 
   template <message_priority Priority = message_priority::normal, class Handle,
             class T, class... Ts>
+  [[deprecated("use anon_mail instead")]]
   void anon_send(const Handle& receiver, T&& arg, Ts&&... args) {
     detail::send_type_check<none_t, Handle, T, Ts...>();
     do_anon_send(actor_cast<abstract_actor*>(receiver), Priority,
@@ -186,6 +187,7 @@ public:
 
   template <message_priority Priority = message_priority::normal, class Handle,
             class T, class... Ts>
+  [[deprecated("use anon_mail instead")]]
   disposable scheduled_anon_send(const Handle& receiver,
                                  actor_clock::time_point timeout, T&& arg,
                                  Ts&&... args) {
@@ -197,6 +199,7 @@ public:
 
   template <message_priority Priority = message_priority::normal, class Handle,
             class T, class... Ts>
+  [[deprecated("use anon_mail instead")]]
   disposable delayed_anon_send(const Handle& receiver,
                                actor_clock::duration_type timeout, T&& arg,
                                Ts&&... args) {
