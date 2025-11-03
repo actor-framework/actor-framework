@@ -150,14 +150,6 @@ const char* local_actor::name() const {
   return "user.local-actor";
 }
 
-error local_actor::save_state(serializer&, const unsigned int) {
-  CAF_RAISE_ERROR("local_actor::serialize called");
-}
-
-error local_actor::load_state(deserializer&, const unsigned int) {
-  CAF_RAISE_ERROR("local_actor::deserialize called");
-}
-
 void local_actor::do_delegate_error() {
   auto& sender = current_element_->sender;
   auto& mid = current_element_->mid;

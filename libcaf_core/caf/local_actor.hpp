@@ -303,16 +303,6 @@ public:
 
   const char* name() const override;
 
-  /// Serializes the state of this actor to `sink`. This function is
-  /// only called if this actor has set the `is_serializable` flag.
-  /// The default implementation throws a `std::logic_error`.
-  virtual error save_state(serializer& sink, unsigned int version);
-
-  /// Deserializes the state of this actor from `source`. This function is
-  /// only called if this actor has set the `is_serializable` flag.
-  /// The default implementation throws a `std::logic_error`.
-  virtual error load_state(deserializer& source, unsigned int version);
-
   /// Returns the currently defined fail state. If this reason is not
   /// `none` then the actor will terminate with this error after executing
   /// the current message handler.

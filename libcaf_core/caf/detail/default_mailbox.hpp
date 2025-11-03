@@ -27,8 +27,6 @@ public:
 
   default_mailbox& operator=(const default_mailbox&) = delete;
 
-  mailbox_element* peek(message_id id) override;
-
   intrusive::inbox_result push_back(mailbox_element_ptr ptr) override;
 
   void push_front(mailbox_element_ptr ptr) override;

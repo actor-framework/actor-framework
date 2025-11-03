@@ -73,11 +73,6 @@ public:
   bool empty() {
     return size() == 0;
   }
-
-  /// @private
-  /// @note Only used by the legacy test framework. Remove when dropping support
-  ///       for it.
-  virtual mailbox_element* peek(message_id id) = 0;
 };
 
 } // namespace caf
