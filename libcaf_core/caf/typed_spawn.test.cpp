@@ -196,8 +196,8 @@ string_actor::behavior_type string_delegator(string_actor::pointer self,
   auto next = leaf ? self->spawn(string_delegator, master, false) : master;
   self->link_to(next);
   return {
-    [=](string& str) -> delegated<string> {
-      return self->delegate(next, std::move(str));
+    [self, next](string str) -> delegated<string> {
+      return self->mail(std::move(str)).delegate(next);
     },
   };
 }
@@ -220,8 +220,8 @@ maybe_string_delegator(maybe_string_actor::pointer self,
                        const maybe_string_actor& x) {
   self->link_to(x);
   return {
-    [=](string& s) -> delegated<ok_atom, string> {
-      return self->delegate(x, std::move(s));
+    [self, x](string s) -> delegated<ok_atom, string> {
+      return self->mail(std::move(s)).delegate(x);
     },
   };
 }
@@ -236,16 +236,16 @@ int_actor::behavior_type int_fun() {
 
 behavior foo(event_based_actor* self) {
   return {
-    [=](int i, int_actor server) {
-      self->delegate(server, i);
+    [self](int i, int_actor server) {
       self->quit();
+      return self->mail(i).delegate(server);
     },
   };
 }
 
 int_actor::behavior_type int_fun2(int_actor::pointer self) {
   return {
-    [=](int value) {
+    [self](int value) {
       self->monitor(self->current_sender(), [self](const error& reason) {
         test::runnable::current().check_eq(reason, exit_reason::normal);
         self->quit();
@@ -257,16 +257,16 @@ int_actor::behavior_type int_fun2(int_actor::pointer self) {
 
 behavior foo2(event_based_actor* self) {
   return {
-    [=](int i, int_actor server) {
-      self->delegate(server, i);
+    [self](int i, int_actor server) {
       self->quit();
+      return self->mail(i).delegate(server);
     },
   };
 }
 
 float_actor::behavior_type float_fun(float_actor::pointer self) {
   return {
-    [=](float a) {
+    [self](float a) {
       test::runnable::current().check_eq(a, test::approx{1.0f});
       self->quit(exit_reason::user_shutdown);
     },
@@ -277,7 +277,7 @@ int_actor::behavior_type foo3(int_actor::pointer self) {
   auto b = self->spawn<linked>(float_fun);
   self->mail(1.0f).send(b);
   return {
-    [=](int) { return 0; },
+    [](int) { return 0; },
   };
 }
 
@@ -399,19 +399,19 @@ TEST("check typed actor signature") {
   using foo_type = typed_actor<result<ok_atom>(put_atom)>;
   using foo_result_type = result<ok_atom>;
   using bar_type = typed_actor<result<void>(ok_atom)>;
-  auto foo_action = [](foo_type::pointer ptr) -> foo_type::behavior_type {
-    return {
-      [=](put_atom) -> foo_result_type {
+  auto foo_action = [](foo_type::pointer ptr) {
+    return foo_type::behavior_type{
+      [ptr](put_atom) -> foo_result_type {
         ptr->quit();
         return {ok_atom_v};
       },
     };
   };
-  auto bar_action = [=](bar_type::pointer ptr) -> bar_type::behavior_type {
+  auto bar_action = [foo_action](bar_type::pointer ptr) {
     auto foo = ptr->spawn<linked>(foo_action);
     ptr->mail(put_atom_v).send(foo);
-    return {
-      [=](ok_atom) { ptr->quit(); },
+    return bar_type::behavior_type{
+      [ptr](ok_atom) { ptr->quit(); },
     };
   };
   auto x = self->spawn(bar_action);
