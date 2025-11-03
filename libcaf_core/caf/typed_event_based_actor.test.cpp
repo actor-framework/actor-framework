@@ -92,10 +92,12 @@ server_actor::behavior_type typed_server3(server_actor::pointer self,
 
 void client(event_based_actor* self, const actor& parent,
             const server_actor& serv) {
-  self->request(serv, infinite, my_request{0, 0})
+  self->mail(my_request{0, 0})
+    .request(serv, infinite)
     .then([self, parent, serv](bool val1) {
       test::runnable::current().check_eq(val1, true);
-      self->request(serv, infinite, my_request{10, 20})
+      self->mail(my_request{10, 20})
+        .request(serv, infinite)
         .then([self, parent](bool val2) {
           test::runnable::current().check_eq(val2, false);
           self->mail(ok_atom_v).send(parent);
