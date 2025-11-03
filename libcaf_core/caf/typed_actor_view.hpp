@@ -307,11 +307,6 @@ public:
                                                    std::move(pending_timeout));
   }
 
-  template <class Handle, class... Args>
-  auto delegate(const Handle& dest, Args&&... args) {
-    return self_->delegate(dest, std::forward<Args>(args)...);
-  }
-
   /// @private
   actor_control_block* ctrl() const noexcept {
     CAF_ASSERT(self_ != nullptr);

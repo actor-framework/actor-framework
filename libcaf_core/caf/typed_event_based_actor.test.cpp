@@ -92,13 +92,15 @@ server_actor::behavior_type typed_server3(server_actor::pointer self,
 
 void client(event_based_actor* self, const actor& parent,
             const server_actor& serv) {
-  self->request(serv, infinite, my_request{0, 0}).then([=](bool val1) {
-    test::runnable::current().check_eq(val1, true);
-    self->request(serv, infinite, my_request{10, 20}).then([=](bool val2) {
-      test::runnable::current().check_eq(val2, false);
-      self->mail(ok_atom_v).send(parent);
+  self->request(serv, infinite, my_request{0, 0})
+    .then([self, parent, serv](bool val1) {
+      test::runnable::current().check_eq(val1, true);
+      self->request(serv, infinite, my_request{10, 20})
+        .then([self, parent](bool val2) {
+          test::runnable::current().check_eq(val2, false);
+          self->mail(ok_atom_v).send(parent);
+        });
     });
-  });
 }
 
 // -- test skipping of messages intentionally + using become() -----------------
@@ -176,8 +178,8 @@ string_actor::behavior_type string_delegator(string_actor::pointer self,
                                              string_actor next) {
   self->link_to(next);
   return {
-    [=](std::string& str) -> delegated<std::string> {
-      return self->delegate(next, std::move(str));
+    [self, next](std::string str) -> delegated<std::string> {
+      return self->mail(std::move(str)).delegate(next);
     },
   };
 }
@@ -204,9 +206,7 @@ maybe_string_delegator(maybe_string_actor::pointer self,
                        const maybe_string_actor& x) {
   self->link_to(x);
   return {
-    [=](std::string& s) -> delegated<ok_atom, std::string> {
-      return self->delegate(x, std::move(s));
-    },
+    [self, x](std::string s) { return self->mail(std::move(s)).delegate(x); },
   };
 }
 
@@ -329,26 +329,26 @@ int_actor::behavior_type int_fun() {
 
 behavior foo(event_based_actor* self) {
   return {
-    [=](int i, int_actor server) {
-      self->delegate(server, i);
+    [self](int i, int_actor server) {
       self->quit();
+      return self->mail(i).delegate(server);
     },
   };
 }
 
 behavior foo2(event_based_actor* self) {
   return {
-    [=](int i, int_actor server) {
-      self->delegate(server, i);
+    [self](int i, int_actor server) {
       caf::log::test::debug("self->quit");
       self->quit();
+      return self->mail(i).delegate(server);
     },
   };
 }
 
 float_actor::behavior_type float_fun(float_actor::pointer self) {
   return {
-    [=](float a) {
+    [self](float a) {
       test::runnable::current().check_eq(a, test::approx{1.0f});
       self->quit(exit_reason::user_shutdown);
     },
@@ -359,7 +359,7 @@ int_actor::behavior_type foo3(int_actor::pointer self) {
   auto b = self->spawn<linked>(float_fun);
   self->mail(1.0f).send(b);
   return {
-    [=](int) { return 0; },
+    [](int) { return 0; },
   };
 }
 
@@ -394,17 +394,17 @@ TEST("check signature") {
   using bar_type = typed_actor<result<void>(ok_atom)>;
   auto foo_action = [](foo_type::pointer ptr) -> foo_type::behavior_type {
     return {
-      [=](put_atom) -> foo_result_type {
+      [ptr](put_atom) -> foo_result_type {
         ptr->quit();
         return {ok_atom_v};
       },
     };
   };
-  auto bar_action = [=](bar_type::pointer ptr) -> bar_type::behavior_type {
+  auto bar_action = [foo_action](bar_type::pointer ptr) {
     auto foo = ptr->spawn<linked>(foo_action);
     ptr->mail(put_atom_v).send(foo);
-    return {
-      [=](ok_atom) { ptr->quit(); },
+    return bar_type::behavior_type{
+      [ptr](ok_atom) { ptr->quit(); },
     };
   };
   auto x = sys.spawn(bar_action);

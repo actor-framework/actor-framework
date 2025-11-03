@@ -7,6 +7,7 @@
 #include "caf/abstract_actor.hpp"
 #include "caf/actor.hpp"
 #include "caf/actor_cast.hpp"
+#include "caf/actor_clock.hpp"
 #include "caf/actor_config.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/behavior.hpp"
@@ -360,17 +361,6 @@ public:
     }
     mid.mark_as_answered();
     return {result, std::move(current_element_->sender)};
-  }
-
-  template <message_priority P = message_priority::normal, class Handle = actor,
-            class... Ts>
-  [[deprecated("use the mail API instead")]]
-  typename response_type<
-    typename Handle::signatures,
-    detail::implicit_conversions_t<std::decay_t<Ts>>...>::delegated_type
-  delegate(const Handle& dest, Ts&&... xs) {
-    auto rp = make_response_promise();
-    return rp.template delegate<P>(dest, std::forward<Ts>(xs)...);
   }
 
   virtual void initialize();

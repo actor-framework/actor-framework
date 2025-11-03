@@ -24,9 +24,9 @@ TEST("delegation moves responsibility for a request to another actor") {
   });
   auto delegator = sys.spawn([worker](event_based_actor* self) {
     return behavior{
-      [self, worker](int32_t x) { return self->delegate(worker, x); },
-      [self, worker](std::string& x) {
-        return self->delegate(worker, std::move(x));
+      [self, worker](int32_t x) { return self->mail(x).delegate(worker); },
+      [self, worker](std::string x) {
+        return self->mail(std::move(x)).delegate(worker);
       },
     };
   });

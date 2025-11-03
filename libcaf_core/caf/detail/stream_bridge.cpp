@@ -21,6 +21,17 @@ constexpr size_t min_batch_buffering = 5;
 /// one demand message for each batch we receive.
 constexpr size_t min_batch_request_threshold = 3;
 
+/// Sends an asynchronous, anonymous message to `receiver`without type checking.
+template <message_priority Priority = message_priority::normal, class Handle,
+          class T, class... Ts>
+void unsafe_anon_send(const Handle& receiver, T&& arg, Ts&&... args) {
+  if (receiver)
+    receiver->enqueue(make_mailbox_element(nullptr, make_message_id(Priority),
+                                           std::forward<T>(arg),
+                                           std::forward<Ts>(args)...),
+                      nullptr);
+}
+
 } // namespace
 
 void stream_bridge_sub::ack(uint64_t src_flow_id,
