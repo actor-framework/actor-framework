@@ -216,7 +216,7 @@ public:
       out.on_subscribe(subscription{ptr});
       return disposable{std::move(ptr)};
     }
-    if (!err_) {
+    if (err_.empty()) {
       return super::empty_subscription(out);
     }
     return super::fail_subscription(out, err_);

@@ -163,7 +163,7 @@ public:
       return std::move(pipe_handles.error());
     auto updater = pollset_updater::make(pipe_handles->first);
     auto mgr = socket_manager::make(this, std::move(updater));
-    if (auto err = mgr->start()) {
+    if (auto err = mgr->start(); err.valid()) {
       close(pipe_handles->second);
       return err;
     }
@@ -446,7 +446,7 @@ public:
     if (!shutting_down_) {
       error err;
       err = mgr->start();
-      if (err) {
+      if (err.valid()) {
         log::net::debug("mgr->init failed: {}", err);
         // The socket manager should not register itself for any events if
         // initialization fails. Purge any state just in case.

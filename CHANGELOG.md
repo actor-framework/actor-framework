@@ -51,6 +51,11 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The member functions `anon_send`, `scheduled_anon_send`, and
   `delayed_anon_send` of the class `local_actor` are now deprecated in favor of
   using the free `anon_mail` function instead.
+- The members `operator bool` and `operator!` on `caf::error` are now
+  deprecated. Allowing boolean conversions from this type makes it too easy to
+  misinterpret the meaning of an `if` statement and thus leads to subtle bugs.
+  Please use `.empty()` and `.valid()` instead to determine whether an error
+  has been default-constructed or holds a valid error code.
 
 ### Added
 

@@ -37,7 +37,7 @@ bool connect_with_timeout(stream_socket fd, const sockaddr* addr,
   namespace sc = std::chrono;
   auto lg = log::net::trace("fd.id = {}, timeout = {}", fd.id, timeout);
   // Set to non-blocking or fail.
-  if (auto err = nonblocking(fd, true))
+  if (auto err = nonblocking(fd, true); err.valid())
     return false;
   // Calculate deadline and define a lambda for getting the relative time in ms.
   auto deadline = sc::steady_clock::now() + timeout;
@@ -49,7 +49,7 @@ bool connect_with_timeout(stream_socket fd, const sockaddr* addr,
   // Call connect() once and see if it succeeds. Otherwise enter a poll()-loop.
   if (connect(fd.id, addr, addrlen) == 0) {
     // Done! Try restoring the socket to blocking and return.
-    if (auto err = nonblocking(fd, false))
+    if (auto err = nonblocking(fd, false); err.valid())
       return false;
     else
       return true;
@@ -69,7 +69,7 @@ bool connect_with_timeout(stream_socket fd, const sockaddr* addr,
         // Check that the socket really is ready to go by reading SO_ERROR.
         if (probe(fd)) {
           // Done! Try restoring the socket to blocking and return.
-          if (auto err = nonblocking(fd, false))
+          if (auto err = nonblocking(fd, false); err.valid())
             return false;
           else
             return true;
@@ -132,7 +132,7 @@ expected<tcp_stream_socket> make_connected_tcp_stream_socket(ip_endpoint node,
 #endif
   CAF_NET_SYSCALL("socket", fd, ==, -1, ::socket(proto, socktype, 0));
   tcp_stream_socket sock{fd};
-  if (auto err = child_process_inherit(sock, false))
+  if (auto err = child_process_inherit(sock, false); err.valid())
     return err;
   auto sguard = make_socket_guard(sock);
   if (proto == AF_INET6) {

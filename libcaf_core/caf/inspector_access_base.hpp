@@ -26,7 +26,7 @@ struct inspector_access_base {
         return false;
       }
       if (!sync_value()) {
-        if (!f.get_error())
+        if (f.get_error().empty())
           f.emplace_error(sec::field_value_synchronization_failed,
                           std::string(field_name));
         return false;
@@ -54,7 +54,7 @@ struct inspector_access_base {
         return false;
       }
       if (!sync_value()) {
-        if (!f.get_error())
+        if (f.get_error().empty())
           f.emplace_error(sec::field_value_synchronization_failed,
                           std::string(field_name));
         return false;

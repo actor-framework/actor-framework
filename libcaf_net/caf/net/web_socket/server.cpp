@@ -110,7 +110,7 @@ private:
       return false;
     }
     // Kindly ask the upper layer to accept a new WebSocket connection.
-    if (auto err = up_->accept(hdr)) {
+    if (auto err = up_->accept(hdr); err.valid()) {
       write_response(http::status::bad_request, to_string(err));
       return false;
     }

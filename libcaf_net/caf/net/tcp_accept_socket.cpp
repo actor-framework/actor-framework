@@ -53,7 +53,7 @@ expected<tcp_accept_socket> new_tcp_acceptor_impl(uint16_t port,
   tcp_accept_socket sock{fd};
   // sguard closes the socket in case of exception
   auto sguard = make_socket_guard(tcp_accept_socket{fd});
-  if (auto err = child_process_inherit(sock, false))
+  if (auto err = child_process_inherit(sock, false); err.valid())
     return err;
   if (reuse_addr) {
     int on = 1;
@@ -68,7 +68,7 @@ expected<tcp_accept_socket> new_tcp_acceptor_impl(uint16_t port,
   memset(&sa, 0, sizeof(sockaddr_type));
   internal::family_of(sa) = Family;
   if (any)
-    if (auto err = set_inaddr_any(sock, sa))
+    if (auto err = set_inaddr_any(sock, sa); err.valid())
       return err;
   CAF_NET_SYSCALL("inet_pton", tmp, !=, 1,
                   inet_pton(Family, addr, &internal::addr_of(sa)));

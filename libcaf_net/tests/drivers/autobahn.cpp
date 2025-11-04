@@ -167,7 +167,7 @@ public:
   caf::error start(caf::net::socket_manager* owner) override {
     self_ref_ = owner->as_disposable();
     owner_ = owner;
-    if (auto err = factory_->start(owner)) {
+    if (auto err = factory_->start(owner); err.valid()) {
       return err;
     }
     on_conn_close_ = caf::make_action([this] { connection_closed(); });
@@ -292,7 +292,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
     auto acceptor = ssl::tcp_acceptor{std::move(*fd), std::move(*ctx)};
     impl = impl_t::make(std::move(acceptor), std::make_unique<factory_t>(),
                         max_connections);
-  } else if (!ctx.error()) { // SSL disabled.
+  } else if (ctx.error().empty()) { // SSL disabled.
     using factory_t = conn_factory<caf::net::octet_stream::transport>;
     using impl_t = accept_handler<caf::net::tcp_accept_socket>;
     impl = impl_t::make(std::move(*fd), std::make_unique<factory_t>(),

@@ -129,7 +129,7 @@ void for_each_adapter(F f, bool is_link_local = false) {
       if (!is_link_local && starts_with(buffer, "fe80:")) {
         log::net::debug("skipping link-local address: {}", buffer);
         continue;
-      } else if (auto err = parse(buffer, ip)) {
+      } else if (auto err = parse(buffer, ip); err.valid()) {
         log::net::error("could not parse into ip address {}", buffer);
         continue;
       }
@@ -162,7 +162,7 @@ std::vector<ip_address> resolve(std::string_view host) {
     auto family = fetch_addr_str(buffer, i->ai_addr);
     if (family != AF_UNSPEC) {
       ip_address ip;
-      if (auto err = parse(buffer, ip))
+      if (auto err = parse(buffer, ip); err.valid())
         log::net::error("could not parse IP address: {}", buffer);
       else
         results.emplace_back(ip);
@@ -193,7 +193,7 @@ std::vector<ip_address> local_addresses(std::string_view host) {
       if (ip == v4_local || ip == v6_local)
         results.push_back(ip);
     });
-  } else if (auto err = parse(host, host_ip)) {
+  } else if (auto err = parse(host, host_ip); err.valid()) {
     for_each_adapter([&](std::string_view iface, ip_address ip) {
       if (iface == host)
         results.push_back(ip);

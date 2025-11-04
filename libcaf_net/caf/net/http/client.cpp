@@ -208,7 +208,7 @@ public:
     auto res = v1::parse_chunk(input);
     if (!res) {
       // No error code signals we didn't receive enough data.
-      if (!res.error())
+      if (res.error().empty())
         return consumed;
       abort_and_shutdown(res.error());
       return -1;

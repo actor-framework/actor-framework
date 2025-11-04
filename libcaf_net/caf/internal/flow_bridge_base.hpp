@@ -116,7 +116,7 @@ public:
   void abort(const error& reason) override {
     auto lg = log::net::trace("reason = {}", reason);
     if (out_) {
-      if (!reason || reason == sec::connection_closed
+      if (reason.empty() || reason == sec::connection_closed
           || reason == sec::socket_disconnected || reason == sec::disposed)
         out_.close();
       else

@@ -37,7 +37,7 @@ public:
   error start(net::socket_manager* owner) override {
     auto lg = log::net::trace("");
     owner_ = owner;
-    if (auto err = acceptor_->start(owner)) {
+    if (auto err = acceptor_->start(owner); err.valid()) {
       log::net::debug("failed to start the acceptor: {}", err);
       return err;
     }
@@ -75,7 +75,7 @@ public:
       if (open_connections_.size() == max_connections_)
         owner_->deregister_reading();
       child->add_cleanup_listener(on_conn_close_);
-      if (auto err = child->start()) {
+      if (auto err = child->start(); err.valid()) {
         on_error(err);
       }
     } else if (conn.error() == sec::unavailable_or_would_block) {

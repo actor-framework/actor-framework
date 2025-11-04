@@ -65,7 +65,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
     return EXIT_FAILURE;
   }
   uri resource;
-  if (auto err = parse(remainder[0], resource)) {
+  if (auto err = parse(remainder[0], resource); err.valid()) {
     sys.println("*** failed to parse URI: {} ", err);
     return EXIT_FAILURE;
   }

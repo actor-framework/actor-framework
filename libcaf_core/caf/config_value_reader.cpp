@@ -514,7 +514,7 @@ public:
         reader.pop();
         return true;
       } else {
-        if (auto err = detail::parse(*ptr, x)) {
+        if (auto err = detail::parse(*ptr, x); err.valid()) {
           reader.set_error(std::move(err));
           return false;
         } else {

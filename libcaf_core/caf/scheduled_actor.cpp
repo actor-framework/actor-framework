@@ -90,7 +90,7 @@ void scheduled_actor::default_node_down_handler(scheduled_actor* ptr,
 }
 
 void scheduled_actor::default_exit_handler(scheduled_actor* ptr, exit_msg& x) {
-  if (x.reason)
+  if (x.reason.valid())
     default_error_handler(ptr, x.reason);
 }
 

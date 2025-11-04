@@ -257,7 +257,7 @@ private:
     // Wait for more input.
     if (hdr_bytes == 0)
       return 0;
-    if (auto err = validate_header(hdr_bytes); err) {
+    if (auto err = validate_header(hdr_bytes); err.valid()) {
       abort_and_shutdown(err);
       return -1;
     }
@@ -354,7 +354,7 @@ private:
     // opcodes are checked for validity when decoding the header
     switch (opcode) {
       case detail::rfc6455::connection_close_frame:
-        if (auto err = validate_closing_payload(payload); err) {
+        if (auto err = validate_closing_payload(payload); err.valid()) {
           abort_and_shutdown(err);
           return -1;
         }

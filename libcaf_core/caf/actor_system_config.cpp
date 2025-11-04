@@ -419,7 +419,7 @@ error actor_system_config::parse(std::vector<std::string> args,
                                  std::istream& config) {
   // Contents of the config file override hard-coded defaults.
   if (config.good()) {
-    if (auto err = parse_config(config, custom_options_, content))
+    if (auto err = parse_config(config, custom_options_, content); err.valid())
       return err;
   } else {
     // Not finding an explicitly defined config file is an error.
@@ -438,7 +438,7 @@ error actor_system_config::parse(std::vector<std::string> args,
     }
     if (auto* env_var = getenv(env_var_name)) {
       config_value value{env_var};
-      if (auto err = opt.sync(value); !err) {
+      if (auto err = opt.sync(value); err.empty()) {
         if (opt.category() == "global")
           put(content, opt.long_name(), std::move(value));
         else
@@ -477,7 +477,7 @@ error actor_system_config::parse(std::vector<std::string> args,
 }
 
 error actor_system_config::parse(std::vector<std::string> args) {
-  if (auto&& [err, path] = extract_config_file_path(args); !err) {
+  if (auto&& [err, path] = extract_config_file_path(args); err.empty()) {
     std::ifstream conf;
     if (!path.empty()) {
       conf.open(path);
@@ -512,7 +512,7 @@ actor_system_config& actor_system_config::set_impl(std::string_view name,
   if (opt == nullptr) {
     std::cerr << "*** failed to set config parameter " << name
               << ": invalid name" << std::endl;
-  } else if (auto err = opt->sync(value)) {
+  } else if (auto err = opt->sync(value); err.valid()) {
     std::cerr << "*** failed to set config parameter " << name << ": "
               << to_string(err) << std::endl;
   } else {
@@ -549,7 +549,7 @@ expected<settings>
 actor_system_config::parse_config(std::istream& source,
                                   const config_option_set& opts) {
   settings result;
-  if (auto err = parse_config(source, opts, result))
+  if (auto err = parse_config(source, opts, result); err.valid())
     return err;
   return result;
 }
@@ -595,7 +595,7 @@ actor_system_config::extract_config_file_path(std::vector<std::string>& args) {
   auto path_str = std::string{path};
   args.erase(first, last);
   config_value val{path_str};
-  if (auto err = ptr->sync(val)) {
+  if (auto err = ptr->sync(val); err.valid()) {
     return {std::move(err), std::string{}};
   }
   put(content, "config-file", std::move(val));

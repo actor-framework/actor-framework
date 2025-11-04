@@ -20,14 +20,14 @@ error::error(none_t) noexcept : data_(nullptr) {
   // nop
 }
 
-error::error(const error& x) : data_(x ? new data(*x.data_) : nullptr) {
+error::error(const error& x) : data_(x.valid() ? new data(*x.data_) : nullptr) {
   // nop
 }
 
 error& error::operator=(const error& x) {
   if (this == &x) {
     // nop
-  } else if (x) {
+  } else if (x.valid()) {
     if (data_ == nullptr)
       data_.reset(new data(*x.data_));
     else
@@ -60,7 +60,7 @@ std::string_view error::what() const noexcept {
 // -- observers ----------------------------------------------------------------
 
 int error::compare(const error& x) const noexcept {
-  return x ? compare(x.data_->code, x.data_->category) : compare(0, 0);
+  return x.valid() ? compare(x.data_->code, x.data_->category) : compare(0, 0);
 }
 
 int error::compare(uint8_t code, type_id_t category) const noexcept {
@@ -73,7 +73,7 @@ int error::compare(uint8_t code, type_id_t category) const noexcept {
 // -- inspection support -----------------------------------------------------
 
 std::string to_string(const error& x) {
-  if (!x)
+  if (x.empty())
     return "none";
   std::string result;
   auto append = [&result](const void* ptr,

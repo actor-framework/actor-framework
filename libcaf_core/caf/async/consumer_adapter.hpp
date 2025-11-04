@@ -67,10 +67,10 @@ public:
           return read_result::try_again_later;
         } else {
           CAF_ASSERT(n == 0);
-          return abort_reason_ ? read_result::abort : read_result::stop;
+          return abort_reason_.valid() ? read_result::abort : read_result::stop;
         }
       } else {
-        return abort_reason_ ? read_result::abort : read_result::stop;
+        return abort_reason_.valid() ? read_result::abort : read_result::stop;
       }
     }
 

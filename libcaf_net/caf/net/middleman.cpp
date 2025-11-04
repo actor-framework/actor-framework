@@ -128,7 +128,7 @@ void middleman::stop() {
 }
 
 void middleman::init(actor_system_config&) {
-  if (auto err = mpx_->init()) {
+  if (auto err = mpx_->init(); err.valid()) {
     log::system::error("failed to initialize multiplexer: {}", err);
     CAF_RAISE_ERROR("mpx_->init() failed");
   }

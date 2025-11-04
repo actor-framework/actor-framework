@@ -142,7 +142,7 @@ auto config_option_set::parse(settings& config, argument_iterator first,
     if (arg_begin != arg_end) {
       auto arg_size = static_cast<size_t>(std::distance(arg_begin, arg_end));
       config_value val{std::string_view{std::addressof(*arg_begin), arg_size}};
-      if (auto err = opt.sync(val); !err) {
+      if (auto err = opt.sync(val); err.empty()) {
         entry[opt_name] = std::move(val);
         return pec::success;
       } else {

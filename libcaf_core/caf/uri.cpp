@@ -273,7 +273,8 @@ void uri::decode(std::string& str) {
     if (str[read_index] == '%' && read_index + 2 < len) {
       // Try to parse the next two hex digits.
       char hex_buf[] = {'0', 'x', str[read_index + 1], str[read_index + 2], 0};
-      if (auto err = detail::parse(std::string_view{hex_buf}, val); !err) {
+      if (auto err = detail::parse(std::string_view{hex_buf}, val);
+          err.empty()) {
         str[write_index++] = static_cast<char>(val);
         read_index += 3; // Skip past the percent-encoding
         continue;
@@ -340,7 +341,7 @@ error parse(std::string_view str, uri& dest) {
 
 expected<uri> make_uri(std::string_view str) {
   uri result;
-  if (auto err = parse(str, result))
+  if (auto err = parse(str, result); err.valid())
     return err;
   return result;
 }

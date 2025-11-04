@@ -122,7 +122,7 @@ public:
     }
     // Otherwise, we're done.
     ++key_;
-    if (!err_)
+    if (err_.empty())
       out_.on_complete();
     else
       out_.on_error(err_);

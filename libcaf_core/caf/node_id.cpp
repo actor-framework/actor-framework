@@ -207,7 +207,7 @@ error parse(std::string_view str, node_id& dest) {
     auto host_hash = str.substr(0, 40);
     auto pid_str = str.substr(41);
     uint32_t pid_val = 0;
-    if (auto err = detail::parse(pid_str, pid_val))
+    if (auto err = detail::parse(pid_str, pid_val); err.valid())
       return err;
     if (auto nid = make_node_id(pid_val, host_hash)) {
       dest = std::move(*nid);

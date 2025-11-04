@@ -150,7 +150,7 @@ public:
   }
 
   void abort(const error& reason) {
-    if (!disposed && !err) {
+    if (!disposed && err.empty()) {
       closed = true;
       err = reason;
       if (!this->is_pulling() && buf.empty()) {
@@ -228,7 +228,7 @@ private:
         --demand;
       }
       if (buf.empty() && closed) {
-        if (!err)
+        if (err.empty())
           out.on_complete();
         else
           out.on_error(err);
@@ -367,7 +367,7 @@ public:
 
   disposable subscribe(observer<T> out) override {
     if (state_->closed) {
-      if (state_->err) {
+      if (state_->err.valid()) {
         return super::fail_subscription(out, state_->err);
       }
       return super::empty_subscription(out);
