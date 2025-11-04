@@ -527,7 +527,7 @@ struct variant_inspector_access {
       return false;
     }
     if (!sync_value()) {
-      if (!f.get_error())
+      if (f.get_error().empty())
         f.emplace_error(sec::field_value_synchronization_failed,
                         std::string{field_name});
       return false;
@@ -558,7 +558,7 @@ struct variant_inspector_access {
         return false;
       }
       if (!sync_value()) {
-        if (!f.get_error())
+        if (f.get_error().empty())
           f.emplace_error(sec::field_value_synchronization_failed,
                           std::string{field_name});
         return false;
@@ -638,7 +638,7 @@ struct inspector_access<std::chrono::duration<Rep, Period>>
       };
       auto set = [&x](std::string str) {
         auto err = detail::parse(str, x);
-        return !err;
+        return err.empty();
       };
       return f.apply(get, set);
     } else {

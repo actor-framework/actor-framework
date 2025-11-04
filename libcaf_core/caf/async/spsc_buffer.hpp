@@ -269,7 +269,7 @@ public:
       return {true, consumed};
     }
     consumer_ = nullptr;
-    if (!err_)
+    if (err_.empty())
       dst.on_complete();
     else
       dst.on_error(err_);

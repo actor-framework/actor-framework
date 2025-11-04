@@ -142,7 +142,7 @@ private:
     }
     if (out_ && src_error_) {
       CAF_ASSERT(!sub_);
-      if (*src_error_)
+      if (src_error_->valid())
         out_.on_error(*src_error_);
       else
         out_.on_complete();

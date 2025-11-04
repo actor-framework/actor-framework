@@ -57,9 +57,9 @@ expected<std::pair<pipe_socket, pipe_socket>> make_pipe() {
   }};
   // Note: for pipe2 it is better to avoid races by setting CLOEXEC (but not on
   // POSIX).
-  if (auto err = child_process_inherit(socket{pipefds[0]}, false))
+  if (auto err = child_process_inherit(socket{pipefds[0]}, false); err.valid())
     return err;
-  if (auto err = child_process_inherit(socket{pipefds[1]}, false))
+  if (auto err = child_process_inherit(socket{pipefds[1]}, false); err.valid())
     return err;
   guard.disable();
   return std::make_pair(pipe_socket{pipefds[0]}, pipe_socket{pipefds[1]});

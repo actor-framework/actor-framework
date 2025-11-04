@@ -20,7 +20,7 @@ std::string timestamp_to_string(timestamp x) {
 
 expected<timestamp> timestamp_from_string(std::string_view str) {
   timestamp result;
-  if (auto err = detail::parse(str, result); !err)
+  if (auto err = detail::parse(str, result); err.empty())
     return result;
   else
     return err;

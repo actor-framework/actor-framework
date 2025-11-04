@@ -77,7 +77,7 @@ int exec_main(F fun, int argc, char** argv) {
   // Load modules.
   (exec_main_load_module<Ts>(cfg), ...);
   // Pass CLI options to config.
-  if (auto err = cfg.parse(argc, argv)) {
+  if (auto err = cfg.parse(argc, argv); err.valid()) {
     auto err_str = to_string(err);
     fprintf(stderr, "error while parsing CLI and file options: %s\n",
             err_str.c_str());

@@ -162,7 +162,7 @@ public:
   }
 
   void fwd_on_error(input_key key, const error& what) {
-    if (err_)
+    if (err_.valid())
       return;
     auto i = inputs_.find(key);
     if (i == inputs_.end())
@@ -276,7 +276,7 @@ private:
       ++pos_;
     // Check if we can call it a day.
     if (out_ && done()) {
-      if (!err_)
+      if (err_.empty())
         out_.on_complete();
       else
         out_.on_error(err_);

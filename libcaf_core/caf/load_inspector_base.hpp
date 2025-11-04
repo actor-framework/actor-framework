@@ -137,7 +137,7 @@ public:
       static_assert(std::is_convertible_v<setter_result, error>,
                     "a setter must return caf::error, bool or void");
       if (dref().apply(tmp)) {
-        if (auto err = set(std::move(tmp)); !err) {
+        if (auto err = set(std::move(tmp)); err.empty()) {
           return true;
         } else {
           dref().set_error(std::move(err));

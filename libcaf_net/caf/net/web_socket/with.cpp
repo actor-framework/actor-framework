@@ -192,7 +192,7 @@ with_t::server_launcher_base::~server_launcher_base() {
 
 expected<disposable> with_t::server_launcher_base::do_start() {
   // Handle an error that could've been created by the DSL during server setup.
-  if (config_->err) {
+  if (config_->err.valid()) {
     if (config_->on_error)
       (*config_->on_error)(config_->err);
     return config_->err;
@@ -264,7 +264,7 @@ with_t::client&& with_t::client::header_field(std::string_view key,
 
 expected<disposable> with_t::client::do_start(pull_t& pull, push_t& push) {
   // Handle an error that could've been created by the DSL during client setup.
-  if (config_->err) {
+  if (config_->err.valid()) {
     if (config_->on_error)
       (*config_->on_error)(config_->err);
     return config_->err;
@@ -300,7 +300,7 @@ with_t&& with_t::context(ssl::context ctx) && {
 with_t&& with_t::context(expected<ssl::context> ctx) && {
   if (ctx) {
     config_->ctx = std::make_shared<ssl::context>(std::move(*ctx));
-  } else if (ctx.error()) {
+  } else if (ctx.error().valid()) {
     config_->err = std::move(ctx.error());
   }
   return std::move(*this);
@@ -347,7 +347,7 @@ with_t::client with_t::connect(uri endpoint) && {
 with_t::client with_t::connect(expected<uri> endpoint) && {
   if (endpoint) {
     config_->client.assign(std::move(*endpoint));
-  } else if (endpoint.error()) {
+  } else if (endpoint.error().valid()) {
     config_->err = std::move(endpoint.error());
   }
   return client{std::move(config_)};

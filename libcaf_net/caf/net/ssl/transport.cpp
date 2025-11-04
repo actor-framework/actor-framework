@@ -157,7 +157,7 @@ public:
 
   bool do_handover(std::unique_ptr<socket_event_layer>& next) override {
     next = transport::make(std::move(policy_.conn), std::move(up_));
-    if (auto err = next->start(owner_))
+    if (auto err = next->start(owner_); err.valid())
       return false;
     else
       return true;

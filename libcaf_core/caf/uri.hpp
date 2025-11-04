@@ -300,7 +300,7 @@ struct inspector_access<uri> : inspector_access_base<uri> {
       auto get = [&x] { return to_string(x); };
       auto set = [&x](std::string str) {
         auto err = parse(str, x);
-        return !err;
+        return err.empty();
       };
       return f.apply(get, set);
     } else {

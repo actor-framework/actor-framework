@@ -151,13 +151,13 @@ public:
   /// Starts the manager and its all of its processing layers.
   error start() override {
     auto lg = log::net::trace("");
-    if (auto err = nonblocking(fd_, true)) {
+    if (auto err = nonblocking(fd_, true); err.valid()) {
       log::net::error("failed to set nonblocking flag in socket: {}", err);
       handler_->abort(err);
       cleanup();
       return err;
     }
-    if (auto err = handler_->start(this); err) {
+    if (auto err = handler_->start(this); err.valid()) {
       log::net::debug("failed to initialize handler: {}", err);
       cleanup();
       return err;

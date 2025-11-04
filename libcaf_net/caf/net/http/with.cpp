@@ -326,7 +326,7 @@ void with_t::server::do_monitor(strong_actor_ptr ptr) {
 }
 
 void with_t::server::add_route(expected<route_ptr>& new_route) {
-  if (config_->err)
+  if (config_->err.valid())
     return;
   if (new_route) {
     CAF_ASSERT(*new_route != nullptr);
@@ -339,7 +339,7 @@ void with_t::server::add_route(expected<route_ptr>& new_route) {
 expected<disposable> with_t::server::do_start(push_t push) {
   config_->push = std::move(push);
   // Handle an error that could've been created by the DSL during server setup.
-  if (config_->err) {
+  if (config_->err.valid()) {
     if (config_->on_error)
       (*config_->on_error)(config_->err);
     return config_->err;
@@ -384,7 +384,7 @@ void with_t::client::do_add_header_field(std::string name, std::string value) {
 expected<std::pair<async::future<response>, disposable>>
 with_t::client::request(http::method method, const_byte_span payload) {
   // Handle an error that could've been created by the DSL during client setup.
-  if (config_->err) {
+  if (config_->err.valid()) {
     if (config_->on_error)
       (*config_->on_error)(config_->err);
     return config_->err;
@@ -439,7 +439,7 @@ with_t&& with_t::context(ssl::context ctx) && {
 with_t&& with_t::context(expected<ssl::context> ctx) && {
   if (ctx) {
     config_->ctx = std::make_shared<ssl::context>(std::move(*ctx));
-  } else if (ctx.error()) {
+  } else if (ctx.error().valid()) {
     config_->err = std::move(ctx.error());
   }
   return std::move(*this);
@@ -470,7 +470,7 @@ with_t::client with_t::connect(uri endpoint) && {
 with_t::client with_t::connect(expected<uri> endpoint) && {
   if (endpoint) {
     config_->client.assign(std::move(*endpoint));
-  } else if (endpoint.error()) {
+  } else if (endpoint.error().valid()) {
     config_->err = std::move(endpoint.error());
   }
   return client{std::move(config_)};

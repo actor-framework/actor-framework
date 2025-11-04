@@ -300,7 +300,7 @@ public:
     // Utility function to fail or complete the subscription immediately in case
     // the source is no longer connectable.
     auto short_circuit = [this, &what] {
-      if (auto& err = std::get<error>(state_->maybe_source)) {
+      if (auto& err = std::get<error>(state_->maybe_source); err.valid()) {
         return super::fail_subscription(what, err);
       }
       return super::empty_subscription(what);

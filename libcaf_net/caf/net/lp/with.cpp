@@ -204,7 +204,7 @@ void with_t::server::do_monitor(strong_actor_ptr ptr) {
 
 expected<disposable> with_t::server::do_start(push_t push) {
   // Handle an error that could've been created by the DSL during server setup.
-  if (config_->err) {
+  if (config_->err.valid()) {
     if (config_->on_error)
       (*config_->on_error)(config_->err);
     return config_->err;
@@ -240,7 +240,7 @@ with_t::client&& with_t::client::max_retry_count(size_t value) && {
 
 expected<disposable> with_t::client::do_start(pull_t pull, push_t push) {
   // Handle an error that could've been created by the DSL during client setup.
-  if (config_->err) {
+  if (config_->err.valid()) {
     if (config_->on_error)
       (*config_->on_error)(config_->err);
     return config_->err;
@@ -280,7 +280,7 @@ with_t&& with_t::context(ssl::context ctx) && {
 with_t&& with_t::context(expected<ssl::context> ctx) && {
   if (ctx) {
     config_->ctx = std::make_shared<ssl::context>(std::move(*ctx));
-  } else if (ctx.error()) {
+  } else if (ctx.error().valid()) {
     config_->err = std::move(ctx.error());
   }
   return std::move(*this);

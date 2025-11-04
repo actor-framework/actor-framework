@@ -340,7 +340,7 @@ protected:
       // Switch to the new protocol and initialize it.
       configure_read(receive_policy::stop());
       up_.reset(next_.release());
-      if (auto err = up_->start(this)) {
+      if (auto err = up_->start(this); err.valid()) {
         up_.reset();
         parent_->deregister();
         parent_->shutdown();

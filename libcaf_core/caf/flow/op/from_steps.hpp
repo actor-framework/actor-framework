@@ -211,7 +211,7 @@ private:
       return;
     }
     if (buf_.empty() && out_) {
-      if (!err_)
+      if (err_.empty())
         out_.on_complete();
       else
         out_.on_error(err_);

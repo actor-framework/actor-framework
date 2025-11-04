@@ -34,7 +34,7 @@ uri_builder& uri_builder::host(std::string str) {
   // we do a quick check here whether `str` contains a valid IPv4 address and
   // store it as IP address if possible.
   ipv4_address addr;
-  if (auto err = parse(str, addr))
+  if (auto err = parse(str, addr); err.valid())
     impl_->authority.host = std::move(str);
   else
     impl_->authority.host = ip_address{addr};

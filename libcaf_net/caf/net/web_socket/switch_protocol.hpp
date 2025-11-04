@@ -98,7 +98,7 @@ public:
       ws_acceptor_impl<Out...> acc{res.header(), res.down()->manager()};
       (state_->on_request)(acc, args...);
       if (!acc.accepted()) {
-        if (auto& err = acc.reject_reason()) {
+        if (auto& err = acc.reject_reason(); err.valid()) {
           auto descr = to_string(err);
           res.respond(http::status::bad_request, "text/plain", descr);
         } else {
