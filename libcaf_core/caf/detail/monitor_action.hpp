@@ -70,9 +70,10 @@ public:
 
   resume_result resume(scheduler*, size_t) override {
     // We can only run a scheduled action.
-    std::lock_guard guard{mtx_};
+    std::unique_lock guard{mtx_};
     if (state_ == action::state::scheduled) {
       state_ = action::state::disposed;
+      guard.unlock();
       f_();
       f_.~function_wrapper();
     }
