@@ -96,7 +96,7 @@ TEST("send fan_out_request messages that return a result") {
     self->mail(1, 2)
       .fan_out_request(workers, 1s, policy::select_all_tag)
       .receive(
-        [=, this](std::vector<int> results) {
+        [this, sum](std::vector<int> results) {
           for (auto result : results)
             check_eq(result, 3);
           *sum = std::accumulate(results.begin(), results.end(), 0);
@@ -273,6 +273,17 @@ TEST("send fan_out_request messages that return a result using typed actors") {
     check_eq(*sum, 9);
     check_eq(*err, error{});
   }
+  SECTION("receive to expected with policy select_all") {
+    auto res = self->mail(1, 2)
+                 .fan_out_request(workers, 1s, policy::select_all_tag)
+                 .receive();
+    if (check_has_value(res)) {
+      check_eq(res->size(), 3u);
+      for (const auto& val : *res) {
+        check_eq(val, 3);
+      }
+    }
+  }
   SECTION("receive with policy select_any") {
     self->mail(1, 2)
       .fan_out_request(workers, 1s, policy::select_any_tag)
@@ -280,6 +291,12 @@ TEST("send fan_out_request messages that return a result using typed actors") {
                [err](error& e) { *err = std::move(e); });
     check_eq(*sum, 3);
     check_eq(*err, error{});
+  }
+  SECTION("receive to expected with policy select_any") {
+    auto res = self->mail(1, 2)
+                 .fan_out_request(workers, 1s, policy::select_any_tag)
+                 .receive();
+    check_eq(res, 3);
   }
 }
 
@@ -315,6 +332,18 @@ TEST(
     }
     check_eq(*err, error{});
   }
+  SECTION("receive to expected with policy select_all") {
+    auto res = self->mail(1, 2)
+                 .fan_out_request(workers, 1s, policy::select_all_tag)
+                 .receive();
+    if (check_has_value(res)) {
+      check_eq(res->size(), 3u);
+      for (const auto& pair : *res) {
+        check_eq(std::get<0>(pair), 2);
+        check_eq(std::get<1>(pair), 1);
+      }
+    }
+  }
   SECTION("receive with policy select_any") {
     self->mail(3, 5)
       .fan_out_request(workers, 1s, policy::select_any_tag)
@@ -326,6 +355,15 @@ TEST(
     check_eq(single_result->first, 5);
     check_eq(single_result->second, 3);
     check_eq(*err, error{});
+  }
+  SECTION("receive to expected with policy select_any") {
+    auto res = self->mail(3, 5)
+                 .fan_out_request(workers, 1s, policy::select_any_tag)
+                 .receive();
+    if (check_has_value(res)) {
+      check_eq(std::get<0>(*res), 5);
+      check_eq(std::get<1>(*res), 3);
+    }
   }
 }
 
@@ -346,6 +384,12 @@ TEST("send fan_out_request messages with void result using typed actors") {
     check(*ran);
     check_eq(*err, error{});
   }
+  SECTION("receive to expected with policy select_all") {
+    auto res = self->mail(1, 2)
+                 .fan_out_request(workers, 1s, policy::select_all_tag)
+                 .receive();
+    check_has_value(res);
+  }
   SECTION("receive with policy select_any") {
     self->mail(1, 2)
       .fan_out_request(workers, 1s, policy::select_any_tag)
@@ -354,7 +398,7 @@ TEST("send fan_out_request messages with void result using typed actors") {
     check(*ran);
     check_eq(*err, error{});
   }
-  SECTION("receive with policy select_any") {
+  SECTION("receive to expected with policy select_any") {
     auto res = self->mail(1, 2)
                  .fan_out_request(workers, 1s, policy::select_any_tag)
                  .receive();
