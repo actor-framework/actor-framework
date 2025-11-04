@@ -27,6 +27,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 ### Fixed
 
 - Add a missing implementation for `caf::version::check_abi_compatibility`.
+- Fix a deadlock when disposing an monitor action while it is running (#2169).
 
 ## [1.1.0] - 2025-07-25
 
