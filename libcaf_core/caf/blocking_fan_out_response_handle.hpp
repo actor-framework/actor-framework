@@ -6,7 +6,6 @@
 
 #include "caf/abstract_blocking_actor.hpp"
 #include "caf/actor_clock.hpp"
-#include "caf/detail/expected_builder.hpp"
 #include "caf/detail/response_type_check.hpp"
 #include "caf/message_id.hpp"
 #include "caf/policy/select_all.hpp"
@@ -88,6 +87,14 @@ struct blocking_fan_out_response_handle_state {
 template <class Policy, class... Results>
 class blocking_fan_out_response_handle {
 public:
+  static constexpr bool is_select_all
+    = std::is_same_v<Policy, policy::select_all_tag_t>;
+
+  static constexpr bool is_select_any
+    = std::is_same_v<Policy, policy::select_any_tag_t>;
+
+  static_assert(is_select_all || is_select_any);
+
   blocking_fan_out_response_handle(abstract_blocking_actor* self,
                                    std::vector<message_id> mids,
                                    disposable in_flight,
@@ -97,81 +104,139 @@ public:
   }
 
   template <class OnValue, class OnError>
-  void receive(OnValue on_value, OnError on_error) && {
+  void receive(OnValue on_value, OnError on_error) &&
+    requires is_select_all
+  {
     detail::fan_out_response_type_check<Policy, OnValue, OnError, Results...>();
-    auto bhvr = behavior{};
-    if constexpr (std::is_same_v<Policy, policy::select_all_tag_t>) {
-      using helper_type = detail::select_all_helper_t<std::decay_t<OnValue>>;
-      helper_type helper{state_.mids.size(), state_.in_flight,
-                         std::forward<OnValue>(on_value)};
-      auto pending = helper.pending;
-      auto error_handler
-        = [pending{helper.pending}, timeout{state_.in_flight},
-           g{std::forward<OnError>(on_error)}](error& err) mutable {
-            auto lg = log::core::trace("pending = {}", *pending);
-            if (*pending > 0) {
-              timeout.dispose();
-              *pending = 0;
-              g(err);
-            }
-          };
-      bhvr = behavior{std::move(helper), std::move(error_handler)};
-      for (const auto& mid : state_.mids) {
-        auto now = std::chrono::steady_clock::now();
-        auto remaining = state_.deadline > now
-                           ? (state_.deadline - now)
-                           : std::chrono::steady_clock::duration::zero();
-        state_.self->do_receive(mid, bhvr, remaining);
-      }
-    } else {
-      using helper = caf::detail::select_any_factory<std::decay_t<OnValue>>;
-      auto pending = std::make_shared<size_t>(state_.mids.size());
-      auto result_handler = helper::make(pending, state_.in_flight,
-                                         std::forward<OnValue>(on_value));
-      auto error_handler
-        = [p{std::move(pending)}, timeout{state_.in_flight},
-           g{std::forward<OnError>(on_error)}](error&) mutable {
-            if (*p == 0) {
-              // nop
-            } else if (*p == 1) {
-              timeout.dispose();
-              auto err = make_error(sec::all_requests_failed);
-              g(err);
-            } else {
-              --*p;
-            }
-          };
-      bhvr = behavior{std::move(result_handler), std::move(error_handler)};
-      for (const auto& mid : state_.mids) {
-        auto now = std::chrono::steady_clock::now();
-        auto remaining = state_.deadline > now
-                           ? (state_.deadline - now)
-                           : std::chrono::steady_clock::duration::zero();
-        state_.self->do_receive(mid, bhvr, remaining);
-      }
+    using helper_type = detail::select_all_helper_t<std::decay_t<OnValue>>;
+    helper_type helper{state_.mids.size(), state_.in_flight,
+                       std::forward<OnValue>(on_value)};
+    auto pending = helper.pending;
+    auto error_handler
+      = [pending{helper.pending}, timeout{state_.in_flight},
+         g{std::forward<OnError>(on_error)}](error& err) mutable {
+          auto lg = log::core::trace("pending = {}", *pending);
+          if (*pending > 0) {
+            timeout.dispose();
+            *pending = 0;
+            g(err);
+          }
+        };
+    auto bhvr = behavior{std::move(helper), std::move(error_handler)};
+    for (const auto& mid : state_.mids) {
+      auto now = std::chrono::steady_clock::now();
+      auto remaining = state_.deadline > now
+                         ? (state_.deadline - now)
+                         : std::chrono::steady_clock::duration::zero();
+      state_.self->do_receive(mid, bhvr, remaining);
     }
   }
 
-  auto receive() && {
-    if constexpr (std::is_same_v<Policy, policy::select_all_tag_t>) {
-      using value_type = detail::select_all_helper_value_t<Results...>;
-      detail::expected_builder<std::vector<value_type>> bld;
-      std::move(*this).receive(
-        [&bld](std::vector<std::tuple<Results...>> args) {
-          bld.set_value(std::move(args));
-        },
-        [&bld](error& err) { bld.set_error(std::move(err)); });
-      return std::move(bld.result);
-    } else {
-      detail::expected_builder<Results...> bld;
-      std::move(*this).receive(
-        [&bld](Results... args) { bld.set_value(std::move(args)...); },
-        [&bld](error& err) { bld.set_error(std::move(err)); });
-      return std::move(bld.result);
+  template <class OnValue, class OnError>
+  void receive(OnValue on_value, OnError on_error) &&
+    requires is_select_any
+  {
+    detail::fan_out_response_type_check<Policy, OnValue, OnError, Results...>();
+    using helper = caf::detail::select_any_factory<std::decay_t<OnValue>>;
+    auto pending = std::make_shared<size_t>(state_.mids.size());
+    auto result_handler = helper::make(pending, state_.in_flight,
+                                       std::forward<OnValue>(on_value));
+    auto error_handler = [p{std::move(pending)}, timeout{state_.in_flight},
+                          g{std::forward<OnError>(on_error)}](error&) mutable {
+      if (*p == 0) {
+        // nop
+      } else if (*p == 1) {
+        timeout.dispose();
+        auto err = make_error(sec::all_requests_failed);
+        g(err);
+      } else {
+        --*p;
+      }
+    };
+    auto bhvr = behavior{std::move(result_handler), std::move(error_handler)};
+    for (const auto& mid : state_.mids) {
+      auto now = std::chrono::steady_clock::now();
+      auto remaining = state_.deadline > now
+                         ? (state_.deadline - now)
+                         : std::chrono::steady_clock::duration::zero();
+      state_.self->do_receive(mid, bhvr, remaining);
     }
+  }
+
+  auto receive() &&
+    requires (is_select_all && sizeof...(Results) == 0)
+  {
+    expected<void> result;
+    std::move(*this).receive(
+      []() {
+        // nop - expected<void> already set.
+      },
+      [&result](error& err) { result = std::move(err); });
+    return result;
+  }
+
+  auto receive() &&
+    requires (is_select_all && sizeof...(Results) == 1)
+  {
+    expected<std::vector<Results...>> result = error{};
+    std::move(*this).receive(
+      [&result](std::vector<Results...> args) {
+        result = std::move(args);
+      },
+      [&result](error& err) { result = std::move(err); });
+    return result;
+  }
+
+  auto receive() &&
+    requires (is_select_all && sizeof...(Results) > 1)
+  {
+    expected<std::vector<std::tuple<Results...>>> result = error{}; 
+    std::move(*this).receive(
+      [&result](std::vector<std::tuple<Results...>> args) {
+        result = std::move(args);
+      },
+      [&result](error& err) { result = std::move(err); });
+    return result;
+  }
+
+  auto receive() &&
+    requires is_select_any
+  {
+    using expected_type = decltype(make_expected(std::declval<Results>()...));
+    expected_type result = caf::error{};
+    std::move(*this).receive(
+      [&result](Results... args) {
+        result = make_expected(std::move(args)...);
+      },
+      [&result](error& err) { result = std::move(err); });
+    return std::move(result);
   }
 
 private:
+  template <class... Ts>
+  static auto make_expected(Ts&&... ts) {
+    if constexpr (sizeof...(Ts) == 0) {
+      return expected<void>{};
+    } else if constexpr (sizeof...(Ts) == 1) {
+      return expected<Ts...>{std::forward<Ts>(ts)...};
+    } else {
+      return expected<std::tuple<Ts...>>{
+        std::make_tuple(std::forward<Ts>(ts)...)};
+    }
+  }
+
+  template <class... Ts>
+  static auto make_expected_container(Ts&&... ts) {
+    if constexpr (sizeof...(Ts) == 0) {
+      return expected<void>{};
+    } else if constexpr (sizeof...(Ts) == 1) {
+      return expected<Ts...>{std::forward<Ts>(ts)...};
+    } else {
+      return expected<std::tuple<Ts...>>{
+        std::make_tuple(std::forward<Ts>(ts)...)};
+    }
+  }
+
   /// Holds the state for the handle.
   blocking_fan_out_response_handle_state state_;
 };
