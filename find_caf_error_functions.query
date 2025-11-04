@@ -1,0 +1,36 @@
+# clang-query to find all function definitions that return caf::error
+
+# Basic query - matches functions returning caf::error (most common case)
+match functionDecl(
+  isDefinition(),
+  hasReturnType(qualType(asString("caf::error")))
+)
+
+# Alternative query - also matches const and reference variations
+match functionDecl(
+  isDefinition(),
+  hasReturnType(qualType(anyOf(
+    asString("caf::error"),
+    asString("const caf::error"),
+    asString("caf::error &"),
+    asString("const caf::error &"),
+    asString("caf::error&&")
+  )))
+)
+
+# More comprehensive query - matches by type declaration name
+match functionDecl(
+  isDefinition(),
+  hasReturnType(qualType(hasDeclaration(namedDecl(hasName("error")))))
+)
+
+# Query that also looks for 'error' in caf namespace context
+match functionDecl(
+  isDefinition(),
+  hasReturnType(qualType(hasDeclaration(
+    cxxRecordDecl(
+      hasName("error"),
+      hasParent(namespaceDecl(hasName("caf")))
+    )
+  )))
+)
