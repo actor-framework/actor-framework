@@ -115,9 +115,11 @@ public:
                                          std::move(acc.ws_resources));
       return res;
     }
-    return std::move(acc) //
-      .reject_reason()
-      .or_else(sec::runtime_error, "WebSocket request rejected without reason");
+    if (auto&& reason = std::move(acc).reject_reason(); reason.valid()) {
+      return std::move(reason);
+    }
+    return make_error(sec::runtime_error,
+                      "WebSocket request rejected without reason");
   }
 
   bool canceled() const noexcept override {

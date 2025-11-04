@@ -56,6 +56,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   misinterpret the meaning of an `if` statement and thus leads to subtle bugs.
   Please use `.empty()` and `.valid()` instead to determine whether an error
   has been default-constructed or holds a valid error code.
+- The methods `or_else` and `eval` on `caf::error` are now deprecated since they
+  overlap with methods such as `transform` and `and_then` on `caf::expected`.
 
 ### Added
 

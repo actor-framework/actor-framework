@@ -168,6 +168,7 @@ public:
   /// Returns a copy of `this` if `!empty()` or else returns a new error from
   /// given arguments.
   template <class Enum, class... Ts>
+  [[deprecated("use expected<T> instead for chainable error handling")]]
   error or_else(Enum code, Ts&&... args) const& {
     if (!empty())
       return *this;
@@ -180,6 +181,7 @@ public:
   /// Returns a copy of `this` if `!empty()` or else returns a new error from
   /// given arguments.
   template <class Enum, class... Ts>
+  [[deprecated("use expected<T> instead for chainable error handling")]]
   error or_else(Enum code, Ts&&... args) && {
     if (!empty())
       return std::move(*this);
@@ -200,11 +202,13 @@ public:
 
   /// @cond
 
+  [[deprecated("use expected<T> instead for chainable error handling")]]
   static error eval() {
     return error{};
   }
 
   template <class F, class... Fs>
+  [[deprecated("use expected<T> instead for chainable error handling")]]
   static error eval(F&& f, Fs&&... fs) {
     auto x = f();
     return x ? x : eval(std::forward<Fs>(fs)...);
