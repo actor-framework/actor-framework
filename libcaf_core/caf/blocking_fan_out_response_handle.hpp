@@ -87,6 +87,13 @@ struct blocking_fan_out_response_handle_state {
 template <class Policy, class... Results>
 class blocking_fan_out_response_handle {
 public:
+  // -- constants --------------------------------------------------------------
+
+  static constexpr bool is_dynamically_typed
+    = std::is_same_v<type_list<Results...>, type_list<message>>;
+
+  static constexpr bool is_statically_typed = !is_dynamically_typed;
+
   static constexpr bool is_select_all
     = std::is_same_v<Policy, policy::select_all_tag_t>;
 
@@ -95,6 +102,8 @@ public:
 
   static_assert(is_select_all || is_select_any);
 
+  // -- constructors, destructors, and assignment operators --------------------
+
   blocking_fan_out_response_handle(abstract_blocking_actor* self,
                                    std::vector<message_id> mids,
                                    disposable in_flight,
@@ -102,6 +111,8 @@ public:
     : state_{self, std::move(mids), in_flight, deadline} {
     // nop
   }
+
+  // -- receive ----------------------------------------------------------------
 
   template <class OnValue, class OnError>
   void receive(OnValue on_value, OnError on_error) &&
@@ -164,7 +175,22 @@ public:
   }
 
   auto receive() &&
-    requires (is_select_all && sizeof...(Results) == 0)
+    requires is_statically_typed
+  {
+    return std::move(*this).template do_receive<Results...>();
+  }
+
+  template <class... Ts>
+  auto receive() &&
+    requires is_dynamically_typed
+  {
+    return std::move(*this).template do_receive<Ts...>();
+  }
+
+private:
+  template<class... Ts>
+  auto do_receive() &&
+    requires (is_select_all && sizeof...(Ts) == 0)
   {
     expected<void> result;
     std::move(*this).receive(
@@ -175,44 +201,46 @@ public:
     return result;
   }
 
-  auto receive() &&
-    requires (is_select_all && sizeof...(Results) == 1)
+  template<class... Ts>
+  auto do_receive() &&
+    requires (is_select_all && sizeof...(Ts) == 1)
   {
-    expected<std::vector<Results...>> result = error{};
+    expected<std::vector<Ts...>> result = error{};
     std::move(*this).receive(
-      [&result](std::vector<Results...> args) {
+      [&result](std::vector<Ts...> args) {
         result = std::move(args);
       },
       [&result](error& err) { result = std::move(err); });
     return result;
   }
 
-  auto receive() &&
-    requires (is_select_all && sizeof...(Results) > 1)
+  template<class... Ts>
+  auto do_receive() &&
+    requires (is_select_all && sizeof...(Ts) > 1)
   {
-    expected<std::vector<std::tuple<Results...>>> result = error{}; 
+    expected<std::vector<std::tuple<Ts...>>> result = error{}; 
     std::move(*this).receive(
-      [&result](std::vector<std::tuple<Results...>> args) {
+      [&result](std::vector<std::tuple<Ts...>> args) {
         result = std::move(args);
       },
       [&result](error& err) { result = std::move(err); });
     return result;
   }
 
-  auto receive() &&
-    requires is_select_any
+  template<class... Ts>
+  auto do_receive() &&
+    requires (is_select_any)
   {
-    using expected_type = decltype(make_expected(std::declval<Results>()...));
+    using expected_type = decltype(make_expected(std::declval<Ts>()...));
     expected_type result = caf::error{};
     std::move(*this).receive(
-      [&result](Results... args) {
+      [&result](Ts... args) {
         result = make_expected(std::move(args)...);
       },
       [&result](error& err) { result = std::move(err); });
     return std::move(result);
   }
 
-private:
   template <class... Ts>
   static auto make_expected(Ts&&... ts) {
     if constexpr (sizeof...(Ts) == 0) {
