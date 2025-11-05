@@ -64,14 +64,14 @@ HTTPS Test Request Exceeds Maximum Size
     ${large_value}=    Generate Random String       ${MAX_REQUEST_SIZE}
     POST    ${HTTP_URL}/api/foo    data=${large_value}    expected_status=413    verify=${False}
 
-HTTP Propetheus Endpoint
+HTTP Prometheus Endpoint
     [Tags]    GET
     ${resp}=    GET    ${PR_HTTP_URL}
     ${content}=    Decode Bytes To String    ${resp.content}    utf-8
     Should Contain    ${content}    caf_system_running_actors
     Run Keyword And Expect Error    *    GET    ${PR_HTTP_BAD_URL}
 
-HTTPS Propetheus Endpoint
+HTTPS Prometheus Endpoint
     [Tags]    GET
     ${resp}=    GET    ${PR_HTTPS_URL}   verify=${False}
     ${content}=    Decode Bytes To String    ${resp.content}    utf-8
