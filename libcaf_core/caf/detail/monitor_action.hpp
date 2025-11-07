@@ -68,7 +68,7 @@ public:
     return state_;
   }
 
-  resume_result resume(scheduler*, uint64_t event_id, size_t) override {
+  resume_result resume(scheduler*, uint64_t event_id) override {
     if (event_id == resumable::dispose_event_id) {
       dispose();
       return resumable::done;

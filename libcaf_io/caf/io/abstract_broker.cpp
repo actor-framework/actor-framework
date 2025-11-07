@@ -338,10 +338,10 @@ resumable::subtype_t abstract_broker::subtype() const noexcept {
 }
 
 resumable::resume_result abstract_broker::resume(scheduler* sched,
-                                                 uint64_t event_id, size_t mt) {
+                                                 uint64_t event_id) {
   CAF_ASSERT(sched != nullptr);
   CAF_ASSERT(sched == backend_);
-  return scheduled_actor::resume(sched, event_id, mt);
+  return scheduled_actor::resume(sched, event_id);
 }
 
 const char* abstract_broker::name() const {

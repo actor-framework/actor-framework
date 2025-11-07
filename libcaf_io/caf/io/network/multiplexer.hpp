@@ -129,8 +129,10 @@ public:
       F f;
       impl(F&& mf) : f(std::move(mf)) {
       }
-      resume_result resume(scheduler*, uint64_t, size_t) override {
-        f();
+      resume_result resume(scheduler*, uint64_t event_id) override {
+        if (event_id != resumable::dispose_event_id) {
+          f();
+        }
         return done;
       }
     };

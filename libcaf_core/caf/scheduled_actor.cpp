@@ -137,10 +137,13 @@ scheduled_actor::scheduled_actor(actor_config& cfg)
     exception_handler_(home_system().config().exception_handler())
 #endif // CAF_ENABLE_EXCEPTIONS
 {
-  if (cfg.mbox_factory == nullptr)
+  if (cfg.mbox_factory == nullptr) {
     mailbox_ = new (&default_mailbox_) detail::default_mailbox();
-  else
+  } else {
     mailbox_ = cfg.mbox_factory->make(this);
+  }
+  max_throughput_ = get_or(config(), "caf.scheduler.max-throughput",
+                           defaults::scheduler::max_throughput);
 }
 
 scheduled_actor::~scheduled_actor() {
@@ -254,14 +257,21 @@ void scheduled_actor::deref_resumable() const noexcept {
 }
 
 resumable::resume_result scheduled_actor::resume(scheduler* sched,
-                                                 uint64_t event_id,
-                                                 size_t max_throughput) {
+                                                 uint64_t event_id) {
   CAF_PUSH_AID(id());
-  if (event_id == resumable::dispose_event_id) {
-    on_cleanup(make_error(exit_reason::user_shutdown));
-    return resumable::done;
+  auto lg = log::core::trace("event-id = {}", event_id);
+  switch (event_id) {
+    case resumable::dispose_event_id:
+      on_cleanup(make_error(exit_reason::user_shutdown));
+      return resumable::done;
+    case resumable::initialization_event_id:
+      if (activate(sched)) {
+        return resumable::awaiting_message;
+      }
+      return resumable::done;
+    default:
+      break;
   }
-  auto lg = log::core::trace("max_throughput = {}", max_throughput);
   if (!activate(sched))
     return resumable::done;
   size_t consumed = 0;
@@ -278,7 +288,7 @@ resumable::resume_result scheduled_actor::resume(scheduler* sched,
       set_receive_timeout();
   };
   mailbox_element_ptr ptr;
-  while (consumed < max_throughput) {
+  while (consumed < max_throughput_) {
     auto ptr = mailbox().pop_front();
     if (!ptr) {
       if (mailbox().try_block()) {
