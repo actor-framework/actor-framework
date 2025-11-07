@@ -115,8 +115,6 @@ SCENARIO("actions can increase and decrease reference count") {
         auto fn = [] {};
         using impl_t = detail::default_action_impl<decltype(fn), true>;
         auto uut = action{make_counted<impl_t>(std::move(fn))};
-        check_eq(uut.as_intrusive_ptr()->subtype(),
-                 resumable::subtype_t::function_object);
         auto impl_ptr = dynamic_cast<impl_t*>(uut.as_intrusive_ptr().get());
         check(impl_ptr->unique());
         impl_ptr->ref_resumable();

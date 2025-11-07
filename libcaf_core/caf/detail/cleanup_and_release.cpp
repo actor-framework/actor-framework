@@ -13,10 +13,10 @@ namespace caf::detail {
 void cleanup_and_release(resumable* ptr) {
   class dummy_scheduler : public scheduler {
   public:
-    void delay(resumable* job) override {
+    void delay(resumable* job, uint64_t) override {
       resumables.push_back(job);
     }
-    void schedule(resumable* job) override {
+    void schedule(resumable* job, uint64_t) override {
       resumables.push_back(job);
     }
     void start() override {
@@ -25,32 +25,18 @@ void cleanup_and_release(resumable* ptr) {
     void stop() override {
       // nop
     }
+    bool is_system_scheduler() const noexcept final {
+      return true;
+    }
     std::vector<resumable*> resumables;
   };
-  switch (ptr->subtype()) {
-    case resumable::scheduled_actor:
-    case resumable::io_actor: {
-      auto dptr = static_cast<scheduled_actor*>(ptr);
-      dummy_scheduler dummy;
-      dptr->cleanup(make_error(exit_reason::user_shutdown), &dummy);
-      while (!dummy.resumables.empty()) {
-        auto sub = dummy.resumables.back();
-        dummy.resumables.pop_back();
-        switch (sub->subtype()) {
-          case resumable::scheduled_actor:
-          case resumable::io_actor: {
-            auto dsub = static_cast<scheduled_actor*>(sub);
-            dsub->cleanup(make_error(exit_reason::user_shutdown), &dummy);
-            break;
-          }
-          default:
-            break;
-        }
-      }
-      break;
-    }
-    default:
-      break;
+  dummy_scheduler dummy;
+  std::ignore = ptr->resume(&dummy, resumable::dispose_event_id);
+  while (!dummy.resumables.empty()) {
+    auto sub = dummy.resumables.back();
+    dummy.resumables.pop_back();
+    std::ignore = sub->resume(&dummy, resumable::dispose_event_id);
+    intrusive_ptr_release(sub);
   }
   intrusive_ptr_release(ptr);
 }

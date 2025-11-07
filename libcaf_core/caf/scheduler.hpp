@@ -27,12 +27,15 @@ public:
 
   /// Schedules @p what to run at some point in the future.
   /// @threadsafe
-  virtual void schedule(resumable* what) = 0;
+  virtual void schedule(resumable* what, uint64_t event_id) = 0;
 
   /// Delay the next execution of @p what. Unlike `schedule`, this function is
   /// not thread-safe and must be called only from the scheduler thread that is
   /// currently running.
-  virtual void delay(resumable* what) = 0;
+  virtual void delay(resumable* what, uint64_t event_id) = 0;
+
+  /// Returns `true` if this scheduler is part of the default system scheduler.
+  virtual bool is_system_scheduler() const noexcept = 0;
 
   /// Starts this scheduler and all of its workers.
   virtual void start() = 0;

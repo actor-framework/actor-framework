@@ -448,7 +448,7 @@ public:
     return owner_ ? action::state::scheduled : action::state::disposed;
   }
 
-  resume_result resume(scheduler*, size_t) override {
+  resume_result resume(scheduler*, uint64_t) override {
     on_wakeup_t on_wakeup;
     {
       std::unique_lock guard{mtx_};
@@ -722,7 +722,7 @@ public:
     return owner_ ? action::state::scheduled : action::state::disposed;
   }
 
-  resume_result resume(scheduler*, size_t) override {
+  resume_result resume(scheduler*, uint64_t) override {
     on_demand_t on_demand;
     size_t demand = 0;
     buffer_ptr_t buf;

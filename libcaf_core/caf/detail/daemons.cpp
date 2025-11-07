@@ -21,13 +21,14 @@ struct daemons::impl {
   }
 
   void on_start() {
-    cleaner = sys->spawn<hidden>([this](caf::event_based_actor* self) {
-      return behavior{
-        [this, self](actor hdl, int64_t id) {
-          self->monitor(hdl, [this, id](const error&) { cleanup(id); });
-        },
-      };
-    });
+    cleaner
+      = sys->spawn<hidden + lazy_init>([this](caf::event_based_actor* self) {
+          return behavior{
+            [this, self](actor hdl, int64_t id) {
+              self->monitor(hdl, [this, id](const error&) { cleanup(id); });
+            },
+          };
+        });
   }
 
   void on_stop() {

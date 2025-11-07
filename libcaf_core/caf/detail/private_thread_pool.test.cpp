@@ -52,10 +52,7 @@ SCENARIO("private threads rerun their resumable when it returns resume_later") {
     std::atomic<size_t> runs = 0;
     mutable std::atomic<size_t> refs_added = 0;
     mutable std::atomic<size_t> refs_released = 0;
-    subtype_t subtype() const noexcept override {
-      return resumable::function_object;
-    }
-    resume_result resume(scheduler*, size_t) override {
+    resume_result resume(scheduler*, uint64_t) override {
       return ++runs < 2 ? resumable::resume_later : resumable::done;
     }
     void ref_resumable() const noexcept final {

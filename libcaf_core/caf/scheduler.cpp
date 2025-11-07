@@ -33,6 +33,9 @@ namespace caf {
 
 namespace {
 
+// Thread-local flag used by shutdown_helper to signal the worker to stop.
+thread_local bool stop_worker = false;
+
 // -- work stealing scheduler implementation -----------------------------------
 
 namespace work_stealing {
@@ -98,9 +101,8 @@ public:
   using job_ptr = resumable*;
 
   template <class SchedulerImpl>
-  worker(size_t worker_id, SchedulerImpl*, const worker_data& init,
-         size_t throughput)
-    : max_throughput_(throughput), id_(worker_id), data_(init) {
+  worker(size_t worker_id, SchedulerImpl*, const worker_data& init)
+    : id_(worker_id), data_(init) {
     // nop
   }
 
@@ -123,12 +125,16 @@ public:
     // nop
   }
 
-  void schedule(job_ptr job) override {
+  bool is_system_scheduler() const noexcept final {
+    return true;
+  }
+
+  void schedule(job_ptr job, uint64_t) override {
     CAF_ASSERT(job != nullptr);
     data_.queue.append(job);
   }
 
-  void delay(job_ptr job) override {
+  void delay(job_ptr job, uint64_t) override {
     CAF_ASSERT(job != nullptr);
     data_.queue.prepend(job);
   }
@@ -143,10 +149,6 @@ public:
 
   worker_data& data() {
     return data_;
-  }
-
-  size_t max_throughput() {
-    return max_throughput_;
   }
 
 private:
@@ -203,34 +205,23 @@ private:
     // scheduling loop
     for (;;) {
       auto job = policy_dequeue(parent);
-      CAF_ASSERT(job != nullptr);
-      CAF_ASSERT(job->subtype() != resumable::io_actor);
-      auto res = job->resume(this, max_throughput_);
+      CAF_ASSERT(job->pinned_scheduler() == nullptr);
+      auto res = job->resume(this, resumable::default_event_id);
       switch (res) {
-        case resumable::resume_later: {
+        case resumable::resume_later:
           // Keep reference to this actor, as it remains in the "loop" job has
           // voluntarily released the CPU to let others run instead this means
           // we are going to put this job to the very end of our queue.
           data_.queue.unsafe_append(job);
           break;
-        }
-        case resumable::done: {
+        case resumable::done:
           intrusive_ptr_release(job);
           break;
-        }
-        case resumable::awaiting_message: {
-          // Resumable will maybe be enqueued again later, deref it for now.
-          intrusive_ptr_release(job);
-          break;
-        }
-        case resumable::shutdown_execution_unit: {
-          return;
-        }
       }
+      if (stop_worker)
+        return;
     }
   }
-  // Number of messages each actor is allowed to consume per resume.
-  size_t max_throughput_;
 
   // The worker's thread.
   std::thread this_thread_;
@@ -247,8 +238,6 @@ class scheduler_impl : public scheduler {
 public:
   explicit scheduler_impl(actor_system& sys) : sys_(&sys) {
     auto& cfg = sys.config();
-    max_throughput_ = get_or(cfg, "caf.scheduler.max-throughput",
-                             defaults::scheduler::max_throughput);
     num_workers_ = get_or(cfg, "caf.scheduler.max-threads",
                           detail::default_thread_count());
   }
@@ -275,13 +264,13 @@ public:
 
   // -- implementation of scheduler interface ----------------------------------
 
-  void schedule(resumable* ptr) override {
+  void schedule(resumable* ptr, uint64_t) override {
     auto w = this->worker_by_id(next_worker++ % num_workers_);
-    w->schedule(ptr);
+    w->schedule(ptr, resumable::default_event_id);
   }
 
-  void delay(resumable* what) override {
-    schedule(what);
+  void delay(resumable* what, uint64_t) override {
+    schedule(what, resumable::default_event_id);
   }
 
   void start() override {
@@ -291,8 +280,7 @@ public:
     workers_.reserve(num_workers_);
     // Create worker instances.
     for (size_t i = 0; i < num_workers_; ++i)
-      workers_.emplace_back(
-        std::make_unique<worker_type>(i, this, init, max_throughput_));
+      workers_.emplace_back(std::make_unique<worker_type>(i, this, init));
     // Start all workers.
     for (auto& w : workers_)
       w->start(this);
@@ -302,12 +290,13 @@ public:
     // Shutdown workers.
     class shutdown_helper : public resumable, public ref_counted {
     public:
-      resumable::resume_result resume(scheduler* ptr, size_t) override {
+      resumable::resume_result resume(scheduler* ptr, uint64_t) override {
         CAF_ASSERT(ptr != nullptr);
+        stop_worker = true;
         std::unique_lock<std::mutex> guard(mtx);
         last_worker = ptr;
         cv.notify_all();
-        return resumable::shutdown_execution_unit;
+        return resumable::done;
       }
 
       void ref_resumable() const noexcept final {
@@ -327,12 +316,13 @@ public:
     // Use a set to keep track of remaining workers.
     shutdown_helper sh;
     std::set<worker_type*> alive_workers;
-    for (size_t i = 0; i < num_workers_; ++i) {
+    for (size_t i = 0; i < num_workers_; ++i)
       alive_workers.insert(worker_by_id(i));
-      sh.ref(); // Make sure reference count is high enough.
-    }
     while (!alive_workers.empty()) {
-      (*alive_workers.begin())->schedule(&sh);
+      // Add a reference before scheduling. The worker will release this
+      // reference after processing the shutdown_helper.
+      sh.ref();
+      (*alive_workers.begin())->schedule(&sh, resumable::default_event_id);
       // Since jobs can be stolen, we cannot assume that we have actually shut
       // down the worker we've enqueued sh to.
       {
@@ -354,6 +344,10 @@ public:
     }
   }
 
+  bool is_system_scheduler() const noexcept final {
+    return true;
+  }
+
 private:
   /// Set of workers.
   std::vector<std::unique_ptr<worker_type>> workers_;
@@ -363,9 +357,6 @@ private:
 
   /// Thread for managing timeouts and delayed messages.
   std::thread timer_;
-
-  /// Number of messages each actor is allowed to consume per resume.
-  size_t max_throughput_ = 0;
 
   /// Configured number of workers.
   size_t num_workers_ = 0;
@@ -386,8 +377,7 @@ class worker : public scheduler {
 public:
   using job_ptr = resumable*;
 
-  worker(size_t worker_id, Parent* parent, size_t throughput)
-    : max_throughput_(throughput), parent_{parent}, id_(worker_id) {
+  worker(size_t worker_id, Parent* parent) : parent_{parent}, id_(worker_id) {
     // nop
   }
 
@@ -406,14 +396,18 @@ public:
     // nop
   }
 
-  void schedule(job_ptr job) override {
-    CAF_ASSERT(job != nullptr);
-    parent_->schedule(job);
+  bool is_system_scheduler() const noexcept final {
+    return true;
   }
 
-  void delay(job_ptr job) override {
+  void schedule(job_ptr job, uint64_t) override {
     CAF_ASSERT(job != nullptr);
-    parent_->schedule(job);
+    parent_->schedule(job, resumable::default_event_id);
+  }
+
+  void delay(job_ptr job, uint64_t) override {
+    CAF_ASSERT(job != nullptr);
+    parent_->schedule(job, resumable::default_event_id);
   }
 
   size_t id() const noexcept {
@@ -424,10 +418,6 @@ public:
     return this_thread_;
   }
 
-  size_t max_throughput() noexcept {
-    return max_throughput_;
-  }
-
 private:
   void run() {
     CAF_SET_LOGGER_SYS(&parent_->system());
@@ -435,27 +425,21 @@ private:
     for (;;) {
       auto job = parent_->dequeue();
       CAF_ASSERT(job != nullptr);
-      CAF_ASSERT(job->subtype() != resumable::io_actor);
-      auto res = job->resume(this, max_throughput_);
+      CAF_ASSERT(job->pinned_scheduler() == nullptr);
+      auto res = job->resume(this, resumable::default_event_id);
       switch (res) {
         case resumable::resume_later:
           // Keep reference to this actor, as it remains in the "loop".
-          parent_->schedule(job);
+          parent_->schedule(job, resumable::default_event_id);
           break;
-        case resumable::awaiting_message:
-          // Resumable will maybe be enqueued again later, deref it for now.
         case resumable::done:
           intrusive_ptr_release(job);
           break;
-        case resumable::shutdown_execution_unit: {
-          return;
-        }
       }
+      if (stop_worker)
+        return;
     }
   }
-
-  // Number of messages each actor is allowed to consume per resume.
-  size_t max_throughput_;
 
   // The worker's thread.
   std::thread this_thread_;
@@ -477,8 +461,6 @@ public:
 
   explicit scheduler_impl(actor_system& sys) : sys_(&sys) {
     auto& cfg = sys.config();
-    max_throughput_ = get_or(cfg, "caf.scheduler.max-throughput",
-                             defaults::scheduler::max_throughput);
     num_workers_ = get_or(cfg, "caf.scheduler.max-threads",
                           detail::default_thread_count());
   }
@@ -499,7 +481,7 @@ public:
 
   // -- implementation of scheduler interface ----------------------------------
 
-  void schedule(resumable* ptr) override {
+  void schedule(resumable* ptr, uint64_t) override {
     queue_type l;
     l.push_back(ptr);
     std::unique_lock<std::mutex> guard(lock);
@@ -507,8 +489,8 @@ public:
     cv.notify_one();
   }
 
-  void delay(resumable* what) override {
-    schedule(what);
+  void delay(resumable* what, uint64_t) override {
+    schedule(what, resumable::default_event_id);
   }
 
   void start() override {
@@ -517,8 +499,7 @@ public:
     workers_.reserve(num);
     // Create worker instances.
     for (size_t i = 0; i < num; ++i)
-      workers_.emplace_back(
-        std::make_unique<worker_type>(i, this, max_throughput_));
+      workers_.emplace_back(std::make_unique<worker_type>(i, this));
     // Start all workers.
     for (auto& w : workers_)
       w->start();
@@ -528,12 +509,13 @@ public:
     // Shutdown workers.
     class shutdown_helper : public resumable, public ref_counted {
     public:
-      resumable::resume_result resume(scheduler* ptr, size_t) override {
+      resumable::resume_result resume(scheduler* ptr, uint64_t) override {
         CAF_ASSERT(ptr != nullptr);
+        stop_worker = true;
         std::unique_lock<std::mutex> guard(mtx);
         last_worker = ptr;
         cv.notify_all();
-        return resumable::shutdown_execution_unit;
+        return resumable::done;
       }
       void ref_resumable() const noexcept final {
         ref();
@@ -551,12 +533,13 @@ public:
     // Use a set to keep track of remaining workers.
     shutdown_helper sh;
     std::set<worker_type*> alive_workers;
-    for (size_t i = 0; i < num_workers_; ++i) {
+    for (size_t i = 0; i < num_workers_; ++i)
       alive_workers.insert(worker_by_id(i));
-      sh.ref(); // Make sure reference count is high enough.
-    }
     while (!alive_workers.empty()) {
-      (*alive_workers.begin())->schedule(&sh);
+      // Add a reference before scheduling. The worker will release this
+      // reference after processing the shutdown_helper.
+      sh.ref();
+      (*alive_workers.begin())->schedule(&sh, resumable::default_event_id);
       // Since jobs can be stolen, we cannot assume that we have actually shut
       // down the worker we've enqueued sh to.
       { // lifetime scope of guard
@@ -572,6 +555,10 @@ public:
     }
     // Run cleanup code for each resumable.
     foreach_central_resumable(detail::cleanup_and_release);
+  }
+
+  bool is_system_scheduler() const noexcept final {
+    return true;
   }
 
   resumable* dequeue() {
@@ -614,9 +601,6 @@ private:
 
   /// Thread for managing timeouts and delayed messages.
   std::thread timer_;
-
-  /// Number of messages each actor is allowed to consume per resume.
-  size_t max_throughput_ = 0;
 
   /// Configured number of workers.
   size_t num_workers_ = 0;

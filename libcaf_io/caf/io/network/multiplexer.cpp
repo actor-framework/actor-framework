@@ -26,10 +26,6 @@ multiplexer::supervisor::~supervisor() {
   // nop
 }
 
-resumable::subtype_t multiplexer::runnable::subtype() const noexcept {
-  return resumable::function_object;
-}
-
 void multiplexer::runnable::ref_resumable() const noexcept {
   ref();
 }
@@ -44,6 +40,10 @@ void multiplexer::start() {
 
 void multiplexer::stop() {
   // nop
+}
+
+bool multiplexer::is_system_scheduler() const noexcept {
+  return false;
 }
 
 } // namespace caf::io::network

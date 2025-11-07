@@ -12,8 +12,8 @@ resumable::~resumable() {
   // nop
 }
 
-resumable::subtype_t resumable::subtype() const noexcept {
-  return unspecified;
+scheduler* resumable::pinned_scheduler() const noexcept {
+  return nullptr;
 }
 
 } // namespace caf

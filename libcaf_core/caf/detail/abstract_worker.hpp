@@ -25,8 +25,6 @@ public:
 
   // -- implementation of resumable --------------------------------------------
 
-  subtype_t subtype() const noexcept final;
-
   void ref_resumable() const noexcept final;
 
   void deref_resumable() const noexcept final;

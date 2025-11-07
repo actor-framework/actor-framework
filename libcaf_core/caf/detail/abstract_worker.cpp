@@ -18,10 +18,6 @@ abstract_worker::~abstract_worker() {
 
 // -- implementation of resumable ----------------------------------------------
 
-resumable::subtype_t abstract_worker::subtype() const noexcept {
-  return resumable::function_object;
-}
-
 void abstract_worker::ref_resumable() const noexcept {
   ref();
 }

@@ -9,6 +9,7 @@
 #include "caf/action.hpp"
 #include "caf/async/fwd.hpp"
 #include "caf/cow_string.hpp"
+#include "caf/defaults.hpp"
 #include "caf/detail/behavior_stack.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/default_mailbox.hpp"
@@ -207,13 +208,11 @@ public:
 
   // -- overridden functions of resumable --------------------------------------
 
-  subtype_t subtype() const noexcept override;
-
   void ref_resumable() const noexcept final;
 
   void deref_resumable() const noexcept final;
 
-  resume_result resume(scheduler*, size_t) override;
+  resume_result resume(scheduler*, uint64_t) override;
 
   // -- scheduler callbacks ----------------------------------------------------
 
@@ -833,6 +832,10 @@ private:
   /// Cleans up any state associated to flows and streams and cancels all
   /// ongoing activities.
   void cancel_flows_and_streams();
+
+  /// The maximum throughput for resuming the actor, i.e., the maximum number of
+  /// messages that the actor is allowed to consume per resume.
+  size_t max_throughput_ = defaults::scheduler::max_throughput;
 
   /// Stores actions that the actor executes after processing the current
   /// message.

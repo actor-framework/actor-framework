@@ -48,12 +48,16 @@ public:
     deref();
   }
 
-  resume_result resume(scheduler*, size_t) override {
+  resume_result resume(scheduler*, uint64_t event_id) override {
     CAF_ASSERT(decorated_ != nullptr);
     WorkerPtr tmp;
     {
       std::unique_lock guard(mtx_);
       tmp.swap(worker_);
+    }
+    if (event_id == resumable::dispose_event_id) {
+      decorated_->dispose();
+      return resumable::done;
     }
     if constexpr (std::is_same_v<WorkerPtr, weak_actor_ptr>) {
       if (auto ptr = actor_cast<strong_actor_ptr>(tmp)) {

@@ -79,10 +79,6 @@ public:
   friend class doorman;
   friend class datagram_servant;
 
-  // -- overridden modifiers of abstract_actor ---------------------------------
-
-  bool enqueue(mailbox_element_ptr, scheduler*) override;
-
   // -- overridden modifiers of local_actor ------------------------------------
 
   void launch(scheduler* eu, bool lazy, bool hide) override;
@@ -93,7 +89,9 @@ public:
 
   // -- overridden modifiers of resumable --------------------------------------
 
-  resume_result resume(scheduler*, size_t) override;
+  resume_result resume(scheduler*, uint64_t) override;
+
+  scheduler* pinned_scheduler() const noexcept final;
 
   // -- modifiers --------------------------------------------------------------
 
@@ -330,10 +328,6 @@ public:
   // -- overridden observers of abstract_actor ---------------------------------
 
   const char* name() const override;
-
-  // -- overridden observers of resumable --------------------------------------
-
-  subtype_t subtype() const noexcept override;
 
   // -- observers --------------------------------------------------------------
 
