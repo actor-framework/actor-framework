@@ -609,7 +609,7 @@ bool default_multiplexer::poll_once(bool block) {
 
 void default_multiplexer::resume(intrusive_ptr<resumable> ptr) {
   auto lg = log::io::trace("");
-  switch (ptr->resume(this, max_throughput_)) {
+  switch (ptr->resume(this, resumable::default_event_id, max_throughput_)) {
     case resumable::resume_later:
       // Delay resumable until next cycle.
       internally_posted_.emplace_back(ptr.release(), false);

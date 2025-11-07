@@ -80,7 +80,7 @@ public:
 
   /// Triggers the action.
   void run() {
-    pimpl_->resume(nullptr, 0);
+    pimpl_->resume(nullptr, resumable::default_event_id, 1);
   }
 
   /// Cancel the action if it has not been invoked yet.
@@ -216,7 +216,11 @@ public:
     return resumable::awaiting_message;
   }
 
-  resume_result resume(scheduler*, size_t) override {
+  resume_result resume(scheduler*, uint64_t event_id, size_t) override {
+    if (event_id == resumable::dispose_event_id) {
+      dispose();
+      return resumable::done;
+    }
     if constexpr (IsSingleShot) {
       run_single_shot();
       return resumable::done;
