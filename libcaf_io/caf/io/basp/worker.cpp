@@ -37,7 +37,7 @@ void worker::launch(const node_id& last_hop, const basp::header& hdr,
   memcpy(&hdr_, &hdr, sizeof(basp::header));
   payload_.assign(payload.begin(), payload.end());
   ref();
-  system_->scheduler().schedule(this);
+  system_->scheduler().schedule(this, resumable::default_event_id);
 }
 
 // -- implementation of resumable ----------------------------------------------
