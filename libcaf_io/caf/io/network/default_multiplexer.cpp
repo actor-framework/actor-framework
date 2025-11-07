@@ -639,7 +639,7 @@ default_multiplexer::~default_multiplexer() {
 #endif
 }
 
-void default_multiplexer::schedule(resumable* ptr) {
+void default_multiplexer::schedule(resumable* ptr, uint64_t) {
   auto lg = log::io::trace("ptr = {}", ptr);
   CAF_ASSERT(ptr != nullptr);
   switch (ptr->subtype()) {
@@ -651,12 +651,12 @@ void default_multiplexer::schedule(resumable* ptr) {
         internally_posted_.emplace_back(ptr, false);
       break;
     default:
-      system().scheduler().schedule(ptr);
+      system().scheduler().schedule(ptr, resumable::default_event_id);
   }
 }
 
-void default_multiplexer::delay(resumable* ptr) {
-  schedule(ptr);
+void default_multiplexer::delay(resumable* ptr, uint64_t) {
+  schedule(ptr, resumable::default_event_id);
 }
 
 scribe_ptr default_multiplexer::new_scribe(native_socket fd) {

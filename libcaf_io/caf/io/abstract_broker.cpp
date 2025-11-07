@@ -34,7 +34,7 @@ void abstract_broker::launch(scheduler* sched, bool lazy, bool hide) {
   if (lazy && mailbox().try_block())
     return;
   intrusive_ptr_add_ref(ctrl());
-  sched->schedule(this);
+  sched->schedule(this, resumable::default_event_id);
 }
 
 void abstract_broker::on_cleanup(const error& reason) {

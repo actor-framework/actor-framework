@@ -66,7 +66,7 @@ OUTLINE("scheduling resumables") {
       auto rendezvous = std::make_shared<latch>(2);
       auto worker = make_counted<testee>(rendezvous);
       worker->ref();
-      sys->scheduler().schedule(worker.get());
+      sys->scheduler().schedule(worker.get(), resumable::default_event_id);
       THEN("expect the resumable to be executed until done") {
         rendezvous->count_down_and_wait();
         check_eq(worker->runs.load(), 10u);
@@ -87,7 +87,7 @@ OUTLINE("scheduling resumables") {
         workers.emplace_back(make_counted<testee>(rendezvous));
         workers.back()->ref();
         check_eq(workers.back()->get_reference_count(), 2u);
-        sys->scheduler().schedule(workers.back().get());
+        sys->scheduler().schedule(workers.back().get(), resumable::default_event_id);
       }
       THEN("expect the resumables to be executed until done") {
         rendezvous->count_down_and_wait();
@@ -156,7 +156,7 @@ OUTLINE("scheduling units that are awaiting") {
       for (int i = 0; i < 10; i++) {
         workers.push_back(make_counted<awaiting_testee>(rendezvous));
         workers.back()->ref();
-        sys->scheduler().schedule(workers.back().get());
+        sys->scheduler().schedule(workers.back().get(), resumable::default_event_id);
       }
       THEN("expect the resumables to be executed once") {
         rendezvous->count_down_and_wait();

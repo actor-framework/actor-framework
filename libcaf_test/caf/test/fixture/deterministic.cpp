@@ -329,7 +329,7 @@ public:
     // nop
   }
 
-  void schedule(resumable* ptr) override {
+  void schedule(resumable* ptr, uint64_t) override {
     using event_t = deterministic::scheduling_event;
     using subtype_t = resumable::subtype_t;
     switch (ptr->subtype()) {
@@ -351,8 +351,8 @@ public:
     intrusive_ptr_release(ptr);
   }
 
-  void delay(resumable* what) override {
-    schedule(what);
+  void delay(resumable* what, uint64_t) override {
+    schedule(what, resumable::default_event_id);
   }
 
   void start() override {
