@@ -339,7 +339,7 @@ public:
         // them right away if they aren't initialized yet.
         auto dptr = dynamic_cast<scheduled_actor*>(ptr);
         if (!dptr->initialized() && !dptr->inactive())
-          dptr->resume(this, 0);
+          dptr->resume(this, resumable::default_event_id, 0);
         break;
       }
       default:
@@ -524,15 +524,15 @@ bool deterministic::dispatch_message() {
     auto ev = std::move(events_.front());
     events_.pop_front();
     auto hdl = ev->target;
-    auto res = hdl->resume(&sys.scheduler(), 1);
+    auto res = hdl->resume(&sys.scheduler(), resumable::default_event_id, 1);
     while (res == resumable::resume_later) {
-      res = hdl->resume(&sys.scheduler(), 0);
+      res = hdl->resume(&sys.scheduler(), resumable::default_event_id, 0);
     }
     return true;
   }
   // Actor: we simply resume the next actor and it will pick up its message.
   auto next = events_.front()->target;
-  next->resume(&sys.scheduler(), 1);
+  next->resume(&sys.scheduler(), resumable::default_event_id, 1);
   return true;
 }
 

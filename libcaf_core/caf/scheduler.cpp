@@ -205,7 +205,8 @@ private:
       auto job = policy_dequeue(parent);
       CAF_ASSERT(job != nullptr);
       CAF_ASSERT(job->subtype() != resumable::io_actor);
-      auto res = job->resume(this, max_throughput_);
+      auto res = job->resume(this, resumable::default_event_id,
+                             max_throughput_);
       switch (res) {
         case resumable::resume_later: {
           // Keep reference to this actor, as it remains in the "loop" job has
@@ -302,7 +303,8 @@ public:
     // Shutdown workers.
     class shutdown_helper : public resumable, public ref_counted {
     public:
-      resumable::resume_result resume(scheduler* ptr, size_t) override {
+      resumable::resume_result resume(scheduler* ptr, uint64_t,
+                                      size_t) override {
         CAF_ASSERT(ptr != nullptr);
         std::unique_lock<std::mutex> guard(mtx);
         last_worker = ptr;
@@ -436,7 +438,8 @@ private:
       auto job = parent_->dequeue();
       CAF_ASSERT(job != nullptr);
       CAF_ASSERT(job->subtype() != resumable::io_actor);
-      auto res = job->resume(this, max_throughput_);
+      auto res = job->resume(this, resumable::default_event_id,
+                             max_throughput_);
       switch (res) {
         case resumable::resume_later:
           // Keep reference to this actor, as it remains in the "loop".
@@ -528,7 +531,8 @@ public:
     // Shutdown workers.
     class shutdown_helper : public resumable, public ref_counted {
     public:
-      resumable::resume_result resume(scheduler* ptr, size_t) override {
+      resumable::resume_result resume(scheduler* ptr, uint64_t,
+                                      size_t) override {
         CAF_ASSERT(ptr != nullptr);
         std::unique_lock<std::mutex> guard(mtx);
         last_worker = ptr;

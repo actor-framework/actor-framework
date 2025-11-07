@@ -42,7 +42,11 @@ void worker::launch(const node_id& last_hop, const basp::header& hdr,
 
 // -- implementation of resumable ----------------------------------------------
 
-resumable::resume_result worker::resume(scheduler* sched, size_t) {
+resumable::resume_result worker::resume(scheduler* sched, uint64_t event_id,
+                                        size_t) {
+  if (event_id == resumable::dispose_event_id) {
+    return resumable::done;
+  }
   proxy_registry::current(proxies_);
   auto guard = detail::scope_guard{[]() noexcept { //
     proxy_registry::current(nullptr);

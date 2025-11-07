@@ -110,8 +110,13 @@ public:
     return resumable::function_object;
   }
 
-  resumable::resume_result resume(scheduler* ctx, size_t) override {
+  resumable::resume_result resume(scheduler* ctx, uint64_t event_id,
+                                  size_t) override {
     CAF_PUSH_AID_FROM_PTR(self_);
+    if (event_id == resumable::dispose_event_id) {
+      self_->cleanup(make_error(exit_reason::user_shutdown), ctx);
+      return resumable::done;
+    }
     self_->context(ctx);
     self_->initialize();
     error rsn;

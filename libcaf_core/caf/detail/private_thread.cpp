@@ -17,10 +17,11 @@ namespace caf::detail {
 void private_thread::run(actor_system* sys) {
   auto lg = log::core::trace("");
   auto resume = [&sys](resumable* job) {
-    auto res = job->resume(&sys->scheduler(),
+    auto res = job->resume(&sys->scheduler(), resumable::default_event_id,
                            std::numeric_limits<size_t>::max());
     while (res == resumable::resume_later)
-      res = job->resume(&sys->scheduler(), std::numeric_limits<size_t>::max());
+      res = job->resume(&sys->scheduler(), resumable::default_event_id,
+                        std::numeric_limits<size_t>::max());
     return res;
   };
   for (;;) {

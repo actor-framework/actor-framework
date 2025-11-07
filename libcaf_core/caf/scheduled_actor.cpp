@@ -254,8 +254,13 @@ void scheduled_actor::deref_resumable() const noexcept {
 }
 
 resumable::resume_result scheduled_actor::resume(scheduler* sched,
+                                                 uint64_t event_id,
                                                  size_t max_throughput) {
   CAF_PUSH_AID(id());
+  if (event_id == resumable::dispose_event_id) {
+    on_cleanup(make_error(exit_reason::user_shutdown));
+    return resumable::done;
+  }
   auto lg = log::core::trace("max_throughput = {}", max_throughput);
   if (!activate(sched))
     return resumable::done;
