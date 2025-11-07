@@ -136,7 +136,7 @@ public:
         return done;
       }
     };
-    delay(new impl(std::move(fun)));
+    delay(new impl(std::move(fun)), resumable::default_event_id);
   }
 
   /// Retrieves a pointer to the implementation or `nullptr` if CAF was

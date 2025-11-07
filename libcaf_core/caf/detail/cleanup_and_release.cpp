@@ -13,10 +13,10 @@ namespace caf::detail {
 void cleanup_and_release(resumable* ptr) {
   class dummy_scheduler : public scheduler {
   public:
-    void delay(resumable* job) override {
+    void delay(resumable* job, uint64_t) override {
       resumables.push_back(job);
     }
-    void schedule(resumable* job) override {
+    void schedule(resumable* job, uint64_t) override {
       resumables.push_back(job);
     }
     void start() override {

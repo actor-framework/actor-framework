@@ -122,12 +122,12 @@ public:
     // nop
   }
 
-  void schedule(job_ptr job) override {
+  void schedule(job_ptr job, uint64_t) override {
     CAF_ASSERT(job != nullptr);
     data_.queue.append(job);
   }
 
-  void delay(job_ptr job) override {
+  void delay(job_ptr job, uint64_t) override {
     CAF_ASSERT(job != nullptr);
     data_.queue.prepend(job);
   }
@@ -266,13 +266,13 @@ public:
 
   // -- implementation of scheduler interface ----------------------------------
 
-  void schedule(resumable* ptr) override {
+  void schedule(resumable* ptr, uint64_t) override {
     auto w = this->worker_by_id(next_worker++ % num_workers_);
-    w->schedule(ptr);
+    w->schedule(ptr, resumable::default_event_id);
   }
 
-  void delay(resumable* what) override {
-    schedule(what);
+  void delay(resumable* what, uint64_t) override {
+    schedule(what, resumable::default_event_id);
   }
 
   void start() override {
@@ -322,7 +322,7 @@ public:
       sh.ref(); // Make sure reference count is high enough.
     }
     while (!alive_workers.empty()) {
-      (*alive_workers.begin())->schedule(&sh);
+      (*alive_workers.begin())->schedule(&sh, resumable::default_event_id);
       // Since jobs can be stolen, we cannot assume that we have actually shut
       // down the worker we've enqueued sh to.
       {
@@ -392,14 +392,14 @@ public:
     // nop
   }
 
-  void schedule(job_ptr job) override {
+  void schedule(job_ptr job, uint64_t) override {
     CAF_ASSERT(job != nullptr);
-    parent_->schedule(job);
+    parent_->schedule(job, resumable::default_event_id);
   }
 
-  void delay(job_ptr job) override {
+  void delay(job_ptr job, uint64_t) override {
     CAF_ASSERT(job != nullptr);
-    parent_->schedule(job);
+    parent_->schedule(job, resumable::default_event_id);
   }
 
   size_t id() const noexcept {
@@ -422,7 +422,7 @@ private:
       switch (res) {
         case resumable::resume_later:
           // Keep reference to this actor, as it remains in the "loop".
-          parent_->schedule(job);
+          parent_->schedule(job, resumable::default_event_id);
           break;
         case resumable::awaiting_message:
           // Resumable will maybe be enqueued again later, deref it for now.
@@ -476,7 +476,7 @@ public:
 
   // -- implementation of scheduler interface ----------------------------------
 
-  void schedule(resumable* ptr) override {
+  void schedule(resumable* ptr, uint64_t) override {
     queue_type l;
     l.push_back(ptr);
     std::unique_lock<std::mutex> guard(lock);
@@ -484,8 +484,8 @@ public:
     cv.notify_one();
   }
 
-  void delay(resumable* what) override {
-    schedule(what);
+  void delay(resumable* what, uint64_t) override {
+    schedule(what, resumable::default_event_id);
   }
 
   void start() override {
@@ -532,7 +532,7 @@ public:
       sh.ref(); // Make sure reference count is high enough.
     }
     while (!alive_workers.empty()) {
-      (*alive_workers.begin())->schedule(&sh);
+      (*alive_workers.begin())->schedule(&sh, resumable::default_event_id);
       // Since jobs can be stolen, we cannot assume that we have actually shut
       // down the worker we've enqueued sh to.
       { // lifetime scope of guard

@@ -175,9 +175,9 @@ bool scheduled_actor::enqueue(mailbox_element_ptr ptr, scheduler* sched) {
       if (private_thread_)
         private_thread_->resume(this);
       else if (sched != nullptr)
-        sched->delay(this);
+        sched->delay(this, resumable::default_event_id);
       else
-        home_system().scheduler().schedule(this);
+        home_system().scheduler().schedule(this, resumable::default_event_id);
       return true;
     }
     case intrusive::inbox_result::success:
@@ -220,7 +220,7 @@ void scheduled_actor::launch(scheduler* sched, bool lazy, bool hide) {
     }
   } else if (!delay_first_scheduling) {
     intrusive_ptr_add_ref(ctrl());
-    sched->delay(this);
+    sched->delay(this, resumable::default_event_id);
   }
   processed_messages_
     = home_system().base_metrics().processed_messages->get_or_add(
