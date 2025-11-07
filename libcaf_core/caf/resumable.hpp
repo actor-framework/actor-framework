@@ -36,6 +36,12 @@ public:
     function_object
   };
 
+  /// The event ID for disposing a resumable.
+  static constexpr uint64_t dispose_event_id = 0;
+
+  /// The event ID for the default event.
+  static constexpr uint64_t default_event_id = 1;
+
   resumable() = default;
 
   virtual ~resumable();
@@ -47,7 +53,12 @@ public:
 
   /// Resume any pending computation until it is either finished
   /// or needs to be re-scheduled later.
-  virtual resume_result resume(scheduler*, size_t max_throughput) = 0;
+  /// @param event_id The event ID for the event that triggered the resume.
+  /// @param max_throughput The maximum throughput for the resume.
+  /// @returns The result of the resume.
+  virtual resume_result
+  resume(scheduler*, uint64_t event_id, size_t max_throughput)
+    = 0;
 
   /// Add a strong reference count to this object.
   virtual void ref_resumable() const noexcept = 0;
@@ -57,16 +68,14 @@ public:
 };
 
 // enables intrusive_ptr<resumable> without introducing ambiguity
-template <class T>
-  requires std::same_as<T*, resumable*>
-void intrusive_ptr_add_ref(const T* ptr) {
+template <std::same_as<resumable> T>
+void intrusive_ptr_add_ref(const T* ptr) noexcept {
   ptr->ref_resumable();
 }
 
 // enables intrusive_ptr<resumable> without introducing ambiguity
-template <class T>
-  requires std::same_as<T*, resumable*>
-void intrusive_ptr_release(const T* ptr) {
+template <std::same_as<resumable> T>
+void intrusive_ptr_release(const T* ptr) noexcept {
   ptr->deref_resumable();
 }
 

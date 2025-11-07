@@ -27,7 +27,12 @@ struct testee : resumable, ref_counted {
     return resumable::function_object;
   }
 
-  resume_result resume(scheduler*, size_t max_throughput) override {
+  resume_result resume(scheduler*, uint64_t event_id,
+                       size_t max_throughput) override {
+    if (event_id == resumable::dispose_event_id) {
+      rendezvous->count_down();
+      return resumable::done;
+    }
     if (++runs == 10) {
       received_throughput = max_throughput;
       rendezvous->count_down();
@@ -124,8 +129,12 @@ struct awaiting_testee : resumable, ref_counted {
     return resumable::function_object;
   }
 
-  resume_result resume(scheduler*, size_t) override {
-    runs++;
+  resume_result resume(scheduler*, uint64_t event_id, size_t) override {
+    if (event_id == resumable::dispose_event_id) {
+      rendezvous->count_down();
+      return resumable::done;
+    }
+    ++runs;
     rendezvous->count_down();
     return resumable::awaiting_message;
   }

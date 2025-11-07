@@ -27,32 +27,15 @@ void cleanup_and_release(resumable* ptr) {
     }
     std::vector<resumable*> resumables;
   };
-  switch (ptr->subtype()) {
-    case resumable::scheduled_actor:
-    case resumable::io_actor: {
-      auto dptr = static_cast<scheduled_actor*>(ptr);
-      dummy_scheduler dummy;
-      dptr->cleanup(make_error(exit_reason::user_shutdown), &dummy);
-      while (!dummy.resumables.empty()) {
-        auto sub = dummy.resumables.back();
-        dummy.resumables.pop_back();
-        switch (sub->subtype()) {
-          case resumable::scheduled_actor:
-          case resumable::io_actor: {
-            auto dsub = static_cast<scheduled_actor*>(sub);
-            dsub->cleanup(make_error(exit_reason::user_shutdown), &dummy);
-            break;
-          }
-          default:
-            break;
-        }
-      }
-      break;
-    }
-    default:
-      break;
-  }
+  dummy_scheduler dummy;
+  std::ignore = ptr->resume(&dummy, resumable::dispose_event_id, 1);
   intrusive_ptr_release(ptr);
+  while (!dummy.resumables.empty()) {
+    auto sub = dummy.resumables.back();
+    dummy.resumables.pop_back();
+    std::ignore = sub->resume(&dummy, resumable::dispose_event_id, 1);
+    intrusive_ptr_release(sub);
+  }
 }
 
 } // namespace caf::detail
