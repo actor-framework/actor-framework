@@ -93,7 +93,7 @@ public:
 
   // -- overridden modifiers of resumable --------------------------------------
 
-  resume_result resume(scheduler*, uint64_t, size_t) override;
+  resume_result resume(scheduler*, uint64_t) override;
 
   // -- modifiers --------------------------------------------------------------
 

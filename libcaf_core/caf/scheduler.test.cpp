@@ -27,14 +27,13 @@ struct testee : resumable, ref_counted {
     return resumable::function_object;
   }
 
-  resume_result resume(scheduler*, uint64_t event_id,
-                       size_t max_throughput) override {
+  resume_result resume(scheduler*, uint64_t event_id
+) override {
     if (event_id == resumable::dispose_event_id) {
       rendezvous->count_down();
       return resumable::done;
     }
     if (++runs == 10) {
-      received_throughput = max_throughput;
       rendezvous->count_down();
       return resumable::done;
     }
@@ -50,7 +49,6 @@ struct testee : resumable, ref_counted {
   }
 
   std::atomic<size_t> runs = 0;
-  std::atomic<size_t> received_throughput = 0;
   std::shared_ptr<latch> rendezvous;
 };
 
@@ -72,9 +70,6 @@ OUTLINE("scheduling resumables") {
       THEN("expect the resumable to be executed until done") {
         rendezvous->count_down_and_wait();
         check_eq(worker->runs.load(), 10u);
-      }
-      AND_THEN("expect the correct max throughput") {
-        check_eq(worker->received_throughput, 5u);
       }
       AND_THEN("the scheduler releases the ref when done") {
         // Note: destroying the actor system here will cause CAF to shut down.
@@ -99,10 +94,6 @@ OUTLINE("scheduling resumables") {
         for (const auto& worker : workers) {
           check_eq(worker->runs, 10u);
         }
-      }
-      AND_THEN("expect the correct max throughput") {
-        for (const auto& worker : workers)
-          check_eq(worker->received_throughput, 5u);
       }
       AND_THEN("the scheduler releases the ref when done") {
         // Note: destroying the actor system here will cause CAF to shut down.
@@ -129,7 +120,7 @@ struct awaiting_testee : resumable, ref_counted {
     return resumable::function_object;
   }
 
-  resume_result resume(scheduler*, uint64_t event_id, size_t) override {
+  resume_result resume(scheduler*, uint64_t event_id) override {
     if (event_id == resumable::dispose_event_id) {
       rendezvous->count_down();
       return resumable::done;

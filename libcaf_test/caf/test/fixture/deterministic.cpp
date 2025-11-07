@@ -338,8 +338,9 @@ public:
         // Actors put their messages into events_ directly. However, we do run
         // them right away if they aren't initialized yet.
         auto dptr = dynamic_cast<scheduled_actor*>(ptr);
-        if (!dptr->initialized() && !dptr->inactive())
-          dptr->resume(this, resumable::default_event_id, 0);
+        if (!dptr->initialized() && !dptr->inactive()) {
+          dptr->resume(this, resumable::initialization_event_id);
+        }
         break;
       }
       default:
@@ -378,6 +379,7 @@ deterministic::system_impl::system_impl(actor_system_config& cfg,
 actor_system_config&
 deterministic::system_impl::prepare(actor_system_config& cfg,
                                     deterministic* fix) {
+  cfg.set("caf.scheduler.max-throughput", 1);
   detail::actor_system_config_access access{cfg};
   access.mailbox_factory(std::make_unique<mailbox_factory_impl>(fix));
   return cfg;
@@ -524,15 +526,15 @@ bool deterministic::dispatch_message() {
     auto ev = std::move(events_.front());
     events_.pop_front();
     auto hdl = ev->target;
-    auto res = hdl->resume(&sys.scheduler(), resumable::default_event_id, 1);
+    auto res = hdl->resume(&sys.scheduler(), resumable::default_event_id);
     while (res == resumable::resume_later) {
-      res = hdl->resume(&sys.scheduler(), resumable::default_event_id, 0);
+      res = hdl->resume(&sys.scheduler(), resumable::default_event_id);
     }
     return true;
   }
   // Actor: we simply resume the next actor and it will pick up its message.
   auto next = events_.front()->target;
-  next->resume(&sys.scheduler(), resumable::default_event_id, 1);
+  next->resume(&sys.scheduler(), resumable::default_event_id);
   return true;
 }
 

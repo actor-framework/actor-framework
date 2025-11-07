@@ -40,7 +40,10 @@ public:
   static constexpr uint64_t dispose_event_id = 0;
 
   /// The event ID for the default event.
-  static constexpr uint64_t default_event_id = 1;
+  static constexpr uint64_t initialization_event_id = 1;
+
+  /// The event ID for the default event.
+  static constexpr uint64_t default_event_id = 2;
 
   resumable() = default;
 
@@ -54,11 +57,8 @@ public:
   /// Resume any pending computation until it is either finished
   /// or needs to be re-scheduled later.
   /// @param event_id The event ID for the event that triggered the resume.
-  /// @param max_throughput The maximum throughput for the resume.
   /// @returns The result of the resume.
-  virtual resume_result
-  resume(scheduler*, uint64_t event_id, size_t max_throughput)
-    = 0;
+  virtual resume_result resume(scheduler*, uint64_t event_id) = 0;
 
   /// Add a strong reference count to this object.
   virtual void ref_resumable() const noexcept = 0;

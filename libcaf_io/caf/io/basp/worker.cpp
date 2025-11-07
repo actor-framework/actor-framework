@@ -42,8 +42,7 @@ void worker::launch(const node_id& last_hop, const basp::header& hdr,
 
 // -- implementation of resumable ----------------------------------------------
 
-resumable::resume_result worker::resume(scheduler* sched, uint64_t event_id,
-                                        size_t) {
+resumable::resume_result worker::resume(scheduler* sched, uint64_t event_id) {
   if (event_id == resumable::dispose_event_id) {
     return resumable::done;
   }
