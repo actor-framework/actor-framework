@@ -168,17 +168,17 @@ private:
   void shutdown() {
     value_sub_.cancel();
     control_sub_.cancel();
-    if (!err_)
+    if (err_.empty())
       out_.on_complete();
     else
       out_.on_error(err_);
-    state_ = err_ ? state::aborted : state::disposed;
+    state_ = err_.valid() ? state::aborted : state::disposed;
   }
 
   void on_request() {
     if (demand_ == 0 || !buf_.has_value())
       return;
-    if (!err_)
+    if (err_.empty())
       out_.on_complete();
     else
       out_.on_error(err_);

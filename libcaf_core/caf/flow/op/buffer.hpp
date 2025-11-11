@@ -209,14 +209,14 @@ private:
       case state::running: {
         if (!buf_.empty()) {
           if (demand_ == 0) {
-            state_ = err_ ? state::aborted : state::completed;
+            state_ = err_.valid() ? state::aborted : state::completed;
             return;
           }
           Trait f;
           out_.on_next(f(buf_));
           buf_.clear();
         }
-        if (!err_)
+        if (err_.empty())
           out_.on_complete();
         else
           out_.on_error(err_);
@@ -238,7 +238,7 @@ private:
     }
     if (!buf_.empty())
       do_emit();
-    if (!err_)
+    if (err_.empty())
       out_.on_complete();
     else
       out_.on_error(err_);

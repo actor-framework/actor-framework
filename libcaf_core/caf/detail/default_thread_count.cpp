@@ -56,7 +56,7 @@ size_t default_thread_count() {
       // No CPU limit imposed
       return fallback;
     }
-    if (auto err = detail::parse(quota_str, quota); err) {
+    if (auto err = detail::parse(quota_str, quota); err.valid()) {
       return fallback;
     }
   } else { // cgroup v1

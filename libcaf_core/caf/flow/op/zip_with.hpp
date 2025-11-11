@@ -158,7 +158,7 @@ public:
   template <size_t I>
   void fwd_on_error(zip_index<I> index, const error& what) {
     if (out_) {
-      if (!err_)
+      if (err_.empty())
         err_ = what;
       auto& input = at(index);
       if (input.sub)
@@ -185,7 +185,7 @@ private:
       input.buf.clear();
     });
     if (from_external) {
-      if (!err_)
+      if (err_.empty())
         err_ = make_error(sec::disposed);
       out_.on_error(err_);
     } else {
@@ -212,7 +212,7 @@ private:
       input.buf.clear();
     });
     // Set out_ to null and emit the final event.
-    if (!err_)
+    if (err_.empty())
       out_.on_complete();
     else
       out_.on_error(err_);
