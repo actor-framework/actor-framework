@@ -18,6 +18,9 @@ public:
   template <class...>
   friend class blocking_response_handle;
 
+  template <class, class...>
+  friend class blocking_fan_out_response_handle;
+
   using super = local_actor;
 
   using super::super;
