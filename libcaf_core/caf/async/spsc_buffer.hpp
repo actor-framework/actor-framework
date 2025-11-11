@@ -235,7 +235,7 @@ public:
     CAF_ASSERT(consumer_ != nullptr);
     CAF_ASSERT(consumer_buf_.empty());
     if constexpr (std::is_same_v<Policy, prioritize_errors_t>) {
-      if (err_) {
+      if (err_.valid()) {
         consumer_ = nullptr;
         dst.on_error(err_);
         return {false, 0};
