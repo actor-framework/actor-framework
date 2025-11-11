@@ -129,6 +129,13 @@ struct blocking_response_handle_state {
 template <class... Results>
 class blocking_response_handle {
 public:
+  // -- constants --------------------------------------------------------------
+
+  static constexpr bool is_dynamically_typed
+    = std::is_same_v<type_list<Results...>, type_list<message>>;
+
+  static constexpr bool is_statically_typed = !is_dynamically_typed;
+
   // -- constructors, destructors, and assignment operators --------------------
 
   blocking_response_handle(abstract_blocking_actor* self, message_id mid,
@@ -144,7 +151,9 @@ public:
     state_.self->do_receive(state_.mid, bhvr, state_.timeout);
   }
 
-  auto receive() && {
+  auto receive() &&
+    requires is_statically_typed
+  {
     detail::expected_builder<Results...> bld;
     std::move(*this).receive(
       [&bld](Results... args) { bld.set_value(std::move(args)...); },
@@ -152,33 +161,10 @@ public:
     return std::move(bld.result);
   }
 
-private:
-  /// Holds the state for the handle.
-  blocking_response_handle_state state_;
-};
-
-/// This helper class identifies an expected response message and enables
-/// `request(...).then(...)`.
-template <>
-class blocking_response_handle<message> {
-public:
-  // -- constructors, destructors, and assignment operators --------------------
-
-  blocking_response_handle(abstract_blocking_actor* self, message_id mid,
-                           timespan timeout)
-    : state_{self, mid, timeout} {
-    // nop
-  }
-
-  template <class OnValue, class OnError>
-  void receive(OnValue on_value, OnError on_error) && {
-    detail::response_type_check<OnValue, OnError, message>();
-    auto bhvr = behavior{std::move(on_value), std::move(on_error)};
-    state_.self->do_receive(state_.mid, bhvr, state_.timeout);
-  }
-
   template <class... Ts>
-  auto receive() && {
+  auto receive() &&
+    requires is_dynamically_typed
+  {
     detail::expected_builder<Ts...> bld;
     std::move(*this).receive(
       [&bld](Ts... args) { bld.set_value(std::move(args)...); },
@@ -198,6 +184,13 @@ class blocking_delayed_response_handle {
 public:
   using decorated_type = blocking_response_handle<Results...>;
 
+  // -- constants --------------------------------------------------------------
+
+  static constexpr bool is_dynamically_typed
+    = std::is_same_v<type_list<Results...>, type_list<message>>;
+
+  static constexpr bool is_statically_typed = !is_dynamically_typed;
+
   // -- constructors, destructors, and assignment operators --------------------
 
   blocking_delayed_response_handle(abstract_blocking_actor* self,
@@ -215,67 +208,16 @@ public:
     std::move(decorated_).receive(std::move(on_value), std::move(on_error));
   }
 
-  auto receive() && {
+  auto receive() &&
+    requires is_statically_typed
+  {
     return std::move(decorated_).receive();
   }
 
-  // -- properties -------------------------------------------------------------
-
-  /// Returns the decorated handle.
-  decorated_type& decorated() {
-    return decorated_;
-  }
-
-  /// @copydoc decorated
-  const decorated_type& decorated() const {
-    return decorated_;
-  }
-
-  /// Returns the handle to the in-flight request message if the request was
-  /// delayed/scheduled. Otherwise, returns an empty handle.
-  disposable& pending_request() {
-    return pending_request_;
-  }
-
-  /// @copydoc pending_request
-  const disposable& pending_request() const {
-    return pending_request_;
-  }
-
-private:
-  /// The wrapped handle type.
-  decorated_type decorated_;
-
-  /// Stores a handle to the in-flight request if the request messages was
-  /// delayed/scheduled.
-  disposable pending_request_;
-};
-
-// Specialization for dynamically typed messages.
-template <>
-class blocking_delayed_response_handle<message> {
-public:
-  using decorated_type = blocking_response_handle<message>;
-
-  // -- constructors, destructors, and assignment operators --------------------
-
-  blocking_delayed_response_handle(abstract_blocking_actor* self,
-                                   message_id mid, timespan timeout,
-                                   disposable pending_request)
-    : decorated_(self, mid, timeout),
-      pending_request_(std::move(pending_request)) {
-    // nop
-  }
-
-  // -- receive ----------------------------------------------------------------
-
-  template <class OnValue, class OnError>
-  void receive(OnValue on_value, OnError on_error) && {
-    std::move(decorated_).receive(std::move(on_value), std::move(on_error));
-  }
-
   template <class... Ts>
-  auto receive() && {
+  auto receive() &&
+    requires is_dynamically_typed
+  {
     return std::move(decorated_).template receive<Ts...>();
   }
 
