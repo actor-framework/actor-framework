@@ -6,8 +6,8 @@
 
 #include "caf/abstract_blocking_actor.hpp"
 #include "caf/actor_traits.hpp"
-#include "caf/blocking_actor.hpp"
 #include "caf/catch_all.hpp"
+#include "caf/detail/metaprogramming.hpp"
 #include "caf/detail/response_type_check.hpp"
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/typed_actor_util.hpp"
@@ -66,48 +66,6 @@ template <class Result>
 using blocking_delayed_response_handle_t =
   typename blocking_delayed_response_handle_oracle<Result>::type;
 
-template <class... Ts>
-struct expected_builder;
-
-template <>
-struct expected_builder<> {
-  expected<void> result;
-  void set_value() {
-    // nop
-  }
-  void set_error(error x) {
-    result = std::move(x);
-  }
-};
-
-template <class T>
-struct expected_builder<T> {
-  expected<T> result;
-  expected_builder() : result(T{}) {
-    // nop
-  }
-  void set_value(T value) {
-    result.emplace(std::move(value));
-  }
-  void set_error(error x) {
-    result = std::move(x);
-  }
-};
-
-template <class T1, class T2, class... Ts>
-struct expected_builder<T1, T2, Ts...> {
-  expected<std::tuple<T1, T2, Ts...>> result;
-  expected_builder() : result(std::tuple{T1{}, T2{}, Ts{}...}) {
-    // nop
-  }
-  void set_value(T1 arg1, T2 arg2, Ts... args) {
-    result = std::tuple{std::move(arg1), std::move(arg2), std::move(args)...};
-  }
-  void set_error(error x) {
-    result = std::move(x);
-  }
-};
-
 } // namespace caf::detail
 
 namespace caf {
@@ -154,25 +112,29 @@ public:
   auto receive() &&
     requires is_statically_typed
   {
-    detail::expected_builder<Results...> bld;
-    std::move(*this).receive(
-      [&bld](Results... args) { bld.set_value(std::move(args)...); },
-      [&bld](error& err) { bld.set_error(std::move(err)); });
-    return std::move(bld.result);
+    return std::move(*this).template do_receive<Results...>();
   }
 
   template <class... Ts>
   auto receive() &&
     requires is_dynamically_typed
   {
-    detail::expected_builder<Ts...> bld;
-    std::move(*this).receive(
-      [&bld](Ts... args) { bld.set_value(std::move(args)...); },
-      [&bld](error& err) { bld.set_error(std::move(err)); });
-    return std::move(bld.result);
+    return std::move(*this).template do_receive<Ts...>();
   }
 
 private:
+  template <class... Ts>
+  auto do_receive() && {
+    using expected_type = detail::to_expected<Ts...>;
+    expected_type result{caf::error{}};
+    std::move(*this).receive(
+      [&result](Ts&... ts) {
+        result = expected_type{std::in_place, std::move(ts)...};
+      },
+      [&result](error& err) { result = std::move(err); });
+    return result;
+  }
+
   /// Holds the state for the handle.
   blocking_response_handle_state state_;
 };

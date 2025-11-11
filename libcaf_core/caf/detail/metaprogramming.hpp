@@ -55,4 +55,27 @@ struct unboxed_trait<expected<T>> {
 template <class T>
 using unboxed = typename unboxed_trait<T>::type;
 
+template <class...>
+struct to_expected_oracle;
+
+template <>
+struct to_expected_oracle<> {
+  using type = expected<void>;
+};
+
+template <class T>
+struct to_expected_oracle<T> {
+  using type = expected<T>;
+};
+
+template <class T0, class T1, class... Ts>
+struct to_expected_oracle<T0, T1, Ts...> {
+  using type = expected<std::tuple<T0, T1, Ts...>>;
+};
+
+/// Evaluates to an `expected` that can hold the given type(s). Passing no type
+/// evaluates to `expected<void>`.
+template <class... Ts>
+using to_expected = typename to_expected_oracle<Ts...>::type;
+
 } // namespace caf::detail
