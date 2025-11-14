@@ -37,10 +37,10 @@ const char* type_names[] = {"none",   "integer",  "boolean",
 template <class To, class From>
 auto no_conversion() {
   return [](const From&) -> expected<To> {
-    return format_to_error(
+    return caf::unexpected{format_to_error(
       sec::conversion_failed, "cannot convert from type {} to type {}",
       type_names[detail::tl_index_of_v<config_value::types, From>],
-      type_names[detail::tl_index_of_v<config_value::types, To>]);
+      type_names[detail::tl_index_of_v<config_value::types, To>])};
   };
 }
 
@@ -91,10 +91,10 @@ expected<config_value> config_value::parse(std::string_view::iterator first,
     case '{':
     case '"':
     case '\'':
-      return error{res.code};
+      return caf::unexpected{error{res.code}};
     default:
       if (isdigit(*i))
-        return error{res.code};
+        return caf::unexpected{error{res.code}};
       return config_value{std::string{first, last}};
   }
 }
@@ -234,8 +234,8 @@ expected<bool> config_value::to_boolean() const {
       if (x == "false") {
         return result_type{false};
       }
-      return format_to_error(sec::conversion_failed,
-                             "cannot convert '{}' to a boolean", x);
+      return caf::unexpected{format_to_error(
+        sec::conversion_failed, "cannot convert '{}' to a boolean", x)};
     },
     [](const dictionary& x) -> result_type {
       if (auto i = x.find("@type");
@@ -245,14 +245,14 @@ expected<bool> config_value::to_boolean() const {
           if (auto j = x.find("value"); j != x.end()) {
             return j->second.to_boolean();
           }
-          return format_to_error(sec::conversion_failed,
-                                 "missing value for object of type {}", tn);
+          return caf::unexpected{format_to_error(
+            sec::conversion_failed, "missing value for object of type {}", tn)};
         }
-        return format_to_error(sec::conversion_failed,
-                               "cannot convert '{}' to a boolean", tn);
+        return caf::unexpected{format_to_error(
+          sec::conversion_failed, "cannot convert '{}' to a boolean", tn)};
       }
-      return format_to_error(sec::conversion_failed,
-                             "cannot convert a dictionary to a boolean");
+      return caf::unexpected{format_to_error(
+        sec::conversion_failed, "cannot convert a dictionary to a boolean")};
     });
   return visit(f, data_);
 }
@@ -270,9 +270,9 @@ expected<config_value::integer> config_value::to_integer() const {
           && x >= static_cast<config_value::real>(limits::min())) {
         return result_type{static_cast<config_value::integer>(x)};
       }
-      return format_to_error(sec::conversion_failed,
-                             "cannot convert decimal or out-of-bounds "
-                             "real number to an integer");
+      return caf::unexpected{format_to_error(
+        sec::conversion_failed, "cannot convert decimal or out-of-bounds "
+                                "real number to an integer")};
     },
     [](const std::string& x) -> result_type {
       auto tmp_int = config_value::integer{0};
@@ -282,8 +282,8 @@ expected<config_value::integer> config_value::to_integer() const {
       if (detail::parse(x, tmp_real) == none)
         if (auto ival = config_value{tmp_real}.to_integer())
           return result_type{*ival};
-      return format_to_error(sec::conversion_failed,
-                             "cannot convert '{} to an integer", x);
+      return caf::unexpected{format_to_error(
+        sec::conversion_failed, "cannot convert '{} to an integer", x)};
     },
     [](const dictionary& x) -> result_type {
       if (auto i = x.find("@type");
@@ -299,14 +299,14 @@ expected<config_value::integer> config_value::to_integer() const {
           if (auto j = x.find("value"); j != x.end()) {
             return j->second.to_integer();
           }
-          return format_to_error(sec::conversion_failed,
-                                 "missing value for object of type {}", tn);
+          return caf::unexpected{format_to_error(
+            sec::conversion_failed, "missing value for object of type {}", tn)};
         }
-        return format_to_error(sec::conversion_failed,
-                               "cannot convert {} to an integer", tn);
+        return caf::unexpected{format_to_error(
+          sec::conversion_failed, "cannot convert {} to an integer", tn)};
       }
-      return format_to_error(sec::conversion_failed,
-                             "cannot convert a dictionary to an integer");
+      return caf::unexpected{format_to_error(
+        sec::conversion_failed, "cannot convert a dictionary to an integer")};
     });
   return visit(f, data_);
 }
@@ -326,8 +326,9 @@ expected<config_value::real> config_value::to_real() const {
       auto tmp = 0.0;
       if (detail::parse(x, tmp) == none)
         return result_type{tmp};
-      return format_to_error(sec::conversion_failed,
-                             "cannot convert {} to a floating point number", x);
+      return caf::unexpected{
+        format_to_error(sec::conversion_failed,
+                        "cannot convert {} to a floating point number", x)};
     },
     [](const dictionary& x) -> result_type {
       if (auto i = x.find("@type");
@@ -340,16 +341,16 @@ expected<config_value::real> config_value::to_real() const {
           if (auto j = x.find("value"); j != x.end()) {
             return j->second.to_real();
           }
-          return format_to_error(sec::conversion_failed,
-                                 "missing value for object of type {}", tn);
+          return caf::unexpected{format_to_error(
+            sec::conversion_failed, "missing value for object of type {}", tn)};
         }
-        return format_to_error(sec::conversion_failed,
-                               "cannot convert {} to a floating point number",
-                               tn);
+        return caf::unexpected{
+          format_to_error(sec::conversion_failed,
+                          "cannot convert {} to a floating point number", tn)};
       }
-      return format_to_error(sec::conversion_failed,
-                             "cannot convert a dictionary to "
-                             "a floating point number");
+      return caf::unexpected{format_to_error(sec::conversion_failed,
+                                             "cannot convert a dictionary to "
+                                             "a floating point number")};
     });
   return visit(f, data_);
 }
@@ -364,8 +365,8 @@ expected<timespan> config_value::to_timespan() const {
       auto tmp = timespan{};
       if (detail::parse(x, tmp) == none)
         return result_type{tmp};
-      return format_to_error(sec::conversion_failed,
-                             "cannot convert '{}' to a timespan", x);
+      return caf::unexpected{format_to_error(
+        sec::conversion_failed, "cannot convert '{}' to a timespan", x)};
     });
   return visit(f, data_);
 }
@@ -405,8 +406,8 @@ expected<config_value::list> config_value::to_list() const {
       }
       if (config_value::list tmp; detail::parse(x, tmp) == none)
         return result_type{std::move(tmp)};
-      return format_to_error(sec::conversion_failed,
-                             "cannot convert '{}' to a list", x);
+      return caf::unexpected{format_to_error(
+        sec::conversion_failed, "cannot convert '{}' to a list", x)};
     },
     [](const list& x) { return result_type{x}; },
     [dict_to_list](const dictionary& x) {
@@ -433,9 +434,9 @@ expected<config_value::dictionary> config_value::to_dictionary() const {
       if (std::ranges::all_of(x, lift)) {
         return result_type{std::move(tmp)};
       }
-      return error{sec::conversion_failed,
-                   "cannot convert list to dictionary unless each "
-                   "element in the list is a key-value pair"};
+      return caf::unexpected{error{
+        sec::conversion_failed, "cannot convert list to dictionary unless each "
+                                "element in the list is a key-value pair"}};
     },
     [this](const std::string& x) -> result_type {
       if (dictionary tmp; detail::parse(x, tmp) == none)
@@ -445,8 +446,8 @@ expected<config_value::dictionary> config_value::to_dictionary() const {
         if (auto res = ls.to_dictionary())
           return res;
       }
-      return format_to_error(sec::conversion_failed,
-                             "cannot convert '{}' to a dictionary", x);
+      return caf::unexpected{format_to_error(
+        sec::conversion_failed, "cannot convert '{}' to a dictionary", x)};
     },
     [](const dictionary& x) { return result_type{x}; });
   return visit(f, data_);

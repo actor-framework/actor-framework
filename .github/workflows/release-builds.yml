@@ -53,6 +53,26 @@ jobs:
       - name: test
         run: ctest --test-dir build
 
+  cpp23-with-std-expected: # EOL May 2026
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/${{ github.repository_owner }}/ci-fedora-42:latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: configure
+        run: |
+          cmake \
+            -S . \
+            -B build \
+            -G Ninja \
+            -D CAF_CXX_VERSION=23 \
+            -D CAF_USE_STD_EXPECTED=ON \
+            -C .ci/linux/release.cmake
+      - name: build
+        run: cmake --build build
+      - name: test
+        run: ctest --test-dir build
+
   no-exceptions:
     runs-on: ubuntu-latest
     steps:

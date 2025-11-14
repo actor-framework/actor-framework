@@ -56,7 +56,8 @@ TEST("async text file I/O") {
     sys.spawn([pub, prom](event_based_actor* self) mutable {
       auto str = std::make_shared<std::string>();
       pub.observe_on(self)
-        .do_on_error([prom](const error& err) { prom->set_value(err); })
+        .do_on_error(
+          [prom](const error& err) { prom->set_value(caf::unexpected{err}); })
         .do_on_complete([prom, str] { prom->set_value(std::move(*str)); })
         .for_each([str](char ch) mutable { *str += ch; });
     });
@@ -70,7 +71,8 @@ TEST("async text file I/O") {
     sys.spawn([pub, prom](event_based_actor* self) mutable {
       auto str = std::make_shared<std::string>();
       pub.observe_on(self)
-        .do_on_error([prom](const error& err) { prom->set_value(err); })
+        .do_on_error(
+          [prom](const error& err) { prom->set_value(caf::unexpected{err}); })
         .do_on_complete([prom, str] { prom->set_value(std::move(*str)); })
         .for_each([str, line = 1](const cow_string& cs) mutable {
           *str += std::to_string(line++);
@@ -91,28 +93,30 @@ TEST("async text file I/O") {
       sys.spawn([pub, prom](event_based_actor* self) mutable {
         auto str = std::make_shared<std::string>();
         pub.observe_on(self)
-          .do_on_error([prom](const error& err) { prom->set_value(err); })
+          .do_on_error(
+            [prom](const error& err) { prom->set_value(caf::unexpected{err}); })
           .do_on_complete([prom, str] { prom->set_value(std::move(*str)); })
           .for_each([str](char ch) mutable { *str += ch; });
       });
       if (res.wait_for(2s) != std::future_status::ready) {
         fail("timeout");
       }
-      check_eq(res.get(), error{sec::cannot_open_file});
+      check_eq(res.get(), caf::unexpected{error{sec::cannot_open_file}});
     }
     SECTION("read_lines") {
       auto pub = invalid.read_lines().run();
       sys.spawn([pub, prom](event_based_actor* self) mutable {
         auto str = std::make_shared<std::string>();
         pub.observe_on(self)
-          .do_on_error([prom](const error& err) { prom->set_value(err); })
+          .do_on_error(
+            [prom](const error& err) { prom->set_value(caf::unexpected{err}); })
           .do_on_complete([prom, str] { prom->set_value(std::move(*str)); })
           .for_each([str](const cow_string& cs) mutable { *str += cs.str(); });
       });
       if (res.wait_for(2s) != std::future_status::ready) {
         fail("timeout");
       }
-      check_eq(res.get(), error{sec::cannot_open_file});
+      check_eq(res.get(), caf::unexpected{error{sec::cannot_open_file}});
     }
   }
 }
@@ -138,7 +142,8 @@ TEST("async binary file I/O") {
     sys.spawn([pub, prom](event_based_actor* self) mutable {
       auto buffer = std::make_shared<byte_buffer>();
       pub.observe_on(self)
-        .do_on_error([prom](const error& err) { prom->set_value(err); })
+        .do_on_error(
+          [prom](const error& err) { prom->set_value(caf::unexpected{err}); })
         .do_on_complete([prom, buffer] { prom->set_value(std::move(*buffer)); })
         .for_each([buffer](std::byte b) mutable { buffer->push_back(b); });
     });
@@ -153,7 +158,8 @@ TEST("async binary file I/O") {
     sys.spawn([pub, prom](event_based_actor* self) mutable {
       auto buffer = std::make_shared<byte_buffer>();
       pub.observe_on(self)
-        .do_on_error([prom](const error& err) { prom->set_value(err); })
+        .do_on_error(
+          [prom](const error& err) { prom->set_value(caf::unexpected{err}); })
         .do_on_complete([prom, buffer] { prom->set_value(std::move(*buffer)); })
         .for_each([buffer](const chunk& ch) mutable {
           for (auto& c : ch.bytes()) {

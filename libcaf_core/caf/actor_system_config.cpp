@@ -541,8 +541,8 @@ actor_system_config::parse_config_file(const char* filename,
                                        const config_option_set& opts) {
   std::ifstream f{filename};
   if (!f.is_open())
-    return format_to_error(sec::cannot_open_file, "cannot open config file: {}",
-                           filename);
+    return caf::unexpected{format_to_error(
+      sec::cannot_open_file, "cannot open config file: {}", filename)};
   return parse_config(f, opts);
 }
 
@@ -556,7 +556,7 @@ actor_system_config::parse_config(std::istream& source,
                                   const config_option_set& opts) {
   settings result;
   if (auto err = parse_config(source, opts, result); err.valid())
-    return err;
+    return caf::unexpected{err};
   return result;
 }
 
