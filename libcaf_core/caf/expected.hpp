@@ -39,6 +39,33 @@ auto expected_from_fn(F&& f, Ts&&... xs) {
 
 } // namespace detail
 
+/// Represents an unexpected value to be stored in caf::expected.
+class unexpected {
+public:
+  unexpected(caf::error err) : reason{std::move(err)} {
+  }
+
+  caf::error& error() noexcept {
+    return reason;
+  }
+
+  const caf::error& error() const noexcept {
+    return reason;
+  }
+
+  void swap(unexpected& other) {
+    using std::swap;
+    swap(reason, other.reason);
+  }
+
+  bool operator==(const unexpected& other) const {
+    return reason == other.reason;
+  }
+
+private:
+  caf::error reason;
+};
+
 /// Represents the result of a computation which can either complete
 /// successfully with an instance of type `T` or fail with an `error`.
 /// @tparam T The type of the result.
@@ -69,16 +96,16 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  template <class U>
-    requires(std::convertible_to<U, T> || error_code_enum<U>)
-  expected(U x) {
-    if constexpr (std::convertible_to<U, T>) {
-      has_value_ = true;
-      new (std::addressof(value_)) T(std::move(x));
-    } else {
-      has_value_ = false;
-      new (std::addressof(error_)) caf::error(x);
-    }
+  template <std::convertible_to<T> U>
+  expected(U x) : has_value_{true} {
+    new (std::addressof(value_)) T(std::move(x));
+  }
+
+  template <error_code_enum U>
+  [[deprecated("Use constructor with caf::unexpected instead")]]
+  expected(U x)
+    : has_value_{false} {
+    new (std::addressof(error_)) caf::error(x);
   }
 
   expected(T&& x) noexcept(nothrow_move) : has_value_(true) {
@@ -89,8 +116,15 @@ public:
     new (std::addressof(value_)) T(x);
   }
 
-  expected(caf::error e) noexcept : has_value_(false) {
+  [[deprecated("Use constructor with caf::unexpected instead")]]
+  expected(caf::error e) noexcept
+    : has_value_(false) {
     new (std::addressof(error_)) caf::error{std::move(e)};
+  }
+
+  expected(caf::unexpected x) {
+    has_value_ = false;
+    new (std::addressof(error_)) caf::error(std::move(x.error()));
   }
 
   expected(const expected& other) noexcept(nothrow_copy) {
@@ -161,6 +195,7 @@ public:
     return *this = T{std::move(x)};
   }
 
+  // TODO
   expected& operator=(caf::error e) noexcept {
     if (!has_value())
       error_ = std::move(e);
@@ -172,6 +207,7 @@ public:
     return *this;
   }
 
+  // TODO
   template <error_code_enum Enum>
   expected& operator=(Enum code) {
     return *this = make_error(code);
