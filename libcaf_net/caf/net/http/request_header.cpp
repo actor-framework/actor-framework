@@ -18,20 +18,22 @@ caf::expected<uri> parse_request_target(http::method method,
                                         std::string_view request_target) {
   using namespace std::literals;
   if (request_target.empty()) {
-    return make_error(sec::invalid_argument,
-                      "Malformed Request-URI: request target empty.");
+    return expected<uri>{unexpect, sec::invalid_argument,
+                         "Malformed Request-URI: request target empty."};
   }
-  expected<uri> res{none};
+  expected<uri> res{unexpect, none};
   if (method == http::method::connect) {
     if (res = make_uri("nil://"s.append(request_target)); !res) {
       log::net::debug("Failed to parse CONNECT URI {}: {}.", request_target,
                       res.error());
-      return error{sec::invalid_argument, "Malformed CONNECT Request-URI."};
+      return expected<uri>{unexpect, sec::invalid_argument,
+                           "Malformed CONNECT Request-URI."};
     }
     if (res->authority().empty()) {
       log::net::debug("Failed to parse CONNECT URI {}: Authority missing.",
                       request_target);
-      return error{sec::invalid_argument, "Malformed CONNECT Request-URI."};
+      return expected<uri>{unexpect, sec::invalid_argument,
+                           "Malformed CONNECT Request-URI."};
     }
     return res;
   }
@@ -53,7 +55,7 @@ caf::expected<uri> parse_request_target(http::method method,
   auto msg = detail::format("Failed to parse URI {}: {}", request_target,
                             res.error());
   log::net::debug("{}", msg);
-  return error{sec::invalid_argument, msg};
+  return expected<uri>{unexpect, sec::invalid_argument, msg};
 }
 
 } // namespace

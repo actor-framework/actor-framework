@@ -269,9 +269,7 @@ SCENARIO("lp::with(...).connect(...) translates between flows and socket I/O") {
                     .subscribe(push);
                 });
               });
-        conn.or_else([this](const error& err) { //
-          fail("connect failed: {}", err);
-        });
+        require_has_value(conn);
         scoped_actor self{sys};
         self->wait_for(hdl);
         if (check_eq(buf->size(), 5u)) {

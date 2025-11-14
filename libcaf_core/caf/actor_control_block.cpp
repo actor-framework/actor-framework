@@ -10,6 +10,7 @@
 #include "caf/add_ref.hpp"
 #include "caf/detail/aligned_alloc.hpp"
 #include "caf/detail/assert.hpp"
+#include "caf/error_code.hpp"
 #include "caf/log/core.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/proxy_registry.hpp"
@@ -83,19 +84,19 @@ bool operator==(const abstract_actor* x, const strong_actor_ptr& y) noexcept {
 error_code<sec> load_actor(strong_actor_ptr& storage, actor_system* sys,
                            actor_id aid, const node_id& nid) {
   if (sys == nullptr)
-    return sec::no_context;
+    return error_code{sec::no_context};
   if (sys->node() == nid) {
     storage = sys->registry().get(aid);
     log::core::debug("fetch actor handle from local actor registry: {}",
                      (storage ? "found" : "not found"));
-    return none;
+    return {};
   }
   // Get or create a proxy for the remote actor.
   if (auto* registry = proxy_registry::current()) {
     storage = registry->get_or_put(nid, aid);
-    return none;
+    return {};
   }
-  return sec::no_proxy_registry;
+  return error_code{sec::no_proxy_registry};
 }
 
 error_code<sec> save_actor(const strong_actor_ptr& storage, actor_id aid,
@@ -106,7 +107,7 @@ error_code<sec> save_actor(const strong_actor_ptr& storage, actor_id aid,
     if (nid == sys->node())
       sys->registry().put(aid, storage);
   }
-  return none;
+  return {};
 }
 
 namespace {

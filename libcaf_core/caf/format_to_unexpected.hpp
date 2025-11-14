@@ -1,0 +1,23 @@
+// This file is part of CAF, the C++ Actor Framework. See the file LICENSE in
+// the main distribution directory for license terms and copyright or visit
+// https://github.com/actor-framework/actor-framework/blob/main/LICENSE.
+
+#pragma once
+
+#include "caf/detail/format.hpp"
+#include "caf/error_code_enum.hpp"
+#include "caf/expected.hpp"
+
+namespace caf {
+
+/// Formats the given arguments into a string and returns an unexpected type
+/// wrapping the error with the specified code and the formatted string as
+/// message.
+template <error_code_enum Enum, class... Args>
+unexpected<error>
+format_to_unexpected(Enum code, std::string_view fstr, Args&&... args) {
+  return caf::unexpected<error>{
+    std::in_place, code, detail::format(fstr, std::forward<Args>(args)...)};
+}
+
+} // namespace caf

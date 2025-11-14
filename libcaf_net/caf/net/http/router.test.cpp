@@ -191,9 +191,11 @@ SCENARIO("routes must have one 'arg' entry per argument") {
     WHEN("evaluating the factory call") {
       THEN("the factory produces an error") {
         auto res1 = make_route("/", [](responder&, int) {});
-        check_eq(res1, sec::invalid_argument);
+        check_eq(res1,
+                 caf::unexpected<error>{std::in_place, sec::invalid_argument});
         auto res2 = make_route("/<arg>", [](responder&, int, int) {});
-        check_eq(res2, sec::invalid_argument);
+        check_eq(res2,
+                 caf::unexpected<error>{std::in_place, sec::invalid_argument});
       }
     }
   }
@@ -201,9 +203,11 @@ SCENARIO("routes must have one 'arg' entry per argument") {
     WHEN("evaluating the factory call") {
       THEN("the factory produces an error") {
         auto res1 = make_route("/<arg>/<arg>", [](responder&) {});
-        check_eq(res1, sec::invalid_argument);
+        check_eq(res1,
+                 caf::unexpected<error>{std::in_place, sec::invalid_argument});
         auto res2 = make_route("/<arg>/<arg>", [](responder&, int) {});
-        check_eq(res2, sec::invalid_argument);
+        check_eq(res2,
+                 caf::unexpected<error>{std::in_place, sec::invalid_argument});
       }
     }
   }

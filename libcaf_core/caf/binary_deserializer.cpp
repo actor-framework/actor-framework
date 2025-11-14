@@ -414,7 +414,7 @@ public:
     if (aid == 0) {
       ptr = nullptr;
     } else if (auto err = load_actor(ptr, context_, aid, nid)) {
-      set_error(err);
+      set_error(error{err.value()});
       return false;
     }
     return true;

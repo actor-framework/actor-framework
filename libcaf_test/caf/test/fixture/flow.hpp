@@ -327,7 +327,7 @@ public:
       CAF_RAISE_ERROR(std::logic_error, "observable did not complete");
     }
     if (err->valid()) {
-      return result_type{std::move(*err)};
+      return result_type{unexpect, std::move(*err)};
     }
     return result_type{std::move(*values)};
   }

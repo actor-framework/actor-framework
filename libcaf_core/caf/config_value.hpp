@@ -226,7 +226,7 @@ public:
     if (detail::load(reader, tmp, token))
       return {std::move(tmp)};
     else
-      return {std::move(reader.get_error())};
+      return expected<T>{unexpect, std::move(reader.get_error())};
   }
 
   template <class T>
@@ -360,9 +360,9 @@ expected<T> get_as(const config_value& x, inspector_access_type::builtin) {
       if (detail::bounds_checker<T>::check(*result))
         return static_cast<T>(*result);
       else
-        return make_error(sec::conversion_failed, "narrowing error");
+        return expected<T>{unexpect, sec::conversion_failed, "narrowing error"};
     } else {
-      return std::move(result.error());
+      return expected<T>{unexpect, std::move(result.error())};
     }
   } else if constexpr (std::is_floating_point_v<T>) {
     if (auto result = x.to_real()) {
@@ -373,11 +373,12 @@ expected<T> get_as(const config_value& x, inspector_access_type::builtin) {
         if (!std::isfinite(*result) || std::isfinite(narrowed)) {
           return narrowed;
         } else {
-          return make_error(sec::conversion_failed, "narrowing error");
+          return expected<T>{unexpect, sec::conversion_failed,
+                             "narrowing error"};
         }
       }
     } else {
-      return std::move(result.error());
+      return expected<T>{unexpect, std::move(result.error())};
     }
   } else {
     static_assert(detail::always_false<T>,
@@ -388,13 +389,13 @@ expected<T> get_as(const config_value& x, inspector_access_type::builtin) {
 template <class T>
 expected<T> get_as(const config_value& x, inspector_access_type::empty) {
   // Technically, we could always simply return T{} here. However,
-  // *semantically* it only makes sense to converts dictionaries to objects. So
-  // at least we check for this condition here.
+  // *semantically* it only makes sense to converts dictionaries to objects.
+  // So at least we check for this condition here.
   if (x.can_convert_to_dictionary())
     return T{};
   else
-    return make_error(sec::conversion_failed,
-                      "invalid element type: expected a dictionary");
+    return expected<T>{unexpect, sec::conversion_failed,
+                       "invalid element type: expected a dictionary"};
 }
 
 template <class T, size_t... Is>
@@ -404,7 +405,8 @@ get_as_tuple(const config_value::list& x, std::index_sequence<Is...>) {
   if ((get<Is>(boxed) && ...))
     return T{std::move(*get<Is>(boxed))...};
   else
-    return make_error(sec::conversion_failed, "invalid element types");
+    return expected<T>{unexpect, sec::conversion_failed,
+                       "invalid element types"};
 }
 
 template <class T>
@@ -415,9 +417,10 @@ expected<T> get_as(const config_value& x, inspector_access_type::tuple) {
     if (wrapped_values->size() == n)
       return get_as_tuple<T>(*wrapped_values, std::make_index_sequence<n>{});
     else
-      return make_error(sec::conversion_failed, "wrong number of arguments");
+      return expected<T>{unexpect, sec::conversion_failed,
+                         "wrong number of arguments"};
   } else {
-    return {std::move(wrapped_values.error())};
+    return expected<T>{unexpect, std::move(wrapped_values.error())};
   }
 }
 
@@ -432,21 +435,21 @@ expected<T> get_as(const config_value& x, inspector_access_type::map) {
       if (auto key = get_as<key_type>(wrapped_key)) {
         if (auto val = get_as<mapped_type>(wrapped_value)) {
           if (!result.emplace(std::move(*key), std::move(*val)).second) {
-            return make_error(sec::conversion_failed,
-                              "ambiguous mapping of keys to key_type");
+            return expected<T>{unexpect, sec::conversion_failed,
+                               "ambiguous mapping of keys to key_type"};
           }
         } else {
-          return make_error(sec::conversion_failed,
-                            "failed to convert values to mapped_type");
+          return expected<T>{unexpect, sec::conversion_failed,
+                             "failed to convert values to mapped_type"};
         }
       } else {
-        return make_error(sec::conversion_failed,
-                          "failed to convert keys to key_type");
+        return expected<T>{unexpect, sec::conversion_failed,
+                           "failed to convert keys to key_type"};
       }
     }
     return {std::move(result)};
   } else {
-    return {std::move(dict.error())};
+    return expected<T>{unexpect, std::move(dict.error())};
   }
 }
 
@@ -464,11 +467,11 @@ expected<T> get_as(const config_value& x, inspector_access_type::list) {
         else
           result.insert(result.end(), std::move(*maybe_value));
       } else {
-        return {std::move(maybe_value.error())};
+        return expected<T>{unexpect, std::move(maybe_value.error())};
       }
     return {std::move(result)};
   } else {
-    return {std::move(wrapped_values.error())};
+    return expected<T>{unexpect, std::move(wrapped_values.error())};
   }
 }
 
@@ -494,8 +497,8 @@ expected<T> get_as(const config_value& value) {
 // -- conversion via get_or ----------------------------------------------------
 
 /// Customization point for configuring automatic mappings from default value
-/// types to deduced types. For example, `get_or(value, "foo"sv)` must return a
-/// `string` rather than a `string_view`. However, user-defined overloads
+/// types to deduced types. For example, `get_or(value, "foo"sv)` must return
+/// a `string` rather than a `string_view`. However, user-defined overloads
 /// *must not* specialize this class for any type from the namespaces `std` or
 /// `caf`.
 template <class T>
@@ -534,8 +537,8 @@ struct get_or_deduction_guide<std::span<T>> {
 /// Configures @ref get_or to uses the @ref get_or_deduction_guide.
 struct get_or_auto_deduce {};
 
-/// Converts a @ref config_value to `To` or returns `fallback` if the conversion
-/// fails.
+/// Converts a @ref config_value to `To` or returns `fallback` if the
+/// conversion fails.
 /// @relates config_value
 template <class To = get_or_auto_deduce, class Fallback>
 auto get_or(const config_value& x, Fallback&& fallback) {

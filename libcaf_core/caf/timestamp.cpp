@@ -23,7 +23,7 @@ expected<timestamp> timestamp_from_string(std::string_view str) {
   if (auto err = detail::parse(str, result); err.empty())
     return result;
   else
-    return err;
+    return expected<timestamp>{unexpect, std::move(err)};
 }
 
 void append_timestamp_to_string(std::string& x, timestamp y) {

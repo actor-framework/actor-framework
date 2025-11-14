@@ -407,7 +407,7 @@ public:
     }
     auto res = dyn_spawn_impl(name, args, ctx, check_interface, expected_ifs);
     if (!res)
-      return std::move(res.error());
+      return expected<Handle>{unexpect, std::move(res.error())};
     return actor_cast<Handle>(std::move(*res));
   }
 

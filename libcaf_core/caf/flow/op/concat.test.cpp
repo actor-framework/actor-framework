@@ -8,6 +8,7 @@
 #include "caf/test/nil.hpp"
 #include "caf/test/test.hpp"
 
+#include "caf/error_code.hpp"
 #include "caf/flow/observable.hpp"
 
 #include <vector>
@@ -45,14 +46,14 @@ TEST("concat operators with error inputs forward the error") {
   auto nil = [this] { return make_observable().empty<int>().as_observable(); };
   auto err = [this] { return make_observable().fail<int>(sec::runtime_error); };
   SECTION("blueprint") {
-    check_eq(collect(nil().concat(err())), sec::runtime_error);
-    check_eq(collect(err().concat(nil())), sec::runtime_error);
-    check_eq(collect(just(err()).concat()), sec::runtime_error);
+    check_eq(collect(nil().concat(err())), error_code{sec::runtime_error});
+    check_eq(collect(err().concat(nil())), error_code{sec::runtime_error});
+    check_eq(collect(just(err()).concat()), error_code{sec::runtime_error});
   }
   SECTION("observable") {
-    check_eq(collect(nil().concat(err())), sec::runtime_error);
-    check_eq(collect(err().concat(nil())), sec::runtime_error);
-    check_eq(collect(just(err()).concat()), sec::runtime_error);
+    check_eq(collect(nil().concat(err())), error_code{sec::runtime_error});
+    check_eq(collect(err().concat(nil())), error_code{sec::runtime_error});
+    check_eq(collect(just(err()).concat()), error_code{sec::runtime_error});
   }
 }
 

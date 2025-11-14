@@ -6,6 +6,7 @@
 
 #include "caf/detail/io_export.hpp"
 #include "caf/error.hpp"
+#include "caf/error_code.hpp"
 #include "caf/sec.hpp"
 
 #include <deque>
@@ -119,14 +120,14 @@ bool inspect(Inspector& f, ip_endpoint& x) {
   }
   auto load = [&] {
     if (auto err = load_endpoint(x, fam, h, p, l)) {
-      f.set_error(err);
+      f.set_error(error{err.value()});
       return false;
     }
     return true;
   };
   auto save = [&] {
     if (auto err = save_endpoint(x, fam, h, p, l)) {
-      f.set_error(err);
+      f.set_error(error{err.value()});
       return false;
     }
     return true;

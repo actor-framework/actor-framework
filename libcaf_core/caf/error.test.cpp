@@ -18,18 +18,18 @@ TEST("default-constructed errors evaluate to false") {
 TEST("error code zero is not an error") {
   check(!error(sec::none));
   check(!make_error(sec::none));
-  check(!error{error_code<sec>(sec::none)});
+  check(!error{sec::none});
 }
 
 TEST("error codes that are not zero are errors") {
   check(static_cast<bool>(error(sec::unexpected_message)));
   check(static_cast<bool>(make_error(sec::unexpected_message)));
-  check(static_cast<bool>(error{error_code<sec>(sec::unexpected_message)}));
+  check(static_cast<bool>(error{sec::unexpected_message}));
 }
 
 TEST("errors convert enums to their integer value") {
   check_eq(make_error(sec::unexpected_message).code(), 1u);
-  check_eq(error{error_code<sec>(sec::unexpected_message)}.code(), 1u);
+  check_eq(error{sec::unexpected_message}.code(), 1u);
 }
 
 TEST("make_error converts string-like arguments to strings") {

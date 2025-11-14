@@ -164,6 +164,20 @@ public:
     return true;
   }
 
+  template <class T>
+  bool builtin_inspect(const caf::expected<T>& x) {
+    if (x.has_value()) {
+      if constexpr (std::is_same_v<T, void>) {
+        append("unit");
+      } else {
+        save(*this, detail::as_mutable_ref(*x));
+      }
+    } else {
+      append("!" + to_string(x.error()));
+    }
+    return true;
+  }
+
   // -- fallbacks --------------------------------------------------------------
 
   template <class T>

@@ -10,6 +10,7 @@
 #include "caf/detail/socket_sys_aliases.hpp"
 #include "caf/expected.hpp"
 #include "caf/format_to_error.hpp"
+#include "caf/format_to_unexpected.hpp"
 #include "caf/internal/socket_sys_includes.hpp"
 #include "caf/log/net.hpp"
 #include "caf/message.hpp"
@@ -30,7 +31,8 @@ expected<std::pair<pipe_socket, pipe_socket>> make_pipe() {
     return std::make_pair(socket_cast<pipe_socket>(result->first),
                           socket_cast<pipe_socket>(result->second));
   } else {
-    return std::move(result.error());
+    return expected<std::pair<pipe_socket, pipe_socket>>{
+      unexpect, std::move(result.error())};
   }
 }
 
@@ -49,8 +51,9 @@ ptrdiff_t read(pipe_socket x, byte_span buf) {
 expected<std::pair<pipe_socket, pipe_socket>> make_pipe() {
   socket_id pipefds[2];
   if (pipe(pipefds) != 0)
-    return format_to_error(sec::network_syscall_failed, "make_pipe failed: {}",
-                           last_socket_error_as_string());
+    return format_to_unexpected(sec::network_syscall_failed,
+                                "make_pipe failed: {}",
+                                last_socket_error_as_string());
   auto guard = detail::scope_guard{[&]() noexcept {
     close(socket{pipefds[0]});
     close(socket{pipefds[1]});
@@ -58,9 +61,11 @@ expected<std::pair<pipe_socket, pipe_socket>> make_pipe() {
   // Note: for pipe2 it is better to avoid races by setting CLOEXEC (but not on
   // POSIX).
   if (auto err = child_process_inherit(socket{pipefds[0]}, false); err.valid())
-    return err;
+    return expected<std::pair<pipe_socket, pipe_socket>>{unexpect,
+                                                         std::move(err)};
   if (auto err = child_process_inherit(socket{pipefds[1]}, false); err.valid())
-    return err;
+    return expected<std::pair<pipe_socket, pipe_socket>>{unexpect,
+                                                         std::move(err)};
   guard.disable();
   return std::make_pair(pipe_socket{pipefds[0]}, pipe_socket{pipefds[1]});
 }
