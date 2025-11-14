@@ -297,18 +297,20 @@ expected<connection> context::new_connection(stream_socket fd) {
     auto conn = connection::from_native(ptr);
     if (auto host = sni_hostname()) {
       if (!conn.sni_hostname(host))
-        return make_error(sec::cannot_connect_to_node,
-                          "Failed to set SNI hostname");
+        return caf::unexpected{make_error(sec::cannot_connect_to_node,
+                                          "Failed to set SNI hostname")};
     }
     if (auto bio_ptr = BIO_new_socket(fd.id, BIO_NOCLOSE)) {
       SSL_set_bio(ptr, bio_ptr, bio_ptr);
 
       return {std::move(conn)};
     } else {
-      return {make_error(sec::logic_error, "BIO_new_socket failed")};
+      return caf::unexpected{
+        make_error(sec::logic_error, "BIO_new_socket failed")};
     }
   } else {
-    return {make_error(sec::logic_error, "SSL_new returned null")};
+    return caf::unexpected{
+      make_error(sec::logic_error, "SSL_new returned null")};
   }
 }
 
@@ -318,16 +320,17 @@ expected<connection> context::new_connection(stream_socket fd,
     auto conn = connection::from_native(ptr);
     if (auto host = sni_hostname()) {
       if (!conn.sni_hostname(host))
-        return make_error(sec::cannot_connect_to_node,
-                          "Failed to set SNI hostname");
+        return caf::unexpected{make_error(sec::cannot_connect_to_node,
+                                          "Failed to set SNI hostname")};
     }
     if (SSL_set_fd(ptr, fd.id) == 1)
       return {std::move(conn)};
     else
-      return {make_error(sec::logic_error, "SSL_set_fd failed")};
+      return caf::unexpected{make_error(sec::logic_error, "SSL_set_fd failed")};
 
   } else {
-    return {make_error(sec::logic_error, "SSL_new returned null")};
+    return caf::unexpected{
+      make_error(sec::logic_error, "SSL_new returned null")};
   }
 }
 
