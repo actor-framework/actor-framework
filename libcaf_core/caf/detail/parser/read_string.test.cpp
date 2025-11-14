@@ -32,7 +32,7 @@ struct string_parser {
     detail::parser::read_string(res, f);
     if (res.code == pec::success)
       return f.x;
-    return res.error();
+    return make_unexpected(res.error());
   }
 };
 
@@ -88,13 +88,13 @@ TEST("unquoted strings") {
 }
 
 TEST("invalid strings") {
-  check_eq(p(R"("abc)"), pec::unexpected_eof);
-  check_eq(p(R"('abc)"), pec::unexpected_eof);
-  check_eq(p("\"ab\nc\""), pec::unexpected_newline);
-  check_eq(p("'ab\nc'"), pec::unexpected_newline);
-  check_eq(p(R"("abc" def)"), pec::trailing_character);
-  check_eq(p(R"('abc' def)"), pec::trailing_character);
-  check_eq(p(R"( 123, )"), pec::trailing_character);
+  check_eq(p(R"("abc)"), caf::make_unexpected(pec::unexpected_eof));
+  check_eq(p(R"('abc)"), caf::make_unexpected(pec::unexpected_eof));
+  check_eq(p("\"ab\nc\""), caf::make_unexpected(pec::unexpected_newline));
+  check_eq(p("'ab\nc'"), caf::make_unexpected(pec::unexpected_newline));
+  check_eq(p(R"("abc" def)"), caf::make_unexpected(pec::trailing_character));
+  check_eq(p(R"('abc' def)"), caf::make_unexpected(pec::trailing_character));
+  check_eq(p(R"( 123, )"), caf::make_unexpected(pec::trailing_character));
 }
 
 } // WITH_FIXTURE(fixture)

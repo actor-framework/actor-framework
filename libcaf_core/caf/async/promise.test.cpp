@@ -29,7 +29,7 @@ SCENARIO("futures can actively wait on a promise") {
   GIVEN("a promise") {
     WHEN("future::get times out") {
       THEN("the client observes the error code sec::future_timeout") {
-        check_eq(fut.get(1ms), make_error(sec::future_timeout));
+        check_eq(fut.get(1ms), caf::make_unexpected(sec::future_timeout));
       }
     }
     WHEN("future::get retrieves an error while waiting") {
@@ -38,7 +38,7 @@ SCENARIO("futures can actively wait on a promise") {
         uut.set_error(sec::runtime_error);
       }};
       THEN("the client observes the error code from set_error") {
-        check_eq(fut.get(), make_error(sec::runtime_error));
+        check_eq(fut.get(), caf::make_unexpected(sec::runtime_error));
       }
       worker.join();
     }
@@ -48,7 +48,7 @@ SCENARIO("futures can actively wait on a promise") {
         uut.set_error(sec::runtime_error);
       }};
       THEN("the client observes the error code from set_error") {
-        check_eq(fut.get(60s), make_error(sec::runtime_error));
+        check_eq(fut.get(60s), caf::make_unexpected(sec::runtime_error));
       }
       worker.join();
     }

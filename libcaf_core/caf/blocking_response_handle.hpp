@@ -126,12 +126,12 @@ private:
   template <class... Ts>
   auto do_receive() && {
     using expected_type = detail::to_expected<Ts...>;
-    expected_type result{caf::error{}};
+    expected_type result{unexpect, caf::error{}};
     std::move(*this).receive(
       [&result](Ts&... ts) {
         result = expected_type{std::in_place, std::move(ts)...};
       },
-      [&result](error& err) { result = std::move(err); });
+      [&result](error& err) { result = make_unexpected(std::move(err)); });
     return result;
   }
 

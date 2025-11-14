@@ -244,12 +244,12 @@ protected:
     auto lg = log::openssl::trace("host = {}, port = {}", host, port);
     auto fd = io::network::new_tcp_connection(host, port);
     if (!fd)
-      return std::move(fd.error());
+      return expected<io::scribe_ptr>{unexpect, std::move(fd.error())};
     io::network::nonblocking(*fd, true);
     auto sssn = make_session(system(), *fd, false);
     if (!sssn) {
       log::system::error("unable to create SSL session for connection");
-      return sec::cannot_connect_to_node;
+      return expected<io::scribe_ptr>{unexpect, sec::cannot_connect_to_node};
     }
     log::openssl::debug(
       "successfully created an SSL session for: host = {}, port = {}", host,
@@ -262,7 +262,7 @@ protected:
     auto lg = log::openssl::trace("port = {}, reuse = {}", port, reuse);
     auto fd = io::network::new_tcp_acceptor_impl(port, addr, reuse);
     if (!fd)
-      return std::move(fd.error());
+      return expected<io::doorman_ptr>{unexpect, std::move(fd.error())};
     return make_counted<doorman_impl>(mpx(), *fd);
   }
 
