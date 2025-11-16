@@ -295,7 +295,7 @@ ssl_ctx_chain(net::ssl::context& ctx, std::string_view descr, bool fn_res) {
   if (fn_res)
     return expected<context>{std::move(ctx)};
   else
-    return expected<context>{context::last_error_or_unexpected(descr)};
+    return expected<context>{caf::unexpected{context::last_error_or_unexpected(descr)}};
 }
 
 // Convenience function for calling a member function on the context with some
@@ -308,11 +308,11 @@ ssl_ctx_chain(net::ssl::context& ctx, std::string_view arg_check_error,
   using net::ssl::context;
   if ((!args && ...)) {
     auto err = make_error(sec::invalid_argument, std::string{arg_check_error});
-    return expected<context>{std::move(err)};
+    return expected<context>{caf::unexpected{std::move(err)}};
   } else if ((ctx.*fn)(args.get()...)) {
     return expected<context>{std::move(ctx)};
   } else {
-    return expected<context>{context::last_error_or_unexpected(fn_error)};
+    return expected<context>{caf::unexpected{context::last_error_or_unexpected(fn_error)}};
   }
 }
 
@@ -327,7 +327,7 @@ ssl_ctx_chain_if(net::ssl::context& ctx, std::string_view fn_error,
   if (!(args && ...) || (ctx.*fn)(args.get()...))
     return expected<context>{std::move(ctx)};
   else
-    return expected<context>{context::last_error_or_unexpected(fn_error)};
+    return expected<context>{caf::unexpected{context::last_error_or_unexpected(fn_error)}};
 }
 
 } // namespace caf::detail
@@ -566,8 +566,8 @@ inline auto use_sni_hostname(caf::uri uri) noexcept {
       ctx.sni_hostname(std::get<std::string>(host));
       return expected{std::move(ctx)};
     }
-    return make_error(sec::runtime_error,
-                      "Failed to set SNI hostname from URI {}", arg1);
+    return caf::unexpected{make_error(sec::runtime_error,
+                      "Failed to set SNI hostname from URI {}", arg1)};
   };
 }
 

@@ -97,10 +97,11 @@ public:
 
   expected<net::socket_manager_ptr> try_accept() override {
     if (parent_ == nullptr)
-      return make_error(sec::runtime_error, "acceptor not started");
+      return caf::unexpected{
+        make_error(sec::runtime_error, "acceptor not started")};
     auto conn = accept(acceptor_);
     if (!conn)
-      return conn.error();
+      return caf::unexpected{std::move(conn.error())};
     auto app = net::http::router::make(routes_);
     auto serv = net::http::server::make(std::move(app));
     serv->max_request_size(max_request_size_);
@@ -176,12 +177,12 @@ public:
         }
       });
       if (!new_route) {
-        return std::move(new_route.error());
+        return caf::unexpected{std::move(new_route.error())};
       }
       routes.push_back(std::move(*new_route));
     } else if (routes.empty()) {
-      return make_error(sec::logic_error,
-                        "cannot start an HTTP server without any routes");
+      return caf::unexpected{make_error(
+        sec::logic_error, "cannot start an HTTP server without any routes")};
     }
     for (auto& ptr : routes)
       ptr->init();
@@ -194,8 +195,9 @@ public:
     auto ptr = net::socket_manager::make(mpx, std::move(impl));
     if (mpx->start(ptr))
       return expected<disposable>{disposable{std::move(ptr)}};
-    return make_error(sec::logic_error,
-                      "failed to register socket manager to net::multiplexer");
+    return caf::unexpected{
+      make_error(sec::logic_error,
+                 "failed to register socket manager to net::multiplexer")};
   }
 
   expected<disposable> start_server_impl(net::ssl::tcp_acceptor& acc) override {
@@ -218,8 +220,9 @@ public:
     auto ptr = socket_manager::make(mpx, std::move(transport));
     if (mpx->start(ptr))
       return disposable{std::move(ptr)};
-    return make_error(sec::logic_error,
-                      "failed to register socket manager to net::multiplexer");
+    return caf::unexpected{
+      make_error(sec::logic_error,
+                 "failed to register socket manager to net::multiplexer")};
   }
 
   expected<disposable> start_client_impl(net::ssl::connection& conn) override {
@@ -235,8 +238,8 @@ public:
     auto use_ssl = false;
     // Sanity checking.
     if (auth.host_str().empty())
-      return make_error(sec::invalid_argument,
-                        "URI must provide a valid hostname");
+      return caf::unexpected{
+        make_error(sec::invalid_argument, "URI must provide a valid hostname")};
     if (endpoint.scheme() == "http") {
       if (auth.port == 0)
         auth.port = defaults::net::http_default_port;
@@ -247,14 +250,14 @@ public:
     } else {
       auto err = make_error(sec::invalid_argument,
                             "unsupported URI scheme: expected http or https");
-      return err;
+      return caf::unexpected{std::move(err)};
     }
     if (use_ssl) {
       if (!ctx) {
         if (auto maybe_ctx = (*context_factory)())
           ctx = std::make_shared<ssl::context>(std::move(*maybe_ctx));
         else
-          return maybe_ctx.error();
+          return caf::unexpected{std::move(maybe_ctx.error())};
       }
     }
     auto host = auth.host_str();
@@ -342,7 +345,7 @@ expected<disposable> with_t::server::do_start(push_t push) {
   if (config_->err.valid()) {
     if (config_->on_error)
       (*config_->on_error)(config_->err);
-    return config_->err;
+    return caf::unexpected{config_->err};
   }
   return config_->start_server();
 }
@@ -387,7 +390,7 @@ with_t::client::request(http::method method, const_byte_span payload) {
   if (config_->err.valid()) {
     if (config_->on_error)
       (*config_->on_error)(config_->err);
-    return config_->err;
+    return caf::unexpected{config_->err};
   }
   // Only connecting to an URI is enabled in the 'with' DSL.
   using lazy_t = internal::net_config::client_config::lazy;

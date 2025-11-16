@@ -226,7 +226,7 @@ public:
     if (detail::load(reader, tmp, token))
       return {std::move(tmp)};
     else
-      return {std::move(reader.get_error())};
+      return caf::unexpected{std::move(reader.get_error())};
   }
 
   template <class T>
@@ -360,9 +360,9 @@ expected<T> get_as(const config_value& x, inspector_access_type::builtin) {
       if (detail::bounds_checker<T>::check(*result))
         return static_cast<T>(*result);
       else
-        return make_error(sec::conversion_failed, "narrowing error");
+        return caf::unexpected{make_error(sec::conversion_failed, "narrowing error")};
     } else {
-      return std::move(result.error());
+      return caf::unexpected{std::move(result.error())};
     }
   } else if constexpr (std::is_floating_point_v<T>) {
     if (auto result = x.to_real()) {
@@ -373,11 +373,11 @@ expected<T> get_as(const config_value& x, inspector_access_type::builtin) {
         if (!std::isfinite(*result) || std::isfinite(narrowed)) {
           return narrowed;
         } else {
-          return make_error(sec::conversion_failed, "narrowing error");
+          return caf::unexpected{make_error(sec::conversion_failed, "narrowing error")};
         }
       }
     } else {
-      return std::move(result.error());
+      return caf::unexpected{std::move(result.error())};
     }
   } else {
     static_assert(detail::always_false<T>,
@@ -393,8 +393,8 @@ expected<T> get_as(const config_value& x, inspector_access_type::empty) {
   if (x.can_convert_to_dictionary())
     return T{};
   else
-    return make_error(sec::conversion_failed,
-                      "invalid element type: expected a dictionary");
+    return caf::unexpected{make_error(sec::conversion_failed,
+                      "invalid element type: expected a dictionary")};
 }
 
 template <class T, size_t... Is>
@@ -404,7 +404,7 @@ get_as_tuple(const config_value::list& x, std::index_sequence<Is...>) {
   if ((get<Is>(boxed) && ...))
     return T{std::move(*get<Is>(boxed))...};
   else
-    return make_error(sec::conversion_failed, "invalid element types");
+    return caf::unexpected{make_error(sec::conversion_failed, "invalid element types")};
 }
 
 template <class T>
@@ -415,9 +415,9 @@ expected<T> get_as(const config_value& x, inspector_access_type::tuple) {
     if (wrapped_values->size() == n)
       return get_as_tuple<T>(*wrapped_values, std::make_index_sequence<n>{});
     else
-      return make_error(sec::conversion_failed, "wrong number of arguments");
+      return caf::unexpected{make_error(sec::conversion_failed, "wrong number of arguments")};
   } else {
-    return {std::move(wrapped_values.error())};
+    return caf::unexpected{std::move(wrapped_values.error())};
   }
 }
 
@@ -432,21 +432,21 @@ expected<T> get_as(const config_value& x, inspector_access_type::map) {
       if (auto key = get_as<key_type>(wrapped_key)) {
         if (auto val = get_as<mapped_type>(wrapped_value)) {
           if (!result.emplace(std::move(*key), std::move(*val)).second) {
-            return make_error(sec::conversion_failed,
-                              "ambiguous mapping of keys to key_type");
+            return caf::unexpected{make_error(sec::conversion_failed,
+                              "ambiguous mapping of keys to key_type")};
           }
         } else {
-          return make_error(sec::conversion_failed,
-                            "failed to convert values to mapped_type");
+          return caf::unexpected{make_error(sec::conversion_failed,
+                            "failed to convert values to mapped_type")};
         }
       } else {
-        return make_error(sec::conversion_failed,
-                          "failed to convert keys to key_type");
+        return caf::unexpected{make_error(sec::conversion_failed,
+                          "failed to convert keys to key_type")};
       }
     }
     return {std::move(result)};
   } else {
-    return {std::move(dict.error())};
+    return caf::unexpected{std::move(dict.error())};
   }
 }
 
@@ -464,11 +464,11 @@ expected<T> get_as(const config_value& x, inspector_access_type::list) {
         else
           result.insert(result.end(), std::move(*maybe_value));
       } else {
-        return {std::move(maybe_value.error())};
+        return caf::unexpected{std::move(maybe_value.error())};
       }
     return {std::move(result)};
   } else {
-    return {std::move(wrapped_values.error())};
+    return caf::unexpected{std::move(wrapped_values.error())};
   }
 }
 

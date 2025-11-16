@@ -160,13 +160,13 @@ public:
   remote_spawn(const node_id& nid, std::string name, message args,
                timespan timeout = timespan{std::chrono::minutes{1}}) {
     if (!nid || name.empty())
-      return sec::invalid_argument;
+      return caf::unexpected{make_error(sec::invalid_argument)};
     if (nid == system().node())
       return system().spawn<Handle>(std::move(name), std::move(args));
     auto res = remote_spawn_impl(nid, name, args,
                                  system().message_types<Handle>(), timeout);
     if (!res)
-      return std::move(res.error());
+      return caf::unexpected{std::move(res.error())};
     return actor_cast<Handle>(std::move(*res));
   }
 

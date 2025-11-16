@@ -114,7 +114,7 @@ expected<void> context::enable(bool flag) {
   if (flag)
     return expected<void>{};
   else
-    return expected<void>{caf::error{}};
+    return caf::unexpected{caf::error{}};
 }
 
 expected<context> context::make(tls vmin, tls vmax) {
@@ -123,7 +123,7 @@ expected<context> context::make(tls vmin, tls vmax) {
   if (errstr == nullptr)
     return {std::move(ctx)};
   else
-    return {make_error(sec::logic_error, errstr)};
+    return caf::unexpected{make_error(sec::logic_error, errstr)};
 }
 
 expected<context> context::make_server(tls vmin, tls vmax) {
@@ -132,7 +132,7 @@ expected<context> context::make_server(tls vmin, tls vmax) {
   if (errstr == nullptr)
     return {std::move(ctx)};
   else
-    return {make_error(sec::logic_error, errstr)};
+    return caf::unexpected{make_error(sec::logic_error, errstr)};
 }
 
 expected<context> context::make_client(tls vmin, tls vmax) {
@@ -141,7 +141,7 @@ expected<context> context::make_client(tls vmin, tls vmax) {
   if (errstr == nullptr)
     return {std::move(ctx)};
   else
-    return {make_error(sec::logic_error, errstr)};
+    return caf::unexpected{make_error(sec::logic_error, errstr)};
 }
 
 expected<context> context::make(dtls vmin, dtls vmax) {
@@ -150,7 +150,7 @@ expected<context> context::make(dtls vmin, dtls vmax) {
   if (errstr == nullptr)
     return {std::move(ctx)};
   else
-    return {make_error(sec::logic_error, errstr)};
+    return caf::unexpected{make_error(sec::logic_error, errstr)};
 }
 
 expected<context> context::make_server(dtls vmin, dtls vmax) {
@@ -159,7 +159,7 @@ expected<context> context::make_server(dtls vmin, dtls vmax) {
   if (errstr == nullptr)
     return {std::move(ctx)};
   else
-    return {make_error(sec::logic_error, errstr)};
+    return caf::unexpected{make_error(sec::logic_error, errstr)};
 }
 
 expected<context> context::make_client(dtls vmin, dtls vmax) {
@@ -168,7 +168,7 @@ expected<context> context::make_client(dtls vmin, dtls vmax) {
   if (errstr == nullptr)
     return {std::move(ctx)};
   else
-    return {make_error(sec::logic_error, errstr)};
+    return caf::unexpected{make_error(sec::logic_error, errstr)};
 }
 
 // -- properties ---------------------------------------------------------------
