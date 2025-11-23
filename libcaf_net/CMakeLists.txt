@@ -20,6 +20,7 @@ caf_add_component(
     net.http.method
     net.http.status
     net.octet_stream.errc
+    net.ssl.backend
     net.ssl.dtls
     net.ssl.errc
     net.ssl.format
