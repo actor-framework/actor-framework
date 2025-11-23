@@ -23,6 +23,12 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   `produce_on` that allows actors to produce data without having to use a flow.
   This is the symmetric counterpart to `consume_on` on `consumer_resource<T>`
   and should only be used when flows are not suitable for the use case at hand.
+- The classes `caf::net::lp::client_factory` and
+  `caf::net::web_socket::client_factory` now have a new member function
+  `start_with` that allows starting a connection with custom buffers. This
+  enables users to provide their own `async::consumer_resource` and
+  `async::producer_resource` instances instead of having the factory create them
+  automatically.
 
 ### Fixed
 
