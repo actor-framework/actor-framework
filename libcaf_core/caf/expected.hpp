@@ -9,6 +9,7 @@
 #include "caf/config.hpp"
 #include "caf/deep_to_string.hpp"
 #include "caf/detail/assert.hpp"
+#include "caf/detail/build_config.hpp"
 #include "caf/detail/concepts.hpp"
 #include "caf/error.hpp"
 #include "caf/error_code_enum.hpp"
@@ -22,9 +23,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace caf {
-
-namespace detail {
+namespace caf::detail {
 
 template <class F, class... Ts>
 auto expected_from_fn(F&& f, Ts&&... xs) {
@@ -37,7 +36,24 @@ auto expected_from_fn(F&& f, Ts&&... xs) {
   }
 }
 
-} // namespace detail
+} // namespace caf::detail
+
+#ifdef CAF_USE_STD_EXPECTED
+
+#  include <expected>
+
+namespace caf {
+
+using unexpected = std::unexpected<error>;
+
+template <typename T>
+using expected = std::expected<T, error>;
+
+} // namespace caf
+
+#else
+
+namespace caf {
 
 /// Represents an unexpected value to be stored in caf::expected.
 class unexpected {
@@ -749,13 +765,13 @@ public:
     // nop
   }
 
-  expected() noexcept = default;
-
   [[deprecated("Use constructor with caf::unexpected instead")]]
   expected(caf::error err) noexcept
     : error_(std::move(err)) {
     // nop
   }
+
+  expected() noexcept = default;
 
   expected(caf::unexpected x) noexcept : error_(std::move(x.error())) {
     // nop
@@ -1078,6 +1094,12 @@ inline bool operator!=(const expected<void>& x, const expected<void>& y) {
   return !(x == y);
 }
 
+} // namespace caf
+
+#endif
+
+namespace caf {
+
 template <class T>
 std::string to_string(const expected<T>& x) {
   if (x)
@@ -1096,5 +1118,3 @@ inline std::string to_string(const expected<void>& x) {
 }
 
 } // namespace caf
-
-// NOLINTEND(bugprone-unchecked-optional-access)
