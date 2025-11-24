@@ -122,8 +122,7 @@ public:
     new (std::addressof(error_)) caf::error{std::move(e)};
   }
 
-  expected(caf::unexpected x) {
-    has_value_ = false;
+  expected(caf::unexpected x) : has_value_(false) {
     new (std::addressof(error_)) caf::error(std::move(x.error()));
   }
 
@@ -510,7 +509,31 @@ public:
   }
 
   template <class F>
+  [[deprecated("use transform_error")]]
   expected transform_or(F&& f) & {
+    return transform_error(std::forward<F>(f));
+  }
+
+  template <class F>
+  [[deprecated("use transform_error")]]
+  expected transform_or(F&& f) && {
+    return std::move(*this).transform_error(std::forward<F>(f));
+  }
+
+  template <class F>
+  [[deprecated("use transform_error")]]
+  expected transform_or(F&& f) const& {
+    return transform_error(std::forward<F>(f));
+  }
+
+  template <class F>
+  [[deprecated("use transform_error")]]
+  expected transform_or(F&& f) const&& {
+    return std::move(*this).transform_error(std::forward<F>(f));
+  }
+
+  template <class F>
+  expected transform_error(F&& f) & {
     using res_t = decltype(f(error_));
     static_assert(std::is_same_v<caf::error, res_t>, "F must return an error");
     if (has_value())
@@ -520,7 +543,7 @@ public:
   }
 
   template <class F>
-  expected transform_or(F&& f) && {
+  expected transform_error(F&& f) && {
     using res_t = decltype(f(error_));
     static_assert(std::is_same_v<caf::error, res_t>, "F must return an error");
     if (has_value())
@@ -530,7 +553,7 @@ public:
   }
 
   template <class F>
-  expected transform_or(F&& f) const& {
+  expected transform_error(F&& f) const& {
     using res_t = decltype(f(error_));
     static_assert(std::is_same_v<caf::error, res_t>, "F must return an error");
     if (has_value())
@@ -540,7 +563,7 @@ public:
   }
 
   template <class F>
-  expected transform_or(F&& f) const&& {
+  expected transform_error(F&& f) const&& {
     using res_t = decltype(f(error_));
     static_assert(std::is_same_v<caf::error, res_t>, "F must return an error");
     if (has_value())
@@ -607,26 +630,41 @@ auto operator==(const T& x, const expected<U>& y) -> decltype(x == *y) {
 
 /// @relates expected
 template <class T>
+[[deprecated("Compare with caf::unexpected{error} instead")]]
 bool operator==(const expected<T>& x, const error& y) {
   return x ? false : x.error() == y;
 }
 
 /// @relates expected
 template <class T>
+[[deprecated("Compare with caf::unexpected{error} instead")]]
 bool operator==(const error& x, const expected<T>& y) {
   return y == x;
 }
 
 /// @relates expected
 template <class T, error_code_enum Enum>
+[[deprecated("Compare with caf::unexpected{error{enum}} instead")]]
 bool operator==(const expected<T>& x, Enum y) {
   return x == make_error(y);
 }
 
 /// @relates expected
 template <error_code_enum Enum, class T>
+[[deprecated("Compare with caf::unexpected{error{enum}} instead")]]
 bool operator==(Enum x, const expected<T>& y) {
   return y == make_error(x);
+}
+
+template <class T>
+bool operator==(const expected<T>& x, const unexpected& y) {
+  return x ? false : x.error() == y;
+}
+
+/// @relates expected
+template <class T>
+bool operator==(const unexpected& x, const expected<T>& y) {
+  return y == x;
 }
 
 /// @relates expected
@@ -650,25 +688,41 @@ auto operator!=(const T& x, const expected<U>& y) -> decltype(x == *y) {
 
 /// @relates expected
 template <class T>
+[[deprecated("Compare with caf::unexpected{error} instead")]]
 bool operator!=(const expected<T>& x, const error& y) {
   return !(x == y);
 }
 
 /// @relates expected
 template <class T>
+[[deprecated("Compare with caf::unexpected{error} instead")]]
 bool operator!=(const error& x, const expected<T>& y) {
   return !(x == y);
 }
 
 /// @relates expected
 template <class T, error_code_enum Enum>
+[[deprecated("Compare with caf::unexpected{error{enum}} instead")]]
 bool operator!=(const expected<T>& x, Enum y) {
   return !(x == y);
 }
 
 /// @relates expected
 template <error_code_enum Enum, class T>
+[[deprecated("Compare with caf::unexpected{error{enum}} instead")]]
 bool operator!=(Enum x, const expected<T>& y) {
+  return !(x == y);
+}
+
+/// @relates expected
+template <class T>
+bool operator!=(const expected<T>& x, const unexpected& y) {
+  return !(x == y);
+}
+
+/// @relates expected
+template <class T>
+bool operator!=(const unexpected& x, const expected<T>& y) {
   return !(x == y);
 }
 
@@ -689,7 +743,9 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   template <error_code_enum Enum>
-  expected(Enum x) : error_(std::in_place, x) {
+  [[deprecated("Use constructor with caf::unexpected instead")]]
+  expected(Enum x)
+    : error_(std::in_place, x) {
     // nop
   }
 
@@ -945,7 +1001,31 @@ public:
   }
 
   template <class F>
+  [[deprecated("use transform_error")]]
   expected transform_or(F&& f) & {
+    return transform_error(std::forward<F>(f));
+  }
+
+  template <class F>
+  [[deprecated("use transform_error")]]
+  expected transform_or(F&& f) && {
+    return std::move(*this).transform_error(std::forward<F>(f));
+  }
+
+  template <class F>
+  [[deprecated("use transform_error")]]
+  expected transform_or(F&& f) const& {
+    return transform_error(std::forward<F>(f));
+  }
+
+  template <class F>
+  [[deprecated("use transform_error")]]
+  expected transform_or(F&& f) const&& {
+    return std::move(*this).transform_error(std::forward<F>(f));
+  }
+
+  template <class F>
+  expected transform_error(F&& f) & {
     using res_t = decltype(f(*error_));
     static_assert(std::is_same_v<caf::error, res_t>, "F must return an error");
     if (has_value())
@@ -955,7 +1035,7 @@ public:
   }
 
   template <class F>
-  expected transform_or(F&& f) && {
+  expected transform_error(F&& f) && {
     using res_t = decltype(f(std::move(*error_)));
     static_assert(std::is_same_v<caf::error, res_t>, "F must return an error");
     if (has_value())
@@ -965,7 +1045,7 @@ public:
   }
 
   template <class F>
-  expected transform_or(F&& f) const& {
+  expected transform_error(F&& f) const& {
     using res_t = decltype(f(*error_));
     static_assert(std::is_same_v<caf::error, res_t>, "F must return an error");
     if (has_value())
@@ -975,7 +1055,7 @@ public:
   }
 
   template <class F>
-  expected transform_or(F&& f) const&& {
+  expected transform_error(F&& f) const&& {
     using res_t = decltype(f(std::move(*error_)));
     static_assert(std::is_same_v<caf::error, res_t>, "F must return an error");
     if (has_value())
