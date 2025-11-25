@@ -262,7 +262,7 @@ with_t::client&& with_t::client::header_field(std::string_view key,
   return std::move(*this);
 }
 
-expected<disposable> with_t::client::do_start(pull_t& pull, push_t& push) {
+expected<disposable> with_t::client::do_start(pull_t pull, push_t push) {
   // Handle an error that could've been created by the DSL during client setup.
   if (config_->err.valid()) {
     if (config_->on_error)

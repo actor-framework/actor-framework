@@ -197,17 +197,24 @@ public:
       auto [s2a_pull, s2a_push] = async::make_spsc_buffer_resource<frame>();
       auto [a2s_pull, a2s_push] = async::make_spsc_buffer_resource<frame>();
       // Wrap the trait and the buffers that belong to the socket.
-      auto res = do_start(a2s_pull, s2a_push);
+      auto res = do_start(std::move(a2s_pull), std::move(s2a_push));
       if (res) {
         on_start(std::move(s2a_pull), std::move(a2s_push));
       }
       return res;
     }
 
+    /// Starts a connection with the WebSocket protocol and custom buffers.
+    /// @returns On success, a handle to stop the connection. On failure, an
+    ///          error.
+    [[nodiscard]] expected<disposable> start(pull_t pull, push_t push) && {
+      return do_start(std::move(pull), std::move(push));
+    }
+
   private:
     explicit client(config_ptr&& cfg) noexcept;
 
-    expected<disposable> do_start(pull_t&, push_t&);
+    expected<disposable> do_start(pull_t, push_t);
 
     config_ptr config_;
   };
