@@ -94,6 +94,10 @@ public:
   public:
     friend class with_t;
 
+    using pull_t = async::consumer_resource<chunk>;
+
+    using push_t = async::producer_resource<chunk>;
+
     ~client();
 
     /// Sets the retry delay for connection attempts.
@@ -118,7 +122,7 @@ public:
     /// @note The `on_start` callback is only invoked if the connection started
     ///       successfully.
     template <class OnStart>
-    [[nodiscard]] expected<disposable> start(OnStart on_start) {
+    [[nodiscard]] expected<disposable> start(OnStart on_start) && {
       // Create socket-to-application and application-to-socket buffers.
       auto [s2a_pull, s2a_push] = async::make_spsc_buffer_resource<chunk>();
       auto [a2s_pull, a2s_push] = async::make_spsc_buffer_resource<chunk>();
@@ -130,12 +134,17 @@ public:
       return res;
     }
 
+    /// Starts a connection with the length-prefixing protocol and custom
+    /// buffers.
+    /// @returns On success, a handle to stop the connection. On failure, an
+    ///          error.
+    template <class OnStart>
+    [[nodiscard]] expected<disposable> start(pull_t pull, push_t push) && {
+      return do_start(std::move(pull), std::move(push));
+    }
+
   private:
     explicit client(config_ptr&& cfg) noexcept;
-
-    using pull_t = async::consumer_resource<chunk>;
-
-    using push_t = async::producer_resource<chunk>;
 
     expected<disposable> do_start(pull_t, push_t);
 
