@@ -30,6 +30,12 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   `backend_version()` to retrieve the backend-specific version number.
   Currently, only OpenSSL is supported as a backend implementation in CAF, but
   the API has been designed to prepare for different backends in the future.
+- The classes `caf::net::lp::client_factory` and
+  `caf::net::web_socket::client_factory` now have a new member function
+  `start_with` that allows starting a connection with custom buffers. This
+  enables users to provide their own `async::consumer_resource` and
+  `async::producer_resource` instances instead of having the factory create them
+  automatically.
 
 ### Fixed
 
