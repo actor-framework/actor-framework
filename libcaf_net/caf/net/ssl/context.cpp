@@ -177,6 +177,23 @@ void context::verify_mode(verify_t flags) {
   SSL_CTX_set_verify(ptr, to_integer(flags), SSL_CTX_get_verify_callback(ptr));
 }
 
+ssl::backend context::backend() const noexcept {
+  return ssl::backend::openssl;
+}
+
+std::string context::backend_name() const noexcept {
+  return to_string(backend());
+}
+
+int context::backend_version() const noexcept {
+  return OPENSSL_VERSION_NUMBER;
+}
+
+bool context::set_cipher_list(const char* cipher_list) {
+  ERR_clear_error();
+  return SSL_CTX_set_cipher_list(native(pimpl_), cipher_list) == 1;
+}
+
 namespace {
 
 int c_password_callback(char* buf, int size, int rwflag, void* ptr) {

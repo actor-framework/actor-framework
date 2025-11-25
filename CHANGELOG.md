@@ -23,6 +23,13 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   `produce_on` that allows actors to produce data without having to use a flow.
   This is the symmetric counterpart to `consume_on` on `consumer_resource<T>`
   and should only be used when flows are not suitable for the use case at hand.
+- The class `caf::net::ssl::context` now includes `set_cipher_list()` for
+  configuring the cipher list used by the SSL/TLS backend.
+- The class `caf::net::ssl::context` now has new `backend()` and
+  `backend_name()` functions to query which SSL/TLS library is in use and
+  `backend_version()` to retrieve the backend-specific version number.
+  Currently, only OpenSSL is supported as a backend implementation in CAF, but
+  the API has been designed to prepare for different backends in the future.
 
 ### Fixed
 
