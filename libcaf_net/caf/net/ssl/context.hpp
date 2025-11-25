@@ -7,6 +7,7 @@
 #include "caf/net/dsl/arg.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/socket_guard.hpp"
+#include "caf/net/ssl/backend.hpp"
 #include "caf/net/ssl/connection.hpp"
 #include "caf/net/ssl/dtls.hpp"
 #include "caf/net/ssl/format.hpp"
@@ -21,7 +22,7 @@
 
 #include <cstring>
 #include <string>
-#include <type_traits>
+#include <utility>
 
 namespace caf::net::ssl {
 
@@ -94,11 +95,33 @@ public:
   }
 
   /// Overrides the verification mode for this context.
-  /// @note calls @c SSL_CTX_set_verify
+  /// @note For OpenSSL, calls @c SSL_CTX_set_verify.
   void verify_mode(verify_t flags);
 
+  /// Returns the SSL/TLS library in use.
+  ssl::backend backend() const noexcept;
+
+  /// Returns the name of the SSL/TLS library in use.
+  std::string backend_name() const noexcept;
+
+  /// Returns the backend-specific version number.
+  /// @note For OpenSSL, this returns @c OPENSSL_VERSION_NUMBER
+  int backend_version() const noexcept;
+
+  /// Sets the cipher list for this context.
+  /// @param cipher_list Backend-specific cipher list string.
+  /// @returns `true` on success, `false` otherwise and `last_error` can be used
+  ///          to retrieve a human-readable error representation.
+  /// @note For OpenSSL, calls @c SSL_CTX_set_cipher_list.
+  [[nodiscard]] bool set_cipher_list(const char* cipher_list);
+
+  /// @copydoc set_cipher_list
+  [[nodiscard]] bool set_cipher_list(const std::string& cipher_list) {
+    return set_cipher_list(cipher_list.c_str());
+  }
+
   /// Overrides the callback to obtain the password for encrypted PEM files.
-  /// @note calls @c SSL_CTX_set_default_passwd_cb
+  /// @note For OpenSSL, calls @c SSL_CTX_set_default_passwd_cb.
   template <typename PasswordCallback>
   void password_callback(PasswordCallback callback) {
     password_callback_impl(password::make_callback(std::move(callback)));
@@ -106,7 +129,7 @@ public:
 
   /// Overrides the callback to obtain the password for encrypted PEM files with
   /// a function that always returns @p password.
-  /// @note calls @c SSL_CTX_set_default_passwd_cb
+  /// @note For OpenSSL, calls @c SSL_CTX_set_default_passwd_cb.
   void password(std::string password) {
     auto cb = [pw = std::move(password)](char* buf, int len,
                                          password::purpose) {
@@ -187,7 +210,7 @@ public:
   ///             e.g., `9d66eef0.0` and `9d66eef0.1`.
   /// @returns `true` on success, `false` otherwise and `last_error` can be used
   ///          to retrieve a human-readable error representation.
-  /// @note Calls @c SSL_CTX_load_verify_locations
+  /// @note For OpenSSL, calls @c SSL_CTX_load_verify_locations.
   [[nodiscard]] bool add_verify_path(const char* path);
 
   /// @copydoc add_verify_path
@@ -199,7 +222,7 @@ public:
   /// @param path Null-terminated string with a path to a single PEM file.
   /// @returns `true` on success, `false` otherwise and `last_error` can be used
   ///          to retrieve a human-readable error representation.
-  /// @note Calls @c SSL_CTX_load_verify_locations
+  /// @note For OpenSSL, calls @c SSL_CTX_load_verify_locations.
   [[nodiscard]] bool load_verify_file(const char* path);
 
   /// @copydoc load_verify_file
@@ -219,7 +242,7 @@ public:
   }
 
   /// Loads a certificate chain from a PEM-formatted file.
-  /// @note calls @c SSL_CTX_use_certificate_chain_file
+  /// @note For OpenSSL, calls @c SSL_CTX_use_certificate_chain_file.
   [[nodiscard]] bool use_certificate_chain_file(const char* path);
 
   /// @copydoc use_certificate_chain_file
@@ -475,7 +498,7 @@ inline auto use_certificate_file_if(dsl::arg::cstring path,
 }
 
 /// Loads a certificate chain from a PEM-formatted file.
-/// @note calls @c SSL_CTX_use_certificate_chain_file
+/// @note For OpenSSL, calls @c SSL_CTX_use_certificate_chain_file.
 /// @returns a function object for chaining `expected<T>::and_then()`.
 inline auto use_certificate_chain_file(dsl::arg::cstring path) {
   return [arg = std::move(path)](context ctx) mutable {
@@ -488,7 +511,7 @@ inline auto use_certificate_chain_file(dsl::arg::cstring path) {
 
 /// Loads a certificate chain from a PEM-formatted file if all arguments are
 /// non-null. Otherwise, does nothing.
-/// @note calls @c SSL_CTX_use_certificate_chain_file
+/// @note For OpenSSL, calls @c SSL_CTX_use_certificate_chain_file.
 /// @returns a function object for chaining `expected<T>::and_then()`.
 inline auto use_certificate_chain_file_if(dsl::arg::cstring path) {
   return [arg = std::move(path)](context ctx) mutable {
