@@ -6,6 +6,7 @@
 
 #include "caf/abstract_blocking_actor.hpp"
 #include "caf/actor_clock.hpp"
+#include "caf/detail/metaprogramming.hpp"
 #include "caf/detail/response_type_check.hpp"
 #include "caf/message_id.hpp"
 #include "caf/policy/select_all.hpp"
@@ -231,38 +232,14 @@ private:
   auto do_receive() &&
     requires (is_select_any)
   {
-    using expected_type = decltype(make_expected(std::declval<Ts>()...));
-    expected_type result = caf::error{};
+    using expected_type = detail::to_expected<Ts...>;
+    expected_type result{error{}};
     std::move(*this).receive(
       [&result](Ts... args) {
-        result = make_expected(std::move(args)...);
+        result = expected_type{std::in_place, std::move(args)...};
       },
       [&result](error& err) { result = std::move(err); });
     return std::move(result);
-  }
-
-  template <class... Ts>
-  static auto make_expected(Ts&&... ts) {
-    if constexpr (sizeof...(Ts) == 0) {
-      return expected<void>{};
-    } else if constexpr (sizeof...(Ts) == 1) {
-      return expected<Ts...>{std::forward<Ts>(ts)...};
-    } else {
-      return expected<std::tuple<Ts...>>{
-        std::make_tuple(std::forward<Ts>(ts)...)};
-    }
-  }
-
-  template <class... Ts>
-  static auto make_expected_container(Ts&&... ts) {
-    if constexpr (sizeof...(Ts) == 0) {
-      return expected<void>{};
-    } else if constexpr (sizeof...(Ts) == 1) {
-      return expected<Ts...>{std::forward<Ts>(ts)...};
-    } else {
-      return expected<std::tuple<Ts...>>{
-        std::make_tuple(std::forward<Ts>(ts)...)};
-    }
   }
 
   /// Holds the state for the handle.

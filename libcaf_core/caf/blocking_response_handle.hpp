@@ -67,48 +67,6 @@ template <class Result>
 using blocking_delayed_response_handle_t =
   typename blocking_delayed_response_handle_oracle<Result>::type;
 
-template <class... Ts>
-struct expected_builder;
-
-template <>
-struct expected_builder<> {
-  expected<void> result;
-  void set_value() {
-    // nop
-  }
-  void set_error(error x) {
-    result = std::move(x);
-  }
-};
-
-template <class T>
-struct expected_builder<T> {
-  expected<T> result;
-  expected_builder() : result(T{}) {
-    // nop
-  }
-  void set_value(T value) {
-    result.emplace(std::move(value));
-  }
-  void set_error(error x) {
-    result = std::move(x);
-  }
-};
-
-template <class T1, class T2, class... Ts>
-struct expected_builder<T1, T2, Ts...> {
-  expected<std::tuple<T1, T2, Ts...>> result;
-  expected_builder() : result(std::tuple{T1{}, T2{}, Ts{}...}) {
-    // nop
-  }
-  void set_value(T1 arg1, T2 arg2, Ts... args) {
-    result = std::tuple{std::move(arg1), std::move(arg2), std::move(args)...};
-  }
-  void set_error(error x) {
-    result = std::move(x);
-  }
-};
-
 } // namespace caf::detail
 
 namespace caf {
