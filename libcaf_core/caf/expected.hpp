@@ -875,7 +875,7 @@ public:
     if (has_value())
       return f();
     else
-      return res_t{*error_};
+      return res_t{unexpected{*error_}};
   }
 
   template <class F>
@@ -1100,6 +1100,19 @@ inline bool operator!=(const expected<void>& x, const expected<void>& y) {
 
 namespace caf {
 
+template <class Inspector>
+bool inspect(Inspector& f, unexpected& x) {
+  if constexpr (Inspector::is_loading) {
+    caf::error e;
+    if (!f.object(x).fields(f.field("error", e)))
+      return false;
+    x = unexpected{std::move(e)};
+    return true;
+  } else {
+    return f.object(x).fields(f.field("error", x.error()));
+  }
+}
+
 template <class T>
 std::string to_string(const expected<T>& x) {
   if (x)
@@ -1118,3 +1131,5 @@ inline std::string to_string(const expected<void>& x) {
 }
 
 } // namespace caf
+
+// NOLINTEND(bugprone-unchecked-optional-access)
