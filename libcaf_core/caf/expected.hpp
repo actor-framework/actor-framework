@@ -417,71 +417,83 @@ public:
   }
 
   template <class F>
+    requires std::is_void_v<
+      decltype(std::declval<F&>()(std::declval<caf::error>()))>
+  [[deprecated("Use or_else with expected return type instead")]]
   expected or_else(F&& f) & {
-    using res_t = decltype(f(error_));
-    if constexpr (std::is_void_v<res_t>) {
-      if (!has_value())
-        f(error_);
-      return *this;
-    } else {
-      static_assert(std::is_same_v<expected, res_t>,
-                    "F must return expected<T> or void");
-      if (has_value())
-        return expected{std::in_place, value_};
-      else
-        return f(error_);
-    }
+    if (!has_value())
+      f(error_);
+    return *this;
   }
 
   template <class F>
+    requires std::is_same_v<
+      expected, decltype(std::declval<F&>()(std::declval<caf::error>()))>
+  expected or_else(F&& f) & {
+    if (has_value())
+      return expected{std::in_place, value_};
+    else
+      return f(error_);
+  }
+
+  template <class F>
+    requires std::is_void_v<
+      decltype(std::declval<F&>()(std::declval<caf::error>()))>
+  [[deprecated("Use or_else with expected return type instead")]]
   expected or_else(F&& f) && {
-    using res_t = decltype(f(std::move(error_)));
-    if constexpr (std::is_void_v<res_t>) {
-      if (!has_value())
-        f(std::move(error_));
-      return std::move(*this);
-    } else {
-      static_assert(std::is_same_v<expected, res_t>,
-                    "F must return expected<T> or void");
-      if (has_value())
-        return expected{std::in_place, std::move(value_)};
-      else
-        return f(std::move(error_));
-    }
+    if (!has_value())
+      f(std::move(error_));
+    return std::move(*this);
   }
 
   template <class F>
+    requires std::is_same_v<
+      expected, decltype(std::declval<F&>()(std::declval<caf::error>()))>
+  expected or_else(F&& f) && {
+    if (has_value())
+      return expected{std::in_place, std::move(value_)};
+    else
+      return f(std::move(error_));
+  }
+
+  template <class F>
+    requires std::is_void_v<
+      decltype(std::declval<F&>()(std::declval<caf::error>()))>
+  [[deprecated("Use or_else with expected return type instead")]]
   expected or_else(F&& f) const& {
-    using res_t = decltype(f(error_));
-    if constexpr (std::is_void_v<res_t>) {
-      if (!has_value())
-        f(error_);
-      return *this;
-    } else {
-      static_assert(std::is_same_v<expected, res_t>,
-                    "F must return expected<T> or void");
-      if (has_value())
-        return expected{std::in_place, value_};
-      else
-        return f(error_);
-    }
+    if (!has_value())
+      f(error_);
+    return *this;
   }
 
   template <class F>
+    requires std::is_same_v<
+      expected, decltype(std::declval<F&>()(std::declval<caf::error>()))>
+  expected or_else(F&& f) const& {
+    if (has_value())
+      return expected{std::in_place, value_};
+    else
+      return f(error_);
+  }
+
+  template <class F>
+    requires std::is_void_v<
+      decltype(std::declval<F&>()(std::declval<caf::error>()))>
+  [[deprecated("Use or_else with expected return type instead")]]
   expected or_else(F&& f) const&& {
-    using res_t = decltype(f(std::move(error_)));
-    if constexpr (std::is_void_v<res_t>) {
-      if (!has_value())
-        f(std::move(error_));
-      return std::move(*this);
-    } else {
-      static_assert(std::is_same_v<expected, res_t>,
-                    "F must return expected<T> or void");
-      if (has_value())
-        return expected{std::in_place, std::move(value_)};
-      else
-        return f(std::move(error_));
-    }
+    if (!has_value())
+      f(std::move(error_));
+    return std::move(*this);
+  }
+
+  template <class F>
+    requires std::is_same_v<
+      expected, decltype(std::declval<F&>()(std::declval<caf::error>()))>
+  expected or_else(F&& f) const&& {
+    if (has_value())
+      return expected{std::in_place, std::move(value_)};
+    else
+      return f(std::move(error_));
   }
 
   template <class F>
