@@ -45,14 +45,20 @@ TEST("concat operators with error inputs forward the error") {
   auto nil = [this] { return make_observable().empty<int>().as_observable(); };
   auto err = [this] { return make_observable().fail<int>(sec::runtime_error); };
   SECTION("blueprint") {
-    check_eq(collect(nil().concat(err())), unexpected{make_error(sec::runtime_error)});
-    check_eq(collect(err().concat(nil())), unexpected{make_error(sec::runtime_error)});
-    check_eq(collect(just(err()).concat()), unexpected{make_error(sec::runtime_error)});
+    check_eq(collect(nil().concat(err())),
+             unexpected{make_error(sec::runtime_error)});
+    check_eq(collect(err().concat(nil())),
+             unexpected{make_error(sec::runtime_error)});
+    check_eq(collect(just(err()).concat()),
+             unexpected{make_error(sec::runtime_error)});
   }
   SECTION("observable") {
-    check_eq(collect(nil().concat(err())), unexpected{make_error(sec::runtime_error)});
-    check_eq(collect(err().concat(nil())), unexpected{make_error(sec::runtime_error)});
-    check_eq(collect(just(err()).concat()), unexpected{make_error(sec::runtime_error)});
+    check_eq(collect(nil().concat(err())),
+             unexpected{make_error(sec::runtime_error)});
+    check_eq(collect(err().concat(nil())),
+             unexpected{make_error(sec::runtime_error)});
+    check_eq(collect(just(err()).concat()),
+             unexpected{make_error(sec::runtime_error)});
   }
 }
 

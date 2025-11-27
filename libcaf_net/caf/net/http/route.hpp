@@ -270,8 +270,8 @@ make_route(std::string path, std::optional<http::method> method, F f) {
                 "F must take 'responder&' as first argument");
   // The path must be absolute.
   if (path.empty() || path.front() != '/') {
-    return caf::unexpected{make_error(sec::invalid_argument,
-                      "expected an absolute path, got: " + path)};
+    return caf::unexpected{make_error(
+      sec::invalid_argument, "expected an absolute path, got: " + path)};
   }
   // The path must have as many <arg> entries as F takes extra arguments.
   auto num_args = detail::args_in_path(path);
