@@ -107,7 +107,7 @@ public:
     type_list<ActorHandle> tk;
     auto x = remote_actor(system().message_types(tk), std::move(host), port);
     if (!x)
-      return unexpected{x.error()};
+      return caf::unexpected{x.error()};
     CAF_ASSERT(x && *x);
     return actor_cast<ActorHandle>(std::move(*x));
   }
@@ -280,7 +280,7 @@ private:
   spawn_client_impl(F fun, const std::string& host, uint16_t port, Ts&&... xs) {
     auto eptr = backend().new_tcp_scribe(host, port);
     if (!eptr)
-      return unexpected{eptr.error()};
+      return caf::unexpected{eptr.error()};
     auto ptr = std::move(*eptr);
     CAF_ASSERT(ptr != nullptr);
     detail::init_fun_factory<Impl, F> fac;
@@ -298,7 +298,7 @@ private:
   spawn_server_impl(F fun, uint16_t& port, Ts&&... xs) {
     auto eptr = backend().new_tcp_doorman(port);
     if (!eptr)
-      return unexpected{eptr.error()};
+      return caf::unexpected{eptr.error()};
     auto ptr = std::move(*eptr);
     detail::init_fun_factory<Impl, F> fac;
     port = ptr->port();

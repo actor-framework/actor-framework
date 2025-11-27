@@ -29,11 +29,11 @@ TEST("calling ignore_elements on range(1, 10) produces []") {
 TEST("ignore_elements operator forwards errors") {
   SECTION("blueprint") {
     check_eq(collect(obs_error<int>().ignore_elements()),
-             unexpected{make_error(sec::runtime_error)});
+             caf::unexpected{make_error(sec::runtime_error)});
   }
   SECTION("observable") {
     check_eq(collect(obs_error<int>().as_observable().ignore_elements()),
-             unexpected{make_error(sec::runtime_error)});
+             caf::unexpected{make_error(sec::runtime_error)});
   }
 }
 

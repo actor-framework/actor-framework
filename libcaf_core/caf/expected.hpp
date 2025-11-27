@@ -887,7 +887,7 @@ public:
     if (has_value())
       return f();
     else
-      return res_t{unexpected{*error_}};
+      return res_t{caf::unexpected{*error_}};
   }
 
   template <class F>
@@ -1118,7 +1118,7 @@ bool inspect(Inspector& f, unexpected& x) {
     caf::error e;
     if (!f.object(x).fields(f.field("error", e)))
       return false;
-    x = unexpected{std::move(e)};
+    x = caf::unexpected{std::move(e)};
     return true;
   } else {
     return f.object(x).fields(f.field("error", x.error()));

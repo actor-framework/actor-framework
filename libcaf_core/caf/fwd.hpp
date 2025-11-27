@@ -10,12 +10,15 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <expected>
 #include <memory>
 #include <span>
 #include <string_view>
 #include <utility>
 #include <vector>
+
+#ifdef CAF_USE_STD_EXPECTED
+#  include <expected>
+#endif
 
 namespace caf {
 
@@ -218,6 +221,7 @@ using type_id_t = uint16_t;
 
 #ifdef CAF_USE_STD_EXPECTED
 using unexpected = std::unexpected<error>;
+
 template <class T>
 using expected = std::expected<T, error>;
 #endif

@@ -46,28 +46,28 @@ TEST("do_finally(fn) executes the passed function before exit") {
   SECTION("do_finally(fn) invokes fn on error") {
     SECTION("blueprint") {
       check_eq(collect(obs_error().do_finally(fn)),
-               unexpected{make_error(sec::runtime_error)});
+               caf::unexpected{make_error(sec::runtime_error)});
       check_eq(*x, 1);
       check_eq(collect(range(1, 3).concat(obs_error()).do_finally(fn)),
-               unexpected{make_error(sec::runtime_error)});
+               caf::unexpected{make_error(sec::runtime_error)});
       check_eq(*x, 2);
       check_eq(
         collect(
           range(1, 3).concat(obs_error()).concat(range(1, 2)).do_finally(fn)),
-        unexpected{make_error(sec::runtime_error)});
+        caf::unexpected{make_error(sec::runtime_error)});
       check_eq(*x, 3);
     }
     SECTION("observable") {
       check_eq(collect(build(obs_error()).do_finally(fn)),
-               unexpected{make_error(sec::runtime_error)});
+               caf::unexpected{make_error(sec::runtime_error)});
       check_eq(*x, 1);
       check_eq(collect(build(range(1, 3).concat(obs_error())).do_finally(fn)),
-               unexpected{make_error(sec::runtime_error)});
+               caf::unexpected{make_error(sec::runtime_error)});
       check_eq(*x, 2);
       check_eq(collect(
                  build(range(1, 3).concat(obs_error()).concat(range(1, 2)))
                    .do_finally(fn)),
-               unexpected{make_error(sec::runtime_error)});
+               caf::unexpected{make_error(sec::runtime_error)});
       check_eq(*x, 3);
     }
   }
@@ -111,11 +111,11 @@ TEST("element_at(n) only takes the element with index n") {
   SECTION("element_at(n) propagates errors") {
     SECTION("blueprint") {
       check_eq(collect(obs_error().element_at(1)),
-               unexpected{make_error(sec::runtime_error)});
+               caf::unexpected{make_error(sec::runtime_error)});
     }
     SECTION("observable") {
       check_eq(collect(build(obs_error()).element_at(1)),
-               unexpected{make_error(sec::runtime_error)});
+               caf::unexpected{make_error(sec::runtime_error)});
     }
   }
 }
@@ -145,19 +145,19 @@ TEST("reduce(init, fn) combines all items into one final value using fn") {
   SECTION("reduce(init, fn) propagates errors") {
     SECTION("blueprint") {
       check_eq(collect(range(1, 1).concat(obs_error()).reduce(0, adder)),
-               unexpected{make_error(sec::runtime_error)});
+               caf::unexpected{make_error(sec::runtime_error)});
       check_eq(collect(range(1, 3).concat(obs_error()).reduce(0, adder)),
-               unexpected{make_error(sec::runtime_error)});
+               caf::unexpected{make_error(sec::runtime_error)});
       check_eq(collect(obs_error().reduce(0, adder)),
-               unexpected{make_error(sec::runtime_error)});
+               caf::unexpected{make_error(sec::runtime_error)});
     }
     SECTION("observable") {
       check_eq(collect(build(range(1, 1).concat(obs_error())).reduce(0, adder)),
-               unexpected{make_error(sec::runtime_error)});
+               caf::unexpected{make_error(sec::runtime_error)});
       check_eq(collect(build(range(1, 3).concat(obs_error())).reduce(0, adder)),
-               unexpected{make_error(sec::runtime_error)});
+               caf::unexpected{make_error(sec::runtime_error)});
       check_eq(collect(build(obs_error()).reduce(0, adder)),
-               unexpected{make_error(sec::runtime_error)});
+               caf::unexpected{make_error(sec::runtime_error)});
     }
   }
 }
@@ -187,19 +187,19 @@ TEST("scan(init, fn) creates successive reduced values using fn") {
   SECTION("scan(init, fn) propagates errors") {
     SECTION("blueprint") {
       check_eq(collect(range(1, 1).concat(obs_error()).scan(0, adder)),
-               unexpected{make_error(sec::runtime_error)});
+               caf::unexpected{make_error(sec::runtime_error)});
       check_eq(collect(range(1, 3).concat(obs_error()).scan(0, adder)),
-               unexpected{make_error(sec::runtime_error)});
+               caf::unexpected{make_error(sec::runtime_error)});
       check_eq(collect(obs_error().scan(0, adder)),
-               unexpected{make_error(sec::runtime_error)});
+               caf::unexpected{make_error(sec::runtime_error)});
     }
     SECTION("observable") {
       check_eq(collect(build(range(1, 1).concat(obs_error())).scan(0, adder)),
-               unexpected{make_error(sec::runtime_error)});
+               caf::unexpected{make_error(sec::runtime_error)});
       check_eq(collect(build(range(1, 3).concat(obs_error())).scan(0, adder)),
-               unexpected{make_error(sec::runtime_error)});
+               caf::unexpected{make_error(sec::runtime_error)});
       check_eq(collect(build(obs_error()).scan(0, adder)),
-               unexpected{make_error(sec::runtime_error)});
+               caf::unexpected{make_error(sec::runtime_error)});
     }
   }
 }
@@ -258,15 +258,15 @@ TEST("skip(n) skips the first n elements in a range of size m") {
   SECTION("skip(n) forwards errors") {
     SECTION("blueprint") {
       check_eq(collect(obs_error().skip(0)),
-               unexpected{make_error(sec::runtime_error)});
+               caf::unexpected{make_error(sec::runtime_error)});
       check_eq(collect(obs_error().skip(1)),
-               unexpected{make_error(sec::runtime_error)});
+               caf::unexpected{make_error(sec::runtime_error)});
     }
     SECTION("observable") {
       check_eq(collect(build(obs_error()).skip(0)),
-               unexpected{make_error(sec::runtime_error)});
+               caf::unexpected{make_error(sec::runtime_error)});
       check_eq(collect(build(obs_error()).skip(1)),
-               unexpected{make_error(sec::runtime_error)});
+               caf::unexpected{make_error(sec::runtime_error)});
     }
   }
 }
@@ -509,50 +509,51 @@ TEST("on_error_return() replaces an error with a value") {
   }
   SECTION("on_error_return() forwards errors from the handler") {
     auto return_unexpected = [](const error&) {
-      return expected<int>{unexpected{make_error(sec::unexpected_message)}};
+      return expected<int>{
+        caf::unexpected{make_error(sec::unexpected_message)}};
     };
     auto return_err = [](const error& err) {
-      return expected<int>{unexpected{err}};
+      return expected<int>{caf::unexpected{err}};
     };
     SECTION("blueprint") {
       check_eq(collect(obs_error().on_error_return(return_unexpected)),
-               unexpected{make_error(sec::unexpected_message)});
+               caf::unexpected{make_error(sec::unexpected_message)});
       check_eq(collect(range(1, 2)
                          .concat(obs_error())
                          .concat(range(1, 2))
                          .on_error_return(return_unexpected)),
-               unexpected{make_error(sec::unexpected_message)});
+               caf::unexpected{make_error(sec::unexpected_message)});
       check_eq(collect(range(1, 3)
                          .concat(obs_error())
                          .concat(range(1, 3))
                          .on_error_return(return_err)),
-               unexpected{make_error(sec::runtime_error)});
+               caf::unexpected{make_error(sec::runtime_error)});
       check_eq(collect(
                  range(1, 2).concat(obs_error()).on_error_return(return_err)),
-               unexpected{make_error(sec::runtime_error)});
+               caf::unexpected{make_error(sec::runtime_error)});
       check_eq(
         collect(
           range(1, 3).concat(obs_error()).on_error_return(return_unexpected)),
-        unexpected{make_error(sec::unexpected_message)});
+        caf::unexpected{make_error(sec::unexpected_message)});
     }
     SECTION("observable") {
       check_eq(collect(build(obs_error()).on_error_return(return_unexpected)),
-               unexpected{make_error(sec::unexpected_message)});
+               caf::unexpected{make_error(sec::unexpected_message)});
       check_eq(collect(
                  build(range(1, 2).concat(obs_error()).concat(range(1, 2)))
                    .on_error_return(return_unexpected)),
-               unexpected{make_error(sec::unexpected_message)});
+               caf::unexpected{make_error(sec::unexpected_message)});
       check_eq(collect(
                  build(range(1, 3).concat(obs_error()).concat(range(1, 3)))
                    .on_error_return(return_err)),
-               unexpected{make_error(sec::runtime_error)});
+               caf::unexpected{make_error(sec::runtime_error)});
       check_eq(
         collect(
           build(range(1, 2).concat(obs_error())).on_error_return(return_err)),
-        unexpected{make_error(sec::runtime_error)});
+        caf::unexpected{make_error(sec::runtime_error)});
       check_eq(collect(build(range(1, 3).concat(obs_error()))
                          .on_error_return(return_unexpected)),
-               unexpected{make_error(sec::unexpected_message)});
+               caf::unexpected{make_error(sec::unexpected_message)});
     }
   }
 }
@@ -597,19 +598,19 @@ TEST("start_with(value) builds observable that emits value first") {
   SECTION("start_with(value) forwards error)") {
     SECTION("blueprint") {
       check_eq(collect(obs_error().start_with(value)),
-               unexpected{make_error(sec::runtime_error)});
+               caf::unexpected{make_error(sec::runtime_error)});
       check_eq(collect(obs_error().start_with(range(1, 2))),
-               unexpected{make_error(sec::runtime_error)});
+               caf::unexpected{make_error(sec::runtime_error)});
       check_eq(collect(range(1, 2).start_with(obs_error())),
-               unexpected{make_error(sec::runtime_error)});
+               caf::unexpected{make_error(sec::runtime_error)});
     }
     SECTION("observable") {
       check_eq(collect(build(obs_error().start_with(value))),
-               unexpected{make_error(sec::runtime_error)});
+               caf::unexpected{make_error(sec::runtime_error)});
       check_eq(collect(build(obs_error().start_with(range(1, 2)))),
-               unexpected{make_error(sec::runtime_error)});
+               caf::unexpected{make_error(sec::runtime_error)});
       check_eq(collect(build(range(1, 2).start_with(obs_error()))),
-               unexpected{make_error(sec::runtime_error)});
+               caf::unexpected{make_error(sec::runtime_error)});
     }
   }
 }

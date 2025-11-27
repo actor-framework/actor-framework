@@ -155,14 +155,14 @@ public:
     std::unique_lock guard{cell_->mtx};
     switch (cell_->value.index()) {
       default:
-        return res_t{unexpected{sec::broken_promise}};
+        return res_t{caf::unexpected{sec::broken_promise}};
       case 1:
         if constexpr (std::is_void_v<T>)
           return res_t{};
         else
           return res_t{std::get<T>(cell_->value)};
       case 2:
-        return res_t{unexpected{std::get<error>(cell_->value)}};
+        return res_t{caf::unexpected{std::get<error>(cell_->value)}};
     }
   }
 
@@ -175,14 +175,14 @@ public:
     std::unique_lock guard{cell_->mtx};
     switch (cell_->value.index()) {
       default:
-        return res_t{unexpected{make_error(sec::future_timeout)}};
+        return res_t{caf::unexpected{make_error(sec::future_timeout)}};
       case 1:
         if constexpr (std::is_void_v<T>)
           return res_t{};
         else
           return res_t{std::get<T>(cell_->value)};
       case 2:
-        return res_t{unexpected{std::get<error>(cell_->value)}};
+        return res_t{caf::unexpected{std::get<error>(cell_->value)}};
     }
   }
 

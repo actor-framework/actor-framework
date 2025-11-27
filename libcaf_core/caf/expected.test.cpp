@@ -707,10 +707,10 @@ TEST("or_else may replace the error or set a default") {
     SECTION("or_else makes copies when called on a const lvalue") {
       const auto v1 = e_int{caf::unexpected{make_error(sec::runtime_error)}};
       const auto v2 = v1.or_else(next_error);
-      check_eq(v1, unexpected{make_error(sec::runtime_error)});
-      check_eq(v2, unexpected{make_error(sec::remote_linking_failed)});
+      check_eq(v1, caf::unexpected{make_error(sec::runtime_error)});
+      check_eq(v2, caf::unexpected{make_error(sec::remote_linking_failed)});
       const auto v3 = v2.or_else(set_fallback);
-      check_eq(v2, unexpected{make_error(sec::remote_linking_failed)});
+      check_eq(v2, caf::unexpected{make_error(sec::remote_linking_failed)});
       check_eq(v3, 42);
     }
     SECTION("or_else moves when called on a mutable rvalue") {

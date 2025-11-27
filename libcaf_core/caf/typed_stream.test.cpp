@@ -30,13 +30,13 @@ struct fixture : test::fixture::deterministic {
     {
       caf::binary_serializer sink{sys, buf};
       if (!sink.apply(obj))
-        return unexpected{sink.get_error()};
+        return caf::unexpected{sink.get_error()};
     }
     auto result = T{};
     {
       caf::binary_deserializer source{sys, buf};
       if (!source.apply(result))
-        return unexpected{source.get_error()};
+        return caf::unexpected{source.get_error()};
     }
     return result;
   }

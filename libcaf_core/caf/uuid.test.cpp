@@ -125,11 +125,11 @@ TEST("make_uuid rejects strings with invalid variant or version values") {
   check(!uuid::can_parse("cbba369a-6ceb-F1ea-bc55-0242ac130003"));
   check(!uuid::can_parse("cbba38fc-6ceb-01ea-bc55-0242ac130003"));
   check_eq(make_uuid("cbba341a-6ceb-81ea-bc55-0242ac130003"),
-           unexpected{error{pec::invalid_argument}});
+           caf::unexpected{error{pec::invalid_argument}});
   check_eq(make_uuid("cbba369a-6ceb-F1ea-bc55-0242ac130003"),
-           unexpected{error{pec::invalid_argument}});
+           caf::unexpected{error{pec::invalid_argument}});
   check_eq(make_uuid("cbba38fc-6ceb-01ea-bc55-0242ac130003"),
-           unexpected{error{pec::invalid_argument}});
+           caf::unexpected{error{pec::invalid_argument}});
 }
 
 SCENARIO("UUIDs are inspectable") {

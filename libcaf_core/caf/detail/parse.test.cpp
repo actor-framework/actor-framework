@@ -50,7 +50,7 @@ expected<T> read(std::string_view str) {
   detail::parse(ps, result);
   if (ps.code == pec::success)
     return result;
-  return unexpected{ps.error()};
+  return caf::unexpected{ps.error()};
 }
 
 } // namespace
@@ -61,7 +61,7 @@ expected<T> read(std::string_view str) {
   check_eq(read<type>(#value), type(cpp_value))
 
 #define CHECK_INVALID(type, str, code)                                         \
-  check_eq(read<type>(str), unexpected{make_error(code)})
+  check_eq(read<type>(str), caf::unexpected{make_error(code)})
 
 TEST("valid signed integers") {
   CHECK_NUMBER(int8_t, -128);
@@ -145,12 +145,14 @@ TEST("valid timespans") {
 }
 
 TEST("invalid timespans") {
-  check_eq(read<timespan>("12"), unexpected{make_error(pec::unexpected_eof)});
+  check_eq(read<timespan>("12"),
+           caf::unexpected{make_error(pec::unexpected_eof)});
   check_eq(read<timespan>("12nas"),
-           unexpected{make_error(pec::unexpected_character)});
+           caf::unexpected{make_error(pec::unexpected_character)});
   check_eq(read<timespan>("34usec"),
-           unexpected{make_error(pec::trailing_character)});
-  check_eq(read<timespan>("56m"), unexpected{make_error(pec::unexpected_eof)});
+           caf::unexpected{make_error(pec::trailing_character)});
+  check_eq(read<timespan>("56m"),
+           caf::unexpected{make_error(pec::unexpected_eof)});
 }
 
 TEST("strings") {
@@ -170,14 +172,14 @@ TEST("IPv4 address") {
   check_eq(read<ipv4_address>("1.2.3.4"), ipv4_address({1, 2, 3, 4}));
   check_eq(read<ipv4_address>("127.0.0.1"), ipv4_address({127, 0, 0, 1}));
   check_eq(read<ipv4_address>("256.0.0.1"),
-           unexpected{make_error(pec::integer_overflow)});
+           caf::unexpected{make_error(pec::integer_overflow)});
 }
 
 TEST("IPv4 subnet") {
   check_eq(read<ipv4_subnet>("1.2.3.0/24"),
            ipv4_subnet(ipv4_address({1, 2, 3, 0}), 24));
   check_eq(read<ipv4_subnet>("1.2.3.0/33"),
-           unexpected{make_error(pec::integer_overflow)});
+           caf::unexpected{make_error(pec::integer_overflow)});
 }
 
 TEST("IPv4 endpoint") {
@@ -186,7 +188,7 @@ TEST("IPv4 endpoint") {
   check_eq(read<ipv4_endpoint>("127.0.0.1:65535"),
            ipv4_endpoint(ipv4_address({127, 0, 0, 1}), 65535));
   check_eq(read<ipv4_endpoint>("127.0.0.1:65536"),
-           unexpected{make_error(pec::integer_overflow)});
+           caf::unexpected{make_error(pec::integer_overflow)});
 }
 
 TEST("IPv6 address") {
@@ -202,7 +204,7 @@ TEST("IPv6 subnet") {
   check_eq(read<ipv6_subnet>("1::/128"),
            ipv6_subnet(ipv6_address({1}, {}), 128));
   check_eq(read<ipv6_subnet>("1::/129"),
-           unexpected{make_error(pec::integer_overflow)});
+           caf::unexpected{make_error(pec::integer_overflow)});
 }
 
 TEST("IPv6 endpoint") {
@@ -211,6 +213,6 @@ TEST("IPv6 endpoint") {
   check_eq(read<ipv6_endpoint>("127.0.0.1:65535"),
            ipv6_endpoint(ipv4_address({127, 0, 0, 1}), 65535));
   check_eq(read<ipv6_endpoint>("127.0.0.1:65536"),
-           unexpected{make_error(pec::integer_overflow)});
+           caf::unexpected{make_error(pec::integer_overflow)});
   check_eq(read<ipv6_endpoint>("[1::2]:8080"), ipv6_endpoint({{1}, {2}}, 8080));
 }
