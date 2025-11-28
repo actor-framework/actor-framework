@@ -135,7 +135,7 @@ public:
           }
         };
     auto bhvr = behavior{std::move(helper), std::move(error_handler)};
-    for (const auto& mid : state_.mids) {
+    for (auto mid : state_.mids) {
       auto now = std::chrono::steady_clock::now();
       auto remaining = state_.deadline > now
                          ? (state_.deadline - now)

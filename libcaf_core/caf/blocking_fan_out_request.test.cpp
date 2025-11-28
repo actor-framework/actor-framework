@@ -34,9 +34,9 @@ struct fixture {
 
 template <typename Fn>
 actor make_server(caf::actor_system& sys, Fn fn) {
-  auto sf = [&]() -> behavior {
+  auto sf = [fn]() -> behavior {
     return {
-      [&](int x, int y) { return fn(x, y); },
+      [fn](int x, int y) { return fn(x, y); },
     };
   };
   return sys.spawn(sf);
@@ -53,8 +53,8 @@ using typed_worker_void_behavior = typed_worker_void_actor::behavior_type;
 
 template <typename Fn>
 typed_worker_actor make_typed_server(caf::actor_system& sys, Fn fn) {
-  auto sf = [&]() -> typed_worker_behavior {
-    return {[&](int x, int y) { return fn(x, y); }};
+  auto sf = [fn]() -> typed_worker_behavior {
+    return {[fn](int x, int y) { return fn(x, y); }};
   };
   return sys.spawn(sf);
 }
@@ -62,16 +62,16 @@ typed_worker_actor make_typed_server(caf::actor_system& sys, Fn fn) {
 template <typename Fn>
 typed_worker_two_values_actor
 make_typed_server_two_values(caf::actor_system& sys, Fn fn) {
-  auto sf = [&]() -> typed_worker_two_values_behavior {
-    return {[&](int x, int y) -> result<int, int> { return fn(x, y); }};
+  auto sf = [fn]() -> typed_worker_two_values_behavior {
+    return {[fn](int x, int y) -> result<int, int> { return fn(x, y); }};
   };
   return sys.spawn(sf);
 }
 
 template <typename Fn>
 typed_worker_void_actor make_typed_server_void(caf::actor_system& sys, Fn fn) {
-  auto sf = [&]() -> typed_worker_void_behavior {
-    return {[&](int x, int y) -> result<void> {
+  auto sf = [fn]() -> typed_worker_void_behavior {
+    return {[fn](int x, int y) -> result<void> {
       fn(x, y);
       return {};
     }};
@@ -83,7 +83,7 @@ typed_worker_void_actor make_typed_server_void(caf::actor_system& sys, Fn fn) {
 
 WITH_FIXTURE(fixture) {
 
-TEST("send fan_out_request messages that return a result") {
+TEST("fan_out_request with a single result") {
   scoped_actor self{sys};
   std::vector<actor> workers{
     make_server(sys, [](int x, int y) { return x + y; }),
@@ -132,7 +132,7 @@ TEST("send fan_out_request messages that return a result") {
   }
 }
 
-TEST("send fan_out_request messages with void result") {
+TEST("fan_out_request with void result") {
   scoped_actor self{sys};
   std::vector<actor> workers{
     make_server(sys, [](int, int) {}),
@@ -171,7 +171,7 @@ TEST("send fan_out_request messages with void result") {
   }
 }
 
-TEST("send fan_out_request messages that returns two values") {
+TEST("fan_out_request with multiple results") {
   scoped_actor self{sys};
   std::vector<actor> workers{
     make_server(sys, [](int x, int y) { return make_message(y, x); }),
@@ -234,7 +234,7 @@ TEST("send fan_out_request messages that returns two values") {
   }
 }
 
-TEST("send fan_out_request messages with invalid setups") {
+TEST("fan_out_request with type mismatch") {
   scoped_actor self{sys};
   std::vector<actor> workers{
     make_server(sys, [](int x, int y) { return std::to_string(x + y); }),
@@ -262,7 +262,7 @@ TEST("send fan_out_request messages with invalid setups") {
   }
 }
 
-TEST("timeout a fan_out_request") {
+TEST("fan_out_request with timeout") {
   scoped_actor self{sys};
   auto dummy = [](event_based_actor* self) -> behavior {
     auto res = std::make_shared<response_promise>();
@@ -301,7 +301,7 @@ TEST("timeout a fan_out_request") {
   }
 }
 
-TEST("send fan_out_request messages that return a result using typed actors") {
+TEST("typed fan_out_request with a single result") {
   scoped_actor self{sys};
   std::vector<typed_worker_actor> workers{
     make_typed_server(sys, [](int x, int y) { return x + y; }),
@@ -350,8 +350,7 @@ TEST("send fan_out_request messages that return a result using typed actors") {
   }
 }
 
-TEST(
-  "send fan_out_request messages that return two values using typed actors") {
+TEST("typed fan_out_request with multiple results") {
   scoped_actor self{sys};
   std::vector<typed_worker_two_values_actor> workers{
     make_typed_server_two_values(
@@ -417,7 +416,7 @@ TEST(
   }
 }
 
-TEST("send fan_out_request messages with void result using typed actors") {
+TEST("typed fan_out_request with void result") {
   scoped_actor self{sys};
   std::vector<typed_worker_void_actor> workers{
     make_typed_server_void(sys, [](int, int) {}),
@@ -456,7 +455,7 @@ TEST("send fan_out_request messages with void result using typed actors") {
   }
 }
 
-TEST("send fan_out_request messages with invalid setups using typed actors") {
+TEST("typed fan_out_request with error responses") {
   scoped_actor self{sys};
   std::vector<typed_worker_actor> error_workers{
     make_typed_server(sys,
@@ -493,7 +492,7 @@ TEST("send fan_out_request messages with invalid setups using typed actors") {
   }
 }
 
-TEST("send delayed fan_out_request messages that return a result") {
+TEST("delayed fan_out_request with a single result") {
   scoped_actor self{sys};
   std::vector<actor> workers{
     make_server(sys, [](int x, int y) { return x + y; }),
@@ -527,7 +526,7 @@ TEST("send delayed fan_out_request messages that return a result") {
   }
 }
 
-TEST("send delayed fan_out_request messages with void result") {
+TEST("delayed fan_out_request with void result") {
   scoped_actor self{sys};
   std::vector<actor> workers{
     make_server(sys, [](int, int) {}),
@@ -556,7 +555,7 @@ TEST("send delayed fan_out_request messages with void result") {
   }
 }
 
-TEST("send delayed fan_out_request messages that return two values") {
+TEST("delayed fan_out_request with multiple results") {
   scoped_actor self{sys};
   std::vector<actor> workers{
     make_server(sys, [](int x, int y) { return make_message(y, x); }),
@@ -600,8 +599,7 @@ TEST("send delayed fan_out_request messages that return two values") {
   }
 }
 
-TEST("send delayed fan_out_request messages that return a result using typed "
-     "actors") {
+TEST("typed delayed fan_out_request with a single result") {
   scoped_actor self{sys};
   std::vector<typed_worker_actor> workers{
     make_typed_server(sys, [](int x, int y) { return x + y; }),
@@ -635,8 +633,7 @@ TEST("send delayed fan_out_request messages that return a result using typed "
   }
 }
 
-TEST("send delayed fan_out_request messages that return two values using typed "
-     "actors") {
+TEST("typed delayed fan_out_request with multiple results") {
   scoped_actor self{sys};
   std::vector<typed_worker_two_values_actor> workers{
     make_typed_server_two_values(
@@ -706,8 +703,7 @@ TEST("send delayed fan_out_request messages that return two values using typed "
   }
 }
 
-TEST(
-  "send delayed fan_out_request messages with void result using typed actors") {
+TEST("typed delayed fan_out_request with void result") {
   scoped_actor self{sys};
   std::vector<typed_worker_void_actor> workers{
     make_typed_server_void(sys, [](int, int) {}),
@@ -736,7 +732,7 @@ TEST(
   }
 }
 
-TEST("fan_out_request with mixed results - one worker returns error") {
+TEST("fan_out_request with one worker returning an error") {
   scoped_actor self{sys};
   std::vector<actor> workers{
     make_server(sys, [](int x, int y) { return x + y; }),
@@ -768,7 +764,7 @@ TEST("fan_out_request with mixed results - one worker returns error") {
   }
 }
 
-TEST("timeout a delayed fan_out_request") {
+TEST("delayed fan_out_request with timeout") {
   scoped_actor self{sys};
   auto dummy = [](event_based_actor* self) -> behavior {
     auto res = std::make_shared<response_promise>();
