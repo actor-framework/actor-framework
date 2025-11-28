@@ -469,8 +469,7 @@ public:
         && member->val->data.index() != detail::json::value::null_index) {
       auto ft = field_type(top<position::object>(), name, field_type_suffix_);
       if (auto id = (*mapper_)(ft); id != invalid_type_id) {
-        if (auto i = std::find(types.begin(), types.end(), id);
-            i != types.end()) {
+        if (auto i = std::ranges::find(types, id); i != types.end()) {
           index = static_cast<size_t>(std::distance(types.begin(), i));
           push(member->val);
           is_present = true;

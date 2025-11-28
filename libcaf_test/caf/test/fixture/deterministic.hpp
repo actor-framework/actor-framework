@@ -670,11 +670,11 @@ public:
     if (ptr == nullptr) {
       return;
     }
-    std::for_each(events_.begin(), events_.end(), [ptr, &fn](auto& event) {
+    for (auto& event : events_) {
       if (event->target == ptr) {
         fn(event->item->payload);
       }
-    });
+    }
   }
 
 private:

@@ -8,6 +8,7 @@
 #include "caf/error.hpp"
 #include "caf/sec.hpp"
 
+#include <algorithm>
 #include <cstddef>
 
 namespace caf::detail {
@@ -150,8 +151,8 @@ private:
     }
     std::string result;
     result.reserve(buf_.size());
-    std::transform(buf_.begin(), buf_.end(), std::back_inserter(result),
-                   [](std::byte b) { return static_cast<char>(b); });
+    std::ranges::transform(buf_, std::back_inserter(result),
+                           [](std::byte b) { return static_cast<char>(b); });
     auto item = cow_string{std::move(result)};
     buf_.clear();
     return next.on_next(item, steps...);

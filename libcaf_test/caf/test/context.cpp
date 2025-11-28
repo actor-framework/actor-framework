@@ -31,7 +31,7 @@ bool context::can_run() const noexcept {
 /// Checks whether `ptr` has been activated this run, i.e., whether we can
 /// find it in `unwind_stack`.
 bool context::activated(block* ptr) const noexcept {
-  return std::find(path.begin(), path.end(), ptr) != path.end();
+  return std::ranges::find(path, ptr) != path.end();
 }
 
 /// Tries to find `name` in `parameters` and otherwise raises an exception.

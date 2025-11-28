@@ -14,6 +14,7 @@
 #include "caf/internal/fast_pimpl.hpp"
 #include "caf/settings.hpp"
 
+#include <algorithm>
 #include <memory>
 #include <stack>
 #include <vector>
@@ -339,8 +340,7 @@ public:
     } else if (id = query_type_id(*str); id == invalid_type_id) {
       emplace_error(sec::runtime_error, "no such type: " + *str);
       return false;
-    } else if (auto i = std::find(types.begin(), types.end(), id);
-               i == types.end()) {
+    } else if (auto i = std::ranges::find(types, id); i == types.end()) {
       emplace_error(sec::conversion_failed,
                     "instrid type for variant field: " + *str);
       return false;

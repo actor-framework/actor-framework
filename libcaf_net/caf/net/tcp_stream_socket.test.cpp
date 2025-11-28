@@ -12,6 +12,8 @@
 
 #include "caf/log/test.hpp"
 
+#include <algorithm>
+
 using namespace caf;
 using namespace caf::net;
 using namespace std::literals;
@@ -74,8 +76,8 @@ TEST("opening and connecting to ipv6 using tcp socket") {
       fail("expected<> contains error {}", expected.error());
   };
   auto addrs = ip::local_addresses("localhost");
-  if (auto it = std::find_if(addrs.begin(), addrs.end(),
-                             [](auto& ip) { return !ip.embeds_v4(); });
+  if (auto it = std::ranges::find_if(addrs,
+                                     [](auto& ip) { return !ip.embeds_v4(); });
       it != addrs.end()) {
     uri::authority_type auth;
     auth.port = 0;

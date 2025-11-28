@@ -12,6 +12,8 @@
 #include "caf/telemetry/metric_impl.hpp"
 #include "caf/telemetry/metric_type.hpp"
 
+#include <algorithm>
+
 namespace {
 
 template <class Range1, class Range2>
@@ -60,8 +62,7 @@ metric_family* metric_registry::fetch(const std::string_view& prefix,
   auto eq = [&](const auto& ptr) {
     return ptr->prefix() == prefix && ptr->name() == name;
   };
-  if (auto i = std::find_if(families_.begin(), families_.end(), eq);
-      i != families_.end())
+  if (auto i = std::ranges::find_if(families_, eq); i != families_.end())
     return i->get();
   return nullptr;
 }

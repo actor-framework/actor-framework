@@ -13,6 +13,7 @@
 #include "caf/parser_state.hpp"
 #include "caf/pec.hpp"
 
+#include <algorithm>
 #include <cstring>
 #include <string_view>
 
@@ -47,7 +48,7 @@ void append_v6_hex(std::string& result, const uint8_t* xs) {
     buf[j++] = tbl[c & 0x0F];
   }
   auto pred = [](char c) { return c != '0'; };
-  auto first_non_zero = std::find_if(buf.begin(), buf.end(), pred);
+  auto first_non_zero = std::ranges::find_if(buf, pred);
   CAF_ASSERT(first_non_zero != buf.end());
   if (*first_non_zero != '\0')
     result += &(*first_non_zero);

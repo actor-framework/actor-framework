@@ -12,6 +12,8 @@
 
 #include "caf/log/test.hpp"
 
+#include <algorithm>
+
 using namespace caf;
 using namespace caf::net;
 using namespace std::literals;
@@ -39,8 +41,8 @@ TEST("opening and accepting tcp on a socket") {
     // to ipv6, so we have to manually resolve the addresses first.
     // NOTE: some of our docker builders dont have ipv6 loopback.
     auto addrs = ip::local_addresses("localhost");
-    if (auto it = std::find_if(addrs.begin(), addrs.end(),
-                               [](auto& ip) { return !ip.embeds_v4(); });
+    if (auto it
+        = std::ranges::find_if(addrs, [](auto& ip) { return !ip.embeds_v4(); });
         it != addrs.end()) {
       log::test::info("opening socket on {}:{}", *it, auth.port);
       auth.host = *it;

@@ -24,6 +24,8 @@
 #include "caf/scoped_actor.hpp"
 #include "caf/type_id.hpp"
 
+#include <algorithm>
+
 using namespace caf;
 using namespace std::literals;
 
@@ -78,7 +80,7 @@ public:
   ptrdiff_t consume(byte_span buf, byte_span) override {
     // Seek newline character.
     constexpr auto nl = std::byte{'\n'};
-    if (auto i = std::find(buf.begin(), buf.end(), nl); i != buf.end()) {
+    if (auto i = std::ranges::find(buf, nl); i != buf.end()) {
       auto pos = std::distance(buf.begin(), i);
       std::string line;
       line.reserve(pos);

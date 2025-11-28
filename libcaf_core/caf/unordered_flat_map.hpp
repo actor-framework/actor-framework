@@ -244,13 +244,13 @@ public:
   template <class K>
   iterator find(const K& key) {
     auto pred = [&](const value_type& y) { return key == y.first; };
-    return std::find_if(xs_.begin(), xs_.end(), pred);
+    return std::ranges::find_if(xs_, pred);
   }
 
   template <class K>
   const_iterator find(const K& key) const {
     auto pred = [&](const value_type& y) { return key == y.first; };
-    return std::find_if(xs_.begin(), xs_.end(), pred);
+    return std::ranges::find_if(xs_, pred);
   }
 
   template <class K>

@@ -59,7 +59,7 @@ public:
                                  labels.begin(), labels.end());
     };
     std::unique_lock<std::mutex> guard{mx_};
-    auto m = std::find_if(metrics_.begin(), metrics_.end(), has_label_values);
+    auto m = std::ranges::find_if(metrics_, has_label_values);
     if (m == metrics_.end()) {
       std::vector<label> cpy{labels.begin(), labels.end()};
       std::sort(cpy.begin(), cpy.end());

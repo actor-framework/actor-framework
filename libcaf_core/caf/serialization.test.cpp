@@ -519,38 +519,34 @@ struct fixture : caf::test::fixture::deterministic {
     if (type == "vector") {
       std::vector<int32_t> ivec;
       caf::split(parsed_value, value, ",");
-      std::transform(parsed_value.cbegin(), parsed_value.cend(),
-                     std::back_inserter(ivec),
-                     [](const std::string& s) { return std::stoi(s); });
+      std::ranges::transform(parsed_value, std::back_inserter(ivec),
+                             [](const std::string& s) { return std::stoi(s); });
       return ivec;
     }
     if (type == "v_bool") {
       std::vector<bool> ivec;
       caf::split(parsed_value, value, ",");
-      std::transform(parsed_value.cbegin(), parsed_value.cend(),
-                     std::back_inserter(ivec),
-                     [](const std::string& s) { return s == "true"; });
+      std::ranges::transform(parsed_value, std::back_inserter(ivec),
+                             [](const std::string& s) { return s == "true"; });
       return ivec;
     }
     if (type == "list") {
       std::list<int32_t> ilist;
       caf::split(parsed_value, value, ",");
-      std::transform(parsed_value.cbegin(), parsed_value.cend(),
-                     std::back_inserter(ilist),
-                     [](const std::string& s) { return std::stoi(s); });
+      std::ranges::transform(parsed_value, std::back_inserter(ilist),
+                             [](const std::string& s) { return std::stoi(s); });
       return ilist;
     }
     if (type == "map") {
       std::map<std::string, int32_t> imap;
       caf::split(parsed_value, value, ",");
-      std::transform(parsed_value.cbegin(), parsed_value.cend(),
-                     std::inserter(imap, imap.begin()),
-                     [](const std::string& s) {
-                       str_list parsed_pair;
-                       caf::split(parsed_pair, s, ":");
-                       return std::pair{parsed_pair[0],
-                                        std::stoi(parsed_pair[1])};
-                     });
+      std::ranges::transform(parsed_value, std::inserter(imap, imap.begin()),
+                             [](const std::string& s) {
+                               str_list parsed_pair;
+                               caf::split(parsed_pair, s, ":");
+                               return std::pair{parsed_pair[0],
+                                                std::stoi(parsed_pair[1])};
+                             });
       return imap;
     }
     if (type == "umap") {
@@ -569,9 +565,8 @@ struct fixture : caf::test::fixture::deterministic {
     if (type == "set") {
       std::set<int32_t> iset;
       caf::split(parsed_value, value, ",");
-      std::transform(parsed_value.cbegin(), parsed_value.cend(),
-                     std::inserter(iset, iset.begin()),
-                     [](const std::string& s) { return std::stoi(s); });
+      std::ranges::transform(parsed_value, std::inserter(iset, iset.begin()),
+                             [](const std::string& s) { return std::stoi(s); });
       return iset;
     }
     if (type == "uset") {
@@ -588,8 +583,8 @@ struct fixture : caf::test::fixture::deterministic {
       if (parsed_value.size() > 5) {
         CAF_RAISE_ERROR(std::logic_error, "invalid array size");
       }
-      std::transform(parsed_value.cbegin(), parsed_value.cend(), iarray.begin(),
-                     [](const std::string& s) { return std::stoi(s); });
+      std::ranges::transform(parsed_value, iarray.begin(),
+                             [](const std::string& s) { return std::stoi(s); });
       std::fill(iarray.begin() + parsed_value.size(), iarray.end(), 0);
       return iarray;
     }
@@ -608,9 +603,8 @@ struct fixture : caf::test::fixture::deterministic {
       if (parsed_value.size() != 4) {
         CAF_RAISE_ERROR(std::logic_error, "invalid c array size");
       }
-      std::transform(parsed_value.cbegin(), parsed_value.cend(),
-                     std::begin(ic_array.value),
-                     [](const std::string& s) { return std::stoi(s); });
+      std::ranges::transform(parsed_value, std::begin(ic_array.value),
+                             [](const std::string& s) { return std::stoi(s); });
       return ic_array;
     }
     CAF_RAISE_ERROR(std::logic_error, "invalid type");

@@ -71,8 +71,7 @@ public:
     if (!result) {
       result = std::make_unique<T>(ctx_, id, description, loc);
       nested_.push_back(result.get());
-    } else if (std::find(nested_.begin(), nested_.end(), result.get())
-               == nested_.end()) {
+    } else if (std::ranges::find(nested_, result.get()) == nested_.end()) {
       nested_.push_back(result.get());
     }
     return static_cast<T*>(result.get());

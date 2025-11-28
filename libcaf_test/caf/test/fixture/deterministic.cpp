@@ -22,6 +22,7 @@
 #include "caf/scheduled_actor.hpp"
 #include "caf/scheduler.hpp"
 
+#include <algorithm>
 #include <cassert>
 #include <memory>
 #include <numeric>
@@ -251,7 +252,7 @@ public:
 
   /// Returns the time of the next pending timeout.
   time_point next_timeout(const detail::source_location& loc) {
-    auto i = std::find_if(actions.begin(), actions.end(), is_not_disposed);
+    auto i = std::ranges::find_if(actions, is_not_disposed);
     if (i == actions.end())
       runnable::current().fail({"no pending timeout found", loc});
     return i->first;
@@ -259,6 +260,7 @@ public:
 
   /// Returns the time of the last pending timeout.
   time_point last_timeout(const detail::source_location& loc) {
+    // Note: Using reverse iterators, so keeping iterator-based version
     auto i = std::find_if(actions.rbegin(), actions.rend(), is_not_disposed);
     if (i == actions.rend())
       runnable::current().fail({"no pending timeout found", loc});
@@ -497,7 +499,7 @@ size_t deterministic::mail_count(scheduled_actor* receiver) {
   if (receiver == nullptr)
     return 0;
   auto pred = [&](const auto& event) { return event->target == receiver; };
-  return std::count_if(events_.begin(), events_.end(), pred);
+  return std::ranges::count_if(events_, pred);
 }
 
 size_t deterministic::mail_count(const strong_actor_ptr& receiver) {

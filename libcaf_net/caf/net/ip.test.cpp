@@ -21,7 +21,7 @@ struct fixture {
   }
 
   bool contains(ip_address x) {
-    return std::count(addrs.begin(), addrs.end(), x) > 0;
+    return std::ranges::count(addrs, x) > 0;
   }
 
   ip_address v4_any_addr;

@@ -12,6 +12,8 @@
 
 #include "caf/flow/multicaster.hpp"
 
+#include <algorithm>
+
 using namespace caf;
 using namespace std::literals;
 
@@ -20,8 +22,9 @@ namespace {
 template <class T>
 auto to_bytes(const T& data) {
   std::vector<std::byte> byte_arr;
-  std::transform(data.begin(), data.end(), std::back_inserter(byte_arr),
-                 [](auto element) { return static_cast<std::byte>(element); });
+  std::ranges::transform(data, std::back_inserter(byte_arr), [](auto element) {
+    return static_cast<std::byte>(element);
+  });
   return byte_arr;
 }
 
