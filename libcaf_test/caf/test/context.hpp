@@ -6,12 +6,12 @@
 
 #include "caf/test/fwd.hpp"
 
-#include "caf/detail/source_location.hpp"
 #include "caf/detail/test_export.hpp"
 #include "caf/raise_error.hpp"
 
 #include <map>
 #include <memory>
+#include <source_location>
 #include <string_view>
 #include <vector>
 
@@ -94,7 +94,7 @@ public:
   /// Returns a new block with the given ID or creates a new one if necessary.
   template <class T>
   T* get(int id, std::string_view description,
-         const detail::source_location& loc) {
+         const std::source_location& loc) {
     auto& result = steps[std::make_pair(id, example_id)];
     if (!result) {
       result = std::make_unique<T>(this, id, description, loc);

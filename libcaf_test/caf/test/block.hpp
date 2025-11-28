@@ -6,10 +6,10 @@
 
 #include "caf/test/fwd.hpp"
 
-#include "caf/detail/source_location.hpp"
 #include "caf/detail/test_export.hpp"
 
 #include <algorithm>
+#include <source_location>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -23,7 +23,7 @@ public:
   // Note: the context owns the block. Hence, we can use a raw pointer for
   //       pointing back to the parent object here.
   block(context* ctx, int id, std::string_view description,
-        const detail::source_location& loc);
+        const std::source_location& loc);
 
   virtual ~block();
 
@@ -41,7 +41,7 @@ public:
   }
 
   /// Returns the source location of this block.
-  const detail::source_location& location() const noexcept {
+  const std::source_location& location() const noexcept {
     return loc_;
   }
 
@@ -66,7 +66,7 @@ public:
 
   template <class T>
   T* get_nested(int id, std::string_view description,
-                const detail::source_location& loc) {
+                const std::source_location& loc) {
     auto& result = get_nested_or_construct(id);
     if (!result) {
       result = std::make_unique<T>(ctx_, id, description, loc);
@@ -79,36 +79,36 @@ public:
   }
 
   virtual section* get_section(int id, std::string_view description,
-                               const detail::source_location& loc
-                               = detail::source_location::current());
+                               const std::source_location& loc
+                               = std::source_location::current());
 
-  virtual given* get_given(int id, std::string_view description,
-                           const detail::source_location& loc
-                           = detail::source_location::current());
+  virtual given*
+  get_given(int id, std::string_view description,
+            const std::source_location& loc = std::source_location::current());
 
   virtual and_given* get_and_given(int id, std::string_view description,
-                                   const detail::source_location& loc
-                                   = detail::source_location::current());
+                                   const std::source_location& loc
+                                   = std::source_location::current());
 
-  virtual when* get_when(int id, std::string_view description,
-                         const detail::source_location& loc
-                         = detail::source_location::current());
+  virtual when*
+  get_when(int id, std::string_view description,
+           const std::source_location& loc = std::source_location::current());
 
   virtual and_when* get_and_when(int id, std::string_view description,
-                                 const detail::source_location& loc
-                                 = detail::source_location::current());
+                                 const std::source_location& loc
+                                 = std::source_location::current());
 
-  virtual then* get_then(int id, std::string_view description,
-                         const detail::source_location& loc
-                         = detail::source_location::current());
+  virtual then*
+  get_then(int id, std::string_view description,
+           const std::source_location& loc = std::source_location::current());
 
   virtual and_then* get_and_then(int id, std::string_view description,
-                                 const detail::source_location& loc
-                                 = detail::source_location::current());
+                                 const std::source_location& loc
+                                 = std::source_location::current());
 
-  virtual but* get_but(int id, std::string_view description,
-                       const detail::source_location& loc
-                       = detail::source_location::current());
+  virtual but*
+  get_but(int id, std::string_view description,
+          const std::source_location& loc = std::source_location::current());
 
 protected:
   std::unique_ptr<block>& get_nested_or_construct(int id);
@@ -120,7 +120,7 @@ protected:
   bool active_ = false;
   bool executed_ = false;
   std::vector<block*> nested_;
-  detail::source_location loc_;
+  std::source_location loc_;
   std::vector<std::string> parameter_names_;
 
 private:

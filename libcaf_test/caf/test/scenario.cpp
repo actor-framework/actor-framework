@@ -19,22 +19,22 @@ block_type scenario::type() const noexcept {
 }
 
 given* scenario::get_given(int id, std::string_view description,
-                           const detail::source_location& loc) {
+                           const std::source_location& loc) {
   return get_nested<given>(id, description, loc);
 }
 
 and_given* scenario::get_and_given(int id, std::string_view description,
-                                   const detail::source_location& loc) {
+                                   const std::source_location& loc) {
   return get_nested<and_given>(id, description, loc);
 }
 
 when* scenario::get_when(int id, std::string_view description,
-                         const detail::source_location& loc) {
+                         const std::source_location& loc) {
   return get_nested<when>(id, description, loc);
 }
 
 and_when* scenario::get_and_when(int id, std::string_view description,
-                                 const detail::source_location& loc) {
+                                 const std::source_location& loc) {
   return get_nested<and_when>(id, description, loc);
 }
 

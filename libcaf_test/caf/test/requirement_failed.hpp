@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "caf/detail/source_location.hpp"
 #include "caf/detail/test_export.hpp"
 
+#include <source_location>
 #include <string>
 
 namespace caf::test {
@@ -24,26 +24,26 @@ public:
   std::string message() const;
 
   /// Returns the source location of the error.
-  constexpr const detail::source_location& location() const noexcept {
+  constexpr const std::source_location& location() const noexcept {
     return loc_;
   }
 
   /// Throws a `requirement_failed` to indicate that requirement check failed.
-  [[noreturn]] static void raise(const detail::source_location& loc
-                                 = detail::source_location::current()) {
+  [[noreturn]] static void
+  raise(const std::source_location& loc = std::source_location::current()) {
     raise_impl(loc);
   }
 
 private:
   constexpr explicit requirement_failed(
-    const detail::source_location& loc) noexcept
+    const std::source_location& loc) noexcept
     : loc_(loc) {
     // nop
   }
 
-  [[noreturn]] static void raise_impl(const detail::source_location& loc);
+  [[noreturn]] static void raise_impl(const std::source_location& loc);
 
-  detail::source_location loc_;
+  std::source_location loc_;
 };
 
 } // namespace caf::test

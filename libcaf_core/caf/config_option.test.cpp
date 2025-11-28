@@ -56,8 +56,8 @@ OUTLINE("config options parse their parameters for long, short and env names") {
         check_eq(ename, uut.env_var_name_cstr());
         log::test::debug("copying config options must return equal objects");
         auto equal_to_uut = [&uut, this](const config_option& other,
-                                         const detail::source_location& loc
-                                         = detail::source_location::current()) {
+                                         const std::source_location& loc
+                                         = std::source_location::current()) {
           check_eq(uut.category(), other.category(), loc);
           check_eq(uut.long_name(), other.long_name(), loc);
           check_eq(uut.short_names(), other.short_names(), loc);

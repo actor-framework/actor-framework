@@ -8,11 +8,11 @@
 #include "caf/test/test.hpp"
 
 #include "caf/config_value.hpp"
-#include "caf/detail/source_location.hpp"
 #include "caf/log/test.hpp"
 #include "caf/parser_state.hpp"
 #include "caf/pec.hpp"
 
+#include <source_location>
 #include <string_view>
 
 using namespace caf;
@@ -68,9 +68,9 @@ struct test_consumer {
 };
 
 struct fixture : test::fixture::deterministic {
-  expected<log_type> parse(std::string_view str, bool expect_success = true,
-                           caf::detail::source_location loc
-                           = caf::detail::source_location::current()) {
+  expected<log_type>
+  parse(std::string_view str, bool expect_success = true,
+        std::source_location loc = std::source_location::current()) {
     test_consumer f;
     string_parser_state res{str.begin(), str.end()};
     detail::parser::read_config(res, f);

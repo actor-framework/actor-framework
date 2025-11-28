@@ -17,12 +17,12 @@ block_type given::type() const noexcept {
 }
 
 when* given::get_when(int id, std::string_view description,
-                      const detail::source_location& loc) {
+                      const std::source_location& loc) {
   return get_nested<when>(id, description, loc);
 }
 
 and_when* given::get_and_when(int id, std::string_view description,
-                              const detail::source_location& loc) {
+                              const std::source_location& loc) {
   auto* result = ctx_->get<and_when>(id, description, loc);
   if (nested_.empty()) {
     nesting_error::raise_invalid_sequence(block_type::when,

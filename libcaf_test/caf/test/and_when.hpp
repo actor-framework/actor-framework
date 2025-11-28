@@ -18,10 +18,10 @@ public:
   block_type type() const noexcept override;
 
   then* get_then(int id, std::string_view description,
-                 const detail::source_location& loc) override;
+                 const std::source_location& loc) override;
 
   and_then* get_and_then(int id, std::string_view description,
-                         const detail::source_location& loc) override;
+                         const std::source_location& loc) override;
 
   scope commit();
 };

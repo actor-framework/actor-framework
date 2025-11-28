@@ -17,13 +17,13 @@
 #include "caf/deep_to_string.hpp"
 #include "caf/detail/format.hpp"
 #include "caf/detail/scope_guard.hpp"
-#include "caf/detail/source_location.hpp"
 #include "caf/detail/test_export.hpp"
 #include "caf/expected.hpp"
 #include "caf/format_string_with_location.hpp"
 #include "caf/log/level.hpp"
 #include "caf/raise_error.hpp"
 
+#include <source_location>
 #include <string_view>
 
 namespace caf::test {
@@ -40,8 +40,7 @@ public:
   /// @param root_type The type of the root block.
   /// @param loc The source location of the test or scenario.
   runnable(context_ptr ctx, std::string_view description, block_type root_type,
-           const detail::source_location& loc
-           = detail::source_location::current())
+           const std::source_location& loc = std::source_location::current())
     : ctx_(std::move(ctx)),
       description_(description),
       root_type_(root_type),
@@ -62,8 +61,8 @@ public:
   /// Checks whether `lhs` and `rhs` are equal.
   template <class T0, class T1>
   bool check_eq(const T0& lhs, const T1& rhs,
-                const detail::source_location& location
-                = detail::source_location::current()) {
+                const std::source_location& location
+                = std::source_location::current()) {
     assert_save_comparison<T0, T1>();
     static_assert(
       !(std::is_floating_point_v<T0> && std::is_floating_point_v<T1>),
@@ -80,8 +79,8 @@ public:
   /// Checks whether `lhs` and `rhs` are unequal.
   template <class T0, class T1>
   bool check_ne(const T0& lhs, const T1& rhs,
-                const detail::source_location& location
-                = detail::source_location::current()) {
+                const std::source_location& location
+                = std::source_location::current()) {
     assert_save_comparison<T0, T1>();
     if (lhs != rhs) {
       reporter::instance().pass(location);
@@ -95,8 +94,8 @@ public:
   /// Checks whether `lhs` is less than `rhs`.
   template <class T0, class T1>
   bool check_lt(const T0& lhs, const T1& rhs,
-                const detail::source_location& location
-                = detail::source_location::current()) {
+                const std::source_location& location
+                = std::source_location::current()) {
     assert_save_comparison<T0, T1>();
     if (lhs < rhs) {
       reporter::instance().pass(location);
@@ -110,8 +109,8 @@ public:
   /// Checks whether `lhs` less than or equal to `rhs`.
   template <class T0, class T1>
   bool check_le(const T0& lhs, const T1& rhs,
-                const detail::source_location& location
-                = detail::source_location::current()) {
+                const std::source_location& location
+                = std::source_location::current()) {
     assert_save_comparison<T0, T1>();
     if (lhs <= rhs) {
       reporter::instance().pass(location);
@@ -125,8 +124,8 @@ public:
   /// Checks whether `lhs` is greater than `rhs`.
   template <class T0, class T1>
   bool check_gt(const T0& lhs, const T1& rhs,
-                const detail::source_location& location
-                = detail::source_location::current()) {
+                const std::source_location& location
+                = std::source_location::current()) {
     assert_save_comparison<T0, T1>();
     if (lhs > rhs) {
       reporter::instance().pass(location);
@@ -140,8 +139,8 @@ public:
   /// Checks whether `lhs` greater than or equal to `rhs`.
   template <class T0, class T1>
   bool check_ge(const T0& lhs, const T1& rhs,
-                const detail::source_location& location
-                = detail::source_location::current()) {
+                const std::source_location& location
+                = std::source_location::current()) {
     assert_save_comparison<T0, T1>();
     if (lhs >= rhs) {
       reporter::instance().pass(location);
@@ -153,14 +152,14 @@ public:
   }
 
   /// Checks whether `value` is `true`.
-  bool check(bool value, const detail::source_location& location
-                         = detail::source_location::current());
+  bool check(bool value, const std::source_location& location
+                         = std::source_location::current());
 
   /// Checks whether `what` holds a value.
   template <class T>
-  bool check_has_value(const expected<T>& what,
-                       const detail::source_location& location
-                       = detail::source_location::current()) {
+  bool
+  check_has_value(const expected<T>& what, const std::source_location& location
+                                           = std::source_location::current()) {
     if (what.has_value()) {
       reporter::instance().pass(location);
       return true;
@@ -174,8 +173,8 @@ public:
   /// Evaluates whether `lhs` and `rhs` are equal and fails otherwise.
   template <class T0, class T1>
   void require_eq(const T0& lhs, const T1& rhs,
-                  const detail::source_location& location
-                  = detail::source_location::current()) {
+                  const std::source_location& location
+                  = std::source_location::current()) {
     if (!check_eq(lhs, rhs, location))
       requirement_failed::raise(location);
   }
@@ -183,8 +182,8 @@ public:
   /// Evaluates whether `lhs` and `rhs` are unequal and fails otherwise.
   template <class T0, class T1>
   void require_ne(const T0& lhs, const T1& rhs,
-                  const detail::source_location& location
-                  = detail::source_location::current()) {
+                  const std::source_location& location
+                  = std::source_location::current()) {
     if (!check_ne(lhs, rhs, location))
       requirement_failed::raise(location);
   }
@@ -192,8 +191,8 @@ public:
   /// Evaluates whether `lhs` is less than `rhs` and fails otherwise
   template <class T0, class T1>
   void require_lt(const T0& lhs, const T1& rhs,
-                  const detail::source_location& location
-                  = detail::source_location::current()) {
+                  const std::source_location& location
+                  = std::source_location::current()) {
     if (!check_lt(lhs, rhs, location))
       requirement_failed::raise(location);
   }
@@ -201,8 +200,8 @@ public:
   /// Evaluates whether `lhs` less than or equal to `rhs` and fails otherwise.
   template <class T0, class T1>
   void require_le(const T0& lhs, const T1& rhs,
-                  const detail::source_location& location
-                  = detail::source_location::current()) {
+                  const std::source_location& location
+                  = std::source_location::current()) {
     if (!check_le(lhs, rhs, location))
       requirement_failed::raise(location);
   }
@@ -210,8 +209,8 @@ public:
   /// Evaluates whether `lhs` is greater than `rhs` and fails otherwise.
   template <class T0, class T1>
   void require_gt(const T0& lhs, const T1& rhs,
-                  const detail::source_location& location
-                  = detail::source_location::current()) {
+                  const std::source_location& location
+                  = std::source_location::current()) {
     if (!check_gt(lhs, rhs, location))
       requirement_failed::raise(location);
   }
@@ -220,15 +219,15 @@ public:
   /// otherwise.
   template <class T0, class T1>
   void require_ge(const T0& lhs, const T1& rhs,
-                  const detail::source_location& location
-                  = detail::source_location::current()) {
+                  const std::source_location& location
+                  = std::source_location::current()) {
     if (!check_ge(lhs, rhs, location))
       requirement_failed::raise(location);
   }
 
   /// Evaluates whether `value` is `true` and fails otherwise.
-  void require(bool value, const detail::source_location& location
-                           = detail::source_location::current());
+  void require(bool value, const std::source_location& location
+                           = std::source_location::current());
 
   /// Returns the `runnable` instance that is currently running.
   static runnable& current();
@@ -236,8 +235,8 @@ public:
   block& current_block();
 
   template <class Expr>
-  void should_fail(Expr&& expr, const caf::detail::source_location& location
-                                = caf::detail::source_location::current()) {
+  void should_fail(Expr&& expr, const std::source_location& location
+                                = std::source_location::current()) {
     auto& rep = reporter::instance();
     auto lvl = rep.verbosity(log::level::quiet);
     auto before = rep.test_stats();
@@ -290,8 +289,8 @@ public:
 
   /// Checks whether `expr()` throws an exception of type `Exception`.
   template <class Exception = void, class Expr>
-  void check_throws(Expr&& expr, const detail::source_location& location
-                                 = detail::source_location::current()) {
+  void check_throws(Expr&& expr, const std::source_location& location
+                                 = std::source_location::current()) {
     if constexpr (std::is_same_v<Exception, void>) {
       try {
         expr();
@@ -317,9 +316,9 @@ public:
   /// Checks whether `expr()` throws an exception of type `Exception` and
   /// increases the failure count.
   template <class Exception = void, class Expr>
-  void should_fail_with_exception(Expr&& expr,
-                                  const caf::detail::source_location& location
-                                  = caf::detail::source_location::current()) {
+  void
+  should_fail_with_exception(Expr&& expr, const std::source_location& location
+                                          = std::source_location::current()) {
     auto& rep = reporter::instance();
     auto before = rep.test_stats();
     auto lvl = rep.verbosity(log::level::quiet);
@@ -365,7 +364,7 @@ protected:
   context_ptr ctx_;
   std::string_view description_;
   block_type root_type_;
-  detail::source_location loc_;
+  std::source_location loc_;
 
 private:
   /// Runs the next branch of the test.

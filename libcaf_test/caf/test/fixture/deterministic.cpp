@@ -14,7 +14,6 @@
 #include "caf/detail/assert.hpp"
 #include "caf/detail/mailbox_factory.hpp"
 #include "caf/detail/print.hpp"
-#include "caf/detail/source_location.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/detail/test_export.hpp"
 #include "caf/log/test.hpp"
@@ -25,6 +24,7 @@
 #include <cassert>
 #include <memory>
 #include <numeric>
+#include <source_location>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -168,7 +168,7 @@ public:
   /// `current_time` to the time point of the triggered timeout unless
   /// `current_time` is already set to a later time.
   /// @returns Whether a timeout was triggered.
-  bool trigger_timeout(const detail::source_location& loc) {
+  bool trigger_timeout(const std::source_location& loc) {
     drop_disposed();
     if (num_timeouts() == 0) {
       log::test::debug({"no pending timeout to trigger", loc});
@@ -189,7 +189,7 @@ public:
   /// `current_time` to the time point of the latest timeout unless
   /// `current_time` is already set to a later time.
   /// @returns The number of triggered timeouts.
-  size_t trigger_all_timeouts(const detail::source_location& loc) {
+  size_t trigger_all_timeouts(const std::source_location& loc) {
     drop_disposed();
     if (num_timeouts() == 0)
       return 0;
@@ -204,7 +204,7 @@ public:
 
   /// Advances the time by `x` and dispatches timeouts and delayed messages.
   /// @returns The number of triggered timeouts.
-  size_t advance_time(duration_type x, const detail::source_location& loc) {
+  size_t advance_time(duration_type x, const std::source_location& loc) {
     log::test::debug({"advance time by {}", loc}, duration_to_string(x));
     if (x.count() <= 0) {
       runnable::current().fail(
@@ -224,7 +224,7 @@ public:
   /// Sets the current time.
   /// @returns The number of triggered timeouts.
   size_t set_time(actor_clock::time_point value,
-                  const detail::source_location& loc) {
+                  const std::source_location& loc) {
     auto diff = value - current_time;
     if (diff.count() > 0)
       return advance_time(value - current_time, loc);
@@ -250,7 +250,7 @@ public:
   }
 
   /// Returns the time of the next pending timeout.
-  time_point next_timeout(const detail::source_location& loc) {
+  time_point next_timeout(const std::source_location& loc) {
     auto i = std::find_if(actions.begin(), actions.end(), is_not_disposed);
     if (i == actions.end())
       runnable::current().fail({"no pending timeout found", loc});
@@ -258,7 +258,7 @@ public:
   }
 
   /// Returns the time of the last pending timeout.
-  time_point last_timeout(const detail::source_location& loc) {
+  time_point last_timeout(const std::source_location& loc) {
     auto i = std::find_if(actions.rbegin(), actions.rend(), is_not_disposed);
     if (i == actions.rend())
       runnable::current().fail({"no pending timeout found", loc});
@@ -563,23 +563,23 @@ void deterministic::inject_exit(const strong_actor_ptr& hdl, error reason) {
 // -- time management ----------------------------------------------------------
 
 size_t deterministic::set_time(actor_clock::time_point value,
-                               const detail::source_location& loc) {
+                               const std::source_location& loc) {
   auto& clock = dynamic_cast<deterministic_actor_clock&>(sys.clock());
   return clock.set_time(value, loc);
 }
 
 size_t deterministic::advance_time(actor_clock::duration_type amount,
-                                   const detail::source_location& loc) {
+                                   const std::source_location& loc) {
   auto& clock = dynamic_cast<deterministic_actor_clock&>(sys.clock());
   return clock.advance_time(amount, loc);
 }
 
-bool deterministic::trigger_timeout(const detail::source_location& loc) {
+bool deterministic::trigger_timeout(const std::source_location& loc) {
   auto& clock = dynamic_cast<deterministic_actor_clock&>(sys.clock());
   return clock.trigger_timeout(loc);
 }
 
-size_t deterministic::trigger_all_timeouts(const detail::source_location& loc) {
+size_t deterministic::trigger_all_timeouts(const std::source_location& loc) {
   auto& clock = dynamic_cast<deterministic_actor_clock&>(sys.clock());
   return clock.trigger_all_timeouts(loc);
 }
@@ -590,13 +590,13 @@ size_t deterministic::num_timeouts() noexcept {
 }
 
 actor_clock::time_point
-deterministic::next_timeout(const detail::source_location& loc) {
+deterministic::next_timeout(const std::source_location& loc) {
   auto& clock = dynamic_cast<deterministic_actor_clock&>(sys.clock());
   return clock.next_timeout(loc);
 }
 
 actor_clock::time_point
-deterministic::last_timeout(const detail::source_location& loc) {
+deterministic::last_timeout(const std::source_location& loc) {
   auto& clock = dynamic_cast<deterministic_actor_clock&>(sys.clock());
   return clock.last_timeout(loc);
 }

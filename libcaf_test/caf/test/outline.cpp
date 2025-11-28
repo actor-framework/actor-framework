@@ -11,22 +11,22 @@ block_type outline::type() const noexcept {
 }
 
 given* outline::get_given(int id, std::string_view description,
-                          const detail::source_location& loc) {
+                          const std::source_location& loc) {
   return get_nested<given>(id, description, loc);
 }
 
 and_given* outline::get_and_given(int id, std::string_view description,
-                                  const detail::source_location& loc) {
+                                  const std::source_location& loc) {
   return get_nested<and_given>(id, description, loc);
 }
 
 when* outline::get_when(int id, std::string_view description,
-                        const detail::source_location& loc) {
+                        const std::source_location& loc) {
   return get_nested<when>(id, description, loc);
 }
 
 and_when* outline::get_and_when(int id, std::string_view description,
-                                const detail::source_location& loc) {
+                                const std::source_location& loc) {
   return get_nested<and_when>(id, description, loc);
 }
 

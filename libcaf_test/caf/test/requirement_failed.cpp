@@ -13,7 +13,7 @@ std::string requirement_failed::message() const {
 }
 
 [[noreturn]] void
-requirement_failed::raise_impl(const detail::source_location& loc) {
+requirement_failed::raise_impl(const std::source_location& loc) {
 #ifdef CAF_ENABLE_EXCEPTIONS
   throw requirement_failed{loc};
 #else

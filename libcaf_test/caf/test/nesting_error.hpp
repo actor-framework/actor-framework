@@ -6,8 +6,9 @@
 
 #include "caf/test/block_type.hpp"
 
-#include "caf/detail/source_location.hpp"
 #include "caf/detail/test_export.hpp"
+
+#include <source_location>
 
 namespace caf::test {
 
@@ -34,7 +35,7 @@ public:
   }
 
   /// Returns the source location of the error.
-  constexpr const detail::source_location& location() const noexcept {
+  constexpr const std::source_location& location() const noexcept {
     return loc_;
   }
 
@@ -42,17 +43,16 @@ public:
   /// `parent`.
   [[noreturn]] static void
   raise_not_allowed(block_type parent, block_type child,
-                    const detail::source_location& loc
-                    = detail::source_location::current()) {
+                    const std::source_location& loc
+                    = std::source_location::current()) {
     raise_impl(code::not_allowed, parent, child, loc);
   }
 
   /// Throws a `nesting_error` to indicate that `parent` is not allowing
   /// additional blocks of type `child`.
-  [[noreturn]] static void
-  raise_too_many(block_type parent, block_type child,
-                 const detail::source_location& loc
-                 = detail::source_location::current()) {
+  [[noreturn]] static void raise_too_many(block_type parent, block_type child,
+                                          const std::source_location& loc
+                                          = std::source_location::current()) {
     raise_impl(code::too_many, parent, child, loc);
   }
 
@@ -60,8 +60,8 @@ public:
   /// block prior to it.
   [[noreturn]] static void
   raise_invalid_sequence(block_type parent, block_type child,
-                         const detail::source_location& loc
-                         = detail::source_location::current()) {
+                         const std::source_location& loc
+                         = std::source_location::current()) {
     raise_impl(code::invalid_sequence, parent, child, loc);
   }
 
@@ -73,19 +73,19 @@ private:
   };
 
   constexpr nesting_error(code what, block_type parent, block_type child,
-                          const detail::source_location& loc) noexcept
+                          const std::source_location& loc) noexcept
     : code_(what), parent_(parent), child_(child), loc_(loc) {
     // nop
   }
 
   [[noreturn]] static void raise_impl(code what, block_type parent,
                                       block_type child,
-                                      const detail::source_location& loc);
+                                      const std::source_location& loc);
 
   code code_;
   block_type parent_;
   block_type child_;
-  detail::source_location loc_;
+  std::source_location loc_;
 };
 
 } // namespace caf::test
