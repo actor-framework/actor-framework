@@ -176,30 +176,6 @@ void local_actor::on_cleanup([[maybe_unused]] const error& reason) {
 
 // -- send functions -----------------------------------------------------------
 
-void local_actor::do_send(abstract_actor* receiver, message_priority priority,
-                          message&& msg) {
-  if (receiver != nullptr) {
-    auto item = make_mailbox_element(ctrl(), make_message_id(priority),
-                                     std::move(msg));
-    receiver->enqueue(std::move(item), context());
-    return;
-  }
-  system().base_metrics().rejected_messages->inc();
-}
-
-disposable local_actor::do_scheduled_send(strong_actor_ptr receiver,
-                                          message_priority priority,
-                                          actor_clock::time_point timeout,
-                                          message&& msg) {
-  if (receiver != nullptr) {
-    auto item = make_mailbox_element(ctrl(), make_message_id(priority),
-                                     std::move(msg));
-    return clock().schedule_message(timeout, receiver, std::move(item));
-  }
-  system().base_metrics().rejected_messages->inc();
-  return {};
-}
-
 void local_actor::do_anon_send(abstract_actor* receiver,
                                message_priority priority, message&& msg) {
   if (receiver != nullptr) {
