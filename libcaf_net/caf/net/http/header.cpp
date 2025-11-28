@@ -7,6 +7,8 @@
 #include "caf/logger.hpp"
 #include "caf/string_algorithms.hpp"
 
+#include <algorithm>
+
 namespace caf::net::http {
 
 namespace {
@@ -78,8 +80,7 @@ void header::clear() noexcept {
 // Note: does not take ownership of the data.
 expected<std::string_view> header::parse_fields(std::string_view data) {
   auto remainder = process_lines(data, [this](std::string_view line) {
-    if (auto sep = std::find(line.begin(), line.end(), ':');
-        sep != line.end()) {
+    if (auto sep = std::ranges::find(line, ':'); sep != line.end()) {
       auto n = static_cast<size_t>(std::distance(line.begin(), sep));
       auto key = trim(std::string_view{line.data(), n});
       auto m = static_cast<size_t>(std::distance(sep + 1, line.end()));

@@ -350,8 +350,7 @@ connection_state instance::handle(scheduler* ctx, connection_handle hdl,
       else
         whitelist.emplace_back(
           std::string{defaults::middleman::app_identifier});
-      auto i = std::find_first_of(app_ids.begin(), app_ids.end(),
-                                  whitelist.begin(), whitelist.end());
+      auto i = std::ranges::find_first_of(app_ids, whitelist);
       if (i == app_ids.end()) {
         log::io::warning("refuse to connect to server due to app ID mismatch: "
                          "app_ids = {} whitelist = {}",

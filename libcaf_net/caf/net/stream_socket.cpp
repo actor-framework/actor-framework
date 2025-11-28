@@ -14,6 +14,7 @@
 #include "caf/internal/socket_sys_includes.hpp"
 #include "caf/log/net.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <span>
 
@@ -177,7 +178,7 @@ ptrdiff_t write(stream_socket x, std::initializer_list<const_byte_span> bufs) {
     return WSABUF{static_cast<ULONG>(buf.size()),
                   reinterpret_cast<CHAR*>(data)};
   };
-  std::transform(bufs.begin(), bufs.end(), std::begin(buf_array), convert);
+  std::ranges::transform(bufs, std::begin(buf_array), convert);
   DWORD bytes_sent = 0;
   auto res = WSASend(x.id, buf_array, static_cast<DWORD>(bufs.size()),
                      &bytes_sent, 0, nullptr, nullptr);
@@ -192,7 +193,7 @@ ptrdiff_t write(stream_socket x, std::initializer_list<const_byte_span> bufs) {
   auto convert = [](const_byte_span buf) {
     return iovec{const_cast<std::byte*>(buf.data()), buf.size()};
   };
-  std::transform(bufs.begin(), bufs.end(), std::begin(buf_array), convert);
+  std::ranges::transform(bufs, std::begin(buf_array), convert);
   return writev(x.id, buf_array, static_cast<int>(bufs.size()));
 }
 

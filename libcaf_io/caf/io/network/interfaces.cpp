@@ -147,8 +147,8 @@ namespace {
 
 template <class F>
 void traverse_impl(std::initializer_list<protocol::network> ps, F f) {
-  auto get_ipv4 = std::find(ps.begin(), ps.end(), protocol::ipv4) != ps.end();
-  auto get_ipv6 = std::find(ps.begin(), ps.end(), protocol::ipv6) != ps.end();
+  auto get_ipv4 = std::ranges::find(ps, protocol::ipv4) != ps.end();
+  auto get_ipv6 = std::ranges::find(ps, protocol::ipv6) != ps.end();
   for_each_address(get_ipv4, get_ipv6, f);
 }
 

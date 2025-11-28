@@ -30,7 +30,7 @@ void prettify_type_name(std::string& class_name) {
   while (class_name[0] == '.' || class_name[0] == ' ')
     class_name.erase(class_name.begin());
   // Drop template parameters, only leaving the template class name.
-  auto i = std::find(class_name.begin(), class_name.end(), '<');
+  auto i = std::ranges::find(class_name, '<');
   if (i != class_name.end())
     class_name.erase(i, class_name.end());
   // Finally, replace any whitespace with %20 (should never happen).

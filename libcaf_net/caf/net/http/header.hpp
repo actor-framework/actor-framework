@@ -10,6 +10,7 @@
 #include "caf/detail/net_export.hpp"
 #include "caf/string_algorithms.hpp"
 
+#include <algorithm>
 #include <string_view>
 #include <vector>
 
@@ -126,7 +127,7 @@ protected:
   // iterator pointing to the found field, or to the end if no field is found.
   fields_map::const_iterator
   find_by_key_icase(std::string_view key) const noexcept {
-    return std::find_if(fields_.begin(), fields_.end(), [&key](const auto& i) {
+    return std::ranges::find_if(fields_, [&key](const auto& i) {
       return icase_equal(i.first, key);
     });
   }

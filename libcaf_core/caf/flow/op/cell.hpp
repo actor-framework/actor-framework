@@ -10,6 +10,7 @@
 #include "caf/flow/subscription.hpp"
 #include "caf/none.hpp"
 
+#include <algorithm>
 #include <memory>
 #include <utility>
 #include <variant>
@@ -104,8 +105,7 @@ public:
   }
 
   void drop(const cell_listener_ptr<T>& listener) {
-    if (auto i = std::find(listeners.begin(), listeners.end(), listener);
-        i != listeners.end())
+    if (auto i = std::ranges::find(listeners, listener); i != listeners.end())
       listeners.erase(i);
   }
 

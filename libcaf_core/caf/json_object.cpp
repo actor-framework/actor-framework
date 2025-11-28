@@ -24,8 +24,7 @@ json_object::json_object() noexcept : obj_(&detail::empty_object_instance) {
 
 json_value json_object::value(std::string_view key) const {
   auto pred = [key](const auto& member) { return member.key == key; };
-  auto i = std::find_if(obj_->begin(), obj_->end(), pred);
-  if (i != obj_->end()) {
+  if (auto i = std::ranges::find_if(*obj_, pred); i != obj_->end()) {
     return {i->val, storage_};
   }
   return json_value::undefined();

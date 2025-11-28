@@ -26,6 +26,7 @@
 #include "caf/sec.hpp"
 #include "caf/send.hpp"
 
+#include <algorithm>
 #include <chrono>
 #include <limits>
 
@@ -243,7 +244,7 @@ behavior basp_broker::make_behavior() {
       if (i == node_observers.end())
         return;
       auto& observers = i->second;
-      auto j = std::find(observers.begin(), observers.end(), observer);
+      auto j = std::ranges::find(observers, observer);
       if (j != observers.end()) {
         observers.erase(j);
         if (observers.empty())
