@@ -14,6 +14,7 @@
 #include "caf/scheduled_actor/flow.hpp"
 #include "caf/uuid.hpp"
 
+#include <algorithm>
 #include <cassert>
 #include <iostream>
 #include <span>
@@ -108,7 +109,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
                 // Interpret the bytes as ASCII characters.
                 auto bytes = frame.bytes();
                 auto str = caf::to_string_view(bytes);
-                if (std::all_of(str.begin(), str.end(), ::isprint)) {
+                if (std::ranges::all_of(str, ::isprint)) {
                   self->println("{}", str);
                 } else {
                   self->println("<non-ascii-data of size {}>", bytes.size());

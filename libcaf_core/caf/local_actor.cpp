@@ -23,6 +23,7 @@
 #include "caf/telemetry/metric_family.hpp"
 #include "caf/telemetry/metric_family_impl.hpp"
 
+#include <algorithm>
 #include <condition_variable>
 #include <string>
 
@@ -39,9 +40,8 @@ local_actor::metrics_t make_instance_metrics(actor_system& sys,
     // Note: name.data() is guaranteed to be null-terminated in this case.
     return detail::glob_match(name.data(), glob.c_str());
   };
-  if (includes.empty()
-      || std::none_of(includes.begin(), includes.end(), matches)
-      || std::any_of(excludes.begin(), excludes.end(), matches))
+  if (includes.empty() || std::ranges::none_of(includes, matches)
+      || std::ranges::any_of(excludes, matches))
     return {
       nullptr,
       nullptr,

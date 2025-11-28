@@ -39,7 +39,7 @@ public:
 
   bool disposed() const noexcept {
     auto is_disposed = [](const disposable& entry) { return entry.disposed(); };
-    return std::all_of(entries_.begin(), entries_.end(), is_disposed);
+    return std::ranges::all_of(entries_, is_disposed);
   }
 
   void ref_disposable() const noexcept {

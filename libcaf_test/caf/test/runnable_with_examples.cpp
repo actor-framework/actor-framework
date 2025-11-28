@@ -6,6 +6,8 @@
 
 #include "caf/string_algorithms.hpp"
 
+#include <algorithm>
+
 namespace {
 
 void trim_all(std::vector<std::string_view>& elements) {
@@ -46,7 +48,7 @@ runnable_with_examples::examples_setter::operator=(std::string_view str) {
   auto is_valid_line = [](std::string_view line) {
     return line.size() > 2 && line.front() == '|' && line.back() == '|';
   };
-  if (!std::all_of(lines.begin(), lines.end(), is_valid_line))
+  if (!std::ranges::all_of(lines, is_valid_line))
     CAF_RAISE_ERROR(std::logic_error, "invalid examples table: syntax error");
   // Strip the leading and trailing pipes.
   for (auto& line : lines)
@@ -56,7 +58,7 @@ runnable_with_examples::examples_setter::operator=(std::string_view str) {
   std::vector<std::string_view> names;
   split(names, lines.front(), '|');
   trim_all(names);
-  if (!std::all_of(names.begin(), names.end(), is_non_empty))
+  if (!std::ranges::all_of(names, is_non_empty))
     CAF_RAISE_ERROR(std::logic_error,
                     "invalid examples table: empty column names");
   if (has_duplicates(names))

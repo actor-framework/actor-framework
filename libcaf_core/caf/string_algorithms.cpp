@@ -7,6 +7,8 @@
 #include "caf/byte_span.hpp"
 #include "caf/detail/append_hex.hpp"
 
+#include <algorithm>
+
 namespace caf {
 
 namespace {
@@ -56,7 +58,7 @@ void split(std::vector<std::string_view>& result, std::string_view str,
 
 std::string_view trim(std::string_view str) {
   auto non_whitespace = [](char c) { return !isspace(c); };
-  if (std::any_of(str.begin(), str.end(), non_whitespace)) {
+  if (std::ranges::any_of(str, non_whitespace)) {
     while (std::isspace(static_cast<unsigned char>(str.front())))
       str.remove_prefix(1);
     while (std::isspace(static_cast<unsigned char>(str.back())))

@@ -18,6 +18,7 @@
 #include "caf/raise_error.hpp"
 #include "caf/term.hpp"
 
+#include <algorithm>
 #include <iostream>
 
 namespace caf::test {
@@ -602,10 +603,10 @@ public:
   /// component and log level.
   bool accepts(unsigned level, std::string_view component) override {
     return level <= reporter::instance().verbosity()
-           && !std::any_of(filter_.begin(), filter_.end(),
-                           [component](const std::string& excluded) {
-                             return component == excluded;
-                           });
+           && !std::ranges::any_of(filter_,
+                                   [component](const std::string& excluded) {
+                                     return component == excluded;
+                                   });
   }
 
   // -- initialization ---------------------------------------------------------
