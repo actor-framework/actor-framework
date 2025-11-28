@@ -35,17 +35,18 @@ tcp_acceptor::make_with_cert_file(tcp_accept_socket fd,
                                   format file_format) {
   auto ctx = context::make_server(tls::any);
   if (!ctx) {
-    return {make_error(sec::runtime_error, "unable to create SSL context")};
+    return caf::unexpected{
+      make_error(sec::runtime_error, "unable to create SSL context")};
   }
   if (!ctx->use_certificate_file(cert_file_path, file_format)) {
-    return {format_to_error(sec::runtime_error,
-                            "unable to load certificate file: {}",
-                            ctx->last_error_string())};
+    return caf::unexpected{
+      format_to_error(sec::runtime_error, "unable to load certificate file: {}",
+                      ctx->last_error_string())};
   }
   if (!ctx->use_private_key_file(key_file_path, file_format)) {
-    return {format_to_error(sec::runtime_error,
-                            "unable to load private key file: {}",
-                            ctx->last_error_string())};
+    return caf::unexpected{
+      format_to_error(sec::runtime_error, "unable to load private key file: {}",
+                      ctx->last_error_string())};
   }
   return {tcp_acceptor{fd, std::move(*ctx)}};
 }
@@ -58,7 +59,7 @@ tcp_acceptor::make_with_cert_file(uint16_t port, const char* cert_file_path,
     return tcp_acceptor::make_with_cert_file(*fd, cert_file_path, key_file_path,
                                              file_format);
   } else {
-    return {make_error(sec::cannot_open_port)};
+    return caf::unexpected{make_error(sec::cannot_open_port)};
   }
 }
 
@@ -76,7 +77,7 @@ expected<connection> accept(tcp_acceptor& acc) {
   auto fd = accept(acc.fd());
   if (fd)
     return acc.ctx().new_connection(*fd);
-  return expected<connection>{std::move(fd.error())};
+  return caf::unexpected{std::move(fd.error())};
 }
 
 } // namespace caf::net::ssl

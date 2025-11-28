@@ -394,8 +394,9 @@ expected<string> local_addr_of_fd(native_socket fd) {
     default:
       break;
   }
-  return format_to_error(sec::invalid_protocol_family,
-                         "invalid protocol family: {}", sa->sa_family);
+  return caf::unexpected{format_to_error(sec::invalid_protocol_family,
+                                         "invalid protocol family: {}",
+                                         sa->sa_family)};
 }
 
 expected<uint16_t> local_port_of_fd(native_socket fd) {
@@ -423,8 +424,9 @@ expected<string> remote_addr_of_fd(native_socket fd) {
     default:
       break;
   }
-  return format_to_error(sec::invalid_protocol_family,
-                         "invalid protocol family: {}", sa->sa_family);
+  return caf::unexpected{format_to_error(sec::invalid_protocol_family,
+                                         "invalid protocol family: {}",
+                                         sa->sa_family)};
 }
 
 expected<uint16_t> remote_port_of_fd(native_socket fd) {

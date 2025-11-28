@@ -19,6 +19,16 @@
                          "error in function {}: {}", funname,                  \
                          last_socket_error_as_string())
 
+/// Calls a C functions and returns an caf::unexpected if `var op rhs` returns
+/// `true`.
+#define CAF_NET_SYSCALL_TO_UNEXPECTED(funname, var, op, rhs, expr)             \
+  auto var = expr;                                                             \
+  if (var op rhs)                                                              \
+    return caf::unexpected {                                                   \
+      format_to_error(sec::network_syscall_failed, "error in function {}: {}", \
+                      funname, last_socket_error_as_string())                  \
+    }
+
 /// Calls a C functions and calls exit() if `var op rhs` returns `true`.
 #define CAF_NET_CRITICAL_SYSCALL(funname, var, op, rhs, expr)                  \
   auto var = expr;                                                             \

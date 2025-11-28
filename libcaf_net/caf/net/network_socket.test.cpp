@@ -12,9 +12,9 @@ using namespace caf::net;
 TEST("invalid socket") {
   network_socket x;
   check_eq(allow_udp_connreset(x, true), sec::network_syscall_failed);
-  check_eq(send_buffer_size(x), sec::network_syscall_failed);
-  check_eq(local_port(x), sec::network_syscall_failed);
-  check_eq(local_addr(x), sec::network_syscall_failed);
-  check_eq(remote_port(x), sec::network_syscall_failed);
-  check_eq(remote_addr(x), sec::network_syscall_failed);
+  check_eq(send_buffer_size(x), caf::unexpected{sec::network_syscall_failed});
+  check_eq(local_port(x), caf::unexpected{sec::network_syscall_failed});
+  check_eq(local_addr(x), caf::unexpected{sec::network_syscall_failed});
+  check_eq(remote_port(x), caf::unexpected{sec::network_syscall_failed});
+  check_eq(remote_addr(x), caf::unexpected{sec::network_syscall_failed});
 }

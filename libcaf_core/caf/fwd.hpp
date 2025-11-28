@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/detail/build_config.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/typed_actor_pack.hpp"
 
@@ -14,6 +15,10 @@
 #include <string_view>
 #include <utility>
 #include <vector>
+
+#ifdef CAF_USE_STD_EXPECTED
+#  include <expected>
+#endif
 
 namespace caf {
 
@@ -28,7 +33,6 @@ template <class> class basic_cow_string;
 template <class> class callback;
 template <class> class cow_vector;
 template <class> class dictionary;
-template <class> class expected;
 template <class> class function_view;
 template <class> class intrusive_cow_ptr;
 template <class> class intrusive_ptr;
@@ -41,6 +45,10 @@ template <class> struct type_id;
 
 template <uint16_t> struct type_by_id;
 template <uint16_t> struct type_name_by_id;
+
+#ifndef CAF_USE_STD_EXPECTED
+template <class> class expected;
+#endif
 
 // -- 2 param templates --------------------------------------------------------
 
@@ -146,6 +154,10 @@ class uri;
 class uri_builder;
 class uuid;
 
+#ifndef CAF_USE_STD_EXPECTED
+class unexpected;
+#endif
+
 // -- templates with default parameters ----------------------------------------
 
 template <class, class = event_based_actor>
@@ -206,6 +218,13 @@ using ip_endpoint = ipv6_endpoint;
 using ip_subnet = ipv6_subnet;
 using settings = dictionary<config_value>;
 using type_id_t = uint16_t;
+
+#ifdef CAF_USE_STD_EXPECTED
+using unexpected = std::unexpected<error>;
+
+template <class T>
+using expected = std::expected<T, error>;
+#endif
 
 // -- functions ----------------------------------------------------------------
 
