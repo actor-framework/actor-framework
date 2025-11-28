@@ -153,18 +153,18 @@ public:
     auto pending = std::make_shared<size_t>(state_.mids.size());
     auto result_handler = helper::make(pending, state_.in_flight,
                                        std::forward<OnValue>(on_value));
-    auto error_handler = [p{std::move(pending)}, timeout{state_.in_flight},
-                          g{std::forward<OnError>(on_error)}](error&) mutable {
-      if (*p == 0) {
-        // nop
-      } else if (*p == 1) {
-        timeout.dispose();
-        auto err = make_error(sec::all_requests_failed);
-        g(err);
-      } else {
-        --*p;
-      }
-    };
+    auto error_handler
+      = [p{std::move(pending)}, timeout{state_.in_flight},
+         g{std::forward<OnError>(on_error)}](error& err) mutable {
+          if (*p == 0) {
+            // nop
+          } else if (*p == 1) {
+            timeout.dispose();
+            g(err);
+          } else {
+            --*p;
+          }
+        };
     auto bhvr = behavior{std::move(result_handler), std::move(error_handler)};
     for (const auto& mid : state_.mids) {
       auto now = std::chrono::steady_clock::now();

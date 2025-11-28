@@ -258,7 +258,7 @@ TEST("fan_out_request with type mismatch") {
       .receive([this](
                  int results) { fail("expected an error, got: {}", results); },
                [err](error& e) { *err = std::move(e); });
-    check_eq(*err, make_error(sec::all_requests_failed));
+    check_eq(*err, make_error(sec::unexpected_response));
   }
 }
 
@@ -294,7 +294,7 @@ TEST("fan_out_request with timeout") {
       .fan_out_request(workers, 10ms, policy::select_any_tag)
       .receive([sum](int result) { *sum = result; },
                [err](error& e) { *err = std::move(e); });
-    check_eq(*err, make_error(sec::all_requests_failed));
+    check_eq(*err, make_error(sec::request_timeout));
   }
   for (const auto& worker : workers) {
     self->send_exit(worker, exit_reason::user_shutdown);
@@ -488,7 +488,7 @@ TEST("typed fan_out_request with error responses") {
       .receive([this](
                  int results) { fail("expected an error, got: {}", results); },
                [err](error& e) { *err = std::move(e); });
-    check_eq(*err, make_error(sec::all_requests_failed));
+    check_eq(*err, make_error(sec::logic_error));
   }
 }
 
@@ -803,7 +803,7 @@ TEST("delayed fan_out_request with timeout") {
       .fan_out_request(workers, 100ms, policy::select_any_tag)
       .receive([sum](int result) { *sum = result; },
                [err](error& e) { *err = std::move(e); });
-    check_eq(*err, make_error(sec::all_requests_failed));
+    check_eq(*err, make_error(sec::request_timeout));
     auto elapsed = std::chrono::steady_clock::now() - start;
     check_ge(elapsed, 200ms);
     check_le(elapsed, 220ms);
