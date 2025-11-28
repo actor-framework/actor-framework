@@ -37,7 +37,7 @@ void block::on_leave() {
 
 bool block::can_run() const noexcept {
   auto pred = [](const auto* nested) { return nested->can_run(); };
-  return !executed_ || std::any_of(nested_.begin(), nested_.end(), pred);
+  return !executed_ || std::ranges::any_of(nested_, pred);
 }
 
 section* block::get_section(int, std::string_view,

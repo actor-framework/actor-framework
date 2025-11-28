@@ -20,6 +20,7 @@
 #include "caf/sec.hpp"
 #include "caf/type_id.hpp"
 
+#include <algorithm>
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
@@ -496,7 +497,7 @@ error actor_system_config::parse(std::vector<std::string> args) {
       if (paths.empty())
         try_open(default_config_file);
       else
-        std::ignore = std::any_of(paths.begin(), paths.end(), try_open);
+        std::ignore = std::ranges::any_of(paths, try_open);
       // Note: not finding any file is not an error. It simply means that we
       //       use the hard-coded defaults.
     }

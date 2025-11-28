@@ -47,7 +47,7 @@ handshake::handshake() noexcept {
 
 bool handshake::has_valid_key() const noexcept {
   auto non_zero = [](std::byte x) { return x != std::byte{0}; };
-  return std::any_of(key_.begin(), key_.end(), non_zero);
+  return std::ranges::any_of(key_, non_zero);
 }
 
 bool handshake::assign_key(std::string_view base64_key) {

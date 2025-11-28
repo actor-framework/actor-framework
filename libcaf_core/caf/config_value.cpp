@@ -19,6 +19,7 @@
 #include "caf/pec.hpp"
 #include "caf/settings.hpp"
 
+#include <algorithm>
 #include <cctype>
 #include <cmath>
 #include <cstdlib>
@@ -294,7 +295,7 @@ expected<config_value::integer> config_value::to_integer() const {
              type_name_v<uint16_t>, type_name_v<uint32_t>,
              type_name_v<uint64_t>, type_name_v<uint8_t>};
         auto eq = [&tn](std::string_view x) { return x == tn; };
-        if (std::any_of(std::begin(valid_types), std::end(valid_types), eq)) {
+        if (std::ranges::any_of(valid_types, eq)) {
           if (auto j = x.find("value"); j != x.end()) {
             return j->second.to_integer();
           }
@@ -335,7 +336,7 @@ expected<config_value::real> config_value::to_real() const {
         std::string_view valid_types[]
           = {type_name_v<float>, type_name_v<double>, type_name_v<long double>};
         auto eq = [&tn](std::string_view x) { return x == tn; };
-        if (std::any_of(std::begin(valid_types), std::end(valid_types), eq)) {
+        if (std::ranges::any_of(valid_types, eq)) {
           if (auto j = x.find("value"); j != x.end()) {
             return j->second.to_real();
           }
@@ -429,7 +430,7 @@ expected<config_value::dictionary> config_value::to_dictionary() const {
         else
           return false;
       };
-      if (std::all_of(x.begin(), x.end(), lift)) {
+      if (std::ranges::all_of(x, lift)) {
         return result_type{std::move(tmp)};
       }
       return error{sec::conversion_failed,
@@ -494,7 +495,7 @@ config_value::parse_msg_impl(std::string_view str,
       result.reset(ptr.release(), false);
       return reader.end_sequence();
     };
-    if (std::any_of(allowed_types.begin(), allowed_types.end(), converts))
+    if (std::ranges::any_of(allowed_types, converts))
       return {std::move(result)};
   }
   return std::nullopt;
@@ -560,7 +561,7 @@ struct to_string_visitor {
   }
 
   void append_key(const std::string& key) {
-    if (std::all_of(key.begin(), key.end(), ::isalnum))
+    if (std::ranges::all_of(key, ::isalnum))
       str.append(key.begin(), key.end());
     else
       (*this)(key);

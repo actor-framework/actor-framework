@@ -23,6 +23,7 @@
 
 #include <ctype.h>
 
+#include <algorithm>
 #include <cstdio>
 #include <cstring>
 #include <iterator>
@@ -72,7 +73,7 @@ void hashed_node_id::print(std::string& dst) const {
 
 bool hashed_node_id::valid(const host_id_type& x) noexcept {
   auto is_zero = [](uint8_t x) { return x == 0; };
-  return !std::all_of(x.begin(), x.end(), is_zero);
+  return !std::ranges::all_of(x, is_zero);
 }
 
 bool hashed_node_id::can_parse(std::string_view str) noexcept {

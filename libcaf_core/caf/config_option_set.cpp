@@ -9,6 +9,7 @@
 #include "caf/detail/algorithms.hpp"
 #include "caf/expected.hpp"
 
+#include <algorithm>
 #include <map>
 #include <set>
 
@@ -286,7 +287,7 @@ bool config_option_set::has_category(std::string_view category) const noexcept {
   auto predicate = [category](const config_option& opt) {
     return opt.category() == category;
   };
-  return std::any_of(opts_.begin(), opts_.end(), predicate);
+  return std::ranges::any_of(opts_, predicate);
 }
 
 } // namespace caf

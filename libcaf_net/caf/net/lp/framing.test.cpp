@@ -117,7 +117,7 @@ public:
     auto printable = [](std::byte x) {
       return ::isprint(static_cast<uint8_t>(x));
     };
-    if (std::all_of(buf.begin(), buf.end(), printable)) {
+    if (std::ranges::all_of(buf, printable)) {
       auto str_buf = reinterpret_cast<char*>(buf.data());
       inputs->append(std::string{str_buf, buf.size()});
       return static_cast<ptrdiff_t>(buf.size());

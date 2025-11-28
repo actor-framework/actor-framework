@@ -11,6 +11,8 @@
 #include "caf/log/test.hpp"
 #include "caf/scoped_actor.hpp"
 
+#include <algorithm>
+
 using namespace caf;
 using namespace std::literals;
 
@@ -147,8 +149,7 @@ TEST("broadcast_actor_pool") {
                            after(std::chrono::milliseconds(250)) >>
                              [this] { fail("didn't receive a result"); });
   check_eq(results.size(), 25u);
-  check(std::all_of(results.begin(), results.end(),
-                    [](int res) { return res == 3; }));
+  check(std::ranges::all_of(results, [](int res) { return res == 3; }));
   self->send_exit(pool, exit_reason::user_shutdown);
 }
 

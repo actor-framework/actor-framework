@@ -12,6 +12,8 @@
 #include "caf/json_reader.hpp"
 #include "caf/json_writer.hpp"
 
+#include <algorithm>
+
 using namespace caf;
 
 namespace {
@@ -42,7 +44,7 @@ TEST("default generated UUIDs have all 128 bits set to zero") {
   uuid nil;
   check(!nil);
   auto zero = [](std::byte x) { return std::to_integer<int>(x) == 0; };
-  check(std::all_of(nil.bytes().begin(), nil.bytes().end(), zero));
+  check(std::ranges::all_of(nil.bytes(), zero));
   check(nil == uuid::nil());
 }
 

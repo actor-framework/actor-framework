@@ -2,6 +2,7 @@
 #include "caf/detail/scope_guard.hpp"
 #include "caf/scheduled_actor/flow.hpp"
 
+#include <algorithm>
 #include <span>
 #include <string>
 #include <string_view>
@@ -42,7 +43,7 @@ void ChatWidget::init(actor_system& system, const std::string& name,
     })
     .for_each([this](const lp::frame& frame) {
       auto str = to_string_view(frame.bytes());
-      if (std::all_of(str.begin(), str.end(), ::isprint)) {
+      if (std::ranges::all_of(str, ::isprint)) {
         auto qstr = QString::fromUtf8(str.data(),
                                       static_cast<qsizetype>(str.size()));
         print(qstr);

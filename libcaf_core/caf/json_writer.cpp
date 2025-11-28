@@ -14,6 +14,8 @@
 #include "caf/internal/json_node.hpp"
 #include "caf/serializer.hpp"
 
+#include <algorithm>
+
 namespace caf {
 
 namespace {
@@ -650,7 +652,7 @@ private:
     auto is_object = [](const entry& x) {
       return x.t == internal::json_node::object;
     };
-    return std::any_of(stack_.begin(), stack_.end(), is_object);
+    return std::ranges::any_of(stack_, is_object);
   }
 
   // -- printing ---------------------------------------------------------------
