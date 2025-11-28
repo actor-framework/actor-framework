@@ -4,8 +4,7 @@
 
 #pragma once
 
-#include "caf/detail/source_location.hpp"
-
+#include <source_location>
 #include <string_view>
 
 namespace caf {
@@ -15,15 +14,15 @@ namespace caf {
 /// passing in a source location via default argument.
 struct format_string_with_location {
   constexpr format_string_with_location(std::string_view str,
-                                        const detail::source_location& loc
-                                        = detail::source_location::current())
+                                        const std::source_location& loc
+                                        = std::source_location::current())
     : value(str), location(loc) {
     // nop
   }
 
   constexpr format_string_with_location(const char* str,
-                                        const detail::source_location& loc
-                                        = detail::source_location::current())
+                                        const std::source_location& loc
+                                        = std::source_location::current())
     : value(str), location(loc) {
     // nop
   }
@@ -32,7 +31,7 @@ struct format_string_with_location {
   std::string_view value;
 
   /// The source location of the format string.
-  detail::source_location location;
+  std::source_location location;
 };
 
 } // namespace caf

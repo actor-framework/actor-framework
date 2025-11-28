@@ -66,7 +66,7 @@ void runnable::call_do_run() {
   do_run();
 }
 
-bool runnable::check(bool value, const detail::source_location& location) {
+bool runnable::check(bool value, const std::source_location& location) {
   if (value) {
     reporter::instance().pass(location);
   } else {
@@ -75,7 +75,7 @@ bool runnable::check(bool value, const detail::source_location& location) {
   return value;
 }
 
-void runnable::require(bool value, const detail::source_location& location) {
+void runnable::require(bool value, const std::source_location& location) {
   if (!check(value, location))
     requirement_failed::raise(location);
 }

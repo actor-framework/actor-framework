@@ -307,7 +307,7 @@ public:
       indent_ -= 2;
   }
 
-  void pass(const detail::source_location& location) override {
+  void pass(const std::source_location& location) override {
     test_stats_.passed++;
     if (level_ < log::level::debug)
       return;
@@ -317,7 +317,7 @@ public:
   }
 
   void fail(binary_predicate type, std::string_view lhs, std::string_view rhs,
-            const detail::source_location& location) override {
+            const std::source_location& location) override {
     test_stats_.failed++;
     if (level_ < log::level::error)
       return;
@@ -333,7 +333,7 @@ public:
   }
 
   void fail(std::string_view arg,
-            const detail::source_location& location) override {
+            const std::source_location& location) override {
     test_stats_.failed++;
     if (level_ < log::level::error)
       return;
@@ -369,7 +369,7 @@ public:
   }
 
   void unhandled_exception(std::string_view msg,
-                           const detail::source_location& location) override {
+                           const std::source_location& location) override {
     test_stats_.failed++;
     if (level_ < log::level::error)
       return;

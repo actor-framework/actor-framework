@@ -19,16 +19,16 @@ public:
   block_type type() const noexcept override;
 
   given* get_given(int id, std::string_view description,
-                   const detail::source_location& loc) override;
+                   const std::source_location& loc) override;
 
   and_given* get_and_given(int id, std::string_view description,
-                           const detail::source_location& loc) override;
+                           const std::source_location& loc) override;
 
   when* get_when(int id, std::string_view description,
-                 const detail::source_location& loc) override;
+                 const std::source_location& loc) override;
 
   and_when* get_and_when(int id, std::string_view description,
-                         const detail::source_location& loc) override;
+                         const std::source_location& loc) override;
 
   scope commit();
 };

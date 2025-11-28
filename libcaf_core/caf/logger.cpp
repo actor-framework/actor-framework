@@ -424,8 +424,7 @@ public:
     namespace lg = defaults::logger;
     set_message(cfg_.file_verbosity, file_filter_);
     auto file_event = log::event::make(log::level::debug, log::core::component,
-                                       detail::source_location::current(), 0,
-                                       msg);
+                                       std::source_location::current(), 0, msg);
     handle_file_event(*file_event);
     set_message(cfg_.console_verbosity, console_filter_);
     auto console_event = file_event->with_message(msg, log::keep_timestamp);
@@ -436,8 +435,7 @@ public:
     if (!accepts(log::level::debug, log::core::component))
       return;
     auto event = log::event::make(log::level::debug, log::core::component,
-                                  detail::source_location::current(), 0,
-                                  "stop");
+                                  std::source_location::current(), 0, "stop");
     handle_event(*event);
   }
 
@@ -611,7 +609,7 @@ logger::line_builder&& logger::line_builder::operator<<(char x) && {
 }
 
 void logger::legacy_api_log(unsigned level, std::string_view component,
-                            std::string msg, detail::source_location loc) {
+                            std::string msg, std::source_location loc) {
   do_log(log::event::make(level, component, loc, thread_local_aid(), msg));
 }
 

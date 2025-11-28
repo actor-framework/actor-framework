@@ -25,10 +25,9 @@ std::string nesting_error::message() const {
   }
 }
 
-[[noreturn]] void
-nesting_error::raise_impl(nesting_error::code what, block_type parent,
-                          block_type child,
-                          const detail::source_location& loc) {
+[[noreturn]] void nesting_error::raise_impl(nesting_error::code what,
+                                            block_type parent, block_type child,
+                                            const std::source_location& loc) {
 #ifdef CAF_ENABLE_EXCEPTIONS
   throw nesting_error{what, parent, child, loc};
 #else

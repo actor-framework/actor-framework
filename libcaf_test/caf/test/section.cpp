@@ -15,7 +15,7 @@ block_type section::type() const noexcept {
 }
 
 section* section::get_section(int id, std::string_view description,
-                              const detail::source_location& loc) {
+                              const std::source_location& loc) {
   return get_nested<section>(id, description, loc);
 }
 

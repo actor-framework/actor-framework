@@ -12,7 +12,6 @@
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/detail/concepts.hpp"
-#include "caf/detail/source_location.hpp"
 #include "caf/detail/test_export.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/resumable.hpp"
@@ -20,6 +19,7 @@
 
 #include <list>
 #include <memory>
+#include <source_location>
 
 namespace caf::test::fixture {
 
@@ -193,7 +193,7 @@ public:
   template <class... Ts>
   class evaluator {
   public:
-    evaluator(deterministic* fix, detail::source_location loc,
+    evaluator(deterministic* fix, std::source_location loc,
               evaluator_algorithm algorithm)
       : fix_(fix), loc_(loc), algo_(algorithm) {
       // nop
@@ -342,7 +342,7 @@ public:
     }
 
     deterministic* fix_;
-    detail::source_location loc_;
+    std::source_location loc_;
     evaluator_algorithm algo_;
     actor_predicate from_;
     message_predicate<Ts...> with_;
@@ -354,7 +354,7 @@ public:
   template <class... Ts>
   class injector {
   public:
-    injector(deterministic* fix, detail::source_location loc, Ts... values)
+    injector(deterministic* fix, std::source_location loc, Ts... values)
       : fix_(fix), loc_(loc), values_(std::move(values)...) {
       // nop
     }
@@ -412,7 +412,7 @@ public:
     }
 
     deterministic* fix_;
-    detail::source_location loc_;
+    std::source_location loc_;
     strong_actor_ptr from_;
     std::tuple<Ts...> values_;
   };
@@ -517,25 +517,25 @@ public:
 
   /// Sets the time to an arbitrary point in time.
   /// @returns the number of triggered timeouts.
-  size_t set_time(actor_clock::time_point value,
-                  const detail::source_location& loc
-                  = detail::source_location::current());
+  size_t
+  set_time(actor_clock::time_point value,
+           const std::source_location& loc = std::source_location::current());
 
   /// Advances the clock by `amount`.
   /// @returns the number of triggered timeouts.
   size_t advance_time(actor_clock::duration_type amount,
-                      const detail::source_location& loc
-                      = detail::source_location::current());
+                      const std::source_location& loc
+                      = std::source_location::current());
 
   /// Tries to trigger the next pending timeout. Returns `true` if a timeout
   /// was triggered, `false` otherwise.
-  bool trigger_timeout(const detail::source_location& loc
-                       = detail::source_location::current());
+  bool trigger_timeout(const std::source_location& loc
+                       = std::source_location::current());
 
   /// Triggers all pending timeouts by advancing the clock to the point in time
   /// where the last timeout is due.
-  size_t trigger_all_timeouts(const detail::source_location& loc
-                              = detail::source_location::current());
+  size_t trigger_all_timeouts(const std::source_location& loc
+                              = std::source_location::current());
 
   /// Returns the number of pending timeouts.
   [[nodiscard]] size_t num_timeouts() noexcept;
@@ -547,13 +547,13 @@ public:
 
   /// Returns the time of the next pending timeout.
   [[nodiscard]] actor_clock::time_point
-  next_timeout(const detail::source_location& loc
-               = detail::source_location::current());
+  next_timeout(const std::source_location& loc
+               = std::source_location::current());
 
   /// Returns the time of the last pending timeout.
   [[nodiscard]] actor_clock::time_point
-  last_timeout(const detail::source_location& loc
-               = detail::source_location::current());
+  last_timeout(const std::source_location& loc
+               = std::source_location::current());
 
   // -- message-based predicates -----------------------------------------------
 
@@ -561,31 +561,31 @@ public:
   /// the receiver and aborts the test if the message is missing. Otherwise
   /// executes the message.
   template <class... Ts>
-  auto expect(const detail::source_location& loc
-              = detail::source_location::current()) {
+  auto
+  expect(const std::source_location& loc = std::source_location::current()) {
     return evaluator<Ts...>{this, loc, evaluator_algorithm::expect};
   }
 
   /// Tries to match a message with types `Ts...` and executes it if it is the
   /// next message in the mailbox of the receiver.
   template <class... Ts>
-  auto allow(const detail::source_location& loc
-             = detail::source_location::current()) {
+  auto
+  allow(const std::source_location& loc = std::source_location::current()) {
     return evaluator<Ts...>{this, loc, evaluator_algorithm::allow};
   }
 
   /// Tries to match a message with types `Ts...` and executes it if it is the
   /// next message in the mailbox of the receiver.
   template <class... Ts>
-  auto disallow(const detail::source_location& loc
-                = detail::source_location::current()) {
+  auto
+  disallow(const std::source_location& loc = std::source_location::current()) {
     return evaluator<Ts...>{this, loc, evaluator_algorithm::disallow};
   }
 
   /// Helper class for `inject` that only provides `with`.
   struct inject_helper {
     deterministic* fix;
-    detail::source_location loc;
+    std::source_location loc;
 
     template <class... Ts>
     auto with(Ts... values) {
@@ -596,8 +596,8 @@ public:
   /// Starts an `inject` clause. Inject clauses provide a shortcut for sending a
   /// message to an actor and then calling `expect` with the same arguments to
   /// check whether the actor handles the message as expected.
-  auto inject(const detail::source_location& loc
-              = detail::source_location::current()) {
+  auto
+  inject(const std::source_location& loc = std::source_location::current()) {
     return inject_helper{this, loc};
   }
 
@@ -605,22 +605,22 @@ public:
   /// the receiver such that the next call to `dispatch_message` will run it.
   /// @returns `true` if the message could be preponed, `false` otherwise.
   template <class... Ts>
-  auto prepone(const detail::source_location& loc
-               = detail::source_location::current()) {
+  auto
+  prepone(const std::source_location& loc = std::source_location::current()) {
     return evaluator<Ts...>{this, loc, evaluator_algorithm::prepone};
   }
 
   /// Shortcut for calling `prepone` and then `expect` with the same arguments.
   template <class... Ts>
-  auto prepone_and_expect(const detail::source_location& loc
-                          = detail::source_location::current()) {
+  auto prepone_and_expect(const std::source_location& loc
+                          = std::source_location::current()) {
     return evaluator<Ts...>{this, loc, evaluator_algorithm::prepone_and_expect};
   }
 
   /// Shortcut for calling `prepone` and then `allow` with the same arguments.
   template <class... Ts>
-  auto prepone_and_allow(const detail::source_location& loc
-                         = detail::source_location::current()) {
+  auto prepone_and_allow(const std::source_location& loc
+                         = std::source_location::current()) {
     return evaluator<Ts...>{this, loc, evaluator_algorithm::prepone_and_allow};
   }
 

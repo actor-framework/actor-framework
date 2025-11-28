@@ -15,9 +15,9 @@
 #include "caf/detail/build_config.hpp"
 #include "caf/detail/concepts.hpp"
 #include "caf/detail/is_complete.hpp"
-#include "caf/detail/source_location.hpp"
 #include "caf/inspector_access_type.hpp"
 
+#include <source_location>
 #include <string>
 
 #ifdef CAF_USE_STD_FORMAT

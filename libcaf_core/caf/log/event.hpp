@@ -8,7 +8,6 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/format.hpp"
 #include "caf/detail/mbr_list.hpp"
-#include "caf/detail/source_location.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/ref_counted.hpp"
@@ -17,6 +16,7 @@
 #include <cstdint>
 #include <memory_resource>
 #include <optional>
+#include <source_location>
 #include <string_view>
 #include <thread>
 #include <variant>
@@ -71,7 +71,7 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   event(unsigned level, std::string_view component,
-        const detail::source_location& loc, caf::actor_id aid) noexcept
+        const std::source_location& loc, caf::actor_id aid) noexcept
     : level_(level),
       component_(component),
       line_number_(loc.line()),
@@ -91,7 +91,7 @@ public:
 
   template <class Arg, class... Args>
   static event_ptr make(unsigned level, std::string_view component,
-                        const detail::source_location& loc, caf::actor_id aid,
+                        const std::source_location& loc, caf::actor_id aid,
                         std::string_view fmt, Arg&& arg, Args&&... args) {
     auto event = make(level, component, loc, aid);
     chunked_string_builder cs_builder{&event->resource_};
@@ -103,7 +103,7 @@ public:
   }
 
   static event_ptr make(unsigned level, std::string_view component,
-                        const detail::source_location& loc, caf::actor_id aid,
+                        const std::source_location& loc, caf::actor_id aid,
                         std::string_view msg);
 
   /// Returns a deep copy of `this` with a new message without changing the
@@ -170,7 +170,7 @@ private:
   event() = default;
 
   static event_ptr make(unsigned level, std::string_view component,
-                        const detail::source_location& loc, caf::actor_id aid);
+                        const std::source_location& loc, caf::actor_id aid);
 
   /// The severity level of the event.
   unsigned level_;
@@ -326,7 +326,7 @@ public:
 
   template <class... Args>
   event_sender(logger* ptr, unsigned level, std::string_view component,
-               const detail::source_location& loc, actor_id aid,
+               const std::source_location& loc, actor_id aid,
                std::string_view fmt, Args&&... args)
     : logger_(ptr),
       event_(event::make(level, component, loc, aid, fmt,

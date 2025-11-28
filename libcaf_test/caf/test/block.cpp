@@ -12,7 +12,7 @@
 namespace caf::test {
 
 block::block(context* ctx, int id, std::string_view description,
-             const detail::source_location& loc)
+             const std::source_location& loc)
   : ctx_(ctx), id_(id), raw_description_(description), loc_(loc) {
   // nop
 }
@@ -41,41 +41,39 @@ bool block::can_run() const noexcept {
 }
 
 section* block::get_section(int, std::string_view,
-                            const detail::source_location& loc) {
+                            const std::source_location& loc) {
   nesting_error::raise_not_allowed(type(), block_type::section, loc);
 }
 
 given* block::get_given(int, std::string_view,
-                        const detail::source_location& loc) {
+                        const std::source_location& loc) {
   nesting_error::raise_not_allowed(type(), block_type::given, loc);
 }
 
 and_given* block::get_and_given(int, std::string_view,
-                                const detail::source_location& loc) {
+                                const std::source_location& loc) {
   nesting_error::raise_not_allowed(type(), block_type::given, loc);
 }
 
-when* block::get_when(int, std::string_view,
-                      const detail::source_location& loc) {
+when* block::get_when(int, std::string_view, const std::source_location& loc) {
   nesting_error::raise_not_allowed(type(), block_type::when, loc);
 }
 
 and_when* block::get_and_when(int, std::string_view,
-                              const detail::source_location& loc) {
+                              const std::source_location& loc) {
   nesting_error::raise_not_allowed(type(), block_type::and_when, loc);
 }
 
-then* block::get_then(int, std::string_view,
-                      const detail::source_location& loc) {
+then* block::get_then(int, std::string_view, const std::source_location& loc) {
   nesting_error::raise_not_allowed(type(), block_type::then, loc);
 }
 
 and_then* block::get_and_then(int, std::string_view,
-                              const detail::source_location& loc) {
+                              const std::source_location& loc) {
   nesting_error::raise_not_allowed(type(), block_type::and_then, loc);
 }
 
-but* block::get_but(int, std::string_view, const detail::source_location& loc) {
+but* block::get_but(int, std::string_view, const std::source_location& loc) {
   nesting_error::raise_not_allowed(type(), block_type::but, loc);
 }
 

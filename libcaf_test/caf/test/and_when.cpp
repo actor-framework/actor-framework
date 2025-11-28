@@ -18,7 +18,7 @@ block_type and_when::type() const noexcept {
 }
 
 then* and_when::get_then(int id, std::string_view description,
-                         const detail::source_location& loc) {
+                         const std::source_location& loc) {
   auto* result = ctx_->get<then>(id, description, loc);
   if (nested_.empty()) {
     nested_.emplace_back(result);
@@ -29,7 +29,7 @@ then* and_when::get_then(int id, std::string_view description,
 }
 
 and_then* and_when::get_and_then(int id, std::string_view description,
-                                 const detail::source_location& loc) {
+                                 const std::source_location& loc) {
   auto* result = ctx_->get<and_then>(id, description, loc);
   if (nested_.empty()) {
     nesting_error::raise_invalid_sequence(block_type::then,

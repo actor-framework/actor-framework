@@ -12,7 +12,7 @@
 #include "caf/net/socket.hpp"
 #include "caf/net/socket_manager.hpp"
 
-#include "caf/detail/source_location.hpp"
+#include <source_location>
 
 using namespace caf;
 using namespace std::literals;
@@ -157,7 +157,7 @@ WITH_FIXTURE(fixture) {
 SCENARIO("routes must have one 'arg' entry per argument") {
   auto set_get_request
     = [this](std::string path,
-             detail::source_location loc = detail::source_location::current()) {
+             std::source_location loc = std::source_location::current()) {
         req = "GET " + path + " HTTP/1.1\r\n"
               + "Host: localhost:8090\r\n"
                 "User-Agent: AwesomeLib/1.0\r\n"
@@ -167,7 +167,7 @@ SCENARIO("routes must have one 'arg' entry per argument") {
       };
   auto set_post_request
     = [this](std::string path,
-             detail::source_location loc = detail::source_location::current()) {
+             std::source_location loc = std::source_location::current()) {
         req = "POST " + path + " HTTP/1.1\r\n"
               + "Host: localhost:8090\r\n"
                 "User-Agent: AwesomeLib/1.0\r\n"
@@ -352,7 +352,7 @@ SCENARIO("routes must have one 'arg' entry per argument") {
 SCENARIO("catch-all routes match any path") {
   auto set_get_request
     = [this](std::string path,
-             detail::source_location loc = detail::source_location::current()) {
+             std::source_location loc = std::source_location::current()) {
         req = "GET " + path + " HTTP/1.1\r\n"
               + "Host: localhost:8090\r\n"
                 "User-Agent: AwesomeLib/1.0\r\n"
@@ -362,7 +362,7 @@ SCENARIO("catch-all routes match any path") {
       };
   auto set_post_request
     = [this](std::string path,
-             detail::source_location loc = detail::source_location::current()) {
+             std::source_location loc = std::source_location::current()) {
         req = "POST " + path + " HTTP/1.1\r\n"
               + "Host: localhost:8090\r\n"
                 "User-Agent: AwesomeLib/1.0\r\n"
