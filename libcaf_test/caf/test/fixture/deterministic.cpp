@@ -5,6 +5,7 @@
 #include "caf/test/fixture/deterministic.hpp"
 
 #include "caf/test/reporter.hpp"
+#include "caf/test/runnable.hpp"
 
 #include "caf/actor_control_block.hpp"
 #include "caf/actor_system.hpp"
@@ -19,8 +20,10 @@
 #include "caf/detail/test_export.hpp"
 #include "caf/log/test.hpp"
 #include "caf/mailbox_element.hpp"
+#include "caf/raise_error.hpp"
 #include "caf/scheduled_actor.hpp"
 #include "caf/scheduler.hpp"
+#include "caf/spawn_options.hpp"
 
 #include <cassert>
 #include <memory>
@@ -391,6 +394,22 @@ void deterministic::system_impl::custom_setup(actor_system& sys,
   setter.logger(reporter::make_logger());
   setter.clock(std::make_unique<deterministic_actor_clock>());
   setter.scheduler(std::make_unique<scheduler_impl>(fix));
+}
+
+void deterministic::system_impl::validate_spawn_options(spawn_options opts,
+                                                        bool is_blocking) {
+  // Fail if detached flag is explicitly set
+  if (has_detach_flag(opts)) {
+    CAF_RAISE_ERROR(std::logic_error,
+                    "detached actors are not supported "
+                    "when using the deterministic test fixture");
+  }
+  // Fail if spawning a blocking actor
+  if (is_blocking) {
+    CAF_RAISE_ERROR(std::logic_error,
+                    "blocking actors are not supported "
+                    "when using the deterministic test fixture");
+  }
 }
 
 // -- abstract_message_predicate -----------------------------------------------

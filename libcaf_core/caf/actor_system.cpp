@@ -1013,6 +1013,10 @@ void actor_system::release_private_thread(detail::private_thread* ptr) {
   impl_->private_threads.release(ptr);
 }
 
+void actor_system::validate_spawn_options(spawn_options, bool) {
+  // nop
+}
+
 detail::mailbox_factory* actor_system::mailbox_factory() {
   return impl_->cfg->mailbox_factory();
 }

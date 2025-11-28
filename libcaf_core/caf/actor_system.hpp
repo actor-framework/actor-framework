@@ -575,11 +575,7 @@ protected:
   /// @param is_blocking Whether the actor type is a blocking actor.
   /// @note The default implementation does nothing. Derived classes can override
   ///       this to add validation (e.g., to prevent detached actors in test fixtures).
-  virtual void validate_spawn_options(spawn_options opts, bool is_blocking) {
-    (void)opts;
-    (void)is_blocking;
-    // Default: no validation
-  }
+  virtual void validate_spawn_options(spawn_options opts, bool is_blocking);
 
 private:
   std::pair<event_based_actor*, actor_launcher>
