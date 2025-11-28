@@ -969,6 +969,7 @@ void actor_system::thread_terminates() {
 std::pair<event_based_actor*, actor_launcher>
 actor_system::spawn_inactive_impl(spawn_options options) {
   using actor_type = event_based_actor;
+  validate_spawn_options(options, false);
   CAF_SET_LOGGER_SYS(this);
   actor_config cfg{&scheduler(), nullptr};
   cfg.flags = abstract_actor::is_inactive_flag;

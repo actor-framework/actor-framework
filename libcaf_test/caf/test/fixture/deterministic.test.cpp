@@ -9,11 +9,13 @@
 #include "caf/test/test.hpp"
 
 #include "caf/anon_mail.hpp"
+#include "caf/blocking_actor.hpp"
 #include "caf/chrono.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/init_global_meta_objects.hpp"
 #include "caf/scoped_actor.hpp"
 #include "caf/send.hpp"
+#include "caf/spawn_options.hpp"
 
 #include <chrono>
 
@@ -564,6 +566,28 @@ TEST("calling next_timeout or last_timeout with no pending timeout throws") {
   should_fail_with_exception([this] { std::ignore = last_timeout(); });
 }
 #endif // CAF_ENABLE_EXCEPTIONS
+
+TEST("spawning detached actors fails with clear error message") {
+  should_fail_with_exception<caf::test::requirement_failed>([this] {
+    sys.spawn<caf::detached>([] {
+      return caf::behavior{};
+    });
+  });
+}
+
+TEST("spawning blocking actors fails with clear error message") {
+  should_fail_with_exception<caf::test::requirement_failed>([this] {
+    sys.spawn([](caf::blocking_actor* self) {
+      // nop
+    });
+  });
+}
+
+TEST("spawning detached actors via spawn_inactive fails") {
+  should_fail_with_exception<caf::test::requirement_failed>([this] {
+    sys.spawn_inactive<caf::detached>();
+  });
+}
 
 } // WITH_FIXTURE(caf::test::fixture::deterministic)
 

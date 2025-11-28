@@ -5,18 +5,22 @@
 #pragma once
 
 #include "caf/test/runnable.hpp"
+#include "caf/test/reporter.hpp"
 
 #include "caf/actor_clock.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
+#include "caf/blocking_actor.hpp"
 #include "caf/detail/concepts.hpp"
 #include "caf/detail/source_location.hpp"
 #include "caf/detail/test_export.hpp"
+#include "caf/infer_handle.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/resumable.hpp"
 #include "caf/scheduled_actor.hpp"
+#include "caf/spawn_options.hpp"
 
 #include <list>
 #include <memory>
@@ -166,6 +170,32 @@ public:
   class system_impl : public actor_system {
   public:
     system_impl(actor_system_config& cfg, deterministic* fix);
+
+  protected:
+    /// Override the virtual validation hook to prevent detached actors.
+    /// This is called from all spawn paths (spawn_impl, spawn_functor, spawn_inactive_impl)
+    /// and works even when sys is passed as actor_system& because it uses virtual dispatch.
+    void validate_spawn_options(spawn_options opts, bool is_blocking) override {
+      // Fail if detached flag is explicitly set
+      if (has_detach_flag(opts)) {
+        auto& ctx = runnable::current();
+        ctx.fail({"detached actors are not allowed in deterministic test fixture. "
+                  "Detached actors cannot be deterministically scheduled. "
+                  "Remove the 'detached' spawn option.",
+                  detail::source_location::current()});
+        // The fail() call above throws, so this won't be reached.
+      }
+      // Fail if spawning a blocking actor (unless explicitly allowed via
+      // allow_blocking_actors_for_this_thread, which scoped_actor calls)
+      if (is_blocking) {
+        auto& ctx = runnable::current();
+        ctx.fail({"blocking actors are not allowed in deterministic test fixture. "
+                  "Blocking actors cannot be deterministically scheduled. "
+                  "Use a non-blocking actor type instead.",
+                  detail::source_location::current()});
+        // The fail() call above throws, so this won't be reached.
+      }
+    }
 
   private:
     static actor_system_config& prepare(actor_system_config& cfg,

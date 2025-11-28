@@ -521,7 +521,10 @@ public:
   template <class C, spawn_options Os, class... Ts>
     requires(is_unbound(Os))
   infer_handle_from_class_t<C> spawn_impl(actor_config& cfg, Ts&&... xs) {
-    if constexpr (has_detach_flag(Os) || std::is_base_of_v<blocking_actor, C>)
+    constexpr bool is_blocking = std::is_base_of_v<blocking_actor, C>;
+    constexpr bool has_detached = has_detach_flag(Os);
+    validate_spawn_options(Os, is_blocking);
+    if constexpr (has_detached || is_blocking)
       cfg.flags |= abstract_actor::is_detached_flag;
     if constexpr (has_hide_flag(Os))
       cfg.flags |= abstract_actor::is_hidden_flag;
@@ -564,6 +567,19 @@ public:
                void* custom_setup_data, version::abi_token = make_abi_token());
 
   /// @endcond
+
+protected:
+  /// Hook for derived classes to validate spawn options before an actor is created.
+  /// This is called from spawn_impl before setting the detached flag.
+  /// @param opts The spawn options being used.
+  /// @param is_blocking Whether the actor type is a blocking actor.
+  /// @note The default implementation does nothing. Derived classes can override
+  ///       this to add validation (e.g., to prevent detached actors in test fixtures).
+  virtual void validate_spawn_options(spawn_options opts, bool is_blocking) {
+    (void)opts;
+    (void)is_blocking;
+    // Default: no validation
+  }
 
 private:
   std::pair<event_based_actor*, actor_launcher>
