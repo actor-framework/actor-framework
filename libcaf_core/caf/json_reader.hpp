@@ -7,13 +7,14 @@
 #include "caf/byte_reader.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
+#include "caf/placement_ptr.hpp"
 
 #include <cstddef>
 
 namespace caf {
 
 /// Deserializes an inspectable object from a JSON-formatted string.
-class CAF_CORE_EXPORT json_reader : public byte_reader {
+class CAF_CORE_EXPORT json_reader final : public byte_reader {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -45,9 +46,9 @@ public:
 
   // -- modifiers --------------------------------------------------------------
 
-  void set_error(error stop_reason) final;
+  void set_error(error stop_reason) override;
 
-  error& get_error() noexcept final;
+  error& get_error() noexcept override;
 
   /// Parses @p json_text into an internal representation. After loading the
   /// JSON input, the reader is ready for attempting to deserialize inspectable
@@ -58,7 +59,7 @@ public:
   /// @note Implicitly calls `reset`.
   bool load(std::string_view json_text);
 
-  bool load_bytes(const_byte_span bytes) final;
+  bool load_bytes(const_byte_span bytes) override;
 
   /// Reads the input stream @p input and parses the content into an internal
   /// representation. After loading the JSON input, the reader is ready for
@@ -85,88 +86,97 @@ public:
 
   // -- overrides --------------------------------------------------------------
 
-  caf::actor_system* sys() const noexcept final;
+  caf::actor_system* sys() const noexcept override;
 
-  bool has_human_readable_format() const noexcept final;
+  bool has_human_readable_format() const noexcept override;
 
-  bool fetch_next_object_type(type_id_t& type) final;
+  bool fetch_next_object_type(type_id_t& type) override;
 
-  bool fetch_next_object_name(std::string_view& type_name) final;
+  bool fetch_next_object_name(std::string_view& type_name) override;
 
-  bool begin_object(type_id_t type, std::string_view name) final;
+  bool begin_object(type_id_t type, std::string_view name) override;
 
-  bool end_object() final;
+  bool end_object() override;
 
-  bool begin_field(std::string_view) final;
+  bool begin_field(std::string_view) override;
 
-  bool begin_field(std::string_view name, bool& is_present) final;
+  bool begin_field(std::string_view name, bool& is_present) override;
 
   bool begin_field(std::string_view name, std::span<const type_id_t> types,
-                   size_t& index) final;
+                   size_t& index) override;
 
   bool begin_field(std::string_view name, bool& is_present,
-                   std::span<const type_id_t> types, size_t& index) final;
+                   std::span<const type_id_t> types, size_t& index) override;
 
-  bool end_field() final;
+  bool end_field() override;
 
-  bool begin_tuple(size_t size) final;
+  bool begin_tuple(size_t size) override;
 
-  bool end_tuple() final;
+  bool end_tuple() override;
 
-  bool begin_key_value_pair() final;
+  bool begin_key_value_pair() override;
 
-  bool end_key_value_pair() final;
+  bool end_key_value_pair() override;
 
-  bool begin_sequence(size_t& size) final;
+  bool begin_sequence(size_t& size) override;
 
-  bool end_sequence() final;
+  bool end_sequence() override;
 
-  bool begin_associative_array(size_t& size) final;
+  bool begin_associative_array(size_t& size) override;
 
-  bool end_associative_array() final;
+  bool end_associative_array() override;
 
   using byte_reader::value;
 
-  bool value(std::byte& x) final;
+  bool value(std::byte& x) override;
 
-  bool value(bool& x) final;
+  bool value(bool& x) override;
 
-  bool value(int8_t& x) final;
+  bool value(int8_t& x) override;
 
-  bool value(uint8_t& x) final;
+  bool value(uint8_t& x) override;
 
-  bool value(int16_t& x) final;
+  bool value(int16_t& x) override;
 
-  bool value(uint16_t& x) final;
+  bool value(uint16_t& x) override;
 
-  bool value(int32_t& x) final;
+  bool value(int32_t& x) override;
 
-  bool value(uint32_t& x) final;
+  bool value(uint32_t& x) override;
 
-  bool value(int64_t& x) final;
+  bool value(int64_t& x) override;
 
-  bool value(uint64_t& x) final;
+  bool value(uint64_t& x) override;
 
-  bool value(float& x) final;
+  bool value(float& x) override;
 
-  bool value(double& x) final;
+  bool value(double& x) override;
 
-  bool value(long double& x) final;
+  bool value(long double& x) override;
 
-  bool value(std::string& x) final;
+  bool value(std::string& x) override;
 
-  bool value(std::u16string& x) final;
+  bool value(std::u16string& x) override;
 
-  bool value(std::u32string& x) final;
+  bool value(std::u32string& x) override;
 
-  bool value(byte_span x) final;
+  bool value(byte_span x) override;
 
-  // Note: `value(strong_actor_ptr&)` and `value(weak_actor_ptr&)` are not
-  //       overridden as `final`. They are an important customization point.
+  bool value(strong_actor_ptr&) override;
+
+  bool value(weak_actor_ptr&) override;
 
 private:
+  static constexpr size_t impl_storage_size = 196;
+
+  /// Opaque implementation class.
+  class impl;
+
+  /// Pointer to the implementation object.
+  placement_ptr<impl> impl_;
+
   /// Storage for the implementation object.
-  alignas(std::max_align_t) std::byte impl_[256];
+  alignas(std::max_align_t) std::byte impl_storage_[impl_storage_size];
 };
 
 } // namespace caf
