@@ -1027,7 +1027,7 @@ TEST("send fan_out_request messages that return a result using typed actors") {
               [err](error& e) { *err = std::move(e); });
     });
     dispatch_messages();
-    check_eq(*err, error{sec::all_requests_failed});
+    check_eq(*err, error{sec::logic_error});
     check_eq(*sum, 0);
   }
 }
@@ -1315,7 +1315,7 @@ TEST("send fan_out_request messages with invalid setups") {
     expect<int, int>().with(1, 2).from(sender).to(workers[2]);
     expect<std::string>().with("3").from(workers[1]).to(sender);
     expect<std::string>().with("3").from(workers[2]).to(sender);
-    check_eq(*err, make_error(sec::all_requests_failed));
+    check_eq(*err, make_error(sec::unexpected_response));
   }
   SECTION("await with policy select_all") {
     auto sender = sys.spawn([workers, err](event_based_actor* self) {
@@ -1355,7 +1355,7 @@ TEST("send fan_out_request messages with invalid setups") {
     expect<int, int>().with(1, 2).from(sender).to(workers[0]);
     expect<std::string>().with("3").from(workers[1]).to(sender);
     expect<std::string>().with("3").from(workers[0]).to(sender);
-    check_eq(*err, make_error(sec::all_requests_failed));
+    check_eq(*err, make_error(sec::unexpected_response));
   }
 }
 
