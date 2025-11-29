@@ -373,22 +373,6 @@ public:
 protected:
   // -- send functions ---------------------------------------------------------
 
-  /// Sends `msg` as an asynchronous message to `receiver`.
-  /// @param receiver The receiver for the message.
-  /// @param priority The priority for sending the message.
-  /// @param msg The message to send.
-  void do_send(abstract_actor* receiver, message_priority priority,
-               message&& msg);
-
-  /// Sends `msg` as an asynchronous message to `receiver` after the timeout.
-  /// @param receiver The receiver for the message.
-  /// @param priority The priority for sending the message.
-  /// @param timeout The timeout for sending the message.
-  /// @param msg The message to send.
-  disposable do_scheduled_send(strong_actor_ptr receiver,
-                               message_priority priority,
-                               actor_clock::time_point timeout, message&& msg);
-
   /// Sends `msg` as an asynchronous message to `receiver` without sender
   /// information.
   /// @param receiver The receiver for the message.
