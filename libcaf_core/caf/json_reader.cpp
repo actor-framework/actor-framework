@@ -11,7 +11,6 @@
 #include "caf/detail/bounds_checker.hpp"
 #include "caf/detail/json.hpp"
 #include "caf/format_to_error.hpp"
-#include "caf/internal/fast_pimpl.hpp"
 #include "caf/string_algorithms.hpp"
 
 #include <fstream>
