@@ -31,3 +31,11 @@ jobs:
         uses: crate-ci/typos@master
         with:
           config: .typos-config.toml
+
+  forbidden-includes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: forbidden-includes
+        run: |
+          python3 scripts/forbidden-includes-check.py $( find libcaf* -name '*.hpp'  | grep -v '/internal/' )
