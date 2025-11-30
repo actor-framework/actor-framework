@@ -44,10 +44,12 @@ add_robot_test(
   --variable BINARY_PATH:$<TARGET_FILE:caf-robot-config-options-driver>
   --variable CONFIG_FILE_DIR:${CMAKE_CURRENT_SOURCE_DIR}/config)
 
-add_robot_test(
-  config
-  dump-config
-  --variable BINARY_PATH:$<TARGET_FILE:hello_world>)
+if(CAF_ENABLE_EXAMPLES)
+  add_robot_test(
+    config
+    dump-config
+    --variable BINARY_PATH:$<TARGET_FILE:hello_world>)
+endif()
 
 caf_add_test_executable(
   caf-robot-flow-merge-driver
