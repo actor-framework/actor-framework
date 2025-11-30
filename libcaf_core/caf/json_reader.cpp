@@ -1126,12 +1126,4 @@ bool json_reader::value(byte_span x) {
   return impl_->value(x);
 }
 
-bool json_reader::value(strong_actor_ptr& ptr) {
-  return impl_->value(ptr);
-}
-
-bool json_reader::value(weak_actor_ptr& ptr) {
-  return impl_->value(ptr);
-}
-
 } // namespace caf

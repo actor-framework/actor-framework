@@ -965,12 +965,4 @@ bool json_writer::value(const_byte_span x) {
   return impl_->value(x);
 }
 
-bool json_writer::value(const strong_actor_ptr& ptr) {
-  return impl_->value(ptr);
-}
-
-bool json_writer::value(const weak_actor_ptr& ptr) {
-  return impl_->value(ptr);
-}
-
 } // namespace caf
