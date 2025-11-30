@@ -356,10 +356,6 @@ private:
 
 #ifdef CAF_ENABLE_TRACE_LOGGING
 
-#  define CAF_LOG_TRACE(unused) CAF_VOID_STMT
-
-#else // CAF_ENABLE_TRACE_LOGGING
-
 #  define CAF_LOG_TRACE(entry_message)                                         \
     caf::logger::trace_exit_guard caf_trace_log_auto_guard;                    \
     if (auto* caf_logger_instance = caf::logger::current_logger();             \
@@ -371,6 +367,10 @@ private:
         (caf::logger::line_builder{} << "ENTRY" << entry_message).get());      \
     }                                                                          \
     static_cast<void>(0)
+
+#else // CAF_ENABLE_TRACE_LOGGING
+
+#  define CAF_LOG_TRACE(unused) CAF_VOID_STMT
 
 #endif // CAF_ENABLE_TRACE_LOGGING
 
