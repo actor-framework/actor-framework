@@ -8,7 +8,6 @@
 #include "caf/detail/append_hex.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/overload.hpp"
-#include "caf/internal/fast_pimpl.hpp"
 #include "caf/settings.hpp"
 
 #include <stack>
@@ -39,10 +38,7 @@
 
 namespace caf {
 
-namespace {
-
-class impl : public save_inspector_base<impl>,
-             public internal::fast_pimpl<impl> {
+class config_value_writer::impl : public save_inspector_base<impl> {
 public:
   // -- member types------------------------------------------------------------
 
@@ -442,34 +438,33 @@ private:
   error err_;
 };
 
-} // namespace
-
 // -- constructors, destructors, and assignment operators ----------------------
 
 config_value_writer::config_value_writer(config_value* dst) {
-  impl::construct(impl_, dst, nullptr);
+  static_assert(sizeof(impl) <= impl_storage_size);
+  impl_.reset(new (impl_storage_) impl(dst, nullptr));
 }
 
 config_value_writer::config_value_writer(config_value* dst, actor_system& sys) {
-  impl::construct(impl_, dst, &sys);
+  impl_.reset(new (impl_storage_) impl(dst, &sys));
 }
 
 config_value_writer::~config_value_writer() {
-  impl::destruct(impl_);
+  // nop
 }
 
 // -- interface functions ------------------------------------------------------
 
 void config_value_writer::set_error(error stop_reason) {
-  return impl::cast(impl_).set_error(std::move(stop_reason));
+  impl_->set_error(std::move(stop_reason));
 }
 
 error& config_value_writer::get_error() noexcept {
-  return impl::cast(impl_).get_error();
+  return impl_->get_error();
 }
 
 caf::actor_system* config_value_writer::sys() const noexcept {
-  return impl::cast(impl_).sys();
+  return impl_->sys();
 }
 
 bool config_value_writer::has_human_readable_format() const noexcept {
@@ -477,135 +472,135 @@ bool config_value_writer::has_human_readable_format() const noexcept {
 }
 
 bool config_value_writer::begin_object(type_id_t type, std::string_view name) {
-  return impl::cast(impl_).begin_object(type, name);
+  return impl_->begin_object(type, name);
 }
 
 bool config_value_writer::end_object() {
-  return impl::cast(impl_).end_object();
+  return impl_->end_object();
 }
 
 bool config_value_writer::begin_field(std::string_view name) {
-  return impl::cast(impl_).begin_field(name);
+  return impl_->begin_field(name);
 }
 
 bool config_value_writer::begin_field(std::string_view name, bool is_present) {
-  return impl::cast(impl_).begin_field(name, is_present);
+  return impl_->begin_field(name, is_present);
 }
 
 bool config_value_writer::begin_field(std::string_view name,
                                       std::span<const type_id_t> types,
                                       size_t index) {
-  return impl::cast(impl_).begin_field(name, types, index);
+  return impl_->begin_field(name, types, index);
 }
 
 bool config_value_writer::begin_field(std::string_view name, bool is_present,
                                       std::span<const type_id_t> types,
                                       size_t index) {
-  return impl::cast(impl_).begin_field(name, is_present, types, index);
+  return impl_->begin_field(name, is_present, types, index);
 }
 
 bool config_value_writer::end_field() {
-  return impl::cast(impl_).end_field();
+  return impl_->end_field();
 }
 
 bool config_value_writer::begin_tuple(size_t size) {
-  return impl::cast(impl_).begin_tuple(size);
+  return impl_->begin_tuple(size);
 }
 
 bool config_value_writer::end_tuple() {
-  return impl::cast(impl_).end_tuple();
+  return impl_->end_tuple();
 }
 
 bool config_value_writer::begin_key_value_pair() {
-  return impl::cast(impl_).begin_key_value_pair();
+  return impl_->begin_key_value_pair();
 }
 
 bool config_value_writer::end_key_value_pair() {
-  return impl::cast(impl_).end_key_value_pair();
+  return impl_->end_key_value_pair();
 }
 
 bool config_value_writer::begin_sequence(size_t size) {
-  return impl::cast(impl_).begin_sequence(size);
+  return impl_->begin_sequence(size);
 }
 
 bool config_value_writer::end_sequence() {
-  return impl::cast(impl_).end_sequence();
+  return impl_->end_sequence();
 }
 
 bool config_value_writer::begin_associative_array(size_t size) {
-  return impl::cast(impl_).begin_associative_array(size);
+  return impl_->begin_associative_array(size);
 }
 
 bool config_value_writer::end_associative_array() {
-  return impl::cast(impl_).end_associative_array();
+  return impl_->end_associative_array();
 }
 
 bool config_value_writer::value(std::byte x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool config_value_writer::value(bool x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool config_value_writer::value(int8_t x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool config_value_writer::value(uint8_t x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool config_value_writer::value(int16_t x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool config_value_writer::value(uint16_t x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool config_value_writer::value(int32_t x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool config_value_writer::value(uint32_t x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool config_value_writer::value(int64_t x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool config_value_writer::value(uint64_t x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool config_value_writer::value(float x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool config_value_writer::value(double x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool config_value_writer::value(long double x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool config_value_writer::value(std::string_view x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool config_value_writer::value(const std::u16string& x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool config_value_writer::value(const std::u32string& x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool config_value_writer::value(const_byte_span x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 } // namespace caf

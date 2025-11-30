@@ -10,12 +10,9 @@
 #include "caf/detail/ieee_754.hpp"
 #include "caf/detail/network_order.hpp"
 #include "caf/detail/squashed_int.hpp"
-#include "caf/internal/fast_pimpl.hpp"
 
 #include <iomanip>
 #include <span>
-
-namespace caf {
 
 namespace {
 
@@ -28,8 +25,11 @@ T compress_index(bool is_present, size_t value) {
   return is_present ? static_cast<T>(value) : T{-1};
 }
 
-class impl : public save_inspector_base<impl>,
-             public internal::fast_pimpl<impl> {
+} // namespace
+
+namespace caf {
+
+class binary_serializer::impl : public save_inspector_base<impl> {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -419,205 +419,204 @@ private:
   error err_;
 };
 
-} // namespace
-
 // -- constructors, destructors, and assignment operators --------------------
 
 binary_serializer::binary_serializer(byte_buffer& buf) noexcept {
-  impl::construct(impl_, buf, nullptr);
+  static_assert(sizeof(impl) <= impl_storage_size);
+  impl_.reset(new (impl_storage_) impl(buf, nullptr));
 }
 
 binary_serializer::binary_serializer(actor_system& sys,
                                      byte_buffer& buf) noexcept {
-  impl::construct(impl_, buf, &sys);
+  impl_.reset(new (impl_storage_) impl(buf, &sys));
 }
 
 binary_serializer::~binary_serializer() {
-  impl::destruct(impl_);
+  // nop
 }
 
 // -- properties -------------------------------------------------------------
 
 actor_system* binary_serializer::context() const noexcept {
-  return impl::cast(impl_).context();
+  return impl_->context();
 }
 
 byte_buffer& binary_serializer::buf() noexcept {
-  return impl::cast(impl_).buf();
+  return impl_->buf();
 }
 
 const byte_buffer& binary_serializer::buf() const noexcept {
-  return impl::cast(impl_).buf();
+  return impl_->buf();
 }
 
 size_t binary_serializer::write_pos() const noexcept {
-  return impl::cast(impl_).write_pos();
+  return impl_->write_pos();
 }
 
 // -- position management ----------------------------------------------------
 
 void binary_serializer::seek(size_t offset) noexcept {
-  return impl::cast(impl_).seek(offset);
+  impl_->seek(offset);
 }
 
 void binary_serializer::skip(size_t num_bytes) {
-  impl::cast(impl_).skip(num_bytes);
+  impl_->skip(num_bytes);
 }
 
 // -- interface functions ----------------------------------------------------
 
 void binary_serializer::set_error(error stop_reason) {
-  impl::cast(impl_).set_error(std::move(stop_reason));
+  impl_->set_error(std::move(stop_reason));
 }
 
 error& binary_serializer::get_error() noexcept {
-  return impl::cast(impl_).get_error();
+  return impl_->get_error();
 }
 
 bool binary_serializer::begin_object(type_id_t type_id,
                                      std::string_view type_name) noexcept {
-  return impl::cast(impl_).begin_object(type_id, type_name);
+  return impl_->begin_object(type_id, type_name);
 }
 
 bool binary_serializer::end_object() {
-  return impl::cast(impl_).end_object();
+  return impl_->end_object();
 }
 
 bool binary_serializer::begin_field(std::string_view type_name) noexcept {
-  return impl::cast(impl_).begin_field(type_name);
+  return impl_->begin_field(type_name);
 }
 
 bool binary_serializer::begin_field(std::string_view type_name,
                                     bool is_present) {
-  return impl::cast(impl_).begin_field(type_name, is_present);
+  return impl_->begin_field(type_name, is_present);
 }
 
 bool binary_serializer::begin_field(std::string_view type_name,
                                     std::span<const type_id_t> types,
                                     size_t index) {
-  return impl::cast(impl_).begin_field(type_name, types, index);
+  return impl_->begin_field(type_name, types, index);
 }
 
 bool binary_serializer::begin_field(std::string_view type_name, bool is_present,
                                     std::span<const type_id_t> types,
                                     size_t index) {
-  return impl::cast(impl_).begin_field(type_name, is_present, types, index);
+  return impl_->begin_field(type_name, is_present, types, index);
 }
 
 bool binary_serializer::end_field() {
-  return impl::cast(impl_).end_field();
+  return impl_->end_field();
 }
 
 bool binary_serializer::begin_tuple(size_t) {
-  return impl::cast(impl_).end_field();
+  return impl_->end_field();
 }
 
 bool binary_serializer::end_tuple() {
-  return impl::cast(impl_).end_field();
+  return impl_->end_field();
 }
 
 bool binary_serializer::begin_key_value_pair() {
-  return impl::cast(impl_).begin_key_value_pair();
+  return impl_->begin_key_value_pair();
 }
 
 bool binary_serializer::end_key_value_pair() {
-  return impl::cast(impl_).end_field();
+  return impl_->end_field();
 }
 
 bool binary_serializer::begin_sequence(size_t list_size) {
-  return impl::cast(impl_).begin_sequence(list_size);
+  return impl_->begin_sequence(list_size);
 }
 
 bool binary_serializer::end_sequence() {
-  return impl::cast(impl_).end_sequence();
+  return impl_->end_sequence();
 }
 
 bool binary_serializer::begin_associative_array(size_t size) {
-  return impl::cast(impl_).begin_associative_array(size);
+  return impl_->begin_associative_array(size);
 }
 
 bool binary_serializer::end_associative_array() {
-  return impl::cast(impl_).end_associative_array();
+  return impl_->end_associative_array();
 }
 
 bool binary_serializer::value(const_byte_span x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool binary_serializer::value(std::byte x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool binary_serializer::value(bool x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool binary_serializer::value(int8_t x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool binary_serializer::value(uint8_t x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool binary_serializer::value(int16_t x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool binary_serializer::value(uint16_t x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool binary_serializer::value(int32_t x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool binary_serializer::value(uint32_t x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool binary_serializer::value(int64_t x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool binary_serializer::value(uint64_t x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool binary_serializer::value(float x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool binary_serializer::value(double x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool binary_serializer::value(long double x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool binary_serializer::value(std::string_view x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool binary_serializer::value(const std::u16string& x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool binary_serializer::value(const std::u32string& x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool binary_serializer::value(const std::vector<bool>& x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool binary_serializer::value(const strong_actor_ptr& ptr) {
-  return impl::cast(impl_).value(std::move(ptr));
+  return impl_->value(ptr);
 }
 
 bool binary_serializer::value(const weak_actor_ptr& ptr) {
-  return impl::cast(impl_).value(std::move(ptr));
+  return impl_->value(ptr);
 }
 
 } // namespace caf

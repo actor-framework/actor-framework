@@ -32,6 +32,7 @@ template <class> class expected;
 template <class> class function_view;
 template <class> class intrusive_cow_ptr;
 template <class> class intrusive_ptr;
+template <class> class placement_ptr;
 template <class> class typed_stream;
 template <class> class weak_intrusive_ptr;
 

@@ -6,7 +6,6 @@
 
 #include "caf/actor_control_block.hpp"
 #include "caf/detail/print.hpp"
-#include "caf/internal/fast_pimpl.hpp"
 #include "caf/internal/stringification_inspector_node.hpp"
 
 #include <algorithm>
@@ -14,10 +13,7 @@
 
 namespace caf::detail {
 
-namespace {
-
-class impl : public save_inspector_base<impl>,
-             public internal::fast_pimpl<impl> {
+class stringification_inspector::impl : public save_inspector_base<impl> {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -376,171 +372,170 @@ private:
   error err_;
 };
 
-} // namespace
-
 // -- constructors, destructors, and assignment operators --------------------
 
 stringification_inspector::stringification_inspector(std::string& result) {
-  impl::construct(impl_, result);
+  static_assert(sizeof(impl) <= impl_storage_size);
+  impl_.reset(new (impl_storage_) impl(result));
 }
 
 stringification_inspector::~stringification_inspector() {
-  impl::destruct(impl_);
+  // nop
 }
 
 // -- properties -------------------------------------------------------------
 
 bool stringification_inspector::has_human_readable_format() const noexcept {
-  return impl::cast(impl_).has_human_readable_format();
+  return impl_->has_human_readable_format();
 }
 
 // -- serializer interface ---------------------------------------------------
 
 void stringification_inspector::set_error(error stop_reason) {
-  impl::cast(impl_).set_error(std::move(stop_reason));
+  impl_->set_error(std::move(stop_reason));
 }
 
 error& stringification_inspector::get_error() noexcept {
-  return impl::cast(impl_).get_error();
+  return impl_->get_error();
 }
 
 bool stringification_inspector::begin_object(type_id_t type,
                                              std::string_view name) {
-  return impl::cast(impl_).begin_object(type, name);
+  return impl_->begin_object(type, name);
 }
 
 bool stringification_inspector::end_object() {
-  return impl::cast(impl_).end_object();
+  return impl_->end_object();
 }
 
 bool stringification_inspector::begin_field(std::string_view name) {
-  return impl::cast(impl_).begin_field(name);
+  return impl_->begin_field(name);
 }
 
 bool stringification_inspector::begin_field(std::string_view name,
                                             bool is_present) {
-  return impl::cast(impl_).begin_field(name, is_present);
+  return impl_->begin_field(name, is_present);
 }
 
 bool stringification_inspector::begin_field(std::string_view name,
                                             std::span<const type_id_t> types,
                                             size_t size) {
-  return impl::cast(impl_).begin_field(name, types, size);
+  return impl_->begin_field(name, types, size);
 }
 
 bool stringification_inspector::begin_field(std::string_view name,
                                             bool is_present,
                                             std::span<const type_id_t> types,
                                             size_t size) {
-  return impl::cast(impl_).begin_field(name, is_present, types, size);
+  return impl_->begin_field(name, is_present, types, size);
 }
 
 bool stringification_inspector::end_field() {
-  return impl::cast(impl_).end_field();
+  return impl_->end_field();
 }
 
 bool stringification_inspector::begin_tuple(size_t size) {
-  return impl::cast(impl_).begin_tuple(size);
+  return impl_->begin_tuple(size);
 }
 
 bool stringification_inspector::end_tuple() {
-  return impl::cast(impl_).end_tuple();
+  return impl_->end_tuple();
 }
 
 bool stringification_inspector::begin_key_value_pair() {
-  return impl::cast(impl_).begin_key_value_pair();
+  return impl_->begin_key_value_pair();
 }
 
 bool stringification_inspector::end_key_value_pair() {
-  return impl::cast(impl_).end_key_value_pair();
+  return impl_->end_key_value_pair();
 }
 
 bool stringification_inspector::begin_sequence(size_t size) {
-  return impl::cast(impl_).begin_sequence(size);
+  return impl_->begin_sequence(size);
 }
 
 bool stringification_inspector::end_sequence() {
-  return impl::cast(impl_).end_sequence();
+  return impl_->end_sequence();
 }
 
 bool stringification_inspector::begin_associative_array(size_t size) {
-  return impl::cast(impl_).begin_associative_array(size);
+  return impl_->begin_associative_array(size);
 }
 
 bool stringification_inspector::end_associative_array() {
-  return impl::cast(impl_).end_associative_array();
+  return impl_->end_associative_array();
 }
 
 bool stringification_inspector::value(std::byte x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool stringification_inspector::value(bool x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool stringification_inspector::value(float x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool stringification_inspector::value(double x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool stringification_inspector::value(long double x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool stringification_inspector::value(timespan x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool stringification_inspector::value(timestamp x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool stringification_inspector::value(std::string_view str) {
-  return impl::cast(impl_).value(str);
+  return impl_->value(str);
 }
 
 bool stringification_inspector::value(void* x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool stringification_inspector::value(const std::u16string& x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool stringification_inspector::value(const std::u32string& x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool stringification_inspector::value(const_byte_span x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool stringification_inspector::value(const strong_actor_ptr& ptr) {
-  return impl::cast(impl_).value(ptr);
+  return impl_->value(ptr);
 }
 
 bool stringification_inspector::value(const weak_actor_ptr& ptr) {
-  return impl::cast(impl_).value(ptr);
+  return impl_->value(ptr);
 }
 
 bool stringification_inspector::list(const std::vector<bool>& xs) {
-  return impl::cast(impl_).list(xs);
+  return impl_->list(xs);
 }
 
 void stringification_inspector::append(std::string_view str) {
-  impl::cast(impl_).append(str);
+  impl_->append(str);
 }
 
 bool stringification_inspector::int_value(int64_t x) {
-  return impl::cast(impl_).int_value(x);
+  return impl_->int_value(x);
 }
 
 bool stringification_inspector::int_value(uint64_t x) {
-  return impl::cast(impl_).int_value(x);
+  return impl_->int_value(x);
 }
 
 } // namespace caf::detail

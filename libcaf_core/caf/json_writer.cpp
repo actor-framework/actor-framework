@@ -10,13 +10,10 @@
 #include "caf/detail/assert.hpp"
 #include "caf/detail/print.hpp"
 #include "caf/format_to_error.hpp"
-#include "caf/internal/fast_pimpl.hpp"
 #include "caf/internal/json_node.hpp"
 #include "caf/serializer.hpp"
 
 #include <algorithm>
-
-namespace caf {
 
 namespace {
 
@@ -38,7 +35,11 @@ char last_non_ws_char(const std::vector<char>& buf) {
   return (i != last) ? *i : '\0';
 }
 
-class impl : public byte_writer, public internal::fast_pimpl<impl> {
+} // namespace
+
+namespace caf {
+
+class json_writer::impl : public byte_writer {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -741,228 +742,227 @@ private:
   serializer* parent_;
 };
 
-} // namespace
-
 // -- constructors, destructors, and assignment operators ----------------------
 
 json_writer::json_writer() {
-  impl::construct(impl_, nullptr, this);
+  static_assert(sizeof(impl) <= impl_storage_size);
+  impl_.reset(new (impl_storage_) impl(nullptr, this));
 }
 
 json_writer::json_writer(actor_system& sys) {
-  impl::construct(impl_, &sys, this);
+  impl_.reset(new (impl_storage_) impl(&sys, this));
 }
 
 json_writer::~json_writer() {
-  impl::destruct(impl_);
+  // nop
 }
 
 // -- properties ---------------------------------------------------------------
 
 const_byte_span json_writer::bytes() const {
-  return impl::cast(impl_).bytes();
+  return impl_->bytes();
 }
 
 std::string_view json_writer::str() const noexcept {
-  return impl::cast(impl_).str();
+  return impl_->str();
 }
 
 size_t json_writer::indentation() const noexcept {
-  return impl::cast(impl_).indentation();
+  return impl_->indentation();
 }
 
 void json_writer::indentation(size_t factor) noexcept {
-  impl::cast(impl_).indentation(factor);
+  impl_->indentation(factor);
 }
 
 bool json_writer::compact() const noexcept {
-  return impl::cast(impl_).compact();
+  return impl_->compact();
 }
 
 bool json_writer::skip_empty_fields() const noexcept {
-  return impl::cast(impl_).skip_empty_fields();
+  return impl_->skip_empty_fields();
 }
 
 void json_writer::skip_empty_fields(bool value) noexcept {
-  impl::cast(impl_).skip_empty_fields(value);
+  impl_->skip_empty_fields(value);
 }
 
 bool json_writer::skip_object_type_annotation() const noexcept {
-  return impl::cast(impl_).skip_object_type_annotation();
+  return impl_->skip_object_type_annotation();
 }
 
 void json_writer::skip_object_type_annotation(bool value) noexcept {
-  impl::cast(impl_).skip_object_type_annotation(value);
+  impl_->skip_object_type_annotation(value);
 }
 
 std::string_view json_writer::field_type_suffix() const noexcept {
-  return impl::cast(impl_).field_type_suffix();
+  return impl_->field_type_suffix();
 }
 
 void json_writer::field_type_suffix(std::string_view suffix) noexcept {
-  impl::cast(impl_).field_type_suffix(suffix);
+  impl_->field_type_suffix(suffix);
 }
 
 const type_id_mapper* json_writer::mapper() const noexcept {
-  return impl::cast(impl_).mapper();
+  return impl_->mapper();
 }
 
 void json_writer::mapper(const type_id_mapper* ptr) noexcept {
-  impl::cast(impl_).mapper(ptr);
+  impl_->mapper(ptr);
 }
 
 // -- modifiers ----------------------------------------------------------------
 
 void json_writer::reset() {
-  impl::cast(impl_).reset();
+  impl_->reset();
 }
 
 // -- overrides ----------------------------------------------------------------
 
 void json_writer::set_error(error stop_reason) {
-  impl::cast(impl_).set_error(std::move(stop_reason));
+  impl_->set_error(std::move(stop_reason));
 }
 
 error& json_writer::get_error() noexcept {
-  return impl::cast(impl_).get_error();
+  return impl_->get_error();
 }
 
 caf::actor_system* json_writer::sys() const noexcept {
-  return impl::cast(impl_).sys();
+  return impl_->sys();
 }
 
 bool json_writer::has_human_readable_format() const noexcept {
-  return impl::cast(impl_).has_human_readable_format();
+  return impl_->has_human_readable_format();
 }
 
 bool json_writer::begin_object(type_id_t id, std::string_view name) {
-  return impl::cast(impl_).begin_object(id, name);
+  return impl_->begin_object(id, name);
 }
 
 bool json_writer::end_object() {
-  return impl::cast(impl_).end_object();
+  return impl_->end_object();
 }
 
 bool json_writer::begin_field(std::string_view name) {
-  return impl::cast(impl_).begin_field(name);
+  return impl_->begin_field(name);
 }
 
 bool json_writer::begin_field(std::string_view name, bool is_present) {
-  return impl::cast(impl_).begin_field(name, is_present);
+  return impl_->begin_field(name, is_present);
 }
 
 bool json_writer::begin_field(std::string_view name,
                               std::span<const type_id_t> types, size_t index) {
-  return impl::cast(impl_).begin_field(name, types, index);
+  return impl_->begin_field(name, types, index);
 }
 
 bool json_writer::begin_field(std::string_view name, bool is_present,
                               std::span<const type_id_t> types, size_t index) {
-  return impl::cast(impl_).begin_field(name, is_present, types, index);
+  return impl_->begin_field(name, is_present, types, index);
 }
 
 bool json_writer::end_field() {
-  return impl::cast(impl_).end_field();
+  return impl_->end_field();
 }
 
 bool json_writer::begin_tuple(size_t size) {
-  return impl::cast(impl_).begin_tuple(size);
+  return impl_->begin_tuple(size);
 }
 
 bool json_writer::end_tuple() {
-  return impl::cast(impl_).end_tuple();
+  return impl_->end_tuple();
 }
 
 bool json_writer::begin_key_value_pair() {
-  return impl::cast(impl_).begin_key_value_pair();
+  return impl_->begin_key_value_pair();
 }
 
 bool json_writer::end_key_value_pair() {
-  return impl::cast(impl_).end_key_value_pair();
+  return impl_->end_key_value_pair();
 }
 
 bool json_writer::begin_sequence(size_t size) {
-  return impl::cast(impl_).begin_sequence(size);
+  return impl_->begin_sequence(size);
 }
 
 bool json_writer::end_sequence() {
-  return impl::cast(impl_).end_sequence();
+  return impl_->end_sequence();
 }
 
 bool json_writer::begin_associative_array(size_t size) {
-  return impl::cast(impl_).begin_associative_array(size);
+  return impl_->begin_associative_array(size);
 }
 
 bool json_writer::end_associative_array() {
-  return impl::cast(impl_).end_associative_array();
+  return impl_->end_associative_array();
 }
 
 bool json_writer::value(std::byte x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool json_writer::value(bool x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool json_writer::value(int8_t x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool json_writer::value(uint8_t x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool json_writer::value(int16_t x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool json_writer::value(uint16_t x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool json_writer::value(int32_t x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool json_writer::value(uint32_t x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool json_writer::value(int64_t x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool json_writer::value(uint64_t x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool json_writer::value(float x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool json_writer::value(double x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool json_writer::value(long double x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool json_writer::value(std::string_view x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool json_writer::value(const std::u16string& x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool json_writer::value(const std::u32string& x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool json_writer::value(const_byte_span x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 } // namespace caf

@@ -7,6 +7,7 @@
 #include "caf/deserializer.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
+#include "caf/placement_ptr.hpp"
 
 #include <cstddef>
 
@@ -106,8 +107,16 @@ public:
   bool value(byte_span x) override;
 
 private:
+  static constexpr size_t impl_storage_size = 88;
+
+  /// Opaque implementation class.
+  class impl;
+
+  /// Pointer to the implementation object.
+  placement_ptr<impl> impl_;
+
   /// Storage for the implementation object.
-  alignas(std::max_align_t) std::byte impl_[88];
+  alignas(std::max_align_t) std::byte impl_storage_[impl_storage_size];
 };
 
 } // namespace caf

@@ -6,6 +6,7 @@
 
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
+#include "caf/placement_ptr.hpp"
 #include "caf/save_inspector_base.hpp"
 
 #include <concepts>
@@ -171,15 +172,23 @@ public:
     return true;
   }
 
-private:
-  /// Storage for the implementation object.
-  alignas(std::max_align_t) std::byte impl_[64];
-
   void append(std::string_view str);
 
   bool int_value(int64_t x);
 
   bool int_value(uint64_t x);
+
+private:
+  static constexpr size_t impl_storage_size = 64;
+
+  /// Opaque implementation class.
+  class impl;
+
+  /// Pointer to the implementation object.
+  placement_ptr<impl> impl_;
+
+  /// Storage for the implementation object.
+  alignas(std::max_align_t) std::byte impl_storage_[impl_storage_size];
 };
 
 } // namespace caf::detail

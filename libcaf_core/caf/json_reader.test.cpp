@@ -47,6 +47,10 @@ CAF_END_TYPE_ID_BLOCK(json_reader_test)
 
 namespace {
 
+TEST_INIT() {
+  caf::init_global_meta_objects<caf::id_block::json_reader_test>();
+}
+
 struct my_request {
   int32_t a = 0;
   int32_t b = 0;
@@ -524,51 +528,4 @@ SCENARIO("mappers enable custom type names in JSON input") {
   }
 }
 
-class custom_reader : public json_reader {
-public:
-  using super = json_reader;
-
-  using super::super;
-
-  using super::value;
-
-  bool value(strong_actor_ptr& ptr) override {
-    strong_actor_ptr_serialized = true;
-    return super::value(ptr);
-  }
-
-  bool value(weak_actor_ptr& ptr) override {
-    weak_actor_ptr_serialized = true;
-    return super::value(ptr);
-  }
-
-  bool strong_actor_ptr_serialized = false;
-
-  bool weak_actor_ptr_serialized = false;
-};
-
-SCENARIO("users can override member functions for actor serialization") {
-  GIVEN("a custom reader") {
-    custom_reader reader;
-    WHEN("serializing a strong actor pointer") {
-      strong_actor_ptr ptr;
-      reader.value(ptr);
-      THEN("the overridden function is called") {
-        check(reader.strong_actor_ptr_serialized);
-      }
-    }
-    WHEN("serializing a weak actor pointer") {
-      weak_actor_ptr ptr;
-      reader.value(ptr);
-      THEN("the overridden function is called") {
-        check(reader.weak_actor_ptr_serialized);
-      }
-    }
-  }
-}
-
 } // WITH_FIXTURE(fixture)
-
-TEST_INIT() {
-  caf::init_global_meta_objects<caf::id_block::json_reader_test>();
-}
