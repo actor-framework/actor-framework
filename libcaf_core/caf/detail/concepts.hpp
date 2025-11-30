@@ -99,11 +99,8 @@ concept has_name = !std::is_scalar_v<T> && requires {
 /// Checks whether F is convertible to either `std::function<void (T&)>`
 /// or `std::function<void (const T&)>`.
 template <class F, class T>
-concept handler_for = requires(F& fn, T& val) {
-  { fn(val) } -> std::same_as<void>;
-} || requires(F& fn, const T& val) {
-  { fn(val) } -> std::same_as<void>;
-};
+concept handler_for = std::is_invocable_r_v<void, F, T&>
+                      || std::is_invocable_r_v<void, F, const T&>;
 
 // Checks whether T has a member function named `push_back` that takes an
 // element of type `T::value_type`.
