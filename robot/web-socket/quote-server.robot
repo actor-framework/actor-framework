@@ -68,7 +68,7 @@ Receive Frames
         ${frame}=         WebSocketClient.Recv    ${fd}
         Append To List    ${received_strings}     ${frame}
     END
-    [Return]    ${received_strings}
+    RETURN      ${received_strings}
 
 Validate Frames
     [Arguments]    ${received_strings}
