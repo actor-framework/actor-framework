@@ -46,12 +46,7 @@ jobs:
       - name: install-robot
         run:  pip install -r robot/dependencies.txt
       - name: configure
-        run: |
-          cmake \
-            -S . \
-            -B build \
-            -G Ninja \
-            -C .ci/linux/asan-and-ubsan.cmake
+        run: ./configure --dev-mode --generator=Ninja
       - name: build
         run: cmake --build build
       - name: test

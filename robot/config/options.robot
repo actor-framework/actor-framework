@@ -64,7 +64,7 @@ Get Block From File
     ${end}=      Evaluate  ${lines}.index("# ${end_marker}")
     ${block}=    Get Slice From List  ${lines}    ${begin}    ${end}
     ${result}=   Evaluate    [line[2:] for line in ${block}]
-    [Return]     ${result}
+    RETURN       ${result}
 
 Set Environment Variables
     [Arguments]    ${lines}

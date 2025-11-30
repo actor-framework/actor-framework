@@ -15,9 +15,9 @@ namespace caf::log::@CAF_COMPONENT_NAME@ {
 /// The name of this component in log events.
 constexpr std::string_view component = "caf.@CAF_COMPONENT_NAME@";
 
-#if CAF_LOG_LEVEL >= CAF_LOG_LEVEL_TRACE
+#ifdef CAF_ENABLE_TRACE_LOGGING
 
-/// Logs a message with `debug` severity.
+/// Logs a message with `trace` severity.
 /// @param fmt_str The format string (with source location) for the message.
 /// @param args Arguments for the format string.
 template <class... Ts>
@@ -51,7 +51,7 @@ void debug(format_string_with_location fmt_str, Ts&&... args) {
 }
 
 /// Starts a new log event with `debug` severity.
-inline auto debug() {
+[[nodiscard]] inline auto debug() {
   return logger::log(level::debug, component);
 }
 
@@ -65,7 +65,7 @@ void info(format_string_with_location fmt_str, Ts&&... args) {
 }
 
 /// Starts a new log event with `info` severity.
-inline auto info() {
+[[nodiscard]] inline auto info() {
   return logger::log(level::info, component);
 }
 
@@ -79,7 +79,7 @@ void warning(format_string_with_location fmt_str, Ts&&... args) {
 }
 
 /// Starts a new log event with `warning` severity.
-inline auto warning() {
+[[nodiscard]] inline auto warning() {
   return logger::log(level::warning, component);
 }
 
@@ -93,7 +93,7 @@ void error(format_string_with_location fmt_str, Ts&&... args) {
 }
 
 /// Starts a new log event with `error` severity.
-inline auto error() {
+[[nodiscard]] inline auto error() {
   return logger::log(level::error, component);
 }
 

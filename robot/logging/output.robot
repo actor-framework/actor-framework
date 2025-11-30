@@ -59,7 +59,7 @@ Run Console Logger
     ...    --api\=${api}
     ...    stderr=app.out
     ${output}=    Get File    app.out
-    [Return]    ${output}
+    RETURN        ${output}
 
 Run File Logger
     [Arguments]    ${verbosity}   ${api}

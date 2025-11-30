@@ -36,28 +36,26 @@ Convenience options:
 
   --dev-mode                shortcut for passing:
                               --build-type=Debug
+                              --disable-shared-libs
+                              --enable-robot-tests
+                              --enable-runtime-checks
                               --enable-trace-logging
                               --sanitizers=address,undefined
-                              --disable-examples
-                              --disable-tools
-                              --disable-shared-libs
-                              --enable-utility-targets
-                              --enable-runtime-checks
 
 Flags (use --enable-<name> to activate and --disable-<name> to deactivate):
 
   cpack                     build with CPack package description [OFF]
-  shared-libs               build shared library targets [ON]
-  export-compile-commands   write JSON compile commands database [ON]
-  prefer-pthread-flag       prefer -pthread flag if available  [ON]
   curl-examples             build examples with libcurl [OFF]
-  protobuf-examples         build examples with Google Protobuf [OFF]
-  qt6-examples              build examples with the Qt6 framework [OFF]
-  runtime-checks            build CAF with extra runtime assertions [OFF]
-  utility-targets           include targets like consistency-check [OFF]
   examples                  build small programs showcasing CAF features [ON]
+  export-compile-commands   write JSON compile commands database [ON]
   io-module                 build networking I/O module [ON]
   openssl-module            build OpenSSL module [ON]
+  prefer-pthread-flag       prefer -pthread flag if available  [ON]
+  protobuf-examples         build examples with Google Protobuf [OFF]
+  qt6-examples              build examples with the Qt6 framework [OFF]
+  robot-tests               add the Robot tests to CTest [OFF]
+  runtime-checks            build CAF with extra runtime assertions [OFF]
+  shared-libs               build shared library targets [ON]
   testing                   build unit test suites [ON]
   with-exceptions           build CAF with support for exceptions [ON]
 
@@ -92,20 +90,20 @@ set_build_flag() {
   FlagName=''
   case "$1" in
     cpack)                   FlagName='CAF_ENABLE_CPACK' ;;
-    shared-libs)             FlagName='BUILD_SHARED_LIBS' ;;
-    export-compile-commands) FlagName='CMAKE_EXPORT_COMPILE_COMMANDS' ;;
-    prefer-pthread-flag)     FlagName='THREADS_PREFER_PTHREAD_FLAG' ;;
     curl-examples)           FlagName='CAF_ENABLE_CURL_EXAMPLES' ;;
-    protobuf-examples)       FlagName='CAF_ENABLE_PROTOBUF_EXAMPLES' ;;
-    qt6-examples)            FlagName='CAF_ENABLE_QT6_EXAMPLES' ;;
-    runtime-checks)          FlagName='CAF_ENABLE_RUNTIME_CHECKS' ;;
-    utility-targets)         FlagName='CAF_ENABLE_UTILITY_TARGETS' ;;
     examples)                FlagName='CAF_ENABLE_EXAMPLES' ;;
+    exceptions)              FlagName='CAF_ENABLE_EXCEPTIONS' ;;
+    export-compile-commands) FlagName='CMAKE_EXPORT_COMPILE_COMMANDS' ;;
     io-module)               FlagName='CAF_ENABLE_IO_MODULE' ;;
     net-module)              FlagName='CAF_ENABLE_NET_MODULE' ;;
     openssl-module)          FlagName='CAF_ENABLE_OPENSSL_MODULE' ;;
+    prefer-pthread-flag)     FlagName='THREADS_PREFER_PTHREAD_FLAG' ;;
+    protobuf-examples)       FlagName='CAF_ENABLE_PROTOBUF_EXAMPLES' ;;
+    qt6-examples)            FlagName='CAF_ENABLE_QT6_EXAMPLES' ;;
+    robot-tests)             FlagName='CAF_ENABLE_ROBOT_TESTS' ;;
+    runtime-checks)          FlagName='CAF_ENABLE_RUNTIME_CHECKS' ;;
+    shared-libs)             FlagName='BUILD_SHARED_LIBS' ;;
     testing)                 FlagName='CAF_ENABLE_TESTING' ;;
-    exceptions)              FlagName='CAF_ENABLE_EXCEPTIONS' ;;
     *)
       echo "Invalid flag '$1'.  Try $0 --help to see available options."
       exit 1
@@ -161,11 +159,9 @@ while [ $# -ne 0 ]; do
       append_cache_entry CAF_ENABLE_TRACE_LOGGING BOOL ON
       append_cache_entry CAF_SANITIZERS STRING 'address,undefined'
       append_cache_entry CMAKE_BUILD_TYPE STRING 'Debug'
-      set_build_flag examples OFF
       set_build_flag shared-libs OFF
-      set_build_flag tools OFF
       set_build_flag runtime-checks ON
-      set_build_flag utility-targets ON
+      set_build_flag robot-tests ON
       ;;
    --enable-*)
       set_build_flag $optarg ON
