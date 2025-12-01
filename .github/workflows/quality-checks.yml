@@ -38,4 +38,4 @@ jobs:
       - uses: actions/checkout@v4
       - name: forbidden-includes
         run: |
-          python3 scripts/forbidden-includes-check.py $( find libcaf* -name '*.hpp'  | grep -v '/internal/' )
+          find libcaf_* -name '*hpp' -type f | grep -v 'caf/internal/' | xargs python3 scripts/forbidden-includes-check.py

@@ -6,7 +6,7 @@
 import re
 import sys
 
-pattern = re.compile(r'#include.*caf/internal')
+pattern = re.compile(r'^\s*#\s*include\s*[<"]caf/internal/')
 
 if len(sys.argv) < 2:
     print(f"Usage: {sys.argv[0]} <file> [<file> ...]", file=sys.stderr)
@@ -24,6 +24,5 @@ for path in sys.argv[1:]:
     except OSError as e:
         print(f"{path}: cannot open file: {e}", file=sys.stderr)
         had_error = True
-        continue
 
 sys.exit(1 if had_error else 0)
