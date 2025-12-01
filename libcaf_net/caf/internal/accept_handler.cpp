@@ -26,7 +26,7 @@ public:
     CAF_ASSERT(max_connections_ > 0);
   }
 
-  ~accept_handler_impl() {
+  ~accept_handler_impl() override {
     on_conn_close_.dispose();
     if (monitor_callback_)
       monitor_callback_.dispose();

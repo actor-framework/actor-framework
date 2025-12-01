@@ -16,7 +16,7 @@ namespace caf::net::octet_stream {
 /// of data.
 class CAF_NET_EXPORT upper_layer : public generic_upper_layer {
 public:
-  virtual ~upper_layer();
+  ~upper_layer() override;
 
   /// Initializes the upper layer.
   /// @param down A pointer to the lower layer that remains valid for the

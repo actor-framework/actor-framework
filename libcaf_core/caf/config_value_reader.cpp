@@ -139,19 +139,19 @@ public:
     return st_.pop();
   }
 
-  void set_error(error stop_reason) {
+  void set_error(error stop_reason) override {
     err_ = std::move(stop_reason);
   }
 
-  error& get_error() noexcept {
+  error& get_error() noexcept override {
     return err_;
   }
 
-  caf::actor_system* sys() const noexcept {
+  caf::actor_system* sys() const noexcept override {
     return sys_;
   }
 
-  bool has_human_readable_format() const noexcept {
+  bool has_human_readable_format() const noexcept override {
     return true;
   }
 
@@ -297,13 +297,13 @@ public:
     }
   }
 
-  bool end_object() {
+  bool end_object() override {
     SCOPE(const settings*);
     st_.pop();
     return true;
   }
 
-  bool begin_field(std::string_view name) {
+  bool begin_field(std::string_view name) override {
     SCOPE(const settings*);
     if (auto i = top->find(name); i != top->end()) {
       st_.push(std::addressof(i->second));
@@ -314,7 +314,7 @@ public:
     }
   }
 
-  bool begin_field(std::string_view name, bool& is_present) {
+  bool begin_field(std::string_view name, bool& is_present) override {
     SCOPE(const settings*);
     if (auto i = top->find(name); i != top->end()) {
       is_present = true;
@@ -326,7 +326,7 @@ public:
   }
 
   bool begin_field(std::string_view name, std::span<const type_id_t> types,
-                   size_t& index) {
+                   size_t& index) override {
     SCOPE(const settings*);
     std::string key;
     key += '@';
@@ -351,7 +351,7 @@ public:
   }
 
   bool begin_field(std::string_view name, bool& is_present,
-                   std::span<const type_id_t> types, size_t& index) {
+                   std::span<const type_id_t> types, size_t& index) override {
     SCOPE(const settings*);
     if (top->contains(name)) {
       is_present = true;
@@ -362,13 +362,13 @@ public:
     }
   }
 
-  bool end_field() {
+  bool end_field() override {
     CHECK_NOT_EMPTY();
     // Note: no pop() here, because the value(s) were already consumed.
     return true;
   }
 
-  bool begin_tuple(size_t size) {
+  bool begin_tuple(size_t size) override {
     size_t list_size = 0;
     if (begin_sequence(list_size)) {
       if (list_size == size)
@@ -384,11 +384,11 @@ public:
     return false;
   }
 
-  bool end_tuple() {
+  bool end_tuple() override {
     return end_sequence();
   }
 
-  bool begin_key_value_pair() {
+  bool begin_key_value_pair() override {
     SCOPE(associative_array);
     if (top.at_end()) {
       emplace_error(sec::runtime_error,
@@ -401,13 +401,13 @@ public:
     return true;
   }
 
-  bool end_key_value_pair() {
+  bool end_key_value_pair() override {
     SCOPE(associative_array);
     ++top.pos;
     return true;
   }
 
-  bool begin_sequence(size_t& size) {
+  bool begin_sequence(size_t& size) override {
     SCOPE(const config_value*);
     if (auto ls = get_if<config_value::list>(top)) {
       size = ls->size();
@@ -422,7 +422,7 @@ public:
     return false;
   }
 
-  bool end_sequence() {
+  bool end_sequence() override {
     SCOPE(sequence);
     if (!top.at_end()) {
       emplace_error(sec::runtime_error,
@@ -433,7 +433,7 @@ public:
     return true;
   }
 
-  bool begin_associative_array(size_t& size) {
+  bool begin_associative_array(size_t& size) override {
     SCOPE(const config_value*);
     if (auto dict = get_if<settings>(top)) {
       size = dict->size();
@@ -447,7 +447,7 @@ public:
     return false;
   }
 
-  bool end_associative_array() {
+  bool end_associative_array() override {
     SCOPE(associative_array);
     if (!top.at_end()) {
       emplace_error(sec::runtime_error,
@@ -458,7 +458,7 @@ public:
     return true;
   }
 
-  bool value(std::byte& x) {
+  bool value(std::byte& x) override {
     CHECK_NOT_EMPTY();
     auto tmp = uint8_t{0};
     if (pull(*this, tmp)) {
@@ -527,77 +527,77 @@ public:
     return false;
   }
 
-  bool value(bool& x) {
+  bool value(bool& x) override {
     CHECK_NOT_EMPTY();
     return pull(*this, x);
   }
 
-  bool value(int8_t& x) {
+  bool value(int8_t& x) override {
     CHECK_NOT_EMPTY();
     return pull(*this, x);
   }
 
-  bool value(uint8_t& x) {
+  bool value(uint8_t& x) override {
     CHECK_NOT_EMPTY();
     return pull(*this, x);
   }
 
-  bool value(int16_t& x) {
+  bool value(int16_t& x) override {
     CHECK_NOT_EMPTY();
     return pull(*this, x);
   }
 
-  bool value(uint16_t& x) {
+  bool value(uint16_t& x) override {
     CHECK_NOT_EMPTY();
     return pull(*this, x);
   }
 
-  bool value(int32_t& x) {
+  bool value(int32_t& x) override {
     CHECK_NOT_EMPTY();
     return pull(*this, x);
   }
 
-  bool value(uint32_t& x) {
+  bool value(uint32_t& x) override {
     CHECK_NOT_EMPTY();
     return pull(*this, x);
   }
 
-  bool value(int64_t& x) {
+  bool value(int64_t& x) override {
     CHECK_NOT_EMPTY();
     return pull(*this, x);
   }
 
-  bool value(uint64_t& x) {
+  bool value(uint64_t& x) override {
     CHECK_NOT_EMPTY();
     return pull(*this, x);
   }
 
-  bool value(float& x) {
+  bool value(float& x) override {
     CHECK_NOT_EMPTY();
     return pull(*this, x);
   }
 
-  bool value(double& x) {
+  bool value(double& x) override {
     CHECK_NOT_EMPTY();
     return pull(*this, x);
   }
 
-  bool value(long double& x) {
+  bool value(long double& x) override {
     CHECK_NOT_EMPTY();
     return pull(*this, x);
   }
 
-  bool value(std::string& x) {
+  bool value(std::string& x) override {
     CHECK_NOT_EMPTY();
     return pull(*this, x);
   }
 
-  bool value(std::u16string&) {
+  bool value(std::u16string&) override {
     emplace_error(sec::runtime_error, "u16string support not implemented yet");
     return false;
   }
 
-  bool value(std::u32string&) {
+  bool value(std::u32string&) override {
     emplace_error(sec::runtime_error, "u32string support not implemented yet");
     return false;
   }

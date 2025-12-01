@@ -22,7 +22,7 @@ public:
 
   class client;
 
-  virtual ~lower_layer();
+  ~lower_layer() override;
 
   /// Start or re-start reading data from the client.
   virtual void request_messages() = 0;
@@ -56,7 +56,7 @@ public:
 
 class CAF_NET_EXPORT lower_layer::server : public lower_layer {
 public:
-  virtual ~server();
+  ~server() override;
 
   /// Starts writing an HTTP resounse header.
   virtual void begin_header(status code) = 0;
@@ -80,7 +80,7 @@ public:
 
 class CAF_NET_EXPORT lower_layer::client : public lower_layer {
 public:
-  virtual ~client();
+  ~client() override;
 
   /// Starts writing an HTTP request header.
   virtual void begin_header(http::method method, std::string_view path) = 0;

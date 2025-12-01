@@ -99,7 +99,7 @@ public:
 
   node_id_data& operator=(const node_id_data&) = default;
 
-  virtual ~node_id_data();
+  ~node_id_data() override;
 
   // -- member variables -------------------------------------------------------
 

@@ -20,12 +20,12 @@ public:
 
   class client;
 
-  virtual ~upper_layer();
+  ~upper_layer() override;
 };
 
 class CAF_NET_EXPORT upper_layer::server : public upper_layer {
 public:
-  virtual ~server();
+  ~server() override;
 
   /// Consumes an HTTP message.
   /// @param hdr The header fields for the received message.
@@ -44,7 +44,7 @@ public:
 
 class CAF_NET_EXPORT upper_layer::client : public upper_layer {
 public:
-  virtual ~client();
+  ~client() override;
 
   /// Consumes an HTTP message.
   /// @param hdr The header fields for the received message.

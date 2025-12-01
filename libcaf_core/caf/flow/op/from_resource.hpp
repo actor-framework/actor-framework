@@ -39,7 +39,7 @@ public:
     parent_->ref_execution_context();
   }
 
-  ~from_resource_sub() {
+  ~from_resource_sub() override {
     parent_->deref_execution_context();
   }
 

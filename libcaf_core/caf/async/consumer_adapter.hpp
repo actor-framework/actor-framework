@@ -34,7 +34,7 @@ public:
       buf_->set_consumer(this);
     }
 
-    ~impl() {
+    ~impl() override {
       if (buf_) {
         buf_->cancel();
         do_wakeup_.dispose();

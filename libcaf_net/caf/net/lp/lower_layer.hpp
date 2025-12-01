@@ -17,7 +17,7 @@ namespace caf::net::lp {
 /// messages.
 class CAF_NET_EXPORT lower_layer : public generic_lower_layer {
 public:
-  virtual ~lower_layer();
+  ~lower_layer() override;
 
   /// Pulls messages from the transport until calling `suspend_reading`.
   virtual void request_messages() = 0;

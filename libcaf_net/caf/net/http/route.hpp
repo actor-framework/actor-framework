@@ -23,7 +23,7 @@ namespace caf::net::http {
 /// Represents a single route for HTTP requests at a server.
 class CAF_NET_EXPORT route : public ref_counted {
 public:
-  virtual ~route();
+  ~route() override;
 
   /// Tries to match an HTTP request and processes the request on a match. The
   /// route may send errors to the client or call `shutdown` on the `parent` for

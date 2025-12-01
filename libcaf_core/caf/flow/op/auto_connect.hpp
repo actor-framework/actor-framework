@@ -283,7 +283,7 @@ public:
       state_(std::make_shared<auto_connect_state<T>>(threshold, source)) {
   }
 
-  ~auto_connect() {
+  ~auto_connect() override {
     if (!pending_subscriptions_.empty()) {
       auto err = make_error(sec::disposed);
       for (auto& ptr : pending_subscriptions_) {
