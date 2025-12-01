@@ -172,6 +172,10 @@ if(NOT TARGET uninstall)
     COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/uninstall.cmake)
 endif()
 
+# -- custom target for triggering code generation ------------------------------
+
+add_custom_target(caf-code-gen COMMENT "Generating enum .cpp files")
+
 # -- utility functions ---------------------------------------------------------
 
 # generates the implementation file for the enum that contains to_string,
@@ -188,6 +192,11 @@ function(caf_add_enum_type target enum_name)
                        -P "${gen_file}"
                      DEPENDS "${hpp_file}" "${gen_file}")
   target_sources(${target} PRIVATE "${cpp_file}")
+  # Create a custom target for this enum generation and add it to caf-code-gen
+  string(MAKE_C_IDENTIFIER "${enum_name}" enum_id)
+  set(gen_target "caf-code-gen-${enum_id}")
+  add_custom_target(${gen_target} DEPENDS "${cpp_file}")
+  add_dependencies(caf-code-gen ${gen_target})
 endfunction()
 
 function(caf_export_and_install_lib component)
