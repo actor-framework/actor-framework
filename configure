@@ -4,9 +4,8 @@ set -e
 # Convenience wrapper for easily setting options that the project's CMake
 # scripts will recognize.
 
-Command="$0 $*"
-CommandDirname=`dirname $0`
-SourceDir=`cd $CommandDirname && pwd`
+CommandDirname=$(dirname $0)
+SourceDir=$(cd $CommandDirname && pwd)
 
 usage="\
 Usage:
@@ -21,7 +20,7 @@ General CMake options:
   --generator=STRING        set CMake generator (see cmake --help)
   --cxx-flags=STRING        set CMAKE_CXX_FLAGS when running CMake
   --prefix=PATH             set installation directory
-  --debug-postfix           set CMAKE_DEBUG_POSTFIX
+  --debug-postfix=STRING    set CMAKE_DEBUG_POSTFIX
 
 Locating packages in non-standard locations:
 
@@ -120,9 +119,9 @@ CMakeCacheEntries=""
 while [ $# -ne 0 ]; do
   # Fetch the option argument.
   case "$1" in
-    --*=*) optarg=`echo "$1" | sed 's/[-_a-zA-Z0-9]*=//'` ;;
-    --enable-*) optarg=`echo "$1" | sed 's/--enable-//'` ;;
-    --disable-*) optarg=`echo "$1" | sed 's/--disable-//'` ;;
+    --*=*) optarg=$(echo "$1" | sed 's/[-_a-zA-Z0-9]*=//') ;;
+    --enable-*) optarg=$(echo "$1" | sed 's/--enable-//') ;;
+    --disable-*) optarg=$(echo "$1" | sed 's/--disable-//') ;;
     *) ;;
   esac
   # Consume current input.
@@ -225,20 +224,3 @@ if [ -n "$CMakeGenerator" ]; then
 else
   "$CMakeCommand" $CMakeCacheEntries "$SourceDir"
 fi
-
-# Generate a config.status file that allows re-running a clean build.
-printf "#!/bin/sh\n\n" > config.status
-printf "# Switch to the source of this build directory.\n" >> config.status
-printf "cd \"%s\"\n\n" "$SourceDir" >> config.status
-printf "# Invoke the command to configure this build.\n" >> config.status
-if [ -n "$CXX" ]; then
-  printf "CXX=\"%s\"\n" "$CXX" >> config.status
-fi
-if [ -n "$CXXFLAGS" ]; then
-  printf "CXXFLAGS=\"%s\"\n" "$CXXFLAGS" >> config.status
-fi
-if [ -n "$LDFLAGS" ]; then
-  printf "LDFLAGS=\"%s\"\n" "$LDFLAGS" >> config.status
-fi
-echo $Command >> config.status
-chmod u+x config.status
