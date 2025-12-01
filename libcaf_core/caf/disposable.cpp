@@ -32,21 +32,21 @@ public:
     // nop
   }
 
-  void dispose() {
+  void dispose() override {
     for (auto& entry : entries_)
       entry.dispose();
   }
 
-  bool disposed() const noexcept {
+  bool disposed() const noexcept override {
     auto is_disposed = [](const disposable& entry) { return entry.disposed(); };
     return std::ranges::all_of(entries_, is_disposed);
   }
 
-  void ref_disposable() const noexcept {
+  void ref_disposable() const noexcept override {
     ref();
   }
 
-  void deref_disposable() const noexcept {
+  void deref_disposable() const noexcept override {
     deref();
   }
 
@@ -79,19 +79,19 @@ public:
     // nop
   }
 
-  void dispose() {
+  void dispose() override {
     flag_ = true;
   }
 
-  bool disposed() const noexcept {
+  bool disposed() const noexcept override {
     return flag_.load();
   }
 
-  void ref_disposable() const noexcept {
+  void ref_disposable() const noexcept override {
     ref();
   }
 
-  void deref_disposable() const noexcept {
+  void deref_disposable() const noexcept override {
     deref();
   }
 

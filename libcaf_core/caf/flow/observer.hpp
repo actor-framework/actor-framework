@@ -292,7 +292,7 @@ public:
     CAF_ASSERT(parent_ != nullptr);
   }
 
-  ~buffer_writer_impl() {
+  ~buffer_writer_impl() override {
     if (buf_)
       buf_->close();
   }

@@ -16,11 +16,7 @@ namespace caf::net::octet_stream {
 /// socket.
 class CAF_NET_EXPORT lower_layer : public generic_lower_layer {
 public:
-  virtual ~lower_layer();
-
-  /// Queries whether the transport is currently configured to read from its
-  /// socket.
-  virtual bool is_reading() const noexcept = 0;
+  ~lower_layer() override;
 
   /// Configures threshold for the next receive operations. Policies remain
   /// active until calling this function again.

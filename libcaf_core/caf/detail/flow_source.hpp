@@ -13,7 +13,7 @@ namespace caf::detail {
 template <class T>
 class flow_source : public ref_counted {
 public:
-  virtual ~flow_source() {
+  ~flow_source() override {
     // nop
   }
 

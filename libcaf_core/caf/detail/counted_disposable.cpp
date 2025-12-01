@@ -17,7 +17,7 @@ public:
     // nop
   }
 
-  ~nested_disposable() {
+  ~nested_disposable() override {
     dispose();
   }
 

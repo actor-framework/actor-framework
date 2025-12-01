@@ -44,7 +44,7 @@ public:
     // nop
   }
 
-  ~monitor_action() {
+  ~monitor_action() override {
     std::lock_guard guard{mtx_};
     if (state_ == action::state::scheduled)
       f_.~function_wrapper();

@@ -31,7 +31,7 @@ using ws_conn_starter_ptr = intrusive_ptr<ws_conn_starter>;
 
 class CAF_NET_EXPORT ws_conn_acceptor : public ref_counted {
 public:
-  virtual ~ws_conn_acceptor();
+  ~ws_conn_acceptor() override;
 
   virtual expected<ws_conn_starter_ptr>
   accept(const net::http::request_header& hdr, net::socket_manager* mgr) = 0;

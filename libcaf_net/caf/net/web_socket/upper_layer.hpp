@@ -21,7 +21,7 @@ public:
 
   class client;
 
-  virtual ~upper_layer();
+  ~upper_layer() override;
 
   virtual ptrdiff_t consume_binary(byte_span buf) = 0;
 
@@ -32,7 +32,7 @@ public:
 
 class CAF_NET_EXPORT upper_layer::server : public upper_layer {
 public:
-  virtual ~server();
+  ~server() override;
 
   /// Asks the layer to accept a new client.
   /// @warning the server calls this function *before* calling `start`.

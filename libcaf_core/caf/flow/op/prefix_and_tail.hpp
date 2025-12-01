@@ -39,7 +39,7 @@ public:
     prefix_buf_.reserve(prefix_size);
   }
 
-  ~prefix_and_tail_sub() {
+  ~prefix_and_tail_sub() override {
     if (sink_) {
       sink_->state().listener = nullptr;
       sink_->close();

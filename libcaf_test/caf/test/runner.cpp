@@ -152,7 +152,7 @@ public:
     bool help_printed;
   };
 
-  int run(int argc, char** argv) {
+  int run(int argc, char** argv) override {
     auto default_reporter = reporter::make_default();
     reporter::instance(default_reporter.get());
     auto default_logger = reporter::make_logger();

@@ -29,7 +29,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  virtual ~deserializer();
+  ~deserializer() override;
 
   // -- properties -------------------------------------------------------------
 

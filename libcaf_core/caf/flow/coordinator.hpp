@@ -37,7 +37,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  virtual ~coordinator();
+  ~coordinator() override;
 
   // -- factories --------------------------------------------------------------
 

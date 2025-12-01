@@ -139,7 +139,7 @@ private:
 
     message_predicate& operator=(const message_predicate&) = default;
 
-    bool operator()(const message& msg) {
+    bool operator()(const message& msg) override {
       if (!predicates_)
         return true;
       if (auto view = make_const_typed_message_view<Ts...>(msg))

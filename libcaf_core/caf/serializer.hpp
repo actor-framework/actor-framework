@@ -31,7 +31,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  virtual ~serializer();
+  ~serializer() override;
 
   // -- properties -------------------------------------------------------------
 

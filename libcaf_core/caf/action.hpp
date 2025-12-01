@@ -153,7 +153,7 @@ public:
     // nop
   }
 
-  ~default_action_impl() {
+  ~default_action_impl() override {
     // The action going out of scope can't be running or deferred dispose.
     CAF_ASSERT(state_.load() != action::state::running);
     CAF_ASSERT(state_.load() != action::state::deferred_dispose);

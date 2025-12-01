@@ -29,7 +29,7 @@ public:
     fire_action_ = make_action([this] { fire(); });
   }
 
-  ~debounce_sub() {
+  ~debounce_sub() override {
     fire_action_.dispose();
   }
 

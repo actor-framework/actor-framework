@@ -70,11 +70,11 @@ public:
 
   // -- overridden member functions --------------------------------------------
 
-  void set_error(error stop_reason) {
+  void set_error(error stop_reason) override {
     err_ = std::move(stop_reason);
   }
 
-  error& get_error() noexcept {
+  error& get_error() noexcept override {
     return err_;
   }
 

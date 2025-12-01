@@ -86,7 +86,7 @@ public:
 
   transport_impl& operator=(const transport_impl&) = delete;
 
-  ~transport_impl() {
+  ~transport_impl() override {
     // nop
   }
 
