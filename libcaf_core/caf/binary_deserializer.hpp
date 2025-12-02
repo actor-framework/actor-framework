@@ -7,6 +7,7 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/load_inspector_base.hpp"
+#include "caf/placement_ptr.hpp"
 
 #include <concepts>
 #include <cstddef>
@@ -155,8 +156,16 @@ public:
   bool value(weak_actor_ptr& ptr);
 
 private:
+  static constexpr size_t impl_storage_size = 48;
+
+  /// Opaque implementation class.
+  class impl;
+
+  /// Pointer to the implementation object.
+  placement_ptr<impl> impl_;
+
   /// Storage for the implementation object.
-  alignas(std::max_align_t) std::byte impl_[48];
+  alignas(std::max_align_t) std::byte impl_storage_[impl_storage_size];
 };
 
 } // namespace caf

@@ -11,7 +11,6 @@
 #include "caf/detail/bounds_checker.hpp"
 #include "caf/detail/json.hpp"
 #include "caf/format_to_error.hpp"
-#include "caf/internal/fast_pimpl.hpp"
 #include "caf/string_algorithms.hpp"
 
 #include <fstream>
@@ -97,9 +96,7 @@ std::string_view field_type(const caf::detail::json::object* obj,
 
 namespace caf {
 
-namespace {
-
-class impl : public byte_reader, public internal::fast_pimpl<impl> {
+class json_reader::impl : public byte_reader {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -909,225 +906,224 @@ private:
   deserializer* parent_;
 };
 
-} // namespace
-
 // -- constructors, destructors, and assignment operators ----------------------
 
 json_reader::json_reader() {
-  impl::construct(impl_, nullptr, this);
+  static_assert(sizeof(impl) <= impl_storage_size);
+  impl_.reset(new (impl_storage_) impl(nullptr, this));
 }
 
 json_reader::json_reader(actor_system& sys) {
-  impl::construct(impl_, &sys, this);
+  impl_.reset(new (impl_storage_) impl(&sys, this));
 }
 
 json_reader::~json_reader() {
-  impl::destruct(impl_);
+  // nop
 }
 
 // -- properties -------------------------------------------------------------
 
 [[nodiscard]] std::string_view json_reader::field_type_suffix() const noexcept {
-  return impl::cast(impl_).field_type_suffix();
+  return impl_->field_type_suffix();
 }
 
 void json_reader::field_type_suffix(std::string_view suffix) noexcept {
-  impl::cast(impl_).field_type_suffix(suffix);
+  impl_->field_type_suffix(suffix);
 }
 
 [[nodiscard]] const type_id_mapper* json_reader::mapper() const noexcept {
-  return impl::cast(impl_).mapper();
+  return impl_->mapper();
 }
 
 /// Changes the type ID mapper for the writer.
 void json_reader::mapper(const type_id_mapper* ptr) noexcept {
-  impl::cast(impl_).mapper(ptr);
+  impl_->mapper(ptr);
 }
 
 // -- modifiers --------------------------------------------------------------
 
 void json_reader::set_error(error stop_reason) {
-  impl::cast(impl_).set_error(std::move(stop_reason));
+  impl_->set_error(std::move(stop_reason));
 }
 
 error& json_reader::get_error() noexcept {
-  return impl::cast(impl_).get_error();
+  return impl_->get_error();
 }
 
 bool json_reader::load(std::string_view json_text) {
-  return impl::cast(impl_).load(json_text);
+  return impl_->load(json_text);
 }
 
 bool json_reader::load_bytes(const_byte_span bytes) {
-  return impl::cast(impl_).load_bytes(bytes);
+  return impl_->load_bytes(bytes);
 }
 
 bool json_reader::load_from(std::istream& input) {
-  return impl::cast(impl_).load_from(input);
+  return impl_->load_from(input);
 }
 
 bool json_reader::load_file(const char* path) {
-  return impl::cast(impl_).load_file(path);
+  return impl_->load_file(path);
 }
 
 bool json_reader::load_file(const std::string& path) {
-  return impl::cast(impl_).load_file(path);
+  return impl_->load_file(path);
 }
 
 void json_reader::revert() {
-  impl::cast(impl_).revert();
+  impl_->revert();
 }
 
 void json_reader::reset() {
-  impl::cast(impl_).reset();
+  impl_->reset();
 }
 
 // -- interface functions ------------------------------------------------------
 
 caf::actor_system* json_reader::sys() const noexcept {
-  return impl::cast(impl_).sys();
+  return impl_->sys();
 }
 
 bool json_reader::has_human_readable_format() const noexcept {
-  return impl::cast(impl_).has_human_readable_format();
+  return impl_->has_human_readable_format();
 }
 
 bool json_reader::fetch_next_object_type(type_id_t& type) {
-  return impl::cast(impl_).fetch_next_object_type(type);
+  return impl_->fetch_next_object_type(type);
 }
 
 bool json_reader::fetch_next_object_name(std::string_view& type_name) {
-  return impl::cast(impl_).fetch_next_object_name(type_name);
+  return impl_->fetch_next_object_name(type_name);
 }
 
 bool json_reader::begin_object(type_id_t, std::string_view) {
-  return impl::cast(impl_).begin_object(type_id_t{}, std::string_view{});
+  return impl_->begin_object(type_id_t{}, std::string_view{});
 }
 
 bool json_reader::end_object() {
-  return impl::cast(impl_).end_object();
+  return impl_->end_object();
 }
 
 bool json_reader::begin_field(std::string_view name) {
-  return impl::cast(impl_).begin_field(name);
+  return impl_->begin_field(name);
 }
 
 bool json_reader::begin_field(std::string_view name, bool& is_present) {
-  return impl::cast(impl_).begin_field(name, is_present);
+  return impl_->begin_field(name, is_present);
 }
 
 bool json_reader::begin_field(std::string_view name,
                               std::span<const type_id_t> types, size_t& index) {
-  return impl::cast(impl_).begin_field(name, types, index);
+  return impl_->begin_field(name, types, index);
 }
 
 bool json_reader::begin_field(std::string_view name, bool& is_present,
                               std::span<const type_id_t> types, size_t& index) {
-  return impl::cast(impl_).begin_field(name, is_present, types, index);
+  return impl_->begin_field(name, is_present, types, index);
 }
 
 bool json_reader::end_field() {
-  return impl::cast(impl_).end_field();
+  return impl_->end_field();
 }
 
 bool json_reader::begin_tuple(size_t size) {
-  return impl::cast(impl_).begin_tuple(size);
+  return impl_->begin_tuple(size);
 }
 
 bool json_reader::end_tuple() {
-  return impl::cast(impl_).end_tuple();
+  return impl_->end_tuple();
 }
 
 bool json_reader::begin_key_value_pair() {
-  return impl::cast(impl_).begin_key_value_pair();
+  return impl_->begin_key_value_pair();
 }
 
 bool json_reader::end_key_value_pair() {
-  return impl::cast(impl_).end_key_value_pair();
+  return impl_->end_key_value_pair();
 }
 
 bool json_reader::begin_sequence(size_t& size) {
-  return impl::cast(impl_).begin_sequence(size);
+  return impl_->begin_sequence(size);
 }
 
 bool json_reader::end_sequence() {
-  return impl::cast(impl_).end_sequence();
+  return impl_->end_sequence();
 }
 
 bool json_reader::begin_associative_array(size_t& size) {
-  return impl::cast(impl_).begin_associative_array(size);
+  return impl_->begin_associative_array(size);
 }
 
 bool json_reader::end_associative_array() {
-  return impl::cast(impl_).end_associative_array();
+  return impl_->end_associative_array();
 }
 
 bool json_reader::value(std::byte& x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool json_reader::value(bool& x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool json_reader::value(int8_t& x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool json_reader::value(uint8_t& x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool json_reader::value(int16_t& x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool json_reader::value(uint16_t& x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool json_reader::value(int32_t& x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool json_reader::value(uint32_t& x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool json_reader::value(int64_t& x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool json_reader::value(uint64_t& x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool json_reader::value(float& x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool json_reader::value(double& x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool json_reader::value(long double& x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool json_reader::value(std::string& x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool json_reader::value(std::u16string& x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool json_reader::value(std::u32string& x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool json_reader::value(byte_span x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 } // namespace caf

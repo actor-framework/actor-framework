@@ -7,6 +7,7 @@
 #include "caf/byte_reader.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
+#include "caf/placement_ptr.hpp"
 
 #include <cstddef>
 
@@ -83,7 +84,7 @@ public:
   /// Removes any loaded JSON data and reclaims memory resources.
   void reset();
 
-  // -- overrides --------------------------------------------------------------
+  // -- finals --------------------------------------------------------------
 
   caf::actor_system* sys() const noexcept final;
 
@@ -161,12 +162,17 @@ public:
 
   bool value(byte_span x) final;
 
-  // Note: `value(strong_actor_ptr&)` and `value(weak_actor_ptr&)` are not
-  //       overridden as `final`. They are an important customization point.
-
 private:
+  static constexpr size_t impl_storage_size = 196;
+
+  /// Opaque implementation class.
+  class impl;
+
+  /// Pointer to the implementation object.
+  placement_ptr<impl> impl_;
+
   /// Storage for the implementation object.
-  alignas(std::max_align_t) std::byte impl_[256];
+  alignas(std::max_align_t) std::byte impl_storage_[impl_storage_size];
 };
 
 } // namespace caf

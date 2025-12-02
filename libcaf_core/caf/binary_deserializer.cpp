@@ -8,21 +8,21 @@
 #include "caf/detail/ieee_754.hpp"
 #include "caf/detail/network_order.hpp"
 #include "caf/error.hpp"
-#include "caf/internal/fast_pimpl.hpp"
 #include "caf/sec.hpp"
 
 #include <sstream>
 #include <type_traits>
-
-namespace caf {
 
 namespace {
 
 template <class T>
 constexpr size_t max_value = static_cast<size_t>(std::numeric_limits<T>::max());
 
-class impl : public load_inspector_base<impl>,
-             public internal::fast_pimpl<impl> {
+} // namespace
+
+namespace caf {
+
+class binary_deserializer::impl : public load_inspector_base<impl> {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -479,222 +479,223 @@ private:
   error err_;
 };
 
-} // namespace
-
 // -- constructors, destructors, and assignment operators --------------------
 
 binary_deserializer::binary_deserializer(const_byte_span input) noexcept {
-  impl::construct(impl_, input.data(), input.size());
+  static_assert(sizeof(impl) <= impl_storage_size);
+  impl_.reset(new (impl_storage_) impl(input.data(), input.size()));
 }
 
 binary_deserializer::binary_deserializer(actor_system& sys,
                                          const_byte_span input) noexcept {
-  impl::construct(impl_, input.data(), input.size(), &sys);
+  impl_.reset(new (impl_storage_) impl(input.data(), input.size(), &sys));
 }
 
 binary_deserializer::binary_deserializer(const void* buf,
                                          size_t size) noexcept {
-  impl::construct(impl_, reinterpret_cast<const std::byte*>(buf), size);
+  impl_.reset(new (impl_storage_)
+                impl(reinterpret_cast<const std::byte*>(buf), size));
 }
 
 binary_deserializer::binary_deserializer(actor_system& sys, const void* buf,
                                          size_t size) noexcept {
-  impl::construct(impl_, reinterpret_cast<const std::byte*>(buf), size, &sys);
+  impl_.reset(new (impl_storage_)
+                impl(reinterpret_cast<const std::byte*>(buf), size, &sys));
 }
 
 binary_deserializer::~binary_deserializer() {
-  impl::destruct(impl_);
+  // nop
 }
 
 // -- properties -------------------------------------------------------------
 
 size_t binary_deserializer::remaining() const noexcept {
-  return impl::cast(impl_).remaining();
+  return impl_->remaining();
 }
 
 const_byte_span binary_deserializer::remainder() const noexcept {
-  return impl::cast(impl_).remainder();
+  return impl_->remainder();
 }
 
 actor_system* binary_deserializer::context() const noexcept {
-  return impl::cast(impl_).context();
+  return impl_->context();
 }
 
 void binary_deserializer::skip(size_t num_bytes) {
-  impl::cast(impl_).skip(num_bytes);
+  impl_->skip(num_bytes);
 }
 
 void binary_deserializer::reset(const_byte_span bytes) noexcept {
-  impl::cast(impl_).reset(bytes);
+  impl_->reset(bytes);
 }
 
 const std::byte* binary_deserializer::current() const noexcept {
-  return impl::cast(impl_).current();
+  return impl_->current();
 }
 
 const std::byte* binary_deserializer::end() const noexcept {
-  return impl::cast(impl_).end();
+  return impl_->end();
 }
 
 // -- overridden member functions --------------------------------------------
 
 void binary_deserializer::set_error(error stop_reason) {
-  impl::cast(impl_).set_error(std::move(stop_reason));
+  impl_->set_error(std::move(stop_reason));
 }
 
 error& binary_deserializer::get_error() noexcept {
-  return impl::cast(impl_).get_error();
+  return impl_->get_error();
 }
 
 bool binary_deserializer::fetch_next_object_type(type_id_t& type) noexcept {
-  return impl::cast(impl_).fetch_next_object_type(type);
+  return impl_->fetch_next_object_type(type);
 }
 
 bool binary_deserializer::begin_object(type_id_t type,
                                        std::string_view type_name) noexcept {
-  return impl::cast(impl_).begin_object(type, type_name);
+  return impl_->begin_object(type, type_name);
 }
 
 bool binary_deserializer::end_object() noexcept {
-  return impl::cast(impl_).end_object();
+  return impl_->end_object();
 }
 
 bool binary_deserializer::begin_field(std::string_view type_name) noexcept {
-  return impl::cast(impl_).begin_field(type_name);
+  return impl_->begin_field(type_name);
 }
 
 bool binary_deserializer::begin_field(std::string_view type_name,
                                       bool& is_present) noexcept {
-  return impl::cast(impl_).begin_field(type_name, is_present);
+  return impl_->begin_field(type_name, is_present);
 }
 
 bool binary_deserializer::begin_field(std::string_view type_name,
                                       std::span<const type_id_t> types,
                                       size_t& index) noexcept {
-  return impl::cast(impl_).begin_field(type_name, types, index);
+  return impl_->begin_field(type_name, types, index);
 }
 
 bool binary_deserializer::begin_field(std::string_view type_name,
                                       bool& is_present,
                                       std::span<const type_id_t> types,
                                       size_t& index) noexcept {
-  return impl::cast(impl_).begin_field(type_name, is_present, types, index);
+  return impl_->begin_field(type_name, is_present, types, index);
 }
 
 bool binary_deserializer::end_field() {
-  return impl::cast(impl_).end_field();
+  return impl_->end_field();
 }
 
 bool binary_deserializer::begin_tuple(size_t size) noexcept {
-  return impl::cast(impl_).begin_tuple(size);
+  return impl_->begin_tuple(size);
 }
 
 bool binary_deserializer::end_tuple() noexcept {
-  return impl::cast(impl_).end_tuple();
+  return impl_->end_tuple();
 }
 
 bool binary_deserializer::begin_key_value_pair() noexcept {
-  return impl::cast(impl_).begin_key_value_pair();
+  return impl_->begin_key_value_pair();
 }
 
 bool binary_deserializer::end_key_value_pair() noexcept {
-  return impl::cast(impl_).end_key_value_pair();
+  return impl_->end_key_value_pair();
 }
 
 bool binary_deserializer::begin_sequence(size_t& list_size) noexcept {
-  return impl::cast(impl_).begin_sequence(list_size);
+  return impl_->begin_sequence(list_size);
 }
 
 bool binary_deserializer::end_sequence() noexcept {
-  return impl::cast(impl_).end_sequence();
+  return impl_->end_sequence();
 }
 
 bool binary_deserializer::begin_associative_array(size_t& size) noexcept {
-  return impl::cast(impl_).begin_associative_array(size);
+  return impl_->begin_associative_array(size);
 }
 
 bool binary_deserializer::end_associative_array() noexcept {
-  return impl::cast(impl_).end_associative_array();
+  return impl_->end_associative_array();
 }
 
 bool binary_deserializer::value(bool& x) noexcept {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool binary_deserializer::value(std::byte& x) noexcept {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool binary_deserializer::value(int8_t& x) noexcept {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool binary_deserializer::value(uint8_t& x) noexcept {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool binary_deserializer::value(int16_t& x) noexcept {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool binary_deserializer::value(uint16_t& x) noexcept {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool binary_deserializer::value(int32_t& x) noexcept {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool binary_deserializer::value(uint32_t& x) noexcept {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool binary_deserializer::value(int64_t& x) noexcept {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool binary_deserializer::value(uint64_t& x) noexcept {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool binary_deserializer::value(float& x) noexcept {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool binary_deserializer::value(double& x) noexcept {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool binary_deserializer::value(long double& x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool binary_deserializer::value(byte_span x) noexcept {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool binary_deserializer::value(std::string& x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool binary_deserializer::value(std::u16string& x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool binary_deserializer::value(std::u32string& x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool binary_deserializer::value(std::vector<bool>& x) {
-  return impl::cast(impl_).value(x);
+  return impl_->value(x);
 }
 
 bool binary_deserializer::value(strong_actor_ptr& ptr) {
-  return impl::cast(impl_).value(ptr);
+  return impl_->value(ptr);
 }
 
 bool binary_deserializer::value(weak_actor_ptr& ptr) {
-  return impl::cast(impl_).value(ptr);
+  return impl_->value(ptr);
 }
 
 } // namespace caf
