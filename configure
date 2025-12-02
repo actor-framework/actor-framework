@@ -63,6 +63,7 @@ Influential Environment Variables (only on first invocation):
   CXX                       C++ compiler command
   CXXFLAGS                  Additional C++ compiler flags
   LDFLAGS                   Additional linker flags
+  CAF_BUILD_DIR             Overrides the default build directory [build]
 "
 
 # Appends a CMake cache entry definition to the CMakeCacheEntries variable.
@@ -112,7 +113,11 @@ set_build_flag() {
 }
 
 # Set defaults.
-CMakeBuildDir="$SourceDir/build"
+if [ -n "$CAF_BUILD_DIR" ]; then
+  CMakeBuildDir="$CAF_BUILD_DIR"
+else
+  CMakeBuildDir="$SourceDir/build"
+fi
 CMakeCacheEntries=""
 
 # Parse user input.
