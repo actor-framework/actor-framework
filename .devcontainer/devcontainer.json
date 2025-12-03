@@ -1,0 +1,25 @@
+{
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "remoteEnv": {
+    "CAF_BUILD_DIR": ".devcontainer/build"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions":[
+        "llvm-vs-code-extensions.vscode-clangd",
+        "ms-vscode.cmake-tools",
+        "robocorp.robotframework-lsp",
+        "xaver.clang-format"
+      ],
+      "settings": {
+        "cmake.buildDirectory": "${workspaceFolder}/.devcontainer/build",
+        "clangd.arguments": [
+          "--compile-commands-dir=${workspaceFolder}/.devcontainer/build"
+        ]
+      }
+    }
+  }
+}
