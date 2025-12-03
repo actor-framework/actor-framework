@@ -205,12 +205,11 @@ private:
                                         std::forward<F>(f));
     auto error_handler = [p{std::move(pending)},
                           timeouts{state_.pending_timeout},
-                          g{std::forward<OnError>(g)}](error&) mutable {
+                          g{std::forward<OnError>(g)}](error& err) mutable {
       if (*p == 0) {
         // nop
       } else if (*p == 1) {
         timeouts.dispose();
-        auto err = make_error(sec::all_requests_failed);
         g(err);
       } else {
         --*p;
