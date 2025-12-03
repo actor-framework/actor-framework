@@ -2,12 +2,12 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/main/LICENSE.
 
-#include "caf/byte_writer.hpp"
+#include "caf/inspector/serializer.hpp"
 
-namespace caf {
+namespace caf::inspector {
 
-byte_writer::~byte_writer() {
+serializer::~serializer() {
   // nop
 }
 
-} // namespace caf
+} // namespace caf::inspector

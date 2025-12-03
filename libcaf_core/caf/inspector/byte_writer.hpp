@@ -5,9 +5,9 @@
 #pragma once
 
 #include "caf/detail/core_export.hpp"
-#include "caf/serializer.hpp"
+#include "caf/inspector/serializer.hpp"
 
-namespace caf {
+namespace caf::inspector {
 
 /// Serializes inspectable objects to a sequence of bytes.
 class CAF_CORE_EXPORT byte_writer : public serializer {
@@ -23,4 +23,4 @@ public:
   virtual void reset() = 0;
 };
 
-} // namespace caf
+} // namespace caf::inspector

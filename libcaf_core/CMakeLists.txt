@@ -122,7 +122,6 @@ caf_add_component(
     caf/blocking_mail.test.cpp
     caf/byte_reader.cpp
     caf/byte_span.cpp
-    caf/byte_writer.cpp
     caf/chrono.cpp
     caf/chrono.test.cpp
     caf/chunk.cpp
@@ -281,7 +280,12 @@ caf_add_component(
     caf/hash/sha1.cpp
     caf/hash/sha1.test.cpp
     caf/init_global_meta_objects.cpp
+    caf/inspector/byte_writer.cpp
+    caf/inspector/json_writer.cpp
+    caf/inspector/serializer.cpp
     caf/inspector_access_type.test.cpp
+    caf/internal/json_writer_impl.cpp
+    caf/internal/json_writer_impl.test.cpp
     caf/intrusive/lifo_inbox.test.cpp
     caf/intrusive/linked_list.test.cpp
     caf/intrusive/stack.test.cpp
@@ -308,8 +312,6 @@ caf_add_component(
     caf/json_reader.test.cpp
     caf/json_value.cpp
     caf/json_value.test.cpp
-    caf/json_writer.cpp
-    caf/json_writer.test.cpp
     caf/load_inspector.cpp
     caf/local_actor.cpp
     caf/log/event.cpp

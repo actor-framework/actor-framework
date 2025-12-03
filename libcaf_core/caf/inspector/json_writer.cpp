@@ -2,7 +2,7 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/main/LICENSE.
 
-#include "caf/json_writer.hpp"
+#include "caf/inspector/json_writer.hpp"
 
 #include "caf/actor_control_block.hpp"
 #include "caf/byte_span.hpp"
