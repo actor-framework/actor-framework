@@ -8,10 +8,6 @@
 
 namespace caf {
 
-resumable::subtype_t action::impl::subtype() const noexcept {
-  return resumable::function_object;
-}
-
 void action::impl::ref_resumable() const noexcept {
   ref_disposable();
 }

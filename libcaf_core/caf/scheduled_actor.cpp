@@ -137,10 +137,12 @@ scheduled_actor::scheduled_actor(actor_config& cfg)
     exception_handler_(home_system().config().exception_handler())
 #endif // CAF_ENABLE_EXCEPTIONS
 {
-  if (cfg.mbox_factory == nullptr)
+  if (cfg.mbox_factory == nullptr) {
     mailbox_ = new (&default_mailbox_) detail::default_mailbox();
-  else
+  } else {
     mailbox_ = cfg.mbox_factory->make(this);
+  }
+  max_throughput_ = home_system().config().max_throughput();
 }
 
 scheduled_actor::~scheduled_actor() {
@@ -156,6 +158,20 @@ scheduled_actor::~scheduled_actor() {
 bool scheduled_actor::enqueue(mailbox_element_ptr ptr, scheduler* sched) {
   CAF_ASSERT(ptr != nullptr);
   CAF_ASSERT(!getf(is_blocking_flag));
+  auto use_delay = true; // Whether we can use delay() instead of schedule().
+  if (auto* pinned = pinned_scheduler(); pinned != nullptr) {
+    // If this actor is pinned to a scheduler, always use that scheduler.
+    if (pinned != sched) {
+      use_delay = false;
+      sched = pinned;
+    }
+  } else if (sched == nullptr || !sched->is_system_scheduler()) {
+    // When enqueued without scheduler context (sched == nullptr), fall back to
+    // the system scheduler. Furthermore, regular actors (any actor that is not
+    // explicitly pinned) may *only* run on the system scheduler.
+    use_delay = false;
+    sched = &home_system().scheduler();
+  }
   auto lg = log::core::trace("ptr = {}", *ptr);
   CAF_LOG_SEND_EVENT(ptr);
   auto mid = ptr->mid;
@@ -169,12 +185,13 @@ bool scheduled_actor::enqueue(mailbox_element_ptr ptr, scheduler* sched) {
     case intrusive::inbox_result::unblocked_reader: {
       CAF_LOG_ACCEPT_EVENT(true);
       intrusive_ptr_add_ref(ctrl());
-      if (private_thread_)
+      if (private_thread_) {
         private_thread_->resume(this);
-      else if (sched != nullptr)
-        sched->delay(this);
-      else
-        home_system().scheduler().schedule(this);
+      } else if (use_delay) {
+        sched->delay(this, resumable::default_event_id);
+      } else {
+        sched->schedule(this, resumable::default_event_id);
+      }
       return true;
     }
     case intrusive::inbox_result::success:
@@ -202,9 +219,12 @@ const char* scheduled_actor::name() const {
 }
 
 void scheduled_actor::launch(scheduler* sched, bool lazy, bool hide) {
-  CAF_ASSERT(sched != nullptr);
   CAF_PUSH_AID_FROM_PTR(this);
   auto lg = log::core::trace("lazy = {}, hide = {}", lazy, hide);
+  if (auto* pinned = pinned_scheduler(); pinned != nullptr) {
+    sched = pinned;
+  }
+  CAF_ASSERT(sched != nullptr);
   CAF_ASSERT(!getf(is_blocking_flag));
   if (!hide)
     register_at_system();
@@ -217,7 +237,7 @@ void scheduled_actor::launch(scheduler* sched, bool lazy, bool hide) {
     }
   } else if (!delay_first_scheduling) {
     intrusive_ptr_add_ref(ctrl());
-    sched->delay(this);
+    sched->delay(this, resumable::initialization_event_id);
   }
   processed_messages_
     = home_system().base_metrics().processed_messages->get_or_add(
@@ -241,10 +261,6 @@ void scheduled_actor::on_cleanup(const error& reason) {
 
 // -- overridden functions of resumable ----------------------------------------
 
-resumable::subtype_t scheduled_actor::subtype() const noexcept {
-  return resumable::scheduled_actor;
-}
-
 void scheduled_actor::ref_resumable() const noexcept {
   intrusive_ptr_add_ref(ctrl());
 }
@@ -254,9 +270,13 @@ void scheduled_actor::deref_resumable() const noexcept {
 }
 
 resumable::resume_result scheduled_actor::resume(scheduler* sched,
-                                                 size_t max_throughput) {
+                                                 uint64_t event_id) {
   CAF_PUSH_AID(id());
-  auto lg = log::core::trace("max_throughput = {}", max_throughput);
+  auto lg = log::core::trace("event-id = {}", event_id);
+  if (event_id == resumable::dispose_event_id) {
+    cleanup(make_error(exit_reason::user_shutdown), sched);
+    return resumable::done;
+  }
   if (!activate(sched))
     return resumable::done;
   size_t consumed = 0;
@@ -273,13 +293,13 @@ resumable::resume_result scheduled_actor::resume(scheduler* sched,
       set_receive_timeout();
   };
   mailbox_element_ptr ptr;
-  while (consumed < max_throughput) {
+  while (consumed < max_throughput_) {
     auto ptr = mailbox().pop_front();
     if (!ptr) {
       if (mailbox().try_block()) {
         reset_timeouts_if_needed();
         log::core::debug("mailbox empty: await new messages");
-        return resumable::awaiting_message;
+        return resumable::done;
       }
       continue; // Interrupted by a new message, try again.
     }
@@ -304,7 +324,7 @@ resumable::resume_result scheduled_actor::resume(scheduler* sched,
   reset_timeouts_if_needed();
   if (mailbox().try_block()) {
     log::core::debug("mailbox empty: await new messages");
-    return resumable::awaiting_message;
+    return resumable::done;
   }
   // time's up
   log::core::debug("max throughput reached: resume later");

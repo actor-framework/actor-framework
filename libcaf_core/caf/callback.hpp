@@ -4,9 +4,7 @@
 
 #pragma once
 
-#include "caf/allowed_unsafe_message_type.hpp"
 #include "caf/detail/callable_trait.hpp"
-#include "caf/detail/concepts.hpp"
 
 #include <memory>
 

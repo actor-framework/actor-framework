@@ -308,6 +308,7 @@ public:
           ctx.fail({"no matching message found", loc_});
         return false;
       }
+      CAF_ASSERT(event->item != nullptr);
       if (!from_(event->item->sender) || !with_(event->item->payload)) {
         if (fail_on_mismatch)
           ctx.fail({"no matching message found", loc_});

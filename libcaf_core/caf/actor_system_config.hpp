@@ -65,13 +65,17 @@ public:
   /// values.
   virtual settings dump_content() const;
 
+  /// Returns the maximum throughput for messages, i.e., the maximum number of
+  /// messages that an actor is allowed to consume per run.
+  size_t max_throughput() const noexcept;
+
+  // -- modifiers --------------------------------------------------------------
+
   /// Sets a config by using its name `config_name` to `config_value`.
   template <class T>
   actor_system_config& set(std::string_view name, T&& value) {
     return set_impl(name, config_value{std::forward<T>(value)});
   }
-
-  // -- modifiers --------------------------------------------------------------
 
   /// Parses `args` as tuple of strings containing CLI options and `config` as
   /// configuration file.

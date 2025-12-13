@@ -85,6 +85,7 @@ constexpr const char* default_config_file = "caf-application.conf";
 } // namespace
 
 struct actor_system_config::fields {
+  size_t max_throughput = defaults::scheduler::max_throughput;
   std::vector<std::string> paths;
   module_factory_list module_factories;
   actor_factory_dictionary actor_factories;
@@ -120,8 +121,8 @@ actor_system_config::actor_system_config() {
   opt_group{custom_options_, "caf.scheduler"}
     .add<std::string>("policy", "'stealing' (default) or 'sharing'")
     .add<size_t>("max-threads", "maximum number of worker threads")
-    .add<size_t>("max-throughput",
-                 "nr. of messages actors can consume per run");
+    .add(fields_->max_throughput, "max-throughput",
+         "nr. of messages actors can consume per run");
   opt_group(custom_options_, "caf.work-stealing")
     .add<size_t>("aggressive-poll-attempts", "nr. of aggressive steal attempts")
     .add<size_t>("aggressive-steal-interval",
@@ -204,6 +205,10 @@ settings actor_system_config::dump_content() const {
   put_missing(console_group, "format", defaults::logger::console::format);
   put_missing(console_group, "excluded-components", std::vector<std::string>{});
   return result;
+}
+
+size_t actor_system_config::max_throughput() const noexcept {
+  return fields_->max_throughput;
 }
 
 // -- config file parsing ------------------------------------------------------

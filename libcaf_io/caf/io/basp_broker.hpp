@@ -57,7 +57,7 @@ public:
 
   proxy_registry* proxy_registry_ptr() override;
 
-  resume_result resume(scheduler*, size_t) override;
+  resume_result resume(scheduler*, uint64_t) override;
 
   // -- implementation of proxy_registry::backend ------------------------------
 

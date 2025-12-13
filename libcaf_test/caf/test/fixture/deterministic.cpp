@@ -322,7 +322,7 @@ private:
 
 } // namespace
 
-class deterministic::scheduler_impl : public scheduler {
+class deterministic::scheduler_impl final : public scheduler {
 public:
   using super = caf::scheduler;
 
@@ -330,29 +330,26 @@ public:
     // nop
   }
 
-  void schedule(resumable* ptr) override {
+  void schedule(resumable* ptr, uint64_t event_id) override {
     using event_t = deterministic::scheduling_event;
-    using subtype_t = resumable::subtype_t;
-    switch (ptr->subtype()) {
-      case subtype_t::scheduled_actor:
-      case subtype_t::io_actor: {
-        // Actors put their messages into events_ directly. However, we do run
-        // them right away if they aren't initialized yet.
-        auto dptr = dynamic_cast<scheduled_actor*>(ptr);
-        if (!dptr->initialized() && !dptr->inactive())
-          dptr->resume(this, 0);
-        break;
+    // Actors put their messages into events_ directly when calling `push_back`
+    // on the mailbox. We simply ignore the delay/schedule calls from actors
+    // here except for initialization events (which we simply inline here).
+    if (auto* self = dynamic_cast<scheduled_actor*>(ptr)) {
+      if (event_id == resumable::initialization_event_id) {
+        self->activate(this);
       }
-      default:
-        fix_->events_.push_back(std::make_unique<event_t>(ptr, nullptr));
+    } else {
+      // "Regular" resumables still need to be scheduled here.
+      fix_->events_.push_back(std::make_unique<event_t>(ptr, nullptr));
     }
     // Before calling this function, CAF *always* bumps the reference count.
     // Hence, we need to release one reference count here.
     intrusive_ptr_release(ptr);
   }
 
-  void delay(resumable* what) override {
-    schedule(what);
+  void delay(resumable* what, uint64_t event_id) override {
+    schedule(what, event_id);
   }
 
   void start() override {
@@ -361,6 +358,10 @@ public:
 
   void stop() override {
     fix_->drop_events();
+  }
+
+  bool is_system_scheduler() const noexcept override {
+    return true;
   }
 
 private:
@@ -379,6 +380,7 @@ deterministic::system_impl::system_impl(actor_system_config& cfg,
 actor_system_config&
 deterministic::system_impl::prepare(actor_system_config& cfg,
                                     deterministic* fix) {
+  cfg.set("caf.scheduler.max-throughput", 1);
   detail::actor_system_config_access access{cfg};
   access.mailbox_factory(std::make_unique<mailbox_factory_impl>(fix));
   return cfg;
@@ -525,15 +527,15 @@ bool deterministic::dispatch_message() {
     auto ev = std::move(events_.front());
     events_.pop_front();
     auto hdl = ev->target;
-    auto res = hdl->resume(&sys.scheduler(), 1);
+    auto res = hdl->resume(&sys.scheduler(), resumable::default_event_id);
     while (res == resumable::resume_later) {
-      res = hdl->resume(&sys.scheduler(), 0);
+      res = hdl->resume(&sys.scheduler(), resumable::default_event_id);
     }
     return true;
   }
   // Actor: we simply resume the next actor and it will pick up its message.
   auto next = events_.front()->target;
-  next->resume(&sys.scheduler(), 1);
+  next->resume(&sys.scheduler(), resumable::default_event_id);
   return true;
 }
 

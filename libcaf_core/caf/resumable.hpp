@@ -8,46 +8,48 @@
 #include "caf/fwd.hpp"
 
 #include <concepts>
-#include <type_traits>
 
 namespace caf {
 
 /// A cooperatively scheduled entity.
 class CAF_CORE_EXPORT resumable {
 public:
-  /// Denotes the state in which a `resumable`
-  /// returned from its last call to `resume`.
+  /// Denotes the state in which a `resumable` returned from its `resume` call.
   enum resume_result {
-    resume_later,
-    awaiting_message,
+    /// Indicates that the resumable has finished processing the event.
     done,
-    shutdown_execution_unit
+    /// Indicates that the resumable voluntarily released the CPU to let others
+    /// run instead and needs to be called again later for the same event.
+    resume_later,
   };
 
-  /// Denotes common subtypes of `resumable`.
-  enum subtype_t {
-    /// Identifies non-actors or blocking actors.
-    unspecified,
-    /// Identifies event-based, cooperatively scheduled actors.
-    scheduled_actor,
-    /// Identifies broker, i.e., actors performing I/O.
-    io_actor,
-    /// Identifies tasks, usually one-shot callbacks.
-    function_object
-  };
+  /// The event ID for the default event.
+  static constexpr uint64_t default_event_id = 0;
+
+  /// The event ID for initialization events.
+  static constexpr uint64_t initialization_event_id = 1;
+
+  /// The event ID for disposing a resumable.
+  static constexpr uint64_t dispose_event_id = 2;
 
   resumable() = default;
 
   virtual ~resumable();
 
-  /// Returns a subtype hint for this object. This allows an execution
-  /// unit to limit processing to a specific set of resumables and
-  /// delegate other subtypes to dedicated workers.
-  virtual subtype_t subtype() const noexcept;
-
   /// Resume any pending computation until it is either finished
   /// or needs to be re-scheduled later.
-  virtual resume_result resume(scheduler*, size_t max_throughput) = 0;
+  /// @param event_id The event ID for the event that triggered the resume.
+  /// @returns The result of the resume.
+  /// @note Separate events are scheduled independently. If a resumable supports
+  ///       multiple types of events, it needs to be prepared that `resume` may
+  ///       be called concurrently for different event IDs.
+  /// @note The default CAF scheduler does not support event IDs and always uses
+  ///       the default event ID.
+  virtual resume_result resume(scheduler*, uint64_t event_id) = 0;
+
+  /// Returns the scheduler that this resumable is pinned to or `nullptr` if
+  /// it can be scheduled on any scheduler.
+  virtual scheduler* pinned_scheduler() const noexcept;
 
   /// Add a strong reference count to this object.
   virtual void ref_resumable() const noexcept = 0;
@@ -57,16 +59,14 @@ public:
 };
 
 // enables intrusive_ptr<resumable> without introducing ambiguity
-template <class T>
-  requires std::same_as<T*, resumable*>
-void intrusive_ptr_add_ref(const T* ptr) {
+template <std::same_as<resumable> T>
+void intrusive_ptr_add_ref(const T* ptr) noexcept {
   ptr->ref_resumable();
 }
 
 // enables intrusive_ptr<resumable> without introducing ambiguity
-template <class T>
-  requires std::same_as<T*, resumable*>
-void intrusive_ptr_release(const T* ptr) {
+template <std::same_as<resumable> T>
+void intrusive_ptr_release(const T* ptr) noexcept {
   ptr->deref_resumable();
 }
 

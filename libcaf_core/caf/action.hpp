@@ -37,8 +37,6 @@ public:
   public:
     virtual state current_state() const noexcept = 0;
 
-    subtype_t subtype() const noexcept final;
-
     void ref_resumable() const noexcept final;
 
     void deref_resumable() const noexcept final;
@@ -80,7 +78,7 @@ public:
 
   /// Triggers the action.
   void run() {
-    pimpl_->resume(nullptr, 0);
+    pimpl_->resume(nullptr, resumable::default_event_id);
   }
 
   /// Cancel the action if it has not been invoked yet.
@@ -213,10 +211,14 @@ public:
       = state_.compare_exchange_strong(expected, action::state::disposed);
     CAF_ASSERT(ok);
     f_.~F();
-    return resumable::awaiting_message;
+    return resumable::done;
   }
 
-  resume_result resume(scheduler*, size_t) override {
+  resume_result resume(scheduler*, uint64_t event_id) override {
+    if (event_id == resumable::dispose_event_id) {
+      dispose();
+      return resumable::done;
+    }
     if constexpr (IsSingleShot) {
       run_single_shot();
       return resumable::done;

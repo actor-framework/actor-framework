@@ -433,12 +433,13 @@ proxy_registry* basp_broker::proxy_registry_ptr() {
   return &instance.proxies();
 }
 
-resumable::resume_result basp_broker::resume(scheduler* ctx, size_t mt) {
+resumable::resume_result basp_broker::resume(scheduler* ctx,
+                                             uint64_t event_id) {
   proxy_registry::current(&instance.proxies());
   auto guard = detail::scope_guard{[]() noexcept { //
     proxy_registry::current(nullptr);
   }};
-  return super::resume(ctx, mt);
+  return super::resume(ctx, event_id);
 }
 
 strong_actor_ptr basp_broker::make_proxy(node_id nid, actor_id aid) {

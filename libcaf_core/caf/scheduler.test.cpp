@@ -23,13 +23,12 @@ struct testee : resumable, ref_counted {
     : rendezvous(std::move(latch_handle)) {
   }
 
-  subtype_t subtype() const noexcept override {
-    return resumable::function_object;
-  }
-
-  resume_result resume(scheduler*, size_t max_throughput) override {
+  resume_result resume(scheduler*, uint64_t event_id) override {
+    if (event_id == resumable::dispose_event_id) {
+      rendezvous->count_down();
+      return resumable::done;
+    }
     if (++runs == 10) {
-      received_throughput = max_throughput;
       rendezvous->count_down();
       return resumable::done;
     }
@@ -45,7 +44,6 @@ struct testee : resumable, ref_counted {
   }
 
   std::atomic<size_t> runs = 0;
-  std::atomic<size_t> received_throughput = 0;
   std::shared_ptr<latch> rendezvous;
 };
 
@@ -63,13 +61,10 @@ OUTLINE("scheduling resumables") {
       auto rendezvous = std::make_shared<latch>(2);
       auto worker = make_counted<testee>(rendezvous);
       worker->ref();
-      sys->scheduler().schedule(worker.get());
+      sys->scheduler().schedule(worker.get(), resumable::default_event_id);
       THEN("expect the resumable to be executed until done") {
         rendezvous->count_down_and_wait();
         check_eq(worker->runs.load(), 10u);
-      }
-      AND_THEN("expect the correct max throughput") {
-        check_eq(worker->received_throughput, 5u);
       }
       AND_THEN("the scheduler releases the ref when done") {
         // Note: destroying the actor system here will cause CAF to shut down.
@@ -87,17 +82,14 @@ OUTLINE("scheduling resumables") {
         workers.emplace_back(make_counted<testee>(rendezvous));
         workers.back()->ref();
         check_eq(workers.back()->get_reference_count(), 2u);
-        sys->scheduler().schedule(workers.back().get());
+        sys->scheduler().schedule(workers.back().get(),
+                                  resumable::default_event_id);
       }
       THEN("expect the resumables to be executed until done") {
         rendezvous->count_down_and_wait();
         for (const auto& worker : workers) {
           check_eq(worker->runs, 10u);
         }
-      }
-      AND_THEN("expect the correct max throughput") {
-        for (const auto& worker : workers)
-          check_eq(worker->received_throughput, 5u);
       }
       AND_THEN("the scheduler releases the ref when done") {
         // Note: destroying the actor system here will cause CAF to shut down.
@@ -120,14 +112,14 @@ struct awaiting_testee : resumable, ref_counted {
     : rendezvous(std::move(latch_handle)) {
   }
 
-  subtype_t subtype() const noexcept override {
-    return resumable::function_object;
-  }
-
-  resume_result resume(scheduler*, size_t) override {
-    runs++;
+  resume_result resume(scheduler*, uint64_t event_id) override {
+    if (event_id == resumable::dispose_event_id) {
+      rendezvous->count_down();
+      return resumable::done;
+    }
+    ++runs;
     rendezvous->count_down();
-    return resumable::awaiting_message;
+    return resumable::done;
   }
 
   void ref_resumable() const noexcept final {
@@ -156,7 +148,8 @@ OUTLINE("scheduling units that are awaiting") {
       for (int i = 0; i < 10; i++) {
         workers.push_back(make_counted<awaiting_testee>(rendezvous));
         workers.back()->ref();
-        sys->scheduler().schedule(workers.back().get());
+        sys->scheduler().schedule(workers.back().get(),
+                                  resumable::default_event_id);
       }
       THEN("expect the resumables to be executed once") {
         rendezvous->count_down_and_wait();

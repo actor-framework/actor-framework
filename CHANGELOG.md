@@ -35,6 +35,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   `CAF_ENABLE_TRACE_LOGGING` to `ON`. When using the `configure` script, this
   can be achieved by passing the new `--enable-trace-logging` option to the
   script.
+- The classes `scheduler` and `resumable` have received a complete overhaul to
+  better hide implementation details and to improve maintainability.
 
 ### Deprecated
 

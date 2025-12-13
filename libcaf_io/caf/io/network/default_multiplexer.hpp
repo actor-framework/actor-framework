@@ -122,9 +122,9 @@ public:
   new_local_udp_endpoint(uint16_t port, const char* in = nullptr,
                          bool reuse_addr = false) override;
 
-  void schedule(resumable* ptr) override;
+  void schedule(resumable* ptr, uint64_t) override;
 
-  void delay(resumable* ptr) override;
+  void delay(resumable* ptr, uint64_t) override;
 
   explicit default_multiplexer(actor_system& sys);
 
@@ -248,9 +248,6 @@ private:
 
   /// Sequential ids for handles of datagram servants
   int64_t servant_ids_;
-
-  /// Maximum messages per resume run.
-  size_t max_throughput_;
 };
 
 inline connection_handle conn_hdl_from_socket(native_socket fd) {

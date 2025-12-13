@@ -68,7 +68,11 @@ public:
     return state_;
   }
 
-  resume_result resume(scheduler*, size_t) override {
+  resume_result resume(scheduler*, uint64_t event_id) override {
+    if (event_id == resumable::dispose_event_id) {
+      dispose();
+      return resumable::done;
+    }
     // We can only run a scheduled action.
     std::unique_lock guard{mtx_};
     if (state_ == action::state::scheduled) {

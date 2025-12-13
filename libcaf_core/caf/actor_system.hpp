@@ -9,6 +9,7 @@
 #include "caf/actor_config.hpp"
 #include "caf/actor_launcher.hpp"
 #include "caf/actor_system_module.hpp"
+#include "caf/callback.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/format.hpp"
 #include "caf/detail/init_fun_factory.hpp"
@@ -566,6 +567,9 @@ public:
   /// @endcond
 
 private:
+  using launch_callback_ptr
+    = unique_callback_ptr<void(scheduled_actor*, caf::scheduler*)>;
+
   std::pair<event_based_actor*, actor_launcher>
     spawn_inactive_impl(spawn_options);
 
@@ -593,6 +597,8 @@ private:
   void set_scheduler(std::unique_ptr<caf::scheduler> ptr);
 
   void set_node(node_id id);
+
+  void set_launch_callback(launch_callback_ptr callback);
 
   // -- member variables -------------------------------------------------------
 

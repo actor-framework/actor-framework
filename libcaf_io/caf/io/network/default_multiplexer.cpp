@@ -143,8 +143,7 @@ default_multiplexer::default_multiplexer(actor_system& sys)
     epollfd_(invalid_native_socket),
     shadow_(1),
     pipe_reader_(*this),
-    servant_ids_(0),
-    max_throughput_(0) {
+    servant_ids_(0) {
   init();
   epollfd_ = epoll_create1(EPOLL_CLOEXEC);
   if (epollfd_ == -1) {
@@ -581,9 +580,6 @@ void default_multiplexer::init() {
     }
   }
 #endif
-  namespace sr = defaults::scheduler;
-  max_throughput_ = get_or(system().config(), "caf.scheduler.max-throughput",
-                           sr::max_throughput);
 }
 
 bool default_multiplexer::poll_once(bool block) {
@@ -609,14 +605,10 @@ bool default_multiplexer::poll_once(bool block) {
 
 void default_multiplexer::resume(intrusive_ptr<resumable> ptr) {
   auto lg = log::io::trace("");
-  switch (ptr->resume(this, max_throughput_)) {
+  switch (ptr->resume(this, resumable::default_event_id)) {
     case resumable::resume_later:
       // Delay resumable until next cycle.
       internally_posted_.emplace_back(ptr.release(), false);
-      break;
-    case resumable::shutdown_execution_unit:
-      // Don't touch reference count of shutdown helpers.
-      ptr.release();
       break;
     default:; // Done. Release reference to resumable.
   }
@@ -643,24 +635,18 @@ default_multiplexer::~default_multiplexer() {
 #endif
 }
 
-void default_multiplexer::schedule(resumable* ptr) {
+void default_multiplexer::schedule(resumable* ptr, uint64_t) {
   auto lg = log::io::trace("ptr = {}", ptr);
   CAF_ASSERT(ptr != nullptr);
-  switch (ptr->subtype()) {
-    case resumable::io_actor:
-    case resumable::function_object:
-      if (std::this_thread::get_id() != thread_id())
-        wr_dispatch_request(ptr);
-      else
-        internally_posted_.emplace_back(ptr, false);
-      break;
-    default:
-      system().scheduler().schedule(ptr);
+  if (std::this_thread::get_id() != thread_id()) {
+    wr_dispatch_request(ptr);
+  } else {
+    internally_posted_.emplace_back(ptr, false);
   }
 }
 
-void default_multiplexer::delay(resumable* ptr) {
-  schedule(ptr);
+void default_multiplexer::delay(resumable* ptr, uint64_t) {
+  schedule(ptr, resumable::default_event_id);
 }
 
 scribe_ptr default_multiplexer::new_scribe(native_socket fd) {
