@@ -10,6 +10,7 @@
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
 #include "caf/format_to_error.hpp"
+#include "caf/format_to_unexpected.hpp"
 #include "caf/internal/net_syscall.hpp"
 #include "caf/internal/socket_sys_includes.hpp"
 #include "caf/logger.hpp"
@@ -128,9 +129,9 @@ expected<std::string> local_addr(network_socket x) {
     default:
       break;
   }
-  return caf::unexpected{
-    format_to_error(sec::invalid_protocol_family,
-                    "local_addr: invalid protocol family {}", sa->sa_family)};
+  return format_to_unexpected(sec::invalid_protocol_family,
+                              "local_addr: invalid protocol family {}",
+                              sa->sa_family);
 }
 
 expected<uint16_t> local_port(network_socket x) {
@@ -160,9 +161,9 @@ expected<std::string> remote_addr(network_socket x) {
     default:
       break;
   }
-  return caf::unexpected{
-    format_to_error(sec::invalid_protocol_family,
-                    "remote_addr: invalid protocol family {}", sa->sa_family)};
+  return format_to_unexpected(sec::invalid_protocol_family,
+                              "remote_addr: invalid protocol family {}",
+                              sa->sa_family);
 }
 
 expected<uint16_t> remote_port(network_socket x) {

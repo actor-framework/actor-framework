@@ -20,6 +20,7 @@
 #include "caf/detail/latch.hpp"
 #include "caf/detail/prometheus_broker.hpp"
 #include "caf/format_to_error.hpp"
+#include "caf/format_to_unexpected.hpp"
 #include "caf/init_global_meta_objects.hpp"
 #include "caf/log/system.hpp"
 #include "caf/logger.hpp"
@@ -298,13 +299,13 @@ expected<strong_actor_ptr> middleman::remote_actor(std::set<std::string> ifs,
     return caf::unexpected{std::move(res.error())};
   strong_actor_ptr ptr = std::move(std::get<1>(*res));
   if (!ptr)
-    return caf::unexpected{
-      format_to_error(sec::no_actor_published_at_port,
-                      "no actor published at port {} on host {}", port)};
+    return format_to_unexpected(sec::no_actor_published_at_port,
+                                "no actor published at port {} on host {}",
+                                port);
   if (!system().assignable(std::get<2>(*res), ifs))
-    return caf::unexpected{format_to_error(
-      sec::unexpected_actor_messaging_interface,
-      "expected interface {}, got {}", std::move(ifs), std::get<2>(*res))};
+    return format_to_unexpected(sec::unexpected_actor_messaging_interface,
+                                "expected interface {}, got {}", std::move(ifs),
+                                std::get<2>(*res));
   return ptr;
 }
 

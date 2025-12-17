@@ -10,6 +10,7 @@
 
 #include "caf/detail/socket_sys_aliases.hpp"
 #include "caf/expected.hpp"
+#include "caf/format_to_unexpected.hpp"
 #include "caf/internal/net_syscall.hpp"
 #include "caf/internal/sockaddr_members.hpp"
 #include "caf/internal/socket_sys_includes.hpp"
@@ -102,9 +103,9 @@ expected<tcp_accept_socket> make_tcp_accept_socket(ip_endpoint node,
     log::net::debug("sock.id = {}", sock.id);
     return sguard.release();
   } else {
-    return caf::unexpected{format_to_error(
+    return format_to_unexpected(
       sec::cannot_open_port,
-      "could not create tcp socket: node = {}, p.error = {}", node, p.error())};
+      "could not create tcp socket: node = {}, p.error = {}", node, p.error());
   }
 }
 
@@ -125,9 +126,9 @@ make_tcp_accept_socket(const uri::authority_type& node, bool reuse_addr) {
   }
   auto addrs = ip::local_addresses(host);
   if (addrs.empty())
-    return caf::unexpected{
-      format_to_error(sec::cannot_open_port,
-                      "no local interface available for {}", to_string(node))};
+    return format_to_unexpected(sec::cannot_open_port,
+                                "no local interface available for {}",
+                                to_string(node));
   // Prefer ipv6 addresses.
   std::stable_partition(std::begin(addrs), std::end(addrs),
                         [](const ip_address& ip) { return !ip.embeds_v4(); });
@@ -136,8 +137,8 @@ make_tcp_accept_socket(const uri::authority_type& node, bool reuse_addr) {
                                            reuse_addr))
       return *sock;
   }
-  return caf::unexpected{
-    format_to_error(sec::cannot_open_port, "failed to open port: {}", node)};
+  return format_to_unexpected(sec::cannot_open_port, "failed to open port: {}",
+                              node);
 }
 
 expected<tcp_accept_socket>

@@ -56,8 +56,24 @@ using expected = std::expected<T, error>;
 namespace caf {
 
 /// Represents an unexpected value to be stored in caf::expected.
+// template <class E>
 class unexpected {
 public:
+  template <typename... Args>
+    requires std::is_constructible_v<error, Args...>
+  constexpr explicit unexpected(std::in_place_t, Args&&... args)
+    : reason{std::forward<Args>(args)...} {
+    // nop
+  }
+
+  template <class U, class... Args>
+    requires std::is_constructible_v<error, std::initializer_list<U>&, Args...>
+  constexpr explicit unexpected(std::in_place_t, std::initializer_list<U> il,
+                                Args&&... args)
+    : reason{std::move(il), std::forward<Args>(args)...} {
+    // nop
+  }
+
   unexpected(caf::error err) : reason{std::move(err)} {
   }
 
@@ -205,7 +221,8 @@ public:
     return *this;
   }
 
-  template <std::convertible_to<T> U>
+  template <class U>
+    requires std::is_constructible_v<T, U>
   expected& operator=(U x) {
     return *this = T{std::move(x)};
   }
@@ -1111,6 +1128,12 @@ inline bool operator!=(const expected<void>& x, const expected<void>& y) {
 #endif
 
 namespace caf {
+
+template <class... Args>
+  requires std::is_constructible_v<error, Args...>
+constexpr unexpected make_unexpected(Args&&... args) noexcept {
+  return unexpected{std::in_place, std::forward<Args>(args)...};
+}
 
 template <class Inspector>
 bool inspect(Inspector& f, unexpected& x) {
