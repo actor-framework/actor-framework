@@ -158,10 +158,9 @@ expected<tcp_stream_socket> accept(tcp_accept_socket x) {
     auto err = net::last_socket_error();
     if (err != std::errc::operation_would_block
         && err != std::errc::resource_unavailable_try_again) {
-      return caf::unexpected{make_error(sec::unavailable_or_would_block)};
+      return make_unexpected(sec::unavailable_or_would_block);
     }
-    return caf::unexpected{
-      make_error(sec::socket_operation_failed, "tcp accept failed")};
+    return make_unexpected(sec::socket_operation_failed, "tcp accept failed");
   }
   log::net::debug("accepted TCP socket {} on accept socket {}", sock, x.id);
   return tcp_stream_socket{sock};

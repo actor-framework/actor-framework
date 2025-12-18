@@ -46,7 +46,7 @@ namespace caf {
 
 using unexpected = std::unexpected<error>;
 
-template <typename T>
+template <class T>
 using expected = std::expected<T, error>;
 
 } // namespace caf
@@ -59,6 +59,8 @@ namespace caf {
 // template <class E>
 class unexpected {
 public:
+  friend bool operator==(const unexpected& lhs, const unexpected& rhs) noexcept;
+
   template <typename... Args>
     requires std::is_constructible_v<error, Args...>
   constexpr explicit unexpected(std::in_place_t, Args&&... args)
@@ -85,18 +87,19 @@ public:
     return reason;
   }
 
-  void swap(unexpected& other) {
+  void swap(unexpected& other) noexcept {
     using std::swap;
     swap(reason, other.reason);
-  }
-
-  bool operator==(const unexpected& other) const {
-    return reason == other.reason;
   }
 
 private:
   caf::error reason;
 };
+
+// TODO tempalte
+inline bool operator==(const unexpected& lhs, const unexpected& rhs) noexcept {
+  return lhs.reason == rhs.reason;
+}
 
 /// Represents the result of a computation which can either complete
 /// successfully with an instance of type `T` or fail with an `error`.
@@ -1129,10 +1132,9 @@ inline bool operator!=(const expected<void>& x, const expected<void>& y) {
 
 namespace caf {
 
-template <class... Args>
-  requires std::is_constructible_v<error, Args...>
-constexpr unexpected make_unexpected(Args&&... args) noexcept {
-  return unexpected{std::in_place, std::forward<Args>(args)...};
+template <error_code_enum Enum, class... Args>
+constexpr unexpected make_unexpected(Enum e, Args&&... args) noexcept {
+  return unexpected{std::in_place, make_error(e, std::forward<Args>(args)...)};
 }
 
 template <class Inspector>

@@ -134,14 +134,14 @@ TEST("add ascii - unsigned") {
     uint8_t x = 0;
     for (auto c : str)
       if (!add_ascii<10>(x, c))
-        return caf::unexpected{make_error(pec::integer_overflow)};
+        return caf::make_unexpected(pec::integer_overflow);
     return x;
   };
   for (int i = 0; i < 256; ++i)
     check_eq(rd(std::to_string(i)), static_cast<uint8_t>(i));
   for (int i = 256; i < 513; ++i)
     check_eq(rd(std::to_string(i)),
-             caf::unexpected{make_error(pec::integer_overflow)});
+             caf::make_unexpected(pec::integer_overflow));
 }
 
 TEST("add ascii - signed") {
@@ -149,14 +149,14 @@ TEST("add ascii - signed") {
     int8_t x = 0;
     for (auto c : str)
       if (!detail::parser::add_ascii<10>(x, c))
-        return caf::unexpected{make_error(pec::integer_overflow)};
+        return caf::make_unexpected(pec::integer_overflow);
     return x;
   };
   for (int i = 0; i < 128; ++i)
     check_eq(rd(std::to_string(i)), static_cast<int8_t>(i));
   for (int i = 128; i < 513; ++i)
     check_eq(rd(std::to_string(i)),
-             caf::unexpected{make_error(pec::integer_overflow)});
+             caf::make_unexpected(pec::integer_overflow));
 }
 
 TEST("sub ascii") {
@@ -164,7 +164,7 @@ TEST("sub ascii") {
     int8_t x = 0;
     for (auto c : str)
       if (!detail::parser::sub_ascii<10>(x, c))
-        return caf::unexpected{make_error(pec::integer_underflow)};
+        return caf::make_unexpected(pec::integer_underflow);
     return x;
   };
   // Using sub_ascii in this way behaves as if we'd prefix the number with a
@@ -173,7 +173,7 @@ TEST("sub ascii") {
     check_eq(rd(std::to_string(i)), static_cast<int8_t>(-i));
   for (int i = 129; i < 513; ++i)
     check_eq(rd(std::to_string(i)),
-             caf::unexpected{make_error(pec::integer_underflow)});
+             caf::make_unexpected(pec::integer_underflow));
 }
 
 #define CHECK_NUMBER(x) check_eq(p(#x), res(x))

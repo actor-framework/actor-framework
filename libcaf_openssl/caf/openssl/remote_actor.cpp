@@ -33,11 +33,11 @@ expected<strong_actor_ptr> remote_actor(actor_system& sys,
   auto& tup = *x;
   auto& ptr = get<1>(tup);
   if (!ptr)
-    return caf::unexpected{make_error(sec::no_actor_published_at_port)};
+    return caf::make_unexpected(sec::no_actor_published_at_port);
   auto& found_mpi = get<2>(tup);
   if (sys.assignable(found_mpi, mpi))
     return std::move(ptr);
-  return caf::unexpected{make_error(sec::unexpected_actor_messaging_interface)};
+  return caf::make_unexpected(sec::unexpected_actor_messaging_interface);
 }
 
 } // namespace caf::openssl

@@ -252,8 +252,8 @@ public:
   virtual expected<disposable> start_server_impl(net::tcp_accept_socket) = 0;
 
   expected<disposable> start_server(none_t) {
-    return caf::unexpected{make_error(
-      caf::sec::logic_error, "invalid WebSocket server configuration")};
+    return caf::make_unexpected(caf::sec::logic_error,
+                                "invalid WebSocket server configuration");
   }
 
   expected<disposable> start_server(server_config::socket& cfg) {
@@ -309,8 +309,8 @@ public:
   virtual expected<disposable> start_client_impl(net::stream_socket) = 0;
 
   expected<disposable> start_client(none_t) {
-    return caf::unexpected{make_error(
-      caf::sec::logic_error, "invalid WebSocket client configuration")};
+    return caf::make_unexpected(caf::sec::logic_error,
+                                "invalid WebSocket client configuration");
   }
 
   expected<disposable> start_client(client_config::conn& cfg) {
@@ -325,9 +325,9 @@ public:
       }
       if (ctx->hostname_validation()) {
         if (!conn->hostname(hostname.c_str())) {
-          return caf::unexpected{make_error(
+          return caf::make_unexpected(
             sec::protocol_error, "unable to set {} for SSL hostname validation",
-            hostname)};
+            hostname);
         }
         log::net::debug("set {} as hostname for SSL validation", hostname);
       }

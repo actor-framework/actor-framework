@@ -45,8 +45,8 @@ public:
 
   expected<net::socket_manager_ptr> try_accept() override {
     if (wca_->canceled()) {
-      return caf::unexpected{make_error(
-        sec::runtime_error, "WebSocket connection dropped: client canceled")};
+      return caf::make_unexpected(
+        sec::runtime_error, "WebSocket connection dropped: client canceled");
     }
     auto conn = accept(acceptor_);
     if (!conn) {
@@ -96,9 +96,9 @@ public:
     auto ptr = net::socket_manager::make(mpx, std::move(handler));
     if (mpx->start(ptr))
       return expected<disposable>{disposable{std::move(ptr)}};
-    return caf::unexpected{
-      make_error(sec::logic_error,
-                 "failed to register socket manager to net::multiplexer")};
+    return make_unexpected(
+      sec::logic_error,
+      "failed to register socket manager to net::multiplexer");
   }
 
   expected<disposable> start_server_impl(net::ssl::tcp_acceptor& acc) override {
@@ -128,9 +128,9 @@ public:
     if (mpx->start(ptr)) {
       return expected<disposable>{disposable{std::move(ptr)}};
     }
-    return caf::unexpected{
-      make_error(sec::logic_error,
-                 "failed to register socket manager to net::multiplexer")};
+    return make_unexpected(
+      sec::logic_error,
+      "failed to register socket manager to net::multiplexer");
   }
 
   expected<disposable> start_client_impl(net::ssl::connection& conn) override {
@@ -147,14 +147,14 @@ public:
     auto port = auth.port;
     // Sanity checking.
     if (host.empty()) {
-      return caf::unexpected{
-        make_error(sec::invalid_argument, "URI must provide a valid hostname")};
+      return make_unexpected(sec::invalid_argument,
+                             "URI must provide a valid hostname");
     }
     // Spin up the server based on the scheme.
     if (endpoint.scheme() == "ws") {
       if (ctx) {
-        return caf::unexpected{make_error(
-          sec::invalid_argument, "URI scheme is ws but SSL context is set")};
+        return make_unexpected(sec::invalid_argument,
+                               "URI scheme is ws but SSL context is set");
       }
       if (port == 0) {
         port = defaults::net::http_default_port;
@@ -172,8 +172,8 @@ public:
         port = defaults::net::https_default_port;
       }
     } else {
-      return caf::unexpected{make_error(
-        sec::invalid_argument, "unsupported URI scheme: expected ws or wss")};
+      return caf::make_unexpected(sec::invalid_argument,
+                                  "unsupported URI scheme: expected ws or wss");
     }
     // Fill the handshake with fields from the URI and try to connect.
     hs.host(host);

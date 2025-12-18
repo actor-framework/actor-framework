@@ -88,17 +88,13 @@ TEST("unquoted strings") {
 }
 
 TEST("invalid strings") {
-  check_eq(p(R"("abc)"), caf::unexpected{make_error(pec::unexpected_eof)});
-  check_eq(p(R"('abc)"), caf::unexpected{make_error(pec::unexpected_eof)});
-  check_eq(p("\"ab\nc\""),
-           caf::unexpected{make_error(pec::unexpected_newline)});
-  check_eq(p("'ab\nc'"), caf::unexpected{make_error(pec::unexpected_newline)});
-  check_eq(p(R"("abc" def)"),
-           caf::unexpected{make_error(pec::trailing_character)});
-  check_eq(p(R"('abc' def)"),
-           caf::unexpected{make_error(pec::trailing_character)});
-  check_eq(p(R"( 123, )"),
-           caf::unexpected{make_error(pec::trailing_character)});
+  check_eq(p(R"("abc)"), caf::make_unexpected(pec::unexpected_eof));
+  check_eq(p(R"('abc)"), caf::make_unexpected(pec::unexpected_eof));
+  check_eq(p("\"ab\nc\""), caf::make_unexpected(pec::unexpected_newline));
+  check_eq(p("'ab\nc'"), caf::make_unexpected(pec::unexpected_newline));
+  check_eq(p(R"("abc" def)"), caf::make_unexpected(pec::trailing_character));
+  check_eq(p(R"('abc' def)"), caf::make_unexpected(pec::trailing_character));
+  check_eq(p(R"( 123, )"), caf::make_unexpected(pec::trailing_character));
 }
 
 } // WITH_FIXTURE(fixture)

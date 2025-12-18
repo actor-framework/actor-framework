@@ -36,8 +36,7 @@ tcp_acceptor::make_with_cert_file(tcp_accept_socket fd,
                                   format file_format) {
   auto ctx = context::make_server(tls::any);
   if (!ctx) {
-    return caf::unexpected{
-      make_error(sec::runtime_error, "unable to create SSL context")};
+    return caf::make_unexpected(sec::runtime_error, "unable to create SSL context");
   }
   if (!ctx->use_certificate_file(cert_file_path, file_format)) {
     return format_to_unexpected(sec::runtime_error,
@@ -60,7 +59,7 @@ tcp_acceptor::make_with_cert_file(uint16_t port, const char* cert_file_path,
     return tcp_acceptor::make_with_cert_file(*fd, cert_file_path, key_file_path,
                                              file_format);
   } else {
-    return caf::unexpected{make_error(sec::cannot_open_port)};
+    return caf::make_unexpected(sec::cannot_open_port);
   }
 }
 

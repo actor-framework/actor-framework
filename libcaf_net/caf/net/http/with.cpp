@@ -97,8 +97,7 @@ public:
 
   expected<net::socket_manager_ptr> try_accept() override {
     if (parent_ == nullptr)
-      return caf::unexpected{
-        make_error(sec::runtime_error, "acceptor not started")};
+      return make_unexpected(sec::runtime_error, "acceptor not started");
     auto conn = accept(acceptor_);
     if (!conn)
       return caf::unexpected{std::move(conn.error())};
@@ -181,8 +180,8 @@ public:
       }
       routes.push_back(std::move(*new_route));
     } else if (routes.empty()) {
-      return caf::unexpected{make_error(
-        sec::logic_error, "cannot start an HTTP server without any routes")};
+      return caf::make_unexpected(
+        sec::logic_error, "cannot start an HTTP server without any routes");
     }
     for (auto& ptr : routes)
       ptr->init();
@@ -195,9 +194,9 @@ public:
     auto ptr = net::socket_manager::make(mpx, std::move(impl));
     if (mpx->start(ptr))
       return expected<disposable>{disposable{std::move(ptr)}};
-    return caf::unexpected{
-      make_error(sec::logic_error,
-                 "failed to register socket manager to net::multiplexer")};
+    return make_unexpected(
+      sec::logic_error,
+      "failed to register socket manager to net::multiplexer");
   }
 
   expected<disposable> start_server_impl(net::ssl::tcp_acceptor& acc) override {
@@ -220,9 +219,9 @@ public:
     auto ptr = socket_manager::make(mpx, std::move(transport));
     if (mpx->start(ptr))
       return disposable{std::move(ptr)};
-    return caf::unexpected{
-      make_error(sec::logic_error,
-                 "failed to register socket manager to net::multiplexer")};
+    return make_unexpected(
+      sec::logic_error,
+      "failed to register socket manager to net::multiplexer");
   }
 
   expected<disposable> start_client_impl(net::ssl::connection& conn) override {
@@ -238,8 +237,8 @@ public:
     auto use_ssl = false;
     // Sanity checking.
     if (auth.host_str().empty())
-      return caf::unexpected{
-        make_error(sec::invalid_argument, "URI must provide a valid hostname")};
+      return make_unexpected(sec::invalid_argument,
+                             "URI must provide a valid hostname");
     if (endpoint.scheme() == "http") {
       if (auth.port == 0)
         auth.port = defaults::net::http_default_port;

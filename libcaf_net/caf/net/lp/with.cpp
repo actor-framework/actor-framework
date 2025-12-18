@@ -58,8 +58,7 @@ public:
 
   expected<net::socket_manager_ptr> try_accept() override {
     if (!mcast_ || !mcast_->has_observers())
-      return caf::unexpected{
-        make_error(sec::runtime_error, "client has disconnected")};
+      return make_unexpected(sec::runtime_error, "client has disconnected");
     // Accept a new connection.
     auto conn = accept(acceptor_);
     if (!conn)
@@ -118,9 +117,9 @@ public:
     auto ptr = net::socket_manager::make(mpx, std::move(handler));
     if (mpx->start(ptr))
       return expected<disposable>{disposable{std::move(ptr)}};
-    return caf::unexpected{
-      make_error(sec::logic_error,
-                 "failed to register socket manager to net::multiplexer")};
+    return make_unexpected(
+      sec::logic_error,
+      "failed to register socket manager to net::multiplexer");
   }
 
   expected<disposable> start_server_impl(net::ssl::tcp_acceptor& acc) override {
@@ -141,9 +140,9 @@ public:
     auto ptr = socket_manager::make(mpx, std::move(transport));
     if (mpx->start(ptr))
       return expected<disposable>{disposable{std::move(ptr)}};
-    return caf::unexpected{
-      make_error(sec::logic_error,
-                 "failed to register socket manager to net::multiplexer")};
+    return make_unexpected(
+      sec::logic_error,
+      "failed to register socket manager to net::multiplexer");
   }
 
   expected<disposable> start_client_impl(net::ssl::connection& conn) override {

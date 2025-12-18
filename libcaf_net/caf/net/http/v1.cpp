@@ -78,8 +78,8 @@ expected<std::pair<size_t, byte_span>> parse_chunk(byte_span input) {
     return caf::unexpected{
       make_error(sec::protocol_error, "Chunk size decoding error.")};
   if (chunk.size() > sizeof(size_t))
-    return caf::unexpected{make_error(
-      sec::protocol_error, "Integer overflow while parsing chunk size.")};
+    return caf::make_unexpected(sec::protocol_error,
+                                "Integer overflow while parsing chunk size.");
   // This parsing method is only safe because of the previous checks.
   detail::parser::ascii_to_int<16, size_t> f;
   size_t chunk_size = 0;

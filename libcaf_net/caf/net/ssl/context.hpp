@@ -563,14 +563,14 @@ inline auto use_sni_hostname(std::string sni_hostname) noexcept {
 /// address.
 /// @returns a function object for chaining `expected<T>::and_then()`.
 inline auto use_sni_hostname(caf::uri uri) noexcept {
-  return [arg1 = std::move(uri)](context ctx) mutable -> expected<context> {
+  return [arg1 = std::move(uri)](context ctx) mutable -> caf::expected<context> {
     auto& host = arg1.authority().host;
     if (std::holds_alternative<std::string>(host)) {
       ctx.sni_hostname(std::get<std::string>(host));
-      return expected<context>{std::move(ctx)};
+      return caf::expected<context>{std::move(ctx)};
     }
-    return caf::unexpected{make_error(
-      sec::runtime_error, "Failed to set SNI hostname from URI {}", arg1)};
+    return caf::make_unexpected(
+      sec::runtime_error, "Failed to set SNI hostname from URI {}", arg1);
   };
 }
 
@@ -580,9 +580,9 @@ inline auto use_sni_hostname(caf::uri uri) noexcept {
 /// inject the hostname automatically from the destination.
 /// @returns a function object for chaining `expected<T>::and_then()`.
 inline auto use_hostname_validation(bool enabled) noexcept {
-  return [arg1 = std::move(enabled)](context ctx) mutable -> expected<context> {
+  return [arg1 = std::move(enabled)](context ctx) mutable -> caf::expected<context> {
     ctx.hostname_validation(arg1);
-    return expected<context>{std::move(ctx)};
+    return caf::expected<context>{std::move(ctx)};
   };
 }
 

@@ -196,7 +196,7 @@ expected<json_value> json_value::parse_file(const char* path) {
   using iterator_t = std::istreambuf_iterator<char>;
   std::ifstream input{path};
   if (!input.is_open())
-    return caf::unexpected{make_error(sec::cannot_open_file)};
+    return caf::make_unexpected(sec::cannot_open_file);
   auto storage = make_counted<detail::json::storage>();
   detail::json::file_parser_state ps{iterator_t{input}, iterator_t{}};
   auto root = detail::json::parse(ps, &storage->buf);

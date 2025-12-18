@@ -18,8 +18,8 @@ caf::expected<uri> parse_request_target(http::method method,
                                         std::string_view request_target) {
   using namespace std::literals;
   if (request_target.empty()) {
-    return caf::unexpected{make_error(
-      sec::invalid_argument, "Malformed Request-URI: request target empty.")};
+    return caf::make_unexpected(sec::invalid_argument,
+                                "Malformed Request-URI: request target empty.");
   }
   expected<uri> res{caf::unexpected{none}};
   if (method == http::method::connect) {

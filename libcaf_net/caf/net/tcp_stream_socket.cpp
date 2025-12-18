@@ -150,7 +150,7 @@ expected<tcp_stream_socket> make_connected_tcp_stream_socket(ip_endpoint node,
     return sguard.release();
   }
   log::net::info("failed to connect to {}", node);
-  return caf::unexpected{make_error(sec::cannot_connect_to_node)};
+  return caf::make_unexpected(sec::cannot_connect_to_node);
 }
 
 expected<tcp_stream_socket>
@@ -159,23 +159,20 @@ make_connected_tcp_stream_socket(const uri::authority_type& node,
   auto lg = log::net::trace("node = {}, timeout = {}", node, timeout);
   auto port = node.port;
   if (port == 0)
-    return caf::unexpected{
-      make_error(sec::cannot_connect_to_node, "port is zero")};
+    return make_unexpected(sec::cannot_connect_to_node, "port is zero");
   std::vector<ip_address> addrs;
   if (auto str = std::get_if<std::string>(&node.host))
     addrs = ip::resolve(*str);
   else if (auto addr = std::get_if<ip_address>(&node.host))
     addrs.push_back(*addr);
   if (addrs.empty())
-    return caf::unexpected{
-      make_error(sec::cannot_connect_to_node, "empty authority")};
+    return make_unexpected(sec::cannot_connect_to_node, "empty authority");
   for (auto& addr : addrs) {
     auto ep = ip_endpoint{addr, port};
     if (auto sock = make_connected_tcp_stream_socket(ep, timeout))
       return *sock;
   }
-  return caf::unexpected{
-    make_error(sec::cannot_connect_to_node, to_string(node))};
+  return make_unexpected(sec::cannot_connect_to_node, to_string(node));
 }
 
 expected<tcp_stream_socket> make_connected_tcp_stream_socket(std::string host,

@@ -85,7 +85,7 @@ expected<T> get_as(const settings& xs, std::string_view name) {
   if (auto ptr = get_if(&xs, name))
     return get_as<T>(*ptr);
   else
-    return caf::unexpected{make_error(sec::no_such_key)};
+    return caf::make_unexpected(sec::no_such_key);
 }
 
 /// @private

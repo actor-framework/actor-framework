@@ -123,7 +123,7 @@ expected<context> context::make(tls vmin, tls vmax) {
   if (errstr == nullptr)
     return {std::move(ctx)};
   else
-    return caf::unexpected{make_error(sec::logic_error, errstr)};
+    return caf::make_unexpected(sec::logic_error, errstr);
 }
 
 expected<context> context::make_server(tls vmin, tls vmax) {
@@ -132,7 +132,7 @@ expected<context> context::make_server(tls vmin, tls vmax) {
   if (errstr == nullptr)
     return {std::move(ctx)};
   else
-    return caf::unexpected{make_error(sec::logic_error, errstr)};
+    return caf::make_unexpected(sec::logic_error, errstr);
 }
 
 expected<context> context::make_client(tls vmin, tls vmax) {
@@ -141,7 +141,7 @@ expected<context> context::make_client(tls vmin, tls vmax) {
   if (errstr == nullptr)
     return {std::move(ctx)};
   else
-    return caf::unexpected{make_error(sec::logic_error, errstr)};
+    return caf::make_unexpected(sec::logic_error, errstr);
 }
 
 expected<context> context::make(dtls vmin, dtls vmax) {
@@ -150,7 +150,7 @@ expected<context> context::make(dtls vmin, dtls vmax) {
   if (errstr == nullptr)
     return {std::move(ctx)};
   else
-    return caf::unexpected{make_error(sec::logic_error, errstr)};
+    return caf::make_unexpected(sec::logic_error, errstr);
 }
 
 expected<context> context::make_server(dtls vmin, dtls vmax) {
@@ -159,7 +159,7 @@ expected<context> context::make_server(dtls vmin, dtls vmax) {
   if (errstr == nullptr)
     return {std::move(ctx)};
   else
-    return caf::unexpected{make_error(sec::logic_error, errstr)};
+    return caf::make_unexpected(sec::logic_error, errstr);
 }
 
 expected<context> context::make_client(dtls vmin, dtls vmax) {
@@ -168,7 +168,7 @@ expected<context> context::make_client(dtls vmin, dtls vmax) {
   if (errstr == nullptr)
     return {std::move(ctx)};
   else
-    return caf::unexpected{make_error(sec::logic_error, errstr)};
+    return caf::make_unexpected(sec::logic_error, errstr);
 }
 
 // -- properties ---------------------------------------------------------------
@@ -297,20 +297,18 @@ expected<connection> context::new_connection(stream_socket fd) {
     auto conn = connection::from_native(ptr);
     if (auto host = sni_hostname()) {
       if (!conn.sni_hostname(host))
-        return caf::unexpected{make_error(sec::cannot_connect_to_node,
-                                          "Failed to set SNI hostname")};
+        return make_unexpected(sec::cannot_connect_to_node,
+                               "Failed to set SNI hostname");
     }
     if (auto bio_ptr = BIO_new_socket(fd.id, BIO_NOCLOSE)) {
       SSL_set_bio(ptr, bio_ptr, bio_ptr);
 
       return {std::move(conn)};
     } else {
-      return caf::unexpected{
-        make_error(sec::logic_error, "BIO_new_socket failed")};
+      return make_unexpected(sec::logic_error, "BIO_new_socket failed");
     }
   } else {
-    return caf::unexpected{
-      make_error(sec::logic_error, "SSL_new returned null")};
+    return make_unexpected(sec::logic_error, "SSL_new returned null");
   }
 }
 
@@ -320,17 +318,15 @@ expected<connection> context::new_connection(stream_socket fd,
     auto conn = connection::from_native(ptr);
     if (auto host = sni_hostname()) {
       if (!conn.sni_hostname(host))
-        return caf::unexpected{make_error(sec::cannot_connect_to_node,
-                                          "Failed to set SNI hostname")};
+        return caf::make_unexpected(sec::cannot_connect_to_node,
+                                    "Failed to set SNI hostname");
     }
     if (SSL_set_fd(ptr, fd.id) == 1)
       return {std::move(conn)};
     else
-      return caf::unexpected{make_error(sec::logic_error, "SSL_set_fd failed")};
-
+      return caf::make_unexpected(sec::logic_error, "SSL_set_fd failed");
   } else {
-    return caf::unexpected{
-      make_error(sec::logic_error, "SSL_new returned null")};
+    return make_unexpected(sec::logic_error, "SSL_new returned null");
   }
 }
 

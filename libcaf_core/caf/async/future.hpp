@@ -175,7 +175,7 @@ public:
     std::unique_lock guard{cell_->mtx};
     switch (cell_->value.index()) {
       default:
-        return res_t{caf::unexpected{make_error(sec::future_timeout)}};
+        return res_t{caf::make_unexpected(sec::future_timeout)};
       case 1:
         if constexpr (std::is_void_v<T>)
           return res_t{};
