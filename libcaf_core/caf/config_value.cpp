@@ -92,10 +92,10 @@ expected<config_value> config_value::parse(std::string_view::iterator first,
     case '{':
     case '"':
     case '\'':
-      return caf::unexpected{error{res.code}};
+      return make_unexpected(error{res.code});
     default:
       if (isdigit(*i))
-        return caf::unexpected{error{res.code}};
+        return make_unexpected(error{res.code});
       return config_value{std::string{first, last}};
   }
 }
@@ -438,9 +438,9 @@ expected<config_value::dictionary> config_value::to_dictionary() const {
       if (std::ranges::all_of(x, lift)) {
         return result_type{std::move(tmp)};
       }
-      return caf::unexpected{error{
+      return make_unexpected(error{
         sec::conversion_failed, "cannot convert list to dictionary unless each "
-                                "element in the list is a key-value pair"}};
+                                "element in the list is a key-value pair"});
     },
     [this](const std::string& x) -> result_type {
       if (dictionary tmp; detail::parse(x, tmp) == none)

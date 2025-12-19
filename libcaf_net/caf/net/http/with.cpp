@@ -100,7 +100,7 @@ public:
       return make_unexpected(sec::runtime_error, "acceptor not started");
     auto conn = accept(acceptor_);
     if (!conn)
-      return caf::unexpected{std::move(conn.error())};
+      return make_unexpected(std::move(conn.error()));
     auto app = net::http::router::make(routes_);
     auto serv = net::http::server::make(std::move(app));
     serv->max_request_size(max_request_size_);
@@ -176,7 +176,7 @@ public:
         }
       });
       if (!new_route) {
-        return caf::unexpected{std::move(new_route.error())};
+        return make_unexpected(std::move(new_route.error()));
       }
       routes.push_back(std::move(*new_route));
     } else if (routes.empty()) {
@@ -249,14 +249,14 @@ public:
     } else {
       auto err = make_error(sec::invalid_argument,
                             "unsupported URI scheme: expected http or https");
-      return caf::unexpected{std::move(err)};
+      return make_unexpected(std::move(err));
     }
     if (use_ssl) {
       if (!ctx) {
         if (auto maybe_ctx = (*context_factory)())
           ctx = std::make_shared<ssl::context>(std::move(*maybe_ctx));
         else
-          return caf::unexpected{std::move(maybe_ctx.error())};
+          return make_unexpected(std::move(maybe_ctx.error()));
       }
     }
     auto host = auth.host_str();
@@ -344,7 +344,7 @@ expected<disposable> with_t::server::do_start(push_t push) {
   if (config_->err.valid()) {
     if (config_->on_error)
       (*config_->on_error)(config_->err);
-    return caf::unexpected{config_->err};
+    return make_unexpected(config_->err);
   }
   return config_->start_server();
 }
@@ -389,7 +389,7 @@ with_t::client::request(http::method method, const_byte_span payload) {
   if (config_->err.valid()) {
     if (config_->on_error)
       (*config_->on_error)(config_->err);
-    return caf::unexpected{config_->err};
+    return make_unexpected(config_->err);
   }
   // Only connecting to an URI is enabled in the 'with' DSL.
   using lazy_t = internal::net_config::client_config::lazy;

@@ -512,7 +512,7 @@ TEST("on_error_return() replaces an error with a value") {
       return expected<int>{caf::make_unexpected(sec::unexpected_message)};
     };
     auto return_err = [](const error& err) {
-      return expected<int>{caf::unexpected{err}};
+      return expected<int>{make_unexpected(err)};
     };
     SECTION("blueprint") {
       check_eq(collect(obs_error().on_error_return(return_unexpected)),

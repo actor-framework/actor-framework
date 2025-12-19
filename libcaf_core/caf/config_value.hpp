@@ -226,7 +226,7 @@ public:
     if (detail::load(reader, tmp, token))
       return {std::move(tmp)};
     else
-      return caf::unexpected{std::move(reader.get_error())};
+      return make_unexpected(std::move(reader.get_error()));
   }
 
   template <class T>
@@ -362,7 +362,7 @@ expected<T> get_as(const config_value& x, inspector_access_type::builtin) {
       else
         return make_unexpected(sec::conversion_failed, "narrowing error");
     } else {
-      return caf::unexpected{std::move(result.error())};
+      return make_unexpected(std::move(result.error()));
     }
   } else if constexpr (std::is_floating_point_v<T>) {
     if (auto result = x.to_real()) {
@@ -377,7 +377,7 @@ expected<T> get_as(const config_value& x, inspector_access_type::builtin) {
         }
       }
     } else {
-      return caf::unexpected{std::move(result.error())};
+      return make_unexpected(std::move(result.error()));
     }
   } else {
     static_assert(detail::always_false<T>,
@@ -418,7 +418,7 @@ expected<T> get_as(const config_value& x, inspector_access_type::tuple) {
       return make_unexpected(sec::conversion_failed,
                              "wrong number of arguments");
   } else {
-    return caf::unexpected{std::move(wrapped_values.error())};
+    return make_unexpected(std::move(wrapped_values.error()));
   }
 }
 
@@ -447,7 +447,7 @@ expected<T> get_as(const config_value& x, inspector_access_type::map) {
     }
     return {std::move(result)};
   } else {
-    return caf::unexpected{std::move(dict.error())};
+    return make_unexpected(std::move(dict.error()));
   }
 }
 
@@ -465,11 +465,11 @@ expected<T> get_as(const config_value& x, inspector_access_type::list) {
         else
           result.insert(result.end(), std::move(*maybe_value));
       } else {
-        return caf::unexpected{std::move(maybe_value.error())};
+        return make_unexpected(std::move(maybe_value.error()));
       }
     return {std::move(result)};
   } else {
-    return caf::unexpected{std::move(wrapped_values.error())};
+    return make_unexpected(std::move(wrapped_values.error()));
   }
 }
 

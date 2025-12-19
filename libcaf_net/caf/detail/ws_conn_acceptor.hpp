@@ -116,7 +116,7 @@ public:
       return res;
     }
     if (auto&& reason = std::move(acc).reject_reason(); reason.valid()) {
-      return caf::unexpected{std::move(reason)};
+      return make_unexpected(std::move(reason));
     }
     return caf::make_unexpected(sec::runtime_error,
                                 "WebSocket request rejected without reason");

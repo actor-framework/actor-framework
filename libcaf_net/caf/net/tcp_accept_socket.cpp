@@ -56,7 +56,7 @@ expected<tcp_accept_socket> new_tcp_acceptor_impl(uint16_t port,
   // sguard closes the socket in case of exception
   auto sguard = make_socket_guard(tcp_accept_socket{fd});
   if (auto err = child_process_inherit(sock, false); err.valid())
-    return caf::unexpected{std::move(err)};
+    return make_unexpected(std::move(err));
   if (reuse_addr) {
     int on = 1;
     CAF_NET_SYSCALL_TO_UNEXPECTED(
@@ -72,7 +72,7 @@ expected<tcp_accept_socket> new_tcp_acceptor_impl(uint16_t port,
   internal::family_of(sa) = Family;
   if (any)
     if (auto err = set_inaddr_any(sock, sa); err.valid())
-      return caf::unexpected{std::move(err)};
+      return make_unexpected(std::move(err));
   CAF_NET_SYSCALL_TO_UNEXPECTED(
     "inet_pton", tmp, !=, 1, inet_pton(Family, addr, &internal::addr_of(sa)));
   internal::port_of(sa) = htons(port);

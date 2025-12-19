@@ -557,7 +557,7 @@ actor_system_config::parse_config(std::istream& source,
                                   const config_option_set& opts) {
   settings result;
   if (auto err = parse_config(source, opts, result); err.valid())
-    return caf::unexpected{err};
+    return make_unexpected(err);
   return result;
 }
 

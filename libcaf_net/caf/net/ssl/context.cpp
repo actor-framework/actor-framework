@@ -114,7 +114,7 @@ expected<void> context::enable(bool flag) {
   if (flag)
     return expected<void>{};
   else
-    return caf::unexpected{caf::error{}};
+    return make_unexpected(caf::error{});
 }
 
 expected<context> context::make(tls vmin, tls vmax) {

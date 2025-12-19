@@ -66,7 +66,7 @@ public:
     // Accept a new connection.
     auto conn = accept(acceptor_);
     if (!conn)
-      return caf::unexpected{std::move(conn.error())};
+      return make_unexpected(std::move(conn.error()));
     // Create socket-to-application and application-to-socket buffers.
     auto [s2a_pull, s2a_push] = async::make_spsc_buffer_resource<std::byte>();
     auto [a2s_pull, a2s_push] = async::make_spsc_buffer_resource<std::byte>();
@@ -216,7 +216,7 @@ expected<disposable> with_t::server::do_start(push_t push) {
   if (config_->err.valid()) {
     if (config_->on_error)
       (*config_->on_error)(config_->err);
-    return caf::unexpected{config_->err};
+    return make_unexpected(config_->err);
   }
   config_->server_push = std::move(push);
   return config_->start_server();
@@ -262,7 +262,7 @@ expected<disposable> with_t::client::do_start(pull_t pull, push_t push) {
   if (config_->err.valid()) {
     if (config_->on_error)
       (*config_->on_error)(config_->err);
-    return caf::unexpected{config_->err};
+    return make_unexpected(config_->err);
   }
   config_->client_pull = std::move(pull);
   config_->client_push = std::move(push);

@@ -80,7 +80,7 @@ behavior requester_v2(event_based_actor* self, actor worker) {
       self->request(worker, infinite, x, y)
         .then([deliver](int result) mutable { deliver(result); },
               [deliver](error err) mutable {
-                deliver(caf::unexpected{std::move(err)});
+                deliver(make_unexpected(std::move(err)));
               });
       return rp;
     },
@@ -93,7 +93,7 @@ behavior requester_v2(event_based_actor* self, actor worker) {
       self->request(worker, infinite, ok_atom_v)
         .then([deliver]() mutable { deliver({}); },
               [deliver](error err) mutable {
-                deliver(caf::unexpected{std::move(err)});
+                deliver(make_unexpected(std::move(err)));
               });
       return rp;
     },

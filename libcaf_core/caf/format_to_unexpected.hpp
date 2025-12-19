@@ -14,10 +14,10 @@ namespace caf {
 /// wrapping the error with the specified code and the formatted string as
 /// message.
 template <error_code_enum Enum, class... Args>
-caf::unexpected
+unexpected<error>
 format_to_unexpected(Enum code, std::string_view fstr, Args&&... args) {
-  return unexpected{std::in_place, code,
-                    detail::format(fstr, std::forward<Args>(args)...)};
+  return unexpected<error>{std::in_place, code,
+                           detail::format(fstr, std::forward<Args>(args)...)};
 }
 
 } // namespace caf

@@ -50,7 +50,7 @@ public:
     }
     auto conn = accept(acceptor_);
     if (!conn) {
-      return caf::unexpected{std::move(conn.error())};
+      return make_unexpected(std::move(conn.error()));
     }
     auto app = internal::make_ws_flow_bridge(wca_);
     auto ws = net::web_socket::server::make(std::move(app));
@@ -164,7 +164,7 @@ public:
         using ctx_t = ssl::context;
         auto new_ctx = ctx_t::make_client(ssl::tls::v1_2);
         if (!new_ctx) {
-          return caf::unexpected{std::move(new_ctx.error())};
+          return make_unexpected(std::move(new_ctx.error()));
         }
         ctx = std::make_shared<ctx_t>(std::move(*new_ctx));
       }
@@ -197,7 +197,7 @@ expected<disposable> with_t::server_launcher_base::do_start() {
   if (config_->err.valid()) {
     if (config_->on_error)
       (*config_->on_error)(config_->err);
-    return caf::unexpected{config_->err};
+    return make_unexpected(config_->err);
   }
   return config_->start_server();
 }
@@ -269,7 +269,7 @@ expected<disposable> with_t::client::do_start(pull_t pull, push_t push) {
   if (config_->err.valid()) {
     if (config_->on_error)
       (*config_->on_error)(config_->err);
-    return caf::unexpected{config_->err};
+    return make_unexpected(config_->err);
   }
   config_->pull = std::move(pull);
   config_->push = std::move(push);

@@ -991,16 +991,16 @@ actor_system::dyn_spawn_impl(const std::string& name, message& args,
     "name = {}, args = {}, check_interface = {}, expected_ifs = {}", name, args,
     check_interface, expected_ifs);
   if (name.empty())
-    return caf::unexpected{sec::invalid_argument};
+    return make_unexpected(sec::invalid_argument);
   auto* fs = impl_->cfg->get_actor_factory(name);
   if (fs == nullptr)
-    return caf::unexpected{sec::unknown_type};
+    return make_unexpected(sec::unknown_type);
   actor_config cfg{sched != nullptr ? sched : &scheduler()};
   auto res = (*fs)(*this, cfg, args);
   if (!res.first)
-    return caf::unexpected{sec::cannot_spawn_actor_from_arguments};
+    return make_unexpected(sec::cannot_spawn_actor_from_arguments);
   if (check_interface && !assignable(res.second, *expected_ifs))
-    return caf::unexpected{sec::unexpected_actor_messaging_interface};
+    return make_unexpected(sec::unexpected_actor_messaging_interface);
   return std::move(res.first);
 }
 

@@ -660,7 +660,7 @@ expected<scribe_ptr>
 default_multiplexer::new_tcp_scribe(const std::string& host, uint16_t port) {
   auto fd = new_tcp_connection(host, port);
   if (!fd)
-    return caf::unexpected{std::move(fd.error())};
+    return make_unexpected(std::move(fd.error()));
   return new_scribe(*fd);
 }
 
@@ -676,7 +676,7 @@ expected<doorman_ptr> default_multiplexer::new_tcp_doorman(uint16_t port,
   auto fd = new_tcp_acceptor_impl(port, in, reuse_addr);
   if (fd)
     return new_doorman(*fd);
-  return caf::unexpected{std::move(fd.error())};
+  return make_unexpected(std::move(fd.error()));
 }
 
 datagram_servant_ptr
@@ -700,7 +700,7 @@ default_multiplexer::new_remote_udp_endpoint(const std::string& host,
                                              uint16_t port) {
   auto res = new_remote_udp_endpoint_impl(host, port);
   if (!res)
-    return caf::unexpected{std::move(res.error())};
+    return make_unexpected(std::move(res.error()));
   return new_datagram_servant_for_endpoint(res->first, res->second);
 }
 
@@ -710,7 +710,7 @@ default_multiplexer::new_local_udp_endpoint(uint16_t port, const char* in,
   auto res = new_local_udp_endpoint_impl(port, in, reuse_addr);
   if (res)
     return new_datagram_servant((*res).first);
-  return caf::unexpected{std::move(res.error())};
+  return make_unexpected(std::move(res.error()));
 }
 
 int64_t default_multiplexer::next_endpoint_id() {
@@ -891,7 +891,7 @@ new_remote_udp_endpoint_impl(const std::string& host, uint16_t port,
                            preferred);
   auto lep = new_local_udp_endpoint_impl(0, nullptr, false, preferred);
   if (!lep)
-    return caf::unexpected{std::move(lep.error())};
+    return make_unexpected(std::move(lep.error()));
   detail::socket_guard sguard{(*lep).first};
   std::pair<native_socket, ip_endpoint> info;
   if (!interfaces::get_endpoint(host, port, std::get<1>(info), (*lep).second))

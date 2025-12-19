@@ -202,7 +202,7 @@ struct fixture {
       return {std::string{buf.begin(), buf.end()}};
     } else {
       log::test::debug("partial JSON output: {}", writer.str());
-      return caf::unexpected{writer.get_error()};
+      return make_unexpected(writer.get_error());
     }
   }
 };

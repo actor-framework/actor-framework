@@ -270,7 +270,7 @@ public:
                                                 std::move(cfg.bind_address),
                                                 cfg.reuse_addr);
     if (!maybe_fd) {
-      return caf::unexpected{std::move(maybe_fd.error())};
+      return make_unexpected(std::move(maybe_fd.error()));
     }
     server_config::socket sub_cfg{*maybe_fd};
     return start_server(sub_cfg);
@@ -321,7 +321,7 @@ public:
     if (ctx) {
       auto conn = ctx->new_connection(cfg.take_fd());
       if (!conn) {
-        return caf::unexpected{std::move(conn.error())};
+        return make_unexpected(std::move(conn.error()));
       }
       if (ctx->hostname_validation()) {
         if (!conn->hostname(hostname.c_str())) {
@@ -341,7 +341,7 @@ public:
     auto maybe_fd = detail::tcp_try_connect(host, port, connection_timeout,
                                             max_retry_count, retry_delay);
     if (!maybe_fd) {
-      return caf::unexpected{std::move(maybe_fd.error())};
+      return make_unexpected(std::move(maybe_fd.error()));
     }
     client_config::socket sub_cfg{*maybe_fd};
     hostname = std::move(host);

@@ -32,7 +32,7 @@ struct string_parser {
     detail::parser::read_string(res, f);
     if (res.code == pec::success)
       return f.x;
-    return caf::unexpected{res.error()};
+    return make_unexpected(res.error());
   }
 };
 

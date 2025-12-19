@@ -134,7 +134,7 @@ expected<tcp_stream_socket> make_connected_tcp_stream_socket(ip_endpoint node,
                                 ::socket(proto, socktype, 0));
   tcp_stream_socket sock{fd};
   if (auto err = child_process_inherit(sock, false); err.valid())
-    return caf::unexpected{std::move(err)};
+    return make_unexpected(std::move(err));
   auto sguard = make_socket_guard(sock);
   if (proto == AF_INET6) {
     if (ip_connect<AF_INET6>(sock, to_string(node.address()), node.port(),

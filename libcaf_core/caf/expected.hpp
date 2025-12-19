@@ -44,7 +44,8 @@ auto expected_from_fn(F&& f, Ts&&... xs) {
 
 namespace caf {
 
-using unexpected = std::unexpected<error>;
+template <class T>
+using unexpected = std::unexpected<T>;
 
 template <class T>
 using expected = std::expected<T, error>;
@@ -56,15 +57,13 @@ using expected = std::expected<T, error>;
 namespace caf {
 
 /// Represents an unexpected value to be stored in caf::expected.
-// template <class E>
+template <class E>
 class unexpected {
 public:
-  friend bool operator==(const unexpected& lhs, const unexpected& rhs) noexcept;
-
   template <typename... Args>
     requires std::is_constructible_v<error, Args...>
   constexpr explicit unexpected(std::in_place_t, Args&&... args)
-    : reason{std::forward<Args>(args)...} {
+    : error_{std::forward<Args>(args)...} {
     // nop
   }
 
@@ -72,33 +71,36 @@ public:
     requires std::is_constructible_v<error, std::initializer_list<U>&, Args...>
   constexpr explicit unexpected(std::in_place_t, std::initializer_list<U> il,
                                 Args&&... args)
-    : reason{std::move(il), std::forward<Args>(args)...} {
+    : error_{std::move(il), std::forward<Args>(args)...} {
     // nop
   }
 
-  unexpected(caf::error err) : reason{std::move(err)} {
+  unexpected(caf::error err) : error_{std::move(err)} {
   }
 
   caf::error& error() noexcept {
-    return reason;
+    return error_;
   }
 
   const caf::error& error() const noexcept {
-    return reason;
+    return error_;
   }
 
   void swap(unexpected& other) noexcept {
     using std::swap;
-    swap(reason, other.reason);
+    swap(error_, other.error_);
   }
 
 private:
-  caf::error reason;
+  E error_;
 };
 
-// TODO tempalte
-inline bool operator==(const unexpected& lhs, const unexpected& rhs) noexcept {
-  return lhs.reason == rhs.reason;
+// TODO requires
+// TODO add comparisons
+template <class E1, class E2>
+inline bool
+operator==(const unexpected<E1>& lhs, const unexpected<E2>& rhs) noexcept {
+  return lhs.error() == rhs.error();
 }
 
 /// Represents the result of a computation which can either complete
@@ -112,6 +114,8 @@ public:
   using value_type = T;
 
   using error_type = caf::error;
+
+  using unexpected_type = unexpected<error>;
 
   template <class U>
   using rebind = expected<U>;
@@ -157,7 +161,7 @@ public:
     new (std::addressof(error_)) caf::error{std::move(e)};
   }
 
-  expected(caf::unexpected x) : has_value_(false) {
+  expected(unexpected_type x) : has_value_(false) {
     new (std::addressof(error_)) caf::error(std::move(x.error()));
   }
 
@@ -248,7 +252,7 @@ public:
     return *this = make_error(code);
   }
 
-  expected& operator=(caf::unexpected e) noexcept {
+  expected& operator=(unexpected_type e) noexcept {
     if (!has_value())
       error_ = std::move(e.error());
     else {
@@ -403,7 +407,7 @@ public:
     if (has_value())
       return f(value_);
     else
-      return res_t{caf::unexpected{error_}};
+      return res_t{caf::unexpected<caf::error>{error_}};
   }
 
   template <class F>
@@ -413,7 +417,7 @@ public:
     if (has_value())
       return f(std::move(value_));
     else
-      return res_t{caf::unexpected{std::move(error_)}};
+      return res_t{caf::unexpected<caf::error>{std::move(error_)}};
   }
 
   template <class F>
@@ -423,7 +427,7 @@ public:
     if (has_value())
       return f(value_);
     else
-      return res_t{caf::unexpected{error_}};
+      return res_t{caf::unexpected<caf::error>{error_}};
   }
 
   template <class F>
@@ -433,7 +437,7 @@ public:
     if (has_value())
       return f(std::move(value_));
     else
-      return res_t{caf::unexpected{std::move(error_)}};
+      return res_t{caf::unexpected<caf::error>{std::move(error_)}};
   }
 
   template <class F>
@@ -523,7 +527,7 @@ public:
     if (has_value())
       return detail::expected_from_fn(std::forward<F>(f), value_);
     else
-      return expected<res_t>{caf::unexpected{error_}};
+      return expected<res_t>{unexpected_type{error_}};
   }
 
   template <class F>
@@ -533,7 +537,7 @@ public:
     if (has_value())
       return detail::expected_from_fn(std::forward<F>(f), std::move(value_));
     else
-      return expected<res_t>{caf::unexpected{std::move(error_)}};
+      return expected<res_t>{unexpected_type{std::move(error_)}};
   }
 
   template <class F>
@@ -543,7 +547,7 @@ public:
     if (has_value())
       return detail::expected_from_fn(std::forward<F>(f), value_);
     else
-      return expected<res_t>{caf::unexpected{error_}};
+      return expected<res_t>{unexpected_type{error_}};
   }
 
   template <class F>
@@ -553,7 +557,7 @@ public:
     if (has_value())
       return detail::expected_from_fn(std::forward<F>(f), std::move(value_));
     else
-      return expected<res_t>{caf::unexpected{std::move(error_)}};
+      return expected<res_t>{unexpected_type{std::move(error_)}};
   }
 
   template <class F>
@@ -587,7 +591,7 @@ public:
     if (has_value())
       return {std::in_place, value_};
     else
-      return expected{caf::unexpected{f(error_)}};
+      return expected{unexpected_type{f(error_)}};
   }
 
   template <class F>
@@ -597,7 +601,7 @@ public:
     if (has_value())
       return {std::in_place, std::move(value_)};
     else
-      return expected{caf::unexpected{f(std::move(error_))}};
+      return expected{unexpected_type{f(std::move(error_))}};
   }
 
   template <class F>
@@ -607,7 +611,7 @@ public:
     if (has_value())
       return {std::in_place, value_};
     else
-      return expected{caf::unexpected{f(error_)}};
+      return expected{unexpected_type{f(error_)}};
   }
 
   template <class F>
@@ -617,7 +621,7 @@ public:
     if (has_value())
       return {std::in_place, std::move(value_)};
     else
-      return expected{caf::unexpected{f(std::move(error_))}};
+      return expected{unexpected_type{f(std::move(error_))}};
   }
 
 private:
@@ -704,14 +708,16 @@ bool operator==(Enum x, const expected<T>& y) {
   return y == make_error(x);
 }
 
-template <class T>
-bool operator==(const expected<T>& x, const unexpected& y) {
-  return x ? false : x.error() == y;
+template <class T, class E>
+// TODO requires
+bool operator==(const expected<T>& x, const unexpected<E>& y) {
+  return x ? false : x.error() == y.error();
 }
 
 /// @relates expected
-template <class T>
-bool operator==(const unexpected& x, const expected<T>& y) {
+template <class E, class T>
+// TODO requires
+bool operator==(const unexpected<E>& x, const expected<T>& y) {
   return y == x;
 }
 
@@ -763,14 +769,16 @@ bool operator!=(Enum x, const expected<T>& y) {
 }
 
 /// @relates expected
-template <class T>
-bool operator!=(const expected<T>& x, const unexpected& y) {
+template <class T, class E>
+// TODO requires
+bool operator!=(const expected<T>& x, const unexpected<E>& y) {
   return !(x == y);
 }
 
 /// @relates expected
-template <class T>
-bool operator!=(const unexpected& x, const expected<T>& y) {
+template <class E, class T>
+// TODO
+bool operator!=(const unexpected<E>& x, const expected<T>& y) {
   return !(x == y);
 }
 
@@ -784,6 +792,8 @@ public:
   using value_type = void;
 
   using error_type = caf::error;
+
+  using unexpected_type = unexpected<error>;
 
   template <class U>
   using rebind = expected<U>;
@@ -805,7 +815,7 @@ public:
 
   expected() noexcept = default;
 
-  expected(caf::unexpected x) noexcept : error_(std::move(x.error())) {
+  expected(unexpected_type x) noexcept : error_(std::move(x.error())) {
     // nop
   }
 
@@ -834,7 +844,7 @@ public:
     return *this;
   }
 
-  expected& operator=(caf::unexpected x) {
+  expected& operator=(unexpected_type x) {
     error_ = std::move(x.error());
     return *this;
   }
@@ -907,7 +917,7 @@ public:
     if (has_value())
       return f();
     else
-      return res_t{caf::unexpected{*error_}};
+      return res_t{unexpected_type{*error_}};
   }
 
   template <class F>
@@ -917,7 +927,7 @@ public:
     if (has_value())
       return f();
     else
-      return res_t{caf::unexpected{std::move(*error_)}};
+      return res_t{unexpected_type{std::move(*error_)}};
   }
 
   template <class F>
@@ -927,7 +937,7 @@ public:
     if (has_value())
       return f();
     else
-      return res_t{caf::unexpected{*error_}};
+      return res_t{unexpected_type{*error_}};
   }
 
   template <class F>
@@ -937,7 +947,7 @@ public:
     if (has_value())
       return f();
     else
-      return res_t{caf::unexpected{*error_}};
+      return res_t{unexpected_type{*error_}};
   }
 
   template <class F>
@@ -1015,7 +1025,7 @@ public:
     if (has_value())
       return detail::expected_from_fn(std::forward<F>(f));
     else
-      return expected<res_t>{caf::unexpected{*error_}};
+      return expected<res_t>{unexpected_type{*error_}};
   }
 
   template <class F>
@@ -1025,7 +1035,7 @@ public:
     if (has_value())
       return detail::expected_from_fn(std::forward<F>(f));
     else
-      return expected<res_t>{caf::unexpected{std::move(*error_)}};
+      return expected<res_t>{unexpected_type{std::move(*error_)}};
   }
 
   template <class F>
@@ -1035,7 +1045,7 @@ public:
     if (has_value())
       return detail::expected_from_fn(std::forward<F>(f));
     else
-      return expected<res_t>{caf::unexpected{*error_}};
+      return expected<res_t>{unexpected_type{*error_}};
   }
 
   template <class F>
@@ -1045,7 +1055,8 @@ public:
     if (has_value())
       return detail::expected_from_fn(std::forward<F>(f));
     else
-      return expected<res_t>{caf::unexpected{*error_}};
+      // TODO
+      return expected<res_t>{unexpected_type{*error_}};
   }
 
   template <class F>
@@ -1079,7 +1090,7 @@ public:
     if (has_value())
       return expected{};
     else
-      return expected{caf::unexpected{f(*error_)}};
+      return expected{make_unexpected(f(*error_))};
   }
 
   template <class F>
@@ -1089,7 +1100,7 @@ public:
     if (has_value())
       return expected{};
     else
-      return expected{caf::unexpected{f(std::move(*error_))}};
+      return expected{make_unexpected(f(std::move(*error_)))};
   }
 
   template <class F>
@@ -1099,7 +1110,7 @@ public:
     if (has_value())
       return expected{std::in_place};
     else
-      return expected{caf::unexpected{f(*error_)}};
+      return expected{make_unexpected(f(*error_))};
   }
 
   template <class F>
@@ -1109,7 +1120,7 @@ public:
     if (has_value())
       return expected{};
     else
-      return expected{caf::unexpected{f(std::move(*error_))}};
+      return expected{make_unexpected(f(std::move(*error_)))};
   }
 
 private:
@@ -1133,17 +1144,22 @@ inline bool operator!=(const expected<void>& x, const expected<void>& y) {
 namespace caf {
 
 template <error_code_enum Enum, class... Args>
-constexpr unexpected make_unexpected(Enum e, Args&&... args) noexcept {
-  return unexpected{std::in_place, make_error(e, std::forward<Args>(args)...)};
+constexpr unexpected<error> make_unexpected(Enum e, Args&&... args) noexcept {
+  return unexpected<error>{std::in_place,
+                           make_error(e, std::forward<Args>(args)...)};
+}
+
+inline unexpected<error> make_unexpected(error err) noexcept {
+  return unexpected<error>{std::move(err)};
 }
 
 template <class Inspector>
-bool inspect(Inspector& f, unexpected& x) {
+bool inspect(Inspector& f, unexpected<error>& x) {
   if constexpr (Inspector::is_loading) {
     caf::error e;
     if (!f.object(x).fields(f.field("error", e)))
       return false;
-    x = caf::unexpected{std::move(e)};
+    x = make_unexpected(std::move(e));
     return true;
   } else {
     return f.object(x).fields(f.field("error", x.error()));

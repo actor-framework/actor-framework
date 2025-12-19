@@ -65,18 +65,18 @@ expected<std::pair<size_t, byte_span>> parse_chunk(byte_span input) {
   if (chunk.size() == input.size()) {
     // Prevents indefinite octet stream as chunk_size.
     if (input.size() >= 10)
-      return caf::unexpected{
-        make_error(sec::protocol_error, "Chunk size part is too long.")};
+      return make_unexpected(
+        make_error(sec::protocol_error, "Chunk size part is too long."));
     // Didn't receive enough data. Signal to caller by returning empty error.
-    return caf::unexpected{error{}};
+    return make_unexpected(error{});
   }
   // Extensions are not supported. Look for extension separator ;
   if (std::ranges::find(chunk, ';') != chunk.end())
-    return caf::unexpected{
-      make_error(sec::logic_error, "Chunk extensions not supported.")};
+    return make_unexpected(
+      make_error(sec::logic_error, "Chunk extensions not supported."));
   if (!std::ranges::all_of(chunk, isxdigit))
-    return caf::unexpected{
-      make_error(sec::protocol_error, "Chunk size decoding error.")};
+    return make_unexpected(
+      make_error(sec::protocol_error, "Chunk size decoding error."));
   if (chunk.size() > sizeof(size_t))
     return caf::make_unexpected(sec::protocol_error,
                                 "Integer overflow while parsing chunk size.");

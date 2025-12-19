@@ -50,7 +50,7 @@ expected<T> read(std::string_view str) {
   detail::parse(ps, result);
   if (ps.code == pec::success)
     return result;
-  return caf::unexpected{ps.error()};
+  return make_unexpected(ps.error());
 }
 
 } // namespace
