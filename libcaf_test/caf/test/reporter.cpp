@@ -19,7 +19,7 @@
 #include "caf/term.hpp"
 
 #include <algorithm>
-#include <iostream>
+#include <cstdio>
 
 namespace caf::test {
 
@@ -28,6 +28,34 @@ reporter::~reporter() {
 }
 
 namespace {
+
+/// Output iterator that writes to a FILE*.
+struct file_iterator {
+  using difference_type = int;
+  using value_type = void;
+  using pointer = void;
+  using reference = void;
+  using iterator_category = std::output_iterator_tag;
+
+  FILE* out;
+
+  file_iterator& operator++() {
+    return *this;
+  }
+
+  file_iterator operator++(int) {
+    return *this;
+  }
+
+  file_iterator& operator*() {
+    return *this;
+  }
+
+  file_iterator& operator=(char c) {
+    fputc(c, out);
+    return *this;
+  }
+};
 
 /// Implements a mini-DSL for colored output:
 /// - $R(red text)
@@ -56,35 +84,36 @@ struct colorizing_iterator {
     verbatim,
   };
   mode_t mode = normal;
-  std::ostream* out;
+  FILE* out;
+
   void put(char c) {
     switch (mode) {
       case normal:
         if (c == '$')
           mode = read_color;
         else
-          out->put(c);
+          fputc(c, out);
         break;
       case read_color:
-        out->flush();
+        fflush(out);
         switch (c) {
           case 'R':
-            *out << term::red;
+            detail::set_color(out, term::red);
             break;
           case 'G':
-            *out << term::green;
+            detail::set_color(out, term::green);
             break;
           case 'B':
-            *out << term::blue;
+            detail::set_color(out, term::blue);
             break;
           case 'Y':
-            *out << term::yellow;
+            detail::set_color(out, term::yellow);
             break;
           case 'M':
-            *out << term::magenta;
+            detail::set_color(out, term::magenta);
             break;
           case 'C':
-            *out << term::cyan;
+            detail::set_color(out, term::cyan);
             break;
           case '0':
             mode = verbatim;
@@ -102,21 +131,21 @@ struct colorizing_iterator {
         break;
       case color:
         if (c == ')') {
-          out->flush();
-          *out << term::reset;
+          fflush(out);
+          detail::set_color(out, term::reset);
           mode = normal;
           break;
         }
-        out->put(c);
+        fputc(c, out);
         break;
       case off:
         if (c == '$')
           mode = off_read_color;
         else
-          out->put(c);
+          fputc(c, out);
         break;
       case off_read_color:
-        out->flush();
+        fflush(out);
         switch (c) {
           case '0':
             mode = verbatim;
@@ -133,14 +162,14 @@ struct colorizing_iterator {
         break;
       case off_color:
         if (c == ')') {
-          out->flush();
+          fflush(out);
           mode = off;
           break;
         }
-        out->put(c);
+        fputc(c, out);
         break;
       default: // verbatim
-        out->put(c);
+        fputc(c, out);
     }
   }
 
@@ -188,13 +217,13 @@ public:
   }
 
   auto plain() {
-    return std::ostream_iterator<char>{std::cout};
+    return file_iterator{stdout};
   }
 
   auto colored() {
     auto state = no_colors_ ? colorizing_iterator::off
                             : colorizing_iterator::normal;
-    return colorizing_iterator{state, &std::cout};
+    return colorizing_iterator{state, stdout};
   }
 
   void stop() override {
@@ -218,7 +247,8 @@ public:
       for (auto name : failed_suites_)
         detail::format_to(colored(), "  - $R({})\n", name);
     }
-    std::cout << std::endl;
+    fputc('\n', stdout);
+    fflush(stdout);
   }
 
   void begin_suite(std::string_view name) override {
@@ -253,7 +283,8 @@ public:
       for (auto name : failed_tests_)
         detail::format_to(colored(), "  - $R({})\n", name);
     }
-    std::cout << std::endl;
+    fputc('\n', stdout);
+    fflush(stdout);
   }
 
   void begin_test(context_ptr state, std::string_view name) override {
@@ -268,8 +299,10 @@ public:
       failed_tests_.push_back(current_test_);
     suite_stats_ += test_stats_;
     current_ctx_.reset();
-    if (live_)
-      std::cout << std::endl;
+    if (live_) {
+      fputc('\n', stdout);
+      fflush(stdout);
+    }
   }
 
   void set_live() {
@@ -479,7 +512,7 @@ private:
 
   void print_indent(size_t indent) {
     for (size_t i = 0; i < indent; ++i)
-      std::cout << ' ';
+      fputc(' ', stdout);
   }
 
   void print_indent() {
