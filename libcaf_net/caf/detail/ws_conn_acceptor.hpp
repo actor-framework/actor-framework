@@ -72,8 +72,8 @@ public:
 
   expected<resources> start() override {
     if (!producer_->push(event_)) {
-      return caf::make_unexpected(
-        sec::runtime_error, "WebSocket connection dropped: client canceled");
+      return {unexpect, sec::runtime_error,
+              "WebSocket connection dropped: client canceled"};
     }
     return res_;
   }
@@ -104,8 +104,8 @@ public:
   expected<ws_conn_starter_ptr> accept(const net::http::request_header& hdr,
                                        net::socket_manager* mgr) override {
     if (!producer_) {
-      return caf::make_unexpected(
-        sec::runtime_error, "WebSocket connection dropped: client canceled");
+      return {unexpect, sec::runtime_error,
+              "WebSocket connection dropped: client canceled"};
     }
     ws_acceptor_impl<Ts...> acc{hdr, mgr};
     on_request_(acc);
@@ -116,10 +116,10 @@ public:
       return res;
     }
     if (auto&& reason = std::move(acc).reject_reason(); reason.valid()) {
-      return make_unexpected(std::move(reason));
+      return {unexpect, std::move(reason)};
     }
-    return caf::make_unexpected(sec::runtime_error,
-                                "WebSocket request rejected without reason");
+    return {unexpect, sec::runtime_error,
+            "WebSocket request rejected without reason"};
   }
 
   bool canceled() const noexcept override {

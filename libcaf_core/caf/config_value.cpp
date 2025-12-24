@@ -92,10 +92,10 @@ expected<config_value> config_value::parse(std::string_view::iterator first,
     case '{':
     case '"':
     case '\'':
-      return make_unexpected(error{res.code});
+      return expected<config_value>{unexpect, error{res.code}};
     default:
       if (isdigit(*i))
-        return make_unexpected(error{res.code});
+        return expected<config_value>{unexpect, error{res.code}};
       return config_value{std::string{first, last}};
   }
 }
@@ -253,8 +253,8 @@ expected<bool> config_value::to_boolean() const {
         return format_to_unexpected(sec::conversion_failed,
                                     "cannot convert '{}' to a boolean", tn);
       }
-      return format_to_unexpected(sec::conversion_failed,
-                                  "cannot convert a dictionary to a boolean");
+      return {unexpect, sec::conversion_failed,
+              "cannot convert a dictionary to a boolean"};
     });
   return visit(f, data_);
 }
@@ -272,9 +272,10 @@ expected<config_value::integer> config_value::to_integer() const {
           && x >= static_cast<config_value::real>(limits::min())) {
         return result_type{static_cast<config_value::integer>(x)};
       }
-      return format_to_unexpected(sec::conversion_failed,
-                                  "cannot convert decimal or out-of-bounds "
-                                  "real number to an integer");
+      return expected<config_value::integer>{
+        unexpect, sec::conversion_failed,
+        "cannot convert decimal or out-of-bounds "
+        "real number to an integer"};
     },
     [](const std::string& x) -> result_type {
       auto tmp_int = config_value::integer{0};
@@ -308,8 +309,8 @@ expected<config_value::integer> config_value::to_integer() const {
         return format_to_unexpected(sec::conversion_failed,
                                     "cannot convert {} to an integer", tn);
       }
-      return format_to_unexpected(sec::conversion_failed,
-                                  "cannot convert a dictionary to an integer");
+      return result_type{unexpect, sec::conversion_failed,
+                         "cannot convert a dictionary to an integer"};
     });
   return visit(f, data_);
 }
@@ -352,9 +353,9 @@ expected<config_value::real> config_value::to_real() const {
           sec::conversion_failed,
           "cannot convert {} to a floating point number", tn);
       }
-      return format_to_unexpected(sec::conversion_failed,
-                                  "cannot convert a dictionary to "
-                                  "a floating point number");
+      return result_type{unexpect, sec::conversion_failed,
+                         "cannot convert a dictionary to "
+                         "a floating point number"};
     });
   return visit(f, data_);
 }
@@ -438,9 +439,9 @@ expected<config_value::dictionary> config_value::to_dictionary() const {
       if (std::ranges::all_of(x, lift)) {
         return result_type{std::move(tmp)};
       }
-      return make_unexpected(error{
-        sec::conversion_failed, "cannot convert list to dictionary unless each "
-                                "element in the list is a key-value pair"});
+      return result_type{unexpect, sec::conversion_failed,
+                         "cannot convert list to dictionary unless each "
+                         "element in the list is a key-value pair"};
     },
     [this](const std::string& x) -> result_type {
       if (dictionary tmp; detail::parse(x, tmp) == none)

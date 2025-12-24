@@ -509,10 +509,10 @@ TEST("on_error_return() replaces an error with a value") {
   }
   SECTION("on_error_return() forwards errors from the handler") {
     auto return_unexpected = [](const error&) {
-      return expected<int>{caf::make_unexpected(sec::unexpected_message)};
+      return expected<int>{unexpect, sec::unexpected_message};
     };
     auto return_err = [](const error& err) {
-      return expected<int>{make_unexpected(err)};
+      return expected<int>{unexpect, err};
     };
     SECTION("blueprint") {
       check_eq(collect(obs_error().on_error_return(return_unexpected)),

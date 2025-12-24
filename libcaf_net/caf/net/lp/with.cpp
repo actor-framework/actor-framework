@@ -58,11 +58,11 @@ public:
 
   expected<net::socket_manager_ptr> try_accept() override {
     if (!mcast_ || !mcast_->has_observers())
-      return make_unexpected(sec::runtime_error, "client has disconnected");
+      return {unexpect, sec::runtime_error, "client has disconnected"};
     // Accept a new connection.
     auto conn = accept(acceptor_);
     if (!conn)
-      return make_unexpected(std::move(conn.error()));
+      return {unexpect, std::move(conn.error())};
     // Create socket-to-application and application-to-socket buffers.
     auto [s2a_pull, s2a_push] = async::make_spsc_buffer_resource<chunk>();
     auto [a2s_pull, a2s_push] = async::make_spsc_buffer_resource<chunk>();
@@ -117,9 +117,9 @@ public:
     auto ptr = net::socket_manager::make(mpx, std::move(handler));
     if (mpx->start(ptr))
       return expected<disposable>{disposable{std::move(ptr)}};
-    return make_unexpected(
+    return {unexpect,
       sec::logic_error,
-      "failed to register socket manager to net::multiplexer");
+      "failed to register socket manager to net::multiplexer"};
   }
 
   expected<disposable> start_server_impl(net::ssl::tcp_acceptor& acc) override {
@@ -140,9 +140,9 @@ public:
     auto ptr = socket_manager::make(mpx, std::move(transport));
     if (mpx->start(ptr))
       return expected<disposable>{disposable{std::move(ptr)}};
-    return make_unexpected(
+    return {unexpect,
       sec::logic_error,
-      "failed to register socket manager to net::multiplexer");
+      "failed to register socket manager to net::multiplexer"};
   }
 
   expected<disposable> start_client_impl(net::ssl::connection& conn) override {
@@ -209,7 +209,7 @@ expected<disposable> with_t::server::do_start(push_t push) {
   if (config_->err.valid()) {
     if (config_->on_error)
       (*config_->on_error)(config_->err);
-    return make_unexpected(config_->err);
+    return {unexpect, config_->err};
   }
   config_->server_push = std::move(push);
   return config_->start_server();
@@ -245,7 +245,7 @@ expected<disposable> with_t::client::do_start(pull_t pull, push_t push) {
   if (config_->err.valid()) {
     if (config_->on_error)
       (*config_->on_error)(config_->err);
-    return make_unexpected(config_->err);
+    return {unexpect, config_->err};
   }
   config_->client_pull = std::move(pull);
   config_->client_push = std::move(push);

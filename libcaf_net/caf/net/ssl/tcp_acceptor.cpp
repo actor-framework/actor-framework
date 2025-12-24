@@ -36,7 +36,8 @@ tcp_acceptor::make_with_cert_file(tcp_accept_socket fd,
                                   format file_format) {
   auto ctx = context::make_server(tls::any);
   if (!ctx) {
-    return caf::make_unexpected(sec::runtime_error, "unable to create SSL context");
+    return expected<tcp_acceptor>{unexpect, sec::runtime_error,
+                                  "unable to create SSL context"};
   }
   if (!ctx->use_certificate_file(cert_file_path, file_format)) {
     return format_to_unexpected(sec::runtime_error,
@@ -59,7 +60,7 @@ tcp_acceptor::make_with_cert_file(uint16_t port, const char* cert_file_path,
     return tcp_acceptor::make_with_cert_file(*fd, cert_file_path, key_file_path,
                                              file_format);
   } else {
-    return caf::make_unexpected(sec::cannot_open_port);
+    return expected<tcp_acceptor>{unexpect, sec::cannot_open_port};
   }
 }
 
@@ -77,7 +78,7 @@ expected<connection> accept(tcp_acceptor& acc) {
   auto fd = accept(acc.fd());
   if (fd)
     return acc.ctx().new_connection(*fd);
-  return make_unexpected(std::move(fd.error()));
+  return {unexpect, std::move(fd.error())};
 }
 
 } // namespace caf::net::ssl
