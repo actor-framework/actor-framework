@@ -378,7 +378,8 @@ expected<T> get_as(const config_value& x, inspector_access_type::builtin) {
         if (!std::isfinite(*result) || std::isfinite(narrowed)) {
           return narrowed;
         } else {
-          return expected<T>{unexpect, sec::conversion_failed, "narrowing error"};
+          return expected<T>{unexpect, sec::conversion_failed,
+                             "narrowing error"};
         }
       }
     } else {
@@ -409,7 +410,8 @@ get_as_tuple(const config_value::list& x, std::index_sequence<Is...>) {
   if ((get<Is>(boxed) && ...))
     return T{std::move(*get<Is>(boxed))...};
   else
-    return expected<T>{unexpect, sec::conversion_failed, "invalid element types"};
+    return expected<T>{unexpect, sec::conversion_failed,
+                       "invalid element types"};
 }
 
 template <class T>
@@ -438,16 +440,16 @@ expected<T> get_as(const config_value& x, inspector_access_type::map) {
       if (auto key = get_as<key_type>(wrapped_key)) {
         if (auto val = get_as<mapped_type>(wrapped_value)) {
           if (!result.emplace(std::move(*key), std::move(*val)).second) {
-        return expected<T>{unexpect,
-                           sec::conversion_failed, "ambiguous mapping of keys to key_type"};
-        }
-      } else {
-        return expected<T>{unexpect,
-                           sec::conversion_failed, "failed to convert values to mapped_type"};
+            return expected<T>{unexpect, sec::conversion_failed,
+                               "ambiguous mapping of keys to key_type"};
+          }
+        } else {
+          return expected<T>{unexpect, sec::conversion_failed,
+                             "failed to convert values to mapped_type"};
         }
       } else {
         return expected<T>{unexpect, sec::conversion_failed,
-                            "failed to convert keys to key_type"};
+                           "failed to convert keys to key_type"};
       }
     }
     return {std::move(result)};

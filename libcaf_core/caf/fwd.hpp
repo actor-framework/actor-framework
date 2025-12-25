@@ -234,9 +234,9 @@ config_option make_config_option(T& storage, std::string_view category,
 // -- free variadic template functions -----------------------------------------
 
 template <error_code_enum Enum, class... Args>
-constexpr unexpected<error> make_unexpected(Enum e, Args&&... args) noexcept;
+unexpected<error> make_unexpected(Enum e, Args&&... args) noexcept;
 
-inline unexpected<error> make_unexpected(error err) noexcept;
+unexpected<error> make_unexpected(error err) noexcept;
 
 // -- hash inspectors ----------------------------------------------------------
 

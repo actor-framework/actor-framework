@@ -188,7 +188,7 @@ expected<json_value> json_value::parse_in_situ(std::string& str) {
                                                str.data() + str.size()};
   auto root = detail::json::parse_in_situ(ps, &storage->buf);
   if (ps.code == pec::success)
-    return {std::in_place, root, std::move(storage)};
+    return expected<json_value>{std::in_place, root, std::move(storage)};
   return expected<json_value>{unexpect, ps.error()};
 }
 

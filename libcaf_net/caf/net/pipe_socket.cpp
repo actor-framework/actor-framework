@@ -31,7 +31,8 @@ expected<std::pair<pipe_socket, pipe_socket>> make_pipe() {
     return std::make_pair(socket_cast<pipe_socket>(result->first),
                           socket_cast<pipe_socket>(result->second));
   } else {
-    return {unexpect, std::move(result.error())};
+    return expected<std::pair<pipe_socket, pipe_socket>>{
+      unexpect, std::move(result.error())};
   }
 }
 

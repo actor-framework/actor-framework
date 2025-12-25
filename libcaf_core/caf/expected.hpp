@@ -1165,7 +1165,7 @@ inline bool operator!=(const expected<void>& x, const expected<void>& y) {
 namespace caf {
 
 template <error_code_enum Enum, class... Args>
-constexpr unexpected<error> make_unexpected(Enum e, Args&&... args) noexcept {
+unexpected<error> make_unexpected(Enum e, Args&&... args) noexcept {
   return unexpected<error>{std::in_place,
                            make_error(e, std::forward<Args>(args)...)};
 }
