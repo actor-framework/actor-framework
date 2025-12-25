@@ -56,7 +56,7 @@ expected<tcp_accept_socket> new_tcp_acceptor_impl(uint16_t port,
   // sguard closes the socket in case of exception
   auto sguard = make_socket_guard(tcp_accept_socket{fd});
   if (auto err = child_process_inherit(sock, false); err.valid())
-    return {unexpect, std::move(err)};
+    return expected<tcp_accept_socket>{unexpect, std::move(err)};
   if (reuse_addr) {
     int on = 1;
     CAF_NET_SYSCALL_TO_UNEXPECTED(
@@ -72,7 +72,7 @@ expected<tcp_accept_socket> new_tcp_acceptor_impl(uint16_t port,
   internal::family_of(sa) = Family;
   if (any)
     if (auto err = set_inaddr_any(sock, sa); err.valid())
-      return {unexpect, std::move(err)};
+      return expected<tcp_accept_socket>{unexpect, std::move(err)};
   CAF_NET_SYSCALL_TO_UNEXPECTED(
     "inet_pton", tmp, !=, 1, inet_pton(Family, addr, &internal::addr_of(sa)));
   internal::port_of(sa) = htons(port);
@@ -158,9 +158,11 @@ expected<tcp_stream_socket> accept(tcp_accept_socket x) {
     auto err = net::last_socket_error();
     if (err != std::errc::operation_would_block
         && err != std::errc::resource_unavailable_try_again) {
-      return {unexpect, sec::unavailable_or_would_block};
+      return expected<tcp_stream_socket>{unexpect,
+                                         sec::unavailable_or_would_block};
     }
-    return {unexpect, sec::socket_operation_failed, "tcp accept failed"};
+    return expected<tcp_stream_socket>{unexpect, sec::socket_operation_failed,
+                                       "tcp accept failed"};
   }
   log::net::debug("accepted TCP socket {} on accept socket {}", sock, x.id);
   return tcp_stream_socket{sock};

@@ -126,7 +126,7 @@ public:
     } else {
       auto& err = maybe_dptr.error();
       log::system::error("failed to expose Prometheus metrics: {}", err);
-      return {unexpect, std::move(err)};
+      return expected<uint16_t>{unexpect, std::move(err)};
     }
     auto actual_port = dptr->port();
     using impl = detail::prometheus_broker;
@@ -259,7 +259,7 @@ expected<node_id> middleman::connect(std::string host, uint16_t port) {
                .request(actor_handle(), infinite)
                .receive();
   if (!res)
-    return {unexpect, std::move(res.error())};
+    return expected<node_id>{unexpect, std::move(res.error())};
   return std::get<0>(*res);
 }
 
@@ -268,7 +268,7 @@ expected<uint16_t> middleman::publish(const strong_actor_ptr& whom,
                                       const char* cstr, bool ru) {
   auto lg = log::io::trace("whom = {}, sigs = {}, port = {}", whom, sigs, port);
   if (!whom)
-    return {unexpect, sec::cannot_publish_invalid_actor};
+    return expected<uint16_t>{unexpect, sec::cannot_publish_invalid_actor};
   std::string in;
   if (cstr != nullptr)
     in = cstr;
@@ -296,7 +296,7 @@ expected<strong_actor_ptr> middleman::remote_actor(std::set<std::string> ifs,
                .request(actor_handle(), infinite)
                .receive();
   if (!res)
-    return {unexpect, std::move(res.error())};
+    return expected<strong_actor_ptr>{unexpect, std::move(res.error())};
   strong_actor_ptr ptr = std::move(std::get<1>(*res));
   if (!ptr)
     return format_to_unexpected(sec::no_actor_published_at_port,

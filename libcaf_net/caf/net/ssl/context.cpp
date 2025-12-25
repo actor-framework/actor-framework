@@ -114,7 +114,7 @@ expected<void> context::enable(bool flag) {
   if (flag)
     return expected<void>{};
   else
-    return {unexpect, caf::error{}};
+    return expected<void>{unexpect, caf::error{}};
 }
 
 expected<context> context::make(tls vmin, tls vmax) {
@@ -297,18 +297,20 @@ expected<connection> context::new_connection(stream_socket fd) {
     auto conn = connection::from_native(ptr);
     if (auto host = sni_hostname()) {
       if (!conn.sni_hostname(host))
-        return {unexpect, sec::cannot_connect_to_node,
-                "Failed to set SNI hostname"};
+        return expected<connection>{unexpect, sec::cannot_connect_to_node,
+                                    "Failed to set SNI hostname"};
     }
     if (auto bio_ptr = BIO_new_socket(fd.id, BIO_NOCLOSE)) {
       SSL_set_bio(ptr, bio_ptr, bio_ptr);
 
       return {std::move(conn)};
     } else {
-      return {unexpect, sec::logic_error, "BIO_new_socket failed"};
+      return expected<connection>{unexpect, sec::logic_error,
+                                  "BIO_new_socket failed"};
     }
   } else {
-    return {unexpect, sec::logic_error, "SSL_new returned null"};
+    return expected<connection>{unexpect, sec::logic_error,
+                                "SSL_new returned null"};
   }
 }
 
@@ -324,9 +326,11 @@ expected<connection> context::new_connection(stream_socket fd,
     if (SSL_set_fd(ptr, fd.id) == 1)
       return {std::move(conn)};
     else
-      return {unexpect, sec::logic_error, "SSL_set_fd failed"};
+      return expected<connection>{unexpect, sec::logic_error,
+                                  "SSL_set_fd failed"};
   } else {
-    return {unexpect, sec::logic_error, "SSL_new returned null"};
+    return expected<connection>{unexpect, sec::logic_error,
+                                "SSL_new returned null"};
   }
 }
 

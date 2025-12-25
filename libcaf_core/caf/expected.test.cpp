@@ -258,7 +258,7 @@ TEST("swap exchanges the content of two expected") {
   }
   SECTION("lhs: void, rhs: error") {
     e_void lhs;
-    e_void rhs{make_unexpected(sec::runtime_error)};
+    e_void rhs{unexpect, sec::runtime_error};
     check(static_cast<bool>(lhs));
     check_eq(rhs, make_unexpected(error{sec::runtime_error}));
     lhs.swap(rhs);
@@ -266,7 +266,7 @@ TEST("swap exchanges the content of two expected") {
     check(static_cast<bool>(rhs));
   }
   SECTION("lhs: error, rhs: void") {
-    e_void lhs{make_unexpected(sec::runtime_error)};
+    e_void lhs{unexpect, sec::runtime_error};
     e_void rhs;
     check_eq(lhs, make_unexpected(error{sec::runtime_error}));
     check(static_cast<bool>(rhs));
@@ -275,8 +275,8 @@ TEST("swap exchanges the content of two expected") {
     check_eq(rhs, make_unexpected(error{sec::runtime_error}));
   }
   SECTION("lhs: error, rhs: error") {
-    e_void lhs{make_unexpected(sec::runtime_error)};
-    e_void rhs{make_unexpected(sec::logic_error)};
+    e_void lhs{unexpect, sec::runtime_error};
+    e_void rhs{unexpect, sec::logic_error};
     check_eq(lhs, make_unexpected(error{sec::runtime_error}));
     check_eq(rhs, make_unexpected(error{sec::logic_error}));
     lhs.swap(rhs);
@@ -300,7 +300,7 @@ TEST("an expected can be compared to its expected type and errors") {
   SECTION("void value type") {
     e_void x;
     check(static_cast<bool>(x));
-    e_void y{make_unexpected(sec::runtime_error)};
+    e_void y{unexpect, sec::runtime_error};
     check_eq(y, make_unexpected(sec::runtime_error));
     check_ne(y, make_unexpected(sec::logic_error));
   }
@@ -449,7 +449,7 @@ TEST("expected is convertible from none") {
   e_int x{unexpect, error{}};
   if (check(!x))
     check(x.error().empty());
-  e_void y{make_unexpected(error{})};
+  e_void y{unexpect, error{}};
   if (check(!y))
     check(!y.error().empty());
 }
@@ -549,7 +549,7 @@ TEST("and_then does nothing when called with an error") {
   }
   SECTION("void value type") {
     auto fn = [] { return e_void{}; };
-    auto v1 = e_void{make_unexpected(sec::runtime_error)};
+    auto v1 = e_void{unexpect, sec::runtime_error};
     auto v2 = v1.and_then(fn);                  // mutable lvalue
     const auto v3 = std::move(v2).and_then(fn); // mutable rvalue
     const auto v4 = v3.and_then(fn);            // const lvalue
@@ -647,7 +647,7 @@ TEST("transform does nothing when called with an error") {
   }
   SECTION("void value type") {
     auto fn = [] {};
-    auto v1 = e_void{make_unexpected(sec::runtime_error)};
+    auto v1 = e_void{unexpect, sec::runtime_error};
     auto v2 = v1.transform(fn);                  // mutable lvalue
     const auto v3 = std::move(v2).transform(fn); // mutable rvalue
     const auto v4 = v3.transform(fn);            // const lvalue
@@ -742,7 +742,7 @@ TEST("or_else may replace the error or set a default") {
       return e_void{};
     };
     SECTION("or_else makes copies when called on a mutable lvalue") {
-      auto v1 = e_void{make_unexpected(sec::runtime_error)};
+      auto v1 = e_void{unexpect, sec::runtime_error};
       auto v2 = v1.or_else(next_error);
       check_eq(v1, make_unexpected(sec::runtime_error));
       check_eq(v2, make_unexpected(sec::remote_linking_failed));
@@ -751,7 +751,7 @@ TEST("or_else may replace the error or set a default") {
       check(static_cast<bool>(v3));
     }
     SECTION("or_else makes copies when called on a const lvalue") {
-      const auto v1 = e_void{make_unexpected(sec::runtime_error)};
+      const auto v1 = e_void{unexpect, sec::runtime_error};
       const auto v2 = v1.or_else(next_error);
       check_eq(v1, make_unexpected(sec::runtime_error));
       check_eq(v2, make_unexpected(sec::remote_linking_failed));
@@ -760,7 +760,7 @@ TEST("or_else may replace the error or set a default") {
       check(static_cast<bool>(v3));
     }
     SECTION("or_else moves when called on a mutable rvalue") {
-      auto v1 = e_void{make_unexpected(sec::runtime_error)};
+      auto v1 = e_void{unexpect, sec::runtime_error};
       auto v2 = std::move(v1).or_else(next_error);
       check_eq(v1, make_unexpected(error{}));
       check_eq(v2, make_unexpected(sec::remote_linking_failed));
@@ -769,7 +769,7 @@ TEST("or_else may replace the error or set a default") {
       check(static_cast<bool>(v3));
     }
     SECTION("or_else makes copies when called on a const rvalue") {
-      const auto v1 = e_void{make_unexpected(sec::runtime_error)};
+      const auto v1 = e_void{unexpect, sec::runtime_error};
       const auto v2 = std::move(v1).or_else(next_error);
       check_eq(v1, make_unexpected(sec::runtime_error));
       check_eq(v2, make_unexpected(sec::remote_linking_failed));
@@ -805,7 +805,7 @@ TEST("or_else leaves the expected unchanged when returning void") {
       ++i;
       return e_void{make_unexpected(e)};
     };
-    auto v1 = e_void{make_unexpected(sec::runtime_error)};
+    auto v1 = e_void{unexpect, sec::runtime_error};
     auto v2 = v1.or_else(inc);                  // mutable lvalue
     const auto v3 = std::move(v2).or_else(inc); // mutable rvalue
     const auto v4 = v3.or_else(inc);            // const lvalue
@@ -886,25 +886,25 @@ TEST("transform_error may replace the error or set a default") {
   SECTION("void value type") {
     next_error_t<void, false> next_error;
     SECTION("transform_error makes copies when called on a mutable lvalue") {
-      auto v1 = e_void{make_unexpected(sec::runtime_error)};
+      auto v1 = e_void{unexpect, sec::runtime_error};
       auto v2 = v1.transform_error(next_error);
       check_eq(v1, make_unexpected(sec::runtime_error));
       check_eq(v2, make_unexpected(sec::remote_linking_failed));
     }
     SECTION("transform_error makes copies when called on a const lvalue") {
-      const auto v1 = e_void{make_unexpected(sec::runtime_error)};
+      const auto v1 = e_void{unexpect, sec::runtime_error};
       const auto v2 = v1.transform_error(next_error);
       check_eq(v1, make_unexpected(sec::runtime_error));
       check_eq(v2, make_unexpected(sec::remote_linking_failed));
     }
     SECTION("transform_error moves when called on a mutable rvalue") {
-      auto v1 = e_void{make_unexpected(sec::runtime_error)};
+      auto v1 = e_void{unexpect, sec::runtime_error};
       auto v2 = std::move(v1).transform_error(next_error);
       check_eq(v1, make_unexpected(error{}));
       check_eq(v2, make_unexpected(sec::remote_linking_failed));
     }
     SECTION("transform_error makes copies when called on a const rvalue") {
-      const auto v1 = e_void{make_unexpected(sec::runtime_error)};
+      const auto v1 = e_void{unexpect, sec::runtime_error};
       const auto v2 = std::move(v1).transform_error(next_error);
       check_eq(v1, make_unexpected(sec::runtime_error));
       check_eq(v2, make_unexpected(sec::remote_linking_failed));

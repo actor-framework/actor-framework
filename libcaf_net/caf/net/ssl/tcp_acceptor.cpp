@@ -78,7 +78,7 @@ expected<connection> accept(tcp_acceptor& acc) {
   auto fd = accept(acc.fd());
   if (fd)
     return acc.ctx().new_connection(*fd);
-  return {unexpect, std::move(fd.error())};
+  return expected<connection>{unexpect, std::move(fd.error())};
 }
 
 } // namespace caf::net::ssl

@@ -29,7 +29,7 @@ expected<strong_actor_ptr> remote_actor(actor_system& sys,
              .request(sys.openssl_manager().actor_handle(), infinite)
              .receive();
   if (!x)
-    return {unexpect, std::move(x.error())};
+    return expected<strong_actor_ptr>{unexpect, std::move(x.error())};
   auto& tup = *x;
   auto& ptr = get<1>(tup);
   if (!ptr)

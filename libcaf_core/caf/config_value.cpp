@@ -253,8 +253,8 @@ expected<bool> config_value::to_boolean() const {
         return format_to_unexpected(sec::conversion_failed,
                                     "cannot convert '{}' to a boolean", tn);
       }
-      return {unexpect, sec::conversion_failed,
-              "cannot convert a dictionary to a boolean"};
+      return result_type{unexpect, sec::conversion_failed,
+                         "cannot convert a dictionary to a boolean"};
     });
   return visit(f, data_);
 }

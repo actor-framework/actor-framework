@@ -169,9 +169,7 @@ public:
     new (std::addressof(error_)) caf::error{std::move(e)};
   }
 
-  [[deprecated("USE UNEXPEXT CTOR")]]
-  expected(unexpected_type x)
-    : has_value_(false) {
+  expected(unexpected_type x) : has_value_(false) {
     new (std::addressof(error_)) caf::error(std::move(x.error()));
   }
 
@@ -189,7 +187,7 @@ public:
   }
 
   template <class... Ts>
-  expected(caf::unexpect_t, Ts&&... xs) : has_value_(false) {
+  explicit expected(caf::unexpect_t, Ts&&... xs) : has_value_(false) {
     new (std::addressof(error_)) caf::error(std::forward<Ts>(xs)...);
   }
 
@@ -843,7 +841,7 @@ public:
   }
 
   template <class... Args>
-  expected(unexpect_t, Args&&... args) noexcept
+  explicit expected(unexpect_t, Args&&... args) noexcept
     : error_(std::forward<Args>(args)...) {
     // nop
   }

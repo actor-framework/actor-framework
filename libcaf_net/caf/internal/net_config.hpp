@@ -252,8 +252,8 @@ public:
   virtual expected<disposable> start_server_impl(net::tcp_accept_socket) = 0;
 
   expected<disposable> start_server(none_t) {
-    return {unexpect, caf::sec::logic_error,
-            "invalid WebSocket server configuration"};
+    return expected<disposable>{unexpect, caf::sec::logic_error,
+                                "invalid WebSocket server configuration"};
   }
 
   expected<disposable> start_server(server_config::socket& cfg) {
@@ -270,7 +270,7 @@ public:
                                                 std::move(cfg.bind_address),
                                                 cfg.reuse_addr);
     if (!maybe_fd) {
-      return {unexpect, std::move(maybe_fd.error())};
+      return expected<disposable>{unexpect, std::move(maybe_fd.error())};
     }
     server_config::socket sub_cfg{*maybe_fd};
     return start_server(sub_cfg);
@@ -309,8 +309,8 @@ public:
   virtual expected<disposable> start_client_impl(net::stream_socket) = 0;
 
   expected<disposable> start_client(none_t) {
-    return {unexpect, caf::sec::logic_error,
-            "invalid WebSocket client configuration"};
+    return expected<disposable>{unexpect, caf::sec::logic_error,
+                                "invalid WebSocket client configuration"};
   }
 
   expected<disposable> start_client(client_config::conn& cfg) {
@@ -321,7 +321,7 @@ public:
     if (ctx) {
       auto conn = ctx->new_connection(cfg.take_fd());
       if (!conn) {
-        return {unexpect, std::move(conn.error())};
+        return expected<disposable>{unexpect, std::move(conn.error())};
       }
       if (ctx->hostname_validation()) {
         if (!conn->hostname(hostname.c_str())) {
@@ -341,7 +341,7 @@ public:
     auto maybe_fd = detail::tcp_try_connect(host, port, connection_timeout,
                                             max_retry_count, retry_delay);
     if (!maybe_fd) {
-      return {unexpect, std::move(maybe_fd.error())};
+      return expected<disposable>{unexpect, std::move(maybe_fd.error())};
     }
     client_config::socket sub_cfg{*maybe_fd};
     hostname = std::move(host);
