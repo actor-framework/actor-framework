@@ -50,6 +50,8 @@ using unexpected = std::unexpected<T>;
 template <class T>
 using expected = std::expected<T, error>;
 
+using unexpect_t = std::unexpect_t;
+
 inline constexpr std::unexpect_t unexpect{};
 
 } // namespace caf
@@ -123,7 +125,7 @@ public:
 
   using error_type = caf::error;
 
-  using unexpected_type = unexpected<error>;
+  using unexpected_type = unexpected<caf::error>;
 
   template <class U>
   using rebind = expected<U>;
@@ -143,13 +145,14 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  template <std::convertible_to<T> U>
+  template <class U>
+    requires std::is_constructible_v<T, U>
   expected(U x) : has_value_{true} {
     new (std::addressof(value_)) T(std::move(x));
   }
 
   template <error_code_enum U>
-  [[deprecated("Use constructor with caf::unexpected instead")]]
+  [[deprecated("construct using unexpect or from an unexpected instead")]]
   expected(U x)
     : has_value_{false} {
     new (std::addressof(error_)) caf::error(x);
@@ -163,7 +166,7 @@ public:
     new (std::addressof(value_)) T(x);
   }
 
-  [[deprecated("Use constructor with caf::unexpected instead")]]
+  [[deprecated("construct using unexpect or from an unexpected instead")]]
   expected(caf::error e) noexcept
     : has_value_(false) {
     new (std::addressof(error_)) caf::error{std::move(e)};
@@ -247,7 +250,7 @@ public:
     return *this = T{std::move(x)};
   }
 
-  [[deprecated("Use assignment with caf::unexpected instead")]]
+  [[deprecated("use assignment with caf::unexpected instead")]]
   expected& operator=(caf::error e) noexcept {
     if (!has_value())
       error_ = std::move(e);
@@ -260,7 +263,7 @@ public:
   }
 
   template <error_code_enum Enum>
-  [[deprecated("Use assignment with caf::unexpected instead")]]
+  [[deprecated("use assignment with caf::unexpected instead")]]
   expected& operator=(Enum code) {
     return *this = make_error(code);
   }
@@ -456,7 +459,7 @@ public:
   template <class F>
     requires std::is_void_v<
       decltype(std::declval<F&>()(std::declval<caf::error>()))>
-  [[deprecated("Use or_else with expected return type instead")]]
+  [[deprecated("use or_else with expected return type instead")]]
   expected or_else(F&& f) & {
     if (!has_value())
       f(error_);
@@ -476,7 +479,7 @@ public:
   template <class F>
     requires std::is_void_v<
       decltype(std::declval<F&>()(std::declval<caf::error>()))>
-  [[deprecated("Use or_else with expected return type instead")]]
+  [[deprecated("use or_else with expected return type instead")]]
   expected or_else(F&& f) && {
     if (!has_value())
       f(std::move(error_));
@@ -496,7 +499,7 @@ public:
   template <class F>
     requires std::is_void_v<
       decltype(std::declval<F&>()(std::declval<caf::error>()))>
-  [[deprecated("Use or_else with expected return type instead")]]
+  [[deprecated("use or_else with expected return type instead")]]
   expected or_else(F&& f) const& {
     if (!has_value())
       f(error_);
@@ -516,7 +519,7 @@ public:
   template <class F>
     requires std::is_void_v<
       decltype(std::declval<F&>()(std::declval<caf::error>()))>
-  [[deprecated("Use or_else with expected return type instead")]]
+  [[deprecated("use or_else with expected return type instead")]]
   expected or_else(F&& f) const&& {
     if (!has_value())
       f(std::move(error_));
@@ -806,7 +809,7 @@ public:
 
   using error_type = caf::error;
 
-  using unexpected_type = unexpected<error>;
+  using unexpected_type = unexpected<caf::error>;
 
   template <class U>
   using rebind = expected<U>;
@@ -814,13 +817,13 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   template <error_code_enum Enum>
-  [[deprecated("Use constructor with caf::unexpected instead")]]
+  [[deprecated("construct using unexpect or from an unexpected instead")]]
   expected(Enum x)
     : error_(std::in_place, x) {
     // nop
   }
 
-  [[deprecated("Use constructor with caf::unexpected instead")]]
+  [[deprecated("construct using unexpect or from an unexpected instead")]]
   expected(caf::error err) noexcept
     : error_(std::move(err)) {
     // nop
@@ -850,14 +853,14 @@ public:
 
   expected& operator=(expected&& other) noexcept = default;
 
-  [[deprecated("Use assignment with caf::unexpected instead")]]
+  [[deprecated("use assignment with caf::unexpected instead")]]
   expected& operator=(caf::error err) noexcept {
     error_ = std::move(err);
     return *this;
   }
 
   template <error_code_enum Enum>
-  [[deprecated("Use assignment with caf::unexpected instead")]]
+  [[deprecated("use assignment with caf::unexpected instead")]]
   expected& operator=(Enum code) {
     error_ = make_error(code);
     return *this;
@@ -1169,19 +1172,6 @@ constexpr unexpected<error> make_unexpected(Enum e, Args&&... args) noexcept {
 
 inline unexpected<error> make_unexpected(error err) noexcept {
   return unexpected<error>{std::move(err)};
-}
-
-template <class Inspector>
-bool inspect(Inspector& f, unexpected<error>& x) {
-  if constexpr (Inspector::is_loading) {
-    caf::error e;
-    if (!f.object(x).fields(f.field("error", e)))
-      return false;
-    x = make_unexpected(std::move(e));
-    return true;
-  } else {
-    return f.object(x).fields(f.field("error", x.error()));
-  }
 }
 
 template <class T>
