@@ -342,7 +342,7 @@ error parse(std::string_view str, uri& dest) {
 expected<uri> make_uri(std::string_view str) {
   uri result;
   if (auto err = parse(str, result); err.valid())
-    return err;
+    return expected<uri>{unexpect, err};
   return result;
 }
 

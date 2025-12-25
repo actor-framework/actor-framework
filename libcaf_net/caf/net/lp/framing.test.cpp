@@ -269,8 +269,9 @@ SCENARIO("lp::with(...).connect(...) translates between flows and socket I/O") {
                     .subscribe(push);
                 });
               });
-        conn.or_else([this](const error& err) { //
+        std::ignore = conn.or_else([this](const error& err) { //
           fail("connect failed: {}", err);
+          return expected<disposable>{unexpect, err};
         });
         scoped_actor self{sys};
         self->wait_for(hdl);

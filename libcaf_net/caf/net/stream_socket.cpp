@@ -60,9 +60,9 @@ constexpr int no_sigpipe_io_flag = 0;
 expected<std::pair<stream_socket, stream_socket>> make_stream_socket_pair() {
   auto addrlen = static_cast<int>(sizeof(sockaddr_in));
   socket_id socks[2] = {invalid_socket_id, invalid_socket_id};
-  CAF_NET_SYSCALL("WSASocket", listener, ==, invalid_socket_id,
-                  WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, nullptr, 0,
-                            WSA_FLAG_OVERLAPPED));
+  CAF_NET_SYSCALL_TO_UNEXPECTED("WSASocket", listener, ==, invalid_socket_id,
+                                WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP,
+                                          nullptr, 0, WSA_FLAG_OVERLAPPED));
   union {
     sockaddr_in inaddr;
     sockaddr addr;
@@ -81,31 +81,33 @@ expected<std::pair<stream_socket, stream_socket>> make_stream_socket_pair() {
   }};
   // bind listener to a local port
   int reuse = 1;
-  CAF_NET_SYSCALL("setsockopt", tmp1, !=, 0,
-                  setsockopt(listener, SOL_SOCKET, SO_REUSEADDR,
-                             reinterpret_cast<char*>(&reuse),
-                             static_cast<int>(sizeof(reuse))));
-  CAF_NET_SYSCALL("bind", tmp2, !=, 0,
-                  bind(listener, &a.addr, static_cast<int>(sizeof(a.inaddr))));
+  CAF_NET_SYSCALL_TO_UNEXPECTED("setsockopt", tmp1, !=, 0,
+                                setsockopt(listener, SOL_SOCKET, SO_REUSEADDR,
+                                           reinterpret_cast<char*>(&reuse),
+                                           static_cast<int>(sizeof(reuse))));
+  CAF_NET_SYSCALL_TO_UNEXPECTED("bind", tmp2, !=, 0,
+                                bind(listener, &a.addr,
+                                     static_cast<int>(sizeof(a.inaddr))));
   // Read the port in use: win32 getsockname may only set the port number
   // (http://msdn.microsoft.com/library/ms738543.aspx).
   memset(&a, 0, sizeof(a));
-  CAF_NET_SYSCALL("getsockname", tmp3, !=, 0,
-                  getsockname(listener, &a.addr, &addrlen));
+  CAF_NET_SYSCALL_TO_UNEXPECTED("getsockname", tmp3, !=, 0,
+                                getsockname(listener, &a.addr, &addrlen));
   a.inaddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
   a.inaddr.sin_family = AF_INET;
   // set listener to listen mode
-  CAF_NET_SYSCALL("listen", tmp5, !=, 0, listen(listener, 1));
+  CAF_NET_SYSCALL_TO_UNEXPECTED("listen", tmp5, !=, 0, listen(listener, 1));
   // create read-only end of the pipe
   DWORD flags = WSA_FLAG_OVERLAPPED;
-  CAF_NET_SYSCALL("WSASocketW", read_fd, ==, invalid_socket_id,
-                  WSASocketW(AF_INET, SOCK_STREAM, 0, nullptr, 0, flags));
-  CAF_NET_SYSCALL("connect", tmp6, !=, 0,
-                  connect(read_fd, &a.addr,
-                          static_cast<int>(sizeof(a.inaddr))));
+  CAF_NET_SYSCALL_TO_UNEXPECTED("WSASocketW", read_fd, ==, invalid_socket_id,
+                                WSASocketW(AF_INET, SOCK_STREAM, 0, nullptr, 0,
+                                           flags));
+  CAF_NET_SYSCALL_TO_UNEXPECTED("connect", tmp6, !=, 0,
+                                connect(read_fd, &a.addr,
+                                        static_cast<int>(sizeof(a.inaddr))));
   // get write-only end of the pipe
-  CAF_NET_SYSCALL("accept", write_fd, ==, invalid_socket_id,
-                  accept(listener, nullptr, nullptr));
+  CAF_NET_SYSCALL_TO_UNEXPECTED("accept", write_fd, ==, invalid_socket_id,
+                                accept(listener, nullptr, nullptr));
   close(socket{listener});
   guard.disable();
   return std::make_pair(stream_socket{read_fd}, stream_socket{write_fd});
@@ -130,8 +132,8 @@ constexpr int no_sigpipe_io_flag = MSG_NOSIGNAL;
 
 expected<std::pair<stream_socket, stream_socket>> make_stream_socket_pair() {
   int sockets[2];
-  CAF_NET_SYSCALL("socketpair", spair_res, !=, 0,
-                  socketpair(AF_UNIX, SOCK_STREAM, 0, sockets));
+  CAF_NET_SYSCALL_TO_UNEXPECTED("socketpair", spair_res, !=, 0,
+                                socketpair(AF_UNIX, SOCK_STREAM, 0, sockets));
   return std::make_pair(stream_socket{sockets[0]}, stream_socket{sockets[1]});
 }
 

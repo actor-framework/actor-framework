@@ -107,7 +107,7 @@ public:
     type_list<ActorHandle> tk;
     auto x = remote_actor(system().message_types(tk), std::move(host), port);
     if (!x)
-      return x.error();
+      return expected<ActorHandle>{unexpect, x.error()};
     CAF_ASSERT(x && *x);
     return actor_cast<ActorHandle>(std::move(*x));
   }
@@ -160,13 +160,13 @@ public:
   remote_spawn(const node_id& nid, std::string name, message args,
                timespan timeout = timespan{std::chrono::minutes{1}}) {
     if (!nid || name.empty())
-      return sec::invalid_argument;
+      return expected<Handle>{unexpect, sec::invalid_argument};
     if (nid == system().node())
       return system().spawn<Handle>(std::move(name), std::move(args));
     auto res = remote_spawn_impl(nid, name, args,
                                  system().message_types<Handle>(), timeout);
     if (!res)
-      return std::move(res.error());
+      return expected<Handle>{unexpect, std::move(res.error())};
     return actor_cast<Handle>(std::move(*res));
   }
 
@@ -280,7 +280,7 @@ private:
   spawn_client_impl(F fun, const std::string& host, uint16_t port, Ts&&... xs) {
     auto eptr = backend().new_tcp_scribe(host, port);
     if (!eptr)
-      return eptr.error();
+      return expected<infer_handle_from_class_t<Impl>>{unexpect, eptr.error()};
     auto ptr = std::move(*eptr);
     CAF_ASSERT(ptr != nullptr);
     detail::init_fun_factory<Impl, F> fac;
@@ -298,7 +298,7 @@ private:
   spawn_server_impl(F fun, uint16_t& port, Ts&&... xs) {
     auto eptr = backend().new_tcp_doorman(port);
     if (!eptr)
-      return eptr.error();
+      return {unexpect, eptr.error()};
     auto ptr = std::move(*eptr);
     detail::init_fun_factory<Impl, F> fac;
     port = ptr->port();
