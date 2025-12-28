@@ -1193,4 +1193,4 @@ inline std::string to_string(const expected<void>& x) {
 
 } // namespace caf
 
-// NOLINTND(bugprone-unchecked-optional-access)
+// NOLINTEND(bugprone-unchecked-optional-access)
