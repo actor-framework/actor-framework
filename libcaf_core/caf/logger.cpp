@@ -4,17 +4,15 @@
 
 #include "caf/logger.hpp"
 
-#include "caf/actor_proxy.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
-#include "caf/config.hpp"
+#include "caf/chunked_string.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/atomic_ref_counted.hpp"
+#include "caf/detail/format.hpp"
 #include "caf/detail/get_process_id.hpp"
-#include "caf/detail/log_level.hpp"
 #include "caf/detail/log_level_map.hpp"
 #include "caf/detail/meta_object.hpp"
-#include "caf/detail/pretty_type_name.hpp"
 #include "caf/detail/set_thread_name.hpp"
 #include "caf/detail/sync_ring_buffer.hpp"
 #include "caf/local_actor.hpp"
@@ -22,18 +20,14 @@
 #include "caf/log/level.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/message.hpp"
-#include "caf/string_algorithms.hpp"
 #include "caf/term.hpp"
 #include "caf/thread_owner.hpp"
 #include "caf/timestamp.hpp"
 
 #include <algorithm>
-#include <condition_variable>
+#include <cstdio>
 #include <cstring>
 #include <ctime>
-#include <fstream>
-#include <iomanip>
-#include <iostream>
 #include <thread>
 #include <unordered_map>
 #include <utility>
@@ -42,43 +36,94 @@ namespace caf {
 
 namespace {
 
+// The default capacity of the render buffer in bytes for pre-allocated memory.
+constexpr size_t default_render_buffer_capacity = 1024;
+
+/// Utility class for buffered rendering of log output.
+class render_buffer {
+public:
+  using value_type = char;
+  using iterator = std::vector<char>::iterator;
+  using const_iterator = std::vector<char>::const_iterator;
+
+  render_buffer() {
+    buf_.reserve(default_render_buffer_capacity);
+  }
+
+  void clear() {
+    buf_.clear();
+  }
+
+  template <class T>
+    requires(!std::is_pointer_v<T>)
+  void append(const T& value) {
+    detail::format_to(std::back_inserter(buf_), "{}", value);
+  }
+
+  void append(char value) {
+    buf_.push_back(value);
+  }
+
+  void append(std::string_view value) {
+    buf_.insert(buf_.end(), value.begin(), value.end());
+  }
+
+  void append(const chunked_string& str) {
+    str.copy_to(std::back_inserter(buf_));
+  }
+
+  void append(const std::thread::id& tid) {
+    append(std::hash<std::thread::id>{}(tid));
+  }
+
+  void write_to(FILE* out) const {
+    if (!buf_.empty()) {
+      fwrite(buf_.data(), 1, buf_.size(), out);
+      fflush(out);
+    }
+  }
+
+private:
+  std::vector<char> buf_;
+};
+
 // Note: not part of the public API on purpose. This is only used for render()
 //       and the format may change at any time.
-void render_fields(std::ostream& out, log::event::field_list fields) {
+void render_fields(render_buffer& buf, log::event::field_list fields) {
   if (fields.empty())
     return;
   auto i = fields.begin();
   auto e = fields.end();
   for (;;) {
-    auto fn = [&out, i](const auto& value) {
+    auto fn = [&buf, i](const auto& value) {
       using value_t = std::decay_t<decltype(value)>;
       if constexpr (std::is_same_v<value_t, std::nullopt_t>) {
-        out << i->key << " = null";
+        buf.append(i->key);
+        buf.append(" = null");
       } else if constexpr (std::is_same_v<value_t, log::event::field_list>) {
-        out << i->key << " { ";
-        render_fields(out, value);
-        out << " }";
+        buf.append(i->key);
+        buf.append(" { ");
+        render_fields(buf, value);
+        buf.append(" }");
       } else {
-        out << i->key << " = " << value;
+        buf.append(i->key);
+        buf.append(" = ");
+        buf.append(value);
       }
     };
     std::visit(fn, i->value);
     if (++i == e)
       return;
-    out << ", ";
+    buf.append(", ");
   }
 }
 
-struct fields_formatter {
-  log::event::field_list fields;
-};
-
-std::ostream& operator<<(std::ostream& out, fields_formatter wrapper) {
-  if (wrapper.fields.empty())
-    return out;
-  out << " ; "; // separates the message from the fields
-  render_fields(out, wrapper.fields);
-  return out;
+void render_fields_formatted(render_buffer& buf,
+                             log::event::field_list fields) {
+  if (fields.empty())
+    return;
+  buf.append(" ; "); // separates the message from the fields
+  render_fields(buf, fields);
 }
 
 // Stores the ID of the currently running actor.
@@ -86,6 +131,17 @@ thread_local actor_id current_actor_id;
 
 // Stores a pointer to the system-wide logger.
 thread_local intrusive_ptr<logger> current_logger_ptr;
+
+// Custom deleter for FILE* to use with unique_ptr.
+struct file_deleter {
+  void operator()(FILE* ptr) const noexcept {
+    if (ptr)
+      fclose(ptr);
+  }
+};
+
+// RAII wrapper for FILE*.
+using file_ptr = std::unique_ptr<FILE, file_deleter>;
 
 // Default logger implementation.
 class default_logger : public logger, public detail::atomic_ref_counted {
@@ -197,9 +253,8 @@ public:
   // -- static utility functions -----------------------------------------------
 
   /// Renders the date of `x` in ISO 8601 format.
-  static void render_date(std::ostream& out, timestamp x) {
-    detail::print_iterator_adapter adapter{std::ostreambuf_iterator<char>{out}};
-    detail::print(adapter, x);
+  static void render_date(render_buffer& buf, timestamp x) {
+    buf.append(x);
   }
 
   /// Parses `format_str` into a format description vector.
@@ -228,8 +283,8 @@ public:
           case '%': ft = percent_sign_field; break;
           default: // clang-format on
             ft = invalid_field;
-            std::cerr << "invalid field specifier in format string: " << *i
-                      << std::endl;
+            fprintf(stderr, "invalid field specifier in format string: %c\n",
+                    *i);
         }
         if (ft != invalid_field)
           res.emplace_back(field{ft, std::string{}});
@@ -250,8 +305,8 @@ public:
     return res;
   }
 
-  /// Renders `x` using the line format `lf` to `out`.
-  void render(std::ostream& out, const line_format& lf,
+  /// Renders `x` using the line format `lf` to `buf`.
+  void render(render_buffer& buf, const line_format& lf,
               const log::event& x) const {
     auto ms_time_diff = [](timestamp t0, timestamp tn) {
       using namespace std::chrono;
@@ -260,21 +315,22 @@ public:
     // clang-format off
     for (auto& f : lf)
       switch (f.kind) {
-        case category_field:     out << x.component();                    break;
-        case class_name_field:   out << "null";                           break;
-        case date_field:         render_date(out, x.timestamp());         break;
-        case file_field:         out << x.file_name();                    break;
-        case line_field:         out << x.line_number();                  break;
-        case method_field:       out << x.function_name();                break;
-        case newline_field:      out << std::endl;                        break;
-        case priority_field:     out << log_level_names_[x.level()];      break;
-        case runtime_field:      out << ms_time_diff(t0_, x.timestamp()); break;
-        case thread_field:       out << x.thread_id();;                   break;
-        case actor_field:        out << "actor" << x.actor_id();          break;
-        case percent_sign_field: out << '%';                              break;
-        case plain_text_field:   out << f.text;                           break;
-        case message_field:      out << x.message()
-                                     << fields_formatter{x.fields()};     break;
+        case category_field:     buf.append(x.component());                    break;
+        case class_name_field:   buf.append("null");                           break;
+        case date_field:         render_date(buf, x.timestamp());              break;
+        case file_field:         buf.append(x.file_name());                    break;
+        case line_field:         buf.append(x.line_number());                  break;
+        case method_field:       buf.append(x.function_name());                break;
+        case newline_field:      buf.append('\n');                             break;
+        case priority_field:     buf.append(log_level_names_[x.level()]);      break;
+        case runtime_field:      buf.append(ms_time_diff(t0_, x.timestamp())); break;
+        case thread_field:       buf.append(x.thread_id());                    break;
+        case actor_field:        buf.append("actor");
+                                 buf.append(x.actor_id());                     break;
+        case percent_sign_field: buf.append('%');                              break;
+        case plain_text_field:   buf.append(f.text);                           break;
+        case message_field:      buf.append(x.message());
+                                 render_fields_formatted(buf, x.fields());     break;
         default: ; // nop
       }
     // clang-format on
@@ -346,9 +402,9 @@ public:
   bool open_file() {
     if (file_verbosity() == log::level::quiet || file_name_.empty())
       return false;
-    file_.open(file_name_, std::ios::out | std::ios::app);
+    file_.reset(fopen(file_name_.c_str(), "a"));
     if (!file_) {
-      std::cerr << "unable to open log file " << file_name_ << std::endl;
+      fprintf(stderr, "unable to open log file %s\n", file_name_.c_str());
       return false;
     }
     return true;
@@ -366,8 +422,11 @@ public:
     if (file_ && x.level() <= file_verbosity()
         && std::ranges::none_of(file_filter_, [&x](std::string_view name) {
              return name == x.component();
-           }))
-      render(file_, file_format_, x);
+           })) {
+      buf_.clear();
+      render(buf_, file_format_, x);
+      buf_.write_to(file_.get());
+    }
   }
 
   void handle_console_event(const log::event& x) {
@@ -377,31 +436,35 @@ public:
           return name == x.component();
         }))
       return;
+    buf_.clear();
+    render(buf_, console_format_, x);
     if (cfg_.console_coloring) {
+      term color = term::reset;
       switch (x.level()) {
         default:
           break;
         case log::level::error:
-          std::clog << term::red;
+          color = term::red;
           break;
         case log::level::warning:
-          std::clog << term::yellow;
+          color = term::yellow;
           break;
         case log::level::info:
-          std::clog << term::green;
+          color = term::green;
           break;
         case log::level::debug:
-          std::clog << term::cyan;
+          color = term::cyan;
           break;
         case log::level::trace:
-          std::clog << term::blue;
+          color = term::blue;
           break;
       }
-      render(std::clog, console_format_, x);
-      std::clog << term::reset_endl;
+      detail::set_color(stderr, color);
+      buf_.write_to(stderr);
+      detail::set_color(stderr, term::reset_endl);
     } else {
-      render(std::clog, console_format_, x);
-      std::clog << std::endl;
+      buf_.append('\n');
+      buf_.write_to(stderr);
     }
   }
 
@@ -550,8 +613,11 @@ public:
   // Format for generating console output.
   line_format console_format_;
 
-  // Stream for file output.
-  std::fstream file_;
+  // File handle for file output.
+  file_ptr file_;
+
+  // Buffer for rendering log output before writing.
+  render_buffer buf_;
 
   // Filled with log events by other threads.
   detail::sync_ring_buffer<log::event_ptr, queue_size> queue_;
