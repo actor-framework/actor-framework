@@ -21,6 +21,7 @@
 #include "caf/detail/critical.hpp"
 #include "caf/detail/socket_guard.hpp"
 #include "caf/format_to_error.hpp"
+#include "caf/format_to_unexpected.hpp"
 #include "caf/log/io.hpp"
 #include "caf/log/system.hpp"
 #include "caf/make_counted.hpp"
@@ -659,7 +660,7 @@ expected<scribe_ptr>
 default_multiplexer::new_tcp_scribe(const std::string& host, uint16_t port) {
   auto fd = new_tcp_connection(host, port);
   if (!fd)
-    return std::move(fd.error());
+    return expected<scribe_ptr>{unexpect, std::move(fd.error())};
   return new_scribe(*fd);
 }
 
@@ -675,7 +676,7 @@ expected<doorman_ptr> default_multiplexer::new_tcp_doorman(uint16_t port,
   auto fd = new_tcp_acceptor_impl(port, in, reuse_addr);
   if (fd)
     return new_doorman(*fd);
-  return std::move(fd.error());
+  return expected<doorman_ptr>{unexpect, std::move(fd.error())};
 }
 
 datagram_servant_ptr
@@ -699,7 +700,7 @@ default_multiplexer::new_remote_udp_endpoint(const std::string& host,
                                              uint16_t port) {
   auto res = new_remote_udp_endpoint_impl(host, port);
   if (!res)
-    return std::move(res.error());
+    return expected<datagram_servant_ptr>{unexpect, std::move(res.error())};
   return new_datagram_servant_for_endpoint(res->first, res->second);
 }
 
@@ -709,7 +710,7 @@ default_multiplexer::new_local_udp_endpoint(uint16_t port, const char* in,
   auto res = new_local_udp_endpoint_impl(port, in, reuse_addr);
   if (res)
     return new_datagram_servant((*res).first);
-  return std::move(res.error());
+  return expected<datagram_servant_ptr>{unexpect, std::move(res.error())};
 }
 
 int64_t default_multiplexer::next_endpoint_id() {
@@ -750,8 +751,9 @@ new_tcp_connection(const std::string& host, uint16_t port,
   auto res = interfaces::native_address(host, std::move(preferred));
   if (!res) {
     log::io::debug("no such host");
-    return format_to_error(sec::cannot_connect_to_node,
-                           "cannot connect to host {} on port {}", host, port);
+    return format_to_unexpected(sec::cannot_connect_to_node,
+                                "cannot connect to host {} on port {}", host,
+                                port);
   }
   auto proto = res->second;
   CAF_ASSERT(proto == ipv4 || proto == ipv6);
@@ -775,8 +777,9 @@ new_tcp_connection(const std::string& host, uint16_t port,
   }
   if (!ip_connect<AF_INET>(fd, res->first, port)) {
     log::io::warning("could not connect to: host = {} port = {}", host, port);
-    return format_to_error(sec::cannot_connect_to_node,
-                           "cannot connect to host {} on port {}", host, port);
+    return format_to_unexpected(sec::cannot_connect_to_node,
+                                "cannot connect to host {} on port {}", host,
+                                port);
   }
   log::io::info("successfully connected to (IPv4): host = {} port = {}", host,
                 port);
@@ -851,9 +854,9 @@ expected<native_socket> new_tcp_acceptor_impl(uint16_t port, const char* addr,
   auto addrs = interfaces::server_address(port, addr);
   auto addr_str = std::string{addr == nullptr ? "" : addr};
   if (addrs.empty())
-    return format_to_error(sec::cannot_open_port,
-                           "failed to resolve {} to a local interface",
-                           addr_str);
+    return format_to_unexpected(sec::cannot_open_port,
+                                "failed to resolve {} to a local interface",
+                                addr_str);
   bool any = addr_str.empty() || addr_str == "::" || addr_str == "0.0.0.0";
   auto fd = invalid_native_socket;
   for (auto& elem : addrs) {
@@ -870,7 +873,7 @@ expected<native_socket> new_tcp_acceptor_impl(uint16_t port, const char* addr,
     break;
   }
   if (fd == invalid_native_socket) {
-    return format_to_error(
+    return format_to_unexpected(
       sec::cannot_open_port,
       "could not open tcp socket on: port = {}, addr_str = {}", port, addr_str);
   }
@@ -888,12 +891,14 @@ new_remote_udp_endpoint_impl(const std::string& host, uint16_t port,
                            preferred);
   auto lep = new_local_udp_endpoint_impl(0, nullptr, false, preferred);
   if (!lep)
-    return std::move(lep.error());
+    return expected<std::pair<native_socket, ip_endpoint>>{
+      unexpect, std::move(lep.error())};
   detail::socket_guard sguard{(*lep).first};
   std::pair<native_socket, ip_endpoint> info;
   if (!interfaces::get_endpoint(host, port, std::get<1>(info), (*lep).second))
-    return format_to_error(sec::cannot_connect_to_node,
-                           "cannot connect to host {} on port {}", host, port);
+    return format_to_unexpected(sec::cannot_connect_to_node,
+                                "cannot connect to host {} on port {}", host,
+                                port);
   get<0>(info) = sguard.release();
   return info;
 }
@@ -906,9 +911,9 @@ new_local_udp_endpoint_impl(uint16_t port, const char* addr, bool reuse,
   auto addrs = interfaces::server_address(port, addr, preferred);
   auto addr_str = std::string{addr == nullptr ? "" : addr};
   if (addrs.empty())
-    return format_to_error(sec::cannot_open_port,
-                           "failed to resolve {} to a local interface",
-                           addr_str);
+    return format_to_unexpected(sec::cannot_open_port,
+                                "failed to resolve {} to a local interface",
+                                addr_str);
   bool any = addr_str.empty() || addr_str == "::" || addr_str == "0.0.0.0";
   auto fd = invalid_native_socket;
   protocol::network proto{};
@@ -927,7 +932,7 @@ new_local_udp_endpoint_impl(uint16_t port, const char* addr, bool reuse,
     break;
   }
   if (fd == invalid_native_socket) {
-    return format_to_error(
+    return format_to_unexpected(
       sec::cannot_open_port,
       "could not open udp socket: port = {}, addr_str = {}", port, addr_str);
   }

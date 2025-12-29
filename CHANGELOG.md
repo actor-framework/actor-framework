@@ -60,6 +60,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   has been default-constructed or holds a valid error code.
 - The methods `or_else` and `eval` on `caf::error` are now deprecated since they
   overlap with methods such as `transform` and `and_then` on `caf::expected`.
+- Deprecated all member functions in `caf::expected` that take an `caf::error`
+  directly. Instead, use the newly added `caf::unexpected` class.
 
 ### Added
 
@@ -74,6 +76,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   `actor_system_config` by calling `exception_handler(my_handler)`. This handler
   then gets passed down to all scheduled actors as the default exception handler
   but can still be overridden by actors.
+- Added a `caf::unexpected` class representing an unexpected value to be used
+  with `caf::expected`. Introduced appropriate member functions for
+  `caf::expected`.
 
 ### Fixed
 

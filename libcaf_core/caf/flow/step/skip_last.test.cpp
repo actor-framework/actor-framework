@@ -59,11 +59,11 @@ TEST("calling take(3) on skip_last(5) ignores the last two items") {
 TEST("skip_last operator forwards errors") {
   SECTION("blueprint") {
     check_eq(collect(obs_error<int>().skip_last(5)),
-             make_error(sec::runtime_error));
+             caf::make_unexpected(sec::runtime_error));
   }
   SECTION("observable") {
     check_eq(collect(obs_error<int>().as_observable().skip_last(5)),
-             make_error(sec::runtime_error));
+             caf::make_unexpected(sec::runtime_error));
   }
 }
 

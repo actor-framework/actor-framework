@@ -239,15 +239,15 @@ TEST("receive response as an expected") {
       });
       SECTION("empty result") {
         auto res = self->mail(get_atom_v).request(server, 1s).receive();
-        check_eq(res, make_error(sec::runtime_error));
+        check_eq(res, caf::make_unexpected(sec::runtime_error));
       }
       SECTION("result with one integer") {
         auto res = self->mail(get_atom_v, 1).request(server, 1s).receive();
-        check_eq(res, make_error(sec::runtime_error));
+        check_eq(res, caf::make_unexpected(sec::runtime_error));
       }
       SECTION("result with two integers") {
         auto res = self->mail(get_atom_v, 1, 2).request(server, 1s).receive();
-        check_eq(res, make_error(sec::runtime_error));
+        check_eq(res, caf::make_unexpected(sec::runtime_error));
       }
     }
     SECTION("dynamically typed response with well-behaved server") {
@@ -266,17 +266,17 @@ TEST("receive response as an expected") {
       });
       SECTION("empty result") {
         auto res = self->mail(get_atom_v).request(server, 1s).receive<>();
-        check_eq(res, make_error(sec::runtime_error));
+        check_eq(res, caf::make_unexpected(sec::runtime_error));
       }
       SECTION("result with one integer") {
         auto res = self->mail(get_atom_v, 1).request(server, 1s).receive<int>();
-        check_eq(res, make_error(sec::runtime_error));
+        check_eq(res, caf::make_unexpected(sec::runtime_error));
       }
       SECTION("result with two integers") {
         auto res = self->mail(get_atom_v, 1, 2)
                      .request(server, 1s)
                      .receive<int, int>();
-        check_eq(res, make_error(sec::runtime_error));
+        check_eq(res, caf::make_unexpected(sec::runtime_error));
       }
     }
   }
@@ -352,19 +352,19 @@ TEST("receive response as an expected") {
       SECTION("empty result") {
         auto res
           = self->mail(get_atom_v).delay(10us).request(server, 1s).receive();
-        check_eq(res, make_error(sec::runtime_error));
+        check_eq(res, caf::make_unexpected(sec::runtime_error));
       }
       SECTION("result with one integer") {
         auto res
           = self->mail(get_atom_v, 1).delay(10us).request(server, 1s).receive();
-        check_eq(res, make_error(sec::runtime_error));
+        check_eq(res, caf::make_unexpected(sec::runtime_error));
       }
       SECTION("result with two integers") {
         auto res = self->mail(get_atom_v, 1, 2)
                      .delay(10us)
                      .request(server, 1s)
                      .receive();
-        check_eq(res, make_error(sec::runtime_error));
+        check_eq(res, caf::make_unexpected(sec::runtime_error));
       }
     }
     SECTION("dynamically typed response with well-behaved server") {
@@ -384,21 +384,21 @@ TEST("receive response as an expected") {
       SECTION("empty result") {
         auto res
           = self->mail(get_atom_v).delay(10us).request(server, 1s).receive<>();
-        check_eq(res, make_error(sec::runtime_error));
+        check_eq(res, caf::make_unexpected(sec::runtime_error));
       }
       SECTION("result with one integer") {
         auto res = self->mail(get_atom_v, 1)
                      .delay(10us)
                      .request(server, 1s)
                      .receive<int>();
-        check_eq(res, make_error(sec::runtime_error));
+        check_eq(res, caf::make_unexpected(sec::runtime_error));
       }
       SECTION("result with two integers") {
         auto res = self->mail(get_atom_v, 1, 2)
                      .delay(10us)
                      .request(server, 1s)
                      .receive<int, int>();
-        check_eq(res, make_error(sec::runtime_error));
+        check_eq(res, caf::make_unexpected(sec::runtime_error));
       }
     }
   }
