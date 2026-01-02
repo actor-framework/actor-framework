@@ -128,11 +128,10 @@ public:
       F f;
       impl(F&& mf) : f(std::move(mf)) {
       }
-      resume_result resume(scheduler*, uint64_t event_id) override {
+      void resume(scheduler*, uint64_t event_id) override {
         if (event_id != resumable::dispose_event_id) {
           f();
         }
-        return done;
       }
     };
     delay(new impl(std::move(fun)), resumable::default_event_id);

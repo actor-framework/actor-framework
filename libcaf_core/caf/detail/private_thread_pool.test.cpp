@@ -47,38 +47,4 @@ SCENARIO("private threads count towards detached actors") {
   }
 }
 
-SCENARIO("private threads rerun their resumable when it returns resume_later") {
-  struct testee : resumable {
-    std::atomic<size_t> runs = 0;
-    mutable std::atomic<size_t> refs_added = 0;
-    mutable std::atomic<size_t> refs_released = 0;
-    resume_result resume(scheduler*, uint64_t) override {
-      return ++runs < 2 ? resumable::resume_later : resumable::done;
-    }
-    void ref_resumable() const noexcept final {
-      ++refs_added;
-    }
-    void deref_resumable() const noexcept final {
-      ++refs_released;
-    }
-  };
-  GIVEN("a resumable f and a private thread t") {
-    auto baseline = sys.detached_actors();
-    testee f;
-    auto t = sys.acquire_private_thread();
-    WHEN("when resuming f with t") {
-      t->resume(&f);
-      THEN("t calls resume until f returns something other than resume_later") {
-        sys.release_private_thread(t);
-        while (f.runs != 2u)
-          std::this_thread::sleep_for(1ms);
-        while (sys.detached_actors() != baseline)
-          std::this_thread::sleep_for(1ms);
-        check_eq(f.refs_added, 0u);
-        check_eq(f.refs_released, 1u);
-      }
-    }
-  }
-}
-
 } // WITH_FIXTURE(test::fixture::deterministic)

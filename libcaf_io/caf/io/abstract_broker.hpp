@@ -89,7 +89,7 @@ public:
 
   // -- overridden modifiers of resumable --------------------------------------
 
-  resume_result resume(scheduler*, uint64_t) override;
+  void resume(scheduler*, uint64_t) override;
 
   scheduler* pinned_scheduler() const noexcept final;
 

@@ -206,18 +206,8 @@ private:
     for (;;) {
       auto job = policy_dequeue(parent);
       CAF_ASSERT(job->pinned_scheduler() == nullptr);
-      auto res = job->resume(this, resumable::default_event_id);
-      switch (res) {
-        case resumable::resume_later:
-          // Keep reference to this actor, as it remains in the "loop" job has
-          // voluntarily released the CPU to let others run instead this means
-          // we are going to put this job to the very end of our queue.
-          data_.queue.unsafe_append(job);
-          break;
-        case resumable::done:
-          intrusive_ptr_release(job);
-          break;
-      }
+      job->resume(this, resumable::default_event_id);
+      intrusive_ptr_release(job);
       if (stop_worker)
         return;
     }
@@ -290,13 +280,12 @@ public:
     // Shutdown workers.
     class shutdown_helper : public resumable, public ref_counted {
     public:
-      resumable::resume_result resume(scheduler* ptr, uint64_t) override {
+      void resume(scheduler* ptr, uint64_t) override {
         CAF_ASSERT(ptr != nullptr);
         stop_worker = true;
         std::unique_lock<std::mutex> guard(mtx);
         last_worker = ptr;
         cv.notify_all();
-        return resumable::done;
       }
 
       void ref_resumable() const noexcept final {
@@ -426,18 +415,11 @@ private:
       auto job = parent_->dequeue();
       CAF_ASSERT(job != nullptr);
       CAF_ASSERT(job->pinned_scheduler() == nullptr);
-      auto res = job->resume(this, resumable::default_event_id);
-      switch (res) {
-        case resumable::resume_later:
-          // Keep reference to this actor, as it remains in the "loop".
-          parent_->schedule(job, resumable::default_event_id);
-          break;
-        case resumable::done:
-          intrusive_ptr_release(job);
-          break;
-      }
-      if (stop_worker)
+      job->resume(this, resumable::default_event_id);
+      intrusive_ptr_release(job);
+      if (stop_worker) {
         return;
+      }
     }
   }
 
@@ -509,13 +491,12 @@ public:
     // Shutdown workers.
     class shutdown_helper : public resumable, public ref_counted {
     public:
-      resumable::resume_result resume(scheduler* ptr, uint64_t) override {
+      void resume(scheduler* ptr, uint64_t) override {
         CAF_ASSERT(ptr != nullptr);
         stop_worker = true;
         std::unique_lock<std::mutex> guard(mtx);
         last_worker = ptr;
         cv.notify_all();
-        return resumable::done;
       }
       void ref_resumable() const noexcept final {
         ref();

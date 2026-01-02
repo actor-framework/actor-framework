@@ -527,10 +527,7 @@ bool deterministic::dispatch_message() {
     auto ev = std::move(events_.front());
     events_.pop_front();
     auto hdl = ev->target;
-    auto res = hdl->resume(&sys.scheduler(), resumable::default_event_id);
-    while (res == resumable::resume_later) {
-      res = hdl->resume(&sys.scheduler(), resumable::default_event_id);
-    }
+    hdl->resume(&sys.scheduler(), resumable::default_event_id);
     return true;
   }
   // Actor: we simply resume the next actor and it will pick up its message.

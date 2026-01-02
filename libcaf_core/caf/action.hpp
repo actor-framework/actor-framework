@@ -196,34 +196,32 @@ public:
     f_.~F();
   }
 
-  resume_result run_multi_shot() {
+  void run_multi_shot() {
     // We can only run a scheduled action.
     auto expected = action::state::scheduled;
     if (!state_.compare_exchange_strong(expected, action::state::running))
-      return resumable::done;
+      return;
     f_();
     // Once run, we can stay in the running state or switch to deferred dispose.
     expected = action::state::running;
     if (state_.compare_exchange_strong(expected, action::state::scheduled))
-      return resumable::done;
+      return;
     CAF_ASSERT(expected == action::state::deferred_dispose);
     [[maybe_unused]] auto ok
       = state_.compare_exchange_strong(expected, action::state::disposed);
     CAF_ASSERT(ok);
     f_.~F();
-    return resumable::done;
   }
 
-  resume_result resume(scheduler*, uint64_t event_id) override {
+  void resume(scheduler*, uint64_t event_id) override {
     if (event_id == resumable::dispose_event_id) {
       dispose();
-      return resumable::done;
+      return;
     }
     if constexpr (IsSingleShot) {
       run_single_shot();
-      return resumable::done;
     } else {
-      return run_multi_shot();
+      run_multi_shot();
     }
   }
 

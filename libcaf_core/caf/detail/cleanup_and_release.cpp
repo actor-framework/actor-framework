@@ -31,11 +31,11 @@ void cleanup_and_release(resumable* ptr) {
     std::vector<resumable*> resumables;
   };
   dummy_scheduler dummy;
-  std::ignore = ptr->resume(&dummy, resumable::dispose_event_id);
+  ptr->resume(&dummy, resumable::dispose_event_id);
   while (!dummy.resumables.empty()) {
     auto sub = dummy.resumables.back();
     dummy.resumables.pop_back();
-    std::ignore = sub->resume(&dummy, resumable::dispose_event_id);
+    sub->resume(&dummy, resumable::dispose_event_id);
     intrusive_ptr_release(sub);
   }
   intrusive_ptr_release(ptr);

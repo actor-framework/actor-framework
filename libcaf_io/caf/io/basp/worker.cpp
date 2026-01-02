@@ -42,9 +42,9 @@ void worker::launch(const node_id& last_hop, const basp::header& hdr,
 
 // -- implementation of resumable ----------------------------------------------
 
-resumable::resume_result worker::resume(scheduler* sched, uint64_t event_id) {
+void worker::resume(scheduler* sched, uint64_t event_id) {
   if (event_id == resumable::dispose_event_id) {
-    return resumable::done;
+    return;
   }
   proxy_registry::current(proxies_);
   auto guard = detail::scope_guard{[]() noexcept { //
@@ -52,7 +52,6 @@ resumable::resume_result worker::resume(scheduler* sched, uint64_t event_id) {
   }};
   handle_remote_message(*system_, sched);
   hub_->push(this);
-  return resumable::done;
 }
 
 } // namespace caf::io::basp
