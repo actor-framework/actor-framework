@@ -23,16 +23,17 @@ struct testee : resumable, ref_counted {
     : rendezvous(std::move(latch_handle)) {
   }
 
-  resume_result resume(scheduler*, uint64_t event_id) override {
+  void resume(scheduler* ctx, uint64_t event_id) override {
     if (event_id == resumable::dispose_event_id) {
       rendezvous->count_down();
-      return resumable::done;
+      return;
     }
     if (++runs == 10) {
       rendezvous->count_down();
-      return resumable::done;
+      return;
     }
-    return resumable::resume_later;
+    ref();
+    ctx->delay(this, resumable::default_event_id);
   }
 
   void ref_resumable() const noexcept final {
@@ -112,14 +113,13 @@ struct awaiting_testee : resumable, ref_counted {
     : rendezvous(std::move(latch_handle)) {
   }
 
-  resume_result resume(scheduler*, uint64_t event_id) override {
+  void resume(scheduler*, uint64_t event_id) override {
     if (event_id == resumable::dispose_event_id) {
       rendezvous->count_down();
-      return resumable::done;
+      return;
     }
     ++runs;
     rendezvous->count_down();
-    return resumable::done;
   }
 
   void ref_resumable() const noexcept final {

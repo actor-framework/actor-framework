@@ -269,16 +269,15 @@ void scheduled_actor::deref_resumable() const noexcept {
   intrusive_ptr_release(ctrl());
 }
 
-resumable::resume_result scheduled_actor::resume(scheduler* sched,
-                                                 uint64_t event_id) {
+void scheduled_actor::resume(scheduler* sched, uint64_t event_id) {
   CAF_PUSH_AID(id());
   auto lg = log::core::trace("event-id = {}", event_id);
   if (event_id == resumable::dispose_event_id) {
     cleanup(make_error(exit_reason::user_shutdown), sched);
-    return resumable::done;
+    return;
   }
   if (!activate(sched))
-    return resumable::done;
+    return;
   size_t consumed = 0;
   auto guard = detail::scope_guard{[this, &consumed]() noexcept {
     if (consumed > 0) {
@@ -299,7 +298,7 @@ resumable::resume_result scheduled_actor::resume(scheduler* sched,
       if (mailbox().try_block()) {
         reset_timeouts_if_needed();
         log::core::debug("mailbox empty: await new messages");
-        return resumable::done;
+        return;
       }
       continue; // Interrupted by a new message, try again.
     }
@@ -319,16 +318,17 @@ resumable::resume_result scheduled_actor::resume(scheduler* sched,
       return res;
     });
     if (res == activation_result::terminated)
-      return resumable::done;
+      return;
   }
   reset_timeouts_if_needed();
   if (mailbox().try_block()) {
     log::core::debug("mailbox empty: await new messages");
-    return resumable::done;
+    return;
   }
   // time's up
   log::core::debug("max throughput reached: resume later");
-  return resumable::resume_later;
+  intrusive_ptr_add_ref(ctrl());
+  sched->delay(this, resumable::default_event_id);
 }
 
 // -- scheduler callbacks ------------------------------------------------------

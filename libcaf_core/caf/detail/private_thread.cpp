@@ -16,22 +16,16 @@ namespace caf::detail {
 
 void private_thread::run(actor_system* sys) {
   auto lg = log::core::trace("");
-  auto resume = [&sys](resumable* job) {
-    auto res = job->resume(&sys->scheduler(), resumable::default_event_id);
-    while (res == resumable::resume_later) {
-      res = job->resume(&sys->scheduler(), resumable::default_event_id);
-    }
-    return res;
-  };
   for (;;) {
     auto [job, done] = await();
     if (job) {
       CAF_ASSERT(job->pinned_scheduler() == nullptr);
-      resume(job);
+      job->resume(&sys->scheduler(), resumable::default_event_id);
       intrusive_ptr_release(job);
     }
-    if (done)
+    if (done) {
       return;
+    }
   }
 }
 

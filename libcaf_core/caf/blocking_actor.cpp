@@ -106,11 +106,11 @@ public:
     intrusive_ptr_add_ref(self->ctrl());
   }
 
-  resumable::resume_result resume(scheduler* ctx, uint64_t event_id) override {
+  void resume(scheduler* ctx, uint64_t event_id) override {
     CAF_PUSH_AID_FROM_PTR(self_);
     if (event_id == resumable::dispose_event_id) {
       self_->cleanup(make_error(exit_reason::user_shutdown), ctx);
-      return resumable::done;
+      return;
     }
     self_->context(ctx);
     self_->initialize();
@@ -136,7 +136,6 @@ public:
       [[maybe_unused]] auto count = sys.registry().dec_running();
       log::system::debug("actor {} decreased running count to {}", id, count);
     }
-    return resumable::done;
   }
 
   void ref_resumable() const noexcept final {
