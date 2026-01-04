@@ -233,9 +233,12 @@ public:
                                          out, period_);
     ptr->init(in_);
     if (!ptr->running()) {
-      return super::fail_subscription(
-        out, ptr->err().or_else(sec::runtime_error,
-                                "failed to initialize debounce subscription"));
+      auto err = ptr->err();
+      if (!err.valid()) {
+        err = error{sec::runtime_error,
+                    "failed to initialize debounce subscription"};
+      }
+      return super::fail_subscription(out, err);
     }
 
     out.on_subscribe(subscription{ptr});
