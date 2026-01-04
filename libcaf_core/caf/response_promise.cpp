@@ -40,7 +40,7 @@ response_promise::response_promise(local_actor* self, strong_actor_ptr source,
   // anonymous messages since there's nowhere to send the message to anyway.
   if (requires_response(mid)) {
     state_ = make_counted<state>();
-    state_->self = self->ctrl();
+    state_->self.reset(self->ctrl(), add_ref);
     state_->source.swap(source);
     state_->id = mid;
   }
@@ -106,7 +106,7 @@ void response_promise::respond_to(local_actor* self, mailbox_element* request,
   if (request && requires_response(*request)
       && has_response_receiver(*request)) {
     state tmp;
-    tmp.self = self->ctrl();
+    tmp.self.reset(self->ctrl(), add_ref);
     tmp.source.swap(request->sender);
     tmp.id = request->mid;
     tmp.deliver_impl(std::move(response));
@@ -119,7 +119,7 @@ void response_promise::respond_to(local_actor* self, mailbox_element* request,
   if (request && requires_response(*request)
       && has_response_receiver(*request)) {
     state tmp;
-    tmp.self = self->ctrl();
+    tmp.self.reset(self->ctrl(), add_ref);
     tmp.source.swap(request->sender);
     tmp.id = request->mid;
     tmp.deliver_impl(make_message(std::move(response)));

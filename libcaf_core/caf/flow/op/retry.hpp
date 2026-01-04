@@ -86,7 +86,8 @@ public:
       return;
     sub_.release_later();
     if (predicate_(what)) {
-      parent_->delay_fn([sptr = intrusive_ptr{this}] { sptr->do_retry(); });
+      parent_->delay_fn(
+        [sptr = intrusive_ptr{this, add_ref}] { sptr->do_retry(); });
     } else {
       out_.on_error(what);
     }

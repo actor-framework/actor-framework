@@ -6,6 +6,8 @@
 
 #include "caf/abstract_actor.hpp"
 #include "caf/actor_control_block.hpp"
+#include "caf/add_ref.hpp"
+#include "caf/adopt_ref.hpp"
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
@@ -106,7 +108,12 @@ public:
     x.ptr_.reset();
   }
 
+  [[deprecated("construct using add_ref or adopt_ref instead")]]
   actor_addr(actor_control_block*, bool);
+
+  actor_addr(actor_control_block*, add_ref_t);
+
+  actor_addr(actor_control_block*, adopt_ref_t);
 
   actor_control_block* get() const noexcept {
     return ptr_.get();
@@ -123,6 +130,7 @@ private:
     return ptr_.get_locked();
   }
 
+  [[deprecated("construct using add_ref or adopt_ref instead")]]
   actor_addr(actor_control_block*);
 
   weak_actor_ptr ptr_;

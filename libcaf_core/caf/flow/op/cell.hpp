@@ -151,7 +151,7 @@ public:
   void request(size_t) override {
     if (!listening_) {
       listening_ = true;
-      auto self = cell_listener_ptr<T>{this};
+      auto self = cell_listener_ptr<T>{this, add_ref};
       parent_->delay_fn([state = state_, self]() mutable { //
         state->listen(std::move(self));
       });
@@ -188,7 +188,7 @@ public:
 private:
   void do_dispose(bool from_external) override {
     if (state_) {
-      state_->drop(this);
+      state_->drop({this, add_ref});
       state_ = nullptr;
     }
     if (out_) {

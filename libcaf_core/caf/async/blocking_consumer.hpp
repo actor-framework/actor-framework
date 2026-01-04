@@ -28,7 +28,7 @@ public:
     impl& operator=(const impl&) = delete;
 
     explicit impl(spsc_buffer_ptr<T> buf) : buf_(std::move(buf)) {
-      buf_->set_consumer(this);
+      buf_->set_consumer({this, add_ref});
     }
 
     template <class ErrorPolicy, class TimePoint>

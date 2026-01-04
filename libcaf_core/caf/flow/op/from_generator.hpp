@@ -82,7 +82,7 @@ private:
     if (!running_) {
       running_ = true;
       parent_->delay_fn(
-        [strong_this = intrusive_ptr<from_generator_sub>{this}] { //
+        [strong_this = intrusive_ptr<from_generator_sub>{this, add_ref}] { //
           strong_this->do_run();
         });
     }

@@ -54,7 +54,7 @@ public:
       }
     };
     auto cb_action = make_single_shot_action(std::move(cb));
-    if (!cell_->subscribe(ctx_, cb_action))
+    if (!cell_->subscribe({ctx_, add_ref}, cb_action))
       ctx_->schedule(cb_action);
     auto res = std::move(cb_action).as_disposable();
     ctx_->watch(res);

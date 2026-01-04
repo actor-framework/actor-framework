@@ -179,8 +179,8 @@ disposable stream_bridge::subscribe(flow::observer<async::batch> out) {
   }
   auto self = self_ptr();
   auto local_id = self->new_u64_id();
-  unsafe_send_as(self, src_,
-                 stream_open_msg{stream_id_, self->ctrl(), local_id});
+  unsafe_send_as(
+    self, src_, stream_open_msg{stream_id_, {self->ctrl(), add_ref}, local_id});
   auto sub = make_counted<stream_bridge_sub>(self, std::move(src_), out,
                                              local_id, buf_capacity_,
                                              request_threshold_);

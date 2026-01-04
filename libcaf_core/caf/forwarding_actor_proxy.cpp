@@ -4,6 +4,7 @@
 
 #include "caf/forwarding_actor_proxy.hpp"
 
+#include "caf/add_ref.hpp"
 #include "caf/anon_mail.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/log/core.hpp"
@@ -16,7 +17,7 @@ namespace caf {
 
 forwarding_actor_proxy::forwarding_actor_proxy(actor_config& cfg, actor dest)
   : actor_proxy(cfg), broker_(std::move(dest)) {
-  anon_mail(monitor_atom_v, ctrl()).send(broker_);
+  anon_mail(monitor_atom_v, strong_actor_ptr{ctrl(), add_ref}).send(broker_);
 }
 
 forwarding_actor_proxy::~forwarding_actor_proxy() {
@@ -34,8 +35,9 @@ bool forwarding_actor_proxy::forward_msg(strong_actor_ptr sender,
   if (msg.match_elements<exit_msg>())
     unlink_from(msg.get_as<exit_msg>(0).source);
   auto ptr = make_mailbox_element(nullptr, make_message_id(), forward_atom_v,
-                                  std::move(sender), strong_actor_ptr{ctrl()},
-                                  mid, std::move(msg));
+                                  std::move(sender),
+                                  strong_actor_ptr{ctrl(), add_ref}, mid,
+                                  std::move(msg));
   std::shared_lock guard{broker_mtx_};
   if (broker_)
     return broker_->enqueue(std::move(ptr), nullptr);
@@ -51,8 +53,9 @@ bool forwarding_actor_proxy::enqueue(mailbox_element_ptr what, scheduler*) {
 
 bool forwarding_actor_proxy::add_backlink(abstract_actor* x) {
   if (abstract_actor::add_backlink(x)) {
-    forward_msg(ctrl(), make_message_id(),
-                make_message(link_atom_v, x->ctrl()));
+    forward_msg({ctrl(), add_ref}, make_message_id(),
+                make_message(link_atom_v,
+                             strong_actor_ptr{x->ctrl(), add_ref}));
     return true;
   }
   return false;
@@ -60,8 +63,9 @@ bool forwarding_actor_proxy::add_backlink(abstract_actor* x) {
 
 bool forwarding_actor_proxy::remove_backlink(abstract_actor* x) {
   if (abstract_actor::remove_backlink(x)) {
-    forward_msg(ctrl(), make_message_id(),
-                make_message(unlink_atom_v, x->ctrl()));
+    forward_msg({ctrl(), add_ref}, make_message_id(),
+                make_message(unlink_atom_v,
+                             strong_actor_ptr{x->ctrl(), add_ref}));
     return true;
   }
   return false;

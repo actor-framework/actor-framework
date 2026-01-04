@@ -53,7 +53,7 @@ chunked_string deep_copy_impl(std::pmr::memory_resource* resource,
 
 event_ptr event::with_message(std::string_view msg, keep_timestamp_t) const {
   // Note: can't use make_counted here because the constructor is private.
-  auto copy = event_ptr{new event, false};
+  auto copy = event_ptr{new event, adopt_ref};
   auto* resource = &copy->resource_;
   copy->level_ = level_;
   copy->component_ = component_;

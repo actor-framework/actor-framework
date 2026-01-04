@@ -122,14 +122,14 @@ public:
   template <class T>
     requires(actor_traits<T>::is_statically_typed
              && detail::tl_subset_of_v<signatures, typename T::signatures>)
-  typed_actor(T* ptr) : ptr_(ptr->ctrl()) {
+  typed_actor(T* ptr) : ptr_(ptr->ctrl(), add_ref) {
     CAF_ASSERT(ptr != nullptr);
   }
 
   // Enable `handle_type{self}` for typed actor views.
   template <std::derived_from<typed_actor_view_base> T>
     requires detail::tl_subset_of_v<signatures, typename T::signatures>
-  explicit typed_actor(T ptr) : ptr_(ptr.ctrl()) {
+  explicit typed_actor(T ptr) : ptr_(ptr.ctrl(), add_ref) {
     // nop
   }
 
@@ -158,7 +158,7 @@ public:
 
   /// Queries the address of the stored actor.
   actor_addr address() const noexcept {
-    return {ptr_.get(), true};
+    return {ptr_.get(), add_ref};
   }
 
   /// Returns the ID of this actor.
@@ -211,7 +211,20 @@ public:
     return actor_addr::compare(get(), actor_cast<actor_control_block*>(x));
   }
 
-  typed_actor(actor_control_block* ptr, bool add_ref) : ptr_(ptr, add_ref) {
+  [[deprecated("construct using add_ref or adopt_ref instead")]]
+  typed_actor(actor_control_block* ptr, bool increase_ref_count) {
+    if (increase_ref_count) {
+      ptr_.reset(ptr, add_ref);
+    } else {
+      ptr_.reset(ptr, adopt_ref);
+    }
+  }
+
+  typed_actor(actor_control_block* ptr, add_ref_t) : ptr_(ptr, add_ref) {
+    // nop
+  }
+
+  typed_actor(actor_control_block* ptr, adopt_ref_t) : ptr_(ptr, adopt_ref) {
     // nop
   }
 
@@ -249,7 +262,9 @@ private:
     return ptr_.release();
   }
 
-  explicit typed_actor(actor_control_block* ptr) : ptr_(ptr) {
+  [[deprecated("construct using add_ref or adopt_ref instead")]]
+  explicit typed_actor(actor_control_block* ptr)
+    : ptr_(ptr, add_ref) {
     // nop
   }
 

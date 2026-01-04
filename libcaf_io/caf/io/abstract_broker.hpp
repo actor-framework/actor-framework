@@ -385,7 +385,7 @@ protected:
     auto i = elements.find(hdl);
     if (i == elements.end())
       return nullptr;
-    return std::addressof(*(i->second));
+    return i->second;
   }
 
 private:

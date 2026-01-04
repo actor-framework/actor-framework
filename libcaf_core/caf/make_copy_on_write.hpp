@@ -12,7 +12,7 @@ namespace caf {
 /// @relates intrusive_cow_ptr
 template <class T, class... Ts>
 intrusive_cow_ptr<T> make_copy_on_write(Ts&&... xs) {
-  return intrusive_cow_ptr<T>(new T(std::forward<Ts>(xs)...), false);
+  return intrusive_cow_ptr<T>{new T(std::forward<Ts>(xs)...), adopt_ref};
 }
 
 } // namespace caf

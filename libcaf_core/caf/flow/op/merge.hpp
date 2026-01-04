@@ -88,7 +88,8 @@ public:
     auto key = next_key_++;
     inputs_.emplace(key, merge_input<T>{});
     using fwd_impl = forwarder<T, merge_sub, size_t>;
-    auto fwd = parent_->add_child(std::in_place_type<fwd_impl>, this, key);
+    auto fwd = parent_->add_child(std::in_place_type<fwd_impl>,
+                                  intrusive_ptr<merge_sub>{this, add_ref}, key);
     what.pimpl()->subscribe(fwd->as_observer());
   }
 

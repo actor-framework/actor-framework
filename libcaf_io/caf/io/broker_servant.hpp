@@ -76,7 +76,7 @@ protected:
 
   bool invoke_mailbox_element(scheduler* ctx) {
     // hold on to a strong reference while "messing" with the parent actor
-    strong_actor_ptr ptr_guard{this->parent()->ctrl()};
+    strong_actor_ptr ptr_guard{this->parent()->ctrl(), add_ref};
     auto prev = activity_tokens_;
     invoke_mailbox_element_impl(ctx, value_);
     // only consume an activity token if actor did not produce them now

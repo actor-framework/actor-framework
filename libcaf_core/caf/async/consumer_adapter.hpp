@@ -31,7 +31,7 @@ public:
       : buf_(std::move(buf)),
         ctx_(std::move(ctx)),
         do_wakeup_(std::move(do_wakeup)) {
-      buf_->set_consumer(this);
+      buf_->set_consumer({this, add_ref});
     }
 
     ~impl() override {

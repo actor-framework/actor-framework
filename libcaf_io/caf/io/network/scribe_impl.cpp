@@ -48,7 +48,7 @@ void scribe_impl::graceful_shutdown() {
 
 void scribe_impl::flush() {
   auto lg = log::io::trace("");
-  stream_.flush(this);
+  stream_.flush({this, add_ref});
 }
 
 std::string scribe_impl::addr() const {

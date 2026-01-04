@@ -85,7 +85,7 @@ bool deserializer::value(weak_actor_ptr& ptr) {
   if (!value(tmp)) {
     return false;
   }
-  ptr.reset(tmp.get());
+  ptr.reset(tmp.get(), add_ref);
   return true;
 }
 

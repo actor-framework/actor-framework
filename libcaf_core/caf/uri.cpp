@@ -83,7 +83,7 @@ void uri::impl_type::copy_members_from(const impl_type& other) {
   fragment = other.fragment;
 }
 
-uri::uri() : impl_(&default_instance) {
+uri::uri() : impl_(&default_instance, add_ref) {
   // nop
 }
 

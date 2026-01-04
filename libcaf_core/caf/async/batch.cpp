@@ -179,7 +179,7 @@ bool batch::load_impl(Inspector& source) {
   intrusive_ptr<batch::data> ptr{new (vptr)
                                    batch::data(dynamic_item_destructor,
                                                item_type, meta->simple_size, 0),
-                                 false};
+                                 adopt_ref};
   auto* storage = ptr->storage_;
   for (auto i = size_t{0}; i < len; ++i) {
     meta->default_construct(storage);

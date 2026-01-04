@@ -7,6 +7,7 @@
 #include "caf/abstract_actor.hpp"
 #include "caf/actor_registry.hpp"
 #include "caf/actor_system.hpp"
+#include "caf/add_ref.hpp"
 #include "caf/detail/aligned_alloc.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/log/core.hpp"
@@ -19,7 +20,7 @@
 namespace caf {
 
 actor_addr actor_control_block::address() noexcept {
-  return {this, true};
+  return {this, add_ref};
 }
 
 bool actor_control_block::enqueue(mailbox_element_ptr what, scheduler* sched) {

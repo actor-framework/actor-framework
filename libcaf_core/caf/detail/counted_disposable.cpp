@@ -54,8 +54,8 @@ private:
 
 disposable counted_disposable::acquire() {
   ++count_;
-  return disposable{
-    make_counted<nested_disposable>(intrusive_ptr<counted_disposable>(this))};
+  return disposable{make_counted<nested_disposable>(
+    intrusive_ptr<counted_disposable>(this, add_ref))};
 }
 
 void counted_disposable::dispose() {

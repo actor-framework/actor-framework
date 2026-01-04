@@ -96,7 +96,7 @@ public:
     intrusive_ptr<batch::data> ptr{
       new (vptr) batch::data(destroy_items, type_id_or_invalid<value_type>(),
                              sizeof(value_type), 0),
-      false};
+      adopt_ref};
     auto* storage = ptr->storage_;
     for (const auto& item : items) {
       new (storage) value_type(item);

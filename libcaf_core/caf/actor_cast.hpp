@@ -67,12 +67,12 @@ template <class To, class From>
 class actor_cast_access<To, From, raw_ptr_cast> {
 public:
   To operator()(actor_control_block* x) const {
-    return To{x};
+    return To{x, add_ref};
   }
 
   To operator()(abstract_actor* x) const {
     if (x != nullptr) {
-      return To{x->ctrl()};
+      return To{x->ctrl(), add_ref};
     }
     return To{};
   }
@@ -80,7 +80,7 @@ public:
   template <class T>
     requires(!std::is_pointer_v<T>)
   To operator()(const T& x) const {
-    return To{x.get()};
+    return To{x.get(), add_ref};
   }
 };
 
@@ -127,7 +127,7 @@ template <class To, class From>
 class actor_cast_access<To, From, weak_ptr_downgrade_cast> {
 public:
   To operator()(const From& x) const {
-    return x.get();
+    return {x.get(), add_ref};
   }
 };
 
@@ -135,7 +135,7 @@ template <class To, class From>
 class actor_cast_access<To, From, weak_ptr_upgrade_cast> {
 public:
   To operator()(const From& x) const {
-    return {x.get_locked(), false};
+    return {x.get_locked(), adopt_ref};
   }
 };
 
@@ -143,11 +143,11 @@ template <class To, class From>
 class actor_cast_access<To, From, neutral_cast> {
 public:
   To operator()(const From& x) const {
-    return To{x.get()};
+    return To{x.get(), add_ref};
   }
 
   To operator()(From&& x) const {
-    return {x.release(), false};
+    return {x.release(), adopt_ref};
   }
 };
 

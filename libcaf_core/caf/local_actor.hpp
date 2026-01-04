@@ -171,10 +171,10 @@ public:
   template <class Handle>
   void send_exit(const Handle& receiver, error reason) {
     if (receiver)
-      receiver->enqueue(make_mailbox_element(ctrl(), make_message_id(),
-                                             exit_msg{address(),
-                                                      std::move(reason)}),
-                        context());
+      receiver->enqueue(
+        make_mailbox_element({ctrl(), add_ref}, make_message_id(),
+                             exit_msg{address(), std::move(reason)}),
+        context());
   }
 
   template <message_priority Priority = message_priority::normal, class Handle,

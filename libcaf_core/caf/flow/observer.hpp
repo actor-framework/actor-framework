@@ -45,7 +45,7 @@ public:
     virtual void on_error(const error& what) = 0;
 
     observer as_observer() noexcept {
-      return observer{intrusive_ptr<impl>(this)};
+      return observer{intrusive_ptr<impl>(this, add_ref)};
     }
   };
 
@@ -53,6 +53,14 @@ public:
 
   explicit observer(intrusive_ptr<impl> pimpl) noexcept
     : pimpl_(std::move(pimpl)) {
+    // nop
+  }
+
+  observer(impl* ptr, add_ref_t) noexcept : pimpl_(ptr, add_ref) {
+    // nop
+  }
+
+  observer(impl* ptr, adopt_ref_t) noexcept : pimpl_(ptr, adopt_ref) {
     // nop
   }
 
@@ -83,7 +91,7 @@ public:
     CAF_ASSERT(pimpl_ != nullptr);
     // Defend against impl::on_complete() indirectly calling member functions on
     // this object again.
-    auto ptr = intrusive_ptr<impl>{pimpl_.release(), false};
+    auto ptr = intrusive_ptr<impl>{pimpl_.release(), adopt_ref};
     auto* parent = ptr->parent();
     ptr->on_complete();
     parent->release_later(ptr);
@@ -95,7 +103,7 @@ public:
     CAF_ASSERT(pimpl_ != nullptr);
     // Defend against impl::on_error() indirectly calling member functions on
     // this object again.
-    auto ptr = intrusive_ptr<impl>{pimpl_.release(), false};
+    auto ptr = intrusive_ptr<impl>{pimpl_.release(), adopt_ref};
     auto* parent = ptr->parent();
     ptr->on_error(what);
     parent->release_later(ptr);
@@ -288,7 +296,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  buffer_writer_impl(coordinator* parent) : parent_(parent) {
+  buffer_writer_impl(coordinator* parent) : parent_(parent, add_ref) {
     CAF_ASSERT(parent_ != nullptr);
   }
 
@@ -302,7 +310,7 @@ public:
     // which case we must not set buf_ to avoid closing a buffer that we don't
     // actually own.
     CAF_ASSERT(buf != nullptr);
-    buf->set_producer(this);
+    buf->set_producer({this, add_ref});
     buf_ = std::move(buf);
   }
 
@@ -413,7 +421,7 @@ private:
   }
 
   intrusive_ptr<buffer_writer_impl> strong_ptr() {
-    return {this};
+    return {this, add_ref};
   }
 
   coordinator_ptr parent_;

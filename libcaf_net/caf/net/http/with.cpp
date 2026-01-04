@@ -168,7 +168,8 @@ public:
   template <class Acceptor>
   expected<disposable> do_start_server(Acceptor& acc) {
     if (push) {
-      auto producer = make_http_request_producer(mpx, push.try_open());
+      auto producer = make_http_request_producer({mpx, add_ref},
+                                                 push.try_open());
       auto new_route = make_route([producer](responder& res) {
         if (!producer->push(responder{res}.to_request())) {
           auto err = make_error(sec::runtime_error, "flow disconnected");

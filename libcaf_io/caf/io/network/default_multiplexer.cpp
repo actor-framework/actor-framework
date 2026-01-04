@@ -635,7 +635,7 @@ void default_multiplexer::schedule(resumable* ptr, uint64_t) {
   if (std::this_thread::get_id() != thread_id()) {
     wr_dispatch_request(ptr);
   } else {
-    internally_posted_.emplace_back(ptr, false);
+    internally_posted_.emplace_back(ptr, adopt_ref);
   }
 }
 

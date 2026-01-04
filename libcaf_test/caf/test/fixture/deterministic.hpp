@@ -40,7 +40,7 @@ private:
   /// Wraps a resumable pointer and a mailbox element pointer.
   struct scheduling_event {
     scheduling_event(resumable* target, mailbox_element_ptr payload)
-      : target(target), item(std::move(payload)) {
+      : target(target, add_ref), item(std::move(payload)) {
       // nop
     }
 

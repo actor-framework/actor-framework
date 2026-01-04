@@ -307,7 +307,7 @@ private:
   }
 
   intrusive_ptr<socket_manager_impl> strong_this() {
-    return intrusive_ptr<socket_manager_impl>{this};
+    return intrusive_ptr<socket_manager_impl>{this, add_ref};
   }
 
   // -- member variables -------------------------------------------------------

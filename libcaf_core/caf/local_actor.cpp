@@ -92,7 +92,7 @@ disposable local_actor::request_response_timeout(timespan timeout,
     return {};
   auto t = clock().now() + timeout;
   return clock().schedule_message(
-    t, strong_actor_ptr{ctrl()},
+    t, strong_actor_ptr{ctrl(), add_ref},
     make_mailbox_element(nullptr, mid.response_id(),
                          make_error(sec::request_timeout)));
 }
@@ -155,7 +155,7 @@ void local_actor::do_delegate_error() {
   auto& mid = current_element_->mid;
   if (!sender || mid.is_response() || mid.is_answered())
     return;
-  sender->enqueue(make_mailbox_element(ctrl(), mid.response_id(),
+  sender->enqueue(make_mailbox_element({ctrl(), add_ref}, mid.response_id(),
                                        make_error(sec::invalid_delegate)),
                   context());
   mid.mark_as_answered();

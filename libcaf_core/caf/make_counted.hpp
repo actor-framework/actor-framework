@@ -14,9 +14,9 @@ namespace caf {
 
 /// Constructs an object of type `T` in an `intrusive_ptr`.
 /// @relates ref_counted
-template <class T, class... Ts>
-intrusive_ptr<T> make_counted(Ts&&... xs) {
-  return intrusive_ptr<T>(new T(std::forward<Ts>(xs)...), false);
+template <class T, class... Args>
+intrusive_ptr<T> make_counted(Args&&... args) {
+  return intrusive_ptr<T>{new T(std::forward<Args>(args)...), adopt_ref};
 }
 
 } // namespace caf

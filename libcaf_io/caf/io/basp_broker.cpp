@@ -270,7 +270,7 @@ behavior basp_broker::make_behavior() {
       // deserialized and delivered.
       auto& q = instance.queue();
       auto msg_id = q.new_id();
-      q.push(context(), msg_id, ctrl(),
+      q.push(context(), msg_id, {ctrl(), add_ref},
              make_mailbox_element(nullptr, make_message_id(), delete_atom_v,
                                   msg.handle));
     },
@@ -284,7 +284,7 @@ behavior basp_broker::make_behavior() {
       // Same reasoning as in connection_closed_msg.
       auto& q = instance.queue();
       auto msg_id = q.new_id();
-      q.push(context(), msg_id, ctrl(),
+      q.push(context(), msg_id, {ctrl(), add_ref},
              make_mailbox_element(nullptr, make_message_id(), delete_atom_v,
                                   msg.handle));
     },
@@ -461,7 +461,7 @@ strong_actor_ptr basp_broker::make_proxy(node_id nid, actor_id aid) {
   auto res = make_actor<forwarding_actor_proxy, strong_actor_ptr>(aid, nid,
                                                                   &(system()),
                                                                   cfg, this);
-  strong_actor_ptr selfptr{ctrl()};
+  strong_actor_ptr selfptr{ctrl(), add_ref};
   res->get()->attach_functor([=](const error& rsn) {
     mm->backend().post([=] {
       // using res->id() instead of aid keeps this actor instance alive
@@ -723,7 +723,7 @@ scheduler* basp_broker::current_scheduler() {
 }
 
 strong_actor_ptr basp_broker::this_actor() {
-  return ctrl();
+  return {ctrl(), add_ref};
 }
 
 } // namespace caf::io

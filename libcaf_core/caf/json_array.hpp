@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/add_ref.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/json.hpp"
 #include "caf/fwd.hpp"
@@ -50,7 +51,7 @@ public:
     const_iterator& operator=(const const_iterator&) = default;
 
     json_value value() const noexcept {
-      return json_value{std::addressof(*iter_), storage_};
+      return json_value{std::addressof(*iter_), {storage_, add_ref}};
     }
 
     json_value operator*() const noexcept {

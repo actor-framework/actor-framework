@@ -226,11 +226,12 @@ public:
           make_message(make_error(sec::request_timeout)));
       }
       auto* ptr = actor_cast<abstract_actor*>(receiver);
-      ptr->enqueue(make_mailbox_element(self()->ctrl(), mid,
+      ptr->enqueue(make_mailbox_element({self()->ctrl(), add_ref}, mid,
                                         std::move(super::content_)),
                    self()->context());
     } else {
-      self()->enqueue(make_mailbox_element(self()->ctrl(), mid.response_id(),
+      self()->enqueue(make_mailbox_element({self()->ctrl(), add_ref},
+                                           mid.response_id(),
                                            make_error(sec::invalid_request)),
                       self()->context());
     }
@@ -273,7 +274,7 @@ public:
       if (!dest)
         continue;
       auto req_id = self()->new_request_id(Priority);
-      dest->enqueue(make_mailbox_element(self()->ctrl(), req_id,
+      dest->enqueue(make_mailbox_element({self()->ctrl(), add_ref}, req_id,
                                          super::content_),
                     self()->context());
       pending_msgs.emplace_back(
@@ -282,7 +283,8 @@ public:
     }
     if (ids.empty()) {
       auto req_id = self()->new_request_id(Priority);
-      self()->enqueue(make_mailbox_element(self()->ctrl(), req_id.response_id(),
+      self()->enqueue(make_mailbox_element({self()->ctrl(), add_ref},
+                                           req_id.response_id(),
                                            make_error(sec::invalid_argument)),
                       self()->context());
       ids.emplace_back(req_id.response_id());

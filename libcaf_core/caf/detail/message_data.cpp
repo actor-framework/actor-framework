@@ -53,7 +53,7 @@ message_data* message_data::copy() const {
   auto vptr = malloc(total_size);
   if (vptr == nullptr)
     CAF_RAISE_ERROR(std::bad_alloc, "bad_alloc");
-  intrusive_ptr<message_data> ptr{new (vptr) message_data(types_), false};
+  intrusive_ptr<message_data> ptr{new (vptr) message_data(types_), adopt_ref};
   auto src = storage();
   auto dst = ptr->storage();
   for (auto id : types_) {
@@ -75,7 +75,7 @@ message_data::make_uninitialized(type_id_list types) {
   auto vptr = malloc(total_size);
   if (vptr == nullptr)
     CAF_RAISE_ERROR(std::bad_alloc, "bad_alloc");
-  return {new (vptr) message_data(types), false};
+  return {new (vptr) message_data(types), adopt_ref};
 }
 
 std::byte* message_data::at(size_t index) noexcept {

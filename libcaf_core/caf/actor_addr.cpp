@@ -5,6 +5,7 @@
 #include "caf/actor_addr.hpp"
 
 #include "caf/actor.hpp"
+#include "caf/config.hpp"
 #include "caf/deserializer.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/node_id.hpp"
@@ -22,12 +23,24 @@ actor_addr& actor_addr::operator=(std::nullptr_t) {
   return *this;
 }
 
-actor_addr::actor_addr(actor_control_block* ptr) : ptr_(ptr) {
+actor_addr::actor_addr(actor_control_block* ptr) : ptr_(ptr, add_ref) {
   // nop
 }
 
-actor_addr::actor_addr(actor_control_block* ptr, bool add_ref)
+CAF_PUSH_DEPRECATED_WARNING
+actor_addr::actor_addr(actor_control_block* ptr, bool increase_ref_count)
+  : ptr_(ptr, increase_ref_count) {
+  // nop
+}
+CAF_POP_WARNINGS
+
+actor_addr::actor_addr(actor_control_block* ptr, add_ref_t)
   : ptr_(ptr, add_ref) {
+  // nop
+}
+
+actor_addr::actor_addr(actor_control_block* ptr, adopt_ref_t)
+  : ptr_(ptr, adopt_ref) {
   // nop
 }
 

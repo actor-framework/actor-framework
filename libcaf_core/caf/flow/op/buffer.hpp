@@ -99,14 +99,16 @@ public:
   void init(observable<input_type> vals, observable<select_token_type> ctrl) {
     using val_fwd_t = forwarder<input_type, buffer_sub, buffer_input_t>;
     using ctrl_fwd_t = forwarder<select_token_type, buffer_sub, buffer_emit_t>;
-    auto fwd = parent_->add_child(std::in_place_type<val_fwd_t>, this,
+    auto fwd = parent_->add_child(std::in_place_type<val_fwd_t>,
+                                  intrusive_ptr<buffer_sub>{this, add_ref},
                                   buffer_input_t{});
     vals.subscribe(fwd->as_observer());
     // Note: the previous subscribe might call on_error, in which case we don't
     // need to try to subscribe to the control observable.
     if (running())
-      ctrl.subscribe(parent_->add_child_hdl(std::in_place_type<ctrl_fwd_t>,
-                                            this, buffer_emit_t{}));
+      ctrl.subscribe(parent_->add_child_hdl(
+        std::in_place_type<ctrl_fwd_t>,
+        intrusive_ptr<buffer_sub>{this, add_ref}, buffer_emit_t{}));
   }
 
   // -- callbacks for the forwarders -------------------------------------------
@@ -183,9 +185,8 @@ public:
     demand_ += n;
     // If we can ship a batch, schedule an event to do so.
     if (demand_ == n && can_emit()) {
-      parent_->delay_fn([strong_this = intrusive_ptr<buffer_sub>{this}] {
-        strong_this->on_request();
-      });
+      parent_->delay_fn([strong_this = intrusive_ptr<buffer_sub>{
+                           this, add_ref}] { strong_this->on_request(); });
     }
   }
 

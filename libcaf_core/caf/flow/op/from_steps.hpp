@@ -219,7 +219,7 @@ private:
   }
 
   intrusive_ptr<from_steps_sub> strong_this() {
-    return {this};
+    return {this, add_ref};
   }
 
   coordinator* parent_;

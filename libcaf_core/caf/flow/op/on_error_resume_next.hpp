@@ -89,7 +89,7 @@ public:
     sub_.release_later();
     if (fallback_ && predicate_(what)) {
       parent_->delay_fn(
-        [sptr = intrusive_ptr{this}, fallback = std::move(fallback_)] {
+        [sptr = intrusive_ptr{this, add_ref}, fallback = std::move(fallback_)] {
           sptr->do_resume_next(fallback);
         });
     } else {

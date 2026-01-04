@@ -528,11 +528,11 @@ public:
     if (auto i = updates_.find(fd); i != updates_.end()) {
       return i->second;
     } else if (auto index = index_of(fd); index != -1) {
-      updates_.container().emplace_back(
-        fd, poll_update{pollset_[index].events, socket_manager_ptr{mgr}});
+      updates_.container().emplace_back(fd, poll_update{pollset_[index].events,
+                                                        {mgr, add_ref}});
       return updates_.container().back().second;
     } else {
-      updates_.container().emplace_back(fd, poll_update{0, mgr});
+      updates_.container().emplace_back(fd, poll_update{0, {mgr, add_ref}});
       return updates_.container().back().second;
     }
   }
@@ -635,10 +635,11 @@ error pollset_updater::start(socket_manager* owner) {
 void pollset_updater::handle_read_event() {
   auto lg = log::net::trace("");
   auto as_mgr = [](intptr_t ptr) {
-    return intrusive_ptr{reinterpret_cast<socket_manager*>(ptr), false};
+    return intrusive_ptr{reinterpret_cast<socket_manager*>(ptr), adopt_ref};
   };
   auto add_action = [this](intptr_t ptr) {
-    auto f = action{intrusive_ptr{reinterpret_cast<action::impl*>(ptr), false}};
+    auto f
+      = action{intrusive_ptr{reinterpret_cast<action::impl*>(ptr), adopt_ref}};
     mpx_->pending_actions.push_back(std::move(f));
   };
   auto delay_action = [this](intptr_t ptr) {
@@ -727,7 +728,7 @@ multiplexer::~multiplexer() {
 
 std::thread multiplexer::launch() {
   auto l = std::make_shared<detail::latch>(2);
-  auto fn = [mpx = multiplexer_ptr{this}, l]() mutable {
+  auto fn = [mpx = multiplexer_ptr{this, add_ref}, l]() mutable {
     mpx->set_thread_id();
     l->count_down();
     l = nullptr;

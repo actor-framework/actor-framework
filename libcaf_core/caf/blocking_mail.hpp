@@ -117,11 +117,12 @@ public:
     auto mid = self()->new_request_id(Priority);
     if (receiver) {
       auto* ptr = actor_cast<abstract_actor*>(receiver);
-      ptr->enqueue(make_mailbox_element(self()->ctrl(), mid,
+      ptr->enqueue(make_mailbox_element({self()->ctrl(), add_ref}, mid,
                                         std::move(super::content_)),
                    self()->context());
     } else {
-      self()->enqueue(make_mailbox_element(self()->ctrl(), mid.response_id(),
+      self()->enqueue(make_mailbox_element({self()->ctrl(), add_ref},
+                                           mid.response_id(),
                                            make_error(sec::invalid_request)),
                       self()->context());
     }

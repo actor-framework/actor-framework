@@ -154,6 +154,8 @@ class stateful_actor;
 
 // -- structs ------------------------------------------------------------------
 
+struct add_ref_t;
+struct adopt_ref_t;
 struct down_msg;
 struct dynamically_typed;
 struct exit_msg;
@@ -191,6 +193,7 @@ enum class exit_reason : uint8_t;
 enum class invoke_message_result;
 enum class pec : uint8_t;
 enum class sec : uint8_t;
+enum class term;
 enum class thread_owner;
 
 // -- aliases ------------------------------------------------------------------

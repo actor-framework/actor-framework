@@ -28,7 +28,7 @@ public:
     impl& operator=(const impl&) = delete;
 
     explicit impl(spsc_buffer_ptr<T> buf) : buf_(std::move(buf)) {
-      buf_->set_producer(this);
+      buf_->set_producer({this, add_ref});
     }
 
     bool push(std::span<const T> items) {
