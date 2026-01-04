@@ -5,7 +5,6 @@
 #include "caf/response_promise.hpp"
 
 #include "caf/detail/assert.hpp"
-#include "caf/detail/profiled_send.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/log/core.hpp"
 
@@ -39,7 +38,7 @@ response_promise::response_promise(local_actor* self, strong_actor_ptr source,
   // we always drop messages in this case. Also don't create promises for
   // anonymous messages since there's nowhere to send the message to anyway.
   if (requires_response(mid)) {
-    state_ = make_counted<state>();
+    state_ = make_counted<detail::response_promise_state>();
     state_->self.reset(self->ctrl(), add_ref);
     state_->source.swap(source);
     state_->id = mid;
@@ -105,7 +104,7 @@ void response_promise::respond_to(local_actor* self, mailbox_element* request,
                                   message& response) {
   if (request && requires_response(*request)
       && has_response_receiver(*request)) {
-    state tmp;
+    detail::response_promise_state tmp;
     tmp.self.reset(self->ctrl(), add_ref);
     tmp.source.swap(request->sender);
     tmp.id = request->mid;
@@ -118,59 +117,13 @@ void response_promise::respond_to(local_actor* self, mailbox_element* request,
                                   error& response) {
   if (request && requires_response(*request)
       && has_response_receiver(*request)) {
-    state tmp;
+    detail::response_promise_state tmp;
     tmp.self.reset(self->ctrl(), add_ref);
     tmp.source.swap(request->sender);
     tmp.id = request->mid;
     tmp.deliver_impl(make_message(std::move(response)));
     request->mid.mark_as_answered();
   }
-}
-
-// -- state --------------------------------------------------------------------
-
-response_promise::state::~state() {
-  // Note: the state may get destroyed outside of the actor. For example, when
-  //       storing the promise in a run-later continuation. Hence, we can't call
-  //       deliver_impl here since it calls self->context().
-  if (self && source) {
-    log::core::debug("broken promise!");
-    auto element = make_mailbox_element(self, id.response_id(),
-                                        make_error(sec::broken_promise));
-    source->enqueue(std::move(element), nullptr);
-  }
-}
-
-void response_promise::state::cancel() {
-  self = nullptr;
-}
-
-void response_promise::state::deliver_impl(message msg) {
-  auto lg = log::core::trace("msg = {}", msg);
-  // Even though we are holding a weak pointer, we can access the pointer
-  // without any additional check here because only the actor itself is allowed
-  // to call this function.
-  auto selfptr = static_cast<local_actor*>(self->get());
-  if (msg.empty() && id.is_async()) {
-    log::core::debug("drop response: empty response to asynchronous input");
-  } else if (source != nullptr) {
-    detail::profiled_send(selfptr, self, source, id.response_id(),
-                          selfptr->context(), std::move(msg));
-  }
-  cancel();
-}
-
-void response_promise::state::delegate_impl(abstract_actor* receiver,
-                                            message msg) {
-  auto lg = log::core::trace("msg = {}", msg);
-  if (receiver != nullptr) {
-    auto selfptr = static_cast<local_actor*>(self->get());
-    detail::profiled_send(selfptr, std::move(source), receiver, id,
-                          selfptr->context(), std::move(msg));
-  } else {
-    log::core::debug("drop response: invalid delegation target");
-  }
-  cancel();
 }
 
 } // namespace caf

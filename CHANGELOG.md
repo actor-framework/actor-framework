@@ -37,6 +37,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   script.
 - The classes `scheduler` and `resumable` have received a complete overhaul to
   better hide implementation details and to improve maintainability.
+- The `is_sum` parameter for counters now defaults to `true` instead of `false`.
+  In the Prometheus output, this means that name for the counter will be
+  suffixed with `_total`, which is the standard suffix for counters.
 
 ### Deprecated
 

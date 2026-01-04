@@ -347,6 +347,7 @@ class disposer;
 class dynamic_message_data;
 class message_data;
 class private_thread;
+class response_promise_state;
 class stream_bridge;
 class stream_bridge_sub;
 

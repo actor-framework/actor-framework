@@ -202,7 +202,7 @@ public:
   metric_family_impl<counter<ValueType>>*
   counter_family(std::string_view prefix, std::string_view name,
                  span_t<std::string_view> labels, std::string_view helptext,
-                 std::string_view unit = "1", bool is_sum = false) {
+                 std::string_view unit = "1", bool is_sum = true) {
     using counter_type = counter<ValueType>;
     using family_type = metric_family_impl<counter_type>;
     std::unique_lock<std::mutex> guard{families_mx_};
@@ -224,7 +224,7 @@ public:
   counter_family(std::string_view prefix, std::string_view name,
                  std::initializer_list<std::string_view> labels,
                  std::string_view helptext, std::string_view unit = "1",
-                 bool is_sum = false) {
+                 bool is_sum = true) {
     auto lbl_span = std::span{labels.begin(), labels.size()};
     return counter_family<ValueType>(prefix, name, lbl_span, helptext, unit,
                                      is_sum);
@@ -249,7 +249,7 @@ public:
   counter<ValueType>*
   counter_instance(std::string_view prefix, std::string_view name,
                    span_t<label_view> labels, std::string_view helptext,
-                   std::string_view unit = "1", bool is_sum = false) {
+                   std::string_view unit = "1", bool is_sum = true) {
     auto label_names = get_label_names(labels);
     auto fptr = counter_family<ValueType>(prefix, name, label_names, helptext,
                                           unit, is_sum);
@@ -262,7 +262,7 @@ public:
   counter_instance(std::string_view prefix, std::string_view name,
                    std::initializer_list<label_view> labels,
                    std::string_view helptext, std::string_view unit = "1",
-                   bool is_sum = false) {
+                   bool is_sum = true) {
     span_t<label_view> lbls{labels.begin(), labels.size()};
     return counter_instance<ValueType>(prefix, name, lbls, helptext, unit,
                                        is_sum);
@@ -288,7 +288,7 @@ public:
   counter<ValueType>*
   counter_singleton(std::string_view prefix, std::string_view name,
                     std::string_view helptext, std::string_view unit = "1",
-                    bool is_sum = false) {
+                    bool is_sum = true) {
     span_t<std::string_view> lbls;
     auto fptr = counter_family<ValueType>(prefix, name, lbls, helptext, unit,
                                           is_sum);
