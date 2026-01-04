@@ -90,6 +90,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Removed the deprecated `actor_ostream` class and the `aout` utility. They have
   been deprecated since CAF 1.0.0. Users should now use `println` instead, which
   is available on actors as well as on the `actor_system`.
+- The getters `spawn_serv` and `config_serv` have been removed from the public
+  interface of `actor_system`. These actors are an implementation detail of the
+  I/O module and should not be accessed directly by users.
 
 ## [1.1.0] - 2025-07-25
 
