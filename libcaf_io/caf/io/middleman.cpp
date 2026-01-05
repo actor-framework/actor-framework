@@ -9,6 +9,7 @@
 #include "caf/io/network/default_multiplexer.hpp"
 
 #include "caf/actor.hpp"
+#include "caf/actor_from_state.hpp"
 #include "caf/actor_registry.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/after.hpp"
@@ -331,6 +332,64 @@ strong_actor_ptr middleman::remote_lookup(std::string name,
   return result;
 }
 
+namespace {
+
+struct config_serv_state {
+  static inline const char* name = "caf.io.config-server";
+
+  config_serv_state(caf::event_based_actor* selfptr) : self(selfptr) {
+    // nop
+  }
+
+  caf::event_based_actor* self;
+  std::unordered_map<std::string, message> data;
+
+  behavior make_behavior() {
+    return {
+      // set a key/value pair
+      [this](put_atom, const std::string& key, message& msg) {
+        log::io::debug("PUT: key = {}, msg = {}", key, msg);
+        data[key] = std::move(msg);
+      },
+      // get a key/value pair
+      [this](get_atom, std::string& key) -> message {
+        log::io::debug("GET: key = {}", key);
+        auto i = data.find(key);
+        return make_message(std::move(key),
+                            i != data.end() ? i->second : make_message());
+      },
+      // get a 'named' actor from the local registry
+      [this](registry_lookup_atom, const std::string& name) {
+        return self->home_system().registry().get(name);
+      },
+    };
+  }
+};
+
+struct spawn_serv_state {
+  static inline const char* name = "caf.io.spawn-server";
+
+  spawn_serv_state(caf::event_based_actor* selfptr) : self(selfptr) {
+    // nop
+  }
+
+  caf::event_based_actor* self;
+
+  behavior make_behavior() {
+    return {
+      [this](spawn_atom, const std::string& name, message& args,
+             actor_system::mpi& xs) -> result<strong_actor_ptr> {
+        log::io::debug("SPAWN: name = {}, args = {}", name, args);
+        return self->system().spawn<strong_actor_ptr>(name, std::move(args),
+                                                      self->context(), true,
+                                                      &xs);
+      },
+    };
+  }
+};
+
+} // namespace
+
 void middleman::start() {
   auto lg = log::io::trace("");
   // Consider using net::middleman for prometheus if caf-net is available.
@@ -343,6 +402,13 @@ void middleman::start() {
       background_tasks_.emplace_back(std::move(ptr));
     }
   }
+  // Create the internal actors for the I/O module.
+  auto config_serv
+    = system().spawn<hidden + lazy_init>(actor_from_state<config_serv_state>);
+  auto spawn_serv
+    = system().spawn<hidden + lazy_init>(actor_from_state<spawn_serv_state>);
+  system().registry().put("ConfigServ", std::move(config_serv));
+  system().registry().put("SpawnServ", std::move(spawn_serv));
   // Launch backend.
   backend_supervisor_ = backend().make_supervisor();
   CAF_ASSERT(backend_supervisor_ != nullptr);
@@ -387,6 +453,8 @@ void middleman::stop() {
     self->wait_for(manager_);
   destroy(manager_);
   background_tasks_.clear();
+  self->send_exit(system().registry().get("SpawnServ"), exit_reason::kill);
+  self->send_exit(system().registry().get("ConfigServ"), exit_reason::kill);
 }
 
 void middleman::init(actor_system_config& cfg) {

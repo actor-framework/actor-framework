@@ -303,13 +303,6 @@ public:
   /// in its destructor before shutting down.
   void await_actors_before_shutdown(bool new_value);
 
-  /// Returns the internal actor for dynamic spawn operations.
-  const strong_actor_ptr& spawn_serv() const;
-
-  /// Returns the internal actor for storing the runtime configuration
-  /// for this actor system.
-  const strong_actor_ptr& config_serv() const;
-
   /// Returns the metrics registry for this system.
   telemetry::metric_registry& metrics() noexcept;
 

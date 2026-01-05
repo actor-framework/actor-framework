@@ -40,126 +40,6 @@ namespace caf {
 
 namespace {
 
-struct kvstate {
-  using key_type = std::string;
-  using mapped_type = message;
-  using subscriber_set = std::unordered_set<strong_actor_ptr>;
-  using topic_set = std::unordered_set<std::string>;
-  std::unordered_map<key_type, std::pair<mapped_type, subscriber_set>> data;
-  std::unordered_map<strong_actor_ptr, topic_set> subscribers;
-  static inline const char* name = "caf.system.config-server";
-};
-
-behavior config_serv_impl(stateful_actor<kvstate>* self) {
-  auto lg = log::core::trace("");
-  std::string wildcard = "*";
-  auto unsubscribe_all = [self](actor subscriber) {
-    auto& subscribers = self->state().subscribers;
-    auto ptr = actor_cast<strong_actor_ptr>(subscriber);
-    auto i = subscribers.find(ptr);
-    if (i == subscribers.end())
-      return;
-    for (auto& key : i->second)
-      self->state().data[key].second.erase(ptr);
-    subscribers.erase(i);
-  };
-  return {
-    // set a key/value pair
-    [=](put_atom, const std::string& key, message& msg) {
-      auto lg = log::core::trace("key = {}, msg = {}", key, msg);
-      if (key == "*")
-        return;
-      auto& vp = self->state().data[key];
-      vp.first = std::move(msg);
-      for (auto& subscriber_ptr : vp.second) {
-        // we never put a nullptr in our map
-        auto subscriber = actor_cast<actor>(subscriber_ptr);
-        if (subscriber != self->current_sender())
-          self->mail(update_atom_v, key, vp.first).send(subscriber);
-      }
-      // also iterate all subscribers for '*'
-      for (auto& subscriber : self->state().data[wildcard].second)
-        if (subscriber != self->current_sender())
-          self->mail(update_atom_v, key, vp.first)
-            .send(actor_cast<actor>(subscriber));
-    },
-    // get a key/value pair
-    [=](get_atom, std::string& key) -> message {
-      auto lg = log::core::trace("key = {}", key);
-      if (key == wildcard) {
-        std::vector<std::pair<std::string, message>> msgs;
-        for (auto& kvp : self->state().data)
-          if (kvp.first != "*")
-            msgs.emplace_back(kvp.first, kvp.second.first);
-        return make_message(std::move(msgs));
-      }
-      auto i = self->state().data.find(key);
-      return make_message(std::move(key), i != self->state().data.end()
-                                            ? i->second.first
-                                            : make_message());
-    },
-    // subscribe to a key
-    [=](subscribe_atom, const std::string& key) {
-      auto subscriber = actor_cast<strong_actor_ptr>(self->current_sender());
-      auto lg = log::core::trace("key = {}, subscriber = {}", key, subscriber);
-      if (!subscriber)
-        return;
-      self->state().data[key].second.insert(subscriber);
-      auto& subscribers = self->state().subscribers;
-      auto i = subscribers.find(subscriber);
-      if (i != subscribers.end()) {
-        i->second.insert(key);
-      } else {
-        auto addr = self->address();
-        self->monitor(subscriber, [unsubscribe_all, addr](const error&) {
-          if (auto hdl = actor_cast<actor>(addr))
-            unsubscribe_all(actor_cast<actor>(hdl));
-        });
-        subscribers.emplace(subscriber, kvstate::topic_set{key});
-      }
-    },
-    // unsubscribe from a key
-    [=](unsubscribe_atom, const std::string& key) {
-      auto subscriber = actor_cast<strong_actor_ptr>(self->current_sender());
-      if (!subscriber)
-        return;
-      auto lg = log::core::trace("key = {}, subscriber = {}", key, subscriber);
-      if (key == wildcard) {
-        unsubscribe_all(actor_cast<actor>(std::move(subscriber)));
-        return;
-      }
-      self->state().subscribers[subscriber].erase(key);
-      self->state().data[key].second.erase(subscriber);
-    },
-    // get a 'named' actor from the local registry
-    [=](registry_lookup_atom, const std::string& name) {
-      return self->home_system().registry().get(name);
-    },
-  };
-}
-
-// -- spawn server -------------------------------------------------------------
-
-// A spawn server allows users to spawn actors dynamically with a name and a
-// message containing the data for initialization. By accessing the spawn server
-// on another node, users can spawn actors remotely.
-
-struct spawn_serv_state {
-  static inline const char* name = "caf.system.spawn-server";
-};
-
-behavior spawn_serv_impl(stateful_actor<spawn_serv_state>* self) {
-  auto lg = log::core::trace("");
-  return {
-    [=](spawn_atom, const std::string& name, message& args,
-        actor_system::mpi& xs) -> result<strong_actor_ptr> {
-      auto lg = log::core::trace("name = {}, args = {}", name, args);
-      return self->system().spawn<strong_actor_ptr>(name, std::move(args),
-                                                    self->context(), true, &xs);
-    },
-  };
-}
-
 // -- stream server ------------------------------------------------------------
 
 // The stream server acts as a man-in-the-middle for all streams that cross the
@@ -644,17 +524,9 @@ public:
     for (auto& mod : modules)
       if (mod)
         mod->init(cfg);
-    // Spawn config and spawn servers (lazily to not access the scheduler yet).
-    static constexpr auto Flags = hidden + lazy_init;
-    spawn_serv
-      = actor_cast<strong_actor_ptr>(parent->spawn<Flags>(spawn_serv_impl));
-    config_serv
-      = actor_cast<strong_actor_ptr>(parent->spawn<Flags>(config_serv_impl));
     // Start all modules.
     registry.start();
     private_threads.start();
-    registry.put("SpawnServ", parent->spawn_serv());
-    registry.put("ConfigServ", parent->config_serv());
     for (auto& mod : modules)
       if (mod)
         mod->start();
@@ -668,13 +540,6 @@ public:
       if (flags.await_actors_before_shutdown) {
         registry.await_running_count_equal(0);
       }
-      // shutdown internal actors
-      auto drop = [&](auto& x) {
-        anon_send_exit(x, exit_reason::user_shutdown);
-        x = nullptr;
-      };
-      drop(spawn_serv);
-      drop(config_serv);
       // stop modules in reverse order
       for (auto i = modules.rbegin(); i != modules.rend(); ++i) {
         auto& ptr = *i;
@@ -735,12 +600,6 @@ public:
 
   /// Stores flags that affect the entire actor system.
   flags_t flags;
-
-  /// Stores config parameters.
-  strong_actor_ptr config_serv;
-
-  /// Allows fully dynamic spawning of actors.
-  strong_actor_ptr spawn_serv;
 
   /// The system-wide, user-provided configuration.
   actor_system_config* cfg;
@@ -856,14 +715,6 @@ bool actor_system::await_actors_before_shutdown() const {
 
 void actor_system::await_actors_before_shutdown(bool new_value) {
   impl_->flags.await_actors_before_shutdown = new_value;
-}
-
-const strong_actor_ptr& actor_system::spawn_serv() const {
-  return impl_->spawn_serv;
-}
-
-const strong_actor_ptr& actor_system::config_serv() const {
-  return impl_->config_serv;
 }
 
 telemetry::metric_registry& actor_system::metrics() noexcept {
