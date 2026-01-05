@@ -48,7 +48,7 @@ public:
     deref();
   }
 
-  resume_result resume(scheduler*, uint64_t event_id) override {
+  void resume(scheduler*, uint64_t event_id) override {
     CAF_ASSERT(decorated_ != nullptr);
     WorkerPtr tmp;
     {
@@ -57,7 +57,7 @@ public:
     }
     if (event_id == resumable::dispose_event_id) {
       decorated_->dispose();
-      return resumable::done;
+      return;
     }
     if constexpr (std::is_same_v<WorkerPtr, weak_actor_ptr>) {
       if (auto ptr = actor_cast<strong_actor_ptr>(tmp)) {
@@ -69,7 +69,6 @@ public:
       if (tmp)
         do_run(tmp);
     }
-    return resumable::done;
   }
 
   state current_state() const noexcept override {

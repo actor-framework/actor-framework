@@ -212,7 +212,7 @@ public:
 
   void deref_resumable() const noexcept final;
 
-  resume_result resume(scheduler*, uint64_t) override;
+  void resume(scheduler*, uint64_t) override;
 
   // -- scheduler callbacks ----------------------------------------------------
 

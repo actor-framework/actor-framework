@@ -328,13 +328,12 @@ void abstract_broker::close_all() {
     datagram_servants_.begin()->second->graceful_shutdown();
 }
 
-resumable::resume_result abstract_broker::resume(scheduler* sched,
-                                                 uint64_t event_id) {
+void abstract_broker::resume(scheduler* sched, uint64_t event_id) {
   CAF_ASSERT(sched != nullptr);
   // Cleanup (via dispose event) may happen from any context (e.g.,
   // cleanup_and_release with a dummy scheduler).
   CAF_ASSERT(sched == backend_ || event_id == resumable::dispose_event_id);
-  return scheduled_actor::resume(sched, event_id);
+  scheduled_actor::resume(sched, event_id);
 }
 
 scheduler* abstract_broker::pinned_scheduler() const noexcept {
