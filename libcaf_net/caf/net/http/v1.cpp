@@ -5,6 +5,7 @@
 #include "caf/detail/parser/ascii_to_int.hpp"
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
+#include "caf/sec.hpp"
 #include "caf/string_algorithms.hpp"
 
 #include <algorithm>

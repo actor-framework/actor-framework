@@ -16,8 +16,8 @@ namespace caf {
 template <error_code_enum Enum, class... Args>
 unexpected<error>
 format_to_unexpected(Enum code, std::string_view fstr, Args&&... args) {
-  return unexpected<error>{std::in_place, code,
-                           detail::format(fstr, std::forward<Args>(args)...)};
+  return caf::unexpected<error>{
+    std::in_place, code, detail::format(fstr, std::forward<Args>(args)...)};
 }
 
 } // namespace caf

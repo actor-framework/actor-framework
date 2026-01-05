@@ -13,6 +13,7 @@
 #include "caf/detail/parse.hpp"
 #include "caf/detail/parser/read_config.hpp"
 #include "caf/detail/scope_guard.hpp"
+#include "caf/error_code.hpp"
 #include "caf/expected.hpp"
 #include "caf/format_to_error.hpp"
 #include "caf/format_to_unexpected.hpp"
@@ -174,12 +175,12 @@ error_code<sec> config_value::default_construct(type_id_t id) {
   switch (id) {
     case type_id_v<bool>:
       data_ = false;
-      return sec::none;
+      return {};
     case type_id_v<double>:
     case type_id_v<float>:
     case type_id_v<long double>:
       data_ = 0.0;
-      return sec::none;
+      return {};
     case type_id_v<int16_t>:
     case type_id_v<int32_t>:
     case type_id_v<int64_t>:
@@ -189,16 +190,16 @@ error_code<sec> config_value::default_construct(type_id_t id) {
     case type_id_v<uint64_t>:
     case type_id_v<uint8_t>:
       data_ = int64_t{0};
-      return sec::none;
+      return {};
     case type_id_v<std::string>:
       data_ = std::string{};
-      return sec::none;
+      return {};
     case type_id_v<timespan>:
       data_ = timespan{};
-      return sec::none;
+      return {};
     case type_id_v<uri>:
       data_ = uri{};
-      return sec::none;
+      return {};
     default:
       if (auto meta = detail::global_meta_object_or_null(id)) {
         auto ptr = malloc(meta->padded_size);
@@ -208,16 +209,16 @@ error_code<sec> config_value::default_construct(type_id_t id) {
           = detail::scope_guard{[=]() noexcept { meta->destroy(ptr); }};
         config_value_writer writer{this};
         if (meta->save(writer, ptr)) {
-          return sec::none;
+          return {};
         } else {
           auto& err = writer.get_error();
           if (err.category() == type_id_v<sec>)
-            return static_cast<sec>(err.code());
+            return error_code{static_cast<sec>(err.code())};
           else
-            return sec::conversion_failed;
+            return error_code{sec::conversion_failed};
         }
       } else {
-        return sec::unknown_type;
+        return error_code{sec::unknown_type};
       }
   }
 }

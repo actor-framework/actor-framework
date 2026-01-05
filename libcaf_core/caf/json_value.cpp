@@ -9,6 +9,7 @@
 #include "caf/json_object.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/parser_state.hpp"
+#include "caf/sec.hpp"
 
 #include <cstdint>
 #include <fstream>

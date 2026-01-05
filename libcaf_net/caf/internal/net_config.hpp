@@ -17,6 +17,7 @@
 #include "caf/callback.hpp"
 #include "caf/defaults.hpp"
 #include "caf/disposable.hpp"
+#include "caf/format_to_unexpected.hpp"
 #include "caf/log/net.hpp"
 #include "caf/none.hpp"
 #include "caf/uri.hpp"
@@ -325,7 +326,7 @@ public:
       }
       if (ctx->hostname_validation()) {
         if (!conn->hostname(hostname.c_str())) {
-          return caf::make_unexpected(
+          return format_to_unexpected(
             sec::protocol_error, "unable to set {} for SSL hostname validation",
             hostname);
         }

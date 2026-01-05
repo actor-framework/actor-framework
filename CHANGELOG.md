@@ -100,6 +100,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The getters `spawn_serv` and `config_serv` have been removed from the public
   interface of `actor_system`. These actors are an implementation detail of the
   I/O module and should not be accessed directly by users.
+- Removed the implicit conversions from `caf::error_code` to `caf::error` and
+  from error code enums to `caf::error_code`.
 
 ## [1.1.0] - 2025-07-25
 

@@ -60,9 +60,7 @@ inline constexpr std::unexpect_t unexpect{};
 
 namespace caf {
 
-struct unexpect_t {
-  explicit unexpect_t() = default;
-};
+struct unexpect_t {};
 
 inline constexpr unexpect_t unexpect{};
 
@@ -85,14 +83,19 @@ public:
     // nop
   }
 
-  unexpected(caf::error err) : error_{std::move(err)} {
+  explicit unexpected(E err) : error_{std::move(err)} {
+    // nop
   }
 
-  caf::error& error() noexcept {
+  caf::error& error() & noexcept {
     return error_;
   }
 
-  const caf::error& error() const noexcept {
+  caf::error&& error() && noexcept {
+    return std::move(error_);
+  }
+
+  const caf::error& error() const& noexcept {
     return error_;
   }
 
@@ -105,8 +108,11 @@ private:
   E error_;
 };
 
-// TODO requires
-// TODO add comparisons
+/// @relates unexpected
+template <class E>
+unexpected(E) -> unexpected<E>;
+
+/// @relates unexpected
 template <class E1, class E2>
 inline bool
 operator==(const unexpected<E1>& lhs, const unexpected<E2>& rhs) noexcept {
@@ -294,8 +300,7 @@ public:
   // -- modifiers --------------------------------------------------------------
 
   template <class... Args>
-    requires std::is_nothrow_constructible_v<T, Args...>
-  T& emplace(Args&&... args) noexcept {
+  T& emplace(Args&&... args) {
     destroy();
     has_value_ = true;
     new (std::addressof(value_)) T(std::forward<Args>(args)...);
@@ -725,14 +730,12 @@ bool operator==(Enum x, const expected<T>& y) {
 }
 
 template <class T, class E>
-// TODO requires
 bool operator==(const expected<T>& x, const unexpected<E>& y) {
   return x ? false : x.error() == y.error();
 }
 
 /// @relates expected
 template <class E, class T>
-// TODO requires
 bool operator==(const unexpected<E>& x, const expected<T>& y) {
   return y == x;
 }
@@ -786,14 +789,12 @@ bool operator!=(Enum x, const expected<T>& y) {
 
 /// @relates expected
 template <class T, class E>
-// TODO requires
 bool operator!=(const expected<T>& x, const unexpected<E>& y) {
   return !(x == y);
 }
 
 /// @relates expected
 template <class E, class T>
-// TODO
 bool operator!=(const unexpected<E>& x, const expected<T>& y) {
   return !(x == y);
 }
@@ -844,9 +845,8 @@ public:
   }
 
   template <class... Args>
-  explicit expected(unexpect_t, Args&&... args) noexcept
-    : error_(std::forward<Args>(args)...) {
-    // nop
+  explicit expected(unexpect_t, Args&&... args) {
+    error_.emplace(std::forward<Args>(args)...);
   }
 
   expected& operator=(const expected& other) = default;
@@ -1163,16 +1163,6 @@ inline bool operator!=(const expected<void>& x, const expected<void>& y) {
 #endif
 
 namespace caf {
-
-template <error_code_enum Enum, class... Args>
-unexpected<error> make_unexpected(Enum e, Args&&... args) noexcept {
-  return unexpected<error>{std::in_place,
-                           make_error(e, std::forward<Args>(args)...)};
-}
-
-inline unexpected<error> make_unexpected(error err) noexcept {
-  return unexpected<error>{std::move(err)};
-}
 
 template <class T>
 std::string to_string(const expected<T>& x) {
