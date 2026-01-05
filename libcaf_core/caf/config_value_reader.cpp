@@ -156,7 +156,7 @@ public:
     return true;
   }
 
-  bool fetch_next_object_type(type_id_t& type) {
+  bool fetch_next_object_type(type_id_t& type) override {
     if (st_.empty()) {
       emplace_error(sec::runtime_error,
                     "tried to read multiple objects from the root object");
@@ -213,7 +213,7 @@ public:
     }
   }
 
-  bool begin_object(type_id_t type, std::string_view) {
+  bool begin_object(type_id_t type, std::string_view) override {
     if (st_.empty()) {
       emplace_error(sec::runtime_error,
                     "tried to read multiple objects from the root object");
@@ -603,7 +603,7 @@ public:
     return false;
   }
 
-  bool value(byte_span bytes) {
+  bool value(byte_span bytes) override {
     CHECK_NOT_EMPTY();
     std::string x;
     if (!pull(*this, x))
