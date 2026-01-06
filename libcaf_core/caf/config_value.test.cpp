@@ -84,6 +84,10 @@ bool inspect(Inspector& f, my_request& x) {
 
 struct dummy_tag_type {};
 
+constexpr bool operator==(dummy_tag_type, dummy_tag_type) noexcept {
+  return true;
+}
+
 template <class T>
 T unbox(caf::expected<T> x) {
   if (!x)
@@ -171,16 +175,26 @@ SCENARIO("get_as can convert config values to boolean") {
   GIVEN("non-boolean config_values") {
     WHEN("using get_as with bool") {
       THEN("conversion fails") {
-        check_eq(get_as<bool>(cv_null), sec::conversion_failed);
-        check_eq(get_as<bool>(cv_empty_uri), sec::conversion_failed);
-        check_eq(get_as<bool>(cv_empty_list), sec::conversion_failed);
-        check_eq(get_as<bool>(cv_empty_dict), sec::conversion_failed);
-        check_eq(get_as<bool>(config_value{0}), sec::conversion_failed);
-        check_eq(get_as<bool>(config_value{1}), sec::conversion_failed);
-        check_eq(get_as<bool>(config_value{0.f}), sec::conversion_failed);
-        check_eq(get_as<bool>(config_value{1.f}), sec::conversion_failed);
-        check_eq(get_as<bool>(config_value{""s}), sec::conversion_failed);
-        check_eq(get_as<bool>(config_value{"1"s}), sec::conversion_failed);
+        check_eq(get_as<bool>(cv_null),
+                 expected<bool>{unexpect, sec::conversion_failed});
+        check_eq(get_as<bool>(cv_empty_uri),
+                 expected<bool>{unexpect, sec::conversion_failed});
+        check_eq(get_as<bool>(cv_empty_list),
+                 expected<bool>{unexpect, sec::conversion_failed});
+        check_eq(get_as<bool>(cv_empty_dict),
+                 expected<bool>{unexpect, sec::conversion_failed});
+        check_eq(get_as<bool>(config_value{0}),
+                 expected<bool>{unexpect, sec::conversion_failed});
+        check_eq(get_as<bool>(config_value{1}),
+                 expected<bool>{unexpect, sec::conversion_failed});
+        check_eq(get_as<bool>(config_value{0.f}),
+                 expected<bool>{unexpect, sec::conversion_failed});
+        check_eq(get_as<bool>(config_value{1.f}),
+                 expected<bool>{unexpect, sec::conversion_failed});
+        check_eq(get_as<bool>(config_value{""s}),
+                 expected<bool>{unexpect, sec::conversion_failed});
+        check_eq(get_as<bool>(config_value{"1"s}),
+                 expected<bool>{unexpect, sec::conversion_failed});
       }
     }
   }
@@ -196,9 +210,12 @@ SCENARIO("get_as can convert config values to integers") {
         check_eq(get_as<uint32_t>(x), 32'768u);
         check_eq(get_as<int32_t>(x), 32'768);
         check_eq(get_as<uint16_t>(x), 32'768u);
-        check_eq(get_as<int16_t>(x), sec::conversion_failed);
-        check_eq(get_as<uint8_t>(x), sec::conversion_failed);
-        check_eq(get_as<int8_t>(x), sec::conversion_failed);
+        check_eq(get_as<int16_t>(x),
+                 expected<int16_t>{unexpect, sec::conversion_failed});
+        check_eq(get_as<uint8_t>(x),
+                 expected<uint8_t>{unexpect, sec::conversion_failed});
+        check_eq(get_as<int8_t>(x),
+                 expected<int8_t>{unexpect, sec::conversion_failed});
       }
     }
   }
@@ -206,13 +223,17 @@ SCENARIO("get_as can convert config values to integers") {
     auto x = config_value{-5};
     WHEN("using get_as with integer types") {
       THEN("conversion fails for all unsigned types") {
-        check_eq(get_as<uint64_t>(x), sec::conversion_failed);
+        check_eq(get_as<uint64_t>(x),
+                 expected<uint64_t>{unexpect, sec::conversion_failed});
         check_eq(get_as<int64_t>(x), -5);
-        check_eq(get_as<uint32_t>(x), sec::conversion_failed);
+        check_eq(get_as<uint32_t>(x),
+                 expected<uint32_t>{unexpect, sec::conversion_failed});
         check_eq(get_as<int32_t>(x), -5);
-        check_eq(get_as<uint16_t>(x), sec::conversion_failed);
+        check_eq(get_as<uint16_t>(x),
+                 expected<uint16_t>{unexpect, sec::conversion_failed});
         check_eq(get_as<int16_t>(x), -5);
-        check_eq(get_as<uint8_t>(x), sec::conversion_failed);
+        check_eq(get_as<uint8_t>(x),
+                 expected<uint8_t>{unexpect, sec::conversion_failed});
         check_eq(get_as<int8_t>(x), -5);
       }
     }
@@ -226,9 +247,12 @@ SCENARIO("get_as can convert config values to integers") {
         check_eq(get_as<uint32_t>(x), 50'000u);
         check_eq(get_as<int32_t>(x), 50'000);
         check_eq(get_as<uint16_t>(x), 50'000u);
-        check_eq(get_as<int16_t>(x), sec::conversion_failed);
-        check_eq(get_as<uint8_t>(x), sec::conversion_failed);
-        check_eq(get_as<int8_t>(x), sec::conversion_failed);
+        check_eq(get_as<int16_t>(x),
+                 expected<int16_t>{unexpect, sec::conversion_failed});
+        check_eq(get_as<uint8_t>(x),
+                 expected<uint8_t>{unexpect, sec::conversion_failed});
+        check_eq(get_as<int8_t>(x),
+                 expected<int8_t>{unexpect, sec::conversion_failed});
       }
     }
   }
@@ -268,14 +292,22 @@ SCENARIO("get_as can convert config values to integers") {
     auto x = config_value{50.05};
     WHEN("using get_as with integer types") {
       THEN("CAF fails to convert the real to an integer") {
-        check_eq(get_as<uint64_t>(x), sec::conversion_failed);
-        check_eq(get_as<int64_t>(x), sec::conversion_failed);
-        check_eq(get_as<uint32_t>(x), sec::conversion_failed);
-        check_eq(get_as<int32_t>(x), sec::conversion_failed);
-        check_eq(get_as<uint16_t>(x), sec::conversion_failed);
-        check_eq(get_as<int16_t>(x), sec::conversion_failed);
-        check_eq(get_as<uint8_t>(x), sec::conversion_failed);
-        check_eq(get_as<int8_t>(x), sec::conversion_failed);
+        check_eq(get_as<uint64_t>(x),
+                 expected<uint64_t>{unexpect, sec::conversion_failed});
+        check_eq(get_as<int64_t>(x),
+                 expected<int64_t>{unexpect, sec::conversion_failed});
+        check_eq(get_as<uint32_t>(x),
+                 expected<uint32_t>{unexpect, sec::conversion_failed});
+        check_eq(get_as<int32_t>(x),
+                 expected<int32_t>{unexpect, sec::conversion_failed});
+        check_eq(get_as<uint16_t>(x),
+                 expected<uint16_t>{unexpect, sec::conversion_failed});
+        check_eq(get_as<int16_t>(x),
+                 expected<int16_t>{unexpect, sec::conversion_failed});
+        check_eq(get_as<uint8_t>(x),
+                 expected<uint8_t>{unexpect, sec::conversion_failed});
+        check_eq(get_as<int8_t>(x),
+                 expected<int8_t>{unexpect, sec::conversion_failed});
       }
     }
   }
@@ -298,38 +330,64 @@ SCENARIO("get_as can convert config values to integers") {
     auto x = config_value{"50.05"s};
     WHEN("using get_as with integer types") {
       THEN("CAF fails to convert the real to an integer") {
-        check_eq(get_as<uint64_t>(x), sec::conversion_failed);
-        check_eq(get_as<int64_t>(x), sec::conversion_failed);
-        check_eq(get_as<uint32_t>(x), sec::conversion_failed);
-        check_eq(get_as<int32_t>(x), sec::conversion_failed);
-        check_eq(get_as<uint16_t>(x), sec::conversion_failed);
-        check_eq(get_as<int16_t>(x), sec::conversion_failed);
-        check_eq(get_as<uint8_t>(x), sec::conversion_failed);
-        check_eq(get_as<int8_t>(x), sec::conversion_failed);
+        check_eq(get_as<uint64_t>(x),
+                 expected<uint64_t>{unexpect, sec::conversion_failed});
+        check_eq(get_as<int64_t>(x),
+                 expected<int64_t>{unexpect, sec::conversion_failed});
+        check_eq(get_as<uint32_t>(x),
+                 expected<uint32_t>{unexpect, sec::conversion_failed});
+        check_eq(get_as<int32_t>(x),
+                 expected<int32_t>{unexpect, sec::conversion_failed});
+        check_eq(get_as<uint16_t>(x),
+                 expected<uint16_t>{unexpect, sec::conversion_failed});
+        check_eq(get_as<int16_t>(x),
+                 expected<int16_t>{unexpect, sec::conversion_failed});
+        check_eq(get_as<uint8_t>(x),
+                 expected<uint8_t>{unexpect, sec::conversion_failed});
+        check_eq(get_as<int8_t>(x),
+                 expected<int8_t>{unexpect, sec::conversion_failed});
       }
     }
   }
   GIVEN("config_values of null, URI, boolean, list or dictionary") {
     WHEN("using get_as with floating point types") {
       THEN("conversion fails") {
-        check_eq(get_as<float>(cv_null), sec::conversion_failed);
-        check_eq(get_as<float>(cv_true), sec::conversion_failed);
-        check_eq(get_as<float>(cv_false), sec::conversion_failed);
-        check_eq(get_as<float>(cv_empty_uri), sec::conversion_failed);
-        check_eq(get_as<float>(cv_empty_list), sec::conversion_failed);
-        check_eq(get_as<float>(cv_empty_dict), sec::conversion_failed);
-        check_eq(get_as<double>(cv_null), sec::conversion_failed);
-        check_eq(get_as<double>(cv_true), sec::conversion_failed);
-        check_eq(get_as<double>(cv_false), sec::conversion_failed);
-        check_eq(get_as<double>(cv_empty_uri), sec::conversion_failed);
-        check_eq(get_as<double>(cv_empty_list), sec::conversion_failed);
-        check_eq(get_as<double>(cv_empty_dict), sec::conversion_failed);
-        check_eq(get_as<long double>(cv_null), sec::conversion_failed);
-        check_eq(get_as<long double>(cv_true), sec::conversion_failed);
-        check_eq(get_as<long double>(cv_false), sec::conversion_failed);
-        check_eq(get_as<long double>(cv_empty_uri), sec::conversion_failed);
-        check_eq(get_as<long double>(cv_empty_list), sec::conversion_failed);
-        check_eq(get_as<long double>(cv_empty_dict), sec::conversion_failed);
+        check_eq(get_as<float>(cv_null),
+                 expected<float>{unexpect, sec::conversion_failed});
+        check_eq(get_as<float>(cv_true),
+                 expected<float>{unexpect, sec::conversion_failed});
+        check_eq(get_as<float>(cv_false),
+                 expected<float>{unexpect, sec::conversion_failed});
+        check_eq(get_as<float>(cv_empty_uri),
+                 expected<float>{unexpect, sec::conversion_failed});
+        check_eq(get_as<float>(cv_empty_list),
+                 expected<float>{unexpect, sec::conversion_failed});
+        check_eq(get_as<float>(cv_empty_dict),
+                 expected<float>{unexpect, sec::conversion_failed});
+        check_eq(get_as<double>(cv_null),
+                 expected<double>{unexpect, sec::conversion_failed});
+        check_eq(get_as<double>(cv_true),
+                 expected<double>{unexpect, sec::conversion_failed});
+        check_eq(get_as<double>(cv_false),
+                 expected<double>{unexpect, sec::conversion_failed});
+        check_eq(get_as<double>(cv_empty_uri),
+                 expected<double>{unexpect, sec::conversion_failed});
+        check_eq(get_as<double>(cv_empty_list),
+                 expected<double>{unexpect, sec::conversion_failed});
+        check_eq(get_as<double>(cv_empty_dict),
+                 expected<double>{unexpect, sec::conversion_failed});
+        check_eq(get_as<long double>(cv_null),
+                 expected<long double>{unexpect, sec::conversion_failed});
+        check_eq(get_as<long double>(cv_true),
+                 expected<long double>{unexpect, sec::conversion_failed});
+        check_eq(get_as<long double>(cv_false),
+                 expected<long double>{unexpect, sec::conversion_failed});
+        check_eq(get_as<long double>(cv_empty_uri),
+                 expected<long double>{unexpect, sec::conversion_failed});
+        check_eq(get_as<long double>(cv_empty_list),
+                 expected<long double>{unexpect, sec::conversion_failed});
+        check_eq(get_as<long double>(cv_empty_dict),
+                 expected<long double>{unexpect, sec::conversion_failed});
       }
     }
   }
@@ -342,7 +400,8 @@ SCENARIO("get_as can convert config values to floating point numbers") {
       THEN("conversion fails if bounds checks fail") {
         check_eq(get_as<long double>(x), 1.79769e+308);
         check_eq(get_as<double>(x), 1.79769e+308);
-        check_eq(get_as<float>(x), sec::conversion_failed);
+        check_eq(get_as<float>(x),
+                 expected<float>{unexpect, sec::conversion_failed});
       }
     }
   }
@@ -381,12 +440,18 @@ SCENARIO("get_as can convert config values to floating point numbers") {
   GIVEN("config_values of null, URI, boolean, list or dictionary") {
     WHEN("using get_as with integer types") {
       THEN("conversion fails") {
-        check_eq(get_as<int64_t>(cv_null), sec::conversion_failed);
-        check_eq(get_as<int64_t>(cv_true), sec::conversion_failed);
-        check_eq(get_as<int64_t>(cv_false), sec::conversion_failed);
-        check_eq(get_as<int64_t>(cv_empty_uri), sec::conversion_failed);
-        check_eq(get_as<int64_t>(cv_empty_list), sec::conversion_failed);
-        check_eq(get_as<int64_t>(cv_empty_dict), sec::conversion_failed);
+        check_eq(get_as<int64_t>(cv_null),
+                 expected<int64_t>{unexpect, sec::conversion_failed});
+        check_eq(get_as<int64_t>(cv_true),
+                 expected<int64_t>{unexpect, sec::conversion_failed});
+        check_eq(get_as<int64_t>(cv_false),
+                 expected<int64_t>{unexpect, sec::conversion_failed});
+        check_eq(get_as<int64_t>(cv_empty_uri),
+                 expected<int64_t>{unexpect, sec::conversion_failed});
+        check_eq(get_as<int64_t>(cv_empty_list),
+                 expected<int64_t>{unexpect, sec::conversion_failed});
+        check_eq(get_as<int64_t>(cv_empty_dict),
+                 expected<int64_t>{unexpect, sec::conversion_failed});
       }
     }
   }
@@ -403,11 +468,18 @@ SCENARIO("get_as can convert config values to timespans") {
     }
     WHEN("using get_as with type other than timespan or string") {
       THEN("conversion fails") {
-        check_eq(get_as<int64_t>(x), sec::conversion_failed);
-        check_eq(get_as<double>(x), sec::conversion_failed);
-        check_eq(get_as<uri>(x), sec::conversion_failed);
-        check_eq(get_as<config_value::list>(x), sec::conversion_failed);
-        check_eq(get_as<config_value::dictionary>(x), sec::conversion_failed);
+        check_eq(get_as<int64_t>(x),
+                 expected<int64_t>{unexpect, sec::conversion_failed});
+        check_eq(get_as<double>(x),
+                 expected<double>{unexpect, sec::conversion_failed});
+        check_eq(get_as<uri>(x),
+                 expected<uri>{unexpect, sec::conversion_failed});
+        check_eq(get_as<config_value::list>(x),
+                 expected<config_value::list>{unexpect,
+                                              sec::conversion_failed});
+        check_eq(get_as<config_value::dictionary>(x),
+                 expected<config_value::dictionary>{unexpect,
+                                                    sec::conversion_failed});
       }
     }
   }
@@ -637,7 +709,8 @@ SCENARIO("get_as can convert config values to custom types") {
     config_value x{str_val};
     GIVEN("the config value " + to_string(x)) {
       WHEN("using get_as with sec") {
-        THEN("CAF picks up the custom inspect_value overload for conversion") {
+        THEN("CAF picks up the custom inspect_value overload for "
+             "conversion") {
           auto maybe_res = get_as<sec>(x);
           if (check(static_cast<bool>(maybe_res)))
             check_eq(*maybe_res, enum_val);
@@ -666,7 +739,8 @@ SCENARIO("get_as can convert config values to custom types") {
     GIVEN("the config value") {
       log::test::debug("obj_vals: {}", x);
       WHEN("using get_as with dummy_tag_type") {
-        THEN("CAF only checks whether the config value is dictionary-ish") {
+        THEN("CAF only checks whether the config value is "
+             "dictionary-ish") {
           check(static_cast<bool>(get_as<dummy_tag_type>(my_request_val)));
         }
       }
@@ -679,7 +753,8 @@ SCENARIO("get_as can convert config values to custom types") {
       log::test::debug("non_obj_vals: {}", x);
       WHEN("using get_as with dummy_tag_type") {
         THEN("conversion fails") {
-          check_eq(get_as<dummy_tag_type>(x), sec::conversion_failed);
+          check_eq(get_as<dummy_tag_type>(x),
+                   expected<dummy_tag_type>{unexpect, sec::conversion_failed});
         }
       }
     }
@@ -720,7 +795,8 @@ SCENARIO("get_or converts or returns a fallback value") {
     WHEN("using get_or with type of int span") {
       int fallback_arr[] = {10, 20, 30};
       auto fallback = std::span{fallback_arr, std::size(fallback_arr)};
-      THEN("CAF returns the default value after converting it to int vector") {
+      THEN("CAF returns the default value after converting it to int "
+           "vector") {
         auto result = get_or(x, fallback);
         static_assert(std::is_same_v<decltype(result), std::vector<int>>);
         check_eq(result, std::vector<int>({10, 20, 30}));
@@ -848,7 +924,8 @@ SCENARIO("config values can parse their own to_string output") {
 SCENARIO("config values can convert lists of tuples to dictionaries") {
   GIVEN("a config value containing a list of key-value pairs (lists)") {
     WHEN("calling as_dictionary on the object") {
-      THEN("the config value lifts the key-value pair list to a dictionary") {
+      THEN("the config value lifts the key-value pair list to a "
+           "dictionary") {
         auto x = make_config_value_list(make_config_value_list("one", 1),
                                         make_config_value_list(2, "two"));
         auto& dict = x.as_dictionary();
@@ -860,7 +937,8 @@ SCENARIO("config values can convert lists of tuples to dictionaries") {
   }
   GIVEN("a config value containing a string representing a kvp list") {
     WHEN("calling as_dictionary on the object") {
-      THEN("the config value lifts the key-value pair list to a dictionary") {
+      THEN("the config value lifts the key-value pair list to a "
+           "dictionary") {
         auto x = config_value{R"_([["one", 1], [2, "two"]])_"};
         auto& dict = x.as_dictionary();
         check_eq(dict.size(), 2u);

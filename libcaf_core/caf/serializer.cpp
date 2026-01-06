@@ -5,6 +5,7 @@
 #include "caf/serializer.hpp"
 
 #include "caf/actor_system.hpp"
+#include "caf/error_code.hpp"
 
 namespace caf {
 
@@ -42,7 +43,7 @@ bool serializer::value(const strong_actor_ptr& ptr) {
   }
   if (ptr != nullptr) {
     if (auto err = save_actor(ptr, aid, nid)) {
-      set_error(err);
+      set_error(error{err.value()});
       return false;
     }
   }

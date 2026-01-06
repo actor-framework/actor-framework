@@ -633,13 +633,13 @@ public:
     {
       binary_serializer sink{sys, buf};
       if (!sink.apply(value))
-        return sink.get_error();
+        return unexpected<error>{std::in_place, sink.get_error()};
     }
     T result;
     {
       binary_deserializer source{sys, buf};
       if (!source.apply(result))
-        return source.get_error();
+        return unexpected<error>{std::in_place, source.get_error()};
     }
     return result;
   }

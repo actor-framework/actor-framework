@@ -387,7 +387,7 @@ public:
     }
     if (ptr != nullptr) {
       if (auto err = save_actor(ptr, aid, nid)) {
-        set_error(err);
+        set_error(error{err.value()});
         return false;
       }
     }

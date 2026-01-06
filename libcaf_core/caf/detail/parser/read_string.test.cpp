@@ -6,6 +6,7 @@
 
 #include "caf/test/test.hpp"
 
+#include "caf/error_code.hpp"
 #include "caf/expected.hpp"
 #include "caf/format_to_error.hpp"
 #include "caf/parser_state.hpp"
@@ -32,7 +33,7 @@ struct string_parser {
     detail::parser::read_string(res, f);
     if (res.code == pec::success)
       return f.x;
-    return res.error();
+    return expected<std::string>{unexpect, res.error()};
   }
 };
 
@@ -88,13 +89,13 @@ TEST("unquoted strings") {
 }
 
 TEST("invalid strings") {
-  check_eq(p(R"("abc)"), pec::unexpected_eof);
-  check_eq(p(R"('abc)"), pec::unexpected_eof);
-  check_eq(p("\"ab\nc\""), pec::unexpected_newline);
-  check_eq(p("'ab\nc'"), pec::unexpected_newline);
-  check_eq(p(R"("abc" def)"), pec::trailing_character);
-  check_eq(p(R"('abc' def)"), pec::trailing_character);
-  check_eq(p(R"( 123, )"), pec::trailing_character);
+  check_eq(p(R"("abc)"), error_code{pec::unexpected_eof});
+  check_eq(p(R"('abc)"), error_code{pec::unexpected_eof});
+  check_eq(p("\"ab\nc\""), error_code{pec::unexpected_newline});
+  check_eq(p("'ab\nc'"), error_code{pec::unexpected_newline});
+  check_eq(p(R"("abc" def)"), error_code{pec::trailing_character});
+  check_eq(p(R"('abc' def)"), error_code{pec::trailing_character});
+  check_eq(p(R"( 123, )"), error_code{pec::trailing_character});
 }
 
 } // WITH_FIXTURE(fixture)

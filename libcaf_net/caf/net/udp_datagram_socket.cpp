@@ -72,21 +72,23 @@ expected<udp_datagram_socket> make_udp_datagram_socket(ip_endpoint ep,
   auto lg = log::net::trace("ep = {}", ep);
   sockaddr_storage addr = {};
   convert(ep, addr);
-  CAF_NET_SYSCALL("socket", fd, ==, invalid_socket_id,
-                  ::socket(addr.ss_family, SOCK_DGRAM, 0));
+  CAF_NET_SYSCALL_TO_UNEXPECTED("socket", fd, ==, invalid_socket_id,
+                                ::socket(addr.ss_family, SOCK_DGRAM, 0));
   udp_datagram_socket sock{fd};
   auto sguard = make_socket_guard(sock);
   socklen_t len = (addr.ss_family == AF_INET) ? sizeof(sockaddr_in)
                                               : sizeof(sockaddr_in6);
   if (reuse_addr) {
     int on = 1;
-    CAF_NET_SYSCALL("setsockopt", tmp1, !=, 0,
-                    setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,
-                               reinterpret_cast<setsockopt_ptr>(&on),
-                               static_cast<socket_size_type>(sizeof(on))));
+    CAF_NET_SYSCALL_TO_UNEXPECTED(
+      "setsockopt", tmp1, !=, 0,
+      setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,
+                 reinterpret_cast<setsockopt_ptr>(&on),
+                 static_cast<socket_size_type>(sizeof(on))));
   }
-  CAF_NET_SYSCALL("bind", err1, !=, 0,
-                  ::bind(sock.id, reinterpret_cast<sockaddr*>(&addr), len));
+  CAF_NET_SYSCALL_TO_UNEXPECTED(
+    "bind", err1, !=, 0,
+    ::bind(sock.id, reinterpret_cast<sockaddr*>(&addr), len));
   log::net::debug("sock.id = {}", sock.id);
   return sguard.release();
 }

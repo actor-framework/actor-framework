@@ -33,7 +33,7 @@ TEST("from string - valid inputs") {
   auto from_string = [](std::string_view str) -> expected<ipv4_address> {
     ipv4_address result;
     if (auto err = parse(str, result))
-      return err;
+      return caf::unexpected{std::move(err)};
     return result;
   };
   check_eq(from_string("136.12.12.12"), addr(136, 12, 12, 12));

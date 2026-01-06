@@ -9,6 +9,7 @@
 #include "caf/actor_from_state.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
+#include "caf/error_code.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/scoped_actor.hpp"
 
@@ -80,7 +81,7 @@ TEST("a mail cache throws when exceeding its capacity") {
   self->mail(add_atom_v, 5).send(aut);
   self->mail(add_atom_v, 6).send(aut);
   auto res = self->mail(get_atom_v).request(aut, 1s).receive<int>();
-  check_eq(res, make_error(sec::request_receiver_down));
+  check_eq(res, error_code{sec::request_receiver_down});
 }
 #endif // CAF_ENABLE_EXCEPTIONS
 

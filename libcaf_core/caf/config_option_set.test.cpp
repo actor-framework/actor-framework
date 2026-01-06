@@ -51,11 +51,11 @@ struct fixture {
     settings cfg;
     auto res = opts.parse(cfg, std::move(args));
     if (res.first != pec::success)
-      return {res.first};
+      return expected<T>{unexpect, res.first};
     else if (auto x = get_as<T>(cfg, key))
       return {std::move(*x)};
     else
-      return {sec::invalid_argument};
+      return expected<T>{unexpect, sec::invalid_argument};
   }
 
   std::string key = "value";

@@ -9,6 +9,7 @@
 
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
+#include "caf/error_code.hpp"
 #include "caf/json_reader.hpp"
 #include "caf/json_writer.hpp"
 
@@ -127,11 +128,11 @@ TEST("make_uuid rejects strings with invalid variant or version values") {
   check(!uuid::can_parse("cbba369a-6ceb-F1ea-bc55-0242ac130003"));
   check(!uuid::can_parse("cbba38fc-6ceb-01ea-bc55-0242ac130003"));
   check_eq(make_uuid("cbba341a-6ceb-81ea-bc55-0242ac130003"),
-           pec::invalid_argument);
+           error_code{pec::invalid_argument});
   check_eq(make_uuid("cbba369a-6ceb-F1ea-bc55-0242ac130003"),
-           pec::invalid_argument);
+           error_code{pec::invalid_argument});
   check_eq(make_uuid("cbba38fc-6ceb-01ea-bc55-0242ac130003"),
-           pec::invalid_argument);
+           error_code{pec::invalid_argument});
 }
 
 SCENARIO("UUIDs are inspectable") {

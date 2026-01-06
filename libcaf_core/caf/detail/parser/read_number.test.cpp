@@ -9,6 +9,7 @@
 #include "caf/detail/nearly_equal.hpp"
 #include "caf/detail/parser/add_ascii.hpp"
 #include "caf/detail/parser/sub_ascii.hpp"
+#include "caf/error_code.hpp"
 #include "caf/expected.hpp"
 #include "caf/parser_state.hpp"
 #include "caf/pec.hpp"
@@ -105,7 +106,7 @@ struct range_parser {
     detail::parser::read_number(res, f, std::true_type{}, std::true_type{});
     if (res.code == pec::success)
       return expected<std::vector<int64_t>>{std::move(f.xs)};
-    return res.error();
+    return expected<std::vector<int64_t>>{unexpect, res.error()};
   }
 };
 
@@ -134,13 +135,13 @@ TEST("add ascii - unsigned") {
     uint8_t x = 0;
     for (auto c : str)
       if (!add_ascii<10>(x, c))
-        return pec::integer_overflow;
+        return expected<uint8_t>{unexpect, pec::integer_overflow};
     return x;
   };
   for (int i = 0; i < 256; ++i)
     check_eq(rd(std::to_string(i)), static_cast<uint8_t>(i));
   for (int i = 256; i < 513; ++i)
-    check_eq(rd(std::to_string(i)), pec::integer_overflow);
+    check_eq(rd(std::to_string(i)), error_code{pec::integer_overflow});
 }
 
 TEST("add ascii - signed") {
@@ -148,13 +149,13 @@ TEST("add ascii - signed") {
     int8_t x = 0;
     for (auto c : str)
       if (!detail::parser::add_ascii<10>(x, c))
-        return pec::integer_overflow;
+        return expected<int8_t>{unexpect, pec::integer_overflow};
     return x;
   };
   for (int i = 0; i < 128; ++i)
     check_eq(rd(std::to_string(i)), static_cast<int8_t>(i));
   for (int i = 128; i < 513; ++i)
-    check_eq(rd(std::to_string(i)), pec::integer_overflow);
+    check_eq(rd(std::to_string(i)), error_code{pec::integer_overflow});
 }
 
 TEST("sub ascii") {
@@ -162,7 +163,7 @@ TEST("sub ascii") {
     int8_t x = 0;
     for (auto c : str)
       if (!detail::parser::sub_ascii<10>(x, c))
-        return pec::integer_underflow;
+        return expected<int8_t>{unexpect, pec::integer_underflow};
     return x;
   };
   // Using sub_ascii in this way behaves as if we'd prefix the number with a
@@ -170,7 +171,7 @@ TEST("sub ascii") {
   for (int i = 1; i < 129; ++i)
     check_eq(rd(std::to_string(i)), static_cast<int8_t>(-i));
   for (int i = 129; i < 513; ++i)
-    check_eq(rd(std::to_string(i)), pec::integer_underflow);
+    check_eq(rd(std::to_string(i)), error_code{pec::integer_underflow});
 }
 
 #define CHECK_NUMBER(x) check_eq(p(#x), res(x))

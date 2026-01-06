@@ -7,6 +7,7 @@
 #include "caf/test/fixture/flow.hpp"
 #include "caf/test/test.hpp"
 
+#include "caf/error_code.hpp"
 #include "caf/flow/scoped_coordinator.hpp"
 #include "caf/scheduled_actor/flow.hpp"
 
@@ -29,11 +30,11 @@ TEST("calling ignore_elements on range(1, 10) produces []") {
 TEST("ignore_elements operator forwards errors") {
   SECTION("blueprint") {
     check_eq(collect(obs_error<int>().ignore_elements()),
-             make_error(sec::runtime_error));
+             error_code{sec::runtime_error});
   }
   SECTION("observable") {
     check_eq(collect(obs_error<int>().as_observable().ignore_elements()),
-             make_error(sec::runtime_error));
+             error_code{sec::runtime_error});
   }
 }
 

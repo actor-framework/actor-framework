@@ -61,11 +61,11 @@ TEST("calling take(3) on take_last(5) ignores the last two items") {
 TEST("take_last operator forwards errors") {
   SECTION("blueprint") {
     check_eq(collect(obs_error<int>().take_last(5)),
-             make_error(sec::runtime_error));
+             error_code{sec::runtime_error});
   }
   SECTION("observable") {
     check_eq(collect(obs_error<int>().as_observable().take_last(5)),
-             make_error(sec::runtime_error));
+             error_code{sec::runtime_error});
   }
 }
 

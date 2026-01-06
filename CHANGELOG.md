@@ -60,6 +60,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   has been default-constructed or holds a valid error code.
 - The methods `or_else` and `eval` on `caf::error` are now deprecated since they
   overlap with methods such as `transform` and `and_then` on `caf::expected`.
+- Deprecate all member functions in `caf::expected` that are not present in
+  `std::expected`.
 
 ### Added
 
@@ -74,6 +76,11 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   `actor_system_config` by calling `exception_handler(my_handler)`. This handler
   then gets passed down to all scheduled actors as the default exception handler
   but can still be overridden by actors.
+- To make `caf::expected` a drop-in replacement for `std::expected`, we have
+  added missing utility types such as `caf::unexpect` and `caf::unexpected`.
+  Further, users can optionally build CAF with `CAF_USE_STD_EXPECTED` enabled to
+  have CAF use aliases to the standard library types instead of its own
+  implementation (requires C++23).
 
 ### Fixed
 
@@ -93,6 +100,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The getters `spawn_serv` and `config_serv` have been removed from the public
   interface of `actor_system`. These actors are an implementation detail of the
   I/O module and should not be accessed directly by users.
+- Removed the implicit conversions from `caf::error_code` to `caf::error` and
+  from error code enums to `caf::error_code`.
 
 ## [1.1.0] - 2025-07-25
 

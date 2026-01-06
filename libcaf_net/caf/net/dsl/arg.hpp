@@ -7,6 +7,7 @@
 #include "caf/expected.hpp"
 
 #include <optional>
+#include <variant>
 
 namespace caf::net::dsl::arg {
 
