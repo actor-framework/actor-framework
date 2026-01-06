@@ -136,7 +136,19 @@ public:
   }
 
   void abort(const error& reason) override {
-    up_->abort(reason);
+    // Only pass on the first error in case `abort` is called multiple times.
+    if (!aborted_) {
+      aborted_ = true;
+      up_->abort(reason);
+    }
+  }
+
+  void abort(sec code, std::string_view reason) {
+    // Only pass on the first error in case `abort` is called multiple times.
+    if (!aborted_) {
+      aborted_ = true;
+      up_->abort(make_error(code, std::string{reason}));
+    }
   }
 
   void prepare_send() override {
@@ -156,16 +168,15 @@ public:
           auto [hdr, remainder] = v1::split_header(input);
           if (hdr.empty()) {
             if (input.size() >= max_request_size_) {
-              up_->abort(
-                make_error(sec::protocol_error, "header exceeds maximum size"));
               write_response(status::request_header_fields_too_large,
                              "Header exceeds maximum size.");
+              abort(sec::protocol_error, "header exceeds maximum size");
               return -1;
             } else {
               return consumed;
             }
           } else if (!handle_header(hdr)) {
-            // Note: handle_header already calls up_->abort().
+            // Note: handle_header already calls abort().
             return -1;
           } else {
             // Prepare for next loop iteration.
@@ -177,10 +188,9 @@ public:
             } else if (auto len = hdr_.content_length()) {
               // Protect against payloads that exceed the maximum size.
               if (*len >= max_request_size_) {
-                up_->abort(make_error(sec::protocol_error,
-                                      "payload exceeds maximum size"));
                 write_response(status::payload_too_large,
                                "Payload exceeds maximum size.");
+                abort(sec::protocol_error, "payload exceeds maximum size");
                 return -1;
               }
               // Transition to read_payload mode and continue.
@@ -213,6 +223,7 @@ public:
           // TODO: implement me
           write_response(status::not_implemented,
                          "Chunked transfer not implemented yet.");
+          abort(sec::protocol_error, "chunked transfer not implemented yet");
           return -1;
         }
       }
@@ -237,8 +248,8 @@ private:
     auto [code, msg] = hdr_.parse(http);
     if (code != status::ok) {
       log::net::debug("received malformed header");
-      up_->abort(make_error(sec::protocol_error, "received malformed header"));
       write_response(code, msg);
+      abort(sec::protocol_error, "received malformed header");
       return false;
     } else {
       return true;
@@ -260,6 +271,8 @@ private:
 
   /// Maximum size for incoming HTTP requests.
   size_t max_request_size_ = caf::defaults::net::http_max_request_size;
+
+  bool aborted_ = false;
 };
 } // namespace
 
