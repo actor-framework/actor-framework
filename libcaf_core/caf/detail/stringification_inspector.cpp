@@ -179,18 +179,6 @@ public:
     return true;
   }
 
-  bool value(timespan x) {
-    sep();
-    detail::print(result_, x);
-    return true;
-  }
-
-  bool value(timestamp x) {
-    sep();
-    append_timestamp_to_string(result_, x);
-    return true;
-  }
-
   bool value(std::string_view x) {
     sep();
     if (x.empty()) {
@@ -483,14 +471,6 @@ bool stringification_inspector::value(double x) {
 }
 
 bool stringification_inspector::value(long double x) {
-  return impl_->value(x);
-}
-
-bool stringification_inspector::value(timespan x) {
-  return impl_->value(x);
-}
-
-bool stringification_inspector::value(timestamp x) {
   return impl_->value(x);
 }
 

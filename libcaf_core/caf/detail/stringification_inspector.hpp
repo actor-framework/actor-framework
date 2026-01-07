@@ -86,10 +86,6 @@ public:
 
   bool value(long double x);
 
-  bool value(timespan x);
-
-  bool value(timestamp x);
-
   bool value(std::string_view x);
 
   bool value(void* x);
@@ -112,7 +108,19 @@ public:
 
   template <class Rep, class Period>
   bool builtin_inspect(const std::chrono::duration<Rep, Period> x) {
-    return value(std::chrono::duration_cast<timespan>(x));
+    std::string str;
+    detail::print(str, x);
+    append(str);
+    return true;
+  }
+
+  template <class Duration>
+  bool builtin_inspect(
+    const std::chrono::time_point<std::chrono::system_clock, Duration> x) {
+    std::string str;
+    detail::print(str, x);
+    append(str);
+    return true;
   }
 
   template <class T>
