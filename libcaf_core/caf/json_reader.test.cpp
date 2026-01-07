@@ -32,7 +32,7 @@ struct widget;
 
 } // namespace
 
-CAF_BEGIN_TYPE_ID_BLOCK(json_reader_test, caf::first_custom_type_id + 95)
+CAF_BEGIN_TYPE_ID_BLOCK(json_reader_test, caf::first_custom_type_id + 40, 10)
 
   CAF_ADD_TYPE_ID(json_reader_test, (circle))
   CAF_ADD_TYPE_ID(json_reader_test, (dummy_struct))

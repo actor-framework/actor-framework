@@ -32,7 +32,7 @@ struct c_array;
 
 } // namespace
 
-CAF_BEGIN_TYPE_ID_BLOCK(serialization_test, caf::first_custom_type_id + 25)
+CAF_BEGIN_TYPE_ID_BLOCK(serialization_test, caf::first_custom_type_id + 100, 10)
 
   CAF_ADD_TYPE_ID(serialization_test, (nasty))
   CAF_ADD_TYPE_ID(serialization_test, (weekday))

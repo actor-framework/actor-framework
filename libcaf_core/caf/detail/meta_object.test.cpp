@@ -23,8 +23,7 @@ struct i64_wrapper;
 
 } // namespace
 
-// +5 to avoid clash with caf.message_builder test
-CAF_BEGIN_TYPE_ID_BLOCK(meta_object_test, caf::first_custom_type_id + 5)
+CAF_BEGIN_TYPE_ID_BLOCK(meta_object_test, caf::first_custom_type_id + 190, 10)
   CAF_ADD_TYPE_ID(meta_object_test, (i32_wrapper))
   CAF_ADD_TYPE_ID(meta_object_test, (i64_wrapper))
 CAF_END_TYPE_ID_BLOCK(meta_object_test)

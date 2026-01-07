@@ -56,7 +56,8 @@ bool inspect(Inspector& f, counted_int_ptr& x) {
   }
 }
 
-CAF_BEGIN_TYPE_ID_BLOCK(message_builder_test, caf::first_custom_type_id)
+CAF_BEGIN_TYPE_ID_BLOCK(message_builder_test, caf::first_custom_type_id + 60,
+                        10)
 
   CAF_ADD_TYPE_ID(message_builder_test, (counted_int))
   CAF_ADD_TYPE_ID(message_builder_test, (counted_int_ptr))

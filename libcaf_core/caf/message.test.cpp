@@ -34,7 +34,7 @@ struct s3;
 
 } // namespace
 
-CAF_BEGIN_TYPE_ID_BLOCK(message_test, caf::first_custom_type_id + 50)
+CAF_BEGIN_TYPE_ID_BLOCK(message_test, caf::first_custom_type_id + 80, 10)
 
   CAF_ADD_TYPE_ID(message_test, (s1))
   CAF_ADD_TYPE_ID(message_test, (s2))

@@ -41,7 +41,8 @@ struct fail_on_copy {
   }
 };
 
-CAF_BEGIN_TYPE_ID_BLOCK(message_lifetime_test, caf::first_custom_type_id + 70)
+CAF_BEGIN_TYPE_ID_BLOCK(message_lifetime_test, caf::first_custom_type_id + 70,
+                        10)
 
   CAF_ADD_TYPE_ID(message_lifetime_test, (fail_on_copy))
 

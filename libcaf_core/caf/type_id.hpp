@@ -142,11 +142,30 @@ public:
 ///
 /// @note CAF reserves all names with the suffix `_module`. For example, core
 ///       module uses the project name `core_module`.
-#define CAF_BEGIN_TYPE_ID_BLOCK(project_name, first_id)                        \
+#define CAF_DETAIL_BEGIN_TYPE_ID_BLOCK_2(project_name, first_id)               \
   namespace caf::id_block {                                                    \
   constexpr type_id_t project_name##_type_id_counter_init = __COUNTER__;       \
   constexpr type_id_t project_name##_first_type_id = first_id;                 \
+  constexpr type_id_t project_name##_max_size                                  \
+    = 65535 - project_name##_type_id_counter_init;                             \
   }
+
+#define CAF_DETAIL_BEGIN_TYPE_ID_BLOCK_3(project_name, first_id, max_size)     \
+  namespace caf::id_block {                                                    \
+  constexpr type_id_t project_name##_type_id_counter_init = __COUNTER__;       \
+  constexpr type_id_t project_name##_first_type_id = first_id;                 \
+  constexpr type_id_t project_name##_max_size = max_size;                      \
+  }
+
+#ifdef CAF_MSVC
+#  define CAF_BEGIN_TYPE_ID_BLOCK(...)                                         \
+    CAF_PP_CAT(CAF_PP_OVERLOAD(CAF_DETAIL_BEGIN_TYPE_ID_BLOCK_,                \
+                               __VA_ARGS__)(__VA_ARGS__),                      \
+               CAF_PP_EMPTY())
+#else
+#  define CAF_BEGIN_TYPE_ID_BLOCK(...)                                         \
+    CAF_PP_OVERLOAD(CAF_DETAIL_BEGIN_TYPE_ID_BLOCK_, __VA_ARGS__)(__VA_ARGS__)
+#endif
 
 // -- CAF_ADD_TYPE_ID ----------------------------------------------------------
 
@@ -367,6 +386,9 @@ public:
   constexpr type_id_t project_name##_last_type_id                              \
     = project_name##_first_type_id                                             \
       + (__COUNTER__ - project_name##_type_id_counter_init - 2);               \
+  static_assert(project_name##_last_type_id                                    \
+                  < project_name##_first_type_id + project_name##_max_size,    \
+                "Type ID block '" #project_name "' contains too many types");  \
   struct project_name {                                                        \
     static constexpr type_id_t begin = project_name##_first_type_id;           \
     static constexpr type_id_t end = project_name##_last_type_id + 1;          \

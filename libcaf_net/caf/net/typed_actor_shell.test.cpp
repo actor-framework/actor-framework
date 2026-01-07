@@ -41,7 +41,8 @@ using testee_actor = typed_actor<testee_trait>;
 
 } // namespace
 
-CAF_BEGIN_TYPE_ID_BLOCK(typed_actor_shell_test, caf::first_custom_type_id + 10)
+CAF_BEGIN_TYPE_ID_BLOCK(typed_actor_shell_test, caf::first_custom_type_id + 210,
+                        10)
   CAF_ADD_TYPE_ID(typed_actor_shell_test, (testee_actor))
 CAF_END_TYPE_ID_BLOCK(typed_actor_shell_test)
 

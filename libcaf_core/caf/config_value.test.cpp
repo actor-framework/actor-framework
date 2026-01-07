@@ -43,7 +43,7 @@ struct dummy_tag_type;
 
 } // namespace
 
-CAF_BEGIN_TYPE_ID_BLOCK(config_value_test, caf::first_custom_type_id + 75)
+CAF_BEGIN_TYPE_ID_BLOCK(config_value_test, caf::first_custom_type_id, 10)
 
   CAF_ADD_TYPE_ID(config_value_test, (my_request))
   CAF_ADD_TYPE_ID(config_value_test, (dummy_tag_type))

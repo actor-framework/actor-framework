@@ -59,7 +59,7 @@ using server_actor = caf::typed_actor<server_trait>;
 #define ADD_TYPE_ID(type) CAF_ADD_TYPE_ID(typed_event_based_actor_test, type)
 
 CAF_BEGIN_TYPE_ID_BLOCK(typed_event_based_actor_test,
-                        caf::first_custom_type_id + 110)
+                        caf::first_custom_type_id + 220, 10)
   ADD_TYPE_ID((my_request))
   ADD_TYPE_ID((int_actor))
   ADD_TYPE_ID((float_actor))
