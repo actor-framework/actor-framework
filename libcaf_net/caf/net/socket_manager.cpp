@@ -21,6 +21,7 @@
 #include "caf/make_counted.hpp"
 #include "caf/sec.hpp"
 
+#include <atomic>
 #include <type_traits>
 
 namespace caf::net {
@@ -38,23 +39,23 @@ public:
       mpx_(mpx),
       handler_(std::move(handler)),
       disposed_(false) {
+    log::net::debug("create new manager for socket {}", fd_.id);
     CAF_ASSERT(fd_ != invalid_socket);
     CAF_ASSERT(mpx_ != nullptr);
     CAF_ASSERT(handler_ != nullptr);
   }
 
   ~socket_manager_impl() override {
-    // Note: may not call cleanup since it calls the multiplexer via
-    // deregister().
+    // Note: the destructor may not call cleanup since it calls the multiplexer
+    //       via deregister().
     handler_.reset();
     if (fd_) {
+      log::net::debug("clean up manager for socket {}", fd_.id);
       close(fd_);
       fd_ = invalid_socket;
     }
-    if (!cleanup_listeners_.empty()) {
-      for (auto& f : cleanup_listeners_)
-        mpx_->schedule(std::move(f));
-      cleanup_listeners_.clear();
+    for (auto& f : cleanup_listeners_) {
+      mpx_->schedule(std::move(f));
     }
   }
 
@@ -88,26 +89,31 @@ public:
 
   /// Registers the manager for read operations.
   void register_reading() override {
+    log::net::debug("register manager for reading on socket {}", fd_.id);
     mpx_->register_reading(this);
   }
 
   /// Registers the manager for write operations.
   void register_writing() override {
+    log::net::debug("register manager for writing on socket {}", fd_.id);
     mpx_->register_writing(this);
   }
 
   /// Deregisters the manager from read operations.
   void deregister_reading() override {
+    log::net::debug("deregister manager for reading on socket {}", fd_.id);
     mpx_->deregister_reading(this);
   }
 
   /// Deregisters the manager from write operations.
   void deregister_writing() override {
+    log::net::debug("deregister manager for writing on socket {}", fd_.id);
     mpx_->deregister_writing(this);
   }
 
   /// Deregisters the manager from both read and write operations.
   void deregister() override {
+    log::net::debug("deregister manager for socket {}", fd_.id);
     mpx_->deregister(this);
   }
 
@@ -123,7 +129,9 @@ public:
   /// Schedules a call to `do_handover` on the handler.
   void schedule_handover() override {
     deregister();
+    log::net::debug("schedule protocol handover on socket {}", fd_.id);
     mpx_->schedule_fn([ptr = strong_this()] {
+      log::net::debug("run protocol handover on socket {}", ptr->fd_.id);
       event_handler_ptr next;
       if (ptr->handler_->do_handover(next)) {
         ptr->handler_.swap(next);
@@ -134,15 +142,10 @@ public:
   /// Shuts down this socket manager.
   void shutdown() override {
     auto lg = log::net::trace("");
+    // Repeated calls to shutdown are ignored.
     if (!shutting_down_) {
+      log::net::debug("shutdown manager for socket {}", fd_.id);
       shutting_down_ = true;
-      dispose();
-    } else {
-      // This usually only happens after disposing the manager if the handler
-      // still had data to send.
-      mpx_->schedule_fn([ptr = strong_this()] { //
-        ptr->cleanup();
-      });
     }
   }
 
@@ -157,8 +160,8 @@ public:
       cleanup();
       return err;
     }
-    if (auto err = handler_->start(this); err) {
-      log::net::debug("failed to initialize handler: {}", err);
+    if (auto err = handler_->start(this)) {
+      log::net::debug("failed to start handler for socket {}: {}", fd_.id, err);
       cleanup();
       return err;
     }
@@ -171,6 +174,9 @@ public:
     if (handler_) {
       handler_->handle_read_event();
       run_delayed_actions();
+      if (shutting_down_ && handler_->finalized()) {
+        cleanup();
+      }
       return;
     }
     deregister();
@@ -181,6 +187,9 @@ public:
     if (handler_) {
       handler_->handle_write_event();
       run_delayed_actions();
+      if (shutting_down_ && handler_->finalized()) {
+        cleanup();
+      }
       return;
     }
     deregister();
@@ -192,23 +201,30 @@ public:
   ///             @ref sec::disposed.
   void handle_error(sec code) override {
     auto lg = log::net::trace("");
-    if (!disposed_)
+    if (!disposed_) {
       disposed_ = true;
-    if (handler_) {
-      if (!shutting_down_) {
-        handler_->abort(make_error(code));
-        shutting_down_ = true;
-        run_delayed_actions();
-      }
-      if (code == sec::disposed && !handler_->finalized()) {
-        // When disposing the manger, the transport is still allowed to send
-        // any pending data and it will call shutdown() later to trigger
-        // cleanup().
-        deregister_reading();
-      } else {
+    }
+    if (!handler_) {
+      // Handler already cleaned up. Nothing to do.
+      return;
+    }
+    if (code == sec::disposed) {
+      log::net::debug("dispose manager for socket {}", fd_.id);
+      // Dispose is not a hard error. We simply shutdown the manager, i.e., stop
+      // reading new data but allow the transport to send any pending data.
+      shutdown();
+      handler_->abort(make_error(code));
+      if (handler_->finalized()) {
         cleanup();
       }
+      return;
     }
+    // Other errors are hard errors from the socket layer. They are always fatal
+    // and there's no point in trying to send pending data.
+    log::net::debug("abort manager for socket {} with error: {}", fd_.id, code);
+    shutdown();
+    handler_->abort(make_error(code));
+    cleanup();
   }
 
   // -- implementation of coordinator ------------------------------------------
@@ -254,8 +270,8 @@ public:
 
   void dispose() override {
     auto lg = log::net::trace("");
-    bool expected = false;
-    if (disposed_.compare_exchange_strong(expected, true)) {
+    bool expected_value = false;
+    if (disposed_.compare_exchange_strong(expected_value, true)) {
       mpx_->schedule_fn([ptr = strong_this()] { //
         ptr->handle_error(sec::disposed);
       });
@@ -293,6 +309,7 @@ private:
   }
 
   void cleanup() {
+    log::net::debug("clean up manager for socket {}", fd_.id);
     deregister();
     handler_.reset();
     if (fd_) {

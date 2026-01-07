@@ -41,6 +41,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 - Add a missing implementation for `caf::version::check_abi_compatibility`.
 - Fix a deadlock when disposing an monitor action while it is running (#2169).
+- Fix a resource leak where sockets were not closed on error, e.g., when an HTTP
+  server rejects an incoming request at the protocol level (#2212).
 
 ## [1.1.0] - 2025-07-25
 
