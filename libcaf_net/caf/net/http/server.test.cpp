@@ -28,6 +28,7 @@ namespace {
 struct response_t {
   net::http::request_header hdr;
   byte_buffer payload;
+  std::vector<byte_buffer> chunked_payload;
 
   std::string_view payload_as_str() const noexcept {
     return {reinterpret_cast<const char*>(payload.data()), payload.size()};
@@ -50,9 +51,9 @@ public:
 
   async::promise<response_t> response;
 
-  std::function<void(net::http::lower_layer::server*,
-                     const net::http::request_header&, const_byte_span)>
-    cb;
+  response_t current_response;
+
+  std::function<void(net::http::lower_layer::server*, const response_t&)> cb;
 
   // -- factories --------------------------------------------------------------
 
@@ -72,6 +73,23 @@ public:
     return none;
   }
 
+  error begin_chunked_message(const net::http::request_header& hdr) override {
+    current_response.hdr = hdr;
+    return error{};
+  }
+
+  ptrdiff_t consume_chunk(const_byte_span body) override {
+    current_response.chunked_payload.emplace_back(body.begin(), body.end());
+    return body.size();
+  }
+
+  error end_chunked_message() override {
+    if (response)
+      response.set_value(current_response);
+    cb(down, current_response);
+    return error{};
+  }
+
   void abort(const error& what) override {
     if (response) {
       response.set_error(what);
@@ -88,7 +106,11 @@ public:
 
   ptrdiff_t consume(const net::http::request_header& request_hdr,
                     const_byte_span body) override {
-    cb(down, request_hdr, body);
+    current_response.hdr = request_hdr;
+    current_response.payload.assign(body.begin(), body.end());
+    if (response)
+      response.set_value(current_response);
+    cb(down, current_response);
     return static_cast<ptrdiff_t>(body.size());
   }
 };
@@ -164,17 +186,12 @@ SCENARIO("the server parses HTTP GET requests into header fields") {
                                 "Hello world!";
     WHEN("sending it to an HTTP server") {
       async::promise<response_t> res_promise;
-      run_server([res_promise](auto* down,
-                               const net::http::request_header& request_hdr,
-                               const_byte_span body) mutable {
-        response_t res;
-        res.hdr = request_hdr;
-        res.payload.assign(body.begin(), body.end());
-        res_promise.set_value(std::move(res));
+      auto cb = [](auto* down, const response_t&) mutable {
         auto hello = "Hello world!"sv;
         down->send_response(net::http::status::ok, "text/plain",
                             as_bytes(std::span{hello}));
-      });
+      };
+      run_server(cb, res_promise);
       net::write(fd1, as_bytes(std::span{request}));
       THEN("the HTTP layer parses the data and calls the application layer") {
         auto maybe_res = res_promise.get_future().get(1s);
@@ -213,8 +230,7 @@ SCENARIO("the client receives a chunked HTTP response") {
                                 "0\r\n"
                                 "\r\n";
     WHEN("sending it to an HTTP server") {
-      run_server([](auto* down, const net::http::request_header&,
-                    const_byte_span) mutable {
+      run_server([](auto* down, const response_t&) mutable {
         auto line1 = "Hello world!"sv;
         auto line2 = "Developer Network"sv;
         down->begin_header(net::http::status::ok);
@@ -257,14 +273,7 @@ SCENARIO("the client sends a multipart HTTP request") {
                     "v2\r\n"
                     "--------------------------n7qcGgyvEaAXIT5sDsIVRV--\r\n"sv;
     async::promise<response_t> res_promise;
-    run_server([res_promise](auto*,
-                             const net::http::request_header& request_hdr,
-                             const_byte_span body) mutable {
-      response_t res;
-      res.hdr = request_hdr;
-      res.payload.assign(body.begin(), body.end());
-      res_promise.set_value(std::move(res));
-    });
+    run_server([](auto*, const response_t&) mutable {}, res_promise);
     WHEN("sending it to an HTTP server") {
       net::write(fd1, as_bytes(std::span{req_headers}));
       net::write(fd1, as_bytes(std::span{req_body}));
@@ -282,21 +291,196 @@ SCENARIO("the client sends a multipart HTTP request") {
   }
 }
 
+SCENARIO("the server receives a chunked HTTP request") {
+  GIVEN("valid HTTP POST request with chunked transfer encoding") {
+    auto req_headers = "POST /upload HTTP/1.1\r\n"
+                       "Transfer-Encoding: chunked\r\n"
+                       "\r\n"sv;
+    auto req_body = "D\r\n"
+                    "Hello, world!\r\n"
+                    "11\r\n"
+                    "Developer Network\r\n"
+                    "0\r\n\r\n"sv;
+    async::promise<response_t> res_promise;
+    auto cb = [](auto* down, const response_t&) mutable {
+      auto ok = "OK"sv;
+      down->send_response(net::http::status::ok, "text/plain",
+                          as_bytes(std::span{ok}));
+    };
+    run_server(cb, res_promise);
+    WHEN("sending it to an HTTP server") {
+      net::write(fd1, as_bytes(std::span{req_headers}));
+      net::write(fd1, as_bytes(std::span{req_body}));
+      THEN("the HTTP layer parses the chunked request and calls the "
+           "application layer") {
+        auto maybe_res = res_promise.get_future().get(1s);
+        require(maybe_res.has_value());
+        check_eq(maybe_res->hdr.method(), net::http::method::post);
+        check_eq(maybe_res->hdr.version(), "HTTP/1.1");
+        check_eq(maybe_res->hdr.path(), "/upload");
+        check_eq(maybe_res->chunked_payload.size(), 2ul);
+        check(std::ranges::equal(maybe_res->chunked_payload[0],
+                                 to_const_byte_span("Hello, world!"sv)));
+        check(std::ranges::equal(maybe_res->chunked_payload[1],
+                                 to_const_byte_span("Developer Network"sv)));
+      }
+    }
+  }
+}
+
+SCENARIO("the server handles edge cases for chunked HTTP requests") {
+  auto run_promise_server = [this]() {
+    async::promise<response_t> res_promise;
+    run_server([res_promise](auto* down, const response_t& res) mutable {
+      res_promise.set_value(res);
+      auto ok = "OK"sv;
+      down->send_response(net::http::status::ok, "text/plain",
+                          as_bytes(std::span{ok}));
+    });
+    return res_promise;
+  };
+  GIVEN("an empty chunked body") {
+    auto req_headers = "POST /upload HTTP/1.1\r\n"
+                       "Host: localhost:8000\r\n"
+                       "Transfer-Encoding: chunked\r\n"
+                       "\r\n"sv;
+    auto req_body = "0\r\n\r\n"sv;
+    auto res_promise = run_promise_server();
+    WHEN("sending it to an HTTP server") {
+      net::write(fd1, as_bytes(std::span{req_headers}));
+      net::write(fd1, as_bytes(std::span{req_body}));
+      THEN("the HTTP layer parses the empty chunked request") {
+        auto maybe_res = res_promise.get_future().get(1s);
+        require(maybe_res.has_value());
+        auto& res = *maybe_res;
+        check_eq(res.hdr.method(), net::http::method::post);
+        check_eq(res.payload_as_str(), "");
+      }
+    }
+  }
+  GIVEN("a chunked request with missing CRLF after chunk data") {
+    auto req_headers = "POST /upload HTTP/1.1\r\n"
+                       "Host: localhost:8000\r\n"
+                       "Transfer-Encoding: chunked\r\n"
+                       "\r\n"sv;
+    auto req_body = "5\r\nHello0\r\n\r\n"sv; // Missing \r\n after "Hello"
+    auto res_promise = run_promise_server();
+    WHEN("sending it to an HTTP server") {
+      net::write(fd1, as_bytes(std::span{req_headers}));
+      net::write(fd1, as_bytes(std::span{req_body}));
+      THEN("the HTTP layer rejects the malformed request") {
+        byte_buffer buf;
+        buf.resize(512);
+        auto bytes_read = net::read(fd1, buf);
+        require(bytes_read > 0);
+        buf.resize(static_cast<size_t>(bytes_read));
+        auto response = to_string_view(buf);
+        check(response.find("400") != std::string_view::npos
+              || response.find("Bad Request") != std::string_view::npos);
+        // Promise should not be fulfilled
+        check(!res_promise.get_future().get(100ms));
+      }
+    }
+  }
+  GIVEN("a chunked request with invalid chunk size") {
+    auto req_headers = "POST /upload HTTP/1.1\r\n"
+                       "Host: localhost:8000\r\n"
+                       "Transfer-Encoding: chunked\r\n"
+                       "\r\n"sv;
+    auto req_body = "5xyz\r\nHello\r\n0\r\n\r\n"sv; // Invalid hex in chunk size
+    auto res_promise = run_promise_server();
+    WHEN("sending it to an HTTP server") {
+      net::write(fd1, as_bytes(std::span{req_headers}));
+      net::write(fd1, as_bytes(std::span{req_body}));
+      THEN("the HTTP layer rejects the invalid chunk size") {
+        byte_buffer buf;
+        buf.resize(512);
+        auto bytes_read = net::read(fd1, buf);
+        require(bytes_read > 0);
+        buf.resize(static_cast<size_t>(bytes_read));
+        auto response = to_string_view(buf);
+        check(response.find("400") != std::string_view::npos
+              || response.find("Bad Request") != std::string_view::npos);
+        check(!res_promise.get_future().get(100ms));
+      }
+    }
+  }
+  GIVEN("a chunked request with chunk extensions") {
+    auto req_headers = "POST /upload HTTP/1.1\r\n"
+                       "Host: localhost:8000\r\n"
+                       "Transfer-Encoding: chunked\r\n"
+                       "\r\n"sv;
+    auto req_body = "5;extension=value\r\nHello\r\n0\r\n\r\n"sv;
+    auto res_promise = run_promise_server();
+    WHEN("sending it to an HTTP server") {
+      net::write(fd1, as_bytes(std::span{req_headers}));
+      net::write(fd1, as_bytes(std::span{req_body}));
+      THEN("the HTTP layer rejects chunk extensions") {
+        byte_buffer buf;
+        buf.resize(512);
+        auto bytes_read = net::read(fd1, buf);
+        require(bytes_read > 0);
+        buf.resize(static_cast<size_t>(bytes_read));
+        auto response = to_string_view(buf);
+        // Chunk extensions are not supported
+        check(response.find("400") != std::string_view::npos
+              || response.find("Bad Request") != std::string_view::npos);
+        check(!res_promise.get_future().get(100ms));
+      }
+    }
+  }
+  GIVEN("a chunked request that exceeds max_request_size") {
+    auto req_headers = "POST /upload HTTP/1.1\r\n"
+                       "Host: localhost:8000\r\n"
+                       "Transfer-Encoding: chunked\r\n"
+                       "\r\n"sv;
+    auto req_body
+      = "100000\r\n"sv; // 100KB chunk size declaration (exceeds 64KB limit)
+    auto res_promise = run_promise_server();
+    WHEN("sending a chunk size that exceeds the limit") {
+      net::write(fd1, as_bytes(std::span{req_headers}));
+      net::write(fd1, as_bytes(std::span{req_body}));
+      THEN("the HTTP layer rejects the oversized payload early") {
+        byte_buffer buf;
+        buf.resize(512);
+        auto bytes_read = net::read(fd1, buf);
+        require(bytes_read > 0);
+        buf.resize(static_cast<size_t>(bytes_read));
+        auto response = to_string_view(buf);
+        check(response.find("413") != std::string_view::npos
+              || response.find("Payload Too Large") != std::string_view::npos);
+        check(!res_promise.get_future().get(100ms));
+      }
+    }
+  }
+
+  GIVEN("a chunked request without the final zero chunk") {
+    auto req_headers = "POST /upload HTTP/1.1\r\n"
+                       "Host: localhost:8000\r\n"
+                       "Transfer-Encoding: chunked\r\n"
+                       "\r\n"sv;
+    auto req_body = "5\r\nHello\r\n5\r\nWorld\r\n"sv; // Missing final 0\r\n\r\n
+    auto res_promise = run_promise_server();
+    WHEN("sending it to an HTTP server") {
+      net::write(fd1, as_bytes(std::span{req_headers}));
+      net::write(fd1, as_bytes(std::span{req_body}));
+      THEN("the HTTP layer waits for the final chunk") {
+        // The server should wait for more data (not timeout immediately)
+        // Promise should not be fulfilled yet
+        check(!res_promise.get_future().get(100ms));
+      }
+    }
+  }
+}
+
 TEST("GH-2073 Regression - incoming data must be parsed only once") {
   auto request = "GET /foo HTTP/1.1\r\n"
                  "Content-Length: 21\r\n\r\n"
                  "GET /foo HTTP/1.1\r\n\r\n"sv;
   async::promise<response_t> res_promise;
   int call_count = 0;
-  run_server([res_promise,
-              &call_count](auto*, const net::http::request_header& request_hdr,
-                           const_byte_span body) mutable {
-    response_t res;
-    res.hdr = request_hdr;
-    res.payload.assign(body.begin(), body.end());
-    res_promise.set_value(std::move(res));
-    call_count++;
-  });
+  run_server([&call_count](auto*, const response_t&) mutable { call_count++; },
+             res_promise);
   net::write(fd1, as_bytes(std::span{request}));
   auto maybe_res = res_promise.get_future().get(1s);
   require(maybe_res.has_value());

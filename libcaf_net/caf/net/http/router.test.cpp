@@ -74,6 +74,18 @@ public:
     }
   }
 
+  error begin_chunked_message(const net::http::request_header&) override {
+    return error{};
+  }
+
+  ptrdiff_t consume_chunk(const_byte_span) override {
+    return 0;
+  }
+
+  error end_chunked_message() override {
+    return error{};
+  }
+
   void prepare_send() override {
     // nop
   }

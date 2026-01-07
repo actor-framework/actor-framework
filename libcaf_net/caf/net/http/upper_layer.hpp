@@ -36,6 +36,15 @@ public:
   virtual ptrdiff_t consume(const request_header& hdr, const_byte_span payload)
     = 0;
 
+  // ... before the first chunk ...
+  virtual error begin_chunked_message(const request_header& hdr) = 0;
+
+  // ... when receiving data ...
+  virtual ptrdiff_t consume_chunk(const_byte_span payload) = 0;
+
+  // ... after the last chunk
+  virtual error end_chunked_message() = 0;
+
   /// Initializes the upper layer.
   /// @param down A pointer to the lower layer that remains valid for the
   ///             lifetime of the upper layer.

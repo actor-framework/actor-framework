@@ -185,6 +185,12 @@ public:
             // Transition to the next mode.
             if (hdr_.chunked_transfer_encoding()) {
               mode_ = mode::read_chunks;
+              if (auto err = up_->begin_chunked_message(hdr_); err.valid()) {
+                write_response(status::internal_server_error,
+                               "Failed to initiate chunked message.");
+                abort(err);
+                return -1;
+              }
             } else if (auto len = hdr_.content_length()) {
               // Protect against payloads that exceed the maximum size.
               if (*len >= max_request_size_) {
@@ -220,11 +226,61 @@ public:
           break;
         }
         case mode::read_chunks: {
-          // TODO: implement me
-          write_response(status::not_implemented,
-                         "Chunked transfer not implemented yet.");
-          abort(sec::protocol_error, "chunked transfer not implemented yet");
-          return -1;
+          auto res = v1::parse_chunk(input);
+          if (!res) {
+            // No error code signals we didn't receive enough data.
+            if (res.error().empty())
+              return consumed;
+            write_response(status::bad_request, "Invalid chunk encoding.");
+            abort(res.error());
+            return -1;
+          }
+          auto [chunk_size, remainder] = *res;
+          // Protect early against payloads that exceed the maximum size.
+          if (chunk_size > max_request_size_ - received_chunks_size_) {
+            write_response(status::payload_too_large,
+                           "Payload exceeds maximum size.");
+            abort(sec::protocol_error, "payload exceeds maximum size");
+            return -1;
+          }
+          if (remainder.size() < chunk_size + 2) {
+            // Configure the policy for the next call to consume.
+            // Await at least chunk line length + chunk_size bytes + crlf.
+            const auto least = input.size() - remainder.size() + chunk_size + 2;
+            const auto most = max_request_size_ - received_chunks_size_;
+            down_->configure_read(receive_policy::between(least, most));
+            return consumed;
+          }
+          // Reset the policy from the previous call to consume.
+          down_->configure_read(
+            receive_policy::up_to(max_request_size_ - received_chunks_size_));
+          consumed += static_cast<ptrdiff_t>(input.size() - remainder.size()
+                                             + chunk_size + 2);
+          // Check crlf at the end of chunk.
+          if (remainder[chunk_size] != std::byte{'\r'}
+              || remainder[chunk_size + 1] != std::byte{'\n'}) {
+            write_response(status::bad_request,
+                           "Missing CRLF sequence at the end of the chunk.");
+            abort(sec::protocol_error,
+                  "missing CRLF sequence at the end of the chunk");
+            return -1;
+          }
+          // End of chunk encoded request comes with a zero length chunk.
+          if (chunk_size == 0) {
+            if (auto err = up_->end_chunked_message(); err.valid()) {
+              write_response(
+                status::internal_server_error,
+                "Failed to process the end of the chunked request.");
+              abort(err);
+              return -1;
+            }
+            mode_ = mode::read_header;
+            return consumed;
+          }
+          up_->consume_chunk(remainder.subspan(0, chunk_size));
+          received_chunks_size_ += chunk_size;
+          input = remainder.subspan(chunk_size + 2);
+          break;
         }
       }
     }
@@ -272,8 +328,12 @@ private:
   /// Maximum size for incoming HTTP requests.
   size_t max_request_size_ = caf::defaults::net::http_max_request_size;
 
+  /// Specific to chunked requests - aggregates the size of all received chunks.
+  size_t received_chunks_size_ = 0;
+
   bool aborted_ = false;
 };
+
 } // namespace
 
 // -- factories ----------------------------------------------------------------
