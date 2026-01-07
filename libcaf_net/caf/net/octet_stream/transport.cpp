@@ -86,7 +86,7 @@ public:
 
   transport_impl& operator=(const transport_impl&) = delete;
 
-  ~transport_impl() {
+  ~transport_impl() override {
     // nop
   }
 
@@ -149,7 +149,6 @@ public:
       parent_->shutdown();
     } else {
       configure_read(receive_policy::stop());
-      parent_->deregister_reading();
       flags_.shutting_down = true;
     }
   }
@@ -358,15 +357,17 @@ protected:
         // Negative values indicate that the application wants to close the
         // socket. We still make sure to send any pending data before closing.
         up_->abort(make_error(caf::sec::runtime_error, "consumed < 0"));
-        parent_->deregister_reading();
+        shutdown();
         return;
-      } else if (static_cast<size_t>(consumed) > n) {
+      }
+      if (static_cast<size_t>(consumed) > n) {
         // Must not happen. An application cannot handle more data then we pass
         // to it.
         up_->abort(make_error(sec::logic_error, "consumed > buffer.size"));
-        parent_->deregister_reading();
+        shutdown();
         return;
-      } else if (consumed == 0) {
+      }
+      if (consumed == 0) {
         if (next_) {
           // When switching protocol, the new layer has never seen the data, so
           // we might just re-invoke the same data again.
@@ -397,11 +398,14 @@ protected:
 
   /// Calls abort on the upper layer and deregisters the transport from events.
   void fail(const error& reason) {
-    auto lg = log::net::trace("reason = {}", reason);
-    up_->abort(reason);
-    up_.reset();
-    parent_->deregister();
-    parent_->shutdown();
+    // Repeated calls to fail are ignored.
+    if (up_) {
+      log::net::debug("transport failed with reason: {}", reason);
+      up_->abort(reason);
+      up_.reset();
+      parent_->deregister();
+      parent_->shutdown();
+    }
   }
 
   // -- member variables -------------------------------------------------------
@@ -413,13 +417,13 @@ protected:
   size_t max_consecutive_reads_ = defaults::middleman::max_consecutive_reads;
 
   /// Caches the write buffer size of the socket.
-  uint32_t max_write_buf_size_ = 0;
+  size_t max_write_buf_size_ = 0;
 
   /// Stores what the user has configured as read threshold.
-  uint32_t min_read_size_ = 0;
+  size_t min_read_size_ = 0;
 
   /// Stores what the user has configured as max. number of bytes to receive.
-  uint32_t max_read_size_ = 0;
+  size_t max_read_size_ = 0;
 
   /// Stores how many bytes are currently buffered, i.e., how many bytes from
   /// `read_buf_` are filled with actual data.

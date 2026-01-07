@@ -7,6 +7,7 @@
 
 #include "caf/async/future.hpp"
 #include "caf/disposable.hpp"
+#include "caf/log/net.hpp"
 
 namespace caf::net::http {
 
@@ -79,7 +80,8 @@ bool router::done_sending() {
   return true;
 }
 
-void router::abort(const error&) {
+void router::abort(const error& reason) {
+  log::net::debug("HTTP router aborted with reason: {}", reason);
   for (auto& [id, hdl] : pending_)
     hdl.dispose();
   pending_.clear();
