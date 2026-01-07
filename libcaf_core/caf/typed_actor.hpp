@@ -42,6 +42,10 @@ public:
 
   // -- friends ----------------------------------------------------------------
 
+  template <class... Us>
+    requires typed_actor_pack<Us...>
+  friend class typed_actor;
+
   friend class local_actor;
   friend class abstract_actor;
 
