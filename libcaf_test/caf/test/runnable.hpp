@@ -155,6 +155,11 @@ public:
   bool check(bool value, const std::source_location& location
                          = std::source_location::current());
 
+  /// Checks whether `str` matches the regular expression `rx`.
+  bool check_matches(std::string_view str, std::string_view rx,
+                     const std::source_location& location
+                     = std::source_location::current());
+
   /// Checks whether `what` holds a value.
   template <class T>
   bool
